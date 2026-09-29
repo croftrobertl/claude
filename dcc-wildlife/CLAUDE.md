@@ -1766,3 +1766,69 @@ it undefined **NO PHOTOGRAPH RESOLVED IN ANY SUITE, EVER**. Every fixture
 fell through to the drawing or the glyph, every screenshot showed a page the
 site does not serve, and the documented fallback chain was untestable below
 its first rung. One line; a whole subsystem.
+
+### 5. The narration voice, decided 2026-09-28. Rob's words, not a summary.
+
+He was shown three entries in two lengths ("full" and "trim") and picked one.
+The decision has four parts, and the fourth is the one that costs real work.
+
+**a. Length: TRIM, for every entry, existing and new.** The approved samples run
+52, 56 and 58 words. That is the target, not today's 43-word mean — the trim
+voice is *denser*, not shorter. Do not "tidy" an entry down to two sentences;
+that is a different voice, and it was rejected.
+
+**b. Only the opening paragraph narrates.** In his words: *"Sections: 'Where to
+look', 'Listen for', 'Best time', 'Tell it apart' and the rest STAY SHORT,
+PLAIN, SCANNABLE LINES, like labels on a field card. Only the opening paragraph
+carries the narrated voice. Light wording polish in the sections is fine; don't
+narrate them."* In the 1.33.0 pass this held: across 51 entries only ten section
+lines changed, every one a correction, and `mark` did not change at all.
+
+**c. Nothing safety-relevant may be lost in trimming.** This is an invariant
+now, not a one-off instruction, and it is **enforced by
+`tools/tests/test-narration.php`**. That suite holds a table of the facts a
+guest *acts on*, per Know-before-you-go species, and fails if one stops
+appearing. It also fails when a species is added to the safety group without
+declaring its facts — so the item-6 expansion cannot quietly add a hazard with
+no contract. Five mutations were verified red against it.
+
+The fact that prompted the rule: a trim sample dropped *"It does not chase
+people"* from the cottonmouth. Rob caught it. It is back, verified, and pinned.
+
+**d. Sources for EVERYTHING that stays, not only what is new.** In his words:
+*"every sentence kept 'unchanged' in any entry: re-verify it, or it goes."*
+
+This is the expensive one and it is not optional. It is why the guide lost two
+claims in 1.33.0 (a twelve-pound Lake Dora bass; bald cypress "spared by the
+loggers") and gained six corrections, one of them dangerous in the old wording
+— the diamondback no longer promises it will rattle first. The full claim-by-
+claim record is in `WATER-SOURCES.md` under "the 1.33.0 narration pass".
+
+**Applies to the item-6 expansion too.** A new entry needs its sources before it
+is written, on the same terms. "It is in the master list" is not a source.
+
+### 6. Page weight, measured with the trim narration (not estimated)
+
+Rob asked for the /explore/ figure at 403 species *after* the trim, because the
+earlier 82 KB number assumed prose 35% longer than it turned out to be. Measured
+by rendering the real hub with a synthesised 403-species registry
+(`tools/` has no copy — the script lives in the session scratchpad; recreate it
+by cloning `dcc_wl_species` up to N, which is all it does):
+
+| | raw | gzip |
+|---|---|---|
+| /explore/ today, 51 species | 191 KB | **34.6 KB** |
+| /explore/ at 403 species, trim narration | 973 KB | **118.3 KB** |
+| — of which the inline species index | 120 KB | 9.6 KB |
+| — of which the server-rendered field guide HTML | 853 KB | 108.4 KB |
+| detail payload, fetched once on opening a sheet | 264 KB | 79.0 KB |
+
+**The number that matters: the page weight is the crawlable field guide, not the
+data.** The inline index is 9.6 KB gzip at 403 species — the wire split did its
+job. 108 of the 118 KB is the `<details>` markup Rob explicitly decided to KEEP
+on /explore/ for crawlability. If that ever needs to come down, the lever is the
+field guide's markup or its presence, not the narration and not the JSON.
+
+For comparison, the same page with the old +35% prose assumption: 122.7 KB gzip.
+So the trim decision saves about 4.4 KB gzip on the page and 6.7 KB on the
+fetched detail — real, but not the thing that decides the page's size.

@@ -528,3 +528,159 @@ the master list, the evidence wins and the owner is told — never a silent
 change. Where it contradicts the PREMISE of a question rather than its
 answer, say so too: "it is native, and also stocked" is more useful than
 picking one.
+
+## Phase 2 — the 1.33.0 narration pass: every retained sentence, re-verified
+
+The owner's ruling of 2026-09-28, in his words:
+
+> "Sources for EVERYTHING that stays, not only what's new. […] The same applies
+> to every sentence kept 'unchanged' in any entry: re-verify it, or it goes."
+
+So this is not a record of what changed. It is a record of **what the text is
+now allowed to say**, claim by claim, for all 51 entries. Anything that could
+not be re-verified this session was cut, and the cuts are listed first, because
+they are the part that is easy to lose.
+
+### What was CUT for want of a source
+
+| entry | the claim | why it went |
+|---|---|---|
+| Largemouth Bass | "Lake Dora has given up largemouth over twelve pounds" | No FWC or TrophyCatch record found for a twelve-pound Lake Dora fish. It was also exactly the "trophy-size superlative" §1 of this document already says we leave out. Replaced with a Lake-Dora-specific fact that *is* sourced: FWC's trophy-bass study surgically tagged bass over eight pounds in Lake Dora and Lake Eustis. |
+| Bald Cypress | "spared by the loggers of the 1800s" | Tour operators say the canal's cypress are ancient; nobody I could find documents that the stand was never cut. Replaced with the dated fact underneath it: the waterway was the Elfin River until 1882, when it was widened for steamboats, and cypress here run past 400 years. |
+
+### What was CORRECTED, because the old text was wrong in the unsafe direction
+
+These are additions to the safety content, not trims of it.
+
+| entry | was | now | source |
+|---|---|---|---|
+| Eastern Diamondback | "a rattle it will usually sound before you get close" | "Do not count on hearing it: one that would rather go unnoticed lies still and says nothing." | UF/IFAS and FWC both state diamondbacks frequently do **not** rattle, and that a snake trying to stay unnoticed is quieter, not louder. The old line taught a guest that silence is an all-clear. That is the single most dangerous sentence the guide contained. |
+| Eastern Coral Snake | "The old rhyme holds here" | the **black snout** is the tell; the rhyme is true of a normally marked snake, and markings vary | Florida Museum's Florida Snake ID Guide: coral snake has a black snout and neck; the scarlet kingsnake and scarlet snake have red heads. Animal Diversity Web notes aberrant colour patterns, so the rhyme alone is not safe. |
+| Poison Ivy | "wash […] within the hour" | "as soon as you can — the oil starts binding to skin within about fifteen minutes" | FDA consumer guidance: urushiol binds to skin proteins within about 15 minutes; washing inside that window can prevent or reduce the reaction. An hour is not the number. |
+| Wood Stork | `safe` said "Federally threatened" | "No longer federally listed […] but still a protected migratory bird" | USFWS: the Southeast U.S. DPS was **delisted entirely**, final 9 March 2026 (Federal Register 2026-02588). It is not threatened any more; saying so is simply out of date. |
+| Dusky Pygmy | "Painful, rarely fatal" | "Bites hurt, and tissue damage is common — but no death from one has ever been recorded." | UF: no recorded fatality from a pygmy rattlesnake bite. Tissue loss is the real hazard. Stronger *and* truer. |
+| Mosquitoes / No-see-ums | no-see-um season given as "spring and autumn" | "April into November" | UF/IFAS Entomology: biting midges are most active at dusk and dawn from April through November. |
+
+### One claim RESTORED to the guide
+
+In the STEP 1a samples I said I could not verify, to this guide's standard, that
+a cottonmouth swims with its whole body on the surface while a watersnake swims
+mostly submerged, and I left it out of the cottonmouth entry. **On re-checking
+it this session, it clears the bar**: the University of Georgia's Savannah River
+Ecology Laboratory herpetology account and the Virginia Department of Wildlife
+Resources both state it directly. It stays in the brown watersnake's "Tell it
+apart" line, where it already was, and is now sourced rather than inherited.
+
+### Know-before-you-go: the actionable facts, and where each one lives now
+
+The owner's rule — "keep every fact a guest acts on that today's text has" — is
+enforced by `tools/tests/test-narration.php`, which is the real record. The
+suite holds a table of the actionable facts per safety species and fails if any
+one of them stops appearing. Five mutations were run against it and all five go
+red: dropping "does not chase people", restoring the rattle promise, putting the
+wash window back to an hour, softening the fire-ant mound description, and
+adding a new safety species without declaring its facts.
+
+**The fact the owner named:** "It does not chase people" had been dropped by my
+trim sample. It is back in the shipped entry, now as "It does not chase people;
+that part is folklore" — and it is verified rather than merely restored. The
+Florida Museum's Florida Snake ID Guide states that cottonmouths are not
+aggressive and do not chase people, and explains the folklore: a cornered snake
+heads for the nearest cover whether or not a person is standing in that
+direction.
+
+**Audit of the other seven safety entries for the same kind of loss.** Nothing
+else had been dropped — the trim sample only ever covered the cottonmouth — but
+each entry was re-read against its pre-trim text fact by fact. Restored or
+strengthened as a result: the fire-ant mound's *no hole in the top* (it is the
+single most reliable way to tell a fire-ant mound from any other ant hill, and
+the trim had blurred it to "soft soil"); the lovebug *acid* reason for washing
+the car the same day, which had been an unexplained instruction; and the
+diamondback's *silence is not an all-clear*, which is new.
+
+### Claim-by-claim sources for the rewritten openings
+
+Cornell = Cornell Lab of Ornithology (All About Birds / Birds of the World).
+
+| entry | claims now made | source |
+|---|---|---|
+| Florida Cottonmouth | blocky head, dark eye mask, pale lip stripe, vertical pupil, facial pit; juvenile yellow tail tip used as a caudal lure for frogs; coils and gapes white when cornered; does not chase people | Florida Museum, Florida Snake ID Guide |
+| Eastern Diamondback | largest venomous snake in North America; sandhill / longleaf pine / palmetto scrub, not waterside; declining range-wide; does not reliably rattle | FWC species profile; FNAI field guide; UF/IFAS |
+| Dusky Pygmy | most abundant venomous snake in Florida; 18 in typical, 31 in record; grey with dark blotches and a rusty dorsal stripe; insect-like rattle; leaf litter at trail edges; tissue damage common, no recorded fatality | UF; Florida Museum; Animal Diversity Web |
+| Eastern Coral Snake | red/yellow/black rings right round the body; black snout vs the red heads of scarlet kingsnake and scarlet snake; fossorial under litter and logs; bites almost only when handled | Florida Museum, Florida Snake ID Guide; Animal Diversity Web |
+| Red Imported Fire Ant | arrived at Mobile in ship's ballast soil, 1930s; mound is a crumbly dome with **no entry hole on top**, entered by tunnels running yards out; mass stinging; white pustules | Encyclopedia of Alabama; UF/IFAS; Texas A&M Imported Fire Ant Project |
+| Poison Ivy | leaves of three; hairy aerial-rooted climbing vine; leaflets toothed or smooth, red in spring and autumn; urushiol in every part including the leafless winter vine; rash hours to days later | Clemson HGIC; UConn Home & Garden; FDA; Johns Hopkins Medicine |
+| Mosquitoes & No-see-ums | *Culicoides* are 1–3 mm and pass through standard 18×16 window mesh; dawn and dusk, April to November | UF/IFAS EENY-349 / IN626; Clemson Extension (20×20 mesh to exclude) |
+| Lovebugs | two flights, four to five weeks from late April and from late August; *Plecia nearctica*, a march fly; larvae decompose plant litter; body fluids acidic, worse after bacterial action over days; no bite, no sting | UF/IFAS EDIS MG068 |
+| Alligator | state reptile; bellow carries infrasound; Faraday waves throw water off the back in a spray; courtship April–May; hatchlings chirp from inside the egg to be dug out | Published fluid-dynamics work on the alligator "water dance"; standard *A. mississippiensis* accounts |
+| Manatee | first record in Lake County 2015, a female locally named Leesburg; calf "Sunset" 2017; killed by a boat 2020; kin to elephants | Mid-Florida Newspapers (Triangle News Leader) account of the Harris Chain manatees |
+| River Otter | up to eight minutes submerged; latrine sites as scent-marking noticeboards conveying identity and status | Sacramento Zoo; Humboldt State latrine-site thesis; *Animal Behaviour* scent-marking study |
+| Turtles | cooters and sliders share basking logs; Florida softshell is flat and leathery, buries in mud, breathes at the surface | Florida Museum herpetology accounts (unchanged from the 1.11.0 pass) |
+| Florida Banded Watersnake | crossbands, eye-to-jaw line; round pupil, narrow head, no facial pit; harmless | Florida Museum, Southern Watersnake |
+| Brown Watersnake | square blotches, head wider than neck, mistaken for a cottonmouth; basks on overhanging branches and drops in; the swimming-posture difference | Florida Museum; UGA SREL herpetology; Virginia DWR |
+| Florida Green Watersnake | largest watersnake in North America, record 74 in; plain olive, no bands; weedy shallows; harmless | *Nerodia floridana* accounts; SC DNR species PDF; USFWS |
+| Largemouth Bass | Harris Chain trophy water; FWC radio-tagged bass over 8 lb in Lake Dora and Lake Eustis; bluegill and black crappie in the shallows | FWC Florida Trophy Bass Project; FWC Harris Chain forecast |
+| Apple Snail | main food of limpkin and the endangered snail kite; eggs laid above the waterline in pale pink clutches, out of reach of fish | FWC apple-snail assessment; USGS NAS *Pomacea paludosa* profile |
+| Bald Eagle | largest nest of any bird: St Petersburg, Florida, 9 ft 6 in wide, 20 ft deep, over two tonnes, measured 1963; Florida birds nest in the cool season; the movie scream is a red-tailed hawk | Guinness World Records; Cornell; Missouri Dept of Conservation |
+| Osprey | the only raptor that submerges after fish; reversible outer toe and barbed foot pads; carries the catch head-first to cut drag; call likened by Cornell to a whistling kettle taken off the stove | American Bird Conservancy; HawkWatch International; Cornell (Osprey Sounds) |
+| Great Egret | the National Audubon Society emblem; plume hunting and the society's founding; slow stalking; breeding aigrettes | Audubon |
+| Snowy Egret | golden feet shuffled to flush prey; plume trade; Audubon movement | Audubon; Cornell |
+| Cattle Egret | crossed the Atlantic unaided, reaching South America c. 1877; first Florida record 1941, first Florida nesting 1953; follows livestock and mowers | Cornell; Minnesota Breeding Bird Atlas; Wild South Florida |
+| Little Blue Heron | white juvenile, slate adult, calico in between; snowy egrets drive off blue adults but tolerate white juveniles, which then catch more fish | Audubon, "The Little Blue Heron's Color Swap"; Cornell |
+| Wood Stork | feeds by tactolocation with the bill open; listed 1984 after a >75% decline; **delisted 9 March 2026** | USFWS press release and Federal Register 2026-02588 |
+| White Ibis | probes by feel; crayfish; black wingtips shown only in flight | Cornell |
+| Glossy Ibis | Old World origin, reached the Americas unaided, first New World record 1817 (New Jersey); iridescent bronze and green | Cornell; standard *Plegadis falcinellus* accounts |
+| Great Blue Heron | modified sixth cervical vertebra allows the strike; rod-rich retina for night hunting; "frawnk" averaging 19.7 s | Cornell (Birds of the World, Sounds) |
+| Tricolored Heron | dashes and pirouettes, foot-rakes the bottom; fish are 90–99.7% of the diet | Cornell, Birds of the World, Diet and Foraging |
+| Florida Sandhill Crane | non-migratory Florida subspecies; winter influx of migrants; trachea coiled into the sternum; bugle carries over a mile; chicks are colts; feeding is illegal in Florida | FWC; Cornell |
+| Black-crowned Night Heron | day roosts, dusk feeding; *Nycticorax* = "night raven"; flat "quok" | Cornell |
+| Yellow-crowned Night Heron | crustacean specialist with a heavy bill; striped face under a pale crown; more diurnal than its cousin | Cornell |
+| Green Heron | bait-fishing with twigs, feathers and insects — and **trims the twig to length**, making it a tool-maker | Audubon; Bird Observer, "Bait-fishing by Birds"; Cornell Bird Academy |
+| Least Bittern | smallest heron in the Americas; straddles reed stems instead of wading, so it can feed where the water is too deep for its legs; bill-up freeze | Cornell; Chesapeake Bay Program; Guinness (smallest heron) |
+| Anhinga | feathers not waterproof — poorly developed oil glands — which is what lets it sink and hunt; wing-spread drying; nest clicking likened by Cornell to a treadle sewing machine or "a croaking frog with a sore throat" | Cornell (Anhinga Sounds); NH PBS NatureWorks |
+| Double-crested Cormorant | swims low, foot-propelled underwater, dries wings-open; **hooked** bill vs the anhinga's dagger | Cornell |
+| Common Gallinule | red frontal shield, yellow-tipped bill, long toes on floating vegetation; head-jerk swimming | Cornell |
+| Purple Gallinule | purple-blue and bronze-green, pale blue shield, yellow legs; climbs pickerelweed for seeds | Cornell |
+| American Coot | a rail, not a duck; **lobed** toes; must patter across the water to take off; winter rafts | Audubon, "The American Coot and Its Wonderfully Weird Feet"; Cornell |
+| Pied-billed Grebe | squeezes air from feathers and air sacs to sink without diving; black bill band when breeding | Audubon, "Pied-billed Grebes Sink Like Submarines"; BirdNote |
+| Wood Duck | drake's plumage; cavity nesting; ducklings jump the day after hatching, from over 50 ft, unhurt | Cornell; National Wildlife Federation |
+| Florida Mottled Duck | non-migratory, peninsula population endemic; both sexes resemble a dark hen mallard; hybridisation with released feral mallards is the **biggest** threat, 7–12% already showing hybrid ancestry | FWC ("The Problem — Hybridization"); *Journal of Wildlife Management* (Bielefeld 2024) |
+| Black-bellied Whistling Duck | tree-perching, cavity-nesting, whistles in flight; pink bill, white wing stripe; **one Sarasota flock in 1981 to nearly the whole peninsula now** | Audubon Florida; USF Breeding Bird Atlas; FWC |
+| American White Pelican | nine-foot wingspan; never plunge-dives; flocks line up and herd fish into the shallows; winter only | Audubon; FWC |
+| Belted Kingfisher | hovers then dives; the **female** carries the extra rusty belly band, unusual among birds; mostly a winter visitor here | Cornell ("Why do female Belted Kingfishers have an extra rust-colored belt?") |
+| Limpkin | apple-snail specialist; bill gaps near the tip like tweezers and curves right to follow the shell's spiral; shell middens on the bank | Cornell (Birds of the World / All About Birds) |
+| Limpkin — *Listen for* | **the call is the voice of the hippogriff in *Harry Potter and the Prisoner of Azkaban*, supplied by Cornell** | **Verified.** Cornell Chronicle, Dec 2005: the Macaulay Library supplied a limpkin screech for the hippogriff; curator of audio Greg Budney chose it. This is the claim the owner asked me to source or cut — it is sourced, from Cornell's own newsroom, and it stays. |
+| Fish Crow | separable from the American crow by the nasal two-note call alone — with the honest caveat that young American crows also sound nasal | Cornell (Fish Crow Sounds); Audubon, "Birdist Rule #65" |
+| Bald Cypress | the Elfin River widened for steamboats in 1882; the species can pass 2,000 years; the purpose of the knees is still unsettled | Lake County tourism / Mount Dora boating history for the 1882 canal; 1.11.0 pass for the knees |
+| Spanish Moss | a bromeliad, not a moss and not a parasite; **no roots**; water and nutrients taken through trichomes | Standard *Tillandsia usneoides* accounts; Bermuda DENR species spotlight |
+| Resurrection Fern | epiphyte, takes nothing from the host; survives losing over 95% of its water; photosynthesis back to pre-drought values within about 12 hours of rehydration | NC State Extension; Arkansas Native Plant Society; desiccation/rehydration study (PMC8566288) |
+| White Waterlily | flowers open early morning and close around noon; pads shelter fish, frogs and dragonflies | Minnesota DNR; Lady Bird Johnson Wildflower Center |
+| Saw Palmetto | fire-adapted, resprouts from an underground stem; major nectar source; fruit eaten by black bears, foxes and **over a hundred** bird species | UF/IFAS Pinellas ("Secrets of the Saw Palmetto"); USDA FEIS; Florida Native Plant Society |
+
+### What the rewrite cost, measured
+
+51 opening paragraphs rewritten, 51 of 51. Mean length 43.4 → 53.9 words, which
+is where the approved trim samples themselves sat (52, 56 and 58 words). The
+sections — *Where to look*, *Best time*, *Listen for*, *Tell it apart* — were
+left short and plain as instructed. Across all 51 entries only **ten section
+lines changed at all**, by 354 characters in total, and every one of them is
+either a correction listed above or the light polish the owner allowed:
+
+| entry | line | why |
+|---|---|---|
+| Eastern Diamondback | *What to do* | added "silence is not an all-clear" |
+| Poison Ivy | *What to do* | the fifteen-minute window replaces "within the hour" |
+| Mosquitoes & No-see-ums | *Best time* | season corrected to April–November |
+| Lovebugs | *What to do* | says *why* to wash the car the same day (acidity) |
+| Wood Stork | *What to do* | no longer says "federally threatened" |
+| Alligator | *Listen for* | polish only |
+| Great Blue Heron | *Listen for* | attributes the twenty seconds to Cornell |
+| Limpkin | *Best time*, *Where to look* | the two polish edits the owner approved in the STEP 1a sample |
+| Fish Crow | *Listen for* | adds the young-American-crow caveat |
+
+`mark` — *Tell it apart* — did not change by a single character across the
+whole guide.
+
+Every entry over 60 words is a Know-before-you-go entry carrying one of the
+corrections above. That is deliberate: the owner's no-loss rule outranks the
+length target on exactly those eight entries.
