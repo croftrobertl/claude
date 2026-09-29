@@ -1077,3 +1077,156 @@ often fails to show the mark its entry names.
 Six photographs are CC0 and needed no credit; all six are credited to the
 observer anyway, four of them by iNaturalist handle where that is the only name
 given.
+
+## Batches 12 and 13 (1.33.0): songbirds, doves and woodpeckers — sources for 60 species
+
+Sixty entries, and as with every batch since the narration pass, the sources
+came before the prose. **One claim was cut during that pass and never written**
+(below), and one conflict between sources had to be resolved rather than
+averaged.
+
+### The four the owner flagged by name
+
+He asked that the where-notes on these be read before the entries were written.
+Three of the four describe a photograph that does not match its own name, and
+the entries were written around that rather than against it.
+
+| species | the note | what the entry does about it |
+|---|---|---|
+| **American goldfinch** | the frame is WINTER plumage — olive-tan, no yellow at all | The entry OPENS on it: *"Nobody here sees the canary-yellow bird."* The mark is the conical bill and the notched tail, not colour. |
+| **Ruby-crowned kinglet** | the ruby crown is RAISED here, which is unusual | The entry says the crown is normally hidden and most people never see it; the mark is the broken eye ring and the wing-flicking. |
+| **Ruby-throated hummingbird** | a FEMALE, throat plain white | The entry says outright that only the male carries the ruby throat, and that the female is the one you will usually be looking at. |
+| **Yellow-rumped warbler** | winter plumage with the yellow rump **clearly lit** | This one is a positive, so it is the one of the four that carries NO photo note: the frame shows the mark the entry names. The entry leads on the rump because the picture backs it. |
+
+Sources: goldfinch winter moult and the all-seed diet that starves a cowbird
+chick — Cornell *All About Birds*, Tennessee WRA, Brooklyn Botanic. Kinglet
+concealed crown and wing-flicking — Wikipedia, Missouri Dept of Conservation,
+Audubon. Hummingbird sexual dimorphism and the non-stop Gulf crossing —
+National Geographic, Missouri Dept of Conservation. Yellow-rumped wax digestion
+and the winter range it buys — Audubon, "How the Yellow-rumped Warbler Survives
+Northern Winters"; *Northern Woodlands*.
+
+### Batch 12 — songbirds, doves and woodpeckers, part 1 (28 species)
+
+| species | claims made | source |
+|---|---|---|
+| Prothonotary Warbler | **the only eastern warbler that nests in a cavity**; golden; named for papal clerks' robes | Wikipedia; Tennessee WRA; Houston Audubon |
+| Northern Parula | **nests INSIDE hanging Spanish moss in the South** (Usnea lichen further north); blue-grey with a chest band | Audubon field guide; Houston Audubon |
+| Palm Warbler | the commonest winter warbler here; **constant tail-wagging**; feeds on the ground | Cornell; the pack manifest's own field note |
+| Yellow-rumped Warbler | see above | see above |
+| Painted Bunting | blue head, green back, red underside; the female is plain green; declining | Cornell; ABC |
+| Pileated Woodpecker | crow-sized; **RECTANGULAR excavations following carpenter-ant tunnels** | Wikipedia; Cornell; Audubon |
+| Red-bellied Woodpecker | **the red belly is effectively invisible in the field** — the red is cap and nape | Tennessee WRA; 10,000 Birds; *Daily Herald* |
+| Downy Woodpecker | **the smallest woodpecker in North America**; works weed stems; **the bill is the mark against the hairy**; whinny descends | Cornell; Kaytee; Eastside Audubon |
+| Northern Flicker | **eats more ants than any bird in North America** and forages on the ground more than any other woodpecker | Tennessee WRA; Audubon; Chicago Botanic |
+| Great Crested Flycatcher | **weaves a SHED SNAKESKIN into the nest lining**; cavity nesters that do lose fewer eggs | Cornell news (2025 study on snake-skin decoration); NestWatch |
+| Eastern Bluebird | cannot excavate; depends on old cavities and nest boxes | Cornell; NestWatch |
+| Loggerhead Shrike | **legs too weak to hold prey, so it impales it** on thorn or barbed wire — the "larder"; **down about 80% since 1966** | USFWS, "Tales from the Larder"; NC Wildlife; *Northern Woodlands* |
+| Northern Mockingbird | repeats each phrase three or four times; **an unpaired male sings at night**; attacks intruders at the nest | Cornell; Audubon |
+| Northern Cardinal | **the FEMALE sings a full song**, rare among North American songbirds, and sings from the nest | Cornell *Living Bird*, "Many Female Birds Sing"; Perky-Pet |
+| Blue Jay | **caches acorns singly and plants oaks** — 50 jays cached 150,000 acorns in 28 days; **imitates a red-shouldered hawk** | UC Berkeley Oaks; UC ANR; xeno-canto; Audubon |
+| Carolina Wren | very loud for its size; pairs hold a territory year-round; nests in odd containers | Cornell; Nature Forward |
+| Tufted Titmouse | leads/joins mixed winter flocks; **pulls hair from living animals for nest lining** | Cornell; Nature Forward |
+| Boat-tailed Grackle | the male's tail folds into a deep **KEEL**; the female is brown and much smaller | Cornell; FWC |
+| Red-winged Blackbird | the male can conceal or flare the epaulet; **the female is streaky brown, not black** | Cornell; MDC; NPS |
+| Ruby-throated Hummingbird | see above | see above |
+| Purple Martin | **east of the Rockies it nests almost entirely in human-supplied housing**; the practice began with gourds hung by Choctaw and Chickasaw people | Purple Martin Conservation Association; Mass.gov; Bernheim |
+| Barn Swallow | forked streamers; mud cup on human structures, natural sites now unusual | Cornell; Audubon |
+| Cedar Waxwing | named for **red waxy droplets on the wing**; **can be intoxicated by fermented fruit** | Audubon; *Texas Parks & Wildlife*; Farm & Dairy |
+| Mourning Dove | **the coo is mistaken for an owl**; the wings **WHISTLE** on take-off, and a panicked take-off alarms other doves | Birdwatcher's General Store; Indiana Audubon; Cornell |
+| Common Ground-Dove | **North America's smallest dove**; walks; rufous in the wing when flushed | Wikipedia; Cornell; Animal Diversity Web |
+| Carolina Chickadee | leads mixed winter flocks; caches seeds singly; chick-a-dee-dee-dee | Cornell; Nature Forward |
+| Tree Swallow | huge winter flocks over Florida water; **lives on waxy bayberry fruit when insects stop** | Cornell; the yellow-rumped wax sources above |
+| Eurasian Collared-Dove | **escaped from a Bahamas pet shop in the mid-1970s**, reached the Keys unaided, now to the Pacific | Cornell; Tennessee WRA; National Geographic |
+
+### Batch 13 — songbirds, doves and woodpeckers, part 2 (32 species)
+
+| species | claims made | source |
+|---|---|---|
+| Blue-gray Gnatcatcher | **nest bound with SPIDER SILK and shingled with lichen**; long white-edged tail | Cornell; Cornell Bird Academy; Stanford |
+| White-eyed Vireo | yellow spectacles round a pale eye; **explosive song opening and closing on a sharp chick** | Audubon; MDC; ABC |
+| Red-eyed Vireo | sings all day in phrases with pauses; grey cap, white eyebrow, no wing bars | Cornell; Audubon |
+| Eastern Phoebe | constant tail-pumping; **the first bird ever banded — Audubon, silver thread, 1804** | Audubon; Cornell |
+| House Wren | plain, with only a faint eyebrow against the Carolina wren's bold one | Cornell |
+| Gray Catbird | **the cat-like mew**; mimics without repeating phrases | Cornell; Audubon |
+| Brown Thrasher | **one of the largest song repertoires of any North American bird — over 1,100 song types**; phrases sung TWICE | Cornell; Outdoor Alabama; Georgia DNR |
+| American Robin | **a winter flocking bird in Florida**, not a lone lawn bird | Cornell; Audubon |
+| Eastern Towhee | double-footed backward kick in leaf litter; **peninsular Florida's residents are PALE-eyed, so a red-eyed bird here is a winter visitor** | Cornell ID; Birds of the World; iNaturalist (*P. e. alleni*); eBird |
+| Common Grackle | bronze gloss, pale eye, **"rusty gate" song**; shorter flatter tail than the boat-tailed | Cornell; MDC |
+| Brown-headed Cowbird | **builds no nest; over 200 host species recorded**; follows cattle | Cornell; Audubon |
+| American Goldfinch | see above | see above |
+| Pine Warbler | **the only warbler that regularly eats seeds**, hence the feeder visits | Cornell; Audubon; Connecticut Audubon |
+| Common Yellowthroat | black mask on the male, plain female; **witchety-witchety-witchety** | Cornell; Smithsonian memory-phrase list |
+| Black-and-white Warbler | **creeps on trunks and limbs like a nuthatch**, unlike every other warbler | Audubon; MDC; Cornell species-compare |
+| Yellow-throated Warbler | yellow throat in a black-and-white face; year-round here; likes Spanish moss | Cornell; Audubon |
+| Chipping Sparrow | rusty cap, black eye-line; **historically lined its nest with horsehair**; dry mechanical trill | Cornell; Audubon |
+| Savannah Sparrow | runs mouse-like through grass; **yellow lore** in front of the eye | Cornell; MDC |
+| Eastern Meadowlark | **not a lark — an icterid, related to the grackles and cowbird**; yellow breast with a black V | National Geographic; NPS; Illinois State Museum |
+| House Finch | **every eastern bird descends from a 1940 Long Island release** of caged "Hollywood finches"; streaked flanks | Cornell; Tennessee WRA; Hilton Pond |
+| Chimney Swift | **cannot perch — the feet only cling**; nest glued with saliva; sharp decline as chimneys were capped | Cornell; Tennessee WRA; Texas Parks & Wildlife |
+| Eastern Kingbird | **attacks crows, hawks and eagles crossing its territory**; white tail-tip band | Cornell; Birds Outside My Window |
+| Summer Tanager | **the only entirely red bird in North America**; **a bee and wasp specialist** that wipes the sting out before swallowing | Smithsonian NZP, "The Bird that Loves the Bees"; Tennessee WRA; Houston Audubon |
+| Indigo Bunting | **no blue pigment — structural colour**; **migrates at night and learns the star pattern** (Emlen's planetarium work) | Cornell; Smithsonian NZP, "A Stellar Migrant" |
+| Ruby-crowned Kinglet | see above | see above |
+| Red-headed Woodpecker | the whole head crimson; **the only woodpecker known to COVER its caches** | NY DEC; Tennessee WRA; COSEWIC |
+| Yellow-bellied Sapsucker | drills sap wells in rows; **the wells feed other birds, squirrels and insects** | Clemson HGIC; *Northern Woodlands*; Colby |
+| Hairy Woodpecker | **bill as long as the head is wide**; call rattle holds pitch | Cornell; Kaytee; Eastside Audubon |
+| White-winged Dove | white wing stripe; **song is owl-like, "who cooks for you"** | PEEC; National Geographic; Birda |
+| Rock Pigeon | a Mediterranean cliff bird — ledges are cliffs to it; domestication left every colour | Cornell; Audubon |
+| House Sparrow | **not a New World sparrow at all** — an Old World family, no relation to the natives it feeds beside; evicts bluebirds and martins from boxes | Wild Bird Habitat Store; Cornell; Star Tribune |
+| European Starling | **all North American starlings descend from about eighty birds released in Central Park in 1890**; winter spangling wears off to a yellow bill by spring | Cook 1928 (the primary account); Royal BC Museum; National Geographic |
+
+### What the check changed
+
+1. **A cedar waxwing claim was cut before it was written.** The well-known story
+   that waxwings pass a berry down a row of perched birds until one eats it
+   could not be sourced to anything primary in the pass, so it is not in the
+   entry. The fermented-fruit intoxication and the red wax wing-tips, which
+   could be, are. This is the limpkin-hippogriff rule applied at draft time
+   rather than at audit time: an unsourceable charming fact is simply not
+   written.
+2. **A conflict about the eastern towhee had to be resolved, not split.** One
+   account put Florida's pale-eyed towhees in the PANHANDLE; the subspecies
+   accounts put *P. e. alleni* through the peninsula, and add that a red-eyed
+   towhee seen in the peninsula is a wintering northern bird. The range accounts
+   win, and the entry uses the eye as a mark for RESIDENCY — which is more
+   useful than using it for identity.
+3. **The house finch was NOT flagged `invasive`**, although it reached the east
+   through a 1940 cage-bird release. It is native to this continent and no
+   authority here treats it as invasive. Four non-natives carry the flag —
+   collared-dove, rock pigeon, house sparrow, starling — and that is all. Same
+   discipline as the kestrel's status in batch 11: a mark that over-claims
+   teaches a guest to ignore marks.
+
+### The short-tailed hawk photograph, replaced
+
+Batch 11 shipped a LIGHT-morph short-tailed hawk and carried a photo note
+saying so, because Florida's dark morph is the commoner of the two. The Director
+supplied a **dark-morph** replacement with batch 12 under the same slug (Matt
+Schenck, CC BY 4.0, Sarasota; iNaturalist observation 107035261), and the three
+renditions overwrite the batch 11 files.
+
+**The note is therefore GONE, not rewritten.** It existed because the frame
+showed the less likely bird; the new frame — a dark bird from directly below,
+carrying prey, pale barred flight feathers against the sky — is exactly what the
+entry describes, and the entry already names both morphs in its `mark` line. A
+photograph note that no longer describes a shortfall is noise. `PHOTO_SOURCES`
+carries the new credit.
+
+### Photograph notes added with these batches
+
+**Three, out of sixty**, down from eight in batches 10 and 11 — and the drop is
+the mechanism working rather than relaxing. Those were distant birds in flight
+identified by marks that a single frame often cannot show; these are perched
+songbirds photographed showing theirs. All three exceptions are the same
+failure: the frame shows the bird in a plumage or a sex that its NAME
+contradicts (goldfinch, kinglet, hummingbird — the three tabled above).
+
+Every one of the 183 renditions measured exactly as the manifests describe
+them: 1100 / 600 / 320×240, checked with `getimagesize()` on the landed files.
+No manifest correction was needed this time.
+
+Seventeen of the sixty photographs are CC0 and are credited to their observers
+anyway; most of those give only an iNaturalist handle, credited as such.
+**kcthetc1 alone supplied sixteen** — one Jacksonville observer who releases
+everything CC0.

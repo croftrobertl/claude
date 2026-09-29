@@ -36,7 +36,7 @@ dcc_section( 'shape' );
  * landing is a deliberate one-line edit here rather than a silent drift. Any
  * other count is computed from the registry.
  */
-const TOTAL = 156;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21.
+const TOTAL = 216;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21, +28, +32.
 
 check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 
@@ -117,6 +117,34 @@ foreach ( Species::dataset() as $row ) {
 	if ( in_array( Species::LIKELY_PEAK, (array) ( $row['months'] ?? [] ), true ) ) { ++$peaks; }
 }
 check( $peaks > 0, 'at least one species reaches the peak score, so Peak Now is reachable', "species at peak in some month: $peaks" );
+
+// THE CALENDAR AND THE REGISTRY MUST NAME THE SAME SPECIES.
+//
+// Added in batch 12 because it caught a real defect that every other suite
+// waved through: a generator wrote the calendar keys with the id padded INSIDE
+// the quotes ( 'goldfinch    ' ), so 59 of 216 species had no calendar row at
+// all. Nothing above notices, because `dataset()` substitutes twelve zeros for
+// a missing row — twelve valid scores, in range, the right length. The species
+// simply never reaches Peak Now, never enters the spotlight, and renders a
+// blank "Through the year" strip. On a phone that reads as a quiet month, not
+// as a bug, which is exactly why it needs a test rather than an eye.
+$cal     = Species::calendar();
+$no_row  = array_diff( array_keys( $reg ), array_keys( $cal ) );
+$orphan  = array_diff( array_keys( $cal ), array_keys( $reg ) );
+check_same( [], array_values( $no_row ), 'every species in the registry has a calendar row of its own', implode( ', ', array_slice( array_values( $no_row ), 0, 6 ) ) );
+check_same( [], array_values( $orphan ), 'and the calendar carries no row for a species that does not exist', implode( ', ', array_slice( array_values( $orphan ), 0, 6 ) ) );
+
+// EVERY SPECIES REACHES 3 IN SOME MONTH. This is the 1.17.0 data doctrine --
+// a species' best window IS its peak -- and it was documented as enforced here
+// when in fact only the global "somebody peaks" check above existed. A species
+// that tops out at 2 has a `bestLabel` naming months the UI never features.
+$never_peak = [];
+foreach ( Species::dataset() as $row ) {
+	if ( ! in_array( Species::LIKELY_PEAK, (array) ( $row['months'] ?? [] ), true ) ) {
+		$never_peak[] = (string) $row['id'];
+	}
+}
+check_same( [], $never_peak, 'and every single species reaches its peak score in some month', implode( ', ', array_slice( $never_peak, 0, 6 ) ) );
 
 dcc_section( 'flags' );
 

@@ -2090,3 +2090,76 @@ reason that was still right (mallard). Rob asked for the first three by name.
 
 **Weight at 156 species:** inline index 13.1 KB gzip, fetched detail 38.4 KB.
 Projected at 403: 33.9 KB inline / 99.1 KB detail.
+
+### 14. Batches 12 and 13 (1.33.0): 156 species became 216 — and a defect the harness waved through
+
+Sixty songbirds, doves and woodpeckers, in two packs. **Every one of the 216
+species in the registry now carries a vetted photograph**, and the three-tier
+art rule still renders for nobody — which is why both lower tiers stay
+(test-1260.php and test-1280.php exist precisely so an empty tier is not
+mistaken for a dead one).
+
+**THE HARNESS PASSED GREEN WITH FIFTY-NINE SPECIES HAVING NO CALENDAR AT ALL.**
+This is the most important thing in this batch and it was mine. A generator
+wrote the calendar keys with the id padded INSIDE the quotes —
+`'goldfinch    ' => [ … ]` — so 59 of the 60 new species had no calendar row
+that any lookup could find. **All 23 suites passed.** They passed because
+`dataset()` substitutes twelve zeros for a missing row, and twelve zeros are
+twelve valid scores, in range, of the right length. What a guest would have got:
+a blank "Through the year" strip, no "Best:" badge, never in Peak Now, never in
+the spotlight — which on a phone reads as a quiet month, not as a bug.
+
+It was caught by *looking at a rendered sheet*, not by a test. Three assertions
+now close it, in `test-species.php`, and all three were verified red by mutation:
+
+- every registry species has a calendar row of its own;
+- the calendar carries no row for a species that does not exist;
+- **every single species reaches its peak score in some month.** This last one
+  was DOCUMENTED as enforced since 1.17.0 and was not: only a global "at least
+  one species somewhere peaks" check existed, which 215 healthy species satisfy
+  on behalf of the broken one.
+
+The general lesson, and it generalises past this bug: **a defect that makes data
+ABSENT is invisible to a suite that only validates the shape of what is
+present.** When a batch adds rows to two structures that must agree, assert that
+they agree — do not assert each one separately and call it covered.
+
+**GROUPS WERE CUT SMALL FROM THE START THIS TIME.** No wall was built and none
+had to be re-cut; after sixty additions the largest look-alike group in the
+whole registry is still six (`shorebirds`). Sixteen groups, none over five.
+
+**THREE GROUPS DELIBERATELY HOLD A SPECIES THAT DOES NOT BELONG BY TAXONOMY**,
+on the batch-8 racerunner rule — confusion, not taxonomy:
+
+- the **goldfinch** sits with three warblers in `winterlittle`, because its
+  Florida plumage is olive-tan and that is the bird a guest is trying to name;
+- the **chimney swift** sits with the swallows, because "what is that over the
+  water" is the question, and it is not a swallow;
+- the **house sparrow** sits with two native sparrows, because a guest does not
+  know it is not one — which is also the entry's opening line.
+
+**FIFTY-THREE OF THE SIXTY CARRY A `sound` LINE**, taking the registry to 111.
+This is the 1.14.0 rule holding, not bending: a sound line goes in where a
+distinctive, guest-recognisable voice could be VERIFIED. Songbirds are simply
+the case — as frogs were in batch 9 — where that is nearly always true. The
+mnemonics printed (teakettle, peter-peter, drink-your-tea, witchety, fee-bee,
+po-ta-to-chip, conk-la-ree) were each checked against a source, not recalled.
+
+**THREE CROSS-LINKS CLOSED FROM THE OTHER END.** The blue jay's hawk mimicry was
+asserted by the red-shouldered hawk in batch 11 and is now stated by the jay
+itself; `jays` finally gives the Florida scrub-jay the comparison its own mark
+line has named since batch 11; and the northern parula nests INSIDE Spanish
+moss, which has been in this guide as a plant since 1.19.0. Keep doing this —
+check on every batch whether it answers a question an earlier one left open.
+
+**A PHOTO NOTE CAN BE RETIRED, AND THIS ONE WAS.** Batch 11's short-tailed hawk
+was a light morph and carried a note saying it showed the less likely of
+Florida's two forms. The Director sent a dark-morph replacement under the same
+slug; the three files were overwritten, the credit changed, and **the note was
+DELETED rather than rewritten.** A note exists to record a shortfall in a
+frame. When the frame stops falling short the note is noise, and leaving it in
+would teach a reader to distrust a photograph that is now correct.
+
+**Weight at 216 species:** inline index 17.5 KB gzip, fetched detail 50.5 KB.
+Projected at 403: 32.7 KB inline / 94.2 KB detail — slightly *better* than the
+projection from 156, because gzip does more with a larger, more repetitive set.
