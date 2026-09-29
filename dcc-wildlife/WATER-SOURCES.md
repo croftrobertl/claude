@@ -825,3 +825,87 @@ The four biggest growers are all entries where a verified fact replaced a
 vaguer one: the manatee (+154px, the exact Leesburg timeline), the
 diamondback (+143px, the rattle correction), and the turtles and bald cypress
 (+124px each, both replacing a claim that could not be sourced).
+
+## Item 6, batches 6–8 (1.33.0): sources for the 43 new species
+
+Every entry below was written from the sources named, on the same terms as the
+narration pass: no verified source, no claim. The master list supplied names,
+scientific names, flags and a one-line habitat; it is not a source, and each
+fact was checked separately.
+
+### Turtles (batch 6, 12 species)
+
+| species | claims made | source |
+|---|---|---|
+| Peninsula Cooter | two doubled-back "hairpin" head stripes; dozens of yellow lines on shell, limbs and tail; yellow not red plastron | *Pseudemys peninsularis* accounts; Animal Diversity Web |
+| Florida Red-bellied Cooter | nests inside living alligator nest mounds; arrowhead head stripe, jaw cusps, red plastron | verified for the STEP 1a sample; unchanged |
+| Red-eared Slider | native to the Mississippi drainage; released pets; interbreeding with native sliders; release prohibited by FWC Rule 68-5.001 F.A.C.; red ear patch | FWC Red-Eared Slider profile; FWC nonnative species |
+| Florida Softshell | largest softshell in North America (to ~30 in carapace); leathery flat shell, snorkel snout, buried ambush | *Apalone ferox* accounts; USGS NAS |
+| Common Snapping Turtle | bottom ambush predator; rarely basks, and then floating with only the carapace showing; long saw-toothed tail | *Chelydra serpentina* accounts; Wild South Florida |
+| Gopher Tortoise | burrow holds steady temperature year-round; **more than 350 species recorded using burrows**; eastern indigo snake depends on them; state-threatened | FWC gopher tortoise commensals; UF/IFAS Lake County; Orianne Society |
+| Florida Box Turtle | hinged plastron closes the shell completely; radiating yellow lines on a high dome | *Terrapene* accounts; Florida Box Turtle profiles |
+| Eastern Musk Turtle | four musk glands under the shell rim; bottom-walker rather than swimmer; climbs bankside branches | Virginia Herpetological Society; Missouri Dept of Conservation |
+| Loggerhead Musk Turtle | oversized head; crushes snails and mussels; clear limestone springs | USFWS; *Sternotherus minor* accounts |
+| Striped Mud Turtle | three pale stripes on the shell, two yellow stripes each side of the face | FWC striped mud turtle profile; Virginia DWR |
+| Florida Mud Turtle | endemic to Florida; small, dark and unmarked — the ABSENCE of the striped mud turtle's marks is the identification | *Kinosternon steindachneri* accounts; USFWS |
+| Florida Chicken Turtle | neck nearly as long as the shell; net of fine yellow lines; Florida subspecies limited to the peninsula; quiet weedy water, walks overland | USFWS; Animal Diversity Web |
+
+### Know before you go (batch 7, 14 species)
+
+| species | claims made | source |
+|---|---|---|
+| No-see-ums | *Culicoides* 1–3 mm, pass standard 18×16 window mesh; dawn and dusk April–November; moving air deters them | UF/IFAS EENY-349/IN626; Clemson Extension |
+| Cane Toad | introduced for cane beetles; parotoid gland behind each eye; bufotoxin absorbed through gums; can kill a dog in minutes; wipe gums, rinse mouth pointing down and out, see a vet | Florida veterinary and municipal guidance (Weston, Tequesta); VCA; PetMD; FWC |
+| Southern Black Widow | glossy black; a SINGLE JOINED red hourglass; untidy tangle webs in dark undisturbed places; bites on reaching | Penn State Extension; Florida sources |
+| Brown Widow | now the commoner widow around buildings; **spiky egg sac like a sandspur**; orange-yellow hourglass; more potent venom but far less injected, and timid | Clemson HGIC; UC Riverside CISR; UF/IFAS NW District |
+| Puss Caterpillar | among the most venomous caterpillars in the US; hollow venomous spines under the "fur"; remove spines with tape | UF/IFAS EENY-545/IN976; Merck Manual |
+| Saddleback Caterpillar | green "saddle" with a brown oval; hollow venom-tipped spines that break off in tissue | UF/IFAS EENY-522; published venom work |
+| Paper Wasps | open unwrapped umbrella comb under eaves and rails; defend only when the nest is disturbed; can sting more than once | standard *Polistes* accounts; NC State Extension |
+| Southern Yellowjacket | nests in the ground; stings repeatedly with a smooth stinger; southern colonies can overwinter and grow very large | NC State Extension; *Vespula squamosa* accounts |
+| Lone Star Tick | commonest human-biting tick in Florida; single silvery-white spot on the female; **alpha-gal syndrome**, delayed red-meat allergy; remove straight out with fine tweezers | UF PHHP; UF/IFAS IN1017; Cleveland Clinic; AAFA |
+| Chiggers | larva bites, not the adult; **does not burrow and does not drink blood** — it builds a stylostome and feeds through it; nail polish is useless; hot soapy shower | Texas A&M AgriLife; Mississippi State Extension; Cleveland Clinic |
+| Yellow Fly | described as the most aggressive fly in Florida; ~1 cm, yellow with black fore-legs and purple-banded green eyes; bites blister | UF/IFAS EENY-320; *Cutis* clinical review |
+| Tread-softly | stinging hairs on stem, leaf, flower AND fruit; also called finger rot; deeply lobed leaves, white flowers | UF/IFAS HB003; Clemson; Florida Native Plant Society |
+| Brazilian Pepper | introduced as an ornamental before 1900; over 750,000 acres in Florida; cashew family, same as poison ivy, causes contact dermatitis; smoke is worse | FDACS noxious weed profile; *Cutis*; UF/IFAS |
+| Eastern Velvet Ant | a wingless female WASP, not an ant; sting widely rated the most painful in the Southeast; not aggressive — stings are to bare feet | Mississippi State Extension; PestWorld |
+
+### Snakes and lizards (batch 8, 17 species)
+
+| species | claims made | source |
+|---|---|---|
+| Black Racer | fast, sight-hunting, holds its head up; white chin; harmless | Florida Museum, North American Racer; UF/IFAS Escambia |
+| Yellow Rat Snake | angled belly scales that grip bark; four thin dark stripes on mustard yellow; climbs | *Pantherophis quadrivittatus* accounts |
+| Corn Snake | spear-point mark on the head; black-edged red saddles on orange; placid rodent specialist | NC Wildlife; Outdoor Alabama; Smithsonian NZ |
+| Eastern Garter Snake | three pale stripes; damp edges; **black lips, no pre-ocular spot** | Mass Audubon; *Thamnophis sirtalis* accounts |
+| Peninsula Ribbon Snake | slimmer than a garter; **white lips and a white spot before the eye**; waterside | Mass Audubon; *Thamnophis sauritus* accounts |
+| Southern Ringneck Snake | pale neck ring; orange belly shown by coiling the tail upright as an aposematic display | UGA SREL; Florida Museum; Outdoor Alabama |
+| Rough Green Snake | arboreal; eats mostly insects — caterpillars, spiders, crickets; very reluctant to bite | Missouri Dept of Conservation; Chesapeake Bay Program |
+| Eastern Mud Snake | glossy black above, red-and-black barred belly; specialises on amphiumas and sirens; rolls to flash the belly and presses the pointed tail tip | Loyola LUCEC; Virginia Herpetological Society; Animal Diversity Web |
+| Eastern Indigo Snake | **longest native snake in the US** (to ~8.6 ft); eats other snakes including rattlesnakes and is unaffected by their venom; winters in gopher tortoise burrows; ESA-threatened since 1978 | USFWS; Smithsonian NZ; Florida Wildlife Federation |
+| Green Anole | pink dewlap; colour change is mood and temperature; **moved up into the branches after the brown anole arrived, and toe pads measurably enlarged in ~15 years / 20 generations** | published work reported by *The Conversation* and Reptiles Magazine |
+| Brown Anole | native to Cuba and the Bahamas; Florida Keys 1887; now nearly every county; eats young green anoles; orange-red dewlap with a pale border; stays low | UF/IFAS NW District; *Anolis sagrei* accounts |
+| Southeastern Five-lined Skink | five pale stripes, ~8 in; blue juvenile tail as a decoy | Florida State Parks; SC PARC |
+| Broad-headed Skink | Florida's largest skink, to ~13 in; males' heads swell and flush orange in spring; arboreal | Florida State Parks; NSIS Florida Wildlife |
+| Ground Skink | smallest lizard here, 3–5.75 in; moves through leaf litter; **transparent window in the lower eyelid** | NC Wildlife; Animal Diversity Web; Virginia Herpetological Society |
+| Six-lined Racerunner | six pale lines; **clocked at 18 mph**; active in full midday heat | Kansas Wetlands Education Center; *Aspidoscelis sexlineata* accounts |
+| Eastern Glass Lizard | legless lizard with **movable eyelids and external ear openings**, which no snake has; tail shatters and is more than half the animal | NC Wildlife; Herps of NC; Britannica |
+| Mediterranean House Gecko | non-native, from the Mediterranean; nocturnal; hunts insects drawn to lights | Texas Invasive Species Institute; NDOW |
+
+### Photograph notes added with these batches
+
+Four, each for a different reason, by the rule that a photograph is a claim:
+
+- **Florida mud turtle** — the only open-licence photograph of the species that
+  could be found, and it is a head-in-shell close-up, so the plainness that
+  identifies it is easier checked against the striped mud turtle's photo.
+- **Eastern indigo snake** — no location stated and the source is a U.S. Army
+  page in Georgia, so very likely not a Florida animal; every other reptile in
+  the pack is.
+- **Puss caterpillar** and **paper wasps** — photographed in Virginia. The
+  species occur here; most open-licence puss caterpillar images are of the adult
+  moth, and the caterpillar is the stage that stings.
+- **Chiggers** — an adult mite. The stage that bites is a larva too small to
+  photograph usefully, which is itself the point of the entry.
+
+The mosquito's existing note lost its "no-see-ums are not shown" clause: they
+have their own entry now, so it described a gap that no longer exists.

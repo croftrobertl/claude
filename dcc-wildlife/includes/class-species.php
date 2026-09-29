@@ -867,6 +867,260 @@ final class Species {
 				'where' => __( 'weedy ponds, ditches and marsh edges away from the main channel', 'dcc-wildlife' ),
 				'mark'  => __( 'an extraordinarily long neck, a net of fine yellow lines on the shell, and vertically striped hind legs', 'dcc-wildlife' ),
 			],
+			// ---- BATCH 8 (1.33.0): the snakes and lizards on dry land -------
+			// Nine snakes and eight lizards. The guide had four venomous snakes
+			// and three watersnakes and nothing else that crawls, so a guest who
+			// met a black racer on the lawn — which is the snake they are most
+			// likely to meet — had nothing to look it up in.
+			//
+			// LOOK-ALIKE GROUPS ARE SMALL AND SPECIFIC, for the same reason
+			// the turtles' are: one "land snakes" group of nine put eight
+			// other species in every sheet, which is a wall rather than an
+			// identification. Five groups, each answering one real question:
+			//   blacksnakes   — big glossy dark ones (racer, indigo, mud)
+			//   stripedsnakes — garter vs ribbon, the classic pair
+			//   climbers      — the two Pantherophis found in outbuildings
+			//   anoles, skinks — the pairs guests actually stand over
+			//
+			// Four carry NO group on purpose. The ringneck, the glass lizard
+			// and the house gecko are unmistakable once seen, and the glass
+			// lizard's confusion is with SNAKES in general, which its own
+			// "Tell it apart" line answers better than a list would.
+			//
+			// The ROUGH GREEN SNAKE is the fourth, and it is a real trade-off
+			// rather than a gap. It is genuinely confused with the Florida
+			// green watersnake — the names are one word apart — but a species
+			// can hold only one look-alike group, and the watersnake's is
+			// `snakes`, where it answers "is this the venomous one". That
+			// question outranks this one, so the green watersnake stays put
+			// and the rough green snake's own "Tell it apart" line names it
+			// instead. Do not move the watersnake out of `snakes` to tidy
+			// this up: it would take one of the three harmless watersnakes
+			// out of the cottonmouth comparison.
+			//
+			// The watersnakes keep `snakes` with the cottonmouth. That set
+			// answers "is this the venomous one", and it is not this question.
+			'blackracer'      => [
+				'emoji' => '🐍',
+				'name'  => __( 'Black Racer', 'dcc-wildlife' ),
+				'sci'   => 'Coluber constrictor priapus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'blacksnakes',
+				'odds'  => 'certain',
+				'fact'  => __( 'The snake you are most likely to meet away from the water, and it will be leaving. Slate-black above, pale grey beneath, with a white chin and a bright, watchful eye — it hunts by sight rather than smell, which is why it holds its head up off the ground. Fast, nervous and completely harmless.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings and afternoons', 'dcc-wildlife' ),
+				'where' => __( 'lawn edges, mulch beds and the base of hedges — usually a black streak going away from you', 'dcc-wildlife' ),
+				'mark'  => __( 'glossy black with a white chin and a round pupil; it flees rather than coils', 'dcc-wildlife' ),
+			],
+			'yellowratsnake'  => [
+				'emoji' => '🐍',
+				'name'  => __( 'Yellow Rat Snake', 'dcc-wildlife' ),
+				'sci'   => 'Pantherophis quadrivittatus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'climbers',
+				'odds'  => 'certain',
+				'fact'  => __( 'Mustard-yellow with four thin dark stripes running the length of it, and much more likely to be met vertically than horizontally: the belly scales are angled at the edges, which turns a tree trunk into a staircase. It is the snake in the rafters, the one that eats the rats, and it is harmless.', 'dcc-wildlife' ),
+				'best'  => __( 'warm days, and after dark in high summer', 'dcc-wildlife' ),
+				'where' => __( 'up oak trunks, in outbuildings, along rafters and fence lines', 'dcc-wildlife' ),
+				'mark'  => __( 'yellow to olive with four thin dark stripes head to tail, and a habit of climbing', 'dcc-wildlife' ),
+			],
+			'cornsnake'       => [
+				'emoji' => '🐍',
+				'name'  => __( 'Corn Snake', 'dcc-wildlife' ),
+				'sci'   => 'Pantherophis guttatus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'climbers',
+				'odds'  => 'likely',
+				'fact'  => __( 'Orange and rust, with big red-brown saddles outlined in black and a spearhead pointing forward between the eyes. It is among the most placid snakes in Florida and one of the most useful — a rodent specialist that hunts barns and woodpiles. People keep them as pets the world over; here it simply lives in the yard.', 'dcc-wildlife' ),
+				'best'  => __( 'warm evenings and nights', 'dcc-wildlife' ),
+				'where' => __( 'woodpiles, outbuildings and mulch, mostly after dark', 'dcc-wildlife' ),
+				'mark'  => __( 'orange with black-edged red saddles, and a spear-point mark on top of the head', 'dcc-wildlife' ),
+			],
+			'gartersnake'     => [
+				'emoji' => '🐍',
+				'name'  => __( 'Eastern Garter Snake', 'dcc-wildlife' ),
+				'sci'   => 'Thamnophis sirtalis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'stripedsnakes',
+				'odds'  => 'likely',
+				'fact'  => __( 'Three pale stripes down a dark body, and a life lived in the damp — lawn edges, ditch banks, anywhere frogs and earthworms are. Florida’s are often washed with blue between the stripes. It is harmless, though it will flatten and smell terrible if you pick it up, which is its whole argument.', 'dcc-wildlife' ),
+				'best'  => __( 'mornings, especially after rain', 'dcc-wildlife' ),
+				'where' => __( 'damp lawn edges, ditches and the margins of wet ground', 'dcc-wildlife' ),
+				'mark'  => __( 'three pale stripes on a stout dark body, and black lips — the ribbon snake is slimmer, with white lips and a white spot before the eye', 'dcc-wildlife' ),
+			],
+			'ribbonsnake'     => [
+				'emoji' => '🐍',
+				'name'  => __( 'Peninsula Ribbon Snake', 'dcc-wildlife' ),
+				'sci'   => 'Thamnophis sauritus sackenii',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'stripedsnakes',
+				'odds'  => 'likely',
+				'fact'  => __( 'A garter snake drawn thin. It is built long and narrow with a tail that is a third of it, and it lives right at the water’s edge, hunting frogs and small fish and swimming when it has to. Quick, nervous, and quite harmless.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings at the water’s edge', 'dcc-wildlife' ),
+				'where' => __( 'marshy margins, wet grass and the reedy edges of the canal', 'dcc-wildlife' ),
+				'mark'  => __( 'much slimmer than a garter snake, with white lips and a white spot just in front of the eye', 'dcc-wildlife' ),
+			],
+			'ringnecksnake'   => [
+				'emoji' => '🐍',
+				'name'  => __( 'Southern Ringneck Snake', 'dcc-wildlife' ),
+				'sci'   => 'Diadophis punctatus punctatus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'odds'  => 'likely',
+				'fact'  => __( 'A pencil of a snake, slate-grey above with a narrow pale collar, and it carries a secret underneath: the belly is orange-yellow, and when something frightens it, it coils the tail into a tight upright spiral to flash that colour. It is a warning flag borrowed from snakes that can back it up. This one cannot, and is harmless.', 'dcc-wildlife' ),
+				'best'  => __( 'after rain; mostly under things at other times', 'dcc-wildlife' ),
+				'where' => __( 'under boards, logs, mulch and pots — found by lifting rather than looking', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny and slate-grey with a pale neck ring, and an orange belly it shows by curling its tail', 'dcc-wildlife' ),
+			],
+			'roughgreensnake' => [
+				'emoji' => '🐍',
+				'name'  => __( 'Rough Green Snake', 'dcc-wildlife' ),
+				'sci'   => 'Opheodrys aestivus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'odds'  => 'likely',
+				'fact'  => __( 'Bright leaf-green above and cream below, and almost impossible to see: it hunts in the middle of a shrub, moving slowly through the twigs and picking off caterpillars and spiders. It is one of very few snakes that eats mostly insects, and it is so gentle it is easier to lift off a branch than to make it bite.', 'dcc-wildlife' ),
+				'best'  => __( 'warm days, in the green', 'dcc-wildlife' ),
+				'where' => __( 'low in shrubs and vines over the bank, usually motionless', 'dcc-wildlife' ),
+				'mark'  => __( 'slender and bright leaf-green, up in foliage rather than on the ground — the Florida green watersnake is far heavier, olive rather than green, and stays in the water', 'dcc-wildlife' ),
+			],
+			'mudsnake'        => [
+				'emoji' => '🐍',
+				'name'  => __( 'Eastern Mud Snake', 'dcc-wildlife' ),
+				'sci'   => 'Farancia abacura',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'blacksnakes',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Glossy blue-black on top and barred red and black underneath, and it spends its life in the mud after one very specific meal: the amphiuma, an eel-shaped salamander two or three feet long that lives in the same swamps. Cornered, a mud snake rolls over to flash the red belly and presses its pointed tail-tip against you — harmlessly, whatever the old stories say.', 'dcc-wildlife' ),
+				'best'  => __( 'warm wet nights', 'dcc-wildlife' ),
+				'where' => __( 'mucky shallows, swamp edges and the wet ground between them', 'dcc-wildlife' ),
+				'mark'  => __( 'glossy black above with bold red-and-black bars across the belly, and a hard pointed tail tip', 'dcc-wildlife' ),
+			],
+			'indigosnake'     => [
+				'emoji' => '🐍',
+				'name'  => __( 'Eastern Indigo Snake', 'dcc-wildlife' ),
+				'sci'   => 'Drymarchon couperi',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'blacksnakes',
+				'flags' => [ 'protected' ],
+				'odds'  => 'rare',
+				'safe'  => __( 'Federally threatened: watch, do not approach, and never disturb a tortoise burrow — it is this snake’s winter shelter.', 'dcc-wildlife' ),
+				'fact'  => __( 'The longest native snake in the United States — well past eight feet — and one of the calmest. It is glossy blue-black all over, hunts in daylight, and eats other snakes, rattlesnakes included, being unbothered by their venom. In winter it shelters in gopher tortoise burrows, which is why saving the tortoise is how you save this.', 'dcc-wildlife' ),
+				'best'  => __( 'bright winter and spring days', 'dcc-wildlife' ),
+				'where' => __( 'dry sandhills near tortoise burrows — a genuinely rare sighting here', 'dcc-wildlife' ),
+				'mark'  => __( 'enormous, uniformly glossy blue-black, often with a red-orange chin; it moves in the open by day', 'dcc-wildlife' ),
+			],
+			'greenanole'      => [
+				'emoji' => '🦎',
+				'name'  => __( 'Green Anole', 'dcc-wildlife' ),
+				'sci'   => 'Anolis carolinensis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'anoles',
+				'odds'  => 'certain',
+				'fact'  => __( 'Our only native anole, and it has been pushed upwards. The male signals by flaring a pink throat fan and doing press-ups; he can also shift from green to brown, which is mood and temperature rather than camouflage. Since the brown anole arrived, green anoles have moved up into the branches — and in fifteen years their toe pads measurably grew to grip the thinner twigs.', 'dcc-wildlife' ),
+				'best'  => __( 'warm days, on anything vertical', 'dcc-wildlife' ),
+				'where' => __( 'higher up — shrubs, tree trunks, railings and screens', 'dcc-wildlife' ),
+				'mark'  => __( 'green (or brown) with a long thin tail and a PINK throat fan; the brown anole’s is orange-red with a pale stripe', 'dcc-wildlife' ),
+			],
+			'brownanole'      => [
+				'emoji' => '🦎',
+				'name'  => __( 'Brown Anole', 'dcc-wildlife' ),
+				'sci'   => 'Anolis sagrei',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'anoles',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'From Cuba and the Bahamas by way of the Florida Keys in 1887, and now in very nearly every county in the state. It keeps low — ground, kerbs, the bottom of walls — and it eats young green anoles, which is why the natives went up the trees. The throat fan is orange-red with a pale border, and it is out constantly.', 'dcc-wildlife' ),
+				'best'  => __( 'any warm day, all day', 'dcc-wildlife' ),
+				'where' => __( 'low down: paths, kerbs, wall bases, pot rims', 'dcc-wildlife' ),
+				'mark'  => __( 'brown with a ridged back and pale diamond or stripe pattern, and an ORANGE-red throat fan; it stays low', 'dcc-wildlife' ),
+			],
+			'fivelinedskink'  => [
+				'emoji' => '🦎',
+				'name'  => __( 'Southeastern Five-lined Skink', 'dcc-wildlife' ),
+				'sci'   => 'Plestiodon inexpectatus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'skinks',
+				'odds'  => 'likely',
+				'fact'  => __( 'A glossy brown lizard with five pale stripes from nose to tail, and a tail that starts out electric blue and fades as it grows. The blue is a decoy: a predator grabs the bright end, the tail comes away, and the skink walks off. It is the skink you will meet on a woodpile.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings, on sun-warmed wood', 'dcc-wildlife' ),
+				'where' => __( 'woodpiles, fallen logs and the sunny side of sheds', 'dcc-wildlife' ),
+				'mark'  => __( 'five pale stripes on a glossy body, about eight inches; the broad-headed skink is far bigger and an adult male has an orange head', 'dcc-wildlife' ),
+			],
+			'broadheadskink'  => [
+				'emoji' => '🦎',
+				'name'  => __( 'Broad-headed Skink', 'dcc-wildlife' ),
+				'sci'   => 'Plestiodon laticeps',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'skinks',
+				'odds'  => 'likely',
+				'fact'  => __( 'Florida’s largest skink, and the big males are unmistakable in spring: olive-brown and thirteen inches long, with the whole head swollen and flushed bright orange. They are tree lizards more than ground ones — look up the trunk of a big oak rather than down at the leaf litter.', 'dcc-wildlife' ),
+				'best'  => __( 'spring mornings, when the males are in colour', 'dcc-wildlife' ),
+				'where' => __( 'up oak trunks and on big fallen limbs', 'dcc-wildlife' ),
+				'mark'  => __( 'large and heavy, an adult male with a wide, bright orange head; the five-lined skink is half the size and striped', 'dcc-wildlife' ),
+			],
+			'groundskink'     => [
+				'emoji' => '🦎',
+				'name'  => __( 'Ground Skink', 'dcc-wildlife' ),
+				'sci'   => 'Scincella lateralis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'skinks',
+				'odds'  => 'likely',
+				'fact'  => __( 'The smallest lizard you will see here, three to five inches of polished brown with a dark line down each side, and it does not climb anything. It swims through leaf litter instead, with a rustle you hear more often than you see it, and it has a clear window in its lower eyelid so it can keep watch with its eyes shut.', 'dcc-wildlife' ),
+				'best'  => __( 'warm days, in the shade', 'dcc-wildlife' ),
+				'where' => __( 'leaf litter and mulch at the wood’s edge — heard as a rustle, seen as a flick', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny, smooth and coppery-brown with a dark stripe along each side, and short legs it barely uses', 'dcc-wildlife' ),
+			],
+			'racerunner'      => [
+				'emoji' => '🦎',
+				'name'  => __( 'Six-lined Racerunner', 'dcc-wildlife' ),
+				'sci'   => 'Aspidoscelis sexlineata',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'skinks',
+				'odds'  => 'likely',
+				'fact'  => __( 'Six pale lines down a dark brown back, and a lizard that has decided the answer to everything is speed — clocked at eighteen miles an hour, which on open sand is a blur rather than an animal. It hunts in the full heat of the day when everything else is in the shade, and it never stops moving.', 'dcc-wildlife' ),
+				'best'  => __( 'hot middays, on open sand', 'dcc-wildlife' ),
+				'where' => __( 'dry sandy ground, path edges and scrub in full sun', 'dcc-wildlife' ),
+				'mark'  => __( 'six crisp pale lines on dark brown, a whip tail, and continuous fast movement', 'dcc-wildlife' ),
+			],
+			'glasslizard'     => [
+				'emoji' => '🦎',
+				'name'  => __( 'Eastern Glass Lizard', 'dcc-wildlife' ),
+				'sci'   => 'Ophisaurus ventralis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A lizard that looks exactly like a snake and is not one. It has no legs, but it has eyelids that blink and ear openings behind the jaw, which no snake has. The name is the other half: seized, it thrashes and the tail shatters off in pieces, leaving the predator with the wrong end. More than half of a whole one is tail.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings, and after rain', 'dcc-wildlife' ),
+				'where' => __( 'grassy edges and sandy open ground; often found by mowing', 'dcc-wildlife' ),
+				'mark'  => __( 'legless but with blinking EYELIDS and visible ear holes, a stiff body and a groove along each side', 'dcc-wildlife' ),
+			],
+			'housegecko'      => [
+				'emoji' => '🦎',
+				'name'  => __( 'Mediterranean House Gecko', 'dcc-wildlife' ),
+				'sci'   => 'Hemidactylus turcicus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'The pale, bug-eyed, soft-looking gecko on the porch wall after dark, mottled with dark spots and translucent enough to be faintly pink. It is not native to anywhere near here — it came from around the Mediterranean — and it has worked out the one thing that matters: a lit wall is a conveyor belt of moths.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, wherever a light is on', 'dcc-wildlife' ),
+				'where' => __( 'porch walls, window screens and around outside lights', 'dcc-wildlife' ),
+				'mark'  => __( 'pale pinkish-grey with dark mottling and bumpy skin, vertical pupils, and toes that hold onto glass', 'dcc-wildlife' ),
+			],
 			// The snake split (1.19.0). The generic "Water Snake" hid the one
 			// distinction that carries risk; the cottonmouth lives in the
 			// safety group above, and these are the harmless lookalikes.
@@ -1448,6 +1702,23 @@ final class Species {
 			'treadsoftly'     => [ 1, 2, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Flowers spring into summer; the hairs are there all year.
 			'brazilianpepper' => [ 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3 ], // Evergreen; berries red late autumn into winter.
 			'velvetant'       => [ 0, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 0 ], // Females walk open sand on warm days.
+			'blackracer'      => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // Active whenever it is warm; least in midwinter.
+			'yellowratsnake'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Climbing and hunting through the warm months.
+			'cornsnake'       => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 1 ], // Nocturnal in high summer, so seen most then.
+			'gartersnake'     => [ 1, 2, 3, 3, 3, 2, 2, 2, 3, 3, 2, 1 ], // Out after rain; quieter in the hottest weeks.
+			'ribbonsnake'     => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // At the water’s edge through the warm months.
+			'ringnecksnake'   => [ 1, 2, 3, 3, 3, 2, 2, 2, 3, 3, 2, 1 ], // Found after rain, spring and autumn.
+			'roughgreensnake' => [ 0, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 0 ], // In leaf, when it is hidden by being green.
+			'mudsnake'        => [ 0, 1, 2, 2, 3, 3, 3, 3, 2, 2, 1, 0 ], // Warm wet nights in summer.
+			'indigosnake'     => [ 2, 3, 3, 2, 2, 1, 1, 1, 1, 2, 2, 2 ], // Diurnal, and most often seen in the cool season.
+			'greenanole'      => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // Out on any warm day, all year in practice.
+			'brownanole'      => [ 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // The commonest lizard here, out constantly.
+			'fivelinedskink'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Basking on wood through the warm months.
+			'broadheadskink'  => [ 1, 1, 2, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Males in breeding colour in spring.
+			'groundskink'     => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // In the litter whenever it is warm.
+			'racerunner'      => [ 0, 1, 2, 3, 3, 3, 3, 3, 2, 2, 1, 0 ], // A hot-weather lizard; out in full midday sun.
+			'glasslizard'     => [ 1, 1, 2, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Most often found in spring, and after rain.
+			'housegecko'      => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // On lit walls every warm night.
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
 			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
 			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
@@ -1560,6 +1831,8 @@ final class Species {
 		// Batch 7 (1.33.0). The yellowjacket's source is only 1024 wide,
 		// so its full rendition is 1024 and not 1100.
 		'noseeums' => 1100, 'canetoad' => 1100, 'blackwidow' => 1100, 'brownwidow' => 1100, 'pusscaterpillar' => 1100, 'saddleback' => 1100, 'paperwasps' => 1100, 'yellowjacket' => 1024, 'lonestartick' => 1100, 'chiggers' => 1100, 'yellowfly' => 1100, 'treadsoftly' => 1100, 'brazilianpepper' => 1100, 'velvetant' => 1100,
+		// Batch 8 (1.33.0).
+		'blackracer' => 1100, 'yellowratsnake' => 1100, 'cornsnake' => 1100, 'gartersnake' => 1100, 'ribbonsnake' => 1100, 'ringnecksnake' => 1100, 'roughgreensnake' => 1100, 'mudsnake' => 1100, 'indigosnake' => 1100, 'greenanole' => 1100, 'brownanole' => 1100, 'fivelinedskink' => 1100, 'broadheadskink' => 1100, 'groundskink' => 1100, 'racerunner' => 1100, 'glasslizard' => 1100, 'housegecko' => 1100,
 		// Batch 6 (1.33.0) — every turtle rendition is 1100 wide.
 		'peninsulacooter' => 1100, 'redbelliedcooter' => 1100, 'redearedslider' => 1100, 'softshell' => 1100, 'snappingturtle' => 1100, 'gophertortoise' => 1100, 'boxturtle' => 1100, 'muskturtle' => 1100, 'loggerheadmusk' => 1100, 'stripedmudturtle' => 1100, 'floridamudturtle' => 1100, 'chickenturtle' => 1100,
 	];
@@ -2114,6 +2387,11 @@ final class Species {
 
 	public static function photos(): array {
 		$ids = [
+			// Batch 8 (1.33.0): the snakes and lizards on dry land.
+			'blackracer', 'yellowratsnake', 'cornsnake', 'gartersnake', 'ribbonsnake',
+			'ringnecksnake', 'roughgreensnake', 'mudsnake', 'indigosnake',
+			'greenanole', 'brownanole', 'fivelinedskink', 'broadheadskink',
+			'groundskink', 'racerunner', 'glasslizard', 'housegecko',
 			// Batch 7 (1.33.0): the rest of Know before you go.
 			'noseeums', 'canetoad', 'blackwidow', 'brownwidow', 'pusscaterpillar',
 			'saddleback', 'paperwasps', 'yellowjacket', 'lonestartick', 'chiggers',

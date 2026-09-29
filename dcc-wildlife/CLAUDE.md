@@ -1916,3 +1916,54 @@ in 1.33.0 only made it easy to see. `ui-mapbar.mjs` probes three points inside
 each open panel with `elementFromPoint` and requires the panel to own all of
 them — "is it visible" is the wrong question; "what would the tap hit" is the
 right one.
+
+### 10. Item 6, batches 6–8 (1.33.0): 51 species became 93
+
+Three photo packs landed and their species were written to match. What the
+batches settled, beyond the entries themselves:
+
+**LOOK-ALIKE GROUPS ARE SMALL, AND "ALL THE TURTLES" IS NOT A GROUP.** The
+first cut put all twelve turtles in one `turtles` group, which put eleven other
+species in every sheet — including a land tortoise underneath a basking cooter.
+A look-alike section answers ONE question, *which of these am I looking at*, and
+a guest standing over a cooter is not also wondering about a gopher tortoise.
+Four turtle groups (`baskers`, `mudmusk`, `bigwater`, `landturtles`) and five
+for batch 8 (`blacksnakes`, `stripedsnakes`, `climbers`, `anoles`, `skinks`).
+Sheets went from 11 look-alikes to 1–3. **Four species carry no group at all**,
+which is correct and not an oversight — the ringneck snake, the glass lizard and
+the house gecko are unmistakable, and the rough green snake is a deliberate
+trade-off recorded in the registry beside it.
+
+**A SPECIES HOLDS ONE LOOK-ALIKE GROUP, SO OVERLAPS ARE A CHOICE.** The Florida
+green watersnake is confused with the cottonmouth *and* with the rough green
+snake. It stays in `snakes`, because "is this the venomous one" outranks "which
+green snake is this", and the rough green snake's own "Tell it apart" line names
+the watersnake instead. Do not move it to tidy this up: it would take one of the
+three harmless watersnakes out of the cottonmouth comparison.
+
+**THE SKINKS GROUP HOLDS A LIZARD THAT IS NOT A SKINK.** The six-lined
+racerunner is in it because a striped brown lizard running across sand is what a
+guest compares to a five-lined skink. Confusion, not taxonomy — the same rule
+that put the anhinga in `dark` with the herons.
+
+**COUNTS IN THE HARNESS ARE DERIVED.** See the batch-6 commit. One number is
+typed — `TOTAL` in test-species.php — so a batch is a deliberate one-line edit.
+Everything else is computed, and the suites assert that the parts agree with the
+whole. If a batch makes you edit more than `TOTAL`, something has genuinely
+changed shape and is worth reading twice.
+
+**AN ANIMAL THAT IS ALSO A HAZARD APPEARS TWICE, BY DESIGN.** The alligator has
+since 1.19.0; the cane toad joined it in 1.33.0. `test-narration.php` therefore
+asks who is in the safety list AS A GUEST SEES IT (safety group ∪ danger-flagged)
+rather than who is in the safety group — otherwise a hazard could be added as an
+animal and skip the no-safety-fact-lost contract entirely.
+
+**Weight at 93 species, measured:** inline index 7.8 KB gzip, fetched detail
+23.3 KB gzip. Scaling the real 93 to 403 projects 33.9 KB inline and 101 KB
+fetched — close to the 9.6 KB / 79 KB the synthetic 403-species run gave,
+because gzip does better on a bigger, more repetitive set than linear scaling
+predicts. Trust the synthetic figure over the scaled one.
+
+**Still to come:** amphibians next, then the remaining packs. No release zip
+until every pack is in — the owner's instruction, and the reason nothing has
+been built yet.
