@@ -288,11 +288,30 @@ render round and his say.
 - **Summer on the Canal scenes:** all three — gator glide, flamingo pool float
   with the flip-flop, mullet skip — rotating at the usual cadence.
 - **Florida Keys:** keeps its Keys feel (sun, palms, hibiscus, colours, name)
-  but its animals and plants are CENTRAL Florida, never sea life. Scene K3
-  (hibiscus bloom drops, floats, a fish nibbles) is approved; the pelican dive
-  and sea turtle were declined. No animal appears twice across the Keys hero,
-  sprites and scenes. Snowbird's flamingo V and arrival scene, and Summer's
-  inflatable flamingo, are NOT affected by the Keys flamingo swap.
+  but its animals and plants are CENTRAL Florida, never sea life. Snowbird's
+  flamingo V and arrival scene, and Summer's inflatable flamingo, are NOT
+  affected by the Keys swaps. Picked 2026-09-29:
+  - Scenes, all five on the normal cadence, rotating like Spring on the
+    Canal's three: KA anhinga drying its wings on a snag, KB osprey catch,
+    KC sandhill crane pair dance, KD limpkin and the apple snail, K3 hibiscus
+    bloom (drops, floats, a fish nibbles). The pelican dive and sea turtle
+    were declined.
+  - Hero: the osprey carrying a fish, two-frame wingbeat — replaces the
+    brown pelican.
+  - Boat: the aluminium jon boat with a small outboard — replaces the flats
+    skiff.
+  - Bird: the white ibis — replaces the flamingo. The roseate spoonbill was
+    declined: not a Lake County bird (Rob cut it from the Wildlife guide on
+    that basis). Do not offer it again.
+  - The osprey hero AND the osprey scene (and their fish) are both kept, with
+    the clash list in front of Rob. Do not flag it again: a scene never runs
+    while a hero crosses, so the osprey is never on screen twice at once.
+  - The Keys sun is a corner accent only — never a sprite, never two on
+    screen.
+- **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
+  distance tie) decides nothing in 2027–2036. Same-day clashes decades out
+  (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
+  question to Rob — any sane, deterministic behaviour is fine.
 - **Calendar rules (both resolvers, identically):** a holiday's own day is
   never given away; Easter beats April Fool's on 1 Apr 2029; a lone day of a
   long theme goes to the theme that starts next, EXCEPT that a one-day holiday
