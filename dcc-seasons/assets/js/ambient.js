@@ -63,22 +63,89 @@
 		return [s, e];
 	}
 	function days(s, e) { return Math.round((new Date(e) - new Date(s)) / 864e5); }
-	/* Legacy rows (pre-3.7.0 Y-m-d strings) still match, for a cached page
-	 * that carries an old config; the narrowest containing range wins. */
-	function activeRow(rows, date) {
-		var y = +date.slice(0, 4), best = null, span = 1e9, i, yy, r, rr;
+	/* ---- Which row wins a day: the four rules of Schedule::active(),
+	 * identically (tools/test-schedule.js walks 2027-2036 through both).
+	 * The holiday and clash tables come from PHP in the config. ---- */
+	var HOL = CFG.holidays || {}, CLASH = CFG.clashWins || [];
+	function addDays(date, n) {
+		var p = date.split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2] + n);
+		return ymd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+	}
+	function ownDay(theme, y) { return HOL[theme] ? resolve({ on: HOL[theme], off: 0 }, y) : null; }
+	/* Every row instance containing date, in row order. Legacy rows
+	 * (pre-3.7.0 Y-m-d strings) still match, for a cached old config. */
+	function hits(rows, date) {
+		var y = +date.slice(0, 4), out = [], i, yy, r, rr;
 		for (i = 0; i < rows.length; i++) {
 			r = rows[i];
 			if (typeof r.start === 'string') {
-				if (r.start <= date && date <= r.end && days(r.start, r.end) < span) { span = days(r.start, r.end); best = r; }
+				if (r.start <= date && date <= r.end) { out.push({ row: r, span: days(r.start, r.end) }); }
 				continue;
 			}
 			for (yy = y - 1; yy <= y; yy++) {
 				rr = resolveRow(r, yy);
-				if (rr && rr[0] <= date && date <= rr[1] && days(rr[0], rr[1]) < span) { span = days(rr[0], rr[1]); best = r; }
+				if (rr && rr[0] <= date && date <= rr[1]) { out.push({ row: r, span: days(rr[0], rr[1]) }); }
 			}
 		}
+		return out;
+	}
+	function narrowest(h) {
+		var best = null;
+		for (var i = 0; i < h.length; i++) { if (!best || h[i].span < best.span) { best = h[i]; } }
 		return best;
+	}
+	function nearest(theme, date) {
+		var y = +date.slice(0, 4), best = [1e9, false], yy, o, d;
+		for (yy = y - 1; yy <= y + 1; yy++) {
+			o = ownDay(theme, yy);
+			if (!o) { continue; }
+			d = days(date, o);
+			if (Math.abs(d) < best[0]) { best = [Math.abs(d), d > 0]; }
+		}
+		return best;
+	}
+	function claim(rows, date) {
+		var h = hits(rows, date), y = +date.slice(0, 4), own = [], th = {}, i, j, x;
+		for (i = 0; i < h.length; i++) {
+			if (ownDay(h[i].row.theme, y) === date) { own.push(h[i]); th[h[i].row.theme] = true; }
+		}
+		if (own.length) {
+			for (j = 0; j < CLASH.length; j++) {
+				if (th[CLASH[j][0]] && th[CLASH[j][1]]) {
+					own = own.filter(function (o) { return o.row.theme !== CLASH[j][1]; });
+				}
+			}
+			return narrowest(own);
+		}
+		var hol = [], ht = {}, nt = 0;
+		for (i = 0; i < h.length; i++) {
+			if (HOL[h[i].row.theme]) {
+				hol.push(h[i]);
+				if (!ht[h[i].row.theme]) { ht[h[i].row.theme] = true; nt++; }
+			}
+		}
+		if (nt > 1) {
+			var best = null, bd = 1e9, bup = false, n2;
+			for (i = 0; i < hol.length; i++) {
+				x = hol[i];
+				n2 = nearest(x.row.theme, date);
+				if (n2[0] < bd || (n2[0] === bd && n2[1] && !bup)) { best = x; bd = n2[0]; bup = n2[1]; }
+			}
+			return best;
+		}
+		return narrowest(h);
+	}
+	function activeRow(rows, date) {
+		var w = claim(rows, date);
+		if (!w) { return null; }
+		var t = w.row.theme;
+		if (w.span > 0 && ownDay(t, +date.slice(0, 4)) !== date) {
+			var p = claim(rows, addDays(date, -1)), n = claim(rows, addDays(date, 1));
+			/* A lone day of a long theme goes to the theme that starts next,
+			 * never onto a one-day holiday. */
+			if ((!p || p.row.theme !== t) && (!n || n.row.theme !== t) && n && n.span > 0) { return n.row; }
+		}
+		return w.row;
 	}
 	var row = activeRow(CFG.schedule || [], today);
 	var themeKey = row ? row.theme : null;

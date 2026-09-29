@@ -327,7 +327,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 105,948 raw / 36,385 gzipped (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 124,372 raw / 42,179 gzipped (4.2.0, `gzip -c`; 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -432,8 +432,12 @@ render round and his say.
   with a default row MUST add it to `Schedule::new_theme_rows()`
   (`version => [theme keys]`); `apply_new_themes()` appends the rows for
   versions being upgraded THROUGH only. Never widen that to "any theme with
-  no row" — a row the owner deleted (summer_canal, on this site) would come
-  back on the next upgrade. `Settings::unscheduled_themes()` reports the rest
+  no row" — a row the owner deliberately deleted would come back on the
+  next upgrade. (This used to cite summer_canal "on this site" as such a
+  deleted row. That was an inference, never the owner's word, and wrong:
+  the live schedule was reset to the defaults on 2026-09-26 and INCLUDES
+  summer_canal; Rob confirmed Summer on the Canal for Jun–Jul on
+  2026-09-27.) `Settings::unscheduled_themes()` reports the rest
   passively on the settings page.
 - **`florida_keys` is the year-round BASE theme, and it is a full-year schedule
   row, not a code path.** `Schedule::defaults()` ends with a Jan 1 - Dec 31
@@ -442,14 +446,16 @@ render round and his say.
   Until 4.0.0 the shipped rows tiled the year and the base row won ZERO
   days; since 4.0.0 the DEFAULTS end spring_canal at 30 April and
   summer_canal at 31 July, handing the base May and August (49-59 days a
-  year, `tools/test-schedule.js`). BUT A STORED SCHEDULE KEEPS ITS OLD
-  BOUNDS: `apply_new_themes()` only appends rows for absent themes and
-  `migrate()` only converts legacy Y-m-d rows, so nothing ever rewrites an
-  existing row's ends. The live site had all 26 rows in the new shape when
-  4.0.0 shipped, so the fix has never been active there — the owner must
-  re-set those two rows (or accept a one-click apply) for the base to win
-  anything. The 4.0.0 report failed to say this. `ambient.js` mirrors the key in `BASE_THEME` and
-  falls back to it when no row matches.
+  year, `tools/test-schedule.js`). A stored schedule keeps its own bounds —
+  `apply_new_themes()` only appends rows for absent themes and `migrate()`
+  only converts legacy Y-m-d rows, so nothing rewrites an existing row's
+  ends. On THIS site that did not matter, and the 4.1.3 note claiming the
+  base "wins zero days" was wrong: live held 25 rows with no summer_canal,
+  so the base won 87 days of 2026. On 2026-09-26 the owner reset the
+  schedule to the defaults (backup `dcc_seasons_options_bak_20260926`);
+  live now resolves exactly as the defaults do (2027: Florida Keys 59,
+  Summer on the Canal 53). `ambient.js` mirrors the key in `BASE_THEME`
+  and falls back to it when no row matches.
 - **`enabled = 0` means NOTHING is printed — check it first.** `should_load()`
   returns at the master switch, so there is no config, no script tag and no
   canvas; through 3.8.0 `?dcc_debug=1` also rendered nothing, because the
@@ -468,8 +474,14 @@ render round and his say.
   named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver
   exists in PHP (admin table) and in `ambient.js` (the visitor, from their local
   date — cache-safe). `tools/test-schedule.js` cross-checks them for every
-  anchor 2024–2035; keep both in step. Narrowest overlapping range wins its day.
-  Pre-3.7.0 dated rows are migrated on read (`Schedule::migrate`).
+  day of 2027–2036; keep both in step. Since 4.2.0 the winner of a day is
+  Rob's four rules (see `Schedule`'s class docblock): a holiday's own day is
+  never given away (`CLASH_WINS` settles same-day clashes); overlapping
+  holiday lead-ups go to the NEARER holiday (exact tie: the upcoming one);
+  otherwise the narrowest range; a long theme's lone day goes to the theme
+  that starts next unless that is a one-day holiday. `HOLIDAY_ANCHOR` and
+  `CLASH_WINS` are shipped in the client config, never hand-copied into
+  ambient.js. Pre-3.7.0 dated rows are migrated on read (`Schedule::migrate`).
 - **Tap counting is delegated** (one document listener, `closest()` against the
   selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
   VISIBLE match). Binding per element double-counted nested targets — the egg
@@ -637,7 +649,14 @@ render round and his say.
   `tools/gen-config.php` emits the client config from the actual Themes and
   Schedule classes, and `tools/fixture.js` holds the Bravada and Elementor page
   shapes. Run: `test-layering.js`, `test-subtle.js`, `test-schedule.js`,
-  `test-min.js`, `php tools/test-settings.php`, `node tools/validate-paths.js`.
+  `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
+  `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
+  `php tools/test-rules.php`, `php tools/test-scope.php`,
+  `php tools/test-upgrade.php`, `node tools/validate-paths.js --strict`.
+  `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
+  `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
+  them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
+  confirmed — exactly.
   Three measurement traps they document, each of which produced a wrong number
   first: `--diag` puts the diagnostics panel on the page and it is counted as a
   blocker; counting the HOST's own background as a blocker understates reach;
@@ -724,6 +743,61 @@ render round and his say.
   the VISITOR'S clock so cached HTML stays date-agnostic, so the server does
   not know which theme is live. If this is ever worth doing, generate the
   chunk from the PHP at build time — do not hand-copy it.
+- **Counts are QUOTA-picked since 4.2.0 — never go back to independent
+  random picks.** Rob's counts are stated per sprite ("~3 doves", "cap 9"),
+  and independent weighted picks only hit a mix ON AVERAGE: behaviours that
+  never respawn (ornaments `hang` for good, palms stand where they grew) let
+  one page draw five ornaments and no gifts. `pickSpec()` water-fills each
+  sprite's share of the CURRENT total (`mixShares()`, per-sprite limit `n`
+  held, the rest shared out again), then picks from the sprites below their
+  exact share weighted by HOW FAR BEHIND they are, then from those below the
+  share rounded up. Weighting the strict tier by theme weight instead left
+  MLK's one phone dove on screen a third of the time. `tools/test-counts.js`
+  models every touched theme and requires the live engine within ±1.
+- **Phone scaling reads the VIEWPORT width, not the canvas.** In content
+  placement the canvas is only the column, so a 1280px screen would never
+  reach the full 16. `partTarget()`: round((16 - reserve) × clamp(innerWidth
+  / 1280, 0.45, 1)); a theme `max` scales the same way but never below 3
+  (`classic` keeps 1); `phoneMin` (Christmas: 5) overrides on < 768px. The
+  ripple reserve is NOT scaled. `fitParts()` re-targets on a real resize,
+  never mid-scene (`endVig()` calls it). On a phone a scene borrows at most
+  ONE sprite (`startVig`). Rob's density setting is never touched.
+- **Hero timing runs on VISIBLE time (`vt`), advanced once per frame before
+  the scene step.** First page of a visit (sessionStorage key
+  `dcc_seasons_visit`) → first hero 3-5s; later pages, or storage blocked
+  (`firstPage === null`) → 120-180s. `window.DCCHeroFx.state` is the
+  home-page hero-image show's contract (dcc-hero-life 3.11.0+: `none |
+  busy | done`, plus a `dcc:herofx` event): no hero STARTS while busy;
+  busy → done → the first hero 2s later; busy that never ends is ignored
+  after 70s of visible time. A hero's departure is recorded in the frame it
+  leaves (`heroGone()`); recording it on the next frame's hero step made a
+  scene that started in between look like an overlap in the logs.
+- **The suites have a mocked clock.** Debug builds only (`--diag`):
+  `CFG.vtScale` speeds the hero clock (70s proven in seconds);
+  `_state.manual(true)` stops the rAF loop and `_state.tick(ms, n)`
+  advances the engine exactly — `tools/test-scenes.js` plays every new
+  scene through tick by tick, and `test-heroes.js` proves hero/scene
+  exclusion over 360 simulated seconds the same way (it used 60s of WALL
+  time first and failed with zero overlaps: a loaded machine ran too few
+  frames to see three of each — count events on the mocked clock, never on
+  wall time); `CFG.vigOnly` forces one scene; `heroLog` /
+  `vigLog` record starts, ends and sprites borrowed. None of this exists in
+  the minified build (`__DCC_DEBUG__=false`).
+- **Earth Day's globe carries `xa`** ("never while the corner accent
+  shows"): the hands accent already holds an Earth, and at Full richness
+  the accent is always mounted — so on the live site Earth Day draws NO
+  globe sprite; the Earth is the accent's. This is Rob's rule taken
+  literally; if he wants a globe back, it needs the accent to give way.
+- **Three SCENES still draw device emoji** — witchmoon (🧙‍♀️), arrival
+  (🦩 where the font has it) and duckparade (🦆). Rob's no-emoji rule is
+  for HEROES (plus his ☘ exception); those scenes were out of 4.2.0's
+  scope. Offer the approved drawings for them in a render round; do not
+  swap them unasked.
+- **`sunshades` is a second sun.** The sun rule ("never two on screen")
+  is implemented for the `sun` sprite, which is now a corner accent only
+  on Summer and the Keys. The `sunshades` sprite (a sun wearing
+  sunglasses) still tumbles on both — raised with Rob in the 4.2.0
+  report; it is his call, not a quiet removal.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

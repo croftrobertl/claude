@@ -89,7 +89,6 @@ class Settings {
     public static function subtle_effects(): array {
         return [
             'leaves'     => __('Leaves drifting down (fall)', 'dcc-seasons'),
-            'snow'       => __('Snow (winter)', 'dcc-seasons'),
             'blossom'    => __('Blossom petals (spring)', 'dcc-seasons'),
             'dragonheat' => __('Dragonflies over a heat shimmer (summer)', 'dcc-seasons'),
             'hearts'     => __('Hearts', 'dcc-seasons'),
@@ -97,6 +96,12 @@ class Settings {
             'embers'     => __('Embers', 'dcc-seasons'),
             'sparks'     => __('Sparks', 'dcc-seasons'),
             'bokeh'      => __('Warm bokeh lights', 'dcc-seasons'),
+            // 4.2.0 — no snow anywhere. Rob's four winter picks, each its own
+            // named choice rather than a hidden per-theme colour.
+            'sunglow'       => __('Winter sun glow', 'dcc-seasons'),
+            'goldlight'     => __('Gold & white light', 'dcc-seasons'),
+            'mardiconfetti' => __('Mardi Gras confetti', 'dcc-seasons'),
+            'orangeblossom' => __('Orange blossom', 'dcc-seasons'),
         ];
     }
 
@@ -109,8 +114,16 @@ class Settings {
     public static function subtle_map(array $opt): array {
         $map = Themes::subtle_defaults();
         $over = isset($opt['subtle_map']) && is_array($opt['subtle_map']) ? $opt['subtle_map'] : [];
+        $known = self::subtle_effects();
         foreach ($over as $theme => $eff) {
-            $map[(string) $theme] = (string) $eff;
+            /* An override naming an effect the plugin no longer has — 'snow',
+             * retired in 4.2.0 — is ignored on read, so that theme gets its
+             * current default. The stored option is never rewritten. */
+            $eff = (string) $eff;
+            if ($eff !== '' && !isset($known[$eff])) {
+                continue;
+            }
+            $map[(string) $theme] = $eff;
         }
         return $map;
     }
@@ -400,7 +413,6 @@ class Settings {
             'fx_vignettes'    => 1,
             'fx_pointer'      => 1,
             'fx_evening'      => 1,
-            'fx_snow'         => 1,
             'schedule'        => Themes::default_schedule(),
         ];
     }
@@ -580,7 +592,8 @@ class Settings {
                 $out['subtle_map'][$theme] = $eff;
             }
         }
-        foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
+        // 'fx_snow' left with the snow in 4.2.0; a stored value is ignored.
+        foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening'] as $fx) {
             $out[$fx] = empty($in[$fx]) ? 0 : 1;
         }
 
@@ -865,7 +878,6 @@ class Settings {
                                         'fx_vignettes'   => __('Scene moments (rare choreographed vignettes)', 'dcc-seasons'),
                                         'fx_pointer'     => __('Pointer awareness (particles ease away from the cursor)', 'dcc-seasons'),
                                         'fx_evening'     => __('Evening tint (dusk grade + night variants, 7pm–6am local)', 'dcc-seasons'),
-                                        'fx_snow'        => __('Snow accumulation (Christmas only)', 'dcc-seasons'),
                                     ];
                                     foreach ($fx_labels as $fx => $label) :
                                         ?>

@@ -22,7 +22,9 @@ const path = require('path');
 const { config, open, settle } = require('./harness');
 const { page: fixture } = require('./fixture');
 
-const EFFECTS = ['leaves', 'snow', 'blossom', 'dragonheat', 'hearts', 'confetti', 'embers', 'sparks', 'bokeh'];
+/* 'snow' left in 4.2.0 (no snow anywhere); the four winter picks joined. */
+const EFFECTS = ['leaves', 'blossom', 'dragonheat', 'hearts', 'confetti', 'embers', 'sparks', 'bokeh',
+  'sunglow', 'goldlight', 'mardiconfetti', 'orangeblossom'];
 const SHEET = process.argv.includes('--sheet');
 const OUT = path.resolve(__dirname, '..', 'build');
 

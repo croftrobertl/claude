@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.1.3
+Stable tag: 4.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,92 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 == Changelog ==
 
+= 4.2.0 =
+One release, every choice in it Rob's, picked from rendered options.
+Rollback: reinstall the 4.1.3 zip. Nothing stored is rewritten — not the
+schedule, not the settings — so rolling back restores 4.1.3 exactly.
+
+No snow anywhere ("it doesn't snow in Florida"):
+* Christmas — the snowflake sprite and the snow piling are gone; bokeh
+  stays; a Florida sabal palm strung with lights (lit string by string)
+  fills the share. Cap 9, so ornaments, holly, gifts and pines keep their
+  old counts; on a phone never fewer than 5 (4 while a scene runs).
+  Ornaments and holly hang on longer threads, down through the page instead
+  of bunched in the header. The sleigh's gift lands on the water line, with
+  a ripple. The Matrix egg carries H and O instead of ❄ ("HO HO HO").
+* New subtle-layer choices, each its own named entry: Winter sun glow
+  (Snowbird), Gold & white light (MLK), Mardi Gras confetti, Orange blossom
+  (Presidents Day). The Snow choice and the snow-accumulation checkbox are
+  gone. A stored "snow" choice (or snow checkbox) is ignored on read: that
+  theme gets its new default. Nothing stored is rewritten.
+
+Counts that look right:
+* Phones get fewer sprites, on the subtle layer's own curve: 7 at 390px
+  (6 on a water theme), the full 16 from 1280px. A theme's cap scales the
+  same way, never below 3. Recomputed on rotation. The density setting is
+  untouched.
+* Caps: Patriot Day ~5 in all, Memorial Day ~7, St. Patrick's ~6 (about
+  five clovers). Per sprite: MLK doves ~3, Labor Day burgers and pontoons
+  ~1 each (and its leftover red/white/blue stars are gone), Valentine's
+  pulsing hearts ~3, Earth Day's globe never alongside the hands accent
+  (which already holds an Earth).
+* Sprites now pick against their share, so a page shows the mix Rob set
+  rather than a lucky or unlucky draw (one could get five ornaments and no
+  gifts before).
+* On a phone a scene borrows at most one sprite, so no scene empties the
+  screen.
+* The same thing twice, removed: the sprite version goes where the subtle
+  layer already does it — Valentine's orbiting hearts; New Year's confetti;
+  Fall Fishing and Thanksgiving leaves; Summer on the Canal and Florida Keys
+  dragonflies; the petal sprite on Mother's Day and Spring on the Canal;
+  Strawberry's drifting blossom (the bloom-to-berry one stays). July 4 is
+  unchanged.
+
+Heroes:
+* Every hero is a drawing now — device emoji looked different on iPhone,
+  Android and Windows. The eagle (two-frame wingbeat) flies on July 4 and
+  Patriot Day only; Memorial Day and Veterans Day have the heron. The witch
+  is a silhouette with her cat on the broom tail. The jumping bass is a
+  largemouth drawn mid-leap. The one exception, by Rob's choice: the St.
+  Patrick's rainbow keeps its ☘ clover strip. The unused "ducks" hero is gone.
+* The first hero of a visit crosses 3-5s in — after the home page's
+  seaplane and fishing catch (it waits for dcc-hero-life's DCCHeroFx to say
+  done, then 2s; never longer than 70s). Later pages keep 120-180s.
+* A scene never starts while a hero crosses, and no hero while a scene runs.
+
+Themes:
+* 4/20 — the picnic basket goes; a hippie van (no badge) drives up and parks.
+* Summer on the Canal — three new scenes: a gator glides by and sinks; an
+  inflatable flamingo pool float drifts past with a lost flip-flop; a
+  mullet skips three times and another answers.
+* Florida Keys — keeps its sun, palms, hibiscus and colours, with Central
+  Florida wildlife instead of sea life: the osprey carrying a fish is the
+  hero (the brown pelican retires), an aluminium jon boat replaces the
+  flats skiff, a white ibis replaces the flamingo (Snowbird keeps its
+  flamingos), and the sun is a corner accent, never a sprite. Five scenes:
+  an anhinga dries its wings on a snag, an osprey catches a fish, a
+  sandhill crane pair dances, a limpkin pulls an apple snail, a hibiscus
+  bloom drops and floats.
+
+Calendar (in the resolver, so the stored schedule gets it untouched; the
+PHP and browser resolvers agree on every day of 2027-2036):
+* A holiday always shows on its own day — Fat Tuesday is Mardi Gras, 14 Feb
+  Valentine's. On 1 Apr 2029 Easter wins; April Fool's skips that year.
+* Overlapping lead-up days go to the nearer holiday (an exact tie, to the
+  one still to come): Mardi Gras takes 10-12 Feb 2029, and St. Patrick's
+  runs 2-17 March 2035 in one piece.
+* A long theme is never left one lone day — it goes to the theme that starts
+  next, except that a one-day holiday (MLK, Presidents, April Fool's, 4/20)
+  is never lengthened.
+
+Cost: the effects engine grows from 106KB to 124KB (36KB to 42KB gzipped)
+for the 22 new drawings and 8 scenes. It still loads only after the page has
+finished loading, so it never delays the page itself.
+
+Corrections: the 4.1.3 "needs a decision" note below was wrong and is marked
+withdrawn; the schedule code no longer claims Summer on the Canal "must stay
+absent" on this site.
+
 = 4.1.3 =
 A self-audit release: three defects in 4.0.0-4.1.2 work, found by re-reading
 the code rather than the release notes, plus one finding that needs the
@@ -184,18 +270,18 @@ owner's decision.
   the debug state never exposed, got undefined, and passed unconditionally.
   The flag is exposed and the test now asserts the real boolean in both
   directions.
-* NEEDS A DECISION — the 4.0.0 calendar change has never been active on the
-  live site. It changed the DEFAULT rows (Spring on the Canal to 30 April,
-  Summer on the Canal to 31 July) so the year-round base wins May and
-  August. But a stored schedule keeps its own bounds: the upgrade path only
-  appends rows for absent themes and only converts pre-3.7.0 dated rows;
-  nothing rewrites an existing row's ends. The live site had all 26 rows
-  in the current shape, so Florida Keys still wins zero days there. The
-  4.0.0 notes claimed 49-59 without saying this. Two options, and it is
-  not the plugin's call: edit those two rows' ends in the schedule table,
-  or accept a one-click "apply the 4.0.0 canal bounds" on the settings
-  page. This release does NEITHER on its own — an upgrade that silently
-  rewrote the owner's rows would be worse than the omission.
+* WITHDRAWN (corrected in 4.2.0) — this entry said the 4.0.0 calendar
+  change had never been active on the live site and that Florida Keys
+  "still wins zero days there", from a note that the site had "all 26 rows".
+  That was an inference, and it was wrong: the live site held 25 rows with
+  no Summer on the Canal row, so Florida Keys won 87 days of 2026 there,
+  not zero. The owner resolved it site-side on 2026-09-26 by resetting the
+  schedule to the defaults (backup: dcc_seasons_options_bak_20260926), and
+  confirmed Summer on the Canal for June-July on 2026-09-27. Live now
+  resolves exactly as the defaults do (in 2027: Florida Keys 59 days,
+  Summer on the Canal 53). The general caveat stands — the upgrade path
+  never rewrites a stored row's bounds — but there was no decision to make
+  here.
 * Docs: nine references to test suites that lived in a session scratchpad
   and did not survive are corrected; the Florida Keys entry now states the
   stored-schedule caveat above.

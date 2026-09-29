@@ -115,10 +115,11 @@ $config = [
         'vignettes'   => true,
         'pointer'     => true,
         'evening'     => false,
-        'snow'        => true,
     ],
     'schedule'     => Schedule::defaults(),
     'anchors'      => $anchors,
+    'holidays'     => Schedule::HOLIDAY_ANCHOR,
+    'clashWins'    => Schedule::CLASH_WINS,
     'themes'       => $themes,
     /* --min points the loader at the MINIFIED build. A suite that only
      * ever exercises the readable source cannot catch a stale or broken

@@ -14,9 +14,24 @@
  * into cached HTML). The two implementations are cross-checked by the test
  * suite for every anchor across a span of years.
  *
- * Overlaps are allowed and expected: when several rows contain a day, the
- * NARROWEST range wins. That is what lets a single-day holiday sit inside a
- * season without the owner having to split the season around it.
+ * Overlaps are allowed and expected. Which row wins a day (4.2.0, Rob's
+ * rules, identical in ambient.js — tools/test-schedule.js walks every day
+ * of 2027-2036 through both):
+ *  1. A holiday always shows on its OWN day (Fat Tuesday is Mardi Gras,
+ *     14 Feb is Valentine's). Two holidays on the same day: CLASH_WINS
+ *     decides (Easter beats April Fool's, 1 Apr 2029); otherwise the
+ *     narrowest row, which is deterministic.
+ *  2. A day claimed by two holiday lead-up windows goes to the holiday
+ *     whose own day is NEARER; an exact tie goes to the one still to come.
+ *  3. Otherwise the narrowest containing range wins, as it always has —
+ *     that is what lets a holiday sit inside a season without the owner
+ *     having to split the season around it.
+ *  4. A long theme is never left a lone day: that day goes to the theme
+ *     that starts next — unless that theme is a one-day holiday (MLK,
+ *     Presidents, April Fool's, 4/20), which is never lengthened; then the
+ *     lone day stays with its own theme.
+ * These are rules in the RESOLVER, so a stored schedule gets them without
+ * a single row being rewritten.
  *
  * @package DCC_Seasons
  */
@@ -31,6 +46,37 @@ class Schedule {
 
     /** The year-round base theme: what shows when nothing else claims the day. */
     public const BASE_THEME = 'florida_keys';
+
+    /**
+     * Holiday theme => the anchor that is its OWN day. Seasons are not here.
+     * Shipped to the client config so ambient.js resolves with this exact
+     * table rather than a hand-kept copy.
+     */
+    public const HOLIDAY_ANCHOR = [
+        'new_years'    => 'new_year',
+        'mlk'          => 'mlk',
+        'valentines'   => 'valentines',
+        'presidents'   => 'presidents',
+        'mardi_gras'   => 'mardi_gras',
+        'st_patricks'  => 'st_patricks',
+        'easter'       => 'easter',
+        'april_fools'  => 'april_fools',
+        'four_twenty'  => 'four_twenty',
+        'earth_day'    => 'earth_day',
+        'mothers_day'  => 'mothers_day',
+        'memorial_day' => 'memorial_day',
+        'fathers_day'  => 'fathers_day',
+        'july4'        => 'july4',
+        'labor_day'    => 'labor_day',
+        'patriot_day'  => 'patriot_day',
+        'halloween'    => 'halloween',
+        'veterans_day' => 'veterans_day',
+        'thanksgiving' => 'thanksgiving',
+        'christmas'    => 'christmas',
+    ];
+
+    /** Same-day clashes Rob has decided: [winner, loser]. */
+    public const CLASH_WINS = [['easter', 'april_fools']];
 
     /**
      * Named anchors. 'nth' = nth weekday of month (n = -1 for last),
@@ -160,29 +206,127 @@ class Schedule {
         return [$s, $e];
     }
 
-    /**
-     * The row active on a date: any row whose instance beginning this year
-     * or last year contains it; ties broken by the narrowest range. Mirrors
-     * ambient.js exactly.
-     */
-    public static function active(array $rows, string $date): ?array {
-        $y    = (int) substr($date, 0, 4);
-        $best = null;
-        $bestSpan = PHP_INT_MAX;
+    /** A holiday theme's own day in year $y, or null for a season. */
+    public static function own_day(string $theme, int $y): ?string {
+        $a = self::HOLIDAY_ANCHOR[$theme] ?? null;
+        return $a ? self::resolve(['on' => $a, 'off' => 0], $y) : null;
+    }
+
+    private static function day_add(string $date, int $n): string {
+        return (new \DateTimeImmutable($date))->modify(($n > 0 ? '+' : '') . $n . ' day')->format('Y-m-d');
+    }
+
+    /** Every row instance containing $date, in row order, with its span in days. */
+    private static function hits(array $rows, string $date): array {
+        $y   = (int) substr($date, 0, 4);
+        $out = [];
         foreach ($rows as $row) {
             foreach ([$y - 1, $y] as $yy) {
                 $r = self::resolve_row($row, $yy);
                 if (!$r || $date < $r[0] || $date > $r[1]) {
                     continue;
                 }
-                $span = (int) (new \DateTimeImmutable($r[0]))->diff(new \DateTimeImmutable($r[1]))->days;
-                if ($span < $bestSpan) {
-                    $bestSpan = $span;
-                    $best     = $row;
-                }
+                $out[] = [
+                    'row'  => $row,
+                    'span' => (int) (new \DateTimeImmutable($r[0]))->diff(new \DateTimeImmutable($r[1]))->days,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    /** The narrowest hit; the first one found wins a tie, so it is deterministic. */
+    private static function narrowest(array $hits): ?array {
+        $best = null;
+        foreach ($hits as $h) {
+            if (!$best || $h['span'] < $best['span']) {
+                $best = $h;
             }
         }
         return $best;
+    }
+
+    /** Distance in days from $date to $theme's nearest own day, and whether that day is still ahead. */
+    private static function nearest(string $theme, string $date): array {
+        $y    = (int) substr($date, 0, 4);
+        $best = [PHP_INT_MAX, false];
+        foreach ([$y - 1, $y, $y + 1] as $yy) {
+            $o = self::own_day($theme, $yy);
+            if (!$o) {
+                continue;
+            }
+            $d = (int) (new \DateTimeImmutable($date))->diff(new \DateTimeImmutable($o))->format('%r%a');
+            if (abs($d) < $best[0]) {
+                $best = [abs($d), $d > 0];
+            }
+        }
+        return $best;
+    }
+
+    /** Rules 1-3: which row claims $date, before the lone-day rule. */
+    private static function claim(array $rows, string $date): ?array {
+        $h = self::hits($rows, $date);
+        $y = (int) substr($date, 0, 4);
+        $own = [];
+        $themes = [];
+        foreach ($h as $x) {
+            if (self::own_day((string) $x['row']['theme'], $y) === $date) {
+                $own[] = $x;
+                $themes[(string) $x['row']['theme']] = true;
+            }
+        }
+        if ($own) {
+            foreach (self::CLASH_WINS as [$win, $lose]) {
+                if (isset($themes[$win], $themes[$lose])) {
+                    $own = array_values(array_filter($own, static fn($x) => $x['row']['theme'] !== $lose));
+                }
+            }
+            return self::narrowest($own);
+        }
+        $hol = array_values(array_filter($h, static fn($x) => isset(self::HOLIDAY_ANCHOR[(string) $x['row']['theme']])));
+        $ht  = [];
+        foreach ($hol as $x) {
+            $ht[(string) $x['row']['theme']] = true;
+        }
+        if (count($ht) > 1) {
+            $best = null;
+            $bd   = PHP_INT_MAX;
+            $bup  = false;
+            foreach ($hol as $x) {
+                [$dist, $up] = self::nearest((string) $x['row']['theme'], $date);
+                if ($dist < $bd || ($dist === $bd && $up && !$bup)) {
+                    $best = $x;
+                    $bd   = $dist;
+                    $bup  = $up;
+                }
+            }
+            return $best;
+        }
+        return self::narrowest($h);
+    }
+
+    /**
+     * The row active on a date, under the four rules in the class docblock.
+     * Mirrors activeRow() in ambient.js exactly.
+     */
+    public static function active(array $rows, string $date): ?array {
+        $w = self::claim($rows, $date);
+        if (!$w) {
+            return null;
+        }
+        $t = (string) $w['row']['theme'];
+        if ($w['span'] > 0 && self::own_day($t, (int) substr($date, 0, 4)) !== $date) {
+            $p = self::claim($rows, self::day_add($date, -1));
+            $n = self::claim($rows, self::day_add($date, 1));
+            if ((!$p || $p['row']['theme'] !== $t) && (!$n || $n['row']['theme'] !== $t)) {
+                // A lone day of a long theme goes to the theme that starts
+                // next — never onto a one-day holiday, which keeps its length.
+                if ($n && $n['span'] > 0) {
+                    return $n['row'];
+                }
+            }
+        }
+        return $w['row'];
     }
 
     /** Shorthand rule builders for the defaults. */
@@ -304,9 +448,13 @@ class Schedule {
      * The version scoping is the whole point, and it is not a nicety: the
      * naive rule — "append a row for any theme that has no row" — would
      * re-add a row the owner deliberately DELETED on the next upgrade, and
-     * silently undo their choice. Summer on the Canal is exactly that case
-     * on this site: it is absent because Florida Keys was chosen as the
-     * summer backdrop instead, and it must stay absent.
+     * silently undo their choice.
+     *
+     * (Corrected in 4.2.0: this used to name Summer on the Canal as such a
+     * deleted row on this site and say it "must stay absent". That was an
+     * inference, never the owner's word; live holds the default schedule
+     * INCLUDING summer_canal — Rob confirmed Summer on the Canal for Jun-Jul
+     * on 2026-09-27.)
      *
      * Appending within that scope is safe: narrowest-wins means a new row
      * can only take days that no narrower row claims.

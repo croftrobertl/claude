@@ -11,7 +11,10 @@
  *                  reflections, cruise wakes)
  *        up        true → fall-family behaviors run upward (April Fool's)
  *        hero      extra rare crosser besides the year-round heron
- *        max       optional per-theme cap below the density option
+ *        max       optional per-theme cap below the density option (scaled
+ *                  on a phone like the total, never below 3)
+ *        phoneMin  optional floor on a phone (< 768px) that overrides the
+ *                  scaled cap — Christmas only
  *        particles particle specs (see below)
  *      Particle spec keys (short — they ship as JSON):
  *        e  emoji glyph            f  fallback glyph if e can't render
@@ -22,6 +25,12 @@
  *        sz [min,max] px           cl color list for tinted primitives
  *        glow 1 → soft halo        face 'L' → native art faces LEFT, the
  *                                     engine mirrors it travelling right
+ *        n  most of this sprite on screen at once at FULL width (scaled on
+ *           a phone, never below 1); the theme's other sprites take the
+ *           space
+ *        xa 1 → never while the theme's corner accent is showing
+ *        hl [min,max] thread length for 'hang', as fractions of the
+ *           screen height (default 30-80px)
  *        fx draw extra: smoke | glint | lights | string | letter | trail |
  *           orbitarrows | shine | chicks (trailing chicks on a waddler)
  *      Behaviors: fall sway flutter wobble float rise grow fly vee pulse
@@ -74,12 +83,13 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
-                        ['s' => 'burger', 'b' => 'fall', 'w' => 2],
+                        /* 4.2.0: the leftover red/white/blue stars are gone, and
+                         * burgers and pontoons are about one each on screen. */
+                        ['s' => 'burger', 'b' => 'fall', 'w' => 2, 'n' => 1],
                         ['s' => 'grill', 'b' => 'grow', 'fx' => 'smoke', 'sz' => [26, 32]],
                         ['s' => 'cooler', 'b' => 'tumble', 'sz' => [20, 26]],
                         ['s' => 'umbrella', 'b' => 'grow'],
-                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'sz' => [32, 40]],
+                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'n' => 1, 'sz' => [32, 40]],
                     ],
                 ],
                 'egg' => [
@@ -93,6 +103,9 @@ class Themes {
             'patriot_day' => [
                 'ambient' => [
                     'hero'      => 'eagle',
+                    // 4.2.0: about five on screen in all — the 4.1.0 edit had
+                    // let the flags climb to ~12.
+                    'max'       => 5,
                     'particles' => [
                         /* Minimal and sober by instruction: the flag,
                          * carried slowly, and nothing else but a few quiet
@@ -115,7 +128,7 @@ class Themes {
                     'water'     => true,
                     'hero'      => 'bass',
                     'particles' => [
-                        ['s' => $leaves, 'b' => 'sway', 'st' => 1, 'w' => 4],
+                        // No leaf sprites (4.2.0): the subtle layer drifts the leaves.
                         ['s' => 'bobber', 'b' => 'float', 'w' => 2],
                         ['s' => 'hook', 'b' => 'dangle', 'worm' => 1],
                         ['s' => 'bass', 'b' => 'jump', 'face' => 'L', 'w' => 2],
@@ -152,7 +165,7 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['s' => $leaves, 'b' => 'sway', 'st' => 1, 'w' => 5],
+                        // No leaf sprites (4.2.0): the subtle layer drifts the leaves.
                         ['s' => 'acorn', 'b' => 'fall', 'w' => 2],
                         ['s' => 'pie', 'b' => 'fall', 'fx' => 'smoke'],
                         // Turkey 2.0 leads two chicks along the bottom.
@@ -170,18 +183,29 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'hero'      => 'sleigh',
+                    /* 4.2.0 — no snow anywhere (Rob: "it doesn't snow in
+                     * Florida"). The snowflakes and the snow piling are gone;
+                     * a Florida sabal palm strung with lights fills their
+                     * share. Cap 9 keeps the ornaments, holly, gifts and pines
+                     * at their old counts; on a phone never fewer than 5. */
+                    'max'       => 9,
+                    'phoneMin'  => 5,
                     'particles' => [
-                        ['s' => 'snowflake', 'b' => 'fall', 'st' => 1, 'w' => 4, 'sz' => [10, 26]],
-                        ['s' => 'ornament', 'b' => 'hang', 'fx' => 'glint', 'w' => 2],
-                        ['s' => 'holly', 'b' => 'hang'],
+                        // Longer threads: they hang down through the page
+                        // instead of bunching in the header band.
+                        ['s' => 'ornament', 'b' => 'hang', 'fx' => 'glint', 'w' => 2, 'hl' => [0.08, 0.55]],
+                        ['s' => 'holly', 'b' => 'hang', 'hl' => [0.08, 0.55]],
                         ['s' => 'gift', 'b' => 'fall'],
                         // Pine grows from the bottom, then pops its lights on.
                         ['s' => 'pine', 'b' => 'grow', 'fx' => 'lights', 'sz' => [28, 38]],
+                        // ...and so does the palm, string by string.
+                        ['s' => 'sabalpalm', 'b' => 'grow', 'fx' => 'lights', 'sz' => [30, 38]],
                     ],
                 ],
                 'egg' => [
                     'colors' => ['#2F9E44', '#E03131'],
-                    'glyphs' => ['❄', '✦', '*', 'ｼ', 'ﾒ', '0'],
+                    // H and O, so a hidden "HO HO HO" flickers through the rain.
+                    'glyphs' => ['H', 'O', '✦', '*', 'ｼ', 'ﾒ', '0'],
                     'finale' => '🎄',
                 ],
             ],
@@ -190,7 +214,7 @@ class Themes {
                 'ambient' => [
                     'mode'      => 'burst',
                     'particles' => [
-                        ['c' => 'confetti', 'cl' => ['#FFD43B', '#E03131', '#339AF0', '#2F9E44', '#CED4DA'], 'b' => 'tumble', 'w' => 3],
+                        // No confetti sprite (4.2.0): the subtle layer is confetti.
                         ['s' => 'flutes', 'b' => 'rise'],
                         ['c' => 'bubble', 'cl' => ['#FFD43B', '#F8F0C8'], 'b' => 'rise', 'w' => 2],
                         ['s' => 'sparkle', 'b' => 'twinkle', 'w' => 2],
@@ -228,7 +252,8 @@ class Themes {
             'mlk' => [
                 'ambient' => [
                     'particles' => [
-                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'w' => 3, 'sz' => [26, 34]],
+                        // About three doves at once (4.2.0; it was about six).
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'w' => 3, 'n' => 3, 'sz' => [26, 34]],
                         ['s' => 'olive', 'b' => 'sway', 'w' => 2],
                         ['c' => 'heart', 'cl' => ['#B8860B', '#F1F3F5', '#FFD43B'], 'b' => 'pulse', 'w' => 2],
                         ['s' => 'sparkle', 'b' => 'twinkle'],
@@ -263,11 +288,12 @@ class Themes {
                     'particles' => [
                         // Petals, not whole roses — they land and drift.
                         ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 3],
-                        ['c' => 'heart', 'cl' => ['#FA5252', '#E64980', '#F783AC'], 'b' => 'pulse', 'w' => 2],
+                        // About three pulsing hearts; the subtle layer's rising
+                        // hearts stay (Rob's exception to the same-thing-twice rule).
+                        ['c' => 'heart', 'cl' => ['#FA5252', '#E64980', '#F783AC'], 'b' => 'pulse', 'w' => 2, 'n' => 3],
                         ['s' => 'balloon', 'b' => 'rise', 'fx' => 'string', 'sz' => [24, 30]],
                         // Opens mid-fall and releases three tiny hearts.
                         ['s' => 'letter0', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
-                        ['c' => 'heart', 'cl' => ['#F06595', '#FA5252'], 'b' => 'orbit'],
                     ],
                 ],
                 'egg' => [
@@ -298,8 +324,8 @@ class Themes {
                     'water'     => true,
                     'particles' => [
                         ['s' => 'berry', 'b' => 'tumble', 'w' => 3, 'sz' => [20, 26]],
-                        ['s' => 'blossom', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        // Bloom → petals → berry swells → drops off.
+                        // Bloom → petals → berry swells → drops off. (The drifting
+                        // blossom sprite left in 4.2.0: the subtle layer drifts petals.)
                         ['s' => 'blossom', 'b' => 'berrycycle'],
                         ['s' => 'ladybug', 'b' => 'waddle', 'face' => 'L', 'sz' => [12, 16]],
                     ],
@@ -313,6 +339,8 @@ class Themes {
             'st_patricks' => [
                 'ambient' => [
                     'hero'      => 'rainbow',
+                    // About five clovers and a horseshoe (4.2.0; it was ~13 clovers).
+                    'max'       => 6,
                     'particles' => [
                         ['s' => 'clover', 'b' => 'tumble', 'w' => 4],
                         ['s' => 'horseshoe', 'b' => 'fall'],
@@ -371,7 +399,7 @@ class Themes {
                         // a dragonfly touches down pad to pad instead, which is
                         // what the behaviour actually does.
                         ['s' => 'dragonfly', 'b' => 'frogger', 'sz' => [16, 20]],
-                        ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        // No petal sprite (4.2.0): the blossom layer drifts petals.
                         ['s' => 'dragonfly', 'b' => 'dart'],
                         ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],
                     ],
@@ -392,7 +420,8 @@ class Themes {
                         ['s' => 'joint', 'b' => 'rise', 'fx' => 'smoke', 'w' => 2, 'sz' => [22, 28]],
                         ['s' => 'peace', 'b' => 'spin', 'sz' => [24, 30]],
                         ['s' => 'peacehand', 'b' => 'fall'],
-                        ['s' => 'basket', 'b' => 'grow', 'sz' => [24, 30]],
+                        // The hippie van (no badge) drives up and parks — Rob's pick, 4.2.0.
+                        ['s' => 'van', 'b' => 'grow', 'sz' => [40, 48]],
                     ],
                 ],
                 'egg' => [
@@ -428,7 +457,9 @@ class Themes {
             // eagle. Celebratory-patriotic like Patriot Day, not "gentle".
             'memorial_day' => [
                 'ambient' => [
-                    'hero'      => 'eagle',
+                    // 4.2.0: the eagle flies on July 4 and Patriot Day only;
+                    // Memorial Day has the heron. About seven on screen.
+                    'max'       => 7,
                     'particles' => [
                         /* Poppies and doves, and deliberately nothing
                          * else. The flag and the falling stars were shared
@@ -457,7 +488,7 @@ class Themes {
                     'particles' => [
                         ['s' => 'tulip', 'b' => 'grow', 'w' => 2, 'sz' => [22, 30]],
                         ['s' => 'blossom', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        // No petal sprite (4.2.0): the blossom layer drifts petals.
                         ['c' => 'heart', 'cl' => ['#F783AC', '#E64980', '#B197FC'], 'b' => 'pulse', 'w' => 2],
                         ['s' => 'letter0', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
                         ['s' => 'balloon', 'b' => 'rise', 'fx' => 'string', 'sz' => [24, 30]],
@@ -497,7 +528,7 @@ class Themes {
             // Veterans Day: flag, poppies, a medal, doves; the eagle.
             'veterans_day' => [
                 'ambient' => [
-                    'hero'      => 'eagle',
+                    // 4.2.0: no eagle — it flies on July 4 and Patriot Day only.
                     'particles' => [
                         /* Sombre, but not Memorial Day. Medals and the
                          * remembrance ribbon lead; the dove is left as
@@ -537,7 +568,7 @@ class Themes {
                         ['s' => 'flipflop', 'b' => 'fall', 'w' => 2, 'sz' => [16, 22]],
                         ['s' => 'icecream', 'b' => 'fall', 'sz' => [18, 24]],
                         ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
-                        ['s' => 'dragonfly', 'b' => 'dart'],
+                        // No dragonfly sprite (4.2.0): the subtle layer carries them.
                         ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
                         ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],
                         ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'sz' => [32, 40]],
@@ -554,7 +585,9 @@ class Themes {
                 'ambient' => [
                     'particles' => [
                         ['s' => 'sprout', 'b' => 'grow', 'w' => 2],
-                        ['s' => 'globe', 'b' => 'pulse', 'fx' => 'orbitarrows', 'sz' => [26, 32]],
+                        // At most one globe, and none while the hands accent (which
+                        // already holds an Earth) is on screen — 4.2.0.
+                        ['s' => 'globe', 'b' => 'pulse', 'fx' => 'orbitarrows', 'n' => 1, 'xa' => 1, 'sz' => [26, 32]],
                         ['s' => 'recycle', 'b' => 'spin'],
                         ['s' => 'tree', 'b' => 'grow'],
                     ],
@@ -567,14 +600,18 @@ class Themes {
             ],
 
             // Florida Keys: the year-round base. It can land in any month,
-            // so nothing in it may read as a season — sabal palms (the state
-            // tree, and what actually grows along the canal), a hibiscus
-            // bloom that lasts a day and drops, a flats skiff, a queen conch.
-            // The brown pelican is the hero.
+            // so nothing in it may read as a season. It keeps its Keys feel —
+            // sun, palms, hibiscus, the colours, the name — but since 4.2.0 its
+            // animals and plants are CENTRAL Florida, never sea life (Rob's
+            // picks): the osprey carrying a fish is the hero, an aluminium jon
+            // boat works the canal, a white ibis crosses (not the flamingo:
+            // Snowbird keeps its flamingos). The sun is a corner accent in the
+            // engine, never a sprite. Five scenes rotate: anhinga, osprey
+            // catch, sandhill cranes, limpkin, hibiscus.
             'florida_keys' => [
                 'ambient' => [
                     'water'     => true,
-                    'hero'      => 'pelican',
+                    'hero'      => 'osprey',
                     'particles' => [
                         // 'grow' (not 'sway'): 'sway' is the falling-leaf drift, and a
                         // palm TREE drifting down the page reads as a bug. 'grow' is
@@ -582,19 +619,9 @@ class Themes {
                         // stands there. One word to change back.
                         ['s' => 'sabalpalm', 'b' => 'grow', 'w' => 2, 'sz' => [26, 34]],
                         ['s' => 'hibiscus', 'b' => 'fall', 'w' => 2, 'sz' => [18, 24]],
-                        ['s' => 'skiff', 'b' => 'cruise', 'face' => 'L', 'sz' => [30, 38]],
-                        /* Cut in 4.1.1 at the owner's call — it never resolved
-                         * into a readable shell at scene scale, two redraws in.
-                         * The flamingo replaces it rather than leaving the
-                         * year-round base a sprite thinner: it is the most
-                         * on-brand Florida bird after the heron. snowbird flies
-                         * it in formation ('vee'); here it crosses alone, and
-                         * the two themes are months apart so the shared art
-                         * cannot read as repetition. */
-                        ['s' => 'flamingo', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
-                        ['s' => 'sun', 'b' => 'pulse', 'sz' => [26, 32]],
+                        ['s' => 'jonboat', 'b' => 'cruise', 'face' => 'L', 'sz' => [36, 42]],
+                        ['s' => 'ibis', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [40, 48]],
                         ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
-                        ['s' => 'dragonfly', 'b' => 'dart'],
                         ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
                     ],
                 ],
@@ -660,11 +687,11 @@ class Themes {
             'fall_fishing' => 'leaves',
             'thanksgiving' => 'leaves',
             'veterans_day' => 'leaves',
-            // Winter
-            'snowbird'     => 'snow',
-            'mlk'          => 'snow',
-            'mardi_gras'   => 'snow',
-            'presidents'   => 'snow',
+            // Winter — no snow anywhere (4.2.0). Each is Rob's pick.
+            'snowbird'     => 'sunglow',
+            'mlk'          => 'goldlight',
+            'mardi_gras'   => 'mardiconfetti',
+            'presidents'   => 'orangeblossom',
             // Spring
             'strawberry'   => 'blossom',
             'st_patricks'  => 'blossom',

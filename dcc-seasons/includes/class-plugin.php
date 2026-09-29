@@ -821,10 +821,13 @@ final class Plugin {
                 'vignettes'   => !empty($opt['fx_vignettes']),
                 'pointer'     => !empty($opt['fx_pointer']),
                 'evening'     => !empty($opt['fx_evening']),
-                'snow'        => !empty($opt['fx_snow']),
             ],
             'schedule'    => Themes::schedule($opt['schedule']),
             'anchors'     => self::client_anchors(),
+            /* The calendar rules' two tables, shipped rather than copied, so
+             * ambient.js resolves with exactly what Schedule::active() uses. */
+            'holidays'    => Schedule::HOLIDAY_ANCHOR,
+            'clashWins'   => Schedule::CLASH_WINS,
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),

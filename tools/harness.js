@@ -58,7 +58,7 @@ async function open(html, opts = {}) {
   }
   const page = await browser.newPage({
     viewport: opts.viewport || { width: 1280, height: 900 },
-    deviceScaleFactor: 1,
+    deviceScaleFactor: opts.dsf || 1,
     reducedMotion: opts.reducedMotion || 'no-preference',
   });
 

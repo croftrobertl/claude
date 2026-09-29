@@ -22,8 +22,10 @@ const { config, open } = require('./harness');
 const { page: fixture } = require('./fixture');
 
 const ROOT = path.resolve(__dirname, '..');
-const Y0 = parseInt(process.argv[2], 10) || 2024;
-const Y1 = parseInt(process.argv[3], 10) || 2035;
+const Y0 = parseInt(process.argv[2], 10) || 2027;
+const Y1 = parseInt(process.argv[3], 10) || 2036;
+/* The calendar Rob confirmed (step 1c revised table), day by day. */
+const EXPECTED = require('./fixtures/calendar-2027-2036.json').days;
 
 /** PHP's answer for every day in the span. */
 function phpDays() {
@@ -103,8 +105,30 @@ function phpDays() {
     const worstBase = Math.min(...baseDays.map(([, n]) => n));
     console.log(`  florida_keys days per year: ${baseDays.map(([y, n]) => y + ':' + n).join(' ')}`);
 
-    const fail = diffs.length || holes.length || worstBase < 1;
-    console.log(fail ? '\nFAIL' : '\nPASS — resolvers agree, no uncovered days, base theme appears every year');
+    /* 4.2.0: the table Rob confirmed, exactly. */
+    const tableDiffs = dates.filter(d => EXPECTED[d] !== undefined && EXPECTED[d] !== php[d]);
+    const tableChecked = dates.filter(d => EXPECTED[d] !== undefined).length;
+    console.log(`  matches Rob's confirmed table: ${tableChecked - tableDiffs.length}/${tableChecked}` +
+      (tableDiffs.length ? ' -> ' + tableDiffs.slice(0, 8).map(d => `${d} php=${php[d]} want=${EXPECTED[d]}`).join('; ') : ''));
+
+    /* The rules themselves, stated independently of the table. */
+    const own = JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);function __($s,$d=null){return $s;}
+      require '${ROOT}/dcc-seasons/includes/class-schedule.php';
+      $o=[];for($y=${Y0};$y<=${Y1};$y++)foreach(\\DCC_Seasons\\Schedule::HOLIDAY_ANCHOR as $t=>$a)$o[]=[$t,\\DCC_Seasons\\Schedule::own_day($t,$y)];echo json_encode($o);`], { encoding: 'utf8' }));
+    const missing = own.filter(([t, d]) => php[d] !== t && !(t === 'april_fools' && d === '2029-04-01'));
+    console.log(`  holidays missing their own day: ${missing.length}${missing.length ? ' -> ' + missing.slice(0, 6).map(x => x.join(' ')).join('; ') : ''}`);
+    const ONE_DAY = ['mlk', 'presidents', 'april_fools', 'four_twenty'];
+    const lengthened = [];
+    for (let i = 1; i < dates.length; i++) {
+      if (ONE_DAY.includes(php[dates[i]]) && php[dates[i]] === php[dates[i - 1]]) { lengthened.push(dates[i]); }
+    }
+    console.log(`  one-day holidays lengthened: ${lengthened.length}${lengthened.length ? ' -> ' + lengthened.join(', ') : ''}`);
+    const fixed = { '2029-04-01': 'easter', '2032-02-15': 'strawberry', '2033-04-19': 'spring_canal', '2029-02-13': 'mardi_gras', '2029-02-12': 'mardi_gras', '2035-03-16': 'st_patricks' };
+    const fixedBad = Object.entries(fixed).filter(([d, t]) => php[d] !== undefined && php[d] !== t);
+    console.log(`  Rob's named days (1 Apr 2029 Easter, lone days kept 2032/2033, nearer-wins 2029/2035): ${fixedBad.length ? 'WRONG ' + JSON.stringify(fixedBad) : 'all correct'}`);
+
+    const fail = diffs.length || holes.length || worstBase < 1 || tableDiffs.length || missing.length || lengthened.length || fixedBad.length;
+    console.log(fail ? '\nFAIL' : '\nPASS — resolvers agree, the confirmed table holds, every rule holds, no uncovered days');
     process.exit(fail ? 1 : 0);
   } finally { await ses.close(); }
 })().catch(e => { console.error(e); process.exit(1); });

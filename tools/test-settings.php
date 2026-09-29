@@ -86,15 +86,15 @@ $clean = Settings::sanitize([
     'subtle'           => '1',
     'subtle_intensity' => '0.8',
     'subtle_map'       => [
-        'halloween'   => 'snow',      // valid re-point
+        'halloween'   => 'bokeh',     // valid re-point
         'christmas'   => '',          // valid "none"
         'valentines'  => 'nonsense',  // unknown effect -> dropped
-        'not_a_theme' => 'snow',      // unknown theme  -> dropped
+        'not_a_theme' => 'bokeh',     // unknown theme  -> dropped
     ],
 ]);
 ok($clean['subtle'] === 1, 'subtle checkbox survives');
 ok(abs($clean['subtle_intensity'] - 0.8) < 0.001, 'intensity survives');
-ok(($clean['subtle_map']['halloween'] ?? null) === 'snow', 'a valid re-point is kept');
+ok(($clean['subtle_map']['halloween'] ?? null) === 'bokeh', 'a valid re-point is kept');
 ok(array_key_exists('christmas', $clean['subtle_map']) && $clean['subtle_map']['christmas'] === '',
     '"none" is kept — it is a real choice, not an empty field');
 ok(!array_key_exists('valentines', $clean['subtle_map']), 'an unknown EFFECT is dropped');
@@ -115,19 +115,45 @@ echo "\n=== the stored map is OVERRIDES ONLY, even after a full-form save ===\n"
  * became false. This reproduces a real save: all 27 as the plugin ships
  * them, plus exactly one deliberate change. */
 $full = Themes::subtle_defaults();
-$full['halloween'] = 'snow';
+$full['halloween'] = 'bokeh';
 $saved = Settings::sanitize(['subtle_map' => $full]);
 ok(count($saved['subtle_map']) === 1, 'only the ONE changed theme is stored',
     'stored ' . count($saved['subtle_map']) . ' entries: ' . implode(',', array_keys($saved['subtle_map'])));
-ok(($saved['subtle_map']['halloween'] ?? null) === 'snow', 'and it is the right one');
+ok(($saved['subtle_map']['halloween'] ?? null) === 'bokeh', 'and it is the right one');
 $untouched = Settings::sanitize(['subtle_map' => Themes::subtle_defaults()]);
 ok($untouched['subtle_map'] === [], 'saving the form unchanged stores nothing at all');
 
 echo "\n=== effective map (defaults + overrides) ===\n";
-$eff = Settings::subtle_map(['subtle_map' => ['halloween' => 'snow']]);
-ok($eff['halloween'] === 'snow', 'the override wins');
+$eff = Settings::subtle_map(['subtle_map' => ['halloween' => 'bokeh']]);
+ok($eff['halloween'] === 'bokeh', 'the override wins');
 ok($eff['christmas'] === 'bokeh', 'an untouched theme keeps tracking the plugin');
 ok(count($eff) === count($themes), 'the effective map still covers every theme');
+
+echo "\n=== no snow anywhere (4.2.0) ===\n";
+ok(!isset($fx['snow']), 'the Snow choice is gone from the dropdown');
+foreach (['sunglow', 'goldlight', 'mardiconfetti', 'orangeblossom'] as $e) {
+    ok(isset($fx[$e]), "the named choice '$e' exists");
+}
+$want = ['snowbird' => 'sunglow', 'mlk' => 'goldlight', 'mardi_gras' => 'mardiconfetti', 'presidents' => 'orangeblossom', 'christmas' => 'bokeh'];
+foreach ($want as $t => $e) {
+    ok($map[$t] === $e, "$t defaults to $e (Rob's pick)", "got {$map[$t]}");
+}
+ok(!in_array('snow', $map, true), 'no theme defaults to snow');
+/* Rob's live options still carry what an older release stored. They are
+ * IGNORED on read — never rewritten. */
+$legacy = ['subtle_map' => ['snowbird' => 'snow', 'mlk' => 'snow', 'halloween' => 'embers'], 'fx_snow' => 1];
+$eff2 = Settings::subtle_map($legacy);
+ok($eff2['snowbird'] === 'sunglow' && $eff2['mlk'] === 'goldlight', 'a stored "snow" falls back to the theme default');
+ok($eff2['halloween'] === 'embers', 'a stored valid override still wins');
+ok(!array_key_exists('fx_snow', $d), 'fx_snow is no longer a setting');
+$cleaned = Settings::sanitize(['fx_snow' => '1', 'subtle_map' => ['snowbird' => 'snow']]);
+ok(!array_key_exists('fx_snow', $cleaned), 'a posted fx_snow is dropped');
+ok(!array_key_exists('snowbird', $cleaned['subtle_map']), 'a posted snow override is dropped');
+$src = file_get_contents(__DIR__ . '/../dcc-seasons/includes/class-themes.php');
+ok(strpos($src, "'snowflake'") === false, 'no theme names the snowflake sprite');
+ok(strpos($src, '❄') === false, 'no ❄ anywhere in the themes (the Christmas egg now carries H and O)');
+$xm = Themes::themes()['christmas']['egg']['glyphs'];
+ok(in_array('H', $xm, true) && in_array('O', $xm, true), 'the Christmas egg carries H and O');
 
 echo "\n$pass passed · $fail failed\n";
 if ($fail) {

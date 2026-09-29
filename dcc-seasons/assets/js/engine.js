@@ -19,8 +19,7 @@
  *    density cap is never exceeded; never overlaps a hero.
  *  - Evening tint (19:00–06:00 local): −10% brightness, +30% glow, one
  *    night variant per theme (fireflies, deck lights, sleigh-past-moon).
- *  - Christmas snow accumulation: a ≤6px snow line builds along the
- *    waterline from settled flakes; per-session only.
+ *  - No snow anywhere (4.2.0, Rob: "it doesn't snow in Florida").
  *  - Auto-degrade: rolling ~8ms frame budget sheds reflections → far
  *    parallax → vignettes, silently.
  *  - Directional facing (face:'L'), motion personalities, hero crossers,
@@ -53,7 +52,6 @@
 		/* — canal & boats — */
 		joint: '20 42|<path d="M8 38 12 38 15 16 5.6 16Z" fill="%d" stroke="#9AA3AD" stroke-width="1.4"/><path d="M8.6 33 11 33" stroke="#9AA3AD" stroke-width="0.9"/><circle cx="10.3" cy="12" r="4.8" fill="#FF6B1A" opacity="0.16"/><circle cx="10.3" cy="12" r="2.9" fill="#FF7A1A" opacity="0.45"/><path d="M5.6 16 15 16 14 12 12 13 10 11 8.7 13 7 12Z" fill="%q" stroke="#9AA3AD" stroke-width="1"/><circle cx="10.3" cy="12.4" r="1.7" fill="#FFC24D"/><path d="M13 8q3 -3 1 -6" fill="none" stroke="%t" stroke-width="1.3" opacity="0.5"/>',
 		peacehand: '28 33|<g fill="#F2C79B" stroke="#C98F55" stroke-width="1"><path d="M11 17 8 5a2 2 0 0 1 3.7-1L15 16Z"/><path d="M16 16 21 5a2 2 0 0 1 3.5 1.4L20 17Z"/><path d="M9 15h11q3.4 0 3.4 5v3.2q0 8-7 8h-3.4q-5 0-5-6Z"/><path d="M10 20q-3.6-1.4-4 1.6t3.8 3.4"/></g><g fill="none" stroke="#C98F55" stroke-width="1"><path d="M11 23h11M12 26h11"/></g>',
-		snowflake: '24 24|<g stroke="#8FC1E8" stroke-linecap="round" fill="none"><g stroke-width="2"><path d="M12 2v20M3.4 7l17 10M3.4 17 21 7"/></g><g stroke-width="1.4"><path d="m12 7-2.6-2.6M12 7l2.6-2.6M12 17l-2.6 2.6M12 17l2.6 2.6M7 9 3 9m2.8 6L3 15m14-6L21 9m-2.8 6L21 15"/></g></g>',
 		sparkle: '24 24|<g fill="%k"><path d="M9 1c1.2 5 2.4 7 7 8-5 1-6 2.2-7 8-1.2-5-2.4-7-7-8 5-1 6-2.2 7-8Z"/><path d="M18 13c.7 3 1.3 3.7 4 4-2.7.6-3.3 1.3-4 4-.7-3-1.3-3.7-4-4 2.7-.6 3.3-1.3 4-4Z"/></g>',
 		fleur: '26 34|<g fill="%a"><path d="M13 1C16 6 16 11 15 14 14 16 14 17 13 19 13 17 12 16 11 14 10 11 10 6 13 1Z"/><path d="M12 19C10 13 6 8.6 3.4 11 1.2 14 3 18 6.4 18 3.6 20 3 24 5.4 26 7.6 27 11 25 12 19Z"/><path d="M14 19C16 13 20 8.6 23 11 25 14 23 18 20 18 22 20 23 24 21 26 18 27 15 25 14 19Z"/></g><rect x="5" y="18.6" width="16" height="3.6" rx="1.4" fill="%f"/><path d="M10 22 16 22 13 32Z" fill="%a"/>',
 		clover: '26 30|<g fill="%j"><path id="cv" d="M13 13C13 4.6 3.6 5 5.6 11C2.4 8.4 0.8 15 13 13Z"/><use href="#cv" transform="rotate(90 13 13)"/><use href="#cv" transform="rotate(180 13 13)"/><use href="#cv" transform="rotate(270 13 13)"/></g><path d="M13 14q1.6 8-2 15" fill="none" stroke="%c" stroke-width="1.8"/>',
@@ -70,11 +68,14 @@
 		hook: '20 30|<path d="M10 1.4v12" stroke="%t" stroke-width="2"/><path d="M10 14q0 9.4-4.2 9.4T2 17" fill="none" stroke="%t" stroke-width="2.2"/><path d="M2 17 4.8 20 1 19Z" fill="%t"/><circle cx="10" cy="2" r="2.2" fill="%h"/>',
 		pontoon: '48 30|<path d="M3 21 L45 21 Q47 21 47 24 Q47 27 45 27 L3 27 Q1 27 1 24 Q1 21 3 21 Z" fill="#868E96"/><path d="M4 17 L42 17 L44 21 L2 21 Z" fill="%d"/><path d="M6 6 L36 6 L38 9 L4 9 Z" fill="%e"/><path d="M7 9 L7 17 M35 9 L35 17" stroke="%h" stroke-width="1.6"/><circle cx="21" cy="13" r="2.6" fill="%b"/><path d="M19 16 L23 16 L23 19 L19 19 Z" fill="%m"/><path d="M40 12 L44 12 L44 17 L40 17 Z" fill="%b"/><path d="M42 3 L47 3 L46 5 L47 7 L42 7 Z" fill="%a"/><path d="M42 3 L42 12" stroke="%h" stroke-width="1.2"/>',
 		kayak: '52 22|<path d="M2 16q24-7 48 0-24 7-48 0Z" fill="%r"/><circle cx="26" cy="7" r="3" fill="%b"/><path d="M26 10v5" stroke="%b" stroke-width="2"/><line x1="14" y1="2" x2="38" y2="14" stroke="%p" stroke-width="2"/><ellipse cx="13" cy="2" rx="3" ry="2" fill="%a" transform="rotate(28 13 2)"/><ellipse cx="39" cy="14" rx="3" ry="2" fill="%a" transform="rotate(28 39 14)"/>',
-		skiff: '52 22|<path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="%d"/><path d="M4.6 14.2 L44 14.2 L44 16 Q26 19 8 16 Z" fill="%v"/><path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="none" stroke="%x" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.6 11.4 L43.6 12.2" stroke="%m" stroke-width="1.1" fill="none"/><path d="M44 11 L48 11 L48 15 L46.6 15 L46.6 19 L45 19 L45 15 L44 15 Z" fill="%b"/><path d="M38 11 L38.6 5.6 M44 11 L44 5.6" stroke="%h" stroke-width="1.4" fill="none"/><path d="M36 3.4 L48 3.4 L48 5.4 L36 5.4 Z" fill="%t" stroke="%h" stroke-width="0.8"/><path d="M22 11 L27 11 L26 6 L23 6 Z" fill="%t" stroke="%x" stroke-width="0.8"/>',
 		bobber: '24 30|<line x1="12" y1="0" x2="12" y2="4" stroke="%h" stroke-width="2"/><circle cx="12" cy="16" r="11" fill="%d"/><path d="M1 16a11 11 0 0 1 22 0Z" fill="%e"/><circle cx="12" cy="16" r="11" fill="none" stroke="%b" stroke-width="1"/><circle cx="12" cy="4" r="2" fill="%b"/>',
 		tacklebox: '32 26|<rect x="2" y="9" width="28" height="15" rx="2" fill="%c"/><rect x="2" y="9" width="28" height="5" fill="#237032"/><path d="M12 9V6a4 4 0 0 1 8 0v3h-3V6a1 1 0 0 0-2 0v3Z" fill="%h"/><rect x="14" y="11" width="5" height="4" rx="1" fill="%a"/>',
 		lure: '30 20|<path d="M5 9.6 L1 5.6 Q0.2 4 2 4.2 L6.6 7.4 Z" fill="%o"/><ellipse cx="13" cy="10" rx="8.4" ry="4.8" fill="%e"/><path d="M4.8 9.6 Q13 5.4 21.2 9.6 Q13 8.6 4.8 9.6 Z" fill="%d"/><path d="M21.4 10 L28.6 6.2 L27.2 10 L28.6 13.8 Z" fill="%e"/><circle cx="7.6" cy="8.4" r="1.6" fill="%d"/><circle cx="7.6" cy="8.4" r="0.85" fill="#111"/><path d="M11 14.6 V17 Q11 18.8 12.8 18.8" stroke="%h" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M18.6 14.4 V16.8 Q18.6 18.6 20.4 18.6" stroke="%h" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
 		bass: '48 26|<path d="M6 13q12-10 28-8l10-4-3 8 3 8-10-4q-16 2-28-8Z" fill="#37633F"/><path d="M8 13q11-7 26-6-13 12-26 6Z" fill="#5C8A54"/><path d="M20 3q6-3 10 0l-4 4Z" fill="#37633F"/><path d="M22 22q5 3 9 1l-4-5Z" fill="#37633F"/><circle cx="12" cy="11" r="2" fill="#111"/><path d="M6 13q3 3 7 3" fill="none" stroke="#2F4F35" stroke-width="1"/>',
+		/* 4.2.0 — the jumping-bass hero, drawn: a largemouth mid-leap, mouth open. */
+		bassleap: '76 44|<path d="M12 22Q24 6 44 10Q58 12 62 18L73 9L70 22L73 35L62 26Q54 33 40 33Q22 34 12 24Z" fill="#5C940D"/><path d="M14 24Q26 32 42 31Q54 30 60 25Q48 27 36 26Q24 25 14 24Z" fill="#E9FAC8"/><path d="M20 20Q30 16 38 20Q46 18 54 21Q46 23 38 22Q30 24 20 20Z" fill="#2B8A3E" opacity=".75"/><path d="M28 10L34 2L40 9L46 4L50 12Z" fill="#2B8A3E"/><path d="M38 31L42 38L46 31Z" fill="#2B8A3E"/><path d="M13 21L4 15Q6 14 12 18Z" fill="#5C940D"/><path d="M13 21L4 15Q3 21 6 27L13 24Z" fill="#7A1E1E"/><path d="M13 24L6 27Q9 29 14 26Z" fill="#E9FAC8"/><circle cx="18" cy="17" r="2.6" fill="#FFD43B"/><circle cx="18" cy="17" r="1.4" fill="%g"/><path d="M22 14Q24 20 22 25" stroke="#2B8A3E" stroke-width="1.2" fill="none"/>',
+		/* 4.2.0 — Florida Keys boat: an aluminium jon boat with a small outboard. */
+		jonboat: '58 22|<path d="M3 10H50L55 14L52 20H6Z" fill="#9AA5B1"/><path d="M3 10H50L52 12H4Z" fill="#C3CBD3"/><path d="M8 14H48" stroke="#7D8894" stroke-width="1"/><rect x="18" y="6" width="10" height="4" fill="#5C940D"/><path d="M52 10L52 3Q52 1 54 1H56L56 16H54" fill="#343A40"/><path d="M55 16L56 21" stroke="#343A40" stroke-width="1.6"/>',
 		lilypad: '36 22|<path d="M31.9 7 A16 8 0 1 0 33 13.7 L18 11 Z" fill="%c"/><path d="M18 11 L4 8 M18 11 L5 14 M18 11 L11 18 M18 11 L20 18 M18 11 L19 3 M18 11 L28 4" stroke="#237032" stroke-width="0.9" fill="none"/><circle cx="10" cy="7" r="3" fill="%s"/><circle cx="10" cy="7" r="1.1" fill="#FDE68A"/>',
 		sabalpalm: '34 38|<path d="M14 38 L15 20 L19 20 L20 38 Z" fill="%p"/><path d="M14.6 25 L19.4 25 M14.4 30 L19.6 30 M14.2 35 L19.8 35" stroke="%i" stroke-width="1.1" fill="none"/><g fill="%c"><path id="fr" d="M17 19 L12.4 7.6 L14.6 10.4 L15.6 4.6 L17 8.6 L18.4 4.6 L19.4 10.4 L21.6 7.6 Z"/><use href="#fr" transform="rotate(30 17 19)"/><use href="#fr" transform="rotate(-30 17 19)"/><use href="#fr" transform="rotate(60 17 19)"/><use href="#fr" transform="rotate(-60 17 19)"/><use href="#fr" transform="rotate(88 17 19)"/><use href="#fr" transform="rotate(-88 17 19)"/><use href="#fr" transform="rotate(112 17 19)"/><use href="#fr" transform="rotate(-112 17 19)"/></g><g fill="%j"><path id="fs" d="M17 19 L14 10.6 L15.6 12.6 L17 8.6 L18.4 12.6 L20 10.6 Z"/><use href="#fs" transform="rotate(45 17 19)"/><use href="#fs" transform="rotate(-45 17 19)"/><use href="#fs" transform="rotate(74 17 19)"/><use href="#fs" transform="rotate(-74 17 19)"/></g><circle cx="17" cy="19" r="2.4" fill="%i"/>',
 		hibiscus: '30 30|<g fill="%e"><path id="pt" d="M15 16 C8.6 13.6 7 6 15 3 C23 6 21.4 13.6 15 16 Z"/><use href="#pt" transform="rotate(72 15 16)"/><use href="#pt" transform="rotate(144 15 16)"/><use href="#pt" transform="rotate(216 15 16)"/><use href="#pt" transform="rotate(288 15 16)"/></g><circle cx="15" cy="16" r="3.6" fill="%n"/><path d="M8.6 23 Q3 26.6 6 29 Q11 27.6 11.6 23.6 Z" fill="%j"/><path d="M15 16 L26.4 5.2" stroke="%k" stroke-width="1.8" fill="none"/><g fill="%a"><circle cx="21.6" cy="9.6" r="1"/><circle cx="23.6" cy="8" r="1.1"/><circle cx="25.4" cy="6.2" r="1.1"/></g><circle cx="26.6" cy="4.6" r="1.7" fill="%k"/><g fill="%u"><circle cx="25.6" cy="3.2" r="0.8"/><circle cx="27.6" cy="2.8" r="0.8"/><circle cx="28.4" cy="4.8" r="0.8"/></g>',
@@ -87,8 +88,28 @@
 		heronstand: '44 64|<path d="M18 10q8 2 10 12v12q0 10-8 12l-4-2q6-6 4-14-8-6-2-20Z" fill="%v"/><path d="M20 6q-6 0-8 6l6-1q4 1 2 6" fill="none" stroke="#5D6D7E" stroke-width="3"/><path d="M12 8 2 6l8 5Z" fill="%a"/><circle cx="17" cy="9" r="1" fill="#111"/><line x1="20" y1="46" x2="19" y2="60" stroke="%f" stroke-width="2"/><line x1="24" y1="46" x2="26" y2="60" stroke="%f" stroke-width="2"/><path d="M15 60h17" stroke="%f" stroke-width="2"/>',
 		manatee: '92 48|<path d="M69 17 Q88 9.6 89 25 Q88 40.4 69 33 Z" fill="#7B8794"/><path d="M13 25 Q13 9 40 9 Q64 9 71 20 L71 30 Q64 41 40 41 Q13 41 13 25 Z" fill="#8D99A6"/><ellipse cx="14" cy="28" rx="8" ry="6.5" fill="#7B8794"/><circle cx="10" cy="25.6" r="1.2" fill="%b"/><circle cx="14.4" cy="25.2" r="1.2" fill="%b"/><circle cx="21" cy="19" r="1.4" fill="%b"/><path d="M28 40 Q32 48 41 44 Z" fill="#7B8794"/><path d="M48 41 Q52 47 59 44 Z" fill="#7B8794"/><path d="M30 15 Q44 12 58 15" stroke="#7B8794" stroke-width="1.2" fill="none"/>',
 		dove: '46 34|<path d="M8 15q2-7 11-6 8 2 13 7l12 2-9 5 3 7-10-6q-9 3-16-3T8 15Z" fill="%d" stroke="#5A6B7C" stroke-width="2.8"/><path d="M19 15q6-10 14-9-2 7-6 11-4 3-8-2Z" fill="%q" stroke="#5A6B7C" stroke-width="2.4"/><path d="M7 14 2 16l5 2Z" fill="%a"/><circle cx="11" cy="13" r="1.4" fill="%g"/><ellipse cx="6" cy="21" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 6 21)"/><ellipse cx="10" cy="22" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 10 22)"/>',
-		pelican: '48 28|<path d="M24 13 Q31 5 44 6 Q35 12 29 16 Z" fill="#6B4A2F"/><path d="M13 11 Q26 7 38 13 Q40 18 30 20 Q17 20 13 15 Z" fill="%p"/><path d="M36 14 L47 16 L36 19.6 Z" fill="#6B4A2F"/><circle cx="10.6" cy="11" r="4.8" fill="%q"/><path d="M13 7.4 Q18 8 19 12.4 Q15.6 9.6 12 8.6 Z" fill="%k"/><path d="M7.6 9.8 L0.6 12 L7.6 13.4 Z" fill="%h"/><path d="M7.4 12.4 Q2.6 14.6 2 18.4 Q7 20.4 11 16.4 Z" fill="%a"/><circle cx="9.4" cy="9.8" r="0.95" fill="#111"/><path d="M22 13 Q29 2 46 3 Q33 11 28 17 Z" fill="%p"/>',
-		pelican1: '48 28|<path d="M24 14 Q31 21 43 23 Q34 17 29 14 Z" fill="#6B4A2F"/><path d="M13 11 Q26 7 38 13 Q40 18 30 20 Q17 20 13 15 Z" fill="%p"/><path d="M36 14 L47 16 L36 19.6 Z" fill="#6B4A2F"/><circle cx="10.6" cy="11" r="4.8" fill="%q"/><path d="M13 7.4 Q18 8 19 12.4 Q15.6 9.6 12 8.6 Z" fill="%k"/><path d="M7.6 9.8 L0.6 12 L7.6 13.4 Z" fill="%h"/><path d="M7.4 12.4 Q2.6 14.6 2 18.4 Q7 20.4 11 16.4 Z" fill="%a"/><circle cx="9.4" cy="9.8" r="0.95" fill="#111"/><path d="M22 14 Q29 24 45 26 Q32 18 28 14 Z" fill="%p"/>',
+		/* 4.2.0 — the eagle hero, drawn as a two-frame wingbeat (July 4 and Patriot Day). */
+		eagleup: '110 60|<ellipse cx="58" cy="38" rx="22" ry="9" fill="#3E2716"/><path d="M76 35L95 30L96 44L76 41Z" fill="#F8F9FA" stroke="#CED4DA" stroke-width="1"/><path d="M48 36Q52 14 70 2L70 8L76 4L74 11L80 9L74 16Q66 26 62 38Z" fill="#4E3019"/><path d="M34 29Q44 28 46 37Q42 42 34 42Z" fill="#F8F9FA"/><ellipse cx="33" cy="34" rx="11" ry="8" fill="#F8F9FA"/><path d="M23 30Q15 30 13 35Q13 39 16 39Q16 36 19 36L24 37Z" fill="#FCC419" stroke="#E67700" stroke-width=".8"/><path d="M27 31L33 30.4" stroke="%b" stroke-width="1.3"/><circle cx="29.5" cy="32.6" r="1.5" fill="%g"/>',
+		eagledown: '110 60|<ellipse cx="58" cy="30" rx="22" ry="9" fill="#3E2716"/><path d="M76 27L95 22L96 36L76 33Z" fill="#F8F9FA" stroke="#CED4DA" stroke-width="1"/><path d="M48 30Q54 46 66 58L67 52L72 57L71 50L77 53L73 46Q66 38 62 30Z" fill="#4E3019"/><path d="M34 21Q44 20 46 29Q42 34 34 34Z" fill="#F8F9FA"/><ellipse cx="33" cy="26" rx="11" ry="8" fill="#F8F9FA"/><path d="M23 22Q15 22 13 27Q13 31 16 31Q16 28 19 28L24 29Z" fill="#FCC419" stroke="#E67700" stroke-width=".8"/><path d="M27 23L33 22.4" stroke="%b" stroke-width="1.3"/><circle cx="29.5" cy="24.6" r="1.5" fill="%g"/>',
+		/* 4.2.0 — Florida Keys hero: an osprey carrying a fish, two-frame wingbeat.
+		 * The -nf frames are the same bird before the catch (the osprey scene). */
+		ospreyup: '92 50|<path d="M42 24Q50 8 58 6Q70 2 86 4L82 7L88 9L81 11L86 14L76 14Q64 14 56 26Z" fill="#5C4033"/><path d="M50 16Q58 10 66 9" stroke="#8C6E5A" stroke-width="2" fill="none"/><ellipse cx="46" cy="27" rx="17" ry="6.5" fill="#F8F9FA"/><path d="M60 24L74 21L75 30L60 30Z" fill="#6B5446"/><circle cx="29" cy="24" r="6.2" fill="#F8F9FA"/><path d="M24 23L36 22L40 26L28 26Z" fill="#3B2A20"/><path d="M23.5 22.5Q19 23 19 27Q21 25.5 24 26Z" fill="#23272E"/><circle cx="27" cy="23.4" r="1.1" fill="#FCC419"/><path d="M42 33l-2 5m5-5l0 5" stroke="#ADB5BD" stroke-width="1.6"/><path d="M34 40Q40 36 48 38Q52 39 53 41L57 38L56 42L57 46L53 43Q49 45 42 44Q36 43 34 40Z" fill="#8FA3B3"/><path d="M36 40Q44 40 52 41" stroke="#5C6F80" stroke-width="1" fill="none"/>',
+		ospreydown: '92 58|<ellipse cx="46" cy="21" rx="17" ry="6.5" fill="#F8F9FA"/><path d="M42 20Q50 36 60 44Q70 52 84 54L80 50L86 49L79 46L84 43L74 42Q64 36 56 20Z" fill="#5C4033"/><path d="M60 18L74 15L75 24L60 24Z" fill="#6B5446"/><circle cx="29" cy="18" r="6.2" fill="#F8F9FA"/><path d="M24 17L36 16L40 20L28 20Z" fill="#3B2A20"/><path d="M23.5 16.5Q19 17 19 21Q21 19.5 24 20Z" fill="#23272E"/><circle cx="27" cy="17.4" r="1.1" fill="#FCC419"/><path d="M42 27l-2 5m5-5l0 5" stroke="#ADB5BD" stroke-width="1.6"/><path d="M34 34Q40 30 48 32Q52 33 53 35L57 32L56 36L57 40L53 37Q49 39 42 38Q36 37 34 34Z" fill="#8FA3B3"/><path d="M36 34Q44 34 52 35" stroke="#5C6F80" stroke-width="1" fill="none"/>',
+		ospreyupnf: '92 50|<path d="M42 24Q50 8 58 6Q70 2 86 4L82 7L88 9L81 11L86 14L76 14Q64 14 56 26Z" fill="#5C4033"/><path d="M50 16Q58 10 66 9" stroke="#8C6E5A" stroke-width="2" fill="none"/><ellipse cx="46" cy="27" rx="17" ry="6.5" fill="#F8F9FA"/><path d="M60 24L74 21L75 30L60 30Z" fill="#6B5446"/><circle cx="29" cy="24" r="6.2" fill="#F8F9FA"/><path d="M24 23L36 22L40 26L28 26Z" fill="#3B2A20"/><path d="M23.5 22.5Q19 23 19 27Q21 25.5 24 26Z" fill="#23272E"/><circle cx="27" cy="23.4" r="1.1" fill="#FCC419"/><path d="M42 33l-2 5m5-5l0 5" stroke="#ADB5BD" stroke-width="1.6"/>',
+		ospreydownnf: '92 58|<ellipse cx="46" cy="21" rx="17" ry="6.5" fill="#F8F9FA"/><path d="M42 20Q50 36 60 44Q70 52 84 54L80 50L86 49L79 46L84 43L74 42Q64 36 56 20Z" fill="#5C4033"/><path d="M60 18L74 15L75 24L60 24Z" fill="#6B5446"/><circle cx="29" cy="18" r="6.2" fill="#F8F9FA"/><path d="M24 17L36 16L40 20L28 20Z" fill="#3B2A20"/><path d="M23.5 16.5Q19 17 19 21Q21 19.5 24 20Z" fill="#23272E"/><circle cx="27" cy="17.4" r="1.1" fill="#FCC419"/><path d="M42 27l-2 5m5-5l0 5" stroke="#ADB5BD" stroke-width="1.6"/>',
+		/* 4.2.0 — Central Florida cast for the Keys. */
+		ibis: '70 30|<path d="M28 13Q36 2 50 1L47 4L52 5L46 7L50 9L42 10Q37 13 36 16Z" fill="#F8F9FA" stroke="#CED4DA" stroke-width=".6"/><path d="M47 1.6L52 5L46 7L50 9L45 9.6Z" fill="#23272E"/><ellipse cx="34" cy="16" rx="12" ry="5" fill="#F8F9FA" stroke="#CED4DA" stroke-width=".6"/><path d="M24 15L12 13" stroke="#F8F9FA" stroke-width="3" stroke-linecap="round"/><ellipse cx="10" cy="12.6" rx="3.2" ry="2.8" fill="#FFA8A8"/><path d="M8 12Q3 12.6 1 17Q4 14.6 8 13.8Z" fill="#FF6B6B"/><circle cx="10.2" cy="11.8" r=".8" fill="#74C0FC"/><path d="M45 17L66 20M45 18L65 22" stroke="#FF8787" stroke-width="1.3"/>',
+		anhingaswim: '56 30|<path d="M20 27Q34 22 54 26L54 28H18Z" fill="#23272E"/><path d="M22 26Q18 16 22 10Q26 4 20 3" stroke="#23272E" stroke-width="3.2" fill="none" stroke-linecap="round"/><ellipse cx="18" cy="3.6" rx="3.4" ry="2.4" fill="#3A3F47"/><path d="M15 3.4L3 4.6L15 5Z" fill="#C9A227"/><circle cx="18.4" cy="3.2" r=".9" fill="#E03131"/>',
+		anhingadry: '76 70|<path d="M36 70L37 52Q30 46 26 44L28 42Q33 45 38 48L40 38L43 38L41 52L44 70Z" fill="#6B5B4B"/><g fill="#23272E"><path d="M33 28L6 20L2 26L7 27L3 31L9 31L6 35L12 34L10 38L33 36Z"/><path d="M43 28L70 20L74 26L69 27L73 31L67 31L70 35L64 34L66 38L43 36Z"/><ellipse cx="38" cy="33" rx="6" ry="11"/><path d="M36 42L32 52L44 52L40 42Z"/></g><g fill="#DEE2E6" opacity=".85"><path d="M30 29L14 25L15 27L30 31ZM30 32L17 29L18 31L30 34Z"/><path d="M46 29L62 25L61 27L46 31ZM46 32L59 29L58 31L46 34Z"/></g><path d="M37 24Q33 18 36 12Q38 8 34 6" stroke="#23272E" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="33" cy="6" rx="3.2" ry="2.3" fill="#3A3F47"/><path d="M30.4 5.6L20 7L30.6 7.6Z" fill="#C9A227"/><circle cx="33.4" cy="5.6" r=".9" fill="#E03131"/><path d="M37 44l-2 4h4Z" fill="#6B5B4B"/>',
+		snag: '76 70|<path d="M36 70L37 52Q30 46 26 44L28 42Q33 45 38 48L40 38L43 38L41 52L44 70Z" fill="#6B5B4B"/><path d="M37 44l-2 4h4Z" fill="#6B5B4B"/>',
+		crane: '44 70|<path d="M20 44L18 68M26 44L27 68" stroke="#495057" stroke-width="1.8"/><path d="M14 30Q20 22 32 26Q42 30 40 40Q36 46 26 45Q16 44 14 36Z" fill="#9AA2AA"/><path d="M30 28Q40 30 42 42Q36 38 32 38Z" fill="#7B838B"/><path d="M16 32Q12 18 14 8" stroke="#A8B0B8" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="13" cy="7" rx="4.2" ry="3.6" fill="#A8B0B8"/><path d="M10.5 4.5Q13 2 15.5 4.5L14 6.5L11 6.5Z" fill="#E03131"/><path d="M9.5 7L1 9L9.6 9.2Z" fill="#343A40"/><path d="M11 8.5Q13 10 16 9" stroke="#F8F9FA" stroke-width="1.4" fill="none"/><circle cx="12.4" cy="6.4" r=".8" fill="#FAB005"/>',
+		cranedance: '64 70|<path d="M30 46L26 60M36 46L40 58" stroke="#495057" stroke-width="1.8"/><path d="M26 32Q30 26 38 28Q46 32 44 42Q40 48 32 47Q24 46 24 38Z" fill="#9AA2AA"/><path d="M30 30Q20 14 4 8L8 14L2 16L10 20L6 24L16 26L28 36Z" fill="#8A929A"/><path d="M40 30Q48 14 62 8L58 14L64 16L56 20L60 24L50 26L40 36Z" fill="#9AA2AA"/><path d="M28 32Q22 22 20 12" stroke="#A8B0B8" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="19" cy="11" rx="4.2" ry="3.6" fill="#A8B0B8"/><path d="M16.5 8.5Q19 6 21.5 8.5L20 10.5L17 10.5Z" fill="#E03131"/><path d="M15.5 11L7 12.5L15.6 13.2Z" fill="#343A40"/><circle cx="18.4" cy="10.4" r=".8" fill="#FAB005"/>',
+		limpkin: '46 56|<path d="M22 38L20 54M28 38L30 54" stroke="#6C5B4B" stroke-width="1.8"/><path d="M14 24Q22 18 34 22Q44 26 42 34Q38 40 28 39Q16 38 14 30Z" fill="#6F4E37"/><g fill="#F1E3C8"><circle cx="22" cy="26" r=".9"/><circle cx="27" cy="24" r=".9"/><circle cx="31" cy="28" r=".9"/><circle cx="36" cy="27" r=".9"/><circle cx="25" cy="31" r=".9"/><circle cx="33" cy="33" r=".9"/><circle cx="19" cy="29" r=".9"/></g><path d="M17 26Q13 16 14 9" stroke="#7A5A42" stroke-width="3.4" fill="none" stroke-linecap="round"/><ellipse cx="13.6" cy="8" rx="3.6" ry="3" fill="#7A5A42"/><path d="M11 7Q5 8 1 12Q6 10 11 9.2Z" fill="#C9A227"/><circle cx="13" cy="7.4" r=".8" fill="#23272E"/><g fill="#F1E3C8"><circle cx="14" cy="12" r=".7"/><circle cx="15" cy="16" r=".7"/></g>',
+		applesnail: '16 14|<path d="M2 12Q1 4 8 2Q15 2 15 8Q15 13 9 13Z" fill="#8C6A3F"/><path d="M8 5Q12 5 12 8.5Q12 11 9 11Q6 11 6 8.5Q6 6.8 8 6.8" stroke="#5E4526" stroke-width="1.2" fill="none"/><path d="M4 6Q6 4 8 4" stroke="#B08A55" stroke-width="1" fill="none"/>',
+		snaileggs: '10 30|<path d="M5 30V2" stroke="#6B8E4E" stroke-width="1.6"/><g fill="#F783AC"><circle cx="5" cy="10" r="2"/><circle cx="3.6" cy="12.6" r="2"/><circle cx="6.4" cy="12.8" r="2"/><circle cx="5" cy="15.4" r="2"/><circle cx="3.8" cy="18" r="1.8"/><circle cx="6.2" cy="18" r="1.8"/></g>',
+		/* 4.2.0 — Summer on the Canal scenes. */
+		gator: '90 20|<path d="M2 14Q6 10 14 11L30 10Q36 6 40 10L44 12Q60 11 88 15L88 17H2Z" fill="#3F5A2A"/><g fill="#2F4420"><path d="M50 12l3-3 3 3ZM58 12.5l3-3 3 3ZM66 13l3-3 3 3ZM74 13.6l3-2.6 3 3Z"/></g><circle cx="7" cy="12" r="1" fill="#1B2512"/><ellipse cx="35" cy="8.4" rx="3.2" ry="2.6" fill="#556B2F"/><circle cx="35.6" cy="8" r="1.3" fill="#E6C229"/><path d="M35.6 7v2" stroke="%g" stroke-width=".7"/>',
+		mullet: '34 14|<path d="M3 7Q10 1 22 3Q27 4 28 7L33 2L32 7L33 12L28 7Q27 10 22 11Q10 13 3 7Z" fill="#CED4DA" stroke="#495057" stroke-width=".8"/><path d="M3.5 6.5Q10 1.4 22 3.2Q26 4 28 6.5Q18 6 8 6.6Z" fill="#5C6B55"/><path d="M8 8Q16 9.5 26 8" stroke="#868E96" stroke-width="1" fill="none"/><circle cx="7" cy="6" r="1.1" fill="%g"/>',
 		swan: '44 38|<path d="M9 26 Q9 17 20 16 Q32 15 39 21 Q34 32 21 33 Q11 33 9 26 Z" fill="%d" stroke="#7D8B99" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 21 Q26 17 35 22 Q28 29 18 27 Z" fill="%q" stroke="#7D8B99" stroke-width="1.2"/><path d="M19 18 Q11 14 13 8 Q15 2.6 22 3.4 Q27.6 4.2 28 9 L24.6 9 Q24.2 7 21.6 6.6 Q17.6 6.2 16.6 9.6 Q15.6 14 22.4 16.4 Z" fill="%d" stroke="#7D8B99" stroke-width="1.2"/><circle cx="26" cy="8" r="3.4" fill="%d" stroke="#7D8B99" stroke-width="1.2"/><path d="M29 8 L34 9.6 L29 11 Z" fill="%r"/><circle cx="27" cy="6.8" r="0.9" fill="%g"/>',
 		ladybug: '24 20|<ellipse cx="14" cy="11" rx="8.4" ry="7" fill="%e"/><path d="M14 4v14" stroke="%g" stroke-width="1.2"/><g fill="%g"><circle cx="10.6" cy="8.4" r="1.4"/><circle cx="17.4" cy="8.4" r="1.4"/><circle cx="10.2" cy="13.4" r="1.4"/><circle cx="17.8" cy="13.4" r="1.4"/></g><circle cx="7" cy="8" r="4" fill="%g"/><path d="M5.4 4.6Q3.4 1.6 1.6 2.4M8.2 4.2Q7.6 1 5.6 0.8" fill="none" stroke="%g" stroke-width="1"/><circle cx="5.6" cy="6.6" r="0.8" fill="%d"/>',
 		turkey: '40 36|<path d="M20 20 8 4q-3 8 4 14Zm0 0 4-18q6 4 3 14Zm0 0 12-14q4 8-5 15Z" fill="#A05A2C"/><ellipse cx="20" cy="25" rx="10" ry="9" fill="%i"/><circle cx="12" cy="18" r="5" fill="%i"/><circle cx="11" cy="17" r="1" fill="#111"/><path d="M8 18l-4 1 4 2Z" fill="%a"/><path d="M9 20q-2 3 0 5" stroke="%e" stroke-width="2" fill="none"/><line x1="17" y1="33" x2="17" y2="36" stroke="%f" stroke-width="2"/><line x1="23" y1="33" x2="23" y2="36" stroke="%f" stroke-width="2"/>',
@@ -109,6 +130,8 @@
 		web: '40 40|<g stroke="#8A94A0" stroke-width="1" fill="none" opacity="0.9"><path d="M40 0 2 0M40 0 4.9 15M40 0 13 27M40 0 26 35M40 0 40 38"/><path d="M40 12 35 11 32 8.5 29 4.6 28 0"/><path d="M40 20 30 19 26 14 22 7.7 20 0"/><path d="M40 28 29 26 20 20 14 11 12 0"/><path d="M40 36 26 33 15 26 6.7 14 4 0"/></g>',
 		candycorn: '22 30|<path d="M11 1 21 29H1Z" fill="%k"/><path d="M4 19 11 1l7 18Z" fill="#FF922B"/><path d="M8 9 11 1l3 8Z" fill="#FFF9DB"/>',
 		witchhat: '32 26|<ellipse cx="16" cy="22" rx="15" ry="4" fill="%g"/><path d="M16 0 24 21H8Z" fill="%b"/><rect x="9" y="16" width="14" height="4" fill="#9C36B5"/><rect x="14" y="17" width="3" height="3" fill="%k"/>',
+		/* 4.2.0 — the witch hero, drawn: a silhouette with her cat on the broom tail. */
+		witchsil: '92 66|<g fill="#1B1B24" stroke="#9C36B5" stroke-width=".7" paint-order="stroke"><path d="M10 48L74 44" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M72 44L90 36L88 44L91 50L72 47Z"/><path d="M38 30Q52 31 58 45L46 46Z"/><path d="M32 30H44L48 47H30Z"/><path d="M33 47L27 56H20V53H26L29 47Z"/><path d="M36 33L27 46" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M39 21Q50 22 52 32Q46 27 40 28Z"/><circle cx="36" cy="24" r="6"/><path d="M30.5 24L27 26L31 27Z"/><ellipse cx="38" cy="18.5" rx="11" ry="2.4" transform="rotate(-8 38 18.5)"/><path d="M31 18L41 16L50 2L44 3Z"/><ellipse cx="68" cy="40" rx="5.5" ry="3.6"/><circle cx="63.5" cy="36.4" r="3.2"/><path d="M61.4 34.6L61.8 30.8L64 33.4ZM65 33.4L66.6 30.4L67 34.6Z"/><path d="M73 40Q78 34 75.5 29" stroke="#1B1B24" stroke-width="1.6" fill="none"/></g><path d="M32 16.6L41 15L41.8 13.6L33 15Z" fill="#9C36B5"/><circle cx="62.6" cy="36" r=".8" fill="%k"/><circle cx="35" cy="23.5" r=".9" fill="%k"/>',
 		/* — thanksgiving / harvest — */
 		acorn: '22 28|<path d="M4 12h14c0 8-4 13-7 15-3-2-7-7-7-15Z" fill="#B08552"/><path d="M2 12c0-5 4-8 9-8s9 3 9 8Z" fill="%i"/><line x1="11" y1="4" x2="11" y2="0" stroke="%i" stroke-width="2"/>',
 		pie: '32 22|<path d="M3 11h26l-2.4 8q-.6 2-3 2H8q-2.4 0-3-2Z" fill="%o"/><path d="M1 11q3-8 15-8T31 11Z" fill="#E8B04B"/><g stroke="#B5772E" stroke-width="1" fill="none"><path d="M8 6 5 11m6-8L10 11M16 3.2V11m5-8L22 11m1.2-5L27 11"/></g>',
@@ -155,6 +178,8 @@
 		cannabis: '32 34|<g fill="%c" transform="translate(16 30)"><path id="cl" d="M0 0 1.5-5 .8-6 2.6-10 1.8-11 3-15 2-17 2.2-20 1-21 0-26-1-21-2.2-20-2-17-3-15-1.8-11-2.6-10-.8-6-1.5-5Z"/><use href="#cl" transform="rotate(27) scale(.9)"/><use href="#cl" transform="rotate(-27) scale(.9)"/><use href="#cl" transform="rotate(54) scale(.74)"/><use href="#cl" transform="rotate(-54) scale(.74)"/><use href="#cl" transform="rotate(79) scale(.54)"/><use href="#cl" transform="rotate(-79) scale(.54)"/></g><path d="M16 29v5" stroke="%c" stroke-width="2"/>',
 		peace: '30 30|<circle cx="15" cy="15" r="13" fill="none" stroke="%l" stroke-width="3"/><circle cx="15" cy="15" r="13" fill="none" stroke="%j" stroke-width="3" stroke-dasharray="14 27"/><path d="M15 2v26M15 15 6 24m9-9 9 9" stroke="%u" stroke-width="3"/>',
 		sprout: '22 26|<path d="M11 26V10" stroke="%c" stroke-width="2"/><path d="M11 12Q3 12 1 4q9-1 10 8Z" fill="#37B24D"/><path d="M11 9Q19 9 21 2q-9-1-10 7Z" fill="%j"/>',
+		/* 4.2.0 — 4/20: the hippie van (no badge) takes the picnic basket's grow-and-stand role. */
+		van: '48 30|<path d="M4 6Q4 2 9 2H42Q46 2 46 7V23H2V11Q2 7 4 6Z" fill="#F8F9FA" stroke="#868E96" stroke-width="1"/><path d="M2 15H46V23H2Z" fill="#12B886"/><path d="M2 15Q10 20 13 15" fill="#F8F9FA"/><path d="M6 5H13V12H4Z" fill="#A5D8FF"/><path d="M16 5H23V12H16ZM26 5H33V12H26ZM36 5H43V12H36Z" fill="#A5D8FF"/><g fill="%k"><circle cx="24" cy="19" r="2.4"/><circle cx="32" cy="18" r="1.6"/></g><g fill="%u"><circle cx="24" cy="19" r="1"/><circle cx="32" cy="18" r=".7"/></g><circle cx="11" cy="24" r="4.2" fill="%g"/><circle cx="37" cy="24" r="4.2" fill="%g"/><circle cx="11" cy="24" r="1.6" fill="%t"/><circle cx="37" cy="24" r="1.6" fill="%t"/><rect x="1" y="17" width="3" height="2" fill="%k"/>',
 		globe: '30 30|<circle cx="15" cy="15" r="13" fill="#339AF0"/><path d="M8 6q6 2 5 8t3 7q-8 1-10-6-1-6 2-9Zm12 1q4 3 4 8 0 6-5 9-2-5 0-9t1-8Z" fill="#37B24D"/>',
 		hands: '44 32|<circle cx="22" cy="12" r="8.6" fill="#2E86DE"/><path d="M15.6 7.4 Q21 4.6 24.6 9 Q22.6 15 17 15.4 Q13.6 11.6 15.6 7.4 Z" fill="%j"/><path d="M26 8.4 Q30 11 28.4 16 Q24.6 17.4 24 12.4 Z" fill="%j"/><path d="M1.6 31 Q0.6 23.6 6 20.6 Q10 19 13.6 21.4 L20 25 Q21.6 26.4 20 27.6 L13 26.6 Q9 26.6 8.6 31 Z" fill="#D9A06B"/><path d="M6.4 22.6 L12.6 25.4 M8 25.4 L13.6 27.2 M4.6 25 L9 27.6" stroke="#B87F4E" stroke-width="0.9" fill="none" stroke-linecap="round"/><path d="M42.4 31 Q43.4 23.6 38 20.6 Q34 19 30.4 21.4 L24 25 Q22.4 26.4 24 27.6 L31 26.6 Q35 26.6 35.4 31 Z" fill="#D9A06B"/><path d="M37.6 22.6 L31.4 25.4 M36 25.4 L30.4 27.2 M39.4 25 L35 27.6" stroke="#B87F4E" stroke-width="0.9" fill="none" stroke-linecap="round"/>',
 		/* — labor day picnic — */
@@ -166,6 +191,7 @@
 		sun: '34 34|<path d="M17 1.5 L17 6 M32.5 17 L28 17 M17 32.5 L17 28 M1.5 17 L6 17 M28 6 L24.8 9.2 M28 28 L24.8 24.8 M6 28 L9.2 24.8 M6 6 L9.2 9.2" stroke="%k" stroke-width="2.4" stroke-linecap="round" fill="none"/><circle cx="17" cy="17" r="9" fill="%r"/><circle cx="17" cy="17" r="7" fill="%k"/>',
 		watermelon: '34 22|<path d="M1 3 A16 16 0 0 1 33 3 L17 21 Z" fill="%c"/><path d="M3.6 3.6 A13.4 13.4 0 0 1 30.4 3.6 L17 19 Z" fill="%d"/><path d="M5.6 4 A11.4 11.4 0 0 1 28.4 4 L17 17 Z" fill="#FA5252"/><g fill="%g"><ellipse cx="12" cy="7.6" rx="1.1" ry="1.8" transform="rotate(20 12 7.6)"/><ellipse cx="22" cy="7.6" rx="1.1" ry="1.8" transform="rotate(-20 22 7.6)"/><ellipse cx="17" cy="11" rx="1.1" ry="1.8"/><ellipse cx="13.6" cy="12.6" rx="1" ry="1.6" transform="rotate(25 13.6 12.6)"/></g>',
 		flipflop: '18 34|<path d="M9 1 Q17 1 17 12 L16 26 Q15 33 9 33 Q3 33 2 26 L1 12 Q1 1 9 1 Z" fill="%k"/><path d="M9 3 Q15 3 15 12 L14 25 Q13.4 31 9 31 Q4.6 31 4 25 L3 12 Q3 3 9 3 Z" fill="#FFE066"/><path d="M9 11 L3.4 19 M9 11 L14.6 19" stroke="%u" stroke-width="2.2" stroke-linecap="round" fill="none"/><circle cx="9" cy="10.6" r="1.6" fill="%u"/>',
+		floatie: '56 46|<ellipse cx="28" cy="38" rx="25" ry="6.5" fill="#F783AC"/><ellipse cx="28" cy="37" rx="14" ry="3" fill="#FCC2D7"/><path d="M40 34Q44 20 40 10Q38 4 32 5Q27 6 28 11" stroke="#F783AC" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="30" cy="10" r="5" fill="#F783AC"/><path d="M26 10L20 13L24 15Z" fill="%g"/><path d="M26 10.5L22.5 12" stroke="#F1F3F5" stroke-width="1.2"/><circle cx="30" cy="8.5" r="1.1" fill="%g"/><path d="M14 36Q18 34 22 36" stroke="#FCC2D7" stroke-width="1.4" fill="none"/>',
 		icecream: '22 36|<path d="M3 16 L11 35 L19 16 Z" fill="%w"/><path d="M5 18 L17 18 M6.4 22 L15.6 22 M8 26 L14 26 M9.4 30 L12.6 30 M6 16 L13 30 M16 16 L9 30" stroke="#B8690C" stroke-width="0.9" fill="none"/><circle cx="11" cy="12.4" r="7.2" fill="%s"/><circle cx="11" cy="7.4" r="6" fill="%d"/><circle cx="8.6" cy="5.6" r="1.4" fill="%e"/>',
 		grill: '30 32|<path d="M2 8h26q0 9-13 9T2 8Z" fill="%g"/><path d="M2 8h26q0 3-13 3T2 8Z" fill="%b"/><line x1="9" y1="16" x2="6" y2="30" stroke="%h" stroke-width="2"/><line x1="21" y1="16" x2="24" y2="30" stroke="%h" stroke-width="2"/><circle cx="24" cy="30" r="2" fill="%h"/>',
 		cooler: '28 24|<rect x="2" y="8" width="24" height="15" rx="2" fill="%m"/><rect x="1" y="5" width="26" height="5" rx="2" fill="#4DABF7"/><path d="M8 5V2m5 3V1m5 4V2" stroke="%p" stroke-width="2"/><rect x="11" y="14" width="6" height="3" rx="1" fill="%d"/>'
@@ -316,7 +342,25 @@
 		var alphaBase = clamp(CFG.opacity || 0.35, 0.05, 1);
 		var maxTotal = clamp(CFG.density || 10, 1, 16); /* hard cap incl. ripples */
 		var reserve = water ? 3 : 0;
-		var maxParts = mx2(1, mn(maxTotal - reserve, A.max || 99));
+		/* PHONES (4.2.0): the sprite count follows the screen, on the same
+		 * curve the subtle layer uses — clamp(width / 1280, 0.45, 1) — applied
+		 * to the SPRITES only, never to the ripple reserve. At 390px density
+		 * 16 gives 7 (13 → 6 on a water theme); from 1280px up, the full
+		 * count. The width is the VIEWPORT's, not the canvas's: in content
+		 * placement the canvas is only the column, and a 1280px screen must
+		 * still get the full 16. A theme's own cap scales the same way but
+		 * never below 3 ('classic' keeps its 1), so the MIX stays the same at
+		 * the smaller total. Christmas carries a phone floor (phoneMin) that
+		 * overrides its scaled cap. Rob's density setting is never touched. */
+		function phoneScale() { return clamp(W.innerWidth / 1280, 0.45, 1); }
+		function partTarget() {
+			var sc = phoneScale();
+			var n = MT.round((maxTotal - reserve) * sc);
+			if (A.max) { n = mn(n, A.max <= 1 ? A.max : mx2(3, MT.round(A.max * sc))); }
+			if (A.phoneMin && W.innerWidth < 768) { n = mx2(n, A.phoneMin); }
+			return mx2(1, mn(n, maxTotal - reserve));
+		}
+		var maxParts = partTarget();
 		var heroEvery = CFG.heroEvery || [120, 180];
 		/* CFG.diag, not CFG.debug: the plugin has only ever emitted 'diag'
 		 * (Plugin::config), so this read a key that was never sent and DEBUG
@@ -337,7 +381,6 @@
 			vig: rich === 'full' && V.vignettes !== false,
 			pointer: rich === 'full' && V.pointer !== false,
 			evening: rich === 'full' && V.evening !== false,
-			snow: rich === 'full' && V.snow !== false && themeKey === 'christmas',
 			heroes: rich !== 'minimal'
 		};
 
@@ -354,7 +397,10 @@
 			thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.55;'],
 			snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
 			earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
-			summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;']
+			summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;'],
+			/* The Keys sun is a corner accent only (Rob, 4.2.0): never a
+			 * sprite, so never two suns on screen. */
+			florida_keys: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;']
 		};
 		/* Accents are built here but mounted with the canvas below, so they
 		 * follow the layering setting: through 3.6.2 they sat on the body at
@@ -1277,12 +1323,23 @@
 			 * counts themselves scale with width. */
 			if (restart || !subParts.length) { initSubtle(); }
 			else { for (k = 0; k < subParts.length; k++) { scaleXY(subParts[k], sx, sy); } }
-			snowCols = FX.snow ? new Float32Array(MT.ceil(vw / 8) + 1) : null;
 			/* A real resize changes both the box and what is under it. The
 			 * map is rebuilt on the throttle, never inline: this path runs on
 			 * the debounce and must stay cheap. */
+			fitParts();
 			sepTarget();
 			queueMap(120);
+		}
+		/* A resize or rotation can change how many sprites the screen gets.
+		 * Never mid-scene: the borrowed slots are dormant, and endVig() comes
+		 * back here once they are returned. */
+		function fitParts() {
+			if (vig || !parts.length) { return; }
+			var want = partTarget();
+			if (want === maxParts) { return; }
+			maxParts = want;
+			while (parts.length < maxParts && pool.length) { parts.push(seed({}, true)); }
+			while (parts.length > maxParts) { parts.pop(); }
 		}
 		/* Every coordinate an actor carries, moved into the new box. */
 		function scaleXY(o, sx, sy) {
@@ -1318,18 +1375,115 @@
 			}
 			return sp;
 		}
-		var pool = [];
+		var pool = [], specs = [];
 		(A.particles || []).forEach(function (def) {
+			/* xa: a sprite that must never share the screen with this
+			 * theme's corner accent (Earth Day's globe: the hands accent
+			 * already holds an Earth). The accent is static, so while it is
+			 * mounted the sprite is simply not in the pool. */
+			if (def.xa && accents.length) { return; }
 			var sp = resolve(def), n = def.w || 1;
+			sp.wt = n;
+			specs.push(sp);
 			while (n--) { pool.push(sp); }
 		});
-		/* Evening variant: fishing swaps one leaf slot for fireflies. */
+		/* n: a sprite's most-on-screen-at-once at FULL width, scaled on a
+		 * phone like the total (never below 1). Enforced when a particle
+		 * picks what it becomes, so the other sprites take the space. */
+		function specLimit(sp) { return sp.def.n ? mx2(1, MT.round(sp.def.n * phoneScale())) : 0; }
+		function liveOf(sp, self) {
+			var c = 0;
+			for (var k = 0; k < parts.length; k++) {
+				var q = parts[k];
+				if (q !== self && !q.dormant && q.sp === sp) { c++; }
+			}
+			return c;
+		}
+		/* What each sprite's share of the CURRENT total is: its weight's
+		 * share, with any sprite over its limit held at the limit and the
+		 * rest shared out again (water-filling). Recomputed only when the
+		 * total changes. */
+		var sharesFor = -1;
+		function mixShares() {
+			if (sharesFor === maxParts) { return; }
+			sharesFor = maxParts;
+			var rem = maxParts, live = specs.slice(), i, W2, capped;
+			for (i = 0; i < specs.length; i++) { specs[i].share = 0; }
+			while (live.length) {
+				W2 = 0;
+				for (i = 0; i < live.length; i++) { W2 += live[i].wt; }
+				capped = [];
+				for (i = 0; i < live.length; i++) {
+					if (live[i].def.n && live[i].wt / W2 * rem > specLimit(live[i])) { capped.push(live[i]); }
+				}
+				if (!capped.length) {
+					for (i = 0; i < live.length; i++) { live[i].share = live[i].wt / W2 * rem; }
+					break;
+				}
+				for (i = 0; i < capped.length; i++) { capped[i].share = specLimit(capped[i]); rem -= capped[i].share; }
+				live = live.filter(function (x) { return capped.indexOf(x) < 0; });
+			}
+		}
+		/* A particle picks what it becomes from the sprites still BELOW their
+		 * share (rounded up), weighted as before. Independent random picks
+		 * only hit the mix on average — and since ornaments hang for good
+		 * and palms stand where they grew, one page could draw five
+		 * ornaments and no gifts. Picking against the quota keeps every
+		 * page within one of Rob's counts while the choice stays random. */
+		function pickSpec(self) {
+			mixShares();
+			/* Two tiers: first the sprites below their exact share, then those
+			 * below it rounded up. Rounding every share up can over-book the
+			 * total, and a single loose tier let one sprite starve (a page of
+			 * Christmas with no pine at all); the strict tier fills the
+			 * furthest-behind first, so every count lands on the floor or the
+			 * ceiling of its share. */
+			var tier, i, c, sp, cand, W2;
+			for (tier = 0; tier < 3; tier++) {
+				cand = []; W2 = 0;
+				for (i = 0; i < specs.length; i++) {
+					sp = specs[i]; c = liveOf(sp, self);
+					if (sp.def.n && c >= specLimit(sp)) { continue; }
+					if (tier === 0 && c >= sp.share - 1e-6) { continue; }
+					if (tier === 1 && c >= MT.ceil(sp.share - 1e-6)) { continue; }
+					/* In the strict tier the weight is HOW FAR BEHIND the sprite
+					 * is, not its theme weight: at a phone's 7 sprites MLK's one
+					 * dove, once it flew off, lost its slot to three sprites that
+					 * were only a sliver under theirs, and a dove showed a third
+					 * of the time. */
+					sp.pw = tier === 0 ? sp.share - c : sp.wt;
+					cand.push(sp); W2 += sp.pw;
+				}
+				if (cand.length) { break; }
+			}
+			if (!cand.length) { return pick(pool); }
+			/* Strict tier: the sprite furthest behind its share, every time
+			 * (the largest-remainder rule; a random pick among exact ties).
+			 * A deficit-WEIGHTED draw could still, by chance, top one sprite
+			 * up to its ceiling before another reached its floor — a page of
+			 * Strawberry with four berries, two ladybugs and no blossom. */
+			if (tier === 0) {
+				var best = -1, ties = [];
+				for (i = 0; i < cand.length; i++) {
+					if (cand[i].pw > best + 1e-6) { best = cand[i].pw; ties = [cand[i]]; }
+					else if (abs(cand[i].pw - best) <= 1e-6) { ties.push(cand[i]); }
+				}
+				return pick(ties);
+			}
+			var r = rand() * W2;
+			for (i = 0; i < cand.length; i++) { r -= cand[i].pw; if (r < 0) { return cand[i]; } }
+			return cand[cand.length - 1];
+		}
+
+		/* Evening variant: fishing adds a firefly slot. It used to take one
+		 * of the falling-leaf slots, but the leaf sprites left Fall Fishing in
+		 * 4.2.0 (the subtle layer already drifts leaves), so it joins the
+		 * pool at the same single-slot share instead. */
 		var firefly = null;
 		if (evening && themeKey === 'fall_fishing') {
-			firefly = { kind: 'c', c: 'firefly', b: 'firefly', def: { b: 'firefly' } };
-			for (var fi = 0; fi < pool.length; fi++) {
-				if (pool[fi].kind === 's' && Array.isArray(pool[fi].s)) { pool[fi] = firefly; break; }
-			}
+			firefly = { kind: 'c', c: 'firefly', b: 'firefly', def: { b: 'firefly' }, wt: 1 };
+			pool.push(firefly);
+			specs.push(firefly);
 		}
 		PRIMS.firefly = function (cx2, p, s) {
 			var g = 0.5 + 0.5 * sin(p.ph * 2.4);
@@ -1371,15 +1525,6 @@
 			}
 		}
 
-		/* --- Christmas snow accumulation (≤6px, session-only). --- */
-		var snowCols = null;
-		function snowLand(x) {
-			if (!snowCols) { return; }
-			var i = clamp((x / 8) | 0, 0, snowCols.length - 1);
-			snowCols[i] = mn(6, snowCols[i] + 0.7);
-			if (i > 0) { snowCols[i - 1] = mn(6, snowCols[i - 1] + 0.3); }
-			if (i < snowCols.length - 1) { snowCols[i + 1] = mn(6, snowCols[i + 1] + 0.3); }
-		}
 		/* ================= LAYER 1 — THE SUBTLE LAYER =====================
 		 * The calm baseline: one quiet seasonal effect, always running,
 		 * always UNDER the sprites. It is drawn on the same canvas rather
@@ -1421,23 +1566,6 @@
 					cx.fill();
 					cx.strokeStyle = 'rgba(0,0,0,.25)'; cx.lineWidth = 0.7;
 					cx.beginPath(); cx.moveTo(-p.r, 0); cx.lineTo(p.r, 0); cx.stroke();
-				}
-			},
-			/* Winter — snow. Slower and sparser than the Christmas snow FX,
-			 * which is a different, heavier effect and stays as it is. */
-			snow: {
-				n: 15, a: 0.31, cl: ['#FFFFFF', '#EAF3FB'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -8);
-					p.r = rnd(1.3, 3.1); p.vy = rnd(11, 22); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.3, 0.8); p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 9 * dt;
-				},
-				draw: function (p) {
-					cx.fillStyle = p.c;
-					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
 				}
 			},
 			/* Spring — blossom petals, lighter and slower than leaves. */
@@ -1588,8 +1716,46 @@
 					cx.fillStyle = g;
 					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
 				}
+			},
+			/* Orange blossom — Florida's state flower; the groves bloom
+			 * February to April (Presidents Day). Five cream petals, a gold
+			 * eye, and a warm outline so the flower survives white copy. */
+			orangeblossom: {
+				n: 10, a: 0.46, cl: ['#FFF4E6', '#FFFFFF'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -8);
+					p.r = rnd(3.6, 6); p.vy = rnd(9, 17); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.1); p.rot = rnd(0, TAU); p.rv = rnd(-0.6, 0.6);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 15 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					var r = p.r;
+					cx.translate(p.x, p.y); cx.rotate(p.rot);
+					cx.fillStyle = p.c;
+					cx.strokeStyle = 'rgba(170,125,60,.6)'; cx.lineWidth = 0.7;
+					for (var i = 0; i < 5; i++) {
+						cx.rotate(TAU / 5);
+						cx.beginPath(); cx.ellipse(0, -r * 0.62, r * 0.34, r * 0.62, 0, 0, TAU);
+						cx.fill(); cx.stroke();
+					}
+					cx.fillStyle = '#FAB005';
+					cx.beginPath(); cx.arc(0, 0, r * 0.24, 0, TAU); cx.fill();
+				}
 			}
 		};
+
+		/* Colour variants of two effects above, each its OWN named choice in
+		 * the settings dropdown (Rob's call: a hidden per-theme palette would
+		 * make "Bokeh" look different depending on the theme). They share the
+		 * parent's motion and drawing, so they cannot drift apart from it. */
+		function variant(base, cl) { var o = {}, k; for (k in base) { o[k] = base[k]; } o.cl = cl; return o; }
+		SUBTLE.sunglow = variant(SUBTLE.bokeh, ['#FFE8A3', '#FFD8A8', '#FFF3BF', '#FFC078']);
+		SUBTLE.goldlight = variant(SUBTLE.bokeh, ['#FFE066', '#FFEC99', '#E9ECEF', '#FCC419']);
+		SUBTLE.mardiconfetti = variant(SUBTLE.confetti, ['#7C3AED', '#2F9E44', '#F1C40F', '#B197FC']);
 
 		/* Theme -> effect. PHP owns this map so the owner can re-point any
 		 * theme from the settings page without a plugin release; this is
@@ -1597,8 +1763,8 @@
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
 			halloween: 'embers', thanksgiving: 'leaves', christmas: 'bokeh',
-			new_years: 'confetti', snowbird: 'snow', mlk: 'snow',
-			mardi_gras: 'snow', valentines: 'hearts', presidents: 'snow',
+			new_years: 'confetti', snowbird: 'sunglow', mlk: 'goldlight',
+			mardi_gras: 'mardiconfetti', valentines: 'hearts', presidents: 'orangeblossom',
 			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
 			april_fools: 'blossom', spring_canal: 'blossom', four_twenty: 'blossom',
 			july4: 'sparks', memorial_day: 'dragonheat', mothers_day: 'blossom',
@@ -1613,6 +1779,9 @@
 		if (SUBC.on !== false && themeKey) {
 			var map = SUBC.map || {};
 			subKey = map[themeKey] != null ? String(map[themeKey]) : (SUBTLE_FALLBACK[themeKey] || '');
+			/* A cached page can still carry an effect that no longer exists
+			 * ('snow' before 4.2.0): fall back to the plugin's own choice. */
+			if (subKey && !SUBTLE[subKey]) { subKey = SUBTLE_FALLBACK[themeKey] || ''; }
 		}
 		/* A slider at 0 must mean OFF. The alpha curve deliberately has a
 		 * floor (0.55x at intensity 0) so the layer stays visible across the
@@ -1691,18 +1860,6 @@
 				cx.restore();
 			}
 		}
-		function drawSnow() {
-			if (!snowCols) { return; }
-			cx.globalAlpha = mn(1, alphaBase * 2);
-			cx.fillStyle = '#F1F5F9';
-			cx.beginPath();
-			cx.moveTo(0, waterY);
-			for (var i = 0; i < snowCols.length; i++) { cx.lineTo(i * 8, waterY - snowCols[i]); }
-			cx.lineTo(vw, waterY);
-			cx.closePath();
-			cx.fill();
-		}
-
 		/* --- Particles. --- */
 		var parts = [];
 		function dirY() { return up ? -1 : 1; }
@@ -2110,7 +2267,7 @@
 		}
 
 		function seed(p, anywhere) {
-			var sp = pick(pool);
+			var sp = pool.length ? pickSpec(p) : null;
 			if (!sp) { return p; }
 			var def = sp.def;
 			p.sp = sp;
@@ -2215,7 +2372,10 @@
 			}
 			if (b === 'hang') {
 				spreadPlace(p, vw * 0.05, vw * 0.95, p.y, p.y);
-				p.len = rnd(30, 80);
+				/* hl: a longer thread, as fractions of the screen height —
+				 * Christmas's ornaments and holly hang down through the page
+				 * instead of bunching in the header band (4.2.0). */
+				p.len = p.sp.def.hl ? rnd(vh * p.sp.def.hl[0], vh * p.sp.def.hl[1]) : rnd(30, 80);
 				p.vr = 0;
 			}
 			if (b === 'toss') {
@@ -2271,7 +2431,6 @@
 			p.t = 2;
 			p.y = waterY;
 			addRipple(p.x, waterY);
-			if (themeKey === 'christmas') { snowLand(p.x); }
 		}
 
 		/* --- Pointer awareness: observation only. The canvas never takes
@@ -2710,13 +2869,33 @@
 			}
 		}
 
+		/* Water-line riders (boats, pads) YIELD to a scene's actors: within
+		 * 90px of one they ease out and ease back once it has passed. A pontoon
+		 * parked on the gator, or a jon boat inside the limpkin, read as a
+		 * collision; borrowing them all instead would empty the screen, which
+		 * a phone scene must not do. */
+		var RIDERS = ' cruise float frogger ', actorX = null;
+		function sceneActors() {
+			if (!water || !vig || !vig.st) { return null; }
+			var st = vig.st, out = [], k2, keys = ['x', 'sx', 'gx', 'tx'];
+			for (k2 = 0; k2 < keys.length; k2++) { if (typeof st[keys[k2]] === 'number') { out.push(st[keys[k2]]); } }
+			return out.length ? out : null;
+		}
+		function riderYield(p, dt) {
+			if (RIDERS.indexOf(' ' + p.b + ' ') < 0) { return; }
+			var want = 1;
+			if (actorX) {
+				for (var k2 = 0; k2 < actorX.length; k2++) { if (abs(p.x - actorX[k2]) < 90) { want = 0; break; } }
+			}
+			p.yl = (p.yl == null ? 1 : p.yl) + (want - (p.yl == null ? 1 : p.yl)) * mn(1, dt * 4);
+		}
 		function drawP(p, t) {
-			if (p.dormant || p.alpha <= 0) { return; }
+			if (p.dormant || p.alpha <= 0 || p.yl < 0.02) { return; }
 			var b = p.b;
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
-			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1);
+			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
 			if (b === 'dangle' && p.st !== 4) {
 				cx.strokeStyle = 'rgba(90,90,90,.6)';
 				cx.lineWidth = 1;
@@ -2887,12 +3066,56 @@
 
 		/* --- Heroes: rare crossers. The heron (3-frame wingbeat, occasional
 		 * full landing sequence) is always in the rotation. --- */
-		var hero = null, heroNext = 0, heroFrame = '';
+		var hero = null, heroFrame = '';
 		var heroPool = ['heron'];
 		if (A.hero) { heroPool.push(A.hero); }
+		if (DEBUG && CFG.heroOnly) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
 		var HERON_FRAMES = ['heron0', 'heron1', 'heron2', 'heron1'];
+		/* Drawn heroes with a two-frame wingbeat: [up, down, ms per frame].
+		 * Every hero is a drawing (4.2.0) — device emoji looked different on
+		 * iPhone, Android and Windows and matched nothing else on screen. The
+		 * ONE exception is Rob's own: the rainbow keeps its ☘ clover strip. */
+		var WINGS = { eagle: ['eagleup', 'eagledown', 280], osprey: ['ospreyup', 'ospreydown', 260] };
+
+		/* --- Hero timing (4.2.0) -------------------------------------------
+		 * The clock is VISIBLE time: rAF stops in a hidden tab, so vt only
+		 * moves while someone can see the page.
+		 *  - The first page of a visit (sessionStorage, i.e. this tab) gets
+		 *    its first hero 3-5s after the effects start; later pages keep
+		 *    the 120-180s cadence, and so does a browser that refuses
+		 *    storage (null) — today's timing, never a guess.
+		 *  - The home page's hero-image show (dcc-hero-life, 3.11.0+:
+		 *    seaplane, then the fishing catch) publishes
+		 *    window.DCCHeroFx.state = none | busy | done and fires
+		 *    'dcc:herofx' on document. No hero STARTS while it is busy;
+		 *    after busy -> done the first hero crosses 2s later. A show
+		 *    that never reports done is ignored after 70s of visible time.
+		 *  - A scene and a hero never share the screen (both directions). */
+		var vt = 0, VT_X = (DEBUG && CFG.vtScale) || 1;
+		var firstPage = (function () {
+			try {
+				var ss = W.sessionStorage, visitKey = 'dcc_seasons_visit';
+				if (ss.getItem(visitKey)) { return false; }
+				ss.setItem(visitKey, '1');
+				return true;
+			} catch (e) { return null; }
+		})();
+		function heroGap() { return rnd(heroEvery[0], heroEvery[1]); }
+		var heroAt = firstPage ? rnd(3, 5) : heroGap(), heroCount = 0, heroLive = false;
+		var FX_CAP = 70, fxBusySeen = false, fxDoneAt = -1;
+		function heroFxState() {
+			var h = W.DCCHeroFx;
+			return h && typeof h.state === 'string' ? h.state : 'none';
+		}
+		function watchHeroFx() {
+			var st = heroFxState();
+			if (st === 'busy') { fxBusySeen = true; }
+			else if (st === 'done' && fxBusySeen && fxDoneAt < 0) { fxDoneAt = vt; }
+		}
+		D.addEventListener('dcc:herofx', watchHeroFx);
+		var heroLog = [], vigLog = [];
 		function spawnHero(t) {
-			if (!FX.heroes || vig) { heroNext = t + 4000; return; }
+			if (!FX.heroes || vig) { heroAt = vt + 4; return; }
 			var kind = pick(heroPool);
 			var dir = sgn();
 			hero = { kind: kind, dir: dir, t: 0, ph: 0 };
@@ -2908,12 +3131,11 @@
 				hero.land = !hero.invert && water && rand() < (themeKey === 'classic' || themeKey === 'florida_keys' ? 0.5 : 0.15);
 				if (hero.land) { hero.lx = rnd(vw * 0.25, vw * 0.75); hero.st = 1; }
 			} else if (kind === 'eagle' || kind === 'witch') {
-				var g = kind === 'eagle' ? '🦅' : '🧙‍♀️';
-				if (!drawable(g)) { hero = null; heroNext = t + 5000; return; }
-				hero.g = g;
-				hero.x = dir > 0 ? -60 : vw + 60;
+				hero.w = kind === 'eagle' ? 104 : 92;
+				hero.x = dir > 0 ? -hero.w : vw + hero.w;
 				hero.y = rnd(vh * 0.1, vh * 0.4);
 				hero.vx = dir * rnd(70, 110);
+				if (kind === 'eagle') { sprite('eagleup'); sprite('eagledown'); } else { sprite('witchsil'); }
 			} else if (kind === 'sleigh') {
 				hero.x = dir > 0 ? -140 : vw + 140;
 				hero.y = rnd(vh * 0.08, vh * 0.3);
@@ -2929,39 +3151,48 @@
 				hero.calf = rand() < 0.5; /* mom with calf */
 				sprite('manatee');
 			} else if (kind === 'bass') {
-				hero.g = drawable('🐟') ? '🐟' : (drawable('🐠') ? '🐠' : null);
-				if (!hero.g) { hero = null; heroNext = t + 5000; return; }
+				sprite('bassleap');
 				hero.x = rnd(vw * 0.15, vw * 0.85);
 				hero.y = waterY + 8;
 				hero.vy = -rnd(340, 400);
 				hero.vxj = rnd(-50, 50);
 				addRipple(hero.x, waterY, true);
-			} else if (kind === 'pelican') {
-				/* Brown pelicans commute low over the water on stiff,
-				 * motionless wings, dropping into a few beats only when
-				 * they start to sink. Flying it high and flapping the
-				 * whole way is the one thing that would read wrong. */
-				hero.x = dir > 0 ? -120 : vw + 120;
-				hero.y = water ? waterY - rnd(16, 46) : rnd(vh * 0.3, vh * 0.55);
-				hero.vx = dir * rnd(52, 78);
-				hero.w = 110;
-				hero.fl = 0;
-				hero.gl = rnd(1.6, 3);
-				sprite('pelican'); sprite('pelican1');
-			} else if (kind === 'ducks') {
-				hero.x = dir > 0 ? -90 : vw + 90;
-				hero.y = ground;
-				hero.vx = dir * rnd(30, 45);
+			} else if (kind === 'osprey') {
+				/* Florida Keys (4.2.0): an osprey carrying its fish, on a
+				 * steady two-frame wingbeat, well above the water. */
+				hero.w = 96;
+				hero.x = dir > 0 ? -hero.w : vw + hero.w;
+				hero.y = rnd(vh * 0.12, vh * 0.4);
+				hero.vx = dir * rnd(60, 85);
+				sprite('ospreyup'); sprite('ospreydown');
 			} else if (kind === 'rainbow') {
 				hero.corner = rand() < 0.5 ? 0 : 1;
 				hero.t = 0;
 				sprite('rainbow');
 			}
 		}
+		/* A hero that has just left: the gap to the next one starts now, in
+		 * the same frame, so the log (and anything reading it) never shows a
+		 * departed hero overlapping the scene that follows it. */
+		function heroGone() {
+			if (hero || !heroLive) { return; }
+			heroLive = false;
+			heroAt = vt + heroGap();
+			if (heroLog.length) { heroLog[heroLog.length - 1].end = vt; }
+		}
 		function stepHero(dt, t) {
 			if (!hero) {
-				if (!heroNext) { heroNext = t + rnd(heroEvery[0], heroEvery[1]) * 1000; }
-				else if (t >= heroNext && !vig) { spawnHero(t); heroNext = 0; }
+				heroGone();
+				watchHeroFx();
+				if (heroFxState() === 'busy' && vt < FX_CAP) { return; }
+				var at = heroAt;
+				if (!heroCount && fxDoneAt >= 0) { at = mx2(at, fxDoneAt + 2); }
+				if (vt < at || vig) { return; }
+				spawnHero(t);
+				if (hero) {
+					heroLive = true; heroCount++;
+					heroLog.push({ kind: hero.kind, start: vt, end: -1, fx: heroFxState() });
+				}
 				return;
 			}
 			var h = hero;
@@ -3003,13 +3234,9 @@
 				return;
 			}
 			h.x += h.vx * dt;
-			if (h.kind === 'pelican') {
-				/* glide → sink slowly → two beats of lift → glide again */
-				h.fl -= dt;
-				if (h.fl <= -h.gl) { h.fl = 0.5; h.gl = rnd(1.8, 3.4); }
-				h.y += (h.fl > 0 ? -26 : 9) * dt;
-				if (water) { h.y = clamp(h.y, waterY - 64, waterY - 10); }
-			} else if (h.kind !== 'manatee' && h.kind !== 'ducks') { h.y += sin(h.ph) * 8 * dt; }
+			if (h.kind !== 'manatee') { h.y += sin(h.ph) * 8 * dt; }
+			/* A bird with a fish keeps well clear of the water it came from. */
+			if (h.kind === 'osprey' && water) { h.y = mn(h.y, waterY - 80); }
 			if (h.kind === 'manatee') {
 				h.rip -= dt;
 				if (h.rip <= 0) { addRipple(h.x + h.dir * 40, waterY + 2); h.rip = rnd(2, 4); }
@@ -3075,8 +3302,8 @@
 					var hw = stand ? 52 : h.w;
 					cx.drawImage(him.img, -hw / 2, -hw * him.ratio / 2, hw, hw * him.ratio);
 				}
-			} else if (h.kind === 'sleigh' || h.kind === 'manatee' || h.kind === 'pelican') {
-				var sim = sprite(h.kind === 'pelican' ? (h.fl > 0 ? 'pelican1' : 'pelican') : h.kind);
+			} else if (h.kind === 'sleigh' || h.kind === 'manatee') {
+				var sim = sprite(h.kind);
 				if (sim.ready) {
 					if (h.dir > 0) { cx.scale(-1, 1); }
 					cx.drawImage(sim.img, -h.w / 2, -h.w * sim.ratio / 2, h.w, h.w * sim.ratio);
@@ -3085,29 +3312,23 @@
 					}
 				}
 			} else if (h.kind === 'bass') {
-				cx.rotate(atan2(h.vy, h.vxj * 4) * 0.5);
-				if (h.vxj > 0) { cx.scale(-1, 1); }
-				cx.font = 40 + FT;
-				cx.fillText(h.g, 0, 0);
-			} else if (h.kind === 'eagle' || h.kind === 'witch') {
-				cx.font = 42 + FT;
+				/* The drawn largemouth faces left; flip it when it jumps to the
+				 * right, then pitch the nose along its arc — up on the way out,
+				 * down on the way back in. */
+				var bim = sprite('bassleap');
+				if (bim.ready) {
+					if (h.vxj > 0) { cx.scale(-1, 1); }
+					cx.rotate(-atan2(h.vy, abs(h.vxj) * 4 + 1) * 0.5);
+					cx.drawImage(bim.img, -28, -28 * bim.ratio, 56, 56 * bim.ratio);
+				}
+			} else if (WINGS[h.kind] || h.kind === 'witch') {
+				var wg = WINGS[h.kind];
+				var key = wg ? wg[((t / wg[2]) | 0) % 2] : 'witchsil';
+				heroFrame = key;
 				if (h.kind === 'witch') { cx.rotate(h.dir * -0.15); }
 				if (h.dir > 0) { cx.scale(-1, 1); }
-				cx.fillText(h.g, 0, 0);
-			} else if (h.kind === 'ducks') {
-				var duck = drawable('🦆') ? '🦆' : '🐤';
-				var chick = drawable('🐥') ? '🐥' : '🐤';
-				var duckling = function (g, ox, oy, fs) {
-					cx.save();
-					cx.translate(ox, oy);
-					if (h.dir > 0) { cx.scale(-1, 1); }
-					cx.font = fs + FT;
-					cx.fillText(g, 0, 0);
-					cx.restore();
-				};
-				duckling(duck, 0, sin(h.ph * 3) * 2, 30);
-				duckling(chick, -h.dir * 30, sin(h.ph * 3 + 1) * 2, 20);
-				duckling(chick, -h.dir * 54, sin(h.ph * 3 + 2) * 2, 20);
+				var aim = sprite(key);
+				if (aim.ready) { cx.drawImage(aim.img, -h.w / 2, -h.w * aim.ratio / 2, h.w, h.w * aim.ratio); }
 			}
 			cx.restore();
 		}
@@ -3286,6 +3507,217 @@
 				}
 				return st.t2 > 6;
 			} },
+			/* ---- 4.2.0: Summer on the Canal and Florida Keys scenes. Each
+			 * picked by Rob from rendered frame strips; the approved art and
+			 * story, at the sizes he saw. Everything on the water is clipped
+			 * at the water line so it can rise out of it and sink back. ---- */
+			/* Summer S1: a gator glides along the canal, stops, and sinks out of sight */
+			gatorglide: { actors: 2, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -60 : vw + 60;
+					st.stop = st.dir > 0 ? rnd(vw * 0.45, vw * 0.6) : rnd(vw * 0.4, vw * 0.55);
+					st.p = 1; st.t2 = 0;
+				}
+				st.t2 += dt;
+				var sink = 0;
+				if (st.p === 1) {
+					st.x += st.dir * 52 * dt;
+					if ((st.dir > 0 && st.x >= st.stop) || (st.dir < 0 && st.x <= st.stop)) { st.p = 2; st.t2 = 0; }
+					/* the V wake it pushes ahead of it */
+					sBeg('#D0EBFF', 1, VA * 0.5);
+					cx.moveTo(st.x + st.dir * 40, waterY + 1); cx.lineTo(st.x - st.dir * 30, waterY - 4);
+					cx.moveTo(st.x + st.dir * 40, waterY + 1); cx.lineTo(st.x - st.dir * 30, waterY + 6);
+					sEnd();
+				} else if (st.p === 2) {
+					if (st.t2 > 1.6) { st.p = 3; st.t2 = 0; }
+				} else {
+					sink = mn(1, st.t2 / 1.6);
+					if (!st.b1 && st.t2 > 0.4) { st.b1 = 1; addRing(st.x, waterY); }
+					if (!st.b2 && st.t2 > 1.1) { st.b2 = 1; addRing(st.x - st.dir * 12, waterY + 1); }
+				}
+				cx.save(); cx.beginPath(); cx.rect(0, 0, vw, waterY + 2); cx.clip();
+				dspr('gator', st.x, waterY - 2 + sink * 12, 112, st.dir > 0);
+				cx.restore();
+				return st.p === 3 && st.t2 > 2;
+			} },
+			/* Summer S2: an inflatable flamingo pool float drifts by, a lost flip-flop in tow */
+			floatdrift: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -50 : vw + 50; st.ph = 0; st.wk = 0; }
+				st.x += st.dir * 26 * dt; st.ph += dt * 1.6; st.wk -= dt;
+				if (st.wk <= 0) { addRipple(st.x - st.dir * 20, waterY + 2); st.wk = rnd(1.6, 2.6); }
+				dspr('floatie', st.x, waterY - 16 + sin(st.ph) * 2, 66, st.dir > 0, sin(st.ph * 0.7) * 0.05);
+				dspr('flipflop', st.x - st.dir * 56, waterY - 4 + sin(st.ph + 1) * 1.5, 18, st.dir > 0, 1.4);
+				return (st.dir > 0 && st.x > vw + 110) || (st.dir < 0 && st.x < -110);
+			} },
+			/* Summer S3: a mullet skips three times, then another answers down the canal */
+			mulletskip: { actors: 2, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.dir = sgn(); st.x = rnd(vw * 0.2, vw * 0.4);
+					if (st.dir < 0) { st.x = vw - st.x; }
+					st.j = 0; st.t2 = 0; st.fish = 0;
+				}
+				st.t2 += dt;
+				var jt = 0.55, gap = 0.25, hop = 52;
+				if (st.t2 > jt + gap) {
+					st.t2 = 0; st.j++; st.x += st.dir * hop;
+					if (st.j === 3) { /* the answer, further down the canal */
+						st.fish++; st.j = 0; st.t2 = -0.9;
+						if (st.fish === 1) { st.x = st.dir > 0 ? vw * 0.62 : vw * 0.38; }
+					}
+				}
+				if (st.fish >= 2) { return st.t2 > 0.6; }
+				if (st.t2 >= 0 && st.t2 <= jt) {
+					var u = st.t2 / jt;
+					if (!st.tk) { st.tk = 1; addRipple(st.x, waterY); }
+					dspr('mullet', st.x + st.dir * u * hop, waterY - sin(u * MT.PI) * hop, 32, st.dir > 0, st.dir * (u - 0.5) * 1.6);
+				} else if (st.t2 > jt && st.tk) { st.tk = 0; addRipple(st.x + st.dir * hop, waterY); }
+				return false;
+			} },
+			/* Keys K3: a hibiscus bloom drops, floats, and a fish nibbles it from below */
+			hibfloat: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.x = rnd(vw * 0.3, vw * 0.7); st.y = waterY - 230; st.t2 = 0; st.p = 1; st.rot = 0; st.ph = 0; }
+				st.t2 += dt; st.ph += dt * 2;
+				if (st.p === 1) {
+					st.y += 70 * dt; st.rot += dt * 1.2; st.x += sin(st.ph) * 20 * dt;
+					dspr('hibiscus', st.x, st.y, 30, false, st.rot);
+					if (st.y >= waterY - 6) { st.p = 2; st.t2 = 0; addRipple(st.x, waterY); }
+					return false;
+				}
+				st.x += 8 * dt;
+				var nib = (st.t2 > 1.6 && st.t2 < 1.9) || (st.t2 > 2.6 && st.t2 < 2.9);
+				if (nib && !st.n1 && st.t2 < 2) { st.n1 = 1; addRing(st.x + 4, waterY + 2); }
+				if (nib && !st.n2 && st.t2 > 2.5) { st.n2 = 1; addRing(st.x - 3, waterY + 2); }
+				if (nib) { /* the fish, a dark shape just under the surface */
+					cx.save(); cx.globalAlpha = VA * 0.6; cx.fillStyle = '#495057';
+					cx.beginPath(); cx.ellipse(st.x + 2, waterY + 4, 7, 3.4, 0, 0, TAU); cx.fill();
+					cx.restore();
+				}
+				dspr('hibiscus', st.x, waterY - 7 + sin(st.ph) * 1.5 - (nib ? 3 : 0), 30, false, st.rot, VA * clamp(5 - st.t2, 0, 1));
+				return st.t2 > 5;
+			} },
+			/* Keys KA: an anhinga swims in, climbs onto a snag and spreads its wings to dry */
+			anhinga: { actors: 1, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.dir = sgn();
+					st.sx = st.dir > 0 ? rnd(vw * 0.55, vw * 0.7) : rnd(vw * 0.3, vw * 0.45);
+					st.x = st.dir > 0 ? -40 : vw + 40; st.p = 1; st.t2 = 0; st.ph = 0; st.wk = 0;
+				}
+				st.t2 += dt; st.ph += dt * 2;
+				var W2 = 64, sy = waterY - W2 * 70 / 76 / 2 + 6, fade = st.p === 4 ? clamp(1 - st.t2 / 1.2, 0, 1) : 1;
+				dspr('snag', st.sx, sy, W2, st.dir < 0, 0, VA * fade);
+				if (st.p === 1) { /* only the snake-neck shows as it swims */
+					st.x += st.dir * 62 * dt; st.wk -= dt;
+					if (st.wk <= 0) { addRipple(st.x - st.dir * 14, waterY + 1); st.wk = 1.1; }
+					cx.save(); cx.beginPath(); cx.rect(0, 0, vw, waterY + 2); cx.clip();
+					dspr('anhingaswim', st.x, waterY - 9, 44, st.dir > 0);
+					cx.restore();
+					if (abs(st.x - st.sx) < 8) { st.p = 2; st.t2 = 0; addRipple(st.sx, waterY, true); }
+				} else if (st.p === 2 || st.p === 3) {
+					/* the wings open: a horizontal stretch from folded to spread,
+					 * then a slow flutter while they dry */
+					var open = st.p === 2 ? easeIO(mn(1, st.t2 / 1.1)) : 1;
+					var flut = st.p === 3 ? 1 + sin(st.ph * 3) * 0.02 : 1;
+					var im = sprite('anhingadry');
+					if (im.ready) {
+						cx.save(); cx.globalAlpha = VA; cx.translate(st.sx, sy);
+						cx.scale((st.dir < 0 ? -1 : 1) * (0.3 + 0.7 * open) * flut, 1);
+						cx.drawImage(im.img, -W2 / 2, -W2 * im.ratio / 2, W2, W2 * im.ratio);
+						cx.restore();
+					}
+					if (st.p === 2 && st.t2 > 1.1) { st.p = 3; st.t2 = 0; }
+					else if (st.p === 3 && st.t2 > 4) { st.p = 4; st.t2 = 0; }
+				} else {
+					dspr('anhingadry', st.sx, sy, W2, st.dir < 0, 0, VA * fade);
+					return st.t2 > 1.2;
+				}
+				return false;
+			} },
+			/* Keys KB: an osprey circles high, stoops feet-first into the water and climbs away with a fish */
+			ospreycatch: { actors: 1, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -60 : vw + 60; st.tx = rnd(vw * 0.4, vw * 0.6); st.p = 1; st.t2 = 0; st.ph = 0; }
+				st.t2 += dt; st.ph += dt;
+				var hy = waterY - 230, fr = ((st.ph / 0.28) | 0) % 2;
+				if (st.p === 1) {
+					st.x += st.dir * 70 * dt;
+					dspr(fr ? 'ospreydownnf' : 'ospreyupnf', st.x, hy + sin(st.ph * 2) * 6, 70, st.dir > 0);
+					if ((st.dir > 0 && st.x >= st.tx) || (st.dir < 0 && st.x <= st.tx)) { st.p = 2; st.t2 = 0; }
+				} else if (st.p === 2) { /* the stoop */
+					var u = mn(1, st.t2 / 0.8);
+					dspr('ospreydownnf', st.x + st.dir * u * 20, lerp(hy, waterY - 10, u * u), 60, st.dir > 0, st.dir * (0.4 + u * 0.8));
+					if (u >= 1) { st.p = 3; st.t2 = 0; st.x += st.dir * 20; addRipple(st.x, waterY, true); addRipple(st.x + 6, waterY, true); }
+				} else if (st.p === 3) { /* the splash */
+					cx.save(); cx.globalAlpha = VA * clamp(1 - st.t2 / 0.7, 0, 1); cx.fillStyle = '#D0EBFF';
+					for (var k = 0; k < 7; k++) {
+						var a = -MT.PI * (0.15 + k * 0.1), r = 10 + st.t2 * 70;
+						cx.beginPath(); cx.arc(st.x + cos(a) * r, waterY + sin(a) * r * 0.9 + st.t2 * st.t2 * 90, 2, 0, TAU); cx.fill();
+					}
+					cx.restore();
+					if (st.t2 > 0.9) { st.p = 4; st.t2 = 0; }
+				} else { /* up and away with the fish, shaking off drops */
+					st.x += st.dir * 60 * dt;
+					var yy = waterY - 18 - st.t2 * 55;
+					dspr(fr ? 'ospreydown' : 'ospreyup', st.x, yy, 70, st.dir > 0, st.dir * -0.15);
+					if (st.t2 < 0.8) {
+						cx.save(); cx.globalAlpha = VA * 0.6; cx.fillStyle = '#D0EBFF';
+						for (var q = 0; q < 3; q++) { cx.beginPath(); cx.arc(st.x - st.dir * (4 + q * 5), yy + 16 + st.t2 * 30 + q * 4, 1.6, 0, TAU); cx.fill(); }
+						cx.restore();
+					}
+					return yy < waterY - 260 || st.x < -80 || st.x > vw + 80;
+				}
+				return false;
+			} },
+			/* Keys KC: a sandhill crane pair walks in, bows, and dances */
+			cranes: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -40 : vw + 40; st.tx = rnd(vw * 0.35, vw * 0.55); st.p = 1; st.t2 = 0; st.ph = 0; }
+				st.t2 += dt; st.ph += dt;
+				var W2 = 40, fy = waterY - W2 * 70 / 44 / 2 + 4, gap = 44, a = VA;
+				function one(x, dance, hop, bow) {
+					if (dance) { dspr('cranedance', x, fy - hop, W2 * 64 / 44, st.dir > 0, 0, a); }
+					else { dspr('crane', x, fy - hop + abs(sin(st.ph * 5)) * (st.p === 1 ? 1.5 : 0), W2, st.dir > 0, st.dir * bow, a); }
+				}
+				if (st.p === 1) {
+					st.x += st.dir * 58 * dt;
+					if ((st.dir > 0 && st.x >= st.tx) || (st.dir < 0 && st.x <= st.tx)) { st.p = 2; st.t2 = 0; }
+				}
+				var bow = st.p === 2 ? sin(mn(1, st.t2 / 1.2) * MT.PI * 2) * 0.35 : 0;
+				if (st.p === 2 && st.t2 > 1.2) { st.p = 3; st.t2 = 0; }
+				/* the dance: wings up, leaping in turn */
+				var d1 = st.p === 3 && ((st.t2 * 2.2) | 0) % 2 === 0, d2 = st.p === 3 && ((st.t2 * 2.2 + 1) | 0) % 2 === 0;
+				var h1 = st.p === 3 ? abs(sin(st.t2 * MT.PI * 2.2)) * 16 : 0, h2 = st.p === 3 ? abs(sin(st.t2 * MT.PI * 2.2 + 1.5)) * 12 : 0;
+				if (st.p === 3 && st.t2 > 3.6) { st.p = 4; st.t2 = 0; }
+				if (st.p === 4) { a = VA * clamp(1 - st.t2 / 1.2, 0, 1); if (st.t2 > 1.2) { return true; } }
+				one(st.x - st.dir * gap, d2, h2, -bow);
+				one(st.x, d1, h1, bow);
+				return false;
+			} },
+			/* Keys KD: a limpkin wades up to the reeds (pink apple-snail eggs on a stem),
+			 * probes, pulls up an apple snail and walks off with it */
+			limpkinsnail: { actors: 1, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -40 : vw + 40; st.tx = rnd(vw * 0.35, vw * 0.55); st.p = 1; st.t2 = 0; st.ph = 0; }
+				st.t2 += dt; st.ph += dt;
+				var W2 = 40, fy = waterY - W2 * 56 / 46 / 2 + 5, a = st.p === 5 ? VA * clamp(1 - st.t2 / 1.2, 0, 1) : VA;
+				dspr('snaileggs', st.tx + st.dir * 34, waterY - 16, 10, false, 0, a);
+				var rot = 0, snail = false;
+				if (st.p === 1) {
+					st.x += st.dir * 52 * dt;
+					if ((st.dir > 0 && st.x >= st.tx) || (st.dir < 0 && st.x <= st.tx)) { st.p = 2; st.t2 = 0; }
+				} else if (st.p === 2) { /* probing the shallows */
+					rot = -st.dir * 0.55 * abs(sin(st.t2 * MT.PI / 0.9));
+					if (!st.r1 && st.t2 > 0.9) { st.r1 = 1; addRing(st.x + st.dir * 18, waterY + 1); }
+					if (st.t2 > 1.8) { st.p = 3; st.t2 = 0; addRing(st.x + st.dir * 18, waterY + 1); }
+				} else if (st.p === 3) { /* up with the snail */
+					rot = -st.dir * 0.55 * (1 - mn(1, st.t2 / 0.6)); snail = st.t2 > 0.3;
+					if (st.t2 > 2.4) { st.p = 4; st.t2 = 0; }
+				} else { /* walks off the way it came, carrying it */
+					snail = true; st.x -= st.dir * 26 * dt;
+					if (st.p === 4 && st.t2 > 2.2) { st.p = 5; st.t2 = 0; }
+					else if (st.p === 5 && st.t2 > 1.2) { return true; }
+				}
+				var face = st.p >= 4 ? st.dir < 0 : st.dir > 0;
+				dspr('limpkin', st.x, fy + (st.p === 1 || st.p >= 4 ? abs(sin(st.ph * 5)) * 1.5 : 0), W2, face, rot, a);
+				if (snail) { dspr('applesnail', st.x + (face ? 1 : -1) * W2 * 0.49, fy - W2 * 56 / 46 * 0.24, 9, false, 0, a); }
+				return false;
+			} },
 			/* Christmas: sleigh crosses high and drops a parachuting gift */
 			giftdrop: { actors: 3, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.dir = sgn(); st.sx = st.dir > 0 ? -130 : vw + 130; st.gy = -30; st.gd = false; st.t2 = 0; st.ph = 0; st.land = 0; }
@@ -3299,7 +3731,9 @@
 				if (st.gd && !st.land) {
 					st.gy += 55 * dt;
 					st.gx += sin(st.ph * 1.4) * 14 * dt;
-					var target = waterY - (snowCols ? snowCols[clamp((st.gx / 8) | 0, 0, snowCols.length - 1)] : 0) - 8;
+					/* It lands ON THE WATER LINE: there is no snow pile to land on
+					 * since 4.2.0, and a ripple marks the touchdown. */
+					var target = waterY - 8;
 					/* parachute */
 					cx.save(); cx.globalAlpha = VA;
 					cx.fillStyle = '#E03131';
@@ -3310,7 +3744,7 @@
 					cx.moveTo(st.gx + 13, st.gy - 21); cx.lineTo(st.gx + 5, st.gy - 6);
 					cx.stroke(); cx.restore();
 					dspr('gift', st.gx, st.gy, 20);
-					if (st.gy >= target) { st.land = st.t2; }
+					if (st.gy >= target) { st.land = st.t2; st.gy = target; addRipple(st.gx, waterY, true); }
 				} else if (st.land) {
 					dspr('gift', st.gx, st.gy, 20);
 					if (st.t2 - st.land > 3) { return true; }
@@ -3647,27 +4081,36 @@
 			strawberry: ['catch1'],
 			easter: ['egghunt', 'hatch'],
 			april_fools: ['bananaslip'],
-			spring_canal: ['duckparade', 'kayaker', 'dragonlotus']
+			spring_canal: ['duckparade', 'kayaker', 'dragonlotus'],
+			summer_canal: ['gatorglide', 'floatdrift', 'mulletskip'],
+			florida_keys: ['anhinga', 'ospreycatch', 'cranes', 'limpkinsnail', 'hibfloat']
 		};
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
+		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
 		if (FX.vig && themeKey === 'christmas' && evening) { vigList.push('sleighmoon'); }
 
 		function startVig(name) {
 			var sc = SCENES[name];
 			if (!sc) { return; }
+			/* On a phone a scene borrows at most ONE sprite (Rob, 4.2.0): with
+			 * 6-7 on screen, a three-actor scene used to empty half of it. */
 			var need = sc.actors || 3, freed = 0;
+			if (mobile) { need = mn(need, 1); }
 			for (var k = 0; k < parts.length && freed < need; k++) {
 				if (!parts[k].dormant) { parts[k].dormant = true; freed++; }
 			}
 			vig = { name: name, st: { t: 0 }, sc: sc };
+			vigLog.push({ name: name, start: vt, end: -1, borrowed: freed });
 		}
 		function endVig(t) {
 			if (!vig) { return; }
 			vig = null;
+			if (vigLog.length) { vigLog[vigLog.length - 1].end = vt; }
 			for (var k = 0; k < parts.length; k++) {
 				if (parts[k].dormant) { parts[k].dormant = false; seed(parts[k]); }
 			}
 			vigNext = (t || 0) + ((DEBUG && CFG.vigGap) || rnd(90, 150) * 1000);
+			fitParts();
 		}
 		function stepVig(dt, t) {
 			/* THE showstopper: the real New Year's countdown, wall-clock. */
@@ -3777,9 +4220,14 @@
 				W.console.info('DCC Seasons: the ambient canvas was removed from the page (the host re-rendered its children) and has been re-mounted.');
 			}
 		}
-		function frame(t) {
+		/* A MOCKED CLOCK for the suites (debug builds only): in manual mode the
+		 * rAF loop stops and the test advances the engine tick by tick, so a
+		 * scene plays through identically every run. */
+		var manual = false, fakeT = 0;
+		function frame(t, tick) {
 			raf = 0;
-			if (!running) { return; }
+			if (manual && !tick) { return; }
+			if (!running && !tick) { return; }
 			ensureMounted();
 			var t0 = (W.performance && performance.now) ? performance.now() : 0;
 			var dt = last ? mn((t - last) / 1000, 0.05) : 0.016;
@@ -3791,7 +4239,6 @@
 			 * is the calm baseline and every sprite belongs on top of it. */
 			stepSubtle(dt);
 			drawSubtle();
-			drawSnow();
 			if (burstMode) {
 				if (!nextBurst) { nextBurst = t + 1500; }
 				else if (t >= nextBurst) { fire(t); }
@@ -3816,11 +4263,13 @@
 			}
 			var k, p;
 			deClump(dt);
+			actorX = sceneActors();
 			for (k = 0; k < parts.length; k++) {
 				p = parts[k];
 				if (p.dormant) { continue; }
 				repel(p, dt);
 				step(p, dt, t);
+				riderYield(p, dt);
 			}
 			/* FAR layer first, then water, then NEAR */
 			for (k = 0; k < parts.length; k++) { p = parts[k]; if (!p.dormant && p.far) { drawP(p, t); } }
@@ -3831,8 +4280,10 @@
 				if (p.dormant || p.far) { continue; }
 				drawP(p, t);
 			}
+			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
 			stepVig(dt, t);
 			stepHero(dt, t);
+			heroGone();
 			drawHero(t);
 			drawReflections(t);
 			if (DEBUG && DBG && W.DCCSeasonsEngine._slow) {
@@ -3840,8 +4291,8 @@
 				while (performance.now() < until) { /* synthetic load for tests */ }
 			}
 			if (clipped) { cx.restore(); }
-			if (t0) { degrade(performance.now() - t0, t); }
-			raf = W.requestAnimationFrame(frame);
+			if (t0 && !tick) { degrade(performance.now() - t0, t); }
+			if (!tick) { raf = W.requestAnimationFrame(frame); }
 		}
 		function play() { if (!raf && running) { last = 0; raf = W.requestAnimationFrame(frame); } }
 		D.addEventListener('visibilitychange', function () {
@@ -3869,9 +4320,28 @@
 				get cap() { return maxTotal; },
 				get vig() { return vig && vig.name; },
 				get hero() { return hero && hero.kind; },
+				get heroXY() { return hero ? [hero.x, hero.y] : null; },
+				get vigSt() { return vig && vig.st; },
+				get vt() { return vt; },
+				get heroAt() { return heroAt; },
+				get firstPage() { return firstPage; },
+				get heroLog() { return heroLog.slice(0); },
+				get vigLog() { return vigLog.slice(0); },
+				get maxParts() { return maxParts; },
+				get mobile() { return mobile; },
+				get sprites() {
+					var out = {};
+					for (var k = 0; k < parts.length; k++) {
+						var q = parts[k];
+						if (q.dormant) { continue; }
+						var key = q.sKey || (q.sp && (q.sp.c || q.sp.g)) || '?';
+						out[key] = (out[key] || 0) + 1;
+					}
+					return out;
+				},
+				get accents() { return accents.map(function (el) { return el.innerHTML.length; }).length; },
 				get heroFrame() { return heroFrame; },
 				get evening() { return evening; },
-				get snowMax() { var m = 0; if (snowCols) { for (var k = 0; k < snowCols.length; k++) { m = mx2(m, snowCols[k]); } } return m; },
 				get frameAvg() { return frameAvg; },
 				get shed() { return shed; },
 				get vw() { return vw; },
@@ -3909,6 +4379,10 @@
 				},
 				get repel() { return { ms: repMs, frames: repN }; },
 				buildMap: function () { buildOpenMap(); return omFrac; },
+				manual: function (on) { manual = !!on; if (!on) { last = 0; play(); } },
+				tick: function (ms, n) {
+					for (var k = 0; k < (n || 1); k++) { fakeT = (fakeT || last || 1000) + ms; frame(fakeT, true); }
+				},
 				/* Re-seeding the live array is exactly what a restart does. */
 				reseed: function (anywhere) { for (var k = 0; k < parts.length; k++) { seed(parts[k], anywhere); } }
 			};
