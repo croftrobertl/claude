@@ -152,6 +152,15 @@ final class Species {
 			// The same three groups the owner's own master list is organised
 			// by. They share the Animals chips' toggle behaviour exactly:
 			// navigation, not a filter — nothing is hidden by choosing one.
+			//
+			// EPIPHYTES GO UNDER "TREES" (the owner's decision, 2026-09-29).
+			// Spanish moss and the resurrection fern are neither trees nor
+			// wildflowers, and 1.33.0 first filed them in the catch-all on the
+			// reasoning that the master list puts a lichen there. His ruling
+			// overrides that, and the reason is better: a guest meets these
+			// looking UP AT AN OAK OR A CYPRESS, so that is the chip they will
+			// reach for. Ball moss goes here too when it lands. The chip is a
+			// place to look, not a botanical rank.
 			'trees'       => __( 'Trees', 'dcc-wildlife' ),
 			'wildflowers' => __( 'Wildflowers & shrubs', 'dcc-wildlife' ),
 			'waterplants' => __( 'Water plants', 'dcc-wildlife' ),
@@ -1614,7 +1623,7 @@ final class Species {
 				'where' => __( 'lining both banks — the knees poke up along the waterline', 'dcc-wildlife' ),
 			],
 			'moss'       => [
-				'browse' => 'wildflowers',
+				'browse' => 'trees',
 				'emoji' => '🌿',
 				'name'  => __( 'Spanish Moss', 'dcc-wildlife' ),
 				'sci'   => 'Tillandsia usneoides',
@@ -1625,7 +1634,7 @@ final class Species {
 				'where' => __( 'draped from the cypress and oak canopy overhead', 'dcc-wildlife' ),
 			],
 			'fern'       => [
-				'browse' => 'wildflowers',
+				'browse' => 'trees',
 				'emoji' => '🌱',
 				'name'  => __( 'Resurrection Fern', 'dcc-wildlife' ),
 				'sci'   => 'Pleopeltis michauxiana',

@@ -1967,3 +1967,22 @@ predicts. Trust the synthetic figure over the scaled one.
 **Still to come:** amphibians next, then the remaining packs. No release zip
 until every pack is in — the owner's instruction, and the reason nothing has
 been built yet.
+
+### 11. Two placement rules Rob set on 2026-09-29
+
+**EPIPHYTES GO UNDER THE "TREES" CHIP.** Spanish moss and the resurrection fern
+— and ball moss when it lands — are neither trees nor wildflowers, and 1.33.0
+first filed them in the Wildflowers & shrubs catch-all because that is where the
+owner's own master list puts a lichen. **He overruled it, and his reason is the
+better one: a guest meets these looking UP AT AN OAK OR A CYPRESS**, so that is
+the chip they reach for. The chip is a place to look, not a botanical rank. Any
+future epiphyte, air plant or lichen growing on a tree goes here for the same
+reason; one growing on the ground does not.
+
+**A LABEL THAT CAN CHANGE ITSELF NEEDS ASKING FIRST.** The derived
+"Reptiles & amphibians" chip was accepted, but only because it lands on the
+label Rob had already chosen — the mechanism made his decision true rather than
+substituting for it. That is the whole of the licence. **Any OTHER piece of
+wording that would rewrite itself from content — a heading, a count phrase, a
+button, a section name — is a design choice under the standing rule: render the
+options and ask.** Do not generalise `has_amphibian()` into a pattern.
