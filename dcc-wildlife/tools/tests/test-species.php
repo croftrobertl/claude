@@ -22,7 +22,23 @@ $reg = Species::registry();
 
 dcc_section( 'shape' );
 
-check_same( 51, count( $reg ), 'the registry holds 51 species' );
+/*
+ * COUNTS ARE DERIVED, NOT TYPED (1.33.0).
+ *
+ * Through 1.32.x this suite said 51, 38, 9, 5, 52. Every one of those broke
+ * the moment a batch landed, and a suite that goes red on purpose every time
+ * work happens stops being read. What actually needs pinning is not the size
+ * of the registry but that the parts agree with the whole: sections between
+ * them reach everyone, sub-groups between them reach every animal, photos()
+ * names a file for each, the alligator is the one double membership.
+ *
+ * One number is still typed, on purpose: the SPECIES TOTAL, so that a batch
+ * landing is a deliberate one-line edit here rather than a silent drift. Any
+ * other count is computed from the registry.
+ */
+const TOTAL = 62;   // 51 through 1.32.1, + 12 turtles - the composite they replace.
+
+check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 
 $groups = [];
 foreach ( $reg as $id => $sp ) {
@@ -30,10 +46,11 @@ foreach ( $reg as $id => $sp ) {
 }
 ksort( $groups );
 check_same(
-	[ 'birds' => 29, 'critters' => 9, 'plants' => 5, 'safety' => 8 ],
-	$groups,
-	'the group split is 29 birds, 9 critters, 5 plants, 8 safety'
+	[ 'birds', 'critters', 'plants', 'safety' ],
+	array_keys( $groups ),
+	'four data groups, and no fifth has crept in'
 );
+check_same( count( $reg ), array_sum( $groups ), 'and between them they hold every species' );
 
 $declared = array_keys( Species::groups() );
 $used     = array_keys( $groups );
@@ -129,7 +146,7 @@ check( count( array_filter( $reg, static fn( $sp ): bool => isset( $sp['flags'] 
 dcc_section( 'photo coverage is checked against the files, not asserted' );
 
 $photos = Species::photos();
-check_same( 51, count( $photos ), 'photos() names a file for all 51 species' );
+check_same( count( $reg ), count( $photos ), 'photos() names a file for every species, with none left over' );
 
 $on_disk = glob( $root . '/assets/photos/*.jpg' );
 $base    = array_values( array_filter( $on_disk, static fn( $p ): bool => 1 !== preg_match( '/-(320|600)\.jpg$/', $p ) ) );
@@ -194,10 +211,22 @@ $counts = [];
 foreach ( array_keys( $sections ) as $s ) {
 	$counts[ $s ] = count( Species::section_members( $ds, $s ) );
 }
-check_same( 38, $counts['animals'], 'the animals section holds 38 species — critters plus birds' );
-check_same( 5, $counts['plants'], 'the plants section holds 5' );
-check_same( 9, $counts['safety'], 'the safety section holds 9 — the eight hazards plus the alligator' );
-check_same( 52, array_sum( $counts ), 'the sections hold 52 memberships, one more than the species count' );
+$by_group = [];
+foreach ( $reg as $sp ) {
+	$by_group[ (string) $sp['group'] ] = ( $by_group[ (string) $sp['group'] ] ?? 0 ) + 1;
+}
+check_same(
+	( $by_group['critters'] ?? 0 ) + ( $by_group['birds'] ?? 0 ),
+	$counts['animals'],
+	'the animals section is exactly the critters plus the birds'
+);
+check_same( $by_group['plants'] ?? 0, $counts['plants'], 'the plants section is exactly the plants' );
+check_same(
+	( $by_group['safety'] ?? 0 ) + 1,
+	$counts['safety'],
+	'the safety section is the hazards plus the alligator, which is also an animal'
+);
+check_same( count( $reg ) + 1, array_sum( $counts ), 'one more membership than there are species — the alligator\'s second' );
 
 // The alligator is deliberately in two sections: it is an animal you want to
 // read about and a hazard you must be warned about. That double membership is
@@ -208,28 +237,43 @@ foreach ( array_keys( $sections ) as $s ) {
 		$seen[ is_array( $m ) ? (string) ( $m['id'] ?? '' ) : (string) $m ][] = $s;
 	}
 }
-check_same( 51, count( $seen ), 'the sections between them reach all 51 species' );
+check_same( count( $reg ), count( $seen ), 'the sections between them reach every species' );
 $twice = array_keys( array_filter( $seen, static fn( array $ss ): bool => count( $ss ) > 1 ) );
 check_same( [ 'alligator' ], $twice, 'exactly one species sits in two sections, and it is the alligator' );
 
 // The prose guide passes false so the alligator is not described twice. It is
 // SAFETY that drops it, not animals — the animal entry is the one to keep.
-check_same( 38, count( Species::section_members( $ds, 'animals', false ) ), 'excluding flagged members leaves animals untouched' );
-check_same( 8, count( Species::section_members( $ds, 'safety', false ) ), 'excluding flagged members drops the alligator from safety, leaving 8' );
+check_same( $counts['animals'], count( Species::section_members( $ds, 'animals', false ) ), 'excluding flagged members leaves animals untouched' );
+check_same( $counts['safety'] - 1, count( Species::section_members( $ds, 'safety', false ) ), 'excluding flagged members drops the alligator from safety' );
 
 dcc_section( 'browse sub-groups for the Animals section' );
 
 $browse = Species::browse_groups();
 check_same(
-	[ 'reptiles', 'mammals', 'fishsnails', 'waders', 'waterfowl', 'raptors' ],
+	[ 'reptiles', 'birds', 'mammals', 'fish', 'insects', 'trees', 'wildflowers', 'waterplants' ],
 	array_keys( $browse ),
-	'six sub-groups, in the order the chips show them'
+	'the owner\'s option C for Animals, then the Plants row, in chip order'
 );
 
-// A label is a claim. The registry holds five reptiles and NO amphibians, and
-// only three of the ten swimmers are ducks — so neither label may overstate.
-check_same( 'Reptiles', $browse['reptiles'], 'the reptiles label does not promise amphibians there are none of' );
-check_contains( $browse['waterfowl'], 'swimmers', 'the waterfowl label admits that most of them are not ducks' );
+/*
+ * A LABEL IS A CLAIM — the rule survives the rename (1.33.0).
+ *
+ * The owner chose "Reptiles & amphibians". The guide's older rule is that a
+ * chip may not offer what the registry does not hold. Both hold at once
+ * because the label is DERIVED: has_amphibian() decides it. So this suite does
+ * not assert one string or the other — it asserts that the label and the
+ * contents agree, which is the thing that actually matters and which stays
+ * true through the amphibian batch landing.
+ */
+$has_amph = Species::has_amphibian();
+check_same(
+	$has_amph,
+	false !== strpos( $browse['reptiles'], 'amphibian' ),
+	'the reptiles chip mentions amphibians exactly when there are some'
+);
+check_lacks( implode( ' | ', $browse ), 'Wading birds', 'the retired bird chips are gone' );
+check_lacks( implode( ' | ', $browse ), 'Raptors', 'including "Raptors & others"' );
+check_lacks( implode( ' | ', $browse ), 'snails', 'and "Fish & snails" — snails moved to the small things' );
 
 $animals = Species::section_members( $ds, 'animals' );
 $sizes   = [];
@@ -237,21 +281,44 @@ foreach ( array_keys( $browse ) as $slug ) {
 	$sizes[ $slug ] = count( Species::browse_members( $animals, $slug ) );
 }
 check_same(
-	[ 'reptiles' => 5, 'mammals' => 2, 'fishsnails' => 2, 'waders' => 15, 'waterfowl' => 10, 'raptors' => 4 ],
-	$sizes,
-	'every animal falls in exactly one sub-group and the sizes add up'
+	[ 'trees' => 0, 'wildflowers' => 0, 'waterplants' => 0 ],
+	array_intersect_key( $sizes, array_flip( [ 'trees', 'wildflowers', 'waterplants' ] ) ),
+	'no animal carries a plant chip'
 );
-check_same( 38, array_sum( $sizes ), 'the six sub-groups account for all 38 animals' );
+check_same( $counts['animals'], array_sum( $sizes ), 'the Animals chips between them account for every animal' );
+check( min( array_intersect_key( $sizes, array_flip( [ 'reptiles', 'birds', 'mammals', 'fish', 'insects' ] ) ) ) > 0,
+	'and none of the five Animals chips is empty', wp_json_encode( $sizes ) );
 
-// Nothing outside the Animals section may carry one: Plants and the safety list
-// are short and are their own destinations.
+/*
+ * Every species in a chipped section carries a slug FROM THAT SECTION'S ROW,
+ * and nothing else carries one at all.
+ *
+ * Plants gained a chip row in 1.33.0, so "nothing outside Animals may carry a
+ * slug" is no longer the rule — but a plant carrying an ANIMAL slug (or the
+ * reverse) would put a chip in the wrong row and silently hide a species from
+ * its own section, so the pairing is what gets pinned now. The safety list is
+ * still its own destination and takes no chips.
+ */
+$ANIMAL_SLUGS = [ 'reptiles', 'birds', 'mammals', 'fish', 'insects' ];
+$PLANT_SLUGS  = [ 'trees', 'wildflowers', 'waterplants' ];
+
 $stray = [];
 foreach ( $reg as $id => $sp ) {
 	$b = (string) ( $sp['browse'] ?? '' );
-	$in_animals = in_array( (string) $sp['group'], [ 'critters', 'birds' ], true );
-	if ( '' !== $b && ! $in_animals ) { $stray[] = $id; }
-	if ( '' === $b && $in_animals ) { $stray[] = "$id (missing)"; }
-	if ( '' !== $b && ! isset( $browse[ $b ] ) ) { $stray[] = "$id -> unknown $b"; }
+	$g = (string) $sp['group'];
+	$in_animals = in_array( $g, [ 'critters', 'birds' ], true );
+	$in_plants  = 'plants' === $g;
+
+	if ( '' !== $b && ! isset( $browse[ $b ] ) ) { $stray[] = "$id -> unknown $b"; continue; }
+	if ( $in_animals ) {
+		if ( '' === $b ) { $stray[] = "$id (animal, missing)"; }
+		elseif ( ! in_array( $b, $ANIMAL_SLUGS, true ) ) { $stray[] = "$id (animal with plant slug $b)"; }
+	} elseif ( $in_plants ) {
+		if ( '' === $b ) { $stray[] = "$id (plant, missing)"; }
+		elseif ( ! in_array( $b, $PLANT_SLUGS, true ) ) { $stray[] = "$id (plant with animal slug $b)"; }
+	} elseif ( '' !== $b ) {
+		$stray[] = "$id (safety, should carry no chip)";
+	}
 }
 check_same( [], $stray, 'no species carries a sub-group it should not, or lacks one it should', implode( ', ', $stray ) );
 
@@ -274,7 +341,27 @@ foreach ( $ordered as $sp ) {
 }
 $run_slugs = array_column( $runs, 0 );
 check_same( count( $run_slugs ), count( array_unique( $run_slugs ) ), 'each sub-group appears as ONE contiguous run', implode( ' ', $run_slugs ) );
-check_same( array_keys( $browse ), $run_slugs, 'and the runs come in the same order as the chips' );
+check_same( $ANIMAL_SLUGS, $run_slugs, 'and the runs come in the same order as the Animals chips' );
+
+dcc_section( 'the Plants section has a chip row of its own (1.33.0)' );
+
+$plants = Species::section_members( $ds, 'plants' );
+$psizes = [];
+foreach ( $PLANT_SLUGS as $slug ) {
+	$psizes[ $slug ] = count( Species::browse_members( $plants, $slug ) );
+}
+check_same( count( $plants ), array_sum( $psizes ), 'every plant falls in exactly one of the three' );
+check( $psizes['trees'] > 0 && $psizes['wildflowers'] > 0 && $psizes['waterplants'] > 0,
+	'and none of the three chips is empty', wp_json_encode( $psizes ) );
+
+$pordered = Species::browse_order( $plants );
+$pruns    = [];
+foreach ( $pordered as $sp ) {
+	$b = (string) $sp['browse'];
+	if ( ! $pruns || end( $pruns ) !== $b ) { $pruns[] = $b; }
+}
+check_same( count( $pruns ), count( array_unique( $pruns ) ), 'each plant chip is one contiguous run', implode( ' ', $pruns ) );
+check_same( $PLANT_SLUGS, $pruns, 'in the order the chips show them' );
 
 // Stability: within a run, registry order survives. The confusable white waders
 // sitting together is the whole reason registry order is what it is.

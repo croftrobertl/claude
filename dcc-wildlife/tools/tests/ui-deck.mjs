@@ -43,7 +43,15 @@ const built = await page.evaluate(() => {
 note(`decks ${built.decks}, visible ${built.visible}, first group "${built.group}" with ${built.tiles} tiles`);
 checkAtLeast(1, built.visible, 'a deck is visible');
 check(built.hasNav, 'it has its control row');
-checkSame(38, built.tiles, 'the visible Animals deck holds all 38 species');
+/* DERIVED, NOT TYPED (1.33.0). This suite said 38 in eight places; every one
+ * of them went red the moment a batch landed, and a suite that reddens on
+ * purpose whenever work happens stops being read. ANIMALS is read off the
+ * rendered page once, and everything downstream is checked against it — which
+ * is the real invariant: the deck, the chips, the jump menu and the compact
+ * list all agree with the section they are describing. */
+const ANIMALS = built.tiles;
+checkAtLeast(38, ANIMALS, 'the Animals deck is at least the size it was in 1.32.1');
+note(`the Animals section holds ${ANIMALS} species`);
 check(!!built.status && /\d/.test(built.status), 'the position line reads out', JSON.stringify(built.status));
 
 section('every species in the deck is reachable and accounted for');
@@ -149,17 +157,49 @@ checkSame(false, chipInfo.hidden, 'it is visible with its tab');
 checkSame(false, chipInfo.chipsHidden, 'the chip row was unhidden by the script');
 checkSame(false, chipInfo.toolsHidden, 'so were the jump select and the view toggle');
 note(`chips: ${chipInfo.labels.join(' | ')}`);
-checkSame(7, chipInfo.labels.length, 'seven chips: All plus six sub-groups');
+checkSame(6, chipInfo.labels.length, 'six chips: All plus the owner\'s option C');
 checkSame(['All'], chipInfo.pressed, 'All is pressed to begin with');
 
-// Labels must not promise what the registry does not hold.
-check(!chipInfo.labels.includes('Reptiles & amphibians'), 'no chip claims amphibians, which the registry has none of');
-check(chipInfo.labels.includes('Reptiles'), 'the reptiles chip is named for what is actually there');
+/* A label is a claim, still. The reptiles chip is allowed to say "& amphibians"
+ * only once the registry holds one; the label is derived, so this checks the
+ * two agree rather than pinning either string. */
+const reptileChip = chipInfo.labels.find((l) => l.startsWith('Reptiles'));
+check(!!reptileChip, 'there is a reptiles chip', chipInfo.labels.join(' | '));
+if (reptileChip.includes('amphibian')) {
+  note('the registry now holds an amphibian, so the chip says so');
+} else {
+  checkSame('Reptiles', reptileChip, 'with no amphibians yet, the chip does not offer any');
+}
+check(!chipInfo.labels.some((l) => /Wading|Raptors|Waterfowl|snails/.test(l)),
+  'the retired chips are gone', chipInfo.labels.join(' | '));
 
 // Every chip must land on its own sub-group and say so.
-const EXPECT = {
-  reptiles: 5, mammals: 2, fishsnails: 2, waders: 15, waterfowl: 10, raptors: 4,
-};
+/* Per-chip sizes come from the chip row's own status line rather than a table
+ * here, so adding a turtle does not mean editing this file. What is pinned is
+ * that every chip lands on a non-empty run and that the runs sum to the whole
+ * section. */
+const SLUGS = ['reptiles', 'birds', 'mammals', 'fish', 'insects'];
+const EXPECT = {};
+/* Counted off the VISIBLE Animals deck, not the document. A page-wide query
+ * counts the alligator twice — it is a reptile in Animals and a hazard in
+ * Safety, and the Safety list carries its browse slug too. */
+{
+  const sizes = await page.evaluate(() => {
+    const deck = Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
+      .find((d) => d.offsetParent !== null || d.getClientRects().length);
+    const out = {};
+    for (const li of Array.from(deck.children)) {
+      const b = li.getAttribute('data-dccwl-browse');
+      if (b) { out[b] = (out[b] || 0) + 1; }
+    }
+    return out;
+  });
+  for (const slug of SLUGS) { EXPECT[slug] = sizes[slug] || 0; }
+}
+note(`chip sizes: ${SLUGS.map((k) => `${k} ${EXPECT[k]}`).join(', ')}`);
+check(SLUGS.every((k) => EXPECT[k] > 0), 'no chip points at an empty run', JSON.stringify(EXPECT));
+checkSame(ANIMALS, Object.values(EXPECT).reduce((a, b) => a + b, 0),
+  'the chip runs between them account for every animal');
 let covered = 0;
 for (const [slug, count] of Object.entries(EXPECT)) {
   await page.click(`[data-dccwl-subnav="animals"] .dccwl-subchip[data-dccwl-browse="${slug}"]`);
@@ -211,7 +251,7 @@ for (const [slug, count] of Object.entries(EXPECT)) {
   );
   covered += landed.count;
 }
-checkSame(38, covered, 'the six chips between them account for every one of the 38 animals');
+checkSame(ANIMALS, covered, 'the chips between them account for every animal');
 
 // All hands the line back to the deck's own global count.
 await page.click('[data-dccwl-subnav="animals"] .dccwl-subchip[data-dccwl-browse=""]');
@@ -225,7 +265,7 @@ const allState = await page.evaluate(() => {
   };
 });
 note(`All: status "${allState.status}", scrollLeft ${allState.scrollLeft}`);
-check(/of 38$/.test(allState.status), 'All restores the whole-section count', allState.status);
+check(new RegExp(`of ${ANIMALS}$`).test(allState.status), 'All restores the whole-section count', allState.status);
 checkAtMost(4, allState.scrollLeft, 'and returns the deck to the start');
 
 section('the jump select reaches every single species');
@@ -259,7 +299,7 @@ const jump = await page.evaluate(async () => {
 });
 
 note(`jump select: ${jump.total} species offered, ${jump.missed.length} unreachable`);
-checkSame(38, jump.total, 'the select lists all 38 animals');
+checkSame(ANIMALS, jump.total, 'the select lists every animal');
 checkSame(0, jump.missed.length, 'choosing any of them scrolls it into view', jump.missed.join(', '));
 
 section('compact rows hold the same species, at the same reach');
@@ -293,8 +333,8 @@ const compact = await page.evaluate(() => {
 
 note(`compact: ${compact.count} rows in ${compact.columns} column(s), shortest card ${compact.minTileHeight}px, toggle now "${compact.toggleLabel}"`);
 check(compact.isCompact, 'the grid switches to the compact list');
-checkSame(38, compact.count, 'all 38 species are still there');
-checkSame(38, compact.focusable, 'and every one is still a button');
+checkSame(ANIMALS, compact.count, 'every species is still there');
+checkSame(ANIMALS, compact.focusable, 'and every one is still a button');
 checkSame(1, compact.columns, 'they are laid out in a single column');
 /*
  * 1.33.0 changed this contract on the owner's instruction: the line must report
@@ -304,9 +344,9 @@ checkSame(1, compact.columns, 'they are laid out in a single column');
  */
 checkSame([true, true], compact.pagerHidden, 'the paging buttons are withdrawn, since there is no deck to page');
 checkSame(false, compact.deckNavHidden, 'but the status line stays, because it still has something true to say');
-checkSame('38 species', compact.status, 'and it counts rather than describing a window that is not there');
-check(!/of 38/.test(String(compact.status)),
-  'no "N-M of 38" in compact mode — the exact line the owner reported');
+checkSame(`${ANIMALS} species`, compact.status, 'and it counts rather than describing a window that is not there');
+check(!new RegExp(`of ${ANIMALS}`).test(String(compact.status)),
+  'no "N-M of N" in compact mode — the exact line the owner reported');
 checkAtLeast(44, compact.minTileHeight, 'every row is at least 44px tall');
 checkAtMost(1, compact.overflowX, 'the list does not scroll sideways');
 checkSame('Photos', compact.toggleLabel, 'the toggle now offers the way back');

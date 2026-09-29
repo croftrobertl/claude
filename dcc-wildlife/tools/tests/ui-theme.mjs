@@ -109,22 +109,44 @@ for (const t of off) {
     `${t.label}: an unselected tab carries no gold mark`, t.shadow);
 }
 
-// The month pills and the browse chips use a border rather than a shadow —
-// they have the room — but the colour rule is the same.
-for (const [sel, what] of [['.dccwl-month', 'month pill'], ['.dccwl-subchip', 'browse chip']]) {
-  const rows = await page.evaluate((s) => Array.from(document.querySelectorAll(s)).map((b) => {
-    const cs = getComputedStyle(b);
-    return { pressed: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('dccwl-month-on'),
-             bg: cs.backgroundColor, fg: cs.color, bc: cs.borderTopColor };
-  }), sel);
-  checkAtLeast(2, rows.length, `${what}s are present`);
-  check(rows.every((r) => r.bg === BLUE), `every ${what} is solid #006BCF`);
-  check(rows.every((r) => r.fg === WHITE), `every ${what} has white text`);
-  const sel_on = rows.filter((r) => r.pressed);
-  checkSame(1, sel_on.length, `exactly one ${what} is selected`);
-  checkSame(GOLD, sel_on[0].bc, `the selected ${what} is marked in gold`);
-  check(rows.filter((r) => !r.pressed).every((r) => r.bc !== GOLD),
-    `no unselected ${what} is marked in gold`);
+/* The month pills and the browse chips use a border rather than a shadow —
+ * they have the room — but the colour rule is the same.
+ *
+ * Grouped BY ROW since 1.33.0. Plants gained a chip row of its own, so the
+ * page now carries two independent sets and "exactly one chip is selected"
+ * is only true within a row. Counting across the page said 2 and looked like
+ * a bug in the toggle; it was the test's assumption that was stale. */
+for (const [sel, what, rowSel] of [
+  ['.dccwl-month', 'month pill', '.dccwl-timeline'],
+  ['.dccwl-subchip', 'browse chip', '.dccwl-subchips'],
+]) {
+  const groups = await page.evaluate(([s, rs]) => {
+    const rows = Array.from(document.querySelectorAll(rs));
+    return rows.map((row) => ({
+      section: row.closest('[data-dccwl-subnav]')?.getAttribute('data-dccwl-subnav') || 'page',
+      chips: Array.from(row.querySelectorAll(s)).map((b) => {
+        const cs = getComputedStyle(b);
+        return {
+          label: b.textContent.trim(),
+          pressed: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('dccwl-month-on'),
+          bg: cs.backgroundColor, fg: cs.color, bc: cs.borderTopColor,
+        };
+      }),
+    })).filter((g) => g.chips.length > 0);
+  }, [sel, rowSel]);
+
+  checkAtLeast(1, groups.length, `${what} rows are present`);
+  for (const g of groups) {
+    const rows = g.chips;
+    checkAtLeast(2, rows.length, `${g.section}: ${what}s are present`);
+    check(rows.every((r) => r.bg === BLUE), `${g.section}: every ${what} is solid #006BCF`);
+    check(rows.every((r) => r.fg === WHITE), `${g.section}: every ${what} has white text`);
+    const sel_on = rows.filter((r) => r.pressed);
+    checkSame(1, sel_on.length, `${g.section}: exactly one ${what} is selected in this row`);
+    checkSame(GOLD, sel_on[0].bc, `${g.section}: the selected ${what} is marked in gold`);
+    check(rows.filter((r) => !r.pressed).every((r) => r.bc !== GOLD),
+      `${g.section}: no unselected ${what} is marked in gold`);
+  }
 }
 
 /* ---- 2b. "Peak Now" stays on ONE LINE ------------------------------- */

@@ -99,14 +99,55 @@ final class Species {
 	 *
 	 * @return array<string,string>
 	 */
+	/**
+	 * Does the registry hold an amphibian yet?
+	 *
+	 * Amphibians share the reptiles chip (the owner's option C), so they are
+	 * marked with `class => 'amphibian'` rather than a browse slug of their
+	 * own. That one key is what renames the chip, so adding the first frog is
+	 * the whole change — there is no second place to remember.
+	 */
+	public static function has_amphibian(): bool {
+		foreach ( self::registry() as $sp ) {
+			if ( 'amphibian' === (string) ( $sp['class'] ?? '' ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static function browse_groups(): array {
 		return [
-			'reptiles'   => __( 'Reptiles', 'dcc-wildlife' ),
-			'mammals'    => __( 'Mammals', 'dcc-wildlife' ),
-			'fishsnails' => __( 'Fish & snails', 'dcc-wildlife' ),
-			'waders'     => __( 'Wading birds', 'dcc-wildlife' ),
-			'waterfowl'  => __( 'Waterfowl & swimmers', 'dcc-wildlife' ),
-			'raptors'    => __( 'Raptors & others', 'dcc-wildlife' ),
+			// ---- Animals (the owner's option C, 2026-09-29) --------------
+			// Five chips, in this order. The three bird chips they replace —
+			// Wading birds, Waterfowl & swimmers, Raptors & others — are
+			// RETIRED, not renamed: at 169 species a guest looking for a
+			// kingfisher should not first have to decide whether a kingfisher
+			// is a raptor. Finding one bird among many is the jump-to menu's
+			// job; these chips only get you to the right part of the section.
+			// THE LABEL TRACKS WHAT IS ACTUALLY THERE. The owner chose the name
+			// "Reptiles & amphibians"; the guide's older and equally firm rule
+			// is that a label is a claim and may not promise what the registry
+			// does not hold. Both are satisfied by deriving it: the moment the
+			// first amphibian entry lands, the chip renames itself, and until
+			// then it does not offer frogs the guide has not got.
+			'reptiles' => self::has_amphibian()
+				? __( 'Reptiles & amphibians', 'dcc-wildlife' )
+				: __( 'Reptiles', 'dcc-wildlife' ),
+			'birds'    => __( 'Birds', 'dcc-wildlife' ),
+			'mammals'  => __( 'Mammals', 'dcc-wildlife' ),
+			'fish'     => __( 'Fish', 'dcc-wildlife' ),
+			// Snails live here, by the owner's decision. "Fish & snails" was a
+			// pairing of convenience and nothing else.
+			'insects'  => __( 'Insects & small things', 'dcc-wildlife' ),
+
+			// ---- Plants (new in 1.33.0) ----------------------------------
+			// The same three groups the owner's own master list is organised
+			// by. They share the Animals chips' toggle behaviour exactly:
+			// navigation, not a filter — nothing is hidden by choosing one.
+			'trees'       => __( 'Trees', 'dcc-wildlife' ),
+			'wildflowers' => __( 'Wildflowers & shrubs', 'dcc-wildlife' ),
+			'waterplants' => __( 'Water plants', 'dcc-wildlife' ),
 		];
 	}
 
@@ -445,16 +486,180 @@ final class Species {
 				'where' => __( 'along the banks near fallen trees and root tangles', 'dcc-wildlife' ),
 				'sound' => __( 'High, sharp chirps traded back and forth while they splash — more bird than mammal until you spot the wake.', 'dcc-wildlife' ),
 			],
-			'turtle'     => [
+			// ---- THE TURTLES (1.33.0) -------------------------------------
+			// One entry became twelve, by the owner's decision. The composite
+			// "Turtles" named three species and showed one photograph, which
+			// is no use at a basking log holding four kinds at once.
+			//
+			// The look-alike groups are the ones a guest ACTUALLY confuses, not
+			// "all turtles". One `turtles` group put eleven other species in
+			// every sheet — including a land tortoise underneath a basking
+			// cooter — which is a wall of text, not an identification. Four
+			// groups instead, each of things seen side by side: the basking
+			// log, the small dark mud and musk turtles, the two big bottom
+			// dwellers, and the two that walk on dry land.
+			//
+			// The gopher tortoise is here too, and is NOT a canal animal: the
+			// 1.11.0 pass removed it from the composite for exactly that reason.
+			// As its own entry it can say plainly that it lives on dry sand and
+			// never swims, which is more useful than leaving it out.
+			'peninsulacooter' => [
 				'emoji' => '🐢',
-				'name'  => __( 'Turtles', 'dcc-wildlife' ),
-				'sci'   => 'Pseudemys spp. & Apalone ferox',
+				'name'  => __( 'Peninsula Cooter', 'dcc-wildlife' ),
+				'sci'   => 'Pseudemys peninsularis',
 				'group' => 'critters',
 				'browse' => 'reptiles',
+				'idgroup' => 'baskers',
 				'odds'  => 'certain',
-				'fact'  => __( 'A basking log is a queue, and not everyone in it is the same animal. Peninsula and red-bellied cooters and yellow-bellied sliders take the sunny end. The Florida softshell never joins them: flat as a dropped pancake, leathery where the others are hard, it buries itself in the mud instead and breathes through a snorkel of a nose.', 'dcc-wildlife' ),
-				'best'  => __( 'sunny afternoons', 'dcc-wildlife' ),
-				'where' => __( 'lined up on half-sunken logs across from the dock', 'dcc-wildlife' ),
+				'fact'  => __( 'The turtle on the log, and usually most of the other turtles on the log as well. Look at its head: two pale stripes double back on themselves like hairpins, which nothing else here does. Dozens more yellow lines run down the shell, the legs and the tail, so a basking cooter is effectively pin-striped from end to end.', 'dcc-wildlife' ),
+				'best'  => __( 'mid-morning to mid-afternoon, once the sun is on the logs', 'dcc-wildlife' ),
+				'where' => __( 'half-sunken logs and snags across from the dock, usually several at once', 'dcc-wildlife' ),
+				'mark'  => __( 'hairpin-shaped pale stripes on the head, and a yellow — not red — belly', 'dcc-wildlife' ),
+			],
+			'redbelliedcooter' => [
+				'emoji' => '🐢',
+				'name'  => __( 'Florida Red-bellied Cooter', 'dcc-wildlife' ),
+				'sci'   => 'Pseudemys nelsoni',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'baskers',
+				'odds'  => 'likely',
+				'fact'  => __( 'She sometimes buries her eggs inside a living alligator’s nest mound — the warmest, best-guarded nursery in Florida, kept by a guard who would happily eat her. Raccoons dig up ordinary turtle nests; almost nothing digs up an alligator’s. Look for her among the peninsula cooters on the basking logs, the one with red in her shell.', 'dcc-wildlife' ),
+				'best'  => __( 'mid-morning, once the sun is on the logs', 'dcc-wildlife' ),
+				'where' => __( 'basking logs at the canal’s edge, usually shoulder to shoulder with the peninsula cooters', 'dcc-wildlife' ),
+				'mark'  => __( 'a yellow head-stripe running between the eyes to a point like an arrowhead, two small cusps notching the upper jaw, and a belly that is red, not yellow', 'dcc-wildlife' ),
+			],
+			'redearedslider'  => [
+				'emoji' => '🐢',
+				'name'  => __( 'Red-eared Slider', 'dcc-wildlife' ),
+				'sci'   => 'Trachemys scripta elegans',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'baskers',
+				'odds'  => 'likely',
+				'flags' => [ 'invasive' ],
+				'fact'  => __( 'The world’s most traded pet turtle, and the reason it is here: bought small, outgrown, and let go. It is native to the Mississippi drainage, not Florida, and releasing one has been against state rule for years — but the ones already out are breeding, and interbreeding with the native sliders. The red ear-patch is the giveaway.', 'dcc-wildlife' ),
+				'best'  => __( 'sunny afternoons on the logs', 'dcc-wildlife' ),
+				'where' => __( 'basking among the cooters, and around any bank people feed from', 'dcc-wildlife' ),
+				'mark'  => __( 'a broad red or orange patch behind the eye — no native turtle here has one', 'dcc-wildlife' ),
+			],
+			'softshell'       => [
+				'emoji' => '🐢',
+				'name'  => __( 'Florida Softshell Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Apalone ferox',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'bigwater',
+				'odds'  => 'certain',
+				'fact'  => __( 'The largest softshell turtle in North America, and it does not look like a turtle at all: flat as a dropped pancake, leathery instead of hard, with a nose drawn out into a snorkel. It lies buried in the bottom with only that nose at the surface, waiting. When it does come out to bask it does so on the bank, alone, never on the log with the cooters.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings, on open bank rather than logs', 'dcc-wildlife' ),
+				'where' => __( 'buried in soft bottom in the shallows, or hauled out flat on a muddy bank', 'dcc-wildlife' ),
+				'mark'  => __( 'a soft, leathery, pancake-flat shell and a long tubular snout; no scutes and no hard rim', 'dcc-wildlife' ),
+			],
+			'snappingturtle'  => [
+				'emoji' => '🐢',
+				'name'  => __( 'Common Snapping Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Chelydra serpentina',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'bigwater',
+				'odds'  => 'occasional',
+				'fact'  => __( 'The one that is nearly always there and nearly never seen. It spends its life on the bottom, buried and waiting for something to swim within reach, and it almost never climbs out to bask — when it does float, only the ridged back breaks the surface. In the water it would far rather leave than fight. Out of it, cornered on a road, it has no shell to hide in and defends itself the only way it can.', 'dcc-wildlife' ),
+				'best'  => __( 'any month; most often seen crossing land in late spring', 'dcc-wildlife' ),
+				'where' => __( 'the canal bottom, and crossing open ground in nesting season', 'dcc-wildlife' ),
+				'mark'  => __( 'a big ridged shell, a long saw-toothed tail and a head too large to pull in', 'dcc-wildlife' ),
+			],
+			'gophertortoise'  => [
+				'emoji' => '🐢',
+				'name'  => __( 'Gopher Tortoise', 'dcc-wildlife' ),
+				'sci'   => 'Gopherus polyphemus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'landturtles',
+				'odds'  => 'occasional',
+				'flags' => [ 'protected' ],
+				'fact'  => __( 'A landlord. Its burrow runs up to forty feet back into the sand and holds a steady temperature all year, and more than 350 other animals have been recorded sheltering in one — including the eastern indigo snake, which depends on them. Dig up a tortoise and you evict a neighbourhood. That is why they are protected, and why the burrows are too.', 'dcc-wildlife' ),
+				'best'  => __( 'warm mornings, grazing near the burrow mouth', 'dcc-wildlife' ),
+				'where' => __( 'dry sandy uplands and roadside scrub — never at the water', 'dcc-wildlife' ),
+				'mark'  => __( 'stumpy elephantine hind feet, flattened shovel-like forelegs, and a domed brown shell; it walks on land and does not swim', 'dcc-wildlife' ),
+			],
+			'boxturtle'       => [
+				'emoji' => '🐢',
+				'name'  => __( 'Florida Box Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Terrapene bauri',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'landturtles',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A land turtle that can shut itself away completely. A hinge across the underside lets the front and back of the plastron fold up against the shell like a drawbridge, sealing it in behind bone — no other turtle here can do it. The shell is high-domed and marked with radiating yellow lines on dark brown, like light through a cracked door.', 'dcc-wildlife' ),
+				'best'  => __( 'mornings after rain, when they move about', 'dcc-wildlife' ),
+				'where' => __( 'damp leaf litter at the wood’s edge, lawns and shaded yards', 'dcc-wildlife' ),
+				'mark'  => __( 'a high domed shell with radiating yellow lines, and a hinged underside that closes flat', 'dcc-wildlife' ),
+			],
+			'muskturtle'      => [
+				'emoji' => '🐢',
+				'name'  => __( 'Eastern Musk Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Sternotherus odoratus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'mudmusk',
+				'odds'  => 'likely',
+				'fact'  => __( 'The stinkpot, and it earns the name: four glands under the shell rim release a drop each when it is handled, and the smell is memorable. You will rarely see it swim. It walks the bottom instead, bumping along in the shallows looking for something to eat, and it climbs — people find them sunning several feet up in a streamside bush.', 'dcc-wildlife' ),
+				'best'  => __( 'warm evenings, or by torchlight off the dock', 'dcc-wildlife' ),
+				'where' => __( 'walking the canal bottom in the shallows, and sometimes up in bankside branches', 'dcc-wildlife' ),
+				'mark'  => __( 'small and dark, with two pale stripes on the side of the head and barbels under the chin', 'dcc-wildlife' ),
+			],
+			'loggerheadmusk'  => [
+				'emoji' => '🐢',
+				'name'  => __( 'Loggerhead Musk Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Sternotherus minor',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'mudmusk',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A small turtle with a head built far too big for it — and the head is the point: the jaws are a nutcracker, and it lives on snails and freshwater mussels, crushing the shells outright. It wants clear water over limestone, so the spring runs are where to look for it rather than the canal.', 'dcc-wildlife' ),
+				'best'  => __( 'bright middays in the spring runs', 'dcc-wildlife' ),
+				'where' => __( 'clear limestone spring runs — Alexander Springs and Wekiwa rather than the canal', 'dcc-wildlife' ),
+				'mark'  => __( 'an outsized head with a pale, dark-spotted throat, and a shell with three low keels when young', 'dcc-wildlife' ),
+			],
+			'stripedmudturtle' => [
+				'emoji' => '🐢',
+				'name'  => __( 'Striped Mud Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Kinosternon baurii',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'mudmusk',
+				'odds'  => 'likely',
+				'fact'  => __( 'A palm-sized turtle of ditches and shallow wet edges, and the one mud turtle here you can name at a glance. Three pale stripes run the length of the brown shell and two more run along each side of the face. It spends the dry spells buried and waits.', 'dcc-wildlife' ),
+				'best'  => __( 'after rain, when the shallow places refill', 'dcc-wildlife' ),
+				'where' => __( 'ditches, marshy edges and temporary pools rather than open water', 'dcc-wildlife' ),
+				'mark'  => __( 'three pale stripes down the shell and two yellow stripes on each side of the head', 'dcc-wildlife' ),
+			],
+			'floridamudturtle' => [
+				'emoji' => '🐢',
+				'name'  => __( 'Florida Mud Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Kinosternon steindachneri',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'mudmusk',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Found in Florida and nowhere else on Earth, and easy to walk past: a small, plain, dark turtle with nothing much written on it. That blankness is the identification — our other small turtle of the same places, the striped mud turtle, is striped three times over on the shell and twice more on the face. This one is not.', 'dcc-wildlife' ),
+				'best'  => __( 'after rain, in the shallow wet places', 'dcc-wildlife' ),
+				'where' => __( 'ditches, ponds and marshy shallows; it will cross open ground between them', 'dcc-wildlife' ),
+				'mark'  => __( 'small, dark and unmarked — no shell stripes and no bold face stripes', 'dcc-wildlife' ),
+			],
+			'chickenturtle'   => [
+				'emoji' => '🐢',
+				'name'  => __( 'Florida Chicken Turtle', 'dcc-wildlife' ),
+				'sci'   => 'Deirochelys reticularia chrysea',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'idgroup' => 'baskers',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Built round a neck. Stretched out it is nearly as long as the shell, which is a strange thing to watch on a basking log, and the shell itself carries a fine net of yellow lines. The Florida form lives in the peninsula and nowhere else, and it prefers a quiet weedy pond or ditch to open water — it will walk overland when one dries up.', 'dcc-wildlife' ),
+				'best'  => __( 'spring mornings, on logs in the quieter ponds', 'dcc-wildlife' ),
+				'where' => __( 'weedy ponds, ditches and marsh edges away from the main channel', 'dcc-wildlife' ),
+				'mark'  => __( 'an extraordinarily long neck, a net of fine yellow lines on the shell, and vertically striped hind legs', 'dcc-wildlife' ),
 			],
 			// The snake split (1.19.0). The generic "Water Snake" hid the one
 			// distinction that carries risk; the cottonmouth lives in the
@@ -503,7 +708,7 @@ final class Species {
 				'name'  => __( 'Largemouth Bass', 'dcc-wildlife' ),
 				'sci'   => 'Micropterus salmoides',
 				'group' => 'critters',
-				'browse' => 'fishsnails',
+				'browse' => 'fish',
 				'odds'  => 'likely',
 				'fact'  => __( 'The Harris Chain is trophy-bass water, and Lake Dora by name: it is one of the two lakes where state biologists surgically tagged largemouth over eight pounds to follow where the big ones actually go. Bluegill and black crappie school in the clear shallows around them.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -514,7 +719,7 @@ final class Species {
 				'name'  => __( 'Apple Snail', 'dcc-wildlife' ),
 				'sci'   => 'Pomacea paludosa',
 				'group' => 'critters',
-				'browse' => 'fishsnails',
+				'browse' => 'insects',
 				'odds'  => 'likely',
 				'fact'  => __( 'A golf-ball of a snail that the canal quietly turns on: it is the main food of the limpkin and of the endangered snail kite, and neither bird has much of a fallback. She lays her eggs above the waterline, in pale pink clusters stuck to a stem — out of reach of every fish that would eat them.', 'dcc-wildlife' ),
 				'best'  => __( 'warm months', 'dcc-wildlife' ),
@@ -532,7 +737,7 @@ final class Species {
 				'name'  => __( 'Bald Eagle', 'dcc-wildlife' ),
 				'sci'   => 'Haliaeetus leucocephalus',
 				'group' => 'birds',
-				'browse' => 'raptors',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Protected under federal law: keep well back from a nest tree and never disturb a roosting or nesting bird.', 'dcc-wildlife' ),
@@ -548,7 +753,7 @@ final class Species {
 				'name'  => __( 'Osprey', 'dcc-wildlife' ),
 				'sci'   => 'Pandion haliaetus',
 				'group' => 'birds',
-				'browse' => 'raptors',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'fact'  => __( 'The only bird of prey that goes right into the water after a fish, sometimes vanishing under it altogether. Its outer toe swivels backwards to take hold of something built not to be held, and it turns the catch head-first in the air — a fish carried nose-on cuts the drag the whole way home.', 'dcc-wildlife' ),
 				'best'  => __( 'mid-morning', 'dcc-wildlife' ),
@@ -563,7 +768,7 @@ final class Species {
 				'name' => __( 'Great Egret', 'dcc-wildlife' ),
 				'sci' => __( 'Ardea alba', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'The bird on the National Audubon Society’s own emblem, and there for a reason: the plume hunters very nearly finished it, and stopping them is how the society began. It hunts by standing still, then stalking slower than anything else in the shallows — and grows the very plumes it was hunted for, down its back, to breed.', 'dcc-wildlife' ),
 				'best' => __( 'mornings and late afternoon', 'dcc-wildlife' ),
@@ -577,7 +782,7 @@ final class Species {
 				'name'  => __( 'Snowy Egret', 'dcc-wildlife' ),
 				'sci'   => 'Egretta thula',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'fact'  => __( 'Golden slippers on black legs, and they are working equipment: it shuffles those bright yellow feet through the mud to panic prey into moving, then takes it. Its lacy plumes were nearly hunted out for ladies’ hats a century ago; the fight to stop that helped launch the Audubon movement.', 'dcc-wildlife' ),
 				'best'  => __( 'early mornings', 'dcc-wildlife' ),
@@ -590,7 +795,7 @@ final class Species {
 				'name' => __( 'Cattle Egret', 'dcc-wildlife' ),
 				'sci' => __( 'Bubulcus ibis', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'The white egret that is never at the water. Its ancestors crossed the Atlantic from Africa on their own wings, reaching South America about 1877; the species turned up in Florida in 1941, nested here by 1953, and went on to take the continent, following livestock and mowers for the insects they stir up.', 'dcc-wildlife' ),
 				'best' => __( 'mid-morning, behind the mowers', 'dcc-wildlife' ),
@@ -603,7 +808,7 @@ final class Species {
 				'name'  => __( 'Little Blue Heron', 'dcc-wildlife' ),
 				'sci'   => 'Egretta caerulea',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
@@ -618,7 +823,7 @@ final class Species {
 				'name'  => __( 'Wood Stork', 'dcc-wildlife' ),
 				'sci'   => 'Mycteria americana',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Off the federal list since March 2026 — that is the good news — and still protected under Florida law while the state reviews where it now belongs: give feeding birds their space and let them work the shallows.', 'dcc-wildlife' ),
@@ -635,7 +840,7 @@ final class Species {
 				'name'  => __( 'White Ibis', 'dcc-wildlife' ),
 				'sci'   => 'Eudocimus albus',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'fact'  => __( 'A flock works the mud entirely by feel, the curved red bill closing on a crayfish it never sees. All white on the ground — the jet-black wingtips stay hidden until the whole flock goes up at once.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
@@ -649,7 +854,7 @@ final class Species {
 				'name' => __( 'Glossy Ibis', 'dcc-wildlife' ),
 				'sci' => __( 'Plegadis falcinellus', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'A shadow at a distance; catch it in good light and it turns to bronze, copper and green. It probes the flooded margins in small flocks, with the same down-curved bill as the white ibis. Another self-made immigrant — it crossed from the Old World under its own power, and was here by 1817.', 'dcc-wildlife' ),
 				'best' => __( 'mornings, in good light', 'dcc-wildlife' ),
@@ -663,7 +868,7 @@ final class Species {
 				'name'  => __( 'Great Blue Heron', 'dcc-wildlife' ),
 				'sci'   => 'Ardea herodias',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'fact'  => __( 'A hinge in the sixth bone of the neck lets it fold the whole neck into a spring and fire the bill forward from it. Its eyes carry enough rods to hunt in the dark, so daylight is only half of its working day.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -677,7 +882,7 @@ final class Species {
 				'name'  => __( 'Tricolored Heron', 'dcc-wildlife' ),
 				'sci'   => 'Egretta tricolor',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
@@ -693,7 +898,7 @@ final class Species {
 				'name' => __( 'Florida Sandhill Crane', 'dcc-wildlife' ),
 				'sci' => __( 'Antigone canadensis pratensis', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'flags' => [ 'protected' ],
 				'safe' => __( 'Never feed them — it is against Florida law, and a fed crane learns to walk up to strangers and into roads. Give a pair with a colt plenty of room; they will defend it.', 'dcc-wildlife' ),
@@ -710,7 +915,7 @@ final class Species {
 				'name' => __( 'Black-crowned Night Heron', 'dcc-wildlife' ),
 				'sci' => __( 'Nycticorax nycticorax', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'It spends the day hunched and silent in a shady tree, looking like a bird with nowhere to be, and comes down to the water at dusk to do its fishing. Its scientific name means “night raven”, and that is exactly what it sounds like going over in the dark.', 'dcc-wildlife' ),
 				'best' => __( 'dusk and after dark', 'dcc-wildlife' ),
@@ -724,7 +929,7 @@ final class Species {
 				'name' => __( 'Yellow-crowned Night Heron', 'dcc-wildlife' ),
 				'sci' => __( 'Nyctanassa violacea', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'A crayfish specialist, and the bill is the proof: short, deep and heavy enough to crack a shell open. Grey overall, with a boldly striped black-and-white face under the pale crown it is named for. Rather more willing to work in daylight than its cousin.', 'dcc-wildlife' ),
 				'best' => __( 'dusk, and often through the day', 'dcc-wildlife' ),
@@ -738,7 +943,7 @@ final class Species {
 				'name'  => __( 'Green Heron', 'dcc-wildlife' ),
 				'sci'   => 'Butorides virescens',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'fact'  => __( 'One of the very few birds on Earth that fishes with bait. It drops a twig, a feather or an insect onto the water and waits for the fish that comes to look — and it does not just find the twig, it trims it to length first, which makes it a tool-maker, not only a tool-user.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -752,7 +957,7 @@ final class Species {
 				'name' => __( 'Least Bittern', 'dcc-wildlife' ),
 				'sci' => __( 'Ixobrychus exilis', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds' => 'occasional',
 				'fact' => __( 'The smallest heron in the Americas, and it has stopped bothering to wade: it straddles two cattail stems and climbs through the reeds instead, which lets it fish water far too deep for its legs. Alarmed, it points its bill straight up and becomes one more vertical stem. Present far more often than seen.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk in the growing season', 'dcc-wildlife' ),
@@ -767,7 +972,7 @@ final class Species {
 				'name'  => __( 'Anhinga', 'dcc-wildlife' ),
 				'sci'   => 'Anhinga anhinga',
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds'  => 'certain',
 				'fact'  => __( 'The “snakebird”, swimming with nothing but its neck above water. Its feathers are not waterproof, and that is the point — soaked, it stops floating and can hunt underwater — but it pays for the trick afterwards, perched with its wings held open until it has dried out.', 'dcc-wildlife' ),
 				'best'  => __( 'sunny middays', 'dcc-wildlife' ),
@@ -781,7 +986,7 @@ final class Species {
 				'name' => __( 'Double-crested Cormorant', 'dcc-wildlife' ),
 				'sci' => __( 'Nannopterum auritum', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'The anhinga’s double, and the reason half the “anhingas” people point at are not. It swims low with its back awash, chases fish down with its feet, and dries off in the same wings-open pose — but the bill ends in a hook where the anhinga’s ends in a dagger.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -795,7 +1000,7 @@ final class Species {
 				'name' => __( 'Common Gallinule', 'dcc-wildlife' ),
 				'sci' => __( 'Gallinula galeata', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'The chicken of the marsh: a red shield up the forehead, a candy-corn bill, and feet big enough to walk on lily pads. It swims with a constant forward jerk of the head, as though the water needed encouraging, and scolds anything that comes near.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -809,7 +1014,7 @@ final class Species {
 				'name' => __( 'Purple Gallinule', 'dcc-wildlife' ),
 				'sci' => __( 'Porphyrio martinica', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'Absurd in the best way: purple-blue in front, bronze-green behind, a pale blue shield on the forehead, a candy-red bill, and enormous yellow feet that carry it clean across the lily pads. It climbs the pickerelweed to pick seeds, and looks, honestly, painted.', 'dcc-wildlife' ),
 				'best' => __( 'mornings', 'dcc-wildlife' ),
@@ -822,7 +1027,7 @@ final class Species {
 				'name' => __( 'American Coot', 'dcc-wildlife' ),
 				'sci' => __( 'Fulica americana', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'Not a duck at all — a rail that took to open water, with each toe lobed rather than the whole foot webbed. It bobs its head as it swims, and it cannot simply lift off: it has to run flapping across the surface first. Winter brings big rafts of them onto the lakes.', 'dcc-wildlife' ),
 				'best' => __( 'winter, all day', 'dcc-wildlife' ),
@@ -835,7 +1040,7 @@ final class Species {
 				'name' => __( 'Pied-billed Grebe', 'dcc-wildlife' ),
 				'sci' => __( 'Podilymbus podiceps', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'Small, brown, and able to do something a duck cannot: it squeezes the air out of its feathers and sinks, straight down, without a dive or a splash — and surfaces somewhere you are not looking. A black band rings the pale bill in the breeding season.', 'dcc-wildlife' ),
 				'best' => __( 'calm mornings', 'dcc-wildlife' ),
@@ -849,7 +1054,7 @@ final class Species {
 				'name' => __( 'Wood Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Aix sponsa', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'The drake has a fair claim to being the most ornate duck in North America — an iridescent green and purple head, a white-striped face, a chestnut breast, a red eye. They nest in tree holes over the swamp, and the day after hatching the ducklings climb to the entrance and jump — fifty feet if that is the drop — and walk away from it.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk', 'dcc-wildlife' ),
@@ -863,7 +1068,7 @@ final class Species {
 				'name' => __( 'Florida Mottled Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Anas fulvigula fulvigula', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'Florida’s own duck: it does not migrate, and the peninsula’s birds are found nowhere else on Earth. Both sexes look like a dark female mallard. The threat to it is not hunting but romance — released farmyard mallards interbreed with it, and state biologists call that the single biggest danger to the species.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk', 'dcc-wildlife' ),
@@ -876,7 +1081,7 @@ final class Species {
 				'name' => __( 'Black-bellied Whistling Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Dendrocygna autumnalis', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'A long-legged, goose-shaped duck that perches in trees, nests in holes, and announces itself with a whistle. Bright pink bill, grey face, chestnut body, a broad white wing stripe in flight. In 1981 there was one flock of them in Florida, at Sarasota; they now hold very nearly the whole peninsula.', 'dcc-wildlife' ),
 				'best' => __( 'dusk, and overhead at any hour', 'dcc-wildlife' ),
@@ -891,7 +1096,7 @@ final class Species {
 				'name' => __( 'American White Pelican', 'dcc-wildlife' ),
 				'sci' => __( 'Pelecanus erythrorhynchos', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'waterfowl',
+				'browse' => 'birds',
 				'odds' => 'likely',
 				'fact' => __( 'Nine feet of wingspan, and here only for the winter. It never dives from the air the way the coastal brown pelican does — instead a flock forms a line, swims at the shallows beating its wings, drives the fish ahead of it and dips together. In spring they leave for prairie lakes a thousand miles north.', 'dcc-wildlife' ),
 				'best' => __( 'winter, mid-morning', 'dcc-wildlife' ),
@@ -903,7 +1108,7 @@ final class Species {
 				'name'  => __( 'Belted Kingfisher', 'dcc-wildlife' ),
 				'sci'   => 'Megaceryle alcyon',
 				'group' => 'birds',
-				'browse' => 'raptors',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'fact'  => __( 'It hangs on beating wings over the water, then goes in headfirst. The female is the brighter of the pair, with a rusty band across the belly the male simply does not have — which is the wrong way round for most birds, and nobody is quite sure why. Mostly a winter visitor here.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
@@ -915,7 +1120,7 @@ final class Species {
 				'name'  => __( 'Limpkin', 'dcc-wildlife' ),
 				'sci'   => 'Aramus guarauna',
 				'group' => 'birds',
-				'browse' => 'waders',
+				'browse' => 'birds',
 				'odds'  => 'likely',
 				'fact'  => __( 'A bird that has bet everything on one snail. Apple snails are nearly its whole diet, and the bill is the tool: it never quite closes, so the tip grips like tweezers, and it bends slightly right to follow the shell’s own spiral. Find a neat pile of empty shells on the bank and you have found a limpkin’s table.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn, dusk, and long after dark', 'dcc-wildlife' ),
@@ -927,7 +1132,7 @@ final class Species {
 				'name' => __( 'Fish Crow', 'dcc-wildlife' ),
 				'sci' => __( 'Corvus ossifragus', 'dcc-wildlife' ),
 				'group' => 'birds',
-				'browse' => 'raptors',
+				'browse' => 'birds',
 				'odds' => 'certain',
 				'fact' => __( 'Identical to an American crow until it opens its mouth. The nasal two-note call is the whole identification — it sounds like a crow that has been asked a question and is denying everything. It patrols the water’s edge for anything edible, other birds’ eggs included.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -938,6 +1143,7 @@ final class Species {
 
 			// ---- PLANTS ------------------------------------------------
 			'cypress'    => [
+				'browse' => 'trees',
 				'emoji' => '🌲',
 				'name'  => __( 'Bald Cypress', 'dcc-wildlife' ),
 				'sci'   => 'Taxodium distichum',
@@ -948,6 +1154,7 @@ final class Species {
 				'where' => __( 'lining both banks — the knees poke up along the waterline', 'dcc-wildlife' ),
 			],
 			'moss'       => [
+				'browse' => 'wildflowers',
 				'emoji' => '🌿',
 				'name'  => __( 'Spanish Moss', 'dcc-wildlife' ),
 				'sci'   => 'Tillandsia usneoides',
@@ -958,6 +1165,7 @@ final class Species {
 				'where' => __( 'draped from the cypress and oak canopy overhead', 'dcc-wildlife' ),
 			],
 			'fern'       => [
+				'browse' => 'wildflowers',
 				'emoji' => '🌱',
 				'name'  => __( 'Resurrection Fern', 'dcc-wildlife' ),
 				'sci'   => 'Pleopeltis michauxiana',
@@ -968,6 +1176,7 @@ final class Species {
 				'where' => __( 'carpeting the tops of the big oak and cypress limbs', 'dcc-wildlife' ),
 			],
 			'lily'       => [
+				'browse' => 'waterplants',
 				'emoji' => '🌸',
 				'name'  => __( 'White Waterlily', 'dcc-wildlife' ),
 				'sci'   => 'Nymphaea odorata',
@@ -978,6 +1187,7 @@ final class Species {
 				'where' => __( 'quiet coves and canal edges', 'dcc-wildlife' ),
 			],
 			'palmetto'   => [
+				'browse' => 'wildflowers',
 				'emoji' => '🌴',
 				'name'  => __( 'Saw Palmetto', 'dcc-wildlife' ),
 				'sci'   => 'Serenoa repens',
@@ -1021,7 +1231,18 @@ final class Species {
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
 			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
 			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
-			'turtle'     => [ 1, 1, 2, 3, 3, 3, 3, 3, 2, 2, 1, 1 ], // Baskers most visible spring–summer.
+			'peninsulacooter' => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // Baskers: out whenever the sun is on the logs, peak Mar–Oct.
+			'redbelliedcooter' => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // With the peninsula cooters, same window.
+			'redearedslider'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Basks with the cooters; fewer of them, so a narrower peak.
+			'softshell'       => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Warm months; hauls out on bank rather than logs.
+			'snappingturtle'  => [ 1, 1, 2, 2, 3, 3, 2, 2, 2, 1, 1, 1 ], // Seen when it crosses land to nest, May–Jun.
+			'gophertortoise'  => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Grazes near the burrow on warm mornings; least active midwinter.
+			'boxturtle'       => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // On the move after rain through the warm months.
+			'muskturtle'      => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 1 ], // Bottom-walker; found on warm nights in summer.
+			'loggerheadmusk'  => [ 1, 1, 2, 2, 3, 3, 3, 3, 2, 2, 1, 1 ], // Spring runs, clearest and busiest in summer.
+			'stripedmudturtle' => [ 1, 2, 3, 3, 3, 2, 2, 2, 3, 3, 2, 1 ], // Moves when the shallow places hold water — spring and autumn rains.
+			'floridamudturtle' => [ 1, 2, 3, 3, 3, 2, 2, 2, 3, 3, 2, 1 ], // As the striped mud turtle; rarer everywhere.
+			'chickenturtle'   => [ 1, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1 ], // Most active and most seen in spring.
 			'bandedwater' => [ 0, 0, 1, 3, 3, 3, 3, 3, 3, 1, 0, 0 ], // Out on warm days (the old generic 'snake' row).
 			'brownwater' => [ 0, 0, 1, 3, 3, 3, 3, 3, 2, 1, 0, 0 ], // Basks over water spring–summer; FWC/Florida Museum.
 			'greenwater' => [ 0, 0, 1, 2, 3, 3, 3, 3, 2, 1, 0, 0 ], // Warm-season, marsh edges.
@@ -1115,7 +1336,9 @@ final class Species {
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
-		'moss' => 950, 'osprey' => 1100, 'otter' => 733, 'palmetto' => 950, 'turtle' => 950,
+		'moss' => 950, 'osprey' => 1100, 'otter' => 733, 'palmetto' => 950,
+		// Batch 6 (1.33.0) — every turtle rendition is 1100 wide.
+		'peninsulacooter' => 1100, 'redbelliedcooter' => 1100, 'redearedslider' => 1100, 'softshell' => 1100, 'snappingturtle' => 1100, 'gophertortoise' => 1100, 'boxturtle' => 1100, 'muskturtle' => 1100, 'loggerheadmusk' => 1100, 'stripedmudturtle' => 1100, 'floridamudturtle' => 1100, 'chickenturtle' => 1100,
 	];
 
 	public static function photo_width( string $id ): int {
@@ -1148,6 +1371,67 @@ final class Species {
 	 * one.
 	 */
 	private const PHOTO_SOURCES = [
+		// Batch 6 (1.33.0): the twelve turtles.
+		'softshell'         => [
+			'Alan Schmierer / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Florida-Weichschildkr%C3%B6te_(Apalone_ferox,_Syn._Trionyx_ferox)_in_einem_Feuchtgebiet.jpg',
+		],
+		'peninsulacooter'   => [
+			'Andrea Westmoreland / CC BY-SA 2.0',
+			'Creative Commons Attribution-ShareAlike 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Florida_Cooter_turtle_at_Gemini_Springs_-_Flickr_-_Andrea_Westmoreland.jpg',
+		],
+		'redbelliedcooter'  => [
+			'David Adam Kess / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Pseudemys_nelsoni_Florida_USA1.jpg',
+		],
+		'snappingturtle'    => [
+			'Courtney Celley / U.S. Fish and Wildlife Service',
+			'Public domain (work of the U.S. Fish and Wildlife Service)',
+			'https://commons.wikimedia.org/wiki/File:Common_snapping_turtle_(53831942257).jpg',
+		],
+		'gophertortoise'    => [
+			'Rstanton13 / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Gopherus_polyphemus_Stanton_2.jpg',
+		],
+		'boxturtle'         => [
+			'Distinguished Reflections / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Florida_Box_Turtle_(Terrapene_carolina_bauri)_(22280675099).jpg',
+		],
+		'muskturtle'        => [
+			'Peter Paplanus / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Gew%C3%B6hnliche_Moschusschildkr%C3%B6te_(Sternotherus_odoratus),_Seitenansicht.jpg',
+		],
+		'stripedmudturtle'  => [
+			'Peter Paplanus / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Striped_Mud_Turtle_(Kinosternon_baurii).jpg',
+		],
+		'redearedslider'    => [
+			'Ferran Pestaña / CC BY-SA 2.0',
+			'Creative Commons Attribution-ShareAlike 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Trachemys_scripta_elegans_Galapago_de_florida_(306860876).jpg',
+		],
+		'chickenturtle'     => [
+			'Melissa McMasters / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Florida_chicken_turtle.jpg',
+		],
+		'floridamudturtle'  => [
+			'Mark Groeneveld / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/60847369',
+		],
+		'loggerheadmusk'    => [
+			'Josiah Londerée / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/110524182',
+		],
 		// Batch 8 (1.33.0): nine snakes and eight lizards. The species entries
 		// land with the item-6 expansion; the CREDITS land with the FILES, so a
 		// photograph can never reach the page ahead of its attribution.
@@ -1433,6 +1717,12 @@ final class Species {
 	 * it never rescues a doubtful one.
 	 */
 	private const PHOTO_NOTES = [
+		// Batch 6 (1.33.0). The only open-licence photograph of this species
+		// that could be found anywhere — iNaturalist holds three in total and
+		// Commons a smaller copy of this same one. It is a head-in-shell frame,
+		// so the two marks the entry names (no shell stripes, no face stripes)
+		// are only half visible in it, and saying so is the rule.
+		'floridamudturtle' => 'The only open-licence photograph of a Florida mud turtle that could be found. It is a close-up with the head drawn in, so the plainness that identifies this turtle — an unmarked shell and an unstriped face — is easier to check against the striped mud turtle’s photograph than in this frame alone.',
 		// Batch 8 (1.33.0). The photographer's own source page is a U.S. Army
 		// Fort Stewart page in GEORGIA, and no location is stated on the file.
 		// The guide's rule is that a photograph identified by what is ABSENT
@@ -1526,7 +1816,12 @@ final class Species {
 
 	public static function photos(): array {
 		$ids = [
-			'alligator', 'manatee', 'otter', 'turtle', 'fish', 'eagle', 'osprey',
+			// Batch 6 (1.33.0): the twelve turtles the composite entry used
+			// to stand in for.
+			'peninsulacooter', 'redbelliedcooter', 'redearedslider', 'softshell',
+			'snappingturtle', 'gophertortoise', 'boxturtle', 'muskturtle',
+			'loggerheadmusk', 'stripedmudturtle', 'floridamudturtle', 'chickenturtle',
+			'alligator', 'manatee', 'otter', 'fish', 'eagle', 'osprey',
 			'anhinga', 'heron', 'egret', 'kingfisher', 'limpkin', 'greenheron',
 			'cypress', 'moss', 'lily', 'palmetto',
 			// Batch 1 of the Phase 2 photo run (1.23.1). Each was checked
