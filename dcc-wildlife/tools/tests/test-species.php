@@ -36,7 +36,7 @@ dcc_section( 'shape' );
  * landing is a deliberate one-line edit here rather than a silent drift. Any
  * other count is computed from the registry.
  */
-const TOTAL = 112;  // 51 at the start of 1.33.0; +12 turtles -1 composite; +14, +17, +19.
+const TOTAL = 156;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21.
 
 check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 

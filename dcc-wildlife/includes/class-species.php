@@ -877,6 +877,654 @@ final class Species {
 				'where' => __( 'weedy ponds, ditches and marsh edges away from the main channel', 'dcc-wildlife' ),
 				'mark'  => __( 'an extraordinarily long neck, a net of fine yellow lines on the shell, and vertically striped hind legs', 'dcc-wildlife' ),
 			],
+			// ---- BATCH 11 (1.33.0): raptors, owls and night birds ------------
+			// Twenty-one, and the look-alike groups were CUT DOWN after they were
+			// first written. Putting all eleven raptors in one `raptor` group
+			// rendered ten look-alikes in every sheet, which is the same wall
+			// the turtles produced in batch 6 — and "a distant soaring bird is
+			// the case where you want the whole field at once" was a rationalisation
+			// for it, not a reason. Three groups instead, each a real question:
+			//   raptor  — bald eagle and osprey, the two big ones over water
+			//   buteos  — red-shouldered, red-tailed, short-tailed: what is circling
+			//   falcons — kestrel, merlin, peregrine AND the Cooper's hawk, which
+			//             is an accipiter and belongs here precisely because the
+			//             question is "small fast raptor, which one" and its
+			//             rounded tail is the answer
+			// The swallow-tailed kite and the harrier carry no group: a forked
+			// tail and a low V-winged quartering flight are unmistakable, and
+			// their own marks say so.
+			//
+			// Vultures, owls and nightjars get their own groups. Nobody confuses
+			// a vulture with a falcon.
+			//
+			// The red-tailed hawk closes the bald eagle's myth-correction from
+			// the other end: that entry has said since 1.14.0 that the movie
+			// eagle scream is a dubbed red-tailed hawk, and the hawk it names now
+			// exists and says so itself.
+			//
+			// THREE PROTECTED SPECIES, AND THE STATUS IS CHECKED, NOT ASSUMED.
+			// The red-cockaded woodpecker is THREATENED, not endangered: USFWS
+			// downlisted it on 25 October 2024, effective 25 November. That is
+			// the wood stork lesson applied before it could become a correction.
+			// The kestrel's flag is for FLORIDA's resident subspecies, which is
+			// state-listed; the wintering northern birds are not.
+			'swallowtailedkite' => [
+				'emoji' => '🦅',
+				'name'  => __( 'Swallow-tailed Kite', 'dcc-wildlife' ),
+				'sci'   => 'Elanoides forficatus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'odds'  => 'likely',
+				'fact'  => __( 'The most beautiful bird that flies over this canal, and it barely touches down: it takes insects and lizards on the wing, and drinks by skimming a mouthful off the surface without stopping. Black and white, with a long forked tail it steers with. In late summer the whole population leaves for southern Brazil — five thousand miles.', 'dcc-wildlife' ),
+				'best'  => __( 'spring and summer, soaring on warm afternoons', 'dcc-wildlife' ),
+				'where' => __( 'high over the cypress and the open water, circling and never flapping much', 'dcc-wildlife' ),
+				'mark'  => __( 'a deep FORKED tail and clean white body with black wings — nothing else here has the shape', 'dcc-wildlife' ),
+			],
+			'redshoulderedhawk' => [
+				'emoji' => '🦅',
+				'name'  => __( 'Red-shouldered Hawk', 'dcc-wildlife' ),
+				'sci'   => 'Buteo lineatus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'buteos',
+				'odds'  => 'certain',
+				'fact'  => __( 'The hawk you hear over the canal. It is the common woodland hawk of Florida, it perches low and calls constantly, and its call is copied so exactly by blue jays that half of them are a lie. Rusty shoulders and breast, and a black-and-white chequered pattern along the wings that shows even from below.', 'dcc-wildlife' ),
+				'sound' => __( 'A loud, ringing kee-ah kee-ah, repeated. Blue jays imitate it almost perfectly, so half the ones you hear are jays.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, perched low or circling', 'dcc-wildlife' ),
+				'where' => __( 'low branches, posts and wires at the wood’s edge, near water', 'dcc-wildlife' ),
+				'mark'  => __( 'rusty barred underparts, and narrow white bands across a black tail', 'dcc-wildlife' ),
+			],
+			'redtailedhawk'     => [
+				'emoji' => '🦅',
+				'name'  => __( 'Red-tailed Hawk', 'dcc-wildlife' ),
+				'sci'   => 'Buteo jamaicensis',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'buteos',
+				'odds'  => 'likely',
+				'fact'  => __( 'Bigger and heavier than the red-shouldered, and a bird of open ground rather than wood: it sits on a pole over a field and waits. From below, the brick-red upper tail catches the light when it banks, which is the only mark most people ever need. Its voice has been borrowed by Hollywood for every eagle ever filmed.', 'dcc-wildlife' ),
+				'sound' => __( 'The scream every film uses for a bald eagle. It is this bird, dubbed over almost every raptor on screen.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, on poles and soaring over open ground', 'dcc-wildlife' ),
+				'where' => __( 'roadside poles, pasture edges and open sky — less often over the canal itself', 'dcc-wildlife' ),
+				'mark'  => __( 'a brick-RED upper tail on an adult, and a dark belly band across pale underparts', 'dcc-wildlife' ),
+			],
+			'kestrel'           => [
+				'emoji' => '🦅',
+				'name'  => __( 'American Kestrel', 'dcc-wildlife' ),
+				'sci'   => 'Falco sparverius',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'falcons',
+				'flags' => [ 'protected' ],
+				'odds'  => 'likely',
+				'safe'  => __( 'Florida’s resident subspecies is state-listed as Threatened: do not disturb a nest cavity or a nest box in use.', 'dcc-wildlife' ),
+				'fact'  => __( 'North America’s smallest falcon, and no bigger than a dove: rusty back, blue-grey wings on the male, and two black stripes down a white face. It hunts from a wire, and hovers on fast wingbeats when there is nowhere to perch. Florida has its own resident subspecies, which does not migrate and is in trouble.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, on wires and posts', 'dcc-wildlife' ),
+				'where' => __( 'roadside wires, fence posts and dead snags over open ground', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny, with TWO black stripes down each side of the face and a rusty back', 'dcc-wildlife' ),
+			],
+			'coopershawk'       => [
+				'emoji' => '🦅',
+				'name'  => __( 'Cooper’s Hawk', 'dcc-wildlife' ),
+				'sci'   => 'Accipiter cooperii',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'falcons',
+				'odds'  => 'likely',
+				'fact'  => __( 'A bird-hunter built for it: short rounded wings and a long rudder of a tail, for threading through trees at speed after something smaller. If a feeder suddenly empties and the songbirds go silent, look up — this is usually why. Adults have a slate back, a rusty-barred breast and a hard red eye.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, in wooded edges and gardens', 'dcc-wildlife' ),
+				'where' => __( 'oak canopy and wooded edges, and around anywhere birds gather', 'dcc-wildlife' ),
+				'mark'  => __( 'a long rounded-tipped tail and short wings; adult with a red eye and rusty barring', 'dcc-wildlife' ),
+			],
+			'harrier'           => [
+				'emoji' => '🦅',
+				'name'  => __( 'Northern Harrier', 'dcc-wildlife' ),
+				'sci'   => 'Circus hudsonius',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A hawk that hunts like an owl. It has a real facial disc — the same dish of stiff feathers that lets an owl find prey by ear — and it uses it, quartering low and slow over open marsh with its wings held in a shallow V. The white rump patch is the classic mark, but it sits on the BACK, so a bird overhead will not show it.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, low over open marsh', 'dcc-wildlife' ),
+				'where' => __( 'gliding low and unhurried over marsh and wet pasture, rarely far above the grass', 'dcc-wildlife' ),
+				'mark'  => __( 'a shallow V to the wings, a long tail and an owlish face; a white rump seen only from above or behind', 'dcc-wildlife' ),
+			],
+			'shorttailedhawk'   => [
+				'emoji' => '🦅',
+				'name'  => __( 'Short-tailed Hawk', 'dcc-wildlife' ),
+				'sci'   => 'Buteo brachyurus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'buteos',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A Florida speciality, and almost never seen perched — it hangs very high and hunts by dropping on birds from above, which means the only view you get is a silhouette against the sky. It comes in two colour forms and the DARK one is the commoner here: blackish, with silvery flight feathers.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, very high overhead', 'dcc-wildlife' ),
+				'where' => __( 'circling high over woodland edges and marsh — always look up, never along', 'dcc-wildlife' ),
+				'mark'  => __( 'small and compact, soaring high; either dark with silvery flight feathers, or white-bellied with a dark hood', 'dcc-wildlife' ),
+			],
+			'merlin'            => [
+				'emoji' => '🦅',
+				'name'  => __( 'Merlin', 'dcc-wildlife' ),
+				'sci'   => 'Falco columbarius',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'falcons',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A small falcon with no interest in subtlety: it hunts small birds by flying them down in the open, fast and level, rather than stooping from height. Dark, heavily streaked underneath, with only a faint moustache where a peregrine has a bold one. It builds nothing — it takes over an old crow’s nest.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, on bare perches over open ground', 'dcc-wildlife' ),
+				'where' => __( 'the tops of dead branches and poles with a clear view, near open ground or water', 'dcc-wildlife' ),
+				'mark'  => __( 'heavily streaked below with only a FAINT moustache stripe; the peregrine’s is a bold black helmet', 'dcc-wildlife' ),
+			],
+			'peregrine'         => [
+				'emoji' => '🦅',
+				'name'  => __( 'Peregrine Falcon', 'dcc-wildlife' ),
+				'sci'   => 'Falco peregrinus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'falcons',
+				'odds'  => 'occasional',
+				'fact'  => __( 'The fastest animal alive. In a hunting stoop from height it passes two hundred miles an hour and kills the bird it hits with the impact. On a perch it is a heavy, broad-shouldered falcon with a black helmet down over the cheek and a finely barred chest, and it looks entirely capable of it.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, usually high or on a tall structure', 'dcc-wildlife' ),
+				'where' => __( 'over open water and high structures; a passing bird more than a resident one', 'dcc-wildlife' ),
+				'mark'  => __( 'a bold black “helmet” down the cheek, and pointed wings held stiff', 'dcc-wildlife' ),
+			],
+			'blackvulture'      => [
+				'emoji' => '🦅',
+				'name'  => __( 'Black Vulture', 'dcc-wildlife' ),
+				'sci'   => 'Coragyps atratus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'vultures',
+				'odds'  => 'certain',
+				'fact'  => __( 'It cannot smell, so it watches the turkey vultures and follows them down. Short-tailed, with a grey wrinkled head and white patches at the very tips of the wings, and it flaps far more than its neighbour. It is also the one that strips the rubber off cars — the Park Service hands out tarps in the Everglades because of it, and nobody knows why they do it.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, all day', 'dcc-wildlife' ),
+				'where' => __( 'circling over open ground, and perched in numbers on poles and roofs', 'dcc-wildlife' ),
+				'mark'  => __( 'a GREY wrinkled head, a short tail, and white only at the wingtips; it flaps in short bursts', 'dcc-wildlife' ),
+			],
+			'turkeyvulture'     => [
+				'emoji' => '🦅',
+				'name'  => __( 'Turkey Vulture', 'dcc-wildlife' ),
+				'sci'   => 'Cathartes aura',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'vultures',
+				'odds'  => 'certain',
+				'fact'  => __( 'One of very few birds with a real sense of smell, and an extraordinary one — it can find a carcass hidden under a closed forest canopy from the air. It rides thermals with its wings in a shallow V, rocking and tilting, and almost never flaps. The bald red head is for reaching inside things without carrying them away on its feathers.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, soaring from mid-morning', 'dcc-wildlife' ),
+				'where' => __( 'riding thermals over the canal and the open country beyond', 'dcc-wildlife' ),
+				'mark'  => __( 'a RED bald head, a longer tail, and silvery flight feathers along the whole rear edge of the wing; it rocks as it glides', 'dcc-wildlife' ),
+			],
+			'barredowl'         => [
+				'emoji' => '🦅',
+				'name'  => __( 'Barred Owl', 'dcc-wildlife' ),
+				'sci'   => 'Strix varia',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'owls',
+				'odds'  => 'certain',
+				'fact'  => __( 'The owl of this canal, and the one you are most likely to hear from the dock at dusk. Big, round-headed, with no ear tufts and dark brown eyes where most owls have yellow. Barred across the chest, streaked down the belly. It will call in daylight, and it will answer a decent imitation.', 'dcc-wildlife' ),
+				'sound' => __( 'Who cooks for you? Who cooks for you-aaall? — eight or nine hooted notes, and often a pair answering each other across the water.', 'dcc-wildlife' ),
+				'best'  => __( 'dusk and after dark; often awake by day', 'dcc-wildlife' ),
+				'where' => __( 'cypress and oak along the water, roosting on a shaded branch', 'dcc-wildlife' ),
+				'mark'  => __( 'round head with NO ear tufts, and DARK brown eyes; barred chest over a streaked belly', 'dcc-wildlife' ),
+			],
+			'greathornedowl'    => [
+				'emoji' => '🦅',
+				'name'  => __( 'Great Horned Owl', 'dcc-wildlife' ),
+				'sci'   => 'Bubo virginianus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'owls',
+				'odds'  => 'likely',
+				'fact'  => __( 'The heavyweight. Ear tufts, a white throat and huge yellow eyes, and a grip strong enough to take a skunk or another owl. It builds nothing of its own: it takes over a hawk’s or a crow’s old nest, usually in a live oak hung with Spanish moss, and it does it in the middle of winter — owlets here are often out before anything else has started nesting.', 'dcc-wildlife' ),
+				'sound' => __( 'A series of deep, soft hoots — hoo, hoo-hoo, hoo, hoo — carrying a long way on a still night.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, and calling from midwinter', 'dcc-wildlife' ),
+				'where' => __( 'tall pines and live oaks, and old hawk nests in the crowns', 'dcc-wildlife' ),
+				'mark'  => __( 'prominent EAR TUFTS, a white throat patch and yellow eyes — the barred owl has none of the three', 'dcc-wildlife' ),
+			],
+			'screechowl'        => [
+				'emoji' => '🦅',
+				'name'  => __( 'Eastern Screech-Owl', 'dcc-wildlife' ),
+				'sci'   => 'Megascops asio',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'owls',
+				'odds'  => 'likely',
+				'fact'  => __( 'A cat-sized owl that fits in a mailbox, and comes in two colours — grey and rust-red, both found here, sometimes in the same brood. It roosts jammed into a tree hollow with its eyes half shut and its bark-pattern plumage doing the rest, and people live beside one for years without knowing.', 'dcc-wildlife' ),
+				'sound' => __( 'Not a screech at all: a soft descending whinny like a small horse, or a long even trill on one note.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark; roosting in holes by day', 'dcc-wildlife' ),
+				'where' => __( 'tree cavities, nest boxes and dense foliage in gardens and oak hammock', 'dcc-wildlife' ),
+				'mark'  => __( 'small with EAR TUFTS and yellow eyes, grey or rusty red; a great horned owl is four times the size', 'dcc-wildlife' ),
+			],
+			'barnowl'           => [
+				'emoji' => '🦅',
+				'name'  => __( 'Barn Owl', 'dcc-wildlife' ),
+				'sci'   => 'Tyto alba',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'owls',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A white heart on a face, and the hearing to go with it: its ear openings are set at different heights on the skull, so a sound reaches one fractionally before the other and the owl can place it in three dimensions. It can catch a mouse in complete darkness, by ear alone, with its eyes shut.', 'dcc-wildlife' ),
+				'sound' => __( 'A long, harsh, rasping shriek in the dark — no hooting at all, and genuinely unnerving the first time.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, over open ground', 'dcc-wildlife' ),
+				'where' => __( 'barns, silos, culverts and structures near open fields; it hunts low over grass', 'dcc-wildlife' ),
+				'mark'  => __( 'a white HEART-SHAPED face, dark eyes, and pale unmarked underparts; it looks ghostly in headlights', 'dcc-wildlife' ),
+			],
+			'chuckwillswidow'   => [
+				'emoji' => '🦅',
+				'name'  => __( 'Chuck-will’s-widow', 'dcc-wildlife' ),
+				'sci'   => 'Antrostomus carolinensis',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'nightbirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'The largest nightjar in North America, and you will hear it all spring without once seeing it: by day it lies lengthways along a branch and disappears into the bark. The gape is startling for the size of the bird, and it hunts moths on the wing at dusk. Ours breed here; the whip-poor-will only winters.', 'dcc-wildlife' ),
+				'sound' => __( 'It says its own name, slowly — chuck-will’s-WID-ow — over and over from the dark woods on a spring night.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark from spring into summer', 'dcc-wildlife' ),
+				'where' => __( 'dry woodland near the water; roosting along branches by day', 'dcc-wildlife' ),
+				'mark'  => __( 'larger and browner than the whip-poor-will, and it names itself in four slow syllables', 'dcc-wildlife' ),
+			],
+			'whippoorwill'      => [
+				'emoji' => '🦅',
+				'name'  => __( 'Eastern Whip-poor-will', 'dcc-wildlife' ),
+				'sci'   => 'Antrostomus vociferus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'nightbirds',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Heard far more than seen, and here it is barely heard either — Central Florida gets this bird in winter, when it is mostly silent, so the song belongs to somewhere else. The way most people meet one is in headlights: a pair of red eyeshine on a dark road, and a moth-like bird lifting off.', 'dcc-wildlife' ),
+				'sound' => __( 'WHIP-poor-WILL, faster and higher than the chuck-will’s-widow, and repeated tirelessly.', 'dcc-wildlife' ),
+				'best'  => __( 'winter nights, and mostly silent then', 'dcc-wildlife' ),
+				'where' => __( 'open woodland floor and quiet roads after dark', 'dcc-wildlife' ),
+				'mark'  => __( 'smaller and greyer than the chuck-will’s-widow, with a shorter, faster three-note song', 'dcc-wildlife' ),
+			],
+			'nighthawk'         => [
+				'emoji' => '🦅',
+				'name'  => __( 'Common Nighthawk', 'dcc-wildlife' ),
+				'sci'   => 'Chordeiles minor',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'nightbirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'Neither a hawk nor strictly nocturnal, which leaves the name nothing to stand on. It hunts insects at dusk on long thin wings, each one crossed by a clean white bar, flying with an erratic bat-like flicker. The booming you hear at the bottom of its display dive is the wind through its own feathers.', 'dcc-wildlife' ),
+				'sound' => __( 'A nasal PEENT over and over at dusk, and in display a hollow BOOM as the male pulls out of a dive — made by air through the wing feathers, not by its voice.', 'dcc-wildlife' ),
+				'best'  => __( 'dusk in the warm months, over open sky', 'dcc-wildlife' ),
+				'where' => __( 'over the lake, lawns and any lit open space at last light', 'dcc-wildlife' ),
+				'mark'  => __( 'long pointed wings with a white BAR across each, and a bounding, erratic flight', 'dcc-wildlife' ),
+			],
+			'wildturkey'        => [
+				'emoji' => '🦅',
+				'name'  => __( 'Osceola Wild Turkey', 'dcc-wildlife' ),
+				'sci'   => 'Meleagris gallopavo osceola',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'odds'  => 'likely',
+				'fact'  => __( 'Florida has its own turkey and it lives nowhere else on Earth — the Osceola, found only on the peninsula. It is smaller and darker than the turkey of the rest of the country, with far less white barring in the wing. A gobbler in spring is iridescent bronze and green with a bare red and blue head.', 'dcc-wildlife' ),
+				'sound' => __( 'The gobble carries half a mile on a still spring morning.', 'dcc-wildlife' ),
+				'best'  => __( 'early mornings, spring especially', 'dcc-wildlife' ),
+				'where' => __( 'oak hammock, pasture edges and pine flatwoods; often a small group walking', 'dcc-wildlife' ),
+				'mark'  => __( 'very dark wings with little white barring — the mark of the Florida subspecies', 'dcc-wildlife' ),
+			],
+			'scrubjay'          => [
+				'emoji' => '🦅',
+				'name'  => __( 'Florida Scrub-Jay', 'dcc-wildlife' ),
+				'sci'   => 'Aphelocoma coerulescens',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'flags' => [ 'protected' ],
+				'odds'  => 'rare',
+				'safe'  => __( 'Federally threatened, and tame enough to land on you. Do not feed one — jays fed peanuts and birdseed nest weeks too early, before the caterpillars their chicks need have hatched.', 'dcc-wildlife' ),
+				'fact'  => __( 'The only bird species on Earth found nowhere but Florida, and it is fussy about where: dry scrub kept open by fire, which is exactly the land people build on. Blue and grey with no crest, and famously unbothered by people. Young birds stay on to help their parents raise the next brood instead of leaving.', 'dcc-wildlife' ),
+				'sound' => __( 'A harsh, rasping call, quite unlike a blue jay’s clear whistle.', 'dcc-wildlife' ),
+				'best'  => __( 'mornings, in open scrub', 'dcc-wildlife' ),
+				'where' => __( 'dry sand scrub with low oaks — not the canal; a trip to the Ocala scrub', 'dcc-wildlife' ),
+				'mark'  => __( 'blue and grey with NO crest and no black necklace; a blue jay has both, plus white wing spots', 'dcc-wildlife' ),
+			],
+			'redcockaded'       => [
+				'emoji' => '🦅',
+				'name'  => __( 'Red-cockaded Woodpecker', 'dcc-wildlife' ),
+				'sci'   => 'Dryobates borealis',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'flags' => [ 'protected' ],
+				'odds'  => 'rare',
+				'safe'  => __( 'Federally threatened since 2024, when it was downlisted from endangered. Keep well back from a cavity tree; the white resin bands mark one in use.', 'dcc-wildlife' ),
+				'fact'  => __( 'The only woodpecker that carves its nest into a LIVING pine — everything else uses dead wood — and it takes years to do. It then drills small wells around the hole so resin runs down the trunk, which stops rat snakes climbing to the eggs. The red cockade the name promises is a few feathers on the male, effectively invisible.', 'dcc-wildlife' ),
+				'sound' => __( 'A raspy, nasal sklit repeated as a family moves through the pines.', 'dcc-wildlife' ),
+				'best'  => __( 'mornings, in old open pine', 'dcc-wildlife' ),
+				'where' => __( 'mature longleaf and slash pine with an open floor; not the canal', 'dcc-wildlife' ),
+				'mark'  => __( 'a big white cheek patch and a barred back; the red cockade is not a field mark at any distance', 'dcc-wildlife' ),
+			],
+			// ---- BATCH 10 (1.33.0): water birds and shorebirds --------------
+			// Twenty-three, and most of them are WINTER birds — which is the
+			// point of the batch. The guide's water birds were the residents; a
+			// guest here in January was looking at rafts of ducks and gulls the
+			// guide could not name at all.
+			//
+			// Look-alike groups, cut by how a guest actually asks the question
+			// rather than by taxonomy — and cut DOWN after a first pass put all
+			// ten waterfowl in one group and rendered nine look-alikes a sheet:
+			//   divingducks — ring-necked vs scaup vs hooded merganser
+			//   dabblers    — teal, shoveler, wigeon
+			//   duck        — the mallard JOINS the existing native group, because
+			//                 hen mallard against mottled duck is the pair that
+			//                 matters and the guide already flagged it
+			//   ferals      — Muscovy and Egyptian goose: the two big odd birds
+			//                 on a lawn, confusable with each other and nothing wild
+			//   gulls       — three birds told apart mostly by LEG COLOUR
+			//   terns, shorebirds
+			// The loon carries no group; its nearest confusion is a cormorant,
+			// which lives in `dark`, so its own mark line names the cormorant.
+			//
+			// The mallard is a cross-link back to the Florida mottled duck: that
+			// entry already said hybridising with released farmyard mallards is
+			// the single biggest threat to the native bird, and now the other
+			// half of the sentence exists and carries the hen-vs-hen field mark.
+			'muscovy'           => [
+				'emoji' => '🐦',
+				'name'  => __( 'Muscovy Duck', 'dcc-wildlife' ),
+				'sci'   => 'Cairina moschata',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'ferals',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'The big black-and-white duck with the red warty face, and it is not a wild bird: the ones here descend from escaped domestic stock. A true wild Muscovy is a shy tropical forest duck from Mexico southwards. These are a park duck, tame to the point of rudeness, and they hybridise with anything that will have them.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, all day', 'dcc-wildlife' ),
+				'where' => __( 'lawns, boat ramps and anywhere people feed ducks', 'dcc-wildlife' ),
+				'mark'  => __( 'red, warty, bare skin round the face and bill; nothing native here has it', 'dcc-wildlife' ),
+			],
+			'ringneckedduck'    => [
+				'emoji' => '🐦',
+				'name'  => __( 'Ring-necked Duck', 'dcc-wildlife' ),
+				'sci'   => 'Aythya collaris',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'divingducks',
+				'odds'  => 'likely',
+				'fact'  => __( 'Named for a mark almost nobody has ever seen. The drake does carry a chestnut ring round the neck, and it is invisible at any normal distance — what you actually see is a bold WHITE ring round the bill, which the bird is not named after. Peaked head, black back, pale flanks. Winter only.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, on open water', 'dcc-wildlife' ),
+				'where' => __( 'the open middle of the lakes and the canal mouth, in small rafts', 'dcc-wildlife' ),
+				'mark'  => __( 'a peaked, angular head and a white ring round the BILL; scaup have a rounded head and a grey back', 'dcc-wildlife' ),
+			],
+			'lesserscaup'       => [
+				'emoji' => '🐦',
+				'name'  => __( 'Lesser Scaup', 'dcc-wildlife' ),
+				'sci'   => 'Aythya affinis',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'divingducks',
+				'odds'  => 'likely',
+				'fact'  => __( 'The drake is a study in three tones: black at both ends, pale grey in the middle, with a head that glosses purple in good light. It dives for its food and spends the winter out on the open water in rafts. The hen is plain brown with a white patch at the base of the bill.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, out on the lakes', 'dcc-wildlife' ),
+				'where' => __( 'open water well off the bank, diving and resurfacing', 'dcc-wildlife' ),
+				'mark'  => __( 'a ROUNDED head and a pale grey back; the ring-necked duck is peaked-headed with a black back', 'dcc-wildlife' ),
+			],
+			'hoodedmerganser'   => [
+				'emoji' => '🐦',
+				'name'  => __( 'Hooded Merganser', 'dcc-wildlife' ),
+				'sci'   => 'Lophodytes cucullatus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'divingducks',
+				'odds'  => 'likely',
+				'fact'  => __( 'The drake raises and lowers a fan of a crest like a hand of cards — white bordered black when it is up, a flat dark lump when it is down, and it changes between one look at him and the next. It is a sawbill: the thin serrated beak is for gripping fish, which it chases underwater.', 'dcc-wildlife' ),
+				'best'  => __( 'winter mornings on quiet water', 'dcc-wildlife' ),
+				'where' => __( 'sheltered backwaters and canal edges rather than the open lake', 'dcc-wildlife' ),
+				'mark'  => __( 'a thin dark serrated bill, and a crest that goes up and down; no other duck here has either', 'dcc-wildlife' ),
+			],
+			'bluewingedteal'    => [
+				'emoji' => '🐦',
+				'name'  => __( 'Blue-winged Teal', 'dcc-wildlife' ),
+				'sci'   => 'Spatula discors',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'dabblers',
+				'odds'  => 'likely',
+				'fact'  => __( 'A small, fast, early duck: it is among the first to arrive in autumn and the first to leave. The drake wears a bold white crescent across the front of a slate-grey face, which is the mark to look for, and both sexes flash a chalky powder-blue panel on the forewing when they go up.', 'dcc-wildlife' ),
+				'best'  => __( 'autumn and winter, in the shallows', 'dcc-wildlife' ),
+				'where' => __( 'shallow weedy margins and marsh ponds, in tight fast flocks', 'dcc-wildlife' ),
+				'mark'  => __( 'a white crescent on the drake’s face; a pale blue forewing patch on both sexes in flight', 'dcc-wildlife' ),
+			],
+			'mallard'           => [
+				'emoji' => '🐦',
+				'name'  => __( 'Mallard', 'dcc-wildlife' ),
+				'sci'   => 'Anas platyrhynchos',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'duck',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'Everyone knows the drake — bottle-green head, white collar, yellow bill. The problem is the hen, and it is a serious one here: released farmyard mallards interbreed with Florida’s own mottled duck, and a hen mallard and a mottled duck look nearly the same. State biologists call that the single biggest threat to the native bird.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, and year-round where birds are fed', 'dcc-wildlife' ),
+				'where' => __( 'park ponds and anywhere ducks are fed; less often on wild water', 'dcc-wildlife' ),
+				'mark'  => __( 'a hen mallard has a WHITE-edged tail and a dark streak through a pale face; a mottled duck has neither, and an unstreaked buff throat', 'dcc-wildlife' ),
+			],
+			'shoveler'          => [
+				'emoji' => '🐦',
+				'name'  => __( 'Northern Shoveler', 'dcc-wildlife' ),
+				'sci'   => 'Spatula clypeata',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'dabblers',
+				'odds'  => 'likely',
+				'fact'  => __( 'The bill is the whole bird: a great spatula lined inside with hundreds of comb-like plates, so the duck can swim head-down with its beak in the water and strain out the plankton. Flocks sometimes spin in a circle together to pull food up from below. The drake is green-headed, white-chested and chestnut-flanked.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, in the shallows', 'dcc-wildlife' ),
+				'where' => __( 'shallow weedy water, swimming with the bill down and the head swinging', 'dcc-wildlife' ),
+				'mark'  => __( 'an oversized spoon-shaped bill, held low in the water; nothing else here comes close', 'dcc-wildlife' ),
+			],
+			'wigeon'            => [
+				'emoji' => '🐦',
+				'name'  => __( 'American Wigeon', 'dcc-wildlife' ),
+				'sci'   => 'Mareca americana',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'dabblers',
+				'odds'  => 'likely',
+				'fact'  => __( 'An outlaw among ducks. It cannot dive, so it waits beside the ones that can — coots especially — and takes the weed off them as they surface. The drake has a broad green stripe back from the eye and a cream crown so pale it earned the old name baldpate. It also grazes on land like a small goose.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, on the open lakes and the banks', 'dcc-wildlife' ),
+				'where' => __( 'open water beside rafts of coots, and grazing on grassy edges', 'dcc-wildlife' ),
+				'mark'  => __( 'a green eye-stripe and a whitish crown on the drake, and a small blue-grey bill with a black tip', 'dcc-wildlife' ),
+			],
+			'egyptiangoose'     => [
+				'emoji' => '🐦',
+				'name'  => __( 'Egyptian Goose', 'dcc-wildlife' ),
+				'sci'   => 'Alopochen aegyptiaca',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'ferals',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'An African bird that is not really a goose — it is a shelduck — and it is not supposed to be here at all. Escaped ornamental stock has bred its way across Florida over the last few decades, and it is still spreading into the centre. Look for the dark chocolate patch round each eye, like smudged eyeliner.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, on open lawns and banks', 'dcc-wildlife' ),
+				'where' => __( 'mown grass beside water, golf courses and retention ponds', 'dcc-wildlife' ),
+				'mark'  => __( 'a dark chocolate patch around each eye, a pink bill and legs, and a big white wing flash in flight', 'dcc-wildlife' ),
+			],
+			'loon'              => [
+				'emoji' => '🐦',
+				'name'  => __( 'Common Loon', 'dcc-wildlife' ),
+				'sci'   => 'Gavia immer',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'odds'  => 'occasional',
+				'fact'  => __( 'You will not see the black-and-white chequerboard bird from the postcards: loons spend the winter here in plain grey and white, and the tremolo call belongs to northern lakes in summer. Its bones are solid rather than hollow, which is what lets it sink and chase fish — and why it needs a long taxiing run to get airborne.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, well out on the big lakes', 'dcc-wildlife' ),
+				'where' => __( 'the open water of the bigger lakes, diving for long periods', 'dcc-wildlife' ),
+				'mark'  => __( 'a heavy dagger bill held LEVEL on a low-riding body — a cormorant rides just as low but holds its hooked bill tilted up', 'dcc-wildlife' ),
+			],
+			'laughinggull'      => [
+				'emoji' => '🐦',
+				'name'  => __( 'Laughing Gull', 'dcc-wildlife' ),
+				'sci'   => 'Leucophaeus atricilla',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'gulls',
+				'odds'  => 'likely',
+				'fact'  => __( 'The gull that sounds like it is enjoying itself — a long descending cackle that carries right across a parking lot. In summer the head is jet black with white crescents round the eye; in winter that goes, leaving a smudged grey wash behind the ear. It is a coastal bird that comes inland in numbers.', 'dcc-wildlife' ),
+				'sound' => __( 'A rolling, descending laugh, ha-ha-ha-haah, falling away at the end.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, all day', 'dcc-wildlife' ),
+				'where' => __( 'open lakes, shorelines, car parks and anywhere with food', 'dcc-wildlife' ),
+				'mark'  => __( 'a black hood in summer, a dark grey back, and dark red-black legs and bill', 'dcc-wildlife' ),
+			],
+			'ringbilledgull'    => [
+				'emoji' => '🐦',
+				'name'  => __( 'Ring-billed Gull', 'dcc-wildlife' ),
+				'sci'   => 'Larus delawarensis',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'gulls',
+				'odds'  => 'likely',
+				'fact'  => __( 'The commonest gull inland in winter, and the easiest to name: a clean black band right round the yellow bill, as though somebody had drawn on it. Pale grey back, white head, and YELLOW legs. It is the gull of car parks and lakeshores rather than the open sea.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, all day', 'dcc-wildlife' ),
+				'where' => __( 'open lakeshores, boat ramps and car parks', 'dcc-wildlife' ),
+				'mark'  => __( 'a crisp black ring round a yellow bill, and yellow legs — the herring gull has a red spot and PINK legs', 'dcc-wildlife' ),
+			],
+			'herringgull'       => [
+				'emoji' => '🐦',
+				'name'  => __( 'Herring Gull', 'dcc-wildlife' ),
+				'sci'   => 'Larus argentatus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'gulls',
+				'odds'  => 'occasional',
+				'fact'  => __( 'The big one. Half again the size of a ring-billed gull, with a heavy bill carrying a red spot near the tip instead of a black ring, and pink legs rather than yellow. It takes four years to grow into that adult plumage, which is why so many big gulls here are a confusing mottled brown.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, on the bigger open water', 'dcc-wildlife' ),
+				'where' => __( 'the larger lakes and their shorelines, often with other gulls', 'dcc-wildlife' ),
+				'mark'  => __( 'PINK legs and a red spot on a heavy bill — the ring-billed gull has yellow legs and a black bill ring', 'dcc-wildlife' ),
+			],
+			'bonapartesgull'    => [
+				'emoji' => '🐦',
+				'name'  => __( 'Bonaparte’s Gull', 'dcc-wildlife' ),
+				'sci'   => 'Chroicocephalus philadelphia',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'gulls',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Small, buoyant and tern-like, it flies more like a marsh tern than a gull and feeds by picking off the surface. It is also the only gull in the world that habitually nests in trees — in spruce, up north, which is about as un-gull-like as a gull gets. In winter it shows a neat dark spot behind the eye.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, on open water', 'dcc-wildlife' ),
+				'where' => __( 'open lakes, picking at the surface in loose flocks', 'dcc-wildlife' ),
+				'mark'  => __( 'small and delicate with a thin black bill, and a single dark ear-spot in winter', 'dcc-wildlife' ),
+			],
+			'forsterstern'      => [
+				'emoji' => '🐦',
+				'name'  => __( 'Forster’s Tern', 'dcc-wildlife' ),
+				'sci'   => 'Sterna forsteri',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'terns',
+				'odds'  => 'likely',
+				'fact'  => __( 'A slim, pale, buoyant tern that hunts by hovering and dropping. Here it is almost always in winter dress, and that changes it completely: instead of a black cap it wears a black BANDIT MASK through the eye on an otherwise white head, which is the single most useful thing to know about terns on these lakes.', 'dcc-wildlife' ),
+				'best'  => __( 'autumn through spring, over open water', 'dcc-wildlife' ),
+				'where' => __( 'hovering over the open lakes and the canal mouth, then dropping', 'dcc-wildlife' ),
+				'mark'  => __( 'in winter, a BLACK EYE PATCH on a white head — not a black cap; slim orange-black bill', 'dcc-wildlife' ),
+			],
+			'caspiantern'       => [
+				'emoji' => '🐦',
+				'name'  => __( 'Caspian Tern', 'dcc-wildlife' ),
+				'sci'   => 'Hydroprogne caspia',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'terns',
+				'odds'  => 'likely',
+				'fact'  => __( 'The largest tern in the world, and it looks it: gull-sized, heavy, with a great carrot of a bill you can see from a long way off. It flies with a slight downward tilt to the bill, hunting, and calls with a harsh grating croak that sounds much more like a heron than a tern.', 'dcc-wildlife' ),
+				'sound' => __( 'A harsh, low, grating croak — nothing like the light calls of the smaller terns.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, over the open lakes', 'dcc-wildlife' ),
+				'where' => __( 'over the bigger lakes and the canal mouth, often alone', 'dcc-wildlife' ),
+				'mark'  => __( 'gull-sized, with a very thick BRIGHT RED bill — Forster’s tern is half the size with a slim bill', 'dcc-wildlife' ),
+			],
+			'blackskimmer'      => [
+				'emoji' => '🐦',
+				'name'  => __( 'Black Skimmer', 'dcc-wildlife' ),
+				'sci'   => 'Rynchops niger',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'terns',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Built round one trick, and no other bird in the hemisphere shares it: the lower half of the bill is markedly longer than the upper, and the bird flies with it slicing the water, snapping shut on whatever it touches. Skimmers are also the only birds in the world whose pupils close to vertical slits, like a cat’s.', 'dcc-wildlife' ),
+				'best'  => __( 'calm evenings, low over still water', 'dcc-wildlife' ),
+				'where' => __( 'skimming the surface of calm open water, usually near dusk', 'dcc-wildlife' ),
+				'mark'  => __( 'a long lower mandible, black above and white below, with a red-and-black bill', 'dcc-wildlife' ),
+			],
+			'killdeer'          => [
+				'emoji' => '🐦',
+				'name'  => __( 'Killdeer', 'dcc-wildlife' ),
+				'sci'   => 'Charadrius vociferus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'certain',
+				'fact'  => __( 'A shorebird that has given up on shores. It nests on gravel, car parks and flat roofs, and when you walk near the nest the adult staggers off dragging an apparently broken wing until you have followed it far enough away — then flies off perfectly well. Two black bands across the chest, and it says its own name.', 'dcc-wildlife' ),
+				'sound' => __( 'A loud, insistent kill-DEER, kill-DEER, repeated — often the first thing you hear, day or night.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, day or night', 'dcc-wildlife' ),
+				'where' => __( 'gravel, short grass, lawn edges and bare open ground away from water', 'dcc-wildlife' ),
+				'mark'  => __( 'TWO black breast bands and a red eye-ring; most small plovers have only one band', 'dcc-wildlife' ),
+			],
+			'spottedsandpiper'  => [
+				'emoji' => '🐦',
+				'name'  => __( 'Spotted Sandpiper', 'dcc-wildlife' ),
+				'sci'   => 'Actitis macularius',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'It teeters. Constantly, the whole rear half of the body bobbing up and down as it walks, which names it from a hundred yards. The spots it is named for are breeding dress and you will not see them here — our birds are plain brown and white. The females are the ones that compete for mates, and the males do most of the sitting.', 'dcc-wildlife' ),
+				'best'  => __( 'autumn through spring, at the water’s edge', 'dcc-wildlife' ),
+				'where' => __( 'walking the very edge of the bank, alone, bobbing as it goes', 'dcc-wildlife' ),
+				'mark'  => __( 'the constant teetering, and a white shoulder-wedge in front of the folded wing; no spots in winter', 'dcc-wildlife' ),
+			],
+			'greateryellowlegs' => [
+				'emoji' => '🐦',
+				'name'  => __( 'Greater Yellowlegs', 'dcc-wildlife' ),
+				'sci'   => 'Tringa melanoleuca',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'Long, elegant and loud. The legs really are that yellow, and the bird is usually heard before it is seen — a ringing three- or four-note alarm as it lifts off, which is why marsh birders call it the telltale. It strides through shallow water rather than picking at the edge.', 'dcc-wildlife' ),
+				'sound' => __( 'A ringing, urgent tew-tew-tew as it flushes, three or four notes falling away.', 'dcc-wildlife' ),
+				'best'  => __( 'autumn through spring, in the shallows', 'dcc-wildlife' ),
+				'where' => __( 'wading the open shallows and flooded margins, alone or in twos', 'dcc-wildlife' ),
+				'mark'  => __( 'bright yellow legs and a long, slightly upturned bill longer than the head', 'dcc-wildlife' ),
+			],
+			'blackneckedstilt'  => [
+				'emoji' => '🐦',
+				'name'  => __( 'Black-necked Stilt', 'dcc-wildlife' ),
+				'sci'   => 'Himantopus mexicanus',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'Absurd, and deliberately so: relative to its body it has the longest legs of any bird on Earth except the flamingo, and they are bright coral pink. Black above, white below, with a needle of a bill. It wades deeper than anything else its size and complains loudly about everything.', 'dcc-wildlife' ),
+				'best'  => __( 'spring through autumn, in shallow open water', 'dcc-wildlife' ),
+				'where' => __( 'flooded margins, shallow ponds and marsh edges', 'dcc-wildlife' ),
+				'mark'  => __( 'impossibly long PINK legs, a needle-thin black bill, and clean black-and-white plumage', 'dcc-wildlife' ),
+			],
+			'wilsonssnipe'      => [
+				'emoji' => '🐦',
+				'name'  => __( 'Wilson’s Snipe', 'dcc-wildlife' ),
+				'sci'   => 'Gallinago delicata',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A bird you almost always meet by accident: it sits tight in wet grass until you are a step away, then explodes upward in a zigzag with a rasping call. The bill is absurdly long and flexible at the tip, for feeling out worms in mud. In display it dives, and the sound it makes is its tail feathers, not its voice.', 'dcc-wildlife' ),
+				'sound' => __( 'A rasping scaip as it flushes. The winnowing hu-hu-hu of display flight is made by air over the outer TAIL feathers.', 'dcc-wildlife' ),
+				'best'  => __( 'winter, in wet grass', 'dcc-wildlife' ),
+				'where' => __( 'flooded grass, ditch margins and soggy ground — seen when flushed', 'dcc-wildlife' ),
+				'mark'  => __( 'a very long straight bill and bold cream head-stripes; it flushes in a zigzag', 'dcc-wildlife' ),
+			],
+			'leastsandpiper'    => [
+				'emoji' => '🐦',
+				'name'  => __( 'Least Sandpiper', 'dcc-wildlife' ),
+				'sci'   => 'Calidris minutilla',
+				'group' => 'birds',
+				'browse' => 'birds',
+				'idgroup' => 'shorebirds',
+				'odds'  => 'likely',
+				'fact'  => __( 'The smallest shorebird in the world — an ounce of bird, five inches long — and it is on the mud right in front of you, creeping along hunched over. Among the little brown sandpipers people lump together as peeps, this is the one with YELLOW-GREEN legs; the others have black ones.', 'dcc-wildlife' ),
+				'best'  => __( 'autumn through spring, on mud and shallow edges', 'dcc-wildlife' ),
+				'where' => __( 'exposed mud and shallow margins, creeping in small loose flocks', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny, brown, and crouched, with YELLOW-GREEN legs — the other peeps have black legs', 'dcc-wildlife' ),
+			],
 			// ---- BATCH 9 (1.33.0): the amphibians ---------------------------
 			// Nineteen, and the reason the Animals chip says "Reptiles &
 			// amphibians" with a straight face. The cane toad flipped that label
@@ -2054,6 +2702,50 @@ final class Species {
 			'greatersiren'    => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // In the mud all year; most active in warm water.
 			'amphiuma'        => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // As the siren — nocturnal, warm months.
 			'peninsulanewt'   => [ 2, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2 ], // In weedy water all year; easiest to see in cool clear months.
+			'muscovy'           => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Feral and resident; present every month.
+			'ringneckedduck'    => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter duck: Nov–Mar.
+			'lesserscaup'       => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter, on open water.
+			'hoodedmerganser'   => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter only.
+			'bluewingedteal'    => [ 3, 3, 2, 1, 0, 0, 0, 1, 3, 3, 3, 3 ], // Earliest duck in and out — autumn and winter.
+			'mallard'           => [ 3, 3, 2, 2, 1, 1, 1, 1, 1, 2, 2, 3 ], // Feral birds year-round; wild birds in winter.
+			'shoveler'          => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter.
+			'wigeon'            => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter.
+			'egyptiangoose'     => [ 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Resident where established; most obvious in spring.
+			'loon'              => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 0, 1, 2 ], // Winter, in drab plumage, on the bigger lakes.
+			'laughinggull'      => [ 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // Commonest inland in the warm months.
+			'ringbilledgull'    => [ 3, 3, 3, 2, 1, 1, 1, 1, 2, 2, 3, 3 ], // The common winter gull inland.
+			'herringgull'       => [ 3, 3, 2, 1, 0, 0, 0, 0, 1, 1, 2, 3 ], // Winter, and fewer than the ring-billed.
+			'bonapartesgull'    => [ 3, 3, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3 ], // Winter, and never in numbers here.
+			'forsterstern'      => [ 3, 3, 3, 2, 1, 1, 1, 2, 3, 3, 3, 3 ], // Mostly autumn through spring, in winter plumage.
+			'caspiantern'       => [ 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // Present much of the year; commonest in the warm months.
+			'blackskimmer'      => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 2, 2, 1 ], // Inland mostly in the warm months, and never reliably.
+			'killdeer'          => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Resident and vocal every month.
+			'spottedsandpiper'  => [ 3, 3, 3, 2, 1, 0, 1, 2, 3, 3, 3, 3 ], // Here Aug–May, in plain winter dress.
+			'greateryellowlegs' => [ 3, 3, 3, 2, 1, 0, 1, 2, 3, 3, 3, 3 ], // Autumn through spring.
+			'blackneckedstilt'  => [ 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1, 1 ], // Breeds here — a spring and summer bird.
+			'wilsonssnipe'      => [ 3, 3, 3, 2, 1, 0, 0, 0, 1, 2, 3, 3 ], // Winter, in wet grass.
+			'leastsandpiper'    => [ 3, 3, 3, 2, 1, 0, 1, 3, 3, 3, 3, 3 ], // Autumn through spring; a long window either side of summer.
+			'swallowtailedkite' => [ 0, 1, 3, 3, 3, 3, 3, 3, 2, 0, 0, 0 ], // Here Mar–Aug, then gone to Brazil.
+			'redshoulderedhawk' => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Resident and vocal all year.
+			'redtailedhawk'     => [ 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3, 3 ], // Resident; more obvious in winter.
+			'kestrel'           => [ 3, 3, 3, 2, 1, 1, 1, 1, 2, 3, 3, 3 ], // Residents all year, swelled by winter migrants.
+			'coopershawk'       => [ 3, 3, 3, 2, 2, 2, 2, 2, 3, 3, 3, 3 ], // Resident; more visible in the cool months.
+			'harrier'           => [ 3, 3, 2, 1, 0, 0, 0, 0, 1, 2, 3, 3 ], // Winter only, over open marsh.
+			'shorttailedhawk'   => [ 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2 ], // Present much of the year; most often seen soaring in warm weather.
+			'merlin'            => [ 3, 3, 2, 1, 0, 0, 0, 0, 1, 2, 3, 3 ], // Winter.
+			'peregrine'         => [ 3, 3, 2, 1, 0, 0, 0, 0, 2, 3, 3, 3 ], // Passage and winter.
+			'blackvulture'      => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Resident everywhere, every month.
+			'turkeyvulture'     => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Resident; numbers rise in winter.
+			'barredowl'         => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Resident and calling all year.
+			'greathornedowl'    => [ 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3, 3 ], // Calls and nests from midwinter.
+			'screechowl'        => [ 3, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 3 ], // Resident; most vocal late winter into spring.
+			'barnowl'           => [ 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Resident but local; nests early in the year.
+			'chuckwillswidow'   => [ 0, 0, 3, 3, 3, 3, 3, 2, 1, 0, 0, 0 ], // Breeds here Mar–Aug; the spring voice of the woods.
+			'whippoorwill'      => [ 3, 3, 2, 1, 0, 0, 0, 0, 1, 2, 3, 3 ], // Winter only here, and mostly silent.
+			'nighthawk'         => [ 0, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 0 ], // Spring through autumn, over open sky at dusk.
+			'wildturkey'        => [ 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Resident; gobblers loudest in spring.
+			'scrubjay'          => [ 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Resident in the scrub — a trip, not a canal bird.
+			'redcockaded'       => [ 2, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Resident in old pine; nesting Mar–Jul.
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
 			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
 			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
@@ -2172,6 +2864,10 @@ final class Species {
 		// note says the greater siren's original is 1170, and the file that
 		// arrived is 1100. The srcset descriptor has to match the FILE.
 		'greentreefrog' => 1100, 'squirreltreefrog' => 1100, 'barkingtreefrog' => 1100, 'pinewoodstreefrog' => 1100, 'cubantreefrog' => 1100, 'pigfrog' => 1100, 'bullfrog' => 1100, 'leopardfrog' => 1100, 'gopherfrog' => 1100, 'southerntoad' => 1100, 'oaktoad' => 1100, 'narrowmouthtoad' => 1100, 'spadefoot' => 1100, 'cricketfrog' => 1100, 'littlegrassfrog' => 1100, 'greenhousefrog' => 1024, 'greatersiren' => 1100, 'amphiuma' => 1100, 'peninsulanewt' => 1100,
+		// Batch 10 (1.33.0) — measured on the landed files; all 1100 wide.
+		'muscovy' => 1100, 'ringneckedduck' => 1100, 'lesserscaup' => 1100, 'hoodedmerganser' => 1100, 'bluewingedteal' => 1100, 'mallard' => 1100, 'shoveler' => 1100, 'wigeon' => 1100, 'egyptiangoose' => 1100, 'loon' => 1100, 'laughinggull' => 1100, 'ringbilledgull' => 1100, 'herringgull' => 1100, 'bonapartesgull' => 1100, 'forsterstern' => 1100, 'caspiantern' => 1100, 'blackskimmer' => 1100, 'killdeer' => 1100, 'spottedsandpiper' => 1100, 'greateryellowlegs' => 1100, 'blackneckedstilt' => 1100, 'wilsonssnipe' => 1100, 'leastsandpiper' => 1100,
+		// Batch 11 (1.33.0) — measured on the landed files; all 1100 wide.
+		'swallowtailedkite' => 1100, 'redshoulderedhawk' => 1100, 'redtailedhawk' => 1100, 'kestrel' => 1100, 'coopershawk' => 1100, 'harrier' => 1100, 'shorttailedhawk' => 1100, 'merlin' => 1100, 'peregrine' => 1100, 'blackvulture' => 1100, 'turkeyvulture' => 1100, 'barredowl' => 1100, 'greathornedowl' => 1100, 'screechowl' => 1100, 'barnowl' => 1100, 'chuckwillswidow' => 1100, 'whippoorwill' => 1100, 'nighthawk' => 1100, 'wildturkey' => 1100, 'scrubjay' => 1100, 'redcockaded' => 1100,
 		// Batch 6 (1.33.0) — every turtle rendition is 1100 wide.
 		'peninsulacooter' => 1100, 'redbelliedcooter' => 1100, 'redearedslider' => 1100, 'softshell' => 1100, 'snappingturtle' => 1100, 'gophertortoise' => 1100, 'boxturtle' => 1100, 'muskturtle' => 1100, 'loggerheadmusk' => 1100, 'stripedmudturtle' => 1100, 'floridamudturtle' => 1100, 'chickenturtle' => 1100,
 	];
@@ -2206,6 +2902,229 @@ final class Species {
 	 * one.
 	 */
 	private const PHOTO_SOURCES = [
+		// Batches 10 and 11 (1.33.0): water birds, shorebirds, raptors, owls
+		// and night birds. Six CC0 photographs are credited to their observers
+		// anyway; four of those give only a handle, which is credited as such.
+		'muscovy'             => [
+			'Eridan Xharahi / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/15334402',
+		],
+		'ringneckedduck'      => [
+			'Philip Schaeffer / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/38363256',
+		],
+		'lesserscaup'         => [
+			'Pete Grannis / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/335514864',
+		],
+		'hoodedmerganser'     => [
+			'iNaturalist user kcthetc1 / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/196924092',
+		],
+		'bluewingedteal'      => [
+			'Court Harding / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/67623238',
+		],
+		'mallard'             => [
+			'Michel Rathwell / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Duck_(27479065157).jpg',
+		],
+		'shoveler'            => [
+			'iNaturalist user Zygy / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/69079988',
+		],
+		'wigeon'              => [
+			'iNaturalist user sudomir / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/105596480',
+		],
+		'egyptiangoose'       => [
+			'Jeffrey Gammon / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Egyptian_Goose_JG.jpg',
+		],
+		'loon'                => [
+			'iNaturalist user datadan / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/341579092',
+		],
+		'laughinggull'        => [
+			'Kent P. McFarland / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/36870452',
+		],
+		'ringbilledgull'      => [
+			'Lyndsey / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/39594250',
+		],
+		'herringgull'         => [
+			'Tom Kennedy / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/106263549',
+		],
+		'bonapartesgull'      => [
+			'lwolfartist / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Bonaparte%27s_gull_merritt_island_nwr_1.22.24_DSC_2830-topaz-denoiseraw-sharpen.jpg',
+		],
+		'forsterstern'        => [
+			'VJAnderson / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Forster%27s_Tern_non-breeding_plumage.jpg',
+		],
+		'caspiantern'         => [
+			'Pål A. Olsvik / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/125824023',
+		],
+		'blackskimmer'        => [
+			'Tom Kennedy / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/163405797',
+		],
+		'killdeer'            => [
+			'Andrea Westmoreland / CC BY-SA 2.0',
+			'Creative Commons Attribution-ShareAlike 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Kildeer_at_Lake_Woodruff_-_Flickr_-_Andrea_Westmoreland.jpg',
+		],
+		'spottedsandpiper'    => [
+			'Dick Daniels / CC BY-SA 3.0',
+			'Creative Commons Attribution-ShareAlike 3.0 Unported',
+			'https://commons.wikimedia.org/wiki/File:Spotted_Sandpiper_RWD2.jpg',
+		],
+		'greateryellowlegs'   => [
+			'Jeffrey Gammon / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Greater_Yellowlegs_JG.jpg',
+		],
+		'blackneckedstilt'    => [
+			'Philip Schaeffer / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/33543377',
+		],
+		'wilsonssnipe'        => [
+			'iNaturalist user mefisher / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/198862367',
+		],
+		'leastsandpiper'      => [
+			'Jean-Lou Justine / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Least_Sandpiper_(Calidris_minutilla)_-_Sanibel_Island,_FL,_USA_01.png',
+		],
+		'swallowtailedkite'   => [
+			'Andy Morffew / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Swallow-tailed_Kite_(34163638494).jpg',
+		],
+		'redshoulderedhawk'   => [
+			'Kevin Brix / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://www.inaturalist.org/observations/192456680',
+		],
+		'redtailedhawk'       => [
+			'Owen Strickland / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/17669518',
+		],
+		'kestrel'             => [
+			'Josiah Londerée / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/142634218',
+		],
+		'blackvulture'        => [
+			'Cricket Raspet / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/194868533',
+		],
+		'turkeyvulture'       => [
+			'Sam Kieschnick / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/20212389',
+		],
+		'barredowl'           => [
+			'iNaturalist user Zygy / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/67118062',
+		],
+		'greathornedowl'      => [
+			'Shirley Zundell / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/263161059',
+		],
+		'screechowl'          => [
+			'joiseyshowaa / CC BY-SA 2.0',
+			'Creative Commons Attribution-ShareAlike 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Owlie_McOwlface_(33283806874).jpg',
+		],
+		'coopershawk'         => [
+			'Curtis (iNaturalist tampabirdman) / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/315105553',
+		],
+		'harrier'             => [
+			'Dan Vickers / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/334791760',
+		],
+		'shorttailedhawk'     => [
+			'Blake Ross / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/337341808',
+		],
+		'merlin'              => [
+			'Philip Schaeffer / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/38263095',
+		],
+		'peregrine'           => [
+			'iNaturalist user Eddie / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/265205432',
+		],
+		'barnowl'             => [
+			'Mike Brady / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/72330578',
+		],
+		'chuckwillswidow'     => [
+			'Isaac Sanchez / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Antrostomus_carolinensis,_Dry_Tortugas_NP,_Florida_1.jpg',
+		],
+		'nighthawk'           => [
+			'Ryan Watson / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/120762058',
+		],
+		'whippoorwill'        => [
+			'Alina Martin / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/197039089',
+		],
+		'wildturkey'          => [
+			'Matt Felperin / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/102951289',
+		],
+		'scrubjay'            => [
+			'lwolfartist / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Florida_scrub_jay_helen_and_allen_cruickshank_preserve_1.22.24_DSC_0245-topaz-denoiseraw-sharpen.jpg',
+		],
+		'redcockaded'         => [
+			'Richard Stovall / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/280586990',
+		],
 		// Batch 9 (1.33.0): the amphibians. Four CC0 photographs are credited
 		// to their observers anyway — CC0 waives the requirement, not the
 		// courtesy. One of those observers gives no name, so the login is
@@ -2722,6 +3641,23 @@ final class Species {
 	 * it never rescues a doubtful one.
 	 */
 	private const PHOTO_NOTES = [
+		// Batches 10 and 11 (1.33.0). Eight notes, in three shapes. FIVE are the
+		// test case for this whole mechanism — the frame does not show the mark
+		// the entry names, or does not show the bird in the dress a reader has in
+		// mind: spotted sandpiper, Forster's tern, harrier, herring gull,
+		// ring-necked duck. TWO say the photograph is one of two colour forms that
+		// both occur here, so colour is not the identification: short-tailed hawk,
+		// screech-owl. ONE is a photograph taken outside Florida, of the sex that
+		// is NOT the confusing one, and says why that was still the right choice:
+		// the mallard.
+		'spottedsandpiper' => 'Photographed on Sanibel Island in WINTER plumage, which has no spots — and that is deliberate. September to May this is how the bird looks here; the spots it is named for belong to the breeding season further north. The constant teetering, not the spots, is what names it on this canal.',
+		'forsterstern' => 'Photographed at Daytona Beach in NON-BREEDING plumage, again on purpose: the black bandit mask through the eye is the winter head, and the black cap most tern pictures show is what these birds wear somewhere else. This is the one you will see over the lakes.',
+		'harrier' => 'A female in flight from below, photographed at Gainesville. The white rump patch that identifies a harrier gliding away over a marsh is on the UPPER side and is not visible in this view — what this frame shows instead is the owl-like face and the barred underwing.',
+		'herringgull' => 'Photographed in Wakulla County — the only research-grade adult available; most open-licence Florida images are brown juveniles. Its legs are under water, so the pink-legs-versus-yellow-legs test against the ring-billed gull has to be taken from the text rather than from this frame.',
+		'shorttailedhawk' => 'A LIGHT-morph bird soaring over Marathon. Florida has both colour forms and the dark morph is the commoner one here, so this photograph shows the less likely of the two — the entry describes both.',
+		'ringneckedduck' => 'A drake at Boyd Hill, St Petersburg. The chestnut neck ring the bird is named for is barely visible on a living bird and is not the mark to use; the white ring round the bill, which is plain in this frame, is.',
+		'mallard' => 'A drake, photographed outside Florida — the photographer is based in Ontario and the file states no location. A drake was chosen deliberately: the only open-licence Florida images were hens, and a hen mallard against a mottled duck is precisely the confusion this entry exists to settle.',
+		'screechowl' => 'A GREY-morph bird in Hillsborough County. Both the grey and the rust-red morph occur here, sometimes in the same brood, so colour is not the identification — the size and the ear tufts are.',
 		// Batch 9 (1.33.0). Four photographs are the right species photographed
 		// outside Florida, which the rule says to declare. Two of the four are
 		// invasives shown in their NATIVE range, which is worth saying plainly
@@ -2834,6 +3770,20 @@ final class Species {
 
 	public static function photos(): array {
 		$ids = [
+			// Batch 11 (1.33.0): raptors, owls and night birds.
+			'swallowtailedkite', 'redshoulderedhawk', 'redtailedhawk', 'kestrel',
+			'coopershawk', 'harrier', 'shorttailedhawk', 'merlin', 'peregrine',
+			'blackvulture', 'turkeyvulture',
+			'barredowl', 'greathornedowl', 'screechowl', 'barnowl',
+			'chuckwillswidow', 'whippoorwill', 'nighthawk',
+			'wildturkey', 'scrubjay', 'redcockaded',
+			// Batch 10 (1.33.0): water birds and shorebirds.
+			'muscovy', 'ringneckedduck', 'lesserscaup', 'hoodedmerganser',
+			'bluewingedteal', 'mallard', 'shoveler', 'wigeon', 'egyptiangoose', 'loon',
+			'laughinggull', 'ringbilledgull', 'herringgull', 'bonapartesgull',
+			'forsterstern', 'caspiantern', 'blackskimmer',
+			'killdeer', 'spottedsandpiper', 'greateryellowlegs', 'blackneckedstilt',
+			'wilsonssnipe', 'leastsandpiper',
 			// Batch 9 (1.33.0): the amphibians.
 			'greentreefrog', 'squirreltreefrog', 'barkingtreefrog', 'pinewoodstreefrog',
 			'cubantreefrog', 'pigfrog', 'bullfrog', 'leopardfrog', 'gopherfrog',

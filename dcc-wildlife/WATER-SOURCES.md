@@ -952,3 +952,128 @@ describe the FILE — a descriptor that disagrees with the image is a wrong
 rendition chosen on a retina screen, silently. Every other rendition in the pack
 measured exactly as the manifest describes it, the greenhouse frog's 1024
 included.
+
+## Batches 10 and 11 (1.33.0): water birds, shorebirds, raptors and night birds — sources for 44 species
+
+Forty-four entries, and every load-bearing claim in them was put to a source
+BEFORE this table was written, not after. Four did not survive that pass
+unchanged; they are listed under "What the check changed" below. The rule this
+enforces is the one the owner set in the narration pass: *sources for everything
+that stays, not only for what is new.*
+
+### Batch 10 — water birds and shorebirds (23 species)
+
+| species | claims made | source |
+|---|---|---|
+| Muscovy Duck | the Florida birds are FERAL, from released domestic stock; the wild bird is a shy forest duck of Mexico southwards; bare red warty face | UF/IFAS EDIS; Cornell *All About Birds* life history; USF Breeding Bird Atlas |
+| Ring-necked Duck | **named for a mark nobody sees** — the chestnut collar is not a field mark; the WHITE ring is on the bill; peaked head, black back | Tennessee WRA; USGS Patuxent; BirdWeb |
+| Lesser Scaup | black at both ends, pale grey middle; rounded head; purple head gloss; hen with a white patch at the bill base | Cornell; Tennessee WRA (in the scaup-vs-ring-neck comparison above) |
+| Hooded Merganser | the crest raises and lowers; a sawbill — thin serrated bill for gripping fish underwater | Cornell *All About Birds*; Ducks Unlimited |
+| Blue-winged Teal | among the first ducks in and out; white facial crescent on the drake; chalky blue forewing on both sexes | Cornell; Ducks Unlimited |
+| Mallard | released farmyard mallards hybridise with the Florida mottled duck, and **state biologists call it the single biggest threat to the native bird**; hen mallard vs mottled duck is the confusion | FWC mottled duck profile (already cited for that entry in batch 2) |
+| Northern Shoveler | **about 400 lamellae**, far more than other dabblers — "hundreds of comb-like plates"; flocks spin in circles to raise food | Wikipedia (Northern shoveler, lamellae count); USFWS species page; NatureWorks |
+| American Wigeon | **cannot dive, so it robs coots and diving ducks** as they surface; old name *baldpate* for the pale crown; grazes on land | Audubon field guide; Stanford *Birds of Stanford* on piracy; Jean Iron, "Thieving Wigeons" |
+| Egyptian Goose | **not a goose but a SHELDUCK**; African; established in Florida from escaped ornamental stock, first breeding reported 1985 and still spreading | Callaghan & Brooks 2017 (*Southwestern Naturalist*); USF Breeding Bird Atlas |
+| Common Loon | winters here in plain grey and white, not the chequerboard; **solid rather than hollow bones**, which is why it sinks to dive and needs a long taxi to take off | NPS (Isle Royale, Gates of the Arctic); Hinterland Who's Who; Maine Audubon |
+| Laughing Gull | descending laugh; black hood in summer lost to a grey smudge in winter; a coastal gull that comes inland | Cornell; Audubon |
+| Ring-billed Gull | commonest gull inland in winter; black ring right round a yellow bill; **YELLOW legs** | Cornell; Audubon |
+| Herring Gull | half again a ring-billed gull; red spot on a heavy bill, **PINK legs**; **four years to adult plumage** | Cornell (Herring Gull ID); eBird species account |
+| Bonaparte's Gull | small, buoyant, tern-like; **the only gull that habitually nests in TREES**, in conifers including black spruce; dark ear-spot in winter | Houston Audubon; BioKIDS (Univ. of Michigan); Imagine Our Florida |
+| Forster's Tern | winter dress is a black EYE MASK, not a black cap — and that is what is on these lakes | Cornell; Audubon |
+| Caspian Tern | **the largest tern in the world**; thick red bill; harsh grating croak | Wikipedia (Caspian tern measurements); Cornell |
+| Black Skimmer | lower mandible markedly longer than the upper, skimmed through the water; **skimmers are the only birds whose pupils close to vertical slits** | Wikipedia (*Rynchops*); Audubon magazine, "Black Skimmer" |
+| Killdeer | a shorebird that nests on gravel, car parks and flat roofs; **broken-wing distraction display**; TWO breast bands | Cornell; Missouri Dept of Conservation; Hinterland Who's Who |
+| Spotted Sandpiper | constant teetering; **polyandrous — females compete for mates and males do most of the incubating**, a system in under 1% of birds; spots are breeding dress only | Stanford *Birds of Stanford*, "Polyandry in the Spotted Sandpiper"; American Bird Conservancy; NHPR |
+| Greater Yellowlegs | ringing three- or four-note alarm on flushing; **old names *telltale* and *tattler*** for exactly that; strides the shallows | Missouri Dept of Conservation; Cornell; ADF&G |
+| Black-necked Stilt | **the longest legs relative to body of any bird except the flamingo**; coral pink; needle bill | Cornell *All About Birds*; Indiana Audubon; Missouri Dept of Conservation |
+| Wilson's Snipe | flushes in a zigzag with a rasping *scaip*; **the winnowing of display flight is made by the outer TAIL feathers, not the voice** | Wikipedia, "Drumming (snipe)"; Cornell; NPS Yellowstone |
+| Least Sandpiper | **the smallest shorebird**; **YELLOW-GREEN legs** where the other peeps have black | Wikipedia (*Calidris minutilla*); Cornell ID |
+
+### Batch 11 — raptors, owls and night birds (21 species)
+
+| species | claims made | source |
+|---|---|---|
+| Swallow-tailed Kite | takes prey on the wing and **drinks by skimming the surface**; the population leaves for **southern Brazil — five thousand miles** | Audubon, "The Secret Lives of Swallow-tailed Kites"; Peregrine Fund; Wikipedia |
+| Red-shouldered Hawk | the common woodland hawk here; **blue jays imitate its call nearly perfectly**; chequered wing panels | Audubon field guide; xeno-canto recordings of jay mimicry |
+| Red-tailed Hawk | bird of open ground; brick-red upper tail; **its scream is dubbed over screen bald eagles** | Cornell; the bald eagle entry's existing 1.14.0 sources |
+| American Kestrel | **the smallest falcon in the United States**; two black facial stripes; hovers; **Florida's resident subspecies *F. s. paulus* is state-designated Threatened and non-migratory**, unlike the wintering northern birds | FWC Southeastern American Kestrel profile; FNAI field guide |
+| Cooper's Hawk | bird-hunter with short wings and a long rounded tail; empties feeders; red eye on the adult | Cornell; Hawkwatch International |
+| Northern Harrier | **a real facial disc and it hunts by ear as much as by eye**; quarters low with wings in a shallow V; white rump on the BACK | Audubon field guide; Animal Diversity Web; Tennessee WRA |
+| Short-tailed Hawk | a Florida speciality, almost never seen perched, hunts by stooping from height; **in Florida the DARK morph outnumbers the light, the reverse of the rest of its range** | NPS Everglades species profile; Animal Diversity Web; Cornell species-compare |
+| Merlin | flies its prey down level rather than stooping; faint moustache against the peregrine's bold one; **builds nothing — takes over an old crow's nest** | Cornell *All About Birds* life history; Univ. of Minnesota Raptor Center; NPS |
+| Peregrine Falcon | **the fastest animal alive; the stoop passes 200 mph**; black helmet | Cornell; Live Science; Rochester Falconcam |
+| Black Vulture | **poor sense of smell, so it follows turkey vultures to carrion**; grey head, short tail, white wingtips; **strips rubber from vehicles — Everglades NP keeps tarps for visitors** | Indiana DNR; Bedford Audubon; Laura Erickson, "Interacting with Black Vultures" |
+| Turkey Vulture | **one of very few birds with a real sense of smell**, able to find carrion under a closed canopy; shallow V, rocking glide; bald red head | Ranchlands natural-history journal; Bedford Audubon |
+| Barred Owl | the canal's owl; **no ear tufts and DARK brown eyes**; *who cooks for you* in eight or nine notes; calls by day | Cornell; FWC owl profiles |
+| Great Horned Owl | ear tufts, white throat, yellow eyes; **the only owl known to prey on skunks**, and takes other owls; **builds nothing — uses an old hawk's or crow's nest, usually in a live oak hung with Spanish moss — and nests from midwinter** | Peregrine Fund; Minnesota DNR; FWC; *The Auk* historical Florida nesting accounts (v52, v69) |
+| Eastern Screech-Owl | **grey and rust-red morphs, both here, sometimes in one brood**; roosts in cavities; the call is a descending whinny or an even trill, not a screech | Cornell; FWC |
+| Barn Owl | **ear openings set at different heights on the skull**, giving vertical sound placement; **can take a mouse in total darkness by ear alone, to under 1°** | Knudsen & Konishi, *J. Exp. Biol.* 54(3); Stanford *Birds of Stanford*, "How Owls Hunt in the Dark" |
+| Chuck-will's-widow | **the largest nightjar in North America**; roosts lengthways along a branch; **breeds here** in spring and summer | Wikipedia; Audubon; Cornell |
+| Eastern Whip-poor-will | **winters in Florida and is mostly SILENT then** — the song belongs elsewhere; met in headlights by its red eyeshine | Audubon field guide; Carolina Bird Club |
+| Common Nighthawk | neither hawk nor strictly nocturnal; white bar across each long wing; **the display boom is air through the primary feathers, not the voice** | Audubon, "The Big Boom Theory"; Cornell Bird Academy |
+| Osceola Wild Turkey | **found only on the Florida peninsula**; darker, with narrow and broken white wing barring | FWC wild turkey profile; Florida Sportsman; onX Hunt |
+| Florida Scrub-Jay | **the only bird species endemic to Florida**; federally threatened; fire-maintained scrub; **cooperative breeding — young stay on as helpers**; **fed suburban jays nest weeks early, before the arthropods their chicks need** | BirdLife DataZone; Bowman & Woolfenden, *Condor* 105(3) (suburban vs wildland timing and diet); Archbold Biological Station |
+| Red-cockaded Woodpecker | **the only woodpecker that excavates in LIVING pine**; resin wells make a barrier that stops rat snakes reaching the cavity; the cockade is not a field mark; **downlisted from endangered to THREATENED by USFWS in October 2024** | USFWS press release, 2024-10; Dept of the Interior release; *Wilson Bulletin* and USDA Forest Service on resin barriers |
+
+### What the check changed
+
+Four entries did not survive the source pass as written. Recording all four,
+including the two that were mine to get right first time:
+
+1. **Florida scrub-jay — the "do not feed" line pointed the wrong way.** It read
+   *"fed jays breed earlier and their young survive less well."* The
+   experimental supplementation literature says the opposite: food-supplemented
+   jays in WILDLAND territories lay earlier AND recruit more young. The claim is
+   true only of the SUBURBAN case, where the food is peanuts and birdseed and
+   the early nests run ahead of the arthropod flush the nestlings actually need
+   (Bowman & Woolfenden). Since the guest being warned is exactly the suburban
+   case, the line stays — but it now carries its mechanism rather than a bare
+   assertion: *"jays fed peanuts and birdseed nest weeks too early, before the
+   caterpillars their chicks need have hatched."* A conservation instruction that
+   a reader could look up and find contradicted is worse than no instruction.
+2. **Black skimmer — the superlative was one taxonomic level too narrow.** It
+   read *"the only bird known to have pupils that close to vertical slits."* It
+   is the only GENUS: all three skimmers have them. Now *"Skimmers are also the
+   only birds in the world whose pupils close to vertical slits."*
+3. **Great horned owl — "or a clump of Spanish moss"** implied the owl nests in
+   a moss mass. What the sources support is that its favoured nest tree is a
+   live oak hung with Spanish moss, and that moss often makes up the bulk of a
+   nest it has taken over. Rewritten to say that.
+4. **A comment miscount, not a guest-facing claim.** The header over the batch's
+   photograph notes said "Six notes, and five of them are the same shape". There
+   are eight, in three shapes. Corrected, because a comment that miscounts what
+   is under it is how the next person's audit goes wrong.
+
+### Photograph notes added with these batches
+
+Eight, the most of any batch so far, and that is the mechanism working rather
+than failing: these are birds identified by marks, and a bird photograph very
+often fails to show the mark its entry names.
+
+- **Spotted sandpiper** (Sanibel Island) and **Forster's tern** (Daytona Beach)
+  are both in WINTER plumage on purpose — no spots, and a black eye mask instead
+  of a black cap. That is how both birds look here, and the owner asked
+  specifically that the notes say so.
+- **Northern harrier** (Gainesville, female from below): the white rump that
+  names a harrier is on the UPPER side and **is not in this frame**. The note
+  says what the frame does show — the owl-like face and the barred underwing.
+- **Herring gull** (Wakulla County): its legs are under water, so the
+  pink-legs-versus-yellow-legs test against the ring-billed gull has to come
+  from the text, not the picture. It was still the only research-grade adult
+  available; most open-licence Florida herring gulls are brown juveniles.
+- **Ring-necked duck** (Boyd Hill, St Petersburg): the frame cannot show the
+  neck ring, because the living bird effectively never does.
+- **Short-tailed hawk** (Marathon) is a LIGHT morph, and the dark morph is the
+  commoner one in Florida — so this photograph shows the less likely of the two.
+  The entry describes both.
+- **Eastern screech-owl** (Hillsborough County) is a GREY morph; both morphs
+  occur here, so colour is not the identification.
+- **Mallard**: photographed by an Ontario-based photographer with no location
+  given, so **not a Florida bird**, and it is a drake. Both were deliberate: the
+  only open-licence Florida images were hens, and a hen mallard against a
+  mottled duck is precisely the confusion this entry exists to settle — so the
+  drake illustrates the entry while the text carries the hen-vs-hen mark.
+
+Six photographs are CC0 and needed no credit; all six are credited to the
+observer anyway, four of them by iNaturalist handle where that is the only name
+given.

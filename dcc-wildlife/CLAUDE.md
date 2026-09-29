@@ -2024,3 +2024,69 @@ invisibly to every test that does not open the file. Widths come from
 `getimagesize()` on the landed files, every batch.
 
 **Weight at 112 species:** inline index 9.4 KB gzip, fetched detail 28.0 KB.
+
+### 13. Batches 10 and 11 (1.33.0): 112 species became 156, and the wall re-cut twice more
+
+Forty-four birds — 23 water birds and shorebirds, 21 raptors, owls and night
+birds — and this is the batch where the guide stops being a summer guide. Most
+of batch 10 is WINTER: a guest here in January was looking at rafts of ducks,
+gulls and terns the guide could not name at all.
+
+**THE LOOK-ALIKE WALL, AGAIN, AND IT WAS MINE BOTH TIMES.** The first pass put
+all eleven raptors in one `raptor` group and all ten waterfowl in one `ducks`
+group, rendering ten and nine look-alikes per sheet. That is exactly the wall
+the turtles produced in batch 6 and the land snakes in batch 8 — my own rule,
+broken twice in one batch. Worse, I had written a comment *rationalising* the
+eleven-member group ("a distant soaring bird is the case where you want the
+whole field at once"); it was replaced with the honest version, which calls it
+a rationalisation and not a reason. **The rule is unchanged and it is not
+negotiable: a look-alike group answers ONE question a guest actually asks.**
+After the re-cut the largest group in the whole registry is six (`shorebirds`).
+
+The groups that came out of it, each a real question:
+
+- `raptor` (2) — bald eagle, osprey: the two big ones over water
+- `buteos` (3) — red-shouldered, red-tailed, short-tailed: *what is circling*
+- `falcons` (4) — kestrel, merlin, peregrine **and the Cooper's hawk**, which is
+  an accipiter and belongs here precisely because the question is "small fast
+  raptor, which one" and its rounded tail is the answer
+- `divingducks` (3), `dabblers` (3), `ferals` (2), `gulls` (3), `terns` (3)
+- `duck` (4) — **the mallard JOINS the existing native group**, because hen
+  mallard against mottled duck is the pair that matters
+- No group at all for the swallow-tailed kite, the harrier and the loon: a
+  forked tail, a low V-winged quartering flight and a level dagger bill are
+  each unmistakable, and their own `mark` lines say so. **A species with no
+  confusable neighbour gets no group — an empty "Tell it apart" is honest.**
+
+**STATUS IS CHECKED, NOT ASSUMED — the wood stork lesson, applied in advance.**
+Two traps in this batch, both avoided before they became corrections:
+
+- The **red-cockaded woodpecker is THREATENED, not endangered.** USFWS
+  downlisted it on 25 October 2024. Every source older than that says
+  endangered, and the badge has to match the text.
+- The **kestrel's `protected` flag is for Florida's RESIDENT subspecies**
+  (*Falco sparverius paulus*), which is state-designated Threatened and does not
+  migrate. The northern birds wintering here are not listed. The `safe` line
+  says so, because a badge that over-claims teaches a guest to ignore badges.
+
+**A CONSERVATION INSTRUCTION NEEDS ITS MECHANISM, NOT JUST ITS CONCLUSION.** The
+scrub-jay's "do not feed" line first read *"fed jays breed earlier and their
+young survive less well"* — and the experimental supplementation literature says
+the opposite for wildland birds. The claim is true of SUBURBAN fed jays, for a
+specific reason, so the line now carries that reason: *"jays fed peanuts and
+birdseed nest weeks too early, before the caterpillars their chicks need have
+hatched."* A guest who looks it up must find the guide supported, not
+contradicted. Full audit in `WATER-SOURCES.md`.
+
+**EIGHT PHOTO NOTES, THE MOST OF ANY BATCH, AND THAT IS THE MECHANISM WORKING.**
+Birds are identified by marks, and a photograph very often fails to show the
+mark its entry names. Five notes say exactly that (spotted sandpiper: no winter
+spots; Forster's tern: eye mask not cap; harrier: the white rump is on the far
+side; herring gull: legs under water; ring-necked duck: the ring it is named
+for). Two say the frame is one of two colour morphs that both occur here
+(short-tailed hawk — and it is the LESS common one in Florida; screech-owl).
+One says the bird is not a Florida animal and is the non-confusing sex, with the
+reason that was still right (mallard). Rob asked for the first three by name.
+
+**Weight at 156 species:** inline index 13.1 KB gzip, fetched detail 38.4 KB.
+Projected at 403: 33.9 KB inline / 99.1 KB detail.
