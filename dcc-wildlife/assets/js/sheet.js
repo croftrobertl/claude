@@ -106,9 +106,29 @@
 		if (!state.open) { return; }
 
 		if (e.key === 'Escape' || e.key === 'Esc') {
+			/* ONE ESCAPE, ONE LAYER (1.33.0).
+			 *
+			 * This listener is on `document` in the CAPTURE phase and stops
+			 * propagation, which is right for a modal — nothing behind the
+			 * sheet should see the key — but it also meant nothing INSIDE the
+			 * sheet ever saw it either. The map bar's Layers and Colour menus
+			 * open over the map; pressing Escape to dismiss one tore down the
+			 * whole map sheet instead, losing the guest's place.
+			 *
+			 * So the sheet asks first. Anything inside it that has something
+			 * open listens for `dccwl:escape` and calls preventDefault() to
+			 * say "that one was mine". Only if nobody claims it does the sheet
+			 * close. A second press then closes the sheet, because by then the
+			 * menu is shut and nobody claims it. */
+			var claim = new CustomEvent('dccwl:escape', { bubbles: true, cancelable: true });
+			var target = (document.activeElement && sheet.contains(document.activeElement))
+				? document.activeElement
+				: bodyEl;
+			target.dispatchEvent(claim);
+
 			e.preventDefault();
 			e.stopPropagation();
-			close(true);
+			if (!claim.defaultPrevented) { close(true); }
 			return;
 		}
 

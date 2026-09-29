@@ -1832,3 +1832,87 @@ field guide's markup or its presence, not the narration and not the JSON.
 For comparison, the same page with the old +35% prose assumption: 122.7 KB gzip.
 So the trim decision saves about 4.4 KB gzip on the page and 6.7 KB on the
 fetched detail — real, but not the thing that decides the page's size.
+
+### 7. The map control bar: one bar, two shapes, chosen by measurement (1.33.0)
+
+Rob's decision, after being shown options A, B and C at 320/390/1280:
+
+> "Where the full six-control bar fits on one row (desktop, e.g. 1280px), keep
+> TODAY'S bar exactly […] That segmented control is the pattern from Rob's
+> Croatia template. […] Where it doesn't fit on one row (phones), show your
+> option C: two menus, 'Colour ▾' and 'Layers ▾', with Fullscreen inside the
+> Layers menu. […] Switch by measurement (does the full bar fit on one row?),
+> not a hard-coded width."
+
+**There is no breakpoint for the switch, and there must never be one.** `fit()`
+in `water-map.js` pins the bar AND the segmented control to `flex-wrap: nowrap`
+for one frame, asks whether `scrollWidth` exceeded `clientWidth`, restores both,
+and picks a shape. A `ResizeObserver` on the bar re-asks whenever its width
+changes — which catches the case `window.resize` cannot: the map sheet changing
+size while the window does not. `ui-mapbar.mjs` pins this with a NEGATIVE test:
+it squeezes the bar to 300px inside a 1280px window and requires it to collapse.
+Hard-coding the switch to `window.innerWidth` fails that test.
+
+Two traps, both of which cost a cycle here:
+
+- **Pinning only the bar to nowrap measures nothing.** `.dccwl-seg` has its own
+  `flex-wrap`, so the three colour buttons wrapped *inside* it, the bar grew a
+  second row, and `scrollWidth` never exceeded `clientWidth`. Both levels have
+  to be pinned or the question asked is "does it fit in any number of rows",
+  whose answer is always yes.
+- **`apply()` must be idempotent.** `fit()` flips to the full shape to measure
+  and flips back, so `apply()` is routinely called twice with the same argument.
+  An early return on "no change" left the bar showing the shape that was only
+  ever meant to be measured.
+
+**The only width-keyed rule the bar has** is a `max-width: 380px` block that
+tightens padding and gap by 16px. That is cosmetic headroom, not the switch.
+
+**One piece of state.** `setColour()` is the only path that changes the
+colouring; it updates the segmented buttons, the radio rows and the menu
+button's label together. Switching shape mid-session can therefore never show
+two different answers, which the suite checks by choosing Level on the full bar
+and then squeezing it.
+
+**The Colour menu uses radio rows** under a heading, because the Layers menu
+already shows its base-map choice that way and Rob asked for no new marking
+style. The button reads "Colour by: Clarity ▾" so the state is legible without
+opening anything.
+
+### 8. Escape belongs to the innermost thing that is open (1.33.0)
+
+`sheet.js` listens for Escape on `document` in the CAPTURE phase and calls
+`stopPropagation()`. Right for a modal — nothing behind it should see the key —
+but it also meant **nothing inside the sheet ever saw it**. Pressing Escape to
+dismiss the map's Layers menu tore down the entire map sheet.
+
+The fix is a small, explicit contract. Before closing, the sheet dispatches a
+cancelable `dccwl:escape` event at the focused element inside it (or at the
+sheet body). Anything with something open listens for it and calls
+`preventDefault()` to say *that one was mine*; only if nobody claims it does the
+sheet close. A second press then closes the sheet, because by then the menu is
+shut and nobody claims it.
+
+**If you add another layer that opens inside a sheet — a popover, a submenu, a
+picker — it claims Escape the same way.** Do not add a second document-level
+listener, and do not weaken the sheet's `stopPropagation()`.
+
+Testing note: a synthetic `keydown` dispatched on a button proves nothing here,
+because the capture listener stops it before it reaches anything. The suite uses
+`page.keyboard.press('Escape')` so the real path runs. The first version of the
+test did the synthetic thing and passed against code that was broken.
+
+### 9. The map bar sits above Leaflet's own controls (1.33.0)
+
+`.dccwl-map-bar` is `z-index: 1100`. It was 500. Leaflet puts its control panes
+at 1000 and its controls at 800, and the attribution line runs along the bottom
+of the canvas — exactly where a menu opening *upwards* from the bar lands. The
+last row of an open menu was painted over by "Leaflet | © OpenStreetMap
+contributors", and `elementFromPoint` returned the attribution there, so the row
+could not be tapped either.
+
+This affected the **Layers** menu from the day it shipped. The Colour menu added
+in 1.33.0 only made it easy to see. `ui-mapbar.mjs` probes three points inside
+each open panel with `elementFromPoint` and requires the panel to own all of
+them — "is it visible" is the wrong question; "what would the tap hit" is the
+right one.

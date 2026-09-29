@@ -684,3 +684,144 @@ whole guide.
 Every entry over 60 words is a Know-before-you-go entry carrying one of the
 corrections above. That is deliberate: the owner's no-loss rule outranks the
 length target on exactly those eight entries.
+
+## The manatee timeline, and the wood stork's badge (1.33.0, second pass)
+
+### Leesburg — the exact timeline, as the owner asked
+
+He kept the story, including her death, and asked for the dates to be right.
+Verified against the Clearwater Marine Aquarium's own account ("A Manatee's
+Legacy: The Life and Loss of Leesburg", mission.cmaquarium.org) and the
+Mid-Florida Newspapers reporting of the Harris Chain manatees:
+
+| when | what |
+|---|---|
+| 2015 | The first manatee ever recorded in Lake County. Named **Leesburg**, for the city where she was first seen. |
+| summer 2017 | Her first calf, a male the community named **Sunset**. |
+| through Mar 2019 | She and Sunset used the Silver River as a winter warm-water refuge, seen monthly. |
+| early Dec 2019 | Sighted, and visibly pregnant. Struck by a boat around this time. |
+| **9 January 2020** | A citizen reported an injured manatee; FWC and CMARI reached her but she died before they could bring her ashore. The necropsy found she died of severe injuries from a boat strike about a month earlier. She was carrying a near-full-term male calf. |
+
+The entry now carries the arrival, the calf, the strike and the date of death.
+**A judgement call I am flagging rather than burying:** the near-full-term calf
+is in the text too. It is verified, and it is the single fact that makes "keep
+the boat at idle when one is near" mean something rather than read as boilerplate.
+It is also the bleakest sentence in the guide. One clause to cut if that is the
+wrong note for a holiday cottage — say the word.
+
+### Wood stork — the badge is right, but for a different reason than it was
+
+The question the owner set: the "Protected — by law" badge must now match the
+text, and the Migratory Bird Treaty Act covers every native bird in the guide,
+so it cannot be what singles this one out. Decide from evidence.
+
+**Evidence:** the federal delisting was final on 9 March 2026 (USFWS; Federal
+Register 2026-02588). But **Florida state protection did not lapse with it**.
+Under Rule 68A-27.0012 F.A.C. a species removed from the federal list gets a
+Biological Status Review by a Biological Review Group, and the wood stork
+remains protected under Rule 68A-27.003 F.A.C. until that review reaches a final
+listing decision. FWC has yet to convene it.
+
+**What I did:** kept the `protected` flag and the badge, and rewrote the
+what-to-do line to say what is actually true today —
+
+> "Off the federal list since March 2026 — that is the good news — and still
+> protected under Florida law while the state reviews where it now belongs."
+
+So the badge is carried by a live state protection specific to this species, not
+by the MBTA, and not by a federal listing that no longer exists. **This needs
+re-checking when FWC's review lands**: if the Biological Review Group recommends
+no state listing, the flag and the badge come off and the entry says so.
+
+### Batch 8 photographs (17 species: nine snakes, eight lizards)
+
+Files and credits landed together, ahead of the species entries themselves, so a
+photograph can never reach the page before its attribution. Two CC0 photographs
+are credited to their observers anyway — CC0 waives the requirement, not the
+courtesy.
+
+**One `PHOTO_NOTES` line was required**, by the same rule that governs the
+Florida mud turtle and the fish crow: the **Eastern Indigo Snake**. The file
+states no location and its source is a U.S. Army page at Fort Stewart, Georgia,
+so it is very likely not a Florida animal — the same species, photographed
+elsewhere in its range. Every other reptile photograph in the pack is a Florida
+animal with a county named, so the exception has to be said out loud rather than
+left for a reader to assume.
+
+## Sheet heights at 390px, before and after the narration rewrite
+
+The owner asked for this table for all 51 entries. Measured in the real
+species sheet at 390px wide, in the harness's serif fallback (this sandbox
+has no Raleway, so the real sheets will differ a little in absolute height —
+the DELTAS are what the rewrite is responsible for).
+
+`before` is commit `72f69a8`, the last before the rewrite. `after` includes the
+exact Leesburg timeline and the wood stork's corrected what-to-do line.
+
+**Summary: median +56px, mean +50px, range −92 to +154.** Seven entries are
+unchanged and three got SHORTER. A line of body text in this sheet is about
+30px, so the typical entry grew by not quite two lines — which is what the
+owner said he was choosing when he accepted the trim density.
+
+| entry | sheet before | sheet after | Δ sheet | paragraph before | paragraph after | Δ para |
+|---|---:|---:|---:|---:|---:|---:|
+| manatee | 1093 | 1247 | +154 | 216 | 370 | +154 |
+| diamondback | 1109 | 1252 | +143 | 247 | 339 | +92 |
+| turtle | 896 | 1020 | +124 | 185 | 308 | +123 |
+| cypress | 896 | 1020 | +124 | 185 | 308 | +123 |
+| littleblue | 1757 | 1880 | +123 | 185 | 308 | +123 |
+| alligator | 1239 | 1332 | +93 | 154 | 247 | +93 |
+| applesnail | 896 | 989 | +93 | 185 | 277 | +92 |
+| otter | 987 | 1079 | +92 | 154 | 247 | +93 |
+| eagle | 1496 | 1588 | +92 | 185 | 277 | +92 |
+| osprey | 1264 | 1356 | +92 | 154 | 247 | +93 |
+| egret | 1599 | 1691 | +92 | 185 | 277 | +92 |
+| greenheron | 1534 | 1626 | +92 | 154 | 247 | +93 |
+| mosquito | 1175 | 1262 | +87 | 247 | 308 | +61 |
+| pygmy | 1165 | 1227 | +62 | 277 | 339 | +62 |
+| coralsnake | 1171 | 1233 | +62 | 308 | 370 | +62 |
+| fireant | 1306 | 1368 | +62 | 277 | 339 | +62 |
+| fish | 896 | 958 | +62 | 185 | 247 | +62 |
+| bcnightheron | 1539 | 1601 | +62 | 185 | 247 | +62 |
+| anhinga | 1811 | 1873 | +62 | 185 | 247 | +62 |
+| kingfisher | 1017 | 1079 | +62 | 185 | 247 | +62 |
+| moss | 932 | 994 | +62 | 185 | 247 | +62 |
+| fern | 932 | 994 | +62 | 185 | 247 | +62 |
+| palmetto | 865 | 927 | +62 | 185 | 247 | +62 |
+| coot | 1420 | 1481 | +61 | 185 | 247 | +62 |
+| lily | 907 | 968 | +61 | 185 | 247 | +62 |
+| heron | 1780 | 1836 | +56 | 154 | 185 | +31 |
+| poisonivy | 1196 | 1247 | +51 | 308 | 308 | +0 |
+| fishcrow | 1265 | 1316 | +51 | 247 | 247 | +0 |
+| woodstork | 1979 | 2023 | +44 | 216 | 277 | +61 |
+| cottonmouth | 1934 | 1965 | +31 | 308 | 339 | +31 |
+| greenwater | 1674 | 1705 | +31 | 247 | 277 | +30 |
+| greategret | 1797 | 1828 | +31 | 247 | 277 | +30 |
+| cattleegret | 1677 | 1708 | +31 | 247 | 277 | +30 |
+| ibis | 1248 | 1279 | +31 | 154 | 185 | +31 |
+| glossyibis | 1245 | 1276 | +31 | 247 | 277 | +30 |
+| tricolored | 1895 | 1926 | +31 | 154 | 185 | +31 |
+| leastbittern | 1622 | 1653 | +31 | 247 | 277 | +30 |
+| whistlingduck | 1526 | 1557 | +31 | 247 | 277 | +30 |
+| grebe | 1451 | 1481 | +30 | 216 | 247 | +31 |
+| woodduck | 1497 | 1527 | +30 | 277 | 308 | +31 |
+| lovebug | 1165 | 1191 | +26 | 277 | 277 | +0 |
+| sandhill | 2023 | 2023 | +0 | 277 | 277 | +0 |
+| ycnightheron | 1571 | 1571 | +0 | 216 | 216 | +0 |
+| cormorant | 1786 | 1786 | +0 | 247 | 247 | +0 |
+| commongallinule | 1582 | 1582 | +0 | 216 | 216 | +0 |
+| purplegallinule | 1481 | 1481 | +0 | 247 | 247 | +0 |
+| mottledduck | 1401 | 1401 | +0 | 277 | 277 | +0 |
+| limpkin | 1155 | 1155 | +0 | 277 | 277 | +0 |
+| brownwater | 1663 | 1632 | -31 | 308 | 277 | -31 |
+| pelican | 1135 | 1104 | -31 | 277 | 247 | -30 |
+| bandedwater | 1831 | 1739 | -92 | 370 | 277 | -93 |
+
+The three that shrank are the three where re-verification let the text say
+MORE with fewer words: the banded watersnake's three-mark comparison (−92px),
+the brown watersnake (−31px) and the white pelican (−31px).
+
+The four biggest growers are all entries where a verified fact replaced a
+vaguer one: the manatee (+154px, the exact Leesburg timeline), the
+diamondback (+143px, the rattle correction), and the turtles and bald cypress
+(+124px each, both replacing a claim that could not be sourced).

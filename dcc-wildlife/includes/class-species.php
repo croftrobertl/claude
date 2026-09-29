@@ -429,7 +429,7 @@ final class Species {
 				'odds'  => 'rare',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Protected under federal law: never touch, feed, chase or crowd one, and keep the boat at idle when one is near.', 'dcc-wildlife' ),
-				'fact'  => __( 'The first manatee ever recorded in Lake County arrived in 2015. People here named her Leesburg; in 2017 she had a calf they called Sunset; in 2020 a boat killed her. A few have wandered up the chain since, most often in the warm months. They are kin to elephants, not to seals.', 'dcc-wildlife' ),
+				'fact'  => __( 'The first manatee ever recorded in Lake County arrived in 2015, and was named Leesburg for the city where she was first seen. She had a calf in the summer of 2017 — Sunset. In December 2019 a boat struck her, and she died of the injuries on 9 January 2020, carrying a near-full-term calf. A few have wandered up the chain since, most often in the warm months. They are kin to elephants, not to seals.', 'dcc-wildlife' ),
 				'best'  => __( 'calm, sunny days', 'dcc-wildlife' ),
 				'where' => __( 'slow water mid-canal — watch for a swirl and a round snout surfacing', 'dcc-wildlife' ),
 			],
@@ -621,7 +621,7 @@ final class Species {
 				'browse' => 'waders',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
-				'safe'  => __( 'No longer federally listed — that is the good news — but still a protected migratory bird: give feeding birds their space and let them work the shallows.', 'dcc-wildlife' ),
+				'safe'  => __( 'Off the federal list since March 2026 — that is the good news — and still protected under Florida law while the state reviews where it now belongs: give feeding birds their space and let them work the shallows.', 'dcc-wildlife' ),
 				'fact'  => __( 'Florida’s only native stork fishes entirely by touch: it wades with its bill held open underwater and snaps it shut the instant a fish brushes the inside. Listed as endangered in 1984 with the population down by three quarters, it came off the federal list altogether in March 2026 — recovered.', 'dcc-wildlife' ),
 				'best'  => __( 'dry-season shallows', 'dcc-wildlife' ),
 				'where' => __( 'wading shrinking pools where falling water traps the fish', 'dcc-wildlife' ),
@@ -1148,6 +1148,98 @@ final class Species {
 	 * one.
 	 */
 	private const PHOTO_SOURCES = [
+		// Batch 8 (1.33.0): nine snakes and eight lizards. The species entries
+		// land with the item-6 expansion; the CREDITS land with the FILES, so a
+		// photograph can never reach the page ahead of its attribution.
+		//
+		// Two CC0 photographs are credited to their observers anyway. CC0 waives
+		// the requirement, not the courtesy, and the guide does not take the one
+		// thing a photographer gave away for free.
+		'blackracer'        => [
+			'Bobyellow / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Coluber_constrictor_ssp._priapus_(Southern_Black_Racer).jpg',
+		],
+		'yellowratsnake'    => [
+			'Ben Machado / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/21591228',
+		],
+		'cornsnake'         => [
+			'U.S. National Park Service',
+			'Public domain (work of the U.S. National Park Service)',
+			'https://commons.wikimedia.org/wiki/File:A_close_up_of_a_coiled_up_Corn_snake_on_the_grass._(00f0e1dc-b4b7-4ab6-b124-bcddd284a68e).jpg',
+		],
+		'gartersnake'       => [
+			'Athena Philips / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/287189719',
+		],
+		'indigosnake'       => [
+			'Dirk Stevenson / Fort Stewart, U.S. Army',
+			'Public domain',
+			'https://commons.wikimedia.org/wiki/File:Eastern_Indigo_Snake.jpg',
+		],
+		'roughgreensnake'   => [
+			'Geoff Gallice / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Opheodrys_aestivus_1.jpg',
+		],
+		'ribbonsnake'       => [
+			'Daniel Estabrooks / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/13538018',
+		],
+		'ringnecksnake'     => [
+			'inaturalistamy / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International',
+			'https://www.inaturalist.org/observations/359394913',
+		],
+		'mudsnake'          => [
+			'Court Harding / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/67619474',
+		],
+		'greenanole'        => [
+			'Walter / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Green_Anole_-_Florida_Botanical_Gardens.jpg',
+		],
+		'brownanole'        => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Brown_Anole_-_Anolis_sagrei,_Fairchild_Tropical_Gardens,_Coral_Gables,_Florida.jpg',
+		],
+		'fivelinedskink'    => [
+			'Kai Squires / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/42618507',
+		],
+		'broadheadskink'    => [
+			'Kai Squires / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/71386239',
+		],
+		'racerunner'        => [
+			'natalie (nat_t) / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/108739452',
+		],
+		'glasslizard'       => [
+			'Kristof Zyskowski / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/35216052',
+		],
+		'housegecko'        => [
+			'Rita Clare / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/4112403',
+		],
+		'groundskink'       => [
+			'Tedd Greenwald / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/202828226',
+		],
 		// Batch 2 (1.24.0), Wikimedia Commons. URLs are the file pages, which
 		// is where the licence and the photographer are actually stated.
 		'ycnightheron'    => [
@@ -1341,6 +1433,12 @@ final class Species {
 	 * it never rescues a doubtful one.
 	 */
 	private const PHOTO_NOTES = [
+		// Batch 8 (1.33.0). The photographer's own source page is a U.S. Army
+		// Fort Stewart page in GEORGIA, and no location is stated on the file.
+		// The guide's rule is that a photograph identified by what is ABSENT
+		// from it needs saying out loud; so does one whose PLACE is absent,
+		// when every other reptile photograph here is a Florida animal.
+		'indigosnake' => 'The clearest view found of this protected snake, and the only one showing no handling. The file states no location, and its source is a U.S. Army page in Georgia, so this is very likely not a Florida animal — the same species, photographed elsewhere in its range.',
 		// Not wrapped in __() here: a const cannot hold a function call. The
 		// read path below translates it, so Loco still sees one string.
 		'fishcrow' => 'Photographed at J.N. “Ding” Darling National Wildlife Refuge, Sanibel Island, Florida. Fish and American crows cannot be told apart by sight — this is a crow at a place where both occur, and the call is what settles it.',

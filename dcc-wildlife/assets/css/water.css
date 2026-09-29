@@ -284,7 +284,20 @@
 	gap: 8px;
 	padding: 8px 10px;
 	position: relative;
-	z-index: 500;
+	/* ABOVE LEAFLET'S OWN CONTROLS (1.33.0).
+	 *
+	 * This was 500. Leaflet puts its control panes at z-index 1000 and the
+	 * controls themselves at 800, and the attribution line sits along the
+	 * bottom of the canvas — exactly where a menu opening UPWARDS from this
+	 * bar lands. The result: the last row of an open menu was painted over by
+	 * "Leaflet | © OpenStreetMap contributors", and elementFromPoint returned
+	 * the attribution there, so the row could not be clicked either. It
+	 * affected the Layers menu from the day it shipped; the Colour menu added
+	 * in 1.33.0 only made it easy to see.
+	 *
+	 * The bar has position:relative, so this value makes a stacking context
+	 * and the panels inside it ride along above the map's controls. */
+	z-index: 1100;
 }
 
 .dccwl-seg {
@@ -380,6 +393,60 @@
 	border: 0;
 	border-top: 1px solid var(--dccwl-line);
 	margin: 8px 0;
+}
+
+/* An action inside a menu — Fullscreen, when the bar is in its compact shape
+ * and the button has moved in here. It is a BUTTON, not a checkbox row, so it
+ * is styled as the menu's one piece of chrome rather than as another setting.
+ * Doubled class to beat Bravada's (0,3,1) button reset. */
+.dccwl-drop-action.dccwl-drop-action {
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-primary);
+	cursor: pointer;
+	display: block;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	min-height: 44px;
+	padding: 10px 12px;
+	text-align: left;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
+	width: 100%;
+}
+
+.dccwl-drop-action.dccwl-drop-action:hover {
+	background: var(--dccwl-btn-bg-hover);
+	border-color: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
+
+.dccwl-drop-action.dccwl-drop-action:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+/* The compact shape is two menus and nothing else, so it centres rather than
+ * hugging the left edge — with two controls, left-aligned reads as a mistake. */
+.dccwl-map-bar--compact { justify-content: center; }
+
+/* Narrow phones: the 320px row has 304px of usable width, and at the bar's
+ * normal padding the two menus came within 3px of the edge. These four values
+ * buy 16px and are the ONLY width-keyed rule the bar has — the full/compact
+ * decision itself is measured, never a breakpoint. */
+@media (max-width: 380px) {
+	.dccwl-map-bar { gap: 6px; padding: 8px 6px; }
+	.dccwl-seg-btn.dccwl-seg-btn,
+	.dccwl-drop-btn.dccwl-drop-btn { padding: 11px 10px; }
+	.dccwl-drop-panel { min-width: 180px; }
+}
+
+/* The Colour menu's panel opens from the right-hand button on a narrow bar,
+ * where a left-anchored panel would hang off the screen. */
+.dccwl-map-bar--compact .dccwl-drop:last-of-type .dccwl-drop-panel {
+	left: auto;
+	right: 0;
 }
 
 /* --- the colour-by legend (1.8.0) --- */

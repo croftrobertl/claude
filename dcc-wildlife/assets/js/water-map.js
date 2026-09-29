@@ -506,38 +506,120 @@
 
 	/* ---- the control bar --------------------------------------------- */
 
+	/* ---- the control bar ---------------------------------------------
+	 *
+	 * ONE BAR, TWO SHAPES, CHOSEN BY MEASUREMENT (1.33.0).
+	 *
+	 * The owner's decision, and the reason for the shape of this function:
+	 * where the full six-control bar fits on one row it stays EXACTLY as it
+	 * was — the "Colour by:" label and the three-button segmented control are
+	 * the pattern from his Croatia template and he wants them where they fit.
+	 * Where it does not fit, the three colour buttons collapse into a "Colour"
+	 * menu and Fullscreen moves inside the Layers menu.
+	 *
+	 * The switch is a MEASUREMENT, not a width. There is no breakpoint in
+	 * here and none in water.css for this: the bar lays itself out nowrap for
+	 * one frame, asks whether it overflowed, and picks a shape from the
+	 * answer. That is the only thing that stays true when the sheet is
+	 * narrower than the window, when the font is scaled up, when a translation
+	 * makes "Data age" three words long, or when the phone is turned.
+	 *
+	 * BOTH shapes drive ONE piece of state. setColour() is the only path that
+	 * changes the colouring, and it updates the segmented buttons, the radio
+	 * rows and the menu button's label together, so switching shape mid-session
+	 * can never show two different answers.
+	 */
+
 	function buildBar(map, groups, recolour, shell, i18n, base) {
 		var bar = el('div', 'dccwl-map-bar');
-
-		// Colour by — segmented control.
-		var seg = el('div', 'dccwl-seg');
-		seg.setAttribute('role', 'group');
-		seg.appendChild(el('span', 'dccwl-seg-label', i18n.colorBy || 'Colour by:'));
-		[
+		var COLOURS = [
 			['clarity', i18n.byClarity || 'Clarity'],
 			['level', i18n.byLevel || 'Level'],
 			['fresh', i18n.byFresh || 'Data age']
-		].forEach(function (pair, i) {
+		];
+		var colourLabel = i18n.colorBy || 'Colour by:';
+		// The menu button says which colouring is on. The label above ends in
+		// a colon because it introduces the buttons beside it; on the button
+		// it would read "Colour by:: Clarity", so strip it.
+		var colourWord = colourLabel.replace(/\s*:\s*$/, '');
+		var current = COLOURS[0][0];
+
+		/* ---- full shape: label + segmented control ---------------------- */
+
+		var seg = el('div', 'dccwl-seg');
+		seg.setAttribute('role', 'group');
+		seg.setAttribute('aria-label', colourWord);
+		seg.appendChild(el('span', 'dccwl-seg-label', colourLabel));
+		var segBtns = {};
+		COLOURS.forEach(function (pair) {
 			var b = el('button', 'dccwl-seg-btn', pair[1]);
 			b.type = 'button';
-			b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
-			b.addEventListener('click', function () {
-				seg.querySelectorAll('.dccwl-seg-btn').forEach(function (o) {
-					o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
-				});
-				recolour(pair[0]);
-			});
+			b.setAttribute('aria-pressed', pair[0] === current ? 'true' : 'false');
+			b.addEventListener('click', function () { setColour(pair[0]); });
+			segBtns[pair[0]] = b;
 			seg.appendChild(b);
 		});
 		bar.appendChild(seg);
 
-		// Layers — dropdown of checkboxes.
+		/* ---- compact shape: a Colour menu ------------------------------- */
+
+		var colourDrop = el('div', 'dccwl-drop');
+		var colourBtn = el('button', 'dccwl-drop-btn', '');
+		colourBtn.type = 'button';
+		colourBtn.setAttribute('aria-expanded', 'false');
+		colourBtn.setAttribute('aria-haspopup', 'true');
+		var colourPanel = el('div', 'dccwl-drop-panel');
+		colourPanel.hidden = true;
+		colourPanel.setAttribute('aria-label', colourWord);
+		/* Radios, not a new marking style: the Layers menu already shows a
+		 * one-of-several choice this way for the base map, and the owner asked
+		 * for the two menus to agree. */
+		colourPanel.appendChild(el('p', 'dccwl-drop-head', colourWord));
+		var colourRadios = {};
+		COLOURS.forEach(function (pair) {
+			var lab = el('label', 'dccwl-drop-row');
+			var rb = document.createElement('input');
+			rb.type = 'radio';
+			rb.name = 'dccwl-colour';
+			rb.checked = pair[0] === current;
+			rb.addEventListener('change', function () {
+				if (rb.checked) { setColour(pair[0]); closeMenus(); }
+			});
+			colourRadios[pair[0]] = rb;
+			lab.appendChild(rb);
+			lab.appendChild(document.createTextNode(' ' + pair[1]));
+			colourPanel.appendChild(lab);
+		});
+		colourDrop.appendChild(colourBtn);
+		colourDrop.appendChild(colourPanel);
+		bar.appendChild(colourDrop);
+
+		/** The one path that changes the colouring. Both shapes call it. */
+		function setColour(key) {
+			current = key;
+			COLOURS.forEach(function (pair) {
+				segBtns[pair[0]].setAttribute('aria-pressed', pair[0] === key ? 'true' : 'false');
+				colourRadios[pair[0]].checked = (pair[0] === key);
+				if (pair[0] === key) {
+					/* translators are served by i18n.colorBy; this is a
+					 * composition of two already-translated strings. */
+					colourBtn.textContent = colourWord + ': ' + pair[1] + ' ▾';
+					colourBtn.setAttribute('aria-label', colourWord + ': ' + pair[1]);
+				}
+			});
+			recolour(key);
+		}
+
+		/* ---- Layers menu: in both shapes, built once -------------------- */
+
 		var drop = el('div', 'dccwl-drop');
 		var toggle = el('button', 'dccwl-drop-btn', (i18n.layers || 'Layers') + ' ▾');
 		toggle.type = 'button';
 		toggle.setAttribute('aria-expanded', 'false');
+		toggle.setAttribute('aria-haspopup', 'true');
 		var panel = el('div', 'dccwl-drop-panel');
 		panel.hidden = true;
+		panel.setAttribute('aria-label', i18n.layers || 'Layers');
 
 		// Base map first — satellite is one tap from streets and vice versa.
 		if (base && base.names.length > 1) {
@@ -561,10 +643,6 @@
 			});
 			panel.appendChild(el('hr', 'dccwl-drop-sep'));
 		}
-		toggle.addEventListener('click', function () {
-			panel.hidden = !panel.hidden;
-			toggle.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
-		});
 		[
 			['ramps', i18n.lyrRamps || 'Boat ramps', true],
 			['waters', i18n.lyrWaters || 'Chain waters', true],
@@ -586,27 +664,156 @@
 		drop.appendChild(panel);
 		bar.appendChild(drop);
 
-		/* Fullscreen, but ONLY where it can actually happen.
+		/* ---- Fullscreen, but ONLY where it can actually happen -----------
 		 *
 		 * iPhone Safari implements requestFullscreen for <video> and nothing
 		 * else, so on the owner's own phone this button rendered, took up a
 		 * 44px slot in a bar that is already tight at 320px, and did nothing
 		 * whatsoever when tapped. A control that cannot work should not be
-		 * offered: feature-detect on the element we would actually ask. */
+		 * offered: feature-detect on the element we would actually ask.
+		 *
+		 * Where it IS offered it exists twice — as a bar button in the full
+		 * shape, as a row inside the Layers menu in the compact one — and both
+		 * call the same handler. */
+		var fsBtn = null;
+		var fsRow = null;
 		if (typeof shell.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
-			var fs = el('button', 'dccwl-drop-btn', i18n.fullscreen || 'Fullscreen');
-			fs.type = 'button';
-			fs.addEventListener('click', function () {
-				if (document.fullscreenElement) {
-					document.exitFullscreen();
-				} else {
-					shell.requestFullscreen();
-				}
-				setTimeout(function () { map.invalidateSize(); }, 200);
-			});
-			bar.appendChild(fs);
+			var fsText = i18n.fullscreen || 'Fullscreen';
+			fsBtn = el('button', 'dccwl-drop-btn dccwl-bar-action', fsText);
+			fsBtn.type = 'button';
+			fsBtn.addEventListener('click', toggleFullscreen);
+			bar.appendChild(fsBtn);
+
+			fsRow = el('hr', 'dccwl-drop-sep');
+			var fsLink = el('button', 'dccwl-drop-action', fsText);
+			fsLink.type = 'button';
+			fsLink.addEventListener('click', function () { toggleFullscreen(); closeMenus(); });
+			panel.appendChild(fsRow);
+			panel.appendChild(fsLink);
+			fsRow = [fsRow, fsLink];
+		}
+		function toggleFullscreen() {
+			if (document.fullscreenElement) {
+				document.exitFullscreen();
+			} else {
+				shell.requestFullscreen();
+			}
+			setTimeout(function () { map.invalidateSize(); fit(); }, 200);
 		}
 
+		/* ---- menu plumbing: open, close, Escape, click-away -------------- */
+
+		function setOpen(btn, pnl, open) {
+			pnl.hidden = !open;
+			btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+		}
+		function closeMenus() {
+			setOpen(toggle, panel, false);
+			setOpen(colourBtn, colourPanel, false);
+		}
+		function wire(btn, pnl) {
+			btn.addEventListener('click', function () {
+				var willOpen = pnl.hidden;
+				closeMenus();
+				setOpen(btn, pnl, willOpen);
+			});
+		}
+		wire(toggle, panel);
+		wire(colourBtn, colourPanel);
+		/* The sheet owns Escape and closes on it. When one of these menus is
+		 * open, THIS layer owns it instead — see the `dccwl:escape` contract in
+		 * sheet.js. Claiming it by calling preventDefault() is what stops a
+		 * guest losing the whole map because they dismissed a menu. */
+		function claimEscape(e) {
+			if (panel.hidden && colourPanel.hidden) { return; }
+			var inColour = colourPanel.contains(document.activeElement);
+			var openBtn = colourPanel.hidden ? toggle : (inColour ? colourBtn : (panel.hidden ? colourBtn : toggle));
+			closeMenus();
+			// Focus would otherwise be stranded on a node that is now hidden.
+			if (bar.contains(document.activeElement) || document.activeElement === document.body) {
+				openBtn.focus();
+			}
+			e.preventDefault();
+		}
+		bar.addEventListener('dccwl:escape', claimEscape);
+		bar.addEventListener('keydown', function (e) {
+			// Standalone use, where there is no sheet above us to ask.
+			if (e.key === 'Escape' || e.keyCode === 27) {
+				if (panel.hidden && colourPanel.hidden) { return; }
+				claimEscape(e);
+				e.stopPropagation();
+			}
+		});
+		document.addEventListener('click', function (e) {
+			if (!bar.contains(e.target)) { closeMenus(); }
+		});
+
+		/* ---- which shape? ask the bar, do not guess ---------------------- */
+
+		var compact = null;   // null = not decided yet
+
+		/* IDEMPOTENT ON PURPOSE. fit() below flips the bar to its full shape to
+		 * measure it and then flips it back, so apply() is called twice in a
+		 * row with the same argument as a matter of course. An early return on
+		 * "no change" made the second call a no-op and left the bar showing
+		 * the shape that was only ever meant to be measured. */
+		function apply(wantCompact) {
+			compact = wantCompact;
+			closeMenus();
+			seg.hidden = wantCompact;
+			colourDrop.hidden = !wantCompact;
+			if (fsBtn) { fsBtn.hidden = wantCompact; }
+			if (fsRow) { fsRow[0].hidden = !wantCompact; fsRow[1].hidden = !wantCompact; }
+			bar.classList.toggle('dccwl-map-bar--compact', wantCompact);
+		}
+
+		function fit() {
+			if (!bar.isConnected || !bar.clientWidth) { return; }
+			/* Measure the FULL shape laid out on ONE line and ask whether it
+			 * overflowed.
+			 *
+			 * The segmented control has its own flex-wrap, so pinning only the
+			 * BAR to nowrap measured nothing: the three colour buttons simply
+			 * wrapped inside .dccwl-seg, the bar grew a second row, and
+			 * scrollWidth never exceeded clientWidth. Both levels have to be
+			 * pinned, or the question being asked is "does it fit in any
+			 * number of rows", to which the answer is always yes. */
+			var wasCompact = compact;
+			var prevBar = bar.style.flexWrap;
+			var prevSeg = seg.style.flexWrap;
+			apply(false);
+			bar.style.flexWrap = 'nowrap';
+			seg.style.flexWrap = 'nowrap';
+			var overflows = bar.scrollWidth > bar.clientWidth + 1;
+			bar.style.flexWrap = prevBar;
+			seg.style.flexWrap = prevSeg;
+			apply(overflows);
+			return { overflows: overflows, wasCompact: wasCompact };
+		}
+
+		setColour(current);
+		apply(false);
+
+		/* First measurement once the bar has a width; then on every change of
+		 * one. ResizeObserver catches the case window.resize cannot: the map
+		 * sheet changing size while the window does not. */
+		if (typeof requestAnimationFrame === 'function') {
+			requestAnimationFrame(fit);
+		} else {
+			setTimeout(fit, 0);
+		}
+		if (typeof ResizeObserver === 'function') {
+			var ro = new ResizeObserver(function () { fit(); });
+			ro.observe(bar);
+		} else {
+			var t = null;
+			window.addEventListener('resize', function () {
+				clearTimeout(t);
+				t = setTimeout(fit, 120);
+			});
+		}
+
+		bar.dccwlFit = fit;   // the suites drive this directly
 		return bar;
 	}
 
