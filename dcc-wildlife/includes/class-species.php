@@ -109,7 +109,14 @@ final class Species {
 	 */
 	public static function has_amphibian(): bool {
 		foreach ( self::registry() as $sp ) {
-			if ( 'amphibian' === (string) ( $sp['class'] ?? '' ) ) {
+			// It has to be under THAT CHIP, not merely in the registry. The
+			// cane toad is an amphibian and a hazard; if it only appeared in
+			// Know before you go, renaming the Animals chip on its account
+			// would be the same over-promise in a new place. It happens to
+			// sit in Animals as well, so it does flip the label — but the
+			// test is the browse slug, not the class alone.
+			if ( 'amphibian' === (string) ( $sp['class'] ?? '' )
+				&& 'reptiles' === (string) ( $sp['browse'] ?? '' ) ) {
 				return true;
 			}
 		}
@@ -445,6 +452,205 @@ final class Species {
 				'safe'  => __( 'Nothing to do but wash the windshield the same day — they turn acidic as they break down.', 'dcc-wildlife' ),
 				'best'  => __( 'mid-morning to late afternoon, in the two flights', 'dcc-wildlife' ),
 				'where' => __( 'everywhere — over the lawn, the road and the dock', 'dcc-wildlife' ),
+			],
+			// ---- BATCH 7 (1.33.0): the rest of Know before you go ----------
+			// Fourteen more, every one of them something a guest DOES something
+			// about: looks before reaching, keeps the dog off the lawn at night,
+			// checks for ticks, does not touch the furry caterpillar.
+			//
+			// The no-see-ums leave the composite "Mosquitoes and No-see-ums" and
+			// stand alone, by the owner's decision. They are a different animal
+			// with a different season and a different defence — a screen stops a
+			// mosquito and does not stop these.
+			//
+			// The cane toad is the only one here that is NOT group=safety: it is
+			// an animal a guest will want to read about as well as a hazard, so
+			// it sits in Animals and reaches Safety through its danger flag, the
+			// same double membership the alligator has had since 1.19.0.
+			'noseeums'        => [
+				'emoji' => '🦟',
+				'name'  => __( 'No-see-ums', 'dcc-wildlife' ),
+				'sci'   => 'Culicoides spp.',
+				'group' => 'safety',
+				'flags' => [ 'nuisance' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'Biting midges one to three millimetres long — small enough to walk straight through an ordinary window screen, which is how they get in. You feel the bite and see nothing, which is the whole of the name. They work still, humid air at dawn and dusk from April into November, and a breeze is the best defence there is.', 'dcc-wildlife' ),
+				'safe'  => __( 'Repellent on exposed skin, and sit where the air is moving — a fan on the porch works better than anything you can spray.', 'dcc-wildlife' ),
+				'best'  => __( 'dawn and dusk on still air, April into November', 'dcc-wildlife' ),
+				'where' => __( 'the water’s edge and the porch at last light, worst when the air is dead still', 'dcc-wildlife' ),
+				'mark'  => __( 'you will not see it; a sudden sharp bite with nothing on your arm is the identification', 'dcc-wildlife' ),
+			],
+			'canetoad'        => [
+				'emoji' => '🐸',
+				'name'  => __( 'Cane Toad', 'dcc-wildlife' ),
+				'sci'   => 'Rhinella marina',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'toads',
+				'flags' => [ 'danger', 'invasive' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'A South American toad brought in to eat cane beetles, which it did not, and which now turns up on Florida lawns at night the size of a dinner plate. Behind each eye is a large triangular gland, and the milky venom it releases is what makes this a dog problem rather than a frog: a dog that mouths one can be in serious trouble within minutes.', 'dcc-wildlife' ),
+				'safe'  => __( 'Keep dogs away from toads at night, and off the lawn after rain. If your dog mouths one, wipe the gums and tongue with a cloth, rinse the mouth with a hose pointed downwards and out for several minutes so it does not swallow, and ring a vet straight away.', 'dcc-wildlife' ),
+				'best'  => __( 'warm wet nights, on lit lawns', 'dcc-wildlife' ),
+				'where' => __( 'lawns, driveways and anywhere a light draws insects after dark', 'dcc-wildlife' ),
+				'mark'  => __( 'very large, with a big triangular gland behind each eye and no ridges across the crown; native southern toads are far smaller', 'dcc-wildlife' ),
+			],
+			'blackwidow'      => [
+				'emoji' => '🕷',
+				'name'  => __( 'Southern Black Widow', 'dcc-wildlife' ),
+				'sci'   => 'Latrodectus mactans',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'Glossy jet black, with a red hourglass on the underside of the abdomen — on this species a single joined shape, not two separate marks. She is not aggressive and will not come at you; the bites happen when a hand goes somewhere unseen and she is between it and the wall. Her webs are untidy tangles in dark, still, sheltered places.', 'dcc-wildlife' ),
+				'safe'  => __( 'Look before you reach into a dark corner — under the dock, behind a pot, inside a rarely used shed. Wear gloves for that kind of job. A bite needs medical advice, not a wait-and-see.', 'dcc-wildlife' ),
+				'best'  => __( 'any month; more noticed in the warm ones', 'dcc-wildlife' ),
+				'where' => __( 'tangled webs in dark, undisturbed corners — under decking, behind pots, in sheds', 'dcc-wildlife' ),
+				'mark'  => __( 'glossy black with a single joined red hourglass underneath, and a messy tangled web', 'dcc-wildlife' ),
+			],
+			'brownwidow'      => [
+				'emoji' => '🕷',
+				'name'  => __( 'Brown Widow', 'dcc-wildlife' ),
+				'sci'   => 'Latrodectus geometricus',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'Now the commoner widow around Florida buildings, and the easiest to identify without ever seeing the spider: the egg sac gives it away, a pale ball covered in little spikes like a sandspur. The spider is grey-brown and patterned, with an orange or yellow hourglass. Its venom is stronger than a black widow’s drop for drop, but it delivers far less and would much rather hide.', 'dcc-wildlife' ),
+				'safe'  => __( 'The same rule as the black widow: look before you reach into anywhere dark. Spiky egg sacs under the rails mean the spiders are there too.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, most obvious in summer', 'dcc-wildlife' ),
+				'where' => __( 'under rails, chairs, letterboxes and the underside of anything left outdoors', 'dcc-wildlife' ),
+				'mark'  => __( 'grey-brown and patterned with an orange hourglass — and a spiky egg sac like a tiny sandspur', 'dcc-wildlife' ),
+			],
+			'pusscaterpillar' => [
+				'emoji' => '🐛',
+				'name'  => __( 'Puss Caterpillar', 'dcc-wildlife' ),
+				'sci'   => 'Megalopyge opercularis',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'It looks like a scrap of orange fur, and it is one of the most venomous caterpillars in the United States. Under the fur are hollow spines that break off in skin; the sting is an immediate deep burn with a grid of red spots in it, and it can bring on swelling and nausea. The temptation to touch something that soft is the entire danger.', 'dcc-wildlife' ),
+				'safe'  => __( 'Do not touch it — and tell children that first, because it looks strokeable. Stung? Strip the spines out with sticky tape pressed on and pulled off, then ice it. Get help for swelling, breathing trouble or a bad reaction.', 'dcc-wildlife' ),
+				'best'  => __( 'late summer and autumn', 'dcc-wildlife' ),
+				'where' => __( 'on oak and elm leaves, and on anything the wind drops them onto', 'dcc-wildlife' ),
+				'mark'  => __( 'a teardrop of soft orange-brown “fur” with a tail, about an inch long; no obvious head', 'dcc-wildlife' ),
+			],
+			'saddleback'      => [
+				'emoji' => '🐛',
+				'name'  => __( 'Saddleback Caterpillar', 'dcc-wildlife' ),
+				'sci'   => 'Acharia stimulea',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'Unmistakable and unmissable: a brown caterpillar wearing a bright green blanket with a purple-brown saddle in the middle of it, and four fat horns of spines at either end. The spines are hollow, tipped with venom, and break off in the skin. Nothing else here looks remotely like it, which is the plant’s warning working exactly as intended.', 'dcc-wildlife' ),
+				'safe'  => __( 'Do not brush it off with a bare hand. Lift the spines out with sticky tape, then ice it; see someone if the reaction spreads.', 'dcc-wildlife' ),
+				'best'  => __( 'late summer into autumn', 'dcc-wildlife' ),
+				'where' => __( 'the undersides of leaves on shrubs, palms and garden plants — found by reaching, not by looking', 'dcc-wildlife' ),
+				'mark'  => __( 'a green “saddle blanket” with a brown oval in the middle, and spiny horns at both ends', 'dcc-wildlife' ),
+			],
+			'paperwasps'      => [
+				'emoji' => '🐝',
+				'name'  => __( 'Paper Wasps', 'dcc-wildlife' ),
+				'sci'   => 'Polistes spp.',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'The open grey nest under an eave, a rail or the underside of the dock, like a small upturned umbrella with the cells showing and the wasps standing on them. They are not looking for you and will ignore you entirely until the nest is jarred — then they defend it, and unlike a bee each one can sting more than once.', 'dcc-wildlife' ),
+				'safe'  => __( 'Look under rails and eaves before you lean, sit or put a hand up. If a nest is somewhere you cannot avoid, tell us rather than knocking it down yourself.', 'dcc-wildlife' ),
+				'best'  => __( 'spring through autumn; nests grow through the summer', 'dcc-wildlife' ),
+				'where' => __( 'under eaves, rails, dock boards and garden furniture', 'dcc-wildlife' ),
+				'mark'  => __( 'an open, unwrapped grey comb like a small umbrella, with the wasps visible on it', 'dcc-wildlife' ),
+			],
+			'yellowjacket'    => [
+				'emoji' => '🐝',
+				'name'  => __( 'Southern Yellowjacket', 'dcc-wildlife' ),
+				'sci'   => 'Vespula squamosa',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'The one that nests in the ground, and the reason that matters is that you find it with your feet. The nest is hidden in a hole or under a board, so there is no umbrella of comb to spot; the first sign is usually wasps pouring out. Each of them can sting over and over, and in a warm winter a southern colony carries on rather than dying back, so the nests get very large.', 'dcc-wildlife' ),
+				'safe'  => __( 'If wasps come up out of the ground, walk away quickly and keep going — they follow. Mark the spot and tell us. Anyone allergic to stings should carry what they normally carry.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, and nests at their biggest in late summer', 'dcc-wildlife' ),
+				'where' => __( 'ground holes, wall voids, and under sheds and decking', 'dcc-wildlife' ),
+				'mark'  => __( 'black and yellow like a paper wasp, but going in and out of a hole in the ground', 'dcc-wildlife' ),
+			],
+			'lonestartick'    => [
+				'emoji' => '🪲',
+				'name'  => __( 'Lone Star Tick', 'dcc-wildlife' ),
+				'sci'   => 'Amblyomma americanum',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'The commonest tick to bite people in Florida, and the female is easy: one silvery-white spot in the middle of her back. It is also the tick behind alpha-gal syndrome — a bite that can leave a person allergic to red meat, with reactions hours after a meal rather than minutes. That is rare, and it is the reason to take ticks seriously rather than brush them off.', 'dcc-wildlife' ),
+				'safe'  => __( 'Walk the middle of paths, check yourself and children after anything long-grass, and check dogs too. Found one attached? Pull it straight out with fine tweezers as close to the skin as you can get — no twisting, no burning — and wash the spot.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, worst spring into summer', 'dcc-wildlife' ),
+				'where' => __( 'long grass, brush and the edges of shaded paths', 'dcc-wildlife' ),
+				'mark'  => __( 'a single silvery-white spot on the female’s back; males have pale streaks round the rim', 'dcc-wildlife' ),
+			],
+			'chiggers'        => [
+				'emoji' => '🐛',
+				'name'  => __( 'Chiggers', 'dcc-wildlife' ),
+				'sci'   => 'Trombiculidae',
+				'group' => 'safety',
+				'flags' => [ 'nuisance' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'Almost nobody has seen one. The biting stage is a mite larva too small to make out, and it does not burrow and does not drink blood — it spits a digestive enzyme into the skin, builds a straw out of the hardened tissue, and feeds through that. The welt and the itch arrive later, after the mite has already gone. Nail polish does nothing: there is nothing under there to smother.', 'dcc-wildlife' ),
+				'safe'  => __( 'Repellent round ankles, socks over trouser cuffs, and a hot soapy shower as soon as you come in from long grass. Then anti-itch cream and leave it alone.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, in long grass and leaf litter', 'dcc-wildlife' ),
+				'where' => __( 'long grass, weedy edges and brush — they wait on the tips and climb on', 'dcc-wildlife' ),
+				'mark'  => __( 'you will not see it; a cluster of intensely itchy welts round sock lines and waistbands is the sign', 'dcc-wildlife' ),
+			],
+			'yellowfly'       => [
+				'emoji' => '🪰',
+				'name'  => __( 'Yellow Fly', 'dcc-wildlife' ),
+				'sci'   => 'Diachlorus ferrugatus',
+				'group' => 'safety',
+				'flags' => [ 'nuisance' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'Described by entomologists at the University of Florida as the most aggressive fly in the state, which is saying something. It is a stocky yellow horsefly with purple-banded green eyes, and the female cuts rather than pierces — the bite hurts at once and can blister days later. It hunts in shade and follows anything warm that moves.', 'dcc-wildlife' ),
+				'safe'  => __( 'It comes for you in shade and at the water’s edge in late spring. Repellent, long sleeves, and keep moving — they are much less interested in a moving target.', 'dcc-wildlife' ),
+				'best'  => __( 'late spring into early summer, in shade', 'dcc-wildlife' ),
+				'where' => __( 'shaded banks and the wood’s edge, especially on still afternoons', 'dcc-wildlife' ),
+				'mark'  => __( 'a stout yellow fly about a centimetre long with black front legs and green eyes banded purple', 'dcc-wildlife' ),
+			],
+			'treadsoftly'     => [
+				'emoji' => '🌿',
+				'name'  => __( 'Tread-softly', 'dcc-wildlife' ),
+				'sci'   => 'Cnidoscolus stimulosus',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'likely',
+				'fact'  => __( 'The name is the instruction. A low plant with deeply lobed leaves and pretty white flowers, and every part of it — stem, leaf, flower, fruit — is armed with long stiff hollow hairs that break off in skin and inject an irritant. Brushing past is enough. Its other name is finger rot, which tells you how much people enjoyed picking the flowers.', 'dcc-wildlife' ),
+				'safe'  => __( 'Bare legs and sandy ground are a bad combination. If you are stung, do not rub it in — lift what you can with sticky tape, wash, and expect it to hurt for a while.', 'dcc-wildlife' ),
+				'best'  => __( 'spring and summer, when it flowers', 'dcc-wildlife' ),
+				'where' => __( 'dry sandy ground, path edges and open scrub', 'dcc-wildlife' ),
+				'mark'  => __( 'deeply lobed leaves and white five-petalled flowers on a plant covered in visible stiff hairs', 'dcc-wildlife' ),
+			],
+			'brazilianpepper' => [
+				'emoji' => '🌿',
+				'name'  => __( 'Brazilian Pepper', 'dcc-wildlife' ),
+				'sci'   => 'Schinus terebinthifolia',
+				'group' => 'safety',
+				'flags' => [ 'danger', 'invasive' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'Florida’s most successful plant invader — brought in as an ornamental before 1900 and now holding something over 750,000 acres — and a relative of poison ivy that gets far less warning. Same family, same kind of oil, same rash in people who react to it, and the smoke from burning it is worse. The red berries at Christmas are why people used to call it Florida holly.', 'dcc-wildlife' ),
+				'safe'  => __( 'Treat it like poison ivy: don’t handle it, and never burn it. Wash with soap and cool water if you brush against it.', 'dcc-wildlife' ),
+				'best'  => __( 'year-round; berries red from late autumn', 'dcc-wildlife' ),
+				'where' => __( 'thickets along disturbed edges, ditches and fence lines', 'dcc-wildlife' ),
+				'mark'  => __( 'compound leaves with a winged midrib, crushed leaves smelling of turpentine, and dense clusters of red berries', 'dcc-wildlife' ),
+			],
+			'velvetant'       => [
+				'emoji' => '🐜',
+				'name'  => __( 'Eastern Velvet Ant', 'dcc-wildlife' ),
+				'sci'   => 'Dasymutilla occidentalis',
+				'group' => 'safety',
+				'flags' => [ 'danger' ],
+				'odds'  => 'occasional',
+				'fact'  => __( 'Not an ant at all but a wingless female wasp, covered in bright red-orange velvet and walking fast across open sand. Its other name is the cow killer, which is an exaggeration, but only about the cow: the sting is widely rated the most painful of any insect in the Southeast. It has no nest to defend and no interest in you, so the stings happen to bare feet.', 'dcc-wildlife' ),
+				'safe'  => __( 'Do not pick it up, and do not walk sandy ground barefoot. That is genuinely the whole of it.', 'dcc-wildlife' ),
+				'best'  => __( 'warm months, in the middle of the day', 'dcc-wildlife' ),
+				'where' => __( 'open sand and bare ground, moving at speed', 'dcc-wildlife' ),
+				'mark'  => __( 'a big, fast, wingless “ant” in vivid red-orange velvet — no real ant here looks like it', 'dcc-wildlife' ),
 			],
 			// ---- CRITTERS ----------------------------------------------
 			'alligator'  => [
@@ -1228,6 +1434,20 @@ final class Species {
 			'mosquito'    => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 1 ], // Wet season; no-see-ums spring and autumn.
 			'lovebug'     => [ 0, 0, 0, 2, 3, 1, 0, 2, 3, 1, 0, 0 ], // Two flights: late Apr–May, late Aug–Sep (UF/IFAS).
 			// Critters
+			'noseeums'        => [ 1, 1, 2, 3, 3, 2, 2, 2, 3, 3, 2, 1 ], // Dawn/dusk, Apr–Nov; worst in the shoulder months (UF/IFAS).
+			'canetoad'        => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 1 ], // Out on warm wet nights; quiet in the cool season.
+			'blackwidow'      => [ 1, 1, 2, 2, 2, 3, 3, 3, 3, 2, 2, 1 ], // Present all year, found most often in summer.
+			'brownwidow'      => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // Now the commoner widow round buildings; year-round.
+			'pusscaterpillar' => [ 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 1 ], // Larvae late summer into autumn.
+			'saddleback'      => [ 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 1 ], // As the puss caterpillar — late summer into autumn.
+			'paperwasps'      => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Nests founded in spring, biggest by late summer.
+			'yellowjacket'    => [ 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 1 ], // Southern colonies can overwinter, so nests get very large.
+			'lonestartick'    => [ 1, 2, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Peak spring into early summer.
+			'chiggers'        => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Warm months, in long grass.
+			'yellowfly'       => [ 0, 0, 1, 2, 3, 3, 2, 1, 1, 1, 0, 0 ], // A short fierce season, late spring into early summer.
+			'treadsoftly'     => [ 1, 2, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Flowers spring into summer; the hairs are there all year.
+			'brazilianpepper' => [ 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3 ], // Evergreen; berries red late autumn into winter.
+			'velvetant'       => [ 0, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 0 ], // Females walk open sand on warm days.
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
 			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
 			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
@@ -1337,6 +1557,9 @@ final class Species {
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
 		'moss' => 950, 'osprey' => 1100, 'otter' => 733, 'palmetto' => 950,
+		// Batch 7 (1.33.0). The yellowjacket's source is only 1024 wide,
+		// so its full rendition is 1024 and not 1100.
+		'noseeums' => 1100, 'canetoad' => 1100, 'blackwidow' => 1100, 'brownwidow' => 1100, 'pusscaterpillar' => 1100, 'saddleback' => 1100, 'paperwasps' => 1100, 'yellowjacket' => 1024, 'lonestartick' => 1100, 'chiggers' => 1100, 'yellowfly' => 1100, 'treadsoftly' => 1100, 'brazilianpepper' => 1100, 'velvetant' => 1100,
 		// Batch 6 (1.33.0) — every turtle rendition is 1100 wide.
 		'peninsulacooter' => 1100, 'redbelliedcooter' => 1100, 'redearedslider' => 1100, 'softshell' => 1100, 'snappingturtle' => 1100, 'gophertortoise' => 1100, 'boxturtle' => 1100, 'muskturtle' => 1100, 'loggerheadmusk' => 1100, 'stripedmudturtle' => 1100, 'floridamudturtle' => 1100, 'chickenturtle' => 1100,
 	];
@@ -1371,6 +1594,77 @@ final class Species {
 	 * one.
 	 */
 	private const PHOTO_SOURCES = [
+		// Batch 7 (1.33.0): the rest of Know before you go.
+		'noseeums'          => [
+			'CSIRO / CC BY 3.0',
+			'Creative Commons Attribution 3.0 Unported',
+			'https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_11052_Biting_midge_on_human_skin.jpg',
+		],
+		'canetoad'          => [
+			'Under the same moon… / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Cane_Toad_(Bufo_marinus_or_Rhinella_marina)_(21047979601).jpg',
+		],
+		'blackwidow'        => [
+			'James Gathany / CDC',
+			'Public domain (work of the U.S. Centers for Disease Control and Prevention)',
+			'https://commons.wikimedia.org/wiki/File:Black_widow_spider_9854_lores.jpg',
+		],
+		'brownwidow'        => [
+			'Ashwin Srinivasan / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/311574147',
+		],
+		'pusscaterpillar'   => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Southern_Flannel_Moth_caterpillar_-_Megalopyge_opercularis,_Merrimac_Farm_Wildlife_Management_Area,_Aden,_Virginia.jpg',
+		],
+		'saddleback'        => [
+			'Christina Butler / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Saddleback_Caterpillar_Moth_-_Acharia_stimulea_(47508058041).jpg',
+		],
+		'paperwasps'        => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Guinea_Paper_Wasp_-_Polistes_exclamans,_Occoquan_Bay_National_Wildlife_Refuge,_Woodbridge,_Virginia,_September_29,_2023_(53563479836).jpg',
+		],
+		'yellowjacket'      => [
+			'Bob Peterson / CC BY-SA 2.0',
+			'Creative Commons Attribution-ShareAlike 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Southern_Yellowjacket_(Vespula_squamosa)_(7225863346).jpg',
+		],
+		'lonestartick'      => [
+			'Scott Allen Davis / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/277908459',
+		],
+		'chiggers'          => [
+			'Thomas Shahan / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Trombiculid_Mite_-_Oklahoma_-_Flickr_-_Thomas_Shahan_3.jpg',
+		],
+		'yellowfly'         => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Yellow_Fly_of_the_Dismal_Swamp_-_Diachloris_ferrugatus,_Myakka_River_State_Park,_Sarasota,_Florida.jpg',
+		],
+		'treadsoftly'       => [
+			'Hans Hillewaert / CC BY-SA 3.0',
+			'Creative Commons Attribution-ShareAlike 3.0 Unported',
+			'https://commons.wikimedia.org/wiki/File:Cnidoscolus_urens_var._stimulosus.jpg',
+		],
+		'brazilianpepper'   => [
+			'Forest & Kim Starr / CC BY 3.0',
+			'Creative Commons Attribution 3.0 Unported',
+			'https://commons.wikimedia.org/wiki/File:Starr_031108-0096_Schinus_terebinthifolius.jpg',
+		],
+		'velvetant'         => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Dasymutilla_occidentalis_(female).jpg',
+		],
 		// Batch 6 (1.33.0): the twelve turtles.
 		'softshell'         => [
 			'Alan Schmierer / CC0',
@@ -1717,6 +2011,10 @@ final class Species {
 	 * it never rescues a doubtful one.
 	 */
 	private const PHOTO_NOTES = [
+		// Batch 7 (1.33.0).
+		'pusscaterpillar' => 'Photographed in Virginia, not Florida — most open-licence images of this species show the adult moth or the cocoon, and the caterpillar is the stage that stings. The same species lives here.',
+		'paperwasps' => 'A Guinea paper wasp on its nest, photographed in Virginia. The species occurs in Florida, and the open umbrella of comb covered in wasps is the thing to recognise whichever Polistes built it.',
+		'chiggers' => 'An adult trombiculid mite, photographed in Oklahoma. The stage that bites is the larva, which is a fraction of this size and effectively invisible — there is no photograph that would help you spot one, which is rather the point of the entry.',
 		// Batch 6 (1.33.0). The only open-licence photograph of this species
 		// that could be found anywhere — iNaturalist holds three in total and
 		// Commons a smaller copy of this same one. It is a head-in-shell frame,
@@ -1747,7 +2045,7 @@ final class Species {
 		// way, but the species is not what this frame establishes.
 		'fireant' => 'A mound in a Central Florida lawn, about sixteen inches across — the shape to look for before you put a chair, a towel or a bare foot down. The mound was not identified to species by the photographer.',
 		// The tile covers two very different animals and shows one of them.
-		'mosquito' => 'A southern house mosquito, Culex quinquefasciatus, the common biter here at dusk. No-see-ums are far smaller and are not shown.',
+		'mosquito' => 'A southern house mosquito, Culex quinquefasciatus, the common biter here at dusk.',
 		// Batch 5 (1.28.0). Deliberately the DARK morph: this is the animal
 		// people mistake for a cottonmouth and kill, and a brightly banded
 		// juvenile would be prettier and useless, because nobody mistakes
@@ -1816,6 +2114,10 @@ final class Species {
 
 	public static function photos(): array {
 		$ids = [
+			// Batch 7 (1.33.0): the rest of Know before you go.
+			'noseeums', 'canetoad', 'blackwidow', 'brownwidow', 'pusscaterpillar',
+			'saddleback', 'paperwasps', 'yellowjacket', 'lonestartick', 'chiggers',
+			'yellowfly', 'treadsoftly', 'brazilianpepper', 'velvetant',
 			// Batch 6 (1.33.0): the twelve turtles the composite entry used
 			// to stand in for.
 			'peninsulacooter', 'redbelliedcooter', 'redearedslider', 'softshell',

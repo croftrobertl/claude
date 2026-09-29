@@ -36,7 +36,7 @@ dcc_section( 'shape' );
  * landing is a deliberate one-line edit here rather than a silent drift. Any
  * other count is computed from the registry.
  */
-const TOTAL = 62;   // 51 through 1.32.1, + 12 turtles - the composite they replace.
+const TOTAL = 76;   // 51 through 1.32.1; +12 turtles -1 composite; +14 batch 7.
 
 check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 
@@ -221,12 +221,26 @@ check_same(
 	'the animals section is exactly the critters plus the birds'
 );
 check_same( $by_group['plants'] ?? 0, $counts['plants'], 'the plants section is exactly the plants' );
+/*
+ * Animals that are ALSO hazards appear twice, by design. The alligator has
+ * done so since 1.19.0; the cane toad joined it in 1.33.0, because a guest
+ * wants to read about it and a dog owner has to be warned about it. So the
+ * count is derived from the flags rather than from a hard-coded "+1".
+ */
+$double = [];
+foreach ( $reg as $id => $sp ) {
+	$in_animals = in_array( (string) $sp['group'], [ 'critters', 'birds' ], true );
+	if ( $in_animals && in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
+		$double[] = $id;
+	}
+}
+sort( $double );
 check_same(
-	( $by_group['safety'] ?? 0 ) + 1,
+	( $by_group['safety'] ?? 0 ) + count( $double ),
 	$counts['safety'],
-	'the safety section is the hazards plus the alligator, which is also an animal'
+	'the safety section is the hazards plus every animal flagged dangerous'
 );
-check_same( count( $reg ) + 1, array_sum( $counts ), 'one more membership than there are species — the alligator\'s second' );
+check_same( count( $reg ) + count( $double ), array_sum( $counts ), 'one extra membership for each of those' );
 
 // The alligator is deliberately in two sections: it is an animal you want to
 // read about and a hazard you must be warned about. That double membership is
@@ -239,12 +253,14 @@ foreach ( array_keys( $sections ) as $s ) {
 }
 check_same( count( $reg ), count( $seen ), 'the sections between them reach every species' );
 $twice = array_keys( array_filter( $seen, static fn( array $ss ): bool => count( $ss ) > 1 ) );
-check_same( [ 'alligator' ], $twice, 'exactly one species sits in two sections, and it is the alligator' );
+sort( $twice );
+check_same( $double, $twice, 'the species in two sections are exactly the dangerous animals', implode( ', ', $twice ) );
+check( in_array( 'alligator', $twice, true ), 'and the alligator is still one of them' );
 
 // The prose guide passes false so the alligator is not described twice. It is
 // SAFETY that drops it, not animals — the animal entry is the one to keep.
 check_same( $counts['animals'], count( Species::section_members( $ds, 'animals', false ) ), 'excluding flagged members leaves animals untouched' );
-check_same( $counts['safety'] - 1, count( Species::section_members( $ds, 'safety', false ) ), 'excluding flagged members drops the alligator from safety' );
+check_same( $counts['safety'] - count( $double ), count( Species::section_members( $ds, 'safety', false ) ), 'excluding flagged members drops them from safety, not from animals' );
 
 dcc_section( 'browse sub-groups for the Animals section' );
 

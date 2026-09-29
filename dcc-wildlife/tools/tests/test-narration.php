@@ -75,6 +75,84 @@ const SAFETY_FACTS = [
 		'the bare winter vine too'      => 'winter vine',
 		'wash inside fifteen minutes'   => 'fifteen minutes',
 	],
+	// The alligator is an ANIMAL that reaches this list through its danger
+	// flag, and it has carried a what-to-do line since 1.19.0. It belongs to
+	// the contract for the same reason as everything else here.
+	'alligator' => [
+		'never feed one'                => 'Never feed one',
+		'why: a fed gator is destroyed' => 'has to be destroyed',
+		'keep children and pets back'   => 'pets and small children',
+	],
+	// ---- Batch 7 (1.33.0). Fourteen more, same contract. ----------------
+	'noseeums' => [
+		'they get through screens'      => 'window screen',
+		'bring repellent'               => 'Repellent',
+		'moving air is the defence'     => 'air is moving',
+	],
+	'canetoad' => [
+		'the gland behind the eye'      => 'behind each eye',
+		'it can kill a dog fast'        => 'serious trouble',
+		'wipe, rinse pointing down'     => 'rinse the mouth',
+		'and ring a vet'                => 'vet',
+	],
+	'blackwidow' => [
+		'the joined red hourglass'      => 'hourglass',
+		'look before you reach'         => 'Look before you reach',
+		'a bite needs medical advice'   => 'medical advice',
+	],
+	'brownwidow' => [
+		'the spiky egg sac'             => 'spiky egg sac',
+		'look before you reach'         => 'look before you reach',
+	],
+	'pusscaterpillar' => [
+		'do not touch it'               => 'Do not touch it',
+		'warn children first'           => 'children',
+		'lift the spines with tape'     => 'tape',
+	],
+	'saddleback' => [
+		'do not brush it off by hand'   => 'bare hand',
+		'lift the spines with tape'     => 'tape',
+	],
+	'paperwasps' => [
+		'look under rails and eaves'    => 'under rails',
+		'each one stings more than once' => 'more than once',
+		'tell us rather than knock it down' => 'tell us',
+	],
+	'yellowjacket' => [
+		'the nest is in the ground'     => 'ground',
+		'walk away and keep going'      => 'keep going',
+		'they sting over and over'      => 'over and over',
+		'allergy warning'               => 'allergic',
+	],
+	'lonestartick' => [
+		'the white spot'                => 'silvery-white spot',
+		'alpha-gal, the meat allergy'   => 'alpha-gal',
+		'check yourself and the dog'    => 'check dogs',
+		'pull it straight out, no twisting' => 'no twisting',
+	],
+	'chiggers' => [
+		'it does not burrow'            => 'does not burrow',
+		'nail polish does nothing'      => 'Nail polish',
+		'hot soapy shower after'        => 'soapy shower',
+	],
+	'yellowfly' => [
+		'the bite hurts and can blister' => 'blister',
+		'repellent and cover up'        => 'Repellent',
+	],
+	'treadsoftly' => [
+		'every part of it stings'       => 'stem, leaf, flower, fruit',
+		'do not rub it in'              => 'do not rub it in',
+	],
+	'brazilianpepper' => [
+		'it is a poison ivy relative'   => 'poison ivy',
+		'never burn it'                 => 'never burn it',
+		'wash if you brush it'          => 'Wash with soap',
+	],
+	'velvetant' => [
+		'it is a wasp, not an ant'      => 'wingless female wasp',
+		'do not pick it up'             => 'Do not pick it up',
+		'no bare feet on sand'          => 'barefoot',
+	],
 	'mosquito' => [
 		'they get through screens'      => 'window screen',
 		'bring repellent'               => 'repellent',
@@ -112,9 +190,18 @@ foreach ( SAFETY_FACTS as $id => $facts ) {
 
 dcc_section( 'the safety group is exactly the entries this suite covers' );
 
+/*
+ * "In the safety list" means what the guest sees there, which is the safety
+ * GROUP plus any animal flagged dangerous — the alligator since 1.19.0, the
+ * cane toad since 1.33.0. Testing the group alone would let a hazard be added
+ * as an animal and skip this contract entirely, which is the exact hole the
+ * suite exists to close.
+ */
 $in_group = [];
 foreach ( $registry as $id => $sp ) {
-	if ( 'safety' === (string) ( $sp['group'] ?? '' ) ) {
+	$is_safety = 'safety' === (string) ( $sp['group'] ?? '' );
+	$is_hazard = in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true );
+	if ( $is_safety || $is_hazard ) {
 		$in_group[] = $id;
 	}
 }

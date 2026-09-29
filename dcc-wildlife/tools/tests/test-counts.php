@@ -48,8 +48,26 @@ check_same( 1, $by_id['cottonmouth']['haz'], 'a safety-group species is a hazard
 check_same( 0, $by_id['limpkin']['haz'], 'an ordinary bird is not' );
 check_same( 0, $by_id['cypress']['haz'], 'nor is a plant' );
 
+/*
+ * The hazard set is DERIVED (1.33.0): every safety-group species, plus every
+ * animal flagged dangerous. Typing the number meant retyping it on every
+ * batch. What matters is that the two definitions agree — is_hazard() and the
+ * dataset's `haz` flag must pick out exactly the same species, because the
+ * whole count rule rests on them being one definition and not two.
+ */
 $hazards = array_values( array_filter( $dataset, static fn( array $sp ): bool => ! empty( $sp['haz'] ) ) );
-check_same( 9, count( $hazards ), 'nine hazards: four venomous snakes, the fire ant, the poison ivy, the mosquitoes, the lovebugs, the alligator' );
+$expect_haz = [];
+foreach ( Species::registry() as $id => $sp ) {
+	if ( 'safety' === (string) ( $sp['group'] ?? '' )
+		|| in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
+		$expect_haz[] = $id;
+	}
+}
+sort( $expect_haz );
+$got_haz = array_column( $hazards, 'id' );
+sort( $got_haz );
+check_same( $expect_haz, $got_haz, 'the hazards are the safety group plus every animal flagged dangerous' );
+printf( "       %d hazards\n", count( $hazards ) );
 
 dcc_section( 'every hazard is reachable in Safety, every month' );
 
@@ -145,9 +163,28 @@ foreach ( $dataset as $sp ) {
 $dropped = array_diff_key( $old_rule, $new_rule );
 printf( "       hub count, September: %d under the 1.32.1 rule, %d under this one\n", count( $old_rule ), count( $new_rule ) );
 printf( "       dropped: %s\n", implode( ', ', $dropped ) ?: '(nothing)' );
-check_same( 1, count( $dropped ), 'exactly one species leaves the hub count' );
-check_same( [ 'alligator' => 'Alligator' ], $dropped,
-	'and it is the alligator — group critters, flagged danger, which is why a group test missed it' );
+/* Every animal that is also a hazard leaves the hub count under the new rule,
+ * and nothing else does. In 1.33.0 that is the alligator and the cane toad. */
+$animal_hazards = [];
+foreach ( Species::registry() as $id => $sp ) {
+	if ( in_array( (string) $sp['group'], [ 'critters', 'birds' ], true )
+		&& in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
+		$animal_hazards[ $id ] = true;
+	}
+}
+check_same(
+	array_keys( $animal_hazards ),
+	array_values( array_intersect( array_keys( $dropped ), array_keys( $animal_hazards ) ) ),
+	'the species that leave the hub count are exactly the dangerous animals'
+);
+check_same( count( $animal_hazards ), count( $dropped ), 'and no others leave it' );
+/* The alligator is the case that made the owner ask for this rule: group
+ * critters, flagged danger, so a test written against the GROUP missed it
+ * entirely and it was counted twice on one screen. It must always be in this
+ * set, whatever else joins it. */
+check( isset( $dropped['alligator'] ),
+	'the alligator is still among them — group critters, flagged danger, which is what a group test misses',
+	implode( ', ', $dropped ) );
 
 dcc_section( 'the September figures, pinned' );
 
@@ -161,6 +198,6 @@ $figures = [
 foreach ( $figures as $label => $n ) {
 	echo "       $label: $n\n";
 }
-check_same( 9, count( $safety ), 'Safety still holds nine' );
+check_same( count( $hazards ), count( $safety ), 'the Safety section holds exactly the hazards' );
 
 dcc_done();
