@@ -2288,3 +2288,54 @@ synthetic 403-species run in section 6 predicted 9.6 KB inline, and it was
 wrong: it cloned one species 403 times, which gzip compresses far better than
 402 genuinely different ones. **Trust a measurement of the real registry over
 any projection, including the ones recorded earlier in this file.**
+
+### 17. 1.33.1 — the release that could not activate, and the blind spot that let it
+
+**1.33.0 fataled on activation.** `dcc-wildlife.php` never `require_once`'d
+`includes/class-guide-rest.php`, and `Plugin::register_hooks()` calls
+`Guide_Rest::register_hooks()` at line 62. WordPress died with
+*"Class DCC_WL\Guide_Rest not found"*. The Website Director patched live by
+adding the one missing line; 1.33.1 is that line, committed.
+
+**TWENTY-THREE SUITES WERE GREEN THROUGHOUT, AND THE REASON IS THE LESSON.**
+Every suite in this harness reaches the code through `dcc_boot_plugin()`, which
+loads what a TEST needs. WordPress loads what THE PLUGIN FILE SAYS. Those are
+two different graphs and only one of them ships. **A suite that obtains its
+classes by any route of its own can never see a missing `require` — it has
+already routed around the defect.** No amount of coverage in that style would
+ever have caught this.
+
+`test-bootstrap.php` closes it, and it works by **deliberately loading
+nothing**. It reads the plugin as text, walks the require graph the way PHP
+would, and asks whether every file in `includes/` would actually be in memory
+after WordPress loaded the plugin. It also checks, from source, that every
+class called as `Name::` is defined by a file on that graph — the assertion
+that reproduces the live fatal directly rather than by proxy.
+
+**DO NOT "IMPROVE" IT BY BOOTING THE PLUGIN** and using `class_exists()` or
+`get_included_files()`. That reintroduces the exact blind spot it exists to
+close. Three mutations are verified red: deleting the guide-rest require (the
+real bug, caught three ways), adding a new file to `includes/` and not
+requiring it, and calling a class under a name nothing defines.
+
+**Two parser lessons worth keeping, both from getting it wrong first:**
+
+- **It is tokenised, not regexed.** An early draft stripped comments with a
+  regex, mangled every `https://` in the files, and produced an EMPTY require
+  list — a parser that finds nothing and reports no problem is the *same*
+  failure mode as the bug it was written to catch. PHP's own lexer knows what
+  is code and what is not; use it.
+- **An unrecognised require FAILS the suite** rather than being skipped. A
+  require the parser cannot follow is a hole of exactly the shape the bug came
+  through. WordPress core's `ABSPATH . 'wp-admin/includes/…'` requires are
+  *classified* and not followed, which is different from being ignored.
+
+The `check( count( $on_disk ) > 0, … )` guard earned its place immediately: the
+first run had a wrong `$plugin_dir` and found zero files, which without that
+guard would have passed silently.
+
+**The general rule this adds to the harness doctrine:** *a suite must exercise
+the path PRODUCTION takes, not a convenient one.* The existing rules already say
+a suite that asserts nothing fails, and that a stub more permissive than the
+real thing is a test that agrees with you. This is the third of that family —
+and the most expensive, because it reached the owner's live site.
