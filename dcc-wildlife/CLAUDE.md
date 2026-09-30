@@ -2163,3 +2163,69 @@ would teach a reader to distrust a photograph that is now correct.
 **Weight at 216 species:** inline index 17.5 KB gzip, fetched detail 50.5 KB.
 Projected at 403: 32.7 KB inline / 94.2 KB detail — slightly *better* than the
 projection from 156, because gzip does more with a larger, more repetitive set.
+
+### 15. Batches 20–23 (1.33.0): the plants — 216 species became 284
+
+Sixty-eight plants in four packs: 24 trees, 25 wildflowers and shrubs, 19 water
+plants. **No plant carries a `sound` line and none should** — that is the 1.14.0
+rule holding, not an omission.
+
+**ROB'S EPIPHYTE RULE DECIDED TWO OF THESE, AND IT CUTS BOTH WAYS.** Section 11
+says an epiphyte, air plant or lichen growing ON A TREE goes under the Trees
+chip, and one growing on the ground does not. **Ball moss** is a *Tillandsia* in
+a branch fork, so it goes under Trees with Spanish moss and the resurrection
+fern — and joins them in a new `airplants` look-alike group. **Reindeer lichen**
+grows on bare sand, so it sits under Wildflowers & shrubs. The chip is a place
+to look, not a botanical rank, and applying the rule mechanically to "lichen"
+would have got the second one wrong.
+
+**FOUR SCIENTIFIC NAMES WERE DECIDED FROM EVIDENCE, AND A BLANKET RULE WOULD
+HAVE BEEN WRONG ONCE IN FOUR.** Every one of the four name-notes said the same
+thing — iNaturalist's taxon differs from the master list's name. Three resolve
+toward the Atlas of Florida Plants (red bay *Persea borbonia*, camphor
+*Cinnamomum camphora*, sawgrass *Cladium jamaicense*). **The prickly pear goes
+the other way**: *Opuntia austrina* is the accepted name for the Florida plant
+and the master list's *O. humifusa* is its synonym. A fifth unflagged case (water
+hyacinth, *Pontederia* vs *Eichhornia*) is recorded in `WATER-SOURCES.md`.
+**Never settle one of these by policy. Look it up per plant.**
+
+**THE FIRST PLANTS TO CARRY `danger`, AND WHAT THAT BROKE.** Sawgrass and the
+prickly pear are flagged, on the bar the three existing hazard plants set: all
+of those are CONTACT injuries, not merely toxic-if-eaten. Coontie, coral bean and
+lantana are poisonous to swallow, say so in their own text, and are NOT flagged —
+widening `danger` that far would move a dozen ordinary plants into Safety and
+teach guests to skim it.
+
+Three suites failed on this, and **two of them were wrong rather than the code**:
+
+- `test-species.php` and `test-counts.php` both derived dual section membership
+  from *"a species in `critters` or `birds` flagged `danger`"* — i.e. they
+  assumed **a hazard is always an ANIMAL**. That was true when they were
+  written and is not any more. Both now ask the question
+  `Species::is_hazard()` actually asks — flagged `danger` while living outside
+  the safety group — and no longer care what kingdom the species is in.
+- `test-narration.php` was **right**, and it is the gate doing its job for the
+  fourth time: two new species reached Safety without rows in the safety
+  contract, and it refused them until they had. Sawgrass and prickly pear now
+  pin their actionable facts there.
+
+The general shape, worth remembering: when a batch fails a suite, decide whether
+the suite encoded an assumption that has expired or a rule that still holds.
+Here both kinds turned up in one run.
+
+**THREE EXISTING PLANTS GAINED A LOOK-ALIKE GROUP** for the first time, because
+until now there was nothing to compare them with: bald cypress joins pond cypress
+(`cypresses`), Spanish moss joins ball moss (`airplants`), and the white
+waterlily joins spatterdock and American lotus (`lilypads`). Bald cypress against
+pond cypress is the classic Florida confusion and the guide could not answer it
+before this batch.
+
+**Weight at 284 species:** inline index 23.2 KB gzip, fetched detail 62.7 KB.
+Projected at 403: 32.9 KB inline / 88.9 KB detail.
+
+**NO RELEASE ZIP WAS BUILT.** Batches 14–19 — the mammals, fish, dragonflies,
+butterflies and other small things, 59 species including the round-tailed muskrat
+and the blue-faced meadowhawk — **did not arrive in this container**. Only packs
+20–23 did. The owner's standing instruction is that nothing ships until every
+pack is in, and a zip cut here would ship a guide that is missing 59 species he
+believes are in it. See the report for exactly what is outstanding.

@@ -36,7 +36,7 @@ dcc_section( 'shape' );
  * landing is a deliberate one-line edit here rather than a silent drift. Any
  * other count is computed from the registry.
  */
-const TOTAL = 216;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21, +28, +32.
+const TOTAL = 284;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21, +28, +32, +68 (plants).
 
 check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 
@@ -250,15 +250,24 @@ check_same(
 );
 check_same( $by_group['plants'] ?? 0, $counts['plants'], 'the plants section is exactly the plants' );
 /*
- * Animals that are ALSO hazards appear twice, by design. The alligator has
+ * A species that is ALSO a hazard appears twice, by design. The alligator has
  * done so since 1.19.0; the cane toad joined it in 1.33.0, because a guest
  * wants to read about it and a dog owner has to be warned about it. So the
  * count is derived from the flags rather than from a hard-coded "+1".
+ *
+ * WIDENED in batches 20-23: this used to ask for a species in `critters` or
+ * `birds` flagged `danger` -- i.e. it assumed a hazard was always an ANIMAL.
+ * Sawgrass and the prickly pear are the first PLANTS to be flagged, and they
+ * are dual members for exactly the same reason: a guest wants to identify the
+ * plant and also needs warning about it. The right question is the one
+ * Species::is_hazard() actually asks -- flagged `danger` while living
+ * somewhere other than the safety group -- so it is asked that way now,
+ * and it no longer cares what kingdom the species belongs to.
  */
 $double = [];
 foreach ( $reg as $id => $sp ) {
-	$in_animals = in_array( (string) $sp['group'], [ 'critters', 'birds' ], true );
-	if ( $in_animals && in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
+	$elsewhere = 'safety' !== (string) $sp['group'];
+	if ( $elsewhere && in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
 		$double[] = $id;
 	}
 }
@@ -266,7 +275,7 @@ sort( $double );
 check_same(
 	( $by_group['safety'] ?? 0 ) + count( $double ),
 	$counts['safety'],
-	'the safety section is the hazards plus every animal flagged dangerous'
+	'the safety section is the hazards plus every species flagged dangerous'
 );
 check_same( count( $reg ) + count( $double ), array_sum( $counts ), 'one extra membership for each of those' );
 
@@ -282,7 +291,7 @@ foreach ( array_keys( $sections ) as $s ) {
 check_same( count( $reg ), count( $seen ), 'the sections between them reach every species' );
 $twice = array_keys( array_filter( $seen, static fn( array $ss ): bool => count( $ss ) > 1 ) );
 sort( $twice );
-check_same( $double, $twice, 'the species in two sections are exactly the dangerous animals', implode( ', ', $twice ) );
+check_same( $double, $twice, 'the species in two sections are exactly the flagged hazards', implode( ', ', $twice ) );
 check( in_array( 'alligator', $twice, true ), 'and the alligator is still one of them' );
 
 // The prose guide passes false so the alligator is not described twice. It is

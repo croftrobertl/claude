@@ -170,6 +170,22 @@ const SAFETY_FACTS = [
 		'they do not bite or sting'     => 'neither bite nor sting',
 		'wash the car the same day'     => 'same day',
 	],
+	/*
+	 * The first two PLANTS to reach Safety (batches 20-23). Both are contact
+	 * injuries, which is the bar the three plants already here set. The facts
+	 * pinned are the ACTIONABLE ones -- what a guest does differently -- not
+	 * the identification, which lives in `mark`.
+	 */
+	'sawgrass' => [
+		'do not push through a stand'   => 'Do not push through',
+		'never grab a blade to steady'  => 'never grab a blade',
+		'it cuts bare skin'             => 'cut bare skin',
+	],
+	'pricklypear' => [
+		'the small hairs are the worse' => 'come off at a touch',
+		'they persist for weeks'        => 'itch for weeks',
+		'tweezers, not fingers'         => 'tweezers, not fingers',
+	],
 ];
 
 $registry = Species::registry();

@@ -1230,3 +1230,145 @@ Seventeen of the sixty photographs are CC0 and are credited to their observers
 anyway; most of those give only an iNaturalist handle, credited as such.
 **kcthetc1 alone supplied sixteen** — one Jacksonville observer who releases
 everything CC0.
+
+## Batches 20–23 (1.33.0): the plants — sources for 68 species
+
+Sixty-eight plants in four packs: 24 trees, 25 wildflowers and shrubs, 19 water
+plants. No plant carries a `sound` line and none should. Two claims were cut
+during the source pass and are not in the guide; four scientific names had to be
+decided rather than copied.
+
+### The four name-notes the owner flagged — and they do not all resolve the same way
+
+Each pack note said the same thing in different words: **iNaturalist's current
+taxon differs from the master list's name for the same plant.** The tempting
+move is a blanket rule. A blanket rule would have been wrong once in four,
+whichever way it pointed.
+
+| plant | master list | iNaturalist | what ships, and why |
+|---|---|---|---|
+| **Red bay** | *Persea borbonia* | *Tamala borbonia* | **Persea borbonia.** The Atlas of Florida Plants — the standing authority for a Florida plant — lists *Persea borbonia* var. *borbonia*. *Tamala* is a 2023 Flora of the Southeastern US reclassification that iNaturalist has adopted; it is defensible but it is not what a Florida guest will find in any field guide. |
+| **Camphor tree** | *Cinnamomum camphora* | *Camphora officinarum* | **Cinnamomum camphora**, for the same reason: UF/IFAS and the Florida invasive-species listings all use it. |
+| **Sawgrass** | *Cladium jamaicense* | *Cladium mariscus* subsp. *jamaicense* | **Cladium jamaicense.** Florida's Plant Atlas accepts it as a species; Kew/POWO treats it as a subspecies of *C. mariscus*. Florida authority wins on a Florida plant. |
+| **Prickly pear** | *Opuntia humifusa* | *Opuntia austrina* | **Opuntia austrina — and here iNaturalist is right.** *O. austrina* is the accepted name for the Florida plant (Majure 2017), with *O. humifusa* listed as its synonym; the Atlas of Florida Plants entry is for *austrina*. The master list carries the outdated name on this one. |
+
+A fifth case of the same kind turned up unflagged: **water hyacinth**, filed by
+iNaturalist and POWO as *Pontederia crassipes* where older Florida references
+say *Eichhornia crassipes*. The current accepted name is used, and this note is
+the record of that.
+
+Sources: Atlas of Florida Plants (USF) species pages; Kew POWO; Florida Native
+Plant Society; UF/IFAS EDIS.
+
+### What the check changed, or stopped
+
+1. **A yaupon superlative was caught before it was written.** The intended line
+   was "the only plant native to North America that makes caffeine". It is one
+   of **two** — and the other is **dahoon holly**, which is in this very batch.
+   The entry now says so, and the two hollies share a look-alike group, so the
+   correction turned into a cross-link.
+2. **A hydrilla growth claim was cut.** "Grows an inch a day" could not be
+   sourced. What could be sourced — Florida's worst submersed weed, released
+   from the aquarium trade in the 1950s, regrows from a fragment — is what the
+   entry says. (The air potato's "eight inches a day and seventy feet" *is*
+   sourced, to UF/IFAS, and is used.)
+
+### Trees (batches 20 and 21, 24 species)
+
+| species | claims made | source |
+|---|---|---|
+| Live oak | dense interlocked wood; **the US Navy framed its first frigates from it, and shot bounced off the Constitution** | USS Constitution Museum; NPS; Naval Live Oaks Reservation |
+| Laurel oak / Water oak | fast, short-lived, hollow early, fall young; water oak's spatulate three-lobed leaf | UF/IFAS; USDA FEIS |
+| Turkey oak | leaf like a turkey's foot; **turns its leaves edge-on to the midday sun**; deep dry sand | UF/IFAS; FEIS |
+| Sabal palm | **Florida's state tree since 1953**; the costa running into the blade | Florida Dept of State; UF/IFAS |
+| Southern magnolia | **beetle-pollinated, and the family predates bees** | Cornell/Britannica botany accounts; UF/IFAS |
+| Red maple | **flowers in January, before leaves**; winged seeds in February | UF/IFAS; FEIS |
+| Sweetgum | star leaf; spiked fruit balls; real autumn colour | UF/IFAS |
+| Pond cypress | **needles pressed UP against the twig**, where bald cypress spreads them flat | UF/IFAS; FEIS |
+| Slash pine | needles in twos AND threes; **turpentine catface scars** | UF/IFAS; FEIS |
+| Longleaf pine | **grass stage of 5–12 years**; fire-run; **about 3% of the original forest remains** | USDA Forest Service; UF/IFAS; Longleaf Alliance |
+| Sand pine | **the Ocala forest is the largest stand on Earth**; serotinous cones in the Ocala race | Florida Forest Service; FEIS |
+| Southern red cedar | **a juniper, not a cedar**; berries flavour gin; rot-resistant heartwood | UF/IFAS; FEIS |
+| Dahoon holly | **smooth-edged leaves, no spines**; female tree fruits; **carries caffeine, far less than yaupon** | UF/IFAS; the yaupon caffeine sources |
+| **Red bay** | leaf smells of bay; **laurel wilt, carried by an imported ambrosia beetle since 2002, has killed most large red bays and reached all 67 counties by 2011** | UF/IFAS HS1358 and EDIS; *Journal of Florida Studies* |
+| Sweetbay magnolia | **leaf chalky silver beneath** | UF/IFAS |
+| Loblolly bay | **a tea relative, not a bay or a magnolia**; white camellia flowers | UF/IFAS; FNPS |
+| Swamp tupelo | swollen fluted base; **the source of tupelo honey, which does not granulate**; turns scarlet early | UF/IFAS; Florida beekeeping extension |
+| Pop ash | compound leaves of 5–7 leaflets; papery winged seeds | UF/IFAS |
+| Persimmon | inedible until properly ripe; blocky alligator-hide bark | UF/IFAS |
+| Chickasaw plum | flowers before leafing; thicket-forming | UF/IFAS; FNPS |
+| **Camphor** | leaves smell of camphor; **bird-spread out of old plantings across Florida** | UF/IFAS; FLEPPC |
+| Chinese tallow | **the "popcorn tree"**; among the worst Southeastern invaders | UF/IFAS; FLEPPC |
+| Ball moss | **a bromeliad, not a moss and not a parasite** — the tree is a perch | UF/IFAS; FNPS |
+
+### Wildflowers, shrubs, vines and lichen (batch 22 + part of 20, 25 species)
+
+| species | claims made | source |
+|---|---|---|
+| Coontie | **Florida's only native cycad**; **sole larval food of the atala butterfly**, which nearly went with it; cycasin removed by washing to make arrowroot starch | UF/IFAS Gardening Solutions; Selby Gardens; Conservancy of SW Florida |
+| American beautyberry | magenta berries clasping the stem; **USDA-ARS isolated callicarpenal and two other repellents from the leaves and patented one** | USDA ARS press releases 2006/2007; ScienceDaily |
+| Coral bean | scarlet hummingbird tubes; **seeds poisonous, alkaloids related to curare** | UF/IFAS; FNPS |
+| Elderberry | flowers and cooked ripe fruit used; stems, leaves and raw fruit not | UF/IFAS |
+| **Wax myrtle** | leaves smell of bay rum; **a true wax on the berries, boiled off for bayberry candles — and digestible by the yellow-rumped warbler and tree swallow**, which is why both winter here | Duke Gardens; NC State Extension; the warbler wax sources in batches 12–13 |
+| Tickseed | **Coreopsis is Florida's state wildflower, designated 1991**, hence the roadside plantings | Florida Statutes 15.0345; Florida Dept of State; UF/IFAS EDIS |
+| Blanket flower | red-to-yellow banding; salt and drought tolerant; **nativity to Florida still debated** | UF/IFAS; FNPS |
+| Spanish needles | flowers year-round; **among the top nectar sources for Florida honeybees**; barbed seeds | UF/IFAS; Florida beekeeping extension |
+| Spiderwort | **each flower lasts one morning and dissolves**; stamen hairs a classroom and radiation-monitoring subject | UF/IFAS; botany teaching literature |
+| Maypop | the Passion-flower reading; **fruit pops underfoot**; **gulf fritillary host** | UF/IFAS; FNPS |
+| Coral honeysuckle | **no scent, because it courts hummingbirds not moths**; non-strangling native | UF/IFAS; FNPS |
+| Firebush | hummingbirds, zebra longwings and gulf fritillaries; returns from the root after frost | UF/IFAS |
+| Muscadine | **unbranched tendrils and non-peeling bark**; bronze forms are scuppernongs | UF/IFAS NW District; UNF |
+| Virginia creeper | **five leaflets against poison ivy's three**; climbs on adhesive pads; berries poisonous to people | Iowa State Extension; Natural Lands; Lady Bird Johnson Wildflower Center |
+| Lantana | colour-changing heads; **listed invasive that hybridises with Florida's native lantana**; green berries the toxic part | UF/IFAS; FLEPPC |
+| Dog fennel | **native and weedy**; cattle avoid it | UF/IFAS |
+| Butterfly weed | **clear sap, not milky**; monarch and queen host | UF/IFAS; FNPS |
+| Buttonbush | spherical pincushion heads; seed heads feed ducks | UF/IFAS; FNPS |
+| **Yaupon holly** | **one of only two North American natives that make caffeine**; the roasted-leaf "black drink"; the species name is a libel | Wikipedia (*Ilex vomitoria*); Auburn; Monticello |
+| Florida rosemary | **allelopathic — it stops other seeds germinating, hence the bare sand ring** | Arizona/NAU allelopathy study; FNAI scrub guide |
+| **Prickly pear** | native cactus; **glochids come off at a touch, embed, and can itch for weeks** | UCLA Health; *Cutis*; horticultural accounts |
+| Adam's needle | threads on the leaf edge; **obligate mutualism with the yucca moth, its only pollinator** | Wikipedia (Prodoxidae); Xerces Society; PNAS |
+| Reindeer lichen | **a fungus and an alga as one**; grows millimetres a year | USFWS Cladonia recovery plan; FNAI |
+| Air potato | **up to eight inches a day, over seventy feet**; spreads by bulbils; **leaf beetle released 2012 and working** | UF/IFAS EDIS IN957/IN972 |
+| Cogongrass | **among the worst weeds in the world**; carries fire hotter than natives; **off-centre midrib** | UF/IFAS; FLEPPC |
+
+### Water plants (batch 23 + part of 20, 19 species)
+
+| species | claims made | source |
+|---|---|---|
+| Pickerelweed | blue spikes; bank-holding; cover for small fish | UF/IFAS Plant Directory; FWC |
+| **Alligator flag** | head-high paddle leaves; **stands of it mark the open water alligators keep clear round their holes** — the name is a working warning | FNPS; UF/IFAS; EOL |
+| Cattail | thousands of flowers in the head; **spreads hard in nutrient-rich water** | UF/IFAS; FWC |
+| **Sawgrass** | the Everglades "river of grass"; **a sedge**; **backward-pointing teeth on every leaf edge and the midrib underside that cut bare skin** | NPSOT; NC State Extension; UF/IFAS Escambia |
+| Spatterdock | half-open yellow globe; **leaves stand up as well as float**; bass hold in its shade | UF/IFAS; FWC |
+| American lotus | **round leaves with no slit, held high**; water beads off; woody showerhead pod | UF/IFAS; FWC |
+| Arrowhead | **duck potato** tubers; three white petals in whorls; **the Florida species is lance-leaved, not arrow-leaved** | UF/IFAS; FWC |
+| String lily | white straps; **scented at dusk for sphinx moths**; bulb poisonous | UF/IFAS; FNPS |
+| Blue flag iris | violet with a yellow signal; **rhizome toxic, and it grows beside edible sweet flag** | UF/IFAS; FNPS |
+| **Bladderwort** | carnivorous; **the fastest movement in the plant kingdom — trap shuts in well under a millisecond, prey pulled in at 600 g** | *Proc. R. Soc. B* / PMC4717191; AskNature; NBC News |
+| **Eelgrass** | ribbons rooted on the bottom; **the key manatee forage on this chain**; **the female flower rides up on a coiled stalk and winds back down to ripen** | FWC freshwater plants; UF/IFAS EDIS AG437; Wikipedia |
+| Maidencane | native; **floating tussock mats where bass spawn** | FWC; UF/IFAS |
+| Torpedo grass | **introduced as cattle forage**; sharp rhizomes; one of the costliest weeds in Florida | UF/IFAS; FWC |
+| **Water hyacinth** | **given away at the 1884 New Orleans cotton exposition and tipped into the St Johns**; over 100,000 acres at its worst; **a mat can double in under a fortnight** (sources say 6–18 days) | UF/IFAS EDIS AG385; Florida Memory; USDA ARS |
+| Water lettuce | floating rosette; daughter plants on runners; mats shut out light and oxygen | UF/IFAS; FWC |
+| **Hydrilla** | **Florida's worst submersed weed, out of the aquarium trade in the 1950s**; regrows from a fragment | UF/IFAS EDIS AG404 |
+| Duckweed | **a flowering plant, among the smallest there are**; each grain an individual | UF/IFAS; FWC |
+| Primrose-willow | listed invasive from South America; resprouts from the stump | UF/IFAS; FLEPPC |
+| Alligator weed | **the first aquatic weed anywhere fought with imported insects, in the 1960s**; the flea beetle still holds it | UF/IFAS; USDA |
+
+### Two plants are flagged `danger`, and three deliberately are not
+
+The bar was set by the three hazard plants already in the guide — poison ivy,
+tread-softly and Brazilian pepper. **All three are CONTACT injuries.** None is
+merely toxic if swallowed.
+
+- **Sawgrass** and the **prickly pear** meet that bar exactly, and both now carry
+  a `safe` line and rows in `test-narration.php`'s contract. Sawgrass cuts bare
+  skin and a guest wades where it grows; prickly pear glochids come off at a
+  touch and are hard to remove.
+- **Coontie, coral bean and lantana** are all poisonous to EAT, and all three say
+  so in their own text. They are not flagged. Widening `danger` to "toxic if
+  swallowed" would move a dozen ordinary plants into Safety and teach a guest to
+  skim the section — which is the opposite of what it is for.
+
+This is a judgement made against an established bar and it is reversible in one
+line each; it is recorded here so it can be reviewed rather than discovered.

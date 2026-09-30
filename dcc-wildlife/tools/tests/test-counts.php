@@ -163,21 +163,28 @@ foreach ( $dataset as $sp ) {
 $dropped = array_diff_key( $old_rule, $new_rule );
 printf( "       hub count, September: %d under the 1.32.1 rule, %d under this one\n", count( $old_rule ), count( $new_rule ) );
 printf( "       dropped: %s\n", implode( ', ', $dropped ) ?: '(nothing)' );
-/* Every animal that is also a hazard leaves the hub count under the new rule,
- * and nothing else does. In 1.33.0 that is the alligator and the cane toad. */
-$animal_hazards = [];
+/* Every species that is also a hazard leaves the hub count under the new rule,
+ * and nothing else does.
+ *
+ * WIDENED in batches 20-23, with test-species.php, for the same reason: this
+ * asked for `critters` or `birds` flagged `danger`, which assumed a hazard was
+ * always an ANIMAL. Sawgrass and the prickly pear are plants and are flagged,
+ * so they leave the hub count too -- correctly, because Rob's rule is that the
+ * hub counts things worth going out to look for, and nobody goes looking for
+ * sawgrass. The question asked now matches Species::is_hazard(). */
+$flagged_hazards = [];
 foreach ( Species::registry() as $id => $sp ) {
-	if ( in_array( (string) $sp['group'], [ 'critters', 'birds' ], true )
+	if ( 'safety' !== (string) $sp['group']
 		&& in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) ) {
-		$animal_hazards[ $id ] = true;
+		$flagged_hazards[ $id ] = true;
 	}
 }
 check_same(
-	array_keys( $animal_hazards ),
-	array_values( array_intersect( array_keys( $dropped ), array_keys( $animal_hazards ) ) ),
-	'the species that leave the hub count are exactly the dangerous animals'
+	array_keys( $flagged_hazards ),
+	array_values( array_intersect( array_keys( $dropped ), array_keys( $flagged_hazards ) ) ),
+	'the species that leave the hub count are exactly the flagged hazards'
 );
-check_same( count( $animal_hazards ), count( $dropped ), 'and no others leave it' );
+check_same( count( $flagged_hazards ), count( $dropped ), 'and no others leave it' );
 /* The alligator is the case that made the owner ask for this rule: group
  * critters, flagged danger, so a test written against the GROUP missed it
  * entirely and it was counted twice on one screen. It must always be in this
