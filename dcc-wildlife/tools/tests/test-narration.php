@@ -186,6 +186,17 @@ const SAFETY_FACTS = [
 		'they persist for weeks'        => 'itch for weeks',
 		'tweezers, not fingers'         => 'tweezers, not fingers',
 	],
+	/* The last two hazards, from batches 14-19. Both are contact injuries. */
+	'walkingstick' => [
+		'do not pick one up'            => 'Do not pick one up',
+		'it sprays at the eyes'         => 'aimed at eyes',
+		'flush the eye and get help'    => 'flush with water at once',
+	],
+	'rhesus' => [
+		'do not approach or feed'       => 'Do not approach, feed',
+		'a bite or scratch is the risk' => 'bite or scratch',
+		'back away and give it room'    => 'Back away',
+	],
 ];
 
 $registry = Species::registry();

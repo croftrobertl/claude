@@ -312,8 +312,15 @@ const data = await art.page.evaluate(() => {
   return { total: (cfg.species || []).length, bare };
 });
 checkAtLeast(1, data.total, 'the config carries species');
-checkSame([], data.bare,
-  'every species has a photograph or a drawing of its own', JSON.stringify(data.bare));
+// The round-tailed muskrat ships with no photograph and no drawing, by the
+// owner's decision (batch 14), so it renders on the GROUP GLYPH -- the third
+// tier of the art rule, which until now had never rendered for anybody. This
+// assertion therefore stopped being "the glyph is never used" and became "the
+// glyph is used by exactly the species that is meant to use it", which also
+// makes it the first live proof that the documented fallback chain works.
+checkSame(['muskrat'], data.bare,
+  'only the species the owner settled without a photograph falls to the group glyph',
+  JSON.stringify(data.bare));
 
 // And the renderer uses it: open a sheet whose look-alike list is all
 // photograph-only species, and assert not one glyph is drawn.

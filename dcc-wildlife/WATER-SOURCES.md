@@ -1252,6 +1252,13 @@ whichever way it pointed.
 | **Sawgrass** | *Cladium jamaicense* | *Cladium mariscus* subsp. *jamaicense* | **Cladium jamaicense.** Florida's Plant Atlas accepts it as a species; Kew/POWO treats it as a subspecies of *C. mariscus*. Florida authority wins on a Florida plant. |
 | **Prickly pear** | *Opuntia humifusa* | *Opuntia austrina* | **Opuntia austrina — and here iNaturalist is right.** *O. austrina* is the accepted name for the Florida plant (Majure 2017), with *O. humifusa* listed as its synonym; the Atlas of Florida Plants entry is for *austrina*. The master list carries the outdated name on this one. |
 
+**Correction to the plant packs' running totals.** Batches 20–23 printed 293,
+311, 331 and 343 of 352, and batch 23 also claimed every wanted photo had been
+delivered — which its own total contradicted. The owner confirmed the intended
+figures are **302, 320, 340 and 352**; the arithmetic, not the packs' contents,
+was at fault. Recorded here because the discrepancy is what showed six packs
+were missing, and the next person reading these files should see it resolved.
+
 A fifth case of the same kind turned up unflagged: **water hyacinth**, filed by
 iNaturalist and POWO as *Pontederia crassipes* where older Florida references
 say *Eichhornia crassipes*. The current accepted name is used, and this note is
@@ -1372,3 +1379,102 @@ merely toxic if swallowed.
 
 This is a judgement made against an established bar and it is reversible in one
 line each; it is recorded here so it can be reviewed rather than discovered.
+
+## Batches 14–19 (1.33.0): mammals, fish, small things and the last reptiles — 118 species
+
+Seven packs, 117 photographs and one species settled without one. This completes
+the guide at **402 species**.
+
+### The blue-faced meadowhawk was DROPPED on the evidence
+
+The pack supplied a photograph and, with it, the evidence against the entry —
+which is the Director's own Check process working as designed.
+
+- **iNaturalist holds five Florida records** of *Sympetrum ambiguum*, every one
+  in the panhandle (DeFuniak Springs, Bonifay, Blackwater River State Park, two
+  unlocated). **None from Lake County or anywhere in Central Florida.**
+- Independently checked against the published range: the species reaches "the
+  Gulf Coast and the **panhandle** of north Florida" (Illinois DNR; USFWS;
+  BugGuide; NJ Odes). Lake County is central peninsula, outside that.
+
+A guide entry asserts *this is on this canal*. That assertion would be false, so
+**the entry was not written and the photograph was not registered** — its files
+are not in `assets/photos/`, exactly as the least bittern was handled in batch 3,
+so nobody can wire it in later without first discovering why it is absent.
+
+This is not the standing "Rob's sightings outrank range maps" case. That rule
+protects a species **the owner has personally ticked**; this one carried a Check
+flag on the master list precisely because nobody had confirmed it, and the
+evidence asked for came back negative.
+
+### The round-tailed muskrat ships with no photograph, by the owner's decision
+
+The only openly licensed image of a live one is an unidentifiable dark shape. It
+renders on the **group glyph** — the third tier of the art rule, which until now
+had never rendered for a single species. It is the only one of 402 without a
+photograph, and `test-species.php` and `ui-theme.mjs` now pin that exception by
+name so a second cannot appear by accident.
+
+### Two new hazards, both contact injuries
+
+| species | why it is flagged | source |
+|---|---|---|
+| **Two-striped walkingstick** | **Sprays a terpene dialdehyde over a foot, accurately, at eyes**; causes intense pain, keratitis and temporary blindness lasting a day or more | UF/IFAS EDIS IN590; Mississippi State Extension; American Academy of Ophthalmology |
+| **Rhesus macaque** | flagged `danger` **as well as** `invasive`: the risk is a bite or scratch, and some of the Silver Springs population carries **herpes B** | UF research via Fox 13 / Orlando Weekly; Smithsonian; FWC |
+
+**The armadillo is NOT flagged**, although it can carry *Mycobacterium leprae*
+and central Florida has seen locally acquired cases. Handling one is a
+deliberate act, like eating a coontie seed — the bar is contact injury, and its
+entry says "look and do not handle" in the text instead.
+
+### Claims verified for this batch (the load-bearing ones)
+
+| species | claim | source |
+|---|---|---|
+| Virginia opossum | **North America's only marsupial**; venom-neutralising protein in the blood; **body temperature near 94°F, too cool for rabies**; fifty teeth | Akron Zoo; Farmers' Almanac; Cleveland Museum of Natural History |
+| Nine-banded armadillo | **every litter is identical quadruplets from one egg**; carries the leprosy bacterium; recent arrival | PMC4872312; Florida Tech; CDC/Florida reporting |
+| Rhesus macaque | **six released at Silver Springs in the 1930s by a boat operator who did not know they swim**; troop now in the hundreds; spread down the Ocklawaha into Lake County, **one photographed in Mount Dora** | Smithsonian; Fox 13; Orlando Weekly |
+| Grey fox | **the only American canid that climbs trees**, with semi-retractable claws | UF/IFAS; FWC |
+| Southern flying squirrel | glides on a membrane, steers with a flattened tail; strictly nocturnal | UF/IFAS; FWC |
+| Marsh rabbit | **swims to escape**; no white on the tail | UF/IFAS; FWC |
+| Brazilian free-tailed bat | **the fastest bat in level flight** | Univ. of Tennessee flight-speed study; BCI |
+| Florida mouse | **the only mammal species endemic to Florida**; digs a chamber off a gopher tortoise burrow | FWC; FNAI |
+| Bowfin | a **living fossil**; breathes air from a lung-like gas bladder | Florida Museum; Wikipedia (*Amia*) |
+| Florida gar / longnose gar | interlocking ganoid scales; air-gulping; **the eggs are toxic** | Florida Museum; Wikipedia (Gar) |
+| Grass carp | **every one stocked in Florida is a sterile triploid**, checked before release | FWC aquatic plant management |
+| American eel | **born in the Sargasso Sea**, returns there once to spawn; crosses wet ground | FWC; USFWS |
+| Least killifish | **among the smallest fish in North America**; bears live young a few at a time | Florida Museum; UF/IFAS |
+| Channel catfish | **over a hundred thousand taste buds, over the whole body** | Cornell/《Science》 catfish chemoreception accounts; MDC |
+| Zebra longwing | **Florida's state butterfly (1996)**; **the only butterfly known to eat pollen**, which is why it lives ~6 months; communal roosts | Florida Statutes; Wikipedia; UF/IFAS EDIS |
+| Viceroy | **a Müllerian mimic, not a Batesian one** — it is unpalatable in its own right; the Florida form copies the queen | Ritland & Brower, *Nature*; Wikipedia |
+| Giant swallowtail | **the largest butterfly in North America**; caterpillar mimics a bird dropping and everts a citrus-smelling osmeterium | UF/IFAS Featured Creatures |
+| Luna moth | **no mouth; the adult cannot eat**; the tails jam bat echolocation | MDC; Wikipedia; the Barber bat-jamming studies |
+| Palamedes swallowtail | tied to red bay and sweetbay, **so laurel wilt threatens it too** | UF/IFAS; the red bay sources in batches 20–23 |
+| Firefly (*Photuris*) | **the female mimics another species' answering flash to lure and eat its males**, taking their lucibufagins | Lloyd, *Nature* 255:628; UF Entomology; The Conversation |
+| Golden silk orbweaver | metre-wide webs in golden silk, woven into cloth; **the male is a fraction of her size** | UF/IFAS Featured Creatures |
+| Green lynx spider | **can spit venom several inches**; guards her egg sac | UF/IFAS Featured Creatures |
+| Regal jumping spider | **the largest jumping spider in eastern North America**; tracks movement | UF/IFAS Featured Creatures |
+| Palmetto tortoise beetle | **~10,000 oil-wetted bristles per foot; resists about 60× its own weight** | Eisner & Aneshansley, PNAS; UF/IFAS |
+| Eastern Hercules beetle | **the heaviest beetle in the United States**; elytra change colour with humidity | UF/IFAS Featured Creatures |
+| Eastern lubber | toxic, hisses and froths; black-and-red young look unrelated | UF/IFAS Featured Creatures |
+| Carolina mantis | **the only insect that can turn its head to look behind it**; a single ear on the thorax | UF/IFAS; Yager & Hoy on mantis hearing |
+| Island apple snail | **pink egg clusters above the waterline**; native snail lays pale | UF/IFAS; FWC |
+| Everglades crayfish | blue in mature males; **mud-pellet chimneys** over dry-season burrows | UF/IFAS; FWC |
+| Scarlet kingsnake | Batesian coral snake mimic — **red touches BLACK, and the snout is red** | Wikipedia; Orianne Society |
+| Eastern hognose | hoods, hisses, strikes closed, then **plays dead and rights itself if turned over** | UF/IFAS; FWC |
+| Eastern coachwhip | fastest snake here; **the whipping story has nothing behind it** | UF/IFAS; FWC |
+| Sand skink | **vestigial legs; "swims" through sand**; federally threatened; wavy surface tracks | USFWS; FNAI |
+| Florida worm lizard | **an amphisbaenian — the only one in the United States**, neither worm nor lizard | Florida Museum; UF/IFAS |
+| Indo-Pacific gecko | **every individual is female — parthenogenetic clones** | UF/IFAS Featured Creatures |
+
+### One manifest figure checked and found correct
+
+The black bear photograph is **800 px wide, not the batch's usual 1100** —
+an FWC camera-trap image, and the only clear openly licensed photo of the
+Florida subspecies. The pack declared that width and the file matches it, so
+`PHOTO_W` records 800. Unlike the greater siren in batch 9, there was nothing to
+correct: the rule "measure the landed file" simply confirmed the manifest.
+
+It is also the only **public-domain** row in `PHOTO_SOURCES` — a work of the
+Florida state government. It still carries a credit, because a credit is how a
+reader checks provenance, not only how a licence is satisfied.

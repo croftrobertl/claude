@@ -36,7 +36,7 @@ dcc_section( 'shape' );
  * landing is a deliberate one-line edit here rather than a silent drift. Any
  * other count is computed from the registry.
  */
-const TOTAL = 284;  // 51 at the start of 1.33.0; +12 -1, +14, +17, +19, +23, +21, +28, +32, +68 (plants).
+const TOTAL = 402;  // 51 at the start of 1.33.0, then batches 6-23. One species (the muskrat) has no photo, by the owner.
 
 check_same( TOTAL, count( $reg ), 'the registry holds the number of species this release claims' );
 
@@ -174,7 +174,27 @@ check( count( array_filter( $reg, static fn( $sp ): bool => isset( $sp['flags'] 
 dcc_section( 'photo coverage is checked against the files, not asserted' );
 
 $photos = Species::photos();
-check_same( count( $reg ), count( $photos ), 'photos() names a file for every species, with none left over' );
+
+/*
+ * THE PHOTO PROGRAMME IS COMPLETE BAR ONE, AND THE ONE IS A DECISION.
+ *
+ * Through 1.33.0 this read `count( $reg ) === count( $photos )` -- every
+ * species has a photograph. Batch 14 ended that on purpose: the owner decided
+ * the ROUND-TAILED MUSKRAT ships with no photograph, because the only openly
+ * licensed image of a live one is an unidentifiable dark shape, and a wrong or
+ * useless picture is worse than the group glyph the art rule falls back to.
+ *
+ * So the exception is PINNED BY NAME rather than the rule relaxed. A second
+ * species quietly losing its photograph still fails here, which is the whole
+ * point -- "no species ships without a photo unless the owner decided that
+ * species himself" is the standing rule, and this is the list of his decisions.
+ */
+const PHOTOLESS = [ 'muskrat' ];
+$missing = array_values( array_diff( array_keys( $reg ), array_keys( $photos ) ) );
+$extra   = array_values( array_diff( array_keys( $photos ), array_keys( $reg ) ) );
+check_same( PHOTOLESS, $missing, 'exactly the species the owner decided may ship without a photograph', implode( ', ', $missing ) );
+check_same( [], $extra, 'and photos() names no file for a species that does not exist', implode( ', ', $extra ) );
+check_same( count( $reg ) - count( PHOTOLESS ), count( $photos ), 'every other species has one' );
 
 $on_disk = glob( $root . '/assets/photos/*.jpg' );
 $base    = array_values( array_filter( $on_disk, static fn( $p ): bool => 1 !== preg_match( '/-(320|600)\.jpg$/', $p ) ) );

@@ -2229,3 +2229,62 @@ and the blue-faced meadowhawk — **did not arrive in this container**. Only pac
 20–23 did. The owner's standing instruction is that nothing ships until every
 pack is in, and a zip cut here would ship a guide that is missing 59 species he
 believes are in it. See the report for exactly what is outstanding.
+
+### 16. Batches 14–19 (1.33.0): the last animals — 284 species became 402, and the guide is complete
+
+Seven packs: 23 mammals, 31 fish, 11 dragonflies and damselflies, 27 butterflies
+and moths, 17 other small things, 9 reptiles the earlier packs had missed.
+**Item 6 is finished.** 402 species, 401 photographs, 116 sound lines, 92
+look-alike groups, largest still six.
+
+**A SPECIES WAS DROPPED ON THE EVIDENCE, AND THAT IS THE PRECEDENT WORTH
+KEEPING.** The blue-faced meadowhawk arrived with a photograph and with the
+Director's own evidence against it: five Florida records on iNaturalist, all
+panhandle, none in Central Florida — and the published range stops at the
+panhandle. A guide entry asserts *this is on this canal*, so the entry was not
+written and **the photograph was not registered**, its files kept out of
+`assets/photos/` exactly as the least bittern was in batch 3.
+
+**Do not confuse this with the standing rule that Rob's sightings outrank range
+maps.** That rule protects a species the OWNER HAS TICKED HIMSELF. This one
+carried a Check flag precisely because nobody had confirmed it, and the check
+came back negative. The two cases look similar and resolve opposite ways.
+
+**THE THIRD ART TIER RENDERED FOR THE FIRST TIME.** The round-tailed muskrat
+ships with no photograph by Rob's decision, so it falls to the group glyph —
+the fallback that has been documented, defended and never once used since
+1.23.0. `ui-theme.mjs` used to assert "no species falls to the glyph"; it now
+asserts "only the muskrat does", which makes it the first live proof the
+documented chain actually works. `test-species.php` pins the same exception by
+name in a `PHOTOLESS` constant. **A second species losing its photograph still
+fails both**, which is the standing rule — *no species ships without a photo
+unless the owner decided that species himself* — expressed as a list of his
+decisions rather than as a blanket count.
+
+**TWO MORE SUITES ENCODED AN ASSUMPTION THAT EXPIRED**, the same shape as the
+plant batch: both asserted every species has a photograph, which was true at
+284/284 and is now deliberately false for exactly one. As before, the fix was to
+pin the intended state, never to loosen the check. `test-narration.php` was
+right again — the walkingstick and the macaque reached Safety without contract
+rows and it refused them. That gate has now caught something real five times.
+
+**TWO NEW HAZARDS, and one deliberate non-hazard.** The walkingstick sprays an
+irritant at eyes and causes temporary blindness; the rhesus macaque is flagged
+`danger` AS WELL AS `invasive`, because the risk is a bite and some of that
+population carries herpes B — and they have reached Lake County, with one
+photographed in Mount Dora. **The armadillo is not flagged** despite carrying
+leprosy: that needs handling the animal, a deliberate act, and the bar has been
+contact injury since the plants. Twenty-eight species now reach Safety.
+
+**WALLS WERE CAUGHT IN DRAFT THIS TIME, NOT AFTER RENDERING.** Three groups
+formed at 7, 10 and 7 members — sunfish, baitfish and skimmers — and each was
+re-cut before a line of PHP was generated, by asking what question a guest is
+actually holding: *which bream is this* is not *which little fish is at the
+surface*, and *which blue dragonfly* is not *which one has patterned wings*.
+
+**Weight at 402 species, measured — this is the real number the projections were
+approximating:** inline index **32.2 KB gzip**, fetched detail **82.9 KB**. The
+synthetic 403-species run in section 6 predicted 9.6 KB inline, and it was
+wrong: it cloned one species 403 times, which gzip compresses far better than
+402 genuinely different ones. **Trust a measurement of the real registry over
+any projection, including the ones recorded earlier in this file.**
