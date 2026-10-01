@@ -842,7 +842,22 @@ final class Render {
 		?>
 		<button type="button" class="dccwl-footnote-link" data-dccwl-go="month" data-dccwl-monthlink hidden
 			aria-label="<?php esc_attr_e( 'Browse the guide by month', 'dcc-wildlife' ); ?>">
-			<?php esc_html_e( 'By Month', 'dcc-wildlife' ); ?>
+			<?php
+			/*
+			 * ITEM 17 — THE SAME LABEL ELEMENT AS THE OTHER THREE.
+			 *
+			 * This is a <button> and they are <summary>, which is the couple of
+			 * pixels Rob saw: their label is a .dccwl-fullguide-h inside a
+			 * .dccwl-fullguide-text and this one was a bare text node, so the
+			 * two line boxes resolved differently however the row was aligned.
+			 * Chasing it with alignment rules is what produced a worse bug —
+			 * a rule that re-showed the chevron this row deliberately hides.
+			 * Giving the label the same box in both places is the fix.
+			 */
+			?>
+			<span class="dccwl-fullguide-text">
+				<span class="dccwl-fullguide-h"><?php esc_html_e( 'By Month', 'dcc-wildlife' ); ?></span>
+			</span>
 		</button>
 		<?php
 		/*

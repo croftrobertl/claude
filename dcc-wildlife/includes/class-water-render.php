@@ -380,8 +380,27 @@ final class Water_Render {
 		self::$about_printed = true;
 		?>
 		<details class="dccwl-fullguide dccwl-water-aboutfold">
-			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'About the water', 'dcc-wildlife' ); ?>">
-				<span class="dccwl-fullguide-h"><?php esc_html_e( 'About', 'dcc-wildlife' ); ?></span>
+			<?php
+			/*
+			 * STRUCTURALLY IDENTICAL TO Field Guide AND Credits, not merely
+			 * styled to match. Rob asked for it to look and behave exactly
+			 * like those three, and the first draft had only the label: no
+			 * turning chevron, and a bare <span> whose line box sat 1.5px off
+			 * the others' — which is the very misalignment item 17 was raised
+			 * about, reintroduced by the fix for it. The chevron and the text
+			 * wrapper are what make the row one row.
+			 *
+			 * Short label in the row, the full phrasing as the accessible
+			 * name — the 1.28.0 rule, because the row must still fit one line
+			 * on a phone with a fourth link in it.
+			 */
+			?>
+			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'About the water and where these readings come from', 'dcc-wildlife' ); ?>">
+				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+				<span class="dccwl-fullguide-text">
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'About', 'dcc-wildlife' ); ?></span>
+					<span class="dccwl-fullguide-meta"><?php esc_html_e( 'the water, and where these readings come from', 'dcc-wildlife' ); ?></span>
+				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">
 				<?php self::render_almanac( $almanac ); ?>

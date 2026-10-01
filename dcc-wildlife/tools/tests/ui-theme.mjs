@@ -258,7 +258,7 @@ for (const w of [320, 390, 1280]) {
   const rows = await h.page.evaluate(() => {
     const row = document.querySelector('.dccwl-footnotes');
     if (!row) { return null; }
-    return Array.from(row.querySelectorAll('.dccwl-fullguide-h, .dccwl-footnote-link')).map((n) => {
+    return Array.from(row.querySelectorAll('.dccwl-fullguide-h')).map((n) => {
       const cs = getComputedStyle(n);
       return { text: n.textContent.trim(), fontSize: cs.fontSize, fontWeight: cs.fontWeight,
                color: cs.color, decoration: cs.textDecorationLine, fontFamily: cs.fontFamily };
@@ -288,7 +288,7 @@ const links = await hub.page.evaluate(() => {
              fontFamily: cs.fontFamily, color: cs.color, decoration: cs.textDecorationLine,
              bg: cs.backgroundColor, letterSpacing: cs.letterSpacing, transform: cs.textTransform };
   };
-  return Array.from(row.querySelectorAll('.dccwl-fullguide-h, .dccwl-footnote-link')).map(pick);
+  return Array.from(row.querySelectorAll('.dccwl-fullguide-h')).map(pick);
 });
 check(!!links && 4 === links.length, 'all four labels are in the row',
   links ? links.map((l) => l.text).join(' | ') : 'row missing');

@@ -607,3 +607,35 @@
 	text-decoration: underline;
 	vertical-align: baseline;
 }
+
+/* AND THE LAST 1.5px, measured rather than reasoned about: the label span
+ * INHERITED 18.72px of line-height inside a <summary> and 22.62px inside the
+ * <button>, because the rule above reaches the summary but loses to a
+ * higher-specificity button rule — so the two line boxes differed by 3.9px and
+ * their centres by half of it. Set on the label itself it applies in both
+ * places and cannot be out-ranked by whichever element is wrapping it.
+ *
+ * Two wrong turns before this one, both worth remembering: aligning the ROW to
+ * baseline (tried in 1.28.0, puts the 44px button 2px low) and sizing the
+ * chevron (this row hides the chevron on purpose — re-showing it wrapped the
+ * row onto two lines at 320 and 360px). The offset was never in the alignment. */
+.dccwl-footnotes .dccwl-fullguide-text.dccwl-fullguide-text.dccwl-fullguide-text,
+.dccwl-footnotes .dccwl-fullguide-h.dccwl-fullguide-h.dccwl-fullguide-h {
+	/* Tripled: widget.css sets this label's line-height at (0,3,0) and the
+	 * button it sits in sets its own, so a (0,2,0) rule here was simply not
+	 * winning — the computed value stayed 1.45 inside the button and 1.2
+	 * inside the summary, which IS the offset. Measure the computed value, not
+	 * the stylesheet, when a rule appears to do nothing. */
+	line-height: 1.2;
+}
+
+/* ...and the fourth time was the charm, by making the question trivial: all
+ * four are tappable and the month link already had to be 44px for the touch
+ * rule, so give the other three the same 44px box. Four identical boxes with
+ * one centred label each cannot disagree about where the label sits — and the
+ * three folds gain the same 44px target the month link has had since 1.17.0,
+ * which the "older clientele" rule wanted anyway. */
+.dccwl-footnotes .dccwl-fullguide-summary {
+	min-height: 44px;
+}
+
