@@ -3154,6 +3154,69 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario AC: the built bundles keep calc() gaps (v0.23.4) --------
+    // Always the MINIFIED files, whatever this suite otherwise runs on: the
+    // source was never wrong, the minifier was. calc(100% + 8px) had become
+    // calc(100%+8px), which the browser drops, so the list lost its gap.
+    {
+        console.log('\nAC. Served bundles: drop-down 8px below the search box, More list 6px below its button');
+        const errors = [];
+        const { execFileSync } = require('child_process');
+        const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
+        const MIN_CORE = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
+        const MIN_GUEST = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
+        const MIN_JS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/widget.min.js'), 'utf8');
+        const pageFor = (markup, css) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style>
+            <style>html{font-weight:700}body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;margin:0;padding:0 16px}</style>
+            </head><body class="elementor-kit-331">${markup}<script>${MIN_JS}</script></body></html>`;
+        const open = async (markup, css, vp) => {
+            const ctx = await browser.newContext({ viewport: vp });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.route('**/admin-ajax.php', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
+            await page.route('https://dccgg.test/g/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(markup, css) }));
+            await page.goto('https://dccgg.test/g/', { waitUntil: 'load' });
+            await page.waitForTimeout(300);
+            return { ctx, page };
+        };
+        for (const [name, markup, css] of [['/explore/', emit('public-intro'), MIN_CORE], ['/guest/', emit('guest'), MIN_CORE + MIN_GUEST]]) {
+            for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 900 }]) {
+                const { ctx, page } = await open(markup, css, vp);
+                await page.fill('.dccgg-search-input', 'pool');
+                await page.waitForTimeout(700);
+                const m = await page.evaluate(() => {
+                    const box = document.querySelector('.dccgg-search').getBoundingClientRect();
+                    const inp = document.querySelector('.dccgg-search-input').getBoundingClientRect();
+                    const list = document.querySelector('.dccgg-search-results');
+                    const r = list.getBoundingClientRect();
+                    return { gapBox: +(r.top - box.bottom).toFixed(2), gapInput: +(r.top - inp.bottom).toFixed(2),
+                             l: Math.round(r.left - box.left), rr: Math.round(box.right - r.right), shown: !list.hidden };
+                });
+                check(`${name} ${vp.width}px: the results list opens 8px below the search box`,
+                    m.shown && Math.abs(m.gapBox - 8) < 0.5 && Math.abs(m.gapInput - 8) < 0.5, JSON.stringify(m));
+                check(`${name} ${vp.width}px: and is still the box's full width`, m.l === 0 && m.rr === 0, JSON.stringify(m));
+                await ctx.close();
+            }
+        }
+        for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 900 }]) {
+            const { ctx, page } = await open(emit('guest-more'), MIN_CORE + MIN_GUEST, vp);
+            await page.click('.dccgg-toolbar .dccgg-more > summary');
+            await page.waitForTimeout(300);
+            const m = await page.evaluate(() => {
+                const d = document.querySelector('.dccgg-toolbar .dccgg-more');
+                const s = d.querySelector(':scope > summary').getBoundingClientRect();
+                const p = d.querySelector('.dccgg-more-popover').getBoundingClientRect();
+                return { open: d.open, gap: +(p.top - s.bottom).toFixed(2), rightAligned: Math.round(d.getBoundingClientRect().right - p.right) };
+            });
+            check(`/guest/ ${vp.width}px: the More list opens 6px below its button, right-aligned`,
+                m.open && Math.abs(m.gap - 6) < 0.5 && m.rightAligned === 0, JSON.stringify(m));
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

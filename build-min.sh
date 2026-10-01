@@ -105,14 +105,43 @@ def partition(css):
 
 src, guest_src = partition(src)
 
+# v0.23.4: inside a math function, + and - are operators and MUST keep the
+# whitespace on both sides: `calc(100% + 8px)` is valid, `calc(100%+8px)` is
+# not, and the browser drops the whole declaration. The collapse below strips
+# space around `+` (for the sibling combinator), which broke every calc() with
+# a +. So, before collapsing, each spaced operator inside calc/min/max/clamp
+# (at any nesting depth) is swapped for a placeholder, and put back with its
+# spaces afterwards. Selectors such as `:nth-child(2n + 1)` are untouched.
+MATH_FN = ('calc', 'min', 'max', 'clamp')
+OPS = {'+': '\x00P\x00', '-': '\x00M\x00'}
+def protect_math(t):
+    out, stack, i = [], [], 0
+    while i < len(t):
+        ch = t[i]
+        if ch == '(':
+            m = re.search(r'([A-Za-z-]*)$', t[max(0, i - 12):i])
+            stack.append(m.group(1).lower() if m else '')
+        elif ch == ')' and stack:
+            stack.pop()
+        elif (ch in OPS and any(f in MATH_FN for f in stack)
+              and i > 0 and t[i - 1].isspace() and i + 1 < len(t) and t[i + 1].isspace()):
+            out.append(OPS[ch]); i += 1; continue
+        out.append(ch); i += 1
+    return ''.join(out)
+def restore_math(t):
+    t = re.sub(r'\s*\x00P\x00\s*', ' + ', t)
+    return re.sub(r'\s*\x00M\x00\s*', ' - ', t)
+
 def minify(t):
     t = re.sub(r'/\*[\s\S]*?\*/', '', t)
+    t = protect_math(t)
     t = re.sub(r'\s+', ' ', t)
     t = re.sub(r'\s*([{};,>+~])\s*', r'\1', t)
     t = re.sub(r':\s+', ':', t)
-    return t.replace(';}', '}').strip()
+    return restore_math(t.replace(';}', '}').strip())
 # Strip block comments.
 src = re.sub(r'/\*[\s\S]*?\*/', '', src)
+src = protect_math(src)      # v0.23.4: see protect_math()
 # Collapse whitespace around CSS metacharacters.
 src = re.sub(r'\s+', ' ', src)
 src = re.sub(r'\s*([{};,>+~])\s*', r'\1', src)
@@ -126,7 +155,7 @@ src = re.sub(r':\s+', ':', src)
 # Remove trailing semicolons before close-brace.
 src = src.replace(';}', '}')
 # Strip leading whitespace.
-src = src.strip()
+src = restore_math(src.strip())
 open(sys.argv[2], 'w').write(src)
 open(sys.argv[3], 'w').write(minify(guest_src))
 PY

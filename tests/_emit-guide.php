@@ -3,7 +3,7 @@
  * Print the WHOLE widget as render() emits it, for one named case, so the
  * browser suite can exercise the real page layout (v0.23.2).
  *
- *   php tests/_emit-guide.php <case>   case: public-intro | public-no-intro | guest
+ *   php tests/_emit-guide.php <case>   case: public-intro | public-no-intro | guest | guest-more
  */
 require __DIR__ . '/_render-guide.php';
 
@@ -25,6 +25,8 @@ function dccgg_guide_case(string $case): array {
         'public-intro'    => ['guide_mode' => 'public', 'public_intro' => $intro],
         'public-no-intro' => ['guide_mode' => 'public'],
         'guest'           => ['guide_mode' => 'full', 'public_intro' => $intro],   // a stray intro must still not show
+        // v0.23.4: the guest guide as live runs it, with the ⋯ More menu on.
+        'guest-more'      => ['guide_mode' => 'full', 'enable_detail_more_menu' => 'yes'],
     ];
     return ($cases[$case] ?? $cases['public-intro']) + ['guide_sections' => $sections, 'guide_items' => $items];
 }

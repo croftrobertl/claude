@@ -819,5 +819,35 @@ check('reveal_memory_hours help no longer promises a Forget control',
 check('split_guest_css help no longer claims the emergency strip is guest-only',
     stripos($help['split_guest_css'], 'emergency strip or') === false);
 
+
+echo "\nX. v0.23.4 — the minifier keeps calc() valid\n";
+// Every math function in the source must reach the built bundles unchanged
+// apart from whitespace collapse: in particular a + or - operator keeps a
+// space on each side. `calc(100%+8px)` is invalid and the browser drops the
+// whole declaration; that is how the search drop-down lost its 8px gap.
+$mathFns = function (string $css): array {
+    $css = preg_replace('#/\*[\s\S]*?\*/#', '', $css);
+    $out = [];
+    $off = 0;
+    while (preg_match('/\b(calc|min|max|clamp)\(/i', $css, $m, PREG_OFFSET_CAPTURE, $off)) {
+        $start = $m[0][1]; $j = $start + strlen($m[0][0]); $depth = 1;
+        while ($j < strlen($css) && $depth) { $depth += ($css[$j] === '(') - ($css[$j] === ')'); $j++; }
+        $out[] = substr($css, $start, $j - $start); $off = $j;
+    }
+    return $out;
+};
+// Whitespace the minifier may legitimately remove: runs collapse to one
+// space, and none is needed after "(" or around ",".
+$norm = static fn(string $e): string => preg_replace(['/\s+/', '/\(\s/', '/\s\)/', '/\s*,\s*/'], [' ', '(', ')', ','], $e);
+$distDir = __DIR__ . '/../dcc-guest-guide/assets/css/';
+$built = $mathFns(file_get_contents($distDir . 'widget.min.css') . file_get_contents($distDir . 'widget-guest.min.css'));
+$srcFns = array_map($norm, $mathFns(file_get_contents($distDir . 'widget.css')));
+$unspaced = array_values(array_filter($built, static fn($e) => preg_match('/[^\s(,][+]|[+][^\s]|[0-9a-z%)]-[0-9(]/i', preg_replace('/--[a-z0-9-]+/i', '', $e))));
+check('no + or - operator in a built math function is missing its spaces', $unspaced === [], implode(' | ', $unspaced));
+$missing = array_values(array_diff(array_unique($srcFns), array_map($norm, $built)));
+check('every math function in the source reaches the bundles intact', $missing === [], implode(' | ', $missing));
+check('the two that v0.23.3 broke are present as written',
+    in_array('calc(100% + 8px)', $built, true) && in_array('calc(100% + 6px)', $built, true));
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

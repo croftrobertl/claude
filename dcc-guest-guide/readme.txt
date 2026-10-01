@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.3
+Stable tag: 0.23.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,20 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.4 =
+
+**Fixed: the search results list now opens 8px below the search bar, as
+designed, on both the public and the guest guide.** The build step that
+compresses the stylesheet was removing the spaces inside `calc(100% + 8px)`,
+which turned it into invalid CSS that browsers ignore, so the list sat
+against the bar. The build now keeps those spaces in every calculation.
+
+**Fixed, same cause: the ⋯ More / User Manuals list on the guest guide now
+opens 6px below its button**, as designed. Its `calc(100% + 6px)` had been
+broken the same way. These were the only two calculations affected.
+
+Nothing else in the stylesheets changed. No new setting.
 
 = 0.23.3 =
 
