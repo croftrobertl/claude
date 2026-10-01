@@ -856,3 +856,122 @@
 	.dccwl-card-src-caret { transition: none; }
 }
 .dccwl-water-attr[hidden] { display: none; }
+
+/* ===================================================================
+ * 1.34.0 — Rob's /explore/ review.
+ * =================================================================== */
+
+/* ITEM 8 (his pick: B) — the source tier is a FULL border, all four sides,
+ * so the cards separate; and a one-line key says what the colours mean.
+ * The colour was decoration until the key existed. */
+.dccwl-water .dccwl-water-tier-live { border: 2px solid var(--dccwl-ok); }
+.dccwl-water .dccwl-water-tier-published { border: 2px solid var(--dccwl-primary); }
+.dccwl-water .dccwl-water-tier-general { border: 2px solid var(--dccwl-warn); }
+.dccwl-water .dccwl-water-fact { border-radius: var(--dccwl-radius-lg); }
+.dccwl-water-tierkey {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-body);
+	line-height: 1.45;
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+
+/* ITEM 7 — the Water tab bar gets the panel's standard block gap above and
+ * below: --dccwl-gap-lg, which is 10px x density. At the shipped density of
+ * 1 that is 10px on each side, where the bar previously sat tight against
+ * the title above it and the content below. */
+.dccwl-water .dccwl-water-tabs { margin-bottom: var(--dccwl-gap-lg); margin-top: var(--dccwl-gap-lg); }
+
+/* ITEM 6 — "Tonight on the Canal": everything centred, moon above the text. */
+.dccwl-moon {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+.dccwl-moon-text { text-align: center; }
+
+/* ITEM 9 — the Fishing tab is centre-aligned by default, including the text
+ * inside each card. */
+.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"],
+.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] p,
+.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] li,
+.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] .dccwl-card { text-align: center; }
+
+/* ITEM 10 (his pick: A) — season picker, then a labelled block per species,
+ * with ruled breaks between the seasons, the map/ramps, the licences and the
+ * FWC disclaimer. */
+.dccwl-fish-seasons { display: flex; justify-content: center; margin: 0 0 var(--dccwl-gap-lg); }
+.dccwl-fish-season[hidden] { display: none; }
+.dccwl-fish-species { margin: 0 0 var(--dccwl-gap); }
+.dccwl-fish-species h4 {
+	color: var(--dccwl-primary);
+	font-size: var(--dccwl-fs-sm);
+	letter-spacing: .03em;
+	margin: 0 0 .15em;
+	text-transform: uppercase;
+}
+.dccwl-fish-rule { background: var(--dccwl-line); border: 0; height: 1px; margin: var(--dccwl-gap-lg) 0; }
+
+/* ==================================================================
+ * ITEM 3 (1.34.0, Rob's pick B) — the Map tab's stat tiles.
+ *
+ * Three big-number tiles under the Map tab's intro, which double as the
+ * map's "Colour by" control: pressing Level or Clarity opens the map already
+ * coloured by that reading. They are TILES in the 1.18.0 sense (white ground,
+ * hairline, shadow) because each one is a piece of content, not a toggle on a
+ * tinted band — and they are buttons, so app.css's button reset applies.
+ *
+ * A tile with no reading is hidden by water.js, so the row is as wide as the
+ * facts that arrived; `auto-fit` lets one or two tiles fill the row rather
+ * than leaving a hole where the third would have been.
+ * ================================================================== */
+.dccwl-water .dccwl-water-stats {
+	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+	list-style: none;
+	margin: 0 0 var(--dccwl-gap-lg);
+	padding: 0;
+}
+.dccwl-water .dccwl-water-stat-btn.dccwl-water-stat-btn {
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-lg);
+	box-shadow: var(--dccwl-shadow-tile);
+	cursor: pointer;
+	display: block;
+	min-height: 44px;
+	padding: var(--dccwl-gap) calc(var(--dccwl-gap) / 2);
+	text-align: center;
+	width: 100%;
+}
+.dccwl-water .dccwl-water-stat-label {
+	color: var(--dccwl-text-muted);
+	display: block;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-label);
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+.dccwl-water .dccwl-water-stat-value {
+	color: var(--dccwl-text);
+	display: block;
+	font-size: var(--dccwl-fs-value);
+	font-weight: var(--dccwl-fw-strong);
+	line-height: 1.25;
+}
+.dccwl-water .dccwl-water-stat-sub {
+	color: var(--dccwl-text-muted);
+	display: block;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-body);
+}
+
+/* The readings fold (item 3, pick B). It is the shared fullguide component, so
+ * it already matches Field Guide and Credits; only its width is set here, and
+ * the tier key sits centred above the cards it decodes. */
+.dccwl-water .dccwl-water-allreadings {
+	margin-inline: auto;
+}

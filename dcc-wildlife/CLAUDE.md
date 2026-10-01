@@ -2339,3 +2339,89 @@ the path PRODUCTION takes, not a convenient one.* The existing rules already say
 a suite that asserts nothing fails, and that a stub more permissive than the
 real thing is a test that agrees with you. This is the third of that family —
 and the most expensive, because it reached the owner's live site.
+
+### 18. 1.34.0 — the /explore/ review: Rob's five picks and fifteen fixes
+
+Seventeen items from Rob's own phone review of /explore/ on 1.33.1, plus one his
+Website Director found. **Five were design choices, so they were rendered as
+labelled options at 390px and 1280px and put to him; he answered 2C · 3B · 8B ·
+10A · 14C on 2026-10-01.** Nothing in this section was a session's choice, and
+every one is a plugin DEFAULT — /explore/ (post 18119, `dccwl_canal`) stores no
+settings, so a default is what a guest gets.
+
+**THE WATER PANEL IS MAP-FIRST NOW (items 1 and 3, pick B).** The chain map was
+a button at the foot of the Fishing tab; Rob called it "an incredibly cool
+feature" that was buried. The tabs are **Map · Now · Fishing**, in that order,
+and the order IS the mechanism: water.js selects the first button in the bar, so
+nothing names a default tab. Two rules held while moving it:
+
+- **Nothing map-related loads until a guest opens the map** (the 1.31.0 rule).
+  The Map tab therefore shows the map's front door — three stat tiles and the
+  open button — never a canvas.
+- **The stat tiles double as "Colour by"**, which is what pick B asked for.
+  Level and Clarity open the map already coloured by that reading; **Wind opens
+  it plain, because the map has no wind colouring** and inventing one would be
+  a claim the data cannot support.
+- The tiles are filled by water.js from the SAME gated `/conditions` facts the
+  Now tab renders, with the source named under each number. A tile with no fact
+  stays hidden — an absent reading is absent, never "unknown".
+
+**A FACT NOW CARRIES AN OPTIONAL `key`, AND IT IS METADATA, NOT A GATE.** The
+client needed to pick the level, clarity and wind readings out of the list
+without matching a TRANSLATED label. `Water_Fact::make()` takes `key`,
+restricted to `[a-z_]`; a Fact without one is as valid as a Fact with one, and a
+key can neither admit an unsourced fact nor change how one renders. The gate
+(tier + source name + parseable date) is untouched. Three live readings declare
+one: level, clarity, wind.
+
+**"About" IS NO LONGER A TAB (item 4).** Its content — the almanac, About the
+water, the official links — is the fourth link in the hub's bottom row beside
+Field Guide, Credits and By Month. Rob asked for it to look and behave exactly
+like those three, so it IS one of them: the same
+`<details class="dccwl-fullguide">`, rendered by `Water_Render::about_fold()`
+and called from `Render`'s footnote row behind `method_exists`, because that
+renderer must keep working when the water module is not loaded. It prints
+nothing when there is no almanac, no reference facts and no links.
+
+**THE SEASON PICKER IS RENDERED HIDDEN, AND THE MONTHS ARE READ OUT OF THE
+LABEL (item 10, pick A).** Fishing was one run of text in which the four
+seasons and the three species looked alike. It is now a season picker over one
+labelled block per species. Two things keep it honest:
+
+- **Hidden, with every season visible**, exactly as the water tab bar is: with
+  no JavaScript a guest reads the whole year in one scroll rather than meeting
+  four dead buttons. water.js unhides it and opens the current season.
+- **The current season is worked out in CANAL TIME, client-side**, never
+  server-side — the page is cached. Which months a season covers is derived
+  from the row's OWN label by `Water_Render::season_months()`, looking for this
+  locale's month names, **never from the row's position**: the seasons are
+  owner-editable rows, and indexing them would mislabel every one the moment
+  somebody reorders them or keeps five. A row whose label holds no month name
+  simply never wins, and the first season opens.
+
+**THE READINGS FOLD BEHIND "All readings", AND THE TIER KEY FOLDS WITH THEM**
+(items 3 and 8, picks B and B). The tier colour is now a full 2px border on all
+four sides, and the one-line key is what makes it mean anything — so the key
+sits INSIDE the fold, beside the colour it decodes, not above a fold where the
+cards are not visible.
+
+**THE CATEGORIES BAR GETS THE MONTHS BAR'S ARROWS (items 13 and 14, pick C).**
+Same element and same class (`.dccwl-timeline-arrow`), so the near-black arrow
+colour and the 1.33.0 rule that *a control with nowhere to go hides and keeps
+its space* both come from ONE implementation. The difference is what a step
+means: months wrap, because a year does; categories end, so at either end the
+arrow disables — which that rule renders as `visibility: hidden`. `min-width: 0`
+on the chip row inside the new flex wrapper is load-bearing, the 1.18.1 lesson
+in its flex form: a flex item's floor is its content's min-width, and seven
+category chips end to end would otherwise push the page wider than the phone.
+
+**THE SELECTED BUTTON IS CORAL, WITH `--dccwl-text` INK (item 12).** Not white:
+white on coral measures 2.59:1, and the 1.16.1 rule is that `--dccwl-accent` is
+fill and border only. The month-now badge set the precedent — coral fill, dark
+ink (7.29:1) — and the selected tab, category chip and water tab follow it.
+
+**Wording, all three Title Case by his instruction (items 5 and 17):**
+"Fishing & Water Conditions", "Tonight on the Canal", and the bottom row reading
+**Field Guide · Credits · By Month · About**. The fishing licences block is now
+"Licences & keep-limits" and carries a ruled break above it, so it reads as its
+own thing rather than more fishing advice.

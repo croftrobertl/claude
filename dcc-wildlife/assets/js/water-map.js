@@ -416,7 +416,7 @@
 		}
 		recolour('clarity');
 
-		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base));
+		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base, cfg && cfg.colour));
 		shell.appendChild(legend.node);
 
 		// Everything is in the DOM; now wait for it to have a size and fit.
@@ -530,7 +530,7 @@
 	 * can never show two different answers.
 	 */
 
-	function buildBar(map, groups, recolour, shell, i18n, base) {
+	function buildBar(map, groups, recolour, shell, i18n, base, want) {
 		var bar = el('div', 'dccwl-map-bar');
 		var COLOURS = [
 			['clarity', i18n.byClarity || 'Clarity'],
@@ -542,7 +542,12 @@
 		// a colon because it introduces the buttons beside it; on the button
 		// it would read "Colour by:: Clarity", so strip it.
 		var colourWord = colourLabel.replace(/\s*:\s*$/, '');
+		/* 1.34.0: the opener may ask for a colouring — a Map-tab stat tile
+		 * opens the map already coloured by its own reading. An unknown or
+		 * absent request falls back to the map's own default, so the caller
+		 * can never put the bar into a state it has no button for. */
 		var current = COLOURS[0][0];
+		COLOURS.forEach(function (pair) { if (pair[0] === want) { current = want; } });
 
 		/* ---- full shape: label + segmented control ---------------------- */
 

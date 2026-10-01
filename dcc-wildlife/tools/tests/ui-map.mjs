@@ -114,19 +114,20 @@ async function openMap(width, height) {
   }
 
   /*
-   * Since 1.33.0 the panel opens on its Now tab and the chain map lives in
-   * Fishing, so the button starts hidden. That is the owner's decision, and
-   * the suite asserts it rather than working around it: a map button that was
-   * reachable without choosing a tab would mean the tabs were not doing
-   * anything.
+   * 1.34.0 REVERSES the 1.33.0 arrangement. Rob chose map-first (item 3,
+   * option B), so the map has its own tab, that tab is FIRST, and the panel
+   * opens on it — which means the button a guest presses to open the map is
+   * visible without choosing anything. The suite asserts the new arrangement
+   * rather than clicking its way back to the old one: the tabs are still
+   * doing something (Now and Fishing are hidden), and what changed is which
+   * of the three a guest meets.
    */
-  const tabbed = await page.$('[data-dccwl-water-tab-btn="fishing"]');
+  const tabbed = await page.$('[data-dccwl-water-tab-btn="map"]');
   if (tabbed) {
-    checkSame(false, await btn.isVisible(),
-      'the map button starts hidden, because the panel opens on Now');
-    await tabbed.click();
-    await page.waitForTimeout(250);
-    checkSame(true, await btn.isVisible(), 'and the Fishing tab reveals it');
+    checkSame(true, await btn.isVisible(),
+      'the map button is visible at once, because the panel opens on Map');
+    checkSame(false, await (await page.$('[data-dccwl-water-tab="now"]')).isVisible(),
+      'and the other tabs are hidden, so the tab bar is still doing its job');
   }
   await btn.click();
 
@@ -393,9 +394,9 @@ for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'
   await page.addScriptTag({ content: asset(f) });
 }
 await page.waitForTimeout(150);
-// The map lives in the Fishing tab since 1.33.0; the panel opens on Now.
-const fsTab = await page.$('[data-dccwl-water-tab-btn="fishing"]');
-if (fsTab) { await fsTab.click(); await page.waitForTimeout(250); }
+// The map has its own tab since 1.34.0, and the panel opens on it, so the
+// button needs no tab press to reach.
+
 await (await page.$('[data-dccwl-map-open]')).click();
 await page.waitForTimeout(700);
 

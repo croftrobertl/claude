@@ -74,11 +74,28 @@ final class Water_Render {
 				'moon'       => null,
 				'fishing'    => null,
 				'map_button' => null,
+				/*
+				 * 1.34.0 — WHO PRINTS THE "About" FOLD.
+				 *
+				 * Item 4 moved the almanac, the reference facts and the
+				 * official links out of a tab and into the hub's bottom row,
+				 * which `Render` owns. A STANDALONE water placement has no
+				 * such row, and losing its almanac to a tab that no longer
+				 * exists would be a silent deletion — so it prints the fold
+				 * itself, at the foot of its own section.
+				 *
+				 * The hub passes false, because its footnote row prints it.
+				 * An explicit flag rather than a first-caller-wins guard: the
+				 * two surfaces render in whatever order the page composes
+				 * them, and "whoever got there first" would decide where
+				 * About appears from one page to the next.
+				 */
+				'about_fold' => true,
 			]
 		);
 		$title = sanitize_text_field( (string) $opts['title'] );
 		if ( '' === $title ) {
-			$title = __( 'Fishing & water conditions', 'dcc-wildlife' );
+			$title = __( 'Fishing & Water Conditions', 'dcc-wildlife' );
 		}
 
 		$almanac   = Water_Data::almanac( 'conditions' );
@@ -119,17 +136,30 @@ final class Water_Render {
 		 * visible in one scroll, exactly as before, rather than two thirds of
 		 * the panel being unreachable behind dead buttons.
 		 */
+		/*
+		 * ITEMS 1 AND 3 (1.34.0, his pick B) — THE MAP IS THE FIRST TAB.
+		 *
+		 * It was a button at the foot of Fishing and Rob called it "an
+		 * incredibly cool feature" that was buried. Map now leads the bar, so
+		 * it is the panel a guest meets, and the tab order below is what makes
+		 * that true: water.js selects the FIRST button it finds.
+		 *
+		 * The 1.31.0 rule is untouched — no Leaflet, no tiles and no map data
+		 * load until a guest opens the map. The tab therefore shows the map's
+		 * front door (a summary line, three stat tiles and the open button),
+		 * not a canvas. ITEM 4: "About" is no longer a tab at all; its content
+		 * opens from the hub's bottom row through about_fold().
+		 */
 		$tabs = [
+			'map'     => Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ),
 			'now'     => Guide_Data::resolve( $opts['moon'], 'show_moon' ) || $live,
 			'fishing' => ( null !== $fishing && Guide_Data::resolve_hide( $opts['fishing'], true ) )
-				|| (bool) $reports
-				|| Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ),
-			'about'   => (bool) $almanac || (bool) $about || (bool) $links,
+				|| (bool) $reports,
 		];
 		$tab_labels = [
+			'map'     => __( 'Map', 'dcc-wildlife' ),
 			'now'     => __( 'Now', 'dcc-wildlife' ),
 			'fishing' => __( 'Fishing', 'dcc-wildlife' ),
-			'about'   => __( 'About', 'dcc-wildlife' ),
 		];
 
 		ob_start();
@@ -158,7 +188,24 @@ final class Water_Render {
 			<?php if ( $live ) : ?>
 				<?php /* Shell only — filled client-side so page caching cannot serve a stale reading. */ ?>
 				<div class="dccwl-water-live" data-dccwl-water-live hidden>
-					<h3 class="dccwl-water-sub"><?php esc_html_e( 'Right now', 'dcc-wildlife' ); ?></h3>
+					<?php
+					/*
+					 * ITEM 3 (pick B) — the card list folds behind "All
+					 * readings". A native <details>, like the field guide and
+					 * the credits: it needs no JavaScript, and the tier key
+					 * above the cards sits INSIDE the fold, because a key
+					 * belongs beside the colour it decodes.
+					 */
+					?>
+					<details class="dccwl-fullguide dccwl-water-allreadings">
+					<summary class="dccwl-fullguide-summary">
+						<span class="dccwl-fullguide-h"><?php esc_html_e( 'All readings', 'dcc-wildlife' ); ?></span>
+					</summary>
+					<div class="dccwl-fullguide-body">
+					<?php /* ITEM 8 (pick B) — the tier colour is now a full border on
+					         all four sides, and this one line is what makes the colour
+					         mean anything. Without it the border is decoration. */ ?>
+					<p class="dccwl-water-tierkey"><?php esc_html_e( 'Green = measured today · Blue = latest published sample · Amber = general guidance', 'dcc-wildlife' ); ?></p>
 					<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-facts></ul>
 
 					<?php /* Each water against its OWN long-run median — the
@@ -169,6 +216,8 @@ final class Water_Render {
 						<p class="dccwl-chain-note"><?php esc_html_e( 'Clarity now against each water’s own long-run median — clearest relative to its own normal first.', 'dcc-wildlife' ); ?></p>
 						<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-chain></ul>
 					</div>
+					</div>
+					</details>
 				</div>
 			<?php endif; ?>
 			</div><?php /* /now */ ?>
@@ -190,24 +239,6 @@ final class Water_Render {
 			 * folds out of its own chip.
 			 */
 			?>
-			<?php if ( Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ) ) : ?>
-				<?php /* Nothing external — no Leaflet, no tiles, no map data —
-				         loads until a guest presses this button. A guest who
-				         never opens the map pays nothing for it. */ ?>
-				<div class="dccwl-map-wrap" data-dccwl-map-wrap>
-					<h3 class="dccwl-water-sub"><?php esc_html_e( 'Chain map', 'dcc-wildlife' ); ?></h3>
-					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from. The map loads only when you open it.', 'dcc-wildlife' ); ?></p>
-					<p>
-						<?php /* 1.9.0: opens the shared sliding sheet rather than
-						         expanding inline, so the map gets the room it
-						         needs and dismisses like every other detail. */ ?>
-						<button type="button" class="dccwl-btn dccwl-map-open" data-dccwl-map-open>
-							<?php esc_html_e( 'Open the chain map', 'dcc-wildlife' ); ?>
-						</button>
-					</p>
-				</div>
-			<?php endif; ?>
-
 			<?php self::render_links( __( 'Local reports & charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
 
 			<?php if ( $links || $reports ) : ?>
@@ -217,38 +248,56 @@ final class Water_Render {
 			<?php endif; ?>
 			</div><?php /* /fishing */ ?>
 
-			<div class="dccwl-water-tab" data-dccwl-water-tab="about">
-			<?php self::render_almanac( $almanac ); ?>
-
-			<?php if ( $about ) : ?>
-				<?php /* Reference facts about the waterbody rather than today's
-				         conditions. Rendered below everything else, and never
-				         enough on their own to make this section appear. */ ?>
-				<div class="dccwl-water-about">
-					<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></h3>
-					<?php foreach ( $about as $waterbody => $facts ) : ?>
-						<ul class="dccwl-cards dccwl-water-facts">
-							<?php foreach ( $facts as $fact ) : ?>
-								<?php self::render_fact( $fact ); ?>
-							<?php endforeach; ?>
-						</ul>
-					<?php endforeach; ?>
+			<div class="dccwl-water-tab" data-dccwl-water-tab="map">
+			<?php if ( Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ) ) : ?>
+				<?php /* Still nothing external until a guest opens the map. */ ?>
+				<div class="dccwl-map-wrap" data-dccwl-map-wrap>
+					<?php
+					/*
+					 * THE STAT TILES DOUBLE AS "COLOUR BY" (item 3, pick B).
+					 *
+					 * Shell only, hidden, filled by water.js from the SAME
+					 * /conditions facts the Now tab renders — a number here is
+					 * never one this codebase chose, and never baked into
+					 * cached HTML. Each tile is a button: Level and Clarity
+					 * open the map already coloured by that reading, which are
+					 * the two colourings the map has. Wind has none, so it
+					 * opens the map as the button does rather than inventing a
+					 * colouring the data cannot support.
+					 */
+					?>
+					<ul class="dccwl-water-stats" data-dccwl-water-stats hidden>
+						<?php
+						$stats = [
+							'level'   => [ __( 'Level', 'dcc-wildlife' ), 'level' ],
+							'clarity' => [ __( 'Clarity', 'dcc-wildlife' ), 'clarity' ],
+							'wind'    => [ __( 'Wind', 'dcc-wildlife' ), '' ],
+						];
+						?>
+						<?php foreach ( $stats as $skey => $stat ) : ?>
+							<li class="dccwl-water-stat" data-dccwl-stat="<?php echo esc_attr( $skey ); ?>" hidden>
+								<button type="button" class="dccwl-water-stat-btn" data-dccwl-stat-colour="<?php echo esc_attr( $stat[1] ); ?>">
+									<span class="dccwl-water-stat-label"><?php echo esc_html( $stat[0] ); ?></span>
+									<span class="dccwl-water-stat-value" data-dccwl-stat-value></span>
+									<span class="dccwl-water-stat-sub" data-dccwl-stat-sub></span>
+								</button>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from. The map loads only when you open it.', 'dcc-wildlife' ); ?></p>
+					<p>
+						<button type="button" class="dccwl-btn dccwl-map-open" data-dccwl-map-open>
+							<?php esc_html_e( 'Open the chain map', 'dcc-wildlife' ); ?>
+						</button>
+					</p>
 				</div>
 			<?php endif; ?>
+			</div><?php /* /map */ ?>
 
-			<?php
-			/*
-			 * THE OFFICIAL LINKS ARE IN ABOUT, AND THEY ARE THE OTHER ONE THE
-			 * OWNER WAS ASKED ABOUT. Five of the six are where the readings
-			 * come from — the Water Atlas page, the two USGS gauges, the NWS
-			 * and the water management district — which is reference, not a
-			 * plan. The sixth, FWC licences and regulations, argues for
-			 * Fishing on its own; the Fishing tab already carries its own FWC
-			 * licence link beside the keep-limits, so nothing is lost here.
-			 */
-			?>
-			<?php self::render_links( __( 'Official information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
-			</div><?php /* /about */ ?>
+			<?php if ( false !== $opts['about_fold'] ) : ?>
+				<?php /* A standalone placement keeps its almanac; see about_fold above. */ ?>
+				<?php self::about_fold(); ?>
+			<?php endif; ?>
 		</section>
 		<?php
 		return (string) ob_get_clean();
@@ -302,6 +351,117 @@ final class Water_Render {
 	 *
 	 * @param array<string,mixed> $f
 	 */
+	/**
+	 * ITEM 4 (1.34.0) — the old About TAB, as a fold for the hub's bottom row.
+	 *
+	 * Rob asked for it beside Field Guide / Credits / By Month and to look and
+	 * behave exactly like those, so it is the same <details class="dccwl-fullguide">
+	 * the other two folds use rather than a new component. Render::footnotes()
+	 * calls it; it prints nothing when there is nothing to show, which is what
+	 * keeps the standalone month widget unchanged.
+	 */
+	private static bool $about_printed = false;
+
+	public static function about_fold(): void {
+		/* Once per page, first caller wins — the same guard shape the
+		 * countdown shell and the prose guide use. A page can carry a hub, a
+		 * standalone month widget and a standalone water widget at once, and
+		 * each of them offers this fold; two copies of the almanac would be a
+		 * duplicate, not a convenience. */
+		if ( self::$about_printed ) {
+			return;
+		}
+		$almanac = Water_Data::almanac( 'conditions' );
+		$about   = Water_Data::almanac( 'about' );
+		$links   = Water_Data::link_list( 'links' );
+		if ( ! $almanac && ! $about && ! $links ) {
+			return;
+		}
+		self::$about_printed = true;
+		?>
+		<details class="dccwl-fullguide dccwl-water-aboutfold">
+			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'About the water', 'dcc-wildlife' ); ?>">
+				<span class="dccwl-fullguide-h"><?php esc_html_e( 'About', 'dcc-wildlife' ); ?></span>
+			</summary>
+			<div class="dccwl-fullguide-body">
+				<?php self::render_almanac( $almanac ); ?>
+				<?php if ( $about ) : ?>
+					<?php /* Reference facts about the waterbody rather than today's
+					         conditions, and never enough on their own to make this
+					         fold appear. */ ?>
+					<div class="dccwl-water-about">
+						<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></h3>
+						<?php foreach ( $about as $facts ) : ?>
+							<ul class="dccwl-cards dccwl-water-facts">
+								<?php foreach ( $facts as $fact ) : ?>
+									<?php self::render_fact( $fact ); ?>
+								<?php endforeach; ?>
+							</ul>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+				<?php
+				/*
+				 * The official links live here: five of the six are where the
+				 * readings come from, which is reference, not a plan. The sixth
+				 * (FWC licences) is duplicated beside the keep-limits in
+				 * Fishing, so nothing is lost by it being here.
+				 */
+				?>
+				<?php self::render_links( __( 'Official information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
+			</div>
+		</details>
+		<?php
+	}
+
+	/**
+	 * Which calendar months a season row covers, read out of its OWN label.
+	 *
+	 * The seasons are owner-editable rows with no month field, so the months
+	 * are DERIVED from the label a person typed ("Fall · Sep–Nov") by looking
+	 * for this locale's month names — never from the row's position, which
+	 * would silently mislabel every season the moment somebody reorders them
+	 * or keeps five. Two names found means an inclusive range that may wrap
+	 * the year end; one means that month alone; anything else yields nothing,
+	 * and water.js then simply opens the first season rather than guessing.
+	 *
+	 * @return int[] 1-12, in no particular order.
+	 */
+	private static function season_months( string $label ): array {
+		if ( '' === $label ) {
+			return [];
+		}
+		$hay   = function_exists( 'mb_strtolower' ) ? mb_strtolower( $label ) : strtolower( $label );
+		$found = [];
+		for ( $m = 1; $m <= 12; $m++ ) {
+			$ts = mktime( 0, 0, 0, $m, 1, 2026 );
+			foreach ( [ date_i18n( 'M', $ts ), date_i18n( 'F', $ts ) ] as $name ) {
+				$name = function_exists( 'mb_strtolower' ) ? mb_strtolower( $name ) : strtolower( $name );
+				if ( '' !== $name && false !== strpos( $hay, $name ) ) {
+					$found[ $m ] = (int) strpos( $hay, $name );
+					break;
+				}
+			}
+		}
+		if ( 1 === count( $found ) ) {
+			return array_keys( $found );
+		}
+		if ( 2 !== count( $found ) ) {
+			return [];
+		}
+		asort( $found );            // the one written first is the start.
+		$ends = array_keys( $found );
+		$out  = [];
+		for ( $m = $ends[0], $guard = 0; $guard < 12; $guard++ ) {
+			$out[] = $m;
+			if ( $m === $ends[1] ) {
+				break;
+			}
+			$m = 12 === $m ? 1 : $m + 1;
+		}
+		return $out;
+	}
+
 	private static function render_fishing( array $f ): void {
 		$seasons = is_array( $f['seasons'] ?? null ) ? $f['seasons'] : [];
 		$regs    = is_array( $f['regs'] ?? null ) ? $f['regs'] : [];
@@ -318,19 +478,45 @@ final class Water_Render {
 			<?php endif; ?>
 
 			<?php if ( $seasons ) : ?>
-				<ul class="dccwl-fishing-seasons">
-					<?php foreach ( $seasons as $s ) : ?>
+				<?php
+				/*
+				 * ITEM 10 (1.34.0, Rob's pick A) — a season picker, then one
+				 * labelled block per species, instead of one long run of text
+				 * in which the seasons and the three species all looked alike.
+				 *
+				 * The picker is rendered HIDDEN and every season is visible, as
+				 * the water tab bar is: with no JavaScript a guest still reads
+				 * the whole year in one scroll rather than meeting four dead
+				 * buttons. water.js unhides it and opens the CURRENT season —
+				 * which it works out in canal time, never server-side, because
+				 * the page is cached.
+				 */
+				?>
+				<div class="dccwl-tabs dccwl-fish-seasons" role="group" aria-label="<?php esc_attr_e( 'Season', 'dcc-wildlife' ); ?>" data-dccwl-fish-seasons hidden>
+					<?php foreach ( $seasons as $i => $s ) : ?>
 						<?php if ( ! is_array( $s ) ) { continue; } ?>
-						<li class="dccwl-fishing-season">
+						<button type="button" class="dccwl-tab" data-dccwl-fish-season-btn="<?php echo (int) $i; ?>" aria-pressed="<?php echo 0 === $i ? 'true' : 'false'; ?>">
+							<?php echo esc_html( (string) ( $s['short'] ?? strtok( (string) ( $s['name'] ?? '' ), ' ·' ) ) ); ?>
+						</button>
+					<?php endforeach; ?>
+				</div>
+				<ul class="dccwl-fishing-seasons">
+					<?php foreach ( $seasons as $i => $s ) : ?>
+						<?php if ( ! is_array( $s ) ) { continue; } ?>
+						<li class="dccwl-fishing-season dccwl-fish-season" data-dccwl-fish-season="<?php echo (int) $i; ?>" data-dccwl-fish-months="<?php echo esc_attr( implode( ',', self::season_months( (string) ( $s['name'] ?? '' ) ) ) ); ?>">
 							<p class="dccwl-fishing-season-name"><?php echo esc_html( (string) ( $s['name'] ?? '' ) ); ?></p>
 							<?php foreach ( $fish as $k => $label ) : ?>
 								<?php if ( ! empty( $s[ $k ] ) ) : ?>
-									<p class="dccwl-fishing-line"><span class="dccwl-fishing-fish"><?php echo esc_html( $label ); ?></span> <?php echo esc_html( (string) $s[ $k ] ); ?></p>
+									<div class="dccwl-fish-species">
+										<h4><?php echo esc_html( $label ); ?></h4>
+										<p class="dccwl-fishing-line"><?php echo esc_html( (string) $s[ $k ] ); ?></p>
+									</div>
 								<?php endif; ?>
 							<?php endforeach; ?>
 						</li>
 					<?php endforeach; ?>
 				</ul>
+				<hr class="dccwl-fish-rule">
 			<?php endif; ?>
 
 			<?php if ( ! empty( $f['sportfish'] ) ) : ?>
@@ -347,8 +533,11 @@ final class Water_Render {
 			<?php endif; ?>
 
 			<?php if ( $regs ) : ?>
+				<?php /* ITEM 10 (pick A) — a ruled break, so the licences block reads
+				         as its own thing and not as more fishing advice. */ ?>
+				<hr class="dccwl-fish-rule">
 				<div class="dccwl-fishing-regs">
-					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Keep-limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
+					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licences &amp; keep-limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
 					<ul class="dccwl-fishing-reglist">
 						<?php foreach ( $regs as $r ) : ?>
 							<?php if ( is_array( $r ) && isset( $r[0], $r[1] ) ) : ?>
@@ -577,7 +766,7 @@ final class Water_Render {
 						'tabAbout'    => __( 'About', 'dcc-wildlife' ),
 						'tabsLabel'   => __( 'What to show', 'dcc-wildlife' ),
 						'moon' => [
-							'label' => __( 'Tonight on the canal', 'dcc-wildlife' ),
+							'label' => __( 'Tonight on the Canal', 'dcc-wildlife' ),
 							/* translators: 1: sunrise time, 2: sunset time. */
 							'light' => __( 'First light %1$s · last light %2$s', 'dcc-wildlife' ),
 							'new' => __( 'New moon', 'dcc-wildlife' ),

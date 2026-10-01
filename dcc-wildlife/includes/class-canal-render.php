@@ -106,7 +106,9 @@ final class Canal_Render {
 		// The water module decides for itself whether it has anything to
 		// say (its 1.5.0 auto-hide). An empty string means "nothing at all
 		// today" — so the hub simply does not offer a Water tile.
-		$water_html = Water_Render::render( [] );
+		/* false: the hub's footnote row prints the About fold (item 4,
+		 * 1.34.0), so the water panel must not print a second copy. */
+		$water_html = Water_Render::render( [ 'about_fold' => false ] );
 		$has_water  = '' !== $water_html;
 
 		// The month widget, minus its hero: the countdown belongs to the hub

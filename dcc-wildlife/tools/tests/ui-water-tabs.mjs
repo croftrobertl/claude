@@ -54,8 +54,13 @@ async function panel(width, opts = {}) {
   return page;
 }
 
-/* ---- 1. it opens on Now ---------------------------------------------- */
-section('the panel opens on Now');
+/* ---- 1. it opens on MAP ----------------------------------------------- */
+/* 1.34.0 REVERSES the 1.33.0 rule that this panel opens on Now. Rob chose
+ * "map first" (item 3, option B) on 2026-10-01, so the panel opens on the
+ * first tab in the bar and that tab is Map. The assertion is rewritten rather
+ * than loosened: the OLD rule and the new one are both one named tab, and a
+ * suite that stopped caring which would no longer be testing his decision. */
+section('the panel opens on Map, which is the first tab');
 
 let page = await panel(390);
 
@@ -69,15 +74,19 @@ const state = () => page.evaluate(() => ({
 }));
 
 checkSame(false, (await state()).barHidden, 'the tab bar is revealed by the script');
-checkSame(['now'], (await state()).pressed, 'Now is the pressed tab');
-checkSame(['now'], (await state()).shown, 'and the only visible pane');
+checkSame(['map'], (await state()).pressed, 'Map is the pressed tab');
+checkSame(['map'], (await state()).shown, 'and the only visible pane');
+checkSame(['map', 'now', 'fishing'], await page.evaluate(() => Array.from(
+  document.querySelectorAll('[data-dccwl-water-tab-btn]')
+).map((b) => b.getAttribute('data-dccwl-water-tab-btn'))),
+  'the bar reads Map · Now · Fishing — About is no longer a tab (item 4)');
 
 /* ---- 2. ...EVERY time, not just the first ---------------------------- */
-section('and returns to Now whenever the hub re-opens it');
+section('and returns to the first tab whenever the hub re-opens it');
 
-await page.evaluate(() => document.querySelector('[data-dccwl-water-tab-btn="about"]').click());
+await page.evaluate(() => document.querySelector('[data-dccwl-water-tab-btn="fishing"]').click());
 await page.waitForTimeout(200);
-checkSame(['about'], (await state()).shown, 'choosing About switches the pane');
+checkSame(['fishing'], (await state()).shown, 'choosing Fishing switches the pane');
 
 await page.evaluate(() => {
   const bar = document.querySelector('[data-dccwl-water-tabs]');
@@ -85,8 +94,8 @@ await page.evaluate(() => {
   target.dispatchEvent(new CustomEvent('dccwl:panel-shown', { bubbles: true, detail: { level: 'water' } }));
 });
 await page.waitForTimeout(200);
-checkSame(['now'], (await state()).shown,
-  'the hub re-opening the panel puts it back on Now — the owner\'s rule, every time');
+checkSame(['map'], (await state()).shown,
+  'the hub re-opening the panel puts it back on the first tab — every time');
 
 /* ---- 3. the sources fold, and unfold ---------------------------------- */
 section('every source folds into its chip, and folds back out');
@@ -175,7 +184,8 @@ const noJs = await page.evaluate(() => ({
   attrsTotal: document.querySelectorAll('.dccwl-water-attr').length,
 }));
 note(JSON.stringify(noJs));
-checkSame(['now', 'fishing', 'about'], noJs.panes, 'every pane is visible');
+checkSame(['now', 'fishing', 'map'], noJs.panes,
+  'every pane is visible — in source order, which the tab order no longer has to match');
 checkSame(true, noJs.barHidden, 'and the tab bar stays hidden, so no button is dead');
 checkSame(noJs.attrsTotal, noJs.attrsVisible,
   'every source line is in plain sight — a folded source must never be a missing one');

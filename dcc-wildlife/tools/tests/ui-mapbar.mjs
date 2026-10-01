@@ -61,8 +61,8 @@ async function openMap(width, height) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(150);
-  const tabbed = await page.$('[data-dccwl-water-tab-btn="fishing"]');
-  if (tabbed) { await tabbed.click(); await page.waitForTimeout(200); }
+  /* 1.34.0: the map is its own tab and the panel opens on it, so the open
+   * button is reachable without pressing anything first. */
   const btn = await page.$('[data-dccwl-map-open]');
   if (!btn) { return { page, opened: false }; }
   await btn.click();

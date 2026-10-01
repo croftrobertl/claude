@@ -1158,6 +1158,8 @@ final class Water_Live {
 		return [
 			[
 				'label'       => __( 'Water level', 'dcc-wildlife' ),
+				/* 1.34.0: the machine name the Map tab's stat tiles read. */
+				'key'         => 'level',
 				'value'       => self::describe_deviation(
 					$inches,
 					'' !== $month
@@ -1323,6 +1325,8 @@ final class Water_Live {
 		return [
 			[
 				'label'       => __( 'Water clarity (Secchi depth)', 'dcc-wildlife' ),
+				/* 1.34.0: the machine name the Map tab's stat tiles read. */
+				'key'         => 'clarity',
 				'value'       => $value,
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
@@ -1797,6 +1801,8 @@ final class Water_Live {
 		if ( '' !== $wspd ) {
 			$rows[] = [
 				'label'       => __( 'Wind', 'dcc-wildlife' ),
+				/* 1.34.0: the machine name the Map tab's stat tiles read. */
+				'key'         => 'wind',
 				'value'       => '' !== $wdir ? trim( $wdir . ' ' . $wspd ) : $wspd,
 				'tier'        => Water_Fact::TIER_LIVE,
 				'source_name' => $source,

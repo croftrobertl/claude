@@ -56,7 +56,8 @@ final class Water_Fact {
 		private string $note,
 		private string $date_label,
 		private string $group,
-		private string $date_precision
+		private string $date_precision,
+		private string $key = ''
 	) {}
 
 	/**
@@ -64,7 +65,7 @@ final class Water_Fact {
 	 * cannot be attributed.
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
-	 * Optional: source_url, note, date_label, group, date_precision.
+	 * Optional: source_url, note, date_label, group, date_precision, key.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
@@ -91,6 +92,16 @@ final class Water_Fact {
 		$note   = trim( (string) ( $raw['note'] ?? '' ) );
 		$dlabel = trim( (string) ( $raw['date_label'] ?? '' ) );
 		$group  = trim( (string) ( $raw['group'] ?? '' ) );
+		/*
+		 * 1.34.0 — an OPTIONAL machine name for the parameter, so the client
+		 * can pick one fact out of the list without matching a translated
+		 * label. It is metadata, never a gate: a Fact with no key is as valid
+		 * as one with it, and a key can neither admit an unsourced fact nor
+		 * change how one renders. Restricted to [a-z_] so it can only ever be
+		 * an identifier.
+		 */
+		$key    = strtolower( trim( (string) ( $raw['key'] ?? '' ) ) );
+		$key    = (string) preg_replace( '/[^a-z_]/', '', $key );
 		$dprec  = trim( (string) ( $raw['date_precision'] ?? '' ) );
 		if ( ! in_array( $dprec, [ 'day', 'minute' ], true ) ) {
 			$dprec = '';
@@ -117,7 +128,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key );
 	}
 
 	/**
@@ -159,6 +170,7 @@ final class Water_Fact {
 			'note'       => $this->note,
 			'dateLabel'  => $this->date_label,
 			'group'      => $this->group,
+			'key'        => $this->key,
 			'datePrecision' => $this->date_precision,
 		];
 	}

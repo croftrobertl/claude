@@ -1137,6 +1137,9 @@
 				// Revealed only now: without this script the grid is a plain
 				// wrapping list with no deck to jump around in.
 				if (chipWrap) { chipWrap.hidden = false; }
+				// The arrows ride with the chip row they belong to (item 13).
+				var chipNav = nav.querySelector('[data-dccwl-subchips-nav]');
+				if (chipNav) { chipNav.hidden = false; }
 				if (tools) { tools.hidden = false; }
 
 				function visible() {
@@ -1184,6 +1187,7 @@
 						if (on) { pressed = c; }
 					});
 					revealChip(pressed);
+					syncArrows();
 				}
 
 				/* The position line for a sub-group: "Wading birds · 2/3".
@@ -1226,6 +1230,43 @@
 				chips.forEach(function (c) {
 					c.addEventListener('click', function () { jump(c.getAttribute('data-dccwl-browse')); });
 				});
+
+				/* ITEM 13 (1.34.0) — ‹ › on this bar, behaving as they do on the
+				 * months bar: one step along the thing the bar navigates. There
+				 * the steps are months and they wrap, because a year does;
+				 * here they are the categories in the order the section lists
+				 * them, and the ends are ends — so at either end the arrow
+				 * DISABLES, which under the 1.33.0 rule hides it and keeps its
+				 * space rather than fading it. */
+				var arrowNav = nav.querySelector('[data-dccwl-subchips-nav]');
+				var prevArrow = arrowNav && arrowNav.querySelector('.dccwl-subchip-prev');
+				var nextArrow = arrowNav && arrowNav.querySelector('.dccwl-subchip-next');
+
+				function chipIndex() {
+					for (var i = 0; i < chips.length; i++) {
+						if (chips[i].getAttribute('data-dccwl-browse') === active) { return i; }
+					}
+					return 0;
+				}
+
+				function syncArrows() {
+					if (!prevArrow || !nextArrow) { return; }
+					var i = chipIndex();
+					prevArrow.disabled = i <= 0;
+					nextArrow.disabled = i >= chips.length - 1;
+				}
+
+				function step(delta) {
+					var i = chipIndex() + delta;
+					if (i < 0 || i >= chips.length) { return; }
+					jump(chips[i].getAttribute('data-dccwl-browse'));
+					chips[i].focus();
+				}
+
+				if (prevArrow && nextArrow) {
+					prevArrow.addEventListener('click', function () { step(-1); });
+					nextArrow.addEventListener('click', function () { step(1); });
+				}
 
 				/* While a sub-group is pressed the chip row follows the deck, so
 				 * it reports position as well as offering it. The All chip is
@@ -1277,6 +1318,7 @@
 						grid.removeAttribute('data-dccwl-compact');
 					}
 					if (chipWrap) { chipWrap.hidden = compact; }
+					if (chipNav) { chipNav.hidden = compact; }
 					if (window.DCCWL_Deck) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
 				}
 

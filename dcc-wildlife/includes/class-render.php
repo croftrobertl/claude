@@ -525,11 +525,31 @@ final class Render {
 		?>
 		<div class="dccwl-subnav" data-dccwl-subnav="<?php echo esc_attr( $section ); ?>"<?php echo $visible ? '' : ' hidden'; ?>>
 			<?php if ( $chips ) : ?>
+			<?php
+			/*
+			 * ITEM 13 (1.34.0) — ‹ › on the categories bar, exactly as the
+			 * months bar has them: same element, same class, so item 14's
+			 * arrow colour and the 1.33.0 rule that a disabled navigation
+			 * control is HIDDEN rather than faded both apply to one
+			 * implementation rather than two. They step through the chips —
+			 * the categories are what this bar navigates, as months are what
+			 * that one does. The wrapper exists because the chip row is a
+			 * horizontal scroller: an arrow inside it would scroll away.
+			 */
+			?>
+			<div class="dccwl-subchips-nav" data-dccwl-subchips-nav hidden>
+			<button type="button" class="dccwl-timeline-arrow dccwl-subchip-prev" aria-label="<?php esc_attr_e( 'Previous category', 'dcc-wildlife' ); ?>">
+				<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
 			<div class="dccwl-subchips" role="group" aria-label="<?php esc_attr_e( 'Jump to a part of this section', 'dcc-wildlife' ); ?>" data-dccwl-subchips hidden>
 				<button type="button" class="dccwl-subchip" data-dccwl-browse="" aria-pressed="true"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></button>
 				<?php foreach ( $groups as $slug => $glabel ) : ?>
 					<button type="button" class="dccwl-subchip" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>" aria-pressed="false"><?php echo esc_html( $glabel ); ?></button>
 				<?php endforeach; ?>
+			</div>
+			<button type="button" class="dccwl-timeline-arrow dccwl-subchip-next" aria-label="<?php esc_attr_e( 'Next category', 'dcc-wildlife' ); ?>">
+				<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
 			</div>
 			<?php endif; ?>
 
@@ -754,7 +774,7 @@ final class Render {
 					         full-length labels do not fit on one line at 393px, which is
 					         the width this was measured at, and the ask was one row. The
 					         meta line under it still says what the panel holds. */ ?>
-					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Field guide', 'dcc-wildlife' ); ?></span>
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Field Guide', 'dcc-wildlife' ); ?></span>
 					<span class="dccwl-fullguide-meta">
 						<?php
 						printf(
@@ -822,8 +842,25 @@ final class Render {
 		?>
 		<button type="button" class="dccwl-footnote-link" data-dccwl-go="month" data-dccwl-monthlink hidden
 			aria-label="<?php esc_attr_e( 'Browse the guide by month', 'dcc-wildlife' ); ?>">
-			<?php esc_html_e( 'By month', 'dcc-wildlife' ); ?>
+			<?php esc_html_e( 'By Month', 'dcc-wildlife' ); ?>
 		</button>
+		<?php
+		/*
+		 * ITEM 4 (1.34.0) — "About the water" used to be a TAB in the water
+		 * panel and is now the fourth link in this row, beside Field Guide,
+		 * Credits and By Month, which was Rob's instruction: it must look and
+		 * behave exactly like those three, so it IS one of them — the same
+		 * <details class="dccwl-fullguide">, rendered by the water module.
+		 *
+		 * Guarded by method_exists because this renderer must keep working
+		 * when the water module is not loaded at all, and it prints nothing
+		 * when the water settings hold no almanac, no reference facts and no
+		 * links — the same silence rule the module follows everywhere else.
+		 */
+		if ( method_exists( __NAMESPACE__ . '\\Water_Render', 'about_fold' ) ) {
+			Water_Render::about_fold();
+		}
+		?>
 		</div>
 		<?php
 	}

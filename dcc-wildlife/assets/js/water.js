@@ -243,6 +243,33 @@
 		});
 	}
 
+	/* ITEM 3 (1.34.0, pick B) — the Map tab's three stat tiles.
+	 *
+	 * Filled from the SAME gated facts the Now tab renders: a tile can only
+	 * ever show a number a source returned, with that source named under it.
+	 * A tile with no fact stays hidden, which is the same rule the whole
+	 * module follows — an absent reading is absent, never "unknown". */
+	var STAT_KEYS = { level: 1, clarity: 1, wind: 1 };
+
+	function fillStats(section, facts) {
+		var wrap = section && section.querySelector('[data-dccwl-water-stats]');
+		if (!wrap) { return; }
+		var shown = 0;
+		facts.forEach(function (f) {
+			if (!f || !f.key || !STAT_KEYS[f.key] || !f.value || !f.sourceName) { return; }
+			if (f.group === 'chain') { return; }
+			var li = wrap.querySelector('[data-dccwl-stat="' + f.key + '"]');
+			if (!li) { return; }
+			var v = li.querySelector('[data-dccwl-stat-value]');
+			var sub = li.querySelector('[data-dccwl-stat-sub]');
+			if (v) { v.textContent = f.value; }
+			if (sub) { sub.textContent = f.sourceName; }
+			li.hidden = false;
+			shown += 1;
+		});
+		if (shown > 0) { wrap.hidden = false; }
+	}
+
 	function fill(root, facts) {
 		var list = root.querySelector('[data-dccwl-water-facts]');
 		if (!list) { return; }
@@ -268,6 +295,7 @@
 			}
 		});
 		if (chainWrap && chainShown > 0) { chainWrap.hidden = false; }
+		fillStats(root.closest('[data-dccwl-water-root]') || document, facts);
 		shown += chainShown;
 
 		/* The same deck the species tiles use (1.23.0), on the lists that just
@@ -386,6 +414,11 @@
 		// REST route, and through it the upstream APIs.
 		var mapData = null;
 		var label = btn.textContent;
+		/* Which colouring the map should open on. A stat tile sets it before
+		 * it presses this button; the button on its own leaves it empty and
+		 * the map keeps its own default. One variable, read at open time, so
+		 * the map never holds a stale request. */
+		var wantColour = '';
 
 		function openSheet() {
 			window.DCCWL_Sheet.open({
@@ -398,7 +431,13 @@
 					// The map wants the whole sheet: no padding, no scroll of
 					// its own — Leaflet handles panning inside the canvas.
 					body.classList.add('dccwl-sheet-body-map');
-					window.DCCWL_Map.init(body, mapData, cfg, (CFG.i18n || {}));
+					var mapCfg = cfg;
+					if (wantColour) {
+						mapCfg = {};
+						Object.keys(cfg).forEach(function (k) { mapCfg[k] = cfg[k]; });
+						mapCfg.colour = wantColour;
+					}
+					window.DCCWL_Map.init(body, mapData, mapCfg, (CFG.i18n || {}));
 				},
 				onClose: function () {
 					btn.textContent = label;
@@ -406,8 +445,26 @@
 			});
 		}
 
-		btn.addEventListener('click', function () {
+		/* The stat tiles are the other way in. Each asks for the map coloured
+		 * by its own reading where the map has that colouring (Level,
+		 * Clarity); Wind has none, so its tile opens the map plain rather
+		 * than inventing a colouring the data cannot support. */
+		var statWrap = (section || document).querySelector('[data-dccwl-water-stats]');
+		if (statWrap && !statWrap.getAttribute('data-dccwl-stats-init')) {
+			statWrap.setAttribute('data-dccwl-stats-init', '1');
+			statWrap.addEventListener('click', function (ev) {
+				var t = ev.target.closest ? ev.target.closest('[data-dccwl-stat-colour]') : null;
+				if (!t) { return; }
+				wantColour = t.getAttribute('data-dccwl-stat-colour') || '';
+				btn.click();
+			});
+		}
+
+		btn.addEventListener('click', function (ev) {
 			if (!window.DCCWL_Sheet) { return; }
+			// A press of the button ITSELF asks for no particular colouring;
+			// only a stat tile's synthetic press carries one.
+			if (ev && ev.isTrusted) { wantColour = ''; }
 			if (mapData) {
 				// Already loaded once — straight back to the sheet.
 				openSheet();
@@ -655,13 +712,81 @@
 					select(b.getAttribute('data-dccwl-water-tab-btn'));
 				});
 			});
-			select('now');
+			/* The FIRST tab in the bar, never a named one. 1.34.0 made Map
+			 * first (item 3) and this line still said 'now', so the bar read
+			 * Map · Now · Fishing and opened on Now — the order and the
+			 * default disagreeing, which is exactly what naming a tab here
+			 * invites. The order is now the only place the default lives. */
+			select(btns[0].getAttribute('data-dccwl-water-tab-btn'));
 
-			// Re-opened from the hub: back to Now, every time.
+			// Re-opened from the hub: back to the first tab, every time.
 			var panel = bar.closest('.dccwl-panel') || root;
 			if (panel && panel.addEventListener) {
-				panel.addEventListener('dccwl:panel-shown', function () { select('now'); });
+				/* Back to the first tab, whatever it is — since 1.34.0 that is
+				 * Map. Naming a tab here would quietly disagree with the bar
+				 * the moment the order changes, which is exactly what it did. */
+				panel.addEventListener('dccwl:panel-shown', function () {
+					select(btns[0].getAttribute('data-dccwl-water-tab-btn'));
+				});
 			}
+		});
+	}
+
+	/* ITEM 10 (1.34.0, pick A) — the season picker.
+	 *
+	 * Rendered hidden with every season visible, so a guest with no
+	 * JavaScript reads the whole year in one scroll instead of meeting four
+	 * dead buttons. Here it is unhidden and the CURRENT season opened —
+	 * worked out in canal time from the months each row declares, never
+	 * server-side, because the page is cached. A row that declares no months
+	 * (an owner wrote a label this locale's month names are not in) simply
+	 * never wins, and the first season opens. */
+	function canalMonth() {
+		try {
+			var p = new Date().toLocaleDateString('en-US', {
+				timeZone: 'America/New_York', month: 'numeric'
+			});
+			var m = parseInt(p, 10);
+			if (m >= 1 && m <= 12) { return m; }
+		} catch (e) { /* fall through */ }
+		return new Date().getMonth() + 1;
+	}
+
+	function initFishSeasons(scope) {
+		(scope || document).querySelectorAll('[data-dccwl-fish-seasons]').forEach(function (bar) {
+			var wrap = bar.closest('[data-dccwl-fishing]') || document;
+			var btns = [].slice.call(bar.querySelectorAll('[data-dccwl-fish-season-btn]'));
+			var panes = [].slice.call(wrap.querySelectorAll('[data-dccwl-fish-season]'));
+			if (!btns.length || !panes.length) { return; }
+
+			function select(idx) {
+				btns.forEach(function (b) {
+					b.setAttribute('aria-pressed',
+						b.getAttribute('data-dccwl-fish-season-btn') === idx ? 'true' : 'false');
+				});
+				panes.forEach(function (p) {
+					p.hidden = p.getAttribute('data-dccwl-fish-season') !== idx;
+				});
+			}
+
+			if (!bar.getAttribute('data-dccwl-fish-init')) {
+				bar.setAttribute('data-dccwl-fish-init', '1');
+				bar.addEventListener('click', function (ev) {
+					var b = ev.target.closest ? ev.target.closest('[data-dccwl-fish-season-btn]') : null;
+					if (b) { select(b.getAttribute('data-dccwl-fish-season-btn')); }
+				});
+			}
+
+			var now = canalMonth();
+			var want = panes[0].getAttribute('data-dccwl-fish-season');
+			panes.forEach(function (p) {
+				var months = (p.getAttribute('data-dccwl-fish-months') || '').split(',');
+				if (months.indexOf(String(now)) >= 0) {
+					want = p.getAttribute('data-dccwl-fish-season');
+				}
+			});
+			bar.hidden = false;
+			select(want);
 		});
 	}
 
@@ -673,6 +798,7 @@
 		// the first paint; the live ones fold as they are built, in fill().
 		foldSources(document);
 		initWaterTabs(document);
+		initFishSeasons(document);
 	}
 
 	if (document.readyState === 'loading') {

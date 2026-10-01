@@ -77,7 +77,12 @@ check(icon && pill && icon.x > pill.x && icon.x + icon.w < pill.x + pill.w,
   `pill ${JSON.stringify(pill)} icon ${JSON.stringify(icon)}`);
 
 /* ---- 2. toggle states ------------------------------------------------ */
-section('every toggle is blue; the selected one is marked in gold');
+/* 1.34.0, item 12: the SELECTED toggle is coral now, with --dccwl-text ink.
+ * Rob's reason is that the gold ring alone did not say what was showing. The
+ * gold mark STAYS (his 1.33.0 answer 1: "the gold selected-ring is fine as it
+ * is"), so the selected state carries both. Ink, not white: white on coral is
+ * 2.59:1 and the 1.16.1 rule makes --dccwl-accent fill-only. */
+section('every unselected toggle is blue; the selected one is coral and gold');
 
 const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dccwl-tab')).map((b) => {
   const cs = getComputedStyle(b);
@@ -95,8 +100,11 @@ const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dc
 note(tabs.map((t) => `${t.label}[${t.pressed}]`).join(' '));
 checkAtLeast(4, tabs.length, 'there are at least four section tabs');
 for (const t of tabs) {
-  checkSame(BLUE, t.bg, `${t.label}: solid #006BCF at rest`);
-  checkSame(WHITE, t.fg, `${t.label}: white text`);
+  const chosen = 'true' === t.pressed;
+  checkSame(chosen ? CORAL : BLUE, t.bg,
+    `${t.label}: ${chosen ? 'coral while selected' : 'solid #006BCF at rest'}`);
+  checkSame(chosen ? INK : WHITE, t.fg,
+    `${t.label}: ${chosen ? 'dark ink on the coral' : 'white text'}`);
   checkSame('30px', t.radius, `${t.label}: the site kit radius`);
 }
 const on = tabs.filter((t) => 'true' === t.pressed);
@@ -139,8 +147,18 @@ for (const [sel, what, rowSel] of [
   for (const g of groups) {
     const rows = g.chips;
     checkAtLeast(2, rows.length, `${g.section}: ${what}s are present`);
-    check(rows.every((r) => r.bg === BLUE), `${g.section}: every ${what} is solid #006BCF`);
-    check(rows.every((r) => r.fg === WHITE), `${g.section}: every ${what} has white text`);
+    check(rows.filter((r) => !r.pressed).every((r) => r.bg === BLUE),
+      `${g.section}: every unselected ${what} is solid #006BCF`);
+    check(rows.filter((r) => !r.pressed).every((r) => r.fg === WHITE),
+      `${g.section}: every unselected ${what} has white text`);
+    /* The month pill is deliberately NOT part of item 12 — Rob listed the
+     * category tabs, the category chips and the water tabs, and the month
+     * strip already marks its selection in gold on blue. So a selected chip
+     * is coral and a selected month pill is not, and the suite says which is
+     * which rather than accepting either. */
+    const wantSel = '.dccwl-subchip' === sel ? CORAL : BLUE;
+    check(rows.filter((r) => r.pressed).every((r) => r.bg === wantSel),
+      `${g.section}: the selected ${what} is ${wantSel === CORAL ? 'coral (item 12)' : 'still blue'}`);
     const sel_on = rows.filter((r) => r.pressed);
     checkSame(1, sel_on.length, `${g.section}: exactly one ${what} is selected in this row`);
     checkSame(GOLD, sel_on[0].bc, `${g.section}: the selected ${what} is marked in gold`);
@@ -221,8 +239,12 @@ if (legend) { checkSame(INK, legend.color, 'a muted-role element is now black');
 
 await page.close();
 
-/* ---- 5. the footnote row: three labels, one look --------------------- */
-section('By month matches Field guide and Credits — at every width');
+/* ---- 5. the footnote row: FOUR labels, one look ---------------------- */
+/* 1.34.0: "About" joined the row (item 4) — Rob asked for the water almanac
+ * to open from here and to look and behave exactly like the other three. The
+ * count is pinned at four rather than made ">= 3": the claim is that the row
+ * holds exactly these labels, and a count that cannot fail is not a test. */
+section('Field Guide, Credits, By Month and About are one row, one look');
 
 /*
  * AT 320, 390 AND 1280. The first version of this check asked at 390 only,
@@ -242,13 +264,15 @@ for (const w of [320, 390, 1280]) {
                color: cs.color, decoration: cs.textDecorationLine, fontFamily: cs.fontFamily };
     });
   });
-  check(!!rows && 3 === rows.length, `${w}px: all three labels are in the row`,
+  check(!!rows && 4 === rows.length, `${w}px: all four labels are in the row`,
     rows ? rows.map((r) => r.text).join(' | ') : 'row missing');
-  if (rows && 3 === rows.length) {
+  if (rows && 4 === rows.length) {
+    checkSame(['Field Guide', 'Credits', 'By Month', 'About'], rows.map((r) => r.text),
+      `${w}px: the labels are Title Case, in the order Rob listed them (item 17)`);
     note(`${w}px  ` + rows.map((r) => `${r.text}: ${r.fontSize}/${r.fontWeight} ${r.color} ${r.decoration}`).join('   '));
     for (const key of ['fontSize', 'fontWeight', 'color', 'decoration', 'fontFamily']) {
       const values = [...new Set(rows.map((r) => r[key]))];
-      checkSame(1, values.length, `${w}px: all three share one ${key}`, JSON.stringify(values));
+      checkSame(1, values.length, `${w}px: all four share one ${key}`, JSON.stringify(values));
     }
   }
   await h.page.close();
@@ -266,9 +290,9 @@ const links = await hub.page.evaluate(() => {
   };
   return Array.from(row.querySelectorAll('.dccwl-fullguide-h, .dccwl-footnote-link')).map(pick);
 });
-check(!!links && links.length >= 3, 'all three labels are in the row',
+check(!!links && 4 === links.length, 'all four labels are in the row',
   links ? links.map((l) => l.text).join(' | ') : 'row missing');
-if (links && links.length >= 3) {
+if (links && 4 === links.length) {
   note(links.map((l) => `${l.text}: ${l.fontSize}/${l.fontWeight} ${l.color}`).join('   '));
   const ref = links[0];
   for (const l of links.slice(1)) {
@@ -411,6 +435,26 @@ for (const [name, bg] of Object.entries(surfaces)) {
 await dis.page.close();
 
 const sheetW = await widgetPage(browser, 'month', { width: 390, height: 2400, sitekit: true });
+/*
+ * THE MONTH IS SET FIRST, AND THAT IS NOT A CONVENIENCE.
+ *
+ * The "Peak season" badge only renders when the species is at peak in the
+ * month on screen, and the month on screen is the real one, in canal time.
+ * The cottonmouth peaks Apr–Sep and scores 2 in October, so this check passed
+ * every day of the 1.33.0 work and began failing on 1 October without a line
+ * of code changing — a test whose answer depends on today's date is a test
+ * that will mislead somebody eventually. It now asks the dataset which month
+ * to stand in and sets it through the widget's own API.
+ */
+await sheetW.page.evaluate(() => {
+  const cfg = window.DCC_WL_CFG || {};
+  const peak = (cfg.set && cfg.set.peakScore) || 3;
+  const sp = (cfg.species || []).filter((x) => 'cottonmouth' === x.id)[0];
+  const m = sp ? (sp.months || []).indexOf(peak) : -1;
+  const root = document.querySelector('.dccwl-root');
+  if (m >= 0 && root && window.DCCWL_Widget) { window.DCCWL_Widget.setMonth(root, m, true); }
+});
+await sheetW.page.waitForTimeout(200);
 await sheetW.page.evaluate(() => {
   const t = document.querySelector('.dccwl-tile[data-dccwl-species="cottonmouth"]');
   (t || document.querySelector('.dccwl-tile')).click();

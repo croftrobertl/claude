@@ -557,3 +557,53 @@
  * than holding empty rows open. */
 .dccwl-canal .dccwl-hub-preview:empty,
 .dccwl-canal .dccwl-hub-art:empty { display: none; }
+
+/* ===================================================================
+ * 1.34.0 — Rob's /explore/ review. Every rule here is his decision.
+ * =================================================================== */
+
+/* ITEM 2 (his pick: C) — the hub cards are the same size at every width.
+ * Measured before the change: Water was 26px taller than Wildlife at 320,
+ * 390, 768 and 1280, because it carries a row of source chips and Wildlife
+ * does not. Two rules, no content added or removed:
+ *   grid-auto-rows: 1fr   makes EVERY row as tall as the tallest card, which
+ *                         is what a phone needs — there the cards are in
+ *                         separate rows, so the grid's own stretch cannot help.
+ *   height: 100%          makes the button fill the li. On desktop the li were
+ *                         ALREADY equal (213/213) and only the button was
+ *                         short (187) — this is the whole desktop fix.
+ * Matching is now by rule, so a longer reading can never pull them apart. */
+.dccwl-hub-tiles { grid-auto-rows: 1fr; }
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { height: 100%; }
+
+/* ITEM 11 — the section title is centred across the WHOLE bar, not in the
+ * space to the right of Back, and it shows on phones in both sections.
+ * The bar is a flex row; absolute centring is the only way to ignore the
+ * Back button's width, which differs between the two sections. */
+.dccwl-canal .dccwl-levelbar { position: relative; }
+.dccwl-canal .dccwl-levelbar .dccwl-crumbs {
+	left: 50%;
+	position: absolute;
+	transform: translateX(-50%);
+	text-align: center;
+	max-width: 60%;
+}
+@media (max-width: 480px) {
+	/* Was hidden at phone width, which is why "Wildlife" never appeared. */
+	.dccwl-canal .dccwl-levelbar .dccwl-crumbs { display: block; }
+}
+
+/* ITEM 17 — the bottom links are one row, one baseline, one type.
+ * "By Month" is a <button> and the other three are <summary>; the two render
+ * with different default line boxes, which is the couple of pixels Rob saw. */
+.dccwl-footnotes .dccwl-fullguide-summary,
+.dccwl-footnotes .dccwl-footnote-link {
+	align-items: center;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	line-height: 1.2;
+	text-decoration: underline;
+	vertical-align: baseline;
+}
