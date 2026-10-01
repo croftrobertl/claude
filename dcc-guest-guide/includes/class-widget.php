@@ -3470,6 +3470,20 @@ final class Widget extends Widget_Base
                     } ?>
                 </div>
 
+                <?php // v0.10.0: public-only intro. v0.23.2: it renders BEFORE the
+                // search bar (intro, search, tiles), so the page says what it is
+                // before offering to search it. The guest guide has no intro, so
+                // its markup is unchanged. Both this and the CTA below
+                // render only when the host has filled them in, so public mode
+                // adds no markup by default. Static text — nothing here varies
+                // per request, so the output stays page-cache and index safe.
+                if (self::is_public_mode($s)) :
+                    $public_intro = trim((string) ($s['public_intro'] ?? ''));
+                    if ($public_intro !== '') : ?>
+                        <p class="dccgg-public-intro"><?php echo esc_html($public_intro); ?></p>
+                    <?php endif;
+                endif; ?>
+
                 <?php if ($enable_search) : ?>
                     <div class="dccgg-search">
                         <i class="fas fa-search dccgg-search-icon" aria-hidden="true"></i>
@@ -3482,17 +3496,6 @@ final class Widget extends Widget_Base
                         <span class="dccgg-sr-only" aria-live="polite" data-dccgg-results-count></span>
                     </div>
                 <?php endif; ?>
-
-                <?php // v0.10.0: public-only intro. Both this and the CTA below
-                // render only when the host has filled them in, so public mode
-                // adds no markup by default. Static text — nothing here varies
-                // per request, so the output stays page-cache and index safe.
-                if (self::is_public_mode($s)) :
-                    $public_intro = trim((string) ($s['public_intro'] ?? ''));
-                    if ($public_intro !== '') : ?>
-                        <p class="dccgg-public-intro"><?php echo esc_html($public_intro); ?></p>
-                    <?php endif;
-                endif; ?>
 
                 <div class="dccgg-stage-container">
                     <?php $this->render_menu($sections, $items_by_section, $s, $reveal_mode); ?>

@@ -2963,6 +2963,89 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario AA: public page order — intro, search, tiles (v0.23.2) --
+    // The WHOLE widget from render() (tests/_emit-guide.php), styled by the
+    // core bundle alone, exactly as /explore/ loads it. The move must not cost
+    // search anything: results drop-down, voice mic, Cmd/Ctrl-K.
+    {
+        console.log('\nAA. Public guide: intro line, then search, then tiles — and search still works');
+        const errors = [];
+        const { execFileSync } = require('child_process');
+        const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
+        const CORE = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
+        const pageFor = (markup) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1"><style>${CORE}</style>
+            <style>html{font-weight:700}body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0;padding:0 16px}</style>
+            </head><body class="elementor-kit-331">${markup}<script>${JS}</script></body></html>`;
+        // A speech recogniser that "hears" one word, so the mic path runs end to end.
+        // Both names: this Chromium ships the unprefixed one, which the plugin
+        // prefers, so a stub under the prefixed name alone is never reached.
+        const fakeSpeech = () => {
+            window.SpeechRecognition = window.webkitSpeechRecognition = class {
+                start() { setTimeout(() => {
+                    this.onresult && this.onresult({ resultIndex: 0, results: [[{ transcript: 'manatees' }]] });
+                    this.onend && this.onend(); }, 50); }
+                stop() {}
+            };
+        };
+        for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 900 }]) {
+            const ctx = await browser.newContext({ viewport: vp });
+            await ctx.addInitScript(fakeSpeech);
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.route('**/admin-ajax.php', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
+            await page.route('https://dccgg.test/explore/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(emit('public-intro')) }));
+            await page.goto('https://dccgg.test/explore/', { waitUntil: 'load' });
+            await page.waitForTimeout(300);
+            const box = (sel) => page.$eval(sel, (e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; });
+            const intro = await box('.dccgg-public-intro');
+            const search = await box('.dccgg-search');
+            const tiles = await box('.dccgg-menu');
+            check(`${vp.width}px: on screen the intro line is above the search bar`, intro.bottom <= search.top,
+                `intro ends ${Math.round(intro.bottom)}, search starts ${Math.round(search.top)}`);
+            check(`${vp.width}px: and the search bar is above the section tiles`, search.bottom <= tiles.top,
+                `search ends ${Math.round(search.bottom)}, tiles start ${Math.round(tiles.top)}`);
+
+            await page.fill('.dccgg-search-input', 'pool');
+            await page.waitForTimeout(800);
+            const res = await page.evaluate(() => {
+                const list = document.querySelector('.dccgg-search-results');
+                const r = list.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 20));
+                return { shown: !list.hidden && r.height > 0, items: [...list.querySelectorAll('.dccgg-search-result')].map((b) => b.textContent.trim()),
+                         onTop: !!(hit && list.contains(hit)), below: r.top >= document.querySelector('.dccgg-search-input').getBoundingClientRect().bottom - 1 };
+            });
+            check(`${vp.width}px: typing opens the results drop-down below the box, on top of the tiles, with the match`,
+                res.shown && res.onTop && res.below && res.items.some((t) => /Pool hours/.test(t)), JSON.stringify(res));
+            await page.click('.dccgg-search-result');
+            await page.waitForTimeout(600);
+            check(`${vp.width}px: choosing a result opens that section`,
+                await page.evaluate(() => [...document.querySelectorAll('.dccgg-detail')].some((d) => !d.hidden && d.dataset.key === 'pool')));
+            await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+            await page.evaluate(() => { const i = document.querySelector('.dccgg-search-input'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.blur(); });
+            await page.waitForTimeout(300);
+
+            const micOk = await page.evaluate(() => {
+                const m = document.querySelector('.dccgg-search .dccgg-search-mic');
+                return !!m && m.nextElementSibling === document.querySelector('.dccgg-search-kbd');
+            });
+            check(`${vp.width}px: the voice-search mic sits in the box, before the ⌘K hint`, micOk);
+            await page.click('.dccgg-search-mic');
+            await page.waitForTimeout(800);
+            const heard = await page.evaluate(() => ({ v: document.querySelector('.dccgg-search-input').value,
+                items: [...document.querySelectorAll('.dccgg-search-result')].map((b) => b.textContent.trim()) }));
+            check(`${vp.width}px: speaking a word searches it`, heard.v === 'manatees' && heard.items.some((t) => /Manatees/.test(t)), JSON.stringify(heard));
+            await page.evaluate(() => document.querySelector('.dccgg-search-input').blur());
+            await page.mouse.click(2, vp.height - 2);
+            await page.keyboard.press('Control+k');
+            check(`${vp.width}px: Ctrl/⌘K focuses the search box`,
+                await page.evaluate(() => document.activeElement === document.querySelector('.dccgg-search-input')));
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

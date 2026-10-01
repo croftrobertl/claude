@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.1
+Stable tag: 0.23.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,14 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.2 =
+
+**Changed: on the public guide the intro line now sits above the search
+bar.** The page reads intro line, search bar, section tiles, so it says what
+it is before offering to search it. Search works exactly as before: the
+results drop-down, the voice-search mic and the ⌘K / Ctrl+K shortcut. The
+guest guide has no intro line and is unchanged. No new setting.
 
 = 0.23.1 =
 

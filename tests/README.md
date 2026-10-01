@@ -32,3 +32,13 @@ Fixtures are generated from the **real** `assets/js/widget.js` +
 `tests/popup.test.js` to match — a fixture drifting from render() shows
 up as sudden unexplained failures (or worse, silent passes), so keep
 them in lockstep.
+
+## Whole-widget render (v0.23.2)
+
+`tests/_render-guide.php` runs the widget's real `render()` with every
+setting at the default its own Elementor control declares; the Elementor
+registry is stubbed only far enough to collect those defaults.
+`tests/_emit-guide.php <case>` prints that output for the browser suite
+(scenario AA), and `php tests/layout.test.php` asserts the page order:
+public guide is intro line → search bar → tiles; the guest guide has no
+intro line and keeps heading → toolbar → search → tiles.
