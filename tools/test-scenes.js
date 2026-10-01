@@ -8,7 +8,7 @@
  * never on a phone borrow more than one sprite. Frames are captured as it
  * goes (a close-up that follows the action at 390px, 3x) and a strip of its
  * story beats — one per phase, topped up evenly — is written to
- * build/Seasons - scene strips 4.2.0.png for the report.
+ * build/Seasons - scene strips 4.3.0.png for the report.
  *
  * Usage: node tools/test-scenes.js [scene ...]
  */
@@ -26,6 +26,10 @@ const SCENES = [
   ['cranes', 'florida_keys', 'KC — a sandhill crane pair walks in, bows, and dances'],
   ['limpkinsnail', 'florida_keys', 'KD — a limpkin wades to the reeds, probes, and pulls up an apple snail'],
   ['hibfloat', 'florida_keys', 'K3 — a hibiscus bloom drops, floats, and a fish nibbles it'],
+  /* 4.3.0: the three scenes that were emoji, now Rob's drawn picks */
+  ['witchmoon', 'halloween', 'W-A — the silhouette witch and her cat cross the moon'],
+  ['arrival', 'snowbird', 'F-A — three flamingos flap down, land, and flap away'],
+  ['duckparade', 'spring_canal', 'D-A — a mottled duck hen leads four ducklings along the water'],
 ];
 const ONLY = process.argv.slice(2);
 const OUT = path.join(ROOT, 'build');
@@ -66,7 +70,11 @@ function ok(c, label, detail) {
       while (!ended && simT < 40) {
         const st = await page.evaluate(() => {
           const s = window.DCCSeasonsEngine._state, v = s.vigSt;
-          return { v: v ? { p: v.p || 0, x: v.sx != null && v.p >= 2 ? v.sx : (v.x != null ? v.x : v.gx), y: v.y, tx: v.tx } : null, wy: s.waterY, log: s.vigLog };
+          /* witchmoon keeps its place as mx/my; arrival as a list of birds */
+          const bs = v && v.birds ? v.birds.filter(b => b.x > -30 && b.x < 420) : null;
+          const fx = v && (v.mx != null ? v.mx : bs && bs.length ? bs.reduce((a, b) => a + b.x, 0) / bs.length : null);
+          const fy = v && (v.my != null ? v.my : bs && bs.length ? bs.reduce((a, b) => a + b.y, 0) / bs.length : null);
+          return { v: v ? { p: v.p || v.st2 || 0, x: fx != null ? fx : v.sx != null && v.p >= 2 ? v.sx : (v.x != null ? v.x : v.gx), y: fy != null ? fy : v.y, tx: v.tx } : null, wy: s.waterY, log: s.vigLog };
         });
         const last = st.log[st.log.length - 1];
         if (last && last.end >= 0) { ended = true; break; }
@@ -102,10 +110,10 @@ function ok(c, label, detail) {
     const img = f => `<img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}">`;
     await p.setContent(`<meta charset=utf-8><style>body{margin:0;padding:18px;background:#eef1f4;font:15px system-ui;color:#123}
       h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:16px 0 6px}.r{display:flex;gap:6px}.b{width:300px}.b img{width:300px;display:block;border:1px solid #bcc}.b span{font-size:12px;color:#456}</style>
-      <h1>DCC Seasons 4.2.0 — the eight new scenes, played through on a mocked clock</h1>
+      <h1>DCC Seasons 4.3.0 — the drawn scenes, played through on a mocked clock</h1>
       <div>390px phone, Rob's live settings, the theme's own sprites running. Each close-up follows the action (magnified); one frame per story phase.</div>
       ${strips.map(s => `<h2>${s.story}</h2><div class=r>${s.frames.map(fr => `<div class=b>${img(fr.f)}<span>t = ${fr.t.toFixed(1)}s</span></div>`).join('')}</div>`).join('')}`);
-    await p.screenshot({ path: path.join(OUT, 'Seasons - scene strips 4.2.0.png'), fullPage: true });
+    await p.screenshot({ path: path.join(OUT, 'Seasons - scene strips 4.3.0.png'), fullPage: true });
     await b.close();
     for (const s of strips) for (const fr of s.frames) { /* keep */ }
   }

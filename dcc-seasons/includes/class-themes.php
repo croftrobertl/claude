@@ -28,7 +28,7 @@
  *        n  most of this sprite on screen at once at FULL width (scaled on
  *           a phone, never below 1); the theme's other sprites take the
  *           space
- *        xa 1 → never while the theme's corner accent is showing
+ *        xa 1 → takes 45-second turns with the theme's corner accent (4.3.0)
  *        hl [min,max] thread length for 'hang', as fractions of the
  *           screen height (default 30-80px)
  *        fx draw extra: smoke | glint | lights | string | letter | trail |
@@ -567,7 +567,7 @@ class Themes {
                         ['s' => 'watermelon', 'b' => 'tumble', 'w' => 2, 'sz' => [24, 32]],
                         ['s' => 'flipflop', 'b' => 'fall', 'w' => 2, 'sz' => [16, 22]],
                         ['s' => 'icecream', 'b' => 'fall', 'sz' => [18, 24]],
-                        ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
+                        // No sunshades (Rob, 4.3.0): it read as a second sun.
                         // No dragonfly sprite (4.2.0): the subtle layer carries them.
                         ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
                         ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],
@@ -585,8 +585,9 @@ class Themes {
                 'ambient' => [
                     'particles' => [
                         ['s' => 'sprout', 'b' => 'grow', 'w' => 2],
-                        // At most one globe, and none while the hands accent (which
-                        // already holds an Earth) is on screen — 4.2.0.
+                        // xa: the globe and the hands accent (which already holds an
+                        // Earth) take 45-second turns, never on screen together
+                        // (Rob's option A, 4.3.0). The engine runs the turns.
                         ['s' => 'globe', 'b' => 'pulse', 'fx' => 'orbitarrows', 'n' => 1, 'xa' => 1, 'sz' => [26, 32]],
                         ['s' => 'recycle', 'b' => 'spin'],
                         ['s' => 'tree', 'b' => 'grow'],
@@ -621,7 +622,7 @@ class Themes {
                         ['s' => 'hibiscus', 'b' => 'fall', 'w' => 2, 'sz' => [18, 24]],
                         ['s' => 'jonboat', 'b' => 'cruise', 'face' => 'L', 'sz' => [36, 42]],
                         ['s' => 'ibis', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [40, 48]],
-                        ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
+                        // No sunshades (Rob, 4.3.0): it read as a second sun.
                         ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
                     ],
                 ],

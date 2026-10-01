@@ -131,6 +131,10 @@
 		candycorn: '22 30|<path d="M11 1 21 29H1Z" fill="%k"/><path d="M4 19 11 1l7 18Z" fill="#FF922B"/><path d="M8 9 11 1l3 8Z" fill="#FFF9DB"/>',
 		witchhat: '32 26|<ellipse cx="16" cy="22" rx="15" ry="4" fill="%g"/><path d="M16 0 24 21H8Z" fill="%b"/><rect x="9" y="16" width="14" height="4" fill="#9C36B5"/><rect x="14" y="17" width="3" height="3" fill="%k"/>',
 		/* 4.2.0 — the witch hero, drawn: a silhouette with her cat on the broom tail. */
+		flamup: '100 54|<g transform="translate(0 5)"><path d="M60 25L98 26.6M60 26.4L97 28.6" stroke="%u" stroke-width="1.4" stroke-linecap="round"/><path d="M44 24Q30 23 16 21.6" stroke="%s" stroke-width="3.4" stroke-linecap="round" fill="none"/><g transform="translate(51 23) scale(1.25) translate(-51 -23)"><path d="M45 23Q46 11 53 3L57 2Q57 13 56 23Z" fill="#F06595"/><path d="M57 2Q63 4 67 7Q61 14 60 23L56 23Q57 13 57 2Z" fill="%g"/><path d="M51 6Q52 4 53 3L57 2L56.6 7Z" fill="%g"/></g><ellipse cx="52" cy="25" rx="11" ry="5.4" fill="%s"/><path d="M61 23.4L66 24.6L61 27Z" fill="%s"/><ellipse cx="13.4" cy="21" rx="3.8" ry="3.1" fill="%s"/><path d="M10 20L4.6 21.4Q3 23.2 4.4 24.8L9.6 22.8Z" fill="#FFE3EC"/><path d="M5.8 21.1L4.6 21.4Q3 23.2 4.4 24.8L6 24.2Z" fill="%g"/><circle cx="13.6" cy="20.2" r=".9" fill="%g"/></g>',
+		flamdown: '100 54|<g transform="translate(0 5)"><path d="M60 21L98 22.6M60 22.4L97 24.6" stroke="%u" stroke-width="1.4" stroke-linecap="round"/><path d="M44 20Q30 19 16 17.6" stroke="%s" stroke-width="3.4" stroke-linecap="round" fill="none"/><g transform="translate(51 21) scale(1.25) translate(-51 -21)"><path d="M45 21Q46 33 53 41L57 42Q57 31 56 21Z" fill="#F06595"/><path d="M57 42Q63 40 67 37Q61 30 60 21L56 21Q57 31 57 42Z" fill="%g"/><path d="M51 38Q52 40 53 41L57 42L56.6 37Z" fill="%g"/></g><ellipse cx="52" cy="21" rx="11" ry="5.4" fill="%s"/><path d="M61 19.4L66 20.6L61 23Z" fill="%s"/><ellipse cx="13.4" cy="17" rx="3.8" ry="3.1" fill="%s"/><path d="M10 16L4.6 17.4Q3 19.2 4.4 20.8L9.6 18.8Z" fill="#FFE3EC"/><path d="M5.8 17.1L4.6 17.4Q3 19.2 4.4 20.8L6 20.2Z" fill="%g"/><circle cx="13.6" cy="16.2" r=".9" fill="%g"/></g>',
+		duckhen: '46 30|<path d="M9 19Q11 13 20 13L33 13Q40 13 43 8Q45 15 41 20Q35 27 21 27Q11 27 9 19Z" fill="#8C6A44"/><path d="M18 17l3 2 3-2M25 18l3 2 3-2M20 22l3 2 3-2M28 22l3 2 3-2M14 21l3 2 3-2" stroke="#5E4329" stroke-width="1" fill="none"/><path d="M30 15.6L38 15L37 17.4L30 18Z" fill="#4C6EF5"/><path d="M30 15.6L38 15M30 18L37 17.4" stroke="#F8F9FA" stroke-width=".6"/><path d="M9 13Q8 17 11 19L16 15Q13 13 12 10Z" fill="#9C7B52"/><circle cx="10.4" cy="9.4" r="5.4" fill="#B08C5F"/><path d="M7.4 5.2Q10.6 3.6 13.6 5Q12 5.8 10.2 6Q8.6 6 7.4 5.2Z" fill="#6B4F33"/><path d="M5.8 9.2Q9 8.8 14.6 10" stroke="#6B4F33" stroke-width=".55" fill="none"/><circle cx="8.6" cy="8.9" r=".95" fill="%g"/><path d="M5.6 10L.6 11.2Q.4 13 2 13.2L5.8 12.2Z" fill="#B8A23C"/><circle cx="1.2" cy="12" r=".6" fill="%g"/>',
+		duckling: '20 16|<ellipse cx="11" cy="10.4" rx="7.4" ry="5" fill="#6B4F33"/><path d="M6 12Q11 15.4 16 12Q11 13 6 12Z" fill="#E9C46A"/><path d="M16 8.6L19.4 7.4L18.4 10Z" fill="#6B4F33"/><circle cx="6" cy="6" r="3.8" fill="#E9C46A"/><path d="M2.6 4.6Q5 1.4 8.6 3Q9.6 4.6 9 6Q6 4.4 2.6 4.6Z" fill="#6B4F33"/><path d="M2.8 6.4L9.4 6" stroke="#6B4F33" stroke-width=".7"/><circle cx="4.8" cy="6.2" r=".8" fill="%g"/><path d="M2.6 6.8L.2 7.6L2.6 8.4Z" fill="#495057"/>',
 		witchsil: '92 66|<g fill="#1B1B24" stroke="#9C36B5" stroke-width=".7" paint-order="stroke"><path d="M10 48L74 44" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M72 44L90 36L88 44L91 50L72 47Z"/><path d="M38 30Q52 31 58 45L46 46Z"/><path d="M32 30H44L48 47H30Z"/><path d="M33 47L27 56H20V53H26L29 47Z"/><path d="M36 33L27 46" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M39 21Q50 22 52 32Q46 27 40 28Z"/><circle cx="36" cy="24" r="6"/><path d="M30.5 24L27 26L31 27Z"/><ellipse cx="38" cy="18.5" rx="11" ry="2.4" transform="rotate(-8 38 18.5)"/><path d="M31 18L41 16L50 2L44 3Z"/><ellipse cx="68" cy="40" rx="5.5" ry="3.6"/><circle cx="63.5" cy="36.4" r="3.2"/><path d="M61.4 34.6L61.8 30.8L64 33.4ZM65 33.4L66.6 30.4L67 34.6Z"/><path d="M73 40Q78 34 75.5 29" stroke="#1B1B24" stroke-width="1.6" fill="none"/></g><path d="M32 16.6L41 15L41.8 13.6L33 15Z" fill="#9C36B5"/><circle cx="62.6" cy="36" r=".8" fill="%k"/><circle cx="35" cy="23.5" r=".9" fill="%k"/>',
 		/* — thanksgiving / harvest — */
 		acorn: '22 28|<path d="M4 12h14c0 8-4 13-7 15-3-2-7-7-7-15Z" fill="#B08552"/><path d="M2 12c0-5 4-8 9-8s9 3 9 8Z" fill="%i"/><line x1="11" y1="4" x2="11" y2="0" stroke="%i" stroke-width="2"/>',
@@ -1375,13 +1379,13 @@
 			}
 			return sp;
 		}
-		var pool = [], specs = [];
+		var pool = [], specs = [], xaSp = null;
 		(A.particles || []).forEach(function (def) {
-			/* xa: a sprite that must never share the screen with this
-			 * theme's corner accent (Earth Day's globe: the hands accent
-			 * already holds an Earth). The accent is static, so while it is
-			 * mounted the sprite is simply not in the pool. */
-			if (def.xa && accents.length) { return; }
+			/* xa: a sprite that never shares the screen with this theme's
+			 * corner accent (Earth Day's globe: the hands accent already
+			 * holds an Earth). While the accent is mounted it is kept OUT of
+			 * the pool and the two take turns instead (stepTurns). */
+			if (def.xa && accents.length) { xaSp = resolve(def); return; }
 			var sp = resolve(def), n = def.w || 1;
 			sp.wt = n;
 			specs.push(sp);
@@ -2266,8 +2270,8 @@
 			if (t0) { repMs = repN ? repMs + (nowMs() - t0 - repMs) * 0.05 : nowMs() - t0; repN++; }
 		}
 
-		function seed(p, anywhere) {
-			var sp = pool.length ? pickSpec(p) : null;
+		function seed(p, anywhere, force) {
+			var sp = force || (pool.length ? pickSpec(p) : null);
 			if (!sp) { return p; }
 			var def = sp.def;
 			p.sp = sp;
@@ -3502,8 +3506,8 @@
 				if (st.t2 > 1.2 && st.t2 < 4.2) {
 					var u = (st.t2 - 1.2) / 3;
 					var wx = lerp(st.mx - 140, st.mx + 140, u);
-					if (drawable('🧙‍♀️')) { dtxt('🧙‍♀️', wx, st.my + sin(u * 6) * 6, 34, null, VA, -0.12); }
-					else { dspr('witchhat', wx, st.my, 30, false, -0.2); }
+					/* W-A (Rob, 4.3.0): the hero's silhouette witch and cat, not an emoji */
+					dspr('witchsil', wx, st.my + sin(u * 6) * 6, 72, true, -0.12);
 				}
 				return st.t2 > 6;
 			} },
@@ -3801,7 +3805,6 @@
 					});
 				}
 				st.t2 += dt;
-				var g = drawable('🦩') ? '🦩' : null;
 				var done = true;
 				st.birds.forEach(function (b3) {
 					b3.ph += dt * 3;
@@ -3819,8 +3822,10 @@
 						b3.x += 90 * dt; b3.y -= 70 * dt;
 						if (b3.x < vw + 60 && b3.y > -60) { done = false; }
 					}
-					if (g) { dtxt(g, b3.x, b3.y, 26, null, VA, 0, true); }
-					else { dtxt('v', b3.x, b3.y, 22, '#F783AC'); }
+					/* F-A (Rob, 4.3.0): two-frame wingbeat in flight; on the water it
+					 * is Snowbird's own standing flamingo */
+					if (b3.st2 === 2) { dspr('flamingo', b3.x, b3.y - 4, 24, true, 0); }
+					else { dspr(((st.t2 * 1000 / 260 + b3.ph) | 0) % 2 ? 'flamup' : 'flamdown', b3.x, b3.y, 60, true, b3.st2 === 1 ? 0.14 : -0.3); }
 				});
 				return done;
 			} },
@@ -4044,21 +4049,20 @@
 				}
 				return false;
 			} },
-			/* Spring: mama duck parade on the water */
+			/* Spring: mother duck parade on the water */
 			duckparade: { actors: 3, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -140 : vw + 140; st.ph = 0; st.wk = 1; }
 				st.ph += dt * 3;
 				st.x += st.dir * 42 * dt;
 				st.wk -= dt;
 				if (st.wk <= 0) { addRipple(st.x - st.dir * 10, waterY + 2); st.wk = rnd(1.2, 2); }
-				var duck = drawable('🦆') ? '🦆' : '🐤';
-				var chick = drawable('🐥') ? '🐥' : '🐤';
+/* D-A (Rob, 4.3.0): a mottled duck hen and four ducklings, facing
+				 * the way they swim (the drawings face left) */
 				var flip = st.dir > 0;
-				dtxt(duck, st.x, waterY - 8 + sin(st.ph) * 2, 28, null, VA, 0);
+				dspr('duckhen', st.x, waterY - 8 + sin(st.ph) * 2, 40, flip, 0);
 				for (var i4 = 1; i4 <= 4; i4++) {
-					dtxt(chick, st.x - st.dir * (22 + i4 * 20), waterY - 5 + sin(st.ph + i4) * 2, 15, null, VA, 0);
+					dspr('duckling', st.x - st.dir * (22 + i4 * 20), waterY - 5 + sin(st.ph + i4) * 2, 17, flip, 0);
 				}
-				if (flip) { /* facing handled by glyph choice being symmetric enough at this size */ }
 				return (st.dir > 0 && st.x > vw + 160) || (st.dir < 0 && st.x < -160);
 			} },
 			/* Spring: dragonfly lands on a lotus */
@@ -4112,6 +4116,43 @@
 			vigNext = (t || 0) + ((DEBUG && CFG.vigGap) || rnd(90, 150) * 1000);
 			fitParts();
 		}
+		/* xa turns (Rob's option A, 4.3.0): the corner accent and the xa
+		 * sprite take 45 s turns of VISIBLE time, accent first, crossfading
+		 * over 1.5 s; never both on screen. The sprite's turn borrows one
+		 * live free-air particle, low on the screen so it drifts up through
+		 * it; if it leaves or a scene borrows it, another takes over (never
+		 * during a scene). Counts are untouched: it replaces, never adds. */
+		var XA_TURN = 45, xaOn = false, xaP = null;
+		function stepTurns(dt) {
+			if (!xaSp) { return; }
+			var on = ((vt / XA_TURN) | 0) % 2 === 1, k, q;
+			if (on !== xaOn) {
+				xaOn = on;
+				for (k = 0; k < accents.length; k++) {
+					/* restore the accent's OWN opacity (Earth Day's is .55), never '' */
+					if (accents[k]._dccOp == null) { accents[k]._dccOp = accents[k].style.opacity; }
+					accents[k].style.transition = 'opacity 1.5s'; accents[k].style.opacity = on ? '0' : accents[k]._dccOp;
+				}
+				if (!on && xaP) { xaP.xaOut = 1; }
+			}
+			if (xaP && (xaP.sp !== xaSp || xaP.dormant)) { xaP.xaOut = 0; xaP = null; }
+			if (xaP) {
+				if (xaP.xaOut) {
+					xaP.alpha -= dt / 1.5;
+					if (xaP.alpha <= 0) { q = xaP; q.xaOut = 0; xaP = null; seed(q); }
+				} else if (xaP.alpha < 1) { xaP.alpha = mn(1, xaP.alpha + dt / 1.5); }
+				return;
+			}
+			if (!on || vig) { return; }
+			for (k = 0; k < parts.length; k++) { if (!parts[k].dormant && parts[k].free) { q = parts[k]; break; } }
+			if (!q) { for (k = 0; k < parts.length; k++) { if (!parts[k].dormant) { q = parts[k]; break; } } }
+			if (!q) { return; }
+			seed(q, false, xaSp);
+			q.far = false; q.free = 0; q.alpha = 0;
+			q.x = rnd(0.3, 0.7) * vw; q.y = vh * 0.74;
+			xaP = q;
+		}
+
 		function stepVig(dt, t) {
 			/* THE showstopper: the real New Year's countdown, wall-clock. */
 			if (themeKey === 'new_years' && FX.vig && !countdownDone) {
@@ -4281,6 +4322,7 @@
 				drawP(p, t);
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
+			stepTurns(dt);
 			stepVig(dt, t);
 			stepHero(dt, t);
 			heroGone();
@@ -4322,6 +4364,7 @@
 				get hero() { return hero && hero.kind; },
 				get heroXY() { return hero ? [hero.x, hero.y] : null; },
 				get vigSt() { return vig && vig.st; },
+				get xa() { return { on: xaOn, live: !!xaP, alpha: xaP ? xaP.alpha : 0, globes: parts.filter(function (q) { return !q.dormant && q.sp === xaSp; }).length, accent: accents.length ? accents[0].style.opacity : null }; },
 				get vt() { return vt; },
 				get heroAt() { return heroAt; },
 				get firstPage() { return firstPage; },

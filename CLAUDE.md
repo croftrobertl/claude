@@ -308,6 +308,20 @@ render round and his say.
     while a hero crosses, so the osprey is never on screen twice at once.
   - The Keys sun is a corner accent only — never a sprite, never two on
     screen.
+### Rob's recorded picks (for 4.3.0, chosen 2026-10-01)
+
+- **`sunshades` comes off Florida Keys and Summer on the Canal** (a second
+  sun). Not replaced. Snowbird keeps it as its corner ACCENT.
+- **Earth Day, option A:** the hands accent and the globe take 45 s turns
+  of visible time, hands first, crossfading over 1.5 s, never both — the
+  engine's `stepTurns()` for any `xa` sprite. (B, swap on each heron, and
+  C, page by page, were declined.)
+- **Scenes:** W-A witchmoon = the hero's `witchsil` (72px) over the
+  unchanged drawn moon; F-A arrival = `flamup`/`flamdown` wingbeat (60px)
+  landing as Snowbird's `flamingo` (24px); D-A duckparade = `duckhen`
+  (40px) + four `duckling` (17px), mottled duck, facing travel. W-B colour
+  witch, F-B glide/one-leg and D-B storybook ducks were declined.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -327,7 +341,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 124,372 raw / 42,179 gzipped (4.2.0, `gzip -c`; 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 127,906 raw / 43,207 gzipped (4.3.0, `gzip -c`); 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -783,21 +797,16 @@ render round and his say.
   wall time); `CFG.vigOnly` forces one scene; `heroLog` /
   `vigLog` record starts, ends and sprites borrowed. None of this exists in
   the minified build (`__DCC_DEBUG__=false`).
-- **Earth Day's globe carries `xa`** ("never while the corner accent
-  shows"): the hands accent already holds an Earth, and at Full richness
-  the accent is always mounted — so on the live site Earth Day draws NO
-  globe sprite; the Earth is the accent's. This is Rob's rule taken
-  literally; if he wants a globe back, it needs the accent to give way.
-- **Three SCENES still draw device emoji** — witchmoon (🧙‍♀️), arrival
-  (🦩 where the font has it) and duckparade (🦆). Rob's no-emoji rule is
-  for HEROES (plus his ☘ exception); those scenes were out of 4.2.0's
-  scope. Offer the approved drawings for them in a render round; do not
-  swap them unasked.
-- **`sunshades` is a second sun.** The sun rule ("never two on screen")
-  is implemented for the `sun` sprite, which is now a corner accent only
-  on Summer and the Keys. The `sunshades` sprite (a sun wearing
-  sunglasses) still tumbles on both — raised with Rob in the 4.2.0
-  report; it is his call, not a quiet removal.
+- **Earth Day's globe carries `xa`, and since 4.3.0 that means TURNS.**
+  While the accent is mounted the xa spec is held out of the pool
+  (`xaSp`) and `stepTurns()` (called after `vt` advances) converts ONE
+  live free-air particle into it on the odd 45 s turns, and fades it back
+  out on the even ones. Counts never change: it replaces, never adds. It
+  restores the accent's OWN inline opacity (`_dccOp`, .55 for the hands) —
+  restoring '' left the hands at full opacity, which test-heroes caught.
+- **No scene or hero draws an emoji since 4.3.0** except the St. Patrick's
+  rainbow's ☘ (Rob's exception) and the fishing worm glyph. witchmoon,
+  arrival and duckparade are drawn (Rob's W-A/F-A/D-A).
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

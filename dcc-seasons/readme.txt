@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.2.0
+Stable tag: 4.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.3.0 =
+Three changes, each Rob's pick from rendered options (2026-10-01).
+Rollback: reinstall the 4.2.0 zip. Nothing stored is rewritten.
+
+* Florida Keys and Summer on the Canal no longer tumble the sun in
+  sunglasses: it read as a second sun next to the corner sun. Nothing
+  replaces it. (Snowbird keeps it as its corner accent.)
+* Earth Day: the hands holding the Earth and the globe now take turns,
+  45 seconds each on every page — hands first, then one globe that fades
+  in low and drifts up, then the hands again. Never both at once.
+* The last three scenes built from emoji are drawings now: the Halloween
+  witch crossing the moon is the silhouette witch with her cat (the same
+  one as the hero); Snowbird's flamingos flap down with a two-frame
+  wingbeat and stand as Snowbird's own flamingo; Spring's duck parade is a
+  mottled duck hen and four ducklings, facing the way they swim. Same
+  timing, same place in the rotation, same phone rules.
 
 = 4.2.0 =
 One release, every choice in it Rob's, picked from rendered options.

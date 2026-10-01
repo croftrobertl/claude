@@ -123,6 +123,23 @@ async function waitVt(page, v, maxMs = 60000) {
     } finally { await s.close(); }
   }
 
+  console.log('\n  --- Earth Day: the globe and the hands take 45 s turns (Rob, 4.3.0) ---');
+  for (const w of [390, 1280]) {
+    const cfg = cfgFor('earth_day'); cfg.heroEvery = [9999, 10000]; cfg.vigFirst = 1e9;
+    const s = await bootWith(cfg, null, w);
+    try {
+      await s.page.evaluate(() => window.DCCSeasonsEngine._state.manual(true));
+      const at = async sec => { await s.page.evaluate(n => window.DCCSeasonsEngine._state.tick(1000 / 60, n), Math.round(sec * 60)); return s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { vt: x.vt, ...x.xa }; }); };
+      const vt0 = await s.page.evaluate(() => window.DCCSeasonsEngine._state.vt);
+      const a = await at(30 - vt0), b = await at(20), c = await at(25), d = await at(25), e = await at(45);
+      ok(!a.on && a.globes === 0 && a.accent === '0.55', `${w}px: hands first, no globe (vt ${a.vt.toFixed(0)})`, JSON.stringify(a));
+      ok(b.on && b.globes === 1 && b.accent === '0' && b.alpha === 1, `${w}px: globe's turn at 45 s — one globe, hands faded`, JSON.stringify(b));
+      ok(c.on && c.globes === 1, `${w}px: still exactly one globe late in its turn`, JSON.stringify(c));
+      ok(!d.on && d.globes === 0 && d.accent === '0.55', `${w}px: hands back at 90 s, globe gone`, JSON.stringify(d));
+      ok(e.on && e.globes === 1, `${w}px: globe again at 135 s`, JSON.stringify(e));
+    } finally { await s.close(); }
+  }
+
   console.log('\n  --- a scene never shares the screen with a hero ---');
   for (const theme of ['florida_keys', 'summer_canal']) {
     const cfg = cfgFor(theme); cfg.vtScale = 1; cfg.heroEvery = [2, 3]; cfg.vigFirst = 800; cfg.vigGap = 6000;
