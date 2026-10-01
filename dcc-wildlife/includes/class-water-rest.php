@@ -87,6 +87,8 @@ final class Water_Rest {
 			[
 				'enabled' => Water_Data::live_enabled(),
 				'facts'   => $payload['facts'],
+				// The parts behind the Wind reading, for the map badge (1.35.0).
+				'wind'    => $payload['wind'] ?? null,
 			]
 		);
 

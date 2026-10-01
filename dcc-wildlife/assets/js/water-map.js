@@ -50,6 +50,77 @@
 		return n;
 	}
 
+	/* ==================================================================
+	 * THE WIND BADGE (1.35.0, Rob's option C)
+	 *
+	 * One National Weather Service forecast for the property's grid square,
+	 * pinned to the corner of the canvas. What it may and may not claim:
+	 *
+	 * - NOT PER-LAKE. There is one reading for the whole chain, so nothing is
+	 *   drawn on the water. A field of arrows over the lakes would be the
+	 *   convention for data that varies across space, and this does not vary.
+	 * - THE SPEED STRING IS PRINTED WHOLE. NWS issues "5 to 10 mph" as often
+	 *   as "10 mph"; reducing a range to one number would invent precision.
+	 * - THE ARROW IS A 16-POINT SECTOR, which is exactly what the API gives.
+	 *   An unrecognised or absent direction draws NO arrow rather than a
+	 *   guessed one — the reading still shows, as a speed alone.
+	 * - THE SOURCE IS VISIBLE. Every other reading in this module names its
+	 *   source beside it, and a number without provenance is the one thing
+	 *   this module does not ship.
+	 *
+	 * Meteorological convention: a direction is where the wind comes FROM, so
+	 * the arrow points the opposite way — the way it blows.
+	 * ================================================================== */
+	var SECTORS = {
+		N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
+		S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5
+	};
+
+	function svgNode(tag, attrs) {
+		var n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+		Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+		return n;
+	}
+
+	function windBadge(wind, i18n) {
+		if (!wind || !wind.speed) { return null; }
+		var dir = String(wind.dir || '').toUpperCase();
+		var box = el('div', 'dccwl-wind-badge');
+
+		if (Object.prototype.hasOwnProperty.call(SECTORS, dir)) {
+			var svg = svgNode('svg', {
+				viewBox: '-30 -30 60 60', width: '44', height: '44',
+				'aria-hidden': 'true', focusable: 'false'
+			});
+			svg.setAttribute('class', 'dccwl-wind-rose');
+			svg.appendChild(svgNode('circle', { r: '27', class: 'dccwl-wind-dial' }));
+			var n = svgNode('text', { y: '-17', 'text-anchor': 'middle', class: 'dccwl-wind-n' });
+			n.textContent = i18n.windNorth || 'N';
+			svg.appendChild(n);
+			/* +180: the sector says where it comes FROM; the arrow shows where
+			 * it goes. Wrapped to 0-359 — rotate(405) draws identically to
+			 * rotate(45), but a value nobody can read at a glance is a value
+			 * nobody can check. */
+			var g = svgNode('g', { transform: 'rotate(' + ((SECTORS[dir] + 180) % 360) + ')' });
+			g.appendChild(svgNode('path', {
+				d: 'M0 17 L0 -17 M0 -17 l-7 9 M0 -17 l7 9', class: 'dccwl-wind-arrow'
+			}));
+			svg.appendChild(g);
+			box.appendChild(svg);
+		}
+
+		var txt = el('span', 'dccwl-wind-text');
+		if (dir) { txt.appendChild(el('b', 'dccwl-wind-dir', dir)); }
+		txt.appendChild(el('span', 'dccwl-wind-speed', wind.speed));
+		if (wind.source) { txt.appendChild(el('span', 'dccwl-wind-src', wind.source)); }
+		box.appendChild(txt);
+
+		box.setAttribute('role', 'group');
+		box.setAttribute('aria-label', (i18n.windAria || 'Wind %1$s at %2$s')
+			.replace('%1$s', dir || '').replace('%2$s', wind.speed));
+		return box;
+	}
+
 	function fmt(n, dp) {
 		if (typeof n !== 'number' || isNaN(n)) { return ''; }
 		// Strip trailing zeros only AFTER a decimal point — a bare /\.?0+$/
@@ -418,6 +489,10 @@
 
 		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base, cfg && cfg.colour));
 		shell.appendChild(legend.node);
+
+		// The wind badge, when the conditions call returned one (1.35.0).
+		var badge = windBadge(cfg && cfg.wind, i18n);
+		if (badge) { shell.appendChild(badge); }
 
 		// Everything is in the DOM; now wait for it to have a size and fit.
 		fitWhenLaid();

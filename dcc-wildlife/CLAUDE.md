@@ -2425,3 +2425,86 @@ ink (7.29:1) — and the selected tab, category chip and water tab follow it.
 **Field Guide · Credits · By Month · About**. The fishing licences block is now
 "Licences & keep-limits" and carries a ruled break above it, so it reads as its
 own thing rather than more fishing advice.
+
+### 19. 1.35.0 — the wind badge, and the 0.9px that was a font-size
+
+**THE WIND BADGE (Rob's option C, chosen 2026-10-01).** He was shown three ways
+to draw wind on the chain map and picked the badge pinned to the canvas corner.
+What governs it is what the DATA is, and the rules below are the reason the
+other two options lost:
+
+- **ONE FORECAST FOR THE WHOLE CHAIN.** It is a single National Weather Service
+  reading for the property's grid square. **Nothing wind-related may be drawn on
+  the water** — a field of arrows over the lakes is the convention for data that
+  varies across space, and this does not vary; it would be the same number drawn
+  six times. `ui-wind.mjs` asserts the negative directly: no wind marks among the
+  Leaflet panes.
+- **THE SPEED STRING IS PRINTED WHOLE.** NWS issues "5 to 10 mph" as often as
+  "10 mph". Reducing a range to one number invents precision, so the badge
+  prints what the forecast says, verbatim.
+- **THE ARROW IS A 16-POINT SECTOR AND NOTHING FINER**, because that is all
+  `windDirection` carries. Rotation is the bearing **plus 180** — a wind
+  direction says where the wind comes FROM and an arrow shows where it goes —
+  wrapped to 0–359 so the value can be read at a glance.
+- **AN UNRECOGNISED DIRECTION DRAWS NO ARROW.** The speed still shows. Same
+  rule as everywhere else here: an absent field is absent, never guessed at.
+- **THE SOURCE IS VISIBLE ON THE BADGE.** Every other reading in this module
+  names its source beside it; a number without provenance is the one thing this
+  module does not ship. It is the longest line on the badge and the one piece of
+  this that was a judgement call — flagged to Rob rather than decided silently.
+
+**THE PARTS ARE CAPTURED AT THE SOURCE, NEVER PARSED BACK OUT.**
+`Water_Live::$wind_parts` is filled in `fetch_nws()` where the API hands over
+`windDirection` and `windSpeed` separately, and rides the cached conditions
+payload out through `/conditions`. "NE 5 to 10 mph" is a sentence this codebase
+wrote; reading a direction back out of it would be guessing at our own
+formatting. A payload cached before 1.35.0 has no wind block, so the badge
+simply does not draw until that cache turns over — `?? null` all the way down.
+
+**NOTHING LOADS ANY EARLIER.** The badge is drawn from a reading the page is
+already holding (it is what fills the Map tab's Wind tile), so the map costs no
+extra request and the 1.31.0 rule is untouched.
+
+**IT TAKES NO POINTER EVENTS** — a guest panning from the corner must pan the
+map — and it is anchored to `.dccwl-sheet-body-map`, which gained
+`position: relative` for the purpose. Without that it resolved against the whole
+sheet and landed **in the header, over the title**: "pinned to the map corner"
+is a claim about the canvas, and the suite checks it against the canvas's own
+rectangle.
+
+### The "By Month" baseline: it was a font-size, two levels up
+
+Rob measured 0.9px on live with real Raleway (1643.6 against 1644.5) and asked
+for the cause rather than a nudge. **It is not padding, line-height,
+vertical-align or the button's appearance** — the four the hint named, and all
+four were ruled out by diffing every computed property along both label chains:
+
+**The LABEL is identical in both places** — same family, size, weight,
+line-height — which is why every test asserting label typography passed while
+the baselines differed. What differs is the WRAPPER it sits in:
+`.dccwl-fullguide-text` inherits **17.5px inside a `<summary>` and 15.6px inside
+the `<button>`**, because the two elements carry different font sizes of their
+own. The wrapper is the flex item being centred in the 44px box, so its line box
+— 21px against 18.72px — is what positions the label. **(21 − 18.72) / 2 = 1.14,
+and the sandbox measured 1.5 with its fallback face; Rob measured 0.9 with
+Raleway. Same cause, different metrics.**
+
+Pinning `line-height` could never have fixed it: **1.2 of two different font
+sizes is two different line boxes.** The wrapper now declares
+`--dccwl-fs-xs`, the size the row's own labels already use, and the spread is
+**0.00 at 320, 360, 375, 390 and 1280px**, one line at every one.
+
+Three wrong turns before the diff, each worth remembering:
+
+- **Aligning the row to baseline** — already tried and rejected in 1.28.0,
+  where it put the 44px button 2px low. The note saying so was in the stylesheet.
+- **Sizing the chevron** — wrong and briefly harmful: this row hides the chevron
+  on purpose, so the rule un-hid it and wrapped the row onto two lines at 320px
+  and 360px. A fix aimed at one pixel cost a wrapped row.
+- **Using `--dccwl-fs-base` for the wrapper** — equalises the baselines just as
+  well and put "About" on a second line at three widths, because it is larger
+  than the labels. The right size was the one the labels themselves declare.
+
+**The method is the lesson: diff the computed styles of the two things that
+disagree, rather than reasoning about which property it ought to be.** Four
+attempts guessed; the first diff found it in one pass.

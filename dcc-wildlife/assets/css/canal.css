@@ -621,6 +621,28 @@
  * row onto two lines at 320 and 360px). The offset was never in the alignment. */
 .dccwl-footnotes .dccwl-fullguide-text.dccwl-fullguide-text.dccwl-fullguide-text,
 .dccwl-footnotes .dccwl-fullguide-h.dccwl-fullguide-h.dccwl-fullguide-h {
+	/* ---- THE CAUSE OF THE 0.9px, FOUND BY DIFFING THE COMPUTED STYLES ----
+	 *
+	 * Not padding, not vertical-align, not the button's appearance. The LABEL
+	 * is identical in both places — same family, size, weight, line-height,
+	 * which is why every test asserting label typography passed while the
+	 * baselines still differed. What differs is the WRAPPER it sits in:
+	 * .dccwl-fullguide-text inherits 17.5px inside a <summary> and 15.6px
+	 * inside the <button>, because the two elements carry different font
+	 * sizes of their own. The wrapper is the flex item being centred in the
+	 * 44px box, so its line box — 21px against 18.72px — is what positions
+	 * the label, and (21 - 18.72) / 2 is the offset, to the pixel.
+	 *
+	 * Pinning line-height alone could never fix it: 1.2 of two different font
+	 * sizes is two different line boxes. The font-size is the fix.
+	 *
+	 * --dccwl-fs-xs is the size the row's own labels already declare, so the
+	 * wrapper now matches what it wraps. Using any LARGER size equalises the
+	 * baselines just as well and costs a wrapped row: --fs-base put About on
+	 * a second line at 320, 360 and 375px, which is the trade this row has
+	 * refused since 1.28.0.
+	 * ------------------------------------------------------------------- */
+	font-size: var(--dccwl-fs-xs);
 	/* Tripled: widget.css sets this label's line-height at (0,3,0) and the
 	 * button it sits in sets its own, so a (0,2,0) rule here was simply not
 	 * winning — the computed value stayed 1.45 inside the button and 1.2

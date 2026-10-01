@@ -193,6 +193,13 @@ final class Water_Live {
 		$payload = [
 			'facts'   => $gated,
 			'fetched' => gmdate( 'c' ),
+			/*
+			 * 1.35.0 — the wind as parts, for the map's badge. It rides the
+			 * payload the conditions call already returns, so the map costs no
+			 * extra request and nothing map-related loads any earlier: the
+			 * badge is drawn from a reading the page is holding anyway.
+			 */
+			'wind'    => self::wind_parts(),
 		];
 
 		if ( $gated ) {
@@ -1728,6 +1735,24 @@ final class Water_Live {
 	/**
 	 * @return array<int,array<string,mixed>>
 	 */
+	/**
+	 * The wind as its PARTS, for the map badge (1.35.0).
+	 *
+	 * Captured here, where the API hands them over separately, and never
+	 * parsed back out of the display string: "NE 5 to 10 mph" is a sentence
+	 * this code wrote, and reading a direction out of it again would be
+	 * guessing at our own formatting. Null until a forecast with wind in it
+	 * has been fetched in this request.
+	 *
+	 * @var array<string,string>|null
+	 */
+	private static ?array $wind_parts = null;
+
+	/** @return array<string,string>|null */
+	public static function wind_parts(): ?array {
+		return self::$wind_parts;
+	}
+
 	private static function fetch_nws(): array {
 		$coords = Water_Data::coords();
 		if ( null === $coords ) {
@@ -1778,6 +1803,23 @@ final class Water_Live {
 
 		$source = __( 'National Weather Service forecast', 'dcc-wildlife' );
 		$rows   = [];
+
+		if ( '' !== $wspd ) {
+			/*
+			 * The SPEED STRING IS KEPT WHOLE. NWS issues "5 to 10 mph" as
+			 * often as "10 mph", and reducing a range to one number would
+			 * claim a precision the forecast does not have. The direction is
+			 * a 16-point compass sector, which is all the badge's arrow ever
+			 * claims — no bearing, and no per-lake wind, because this is one
+			 * forecast for one grid square covering the whole chain.
+			 */
+			self::$wind_parts = [
+				'dir'    => $wdir,
+				'speed'  => $wspd,
+				'source' => $source,
+				'date'   => $updated,
+			];
+		}
 
 		if ( '' !== $short ) {
 			$rows[] = [

@@ -332,6 +332,11 @@
 		} catch (e) { /* very old browsers: the strip still fills */ }
 	}
 
+	/* The wind as its parts, straight from the conditions call (1.35.0). The
+	 * map badge is drawn from this; nothing fetches it again, and a map that
+	 * is never opened costs nothing for it. */
+	var windParts = null;
+
 	function init() {
 		var roots = document.querySelectorAll('[data-dccwl-water-live]');
 		if (!roots.length) { return; }
@@ -340,6 +345,9 @@
 			.then(function (r) { return r.json(); })
 			.then(function (data) {
 				var facts = (data && data.enabled && Array.isArray(data.facts)) ? data.facts : [];
+				/* A payload cached before 1.35.0 has no wind block; the badge
+				 * simply does not draw until that cache turns over. */
+				windParts = (data && data.wind && data.wind.speed) ? data.wind : null;
 				// Announce what this ONE existing call returned, so the 1.10.0
 				// hub can show a preview without a second request. Fired even
 				// when empty: "nothing sourced" is the signal the hub needs in
@@ -432,10 +440,11 @@
 					// its own — Leaflet handles panning inside the canvas.
 					body.classList.add('dccwl-sheet-body-map');
 					var mapCfg = cfg;
-					if (wantColour) {
+					if (wantColour || windParts) {
 						mapCfg = {};
 						Object.keys(cfg).forEach(function (k) { mapCfg[k] = cfg[k]; });
-						mapCfg.colour = wantColour;
+						if (wantColour) { mapCfg.colour = wantColour; }
+						if (windParts) { mapCfg.wind = windParts; }
 					}
 					window.DCCWL_Map.init(body, mapData, mapCfg, (CFG.i18n || {}));
 				},

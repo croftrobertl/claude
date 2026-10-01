@@ -813,6 +813,13 @@ final class Water_Render {
 						'mapLoading'  => __( 'Loading the map…', 'dcc-wildlife' ),
 						'mapFailed'   => __( 'The map could not be loaded.', 'dcc-wildlife' ),
 						'colorBy'     => __( 'Colour by:', 'dcc-wildlife' ),
+						/* The wind badge (1.35.0). The compass sector and the
+						 * speed are the forecast's own words and are never
+						 * translated here; only the dial's N and the
+						 * screen-reader sentence around them are ours. */
+						'windNorth'   => _x( 'N', 'compass north on the wind dial', 'dcc-wildlife' ),
+						/* translators: 1: compass direction the wind comes from, e.g. "NE". 2: wind speed as the forecast words it, e.g. "5 to 10 mph". */
+						'windAria'    => __( 'Wind %1$s at %2$s', 'dcc-wildlife' ),
 						'byClarity'   => __( 'Clarity', 'dcc-wildlife' ),
 						'byLevel'     => __( 'Level', 'dcc-wildlife' ),
 						'byFresh'     => __( 'Data age', 'dcc-wildlife' ),

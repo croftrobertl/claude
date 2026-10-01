@@ -247,6 +247,12 @@
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	padding: 0;
+	/* The containing block for the wind badge (1.35.0). Without it the badge
+	 * resolved against the whole sheet and landed in the HEADER, over the
+	 * title — "pinned to the map corner" has to mean the map's corner. The
+	 * map bar and the drop panels are positioned in flow and against their
+	 * own parents, so neither moves because of this. */
+	position: relative;
 }
 
 .dccwl-sheet-body-map .dccwl-map-canvas {
@@ -974,4 +980,62 @@
  * the tier key sits centred above the cards it decodes. */
 .dccwl-water .dccwl-water-allreadings {
 	margin-inline: auto;
+}
+
+/* ==================================================================
+ * THE WIND BADGE (1.35.0 — Rob's option C).
+ *
+ * Pinned to the canvas corner, not drawn on the water: one forecast for the
+ * whole chain cannot be shown per lake, and a badge reads as a reading about
+ * the day rather than a mark on a place.
+ *
+ * z-index matches the map bar's 1100 for the reason recorded in 1.33.0 —
+ * Leaflet's control panes sit at 1000 and its controls at 800, so anything
+ * below that is painted over. `pointer-events: none` keeps it out of the way
+ * of panning: it is information, never a target, so it must never eat a drag
+ * that starts in the corner.
+ * ================================================================== */
+.dccwl-wind-badge {
+	align-items: center;
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-lg);
+	box-shadow: var(--dccwl-shadow-tile);
+	display: flex;
+	gap: calc(var(--dccwl-gap) * 1.2);
+	max-width: min(62%, 300px);
+	padding: calc(var(--dccwl-gap) * 0.8) var(--dccwl-gap);
+	pointer-events: none;
+	position: absolute;
+	right: var(--dccwl-gap-lg);
+	top: var(--dccwl-gap-lg);
+	z-index: 1100;
+}
+.dccwl-wind-rose { flex: 0 0 auto; }
+.dccwl-wind-dial { fill: #ffffff; stroke: var(--dccwl-line-strong); stroke-width: 1.5; }
+.dccwl-wind-n {
+	fill: var(--dccwl-text-muted);
+	font-size: 9px;
+	font-weight: var(--dccwl-fw-label);
+}
+/* The arrow is drawn, not written: stroke only, round caps, no fill — the
+ * same two properties the sprite sheet needs and for the same reason. */
+.dccwl-wind-arrow {
+	fill: none;
+	stroke: var(--dccwl-primary);
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 4;
+}
+.dccwl-wind-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.dccwl-wind-dir {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-strong);
+}
+.dccwl-wind-speed { color: var(--dccwl-text); font-size: var(--dccwl-fs-xs); }
+.dccwl-wind-src {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-body);
 }
