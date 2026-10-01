@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.2
+Stable tag: 0.23.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,14 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.3 =
+
+**Fixed: the search results drop-down is now solid.** It used the tiles'
+see-through background (92% white by default), so the intro line and the
+tiles showed through it. It keeps the same colour, now at full strength,
+on both the public and the guest guide and in every colour palette. Its
+border, shadow, rounded corners and position are unchanged. No new setting.
 
 = 0.23.2 =
 

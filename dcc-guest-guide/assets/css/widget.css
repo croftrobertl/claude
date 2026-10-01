@@ -514,7 +514,14 @@
     right: 0;
     max-height: 360px;
     overflow-y: auto;
-    background: var(--dccgg-tile-bg);
+    /* v0.23.3: OPAQUE. The tile colour is translucent in most palettes (92%
+       white by default), so whatever sat under the list — the intro line, the
+       tiles — showed through it. Same colour, transparency removed:
+       browsers without relative colour (e.g. iOS before 18) paint the tile
+       colour over the guide's own panel colour, which is opaque in every
+       palette; the @supports rule below gives everyone else the tile colour
+       itself at full strength. */
+    background: linear-gradient(var(--dccgg-tile-bg), var(--dccgg-tile-bg)), var(--dccgg-detail-bg, #ffffff);
     border: 1px solid var(--dccgg-tile-border);
     border-radius: 12px;
     box-shadow: 0 12px 32px rgba(0,0,0,0.12);
@@ -523,6 +530,10 @@
     z-index: 50;
 }
 .dccgg-search-results[hidden] { display: none; }
+@supports (color: rgb(from red r g b / 1)) {
+    /* "/ 1" is required: omit it and relative colour KEEPS the origin's alpha. */
+    .dccgg-search-results { background: rgb(from var(--dccgg-tile-bg) r g b / 1); }
+}
 .dccgg-search-result {
     display: block;
     width: 100%;

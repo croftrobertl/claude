@@ -3046,6 +3046,114 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario AB: the search results drop-down is opaque (v0.23.3) ----
+    // Whole widget from render(). Everything UNDER the open list is painted
+    // magenta, the list is screenshotted, and its pixels are read back: a
+    // single magenta-tinted pixel means something shows through. Every palette
+    // the plugin ships is tried, on the public page (core bundle only) and the
+    // guest page (core + guest), and again with the relative-colour rule
+    // removed, which is what a browser without it (e.g. iOS before 18) gets.
+    {
+        console.log('\nAB. Search results drop-down: solid, same colour, nothing shows through');
+        const errors = [];
+        const { execFileSync } = require('child_process');
+        const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
+        // Run on whatever stylesheet the suite runs on (source, or min via the
+        // min harness); the guest bundle rides along on the guest page.
+        const CORE_AB = CSS;
+        const GUESTCSS_AB = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
+        const noSupports = (css) => css.replace(/@supports\s*\(\s*color\s*:\s*rgb\(\s*from[^{]*\{[^{}]*\{[^{}]*\}\s*\}/g, '');
+        // [name, --dccgg-tile-bg, --dccgg-detail-bg, expected opaque rgb]
+        const PALETTES = [
+            ['default',  'rgba(255, 255, 255, 0.92)', '#ffffff', [255, 255, 255]],
+            ['coastal',  'rgba(255,255,255,0.85)',    '#ffffff', [255, 255, 255]],
+            ['hotel',    '#fdfaf3',                   '#fffdf7', [253, 250, 243]],
+            ['bohemian', 'rgba(254,246,240,0.85)',    '#fef6f0', [254, 246, 240]],
+            ['minimal',  '#ffffff',                   '#ffffff', [255, 255, 255]],
+            ['dark',     'rgba(28,38,52,0.85)',       '#15202b', [28, 38, 52]],
+        ];
+        const pageFor = (markup, css, pal) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style>
+            <style>html{font-weight:700}body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;margin:0;padding:0 16px}
+              .dccgg-root.dccgg-root{--dccgg-tile-bg:${pal[1]};--dccgg-detail-bg:${pal[2]}}</style>
+            </head><body class="elementor-kit-331">${markup}<script>${JS}</script></body></html>`;
+        // Paint every pixel under the list loud, then read the list's own pixels.
+        const probe = async (page) => {
+            await page.fill('.dccgg-search-input', 'pool');
+            await page.waitForTimeout(700);
+            await page.addStyleTag({ content: `html,body,.dccgg-root,.dccgg-wrapper,.dccgg-stage-container,.dccgg-menu,.dccgg-tile-wrap,.dccgg-tile,
+                .dccgg-public-intro,.dccgg-toolbar,.dccgg-heading{background:#ff00ff !important;background-image:none !important}` });
+            await page.waitForTimeout(100);
+            const list = await page.$('.dccgg-search-results');
+            const png = (await list.screenshot()).toString('base64');
+            const geo = await list.evaluate((el) => {
+                const c = getComputedStyle(el), r = el.getBoundingClientRect();
+                const box = el.closest('.dccgg-search').getBoundingClientRect();
+                const inp = el.closest('.dccgg-search').querySelector('.dccgg-search-input').getBoundingClientRect();
+                return { w: r.width, h: r.height, border: `${c.borderTopWidth} ${c.borderTopStyle}`, radius: c.borderTopLeftRadius,
+                    shadow: c.boxShadow, pad: c.padding, z: c.zIndex, pos: c.position,
+                    alignedL: Math.round(r.left - box.left), alignedR: Math.round(box.right - r.right), below: r.top >= inp.bottom - 1,
+                    overTiles: (() => { const t = document.querySelector('.dccgg-menu').getBoundingClientRect(); return r.bottom > t.top; })() };
+            });
+            // Decode the screenshot in the page and sample the 6px padding band
+            // inside the border, clear of the rounded corners and of any text.
+            const px = await page.evaluate(async ({ png, w, h }) => {
+                const img = new Image(); img.src = 'data:image/png;base64,' + png; await img.decode();
+                const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+                const g = cv.getContext('2d'); g.drawImage(img, 0, 0);
+                const sx = img.width / w, sy = img.height / h, out = [];
+                for (const yy of [3, h - 4]) for (let xx = 16; xx < w - 16; xx += 4) {
+                    const d = g.getImageData(Math.round(xx * sx), Math.round(yy * sy), 1, 1).data; out.push([d[0], d[1], d[2]]);
+                }
+                for (const xx of [3, w - 4]) for (let yy = 16; yy < h - 16; yy += 4) {
+                    const d = g.getImageData(Math.round(xx * sx), Math.round(yy * sy), 1, 1).data; out.push([d[0], d[1], d[2]]);
+                }
+                return out;
+            }, { png, w: geo.w, h: geo.h });
+            return { geo, px };
+        };
+        const run = async (label, markup, css, pal, vp) => {
+            const ctx = await browser.newContext({ viewport: vp });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.route('**/admin-ajax.php', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
+            await page.route('https://dccgg.test/p/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(markup, css, pal) }));
+            await page.goto('https://dccgg.test/p/', { waitUntil: 'load' });
+            await page.waitForTimeout(300);
+            const res = await probe(page);
+            await ctx.close();
+            const want = pal[3];
+            const bad = res.px.filter((p) => p.some((v, i) => Math.abs(v - want[i]) > 2));
+            check(`${label}: solid ${pal[0]} colour rgb(${want.join(',')}), nothing showing through (${res.px.length} pixels)`,
+                res.px.length > 40 && bad.length === 0, bad.length ? `${bad.length} off, e.g. rgb(${bad[0].join(',')})` : '');
+            return res.geo;
+        };
+        const pub = emit('public-intro'), guest = emit('guest');
+        const geos = [];
+        for (const pal of PALETTES) {
+            geos.push(await run(`public 375px ${pal[0]}`, pub, CORE_AB, pal, { width: 375, height: 812 }));
+            geos.push(await run(`guest 375px ${pal[0]}`, guest, CORE_AB + GUESTCSS_AB, pal, { width: 375, height: 812 }));
+        }
+        geos.push(await run('public 1280px default', pub, CORE_AB, PALETTES[0], { width: 1280, height: 900 }));
+        geos.push(await run('guest 1280px default', guest, CORE_AB + GUESTCSS_AB, PALETTES[0], { width: 1280, height: 900 }));
+        // Fallback: the browser does not know relative colour. Opaque still; the
+        // tile colour painted over the guide's own opaque panel colour.
+        check('the relative-colour rule is present to remove (fallback test is real)', noSupports(CORE_AB) !== CORE_AB);
+        for (const pal of [PALETTES[0], PALETTES[3], PALETTES[5]]) {
+            const fb = pal[0] === 'bohemian' ? [254, 246, 240] : pal[0] === 'dark' ? [27, 37, 51] : pal[3];
+            await run(`fallback (no relative colour) public ${pal[0]}`, pub, noSupports(CORE_AB), [pal[0], pal[1], pal[2], fb], { width: 375, height: 812 });
+        }
+        // Everything else about the list is as before.
+        const g0 = geos[0];
+        check('border, radius, shadow, padding and stacking unchanged',
+            geos.every((g) => g.border === '1px solid' && g.radius === '12px' && g.shadow === 'rgba(0, 0, 0, 0.12) 0px 12px 32px 0px'
+                && g.pad === '6px' && g.z === '50' && g.pos === 'absolute'), JSON.stringify(g0));
+        check('still full-width under the search box, below the input, over the tiles',
+            geos.every((g) => g.alignedL === 0 && g.alignedR === 0 && g.below && g.overTiles), JSON.stringify(g0));
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);
