@@ -2508,3 +2508,20 @@ Three wrong turns before the diff, each worth remembering:
 **The method is the lesson: diff the computed styles of the two things that
 disagree, rather than reasoning about which property it ought to be.** Four
 attempts guessed; the first diff found it in one pass.
+
+### 1.35.1 — the badge's source line, shortened
+
+Rob's call on the 1.35.0 badge: the visible source reads **"NWS forecast"**, and
+the full **"National Weather Service forecast"** stays as the screen-reader
+label. The badge went from 59% of the map's width on a phone to **34%**.
+
+**THE SHORT FORM TRAVELS WITH THE READING, it is not an abbreviation the client
+invents.** `Water_Live::$wind_parts` carries `sourceShort` beside `source`, both
+set where the NWS branch builds them. A client that shortened "National Weather
+Service forecast" itself would hand the next source — whatever that turned out
+to be — a name nobody chose for it. The badge prints `sourceShort || source`, so
+a payload cached by 1.35.0 shows the long name rather than nothing, and
+`ui-wind.mjs` pins that fallback by name.
+
+The aria-label gained the source as a third placeholder, so the full attribution
+is what a screen reader hears whatever the badge shows.

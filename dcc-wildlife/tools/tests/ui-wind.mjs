@@ -41,6 +41,10 @@ const MAP_DATA = {
 };
 
 const SOURCE = 'National Weather Service forecast';
+/* 1.35.1: the badge shows the short form and a screen reader is given the
+ * full name. The short form travels WITH the reading — the client never
+ * abbreviates a source it was handed. */
+const SHORT = 'NWS forecast';
 
 async function openMap(width, wind) {
   const fixture = rendered('water', '--enable');
@@ -97,26 +101,35 @@ const read = (page) => page.evaluate(() => {
 /* ---- 1. the badge, from the conditions call ---------------------------- */
 section('the badge draws the forecast the page already had');
 
-let page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE });
+let page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE, sourceShort: SHORT });
 let m = await read(page);
 note(JSON.stringify(m));
 check(m.badge, 'the badge is on the map');
 checkSame('NE', m.dir, 'the compass sector is the forecast\'s own word');
 checkSame('5 to 10 mph', m.speed, 'and the speed string is printed WHOLE, range and all');
-checkSame(SOURCE, m.src, 'the source is named, as every reading in this module is');
-checkSame('Wind NE at 5 to 10 mph', m.aria, 'and a screen reader gets one sentence');
+checkSame(SHORT, m.src, 'the source is named SHORT on the badge (1.35.1)');
+checkSame('Wind NE at 5 to 10 mph — ' + SOURCE, m.aria,
+  'and a screen reader still gets the full name');
 checkSame('rotate(225)', m.rot, 'NE (45) + 180: the arrow shows where the wind GOES');
 check(m.onCanvas, 'it sits inside the canvas, not in the sheet header');
-check(m.widthShare <= 0.65, 'and takes no more than two thirds of the map width', String(m.widthShare));
+check(m.widthShare <= 0.5, 'and the short form keeps the badge under half the map width', String(m.widthShare));
 checkSame(false, m.hitsBadge, 'a tap in the corner reaches the map, not the badge');
 checkSame(0, m.marksOnWater, 'NOTHING wind-related is drawn among the map layers — one forecast is not per-lake data');
+await page.close();
+
+/* ---- 1b. a payload cached before 1.35.1 ------------------------------- */
+section('with no short form, the full source still shows — never no source');
+
+page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE });
+m = await read(page);
+checkSame(SOURCE, m.src, 'it falls back to the full name rather than going blank');
 await page.close();
 
 /* ---- 2. every sector maps to its own bearing -------------------------- */
 section('each compass sector points its own way');
 
 for (const [dir, rot] of [['N', 'rotate(180)'], ['E', 'rotate(270)'], ['SSW', 'rotate(22.5)'], ['WNW', 'rotate(112.5)']]) {
-  page = await openMap(390, { dir, speed: '10 mph', source: SOURCE });
+  page = await openMap(390, { dir, speed: '10 mph', source: SOURCE, sourceShort: SHORT });
   m = await read(page);
   checkSame(rot, m.rot, `${dir} rotates to ${rot}`);
   await page.close();
@@ -126,7 +139,7 @@ for (const [dir, rot] of [['N', 'rotate(180)'], ['E', 'rotate(270)'], ['SSW', 'r
 section('an unknown or absent direction shows the speed and no arrow');
 
 for (const dir of ['', 'VAR', 'north-east-ish']) {
-  page = await openMap(390, { dir, speed: '15 mph', source: SOURCE });
+  page = await openMap(390, { dir, speed: '15 mph', source: SOURCE, sourceShort: SHORT });
   m = await read(page);
   check(m.badge, `"${dir}": the reading still shows`);
   checkSame(0, m.arrows, `"${dir}": and no arrow is drawn`);
@@ -147,7 +160,7 @@ for (const wind of [null, { dir: 'NE', speed: '' }]) {
 /* ---- 5. desktop ------------------------------------------------------- */
 section('and the same on a desktop canvas');
 
-page = await openMap(1280, { dir: 'SW', speed: '5 to 10 mph', source: SOURCE });
+page = await openMap(1280, { dir: 'SW', speed: '5 to 10 mph', source: SOURCE, sourceShort: SHORT });
 m = await read(page);
 checkSame('rotate(45)', m.rot, 'SW (225) + 180 wraps to 45');
 check(m.onCanvas, 'still on the canvas at 1280px');

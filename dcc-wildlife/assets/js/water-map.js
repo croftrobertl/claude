@@ -112,12 +112,17 @@
 		var txt = el('span', 'dccwl-wind-text');
 		if (dir) { txt.appendChild(el('b', 'dccwl-wind-dir', dir)); }
 		txt.appendChild(el('span', 'dccwl-wind-speed', wind.speed));
-		if (wind.source) { txt.appendChild(el('span', 'dccwl-wind-src', wind.source)); }
+		/* The short form on screen, the full name to a screen reader (1.35.1).
+		 * Falls back to the full name when a payload cached before 1.35.1 has
+		 * no short form — a long source line beats no source line. */
+		var srcShort = wind.sourceShort || wind.source;
+		if (srcShort) { txt.appendChild(el('span', 'dccwl-wind-src', srcShort)); }
 		box.appendChild(txt);
 
 		box.setAttribute('role', 'group');
-		box.setAttribute('aria-label', (i18n.windAria || 'Wind %1$s at %2$s')
-			.replace('%1$s', dir || '').replace('%2$s', wind.speed));
+		box.setAttribute('aria-label', (i18n.windAria || 'Wind %1$s at %2$s — %3$s')
+			.replace('%1$s', dir || '').replace('%2$s', wind.speed)
+			.replace('%3$s', wind.source || srcShort || ''));
 		return box;
 	}
 

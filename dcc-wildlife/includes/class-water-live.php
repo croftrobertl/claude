@@ -1817,6 +1817,17 @@ final class Water_Live {
 				'dir'    => $wdir,
 				'speed'  => $wspd,
 				'source' => $source,
+				/*
+				 * 1.35.1 — the SHORT form for the map badge, where the full
+				 * name was the longest line and took about 60% of the map's
+				 * width on a phone (Rob's call, 2026-10-01). It travels WITH
+				 * the data rather than being abbreviated client-side: the
+				 * client must never invent a short name for a source it was
+				 * handed, because the next source would get the wrong one.
+				 * The full name still rides along and is what a screen reader
+				 * is given.
+				 */
+				'sourceShort' => __( 'NWS forecast', 'dcc-wildlife' ),
 				'date'   => $updated,
 			];
 		}
