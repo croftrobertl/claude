@@ -32,8 +32,6 @@
 
 .dccwl-hero-stat {
 	align-items: center;
-	-webkit-backdrop-filter: var(--dccwl-glass-blur);
-	backdrop-filter: var(--dccwl-glass-blur);
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
 	border-left: 4px solid var(--dccwl-accent);
@@ -550,6 +548,10 @@
 	text-align: center;
 }
 .dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; }
+/* ITEM 6 (1.36.0) — the placeholder clears the moment the field is focused,
+ * not when the first letter lands. Colour, not `content`, so the input keeps
+ * its intrinsic width and nothing reflows as it empties. */
+.dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input:focus::placeholder { color: transparent; }
 /* Ours is a 44px target and always in the same place; the platform's is not. */
 .dccwl-search-input::-webkit-search-cancel-button,
 .dccwl-search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
@@ -718,12 +720,30 @@
  * have a vetted one; species without a photo keep the drawn scene above.
  * Double class (.dccwl-medallion.dccwl-medallion-photo) so this out-ranks the
  * base medallion's own mobile height rule regardless of source order. */
-.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 240px; }
+/*
+ * ITEM 7 (1.36.0) — THE WHOLE PHOTOGRAPH, NOTHING CROPPED.
+ *
+ * It was a 240px-tall box with object-fit: cover, which on a 4:3 frame showed
+ * a thin band of the middle-bottom — Rob's words, "mostly the bottom of the
+ * image". The box now takes its height from the picture: width 100%, height
+ * auto, no cover, no fixed height. A tall portrait is capped by max-height so
+ * it cannot push the sheet's text off screen, and `contain` means even that
+ * case letterboxes rather than crops.
+ *
+ * The 1.12.0 reason for the doubled class still holds — it must out-rank the
+ * base medallion's own mobile height rule — so the override is doubled here
+ * too, and now sets `height: auto` where that rule sets a height.
+ */
+.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo {
+	height: auto;
+	max-height: 70vh;
+}
 
 .dccwl-sheet .dccwl-medallion-photo .dccwl-photo {
 	display: block;
-	height: 100%;
-	object-fit: cover;
+	height: auto;
+	max-height: 70vh;
+	object-fit: contain;
 	width: 100%;
 }
 
@@ -760,7 +780,8 @@
 }
 
 @media (max-width: 600px) {
-	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 210px; }
+	/* ITEM 7: the phone case keeps its own cap, not its own crop. */
+	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: auto; max-height: 60vh; }
 }
 
 /* ======================================================================

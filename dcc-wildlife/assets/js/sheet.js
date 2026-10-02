@@ -24,6 +24,14 @@
 		'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 	/* Static, trusted constant — the only innerHTML in this file. */
+	/* ITEM 9 (1.36.0) — the × that closes the sheet outright, drawn to the
+	 * Availability Calendar's close: a 30px SVG cross, stroke-width 2.75, in
+	 * the blue the rest of that plugin uses. Static trusted constant, like
+	 * ICON_BACK — the only innerHTML this file permits. */
+	var ICON_CLOSE = '<svg viewBox="0 0 30 30" width="30" height="30" aria-hidden="true" focusable="false">' +
+		'<path d="M7 7 L23 23 M23 7 L7 23" fill="none" stroke="currentColor" ' +
+		'stroke-width="2.75" stroke-linecap="round"/></svg>';
+
 	var ICON_BACK = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
 		'<path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" ' +
 		'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -34,6 +42,7 @@
 	var titleEl = null;
 	var bodyEl = null;
 	var backBtn = null;
+	var closeBtn = null;
 
 	var state = {
 		open: false,
@@ -86,8 +95,21 @@
 		titleEl.id = 'dccwl-sheet-title';
 		sheet.setAttribute('aria-labelledby', titleEl.id);
 
+		/*
+		 * TWO CONTROLS, TWO JOBS. The ‹ on the left keeps doing what it has
+		 * always done — one step back, which for a sheet opened from a tile
+		 * means closing it and handing focus to that tile. The × on the
+		 * right closes the sheet outright, and it is here because that is
+		 * where a guest looks for one. The title sits between them.
+		 */
+		closeBtn = el('button', 'dccwl-sheet-close');
+		closeBtn.type = 'button';
+		closeBtn.innerHTML = ICON_CLOSE; // static trusted constant
+		closeBtn.addEventListener('click', function () { close(true); });
+
 		head.appendChild(backBtn);
 		head.appendChild(titleEl);
+		head.appendChild(closeBtn);
 
 		bodyEl = el('div', 'dccwl-sheet-body');
 
@@ -176,6 +198,12 @@
 		titleEl.textContent = opts.title || '';
 		if (backBtn) {
 			backBtn.setAttribute('aria-label', opts.closeLabel || 'Close');
+		}
+		if (closeBtn) {
+			/* Its OWN label, not the caller's. The ‹ says what going back
+			 * means in context ("Close details"); the × says the one thing it
+			 * does, and Rob specified that word. */
+			closeBtn.setAttribute('aria-label', opts.closeAllLabel || 'Close');
 		}
 
 		bodyEl.textContent = '';

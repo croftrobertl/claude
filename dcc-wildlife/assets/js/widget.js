@@ -631,6 +631,7 @@
 				title: sp.name,
 				appClasses: root.className.replace('dccwl-root', '').trim(),
 				closeLabel: CFG.i18n.close,
+				closeAllLabel: CFG.i18n.closeAll,
 				opener: tile,
 				build: function (body) {
 					buildDetail(body, sp);

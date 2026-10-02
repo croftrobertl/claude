@@ -809,6 +809,8 @@ final class Water_Render {
 						],
 						'mapTitle'    => __( 'Chain map', 'dcc-wildlife' ),
 						'mapClose'    => __( 'Close the map', 'dcc-wildlife' ),
+						/* The × at the top right of the sheet (1.36.0). */
+						'closeAll'    => __( 'Close', 'dcc-wildlife' ),
 						'ageToday'    => __( 'today', 'dcc-wildlife' ),
 						'mapLoading'  => __( 'Loading the map…', 'dcc-wildlife' ),
 						'mapFailed'   => __( 'The map could not be loaded.', 'dcc-wildlife' ),

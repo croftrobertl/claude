@@ -56,8 +56,6 @@
 }
 
 .dccwl-water .dccwl-card {
-	-webkit-backdrop-filter: var(--dccwl-glass-blur);
-	backdrop-filter: var(--dccwl-glass-blur);
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
 	border-radius: var(--dccwl-radius);
@@ -530,8 +528,6 @@
  * ================================================================== */
 
 .dccwl-moon {
-	-webkit-backdrop-filter: var(--dccwl-glass-blur);
-	backdrop-filter: var(--dccwl-glass-blur);
 	align-items: center;
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
@@ -616,8 +612,6 @@
 }
 
 .dccwl-fishing-season {
-	-webkit-backdrop-filter: var(--dccwl-glass-blur);
-	backdrop-filter: var(--dccwl-glass-blur);
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
 	border-radius: var(--dccwl-radius);
@@ -908,7 +902,22 @@
 /* ITEM 10 (his pick: A) — season picker, then a labelled block per species,
  * with ruled breaks between the seasons, the map/ramps, the licences and the
  * FWC disclaimer. */
-.dccwl-fish-seasons { display: flex; justify-content: center; margin: 0 0 var(--dccwl-gap-lg); }
+/*
+ * ITEM 2 (1.36.0) — the season bar is CENTRED, measured rather than assumed.
+ *
+ * It was `display: flex` at (0,1,0), which lost to `.dccwl-app .dccwl-tabs
+ * .dccwl-tabs` at (0,3,0) and stayed inline-flex — and an inline-level box
+ * centres only if its parent says so, which this one's parent does not
+ * (computed text-align: left, measured at 1280px: the bar sat 490px left of
+ * centre). A block-level flex that centres its own children does not care
+ * what the parent's text-align is, at any width.
+ */
+.dccwl-water .dccwl-tabs.dccwl-tabs.dccwl-fish-seasons {
+	display: flex;
+	justify-content: center;
+	margin: 0 auto var(--dccwl-gap-lg);
+	width: 100%;
+}
 .dccwl-fish-season[hidden] { display: none; }
 .dccwl-fish-species { margin: 0 0 var(--dccwl-gap); }
 .dccwl-fish-species h4 {

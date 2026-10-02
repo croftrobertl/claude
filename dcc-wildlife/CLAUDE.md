@@ -2525,3 +2525,104 @@ a payload cached by 1.35.0 shows the long name rather than nothing, and
 
 The aria-label gained the source as a third placeholder, so the full attribution
 is what a screen reader hears whatever the badge shows.
+
+### 20. 1.36.0 — the blur comes out, and eight fixes from Rob's 2026-10-02 list
+
+**THE BLUR IS GONE FROM EVERY WILDLIFE ELEMENT, AND IT MUST NOT COME BACK.**
+/explore/ carried **451 elements with `backdrop-filter: blur(10px)`** — 409 of
+them species tiles — and Rob's Windows PC re-composited every one on every
+scrolled frame. On a near-white surface over a white page **the blur was
+invisible**: it cost frames and bought nothing.
+
+- Every `backdrop-filter` declaration is deleted from all four stylesheets.
+- `--dccwl-glass-blur` is **deleted as a token**, deliberately: a token that
+  still existed would be an invitation to set it again.
+- `.dccwl-glass-yes` is gone from `Render::app_classes()`. It carried one
+  declaration — the blur — and a class that now selects nothing is a setting
+  that does nothing, which this plugin does not keep.
+- **The surfaces are solid, and the pixels did not move.**
+  `rgba(255,255,255,.92)` composited over the page ground `#f4f7fa` *is*
+  `#fefeff`; `.98` is `#ffffff`. Those are the values now. Keep them opaque —
+  the always-light rule depends on these surfaces not letting a host or OS
+  theme through.
+
+**MEASURED AS A CONTROLLED A/B, NOT AS TWO RUNS.** One page, the blur
+re-applied at runtime to recreate 1.35.1 exactly, three interleaved reps per
+condition, CPU throttled 4×, scrolling 120 frames of 90px:
+
+| width | with blur | without | change |
+|---|---|---|---|
+| 1680px | 2356 ms, 21 frames over 20ms | 2070 ms, 5 over 20ms | −12.1% |
+| 390px | 2293 ms, 18 over 20ms | 2159 ms, 10 over 20ms | −5.8% |
+
+**This sandbox composites in SOFTWARE and the real gain is probably larger**,
+because backdrop-filter is exactly what a GPU pipeline handles differently.
+Say so when quoting these numbers; the honest hard figure is 308 → 0
+re-composited elements per frame in the fixture.
+
+**WHAT ELSE COSTS FRAMES, named but not touched.** The species page is
+**159,305px tall with 9,361 nodes** at 402 species — that is now the dominant
+cost, and it is the crawlable prose guide Rob chose to keep. 308 tiles
+transition `box-shadow`, `border-color` and `background` on HOVER, which is
+repaint-heavy but never fires while scrolling. 413 images, all lazy.
+
+**AND ONE FALSE ALARM WORTH REMEMBERING:** a first pass found "7,395 elements
+with `transition-property: all`" and nearly reported it. `all` is that
+property's INITIAL VALUE; with `transition-duration: 0s` it costs nothing. The
+number that means something is the duration, and by that measure 648 elements
+animate anything at all. **Measure the property that does the work, not the
+one with the alarming name.**
+
+### The Back bar overlap was a 1.34.0 regression, and the mechanism is the lesson
+
+Rob photographed the level bar covering half the months row at 1680px. The
+cause: the rule added in 1.34.0 to give the absolutely-centred crumb a
+containing block declared `.dccwl-canal .dccwl-levelbar { position: relative }`
+— **same specificity as the bar's own block and later in the file, so it
+replaced `position: sticky`** — while the bar kept
+`top: var(--dccwl-sticky-offset)`. On a theme with a sticky header that token
+is 60–80px, and **`top` on a RELATIVE element shifts it down without reserving
+the space**, so it landed on whatever followed.
+
+A sticky element is already a containing block for its absolute children, so
+the crumb never needed that rule. `position` now lives in exactly one place.
+`ui-chrome.mjs` pins it **with a non-zero `--dccwl-sticky-offset`**, because
+with the token at 0 the bug is invisible — the test that would have caught this
+is the one that sets the offset first.
+
+### The rest of his list
+
+- **The season bar is centred**, and it was off by 490px at 1280px because it
+  stayed `inline-flex` (its `display: flex` lost to `.dccwl-app .dccwl-tabs
+  .dccwl-tabs` at (0,3,0)) and its parent computes `text-align: left`. A
+  block-level flex that centres its own children does not care what the
+  parent's alignment is.
+- **A map popup closes on a tap anywhere outside it.** Leaflet's
+  `closePopupOnClick` only hears clicks on the MAP, so the control bar, the
+  legend, the sheet and the page behind it all left it open. The document-level
+  listener skips `.leaflet-interactive` (or it would close the popup on the
+  click that opened it) and removes itself once its canvas is gone, because the
+  sheet empties its body on close.
+- **SELECTED IS CORAL WITH WHITE TEXT (REVERSES 1.34.0's dark ink), and the
+  month pill joins it.** Rob chose white knowing it measures 2.59:1 — below AA
+  at every size — and ruled that **the coral must not be deepened**. Same call,
+  same reason, as coral hover in 1.33.0 answer 2: three plugins disagreeing
+  about a pressed button is worse to him than the number. If contrast is ever
+  raised it happens SITE-WIDE, never in Wildlife alone.
+- **The search placeholder clears on focus**, by colour rather than by
+  emptying `content`, so nothing reflows.
+- **The species photo shows whole.** It was a 240px box with `object-fit:
+  cover`, which on a 2:3 frame showed a band of the bottom. Now `height: auto`,
+  `object-fit: contain`, capped at 70vh (60vh on a phone) so a portrait cannot
+  push the text off screen.
+- **The sheet's content clears its edges**: 20px sides (already
+  `--dccwl-detail-pad-x`) and **24px at the foot**, the Availability Calendar's
+  1.25em / 1.5em. The photo stays INSET like everything else rather than
+  full-bleed — the status quo, and it satisfies "nothing touches the edges"
+  without introducing a treatment Rob has not seen.
+- **The sheet has an × at the top right** — 46px circle, `#E7EEF7`, a `#0A50B2`
+  cross drawn at 30px with stroke-width 2.75, **no shadow and no transition**
+  (both are part of the Availability Calendar's spec, not oversights), a
+  `:focus-visible` ring, and the accessible name **"Close"** — its own label,
+  not the caller's "Close details", because the × does one thing whatever the
+  sheet is showing. The ‹ on the left is unchanged.

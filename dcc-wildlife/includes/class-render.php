@@ -137,13 +137,19 @@ final class Render {
 	 * The app-layer classes every Wildlife surface carries (1.9.0).
 	 *
 	 * `dccwl-app` scopes the token block; the modifiers mirror what /guest/
-	 * actually renders — density cozy, glass on, and NO dark class, because
-	 * the Guide renders light on every OS and so does this (1.9.1). Kept
-	 * filterable so a theme change on the Guide side is a one-line change
-	 * here rather than a release.
+	 * actually renders — density cozy, and NO dark class, because the Guide
+	 * renders light on every OS and so does this (1.9.1). Kept filterable so
+	 * a theme change on the Guide side is a one-line change here rather than
+	 * a release.
+	 *
+	 * `dccwl-glass-yes` WENT IN 1.36.0 with the blur it carried. It set one
+	 * declaration, a backdrop-filter, and Rob had the blur removed outright:
+	 * a class that now selects nothing is a setting that does nothing, which
+	 * this plugin does not keep. The surfaces it styled are unchanged — they
+	 * were already near-white and are now solid.
 	 */
 	public static function app_classes(): string {
-		$classes = [ 'dccwl-app', 'dccwl-density-cozy', 'dccwl-glass-yes' ];
+		$classes = [ 'dccwl-app', 'dccwl-density-cozy' ];
 
 		/**
 		 * Filter the app-layer classes (density / dark / glass modifiers).
@@ -1144,6 +1150,9 @@ final class Render {
 				/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
 				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
+				/* The × at the top right (1.36.0). One word, because it does
+				 * one thing, whatever the sheet is showing. */
+				'closeAll'    => __( 'Close', 'dcc-wildlife' ),
 				'details'     => __( 'Species details', 'dcc-wildlife' ),
 				'photoCredit' => __( 'Photo: Adobe Stock', 'dcc-wildlife' ),
 				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),

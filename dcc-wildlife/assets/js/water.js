@@ -433,6 +433,7 @@
 				title: (CFG.i18n && CFG.i18n.mapTitle) || label,
 				appClasses: (CFG.appClasses || 'dccwl-app'),
 				closeLabel: (CFG.i18n && CFG.i18n.mapClose) || 'Close',
+				closeAllLabel: (CFG.i18n && CFG.i18n.closeAll) || 'Close',
 				opener: btn,
 				tall: true,
 				build: function (body) {

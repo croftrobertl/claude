@@ -364,6 +364,39 @@
 		shell.appendChild(canvas);
 
 		var map = L.map(canvas, { scrollWheelZoom: false });
+
+		/*
+		 * ITEM 3 (1.36.0) — A POPUP CLOSES WHEN A GUEST TAPS AWAY FROM IT.
+		 *
+		 * Leaflet's own closePopupOnClick only hears clicks on the MAP, so a
+		 * tap on the control bar, the legend, the sheet around the map or the
+		 * page behind it left the popup open with no way out but its ×. This
+		 * listens on the document instead, which is where "anywhere outside"
+		 * actually lives.
+		 *
+		 * Two things it must not do: close the popup on the very click that
+		 * opened it (a marker is .leaflet-interactive, so those are left to
+		 * Leaflet), and outlive its map — the sheet empties its body on
+		 * close, which orphans this canvas, so the listener removes itself
+		 * the first time it notices.
+		 */
+		function closeAway(ev) {
+			if (!document.contains(canvas)) {
+				document.removeEventListener('click', closeAway, true);
+				document.removeEventListener('touchend', closeAway, true);
+				return;
+			}
+			var t = ev.target;
+			if (!t || !t.closest) { return; }
+			if (t.closest('.leaflet-popup') || t.closest('.leaflet-interactive')) { return; }
+			map.closePopup();
+		}
+		document.addEventListener('click', closeAway, true);
+		document.addEventListener('touchend', closeAway, true);
+		map.on('unload', function () {
+			document.removeEventListener('click', closeAway, true);
+			document.removeEventListener('touchend', closeAway, true);
+		});
 		var base = buildBaseLayers(map, canvas, cfg, i18n);
 
 		var groups = {

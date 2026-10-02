@@ -77,12 +77,15 @@ check(icon && pill && icon.x > pill.x && icon.x + icon.w < pill.x + pill.w,
   `pill ${JSON.stringify(pill)} icon ${JSON.stringify(icon)}`);
 
 /* ---- 2. toggle states ------------------------------------------------ */
-/* 1.34.0, item 12: the SELECTED toggle is coral now, with --dccwl-text ink.
- * Rob's reason is that the gold ring alone did not say what was showing. The
- * gold mark STAYS (his 1.33.0 answer 1: "the gold selected-ring is fine as it
- * is"), so the selected state carries both. Ink, not white: white on coral is
- * 2.59:1 and the 1.16.1 rule makes --dccwl-accent fill-only. */
-section('every unselected toggle is blue; the selected one is coral and gold');
+/* 1.36.0 REVERSES 1.34.0's ink. The selected toggle is coral with WHITE text,
+ * matching the hover state exactly — Rob's decision on 2026-10-02, made with
+ * the measurement in front of him: white on #F08080 is 2.59:1, below AA at
+ * every size, and he ruled that the coral must NOT be deepened to rescue it.
+ * It is the same call he made for coral hover in 1.33.0 answer 2: three
+ * plugins disagreeing about a pressed button is worse, to him, than the
+ * number. The suite pins HIS answer, not the guideline — and if the contrast
+ * is ever raised it happens site-wide, not here. The gold ring still stays. */
+section('every unselected toggle is blue; the selected one is coral, white and gold');
 
 const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dccwl-tab')).map((b) => {
   const cs = getComputedStyle(b);
@@ -103,8 +106,8 @@ for (const t of tabs) {
   const chosen = 'true' === t.pressed;
   checkSame(chosen ? CORAL : BLUE, t.bg,
     `${t.label}: ${chosen ? 'coral while selected' : 'solid #006BCF at rest'}`);
-  checkSame(chosen ? INK : WHITE, t.fg,
-    `${t.label}: ${chosen ? 'dark ink on the coral' : 'white text'}`);
+  checkSame(WHITE, t.fg,
+    `${t.label}: white text, selected or not (1.36.0)`);
   checkSame('30px', t.radius, `${t.label}: the site kit radius`);
 }
 const on = tabs.filter((t) => 'true' === t.pressed);
@@ -151,14 +154,13 @@ for (const [sel, what, rowSel] of [
       `${g.section}: every unselected ${what} is solid #006BCF`);
     check(rows.filter((r) => !r.pressed).every((r) => r.fg === WHITE),
       `${g.section}: every unselected ${what} has white text`);
-    /* The month pill is deliberately NOT part of item 12 — Rob listed the
-     * category tabs, the category chips and the water tabs, and the month
-     * strip already marks its selection in gold on blue. So a selected chip
-     * is coral and a selected month pill is not, and the suite says which is
-     * which rather than accepting either. */
-    const wantSel = '.dccwl-subchip' === sel ? CORAL : BLUE;
-    check(rows.filter((r) => r.pressed).every((r) => r.bg === wantSel),
-      `${g.section}: the selected ${what} is ${wantSel === CORAL ? 'coral (item 12)' : 'still blue'}`);
+    /* 1.36.0: the month pill is coral too. 1.34.0 left it blue because Rob's
+     * list did not name it; this time it does, so the exception is gone and
+     * every selected control on the page is the same colour. */
+    check(rows.filter((r) => r.pressed).every((r) => r.bg === CORAL),
+      `${g.section}: the selected ${what} is coral`);
+    check(rows.filter((r) => r.pressed).every((r) => r.fg === WHITE),
+      `${g.section}: with white text, matching hover`);
     const sel_on = rows.filter((r) => r.pressed);
     checkSame(1, sel_on.length, `${g.section}: exactly one ${what} is selected in this row`);
     checkSame(GOLD, sel_on[0].bc, `${g.section}: the selected ${what} is marked in gold`);

@@ -75,8 +75,16 @@
 	/* Surfaces are near-opaque WHITE on purpose — this is how the Guide
 	 * stays legible under any host or OS theme without ever recolouring.
 	 * Do not make any of these transparent. */
-	--dccwl-tile-bg: rgba(255, 255, 255, 0.92);       /* --dccgg-tile-bg */
-	--dccwl-tile-bg-hover: rgba(255, 255, 255, 0.98); /* derived */
+	/*
+	 * SOLID, NOT TRANSLUCENT (1.36.0). These were rgba(255,255,255,.92) and
+	 * .98, composited over the page ground at #f4f7fa — which resolves to
+	 * exactly #fefeff and #ffffff. The pixels are unchanged; what goes is a
+	 * per-element blend on every scrolled frame. Keep them opaque: the
+	 * always-light rule above depends on these surfaces not letting a host or
+	 * OS theme show through.
+	 */
+	--dccwl-tile-bg: #fefeff;            /* was rgba(255,255,255,.92) over #f4f7fa */
+	--dccwl-tile-bg-hover: #ffffff;      /* was rgba(255,255,255,.98) over #f4f7fa */
 	--dccwl-detail-bg: #ffffff;          /* --dccgg-detail-bg */
 	--dccwl-page-bg: #f4f7fa;                         /* derived */
 	--dccwl-sheet-scrim: rgba(17, 17, 17, 0.44);      /* derived */
@@ -183,9 +191,20 @@
 	--dccwl-t-fast: 140ms;                            /* derived */
 	--dccwl-ease-color: ease;                         /* derived */
 
-	/* --- glass — ON, matching the Guide ------------------------------- */
+	/*
+	 * --- the former glass surfaces (1.36.0) ---------------------------
+	 *
+	 * THE BLUR IS GONE, EVERYWHERE, BY ROB'S DECISION. /explore/ carried 451
+	 * elements with backdrop-filter: blur(10px) — 409 of them species tiles —
+	 * and every one was re-composited on every scrolled frame on his Windows
+	 * PC. On a white ground over a white page the blur was INVISIBLE: it cost
+	 * frames and bought nothing.
+	 *
+	 * The tokens stay, because the surfaces that used them are real; only the
+	 * filter is gone. --dccwl-glass-blur is not among them: nothing may
+	 * reintroduce a blur through a token that still exists.
+	 */
 	--dccwl-glass-bg: var(--dccwl-tile-bg);
-	--dccwl-glass-blur: none;
 	--dccwl-glass-border: var(--dccwl-line);
 
 	color: var(--dccwl-text);
@@ -198,12 +217,6 @@
 .dccwl-app.dccwl-density-compact { --dccwl-density: 0.82; }
 .dccwl-app.dccwl-density-cozy    { --dccwl-density: 1; }
 .dccwl-app.dccwl-density-roomy   { --dccwl-density: 1.22; }
-
-/* Glass surfaces — opt-in, and degrades to a solid fill where
- * backdrop-filter is unsupported because the fallback is the token itself. */
-.dccwl-app.dccwl-glass-yes {
-	--dccwl-glass-blur: blur(10px);      /* --dccgg-glass-blur */
-}
 
 /* --- NO DARK MODE, DELIBERATELY (1.9.1) -------------------------------
  * Rob's decision, matching the Guest Guide: this widget renders LIGHT on
@@ -279,8 +292,6 @@
 
 .dccwl-app .dccwl-tile.dccwl-tile {
 	align-items: center;
-	-webkit-backdrop-filter: var(--dccwl-glass-blur);
-	backdrop-filter: var(--dccwl-glass-blur);
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
 	border-radius: var(--dccwl-radius);
@@ -671,7 +682,12 @@
 	/* The sheet pins to bottom: 0. On iPhones the home indicator overlays the
 	 * last ~34px, so the body's bottom padding grows to clear it (1.17.0).
 	 * env() is 0 everywhere else, so max() falls back to the normal pad. */
-	padding-bottom: max(var(--dccwl-detail-pad-y), env(safe-area-inset-bottom, 0px));
+	/* ITEM 8 (1.36.0) — 24px at the foot, matching the Availability
+	 * Calendar's 1.5em, so the last line never sits on the sheet's edge. The
+	 * sides are already 20px (--dccwl-detail-pad-x), which is that plugin's
+	 * 1.25em, so only the bottom moved. The safe-area max() still wins on an
+	 * iPhone, where the home indicator needs more than either. */
+	padding-bottom: max(calc(24px * var(--dccwl-density)), env(safe-area-inset-bottom, 0px));
 }
 
 .dccwl-sheet-body > :first-child { margin-top: 0; }
@@ -963,12 +979,17 @@
  * what is showing. Applies to the Animals / Plants / Safety / Peak Now
  * tabs, the category chips and the Water tabs, which are all .dccwl-tab.
  *
- * THE INK IS --dccwl-text, NOT WHITE, and that is not a new choice: the
- * 1.16.1 contrast rule says coral is FILL AND BORDER ONLY and never a
- * text colour, and white on #F08080 measures 2.59:1 — below AA at every
- * size. The month-now badge has carried coral fill with --dccwl-text ink
- * (7.29:1) since 1.16.1 for exactly this reason, so this follows the
- * plugin's own precedent rather than inventing one.
+ * THE INK IS WHITE (1.36.0, REVERSING 1.34.0's dark ink). Rob chose white
+ * on the CURRENT coral so the selected state matches the hover state
+ * exactly, and he chose it KNOWING the measurement: white on #F08080 is
+ * 2.59:1, below AA at every size. He also ruled that the coral must NOT be
+ * deepened to rescue the ratio.
+ *
+ * This is the same decision he made for coral hover in 1.33.0 answer 2 and
+ * for the same reason: three plugins on one site disagreeing about what a
+ * pressed button looks like is worse, to him, than the number. IF CONTRAST
+ * IS EVER RAISED IT CHANGES SITE-WIDE, in one place, never in Wildlife
+ * alone. Do not "fix" this here, and do not restore the dark ink.
  *
  * The gold ring stays: it is the focus affordance, not the selected one.
  *
@@ -981,13 +1002,55 @@
  * =================================================================== */
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"],
 .dccwl-root .dccwl-subchip.dccwl-subchip.dccwl-subchip[aria-pressed="true"],
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"] {
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"],
+/* 1.36.0: the month pill joins them. Rob listed it by name this time —
+ * "Animals/Plants/Safety/Peak Now, the category chips, the month pills, the
+ * Water tabs" — which settles the one exception 1.34.0 carried. */
+.dccwl-root .dccwl-month.dccwl-month.dccwl-month-on {
 	background: var(--dccwl-accent);
-	color: var(--dccwl-text);
+	color: #ffffff;
 }
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover,
 .dccwl-root .dccwl-subchip.dccwl-subchip.dccwl-subchip[aria-pressed="true"]:hover,
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"]:hover {
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"]:hover,
+.dccwl-root .dccwl-month.dccwl-month.dccwl-month-on:hover {
 	background: var(--dccwl-accent);
 	color: var(--dccwl-text);
+}
+
+/* ======================================================================
+ * ITEM 9 (1.36.0) — THE × THAT CLOSES THE SHEET.
+ *
+ * Drawn to the Availability Calendar's close button, which is Rob's
+ * reference for every popup on this site: a 46px circle on #E7EEF7 with a
+ * #0A50B2 cross, no shadow and no transition. Those two absences are part of
+ * the spec, not an oversight — that plugin's close does not animate, and a
+ * close that behaves differently in each plugin is the thing being fixed.
+ *
+ * The focus ring is ours and is required: a control with no visible focus is
+ * unusable from a keyboard, and `:focus-visible` is what this plugin styles
+ * everywhere (never :focus — a scripted focus must not light it up).
+ * ====================================================================== */
+.dccwl-app .dccwl-sheet-close.dccwl-sheet-close,
+.dccwl-sheet .dccwl-sheet-close.dccwl-sheet-close {
+	align-items: center;
+	background: #e7eef7;
+	border: 0;
+	border-radius: 50%;
+	box-shadow: none;
+	color: #0a50b2;
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	height: 46px;
+	justify-content: center;
+	margin: 0;
+	padding: 0;
+	transition: none;
+	width: 46px;
+}
+.dccwl-app .dccwl-sheet-close.dccwl-sheet-close:focus-visible,
+.dccwl-sheet .dccwl-sheet-close.dccwl-sheet-close:focus-visible {
+	outline: var(--dccwl-gold-w) solid var(--dccwl-gold);
+	outline-offset: 2px;
 }

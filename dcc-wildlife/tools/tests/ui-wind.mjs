@@ -24,7 +24,7 @@
  */
 import {
   launch, buildPage, rendered, asset,
-  check, checkSame, section, note, done, skipSuite,
+  check, checkSame, checkAtLeast, section, note, done, skipSuite,
 } from './lib.mjs';
 
 const browser = await launch();
@@ -165,6 +165,44 @@ m = await read(page);
 checkSame('rotate(45)', m.rot, 'SW (225) + 180 wraps to 45');
 check(m.onCanvas, 'still on the canvas at 1280px');
 check(m.widthShare <= 0.35, 'and a smaller share of a wider map', String(m.widthShare));
+await page.close();
+
+/* ---- 6. a popup closes when a guest taps away (item 3, 1.36.0) --------- */
+section('a marker popup closes on a tap anywhere outside it');
+
+page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE, sourceShort: SHORT });
+const popupState = () => page.evaluate(() => ({
+  open: document.querySelectorAll('.leaflet-popup').length,
+}));
+
+// Open one the way a guest does: by pressing a water marker.
+await page.evaluate(() => {
+  const m = document.querySelector('.leaflet-interactive');
+  if (m) { m.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); }
+});
+await page.waitForTimeout(400);
+checkAtLeast(1, (await popupState()).open, 'pressing a marker opens its popup');
+
+// A tap on the map bar is "outside", and Leaflet's own handler never hears it.
+await page.evaluate(() => {
+  const bar = document.querySelector('.dccwl-map-bar') || document.body;
+  bar.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+});
+await page.waitForTimeout(350);
+checkSame(0, (await popupState()).open, 'a tap on the control bar closes it');
+
+// And the popup does not close on a click INSIDE itself.
+await page.evaluate(() => {
+  const m = document.querySelector('.leaflet-interactive');
+  if (m) { m.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); }
+});
+await page.waitForTimeout(400);
+await page.evaluate(() => {
+  const p = document.querySelector('.leaflet-popup');
+  if (p) { p.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); }
+});
+await page.waitForTimeout(300);
+checkAtLeast(1, (await popupState()).open, 'but a tap inside the popup leaves it open');
 await page.close();
 
 await browser.close();
