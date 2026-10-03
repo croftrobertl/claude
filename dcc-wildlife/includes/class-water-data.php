@@ -101,7 +101,15 @@ final class Water_Data {
 			// blank tiles, just the wrong place. Both are settings precisely
 			// so a provider swap is a paste, not a release.
 			'map_sat_url'       => 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-			'map_sat_attrib'    => 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+			/*
+			 * "Powered by Esri" is REQUIRED WORDING, not decoration (1.37.0).
+			 * Esri's terms allow a credit reached from a button only if it is
+			 * discoverable, never covered, and carries that phrase along with
+			 * the source line. The ⓘ satisfies the first two; this string is
+			 * the third, and a site that stored the old value is repaired in
+			 * Water_Data::upgrade().
+			 */
+			'map_sat_attrib'    => 'Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
 			'map_tile_url'      => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 			'map_tile_attrib'   => '&copy; OpenStreetMap contributors',
 			// Anglers and boaters read structure, grass lines and shoreline
@@ -320,6 +328,20 @@ final class Water_Data {
 				$stored[ $key ] = $rebraced;
 				$changed        = true;
 			}
+		}
+
+		/*
+		 * 1.37.0: add the wording Esri requires to a stored credit that is
+		 * still the old default. ONLY an exact match is touched — an owner who
+		 * typed their own credit keeps it, exactly as the 1.32.1 tile-template
+		 * repair does. Fixing the default alone would have left every site
+		 * that ever pressed Save showing a credit that breaks the terms.
+		 */
+		$old_sat = 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community';
+		if ( isset( $stored['map_sat_attrib'] ) && $old_sat === trim( (string) $stored['map_sat_attrib'] ) ) {
+			$defaults                   = self::defaults();
+			$stored['map_sat_attrib']   = (string) $defaults['map_sat_attrib'];
+			$changed                    = true;
 		}
 
 		if ( $changed ) {

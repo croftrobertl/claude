@@ -1137,7 +1137,14 @@
 
 				// Revealed only now: without this script the grid is a plain
 				// wrapping list with no deck to jump around in.
-				if (chipWrap) { chipWrap.hidden = false; }
+				if (chipWrap) {
+					chipWrap.hidden = false;
+					/* ITEM 7 (1.37.0): the same edge-fade function the months
+					 * bar uses, on the row itself — it toggles fade-l and
+					 * fade-r from the actual scroll position, so an edge is
+					 * cued only when something is hidden behind it. */
+					attachEdgeFades(chipWrap, chipWrap);
+				}
 				// The arrows ride with the chip row they belong to (item 13).
 				var chipNav = nav.querySelector('[data-dccwl-subchips-nav]');
 				if (chipNav) { chipNav.hidden = false; }
@@ -1395,8 +1402,28 @@
 						setQuery('');
 					}
 				});
+				/*
+				 * ITEM 5 (1.37.0) — ENTER / GO SHOWS THE RESULTS.
+				 *
+				 * It used to do one thing: stop a form submit reloading the
+				 * page. The guest was left looking at the browser's own
+				 * suggestion list over their results, with the keyboard still
+				 * up and the matches behind both. Blurring the field is what
+				 * closes that list and lowers the keyboard — there is no other
+				 * handle on either — and the query is applied first so the
+				 * results are already there when they appear.
+				 */
+				var submitSearch = function (e) {
+					if ('Enter' !== e.key) { return; }
+					e.preventDefault();
+					setQuery(input.value);
+					input.blur();
+				};
+				input.addEventListener('keydown', submitSearch);
 				// A search field inside a form must never reload the page.
 				input.addEventListener('keypress', function (e) { if ('Enter' === e.key) { e.preventDefault(); } });
+				// iOS fires `search` on the Go key of the on-screen keyboard.
+				input.addEventListener('search', function () { setQuery(input.value); input.blur(); });
 			}
 			if (clear && input) {
 				clear.addEventListener('click', function () {

@@ -517,10 +517,32 @@
 	border-radius: var(--dccwl-radius-control);
 	display: flex;
 	gap: 8px;
-	padding: 0 4px 0 14px;
+	/* Symmetrical (item 6). It was `0 4px 0 14px` — the 14px made room for the
+	 * magnifier when that was a flex item, and with the icon now positioned it
+	 * only pushed the input's box 5px right of the bar's centre. */
+	padding: 0 4px;
 }
 .dccwl-search-field:focus-within { box-shadow: var(--dccwl-ring); }
-.dccwl-search-icon { color: var(--dccwl-text); flex: none; height: 18px; width: 18px; }
+/*
+ * ITEM 6 (1.37.0) — CENTRED ON THE BAR, NOT ON WHAT IS LEFT OF THE MAGNIFIER.
+ *
+ * The icon and the clear button were flex items, so the input's box started
+ * after the icon and ended before the button: `text-align: center` then
+ * centred the placeholder and the caret inside THAT box, which sits right of
+ * the bar's middle. Taking both out of the flow and giving the input equal
+ * padding on each side puts its box back on the bar's own centre line, and
+ * the padding keeps a long query clear of either control.
+ */
+.dccwl-search-field { position: relative; }
+.dccwl-search-icon {
+	color: var(--dccwl-text);
+	height: 18px;
+	left: 14px;
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 18px;
+}
 /* Tripled class = (0,4,0). Bravada's Elementor kit resets inputs at (0,3,1);
  * at (0,3,0) this rule lost and the kit's own border and radius reappeared
  * inside the pill above. Same trap, same fix, as the Availability Calendar. */
@@ -541,7 +563,10 @@
 	min-height: 44px;
 	min-width: 0;
 	outline: none;
-	padding: 0;
+	/* Equal on both sides (item 6): the icon sits in the left 40px and the
+	 * clear button in the right 40px, so the text box stays symmetrical and
+	 * its centre is the bar's centre. */
+	padding: 0 40px;
 	/* 1.27.0, owner's request: centred, which covers both the placeholder and
 	 * what a guest types. Declared here because the host theme styles form
 	 * fields and would otherwise decide it. */
@@ -563,10 +588,16 @@
 	color: var(--dccwl-text);
 	cursor: pointer;
 	display: inline-flex;
-	flex: none;
 	height: 40px;
 	justify-content: center;
 	padding: 0;
+	/* Out of the flow with the magnifier (item 6), so the input's box stays
+	 * symmetrical whether or not the button is showing — otherwise the text
+	 * would shift sideways the moment a guest typed a letter. */
+	position: absolute;
+	right: 4px;
+	top: 50%;
+	transform: translateY(-50%);
 	width: 40px;
 }
 .dccwl-root .dccwl-search-clear.dccwl-search-clear:hover { background: var(--dccwl-btn-bg-hover); color: var(--dccwl-btn-txt-hover); }
@@ -753,7 +784,9 @@
 	font-size: 0.72rem;
 	letter-spacing: 0.02em;
 	margin: 0 0 var(--dccwl-gap);
-	text-align: right;
+	/* ITEM 10 (1.37.0): centred under the photograph. The sheet has been
+	 * centred throughout since 1.33.0 and this line was the one hold-out. */
+	text-align: center;
 	font-weight: var(--dccwl-fw-body);
 }
 
@@ -1401,16 +1434,30 @@
 	padding: 3px;
 	scroll-snap-type: x proximity;
 	scrollbar-width: none;
-	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-	mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
 .dccwl-subchips::-webkit-scrollbar { display: none; }
 
-/* Scrolled to the end there is nothing left to cue. */
-.dccwl-subchips.dccwl-at-end {
-	-webkit-mask-image: none;
-	mask-image: none;
+/*
+ * ITEM 7 (1.37.0) — A FADE MEANS "THERE IS MORE THIS WAY", so it appears only
+ * where there IS more. The row used to carry a permanent right-hand mask and
+ * drop it at the end: it faded the right even when every category already
+ * fitted, and never faded the left once a guest had scrolled, so the one edge
+ * with something hidden behind it was the one with no cue. The months bar has
+ * been doing this correctly since 1.19.0 — these are now the same two classes
+ * driven by the same function.
+ */
+.dccwl-subchips.dccwl-fade-r {
+	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+	mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.dccwl-subchips.dccwl-fade-l {
+	-webkit-mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+	mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+}
+.dccwl-subchips.dccwl-fade-l.dccwl-fade-r {
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+	mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
 }
 
 .dccwl-root .dccwl-subchip.dccwl-subchip {

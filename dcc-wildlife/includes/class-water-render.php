@@ -809,6 +809,8 @@ final class Water_Render {
 						],
 						'mapTitle'    => __( 'Chain map', 'dcc-wildlife' ),
 						'mapClose'    => __( 'Close the map', 'dcc-wildlife' ),
+						/* The ⓘ that opens the map's credits (1.37.0). */
+						'creditLabel' => __( 'Map credits', 'dcc-wildlife' ),
 						/* The × at the top right of the sheet (1.36.0). */
 						'closeAll'    => __( 'Close', 'dcc-wildlife' ),
 						'ageToday'    => __( 'today', 'dcc-wildlife' ),

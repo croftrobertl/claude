@@ -366,6 +366,78 @@
 		var map = L.map(canvas, { scrollWheelZoom: false });
 
 		/*
+		 * ITEM 4 (1.37.0) — THE CREDIT IS AN ⓘ, AND EACH PROVIDER'S RULE IS
+		 * KEPT. The permanent line ran across the bottom of every map and, in
+		 * Rob's screenshot, across the last line of an open popup.
+		 *
+		 * LEAFLET STILL RENDERS THE CREDIT. Its attribution control holds the
+		 * markup — including the providers' own links — so this code never
+		 * builds that string, never inserts it as HTML, and cannot drop a link
+		 * a licence requires. All that changed is when it is on screen: the
+		 * control is collapsed by CSS and the ⓘ shows it.
+		 *
+		 * `setPrefix(false)` drops Leaflet's own logo and flag, which are
+		 * optional and are not a credit anyone is owed.
+		 *
+		 * ESRI (the satellite layer, and the default): a credit behind a
+		 * button is allowed, so this starts collapsed — but it must be
+		 * discoverable and never covered, which is what the ⓘ and its
+		 * z-index are for. The required wording, "Powered by Esri" with the
+		 * source line, lives in the setting that feeds the control.
+		 *
+		 * OPENSTREETMAP (chosen, or the fallback when satellite fails): a
+		 * collapsed credit is allowed only if it shows FIRST and then
+		 * collapses on the guest's first pan, zoom or tap, or after five
+		 * seconds. openForOsm() does exactly that, and it runs on every
+		 * switch to that layer including the automatic one.
+		 */
+		map.attributionControl.setPrefix(false);
+		var creditTimer = null;
+
+		function creditOpen(on) {
+			canvas.classList.toggle('dccwl-credit-open', !!on);
+			if (creditBtn) { creditBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); }
+		}
+
+		function disarmCredit() {
+			if (creditTimer) { window.clearTimeout(creditTimer); creditTimer = null; }
+			map.off('movestart zoomstart click', collapseCredit);
+			canvas.removeEventListener('touchstart', collapseCredit, true);
+		}
+
+		function collapseCredit() {
+			disarmCredit();
+			creditOpen(false);
+		}
+
+		/* The OpenStreetMap rule: on screen first, then out of the way on the
+		 * first interaction or after five seconds — whichever comes first. */
+		function openForOsm() {
+			disarmCredit();
+			creditOpen(true);
+			map.on('movestart zoomstart click', collapseCredit);
+			canvas.addEventListener('touchstart', collapseCredit, true);
+			creditTimer = window.setTimeout(collapseCredit, 5000);
+		}
+
+		var creditBtn = el('button', 'dccwl-map-credit-btn');
+		creditBtn.type = 'button';
+		creditBtn.textContent = 'i';
+		creditBtn.setAttribute('aria-expanded', 'false');
+		creditBtn.setAttribute('aria-label', i18n.creditLabel || 'Map credits');
+		creditBtn.addEventListener('click', function (ev) {
+			ev.stopPropagation();
+			disarmCredit();
+			creditOpen(!canvas.classList.contains('dccwl-credit-open'));
+		});
+		/* Inside the map container, so a press must not also start a drag or
+		 * reach the map's own click handling. */
+		if (L.DomEvent && L.DomEvent.disableClickPropagation) {
+			L.DomEvent.disableClickPropagation(creditBtn);
+		}
+		canvas.appendChild(creditBtn);
+
+		/*
 		 * ITEM 3 (1.36.0) — A POPUP CLOSES WHEN A GUEST TAPS AWAY FROM IT.
 		 *
 		 * Leaflet's own closePopupOnClick only hears clicks on the MAP, so a
@@ -398,6 +470,17 @@
 			document.removeEventListener('touchend', closeAway, true);
 		});
 		var base = buildBaseLayers(map, canvas, cfg, i18n);
+
+		/* The OpenStreetMap credit rule, on every arrival at that layer — a
+		 * guest choosing it, and the automatic fallback when satellite is
+		 * blocked. Esri's layer leaves the credit collapsed behind the ⓘ,
+		 * which its terms allow. Called once for the layer the map opened on,
+		 * because buildBaseLayers chooses that before anything can listen. */
+		function creditRuleFor(name) {
+			if ('streets' === name) { openForOsm(); } else { collapseCredit(); }
+		}
+		base.onChange(creditRuleFor);
+		creditRuleFor(base.currentName());
 
 		var groups = {
 			waters: L.layerGroup(),
@@ -558,7 +641,12 @@
 		var failed = {};
 		var current = null;
 		var notice = null;
-		var onChange = null;
+		/* A LIST, not a slot (1.37.0). The Layers radio rows registered the
+		 * one callback there was; the OpenStreetMap credit rule needs to hear
+		 * the same event, and a second `onChange(fn)` would silently have
+		 * replaced the first. */
+		var listeners = [];
+		function onChange(name) { listeners.forEach(function (fn) { fn(name); }); }
 
 		function make(url, attribution, maxZoom) {
 			return window.L.tileLayer(url, {
@@ -578,7 +666,7 @@
 				notice = el('p', 'dccwl-map-notice', i18n.noImagery || '');
 				canvas.parentNode.insertBefore(notice, canvas);
 			}
-			if (onChange) { onChange(null); }
+			onChange(null);
 		}
 
 		function setBase(name) {
@@ -586,7 +674,7 @@
 			if (current && layers[current]) { map.removeLayer(layers[current]); }
 			layers[name].addTo(map);
 			current = name;
-			if (onChange) { onChange(name); }
+			onChange(name);
 		}
 
 		Object.keys(layers).forEach(function (name) {
@@ -613,7 +701,7 @@
 			names: Object.keys(layers),
 			set: setBase,
 			currentName: function () { return current; },
-			onChange: function (fn) { onChange = fn; }
+			onChange: function (fn) { listeners.push(fn); }
 		};
 	}
 

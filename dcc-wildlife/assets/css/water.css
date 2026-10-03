@@ -980,8 +980,30 @@
 .dccwl-water .dccwl-water-stat-sub {
 	color: var(--dccwl-text-muted);
 	display: block;
-	font-size: var(--dccwl-fs-xs);
+	/* ITEM 2: the source sits under the reading in small text. 0.65rem is
+	 * 13px on the deployment root, which is the size Rob asked for; the rem
+	 * keeps a visitor's own text-size setting working. */
+	font-size: 0.65rem;
 	font-weight: var(--dccwl-fw-body);
+}
+
+/*
+ * ITEM 2 — NOTHING BREAKS MID-WORD. "September" split as "Septem/ber" on his
+ * phone, because three readings were squeezed into a 390px row. A tile is one
+ * reading and one source: if a word will not fit it wraps at a space, never
+ * inside a word.
+ */
+.dccwl-water .dccwl-water-stat-label,
+.dccwl-water .dccwl-water-stat-value,
+.dccwl-water .dccwl-water-stat-sub {
+	hyphens: none;
+	overflow-wrap: normal;
+	word-break: normal;
+}
+
+/* Three across once there is room for them. */
+@media (min-width: 700px) {
+	.dccwl-water .dccwl-water-stats { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* The readings fold (item 3, pick B). It is the shared fullguide component, so
@@ -1047,4 +1069,72 @@
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	font-weight: var(--dccwl-fw-body);
+}
+
+/* ======================================================================
+ * ITEM 3 (1.37.0) — A POPUP SITS ABOVE EVERYTHING IN THE MAP SHEET.
+ *
+ * In Rob's screenshot the wind badge covered the popup's title and the credit
+ * line ran through its last row. Leaflet puts popups at 700 inside the map's
+ * own stacking context, while the bar and the badge are ours at 1100 — so
+ * ours won, every time.
+ *
+ * The popup pane is lifted above both. The numbers are deliberately apart so
+ * the order reads at a glance: popup 1300, our chrome 1100, Leaflet's panes
+ * 700 and below. Anything added to this sheet later goes BELOW 1300.
+ * ====================================================================== */
+.dccwl-map-canvas .leaflet-popup-pane { z-index: 1300; }
+
+/* ======================================================================
+ * ITEM 4 — THE CREDIT IS AN ⓘ IN THE BOTTOM-RIGHT CORNER.
+ *
+ * Bottom-right by the Director's instruction: clear of the wind badge
+ * (top-right) and Leaflet's zoom buttons (top-left). The credit itself is
+ * still Leaflet's own attribution control — it holds each provider's markup
+ * and links — and all that changed is that it is collapsed until asked for,
+ * or until the OpenStreetMap rule shows it.
+ * ====================================================================== */
+.dccwl-map-canvas .dccwl-map-credit-btn {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: 50%;
+	bottom: 8px;
+	color: var(--dccwl-primary);
+	cursor: pointer;
+	display: inline-flex;
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: 15px;
+	font-style: italic;
+	font-weight: 700;
+	height: 28px;
+	justify-content: center;
+	line-height: 1;
+	padding: 0;
+	position: absolute;
+	right: 8px;
+	width: 28px;
+	/* Above our own chrome, below an open popup: a guest must always be able
+	 * to reach the credit, which is the condition Esri's terms attach to
+	 * putting it behind a button at all. */
+	z-index: 1200;
+}
+.dccwl-map-canvas .dccwl-map-credit-btn:focus-visible {
+	outline: var(--dccwl-gold-w) solid var(--dccwl-gold);
+	outline-offset: 2px;
+}
+
+/* Collapsed by default; the button and the OSM rule reveal it. */
+.dccwl-map-canvas .leaflet-control-attribution { display: none; }
+.dccwl-map-canvas.dccwl-credit-open .leaflet-control-attribution {
+	background: rgba(255, 255, 255, 0.96);
+	border-radius: var(--dccwl-radius);
+	display: block;
+	font-size: 11px;
+	line-height: 1.35;
+	margin: 0 44px 8px 8px;
+	max-width: calc(100% - 60px);
+	padding: 4px 8px;
+	/* With the button, under a popup. */
+	z-index: 1200;
 }

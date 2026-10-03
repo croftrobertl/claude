@@ -54,10 +54,14 @@ async function openMap(width, wind) {
     head: '<link rel="stylesheet" data-dccwl-leaflet="1" href="data:text/css,">',
     body: fixture.html + `<script>${fixture.config}</script>`,
   });
-  await page.route('**/*.png', (route) => route.fulfill({
-    status: 200, contentType: 'image/png',
-    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
-  }));
+  /* EVERY tile host, not just the PNG glob. Esri's template ends in
+   * /{z}/{y}/{x} with no extension, so a PNG-only route let those requests
+   * fail — six errors, and the map fell back to OpenStreetMap, which made a
+   * test about the Esri rule quietly test the fallback instead. */
+  const TILE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  for (const pat of ['**/*.png', '**/server.arcgisonline.com/**', '**/tile.openstreetmap.org/**']) {
+    await page.route(pat, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: TILE }));
+  }
   await page.addScriptTag({ content: asset('assets/vendor/leaflet/leaflet.js') });
   await page.addScriptTag({ content: asset('assets/js/water-map.js') });
   await page.evaluate(([m, c]) => {
@@ -167,6 +171,81 @@ check(m.onCanvas, 'still on the canvas at 1280px');
 check(m.widthShare <= 0.35, 'and a smaller share of a wider map', String(m.widthShare));
 await page.close();
 
+/* ---- 5b. the credit is an ⓘ, and each provider's rule holds (1.37.0) --- */
+section('the map credit collapses behind an ⓘ, by each provider\'s rule');
+
+page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE, sourceShort: SHORT });
+let credit = await page.evaluate(() => {
+  const canvas = document.querySelector('.dccwl-map-canvas');
+  const btn = canvas.querySelector('.dccwl-map-credit-btn');
+  const attr = canvas.querySelector('.leaflet-control-attribution');
+  const br = btn && btn.getBoundingClientRect();
+  const cr = canvas.getBoundingClientRect();
+  return {
+    hasBtn: !!btn,
+    label: btn && btn.getAttribute('aria-label'),
+    // bottom-right, clear of the badge (top-right) and the zoom (top-left)
+    corner: br ? (cr.bottom - br.bottom < 40 && cr.right - br.right < 40) : null,
+    open: canvas.classList.contains('dccwl-credit-open'),
+    attrText: attr ? attr.textContent.replace(/\s+/g, ' ').trim() : null,
+    attrShown: attr ? 'none' !== getComputedStyle(attr).display : null,
+    // Leaflet's own flag/logo is off
+    prefix: attr ? /Leaflet/i.test(attr.textContent) : null,
+  };
+});
+note(JSON.stringify(credit));
+check(credit.hasBtn, 'there is an ⓘ on the map');
+checkSame('Map credits', credit.label, 'named for a screen reader');
+check(credit.corner, 'in the BOTTOM-RIGHT corner, clear of the badge and the zoom');
+checkSame(false, credit.open, 'the satellite (Esri) layer starts collapsed, which its terms allow');
+checkSame(false, credit.attrShown, 'so the permanent credit line is gone from the map');
+checkSame(false, credit.prefix, "and Leaflet's own flag and logo are dropped");
+check(/Powered by Esri/.test(credit.attrText || ''),
+  'the Esri credit carries the required "Powered by Esri"', credit.attrText);
+
+await page.evaluate(() => document.querySelector('.dccwl-map-credit-btn').click());
+await page.waitForTimeout(250);
+credit = await page.evaluate(() => {
+  const canvas = document.querySelector('.dccwl-map-canvas');
+  const attr = canvas.querySelector('.leaflet-control-attribution');
+  const ar = attr.getBoundingClientRect();
+  const hit = document.elementFromPoint(Math.round(ar.left + 4), Math.round(ar.top + ar.height / 2));
+  return { shown: 'none' !== getComputedStyle(attr).display,
+           reachable: !!(hit && (attr === hit || attr.contains(hit))) };
+});
+check(credit.shown, 'pressing the ⓘ shows the credit');
+check(credit.reachable, 'and nothing of ours covers it');
+await page.close();
+
+/* The OpenStreetMap rule: shown first, then collapsed on a pan, a tap or five
+ * seconds. This is a LICENCE condition, not a preference. */
+section('the OpenStreetMap layer shows its credit first, then collapses');
+
+page = await openMap(390, { dir: 'NE', speed: '5 to 10 mph', source: SOURCE, sourceShort: SHORT });
+await page.evaluate(() => {
+  const r = Array.from(document.querySelectorAll('input[type="radio"]'))
+    .find((x) => /street/i.test(x.value || '') || /street/i.test((x.parentElement || {}).textContent || ''));
+  if (r) { r.click(); }
+});
+await page.waitForTimeout(300);
+const osmOpen = await page.evaluate(() => ({
+  open: document.querySelector('.dccwl-map-canvas').classList.contains('dccwl-credit-open'),
+  text: (document.querySelector('.leaflet-control-attribution') || {}).textContent || '',
+}));
+note(JSON.stringify(osmOpen));
+check(osmOpen.open, 'choosing the street layer shows its credit at once');
+check(/OpenStreetMap/i.test(osmOpen.text), 'and the credit names OpenStreetMap', osmOpen.text.slice(0, 80));
+
+// a pan collapses it
+await page.evaluate(() => {
+  const canvas = document.querySelector('.dccwl-map-canvas');
+  canvas.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true }));
+});
+await page.waitForTimeout(250);
+checkSame(false, await page.evaluate(() => document.querySelector('.dccwl-map-canvas')
+  .classList.contains('dccwl-credit-open')), 'and the guest\'s first touch collapses it');
+await page.close();
+
 /* ---- 6. a popup closes when a guest taps away (item 3, 1.36.0) --------- */
 section('a marker popup closes on a tap anywhere outside it');
 
@@ -203,6 +282,39 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 checkAtLeast(1, (await popupState()).open, 'but a tap inside the popup leaves it open');
+
+/* ITEM 3 (1.37.0): and while it is open it is ABOVE everything else in the
+ * sheet. Rob's screenshot had the wind badge over the popup's title and the
+ * credit line through its last row. "Is it on top" is not a question about
+ * z-index values — it is a question about what a tap would hit, so that is
+ * what this asks, at three points down the popup. */
+const stack = await page.evaluate(() => {
+  const pop = document.querySelector('.leaflet-popup');
+  if (!pop) { return null; }
+  const r = pop.getBoundingClientRect();
+  const probe = (y) => {
+    const el = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(y));
+    return !!(el && pop.contains(el));
+  };
+  return {
+    top: probe(r.top + 6),
+    middle: probe(r.top + r.height / 2),
+    bottom: probe(r.bottom - 6),
+    overlapsBadge: (() => {
+      const b = document.querySelector('.dccwl-wind-badge');
+      if (!b) { return false; }
+      const br = b.getBoundingClientRect();
+      return !(br.right < r.left || br.left > r.right || br.bottom < r.top || br.top > r.bottom);
+    })(),
+  };
+});
+check(!!stack, 'the popup is on screen to test');
+if (stack) {
+  note(JSON.stringify(stack));
+  check(stack.top, 'the popup owns its own title row — nothing is painted over it');
+  check(stack.middle, 'and its middle');
+  check(stack.bottom, 'and its last line, where the credit used to run');
+}
 await page.close();
 
 await browser.close();

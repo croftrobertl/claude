@@ -2626,3 +2626,82 @@ is the one that sets the offset first.
   `:focus-visible` ring, and the accessible name **"Close"** — its own label,
   not the caller's "Close details", because the × does one thing whatever the
   sheet is showing. The ‹ on the left is unchanged.
+
+### 21. 1.37.0 — eleven from Rob's iPhone review (2026-10-03)
+
+**THE SUB-GROUP COLUMN BREAK IS GONE, AND ITS COST IS RECORDED.** From 1.33.0
+a browse group's first tile carried `grid-row: 1`, which makes the sparse
+auto-placement algorithm skip to the next free column so the group began
+top-left of its own. The documented price was "a blank cell or two". **Measured
+at 390px it was worse**: browsing Animals left 4 short columns, and a search of
+the Safety list produced columns of `[3,1,1,1,3,…]` — single tiles stranded
+mid-list with two empty cells under each, which is what Rob photographed.
+
+His instruction is unconditional — the tiles fill the columns in order — so the
+rule is deleted. **What that costs:** a chip's first tile is no longer
+guaranteed to be top-left. "Press Mammals, see a mammal" still holds, because
+`jumpTo()` aligns the column CONTAINING the target, but the target may be the
+second or third tile in it. That trade is the owner's, made with the numbers.
+After the change a sweep of 13 grid states (every chip, three searches) reports
+**zero short columns and ≤2px of deck slack**.
+
+**The Director's "blank area several screens tall" did not reproduce here**, at
+390px, in any of those 13 states. The empty cells the column break produced are
+the most plausible cause and they are gone; say so plainly rather than claiming
+the blank is fixed, and have it re-checked on his phone.
+
+**ITEM 4 — THE MAP CREDIT IS AN ⓘ, AND EACH PROVIDER'S RULE IS KEPT.**
+
+- **Leaflet still renders the credit.** Its attribution control holds each
+  provider's markup and links; this plugin never builds that string, never
+  inserts it as HTML, and so cannot drop a link a licence requires. Only its
+  visibility changed. `setPrefix(false)` drops Leaflet's own logo and flag,
+  which are optional and are nobody's credit.
+- **Esri** (satellite, the default) allows a credit behind a button **if** it
+  is discoverable and never covered — hence the ⓘ, bottom-right, at z-index
+  1200, and the popup above it at 1300. Its terms also require the words
+  **"Powered by Esri"**, which the default string now carries; a site that
+  stored the old string is repaired in `Water_Data::upgrade()`, **exact match
+  only**, so an owner's own wording is never overwritten.
+- **OpenStreetMap** (chosen, or the automatic fallback) allows a collapsed
+  credit only if it **shows first and then collapses** on the first pan, zoom
+  or tap, or after five seconds. `openForOsm()` does that on every arrival at
+  that layer, including the fallback.
+- `buildBaseLayers`'s `onChange` became a **list of listeners**: it was a
+  single slot, and the credit rule would have silently replaced the Layers
+  radio rows' callback.
+
+**ITEM 3 — A POPUP OUTRANKS EVERYTHING IN THE SHEET.** Leaflet's popup pane is
+700 inside the map's own stacking context; the bar and the wind badge are ours
+at 1100, so ours won. The pane is now 1300. The suite does not read z-index —
+it asks `elementFromPoint` at three points down an open popup, because the
+question is what a tap would hit.
+
+**ITEM 6 — the search text centres on the BAR.** The magnifier and the clear
+button were flex items, so the input's box started after the icon and ended
+before the button; `text-align: center` then centred the placeholder inside
+that box. Both controls are positioned now, the input carries equal 40px
+padding, and the field's own padding went from `0 4px 0 14px` to `0 4px` —
+**measured off-centre by 5px until that last change**.
+
+**ITEM 7 — a fade means "there is more this way".** The chip row carried a
+permanent right-hand mask and dropped it at the end: it faded the right even
+when everything fitted and never faded the left. It now uses the months bar's
+own `attachEdgeFades`, so each edge is cued only when something is behind it.
+
+**ITEM 8 — the selected state is white in EVERY state.** On a phone a button
+keeps `:focus` after a tap and a focus rule was repainting the label dark until
+the guest touched something else. Hover, focus, focus-visible and active are
+all listed now.
+
+**Also:** tab labels are semibold (weight only — the size is Rob's "stays as it
+is"); the Map stat tiles are one per row on a phone and three across from
+700px, with the reading at tile-name size, the source at 0.65rem, and
+`word-break: normal` so "September" cannot split again; Enter/Go applies the
+query and **blurs the field**, which is the only handle on the browser's
+suggestion list and the keyboard; the photo credit centres; and the pager
+counter reads at body size.
+
+**Every weight in these rules is declared.** The site serves
+`html{font-weight:700}`, so an undeclared weight inherits bold — the 1.27.0
+lesson, still the trap.
