@@ -171,9 +171,51 @@
 		setTimeout(function () { refresh(list, i18n); }, 400);
 	}
 
+	/* ==================================================================
+	 * NO DECK LEAVES AN EMPTY COLUMN (1.37.1 — Rob's ruling, 2026-10-03).
+	 *
+	 * The row count is fixed by CSS: three on a phone. A deck with THREE
+	 * matches therefore filled one column top to bottom and left the second
+	 * empty — which is what the Website Director measured on the Safety deck
+	 * for "snake" (Eastern Diamondback, Dusky Pygmy Rattlesnake, Eastern
+	 * Coral Snake, stacked in the left column). Nothing was broken in the
+	 * grid; three items in three rows IS one column. The policy was wrong.
+	 *
+	 * So the rows now follow the matches: ceil(n / columns that fit), capped
+	 * at the CSS row count, never below one. Three matches across two columns
+	 * becomes two rows — [2, 1] — and the right column is in use.
+	 *
+	 * THE DECLARED COUNT IS RE-READ EVERY TIME, WITH OUR OVERRIDE TAKEN OFF
+	 * FIRST, and it is never cached. Caching it was the first version of this
+	 * and it was wrong twice over: the first refresh can run while the panel
+	 * is still hidden, where the grid reports whatever it likes, and a cached
+	 * number also survives a breakpoint change that was supposed to alter it.
+	 * The deck came back with a base of 2 where the stylesheet says 3.
+	 * Explicit tracks are reported even when empty, so reading them with the
+	 * override removed gives the stylesheet's own answer — as long as the
+	 * element is actually laid out, which is what the width guards are for.
+	 */
+	function fitRows(list) {
+		var items = visibleTiles(list);
+		if (!items.length || !list.clientWidth) { return; }
+		var w = items[0].getBoundingClientRect().width;
+		if (!w) { return; }
+
+		list.style.removeProperty('--dccwl-deck-rows');
+		var cs = window.getComputedStyle(list);
+		var tpl = (cs.gridTemplateRows || '').trim();
+		var base = tpl && 'none' !== tpl ? tpl.split(/\s+/).length : 1;
+		var gap = parseFloat(cs.columnGap) || 0;
+
+		var fits = Math.max(1, Math.floor((list.clientWidth + gap) / (w + gap)));
+		var want = Math.max(1, Math.min(base, Math.ceil(items.length / fits)));
+		if (want < base) { list.style.setProperty('--dccwl-deck-rows', String(want)); }
+	}
+
 	function refresh(list, i18n) {
 		if (!list || !list.getAttribute('data-dccwl-deck-init')) { return; }
 		i18n = i18n || {};
+		if (!list.getAttribute('data-dccwl-compact')) { fitRows(list); }
 		var nav = list.nextElementSibling;
 		if (!nav || !nav.classList.contains('dccwl-deck-nav')) { return; }
 		var tiles = visibleTiles(list).length;

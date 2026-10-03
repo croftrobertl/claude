@@ -153,5 +153,71 @@ if (photo) {
 }
 await h.page.close();
 
+/* ---- 4. THE DIRECTOR'S REPRO: "snake" at 390px (1.37.1) ---------------- */
+section('a search leaves no deck with an empty column — "snake" at 390px');
+
+/*
+ * The exact case he re-measured on a fresh load: Wildlife, type "snake", and
+ * TWO decks show — the main guide deck (15 matches) and the Safety deck (3:
+ * Eastern Diamondback, Dusky Pygmy Rattlesnake, Eastern Coral Snake). The
+ * Safety deck had three rows and three matches, so it filled ONE column and
+ * left the second empty. Three items in three rows IS one column; the row
+ * count was the policy that had to change, not the grid.
+ *
+ * The bar this holds, in Rob's words: tiles always fill both columns. Stated
+ * as something a test can ask — a deck showing two or more tiles, on a
+ * viewport where two or more columns fit, must USE two or more columns.
+ */
+const sh = await widgetPage(browser, 'canal', { width: 390, height: 844, sitekit: true });
+await sh.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+await sh.page.waitForTimeout(800);
+await sh.page.evaluate(() => {
+  const i = document.querySelector('.dccwl-search-input');
+  i.value = 'snake';
+  i.dispatchEvent(new Event('input', { bubbles: true }));
+});
+await sh.page.waitForTimeout(700);
+
+const decks = await sh.page.evaluate(() => Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
+  .filter((g) => g.offsetParent !== null)
+  .map((g) => {
+    const vis = Array.from(g.children).filter((li) => !li.hidden);
+    if (!vis.length) { return null; }
+    const byCol = new Map();
+    vis.forEach((li) => {
+      const x = Math.round(li.getBoundingClientRect().left);
+      byCol.set(x, (byCol.get(x) || 0) + 1);
+    });
+    const w = vis[0].getBoundingClientRect().width;
+    const gap = parseFloat(getComputedStyle(g).columnGap) || 0;
+    return {
+      group: g.getAttribute('data-dccwl-group'),
+      n: vis.length,
+      cols: [...byCol.entries()].sort((a, b) => a[0] - b[0]).map((e) => e[1]),
+      fits: Math.max(1, Math.floor((g.clientWidth + gap) / (w + gap))),
+      names: vis.map((li) => (li.textContent || '').trim().split('\n')[0].trim()),
+    };
+  })
+  .filter(Boolean));
+
+note(JSON.stringify(decks.map((d) => ({ g: d.group, n: d.n, cols: d.cols }))));
+checkAtLeast(2, decks.length, 'the search shows the guide deck AND the safety deck');
+
+for (const d of decks) {
+  if (d.n < 2 || d.fits < 2) { continue; }
+  checkAtLeast(2, d.cols.length,
+    `${d.group}: ${d.n} matches fill at least two columns, never one`, JSON.stringify(d.cols));
+}
+
+const safety = decks.filter((d) => 'safety' === d.group)[0];
+check(!!safety, 'the safety deck is one of them');
+if (safety) {
+  checkSame(3, safety.n, 'it holds the three venomous snakes');
+  checkSame([2, 1], safety.cols, 'laid out two then one — both columns in use');
+  check(/Diamondback/i.test(safety.names.join(' ')), 'and they are the ones he photographed',
+    safety.names.join(' · '));
+}
+await sh.page.close();
+
 await browser.close();
 done();

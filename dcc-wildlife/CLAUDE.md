@@ -2705,3 +2705,45 @@ counter reads at body size.
 **Every weight in these rules is declared.** The site serves
 `html{font-weight:700}`, so an undeclared weight inherits bold — the 1.27.0
 lesson, still the trap.
+
+### 22. 1.37.1 — a deck's rows follow its matches
+
+**THE DIRECTOR WAS RIGHT AND THE CAUSE WAS A POLICY, NOT A BUG.** 1.37.0
+removed the sub-group column break and that was not the whole of item 9. On a
+fresh load at 390px, a search for "snake" shows TWO decks: the guide deck (15
+matches) and the Safety deck (3 — Eastern Diamondback, Dusky Pygmy
+Rattlesnake, Eastern Coral Snake). The Safety deck had three rows and three
+matches, so it filled one column and left the other empty. **Three items in
+three rows IS one column**; the grid did exactly what it was told. What was
+wrong is that the row count never looked at how many matches there were.
+
+`fitRows()` in deck.js now sets `--dccwl-deck-rows` to
+`ceil(visible / columns that fit)`, capped at the stylesheet's own count and
+never below one. Three matches across two columns is two rows — `[2, 1]` —
+and the right column is in use. **Rob's ruling stands and is recorded: NO
+GAPS. A tapped chip's first tile only has to be on screen, not top-left.**
+
+**THE FIRST VERSION OF THIS CACHED THE BASE ROW COUNT AND WAS WRONG TWICE.**
+The first refresh can run while the panel is still hidden, where the grid
+reports whatever it likes — the main deck came back with a base of 2 where the
+stylesheet says 3, and quietly lost a row. A cached number would also survive a
+breakpoint change that was meant to alter it. The count is now re-read on every
+call **with our own override removed first**, and nothing is cached: explicit
+tracks are reported even when empty, so that reading is the stylesheet's own
+answer. The width guards are what keep it from reading an unlaid element.
+
+**DESKTOP IS UNCHANGED AND THAT IS NOT AN OVERSIGHT.** At ≥700px
+`grid-template-rows: repeat(2, auto)` is a literal in the media query, not the
+variable, so three matches read as 2 + 1 there whatever the phone does. Left
+alone deliberately — "change nothing else" — and put to Rob with the options.
+
+**The repro is a test now** (`ui-chrome.mjs`): fresh load, 390px, Wildlife,
+type "snake". It asserts both decks appear, that any deck with ≥2 tiles on a
+viewport fitting ≥2 columns uses ≥2 columns, and that the Safety deck is
+specifically `[2, 1]` holding the three snakes he photographed.
+
+**Two choices went to Rob rather than being made here:** how a few-match deck
+should read (rows-follow-matches, wrap-like-a-grid, or one sideways row — the
+shipped one fills downwards, so three matches read left-to-right as
+Diamondback, Coral, Dusky), and whether the Safety deck should carry a heading
+during a search, where today it has none.
