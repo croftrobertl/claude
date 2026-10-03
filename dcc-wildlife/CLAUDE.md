@@ -2747,3 +2747,33 @@ should read (rows-follow-matches, wrap-like-a-grid, or one sideways row — the
 shipped one fills downwards, so three matches read left-to-right as
 Diamondback, Coral, Dusky), and whether the Safety deck should carry a heading
 during a search, where today it has none.
+
+### 23. 1.37.2 — a deck with nothing to scroll is an ordinary grid (Rob's pick B)
+
+**His answer to the question 1.37.1 left open, chosen 2026-10-03.** When every
+match already fits on screen, the deck stops being a deck: the tiles wrap as a
+plain grid in **reading order — left to right, top to bottom** — and the
+sideways scroll, the snap and the pager stand down with it. When the matches do
+not fit, nothing changes: it is the swipe deck it has always been, with the
+1.37.1 rule that its rows follow its matches so no column is left empty.
+
+This settles the oddity option A carried. Three snakes now read **Eastern
+Diamondback, Dusky Pygmy Rattlesnake, Eastern Coral Snake** — the order of the
+list — where the column-major deck read Diamondback, Coral, Dusky.
+
+- **The switch is a measurement, not a width**: `items.length <= fits * base`,
+  where `fits` is the columns that fit and `base` the stylesheet's row count.
+  No breakpoint is involved, so it holds at 320, 390, 768 and 1280 alike, and a
+  longer species name that changes how many fit changes the answer with it.
+- **The pager needed no special case.** `refresh()` already hides the nav when
+  the list does not overflow, and a wrapped grid never does.
+- **`--dccwl-deck-cols` is set to `fits`, not to a literal 2.** On a phone that
+  IS two, which is what Rob asked for; on a desktop it keeps the tile size the
+  deck already had instead of stretching four tiles across six columns' worth
+  of room.
+- **Both overrides come off before measuring**, the 1.37.1 lesson: read the
+  stylesheet's own answer, never your own from last time.
+
+**The Safety deck gets NO label during a search (L0, his pick).** The red
+danger mark on each tile is what says these are hazards. Do not add a heading
+there without asking him again.

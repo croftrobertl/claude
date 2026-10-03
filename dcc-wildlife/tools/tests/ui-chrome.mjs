@@ -167,6 +167,13 @@ section('a search leaves no deck with an empty column — "snake" at 390px');
  * The bar this holds, in Rob's words: tiles always fill both columns. Stated
  * as something a test can ask — a deck showing two or more tiles, on a
  * viewport where two or more columns fit, must USE two or more columns.
+ *
+ * 1.37.2 adds his answer to how that should READ. A deck whose matches all
+ * fit on screen stops being a deck: it wraps as an ordinary grid, left to
+ * right and top to bottom, and its pager goes with the scroll it no longer
+ * needs. So the three snakes must read Diamondback, Dusky Pygmy, Coral — the
+ * order of the list — and not the column-major Diamondback, Coral, Dusky the
+ * swipe deck produced.
  */
 const sh = await widgetPage(browser, 'canal', { width: 390, height: 844, sitekit: true });
 await sh.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
@@ -190,12 +197,21 @@ const decks = await sh.page.evaluate(() => Array.from(document.querySelectorAll(
     });
     const w = vis[0].getBoundingClientRect().width;
     const gap = parseFloat(getComputedStyle(g).columnGap) || 0;
+    const nav = g.nextElementSibling;
     return {
       group: g.getAttribute('data-dccwl-group'),
       n: vis.length,
       cols: [...byCol.entries()].sort((a, b) => a[0] - b[0]).map((e) => e[1]),
       fits: Math.max(1, Math.floor((g.clientWidth + gap) / (w + gap))),
+      wrapped: g.classList.contains('dccwl-deck-wrap'),
+      overflows: g.scrollWidth > g.clientWidth + 4,
+      navShown: nav && nav.classList.contains('dccwl-deck-nav') ? !nav.hidden : null,
       names: vis.map((li) => (li.textContent || '').trim().split('\n')[0].trim()),
+      // what a guest reads: top to bottom, left to right within a row
+      reading: vis.map((li) => {
+        const r = li.getBoundingClientRect();
+        return { t: (li.textContent || '').trim().split('\n')[0].trim(), x: Math.round(r.left), y: Math.round(r.top) };
+      }).sort((a, b) => a.y - b.y || a.x - b.x).map((o) => o.t),
     };
   })
   .filter(Boolean));
@@ -214,8 +230,24 @@ check(!!safety, 'the safety deck is one of them');
 if (safety) {
   checkSame(3, safety.n, 'it holds the three venomous snakes');
   checkSame([2, 1], safety.cols, 'laid out two then one — both columns in use');
-  check(/Diamondback/i.test(safety.names.join(' ')), 'and they are the ones he photographed',
-    safety.names.join(' · '));
+  check(safety.wrapped, 'and as an ordinary grid, because they all fit on screen');
+  checkSame(false, safety.overflows, 'so there is nothing to scroll sideways');
+  checkSame(false, safety.navShown, 'and no pager, because there are no pages');
+  /* HIS ORDER, NAMED. A looser check — "the three are present" — passed on
+   * the column-major layout he rejected, which is why this one spells the
+   * sequence out. */
+  checkSame(
+    ['Eastern Diamondback Rattlesnake', 'Dusky Pygmy Rattlesnake', 'Eastern Coral Snake'],
+    safety.reading,
+    'reading left to right, top to bottom, in list order'
+  );
+}
+
+/* The deck that DOES overflow keeps being a deck. */
+const guide = decks.filter((d) => 'animals' === d.group)[0];
+if (guide) {
+  checkSame(false, guide.wrapped, '15 matches do not fit, so that deck still swipes');
+  checkSame(true, guide.navShown, 'and keeps its pager');
 }
 await sh.page.close();
 

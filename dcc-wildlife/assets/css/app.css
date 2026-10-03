@@ -1085,3 +1085,24 @@
 	outline: var(--dccwl-gold-w) solid var(--dccwl-gold);
 	outline-offset: 2px;
 }
+
+/* ======================================================================
+ * A DECK WITH NOTHING TO SCROLL IS AN ORDINARY GRID (1.37.2, Rob's pick B).
+ *
+ * deck.js adds this class when every match is already on screen. The tiles
+ * then flow in READING ORDER — left to right, top to bottom — instead of
+ * down the columns, which is what a short result list is expected to do.
+ * The sideways scroll, the snap and the paging all stand down with it; the
+ * nav hides itself, because refresh() keys that off overflow and a wrapped
+ * grid has none.
+ *
+ * Doubled class, like every other rule on this element: .dccwl-tiles and
+ * .dccwl-cards set their own columns at (0,3,0) later in this file.
+ * ====================================================================== */
+.dccwl-app .dccwl-deck.dccwl-deck.dccwl-deck-wrap {
+	grid-auto-flow: row;
+	grid-template-columns: repeat(var(--dccwl-deck-cols, 2), minmax(0, 1fr));
+	grid-template-rows: none;
+	overflow-x: visible;
+	scroll-snap-type: none;
+}

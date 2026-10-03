@@ -201,13 +201,39 @@
 		var w = items[0].getBoundingClientRect().width;
 		if (!w) { return; }
 
+		/* Measure the deck as the stylesheet draws it: our own two overrides
+		 * come off first, or we read yesterday's answer back. */
+		list.classList.remove('dccwl-deck-wrap');
 		list.style.removeProperty('--dccwl-deck-rows');
+		list.style.removeProperty('--dccwl-deck-cols');
 		var cs = window.getComputedStyle(list);
 		var tpl = (cs.gridTemplateRows || '').trim();
 		var base = tpl && 'none' !== tpl ? tpl.split(/\s+/).length : 1;
 		var gap = parseFloat(cs.columnGap) || 0;
 
 		var fits = Math.max(1, Math.floor((list.clientWidth + gap) / (w + gap)));
+
+		/*
+		 * EVERYTHING ON ONE SCREEN: AN ORDINARY GRID (1.37.2 — Rob's option B).
+		 *
+		 * A deck earns its sideways scroll by having more than fits on screen.
+		 * When it does not — three snakes, four oaks — it stops being a deck
+		 * and becomes a plain grid in READING ORDER: left to right, top to
+		 * bottom. That is the whole of his pick, and it settles the oddity
+		 * option A carried, where three matches read Diamondback, Coral, Dusky
+		 * because the deck fills downwards.
+		 *
+		 * The pager needs no special case: refresh() hides the nav when the
+		 * list does not overflow, and a wrapped grid never does.
+		 */
+		if (items.length <= fits * base) {
+			list.style.setProperty('--dccwl-deck-cols', String(fits));
+			list.classList.add('dccwl-deck-wrap');
+			return;
+		}
+
+		/* Still a deck. Its rows follow its matches so no column is left
+		 * empty — the 1.37.1 rule, which applies to everything that scrolls. */
 		var want = Math.max(1, Math.min(base, Math.ceil(items.length / fits)));
 		if (want < base) { list.style.setProperty('--dccwl-deck-rows', String(want)); }
 	}
