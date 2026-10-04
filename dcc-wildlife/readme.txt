@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.32.1
+Stable tag: 1.38.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,22 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.38.0 =
+* **Three things that were right in testing and wrong on the phone are fixed at
+  their cause.** The Map tab's readings are one tile per row on a phone again
+  (three across on a tablet or desktop), the chain map's popups open above the
+  map's own buttons and stay inside the map, and a selected button keeps its
+  white label the moment you lift your finger.
+* **One "Show: All" button in place of the sliding row of categories.** Choosing
+  a category now shows that category and nothing else, with how many of each
+  beside its name; the list starts again at the first page. Switching section
+  goes back to All, and a search looks through everything whatever is chosen —
+  clearing the search puts your category back.
+* **"Jump to a species…" has been removed.** The search box reaches every
+  species by common or scientific name, which is what the list was for. Its
+  Elementor override went with it.
+* The paging line under the tiles reads at body size, as 1.37.0 intended.
 
 = 1.32.1 =
 * **The chain map has a real map under it again.** The basemap was showing the

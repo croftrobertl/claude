@@ -250,7 +250,6 @@ final class Render {
 				'rows_override' => null,
 				// The sub-navigation's three parts. null inherits the setting.
 				'subnav'        => null,
-				'jump'          => null,
 				'compact_btn'   => null,
 			]
 		);
@@ -389,7 +388,7 @@ final class Render {
 							<span class="dccwl-legend-item"><?php echo Sprites::mark_html( $flag, $def[0] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted markup. ?><span><b><?php echo esc_html( $def[0] ); ?></b> — <?php echo esc_html( $def[1] ); ?></span></span>
 						<?php endforeach; ?>
 					</p>
-					<?php self::render_guide_grids( [ 'subnav' => $opts['subnav'], 'jump' => $opts['jump'], 'compact_btn' => $opts['compact_btn'] ] ); ?>
+					<?php self::render_guide_grids( [ 'subnav' => $opts['subnav'], 'compact_btn' => $opts['compact_btn'] ] ); ?>
 					<?php /* Month-filtered on the hub (canal.js): a species not likely
 					         this month is hidden, and this line says so when a whole
 					         category goes quiet. Filled client-side; empty in the HTML. */ ?>
@@ -515,11 +514,11 @@ final class Render {
 		}
 
 		$chips   = Guide_Data::resolve( $gates['subnav'] ?? null, 'show_subnav' );
-		$jump    = Guide_Data::resolve( $gates['jump'] ?? null, 'show_jump' );
 		$compact = Guide_Data::resolve( $gates['compact_btn'] ?? null, 'show_compact' );
-		// All three off means there is no sub-navigation to draw. Emitting an
-		// empty container would leave a margin on the page for nothing.
-		if ( ! $chips && ! $jump && ! $compact ) {
+		/* `show_jump` is gone (1.38.0): the control it gated no longer exists.
+		 * Both off means there is no sub-navigation to draw, and an empty
+		 * container would leave a margin on the page for nothing. */
+		if ( ! $chips && ! $compact ) {
 			return;
 		}
 
@@ -530,59 +529,78 @@ final class Render {
 		);
 		?>
 		<div class="dccwl-subnav" data-dccwl-subnav="<?php echo esc_attr( $section ); ?>"<?php echo $visible ? '' : ' hidden'; ?>>
-			<?php if ( $chips ) : ?>
 			<?php
 			/*
-			 * ITEM 13 (1.34.0) — ‹ › on the categories bar, exactly as the
-			 * months bar has them: same element, same class, so item 14's
-			 * arrow colour and the 1.33.0 rule that a disabled navigation
-			 * control is HIDDEN rather than faded both apply to one
-			 * implementation rather than two. They step through the chips —
-			 * the categories are what this bar navigates, as months are what
-			 * that one does. The wrapper exists because the chip row is a
-			 * horizontal scroller: an arrow inside it would scroll away.
+			 * ONE PILL, NOT A SCROLLING BAR (1.38.0 — Rob's C2/C3).
+			 *
+			 * The categories were a sideways-scrolling row of chips with
+			 * arrows and edge fades; they are now "Show: All ▾", a button that
+			 * opens a list beneath it. Modelled on the Layers ▾ control in his
+			 * own Croatia map, which is where he asked for the pattern.
+			 *
+			 * IT FILTERS, IT DOES NOT SCROLL TO. The chips used to JUMP the
+			 * deck to a group and hide nothing — the 1.31.0 rule that a
+			 * sub-group is navigation, never a filter. That rule is REVERSED
+			 * here, deliberately and by the owner: choosing a category now
+			 * shows that category alone, the pager restarts at its first page,
+			 * and the deck keeps the 1.37.2 no-gap and reading-order rules.
+			 *
+			 * The list is rendered in the HTML rather than built by script so
+			 * that it is in the page for a crawler and for a guest whose
+			 * JavaScript has not arrived; widget.js only opens and closes it.
 			 */
+			$counts = [ '' => 0 ];
+			foreach ( $members as $sp ) {
+				$b = (string) ( $sp['browse'] ?? '' );
+				$counts['']     = (int) $counts[''] + 1;
+				$counts[ $b ]   = (int) ( $counts[ $b ] ?? 0 ) + 1;
+			}
+			$pick_id = 'dccwl-pick-' . $section;
 			?>
-			<div class="dccwl-subchips-nav" data-dccwl-subchips-nav hidden>
-			<button type="button" class="dccwl-timeline-arrow dccwl-subchip-prev" aria-label="<?php esc_attr_e( 'Previous category', 'dcc-wildlife' ); ?>">
-				<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			</button>
-			<div class="dccwl-subchips" role="group" aria-label="<?php esc_attr_e( 'Jump to a part of this section', 'dcc-wildlife' ); ?>" data-dccwl-subchips hidden>
-				<button type="button" class="dccwl-subchip" data-dccwl-browse="" aria-pressed="true"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></button>
-				<?php foreach ( $groups as $slug => $glabel ) : ?>
-					<button type="button" class="dccwl-subchip" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>" aria-pressed="false"><?php echo esc_html( $glabel ); ?></button>
-				<?php endforeach; ?>
-			</div>
-			<button type="button" class="dccwl-timeline-arrow dccwl-subchip-next" aria-label="<?php esc_attr_e( 'Next category', 'dcc-wildlife' ); ?>">
-				<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			</button>
+			<?php if ( $chips ) : ?>
+			<div class="dccwl-pick" data-dccwl-pick>
+				<button type="button" class="dccwl-pick-btn" data-dccwl-pick-btn
+					id="<?php echo esc_attr( $pick_id ); ?>-btn"
+					aria-expanded="false" aria-haspopup="listbox"
+					aria-controls="<?php echo esc_attr( $pick_id ); ?>-list">
+					<span class="dccwl-pick-label">
+						<?php
+						printf(
+							/* translators: %s: the chosen category, e.g. "All" or "Birds". */
+							esc_html__( 'Show: %s', 'dcc-wildlife' ),
+							'<span class="dccwl-pick-value" data-dccwl-pick-value>' . esc_html__( 'All', 'dcc-wildlife' ) . '</span>'
+						);
+						?>
+					</span>
+					<span class="dccwl-pick-chev" aria-hidden="true">▾</span>
+				</button>
+				<div class="dccwl-pick-list" role="listbox" hidden
+					id="<?php echo esc_attr( $pick_id ); ?>-list"
+					aria-labelledby="<?php echo esc_attr( $pick_id ); ?>-btn"
+					data-dccwl-pick-list>
+					<button type="button" class="dccwl-pick-opt" role="option" aria-selected="true" data-dccwl-browse="">
+						<span class="dccwl-pick-opt-name"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></span>
+						<span class="dccwl-pick-opt-n"><?php echo esc_html( (string) (int) $counts[''] ); ?></span>
+					</button>
+					<?php foreach ( $groups as $slug => $glabel ) : ?>
+						<button type="button" class="dccwl-pick-opt" role="option" aria-selected="false" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>">
+							<span class="dccwl-pick-opt-name"><?php echo esc_html( $glabel ); ?></span>
+							<span class="dccwl-pick-opt-n"><?php echo esc_html( (string) (int) ( $counts[ $slug ] ?? 0 ) ); ?></span>
+						</button>
+					<?php endforeach; ?>
+				</div>
 			</div>
 			<?php endif; ?>
 
-			<?php if ( $jump || $compact ) : ?>
+			<?php if ( $compact ) : ?>
+			<?php /* C6: the pill and the Compact switch share one row. "Jump to
+			         a species…" was removed in 1.38.0 — search reaches every
+			         species by common or scientific name, which is what it was
+			         for. */ ?>
 			<div class="dccwl-subtools" data-dccwl-subtools hidden>
-				<?php if ( $jump ) : ?>
-				<label class="dccwl-jump">
-					<span class="dccwl-sr"><?php esc_html_e( 'Jump to a species', 'dcc-wildlife' ); ?></span>
-					<select class="dccwl-jump-select" data-dccwl-jump>
-						<option value=""><?php esc_html_e( 'Jump to a species…', 'dcc-wildlife' ); ?></option>
-						<?php foreach ( $groups as $slug => $glabel ) : ?>
-							<optgroup label="<?php echo esc_attr( $glabel ); ?>">
-								<?php foreach ( $members as $sp ) : ?>
-									<?php if ( $slug !== (string) ( $sp['browse'] ?? '' ) ) : continue; endif; ?>
-									<option value="<?php echo esc_attr( (string) $sp['id'] ); ?>"><?php echo esc_html( (string) $sp['name'] ); ?></option>
-								<?php endforeach; ?>
-							</optgroup>
-						<?php endforeach; ?>
-					</select>
-				</label>
-				<?php endif; ?>
-
-				<?php if ( $compact ) : ?>
 				<button type="button" class="dccwl-viewtoggle" data-dccwl-view="deck" aria-pressed="false">
 					<?php esc_html_e( 'Compact', 'dcc-wildlife' ); ?>
 				</button>
-				<?php endif; ?>
 			</div>
 			<?php endif; ?>
 		</div>

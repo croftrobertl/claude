@@ -136,53 +136,69 @@ async function settled(pg) {
   });
 }
 
-section('the sub-group chips jump, and report where you are');
+/* ======================================================================
+ * THE CATEGORY PICKER (1.38.0). This replaces two sections of this file —
+ * "the sub-group chips jump, and report where you are" and "the jump select
+ * reaches every single species" — because both controls are gone at the
+ * owner's instruction.
+ *
+ * They are REPLACED, not deleted: what those sections really guarded is that
+ * every category points at a real run of species and that the runs account
+ * for the whole section, and that is asserted here against the control that
+ * now does the job. What is NOT carried over are the claims that no longer
+ * mean anything: a chip "stays pressed as a choice, not a position", and the
+ * deck scrolling as far toward a group as it can. The picker hides the rest
+ * of the section instead of scrolling past it, so there is nothing to scroll
+ * toward and nothing left on screen to be wrong about.
+ * ====================================================================== */
+section('the picker filters the deck, and its categories account for every animal');
 
-const chipInfo = await page.evaluate(() => {
+const pickInfo = await page.evaluate(() => {
   const nav = document.querySelector('[data-dccwl-subnav="animals"]');
-  if (!nav) return { error: 'no sub-nav' };
-  const chips = Array.from(nav.querySelectorAll('.dccwl-subchip'));
+  if (!nav) { return { error: 'no sub-nav' }; }
+  const btn = nav.querySelector('[data-dccwl-pick-btn]');
+  const opts = Array.from(nav.querySelectorAll('.dccwl-pick-opt'));
   return {
     hidden: nav.hidden,
-    chipsHidden: nav.querySelector('[data-dccwl-subchips]').hidden,
     toolsHidden: nav.querySelector('[data-dccwl-subtools]').hidden,
-    labels: chips.map((c) => c.textContent.trim()),
-    slugs: chips.map((c) => c.getAttribute('data-dccwl-browse')),
-    pressed: chips.filter((c) => c.getAttribute('aria-pressed') === 'true').map((c) => c.textContent.trim()),
+    listHidden: nav.querySelector('[data-dccwl-pick-list]').hidden,
+    label: btn.textContent.replace(/\s+/g, ' ').trim(),
+    labels: opts.map((o) => o.querySelector('.dccwl-pick-opt-name').textContent.trim()),
+    slugs: opts.map((o) => o.getAttribute('data-dccwl-browse')),
+    counts: opts.map((o) => Number(o.querySelector('.dccwl-pick-opt-n').textContent.trim())),
+    selected: opts.filter((o) => 'true' === o.getAttribute('aria-selected'))
+      .map((o) => o.querySelector('.dccwl-pick-opt-name').textContent.trim()),
   };
 });
 
-check(!chipInfo.error, 'the Animals sub-nav is rendered', chipInfo.error || '');
-checkSame(false, chipInfo.hidden, 'it is visible with its tab');
-checkSame(false, chipInfo.chipsHidden, 'the chip row was unhidden by the script');
-checkSame(false, chipInfo.toolsHidden, 'so were the jump select and the view toggle');
-note(`chips: ${chipInfo.labels.join(' | ')}`);
-checkSame(6, chipInfo.labels.length, 'six chips: All plus the owner\'s option C');
-checkSame(['All'], chipInfo.pressed, 'All is pressed to begin with');
+check(!pickInfo.error, 'the Animals sub-nav is rendered', pickInfo.error || '');
+checkSame(false, pickInfo.hidden, 'it is visible with its tab');
+checkSame(false, pickInfo.toolsHidden, 'the script unhid the Compact switch');
+checkSame(true, pickInfo.listHidden, 'and the list starts closed');
+check(/Show:\s*All/.test(pickInfo.label), 'the pill reads "Show: All"', pickInfo.label);
+note(`categories: ${pickInfo.labels.join(' | ')}`);
+checkSame(6, pickInfo.labels.length, "six options: All plus the owner's option C");
+checkSame(['All'], pickInfo.selected, 'All is chosen to begin with');
 
-/* A label is a claim, still. The reptiles chip is allowed to say "& amphibians"
- * only once the registry holds one; the label is derived, so this checks the
- * two agree rather than pinning either string. */
-const reptileChip = chipInfo.labels.find((l) => l.startsWith('Reptiles'));
-check(!!reptileChip, 'there is a reptiles chip', chipInfo.labels.join(' | '));
-if (reptileChip.includes('amphibian')) {
-  note('the registry now holds an amphibian, so the chip says so');
+/* A label is a claim, still. The reptiles option may say "& amphibians" only
+ * once the registry holds one; the label is derived, so this checks the two
+ * agree rather than pinning either string. */
+const reptileOpt = pickInfo.labels.find((l) => l.startsWith('Reptiles'));
+check(!!reptileOpt, 'there is a reptiles category', pickInfo.labels.join(' | '));
+if (reptileOpt.includes('amphibian')) {
+  note('the registry now holds an amphibian, so the option says so');
 } else {
-  checkSame('Reptiles', reptileChip, 'with no amphibians yet, the chip does not offer any');
+  checkSame('Reptiles', reptileOpt, 'with no amphibians yet, the option does not offer any');
 }
-check(!chipInfo.labels.some((l) => /Wading|Raptors|Waterfowl|snails/.test(l)),
-  'the retired chips are gone', chipInfo.labels.join(' | '));
+check(!pickInfo.labels.some((l) => /Wading|Raptors|Waterfowl|snails/.test(l)),
+  'the retired category names are gone', pickInfo.labels.join(' | '));
 
-// Every chip must land on its own sub-group and say so.
-/* Per-chip sizes come from the chip row's own status line rather than a table
- * here, so adding a turtle does not mean editing this file. What is pinned is
- * that every chip lands on a non-empty run and that the runs sum to the whole
- * section. */
+/* The counts PRINTED ON THE OPTIONS are the ones under test: a count beside a
+ * category is a promise about what choosing it shows. Counted off the visible
+ * Animals deck, not the document — a page-wide query counts the alligator
+ * twice, since it is a reptile in Animals and a hazard in Safety. */
 const SLUGS = ['reptiles', 'birds', 'mammals', 'fish', 'insects'];
 const EXPECT = {};
-/* Counted off the VISIBLE Animals deck, not the document. A page-wide query
- * counts the alligator twice — it is a reptile in Animals and a hazard in
- * Safety, and the Safety list carries its browse slug too. */
 {
   const sizes = await page.evaluate(() => {
     const deck = Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
@@ -196,111 +212,72 @@ const EXPECT = {};
   });
   for (const slug of SLUGS) { EXPECT[slug] = sizes[slug] || 0; }
 }
-note(`chip sizes: ${SLUGS.map((k) => `${k} ${EXPECT[k]}`).join(', ')}`);
-check(SLUGS.every((k) => EXPECT[k] > 0), 'no chip points at an empty run', JSON.stringify(EXPECT));
+note(`category sizes: ${SLUGS.map((k) => `${k} ${EXPECT[k]}`).join(', ')}`);
+check(SLUGS.every((k) => EXPECT[k] > 0), 'no category points at an empty run', JSON.stringify(EXPECT));
 checkSame(ANIMALS, Object.values(EXPECT).reduce((a, b) => a + b, 0),
-  'the chip runs between them account for every animal');
+  'the categories between them account for every animal');
+checkSame(ANIMALS, pickInfo.counts[0], 'the All option prints the whole section');
+for (let k = 0; k < pickInfo.slugs.length; k += 1) {
+  const slug = pickInfo.slugs[k];
+  if (!slug) { continue; }
+  checkSame(EXPECT[slug], pickInfo.counts[k],
+    `the ${slug} option's printed count matches what it shows`);
+}
+
 let covered = 0;
-for (const [slug, count] of Object.entries(EXPECT)) {
-  await page.click(`[data-dccwl-subnav="animals"] .dccwl-subchip[data-dccwl-browse="${slug}"]`);
+for (const slug of SLUGS) {
+  await page.click('[data-dccwl-subnav="animals"] [data-dccwl-pick-btn]');
+  await page.click(`[data-dccwl-subnav="animals"] .dccwl-pick-opt[data-dccwl-browse="${slug}"]`);
   await settled(page);
 
-  const landed = await page.evaluate((sub) => {
+  const filtered = await page.evaluate((sub) => {
     const deck = Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
       .find((d) => d.offsetParent !== null || d.getClientRects().length);
-    const box = deck.getBoundingClientRect();
-    const lis = Array.from(deck.children).filter((li) => !li.hidden);
-    const mine = lis.filter((li) => li.getAttribute('data-dccwl-browse') === sub);
-    const onScreen = lis.filter((li) => {
-      const r = li.getBoundingClientRect();
-      return r.right > box.left + 1 && r.left < box.right - 1;
-    });
-    const status = (deck.nextElementSibling.querySelector('.dccwl-deck-status') || {}).textContent || '';
-    const chip = document.querySelector(`.dccwl-subchip[data-dccwl-browse="${sub}"]`);
-    const maxScroll = deck.scrollWidth - deck.clientWidth;
-    const firstRect = mine.length ? mine[0].getBoundingClientRect() : null;
+    const vis = Array.from(deck.children).filter((li) => !li.hidden);
+    const nav = deck.nextElementSibling;
     return {
-      count: mine.length,
-      firstOfGroupOnScreen: mine.length ? onScreen.includes(mine[0]) : false,
-      // How far the group's first tile is from the left edge. A jump aligns the
-      // COLUMN holding it, so a column's width of slack is expected.
-      offsetFromEdge: firstRect ? Math.round(firstRect.left - box.left) : null,
-      atMaxScroll: Math.round(deck.scrollLeft) >= maxScroll - 2,
-      status,
-      pressed: chip.getAttribute('aria-pressed'),
-      label: chip.textContent.trim(),
+      shown: vis.length,
+      mine: vis.filter((li) => sub === li.getAttribute('data-dccwl-browse')).length,
+      scrollLeft: Math.round(deck.scrollLeft),
+      listClosed: document.querySelector('[data-dccwl-subnav="animals"] [data-dccwl-pick-list]').hidden,
+      pill: document.querySelector('[data-dccwl-subnav="animals"] [data-dccwl-pick-btn]')
+        .textContent.replace(/\s+/g, ' ').trim(),
+      status: nav ? (nav.querySelector('.dccwl-deck-status') || {}).textContent || '' : '',
     };
   }, slug);
 
-  note(`${slug}: ${landed.count} species, ${landed.offsetFromEdge}px from the edge${landed.atMaxScroll ? ' (deck at maximum)' : ''}, status "${landed.status}"`);
-  checkSame(count, landed.count, `the ${slug} chip's group holds ${count} species`);
-  check(landed.firstOfGroupOnScreen, `pressing it brings the first ${slug} species on screen`);
-  // The jump aligns the column holding the target, so the tile lands within one
-  // column of the edge — unless the deck has simply run out of scroll, which is
-  // what happens for the LAST group and is not a failure.
-  check(
-    landed.atMaxScroll || landed.offsetFromEdge <= 200,
-    `the deck scrolls as far toward ${slug} as it can`,
-    `${landed.offsetFromEdge}px from the edge, atMaxScroll=${landed.atMaxScroll}`
-  );
-  checkSame('true', landed.pressed, `the ${slug} chip stays pressed — a chip records a choice, not a position`);
-  check(
-    landed.status.startsWith(landed.label) && /\d+\/\d+$/.test(landed.status),
-    `the position line names the group and its page, not the whole section`,
-    landed.status
-  );
-  covered += landed.count;
+  note(`${slug}: ${filtered.shown} shown, pill "${filtered.pill}", status "${filtered.status}"`);
+  checkSame(EXPECT[slug], filtered.shown, `choosing ${slug} shows its ${EXPECT[slug]} species`);
+  checkSame(filtered.shown, filtered.mine, `and nothing that is not a ${slug} entry`);
+  check(filtered.listClosed, `choosing ${slug} closes the list`);
+  checkSame(0, filtered.scrollLeft, `and the pager restarts at the first page`);
+  check(filtered.status.includes(String(EXPECT[slug])),
+    `the position line counts the filtered set`, filtered.status);
+  covered += filtered.shown;
 }
-checkSame(ANIMALS, covered, 'the chips between them account for every animal');
+checkSame(ANIMALS, covered, 'the categories between them show every animal');
 
-// All hands the line back to the deck's own global count.
-await page.click('[data-dccwl-subnav="animals"] .dccwl-subchip[data-dccwl-browse=""]');
+// All hands the deck back its whole section.
+await page.click('[data-dccwl-subnav="animals"] [data-dccwl-pick-btn]');
+await page.click('[data-dccwl-subnav="animals"] .dccwl-pick-opt[data-dccwl-browse=""]');
 await settled(page);
 const allState = await page.evaluate(() => {
   const deck = Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
     .find((d) => d.offsetParent !== null || d.getClientRects().length);
   return {
+    shown: Array.from(deck.children).filter((li) => !li.hidden).length,
     status: (deck.nextElementSibling.querySelector('.dccwl-deck-status') || {}).textContent || '',
     scrollLeft: Math.round(deck.scrollLeft),
+    pill: document.querySelector('[data-dccwl-subnav="animals"] [data-dccwl-pick-btn]')
+      .textContent.replace(/\s+/g, ' ').trim(),
   };
 });
-note(`All: status "${allState.status}", scrollLeft ${allState.scrollLeft}`);
-check(new RegExp(`of ${ANIMALS}$`).test(allState.status), 'All restores the whole-section count', allState.status);
-checkAtMost(4, allState.scrollLeft, 'and returns the deck to the start');
-
-section('the jump select reaches every single species');
-
-const jump = await page.evaluate(async () => {
-  const nav = document.querySelector('[data-dccwl-subnav="animals"]');
-  const sel = nav.querySelector('[data-dccwl-jump]');
-  const deck = Array.from(document.querySelectorAll('.dccwl-tiles.dccwl-deck'))
-    .find((d) => d.offsetParent !== null || d.getClientRects().length);
-  const ids = Array.from(sel.querySelectorAll('option')).map((o) => o.value).filter(Boolean);
-
-  const missed = [];
-  for (const id of ids) {
-    sel.value = id;
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-    // A smooth scroll: wait for it to STOP, rather than guess a duration. A
-    // fixed delay made one of the 38 look unreachable when it was merely slow.
-    let last = -1;
-    for (let k = 0; k < 40; k += 1) {
-      await new Promise((r) => setTimeout(r, 40));
-      if (Math.round(deck.scrollLeft) === last) break;
-      last = Math.round(deck.scrollLeft);
-    }
-    const li = deck.querySelector(`[data-dccwl-species="${id}"]`).closest('li');
-    const box = deck.getBoundingClientRect();
-    const r = li.getBoundingClientRect();
-    const onScreen = r.right > box.left + 1 && r.left < box.right - 1;
-    if (!onScreen) missed.push(id);
-  }
-  return { total: ids.length, missed };
-});
-
-note(`jump select: ${jump.total} species offered, ${jump.missed.length} unreachable`);
-checkSame(ANIMALS, jump.total, 'the select lists every animal');
-checkSame(0, jump.missed.length, 'choosing any of them scrolls it into view', jump.missed.join(', '));
+note(`All: ${allState.shown} shown, status "${allState.status}", scrollLeft ${allState.scrollLeft}`);
+checkSame(ANIMALS, allState.shown, 'All restores every animal');
+check(new RegExp(`of ${ANIMALS}$`).test(allState.status) || allState.status.includes(String(ANIMALS)),
+  'and the whole-section count', allState.status);
+checkAtMost(4, allState.scrollLeft, 'with the deck back at the start');
+check(/Show:\s*All/.test(allState.pill), 'and the pill reading All again', allState.pill);
 
 section('compact rows hold the same species, at the same reach');
 

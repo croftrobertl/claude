@@ -868,8 +868,13 @@ final class Water_Admin {
 			<?php
 			self::guide_check( 'show_spotlight', __( 'This month\'s spotlight', 'dcc-wildlife' ), __( 'The scrolling row of species worth looking for right now. The hub never shows it — it filters the whole list by month instead.', 'dcc-wildlife' ) );
 			self::guide_check( 'show_search', __( 'Search box', 'dcc-wildlife' ), __( 'Searches names, scientific names and field marks. Nothing is hidden when it is off; the tabs and chips still reach every species.', 'dcc-wildlife' ) );
-			self::guide_check( 'show_subnav', __( 'Group chips', 'dcc-wildlife' ), __( 'Reptiles, Mammals, Fish & snails, Wading birds, Waterfowl & swimmers, Raptors & others. They jump to a part of the Animals list; they never hide the rest of it.', 'dcc-wildlife' ) );
-			self::guide_check( 'show_jump', __( '"Jump to a species" list', 'dcc-wildlife' ), __( 'Every animal by name, in one drop-down.', 'dcc-wildlife' ) );
+			/* 1.38.0: the label and the description BOTH changed, because the
+			 * control did. It was a row of chips that scrolled the deck and
+			 * hid nothing; it is one "Show: All" pill that filters. A
+			 * description promising the old behaviour would be the defect
+			 * this plugin refuses to keep — a setting that describes
+			 * behaviour it does not have. */
+			self::guide_check( 'show_subnav', __( 'Category picker', 'dcc-wildlife' ), __( 'The "Show: All" button over the tiles. Choosing a category shows that category and nothing else, with how many of each beside its name; the search still reaches every species.', 'dcc-wildlife' ) );
 			self::guide_check( 'show_compact', __( '"Compact" button', 'dcc-wildlife' ), __( 'Lets a guest swap the photo cards for short rows.', 'dcc-wildlife' ) );
 			self::guide_check( 'show_moon', __( '"Tonight on the canal" card', 'dcc-wildlife' ), __( 'The moon phase and golden hour, at the top of the water module. Worked out in the browser from the date — no network call, no API.', 'dcc-wildlife' ) );
 			?>

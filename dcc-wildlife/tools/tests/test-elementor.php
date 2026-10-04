@@ -127,9 +127,15 @@ dcc_section( 'per-placement overrides (1.32.0)' );
 // Every override must be a SELECT with an empty default. That is the whole
 // mechanism: '' means "use the setting", so an untouched control keeps
 // following the settings page instead of freezing today's value.
+/*
+ * `ov_jump` IS GONE AND THAT IS THE POINT (1.38.0). The "Jump to a species…"
+ * list it overrode was removed at the owner's instruction, and the list here
+ * is pinned rather than loosened: a control that comes back must come back as
+ * a deliberate edit to this line, exactly as a new one must.
+ */
 $expected_overrides = [
-	'dccwl_month'  => [ 'ov_spotlight', 'ov_search', 'ov_subnav', 'ov_jump', 'ov_compact_btn', 'ov_view', 'ov_deck_rows' ],
-	'dccwl_canal'  => [ 'ov_search', 'ov_subnav', 'ov_jump', 'ov_compact_btn', 'ov_view', 'ov_deck_rows', 'ov_hub_preview_max', 'ov_now_names_max', 'ov_month_art_max', 'ov_sticky_offset' ],
+	'dccwl_month'  => [ 'ov_spotlight', 'ov_search', 'ov_subnav', 'ov_compact_btn', 'ov_view', 'ov_deck_rows' ],
+	'dccwl_canal'  => [ 'ov_search', 'ov_subnav', 'ov_compact_btn', 'ov_view', 'ov_deck_rows', 'ov_hub_preview_max', 'ov_now_names_max', 'ov_month_art_max', 'ov_sticky_offset' ],
 	'dccwl_water'  => [ 'ov_moon', 'ov_fishing', 'ov_map_button' ],
 ];
 

@@ -95,7 +95,6 @@ final class Canal_Render {
 				'sticky_offset'   => null,
 				'search'          => null,
 				'subnav'          => null,
-				'jump'            => null,
 				'compact_btn'     => null,
 				'view'            => null,
 				'deck_rows'       => null,
@@ -139,7 +138,6 @@ final class Canal_Render {
 				 */
 				'search'        => Guide_Data::resolve( $opts['search'], 'show_search' ),
 				'subnav'        => $opts['subnav'],
-				'jump'          => $opts['jump'],
 				'compact_btn'   => $opts['compact_btn'],
 				'view_override' => $opts['view'],
 				'rows_override' => $opts['deck_rows'],

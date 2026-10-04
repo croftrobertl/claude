@@ -196,8 +196,7 @@ class Widget extends \Elementor\Widget_Base {
 		return [
 			'ov_spotlight'   => __( "This month's spotlight", 'dcc-wildlife' ),
 			'ov_search'      => __( 'Search box', 'dcc-wildlife' ),
-			'ov_subnav'      => __( 'Group chips', 'dcc-wildlife' ),
-			'ov_jump'        => __( '"Jump to a species" list', 'dcc-wildlife' ),
+			'ov_subnav'      => __( 'Category picker', 'dcc-wildlife' ),
 			'ov_compact_btn' => __( '"Compact" button', 'dcc-wildlife' ),
 		];
 	}
@@ -227,7 +226,6 @@ class Widget extends \Elementor\Widget_Base {
 				'spotlight'     => Guide_Data::resolve( $settings['ov_spotlight'] ?? '', 'show_spotlight' ),
 				'search'        => Guide_Data::resolve( $settings['ov_search'] ?? '', 'show_search' ),
 				'subnav'        => $settings['ov_subnav'] ?? null,
-				'jump'          => $settings['ov_jump'] ?? null,
 				'compact_btn'   => $settings['ov_compact_btn'] ?? null,
 				'view_override' => $settings['ov_view'] ?? null,
 				'rows_override' => $settings['ov_deck_rows'] ?? null,

@@ -43,6 +43,17 @@
 	/* Thresholds mirror the PHP side so map and text agree. */
 	var CLEARER = 1.5, MURKIER = 0.67, LEVEL_NEAR_IN = 2;
 
+	/* ITEM 3 (1.38.0): the margin a popup keeps from every edge of the map.
+	 * Rob asked for at least 12px; autoPan uses it as its padding, and the
+	 * width and height caps above are measured against it. */
+	var POPUP_PAD = 12;
+	var POPUP_OPTS = {
+		autoPan: true,
+		autoPanPadding: [POPUP_PAD, POPUP_PAD],
+		keepInView: true,
+		maxWidth: 320
+	};
+
 	function el(tag, cls, text) {
 		var n = document.createElement(tag);
 		if (cls) { n.className = cls; }
@@ -392,6 +403,50 @@
 		 * switch to that layer including the automatic one.
 		 */
 		map.attributionControl.setPrefix(false);
+
+		/*
+		 * ITEM 3 (1.38.0) — A POPUP IS ABOVE EVERY CONTROL, AND STAYS INSIDE
+		 * THE MAP. The 1.37.0 attempt raised the popup PANE's z-index and did
+		 * nothing on live, for a reason worth keeping: the pane lives inside
+		 * Leaflet's map pane, which has `z-index: 400` and therefore its own
+		 * STACKING CONTEXT. A child cannot climb past its parent's level, so
+		 * 1300 inside a 400 context still lost to our bar and badge at 1100.
+		 * z-index is not a global ranking; that was the mistake.
+		 *
+		 * Rob's pick, and the only one that works without moving the popup out
+		 * of the map: LOWER THE CONTROLS WHILE ONE IS OPEN. A class on the
+		 * canvas drops the bar, the badge, the ⓘ and Leaflet's own control
+		 * corners beneath the map pane; closing the popup puts them back.
+		 *
+		 * `autoPan` with real padding is what keeps the whole popup on screen
+		 * — Leaflet pans the map until it fits rather than letting it hang off
+		 * the left edge, which is where the title was being cut off.
+		 */
+		map.on('popupopen', function (e) {
+			canvas.classList.add('dccwl-popup-open');
+			/* The control bar is a SIBLING of the canvas, not a child, so the
+			 * canvas's class cannot reach it. Mark the shell as well. */
+			if (shell && shell.classList) { shell.classList.add('dccwl-popup-open'); }
+			// Give it the room the spec asks for, measured from the canvas.
+			var box = canvas.getBoundingClientRect();
+			var el = e.popup.getElement();
+			if (el) {
+				var wrap = el.querySelector('.leaflet-popup-content-wrapper');
+				var content = el.querySelector('.leaflet-popup-content');
+				if (content) {
+					content.style.maxWidth = Math.max(140, Math.round(box.width - POPUP_PAD * 2) - 24) + 'px';
+					/* Taller than the map: it scrolls inside itself, and the
+					 * title row stays put because only the body scrolls. */
+					content.style.maxHeight = Math.max(120, Math.round(box.height - POPUP_PAD * 2) - 52) + 'px';
+					content.style.overflowY = 'auto';
+				}
+				if (wrap) { wrap.style.maxWidth = Math.round(box.width - POPUP_PAD * 2) + 'px'; }
+			}
+		});
+		map.on('popupclose', function () {
+			canvas.classList.remove('dccwl-popup-open');
+			if (shell && shell.classList) { shell.classList.remove('dccwl-popup-open'); }
+		});
 		var creditTimer = null;
 
 		function creditOpen(on) {
@@ -496,7 +551,7 @@
 			var m = L.circleMarker([w.lat, w.lon], {
 				radius: 11, weight: 2, color: '#fff', fillOpacity: 0.9, fillColor: C.usual
 			});
-			m.bindPopup(waterPopup(w, i18n));
+			m.bindPopup(waterPopup(w, i18n), POPUP_OPTS);
 			m.addTo(groups.waters);
 			waterMarkers.push({ marker: m, water: w });
 			bounds.push([w.lat, w.lon]);
@@ -516,7 +571,7 @@
 				// than hidden: it is still where the number would come from.
 				fillColor: live ? C.navy : C.usual
 			});
-			sm.bindPopup(stationPopup(s, i18n));
+			sm.bindPopup(stationPopup(s, i18n), POPUP_OPTS);
 			sm.addTo(groups.stations);
 			bounds.push([s.lat, s.lon]);
 		});
@@ -527,7 +582,7 @@
 				radius: 7, weight: 2, color: '#fff', fillOpacity: 1,
 				fillColor: closed ? C.rampClosed : C.ramp
 			});
-			m.bindPopup(rampPopup(r, i18n));
+			m.bindPopup(rampPopup(r, i18n), POPUP_OPTS);
 			m.addTo(groups.ramps);
 			bounds.push([r.lat, r.lon]);
 		});
@@ -536,7 +591,7 @@
 			var home = L.circleMarker([data.property.lat, data.property.lon], {
 				radius: 9, weight: 3, color: '#fff', fillOpacity: 1, fillColor: C.home
 			});
-			home.bindPopup(el('div', 'dccwl-pop', i18n.lyrProperty || 'The cottages'));
+			home.bindPopup(el('div', 'dccwl-pop', i18n.lyrProperty || 'The cottages'), POPUP_OPTS);
 			home.addTo(groups.property);
 			bounds.push([data.property.lat, data.property.lon]);
 		}

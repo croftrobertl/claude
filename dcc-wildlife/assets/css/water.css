@@ -945,7 +945,13 @@
 .dccwl-water .dccwl-water-stats {
 	display: grid;
 	gap: var(--dccwl-gap);
-	grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+	/* ITEM 2 (1.37.0, LOST, RE-APPLIED 1.38.0) — ONE TILE PER ROW ON A PHONE,
+	 * three across from 768px. auto-fit squeezed three readings into a 390px
+	 * row at 108px each, which is where "September" was breaking mid-word.
+	 * This line and the value's size below were written in 1.37.0 and never
+	 * reached the file: the script that made all three edits asserted on the
+	 * third, aborted before writing, and only the failed one was re-run. */
+	grid-template-columns: 1fr;
 	list-style: none;
 	margin: 0 0 var(--dccwl-gap-lg);
 	padding: 0;
@@ -973,8 +979,10 @@
 .dccwl-water .dccwl-water-stat-value {
 	color: var(--dccwl-text);
 	display: block;
-	font-size: var(--dccwl-fs-value);
-	font-weight: var(--dccwl-fw-strong);
+	/* ITEM 2: the reading reads at the species-tile size and weight, not at
+	 * the 27px/700 it had. Also lost in 1.37.0; see the note above. */
+	font-size: var(--dccwl-fs-base);
+	font-weight: var(--dccwl-fw-label);
 	line-height: 1.25;
 }
 .dccwl-water .dccwl-water-stat-sub {
@@ -1001,8 +1009,8 @@
 	word-break: normal;
 }
 
-/* Three across once there is room for them. */
-@media (min-width: 700px) {
+/* Three across once there is room for them — at 768px, the width Rob named. */
+@media (min-width: 768px) {
 	.dccwl-water .dccwl-water-stats { grid-template-columns: repeat(3, 1fr); }
 }
 
@@ -1083,7 +1091,31 @@
  * the order reads at a glance: popup 1300, our chrome 1100, Leaflet's panes
  * 700 and below. Anything added to this sheet later goes BELOW 1300.
  * ====================================================================== */
-.dccwl-map-canvas .leaflet-popup-pane { z-index: 1300; }
+/*
+ * ITEM 3 (1.38.0) — WHILE A POPUP IS OPEN, THE CONTROLS GO UNDER IT.
+ *
+ * Raising the popup does not work and the reason is worth keeping: the popup
+ * pane sits inside Leaflet's map pane, which has `z-index: 400` and so owns a
+ * STACKING CONTEXT. Nothing inside it can climb past 400 relative to our own
+ * chrome at 1100, whatever number the popup carries. So the chrome comes down
+ * instead — only while a popup is open, and only on this canvas.
+ */
+.dccwl-map-canvas.dccwl-popup-open .dccwl-map-credit-btn,
+.dccwl-map-canvas.dccwl-popup-open .dccwl-wind-badge,
+.dccwl-map-canvas.dccwl-popup-open .leaflet-top,
+.dccwl-map-canvas.dccwl-popup-open .leaflet-bottom,
+.dccwl-map-canvas.dccwl-popup-open + .dccwl-map-bar,
+.dccwl-sheet-body-map.dccwl-popup-open .dccwl-map-bar {
+	z-index: 1;
+}
+/* The bar is a SIBLING of the canvas, so the canvas's own class cannot reach
+ * it with a descendant selector; water-map.js marks the body as well. */
+
+/* Inside the map, the popup still outranks the tiles and markers. */
+.dccwl-map-canvas .leaflet-popup-pane { z-index: 700; }
+
+/* The title row stays while the body scrolls (item 3). */
+.dccwl-map-canvas .leaflet-popup-content { overscroll-behavior: contain; }
 
 /* ======================================================================
  * ITEM 4 — THE CREDIT IS AN ⓘ IN THE BOTTOM-RIGHT CORNER.

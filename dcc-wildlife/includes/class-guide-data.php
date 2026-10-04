@@ -63,7 +63,11 @@ final class Guide_Data {
 			'show_spotlight' => 1,
 			'show_search'    => 1,
 			'show_subnav'    => 1,
-			'show_jump'      => 1,
+			/* RETIRED IN 1.38.0 with the control it gated. "Jump to a
+			 * species…" is gone; search reaches every species by common or
+			 * scientific name, which is what the list was for. The key is
+			 * left OUT of the schema below so a Save cannot write it back,
+			 * and the stored value is harmless: nothing reads it. */
 			'show_compact'   => 1,
 			// The water module's "Tonight on the canal" moon card. A display
 			// element with no data cost — pure client-side astronomy, no
@@ -114,7 +118,6 @@ final class Guide_Data {
 			'show_spotlight'    => [ 'type' => 'bool' ],
 			'show_search'       => [ 'type' => 'bool' ],
 			'show_subnav'       => [ 'type' => 'bool' ],
-			'show_jump'         => [ 'type' => 'bool' ],
 			'show_compact'      => [ 'type' => 'bool' ],
 			'show_moon'         => [ 'type' => 'bool' ],
 			'show_jsonld'       => [ 'type' => 'bool' ],

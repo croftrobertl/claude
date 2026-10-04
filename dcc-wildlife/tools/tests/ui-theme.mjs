@@ -127,9 +127,15 @@ for (const t of off) {
  * page now carries two independent sets and "exactly one chip is selected"
  * is only true within a row. Counting across the page said 2 and looked like
  * a bug in the toggle; it was the test's assumption that was stale. */
+/*
+ * THE BROWSE CHIP ROW IS GONE (1.38.0) and is not in this loop any more. The
+ * categories are a drop-down list under one pill, so "every unselected chip
+ * is solid #006BCF" is not a question about them: a list row is not a chip,
+ * and the loop would have to be loosened to include it. The pill and its
+ * options are checked on their own terms below instead.
+ */
 for (const [sel, what, rowSel] of [
   ['.dccwl-month', 'month pill', '.dccwl-timeline'],
-  ['.dccwl-subchip', 'browse chip', '.dccwl-subchips'],
 ]) {
   const groups = await page.evaluate(([s, rs]) => {
     const rows = Array.from(document.querySelectorAll(rs));
@@ -167,6 +173,43 @@ for (const [sel, what, rowSel] of [
     check(rows.filter((r) => !r.pressed).every((r) => r.bc !== GOLD),
       `${g.section}: no unselected ${what} is marked in gold`);
   }
+}
+
+/* ---- 2a2. the category picker speaks the same colour language ------- */
+section('the category picker: a blue pill, a coral choice');
+
+const pickColours = await page.evaluate(async () => {
+  const nav = document.querySelector('[data-dccwl-subnav]:not([hidden])');
+  if (!nav) { return null; }
+  const btn = nav.querySelector('[data-dccwl-pick-btn]');
+  const read = (el) => {
+    const cs = getComputedStyle(el);
+    return { bg: cs.backgroundColor, fg: cs.color, weight: cs.fontWeight,
+             h: Math.round(el.getBoundingClientRect().height) };
+  };
+  const closed = read(btn);
+  btn.click();
+  await new Promise((r) => setTimeout(r, 150));
+  const opts = Array.from(nav.querySelectorAll('.dccwl-pick-opt'));
+  return {
+    closed,
+    chosen: read(opts.find((o) => 'true' === o.getAttribute('aria-selected'))),
+    others: opts.filter((o) => 'true' !== o.getAttribute('aria-selected')).map(read),
+  };
+});
+
+if (pickColours) {
+  note(JSON.stringify(pickColours.closed) + ' chosen ' + JSON.stringify(pickColours.chosen));
+  checkSame(BLUE, pickColours.closed.bg, 'the pill is solid #006BCF, like every other control');
+  checkSame(WHITE, pickColours.closed.fg, 'with white text');
+  checkAtLeast(44, pickColours.closed.h, 'and the 44px target this plugin keeps');
+  checkSame(CORAL, pickColours.chosen.bg, 'the chosen category is coral');
+  checkSame(WHITE, pickColours.chosen.fg, 'with white text, as every selected control is since 1.36.0');
+  check(pickColours.others.every((o) => o.bg !== CORAL),
+    'and no other row is marked as chosen');
+  check(pickColours.others.every((o) => o.fg !== WHITE),
+    'the rows a guest has not chosen read as ordinary text, not as buttons');
+  check(pickColours.others.every((o) => o.h >= 44), 'every row is a 44px target');
 }
 
 /* ---- 2b. "Peak Now" stays on ONE LINE ------------------------------- */
@@ -426,7 +469,9 @@ const surfaces = await dis.page.evaluate(() => {
     'A .dccwl-tile-media': g('.dccwl-tile-media'),
     'B .dccwl-tabs': g('.dccwl-tabs'),
     'C .dccwl-timeline': g('.dccwl-timeline'),
-    'D .dccwl-subchips': g('.dccwl-subchips'),
+    /* 'D .dccwl-subchips' retired in 1.38.0 with the chip row itself. There
+     * is no replacement entry: the picker is a pill on the page, not a
+     * ground, so there is no surface here to have turned white. */
   };
 });
 note(JSON.stringify(surfaces));

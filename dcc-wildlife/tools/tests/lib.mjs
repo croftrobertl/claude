@@ -142,13 +142,22 @@ export async function buildPage(browser, opts = {}) {
     globals = {},
     hostile = false,
     sitekit = false,
+    /*
+     * TOUCH OR MOUSE (1.38.0). Every page here was built with hasTouch and
+     * isMobile on, at every width — so a suite could not tell a phone from a
+     * desktop, and a state that only exists after a real tap (a button that
+     * keeps :hover and :focus) was never reachable. That is how item 8 passed
+     * here and failed on Rob's phone. Suites now say which they mean; the
+     * default stays touch so nothing already written changes behaviour.
+     */
+    touch = true,
   } = opts;
 
   const page = await browser.newPage({
     viewport: { width, height },
     deviceScaleFactor: 2,
-    hasTouch: true,
-    isMobile: true,
+    hasTouch: touch,
+    isMobile: touch,
   });
 
   /*

@@ -54,8 +54,11 @@ foreach (
 		'the search row'           => 'data-dccwl-search ',
 		'the flag key'             => 'dccwl-legend',
 		'the footnote row'         => 'dccwl-footnotes',
-		'the sub-group chips'      => 'data-dccwl-subchips',
-		'the jump select'          => 'data-dccwl-jump',
+		/* 1.38.0: the sideways chip row and the "Jump to a species…" list are
+		 * both gone. What `show_subnav` gates now is the ONE picker pill, and
+		 * the jump row is deleted rather than relaxed — the setting behind it
+		 * is retired, so a page containing it would be a regression. */
+		'the category picker'      => 'data-dccwl-pick',
 		'the compact toggle'       => 'data-dccwl-view',
 		'the structured-data block' => 'application/ld+json',
 	] as $what => $needle
@@ -91,8 +94,7 @@ dcc_section( 'every display setting actually changes the output' );
 $gates = [
 	'show_spotlight' => 'dccwl-spotlight-tiles',
 	'show_search'    => 'data-dccwl-search ',
-	'show_subnav'    => 'data-dccwl-subchips',
-	'show_jump'      => 'data-dccwl-jump',
+	'show_subnav'    => 'data-dccwl-pick',
 	'show_compact'   => 'data-dccwl-view',
 	'show_jsonld'    => 'application/ld+json',
 ];
@@ -108,10 +110,10 @@ foreach ( $gates as $key => $needle ) {
 	check_same( [], $collateral, "switching $key off leaves everything else alone", implode( ', ', $collateral ) );
 }
 
-// All three sub-navigation parts off means no container at all — an empty one
-// would hold a margin open for nothing.
-$none = dcc_month( [], [ 'show_subnav' => 0, 'show_jump' => 0, 'show_compact' => 0 ] );
-check_lacks( $none['html'], 'data-dccwl-subnav', 'with all three off the sub-navigation container is gone too' );
+// BOTH sub-navigation parts off means no container at all — an empty one would
+// hold a margin open for nothing. It was three parts until 1.38.0.
+$none = dcc_month( [], [ 'show_subnav' => 0, 'show_compact' => 0 ] );
+check_lacks( $none['html'], 'data-dccwl-subnav', 'with both off the sub-navigation container is gone too' );
 
 dcc_section( 'numeric settings reach the scripts' );
 
@@ -141,8 +143,8 @@ ob_start();
 $a = Render::render( [ 'subnav' => 'off' ] );
 $b = Render::render( [] );
 ob_end_clean();
-check_lacks( $a, 'data-dccwl-subchips', 'the widget that overrode loses its chips' );
-check_contains( $b, 'data-dccwl-subchips', 'the widget beside it keeps them' );
+check_lacks( $a, 'data-dccwl-pick', 'the widget that overrode loses its picker' );
+check_contains( $b, 'data-dccwl-pick', 'the widget beside it keeps it' );
 
 // Per-root numbers land on the root element, not in the shared config.
 $root_ov = dcc_month( [ 'rows_override' => 2, 'view_override' => 'compact' ] );

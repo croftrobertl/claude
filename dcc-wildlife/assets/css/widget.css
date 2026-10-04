@@ -150,14 +150,16 @@
  *
  * `margin-inline: auto` does two different things depending on what the box
  * is. On a block it centres it. On a FLEX ITEM it makes the item shrink to
- * its content first and then centre — and .dccwl-subchips is a flex item
- * inside .dccwl-subnav's column, so capping it here sized it to all seven
- * chips laid end to end and pushed the whole PAGE to 768px on a 390px phone.
- * The chip row is a horizontal scroller; its content is meant to be wider
- * than its box, and telling it to fit its content defeats the scroller.
+ * its content first and then centre. The row this list caps, .dccwl-subnav,
+ * is a block; the controls INSIDE it are flex items and are therefore not
+ * listed — they are already held to the measure by their parent.
  *
- * .dccwl-subchips and .dccwl-subtools are therefore NOT here. They sit inside
- * .dccwl-subnav, which is capped, so they are already held to the measure.
+ * (Through 1.37.x the cautionary case here was .dccwl-subchips, the
+ * sideways-scrolling category row, which this cap once sized to all seven
+ * chips end to end and pushed a 390px page out to 768px. That row, its
+ * arrows and its fades were replaced by the one picker pill in 1.38.0; the
+ * rule about flex items is kept because it is about this list, not about
+ * that row.)
  */
 .dccwl-root .dccwl-timeline,
 .dccwl-root .dccwl-legend,
@@ -1412,129 +1414,12 @@
  * the white-card treatment, however card-like a chip may look elsewhere.
  * ================================================================== */
 
-.dccwl-subnav {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dccwl-gap);
-	margin: 0 0 var(--dccwl-gap);
-}
-
-/* Seven chips do not fit across a phone, and shrinking them to fit would put
- * them under the 44px floor. So the row scrolls, with the same edge mask the
- * spotlight strip uses to say so. */
-.dccwl-subchips {
-	-ms-overflow-style: none;
-	/* WHITE (1.33.0, owner's decision). */
-	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-pill);
-	display: flex;
-	gap: 2px;
-	overflow-x: auto;
-	padding: 3px;
-	scroll-snap-type: x proximity;
-	scrollbar-width: none;
-}
-
-.dccwl-subchips::-webkit-scrollbar { display: none; }
-
-/*
- * ITEM 7 (1.37.0) — A FADE MEANS "THERE IS MORE THIS WAY", so it appears only
- * where there IS more. The row used to carry a permanent right-hand mask and
- * drop it at the end: it faded the right even when every category already
- * fitted, and never faded the left once a guest had scrolled, so the one edge
- * with something hidden behind it was the one with no cue. The months bar has
- * been doing this correctly since 1.19.0 — these are now the same two classes
- * driven by the same function.
- */
-.dccwl-subchips.dccwl-fade-r {
-	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-	mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-}
-.dccwl-subchips.dccwl-fade-l {
-	-webkit-mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
-	mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
-}
-.dccwl-subchips.dccwl-fade-l.dccwl-fade-r {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-	mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-}
-
-.dccwl-root .dccwl-subchip.dccwl-subchip {
-	background: var(--dccwl-btn-bg);
-	border: var(--dccwl-gold-w) solid transparent;
-	border-radius: var(--dccwl-radius-control);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	flex: none;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-label);
-	min-height: 44px;
-	padding: 10px 14px;
-	scroll-snap-align: start;
-	white-space: nowrap;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
-		color var(--dccwl-t-fast) var(--dccwl-ease-color);
-}
-
-.dccwl-root .dccwl-subchip.dccwl-subchip[aria-pressed="true"] {
-	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-gold);
-	color: var(--dccwl-btn-txt);
-}
-.dccwl-root .dccwl-subchip.dccwl-subchip:hover {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-.dccwl-root .dccwl-subchip.dccwl-subchip[aria-pressed="true"]:hover {
-	border-color: var(--dccwl-gold);
-}
-
-.dccwl-root .dccwl-subchip.dccwl-subchip:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: 2px solid var(--dccwl-primary);
-	outline-offset: 1px;
-}
-
 /* --- the jump select and the view toggle --- */
 
 .dccwl-subtools {
 	display: flex;
 	gap: var(--dccwl-gap);
 	align-items: stretch;
-}
-
-.dccwl-jump { flex: 1 1 auto; min-width: 0; }
-
-/* An input, so it gets the same gold pill as the search box (1.33.0).
- * Tripled class for the same (0,3,1) kit reset the search input names. */
-.dccwl-root .dccwl-jump-select.dccwl-jump-select.dccwl-jump-select {
-	background: #ffffff;
-	border: var(--dccwl-gold-w) solid var(--dccwl-gold);
-	border-radius: var(--dccwl-radius-control);
-	color: var(--dccwl-text);
-	font: inherit;
-	/*
-	 * 1rem, NOT 0.875rem, and deliberately not a px value.
-	 *
-	 * iOS Safari zooms the whole page when a form control under 16px takes
-	 * focus — the same trap the search input carries a 16px floor for. A rem
-	 * keeps the plugin's "sizes stay relative" rule intact AND clears the
-	 * threshold: the deployment theme serves a 20px root, so this computes to
-	 * 20px there and to exactly 16px on a default root. A visitor who has
-	 * chosen smaller text gets what they asked for, which is the whole reason
-	 * these sizes are relative.
-	 */
-	font-size: 1rem;
-	min-height: 44px;
-	padding: 10px 12px;
-	width: 100%;
-}
-
-.dccwl-root .dccwl-jump-select.dccwl-jump-select.dccwl-jump-select:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
 }
 
 .dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle {
@@ -1651,23 +1536,6 @@
 	color: var(--dccwl-text);
 }
 
-/* ITEM 15 — the jump-to pill matches the search bar exactly, its text is
- * centred, and the chevron has room. It measured ~206px against the search
- * bar's ~271px on a phone, which cut the label to "Jump to a specie". */
-.dccwl-jump,
-.dccwl-root .dccwl-jump-select.dccwl-jump-select {
-	box-sizing: border-box;
-	margin-left: auto;
-	margin-right: auto;
-	max-width: 420px;
-	width: 100%;
-}
-.dccwl-root .dccwl-jump-select.dccwl-jump-select {
-	padding-right: 2.4rem;   /* room between the label and the chevron */
-	text-align: center;
-	text-align-last: center; /* centres the closed value in a <select> */
-}
-
 /* ITEM 16 — tapping the search drew a SECOND gold pill inside the bar.
  * The outer pill keeps a visible focus state for keyboard users; the inner
  * input must not draw one of its own. */
@@ -1688,25 +1556,123 @@
  * row. Aligning on the top edge instead makes wrapping irrelevant. */
 .dccwl-root .dccwl-legend-item { vertical-align: top; }
 
-/* ==================================================================
- * ITEM 13 (1.34.0) — the categories bar's ‹ › arrows.
+/* ======================================================================
+ * THE CATEGORY PICKER (1.38.0 — Rob's C2/C3).
  *
- * The same row shape the months bar uses: arrow, scroller, arrow, with the
- * scroller taking the slack. `min-width: 0` on the chip row is load-bearing —
- * a flex item's floor is its content's min-width, and without it seven
- * category chips laid end to end would push the row (and the page) wider than
- * the phone, which is the 1.18.1 lesson in its grid form.
+ * One pill that opens a list beneath it, modelled on the Layers ▾ control in
+ * his own Croatia map. It replaces the sideways-scrolling chip bar, its ‹ ›
+ * arrows and its edge fades — all of which are gone.
  *
- * The arrows carry .dccwl-timeline-arrow, so item 14's colour and the 1.33.0
- * rule that a control with nowhere to go hides (and keeps its space) both come
- * from one implementation rather than a second copy.
- * ================================================================== */
-.dccwl-root .dccwl-subchips-nav {
+ * The pill is a CONTROL, so it sits on the tinted ground with the tabs and
+ * the Compact switch rather than reading as another card (the 1.18.0
+ * hierarchy rule). Doubled classes throughout: Bravada's kit resets buttons
+ * at (0,3,1) and a (0,2,0) rule here would lose its border and radius.
+ * ====================================================================== */
+.dccwl-subnav {
 	align-items: center;
 	display: flex;
+	/* EXPLICIT, AND THIS IS WHY (1.38.0). This row replaced one that was
+	 * `flex-direction: column`, and that old rule out-lived its markup: a
+	 * later rule of the same specificity only overrides the properties it
+	 * NAMES, so the pill and the Compact switch kept stacking vertically at
+	 * every width while every other declaration here applied. Same shape as
+	 * the live failures this release exists to fix — state the property. */
+	flex-direction: row;
+	flex-wrap: wrap;
 	gap: var(--dccwl-gap);
 	justify-content: center;
+	margin: 0 auto var(--dccwl-gap);
+	max-width: var(--dccwl-measure);
 }
-.dccwl-root .dccwl-subchips-nav .dccwl-subchips {
-	min-width: 0;
+.dccwl-pick { position: relative; }
+
+.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn {
+	align-items: center;
+	background: var(--dccwl-btn-bg);
+	border: 1px solid transparent;
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-btn-txt);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	gap: 6px;
+	letter-spacing: 0;
+	/* The 44px touch target the whole plugin keeps for its older clientele. */
+	min-height: 44px;
+	padding: 0 14px;
+	text-transform: none;
+	white-space: nowrap;
 }
+.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:hover {
+	background: var(--dccwl-accent);
+	color: #ffffff;
+}
+.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+.dccwl-pick-chev { font-size: .8em; line-height: 1; }
+
+/* The list drops straight under the pill. Absolute, so it never pushes the
+ * tiles down as it opens, and above them while it is open. */
+.dccwl-root .dccwl-pick-list {
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-raised);
+	left: 50%;
+	margin-top: 6px;
+	max-height: min(60vh, 420px);
+	max-width: min(92vw, 320px);
+	min-width: 220px;
+	overflow-y: auto;
+	padding: 4px;
+	position: absolute;
+	top: 100%;
+	transform: translateX(-50%);
+	z-index: 20;
+}
+.dccwl-root .dccwl-pick-list[hidden] { display: none; }
+
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: var(--dccwl-radius);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-body);
+	gap: 12px;
+	justify-content: space-between;
+	letter-spacing: 0;
+	/* Rob's 44px, per option. */
+	min-height: 44px;
+	padding: 0 12px;
+	text-align: left;
+	text-transform: none;
+	width: 100%;
+}
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt:hover {
+	background: var(--dccwl-primary-soft);
+}
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+/* The chosen option is marked like every other selected control: coral with
+ * white text, at rest and in every state (item 8). */
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"],
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:hover,
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:focus,
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:focus-visible,
+.dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:active {
+	background: var(--dccwl-accent);
+	color: #ffffff;
+	font-weight: var(--dccwl-fw-label);
+}
+.dccwl-pick-opt-n { font-size: var(--dccwl-fs-xs); opacity: .85; }

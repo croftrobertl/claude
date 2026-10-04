@@ -104,8 +104,10 @@ class Canal_Widget extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control( 'ov_search', Guide_Data::three_way( __( 'Search box', 'dcc-wildlife' ) ) );
-		$this->add_control( 'ov_subnav', Guide_Data::three_way( __( 'Group chips', 'dcc-wildlife' ) ) );
-		$this->add_control( 'ov_jump', Guide_Data::three_way( __( '"Jump to a species" list', 'dcc-wildlife' ) ) );
+		$this->add_control( 'ov_subnav', Guide_Data::three_way( __( 'Category picker', 'dcc-wildlife' ) ) );
+		/* 'ov_jump' RETIRED IN 1.38.0 with the "Jump to a species" list. A
+		 * placement saved with it keeps the stored key harmlessly; nothing
+		 * reads it, and the control is gone so nobody can set it again. */
 		$this->add_control( 'ov_compact_btn', Guide_Data::three_way( __( '"Compact" button', 'dcc-wildlife' ) ) );
 
 		$this->add_control(
@@ -142,7 +144,6 @@ class Canal_Widget extends \Elementor\Widget_Base {
 				'title'           => (string) ( $s['widget_title'] ?? '' ),
 				'search'          => $s['ov_search'] ?? null,
 				'subnav'          => $s['ov_subnav'] ?? null,
-				'jump'            => $s['ov_jump'] ?? null,
 				'compact_btn'     => $s['ov_compact_btn'] ?? null,
 				'view'            => $s['ov_view'] ?? null,
 				'deck_rows'       => $s['ov_deck_rows'] ?? null,

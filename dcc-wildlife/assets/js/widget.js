@@ -901,7 +901,12 @@
 		// Must match Render::PEAK_TAB. The tab row is server-rendered and this
 		// reads the slug back off it, so the two have to agree.
 		var PEAK_TAB = '__peak';
-		var guide = { q: '', group: null };
+		/* `pick` is the chosen CATEGORY, per section (1.38.0). It is a FILTER
+		 * now — the sub-chips only scrolled the deck — and it is remembered
+		 * per tab, so switching away and back does not lose it. A search sets
+		 * it aside without clearing it: C4 says clearing the search restores
+		 * what the guest had. */
+		var guide = { q: '', group: null, pick: {} };
 
 		/* Lowercased, accent-folded, and cached on the species row. */
 		function fold(v) {
@@ -962,6 +967,15 @@
 					if (old) { old.parentNode.removeChild(old); }
 					var v = sp && sp.months ? (sp.months[state.month] || 0) : 0;
 					var keep = groupOn;
+					/* THE CATEGORY FILTER (1.38.0, Rob's C2). Set aside while
+					 * searching — a search covers everything, including the
+					 * separate Safety list — and meaningless on Peak Now,
+					 * which has no categories. */
+					if (keep && !searching && !peaking) {
+						var want = guide.pick[group] || '';
+						var own = tile.closest('li');
+						if (want && own && want !== (own.getAttribute('data-dccwl-browse') || '')) { keep = false; }
+					}
 					if (keep && sp) {
 						if (searching) {
 							// A search overrides the month: a guest looking for
@@ -1030,12 +1044,24 @@
 				var groupOn = searching || peaking || null === guide.group || group === guide.group;
 				g.hidden = !groupOn || ((searching || peaking) && !perGrid[group]);
 
-				/* A section's sub-navigation lives or dies with its grid. It is
-				 * also withdrawn while SEARCHING or on Peak Now: those draw from
-				 * every section at once, so "jump to Wading birds" would be
-				 * offering to navigate a list that is not on screen. */
+				/*
+				 * A section's toolbar lives or dies with its grid, and Peak
+				 * Now has no categories at all, so the row goes there — which
+				 * leaves the Compact switch alone on that tab, as Rob asked.
+				 *
+				 * DURING A SEARCH the CURRENT tab keeps its row (1.38.0). The
+				 * chips used to go, because jumping to a sub-group of a list
+				 * that was not on screen made no sense; a pill that reads
+				 * "Show: All" is telling the guest something true — the search
+				 * is covering everything — and the Compact switch stays usable
+				 * with it. The other sections' rows stay hidden: one pill on
+				 * screen, never three.
+				 */
 				var sub = section.querySelector('[data-dccwl-subnav="' + group + '"]');
-				if (sub) { sub.hidden = g.hidden || searching || peaking; }
+				if (sub) {
+					sub.hidden = peaking || g.hidden || (searching && group !== guide.group);
+					if (sub.dccwlSyncPick) { sub.dccwlSyncPick(); }
+				}
 			});
 
 			var eligible = kept.length;
@@ -1109,203 +1135,121 @@
 				var grid = section.querySelector('.dccwl-guide-grid[data-dccwl-group="' + slug + '"]');
 				if (!grid) { return; }
 
-				var chipWrap = nav.querySelector('[data-dccwl-subchips]');
 				var tools = nav.querySelector('[data-dccwl-subtools]');
-				var chips = [].slice.call(nav.querySelectorAll('.dccwl-subchip'));
-				var sel = nav.querySelector('[data-dccwl-jump]');
 				var toggle = nav.querySelector('[data-dccwl-view]');
-				var active = '';   // '' is the All chip
 
-				/*
-				 * A NOTE ON WHAT IS DELIBERATELY NOT HERE.
-				 *
-				 * The chips were briefly also a position indicator: a scroll
-				 * handler moved the pressed chip to whichever group was at the
-				 * left edge. It read well and was wrong, consistently, by one
-				 * group — because a jump aligns the COLUMN holding the target
-				 * tile, and the tile at the left edge of that column usually
-				 * belongs to the PREVIOUS group. Pressing "Mammals" landed
-				 * correctly and then relabelled itself "Reptiles".
-				 *
-				 * Two defensible definitions of "where am I" that disagree is
-				 * not a bug to tune; it is a sign the second one should not
-				 * exist. So a chip records the guest's CHOICE and nothing else.
-				 * If the deck is later swiped clear of that group the position
-				 * line says so by falling back to the deck's own count, which
-				 * contextFor() already handles by returning null.
-				 */
-
-				// Revealed only now: without this script the grid is a plain
-				// wrapping list with no deck to jump around in.
-				if (chipWrap) {
-					chipWrap.hidden = false;
-					/* ITEM 7 (1.37.0): the same edge-fade function the months
-					 * bar uses, on the row itself — it toggles fade-l and
-					 * fade-r from the actual scroll position, so an edge is
-					 * cued only when something is hidden behind it. */
-					attachEdgeFades(chipWrap, chipWrap);
-				}
-				// The arrows ride with the chip row they belong to (item 13).
-				var chipNav = nav.querySelector('[data-dccwl-subchips-nav]');
-				if (chipNav) { chipNav.hidden = false; }
+				/* The Compact switch ships HIDDEN and is unhidden here, by the
+				 * 1.33.0 rule that a control which cannot work is not offered:
+				 * with no JavaScript it would do nothing. Losing this one line
+				 * while the picker was written left the switch hidden at every
+				 * width, so the pill sat alone on its row — caught by the
+				 * live-conditions suite asking what shares the row, which is a
+				 * question about the rendered page rather than about CSS. */
 				if (tools) { tools.hidden = false; }
 
-				function visible() {
-					return [].filter.call(grid.children, function (li) { return !li.hidden; });
+				/* ==========================================================
+				 * THE CATEGORY PICKER (1.38.0 — Rob's C2/C3).
+				 *
+				 * One pill, "Show: All ▾", opening a list beneath it. It
+				 * FILTERS the deck; the chips it replaces only scrolled to a
+				 * group. That reverses the 1.31.0 rule that a sub-group is
+				 * navigation and never a filter — reversed BY THE OWNER, who
+				 * asked for exactly this after living with the chips.
+				 *
+				 * The 1.28.0 lesson behind that old rule still stands and is
+				 * answered differently: a filter must never be invisible. This
+				 * one says what it is doing in its own label, every time.
+				 * ========================================================== */
+				var pick = nav.querySelector('[data-dccwl-pick]');
+				var pickBtn = pick && pick.querySelector('[data-dccwl-pick-btn]');
+				var pickList = pick && pick.querySelector('[data-dccwl-pick-list]');
+				var pickValue = pick && pick.querySelector('[data-dccwl-pick-value]');
+				var opts = pick ? [].slice.call(pick.querySelectorAll('.dccwl-pick-opt')) : [];
+				var allLabel = opts.length ? optName(opts[0]) : 'All';
+
+				function optName(o) {
+					var n = o.querySelector('.dccwl-pick-opt-name');
+					return (n ? n.textContent : o.textContent || '').trim();
 				}
 
-				function membersOf(sub) {
-					return visible().filter(function (li) {
-						return li.getAttribute('data-dccwl-browse') === sub;
+				function openPick(on) {
+					if (!pick || !pickList || !pickBtn) { return; }
+					pickList.hidden = !on;
+					pickBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+					pick.classList.toggle('dccwl-pick-open', !!on);
+					if (on) {
+						var sel = opts.filter(function (o) { return 'true' === o.getAttribute('aria-selected'); })[0];
+						(sel || opts[0]).focus();
+					}
+				}
+
+				/* The pill always shows what the deck is showing. While a
+				 * search is on it reads "All", because a search covers
+				 * everything (C4) — the guest's own choice is kept in
+				 * guide.pick and comes back when they clear the box. */
+				function syncPick() {
+					if (!pick) { return; }
+					var searching = !!guide.q;
+					var want = searching ? '' : (guide.pick[slug] || '');
+					opts.forEach(function (o) {
+						var on = (o.getAttribute('data-dccwl-browse') || '') === want;
+						o.setAttribute('aria-selected', on ? 'true' : 'false');
+						if (on && pickValue) { pickValue.textContent = optName(o); }
 					});
+					if (!opts.length && pickValue) { pickValue.textContent = allLabel; }
 				}
 
-				/* Bring a chip into view inside its own scroller — never with
-				 * scrollIntoView(), which also scrolls the PAGE and would yank
-				 * the guide around under a guest who only tapped a chip. The
-				 * arithmetic is on the scroller's own scrollLeft, so nothing
-				 * outside the row moves. (1.33.0) */
-				function revealChip(c) {
-					if (!c || !chipWrap) { return; }
-					var wrap = chipWrap.scrollWidth > chipWrap.clientWidth ? chipWrap : null;
-					if (!wrap) { return; }
-					var pad = 12;   // clear of the row's own edge fade
-					var left = c.offsetLeft - wrap.offsetLeft;
-					var right = left + c.offsetWidth;
-					var target = null;
-					if (left - pad < wrap.scrollLeft) {
-						target = Math.max(0, left - pad);
-					} else if (right + pad > wrap.scrollLeft + wrap.clientWidth) {
-						target = right + pad - wrap.clientWidth;
+				function choose(value) {
+					guide.pick[slug] = value || '';
+					openPick(false);
+					syncPick();
+					refreshGuide();
+					/* A new filter is a new list: the deck starts at its
+					 * first page, as Rob asked. */
+					if (window.DCCWL_Deck) {
+						grid.scrollLeft = 0;
+						window.DCCWL_Deck.refreshSoon(grid, CFG.i18n);
 					}
-					if (null === target) { return; }
-					if (wrap.scrollTo) {
-						wrap.scrollTo({ left: target, behavior: reducedMotion ? 'auto' : 'smooth' });
-					} else {
-						wrap.scrollLeft = target;
-					}
+					if (pickBtn) { pickBtn.focus(); }
 				}
 
-				function press(sub) {
-					active = sub;
-					var pressed = null;
-					chips.forEach(function (c) {
-						var on = c.getAttribute('data-dccwl-browse') === sub;
-						c.setAttribute('aria-pressed', on ? 'true' : 'false');
-						if (on) { pressed = c; }
+				if (pick && pickBtn && pickList) {
+					pickBtn.addEventListener('click', function (ev) {
+						ev.stopPropagation();
+						openPick(pickList.hidden);
 					});
-					revealChip(pressed);
-					syncArrows();
-				}
-
-				/* The position line for a sub-group: "Wading birds · 2/3".
-				 * Returns null when the deck has scrolled clear of the group,
-				 * which hands the line back to the deck's own "7–12 of 38" —
-				 * saying "Wading birds" while showing ducks would be a lie. */
-				function contextFor(sub, label) {
-					return function (shownIdx, total) {
-						var all = visible();
-						var subs = membersOf(sub);
-						if (!subs.length || !shownIdx.length) { return null; }
-						var from = all.indexOf(subs[0]) + 1;
-						var to = all.indexOf(subs[subs.length - 1]) + 1;
-						var inside = shownIdx.filter(function (i) { return i >= from && i <= to; });
-						if (!inside.length) { return null; }
-						var perPage = Math.max(1, shownIdx.length);
-						var pages = Math.max(1, Math.ceil(subs.length / perPage));
-						var page = Math.min(pages, Math.floor((inside[0] - from) / perPage) + 1);
-						return fmt(CFG.i18n.subPos || '%1$s · %2$d/%3$d', label, page, pages);
-					};
-				}
-
-				function applyContext() {
-					if (!window.DCCWL_Deck) { return; }
-					if ('' === active) {
-						window.DCCWL_Deck.setContext(grid, null);
-						return;
-					}
-					var chip = chips.filter(function (c) { return c.getAttribute('data-dccwl-browse') === active; })[0];
-					window.DCCWL_Deck.setContext(grid, contextFor(active, chip ? chip.textContent.trim() : active));
-				}
-
-				function jump(sub) {
-					press(sub);
-					var target = '' === sub ? visible()[0] : membersOf(sub)[0];
-					if (target && window.DCCWL_Deck) { window.DCCWL_Deck.jumpTo(grid, target); }
-					applyContext();
-				}
-
-				chips.forEach(function (c) {
-					c.addEventListener('click', function () { jump(c.getAttribute('data-dccwl-browse')); });
-				});
-
-				/* ITEM 13 (1.34.0) — ‹ › on this bar, behaving as they do on the
-				 * months bar: one step along the thing the bar navigates. There
-				 * the steps are months and they wrap, because a year does;
-				 * here they are the categories in the order the section lists
-				 * them, and the ends are ends — so at either end the arrow
-				 * DISABLES, which under the 1.33.0 rule hides it and keeps its
-				 * space rather than fading it. */
-				var arrowNav = nav.querySelector('[data-dccwl-subchips-nav]');
-				var prevArrow = arrowNav && arrowNav.querySelector('.dccwl-subchip-prev');
-				var nextArrow = arrowNav && arrowNav.querySelector('.dccwl-subchip-next');
-
-				function chipIndex() {
-					for (var i = 0; i < chips.length; i++) {
-						if (chips[i].getAttribute('data-dccwl-browse') === active) { return i; }
-					}
-					return 0;
-				}
-
-				function syncArrows() {
-					if (!prevArrow || !nextArrow) { return; }
-					var i = chipIndex();
-					prevArrow.disabled = i <= 0;
-					nextArrow.disabled = i >= chips.length - 1;
-				}
-
-				function step(delta) {
-					var i = chipIndex() + delta;
-					if (i < 0 || i >= chips.length) { return; }
-					jump(chips[i].getAttribute('data-dccwl-browse'));
-					chips[i].focus();
-				}
-
-				if (prevArrow && nextArrow) {
-					prevArrow.addEventListener('click', function () { step(-1); });
-					nextArrow.addEventListener('click', function () { step(1); });
-				}
-
-				/* While a sub-group is pressed the chip row follows the deck, so
-				 * it reports position as well as offering it. The All chip is
-				 * left alone — someone who asked for the whole section's count
-				 * has not asked to be tracked. */
-				if (sel) {
-					sel.addEventListener('change', function () {
-						var id = sel.value;
-						if (!id) { return; }
-						var li = grid.querySelector('[data-dccwl-species="' + id + '"]');
-						li = li ? li.closest('li') : null;
-						if (!li) { return; }
-						var sub = li.getAttribute('data-dccwl-browse') || '';
-						press(sub);
-						if (window.DCCWL_Deck) { window.DCCWL_Deck.jumpTo(grid, li); }
-						applyContext();
-						// A jump with no visible change is indistinguishable from
-						// a control that did nothing, so the tile says so.
-						li.classList.remove('dccwl-flash');
-						void li.offsetWidth;
-						li.classList.add('dccwl-flash');
-						// Reset, so choosing the same name twice works.
-						sel.value = '';
+					opts.forEach(function (o) {
+						o.addEventListener('click', function () { choose(o.getAttribute('data-dccwl-browse')); });
 					});
+					/* Keyboard: the list is a listbox, so arrows move through
+					 * it, Enter chooses, Escape closes and hands focus back. */
+					pickList.addEventListener('keydown', function (ev) {
+						var i = opts.indexOf(document.activeElement);
+						if ('Escape' === ev.key) {
+							ev.stopPropagation();
+							openPick(false);
+							pickBtn.focus();
+						} else if ('ArrowDown' === ev.key || 'ArrowUp' === ev.key) {
+							ev.preventDefault();
+							var n = opts.length;
+							var next = (i < 0 ? 0 : (i + ('ArrowDown' === ev.key ? 1 : n - 1)) % n);
+							opts[next].focus();
+						} else if ('Home' === ev.key || 'End' === ev.key) {
+							ev.preventDefault();
+							opts['Home' === ev.key ? 0 : opts.length - 1].focus();
+						}
+					});
+					// A tap anywhere else closes it, like the map's menus.
+					document.addEventListener('click', function (ev) {
+						if (pickList.hidden) { return; }
+						if (pick.contains(ev.target)) { return; }
+						openPick(false);
+					});
+					nav.dccwlSyncPick = syncPick;
+					syncPick();
 				}
 
-				/* One function for the view, so the toggle and the owner's
-				 * chosen default cannot drift apart. A default of 'compact'
-				 * that only the button knew how to apply would be a setting
-				 * that works for the second visitor and not the first. */
-				function applyView(compact) {
+								function applyView(compact) {
 					if (toggle) {
 						toggle.setAttribute('data-dccwl-view', compact ? 'compact' : 'deck');
 						toggle.setAttribute('aria-pressed', compact ? 'true' : 'false');
@@ -1325,8 +1269,9 @@
 					} else {
 						grid.removeAttribute('data-dccwl-compact');
 					}
-					if (chipWrap) { chipWrap.hidden = compact; }
-					if (chipNav) { chipNav.hidden = compact; }
+					/* The picker rides with the deck it filters: a compact
+					 * list is one column of everything, so a category filter
+					 * still applies and the pill stays. (1.38.0) */
 					if (window.DCCWL_Deck) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
 				}
 
@@ -1625,7 +1570,7 @@
 		 * `once` on each, and ensureDetail() is idempotent, so this costs one
 		 * listener per control and at most one request. */
 		document.querySelectorAll(
-			'.dccwl-root .dccwl-tab, .dccwl-root .dccwl-subchip, .dccwl-root .dccwl-month, .dccwl-root .dccwl-search-input'
+			'.dccwl-root .dccwl-tab, .dccwl-root .dccwl-pick-btn, .dccwl-root .dccwl-month, .dccwl-root .dccwl-search-input'
 		).forEach(function (el) {
 			el.addEventListener('focus', warmDetail, { once: true });
 			el.addEventListener('click', warmDetail, { once: true });

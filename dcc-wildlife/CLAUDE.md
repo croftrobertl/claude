@@ -2777,3 +2777,139 @@ list — where the column-major deck read Diamondback, Coral, Dusky.
 **The Safety deck gets NO label during a search (L0, his pick).** The red
 danger mark on each tile is what says these are hazards. Do not add a heading
 there without asking him again.
+
+### 24. 1.38.0 — three live failures, and the picker that replaces the chip row
+
+**WHY THIS RELEASE EXISTS, IN ROB'S WORDS: "in 1.37.x your suites passed but
+items 2, 3 and 8 failed on live."** Two of the three causes were mine, one was
+a misunderstanding of how stacking contexts work, and all three had a green
+suite standing over them. The harness doctrine gains its fourth rule, and the
+new suite is the enforcement:
+
+- a suite that asserts nothing fails;
+- a stub more permissive than the real thing agrees with you;
+- a suite must exercise the path production takes;
+- **and now: a state that only exists after a real tap must be tested with a
+  real tap, on the real stylesheets, at the real width.**
+
+**`tools/tests/ui-live.mjs` IS THAT SUITE, AND ITS THREE CONDITIONS ARE THE
+POINT.** Every assertion in it runs on the rendered page with the host kit's
+20px/700 root, at **390px with `hasTouch`/`isMobile` and `page.tap()`** and at
+**1280px with the touch emulation OFF**. `buildPage` gained a `touch` option
+for the second of those: every page this harness had ever built was a touch
+page at every width, so no suite could tell a phone from a desktop, and the
+state item 8 failed in — a button that keeps `:hover` and `:focus` after a tap —
+was not reachable from here at all. The default stays touch, so nothing written
+before this release changed behaviour.
+
+A plain statement about the stand-in, because it matters when reading a green
+run: `sitekit.css` is **this repo's reproduction** of the deployment theme's
+resets and root, not a copy of the live file. It carries the traps that have
+actually bitten us. It is not the live theme, and a green run here is evidence,
+not proof — which is why the Director still checks on the phone.
+
+**ITEM 2's CAUSE WAS A WRITE THAT NEVER HAPPENED.** The 1.37.0 edit script made
+three replacements in `water.css`, asserted on the third, aborted before
+writing anything, and only the failed replacement was re-run — so the
+one-tile-per-row rule and the reading's font size were never in the file that
+shipped, while the third edit was. **An edit script that asserts after writing
+is a different thing from one that asserts before**, and a partially applied
+batch is invisible afterwards: the file is syntactically fine and the release
+notes describe work that is not there. Re-applied, with the breakpoint at the
+768px Rob named, and now measured on the rendered panel at 390/767/768/1280
+including a per-word check that nothing breaks mid-word.
+
+**ITEM 3's CAUSE WAS A STACKING CONTEXT, AND RAISING THE POPUP COULD NOT WORK.**
+`.leaflet-popup-pane` lives inside Leaflet's map pane at `z-index: 400`, which
+creates a stacking context, so **a child cannot climb past its parent relative
+to the parent's outside siblings whatever number it carries.** 1.37.0 set the
+pane to 1300 and the suite agreed with it; our chrome at 1100 still won,
+because the comparison was 400 against 1100. The fix lowers OUR chrome while a
+popup is open (`.dccwl-popup-open` on the canvas and on the map sheet body,
+dropping the credit button, the wind badge, the map bar and Leaflet's own
+control corners to 1), and restores it on close. **Never "fix" a z-index
+without finding out which stacking context each number is measured in.**
+
+The popup is also kept inside the map with ≥12px margins (`autoPan`,
+`autoPanPadding`, `keepInView`) and capped so it scrolls internally rather than
+growing past the canvas. 1.36.0's outside-tap close is unchanged. Everything
+here is asserted with `elementFromPoint` at the popup's title row, its centre
+and its last line — "what would a tap hit", never "is it visible".
+
+**ITEM 8's CAUSE WAS A RULE 1.36.0 DID NOT FINISH.** The resting selected rule
+became white in 1.36.0; the `:hover/:focus/:focus-visible/:active` block kept
+`color: var(--dccwl-text)`. With a mouse that is invisible — the pointer leaves
+and the label repaints. **On a phone a tapped button keeps `:hover` AND
+`:focus` until the guest touches something else**, so the label stayed dark
+exactly where Rob was looking. Every selected control is now white in every
+state, and the suite taps each one and reads it WITHOUT moving away: the
+section tabs, the month pills, the water tab bar, the Compact switch and the
+picker's chosen option.
+
+### The picker: one pill that FILTERS (Rob's C, 2026-10-04)
+
+The sideways-scrolling category row, its ‹ › arrows and its edge fades are
+gone, replaced by **"Show: All ▾"** — a button opening a list beneath it,
+modelled on the Layers ▾ control in his own Croatia map.
+
+- **IT FILTERS. THAT REVERSES THE 1.31.0 RULE** that a browse sub-group is
+  navigation and never a filter — reversed by the owner, who asked for exactly
+  this after living with the chips. The 1.28.0 lesson behind the old rule still
+  stands and is answered differently: **a filter must never be invisible**, and
+  this one says what it is doing in its own label, every time.
+- Choosing a category restarts the pager at its first page; the 1.37.1 rows-
+  follow-matches and 1.37.2 wrap-when-everything-fits rules are untouched.
+- **Switching section resets to All**, and **a search sets the filter aside and
+  restores it when the search is cleared** — while searching, the pill reads
+  "Show: All" so it never claims to be filtering when it is not.
+- Counts are per tab and are rendered in the HTML, not built by script, so they
+  are in the page for a crawler and for a guest whose JavaScript has not
+  arrived. ui-deck.mjs asserts that each printed count matches what choosing it
+  actually shows, and that the categories between them account for every animal.
+- Accessible as a listbox: `aria-expanded`, `aria-haspopup`, `aria-selected`,
+  arrow/Home/End keys, Escape and an outside tap close it, and focus returns to
+  the pill. Every row is a 44px target.
+- **The month bar keeps its arrows and its edge fades.** Only the category row
+  lost them.
+
+**"Jump to a species…" IS REMOVED, AND SO IS ITS SETTING.** Gone: the `<select>`
+and its markup, `show_jump` from the Guide_Data schema and the admin page (the
+key is left in the defaults with a RETIRED comment, because deleting it would
+change a stored row), the `ov_jump` override on BOTH Elementor widgets, and
+every `'jump' =>` gate in the renderers. The search box reaches every species by
+common or scientific name, which is what the list was for.
+
+**DEAD CSS WAS DELETED WITH IT, AND THAT IS WHERE THE LAST BUG CAME FROM.** The
+`.dccwl-subchips`, `.dccwl-subchip`, `.dccwl-jump*` and `.dccwl-subchips-nav`
+rules went, along with the stale `.dccwl-subnav { flex-direction: column }`
+block — **and that block is why the pill and the Compact switch stacked instead
+of sharing a row at every width.** A later rule of the same specificity
+overrides only the properties it NAMES, so the new row's `display`,
+`flex-wrap`, `gap` and `justify-content` all applied while the old column
+direction survived underneath them. The row now states `flex-direction: row`
+explicitly, with that reason written beside it. Same family as the live
+failures: the rule was there, it just was not what was in force.
+
+**AND ONE MORE LOST 1.37.0 EDIT, FOUND BY MEASURING RATHER THAN READING.**
+`.dccwl-deck-status` carried a comment promising item 11's "body size" over a
+declaration setting `--dccwl-fs-sm` (17.5px on the deployment root, where body
+is 21.25px), plus a duplicated `font-weight`. Corrected to `--dccwl-fs-base`,
+because the comment is Rob's instruction and the declaration was not.
+
+**THREE SUITES ENCODED CONTROLS THAT NO LONGER EXIST**, and as with the plant
+batch the fix was to pin the intended state, never to loosen the check:
+test-elementor.php's override list drops `ov_jump`, test-guide-settings.php's
+marker table swaps the chip row for `data-dccwl-pick` and drops the jump row,
+ui-deck.mjs's two chip/jump sections are REPLACED by picker sections keeping
+what those sections really guarded (every category points at a real run; the
+runs account for the whole section), and ui-theme.mjs stops asking a drop-down
+row to look like a chip and checks the pill and its options on their own terms.
+What is deliberately NOT carried over: "a chip records a choice, not a
+position", and "the deck scrolls as far toward the group as it can". The picker
+hides the rest of the section instead of scrolling past it, so there is nothing
+to scroll toward.
+
+**The screenshot script is `tools/shots-1380.mjs`, and it lives OUTSIDE
+`tools/tests/` on purpose** — it asserts nothing, and anything matching
+`ui-*.mjs` in that directory is run as a suite and would fail (correctly) for
+asserting nothing.
