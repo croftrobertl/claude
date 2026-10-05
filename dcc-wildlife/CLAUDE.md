@@ -2913,3 +2913,74 @@ to scroll toward.
 `tools/tests/` on purpose** — it asserts nothing, and anything matching
 `ui-*.mjs` in that directory is run as a suite and would fail (correctly) for
 asserting nothing.
+
+### 25. 1.38.1 — three things the full specification caught that 1.38.0 had wrong
+
+1.38.0 was built from a summary of Rob's brief; the brief itself arrived
+complete afterwards, and reading the two side by side found three
+disagreements. All three are recorded because each is a different way to be
+wrong.
+
+**THE PAGER COUNTER IS 17.5px, AND 1.38.0 "CORRECTED" IT TO 21.25px.**
+`.dccwl-deck-status` carried `--dccwl-fs-sm` under a comment saying "body
+size", and 1.38.0 changed the declaration to match the comment. His
+specification says, in his own figures, **"11 pager counter 17.5px"**, and
+lists it among the items that are WORKING on live and must not regress. The
+comment was a paraphrase; the declaration was the instruction. **Measure
+against what was asked, never against a previous summary of it** — the summary
+is the thing most likely to have drifted. The real defect in that rule, a
+duplicated `font-weight`, is still gone.
+
+**PEAK NOW HAD NO TOOLBAR ROW AT ALL, UNDER A COMMENT SAYING IT DID.** The
+brief: *"Peak Now has no categories, so no pill (the Compact switch sits alone
+on that row)."* The code read `sub.hidden = peaking || …` — the row was hidden
+on that tab — while the comment above it described exactly the behaviour Rob
+asked for. A comment is not a test, and this one had been true of an intention
+rather than of the code since it was written.
+
+Peak Now spans every section and shows two or three decks at once, so:
+- the row shown is the one belonging to the **first section still on screen**,
+  decided per refresh because which sections have anything at peak changes
+  with the month;
+- the pill is hidden on it (`nav.dccwlPeakMode`), since there are no categories
+  to offer across a filter that crosses sections;
+- **the switch applies to every visible deck** (`nav.dccwlApplyView`, published
+  for this). One switch governing one of three decks would leave the others in
+  photo cards under a control reading "Photos" — a control disagreeing with
+  itself.
+
+**THE SAFETY TAB OFFERED "All 49" OVER A LIST OF 28.** The counts loop used
+`''` as both the key for the total and the key for a species with no browse
+slug, so every slug-less species was counted twice. Animals and Plants were
+right by accident — every one of their members has a slug — and Safety has 21
+that do not. **A count beside a category is a promise about what choosing it
+shows**, so the total is tallied separately now, and `ui-live.mjs` asserts per
+tab that "All" equals the tiles the tab actually renders.
+
+**WHAT THE LIVE SUITE GAINED WITH THEM** (270 assertions now, still at 390px
+with real taps and 1280px with a mouse): the per-tab category lists asserted
+against Rob's own strings and order, Peak Now's row shape and its cross-deck
+switch, search by **scientific name** (`Ardea hero` → Great Blue Heron,
+`guarauna` → Limpkin) standing in for the Jump list that was removed, the
+water tab bar's weight, the ⓘ credit (its "Map credits" name, Esri's required
+wording, the OpenStreetMap show-then-collapse rule proved with a real tap), and
+**the Director's sweep: every tab crossed with every one of its categories at
+390px**, asserting no deck leaves a column empty — the state 1.37.1's and
+1.37.2's rules now have to hold in, since a category is a filter.
+
+**TWO FIXTURE LESSONS, BOTH OF WHICH FIRST LOOKED LIKE BUGS IN THE PLUGIN:**
+
+- **Serve what the code actually requests.** Esri's tile URL ends `/{z}/{y}/{x}`
+  with no extension, so a route matching only PNG names left every satellite
+  tile failing — and this plugin degrades honestly, switching to OpenStreetMap
+  after five misses. The suite then "found" that a map it believed was Esri
+  credited OpenStreetMap. The fixture was wrong, not the map.
+- **An open menu over the attribution is the rule working, not a breach.** The
+  tap that closes a popup lands on the control bar, and at 390px that bar is
+  the two-menu shape, so it can OPEN a menu — which is meant to paint over the
+  attribution (1.33.0, item 9). The suite now closes anything open before
+  asking what covers the credit.
+
+And one more of the repository's oldest traps, hit again while writing that
+first lesson: **a block comment containing a glob with a star-slash in it ends
+the comment early.** Reworded, as in 1.26.0.

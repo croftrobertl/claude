@@ -440,19 +440,19 @@ final class Render {
 			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php
 				/*
-				 * 1.33.0 — MARK EACH SUB-GROUP'S FIRST MEMBER.
+				 * `data-dccwl-browse-first` MARKS EACH SUB-GROUP'S FIRST
+				 * MEMBER, AND NOTHING STYLES IT ANY MORE.
 				 *
-				 * The deck is a three-row column grid, so aligning a tile's
-				 * left edge aligns its COLUMN, and a group whose first member
-				 * sits in row 2 or 3 opened on the previous group's tiles:
-				 * pressing "Mammals" showed a watersnake at the top left. The
-				 * owner's requirement is that Mammals opens on a mammal.
+				 * 1.33.0 used it to force that tile into row 1 so a column
+				 * break fell before each group. 1.37.0 deleted that rule —
+				 * the owner measured the blank cells it cost and ruled no
+				 * gaps — and 1.38.0 made the categories a filter, so a group
+				 * no longer has to begin anywhere in particular.
 				 *
-				 * The marker lets the CSS put that tile in row 1, which makes
-				 * the auto-placement algorithm start a new column for it. The
-				 * cost is a blank cell at the foot of the previous group's
-				 * last column — deliberate, and the only way the guarantee
-				 * holds without hiding tiles or reordering them.
+				 * The attribute stays because it is the only record in the
+				 * markup of where a run begins, it costs a few bytes, and a
+				 * future control may want it. It is NOT load-bearing: nothing
+				 * in the CSS or the scripts reads it today.
 				 */
 				$seen_browse = [];
 				?>
@@ -549,11 +549,24 @@ final class Render {
 			 * that it is in the page for a crawler and for a guest whose
 			 * JavaScript has not arrived; widget.js only opens and closes it.
 			 */
-			$counts = [ '' => 0 ];
+			/*
+			 * A COUNT BESIDE A CATEGORY IS A PROMISE ABOUT WHAT CHOOSING IT
+			 * SHOWS, so the total is tallied separately from the groups.
+			 *
+			 * The first version used '' as both the total's key and the key
+			 * for a species with no browse slug, so every such species was
+			 * counted twice: Safety printed "All 49" over a list of 28,
+			 * because 21 of its members carry no slug. Animals and Plants were
+			 * right by accident — every one of their members has one.
+			 */
+			$total  = count( $members );
+			$counts = [];
 			foreach ( $members as $sp ) {
 				$b = (string) ( $sp['browse'] ?? '' );
-				$counts['']     = (int) $counts[''] + 1;
-				$counts[ $b ]   = (int) ( $counts[ $b ] ?? 0 ) + 1;
+				if ( '' === $b ) {
+					continue;
+				}
+				$counts[ $b ] = (int) ( $counts[ $b ] ?? 0 ) + 1;
 			}
 			$pick_id = 'dccwl-pick-' . $section;
 			?>
@@ -580,7 +593,7 @@ final class Render {
 					data-dccwl-pick-list>
 					<button type="button" class="dccwl-pick-opt" role="option" aria-selected="true" data-dccwl-browse="">
 						<span class="dccwl-pick-opt-name"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></span>
-						<span class="dccwl-pick-opt-n"><?php echo esc_html( (string) (int) $counts[''] ); ?></span>
+						<span class="dccwl-pick-opt-n"><?php echo esc_html( (string) (int) $total ); ?></span>
 					</button>
 					<?php foreach ( $groups as $slug => $glabel ) : ?>
 						<button type="button" class="dccwl-pick-opt" role="option" aria-selected="false" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>">

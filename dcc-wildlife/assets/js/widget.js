@@ -1039,27 +1039,42 @@
 				var g = r.grid.getAttribute('data-dccwl-group');
 				perGrid[g] = (perGrid[g] || 0) + (r.show ? 1 : 0);
 			});
+			/* Which section's toolbar row Peak Now borrows: the first one that
+			 * still has tiles on screen. Decided in this pass, because which
+			 * sections have anything at peak changes with the month. */
+			var peakRow = null;
 			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
 				var group = g.getAttribute('data-dccwl-group');
 				var groupOn = searching || peaking || null === guide.group || group === guide.group;
 				g.hidden = !groupOn || ((searching || peaking) && !perGrid[group]);
 
 				/*
-				 * A section's toolbar lives or dies with its grid, and Peak
-				 * Now has no categories at all, so the row goes there — which
-				 * leaves the Compact switch alone on that tab, as Rob asked.
+				 * ONE TOOLBAR ROW ON SCREEN, NEVER THREE.
+				 *
+				 * PEAK NOW HAS NO CATEGORIES, SO IT HAS NO PILL — AND THE
+				 * COMPACT SWITCH SITS ALONE ON THAT ROW, which is what Rob
+				 * asked for and what the comment here used to CLAIM while the
+				 * code hid the whole row (`sub.hidden = peaking || …`). Peak
+				 * Now spans every section, so the row shown is the one
+				 * belonging to the first section still on screen, and its
+				 * switch applies to every visible deck rather than to one.
 				 *
 				 * DURING A SEARCH the CURRENT tab keeps its row (1.38.0). The
 				 * chips used to go, because jumping to a sub-group of a list
 				 * that was not on screen made no sense; a pill that reads
 				 * "Show: All" is telling the guest something true — the search
 				 * is covering everything — and the Compact switch stays usable
-				 * with it. The other sections' rows stay hidden: one pill on
-				 * screen, never three.
+				 * with it. The other sections' rows stay hidden.
 				 */
 				var sub = section.querySelector('[data-dccwl-subnav="' + group + '"]');
 				if (sub) {
-					sub.hidden = peaking || g.hidden || (searching && group !== guide.group);
+					if (peaking) {
+						if (!peakRow && !g.hidden) { peakRow = group; }
+						sub.hidden = g.hidden || group !== peakRow;
+					} else {
+						sub.hidden = g.hidden || (searching && group !== guide.group);
+					}
+					if (sub.dccwlPeakMode) { sub.dccwlPeakMode(peaking); }
 					if (sub.dccwlSyncPick) { sub.dccwlSyncPick(); }
 				}
 			});
@@ -1112,22 +1127,21 @@
 		// Kept as the old name so every existing caller still reads clearly.
 		function annotateGuide() { refreshGuide(); }
 
-		/* ---------- sub-navigation inside a long section (1.31.0) ----------
+		/* ---------- the section toolbar (1.31.0, rebuilt 1.38.0) ----------
 		 *
-		 * Thirty-eight animals is six or seven swipes of the deck with only a
-		 * counter for orientation. Three ways through, none of which replaces
-		 * the deck and none of which can hide a species:
+		 * Three hundred animals is fifty swipes of the deck with only a
+		 * counter for orientation. TWO controls now, on one row:
 		 *
-		 *  - CHIPS jump to a sub-group and double as a position indicator: the
-		 *    pressed chip follows the deck as it scrolls, so the row always
-		 *    says where you are as well as where you can go.
-		 *  - A NATIVE <select> goes straight to one species by name.
+		 *  - THE PICKER filters the deck to one category. It replaced a row
+		 *    of chips that scrolled to a sub-group and hid nothing, and a
+		 *    native <select> that went straight to one species by name.
 		 *  - A COMPACT toggle swaps photo cards for short rows.
 		 *
-		 * Nothing here FILTERS. That is deliberate: the 1.28.0 lesson was that
-		 * a filter nobody could see made seven winter species unreachable, and
-		 * a sub-group that hid the other five sixths of the section would be
-		 * the same mistake in a smaller box.
+		 * THE FILTER REVERSES THE 1.31.0 RULE, by the owner's instruction.
+		 * The 1.28.0 lesson behind that rule — a filter nobody can see made
+		 * seven winter species unreachable — is answered differently: this one
+		 * names what it is doing in its own label, every time, and the search
+		 * box overrides it so a species is never unreachable.
 		 */
 		function initBrowseNav(section) {
 			section.querySelectorAll('[data-dccwl-subnav]').forEach(function (nav) {
@@ -1246,6 +1260,15 @@
 						openPick(false);
 					});
 					nav.dccwlSyncPick = syncPick;
+					/* PEAK NOW BORROWS THIS ROW AND HIDES THE PILL. There are
+					 * no categories to offer across a filter that spans every
+					 * section, so what is left is the Compact switch, alone on
+					 * the row — Rob's words. The pill comes back the moment the
+					 * guest leaves that tab. */
+					nav.dccwlPeakMode = function (on) {
+						pick.hidden = !!on;
+						if (on) { openPick(false); }
+					};
 					syncPick();
 				}
 
@@ -1275,9 +1298,25 @@
 					if (window.DCCWL_Deck) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
 				}
 
+				/* Published so the row Peak Now borrows can drive the OTHER
+				 * sections' decks as well as its own. */
+				nav.dccwlApplyView = applyView;
+
 				if (toggle) {
 					toggle.addEventListener('click', function () {
-						applyView('compact' !== toggle.getAttribute('data-dccwl-view'));
+						var compact = 'compact' !== toggle.getAttribute('data-dccwl-view');
+						applyView(compact);
+						/* PEAK NOW SHOWS TWO OR THREE DECKS AT ONCE, so the one
+						 * switch on screen has to mean what it says for all of
+						 * them. Switching it on a single deck would leave the
+						 * others in photo cards under a control reading
+						 * "Photos", which is a control disagreeing with itself.
+						 */
+						if (guide.group === PEAK_TAB) {
+							section.querySelectorAll('[data-dccwl-subnav]').forEach(function (other) {
+								if (other !== nav && other.dccwlApplyView) { other.dccwlApplyView(compact); }
+							});
+						}
 					});
 				}
 

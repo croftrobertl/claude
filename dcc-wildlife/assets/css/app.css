@@ -512,18 +512,17 @@
 }
 .dccwl-deck-status {
 	color: var(--dccwl-text-muted);
-	/* ITEM 11 (1.37.0, CORRECTED 1.38.0): BODY size. "5–6 of 28" is the one
-	 * line telling a guest where they are in a 400-species deck, and it was
-	 * the smallest text on the row.
+	/* ITEM 11: 17.5px, WHICH IS WHAT ROB ASKED FOR AND WHAT LIVE SERVES.
 	 *
-	 * The declaration said --dccwl-fs-sm (0.875rem, 17.5px on the deployment
-	 * root) under a comment promising body size, which this plugin's own
-	 * token layer defines as --dccwl-fs-base (1.0625rem, 21.25px). A third
-	 * 1.37.0 edit that did not land as written — the same shape as the two
-	 * Rob found on live — and it is corrected rather than re-documented,
-	 * because the comment is his instruction and the declaration was not.
-	 * The duplicated font-weight on the old rule went with it. */
-	font-size: var(--dccwl-fs-base);
+	 * 1.38.0 briefly "corrected" this to --dccwl-fs-base (21.25px) because the
+	 * comment above it said "body size" and the declaration said
+	 * --dccwl-fs-sm. The comment was my paraphrase; his specification says
+	 * "pager counter 17.5px" and lists it among the items that are WORKING on
+	 * live and must not regress. The declaration was right and the prose was
+	 * wrong, so the prose is what changed. Measure against the instruction,
+	 * never against a previous summary of it. (The duplicated font-weight the
+	 * old rule carried is gone, which was the only real defect here.) */
+	font-size: var(--dccwl-fs-sm);
 	font-weight: var(--dccwl-fw-body);
 	margin: 0;
 	min-width: 6em;
