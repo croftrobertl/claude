@@ -251,17 +251,47 @@
 		parent.appendChild(p);
 	}
 
+	/*
+	 * A CLARITY READING, IN FEET, WITH ITS USUAL VALUE BESIDE IT (1.39.0).
+	 *
+	 * "Clarity: 3.6 ft (usual: 3.3 ft)". The feet come from the payload —
+	 * `ft` and `medianFt`, converted where the rest of this module's
+	 * arithmetic lives — because the Atlas reports some of the chain in
+	 * metres and some in feet, and a popup saying "1.1 m" beside a tile
+	 * saying "3.6 ft" is the same lake twice in two languages.
+	 *
+	 * A payload cached before 1.39.0 carries no `ft`, so the reading falls
+	 * back to the source's own value and unit rather than disappearing — the
+	 * same fallback `sourceShort` keeps in 1.35.1. An unrecognised unit lands
+	 * in the same place, deliberately: an unconvertible number is printed as
+	 * given, never guessed at.
+	 */
+	function clarityText(c, i18n) {
+		if (!c) { return ''; }
+		var feet = i18n.unitFeet || 'ft';
+		var out;
+		if (typeof c.ft === 'number') {
+			out = fmt(c.ft) + ' ' + feet;
+		} else if (typeof c.value === 'number') {
+			out = fmt(c.value) + (c.units ? ' ' + c.units : '');
+		} else {
+			return '';
+		}
+		if (typeof c.medianFt === 'number') {
+			out += ' (' + (i18n.usual || 'usual:') + ' ' + fmt(c.medianFt) + ' ' + feet + ')';
+		} else if (typeof c.median === 'number' && typeof c.ft !== 'number') {
+			out += ' (' + (i18n.usual || 'usual:') + ' ' + fmt(c.median) + (c.units ? ' ' + c.units : '') + ')';
+		}
+		return out;
+	}
+
 	function waterPopup(w, i18n) {
 		var box = el('div', 'dccwl-pop');
 		box.appendChild(el('h4', 'dccwl-pop-title', w.name));
 
 		if (w.clarity) {
-			var cl = fmt(w.clarity.value) + (w.clarity.units ? ' ' + w.clarity.units : '');
-			if (typeof w.clarity.median === 'number') {
-				cl += ' (' + (i18n.median || 'median') + ' ' + fmt(w.clarity.median) + ')';
-			}
-			line(box, i18n.lblClarity || 'Clarity:', cl);
-			line(box, (i18n.sampled || 'sampled') + ':', w.clarity.date || '');
+			line(box, i18n.lblClarity || 'Clarity:', clarityText(w.clarity, i18n));
+			line(box, (i18n.sampled || 'Sampled') + ':', w.clarity.date || '');
 		}
 
 		if (w.level) {
@@ -322,8 +352,9 @@
 				? tpl(i18n.levelAbove || '%s in above its monthly norm', inches)
 				: tpl(i18n.levelBelow || '%s in below its monthly norm', inches)) + (r.date ? ' — ' + r.date : ''));
 		} else if (typeof r.value === 'number') {
-			line(box, kindName, fmt(r.value) + (r.units ? ' ' + r.units : ''));
-			line(box, (i18n.sampled || 'sampled') + ':', r.date || '');
+			// The same reading a water's own popup shows, in the same units.
+			line(box, kindName, clarityText(r, i18n));
+			line(box, (i18n.sampled || 'Sampled') + ':', r.date || '');
 		} else {
 			box.appendChild(el('p', 'dccwl-pop-none', i18n.stationNone || 'No current reading from this station.'));
 		}

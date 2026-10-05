@@ -16,15 +16,17 @@ if (!browser) { console.log('no chromium'); process.exit(1); }
 const CONDITIONS = {
   enabled: true,
   facts: [
-    { label: 'Water level', key: 'level', value: 'about 2 in. below normal', tier: 'live',
+    { label: 'Water level', key: 'level', value: 'About 3 inches below normal for September',
+      short: '3 in. below normal', detail: 'for September', tier: 'live',
       group: 'primary', sourceName: 'Lake County Water Atlas', date: '2026-09-28',
       dateLabel: 'reading', datePrecision: 'day' },
-    { label: 'Water clarity', key: 'clarity', value: '3.6 ft', tier: 'published',
+    { label: 'Water clarity', key: 'clarity', value: '2.95 ft — clearer than usual here',
+      short: '2.95 ft', detail: 'clearer than usual here', tier: 'published',
       group: 'primary', sourceName: 'Water Atlas, sampled September 2026', date: '2026-09-02',
       dateLabel: 'sampled', datePrecision: 'day' },
-    { label: 'Wind', key: 'wind', value: 'NE 5 to 10 mph', tier: 'live', group: 'primary',
-      sourceName: 'NWS forecast', date: '2026-10-04T12:00:00Z', dateLabel: 'forecast',
-      datePrecision: 'minute' },
+    { label: 'Wind', key: 'wind', value: 'ESE 0 to 5 mph', short: '', detail: '', tier: 'live',
+      group: 'primary', sourceName: 'NWS forecast', date: '2026-10-04T12:00:00Z',
+      dateLabel: 'forecast', datePrecision: 'minute' },
   ],
   wind: { dir: 'NE', speed: '5 to 10 mph', source: 'National Weather Service forecast',
           sourceShort: 'NWS forecast' },
@@ -33,7 +35,7 @@ const CONDITIONS = {
 const MAP_DATA = {
   enabled: true,
   waters: [
-    { id: '1', name: 'Lake Dora', lat: 28.8003, lon: -81.6706, clarity: { value: 1.1, units: 'm', median: 1.0, ratio: 1.1, date: '2026-08-01', age: 20, station: 'Dora station', url: '' }, level: null, depthMap: null, ageDays: 20 },
+    { id: '1', name: 'Lake Dora', lat: 28.8003, lon: -81.6706, clarity: { value: 1.1, units: 'm', ft: 3.61, medianFt: 3.28, median: 1.0, ratio: 1.1, date: '2026-08-01', age: 20, station: 'Dora station', url: '' }, level: null, depthMap: null, ageDays: 20 },
     { id: '2', name: 'Lake Harris', lat: 28.7419, lon: -81.8069, clarity: null, level: { value: 62.5, units: 'ft', norm: 62.0, inches: 6, datum: 'NAVD88' }, depthMap: null, ageDays: 40 },
     { id: '3', name: 'Lake Eustis', lat: 28.8489, lon: -81.7317, clarity: null, level: null, depthMap: null, ageDays: null },
     { id: '4', name: 'Lake Griffin', lat: 28.8797, lon: -81.8836, clarity: null, level: null, depthMap: null, ageDays: null },
@@ -90,7 +92,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
 
   /* 1 — the Water Map tab, with its three stat tiles. */
   let page = await waterPage(w, touch, false);
-  await shot(page, `Wildlife - 1.38.1 Water Map tab ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.0 Water Map tab ${tag}.png`,
     await page.$('[data-dccwl-water-root]'));
   await page.close();
 
@@ -104,7 +106,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     await page.waitForTimeout(400);
     if (await page.$('.leaflet-popup')) { break; }
   }
-  await shot(page, `Wildlife - 1.38.1 Map popup over the controls ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.0 Map popup over the controls ${tag}.png`,
     await page.$('.dccwl-sheet-body-map'));
   await page.close();
 
@@ -115,7 +117,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
   await page.waitForTimeout(900);
   const panel = await page.$('.dccwl-panel-species') || await page.$('.dccwl-guide');
-  await shot(page, `Wildlife - 1.38.1 Toolbar closed ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.0 Toolbar closed ${tag}.png`, panel);
 
   const vis = async (sel) => {
     for (const el of await page.$$(sel)) { if (await el.isVisible()) { return el; } }
@@ -124,7 +126,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const pill = await vis('[data-dccwl-subnav] [data-dccwl-pick-btn]');
   if (touch) { await pill.tap(); } else { await pill.click(); }
   await page.waitForTimeout(300);
-  await shot(page, `Wildlife - 1.38.1 Toolbar open ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.0 Toolbar open ${tag}.png`, panel);
 
   // Choose a category by tap, then photograph the row with the pill labelled.
   const birds = await page.$('.dccwl-pick-opt[data-dccwl-browse="birds"]');
@@ -135,7 +137,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const tab = await vis('.dccwl-tab:not([aria-pressed="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
-  await shot(page, `Wildlife - 1.38.1 Selected after a tap ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.0 Selected after a tap ${tag}.png`,
     await page.$('.dccwl-tabs'));
 
   /* Peak Now: no pill, the Compact switch alone on the row (1.38.1). */
@@ -144,7 +146,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     if (b) { b.click(); }
   });
   await page.waitForTimeout(700);
-  await shot(page, `Wildlife - 1.38.1 Peak Now toolbar ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.0 Peak Now toolbar ${tag}.png`, panel);
   await page.close();
 }
 

@@ -57,7 +57,23 @@ final class Water_Fact {
 		private string $date_label,
 		private string $group,
 		private string $date_precision,
-		private string $key = ''
+		private string $key = '',
+		/*
+		 * 1.39.0 — the SHORT reading and its qualifier, as separate strings.
+		 *
+		 * The Map tab's tiles print the reading large and the qualifier small
+		 * beneath it ("3 in. below normal" over "for September"). Splitting a
+		 * composed sentence in the browser would mean the client guessing at
+		 * this codebase's own formatting, which is the mistake the wind
+		 * parts avoided in 1.35.0 — so the builder that COMPOSES the sentence
+		 * states its parts here.
+		 *
+		 * Presentation metadata, exactly like `key`: optional, never a gate,
+		 * and unable to admit an unsourced fact. A Fact with neither still
+		 * renders — the tile falls back to `value`.
+		 */
+		private string $short = '',
+		private string $detail = ''
 	) {}
 
 	/**
@@ -65,7 +81,8 @@ final class Water_Fact {
 	 * cannot be attributed.
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
-	 * Optional: source_url, note, date_label, group, date_precision, key.
+	 * Optional: source_url, note, date_label, group, date_precision, key,
+	 * short, detail.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
@@ -102,6 +119,8 @@ final class Water_Fact {
 		 */
 		$key    = strtolower( trim( (string) ( $raw['key'] ?? '' ) ) );
 		$key    = (string) preg_replace( '/[^a-z_]/', '', $key );
+		$short  = trim( (string) ( $raw['short'] ?? '' ) );
+		$detail = trim( (string) ( $raw['detail'] ?? '' ) );
 		$dprec  = trim( (string) ( $raw['date_precision'] ?? '' ) );
 		if ( ! in_array( $dprec, [ 'day', 'minute' ], true ) ) {
 			$dprec = '';
@@ -128,7 +147,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key, $short, $detail );
 	}
 
 	/**
@@ -171,6 +190,8 @@ final class Water_Fact {
 			'dateLabel'  => $this->date_label,
 			'group'      => $this->group,
 			'key'        => $this->key,
+			'short'      => $this->short,
+			'detail'     => $this->detail,
 			'datePrecision' => $this->date_precision,
 		];
 	}

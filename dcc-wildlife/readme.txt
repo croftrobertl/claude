@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.38.1
+Stable tag: 1.39.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,20 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.39.0 =
+* **Map popups read in feet.** A popup said "1.1 m" for the same lake whose
+  tile said "3.6 ft". Every depth and clarity reading on the map is now in
+  feet, with the long-run figure named beside it — "3.6 ft (usual: 3.3 ft)" —
+  and the row labels capitalised. A reading in a unit the plugin does not
+  recognise is printed as the source published it, never converted on a guess.
+* **The Map tab lines up.** The intro sentence and the "Open the chain map"
+  button are centred, like the three tiles above them.
+* **The tiles read at a glance.** The reading is the big line ("3 in. below
+  normal"), the qualifier sits small underneath ("for September"), and the
+  source stays beneath that.
+* Fixed: the "About the water…" fold showed two arrows — the browser's own and
+  ours — wherever it appeared outside the main wildlife widget.
 
 = 1.38.1 =
 * **The category counts were wrong on the Safety tab.** It offered "All 49"

@@ -261,8 +261,19 @@
 			var li = wrap.querySelector('[data-dccwl-stat="' + f.key + '"]');
 			if (!li) { return; }
 			var v = li.querySelector('[data-dccwl-stat-value]');
+			var det = li.querySelector('[data-dccwl-stat-detail]');
 			var sub = li.querySelector('[data-dccwl-stat-sub]');
-			if (v) { v.textContent = f.value; }
+			/*
+			 * THE SHORT READING LARGE, ITS QUALIFIER SMALL (1.39.0).
+			 *
+			 * Both parts come from the Fact, stated by the builder that
+			 * composed the sentence — this client never splits one. A fact
+			 * with no `short` (an owner-entered almanac row, or a payload
+			 * cached before 1.39.0) falls back to the whole value, which is
+			 * what the tile has always shown.
+			 */
+			if (v) { v.textContent = f.short || f.value; }
+			if (det) { det.textContent = (f.short && f.detail) ? f.detail : ''; }
 			if (sub) { sub.textContent = f.sourceName; }
 			li.hidden = false;
 			shown += 1;

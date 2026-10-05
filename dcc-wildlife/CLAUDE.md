@@ -2984,3 +2984,70 @@ wording, the OpenStreetMap show-then-collapse rule proved with a real tap), and
 And one more of the repository's oldest traps, hit again while writing that
 first lesson: **a block comment containing a glob with a star-slash in it ends
 the comment early.** Reworded, as in 1.26.0.
+
+### 26. 1.39.0 — feet, two-line tiles, and a rule in the wrong stylesheet
+
+**EVERY MAP POPUP READS IN FEET, CONVERTED ON THE SERVER.** A popup said
+"1.1 m (median 1)" for the lake whose Map tile said "3.6 ft" — the same water,
+twice, in two languages. The Atlas publishes Secchi in whatever unit the
+station uses, so:
+
+- `Water_Live::to_feet()` is the ONE conversion, beside the rest of this
+  module's arithmetic (the level deviation has always been computed in PHP).
+  The map payload carries `ft` and `medianFt` alongside the source's own
+  `value` and `units`, which are left exactly as published.
+- **An unrecognised unit converts to nothing.** `to_feet()` knows metres and
+  feet — the two the Atlas has ever returned — and returns null for anything
+  else; the client then prints the reading as the source gave it. A guessed
+  unit is a wrong number with a confident label, which is the one thing this
+  module refuses.
+- **A reading already in feet comes through unchanged**, to two decimals. The
+  tile prints the Atlas's own "2.95 ft", and a popup rounding that to "3 ft"
+  beside it would be the same mismatch in a smaller font.
+- A payload cached before this release has no `ft`, so the popup falls back to
+  the published value and unit rather than going blank — the fallback
+  `sourceShort` has kept since 1.35.1.
+- The median is NAMED now ("usual: 3.3 ft"), not labelled "median", and the
+  row labels are capitalised ("Sampled:"). The date format is untouched.
+
+**A FACT STATES ITS OWN SHORT READING AND QUALIFIER.** The Map tile prints the
+reading large and the qualifier small: "3 in. below normal" over "for
+September". `Water_Fact` gained optional `short` and `detail`, set by the
+builder that COMPOSES the sentence — presentation metadata exactly like `key`,
+never a gate, and unable to admit an unsourced fact (the suite asserts that
+directly). **The browser never splits a composed sentence**: that would be the
+client guessing at this codebase's own wording, which is what the wind parts
+avoided in 1.35.0. A fact with no parts — an owner-entered almanac row — falls
+back to the whole value, which is what the tile always showed.
+
+The Now card is untouched and still prints the full sentence. `:empty` on the
+qualifier line matters: the wind forecast has no qualifier and must not hold a
+blank line open.
+
+**THE DIRECTOR'S QUESTION, ANSWERED BY DRIVING THE CASE HE COULD NOT.** His
+browser is headless, where Leaflet's autoPan never runs, so "does a popup near
+an edge pan fully into view?" was untested. `ui-live.mjs` now pans the map
+until a water sits 30px below the canvas top, taps its marker, **waits for the
+pan to stop moving** rather than guessing a duration, and then measures.
+Result at both widths: **12px clear on the top and left, title on screen and
+tappable** — the autoPanPadding doing exactly what it was set to do.
+
+**THE DOUBLE DISCLOSURE MARKER WAS A RULE IN THE WRONG STYLESHEET.** The
+standalone water widget's "About the water…" fold showed the browser's ▶ AND
+our ⌄. The suppression (`list-style: none`, `::-webkit-details-marker`,
+`::marker`) lived in **widget.css**, which that widget does not enqueue — it
+loads app.css and water.css. **A rule in the wrong stylesheet is invisible on
+the surface that loads the other one**, and this is the second defect of that
+exact shape (the first was the deck layout scoped to `.dccwl-tiles` in
+1.23.0). It lives in app.css now, the layer both stylesheets depend on, scoped
+to `.dccwl-fullguide-summary` rather than to `summary` so a fold the THEME
+renders keeps its own marker.
+
+**`tools/tests/test-water-parts.php` IS THE NEW SUITE**, and it drives the REAL
+parsers from stubbed Atlas payloads rather than hand-built Facts — the 1.33.1
+rule that a suite must exercise the path production takes. Two fixture notes
+worth keeping: a station component with **no coordinates is deliberately not
+pinned**, so a station assertion needs them or it is testing the fixture; and
+a Secchi reading within its median's silent band produces **no** comparison,
+because "only speak when it matters" is a rule of this module — a fixture at
+1.10 against 1.00 would have asserted that the qualifier was missing.

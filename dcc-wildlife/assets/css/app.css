@@ -529,6 +529,25 @@
 	text-align: center;
 }
 
+/* ======================================================================
+ * ONE DISCLOSURE MARKER PER FOLD (1.39.0 — the Director's bug).
+ *
+ * The standalone water widget's "About the water…" fold showed TWO: the
+ * browser's own ▶ triangle AND our ⌄ chevron. The rules that suppress the
+ * native marker lived in widget.css, which that widget does not enqueue —
+ * it loads app.css and water.css only. A rule in the wrong stylesheet is
+ * invisible on the surface that happens to load the other one.
+ *
+ * So the suppression lives HERE, in the layer both stylesheets depend on,
+ * and it is scoped to our own component rather than to `summary`: a fold the
+ * THEME renders elsewhere on the page keeps its marker.
+ * ====================================================================== */
+.dccwl-fullguide-summary {
+	list-style: none;
+}
+.dccwl-fullguide-summary::-webkit-details-marker { display: none; }
+.dccwl-fullguide-summary::marker { content: ""; }
+
 /* --- badges + chips ------------------------------------------------- */
 
 .dccwl-app .dccwl-badge {

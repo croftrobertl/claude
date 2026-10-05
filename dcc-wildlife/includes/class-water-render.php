@@ -279,6 +279,11 @@ final class Water_Render {
 								<button type="button" class="dccwl-water-stat-btn" data-dccwl-stat-colour="<?php echo esc_attr( $stat[1] ); ?>">
 									<span class="dccwl-water-stat-label"><?php echo esc_html( $stat[0] ); ?></span>
 									<span class="dccwl-water-stat-value" data-dccwl-stat-value></span>
+									<?php /* 1.39.0: the qualifier, small, under the reading —
+									         "for September", "clearer than usual here". Empty
+									         for a reading that has none, and `:empty` keeps it
+									         from holding a line open. */ ?>
+									<span class="dccwl-water-stat-detail" data-dccwl-stat-detail></span>
 									<span class="dccwl-water-stat-sub" data-dccwl-stat-sub></span>
 								</button>
 							</li>
@@ -847,7 +852,13 @@ final class Water_Render {
 						'noReading'   => __( 'no recent reading', 'dcc-wildlife' ),
 						'staleLevel'  => __( 'level reading is old', 'dcc-wildlife' ),
 						'median'      => __( 'median', 'dcc-wildlife' ),
-						'sampled'     => __( 'sampled', 'dcc-wildlife' ),
+						/* 1.39.0: capitalised, because it begins a label —
+						 * "Sampled: 2026-08-01", like every other row. */
+						'sampled'     => __( 'Sampled', 'dcc-wildlife' ),
+						/* The long-run median, named in plain words beside a
+						 * reading: "3.6 ft (usual: 3.3 ft)". */
+						'usual'       => __( 'usual:', 'dcc-wildlife' ),
+						'unitFeet'    => _x( 'ft', 'feet, abbreviated', 'dcc-wildlife' ),
 
 						// Popup field labels (1.8.0, finding 2 — previously
 						// hardcoded English inside water-map.js).

@@ -504,9 +504,27 @@ final class Water_Live {
 				$med  = $hist['medValue'] ?? null;
 				$date = self::comp_str( $sec, 'sampleDate' );
 				$age  = self::comp_age_days( $date );
+				$sec_units = self::comp_str( $sec, 'units' );
 				$entry['clarity'] = [
 					'value'  => (float) $sec['value'],
-					'units'  => self::comp_str( $sec, 'units' ),
+					'units'  => $sec_units,
+					/*
+					 * FEET, CONVERTED HERE AND NOWHERE ELSE (1.39.0).
+					 *
+					 * The Atlas reports Secchi in whatever unit the station
+					 * uses — metres for some of the chain, feet for others —
+					 * so a popup printed "1.1 m" beside a tile reading
+					 * "3.6 ft" for the same lake. The conversion is arithmetic
+					 * on the source's own number, the same kind the level
+					 * deviation already does, and it belongs on this side with
+					 * the rest of the arithmetic rather than in the browser.
+					 *
+					 * Null when the unit is not one we recognise: an unknown
+					 * unit is never guessed at, and the client then prints the
+					 * reading as the source gave it.
+					 */
+					'ft'       => self::to_feet( (float) $sec['value'], $sec_units ),
+					'medianFt' => is_numeric( $med ) ? self::to_feet( (float) $med, $sec_units ) : null,
 					'median' => is_numeric( $med ) ? (float) $med : null,
 					'ratio'  => ( is_numeric( $med ) && (float) $med > 0 ) ? (float) $sec['value'] / (float) $med : null,
 					'date'   => $date,
@@ -1162,11 +1180,31 @@ final class Water_Live {
 			self::por_suffix( $avg )
 		);
 
+		/*
+		 * THE PARTS ARE STATED HERE, WHERE THE SENTENCE IS COMPOSED (1.39.0).
+		 * The Map tab prints the reading large and its qualifier small; the
+		 * Now card still prints the whole sentence, unchanged. Splitting the
+		 * sentence in the browser would be the client guessing at this
+		 * codebase's own wording.
+		 */
+		$whole = (int) round( abs( $inches ) );
+		if ( $whole < 1 ) {
+			$whole = 1;
+		}
+		$short = $inches > 0
+			/* translators: %d: whole inches. The Map tile's large line. */
+			? sprintf( __( '%d in. above normal', 'dcc-wildlife' ), $whole )
+			/* translators: %d: whole inches. The Map tile's large line. */
+			: sprintf( __( '%d in. below normal', 'dcc-wildlife' ), $whole );
+
 		return [
 			[
 				'label'       => __( 'Water level', 'dcc-wildlife' ),
 				/* 1.34.0: the machine name the Map tab's stat tiles read. */
 				'key'         => 'level',
+				'short'       => $short,
+				/* translators: %s: month name, e.g. "for September". */
+				'detail'      => '' !== $month ? sprintf( __( 'for %s', 'dcc-wildlife' ), $month ) : '',
 				'value'       => self::describe_deviation(
 					$inches,
 					'' !== $month
@@ -1209,6 +1247,26 @@ final class Water_Live {
 			? sprintf( _n( 'About %1$d inch above %2$s', 'About %1$d inches above %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label )
 			/* translators: 1: whole inches, 2: e.g. "normal for August". */
 			: sprintf( _n( 'About %1$d inch below %2$s', 'About %1$d inches below %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label );
+	}
+
+	/**
+	 * A measure in FEET, or null when the unit is not one we recognise.
+	 *
+	 * Metres and feet are the two the Atlas has ever returned for Secchi; a
+	 * third would be a guess, and this module does not guess. Two decimals,
+	 * because a value already in feet must come out of here unchanged — the
+	 * Map tile prints the Atlas's own "2.95 ft" and a popup rounding that to
+	 * "3 ft" beside it is the mismatch this exists to remove.
+	 */
+	private static function to_feet( float $value, string $units ): ?float {
+		$u = strtolower( trim( $units ) );
+		if ( 'ft' === $u || 'feet' === $u || 'foot' === $u ) {
+			return round( $value, 2 );
+		}
+		if ( 'm' === $u || 'meter' === $u || 'meters' === $u || 'metre' === $u || 'metres' === $u ) {
+			return round( $value * 3.280839895, 2 );
+		}
+		return null;
 	}
 
 	/**
@@ -1304,11 +1362,18 @@ final class Water_Live {
 		$med  = $hist['medValue'] ?? null;
 		$note = '';
 
+		/* The measure alone is the Map tile's large line; the comparison is
+		 * its small one (1.39.0). Same two strings, said once each. */
+		$short  = $value;
+		$detail = '';
+
 		if ( is_numeric( $med ) && (float) $med > 0 ) {
 			$ratio = $current / (float) $med;
 			if ( $ratio >= self::SECCHI_CLEARER ) {
+				$detail = __( 'clearer than usual here', 'dcc-wildlife' );
 				$value .= __( ' — clearer than usual here', 'dcc-wildlife' );
 			} elseif ( $ratio <= self::SECCHI_MURKIER ) {
+				$detail = __( 'murkier than usual here', 'dcc-wildlife' );
 				$value .= __( ' — murkier than usual here', 'dcc-wildlife' );
 			}
 
@@ -1334,6 +1399,8 @@ final class Water_Live {
 				'label'       => __( 'Water clarity (Secchi depth)', 'dcc-wildlife' ),
 				/* 1.34.0: the machine name the Map tab's stat tiles read. */
 				'key'         => 'clarity',
+				'short'       => $short,
+				'detail'      => $detail,
 				'value'       => $value,
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),

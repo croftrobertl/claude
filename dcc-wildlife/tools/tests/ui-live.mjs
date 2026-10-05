@@ -509,13 +509,19 @@ section('A2 — the Map stat tiles, under the host kit');
 const CONDITIONS = {
   enabled: true,
   facts: [
-    { label: 'Water level', key: 'level', value: 'about 2 in. below normal', tier: 'live',
+    /* Shaped exactly as Water_Live now builds them: the whole sentence in
+     * `value` for the Now card, and the parts the Map tile prints on two
+     * lines. The wind forecast has no qualifier and carries none — a tile
+     * must not hold a blank line open for it. */
+    { label: 'Water level', key: 'level', value: 'About 3 inches below normal for September',
+      short: '3 in. below normal', detail: 'for September', tier: 'live',
       group: 'primary', sourceName: 'Lake County Water Atlas',
       date: '2026-09-28', dateLabel: 'reading', datePrecision: 'day' },
-    { label: 'Water clarity', key: 'clarity', value: '3.6 ft', tier: 'published',
+    { label: 'Water clarity', key: 'clarity', value: '2.95 ft — clearer than usual here',
+      short: '2.95 ft', detail: 'clearer than usual here', tier: 'published',
       group: 'primary', sourceName: 'Water Atlas, sampled September 2026',
       date: '2026-09-02', dateLabel: 'sampled', datePrecision: 'day' },
-    { label: 'Wind', key: 'wind', value: 'NE 5 to 10 mph', tier: 'live',
+    { label: 'Wind', key: 'wind', value: 'ESE 0 to 5 mph', short: '', detail: '', tier: 'live',
       group: 'primary', sourceName: 'NWS forecast',
       date: '2026-10-04T12:00:00Z', dateLabel: 'forecast', datePrecision: 'minute' },
   ],
@@ -590,7 +596,16 @@ for (const [w, touch, cols] of [[390, true, 1], [767, true, 1], [768, false, 3],
       columns: Object.keys(lefts).length,
       label: read('.dccwl-water-stat-label'),
       value: read('.dccwl-water-stat-value'),
+      detail: read('.dccwl-water-stat-detail'),
       sub: read('.dccwl-water-stat-sub'),
+      // every tile's three lines, in order, so the split can be read at once
+      lines: vis.map((li) => ({
+        key: li.getAttribute('data-dccwl-stat'),
+        value: li.querySelector('.dccwl-water-stat-value').textContent.trim(),
+        detail: li.querySelector('.dccwl-water-stat-detail').textContent.trim(),
+        detailShown: li.querySelector('.dccwl-water-stat-detail').getClientRects().length > 0,
+        sub: li.querySelector('.dccwl-water-stat-sub').textContent.trim(),
+      })),
       pageW: document.documentElement.scrollWidth,
     };
   });
@@ -607,6 +622,73 @@ for (const [w, touch, cols] of [[390, true, 1], [767, true, 1], [768, false, 3],
   checkSame(13, tiles.sub.px, `${w}px: the source line is 13px`);
   checkSame('400', tiles.sub.w, `${w}px: at body weight, against a 700 root`);
   checkAtLeast(w, tiles.pageW <= w ? w : 0, `${w}px: no horizontal overflow`);
+
+  /* ITEM 3 (1.39.0) — the short reading large, its qualifier small beneath. */
+  const byKey = {};
+  tiles.lines.forEach((l) => { byKey[l.key] = l; });
+  checkSame('3 in. below normal', byKey.level.value, `${w}px: the level tile reads the short reading`);
+  checkSame('for September', byKey.level.detail, `${w}px: with its qualifier on the small line`);
+  checkSame('2.95 ft', byKey.clarity.value, `${w}px: the clarity tile reads the measure alone`);
+  checkSame('clearer than usual here', byKey.clarity.detail, `${w}px: with the comparison beneath`);
+  checkSame('ESE 0 to 5 mph', byKey.wind.value, `${w}px: the wind tile reads the forecast whole`);
+  checkSame('', byKey.wind.detail, `${w}px: and carries no qualifier`);
+  checkSame(false, byKey.wind.detailShown,
+    `${w}px: so its empty line holds no space open`);
+  check(tiles.lines.every((l) => l.sub.length > 0),
+    `${w}px: every tile still names its source underneath`);
+  checkSame(21.25, tiles.value.px, `${w}px: the big line is still 21.25px`);
+  checkSame(13, tiles.detail.px, `${w}px: the qualifier reads at 13px`);
+  checkSame('400', tiles.detail.w, `${w}px: at body weight`);
+
+  /* ITEM 2 — the intro line and the button centre on the tiles. */
+  const centred = await page.evaluate(() => {
+    const wrap = document.querySelector('.dccwl-water-stats');
+    const intro = document.querySelector('.dccwl-map-intro');
+    const btn = document.querySelector('[data-dccwl-map-open]');
+    const mid = (el) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
+    return {
+      introAlign: getComputedStyle(intro).textAlign,
+      tilesMid: Math.round(mid(wrap)),
+      introMid: Math.round(mid(intro)),
+      btnMid: Math.round(mid(btn)),
+      btnWidth: Math.round(btn.getBoundingClientRect().width),
+      wrapWidth: Math.round(wrap.getBoundingClientRect().width),
+    };
+  });
+  note(`${w}px centring ${JSON.stringify(centred)}`);
+  checkSame('center', centred.introAlign, `${w}px: the intro line is centred`);
+  check(Math.abs(centred.btnMid - centred.tilesMid) <= 2,
+    `${w}px: and "Open the chain map" sits on the tiles' centre line`,
+    `${centred.btnMid} against ${centred.tilesMid}`);
+  check(centred.btnWidth < centred.wrapWidth,
+    `${w}px: the button is centred, not stretched`, `${centred.btnWidth} of ${centred.wrapWidth}`);
+
+  /* THE DIRECTOR'S BUG — one disclosure marker, not two. Asked on the
+   * STANDALONE water widget, which loads app.css and water.css and NOT
+   * widget.css: that is the surface the rule was missing on. */
+  const fold = await page.evaluate(() => {
+    const sums = Array.from(document.querySelectorAll('.dccwl-fullguide-summary'));
+    const read = (sum) => {
+      const cs = getComputedStyle(sum);
+      const marker = getComputedStyle(sum, '::marker');
+      return {
+        label: (sum.getAttribute('aria-label') || sum.textContent).replace(/\s+/g, ' ').trim().slice(0, 28),
+        listStyle: cs.listStyleType,
+        markerContent: marker ? marker.content : null,
+        chevrons: sum.querySelectorAll('.dccwl-fullguide-chev').length,
+      };
+    };
+    const about = sums.find((x) => /About the water/i.test(x.getAttribute('aria-label') || ''));
+    return { count: sums.length, all: sums.map(read), about: about ? read(about) : null };
+  });
+  note(`${w}px folds ${JSON.stringify(fold)}`);
+  checkAtLeast(1, fold.count, 'the standalone widget renders its folds');
+  check(fold.all.every((f) => 'none' === f.listStyle),
+    `${w}px: every fold suppresses the native marker`, JSON.stringify(fold.all.map((f) => f.listStyle)));
+  check(fold.all.every((f) => '""' === f.markerContent || 'none' === f.markerContent),
+    `${w}px: and its ::marker draws nothing`, JSON.stringify(fold.all.map((f) => f.markerContent)));
+  check(!!fold.about, `${w}px: the About fold is on the page`);
+  checkSame(1, fold.about.chevrons, `${w}px: with exactly one chevron — ours, and no browser triangle`);
 
   const split = await page.evaluate(SPLIT_PROBE);
   checkSame([], split, `${w}px: no word is broken mid-word`, split.join(', '));
@@ -652,7 +734,7 @@ section('A3 — the map popup is above every control, inside the map, and scroll
 const MAP_DATA = {
   enabled: true,
   waters: [
-    { id: '1', name: 'Lake Dora', lat: 28.8003, lon: -81.6706, clarity: { value: 1.1, units: 'm', median: 1.0, ratio: 1.1, date: '2026-08-01', age: 20, station: 'Dora station', url: '' }, level: null, depthMap: null, ageDays: 20 },
+    { id: '1', name: 'Lake Dora', lat: 28.8003, lon: -81.6706, clarity: { value: 1.1, units: 'm', ft: 3.61, medianFt: 3.28, median: 1.0, ratio: 1.1, date: '2026-08-01', age: 20, station: 'Dora station', url: '' }, level: null, depthMap: null, ageDays: 20 },
     { id: '2', name: 'Lake Harris', lat: 28.7419, lon: -81.8069, clarity: null, level: { value: 62.5, units: 'ft', norm: 62.0, inches: 6, datum: 'NAVD88' }, depthMap: null, ageDays: 40 },
     { id: '3', name: 'Lake Eustis', lat: 28.8489, lon: -81.7317, clarity: null, level: null, depthMap: null, ageDays: null },
     { id: '4', name: 'Lake Griffin', lat: 28.8797, lon: -81.8836, clarity: null, level: null, depthMap: null, ageDays: null },
@@ -691,6 +773,17 @@ async function openChainMap(width, height, touch) {
     body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
   }));
   await page.addScriptTag({ content: asset('assets/vendor/leaflet/leaflet.js') });
+  /* Wrap the LIBRARY, not the plugin, so the suite can pan the map into the
+   * state the Director could not reach — his test browser is headless, where
+   * Leaflet's autoPan never runs. */
+  await page.evaluate(() => {
+    const orig = window.L.map;
+    window.L.map = function (...args) {
+      const m = orig.apply(this, args);
+      (window.__maps = window.__maps || []).push(m);
+      return m;
+    };
+  });
   await page.addScriptTag({ content: asset('assets/js/water-map.js') });
   await page.evaluate((data) => {
     window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
@@ -769,6 +862,103 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
     `${label}: and is capped to the map minus its margins`, `${probe.maxH} of ${probe.canvasH}`);
   check(probe.canvasFlag && probe.bodyFlag,
     `${label}: our own chrome stands down while the popup is open`);
+
+  /* ITEM 1 (1.39.0) — the popup reads in FEET, with the median named. */
+  const feet = await page.evaluate(() => {
+    const t = document.querySelector('.leaflet-popup-content').textContent.replace(/\s+/g, ' ');
+    return t.trim();
+  });
+  note(`${label} popup text: ${feet}`);
+  if (/Clarity/.test(feet)) {
+    check(/Clarity:\s*3\.61 ft/.test(feet), `${label}: clarity reads in feet`, feet);
+    check(/\(usual:\s*3\.28 ft\)/.test(feet), `${label}: with the usual value named beside it`, feet);
+    check(!/median/i.test(feet), `${label}: "median" is gone from the popup`, feet);
+    check(!/\b1\.1 m\b/.test(feet), `${label}: and so is the metres reading`, feet);
+  }
+  check(/Sampled:/.test(feet), `${label}: the date label is capitalised`, feet);
+  check(!/ sampled:/.test(feet), `${label}: with no lower-case copy left`, feet);
+
+  /* THE DIRECTOR'S CHECK — a popup opened near an EDGE. His headless browser
+   * never ran Leaflet's autoPan, so this drives the case he could not: the
+   * map is panned until the chosen water sits ~30px below the top of the
+   * canvas, its marker is tapped, and the margins are measured only AFTER
+   * the pan has stopped moving. */
+  await page.evaluate(() => { document.querySelector('.leaflet-popup-close-button').click(); });
+  await page.waitForTimeout(300);
+
+  const edge = await page.evaluate(async () => {
+    const map = (window.__maps || [])[0];
+    const canvas = document.querySelector('.dccwl-map-canvas');
+    if (!map) { return { skipped: 'no map handle' }; }
+    const box = canvas.getBoundingClientRect();
+
+    // Put a marker near the top edge: centre on it, then pan the view down.
+    const target = [28.8003, -81.6706];
+    map.setView(target, map.getZoom(), { animate: false });
+    map.panBy([0, Math.round(box.height / 2) - 30], { animate: false });
+    await new Promise((r) => setTimeout(r, 300));
+
+    const pt = map.latLngToContainerPoint(target);
+    const before = { x: Math.round(pt.x), y: Math.round(pt.y) };
+
+    // Tap the marker nearest that point.
+    const marks = Array.from(canvas.querySelectorAll('.leaflet-interactive'));
+    let best = null;
+    let bestD = Infinity;
+    marks.forEach((m) => {
+      const r = m.getBoundingClientRect();
+      const d = Math.hypot((r.left + r.width / 2) - (box.left + pt.x),
+        (r.top + r.height / 2) - (box.top + pt.y));
+      if (d < bestD) { bestD = d; best = m; }
+    });
+    if (!best) { return { skipped: 'no marker' }; }
+    best.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+
+    // WAIT FOR THE PAN TO STOP, then measure. Leaflet's autoPan is animated;
+    // a fixed delay would measure a popup still in flight.
+    let last = null;
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      const pop = document.querySelector('.leaflet-popup');
+      if (!pop) { continue; }
+      const r = pop.getBoundingClientRect();
+      const key = [Math.round(r.top), Math.round(r.left)].join(',');
+      if (key === last) { break; }
+      last = key;
+    }
+    const pop = document.querySelector('.leaflet-popup');
+    if (!pop) { return { skipped: 'no popup' }; }
+    const cr = canvas.getBoundingClientRect();
+    const pr = pop.getBoundingClientRect();
+    const content = pop.querySelector('.leaflet-popup-content');
+    const title = content.querySelector('.dccwl-pop-title') || content.firstElementChild;
+    const tr = title.getBoundingClientRect();
+    const owns = (x, y) => {
+      const el = document.elementFromPoint(Math.round(x), Math.round(y));
+      return !!(el && el.closest('.leaflet-popup'));
+    };
+    return {
+      markerStartedAt: before,
+      left: Math.round(pr.left - cr.left), right: Math.round(cr.right - pr.right),
+      top: Math.round(pr.top - cr.top), bottom: Math.round(cr.bottom - pr.bottom),
+      titleOwned: owns(tr.left + tr.width / 2, tr.top + tr.height / 2),
+      titleText: title.textContent.trim(),
+    };
+  });
+  note(`${label} edge popup ${JSON.stringify(edge)}`);
+  if (!edge.skipped) {
+    check(edge.markerStartedAt.y < 80,
+      `${label}: the marker really was near the top edge before the tap`,
+      JSON.stringify(edge.markerStartedAt));
+    checkAtLeast(12, edge.top, `${label}: after the pan, the popup clears the top by ≥12px`);
+    checkAtLeast(12, edge.left, `${label}: the left edge`);
+    checkAtLeast(12, edge.right, `${label}: the right edge`);
+    checkAtLeast(12, edge.bottom, `${label}: and the bottom`);
+    check(edge.titleOwned, `${label}: and its TITLE is on screen and tappable`, edge.titleText);
+  } else {
+    note(`${label}: edge case skipped — ${edge.skipped}`);
+    check(false, `${label}: the edge case ran`, edge.skipped);
+  }
 
   /* The title row stays visible when the content is scrolled — a long popup
    * must not scroll its own heading away. */

@@ -985,6 +985,19 @@
 	font-weight: var(--dccwl-fw-label);
 	line-height: 1.25;
 }
+/* ITEM 3 (1.39.0) — the qualifier, small, between the reading and its source.
+ * Same size and weight as the source line, so the tile reads as one large
+ * number over two quiet lines. `:empty` matters: a reading with no qualifier
+ * (the wind forecast has none) must not hold a blank line open. */
+.dccwl-water .dccwl-water-stat-detail {
+	color: var(--dccwl-text-muted);
+	display: block;
+	font-size: 0.65rem;
+	font-weight: var(--dccwl-fw-body);
+	line-height: 1.3;
+}
+.dccwl-water .dccwl-water-stat-detail:empty { display: none; }
+
 .dccwl-water .dccwl-water-stat-sub {
 	color: var(--dccwl-text-muted);
 	display: block;
@@ -1003,6 +1016,7 @@
  */
 .dccwl-water .dccwl-water-stat-label,
 .dccwl-water .dccwl-water-stat-value,
+.dccwl-water .dccwl-water-stat-detail,
 .dccwl-water .dccwl-water-stat-sub {
 	hyphens: none;
 	overflow-wrap: normal;
@@ -1169,4 +1183,20 @@
 	padding: 4px 8px;
 	/* With the button, under a popup. */
 	z-index: 1200;
+}
+
+
+/* ======================================================================
+ * ITEM 2 (1.39.0) — THE MAP TAB CENTRES.
+ *
+ * The three stat tiles above these are centred, so a left-aligned sentence
+ * and a left-aligned button underneath read as a different column. Rob asked
+ * for the intro line and the "Open the chain map" button to line up with the
+ * tiles. The button is centred by its PARAGRAPH's text-align rather than by
+ * margins: it is an inline-flex box, and `margin: 0 auto` does nothing for
+ * one — the 1.36.0 lesson about the season bar, in its smaller form.
+ * ====================================================================== */
+.dccwl-water .dccwl-map-intro,
+.dccwl-water .dccwl-map-intro + p {
+	text-align: center;
 }
