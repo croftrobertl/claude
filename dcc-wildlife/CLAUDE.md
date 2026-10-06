@@ -3236,3 +3236,57 @@ dateText — for an ISO date. `date` itself is exempt BY NAME and must stay raw:
 it is the instant the age chip measures from. Nothing else in the module
 carries an embedded date today, and a future sentence that does will fail that
 check.
+
+### 30. 1.41.0 — the bottom row's own cue, built to live measurements
+
+**ROB'S PICK, 2026-10-06: option B with a shorter first label.** The row reads
+**"Guide ▾ · Credits ▾ · By Month › · About ▾"** at every width.
+
+**TWO MARKS, BECAUSE THERE ARE TWO BEHAVIOURS.** A caret that flips means
+*this expands here*; "By Month" is a BUTTON that opens another view, so it
+carries a fixed `›` — the mark the hub's round go button uses — and it never
+changes. Giving it a caret would misdescribe it, which is why that question
+went to Rob rather than being settled here.
+
+**THE CIRCLED CHEVRON STAYS HIDDEN IN THIS ROW.** 1.40.1 measured what showing
+it costs: 50px to 99px, two lines at 320, 360 and 390. The caret is an
+`::after` on the label instead — inside the same underline, same colour, no
+extra box, and the label's own text baseline is untouched (the ::after is not
+in the text node a Range measures, which is how the 0.00 spread survives).
+
+**BUILT TO THE DIRECTOR'S LIVE NUMBERS, NOT TO THIS SANDBOX.** There is no
+Raleway here, so the widths here are not the site's. He measured the real face
+(Raleway 15.6/600) and the arithmetic was checked against his figures before
+anything was written:
+
+| | 320 | 360 | 390 |
+|---|---|---|---|
+| spare today | −11 | +29 | +59 |
+| three carets " ▾" (13.8 each) | +41.4 | | |
+| one " ›" | +9.4 | | |
+| "Field Guide" → "Guide" | −40.6 | | |
+| **spare after (net +10.2)** | **−21** | **+19** | **+49** |
+
+320 already wrapped and still does; 360 and 390 stay on one line. **When the
+sandbox cannot answer the question, build to the measurement that can and say
+which is which** — the suite records its own geometry as the sandbox's, not as
+the site's.
+
+**SIZE AND WEIGHT ARE PINNED** (`.95em` / `1.05em`, `font-weight: inherit`,
+`line-height: 1`) because Raleway may not carry ▾ ▴ ›: a fallback face must
+not render them bigger, bolder or taller than what Rob approved.
+
+**THE VISIBLE WORD AND THE ACCESSIBLE NAME.** The row label is "Guide"; the
+summary's accessible name is **"Field Guide"**, which CONTAINS it — WCAG 2.5.3
+label-in-name, so a guest saying "tap Guide" to a voice assistant is
+understood. (It was "The whole field guide", which also contained it; naming
+the control what it is beats describing it.)
+
+**ONE ELEMENT, TWO JOBS — REPORTED, NOT WORKED AROUND.** That span is also the
+heading of the panel when it opens, so the open panel now reads "Guide" too.
+Splitting it would put a second copy of the label in the markup for a crawler
+to meet, which is worse than the rename it avoids.
+
+`ui-theme.mjs` pinned the four labels by name and was updated to the new list
+rather than loosened — the claim is still that the row holds exactly these
+four, in this order.

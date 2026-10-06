@@ -1395,6 +1395,151 @@ async function foldSweep(page, where) {
   await page.close();
 }
 
+/* ================= THE BOTTOM ROW'S CUE (1.41.0) ================= */
+/*
+ * Rob's option B, chosen 2026-10-06: "Guide ▾ · Credits ▾ · By Month › ·
+ * About ▾". Two marks because there are two behaviours — a caret that flips
+ * means "this expands here", and By Month is a BUTTON that opens another
+ * view, so its › never changes.
+ *
+ * THE ONE-LINE QUESTION CANNOT BE SETTLED HERE. This sandbox has no Raleway,
+ * so its widths are not the site's; the Director measured the real face and
+ * the budget is written beside the rules in widget.css. What this suite can
+ * assert is everything else: the marks, their states, their pinned size and
+ * weight, the 44px targets, the accessible name, and that nothing regressed
+ * in the sandbox's own geometry.
+ */
+section('the bottom row: Guide ▾ · Credits ▾ · By Month › · About ▾');
+
+for (const [w, touch] of [[390, true], [1280, false]]) {
+  const h = await widgetPage(browser, 'canal', { width: w, height: 1600, sitekit: true, touch });
+  const page = h.page;
+  await page.waitForTimeout(700);
+
+  const row = await page.evaluate(() => {
+    const el = document.querySelector('.dccwl-footnotes');
+    const items = Array.from(el.querySelectorAll('.dccwl-fullguide-h'));
+    const read = (node) => {
+      const after = getComputedStyle(node, '::after');
+      const own = getComputedStyle(node);
+      const host = node.closest('details') || node.closest('button');
+      const press = host && 'SUMMARY' === (host.querySelector('summary') || {}).tagName
+        ? host.querySelector('summary') : host;
+      return {
+        label: node.textContent.trim(),
+        mark: (after.content || '').replace(/^"|"$/g, '').trim(),
+        markPx: Math.round(parseFloat(after.fontSize) * 100) / 100,
+        labelPx: Math.round(parseFloat(own.fontSize) * 100) / 100,
+        markWeight: after.fontWeight,
+        labelWeight: own.fontWeight,
+        markColor: after.color,
+        labelColor: own.color,
+        isFold: !!node.closest('details'),
+        tap: press ? Math.round(press.getBoundingClientRect().height) : null,
+        aria: press ? press.getAttribute('aria-expanded') : null,
+        underline: own.textDecorationLine,
+      };
+    };
+    const tops = new Set(Array.from(el.children)
+      .filter((c) => c.getClientRects().length)
+      .map((c) => Math.round(c.getBoundingClientRect().top)));
+    return {
+      items: items.map(read),
+      rows: tops.size,
+      height: Math.round(el.getBoundingClientRect().height),
+      names: items.map((n) => {
+        const host = n.closest('summary') || n.closest('button');
+        return host ? (host.getAttribute('aria-label') || '') : '';
+      }),
+    };
+  });
+  row.items.forEach((i) => note(`${w}px ${i.label}${i.mark ? ' ' + i.mark : ''} ` +
+    `mark=${i.markPx}px/${i.markWeight} label=${i.labelPx}px/${i.labelWeight} tap=${i.tap}`));
+
+  /* 1 — the label Rob shortened, and the name that still carries the long form. */
+  const guide = row.items.find((i) => /^Guide/.test(i.label));
+  check(!!guide, `${w}px: the first label reads "Guide"`, row.items.map((i) => i.label).join(' · '));
+  const guideName = row.names[row.items.indexOf(guide)];
+  checkSame('Field Guide', guideName, `${w}px: its accessible name is still "Field Guide"`);
+  /* WCAG 2.5.3: the accessible name must CONTAIN the visible label, so a
+   * guest who says "tap Guide" is understood. */
+  check(guideName.toLowerCase().includes(guide.label.toLowerCase()),
+    `${w}px: and contains the visible word (WCAG 2.5.3 label-in-name)`,
+    `${guideName} / ${guide.label}`);
+
+  /* 2 — the marks. */
+  const folds = row.items.filter((i) => i.isFold);
+  const button = row.items.find((i) => !i.isFold);
+  checkSame(3, folds.length, `${w}px: three folds in the row`);
+  check(folds.every((f) => '▾' === f.mark), `${w}px: each fold carries ▾`,
+    folds.map((f) => `${f.label}:${f.mark}`).join(' '));
+  checkSame('›', button.mark, `${w}px: By Month carries ›, not a caret`);
+
+  /* 3 — pinned size and weight, so a fallback face cannot inflate them. */
+  folds.forEach((f) => {
+    check(Math.abs(f.markPx - f.labelPx * 0.95) < 0.3,
+      `${w}px: ${f.label}'s caret is .95em of the label`, `${f.markPx} vs ${f.labelPx}`);
+    checkSame(f.labelWeight, f.markWeight, `${w}px: and the label's own weight`);
+    checkSame(f.labelColor, f.markColor, `${w}px: and its colour`);
+  });
+  check(Math.abs(button.markPx - button.labelPx * 1.05) < 0.3,
+    `${w}px: By Month's mark is 1.05em of the label`, `${button.markPx} vs ${button.labelPx}`);
+  checkSame(button.labelWeight, button.markWeight, `${w}px: at the label's weight`);
+
+  /* 4 — the underline runs through, and the targets are still 44px. */
+  check(row.items.every((i) => i.underline.includes('underline')),
+    `${w}px: every label keeps its underline`);
+  row.items.forEach((i) => checkAtLeast(44, i.tap, `${w}px: ${i.label} keeps a 44px target`));
+
+  /* 5 — the caret flips with the fold, and By Month's mark does not. */
+  const flipped = await page.evaluate(async () => {
+    const d = document.querySelector('.dccwl-footnotes details.dccwl-fullguide');
+    d.open = true;
+    /* `toggle` fires in a later task, so aria-expanded is updated a tick
+     * after the property changes. Reading in the same turn measured the
+     * state BEFORE the event — a test timing artefact, not a defect. */
+    await new Promise((r) => setTimeout(r, 60));
+    const h = d.querySelector('.dccwl-fullguide-h');
+    const btn = document.querySelector('.dccwl-footnote-link .dccwl-fullguide-h');
+    return {
+      open: (getComputedStyle(h, '::after').content || '').replace(/"/g, '').trim(),
+      aria: d.querySelector('summary').getAttribute('aria-expanded'),
+      button: btn ? (getComputedStyle(btn, '::after').content || '').replace(/"/g, '').trim() : null,
+    };
+  });
+  note(`${w}px opened ${JSON.stringify(flipped)}`);
+  checkSame('▴', flipped.open, `${w}px: an open fold's caret points up`);
+  checkSame('›', flipped.button, `${w}px: and By Month's mark is unchanged by it`);
+  checkSame('true', flipped.aria, `${w}px: aria-expanded still tracks the fold`);
+
+  await page.close();
+}
+
+/* The sandbox's own geometry, recorded rather than asserted as the site's:
+ * one line at 360 and 390 here, and 320 no worse than the two rows it has
+ * had since before this change. */
+for (const w of [320, 360, 390]) {
+  const h = await widgetPage(browser, 'canal', { width: w, height: 1400, sitekit: true, touch: true });
+  await h.page.waitForTimeout(600);
+  const m = await h.page.evaluate(() => {
+    const el = document.querySelector('.dccwl-footnotes');
+    const tops = new Set(Array.from(el.children)
+      .filter((c) => c.getClientRects().length)
+      .map((c) => Math.round(c.getBoundingClientRect().top)));
+    const labels = Array.from(el.querySelectorAll('.dccwl-fullguide-h'));
+    const total = labels.reduce((a, n) => a + n.getBoundingClientRect().width, 0);
+    return { rows: tops.size, width: Math.round(el.getBoundingClientRect().width),
+      labels: Math.round(total), slack: Math.round(el.getBoundingClientRect().width - total) };
+  });
+  note(`${w}px sandbox row: ${m.rows} row(s), labels ${m.labels}px of ${m.width}px (slack ${m.slack})`);
+  if (320 === w) {
+    checkAtMost(2, m.rows, `${w}px: no worse than the two rows it already had`);
+  } else {
+    checkSame(1, m.rows, `${w}px: one line in this sandbox's face`);
+  }
+  await h.page.close();
+}
+
 /* =================== ONE DATE FORMAT, EVERY SURFACE =================== */
 /*
  * Rob's ruling: every date a guest sees in the water module reads 07/27/2026.

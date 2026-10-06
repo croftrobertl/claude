@@ -1229,6 +1229,52 @@
  * these as links, the <details> still toggles, and a footnote does not need a
  * disclosure triangle. This also leaves headroom for a longer translation. */
 .dccwl-footnotes .dccwl-fullguide-chev { display: none; }
+
+/* ======================================================================
+ * THE ROW'S OWN CUE (1.41.0 — Rob's option B, chosen 2026-10-06).
+ *
+ * The circled chevron above is hidden here on purpose and stays hidden:
+ * showing it wraps this row onto two lines at every phone width (measured
+ * 50px to 99px at 320, 360 and 390 in 1.40.1). What the folds get instead is
+ * a small caret inside the label's own underline — same colour, same
+ * baseline, no extra box.
+ *
+ * TWO MARKS, BECAUSE THERE ARE TWO BEHAVIOURS. A caret that flips means
+ * "this expands here". "By Month" is a BUTTON that opens another view, so it
+ * carries a fixed › — the same mark the hub's round go button uses — and it
+ * never changes. Giving it a caret would misdescribe it.
+ *
+ * SIZE AND WEIGHT ARE PINNED. Raleway may not carry ▾ ▴ ›, and a fallback
+ * face must not render them bigger or bolder than what was approved. The
+ * `em` size keeps them proportional to the label; `font-weight: inherit`
+ * keeps them at the label's 600; `line-height: 1` stops a tall fallback
+ * glyph from growing the row's height.
+ *
+ * THE BUDGET, measured on live by the Director (Raleway 15.6/600), not in
+ * this sandbox, which has no Raleway:
+ *   spare today        −11px @320   +29px @360   +59px @390
+ *   three carets " ▾"  3 × 13.8 = +41.4
+ *   one mark " ›"                  +9.4
+ *   "Field Guide" → "Guide"        −40.6
+ *   net                            +10.2
+ *   spare after        −21px @320   +19px @360   +49px @390
+ * 320 already wrapped and still does; 360 and 390 stay on one line.
+ * ====================================================================== */
+.dccwl-footnotes details.dccwl-fullguide > .dccwl-fullguide-summary .dccwl-fullguide-h::after {
+	content: " \25BE";
+	font-size: .95em;
+	font-weight: inherit;
+	line-height: 1;
+}
+.dccwl-footnotes details.dccwl-fullguide[open] > .dccwl-fullguide-summary .dccwl-fullguide-h::after {
+	content: " \25B4";
+}
+.dccwl-footnotes .dccwl-footnote-link .dccwl-fullguide-h::after {
+	content: " \203A";
+	font-size: 1.05em;
+	font-weight: inherit;
+	line-height: 1;
+}
 .dccwl-footnotes .dccwl-fullguide-text { display: inline; }
 
 /* A footnote link, not a heading: the same size and colour as the meta line

@@ -800,18 +800,45 @@ final class Render {
 		         opens only exists inside the hub app. */ ?>
 		<div class="dccwl-footnotes">
 		<details class="dccwl-fullguide">
-			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'The whole field guide', 'dcc-wildlife' ); ?>">
+			<?php
+			/*
+			 * THE ACCESSIBLE NAME IS "Field Guide" AND THE VISIBLE WORD IS
+			 * "Guide" (1.41.0, Rob's pick). WCAG 2.5.3 asks that a control's
+			 * accessible name CONTAIN its visible label, which "Field Guide"
+			 * does — so a guest saying "tap Guide" to a voice assistant is
+			 * understood. The old name, "The whole field guide", also
+			 * contained it, but naming the control what it is beats
+			 * describing it.
+			 *
+			 * An aria-label REPLACES the contents for a screen reader (the
+			 * 1.15.1 lesson), so the meta line underneath is not announced.
+			 * That was already true and is why the name has to carry the
+			 * meaning on its own.
+			 */
+			?>
+			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'Field Guide', 'dcc-wildlife' ); ?>">
 				<?php /* A real affordance (1.18.0): chevron that turns on open, a label
-				   that is the section's H2 (so Critters/Birds/Plants own a place in
-				   the outline), and a meta line. Still a native <details>, still
-				   server-rendered — this is the crawlable prose. */ ?>
+				   that is the section's heading, and a meta line. Still a native
+				   <details>, still server-rendered — this is the crawlable prose. */ ?>
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
-					<?php /* Short in the row, long to a screen reader (1.27.0). Three
-					         full-length labels do not fit on one line at 393px, which is
-					         the width this was measured at, and the ask was one row. The
-					         meta line under it still says what the panel holds. */ ?>
-					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Field Guide', 'dcc-wildlife' ); ?></span>
+					<?php
+					/*
+					 * "Guide", not "Field Guide" (1.41.0). Measured on live by
+					 * the Director with the real face, Raleway 15.6/600: the
+					 * row had 29px spare at 360px, and the three carets plus
+					 * By Month's mark cost 50.8px. Shortening this one label
+					 * gives back 40.6px, which is what keeps the row on one
+					 * line — about 19px spare at 360 and 49px at 390.
+					 *
+					 * THIS SPAN IS ALSO THE OPEN PANEL'S HEADING, so the
+					 * panel now reads "Guide" too. It is one element, not two;
+					 * that is reported rather than worked around, because
+					 * splitting it would put a second copy of the label in the
+					 * markup for a crawler to meet.
+					 */
+					?>
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Guide', 'dcc-wildlife' ); ?></span>
 					<span class="dccwl-fullguide-meta">
 						<?php
 						printf(

@@ -107,9 +107,30 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
 
   /* 1 — the Water Map tab, with its three stat tiles. */
   let page = await waterPage(w, touch, false);
-  await shot(page, `Wildlife - 1.40.1 Water Map tab ${tag}.png`,
+  await shot(page, `Wildlife - 1.41.0 Water Map tab ${tag}.png`,
     await page.$('[data-dccwl-water-root]'));
   await page.close();
+
+  /* 1a2 — the bottom row, closed and with one fold open (1.41.0). */
+  {
+    const h2 = await widgetPage(browser, 'canal', { width: w, height: 1600, sitekit: true, touch });
+    await h2.page.waitForTimeout(800);
+    const rowEl = await h2.page.$('.dccwl-footnotes');
+    const box = await rowEl.boundingBox();
+    const clip = (tall) => ({ x: Math.max(0, box.x - 8), y: Math.max(0, box.y - 14),
+      width: Math.min(w, box.width + 16), height: tall });
+    writeFileSync(join(OUT, `Wildlife - 1.41.0 Bottom row closed ${tag}.png`),
+      await h2.page.screenshot({ clip: clip(box.height + 28) }));
+    await h2.page.evaluate(() => {
+      const d = document.querySelector('.dccwl-footnotes details.dccwl-fullguide');
+      if (d) { d.open = true; }
+    });
+    await h2.page.waitForTimeout(350);
+    writeFileSync(join(OUT, `Wildlife - 1.41.0 Bottom row one fold open ${tag}.png`),
+      await h2.page.screenshot({ clip: clip(150) }));
+    console.log('wrote the bottom-row pair at', tag);
+    await h2.page.close();
+  }
 
   /* 1b — the Now tab, where every reading now carries a US-numeric date. */
   page = await waterPage(w, touch, false);
@@ -131,7 +152,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     document.querySelectorAll('.dccwl-card-src').forEach((c) => c.click());
   });
   await page.waitForTimeout(300);
-  await shot(page, `Wildlife - 1.40.1 Now tab dates ${tag}.png`,
+  await shot(page, `Wildlife - 1.41.0 Now tab dates ${tag}.png`,
     await page.$('[data-dccwl-water-root]'));
   await page.close();
 
@@ -142,7 +163,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     if (b) { b.click(); }
   });
   await page.waitForTimeout(500);
-  await shot(page, `Wildlife - 1.40.1 All readings fold ${tag}.png`,
+  await shot(page, `Wildlife - 1.41.0 All readings fold ${tag}.png`,
     await page.$('[data-dccwl-water-root]'));
   await page.close();
 
@@ -156,7 +177,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     await page.waitForTimeout(400);
     if (await page.$('.leaflet-popup')) { break; }
   }
-  await shot(page, `Wildlife - 1.40.1 Map popup over the controls ${tag}.png`,
+  await shot(page, `Wildlife - 1.41.0 Map popup over the controls ${tag}.png`,
     await page.$('.dccwl-sheet-body-map'));
   await page.close();
 
@@ -167,7 +188,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
   await page.waitForTimeout(900);
   const panel = await page.$('.dccwl-panel-species') || await page.$('.dccwl-guide');
-  await shot(page, `Wildlife - 1.40.1 Toolbar closed ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.41.0 Toolbar closed ${tag}.png`, panel);
 
   const vis = async (sel) => {
     for (const el of await page.$$(sel)) { if (await el.isVisible()) { return el; } }
@@ -176,7 +197,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const pill = await vis('[data-dccwl-subnav] [data-dccwl-pick-btn]');
   if (touch) { await pill.tap(); } else { await pill.click(); }
   await page.waitForTimeout(300);
-  await shot(page, `Wildlife - 1.40.1 Toolbar open ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.41.0 Toolbar open ${tag}.png`, panel);
 
   // Choose a category by tap, then photograph the row with the pill labelled.
   const birds = await page.$('.dccwl-pick-opt[data-dccwl-browse="birds"]');
@@ -187,7 +208,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const tab = await vis('.dccwl-tab:not([aria-pressed="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
-  await shot(page, `Wildlife - 1.40.1 Selected after a tap ${tag}.png`,
+  await shot(page, `Wildlife - 1.41.0 Selected after a tap ${tag}.png`,
     await page.$('.dccwl-tabs'));
 
   /* Peak Now: no pill, the Compact switch alone on the row (1.38.1). */
@@ -196,7 +217,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     if (b) { b.click(); }
   });
   await page.waitForTimeout(700);
-  await shot(page, `Wildlife - 1.40.1 Peak Now toolbar ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.41.0 Peak Now toolbar ${tag}.png`, panel);
   await page.close();
 }
 

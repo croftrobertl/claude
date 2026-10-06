@@ -312,7 +312,12 @@ for (const w of [320, 390, 1280]) {
   check(!!rows && 4 === rows.length, `${w}px: all four labels are in the row`,
     rows ? rows.map((r) => r.text).join(' | ') : 'row missing');
   if (rows && 4 === rows.length) {
-    checkSame(['Field Guide', 'Credits', 'By Month', 'About'], rows.map((r) => r.text),
+    /* "Guide", not "Field Guide", since 1.41.0: Rob shortened the first
+     * label to buy back the width the row's new carets cost. The accessible
+     * name is still "Field Guide" — ui-live.mjs asserts that, and that it
+     * contains the visible word. Pinned, not loosened: the claim is that the
+     * row holds exactly these four labels in this order. */
+    checkSame(['Guide', 'Credits', 'By Month', 'About'], rows.map((r) => r.text),
       `${w}px: the labels are Title Case, in the order Rob listed them (item 17)`);
     note(`${w}px  ` + rows.map((r) => `${r.text}: ${r.fontSize}/${r.fontWeight} ${r.color} ${r.decoration}`).join('   '));
     for (const key of ['fontSize', 'fontWeight', 'color', 'decoration', 'fontFamily']) {
