@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.0
+Stable tag: 0.27.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,26 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.27.0 =
+* NEW (owner's pick, 2026-10-06): "Upload Photo ID" ends the Guest 1 group on
+  the WP-Admin booking screen, after Email. 0.26.0 left it at the bottom under
+  "Other", because its row holds only a "View" link and no field to match. It is
+  recognised by MotoPress's own markers, never by its label; if it cannot be
+  recognised it stays under "Other", visible, as before.
+* NEW (owner's pick): on an EXISTING booking, Guest 3, Guest 4 and Dog now hide
+  by the booking's own cottage, exactly as they do on a new booking. The edit
+  screen shows no accommodation control, so the plugin reads the booking's
+  reserved rooms itself. Several rooms: a group shows if any room needs it.
+  Stored details always stay visible, "Show all booking fields" still reveals
+  everything, and if any room cannot be read, everything shows, as before.
+* "Show all booking fields" is now a proper full-width row in the box, and its
+  help text is true on new and existing bookings and at any "Guests included"
+  setting. NOTE for translations: the help text is a new string.
+* FIX: where the cottage cannot be read, nothing is hidden -- and the "Show all"
+  checkbox now steps aside instead of staying up, unticked, beside a box that
+  already shows everything (seen on live under 0.26.0).
+* WP-Admin only. No stored data, field name, save or public checkout changed.
 
 = 0.26.0 =
 * NEW (owner's picks, 2026-10-06): the Customer Information box on the WP-Admin

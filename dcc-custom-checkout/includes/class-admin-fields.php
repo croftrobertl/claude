@@ -212,6 +212,22 @@ final class Admin_Fields
             }
         }
 
+        // The hint names exactly the guest groups the gating hides — the same
+        // `min > included` test as $groups above — so it stays true at any
+        // "Guests included" setting (v0.27.0): "3–4" at the default, "4" at 3.
+        $mins = array_map(static function ($g) { return (int) $g['min']; }, $groups);
+        sort($mins);
+        if ($mins) {
+            $range = count($mins) === 1 ? (string) $mins[0] : $mins[0] . '–' . $mins[count($mins) - 1];
+            $hint  = sprintf(
+                /* translators: %s: the guest numbers hidden, e.g. "3–4" or "4". */
+                __('Guest %s details are hidden unless this booking already has them saved, and so are pet details on a cottage that does not take dogs. The Extra Guest Fee row is hidden too. Tick to show every field — for example to add a dog to a cottage that is not normally pet-friendly.', 'dcc-checkout'),
+                $range
+            );
+        } else {
+            $hint = __('Pet details are hidden on a cottage that does not take dogs, unless this booking already has them saved. The Extra Guest Fee row is hidden too. Tick to show every field — for example to add a dog to a cottage that is not normally pet-friendly.', 'dcc-checkout');
+        }
+
         return [
             'roomTypes'      => $this->room_type_map(),
             'dogFieldNames'  => Config::dog_field_name_list(),
@@ -229,12 +245,21 @@ final class Admin_Fields
             // Sticky-value protection applies to an existing booking only; on a
             // brand-new booking a field's default value is not stored data.
             'isExisting'     => $this->is_existing_booking() ? '1' : '',
+            // v0.27.0 — the edit screen has no accommodation control in its
+            // markup, so the script could not tell the cottage and showed
+            // everything. PHP states it, exactly as the add-booking step does.
+            // Empty = could not read it: the script then shows everything.
+            'statedRoomTypes' => $this->is_existing_booking() ? $this->booking_room_types() : [],
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
             'i18n'           => [
                 'showAll' => __('Show all booking fields', 'dcc-checkout'),
-                'hint'    => __('Guest 3–4 details, pet details and the Extra Guest Fee row are hidden by default. Tick to show every field — for example to book a guest with a dog into a cottage that is not normally pet-friendly.', 'dcc-checkout'),
+                // v0.27.0: must be true on a NEW booking and on an EXISTING
+                // one. The old text said pet details were "hidden by default",
+                // which was false on any pet cottage, and invited "booking" a
+                // guest on a booking that already exists.
+                'hint'    => $hint,
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
             ],
@@ -263,7 +288,10 @@ final class Admin_Fields
      * "Guest 2", "Guest 3", "Guest 4", "Dog", "Note". Field LABELS are not
      * touched (owner decision: "State / County" and "Postcode" stay).
      *
-     * @return array<int, array{key:string,title:string,governed:bool,fields:array<int,string[]>}>
+     * Each field is a list of input names to try, or (for a row with no input,
+     * such as Upload Photo ID) an object {names, rowClass} — see markedRow().
+     *
+     * @return array<int, array{key:string,title:string,governed:bool,fields:array<int,mixed>}>
      */
     public static function customer_layout(): array
     {
@@ -287,7 +315,20 @@ final class Admin_Fields
         return [
             [
                 'key' => 'guest1', 'title' => __('Guest 1', 'dcc-checkout'), 'governed' => false,
-                'fields' => [$mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email')],
+                'fields' => [
+                    $mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email'),
+                    // Upload Photo ID, last in Guest 1 (owner's pick, v0.27.0).
+                    // Its admin row holds only a "View" link — no input, so no
+                    // name to match. The script identifies it by MotoPress's
+                    // own markers instead, never by the label: an element in
+                    // the row referencing one of `names`, else the ONE row in
+                    // the box carrying `rowClass`. Two such rows, or none, and
+                    // it is left under "Other", as before.
+                    [
+                        'names'    => [Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],
+                        'rowClass' => 'mphb-link-button-row',
+                    ],
+                ],
             ],
             [
                 'key' => 'address', 'title' => __('Address', 'dcc-checkout'), 'governed' => false,
@@ -318,6 +359,54 @@ final class Admin_Fields
                 'fields' => [$mp('note')],
             ],
         ];
+    }
+
+    /**
+     * The accommodation types of the booking being edited (v0.27.0).
+     *
+     * The chain is the one Admin_Guests and the Availability Calendar already
+     * use, confirmed on the live database 2026-09-17: `mphb_reserved_room`
+     * posts are children of the booking (post_parent) and carry `_mphb_room_id`;
+     * the physical room carries `mphb_room_type_id`.
+     *
+     * ALL OR NOTHING. If any reserved room's type cannot be read, this returns
+     * [] — "say nothing" — and the script falls back to showing everything,
+     * which is today's behaviour. A partial answer would hide a group that the
+     * unreadable room might need (the union rule shows a group if ANY room
+     * needs it), so it is worse than none.
+     *
+     * @return int[]
+     */
+    private function booking_room_types(): array
+    {
+        $post = get_post();
+        if (!$post instanceof \WP_Post) {
+            return [];
+        }
+        $rooms = get_posts([
+            'post_type'        => 'mphb_reserved_room',
+            'post_parent'      => (int) $post->ID,
+            'post_status'      => 'any',
+            'numberposts'      => 50,
+            'orderby'          => 'ID',
+            'order'            => 'ASC',
+            'suppress_filters' => false,
+        ]);
+        if (!is_array($rooms) || empty($rooms)) {
+            return [];
+        }
+        $types = [];
+        foreach ($rooms as $rr) {
+            $room_id = (int) get_post_meta((int) $rr->ID, '_mphb_room_id', true);
+            $type_id = $room_id > 0 ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0;
+            if ($type_id <= 0) {
+                return []; // One unreadable room: say nothing at all.
+            }
+            if (!in_array($type_id, $types, true)) {
+                $types[] = $type_id;
+            }
+        }
+        return $types;
     }
 
     /**

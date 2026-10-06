@@ -2,7 +2,14 @@
 /**
  * Prints the admin script's config exactly as Admin_Fields builds it, as JSON.
  *
- *     php tests/admin-layout/config.php [included_guests]
+ *     php tests/admin-layout/config.php [included_guests] [booking-json]
+ *
+ * booking-json describes an EXISTING booking being edited, e.g.
+ *     {"rooms":[{"type":1604},{"type":1065}]}
+ * Each room becomes a `mphb_reserved_room` child of booking 19615 with an
+ * `_mphb_room_id`, and that room carries `mphb_room_type_id` — the chain
+ * confirmed on live. {"type":0} is a room whose type cannot be read.
+ * Omitted: a NEW booking (no post), as before.
  *
  * The layout suite reads this instead of keeping its own copy of the group
  * list, so the test exercises the SHIPPED PHP: a renamed field, a reordered
@@ -28,12 +35,41 @@ function sanitize_text_field($v) { return is_string($v) ? trim($v) : ''; }
 function sanitize_key($v) { return is_string($v) ? strtolower(preg_replace('/[^a-z0-9_\-]/i', '', $v)) : ''; }
 function wp_strip_all_tags($t) { return strip_tags((string) $t); }
 function number_format_i18n($n, $d = 0) { return number_format((float) $n, (int) $d); }
-function get_post_meta($id, $k, $s = false) { return ''; }
-function get_posts($a = []) { return []; }
-function get_post($id = null) { return null; }
+class WP_Post { public $ID = 0; public $post_type = ''; public $post_status = ''; }
+
+$GLOBALS['booking'] = null;
+$GLOBALS['meta']    = [];
+$GLOBALS['reserved']      = [];
+if (isset($argv[2]) && $argv[2] !== '') {
+    $spec = json_decode($argv[2], true);
+    $b = new WP_Post();
+    $b->ID = 19615; $b->post_type = 'mphb_booking'; $b->post_status = 'confirmed';
+    $GLOBALS['booking'] = $b;
+    foreach ((array) ($spec['rooms'] ?? []) as $i => $room) {
+        $rr = new WP_Post();
+        $rr->ID = 900 + $i; $rr->post_type = 'mphb_reserved_room';
+        $GLOBALS['reserved'][] = $rr;
+        $room_id = 500 + $i;
+        $GLOBALS['meta'][$rr->ID]['_mphb_room_id'] = (string) $room_id;
+        if ((int) ($room['type'] ?? 0) > 0) {
+            $GLOBALS['meta'][$room_id]['mphb_room_type_id'] = (string) (int) $room['type'];
+        }
+    }
+}
+
+function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][(int) $id][$k] ?? ''; }
+function get_posts($a = []) {
+    if (($a['post_type'] ?? '') === 'mphb_reserved_room' && $GLOBALS['booking']
+        && (int) ($a['post_parent'] ?? 0) === $GLOBALS['booking']->ID) {
+        return $GLOBALS['reserved'];
+    }
+    return [];
+}
+function get_post($id = null) { return $GLOBALS['booking']; }
 function did_action($h) { return 0; }
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');

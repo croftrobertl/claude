@@ -298,7 +298,8 @@
          * Accommodation types currently selected anywhere on the screen, in
          * order of trust.
          *
-         * 1. What PHP stated. The create-booking wizard's checkout step carries
+         * 1. What PHP stated (CFG.statedRoomTypes on the edit screen, the
+         *    data-dcc-room-types marker on the wizard). The create-booking wizard's checkout step carries
          *    NO room-type control in its markup — the accommodation was chosen
          *    in an earlier step and exists only server-side — so there is
          *    nothing to derive from and derivation alone left that screen
@@ -317,6 +318,14 @@
          */
         function selectedRoomTypes() {
             var stated = [];
+            // v0.27.0 — on an EXISTING booking the edit screen carries no
+            // accommodation control at all, so Admin_Fields reads the booking's
+            // reserved rooms and states their types here. Empty means it could
+            // not read them, and then this falls through to "show everything".
+            (CFG.statedRoomTypes || []).forEach(function (v) {
+                var n = parseInt(v, 10);
+                if (n > 0 && stated.indexOf(n) === -1) { stated.push(n); }
+            });
             Array.prototype.forEach.call(
                 document.querySelectorAll('[data-dcc-room-types]'),
                 function (ctx) {
@@ -391,6 +400,12 @@
                 // Couldn't identify the accommodation control: fail open and
                 // leave the screen exactly as MotoPress rendered it.
                 managed.forEach(function (f) { f.row.classList.remove(HIDDEN_CLASS); });
+                // v0.27.0 — and the checkbox follows the same rule as below:
+                // hiding nothing, it steps aside. Until now this path returned
+                // before telling it, so it stayed up offering to "show all"
+                // beside a box already showing everything (seen on live,
+                // booking 19615, 0.26.0), under a hint saying fields are hidden.
+                if (hatch) { hatch.update(0, showAll); }
                 if (layout) { layout.refresh(); }
                 return;
             }
@@ -504,12 +519,19 @@
 
         function find() {
             var hits = [];
+            var marked = [];
             spec.forEach(function (g, gi) {
-                (g.fields || []).forEach(function (cands) {
+                (g.fields || []).forEach(function (cands, fi) {
+                    if (cands && !Array.isArray(cands)) {
+                        // A row with no named control (Upload Photo ID): it is
+                        // matched once the box is known — see markedRow().
+                        marked.push({ gi: gi, fi: fi, def: cands });
+                        return;
+                    }
                     var el = controlFor(cands || []);
                     if (!el) { return; }
                     var tr = el.closest('tr');
-                    if (tr && tr.parentNode) { hits.push({ gi: gi, el: el, row: tr }); }
+                    if (tr && tr.parentNode) { hits.push({ gi: gi, fi: fi, el: el, row: tr }); }
                 });
             });
             // The parent most known rows share is the box; a stray match
@@ -522,7 +544,43 @@
             tally.sort(function (a, b) { return b.n - a.n; });
             if (!tally.length || tally[0].n < 2) { return null; }
             var box = tally[0].p;
-            return { box: box, hits: hits.filter(function (h) { return h.row.parentNode === box; }) };
+            var inBox = hits.filter(function (h) { return h.row.parentNode === box; });
+            marked.forEach(function (m) {
+                var row = markedRow(box, m.def, inBox);
+                if (row) { inBox.push({ gi: m.gi, fi: m.fi, el: row, row: row }); }
+            });
+            // Rows join their group in the group's own field order.
+            inBox.sort(function (a, b) { return a.gi - b.gi || a.fi - b.fi; });
+            return { box: box, hits: inBox };
+        }
+
+        /**
+         * A row that carries no named control, identified by what MotoPress
+         * put on it — never by its label, which is translatable text.
+         *  1. a direct reference to the field: an element in the row whose
+         *     for / id / name is one of def.names;
+         *  2. else the ONE row in the box carrying def.rowClass (MotoPress's
+         *     marker for that kind of field). Two or more, and there is no
+         *     telling them apart, so none is taken and they stay under
+         *     "Other" — visible, as before.
+         */
+        function markedRow(box, def, taken) {
+            var used = taken.map(function (h) { return h.row; });
+            var free = Array.prototype.filter.call(box.children, function (c) {
+                return c.tagName === 'TR' && used.indexOf(c) === -1;
+            });
+            var names = def.names || [];
+            for (var i = 0; i < free.length; i++) {
+                for (var j = 0; j < names.length; j++) {
+                    var n = esc(names[j]);
+                    if (free[i].querySelector('[for="' + n + '"], [id="' + n + '"], [name="' + n + '"]')) {
+                        return free[i];
+                    }
+                }
+            }
+            if (!def.rowClass) { return null; }
+            var byClass = free.filter(function (c) { return c.classList.contains(def.rowClass); });
+            return byClass.length === 1 ? byClass[0] : null;
         }
 
         function heading(key, title, cols) {
@@ -566,7 +624,8 @@
 
             var hatch = null;
             Array.prototype.forEach.call(box.children, function (c) {
-                if (c.classList && c.classList.contains('dcc_admin-showall')) { hatch = c; }
+                if (c.classList && (c.classList.contains('dcc_admin-showall') ||
+                        c.classList.contains('dcc_admin-showall-row'))) { hatch = c; }
             });
 
             var desired = [];
@@ -683,7 +742,23 @@
         if (hint.textContent) { wrap.appendChild(hint); }
 
         box.addEventListener('change', function () { onChange(box.checked); });
-        firstField.row.parentNode.insertBefore(wrap, firstField.row);
+
+        // v0.27.0 — among table rows it gets a proper full-width row of its
+        // own (a bare <div> in a <tbody> rendered, but as a narrow orphan
+        // cell). Anywhere else it stays a plain block, as before.
+        var outer = wrap;
+        var anchor = firstField.row;
+        if (anchor.tagName === 'TR') {
+            var span = 0;
+            Array.prototype.forEach.call(anchor.cells || [], function (c) { span += c.colSpan || 1; });
+            outer = document.createElement('tr');
+            outer.className = 'dcc_admin-showall-row';
+            var td = document.createElement('td');
+            td.colSpan = Math.max(span, 1);
+            td.appendChild(wrap);
+            outer.appendChild(td);
+        }
+        anchor.parentNode.insertBefore(outer, anchor);
 
         var base = label.textContent;
         return {
@@ -691,7 +766,7 @@
                 // Present while it has something to reveal, or while it is the
                 // reason everything is visible. Otherwise it is noise.
                 var useful = hiddenCount > 0 || showAll;
-                wrap.hidden = !useful;
+                if (outer.hidden !== !useful) { outer.hidden = !useful; }
                 label.textContent = hiddenCount > 0
                     ? base + ' (' + hiddenCount + ')'
                     : base;

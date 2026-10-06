@@ -7,6 +7,12 @@
     display: none !important;
 }
 
+/* v0.27.0: among table rows the checkbox sits in its own full-width row.
+   `tr.` + class is (0,1,2), above core's `.form-table td` (0,1,1). */
+tr.dcc_admin-showall-row > td {
+    padding: 4px 10px 4px 0;
+}
+
 .dcc_admin-showall {
     margin: 12px 0;
     padding: 8px 12px;

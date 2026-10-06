@@ -1015,5 +1015,93 @@
   "find": "                'governed' => ($min[3] ?? 3) > $included,",
   "replace": "                'governed' => true,",
   "count": 1
+ },
+ {
+  "id": "js-stated-roomtypes-ignored",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 an existing booking is gated by the cottage PHP states for it",
+  "find": "            (CFG.statedRoomTypes || []).forEach(function (v) {",
+  "replace": "            ([]).forEach(function (v) {",
+  "count": 1
+ },
+ {
+  "id": "php-booking-types-partial",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 one unreadable reserved room means nothing is stated (show everything)",
+  "find": "                return []; // One unreadable room: say nothing at all.",
+  "replace": "                continue;",
+  "count": 1
+ },
+ {
+  "id": "js-photo-class-not-unique",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 the link-button class identifies the Photo ID only when exactly one row has it",
+  "find": "            return byClass.length === 1 ? byClass[0] : null;",
+  "replace": "            return byClass.length ? byClass[0] : null;",
+  "count": 1
+ },
+ {
+  "id": "js-photo-attr-ref-dead",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 a row referencing mphb_upload_id is the Photo ID even without the class",
+  "find": "                    if (free[i].querySelector('[for=\"' + n + '\"], [id=\"' + n + '\"], [name=\"' + n + '\"]')) {",
+  "replace": "                    if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-hatch-failopen-stays-up",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 with nothing hidden (cottage unreadable) the Show-all box steps aside",
+  "find": "                if (hatch) { hatch.update(0, showAll); }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-hatch-bare-div",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 among table rows the Show-all box is a full-width row",
+  "find": "        if (anchor.tagName === 'TR') {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "php-photo-not-in-guest1",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 Upload Photo ID ends the Guest 1 group (owner's pick)",
+  "find": "                        'rowClass' => 'mphb-link-button-row',",
+  "replace": "                        'rowClass' => 'no-such-marker',",
+  "count": 1
+ },
+ {
+  "id": "php-hint-ignores-setting",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.0 the Show-all hint names the groups the setting actually hides",
+  "find": "            $range = count($mins) === 1 ? (string) $mins[0] : $mins[0] . '–' . $mins[count($mins) - 1];",
+  "replace": "            $range = '3–4';",
+  "count": 1
  }
 ]

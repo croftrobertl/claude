@@ -28,9 +28,10 @@ const ROOT   = path.resolve(__dirname, '../..');
 const SCRIPT = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.js'), 'utf8');
 const CSS    = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.css'), 'utf8');
 
-function phpConfig(included) {
-    const args = [path.join(__dirname, 'config.php')];
-    if (included !== undefined) { args.push(String(included)); }
+function phpConfig(included, booking) {
+    const args = [path.join(__dirname, 'config.php'),
+        included === undefined ? '' : String(included),
+        booking ? JSON.stringify(booking) : ''];
     return JSON.parse(execFileSync('php', args, { encoding: 'utf8' }));
 }
 
@@ -53,6 +54,11 @@ const MOTOPRESS_ORDER = [
     ['note', 'Customer Note', 'textarea'],
     ['guest2_first_name', 'Guest 2: First Name'], ['guest2_last_name', 'Guest 2: Last Name'],
     ['guest2_phone', 'Guest 2: Phone Number'], ['apartment-units', 'Apartment/Unit #'],
+    // Live has this row (Director, 2026-10-06) and 0.26.0's fixture did not:
+    // <tr class="mphb-link-button-row">, a th label and a cell holding only a
+    // "View" link — no named input. Its original position was not reported;
+    // it is placed here, and the result does not depend on it.
+    ['upload_id', 'Upload Photo ID', 'link'],
     ['dog_type', 'Dog Type'], ['dog_size', 'Dog Size', 'select'], ['dog_hair', 'Dog Hair', 'select'],
     ['guest3_first_name', 'Guest 3: First Name'], ['guest3_last_name', 'Guest 3: Last Name'],
     ['guest4_first_name', 'Guest 4: First Name'], ['guest4_last_name', 'Guest 4: Last Name'],
@@ -60,7 +66,7 @@ const MOTOPRESS_ORDER = [
 
 /* Rob's "full tidy order" (2026-10-06), headings included. */
 const TIDY = [
-    '## Guest 1', 'First Name', 'Last Name', 'Phone', 'Email',
+    '## Guest 1', 'First Name', 'Last Name', 'Phone', 'Email', 'Upload Photo ID',
     '## Address', 'Address', 'Apartment/Unit #', 'City', 'State / County', 'Postcode', 'Country',
     '## Guest 2', 'Guest 2: First Name', 'Guest 2: Last Name', 'Guest 2: Phone Number',
     '## Guest 3', 'Guest 3: First Name', 'Guest 3: Last Name',
@@ -72,6 +78,7 @@ const TIDY = [
 /* Synthetic values only — never anything resembling a real guest. */
 function control(name, label, kind, value) {
     const id = 'mphb_' + name, v = value || '';
+    if (kind === 'link') { return '<a href="#">View</a>'; }
     if (kind === 'select') {
         return `<select id="${id}" name="${id}"><option value="">—</option>` +
             `<option value="A"${v === 'A' ? ' selected' : ''}>A</option>` +
@@ -83,9 +90,21 @@ function control(name, label, kind, value) {
     return `<input type="text" id="${id}" name="${id}" value="${v}" class="regular-text">`;
 }
 
-function rowsHtml(order, values, wrap) {
+/* linkMarker — how a "View"-only row is marked:
+ *   'class' (default): MotoPress's tr.mphb-link-button-row, label with no `for`
+ *                      — the shape the Director reported on live;
+ *   'for':  no class, but the label's `for` names the field;
+ *   'none': neither. */
+function rowsHtml(order, values, wrap, linkMarker) {
+    linkMarker = linkMarker || 'class';
     return order.map(([name, label, kind]) => {
         const c = control(name, label, kind, values && values[name]);
+        if (kind === 'link') {
+            const forAttr = linkMarker === 'for' ? ` for="mphb_${name}"` : '';
+            if (wrap === 'p') { return `<p class="mphb-field"><label${forAttr}>${label}</label>${c}</p>`; }
+            const cls = linkMarker === 'class' ? ' class="mphb-link-button-row"' : '';
+            return `<tr${cls}><th scope="row"><label${forAttr}>${label}</label></th><td>${c}</td></tr>`;
+        }
         if (wrap === 'p') { return `<p class="mphb-field"><label for="mphb_${name}">${label}</label>${c}</p>`; }
         return `<tr><th scope="row"><label for="mphb_${name}">${label}</label></th><td>${c}</td></tr>`;
     }).join('\n');
@@ -94,8 +113,8 @@ function rowsHtml(order, values, wrap) {
 function page(order, values, opts) {
     opts = opts || {};
     const box = opts.wrap === 'p'
-        ? `<div class="mphb-customer-fields">${rowsHtml(order, values, 'p')}</div>`
-        : `<table class="form-table"><tbody>${rowsHtml(order, values)}</tbody></table>`;
+        ? `<div class="mphb-customer-fields">${rowsHtml(order, values, 'p', opts.linkMarker)}</div>`
+        : `<table class="form-table"><tbody>${rowsHtml(order, values, null, opts.linkMarker)}</tbody></table>`;
     return `<!doctype html><html><head><meta name="viewport" content="width=device-width">
 <style>
 /* REPRODUCTION of the core wp-admin rules that shape this table (forms.css),
@@ -120,23 +139,27 @@ ${CSS}
 <form id="post" method="post"><div id="poststuff">
   <div class="postbox" id="mphb_customer"><h2>Customer Information</h2><div class="inside">${box}</div></div>
   <div class="postbox"><h2>Reserved Accommodations</h2><div class="inside">
-    <select name="mphb_room_type_id" id="rt">
+    ${opts.existing
+        // The edit screen of an EXISTING booking: no accommodation control at
+        // all (Director, live 2026-10-06) — the only room-ish input is this.
+        ? '<input type="hidden" name="mphb_rooms-hide" value="1">'
+        : `<select name="mphb_room_type_id" id="rt">
       <option value="1065"${opts.room === 1604 ? '' : ' selected'}>Cottage 22</option>
       <option value="1604"${opts.room === 1604 ? ' selected' : ''}>Cottage 33</option>
-    </select></div></div>
+    </select>`}</div></div>
 </div></form>
 <!--DCC-CFG-->
 ${opts.noScript ? '' : '<script>' + SCRIPT + '</script>'}
 </body></html>`;
 }
 
-async function open(browser, width, html, cfgOver, included) {
+async function open(browser, width, html, cfgOver, included, booking) {
     const ctx = await browser.newContext({ viewport: { width, height: 900 } });
     const pg  = await ctx.newPage();
     pg.setDefaultTimeout(5000);
     const logs = [];
     pg.on('console', m => logs.push(m.text()));
-    const cfg = Object.assign(phpConfig(included), {
+    const cfg = Object.assign(phpConfig(included, booking), {
         roomTypes: { '1065': { pet: 'yes', couch: 'yes' }, '1604': { pet: 'no', couch: 'no' } },
     }, cfgOver || {});
     // Printed inline ahead of the script, as wp_localize_script does. (An
@@ -158,7 +181,10 @@ async function seen(pg) {
         box.querySelectorAll('tr, .dcc_admin-showall, p.mphb-field').forEach(n => {
             if (!n.getClientRects().length) { return; }
             if (n.classList.contains('dcc_admin-group-heading')) { out.push('## ' + n.textContent.trim()); }
-            else if (n.classList.contains('dcc_admin-showall')) { out.push('[show all]'); }
+            else if (n.classList.contains('dcc_admin-showall-row')) { out.push('[show all]'); }
+            else if (n.classList.contains('dcc_admin-showall')) {
+                if (!n.closest('tr')) { out.push('[show all]'); }
+            }
             else { const l = n.querySelector('label'); if (l) { out.push(l.textContent.trim()); } }
         });
         return out;
@@ -200,6 +226,18 @@ async function formData(pg) {
             s.filter(x => x !== '[show all]'), TIDY);
         check(`${width}px: "Show all booking fields" sits directly above the Guest 3 heading`,
             s[s.indexOf('## Guest 3') - 1], '[show all]');
+        check(`${width}px: the help text names the groups hidden at the default setting`,
+            await pg.evaluate(() => document.querySelector('.dcc_admin-showall__hint').textContent
+                .startsWith('Guest 3–4 details are hidden unless this booking already has them saved')), true);
+        check(`${width}px: the checkbox is a full-width table row, not a bare div in the tbody`,
+            await pg.evaluate(() => {
+                const w = document.querySelector('.dcc_admin-showall');
+                const tr = w.parentNode && w.parentNode.parentNode;
+                const box = document.querySelector('#mphb_customer tbody');
+                return !!tr && tr.tagName === 'TR' && tr.parentNode === box &&
+                    tr.classList.contains('dcc_admin-showall-row') && w.parentNode.colSpan === 2 &&
+                    Array.from(box.children).every(c => c.tagName === 'TR');
+            }), true);
         const geo = await pg.evaluate(() => {
             const box = document.querySelector('#mphb_customer');
             const heads = Array.from(document.querySelectorAll('.dcc_admin-group-heading')).map(h => h.getBoundingClientRect());
@@ -263,13 +301,16 @@ async function formData(pg) {
         const before = await formData(base.pg);
         await base.ctx.close();
         const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, vals), { isExisting: '1' });
-        check('the guard: the baseline really carries every field (21 + the cottage)', before.length, 22);
+        check('the guard: the baseline really carries every named field (21 + the cottage)', before.length, 22);
         check('with the layout applied, the form submits exactly the same fields and values',
             await formData(pg), before);
         // Every field holds a value on this existing booking, so all are
         // sticky, nothing is hidden, and the checkbox hides itself (v0.22.0).
         check('every field sticky: the checkbox has nothing to reveal and is hidden',
-            await pg.evaluate(() => document.querySelector('.dcc_admin-showall').hidden), true);
+            await pg.evaluate(() => {
+                const r = document.querySelector('.dcc_admin-showall-row');
+                return !!r && r.hidden && !r.getClientRects().length;
+            }), true);
         await pg.evaluate(() => document.getElementById('dcc_admin_show_all').click());
         await pg.selectOption('#rt', '1065');
         await pg.waitForTimeout(350);
@@ -364,6 +405,110 @@ async function formData(pg) {
         await setShowAll(pg, false);
         check('... and Guest 3, no longer governed, stays shown',
             headingsIn(await seen(pg)).includes('## Guest 3'), true);
+        check('... and the help text names only what is hidden: "Guest 4 details"',
+            await pg.evaluate(() => document.querySelector('.dcc_admin-showall__hint').textContent
+                .startsWith('Guest 4 details are hidden')), true);
+        await ctx.close();
+    }
+
+
+    /* --- 8. Upload Photo ID: identified by MotoPress's markers, never by its
+     *        label. Each marker constructed, and each way it must NOT match. --- */
+    for (const [marker, title] of [['class', 'the mphb-link-button-row class (live shape)'],
+                                   ['for', 'a label naming mphb_upload_id']]) {
+        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { linkMarker: marker }));
+        await setShowAll(pg, true);
+        const s = (await seen(pg)).filter(x => x !== '[show all]');
+        check(`Photo ID found by ${title}: it ends Guest 1, after Email`,
+            s.slice(s.indexOf('Email'), s.indexOf('## Address')), ['Email', 'Upload Photo ID']);
+        check(`... and no "Other" heading appears (${marker})`, s.includes('## Other'), false);
+        await ctx.close();
+    }
+    {
+        // Neither marker: it is NOT guessed at by its label — it stays visible
+        // under "Other", exactly as 0.26.0 left it.
+        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { linkMarker: 'none' }));
+        const s = await seen(pg);
+        check('Photo ID with no marker is not matched by its label: still under "Other"',
+            s.slice(-2), ['## Other', 'Upload Photo ID']);
+        await ctx.close();
+    }
+    {
+        // Two rows carrying the class: no telling which is the Photo ID, so
+        // neither is taken. Both stay visible under "Other".
+        const order = MOTOPRESS_ORDER.concat([['proof_address', 'Proof of Address', 'link']]);
+        const { ctx, pg } = await open(browser, 1280, page(order));
+        const s = await seen(pg);
+        check('two link-button rows: neither is moved into Guest 1',
+            s.slice(s.indexOf('## Guest 1'), s.indexOf('## Address')),
+            ['## Guest 1', 'First Name', 'Last Name', 'Phone', 'Email']);
+        check('... both stay visible, under "Other"',
+            s.slice(s.indexOf('## Other')), ['## Other', 'Upload Photo ID', 'Proof of Address']);
+        await ctx.close();
+    }
+
+    /* --- 9. EXISTING bookings: hidden by the booking's own facts (v0.27.0).
+     *        No accommodation control on the screen, as on live; the room
+     *        types come from the shipped Admin_Fields reading a simulated
+     *        booking's reserved rooms (config.php). Both widths. ----------- */
+    for (const width of [1280, 390]) {
+        const ex = (rooms, values) => open(browser, width,
+            page(MOTOPRESS_ORDER, values || null, { existing: true }),
+            {}, undefined, { rooms: rooms.map(t => ({ type: t })) });
+
+        let r = await ex([1604]);
+        check(`${width}px existing, 2-guest no-dogs cottage, nothing stored: Guest 3, 4 and Dog hidden`,
+            headingsIn(await seen(r.pg)), ['## Guest 1', '## Address', '## Guest 2', '## Note']);
+        check(`${width}px ... and "Show all" is offered, counting what it hides`,
+            await r.pg.evaluate(() => {
+                const row = document.querySelector('.dcc_admin-showall-row');
+                return !!row && !row.hidden && /\(7\)$/.test(row.querySelector('label').textContent);
+            }), true);
+        await setShowAll(r.pg, true);
+        check(`${width}px ... "Show all" reveals every heading`,
+            headingsIn(await seen(r.pg)), TIDY.filter(x => x.startsWith('## ')));
+        await r.ctx.close();
+
+        r = await ex([1065]);
+        check(`${width}px existing, 4-guest pet cottage: Dog shown, Guest 3/4 hidden (same rule as new bookings)`,
+            headingsIn(await seen(r.pg)), ['## Guest 1', '## Address', '## Guest 2', '## Dog', '## Note']);
+        await r.ctx.close();
+
+        r = await ex([1604], { guest3_first_name: 'x-g3', dog_type: 'x-dog' });
+        const h = headingsIn(await seen(r.pg));
+        check(`${width}px existing, stored Guest 3 and dog values on a no-dogs cottage: both stay visible`,
+            [h.includes('## Guest 3'), h.includes('## Dog')], [true, true]);
+        check(`${width}px ... Guest 4, empty, stays hidden`, h.includes('## Guest 4'), false);
+        await r.ctx.close();
+
+        r = await ex([1604, 1065]);
+        check(`${width}px existing, two rooms (no-dogs + pet): Dog shows because ANY room needs it`,
+            headingsIn(await seen(r.pg)).includes('## Dog'), true);
+        await r.ctx.close();
+
+        r = await ex([1604, 0]);
+        check(`${width}px existing, one room's type unreadable: everything shown (today's behaviour)`,
+            headingsIn(await seen(r.pg)), TIDY.filter(x => x.startsWith('## ')));
+        check(`${width}px ... and "Show all" has nothing to reveal, so it is not shown`,
+            await r.pg.evaluate(() => {
+                const row = document.querySelector('.dcc_admin-showall-row');
+                return !row || !row.getClientRects().length;
+            }), true);
+        await r.ctx.close();
+
+        r = await ex([]);
+        check(`${width}px existing, no reserved room readable at all: everything shown`,
+            headingsIn(await seen(r.pg)), TIDY.filter(x => x.startsWith('## ')));
+        await r.ctx.close();
+    }
+    {
+        // The guard on the existing-booking guards: the same screen with NO
+        // booking facts stated is today's 0.26.0 behaviour — everything shown.
+        // Without this, "hidden" above could be hiding for some other reason.
+        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { existing: true }),
+            { isExisting: '1' });
+        check('the guard: an existing booking with no stated cottage shows everything, as 0.26.0 did',
+            headingsIn(await seen(pg)), TIDY.filter(x => x.startsWith('## ')));
         await ctx.close();
     }
 

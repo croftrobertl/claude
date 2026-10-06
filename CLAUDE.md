@@ -718,6 +718,59 @@ yours to improvise.
     page; the suite's first draft ran with no config at all and timed out
     rather than passing. The config is now printed inline, as
     `wp_localize_script` does.
+  - **0.26.0 VERIFIED ON LIVE** (Director, 2026-10-06, booking 19615, labels
+    and structure only): the layout applied with no fallback, exact order,
+    headings rendered, labels unchanged; `checkout.js`/`checkout.css`
+    byte-identical to 0.25.2; the Guests 3 and 4 box ticked with no stored
+    row (absent = ON) and no `apply_filters` left for it. **The pattern's
+    SHAPE matched — but live had a row the fixture lacked** (Upload Photo ID,
+    below), which 0.26.0 put under "Other". That is the v0.9.0 lesson again:
+    a plausible fixture is missing exactly what nobody thought to put in it.
+  - **UPLOAD PHOTO ID ENDS GUEST 1** (owner's pick, v0.27.0). Live shape:
+    `<tr class="mphb-link-button-row">`, a `th` label, a cell holding only a
+    "View" link — NO named input, so the name match cannot see it. It is
+    identified by MotoPress's own markers, **never by its label** (`markedRow()`):
+    an element in the row whose `for`/`id`/`name` is `mphb_upload_id` (or
+    `upload_id`) first, else the ONE `tr.mphb-link-button-row` in the box. Two
+    such rows, or none, and it stays under "Other", visible — fail open. Only
+    the class path is known to exist on live; whether the row also carries a
+    `for` was not reported. Its original position in MotoPress's order was not
+    reported either; the fixture places it after Apartment/Unit # and the
+    result does not depend on it.
+  - **EXISTING BOOKINGS ARE GATED BY THEIR OWN COTTAGE** (owner's pick,
+    v0.27.0). The edit screen carries no accommodation control (the only
+    room-ish input is `mphb_rooms-hide`), so the gating read nothing and showed
+    everything. `Admin_Fields::booking_room_types()` reads the reserved rooms
+    by the live-confirmed chain (post_parent → `_mphb_room_id` →
+    `mphb_room_type_id`) and states them as `CFG.statedRoomTypes`, which the
+    script treats exactly like the add-booking step's marker. **All or
+    nothing**: one unreadable room states nothing, and the screen shows
+    everything as before — a partial answer could hide a group the unreadable
+    room needs. **Guest 3/4 follow the SAME rule as new bookings** — hidden
+    unless stored or "Show all" (owner's pick, 2026-10-06). The brief described
+    a guest-count test; the code has never used one, so he was asked, and no
+    count is read. (Had it been, MotoPress's capacity-filled `_mphb_adults` on
+    imports would have shown Guest 3/4 on bookings that never had them.)
+  - **The "Show all" box is a full-width row** among table rows (owner's pick,
+    v0.27.0; `tr.dcc_admin-showall-row`, colspan from the anchor row). It was a
+    bare `<div>` in the `<tbody>`.
+  - **The fail-open path now tells the checkbox it hides nothing** (v0.27.0).
+    It returned before `hatch.update()`, so on any screen where the cottage
+    could not be read the box stayed up, unticked, beside a box already
+    showing everything, under a hint saying fields were hidden — seen on live
+    on booking 19615 under 0.26.0, and the v0.22.0 rule says it must step
+    aside. Found by the suite's existing-booking case, not by reading.
+  - **The hint text changed** (v0.27.0) to be true on new AND existing
+    bookings AND at any "Guests included": "Guest %s details are hidden unless
+    this booking already has them saved, and so are pet details on a cottage
+    that does not take dogs. The Extra Guest Fee row is hidden too. Tick to
+    show every field — …", where %s is built from the same `min > included`
+    test as the gating ("3–4" at the default, "4" at 3; a pet-only variant when
+    no guest group is gated). The old one said pet details were "hidden by
+    default" (false on any pet cottage), and a fixed "Guest 3–4" would have
+    been false at "Guests included" = 3 — a setting must reach every reader,
+    the help text included. Mutation `php-hint-ignores-setting`. **A changed English source string is a new string to
+    LocoTranslate**: any translation of the old hint no longer applies.
 - **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
   MotoPress's. It names how many fields it is hiding and hides itself when it
   is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
@@ -934,9 +987,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 92
-  mutations, 92 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
-  v0.26.0; twelve suites). It read 50 here through three rounds that took it to
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 100
+  mutations, 100 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
+  v0.27.0; twelve suites). It read 50 here through three rounds that took it to
   75 — a count in prose is a claim that goes stale silently. 0.26.0's first full
   run was 88 + 4 STALE: four `g34-*` mutations aimed at the line the hook
   removal rewrote. Re-anchored with their intent unchanged, then re-run whole.
