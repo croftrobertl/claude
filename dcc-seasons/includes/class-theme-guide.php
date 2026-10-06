@@ -104,6 +104,7 @@ final class Theme_Guide {
                 'ambient'   => !empty($opt['ambient']),
                 'egg'       => !empty($opt['egg']),
                 'subtle'    => !empty($opt['subtle']),
+                'subtleIntensity' => (float) ($opt['subtle_intensity'] ?? 0.6),
                 'richness'  => (string) $opt['richness'],
                 'vignettes' => !empty($opt['fx_vignettes']),
                 'evening'   => !empty($opt['fx_evening']),
@@ -147,7 +148,7 @@ final class Theme_Guide {
             /* translators: %d: minimum number of sprites */
             'phoneMin'     => __('On a phone it never shows fewer than %d sprites.', 'dcc-seasons'),
             'countdown'    => __('At 11:59:50 pm on 31 December, a 10-second countdown to midnight takes over the screen.', 'dcc-seasons'),
-            'engineOff'    => __('“Ambient particles” is off in Settings, so the effects engine does not load: the background layer, corner accents, scenes and heroes are off too, not just the falling sprites. The logo egg still works.', 'dcc-seasons'),
+            'spritesOff'   => __('“Falling and drifting sprites” is off in Settings, so those lines (and the boats and birds, and anything that needs a sprite) are tagged below. The background layer, corner accents, scenes, heroes and the logo egg still play.', 'dcc-seasons'),
             'masterOff'    => __('DCC Seasons is switched off in Settings (Master enable), so guests see none of this.', 'dcc-seasons'),
             /* translators: %d: year */
             'datesIn'      => __('Dates in %d', 'dcc-seasons'),

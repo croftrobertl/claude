@@ -44,13 +44,6 @@ class Settings {
     }
 
     /**
-     * The settings page's hook suffix / screen ID, once admin_menu has run.
-     */
-    public static function hook(): string {
-        return self::$hook;
-    }
-
-    /**
      * "Where effects appear" choices, narrowest first. The tiers are
      * strictly nested (home < no_cottages < pages < all); the matrix each
      * one covers lives on Plugin::scope_allows().
@@ -74,6 +67,22 @@ class Settings {
      * with 'behind' layering an opaque section covers what is left. The
      * honest description of the trade is in the help text, not in a label.
      */
+    /**
+     * Does the effects engine have anything to draw? Since 4.5.0 each layer
+     * has its own switch and the engine loads when ANY is on (Rob,
+     * 2026-10-06): falling/drifting sprites → 'ambient'; background layer →
+     * 'subtle' (at an intensity above 0); corner accents and scenes →
+     * Visual richness 'full' (scenes also 'fx_vignettes'); heroes → any
+     * richness but 'minimal'. Plugin::config() ships this as CFG.engine and
+     * ambient.js fetches the engine on it; should_load() uses it too, so the
+     * two cannot disagree.
+     */
+    public static function engine_needed(array $opt): bool {
+        return !empty($opt['ambient'])
+            || (!empty($opt['subtle']) && (float) ($opt['subtle_intensity'] ?? 0.6) > 0)
+            || (string) ($opt['richness'] ?? 'full') !== 'minimal';
+    }
+
     public static function placements(): array {
         return [
             'content' => __('Across the page content', 'dcc-seasons'),
@@ -267,10 +276,10 @@ class Settings {
                 . esc_html__('DCC Seasons is switched OFF.', 'dcc-seasons') . '</strong> '
                 . esc_html__('Nothing renders on the site at all — no ambient canvas, no easter egg, and no scripts on the page. Every other setting below is inert until Master enable is ticked and saved.', 'dcc-seasons')
                 . '</p></div>';
-        } elseif (empty($opt['ambient']) && empty($opt['egg'])) {
+        } elseif (!self::engine_needed($opt) && empty($opt['egg'])) {
             echo '<div class="notice notice-error"><p><strong>'
-                . esc_html__('Both layers are off.', 'dcc-seasons') . '</strong> '
-                . esc_html__('Seasons is enabled, but with neither ambient particles nor the easter egg there is nothing to render, so no scripts are printed.', 'dcc-seasons')
+                . esc_html__('Everything is switched off.', 'dcc-seasons') . '</strong> '
+                . esc_html__('Seasons is enabled, but the falling sprites, the background layer, the easter egg and (at Minimal richness) the heroes are all off, so there is nothing to render and no scripts are printed.', 'dcc-seasons')
                 . '</p></div>';
         }
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only.
@@ -663,8 +672,9 @@ class Settings {
                         <td>
                             <label>
                                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[ambient]" value="1" <?php checked(!empty($opt['ambient'])); ?> />
-                                <?php esc_html_e('Ambient particles (site-wide, subtle)', 'dcc-seasons'); ?>
+                                <?php esc_html_e('Falling and drifting sprites', 'dcc-seasons'); ?>
                             </label><br />
+                            <p class="description dcc-seasons-layer-note"><?php esc_html_e('Switches the falling and drifting sprites only, including the boats and birds. The background layer, corner accents, scenes and heroes keep playing; they have their own settings below.', 'dcc-seasons'); ?></p>
                             <label>
                                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[egg]" value="1" <?php checked(!empty($opt['egg'])); ?> />
                                 <?php esc_html_e('Matrix easter egg (tap the logo)', 'dcc-seasons'); ?>

@@ -12,7 +12,7 @@
  *        [--assets-url=file:///…/dcc-seasons/]
  */
 define('ABSPATH', 1);
-$ROOT = realpath(__DIR__ . '/../dcc-seasons');
+$ROOT = realpath(getenv('DCC_ROOT') ?: (__DIR__ . '/../dcc-seasons'));   /* DCC_ROOT: render another build (before/after diffs) */
 $args = [];
 foreach (array_slice($argv, 1) as $a) { if (preg_match('/^--([a-z-]+)=(.*)$/', $a, $m)) { $args[$m[1]] = $m[2]; } }
 define('DCC_SEASONS_VERSION', 'test');
@@ -36,7 +36,14 @@ function esc_attr($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
 function esc_url($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
 function esc_textarea($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
 function apply_filters($tag, $value) { return $value; }
-function add_action() {} function add_filter() {} function do_action() {}
+/* Hooks are RECORDED, so the page's admin_notices (the plugin's own, e.g.
+ * the old preview panel) print the way WordPress prints them. */
+$GLOBALS['HOOKS'] = [];
+function add_action($tag, $cb = null, $prio = 10) { $GLOBALS['HOOKS'][$tag][] = $cb; return true; }
+function add_filter($tag, $cb = null, $prio = 10) { return true; }
+function do_action($tag) { foreach ($GLOBALS['HOOKS'][$tag] ?? [] as $cb) { if (is_callable($cb)) { call_user_func($cb); } } }
+function is_admin() { return true; }
+function register_activation_hook() {} function register_deactivation_hook() {}
 function sanitize_key($k) { return strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $k)); }
 function sanitize_text_field($v) { return trim(strip_tags((string) $v)); }
 function wp_unslash($v) { return $v; }
@@ -63,10 +70,10 @@ function wp_json_encode($v, $f = 0) { return json_encode($v, $f | JSON_UNESCAPED
 function wp_enqueue_style($h, $src = '') { $GLOBALS['ENQ']['style'][$h] = $src; }
 function wp_enqueue_script($h, $src = '') { $GLOBALS['ENQ']['script'][$h] = $src; }
 function wp_add_inline_script($h, $js, $pos = 'after') { $GLOBALS['ENQ']['inline'][] = [$h, $js, $pos]; return true; }
-function get_current_screen() { return null; }
+function get_current_screen() { return (object) ['id' => 'dcc_page_dcc-seasons', 'base' => 'dcc_page_dcc-seasons']; }
 function number_format_i18n($n) { return number_format($n); }
 
-foreach (['class-menu', 'class-plugin', 'class-schedule', 'class-themes', 'class-settings', 'class-theme-guide'] as $f) {
+foreach (['class-menu', 'class-plugin', 'class-schedule', 'class-themes', 'class-settings', 'class-theme-guide', 'class-preview'] as $f) {
     if (is_file("$ROOT/includes/$f.php")) { require "$ROOT/includes/$f.php"; }
 }
 use DCC_Seasons\Settings;
@@ -76,7 +83,12 @@ $rp = new ReflectionProperty(Settings::class, 'hook');
 $rp->setAccessible(true);
 $rp->setValue(null, 'dcc_page_dcc-seasons');
 Settings::assets('dcc_page_dcc-seasons');
+if (class_exists('DCC_Seasons\\Preview')) { \DCC_Seasons\Preview::init(); }
 ob_start();
+/* WordPress prints admin_notices above the page content. */
+echo '<div class="dcc-admin-notices">';
+do_action('admin_notices');
+echo '</div>';
 Settings::render_page();
 $body = ob_get_clean();
 

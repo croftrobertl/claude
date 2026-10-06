@@ -14,7 +14,9 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const ASSETS = path.join(ROOT, 'dcc-seasons', 'assets', 'js');
+/* DCC_ASSETS points the suites at another build's js folder (a before/after
+ * measurement serves the previous release from a scratch copy). */
+const ASSETS = process.env.DCC_ASSETS || path.join(ROOT, 'dcc-seasons', 'assets', 'js');
 
 function playwright() {
   const tries = [

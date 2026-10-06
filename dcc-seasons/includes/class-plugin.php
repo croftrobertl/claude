@@ -328,8 +328,8 @@ final class Plugin {
         $why   = '';
         if (empty($opt['enabled'])) {
             $why = __('DCC Seasons is SWITCHED OFF (Master enable). Nothing renders on this site: no config, no scripts, no canvas, no easter egg.', 'dcc-seasons');
-        } elseif (empty($opt['ambient']) && empty($opt['egg'])) {
-            $why = __('Both layers are off (ambient particles AND the easter egg), so there is nothing to render.', 'dcc-seasons');
+        } elseif (!Settings::engine_needed($opt) && empty($opt['egg'])) {
+            $why = __('Everything is switched off (falling sprites, background layer, easter egg, and heroes at Minimal richness), so there is nothing to render.', 'dcc-seasons');
         } elseif ($this->is_excluded()) {
             $why = __('This page is hard-excluded (checkout, or the Elementor editor). Exclusions beat every other setting, including a preview.', 'dcc-seasons');
         } else {
@@ -339,7 +339,8 @@ final class Plugin {
         $no   = __('no', 'dcc-seasons');
         $rows = [
             __('Master enable', 'dcc-seasons')      => empty($opt['enabled']) ? __('OFF', 'dcc-seasons') : __('on', 'dcc-seasons'),
-            __('Ambient particles', 'dcc-seasons')  => empty($opt['ambient']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
+            __('Falling sprites', 'dcc-seasons')    => empty($opt['ambient']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
+            __('Background layer', 'dcc-seasons')   => empty($opt['subtle']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
             __('Easter egg', 'dcc-seasons')         => empty($opt['egg']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
             __('Hard-excluded page', 'dcc-seasons') => $this->is_excluded() ? $yes : $no,
             __('Where effects appear', 'dcc-seasons') => $scope,
@@ -384,7 +385,7 @@ final class Plugin {
     private function should_load(): bool {
         $opt = Settings::options();
 
-        if (empty($opt['enabled']) || (empty($opt['ambient']) && empty($opt['egg']))) {
+        if (empty($opt['enabled']) || (!Settings::engine_needed($opt) && empty($opt['egg']))) {
             return false;
         }
         if ($this->is_excluded()) {
@@ -761,7 +762,8 @@ final class Plugin {
     private function config(array $opt): array {
         $config = [
             'enabled'     => (bool) $opt['enabled'],
-            'ambient'     => (bool) $opt['ambient'],
+            'ambient'     => (bool) $opt['ambient'],   /* falling/drifting sprites only, since 4.5.0 */
+            'engine'      => Settings::engine_needed($opt),
             'egg'         => (bool) $opt['egg'],
             'tapSelector' => (string) $opt['tap_selector'],
             'tapFallback' => '#masthead',

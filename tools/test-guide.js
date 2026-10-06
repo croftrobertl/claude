@@ -73,7 +73,7 @@ const ALLON = { ...LIVE, ambient: 1 };
         pics: [...document.querySelectorAll('.dcc-guide-card img, .dcc-guide-card canvas, .dcc-guide-card [role=img]')].map(n => n.getAttribute('alt') || n.getAttribute('aria-label') || ''),
         imgsBroken: [...document.querySelectorAll('.dcc-guide-card img')].filter(i => !i.complete || !i.naturalWidth).length,
         text: document.querySelector('#dcc-seasons-guide').innerText,
-        secs: cards.map(c => [...c.querySelectorAll('.dcc-guide-sec')].map(s => ({ label: s.querySelector('.dcc-guide-label').firstChild.textContent, off: !!s.querySelector('.dcc-guide-off') }))),
+        secs: cards.map(c => [...c.querySelectorAll('.dcc-guide-sec')].map(s => ({ label: s.querySelector('.dcc-guide-label').firstChild.textContent, off: !!s.querySelector('.dcc-guide-off'), text: s.innerText }))),
         note: (document.querySelector('.dcc-guide-note') || {}).textContent || '',
         turns: (document.querySelector('#dcc-guide-earth_day') || { innerText: '' }).innerText,
         newyears: document.querySelectorAll('.dcc-guide-card')[0].innerText,
@@ -93,14 +93,18 @@ const ALLON = { ...LIVE, ambient: 1 };
     ok(!raw.length, 'no picture falls back to a raw engine key (names() covers all)', raw.join(', '));
     ok(!r.imgsBroken, 'every sprite image decodes', `${r.imgsBroken} broken`);
     ok(!/\bnone\b/i.test(r.text.replace(/None \(heron/g, '')), 'never prints "none"', (r.text.match(/.{20}\bnone\b.{20}/i) || [''])[0]);
-    const engineLabels = ['Falling and drifting', 'Boats and birds', 'Background layer', 'Corner accent', 'Scenes', 'Hero', 'Special'];
+    /* 4.5.0: Ambient switches the sprites ONLY. Off, the sprite lines are
+     * tagged — falling/drifting, boats and birds, and the two specials that
+     * need a sprite (Earth Day's turns, Christmas's phone minimum) — and
+     * nothing else: background, accent, scenes, hero and egg all play. */
+    const spriteLabels = ['Falling and drifting', 'Boats and birds'];
     const bad = [];
     r.secs.forEach((ss, i) => ss.forEach(s => {
-      const want = s.label === 'Logo egg' ? false : engineLabels.includes(s.label);
-      if (s.off !== want) { bad.push(`${r.ids[i]}:${s.label}`); }
+      const want = spriteLabels.includes(s.label) || (s.label === 'Special' && /take turns|never shows fewer/.test(s.text));
+      if (s.off !== want) { bad.push(`${r.ids[i]}:${s.label}${s.off ? ' (tagged)' : ' (not tagged)'}`); }
     }));
-    ok(!bad.length, 'Ambient off: every engine layer tagged "Switched off in Settings", the egg not', bad.slice(0, 6).join(' '));
-    ok(/Ambient particles/.test(r.note) && /background layer/.test(r.note), 'a notice says why every engine layer is off', r.note.slice(0, 80));
+    ok(!bad.length, 'Ambient off: only the sprite lines are tagged "Switched off in Settings"', bad.slice(0, 6).join(' '));
+    ok(/Falling and drifting sprites/.test(r.note) && /background layer, corner accents, scenes, heroes and the logo egg still play/.test(r.note), 'the notice says only the sprites are off', r.note.slice(0, 100));
     ok(/45 s each/.test(r.turns) && /Hands holding the Earth|hands holding the earth/.test(r.turns), 'Earth Day shows its 45-second hands/globe turns', r.turns.slice(0, 120));
     ok(/countdown/.test(r.newyears), 'New Year\'s shows its midnight countdown', '');
     await p.close();

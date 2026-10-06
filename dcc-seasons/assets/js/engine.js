@@ -1676,7 +1676,12 @@
 			return sp;
 		}
 		var pool = [], specs = [], xaSp = null;
-		(A.particles || []).forEach(function (def) {
+		/* "Ambient particles" switches the falling/drifting sprites ONLY
+		 * (4.5.0, Rob). Off, the pool is empty: no sprites, boats or birds,
+		 * no xa turns (the globe is a sprite, so the accent stays up), while
+		 * the background layer, accents, scenes and heroes play on. An old
+		 * cached config without the key keeps its sprites. */
+		(CFG.ambient === false ? [] : (A.particles || [])).forEach(function (def) {
 			/* xa: a sprite that never shares the screen with this theme's
 			 * corner accent (Earth Day's globe: the hands accent already
 			 * holds an Earth). While the accent is mounted it is kept OUT of

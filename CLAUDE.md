@@ -666,7 +666,7 @@ render round and his say.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/validate-paths.js --strict`.
   `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
   `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
   them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
@@ -821,12 +821,24 @@ render round and his say.
   name. Inside `subtleKit` the context is `kitG`, never `g`: effects
   declare their own `var g` for gradients, and a shadowed `g` broke bokeh
   on the first try.
-- **"Ambient particles" off means the ENGINE does not load** (`ambient.js`
-  returns before fetching it), so the background layer, corner accents,
-  scenes and heroes are off too — not just the falling sprites. Live has
-  run this way since at least 2026-10-06 while the Director believed the
-  background layer was on; reported, not changed (what the checkbox should
-  mean is Rob's call). The guide tags every engine layer and says why.
+- **Each engine layer has its own switch since 4.5.0 (Rob, 2026-10-06).**
+  The `ambient` option ("Falling and drifting sprites") empties the sprite
+  pool and nothing else (`CFG.ambient === false` in engine.js; boats,
+  birds and the xa globe are sprites too, so Earth Day's hands stay up).
+  The engine loads on `CFG.engine` = `Settings::engine_needed()`: ambient,
+  OR subtle at an intensity above 0, OR richness other than 'minimal'
+  (heroes). Accents need richness 'full'; scenes 'full' + fx_vignettes;
+  heroes not 'minimal'. `should_load()` uses the same rule, so the loader
+  and the server cannot disagree. Until 4.5.0 `ambient` gated the whole
+  engine and live showed nothing but the egg for weeks while its
+  background layer was "on". Measured cost of the engine with ambient=0,
+  subtle=1 (Halloween, `tools/measure-perf.js`, headless, unthrottled):
+  ~50 ms/s main thread at 390px and ~115 ms/s at 1280px over the 4.4.0
+  baseline (engine not loaded), 60 fps throughout; mostly canvas paint,
+  12-16 ms/s script. `tools/test-switches.js` proves every layer's gate.
+- **The settings-page preview panel is gone (4.5.0)**; `Preview` keeps
+  only the front-end chip. `tools/render-settings.php` now fires the
+  plugin's own `admin_notices`, so a render shows what WordPress prints.
 - **Screenshots of the settings page:** `php tools/render-settings.php
   [--tab=guide] [--opt=file.json]` renders the REAL page on WP stubs;
   `node tools/shot-settings.js page.html out.png 1280 [selector]` captures

@@ -43,6 +43,7 @@ if (!function_exists('sanitize_key')) {
 
 require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
 require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
+require __DIR__ . '/../dcc-seasons/includes/class-settings.php';
 
 use DCC_Seasons\Schedule;
 use DCC_Seasons\Themes;
@@ -80,7 +81,15 @@ if (!empty($args['noparticles'])) {
 
 $config = [
     'enabled'      => true,
-    'ambient'      => true,
+    /* --ambient=0: the falling/drifting sprites off (4.5.0: that is ALL
+     * the switch does). 'engine' comes from the plugin's own rule. */
+    'ambient'      => (($args['ambient'] ?? '1') !== '0'),
+    'engine'       => \DCC_Seasons\Settings::engine_needed([
+        'ambient'          => (($args['ambient'] ?? '1') !== '0') ? 1 : 0,
+        'subtle'           => (($args['subtle'] ?? '') !== 'off') ? 1 : 0,
+        'subtle_intensity' => isset($args['intensity']) ? (float) $args['intensity'] : 0.6,
+        'richness'         => (string) ($args['richness'] ?? 'full'),
+    ]),
     'egg'          => true,
     'tapSelector'  => '#site-title',
     'tapFallback'  => '#masthead',

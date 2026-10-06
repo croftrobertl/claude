@@ -20,18 +20,19 @@
 	if (!E) { root.innerHTML = ''; root.appendChild(el('p', 'notice notice-error dcc-guide-error', T.loadError)); return; }
 
 	var S = D.settings, N = D.names;
-	/* What actually runs, from the same gates the plugin and engine use:
-	 * the loader fetches the engine only with Ambient on (ambient.js), the
-	 * corner accents and scenes need Full richness, heroes anything but
-	 * Minimal, scenes also the "scenes" toggle. */
-	var engineOn = S.enabled && S.ambient;
+	/* What actually runs, from the same gates the plugin and engine use
+	 * (4.5.0: each layer its own switch, see Settings::engine_needed()):
+	 * sprites (incl. boats and birds) → Ambient; background → Subtle at an
+	 * intensity above 0; corner accents → Full richness; scenes → Full
+	 * richness and the scenes toggle; heroes → anything but Minimal. */
+	var live = S.enabled;
 	var on = {
-		sprites: engineOn,
-		subtle: engineOn && S.subtle,
-		accent: engineOn && S.richness === 'full',
-		scenes: engineOn && S.richness === 'full' && S.vignettes,
-		hero: engineOn && S.richness !== 'minimal',
-		egg: S.enabled && S.egg
+		sprites: live && S.ambient,
+		subtle: live && S.subtle && S.subtleIntensity > 0,
+		accent: live && S.richness === 'full',
+		scenes: live && S.richness === 'full' && S.vignettes,
+		hero: live && S.richness !== 'minimal',
+		egg: live && S.egg
 	};
 	var BOATS_BIRDS = ' cruise fly vee ';
 
@@ -276,7 +277,7 @@
 		if (turnDef && accent) {
 			var tk = Array.isArray(turnDef.s) ? turnDef.s[0] : turnDef.s;
 			sp.push([[spriteImg(tk, spriteName(tk)), spriteImg(accent[0], spriteName(accent[0]))],
-				fmt(T.turns, spriteName(tk), spriteName(accent[0]).toLowerCase(), E.timing.xaTurn), on.accent]);
+				fmt(T.turns, spriteName(tk), spriteName(accent[0]).toLowerCase(), E.timing.xaTurn), on.accent && on.sprites]);
 		}
 		if (A && A.phoneMin) { sp.push([[], fmt(T.phoneMin, A.phoneMin), on.sprites]); }
 		if (key === E.countdown) { sp.push([[], T.countdown, on.scenes]); }
@@ -317,7 +318,7 @@
 	root.innerHTML = '';
 	root.appendChild(el('p', 'description dcc-guide-intro', T.intro));
 	if (!S.enabled) { root.appendChild(el('p', 'notice notice-warning inline dcc-guide-note', T.masterOff)); }
-	else if (!S.ambient) { root.appendChild(el('p', 'notice notice-info inline dcc-guide-note', T.engineOff)); }
+	else if (!S.ambient) { root.appendChild(el('p', 'notice notice-info inline dcc-guide-note', T.spritesOff)); }
 	var grid = el('div', 'dcc-guide-grid');
 	keys.forEach(function (k) { grid.appendChild(card(k)); });
 	root.appendChild(grid);

@@ -218,6 +218,38 @@ ok(\DCC_Seasons\Menu::PRIORITY === 40, 'Menu::PRIORITY is still 40',
     (string) \DCC_Seasons\Menu::PRIORITY);
 ok(\DCC_Seasons\Menu::PARENT === 'dcc', "Menu::PARENT is still 'dcc'");
 
+/* 4.5.0 rollout (Rob, 2026-10-06): the Director narrows Scope to the
+ * homepage on install, with the live layer settings — falling sprites off,
+ * background layer on. The page must still load (the engine now has the
+ * background, accent, scenes and heroes to draw), on the homepage only. */
+echo "\n=== 4.5.0 rollout: scope=home, ambient=0, subtle=1 ===\n";
+$ROLL = ['scope' => 'home', 'ambient' => 0, 'subtle' => 1, 'egg' => 1, 'placement' => 'content', 'layering' => 'front', 'density' => 16];
+ok(loads(['front' => true, 'path' => '/'], $ROLL), 'the homepage is decorated');
+ok(!loads(['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'], $ROLL), '/contact/ is not');
+ok(!loads(['page' => true, 'id' => 13, 'slug' => 'cottages', 'path' => '/cottages/'], $ROLL), '/cottages/ is not');
+ok(!loads(['cottage' => true, 'id' => 1065, 'slug' => 'cottage-1', 'path' => '/accommodation/cottage-1/'], $ROLL), 'a cottage page is not');
+ok(!loads(['page' => true, 'id' => 1399, 'slug' => 'submit-booking', 'path' => '/submit-booking/'], $ROLL), 'Submit Booking is not');
+ok(loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 1, 'scope' => 'home']), 'egg off too: the homepage still loads (the engine has layers to draw)');
+ok(!loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 0, 'richness' => 'minimal', 'scope' => 'home']), 'everything off: nothing loads, even on the homepage');
+/* config() needs a few more WordPress functions than should_load() does. */
+foreach (['add_query_arg' => 'function add_query_arg($k, $v = null, $u = null) { return (string) $u; }',
+          'home_url' => 'function home_url($p = "") { return "https://doracanalcourt.com" . $p; }',
+          'current_user_can' => 'function current_user_can($c) { return false; }',
+          'admin_url' => 'function admin_url($p = "") { return "https://doracanalcourt.com/wp-admin/" . $p; }',
+          'wp_create_nonce' => 'function wp_create_nonce($a = -1) { return "n"; }',
+          'is_user_logged_in' => 'function is_user_logged_in() { return false; }',
+          'current_time' => 'function current_time($f) { return date($f); }',
+          'get_locale' => 'function get_locale() { return "en_US"; }'] as $fn => $def) {
+    if (!function_exists($fn)) { eval($def); }
+}
+if (!defined('DCC_SEASONS_URL')) { define('DCC_SEASONS_URL', 'https://doracanalcourt.com/wp-content/plugins/dcc-seasons/'); }
+if (!defined('DCC_SEASONS_VERSION')) { define('DCC_SEASONS_VERSION', 'test'); }
+$ref = new \ReflectionClass(Plugin::class);
+$cfgm = $ref->getMethod('config');
+$cfgm->setAccessible(true);
+$cfg = $cfgm->invoke($ref->newInstanceWithoutConstructor(), array_merge(Settings::defaults(), $ROLL));
+ok($cfg['ambient'] === false && $cfg['engine'] === true, "the page's config says: sprites off, engine on", json_encode(['ambient' => $cfg['ambient'], 'engine' => $cfg['engine']]));
+
 echo "\n$pass passed · $fail failed\n";
 if ($fail) {
     foreach ($problems as $p) { echo "  - $p\n"; }

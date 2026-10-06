@@ -1,6 +1,6 @@
 /* DCC Seasons — deferred loader: picks the active theme from the visitor's
  * LOCAL date (cache-safe), binds the tap counter, and lazy-loads the two
- * engines — engine.js (ambient particles, after idle) and matrix.js (the
+ * engines — engine.js (every animated layer, after idle) and matrix.js (the
  * easter egg, only on the launching tap). Dependency-free. */
 (function () {
 	'use strict';
@@ -182,7 +182,14 @@
 	 * Loads on themed days AND theme-less days: the heron hero is the
 	 * plugin's year-round signature. Not loaded under reduced motion. */
 	function ambient() {
-		if (!CFG.ambient || reduced() || !CFG.engineSrc) { return; }
+		/* The engine draws every animated layer — falling sprites, the
+		 * background layer, corner accents, scenes, heroes — and since 4.5.0
+		 * each has its own switch (Rob: "Ambient" = falling sprites only).
+		 * So it loads whenever ANY of them is on: CFG.engine, computed by
+		 * Settings::engine_needed(). A config cached before 4.5.0 has no
+		 * CFG.engine and keeps the old meaning. */
+		var wantEngine = CFG.engine !== undefined ? !!CFG.engine : !!CFG.ambient;
+		if (!wantEngine || reduced() || !CFG.engineSrc) { return; }
 		/* Footer placement with no footer renders nothing, so fetching the
 		 * engine to discover that costs ~96KB for no effect. Measured: on a
 		 * page with no footer the engine was fetched in full and produced

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.4.0
+Stable tag: 4.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.5.0 =
+Rob's decisions of 2026-10-06. Rollback: reinstall the 4.4.0 zip. Nothing
+stored is rewritten.
+
+* "Ambient particles" is now "Falling and drifting sprites" and switches
+  only those (boats and birds included). Until now it gated the whole
+  effects engine, so with it off guests saw nothing but the logo egg,
+  even with the background layer switched on. The engine now loads
+  whenever any of its layers is on, and each layer follows its own
+  setting: background layer → "Subtle layer"; corner accents → Visual
+  richness "Full"; scenes → richness "Full" plus "Scene moments"; heroes
+  → any richness but "Minimal". No new settings.
+* The Theme guide's notice and "Switched off in Settings" tags follow the
+  same mapping.
+* The "Preview a theme" button panel at the top of the Seasons settings
+  page is gone (both tabs): every theme row and guide card has its own
+  preview link. The front-end preview chip is unchanged.
 
 = 4.4.0 =
 Two WP-Admin changes from Rob (2026-10-06). Nothing guests see changes.
