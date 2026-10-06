@@ -726,17 +726,26 @@ yours to improvise.
     SHAPE matched — but live had a row the fixture lacked** (Upload Photo ID,
     below), which 0.26.0 put under "Other". That is the v0.9.0 lesson again:
     a plausible fixture is missing exactly what nobody thought to put in it.
-  - **UPLOAD PHOTO ID ENDS GUEST 1** (owner's pick, v0.27.0). Live shape:
-    `<tr class="mphb-link-button-row">`, a `th` label, a cell holding only a
-    "View" link — NO named input, so the name match cannot see it. It is
-    identified by MotoPress's own markers, **never by its label** (`markedRow()`):
-    an element in the row whose `for`/`id`/`name` is `mphb_upload_id` (or
-    `upload_id`) first, else the ONE `tr.mphb-link-button-row` in the box. Two
-    such rows, or none, and it stays under "Other", visible — fail open. Only
-    the class path is known to exist on live; whether the row also carries a
-    `for` was not reported. Its original position in MotoPress's order was not
-    reported either; the fixture places it after Apartment/Unit # and the
-    result does not depend on it.
+  - **UPLOAD PHOTO ID ENDS GUEST 1** (owner's pick, v0.27.0; matcher FIXED
+    in v0.27.1). The row has NO named input and takes TWO shapes on live
+    (Director, 2026-10-06, attributes only):
+    - file stored (19615): `tr.mphb-link-button-row` > `th` > `label[for="mphb-mphb_upload_id"]`;
+      `td` > `div.mphb-ctrl-wrapper.mphb-ctrl.mphb-ctrl-link-button` > `a.button` "View file";
+    - no file (19600, 18462 — most bookings; only 19 hold a photo):
+      `tr.mphb-placeholder-row`, same `th` label and `for`; `td` > `div…mphb-ctrl-placeholder` >
+      `label` "File is not uploaded".
+    **The match is the label's `for="mphb-mphb_upload_id"`** (prefix doubled:
+    MotoPress's `mphb-` + the field name), which both shapes carry; the value is
+    built from `Id_Files::META_KEY`, never retyped. **0.27.0 matched on
+    `mphb-link-button-row` and so missed every booking without a photo** — the
+    class changes with the row's STATE, and `mphb-placeholder-row` is generic
+    MotoPress. So: never a row class alone, never the label text, and no match
+    leaves the row under "Other", visible. The fixture carries both live shapes,
+    a class-only row (must not match) and an unrelated placeholder row (must not
+    be taken). Mutation `js-photo-nofile-missed` reproduces 0.27.0's defect and
+    the no-file fixture kills it. **Lesson: a fixture holding one STATE of a row
+    tests that state** — the v0.9.0 rule needs "every state the live markup
+    takes", not only "real markup".
   - **EXISTING BOOKINGS ARE GATED BY THEIR OWN COTTAGE** (owner's pick,
     v0.27.0). The edit screen carries no accommodation control (the only
     room-ish input is `mphb_rooms-hide`), so the gating read nothing and showed
@@ -987,9 +996,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 100
-  mutations, 100 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
-  v0.27.0; twelve suites). It read 50 here through three rounds that took it to
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 101
+  mutations, 101 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
+  v0.27.1; twelve suites). It read 50 here through three rounds that took it to
   75 — a count in prose is a claim that goes stale silently. 0.26.0's first full
   run was 88 + 4 STALE: four `g34-*` mutations aimed at the line the hook
   removal rewrote. Re-anchored with their intent unchanged, then re-run whole.

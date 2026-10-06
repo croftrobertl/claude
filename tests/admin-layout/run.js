@@ -54,10 +54,9 @@ const MOTOPRESS_ORDER = [
     ['note', 'Customer Note', 'textarea'],
     ['guest2_first_name', 'Guest 2: First Name'], ['guest2_last_name', 'Guest 2: Last Name'],
     ['guest2_phone', 'Guest 2: Phone Number'], ['apartment-units', 'Apartment/Unit #'],
-    // Live has this row (Director, 2026-10-06) and 0.26.0's fixture did not:
-    // <tr class="mphb-link-button-row">, a th label and a cell holding only a
-    // "View" link — no named input. Its original position was not reported;
-    // it is placed here, and the result does not depend on it.
+    // Live has this row (Director, 2026-10-06) and 0.26.0's fixture did not.
+    // No named input; two shapes, see rowsHtml(). Its original position was
+    // not reported; it is placed here, and the result does not depend on it.
     ['upload_id', 'Upload Photo ID', 'link'],
     ['dog_type', 'Dog Type'], ['dog_size', 'Dog Size', 'select'], ['dog_hair', 'Dog Hair', 'select'],
     ['guest3_first_name', 'Guest 3: First Name'], ['guest3_last_name', 'Guest 3: Last Name'],
@@ -90,20 +89,38 @@ function control(name, label, kind, value) {
     return `<input type="text" id="${id}" name="${id}" value="${v}" class="regular-text">`;
 }
 
-/* linkMarker — how a "View"-only row is marked:
- *   'class' (default): MotoPress's tr.mphb-link-button-row, label with no `for`
- *                      — the shape the Director reported on live;
- *   'for':  no class, but the label's `for` names the field;
- *   'none': neither. */
+/* The Photo ID row's two LIVE shapes, attribute for attribute as the Director
+ * reported them (2026-10-06), plus one that must not match:
+ *   'file' (default) — a photo is stored (19615):
+ *       tr.mphb-link-button-row > th > label[for="mphb-mphb_upload_id"]
+ *       td > div.mphb-ctrl-wrapper.mphb-ctrl.mphb-ctrl-link-button > a.button "View file"
+ *   'nofile' — no photo (19600, 18462; most bookings):
+ *       tr.mphb-placeholder-row > th > label[for="mphb-mphb_upload_id"]
+ *       td > div.mphb-ctrl-wrapper.mphb-ctrl.mphb-ctrl-placeholder > label "File is not uploaded"
+ *   'classonly' — the link-button class with NO `for`: the class alone must
+ *       not be enough (0.27.0 matched on it and missed every 'nofile' row).
+ * Kind 'placeholder' is some OTHER MotoPress placeholder row, no `for`. */
+function linkRow(name, label, marker) {
+    const forAttr = marker === 'classonly' ? '' : ` for="mphb-mphb_${name}"`;
+    if (marker === 'nofile') {
+        return `<tr class="mphb-placeholder-row"><th scope="row"><label${forAttr}>${label}</label></th>` +
+            `<td><div class="mphb-ctrl-wrapper mphb-ctrl mphb-ctrl-placeholder"><label>File is not uploaded</label></div></td></tr>`;
+    }
+    return `<tr class="mphb-link-button-row"><th scope="row"><label${forAttr}>${label}</label></th>` +
+        `<td><div class="mphb-ctrl-wrapper mphb-ctrl mphb-ctrl-link-button"><a class="button" href="#">View file</a></div></td></tr>`;
+}
+
 function rowsHtml(order, values, wrap, linkMarker) {
-    linkMarker = linkMarker || 'class';
+    linkMarker = linkMarker || 'file';
     return order.map(([name, label, kind]) => {
         const c = control(name, label, kind, values && values[name]);
         if (kind === 'link') {
-            const forAttr = linkMarker === 'for' ? ` for="mphb_${name}"` : '';
-            if (wrap === 'p') { return `<p class="mphb-field"><label${forAttr}>${label}</label>${c}</p>`; }
-            const cls = linkMarker === 'class' ? ' class="mphb-link-button-row"' : '';
-            return `<tr${cls}><th scope="row"><label${forAttr}>${label}</label></th><td>${c}</td></tr>`;
+            if (wrap === 'p') { return `<p class="mphb-field"><label for="mphb-mphb_${name}">${label}</label>${c}</p>`; }
+            return linkRow(name, label, linkMarker);
+        }
+        if (kind === 'placeholder') {
+            return `<tr class="mphb-placeholder-row"><th scope="row"><label>${label}</label></th>` +
+                `<td><div class="mphb-ctrl-wrapper mphb-ctrl mphb-ctrl-placeholder"><label>File is not uploaded</label></div></td></tr>`;
         }
         if (wrap === 'p') { return `<p class="mphb-field"><label for="mphb_${name}">${label}</label>${c}</p>`; }
         return `<tr><th scope="row"><label for="mphb_${name}">${label}</label></th><td>${c}</td></tr>`;
@@ -412,38 +429,39 @@ async function formData(pg) {
     }
 
 
-    /* --- 8. Upload Photo ID: identified by MotoPress's markers, never by its
-     *        label. Each marker constructed, and each way it must NOT match. --- */
-    for (const [marker, title] of [['class', 'the mphb-link-button-row class (live shape)'],
-                                   ['for', 'a label naming mphb_upload_id']]) {
-        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { linkMarker: marker }));
-        await setShowAll(pg, true);
-        const s = (await seen(pg)).filter(x => x !== '[show all]');
-        check(`Photo ID found by ${title}: it ends Guest 1, after Email`,
-            s.slice(s.indexOf('Email'), s.indexOf('## Address')), ['Email', 'Upload Photo ID']);
-        check(`... and no "Other" heading appears (${marker})`, s.includes('## Other'), false);
-        await ctx.close();
+    /* --- 8. Upload Photo ID: matched by its label's for="mphb-mphb_upload_id",
+     *        in BOTH live states; never by row class alone, never by label
+     *        text. Each way it must not match is constructed too. ---------- */
+    for (const [marker, title] of [['file', 'a photo stored (link-button row)'],
+                                   ['nofile', 'NO photo stored (placeholder row) — most bookings']]) {
+        for (const width of [1280, 390]) {
+            const { ctx, pg } = await open(browser, width, page(MOTOPRESS_ORDER, null, { linkMarker: marker }));
+            await setShowAll(pg, true);
+            const s = (await seen(pg)).filter(x => x !== '[show all]');
+            check(`${width}px Photo ID with ${title}: it ends Guest 1, after Email`,
+                s.slice(s.indexOf('Email'), s.indexOf('## Address')), ['Email', 'Upload Photo ID']);
+            check(`${width}px ... and no "Other" heading appears (${marker})`, s.includes('## Other'), false);
+            await ctx.close();
+        }
     }
     {
-        // Neither marker: it is NOT guessed at by its label — it stays visible
-        // under "Other", exactly as 0.26.0 left it.
-        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { linkMarker: 'none' }));
+        // The link-button class with no `for`: the class alone is NOT enough.
+        const { ctx, pg } = await open(browser, 1280, page(MOTOPRESS_ORDER, null, { linkMarker: 'classonly' }));
         const s = await seen(pg);
-        check('Photo ID with no marker is not matched by its label: still under "Other"',
+        check('Photo ID row carrying only the class (no for) is not matched: it stays under "Other"',
             s.slice(-2), ['## Other', 'Upload Photo ID']);
         await ctx.close();
     }
     {
-        // Two rows carrying the class: no telling which is the Photo ID, so
-        // neither is taken. Both stay visible under "Other".
-        const order = MOTOPRESS_ORDER.concat([['proof_address', 'Proof of Address', 'link']]);
-        const { ctx, pg } = await open(browser, 1280, page(order));
+        // Another MotoPress placeholder row beside the real one: the generic
+        // class takes nothing with it. Photo ID moves; the other stays visible
+        // under "Other".
+        const order = MOTOPRESS_ORDER.concat([['proof_address', 'Proof of Address', 'placeholder']]);
+        const { ctx, pg } = await open(browser, 1280, page(order, null, { linkMarker: 'nofile' }));
         const s = await seen(pg);
-        check('two link-button rows: neither is moved into Guest 1',
-            s.slice(s.indexOf('## Guest 1'), s.indexOf('## Address')),
-            ['## Guest 1', 'First Name', 'Last Name', 'Phone', 'Email']);
-        check('... both stay visible, under "Other"',
-            s.slice(s.indexOf('## Other')), ['## Other', 'Upload Photo ID', 'Proof of Address']);
+        check('a second, unrelated placeholder row is not taken for the Photo ID',
+            s.slice(s.indexOf('Email'), s.indexOf('## Address')), ['Email', 'Upload Photo ID']);
+        check('... it stays visible, under "Other"', s.slice(-2), ['## Other', 'Proof of Address']);
         await ctx.close();
     }
 

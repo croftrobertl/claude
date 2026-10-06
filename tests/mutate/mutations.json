@@ -1039,17 +1039,6 @@
   "count": 1
  },
  {
-  "id": "js-photo-class-not-unique",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 the link-button class identifies the Photo ID only when exactly one row has it",
-  "find": "            return byClass.length === 1 ? byClass[0] : null;",
-  "replace": "            return byClass.length ? byClass[0] : null;",
-  "count": 1
- },
- {
   "id": "js-photo-attr-ref-dead",
   "file": "dcc-custom-checkout/assets/admin-booking.js",
   "suites": [
@@ -1083,17 +1072,6 @@
   "count": 1
  },
  {
-  "id": "php-photo-not-in-guest1",
-  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 Upload Photo ID ends the Guest 1 group (owner's pick)",
-  "find": "                        'rowClass' => 'mphb-link-button-row',",
-  "replace": "                        'rowClass' => 'no-such-marker',",
-  "count": 1
- },
- {
   "id": "php-hint-ignores-setting",
   "file": "dcc-custom-checkout/includes/class-admin-fields.php",
   "suites": [
@@ -1102,6 +1080,39 @@
   "claim": "0.27.0 the Show-all hint names the groups the setting actually hides",
   "find": "            $range = count($mins) === 1 ? (string) $mins[0] : $mins[0] . '–' . $mins[count($mins) - 1];",
   "replace": "            $range = '3–4';",
+  "count": 1
+ },
+ {
+  "id": "js-photo-nofile-missed",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.1 the Photo ID is matched with NO file stored (placeholder row) — 0.27.0's live defect",
+  "find": "                return c.tagName === 'TR' && used.indexOf(c) === -1;",
+  "replace": "                return c.tagName === 'TR' && c.classList.contains('mphb-link-button-row') && used.indexOf(c) === -1;",
+  "count": 1
+ },
+ {
+  "id": "js-photo-class-alone",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.1 a row class alone never identifies the Photo ID",
+  "find": "            return null;\n        }\n\n        function heading(key, title, cols) {",
+  "replace": "            var byClass = free.filter(function (c) { return c.classList.contains('mphb-link-button-row'); });\n            return byClass.length === 1 ? byClass[0] : null;\n        }\n\n        function heading(key, title, cols) {",
+  "count": 1
+ },
+ {
+  "id": "php-photo-live-for-dropped",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.27.1 the live label for= value (mphb-mphb_upload_id) is what identifies the Photo ID",
+  "find": "                        'names' => ['mphb-' . Id_Files::META_KEY, Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],",
+  "replace": "                        'names' => [Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],",
   "count": 1
  }
 ]

@@ -555,14 +555,14 @@
         }
 
         /**
-         * A row that carries no named control, identified by what MotoPress
-         * put on it — never by its label, which is translatable text.
-         *  1. a direct reference to the field: an element in the row whose
-         *     for / id / name is one of def.names;
-         *  2. else the ONE row in the box carrying def.rowClass (MotoPress's
-         *     marker for that kind of field). Two or more, and there is no
-         *     telling them apart, so none is taken and they stay under
-         *     "Other" — visible, as before.
+         * A row that carries no named control, identified by a direct
+         * reference to the field: an element in the row whose for / id / name
+         * is one of def.names (on live, the th label's
+         * for="mphb-mphb_upload_id", present whether or not a file is
+         * uploaded). Never by its label text, and never by row class alone
+         * (v0.27.1): the class changes with the row's state, which is how
+         * 0.27.0 missed every booking without a photo. No match: the row stays
+         * under "Other", visible.
          */
         function markedRow(box, def, taken) {
             var used = taken.map(function (h) { return h.row; });
@@ -578,9 +578,7 @@
                     }
                 }
             }
-            if (!def.rowClass) { return null; }
-            var byClass = free.filter(function (c) { return c.classList.contains(def.rowClass); });
-            return byClass.length === 1 ? byClass[0] : null;
+            return null;
         }
 
         function heading(key, title, cols) {

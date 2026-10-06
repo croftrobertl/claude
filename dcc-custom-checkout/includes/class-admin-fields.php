@@ -318,15 +318,19 @@ final class Admin_Fields
                 'fields' => [
                     $mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email'),
                     // Upload Photo ID, last in Guest 1 (owner's pick, v0.27.0).
-                    // Its admin row holds only a "View" link — no input, so no
-                    // name to match. The script identifies it by MotoPress's
-                    // own markers instead, never by the label: an element in
-                    // the row referencing one of `names`, else the ONE row in
-                    // the box carrying `rowClass`. Two such rows, or none, and
-                    // it is left under "Other", as before.
+                    // Its admin row has no input, so no name to match, and it
+                    // takes TWO shapes on live (Director, 2026-10-06):
+                    //   file:    tr.mphb-link-button-row, cell = "View file" link
+                    //   no file: tr.mphb-placeholder-row, cell = "File is not
+                    //            uploaded" — most bookings (19 hold a photo)
+                    // What both carry is the th label's for="mphb-mphb_upload_id"
+                    // (prefix doubled: MotoPress's "mphb-" + the field name),
+                    // so that is the match (v0.27.1). NOT the row class: 0.27.0
+                    // matched mphb-link-button-row and missed every booking
+                    // without a file, and mphb-placeholder-row is generic.
+                    // Never the label text. Unmatched -> stays under "Other".
                     [
-                        'names'    => [Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],
-                        'rowClass' => 'mphb-link-button-row',
+                        'names' => ['mphb-' . Id_Files::META_KEY, Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],
                     ],
                 ],
             ],

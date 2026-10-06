@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.0
+Stable tag: 0.27.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,14 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.27.1 =
+* FIX: on the WP-Admin booking screen, "Upload Photo ID" was moved to the end of
+  Guest 1 only on bookings that HAVE a photo. On a booking without one -- most
+  of them -- MotoPress draws the row differently, and 0.27.0 left it at the
+  bottom under "Other". It is now recognised by the field reference both shapes
+  carry, so it ends Guest 1 either way. Unrecognised rows still stay visible
+  under "Other". Nothing else changed.
 
 = 0.27.0 =
 * NEW (owner's pick, 2026-10-06): "Upload Photo ID" ends the Guest 1 group on
