@@ -1315,6 +1315,50 @@ final class Water_Live {
 	}
 
 	/**
+	 * A date, and its time when the source declared one: "07/27/2026" or
+	 * "07/27/2026, 4:00 AM" — the canal's clock, in every corner of the
+	 * water module (1.40.0, Rob's pick).
+	 *
+	 * ONE FORMAT, ONE IMPLEMENTATION. 1.39.1 fixed the map popups and left
+	 * two places that could still print machine text — the server-rendered
+	 * fact card, which echoed whatever string the Fact carried, and
+	 * `readingTime()` in water.js, which fell back to the raw string and then
+	 * to `toISOString()`. Both are closed by computing the text HERE and
+	 * sending it, so there is nothing left to fall back to.
+	 *
+	 * The time is kept where it exists, because dropping it would throw away
+	 * what the source actually declared: a forecast issued at 4am and a lab
+	 * sample taken on a day are different claims, and `date_precision` is how
+	 * this module has always said which it has. A 'minute' precision prints
+	 * the clock time; anything else prints the date alone.
+	 */
+	public static function us_datetime( string $raw, string $precision = '' ): string {
+		$v = trim( $raw );
+		if ( '' === $v ) {
+			return '';
+		}
+		$date = self::us_date( $v );
+		if ( '' === $date ) {
+			return '';
+		}
+		if ( 'minute' !== $precision ) {
+			return $date;
+		}
+		/* A declared minute, but a value with no time in it, is a
+		 * contradiction we do not resolve by inventing midnight: the date
+		 * stands alone. */
+		if ( ! preg_match( '/\d{2}:\d{2}/', $v ) ) {
+			return $date;
+		}
+		try {
+			$d = new \DateTimeImmutable( $v );
+		} catch ( \Throwable $e ) {
+			return $date;
+		}
+		return $date . ', ' . $d->setTimezone( new \DateTimeZone( self::TZ ) )->format( 'g:i A' );
+	}
+
+	/**
 	 * Every date in a map payload, formatted for a guest.
 	 *
 	 * Applied at the OUTPUT gate rather than in the generator, deliberately:

@@ -267,4 +267,49 @@ check_same( '07/27/2026', $served['stations'][0]['reading']['date'], 'and the st
 check_same( 71, $served['waters'][0]['clarity']['age'], 'the AGE is untouched — the map greys by it' );
 check_same( 3.61, $served['waters'][0]['clarity']['ft'], 'and so is everything else in the payload' );
 
+/* ---------------------------------------------------------------- 6 ---- */
+dcc_section( 'one date format for the whole water module' );
+
+/*
+ * 1.39.1 closed the map popups and REPORTED two places that could still print
+ * machine text. Both are closed here, by computing the text once on the
+ * server: a Fact carries `dateText`, and nothing downstream parses a
+ * timestamp or falls back to printing one.
+ */
+$dt = [
+	// the live shape, with a declared minute: date AND clock, in canal time
+	[ '2026-07-27T04:00:00.0000000Z', 'minute', '07/27/2026, 12:00 AM', 'a forecast instant keeps its time, read in canal time' ],
+	[ '2026-01-15T05:00:00.0000000Z', 'minute', '01/15/2026, 12:00 AM', 'and so does a winter one' ],
+	// a lab sample is dated to the day: no clock invented for it
+	[ '2026-07-27T04:00:00.0000000Z', 'day', '07/27/2026', 'a day-precision reading prints the date alone' ],
+	[ '2026-08-01', 'day', '08/01/2026', 'a date-only value is not shifted' ],
+	[ '2026-08-01', 'minute', '08/01/2026', 'and a declared minute with no time in the value invents none' ],
+	[ '2019-07', '', '2019-07', 'a year-month stays as it is' ],
+	[ '', 'minute', '', 'an empty date prints nothing' ],
+	[ 'not a date', 'minute', '', 'and so does an unparseable one — never the raw string' ],
+];
+foreach ( $dt as [ $raw, $prec, $want, $what ] ) {
+	check_same( $want, Water_Live::us_datetime( $raw, $prec ), $what, var_export( $raw, true ) );
+}
+
+/* The Fact carries it, beside the raw date the age chip needs. */
+$f = Water_Fact::make( [
+	'label' => 'Wind', 'value' => 'ESE 0 to 5 mph', 'tier' => Water_Fact::TIER_LIVE,
+	'source_name' => 'NWS forecast', 'date' => '2026-07-27T04:00:00.0000000Z',
+	'date_precision' => 'minute',
+] );
+$row = $f->to_array();
+echo '       fact: date=' . $row['date'] . ' dateText=' . $row['dateText'] . "\n";
+check_same( '07/27/2026, 12:00 AM', $row['dateText'], 'a Fact carries the text a guest reads' );
+check_same( '2026-07-27T04:00:00.0000000Z', $row['date'], 'and the raw instant, which the age chip measures from' );
+
+/* GUARD (a) FROM 1.39.1, CLOSED: an ISO timestamp typed into the admin form
+ * can no longer reach a guest through the server-rendered card. */
+$bad = Water_Fact::make( [
+	'label' => 'Surface area', 'value' => '4,475 acres', 'tier' => Water_Fact::TIER_PUBLISHED,
+	'source_name' => 'Water Atlas', 'date' => '2026-07-27T04:00:00.0000000Z',
+] );
+check_same( '07/27/2026', $bad->to_array()['dateText'],
+	'an owner-typed timestamp renders as a date, not as itself' );
+
 dcc_done();

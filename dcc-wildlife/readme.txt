@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.39.1
+Stable tag: 1.40.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,16 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.40.0 =
+* **One date format everywhere in the water section.** Readings, the almanac
+  and the map popups all read 07/27/2026 now, in Florida time, with the clock
+  time kept only where the source gives one. A date that cannot be read prints
+  nothing at all — no raw text, and never today's date by accident.
+* **A map popup stays on top of the wind badge.** When the map slid a popup up
+  to fit it on screen, the badge was drawn over its top corner. The badge, the
+  zoom buttons, the ⓘ and the control bar all sit under an open popup now,
+  during and after that movement.
 
 = 1.39.1 =
 * **Map popups show dates as 07/27/2026.** They were printing the raw

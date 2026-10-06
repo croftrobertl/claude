@@ -79,29 +79,22 @@
 		return [ atMidnight.getUTCFullYear(), atMidnight.getUTCMonth() + 1, atMidnight.getUTCDate() ];
 	}
 
-	/* Render an ISO instant in the visitor's locale. Falls back to the raw
-	 * string rather than inventing a format we cannot verify. */
-	function readingTime(iso, precision) {
-		if (!iso) { return ''; }
-		var d = new Date(iso);
-		if (isNaN(d.getTime())) { return String(iso); }
-		try {
-			if (!hasRealTime(iso, precision)) {
-				var parts = dateOnlyParts(iso);
-				if (!parts) { return String(iso); }
-				// The year is shown too: these run months or years old, and
-				// "May 28" alone hides which May.
-				return new Date(parts[0], parts[1] - 1, parts[2])
-					.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-			}
-			return d.toLocaleString(undefined, {
-				month: 'short', day: 'numeric',
-				hour: 'numeric', minute: '2-digit'
-			});
-		} catch (e) {
-			return d.toISOString();
-		}
-	}
+	/*
+	 * readingTime() WAS HERE AND IS GONE (1.40.0).
+	 *
+	 * It rendered a reading's instant in the VISITOR's locale — "Jul 27,
+	 * 2026" for one guest, "27 juil. 2026" for another — and, when anything
+	 * failed to parse, printed the raw ISO string or `toISOString()`. Rob's
+	 * ruling is one format for the whole water module, so the text is
+	 * computed once on the server (`Water_Fact::to_array()['dateText']`) in
+	 * canal time. Deleted rather than left unused: a formatter nothing calls
+	 * is an invitation to call it again.
+	 *
+	 * `hasRealTime()` and `dateOnlyParts()` above are NOT dead with it —
+	 * ageWords() still needs both, because an age is a duration measured
+	 * from the real instant and must read a date-only value in the source's
+	 * own frame.
+	 */
 
 	/* How old is this reading, in words short enough for a chip?
 	 *
@@ -172,7 +165,16 @@
 			attr.appendChild(document.createTextNode(f.sourceName));
 		}
 
-		var when = readingTime(f.date, f.datePrecision);
+		/*
+		 * THE SERVER'S OWN TEXT (1.40.0). readingTime() used to format this
+		 * in the VISITOR's locale and timezone, and fell back to the raw ISO
+		 * string — or to toISOString() — when anything went wrong. One
+		 * format for the whole module now, computed once in PHP in canal
+		 * time, so there is no locale to differ and nothing to fall back to.
+		 * A fact whose date could not be read carries an empty dateText and
+		 * this line is simply not drawn.
+		 */
+		var when = f.dateText || '';
 		if (when) {
 			// The wording comes from the fact: a gauge is "read", a lab
 			// sample is "sampled", a survey is "surveyed". Falls back to the

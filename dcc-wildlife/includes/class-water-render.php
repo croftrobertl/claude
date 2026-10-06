@@ -655,15 +655,32 @@ final class Water_Render {
 				<?php else : ?>
 					<?php echo esc_html( $f['sourceName'] ); ?>
 				<?php endif; ?>
+				<?php
+				/*
+				 * THE FORMATTED DATE, NEVER THE RAW ONE (1.40.0).
+				 *
+				 * This line echoed `$f['date']` exactly as the Fact carried
+				 * it, and `Water_Fact::valid_date()` accepts a full ISO
+				 * timestamp — so an owner pasting one into the admin form
+				 * would have printed "2026-07-27T04:00:00.0000000Z" to a
+				 * guest. Reported in 1.39.1; closed here. An empty or
+				 * unparseable date yields an empty `dateText`, and then the
+				 * span is not printed at all rather than showing a bare
+				 * label with nothing after it.
+				 */
+				$date_text = (string) ( $f['dateText'] ?? '' );
+				?>
+				<?php if ( '' !== $date_text ) : ?>
 				<span class="dccwl-water-date">
 					<?php
 					echo esc_html(
 						'' !== ( $f['dateLabel'] ?? '' )
-							? $f['dateLabel'] . ' ' . $f['date']
-							: $f['date']
+							? $f['dateLabel'] . ' ' . $date_text
+							: $date_text
 					);
 					?>
 				</span>
+				<?php endif; ?>
 				<?php if ( '' !== $f['note'] ) : ?>
 					<span class="dccwl-water-note"><?php echo esc_html( $f['note'] ); ?></span>
 				<?php endif; ?>

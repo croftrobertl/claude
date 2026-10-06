@@ -3118,3 +3118,72 @@ data. Left exactly as they are:
    date parses today, so the Now tab shows "Jul 27, 2026" as intended.
 
 **The tiles' "sampled September 2026" wording is deliberate and untouched.**
+
+### 28. 1.40.0 — one date format, and a rule written for the wrong parent (again)
+
+**ONE FORMAT FOR THE WHOLE WATER MODULE (Rob, 2026-10-06).** Every date a
+guest sees reads **07/27/2026**: the map popups (1.39.1), the Now tab's
+reading times, and the almanac and fact cards. The tiles' "sampled September
+2026" stays — it is a MONTH, not a date, and he said so explicitly.
+
+The two guards 1.39.1 reported are closed, and both by the same move:
+**compute the text once, on the server, and send it.**
+
+- `Water_Live::us_datetime()` builds on `us_date()` and adds the clock only
+  where `date_precision` is `minute` — a forecast issued at 4am and a lab
+  sample taken on a day are different claims, and that field is how this
+  module has always said which it holds. A declared minute with no time in the
+  value invents none.
+- `Water_Fact::to_array()` carries `dateText` beside the raw `date`. The raw
+  instant stays because the **age chip is a duration** and has to measure from
+  the real moment.
+- `Water_Render`'s server-rendered card prints `dateText`, and prints **no
+  date line at all** when it is empty, rather than a label with nothing after
+  it. That closes guard (a): an ISO timestamp pasted into the admin form —
+  which `valid_date()` accepts — can no longer reach a guest.
+- **`readingTime()` in water.js is DELETED**, not left unused. It formatted in
+  the VISITOR's locale and timezone ("Jul 27, 2026" for one guest, "27 juil.
+  2026" for another) and fell back to the raw ISO string and then to
+  `toISOString()`. That was guard (b). `hasRealTime()` and `dateOnlyParts()`
+  stay: `ageWords()` needs both, because a date-only value must be read in the
+  source's own frame to measure an age from it.
+
+**THE WIND BADGE RULE HAD NEVER MATCHED ANYTHING.** The 1.39.1 screenshot
+showed the badge painted over a popup's top-right **after** autoPan lifted it;
+the Director's check **before** a pan found the popup on top. The suspected
+cause — a move handler restoring the chrome — was wrong. The real one:
+`.dccwl-map-canvas.dccwl-popup-open .dccwl-wind-badge`, written in 1.38.0,
+selects nothing, because **`windBadge()` appends to the SHELL**, not the
+canvas — 1.35.0 anchored it to `.dccwl-sheet-body-map` after it resolved
+against the whole sheet and landed in the header. So the badge kept its 1100
+and won wherever a popup reached it, which is only after a pan.
+
+Same family as 1.39.0's double disclosure marker and 1.23.0's deck layout
+scoped to `.dccwl-tiles`: **a rule written for the wrong parent is invisible,
+and the thing it was meant to govern keeps doing what it always did.** When a
+rule covers chrome, check which element each piece is actually appended to.
+
+**THE SUITE NOW PROVES IT WHERE LEAFLET REALLY PANS.** `ui-live.mjs` puts a
+marker near the TOP RIGHT — the badge's own corner — opens its popup with
+animation on, waits for **Leaflet's own `moveend`** rather than a guessed
+delay, and then asks `elementFromPoint` at the popup's **four corners** and at
+the centre of its overlap with each piece of chrome. Two things that keep it
+honest:
+
+- **An assertion that passes because nothing overlapped proves nothing.** Each
+  piece reports whether it overlaps at all; at 390px the badge does, at 1280px
+  the popup lands clear of it, and the suite says so instead of counting it as
+  evidence. The z-index check covers the desktop case.
+- **Ask the element the stylesheet lowers.** Leaflet's zoom buttons keep their
+  own `z-index: 800` inside `.leaflet-top`; lowering the CORNER is what puts
+  the group under the popup. Probing the button for a 1 asks the wrong element
+  and calls a working rule broken — which the first version of this check did.
+
+**FIXTURES CARRY THE SHAPES THAT OCCUR.** `render-fixture.php facts` runs four
+rows through `Water_Fact`'s own gate and formatter — a live instant with a
+seven-digit fraction, a winter `T05:00Z`, a date-only value, and a date the
+gate accepts but the formatter refuses — and `ui-live.mjs` asserts the
+rendered cards at 390px. One more test-only trap recorded: **`document.body
+.textContent` includes every `<script>`**, so the "no ISO anywhere on the page"
+check first found its own injected fixture. It walks text nodes and skips
+script and style now.

@@ -134,6 +134,54 @@ if ( 'map' === $which ) {
 	exit;
 }
 
+/*
+ * THE /conditions PAYLOAD, GATED AND FORMATTED BY THE REAL CODE.
+ *
+ * The browser suites need facts carrying the date shapes that actually occur
+ * — a live instant with a seven-digit fraction, a winter one, a date-only
+ * value, and a string that cannot be parsed at all. Hand-writing the payload
+ * would mean hand-writing `dateText`, which is the very thing under test, so
+ * the rows go through Water_Fact: the same gate and the same formatter a
+ * guest's reading goes through.
+ */
+if ( 'facts' === $which ) {
+	$rows = [
+		[
+			'label' => 'Wind', 'key' => 'wind', 'value' => 'ESE 0 to 5 mph',
+			'short' => '', 'detail' => '', 'tier' => \DCC_WL\Water_Fact::TIER_LIVE,
+			'source_name' => 'NWS forecast', 'date' => '2026-07-27T04:00:00.0000000Z',
+			'date_label' => 'forecast', 'date_precision' => 'minute', 'group' => 'primary',
+		],
+		[
+			'label' => 'Water level', 'key' => 'level', 'value' => 'About 3 inches below normal for January',
+			'short' => '3 in. below normal', 'detail' => 'for January',
+			'tier' => \DCC_WL\Water_Fact::TIER_LIVE, 'source_name' => 'Lake County Water Atlas',
+			'date' => '2026-01-15T05:00:00.0000000Z', 'date_label' => 'reading',
+			'date_precision' => 'day', 'group' => 'primary',
+		],
+		[
+			'label' => 'Water clarity', 'key' => 'clarity', 'value' => '2.95 ft',
+			'short' => '2.95 ft', 'detail' => '', 'tier' => \DCC_WL\Water_Fact::TIER_PUBLISHED,
+			'source_name' => 'Water Atlas', 'date' => '2026-08-01',
+			'date_label' => 'sampled', 'date_precision' => 'day', 'group' => 'primary',
+		],
+		/* The gate accepts this date (it is a valid shape) and the formatter
+		 * refuses it, which is the pair worth testing: the card renders, with
+		 * NO date line, rather than printing the string. */
+		[
+			'label' => 'Surface area', 'value' => '4,475 acres',
+			'tier' => \DCC_WL\Water_Fact::TIER_PUBLISHED, 'source_name' => 'Water Atlas',
+			'date' => '2026-13-45T99:99', 'date_label' => 'published', 'group' => 'primary',
+		],
+	];
+	$facts = [];
+	foreach ( \DCC_WL\Water_Fact::collect( $rows ) as $f ) {
+		$facts[] = $f->to_array();
+	}
+	echo wp_json_encode( [ 'enabled' => true, 'facts' => $facts, 'fetched' => '' ] );
+	exit;
+}
+
 ob_start();
 switch ( $which ) {
 	case 'canal':

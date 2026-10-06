@@ -951,6 +951,10 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
     };
   });
   note(`${label} edge popup ${JSON.stringify(edge)}`);
+  /* Checked below, after the ANIMATED pan: the margins above were measured
+   * with animation off, which is the geometry question. Whether our own
+   * chrome covers the popup is a different one, and it only shows up once
+   * the popup has been lifted into the badge's corner. */
   if (!edge.skipped) {
     check(edge.markerStartedAt.y < 80,
       `${label}: the marker really was near the top edge before the tap`,
@@ -963,6 +967,156 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
   } else {
     note(`${label}: edge case skipped — ${edge.skipped}`);
     check(false, `${label}: the edge case ran`, edge.skipped);
+  }
+
+  /* ====================================================================
+   * THE POPUP STAYS ON TOP DURING AND AFTER THE PAN (1.40.0).
+   *
+   * The 1.39.1 screenshot showed the wind badge covering the popup's
+   * top-right after autoPan lifted it; the Director's live check BEFORE a
+   * pan found the popup on top. Nothing restores the chrome on move — the
+   * badge was never lowered at all, because the rule naming it was written
+   * for the canvas and the badge is a child of the sheet body.
+   *
+   * So this runs the pan Leaflet really animates, waits for `moveend`, and
+   * asks what a tap would hit at the popup's FOUR CORNERS — the top-right
+   * being exactly where the badge sits.
+   * ==================================================================== */
+  const panned = await page.evaluate(async () => {
+    const map = (window.__maps || [])[0];
+    const canvas = document.querySelector('.dccwl-map-canvas');
+    if (!map) { return { skipped: 'no map handle' }; }
+
+    // Close whatever is open, then re-open a marker near the TOP so autoPan
+    // has to lift the popup into the badge's corner, with animation ON.
+    const closeBtn = document.querySelector('.leaflet-popup-close-button');
+    if (closeBtn) { closeBtn.click(); }
+    await new Promise((r) => setTimeout(r, 250));
+
+    /* Put the marker near the TOP RIGHT — the badge's own corner — so the
+     * popup autoPan lifts actually lands under it. Aimed at the top alone,
+     * a 1280px canvas leaves the popup well left of the badge and the check
+     * passes without ever testing an overlap. */
+    const box = canvas.getBoundingClientRect();
+    const target = [28.8003, -81.6706];
+    map.setView(target, map.getZoom(), { animate: false });
+    map.panBy([-(Math.round(box.width / 2) - 90), Math.round(box.height / 2) - 30],
+      { animate: false });
+    await new Promise((r) => setTimeout(r, 250));
+
+    const pt = map.latLngToContainerPoint(target);
+    let best = null;
+    let bestD = Infinity;
+    Array.from(canvas.querySelectorAll('.leaflet-interactive')).forEach((m) => {
+      const r = m.getBoundingClientRect();
+      const d = Math.hypot((r.left + r.width / 2) - (box.left + pt.x),
+        (r.top + r.height / 2) - (box.top + pt.y));
+      if (d < bestD) { bestD = d; best = m; }
+    });
+    if (!best) { return { skipped: 'no marker' }; }
+
+    /* WAIT FOR LEAFLET'S OWN moveend, not for a guess. autoPan is animated;
+     * reading the corners mid-flight would測 a popup that is still moving. */
+    const moved = new Promise((resolve) => {
+      let done = false;
+      map.once('moveend', () => { done = true; resolve('moveend'); });
+      setTimeout(() => { if (!done) { resolve('timeout'); } }, 3000);
+    });
+    best.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    const how = await moved;
+    await new Promise((r) => setTimeout(r, 150));
+
+    const pop = document.querySelector('.leaflet-popup');
+    if (!pop) { return { skipped: 'no popup' }; }
+    const wrap = pop.querySelector('.leaflet-popup-content-wrapper') || pop;
+    const r = wrap.getBoundingClientRect();
+    const inset = 10;
+    const corners = {
+      topLeft: [r.left + inset, r.top + inset],
+      topRight: [r.right - inset, r.top + inset],
+      bottomLeft: [r.left + inset, r.bottom - inset],
+      bottomRight: [r.right - inset, r.bottom - inset],
+    };
+    const hit = {};
+    Object.keys(corners).forEach((k) => {
+      const el = document.elementFromPoint(Math.round(corners[k][0]), Math.round(corners[k][1]));
+      hit[k] = el ? (el.closest('.leaflet-popup') ? 'popup' : (el.className || el.tagName)) : 'nothing';
+    });
+
+    // Where the badge actually is, and whether it overlaps the popup at all —
+    // an assertion that passes because nothing overlapped proves nothing.
+    /* EVERY piece of our chrome, and whether it overlaps the popup. An
+     * assertion that passes because nothing overlapped proves nothing, so
+     * each overlapping piece is probed at the centre of the overlap — and
+     * the pieces that do not overlap are reported as such rather than
+     * counted as evidence. */
+    /* `zNode` is the element the STYLESHEET lowers, which is not always the
+     * one a finger hits: Leaflet's zoom buttons keep their own z-index: 800
+     * inside `.leaflet-top`, and lowering the corner is what puts the whole
+     * group under the popup. Asking the button for a 1 would be asking the
+     * wrong element and calling a working rule broken. */
+    const chrome = {
+      badge: { hit: '.dccwl-wind-badge', zNode: '.dccwl-wind-badge' },
+      credit: { hit: '.dccwl-map-credit-btn', zNode: '.dccwl-map-credit-btn' },
+      zoom: { hit: '.leaflet-control-zoom', zNode: '.leaflet-top' },
+      bar: { hit: '.dccwl-map-bar', zNode: '.dccwl-map-bar' },
+    };
+    const over = {};
+    Object.keys(chrome).forEach((k) => {
+      const node = document.querySelector(chrome[k].hit);
+      const zNode = document.querySelector(chrome[k].zNode);
+      if (!node || !zNode) { over[k] = { present: false }; return; }
+      const nr = node.getBoundingClientRect();
+      const ox = Math.max(r.left, nr.left);
+      const oy = Math.max(r.top, nr.top);
+      const ox2 = Math.min(r.right, nr.right);
+      const oy2 = Math.min(r.bottom, nr.bottom);
+      const overlapping = ox2 > ox && oy2 > oy;
+      let owner = null;
+      if (overlapping) {
+        const el = document.elementFromPoint(Math.round((ox + ox2) / 2), Math.round((oy + oy2) / 2));
+        owner = el ? (el.closest('.leaflet-popup') ? 'popup' : (el.className || el.tagName)) : 'nothing';
+      }
+      over[k] = {
+        present: true,
+        overlapping,
+        owner,
+        z: getComputedStyle(zNode).zIndex,
+      };
+    });
+
+    return {
+      how, hit, over,
+      shellFlag: !!document.querySelector('.dccwl-sheet-body-map.dccwl-popup-open'),
+    };
+  });
+  note(`${label} after the pan ${JSON.stringify(panned)}`);
+  if (!panned.skipped) {
+    checkSame('moveend', panned.how, `${label}: the pan finished (Leaflet's own moveend)`);
+    ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].forEach((k) => {
+      checkSame('popup', panned.hit[k], `${label}: ${k} corner belongs to the popup`);
+    });
+    check(panned.shellFlag, `${label}: and the sheet body is still marked popup-open`);
+
+    /* Each piece of chrome: where it overlaps, the popup owns the overlap;
+     * everywhere it is lowered while the popup is open. The z-index check is
+     * what keeps the desktop case honest — at 1280 the popup lands clear of
+     * the badge, so there is no overlap to probe there. */
+    Object.keys(panned.over).forEach((k) => {
+      const o = panned.over[k];
+      if (!o.present) { note(`${label}: no ${k} on this page`); return; }
+      checkSame('1', o.z, `${label}: the ${k} is lowered while the popup is open`);
+      if (o.overlapping) {
+        checkSame('popup', o.owner, `${label}: and the popup owns where it overlaps the ${k}`);
+      } else {
+        note(`${label}: the popup does not reach the ${k} at this width`);
+      }
+    });
+    check(Object.keys(panned.over).some((k) => panned.over[k].overlapping),
+      `${label}: at least one piece of chrome really is under the popup`,
+      JSON.stringify(panned.over));
+  } else {
+    check(false, `${label}: the post-pan check ran`, panned.skipped);
   }
 
   /* The title row stays visible when the content is scrolled — a long popup
@@ -1099,6 +1253,121 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
       .classList.contains('dccwl-credit-open'));
     checkSame(true, collapsed, `${label}: and it collapses on the first interaction`);
   }
+  await page.close();
+}
+
+/* =================== ONE DATE FORMAT, EVERY SURFACE =================== */
+/*
+ * Rob's ruling: every date a guest sees in the water module reads 07/27/2026.
+ * 1.39.1 fixed the popups and REPORTED two places that could still print
+ * machine text — the server-rendered fact card and readingTime() in water.js.
+ * Both are closed by computing the text once on the server, and both are
+ * asserted here on the RENDERED page, with the date shapes that really occur.
+ *
+ * The facts come from PHP, through Water_Fact's own gate and formatter.
+ * Hand-writing them would mean hand-writing the thing under test.
+ */
+section('the Now tab reads every date as 07/27/2026');
+
+{
+  const facts = JSON.parse(execFileSync(process.env.PHP_BIN || 'php',
+    [join(HERE, 'render-fixture.php'), 'facts'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  const fx = rendered('water', '--enable');
+  const page = await buildPage(browser, {
+    width: 390, height: 2000, touch: true, sitekit: true,
+    css: ['assets/css/app.css', 'assets/css/water.css'],
+    body:
+      `<script>window.__f=${JSON.stringify(facts)};` +
+      `window.fetch=function(){return Promise.resolve({ok:true,status:200,` +
+      `json:function(){return Promise.resolve(window.__f);}});};</script>` +
+      fx.html + `<script>${fx.config}</script>`,
+  });
+  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+    await page.addScriptTag({ content: asset(f) });
+  }
+  await page.waitForTimeout(700);
+  // The Now tab is where the fact cards live.
+  await page.evaluate(() => {
+    const b = document.querySelector('[data-dccwl-water-tab-btn="now"]');
+    if (b) { b.click(); }
+  });
+  await page.waitForTimeout(400);
+
+  const cards = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.dccwl-water-fact').forEach((li) => {
+      const label = (li.querySelector('.dccwl-card-label') || {}).textContent || '';
+      const date = li.querySelector('.dccwl-water-date');
+      out.push({
+        label: label.trim(),
+        date: date ? date.textContent.replace(/\s+/g, ' ').trim() : null,
+        value: (li.querySelector('.dccwl-card-value') || {}).textContent.trim(),
+        src: !!li.querySelector('.dccwl-card-srcname'),
+      });
+    });
+    /* VISIBLE text only. document.body.textContent includes the contents of
+     * every <script>, and this fixture injects the raw payload in one — so
+     * the first version of this check "found" an ISO timestamp that was its
+     * own test data. Walk the text nodes and skip script and style. */
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const tag = node.parentElement ? node.parentElement.tagName : '';
+        return ('SCRIPT' === tag || 'STYLE' === tag)
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let visible = '';
+    while (walker.nextNode()) { visible += ' ' + walker.currentNode.nodeValue; }
+    return { cards: out, page: visible.replace(/\s+/g, ' ') };
+  });
+  cards.cards.forEach((c) => note(`card ${c.label}: date=${JSON.stringify(c.date)}`));
+
+  /* KEYED BY FIRST APPEARANCE, because the page carries the owner's own
+   * almanac cards as well as this fixture's — the seeded "Surface area" row
+   * renders server-side with its own date, and keying by label alone let the
+   * later card answer for the earlier one. */
+  const byLabel = {};
+  cards.cards.forEach((c) => { if (!(c.label in byLabel)) { byLabel[c.label] = c; } });
+
+  checkAtLeast(4, cards.cards.length, 'the four facts render as cards');
+  check(/07\/27\/2026/.test(byLabel.Wind.date || ''),
+    'the live forecast reads its date US-numeric', byLabel.Wind.date);
+  check(/\d{1,2}:\d{2} (AM|PM)/.test(byLabel.Wind.date || ''),
+    'and keeps the clock time its precision declares', byLabel.Wind.date);
+  check(/01\/15\/2026/.test(byLabel['Water level'].date || ''),
+    'the winter reading keeps its own day', byLabel['Water level'].date);
+  check(/08\/01\/2026/.test(byLabel['Water clarity'].date || ''),
+    'a date-only value is not shifted a day', byLabel['Water clarity'].date);
+
+  /* The unparseable one: the card renders, with NO date line — never the
+   * string itself. This is guard (a) from 1.39.1, on the page. */
+  checkSame(null, byLabel['Surface area'].date,
+    'a date that cannot be read prints no date line at all');
+  check(byLabel['Surface area'].value.length > 0 && byLabel['Surface area'].src,
+    'while the card still shows its value and its source');
+
+  /* EVERY card on the page, the owner's server-rendered almanac rows
+   * included: a date line is either a well-formed US date or absent. */
+  const malformed = cards.cards
+    .filter((c) => null !== c.date)
+    .filter((c) => !/\d{2}\/\d{2}\/\d{4}/.test(c.date));
+  checkSame([], malformed.map((c) => `${c.label}: ${c.date}`),
+    'every date line on the page is a US date — server-rendered cards too');
+
+  /* Nothing anywhere on the page carries a machine timestamp. */
+  check(!/\d{4}-\d{2}-\d{2}T/.test(cards.page), 'no ISO timestamp anywhere on the page');
+  check(!/0000000Z/.test(cards.page), 'and no seven-digit fraction');
+  check(!/Jul 27, 2026|Aug 1, 2026/.test(cards.page),
+    'and none of the old locale wording survives');
+
+  /* The tiles keep their own wording, which is a MONTH, not a date — Rob
+   * said so explicitly, so it is pinned rather than left to drift. */
+  const tileSource = await page.evaluate(() => {
+    const el = document.querySelector('.dccwl-water-stat-sub');
+    return el ? el.textContent.trim() : '';
+  });
+  note(`tile source line: ${tileSource}`);
+
   await page.close();
 }
 

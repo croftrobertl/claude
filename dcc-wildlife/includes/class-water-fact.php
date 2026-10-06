@@ -192,6 +192,14 @@ final class Water_Fact {
 			'key'        => $this->key,
 			'short'      => $this->short,
 			'detail'     => $this->detail,
+			/*
+			 * THE DATE AS A GUEST READS IT (1.40.0). Computed once, here, so
+			 * every surface in the water module shows the same format and
+			 * NOTHING downstream has to parse a timestamp or fall back to
+			 * printing one. `date` still travels raw beside it, because the
+			 * age chip is a duration and needs the real instant.
+			 */
+			'dateText'   => Water_Live::us_datetime( $this->date, $this->date_precision ),
 			'datePrecision' => $this->date_precision,
 		];
 	}

@@ -1115,11 +1115,28 @@
  * instead — only while a popup is open, and only on this canvas.
  */
 .dccwl-map-canvas.dccwl-popup-open .dccwl-map-credit-btn,
-.dccwl-map-canvas.dccwl-popup-open .dccwl-wind-badge,
 .dccwl-map-canvas.dccwl-popup-open .leaflet-top,
 .dccwl-map-canvas.dccwl-popup-open .leaflet-bottom,
 .dccwl-map-canvas.dccwl-popup-open + .dccwl-map-bar,
-.dccwl-sheet-body-map.dccwl-popup-open .dccwl-map-bar {
+.dccwl-sheet-body-map.dccwl-popup-open .dccwl-map-bar,
+/*
+ * THE WIND BADGE IS A CHILD OF THE SHEET BODY, NOT OF THE CANVAS (1.40.0).
+ *
+ * It was listed here under `.dccwl-map-canvas.dccwl-popup-open` from 1.38.0,
+ * and that selector has never matched anything: windBadge() appends to the
+ * SHELL, because 1.35.0 anchored the badge to `.dccwl-sheet-body-map` after
+ * it resolved against the whole sheet and landed in the header. So the badge
+ * kept its 1100 and painted over any popup that reached its corner — which
+ * autoPan does, every time it lifts a popup to the top of the map. The
+ * Director's check before a pan found the popup on top because nothing
+ * overlapped yet.
+ *
+ * The same family as 1.39.0's double disclosure marker: a rule written for
+ * the wrong parent is invisible, and the thing it was meant to govern keeps
+ * doing what it always did. When a rule covers chrome, check which element
+ * each piece is actually appended to.
+ */
+.dccwl-sheet-body-map.dccwl-popup-open .dccwl-wind-badge {
 	z-index: 1;
 }
 /* The bar is a SIBLING of the canvas, so the canvas's own class cannot reach
