@@ -338,31 +338,7 @@ final class Settings
                     <?php echo esc_html__('One switch for the whole offering. Turn it off and nothing asks for a third or fourth guest and no extra-guest fee can be charged — on the checkout or in the Cottage Selector quiz. Guest #2 is unaffected: the cottages sleep two as standard.', 'dcc-checkout'); ?>
                 </p>
                 <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><?php echo esc_html__('Offer guests 3 and 4', 'dcc-checkout'); ?></th>
-                        <td>
-                            <?php
-                            /* The hidden field is load-bearing: an unchecked
-                               checkbox posts nothing, and the Settings API only
-                               saves keys it finds in the POST -- so without it,
-                               switching this OFF would appear to work and change
-                               nothing. */
-                            ?>
-                            <input type="hidden" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="" />
-                            <label>
-                                <input type="checkbox" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="1" <?php checked(true, Config::guest34_enabled()); ?> />
-                                <?php echo esc_html__('Accept bookings for 3–4 guests and charge the extra-guest fee', 'dcc-checkout'); ?>
-                            </label>
-                            <p class="description" style="max-width:640px">
-                                <?php echo esc_html__('On by default. Switching it off stops COLLECTING guest 3 and 4 details — bookings you have already taken keep theirs, and they still appear here and on the staff page. It does not change capacity in MotoPress, and it does not touch your service configuration.', 'dcc-checkout'); ?>
-                            </p>
-                            <?php if (!Config::guest34_enabled()) : ?>
-                                <p class="description" style="max-width:640px"><strong>
-                                    <?php echo esc_html__('Currently OFF. The extra-guest fee is refused even if a stale or cached page tries to submit it.', 'dcc-checkout'); ?>
-                                </strong></p>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
+                    <?php $this->render_guest34_row(); ?>
                 </table>
 
                 <h2><?php echo esc_html__('Section titles', 'dcc-checkout'); ?></h2>
@@ -487,6 +463,47 @@ final class Settings
      * sight is a usability regression dressed as tidying. A reordering proposal
      * belongs in the report, not in a silent commit.
      */
+    /**
+     * The "Guests 3 and 4" switch row. Its own method so the rendered checkbox
+     * can be asserted directly (tests/settings/), not inferred from the reader.
+     *
+     * The box shows the STORED value (owner decision, 2026-09-27). Since 0.26.0
+     * Config::guest34_enabled() reads the option and nothing else -- the
+     * `dcc_guest34_enabled` filter is gone -- so this cannot show an override,
+     * and therefore cannot write one into storage on the next unrelated save.
+     */
+    private function render_guest34_row(): void
+    {
+        $on = Config::guest34_enabled();
+        ?>
+    <tr>
+        <th scope="row"><?php echo esc_html__('Offer guests 3 and 4', 'dcc-checkout'); ?></th>
+        <td>
+            <?php
+            /* The hidden field is load-bearing: an unchecked
+               checkbox posts nothing, and the Settings API only
+               saves keys it finds in the POST -- so without it,
+               switching this OFF would appear to work and change
+               nothing. */
+            ?>
+            <input type="hidden" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="" />
+            <label>
+                <input type="checkbox" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="1" <?php checked(true, $on); ?> />
+                <?php echo esc_html__('Accept bookings for 3–4 guests and charge the extra-guest fee', 'dcc-checkout'); ?>
+            </label>
+            <p class="description" style="max-width:640px">
+                <?php echo esc_html__('On by default. Switching it off stops COLLECTING guest 3 and 4 details — bookings you have already taken keep theirs, and they still appear here and on the staff page. It does not change capacity in MotoPress, and it does not touch your service configuration.', 'dcc-checkout'); ?>
+            </p>
+            <?php if (!$on) : ?>
+                <p class="description" style="max-width:640px"><strong>
+                    <?php echo esc_html__('Currently OFF. The extra-guest fee is refused even if a stale or cached page tries to submit it.', 'dcc-checkout'); ?>
+                </strong></p>
+            <?php endif; ?>
+        </td>
+    </tr>
+        <?php
+    }
+
     private function render_advanced_section(array $s): void
     {
         ?>

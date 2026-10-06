@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.2
+Stable tag: 0.26.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,30 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.26.0 =
+* NEW (owner's picks, 2026-10-06): the Customer Information box on the WP-Admin
+  booking screen reads in the owner's order -- Guest 1 (First Name, Last Name,
+  Phone, Email), Address (Address, Apartment/Unit #, City, State / County,
+  Postcode, Country), Guest 2, Guest 3, Guest 4, Dog (Type, Size, Hair), Note
+  -- with a quiet heading over each group. A heading hides when every row under
+  it is hidden, and comes back with "Show all booking fields" and with stored
+  details. That checkbox now sits above the first group it governs (Guest 3 by
+  default). A field the plugin does not know stays visible at the end, under
+  "Other".
+  WP-Admin only. The guest checkout form, emails and invoices are unchanged, and
+  so are the field labels. Existing rows are moved, never re-created, so names,
+  values, saving and validation are untouched.
+  Built and tested against the usual MotoPress admin table shape, because the
+  real edit screen could not be read from here (it needs a login). If the live
+  box is shaped differently, the box is left exactly as before and the browser
+  console says why.
+* REMOVED: the `dcc_guest34_enabled` filter. The owner decided (2026-09-27) that
+  the saved "Guests 3 and 4" setting is the only switch: the hook reached only
+  this plugin, not the Cottage Selector, and the settings checkbox showed its
+  overridden value, so the next save would have stored the override. Nothing
+  used it -- on the owner's word, and nothing in this repository calls it. The
+  checkbox now always shows the saved value.
 
 = 0.25.2 =
 * FIX (found by self-audit): with the extra-guest fee not on sale ("Guests 3

@@ -582,30 +582,17 @@ yours to improvise.
     corrects its notes in its 0.50.0.** When that ships, compare the two readers
     on its branch yourself (read-only fetch into a scratch ref, as before) —
     "they said they would" is not "they match".
-  - **PENDING FOR THE NEXT RELEASE — owner decision 2026-09-27, NOT a release
-    on its own** ("quality over rapid turnover"): **drop the
-    `dcc_guest34_enabled` filter hook, and render the settings checkbox from the
-    STORED value.** Nothing uses the hook (owner; no in-repo caller either). Why
-    both: the hook reached only this half of the system, and the checkbox showed
-    the FILTERED value, so an override would have been written into storage by
-    the next unrelated save. Deliberately NOT committed ahead of a release: an
-    unbumped behaviour change leaves a branch that says 0.25.2 and is not the
-    0.25.2 on live. The work, in full:
-    1. `Config::guest34_enabled()` loses its `apply_filters` line — which also
-       makes it the character-for-character twin the Selector's 0.50.0 will
-       copy. Leave `dcc_checkout_guest_fee_enabled` alone; it is a different
-       hook and not part of the decision.
-    2. The checkbox at `class-settings.php` ("Guests 3 and 4") then reads the
-       stored value through that reader — assert it in `tests/settings/` by
-       storing `''` and requiring the box unchecked, and storing `'1'` checked.
-    3. `tests/guest34/run.php` — the block titled "the switch itself is
-       filterable" asserts the OPPOSITE of the decision. Invert it: store `'1'`,
-       set the filter to false, require ON. Its comment says the Selector's tests
-       drive the switch through the hook; they do not (they set the option), so
-       the comment goes too.
-    4. Mutation: re-add the `apply_filters` to the reader; it must go red.
-    5. Changelog: say a public hook was removed, and on whose word nothing uses
-       it.
+  - **NO FILTER ON THE SWITCH — DONE IN 0.26.0** (owner decision 2026-09-27,
+    folded into the next release as he asked; confirmed for 0.26.0 by the
+    courier on 2026-10-06, asked because that brief said "change nothing else"). `Config::guest34_enabled()`
+    reads the option and nothing else; the "Guests 3 and 4" row is its own
+    method, `Settings::render_guest34_row()`, so the rendered checkbox is
+    asserted directly — and a filter can no longer make the box disagree with
+    storage, so a save cannot persist an override. Asserted both ways round in
+    `tests/guest34/` (a filter cannot turn a stored ON off, nor a stored OFF
+    on) and on the rendered box in `tests/settings/`; mutation
+    `cfg-guest34-filter-readded` puts the hook back and must go red. The
+    Selector adopts this reader in its 0.50.0 — compare the two then.
   - **No `default` is registered** with `register_setting()`. Registering one
     would make `get_option()` return it on a site that never saved the setting,
     and "absent" is a meaningful third state.
@@ -682,6 +669,55 @@ yours to improvise.
   `Staff_Data::push()` already returns early when the value is blank, so the
   Guest3/Guest4 rows only render when the booking has the data. There is no
   cross-plugin contract to build for decision 1 and none was built.
+- **THE ADMIN CUSTOMER INFORMATION BOX IS ORDERED IN THE BROWSER** (owner's
+  picks 2026-10-06, v0.26.0; `customerLayout()` in `admin-booking.js`, groups
+  from `Admin_Fields::customer_layout()`). Rob's "full tidy order" — Guest 1
+  (First, Last, Phone, Email), Address (Address, Apartment/Unit #, City,
+  State / County, Postcode, Country), Guest 2, Guest 3, Guest 4, Dog (Type,
+  Size, Hair), Note — with a quiet heading over each. It cannot be done with
+  `menu_order`: MotoPress renders its built-in fields first regardless, and
+  `menu_order` would also move the GUEST checkout form, which he does not want.
+  **WP-Admin only**; checkout, emails and invoices are untouched. Labels are
+  untouched ("State / County", "Postcode" stay — his choice). The rules:
+  - **Rows are MOVED, never re-created**, so names, values, saving and
+    validation are untouched. Proven by the form's successful controls being
+    identical with and without the script, before and after the toggle and a
+    cottage change.
+  - **"The same box" = the known fields' rows are `<tr>`s sharing one
+    parent**, and at least two of them. Anything else and it stands down: the
+    box stays exactly as MotoPress drew it, with a console note naming the
+    reason (never a value). That rule is also what decides the add-booking
+    step: the same table is ordered, a different form is left alone.
+  - A missing field is skipped; a group with no rows gets no heading. A field
+    it does not know stays visible after the known groups under an **"Other"**
+    heading (owner's pick), which exists only while such a row does.
+  - **A heading hides when every row under it is hidden by the gating**, and
+    comes back with the toggle and the sticky-values rule. NB: Guest 3/4 are
+    hidden by default on EVERY cottage (the owner decision behind
+    `NEED_SHOW_ALL`, explained at `init()` in `admin-booking.js`), not only on two-sleepers as the brief's example put it;
+    the headings follow the rows, so they do the same.
+  - **"Show all booking fields" sits above the first group it governs**
+    (owner's pick), computed from the gating's own `min > included_guests`
+    test — Guest 3 at the default, Guest 4 when "Guests included" is 3.
+  - **Idempotent**: an already-ordered box is not touched, so the gating's
+    MutationObserver, which now calls it, cannot feed itself. Asserted (zero
+    childList records after a provoked re-run).
+  - **THE FIXTURE IS A PATTERN, NOT A CAPTURE.** The edit screen needs a login
+    and the session's network policy blocks wordpress.org and GitHub, so no
+    real admin markup was read. `tests/admin-layout/` carries the 21 rows in the
+    exact order and labels the Director read on booking 19615, in core's
+    `form-table` shape with a REPRODUCTION of core's 782px rule, and the input
+    names follow the `mphb_` pattern (built-ins are tried as `mphb_<name>` then
+    `<name>`). Whether live matches is the Director's label-order check; if it
+    does not, the stand-down means the screen is unchanged, not broken. **When
+    real markup becomes available, replace the fixture with it** — the v0.9.0
+    rule exists because plausible fixtures hid three defects.
+  - The config the suite uses is NOT a copy: `tests/admin-layout/config.php`
+    calls the shipped `Admin_Fields::script_config()`.
+  - Harness note, measured: `addInitScript` does not reach a `setContent`
+    page; the suite's first draft ran with no config at all and timed out
+    rather than passing. The config is now printed inline, as
+    `wp_localize_script` does.
 - **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
   MotoPress's. It names how many fields it is hiding and hides itself when it
   is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
@@ -898,10 +934,12 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 82
-  mutations, 82 killed, 0 of everything else, exit 0 (2026-09-27, v0.25.2; it
-  read 50 here through three rounds that took it to 75 — a count in prose is a
-  claim that goes stale silently).
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 92
+  mutations, 92 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
+  v0.26.0; twelve suites). It read 50 here through three rounds that took it to
+  75 — a count in prose is a claim that goes stale silently. 0.26.0's first full
+  run was 88 + 4 STALE: four `g34-*` mutations aimed at the line the hook
+  removal rewrote. Re-anchored with their intent unchanged, then re-run whole.
   A suite's outcome is read from what it PRINTED: `FAIL` lines kill, no
   PASS-or-FAIL line is `NO RUN`, a missing script is `NO SUITE`, and both of
   those become **HARNESS** — not red, and they fail the exit code. A mutated file
@@ -1040,9 +1078,11 @@ yours to improvise.
   pinned, mutation `js-feeoff-cap-injects`. `class-settings.php` is no longer
   suite-less: `tests/settings/` covers the sanitiser and the guest preview; the
   rest of the page's rendering is still untested.
-  Whole files with no suite at all: `admin-booking.js` (484 lines),
-  `class-settings.php` (698), `class-assets.php` (418), `class-admin-fields.php`
-  (302), `tap-debug.js` (450). The fail-open family — `class-config.php:493-495`
+  Whole files with no suite at all: `class-assets.php` (418), `tap-debug.js`
+  (450). (`admin-booking.js` and `class-admin-fields.php` gained
+  `tests/admin-layout/` in 0.26.0 — the layout and, through it, the gating's
+  hide/show per cottage, the toggle and sticky values; the Extra Guest Fee
+  slaving in `syncExtraGuestFee()` is still untested.) The fail-open family — `class-config.php:493-495`
   ("callers MUST treat null as unknown and fail open"),
   `class-admin-fields.php:30-31`, `admin-booking.js:302/357` — is untested
   everywhere it is claimed.

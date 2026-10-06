@@ -165,12 +165,23 @@ check('a filter cannot switch the fee back on behind the master switch',
     Config::guest_fee_enabled(), false);
 $GLOBALS['filters'] = [];
 
-/* --- But the switch itself is filterable, which is how a snippet or the
-   Cottage Selector's own tests can drive it. */
+/* --- The switch itself is NOT filterable (owner decision 2026-09-27,
+   removed in 0.26.0). The hook reached only this half -- the Selector never
+   applied it -- and the settings box persisted whatever it said. Constructed
+   both ways round: a filter cannot turn a stored ON off, nor a stored OFF on.
+   (The comment this replaces said the Selector's tests drove the switch
+   through the hook; they set the option.) */
 seed_live_config();
+switch_on();
 $GLOBALS['filters']['dcc_guest34_enabled'] = false;
-check('the switch itself is filterable', Config::guest34_enabled(), false);
-check('... and that turns the fee off too', Config::guest_fee_enabled(), false);
+check('a filter cannot switch a stored ON off', Config::guest34_enabled(), true);
+check('... so the fee stays as configured', Config::guest_fee_enabled(), true);
+$GLOBALS['filters'] = [];
+seed_live_config();
+switch_off();
+$GLOBALS['filters']['dcc_guest34_enabled'] = true;
+check('nor a stored OFF on', Config::guest34_enabled(), false);
+check('... so the fee stays refused', Config::guest_fee_enabled(), false);
 $GLOBALS['filters'] = [];
 
 /* ===================================================================== *

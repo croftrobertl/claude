@@ -64,6 +64,7 @@ SUITES = {
     'backstops':    ('php',  'tests/backstops/run.php'),
     'guest34':      ('php',  'tests/guest34/run.php'),
     'settings':     ('php',  'tests/settings/run.php'),
+    'admin-layout': ('node', 'tests/admin-layout/run.js'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

@@ -10,6 +10,11 @@
  * It only ever shows and hides. Nothing is removed from the DOM, no value is
  * cleared, and nothing is validated or blocked — the deliberate wp-admin
  * exemptions in the PHP backstops are untouched. Every uncertainty fails open.
+ *
+ * v0.26.0 — it also ORDERS the Customer Information box into the owner's
+ * groups (Guest 1, Address, Guest 2, Guest 3, Guest 4, Dog, Note) with a quiet
+ * heading over each. See customerLayout(): existing rows are MOVED, never
+ * re-created, so names, values, saving and validation are untouched.
  */
 (function () {
     'use strict';
@@ -36,9 +41,15 @@
         }
     }
 
-    ready(init);
+    ready(function () {
+        // The layout is independent of the gating: it runs even where there is
+        // nothing to gate, and the gating keeps its headings in step.
+        var layout = customerLayout();
+        init(layout);
+        if (layout) { layout.refresh(); }
+    });
 
-    function init() {
+    function init(layout) {
         var roomTypes = CFG.roomTypes || {};
         var knownIds  = Object.keys(roomTypes).map(Number).filter(function (n) { return n > 0; });
         if (!knownIds.length) {
@@ -70,6 +81,9 @@
             writeShowAll(on);
             evaluate();
         });
+        // The hatch was put beside the first managed row; the layout moves it
+        // above the first group it governs (owner decision, v0.26.0).
+        if (layout) { layout.arrange(); }
 
         evaluate();
         watch();
@@ -377,6 +391,7 @@
                 // Couldn't identify the accommodation control: fail open and
                 // leave the screen exactly as MotoPress rendered it.
                 managed.forEach(function (f) { f.row.classList.remove(HIDDEN_CLASS); });
+                if (layout) { layout.refresh(); }
                 return;
             }
             var hiddenNow = 0;
@@ -398,6 +413,8 @@
             // and hides itself when it is hiding nothing AND is not the thing
             // currently doing the showing.
             if (hatch) { hatch.update(hiddenNow, showAll); }
+            // A heading hides when every row under it is hidden.
+            if (layout) { layout.refresh(); }
         }
 
         /**
@@ -417,13 +434,222 @@
             new MutationObserver(function () {
                 if (timer) { clearTimeout(timer); }
                 timer = setTimeout(function () {
-                    // Rows can be replaced wholesale by a re-render; re-find
-                    // them before re-evaluating.
+                    // Rows can be replaced wholesale by a re-render; re-order
+                    // (a no-op when already in order, so this cannot loop) and
+                    // re-find them before re-evaluating.
+                    if (layout) { layout.arrange(); }
                     managed = collect(groups).concat(collectServiceRows());
                     evaluate();
                 }, 200);
             }).observe(document.body, { childList: true, subtree: true });
         }
+    }
+
+
+    /**
+     * Customer Information box: the owner's order and headings (v0.26.0).
+     *
+     * MotoPress renders its built-in customer fields first, in its own fixed
+     * order, then the Checkout Fields add-on's fields in menu_order — which
+     * cannot express the owner's order, and changing menu_order would also move
+     * the GUEST checkout form, which he does not want. So the box is ordered
+     * here, in the browser, in wp-admin only.
+     *
+     * THE RULES, each one a decision rather than a default:
+     *  - MOVE, never re-create. appendChild() moves the existing <tr>, so every
+     *    input keeps its name, its value and its place in the form. Nothing
+     *    here reads or writes a value.
+     *  - "The same box" means: the known fields' rows are <tr>s sharing ONE
+     *    parent. Anything else — a different layout on another screen, a
+     *    MotoPress update — and this stands down and the screen stays exactly
+     *    as MotoPress drew it. That is also what decides the add-booking step:
+     *    the same table is ordered, a different form is left alone.
+     *  - A missing field is skipped; a group with no rows gets no heading.
+     *  - Any row it does not know stays visible, after the known groups, under
+     *    an "Other" heading that exists only while there is such a row.
+     *  - Idempotent: when the box is already in order nothing is moved, so the
+     *    MutationObserver that calls this cannot feed itself.
+     */
+    function customerLayout() {
+        var spec = CFG.customerLayout || [];
+        if (!spec.length) { return null; }
+        var HEAD = 'dcc_admin-group-heading';
+        var heads = {};          // group key -> heading <tr>
+        var state = null;        // the last arrangement, for refresh()
+        var reported = false;
+
+        function standDown(reason) {
+            // Remove only what this added, so a box that stops matching goes
+            // back to MotoPress's own markup rather than keeping stale headings.
+            Object.keys(heads).forEach(function (k) {
+                if (heads[k].parentNode) { heads[k].parentNode.removeChild(heads[k]); }
+            });
+            heads = {};
+            state = null;
+            if (!reported && window.console && console.info) {
+                // Admin-only, and it names a reason and a count — never a value.
+                console.info('DCC Custom Checkout: booking-screen layout left as MotoPress drew it — ' + reason + '.');
+                reported = true;
+            }
+            return null;
+        }
+
+        function controlFor(cands) {
+            for (var i = 0; i < cands.length; i++) {
+                var el = document.querySelector('[name="' + esc(cands[i]) + '"]');
+                if (el) { return el; }
+            }
+            return null;
+        }
+
+        function find() {
+            var hits = [];
+            spec.forEach(function (g, gi) {
+                (g.fields || []).forEach(function (cands) {
+                    var el = controlFor(cands || []);
+                    if (!el) { return; }
+                    var tr = el.closest('tr');
+                    if (tr && tr.parentNode) { hits.push({ gi: gi, el: el, row: tr }); }
+                });
+            });
+            // The parent most known rows share is the box; a stray match
+            // elsewhere on the screen is simply not part of it.
+            var tally = [];
+            hits.forEach(function (h) {
+                var t = tally.filter(function (x) { return x.p === h.row.parentNode; })[0];
+                if (t) { t.n += 1; } else { tally.push({ p: h.row.parentNode, n: 1 }); }
+            });
+            tally.sort(function (a, b) { return b.n - a.n; });
+            if (!tally.length || tally[0].n < 2) { return null; }
+            var box = tally[0].p;
+            return { box: box, hits: hits.filter(function (h) { return h.row.parentNode === box; }) };
+        }
+
+        function heading(key, title, cols) {
+            var tr = heads[key];
+            if (!tr) {
+                tr = document.createElement('tr');
+                tr.className = HEAD;
+                tr.setAttribute('data-dcc-group', key);
+                var td = document.createElement('td');
+                var div = document.createElement('div');
+                div.className = HEAD + '__title';
+                div.setAttribute('role', 'heading');
+                div.setAttribute('aria-level', '3');
+                div.textContent = title;
+                td.appendChild(div);
+                tr.appendChild(td);
+                heads[key] = tr;
+            }
+            var td0 = tr.firstChild;
+            if (td0.colSpan !== cols) { td0.colSpan = cols; }
+            return tr;
+        }
+
+        function arrange() {
+            var f = find();
+            if (!f) { return standDown('fewer than two of its fields were found as rows of one table'); }
+            var box = f.box;
+            var cols = 1;
+            var known = [];
+            var groups = spec.map(function (g) { return { g: g, rows: [], els: [] }; });
+            f.hits.forEach(function (h) {
+                var span = 0;
+                Array.prototype.forEach.call(h.row.cells || [], function (c) { span += c.colSpan || 1; });
+                if (span > cols) { cols = span; }
+                groups[h.gi].els.push(h.el);
+                if (known.indexOf(h.row) === -1) {
+                    known.push(h.row);
+                    groups[h.gi].rows.push(h.row);
+                }
+            });
+
+            var hatch = null;
+            Array.prototype.forEach.call(box.children, function (c) {
+                if (c.classList && c.classList.contains('dcc_admin-showall')) { hatch = c; }
+            });
+
+            var desired = [];
+            var hatchPlaced = false;
+            groups.forEach(function (gr) {
+                if (!gr.rows.length) {
+                    if (heads[gr.g.key] && heads[gr.g.key].parentNode) {
+                        heads[gr.g.key].parentNode.removeChild(heads[gr.g.key]);
+                    }
+                    return;
+                }
+                if (hatch && !hatchPlaced && gr.g.governed) {
+                    desired.push(hatch);
+                    hatchPlaced = true;
+                }
+                desired.push(heading(gr.g.key, gr.g.title, cols));
+                desired = desired.concat(gr.rows);
+            });
+            if (hatch && !hatchPlaced) { desired.push(hatch); }
+
+            var ours = function (c) {
+                return c === hatch || known.indexOf(c) !== -1 ||
+                    (c.classList && c.classList.contains(HEAD));
+            };
+            var others = Array.prototype.filter.call(box.children, function (c) { return !ours(c); });
+            if (others.length) {
+                desired.push(heading('other', CFG.customerOtherTitle || 'Other', cols));
+                desired = desired.concat(others);
+            } else if (heads.other && heads.other.parentNode) {
+                heads.other.parentNode.removeChild(heads.other);
+            }
+
+            var current = Array.prototype.slice.call(box.children);
+            var same = current.length === desired.length && current.every(function (c, i) { return c === desired[i]; });
+            if (!same) {
+                desired.forEach(function (node) { box.appendChild(node); });
+            }
+            if (box.getAttribute('data-dcc-layout') !== 'arranged') {
+                box.setAttribute('data-dcc-layout', 'arranged');
+            }
+            state = { groups: groups, others: others };
+            refresh();
+            return state;
+        }
+
+        function shown(node) {
+            if (!node || node.hidden) { return false; }
+            if (node.classList && node.classList.contains(HIDDEN_CLASS)) { return false; }
+            var cs = window.getComputedStyle ? window.getComputedStyle(node) : null;
+            return !(cs && cs.display === 'none');
+        }
+
+        // A field counts as visible when its row is shown AND nothing between
+        // its control and that row has been hidden by the gating, which may
+        // hide a wrapper inside the cell rather than the <tr> itself.
+        function fieldShown(el, row) {
+            if (!shown(row)) { return false; }
+            for (var n = el; n && n !== row; n = n.parentNode) {
+                if (n.nodeType === 1 && !shown(n) && n.type !== 'hidden') { return false; }
+            }
+            return true;
+        }
+
+        function setHidden(tr, hide) {
+            if (!tr) { return; }
+            if (tr.classList.contains(HIDDEN_CLASS) !== hide) {
+                if (hide) { tr.classList.add(HIDDEN_CLASS); } else { tr.classList.remove(HIDDEN_CLASS); }
+            }
+        }
+
+        function refresh() {
+            if (!state) { return; }
+            state.groups.forEach(function (gr) {
+                if (!gr.rows.length) { return; }
+                var any = gr.els.some(function (el) { return fieldShown(el, el.closest('tr')); });
+                setHidden(heads[gr.g.key], !any);
+            });
+            if (heads.other) {
+                setHidden(heads.other, !state.others.some(shown));
+            }
+        }
+
+        return arrange() ? { arrange: arrange, refresh: refresh } : null;
     }
 
     /**

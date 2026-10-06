@@ -262,12 +262,18 @@ final class Config
      *
      * This function is small on purpose: the Cottage Selector keeps its own copy
      * and the two must agree character for character. Change one, change both.
+     *
+     * NO FILTER, deliberately (owner decision 2026-09-27, removed in 0.26.0).
+     * The `dcc_guest34_enabled` hook reached only this half of the system -- the
+     * Selector never applied it -- and the settings checkbox showed its
+     * overridden value, so the next unrelated save wrote the override into
+     * storage. The stored option is the only switch. Nothing used the hook
+     * (owner's word; no caller in this repo either).
      */
     public static function guest34_enabled(): bool
     {
         $raw = get_option(self::GUEST34_OPTION, null);
-        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);
-        return (bool) apply_filters('dcc_guest34_enabled', $on);
+        return ($raw === null) || ($raw === '1') || ($raw === 1);
     }
 
     /**

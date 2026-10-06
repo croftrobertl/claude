@@ -569,8 +569,8 @@
    "guest34"
   ],
   "claim": "switching the toggle OFF actually does something",
-  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
-  "replace": "        $on  = true;",
+  "find": "        return ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        return true;",
   "count": 1
  },
  {
@@ -580,8 +580,8 @@
    "guest34"
   ],
   "claim": "leaving the toggle ON actually does something",
-  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
-  "replace": "        $on  = false;",
+  "find": "        return ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        return false;",
   "count": 1
  },
  {
@@ -591,8 +591,8 @@
    "guest34"
   ],
   "claim": "ABSENT MEANS ON -- a site that never saw the setting is unchanged",
-  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
-  "replace": "        $on  = ($raw === '1') || ($raw === 1);",
+  "find": "        return ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        return ($raw === '1') || ($raw === 1);",
   "count": 1
  },
  {
@@ -602,8 +602,8 @@
    "guest34"
   ],
   "claim": "a present-but-unrecognised value reads as OFF, the direction that does not charge",
-  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
-  "replace": "        $on  = ($raw === null) || !empty($raw);",
+  "find": "        return ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        return ($raw === null) || !empty($raw);",
   "count": 1
  },
  {
@@ -903,6 +903,117 @@
   "claim": "capAdultsSelects only DISABLES existing options — never injects any",
   "find": "            if (changed) {\n                fireChange(sel); // let MotoPress recompute for the corrected count",
   "replace": "            sel.appendChild(new Option('1', '1'));\n            if (changed) {\n                fireChange(sel); // let MotoPress recompute for the corrected count",
+  "count": 1
+ },
+ {
+  "id": "cfg-guest34-filter-readded",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34",
+   "settings"
+  ],
+  "claim": "0.26.0 the Guests 3/4 switch has no filter; storage is the only switch",
+  "find": "        return ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        return (bool) apply_filters('dcc_guest34_enabled', ($raw === null) || ($raw === '1') || ($raw === 1));",
+  "count": 1
+ },
+ {
+  "id": "js-layout-not-idempotent",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 an already-ordered box is not touched again (cannot feed its observer)",
+  "find": "            if (!same) {\n                desired.forEach",
+  "replace": "            if (true) {\n                desired.forEach",
+  "count": 1
+ },
+ {
+  "id": "js-layout-heading-ignores-rows",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 a heading hides when every row under it is hidden",
+  "find": "                setHidden(heads[gr.g.key], !any);",
+  "replace": "                setHidden(heads[gr.g.key], false);",
+  "count": 1
+ },
+ {
+  "id": "js-layout-refresh-not-called",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 headings follow the gating when the cottage changes",
+  "find": "            // A heading hides when every row under it is hidden.\n            if (layout) { layout.refresh(); }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-layout-unknown-dropped",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 an unknown field stays visible after the known groups under Other",
+  "find": "            if (others.length) {\n                desired.push(heading('other'",
+  "replace": "            if (false) {\n                desired.push(heading('other'",
+  "count": 1
+ },
+ {
+  "id": "js-layout-standdown-threshold",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 fewer than two known rows in one table is not the box",
+  "find": "            if (!tally.length || tally[0].n < 2) { return null; }",
+  "replace": "            if (!tally.length || tally[0].n < 1) { return null; }",
+  "count": 1
+ },
+ {
+  "id": "js-layout-non-table",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 only table rows are moved; any other layout is left as MotoPress drew it",
+  "find": "                    var tr = el.closest('tr');",
+  "replace": "                    var tr = el.closest('tr, p');",
+  "count": 1
+ },
+ {
+  "id": "js-layout-hatch-ignores-governed",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 the Show-all checkbox sits above the first group it governs",
+  "find": "                if (hatch && !hatchPlaced && gr.g.governed) {",
+  "replace": "                if (hatch && !hatchPlaced) {",
+  "count": 1
+ },
+ {
+  "id": "php-layout-order",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 Guest 1 reads First, Last, Phone, Email (Rob's order)",
+  "find": "$mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email')",
+  "replace": "$mp('first_name'), $mp('last_name'), $mp('email'), $mp('phone')",
+  "count": 1
+ },
+ {
+  "id": "php-layout-governed-literal",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.26.0 'governed' follows included_guests (a setting reaches its consumer)",
+  "find": "                'governed' => ($min[3] ?? 3) > $included,",
+  "replace": "                'governed' => true,",
   "count": 1
  }
 ]

@@ -229,11 +229,93 @@ final class Admin_Fields
             // Sticky-value protection applies to an existing booking only; on a
             // brand-new booking a field's default value is not stored data.
             'isExisting'     => $this->is_existing_booking() ? '1' : '',
+            // v0.26.0 — the Customer Information box's order and headings.
+            'customerLayout'     => self::customer_layout(),
+            'customerOtherTitle' => __('Other', 'dcc-checkout'),
             'i18n'           => [
                 'showAll' => __('Show all booking fields', 'dcc-checkout'),
                 'hint'    => __('Guest 3–4 details, pet details and the Extra Guest Fee row are hidden by default. Tick to show every field — for example to book a guest with a dog into a cottage that is not normally pet-friendly.', 'dcc-checkout'),
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
+            ],
+        ];
+    }
+
+    /**
+     * The owner's order for the admin Customer Information box (v0.26.0):
+     * group key, heading, whether the "Show all booking fields" checkbox
+     * governs it, and per field the input name(s) to look for, in order.
+     *
+     * MotoPress's built-in customer fields are given as `mphb_<name>` and the
+     * bare `<name>`, tried in that order; nothing has been read from the live
+     * admin markup (it needs a login), so both are offered and a field matching
+     * neither is simply skipped. The guest and dog names come from Config —
+     * the names the gating above already uses, so the two cannot disagree and
+     * a renamed field moves here with them. (That some of them match on live is
+     * known — the "Show all booking fields" count has been seen there — but
+     * not each one individually.)
+     *
+     * `governed` uses the gating's own test (`min > included_guests`, plus the
+     * dog fields), so the checkbox sits above the first group it really hides
+     * at whatever "Guests included" is set to.
+     *
+     * Headings are translatable and fixed by the owner: "Guest 1", "Address",
+     * "Guest 2", "Guest 3", "Guest 4", "Dog", "Note". Field LABELS are not
+     * touched (owner decision: "State / County" and "Postcode" stay).
+     *
+     * @return array<int, array{key:string,title:string,governed:bool,fields:array<int,string[]>}>
+     */
+    public static function customer_layout(): array
+    {
+        $mp = static function (string $name): array {
+            return ['mphb_' . $name, $name];
+        };
+        $one = static function (string $name): array {
+            return [$name];
+        };
+
+        $included = Config::included_guests();
+        $min      = [];
+        foreach (Config::guest_field_groups() as $n => $group) {
+            $min[(int) $n] = (int) $group['min'];
+        }
+        $g2  = Config::guest2_field_names();
+        $g3  = Config::guest3_field_names();
+        $g4  = Config::guest4_field_names();
+        $dog = Config::dog_field_names();
+
+        return [
+            [
+                'key' => 'guest1', 'title' => __('Guest 1', 'dcc-checkout'), 'governed' => false,
+                'fields' => [$mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email')],
+            ],
+            [
+                'key' => 'address', 'title' => __('Address', 'dcc-checkout'), 'governed' => false,
+                'fields' => [$mp('address1'), $mp('apartment-units'), $mp('city'), $mp('state'), $mp('zip'), $mp('country')],
+            ],
+            [
+                'key' => 'guest2', 'title' => __('Guest 2', 'dcc-checkout'),
+                'governed' => ($min[2] ?? 2) > $included,
+                'fields' => [$one($g2['first_name']), $one($g2['last_name']), $one($g2['phone'])],
+            ],
+            [
+                'key' => 'guest3', 'title' => __('Guest 3', 'dcc-checkout'),
+                'governed' => ($min[3] ?? 3) > $included,
+                'fields' => [$one($g3['first_name']), $one($g3['last_name'])],
+            ],
+            [
+                'key' => 'guest4', 'title' => __('Guest 4', 'dcc-checkout'),
+                'governed' => ($min[4] ?? 4) > $included,
+                'fields' => [$one($g4['first_name']), $one($g4['last_name'])],
+            ],
+            [
+                'key' => 'dog', 'title' => __('Dog', 'dcc-checkout'),
+                'governed' => !empty(Config::dog_field_name_list()),
+                'fields' => [$one($dog['type']), $one($dog['size']), $one($dog['hair'])],
+            ],
+            [
+                'key' => 'note', 'title' => __('Note', 'dcc-checkout'), 'governed' => false,
+                'fields' => [$mp('note')],
             ],
         ];
     }

@@ -1,6 +1,7 @@
 /**
  * DCC Custom Checkout — admin booking screen.
- * Hiding only; nothing here changes how MotoPress lays the screen out.
+ * Hiding, plus the Customer Information group headings (v0.26.0). The rows
+ * themselves keep MotoPress's own styling; only their order changes.
  */
 .dcc_admin-field-hidden {
     display: none !important;
@@ -43,4 +44,31 @@
 
 .dcc_admin-guests select {
     max-width: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Customer Information group headings (v0.26.0).
+ * Quiet sub-headings, not boxes: no fill, no border box — a label and a
+ * hairline, in the admin's own text colours. The element is a role="heading"
+ * <div> rather than an <h3>, because core styles headings inside #poststuff at
+ * ID specificity and this must look the same on every admin screen.
+ * `tr.` + class is (0,1,2), above core's `.form-table td` (0,1,1), so the
+ * cell's padding is ours whatever order the stylesheets print in.
+ * ------------------------------------------------------------------------- */
+tr.dcc_admin-group-heading > td {
+    padding: 14px 10px 2px 0;
+}
+
+tr.dcc_admin-group-heading:first-child > td {
+    padding-top: 4px;
+}
+
+.dcc_admin-group-heading__title {
+    margin: 0;
+    padding: 0 0 4px;
+    border-bottom: 1px solid #dcdcde;
+    color: #50575e;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
 }

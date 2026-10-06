@@ -41,6 +41,12 @@ function number_format_i18n($n, $d = 0) { return number_format((float) $n, (int)
 function wp_parse_args($a, $b) { return array_merge($b, (array) $a); }
 function get_post_meta($id, $k, $s = false) { return ''; }
 function did_action($h) { return 0; }
+// WordPress's checked(): compares the two as STRINGS, as core does.
+function checked($a, $b = true, $echo = true) {
+    $r = ((string) $a === (string) $b) ? " checked='checked'" : '';
+    if ($echo) { echo $r; }
+    return $r;
+}
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-settings.php';
@@ -266,6 +272,37 @@ $h = preview_html();
 check('preview, 3 included: the couch note (which says 1-2) is NOT shown', strpos($h, $literal), false);
 check('preview, 3 included: guest 3 carries no fee label', strpos($h, '<code>3 (+'), false);
 check('preview, 3 included: guest 4 carries the first step', strpos($h, '<code>4 (+') !== false, true);
+
+/* ===================================================================== *
+ * 6. THE "GUESTS 3 AND 4" BOX SHOWS THE STORED VALUE (owner decision
+ *    2026-09-27, 0.26.0). Rendered, not inferred: the row is drawn and the
+ *    checkbox's `checked` read off the markup. The last two cases are the
+ *    reason for the decision — with the hook gone a filter cannot make the
+ *    box disagree with storage, so a save cannot persist an override.
+ * ===================================================================== */
+function guest34_box_checked(): ?bool {
+    $m = new ReflectionMethod(Settings::class, 'render_guest34_row');
+    $m->setAccessible(true);
+    ob_start();
+    $m->invoke(new Settings());
+    $h = (string) ob_get_clean();
+    if (!preg_match('/<input type="checkbox"[^>]*>/', $h, $box)) { return null; }
+    return strpos($box[0], "checked='checked'") !== false;
+}
+fresh();
+check('the guard: the row really renders a checkbox', guest34_box_checked() !== null, true);
+fresh();
+check('nothing stored (absent = ON): the box is ticked', guest34_box_checked(), true);
+fresh(); $GLOBALS['opt'][Config::GUEST34_OPTION] = '1';
+check("stored '1': ticked", guest34_box_checked(), true);
+fresh(); $GLOBALS['opt'][Config::GUEST34_OPTION] = '';
+check("stored '': unticked", guest34_box_checked(), false);
+fresh(); $GLOBALS['opt'][Config::GUEST34_OPTION] = '1';
+$GLOBALS['filters']['dcc_guest34_enabled'] = false;
+check("stored '1' with a filter saying OFF: still ticked — the box shows storage", guest34_box_checked(), true);
+fresh(); $GLOBALS['opt'][Config::GUEST34_OPTION] = '';
+$GLOBALS['filters']['dcc_guest34_enabled'] = true;
+check("stored '' with a filter saying ON: still unticked", guest34_box_checked(), false);
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);
