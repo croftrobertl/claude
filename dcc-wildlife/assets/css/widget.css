@@ -1097,83 +1097,13 @@
    budget is unchanged. Text uses --dccwl-text / --dccwl-text-muted only; the
    faint token is decoration-only and fails AA (see the 1.15.1 audit).
    --------------------------------------------------------------------------- */
-/* ---- the whole field guide, in words (1.16.0; restyled 1.18.0) ------
- * A native <details>, server-rendered, always in the HTML: this is the
- * crawlable prose. Restyled as a proper section — a card with a header row
- * (chevron that turns on open, a label that is the section's H2, a meta
- * line) — instead of an unstyled browser triangle that read as a stray
- * link. The <details>/<summary> semantics are untouched. */
-.dccwl-fullguide {
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius-lg);
-	margin-top: var(--dccwl-gap-lg);
-	overflow: hidden;
-}
-.dccwl-fullguide-summary {
-	align-items: center;
-	background: linear-gradient(var(--dccwl-primary-soft), var(--dccwl-primary-soft)), #ffffff;
-	color: var(--dccwl-text);
-	cursor: pointer;
-	display: flex;
-	gap: 12px;
-	list-style: none;
-	min-height: 60px;
-	padding: 12px 16px;
-}
-.dccwl-fullguide-summary::-webkit-details-marker { display: none; }
-.dccwl-fullguide-summary::marker { content: ""; }
-.dccwl-fullguide-chev {
-	align-items: center;
-	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: 50%;
-	color: var(--dccwl-primary);
-	display: inline-flex;
-	flex: none;
-	height: 36px;
-	justify-content: center;
-	width: 36px;
-}
-.dccwl-fullguide-chev svg { transition: transform 160ms ease; }
-.dccwl-fullguide[open] > .dccwl-fullguide-summary .dccwl-fullguide-chev svg { transform: rotate(180deg); }
-.dccwl-fullguide[open] > .dccwl-fullguide-summary { border-bottom: 1px solid var(--dccwl-line); }
-@media (prefers-reduced-motion: reduce) {
-	.dccwl-fullguide-chev svg { transition: none; }
-}
-.dccwl-fullguide-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-/* The H2 is the section's heading in the outline; styled as the header
- * label, not as a page heading. Doubled class outranks the kit's h2 rules. */
-.dccwl-app .dccwl-fullguide-h.dccwl-fullguide-h {
-	color: var(--dccwl-text);
-	font-size: var(--dccwl-fs-base);
-	font-weight: 700;
-	letter-spacing: 0;
-	line-height: 1.25;
-	margin: 0;
-	padding: 0;
-	text-align: left;
-	text-transform: none;
-}
-.dccwl-fullguide-meta {
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	text-align: left;
-	font-weight: var(--dccwl-fw-body);
-}
-/* Scoped to .dccwl-app, NOT .dccwl-root: the prose guide appears both inside
-   the standalone widget (.dccwl-root) AND at the canal hub's top level
-   (.dccwl-canal), and both wrappers carry .dccwl-app. Doubled class keeps
-   specificity at (0,4,0), which beats the Elementor kit's (0,3,1) resets. */
-.dccwl-app .dccwl-fullguide-summary.dccwl-fullguide-summary:focus-visible {
-	outline: none;
-	box-shadow: inset var(--dccwl-ring);
-}
-.dccwl-fullguide-body {
-	padding: var(--dccwl-gap-lg) 16px 16px;
-	text-align: left;
-}
-.dccwl-fullguide-body > * { margin-left: auto; margin-right: auto; max-width: 68ch; }
+/* The fold component — .dccwl-fullguide and everything inside its summary —
+ * MOVED TO app.css IN 1.40.1. It is rendered by the water module as well as
+ * by the guide, and the water module does not load this stylesheet: that is
+ * why the standalone widget's "About the water" fold had no chevron styling
+ * and why "All readings" had no cue at all. Same lesson as the double
+ * disclosure marker in 1.39.0 — a rule only reaches the surfaces that load
+ * the file it lives in. */
 
 .dccwl-fg-group {
 	border-top: 1px solid var(--dccwl-line);

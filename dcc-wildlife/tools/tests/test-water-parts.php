@@ -312,4 +312,110 @@ $bad = Water_Fact::make( [
 check_same( '07/27/2026', $bad->to_array()['dateText'],
 	'an owner-typed timestamp renders as a date, not as itself' );
 
+/* ---------------------------------------------------------------- 7 ---- */
+dcc_section( 'no date is written into a sentence a guest reads' );
+
+/*
+ * THE DEFECT THIS CATCHES, FOUND ON LIVE: the rainfall note read
+ * "calendar-day totals for 2026-10-03 and 2026-10-04". 1.40.0 formats a
+ * Fact's own `date` field, and a date written INTO a sentence is invisible to
+ * that — the rule is about what a guest reads, not about which field it
+ * travels in.
+ *
+ * So this sweeps the facts the builders actually produce and checks every
+ * string a guest can see. `date` itself is exempt and must stay raw: it is
+ * the instant the age chip measures from, and `dateText` is what renders.
+ */
+dccwl_test_reset();
+dcc_parts_enable();
+dcc_parts_atlas( 1.60, 'm', 1.00, 61.00, 61.25 );
+
+/* USGS daily rainfall, in the shape the service returns it. */
+$GLOBALS['dccwl_test']['http']['waterservices.usgs.gov'] = [
+	'code' => 200,
+	'body' => wp_json_encode(
+		[
+			'value' => [
+				'timeSeries' => [
+					[
+						'sourceInfo' => [ 'siteCode' => [ [ 'value' => '02236000' ] ] ],
+						'values'     => [
+							[
+								'value' => [
+									[ 'dateTime' => gmdate( 'Y-m-d', time() - 86400 * 2 ), 'value' => '0.42' ],
+									[ 'dateTime' => gmdate( 'Y-m-d', time() - 86400 ), 'value' => '0.31' ],
+								],
+							],
+						],
+					],
+				],
+			],
+		]
+	),
+];
+/* NWS: the forecast and the wind parts. */
+$GLOBALS['dccwl_test']['http']['api.weather.gov'] = [
+	'code' => 200,
+	'body' => wp_json_encode(
+		[
+			'properties' => [
+				'forecast'   => 'https://api.weather.gov/gridpoints/MLB/30,70/forecast',
+				'updateTime' => gmdate( 'c' ),
+				'periods'    => [
+					[
+						'name' => 'Today', 'detailedForecast' => 'Sunny, with a high near 84.',
+						'windDirection' => 'ESE', 'windSpeed' => '0 to 5 mph',
+					],
+				],
+			],
+		]
+	),
+];
+
+$built = Water_Live::refresh();
+$rows  = (array) ( $built['facts'] ?? [] );
+check( count( $rows ) > 1, 'several builders produced facts', (string) count( $rows ) );
+
+/* Every string a guest reads, from every fact. `date` is excluded by name. */
+$READ = [ 'label', 'value', 'short', 'detail', 'note', 'sourceName', 'dateLabel', 'dateText' ];
+$raw_dates = [];
+foreach ( $rows as $f ) {
+	$row = $f instanceof Water_Fact ? $f->to_array() : (array) $f;
+	foreach ( $READ as $k ) {
+		$txt = (string) ( $row[ $k ] ?? '' );
+		if ( '' === $txt ) {
+			continue;
+		}
+		if ( preg_match( '/\d{4}-\d{2}-\d{2}/', $txt ) || preg_match( '/\d{4}-\d{2}-\d{2}T/', $txt ) ) {
+			$raw_dates[] = ( $row['label'] ?? '?' ) . " [$k]: $txt";
+		}
+	}
+	echo '       ' . str_pad( (string) ( $row['label'] ?? '?' ), 22 ) . ' note="' . ( $row['note'] ?? '' ) . '"' . "\n";
+}
+check_same( [], $raw_dates, 'no sentence any builder writes carries an ISO date', implode( ' | ', $raw_dates ) );
+
+/* And the one that was wrong reads as Rob asked. */
+$rain = null;
+foreach ( $rows as $f ) {
+	$row = $f instanceof Water_Fact ? $f->to_array() : (array) $f;
+	if ( false !== strpos( (string) $row['label'], 'rain' ) || false !== strpos( (string) $row['label'], 'Rain' ) ) {
+		$rain = $row;
+	}
+}
+check( null !== $rain, 'the rainfall fact is built' );
+if ( null !== $rain ) {
+	check( (bool) preg_match( '#calendar-day totals for \d{2}/\d{2}/\d{4} and \d{2}/\d{2}/\d{4}#', $rain['note'] ),
+		'its note names both days US-numeric', $rain['note'] );
+}
+
+/* The raw instant still travels, because the age chip measures from it. */
+$has_raw_date = false;
+foreach ( $rows as $f ) {
+	$row = $f instanceof Water_Fact ? $f->to_array() : (array) $f;
+	if ( preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $row['date'] ) ) {
+		$has_raw_date = true;
+	}
+}
+check( $has_raw_date, 'and the raw date field is untouched, as the age chip needs' );
+
 dcc_done();

@@ -3187,3 +3187,52 @@ rendered cards at 390px. One more test-only trap recorded: **`document.body
 .textContent` includes every `<script>`**, so the "no ISO anywhere on the page"
 check first found its own injected fixture. It walks text nodes and skips
 script and style now.
+
+### 29. 1.40.1 — the cue 1.39.0 took away, and a date inside a sentence
+
+**"ALL READINGS" HAD NO OPEN/CLOSE CUE, AND 1.39.0 IS HALF THE REASON.** That
+release hid the browser's own triangle on every `.dccwl-fullguide-summary` —
+correctly, because the other folds draw their own chevron. This one never had
+one, so between the two it rendered as a plain heading with no way to tell it
+opened. It now carries the same chevron, the same 180° rotation and the same
+text wrapper as the About fold, copied rather than reinvented.
+
+**AND THE FOLD COMPONENT MOVED TO app.css**, where it should have been all
+along. `.dccwl-fullguide*` lived in **widget.css**, which the water module
+never loads — so the standalone widget's About fold drew a bare chevron with
+none of its styling. That is the THIRD defect of this exact shape (1.23.0's
+deck layout scoped to `.dccwl-tiles`, 1.39.0's disclosure marker, this), and
+the rule now has a name: **a shared component lives in the shared layer; if
+two widgets render it, neither widget's stylesheet may own it.**
+
+**`aria-expanded` IS SET IN JAVASCRIPT, NOT IN THE MARKUP, AND THAT IS
+DELIBERATE.** `<details>`/`<summary>` already reports its state to a screen
+reader. A static `aria-expanded="false"` in the HTML would CONTRADICT the
+native state the moment a guest opened the fold, and with no JavaScript it
+could never be corrected. `syncFolds()` sets it and keeps it in step on
+`toggle`. It lives in **sheet.js** because that file is a dependency of both
+widget.js and water.js — the same lesson as app.css, in its JavaScript form.
+
+**THE FOOTNOTE ROW KEEPS ITS CHEVRONS HIDDEN, AND THE SWEEP ASSERTS THAT
+RATHER THAN SKIPPING IT.** Field Guide, Credits and About are folds too, but
+in that row the chevron is hidden on purpose since 1.35.0. Re-measured for
+this release: showing them takes the row from **50px to 99px — two lines at
+320, 360 AND 390px**. The suite pins the exception so that if the row ever
+starts drawing them, something says so. **This contradicts the brief's premise
+that those three "carry your chevron"; it was reported rather than quietly
+resolved either way.**
+
+**A DATE WRITTEN INTO A SENTENCE IS INVISIBLE TO A FORMATTER THAT FORMATS
+FIELDS.** The rainfall note read "calendar-day totals for 2026-10-03 and
+2026-10-04" on live. 1.40.0 formats each Fact's own `date`; this date was
+inside `note`, composed by the builder. **The rule is about what a guest
+reads, not about which field it travels in.**
+
+The sweep that followed is a runtime one, not a code read:
+`test-water-parts.php` drives `Water_Live::refresh()` with stubs for the
+Atlas, USGS daily values and NWS, then checks **every string of every fact a
+builder produced** — label, value, short, detail, note, sourceName, dateLabel,
+dateText — for an ISO date. `date` itself is exempt BY NAME and must stay raw:
+it is the instant the age chip measures from. Nothing else in the module
+carries an embedded date today, and a future sentence that does will fail that
+check.

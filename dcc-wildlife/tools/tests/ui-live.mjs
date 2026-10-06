@@ -1256,6 +1256,145 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
   await page.close();
 }
 
+/* ===================== EVERY FOLD HAS A CUE ===================== */
+/*
+ * The Director's finding: "All readings" had no open/close cue at all. Its
+ * summary had the browser's triangle hidden — 1.39.0 did that for every fold
+ * in the plugin, correctly, because the others draw their own chevron — and
+ * no chevron of its own. Between the two it read as a plain heading.
+ *
+ * So this sweeps EVERY <summary> the plugin renders, on all three surfaces,
+ * and asks what a guest can see. The footnote row is the one deliberate
+ * exception and is asserted as such rather than skipped: since 1.35.0 its
+ * chevrons are hidden on purpose, because showing them wraps that row onto
+ * two lines at every phone width (measured again for 1.40.1: 50px to 99px at
+ * 320, 360 and 390). Those three are styled as a row of controls instead.
+ */
+section('every fold shows how to open it');
+
+async function foldSweep(page, where) {
+  const folds = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('summary').forEach((su) => {
+      const details = su.closest('details');
+      const chev = su.querySelector('.dccwl-fullguide-chev');
+      const cr = chev ? chev.getBoundingClientRect() : null;
+      const sr = su.getBoundingClientRect();
+      const cs = getComputedStyle(su);
+      const marker = getComputedStyle(su, '::marker');
+      out.push({
+        text: su.textContent.replace(/\s+/g, ' ').trim().slice(0, 30),
+        onScreen: sr.width > 0 && sr.height > 0,
+        chevShown: !!(cr && cr.width > 0 && cr.height > 0),
+        inFootnotes: !!su.closest('.dccwl-footnotes'),
+        aria: su.getAttribute('aria-expanded'),
+        open: details ? details.open : null,
+        marker: marker ? marker.content : null,
+        listStyle: cs.listStyleType,
+        // The footnote row's own cue: it is a control on a tinted ground,
+        // not a line of body text.
+        bg: cs.backgroundColor,
+        cursor: cs.cursor,
+        minH: Math.round(sr.height),
+      });
+    });
+    return out;
+  });
+
+  folds.filter((f) => f.onScreen).forEach((f) => {
+    note(`${where} "${f.text}" chevron=${f.chevShown} footnoteRow=${f.inFootnotes} aria=${f.aria}`);
+
+    checkSame('none', f.listStyle, `${where} "${f.text}": the browser triangle stays hidden`);
+    checkSame(String(f.open), f.aria,
+      `${where} "${f.text}": aria-expanded matches the fold`, `${f.aria} vs open=${f.open}`);
+    checkSame('pointer', f.cursor, `${where} "${f.text}": it reads as something you press`);
+
+    if (f.inFootnotes) {
+      /* The deliberate exception, asserted rather than skipped — if the
+       * footnote row ever starts showing chevrons, this says so. */
+      checkSame(false, f.chevShown,
+        `${where} "${f.text}": the footnote row keeps its chevrons hidden (1.35.0)`);
+    } else {
+      checkSame(true, f.chevShown, `${where} "${f.text}": shows its chevron`);
+    }
+  });
+  return folds;
+}
+
+{
+  /* 1 — the hub, as /explore/ places it. */
+  const hub = await widgetPage(browser, 'canal', { width: 390, height: 2000, sitekit: true, touch: true });
+  await hub.page.waitForTimeout(700);
+  const hubFolds = await foldSweep(hub.page, 'hub');
+  checkAtLeast(3, hubFolds.filter((f) => f.onScreen).length, 'the hub renders its folds');
+  await hub.page.close();
+
+  /* 2 — the standalone month widget. */
+  const month = await widgetPage(browser, 'month', { width: 390, height: 2000, sitekit: true, touch: true });
+  await month.page.waitForTimeout(700);
+  await foldSweep(month.page, 'month widget');
+  await month.page.close();
+
+  /* 3 — the standalone water widget, with the Now tab open, which is where
+   * "All readings" lives. It needs real facts: with none, the whole pane
+   * stays hidden and the sweep would be of an empty page. */
+  const facts = JSON.parse(execFileSync(process.env.PHP_BIN || 'php',
+    [join(HERE, 'render-fixture.php'), 'facts'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  const fx = rendered('water', '--enable');
+  const page = await buildPage(browser, {
+    width: 390, height: 2400, touch: true, sitekit: true,
+    css: ['assets/css/app.css', 'assets/css/water.css'],
+    body:
+      `<script>window.__f=${JSON.stringify(facts)};` +
+      `window.fetch=function(){return Promise.resolve({ok:true,status:200,` +
+      `json:function(){return Promise.resolve(window.__f);}});};</script>` +
+      fx.html + `<script>${fx.config}</script>`,
+  });
+  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+    await page.addScriptTag({ content: asset(f) });
+  }
+  await page.waitForTimeout(800);
+  await page.evaluate(() => {
+    const b = document.querySelector('[data-dccwl-water-tab-btn="now"]');
+    if (b) { b.click(); }
+  });
+  await page.waitForTimeout(400);
+
+  const water = await foldSweep(page, 'water widget');
+  const allReadings = water.find((f) => /All readings/.test(f.text));
+  check(!!allReadings && allReadings.onScreen, 'the "All readings" fold is on screen');
+  checkSame(true, allReadings.chevShown, '"All readings" has the chevron it was missing');
+
+  /* Opening it turns the chevron and flips aria-expanded — the same
+   * behaviour as every other fold, which is what "the SAME chevron,
+   * rotation and styling" means. */
+  const opened = await page.evaluate(async () => {
+    const d = document.querySelector('.dccwl-water-allreadings');
+    d.open = true;
+    await new Promise((r) => setTimeout(r, 250));
+    const su = d.querySelector('summary');
+    const svg = su.querySelector('.dccwl-fullguide-chev svg');
+    const about = document.querySelector('[aria-label^="About the water"]');
+    const aboutSvg = about ? about.querySelector('.dccwl-fullguide-chev svg') : null;
+    if (about) { about.closest('details').open = true; }
+    await new Promise((r) => setTimeout(r, 250));
+    return {
+      aria: su.getAttribute('aria-expanded'),
+      rotation: getComputedStyle(svg).transform,
+      aboutRotation: aboutSvg ? getComputedStyle(aboutSvg).transform : null,
+      size: [Math.round(su.querySelector('.dccwl-fullguide-chev').getBoundingClientRect().width),
+        Math.round(su.querySelector('.dccwl-fullguide-chev').getBoundingClientRect().height)],
+    };
+  });
+  note(`All readings opened ${JSON.stringify(opened)}`);
+  checkSame('true', opened.aria, 'opening it sets aria-expanded');
+  checkSame('matrix(-1, 0, 0, -1, 0, 0)', opened.rotation, 'and turns the chevron 180°');
+  checkSame(opened.aboutRotation, opened.rotation, 'exactly as the About fold does');
+  checkSame([36, 36], opened.size, 'at the same 36px as every other fold');
+
+  await page.close();
+}
+
 /* =================== ONE DATE FORMAT, EVERY SURFACE =================== */
 /*
  * Rob's ruling: every date a guest sees in the water module reads 07/27/2026.

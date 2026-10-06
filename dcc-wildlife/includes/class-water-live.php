@@ -1877,11 +1877,22 @@ final class Water_Live {
 				'date'        => $last_date,
 				// USGS daily values carry a date and no clock.
 				'date_precision' => 'day',
+				/*
+				 * THE DATES INSIDE THE SENTENCE ARE FORMATTED TOO (1.40.1).
+				 *
+				 * This note read "calendar-day totals for 2026-10-03 and
+				 * 2026-10-04" on live. 1.40.0 formats the Fact's own `date`
+				 * field, and a date WRITTEN INTO a sentence is invisible to
+				 * that: the rule is about what a guest reads, not about which
+				 * field it travels in. Formatted where the sentence is
+				 * composed, which is the same place the parts of a reading
+				 * are stated.
+				 */
 				'note'        => sprintf(
 					/* translators: 1: first calendar date, 2: last calendar date. */
 					__( 'calendar-day totals for %1$s and %2$s', 'dcc-wildlife' ),
-					$first_date,
-					$last_date
+					self::us_date( $first_date ),
+					self::us_date( $last_date )
 				),
 			],
 		];

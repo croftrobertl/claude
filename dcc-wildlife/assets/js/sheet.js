@@ -266,7 +266,43 @@
 		}
 	}
 
+	/* ======================================================================
+	 * EVERY FOLD REPORTS ITS STATE (1.40.1).
+	 *
+	 * `<details>`/`<summary>` already tells a screen reader whether it is
+	 * open, so nothing here renders `aria-expanded` server-side: a static
+	 * `false` in the markup would CONTRADICT the native state the moment a
+	 * guest opened it, and with no JavaScript it could never be corrected.
+	 * It is set and kept in step here instead, where it can always be true.
+	 *
+	 * In sheet.js because this file is a dependency of BOTH widget.js and
+	 * water.js, and the folds come from both — the 1.39.0/1.40.1 lesson about
+	 * app.css in its JavaScript form: code that only one surface loads
+	 * reaches only that surface.
+	 * ====================================================================== */
+	function syncFolds(scope) {
+		(scope || document).querySelectorAll('details.dccwl-fullguide').forEach(function (d) {
+			var sum = d.querySelector('summary.dccwl-fullguide-summary');
+			if (!sum) { return; }
+			var set = function () { sum.setAttribute('aria-expanded', d.open ? 'true' : 'false'); };
+			set();
+			if (!d.getAttribute('data-dccwl-fold-init')) {
+				d.setAttribute('data-dccwl-fold-init', '1');
+				d.addEventListener('toggle', set);
+			}
+		});
+	}
+
+	if ('loading' === document.readyState) {
+		document.addEventListener('DOMContentLoaded', function () { syncFolds(document); });
+	} else {
+		syncFolds(document);
+	}
+
 	window.DCCWL_Sheet = {
+		/* Exposed so a panel built after load — the hub swaps whole stages —
+		 * can register its folds too. */
+		syncFolds: syncFolds,
 		open: open,
 		close: close,
 		isOpen: function () { return state.open; },

@@ -198,8 +198,25 @@ final class Water_Render {
 					 */
 					?>
 					<details class="dccwl-fullguide dccwl-water-allreadings">
-					<summary class="dccwl-fullguide-summary">
-						<span class="dccwl-fullguide-h"><?php esc_html_e( 'All readings', 'dcc-wildlife' ); ?></span>
+					<?php
+					/*
+					 * THE SAME CHEVRON AS EVERY OTHER FOLD (1.40.1 — the
+					 * Director's finding). This summary had no chevron of its
+					 * own, and 1.39.0 had hidden the browser's triangle for
+					 * every fold in the plugin — correctly, since the others
+					 * draw their own. Between the two, this one lost its only
+					 * open/close cue and read as a plain heading.
+					 *
+					 * Markup copied from the About fold rather than invented:
+					 * same chevron, same rotation, same text wrapper, so the
+					 * four folds a guest meets are one component.
+					 */
+					?>
+					<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'All readings, with their sources', 'dcc-wildlife' ); ?>">
+						<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+						<span class="dccwl-fullguide-text">
+							<span class="dccwl-fullguide-h"><?php esc_html_e( 'All readings', 'dcc-wildlife' ); ?></span>
+						</span>
 					</summary>
 					<div class="dccwl-fullguide-body">
 					<?php /* ITEM 8 (pick B) — the tier colour is now a full border on
