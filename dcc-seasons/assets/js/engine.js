@@ -331,6 +331,318 @@
 	var FREEAIR = ' fall sway tumble spin wobble jump flutter rise pulse orbit dangle hang dart twinkle firefly ';
 
 	/* ================= Engine ================= */
+	/* --- Layer 1 effects (4.4.0: hoisted so engine and Theme guide share them).
+	 * kitG = { cx, vw, vh }, read live on every call (not 'g': effects use
+	 * their own var g for gradients). --- */
+	function subtleKit(kitG) {
+		var SUBTLE = {
+			/* Fall — leaves drifting down, tumbling as they go. */
+			leaves: {
+				n: 11, a: 0.28, cl: ['#C1440E', '#E07A2F', '#B8860B', '#8B5A2B', '#A2562B'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-60, -10);
+					p.r = rnd(4.5, 8.5); p.vy = rnd(13, 26); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.2); p.rot = rnd(0, TAU); p.rv = rnd(-0.7, 0.7);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 16 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					kitG.cx.translate(p.x, p.y); kitG.cx.rotate(p.rot);
+					kitG.cx.fillStyle = p.c;
+					kitG.cx.beginPath();
+					kitG.cx.ellipse(0, 0, p.r, p.r * 0.52, 0, 0, TAU);
+					kitG.cx.fill();
+					kitG.cx.strokeStyle = 'rgba(0,0,0,.25)'; kitG.cx.lineWidth = 0.7;
+					kitG.cx.beginPath(); kitG.cx.moveTo(-p.r, 0); kitG.cx.lineTo(p.r, 0); kitG.cx.stroke();
+				}
+			},
+			/* Spring — blossom petals, lighter and slower than leaves. */
+			blossom: {
+				n: 12, a: 0.27, cl: ['#F8C8DC', '#FADCE6', '#F6B8CE', '#FFFFFF'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-50, -8);
+					p.r = rnd(3.2, 6.2); p.vy = rnd(10, 19); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.6, 1.4); p.rot = rnd(0, TAU); p.rv = rnd(-0.5, 0.5);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 20 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					kitG.cx.translate(p.x, p.y); kitG.cx.rotate(p.rot);
+					kitG.cx.fillStyle = p.c;
+					kitG.cx.beginPath();
+					kitG.cx.ellipse(0, 0, p.r, p.r * 0.42, 0, 0, TAU);
+					kitG.cx.fill();
+				}
+			},
+			/* Summer — a few dragonflies over a faint heat shimmer on the
+			 * water. The shimmer is the band, the dragonflies are the
+			 * particles; both are deliberately near the bottom. */
+			dragonheat: {
+				n: 5, a: 0.30, shimmer: true, cl: ['#4DABF7', '#38D9A9', '#74C0FC'],
+				seed: function (p, first) {
+					p.x = first ? rnd(0, kitG.vw) : (rand() < 0.5 ? -30 : kitG.vw + 30);
+					p.y = rnd(kitG.vh * 0.45, kitG.vh * 0.88);
+					p.r = rnd(5, 9); p.dir = p.x < kitG.vw / 2 ? 1 : -1;
+					p.v = rnd(16, 34); p.ph = rnd(0, TAU); p.sp = rnd(1.6, 3.0);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.ph += p.sp * dt;
+					p.x += p.dir * p.v * dt;
+					p.y += sin(p.ph) * 10 * dt;
+				},
+				draw: function (p) {
+					kitG.cx.translate(p.x, p.y);
+					kitG.cx.strokeStyle = p.c; kitG.cx.lineWidth = 1.1;
+					kitG.cx.beginPath(); kitG.cx.moveTo(-p.r, 0); kitG.cx.lineTo(p.r * 0.6, 0); kitG.cx.stroke();
+					var w = p.r * 0.85, fl = sin(p.ph * 4) * 0.35 + 0.65;
+					kitG.cx.globalAlpha *= 0.85;
+					kitG.cx.beginPath();
+					kitG.cx.ellipse(0, -w * 0.35 * fl, w, w * 0.3 * fl, -0.3, 0, TAU);
+					kitG.cx.ellipse(0, w * 0.35 * fl, w, w * 0.3 * fl, 0.3, 0, TAU);
+					kitG.cx.stroke();
+				}
+			},
+			/* Valentine's — hearts, rising rather than falling. */
+			hearts: {
+				n: 9, a: 0.26, cl: ['#FF6B81', '#FF8FA3', '#E8375A'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : kitG.vh + rnd(8, 50);
+					p.r = rnd(4, 7.5); p.vy = -rnd(12, 24); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.1); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 14 * dt;
+				},
+				draw: function (p) {
+					var r = p.r;
+					kitG.cx.translate(p.x, p.y); kitG.cx.fillStyle = p.c;
+					kitG.cx.beginPath();
+					kitG.cx.moveTo(0, r * 0.75);
+					kitG.cx.bezierCurveTo(-r * 1.3, -r * 0.2, -r * 0.5, -r, 0, -r * 0.35);
+					kitG.cx.bezierCurveTo(r * 0.5, -r, r * 1.3, -r * 0.2, 0, r * 0.75);
+					kitG.cx.fill();
+				}
+			},
+			/* New Year's — confetti, tumbling down. */
+			confetti: {
+				n: 14, a: 0.30, cl: ['#FFD43B', '#FF6B6B', '#4DABF7', '#51CF66', '#F1F3F5'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-50, -8);
+					p.r = rnd(2.6, 5); p.vy = rnd(22, 42); p.ph = rnd(0, TAU);
+					p.sp = rnd(1.4, 3.2); p.rot = rnd(0, TAU); p.rv = rnd(-2.4, 2.4);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 22 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					kitG.cx.translate(p.x, p.y); kitG.cx.rotate(p.rot);
+					kitG.cx.fillStyle = p.c;
+					/* The vertical squash is the tumble: a flat rectangle
+					 * edge-on reads as a spinning chip without a 3D turn. */
+					kitG.cx.fillRect(-p.r, -p.r * 0.45 * abs(cos(p.ph)), p.r * 2, p.r * 0.9 * abs(cos(p.ph)) + 0.6);
+				}
+			},
+			/* Halloween — embers rising and winking out. */
+			embers: {
+				n: 12, a: 0.30, cl: ['#FF7A00', '#FF9E3D', '#E8590C', '#FFC078'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : kitG.vh + rnd(6, 40);
+					p.r = rnd(1.2, 2.8); p.vy = -rnd(16, 34); p.ph = rnd(0, TAU);
+					p.sp = rnd(1.8, 3.6); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 11 * dt;
+				},
+				draw: function (p) {
+					kitG.cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 2) * 0.5 + 0.5);
+					kitG.cx.fillStyle = p.c;
+					kitG.cx.beginPath(); kitG.cx.arc(p.x, p.y, p.r, 0, TAU); kitG.cx.fill();
+				}
+			},
+			/* July 4 — drifting sparks, red/white/blue, falling away. */
+			sparks: {
+				n: 12, a: 0.28, cl: ['#FF5252', '#F1F3F5', '#5C7CFA'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-40, -6);
+					p.r = rnd(1.1, 2.4); p.vy = rnd(18, 36); p.ph = rnd(0, TAU);
+					p.sp = rnd(2.2, 4.4); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 13 * dt;
+				},
+				draw: function (p) {
+					kitG.cx.globalAlpha *= 0.5 + 0.5 * (sin(p.ph) * 0.5 + 0.5);
+					kitG.cx.strokeStyle = p.c; kitG.cx.lineWidth = p.r;
+					kitG.cx.beginPath();
+					kitG.cx.moveTo(p.x, p.y - p.r * 2); kitG.cx.lineTo(p.x, p.y + p.r * 2);
+					kitG.cx.stroke();
+				}
+			},
+			/* Christmas — slow warm bokeh, the softest of the set. */
+			bokeh: {
+				n: 8, a: 0.22, cl: ['#FFD8A8', '#FFE8CC', '#FFC9C9', '#D8F5A2'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-70, -20);
+					p.r = rnd(9, 20); p.vy = rnd(5, 12); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.25, 0.6); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 7 * dt;
+				},
+				draw: function (p) {
+					var g = kitG.cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+					g.addColorStop(0, p.c);
+					g.addColorStop(0.55, p.c);
+					g.addColorStop(1, 'rgba(255,255,255,0)');
+					kitG.cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 1.7) * 0.5 + 0.5);
+					kitG.cx.fillStyle = g;
+					kitG.cx.beginPath(); kitG.cx.arc(p.x, p.y, p.r, 0, TAU); kitG.cx.fill();
+				}
+			},
+			/* Orange blossom — Florida's state flower; the groves bloom
+			 * February to April (Presidents Day). Five cream petals, a gold
+			 * eye, and a warm outline so the flower survives white copy. */
+			orangeblossom: {
+				n: 10, a: 0.46, cl: ['#FFF4E6', '#FFFFFF'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-40, -8);
+					p.r = rnd(3.6, 6); p.vy = rnd(9, 17); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.1); p.rot = rnd(0, TAU); p.rv = rnd(-0.6, 0.6);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 15 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					var r = p.r;
+					kitG.cx.translate(p.x, p.y); kitG.cx.rotate(p.rot);
+					kitG.cx.fillStyle = p.c;
+					kitG.cx.strokeStyle = 'rgba(170,125,60,.6)'; kitG.cx.lineWidth = 0.7;
+					for (var i = 0; i < 5; i++) {
+						kitG.cx.rotate(TAU / 5);
+						kitG.cx.beginPath(); kitG.cx.ellipse(0, -r * 0.62, r * 0.34, r * 0.62, 0, 0, TAU);
+						kitG.cx.fill(); kitG.cx.stroke();
+					}
+					kitG.cx.fillStyle = '#FAB005';
+					kitG.cx.beginPath(); kitG.cx.arc(0, 0, r * 0.24, 0, TAU); kitG.cx.fill();
+				}
+			}
+		};
+
+		/* Colour variants of two effects above, each its OWN named choice in
+		 * the settings dropdown (Rob's call: a hidden per-theme palette would
+		 * make "Bokeh" look different depending on the theme). They share the
+		 * parent's motion and drawing, so they cannot drift apart from it. */
+		function variant(base, cl) { var o = {}, k; for (k in base) { o[k] = base[k]; } o.cl = cl; return o; }
+		SUBTLE.sunglow = variant(SUBTLE.bokeh, ['#FFE8A3', '#FFD8A8', '#FFF3BF', '#FFC078']);
+		SUBTLE.goldlight = variant(SUBTLE.bokeh, ['#FFE066', '#FFEC99', '#E9ECEF', '#FCC419']);
+		SUBTLE.mardiconfetti = variant(SUBTLE.confetti, ['#7C3AED', '#2F9E44', '#F1C40F', '#B197FC']);
+
+		/* Theme -> effect. PHP owns this map so the owner can re-point any
+		 * theme from the settings page without a plugin release; this is
+		 * only the fallback for a config that predates the setting. */
+		return SUBTLE;
+	}
+
+	var ACCENTS = {
+		halloween: ['web', 'right:0;top:0;width:64px;opacity:.5;'],
+		thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.55;'],
+		snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
+		earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
+		summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;'],
+		/* The Keys sun is a corner accent only (Rob, 4.2.0): never a
+		 * sprite, so never two suns on screen. */
+		florida_keys: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;']
+	};
+
+	var VIGS = {
+		labor_day: ['flotilla'],
+		patriot_day: ['flagfly'],
+		mlk: ['doveflight'],
+		fall_fishing: ['fullcast', 'dragonlands'],
+		halloween: ['witchmoon'],
+		christmas: ['giftdrop'],
+		new_years: ['corkpop'],
+		snowbird: ['arrival'],
+		mardi_gras: ['stilts', 'doubloons'],
+		valentines: ['swans'],
+		strawberry: ['catch1'],
+		easter: ['egghunt', 'hatch'],
+		april_fools: ['bananaslip'],
+		spring_canal: ['duckparade', 'kayaker', 'dragonlotus'],
+		summer_canal: ['gatorglide', 'floatdrift', 'mulletskip'],
+		florida_keys: ['anhinga', 'ospreycatch', 'cranes', 'limpkinsnail', 'hibfloat']
+	};
+
+	var WINGS = { eagle: ['eagleup', 'eagledown', 280], osprey: ['ospreyup', 'ospreydown', 260] };
+
+	/* --- How many sprites, and of what (4.2.0 rules; 4.4.0 made them pure so
+	 * the admin Theme guide computes its counts with the SAME functions).
+	 * PHONES: the sprite count follows the screen — clamp(width / 1280,
+	 * 0.45, 1) — on the SPRITES only, never the ripple reserve; a theme's
+	 * cap scales the same way but never below 3 (a cap of 1 stays 1);
+	 * phoneMin overrides below 768px. --- */
+	function phoneScaleAt(w) { return clamp(w / 1280, 0.45, 1); }
+	function partTargetFor(A, density, w) {
+		var maxTotal = clamp(density || 10, 1, 16), reserve = A.water ? 3 : 0, sc = phoneScaleAt(w);
+		var n = MT.round((maxTotal - reserve) * sc);
+		if (A.max) { n = mn(n, A.max <= 1 ? A.max : mx2(3, MT.round(A.max * sc))); }
+		if (A.phoneMin && w < 768) { n = mx2(n, A.phoneMin); }
+		return mx2(1, mn(n, maxTotal - reserve));
+	}
+	function specLimitAt(def, w) { return def.n ? mx2(1, MT.round(def.n * phoneScaleAt(w))) : 0; }
+	/* Each spec's share of the total: its weight's share, with any spec over
+	 * its limit held at the limit and the rest shared out again
+	 * (water-filling). Specs are { wt, def }; sets .share on each. */
+	function sharesAt(specs, total, w) {
+		var rem = total, live = specs.slice(), i, W2, capped;
+		for (i = 0; i < specs.length; i++) { specs[i].share = 0; }
+		while (live.length) {
+			W2 = 0;
+			for (i = 0; i < live.length; i++) { W2 += live[i].wt; }
+			capped = [];
+			for (i = 0; i < live.length; i++) {
+				if (live[i].def.n && live[i].wt / W2 * rem > specLimitAt(live[i].def, w)) { capped.push(live[i]); }
+			}
+			if (!capped.length) {
+				for (i = 0; i < live.length; i++) { live[i].share = live[i].wt / W2 * rem; }
+				break;
+			}
+			for (i = 0; i < capped.length; i++) { capped[i].share = specLimitAt(capped[i].def, w); rem -= capped[i].share; }
+			live = live.filter(function (x) { return capped.indexOf(x) < 0; });
+		}
+		return specs;
+	}
+
+	/* --- Timing, in seconds. heroEvery is the fallback for a config that
+	 * predates CFG.heroEvery (Plugin::HERO_EVERY sends the live value). --- */
+	var TIMING = { heroFirst: [3, 5], heroEvery: [120, 180], vigFirst: [20, 28], vigGap: [90, 150], xaTurn: 45 };
+	/* Scenes added only in the evening, and the theme with the midnight countdown. */
+	var EVENING_VIGS = { christmas: ['sleighmoon'] };
+	var COUNTDOWN_THEME = 'new_years';
+	/* The drawing that stands for each hero and scene in the admin Theme
+	 * guide — the hero's own sprite, or the scene's main actor. */
+	/* The one emoji a hero draws (Rob's exception): the rainbow's clover strip. */
+	var HERO_GLYPHS = { rainbow: '☘' };
+	var HERO_ART = { heron: 'heron0', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
+	var SCENE_ART = {
+		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witchsil',
+		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
+		ospreycatch: 'ospreyup', cranes: 'cranedance', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
+		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
+		doubloons: 'doubloon', swans: 'swan', catch1: 'berry', egghunt: 'bunny', hatch: 'chick', bananaslip: 'peel', duckparade: 'duckhen'
+	};
+
 	function start(boot) {
 		var CFG = boot.cfg || {};
 		var theme = boot.theme;
@@ -356,16 +668,10 @@
 		 * never below 3 ('classic' keeps its 1), so the MIX stays the same at
 		 * the smaller total. Christmas carries a phone floor (phoneMin) that
 		 * overrides its scaled cap. Rob's density setting is never touched. */
-		function phoneScale() { return clamp(W.innerWidth / 1280, 0.45, 1); }
-		function partTarget() {
-			var sc = phoneScale();
-			var n = MT.round((maxTotal - reserve) * sc);
-			if (A.max) { n = mn(n, A.max <= 1 ? A.max : mx2(3, MT.round(A.max * sc))); }
-			if (A.phoneMin && W.innerWidth < 768) { n = mx2(n, A.phoneMin); }
-			return mx2(1, mn(n, maxTotal - reserve));
-		}
+		function phoneScale() { return phoneScaleAt(W.innerWidth); }
+		function partTarget() { return partTargetFor(A, CFG.density, W.innerWidth); }
 		var maxParts = partTarget();
-		var heroEvery = CFG.heroEvery || [120, 180];
+		var heroEvery = CFG.heroEvery || TIMING.heroEvery;
 		/* CFG.diag, not CFG.debug: the plugin has only ever emitted 'diag'
 		 * (Plugin::config), so this read a key that was never sent and DEBUG
 		 * was permanently false on every real page. The diagnostics PANEL
@@ -396,16 +702,6 @@
 		var evening = FX.evening && (hour >= 19 || hour < 6);
 
 		/* Static corner accents (DOM, no motion, no assets). */
-		var ACCENTS = {
-			halloween: ['web', 'right:0;top:0;width:64px;opacity:.5;'],
-			thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.55;'],
-			snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
-			earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
-			summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;'],
-			/* The Keys sun is a corner accent only (Rob, 4.2.0): never a
-			 * sprite, so never two suns on screen. */
-			florida_keys: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;']
-		};
 		/* Accents are built here but mounted with the canvas below, so they
 		 * follow the layering setting: through 3.6.2 they sat on the body at
 		 * z-index 99990 in EVERY mode, floating over text and widgets even
@@ -1394,7 +1690,7 @@
 		/* n: a sprite's most-on-screen-at-once at FULL width, scaled on a
 		 * phone like the total (never below 1). Enforced when a particle
 		 * picks what it becomes, so the other sprites take the space. */
-		function specLimit(sp) { return sp.def.n ? mx2(1, MT.round(sp.def.n * phoneScale())) : 0; }
+		function specLimit(sp) { return specLimitAt(sp.def, W.innerWidth); }
 		function liveOf(sp, self) {
 			var c = 0;
 			for (var k = 0; k < parts.length; k++) {
@@ -1411,22 +1707,7 @@
 		function mixShares() {
 			if (sharesFor === maxParts) { return; }
 			sharesFor = maxParts;
-			var rem = maxParts, live = specs.slice(), i, W2, capped;
-			for (i = 0; i < specs.length; i++) { specs[i].share = 0; }
-			while (live.length) {
-				W2 = 0;
-				for (i = 0; i < live.length; i++) { W2 += live[i].wt; }
-				capped = [];
-				for (i = 0; i < live.length; i++) {
-					if (live[i].def.n && live[i].wt / W2 * rem > specLimit(live[i])) { capped.push(live[i]); }
-				}
-				if (!capped.length) {
-					for (i = 0; i < live.length; i++) { live[i].share = live[i].wt / W2 * rem; }
-					break;
-				}
-				for (i = 0; i < capped.length; i++) { capped[i].share = specLimit(capped[i]); rem -= capped[i].share; }
-				live = live.filter(function (x) { return capped.indexOf(x) < 0; });
-			}
+			sharesAt(specs, maxParts, W.innerWidth);
 		}
 		/* A particle picks what it becomes from the sprites still BELOW their
 		 * share (rounded up), weighted as before. Independent random picks
@@ -1548,222 +1829,11 @@
 		 * pretty it is. Counts scale with viewport width so a phone does
 		 * not get a desktop's worth of particles.
 		 * ----------------------------------------------------------------- */
-		var SUBTLE = {
-			/* Fall — leaves drifting down, tumbling as they go. */
-			leaves: {
-				n: 11, a: 0.28, cl: ['#C1440E', '#E07A2F', '#B8860B', '#8B5A2B', '#A2562B'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-60, -10);
-					p.r = rnd(4.5, 8.5); p.vy = rnd(13, 26); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.5, 1.2); p.rot = rnd(0, TAU); p.rv = rnd(-0.7, 0.7);
-					p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt;
-					p.x += sin(p.ph) * 16 * dt; p.rot += p.rv * dt;
-				},
-				draw: function (p) {
-					cx.translate(p.x, p.y); cx.rotate(p.rot);
-					cx.fillStyle = p.c;
-					cx.beginPath();
-					cx.ellipse(0, 0, p.r, p.r * 0.52, 0, 0, TAU);
-					cx.fill();
-					cx.strokeStyle = 'rgba(0,0,0,.25)'; cx.lineWidth = 0.7;
-					cx.beginPath(); cx.moveTo(-p.r, 0); cx.lineTo(p.r, 0); cx.stroke();
-				}
-			},
-			/* Spring — blossom petals, lighter and slower than leaves. */
-			blossom: {
-				n: 12, a: 0.27, cl: ['#F8C8DC', '#FADCE6', '#F6B8CE', '#FFFFFF'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-50, -8);
-					p.r = rnd(3.2, 6.2); p.vy = rnd(10, 19); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.6, 1.4); p.rot = rnd(0, TAU); p.rv = rnd(-0.5, 0.5);
-					p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt;
-					p.x += sin(p.ph) * 20 * dt; p.rot += p.rv * dt;
-				},
-				draw: function (p) {
-					cx.translate(p.x, p.y); cx.rotate(p.rot);
-					cx.fillStyle = p.c;
-					cx.beginPath();
-					cx.ellipse(0, 0, p.r, p.r * 0.42, 0, 0, TAU);
-					cx.fill();
-				}
-			},
-			/* Summer — a few dragonflies over a faint heat shimmer on the
-			 * water. The shimmer is the band, the dragonflies are the
-			 * particles; both are deliberately near the bottom. */
-			dragonheat: {
-				n: 5, a: 0.30, shimmer: true, cl: ['#4DABF7', '#38D9A9', '#74C0FC'],
-				seed: function (p, first) {
-					p.x = first ? rnd(0, vw) : (rand() < 0.5 ? -30 : vw + 30);
-					p.y = rnd(vh * 0.45, vh * 0.88);
-					p.r = rnd(5, 9); p.dir = p.x < vw / 2 ? 1 : -1;
-					p.v = rnd(16, 34); p.ph = rnd(0, TAU); p.sp = rnd(1.6, 3.0);
-					p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.ph += p.sp * dt;
-					p.x += p.dir * p.v * dt;
-					p.y += sin(p.ph) * 10 * dt;
-				},
-				draw: function (p) {
-					cx.translate(p.x, p.y);
-					cx.strokeStyle = p.c; cx.lineWidth = 1.1;
-					cx.beginPath(); cx.moveTo(-p.r, 0); cx.lineTo(p.r * 0.6, 0); cx.stroke();
-					var w = p.r * 0.85, fl = sin(p.ph * 4) * 0.35 + 0.65;
-					cx.globalAlpha *= 0.85;
-					cx.beginPath();
-					cx.ellipse(0, -w * 0.35 * fl, w, w * 0.3 * fl, -0.3, 0, TAU);
-					cx.ellipse(0, w * 0.35 * fl, w, w * 0.3 * fl, 0.3, 0, TAU);
-					cx.stroke();
-				}
-			},
-			/* Valentine's — hearts, rising rather than falling. */
-			hearts: {
-				n: 9, a: 0.26, cl: ['#FF6B81', '#FF8FA3', '#E8375A'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : vh + rnd(8, 50);
-					p.r = rnd(4, 7.5); p.vy = -rnd(12, 24); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.5, 1.1); p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 14 * dt;
-				},
-				draw: function (p) {
-					var r = p.r;
-					cx.translate(p.x, p.y); cx.fillStyle = p.c;
-					cx.beginPath();
-					cx.moveTo(0, r * 0.75);
-					cx.bezierCurveTo(-r * 1.3, -r * 0.2, -r * 0.5, -r, 0, -r * 0.35);
-					cx.bezierCurveTo(r * 0.5, -r, r * 1.3, -r * 0.2, 0, r * 0.75);
-					cx.fill();
-				}
-			},
-			/* New Year's — confetti, tumbling down. */
-			confetti: {
-				n: 14, a: 0.30, cl: ['#FFD43B', '#FF6B6B', '#4DABF7', '#51CF66', '#F1F3F5'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-50, -8);
-					p.r = rnd(2.6, 5); p.vy = rnd(22, 42); p.ph = rnd(0, TAU);
-					p.sp = rnd(1.4, 3.2); p.rot = rnd(0, TAU); p.rv = rnd(-2.4, 2.4);
-					p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt;
-					p.x += sin(p.ph) * 22 * dt; p.rot += p.rv * dt;
-				},
-				draw: function (p) {
-					cx.translate(p.x, p.y); cx.rotate(p.rot);
-					cx.fillStyle = p.c;
-					/* The vertical squash is the tumble: a flat rectangle
-					 * edge-on reads as a spinning chip without a 3D turn. */
-					cx.fillRect(-p.r, -p.r * 0.45 * abs(cos(p.ph)), p.r * 2, p.r * 0.9 * abs(cos(p.ph)) + 0.6);
-				}
-			},
-			/* Halloween — embers rising and winking out. */
-			embers: {
-				n: 12, a: 0.30, cl: ['#FF7A00', '#FF9E3D', '#E8590C', '#FFC078'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : vh + rnd(6, 40);
-					p.r = rnd(1.2, 2.8); p.vy = -rnd(16, 34); p.ph = rnd(0, TAU);
-					p.sp = rnd(1.8, 3.6); p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 11 * dt;
-				},
-				draw: function (p) {
-					cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 2) * 0.5 + 0.5);
-					cx.fillStyle = p.c;
-					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
-				}
-			},
-			/* July 4 — drifting sparks, red/white/blue, falling away. */
-			sparks: {
-				n: 12, a: 0.28, cl: ['#FF5252', '#F1F3F5', '#5C7CFA'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -6);
-					p.r = rnd(1.1, 2.4); p.vy = rnd(18, 36); p.ph = rnd(0, TAU);
-					p.sp = rnd(2.2, 4.4); p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 13 * dt;
-				},
-				draw: function (p) {
-					cx.globalAlpha *= 0.5 + 0.5 * (sin(p.ph) * 0.5 + 0.5);
-					cx.strokeStyle = p.c; cx.lineWidth = p.r;
-					cx.beginPath();
-					cx.moveTo(p.x, p.y - p.r * 2); cx.lineTo(p.x, p.y + p.r * 2);
-					cx.stroke();
-				}
-			},
-			/* Christmas — slow warm bokeh, the softest of the set. */
-			bokeh: {
-				n: 8, a: 0.22, cl: ['#FFD8A8', '#FFE8CC', '#FFC9C9', '#D8F5A2'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-70, -20);
-					p.r = rnd(9, 20); p.vy = rnd(5, 12); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.25, 0.6); p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 7 * dt;
-				},
-				draw: function (p) {
-					var g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-					g.addColorStop(0, p.c);
-					g.addColorStop(0.55, p.c);
-					g.addColorStop(1, 'rgba(255,255,255,0)');
-					cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 1.7) * 0.5 + 0.5);
-					cx.fillStyle = g;
-					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
-				}
-			},
-			/* Orange blossom — Florida's state flower; the groves bloom
-			 * February to April (Presidents Day). Five cream petals, a gold
-			 * eye, and a warm outline so the flower survives white copy. */
-			orangeblossom: {
-				n: 10, a: 0.46, cl: ['#FFF4E6', '#FFFFFF'],
-				seed: function (p, first) {
-					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -8);
-					p.r = rnd(3.6, 6); p.vy = rnd(9, 17); p.ph = rnd(0, TAU);
-					p.sp = rnd(0.5, 1.1); p.rot = rnd(0, TAU); p.rv = rnd(-0.6, 0.6);
-					p.c = pick(this.cl);
-				},
-				step: function (p, dt) {
-					p.y += p.vy * dt; p.ph += p.sp * dt;
-					p.x += sin(p.ph) * 15 * dt; p.rot += p.rv * dt;
-				},
-				draw: function (p) {
-					var r = p.r;
-					cx.translate(p.x, p.y); cx.rotate(p.rot);
-					cx.fillStyle = p.c;
-					cx.strokeStyle = 'rgba(170,125,60,.6)'; cx.lineWidth = 0.7;
-					for (var i = 0; i < 5; i++) {
-						cx.rotate(TAU / 5);
-						cx.beginPath(); cx.ellipse(0, -r * 0.62, r * 0.34, r * 0.62, 0, 0, TAU);
-						cx.fill(); cx.stroke();
-					}
-					cx.fillStyle = '#FAB005';
-					cx.beginPath(); cx.arc(0, 0, r * 0.24, 0, TAU); cx.fill();
-				}
-			}
-		};
+		/* The subtle layer's effects live in subtleKit() (outer scope) so the
+		 * admin Theme guide draws its previews with the SAME code. The
+		 * getters keep the canvas and its size live across resizes. */
+		var SUBTLE = subtleKit({ get cx() { return cx; }, get vw() { return vw; }, get vh() { return vh; } });
 
-		/* Colour variants of two effects above, each its OWN named choice in
-		 * the settings dropdown (Rob's call: a hidden per-theme palette would
-		 * make "Bokeh" look different depending on the theme). They share the
-		 * parent's motion and drawing, so they cannot drift apart from it. */
-		function variant(base, cl) { var o = {}, k; for (k in base) { o[k] = base[k]; } o.cl = cl; return o; }
-		SUBTLE.sunglow = variant(SUBTLE.bokeh, ['#FFE8A3', '#FFD8A8', '#FFF3BF', '#FFC078']);
-		SUBTLE.goldlight = variant(SUBTLE.bokeh, ['#FFE066', '#FFEC99', '#E9ECEF', '#FCC419']);
-		SUBTLE.mardiconfetti = variant(SUBTLE.confetti, ['#7C3AED', '#2F9E44', '#F1C40F', '#B197FC']);
-
-		/* Theme -> effect. PHP owns this map so the owner can re-point any
-		 * theme from the settings page without a plugin release; this is
-		 * only the fallback for a config that predates the setting. */
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
 			halloween: 'embers', thanksgiving: 'leaves', christmas: 'bokeh',
@@ -3079,7 +3149,6 @@
 		 * Every hero is a drawing (4.2.0) — device emoji looked different on
 		 * iPhone, Android and Windows and matched nothing else on screen. The
 		 * ONE exception is Rob's own: the rainbow keeps its ☘ clover strip. */
-		var WINGS = { eagle: ['eagleup', 'eagledown', 280], osprey: ['ospreyup', 'ospreydown', 260] };
 
 		/* --- Hero timing (4.2.0) -------------------------------------------
 		 * The clock is VISIBLE time: rAF stops in a hidden tab, so vt only
@@ -3105,7 +3174,7 @@
 			} catch (e) { return null; }
 		})();
 		function heroGap() { return rnd(heroEvery[0], heroEvery[1]); }
-		var heroAt = firstPage ? rnd(3, 5) : heroGap(), heroCount = 0, heroLive = false;
+		var heroAt = firstPage ? rnd(TIMING.heroFirst[0], TIMING.heroFirst[1]) : heroGap(), heroCount = 0, heroLive = false;
 		var FX_CAP = 70, fxBusySeen = false, fxDoneAt = -1;
 		function heroFxState() {
 			var h = W.DCCHeroFx;
@@ -3282,7 +3351,7 @@
 						if (gu > 0) {
 							var gx2 = (h.corner ? vw - 190 : 40) + v3 * 26;
 							cx.font = MT.round(8 + gu * 6) + FT;
-							cx.fillText('☘', gx2, vh - 4 - gu * 4);
+							cx.fillText(HERO_GLYPHS.rainbow, gx2, vh - 4 - gu * 4);
 						}
 					}
 				}
@@ -4071,27 +4140,9 @@
 				return SCENES.dragonlands.run.call(this, st, dt);
 			} }
 		};
-		var VIGS = {
-			labor_day: ['flotilla'],
-			patriot_day: ['flagfly'],
-			mlk: ['doveflight'],
-			fall_fishing: ['fullcast', 'dragonlands'],
-			halloween: ['witchmoon'],
-			christmas: ['giftdrop'],
-			new_years: ['corkpop'],
-			snowbird: ['arrival'],
-			mardi_gras: ['stilts', 'doubloons'],
-			valentines: ['swans'],
-			strawberry: ['catch1'],
-			easter: ['egghunt', 'hatch'],
-			april_fools: ['bananaslip'],
-			spring_canal: ['duckparade', 'kayaker', 'dragonlotus'],
-			summer_canal: ['gatorglide', 'floatdrift', 'mulletskip'],
-			florida_keys: ['anhinga', 'ospreycatch', 'cranes', 'limpkinsnail', 'hibfloat']
-		};
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
 		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
-		if (FX.vig && themeKey === 'christmas' && evening) { vigList.push('sleighmoon'); }
+		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
 
 		function startVig(name) {
 			var sc = SCENES[name];
@@ -4113,7 +4164,7 @@
 			for (var k = 0; k < parts.length; k++) {
 				if (parts[k].dormant) { parts[k].dormant = false; seed(parts[k]); }
 			}
-			vigNext = (t || 0) + ((DEBUG && CFG.vigGap) || rnd(90, 150) * 1000);
+			vigNext = (t || 0) + ((DEBUG && CFG.vigGap) || rnd(TIMING.vigGap[0], TIMING.vigGap[1]) * 1000);
 			fitParts();
 		}
 		/* xa turns (Rob's option A, 4.3.0): the corner accent and the xa
@@ -4122,7 +4173,7 @@
 		 * live free-air particle, low on the screen so it drifts up through
 		 * it; if it leaves or a scene borrows it, another takes over (never
 		 * during a scene). Counts are untouched: it replaces, never adds. */
-		var XA_TURN = 45, xaOn = false, xaP = null;
+		var XA_TURN = TIMING.xaTurn, xaOn = false, xaP = null;
 		function stepTurns(dt) {
 			if (!xaSp) { return; }
 			var on = ((vt / XA_TURN) | 0) % 2 === 1, k, q;
@@ -4155,7 +4206,7 @@
 
 		function stepVig(dt, t) {
 			/* THE showstopper: the real New Year's countdown, wall-clock. */
-			if (themeKey === 'new_years' && FX.vig && !countdownDone) {
+			if (themeKey === COUNTDOWN_THEME && FX.vig && !countdownDone) {
 				var nw = localNow();
 				if (nw.getMonth() === 11 && nw.getDate() === 31 && nw.getHours() === 23 && nw.getMinutes() === 59 && nw.getSeconds() >= 50) {
 					if (!vig || vig.name !== 'countdown') {
@@ -4190,7 +4241,7 @@
 				return;
 			}
 			if (!vigList.length || hero) { return; }
-			if (!vigNext) { vigNext = t + ((DEBUG && CFG.vigFirst) || 20000 + rnd(0, 8000)); return; } /* let the page settle */
+			if (!vigNext) { vigNext = t + ((DEBUG && CFG.vigFirst) || rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]) * 1000); return; } /* let the page settle */
 			if (t >= vigNext) {
 				/* startVig() returns without starting anything if the name
 				 * has no scene, and vigNext is only pushed forward by
@@ -4433,5 +4484,10 @@
 		play();
 	}
 
-	W.DCCSeasonsEngine = { start: start };
+	/* The admin Theme guide reads these, so it shows exactly what plays. */
+	W.DCCSeasonsEngine = { start: start, guide: {
+		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, vigs: VIGS, eveningVigs: EVENING_VIGS,
+		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
+		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
+	} };
 })();

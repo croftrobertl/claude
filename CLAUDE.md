@@ -341,7 +341,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 127,906 raw / 43,207 gzipped (4.3.0, `gzip -c`); 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 129,444 raw / 43,746 gzipped (4.4.0, `gzip -c`; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -666,7 +666,7 @@ render round and his say.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/validate-paths.js --strict`.
   `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
   `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
   them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
@@ -807,6 +807,31 @@ render round and his say.
 - **No scene or hero draws an emoji since 4.3.0** except the St. Patrick's
   rainbow's ☘ (Rob's exception) and the fishing worm glyph. witchmoon,
   arrival and duckparade are drawn (Rob's W-A/F-A/D-A).
+- **The Theme guide (4.4.0) is GENERATED, and the engine is its source.**
+  `Theme_Guide::payload()` sends the theme config, saved settings and each
+  theme's days walked through `Schedule::active()`; `theme-guide.js` reads
+  everything else from `DCCSeasonsEngine.guide` — SVGS/PRIMS, ACCENTS,
+  VIGS + EVENING_VIGS, HERO_ART/SCENE_ART/HERO_GLYPHS, TIMING, and the
+  pure counting rules `partTargetFor`/`specLimitAt`/`sharesAt` and
+  `subtleKit()`, which 4.4.0 hoisted out of `start()` so the engine and the
+  guide call the SAME code. The only hand-written table is
+  `Theme_Guide::names()` (translatable names); `tools/test-guide.js` fails
+  if anything shown lacks one, and `validate-paths.js` fails if a scene or
+  hero has no guide picture. A new scene needs a SCENE_ART entry and a
+  name. Inside `subtleKit` the context is `kitG`, never `g`: effects
+  declare their own `var g` for gradients, and a shadowed `g` broke bokeh
+  on the first try.
+- **"Ambient particles" off means the ENGINE does not load** (`ambient.js`
+  returns before fetching it), so the background layer, corner accents,
+  scenes and heroes are off too — not just the falling sprites. Live has
+  run this way since at least 2026-10-06 while the Director believed the
+  background layer was on; reported, not changed (what the checkbox should
+  mean is Rob's call). The guide tags every engine layer and says why.
+- **Screenshots of the settings page:** `php tools/render-settings.php
+  [--tab=guide] [--opt=file.json]` renders the REAL page on WP stubs;
+  `node tools/shot-settings.js page.html out.png 1280 [selector]` captures
+  it. The frozen 1280px schedule table was proven pixel-identical for
+  4.4.0 this way (hide `.dcc-seasons-tabs` so it sits at its old offset).
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

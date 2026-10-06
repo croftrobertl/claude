@@ -84,7 +84,9 @@ $a = strpos($engine, 'function drawHero(');
 $b = strpos($engine, '/* --- Vignette director', $a);
 $body = substr($engine, $a, $b - $a);
 preg_match_all('/fillText\(([^,]+),/', $body, $m);
-ok(count($m[1]) === 1 && strpos($body, "fillText('☘'") !== false, 'no hero draws an emoji — except the rainbow\'s ☘ strip',
+/* 4.4.0: the glyph is the shared HERO_GLYPHS constant (the Theme guide shows it too). */
+$glyphs = preg_match("/var HERO_GLYPHS = \\{ rainbow: '☘' \\};/u", $engine) === 1;
+ok(count($m[1]) === 1 && (strpos($body, "fillText('☘'") !== false || (strpos($body, 'fillText(HERO_GLYPHS.rainbow') !== false && $glyphs)), 'no hero draws an emoji — except the rainbow\'s ☘ strip',
     'fillText args: ' . implode(' | ', $m[1]));
 ok(strpos($engine, "'ducks'") === false, 'the unused ducks hero is gone');
 foreach (['eagleup', 'eagledown', 'witchsil', 'bassleap', 'ospreyup', 'ospreydown'] as $k) {

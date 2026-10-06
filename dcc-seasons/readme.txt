@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.3.0
+Stable tag: 4.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.4.0 =
+Two WP-Admin changes from Rob (2026-10-06). Nothing guests see changes.
+Rollback: reinstall the 4.3.0 zip. Nothing stored is rewritten.
+
+* Theme preview links are full links that open in a new tab — the preview
+  table, the "off" row and the two examples above it
+  (e.g. https://doracanalcourt.com/?dcc_season=snowbird). Administrators
+  only, as before.
+* New "Theme guide" tab: a card per theme in the order the year plays
+  them (unscheduled themes last), with its dates this year, its preview
+  link, and everything a guest can see in it — the drawings the engine
+  actually uses and their names, sprite counts at 1280px and on a 390px
+  phone, the background layer, corner accent, scenes and heroes with their
+  timing, special behaviour (Earth Day's turns, New Year's countdown) and
+  the logo-egg palette. Layers switched off in Settings are tagged. Built
+  from the plugin itself on every load, so it cannot drift from what
+  plays; its files load on that tab only.
 
 = 4.3.0 =
 Three changes, each Rob's pick from rendered options (2026-10-01).

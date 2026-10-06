@@ -482,6 +482,16 @@ class Settings {
             DCC_SEASONS_VERSION,
             true
         );
+        if (Theme_Guide::is_tab()) {
+            Theme_Guide::enqueue();
+        }
+    }
+
+    /** A theme preview as a full, new-tab link (admins only, like the page). */
+    private static function preview_link(string $key): string {
+        $url = Theme_Guide::preview_url($key);
+        return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($url) .
+            '<span class="screen-reader-text"> ' . esc_html__('(opens in a new tab)', 'dcc-seasons') . '</span></a>';
     }
 
     /**
@@ -628,6 +638,12 @@ class Settings {
             <p class="description">
                 <?php esc_html_e('Seasonal ambient particles + a tap-the-logo Matrix easter egg. The active theme is picked in the visitor\'s browser from their local date, so page caching never serves a stale season.', 'dcc-seasons'); ?>
             </p>
+            <?php Theme_Guide::tabs(); ?>
+            <?php if (Theme_Guide::is_tab()) : ?>
+                <?php Theme_Guide::render(); ?>
+        </div>
+                <?php return; ?>
+            <?php endif; ?>
 
             <form method="post" action="options.php">
                 <?php settings_fields('dcc_seasons'); ?>
@@ -932,11 +948,11 @@ class Settings {
                 <h2><?php esc_html_e('Theme preview', 'dcc-seasons'); ?></h2>
                 <p class="description">
                     <?php
-                    printf(
-                        /* translators: 1: example URL parameter, 2: "off" parameter */
-                        esc_html__('Append %1$s to any front-end URL to force that theme for the page view — ambient runs in that theme and the tap-the-logo egg uses its Matrix palette. %2$s forces no theme. Works only for logged-in administrators (manage_options, verified server-side); visitors always get the date-driven schedule.', 'dcc-seasons'),
-                        '<code>?dcc_season=halloween</code>',
-                        '<code>?dcc_season=off</code>'
+                    printf( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the links are escaped in preview_link()
+                        /* translators: 1: example preview link, 2: "off" preview link */
+                        esc_html__('Open a link such as %1$s (or add ?dcc_season= and a theme key to any front-end URL) to force that theme for the page view — ambient runs in that theme and the tap-the-logo egg uses its Matrix palette. %2$s forces no theme. Links open in a new tab and work only for logged-in administrators (manage_options, verified server-side); visitors always get the date-driven schedule.', 'dcc-seasons'),
+                        self::preview_link('halloween'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built escaped
+                        self::preview_link('off')
                     );
                     ?>
                 </p>
@@ -951,12 +967,12 @@ class Settings {
                     <tbody>
                         <?php foreach ($labels as $key => $label) : ?>
                             <tr>
-                                <td><code>?dcc_season=<?php echo esc_html($key); ?></code></td>
+                                <td><?php echo self::preview_link((string) $key); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in preview_link() ?></td>
                                 <td><?php echo esc_html($label); ?></td>
                             </tr>
                         <?php endforeach; ?>
                         <tr>
-                            <td><code>?dcc_season=off</code></td>
+                            <td><?php echo self::preview_link('off'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in preview_link() ?></td>
                             <td><?php esc_html_e('No theme (no ambient; egg falls back to classic green)', 'dcc-seasons'); ?></td>
                         </tr>
                     </tbody>

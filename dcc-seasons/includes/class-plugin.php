@@ -15,6 +15,8 @@ final class Plugin {
 
     /** Stores the version last seen running, to detect an install/upgrade. */
     public const VERSION_OPTION = 'dcc_seasons_version';
+    /** Seconds between hero crossings after the first; the Theme guide quotes it. */
+    public const HERO_EVERY = [120, 180];
 
     private static ?Plugin $instance = null;
 
@@ -299,7 +301,7 @@ final class Plugin {
      *
      * for <name> in ambient, engine, matrix.
      */
-    private static function suffix(): string {
+    public static function suffix(): string {
         return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
     }
 
@@ -831,7 +833,7 @@ final class Plugin {
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
-            'heroEvery'   => [120, 180],
+            'heroEvery'   => self::HERO_EVERY,
             'preview'      => null,
             'previewLabel' => '',
             'version'      => DCC_SEASONS_VERSION,

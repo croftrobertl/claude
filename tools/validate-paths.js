@@ -115,16 +115,29 @@ function collectHeroes(js, php) {
 function collectVignettes(js) {
   const a = js.indexOf('var SCENES = {');
   const b = js.indexOf('var VIGS = {');
-  if (a < 0 || b < 0) return { defined: new Set(), named: new Set(), missing: [] };
-  const defined = new Set([...js.slice(a, b).matchAll(/\n\t{3}([a-z0-9_]+): \{/g)].map(m => m[1]));
+  if (a < 0 || b < 0) return { defined: new Set(), named: new Set(), missing: [], art: [] };
+  /* Each block ends at its OWN closing brace (4.4.0 hoisted VIGS out of
+   * start(), above SCENES, so "SCENES up to VIGS" no longer brackets it). */
+  const scenes = js.slice(a, js.indexOf('\n\t\t};', a));
+  const defined = new Set([...scenes.matchAll(/\n\t{3}([a-z0-9_]+): /g)].map(m => m[1]));
   const vigsBlock = js.slice(b, js.indexOf('};', b));
   // theme keys are the `name: [` entries; the quoted strings are scene names
-  const themeKeys = new Set([...vigsBlock.matchAll(/\n\t{3}([a-z0-9_]+): \[/g)].map(m => m[1]));
+  const themeKeys = new Set([...vigsBlock.matchAll(/\n\t{1,3}([a-z0-9_]+): \[/g)].map(m => m[1]));
   const named = new Set([...vigsBlock.matchAll(/'([a-z0-9_]+)'/g)].map(m => m[1]));
-  // scenes pushed in conditionally (e.g. sleighmoon on a Christmas evening)
+  // scenes added conditionally (Christmas evenings: EVENING_VIGS)
+  const ev = js.match(/var EVENING_VIGS = \{([^}]*)\}/);
+  if (ev) for (const m of ev[1].matchAll(/'([a-z0-9_]+)'/g)) named.add(m[1]);
   for (const m of js.matchAll(/vigList\.push\('([a-z0-9_]+)'\)/g)) named.add(m[1]);
   for (const k of themeKeys) named.delete(k);
-  return { defined, named, missing: [...named].filter(n => !defined.has(n)) };
+  /* The admin Theme guide pictures every scene and hero with SCENE_ART /
+   * HERO_ART: each named scene needs an entry, and each entry a sprite. */
+  const art = [];
+  const table = name => { const m = js.match(new RegExp('var ' + name + ' = \\{([\\s\\S]*?)\\};')); return m ? [...m[1].matchAll(/([a-z0-9_]+): '([a-z0-9_]+)'/g)].map(x => [x[1], x[2]]) : []; };
+  const sceneArt = new Map(table('SCENE_ART'));
+  for (const n of named) if (defined.has(n) && !sceneArt.has(n)) art.push(`scene '${n}' has no SCENE_ART picture for the Theme guide`);
+  for (const [k] of sceneArt) if (!defined.has(k)) art.push(`SCENE_ART names '${k}', which is not a scene`);
+  art.sceneArt = sceneArt; art.heroArt = new Map(table('HERO_ART'));
+  return { defined, named, missing: [...named].filter(n => !defined.has(n)), art };
 }
 
 function main() {
@@ -177,6 +190,8 @@ function main() {
   for (const [k, where] of dangling) console.log(`DANGLING  '${k}' named by ${where} — no such sprite`);
   for (const h of heroes.missing) console.log(`DANGLING  hero '${h}' — the engine implements no such kind`);
   for (const v of vig.missing) console.log(`DANGLING  vignette '${v}' — VIGS names it but SCENES has no such scene`);
+  for (const [k, v] of [...vig.art.sceneArt, ...vig.art.heroArt]) if (!keys.has(v)) vig.art.push(`'${k}' is pictured by '${v}', which is not a sprite`);
+  for (const m of vig.art) console.log(`GUIDE     ${m}`);
   /* THE UNREFERENCED DIRECTION WARNS; IT DOES NOT FAIL THE BUILD.
    *
    * The two directions are not equally decidable, and treating them as if
@@ -208,7 +223,7 @@ function main() {
 
   console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${vig.defined.size} vignettes · ${dangling.length + heroes.missing.length + vig.missing.length} dangling · ${dead.length} unreferenced`);
   if (badSprites) { console.log('BUILD FAILURE: malformed path data would render with parts missing.'); process.exit(1); }
-  if (dangling.length || heroes.missing.length || vig.missing.length) { console.log('BUILD FAILURE: a theme or scene names something that does not exist; it would draw nothing and say nothing.'); process.exit(1); }
+  if (dangling.length || heroes.missing.length || vig.missing.length || vig.art.length) { console.log('BUILD FAILURE: a theme or scene names something that does not exist; it would draw nothing and say nothing.'); process.exit(1); }
   if (dead.length && process.argv.includes('--strict')) {
     console.log('BUILD FAILURE (--strict): sprites nothing can reach.');
     process.exit(1);
