@@ -4321,15 +4321,67 @@
 		 * rAF loop stops and the test advances the engine tick by tick, so a
 		 * scene plays through identically every run. */
 		var manual = false, fakeT = 0;
+		/* --- PACING (4.6.0, Rob: "make it lighter, keep the look"). The loop
+		 * used to clear and repaint the whole canvas on every display frame
+		 * whatever was on it. Now each frame picks how soon the NEXT repaint
+		 * is due:
+		 *   0       full rate — anything that must stay smooth is on screen:
+		 *           a hero, a scene, any live sprite, ripples, fireworks,
+		 *           the Earth Day turn, and the transferred background fills
+		 *           and footer text clip, which track the page as it scrolls;
+		 *   SLOW_MS the background layer is all that moves. Every effect was
+		 *           measured stepping at most 1.54px and 4.5deg per frame at
+		 *           30fps (embers 1.15px), so it looks the same as at 60;
+		 *   IDLE_MS nothing is drawn at all: no clear, no paint, just a cheap
+		 *           tick so the hero and scene clocks keep counting.
+		 * Skipped display frames cost one early return. dt is measured from
+		 * the last REPAINT, so motion speeds are unchanged. --- */
+		var SLOW_MS = 1000 / 30, IDLE_MS = 250, lastDraw = 0, blank = false;
+		/* While the background layer is all that is drawn, clearing the whole
+		 * canvas re-rasterises a screen's worth of pixels for a handful of
+		 * small particles. Instead clear only the boxes they were drawn in
+		 * last time: every effect was measured drawing within 3.6x its
+		 * radius (sparks; most within 1.8x), so 4x + 4px covers it with room
+		 * to spare, plus the shimmer strip over the water. Any frame that
+		 * draws anything else clears in full, and so does the first
+		 * background-only frame after one (dirtyOk). */
+		var dirtyBoxes = [], dirtyOk = false;
+		function subtleBoxes() {
+			dirtyBoxes.length = 0;
+			for (var i = 0; i < subParts.length; i++) {
+				var q = subParts[i], h = (q.r || 6) * 4 + 4;
+				dirtyBoxes.push(q.x - h, q.y - h, h * 2, h * 2);
+			}
+			if (subEff && subEff.shimmer) {
+				var base = waterY || vh * 0.92;
+				dirtyBoxes.push(0, base - 40, vw, 52);
+			}
+		}
+		function pace() {
+			if (hero || vig || burstMode || ripples.length || bgFills.length || footMode || xaP) { return 0; }
+			for (var k = 0; k < parts.length; k++) { if (!parts[k].dormant) { return 0; } }
+			return (subEff && subParts.length) ? SLOW_MS : IDLE_MS;
+		}
 		function frame(t, tick) {
 			raf = 0;
 			if (manual && !tick) { return; }
 			if (!running && !tick) { return; }
+			var pc = pace();
+			/* -1ms: rAF timestamps jitter, and a 33.3ms target on a 16.7ms
+			 * display must land on every second frame, not every third. */
+			if (!tick && pc && lastDraw && t - lastDraw < pc - 1) { next(pc - (t - lastDraw)); return; }
+			lastDraw = t;
 			ensureMounted();
 			var t0 = (W.performance && performance.now) ? performance.now() : 0;
-			var dt = last ? mn((t - last) / 1000, 0.05) : 0.016;
+			/* Motion steps stay capped as before; an idle tick may span 250ms,
+			 * and the clocks must see all of it. */
+			var dt = last ? mn((t - last) / 1000, pc === IDLE_MS ? 0.3 : 0.05) : 0.016;
 			last = t;
-			cx.clearRect(0, 0, vw, vh);
+			/* Nothing was drawn last frame and nothing will be: leave the
+			 * already-empty canvas alone. */
+			if (pc === SLOW_MS && dirtyOk && !tick) {
+				for (var b = 0; b < dirtyBoxes.length; b += 4) { cx.clearRect(dirtyBoxes[b], dirtyBoxes[b + 1], dirtyBoxes[b + 2], dirtyBoxes[b + 3]); }
+			} else if (!(pc === IDLE_MS && blank)) { cx.clearRect(0, 0, vw, vh); }
 			var clipped = footMode && clipText();
 			drawBgFills();
 			/* Layer 1 before everything else on the canvas: the subtle layer
@@ -4389,14 +4441,54 @@
 				while (performance.now() < until) { /* synthetic load for tests */ }
 			}
 			if (clipped) { cx.restore(); }
+			/* Whether this frame left the canvas empty: re-asked AFTER the
+			 * step, because a hero or scene may have started in it. */
+			var pn = pace();
+			blank = pn === IDLE_MS;
+			/* Boxes are only trusted when this frame drew nothing but the
+			 * background layer and the next one will be the same. */
+			dirtyOk = pc === SLOW_MS && pn === SLOW_MS;
+			if (dirtyOk) { subtleBoxes(); }
 			if (t0 && !tick) { degrade(performance.now() - t0, t); }
-			if (!tick) { raf = W.requestAnimationFrame(frame); }
+			if (!tick) { next(pn); }
 		}
-		function play() { if (!raf && running) { last = 0; raf = W.requestAnimationFrame(frame); } }
-		D.addEventListener('visibilitychange', function () {
-			running = !D.hidden && !reduced();
+		/* Ask for the next frame only when it is due. A requestAnimationFrame
+		 * on every display frame keeps the browser producing 60 frames a
+		 * second even when the callback returns at once, and that per-frame
+		 * overhead was most of what remained. At a slow pace, sleep on a
+		 * timer and then take the next display frame. */
+		var sleep = 0;
+		function next(pn) {
+			if (!pn) { raf = W.requestAnimationFrame(frame); return; }
+			sleep = W.setTimeout(function () {
+				sleep = 0;
+				if (running && !raf) { raf = W.requestAnimationFrame(frame); }
+			}, mx2(0, pn - 10));
+		}
+		function play() {
+			if (sleep) { W.clearTimeout(sleep); sleep = 0; }
+			if (!raf && running) { last = 0; lastDraw = 0; raf = W.requestAnimationFrame(frame); }
+		}
+		/* Draw only while someone can see it: the tab is showing AND the
+		 * canvas is on screen (a footer or sticky canvas scrolls away). The
+		 * hero and scene clocks run on visible time, so they pause with it
+		 * and pick up where they left off. A canvas that has been REMOVED
+		 * from the page also reports "not intersecting" — keep the loop
+		 * running then, or ensureMounted() could never put it back. */
+		var onScreen = true;
+		function setRunning() {
+			running = !D.hidden && !reduced() && (onScreen || !D.body.contains(cv));
 			if (running) { play(); }
-		});
+		}
+		D.addEventListener('visibilitychange', setRunning);
+		if (W.IntersectionObserver) {
+			try {
+				new W.IntersectionObserver(function (es) {
+					onScreen = es[es.length - 1].isIntersecting;
+					setRunning();
+				}).observe(cv);
+			} catch (e) { /* no observer: draw as before */ }
+		}
 		if (mq && mq.addEventListener) {
 			mq.addEventListener('change', function () {
 				if (reduced()) {
@@ -4404,8 +4496,7 @@
 					cv.style.display = 'none';
 				} else {
 					cv.style.display = '';
-					running = !D.hidden;
-					play();
+					setRunning();
 				}
 			});
 		}
@@ -4462,7 +4553,7 @@
 					 * correct build. */
 					var pos = [], i;
 					for (i = 0; i < subParts.length; i++) {
-						pos.push({ x: MT.round(subParts[i].x * 10) / 10, y: MT.round(subParts[i].y * 10) / 10 });
+						pos.push({ x: MT.round(subParts[i].x * 10) / 10, y: MT.round(subParts[i].y * 10) / 10, r: subParts[i].r });
 					}
 					return { key: subKey, on: !!subEff, n: subParts.length,
 						intensity: subIntensity, shimmer: !!(subEff && subEff.shimmer), pos: pos };

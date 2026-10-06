@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.5.0
+Stable tag: 4.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,22 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.6.0 =
+Lighter, looking exactly the same (Rob, 2026-10-06). Rollback: reinstall
+the 4.5.0 zip. Nothing stored is rewritten.
+
+* Nothing is drawn while the effects canvas is off screen (a footer or
+  sticky canvas scrolled away) or the tab is hidden; it resumes where it
+  left off.
+* While the background layer is all that moves, it repaints 30 times a
+  second instead of 60 (every effect was measured moving at most 1.5
+  pixels between repaints, so it looks the same) and only the small areas
+  its particles cover are cleared. Heroes, scenes, sprites, fireworks and
+  ripples keep the full rate.
+* With nothing to draw at all, nothing is drawn: no canvas clears, just a
+  quiet four-times-a-second check for the next hero or scene.
+* Reduced-motion settings are respected as before.
 
 = 4.5.0 =
 Rob's decisions of 2026-10-06. Rollback: reinstall the 4.4.0 zip. Nothing

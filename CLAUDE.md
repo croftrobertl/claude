@@ -666,7 +666,7 @@ render round and his say.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/validate-paths.js --strict`.
   `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
   `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
   them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
@@ -836,6 +836,26 @@ render round and his say.
   ~50 ms/s main thread at 390px and ~115 ms/s at 1280px over the 4.4.0
   baseline (engine not loaded), 60 fps throughout; mostly canvas paint,
   12-16 ms/s script. `tools/test-switches.js` proves every layer's gate.
+- **The frame loop is PACED since 4.6.0 (Rob: "lighter, same look").**
+  `pace()` picks the next repaint: 0 (full rate) whenever a hero, scene,
+  live sprite, ripple, burst, xa turn, transferred bg fill or footer clip
+  is on the canvas; `SLOW_MS` (30 fps) when only the subtle layer moves;
+  `IDLE_MS` (250 ms, no clear at all) when nothing is drawn. `next()`
+  sleeps on a TIMER until a slow repaint is due — a rAF every vsync that
+  returns at once still makes the browser produce 60 frames a second, and
+  that was most of the remaining cost. Subtle-only frames clear just last
+  frame's particle boxes (`dirtyBoxes`, r*4+4: measured extents are at
+  most 3.6r) plus the shimmer strip; any other frame, and the first
+  subtle-only frame after one, clears in full. Drawing stops off screen
+  (IntersectionObserver) and when hidden, EXCEPT while the canvas is out
+  of the document, so `ensureMounted()` can still put it back. 30 fps is
+  "visually identical" on measurement: every effect steps at most 1.54px
+  and 4.5deg per repaint. 20 fps (embers 1.7px, confetti 2.3px) was
+  rendered for Rob, not shipped. `tools/test-pacing.js` proves no trails,
+  the rates and every pause; the mocked clock (`_state.tick`) always does
+  full clears, so only the real-rAF suite exercises this path. Measured
+  (`tools/measure-perf.js`, Halloween, ambient=0, subtle=1, background-only
+  window): 390px at 4x CPU 209 -> 128 ms/s; 1280px 99 -> 55 ms/s.
 - **The settings-page preview panel is gone (4.5.0)**; `Preview` keeps
   only the front-end chip. `tools/render-settings.php` now fires the
   plugin's own `admin_notices`, so a render shows what WordPress prints.
