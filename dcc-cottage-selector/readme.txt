@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.51.0
+Stable tag: 0.52.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.52.0 =
+* Fixed: after Save Changes on DCC > Cottage Selector the browser landed on
+  options-general.php?page=dcc-cottage-selector, which WordPress refuses with
+  "Sorry, you are not allowed to access this page." The settings did save. The
+  save handler runs on admin-post.php, where the admin menu is never built, so it
+  could not tell which menu the page lives under and always guessed Settings. It
+  now returns to the page the form was submitted from (accepted only when that is
+  this page), and otherwise to admin.php?page=dcc-cottage-selector, which loads
+  under the shared DCC menu and under the Settings fallback alike.
+* After saving: WordPress's standard green "Settings saved." notice at the top of
+  the page, and the page scrolls back to where Save was clicked. If Advanced was
+  open it reopens. A refresh does not repeat either.
+* Unsaved changes: once a field differs from how the page loaded, leaving the page
+  (a link, Back, closing the tab) brings up the browser's own "Leave site?"
+  prompt. Saving never prompts; neither does an untouched page, or one whose
+  changes were put back.
 
 = 0.51.0 =
 * Results: the "Your Top Matches" heading and each card's feature chips are now

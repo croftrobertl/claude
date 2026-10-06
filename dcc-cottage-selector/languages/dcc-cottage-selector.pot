@@ -65,7 +65,7 @@ msgstr ""
 msgid "Adds an optional dates step. Cottages booked for those dates are still shown, ranked below the free ones and clearly marked. Requires the MPHB Availability Calendar plugin to be active."
 msgstr ""
 
-#: includes/class-settings-page.php:141
+#: includes/class-settings-page.php:264
 msgid "Advanced"
 msgstr ""
 
@@ -73,7 +73,7 @@ msgstr ""
 msgid "All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector)."
 msgstr ""
 
-#: includes/class-settings-page.php:120
+#: includes/class-settings-page.php:243
 msgid "An extra screen listing the answers before the matches."
 msgstr ""
 
@@ -155,16 +155,16 @@ msgstr ""
 msgid "Apply text"
 msgstr ""
 
-#: includes/class-settings-page.php:134
+#: includes/class-settings-page.php:257
 msgid "Ask for dates and check availability"
 msgstr ""
 
 #: includes/class-selector-widget.php:255
-#: includes/class-settings-page.php:132
+#: includes/class-settings-page.php:255
 msgid "Availability"
 msgstr ""
 
-#: includes/class-settings-page.php:147
+#: includes/class-settings-page.php:270
 msgid "Availability AJAX action"
 msgstr ""
 
@@ -176,8 +176,8 @@ msgstr ""
 msgid "Available for your dates"
 msgstr ""
 
-#: includes/class-settings-page.php:96
-#: includes/class-settings-page.php:97
+#: includes/class-settings-page.php:219
+#: includes/class-settings-page.php:220
 msgid "Available modes"
 msgstr ""
 
@@ -259,7 +259,7 @@ msgid "Badge: Work desk"
 msgstr ""
 
 #: includes/class-selector-widget.php:205
-#: includes/class-settings-page.php:144
+#: includes/class-settings-page.php:267
 msgid "Badges per cottage"
 msgstr ""
 
@@ -307,7 +307,7 @@ msgstr ""
 msgid "Buttons & menus"
 msgstr ""
 
-#: includes/class-settings-page.php:149
+#: includes/class-settings-page.php:272
 msgid "Calendar page URL"
 msgstr ""
 
@@ -315,7 +315,7 @@ msgstr ""
 msgid "Capacity note (party-size question)"
 msgstr ""
 
-#: includes/class-settings-page.php:127
+#: includes/class-settings-page.php:250
 msgid "Capacity note link"
 msgstr ""
 
@@ -379,7 +379,7 @@ msgstr ""
 #: includes/class-config.php:146
 #: includes/class-selector-widget.php:180
 #: includes/class-selector-widget.php:196
-#: includes/class-settings-page.php:171
+#: includes/class-settings-page.php:294
 msgid "Compare"
 msgstr ""
 
@@ -450,18 +450,18 @@ msgid "Cottage Selector"
 msgstr ""
 
 #: includes/class-selector-widget.php:204
-#: includes/class-settings-page.php:89
+#: includes/class-settings-page.php:212
 msgid "Cottages to show"
 msgstr ""
 
 #: includes/class-menu.php:77
 #: includes/class-menu.php:78
 #: includes/class-selector-widget.php:40
-#: includes/class-settings-page.php:71
+#: includes/class-settings-page.php:180
 msgid "DCC Cottage Selector"
 msgstr ""
 
-#: includes/class-settings-page.php:158
+#: includes/class-settings-page.php:281
 msgid "DCC Cottage Selector %s. Defaults reproduce the behaviour of the release before this page existed."
 msgstr ""
 
@@ -477,7 +477,7 @@ msgstr ""
 msgid "Default background for the navigation & action buttons, kept distinct from the answer buttons."
 msgstr ""
 
-#: includes/class-settings-page.php:142
+#: includes/class-settings-page.php:265
 msgid "Defaults here reproduce the behaviour shipped before this page existed. Change them only with a reason."
 msgstr ""
 
@@ -551,7 +551,7 @@ msgstr ""
 msgid "Element spacing"
 msgstr ""
 
-#: includes/class-settings-page.php:197
+#: includes/class-settings-page.php:320
 msgid "Enabled"
 msgstr ""
 
@@ -571,7 +571,7 @@ msgstr ""
 msgid "Fee details"
 msgstr ""
 
-#: includes/class-settings-page.php:125
+#: includes/class-settings-page.php:248
 msgid "Fee links"
 msgstr ""
 
@@ -655,7 +655,7 @@ msgstr ""
 msgid "How many guests will there be?"
 msgstr ""
 
-#: includes/class-settings-page.php:90
+#: includes/class-settings-page.php:213
 msgid "How many matches the results screen lists. The highlighted cottage from a deep link is shown in addition to these."
 msgstr ""
 
@@ -764,7 +764,7 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: includes/class-settings-page.php:146
+#: includes/class-settings-page.php:269
 msgid "Longest stay to look up (nights)"
 msgstr ""
 
@@ -777,7 +777,7 @@ msgid "Match a Cottage Selector that has \"Share this design\" turned on. Save t
 msgstr ""
 
 #: includes/class-selector-widget.php:206
-#: includes/class-settings-page.php:145
+#: includes/class-settings-page.php:268
 msgid "Match reasons per cottage"
 msgstr ""
 
@@ -829,7 +829,7 @@ msgstr ""
 msgid "Mode switcher"
 msgstr ""
 
-#: includes/class-settings-page.php:93
+#: includes/class-settings-page.php:216
 msgid "Modes"
 msgstr ""
 
@@ -921,7 +921,7 @@ msgstr ""
 msgid "Note: Cottages %s have identical layouts & features"
 msgstr ""
 
-#: includes/class-settings-page.php:135
+#: includes/class-settings-page.php:258
 msgid "OFF by default. This is the only runtime request this plugin makes, and it needs the MPHB Availability Calendar plugin active to answer it. A failed lookup never blanks the results."
 msgstr ""
 
@@ -929,7 +929,7 @@ msgstr ""
 msgid "Off"
 msgstr ""
 
-#: includes/class-settings-page.php:122
+#: includes/class-settings-page.php:245
 msgid "Off by default: the Compare subheader already says to pick two or more."
 msgstr ""
 
@@ -937,7 +937,7 @@ msgstr ""
 msgid "On"
 msgstr ""
 
-#: includes/class-settings-page.php:111
+#: includes/class-settings-page.php:234
 msgid "Opening mode"
 msgstr ""
 
@@ -953,7 +953,7 @@ msgstr ""
 msgid "Optional. Give us dates and we will only recommend cottages that are free."
 msgstr ""
 
-#: includes/class-settings-page.php:128
+#: includes/class-settings-page.php:251
 msgid "Optional. Leave empty and the note renders as plain text with no link. Fee AMOUNTS never appear in this plugin."
 msgstr ""
 
@@ -979,7 +979,7 @@ msgstr ""
 msgid "Paste a text code from a Cottage Selector, then click Apply…"
 msgstr ""
 
-#: includes/class-settings-page.php:129
+#: includes/class-settings-page.php:252
 msgid "Pet note link"
 msgstr ""
 
@@ -1156,7 +1156,7 @@ msgid "Quick Pick"
 msgstr ""
 
 #: includes/class-config.php:27
-#: includes/class-settings-page.php:169
+#: includes/class-settings-page.php:292
 msgid "Quick finder"
 msgstr ""
 
@@ -1185,7 +1185,7 @@ msgid "Result cards"
 msgstr ""
 
 #: includes/class-selector-widget.php:754
-#: includes/class-settings-page.php:87
+#: includes/class-settings-page.php:210
 msgid "Results"
 msgstr ""
 
@@ -1270,7 +1270,7 @@ msgstr ""
 msgid "Selector page URL"
 msgstr ""
 
-#: includes/class-settings-page.php:75
+#: includes/class-settings-page.php:187
 msgid "Settings saved."
 msgstr ""
 
@@ -1286,15 +1286,15 @@ msgstr ""
 msgid "Show heading"
 msgstr ""
 
-#: includes/class-settings-page.php:118
+#: includes/class-settings-page.php:241
 msgid "Show the heading"
 msgstr ""
 
-#: includes/class-settings-page.php:119
+#: includes/class-settings-page.php:242
 msgid "Show the review step"
 msgstr ""
 
-#: includes/class-settings-page.php:121
+#: includes/class-settings-page.php:244
 msgid "Show the “pick 2” tip"
 msgstr ""
 
@@ -1323,7 +1323,7 @@ msgstr ""
 msgid "Site default is off: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). On adds a review-and-confirm step before results."
 msgstr ""
 
-#: includes/class-settings-page.php:79
+#: includes/class-settings-page.php:192
 msgid "Site-wide defaults for every Cottage Selector and Mini Entry on the site. An individual widget overrides a default only where its own Elementor control has been deliberately set; clearing that control hands the decision back to this page."
 msgstr ""
 
@@ -1404,7 +1404,7 @@ msgstr ""
 msgid "Text alignment"
 msgstr ""
 
-#: includes/class-settings-page.php:148
+#: includes/class-settings-page.php:271
 msgid "The action name the MPHB Availability Calendar answers on. Do not change unless that plugin changes it."
 msgstr ""
 
@@ -1442,7 +1442,7 @@ msgstr ""
 msgid "Trigger text"
 msgstr ""
 
-#: includes/class-settings-page.php:108
+#: includes/class-settings-page.php:231
 msgid "Unticking every mode is not saved — the landing screen would have nothing to offer."
 msgstr ""
 
@@ -1482,7 +1482,7 @@ msgid "We could not check availability just now — these are ranked without it.
 msgstr ""
 
 #: includes/class-config.php:28
-#: includes/class-settings-page.php:170
+#: includes/class-settings-page.php:293
 msgid "Weigh priorities"
 msgstr ""
 
@@ -1499,7 +1499,7 @@ msgstr ""
 msgid "When were you thinking of staying?"
 msgstr ""
 
-#: includes/class-settings-page.php:150
+#: includes/class-settings-page.php:273
 msgid "Where a guest is sent to pick other dates when their choice is booked."
 msgstr ""
 
@@ -1528,11 +1528,11 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: includes/class-settings-page.php:41
+#: includes/class-settings-page.php:86
 msgid "You do not have permission to change these settings."
 msgstr ""
 
-#: includes/class-settings-page.php:64
+#: includes/class-settings-page.php:173
 msgid "You do not have permission to view these settings."
 msgstr ""
 

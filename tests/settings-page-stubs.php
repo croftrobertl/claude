@@ -11,14 +11,14 @@ namespace {
     define('ABSPATH', sys_get_temp_dir() . '/');
     $dir = $GLOBALS['__dccs_dir'] ?? (dirname(__DIR__) . '/dcc-cottage-selector/');
     define('DCCS_DIR', $dir);
-    define('DCCS_URL', 'https://example.test/wp-content/plugins/dcc-cottage-selector/');
+    define('DCCS_URL', ($GLOBALS['__site'] ?? 'https://example.test') . '/wp-content/plugins/dcc-cottage-selector/');
     define('DCCS_VERSION', 'test');
 
     final class WPRedirect extends \Exception { public string $to; public function __construct(string $to) { parent::__construct($to); $this->to = $to; } }
     final class WPDie extends \Exception {}
 
-    $GLOBALS['__opts'] = []; $GLOBALS['__hooks'] = []; $GLOBALS['__calls'] = [];
-    $GLOBALS['__cap'] = true; $GLOBALS['__ref'] = false; $GLOBALS['__site'] = 'https://example.test';
+    $GLOBALS['__opts'] = $GLOBALS['__opts'] ?? []; $GLOBALS['__hooks'] = []; $GLOBALS['__calls'] = [];
+    $GLOBALS['__cap'] = true; $GLOBALS['__ref'] = false; $GLOBALS['__site'] = $GLOBALS['__site'] ?? 'https://example.test';
     $GLOBALS['__admin_path'] = '/wp-admin/'; $GLOBALS['wp_settings_errors'] = []; $GLOBALS['__scripts'] = [];
 
     function __($t, $d = null) { return $t; }
@@ -30,7 +30,8 @@ namespace {
     function wp_unslash($v) { return $v; }
     function selected($a, $b, $echo = true) { return (string) $a === (string) $b ? ' selected="selected"' : ''; }
     function submit_button() { echo '<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes"></p>'; }
-    function wp_nonce_field($a, $n) { echo '<input type="hidden" id="' . $n . '" name="' . $n . '" value="nonce"><input type="hidden" name="_wp_http_referer" value="/wp-admin/admin.php?page=dcc-cottage-selector">'; }
+    // core: the referer field is the current REQUEST_URI.
+    function wp_nonce_field($a, $n) { echo '<input type="hidden" id="' . $n . '" name="' . $n . '" value="nonce"><input type="hidden" name="_wp_http_referer" value="' . esc_attr($_SERVER['REQUEST_URI'] ?? '/wp-admin/admin.php?page=dcc-cottage-selector') . '">'; }
     function current_user_can($c) { $GLOBALS['__calls'][] = 'cap'; return $GLOBALS['__cap']; }
     function check_admin_referer($a, $n) { $GLOBALS['__calls'][] = 'nonce'; return 1; }
     function wp_die($m = '', $t = '', $a = []) { throw new WPDie((string) $m); }

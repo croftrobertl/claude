@@ -127,6 +127,7 @@ assets/js/score.js                   # Two-phase scoring engine (hard filters, t
 assets/js/labels.js                  # Badge + "why this fits" key allocation
 assets/js/selector.js                # Front-end controller; renders every mode
 assets/js/editor-io.js               # Editor-only: the dccs_design_io control view
+assets/js/settings-page.js           # Admin-only, settings page only: post-save restore + leave prompt
 assets/css/selector.css              # CSS custom-property driven (SCRIPT_DEBUG serves it)
 assets/css/selector.min.css          # GENERATED, comments stripped — what the front end loads
 ```
@@ -423,6 +424,27 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   30 Guest Guide, 35 Features & Amenities, 40 Seasons, **45 this plugin**,
   50 Custom Checkout, 55 Availability Calendar, 63 Wildlife. Never renumber or
   remove another plugin's entry.
+- **The settings save NEVER asks the menu where the page lives (0.52.0).**
+  `handle_save()` runs on `admin-post.php`, where `admin_menu` never fires, so
+  `$GLOBALS['admin_page_hooks']` is empty there WHETHER OR NOT the `dcc` parent
+  exists. 0.44.0–0.51.0 read it, always concluded "no parent", and redirected
+  every save to `options-general.php?page=dcc-cottage-selector` — "Sorry, you are
+  not allowed to access this page." under `dcc`, while the setting had saved.
+  The redirect now takes only the FILE from the referer (this site's `admin.php`
+  or `options-general.php`, with `page=dcc-cottage-selector`) and builds every
+  query arg itself; anything else falls back to `admin.php?page=…`, which
+  WordPress resolves under whichever parent the page was registered with
+  (`admin.php?page=X` finds its parent by searching `$submenu`; `<parent>.php?
+  page=X` works only for the parent it was registered under). A PHP test
+  tokenises `class-settings-page.php` and fails if `admin_page_hooks` returns as
+  code. The notice is core's own `settings_errors()` under our setting slug, so it
+  cannot double up with core's `settings-updated` notice on the Settings fallback.
+  **The scroll offset is measured from the top of the FORM, not the document**, so
+  the notice that appears above the form after the save does not shift the view;
+  the restore waits for `load`, after common.js has moved notices. The leave
+  prompt compares a snapshot of every visible field, never a dirty flag, so a
+  change put back does not warn. Measured end to end in Chromium (stubbed WP, both
+  parents): 34/34, and 0.51.0 reproduces Rob's report in the same harness.
 - **The dates step has TWO switches now, by design: the site-wide "Ask for dates"
   on the settings page, and each widget's `avail_enable` tri-select (Site default
   / On / Off).** The pre-0.44.0 rule "there is no second switch" is retired: the
@@ -607,6 +629,11 @@ There is no WordPress in this environment, so the suites stub what they need:
   final method" fatal fails here instead of on the live site.
 - `tests/dom-smoke.test.js` — boots the real JS against the real `data-config`
   (via `tests/dump-config.php`) in jsdom and drives every mode.
+- `tests/test-settings-page.php` + `tests/settings-page.test.js` — the settings
+  page's save redirect, notice, view-state round trip and leave prompt, on stubs
+  in `tests/settings-page-stubs.php` (stubs whose OUTPUT is read reproduce core:
+  `settings_errors`, `add_query_arg`, `wp_nonce_field`'s referer). Both take a
+  plugin path argument so they can be run against an older release to show red.
 - A headless-Chromium accessibility/behaviour audit lives in the session scratchpad
   (not committed): overflow, 44px tap targets, WCAG contrast, focus management and
   nested-modal Escape at 320/360/768.
