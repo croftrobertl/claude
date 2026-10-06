@@ -16,10 +16,15 @@
  *  - 1280px WITH A MOUSE. hasTouch off, so the desktop case is the desktop
  *    case and not a phone in a wide window.
  */
+import { execFileSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   launch, widgetPage, buildPage, rendered, asset,
   check, checkSame, checkAtLeast, checkAtMost, section, note, done, skipSuite,
 } from './lib.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 const browser = await launch();
 if (!browser) { skipSuite('no chromium'); }
@@ -746,7 +751,7 @@ const MAP_DATA = {
           sourceShort: 'NWS forecast' },
 };
 
-async function openChainMap(width, height, touch) {
+async function openChainMap(width, height, touch, payload) {
   const fx = rendered('water', '--enable');
   const page = await buildPage(browser, {
     width, height, touch, sitekit: true,
@@ -787,7 +792,7 @@ async function openChainMap(width, height, touch) {
   await page.addScriptTag({ content: asset('assets/js/water-map.js') });
   await page.evaluate((data) => {
     window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
-  }, MAP_DATA);
+  }, payload || MAP_DATA);
   for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
@@ -1094,6 +1099,98 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
       .classList.contains('dccwl-credit-open'));
     checkSame(true, collapsed, `${label}: and it collapses on the first interaction`);
   }
+  await page.close();
+}
+
+/* ======================= DATES IN MAP POPUPS ======================= */
+/*
+ * THE LIVE DEFECT 1.39.0 SHIPPED, AND WHY NO SUITE SAW IT.
+ *
+ * The real /map payload carries ISO 8601 with a SEVEN-digit fraction and a Z
+ * — "2026-07-27T04:00:00.0000000Z" — and popups printed it verbatim. Every
+ * fixture here used plain "2026-08-01" dates, so the shape that breaks was
+ * the one shape never tested. A hand-written fixture can only confirm what
+ * its author already believed.
+ *
+ * So this section does NOT hand-write a payload. It asks PHP for one, built
+ * by Water_Live from an Atlas response carrying the live timestamps, and then
+ * asserts what the popup SAYS at 390px and 1280px.
+ */
+section('map popups read dates as 07/27/2026, from the real payload');
+
+for (const [w, touch] of [[390, true], [1280, false]]) {
+  for (const season of ['summer', 'winter']) {
+    const payload = JSON.parse(execFileSync(process.env.PHP_BIN || 'php',
+      [join(HERE, 'render-fixture.php'), 'map', ...(season === 'winter' ? ['--winter'] : [])],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+
+    const label = `${w}px ${season}`;
+    const page = await openChainMap(w, touch ? 844 : 900, touch, payload);
+
+    // Open the first marker that has a popup.
+    let opened = false;
+    for (const m of await page.$$('.dccwl-map-canvas .leaflet-interactive')) {
+      if (touch) { await m.tap(); } else { await m.click(); }
+      await page.waitForTimeout(350);
+      opened = await page.evaluate(() => !!document.querySelector('.leaflet-popup'));
+      if (opened) { break; }
+    }
+    check(opened, `${label}: a popup opens`);
+
+    const text = await page.evaluate(() => document.querySelector('.leaflet-popup-content')
+      .textContent.replace(/\s+/g, ' ').trim());
+    note(`${label}: ${text}`);
+
+    const want = season === 'winter' ? '01/15/2026' : '07/27/2026';
+    check(text.includes(want), `${label}: the sampled date reads ${want}`, text);
+    check(!/\d{4}-\d{2}-\d{2}T/.test(text), `${label}: no raw timestamp survives`, text);
+    check(!/0000000Z/.test(text), `${label}: and no seven-digit fraction`, text);
+    /* The winter timestamp is local midnight written as T05:00Z. Read in UTC
+     * it is still the 15th; read an hour wrong it would be the 14th. The
+     * assertion names the day because that is the failure that matters. */
+    check(!text.includes(season === 'winter' ? '01/14/2026' : '07/26/2026'),
+      `${label}: and never the previous day`, text);
+
+    /* Every date the popup shows, not just the one in the title row. */
+    const dates = (text.match(/\d{2}\/\d{2}\/\d{4}/g) || []);
+    checkAtLeast(1, dates.length, `${label}: at least one date is printed`, text);
+
+    await page.close();
+  }
+}
+
+/* The guard behind the server formatter: if a raw timestamp ever reaches the
+ * client anyway — a route that bypassed the output gate, a cache from an
+ * older release — the popup prints NOTHING for that date rather than the raw
+ * string. Asserted by feeding the client exactly what 1.39.0 served. */
+section('a raw timestamp reaching the client prints nothing, never raw text');
+
+{
+  const raw = JSON.parse(execFileSync(process.env.PHP_BIN || 'php',
+    [join(HERE, 'render-fixture.php'), 'map'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  // Put the pre-1.39.1 strings back, exactly as the Director found them.
+  raw.waters.forEach((x) => {
+    if (x.clarity) { x.clarity.date = '2026-07-27T04:00:00.0000000Z'; }
+    if (x.level) { x.level.date = '2026-09-22T04:00:00.0000000Z'; }
+  });
+  (raw.stations || []).forEach((st) => {
+    if (st.reading) { st.reading.date = '2026-07-27T04:00:00.0000000Z'; }
+  });
+
+  const page = await openChainMap(390, 844, true, raw);
+  for (const m of await page.$$('.dccwl-map-canvas .leaflet-interactive')) {
+    await m.tap();
+    await page.waitForTimeout(350);
+    if (await page.evaluate(() => !!document.querySelector('.leaflet-popup'))) { break; }
+  }
+  const text = await page.evaluate(() => {
+    const p = document.querySelector('.leaflet-popup-content');
+    return p ? p.textContent.replace(/\s+/g, ' ').trim() : '';
+  });
+  note(`raw payload: ${text}`);
+  check(!/0000000Z/.test(text), 'the raw timestamp is not printed', text);
+  check(!/\d{4}-\d{2}-\d{2}T/.test(text), 'nor any part of its ISO shape', text);
+  check(text.length > 0, 'and the rest of the popup still renders', text);
   await page.close();
 }
 

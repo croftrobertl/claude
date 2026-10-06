@@ -7,6 +7,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { launch, widgetPage, buildPage, rendered, asset } from './tests/lib.mjs';
 
 const OUT = process.argv[2] || '.';
@@ -51,10 +52,18 @@ async function waterPage(width, touch, mapToo) {
   const css = ['assets/css/app.css', 'assets/css/water.css'];
   const head = mapToo ? '<link rel="stylesheet" data-dccwl-leaflet="1" href="data:text/css,">' : '';
   if (mapToo) { css.push('assets/vendor/leaflet/leaflet.css'); }
+  /* The map payload is built by PHP from an Atlas response carrying the live
+   * timestamp shape, so the screenshot shows a real formatted date rather
+   * than one typed into this file. */
+  const mapPayload = mapToo
+    ? JSON.parse(execFileSync(process.env.PHP_BIN || 'php',
+        [new URL('./tests/render-fixture.php', import.meta.url).pathname, 'map'],
+        { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }))
+    : null;
   const page = await buildPage(browser, {
     width, height: mapToo ? 900 : 1200, touch, sitekit: true, css, head,
     body:
-      `<script>window.__f=${JSON.stringify(mapToo ? MAP_DATA : CONDITIONS)};` +
+      `<script>window.__f=${JSON.stringify(mapToo ? mapPayload : CONDITIONS)};` +
       `window.__c=${JSON.stringify(CONDITIONS)};</script>` +
       fx.html + `<script>${fx.config}</script>`,
   });
@@ -92,7 +101,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
 
   /* 1 — the Water Map tab, with its three stat tiles. */
   let page = await waterPage(w, touch, false);
-  await shot(page, `Wildlife - 1.39.0 Water Map tab ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.1 Water Map tab ${tag}.png`,
     await page.$('[data-dccwl-water-root]'));
   await page.close();
 
@@ -106,7 +115,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     await page.waitForTimeout(400);
     if (await page.$('.leaflet-popup')) { break; }
   }
-  await shot(page, `Wildlife - 1.39.0 Map popup over the controls ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.1 Map popup over the controls ${tag}.png`,
     await page.$('.dccwl-sheet-body-map'));
   await page.close();
 
@@ -117,7 +126,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
   await page.waitForTimeout(900);
   const panel = await page.$('.dccwl-panel-species') || await page.$('.dccwl-guide');
-  await shot(page, `Wildlife - 1.39.0 Toolbar closed ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.1 Toolbar closed ${tag}.png`, panel);
 
   const vis = async (sel) => {
     for (const el of await page.$$(sel)) { if (await el.isVisible()) { return el; } }
@@ -126,7 +135,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const pill = await vis('[data-dccwl-subnav] [data-dccwl-pick-btn]');
   if (touch) { await pill.tap(); } else { await pill.click(); }
   await page.waitForTimeout(300);
-  await shot(page, `Wildlife - 1.39.0 Toolbar open ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.1 Toolbar open ${tag}.png`, panel);
 
   // Choose a category by tap, then photograph the row with the pill labelled.
   const birds = await page.$('.dccwl-pick-opt[data-dccwl-browse="birds"]');
@@ -137,7 +146,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const tab = await vis('.dccwl-tab:not([aria-pressed="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
-  await shot(page, `Wildlife - 1.39.0 Selected after a tap ${tag}.png`,
+  await shot(page, `Wildlife - 1.39.1 Selected after a tap ${tag}.png`,
     await page.$('.dccwl-tabs'));
 
   /* Peak Now: no pill, the Compact switch alone on the row (1.38.1). */
@@ -146,7 +155,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     if (b) { b.click(); }
   });
   await page.waitForTimeout(700);
-  await shot(page, `Wildlife - 1.39.0 Peak Now toolbar ${tag}.png`, panel);
+  await shot(page, `Wildlife - 1.39.1 Peak Now toolbar ${tag}.png`, panel);
   await page.close();
 }
 

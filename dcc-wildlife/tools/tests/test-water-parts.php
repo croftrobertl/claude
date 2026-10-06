@@ -195,4 +195,76 @@ check_same( null, $cl3['ft'], 'no feet value is invented for a unit we do not kn
 check_same( null, $cl3['medianFt'], 'nor for its median' );
 check_same( 42.0, $cl3['value'], 'the reading itself is still carried, as published' );
 
+/* ---------------------------------------------------------------- 4 ---- */
+dcc_section( 'a date a guest reads: 07/27/2026, from the shape the live payload really carries' );
+
+/*
+ * THE SHAPE THAT BROKE IT. The live /map payload carries ISO 8601 with a
+ * SEVEN-digit fraction and a Z, and popups printed it verbatim for three
+ * releases because every fixture here used plain dates. Each row below is a
+ * case that was checked against PHP rather than assumed.
+ */
+$cases = [
+	// the live shape, summer: local midnight written as T04:00Z (EDT)
+	[ '2026-07-27T04:00:00.0000000Z', '07/27/2026', 'the summer timestamp keeps its own day' ],
+	// and winter: T05:00Z (EST)
+	[ '2026-01-15T05:00:00.0000000Z', '01/15/2026', 'so does the winter one' ],
+	[ '2026-09-22T04:00:00.0000000Z', '09/22/2026', 'the level reading the Director photographed' ],
+	[ '2026-12-31T05:00:00.0000000Z', '12/31/2026', 'and a year end, which a UTC read would roll over' ],
+	// a DATE is not a timestamp: converting it would print the day before
+	[ '2026-08-01', '08/01/2026', 'a date-only value is NOT shifted into the canal zone' ],
+	// already formatted: the output pass runs over payloads it has seen
+	[ '07/27/2026', '07/27/2026', 'and formatting is idempotent' ],
+	// readable as they stand, with no day to print
+	[ '2019-07', '2019-07', 'a year-month is left alone' ],
+	[ '2019', '2019', 'so is a bare year' ],
+	// an empty string parses as NOW in PHP; it must not become today
+	[ '', '', 'an empty date is empty, never today' ],
+	[ '   ', '', 'and so is whitespace' ],
+	[ 'not a date', '', 'unparseable text prints NOTHING, never itself' ],
+	[ '2026-13-45T99:99Z', '', 'and so does a timestamp that cannot exist' ],
+];
+foreach ( $cases as [ $raw, $want, $what ] ) {
+	check_same( $want, Water_Live::us_date( $raw ), $what, var_export( $raw, true ) );
+}
+
+/* ---------------------------------------------------------------- 5 ---- */
+dcc_section( 'a payload cached by 1.39.0 is formatted on its way out' );
+
+/*
+ * The upgrade path, which is the half a guest would have seen: a site moving
+ * to 1.39.1 holds a payload built by 1.39.0, full of raw timestamps, and it
+ * may live for another three hours. map_payload() formats what it reads from
+ * the cache, so the cache's age cannot reach a popup.
+ */
+dccwl_test_reset();
+dcc_parts_enable();
+$raw_cached = [
+	'waters' => [
+		[
+			'id' => '1', 'name' => 'Lake Dora', 'lat' => 28.8, 'lon' => -81.67,
+			'clarity' => [ 'value' => 1.1, 'units' => 'm', 'ft' => 3.61, 'medianFt' => 3.28,
+				'date' => '2026-07-27T04:00:00.0000000Z', 'age' => 71 ],
+			'level'   => [ 'inches' => -3.0, 'date' => '2026-09-22T04:00:00.0000000Z', 'stale' => false ],
+			'depthMap'=> null, 'ageDays' => 71,
+		],
+	],
+	'stations' => [
+		[ 'id' => 'TEST-1', 'kind' => 'clarity', 'water' => 'Lake Dora', 'lat' => 28.8, 'lon' => -81.67,
+			'reading' => [ 'value' => 1.1, 'units' => 'm', 'date' => '2026-07-27T04:00:00.0000000Z' ] ],
+	],
+	'ramps' => [], 'property' => null,
+];
+set_transient( 'dcc_wl_water_map', $raw_cached, 3600 );
+
+$served = Water_Live::map_payload();
+echo '       served: ' . wp_json_encode( $served['waters'][0]['clarity']['date'] ) . ' / '
+	. wp_json_encode( $served['waters'][0]['level']['date'] ) . ' / '
+	. wp_json_encode( $served['stations'][0]['reading']['date'] ) . "\n";
+check_same( '07/27/2026', $served['waters'][0]['clarity']['date'], 'the cached clarity date is formatted on output' );
+check_same( '09/22/2026', $served['waters'][0]['level']['date'], 'so is the cached level date' );
+check_same( '07/27/2026', $served['stations'][0]['reading']['date'], 'and the station pin reading' );
+check_same( 71, $served['waters'][0]['clarity']['age'], 'the AGE is untouched — the map greys by it' );
+check_same( 3.61, $served['waters'][0]['clarity']['ft'], 'and so is everything else in the payload' );
+
 dcc_done();

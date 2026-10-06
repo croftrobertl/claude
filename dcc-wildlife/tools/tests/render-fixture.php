@@ -70,6 +70,70 @@ if ( 'detail' === $which ) {
 	exit;
 }
 
+/*
+ * THE MAP PAYLOAD, BUILT BY THE REAL PARSERS FROM THE REAL TIMESTAMP SHAPE.
+ *
+ * The live /map route carries ISO 8601 with a SEVEN-digit fraction and a Z
+ * ("2026-07-27T04:00:00.0000000Z"); every fixture in this repository used
+ * plain dates, which is exactly why no suite saw raw timestamps reaching the
+ * popups. A browser suite asking "what does the popup SAY" has to be fed a
+ * payload that went through Water_Live, not a hand-written one — a hand-built
+ * fixture can only ever confirm what its author already believed.
+ *
+ * Two timestamps, on purpose: a SUMMER one written as T04:00Z (EDT) and a
+ * WINTER one as T05:00Z (EST). Both are local midnight at the source, and
+ * both must print their own day, not the one before.
+ */
+if ( 'map' === $which ) {
+	$GLOBALS['dccwl_test']['options'][ \DCC_WL\Water_Data::OPTION ] = array_merge(
+		\DCC_WL\Water_Data::defaults(),
+		[ 'live_enabled' => 1, 'map_enabled' => 1, 'map_ramps' => 0 ]
+	);
+	$GLOBALS['dccwl_test']['http']['wateratlas'] = [
+		'code' => 200,
+		'body' => wp_json_encode(
+			[
+				'payload' => [
+					[
+						'displayName' => 'Secchi Depth',
+						'value'       => 1.10,
+						'units'       => 'm',
+						'precision'   => 2,
+						'sampleDate'  => in_array( '--winter', $flags, true )
+							? '2026-01-15T05:00:00.0000000Z'
+							: '2026-07-27T04:00:00.0000000Z',
+						'stationId'   => 'TEST-1',
+						'latitude'    => 28.8003,
+						'longitude'   => -81.6706,
+						'historic'    => [ 'medValue' => 1.00, 'numSamples' => 120 ],
+					],
+					[
+						'displayName' => 'Water Levels',
+						'value'       => 61.00,
+						'units'       => 'ft',
+						'precision'   => 2,
+						'sampleDate'  => in_array( '--winter', $flags, true )
+							? '2026-01-12T05:00:00.0000000Z'
+							: '2026-09-22T04:00:00.0000000Z',
+						'stationId'   => 'TEST-2',
+						'latitude'    => 28.7992,
+						'longitude'   => -81.6689,
+						'verticalDatum' => 'NAVD88',
+						'historicAverageForMonth' => [ 'norm' => 61.25 ],
+					],
+				],
+			]
+		),
+	];
+	/* SERVED THE WAY THE ROUTE SERVES IT. Water_Rest::map() sets `enabled`
+	 * on the payload, and the client draws nothing without it — a fixture
+	 * missing that flag opens an empty sheet and tests nothing. */
+	$payload            = \DCC_WL\Water_Live::map_payload();
+	$payload['enabled'] = true;
+	echo wp_json_encode( $payload );
+	exit;
+}
+
 ob_start();
 switch ( $which ) {
 	case 'canal':

@@ -83,6 +83,16 @@ final class Water_Live {
 	public const WARM_HOOK = 'dcc_wl_warm_map';
 
 	/**
+	 * The canal's own clock, for turning a source's timestamp into the day a
+	 * guest would call it. The cottages are in Florida and every other
+	 * "today" in this plugin is worked out in this zone — canal.js, water.js
+	 * and widget.js each name the same string. Keep them in step: a date
+	 * computed in one zone and labelled in another is off by a day for part
+	 * of every night.
+	 */
+	public const TZ = 'America/New_York';
+
+	/**
 	 * Staleness guards. USGS leaves dead series published — 02238000's flow
 	 * has been offline for maintenance since 2026-03-03 — and a value whose
 	 * timestamp is five months old must never render as a current condition.
@@ -405,7 +415,10 @@ final class Water_Live {
 	public static function map_payload(): array {
 		$cached = get_transient( self::MAP_KEY );
 		if ( is_array( $cached ) ) {
-			return $cached;
+			/* Formatted on the way OUT, so a payload cached by 1.39.0 — three
+			 * hours of raw `2026-07-27T04:00:00.0000000Z` — cannot reach a
+			 * guest after the upgrade. */
+			return self::us_dates( $cached );
 		}
 
 		if ( get_transient( self::MAP_LOCK ) ) {
@@ -422,7 +435,7 @@ final class Water_Live {
 
 		set_transient( self::MAP_KEY, $payload, self::map_ttl( $payload ) );
 
-		return $payload;
+		return self::us_dates( $payload );
 	}
 
 	/**
@@ -1247,6 +1260,94 @@ final class Water_Live {
 			? sprintf( _n( 'About %1$d inch above %2$s', 'About %1$d inches above %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label )
 			/* translators: 1: whole inches, 2: e.g. "normal for August". */
 			: sprintf( _n( 'About %1$d inch below %2$s', 'About %1$d inches below %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label );
+	}
+
+	/**
+	 * A date as a guest reads it: 07/27/2026, in the canal's own timezone.
+	 *
+	 * THE LIVE PAYLOAD'S REAL SHAPE IS `2026-07-27T04:00:00.0000000Z` — ISO
+	 * 8601 with a SEVEN-digit fraction and a Z — and it was reaching popups
+	 * verbatim. Every fixture in this repository used plain `2026-08-01`
+	 * dates, so no suite ever saw one. Three things this has to get right,
+	 * and each of them was checked against PHP rather than assumed:
+	 *
+	 *  1. **The fraction parses.** PHP's own parser accepts seven digits, so
+	 *     no truncation is needed; what it will NOT accept is garbage, and a
+	 *     DateMalformedStringException there means we print nothing.
+	 *  2. **A timestamp is converted; a DATE is not.** The source writes local
+	 *     midnight as T04:00Z in summer and T05:00Z in winter, so a timestamp
+	 *     must be read in America/New_York or it prints the previous day. But
+	 *     a date-only `2026-08-01` has no time to convert: run it through the
+	 *     same conversion and it becomes 07/31/2026, which is the 1.7.x rule
+	 *     "date-only values are read in the SOURCE's frame, never converted"
+	 *     being broken in a new place. They take different paths here.
+	 *  3. **An empty string is not "today".** `new DateTimeImmutable('')`
+	 *     returns the current time, so an absent date would quietly render as
+	 *     this morning. It is rejected before parsing.
+	 *
+	 * A year (`2019`) or a year-month (`2019-07`) is left exactly as it is:
+	 * it is already readable, and there is no day in it to print.
+	 */
+	public static function us_date( string $raw ): string {
+		$v = trim( $raw );
+		if ( '' === $v ) {
+			return '';
+		}
+		// Already formatted — this pass is idempotent, because it runs over
+		// payloads that may have been through it already.
+		if ( preg_match( '#^\d{2}/\d{2}/\d{4}$#', $v ) ) {
+			return $v;
+		}
+		// A bare year or year-month: readable as it stands, no day to print.
+		if ( preg_match( '/^\d{4}(-\d{2})?$/', $v ) ) {
+			return $v;
+		}
+		// A date with no time: formatted in the SOURCE's frame, never shifted.
+		if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m ) ) {
+			return $m[2] . '/' . $m[3] . '/' . $m[1];
+		}
+		try {
+			$d = new \DateTimeImmutable( $v );
+		} catch ( \Throwable $e ) {
+			return '';
+		}
+		return $d->setTimezone( new \DateTimeZone( self::TZ ) )->format( 'm/d/Y' );
+	}
+
+	/**
+	 * Every date in a map payload, formatted for a guest.
+	 *
+	 * Applied at the OUTPUT gate rather than in the generator, deliberately:
+	 * a site upgrading to 1.39.1 is holding a payload cached by 1.39.0 that
+	 * is full of raw timestamps, and it may live for another three hours.
+	 * Formatting here means no guest can see one, whenever the payload was
+	 * built — which is what "make sure no guest sees one after upgrade"
+	 * requires. `us_date()` is idempotent, so a payload built after this
+	 * release passes through unchanged.
+	 *
+	 * The AGE fields are untouched: they were computed from the raw string
+	 * when the payload was built, and the map's greying reads them.
+	 *
+	 * @param array<string,mixed> $payload
+	 * @return array<string,mixed>
+	 */
+	private static function us_dates( array $payload ): array {
+		foreach ( [ 'waters', 'stations' ] as $list ) {
+			if ( ! isset( $payload[ $list ] ) || ! is_array( $payload[ $list ] ) ) {
+				continue;
+			}
+			foreach ( $payload[ $list ] as $i => $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				foreach ( [ 'clarity', 'level', 'depthMap', 'reading' ] as $part ) {
+					if ( isset( $row[ $part ]['date'] ) && is_string( $row[ $part ]['date'] ) ) {
+						$payload[ $list ][ $i ][ $part ]['date'] = self::us_date( $row[ $part ]['date'] );
+					}
+				}
+			}
+		}
+		return $payload;
 	}
 
 	/**

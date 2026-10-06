@@ -266,6 +266,25 @@
 	 * in the same place, deliberately: an unconvertible number is printed as
 	 * given, never guessed at.
 	 */
+	/*
+	 * A LAST GUARD: a popup never prints a raw timestamp (1.39.1).
+	 *
+	 * The dates in this payload are formatted on the server, at the output
+	 * gate, so by the time they arrive they read "07/27/2026". This refuses
+	 * anything still carrying the ISO shape — a payload served by a route
+	 * that somehow bypassed that gate, or a future regression. Printing
+	 * nothing is the module's standing answer to a value it cannot vouch
+	 * for; printing "2026-07-27T04:00:00.0000000Z" to a guest is the defect
+	 * this release exists to remove, and it should not be able to come back
+	 * quietly.
+	 */
+	function dateText(v) {
+		var s = (typeof v === 'string') ? v.trim() : '';
+		if (!s) { return ''; }
+		if (/\d{4}-\d{2}-\d{2}T/.test(s)) { return ''; }
+		return s;
+	}
+
 	function clarityText(c, i18n) {
 		if (!c) { return ''; }
 		var feet = i18n.unitFeet || 'ft';
@@ -291,21 +310,21 @@
 
 		if (w.clarity) {
 			line(box, i18n.lblClarity || 'Clarity:', clarityText(w.clarity, i18n));
-			line(box, (i18n.sampled || 'Sampled') + ':', w.clarity.date || '');
+			line(box, (i18n.sampled || 'Sampled') + ':', dateText(w.clarity.date));
 		}
 
 		if (w.level) {
 			if (w.level.stale) {
 				// Do not state an old elevation as a current condition.
 				line(box, i18n.lblLevel || 'Level:', (i18n.staleLevel || 'level reading is old') +
-					(w.level.date ? ' — ' + w.level.date : ''));
+					(dateText(w.level.date) ? ' — ' + dateText(w.level.date) : ''));
 			} else if (typeof w.level.inches === 'number') {
 				var inches = Math.abs(Math.round(w.level.inches));
 				var levelText = w.level.inches > 0
 					? tpl(i18n.levelAbove || '%s in above its monthly norm', inches)
 					: tpl(i18n.levelBelow || '%s in below its monthly norm', inches);
 				line(box, i18n.lblLevel || 'Level:', levelText +
-					(w.level.date ? ' — ' + w.level.date : ''));
+					(dateText(w.level.date) ? ' — ' + dateText(w.level.date) : ''));
 			}
 		}
 
@@ -345,16 +364,16 @@
 		if (!r) {
 			box.appendChild(el('p', 'dccwl-pop-none', i18n.stationNone || 'No current reading from this station.'));
 		} else if ('level' === s.kind && r.stale) {
-			line(box, kindName, (i18n.staleLevel || 'level reading is old') + (r.date ? ' — ' + r.date : ''));
+			line(box, kindName, (i18n.staleLevel || 'level reading is old') + (dateText(r.date) ? ' — ' + dateText(r.date) : ''));
 		} else if ('level' === s.kind && typeof r.inches === 'number') {
 			var inches = Math.abs(Math.round(r.inches));
 			line(box, kindName, (r.inches > 0
 				? tpl(i18n.levelAbove || '%s in above its monthly norm', inches)
-				: tpl(i18n.levelBelow || '%s in below its monthly norm', inches)) + (r.date ? ' — ' + r.date : ''));
+				: tpl(i18n.levelBelow || '%s in below its monthly norm', inches)) + (dateText(r.date) ? ' — ' + dateText(r.date) : ''));
 		} else if (typeof r.value === 'number') {
 			// The same reading a water's own popup shows, in the same units.
 			line(box, kindName, clarityText(r, i18n));
-			line(box, (i18n.sampled || 'Sampled') + ':', r.date || '');
+			line(box, (i18n.sampled || 'Sampled') + ':', dateText(r.date));
 		} else {
 			box.appendChild(el('p', 'dccwl-pop-none', i18n.stationNone || 'No current reading from this station.'));
 		}

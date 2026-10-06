@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.39.0
+Stable tag: 1.39.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,14 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.39.1 =
+* **Map popups show dates as 07/27/2026.** They were printing the raw
+  timestamp the data source sends — "2026-07-27T04:00:00.0000000Z". Dates are
+  now formatted on the server, read in Florida time so a reading never shows
+  the day before, and a date that cannot be read prints nothing at all rather
+  than machine text. Popups already on a cached map are corrected as they are
+  served, so nothing stale survives the update.
 
 = 1.39.0 =
 * **Map popups read in feet.** A popup said "1.1 m" for the same lake whose

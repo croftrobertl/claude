@@ -3051,3 +3051,70 @@ pinned**, so a station assertion needs them or it is testing the fixture; and
 a Secchi reading within its median's silent band produces **no** comparison,
 because "only speak when it matters" is a rule of this module — a fixture at
 1.10 against 1.00 would have asserted that the qualifier was missing.
+
+### 27. 1.39.1 — the timestamp shape no fixture had, and the rule it reinstates
+
+**MAP POPUPS PRINTED RAW TIMESTAMPS ON LIVE FOR THREE RELEASES.** The Director
+photographed `Sampled: 2026-07-27T04:00:00.0000000Z` and
+`Level: 3 in below its monthly norm — 2026-09-22T04:00:00.0000000Z`. The live
+`/map` payload carries ISO 8601 with a **seven-digit fraction and a Z**, thirty
+of them on the day it was found, and **every fixture in this repository used
+plain `2026-08-01` dates** — so the one shape that breaks was the one shape
+never tested. That is the whole lesson: *a hand-written fixture can only
+confirm what its author already believed.*
+
+**`Water_Live::us_date()` IS THE FORMATTER, AND EACH OF ITS BRANCHES IS A TRAP
+THAT WAS CHECKED AGAINST PHP RATHER THAN ASSUMED:**
+
+- **The seven-digit fraction parses.** PHP's own parser accepts it; no
+  truncation is needed. What it throws on is garbage, and that prints nothing.
+- **A timestamp is converted; a DATE is not.** The source writes local midnight
+  as `T04:00Z` in summer and `T05:00Z` in winter, so a timestamp must be read
+  in `America/New_York` or it prints the previous day. But run a date-only
+  `2026-08-01` through the same conversion and it becomes **07/31/2026** —
+  the 1.7.x rule ("date-only values are read in the SOURCE's frame, never
+  converted") broken in a new place. The two take different paths.
+- **An empty string is not "today".** `new DateTimeImmutable('')` returns the
+  current time, so an absent date would have rendered as this morning,
+  confidently. It is rejected before parsing.
+- A bare year or year-month is left alone: readable already, no day in it.
+- The pass is **idempotent**, because it runs over payloads that may have been
+  through it.
+
+**IT IS APPLIED AT THE OUTPUT GATE, NOT IN THE GENERATOR, AND THAT IS THE
+UPGRADE STORY.** A site moving to 1.39.1 holds a payload cached by 1.39.0,
+full of raw timestamps, which may live another three hours. `map_payload()`
+formats what it reads from the cache as well as what it builds, so **no guest
+can see one whatever the cache's age** — no flush, no upgrade step, nothing to
+get wrong. `map_data()` stays the generator, untouched, and the `age` fields
+stay raw-derived because the map's greying reads them.
+
+**AND A LAST GUARD IN THE CLIENT.** `dateText()` in water-map.js refuses any
+string still carrying the ISO shape and prints nothing. The server already
+formats; this is what stops the defect coming back quietly through a route
+that bypasses the gate. The suite proves it by feeding the client exactly what
+1.39.0 served and asserting the popup renders without the timestamp.
+
+**THE FIXTURE IS BUILT BY PHP NOW, NOT BY HAND.** `render-fixture.php map`
+stubs an Atlas response carrying the live timestamps — a summer `T04:00Z` and
+a winter `T05:00Z` — runs it through `Water_Live::map_payload()`, and serves
+it **the way `Water_Rest::map()` does, with `enabled` set**. (Without that flag
+the client draws nothing and the suite tests an empty sheet; that cost a cycle
+here.) `ui-live.mjs` then asserts the RENDERED popup text at 390 and 1280:
+`07/27/2026` in summer, `01/15/2026` in winter, no `T`, no `0000000Z`, and
+never the previous day.
+
+### Raw dates elsewhere — REPORTED, NOT CHANGED (Rob's instruction)
+
+Two places could print machine text, neither of them reachable with today's
+data. Left exactly as they are:
+
+1. **`Water_Render`'s server-rendered fact card** prints `$f['date']`
+   verbatim after its label. The facts that reach it are the owner's almanac
+   rows, which carry plain dates — but `Water_Fact::valid_date()` accepts a
+   full ISO timestamp, so one typed into the admin form would render raw.
+2. **`water.js readingTime()`** falls back to `String(iso)` when a date will
+   not parse, and to `d.toISOString()` if `toLocaleString` throws. Every live
+   date parses today, so the Now tab shows "Jul 27, 2026" as intended.
+
+**The tiles' "sampled September 2026" wording is deliberate and untouched.**
