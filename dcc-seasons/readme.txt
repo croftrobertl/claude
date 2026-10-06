@@ -181,6 +181,10 @@ the 4.5.0 zip. Nothing stored is rewritten.
 * With nothing to draw at all, nothing is drawn: no canvas clears, just a
   quiet four-times-a-second check for the next hero or scene.
 * Reduced-motion settings are respected as before.
+* Decided by Rob after a side-by-side on his phone (2026-10-06): the
+  background stays at 30 repaints a second. The 20-a-second option (lighter
+  still, but particles step up to 2.3 pixels) was declined; do not
+  re-propose it.
 
 = 4.5.0 =
 Rob's decisions of 2026-10-06. Rollback: reinstall the 4.4.0 zip. Nothing

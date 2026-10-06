@@ -850,8 +850,12 @@ render round and his say.
   (IntersectionObserver) and when hidden, EXCEPT while the canvas is out
   of the document, so `ensureMounted()` can still put it back. 30 fps is
   "visually identical" on measurement: every effect steps at most 1.54px
-  and 4.5deg per repaint. 20 fps (embers 1.7px, confetti 2.3px) was
-  rendered for Rob, not shipped. `tools/test-pacing.js` proves no trails,
+  and 4.5deg per repaint. **Rob's decision (2026-10-06): option A, 30 fps
+  stays. 20 fps (embers 1.7px, confetti 2.3px; 79 ms/s at 390px x4) was
+  rendered side by side for him (artifact MDrM4k7N887m7ST2dMg6kg, kept as
+  the record) and DECLINED. Do not build or re-propose it.** He watched
+  4.6.0 on his phone and it looks good; Scope stays "Homepage only" until
+  he says otherwise (a settings change, not a release). `tools/test-pacing.js` proves no trails,
   the rates and every pause; the mocked clock (`_state.tick`) always does
   full clears, so only the real-rAF suite exercises this path. Measured
   (`tools/measure-perf.js`, Halloween, ambient=0, subtle=1, background-only
