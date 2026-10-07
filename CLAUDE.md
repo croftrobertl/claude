@@ -1021,13 +1021,25 @@ yours to improvise.
     exact public route `/mphb/v1/checkout`. The `$_POST` fallback and the
     `wp_insert_post` staff marker were REMOVED: no live path was shown to use
     them, and the owner's rule is to act only on what is proven.
-  - **FOUND, REPORTED, NOT FIXED: the REST backstops run on staff bookings.**
-    `Rest_Guard::route_matches()` is a SUBSTRING test on `/mphb/v1/checkout`,
-    which `/mphb/v1/checkout/admin` contains, and the guard has no staff
-    exemption — so the Guest 2/3/4, pet and extra-guest backstops validate
-    every Add New submission, although the wp_loaded backstops deliberately
-    exempt wp-admin "so an admin is never fought". Whether it has ever refused
-    a staff booking is not known. Left as is pending Rob's decision.
+  - **STAFF ADD NEW BOOKINGS SKIP THE REST BACKSTOPS** (Rob: "Skip for staff",
+    0.30.1). Found in 0.30.0: `Rest_Guard::route_matches()` is a SUBSTRING
+    test on `/mphb/v1/checkout`, which `/mphb/v1/checkout/admin` contains, so
+    the Guest 2/3/4, pet and extra-guest backstops validated every Add New
+    submission although the wp_loaded backstops deliberately exempt wp-admin.
+    Now `intercept()` returns untouched for the EXACT admin route
+    (`Rest_Guard::is_admin_route()`, trailing slash tolerated, look-alikes still
+    checked). Safe because MotoPress's `SubmitAdminCheckoutController::
+    is_request_allowed()` requires `checkPostPermissions(booking, 'create')`
+    (Director, live 6.3.0). **`route_matches()` was deliberately NOT narrowed**:
+    `defer_to_rest()` shares it and must keep the wp_loaded backstops standing
+    down on BOTH routes. **The brief asked for `mphb_is_current_request_for_
+    admin_ui` to back this — it cannot**: the guard runs at
+    `rest_request_before_callbacks`, and MotoPress adds that filter inside the
+    admin controller's callback, AFTER it; code testing it there would always
+    read false, so none was added. Tested by sending one violating payload to
+    both routes (`tests/backstops/`): refused on the public route (the
+    guard-on-the-guard), passed on the admin route; mutations
+    `guard-admin-checked`, `guard-admin-prefix`, `guard-exempt-all`.
   - **Viewer**: `admin-post.php?action=dcc_policy_version&sha=…`, `edit_posts`,
     read only, the derived text through `wp_kses_post` plus the exact stored
     data escaped. No enforcement anywhere: a booking is never refused over
@@ -1040,6 +1052,42 @@ yours to improvise.
     not named `run.*`** — it tested membership of a `run.*` glob, not
     existence, so `tests/policy/browser.js` read as missing while it ran.
     Fixed to test existence; proved both ways (moved away → flagged).
+- **0.30.1 — ADD NEW BOOKING'S RESULTS TABLE SAYS WHAT ITS NUMBERS ARE**
+  (Rob's picks 2026-10-07; `Results_Labels`, suites `tests/results/run.php`
+  and `tests/results/browser.js`). Rob searched 2 adults and read "Capacity:
+  Adults: 4 Children: 0" as a wrong count (it is the cottage's MAXIMUM), and
+  "Base price" is the WHOLE STAY's total before fees and taxes (live: $700
+  for 4 nights). Now "Capacity" → **"Sleeps up to"**, cell =
+  `RoomType::calcTotalCapacity()` (total capacity if set, else adults +
+  children — verified 6.3.0), plus " · up to N child/children" ONLY when the
+  children capacity is > 0 (none live: 1065/1067/1069/1071/1740/1742 = 4/0/4,
+  1604/1607 = 2/0/2); "Base price" → **"Stay total before fees & taxes"**
+  (Rob corrected an earlier "Nightly rates…": the amount is per stay). The
+  search form, including Children, is untouched.
+  - **Scope, by MotoPress's own hooks**: the template
+    `templates/create-booking/results/reserve-rooms.php` (read VERBATIM by the
+    Director on live 6.3.0; the test renders a copy of it) fires
+    `mphb_cb_reserve_rooms_form_before_start` and `…_after_end` around the
+    form. Only between them, only on `page=mphb_add_new_booking&step=2` in
+    wp-admin, is the output buffered and rewritten. **No gettext filter of any
+    kind** — 'Capacity' is MotoPress's word in Google Hotels data, the
+    room-type editor and the accommodation list; asserted.
+  - **All or nothing**: every table must have exactly MotoPress's four
+    headings, every row must match (checkbox naming its room type, the
+    "Adults:&nbsp;N Children:&nbsp;M" cell AGREEING with that room type's own
+    capacities), or the whole form is printed exactly as drawn. Matched on
+    MotoPress's strings AS TRANSLATED, so a translated site still matches.
+    Constructed: unreadable room type, disagreeing cell, total 0, a fifth
+    column, one changed table beside a normal one, one odd row beside a
+    normal one, a foreign table — each leaves the form byte-identical.
+    Mutation `res-head-unmatched` SURVIVED at first: every "changed heading"
+    case changed EVERY table, where skipping one and refusing all look the
+    same; the mixed case (one changed, one normal) is what tells them apart.
+  - The rendered markup (Director, K) has `&nbsp;` in the cell and the price
+    as `<span class="mphb-price">`; the price cell is never touched. The
+    browser suite REPRODUCES only WordPress's `.widefat`/`table.fixed` rules
+    (core admin CSS is not available here) — the Director's read-only look at
+    step 2 is the real check.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1251,9 +1299,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 156
-  mutations, 156 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
-  v0.30.0; fourteen suites). Before that, at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 173
+  mutations, 173 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
+  v0.30.1; sixteen suites). At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
   search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
   retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code

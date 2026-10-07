@@ -67,6 +67,8 @@ SUITES = {
     'admin-layout': ('node', 'tests/admin-layout/run.js'),
     'policy':       ('php',  'tests/policy/run.php'),
     'policy-browser': ('node', 'tests/policy/browser.js'),
+    'results':      ('php',  'tests/results/run.php'),
+    'results-browser': ('node', 'tests/results/browser.js'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

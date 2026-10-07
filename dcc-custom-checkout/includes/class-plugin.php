@@ -63,6 +63,8 @@ final class Plugin
         // v0.30.0: the acceptance box's two links, and the acceptance record
         // on each booking made online (the policy versions the guest was shown).
         (new Policy_Record())->register();
+        // v0.30.1: clearer labels on Add New Booking's search results table.
+        (new Results_Labels())->register();
     }
 
     public function load_textdomain(): void

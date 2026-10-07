@@ -1757,5 +1757,161 @@
   "find": "        $cf = $params['customer_fields'] ?? null;",
   "replace": "        $cf = $params;",
   "count": 1
+ },
+ {
+  "id": "res-any-step",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 the results labels apply on step 2 only",
+  "find": "            && (string) wp_unslash($_GET['step']) === '2';",
+  "replace": "            && true;",
+  "count": 1
+ },
+ {
+  "id": "res-any-page",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 the results labels apply on Add New Booking only",
+  "find": "            && sanitize_key(wp_unslash($_GET['page'])) === self::PAGE",
+  "replace": "            && sanitize_key(wp_unslash($_GET['page'])) !== ''",
+  "count": 1
+ },
+ {
+  "id": "res-front-end",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 the results labels are wp-admin only",
+  "find": "        return is_admin()\n",
+  "replace": "        return true\n",
+  "count": 1
+ },
+ {
+  "id": "res-sum-not-calc",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 'Sleeps up to' is calcTotalCapacity(), never adults + children",
+  "find": "                'total'    => (int) $rt->calcTotalCapacity(),",
+  "replace": "                'total'    => (int) $rt->getAdultsCapacity() + (int) $rt->getChildrenCapacity(),",
+  "count": 1
+ },
+ {
+  "id": "res-no-suffix",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results",
+   "results-browser"
+  ],
+  "claim": "0.30.1 a cottage taking children shows ' · up to N children'",
+  "find": "                if ($cap['children'] > 0) {",
+  "replace": "                if (false) {",
+  "count": 1
+ },
+ {
+  "id": "res-suffix-always",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 no children suffix when the children capacity is 0",
+  "find": "                if ($cap['children'] > 0) {",
+  "replace": "                if ($cap['children'] >= 0) {",
+  "count": 1
+ },
+ {
+  "id": "res-mismatch-ignored",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 a cell that disagrees with its room type leaves the form as drawn",
+  "find": "                if ($cap === null || $cap['adults'] !== (int) $m[3] || ",
+  "replace": "                if ($cap === null || ",
+  "count": 1
+ },
+ {
+  "id": "res-partial-rows",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 never half-relabelled: every row must be recognised",
+  "find": " || $rows_found !== $rows_total) {",
+  "replace": ") {",
+  "count": 1
+ },
+ {
+  "id": "res-foreign-table",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 a table that is not MotoPress's shape leaves the form as drawn",
+  "find": "                    return null; // a table that is not MotoPress's shape",
+  "replace": "                    continue;",
+  "count": 1
+ },
+ {
+  "id": "res-head-unmatched",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.1 changed headings (a template change) leave the form as drawn",
+  "find": "            if (preg_match_all($head, $part) !== 1) {\n                return null;",
+  "replace": "            if (preg_match_all($head, $part) !== 1) {\n                continue;",
+  "count": 1
+ },
+ {
+  "id": "res-heading-dead",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results",
+   "results-browser"
+  ],
+  "claim": "0.30.1 the headings read Sleeps up to / Stay total before fees & taxes",
+  "find": "            $part = preg_replace_callback($head,",
+  "replace": "            $part = preg_replace_callback('#^$#',",
+  "count": 1
+ },
+ {
+  "id": "guard-admin-checked",
+  "file": "dcc-custom-checkout/includes/class-rest-guard.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.30.1 staff Add New submissions (/mphb/v1/checkout/admin) skip the server checks",
+  "find": "        if (self::is_admin_route((string) $request->get_route())) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "guard-admin-prefix",
+  "file": "dcc-custom-checkout/includes/class-rest-guard.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.30.1 only the EXACT admin route is exempt",
+  "find": "untrailingslashit($route) === $fragment . '/admin';",
+  "replace": "strpos($route, $fragment . '/admin') !== false;",
+  "count": 1
+ },
+ {
+  "id": "guard-exempt-all",
+  "file": "dcc-custom-checkout/includes/class-rest-guard.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.30.1 the public route is still checked in full",
+  "find": "untrailingslashit($route) === $fragment . '/admin';",
+  "replace": "true;",
+  "count": 1
  }
 ]

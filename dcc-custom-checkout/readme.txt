@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.30.0
+Stable tag: 0.30.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,23 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.30.1 =
+Corrections to 0.30.0 from the live MotoPress 6.3.0 source, and two
+WP-Admin changes (owner's picks, 2026-10-07).
+* Bookings made on Add New Booking are now always recorded as "Entered by
+  staff -- not accepted online". MotoPress fires the same booking hook for
+  them, so 0.30.0 could have recorded one as an online booking.
+* The acceptance tick is read where MotoPress actually sends it, and counts
+  only when it is exactly the ticked value.
+* Add New Booking search results: "Capacity" now reads "Sleeps up to" with
+  the cottage's number (e.g. 4), and "Base price" reads "Stay total before
+  fees & taxes" -- the amount is the whole stay's, before fees and taxes.
+  Only on that results step; elsewhere MotoPress's wording is unchanged, and
+  if the table is not exactly as expected it is left exactly as drawn.
+* Staff Add New bookings no longer run this plugin's server-side checks
+  (Guest 2/3/4 details, pet fee, extra-guest fee). Online bookings are
+  checked exactly as before.
 
 = 0.30.0 =
 The checkout's acceptance box, and a record of it on each booking (owner's

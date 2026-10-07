@@ -51,6 +51,15 @@ function sanitize_text_field($v) { return is_string($v) ? trim($v) : ''; }
 function absint($v) { return abs((int) $v); }
 function get_post_meta($id, $k, $s = false) { return ''; }
 function did_action($h) { return 0; }
+function untrailingslashit($s) { return rtrim((string) $s, '/\\'); }
+class WP_Error { public $code; public function __construct($c = '', $m = '', $d = []) { $this->code = $c; } }
+class WP_REST_Request {
+    private $m; private $r; private $p;
+    public function __construct($m, $r, $p) { $this->m = $m; $this->r = $r; $this->p = $p; }
+    public function get_method() { return $this->m; }
+    public function get_route() { return $this->r; }
+    public function get_params() { return $this->p; }
+}
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-rest-guard.php';
@@ -307,6 +316,27 @@ $_SERVER['REQUEST_URI'] = '/submit-booking/';
 check('an ordinary checkout URL is not the REST route',
     Checkout_Request::defer_to_rest(), false);
 check('... so it is still enforced', ran_redirect($svc), true);
+
+/* =====================================================================
+ * v0.30.1 — THE GUARD ITSELF, BY ROUTE (owner: "Skip for staff"). Add New
+ * Booking submits to /mphb/v1/checkout/admin (MotoPress 6.3.0); the public
+ * checkout to /mphb/v1/checkout. The SAME violating payload is sent to both.
+ * ===================================================================== */
+seed_violation();
+$payload = $_POST;
+$_POST = [];
+$public = $rg->intercept(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', $payload));
+check('guard-on-the-guard: the payload IS a violation — the public route refuses it',
+    $public instanceof WP_Error ? $public->code : 'not refused', 'dcc_checkout_pet');
+$admin = $rg->intercept(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout/admin', $payload));
+check('the staff route (/mphb/v1/checkout/admin) is NOT checked: the same payload passes', $admin, null);
+$admin2 = $rg->intercept(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout/admin/', $payload));
+check('... with a trailing slash too', $admin2, null);
+$other = $rg->intercept(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout/administrator', $payload));
+check('... but only that exact route: a look-alike is still checked',
+    $other instanceof WP_Error ? $other->code : 'not refused', 'dcc_checkout_pet');
+check('defer_to_rest() still stands the wp_loaded backstops down on the admin route',
+    (function () { $_SERVER['REQUEST_URI'] = '/wp-json/mphb/v1/checkout/admin'; return Checkout_Request::defer_to_rest(); })(), true);
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

@@ -54,6 +54,13 @@ final class Rest_Guard
         return $fragment !== '' && strpos($route, $fragment) !== false;
     }
 
+    /** MotoPress's staff checkout route: the public route + "/admin" (6.3.0). */
+    public static function is_admin_route(string $route): bool
+    {
+        $fragment = self::route_fragment();
+        return $fragment !== '' && untrailingslashit($route) === $fragment . '/admin';
+    }
+
     public function register(): void
     {
         add_filter('rest_request_before_callbacks', [$this, 'intercept'], 10, 3);
@@ -86,6 +93,21 @@ final class Rest_Guard
         // Over-matching is harmless: a request without room_details makes every
         // validator a no-op. Under-matching would be a bypass.
         if (!self::route_matches((string) $request->get_route())) {
+            return $response;
+        }
+        // v0.30.1 — staff Add New bookings are exempt (owner: "Skip for staff").
+        // Add New's "Submit Booking" POSTs to /mphb/v1/checkout/admin, which
+        // the substring test above also matches; MotoPress's own
+        // SubmitAdminCheckoutController::is_request_allowed() requires
+        // ApiHelper::checkPostPermissions(booking, 'create') on that route
+        // (Director, live 6.3.0), so a guest cannot use it to dodge these
+        // checks. EXACT route, so the public /mphb/v1/checkout is still checked
+        // in full. (route_matches() is NOT narrowed: defer_to_rest() shares it
+        // and must keep standing the wp_loaded backstops down on both routes.)
+        // MotoPress's mphb_is_current_request_for_admin_ui filter cannot back
+        // this here: the admin controller adds it inside its callback, which
+        // runs AFTER this hook.
+        if (self::is_admin_route((string) $request->get_route())) {
             return $response;
         }
         // NOTE: no capability exemption here — this is the public booking
