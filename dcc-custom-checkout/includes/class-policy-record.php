@@ -11,11 +11,13 @@ if (!defined('ABSPATH')) {
  *
  * LABEL. MotoPress renders the box in CheckoutView::renderTermsAndConditions,
  * hooked at mphb_sc_checkout_form priority 60, printing
- * printf(_x("I've read and accept the %s", …), $link) (Director, MotoPress
- * 6.1.0 on live). This swaps that one string for the two-link sentence ONLY
- * between priorities 59 and 61 of that one action — every other use of the
- * same msgid anywhere keeps MotoPress's wording — and only when both policy
- * pages are published; otherwise MotoPress's label stands exactly.
+ * printf(_x("I've read and accept the %s", …), $link) UNESCAPED (read by the
+ * Director in live MotoPress 6.3.0, checkout-view.php:498; its only caller is
+ * step-checkout.php:79, and the sentence appears nowhere else in MotoPress's
+ * PHP or JS; Add New Booking has no terms box). This swaps that one string for
+ * the two-link sentence ONLY between priorities 59 and 61 of that one action,
+ * and only when both policy pages are published; otherwise MotoPress's label
+ * stands exactly.
  *
  * RECORD. On a public-checkout booking (mphb_create_booking_by_user), one meta
  * row: when, whether the tick reached the server, the label shown, and each
@@ -36,9 +38,20 @@ final class Policy_Record
 
     private const BOOKING_TYPE = 'mphb_booking';
 
-    /** The submission's tick, as seen on MotoPress's REST checkout route. */
-    private static bool $rest_seen = false;
-    private static bool $rest_tick = false;
+    /**
+     * MotoPress's two checkout routes, as the Director read them in live
+     * MotoPress 6.3.0: the public checkout POSTs to /mphb/v1/checkout
+     * (restApiHelper.submitCheckout); Add New Booking's "Submit Booking" POSTs
+     * to /mphb/v1/checkout/admin (SubmitAdminCheckoutController, which extends
+     * the public controller and so ALSO fires mphb_create_booking_by_user).
+     */
+    public const ROUTE_PUBLIC = '/mphb/v1/checkout';
+    public const ROUTE_ADMIN  = '/mphb/v1/checkout/admin';
+
+    /** What this request's checkout submission was, seen before the controller ran. */
+    private static bool $public_seen = false;
+    private static bool $admin_seen  = false;
+    private static bool $rest_tick   = false;
 
     public function register(): void
     {
@@ -48,8 +61,8 @@ final class Policy_Record
         add_action('mphb_sc_checkout_form', [$this, 'label_off'], 61, 0);
 
         add_filter('rest_request_before_callbacks', [$this, 'capture_rest'], 5, 3);
+        add_action('mphb_admin_checkout_rest_before_start', [$this, 'note_admin_checkout'], 10, 0);
         add_action('mphb_create_booking_by_user', [$this, 'on_booking_created'], 10, 1);
-        add_action('wp_insert_post', [$this, 'mark_staff'], 10, 3);
 
         add_action('add_meta_boxes', [$this, 'add_box']);
         add_action('admin_post_dcc_policy_version', [$this, 'render_version']);
@@ -107,42 +120,50 @@ final class Policy_Record
 
     /* -------------------------------------------------------------- record */
 
-    /** Is this an admin screen's request? (The same test the Extras rename uses.) */
-    private static function from_admin(): bool
-    {
-        $referer = (string) wp_get_referer();
-        return $referer !== '' && strpos($referer, admin_url()) === 0;
-    }
-
-    /** Did the submission carry a ticked box? Only MotoPress's own field names. */
+    /**
+     * Was the box ticked? MotoPress 6.3.0's mphb.js puts every unknown "mphb…"
+     * form field into custom_fields and _buildFormData() sends it as
+     * customer_fields[<name>] — so a ticked box arrives as
+     * customer_fields[mphb_accept_terms] = '1', and an unticked one is not sent
+     * at all (Director, live source). ParseUtils::parseCustomer() then keeps
+     * only REGISTERED customer fields, so the booking never carries it: this
+     * reads the REQUEST, never booking data. Exactly '1' — nothing looser.
+     */
     public static function tick_in(array $params): bool
     {
-        foreach (['mphb_accept_terms', 'accept_terms'] as $k) {
-            if (isset($params[$k]) && !is_array($params[$k])) {
-                $v = strtolower(trim((string) $params[$k]));
-                if ($v !== '' && $v !== '0' && $v !== 'false' && $v !== 'off') {
-                    return true;
-                }
-            }
-        }
-        return false;
+        $cf = $params['customer_fields'] ?? null;
+        return is_array($cf) && isset($cf['mphb_accept_terms']) && $cf['mphb_accept_terms'] === '1';
+    }
+
+    private static function route_is(string $route, string $want): bool
+    {
+        return untrailingslashit($route) === $want;
     }
 
     /**
-     * Note what the REST checkout submission carried, before MotoPress's
-     * controller runs and fires mphb_create_booking_by_user in the same
-     * request. Observes only: always returns $response unchanged.
+     * Note which checkout route this request is, and what it carried, before
+     * MotoPress's controller runs and fires mphb_create_booking_by_user in the
+     * same request. Observes only: always returns $response unchanged.
      */
     public function capture_rest($response, $handler, $request)
     {
-        if ($request instanceof \WP_REST_Request
-            && $request->get_method() === 'POST'
-            && Rest_Guard::route_matches((string) $request->get_route())) {
-            self::$rest_seen = true;
-            $params = $request->get_params();
-            self::$rest_tick = is_array($params) && self::tick_in($params);
+        if ($request instanceof \WP_REST_Request && $request->get_method() === 'POST') {
+            $route = (string) $request->get_route();
+            if (self::route_is($route, self::ROUTE_ADMIN)) {
+                self::$admin_seen = true;
+            } elseif (self::route_is($route, self::ROUTE_PUBLIC)) {
+                self::$public_seen = true;
+                $params = $request->get_params();
+                self::$rest_tick = is_array($params) && self::tick_in($params);
+            }
         }
         return $response;
+    }
+
+    /** mphb_admin_checkout_rest_before_start — fired only by the admin controller. */
+    public function note_admin_checkout(): void
+    {
+        self::$admin_seen = true;
     }
 
     /** @param mixed $booking MotoPress booking entity (or an ID). */
@@ -155,9 +176,13 @@ final class Policy_Record
     }
 
     /**
-     * mphb_create_booking_by_user. Online only: MotoPress's REST checkout route
-     * (or a plain front-end form post), NOT referred from wp-admin. A booking
-     * an admin screen created is marked as staff-entered instead.
+     * mphb_create_booking_by_user (one argument, the saved Booking; fired after
+     * save() — submit-checkout-controller.php:359). It fires for STAFF bookings
+     * too, so staff is decided first, by MotoPress's own signals:
+     * mphb_is_current_request_for_admin_ui (true while the admin controller
+     * runs its parent), its mphb_admin_checkout_rest_before_start action, or
+     * the admin route itself. An online record needs the PUBLIC route. Anything
+     * else writes nothing.
      *
      * @param mixed $booking
      */
@@ -167,19 +192,14 @@ final class Policy_Record
         if ($id <= 0) {
             return;
         }
-        if (self::from_admin()) {
+        if (self::$admin_seen || apply_filters('mphb_is_current_request_for_admin_ui', false)) {
             self::write_staff($id);
             return;
         }
-        $rest = defined('REST_REQUEST') && REST_REQUEST;
-        if (self::$rest_seen) {
-            $tick = self::$rest_tick;
-        } elseif (!$rest && !is_admin()) {
-            $tick = self::tick_in(wp_unslash($_POST)); // phpcs:ignore WordPress.Security.NonceVerification -- read-only; MotoPress's own submission
-        } else {
+        if (!self::$public_seen) {
             return; // not a channel this can vouch for — write nothing
         }
-        self::write_record($id, $tick);
+        self::write_record($id, self::$rest_tick);
     }
 
     /** Build and store the record. Never over an existing one. */
@@ -216,29 +236,6 @@ final class Policy_Record
         if (get_post_meta($booking_id, self::META, true) === '') {
             add_post_meta($booking_id, self::STAFF_META, '1', true);
         }
-    }
-
-    /**
-     * A booking CREATED (never updated) by an ordinary wp-admin screen request
-     * — the Add New wizard — is staff-entered. AJAX, cron and REST are not
-     * screens; an iCal import running in one is never marked.
-     *
-     * @param int $post_id
-     * @param mixed $post
-     * @param bool $update
-     */
-    public function mark_staff($post_id, $post, $update): void
-    {
-        if ($update || !$post instanceof \WP_Post || $post->post_type !== self::BOOKING_TYPE) {
-            return;
-        }
-        if (!is_admin() || wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST)) {
-            return;
-        }
-        if (!current_user_can('edit_posts')) {
-            return;
-        }
-        self::write_staff((int) $post_id);
     }
 
     /* ------------------------------------------------------------- display */

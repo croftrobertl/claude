@@ -12,10 +12,10 @@
  *  - add_post_meta()/update_post_meta() UNSLASH what they are given, as core
  *    does. Elementor's JSON is full of backslashes; a version stored without
  *    wp_slash() would come back altered and stop matching its fingerprint.
- *  - MotoPress's render is reproduced from what the Director read in 6.1.0
- *    (checkout-view.php ~531–537): the input markup and
- *    printf(_x("I've read and accept the %s", …), $link). The wrapping <p> and
- *    <label> are a STAND-IN; only those two facts are verified.
+ *  - MotoPress's render is the markup the Director read VERBATIM in live
+ *    MotoPress 6.3.0, checkout-view.php:498 renderTermsAndConditions(), with
+ *    mphb_open_terms_in_new_window = 1 as on live (so no terms-text <div>).
+ *    The <label> has NO `for`: it wraps the input.
  */
 define('ABSPATH', __DIR__);
 
@@ -78,6 +78,8 @@ function sanitize_text_field($v) { return is_string($v) ? trim(strip_tags($v)) :
 function admin_url($p = '') { return 'https://doracanalcourt.com/wp-admin/' . $p; }
 function wp_get_referer() { return $GLOBALS['referer']; }
 function is_admin() { return $GLOBALS['is_admin']; }
+function untrailingslashit($s) { return rtrim((string) $s, '/\\'); }
+function __return_true() { return true; }
 function wp_doing_ajax() { return !empty($GLOBALS['ajax']); }
 function wp_doing_cron() { return false; }
 function current_user_can($c, ...$a) { return $GLOBALS['caps']; }
@@ -145,7 +147,7 @@ function reset_site() {
     page(2394, 'cancellation-refund-policy', 'Cancellation & Refund Policy',
         '[{"elType":"widget","settings":{"editor":"<p>POLICY TEXT v1 \u2014 \"quoted\" C:\\\\path<\/p><script>alert(1)<\/script>"},"elements":[]}]');
     $r = new ReflectionClass(Policy_Record::class);
-    foreach (['rest_seen' => false, 'rest_tick' => false] as $k => $v) {
+    foreach (['public_seen' => false, 'admin_seen' => false, 'rest_tick' => false] as $k => $v) {
         $prop = $r->getProperty($k); $prop->setAccessible(true); $prop->setValue(null, $v);
     }
 }
@@ -159,15 +161,40 @@ function booking($id, $rooms = []) {
     return new class($id) { private $i; public function __construct($i) { $this->i = $i; } public function getId() { return $this->i; } };
 }
 
-/* ---- MotoPress's render: the Director's reading of 6.1.0 ----------------- */
+/* ---- MotoPress's two checkout controllers, as the Director read them in
+   live 6.3.0. The public one: the request is dispatched (core's
+   rest_request_before_callbacks runs), then the controller saves the booking
+   and fires mphb_create_booking_by_user($booking). The admin one
+   (SubmitAdminCheckoutController extends it) first fires
+   mphb_admin_checkout_rest_before_start($request), then adds
+   mphb_is_current_request_for_admin_ui => __return_true around the parent's
+   processing — so the same hook fires with that filter true. ---------- */
+const TICK = ['customer_fields' => ['mphb_accept_terms' => '1']];
+function public_checkout($bid, $params) {
+    $GLOBALS['rec']->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', $params));
+    do_action('mphb_create_booking_by_user', booking($bid));
+}
+function admin_checkout($bid, $params = []) {
+    $req = new WP_REST_Request('POST', '/mphb/v1/checkout/admin', $params);
+    $GLOBALS['rec']->capture_rest(null, null, $req);
+    do_action('mphb_admin_checkout_rest_before_start', $req);
+    add_filter('mphb_is_current_request_for_admin_ui', '__return_true');
+    do_action('mphb_create_booking_by_user', booking($bid));
+    remove_filter('mphb_is_current_request_for_admin_ui', '__return_true');
+}
+
+/* ---- MotoPress's render: the Director's reading of live 6.3.0 ------------ */
 function motopress_render_terms() {
-    $link = sprintf('<a href="%s" target="_blank">%s</a>',
-        esc_url(get_permalink(get_option('mphb_terms_and_conditions_page'))),
-        _x('terms & conditions', "I've read and accept the terms & conditions", 'motopress-hotel-booking'));
-    echo '<p class="mphb-terms-and-conditions-accept"><label for="mphb_accept_terms">'
-        . '<input type="checkbox" id="mphb_accept_terms" name="mphb_accept_terms" value="1" required> ';
-    printf(_x("I've read and accept the %s", "I've read and accept the <tag>terms & conditions</tag>", 'motopress-hotel-booking'), $link);
-    echo ' <abbr title="required">*</abbr></label></p>';
+    $termsPageId = get_option('mphb_terms_and_conditions_page');
+    if (!$termsPageId) { return; }
+    echo '<section class="mphb-checkout-terms-wrapper mphb-checkout-section">';
+    echo '<p class="mphb-terms-and-conditions-accept"><label>';
+    echo '<input type="checkbox" id="mphb_accept_terms" name="mphb_accept_terms" value="1" required="required" /> ';
+    $termsPagelink = '<a class="mphb-terms-and-conditions-link" href="' . esc_url(get_permalink($termsPageId)) . '" target="_blank">'
+        . _x('terms & conditions', "I've read and accept the terms & conditions", 'motopress-hotel-booking') . '</a>';
+    printf(_x("I've read and accept the %s", "I've read and accept the <tag>terms & conditions</tag>", 'motopress-hotel-booking'), $termsPagelink);
+    echo ' <abbr title="Required">*</abbr>';
+    echo '</label></p></section>';
 }
 function checkout_fragment(): string {
     ob_start();
@@ -176,6 +203,7 @@ function checkout_fragment(): string {
 }
 
 $rec = new Policy_Record();
+$GLOBALS['rec'] = $rec;
 $rec->register();
 add_action('mphb_sc_checkout_form', 'motopress_render_terms', 60, 0);
 
@@ -209,7 +237,7 @@ check('label: two links, each opening in a new tab (target=_blank, rel=noopener)
     ['https://doracanalcourt.com/terms-conditions/', 'https://doracanalcourt.com/cancellation-refund-policy/']);
 check('... the refund link is built from the PAGE ID setting (2394), never a typed URL', Config::refund_page_id(), 2394);
 check('label: the checkbox itself is untouched — still required, same name and value',
-    (bool) preg_match('#<input type="checkbox" id="mphb_accept_terms" name="mphb_accept_terms" value="1" required>#', $html), true);
+    (bool) preg_match('#<input type="checkbox" id="mphb_accept_terms" name="mphb_accept_terms" value="1" required="required" />#', $html), true);
 check('label: MotoPress\'s own "terms & conditions" link is not printed as well', substr_count($html, '<a '), 2);
 check('label: the swap is scoped — the same string OUTSIDE the box keeps MotoPress\'s wording',
     _x("I've read and accept the %s", "I've read and accept the <tag>terms & conditions</tag>", 'motopress-hotel-booking'),
@@ -249,8 +277,7 @@ foreach ([
 
 /* === 2. THE RECORD ======================================================= */
 reset_site();
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', ['mphb_accept_terms' => '1', 'room_details' => []]));
-$rec->on_booking_created(booking(501));
+public_checkout(501, TICK + ['room_details' => []]);
 $r1 = get_post_meta(501, Policy_Record::META, true);
 check('record (tick received): its keys are exactly when / channel / tick / label / policies — nothing about the guest',
     array_keys($r1), ['v', 'channel', 'at_gmt', 'tick', 'label', 'policies']);
@@ -272,26 +299,34 @@ check('... with both versions, saved, and a link to view each',
     substr_count($box, 'admin-post.php?action=dcc_policy_version&#038;sha='), 2);
 
 // Tick NOT received (the expected live case): never called "accepted".
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', ['room_details' => []]));
-$rec->on_booking_created(booking(502));
+public_checkout(502, ['room_details' => [], 'customer_fields' => ['mphb_first_name' => 'x']]);
 $r2 = get_post_meta(502, Policy_Record::META, true);
 check('record (tick absent from the submission): "not_received"', $r2['tick'], 'not_received');
 $box2 = Policy_Record::box_html(502);
 check('... the edit screen never says "accepted" for it', [strpos($box2, 'Policies accepted'), strpos($box2, 'Booked online: ') !== false], [false, true]);
 check('... same versions: no new copies stored', $versions(), 2);
 
-foreach (['1' => true, 'on' => true, 'yes' => true, '' => false, '0' => false, 'false' => false, 'off' => false] as $v => $want) {
-    check("tick_in: mphb_accept_terms=\"$v\" -> " . ($want ? 'received' : 'not received'), Policy_Record::tick_in(['mphb_accept_terms' => (string) $v]), $want);
+// Exactly what MotoPress 6.3.0 sends for a ticked box: customer_fields[mphb_accept_terms]=1.
+foreach ([
+    ['customer_fields[mphb_accept_terms] = "1" (what MotoPress sends)', TICK, true],
+    ['... "on"', ['customer_fields' => ['mphb_accept_terms' => 'on']], false],
+    ['... "true"', ['customer_fields' => ['mphb_accept_terms' => 'true']], false],
+    ['... "0"', ['customer_fields' => ['mphb_accept_terms' => '0']], false],
+    ['... "" ', ['customer_fields' => ['mphb_accept_terms' => '']], false],
+    ['... an integer 1, not the string', ['customer_fields' => ['mphb_accept_terms' => 1]], false],
+    ['... an array', ['customer_fields' => ['mphb_accept_terms' => ['1']]], false],
+    ['a TOP-LEVEL mphb_accept_terms (not where MotoPress puts it)', ['mphb_accept_terms' => '1'], false],
+    ['no customer_fields at all', [], false],
+    ['customer_fields without the box (unticked: not sent)', ['customer_fields' => ['mphb_first_name' => 'x']], false],
+] as [$label, $params, $want]) {
+    check('tick_in: ' . $label . ' -> ' . ($want ? 'received' : 'not received'), Policy_Record::tick_in($params), $want);
 }
-check('tick_in: an array is not a tick', Policy_Record::tick_in(['mphb_accept_terms' => ['1']]), false);
-check('tick_in: missing is not a tick', Policy_Record::tick_in([]), false);
 
 // A policy edit: new fingerprint, a SECOND copy, the old booking unchanged.
 $old_refund = sha_of_page(2394);
 $GLOBALS['meta'][2394]['_elementor_data'] = '[{"elType":"widget","settings":{"editor":"<p>POLICY TEXT v2<\/p>"},"elements":[]}]';
 // post_modified is deliberately NOT bumped — the Director's CLI edits did not.
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', ['mphb_accept_terms' => '1']));
-$rec->on_booking_created(booking(503));
+public_checkout(503, TICK);
 $r3 = get_post_meta(503, Policy_Record::META, true);
 check('policy edited (post_modified NOT bumped): the new booking gets a NEW fingerprint',
     $r3['policies'][1]['sha256'] !== $old_refund && $r3['policies'][1]['sha256'] === sha_of_page(2394), true);
@@ -309,37 +344,50 @@ check('... and nothing is captured for it either: no new copy stored', $versions
 // Fallback label recorded, refund page not recorded (it was not linked).
 reset_site();
 $GLOBALS['posts'][2394]->post_status = 'draft';
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', ['mphb_accept_terms' => '1']));
-$rec->on_booking_created(booking(504));
+public_checkout(504, TICK);
 $r4 = get_post_meta(504, Policy_Record::META, true);
 check('refund page unpublished: the record keeps MotoPress\'s label and only the Terms page',
     [$r4['label'], array_column($r4['policies'], 'role')], ["I've read and accept the terms & conditions", ['terms']]);
 
-// Plain front-end form post (no REST): $_POST is read.
+// The hook firing with no checkout route seen at all: nothing is vouched for.
 reset_site();
-$_POST = ['mphb_accept_terms' => '1'];
-$rec->on_booking_created(booking(505));
-check('front-end form post (no REST): the tick is read from the post', get_post_meta(505, Policy_Record::META, true)['tick'], 'received');
+$_POST = ['customer_fields' => ['mphb_accept_terms' => '1']];
+do_action('mphb_create_booking_by_user', booking(505));
+check('hook fired outside both checkout routes (even with a tick in $_POST): nothing written',
+    [get_post_meta(505, Policy_Record::META, true), get_post_meta(505, Policy_Record::STAFF_META, true)], ['', '']);
 
 /* === 3. STAFF, IMPORTED, NONE ============================================= */
+// Add New Booking -> /mphb/v1/checkout/admin. mphb_create_booking_by_user
+// FIRES HERE TOO (the Director's finding); it must never become an online record.
 reset_site();
-$GLOBALS['referer'] = 'https://doracanalcourt.com/wp-admin/admin.php?page=mphb_add_new_booking';
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', []));
-$rec->on_booking_created(booking(601));
-check('booking created from a wp-admin screen: NO online record', get_post_meta(601, Policy_Record::META, true), '');
+admin_checkout(601, TICK);
+check('Add New (admin route, as MotoPress runs it): NO online record, even with a tick in the request',
+    get_post_meta(601, Policy_Record::META, true), '');
 check('... "Entered by staff — not accepted online"', strip_tags(Policy_Record::box_html(601)), 'Entered by staff — not accepted online');
+check('... and no wp-admin referrer is involved', $GLOBALS['referer'], '');
+
+// Each of MotoPress's three staff signals is sufficient on its own.
+reset_site();
+add_filter('mphb_is_current_request_for_admin_ui', '__return_true');
+$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', TICK));
+do_action('mphb_create_booking_by_user', booking(602));
+remove_filter('mphb_is_current_request_for_admin_ui', '__return_true');
+check('staff signal 1 alone — mphb_is_current_request_for_admin_ui true: staff, even on the public route',
+    [get_post_meta(602, Policy_Record::META, true), get_post_meta(602, Policy_Record::STAFF_META, true)], ['', '1']);
+reset_site();
+do_action('mphb_admin_checkout_rest_before_start', null);
+do_action('mphb_create_booking_by_user', booking(603));
+check('staff signal 2 alone — mphb_admin_checkout_rest_before_start fired: staff',
+    get_post_meta(603, Policy_Record::STAFF_META, true), '1');
+reset_site();
+$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout/admin', TICK));
+do_action('mphb_create_booking_by_user', booking(604));
+check('staff signal 3 alone — the admin route: staff', get_post_meta(604, Policy_Record::STAFF_META, true), '1');
 
 reset_site();
-$GLOBALS['is_admin'] = true;
-$id = wp_insert_post(['post_type' => 'mphb_booking', 'post_status' => 'confirmed']);
-check('wp-admin screen creates a booking: marked staff-entered', strip_tags(Policy_Record::box_html($id)), 'Entered by staff — not accepted online');
-$GLOBALS['ajax'] = true;
-$id2 = wp_insert_post(['post_type' => 'mphb_booking']);
-check('... an AJAX request (e.g. an import) is not a screen: not marked', get_post_meta($id2, Policy_Record::STAFF_META, true), '');
-$GLOBALS['ajax'] = false;
-booking(602);
-$rec->mark_staff(602, $GLOBALS['posts'][602], true);
-check('... an UPDATE to an existing booking is never marked', get_post_meta(602, Policy_Record::STAFF_META, true), '');
+public_checkout(605, TICK);
+check('public route, filter false: the online record, never a staff mark',
+    [get_post_meta(605, Policy_Record::META, true)['tick'], get_post_meta(605, Policy_Record::STAFF_META, true)], ['received', '']);
 
 reset_site();
 booking(701);
@@ -356,15 +404,13 @@ check('no record, not staff, not imported: "No online acceptance on record"', st
 
 // Another REST route is not the checkout.
 reset_site();
-define('REST_REQUEST', true);
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/wp/v2/posts', ['mphb_accept_terms' => '1']));
-$rec->on_booking_created(booking(801));
+$rec->capture_rest(null, null, new WP_REST_Request('POST', '/wp/v2/posts', TICK));
+do_action('mphb_create_booking_by_user', booking(801));
 check('a booking created under some OTHER REST route: nothing written', get_post_meta(801, Policy_Record::META, true), '');
 
 /* === 4. THE VIEWER ======================================================== */
 reset_site();
-$rec->capture_rest(null, null, new WP_REST_Request('POST', '/mphb/v1/checkout', ['mphb_accept_terms' => '1']));
-$rec->on_booking_created(booking(901));
+public_checkout(901, TICK);
 $sha = sha_of_page(2394);
 $_GET = ['sha' => $sha];
 ob_start();

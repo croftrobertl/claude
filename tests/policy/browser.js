@@ -49,10 +49,10 @@ const page = fragment => `<!doctype html><html><head><meta name="viewport" conte
         const pg = await ctx.newPage();
         await pg.setContent(page(box('published')));
 
-        const label = await pg.$eval('label[for="mphb_accept_terms"]', l => l.innerText.replace(/\s+/g, ' ').trim());
+        const label = await pg.$eval('.mphb-terms-and-conditions-accept label', l => l.innerText.replace(/\s+/g, ' ').trim());
         check(`${width}px: the label reads as one sentence with both policies`,
             label, "I've read and accept the Terms & Conditions and the Cancellation & Refund Policy. *");
-        const links = await pg.$$eval('label[for="mphb_accept_terms"] a', as => as.map(a => [a.textContent, a.getAttribute('href'), a.target, a.rel, !!a.getClientRects().length]));
+        const links = await pg.$$eval('.mphb-terms-and-conditions-accept label a', as => as.map(a => [a.textContent, a.getAttribute('href'), a.target, a.rel, !!a.getClientRects().length]));
         check(`${width}px: two visible links, each target=_blank rel=noopener`, links, [
             ['Terms & Conditions', 'https://doracanalcourt.com/terms-conditions/', '_blank', 'noopener', true],
             ['Cancellation & Refund Policy', 'https://doracanalcourt.com/cancellation-refund-policy/', '_blank', 'noopener', true],
@@ -72,7 +72,7 @@ const page = fragment => `<!doctype html><html><head><meta name="viewport" conte
         await pg.click('input[type=submit]');
         check(`${width}px: ticked, it submits`, await pg.evaluate(() => window.submits), 1);
         const geo = await pg.evaluate(() => ({
-            right: Math.max(...Array.from(document.querySelectorAll('label[for="mphb_accept_terms"], label[for="mphb_accept_terms"] a'))
+            right: Math.max(...Array.from(document.querySelectorAll('.mphb-terms-and-conditions-accept label, .mphb-terms-and-conditions-accept label a'))
                 .map(e => e.getBoundingClientRect().right)),
             page: document.documentElement.scrollWidth - window.innerWidth,
         }));
@@ -80,7 +80,7 @@ const page = fragment => `<!doctype html><html><head><meta name="viewport" conte
 
         await pg.setContent(page(box('unpublished')));
         check(`${width}px, refund page unpublished: MotoPress's original label and its one link`,
-            await pg.$eval('label[for="mphb_accept_terms"]', l => [l.innerText.replace(/\s+/g, ' ').trim(), l.querySelectorAll('a').length]),
+            await pg.$eval('.mphb-terms-and-conditions-accept label', l => [l.innerText.replace(/\s+/g, ' ').trim(), l.querySelectorAll('a').length]),
             ["I've read and accept the terms & conditions *", 1]);
         await ctx.close();
     }

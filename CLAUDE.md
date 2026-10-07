@@ -215,6 +215,11 @@ yours to improvise.
 
 ## DCC Custom Checkout — release artifacts
 
+- **Live MotoPress Hotel Booking is 6.3.0** (Director, the plugin header,
+  2026-10-07). Earlier entries here — and `SITE-CONTEXT.md`, which this
+  plugin does not edit — say 6.1.0; that was wrong. Facts marked "live 6.3.0"
+  were read from the live files.
+
 - **Naming of files handed to the owner** (owner preference, corrected
   2026-09-13). Two rules, and the distinction matters:
   - **Plugin zips take NO dash**: `Custom Checkout <version>.zip` (e.g.
@@ -811,7 +816,8 @@ yours to improvise.
     only (below). The dropdown has NO `name`, so it never submits. The native
     pet rows are hidden; the boxes still submit (display-only hiding, as on
     the checkout). The search step (no `[adults]` chooser) gets no dropdown.
-    DCC-VERIFY: `getCheckInDate()`/`getCheckOutDate()` on the wizard's booking.
+    VERIFIED (live 6.3.0): Booking has `getCheckInDate()`/`getCheckOutDate()`
+    (booking.php:487/495); Rob's 0.29.0 phone test added the pet fee on 34.
   - **Edit screen: a read-only "Pet fee: Yes/No" line** at the end of the
     Guests box (`Admin_Guests::render()`), and Dog follows it.
     **`Admin_Fields::booking_pet_fee()`** reads `_mphb_services` on the
@@ -931,8 +937,11 @@ yours to improvise.
   reaches the server if the admin submits. Found by MotoPress's own markup —
   `mphb_room_details[N][guest_name]` or the input in
   `.mphb-guest-name-wrapper` (that class is confirmed: the site's Customizer
-  CSS hides it on the public checkout) — **the admin markup is NOT confirmed
-  on live** [Director]; when neither is found it does nothing. Add New only.
+  CSS hides it on the public checkout). **VERIFIED** (live 6.3.0,
+  checkout-view.php:290–294): `<p class="mphb-guest-name-wrapper"><label
+  for="{idPrefix}-guest-name">…<input type="text" name="{namePrefix}[guest_name]">`,
+  preset via `mphb_sc_checkout_preset_guest_name`; Rob's phone test: it
+  fills. When neither selector matches it does nothing. Add New only.
 - **0.30.0 — THE ACCEPTANCE BOX AND THE ACCEPTANCE RECORD** (Rob's picks
   2026-10-07: "One box, both links" / "Yes, record it"; `Policies` and
   `Policy_Record`; suites `tests/policy/run.php` and `tests/policy/browser.js`).
@@ -951,29 +960,31 @@ yours to improvise.
     original label exactly [Director].
   - **How it is swapped**: a `gettext_with_context` filter added at
     `mphb_sc_checkout_form` priority 59 and removed at 61, around MotoPress's
-    `renderTermsAndConditions` at 60 (Director, MotoPress 6.1.0). It matches
+    `renderTermsAndConditions` at 60. It matches
     the exact msgid + context the Director read, and returns the full label
     with every `%` doubled, because MotoPress feeds it to `printf()` with its
     own link as the one argument (ignored — ours has no placeholder; PHP 8
     throws on an unknown specifier, so an unescaped `%` in a URL would crash
     the checkout render). Scoped, so any OTHER use of that msgid keeps
-    MotoPress's wording. **Where else MotoPress prints this box could not be
-    checked here** (its source is unreachable — below); the scoping means
-    elsewhere is unchanged either way. The test's MotoPress render is a
-    STAND-IN of the two verified facts (input markup, `printf(_x(...))`).
-  - **DOES THE TICK REACH THE SERVER? Not verifiable from this session, and
-    probably not.** wordpress.org is blocked by the session's network policy
-    (gateway 403 on downloads/svn/api.wordpress.org — not to be routed
-    around), so MotoPress's JS could not be read. The evidence on record is
-    `class-checkout-request.php`'s staging hook trace: MotoPress submits a
-    NORMALISED payload (`check_in_date`, `check_out_date`, `checkout_id`,
-    `coupon_code`, `customer_fields`, `lang`, `room_details`) and drops other
-    top-level fields. No terms key there. Rob's pick: **record honestly now**
-    — the record reads `mphb_accept_terms`/`accept_terms` from the REST
-    params (captured at `rest_request_before_callbacks` on MotoPress's route)
-    or `$_POST`, and says `not_received` when absent. **Rob's one test
-    booking settles it**; if "not received", a follow-up adds a carrier for
-    the tick, built against what that booking showed.
+    MotoPress's wording. **VERIFIED in live MotoPress 6.3.0** (Director,
+    2026-10-07): `checkout-view.php:498` prints the label UNESCAPED (phpcs:ignore),
+    the box's only caller is `step-checkout.php:79`, the sentence appears
+    nowhere else in MotoPress's PHP or JS, and Add New Booking has no terms
+    box. The label is rendered only when `mphb_open_terms_in_new_window` is on
+    or terms text is set (live: on). Its `<label>` has NO `for` — it wraps the
+    input; the test render is now that markup verbatim.
+  - **THE TICK DOES REACH THE SERVER — inside `customer_fields`** (Director,
+    live 6.3.0 source, 2026-10-07; the "probably not" this entry first carried
+    came from an old staging trace and was WRONG). `mphb.js`
+    `_parseBookingDetails()` puts every unknown `mphb…` form field into
+    custom_fields, and `_buildFormData()` sends it as
+    `customer_fields[mphb_accept_terms]=1` (multipart, so `$_POST` is filled
+    too); an unticked box is not sent at all. `ParseUtils::parseCustomer()`
+    then keeps only REGISTERED customer fields, so the BOOKING never carries
+    it. The record therefore reads the REQUEST (captured at
+    `rest_request_before_callbacks`), never booking data, and "received" means
+    exactly the string `'1'`. Lesson: a payload "trace" of the keys that
+    survive is not a trace of what was SENT.
   - **The record** (`_dcc_policy_acceptance` on the booking, written once at
     `mphb_create_booking_by_user`, `add_post_meta(..., unique)`, never over an
     existing row and never to an existing booking): `at_gmt`, `tick`
@@ -992,14 +1003,31 @@ yours to improvise.
     read back and re-hashed; one that does not match is not reported saved,
     and the viewer says so. Mutation `pol-version-unslashed` pins it.
   - **Who made the booking** (display order): a record → it; an import
-    (`mphb_ical_prodid` on the booking or a reserved room — the Availability
-    Calendar's live reader) → "Imported booking — not accepted on this site"
-    (Rob's pick "Distinguish imports"); a staff mark → "Entered by staff — not
-    accepted online"; otherwise "No online acceptance on record". Staff mark
-    (`_dcc_policy_staff`) is written for a NEW booking created either by a
-    wp-admin screen request (`wp_insert_post`, not AJAX/cron/REST) or by a
-    checkout submission REFERRED from wp-admin (the same test the Extras
-    rename uses). DCC-VERIFY: which of the two the Add New wizard takes.
+    (`mphb_ical_prodid` non-empty on the booking — live: on 143 of 413
+    bookings, on no reserved room; the reserved-room fallback is kept from the
+    Availability Calendar's reader) → "Imported booking — not accepted on this
+    site" (Rob's pick "Distinguish imports"); a staff mark → "Entered by staff —
+    not accepted online"; otherwise "No online acceptance on record".
+  - **STAFF IS DECIDED BY MOTOPRESS'S OWN SIGNALS, NOT A REFERRER** (0.30.1).
+    0.30.0 used the wp-admin referrer and was wrong in the way that matters:
+    Add New Booking's "Submit Booking" POSTs to `/mphb/v1/checkout/admin`
+    (`SubmitAdminCheckoutController extends SubmitCheckoutController`), whose
+    parent FIRES `mphb_create_booking_by_user` — so a staff booking would have
+    been recorded "online" whenever no referrer came through. Now staff = any
+    of: `mphb_is_current_request_for_admin_ui` true (the admin controller adds
+    `__return_true` around its parent call), the
+    `mphb_admin_checkout_rest_before_start` action, or the admin route itself
+    — each tested ALONE, with a mutation each. An online record needs the
+    exact public route `/mphb/v1/checkout`. The `$_POST` fallback and the
+    `wp_insert_post` staff marker were REMOVED: no live path was shown to use
+    them, and the owner's rule is to act only on what is proven.
+  - **FOUND, REPORTED, NOT FIXED: the REST backstops run on staff bookings.**
+    `Rest_Guard::route_matches()` is a SUBSTRING test on `/mphb/v1/checkout`,
+    which `/mphb/v1/checkout/admin` contains, and the guard has no staff
+    exemption — so the Guest 2/3/4, pet and extra-guest backstops validate
+    every Add New submission, although the wp_loaded backstops deliberately
+    exempt wp-admin "so an admin is never fought". Whether it has ever refused
+    a staff booking is not known. Left as is pending Rob's decision.
   - **Viewer**: `admin-post.php?action=dcc_policy_version&sha=…`, `edit_posts`,
     read only, the derived text through `wp_kses_post` plus the exact stored
     data escaped. No enforcement anywhere: a booking is never refused over

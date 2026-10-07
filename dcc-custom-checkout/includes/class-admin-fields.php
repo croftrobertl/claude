@@ -105,9 +105,10 @@ final class Admin_Fields
      * (v0.28.0). 0 when the dates cannot be read; the script then uses the
      * room's only pet service, or leaves the pet fee to be chosen by hand.
      *
-     * DCC-VERIFY: getCheckInDate()/getCheckOutDate() on the booking under
-     * construction are reasoned from MotoPress's Booking entity, not observed.
-     * Every miss returns 0, which only ever means "say nothing".
+     * VERIFIED (Director, live MotoPress 6.3.0, 2026-10-07): Booking has
+     * getCheckInDate()/getCheckOutDate() (booking.php:487/495), and Rob's
+     * 0.29.0 phone test on Cottage 34 added the pet fee for the stay. Every
+     * miss still returns 0, which only ever means "say nothing".
      *
      * @param mixed $booking
      */
@@ -134,8 +135,11 @@ final class Admin_Fields
      * Room-type IDs for the booking being created, read from whichever of the
      * two hook arguments actually carries them.
      *
-     * DCC-VERIFY: provisional — confirm against live MotoPress.
-     * $details is documented as an array of [room_id, room_type_id, rate_id];
+     * The hook and its two arguments are VERIFIED (live 6.3.0:
+     * do_action('mphb_cb_checkout_form', $booking, $details),
+     * templates/create-booking/checkout/checkout-form.php:34; Booking has
+     * getReservedRooms(), booking.php:512). DCC-VERIFY, still: the SHAPE of
+     * $details. It is documented as an array of [room_id, room_type_id, rate_id];
      * the booking object is tried as a second source. Both are best-effort and
      * an empty result simply means "say nothing", never a wrong answer.
      *

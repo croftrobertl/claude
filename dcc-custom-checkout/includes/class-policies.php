@@ -26,7 +26,7 @@ final class Policies
     public const META_BUNDLE = '_dcc_pv_bundle';
     public const META_SHA    = '_dcc_pv_sha256';
 
-    /** MotoPress's own label, as the Director read it in 6.1.0 (checkout-view.php). */
+    /** MotoPress's own label, as the Director read it in live 6.3.0 (checkout-view.php:498). */
     public const MP_LABEL_TEXT    = "I've read and accept the %s";
     public const MP_LABEL_CONTEXT = "I've read and accept the <tag>terms & conditions</tag>";
     public const MP_LINK_TEXT     = 'terms & conditions';

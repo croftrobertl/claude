@@ -1561,39 +1561,6 @@
   "count": 1
  },
  {
-  "id": "pol-staff-referer-ignored",
-  "file": "dcc-custom-checkout/includes/class-policy-record.php",
-  "suites": [
-   "policy"
-  ],
-  "claim": "0.30.0 a booking created from a wp-admin screen gets no online record",
-  "find": "        if (self::from_admin()) {",
-  "replace": "        if (false) {",
-  "count": 1
- },
- {
-  "id": "pol-staff-marks-updates",
-  "file": "dcc-custom-checkout/includes/class-policy-record.php",
-  "suites": [
-   "policy"
-  ],
-  "claim": "0.30.0 only a NEW booking is marked staff-entered, never an update",
-  "find": "        if ($update || !$post instanceof \\WP_Post",
-  "replace": "        if (!$post instanceof \\WP_Post",
-  "count": 1
- },
- {
-  "id": "pol-staff-marks-ajax",
-  "file": "dcc-custom-checkout/includes/class-policy-record.php",
-  "suites": [
-   "policy"
-  ],
-  "claim": "0.30.0 an AJAX request (an import) is not a staff screen",
-  "find": "        if (!is_admin() || wp_doing_ajax() || wp_doing_cron()",
-  "replace": "        if (!is_admin() || wp_doing_cron()",
-  "count": 1
- },
- {
   "id": "pol-other-rest-recorded",
   "file": "dcc-custom-checkout/includes/class-policy-record.php",
   "suites": [
@@ -1602,17 +1569,6 @@
   "claim": "0.30.0 a booking under any other REST route gets no record",
   "find": "            return; // not a channel this can vouch for — write nothing",
   "replace": "            $tick = false;",
-  "count": 1
- },
- {
-  "id": "pol-rest-route-any",
-  "file": "dcc-custom-checkout/includes/class-policy-record.php",
-  "suites": [
-   "policy"
-  ],
-  "claim": "0.30.0 the tick is read from MotoPress's checkout route only",
-  "find": "            && Rest_Guard::route_matches((string) $request->get_route())) {",
-  "replace": "            ) {",
   "count": 1
  },
  {
@@ -1723,6 +1679,83 @@
   "claim": "0.30.0 'None' (0) is a valid refund-page choice",
   "find": "        if ($rp === 0) {\n            $out['refund_page_id'] = 0;",
   "replace": "        if ($rp === 0) {\n            $out['refund_page_id'] = 2394;",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-filter-ignored",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 staff signal: mphb_is_current_request_for_admin_ui (MotoPress 6.3.0) makes it staff",
+  "find": "        if (self::$admin_seen || apply_filters('mphb_is_current_request_for_admin_ui', false)) {",
+  "replace": "        if (self::$admin_seen) {",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-action-ignored",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 staff signal: mphb_admin_checkout_rest_before_start makes it staff",
+  "find": "    public function note_admin_checkout(): void\n    {\n        self::$admin_seen = true;",
+  "replace": "    public function note_admin_checkout(): void\n    {\n        self::$admin_seen = false;",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-route-ignored",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 staff signal: the /mphb/v1/checkout/admin route makes it staff",
+  "find": "            if (self::route_is($route, self::ROUTE_ADMIN)) {\n                self::$admin_seen = true;",
+  "replace": "            if (self::route_is($route, self::ROUTE_ADMIN)) {\n                self::$admin_seen = false;",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-all-ignored",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 Add New (admin route) never gets an online record",
+  "find": "        if (self::$admin_seen || apply_filters('mphb_is_current_request_for_admin_ui', false)) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "pol-public-route-any",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 an online record needs the PUBLIC checkout route",
+  "find": "        if (!self::$public_seen) {\n            return; // not a channel this can vouch for — write nothing",
+  "replace": "        if (false) {\n            return; // not a channel this can vouch for — write nothing",
+  "count": 1
+ },
+ {
+  "id": "pol-tick-loose",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 the tick is exactly '1' (what MotoPress sends)",
+  "find": "&& $cf['mphb_accept_terms'] === '1';",
+  "replace": "&& !empty($cf['mphb_accept_terms']);",
+  "count": 1
+ },
+ {
+  "id": "pol-tick-top-level",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.1 the tick is read from customer_fields, where MotoPress 6.3.0 puts it",
+  "find": "        $cf = $params['customer_fields'] ?? null;",
+  "replace": "        $cf = $params;",
   "count": 1
  }
 ]

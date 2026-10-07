@@ -606,9 +606,10 @@ final class Config
      * The Service IDs actually attached to an accommodation type, or null when
      * that cannot be determined.
      *
-     * DCC-VERIFY: provisional — confirm against live MotoPress.
-     * MotoPress stores per-accommodation service assignment differently across
-     * versions, so this reads the public API and returns null when it cannot
+     * VERIFIED (Director, live MotoPress 6.3.0): RoomType::getServices()
+     * returns $this->servicesIds, loaded from the room type's mphb_services
+     * meta (room-type-repository.php:105) — a list of service IDs, so an empty
+     * meta list is a definite "none". This still reads the public API and returns null when it cannot
      * read it; an empty array means the list was read and is empty. Callers
      * MUST treat null as "unknown" and fail open — never hide something on the
      * strength of a failed read.
