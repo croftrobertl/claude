@@ -692,13 +692,9 @@ yours to improvise.
     it does not know stays visible after the known groups under an **"Other"**
     heading (owner's pick), which exists only while such a row does.
   - **A heading hides when every row under it is hidden by the gating**, and
-    comes back with the toggle and the sticky-values rule. NB: Guest 3/4 are
-    hidden by default on EVERY cottage (the owner decision behind
-    `NEED_SHOW_ALL`, explained at `init()` in `admin-booking.js`), not only on two-sleepers as the brief's example put it;
-    the headings follow the rows, so they do the same.
-  - **"Show all booking fields" sits above the first group it governs**
-    (owner's pick), computed from the gating's own `min > included_guests`
-    test — Guest 3 at the default, Guest 4 when "Guests included" is 3.
+    comes back when the guest count, the Pet Fee choice or a filled value
+    shows a row again (since 0.28.0; it used to follow the "Show all" toggle,
+    which is gone).
   - **Idempotent**: an already-ordered box is not touched, so the gating's
     MutationObserver, which now calls it, cannot feed itself. Asserted (zero
     childList records after a provoked re-run).
@@ -755,36 +751,99 @@ yours to improvise.
     script treats exactly like the add-booking step's marker. **All or
     nothing**: one unreadable room states nothing, and the screen shows
     everything as before — a partial answer could hide a group the unreadable
-    room needs. **Guest 3/4 follow the SAME rule as new bookings** — hidden
-    unless stored or "Show all" (owner's pick, 2026-10-06). The brief described
-    a guest-count test; the code has never used one, so he was asked, and no
-    count is read. (Had it been, MotoPress's capacity-filled `_mphb_adults` on
-    imports would have shown Guest 3/4 on bookings that never had them.)
-  - **The "Show all" box is a full-width row** among table rows (owner's pick,
-    v0.27.0; `tr.dcc_admin-showall-row`, colspan from the anchor row). It was a
-    bare `<div>` in the `<tbody>`.
-  - **The fail-open path now tells the checkbox it hides nothing** (v0.27.0).
-    It returned before `hatch.update()`, so on any screen where the cottage
-    could not be read the box stayed up, unticked, beside a box already
-    showing everything, under a hint saying fields were hidden — seen on live
-    on booking 19615 under 0.26.0, and the v0.22.0 rule says it must step
-    aside. Found by the suite's existing-booking case, not by reading.
-  - **The hint text changed** (v0.27.0) to be true on new AND existing
-    bookings AND at any "Guests included": "Guest %s details are hidden unless
-    this booking already has them saved, and so are pet details on a cottage
-    that does not take dogs. The Extra Guest Fee row is hidden too. Tick to
-    show every field — …", where %s is built from the same `min > included`
-    test as the gating ("3–4" at the default, "4" at 3; a pet-only variant when
-    no guest group is gated). The old one said pet details were "hidden by
-    default" (false on any pet cottage), and a fixed "Guest 3–4" would have
-    been false at "Guests included" = 3 — a setting must reach every reader,
-    the help text included. Mutation `php-hint-ignores-setting`. **A changed English source string is a new string to
-    LocoTranslate**: any translation of the old hint no longer applies.
-- **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
-  MotoPress's. It names how many fields it is hiding and hides itself when it
-  is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
-  working as designed: on an EXISTING booking every field holding a value stays
-  visible whatever the accommodation, so there is often nothing left to reveal.
+    room needs. **SUPERSEDED IN 0.28.0 for Guest 3/4:** they now follow the
+    saved guest count (see the 0.28.0 entry below). 0.27.0 hid them unless
+    stored or "Show all" and read no count; Rob then chose the count, used AS
+    STORED — so an import whose `_mphb_adults` MotoPress filled with the
+    capacity (4) now shows Guest 3 and 4 headings over empty rows. That is
+    his informed pick, not an oversight.
+  - **"Show all booking fields" and its hint are GONE** (owner's pick,
+    0.28.0: "Remove it; dropdown everywhere"). With it went the full-width
+    `tr.dcc_admin-showall-row` (0.27.0), the fail-open `hatch.update()` path
+    (0.27.0), `NEED_SHOW_ALL` and the "Guest %s details are hidden…" hint —
+    those strings no longer exist, so LocoTranslate will list their
+    translations as obsolete.
+- **0.28.0 — THE BOOKING SCREENS ARE DRIVEN BY FACTS, NOT BY A TOGGLE** (Rob's
+  picks from his Add New recordings, 2026-10-06/07; `admin-booking.js`
+  rewritten). Three rules in order: **fail open** (anything unreadable shows),
+  **a filled field always stays visible** (with a note when the facts say it
+  would otherwise be hidden — nothing is ever cleared), **facts decide**.
+  - **Guest count drives Guest 3/4.** A group shows when the count is ≥ its
+    `min` from `guestGroups` (never a literal), so "Guests included" = 3 moves
+    it. The count is the SAME one the fee sync reads: MotoPress's
+    `[adults]` selects, else the Guests box (`dcc_adults[...]`), else
+    `CFG.statedGuests`. Several rooms → the maximum; any blank → null → show.
+    Lowering the count re-hides an empty group; a filled one stays with the
+    note "More guest names than guests." (`dcc_admin-group-note`).
+  - **`Admin_Fields::booking_guest_count()`** states the saved count on the
+    edit screen: max `_mphb_adults` over the reserved rooms, used AS STORED
+    (Rob's pick — see the capacity-fill caveat in the 0.27.0 entry above).
+    One room unreadable or < 1 → null → show everything.
+  - **The Extra Guest Fee row is NEVER shown on wp-admin**
+    (`.dcc_admin-fee-row`, `!important`), not even before the count is read.
+    Number of Guests is its only control: `syncExtraGuestFee()` ticks it above
+    the included guests and **always writes the multiplier**, unticking too —
+    MotoPress prices a ticked box × its "for N" select, and a stale N was a
+    wrong charge waiting for the next tick. No waive or override (Rob). If
+    every service row on the screen is ours, the "Additional Services"
+    heading hides with it.
+  - **The read-only fee line** `p.dcc_admin-feeline` under Number of Guests:
+    "Extra guest fee: 1 guest × $50/night" / "%1$d guests × …". Nothing at or
+    below the included guests. Add New only — the edit screen has no services
+    UI.
+  - **"Pet Fee:" Yes/No dropdown** (Rob's own design, replacing a checkbox he
+    called "floating mislabeled"), placed after Number of Guests on Add New.
+    Yes ticks the stay-length bucket and shows Dog; No unticks it and hides
+    Dog. **The bucket is chosen by PHP**: `wizard_pet_service()` →
+    `Config::service_id_for_nights()`, printed as `data-dcc-pet-service` on
+    the room-context marker — the JS never re-derives it. With no stated
+    bucket the room's ONLY pet box is used; with several and none stated the
+    native rows stay visible with "Choose the pet fee under Additional
+    Services." — never a guess between prices. On a cottage with no pet
+    service, Yes shows Dog and says "This cottage has no pet fee, so nothing
+    is charged." The dropdown has NO `name`, so it never submits. The native
+    pet rows are hidden; the boxes still submit (display-only hiding, as on
+    the checkout). The search step (no `[adults]` chooser) gets no dropdown.
+    DCC-VERIFY: `getCheckInDate()`/`getCheckOutDate()` on the wizard's booking.
+  - **Edit screen: a read-only "Pet fee: Yes/No" line** at the end of the
+    Guests box (`Admin_Guests::render()`), and Dog follows it.
+    **`Admin_Fields::booking_pet_fee()`** reads `_mphb_services` on the
+    reserved rooms in the three shapes the Calendar's `has_pet_service`
+    accepts (list of ids, map id⇒qty, list of arrays with `id`) against
+    `Config::pet_service_id_list()`. Absent/empty → no fee; any other
+    unreadable shape → null → "could not be read, so the dog details are
+    shown." DCC-VERIFY: the live shape of `_mphb_services` was not observed.
+  - **Add New customer step gets the order and headings** (C). That step is
+    MotoPress's FRONT-END form (`<p>` rows in `section#mphb-customer-details`),
+    so `customerLayout()` has a FLOW mode beside TABLE mode: headings are
+    `div.dcc_admin-group-heading`, control-less elements before the first
+    known row stay first, control-less ones after a known row travel with it
+    (hints, `<br>`s). It **stands down** — a console note, the step left as
+    drawn — if the box also holds an adults select or services, because then
+    it is not the customer box. Labels untouched.
+  - **THE ADD NEW FIXTURE IS A STAND-IN BUILT FROM ROB'S RECORDINGS** (Cottage
+    36, Nov 20–21 2026), not markup: that step needs a login and a Reserve
+    press. Its first check-list item is "did it match". Unknown: whether the
+    trailing Total / Status / Submit share the customer container (they would
+    land under "Other"), and the services heading's tag (assumed h1–h6).
+    **When real markup is available, replace it** (v0.9.0, again).
+  - **Price Breakdown "proof" is of the INPUTS**: the suite's stand-in prices
+    $175 + $50 × multiplier per ticked fee + $35 pet, and asserts 1/2/3/4/2/1
+    guests read $194.25 / $194.25 / $244.25 / $294.25 / … and the pet total.
+    It proves what MotoPress is GIVEN (which boxes, which N), not MotoPress's
+    arithmetic.
+  - **Fixed in passing: the Guests box was being decorated as a fee chooser**
+    since 0.27.0 — `dcc_adults[...]` matched the `select[name*="adults"]`
+    fallback and got "(+$50/night)" option suffixes on couch cottages.
+    `adultsSelects()` now excludes `dcc_` names and anything under
+    `[services]`; mutation `js-adults-includes-dcc`.
+  - **Phone width (F), admin only**: at ≤ 782px a service label stacks — tick
+    + name, price (`<em>`), the "for N" picker — via
+    `label:has(input[name*="[services]"][name$="[id]"])`. Unchanged at 1280.
+    **The public checkout cannot have this overflow**: it hides the native
+    services section outright (v0.7.0), so there is nothing to report there.
+  - Unchanged: stored data, field names, save logic; `checkout.js` /
+    `checkout.css` untouched.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1143,8 +1202,9 @@ yours to improvise.
   Whole files with no suite at all: `class-assets.php` (418), `tap-debug.js`
   (450). (`admin-booking.js` and `class-admin-fields.php` gained
   `tests/admin-layout/` in 0.26.0 — the layout and, through it, the gating's
-  hide/show per cottage, the toggle and sticky values; the Extra Guest Fee
-  slaving in `syncExtraGuestFee()` is still untested.) The fail-open family — `class-config.php:493-495`
+  hide/show per cottage and sticky values; 0.28.0 added the guest-count and
+  pet gating, and the Extra Guest Fee slaving in `syncExtraGuestFee()` —
+  tick, multiplier, fee line — is now tested against a stand-in breakdown.) The fail-open family — `class-config.php:493-495`
   ("callers MUST treat null as unknown and fail open"),
   `class-admin-fields.php:30-31`, `admin-booking.js:302/357` — is untested
   everywhere it is claimed.

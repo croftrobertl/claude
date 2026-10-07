@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.1
+Stable tag: 0.28.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,34 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.28.0 =
+WP-Admin booking screens only (owner's picks, 2026-10-06/07). The public
+checkout, emails, invoices, stored data and field names are unchanged.
+* Guest 3 and Guest 4 now follow the guest count: they appear once Number of
+  Guests reaches 3 (or 4) on Add New Booking, and by the booking's saved count
+  on the edit screen. Lowering the count hides them again, unless names are
+  already in them -- those stay, with a short note that there are more guest
+  names than guests. Nothing is ever cleared.
+* Number of Guests is now the only control for the Extra Guest Fee. Its row in
+  Additional Services is never shown; the fee is ticked, and its "for N
+  guests" set, from the count -- including when it is unticked, so it is never
+  left at a stale number. A read-only line under Number of Guests says what is
+  being charged ("Extra guest fee: 1 guest x $50/night").
+* New "Pet Fee: Yes / No" dropdown under Number of Guests on Add New Booking.
+  On a cottage that takes dogs, Yes ticks the pet fee for the length of stay
+  and shows the Dog fields; No unticks it and hides them (unless already
+  filled in). On a cottage with no pet fee, Yes shows the Dog fields and says
+  plainly that nothing is charged. The edit screen shows a read-only "Pet fee:
+  Yes / No" in the Guests box, and the Dog fields follow the saved fee.
+* "Show all booking fields" is removed; the two dropdowns replace it.
+* The Add New Booking customer step gets the same order and light headings as
+  the edit screen, with MotoPress's labels as drawn there.
+* At phone width, an Additional Services row stacks (name, price, "for N")
+  instead of running off the screen.
+* FIX: since 0.27.0 the edit screen's own Guests box could show "(+$50/night)"
+  beside its numbers on a couch cottage. That box does not change the fee; the
+  labels are gone.
 
 = 0.27.1 =
 * FIX: on the WP-Admin booking screen, "Upload Photo ID" was moved to the end of

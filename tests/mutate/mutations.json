@@ -946,7 +946,7 @@
    "admin-layout"
   ],
   "claim": "0.26.0 headings follow the gating when the cottage changes",
-  "find": "            // A heading hides when every row under it is hidden.\n            if (layout) { layout.refresh(); }\n",
+  "find": "            if (layout) { layout.arrange(); layout.refresh(); }\n",
   "replace": "",
   "count": 1
  },
@@ -973,25 +973,14 @@
   "count": 1
  },
  {
-  "id": "js-layout-non-table",
+  "id": "js-layout-flow-guard",
   "file": "dcc-custom-checkout/assets/admin-booking.js",
   "suites": [
    "admin-layout"
   ],
-  "claim": "0.26.0 only table rows are moved; any other layout is left as MotoPress drew it",
-  "find": "                    var tr = el.closest('tr');",
-  "replace": "                    var tr = el.closest('tr, p');",
-  "count": 1
- },
- {
-  "id": "js-layout-hatch-ignores-governed",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.26.0 the Show-all checkbox sits above the first group it governs",
-  "find": "                if (hatch && !hatchPlaced && gr.g.governed) {",
-  "replace": "                if (hatch && !hatchPlaced) {",
+  "claim": "0.28.0 a flow container holding Number of Guests or services is not the customer box",
+  "find": "            if (!table && (adultsSelects(box).length || box.querySelector('input[name*=\"[services]\"]'))) {",
+  "replace": "            if (false) {",
   "count": 1
  },
  {
@@ -1003,17 +992,6 @@
   "claim": "0.26.0 Guest 1 reads First, Last, Phone, Email (Rob's order)",
   "find": "$mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email')",
   "replace": "$mp('first_name'), $mp('last_name'), $mp('email'), $mp('phone')",
-  "count": 1
- },
- {
-  "id": "php-layout-governed-literal",
-  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.26.0 'governed' follows included_guests (a setting reaches its consumer)",
-  "find": "                'governed' => ($min[3] ?? 3) > $included,",
-  "replace": "                'governed' => true,",
   "count": 1
  },
  {
@@ -1045,41 +1023,8 @@
    "admin-layout"
   ],
   "claim": "0.27.0 a row referencing mphb_upload_id is the Photo ID even without the class",
-  "find": "                    if (free[i].querySelector('[for=\"' + n + '\"], [id=\"' + n + '\"], [name=\"' + n + '\"]')) {",
+  "find": "                    if (free[i].matches('[name=\"' + n + '\"]') ||\n                            free[i].querySelector('[for=\"' + n + '\"], [id=\"' + n + '\"], [name=\"' + n + '\"]')) {",
   "replace": "                    if (false) {",
-  "count": 1
- },
- {
-  "id": "js-hatch-failopen-stays-up",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 with nothing hidden (cottage unreadable) the Show-all box steps aside",
-  "find": "                if (hatch) { hatch.update(0, showAll); }\n",
-  "replace": "",
-  "count": 1
- },
- {
-  "id": "js-hatch-bare-div",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 among table rows the Show-all box is a full-width row",
-  "find": "        if (anchor.tagName === 'TR') {",
-  "replace": "        if (false) {",
-  "count": 1
- },
- {
-  "id": "php-hint-ignores-setting",
-  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 the Show-all hint names the groups the setting actually hides",
-  "find": "            $range = count($mins) === 1 ? (string) $mins[0] : $mins[0] . '–' . $mins[count($mins) - 1];",
-  "replace": "            $range = '3–4';",
   "count": 1
  },
  {
@@ -1089,8 +1034,8 @@
    "admin-layout"
   ],
   "claim": "0.27.1 the Photo ID is matched with NO file stored (placeholder row) — 0.27.0's live defect",
-  "find": "                return c.tagName === 'TR' && used.indexOf(c) === -1;",
-  "replace": "                return c.tagName === 'TR' && c.classList.contains('mphb-link-button-row') && used.indexOf(c) === -1;",
+  "find": "                return used.indexOf(c) === -1;\n            });\n            var names = def.names || [];",
+  "replace": "                return c.classList.contains('mphb-link-button-row') && used.indexOf(c) === -1;\n            });\n            var names = def.names || [];",
   "count": 1
  },
  {
@@ -1100,8 +1045,8 @@
    "admin-layout"
   ],
   "claim": "0.27.1 a row class alone never identifies the Photo ID",
-  "find": "            return null;\n        }\n\n        function heading(key, title, cols) {",
-  "replace": "            var byClass = free.filter(function (c) { return c.classList.contains('mphb-link-button-row'); });\n            return byClass.length === 1 ? byClass[0] : null;\n        }\n\n        function heading(key, title, cols) {",
+  "find": "            return null;\n        }\n\n        function heading(key, title, cols, table) {",
+  "replace": "            var byClass = free.filter(function (c) { return c.classList && c.classList.contains('mphb-link-button-row'); });\n            return byClass.length === 1 ? byClass[0] : null;\n        }\n\n        function heading(key, title, cols, table) {",
   "count": 1
  },
  {
@@ -1113,6 +1058,305 @@
   "claim": "0.27.1 the live label for= value (mphb-mphb_upload_id) is what identifies the Photo ID",
   "find": "                        'names' => ['mphb-' . Id_Files::META_KEY, Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],",
   "replace": "                        'names' => [Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],",
+  "count": 1
+ },
+ {
+  "id": "js-guest-count-ignored",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 Guest 3/4 show once the guest count reaches their min",
+  "find": "                    show = count === null || count >= g.min || held;",
+  "replace": "                    show = count === null || held;",
+  "count": 1
+ },
+ {
+  "id": "js-guest-held-hidden",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 a Guest 3/4 field holding a value is never hidden by a lower count",
+  "find": "                    show = count === null || count >= g.min || held;",
+  "replace": "                    show = count === null || count >= g.min;",
+  "count": 1
+ },
+ {
+  "id": "js-guest-count-failopen",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 an unreadable guest count shows Guest 3/4",
+  "find": "                    show = count === null || count >= g.min || held;",
+  "replace": "                    show = (count !== null && count >= g.min) || held;",
+  "count": 1
+ },
+ {
+  "id": "js-note-dead",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 more guest names than guests carries a note",
+  "find": "                    over = held && count !== null && count < g.min;",
+  "replace": "                    over = false;",
+  "count": 1
+ },
+ {
+  "id": "js-dog-petfee-ignored",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 Dog follows the pet fee",
+  "find": "                    show = petOn !== false || held;",
+  "replace": "                    show = held;",
+  "count": 1
+ },
+ {
+  "id": "js-dog-failopen",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 an unreadable pet fee shows Dog",
+  "find": "                    show = petOn !== false || held;",
+  "replace": "                    show = petOn === true || held;",
+  "count": 1
+ },
+ {
+  "id": "js-fee-row-visible",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the Extra Guest Fee row is never shown in wp-admin",
+  "find": "            serviceBoxes(GUEST_IDS).forEach(function (box) {\n                var row = serviceRow(box);\n                if (row) { addClass(row, FEE_ROW_CLASS); }",
+  "replace": "            serviceBoxes(GUEST_IDS).forEach(function (box) {\n                var row = serviceRow(box);\n                if (row) { }",
+  "count": 1
+ },
+ {
+  "id": "js-multiplier-stale",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the fee multiplier is never left stale, ticked or not",
+  "find": "                        if (String(svc.adults.value) !== mult && hasOption(svc.adults, mult)) {",
+  "replace": "                        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-fee-line-dead",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 a read-only fee line says what the guest count charges",
+  "find": "            if (!extra || !one) {",
+  "replace": "            if (true) {",
+  "count": 1
+ },
+ {
+  "id": "js-pet-wrong-bucket",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 Pet Fee Yes ticks the stay-length bucket PHP stated",
+  "find": "                        var t = list.filter(function (b) { return parseInt(b.value, 10) === target; })[0] ||",
+  "replace": "                        var t = list[0] ||",
+  "count": 1
+ },
+ {
+  "id": "js-pet-guess-bucket",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 with several pet services and none stated, nothing is guessed",
+  "find": "                            (list.length === 1 ? list[0] : null);",
+  "replace": "                            list[0];",
+  "count": 1
+ },
+ {
+  "id": "js-pet-rows-visible",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the pet services own rows are never shown once the dropdown drives them",
+  "find": "                            var row = serviceRow(b);\n                            if (row) { addClass(row, FEE_ROW_CLASS); }",
+  "replace": "                            var row = serviceRow(b);\n                            if (row) { }",
+  "count": 1
+ },
+ {
+  "id": "js-pet-on-search-step",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the search step gets no Pet Fee dropdown",
+  "find": "                return /\\[adults\\]$/.test(String(s.name || ''));",
+  "replace": "                return true;",
+  "count": 1
+ },
+ {
+  "id": "js-pet-none-silent",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 Yes on a cottage with no pet fee says nothing is charged",
+  "find": "                    if (yes) { msg = I18N.petNone || 'This cottage has no pet fee, so nothing is charged.'; }",
+  "replace": "                    if (yes) { msg = ''; }",
+  "count": 1
+ },
+ {
+  "id": "js-adults-includes-dcc",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 our Guests box is never decorated with fees (0.27.x regression)",
+  "find": "                return n.indexOf('[services]') === -1 && n.indexOf('dcc_') !== 0;",
+  "replace": "                return n.indexOf('[services]') === -1;",
+  "count": 1
+ },
+ {
+  "id": "js-layout-flow-attach",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 a control-less element after a known row travels with it",
+  "find": "                    if (lastKnown && !hasControl(c)) {",
+  "replace": "                    if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-layout-flow-lead",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the section title and tip stay first",
+  "find": "                    if (!seenKnown && !hasControl(c)) {",
+  "replace": "                    if (false) {",
+  "count": 1
+ },
+ {
+  "id": "php-pet-fee-map-shape",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout",
+   "admin-guests"
+  ],
+  "claim": "0.28.0 a saved services MAP (id => qty) is read by its keys",
+  "find": "                    $sid = (int) ($is_list ? $v : $k);",
+  "replace": "                    $sid = (int) $v;",
+  "count": 1
+ },
+ {
+  "id": "php-pet-fee-unreadable-hidden",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout",
+   "admin-guests"
+  ],
+  "claim": "0.28.0 unreadable saved services read as unknown, never as no",
+  "find": "            if (!is_array($meta)) {\n                return null;",
+  "replace": "            if (!is_array($meta)) {\n                return false;",
+  "count": 1
+ },
+ {
+  "id": "php-guest-count-partial",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 one unreadable room makes the saved count unreadable",
+  "find": "            if (!is_numeric($raw) || (int) $raw < 1) {\n                return null;",
+  "replace": "            if (!is_numeric($raw) || (int) $raw < 1) {\n                continue;",
+  "count": 1
+ },
+ {
+  "id": "php-wizard-bucket",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the Add New pet bucket follows the stay length",
+  "find": "            return Config::service_id_for_nights((int) $in->diff($out)->days);",
+  "replace": "            return Config::service_id_for_nights(1);",
+  "count": 1
+ },
+ {
+  "id": "php-stated-guests-dropped",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the edit screen gets the saved guest count",
+  "find": "            'statedGuests'    => $existing ? self::booking_guest_count($booking) : null,",
+  "replace": "            'statedGuests'    => null,",
+  "count": 1
+ },
+ {
+  "id": "php-stated-pet-dropped",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the edit screen gets the saved pet fee",
+  "find": "            'statedPetFee'    => $existing ? self::booking_pet_fee($booking) : null,",
+  "replace": "            'statedPetFee'    => null,",
+  "count": 1
+ },
+ {
+  "id": "php-groups-ignore-included",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 which guest groups the count gates follows Guests included",
+  "find": "            if ((int) $group['min'] > $included) {",
+  "replace": "            if ((int) $group['min'] > 2) {",
+  "count": 1
+ },
+ {
+  "id": "php-guests-box-pet-line",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.28.0 the Guests box says Pet fee: Yes when one is saved",
+  "find": "            echo esc_html($pet ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));",
+  "replace": "            echo esc_html(__('No', 'dcc-checkout'));",
+  "count": 1
+ },
+ {
+  "id": "css-fee-row-shown",
+  "file": "dcc-custom-checkout/assets/admin-booking.css",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 the fee rows are hidden by CSS, display-based",
+  "find": ".dcc_admin-fee-row {\n    display: none !important;\n}",
+  "replace": ".dcc_admin-fee-row {\n    display: block;\n}",
+  "count": 1
+ },
+ {
+  "id": "css-phone-stack",
+  "file": "dcc-custom-checkout/assets/admin-booking.css",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.28.0 at phone width the price sits on its own line",
+  "find": "    label:has(input[name*=\"[services]\"][name$=\"[id]\"]) > em {\n        display: block;\n    }",
+  "replace": "    label:has(input[name*=\"[services]\"][name$=\"[id]\"]) > em {\n        display: inline;\n    }",
   "count": 1
  }
 ]

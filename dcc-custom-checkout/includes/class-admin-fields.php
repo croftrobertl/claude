@@ -21,19 +21,24 @@ if (!defined('ABSPATH')) {
  * 3 and 4 name fields for cottages that sleep two.
  *
  * WHAT THIS DOES — and deliberately does not
- * It mirrors the front-end gate on the admin booking screen only, in the
- * browser only, by SHOWING AND HIDING rows. It does not validate, does not
- * block a save, does not remove anything from the DOM, and does not extend any
- * server-side backstop into wp-admin — the exemptions stay exactly as they
- * are. Three rules keep an admin from ever losing data or control:
+ * In the browser only, on the admin booking screens only, it SHOWS AND HIDES
+ * rows, and (v0.28.0) drives the two fees from their own dropdowns: Number of
+ * Guests ticks the Extra Guest Fee and sets its multiplier; "Pet Fee: Yes /
+ * No" on Add New ticks the pet service for the stay's length. It does not
+ * validate, does not block a save, does not remove anything from the DOM, and
+ * does not extend any server-side backstop into wp-admin — the exemptions stay
+ * exactly as they are. Three rules keep an admin from ever losing data:
  *
- *   1. Fail open. If the accommodation cannot be identified, or a room type's
- *      services cannot be read, nothing is hidden.
- *   2. Sticky values. On an EXISTING booking, any field that already holds a
- *      value stays visible whatever the accommodation, so stored data is never
- *      hidden from the person editing it.
- *   3. An escape hatch. A "Show all booking fields" checkbox reveals
- *      everything, for the deliberate-override case the exemptions protect.
+ *   1. Fail open. Whatever cannot be read — the guest count, the pet fee —
+ *      leaves its fields SHOWN.
+ *   2. Filled fields stay. Any field holding a value, typed or saved, stays
+ *      visible whatever the count or the pet fee says; Guest 3/4 then carry a
+ *      short note that there are more guest names than guests.
+ *   3. The facts decide, not a switch. Guest 3/4 follow the guest count, Dog
+ *      follows the pet fee (on a cottage with no pet fee, "Yes" shows Dog and
+ *      says nothing is charged). The "Show all booking fields" checkbox is
+ *      gone (owner's pick, 2026-10-07): a Pet Fee dropdown that says what it
+ *      does replaced it.
  */
 final class Admin_Fields
 {
@@ -80,15 +85,49 @@ final class Admin_Fields
             return;
         }
         $room_types = $this->room_types_from_context($booking, $details);
-        if (empty($room_types)) {
+        $pet        = self::wizard_pet_service($booking);
+        if (empty($room_types) && $pet <= 0) {
             // Nothing authoritative to say; the script falls back to deriving
             // from the DOM, and hides nothing if that finds no control either.
             return;
         }
         printf(
-            '<div class="dcc_admin-room-context" data-dcc-room-types="%s" hidden></div>',
-            esc_attr(implode(',', $room_types))
+            '<div class="dcc_admin-room-context" data-dcc-room-types="%s" data-dcc-pet-service="%s" hidden></div>',
+            esc_attr(implode(',', $room_types)),
+            esc_attr($pet > 0 ? (string) $pet : '')
         );
+    }
+
+    /**
+     * The pet service for the stay being booked — the same length-of-stay
+     * bucket the public checkout charges (Config::service_id_for_nights()), so
+     * the "Pet Fee" dropdown ticks exactly what a guest would have paid
+     * (v0.28.0). 0 when the dates cannot be read; the script then uses the
+     * room's only pet service, or leaves the pet fee to be chosen by hand.
+     *
+     * DCC-VERIFY: getCheckInDate()/getCheckOutDate() on the booking under
+     * construction are reasoned from MotoPress's Booking entity, not observed.
+     * Every miss returns 0, which only ever means "say nothing".
+     *
+     * @param mixed $booking
+     */
+    private static function wizard_pet_service($booking): int
+    {
+        if (!is_object($booking)
+            || !method_exists($booking, 'getCheckInDate')
+            || !method_exists($booking, 'getCheckOutDate')) {
+            return 0;
+        }
+        try {
+            $in  = $booking->getCheckInDate();
+            $out = $booking->getCheckOutDate();
+            if (!$in instanceof \DateTimeInterface || !$out instanceof \DateTimeInterface || $out <= $in) {
+                return 0;
+            }
+            return Config::service_id_for_nights((int) $in->diff($out)->days);
+        } catch (\Throwable $e) {
+            return 0;
+        }
     }
 
     /**
@@ -212,32 +251,20 @@ final class Admin_Fields
             }
         }
 
-        // The hint names exactly the guest groups the gating hides — the same
-        // `min > included` test as $groups above — so it stays true at any
-        // "Guests included" setting (v0.27.0): "3–4" at the default, "4" at 3.
-        $mins = array_map(static function ($g) { return (int) $g['min']; }, $groups);
-        sort($mins);
-        if ($mins) {
-            $range = count($mins) === 1 ? (string) $mins[0] : $mins[0] . '–' . $mins[count($mins) - 1];
-            $hint  = sprintf(
-                /* translators: %s: the guest numbers hidden, e.g. "3–4" or "4". */
-                __('Guest %s details are hidden unless this booking already has them saved, and so are pet details on a cottage that does not take dogs. The Extra Guest Fee row is hidden too. Tick to show every field — for example to add a dog to a cottage that is not normally pet-friendly.', 'dcc-checkout'),
-                $range
-            );
-        } else {
-            $hint = __('Pet details are hidden on a cottage that does not take dogs, unless this booking already has them saved. The Extra Guest Fee row is hidden too. Tick to show every field — for example to add a dog to a cottage that is not normally pet-friendly.', 'dcc-checkout');
-        }
+        $existing = $this->is_existing_booking();
+        $booking  = $existing ? (int) get_post()->ID : 0;
 
         return [
             'roomTypes'      => $this->room_type_map(),
             'dogFieldNames'  => Config::dog_field_name_list(),
             'guestGroups'    => $groups,
             'petFeeEnabled'  => Config::pet_fee_enabled() ? '1' : '',
-            // Extra-guest fee, so wp-admin gets the same simplification as the
-            // public checkout: the service row is hidden behind the escape
-            // hatch and its quantity is slaved to the guest count, which is
-            // what stops "Number of Guests: 1" sitting beside "Extra Guest Fee
-            // for 4 guest(s)". Amounts come from Config, never literals.
+            // v0.28.0 — the pet services the "Pet Fee" dropdown drives.
+            'petServiceIds'  => array_values(array_filter(Config::pet_service_id_list())),
+            // Extra-guest fee: Number of Guests is the ONLY control for it
+            // (owner's pick, v0.28.0). Its service row is never shown in
+            // wp-admin; it is ticked and its multiplier set from the count.
+            // Amounts come from Config, never literals.
             'guestServiceIds' => array_values(array_filter(Config::guest_service_id_list())),
             'guestFeeSteps'   => Config::guest_fee_steps(),
             'includedGuests'  => $included,
@@ -249,49 +276,52 @@ final class Admin_Fields
             // markup, so the script could not tell the cottage and showed
             // everything. PHP states it, exactly as the add-booking step does.
             // Empty = could not read it: the script then shows everything.
-            'statedRoomTypes' => $this->is_existing_booking() ? $this->booking_room_types() : [],
+            'statedRoomTypes' => $existing ? $this->booking_room_types() : [],
+            // v0.28.0 — the booking's own facts, for the edit screen. null =
+            // could not be read, and the script then shows the fields.
+            'statedGuests'    => $existing ? self::booking_guest_count($booking) : null,
+            'statedPetFee'    => $existing ? self::booking_pet_fee($booking) : null,
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
             'i18n'           => [
-                'showAll' => __('Show all booking fields', 'dcc-checkout'),
-                // v0.27.0: must be true on a NEW booking and on an EXISTING
-                // one. The old text said pet details were "hidden by default",
-                // which was false on any pet cottage, and invited "booking" a
-                // guest on a booking that already exists.
-                'hint'    => $hint,
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
+                'petFee'      => __('Pet Fee:', 'dcc-checkout'),
+                'petYes'      => __('Yes', 'dcc-checkout'),
+                'petNo'       => __('No', 'dcc-checkout'),
+                'petNone'     => __('This cottage has no pet fee, so nothing is charged.', 'dcc-checkout'),
+                'petManual'   => __('Choose the pet fee under Additional Services.', 'dcc-checkout'),
+                'moreNames'   => __('More guest names than guests.', 'dcc-checkout'),
+                /* translators: %s: per-night amount for one extra guest (e.g. $50). */
+                'feeLineOne'  => __('Extra guest fee: 1 guest × %s/night', 'dcc-checkout'),
+                /* translators: 1: number of extra guests, 2: per-night amount for one extra guest (e.g. $50). */
+                'feeLineMany' => __('Extra guest fee: %1$d guests × %2$s/night', 'dcc-checkout'),
             ],
         ];
     }
 
     /**
-     * The owner's order for the admin Customer Information box (v0.26.0):
-     * group key, heading, whether the "Show all booking fields" checkbox
-     * governs it, and per field the input name(s) to look for, in order.
+     * The owner's order for the admin Customer Information box (v0.26.0), on
+     * the edit screen and — since v0.28.0 — the Add New Booking customer step:
+     * group key, heading, and per field the input name(s) to look for, in order.
      *
      * MotoPress's built-in customer fields are given as `mphb_<name>` and the
-     * bare `<name>`, tried in that order; nothing has been read from the live
-     * admin markup (it needs a login), so both are offered and a field matching
-     * neither is simply skipped. The guest and dog names come from Config —
-     * the names the gating above already uses, so the two cannot disagree and
-     * a renamed field moves here with them. (That some of them match on live is
-     * known — the "Show all booking fields" count has been seen there — but
-     * not each one individually.)
-     *
-     * `governed` uses the gating's own test (`min > included_guests`, plus the
-     * dog fields), so the checkbox sits above the first group it really hides
-     * at whatever "Guests included" is set to.
+     * bare `<name>`, tried in that order. The guest and dog names come from
+     * Config — the names the gating uses — so the two cannot disagree. The
+     * Add New step draws MotoPress's FRONT-END form, whose apartment field may
+     * be spelled with an underscore (the public-checkout fixture carries
+     * `mphb_apartment_units`), so both spellings are offered.
      *
      * Headings are translatable and fixed by the owner: "Guest 1", "Address",
      * "Guest 2", "Guest 3", "Guest 4", "Dog", "Note". Field LABELS are not
-     * touched (owner decision: "State / County" and "Postcode" stay).
+     * touched (owner decision: MotoPress's wording stays, on both screens).
      *
      * Each field is a list of input names to try, or (for a row with no input,
-     * such as Upload Photo ID) an object {names, rowClass} — see markedRow().
+     * such as Upload Photo ID on the edit screen) an object {names} matched by
+     * a reference inside the row — see markedRow().
      *
-     * @return array<int, array{key:string,title:string,governed:bool,fields:array<int,mixed>}>
+     * @return array<int, array{key:string,title:string,fields:array<int,mixed>}>
      */
     public static function customer_layout(): array
     {
@@ -302,11 +332,6 @@ final class Admin_Fields
             return [$name];
         };
 
-        $included = Config::included_guests();
-        $min      = [];
-        foreach (Config::guest_field_groups() as $n => $group) {
-            $min[(int) $n] = (int) $group['min'];
-        }
         $g2  = Config::guest2_field_names();
         $g3  = Config::guest3_field_names();
         $g4  = Config::guest4_field_names();
@@ -314,52 +339,45 @@ final class Admin_Fields
 
         return [
             [
-                'key' => 'guest1', 'title' => __('Guest 1', 'dcc-checkout'), 'governed' => false,
+                'key' => 'guest1', 'title' => __('Guest 1', 'dcc-checkout'),
                 'fields' => [
                     $mp('first_name'), $mp('last_name'), $mp('phone'), $mp('email'),
                     // Upload Photo ID, last in Guest 1 (owner's pick, v0.27.0).
-                    // Its admin row has no input, so no name to match, and it
-                    // takes TWO shapes on live (Director, 2026-10-06):
-                    //   file:    tr.mphb-link-button-row, cell = "View file" link
-                    //   no file: tr.mphb-placeholder-row, cell = "File is not
-                    //            uploaded" — most bookings (19 hold a photo)
-                    // What both carry is the th label's for="mphb-mphb_upload_id"
-                    // (prefix doubled: MotoPress's "mphb-" + the field name),
-                    // so that is the match (v0.27.1). NOT the row class: 0.27.0
-                    // matched mphb-link-button-row and missed every booking
-                    // without a file, and mphb-placeholder-row is generic.
-                    // Never the label text. Unmatched -> stays under "Other".
+                    // Edit screen: no input, two live shapes; what both carry
+                    // is the th label's for="mphb-mphb_upload_id" (v0.27.1).
+                    // Add New: a real file input, matched by its name. Never
+                    // the label text; unmatched -> stays under "Other".
                     [
                         'names' => ['mphb-' . Id_Files::META_KEY, Id_Files::META_KEY, substr(Id_Files::META_KEY, 5)],
                     ],
                 ],
             ],
             [
-                'key' => 'address', 'title' => __('Address', 'dcc-checkout'), 'governed' => false,
-                'fields' => [$mp('address1'), $mp('apartment-units'), $mp('city'), $mp('state'), $mp('zip'), $mp('country')],
+                'key' => 'address', 'title' => __('Address', 'dcc-checkout'),
+                'fields' => [
+                    $mp('address1'),
+                    ['mphb_apartment-units', 'apartment-units', 'mphb_apartment_units'],
+                    $mp('city'), $mp('state'), $mp('zip'), $mp('country'),
+                ],
             ],
             [
                 'key' => 'guest2', 'title' => __('Guest 2', 'dcc-checkout'),
-                'governed' => ($min[2] ?? 2) > $included,
                 'fields' => [$one($g2['first_name']), $one($g2['last_name']), $one($g2['phone'])],
             ],
             [
                 'key' => 'guest3', 'title' => __('Guest 3', 'dcc-checkout'),
-                'governed' => ($min[3] ?? 3) > $included,
                 'fields' => [$one($g3['first_name']), $one($g3['last_name'])],
             ],
             [
                 'key' => 'guest4', 'title' => __('Guest 4', 'dcc-checkout'),
-                'governed' => ($min[4] ?? 4) > $included,
                 'fields' => [$one($g4['first_name']), $one($g4['last_name'])],
             ],
             [
                 'key' => 'dog', 'title' => __('Dog', 'dcc-checkout'),
-                'governed' => !empty(Config::dog_field_name_list()),
                 'fields' => [$one($dog['type']), $one($dog['size']), $one($dog['hair'])],
             ],
             [
-                'key' => 'note', 'title' => __('Note', 'dcc-checkout'), 'governed' => false,
+                'key' => 'note', 'title' => __('Note', 'dcc-checkout'),
                 'fields' => [$mp('note')],
             ],
         ];
@@ -387,16 +405,8 @@ final class Admin_Fields
         if (!$post instanceof \WP_Post) {
             return [];
         }
-        $rooms = get_posts([
-            'post_type'        => 'mphb_reserved_room',
-            'post_parent'      => (int) $post->ID,
-            'post_status'      => 'any',
-            'numberposts'      => 50,
-            'orderby'          => 'ID',
-            'order'            => 'ASC',
-            'suppress_filters' => false,
-        ]);
-        if (!is_array($rooms) || empty($rooms)) {
+        $rooms = self::reserved_rooms((int) $post->ID);
+        if (empty($rooms)) {
             return [];
         }
         $types = [];
@@ -411,6 +421,106 @@ final class Admin_Fields
             }
         }
         return $types;
+    }
+
+    /**
+     * The reserved-room posts of a booking (post_parent = booking ID).
+     *
+     * @return array<int, object>
+     */
+    private static function reserved_rooms(int $booking_id): array
+    {
+        if ($booking_id <= 0) {
+            return [];
+        }
+        $rooms = get_posts([
+            'post_type'        => 'mphb_reserved_room',
+            'post_parent'      => $booking_id,
+            'post_status'      => 'any',
+            'numberposts'      => 50,
+            'orderby'          => 'ID',
+            'order'            => 'ASC',
+            'suppress_filters' => false,
+        ]);
+        return is_array($rooms) ? $rooms : [];
+    }
+
+    /**
+     * The booking's saved guest count, as the largest `_mphb_adults` across its
+     * reserved rooms (v0.28.0) — "a multi-room booking shows a group if any
+     * room needs it". `_mphb_adults` is confirmed on all 417 live reserved
+     * rooms (2026-09-17). It is used AS SAVED (owner's pick, 2026-10-07), so an
+     * import MotoPress filled with the cottage's capacity reads as that number.
+     *
+     * null — show the fields — when there is no room, or any room's count is
+     * missing or not a positive number: one unreadable room could be the one
+     * that needs Guest 3.
+     */
+    public static function booking_guest_count(int $booking_id): ?int
+    {
+        $rooms = self::reserved_rooms($booking_id);
+        if (empty($rooms)) {
+            return null;
+        }
+        $max = 0;
+        foreach ($rooms as $rr) {
+            $raw = get_post_meta((int) $rr->ID, '_mphb_adults', true);
+            if (!is_numeric($raw) || (int) $raw < 1) {
+                return null;
+            }
+            $max = max($max, (int) $raw);
+        }
+        return $max;
+    }
+
+    /**
+     * Does the booking carry the pet fee? (v0.28.0, the edit screen's
+     * read-only "Pet fee" line, and what the Dog section follows there.)
+     *
+     * Reads `_mphb_services` on each reserved room the way the Availability
+     * Calendar's has_pet_service() does: MotoPress stores it as a LIST of ids,
+     * a MAP of id => quantity, or a list of arrays carrying 'id'. Matched
+     * against this plugin's configured pet service IDs, never by title.
+     * DCC-VERIFY: the storage shapes are the Calendar's reading, not observed
+     * here; the Director's check list carries a booking with the fee.
+     *
+     * true  — a pet service is attached to some room;
+     * false — every room was read and none carries one (an absent or empty
+     *         `_mphb_services` is "no services", not "unreadable");
+     * null  — something could not be read: show the Dog fields.
+     */
+    public static function booking_pet_fee(int $booking_id): ?bool
+    {
+        $pet = array_values(array_filter(array_map('intval', Config::pet_service_id_list())));
+        if (empty($pet)) {
+            return null;
+        }
+        $rooms = self::reserved_rooms($booking_id);
+        if (empty($rooms)) {
+            return null;
+        }
+        foreach ($rooms as $rr) {
+            $raw = get_post_meta((int) $rr->ID, '_mphb_services', true);
+            if ($raw === '' || $raw === [] || $raw === null) {
+                continue;
+            }
+            $meta = maybe_unserialize($raw);
+            if (!is_array($meta)) {
+                return null;
+            }
+            $is_list = $meta === [] || array_keys($meta) === range(0, count($meta) - 1);
+            foreach ($meta as $k => $v) {
+                if (is_array($v)) {
+                    $sid = (int) ($v['id'] ?? ($is_list ? 0 : $k));
+                } else {
+                    $sid = (int) ($is_list ? $v : $k);
+                }
+                if (in_array($sid, $pet, true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

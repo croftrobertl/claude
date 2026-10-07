@@ -5,11 +5,17 @@
  *     php tests/admin-layout/config.php [included_guests] [booking-json]
  *
  * booking-json describes an EXISTING booking being edited, e.g.
- *     {"rooms":[{"type":1604},{"type":1065}]}
+ *     {"rooms":[{"type":1604,"adults":2,"services":[17712]},{"type":1065}]}
  * Each room becomes a `mphb_reserved_room` child of booking 19615 with an
  * `_mphb_room_id`, and that room carries `mphb_room_type_id` — the chain
  * confirmed on live. {"type":0} is a room whose type cannot be read.
+ * `adults` becomes `_mphb_adults` (omitted = missing meta); `services` becomes
+ * `_mphb_services` exactly as given — a list, a map, a list of arrays, or a
+ * string — so each storage shape is constructed rather than assumed.
  * Omitted: a NEW booking (no post), as before.
+ *
+ * [wizard-json] {"nights":N} adds `_wizardPetService`: what the shipped
+ * Admin_Fields::wizard_pet_service() picks for a stay of N nights.
  *
  * The layout suite reads this instead of keeping its own copy of the group
  * list, so the test exercises the SHIPPED PHP: a renamed field, a reordered
@@ -20,8 +26,20 @@ define('ABSPATH', __DIR__);
 
 $GLOBALS['opt']     = [];
 $GLOBALS['filters'] = [];
+// The LIVE fee configuration, as measured 2026-09-19 (CLAUDE.md): service
+// 18063 in all three extra-guest buckets at $50, on the six couch cottages.
+// The shipped defaults are 0, and with them every fee assertion in this suite
+// would pass vacuously — nothing would ever be ticked or labelled.
+$GLOBALS['opt']['dcc_checkout_settings'] = [
+    'guest_fee_enabled'     => 1,
+    'guest_fee_amount'      => 50,
+    'guest_service_daily'   => 18063,
+    'guest_service_weekly'  => 18063,
+    'guest_service_monthly' => 18063,
+    'guest_accommodations'  => [1071, 1069, 1067, 1065, 1740, 1742],
+];
 if (isset($argv[1]) && $argv[1] !== '') {
-    $GLOBALS['opt']['dcc_checkout_settings'] = ['included_guests' => (int) $argv[1]];
+    $GLOBALS['opt']['dcc_checkout_settings']['included_guests'] = (int) $argv[1];
 }
 
 function get_option($k, $d = false) { return array_key_exists($k, $GLOBALS['opt']) ? $GLOBALS['opt'][$k] : $d; }
@@ -54,6 +72,12 @@ if (isset($argv[2]) && $argv[2] !== '') {
         if ((int) ($room['type'] ?? 0) > 0) {
             $GLOBALS['meta'][$room_id]['mphb_room_type_id'] = (string) (int) $room['type'];
         }
+        if (array_key_exists('adults', $room)) {
+            $GLOBALS['meta'][$rr->ID]['_mphb_adults'] = (string) $room['adults'];
+        }
+        if (array_key_exists('services', $room)) {
+            $GLOBALS['meta'][$rr->ID]['_mphb_services'] = $room['services'];
+        }
     }
 }
 
@@ -67,6 +91,13 @@ function get_posts($a = []) {
 }
 function get_post($id = null) { return $GLOBALS['booking']; }
 function did_action($h) { return 0; }
+function maybe_unserialize($v) {
+    if (is_string($v)) {
+        $u = @unserialize($v);
+        return ($u === false && $v !== 'b:0;') ? $v : $u;
+    }
+    return $v;
+}
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
@@ -74,4 +105,20 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
 $m->setAccessible(true);
-echo json_encode($m->invoke(new \DCC_Checkout\Admin_Fields()), JSON_UNESCAPED_UNICODE);
+$out = $m->invoke(new \DCC_Checkout\Admin_Fields());
+
+if (isset($argv[3]) && $argv[3] !== '') {
+    $w = json_decode($argv[3], true);
+    $nights = (int) ($w['nights'] ?? 0);
+    $booking = new class($nights) {
+        private $n;
+        public function __construct($n) { $this->n = $n; }
+        public function getCheckInDate() { return new DateTime('2026-11-20'); }
+        public function getCheckOutDate() { return (new DateTime('2026-11-20'))->modify('+' . $this->n . ' days'); }
+    };
+    $wp = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'wizard_pet_service');
+    $wp->setAccessible(true);
+    $out['_wizardPetService'] = $wp->invoke(null, $booking);
+}
+
+echo json_encode($out, JSON_UNESCAPED_UNICODE);

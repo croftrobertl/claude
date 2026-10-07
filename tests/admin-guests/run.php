@@ -55,8 +55,20 @@ function get_posts($args) {
    admin_guest_fallback, clamped by Admin_Guests::MAX_OPTIONS), so Config is
    loaded here too. get_option() is already shimmed above, which is all Config
    needs to return its defaults. */
+function maybe_unserialize($v) {
+    if (is_string($v)) {
+        $u = @unserialize($v);
+        return ($u === false && $v !== 'b:0;') ? $v : $u;
+    }
+    return $v;
+}
+class WP_Post { public $ID = 0; public $post_type = ''; }
+
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
+// v0.28.0: the Guests box prints the read-only "Pet fee" line from
+// Admin_Fields::booking_pet_fee(), so the box cannot be rendered without it.
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 
 use DCC_Checkout\Admin_Guests;
 
@@ -275,6 +287,30 @@ check('a setting of 3 does shrink the accepted range',
     $GLOBALS['meta'][99]['_mphb_adults'], 4);
 $GLOBALS['opt'] = [];
 \DCC_Checkout\Config::flush_cache();
+
+/* --- v0.28.0: the read-only "Pet fee" line, rendered. --------------------
+   Constructed both ways and the unreadable case; never a dropdown, because
+   the fee cannot be changed from this box. */
+function pet_line(Admin_Guests $g): string {
+    $post = new WP_Post();
+    $post->ID = 18433;
+    ob_start();
+    $g->render($post);
+    $h = (string) ob_get_clean();
+    return preg_match('#<p class="dcc_admin-petfee-line"><strong>Pet fee:</strong> (.*?)</p>#', $h, $m) ? $m[1] : '(no line)';
+}
+seed();
+$GLOBALS['meta'][99]['_mphb_services'] = [17712];
+check('the Guests box says "Pet fee: Yes" when a pet service is saved', pet_line($g), 'Yes');
+seed();
+$GLOBALS['meta'][99]['_mphb_services'] = [18063];
+check('... "No" when only another service is saved', pet_line($g), 'No');
+seed();
+check('... "No" when no service is saved at all', pet_line($g), 'No');
+seed();
+$GLOBALS['meta'][99]['_mphb_services'] = 'not-serialised garbage';
+check('... and says it could not be read, rather than guessing',
+    pet_line($g), 'could not be read, so the dog details are shown.');
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

@@ -1,20 +1,34 @@
 /**
- * DCC Custom Checkout — admin booking screen field gating.
+ * DCC Custom Checkout — admin booking screens: field gating, fee controls and
+ * the Customer Information layout.
  *
  * MotoPress enables Checkout Fields globally, so the dog fields and the guest
- * 3/4 name fields render on every admin booking regardless of which
- * accommodation is chosen. This mirrors the front-end gate here: it watches the
- * accommodation selector(s) and shows/hides those rows to match what the chosen
- * cottage can actually offer.
+ * 3/4 name fields render on every admin booking. This shows and hides them by
+ * the booking's own facts (v0.28.0, owner's picks 2026-10-06/07):
  *
- * It only ever shows and hides. Nothing is removed from the DOM, no value is
- * cleared, and nothing is validated or blocked — the deliberate wp-admin
- * exemptions in the PHP backstops are untouched. Every uncertainty fails open.
+ *   Guest 3 / Guest 4 — by the guest count: a group shows once the count
+ *     reaches its `min` (from guestGroups, never a literal). Add New reads the
+ *     Number of Guests dropdown the fee sync reads; the edit screen reads the
+ *     booking's saved count (our Guests box, which starts at it).
+ *   Dog — by the pet fee: Add New's "Pet Fee: Yes / No" dropdown, which ticks
+ *     the pet service itself; the edit screen's saved services.
+ *   Either way, a field that already holds something stays visible (with a
+ *     short note when there are more guest names than guests), and anything
+ *     that cannot be read SHOWS the fields — fail open.
+ *
+ * Number of Guests is the ONLY control for the Extra Guest Fee, and Pet Fee the
+ * only one for the pet fee: their native service rows are never shown in
+ * wp-admin, and the dropdowns tick them and set the multiplier. The fee itself
+ * is still MotoPress's — it prices the ticked service as it always has.
+ *
+ * It never removes a field, never clears a value, and never validates or blocks
+ * anything; the deliberate wp-admin exemptions in the PHP backstops stay. The
+ * Pet Fee dropdown has no `name`, so it never reaches the server.
  *
  * v0.26.0 — it also ORDERS the Customer Information box into the owner's
  * groups (Guest 1, Address, Guest 2, Guest 3, Guest 4, Dog, Note) with a quiet
- * heading over each. See customerLayout(): existing rows are MOVED, never
- * re-created, so names, values, saving and validation are untouched.
+ * heading over each — since v0.28.0 on the Add New customer step as well. See
+ * customerLayout(): existing rows are MOVED, never re-created.
  */
 (function () {
     'use strict';
@@ -22,12 +36,17 @@
     var CFG  = window.DCC_CHECKOUT_ADMIN || {};
     var I18N = CFG.i18n || {};
     var HIDDEN_CLASS = 'dcc_admin-field-hidden';
-    var STORAGE_KEY  = 'dccCheckoutShowAllFields';
-    /** Capability that no accommodation ever satisfies: escape hatch only. */
-    var NEED_SHOW_ALL = '__show_all_only__';
-    var GUEST_IDS = (CFG.guestServiceIds || [])
-        .map(Number)
-        .filter(function (n) { return n > 0; });
+    /** A fee's native service row: never shown in wp-admin (v0.28.0). */
+    var FEE_ROW_CLASS = 'dcc_admin-fee-row';
+    var NOTE_CLASS = 'dcc_admin-group-note';
+    var GUEST_IDS = idList(CFG.guestServiceIds);
+    var PET_IDS   = idList(CFG.petServiceIds);
+    /** Group key -> its "more guest names than guests" note (shared with the layout). */
+    var notes = {};
+
+    function idList(a) {
+        return (a || []).map(Number).filter(function (n) { return n > 0; });
+    }
 
     function esc(sel) {
         return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
@@ -41,58 +60,144 @@
         }
     }
 
+    /* Idempotent writes: nothing below may write what is already there, because
+       the MutationObserver re-runs all of this and must find nothing to do. */
+    function setHidden(el, hide) {
+        if (!el) { return; }
+        if (el.classList.contains(HIDDEN_CLASS) !== hide) {
+            if (hide) { el.classList.add(HIDDEN_CLASS); } else { el.classList.remove(HIDDEN_CLASS); }
+        }
+    }
+    function addClass(el, name) {
+        if (el && !el.classList.contains(name)) { el.classList.add(name); }
+    }
+    function setText(el, text) {
+        if (el && el.textContent !== text) { el.textContent = text; }
+    }
+    function setShown(el, show) {
+        if (el && el.hidden !== !show) { el.hidden = !show; }
+    }
+
+    function fire(el) {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /** A field "holds something": typed, chosen or saved. */
+    function filled(el) {
+        if (!el) { return false; }
+        if (el.type === 'checkbox' || el.type === 'radio') { return !!el.checked; }
+        return String(el.value || '').trim() !== '';
+    }
+
+    /**
+     * Guest-count dropdowns within `scope` (never a service's own per-adult
+     * select, and never this plugin's own Guests box on the edit screen, whose
+     * `dcc_adults[…]` name the last fallback would otherwise match — 0.27.x
+     * labelled its options with fees it does not charge). Same widening
+     * fallbacks as the public checkout, because admin markup is not guaranteed
+     * to use the same names.
+     */
+    function adultsSelects(scope) {
+        var tries = [
+            CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
+            'select.mphb_sc_checkout-guests-chooser',
+            'select.mphb_checkout-guests-chooser',
+            '.mphb-adults-chooser select',
+            'select[name*="[adults]"]',
+            'select[name*="adults"]'
+        ];
+        for (var i = 0; i < tries.length; i++) {
+            var found;
+            try {
+                found = Array.prototype.slice.call(scope.querySelectorAll(tries[i]));
+            } catch (e) {
+                continue;
+            }
+            found = found.filter(function (sel) {
+                var n = String(sel.name || '');
+                return n.indexOf('[services]') === -1 && n.indexOf('dcc_') !== 0;
+            });
+            if (found.length) { return found; }
+        }
+        return [];
+    }
+
+    /** Service checkboxes (`…[services][j][id]`) whose value is one of `ids`. */
+    function serviceBoxes(ids) {
+        if (!ids.length) { return []; }
+        return Array.prototype.filter.call(
+            document.querySelectorAll('input[name*="[services]"]'),
+            function (box) {
+                return /\[id\]$/.test(String(box.name || '')) && ids.indexOf(parseInt(box.value, 10)) !== -1;
+            }
+        );
+    }
+
+    /** "mphb_room_details[0]" from "mphb_room_details[0][services][2][id]". */
+    function roomPrefix(name) {
+        var m = /^(.*)\[services\]/.exec(String(name || ''));
+        return m ? m[1] : '';
+    }
+
+    /**
+     * Smallest element wrapping one service row, with the same containment
+     * guard the public checkout uses: never an ancestor holding a guest-count
+     * dropdown or a second service, because this element gets hidden and
+     * taking the guest chooser down with it is exactly the regression that cost
+     * the public checkout its "Number of Guests".
+     */
+    function serviceRow(box) {
+        var el = box.parentNode;
+        var best = null;
+        for (var depth = 0; el && el.nodeType === 1 && depth < 6; depth++) {
+            if (adultsSelects(el).length) { break; }
+            if (el.querySelector('.dcc_admin-petfee')) { break; }
+            if (el.querySelectorAll('input[name*="[services]"][name$="[id]"]').length > 1) { break; }
+            best = el;
+            el = el.parentNode;
+        }
+        return best;
+    }
+
+    /** Where a line under Number of Guests goes: after the chooser's wrapper. */
+    function chooserAnchor(sel) {
+        return sel.closest('p, .mphb-adults-chooser, li, div') || sel;
+    }
+    function insertAfter(node, ref) {
+        if (ref.parentNode && ref.nextSibling !== node) {
+            ref.parentNode.insertBefore(node, ref.nextSibling);
+        }
+    }
+
     ready(function () {
         // The layout is independent of the gating: it runs even where there is
         // nothing to gate, and the gating keeps its headings in step.
         var layout = customerLayout();
-        init(layout);
+        gate(layout);
         if (layout) { layout.refresh(); }
     });
 
-    function init(layout) {
+    function gate(layout) {
         var roomTypes = CFG.roomTypes || {};
         var knownIds  = Object.keys(roomTypes).map(Number).filter(function (n) { return n > 0; });
-        if (!knownIds.length) {
-            return; // Nothing to gate against.
-        }
 
-        // The two managed groups. `need` is the capability key in roomTypes.
         var groups = [];
-        if ((CFG.dogFieldNames || []).length) {
-            groups.push({ need: 'pet', names: CFG.dogFieldNames });
-        }
-        // Guest 3/4 are NOT gated on the accommodation (nor on any admin guest
-        // count) — the owner wants them hidden by default and revealed only by
-        // the "Show all booking fields" checkbox, which is what its label
-        // already promises. NEED_SHOW_ALL is never "capable", so only that
-        // checkbox (or stored data on an existing booking) reveals them.
         (CFG.guestGroups || []).forEach(function (g) {
-            groups.push({ need: NEED_SHOW_ALL, names: g.names || [] });
+            var min = Number(g.min) || 0;
+            groups.push({ kind: 'guest', key: 'guest' + min, min: min, names: g.names || [] });
         });
-
-        var managed = collect(groups).concat(collectServiceRows());
-        if (!managed.length) {
-            return; // None of the fields are on this screen.
+        if ((CFG.dogFieldNames || []).length) {
+            groups.push({ kind: 'dog', key: 'dog', names: CFG.dogFieldNames });
         }
 
-        var showAll = readShowAll();
-        var hatch = addEscapeHatch(managed[0], function (on) {
-            showAll = on;
-            writeShowAll(on);
-            evaluate();
-        });
-        // The hatch was put beside the first managed row; the layout moves it
-        // above the first group it governs (owner decision, v0.26.0).
-        if (layout) { layout.arrange(); }
+        var pet = petControl();
+        var managed = collect(groups);
 
         evaluate();
         watch();
 
-        /**
-         * Find each managed field, its row, and whether it already holds stored
-         * data (existing bookings only — a default value on a NEW booking is
-         * not data anyone would lose).
-         */
+        /** Each managed field, its control and its row. */
         function collect(defs) {
             var out = [];
             defs.forEach(function (def) {
@@ -101,96 +206,172 @@
                     if (!el) { return; }
                     var row = el.closest('tr, .mphb-field, .mphb-text-control, p, li') || el.parentNode;
                     if (!row) { return; }
-                    out.push({
-                        need: def.need,
-                        row: row,
-                        sticky: !!CFG.isExisting && String(el.value || '').trim() !== ''
-                    });
+                    out.push({ group: def, el: el, row: row });
                 });
             });
             return out;
         }
 
         /**
-         * The Extra Guest Fee service rows on this screen.
-         *
-         * Hidden behind the same "Show all booking fields" switch as the other
-         * conditional fields, so wp-admin matches the public checkout: one
-         * control (the guest count) drives the charge, instead of two that can
-         * disagree.
+         * The guest count, or null when it cannot be read (then Guest 3/4 show).
+         *  1. Add New: the Number of Guests dropdown(s) — the same ones the fee
+         *     sync reads. Several rooms: the largest, so a group shows if ANY
+         *     room needs it.
+         *  2. Edit screen: our Guests box (`dcc_adults[…]`), which opens at the
+         *     booking's saved `_mphb_adults` and follows a change before save.
+         *  3. Edit screen without that box: the saved count PHP stated.
+         * Any room "not provided" or blank makes the whole answer unreadable —
+         * that room could be the one with a third guest.
          */
-        function collectServiceRows() {
-            if (!GUEST_IDS.length) { return []; }
-            var out = [];
-            Array.prototype.forEach.call(
+        function guestCount() {
+            var sels = adultsSelects(document);
+            if (!sels.length) {
+                sels = Array.prototype.slice.call(document.querySelectorAll('select[name^="dcc_adults["]'));
+            }
+            if (sels.length) {
+                var max = 0;
+                for (var i = 0; i < sels.length; i++) {
+                    var v = parseInt(sels[i].value, 10);
+                    if (!(v > 0)) { return null; }
+                    if (v > max) { max = v; }
+                }
+                return max;
+            }
+            var stated = parseInt(CFG.statedGuests, 10);
+            return stated > 0 ? stated : null;
+        }
+
+        function evaluate() {
+            pet.apply();      // first: it decides which pet rows are ours to hide
+            hideFeeRows();
+            var count = guestCount();
+            var petOn = pet.state();   // true / false / null (unknown)
+
+            groups.forEach(function (g) {
+                var rows = managed.filter(function (f) { return f.group === g; });
+                if (!rows.length) { return; }
+                var held = rows.some(function (f) { return filled(f.el); });
+                var show;
+                var over = false;
+                if (g.kind === 'guest') {
+                    show = count === null || count >= g.min || held;
+                    over = held && count !== null && count < g.min;
+                } else {
+                    show = petOn !== false || held;
+                }
+                rows.forEach(function (f) { setHidden(f.row, !show); });
+                setNote(g.key, over, rows);
+            });
+
+            syncExtraGuestFee(selectedRoomTypes());
+            // A heading hides when every row under it is hidden; notes are put
+            // under their heading. arrange() moves nothing when in order.
+            if (layout) { layout.arrange(); layout.refresh(); }
+        }
+
+        /**
+         * "More guest names than guests." — under the group's heading (the
+         * layout places it), or before its first row when there is no layout.
+         * Never clears a value: the fields stay, the note says why.
+         */
+        function setNote(key, on, rows) {
+            var n = notes[key];
+            if (!on) {
+                if (n) { setShown(n, false); }
+                return;
+            }
+            if (!n) {
+                var first = rows[0].row;
+                if (first.tagName === 'TR') {
+                    n = document.createElement('tr');
+                    var td = document.createElement('td');
+                    var span = 0;
+                    Array.prototype.forEach.call(first.cells || [], function (c) { span += c.colSpan || 1; });
+                    td.colSpan = Math.max(span, 1);
+                    var div = document.createElement('div');
+                    div.className = NOTE_CLASS + '__text';
+                    td.appendChild(div);
+                    n.appendChild(td);
+                } else {
+                    n = document.createElement('p');
+                    var inner = document.createElement('span');
+                    inner.className = NOTE_CLASS + '__text';
+                    n.appendChild(inner);
+                }
+                n.className = NOTE_CLASS;
+                n.setAttribute('data-dcc-group', key);
+                first.parentNode.insertBefore(n, first);
+                notes[key] = n;
+            }
+            setText(n.querySelector('.' + NOTE_CLASS + '__text'), I18N.moreNames || 'More guest names than guests.');
+            setShown(n, true);
+        }
+
+        /**
+         * The Extra Guest Fee's own row is never shown in wp-admin (owner's
+         * pick, v0.28.0): Number of Guests is its only control. With every
+         * service row on the screen hidden by us, the "Choose Additional
+         * Services" heading and any emptied wrapper go too.
+         */
+        function hideFeeRows() {
+            serviceBoxes(GUEST_IDS).forEach(function (box) {
+                var row = serviceRow(box);
+                if (row) { addClass(row, FEE_ROW_CLASS); }
+            });
+            var all = Array.prototype.filter.call(
                 document.querySelectorAll('input[name*="[services]"]'),
-                function (box) {
-                    if (!/\[id\]$/.test(String(box.name || ''))) { return; }
-                    if (GUEST_IDS.indexOf(parseInt(box.value, 10)) === -1) { return; }
-                    var row = serviceRow(box);
-                    if (row) {
-                        out.push({ need: NEED_SHOW_ALL, row: row, sticky: false });
-                    }
-                }
+                function (b) { return /\[id\]$/.test(String(b.name || '')); }
             );
-            return out;
+            if (!all.length) { return; }
+            var rows = all.map(serviceRow);
+            var allOurs = rows.every(function (r) { return r && r.classList.contains(FEE_ROW_CLASS); });
+            if (!allOurs) { return; }
+            hideServicesHeading(rows[0]);
+            rows.forEach(hideEmptiedAncestors);
         }
 
-        /**
-         * Smallest element wrapping one service row, with the same containment
-         * guard the public checkout uses: never return an ancestor holding a
-         * guest-count dropdown or a second service, because this element gets
-         * hidden and taking the guest chooser down with it is exactly the
-         * regression that cost the public checkout its "Number of Guests".
-         */
-        function serviceRow(box) {
-            var el = box.parentNode;
-            var best = null;
-            for (var depth = 0; el && el.nodeType === 1 && depth < 6; depth++) {
-                if (adultsSelects(el).length) { break; }
-                if (el.querySelectorAll('input[name*="[services]"][name$="[id]"]').length > 1) { break; }
-                best = el;
-                el = el.parentNode;
+        // The last heading before the first service row, found by position, not
+        // wording — unless a guest chooser sits between them (then the heading
+        // belongs to that block). The public checkout's rule, unchanged.
+        function hideServicesHeading(firstRow) {
+            var scope = firstRow.closest('.mphb-checkout-section') || firstRow.parentNode || document;
+            var chooser = adultsSelects(scope)[0] || null;
+            var heading = null;
+            Array.prototype.forEach.call(scope.querySelectorAll('h1, h2, h3, h4, h5, h6'), function (h) {
+                if (h.contains(firstRow)) { return; }
+                if (!(h.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING)) { return; }
+                heading = h;
+            });
+            if (!heading) { return; }
+            if (chooser && (heading.compareDocumentPosition(chooser) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+                    (chooser.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                return;
             }
-            return best;
+            addClass(heading, FEE_ROW_CLASS);
         }
 
-        /**
-         * Guest-count dropdowns within `scope` (never a service's own per-adult
-         * select). Same widening fallbacks as the public checkout, because the
-         * admin markup is not guaranteed to use the same input names.
-         */
-        function adultsSelects(scope) {
-            var tries = [
-                CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
-                'select.mphb_sc_checkout-guests-chooser',
-                'select.mphb_checkout-guests-chooser',
-                '.mphb-adults-chooser select',
-                'select[name*="[adults]"]',
-                'select[name*="adults"]'
-            ];
-            for (var i = 0; i < tries.length; i++) {
-                var found;
-                try {
-                    found = Array.prototype.slice.call(scope.querySelectorAll(tries[i]));
-                } catch (e) {
-                    continue;
+        function hideEmptiedAncestors(row) {
+            var node = row && row.parentNode;
+            while (node && node.nodeType === 1 && node !== document.body) {
+                if (adultsSelects(node).length || node.querySelector('.dcc_admin-petfee')) { return; }
+                var kids = node.children;
+                for (var i = 0; i < kids.length; i++) {
+                    if (!kids[i].classList.contains(FEE_ROW_CLASS)) { return; }
                 }
-                found = found.filter(function (sel) {
-                    return String(sel.name || '').indexOf('[services]') === -1;
-                });
-                if (found.length) { return found; }
+                addClass(node, FEE_ROW_CLASS);
+                node = node.parentNode;
             }
-            return [];
         }
 
         /**
-         * Keep the Extra Guest Fee slaved to the guest count, and label the
-         * count options with what each one adds — the same rules as the public
-         * checkout, from the same Config values (never literals).
+         * Keep the Extra Guest Fee slaved to the guest count, label the count
+         * options with what each adds, and say what is being charged — from
+         * the same Config values as the public checkout, never literals.
          *
-         * This is presentation and input-slaving only. No server-side
-         * validation is extended into wp-admin; those exemptions stay.
+         * The multiplier is set from the count EVERY time, ticked or not
+         * (v0.28.0): MotoPress presets it to capacity, and an unticked fee left
+         * at 4 — or at whatever was last chosen — was one more number on the
+         * screen that disagreed with Number of Guests.
          */
         function syncExtraGuestFee(ids) {
             if (!GUEST_IDS.length) { return; }
@@ -208,34 +389,61 @@
             adultsSelects(document).forEach(function (sel) {
                 if (couch) { decorateOptions(sel, included, steps); }
                 var svc = serviceFor(sel);
-                if (!svc) { return; }
                 var extra = Math.max(0, (parseInt(sel.value, 10) || 0) - included);
                 // Never tick without control of the multiplier — MotoPress
                 // presets that select to full capacity, which would bill more
                 // guests than were booked.
-                var want = couch && extra > 0 && !!svc.adults;
-                if (want && String(svc.adults.value) !== String(extra)) {
-                    svc.adults.value = String(extra);
-                    fire(svc.adults);
+                var want = !!svc && couch && extra > 0 && !!svc.adults;
+                if (svc) {
+                    if (svc.adults) {
+                        var mult = String(Math.max(1, extra));
+                        if (String(svc.adults.value) !== mult && hasOption(svc.adults, mult)) {
+                            svc.adults.value = mult;
+                            fire(svc.adults);
+                        }
+                    }
+                    if (!!svc.box.checked !== want) {
+                        svc.box.checked = want;
+                        fire(svc.box);
+                    }
                 }
-                if (!!svc.box.checked !== want) {
-                    svc.box.checked = want;
-                    fire(svc.box);
-                }
+                feeLine(sel, want ? extra : 0, steps);
             });
+        }
+
+        function hasOption(sel, value) {
+            return Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+        }
+
+        /**
+         * The read-only line under Number of Guests: "Extra guest fee: 1 guest
+         * × $50/night". Shown only while the fee is actually ticked, and never
+         * with an amount that cannot be read.
+         */
+        function feeLine(sel, extra, steps) {
+            var line = sel.dccFeeLine;
+            var one = steps[1] || '';
+            if (!extra || !one) {
+                if (line) { setShown(line, false); }
+                return;
+            }
+            if (!line) {
+                line = document.createElement('p');
+                line.className = 'dcc_admin-feeline description';
+                insertAfter(line, chooserAnchor(sel));
+                sel.dccFeeLine = line;
+            }
+            var text = extra === 1
+                ? (I18N.feeLineOne || 'Extra guest fee: 1 guest × %s/night').replace('%s', one)
+                : (I18N.feeLineMany || 'Extra guest fee: %1$d guests × %2$s/night')
+                    .replace('%1$d', String(extra)).replace('%2$s', one);
+            setText(line, text);
+            setShown(line, true);
         }
 
         /** Pair a guest-count select with its Extra Guest Fee inputs. */
         function serviceFor(sel) {
-            var boxes = [];
-            Array.prototype.forEach.call(
-                document.querySelectorAll('input[name*="[services]"]'),
-                function (box) {
-                    if (!/\[id\]$/.test(String(box.name || ''))) { return; }
-                    if (GUEST_IDS.indexOf(parseInt(box.value, 10)) === -1) { return; }
-                    boxes.push(box);
-                }
-            );
+            var boxes = serviceBoxes(GUEST_IDS);
             if (!boxes.length) { return null; }
 
             // Prefer the service that shares this select's name prefix, so a
@@ -285,43 +493,19 @@
                 }
                 var extra  = (parseInt(opt.value, 10) || 0) - included;
                 var amount = extra > 0 ? steps[extra] : '';
-                opt.textContent = amount ? base + suffix.replace('%s', amount) : base;
+                setText(opt, amount ? base + suffix.replace('%s', amount) : base);
             });
-        }
-
-        function fire(el) {
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         /**
          * Accommodation types currently selected anywhere on the screen, in
-         * order of trust.
-         *
-         * 1. What PHP stated (CFG.statedRoomTypes on the edit screen, the
-         *    data-dcc-room-types marker on the wizard). The create-booking wizard's checkout step carries
-         *    NO room-type control in its markup — the accommodation was chosen
-         *    in an earlier step and exists only server-side — so there is
-         *    nothing to derive from and derivation alone left that screen
-         *    ungated. Admin_Fields prints the reserved room-type ids on the
-         *    mphb_cb_checkout_form hook; that is authoritative, so it wins.
-         *
-         * 2. Derived from the DOM, for the edit-booking screen, whose
-         *    room-type selects MotoPress creates dynamically (hence the
-         *    MutationObserver). Rather than guess a selector: any <select>
-         *    offering a known room-type ID as an option value, or any input
-         *    whose name mentions room_type and holds a known ID.
-         *
-         * Returns null when neither is available, and the whole gate stands
-         * down — that screen then behaves exactly as it did before this file
-         * existed. Hiding nothing is always the safe wrong answer here.
+         * order of trust: what PHP stated (CFG.statedRoomTypes on the edit
+         * screen, the data-dcc-room-types marker on the Add New step), then
+         * derived from the DOM. null when neither is available. Used for the
+         * couch test only: whether the guest fee can apply at all.
          */
         function selectedRoomTypes() {
             var stated = [];
-            // v0.27.0 — on an EXISTING booking the edit screen carries no
-            // accommodation control at all, so Admin_Fields reads the booking's
-            // reserved rooms and states their types here. Empty means it could
-            // not read them, and then this falls through to "show everything".
             (CFG.statedRoomTypes || []).forEach(function (v) {
                 var n = parseInt(v, 10);
                 if (n > 0 && stated.indexOf(n) === -1) { stated.push(n); }
@@ -329,8 +513,6 @@
             Array.prototype.forEach.call(
                 document.querySelectorAll('[data-dcc-room-types]'),
                 function (ctx) {
-                    // Union across markers: should the hook ever fire once per
-                    // reserved room, every room still counts.
                     String(ctx.getAttribute('data-dcc-room-types') || '')
                         .split(',')
                         .forEach(function (v) {
@@ -345,7 +527,6 @@
 
             var found = [];
             var sawControl = false;
-
             Array.prototype.forEach.call(document.querySelectorAll('select'), function (sel) {
                 var offersKnown = Array.prototype.some.call(sel.options, function (opt) {
                     return knownIds.indexOf(parseInt(opt.value, 10)) !== -1;
@@ -355,87 +536,134 @@
                 var v = parseInt(sel.value, 10);
                 if (knownIds.indexOf(v) !== -1) { found.push(v); }
             });
-
             Array.prototype.forEach.call(
                 document.querySelectorAll('input[name*="room_type"]'),
                 function (input) {
                     var v = parseInt(input.value, 10);
                     if (knownIds.indexOf(v) === -1) { return; }
-                    if (input.type === 'checkbox' || input.type === 'radio') {
-                        sawControl = true;
-                        if (input.checked) { found.push(v); }
-                        return;
-                    }
                     sawControl = true;
+                    if ((input.type === 'checkbox' || input.type === 'radio') && !input.checked) { return; }
                     found.push(v);
                 }
             );
-
             return sawControl ? found : null;
         }
 
         /**
-         * Union semantics: a booking can hold more than one accommodation, so a
-         * capability any selected cottage has keeps the fields visible.
-         * 'unknown' counts as capable — we never hide on a failed read.
+         * The pet fee (v0.28.0, owner's picks 2026-10-07).
+         *
+         * Edit screen: the booking's saved services, stated by PHP — true,
+         * false, or null when they could not be read (Dog then shows). The
+         * read-only "Pet fee: Yes/No" line is printed by the Guests box.
+         *
+         * Add New: a "Pet Fee: Yes / No" dropdown under Number of Guests, on
+         * every cottage. It behaves like Number of Guests: Yes ticks the pet
+         * service for this stay's length (the bucket PHP stated on the marker,
+         * else the room's only pet service) and shows Dog; No unticks it. The
+         * native pet rows are then never shown, so the dropdown is the only
+         * pet fee control. On a cottage with no pet service, Yes shows Dog and
+         * says plainly that nothing is charged. Where the bucket cannot be
+         * told (several pet services, none stated), the native rows stay
+         * visible and the dropdown asks for the fee to be chosen there.
+         * The dropdown has no `name`: it is never submitted.
          */
-        function capable(need, ids) {
-            if (need === NEED_SHOW_ALL) {
-                return false; // Only the escape hatch (or stored data) shows these.
+        function petControl() {
+            var none = { state: function () { return null; }, apply: function () {} };
+            if (CFG.isExisting === '1') {
+                var s = CFG.statedPetFee;
+                return {
+                    state: function () { return s === true ? true : (s === false ? false : null); },
+                    apply: function () {}
+                };
             }
-            if (!ids || !ids.length) {
-                return true; // Nothing chosen yet — show everything.
-            }
-            for (var i = 0; i < ids.length; i++) {
-                var rt = roomTypes[String(ids[i])];
-                if (!rt) { return true; }
-                if (rt[need] !== 'no') { return true; }
-            }
-            return false;
-        }
+            // The checkout form's per-room chooser only (…[adults]). The Add
+            // New SEARCH step has an adults select too, and must not get a pet
+            // control.
+            var chooser = adultsSelects(document).filter(function (s) {
+                return /\[adults\]$/.test(String(s.name || ''));
+            })[0];
+            if (!chooser) { return none; }
 
-        function evaluate() {
-            var ids = selectedRoomTypes();
-            if (ids === null) {
-                // Couldn't identify the accommodation control: fail open and
-                // leave the screen exactly as MotoPress rendered it.
-                managed.forEach(function (f) { f.row.classList.remove(HIDDEN_CLASS); });
-                // v0.27.0 — and the checkbox follows the same rule as below:
-                // hiding nothing, it steps aside. Until now this path returned
-                // before telling it, so it stayed up offering to "show all"
-                // beside a box already showing everything (seen on live,
-                // booking 19615, 0.26.0), under a hint saying fields are hidden.
-                if (hatch) { hatch.update(0, showAll); }
-                if (layout) { layout.refresh(); }
-                return;
-            }
-            var hiddenNow = 0;
-            managed.forEach(function (f) {
-                var show = showAll || f.sticky || capable(f.need, ids);
-                f.row.classList.toggle(HIDDEN_CLASS, !show);
-                if (!show) { hiddenNow += 1; }
+            var wrap = document.createElement('p');
+            wrap.className = 'dcc_admin-petfee';
+            var label = document.createElement('label');
+            label.setAttribute('for', 'dcc_admin_pet_fee');
+            label.textContent = I18N.petFee || 'Pet Fee:';
+            var sel = document.createElement('select');
+            sel.id = 'dcc_admin_pet_fee';
+            [['no', I18N.petNo || 'No'], ['yes', I18N.petYes || 'Yes']].forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o[0];
+                opt.textContent = o[1];
+                sel.appendChild(opt);
             });
-            syncExtraGuestFee(ids);
+            var note = document.createElement('span');
+            note.className = 'dcc_admin-petfee__note description';
+            note.hidden = true;
+            wrap.appendChild(label);
+            wrap.appendChild(document.createTextNode(' '));
+            wrap.appendChild(sel);
+            wrap.appendChild(note);
+            insertAfter(wrap, chooserAnchor(chooser));
 
-            // v0.22.0 — the checkbox says what it is doing, or gets out of the
-            // way. It was reported as appearing on a screen where every field
-            // was already shown, which is exactly what happens on an EXISTING
-            // booking: rule 2 keeps any field that holds a value visible
-            // whatever the accommodation, so on a filled-in booking there is
-            // often nothing left for this to reveal. A control that promises
-            // to show more, next to a screen already showing everything, reads
-            // as broken. So: it names the count while it is hiding something,
-            // and hides itself when it is hiding nothing AND is not the thing
-            // currently doing the showing.
-            if (hatch) { hatch.update(hiddenNow, showAll); }
-            // A heading hides when every row under it is hidden.
-            if (layout) { layout.refresh(); }
+            // Opens at what the form already says: Yes if a pet fee is ticked.
+            sel.value = serviceBoxes(PET_IDS).some(function (b) { return b.checked; }) ? 'yes' : 'no';
+            sel.addEventListener('change', function () { apply(); });
+
+            function stated() {
+                var ctx = document.querySelector('[data-dcc-pet-service]');
+                return ctx ? (parseInt(ctx.getAttribute('data-dcc-pet-service'), 10) || 0) : 0;
+            }
+
+            function apply() {
+                var yes = sel.value === 'yes';
+                var boxes = serviceBoxes(PET_IDS);
+                var msg = '';
+                if (!boxes.length) {
+                    if (yes) { msg = I18N.petNone || 'This cottage has no pet fee, so nothing is charged.'; }
+                } else {
+                    var target = stated();
+                    var rooms = {};
+                    boxes.forEach(function (b) {
+                        var p = roomPrefix(b.name);
+                        (rooms[p] = rooms[p] || []).push(b);
+                    });
+                    Object.keys(rooms).forEach(function (p) {
+                        var list = rooms[p];
+                        var t = list.filter(function (b) { return parseInt(b.value, 10) === target; })[0] ||
+                            (list.length === 1 ? list[0] : null);
+                        if (!t) {
+                            // Cannot tell which bucket: leave this room's pet
+                            // rows visible and untouched, and say so.
+                            if (yes) { msg = I18N.petManual || 'Choose the pet fee under Additional Services.'; }
+                            return;
+                        }
+                        list.forEach(function (b) {
+                            var row = serviceRow(b);
+                            if (row) { addClass(row, FEE_ROW_CLASS); }
+                            var want = yes && b === t;
+                            if (!!b.checked !== want) {
+                                b.checked = want;
+                                fire(b);   // MotoPress recomputes the total natively
+                            }
+                        });
+                    });
+                }
+                setText(note, msg);
+                setShown(note, msg !== '');
+            }
+
+            return {
+                state: function () { return sel.value === 'yes'; },
+                apply: apply
+            };
         }
 
         /**
-         * The admin picks the accommodation after the form has rendered and can
-         * change it, and MotoPress re-renders parts of the screen as they do,
-         * so re-evaluate on both change events and DOM mutations.
+         * The admin can change the count or the pet fee, and MotoPress
+         * re-renders parts of the screen as they do, so re-evaluate on both
+         * change events and DOM mutations. Every write above is idempotent, so
+         * a re-run with nothing to do changes nothing and the observer settles.
          */
         function watch() {
             document.addEventListener('change', function (e) {
@@ -449,17 +677,13 @@
             new MutationObserver(function () {
                 if (timer) { clearTimeout(timer); }
                 timer = setTimeout(function () {
-                    // Rows can be replaced wholesale by a re-render; re-order
-                    // (a no-op when already in order, so this cannot loop) and
-                    // re-find them before re-evaluating.
                     if (layout) { layout.arrange(); }
-                    managed = collect(groups).concat(collectServiceRows());
+                    managed = collect(groups);
                     evaluate();
                 }, 200);
             }).observe(document.body, { childList: true, subtree: true });
         }
     }
-
 
     /**
      * Customer Information box: the owner's order and headings (v0.26.0).
@@ -470,15 +694,21 @@
      * the GUEST checkout form, which he does not want. So the box is ordered
      * here, in the browser, in wp-admin only.
      *
+     * TWO SHAPES (v0.28.0):
+     *  - TABLE — the edit screen: rows are <tr>s of one table. Verified live.
+     *  - FLOW — the Add New customer step, which draws MotoPress's front-end
+     *    form: rows are the <p> wrapping each field, sharing one parent. Built
+     *    from the owner's recordings, NOT from captured markup, so it is held
+     *    to stricter rules: the container must hold no Number of Guests and no
+     *    service; elements before the first known row stay first; an element
+     *    with no form control right after a known row travels with it (an
+     *    upload hint); anything else goes after the known groups, visible.
+     *
      * THE RULES, each one a decision rather than a default:
-     *  - MOVE, never re-create. appendChild() moves the existing <tr>, so every
-     *    input keeps its name, its value and its place in the form. Nothing
-     *    here reads or writes a value.
-     *  - "The same box" means: the known fields' rows are <tr>s sharing ONE
-     *    parent. Anything else — a different layout on another screen, a
-     *    MotoPress update — and this stands down and the screen stays exactly
-     *    as MotoPress drew it. That is also what decides the add-booking step:
-     *    the same table is ordered, a different form is left alone.
+     *  - MOVE, never re-create. appendChild() moves the existing node, so every
+     *    input keeps its name, its value and its place in the form.
+     *  - At least two known fields in one container, or it stands down and the
+     *    screen stays exactly as MotoPress drew it (console names the reason).
      *  - A missing field is skipped; a group with no rows gets no heading.
      *  - Any row it does not know stays visible, after the known groups, under
      *    an "Other" heading that exists only while there is such a row.
@@ -489,7 +719,7 @@
         var spec = CFG.customerLayout || [];
         if (!spec.length) { return null; }
         var HEAD = 'dcc_admin-group-heading';
-        var heads = {};          // group key -> heading <tr>
+        var heads = {};          // group key -> heading node
         var state = null;        // the last arrangement, for refresh()
         var reported = false;
 
@@ -502,7 +732,7 @@
             heads = {};
             state = null;
             if (!reported && window.console && console.info) {
-                // Admin-only, and it names a reason and a count — never a value.
+                // Admin-only, and it names a reason — never a value.
                 console.info('DCC Custom Checkout: booking-screen layout left as MotoPress drew it — ' + reason + '.');
                 reported = true;
             }
@@ -517,21 +747,25 @@
             return null;
         }
 
+        function rowOf(el) {
+            return el.closest('tr') || el.closest('p');
+        }
+
         function find() {
             var hits = [];
             var marked = [];
             spec.forEach(function (g, gi) {
                 (g.fields || []).forEach(function (cands, fi) {
                     if (cands && !Array.isArray(cands)) {
-                        // A row with no named control (Upload Photo ID): it is
-                        // matched once the box is known — see markedRow().
+                        // A row with no named control (Upload Photo ID on the
+                        // edit screen): matched once the box is known.
                         marked.push({ gi: gi, fi: fi, def: cands });
                         return;
                     }
                     var el = controlFor(cands || []);
                     if (!el) { return; }
-                    var tr = el.closest('tr');
-                    if (tr && tr.parentNode) { hits.push({ gi: gi, fi: fi, el: el, row: tr }); }
+                    var row = rowOf(el);
+                    if (row && row.parentNode) { hits.push({ gi: gi, fi: fi, el: el, row: row }); }
                 });
             });
             // The parent most known rows share is the box; a stray match
@@ -555,25 +789,23 @@
         }
 
         /**
-         * A row that carries no named control, identified by a direct
-         * reference to the field: an element in the row whose for / id / name
-         * is one of def.names (on live, the th label's
-         * for="mphb-mphb_upload_id", present whether or not a file is
-         * uploaded). Never by its label text, and never by row class alone
-         * (v0.27.1): the class changes with the row's state, which is how
-         * 0.27.0 missed every booking without a photo. No match: the row stays
-         * under "Other", visible.
+         * A row identified by a direct reference to the field: an element in
+         * it whose for / id / name is one of def.names (edit screen: the th
+         * label's for="mphb-mphb_upload_id", in both of its live states; Add
+         * New: the file input's own name). Never by its label text, and never
+         * by row class alone (v0.27.1). No match: the row stays under "Other".
          */
         function markedRow(box, def, taken) {
             var used = taken.map(function (h) { return h.row; });
             var free = Array.prototype.filter.call(box.children, function (c) {
-                return c.tagName === 'TR' && used.indexOf(c) === -1;
+                return used.indexOf(c) === -1;
             });
             var names = def.names || [];
             for (var i = 0; i < free.length; i++) {
                 for (var j = 0; j < names.length; j++) {
                     var n = esc(names[j]);
-                    if (free[i].querySelector('[for="' + n + '"], [id="' + n + '"], [name="' + n + '"]')) {
+                    if (free[i].matches('[name="' + n + '"]') ||
+                            free[i].querySelector('[for="' + n + '"], [id="' + n + '"], [name="' + n + '"]')) {
                         return free[i];
                     }
                 }
@@ -581,53 +813,99 @@
             return null;
         }
 
-        function heading(key, title, cols) {
-            var tr = heads[key];
-            if (!tr) {
-                tr = document.createElement('tr');
-                tr.className = HEAD;
-                tr.setAttribute('data-dcc-group', key);
-                var td = document.createElement('td');
+        function heading(key, title, cols, table) {
+            var node = heads[key];
+            if (!node) {
                 var div = document.createElement('div');
                 div.className = HEAD + '__title';
                 div.setAttribute('role', 'heading');
                 div.setAttribute('aria-level', '3');
                 div.textContent = title;
-                td.appendChild(div);
-                tr.appendChild(td);
-                heads[key] = tr;
+                if (table) {
+                    node = document.createElement('tr');
+                    var td = document.createElement('td');
+                    td.appendChild(div);
+                    node.appendChild(td);
+                } else {
+                    node = document.createElement('div');
+                    node.appendChild(div);
+                }
+                node.className = HEAD;
+                node.setAttribute('data-dcc-group', key);
+                heads[key] = node;
             }
-            var td0 = tr.firstChild;
-            if (td0.colSpan !== cols) { td0.colSpan = cols; }
-            return tr;
+            if (table && node.firstChild.colSpan !== cols) { node.firstChild.colSpan = cols; }
+            return node;
+        }
+
+        function hasControl(el) {
+            return !!(el.matches && el.matches('input, select, textarea, button')) ||
+                !!el.querySelector('input:not([type="hidden"]), select, textarea, button');
         }
 
         function arrange() {
             var f = find();
-            if (!f) { return standDown('fewer than two of its fields were found as rows of one table'); }
+            if (!f) { return standDown('fewer than two of its fields were found in one container'); }
             var box = f.box;
+            var table = box.tagName === 'TBODY' || box.tagName === 'TABLE' || box.tagName === 'THEAD';
+            if (!table && (adultsSelects(box).length || box.querySelector('input[name*="[services]"]'))) {
+                // The Add New form's accommodation block shares this container:
+                // ordering it would move Number of Guests. Not the box.
+                return standDown('the fields share a container with the guest count or the services');
+            }
+
             var cols = 1;
             var known = [];
-            var groups = spec.map(function (g) { return { g: g, rows: [], els: [] }; });
+            var groups = spec.map(function (g) { return { g: g, rows: [], pairs: [] }; });
             f.hits.forEach(function (h) {
-                var span = 0;
-                Array.prototype.forEach.call(h.row.cells || [], function (c) { span += c.colSpan || 1; });
-                if (span > cols) { cols = span; }
-                groups[h.gi].els.push(h.el);
+                if (table) {
+                    var span = 0;
+                    Array.prototype.forEach.call(h.row.cells || [], function (c) { span += c.colSpan || 1; });
+                    if (span > cols) { cols = span; }
+                }
+                groups[h.gi].pairs.push({ el: h.el, row: h.row });
                 if (known.indexOf(h.row) === -1) {
                     known.push(h.row);
                     groups[h.gi].rows.push(h.row);
                 }
             });
 
-            var hatch = null;
-            Array.prototype.forEach.call(box.children, function (c) {
-                if (c.classList && (c.classList.contains('dcc_admin-showall') ||
-                        c.classList.contains('dcc_admin-showall-row'))) { hatch = c; }
-            });
+            var isOurs = function (c) {
+                return known.indexOf(c) !== -1 || !!(c.classList &&
+                    (c.classList.contains(HEAD) || c.classList.contains(NOTE_CLASS)));
+            };
+            var children = Array.prototype.slice.call(box.children);
 
-            var desired = [];
-            var hatchPlaced = false;
+            // FLOW only: what stays first, and what travels with a known row.
+            var lead = [];
+            var attached = {};   // index in `known` -> [nodes following that row]
+            var claimed = [];
+            if (!table) {
+                var seenKnown = false;
+                var lastKnown = null;
+                children.forEach(function (c) {
+                    if (known.indexOf(c) !== -1) {
+                        seenKnown = true;
+                        lastKnown = c;
+                        return;
+                    }
+                    if (isOurs(c)) { return; }
+                    if (!seenKnown && !hasControl(c)) {
+                        lead.push(c);
+                        claimed.push(c);
+                        return;
+                    }
+                    if (lastKnown && !hasControl(c)) {
+                        var k = known.indexOf(lastKnown);
+                        (attached[k] = attached[k] || []).push(c);
+                        claimed.push(c);
+                        return;
+                    }
+                    lastKnown = null;   // an unknown control breaks the chain
+                });
+            }
+
+            var desired = lead.slice();
             groups.forEach(function (gr) {
                 if (!gr.rows.length) {
                     if (heads[gr.g.key] && heads[gr.g.key].parentNode) {
@@ -635,26 +913,29 @@
                     }
                     return;
                 }
-                if (hatch && !hatchPlaced && gr.g.governed) {
-                    desired.push(hatch);
-                    hatchPlaced = true;
-                }
-                desired.push(heading(gr.g.key, gr.g.title, cols));
-                desired = desired.concat(gr.rows);
+                desired.push(heading(gr.g.key, gr.g.title, cols, table));
+                var note = notes[gr.g.key];
+                if (note && note.parentNode === box) { desired.push(note); }
+                gr.rows.forEach(function (row) {
+                    desired.push(row);
+                    (attached[known.indexOf(row)] || []).forEach(function (a) { desired.push(a); });
+                });
             });
-            if (hatch && !hatchPlaced) { desired.push(hatch); }
 
-            var ours = function (c) {
-                return c === hatch || known.indexOf(c) !== -1 ||
-                    (c.classList && c.classList.contains(HEAD));
-            };
-            var others = Array.prototype.filter.call(box.children, function (c) { return !ours(c); });
+            var others = children.filter(function (c) {
+                return !isOurs(c) && claimed.indexOf(c) === -1;
+            });
             if (others.length) {
-                desired.push(heading('other', CFG.customerOtherTitle || 'Other', cols));
+                desired.push(heading('other', CFG.customerOtherTitle || 'Other', cols, table));
                 desired = desired.concat(others);
             } else if (heads.other && heads.other.parentNode) {
                 heads.other.parentNode.removeChild(heads.other);
             }
+            // A note whose group has no rows here is left where it is.
+            Object.keys(notes).forEach(function (k) {
+                var n = notes[k];
+                if (n.parentNode === box && desired.indexOf(n) === -1) { desired.push(n); }
+            });
 
             var current = Array.prototype.slice.call(box.children);
             var same = current.length === desired.length && current.every(function (c, i) { return c === desired[i]; });
@@ -677,8 +958,7 @@
         }
 
         // A field counts as visible when its row is shown AND nothing between
-        // its control and that row has been hidden by the gating, which may
-        // hide a wrapper inside the cell rather than the <tr> itself.
+        // its control and that row has been hidden by the gating.
         function fieldShown(el, row) {
             if (!shown(row)) { return false; }
             for (var n = el; n && n !== row; n = n.parentNode) {
@@ -687,18 +967,11 @@
             return true;
         }
 
-        function setHidden(tr, hide) {
-            if (!tr) { return; }
-            if (tr.classList.contains(HIDDEN_CLASS) !== hide) {
-                if (hide) { tr.classList.add(HIDDEN_CLASS); } else { tr.classList.remove(HIDDEN_CLASS); }
-            }
-        }
-
         function refresh() {
             if (!state) { return; }
             state.groups.forEach(function (gr) {
                 if (!gr.rows.length) { return; }
-                var any = gr.els.some(function (el) { return fieldShown(el, el.closest('tr')); });
+                var any = gr.pairs.some(function (p) { return fieldShown(p.el, p.row); });
                 setHidden(heads[gr.g.key], !any);
             });
             if (heads.other) {
@@ -707,77 +980,5 @@
         }
 
         return arrange() ? { arrange: arrange, refresh: refresh } : null;
-    }
-
-    /**
-     * "Show all booking fields" — the deliberate-override escape hatch the
-     * wp-admin exemptions exist to protect. Remembered for the session so an
-     * admin working through several bookings sets it once.
-     */
-    function addEscapeHatch(firstField, onChange) {
-        if (!firstField || !firstField.row || !firstField.row.parentNode) { return null; }
-        if (document.querySelector('.dcc_admin-showall')) { return null; }
-
-        var wrap = document.createElement('div');
-        wrap.className = 'dcc_admin-showall';
-
-        var id = 'dcc_admin_show_all';
-        var box = document.createElement('input');
-        box.type = 'checkbox';
-        box.id = id;
-        box.checked = readShowAll();
-
-        var label = document.createElement('label');
-        label.setAttribute('for', id);
-        label.textContent = I18N.showAll || 'Show all booking fields';
-
-        var hint = document.createElement('p');
-        hint.className = 'dcc_admin-showall__hint';
-        hint.textContent = I18N.hint || '';
-
-        wrap.appendChild(box);
-        wrap.appendChild(label);
-        if (hint.textContent) { wrap.appendChild(hint); }
-
-        box.addEventListener('change', function () { onChange(box.checked); });
-
-        // v0.27.0 — among table rows it gets a proper full-width row of its
-        // own (a bare <div> in a <tbody> rendered, but as a narrow orphan
-        // cell). Anywhere else it stays a plain block, as before.
-        var outer = wrap;
-        var anchor = firstField.row;
-        if (anchor.tagName === 'TR') {
-            var span = 0;
-            Array.prototype.forEach.call(anchor.cells || [], function (c) { span += c.colSpan || 1; });
-            outer = document.createElement('tr');
-            outer.className = 'dcc_admin-showall-row';
-            var td = document.createElement('td');
-            td.colSpan = Math.max(span, 1);
-            td.appendChild(wrap);
-            outer.appendChild(td);
-        }
-        anchor.parentNode.insertBefore(outer, anchor);
-
-        var base = label.textContent;
-        return {
-            update: function (hiddenCount, showAll) {
-                // Present while it has something to reveal, or while it is the
-                // reason everything is visible. Otherwise it is noise.
-                var useful = hiddenCount > 0 || showAll;
-                if (outer.hidden !== !useful) { outer.hidden = !useful; }
-                label.textContent = hiddenCount > 0
-                    ? base + ' (' + hiddenCount + ')'
-                    : base;
-                if (box.checked !== !!showAll) { box.checked = !!showAll; }
-            }
-        };
-    }
-
-    function readShowAll() {
-        try { return window.sessionStorage.getItem(STORAGE_KEY) === '1'; } catch (e) { return false; }
-    }
-
-    function writeShowAll(on) {
-        try { window.sessionStorage.setItem(STORAGE_KEY, on ? '1' : '0'); } catch (e) {}
     }
 })();
