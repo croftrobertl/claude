@@ -1,7 +1,10 @@
 /**
  * Admin booking screens — Customer Information order and headings (v0.26.0+),
- * and the v0.28.0 rules: Guest 3/4 by guest count, Dog by the pet fee, Number
- * of Guests and "Pet Fee" as the only fee controls. Real Chromium, 1280 and 390.
+ * the v0.28.0 rules (Guest 3/4 by guest count, Dog by the pet fee, Number of
+ * Guests and "Pet Fee" as the only fee controls) and v0.29.0's (Guest 2 by the
+ * count, the pet fee on a pet-fee cottage only, the pet fee as a WORD after
+ * WordPress's localize step, Full Guest Name from Guest 1). Real Chromium,
+ * 1280 and 390.
  *
  *     npm install && npm test
  *
@@ -55,12 +58,10 @@ function check(name, actual, expected) {
     }
 }
 
-const ROOM_TYPES = {
-    '1742': { pet: 'no', couch: 'yes' },    // Cottage 36: Sunshine Suite (the recordings)
-    '1065': { pet: 'no', couch: 'yes' },
-    '1607': { pet: 'yes', couch: 'no' },    // Cottage 34: pet, sleeps two
-    '1604': { pet: 'no', couch: 'no' },
-};
+/* The cottage map comes from the SHIPPED room_type_map() via config.php (since
+   v0.29.0), over the live services: 1742/1065 carry the Extra Guest Fee, 1607
+   (Cottage 34) the pet services, 1604 (Cottage 33) an EMPTY list, and 1999
+   cannot be read. */
 
 /* =========================================================================
  * EDIT SCREEN fixture (table)
@@ -235,7 +236,20 @@ function flowField(name, label, kind, value, hintsOutside) {
 /* opts: preset (Number of Guests), feeMult (the fee's own preset, MotoPress
    uses capacity), fee (couch cottage: the Extra Guest Fee row), pet (number of
    pet services: 0, 1 or 3), other (a generic service row), marker {types, pet},
-   values, guestsInCustomer (fail-open case), noScript. */
+   values, guestsInCustomer (fail-open case), noScript, guestName ('both' —
+   MotoPress's name AND wrapper, the default; 'name' — name only; 'wrapper' —
+   wrapper only; 'none'), guestNameValue, secondRoom. */
+/* Full Guest Name, per room, in the shapes MotoPress's own markup could take.
+   The live markup is NOT confirmed (Director, 2026-10-07). */
+function guestNameBox(opts, i) {
+    const shape = opts.guestName || 'both';
+    if (shape === 'none') { return ''; }
+    const v = opts.guestNameValue ? ` value="${opts.guestNameValue}"` : '';
+    const name = shape === 'wrapper' ? `dcc_test_full_name_${i}` : `mphb_room_details[${i}][guest_name]`;
+    const cls = shape === 'name' ? 'mphb-test-plain' : 'mphb-guest-name-wrapper';
+    return `<p class="${cls}"><label>Full Guest Name</label><input type="text" name="${name}"${v}></p>`;
+}
+
 function addNewPage(opts) {
     opts = opts || {};
     const preset = opts.preset === undefined ? 1 : opts.preset;
@@ -282,7 +296,7 @@ ${CSS}</style></head><body><div class="wrap"><h1>Add New Booking</h1>
     <h3>Accommodation Details</h3>
     <p>Selected Accommodation: <a href="#">Cottage 36: Sunshine Suite</a></p>
     ${chooser}
-    <p class="mphb-guest-name-wrapper"><label>Full Guest Name</label><input type="text" name="mphb_room_details[0][guest_name]"></p>
+    ${guestNameBox(opts, 0)}${opts.secondRoom ? guestNameBox(opts, 1) : ''}
     ${services}
     <h4>Price Breakdown</h4>
     <table class="mphb-price-breakdown"><tbody>
@@ -331,7 +345,7 @@ async function open(browser, width, html, cfgOver, included, booking, wizard) {
     pg.setDefaultTimeout(5000);
     const logs = [];
     pg.on('console', m => logs.push(m.text()));
-    const cfg = Object.assign(phpConfig(included, booking, wizard), { roomTypes: ROOM_TYPES }, cfgOver || {});
+    const cfg = Object.assign(phpConfig(included, booking, wizard), cfgOver || {});
     // Printed inline ahead of the script, as wp_localize_script does. (An
     // addInitScript does NOT reach a setContent page — measured.)
     const cfgTag = '<script>window.DCC_CHECKOUT_ADMIN = ' +
@@ -412,7 +426,7 @@ async function visibleServiceRows(pg) {
     /* --- E1. Order, at both widths, every group shown by the booking's facts. */
     for (const width of [1280, 390]) {
         const { ctx, pg } = await open(browser, width, editPage(MOTOPRESS_ORDER), EX, undefined,
-            bk([{ type: 1065, adults: 4, services: [17712] }]));
+            bk([{ type: 1607, adults: 4, services: [17712] }]));
         check(`${width}px edit, 4 guests + pet fee saved: Rob's order, every heading`,
             await seen(pg, EDIT_BOX), TIDY);
         check(`${width}px edit: no "Show all booking fields" anywhere (removed, owner's pick)`,
@@ -479,8 +493,8 @@ async function visibleServiceRows(pg) {
             [h.includes('## Guest 3'), h.includes('## Guest 4')], [true, true]);
         await r.ctx.close();
 
-        r = await ex([{ type: 1065, adults: 2, services: 'not-serialised garbage' }]);
-        check('edit, saved services unreadable: Dog shows (fail open)',
+        r = await ex([{ type: 1607, adults: 2, services: 'not-serialised garbage' }]);
+        check('edit, Cottage 34, saved services unreadable: Dog shows (fail open)',
             headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Dog'), true);
         await r.ctx.close();
 
@@ -506,6 +520,73 @@ async function visibleServiceRows(pg) {
         check('the Guests box options carry NO fee label (0.27.x labelled them on couch cottages)',
             await pg.$$eval('[name="dcc_adults[900]"] option', os => os.some(o => o.textContent.indexOf('(+') !== -1)), false);
         await ctx.close();
+    }
+
+    /* --- E2b. v0.29.0: the pet fee as the BROWSER receives it, Guest 2. ---- */
+    {
+        const ex = (rooms, values, more) => open(browser, 1280, editPage(MOTOPRESS_ORDER, values, more || {}), EX, undefined, bk(rooms));
+        const dog = async pg => headingsIn(await seen(pg, EDIT_BOX)).includes('## Dog');
+        const word = pg => pg.evaluate(() => [typeof window.DCC_CHECKOUT_ADMIN.statedPetFee, window.DCC_CHECKOUT_ADMIN.statedPetFee]);
+
+        // THE 0.28.0 DEFECT, constructed: Cottage 34, no pet fee saved. Live,
+        // wp_localize_script turned false into "" and Dog showed anyway.
+        let r = await ex([{ type: 1607, adults: 2 }]);
+        check('edit, Cottage 34 without the pet fee: the browser receives the WORD "no" (after WP\'s localize step)',
+            await word(r.pg), ['string', 'no']);
+        check('... and Dog is hidden (0.28.0 showed it: "" read as unknown)', await dog(r.pg), false);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1607, adults: 2, services: [17711] }]);
+        check('edit, Cottage 34 with the pet fee: the browser receives "yes", and Dog shows',
+            [await word(r.pg), await dog(r.pg)], [['string', 'yes'], true]);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1065, adults: 2 }]);
+        check('edit, Cottage 22 (no pet fee): "none", Dog hidden',
+            [await word(r.pg), await dog(r.pg)], [['string', 'none'], false]);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1604, adults: 2 }]);
+        check('edit, Cottage 33 (an EMPTY services list = no pet services): "none", Dog hidden',
+            [await word(r.pg), await dog(r.pg)], [['string', 'none'], false]);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1999, adults: 2 }]);
+        check('edit, a cottage that cannot be read: "unknown", Dog shows (fail open)',
+            [await word(r.pg), await dog(r.pg)], [['string', 'unknown'], true]);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1065, adults: 2 }, { type: 1999, adults: 2 }]);
+        check('edit, two rooms, one cottage unreadable: Dog shows (one unknown room = unknown)', await dog(r.pg), true);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1065, adults: 2 }], { dog_type: 'x-dog' });
+        check('edit, Cottage 22 with dog details saved: Dog stays visible, value kept',
+            [await dog(r.pg), await r.pg.$eval('[name="mphb_dog_type"]', e => e.value)], [true, 'x-dog']);
+        await r.ctx.close();
+
+        // Guest 2 follows the count too (owner, 2026-10-07).
+        r = await ex([{ type: 1065, adults: 1 }]);
+        check('edit, 1 guest: Guest 2 hidden (as Guest 3 and 4)',
+            headingsIn(await seen(r.pg, EDIT_BOX)).filter(x => /Guest [234]/.test(x)), []);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1065, adults: 1 }], { guest2_first_name: 'x-g2' });
+        let s = await seen(r.pg, EDIT_BOX);
+        check('edit, 1 guest with Guest 2 saved: Guest 2 stays, with the note, value untouched',
+            [headingsIn(s).includes('## Guest 2'), s[s.indexOf('## Guest 2') + 1],
+             await r.pg.$eval('[name="mphb_guest2_first_name"]', e => e.value)],
+            [true, 'NOTE More guest names than guests.', 'x-g2']);
+        await r.ctx.close();
+
+        r = await ex([{ type: 1065, adults: 2 }], null, { guestsBox: 1 });
+        check('edit, Guests box at 1: Guest 2 hidden', headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Guest 2'), false);
+        await choose(r.pg, '[name="dcc_adults[900]"]', '2');
+        check('... set to 2 (before save): Guest 2 appears', headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Guest 2'), true);
+        await choose(r.pg, '[name="dcc_adults[900]"]', '');
+        check('... set to "Not provided": Guest 2, 3 and 4 show (count unknown, fail open)',
+            headingsIn(await seen(r.pg, EDIT_BOX)).filter(x => /Guest [234]/.test(x)), ['## Guest 2', '## Guest 3', '## Guest 4']);
+        await r.ctx.close();
     }
 
     /* --- E3. Upload Photo ID, both live states, never by class alone. ------- */
@@ -611,7 +692,8 @@ async function visibleServiceRows(pg) {
         const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 1, feeMult: 4, marker: COUCH }));
         let f = await feeState(pg);
         check('Add New at 1 guest: the fee\'s multiplier is NOT left at MotoPress\'s preset 4', [f.ticked, f.mult], [false, '1']);
-        check('... Guest 3 and 4 hidden', headingsIn(await seen(pg, ADD_BOX)).filter(x => /Guest [34]/.test(x)), []);
+        check('... Guest 2, 3 and 4 hidden (Guest 2 follows the count since v0.29.0)',
+            headingsIn(await seen(pg, ADD_BOX)).filter(x => /Guest [234]/.test(x)), []);
         check('... the Extra Guest Fee row is never on screen', await visibleServiceRows(pg), []);
         check('... nor the "Choose Additional Services" heading that only held it',
             await pg.evaluate(() => !!document.querySelector('.mphb-booking-details h4').getClientRects().length), false);
@@ -625,8 +707,12 @@ async function visibleServiceRows(pg) {
             check(`Add New ${n} guest(s): fee ticked / multiplier / line / Price Breakdown total`,
                 [f.ticked, f.mult, f.line, f.total], expect[n]);
         }
-        await choose(pg, '[name="mphb_room_details[0][adults]"]', { label: '3 (+$50/night)' });
+        await choose(pg, '[name="mphb_room_details[0][adults]"]', '2');
         let h = headingsIn(await seen(pg, ADD_BOX));
+        check('Add New 2 guests: Guest 2 shows, Guest 3 and 4 do not',
+            [h.includes('## Guest 2'), h.includes('## Guest 3'), h.includes('## Guest 4')], [true, false, false]);
+        await choose(pg, '[name="mphb_room_details[0][adults]"]', { label: '3 (+$50/night)' });
+        h = headingsIn(await seen(pg, ADD_BOX));
         check('Add New 3 guests: Guest 3 shows, Guest 4 does not', [h.includes('## Guest 3'), h.includes('## Guest 4')], [true, false]);
         await choose(pg, '[name="mphb_room_details[0][adults]"]', { label: '4 (+$100/night)' });
         h = headingsIn(await seen(pg, ADD_BOX));
@@ -692,16 +778,36 @@ async function visibleServiceRows(pg) {
         await ctx.close();
     }
 
-    /* --- A4. Pet Fee on a cottage with no pet fee. --------------------------- */
+    /* --- A4. No Pet Fee anywhere but a pet-fee cottage (v0.29.0). ---------- */
     {
-        const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }));
-        check('no-pet cottage: the Pet Fee dropdown is still offered', await pg.$eval('#dcc_admin_pet_fee', e => !!e.getClientRects().length), true);
-        await choose(pg, '#dcc_admin_pet_fee', 'yes');
-        check('no-pet cottage, Yes: Dog shows and it says plainly that nothing is charged',
-            [headingsIn(await seen(pg, ADD_BOX)).includes('## Dog'),
-             await pg.$eval('.dcc_admin-petfee__note', e => e.hidden ? '' : e.textContent), (await feeState(pg)).total],
-            [true, 'This cottage has no pet fee, so nothing is charged.', '$194.25']);
-        await ctx.close();
+        // Rob: "Keep 34 as the only pet fee cottage" / "No Pet Fee on others".
+        const probe = async pg => [
+            await pg.$('#dcc_admin_pet_fee') !== null,
+            headingsIn(await seen(pg, ADD_BOX)).includes('## Dog'),
+            await pg.$('.dcc_admin-petfee__note') !== null,
+        ];
+        let r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }));
+        check('Add New, Cottage 36 (no pet fee): no dropdown, no Dog, no message', await probe(r.pg), [false, false, false]);
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 2, fee: false, marker: { types: '1604' } }));
+        check('Add New, Cottage 33 (empty services list): no dropdown, no Dog, no message', await probe(r.pg), [false, false, false]);
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 2, fee: false, pet: 3, marker: { types: '1999', pet: W1 } }));
+        check('Add New, cottage unreadable (pet rows even on screen): no dropdown, Dog shows (fail open)',
+            await probe(r.pg), [false, true, false]);
+        check('... and nothing is ticked for it', await petBoxes(r.pg), []);
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 2, fee: false, pet: 0, marker: PETCOT(W1) }));
+        check('Add New, Cottage 34 but no pet service on screen: no dropdown (nothing to charge), Dog shows',
+            await probe(r.pg), [false, true, false]);
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }));
+        await r.pg.evaluate(() => document.querySelector('[name="mphb_dog_type"]').closest('p').classList.contains('dcc_admin-field-hidden'));
+        await r.pg.$eval('[name="mphb_dog_type"]', e => { e.value = 'x-dog'; e.dispatchEvent(new Event('change', { bubbles: true })); });
+        await r.pg.waitForTimeout(150);
+        check('Add New, Cottage 36, a dog value present: Dog shows (a filled field always stays)',
+            headingsIn(await seen(r.pg, ADD_BOX)).includes('## Dog'), true);
+        await r.ctx.close();
     }
 
     /* --- A5. Phone width: service rows stack; nothing past the edge. -------- */
@@ -734,12 +840,17 @@ async function visibleServiceRows(pg) {
     {
         const vals = { first_name: 'x-f', guest2_first_name: 'x-g2', dog_size: 'A' };
         const base = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, values: vals, noScript: true }));
-        const before = (await formData(base.pg)).filter(x => !/\[services\]/.test(x));
+        const keep = x => !/\[services\]|\[guest_name\]/.test(x);
+        const all0 = await formData(base.pg);
+        const before = all0.filter(keep);
         await base.ctx.close();
         const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, values: vals }));
         check('Add New, the guard: the baseline carries the customer fields', before.length > 20, true);
         check('Add New, with everything applied the customer fields submit unchanged',
-            (await formData(pg)).filter(x => !/\[services\]/.test(x)), before);
+            (await formData(pg)).filter(keep), before);
+        check('... the ONE value that differs is Full Guest Name, filled from Guest 1 (v0.29.0)',
+            [all0.filter(x => /\[guest_name\]/.test(x)), (await formData(pg)).filter(x => /\[guest_name\]/.test(x))],
+            [['mphb_room_details[0][guest_name]='], ['mphb_room_details[0][guest_name]=x-f']]);
         const n = await pg.evaluate(() => new Promise(res => {
             const box = document.querySelector('#mphb-customer-details');
             let count = 0;
@@ -751,11 +862,14 @@ async function visibleServiceRows(pg) {
         await ctx.close();
     }
     {
-        // The Add New SEARCH step has an adults select too: no Pet Fee there.
+        // The Add New SEARCH step has an adults select too: no Pet Fee there —
+        // even with Cottage 34 chosen in its Accommodation Type (as in the
+        // recordings), the worst case for it.
         const { ctx, pg } = await open(browser, 1280, `<!doctype html><html><body>
-            <form><select name="mphb_adults"><option>1</option><option>2</option></select></form>
+            <form><select name="mphb_room_type_id"><option value="1065">Cottage 22</option><option value="1607" selected>Cottage 34</option></select>
+            <select name="mphb_adults"><option>1</option><option>2</option></select></form>
             <!--DCC-CFG--><script>${SCRIPT}</script></body></html>`);
-        check('the search step gets no Pet Fee dropdown', await pg.$('#dcc_admin_pet_fee'), null);
+        check('the search step gets no Pet Fee dropdown, even on Cottage 34', await pg.$('#dcc_admin_pet_fee'), null);
         await ctx.close();
     }
     {
@@ -769,8 +883,8 @@ async function visibleServiceRows(pg) {
         // Count unreadable ("— Select —"): Guest 3/4 show.
         const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 0, marker: COUCH }));
         const h = headingsIn(await seen(pg, ADD_BOX));
-        check('Add New, Number of Guests not chosen: Guest 3 and 4 show (fail open)',
-            [h.includes('## Guest 3'), h.includes('## Guest 4')], [true, true]);
+        check('Add New, Number of Guests not chosen: Guest 2, 3 and 4 show (fail open)',
+            [h.includes('## Guest 2'), h.includes('## Guest 3'), h.includes('## Guest 4')], [true, true, true]);
         await ctx.close();
     }
 
@@ -787,11 +901,16 @@ async function visibleServiceRows(pg) {
         await ctx.close();
     }
     {
-        // "Guests included" = 3: only Guest 4 is gated, so Guest 3 shows at 2.
-        const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }), {}, 3);
+        // v0.29.0: the COUNT decides every guest group, whatever "Guests
+        // included" says (that setting moves the fee, not the fields).
+        const { ctx, pg, cfg } = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }), {}, 3);
+        check('"Guests included" = 3: every guest group is still sent, each with its own min',
+            cfg.guestGroups.map(g => g.min), [2, 3, 4]);
         const h = headingsIn(await seen(pg, ADD_BOX));
-        check('"Guests included" = 3, 2 guests: Guest 3 is not gated (shows), Guest 4 is (hidden)',
-            [h.includes('## Guest 3'), h.includes('## Guest 4')], [true, false]);
+        check('"Guests included" = 3, 2 guests: Guest 2 shows, Guest 3 and 4 do not',
+            [h.includes('## Guest 2'), h.includes('## Guest 3'), h.includes('## Guest 4')], [true, false, false]);
+        await choose(pg, '[name="mphb_room_details[0][adults]"]', '3');
+        check('... at 3 guests: no fee line (3 are included)', (await feeState(pg)).line, '');
         await ctx.close();
     }
     {
@@ -801,6 +920,48 @@ async function visibleServiceRows(pg) {
         check('edit, two rooms, one count missing: Guest 3 and 4 show (one unreadable room = unreadable)',
             [h.includes('## Guest 3'), h.includes('## Guest 4')], [true, true]);
         await ctx.close();
+    }
+
+    /* --- A8. Full Guest Name follows Guest 1 (v0.29.0). ----------------------- */
+    {
+        const typeName = async (pg, first, last) => {
+            await pg.fill('[name="mphb_first_name"]', first);
+            await pg.fill('[name="mphb_last_name"]', last);
+        };
+        const boxes = pg => pg.$$eval('.mphb-booking-details input[type=text]', bs => bs.map(b => b.value));
+
+        let r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH }));
+        await typeName(r.pg, 'Ann', 'Example');
+        check('Add New: Full Guest Name fills from First + Last as they are typed', await boxes(r.pg), ['Ann Example']);
+        await r.pg.fill('[name="mphb_room_details[0][guest_name]"]', 'x-by-hand');
+        await r.pg.fill('[name="mphb_last_name"]', 'Other');
+        check('... once edited by hand it is never overwritten', await boxes(r.pg), ['x-by-hand']);
+        await r.ctx.close();
+
+        r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, secondRoom: true }));
+        await typeName(r.pg, 'Ann', 'Example');
+        check('Add New, two rooms: each room\'s box is filled', await boxes(r.pg), ['Ann Example', 'Ann Example']);
+        await r.ctx.close();
+
+        r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, guestNameValue: 'x-already' }));
+        await typeName(r.pg, 'Ann', 'Example');
+        check('Add New, a box that already holds a name is left alone', await boxes(r.pg), ['x-already']);
+        await r.ctx.close();
+
+        for (const shape of ['name', 'wrapper']) {
+            r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, guestName: shape }));
+            await typeName(r.pg, 'Ann', 'Example');
+            check(`Add New, found by MotoPress's ${shape === 'name' ? '[guest_name] input name' : '.mphb-guest-name-wrapper'} alone`,
+                await boxes(r.pg), ['Ann Example']);
+            await r.ctx.close();
+        }
+
+        r = await open(browser, 1280, addNewPage({ preset: 2, marker: COUCH, guestName: 'none' }));
+        const errs = [];
+        r.pg.on('pageerror', e => errs.push(String(e)));
+        await typeName(r.pg, 'Ann', 'Example');
+        check('Add New, no Full Guest Name on the page: nothing happens, no error', errs, []);
+        await r.ctx.close();
     }
 
     await browser.close();

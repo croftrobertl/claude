@@ -773,9 +773,10 @@ yours to improvise.
   rewritten). Three rules in order: **fail open** (anything unreadable shows),
   **a filled field always stays visible** (with a note when the facts say it
   would otherwise be hidden — nothing is ever cleared), **facts decide**.
-  - **Guest count drives Guest 3/4.** A group shows when the count is ≥ its
-    `min` from `guestGroups` (never a literal), so "Guests included" = 3 moves
-    it. The count is the SAME one the fee sync reads: MotoPress's
+  - **Guest count drives Guest 3/4** — and Guest 2 since 0.29.0 (below), so
+    `guestGroups` now carries EVERY group and "Guests included" no longer
+    moves which are gated (it still moves the fee). A group shows when the
+    count is ≥ its `min` from `guestGroups` (never a literal). The count is the SAME one the fee sync reads: MotoPress's
     `[adults]` selects, else the Guests box (`dcc_adults[...]`), else
     `CFG.statedGuests`. Several rooms → the maximum; any blank → null → show.
     Lowering the count re-hides an empty group; a filled one stays with the
@@ -804,9 +805,10 @@ yours to improvise.
     the room-context marker — the JS never re-derives it. With no stated
     bucket the room's ONLY pet box is used; with several and none stated the
     native rows stay visible with "Choose the pet fee under Additional
-    Services." — never a guess between prices. On a cottage with no pet
-    service, Yes shows Dog and says "This cottage has no pet fee, so nothing
-    is charged." The dropdown has NO `name`, so it never submits. The native
+    Services." — never a guess between prices. **SUPERSEDED IN 0.29.0:** it
+    was offered on every cottage, saying "This cottage has no pet fee, so
+    nothing is charged." on the others; it now appears on a pet-fee cottage
+    only (below). The dropdown has NO `name`, so it never submits. The native
     pet rows are hidden; the boxes still submit (display-only hiding, as on
     the checkout). The search step (no `[adults]` chooser) gets no dropdown.
     DCC-VERIFY: `getCheckInDate()`/`getCheckOutDate()` on the wizard's booking.
@@ -817,7 +819,9 @@ yours to improvise.
     accepts (list of ids, map id⇒qty, list of arrays with `id`) against
     `Config::pet_service_id_list()`. Absent/empty → no fee; any other
     unreadable shape → null → "could not be read, so the dog details are
-    shown." DCC-VERIFY: the live shape of `_mphb_services` was not observed.
+    shown." **Read correctly on live** (Director, 2026-10-07, 0.28.0): the line
+    said "Yes" on 17730 and "No" on 19615, 19600 and 18462 — the PHP reading
+    works. It was the trip to the browser that lost it (0.29.0 entry).
   - **Add New customer step gets the order and headings** (C). That step is
     MotoPress's FRONT-END form (`<p>` rows in `section#mphb-customer-details`),
     so `customerLayout()` has a FLOW mode beside TABLE mode: headings are
@@ -828,10 +832,13 @@ yours to improvise.
     it is not the customer box. Labels untouched.
   - **THE ADD NEW FIXTURE IS A STAND-IN BUILT FROM ROB'S RECORDINGS** (Cottage
     36, Nov 20–21 2026), not markup: that step needs a login and a Reserve
-    press. Its first check-list item is "did it match". Unknown: whether the
-    trailing Total / Status / Submit share the customer container (they would
-    land under "Other"), and the services heading's tag (assumed h1–h6).
-    **When real markup is available, replace it** (v0.9.0, again).
+    press. **It MATCHED on live** (Rob's phone, 0.28.0, Cottage 22, Oct 23–24
+    2026): headings Guest 1 / Address / Guest 2 drawn, MotoPress's labels
+    unchanged, and Total Price / Status / "Submit Booking" sit after the
+    fields with NO "Other" heading — so they do not share the customer
+    container. The live step has **no Customer Note field**, so "Note" never
+    appears there. Still a reconstruction: **when real markup is available,
+    replace it** (v0.9.0, again).
   - **Price Breakdown "proof" is of the INPUTS**: the suite's stand-in prices
     $175 + $50 × multiplier per ticked fee + $35 pet, and asserts 1/2/3/4/2/1
     guests read $194.25 / $194.25 / $244.25 / $294.25 / … and the pet total.
@@ -855,6 +862,77 @@ yours to improvise.
     services section outright (v0.7.0), so there is nothing to report there.
   - Unchanged: stored data, field names, save logic; `checkout.js` /
     `checkout.css` untouched.
+- **0.29.0 — A BOOLEAN DOES NOT SURVIVE `wp_localize_script`** (Director's
+  live check of 0.28.0, 2026-10-07). `WP_Scripts::localize()` casts every
+  TOP-LEVEL scalar with `(string)` (WordPress 6.6.2,
+  `class-wp-scripts.php:589-597`, read from source): `true` → `"1"`,
+  `false` → `""`, ints → strings; `null` and arrays pass untouched. 0.28.0
+  sent `statedPetFee` as `true/false/null` and the script tested
+  `=== true / === false`, so Yes and No both read as unknown and Dog showed
+  on every booking. **It shipped green because the suite printed PHP's
+  `json_encode()` straight into the page** — the step that does the damage
+  was never in the harness. Now:
+  - `statedPetFee` is ONE WORD from `Admin_Fields::booking_pet_state()`:
+    `yes` / `no` (pet-fee cottage, fee carried or not), `none` (not a pet-fee
+    cottage), `unknown` (cottage or services unreadable → Dog shows).
+  - `tests/admin-layout/config.php` runs WordPress's localize loop, copied
+    verbatim, before printing, so every suite case sees what a browser sees,
+    and asserts `typeof statedPetFee === 'string'`. Mutations
+    `php-stated-pet-boolean` and `js-pet-state-reads-boolean` put the 0.28.0
+    defect back and must go red.
+  - **Audit, done**: every other top-level value either is already a string,
+    is numeric and read with `parseInt`/`Number` (`statedGuests`,
+    `includedGuests`), or is an array. The PUBLIC checkout localizes three
+    booleans (`petFeeEnabled`, `guestFeeEnabled`, `isAdmin`) and reads each by
+    truthiness, which `"1"`/`""` preserve — no defect there, nothing changed.
+  - **Rule: never localize a three-state as a boolean, and never test a
+    localized top-level value with `===` against `true`/`false`.** Use a word,
+    or nest it in an array, or `wp_add_inline_script` with `wp_json_encode`.
+- **0.29.0 — THE PET FEE BELONGS TO A PET-FEE COTTAGE** (owner: "Keep 34 as the
+  only pet fee cottage" / "No Pet Fee on others"; [Director] defaults marked).
+  A pet-fee cottage is one whose MotoPress services include a pet service —
+  read, never listed: `Config::room_type_has_pet_services()` via the admin
+  `roomTypes` map and `Admin_Fields::booking_pet_cottage()`. **Not**
+  `Config::pet_accommodations()`, which was deliberately not touched.
+  - Add New: the Pet Fee dropdown only there. Any other cottage: no dropdown,
+    no Dog, no message (Dog still shows if a dog value is present). Cottage
+    unreadable [Director], or a pet-fee cottage with no pet service on screen:
+    no dropdown (nothing it could be sure of charging) and Dog SHOWS.
+  - Edit screen: the "Pet fee: Yes/No" line only there [Director]; elsewhere,
+    and on an unreadable cottage, no line. Dog: hidden on other cottages unless
+    dog values are saved; shown when anything is unknown.
+  - **AN EMPTY SERVICES LIST IS A DEFINITE "NONE"** (Director). Cottage 33
+    (1604) has one, and `room_type_service_ids()` turned every empty result
+    into `null`, so the map called it `unknown`. It now returns `[]` for a
+    list READ AS EMPTY; a list with entries none of which parse is still
+    `null`. Mutation `cfg-empty-services-unknown`. Only the admin calls it.
+  - MotoPress services, the public checkout and `checkout.js`/`checkout.css`
+    are unchanged (byte-identical to 0.27.1/0.28.0).
+  - **The search step is now guarded three times** — the `[adults]$` name
+    test, the pet-fee-cottage test and "a pet service on screen" (the search
+    step has none). So mutation `js-pet-on-search-step`, which removed the
+    first, became an equivalent mutant and SURVIVED 0.29.0's first full run;
+    it was retired, and the search-step fixture now carries the recordings'
+    Accommodation Type select set to Cottage 34 — the worst case for it.
+- **0.29.0 — GUEST 2 FOLLOWS THE COUNT** (owner: "responsive to the number of
+  guests selected … just like Guest3, Guest4"). Same rules: shown from 2,
+  hidden at 1 unless a value is typed or saved (then it stays with the note),
+  never cleared; an unknown count ("Not provided") shows it [Director]. Done
+  by sending every group in `guestGroups` (mins 2, 3, 4) — the filter on
+  `min > included_guests` is gone, so **"Guests included" no longer changes
+  which fields are gated**; it still moves the fee and the fee line.
+  Mutation `php-guest2-not-gated`.
+- **0.29.0 — FULL GUEST NAME FILLS FROM GUEST 1 ON ADD NEW** (owner's pick).
+  `fillGuestNames()` in `admin-booking.js`: First + Last, joined by a space,
+  into every room's box as they are typed. A box that holds anything other
+  than what the script last wrote — prefilled, or edited by hand — is the
+  admin's and is never written again. It sets `.value` (a property, no DOM
+  mutation, so the observer and the three-tap rules are untouched) and only
+  reaches the server if the admin submits. Found by MotoPress's own markup —
+  `mphb_room_details[N][guest_name]` or the input in
+  `.mphb-guest-name-wrapper` (that class is confirmed: the site's Customizer
+  CSS hides it on the public checkout) — **the admin markup is NOT confirmed
+  on live** [Director]; when neither is found it does nothing. Add New only.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1066,9 +1144,11 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 120
-  mutations, 120 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
-  v0.28.0; twelve suites). 0.28.0's first full run was 121 + 2 SURVIVED: both
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 134
+  mutations, 134 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
+  v0.29.0; twelve suites). 0.29.0's first full run was 134 + 1 SURVIVED: the
+  search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
+  retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code
   went and the two mutations with it. Its second was 120 + 1 SURVIVED:
   removing that code made `js-adults-includes-dcc` an equivalent mutant (see

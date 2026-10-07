@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.28.0
+Stable tag: 0.29.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,24 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.29.0 =
+WP-Admin booking screens only (owner's picks, 2026-10-07). The public
+checkout, emails, invoices, stored data and field names are unchanged.
+* Fixed: on the booking edit screen the saved pet fee never reached the
+  page -- WordPress turns a yes/no into "1"/"" on the way, and both read as
+  "unknown", so Dog showed on every booking. It is now passed as a word.
+* Guest 2 follows the guest count too: shown from 2 guests, hidden at 1
+  unless a Guest 2 name is already there (then it stays, with the note).
+  An unknown count ("Not provided") shows it.
+* The pet fee belongs to a pet-fee cottage only (today Cottage 34). On Add
+  New the "Pet Fee:" dropdown appears only there; on any other cottage there
+  is no dropdown and no Dog section (unless dog details are already there).
+  On the edit screen the "Pet fee: Yes/No" line appears only there. A cottage
+  with an empty services list (Cottage 33) now reads as "no pet fee" rather
+  than "unknown"; a cottage that cannot be read shows Dog, with no dropdown.
+* Add New: Full Guest Name fills from Guest 1's First and Last Name as they
+  are typed, in every room, until it is edited by hand.
 
 = 0.28.0 =
 WP-Admin booking screens only (owner's picks, 2026-10-06/07). The public

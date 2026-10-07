@@ -64,6 +64,28 @@ function maybe_unserialize($v) {
 }
 class WP_Post { public $ID = 0; public $post_type = ''; }
 
+/* v0.29.0: the Pet fee line is printed on a pet-fee cottage only, which is
+   read from the services MotoPress attached to the cottage — the same reading
+   the Add New map uses. 1065 carries the Extra Guest Fee; 1607 (Cottage 34)
+   the three pet services; 1999 cannot be read at all. */
+$GLOBALS['room_types'] = [1065 => [18063], 1607 => [17712, 17711, 14926], 1999 => null];
+function MPHB() {
+    return new class {
+        public function getRoomTypeRepository() {
+            return new class {
+                public function findById($id) {
+                    $svc = $GLOBALS['room_types'][(int) $id] ?? null;
+                    return $svc === null ? null : new class($svc) {
+                        private $s;
+                        public function __construct($s) { $this->s = $s; }
+                        public function getServices() { return $this->s; }
+                    };
+                }
+            };
+        }
+    };
+}
+
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
 // v0.28.0: the Guests box prints the read-only "Pet fee" line from
@@ -299,18 +321,27 @@ function pet_line(Admin_Guests $g): string {
     $h = (string) ob_get_clean();
     return preg_match('#<p class="dcc_admin-petfee-line"><strong>Pet fee:</strong> (.*?)</p>#', $h, $m) ? $m[1] : '(no line)';
 }
-seed();
+// On the pet-fee cottage (Cottage 34, 1607).
+function seed34() { seed(); $GLOBALS['meta'][500]['mphb_room_type_id'] = 1607; }
+seed34();
 $GLOBALS['meta'][99]['_mphb_services'] = [17712];
-check('the Guests box says "Pet fee: Yes" when a pet service is saved', pet_line($g), 'Yes');
-seed();
+check('Cottage 34: the Guests box says "Pet fee: Yes" when a pet service is saved', pet_line($g), 'Yes');
+seed34();
 $GLOBALS['meta'][99]['_mphb_services'] = [18063];
 check('... "No" when only another service is saved', pet_line($g), 'No');
-seed();
+seed34();
 check('... "No" when no service is saved at all', pet_line($g), 'No');
-seed();
+seed34();
 $GLOBALS['meta'][99]['_mphb_services'] = 'not-serialised garbage';
 check('... and says it could not be read, rather than guessing',
     pet_line($g), 'could not be read, so the dog details are shown.');
+// v0.29.0 — only on a pet-fee cottage (owner: "Keep 34 as the only pet fee
+// cottage"; Director's default: the line only where the fee exists).
+seed();
+check('Cottage 22 (no pet fee): NO Pet fee line at all', pet_line($g), '(no line)');
+seed();
+$GLOBALS['meta'][500]['mphb_room_type_id'] = 1999;
+check('a cottage that cannot be read: no Pet fee line either', pet_line($g), '(no line)');
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

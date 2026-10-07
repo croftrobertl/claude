@@ -34,11 +34,11 @@ if (!defined('ABSPATH')) {
  *   2. Filled fields stay. Any field holding a value, typed or saved, stays
  *      visible whatever the count or the pet fee says; Guest 3/4 then carry a
  *      short note that there are more guest names than guests.
- *   3. The facts decide, not a switch. Guest 3/4 follow the guest count, Dog
- *      follows the pet fee (on a cottage with no pet fee, "Yes" shows Dog and
- *      says nothing is charged). The "Show all booking fields" checkbox is
- *      gone (owner's pick, 2026-10-07): a Pet Fee dropdown that says what it
- *      does replaced it.
+ *   3. The facts decide, not a switch. Guests 2, 3 and 4 follow the guest
+ *      count; Dog follows the pet fee, and only a pet-fee cottage has one
+ *      (v0.29.0: elsewhere there is no Pet Fee control and Dog stays hidden
+ *      unless dog details are already there). The "Show all booking fields"
+ *      checkbox is gone (owner's pick, 2026-10-07).
  */
 final class Admin_Fields
 {
@@ -239,16 +239,16 @@ final class Admin_Fields
     {
         $included = Config::included_guests();
 
-        // Only the groups that need gating: guest 2 fits in every cottage.
+        // Every guest group follows the count — Guest 2 too since v0.29.0
+        // (owner: "responsive to the number of guests selected … just like
+        // Guest 3, Guest 4"). Each group's `min` is its own, never a literal.
         $groups = [];
         foreach (Config::guest_field_groups() as $group) {
-            if ((int) $group['min'] > $included) {
-                $groups[] = [
-                    'min'   => (int) $group['min'],
-                    'names' => array_values((array) $group['names']),
-                    'title' => (string) $group['title'],
-                ];
-            }
+            $groups[] = [
+                'min'   => (int) $group['min'],
+                'names' => array_values((array) $group['names']),
+                'title' => (string) $group['title'],
+            ];
         }
 
         $existing = $this->is_existing_booking();
@@ -275,7 +275,11 @@ final class Admin_Fields
             // v0.28.0 — the booking's own facts, for the edit screen. null =
             // could not be read, and the script then shows the fields.
             'statedGuests'    => $existing ? self::booking_guest_count($booking) : null,
-            'statedPetFee'    => $existing ? self::booking_pet_fee($booking) : null,
+            // A WORD, never a boolean (v0.29.0): wp_localize_script casts every
+            // top-level scalar to a string, so true/false arrived as "1"/"" and
+            // the script read both as "unknown" — Dog showed on every booking.
+            // See booking_pet_state() for the four values.
+            'statedPetFee'    => $existing ? self::booking_pet_state($booking) : 'unknown',
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
@@ -285,7 +289,6 @@ final class Admin_Fields
                 'petFee'      => __('Pet Fee:', 'dcc-checkout'),
                 'petYes'      => __('Yes', 'dcc-checkout'),
                 'petNo'       => __('No', 'dcc-checkout'),
-                'petNone'     => __('This cottage has no pet fee, so nothing is charged.', 'dcc-checkout'),
                 'petManual'   => __('Choose the pet fee under Additional Services.', 'dcc-checkout'),
                 'moreNames'   => __('More guest names than guests.', 'dcc-checkout'),
                 /* translators: %s: per-night amount for one extra guest (e.g. $50). */
@@ -479,6 +482,75 @@ final class Admin_Fields
     }
 
     /**
+     * Is the booking on a pet-fee cottage? (v0.29.0: the Pet Fee line and the
+     * Dog section belong to cottages that carry the pet services — today only
+     * Cottage 34; owner: "Keep 34 as the only pet fee cottage".)
+     *
+     * Reads each reserved room's type by the live-confirmed chain
+     * (`_mphb_room_id` → the room's `mphb_room_type_id`), then what that type
+     * carries — the same reading the Add New map uses (type_has_pet()).
+     *
+     * true  — some room is on a pet-fee cottage;
+     * false — every room was read and none is;
+     * null  — a room or its cottage could not be read (Dog then shows).
+     */
+    public static function booking_pet_cottage(int $booking_id): ?bool
+    {
+        $rooms = self::reserved_rooms($booking_id);
+        if (empty($rooms)) {
+            return null;
+        }
+        $unknown = false;
+        foreach ($rooms as $rr) {
+            $room_id = (int) get_post_meta((int) $rr->ID, '_mphb_room_id', true);
+            $type_id = $room_id > 0 ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0;
+            $has = $type_id > 0 ? self::type_has_pet($type_id) : null;
+            if ($has === true) {
+                return true;
+            }
+            if ($has === null) {
+                $unknown = true;
+            }
+        }
+        return $unknown ? null : false;
+    }
+
+    /**
+     * The edit screen's pet-fee fact, as ONE WORD the script can read after
+     * wp_localize_script has stringified it (v0.29.0):
+     *
+     *   'yes'     — a pet-fee cottage, and the booking carries the pet fee;
+     *   'no'      — a pet-fee cottage, and it does not;
+     *   'none'    — not a pet-fee cottage: no Pet fee line, and Dog stays
+     *               hidden unless dog details are saved;
+     *   'unknown' — the cottage or the services could not be read: Dog shows.
+     */
+    public static function booking_pet_state(int $booking_id): string
+    {
+        $cottage = self::booking_pet_cottage($booking_id);
+        if ($cottage === false) {
+            return 'none';
+        }
+        if ($cottage === null) {
+            return 'unknown';
+        }
+        $fee = self::booking_pet_fee($booking_id);
+        return $fee === null ? 'unknown' : ($fee ? 'yes' : 'no');
+    }
+
+    /**
+     * Does this accommodation type carry the pet services? With the pet flow
+     * switched off, no type does. null = could not be read.
+     */
+    private static function type_has_pet(int $type_id): ?bool
+    {
+        if (!Config::pet_fee_enabled()) {
+            return false;
+        }
+        return Config::room_type_has_pet_services($type_id);
+    }
+
+    /**
      * Are we editing a booking that already exists (as opposed to adding one)?
      */
     private function is_existing_booking(): bool
@@ -508,24 +580,16 @@ final class Admin_Fields
         }
 
         $couch_acc = Config::guest_accommodations();
-        $pet_on    = Config::pet_fee_enabled();
         $map       = [];
 
         foreach ($ids as $id) {
             $id = (int) $id;
 
             // 'unknown' whenever we can't positively determine it — the script
-            // shows the fields in that case rather than hiding data blindly.
-            $pet = 'unknown';
-            if (!$pet_on) {
-                // The whole pet flow is off; the dog fields are for nobody.
-                $pet = 'no';
-            } else {
-                $has = Config::room_type_has_pet_services($id);
-                if ($has !== null) {
-                    $pet = $has ? 'yes' : 'no';
-                }
-            }
+            // shows the Dog fields then, but offers no Pet Fee dropdown (there
+            // is nothing it could be sure of charging).
+            $has = self::type_has_pet($id);
+            $pet = $has === null ? 'unknown' : ($has ? 'yes' : 'no');
 
             // Couch capability is plugin configuration, not a MotoPress read,
             // so it is always knowable. Deliberately NOT gated on the fee being

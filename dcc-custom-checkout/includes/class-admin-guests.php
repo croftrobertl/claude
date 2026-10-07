@@ -167,14 +167,18 @@ final class Admin_Guests
         // v0.28.0 — the pet fee, read-only (owner's pick, 2026-10-07): it
         // cannot be changed from here, so nothing here pretends to. The Dog
         // fields in Customer Information follow this same reading.
-        $pet = Admin_Fields::booking_pet_fee((int) $post->ID);
-        echo '<p class="dcc_admin-petfee-line"><strong>' . esc_html__('Pet fee:', 'dcc-checkout') . '</strong> ';
-        if ($pet === null) {
-            echo esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
-        } else {
-            echo esc_html($pet ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));
+        // v0.29.0 — on a pet-fee cottage ONLY (today Cottage 34). Elsewhere,
+        // and where the cottage cannot be read, there is no line at all.
+        if (Admin_Fields::booking_pet_cottage((int) $post->ID) === true) {
+            $pet = Admin_Fields::booking_pet_state((int) $post->ID);
+            echo '<p class="dcc_admin-petfee-line"><strong>' . esc_html__('Pet fee:', 'dcc-checkout') . '</strong> ';
+            if ($pet === 'yes' || $pet === 'no') {
+                echo esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));
+            } else {
+                echo esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
+            }
+            echo '</p>';
         }
-        echo '</p>';
 
         echo '</div>';
     }

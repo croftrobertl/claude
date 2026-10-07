@@ -594,9 +594,10 @@ final class Config
      *
      * DCC-VERIFY: provisional — confirm against live MotoPress.
      * MotoPress stores per-accommodation service assignment differently across
-     * versions, so this reads the public API and returns null (never an empty
-     * array) when it cannot read it. Callers MUST treat null as "unknown" and
-     * fail open — never hide something on the strength of a failed read.
+     * versions, so this reads the public API and returns null when it cannot
+     * read it; an empty array means the list was read and is empty. Callers
+     * MUST treat null as "unknown" and fail open — never hide something on the
+     * strength of a failed read.
      *
      * @return int[]|null
      */
@@ -614,16 +615,25 @@ final class Config
             if (!$room_type || !method_exists($room_type, 'getServices')) {
                 return null;
             }
+            $services = $room_type->getServices();
+            if (!is_array($services)) {
+                return null;
+            }
+            // v0.29.0 — an EMPTY list is a definite "no services", not
+            // "unknown": Cottage 33 (1604) carries an empty list on live and
+            // read as 'unknown' until now (Director, 2026-10-07). Only a list
+            // that HAS entries none of which can be read stays unknown.
+            if ($services === []) {
+                return [];
+            }
             $ids = [];
-            foreach ((array) $room_type->getServices() as $service) {
+            foreach ($services as $service) {
                 if (is_object($service) && method_exists($service, 'getId')) {
                     $ids[] = (int) $service->getId();
                 } elseif (is_numeric($service)) {
                     $ids[] = (int) $service;
                 }
             }
-            // Empty is ambiguous (genuinely no services vs. an unreadable
-            // shape), so it stays "unknown" rather than "definitely none".
             return empty($ids) ? null : array_values(array_unique($ids));
         } catch (\Throwable $e) {
             return null;

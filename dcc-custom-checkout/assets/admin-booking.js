@@ -6,12 +6,14 @@
  * 3/4 name fields render on every admin booking. This shows and hides them by
  * the booking's own facts (v0.28.0, owner's picks 2026-10-06/07):
  *
- *   Guest 3 / Guest 4 — by the guest count: a group shows once the count
- *     reaches its `min` (from guestGroups, never a literal). Add New reads the
- *     Number of Guests dropdown the fee sync reads; the edit screen reads the
- *     booking's saved count (our Guests box, which starts at it).
- *   Dog — by the pet fee: Add New's "Pet Fee: Yes / No" dropdown, which ticks
- *     the pet service itself; the edit screen's saved services.
+ *   Guest 2 / Guest 3 / Guest 4 — by the guest count (Guest 2 since
+ *     v0.29.0): a group shows once the count reaches its `min` (from
+ *     guestGroups, never a literal). Add New reads the Number of Guests
+ *     dropdown the fee sync reads; the edit screen reads the booking's saved
+ *     count (our Guests box, which starts at it).
+ *   Dog — by the pet fee, on a pet-fee cottage only (v0.29.0): Add New's "Pet
+ *     Fee: Yes / No" dropdown, which ticks the pet service itself; the edit
+ *     screen's saved services. Elsewhere Dog stays hidden unless filled.
  *   Either way, a field that already holds something stays visible (with a
  *     short note when there are more guest names than guests), and anything
  *     that cannot be read SHOWS the fields — fail open.
@@ -176,7 +178,47 @@
         var layout = customerLayout();
         gate(layout);
         if (layout) { layout.refresh(); }
+        if (CFG.isExisting !== '1') { fillGuestNames(); }
     });
+
+    /**
+     * Add New: Full Guest Name (Accommodation Details) follows Guest 1's First
+     * and Last Name as they are typed (owner's pick, v0.29.0), in every room's
+     * box. Once a box no longer holds what this last wrote there — the admin
+     * typed in it — it is theirs and is never written again. It is a value,
+     * not markup, so the MutationObserver sees nothing; it reaches the server
+     * only if the admin submits the booking.
+     *
+     * Found by MotoPress's own markup — the `…[guest_name]` input of
+     * `mphb_room_details`, or the input inside its `.mphb-guest-name-wrapper`
+     * — and NOT confirmed on live: when neither is there, nothing happens.
+     */
+    function fillGuestNames() {
+        var first = document.querySelector('[name="mphb_first_name"]');
+        var last  = document.querySelector('[name="mphb_last_name"]');
+        if (!first || !last) { return; }
+        // One selector list, so an input matching both appears once.
+        var boxes = Array.prototype.filter.call(
+            document.querySelectorAll('input[name^="mphb_room_details["][name$="[guest_name]"], .mphb-guest-name-wrapper input'),
+            function (b) { return b.type === 'text'; }
+        );
+        if (!boxes.length) { return; }
+        function sync() {
+            var name = [first.value, last.value].map(function (v) { return String(v || '').trim(); })
+                .filter(Boolean).join(' ');
+            boxes.forEach(function (b) {
+                var mine = b.dccGuestName === undefined ? '' : b.dccGuestName;
+                if (b.value !== mine) { return; }   // edited by hand: theirs now
+                if (b.value !== name) { b.value = name; }
+                b.dccGuestName = name;
+            });
+        }
+        first.addEventListener('input', sync);
+        last.addEventListener('input', sync);
+        first.addEventListener('change', sync);
+        last.addEventListener('change', sync);
+        sync();
+    }
 
     function gate(layout) {
         var roomTypes = CFG.roomTypes || {};
@@ -498,6 +540,24 @@
         }
 
         /**
+         * Is the selected accommodation a pet-fee cottage — one whose services
+         * include the pet fee (PHP's roomTypes map)? true if any selected room
+         * is; false only when every one was read and none is; null when the
+         * cottage is not known.
+         */
+        function petCottage(ids) {
+            if (!ids || !ids.length) { return null; }
+            var unknown = false;
+            for (var i = 0; i < ids.length; i++) {
+                var rt = roomTypes[String(ids[i])];
+                var pet = rt ? rt.pet : 'unknown';
+                if (pet === 'yes') { return true; }
+                if (pet !== 'no') { unknown = true; }
+            }
+            return unknown ? null : false;
+        }
+
+        /**
          * Accommodation types currently selected anywhere on the screen, in
          * order of trust: what PHP stated (the data-dcc-room-types marker on
          * the Add New step), then derived from the DOM. null when neither is
@@ -547,31 +607,36 @@
         }
 
         /**
-         * The pet fee (v0.28.0, owner's picks 2026-10-07).
+         * The pet fee (v0.28.0, owner's picks 2026-10-07; v0.29.0: a pet-fee
+         * cottage only — owner: "Keep 34 as the only pet fee cottage").
          *
-         * Edit screen: the booking's saved services, stated by PHP — true,
-         * false, or null when they could not be read (Dog then shows). The
+         * Edit screen: one word from PHP — 'yes' / 'no' (a pet-fee cottage,
+         * fee carried or not), 'none' (not a pet-fee cottage: Dog stays hidden
+         * unless dog details are saved), anything else unknown (Dog shows). A
+         * WORD because wp_localize_script stringifies booleans: true arrived
+         * as "1" and false as "", and 0.28.0 read both as unknown. The
          * read-only "Pet fee: Yes/No" line is printed by the Guests box.
          *
-         * Add New: a "Pet Fee: Yes / No" dropdown under Number of Guests, on
-         * every cottage. It behaves like Number of Guests: Yes ticks the pet
-         * service for this stay's length (the bucket PHP stated on the marker,
-         * else the room's only pet service) and shows Dog; No unticks it. The
-         * native pet rows are then never shown, so the dropdown is the only
-         * pet fee control. On a cottage with no pet service, Yes shows Dog and
-         * says plainly that nothing is charged. Where the bucket cannot be
-         * told (several pet services, none stated), the native rows stay
-         * visible and the dropdown asks for the fee to be chosen there.
+         * Add New: on a pet-fee cottage, a "Pet Fee: Yes / No" dropdown under
+         * Number of Guests. It behaves like Number of Guests: Yes ticks the
+         * pet service for this stay's length (the bucket PHP stated on the
+         * marker, else the room's only pet service) and shows Dog; No unticks
+         * it. The native pet rows are then never shown, so the dropdown is the
+         * only pet fee control. Where the bucket cannot be told (several pet
+         * services, none stated), the native rows stay visible and the
+         * dropdown asks for the fee to be chosen there. On any other cottage:
+         * no dropdown, no Dog, no message. Cottage unreadable, or a pet-fee
+         * cottage with no pet service on screen: no dropdown (nothing it could
+         * be sure of charging) and Dog shows (fail open).
          * The dropdown has no `name`: it is never submitted.
          */
         function petControl() {
             var none = { state: function () { return null; }, apply: function () {} };
+            var off  = { state: function () { return false; }, apply: function () {} };
             if (CFG.isExisting === '1') {
-                var s = CFG.statedPetFee;
-                return {
-                    state: function () { return s === true ? true : (s === false ? false : null); },
-                    apply: function () {}
-                };
+                var s = String(CFG.statedPetFee || '');
+                var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);
+                return { state: function () { return known; }, apply: function () {} };
             }
             // The checkout form's per-room chooser only (…[adults]). The Add
             // New SEARCH step has an adults select too, and must not get a pet
@@ -580,6 +645,10 @@
                 return /\[adults\]$/.test(String(s.name || ''));
             })[0];
             if (!chooser) { return none; }
+
+            var cottage = petCottage(selectedRoomTypes());
+            if (cottage === false) { return off; }
+            if (cottage === null || !serviceBoxes(PET_IDS).length) { return none; }
 
             var wrap = document.createElement('p');
             wrap.className = 'dcc_admin-petfee';
@@ -616,9 +685,7 @@
                 var yes = sel.value === 'yes';
                 var boxes = serviceBoxes(PET_IDS);
                 var msg = '';
-                if (!boxes.length) {
-                    if (yes) { msg = I18N.petNone || 'This cottage has no pet fee, so nothing is charged.'; }
-                } else {
+                if (boxes.length) {
                     var target = stated();
                     var rooms = {};
                     boxes.forEach(function (b) {

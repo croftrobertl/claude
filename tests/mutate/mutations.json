@@ -1171,28 +1171,6 @@
   "count": 1
  },
  {
-  "id": "js-pet-on-search-step",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.28.0 the search step gets no Pet Fee dropdown",
-  "find": "                return /\\[adults\\]$/.test(String(s.name || ''));",
-  "replace": "                return true;",
-  "count": 1
- },
- {
-  "id": "js-pet-none-silent",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.28.0 Yes on a cottage with no pet fee says nothing is charged",
-  "find": "                    if (yes) { msg = I18N.petNone || 'This cottage has no pet fee, so nothing is charged.'; }",
-  "replace": "                    if (yes) { msg = ''; }",
-  "count": 1
- },
- {
   "id": "js-layout-flow-attach",
   "file": "dcc-custom-checkout/assets/admin-booking.js",
   "suites": [
@@ -1277,20 +1255,9 @@
   "suites": [
    "admin-layout"
   ],
-  "claim": "0.28.0 the edit screen gets the saved pet fee",
-  "find": "            'statedPetFee'    => $existing ? self::booking_pet_fee($booking) : null,",
-  "replace": "            'statedPetFee'    => null,",
-  "count": 1
- },
- {
-  "id": "php-groups-ignore-included",
-  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.28.0 which guest groups the count gates follows Guests included",
-  "find": "            if ((int) $group['min'] > $included) {",
-  "replace": "            if ((int) $group['min'] > 2) {",
+  "claim": "0.28.0 the edit screen gets the saved pet fee (0.29.0: as a word)",
+  "find": "            'statedPetFee'    => $existing ? self::booking_pet_state($booking) : 'unknown',",
+  "replace": "            'statedPetFee'    => 'unknown',",
   "count": 1
  },
  {
@@ -1300,8 +1267,8 @@
    "admin-guests"
   ],
   "claim": "0.28.0 the Guests box says Pet fee: Yes when one is saved",
-  "find": "            echo esc_html($pet ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));",
-  "replace": "            echo esc_html(__('No', 'dcc-checkout'));",
+  "find": "                echo esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));",
+  "replace": "                echo esc_html(__('No', 'dcc-checkout'));",
   "count": 1
  },
  {
@@ -1324,6 +1291,194 @@
   "claim": "0.28.0 at phone width the price sits on its own line",
   "find": "    label:has(input[name*=\"[services]\"][name$=\"[id]\"]) > em {\n        display: block;\n    }",
   "replace": "    label:has(input[name*=\"[services]\"][name$=\"[id]\"]) > em {\n        display: inline;\n    }",
+  "count": 1
+ },
+ {
+  "id": "php-stated-pet-boolean",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 THE 0.28.0 DEFECT: the pet fee is sent as a word, because wp_localize_script stringifies booleans",
+  "find": "            'statedPetFee'    => $existing ? self::booking_pet_state($booking) : 'unknown',",
+  "replace": "            'statedPetFee'    => $existing ? self::booking_pet_fee($booking) : null,",
+  "count": 1
+ },
+ {
+  "id": "js-pet-state-reads-boolean",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 the script reads the pet-fee WORD, not a boolean that never arrives",
+  "find": "                var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);",
+  "replace": "                var known = CFG.statedPetFee === true ? true : (CFG.statedPetFee === false ? false : null);",
+  "count": 1
+ },
+ {
+  "id": "js-pet-state-none-unknown",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 'none' (not a pet-fee cottage) hides Dog, it is not unknown",
+  "find": "                var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);",
+  "replace": "                var known = s === 'yes' ? true : (s === 'no' ? false : null);",
+  "count": 1
+ },
+ {
+  "id": "cfg-empty-services-unknown",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 an EMPTY services list (Cottage 33) is a definite no, not unknown",
+  "find": "            if ($services === []) {\n                return [];",
+  "replace": "            if ($services === []) {\n                return null;",
+  "count": 1
+ },
+ {
+  "id": "php-guest2-not-gated",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 Guest 2 follows the count too: every guest group is sent",
+  "find": "        foreach (Config::guest_field_groups() as $group) {\n            $groups[] = [",
+  "replace": "        foreach (Config::guest_field_groups() as $group) {\n            if ((int) $group['min'] <= $included) { continue; }\n            $groups[] = [",
+  "count": 1
+ },
+ {
+  "id": "php-pet-cottage-unknown-as-none",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout",
+   "admin-guests"
+  ],
+  "claim": "0.29.0 a cottage that cannot be read is unknown (Dog shows), never 'not a pet cottage'",
+  "find": "        return $unknown ? null : false;\n    }\n\n    /**\n     * The edit screen's pet-fee fact",
+  "replace": "        return false;\n    }\n\n    /**\n     * The edit screen's pet-fee fact",
+  "count": 1
+ },
+ {
+  "id": "php-pet-line-everywhere",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.29.0 the Pet fee line is on a pet-fee cottage only",
+  "find": "        if (Admin_Fields::booking_pet_cottage((int) $post->ID) === true) {",
+  "replace": "        if (Admin_Fields::booking_pet_cottage((int) $post->ID) !== false) {",
+  "count": 1
+ },
+ {
+  "id": "js-pet-dropdown-everywhere",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 no Pet Fee and no Dog on a cottage without the pet fee",
+  "find": "            if (cottage === false) { return off; }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-pet-unknown-offered",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 an unreadable cottage gets no Pet Fee dropdown (nothing it could be sure of charging)",
+  "find": "            if (cottage === null || !serviceBoxes(PET_IDS).length) { return none; }",
+  "replace": "            if (!serviceBoxes(PET_IDS).length) { return none; }",
+  "count": 1
+ },
+ {
+  "id": "js-pet-no-boxes-offered",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 a pet-fee cottage with no pet service on screen gets no dropdown, and Dog shows",
+  "find": "            if (cottage === null || !serviceBoxes(PET_IDS).length) { return none; }",
+  "replace": "            if (cottage === null) { return none; }",
+  "count": 1
+ },
+ {
+  "id": "js-petcottage-unknown-as-no",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 a selected cottage the map cannot read is unknown, not 'no pet fee'",
+  "find": "                if (pet !== 'no') { unknown = true; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-dead",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 Full Guest Name fills from Guest 1 on Add New",
+  "find": "        if (CFG.isExisting !== '1') { fillGuestNames(); }",
+  "replace": "        if (false) { fillGuestNames(); }",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-overwrites-manual",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 a Full Guest Name edited by hand is never overwritten",
+  "find": "                if (b.value !== mine) { return; }   // edited by hand: theirs now\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-overwrites-prefilled",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 a Full Guest Name already holding a value is left alone",
+  "find": "                var mine = b.dccGuestName === undefined ? '' : b.dccGuestName;",
+  "replace": "                var mine = b.dccGuestName === undefined ? b.value : b.dccGuestName;",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-first-room-only",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 with several rooms, every room's Full Guest Name is filled",
+  "find": "        if (!boxes.length) { return; }\n        function sync() {",
+  "replace": "        boxes = boxes.slice(0, 1);\n        if (!boxes.length) { return; }\n        function sync() {",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-wrapper-missed",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 Full Guest Name is also found by MotoPress's .mphb-guest-name-wrapper",
+  "find": ", .mphb-guest-name-wrapper input'",
+  "replace": "'",
+  "count": 1
+ },
+ {
+  "id": "js-guestname-name-missed",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.29.0 Full Guest Name is also found by MotoPress's [guest_name] input name",
+  "find": "'input[name^=\"mphb_room_details[\"][name$=\"[guest_name]\"], .mphb-guest-name-wrapper input'",
+  "replace": "'.mphb-guest-name-wrapper input'",
   "count": 1
  }
 ]

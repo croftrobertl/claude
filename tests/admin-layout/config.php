@@ -17,6 +17,16 @@
  * [wizard-json] {"nights":N} adds `_wizardPetService`: what the shipped
  * Admin_Fields::wizard_pet_service() picks for a stay of N nights.
  *
+ * TWO THINGS THIS DOES THAT 0.28.0'S HARNESS DID NOT (v0.29.0):
+ *  - The config goes through WordPress's OWN localize step before it is
+ *    printed: every top-level scalar cast to a string, exactly as
+ *    WP_Scripts::localize() does. 0.28.0 printed PHP's json_encode() directly,
+ *    so `statedPetFee` reached the suite as a real true/false and reached the
+ *    live browser as "1"/"" — the suite could not see the defect.
+ *  - The cottage map (`roomTypes`) is the SHIPPED room_type_map(), fed by an
+ *    MPHB() stand-in carrying each cottage's services, instead of a literal in
+ *    run.js — so the "empty list = no pet services" reading is exercised.
+ *
  * The layout suite reads this instead of keeping its own copy of the group
  * list, so the test exercises the SHIPPED PHP: a renamed field, a reordered
  * group or a wrong `governed` flag in Admin_Fields::customer_layout() changes
@@ -81,8 +91,45 @@ if (isset($argv[2]) && $argv[2] !== '') {
     }
 }
 
+/*
+ * Accommodation types and the services MotoPress has attached to each — the
+ * live picture (CLAUDE.md, Director 2026-10-07): the six couch cottages carry
+ * the Extra Guest Fee 18063; Cottage 34 (1607) carries the three pet services;
+ * Cottage 33 (1604) carries an EMPTY list. 1999 stands for a type that cannot
+ * be read at all (the repository returns nothing for it).
+ */
+$GLOBALS['room_types'] = [
+    1065 => [18063], 1067 => [18063], 1069 => [18063], 1071 => [18063],
+    1740 => [18063], 1742 => [18063],
+    1607 => [17712, 17711, 14926],
+    1604 => [],
+    1999 => null,
+];
+function MPHB() {
+    return new class {
+        public function getRoomTypeRepository() {
+            return new class {
+                public function findById($id) {
+                    $svc = $GLOBALS['room_types'][(int) $id] ?? null;
+                    if ($svc === null) {
+                        return null;
+                    }
+                    return new class($svc) {
+                        private $s;
+                        public function __construct($s) { $this->s = $s; }
+                        public function getServices() { return $this->s; }
+                    };
+                }
+            };
+        }
+    };
+}
+
 function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][(int) $id][$k] ?? ''; }
 function get_posts($a = []) {
+    if (($a['post_type'] ?? '') === 'mphb_room_type') {
+        return array_keys($GLOBALS['room_types']);
+    }
     if (($a['post_type'] ?? '') === 'mphb_reserved_room' && $GLOBALS['booking']
         && (int) ($a['post_parent'] ?? 0) === $GLOBALS['booking']->ID) {
         return $GLOBALS['reserved'];
@@ -106,6 +153,16 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
 $m->setAccessible(true);
 $out = $m->invoke(new \DCC_Checkout\Admin_Fields());
+
+// WP_Scripts::localize(), WordPress 6.6.2 src/wp-includes/class-wp-scripts.php
+// lines 589-597, copied verbatim (read from wordpress-develop, 2026-10-07):
+// every TOP-LEVEL scalar becomes a string; arrays (and null) pass untouched.
+foreach ($out as $key => $value) {
+    if (!is_scalar($value)) {
+        continue;
+    }
+    $out[$key] = html_entity_decode((string) $value, ENT_QUOTES, 'UTF-8');
+}
 
 if (isset($argv[3]) && $argv[3] !== '') {
     $w = json_decode($argv[3], true);
