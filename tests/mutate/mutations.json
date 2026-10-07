@@ -995,28 +995,6 @@
   "count": 1
  },
  {
-  "id": "js-stated-roomtypes-ignored",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 an existing booking is gated by the cottage PHP states for it",
-  "find": "            (CFG.statedRoomTypes || []).forEach(function (v) {",
-  "replace": "            ([]).forEach(function (v) {",
-  "count": 1
- },
- {
-  "id": "php-booking-types-partial",
-  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.27.0 one unreadable reserved room means nothing is stated (show everything)",
-  "find": "                return []; // One unreadable room: say nothing at all.",
-  "replace": "                continue;",
-  "count": 1
- },
- {
   "id": "js-photo-attr-ref-dead",
   "file": "dcc-custom-checkout/assets/admin-booking.js",
   "suites": [
@@ -1212,17 +1190,6 @@
   "claim": "0.28.0 Yes on a cottage with no pet fee says nothing is charged",
   "find": "                    if (yes) { msg = I18N.petNone || 'This cottage has no pet fee, so nothing is charged.'; }",
   "replace": "                    if (yes) { msg = ''; }",
-  "count": 1
- },
- {
-  "id": "js-adults-includes-dcc",
-  "file": "dcc-custom-checkout/assets/admin-booking.js",
-  "suites": [
-   "admin-layout"
-  ],
-  "claim": "0.28.0 our Guests box is never decorated with fees (0.27.x regression)",
-  "find": "                return n.indexOf('[services]') === -1 && n.indexOf('dcc_') !== 0;",
-  "replace": "                return n.indexOf('[services]') === -1;",
   "count": 1
  },
  {

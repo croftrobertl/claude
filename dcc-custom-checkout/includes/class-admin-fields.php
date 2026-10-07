@@ -272,11 +272,6 @@ final class Admin_Fields
             // Sticky-value protection applies to an existing booking only; on a
             // brand-new booking a field's default value is not stored data.
             'isExisting'     => $this->is_existing_booking() ? '1' : '',
-            // v0.27.0 — the edit screen has no accommodation control in its
-            // markup, so the script could not tell the cottage and showed
-            // everything. PHP states it, exactly as the add-booking step does.
-            // Empty = could not read it: the script then shows everything.
-            'statedRoomTypes' => $existing ? $this->booking_room_types() : [],
             // v0.28.0 — the booking's own facts, for the edit screen. null =
             // could not be read, and the script then shows the fields.
             'statedGuests'    => $existing ? self::booking_guest_count($booking) : null,
@@ -381,46 +376,6 @@ final class Admin_Fields
                 'fields' => [$mp('note')],
             ],
         ];
-    }
-
-    /**
-     * The accommodation types of the booking being edited (v0.27.0).
-     *
-     * The chain is the one Admin_Guests and the Availability Calendar already
-     * use, confirmed on the live database 2026-09-17: `mphb_reserved_room`
-     * posts are children of the booking (post_parent) and carry `_mphb_room_id`;
-     * the physical room carries `mphb_room_type_id`.
-     *
-     * ALL OR NOTHING. If any reserved room's type cannot be read, this returns
-     * [] — "say nothing" — and the script falls back to showing everything,
-     * which is today's behaviour. A partial answer would hide a group that the
-     * unreadable room might need (the union rule shows a group if ANY room
-     * needs it), so it is worse than none.
-     *
-     * @return int[]
-     */
-    private function booking_room_types(): array
-    {
-        $post = get_post();
-        if (!$post instanceof \WP_Post) {
-            return [];
-        }
-        $rooms = self::reserved_rooms((int) $post->ID);
-        if (empty($rooms)) {
-            return [];
-        }
-        $types = [];
-        foreach ($rooms as $rr) {
-            $room_id = (int) get_post_meta((int) $rr->ID, '_mphb_room_id', true);
-            $type_id = $room_id > 0 ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0;
-            if ($type_id <= 0) {
-                return []; // One unreadable room: say nothing at all.
-            }
-            if (!in_array($type_id, $types, true)) {
-                $types[] = $type_id;
-            }
-        }
-        return $types;
     }
 
     /**

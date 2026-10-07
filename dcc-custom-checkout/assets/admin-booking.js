@@ -499,17 +499,14 @@
 
         /**
          * Accommodation types currently selected anywhere on the screen, in
-         * order of trust: what PHP stated (CFG.statedRoomTypes on the edit
-         * screen, the data-dcc-room-types marker on the Add New step), then
-         * derived from the DOM. null when neither is available. Used for the
-         * couch test only: whether the guest fee can apply at all.
+         * order of trust: what PHP stated (the data-dcc-room-types marker on
+         * the Add New step), then derived from the DOM. null when neither is
+         * available. Used for the couch test only: whether the guest fee can
+         * apply at all — so the edit screen, which has no service boxes, needs
+         * no cottage stated (0.28.0 retired CFG.statedRoomTypes).
          */
         function selectedRoomTypes() {
             var stated = [];
-            (CFG.statedRoomTypes || []).forEach(function (v) {
-                var n = parseInt(v, 10);
-                if (n > 0 && stated.indexOf(n) === -1) { stated.push(n); }
-            });
             Array.prototype.forEach.call(
                 document.querySelectorAll('[data-dcc-room-types]'),
                 function (ctx) {

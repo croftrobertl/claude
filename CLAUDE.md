@@ -743,7 +743,12 @@ yours to improvise.
     tests that state** — the v0.9.0 rule needs "every state the live markup
     takes", not only "real markup".
   - **EXISTING BOOKINGS ARE GATED BY THEIR OWN COTTAGE** (owner's pick,
-    v0.27.0). The edit screen carries no accommodation control (the only
+    v0.27.0; **RETIRED in 0.28.0** — kept for the record. Nothing on the edit
+    screen is gated by cottage any more: Guest 3/4 follow the count and Dog
+    follows the pet fee. The 0.28.0 mutation run proved it — the two mutations
+    on this path SURVIVED because the value fed only the fee's couch test, and
+    the edit screen has no service boxes — so `booking_room_types()` and
+    `CFG.statedRoomTypes` were removed rather than kept as apparent coverage.) The edit screen carries no accommodation control (the only
     room-ish input is `mphb_rooms-hide`), so the gating read nothing and showed
     everything. `Admin_Fields::booking_room_types()` reads the reserved rooms
     by the live-confirmed chain (post_parent → `_mphb_room_id` →
@@ -836,7 +841,13 @@ yours to improvise.
     since 0.27.0 — `dcc_adults[...]` matched the `select[name*="adults"]`
     fallback and got "(+$50/night)" option suffixes on couch cottages.
     `adultsSelects()` now excludes `dcc_` names and anything under
-    `[services]`; mutation `js-adults-includes-dcc`.
+    `[services]`. **That exclusion is now a BELT, not the guard**: once
+    `statedRoomTypes` was retired (below), the edit screen has no cottage
+    stated and no accommodation control, so `couch` is false there and nothing
+    is decorated either way. Mutation `js-adults-includes-dcc` was therefore an
+    equivalent mutant — it SURVIVED the second 0.28.0 run — and was retired
+    rather than kept as apparent coverage. The outcome assertion ("the Guests
+    box options carry NO fee label") stays in `tests/admin-layout/`.
   - **Phone width (F), admin only**: at ≤ 782px a service label stacks — tick
     + name, price (`<em>`), the "for N" picker — via
     `label:has(input[name*="[services]"][name$="[id]"])`. Unchanged at 1280.
@@ -1055,9 +1066,13 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 101
-  mutations, 101 killed, 0 of everything else, exit 0, in ONE run (2026-10-06,
-  v0.27.1; twelve suites). It read 50 here through three rounds that took it to
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 120
+  mutations, 120 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
+  v0.28.0; twelve suites). 0.28.0's first full run was 121 + 2 SURVIVED: both
+  on the retired cottage-gating path above, which was dead code, so the code
+  went and the two mutations with it. Its second was 120 + 1 SURVIVED:
+  removing that code made `js-adults-includes-dcc` an equivalent mutant (see
+  the 0.28.0 entry), so it was retired too, and the third run is the count. It read 50 here through three rounds that took it to
   75 — a count in prose is a claim that goes stale silently. 0.26.0's first full
   run was 88 + 4 STALE: four `g34-*` mutations aimed at the line the hook
   removal rewrote. Re-anchored with their intent unchanged, then re-run whole.
