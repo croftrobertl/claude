@@ -1797,7 +1797,7 @@
   "suites": [
    "results"
   ],
-  "claim": "0.30.1 'Sleeps up to' is calcTotalCapacity(), never adults + children",
+  "claim": "0.30.1 the Capacity cell is calcTotalCapacity(), never adults + children",
   "find": "                'total'    => (int) $rt->calcTotalCapacity(),",
   "replace": "                'total'    => (int) $rt->getAdultsCapacity() + (int) $rt->getChildrenCapacity(),",
   "count": 1
@@ -1876,9 +1876,21 @@
    "results",
    "results-browser"
   ],
-  "claim": "0.30.1 the headings read Sleeps up to / Stay total before fees & taxes",
+  "claim": "0.30.2 the price heading reads 'Total (minus taxes/fees)'",
   "find": "            $part = preg_replace_callback($head,",
   "replace": "            $part = preg_replace_callback('#^$#',",
+  "count": 1
+ },
+ {
+  "id": "res-cells-not-rewritten",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results",
+   "results-browser"
+  ],
+  "claim": "0.30.2 a recognised table is told apart from 'as drawn' by its cells: no 'Adults:' left",
+  "find": "                return substr($m[0], 0, -strlen($m[2] . '</td>')) . esc_html($cell) . '</td>';",
+  "replace": "                return $m[0];",
   "count": 1
  },
  {

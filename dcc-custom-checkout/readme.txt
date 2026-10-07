@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.30.1
+Stable tag: 0.30.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,16 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.30.2 =
+Add New Booking search results: the two column headings in the owner's
+words (2026-10-07).
+* The capacity column is headed "Capacity" again (MotoPress's own heading,
+  left as it prints it). Its cells still show the cottage's number (e.g. 4),
+  plus "up to N children" only for a cottage that takes children.
+* The price column is headed "Total (minus taxes/fees)". The amounts are
+  unchanged.
+* Nothing else changes.
 
 = 0.30.1 =
 Corrections to 0.30.0 from the live MotoPress 6.3.0 source, and two

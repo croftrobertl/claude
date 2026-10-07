@@ -1,6 +1,9 @@
 <?php
 /**
  * v0.30.1 — Add New Booking, step 2: the search-results table's labels.
+ * v0.30.2 — headings per Rob: "Capacity" (MotoPress's own, left as printed)
+ * and "Total (minus taxes/fees)". With the Capacity heading identical either
+ * way, "relabelled" and "left as drawn" are told apart by the CELLS.
  *
  *     php tests/results/run.php            assertions
  *     php tests/results/run.php fixture X  print the rendered form for the
@@ -119,14 +122,18 @@ function cap_cells($h) { preg_match_all('#</label></td>\s*<td>([^<]*)</td>#', $h
 
 foreach ([false => 'as a WP template prints it', true => 'with the whitespace condensed'] as $condensed => $how) {
     $out = render(rooms_list(), (bool) $condensed);
-    check("step 2 ($how): headings read Title / Sleeps up to / Stay total before fees & taxes",
-        array_values(array_unique(heads($out))), ['Title', 'Sleeps up to', 'Stay total before fees &amp; taxes']);
+    check("step 2 ($how): headings read Title / Capacity / Total (minus taxes/fees)",
+        array_values(array_unique(heads($out))), ['Title', 'Capacity', 'Total (minus taxes/fees)']);
+    check("... the Capacity heading is byte-for-byte MotoPress's own (not re-printed by this plugin)",
+        substr_count($out, '<th class="row-title">Capacity</th>'), substr_count(render_plain(rooms_list(), (bool) $condensed), '<th class="row-title">Capacity</th>'));
+    check("... recognised, told apart from 'as drawn' by the CELLS: no \"Adults:\" left (MotoPress's own has 2)",
+        [substr_count($out, 'Adults:'), substr_count(render_plain(rooms_list(), (bool) $condensed), 'Adults:')], [0, 2]);
     check("... each cottage's cell is its calcTotalCapacity(): 4 for Cottage 32, 2 for Cottage 33", cap_cells($out), ['4', '2']);
     check('... amounts unchanged ($700, $600)', substr_count($out, '<span class="mphb-currency">$</span>700</span>') + substr_count($out, '<span class="mphb-currency">$</span>600</span>'), 2);
     check('... nothing else changed: the output equals MotoPress\'s with only those strings swapped',
         $out, str_replace(
-            ['<th class="row-title">Capacity</th>', '<th class="row-title">Base price</th>', 'Adults:&nbsp;4 Children:&nbsp;0', 'Adults:&nbsp;2 Children:&nbsp;0'],
-            ['<th class="row-title">Sleeps up to</th>', '<th class="row-title">Stay total before fees &amp; taxes</th>', '4', '2'],
+            ['<th class="row-title">Base price</th>', 'Adults:&nbsp;4 Children:&nbsp;0', 'Adults:&nbsp;2 Children:&nbsp;0'],
+            ['<th class="row-title">Total (minus taxes/fees)</th>', '4', '2'],
             render_plain(rooms_list(), (bool) $condensed)));
 }
 
@@ -165,8 +172,9 @@ $extra = str_replace('<th class="row-title"><?php esc_html_e( \'Base price\', \'
     '<th class="row-title"><?php esc_html_e( \'Base price\', \'motopress-hotel-booking\' ); ?></th><th>Extra</th>', file_get_contents(__DIR__ . '/reserve-rooms.php'));
 $tpl = sys_get_temp_dir() . '/dcc-reserve-rooms-extra.php';
 file_put_contents($tpl, $extra);
-check('unrecognised — a fifth column (MotoPress changed the template): left exactly as drawn',
-    strpos(render(rooms_list(), false, $tpl), 'Capacity</th>') !== false && strpos(render(rooms_list(), false, $tpl), 'Sleeps up to') === false, true);
+$fifth = render(rooms_list(), false, $tpl);
+check('unrecognised — a fifth column (MotoPress changed the template): left exactly as drawn (cells keep "Adults:", price heading kept)',
+    [substr_count($fifth, 'Adults:&nbsp;'), strpos($fifth, 'Base price</th>') !== false, strpos($fifth, 'Total (minus')], [2, true, false]);
 $good = render_plain(rooms_list(['1065' => ['Cottage 32', 700], 1067 => ['Cottage 31', 700]]));
 // Two rows in ONE table: make the second row's checkbox carry an extra attribute.
 $one = preg_replace('#<table class="widefat striped fixed">#', '<table class="widefat striped fixed">', $good, 1);

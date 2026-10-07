@@ -7,15 +7,22 @@ if (!defined('ABSPATH')) {
 
 /**
  * Add New Booking, step 2 (search results): clearer column labels (v0.30.1,
- * owner's picks 2026-10-07).
+ * owner's picks 2026-10-07; headings revised in v0.30.2, Rob's words).
  *
  * Rob searched for 2 adults and read "Capacity: Adults: 4 Children: 0" as a
  * wrong guest count; it is the cottage's maximum. And "Base price" is the
  * WHOLE STAY's total before fees and taxes (live: $700 for 4 nights), not a
  * per-night rate. So:
- *   "Capacity"   → "Sleeps up to", cell = RoomType::calcTotalCapacity()
- *                  (+ " · up to N children" only when children capacity > 0);
- *   "Base price" → "Stay total before fees & taxes". Amount unchanged.
+ *   "Capacity" column: heading LEFT AS MOTOPRESS PRINTS IT (0.30.1 said
+ *                  "Sleeps up to"; Rob asked for "Capacity" back), cell =
+ *                  RoomType::calcTotalCapacity() (+ " · up to N children" only
+ *                  when children capacity > 0);
+ *   "Base price" → "Total (minus taxes/fees)". Amount unchanged.
+ *
+ * Because the Capacity heading is MotoPress's own again, the HEADINGS no
+ * longer tell a relabelled table from one left as drawn — the CELLS do: a
+ * recognised table has no "Adults:" left in that column, and its price
+ * heading is ours. The tests assert on the cells for that reason.
  *
  * SCOPE, deliberately narrow: NO global gettext filter — 'Capacity' is also
  * MotoPress's word in Google Hotels data, the room-type editor and the
@@ -126,7 +133,7 @@ final class Results_Labels
         };
         $head = '#<thead>\s*<tr>\s*<th class="check-column">&nbsp;</th>\s*'
             . '<th class="row-title">' . $q(self::mp('Title')) . '</th>\s*'
-            . '<th class="row-title">(' . $q(self::mp('Capacity')) . ')</th>\s*'
+            . '<th class="row-title">' . $q(self::mp('Capacity')) . '</th>\s*'
             . '<th class="row-title">(' . $q(self::mp('Base price')) . ')</th>\s*</tr>\s*</thead>#';
         $row = '#<tr>\s*<td>\s*<input type="checkbox" name="mphb_rooms\[(\d+)\]\[\]" value="\d+" id="mphb_room-\d+"\s*/>\s*</td>\s*'
             . '<td>\s*<label for="mphb_room-\d+">[^<]*</label>\s*</td>\s*'
@@ -166,11 +173,11 @@ final class Results_Labels
             if ($bad || $part === null || $rows_found < 1 || $rows_found !== $rows_total) {
                 return null;
             }
+            // Only the price heading changes; the Capacity heading stays MotoPress's.
             $part = preg_replace_callback($head, static function (array $m): string {
                 return str_replace(
-                    ['<th class="row-title">' . $m[1] . '</th>', '<th class="row-title">' . $m[2] . '</th>'],
-                    ['<th class="row-title">' . esc_html__('Sleeps up to', 'dcc-checkout') . '</th>',
-                     '<th class="row-title">' . esc_html__('Stay total before fees & taxes', 'dcc-checkout') . '</th>'],
+                    '<th class="row-title">' . $m[1] . '</th>',
+                    '<th class="row-title">' . esc_html__('Total (minus taxes/fees)', 'dcc-checkout') . '</th>',
                     $m[0]
                 );
             }, $part);

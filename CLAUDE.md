@@ -1083,6 +1083,18 @@ yours to improvise.
     Mutation `res-head-unmatched` SURVIVED at first: every "changed heading"
     case changed EVERY table, where skipping one and refusing all look the
     same; the mixed case (one changed, one normal) is what tells them apart.
+  - **0.30.2 — HEADINGS IN ROB'S WORDS** (2026-10-07, after 0.30.1 passed
+    live): the capacity column is headed **"Capacity"** again — MotoPress's
+    OWN heading, left byte-for-byte as it prints it (not re-printed under
+    `dcc-checkout`), so a translated site keeps MotoPress's translation — and
+    the price column reads **"Total (minus taxes/fees)"**. "Sleeps up to" and
+    "Stay total before fees & taxes" are gone (LocoTranslate will list them
+    obsolete). Cells unchanged. **Consequence: the Capacity heading no longer
+    distinguishes "relabelled" from "left as drawn"** — the CELLS do (no
+    "Adults:" in a recognised table) plus the price heading. Recognition
+    still requires all four of MotoPress's headings. Asserted on the cells;
+    mutation `res-cells-not-rewritten` (recognise, count, but leave the cell)
+    must go red.
   - The rendered markup (Director, K) has `&nbsp;` in the cell and the price
     as `<span class="mphb-price">`; the price cell is never touched. The
     browser suite REPRODUCES only WordPress's `.widefat`/`table.fixed` rules
@@ -1299,9 +1311,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 173
-  mutations, 173 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
-  v0.30.1; sixteen suites). At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 174
+  mutations, 174 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
+  v0.30.2; sixteen suites). At v0.30.1, 173. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
   search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
   retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code

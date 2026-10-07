@@ -1,5 +1,5 @@
 /**
- * v0.30.1 — Add New Booking step 2, the results table, in real Chromium at
+ * v0.30.1 (headings revised v0.30.2) — Add New Booking step 2, the results table, in real Chromium at
  * 1280 and 390. The markup is what tests/results/run.php prints through the
  * SHIPPED Results_Labels (the verbatim live template, MotoPress's hooks).
  * WordPress's admin CSS is not available here: the page REPRODUCES only the
@@ -35,8 +35,8 @@ table.fixed{table-layout:fixed}.widefat td,.widefat th{padding:8px 10px;text-ali
             head: Array.from(t.querySelectorAll('thead th')).map(th => th.innerText.trim()),
             row: Array.from(t.querySelectorAll('tbody td')).slice(1).map(td => td.innerText.trim()),
         })));
-        check(`${width}px: every table's headings read Title · Sleeps up to · Stay total before fees & taxes`,
-            read.map(r => r.head), Array(3).fill(['', 'Title', 'Sleeps up to', 'Stay total before fees & taxes']));
+        check(`${width}px: every table's headings read Title · Capacity · Total (minus taxes/fees)`,
+            read.map(r => r.head), Array(3).fill(['', 'Title', 'Capacity', 'Total (minus taxes/fees)']));
         check(`${width}px: each row shows the cottage, how many it sleeps, the stay total`, read.map(r => r.row), [
             ['Cottage 32: Flamingo Bungalow', '4', '$700'], ['Cottage 22: The Boathouse', '4', '$800'], ['Cottage 33', '2', '$600']]);
         const geo = await pg.evaluate(() => ({
