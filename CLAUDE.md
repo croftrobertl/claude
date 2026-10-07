@@ -933,6 +933,85 @@ yours to improvise.
   `.mphb-guest-name-wrapper` (that class is confirmed: the site's Customizer
   CSS hides it on the public checkout) — **the admin markup is NOT confirmed
   on live** [Director]; when neither is found it does nothing. Add New only.
+- **0.30.0 — THE ACCEPTANCE BOX AND THE ACCEPTANCE RECORD** (Rob's picks
+  2026-10-07: "One box, both links" / "Yes, record it"; `Policies` and
+  `Policy_Record`; suites `tests/policy/run.php` and `tests/policy/browser.js`).
+  - **ROB'S STANDING RULE: THE POLICY'S TERMS LIVE ONLY ON THE POLICY PAGE.**
+    This plugin, its settings defaults and its notes LINK to it and never
+    restate it — no time limits, amounts or conditions of any kind. If the
+    policy changes, nothing here can be left saying the old thing.
+    `tests/policy/run.php` scans the feature's PHP, the readme and THIS FILE
+    for such wording and goes red on a hit.
+  - **Label**: "I've read and accept the Terms & Conditions and the
+    Cancellation & Refund Policy." — two links, new tab (`target=_blank`,
+    `rel=noopener`). Terms URL from MotoPress's `mphb_terms_and_conditions_page`
+    (2515); the policy page BY ID from the settings picker
+    (`refund_page_id`, default 2394 — "Checkout policies" on the settings
+    page). Either page missing/unpublished, or none chosen → MotoPress's
+    original label exactly [Director].
+  - **How it is swapped**: a `gettext_with_context` filter added at
+    `mphb_sc_checkout_form` priority 59 and removed at 61, around MotoPress's
+    `renderTermsAndConditions` at 60 (Director, MotoPress 6.1.0). It matches
+    the exact msgid + context the Director read, and returns the full label
+    with every `%` doubled, because MotoPress feeds it to `printf()` with its
+    own link as the one argument (ignored — ours has no placeholder; PHP 8
+    throws on an unknown specifier, so an unescaped `%` in a URL would crash
+    the checkout render). Scoped, so any OTHER use of that msgid keeps
+    MotoPress's wording. **Where else MotoPress prints this box could not be
+    checked here** (its source is unreachable — below); the scoping means
+    elsewhere is unchanged either way. The test's MotoPress render is a
+    STAND-IN of the two verified facts (input markup, `printf(_x(...))`).
+  - **DOES THE TICK REACH THE SERVER? Not verifiable from this session, and
+    probably not.** wordpress.org is blocked by the session's network policy
+    (gateway 403 on downloads/svn/api.wordpress.org — not to be routed
+    around), so MotoPress's JS could not be read. The evidence on record is
+    `class-checkout-request.php`'s staging hook trace: MotoPress submits a
+    NORMALISED payload (`check_in_date`, `check_out_date`, `checkout_id`,
+    `coupon_code`, `customer_fields`, `lang`, `room_details`) and drops other
+    top-level fields. No terms key there. Rob's pick: **record honestly now**
+    — the record reads `mphb_accept_terms`/`accept_terms` from the REST
+    params (captured at `rest_request_before_callbacks` on MotoPress's route)
+    or `$_POST`, and says `not_received` when absent. **Rob's one test
+    booking settles it**; if "not received", a follow-up adds a carrier for
+    the tick, built against what that booking showed.
+  - **The record** (`_dcc_policy_acceptance` on the booking, written once at
+    `mphb_create_booking_by_user`, `add_post_meta(..., unique)`, never over an
+    existing row and never to an existing booking): `at_gmt`, `tick`
+    (`received`/`not_received`), `label` (plain text as shown), and per page
+    `role`, `id`, `sha256`, `modified_gmt`, `saved`. **Nothing about the
+    guest.** `not_received` is never displayed as "accepted" ("Booked online:
+    …. The acceptance tick did not reach the server …").
+  - **A VERSION IS ITS CONTENT, NOT ITS DATE.** The fingerprint is SHA-256 of
+    `{page_id, title, post_content, _elementor_data}` — the Director found
+    CLI edits to `_elementor_data` that never bump `post_modified`, which is
+    kept only as a hint. One copy per distinct fingerprint, in the private
+    post type `dcc_policy_version` (meta `_dcc_pv_bundle` + `_dcc_pv_sha256`).
+    **Stored in META, slashed**: post_content passes kses for an anonymous
+    guest's request, and `add_post_meta()` UNSLASHES — Elementor's JSON is
+    full of backslashes, so an unslashed write comes back altered. The copy is
+    read back and re-hashed; one that does not match is not reported saved,
+    and the viewer says so. Mutation `pol-version-unslashed` pins it.
+  - **Who made the booking** (display order): a record → it; an import
+    (`mphb_ical_prodid` on the booking or a reserved room — the Availability
+    Calendar's live reader) → "Imported booking — not accepted on this site"
+    (Rob's pick "Distinguish imports"); a staff mark → "Entered by staff — not
+    accepted online"; otherwise "No online acceptance on record". Staff mark
+    (`_dcc_policy_staff`) is written for a NEW booking created either by a
+    wp-admin screen request (`wp_insert_post`, not AJAX/cron/REST) or by a
+    checkout submission REFERRED from wp-admin (the same test the Extras
+    rename uses). DCC-VERIFY: which of the two the Add New wizard takes.
+  - **Viewer**: `admin-post.php?action=dcc_policy_version&sha=…`, `edit_posts`,
+    read only, the derived text through `wp_kses_post` plus the exact stored
+    data escaped. No enforcement anywhere: a booking is never refused over
+    the tick (owner's instruction).
+  - `checkout.js` / `checkout.css` UNCHANGED. The browser suite places the
+    PHP-rendered box in a form styled by the shipped `checkout.css` at 390
+    and 1280: wording, both links, a real new tab, still `required` (the
+    form will not submit unticked), no overflow, and the fallback.
+  - **The runner's "WIRED UP BUT NOT ON DISK" was itself wrong for any suite
+    not named `run.*`** — it tested membership of a `run.*` glob, not
+    existence, so `tests/policy/browser.js` read as missing while it ran.
+    Fixed to test existence; proved both ways (moved away → flagged).
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1144,9 +1223,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 134
-  mutations, 134 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
-  v0.29.0; twelve suites). 0.29.0's first full run was 134 + 1 SURVIVED: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 156
+  mutations, 156 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
+  v0.30.0; fourteen suites). Before that, at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
   search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
   retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code

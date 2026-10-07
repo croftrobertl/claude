@@ -65,6 +65,8 @@ SUITES = {
     'guest34':      ('php',  'tests/guest34/run.php'),
     'settings':     ('php',  'tests/settings/run.php'),
     'admin-layout': ('node', 'tests/admin-layout/run.js'),
+    'policy':       ('php',  'tests/policy/run.php'),
+    'policy-browser': ('node', 'tests/policy/browser.js'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'
@@ -126,7 +128,11 @@ def preflight():
     for f in on_disk:
         rel = os.path.relpath(f, ROOT)
         print(f'  {rel:34s} {"wired up" if f in wired else "*** NOT WIRED INTO THIS RUNNER ***"}')
-    missing = [s for _, s in SUITES.values() if os.path.join(ROOT, s) not in set(on_disk)]
+    # Existence, not membership of the glob above: a wired suite need not be
+    # called run.* (tests/policy/browser.js), and the glob would report it
+    # missing while it ran -- an instrument that cannot tell absent from
+    # differently-named is the exit-code fault in another shape.
+    missing = [s for _, s in SUITES.values() if not os.path.isfile(os.path.join(ROOT, s))]
     for s in missing:
         print(f'  {s:34s} *** WIRED UP BUT NOT ON DISK ***')
 

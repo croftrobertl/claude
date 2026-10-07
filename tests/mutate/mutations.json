@@ -1480,5 +1480,249 @@
   "find": "'input[name^=\"mphb_room_details[\"][name$=\"[guest_name]\"], .mphb-guest-name-wrapper input'",
   "replace": "'.mphb-guest-name-wrapper input'",
   "count": 1
+ },
+ {
+  "id": "pol-label-window-leaks",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 the label is swapped ONLY inside the box's render window",
+  "find": "        remove_filter('gettext_with_context', [$this, 'swap_label'], 10);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "pol-label-unpublished-linked",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy",
+   "policy-browser"
+  ],
+  "claim": "0.30.0 an unpublished policy page falls back to MotoPress's original label",
+  "find": "        if (!self::published($terms) || !self::published($refund)) {",
+  "replace": "        if ($terms <= 0 || $refund <= 0) {",
+  "count": 1
+ },
+ {
+  "id": "pol-label-no-new-tab",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy",
+   "policy-browser"
+  ],
+  "claim": "0.30.0 both links open in a new tab",
+  "find": "'<a href=\"%s\" target=\"_blank\" rel=\"noopener\">%s</a>'",
+  "replace": "'<a href=\"%s\">%s</a>'",
+  "count": 1
+ },
+ {
+  "id": "pol-label-percent-unescaped",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 a '%' in a policy URL survives MotoPress's printf",
+  "find": "        return str_replace('%', '%%', Policies::label_html($links));",
+  "replace": "        return Policies::label_html($links);",
+  "count": 1
+ },
+ {
+  "id": "pol-refund-page-hardcoded",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 the refund link follows the settings page picker (a setting must reach its consumer)",
+  "find": "        $refund = Config::refund_page_id();",
+  "replace": "        $refund = 2394;",
+  "count": 1
+ },
+ {
+  "id": "pol-record-tick-always",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 'received' only when the tick reached the server",
+  "find": "            'tick'     => $tick ? 'received' : 'not_received',",
+  "replace": "            'tick'     => 'received',",
+  "count": 1
+ },
+ {
+  "id": "pol-record-guard-dead",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 an existing record is never touched, not even by a capture",
+  "find": "        if (get_post_meta($booking_id, self::META, true) !== '') {\n            return false;\n        }\n        $links    = Policies::label_links();",
+  "replace": "        $links    = Policies::label_links();",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-referer-ignored",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 a booking created from a wp-admin screen gets no online record",
+  "find": "        if (self::from_admin()) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-marks-updates",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 only a NEW booking is marked staff-entered, never an update",
+  "find": "        if ($update || !$post instanceof \\WP_Post",
+  "replace": "        if (!$post instanceof \\WP_Post",
+  "count": 1
+ },
+ {
+  "id": "pol-staff-marks-ajax",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 an AJAX request (an import) is not a staff screen",
+  "find": "        if (!is_admin() || wp_doing_ajax() || wp_doing_cron()",
+  "replace": "        if (!is_admin() || wp_doing_cron()",
+  "count": 1
+ },
+ {
+  "id": "pol-other-rest-recorded",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 a booking under any other REST route gets no record",
+  "find": "            return; // not a channel this can vouch for — write nothing",
+  "replace": "            $tick = false;",
+  "count": 1
+ },
+ {
+  "id": "pol-rest-route-any",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 the tick is read from MotoPress's checkout route only",
+  "find": "            && Rest_Guard::route_matches((string) $request->get_route())) {",
+  "replace": "            ) {",
+  "count": 1
+ },
+ {
+  "id": "pol-imported-dead",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 an imported booking says so",
+  "find": "        if (Policies::is_imported($booking_id)) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "pol-imported-room-missed",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 an import marker on a reserved room counts",
+  "find": "            if ((string) get_post_meta((int) $rid, 'mphb_ical_prodid', true) !== '') {\n                return true;",
+  "replace": "            if ((string) get_post_meta((int) $rid, 'mphb_ical_prodid', true) !== '') {\n                return false;",
+  "count": 1
+ },
+ {
+  "id": "pol-version-unslashed",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 a stored copy is exact: slashed before core unslashes it",
+  "find": "        add_post_meta($id, self::META_BUNDLE, wp_slash($json), true);",
+  "replace": "        add_post_meta($id, self::META_BUNDLE, $json, true);",
+  "count": 1
+ },
+ {
+  "id": "pol-version-no-dedupe",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 ONE stored copy per distinct version",
+  "find": "        $saved = self::find_version($sha) !== null || self::store_version($sha, $json, $page);",
+  "replace": "        $saved = self::store_version($sha, $json, $page);",
+  "count": 1
+ },
+ {
+  "id": "pol-fingerprint-ignores-elementor",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 an Elementor-only edit (post_modified not bumped) is a new version",
+  "find": "            'elementor_data' => (string) get_post_meta((int) $page->ID, '_elementor_data', true),",
+  "replace": "            'elementor_data' => '',",
+  "count": 1
+ },
+ {
+  "id": "pol-not-received-says-accepted",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 a booking whose tick did not arrive is never called accepted",
+  "find": "        $head = $received\n",
+  "replace": "        $head = true\n",
+  "count": 1
+ },
+ {
+  "id": "pol-viewer-no-cap",
+  "file": "dcc-custom-checkout/includes/class-policy-record.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 the saved-text viewer checks capability",
+  "find": "        if (!current_user_can('edit_posts')) {\n            wp_die(",
+  "replace": "        if (false) {\n            wp_die(",
+  "count": 1
+ },
+ {
+  "id": "pol-viewer-unsanitised",
+  "file": "dcc-custom-checkout/includes/class-policies.php",
+  "suites": [
+   "policy"
+  ],
+  "claim": "0.30.0 the viewer never outputs page script",
+  "find": "                            $out .= '<div>' . wp_kses_post($s[$k]) . '</div>';",
+  "replace": "                            $out .= '<div>' . $s[$k] . '</div>';",
+  "count": 1
+ },
+ {
+  "id": "pol-settings-any-id",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "0.30.0 the refund-page setting keeps only an ID that names a page",
+  "find": "        } elseif ($rp > 0 && get_post_type($rp) === 'page') {",
+  "replace": "        } elseif ($rp > 0) {",
+  "count": 1
+ },
+ {
+  "id": "pol-settings-zero-lost",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "0.30.0 'None' (0) is a valid refund-page choice",
+  "find": "        if ($rp === 0) {\n            $out['refund_page_id'] = 0;",
+  "replace": "        if ($rp === 0) {\n            $out['refund_page_id'] = 2394;",
+  "count": 1
  }
 ]

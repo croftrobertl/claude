@@ -216,6 +216,17 @@ final class Settings
         $beds = isset($input['couch_beds_text']) ? sanitize_text_field($input['couch_beds_text']) : '';
         $out['couch_beds_text'] = $beds !== '' ? $beds : (string) $defaults['couch_beds_text'];
 
+        // v0.30.0 -- a PAGE ID, kept only if it names a page; 0 (none) is a
+        // valid choice and puts MotoPress's own label back on the checkout.
+        $rp = isset($input['refund_page_id']) && is_numeric($input['refund_page_id']) ? (int) $input['refund_page_id'] : -1;
+        if ($rp === 0) {
+            $out['refund_page_id'] = 0;
+        } elseif ($rp > 0 && get_post_type($rp) === 'page') {
+            $out['refund_page_id'] = $rp;
+        } else {
+            $out['refund_page_id'] = (int) (Config::settings()['refund_page_id'] ?? $defaults['refund_page_id']);
+        }
+
         // Fresh reads should reflect the new values immediately.
         Config::flush_cache();
 
@@ -340,6 +351,8 @@ final class Settings
                 <table class="form-table" role="presentation">
                     <?php $this->render_guest34_row(); ?>
                 </table>
+
+                <?php $this->render_policies_section(); ?>
 
                 <h2><?php echo esc_html__('Section titles', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
@@ -543,6 +556,44 @@ final class Settings
                 ?>
             </table>
         </details>
+        <?php
+    }
+
+    /**
+     * v0.30.0 — the page the checkout's acceptance box links to beside
+     * MotoPress's Terms & Conditions. A picker of pages, never a URL. It says
+     * what the guest will see, without restating any policy term.
+     */
+    private function render_policies_section(): void
+    {
+        $id = Config::refund_page_id();
+        ?>
+        <h2><?php echo esc_html__('Checkout policies', 'dcc-checkout'); ?></h2>
+        <p class="description" style="max-width:640px">
+            <?php echo esc_html__('The checkout\'s acceptance box links to MotoPress\'s Terms & Conditions page and to the page chosen here. Each booking made online records which version of both pages the guest was shown.', 'dcc-checkout'); ?>
+        </p>
+        <table class="form-table" role="presentation">
+            <tr><th scope="row"><label for="dcc_refund_page_id"><?php echo esc_html__('Cancellation & Refund Policy page', 'dcc-checkout'); ?></label></th><td>
+            <?php
+            wp_dropdown_pages([
+                'name'              => esc_attr(Config::OPTION) . '[refund_page_id]',
+                'id'                => 'dcc_refund_page_id',
+                'selected'          => $id,
+                'show_option_none'  => esc_html__('— None —', 'dcc-checkout'),
+                'option_none_value' => '0',
+                'post_status'       => ['publish', 'draft', 'private', 'pending'],
+            ]);
+            if ($id > 0 && !Policies::published($id)) {
+                echo '<p class="description"><strong>' . esc_html__('This page is not published, so the checkout shows MotoPress\'s original label.', 'dcc-checkout') . '</strong></p>';
+            } elseif ($id === 0) {
+                echo '<p class="description">' . esc_html__('None chosen: the checkout shows MotoPress\'s original label.', 'dcc-checkout') . '</p>';
+            }
+            if (!Policies::published(Policies::terms_page_id())) {
+                echo '<p class="description"><strong>' . esc_html__('MotoPress\'s Terms & Conditions page is not set or not published, so the checkout shows MotoPress\'s original label.', 'dcc-checkout') . '</strong></p>';
+            }
+            ?>
+            </td></tr>
+        </table>
         <?php
     }
 

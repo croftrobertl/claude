@@ -40,6 +40,9 @@ function wp_strip_all_tags($t) { return strip_tags((string) $t); }
 function number_format_i18n($n, $d = 0) { return number_format((float) $n, (int) $d); }
 function wp_parse_args($a, $b) { return array_merge($b, (array) $a); }
 function get_post_meta($id, $k, $s = false) { return ''; }
+// v0.30.0: the refund-page picker keeps an ID only if it names a page.
+$GLOBALS['post_types'] = [2394 => 'page', 3001 => 'page', 18063 => 'mphb_room_service'];
+function get_post_type($id) { return $GLOBALS['post_types'][(int) $id] ?? false; }
 function did_action($h) { return 0; }
 // WordPress's checked(): compares the two as STRINGS, as core does.
 function checked($a, $b = true, $echo = true) {
@@ -303,6 +306,32 @@ check("stored '1' with a filter saying OFF: still ticked — the box shows stora
 fresh(); $GLOBALS['opt'][Config::GUEST34_OPTION] = '';
 $GLOBALS['filters']['dcc_guest34_enabled'] = true;
 check("stored '' with a filter saying ON: still unticked", guest34_box_checked(), false);
+
+/* =====================================================================
+ * v0.30.0 -- the Cancellation & Refund Policy page picker. A PAGE ID, never
+ * a URL. Defaults to 2394 on a site that never saved it (read-time merge).
+ * ===================================================================== */
+fresh();
+check('refund page: a site that never saved it reads the live page, 2394', Config::refund_page_id(), 2394);
+foreach ([
+    ['another page',              3001,     3001],
+    ['0 (none: MotoPress\'s label)', 0,     0],
+    ['"0" as posted',             '0',      0],
+    ['a post that is not a page', 18063,    2394],
+    ['an ID that does not exist', 77777,    2394],
+    ['a negative number',         -3,       2394],
+    ['garbage',                   'policy', 2394],
+    ['missing',                   null,     2394],
+] as [$label, $value, $want]) {
+    fresh();
+    $in = $base;
+    if ($value !== null) { $in['refund_page_id'] = $value; }
+    check("refund page: $label -> $want", $settings->sanitize($in)['refund_page_id'], $want);
+}
+fresh();
+$GLOBALS['opt'][Config::OPTION] = ['refund_page_id' => 3001];
+$in = $base; $in['refund_page_id'] = 18063;
+check('refund page: a bad post keeps the STORED choice, not the default', $settings->sanitize($in)['refund_page_id'], 3001);
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

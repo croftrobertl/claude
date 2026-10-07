@@ -102,7 +102,21 @@ final class Config
             // Sleeping arrangement named in the guest-facing note. One string
             // for the six couch cottages, which share the same layout.
             'couch_beds_text'       => '1 queen-sized bed and a pull-out couch',
+            // v0.30.0 -- the Cancellation & Refund Policy page the checkout's
+            // acceptance box links to, BY ID (never a URL): page 2394 on live,
+            // /cancellation-refund-policy/. The policy's terms live only on
+            // that page; nothing in this plugin restates them.
+            'refund_page_id'        => 2394,
         ];
+    }
+
+    /**
+     * The Cancellation & Refund Policy page ID (v0.30.0). 0 = none chosen, in
+     * which case the checkout keeps MotoPress's own label.
+     */
+    public static function refund_page_id(): int
+    {
+        return max(0, (int) (self::settings()['refund_page_id'] ?? 0));
     }
 
     /**

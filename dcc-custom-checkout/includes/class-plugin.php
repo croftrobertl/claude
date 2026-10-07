@@ -60,6 +60,9 @@ final class Plugin
         // Guest ID images: one-click deletion, deletion with the booking, and
         // keeping the protected store unreadable.
         (new Id_Files())->register();
+        // v0.30.0: the acceptance box's two links, and the acceptance record
+        // on each booking made online (the policy versions the guest was shown).
+        (new Policy_Record())->register();
     }
 
     public function load_textdomain(): void

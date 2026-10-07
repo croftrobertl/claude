@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.29.0
+Stable tag: 0.30.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,25 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.30.0 =
+The checkout's acceptance box, and a record of it on each booking (owner's
+picks, 2026-10-07). The policies themselves are written only on their own
+pages; this plugin links to them and never restates them.
+* The checkbox now reads "I've read and accept the Terms & Conditions and the
+  Cancellation & Refund Policy." Both are links that open in a new tab. The
+  Terms link is MotoPress's own setting; the policy page is chosen under
+  DCC -> Custom Checkout -> Checkout policies (default: page 2394). If either
+  page is missing or unpublished, MotoPress's original label is shown. The
+  box is still required in the browser, as before.
+* Each booking made online records when it was made, whether the tick
+  reached the server, the label shown, and which version of each policy page
+  was shown (a SHA-256 fingerprint, with one saved copy of each version).
+  It is shown read-only in a new "Policies" box on the booking screen, with a
+  link to the saved text. A booking whose tick did not reach the server is
+  never described as accepted. Bookings entered by staff, imported bookings
+  and older bookings say so; existing bookings are never written to.
+* Nothing is enforced server-side: a booking is never refused over the tick.
 
 = 0.29.0 =
 WP-Admin booking screens only (owner's picks, 2026-10-07). The public
