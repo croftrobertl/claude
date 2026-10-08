@@ -19,7 +19,7 @@ const S = {
   priceLabel: 'Estimated total:',
   priceOneNight: '{price} for 1 night',
   priceForNights: '{price} for {nights} nights',
-  priceAvg: '({avg}/night avg)',
+  priceAvg: '({avg}/night)',
 };
 const PRICE = '<span class="mphb-price">&#036;910</span>';
 const AVG = '<span class="mphb-price">&#036;130</span>';
@@ -70,7 +70,7 @@ console.log('\n-- the estimate line --');
   check('the label text comes from the strings, not a literal',
     line.children[0].textContent === 'Estimated total:');
   check('the whole line reads correctly',
-    line.textContent.replace(/\s+/g, ' ') === 'Estimated total: $910 for 7 nights ($130/night avg)',
+    line.textContent.replace(/\s+/g, ' ') === 'Estimated total: $910 for 7 nights ($130/night)',
     line.textContent);
   check('a space text node survives between label and amount, so the line reads even without the CSS',
     line.children[1].nodeType === 3 && line.children[1].data === ' ');
@@ -102,6 +102,26 @@ console.log('\n-- the estimate line --');
   R.renderEstimateLine(redraw, S, 2, PRICE, null);
   check('re-rendering replaces the line rather than appending to it',
     redraw.textContent.includes('2 nights') && !redraw.textContent.includes('7 nights'), redraw.textContent);
+}
+
+console.log('\n-- 0.43.0: "avg" is gone from the DEFAULT, in both places it lives --');
+{
+  /* Rob dropped "avg" everywhere. The wording has two homes that must agree:
+     the Elementor control's default (class-widget.php) and widget.js's own
+     fallback, used when a widget's strings carry no priceAvg at all. The
+     three widgets that stored their own copy were changed by hand on live;
+     the other seven cottage pages follow these defaults. */
+  const noAvg = Object.assign({}, S); delete noAvg.priceAvg;
+  const line = el();
+  R.renderEstimateLine(line, noAvg, 7, PRICE, AVG);
+  check('with no string supplied, the FALLBACK reads "($130/night)"',
+    line.textContent.replace(/\s+/g, ' ') === 'Estimated total: $910 for 7 nights ($130/night)', line.textContent);
+  const fs = require('fs'), path = require('path');
+  const php = fs.readFileSync(path.resolve(__dirname, '../../mphb-availability-calendar/includes/class-widget.php'), 'utf8');
+  const m = php.match(/'str_price_avg'\s*=>\s*\[[^\]]*?__\('([^']*)',\s*'mphb-availability-calendar'\)\]/);
+  check('the Elementor control default is the same "({avg}/night)"', !!m && m[1] === '({avg}/night)', m && m[1]);
+  check('and the word "avg" appears in neither', !/night avg/.test(php)
+    && !/night avg/.test(fs.readFileSync(path.resolve(__dirname, '../../mphb-availability-calendar/assets/js/widget.js'), 'utf8')));
 }
 
 done();

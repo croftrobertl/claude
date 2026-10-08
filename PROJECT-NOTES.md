@@ -2048,6 +2048,68 @@ at page load, and the inline path's selector match is unchanged. The fill sets
 the marker, so the desktop hover-prefetch route — where the fill happens with
 no popup open — is covered as well as the tap; the suite drives both.
 
+## The staff board gets periods; who decided what (0.43.0)
+
+The Website Director relayed answers to 24 questions on 2026-10-08. **Rob's
+own decisions and the WD's are kept apart here**, at the WD's request,
+because they carry different authority: Rob's are product decisions; the
+WD's were settled from facts verified on live, or for privacy and safety.
+
+**Rob decided** (several from rendered mockups):
+- Drop "avg" from the estimate everywhere (changed in both the control
+  default and widget.js's fallback; the three widgets that stored their own
+  copy were changed by hand on live by the WD).
+- Weekly fills the screen; on phones the cottage column shrinks to ~48px.
+- Short bars keep today's name rule, falling back to a nights count only
+  where nothing fits (0.44.0).
+- Today tiles mean the real today; % booked follows the period (0.44.0).
+- Calendar windows: Weekly a calendar week from WordPress's start_of_week
+  (0 = Sunday on live), Yearly Jan 1 – Dec 31 opening on today.
+- Yearly is a 365-day scrolling chart, not an occupancy grid.
+- The period menu replaces the List / Chart buttons.
+- Remember each device's last period; first visit opens Monthly on every
+  device, phones included — made knowing phones opened on the list before.
+- No keyboard shortcuts. Search open to anyone with the staff password,
+  with no result cap and no rate limit (0.45.0). Live as you type, one mixed
+  list, best match first.
+
+**The WD decided:** the login-page styling lives in the WD's own
+dcc-password-form.php mu-plugin, not here — add no login styles to this
+plugin, and report any change to .mphbac-btn's look so it can be matched;
+no build to clear saved "avg" copies; search excludes cancelled/abandoned,
+indexes imported sync text, maps country names to codes, covers every sheet
+field except Photo ID; no semantic/AI search (privacy: guest data stays on
+our server); no recent searches stored anywhere; the delivery split
+0.43.0 / 0.44.0 / 0.45.0.
+
+**THE ±3-YEAR CAP IS A CONVENIENCE LIMIT, NOT A PROTECTION.** It was
+introduced so the month endpoint "can't be used to sweep the whole booking
+table". From 0.45.0, search reaches every booking ever for anyone with the
+staff password — Rob's decision, made knowing that. The cap is kept so
+ordinary browsing stays sensible. The range request CLAMPS a window that
+overlaps it (and says so) rather than refusing the year three years back
+over a few missing weeks, and refuses one wholly outside it. Search hits
+outside it will open their sheet without moving the calendar.
+
+**MOTOPRESS 6.3.0's HOOKS, verified on live by the WD.** The three names the
+plugin hooked for imports — mphb_after_sync_ical, mphb_ical_sync_finished,
+mphb_after_create_booking — do not exist; they had been "a best guess" since
+they were written, and no test could have caught it, because a test can only
+prove a hook is REGISTERED, not that anything FIRES it. The consequence was
+live: an imported booking never flushed the public calendar, which could be
+up to 15 minutes stale. 6.3.0 fires mphb_create_booking_via_ical and
+mphb_update_booking_via_ical, rewrites dates with update_post_meta (no
+save_post) and deletes with wp_delete_post (only deleted_post). **A hook name
+nobody has seen fire is an assumption, not a fact** — ask for it to be
+verified on the live install.
+
+**No suite had ever run staff.js.** staff-test.js checks the board's CSS on
+static markup. staff-period-test.js now runs the real script against the
+shell extracted from the PHP, with fetch answered by a stand-in that applies
+Staff::send_range()'s own rules, and the board's strings read from the PHP
+rather than copied. It runs 8 cottages, as live has: Yearly measured 277ms to
+render at 4x CPU slowdown (about 4,000 elements).
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

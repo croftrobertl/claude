@@ -33,7 +33,9 @@ const INFO_SHEET = (() => {
 const SALMON = 'rgb(240, 128, 128)';
 const BUTTONLIKE = [
   ['nav', '.mphbac-staff-prev'],
-  ['view (unselected)', '.mphbac-staff-view[aria-pressed="false"]'],
+  // The List / Chart tabs were here until 0.43.0; the period menu replaced
+  // them. It is a FIELD (a <select>), not a salmon button, so it is not in
+  // this list — its size, weight and tap target are asserted below.
   ['close', '.mphbac-staff-close'],
   ['photo link', '.mphbac-staff-photo a'],
 ];
@@ -102,7 +104,7 @@ const BUTTONLIKE = [
   check('...and the nav focus background is still declared, ungated',
     /\.mphbac-staff-nav:focus-visible\s*\{[^}]*--staff-nav-hover/.test(code.slice(0, code.indexOf(GUARD))));
 
-  console.log('\n-- DESKTOP: all four button-like controls go salmon --');
+  console.log('\n-- DESKTOP: all three button-like controls go salmon --');
   {
     const { ctx, p } = await open(false);
     for (const [label, sel] of BUTTONLIKE) {
@@ -110,10 +112,6 @@ const BUTTONLIKE = [
       check(`${label}: the pointer really is over it (instrument check)`, r.hov.hovering === true);
       check(`${label}: hovers to the shared salmon`, r.hov.bg === SALMON, { rest: r.rest.bg, hover: r.hov.bg });
     }
-    // The selected tab is deliberately untouched.
-    const sel = await hoverRead(p, '.mphbac-staff-view[aria-pressed="true"]');
-    check('the SELECTED tab is deliberately unchanged on hover — it is the only signal of the active view',
-      sel.hov.bg === sel.rest.bg, sel);
     // Surfaces keep their own treatment.
     const bar = await hoverRead(p, '.mphbac-staff-bar');
     const item = await hoverRead(p, '.mphbac-staff-item');
@@ -152,19 +150,19 @@ const BUTTONLIKE = [
       const read = s => { const e = document.querySelector(s), c = getComputedStyle(e), r = e.getBoundingClientRect();
         return { s, w: +r.width.toFixed(1), h: +r.height.toFixed(1), dur: c.transitionDuration,
                  minH: c.minHeight, height: c.height }; };
-      return ['.mphbac-staff-prev', '.mphbac-staff-view', '.mphbac-staff-close', '.mphbac-staff-photo a'].map(read);
+      return ['.mphbac-staff-prev', '.mphbac-staff-period', '.mphbac-staff-goto', '.mphbac-staff-close', '.mphbac-staff-photo a'].map(read);
     });
     check('every button-like staff control clears the 44px floor',
       m.every(x => x.w >= 44 && x.h >= 44), m.filter(x => x.w < 44 || x.h < 44));
-    check('the two that were raised carry headroom above it',
-      m.filter(x => /view|close/.test(x.s)).every(x => x.h >= 46),
-      m.filter(x => /view|close/.test(x.s)).map(x => [x.s, x.h]));
+    check('the period menu, the date picker and the close button carry headroom above it',
+      m.filter(x => /period|goto|close/.test(x.s)).every(x => x.h >= 46),
+      m.filter(x => /period|goto|close/.test(x.s)).map(x => [x.s, x.h]));
     check('the close button is square, so the circle is still a circle',
       (x => x.w === x.h)(m.find(x => /close/.test(x.s))), m.find(x => /close/.test(x.s)));
     check('the close button uses min-height, not a fixed height that would clip the glyph',
       /\.mphbac-staff-close\s*\{[^}]*min-height:\s*46px/.test(code)
       && !/\.mphbac-staff-close\s*\{[^}]*\sheight:\s*4\dpx/.test(code));
-    check('no transition survives on any of the four — a fade reads as a flicker',
+    check('no transition survives on any of them — a fade reads as a flicker',
       m.every(x => x.dur === '0s'), m.map(x => [x.s, x.dur]));
     // The theme's 0.75s really is in this fixture, so the pass is not vacuous.
     const bare = await p.evaluate(() => { const b = document.createElement('button');
@@ -482,7 +480,8 @@ const BUTTONLIKE = [
       const read = s => { const c = getComputedStyle(document.querySelector(s));
         return { size: c.fontSize, weight: c.fontWeight }; };
       return { nav: read('.mphbac-staff-prev'), today: read('.mphbac-staff-today'),
-               view: read('.mphbac-staff-view'), close: read('.mphbac-staff-close'),
+               period: read('.mphbac-staff-period'), goto: read('.mphbac-staff-goto'),
+               close: read('.mphbac-staff-close'),
                bar: read('.mphbac-staff-bar'), item: read('.mphbac-staff-item') };
     });
     check('the nav renders its declared 16px (was 15px/700)', m.nav.size === '16px', m.nav);
@@ -505,7 +504,9 @@ const BUTTONLIKE = [
     check('...and Today, the one nav button with a word in it, is matched exactly',
       m.today.size === '13px' && m.today.weight === '600', m.today);
     check('Today renders its declared 13px / 600', m.today.size === '13px' && m.today.weight === '600', m.today);
-    check('the view switcher renders its declared 14px / 600', m.view.size === '14px' && m.view.weight === '600', m.view);
+    check('the period menu renders its declared 14px / 600, as the List / Chart tabs it replaced did',
+      m.period.size === '14px' && m.period.weight === '600', m.period);
+    check('...and so does the date picker beside it', m.goto.size === '14px' && m.goto.weight === '600', m.goto);
     // Route B — replacing the shorthand with family+size longhands — would
     // ALSO have dropped these three from 700 to 400, a restyle nobody asked
     // for. They must not move.

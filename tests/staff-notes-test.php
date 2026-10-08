@@ -51,6 +51,14 @@ function with_notes($notes): array {
    because that is precisely what the removed ?object hints could not take. */
 class T_Booking {
     public function getInternalNotes() { return $GLOBALS['t_notes']; }
+    // 0.43.0: the guest's checkout note, through MotoPress's own getter.
+    public function getNote() { return $GLOBALS['t_note'] ?? ''; }
+    public function getCustomer() { return new T_Customer(); }
+}
+/* The customer entity's checkout custom fields, as getCustomFields() returns
+   them — keyed by the checkout form's field names, hyphens and all. */
+class T_Customer {
+    public function getCustomFields() { return $GLOBALS['t_custom'] ?? []; }
 }
 class T_Repo { public function findById($id) { return new T_Booking(); } }
 class T_MPHB { public function getBookingRepository() { return new T_Repo(); } }
@@ -129,6 +137,50 @@ echo "\n-- a very long note list is bounded --\n";
     $many = array_map(static fn($i) => ['note' => "note $i", 'date' => '2026-09-01'], range(1, 200));
     $rows = with_notes($many);
     check('the list is capped rather than rendering 200 rows', count($rows) <= 50, count($rows));
+}
+
+echo "\n-- 0.43.0: the customer's note, through Booking::getNote() --\n";
+{
+    /* Missing from the sheet until 0.43.0 — 35 confirmed bookings on live
+       carry one. Read through the entity getter, per Rob's 2026-09-03
+       decision that the sheet is sourced through MotoPress's getters. */
+    $GLOBALS['t_note'] = 'Arriving late, please leave the key';
+    $rows = with_notes([['note' => 'Called guest', 'date' => '2026-09-10 14:00']]);
+    check('the customer note is a row in the Notes section',
+        (bool) array_filter($rows, static fn($r) => $r['label'] === 'Customer Note'
+            && $r['value'] === 'Arriving late, please leave the key'), $rows);
+    check('...and it comes ABOVE the admin notes',
+        ($rows[0]['label'] ?? '') === 'Customer Note', array_column($rows, 'label'));
+    check('the admin notes are still there beneath it',
+        count($rows) === 2 && str_contains($rows[1]['value'] ?? '', 'Called guest'), $rows);
+    $GLOBALS['t_note'] = '   ';
+    $rows = with_notes([]);
+    check('a blank note adds no row — the sheet shows only what the booking contains',
+        !array_filter($rows, static fn($r) => $r['label'] === 'Customer Note'), $rows);
+    $GLOBALS['t_note'] = '<b>Bold</b> & <script>x</script>';
+    $rows = with_notes([]);
+    check('the note arrives as plain text — the board writes it with textContent',
+        ($rows[0]['value'] ?? '') !== '' && !str_contains($rows[0]['value'], '<'), $rows[0] ?? null);
+    unset($GLOBALS['t_note']);
+}
+
+echo "\n-- 0.43.0: Apartment / Unit, through the customer's getCustomFields() --\n";
+{
+    $customer = static function (array $custom): array {
+        $GLOBALS['t_custom'] = $custom;
+        with_notes([]);
+        return Staff_Data::booking_detail(950)['sections']['customer'];
+    };
+    $rows = $customer(['address1' => '1 Canal St', 'apartment-units' => '4B', 'city' => 'Dora']);
+    $labels = array_column($rows, 'label');
+    check('the checkout field "apartment-units" appears as Apartment / Unit',
+        in_array('Apartment / Unit', $labels, true)
+        && $rows[array_search('Apartment / Unit', $labels, true)]['value'] === '4B', $rows);
+    check('...immediately after Address',
+        array_search('Apartment / Unit', $labels, true) === array_search('Address', $labels, true) + 1, $labels);
+    $rows = $customer(['address1' => '1 Canal St']);
+    check('no field, no row', !in_array('Apartment / Unit', array_column($rows, 'label'), true));
+    unset($GLOBALS['t_custom']);
 }
 
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");

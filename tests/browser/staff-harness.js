@@ -125,11 +125,10 @@ function dephp(html) {
 }
 
 const TOOLS = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-topbar">'))
-  // The markup ships BOTH view tabs unpressed; widget.js sets one at runtime.
-  // The selected state is a runtime state, so the fixture applies it the way
-  // the page does rather than the markup pretending to.
+  // Until 0.43.0 this patched one List / Chart tab to aria-pressed="true",
+  // a runtime state the markup could not carry. The period menu that
+  // replaced them is a <select> whose default is in the markup itself.
   + dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-tools">'))
-      .replace('data-view="chart" aria-pressed="false"', 'data-view="chart" aria-pressed="true"')
   + `
   <button type="button" class="mphbac-staff-item"><span class="mphbac-staff-item-cottage">Cottage 22</span></button>
   <div style="position:relative;width:400px;height:40px">

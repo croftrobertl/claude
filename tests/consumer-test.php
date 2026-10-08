@@ -180,6 +180,36 @@ echo "\n-- keep_assets_unoptimized decides whether the opt-out filters are hooke
     // hook that is certain to fire on every editor save.
     check('an Elementor editor save flushes it (elementor/document/after_save)',
         $flushes('elementor/document/after_save'));
+
+    /* 0.43.0 — THE IMPORT HOOKS. Verified on live against MotoPress 6.3.0 by
+       the Website Director: its iCal code fires mphb_create_booking_via_ical
+       and mphb_update_booking_via_ical, rewrites dates with update_post_meta
+       and deletes with wp_delete_post. The three names hooked until now
+       (mphb_after_sync_ical, mphb_ical_sync_finished,
+       mphb_after_create_booking) do not exist, so an import never flushed
+       the public calendar. */
+    check('a booking imported by the sync flushes the availability cache',
+        $flushes('mphb_create_booking_via_ical'));
+    check('a booking whose dates the sync changed flushes it',
+        $flushes('mphb_update_booking_via_ical'));
+    check('a booking saved at checkout or in WP-Admin flushes it', $flushes('save_post_mphb_booking'));
+    check('a status change still flushes it', $flushes('mphb_booking_status_changed'));
+    check('a deleted post goes through the booking-only filter',
+        in_array(['\\MPHBAC\\Cache', 'flush_if_booking'], $GLOBALS['t_hooks']['action']['deleted_post'] ?? [], true));
+    $dead = array_intersect(['mphb_after_sync_ical', 'mphb_ical_sync_finished', 'mphb_after_create_booking'],
+        array_keys($GLOBALS['t_hooks']['action'] ?? []));
+    check('none of the three hook names MotoPress 6.3.0 never fires is still hooked', !$dead, array_values($dead));
+
+    // deleted_post fires for EVERY post type; only a booking changes availability.
+    $gen = static fn(): int => (int) ($GLOBALS['t_options']['mphbac_cache_gen'] ?? 1);
+    $g0 = $gen();
+    MPHBAC\Cache::flush_if_booking(77, (object) ['post_type' => 'page']);
+    check('deleting a PAGE does not flush the calendar', $gen() === $g0, [$g0, $gen()]);
+    MPHBAC\Cache::flush_if_booking(78, (object) ['post_type' => 'mphb_booking']);
+    check('deleting a BOOKING does', $gen() === $g0 + 1, [$g0, $gen()]);
+    MPHBAC\Cache::flush_if_booking(79, null);
+    check('...and a call with no post object (pre-5.5 WordPress) is ignored rather than guessed',
+        $gen() === $g0 + 1);
 }
 
 echo "\n-- lazy_cottage_panels decides what a template row puts in the page --\n";
