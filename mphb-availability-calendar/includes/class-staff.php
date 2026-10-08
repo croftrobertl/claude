@@ -154,6 +154,13 @@ final class Staff
     {
         self::require_authorization();
 
+        // A RANGE (0.43.0): Weekly and Yearly are not months. Same handler,
+        // same gate — require_authorization() above runs before anything is
+        // read — and the same ±3-year browsing cap, applied at both ends.
+        if (isset($_POST['from']) || isset($_POST['to'])) {
+            self::send_range();
+        }
+
         $month = isset($_POST['month']) ? sanitize_text_field((string) wp_unslash($_POST['month'])) : '';
         if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
             wp_send_json_error(['message' => __('Invalid month.', 'mphb-availability-calendar')], 400);
@@ -173,6 +180,62 @@ final class Staff
         $last = $first->modify('last day of this month');
 
         wp_send_json_success(Staff_Data::month_view($first, $last));
+    }
+
+    /**
+     * Bookings overlapping an arbitrary from..to window. Called only from
+     * handle_month(), after the gate.
+     *
+     * THE ±3-YEAR CAP IS A CONVENIENCE LIMIT, NOT A PROTECTION, once search
+     * exists (0.45.0): anyone with the staff password will be able to reach
+     * every booking ever through search, by Rob's decision. It is kept so
+     * ordinary browsing stays within a sensible range. A window that
+     * overlaps the cap is CLAMPED to it and answered with clamped=true, so
+     * the board can say so — refusing it would turn the year view of the
+     * year three years back into an error over a few missing weeks. A window
+     * entirely outside the cap is refused, as a month outside it always was.
+     *
+     * SPAN IS LIMITED TO 400 DAYS: a year plus margin. The board never asks
+     * for more, and an unlimited span would make one request as heavy as
+     * the whole booking table.
+     */
+    private static function send_range(): void
+    {
+        $from_s = isset($_POST['from']) ? sanitize_text_field((string) wp_unslash($_POST['from'])) : '';
+        $to_s   = isset($_POST['to'])   ? sanitize_text_field((string) wp_unslash($_POST['to']))   : '';
+        $bad = static function (): void {
+            wp_send_json_error(['message' => __('Invalid date range.', 'mphb-availability-calendar')], 400);
+        };
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from_s) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to_s)) {
+            $bad();
+        }
+        try {
+            $tz   = Data_Provider::timezone();
+            $from = new \DateTimeImmutable($from_s, $tz);
+            $to   = new \DateTimeImmutable($to_s, $tz);
+        } catch (\Throwable $e) {
+            $bad();
+            return;
+        }
+        // Reject dates PHP silently normalised (2026-02-31 -> 2026-03-03).
+        if ($from->format('Y-m-d') !== $from_s || $to->format('Y-m-d') !== $to_s) {
+            $bad();
+        }
+        if ($to < $from || (int) $from->diff($to)->days > 400) {
+            $bad();
+        }
+        $today = Data_Provider::today();
+        $lo = $today->modify('-3 years');
+        $hi = $today->modify('+3 years');
+        if ($to < $lo || $from > $hi) {
+            $bad();
+        }
+        $q_from = $from < $lo ? $lo : $from;
+        $q_to   = $to > $hi ? $hi : $to;
+
+        $data = Staff_Data::month_view($q_from, $q_to);
+        $data['clamped'] = ($q_from != $from) || ($q_to != $to);
+        wp_send_json_success($data);
     }
 
     /** Full detail for ONE booking, loaded lazily when staff tap it. */

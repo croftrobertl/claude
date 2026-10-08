@@ -106,7 +106,8 @@
     -webkit-tap-highlight-color: transparent;
 }
 .mphbac-staff-nav.mphbac-staff-nav,
-.mphbac-staff-view.mphbac-staff-view,
+.mphbac-staff-period.mphbac-staff-period,
+.mphbac-staff-goto.mphbac-staff-goto,
 .mphbac-staff-item.mphbac-staff-item,
 .mphbac-staff-bar.mphbac-staff-bar,
 .mphbac-staff-close.mphbac-staff-close {
@@ -255,9 +256,13 @@
    these buttons the assertion fails and sends the reader here. */
 .mphbac-staff-nav.mphbac-staff-nav { font-size: 16px; }
 .mphbac-staff-today.mphbac-staff-today { font-size: 13px; font-weight: 600; }
-.mphbac-staff-view.mphbac-staff-view { font-size: 14px; font-weight: 600; }
+/* The period menu and the date picker take the size and weight the List /
+   Chart buttons had (14px / 600) — they replace them in the same row. Fields
+   are <select> / <input>, which inherit even less than <button> does. */
+.mphbac-staff-period.mphbac-staff-period,
+.mphbac-staff-goto.mphbac-staff-goto { font-size: 14px; font-weight: 600; }
 
-/* ---- tools row: view toggle + legend ---- */
+/* ---- tools row: period menu + go to date + legend (0.43.0) ---- */
 .mphbac-staff-tools {
     display: flex;
     flex-wrap: wrap;
@@ -266,32 +271,35 @@
     gap: 8px 16px;
     margin-bottom: 10px;
 }
-.mphbac-staff-views {
+.mphbac-staff-field {
     display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0;
+}
+.mphbac-staff-field-label {
+    color: var(--staff-muted);
+    font-size: 0.85em;
+    font-weight: 600;
+}
+.mphbac-staff-period,
+.mphbac-staff-goto {
+    box-sizing: border-box;
+    /* 46px, the same tap floor the List / Chart buttons held. min-height so
+       a larger system font grows the control instead of clipping it. */
+    min-height: 46px;
+    margin: 0;
+    padding: 0 12px;
     border: 1px solid var(--staff-frame);
     border-radius: 6px;
-    overflow: hidden;
     background: var(--staff-surface);
-}
-.mphbac-staff-view {
-    min-width: 64px;
-    /* 46px, not 44: the floor is not the target — at exactly 44.0 there is
-       nothing between the control and the line it has to clear. This was the
-       only staff control under the floor. min-height rather than height so a
-       label that wraps grows the button instead of being clipped. */
-    min-height: 46px;
-    padding: 0 14px;
-    border: 0;
-    background: transparent;
     color: var(--staff-text);
-    /* 14px / 600 moved to the (0,2,0) block above. */
+    line-height: 1.2;
     cursor: pointer;
 }
-.mphbac-staff-view + .mphbac-staff-view { border-left: 1px solid var(--staff-frame); }
-.mphbac-staff-view[aria-pressed="true"] {
-    background: var(--staff-header);
-    color: #ffffff;
-}
+.mphbac-staff-period { min-width: 120px; }
+.mphbac-staff-goto { min-width: 150px; }
+
 .mphbac-staff-legend {
     display: flex;
     flex-wrap: wrap;
@@ -437,6 +445,25 @@
 }
 
 /* day background cells — the gridlines and the today/weekend tints */
+/* YEARLY: a rule down each 1st so the eye can find a month in a 365-day
+   scroll. The header cell carries the month's name in place of its weekday
+   (staff.js); this is the line through every row beneath it. */
+.mphbac-staff-chart.is-year .is-month-start {
+    box-shadow: inset 2px 0 0 var(--staff-header);
+}
+.mphbac-staff-chart.is-year .mphbac-staff-dayhead.is-month-start {
+    font-weight: 700;
+    color: var(--staff-header);
+}
+/* WEEKLY ON A PHONE: the cottage column shrinks to its number (staff.js sets
+   --staff-label-w to 48px on the chart), so its name is not shown — it is
+   still in the cell's title, the bar's description and the detail sheet. */
+.mphbac-staff-chart.is-compact .mphbac-staff-rowname { display: none; }
+.mphbac-staff-chart.is-compact .mphbac-staff-corner {
+    font-size: 0.7em;
+    overflow-wrap: anywhere;
+}
+
 .mphbac-staff-daycell {
     border-left: 1px solid var(--staff-frame);
     border-bottom: 1px solid var(--staff-frame);
@@ -909,17 +936,6 @@ body.mphbac-staff-open { overflow: hidden; }
    ====================================================================== */
 @media (hover: hover) and (pointer: fine) {
     .mphbac-staff-nav:hover { background: var(--staff-nav-hover); }
-
-    /* The view switcher had NO hover state at all. Hovering an UNSELECTED
-       tab offers to switch to it, so it takes the shared hover pair. A
-       SELECTED tab is deliberately left alone: hovering the view you are
-       already in offers nothing, and recolouring it would destroy the only
-       signal of which view is active. Stated rather than left to
-       specificity. */
-    .mphbac-staff-view:not([aria-pressed="true"]):hover {
-        background: var(--dcc-button-hover-bg, #f08080);
-        color: var(--dcc-button-hover-fg, #ffffff);
-    }
 
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {
         background: var(--dcc-button-hover-bg, #f08080);

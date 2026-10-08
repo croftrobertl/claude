@@ -78,7 +78,9 @@ final class Staff_Widget
                 'error'        => __('Could not load bookings. Please try again.', 'mphb-availability-calendar'),
                 'expired'      => __('Your session expired. Please reload this page and re-enter the password.', 'mphb-availability-calendar'),
                 'denied'       => __('Not authorized.', 'mphb-availability-calendar'),
-                'empty'        => __('No bookings this month.', 'mphb-availability-calendar'),
+                'empty'        => __('No bookings in this period.', 'mphb-availability-calendar'),
+                'partial'      => __('Part of this period is outside the board\'s ±3-year range.', 'mphb-availability-calendar'),
+                'outOfRange'   => __('That date is outside the board\'s ±3-year range.', 'mphb-availability-calendar'),
                 'today'        => __('Today', 'mphb-availability-calendar'),
                 'cottage'      => __('Cottages', 'mphb-availability-calendar'),
                 'checkIn'      => __('Check-in', 'mphb-availability-calendar'),
@@ -101,6 +103,10 @@ final class Staff_Widget
                 'nextMonth'    => __('Next month', 'mphb-availability-calendar'),
                 'prevDay'      => __('Previous day', 'mphb-availability-calendar'),
                 'nextDay'      => __('Next day', 'mphb-availability-calendar'),
+                'prevWeek'     => __('Previous week', 'mphb-availability-calendar'),
+                'nextWeek'     => __('Next week', 'mphb-availability-calendar'),
+                'prevYear'     => __('Previous year', 'mphb-availability-calendar'),
+                'nextYear'     => __('Next year', 'mphb-availability-calendar'),
                 'detailTitle'  => __('Booking', 'mphb-availability-calendar'),
                 // Section headings. Every FIELD label is built server-side in
                 // Staff_Data, so this list is titles only — a label that is
@@ -137,19 +143,35 @@ final class Staff_Widget
                 <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
             <div class="mphbac-staff-tools">
-                <div class="mphbac-staff-views" role="group" aria-label="<?php echo esc_attr__('View', 'mphb-availability-calendar'); ?>">
-                    <button type="button" class="mphbac-staff-view" data-view="agenda" aria-pressed="false"><?php echo esc_html__('List', 'mphb-availability-calendar'); ?></button>
-                    <button type="button" class="mphbac-staff-view" data-view="chart" aria-pressed="false"><?php echo esc_html__('Chart', 'mphb-availability-calendar'); ?></button>
-                </div>
+                <?php // THE PERIOD MENU (0.43.0) replaces the List / Chart buttons:
+                // Daily is the old List, the other three are the chart at three
+                // widths. A native <select> rather than a custom dropdown — it is
+                // keyboard- and screen-reader-complete for free, and on a phone it
+                // opens the OS picker. The visible label is the accessible name.
+                // "selected" is only the no-JS default; staff.js applies the
+                // device's remembered period on load. ?>
+                <label class="mphbac-staff-field">
+                    <span class="mphbac-staff-field-label"><?php echo esc_html__('Show', 'mphb-availability-calendar'); ?></span>
+                    <select class="mphbac-staff-period">
+                        <option value="day"><?php echo esc_html__('Daily', 'mphb-availability-calendar'); ?></option>
+                        <option value="week"><?php echo esc_html__('Weekly', 'mphb-availability-calendar'); ?></option>
+                        <option value="month" selected><?php echo esc_html__('Monthly', 'mphb-availability-calendar'); ?></option>
+                        <option value="year"><?php echo esc_html__('Yearly', 'mphb-availability-calendar'); ?></option>
+                    </select>
+                </label>
+                <label class="mphbac-staff-field">
+                    <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
+                    <input type="date" class="mphbac-staff-goto">
+                </label>
                 <div class="mphbac-staff-legend" aria-hidden="true">
                     <span class="mphbac-staff-key mphbac-staff-key--in"><?php echo esc_html__('Check-in', 'mphb-availability-calendar'); ?></span>
                     <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
                     <span class="mphbac-staff-key mphbac-staff-key--out"><?php echo esc_html__('Check-out', 'mphb-availability-calendar'); ?></span>
                 </div>
             </div>
-            <?php // Two presentations of the same month payload. The list is the
-            // phone default ("who is arriving and leaving today"); the chart is
-            // the desktop default. No aria-live on either: the status line
+            <?php // Two presentations of the same gated payload: the list is the
+            // Daily period, the chart is Weekly / Monthly / Yearly. Since 0.43.0
+            // every device opens on Monthly until it chooses otherwise. No aria-live on either: the status line
             // below carries announcements so a month change is not read cell
             // by cell. tabindex=0 makes the scrolling chart keyboard-reachable. ?>
             <div class="mphbac-staff-agenda" role="region"
