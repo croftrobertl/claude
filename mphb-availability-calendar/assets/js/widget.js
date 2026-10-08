@@ -1978,7 +1978,7 @@
         });
     }
 
-    // Compose the "Estimated total: $910 for 7 nights ($130/night avg)" line
+    // Compose the "Estimated total: $910 for 7 nights ($130/night)" line
     // into lineEl. Average only when nights > 1 and the server provided it.
     function renderEstimateLine(lineEl, strings, nights, priceHtml, avgHtml) {
         lineEl.textContent = '';
@@ -1999,7 +1999,7 @@
         if (nights > 1 && avgHtml) {
             lineEl.appendChild(document.createTextNode(' '));
             var avg = document.createElement('span');
-            renderTemplate(avg, strings.priceAvg || '({avg}/night avg)', { avg: { html: avgHtml } });
+            renderTemplate(avg, strings.priceAvg || '({avg}/night)', { avg: { html: avgHtml } });
             lineEl.appendChild(avg);
         }
     }
