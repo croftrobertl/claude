@@ -79,6 +79,23 @@ final class Cache
         return $value;
     }
 
+    /**
+     * deleted_post fires for EVERY post type; only a booking's deletion
+     * changes availability. The post object is passed (WordPress 5.5+)
+     * because by the time this runs the post is gone and get_post_type()
+     * would answer false. The iCal sync removes bookings with
+     * wp_delete_post(), permanently, so this is the only signal it gives.
+     *
+     * @param int           $post_id
+     * @param \WP_Post|null $post
+     */
+    public static function flush_if_booking($post_id, $post = null): void
+    {
+        if (is_object($post) && ($post->post_type ?? '') === 'mphb_booking') {
+            self::flush_all();
+        }
+    }
+
     public static function flush_all(): void
     {
         // O(1) invalidation that works even when transients live in an

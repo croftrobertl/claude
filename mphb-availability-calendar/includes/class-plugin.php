@@ -85,11 +85,23 @@ final class Plugin
         // settings are ever reset without a plugin reactivation.
         Cache_Integration::register_runtime_filter();
 
-        // Best-effort cache invalidation when MotoPress finishes syncing iCal feeds.
-        // Hook name is a best guess; transients also expire on TTL as a safety net.
-        add_action('mphb_after_sync_ical', ['\\MPHBAC\\Cache', 'flush_all']);
-        add_action('mphb_ical_sync_finished', ['\\MPHBAC\\Cache', 'flush_all']);
-        add_action('mphb_after_create_booking', ['\\MPHBAC\\Cache', 'flush_all']);
+        // BOOKING CHANGES THAT MUST FLUSH THE AVAILABILITY CACHE (0.43.0).
+        // Until 0.43.0 this block hooked mphb_after_sync_ical,
+        // mphb_ical_sync_finished and mphb_after_create_booking — "a best
+        // guess", the comment said. Verified on live against MotoPress 6.3.0
+        // by the Website Director: NONE of the three exists, so an imported
+        // booking never flushed the public calendar, which could show
+        // availability up to one cache TTL (15 min) old. Checkout re-checks,
+        // so it could not double-book, but it was wrong. 6.3.0's iCal code
+        // fires exactly these, and the sync rewrites dates with
+        // update_post_meta and deletes with wp_delete_post — neither of which
+        // fires save_post — so each needs its own hook:
+        add_action('mphb_create_booking_via_ical', ['\\MPHBAC\\Cache', 'flush_all']);
+        add_action('mphb_update_booking_via_ical', ['\\MPHBAC\\Cache', 'flush_all']);
+        add_action('deleted_post', ['\\MPHBAC\\Cache', 'flush_if_booking'], 10, 2);
+        // A booking created at checkout or edited in WP-Admin — including
+        // trashed and restored, which go through wp_update_post — is a save.
+        add_action('save_post_mphb_booking', ['\\MPHBAC\\Cache', 'flush_all']);
         // The cottage info FRAGMENTS are cached too (0.42.1), and they change
         // when their template or accommodation is edited, not when a booking
         // lands. flush_all() is O(1) — it bumps a generation counter — so
