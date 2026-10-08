@@ -416,6 +416,12 @@ final class Staff_Data
         self::push($out, __('Email', 'mphb-availability-calendar'), $pick(['getEmail'], ['email']));
         self::push($out, __('Phone', 'mphb-availability-calendar'), $pick(['getPhone'], ['phone']));
         self::push($out, __('Address', 'mphb-availability-calendar'), $pick(['getAddress1', 'getAddress'], ['address1', 'address']));
+        // Missing until 0.43.0 (found by the Website Director: 6 confirmed
+        // bookings carry one). A checkout CUSTOM field, "apartment-units",
+        // so it comes through the customer entity's getCustomFields() — the
+        // same getter $custom was built from — and is matched on the
+        // normalised key like every other custom field here.
+        self::push($out, __('Apartment / Unit', 'mphb-availability-calendar'), self::custom_get($custom, ['apartmentunits', 'apartmentunit', 'apartment']));
         self::push($out, __('City', 'mphb-availability-calendar'), $pick(['getCity'], ['city']));
         self::push($out, __('State', 'mphb-availability-calendar'), $pick(['getState'], ['state']));
         self::push($out, __('Zip', 'mphb-availability-calendar'), $pick(['getZip'], ['zip', 'postcode', 'postalcode']));
@@ -724,8 +730,15 @@ final class Staff_Data
      */
     private static function section_notes(int $id, $b): array
     {
+        // THE GUEST'S OWN NOTE FROM CHECKOUT, above the admin notes (0.43.0).
+        // Missing until now — 35 confirmed bookings on live have one. Read
+        // through Booking::getNote(), MotoPress's getter for it (verified to
+        // exist in 6.3.0), not the mphb_note meta, per Rob's 2026-09-03
+        // decision that the sheet is sourced through the entity getters.
+        $out = [];
+        self::push($out, __('Customer Note', 'mphb-availability-calendar'), self::scalar($b, ['getNote'], ''));
         $internal = self::first_of($b, ['getInternalNotes', 'getInternalNote']);
-        return self::entry_rows($internal, __('Internal Notes', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']);
+        return array_merge($out, self::entry_rows($internal, __('Internal Notes', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']));
     }
 
     /**
