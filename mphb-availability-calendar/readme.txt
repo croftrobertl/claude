@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.42.3
+Stable tag: 0.43.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.43.0 =
+* **Staff board: a Daily / Weekly / Monthly / Yearly menu** replaces the List and Chart buttons. Daily is the old list of who is arriving, leaving and in house; Weekly fills the screen so names fit; Monthly is the board as it was; Yearly is the whole year in one sideways scroll, opening on today. The arrows step a whole day, week, month or year, Today works in every one, and a new Go to date picker jumps straight to any date.
+* **The board remembers each device's last choice.** A device that has never chosen opens on Monthly — phones included, which used to open on the list. A device that had picked List or Chart before keeps that choice.
+* **On a phone, swipe left or right across the top of the board** (or anywhere on the Daily list) to go to the next or previous period. Swiping across the chart itself still just scrolls it.
+* **The staff detail sheet now shows the guest's own note from checkout** (above the admin notes) **and their apartment or unit number** (after the address). Both were being left out.
+* **The public calendar now refreshes as soon as a booking arrives from Airbnb, Booking.com or Vrbo,** or one is changed or removed. It used to wait up to 15 minutes, because the signals it listened for do not exist in this version of MotoPress. Checkout always re-checked availability, so this could never double-book.
+* The booking popup's estimate now reads "($175/night)" instead of "($175/night avg)".
 
 = 0.42.3 =
 * **Hardening for the lazily-loaded cottage panels, which are now on live.** Parts of a panel that animate in, slide or stay put on scroll are now switched on when the panel arrives, as they would be if it had been on the page. None of the eight panels uses one today; this makes sure a future template edit can’t leave part of a panel invisible.
