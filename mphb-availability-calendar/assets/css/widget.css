@@ -211,7 +211,7 @@
     }
     /* The standard's 20px side padding is generous for a field that is ~135px
        wide at 320px: 40px of it is padding, leaving too little for
-       "mm/dd/yyyy" plus the picker. Trimmed to 12px on phones only, which
+       a date plus the picker. Trimmed to 12px on phones only, which
        buys back 16px of content width. Block padding is untouched, so the
        44px tap target is unaffected. */
     .mphbac-input.mphbac-input.mphbac-input.mphbac-input {
@@ -395,8 +395,8 @@
    empty non-required date input is :valid, :in-range, and NOT
    :placeholder-shown). So widget.js sets .mphbac-input--empty, and this is
    the date-input equivalent of the standard's ::placeholder rule. */
-/* Blink DOES still paint mm/dd/yyyy in an empty date field, so with the
-   0.31.0 hint span drawing "MM/DD/YY" on top the two would double up. The
+/* Blink DOES still paint its own mm/dd/yyyy in an empty date field, so with
+   the plugin's hint span ("mm/dd/yy") drawn on top the two would double up. The
    native text is hidden rather than muted, and the muted colour moved to the
    span — same result, one renderer. iOS paints nothing here under
    appearance: none, so this costs nothing there.
@@ -408,7 +408,16 @@
     opacity: 1;
 }
 
-/* ---- THE "MM/DD/YY" HINT (0.31.0, item 1) ----
+/* ---- THE "mm/dd/yy" HINT (0.31.0, item 1) ----
+   ITS TEXT, BECAUSE THE RECORD ONCE DISAGREED WITH ITSELF: 0.31.0 drew
+   "MM/DD/YY" (Rob: "It used to be there as MM/DD/YY. Add it back."); 0.31.1
+   changed it to "mm/dd/yyyy", relayed as the owner's wording; 0.43.3 made it
+   "mm/dd/yy", answered for Rob and the Website Director after they were told
+   that on a desktop a two-digit year typed by habit stores the year 0026, and
+   that Chrome shows its own "mm/dd/yyyy" once the field is focused. Phones
+   open a picker. The text lives in class-widget.php (four places); this
+   heading names whatever ships — change both together.
+
    A REGRESSION OF MINE, and the price of the 0.30.0 fix. `appearance: none`
    is what actually cured the iOS overlap (evidence: in 0.29.0 the popup
    fields already computed min-width: 0 and the controls still rendered at
@@ -435,14 +444,16 @@
     align-items: center;
     justify-content: center;   /* centred, like the value it stands in for */
     pointer-events: none;      /* the tap must reach the input underneath */
-    /* The VALUE is centred over the text area, with the picker indicator
-       sitting outside it; this span covers the whole padded box, so without
-       an allowance for the indicator the hint centres further right than the
-       value it stands in for and collides with the icon. Reserving its width
-       lines the two up. Where no indicator is painted — iOS under
-       appearance: none, which is the case the owner actually sees — the hint
-       sits a few pixels left of centre, which is the cheaper error. */
-    padding-right: 1.15em;
+    /* WHERE THE DATE WILL BE, EXACTLY (0.43.3). The value centres over the
+       field's content box less the picker icon, where one is painted (Chrome
+       on a desktop); on iOS (appearance: none) nothing is painted and it
+       centres over the whole box. Until 0.43.3 this reserved a fixed 1.15em
+       (21.85px on live) everywhere, so on Rob's iPhone the hint sat ~11px
+       left of centre. widget.js now MEASURES the icon per field and writes
+       its width to --mphbac-picker-w: 0 on iOS, the icon and its margin on
+       Chrome. The fallback before any script runs is 0 — centred, which is
+       right on the phones that need it most. See fitHint(). */
+    padding-right: var(--mphbac-picker-w, 0px);
     color: var(--dcc-muted);
     font-family: inherit;
     /* Match the VALUE, not the surroundings — empty and filled have to read as
@@ -457,7 +468,14 @@
        SIZE. `inherit` is NOT the same as the input's size: the input uses
        max(16px, 1em) — the iOS zoom guard — and in the booking popup the
        surrounding .mphbac-sheet-field is 0.95em, so plain inherit would give
-       the hint 15.2px against a 16px value. Same expression, same result. */
+       the hint 15.2px against a 16px value. Same expression, same result.
+       THESE TWO ARE NOW THE FALLBACK ONLY (0.43.3). On live the Filter Fields
+       typography control sets the input to 18px, which this expression
+       cannot see: the hint's 1em resolved inside the theme's 19px label, so
+       it computed 19px against the value's 18px (measured by the Website
+       Director) and jumped when a date was filled in. widget.js copies the
+       input's computed family, size, weight and style onto the hint; these
+       hold until it runs. */
     font-weight: 300;
     font-size: max(16px, 1em);
     line-height: 1.3;

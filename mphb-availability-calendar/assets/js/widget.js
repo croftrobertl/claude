@@ -584,6 +584,81 @@
             });
         });
         syncEmptyState(root);
+        fitHints(root);
+        var fitT = 0;
+        window.addEventListener('resize', function () {
+            clearTimeout(fitT);
+            fitT = setTimeout(function () { fitHints(root); }, 150);
+        });
+    }
+
+    // THE HINT SITS EXACTLY WHERE THE DATE WILL (0.43.3). The drawn hint
+    // (.mphbac-field-ph) is a SIBLING of its <input>, so CSS cannot give it
+    // the input's computed type or tell it whether the browser paints a
+    // picker icon. Both are read from the input here instead.
+    //
+    // TYPE. The input's family, size, weight and style come from the Filter
+    // Fields typography control, which targets the input alone; the hint's
+    // own `1em` resolved inside the theme's 19px label, so on live it was
+    // 19px against the value's 18px and jumped when a date was filled in.
+    //
+    // CENTRE. The filled-in date centres over the field's content box LESS
+    // the picker icon, where one is painted (Chrome on a desktop); on iOS
+    // (appearance: none) nothing is painted and the date centres over the
+    // whole box. No CSS can tell the two apart — WebKit accepts every
+    // ::-webkit- selector, so @supports says yes on iOS too. So the icon is
+    // MEASURED: two invisible copies of the field at their natural width, one
+    // with the icon switched off; the difference is exactly the icon and its
+    // margin, and 0 where none is painted. The hint reserves that on the
+    // right (--mphbac-picker-w) and so centres where the date will.
+    //
+    // A hidden field measures 0 wide, so the booking popup's two are fitted
+    // again when it opens. Cosmetic only: with JS off the hint is centred
+    // over the whole field, which is exact on the phones that need it most.
+    function fitHints(scope) {
+        var inputs = scope.querySelectorAll('.mphbac-input');
+        for (var i = 0; i < inputs.length; i++) fitHint(inputs[i]);
+    }
+
+    function fitHint(input) {
+        var ph = input.nextElementSibling;
+        if (!ph || !ph.classList || !ph.classList.contains('mphbac-field-ph')) return;
+        var cs = window.getComputedStyle(input);
+        ph.style.fontFamily = cs.fontFamily;
+        ph.style.fontSize = cs.fontSize;
+        ph.style.fontWeight = cs.fontWeight;
+        ph.style.fontStyle = cs.fontStyle;
+        ph.style.letterSpacing = cs.letterSpacing;
+        var w = pickerWidth(input);
+        if (w !== null) ph.style.setProperty('--mphbac-picker-w', w + 'px');
+    }
+
+    var PROBE_CLASS = 'mphbac-picker-probe--bare';
+    function pickerWidth(input) {
+        var parent = input.parentNode;
+        if (!parent || !input.offsetWidth) return null;          // hidden: measure on open
+        if (!document.getElementById('mphbac-picker-probe')) {
+            var st = document.createElement('style');
+            st.id = 'mphbac-picker-probe';
+            st.textContent = '.' + PROBE_CLASS + '::-webkit-calendar-picker-indicator{display:none!important}';
+            (document.head || document.documentElement).appendChild(st);
+        }
+        var probes = [input.cloneNode(false), input.cloneNode(false)];
+        probes[1].classList.add(PROBE_CLASS);
+        probes.forEach(function (p) {
+            p.removeAttribute('name');
+            p.removeAttribute('id');
+            p.removeAttribute('required');
+            p.setAttribute('aria-hidden', 'true');
+            p.tabIndex = -1;
+            p.value = '';
+            p.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;'
+                + 'width:auto;min-width:0;max-width:none;';
+            parent.appendChild(p);
+        });
+        var w = probes[0].offsetWidth - probes[1].offsetWidth;
+        probes.forEach(function (p) { parent.removeChild(p); });
+        return Math.max(0, w);
     }
 
     function deviceBucket() {
@@ -2295,6 +2370,20 @@
         var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false, closeTimer: null, viaKeyboard: false };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
+        // THE POPUP'S OWN EMPTY-STATE LISTENER (0.43.3). wireEmptyState()
+        // delegates on the ROOT, and an open popup lives under <body>, so its
+        // two fields' input/change events never reached it: a date cleared in
+        // the popup kept the filled state (no hint on iOS), and one picked into
+        // an empty popup field kept the EMPTY state, which hides the typed date
+        // and draws the hint over it. Bound on the sheet itself, these travel
+        // with it through the portal.
+        ['input', 'change'].forEach(function (evt) {
+            sheet.addEventListener(evt, function (e) {
+                var t = e.target;
+                if (t && t.classList && t.classList.contains('mphbac-input')) markEmpty(t);
+            });
+        });
+
         // ---- Price estimate (0.20.0) --------------------------------------
         // Informative only: it never gates the Confirm flow. Debounced so
         // date-picker scrubbing doesn't spam admin-ajax; a sequence counter
@@ -2662,6 +2751,10 @@
                 // avoiding the iOS Safari quirk where focusing during a
                 // transform causes a flash. Tracked so close can cancel.
                 context.focusRaf = requestAnimationFrame(function () {
+                    // Visible by now (the first frame can still be inside a
+                    // View Transition's hidden state), so its two date fields
+                    // can be measured for their hints.
+                    fitHints(sheet);
                     if (context.isOpen) {
                         try { checkinEl.focus(); } catch (e) { /* ignore */ }
                     }

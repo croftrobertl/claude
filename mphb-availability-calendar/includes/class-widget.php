@@ -1796,7 +1796,7 @@ class Widget extends Widget_Base
                         name="mphbac_checkin"
                         min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                         autocomplete="off">
-                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yy', 'mphb-availability-calendar'); ?></span>
                     </span>
                 </label>
                 <label class="mphbac-filter mphbac-filter-checkout">
@@ -1806,7 +1806,7 @@ class Widget extends Widget_Base
                         name="mphbac_checkout"
                         min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                         autocomplete="off">
-                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yy', 'mphb-availability-calendar'); ?></span>
                     </span>
                 </label>
                 <div class="mphbac-filter-actions">
@@ -1942,7 +1942,7 @@ class Widget extends Widget_Base
                                 name="mphbac_sheet_checkin"
                                 min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                                 autocomplete="off">
-                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yy', 'mphb-availability-calendar'); ?></span>
                             </span>
                         </label>
                         <label class="mphbac-sheet-field">
@@ -1952,7 +1952,7 @@ class Widget extends Widget_Base
                                 name="mphbac_sheet_checkout"
                                 min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
                                 autocomplete="off">
-                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yy', 'mphb-availability-calendar'); ?></span>
                             </span>
                         </label>
                         <?php // Estimated-price row (0.20.0). Filled by JS from the

@@ -166,7 +166,7 @@
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    padding-right: 1.15em;
+    padding-right: var(--mphbac-picker-w, 0px);
     color: var(--dcc-muted);
     font-family: inherit;
     font-weight: 300;
