@@ -78,6 +78,12 @@
     --staff-day-w:   44px;
     --staff-row-h:   46px;
     --staff-head-h:  48px;
+    /* The month band (0.43.1): a row above the day numbers naming each month,
+       and a bold rule down each 1st. #E7EEF7 is the palette's pale blue; the
+       rule is the header blue. */
+    --staff-band-h:     24px;
+    --staff-band-bg:    #E7EEF7;
+    --staff-month-line: #0A50B2;
     --staff-label-w: 96px;
 }
 
@@ -106,8 +112,6 @@
     -webkit-tap-highlight-color: transparent;
 }
 .mphbac-staff-nav.mphbac-staff-nav,
-.mphbac-staff-period.mphbac-staff-period,
-.mphbac-staff-goto.mphbac-staff-goto,
 .mphbac-staff-item.mphbac-staff-item,
 .mphbac-staff-bar.mphbac-staff-bar,
 .mphbac-staff-close.mphbac-staff-close {
@@ -146,28 +150,38 @@
     text-align: center;
 }
 
-/* ---- top bar: prev / title / today / next ---- */
+/* ---- top bar: prev / label / today / next ----
+   THE PUBLIC NAV ROW, matched (0.43.1, Rob's choice from mockups): the same
+   centred cluster as widget.css's .mphbac-nav — flex, centred, 10px gaps —
+   with a plain label in the middle like .mphbac-nav-range (15px / 600 /
+   #111), replacing the large blue title that made this row look like a
+   different product. The arrows and Today were already the public values
+   (44px #0A50B2 circles, Today 13px / 600) and are unchanged. */
 .mphbac-staff-topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5em;
+    justify-content: center;
+    gap: 10px;
     margin-bottom: 12px;
 }
 .mphbac-staff-title {
-    flex: 1 1 auto;
-    min-width: 0;
+    /* Reserves room so the arrows hold still as the label changes length —
+       the public label's own rule, and its own clamp so it never overflows a
+       phone: 200px is the rest of the row (two arrows, Today, three gaps). */
+    min-width: min(19ch, calc(100% - 200px));
     margin: 0;
-    color: var(--staff-header);
-    font-size: 1.2em;
-    font-weight: 700;
+    color: #111111;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
     text-align: center;
     overflow-wrap: anywhere;
 }
+/* Daily's second line ("Today" / the month), kept small under the label. */
 .mphbac-staff-title .mphbac-staff-title-sub {
     display: block;
     color: var(--staff-muted);
-    font-size: 0.75em;
+    font-size: 12px;
     font-weight: 600;
 }
 .mphbac-staff-nav {
@@ -208,7 +222,8 @@
    the pointer guard at the end of this file. The control was split the same
    way. Same pattern as widget.css's nav. */
 .mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }
-/* The Today button carries a word rather than an arrow. */
+/* The Today button carries a word rather than an arrow. Always shown since
+   0.43.1 — when today is already in the period it scrolls back to it. */
 .mphbac-staff-today {
     width: auto;
     padding: 0 0.85em;
@@ -216,7 +231,6 @@
        public widget: .mphbac-nav-today computes 13px / 600 exactly. */
     text-transform: capitalize;
 }
-.mphbac-staff-today[hidden] { display: none; }
 
 /* ---- PER-CONTROL TYPE, AT (0,2,0) ----------------------------------------
    `.mphbac-staff button { font: inherit }` sits at (0,1,1) and the shorthand
@@ -256,49 +270,120 @@
    these buttons the assertion fails and sends the reader here. */
 .mphbac-staff-nav.mphbac-staff-nav { font-size: 16px; }
 .mphbac-staff-today.mphbac-staff-today { font-size: 13px; font-weight: 600; }
-/* The period menu and the date picker take the size and weight the List /
-   Chart buttons had (14px / 600) — they replace them in the same row. Fields
-   are <select> / <input>, which inherit even less than <button> does. */
-.mphbac-staff-period.mphbac-staff-period,
-.mphbac-staff-goto.mphbac-staff-goto { font-size: 14px; font-weight: 600; }
 
-/* ---- tools row: period menu + go to date + legend (0.43.0) ---- */
+/* ---- tools row: period menu + go to date + legend ----
+   THE PUBLIC FILTER ROW, matched (0.43.1). Labels sit ABOVE their fields as
+   in .mphbac-filters / .mphbac-filter, in the .mphbac-filter-label style,
+   and both fields are the public .mphbac-input pill. The legend follows on
+   its own centred line. */
 .mphbac-staff-tools {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px 16px;
+    gap: 10px;
     margin-bottom: 10px;
 }
+.mphbac-staff-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em 0.75em;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+}
 .mphbac-staff-field {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5em;
+    gap: 0.25em;
+    flex: 0 1 13em;
+    min-width: 0;
     margin: 0;
 }
+/* .mphbac-filter-label: 600, #111, centred, at the filter's 0.9em of the
+   public root's 18px. Pinned in px because the staff root is 15px. */
 .mphbac-staff-field-label {
-    color: var(--staff-muted);
-    font-size: 0.85em;
+    color: #111111;
+    font-size: 16.2px;
     font-weight: 600;
+    text-align: center;
 }
-.mphbac-staff-period,
-.mphbac-staff-goto {
+
+/* THE FIELD PILL — the public .mphbac-input, value for value (0.43.1).
+   Rob's screenshot: on /staff/ the THEME's form-field rule won on the date
+   <input> (grey fill, a different oval, taller) while the <select> kept the
+   old 1px #e0e0e0 box, so the two matched neither each other nor the public
+   calendar. Bravada's Elementor kit resets inputs at (0,3,1).
+
+   (0,5,0), root-prefixed and class-repeated, with NO !important: above the
+   kit with room to spare, and on a page where this widget exposes no field
+   style control there is nothing above it to keep clear of. The root prefix
+   is safe here — unlike the public popup, these fields are never portaled.
+
+   COPIED, NOT LOADED. /staff/ does not load widget.css, and loading it for
+   this would not have been enough: the public field's 18px / 300 Raleway
+   comes from the Filter Fields typography control on each public placement,
+   not from widget.css. What IS shared is the token layer — the same
+   --dcc-* names reading the same --dcc-site-* overrides first, declared on
+   .mphbac-staff below — so a future shared layer moves both together.
+
+   The <select> needs one thing the date field does not: appearance: none
+   removes its native arrow, so the chevron is drawn as a background image,
+   in the field's own ink, and the right padding makes room for it. */
+.mphbac-staff {
+    --dcc-gold:         var(--dcc-site-gold, #f4da62);
+    --dcc-label:        var(--dcc-site-label, #000000);
+    --dcc-field-radius: var(--dcc-site-field-radius, 30px);
+    --dcc-field-border: var(--dcc-site-field-border, 2px);
+}
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-input {
     box-sizing: border-box;
-    /* 46px, the same tap floor the List / Chart buttons held. min-height so
-       a larger system font grows the control instead of clipping it. */
-    min-height: 46px;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    /* One line of text + padding + border + 2px: exactly the height the date
+       field takes on its own (49.4px at 18px — the ~49px Rob measured on
+       /cottages/, where the extra 2px is the date field's inner edit box).
+       Without it the <select>, which has no such box, came out 2px shorter
+       and the two pills sat out of line. Never under the 44px tap floor. */
+    min-height: max(44px, calc(1.3em + 26px));
     margin: 0;
-    padding: 0 12px;
-    border: 1px solid var(--staff-frame);
-    border-radius: 6px;
-    background: var(--staff-surface);
-    color: var(--staff-text);
-    line-height: 1.2;
+    padding: 10px 20px;
+    border: var(--dcc-field-border) solid var(--dcc-gold);
+    border-radius: var(--dcc-field-radius);
+    background-color: #ffffff;
+    color: var(--dcc-label);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 300;
+    font-style: normal;
+    line-height: 1.3;
+    text-align: center;
+    text-align-last: center;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: none;
+}
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period {
+    padding-right: 40px;
+    padding-left: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 18px 18px;
+}
+/* The public field's picker affordance, as widget.css styles it. */
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
     cursor: pointer;
 }
-.mphbac-staff-period { min-width: 120px; }
-.mphbac-staff-goto { min-width: 150px; }
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input:focus-visible {
+    outline: 2px solid var(--staff-focus, #0f6dbf);
+    outline-offset: 2px;
+}
 
 .mphbac-staff-legend {
     display: flex;
@@ -351,7 +436,7 @@
        track is a fixed width, so a 31-day month is exactly 31 × --staff-day-w
        wider than a 28-day one and nothing else moves. */
     grid-template-columns: var(--staff-label-w) repeat(var(--staff-halfdays, 62), calc(var(--staff-day-w) / 2));
-    grid-template-rows: var(--staff-head-h);
+    grid-template-rows: var(--staff-band-h) var(--staff-head-h);
     grid-auto-rows: var(--staff-row-h);
     width: max-content;
     min-width: 100%;
@@ -376,6 +461,8 @@
 .mphbac-staff-corner {
     left: 0;
     z-index: 5;                        /* wins both intersections */
+    /* Spans the month band and the day header (staff.js), so it is pinned
+       from the very top. */
     /* Centred both ways (the base rule is a centred flex column; this used to
        override the cross axis to flex-start). */
     align-items: center;
@@ -385,6 +472,8 @@
     font-weight: 700;
 }
 .mphbac-staff-dayhead {
+    /* Pinned BELOW the month band, which is pinned at 0. */
+    top: var(--staff-band-h);
     border-left: 1px solid var(--staff-frame);
     color: var(--staff-muted);
     font-weight: 600;
@@ -445,16 +534,57 @@
 }
 
 /* day background cells — the gridlines and the today/weekend tints */
-/* YEARLY: a rule down each 1st so the eye can find a month in a 365-day
-   scroll. The header cell carries the month's name in place of its weekday
-   (staff.js); this is the line through every row beneath it. */
-.mphbac-staff-chart.is-year .is-month-start {
-    box-shadow: inset 2px 0 0 var(--staff-header);
-}
-.mphbac-staff-chart.is-year .mphbac-staff-dayhead.is-month-start {
+/* ---- THE MONTH BAND (0.43.1, Rob's option C, every chart view) ----
+   "Hard to tell which month I'm in when I scroll": until 0.43.0 only the 1st
+   carried the month (Yearly) and mid-month nothing did. Now:
+     - a band above the day numbers, one cell per month spanning its days,
+       pinned to the top with the day header;
+     - inside each cell the month's NAME is sticky at the left edge of the
+       visible days, so it stays in view for as long as any of its month
+       does, and is pushed out by the next month's name at the boundary —
+       sticky is bounded by its parent cell, which is what does the pushing;
+     - a bold rule down each 1st: on the band cell, the day header, and an
+       overlay through every cottage row ABOVE the bars, so a stay crossing
+       the 1st cannot hide it. The overlay ignores the pointer.
+   The nav label follows the scroll as well — staff.js. */
+.mphbac-staff-monthband {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    background: var(--staff-band-bg);
+    border-left: 1px solid var(--staff-frame);
+    border-bottom: 1px solid var(--staff-frame);
+    color: var(--staff-month-line);
+    font-size: 12px;
     font-weight: 700;
-    color: var(--staff-header);
+    line-height: 1;
+    white-space: nowrap;
 }
+.mphbac-staff-monthname {
+    position: sticky;
+    left: var(--staff-label-w);
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mphbac-staff-monthband.is-month-start,
+.mphbac-staff-dayhead.is-month-start {
+    box-shadow: inset 3px 0 0 var(--staff-month-line);
+}
+.mphbac-staff-dayhead.is-month-start {
+    color: var(--staff-month-line);
+}
+.mphbac-staff-monthline {
+    z-index: 2;
+    justify-self: start;
+    width: 3px;
+    background: var(--staff-month-line);
+    pointer-events: none;
+}
+
 /* WEEKLY ON A PHONE: the cottage column shrinks to its number (staff.js sets
    --staff-label-w to 48px on the chart), so its name is not shown — it is
    still in the cell's title, the bar's description and the detail sheet. */
@@ -899,7 +1029,29 @@ body.mphbac-staff-open { overflow: hidden; }
 
 /* ---- phone ---- */
 @media (max-width: 600px) {
-    .mphbac-staff-tools { gap: 8px 12px; }
+    /* The public filter row on a phone (widget.css 0.29.0): both labels
+       across the top, both fields beneath, via display: contents on each
+       <label> — the label-for-control association is a DOM relationship
+       and survives it. Same 12px side padding the public fields drop to. */
+    .mphbac-staff-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 0.75em;
+        row-gap: 0.25em;
+        align-items: end;
+    }
+    .mphbac-staff-field { display: contents; }
+    .mphbac-staff-field-label { grid-row: 1; }
+    .mphbac-staff-input { grid-row: 2; }
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period {
+        padding-left: 12px;
+        padding-right: 34px;
+        background-position: right 12px center;
+    }
     .mphbac-staff-legend { font-size: 0.8em; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
     /* Same arithmetic as the base rule — only the vertical padding tightens

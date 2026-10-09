@@ -194,7 +194,6 @@
         function render() {
             var w = windowOf(state.anchor, state.period);
             renderTitle(w);
-            if (todayBtn) todayBtn.hidden = (config.today >= w.from && config.today <= w.to);
             // An arrow whose next window lies wholly outside the cap would
             // only fetch a refusal; it is disabled instead.
             prevBtn.disabled = windowOf(stepAnchor(-1), state.period).to < CAP_LO;
@@ -263,23 +262,68 @@
                 sub.className = 'mphbac-staff-title-sub';
                 sub.textContent = (day === config.today) ? (S.today || 'Today') : monthName(day.slice(0, 7));
                 titleEl.appendChild(sub);
-            } else if (p === 'week') {
-                titleEl.textContent = rangeTitle(w.from, w.to);
-            } else if (p === 'month') {
-                titleEl.textContent = monthName(w.from.slice(0, 7));
             } else {
-                titleEl.textContent = w.from.slice(0, 4);
+                // A chart period names a MONTH (0.43.1, Rob's option C): the
+                // one filling most of what is on screen, kept current by
+                // followScroll() once the chart is drawn. Until then, the
+                // month that will fill it — the week's larger part, or the
+                // anchor's month for a month or a year.
+                setLabel(p === 'week' ? mostOf(w.from, w.to) : state.anchor.slice(0, 7));
             }
         }
 
-        // "Oct 4 – 10, 2026" / "Sep 27 – Oct 3, 2026" / "Dec 27, 2026 – Jan 2, 2027"
-        function rangeTitle(a, b) {
-            var da = new Date(a + 'T00:00:00'), db = new Date(b + 'T00:00:00');
-            if (da.getFullYear() !== db.getFullYear()) {
-                return shortDate(a) + ', ' + da.getFullYear() + ' – ' + shortDate(b) + ', ' + db.getFullYear();
+        // Writes only on a change: the label is aria-live, and a scroll that
+        // stays inside one month must not re-announce it on every frame.
+        function setLabel(m) {
+            var t = monthName(m);
+            if (titleEl.textContent !== t) titleEl.textContent = t;
+        }
+
+        // The month holding the most days of [from, to]; the earlier on a tie.
+        function mostOf(from, to) {
+            var n = {}, best = null;
+            daysBetween(from, to).forEach(function (d) {
+                var m = d.slice(0, 7);
+                n[m] = (n[m] || 0) + 1;
+                if (best === null || n[m] > n[best]) best = m;
+            });
+            return best || from.slice(0, 7);
+        }
+
+        // THE LABEL FOLLOWS THE SCROLL. The visible days are those between
+        // the pinned cottage column's right edge and the grid's right edge;
+        // each month is weighed by how many PIXELS of it are in that span,
+        // so a month half-scrolled in counts by half.
+        function followScroll() {
+            if (state.period === 'day') return;
+            var chart = gridEl.firstChild;
+            var heads = chart ? chart.querySelectorAll('.mphbac-staff-dayhead') : [];
+            if (!heads.length) return;
+            var lw = chartLabelW(chart);
+            var lo = gridEl.scrollLeft + lw, hi = gridEl.scrollLeft + gridEl.clientWidth;
+            var px = {}, best = null;
+            for (var i = 0; i < heads.length; i++) {
+                var h = heads[i], a = h.offsetLeft, b = a + h.offsetWidth;
+                var seen = Math.min(b, hi) - Math.max(a, lo);
+                if (seen <= 0) continue;
+                var m = h.getAttribute('data-day').slice(0, 7);
+                px[m] = (px[m] || 0) + seen;
+                if (best === null || px[m] > px[best]) best = m;
             }
-            if (da.getMonth() === db.getMonth()) return shortDate(a) + ' – ' + db.getDate() + ', ' + db.getFullYear();
-            return shortDate(a) + ' – ' + shortDate(b) + ', ' + db.getFullYear();
+            if (best) setLabel(best);
+        }
+        var scrollRaf = 0;
+        gridEl.addEventListener('scroll', function () {
+            if (scrollRaf) return;
+            scrollRaf = requestAnimationFrame(function () { scrollRaf = 0; followScroll(); });
+        }, { passive: true });
+
+        // Bring a day into view with a day's context to its left.
+        function scrollToDay(d) {
+            var chart = gridEl.firstChild;
+            var th = chart && chart.querySelector('.mphbac-staff-dayhead[data-day="' + d + '"]');
+            gridEl.scrollLeft = th ? Math.max(0, th.offsetLeft - chartLabelW(chart) - th.offsetWidth) : 0;
+            followScroll();
         }
 
                 // ---- TAPE CHART -----------------------------------------------------
@@ -319,40 +363,61 @@
             if (period === 'week') sizeWeek(chart);
 
             // header row
+            chart.setAttribute('data-from', first);
+            chart.setAttribute('data-to', last);
             var corner = document.createElement('div');
             corner.className = 'mphbac-staff-corner';
             corner.textContent = S.cottage || 'Cottages';
-            corner.style.gridRow = '1';
+            corner.style.gridRow = '1 / span 2';
             corner.style.gridColumn = '1';
             chart.appendChild(corner);
+
+            // Row 1: the month band, one cell per month (or part of one) in
+            // the window, named as fully as its width allows.
+            var dayW = (period === 'week')
+                ? (parseFloat(chart.style.getPropertyValue('--staff-day-w')) || 44)
+                : (parseFloat(getComputedStyle(root).getPropertyValue('--staff-day-w')) || 44);
+            var segStart = 0;
+            days.forEach(function (d, i) {
+                if (i < N - 1 && days[i + 1].slice(0, 7) === d.slice(0, 7)) return;
+                var len = i - segStart + 1, startDay = days[segStart];
+                var band = document.createElement('div');
+                band.className = 'mphbac-staff-monthband' + (startDay.slice(8, 10) === '01' ? ' is-month-start' : '');
+                band.style.gridRow = '1';
+                band.style.gridColumn = (2 + 2 * segStart) + ' / span ' + (2 * len);
+                var name = document.createElement('span');
+                name.className = 'mphbac-staff-monthname';
+                var w = len * dayW;
+                name.textContent = w >= 130 ? monthName(d.slice(0, 7)) : (w >= 40 ? shortMonth(d) : '');
+                band.title = monthName(d.slice(0, 7));
+                band.appendChild(name);
+                chart.appendChild(band);
+                segStart = i + 1;
+            });
+
+            // Row 2: the days.
+            var starts = [];
             days.forEach(function (d, i) {
                 var h = document.createElement('div');
-                h.className = 'mphbac-staff-dayhead' + dayClasses(d, data.today);
-                h.style.gridRow = '1';
+                var isFirst = d.slice(8, 10) === '01';
+                h.className = 'mphbac-staff-dayhead' + dayClasses(d, data.today) + (isFirst ? ' is-month-start' : '');
+                h.setAttribute('data-day', d);
+                h.style.gridRow = '2';
                 h.style.gridColumn = (2 + 2 * i) + ' / span 2';
                 var wd = document.createElement('span');
                 var num = document.createElement('span');
                 num.className = 'mphbac-staff-daynum';
-                var dom = parseInt(d.slice(8, 10), 10);
-                num.textContent = String(dom);
+                num.textContent = String(parseInt(d.slice(8, 10), 10));
                 wd.textContent = weekdayShort(d);
-                // Where am I in a long scroll? Yearly marks each 1st with the
-                // month's name in place of its weekday, plus a rule; Weekly,
-                // which has room, adds the month to the day number.
-                if (dom === 1 && period === 'year') {
-                    wd.textContent = shortMonth(d);
-                    h.className += ' is-month-start';
-                } else if (dom === 1 && period === 'week') {
-                    num.textContent = shortDate(d);
-                }
                 h.appendChild(wd);
                 h.appendChild(num);
                 h.setAttribute('aria-label', longDate(d));
                 chart.appendChild(h);
+                if (isFirst) starts.push(i);
             });
 
             // cottage rows
-            var row = 2;
+            var row = 3;
             (data.cottages || []).forEach(function (c, ci) {
                 var bars = barsByType[c.id] || [];
                 var lanes = assignLanes(bars);
@@ -376,8 +441,7 @@
 
                 days.forEach(function (d, i) {
                     var cell = document.createElement('div');
-                    cell.className = 'mphbac-staff-daycell' + dayClasses(d, data.today)
-                        + (period === 'year' && d.slice(8, 10) === '01' ? ' is-month-start' : '');
+                    cell.className = 'mphbac-staff-daycell' + dayClasses(d, data.today);
                     cell.style.gridColumn = (2 + 2 * i) + ' / span 2';
                     cell.style.gridRow = row + ' / span ' + lanes;
                     chart.appendChild(cell);
@@ -393,15 +457,24 @@
                 row += lanes;
             });
 
+            // The rule down each 1st, through every cottage row and above the
+            // bars (appended after them, at the same z-index).
+            if (row > 3) {
+                starts.forEach(function (i) {
+                    var line = document.createElement('div');
+                    line.className = 'mphbac-staff-monthline';
+                    line.setAttribute('aria-hidden', 'true');
+                    line.style.gridColumn = String(2 + 2 * i);
+                    line.style.gridRow = '3 / ' + row;
+                    chart.appendChild(line);
+                });
+            }
+
             gridEl.appendChild(chart);
 
-            // Bring today into view (a little context to its left).
-            var th = chart.querySelector('.mphbac-staff-dayhead.is-today');
-            if (th) {
-                gridEl.scrollLeft = Math.max(0, th.offsetLeft - label_w() - th.offsetWidth);
-            } else {
-                gridEl.scrollLeft = 0;
-            }
+            // Open on the anchor: today when the period holds it, else the
+            // date the board was sent to (Go to date) or the period's start.
+            scrollToDay(state.anchor);
 
             if (!(data.bookings || []).length) say(S.empty || '');
         }
@@ -429,6 +502,11 @@
         function label_w() {
             var v = parseFloat(getComputedStyle(root).getPropertyValue('--staff-label-w'));
             return isNaN(v) ? 96 : v;
+        }
+        // The cottage column as drawn — compact Weekly narrows it on the chart.
+        function chartLabelW(chart) {
+            var v = parseFloat(getComputedStyle(chart).getPropertyValue('--staff-label-w'));
+            return isNaN(v) ? label_w() : v;
         }
 
         // Greedy interval colouring: overlapping bookings in one cottage
@@ -812,11 +890,21 @@
         prevBtn.addEventListener('click', function () { step(-1); });
         nextBtn.addEventListener('click', function () { step(1); });
         if (todayBtn) {
-            // Hidden whenever the period on screen already holds today, so it
-            // never sits there as a no-op button. Keeps the period.
+            // ALWAYS SHOWN (0.43.1). Keeps the period. When the period on
+            // screen already holds today — a year scrolled to March, say — it
+            // scrolls back to today rather than redrawing; otherwise it
+            // moves to the period holding today.
             todayBtn.addEventListener('click', function () {
+                var w = windowOf(state.anchor, state.period);
+                var here = state.period !== 'day' && config.today >= w.from && config.today <= w.to
+                    && gridEl.firstChild && gridEl.firstChild.getAttribute('data-from') === w.from;
                 state.anchor = config.today;
-                render();
+                if (here) {
+                    if (gotoEl) gotoEl.value = config.today;
+                    scrollToDay(config.today);
+                } else {
+                    render();
+                }
             });
         }
 

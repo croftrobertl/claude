@@ -137,8 +137,14 @@ final class Staff_Widget
                 <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <?php // Not a heading element: it ships empty (JS fills it), which is
                 // precisely what tripped the empty-heading check fixed in 0.20.1.
-                // aria-live announces the month/day when it changes. ?>
+                // aria-live announces the period when it changes. Styled as the
+                // public .mphbac-nav-range (0.43.1): a plain 15px / 600 label in
+                // a centred cluster, not a large blue title. In the chart periods
+                // it names the month filling most of the visible chart and
+                // follows the scroll; Daily names its day. ?>
                 <div class="mphbac-staff-title" aria-live="polite"></div>
+                <?php // Always shown (0.43.1). When today is already in the period,
+                // it scrolls the chart back to today instead of hiding. ?>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-today"><?php echo esc_html__('Today', 'mphb-availability-calendar'); ?></button>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
@@ -149,20 +155,25 @@ final class Staff_Widget
                 // keyboard- and screen-reader-complete for free, and on a phone it
                 // opens the OS picker. The visible label is the accessible name.
                 // "selected" is only the no-JS default; staff.js applies the
-                // device's remembered period on load. ?>
-                <label class="mphbac-staff-field">
-                    <span class="mphbac-staff-field-label"><?php echo esc_html__('Show', 'mphb-availability-calendar'); ?></span>
-                    <select class="mphbac-staff-period">
-                        <option value="day"><?php echo esc_html__('Daily', 'mphb-availability-calendar'); ?></option>
-                        <option value="week"><?php echo esc_html__('Weekly', 'mphb-availability-calendar'); ?></option>
-                        <option value="month" selected><?php echo esc_html__('Monthly', 'mphb-availability-calendar'); ?></option>
-                        <option value="year"><?php echo esc_html__('Yearly', 'mphb-availability-calendar'); ?></option>
-                    </select>
-                </label>
-                <label class="mphbac-staff-field">
-                    <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
-                    <input type="date" class="mphbac-staff-goto">
-                </label>
+                // device's remembered period on load.
+                // 0.43.1: laid out as the public filter row — label ABOVE field —
+                // and both fields carry .mphbac-staff-input, the staff copy of the
+                // public .mphbac-input pill (see staff.css). ?>
+                <div class="mphbac-staff-fields">
+                    <label class="mphbac-staff-field">
+                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Show', 'mphb-availability-calendar'); ?></span>
+                        <select class="mphbac-staff-input mphbac-staff-period">
+                            <option value="day"><?php echo esc_html__('Daily', 'mphb-availability-calendar'); ?></option>
+                            <option value="week"><?php echo esc_html__('Weekly', 'mphb-availability-calendar'); ?></option>
+                            <option value="month" selected><?php echo esc_html__('Monthly', 'mphb-availability-calendar'); ?></option>
+                            <option value="year"><?php echo esc_html__('Yearly', 'mphb-availability-calendar'); ?></option>
+                        </select>
+                    </label>
+                    <label class="mphbac-staff-field">
+                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
+                        <input type="date" class="mphbac-staff-input mphbac-staff-goto">
+                    </label>
+                </div>
                 <div class="mphbac-staff-legend" aria-hidden="true">
                     <span class="mphbac-staff-key mphbac-staff-key--in"><?php echo esc_html__('Check-in', 'mphb-availability-calendar'); ?></span>
                     <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
