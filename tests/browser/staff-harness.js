@@ -160,5 +160,65 @@ const SHEET = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-sheet" r
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 
-module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults,
+
+/**
+ * THE BOARD, LIVE (0.44.0): the shell EXTRACTED FROM THE PHP, the real
+ * staff.js, the board's strings read from the PHP, and fetch() answered by a
+ * stand-in server that applies the month endpoint's overlap rule, answers the
+ * booking endpoint from `details`, and — when window.__nonceExpired is set —
+ * answers EVERY request with the expired-token 403 ("X-MPHBAC-Staff: nonce").
+ * Every request is logged in window.__reqs. Serve it with ctx.route().
+ */
+function boardStrings() {
+  const src = widgetPhp();
+  const block = src.slice(src.indexOf("'strings' => ["), src.indexOf('        ];', src.indexOf("'strings' => [")));
+  const out = {};
+  const re = /'(\w+)'\s*=>\s*__\('((?:[^'\\]|\\.)*)'/g;
+  let m;
+  while ((m = re.exec(block))) out[m[1]] = m[2].replace(/\\'/g, "'");
+  return out;
+}
+function boardShell({ today, cottages, bookings, details = {}, sow = 0, head = '', bodyStyle = '' }) {
+  const config = {
+    ajaxUrl: '/ajax', nonce: 'n', month: today.slice(0, 7), today,
+    calendar: {
+      weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      weekdaysFull: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      startOfWeek: sow,
+    },
+    strings: boardStrings(),
+  };
+  const markup = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff" data-staff-config='))
+    .replace('data-staff-config=""', "data-staff-config='" + JSON.stringify(config).replace(/'/g, '&#39;') + "'");
+  const js = fs.readFileSync(path.join(ROOT, 'assets/js/staff.js'), 'utf8');
+  return `<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;font-family:Raleway,Georgia,serif;${bodyStyle}}${THEME}</style>
+<style>${css()}</style>${head}</head><body>
+${markup}
+<script>
+  window.__reqs = [];
+  var TODAY = ${JSON.stringify(today)}, BOOKINGS = ${JSON.stringify(bookings)}, COTTAGES = ${JSON.stringify(cottages)}, DETAILS = ${JSON.stringify(details)};
+  var json = function (o, st, h) { return Promise.resolve(new Response(JSON.stringify(o), { status: st || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, h || {}) })); };
+  window.fetch = function (url, opts) {
+    var p = new URLSearchParams(opts.body.toString());
+    var req = { action: p.get('action'), from: p.get('from'), to: p.get('to'), booking_id: p.get('booking_id'), nonce: p.get('nonce') };
+    window.__reqs.push(req);
+    if (window.__nonceExpired || (function () { try { return sessionStorage.getItem('__nonceExpired') === '1'; } catch (e) { return false; } })()) {
+      return Promise.resolve(new Response('', { status: 403, headers: { 'X-MPHBAC-Staff': 'nonce' } }));
+    }
+    if (req.action === 'mphbac_staff_booking') {
+      var d = DETAILS[req.booking_id];
+      return d ? json({ success: true, data: d }) : json({ success: false, data: { message: 'Booking not found.' } }, 404);
+    }
+    var bookings = BOOKINGS.filter(function (b) { return b.checkout >= req.from && b.checkin <= req.to; });
+    return json({ success: true, data: { from: req.from, to: req.to, today: TODAY, cottages: COTTAGES, bookings: bookings, clamped: false } });
+  };
+</script>
+<script>${js}</script>
+</body></html>`;
+}
+
+module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults, boardShell, boardStrings,
   page, TOOLS, SHEET, THEME, CHROMIUM, POST, WRAPPER };

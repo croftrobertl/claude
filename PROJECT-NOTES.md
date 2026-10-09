@@ -2378,3 +2378,73 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Active branch: `claude/review-shared-chat-bExtl` (existing remote ref; renaming it is optional). Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+## At a glance, filters, staying current (0.44.0)
+
+Built from the brief of 2026-10-08 and the WD's answers 1–26, with the
+updates of 2026-10-09. **Rob decided:** option C bars, his colour set 1
+(Direct #078732, Airbnb #bc003e, Booking.com #002e7a, Vrbo #0f6dbf, Other
+#334155), white IN / OUT tags shrinking to ▸ / ◂, today's name rule wherever
+it fits and the nights count otherwise (conflict 2), turnovers, the five
+tiles (today's counts the real today, % booked the period, all filtered —
+conflict 4), the four filters, the paw, tap to call / text / email, the quick
+preview, Open in WP-Admin, auto-refresh, and the board always opening on
+Monthly (0.43.3). **The WD decided:** keep the letter badge with the colours
+so the source never rests on colour alone; Turnovers first in Daily with
+those guests still under Arriving / Departing (5); filters apply to the board
+and later to search; Open in WP-Admin decided server-side; the expired-token
+reload, once, never a loop; 3 minutes; no stored period.
+
+**THE TOKEN RELOAD KEEPS THE VIEW WITHOUT STORING IT.** The WD asked that the
+reload keep the current period, scroll and filters "in memory", and that only
+the one-shot guard touch sessionStorage. A reload cannot keep memory, so the
+view crosses it in the URL FRAGMENT — period, date, scroll, cottage ids,
+source keys, two booleans; no guest data — written just before the reload and
+removed with history.replaceState() the moment it is read back. A reload the
+user makes therefore has no fragment and opens on Monthly, as Rob decided.
+The guard is a timestamp; under 10 minutes old a second nonce 403 stops with
+the existing message; a 403 without the nonce header never reloads; blocked
+storage never reloads. The guard is cleared by the next request that works,
+so tomorrow's expiry can reload again.
+
+**WHAT FITS ON A BAR IS MEASURED.** Canvas measureText in the board's own
+face, with the label's real paddings and gaps — the same numbers as the CSS
+(full: 6px / 4px; compact: 2px / 2px). Order of preference: the name beside
+word tags, the name beside arrows, the nights count beside word tags, the
+count beside arrows, nothing. On a SLIVER (a stay starting on the window's
+last afternoon, ~17px) pieces drop until the rest fits — paw, then the OUT
+arrow, then the badge, then the IN arrow. The badge outlasts the OUT arrow
+because on a one-night bar it is the only non-colour mark of the source,
+while the bar's own end and the turnover mark still show the check-out.
+Source and pets are always in the preview, the sheet and the description.
+Never an ellipsis.
+
+**THE MONTH PAYLOAD STAYS AT ITS QUERY BUDGET.** Pets and the guest count are
+read from meta month_view() already primes — never the MPHB entity — and the
+pet-fee check is ONE services lookup for the whole window
+(pet_service_ids()), not one per booking. has_pet_service() was split into
+service_ids_on() + pet_service_ids() so both paths share the rule.
+
+**TODAY'S TILES COME FROM THE SAME FUNCTION AS THE DAILY LISTS** (dayGroups()),
+so a tile and its list cannot disagree; when the period on screen does not
+cover today, today's month is fetched once and cached. % booked counts each
+cottage-night once: a channel block echoing a booking does not double it.
+
+**Instrument change: the Yearly timing is best of five.** The container this
+release was built in is slower than 0.43.x's: 0.43.4's own board measured
+370–430ms at 4x slowdown here against the 207ms recorded before. One sample
+against a fixed 500ms budget would fail with nothing changed; the best of five
+removes scheduling noise and still catches a regression. 0.44.0 measured no
+slower than 0.43.4 on the same machine, alternating runs.
+
+**Harness: the shell is extracted from the PHP and the PHP is stripped**, so a
+PHP loop writing markup becomes ONE blank element in every browser suite. The
+Source checkboxes are written out for that reason. staff-harness.js now has
+boardShell(): the live board with a stand-in server answering the month and
+booking endpoints and, on demand, the expired-token 403.
+
+One of the 56 new mutations survived its first run, and it found dead code:
+the refresh passed a `fresh` flag to bypass the cache, but refresh() had
+already emptied the cache, so the flag changed nothing. The flag is gone; the
+mutation now removes the cache clear, which is what actually makes the
+refresh a refetch.
