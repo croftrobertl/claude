@@ -78,18 +78,20 @@ check('a URL on another host is not mapped into our uploads dir',
     Staff_Data::attachment_path_for(900, 'mphb_upload_id'));
 /* WHERE CONTAINMENT ACTUALLY LIVES, asserted at the layer that provides it.
  *
- * attachment_path_for() does NOT guarantee the path is inside uploads. Its
- * own guard is `$rel !== $val` after an ltrim, and a LEADING SLASH defeats
- * that: "/etc/passwd" becomes "etc/passwd", which differs from the input, so
- * it returns basedir . "etc/passwd". "/../../etc/passwd" composes a path that
- * resolves outside uploads entirely.
+ * attachment_path_for() does NOT guarantee the path is inside uploads, and
+ * never did. Until 0.43.2 a LEADING SLASH slipped through its URL branch
+ * ("/../../etc/passwd" came back as basedir . "../../etc/passwd"); since
+ * 0.43.2 it resolves filesystem paths on purpose — the live shape is a path
+ * relative to the WordPress root — so an absolute value naming a real file
+ * comes back as itself. Either way the result can lie outside uploads.
  *
  * That is not a live exposure, and it is worth being precise about why: the
  * single consumer — Staff::handle_photo() — re-checks authorization and then
  * refuses anything whose realpath() does not sit under realpath(basedir),
  * which catches traversal and symlink escape alike. The containment is real;
  * it just is not in this function. Asserting it HERE would record a guarantee
- * this layer does not make. */
+ * this layer does not make. staff-photo-test.php proves the refusal end to
+ * end, through the real handler, for every new shape. */
 seed(['mphb_upload_id' => '/../../etc/passwd']);
 $escaped = Staff_Data::attachment_path_for(900, 'mphb_upload_id');
 check('(recorded) this function alone does not contain a leading-slash path',

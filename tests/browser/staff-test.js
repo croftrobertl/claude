@@ -607,6 +607,69 @@ const BUTTONLIKE = [
     check('the field rule wins WITHOUT !important', !/mphbac-staff-input[^{]*\{[^}]*!important/.test(code));
   }
 
+  console.log('\n-- 0.43.2: the dialog header contains its X, on a phone too --');
+  for (const [w, h, who] of [[375, 812, 'PHONE 375px'], [1280, 900, 'DESKTOP 1280px']]) {
+    /* Rob's phone screenshot: the 46px X crossed the sheet's top edge and the
+       header rule. The header was ~44px there (10px padding, a 19px title,
+       the rule) and the X is centred on it absolutely, so it added no height.
+       The only check that measured this X ran at 1280px, where the header is
+       48px — which is why it never failed. */
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
+    const p = await ctx.newPage();
+    await p.setContent(S.page({ body: '', sheet: S.SHEET }));
+    const m = await p.evaluate(() => {
+      const sheet = document.querySelector('.mphbac-staff-sheet');
+      sheet.hidden = false;
+      sheet.classList.add('is-open');
+      sheet.style.transition = 'none';
+      document.querySelector('.mphbac-staff-sheet-title').textContent = 'Booking #18433';
+      const r = e => document.querySelector(e).getBoundingClientRect();
+      const head = r('.mphbac-staff-sheet-head'), x = r('.mphbac-staff-close'), sh = r('.mphbac-staff-sheet');
+      const rule = head.bottom - parseFloat(getComputedStyle(document.querySelector('.mphbac-staff-sheet-head')).borderBottomWidth);
+      return { sheetTop: sh.top, xTop: x.top, xBottom: x.bottom, rule, headH: head.height, xH: x.height };
+    });
+    await p.waitForTimeout(50);
+    if (w === 375) await p.screenshot({ path: require('path').join(require('os').tmpdir(), 'staff-sheet-head-375.png'), clip: { x: 0, y: m.sheetTop - 8, width: 375, height: m.headH + 40 } });
+    check(`${who}: (instrument check) the X really is the 46px button`, Math.round(m.xH) === 46, m);
+    check(`${who}: the X starts at least 6px below the sheet's top edge`, m.xTop >= m.sheetTop + 6, { gap: +(m.xTop - m.sheetTop).toFixed(1) });
+    check(`${who}: ...and ends at least 6px above the header rule`, m.xBottom <= m.rule - 6, { gap: +(m.rule - m.xBottom).toFixed(1) });
+    console.log(`      ${who}: header ${m.headH.toFixed(1)}px, X ${(m.xTop - m.sheetTop).toFixed(1)}px from the top edge, ${(m.rule - m.xBottom).toFixed(1)}px above the rule`);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.43.2: the field labels are the LIVE public labels --');
+  {
+    /* 19px / 600 / #111, centred: the public Check-in / Check-out labels as
+       the Website Director measured them on /cottages/ at 375px and 1280px.
+       The size comes from the live placement, not from widget.css (which
+       alone gives 16.2px — what 0.43.1 copied), so it is recorded here as a
+       measured value; weight, ink and alignment are compared against the
+       public label as the public stylesheet renders it. */
+    const LIVE_PUBLIC_LABEL = { size: '19px', weight: '600', color: 'rgb(17, 17, 17)', align: 'center' };
+    const pctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const pp = await pctx.newPage();
+    await pp.setContent(H.page({ body: H.filtersHtml() }));
+    const pub = await pp.evaluate(() => { const c = getComputedStyle(document.querySelector('.mphbac-filter-label'));
+      return { size: c.fontSize, weight: c.fontWeight, color: c.color, align: c.textAlign }; });
+    await pctx.close();
+    for (const [w, who] of [[1280, 'DESKTOP'], [375, 'PHONE']]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: 900 } });
+      const p = await ctx.newPage();
+      await p.setContent(S.page({ body: S.TOOLS }));
+      const labs = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
+        const c = getComputedStyle(l); return { text: l.textContent, size: c.fontSize, weight: c.fontWeight, color: c.color, align: c.textAlign }; }));
+      check(`${who}: (instrument check) both labels found`, labs.length === 2, labs);
+      for (const l of labs) {
+        check(`${who}: "${l.text}" is the live public label — 19px / 600 / #111, centred`,
+          l.size === LIVE_PUBLIC_LABEL.size && l.weight === LIVE_PUBLIC_LABEL.weight
+          && l.color === LIVE_PUBLIC_LABEL.color && l.align === LIVE_PUBLIC_LABEL.align, l);
+        check(`${who}: "${l.text}" matches the public label's weight, ink and alignment as the public stylesheet renders them`,
+          l.weight === pub.weight && l.color === pub.color && l.align === pub.align, [l, pub]);
+      }
+      await ctx.close();
+    }
+  }
+
   console.log('\n-- the fade is gone from the bar and the row, the sheet still animates --');
   {
     const { ctx, p } = await open(false);

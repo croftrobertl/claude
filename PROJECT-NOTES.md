@@ -2166,6 +2166,52 @@ started counting the prev arrow's blue circle once the nav row was centred
 under the dialog — the instrument measures over an empty page now, as the
 public ones always did.
 
+## Photo ID, the dialog's X, the live label size (0.43.2)
+
+Found by Rob on 0.43.1 on live, diagnosed on live by the Website Director.
+
+**"VIEW PHOTO ID" OPENED A BLANK TAB, FOR EVERY BOOKING.** MotoPress stores
+the photo as a path relative to the WordPress root —
+"wp-content/uploads/mphb_protected_uploads/<file>" — on all 13 confirmed
+bookings that have one (in mphb_upload_id and in the customer's custom
+fields alike). attachment_path_for() knew an attachment id, a URL and an
+uploads-URL prefix; this shape matched none, so handle_photo() sent a 404
+with an empty body: a blank page. The tests covered the three shapes the code
+knew and never ran the handler. Now: filesystem paths resolve (absolute,
+ABSPATH-relative, content-dir-relative, uploads-relative; first real file
+wins), BEFORE handle_photo()'s realpath() containment check, which is
+unchanged and refuses anything outside uploads. A second fault hid behind
+the first: the URL branch's guard was "did stripping the uploads URL change
+anything?", which a leading slash alone satisfied, so "/wp-content/..."
+returned basedir + "wp-content/..." before any filesystem shape was tried.
+It now requires the value to START with the uploads URL.
+staff-photo-test.php runs the real handler in child processes against a
+real directory tree, with the live shape, HEIC, and every escape route.
+
+**A 404 from the photo endpoint now says so** ("This photo could not be
+found.", plain text, nosniff) — the WD's decision; the 403 stays EMPTY.
+**HEIC/HEIF are inline types** (WD): Rob views these on an iPhone. WordPress
+maps .heic/.heif itself since 6.7, case-insensitively; an explicit fallback
+covers an install or filter that does not.
+
+**THE CSP HEADER WAS NOT VERIFIED IN WEBKIT.** The WD asked for it (Rob's
+browser is Chrome on iOS, which is WebKit). This environment has Chromium
+only, and its rule is not to download browsers. The header is unchanged;
+verification moves to Rob's iPhone on staging.
+
+**THE X OVERFLOWED THE HEADER ON PHONES — and 0.43.1's note was wrong to
+reassure.** The 0.43.1 glyph-test failure really was the prev arrow behind
+the dialog (its screenshot showed that), but the overflow Rob photographed is
+a different, real fault, pre-existing since the 0.39.0 phone padding: the
+header was ~44px and the absolutely-centred 46px X added no height. The only
+check of that X ran at 1280px, where the header is 48px. The header now has
+a min-height of 46 + 2 × 8 + 1, and the test runs at 375px. **A layout
+assertion made at one width says nothing about another.**
+
+**Field labels are 19px** — the live public label, measured by the WD. 0.43.1
+derived 16.2px from widget.css; the live value comes from the placement.
+**A value derived from a stylesheet is not a measurement of the page.**
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
