@@ -687,27 +687,27 @@ final class Staff_Data
      * and installs punctuate differently, so "mphb_guest_2_first_name",
      * "guest2FirstName" and "Guest 2 First Name" all reduce to the same thing.
      *
+     * The map is rebuilt on every call and never cached. Up to 0.43.0 it was
+     * kept in a static keyed by the KEY NAMES alone; every booking on the site
+     * has the same 12 keys, so within one request every booking after the
+     * first read the first booking's values. Twelve keys cost nothing to
+     * normalize; a cache keyed on anything but the values cannot be right.
+     *
      * @param array<string,mixed> $custom
      * @param string[]            $candidates already normalized
      */
     private static function custom_get(array $custom, array $candidates): string
     {
-        static $norm = [];
-        $sig = array_keys($custom);
-        $key = md5(implode('|', $sig));
-        if (!isset($norm[$key])) {
-            $map = [];
-            foreach ($custom as $k => $v) {
-                $n = preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/^mphb_?/i', '', (string) $k)));
-                if ($n !== '' && !isset($map[$n])) {
-                    $map[$n] = $v;
-                }
+        $map = [];
+        foreach ($custom as $k => $v) {
+            $n = preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/^mphb_?/i', '', (string) $k)));
+            if ($n !== '' && !isset($map[$n])) {
+                $map[$n] = $v;
             }
-            $norm[$key] = $map;
         }
         foreach ($candidates as $c) {
-            if (isset($norm[$key][$c])) {
-                $v = $norm[$key][$c];
+            if (isset($map[$c])) {
+                $v = $map[$c];
                 if (is_array($v)) {
                     $v = reset($v);
                 }
