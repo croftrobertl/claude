@@ -2269,6 +2269,46 @@ forgetOldPeriod() had removed it, so it could not change anything. It now
 reads before the removal. **A test page whose values equal the fallback cannot
 prove the copy.**
 
+## Two-digit years; a date that cannot be used says so (0.43.4)
+
+Found by the Website Director on staging after 0.43.3: the hint reads
+"mm/dd/yy", a desktop guest types 10/12/26, Chromium stores 0026-10-12, and
+Show did nothing visible — the field was invalid against min.
+
+**Rob decided:** a year below 100 becomes 20YY when the value commits, in all
+four fields, then the existing rules apply unchanged. **The WD added** (Rob
+may overrule): Show, or the popup's booking step, meeting a date that is
+before today or unreadable says "Please check the dates." instead of nothing.
+
+**WHEN A DATE "COMMITS" IN CHROME.** Not on `change`: Chromium fires it while
+the year is still being typed (after "2" the value is already 0002-10-12), so
+correcting there would fight the keystrokes. On leaving the field — and on
+Tab / Enter INSIDE it, because in Chrome on a desktop the first Tab after the
+year does not leave the field: it goes to the field's own calendar icon, and
+focus stays on the input. Both fields of a pair are corrected before `change`
+is sent. A 00YY check-in also blanked the check-out (addDays() makes "27-10-14",
+which a date input refuses); the corrected check-in's `change` refills it.
+
+**THE POPUP SAYS WHY** rather than on press: Book Now was already disabled for
+these dates, so a message on press could never show. The reason joins the
+existing check-on-selection (0.23.8) and appears on leaving the field — never
+while the guest is still in it, which keeps "half-filled is not an error".
+
+**The filter row's message** is a hidden `role="alert"` row in the popup's
+alert style; `[hidden]` is display: none, so the row is the same height as
+before until it speaks (asserted). The text is a plain translatable string,
+not a panel control — the panel is unchanged.
+
+year-test.js drives all of it with real keystrokes in Chromium and records
+fetch(), so "Show works" means the request asked for the corrected window.
+
+Two of the new mutations survived their first run, both instrument faults:
+a "rewrite every year by its last two digits" mutant leaves 2027 as 2027, so
+the four-digit check now uses 2130; and removing `.mphbac-filter-error[hidden]`
+cannot be seen — nothing gives that row a display, so the UA's own [hidden]
+hides it anyway. That rule stays as a guard; the mutation now ships the row
+WITHOUT `hidden`, which the layout check catches.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

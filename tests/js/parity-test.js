@@ -41,9 +41,14 @@ function sheet({ avail = {}, ci = '', co = '', minNights = 2, strings = {},
   // could see, and SURVIVED.
   const checkinEl = { value: ci };
   const checkoutEl = { value: co };
-  const built = E.build(['roomLabel', 'blockedNight', 'freeAlternative', 'rangeState'], {
-    state, context, config, minNights, nightsBetween, checkinEl, checkoutEl,
+  // dateProblem() (0.43.4) reads document.activeElement and config.today.
+  // config.today is left UNSET by default: these fixtures' September dates
+  // are in the past, and every older case must keep its old meaning.
+  const document = { activeElement: null };
+  const built = E.build(['roomLabel', 'blockedNight', 'freeAlternative', 'dateProblem', 'rangeState'], {
+    state, context, config, minNights, nightsBetween, checkinEl, checkoutEl, document,
   });
+  built.config = config;
   built.els = { checkinEl, checkoutEl };
   return built;
 }
@@ -51,7 +56,20 @@ function sheet({ avail = {}, ci = '', co = '', minNights = 2, strings = {},
 const OPEN = { '2026-09-20': 'available', '2026-09-21': 'available', '2026-09-22': 'available',
                '2026-09-23': 'available', '2026-09-24': 'available' };
 
-console.log('-- half-filled is not an error --');
+console.log('-- 0.43.4: a date that cannot be used gives a reason --');
+{
+  const s = sheet({ avail: OPEN, ci: '', co: '2026-09-23', strings: { checkDates: 'Please check the dates.' } });
+  s.els.checkinEl.validity = { badInput: true };          // digits in the year segment alone
+  const r = s.rangeState();
+  check('an unreadable check-in: complete, not ok, "Please check the dates."',
+    r.ok === false && r.complete === true && r.msg === 'Please check the dates.', r);
+  const t = sheet({ avail: OPEN, ci: '2026-09-20', co: '2026-09-23', strings: { checkDates: 'Please check the dates.' } });
+  t.config.today = '2026-09-21';
+  const u = t.rangeState();
+  check('a check-in before today: the same reason, and Book Now stays off', u.ok === false && u.msg === 'Please check the dates.', u);
+}
+
+console.log('\n-- half-filled is not an error --');
 {
   const s = sheet({ avail: OPEN, ci: '2026-09-20', co: '' });
   const r = s.rangeState();
