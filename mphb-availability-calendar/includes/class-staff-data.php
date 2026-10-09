@@ -1054,12 +1054,66 @@ final class Staff_Data
                 $path = get_attached_file($id);
                 return is_string($path) && $path !== '' ? $path : null;
             }
-            // Bare path inside uploads (older MPHB field storage).
+            // A URL inside uploads with no attachment row (older MPHB field
+            // storage). Only a value that really STARTS with the uploads URL:
+            // until 0.43.2 the test was "did stripping it change anything?",
+            // which a leading slash alone satisfied — so "/wp-content/..."
+            // came back as basedir + "wp-content/...", a file that does not
+            // exist, before the filesystem shapes below were ever tried.
             $uploads = wp_get_upload_dir();
             $base    = trailingslashit((string) ($uploads['basedir'] ?? ''));
-            $rel     = ltrim(str_replace(trailingslashit((string) ($uploads['baseurl'] ?? '')), '', $val), '/');
-            if ($rel !== '' && $rel !== $val) {
-                return $base . $rel;
+            $baseurl = trailingslashit((string) ($uploads['baseurl'] ?? ''));
+            if ($baseurl !== '/' && strpos($val, $baseurl) === 0) {
+                $rel = ltrim(substr($val, strlen($baseurl)), '/');
+                return $rel !== '' ? $base . $rel : null;
+            }
+            return self::filesystem_path_for($val, $base);
+        }
+        return null;
+    }
+
+    /**
+     * A stored value that is a FILESYSTEM path rather than a URL (0.43.2).
+     *
+     * What MotoPress actually stores on live, on all 13 bookings with a photo
+     * (verified by the Website Director): "wp-content/uploads/
+     * mphb_protected_uploads/<file>", relative to the WordPress root — in the
+     * mphb_upload_id meta and in the customer's getCustomFields() alike. None
+     * of the three shapes above matches it, so every "View photo ID" answered
+     * 404 with an empty body: a blank tab on Rob's iPhone.
+     *
+     * Candidates, first existing file wins: the value itself when absolute;
+     * relative to ABSPATH (the live shape); relative to WP_CONTENT_DIR's
+     * parent when it starts "wp-content/" (a moved content dir); relative to
+     * the uploads basedir. A URL is never treated as a path.
+     *
+     * NOT A SECURITY BOUNDARY, on purpose: this only finds the file the
+     * booking names. Staff::handle_photo() still realpath()s the result and
+     * refuses anything outside the uploads basedir — a "../" in a stored
+     * value resolves here and is refused there, exactly as before.
+     */
+    private static function filesystem_path_for(string $val, string $uploads_base): ?string
+    {
+        if (strpos($val, '://') !== false || strpos($val, "\0") !== false) {
+            return null;
+        }
+        $rel = ltrim($val, '/');
+        $candidates = [];
+        if ($val[0] === '/') {
+            $candidates[] = $val;
+        }
+        if (defined('ABSPATH')) {
+            $candidates[] = trailingslashit((string) ABSPATH) . $rel;
+        }
+        if (defined('WP_CONTENT_DIR') && strpos($rel, 'wp-content/') === 0) {
+            $candidates[] = trailingslashit(dirname((string) WP_CONTENT_DIR)) . $rel;
+        }
+        if ($uploads_base !== '/') {
+            $candidates[] = $uploads_base . $rel;
+        }
+        foreach ($candidates as $c) {
+            if (is_file($c)) {
+                return $c;
             }
         }
         return null;

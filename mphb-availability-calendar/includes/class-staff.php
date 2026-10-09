@@ -281,8 +281,7 @@ final class Staff
         // path/ID: the only reachable files are ones this booking references.
         $path = Staff_Data::attachment_path_for($booking_id, $field);
         if ($path === null) {
-            status_header(404);
-            exit;
+            self::photo_not_found();
         }
 
         $uploads = wp_get_upload_dir();
@@ -292,19 +291,25 @@ final class Staff
         if ($real === false || $realbase === false || strpos($real, $realbase . DIRECTORY_SEPARATOR) !== 0) {
             // Path traversal / symlink escape / file outside uploads.
             error_log('MPHBAC staff: refused out-of-uploads photo path for booking ' . $booking_id);
-            status_header(404);
-            exit;
+            self::photo_not_found();
         }
         if (!is_readable($real)) {
-            status_header(404);
-            exit;
+            self::photo_not_found();
         }
 
         $type = wp_check_filetype(basename($real));
-        $mime = is_string($type['type'] ?? null) && $type['type'] !== '' ? $type['type'] : 'application/octet-stream';
+        $mime = is_string($type['type'] ?? null) && $type['type'] !== '' ? $type['type'] : '';
+        // HEIC / HEIF (0.43.2): what an iPhone camera saves, and Rob views
+        // these on an iPhone, which displays them. WordPress maps .heic and
+        // .heif itself since 6.7, case-insensitively; this covers an install
+        // or a filter that does not, rather than letting the photo download.
+        if ($mime === '') {
+            $ext  = strtolower((string) pathinfo($real, PATHINFO_EXTENSION));
+            $mime = ['heic' => 'image/heic', 'heif' => 'image/heif'][$ext] ?? 'application/octet-stream';
+        }
         // Only ever hand back image/PDF; anything else downloads rather than
         // rendering, so a mislabelled upload can't execute in the browser.
-        $inline = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'], true);
+        $inline = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'], true);
 
         // Discard any output buffering before streaming bytes. A stray notice
         // or a plugin's buffered whitespace prepended to a JPEG/PDF corrupts
@@ -320,6 +325,24 @@ final class Staff
         header('X-Content-Type-Options: nosniff');
         header('Content-Security-Policy: default-src \'none\'; img-src \'self\'; object-src \'none\'; sandbox');
         readfile($real);
+        exit;
+    }
+
+    /**
+     * 404 WITH A SENTENCE (0.43.2). The photo opens in a new tab, and an empty
+     * 404 there is a blank page — which is what Rob saw, and it told nobody
+     * anything. Plain text, nosniff, no booking detail and no path. Only the
+     * 404 gets a body: the 403 from require_authorization() stays EMPTY.
+     */
+    private static function photo_not_found(): void
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        status_header(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        header('X-Content-Type-Options: nosniff');
+        echo esc_html__('This photo could not be found.', 'mphb-availability-calendar');
         exit;
     }
 }
