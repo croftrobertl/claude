@@ -5967,7 +5967,43 @@ final class Species {
 		 * @param array $species Keyed by species id; each entry has emoji,
 		 *                       name, sci, group, fact, best and where.
 		 */
-		return apply_filters( 'dcc_wl_species', $species );
+		/*
+		 * MEMOISED FOR THE REQUEST (1.41.1).
+		 *
+		 * This literal is 402 entries and the filter runs over all of them.
+		 * Measured: one hub render rebuilt it TWELVE times — Render alone
+		 * calls dataset() at five points, and dataset() calls this. The page
+		 * is heavily cached, so a guest rarely pays it; a cache miss, an
+		 * Elementor preview, a REST detail call and every crawler hit do.
+		 *
+		 * Per-REQUEST only: a static, not a transient. Filters are registered
+		 * at plugin load, long before anything renders, so a filter added
+		 * after the first call would be one added mid-render — which nothing
+		 * here does. `flush_cache()` exists for the suites, which add filters
+		 * between renders on purpose.
+		 */
+		if ( null === self::$registry_cache ) {
+			self::$registry_cache = apply_filters( 'dcc_wl_species', $species );
+		}
+		return self::$registry_cache;
+	}
+
+	/** @var array<string,mixed>|null */
+	private static $registry_cache = null;
+
+	/** @var array<int,array<string,mixed>>|null */
+	private static $dataset_cache = null;
+
+	/**
+	 * Drop the per-request caches.
+	 *
+	 * For the test harness, which adds and removes `dcc_wl_species` and
+	 * `dcc_wl_calendar` filters between renders inside one PHP process —
+	 * something no web request does.
+	 */
+	public static function flush_cache(): void {
+		self::$registry_cache = null;
+		self::$dataset_cache  = null;
 	}
 
 	/**
@@ -8983,6 +9019,11 @@ final class Species {
 	}
 
 	public static function dataset(): array {
+		/* Memoised with the registry it derives from, and for the same
+		 * measured reason: twelve builds per hub render, ~86ms each. */
+		if ( null !== self::$dataset_cache ) {
+			return self::$dataset_cache;
+		}
 		$calendar = self::calendar();
 		$photos   = self::photos();
 		$credits  = self::photo_credits();
@@ -9074,6 +9115,8 @@ final class Species {
 				'bestLabel' => self::best_months_label( $months ),
 			];
 		}
+
+		self::$dataset_cache = $dataset;
 
 		return $dataset;
 	}

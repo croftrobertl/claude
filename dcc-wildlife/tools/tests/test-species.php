@@ -449,4 +449,63 @@ foreach ( array_keys( $browse ) as $slug ) {
 }
 check_same( [], $unstable, 'order within every sub-group is still registry order', implode( ', ', $unstable ) );
 
+/* ---------------------------------------------------------------- */
+dcc_section( 'the species data is built once per request, and a filter still reaches it' );
+
+/*
+ * MEASURED, NOT ASSUMED (1.41.1). One hub render rebuilt the 402-entry
+ * registry TWELVE times — Render calls dataset() at five points and
+ * dataset() calls registry() — at about 86ms a build. The page is cached, so
+ * a guest rarely pays it; a cache miss, an Elementor preview, a REST detail
+ * call and every crawler hit do.
+ *
+ * Two assertions, because a cache has two ways to be wrong: it can fail to
+ * cache, and it can cache too well.
+ */
+dccwl_test_reset();
+dcc_reset_once_guards();
+
+$builds = 0;
+add_filter(
+	'dcc_wl_species',
+	static function ( $sp ) use ( &$builds ) {
+		$builds++;
+		return $sp;
+	}
+);
+
+ob_start();
+$html = \DCC_WL\Canal_Render::shortcode( [] );
+$pre  = ob_get_clean();
+check_same( 1, $builds, 'one hub render builds the registry exactly once' );
+check( strlen( $pre . $html ) > 100000, 'and still renders the whole page', (string) strlen( $pre . $html ) );
+
+/* It can also cache too well. A filter registered after the cache is warm
+ * must reach the data once the request boundary passes — which in this
+ * harness is dccwl_test_reset(), and in production is the next request. */
+$before = count( Species::registry() );
+dccwl_test_reset();
+dcc_reset_once_guards();
+add_filter(
+	'dcc_wl_species',
+	static function ( $sp ) {
+		$sp['dcc_audit_probe'] = [
+			'emoji' => '*', 'name' => 'Probe', 'sci' => 'Probus probus',
+			'group' => 'critters', 'fact' => 'x', 'best' => 'x', 'where' => 'x',
+		];
+		return $sp;
+	}
+);
+$after = Species::registry();
+check_same( $before + 1, count( $after ), 'a filter added after a reset still reaches the registry' );
+check( isset( $after['dcc_audit_probe'] ), 'and its species is in it' );
+
+/* And the dataset follows the registry rather than its own stale copy. */
+$ids = array_column( Species::dataset(), 'id' );
+check( in_array( 'dcc_audit_probe', $ids, true ), 'the dataset is derived from the same filtered registry' );
+
+dccwl_test_reset();
+dcc_reset_once_guards();
+check_same( $before, count( Species::registry() ), 'and the probe is gone once the filter is' );
+
 dcc_done();

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.41.0
+Stable tag: 1.41.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,13 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.41.1 =
+* **Pages build about five times faster on the server.** The 402-species list
+  was being rebuilt a dozen times for every page; it is now built once per
+  request. Nothing a guest sees changes — the page is byte-for-byte the same —
+  but an uncached page, an Elementor preview and every search-engine visit
+  cost a fraction of what they did.
 
 = 1.41.0 =
 * **The bottom row shows what each link does.** Guide, Credits and About each

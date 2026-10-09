@@ -116,6 +116,17 @@ function dcc_boot_plugin(): string {
  * indistinguishable from a render that emitted the wrong thing.
  */
 function dcc_reset_once_guards(): void {
+	/*
+	 * The species caches too (1.41.1). They are per-REQUEST memos, and a
+	 * suite is many "requests" in one PHP process — several of which add a
+	 * `dcc_wl_species` or `dcc_wl_calendar` filter between renders, which no
+	 * web request does. Without this, the second render in a suite would
+	 * serve the first one's data and the filter tests would pass against a
+	 * stale array.
+	 */
+	if ( class_exists( 'DCC_WL\Species' ) ) {
+		\DCC_WL\Species::flush_cache();
+	}
 	foreach ( [ 'DCC_WL\Render', 'DCC_WL\Canal_Render', 'DCC_WL\Water_Render' ] as $class ) {
 		if ( ! class_exists( $class ) ) {
 			continue;

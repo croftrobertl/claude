@@ -57,6 +57,14 @@ function dccwl_test_reset(): void {
 	$GLOBALS['dccwl_test']['die']      = null;
 	$GLOBALS['dccwl_test']['caps']     = true;
 	$GLOBALS['dccwl_test']['nonce_ok'] = true;
+	/*
+	 * `filters` is cleared above, so every registered `dcc_wl_species` /
+	 * `dcc_wl_calendar` filter has just gone — which means the memoised
+	 * species data is now from a world that no longer exists (1.41.1).
+	 */
+	if ( class_exists( 'DCC_WL\Species' ) ) {
+		\DCC_WL\Species::flush_cache();
+	}
 }
 
 /* ---- escaping + i18n ------------------------------------------------ */

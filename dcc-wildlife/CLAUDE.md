@@ -3290,3 +3290,61 @@ to meet, which is worse than the rename it avoids.
 `ui-theme.mjs` pinned the four labels by name and was updated to the new list
 rather than loosened — the claim is still that the row holds exactly these
 four, in this order.
+
+### 31. 1.41.1 — the species data is built once per request (found by audit)
+
+**MEASURED, AND THE NUMBER IS THE WHOLE STORY.** One hub render rebuilt the
+402-entry registry **twelve times**: `Render` calls `Species::dataset()` at
+five points, `Canal_Render` and the others add more, and every `dataset()`
+call rebuilds the registry, the calendar lookup, the photo map and the
+credits. At ~86ms a build:
+
+| | before | after |
+|---|---|---|
+| hub render (`Canal_Render::shortcode`) | **606 ms** | **111 ms** |
+| registry builds per render | 12 | **1** |
+| peak memory | 12.0 MB | 10.0 MB |
+| rendered HTML | 892,445 raw / 139,100 gz | **identical, byte for byte** |
+
+The output not moving is the point: this is the same page, built with less
+work. The page is heavily cached, so a guest rarely pays a render — **a cache
+miss, an Elementor preview, a REST detail call and every crawler hit do.**
+
+**PER-REQUEST, NOT A TRANSIENT.** A static memo on `Species::registry()` and
+`Species::dataset()`. Filters are registered at plugin load, long before
+anything renders, so the only way to add one after the cache is warm is to
+add it mid-render, which nothing does. **`Species::flush_cache()` exists for
+the harness**, which is many "requests" in one PHP process and adds filters
+between them on purpose — it is called from both `dccwl_test_reset()` and
+`dcc_reset_once_guards()`, and without it the filter tests would have passed
+against stale data.
+
+**THE GUARD ASSERTS BOTH WAYS A CACHE CAN BE WRONG** (test-species.php): that
+one render builds the registry exactly once, and that a filter added after a
+reset still reaches both the registry and the dataset. A cache that never
+invalidates passes the first assertion on its own.
+
+### What else the audit measured and did NOT change
+
+- **Scroll, at 4× CPU throttling, 120 frames:** 0 frames over 20ms at 390 and
+  1280 with the folds closed; with the prose guide OPEN (a 285,698px page at
+  390px) 7 of 120 frames over 20ms, worst 28ms. Acceptable, unchanged.
+- **`content-visibility: auto` on the prose body was tried and REJECTED on the
+  measurement**: 7→4 slow frames at 390, and 2→7 at 1280. Noise, not a win.
+  Recorded so nobody re-proposes it from theory.
+- **No console errors, no page errors, no PHP notices under E_ALL** on hub,
+  month and water renders; no duplicate ids; no horizontal overflow at 320,
+  360, 390, 768, 1280 or 1680.
+- **413 images, all `loading="lazy"`, all with `alt` and explicit dimensions.**
+- **The 379 "small tap targets" are inline links inside the crawlable prose**,
+  which WCAG's inline exception covers. Checked, not a finding.
+- **Six CSS classes select nothing**: `.dccwl-flash`, `.dccwl-btn-quiet`,
+  `.dccwl-sheet-nav`, `.dccwl-tabs-wrap`, `.dccwl-fishing-fish`,
+  `.dccwl-legend-badge`. `.dccwl-sheet-nav` is deliberate — 1.33.0 answer 4
+  names it as part of the one hidden-disabled rule. The other five are
+  leftovers, ~40 lines in total; left alone because deleting styling is a
+  visible-surface decision and they cost under 1KB gzipped.
+- **60% of the shipped CSS and JS is comments** — 123.3 KB gz today, 48.9 KB
+  with comments stripped. The comments are this repo's documentation and must
+  stay in the SOURCE; the saving is a build-step question (strip on the way
+  into the zip), which is Rob's to decide, not something to take silently.
