@@ -231,7 +231,13 @@ const BUTTONLIKE = [
     const inf = await ctx.newPage();
     await inf.setContent(H.page({ sheet: INFO_SHEET }));
     const stf = await ctx.newPage();
-    await stf.setContent(S.page({ body: S.TOOLS, sheet: S.SHEET }));
+    /* NO TOOLBAR BEHIND THIS ONE (0.43.1). The X's ground is translucent and
+       the clip is a screenshot, so whatever is painted behind the button is
+       part of what is measured. Once the nav row was centred like the public
+       one, its prev arrow sat exactly under the X at this position and its
+       blue circle was counted as ink. The public pages measure their X over
+       an empty page; so does this one now. */
+    await stf.setContent(S.page({ body: '', sheet: S.SHEET }));
 
     // THREE, not two, since 0.39.0: the info popup's floating X joined.
     const m = {
@@ -504,9 +510,10 @@ const BUTTONLIKE = [
     check('...and Today, the one nav button with a word in it, is matched exactly',
       m.today.size === '13px' && m.today.weight === '600', m.today);
     check('Today renders its declared 13px / 600', m.today.size === '13px' && m.today.weight === '600', m.today);
-    check('the period menu renders its declared 14px / 600, as the List / Chart tabs it replaced did',
-      m.period.size === '14px' && m.period.weight === '600', m.period);
-    check('...and so does the date picker beside it', m.goto.size === '14px' && m.goto.weight === '600', m.goto);
+    // 0.43.1: the fields are the public pill — 18px / 300, not the 14px / 600
+    // the List / Chart tabs had. Measured in full in the section below.
+    check('the period menu renders the public field\'s 18px / 300', m.period.size === '18px' && m.period.weight === '300', m.period);
+    check('...and so does the date picker beside it', m.goto.size === '18px' && m.goto.weight === '300', m.goto);
     // Route B — replacing the shorthand with family+size longhands — would
     // ALSO have dropped these three from 700 to 400, a restyle nobody asked
     // for. They must not move.
@@ -516,6 +523,88 @@ const BUTTONLIKE = [
     check('the shorthand is still there doing its job — deleting it drops buttons to the UA font',
       /\.mphbac-staff button \{[^}]*font:\s*inherit/.test(code));
     await ctx.close();
+  }
+
+  console.log('\n-- 0.43.1: the controls ARE the public calendar\'s, against the theme\'s field rule --');
+  {
+    const FIELD = ['borderTopWidth', 'borderTopStyle', 'borderTopColor', 'borderTopLeftRadius', 'backgroundColor', 'color',
+                   'paddingTop', 'paddingBottom', 'appearance', 'boxSizing'];
+    const readField = (p, sel) => p.evaluate(([sel, keys]) => {
+      const e = document.querySelector(sel), c = getComputedStyle(e), r = e.getBoundingClientRect();
+      const o = { family: c.fontFamily.split(',')[0].replace(/["']/g, '').trim(), size: c.fontSize, weight: c.fontWeight,
+                  lineHeight: c.lineHeight, padL: c.paddingLeft, padR: c.paddingRight, h: +r.height.toFixed(1), w: +r.width.toFixed(1) };
+      keys.forEach(k => { o[k] = c[k]; });
+      return o;
+    }, [sel, FIELD]);
+
+    // The public pill, in the public harness against the same kit rule.
+    const pctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const pp = await pctx.newPage();
+    await pp.setContent(H.page({ body: H.filtersHtml() }));
+    const pub = await readField(pp, '.mphbac-input-checkin');
+    await pctx.close();
+
+    for (const [w, who] of [[1280, 'DESKTOP'], [375, 'PHONE']]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: 900 } });
+      const p = await ctx.newPage();
+      await p.setContent(S.page({ body: S.TOOLS }));
+      const per = await readField(p, '.mphbac-staff-period'), go = await readField(p, '.mphbac-staff-goto');
+      console.log(`      ${who} period: ` + JSON.stringify(per));
+      console.log(`      ${who} goto:   ` + JSON.stringify(go));
+      if (w === 1280) console.log('      public pill:   ' + JSON.stringify(pub));
+      check(`${who}: (instrument check) the kit rule is live in this fixture — a bare input loses to it`,
+        await p.evaluate(() => { const i = document.createElement('input'); i.type = 'date';
+          document.querySelector('.mphbac-staff').appendChild(i);
+          const c = getComputedStyle(i); const r = c.backgroundColor === 'rgb(238, 238, 238)'; i.remove(); return r; }));
+      for (const [name, f] of [['the period menu', per], ['the date picker', go]]) {
+        check(`${who}: ${name} is the public pill — 2px solid #F4DA62, 30px radius, white, black text`,
+          f.borderTopWidth === '2px' && f.borderTopStyle === 'solid' && f.borderTopColor === 'rgb(244, 218, 98)'
+          && f.borderTopLeftRadius === '30px' && f.backgroundColor === 'rgb(255, 255, 255)' && f.color === 'rgb(0, 0, 0)', f);
+        check(`${who}: ${name} — Raleway 18px / 300, line-height 1.3 (the kit's 1px reset loses)`,
+          f.family === 'Raleway' && f.size === '18px' && f.weight === '300' && f.lineHeight === '23.4px', f);
+        check(`${who}: ${name} — 10px block padding, appearance none`,
+          f.paddingTop === '10px' && f.paddingBottom === '10px' && f.appearance === 'none', f);
+        for (const k of FIELD) {
+          if (k === 'paddingTop' || k === 'paddingBottom' || k === 'appearance' || k === 'boxSizing' || k.startsWith('border') || k === 'backgroundColor' || k === 'color') {
+            if (f[k] !== pub[k]) check(`${who}: ${name} matches the PUBLIC field's ${k}`, false, [f[k], pub[k]]);
+          }
+        }
+      }
+      check(`${who}: the two fields are the same height, ≥44px`, Math.abs(per.h - go.h) <= 1 && per.h >= 44, [per.h, go.h]);
+      if (w === 1280) {
+        check('DESKTOP: the date picker has the public 20px side padding', go.padL === '20px' && go.padR === '20px', go);
+      } else {
+        check('PHONE: the date picker drops to the public 12px side padding', go.padL === '12px' && go.padR === '12px', go);
+      }
+
+      const lay = await p.evaluate(() => {
+        const r = s => document.querySelector(s).getBoundingClientRect();
+        const labels = [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
+          const c = getComputedStyle(l); return { b: l.getBoundingClientRect().bottom, t: l.getBoundingClientRect().top,
+            size: c.fontSize, weight: c.fontWeight, color: c.color }; });
+        const t = getComputedStyle(document.querySelector('.mphbac-staff-title'));
+        const bar = getComputedStyle(document.querySelector('.mphbac-staff-topbar'));
+        const today = document.querySelector('.mphbac-staff-today');
+        return { labels, per: r('.mphbac-staff-period'), go: r('.mphbac-staff-goto'),
+                 title: { size: t.fontSize, weight: t.fontWeight, color: t.color },
+                 bar: { justify: bar.justifyContent, gap: bar.columnGap },
+                 today: getComputedStyle(today).display !== 'none' && !today.hidden,
+                 // The controls themselves — the fixture's own 400px test bar is not the board's.
+                 overflow: ['.mphbac-staff-topbar', '.mphbac-staff-tools', '.mphbac-staff-period', '.mphbac-staff-goto', '.mphbac-staff-title']
+                   .some(s => { const b = document.querySelector(s).getBoundingClientRect(); return b.left < -0.5 || b.right > window.innerWidth + 0.5; }) };
+      });
+      check(`${who}: each label sits ABOVE its field`, lay.labels[0].b <= lay.per.top + 0.5 && lay.labels[1].b <= lay.go.top + 0.5, lay);
+      check(`${who}: labels in the public filter-label style — 600, #111`,
+        lay.labels.every(l => l.weight === '600' && l.color === 'rgb(17, 17, 17)'), lay.labels);
+      check(`${who}: the two fields side by side, tops level`, Math.abs(lay.per.top - lay.go.top) <= 0.5 && lay.per.right <= lay.go.left, [lay.per, lay.go]);
+      check(`${who}: the nav label is the public range label — 15px / 600 / #111, not the big blue title`,
+        lay.title.size === '15px' && lay.title.weight === '600' && lay.title.color === 'rgb(17, 17, 17)', lay.title);
+      check(`${who}: the nav row is the public centred cluster, 10px gaps`, lay.bar.justify === 'center' && lay.bar.gap === '10px', lay.bar);
+      check(`${who}: Today is in the row in the markup itself`, lay.today);
+      check(`${who}: the nav row and the fields stay inside the screen`, !lay.overflow);
+      await ctx.close();
+    }
+    check('the field rule wins WITHOUT !important', !/mphbac-staff-input[^{]*\{[^}]*!important/.test(code));
   }
 
   console.log('\n-- the fade is gone from the bar and the row, the sheet still animates --');

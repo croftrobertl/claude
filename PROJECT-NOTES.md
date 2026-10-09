@@ -2110,6 +2110,62 @@ Staff::send_range()'s own rules, and the board's strings read from the PHP
 rather than copied. It runs 8 cottages, as live has: Yearly measured 277ms to
 render at 4x CPU slowdown (about 4,000 elements).
 
+## The board matches the public calendar; which month am I in? (0.43.1)
+
+0.43.0 verified on live by the WD (2026-10-08). Rob then reviewed the live
+board on his phone in Yearly and **chose each fix from rendered mockups:**
+- **The controls match the public calendar exactly.** The nav row is the
+  public .mphbac-nav cluster with a plain 15px / 600 #111 label in place of
+  the large blue title; the fields have labels ABOVE them as in the public
+  filter row, and both are the public .mphbac-input pill. **Today is always
+  in the row**; inside the period holding today it scrolls back to today.
+- **Option C, in every chart view:** a month band above the day numbers with
+  the month's name pinned while you scroll, a bold rule down each 1st, and
+  the nav label following the scroll (the month filling most of the visible
+  chart). Daily keeps its day label. Consequence, accepted with the option:
+  Weekly's label is now a month ("September 2026"), not "Sep 27 – Oct 3".
+
+**WHY THE DATE FIELD LOOKED WRONG ON LIVE AND RIGHT IN THE TESTS.** The
+staff harness modelled only two theme rules (html weight 700, the button
+fade). It did not model Bravada's kit form-field reset, which the public
+harness has carried since 0.28.0 — so a 1px-#e0e0e0 field that the theme
+overrode on the real page passed. The kit rule is now in the staff harness
+too, with select added, and an instrument check proves it is live. **When a
+second surface adopts a control type, bring the first surface's theme
+fixture with it.**
+
+**COPIED, NOT LOADED.** The WD preferred reusing the public CSS over copying
+values. /staff/ does not load widget.css, and loading it would not have been
+enough: the public field's Raleway 18px / 300 comes from the Filter Fields
+typography control on each public placement, not from widget.css. What is
+shared is the token layer (--dcc-gold, --dcc-label, --dcc-field-radius,
+--dcc-field-border, reading --dcc-site-* first), and staff-test.js compares
+the staff fields' computed border, radius, background, ink, padding and
+appearance against the PUBLIC field rendered in the public harness — so the
+two cannot drift without a red test, which is the property reuse was for.
+
+**THE custom_get() CROSS-BOOKING CACHE (found by the WD).** It cached its
+normalised map in a static keyed by md5 of the KEY NAMES. Every live booking
+has the same 12 keys, so within one request every booking after the first
+read the first booking's custom fields. No live impact while the board reads
+one booking per request, but 0.44.0 (pets across a month) and 0.45.0 (the
+search index) would have shown one guest's unit, Guest 2 or dog on another.
+The cache is gone — twelve keys cost nothing to normalise. **A cache keyed on
+anything less than everything the result depends on is a correctness bug,
+not an optimisation.**
+
+**Two instruments that could not fail, caught by mutation this time.** (1)
+The weekly label check ran after the chart was drawn, when followScroll()
+has already overwritten the provisional label that mostOf() sets during
+loading — so mostOf() was untested. The test now holds the fetch open and
+reads the label while loading. (2) Its first version "held" a week that the
+previous step had already fetched (Jul 29 and Aug 1 are the same week), and
+its instrument check proved only that the hold flag was raised. It now
+proves a request is actually pending. Also: the staff X glyph comparison
+started counting the prev arrow's blue circle once the nav row was centred
+under the dialog — the instrument measures over an empty page now, as the
+public ones always did.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

@@ -183,5 +183,37 @@ echo "\n-- 0.43.0: Apartment / Unit, through the customer's getCustomFields() --
     unset($GLOBALS['t_custom']);
 }
 
+echo "\n-- 0.43.1: two bookings with the same custom-field KEYS in one request --\n";
+{
+    // Every live booking carries the identical 12-key set. Up to 0.43.0
+    // custom_get() cached its normalised map keyed by the key names alone, so
+    // the second booking read the first booking's values. Same keys, different
+    // values, one process.
+    $values = static function (array $custom): array {
+        $GLOBALS['t_custom'] = $custom;
+        with_notes([]);
+        $out = [];
+        foreach (Staff_Data::booking_detail(950)['sections'] as $rows) {
+            foreach ((array) $rows as $r) {
+                if (is_array($r) && isset($r['label'], $r['value'])) {
+                    $out[$r['label']] = $r['value'];
+                }
+            }
+        }
+        return $out;
+    };
+    $keys = ['address1', 'apartment-units', 'guest-2-first-name', 'dog-type'];
+    $a = $values(array_combine($keys, ['1 Canal St', '4B', 'Alice', 'Labrador']));
+    $b = $values(array_combine($keys, ['9 Lock Rd', '12', 'Bertie', 'Spaniel']));
+    check('the first booking reads its own unit', ($a['Apartment / Unit'] ?? null) === '4B', $a);
+    check('the second booking reads ITS unit, not the first one\'s', ($b['Apartment / Unit'] ?? null) === '12', $b);
+    check('...and its own Guest 2', ($b['Guest2 First Name'] ?? null) === 'Bertie', $b);
+    check('...and its own dog', in_array('Spaniel', $b, true) && !in_array('Labrador', $b, true), $b);
+    $c = $values(array_combine($keys, ['1 Canal St', '—', '', 'Labrador']));
+    check('a third booking with the field blank shows no unit rather than an earlier one',
+        !isset($c['Apartment / Unit']), $c);
+    unset($GLOBALS['t_custom']);
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);

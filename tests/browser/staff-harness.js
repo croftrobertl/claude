@@ -79,7 +79,17 @@ function emitDefaults() {
 /** Bravada, as measured on the live page. */
 const THEME = `
  html { font-weight: 700; }
- button, input[type=button], input[type=submit], input[type=reset] { transition: background .75s ease-out; }`;
+ button, input[type=button], input[type=submit], input[type=reset] { transition: background .75s ease-out; }
+ /* Bravada's Elementor kit form-field reset, at its RECORDED (0,3,1) — the
+    public harness's rule, here since 0.43.1 with select added. Without it
+    this fixture could not show what Rob saw on /staff/: the theme winning on
+    the date field while the menu kept the plugin's own box. */
+ .elementor-kit-9 input, .elementor-kit-9 select { line-height: 1px; font-family: Pavanam, sans-serif; font-size: 11px; }
+ .elementor-kit-9 .elementor-element .elementor-widget-container input,
+ .elementor-kit-9 .elementor-element .elementor-widget-container select {
+   line-height: 1px; border: 1px dotted #999; border-radius: 0; padding: 1px 2px;
+   background-color: #eeeeee; color: #999999; min-height: 0; text-align: left;
+ }`;
 
 function page({ panel = emitDefaults(), body = '', sheet = '' } = {}) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -87,7 +97,7 @@ function page({ panel = emitDefaults(), body = '', sheet = '' } = {}) {
 <style>body{margin:0;font-family:Raleway,Georgia,serif}${THEME}</style>
 <style id="elementor">${panel}</style>
 <style id="plugin">${css()}</style></head>
-<body class="elementor-18102">
+<body class="elementor-18102 elementor-kit-9">
 <div class="${WRAPPER.replace(/\./g, ' ').trim()}"><div class="elementor-widget-container">
   <div class="mphbac-staff">${body}</div>
 </div></div>

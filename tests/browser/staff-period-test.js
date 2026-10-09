@@ -12,6 +12,11 @@
  * outside, ±3 years around "today").
  *
  * "Today" is pinned to Thursday 2026-10-08 so every window is exact.
+ *
+ * 0.43.1: in the chart periods the nav label names the MONTH on screen and
+ * follows the scroll, so it no longer identifies the window. The window is
+ * read from the chart itself (data-from / data-to, set from the same
+ * windowOf() the arrows use); Daily still names its day.
  */
 const { chromium } = require('playwright-core');
 const S = require('./staff-harness.js');
@@ -48,6 +53,7 @@ const BOOKINGS = [
   bk(3, '2026-10-05', '2026-10-08', 23, 'Cy Lee'),        // departs today
   bk(4, '2026-03-14', '2026-03-18', 22, 'Dee March'),     // earlier this year
   bk(5, '2027-03-14', '2027-03-17', 22, 'Ed Future'),     // for Go to date
+  bk(6, '2026-10-29', '2026-11-03', 24, 'Fay Cross'),     // a stay across the 1st
 ];
 
 function shell(sow) {
@@ -80,6 +86,12 @@ ${markup}
     var p = new URLSearchParams(opts.body.toString());
     var req = { action: p.get('action'), from: p.get('from'), to: p.get('to'), month: p.get('month') };
     window.__reqs.push(req);
+    // window.__hold = true keeps the answer back until window.__release(), so
+    // a test can look at the board WHILE a window is loading.
+    if (window.__hold) {
+      var self = this, a = arguments;
+      return new Promise(function (res) { window.__release = function () { window.__hold = false; res(window.fetch.apply(self, a)); window.__reqs.pop(); }; });
+    }
     if (req.to < LO || req.from > HI) {
       return Promise.resolve(new Response(JSON.stringify({ success: false, data: { message: 'Invalid date range.' } }), { status: 400 }));
     }
@@ -119,6 +131,9 @@ ${markup}
     const stored = (() => { try { return localStorage.getItem('mphbacStaffView'); } catch (e) { return 'BLOCKED'; } })();
     return {
       period: q('.mphbac-staff-period').value, title: q('.mphbac-staff-title').textContent,
+      win: q('.mphbac-staff-chart') && !q('.mphbac-staff-grid').hidden
+        ? q('.mphbac-staff-chart').dataset.from + '..' + q('.mphbac-staff-chart').dataset.to : null,
+      scroll: q('.mphbac-staff-grid').scrollLeft,
       agenda: !q('.mphbac-staff-agenda').hidden, chart: !q('.mphbac-staff-grid').hidden,
       legend: !q('.mphbac-staff-legend').hidden, today: !q('.mphbac-staff-today').hidden,
       prev: q('.mphbac-staff-prev').getAttribute('aria-label'), prevDisabled: q('.mphbac-staff-prev').disabled,
@@ -138,7 +153,7 @@ ${markup}
     check(`${who}: ...this month`, s.title === 'October 2026', s.title);
     check(`${who}: ...in ONE request for exactly the month`, s.reqs.length === 1
       && s.reqs[0].from === '2026-10-01' && s.reqs[0].to === '2026-10-31', s.reqs);
-    check(`${who}: Today is hidden — this month already holds today`, !s.today);
+    check(`${who}: Today is SHOWN even though this month holds today (0.43.1: always in the row)`, s.today);
     check(`${who}: opening the board stores NOTHING — only a deliberate choice does`, s.stored === null, s.stored);
     await ctx.close();
   }
@@ -181,17 +196,24 @@ ${markup}
 
     await choose(p, 'week');
     s = await st(p);
-    check('Weekly: the calendar week holding today, Sunday-first (start_of_week = 0)', s.title === 'Oct 4 – 10, 2026', s.title);
+    check('Weekly: the calendar week holding today, Sunday-first (start_of_week = 0)', s.win === '2026-10-04..2026-10-10', s.win);
+    check('Weekly: the label names the month on screen', s.title === 'October 2026', s.title);
     check('Weekly: seven day columns', s.heads === 7, s.heads);
     check('Weekly: the arrows say "week"', s.prev === STRINGS.prevWeek, s.prev);
 
     await choose(p, 'year');
     s = await st(p);
-    check('Yearly: the calendar year', s.title === '2026', s.title);
+    check('Yearly: the calendar year', s.win === '2026-01-01..2026-12-31', s.win);
+    check('Yearly: the label names the month on screen — opened on today, October', s.title === 'October 2026', s.title);
     check('Yearly: 365 day columns', s.heads === 365, s.heads);
     check('Yearly: ONE request for the whole year', s.reqs.slice(-1)[0].from === '2026-01-01' && s.reqs.slice(-1)[0].to === '2026-12-31', s.reqs.slice(-1));
-    const marks = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-dayhead.is-month-start')].map(h => h.textContent));
-    check('Yearly: each month is marked in the header, by name', marks.length === 12 && /^Jan/.test(marks[0]) && /^Dec/.test(marks[11]), marks);
+    const marks = await p.evaluate(() => ({
+      band: [...document.querySelectorAll('.mphbac-staff-monthband')].map(b => b.textContent),
+      heads: document.querySelectorAll('.mphbac-staff-dayhead.is-month-start').length,
+      lines: document.querySelectorAll('.mphbac-staff-monthline').length }));
+    check('Yearly: the month band names all twelve months, in full',
+      marks.band.length === 12 && marks.band[0] === 'January 2026' && marks.band[11] === 'December 2026', marks.band);
+    check('Yearly: each 1st is ruled in the header and through the rows', marks.heads === 12 && marks.lines === 12, marks);
     const scroll = await p.evaluate(() => {
       const g = document.querySelector('.mphbac-staff-grid'), t = document.querySelector('.mphbac-staff-dayhead.is-today');
       return { left: g.scrollLeft, todayX: t.offsetLeft, view: g.clientWidth };
@@ -215,42 +237,46 @@ ${markup}
     await choose(p, 'month');
     check('(instrument check) March was never fetched on its own',
       !(await st(p)).reqs.some(r => r.from === '2026-03-01'), (await st(p)).reqs);
-    check('March, inside the loaded year, costs NO request', (await st(p)).title === 'March 2026'
-      && (await st(p)).reqs.length === n, [(await st(p)).title, (await st(p)).reqs.length - n]);
+    check('March, inside the loaded year, costs NO request', (await st(p)).win === '2026-03-01..2026-03-31'
+      && (await st(p)).reqs.length === n, [(await st(p)).win, (await st(p)).reqs.length - n]);
     await choose(p, 'week');
-    check('...nor does a week of it', (await st(p)).title === 'Mar 15 – 21, 2026'
-      && (await st(p)).reqs.length === n, [(await st(p)).title, (await st(p)).reqs.length - n]);
+    check('...nor does a week of it', (await st(p)).win === '2026-03-15..2026-03-21'
+      && (await st(p)).reqs.length === n, [(await st(p)).win, (await st(p)).reqs.length - n]);
     await ctx.close();
   }
   {
     const { ctx, p } = await open({ sow: 1 });
     await choose(p, 'week');
     check('with "Week Starts On" = Monday the week is Mon–Sun — the setting is READ, not assumed',
-      (await st(p)).title === 'Oct 5 – 11, 2026', (await st(p)).title);
+      (await st(p)).win === '2026-10-05..2026-10-11', (await st(p)).win);
     await ctx.close();
   }
 
   console.log('\n-- the arrows step a whole period; Today comes back --');
   {
     const { ctx, p } = await open();
-    const seq = [];
-    for (const [period, steps] of [['day', ['Friday, October 9, 2026']], ['week', ['Oct 11 – 17, 2026']],
-                                   ['month', ['November 2026']], ['year', ['2027']]]) {
+    // Daily is identified by its label; the chart periods by their window.
+    const where = s => s.period === 'day' ? s.title : s.win;
+    for (const [period, next, home] of [
+      ['day', 'Friday, October 9, 2026', 'Thursday, October 8, 2026'],
+      ['week', '2026-10-11..2026-10-17', '2026-10-04..2026-10-10'],
+      ['month', '2026-11-01..2026-11-30', '2026-10-01..2026-10-31'],
+      ['year', '2027-01-01..2027-12-31', '2026-01-01..2026-12-31']]) {
       await choose(p, period);
-      await click(p, '.mphbac-staff-today').catch(() => {});
+      await click(p, '.mphbac-staff-today');
       await click(p, '.mphbac-staff-next');
       const s = await st(p);
-      seq.push([period, s.title, s.today]);
-      check(`${period}: next steps one whole ${period}`, s.title.indexOf(steps[0]) === 0, s.title);
-      check(`${period}: Today appears once today is off screen`, s.today);
+      check(`${period}: next steps one whole ${period}`, where(s).indexOf(next) === 0, where(s));
+      check(`${period}: Today is in the row`, s.today);
       await click(p, '.mphbac-staff-today');
       const back = await st(p);
-      check(`${period}: Today brings back the period holding today, and hides again`, !back.today, back.title);
+      check(`${period}: Today brings back the period holding today, and stays in the row`,
+        where(back).indexOf(home) === 0 && back.today, [where(back), back.today]);
     }
     await choose(p, 'week');
     await click(p, '.mphbac-staff-prev');
     await click(p, '.mphbac-staff-prev');
-    check('week: two steps back crosses the month cleanly', (await st(p)).title === 'Sep 20 – 26, 2026', (await st(p)).title);
+    check('week: two steps back crosses the month cleanly', (await st(p)).win === '2026-09-20..2026-09-26', (await st(p)).win);
     await ctx.close();
   }
 
@@ -259,7 +285,8 @@ ${markup}
     const { ctx, p } = await open();
     const go = async v => { await p.fill('.mphbac-staff-goto', v); await p.dispatchEvent('.mphbac-staff-goto', 'change'); await p.waitForTimeout(60); };
     await go('2027-03-15');
-    check('Monthly: Go to date shows that date\'s month', (await st(p)).title === 'March 2027', (await st(p)).title);
+    check('Monthly: Go to date shows that date\'s month', (await st(p)).win === '2027-03-01..2027-03-31'
+      && (await st(p)).title === 'March 2027', [(await st(p)).win, (await st(p)).title]);
     await choose(p, 'day');
     check('...and switching to Daily lands on that very day', /March 15, 2027/.test((await st(p)).title), (await st(p)).title);
     const before = (await st(p)).title;
@@ -275,12 +302,12 @@ ${markup}
     await choose(p, 'year');
     for (let i = 0; i < 3; i++) await click(p, '.mphbac-staff-prev');
     let s = await st(p);
-    check('three years back: 2023 is shown, not refused', s.title === '2023' && s.heads === 365, s.title);
+    check('three years back: 2023 is shown, not refused', s.win === '2023-01-01..2023-12-31' && s.heads === 365, s.win);
     check('...with a note that part of it is outside the range', s.status === STRINGS.partial, s.status);
     check('...and the back arrow disabled — 2022 lies wholly outside', s.prevDisabled);
     for (let i = 0; i < 6; i++) await click(p, '.mphbac-staff-next');
     s = await st(p);
-    check('three years ahead: 2029 shown, forward arrow disabled', s.title === '2029' && s.nextDisabled, [s.title, s.nextDisabled]);
+    check('three years ahead: 2029 shown, forward arrow disabled', s.win === '2029-01-01..2029-12-31' && s.nextDisabled, [s.win, s.nextDisabled]);
     check('no request was ever refused — the arrows never ask for one', !p.__errors.length && !/Could not/.test(s.status), s.status);
     await ctx.close();
   }
@@ -306,6 +333,129 @@ ${markup}
       check(`${who}: days grow well past 44px, room for full names`, m.day > 120 && m.label === 96 && m.nameShown, m);
     }
     console.log(`      ${who}: cottage column ${m.label}px, day ${m.day}px`);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.43.1: which month am I in? the band, the rule, the label, Today --');
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    const { ctx, p } = await open({ phone });
+    const go = async v => { await p.fill('.mphbac-staff-goto', v); await p.dispatchEvent('.mphbac-staff-goto', 'change'); await p.waitForTimeout(60); };
+    const scrollTo = async x => { await p.evaluate(x => { const g = document.querySelector('.mphbac-staff-grid'); g.scrollLeft = x; g.dispatchEvent(new Event('scroll')); }, x); await p.waitForTimeout(80); };
+    // x of a day's column inside the scrolled chart
+    const dayX = d => p.evaluate(d => document.querySelector('.mphbac-staff-dayhead[data-day="' + d + '"]').offsetLeft, d);
+    const labelW = () => p.evaluate(() => document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect().width);
+
+    // Monthly: one band cell, and the rule on the 1st.
+    let b = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-monthband')].map(x => x.textContent));
+    check(`${who} Monthly: the band names the month`, JSON.stringify(b) === '["October 2026"]', b);
+
+    // Weekly across a month boundary: two band cells, one rule, label = the larger part.
+    await choose(p, 'week');
+    await go('2026-09-30');
+    let s = await st(p);
+    b = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-monthband')].map(x => [x.textContent, x.title]));
+    check(`${who} Weekly Sep 27 – Oct 3: two band cells, September then October`,
+      s.win === '2026-09-27..2026-10-03' && b.length === 2 && b[0][1] === 'September 2026' && b[1][1] === 'October 2026', [s.win, b]);
+    check(`${who} Weekly: the label names the month with more of the week (4 days of September)`, s.title === 'September 2026', s.title);
+    // The label while that week is still LOADING: mostOf() names the larger
+    // part before there is a chart to measure. Asserted on a window never
+    // fetched, with the answer held back.
+    // Each held week follows a jump to a DIFFERENT, unrelated week, and the
+    // instrument check is that a request is really waiting (__release set by
+    // the stand-in), not merely that the hold flag was raised.
+    const heldLabel = async (before, target) => {
+      await go(before);
+      await p.evaluate(() => { window.__release = null; window.__hold = true; });
+      await go(target);
+      const r = await p.evaluate(() => ({ t: document.querySelector('.mphbac-staff-title').textContent,
+        pending: typeof window.__release === 'function' }));
+      await p.evaluate(() => { window.__hold = false; if (window.__release) window.__release(); });
+      await p.waitForTimeout(60);
+      return r;
+    };
+    const held = await heldLabel('2026-06-10', '2026-08-04');
+    check(`${who} (instrument check) a request really was held, and the loading label is the week's month`,
+      held.pending && held.t === 'August 2026', held);
+    const held2 = await heldLabel('2026-06-10', '2026-08-01');
+    check(`${who} Weekly Jul 26 – Aug 1, while still loading: July, the larger part (6 days), not the anchor's August`,
+      held2.pending && held2.t === 'July 2026', held2);
+    await go('2026-09-30');
+    const lines = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-monthline')].map(l => l.style.gridColumn));
+    check(`${who} Weekly: one rule, on October 1st`, lines.length === 1, lines);
+
+    // Yearly: the label follows the scroll.
+    await choose(p, 'year');
+    await click(p, '.mphbac-staff-today');
+    const lw = await labelW();
+    await scrollTo((await dayX('2026-03-10')) - lw);
+    s = await st(p);
+    check(`${who} Yearly: scrolled to mid-March, the label says March`, s.title === 'March 2026', s.title);
+    await scrollTo((await dayX('2026-11-05')) - lw);
+    check(`${who} Yearly: ...and November when scrolled there`, (await st(p)).title === 'November 2026', (await st(p)).title);
+
+    // The month's name stays pinned while its month is on screen.
+    const pin = await p.evaluate(() => {
+      const g = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
+      const lab = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect();
+      const nov = [...document.querySelectorAll('.mphbac-staff-monthband')].find(x => x.title === 'November 2026');
+      const r = nov.querySelector('.mphbac-staff-monthname').getBoundingClientRect();
+      const bandR = nov.getBoundingClientRect();
+      return { nameLeft: Math.round(r.left), colRight: Math.round(lab.right), bandLeft: Math.round(bandR.left), visible: r.right <= g.right && r.left >= g.left };
+    });
+    check(`${who} Yearly: mid-November, its name is pinned beside the cottage column, not scrolled off with the 1st`,
+      pin.visible && Math.abs(pin.nameLeft - pin.colRight) <= 1 && pin.bandLeft < pin.colRight, pin);
+
+    // The rule on the 1st runs through the rows ABOVE a stay crossing it, and lets the tap through.
+    await scrollTo((await dayX('2026-10-27')) - lw);
+    const rule = await p.evaluate(() => {
+      const bar = [...document.querySelectorAll('.mphbac-staff-bar')].find(x => x.dataset.bookingId === '6');
+      const head = document.querySelector('.mphbac-staff-dayhead[data-day="2026-11-01"]').getBoundingClientRect();
+      const br = bar.getBoundingClientRect();
+      const x = head.left + 1, y = br.top + br.height / 2;
+      const line = [...document.querySelectorAll('.mphbac-staff-monthline')].find(l => {
+        const r = l.getBoundingClientRect(); return Math.abs(r.left - head.left) < 1; });
+      const lr = line.getBoundingClientRect();
+      const rows = [...document.querySelectorAll('.mphbac-staff-rowlabel')];
+      return { x, y, hit: document.elementFromPoint(x, y) === bar || bar.contains(document.elementFromPoint(x, y)),
+               lineTop: Math.round(lr.top), lineBottom: Math.round(lr.bottom), lineW: Math.round(lr.width),
+               rowsTop: Math.round(rows[0].getBoundingClientRect().top), rowsBottom: Math.round(rows[rows.length - 1].getBoundingClientRect().bottom) };
+    });
+    check(`${who} the rule on Nov 1 runs from the first cottage row to the last`,
+      Math.abs(rule.lineTop - rule.rowsTop) <= 1 && Math.abs(rule.lineBottom - rule.rowsBottom) <= 1 && rule.lineW === 3, rule);
+    check(`${who} ...a tap on it still opens the stay underneath`, rule.hit, rule);
+    const shot = await p.screenshot({ clip: { x: rule.x, y: rule.y, width: 1, height: 1 } });
+    const px = await p.evaluate(async b64 => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+      const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d');
+      g.drawImage(img, 0, 0); return [...g.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    }, shot.toString('base64'));
+    check(`${who} ...and it is PAINTED above the bar (#0A50B2), not hidden under it`,
+      Math.abs(px[0] - 10) <= 6 && Math.abs(px[1] - 80) <= 6 && Math.abs(px[2] - 178) <= 6, px);
+
+    // Today, scrolled away inside the year holding it: scrolls back, no redraw.
+    await scrollTo(0);
+    const chartBefore = await p.evaluateHandle(() => document.querySelector('.mphbac-staff-chart'));
+    const reqs = (await st(p)).reqs.length;
+    await click(p, '.mphbac-staff-today');
+    s = await st(p);
+    const same = await p.evaluate(c => c === document.querySelector('.mphbac-staff-chart'), chartBefore);
+    const tv = await p.evaluate(() => {
+      const g = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
+      const t = document.querySelector('.mphbac-staff-dayhead.is-today').getBoundingClientRect();
+      return t.left >= g.left && t.right <= g.right;
+    });
+    check(`${who} Yearly scrolled to January: Today scrolls back to today`, tv && s.title === 'October 2026' && s.today, [tv, s.title]);
+    check(`${who} ...without redrawing or fetching the year`, same && s.reqs.length === reqs, [same, s.reqs.length - reqs]);
+
+    // Go to date inside the loaded year scrolls to that date.
+    await go('2026-06-15');
+    const gv = await p.evaluate(() => {
+      const g = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
+      const t = document.querySelector('.mphbac-staff-dayhead[data-day="2026-06-15"]').getBoundingClientRect();
+      return t.left >= g.left && t.right <= g.right;
+    });
+    check(`${who} Yearly: Go to date in the same year scrolls to that date`, gv && (await st(p)).title === 'June 2026', [gv, (await st(p)).title]);
     await ctx.close();
   }
 
