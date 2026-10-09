@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.4
+Stable tag: 0.44.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,17 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.44.0 =
+* **Bars in the source's colour.** On the staff board each booking's bar is now the colour of where it came from — Direct green, Airbnb red, Booking.com navy, Vrbo blue, anything else slate — with small white IN and OUT tags on the arrival and departure days. Imported bookings keep their letter badge, pending bookings keep their stripes, and the legend shows it all.
+* **Short bars stay readable.** A bar shows the guest's name (or initials, or "First L.") where it fits beside the tags, otherwise the number of nights; the tags shrink to ▸ / ◂ on very short bars. Nothing is cut off — the full name is always in the quick preview and the booking details.
+* **Turnovers** — a day when one guest leaves a cottage and the next arrives — are marked on the chart, and listed first in Daily ("Cottage 23: Lee out → Jones in").
+* **Today at a glance:** tiles at the top for arriving today, leaving today, in house now, turnovers today, and how booked the period shown is.
+* **Filters:** by cottage, by source, pets only, and arrivals or departures only. They apply to the chart, the Daily list and the tiles, and are not remembered after you leave the page.
+* **A paw** marks every booking with a pet.
+* **Quick preview:** hover over a bar (computer) or press and hold it (phone) to see the guest, dates, guests, source and pets without opening the booking.
+* **Tap to call, text or email** a guest from the booking details. Logged-in managers also get an **Open in WP-Admin** button there.
+* **The board keeps itself up to date** every three minutes while it is on screen, without losing your place, and shows when it last updated. When the board's security token expires overnight, the page reloads once by itself and comes back exactly where you were.
 
 = 0.43.4 =
 * **A two-digit year now works.** Typing a date the way the hint shows it — for example 10/12/26 — used to give the year 26 AD on a desktop, and Show then did nothing. The year now becomes 2026 as soon as you leave the field (or press Tab or Enter), in the two date fields and in the booking popup.
