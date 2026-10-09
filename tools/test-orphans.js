@@ -117,20 +117,24 @@ async function letters() {
 
     /* Now watch one cross the midline, which is the only thing that makes
      * letter1 appear. Sampling the resolved key over time is the honest
-     * check: a particle sitting still above the line would never show it. */
-    const swap = await ses.page.evaluate(() => new Promise(resolve => {
-      const keys = {};
-      let ticks = 0;
-      const id = setInterval(() => {
-        const st = window.DCCSeasonsEngine._state;
+     * check: a particle sitting still above the line would never show it.
+     * On the MOCKED clock (90 simulated seconds): sampling 11 s of wall
+     * time failed on a loaded machine that ran too few frames for a slow
+     * letter to fall that far — the same trap as test-v21's bass check. */
+    const swap = await ses.page.evaluate(() => {
+      const st = window.DCCSeasonsEngine._state, keys = {};
+      st.manual(true);
+      for (let i = 0; i < 90 * 10; i++) {
+        st.tick(1000 / 60, 6);
         for (const p of st.parts) {
           if (p.sp && p.sp.def && p.sp.def.fx === 'letter' && !p.dormant) {
             keys[p.y > st.vh * 0.5 ? 'letter1' : 'letter0'] = 1;
           }
         }
-        if (++ticks > 120) { clearInterval(id); resolve(Object.keys(keys)); }
-      }, 90);
-    }));
+        if (keys.letter0 && keys.letter1) { break; }
+      }
+      return Object.keys(keys).sort();
+    });
     console.log('   resolved keys over time:', JSON.stringify(swap));
     ok(swap.includes('letter1'), 'letter1 is the key a falling letter resolves to below the midline',
       JSON.stringify(swap));

@@ -848,7 +848,10 @@ render round and his say.
   most 3.6r) plus the shimmer strip; any other frame, and the first
   subtle-only frame after one, clears in full. Drawing stops off screen
   (IntersectionObserver) and when hidden, EXCEPT while the canvas is out
-  of the document, so `ensureMounted()` can still put it back. 30 fps is
+  of the document AND a re-mount is still possible (behind layering, under
+  20 tries) — so `ensureMounted()` can put it back. In front mode nothing
+  re-mounts, so a removed canvas stops the loop (4.6.1; it drew into a
+  detached canvas for the rest of the visit before). 30 fps is
   "visually identical" on measurement: every effect steps at most 1.54px
   and 4.5deg per repaint. **Rob's decision (2026-10-06): option A, 30 fps
   stays. 20 fps (embers 1.7px, confetti 2.3px; 79 ms/s at 390px x4) was
@@ -868,6 +871,16 @@ render round and his say.
   `node tools/shot-settings.js page.html out.png 1280 [selector]` captures
   it. The frozen 1280px schedule table was proven pixel-identical for
   4.4.0 this way (hide `.dcc-seasons-tabs` so it sits at its old offset).
+- **The egg's 'YEAR' is a token, in `glyphs` AND as `finale` (4.6.1).**
+  `matrix.js` `targetYear()` = this year until June, the next from July,
+  from the visitor's clock; `expand()` turns a 'YEAR' glyph into its
+  digits. New Year's carried a literal '2','0','2','7' until 4.6.1, which
+  would have shown 2027 at New Year's 2028. `theme-guide.js` mirrors the
+  rule for its picture. Never type a year into a theme.
+- **Wall-clock waits in a browser suite are load-sensitive — use the
+  mocked clock.** `test-orphans.js`'s letter check sampled 11 s of real
+  time and failed under load (4.6.1 audit); it now ticks 90 simulated
+  seconds. Same trap as `test-v21.js`'s bass check.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

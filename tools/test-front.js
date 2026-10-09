@@ -159,6 +159,29 @@ async function reducedMotion() {
   } finally { await ses.close(); }
 }
 
+/* --------------------- 3b. the egg: a failed fetch retries; YEAR digits */
+async function eggSturdy() {
+  console.log('\n=== the egg: a failed fetch is retried, and New Year\'s shows this year ===');
+  const ses = await open(fixture({ kind: 'bravada', config: config([...LIVE.slice(0, -1), '--theme=new_years']) }), { reducedMotion: 'reduce' });
+  try {
+    await ses.page.waitForTimeout(800);
+    let fails = 1, fetches = 0;
+    await ses.page.route(/matrix(\.min)?\.js/, r => { fetches++; return fails-- > 0 ? r.abort() : r.fallback(); });
+    const five = async () => { for (let i = 0; i < 5; i++) { await ses.page.click('#site-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
+    await five();
+    const first = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
+    await five();
+    const r = await ses.page.evaluate(() => {
+      const ov = [...document.querySelectorAll('div')].find(d => (d.style.zIndex | 0) > 2000000000);
+      const d = new Date(), yr = String(d.getFullYear() + (d.getMonth() >= 6 ? 1 : 0));
+      return { loaded: !!window.DCCSeasonsMatrix, text: ov ? ov.innerText : '', want: yr.split('').join(' ') };
+    });
+    console.log('  ', JSON.stringify({ first, fetches, ...r }));
+    ok(!first && r.loaded && fetches === 2, 'a failed egg fetch is retried on the next five taps', JSON.stringify({ first, fetches, loaded: r.loaded }));
+    ok(r.text.indexOf(r.want) >= 0 && !/YEAR/.test(r.text), `New Year's banner shows the coming year's digits (${r.want})`, JSON.stringify(r.text.slice(0, 40)));
+  } finally { await ses.close(); }
+}
+
 /* -------------------------------------------------------- 4. performance */
 async function performance() {
   console.log('\n=== frame cost at the live density, full viewport ===');
@@ -288,6 +311,7 @@ async function mobile() {
   await zIndexBand();
   await tapEgg();
   await reducedMotion();
+  await eggSturdy();
   await performance();
   await hiddenTab();
   await mobile();

@@ -300,10 +300,13 @@
 				sw.title = col;
 				pics.push(sw);
 			});
-			var gl = el('span', 'dcc-guide-eggglyphs', (egg.glyphs || []).join(' '));
+			/* 'YEAR' is a token (matrix.js, targetYear): the year the egg
+			 * counts toward, in the rain and as the finale. Show that. */
+			var nowd = new Date(), yr = String(nowd.getFullYear() + (nowd.getMonth() >= 6 ? 1 : 0));
+			var gl = el('span', 'dcc-guide-eggglyphs', (egg.glyphs || []).map(function (q) { return q === 'YEAR' ? yr.split('').join(' ') : q; }).join(' '));
 			gl.style.color = (egg.colors || [])[0] || '';
 			pics.push(gl);
-			if (egg.finale) { pics.push(glyph(egg.finale, T.egg)); }
+			if (egg.finale) { pics.push(glyph(egg.finale === 'YEAR' ? yr : egg.finale, T.egg)); }
 			es.appendChild(item(pics, T.eggNote));
 			c.appendChild(es);
 		}

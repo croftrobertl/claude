@@ -41,6 +41,7 @@
  *      in the engine keyed by theme.
  *  - 'egg': the Matrix-rain recolor/re-glyph config. (The false-to-disable
  *      form still works but no theme uses it — every theme ships full.)
+ *      A 'YEAR' entry in 'glyphs' stands for the digits of that year.
  *      Optional 'finale': a glyph (or 'YEAR') the rain briefly organizes
  *      into ~18s in, via an alpha-mask of that glyph.
  *
@@ -223,7 +224,10 @@ class Themes {
                 ],
                 'egg' => [
                     'colors' => ['#FFD43B', '#CED4DA'],
-                    'glyphs' => ['2', '0', '2', '7', '✦', '★'],
+                    // 'YEAR' = the digits of the year the egg counts toward,
+                    // from the visitor's clock (matrix.js); was a literal
+                    // '2','0','2','7' that would have gone stale in Dec 2027.
+                    'glyphs' => ['YEAR', '✦', '★'],
                     'finale' => 'YEAR',
                 ],
             ],

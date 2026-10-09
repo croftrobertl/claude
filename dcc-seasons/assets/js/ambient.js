@@ -170,11 +170,17 @@
 		}
 	}
 
-	function loadScript(src, cb) {
+	function loadScript(src, cb, fail) {
 		var sc = D.createElement('script');
 		sc.src = src;
 		sc.async = true;
 		sc.onload = cb;
+		/* A failed fetch (a flaky phone connection) must not leave the
+		 * caller waiting for good: remove the dead tag and let it retry. */
+		sc.onerror = function () {
+			if (sc.parentNode) { sc.parentNode.removeChild(sc); }
+			if (fail) { fail(); }
+		};
 		(D.head || D.documentElement).appendChild(sc);
 	}
 
@@ -345,7 +351,7 @@
 			loadScript(CFG.matrixSrc, function () {
 				loading = false;
 				if (W.DCCSeasonsMatrix) { open(); }
-			});
+			}, function () { loading = false; }); /* the next 5 taps try again */
 		}
 	}
 

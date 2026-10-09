@@ -4294,7 +4294,9 @@
 			 * passing in a frame timestamp from one caller and something else
 			 * from another would let one of them disable the other. */
 			var now = (W.performance && performance.now) ? performance.now() : +new Date();
-			if (!CFG.layer || D.body.contains(cv) || remounts >= 20 || now < remountNext) { return; }
+			if (!CFG.layer || D.body.contains(cv) || now < remountNext) { return; }
+			/* Out of re-mounts: stop drawing into a canvas nobody can see. */
+			if (remounts >= 20) { setRunning(); return; }
 			remountNext = now + 1000;
 			remounts++;
 			/* The old margin correction belongs to the old layout; carrying it
@@ -4477,7 +4479,10 @@
 		 * running then, or ensureMounted() could never put it back. */
 		var onScreen = true;
 		function setRunning() {
-			running = !D.hidden && !reduced() && (onScreen || !D.body.contains(cv));
+			/* ...but only while a re-mount is still possible: in front mode
+			 * (no CFG.layer) nothing re-mounts, and after the 20th attempt
+			 * nothing will, so a removed canvas stops the loop for good. */
+			running = !D.hidden && !reduced() && (onScreen || (!D.body.contains(cv) && !!CFG.layer && remounts < 20));
 			if (running) { play(); }
 		}
 		D.addEventListener('visibilitychange', setRunning);

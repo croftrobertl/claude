@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.6.0
+Stable tag: 4.6.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.6.1 =
+Fixes from a self-audit. Nothing looks different, and no setting or stored
+data changes. Rollback: reinstall the 4.6.0 zip.
+
+* The New Year's logo egg no longer has "2027" written into it: its rain
+  digits, its finale and its reduced-motion banner all spell the year being
+  counted toward, from the visitor's own clock. 4.6.0 would have shown
+  "2027" again at New Year's 2028.
+* The Theme guide showed the New Year's egg finale as the word "YEAR"; it
+  now shows the year.
+* If the logo egg's script fails to download (a patchy phone connection),
+  the next five taps try again; before, the egg stayed dead until the page
+  was reloaded.
+* If a page script removes the effects canvas and it cannot be put back,
+  the plugin now stops drawing instead of drawing into an invisible canvas
+  for the rest of the visit.
 
 = 4.6.0 =
 Lighter, looking exactly the same (Rob, 2026-10-06). Rollback: reinstall

@@ -152,6 +152,19 @@ const QUIET = c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; };
     } finally { await ses.close(); }
   }
 
+  console.log('\n  --- front mode: a removed canvas cannot come back, so the loop stops ---');
+  {
+    const ses = await boot(['--theme=halloween', '--ambient=0'], QUIET);
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForTimeout(1500);
+      await ses.page.evaluate(() => { const c = document.querySelector('canvas.dcc-seasons-canvas'); c.parentNode.removeChild(c); });
+      await ses.page.waitForTimeout(600);
+      const after = await framesIn(ses.page, 2000);
+      ok(after === 0, 'no repaints into a detached canvas', `${after}`);
+    } finally { await ses.close(); }
+  }
+
   console.log('\n  --- reduced motion: as before, no engine ---');
   {
     const ses = await boot(['--theme=halloween', '--ambient=0'], QUIET, { reducedMotion: 'reduce' });

@@ -28,6 +28,22 @@
 			cx.restore();
 		}
 	};
+	/* 'YEAR' is a token, in glyphs[] and as the finale: the year the rain
+	 * counts toward — this one until June, the next from July — so New
+	 * Year's never shows last year's digits. Read from the visitor's clock,
+	 * like the schedule, so cached HTML stays date-agnostic. */
+	function targetYear() {
+		var d = new Date();
+		return d.getFullYear() + (d.getMonth() >= 6 ? 1 : 0);
+	}
+	function expand(list) {
+		var out = [];
+		for (var i = 0; i < list.length; i++) {
+			if (list[i] === 'YEAR') { out.push.apply(out, String(targetYear()).split('')); }
+			else { out.push(list[i]); }
+		}
+		return out;
+	}
 	function paint(cx, g, x, y, size) {
 		if (g.charCodeAt(0) === 64) {
 			var d = DRAWN[g.slice(1)];
@@ -128,7 +144,7 @@
 			box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:82%;padding:26px 34px;text-align:center;border:2px solid ' + colors[0] + ';border-radius:12px;background:rgba(0,0,0,.72);color:#fff;font-family:monospace;pointer-events:none;';
 			var g = D.createElement('div');
 			g.style.cssText = 'font-size:42px;line-height:1.35;';
-			g.textContent = usable(egg.glyphs || []).filter(function (q) { return q.charCodeAt(0) !== 64; }).slice(0, 6).join(' ');
+			g.textContent = usable(expand(egg.glyphs || [])).filter(function (q) { return q.charCodeAt(0) !== 64; }).slice(0, 6).join(' ');
 			var t = D.createElement('div');
 			t.style.cssText = 'margin-top:10px;font-size:18px;color:' + colors[0] + ';';
 			t.textContent = (i18n.banner || 'Seasonal mode') + (opts.label ? ': ' + opts.label : '');
@@ -148,7 +164,7 @@
 			cv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
 			ov.appendChild(cv);
 			var cx = cv.getContext('2d');
-			var glyphs = usable(egg.glyphs || ['0', '1']);
+			var glyphs = usable(expand(egg.glyphs || ['0', '1']));
 			var up = egg.dir === 'up';
 			var glitch = !!egg.glitch;
 			var vw, vh, fontSize, nCols, colW, drops, speeds, colColors;
@@ -165,10 +181,7 @@
 				oc.width = nCols; oc.height = rows;
 				var ox = oc.getContext('2d', { willReadFrequently: true });
 				var text = finChar;
-				if (text === 'YEAR') {
-					var nowd = new Date();
-					text = String(nowd.getFullYear() + (nowd.getMonth() >= 6 ? 1 : 0));
-				}
+				if (text === 'YEAR') { text = String(targetYear()); }
 				ox.textAlign = 'center';
 				ox.textBaseline = 'middle';
 				ox.font = Math.round(text.length > 2 ? rows * 0.52 : rows * 0.92) + 'px sans-serif';
