@@ -300,11 +300,14 @@
     min-width: 0;
     margin: 0;
 }
-/* .mphbac-filter-label: 600, #111, centred, at the filter's 0.9em of the
-   public root's 18px. Pinned in px because the staff root is 15px. */
+/* The public Check-in / Check-out labels AS THEY RENDER ON LIVE: 19px / 600
+   / #111, centred — measured by the Website Director on /cottages/ at 375px
+   and 1280px. 0.43.1 set 16.2px, derived from widget.css's 0.9em of 18px;
+   like the fields, the live value comes from the placement's controls, not
+   from the stylesheet. Pinned in px because the staff root is 15px. */
 .mphbac-staff-field-label {
     color: #111111;
-    font-size: 16.2px;
+    font-size: 19px;
     font-weight: 600;
     text-align: center;
 }
@@ -859,6 +862,16 @@
        right offset, plus its width, plus breathing room. The padding stays
        symmetric because the header centres its title. */
     padding: 12px calc(12px + 46px + 8px);
+    /* THE HEADER MUST CONTAIN THE X VERTICALLY TOO (0.43.2). The X is 46px,
+       absolutely centred, so it adds nothing to the header's height — which
+       came only from the padding and the title: 12 + 22.8 + 12 + 1 ≈ 48px
+       on a desktop, but 10 + 22.8 + 10 + 1 ≈ 44px on a phone (Rob's
+       screenshot measures ~40). There the circle crossed both the sheet's top
+       edge and the header rule. Pre-existing since the phone padding of
+       0.39.0; no test measured the X against the header at phone width.
+       Written as the arithmetic: the button, 8px above and below, the 1px
+       rule (border-box). A two-line title still grows the header past it. */
+    min-height: calc(46px + 2 * 8px + 1px);
     border-bottom: 1px solid #e0e0e0;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title {
