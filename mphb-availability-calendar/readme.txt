@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.1
+Stable tag: 0.43.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.43.2 =
+* **"View photo ID" opens the photo again.** It was opening a blank tab for every booking, because the board did not recognise the way MotoPress stores the photo's location. Photos taken on an iPhone (HEIC) now show in the tab too, instead of downloading. If a photo really is missing, the tab now says "This photo could not be found." instead of staying blank.
+* **The booking popup's close button no longer sticks out of its header** on a phone.
+* The staff board's "Show" and "Go to date" labels are now the same size as the Check-in / Check-out labels on /cottages/.
 
 = 0.43.1 =
 * **The staff board's controls now look exactly like the public calendar's.** The arrows, the month label and Today sit in the same centred row as on /cottages/, and the Show and Go to date fields are the same gold rounded fields, with their labels above them. The date field had been taking the theme's grey style instead.
