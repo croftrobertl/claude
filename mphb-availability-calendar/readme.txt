@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.3
+Stable tag: 0.43.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.43.4 =
+* **A two-digit year now works.** Typing a date the way the hint shows it — for example 10/12/26 — used to give the year 26 AD on a desktop, and Show then did nothing. The year now becomes 2026 as soon as you leave the field (or press Tab or Enter), in the two date fields and in the booking popup.
+* **When a date can't be used, the calendar says so.** If Show is pressed with a date before today, or with a date that wasn't fully entered, "Please check the dates." appears under the fields instead of nothing happening. The booking popup shows the same message.
 
 = 0.43.3 =
 * **The staff board always opens on Monthly**, on every device, every time. A period picked from the menu lasts until the page is left or reloaded; nothing is remembered any more, and the old remembered choice is cleared.
