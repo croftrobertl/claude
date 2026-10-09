@@ -37,6 +37,20 @@
     var OLD_PREF_KEY = 'mphbacStaffView';
     var PERIODS = ['day', 'week', 'month', 'year'];
     var SWIPE_MIN_PX = 60;
+    // 0.44.0
+    var SOURCES = ['direct', 'airbnb', 'booking', 'vrbo', 'other'];
+    var REFRESH_MS = 3 * 60 * 1000;           // auto-refresh while visible
+    var REFRESH_RETRY_MS = 30 * 1000;         // a skipped refresh tries again
+    var LONG_PRESS_MS = 500;
+    var HOVER_DELAY_MS = 250;
+    // The one-shot token-reload guard: the ONLY thing this board keeps in
+    // sessionStorage, and only a timestamp. Never guest data.
+    var RELOAD_GUARD = 'mphbacStaffReload';
+    var RELOAD_GUARD_MS = 10 * 60 * 1000;
+    // The view carried across that one reload, in the URL fragment — not in
+    // storage — and removed the moment it is read back, so a reload the USER
+    // makes still opens on Monthly.
+    var VIEW_HASH = 'mphbac-view=';
 
     function init(root) {
         if (!root || root.dataset.staffInit === '1') return;
@@ -53,6 +67,10 @@
         var todayBtn = root.querySelector('.mphbac-staff-today');
         var periodSel = root.querySelector('.mphbac-staff-period');
         var gotoEl   = root.querySelector('.mphbac-staff-goto');
+        var tilesEl  = root.querySelector('.mphbac-staff-tiles');
+        var filtersEl = root.querySelector('.mphbac-staff-filters');
+        var updatedEl = root.querySelector('.mphbac-staff-updated');
+        var previewEl = root.querySelector('.mphbac-staff-preview');
         var legendEl = root.querySelector('.mphbac-staff-legend');
         var agendaEl = root.querySelector('.mphbac-staff-agenda');
         var gridEl   = root.querySelector('.mphbac-staff-grid');
@@ -73,7 +91,13 @@
             period: null,              // 'day' | 'week' | 'month' | 'year'
             anchor: config.today,      // a date inside the window, 'YYYY-MM-DD'
             req:   0,                  // last-write-wins guard for month loads
-            cache: {}                  // 'from|to' -> payload (session only)
+            cache: {},                 // 'from|to' -> payload (session only)
+            // Filters (0.44.0) live in memory only: Cottage (room type ids),
+            // Source (keys), Pets, Arrivals or departures only.
+            filters: { cottages: {}, sources: {}, pets: false, moves: false },
+            todayData: null,           // the payload covering the real today, for the tiles
+            todayReq: 0,
+            lastRefresh: 0
         };
         var lastTrigger = null;
         var mq = window.matchMedia ? window.matchMedia(NARROW) : null;
@@ -100,7 +124,12 @@
                     e.nonce = r.headers.get('X-MPHBAC-Staff') === 'nonce';
                     throw e;
                 }
-                return r.json();
+                return r.json().then(function (json) {
+                    // A request that worked: any earlier token reload did its
+                    // job, so the next expiry (a day later) may reload again.
+                    if (json && json.success) clearReloadGuard();
+                    return json;
+                });
             });
         }
 
@@ -184,7 +213,8 @@
 
                 // ---- rendering dispatch ---------------------------------------------
 
-        function render() {
+        function render(opts) {
+            opts = opts || {};
             var w = windowOf(state.anchor, state.period);
             renderTitle(w);
             // An arrow whose next window lies wholly outside the cap would
@@ -196,15 +226,21 @@
             // a time is a cache hit rather than a request per tap.
             var load = (state.period === 'day') ? windowOf(state.anchor, 'month') : w;
             ensureRange(load.from, load.to, function (data) {
-                if (state.period === 'day') renderAgenda(data);
-                else renderChart(data, w);
+                buildCottageFilter(data);
+                if (state.period === 'day') {
+                    renderAgenda(data);
+                    if (state.restoreScroll) { window.scrollTo(0, state.restoreScroll.y); state.restoreScroll = null; }
+                } else {
+                    renderChart(data, w, opts);
+                }
+                renderTiles(data, w);
                 // Judged against what is ON SCREEN, not the payload's own flag:
                 // a week served from a cached, clamped year may itself be
                 // entirely inside the cap.
                 if ((data.from && w.from < data.from) || (data.to && w.to > data.to)) {
                     say(S.partial || '');
                 }
-            });
+            }, opts);
         }
 
         // A cached payload covering the whole window serves it: bookings
@@ -220,11 +256,13 @@
             return null;
         }
 
-        function ensureRange(from, to, cb) {
+        function ensureRange(from, to, cb, opts) {
+            opts = opts || {};
             var seq = ++state.req;
             var hit = cachedCovering(from, to);
             if (hit) { say(''); cb(hit); return; }
-            say(S.loading || 'Loading…');
+            // An auto-refresh is silent: no "Loading…" flash every 3 minutes.
+            if (!opts.quiet) say(S.loading || 'Loading…');
             gridEl.setAttribute('aria-busy', 'true');
             agendaEl.setAttribute('aria-busy', 'true');
             post('mphbac_staff_month', { from: from, to: to }).then(function (json) {
@@ -232,9 +270,11 @@
                 if (!json || !json.success || !json.data) { say(S.error, true); return; }
                 state.cache[from + '|' + to] = json.data;
                 say('');
+                markUpdated();
                 cb(json.data);
             }).catch(function (err) {
                 if (seq !== state.req) return;
+                if (tokenReload(err)) return;
                 say(failureText(err), true);
             }).then(function () {
                 if (seq === state.req) {
@@ -242,6 +282,69 @@
                     agendaEl.removeAttribute('aria-busy');
                 }
             });
+        }
+
+        // ---- filters (0.44.0) -------------------------------------------------
+
+        function anyKey(o) { for (var k in o) { if (o[k]) return true; } return false; }
+        function sourceOf(b) {
+            var k = b.sourceKey || (b.imported ? 'other' : 'direct');
+            return SOURCES.indexOf(k) >= 0 ? k : 'other';
+        }
+        // Does a booking pass the active filters, for the window `w` shown?
+        // Cottage, Source and Pets are properties of the booking; "Arrivals or
+        // departures only" keeps a booking that checks in or out INSIDE w.
+        function passes(b, w) {
+            var f = state.filters;
+            if (anyKey(f.cottages) && !(b.cottages || []).some(function (c) { return f.cottages[c.roomTypeId]; })) return false;
+            if (anyKey(f.sources) && !f.sources[sourceOf(b)]) return false;
+            if (f.pets && !b.pets) return false;
+            if (f.moves && !((b.checkin >= w.from && b.checkin <= w.to) || (b.checkout >= w.from && b.checkout <= w.to))) return false;
+            return true;
+        }
+        function cottagesShown(data) {
+            var f = state.filters;
+            return (data.cottages || []).filter(function (c) { return !anyKey(f.cottages) || f.cottages[c.id]; });
+        }
+        function filterCount() {
+            var f = state.filters, n = 0;
+            for (var k in f.cottages) if (f.cottages[k]) n++;
+            for (var j in f.sources) if (f.sources[j]) n++;
+            return n + (f.pets ? 1 : 0) + (f.moves ? 1 : 0);
+        }
+
+        // TURNOVERS (0.44.0): a day on which one booking checks out of a
+        // cottage and another checks in. Returns roomTypeId -> date -> {out, in}.
+        function turnovers(bookings) {
+            var outs = {}, ins = {}, out = {};
+            bookings.forEach(function (b) {
+                (b.cottages || []).forEach(function (c) {
+                    ((outs[c.roomTypeId] = outs[c.roomTypeId] || {})[b.checkout] = outs[c.roomTypeId][b.checkout] || []).push(b);
+                    ((ins[c.roomTypeId] = ins[c.roomTypeId] || {})[b.checkin] = ins[c.roomTypeId][b.checkin] || []).push(b);
+                });
+            });
+            Object.keys(outs).forEach(function (t) {
+                Object.keys(outs[t]).forEach(function (d) {
+                    var o = outs[t][d], i = (ins[t] || {})[d];
+                    if (!i) return;
+                    var a = o.filter(function (x) { return i.some(function (y) { return y.id !== x.id; }); });
+                    if (!a.length) return;
+                    (out[t] = out[t] || {})[d] = { out: a[0], 'in': i.filter(function (y) { return y.id !== a[0].id; })[0] };
+                });
+            });
+            return out;
+        }
+
+        // Text widths for the short-bar rule, measured in the board's own face.
+        var measureCtx = null;
+        function textW(str, font) {
+            if (!measureCtx) {
+                var c = document.createElement('canvas');
+                measureCtx = c.getContext && c.getContext('2d');
+                if (!measureCtx) return str.length * 8;
+            }
+            measureCtx.font = font;
+            return measureCtx.measureText(str).width;
         }
 
         function renderTitle(w) {
@@ -319,8 +422,15 @@
 
                 // ---- TAPE CHART -----------------------------------------------------
 
-        function renderChart(data, w) {
+        function renderChart(data, w, opts) {
+            opts = opts || {};
+            // A refresh keeps the reader exactly where they were (0.44.0).
+            var keepX = gridEl.scrollLeft, keepY = gridEl.scrollTop;
             gridEl.textContent = '';
+            // Only what passes the filters is drawn (0.44.0); the Cottage
+            // filter also removes the other cottages' rows.
+            var shown = (data.bookings || []).filter(function (b) { return passes(b, w); });
+            var turns = turnovers(shown);
 
             var period = state.period;
             var days = daysBetween(w.from, w.to);
@@ -332,7 +442,7 @@
 
             // bars per cottage (room type id -> [bar])
             var barsByType = {};
-            (data.bookings || []).forEach(function (b) {
+            shown.forEach(function (b) {
                 if (!b.checkin || !b.checkout) return;
                 var contLeft = b.checkin < first;
                 var contRight = b.checkout > last;
@@ -409,7 +519,8 @@
 
             // cottage rows
             var row = 3;
-            (data.cottages || []).forEach(function (c, ci) {
+            var barFont = getComputedStyle(gridEl).fontFamily || 'sans-serif';
+            cottagesShown(data).forEach(function (c, ci) {
                 var bars = barsByType[c.id] || [];
                 var lanes = assignLanes(bars);
 
@@ -439,10 +550,29 @@
                 });
 
                 bars.forEach(function (bar) {
-                    var el = barEl(bar, c);
+                    var el = barEl(bar, c, dayW, barFont);
                     el.style.gridColumn = (2 + bar.start) + ' / ' + (2 + bar.end);
                     el.style.gridRow = String(row + bar.lane);
                     chart.appendChild(el);
+                });
+
+                // The turnover mark (0.44.0): on the day one guest leaves this
+                // cottage and the next arrives — where, with whole-bar source
+                // colours, nothing else marks the hand-over any more.
+                var t = turns[c.id] || {};
+                Object.keys(t).forEach(function (d) {
+                    if (idx[d] === undefined) return;
+                    var m = document.createElement('div');
+                    m.className = 'mphbac-staff-turn';
+                    m.setAttribute('data-day', d);
+                    var tip = (S.turnoverTip || 'Turnover') + ' — ' + (t[d].out.guestName || ('#' + t[d].out.id))
+                        + ' → ' + ((t[d]['in'] || {}).guestName || '');
+                    m.title = tip;
+                    m.setAttribute('aria-label', tip);
+                    m.setAttribute('role', 'img');
+                    m.style.gridColumn = (2 + 2 * idx[d]) + ' / span 2';
+                    m.style.gridRow = row + ' / span ' + lanes;
+                    chart.appendChild(m);
                 });
 
                 row += lanes;
@@ -463,11 +593,23 @@
 
             gridEl.appendChild(chart);
 
-            // Open on the anchor: today when the period holds it, else the
-            // date the board was sent to (Go to date) or the period's start.
-            scrollToDay(state.anchor);
+            if (state.restoreScroll) {
+                // Back from the one token reload: exactly where the reader was.
+                gridEl.scrollLeft = state.restoreScroll.x;
+                window.scrollTo(0, state.restoreScroll.y);
+                state.restoreScroll = null;
+                followScroll();
+            } else if (opts.keepScroll) {
+                gridEl.scrollLeft = keepX;
+                gridEl.scrollTop = keepY;
+                followScroll();
+            } else {
+                // Open on the anchor: today when the period holds it, else the
+                // date the board was sent to (Go to date) or the period's start.
+                scrollToDay(state.anchor);
+            }
 
-            if (!(data.bookings || []).length) say(S.empty || '');
+            if (!shown.length) say(S.empty || '');
         }
 
         // WEEKLY FILLS THE SCREEN (Rob's choice, 2026-10-08). Seven days share
@@ -512,49 +654,139 @@
             return Math.max(1, laneEnds.length);
         }
 
-        function barEl(bar, cottage) {
+        // THE BAR (0.44.0, Rob's option C). The WHOLE bar is the source's
+        // colour; the check-in and check-out days carry small white IN / OUT
+        // tags in that colour; pending bookings keep their stripes; imports
+        // keep their letter badge; a booking that passes the pet rule gets a
+        // paw. So the source never rests on colour alone.
+        //
+        // WHAT FITS, measured rather than guessed (Rob, conflict 2): today's
+        // name rule — 1 night initials, 2–3 "First L.", 4+ the full name —
+        // wherever it fits beside the tags, badge and paw; else the nights
+        // count; else nothing (the name is always in the preview, the sheet,
+        // the title and the aria-label). Never an ellipsis. On a bar too short
+        // for the words, the tags shrink to ▸ / ◂ (conflict 2, the 1-night
+        // case), and the name is preferred over word tags.
+        function barEl(bar, cottage, dayW, family) {
             var b = bar.b;
             var btn = document.createElement('button');
             btn.type = 'button';
             var nights = nightsBetween(b.checkin, b.checkout);
-            var cls = 'mphbac-staff-bar';
+            var cls = 'mphbac-staff-bar is-src-' + sourceOf(b);
             if (b.status && b.status !== 'confirmed') cls += ' is-pending';
             if (b.imported) cls += ' is-imported';
             if (bar.contLeft) cls += ' is-cont-left';
             if (bar.contRight) cls += ' is-cont-right';
-            if (bar.end - bar.start > 2) cls += ' has-body';
             btn.className = cls;
             btn.setAttribute('data-booking-id', String(b.id));
 
-            // Segments: the SAME state classes the legend swatches use.
-            if (!bar.contLeft) btn.appendChild(seg('in'));
-            btn.appendChild(seg('stay'));
-            if (!bar.contRight) btn.appendChild(seg('out'));
+            var hasIn = !bar.contLeft, hasOut = !bar.contRight;
+            var px = (bar.end - bar.start) * (dayW || 44) / 2 - 2;        // the bar's margins
+            var tagFont = '700 10px ' + family, textFont = '600 13px ' + family;
+            // Full layout: 6px label padding, 4px gaps. Compact (arrows): 2px
+            // and 2px, so a one-night bar on a phone's ~31px day still fits
+            // both arrows. These numbers are the CSS's (.is-compact).
+            var lay = function (pad, gap) {
+                var r = px - 2 * pad;
+                if (b.imported) r -= 16 + gap;
+                if (b.pets) r -= 14 + gap;
+                return { room: r, gap: gap };
+            };
+            var full = lay(6, 4), tight = lay(2, 2);
+            var tagW = function (t, gap) { return textW(t, tagFont) + 6 + gap; };
+            var words = (hasIn ? tagW(S.tagIn || 'IN', full.gap) : 0) + (hasOut ? tagW(S.tagOut || 'OUT', full.gap) : 0);
+            var arrows = (hasIn ? tagW('▸', tight.gap) : 0) + (hasOut ? tagW('◂', tight.gap) : 0);
+            var who = b.guestName || ('#' + b.id);
+            var name = nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who));
+            var count = (S.nightsShort || '{n}n').replace('{n}', String(nights));
+            var fitsFull = function (t) { return t !== '' && textW(t, textFont) <= full.room - words; };
+            var fitsTight = function (t) { return t !== '' && textW(t, textFont) <= tight.room - arrows; };
+            var compact, text;
+            if (fitsFull(name)) { compact = false; text = name; }
+            else if (fitsTight(name)) { compact = true; text = name; }
+            else if (fitsFull(count)) { compact = false; text = count; }
+            else if (fitsTight(count)) { compact = true; text = count; }
+            else { compact = full.room < words; text = ''; }
+            // THE SLIVER RULE: a bar that is only part of a day wide (a stay
+            // starting on the window's last afternoon) may not hold even the
+            // arrows and the badge. Then pieces drop, least important first —
+            // the paw, the OUT arrow, the badge, the IN arrow — until the rest
+            // fits; never a clipped one. The SOURCE BADGE outlasts the OUT
+            // arrow: on a one-night bar the badge is the only non-colour mark
+            // of the source (the Website Director's requirement), while the
+            // bar's own end — and the turnover mark — still show the check-out.
+            // Source and pets stay in the preview, the sheet and the bar's
+            // description whatever drops.
+            var showBadge = !!b.imported, showPaw = !!b.pets;
+            if (compact && !text) {
+                var used = function () {
+                    return (hasIn ? tagW('▸', tight.gap) : 0) + (hasOut ? tagW('◂', tight.gap) : 0)
+                        + (showBadge ? 16 + tight.gap : 0) + (showPaw ? 14 + tight.gap : 0);
+                };
+                var avail = px - 4;
+                if (used() > avail) showPaw = false;
+                if (used() > avail) hasOut = false;
+                if (used() > avail) showBadge = false;
+                if (used() > avail) hasIn = false;
+            }
+            if (compact) btn.classList.add('is-compact');
 
             var label = document.createElement('span');
             label.className = 'mphbac-staff-bar-label';
-            if (b.imported) label.appendChild(otaBadge(b));
-            var text = document.createElement('span');
-            text.className = 'mphbac-staff-bar-text';
-            var who = b.guestName || ('#' + b.id);
-            // Deliberate short forms by available width (title/aria carry the
-            // full name; the dialog shows everything): 1 night = initials,
-            // 2–3 nights = "First L.", 4+ nights = the full name.
-            text.textContent = nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who));
-            label.appendChild(text);
+            if (hasIn) label.appendChild(tag('in', compact ? '▸' : (S.tagIn || 'IN')));
+            if (showBadge) label.appendChild(otaBadge(b));
+            if (showPaw) label.appendChild(paw());
+            var tx = document.createElement('span');
+            tx.className = 'mphbac-staff-bar-text';
+            tx.textContent = text;
+            label.appendChild(tx);
+            if (hasOut) label.appendChild(tag('out', compact ? '◂' : (S.tagOut || 'OUT')));
             btn.appendChild(label);
 
             var desc = describe(b, cottage);
             btn.title = desc;
             btn.setAttribute('aria-label', desc);
-            btn.addEventListener('click', function () { openDetail(b.id, btn); });
+            btn.addEventListener('click', function (e) {
+                // A long-press opened the preview; that tap must not ALSO open
+                // the sheet (the brief: "a long-press must not also open it").
+                if (suppressClick) { suppressClick = false; e.preventDefault(); return; }
+                openDetail(b.id, btn);
+            });
+            bindPreview(btn, b, cottage);
             return btn;
         }
 
-        function seg(kind) {
-            var s = document.createElement('span');
-            s.className = 'mphbac-staff-seg is-' + kind;
-            return s;
+        function tag(kind, text) {
+            var t = document.createElement('span');
+            t.className = 'mphbac-staff-tag is-' + kind;
+            t.setAttribute('aria-hidden', 'true');
+            t.textContent = text;
+            return t;
+        }
+
+        // A paw, drawn with DOM APIs — never markup in a string.
+        function paw() {
+            var NS = 'http://www.w3.org/2000/svg';
+            var svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('class', 'mphbac-staff-paw');
+            svg.setAttribute('aria-hidden', 'true');
+            svg.setAttribute('focusable', 'false');
+            [[6, 10, 2.3], [10, 5.6, 2.3], [14, 5.6, 2.3], [18, 10, 2.3]].forEach(function (p) {
+                var c = document.createElementNS(NS, 'circle');
+                c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]); c.setAttribute('r', p[2]);
+                svg.appendChild(c);
+            });
+            var e = document.createElementNS(NS, 'ellipse');
+            e.setAttribute('cx', '12'); e.setAttribute('cy', '16'); e.setAttribute('rx', '5.2'); e.setAttribute('ry', '4.4');
+            svg.appendChild(e);
+            return svg;
+        }
+
+        // The source by name, from the stable key — never colour alone.
+        function sourceName(b) {
+            var k = sourceOf(b);
+            return S['src' + k.charAt(0).toUpperCase() + k.slice(1)] || k;
         }
 
         function otaBadge(b) {
@@ -574,27 +806,87 @@
             var n = nightsBetween(b.checkin, b.checkout);
             parts.push(shortDate(b.checkin) + ' → ' + shortDate(b.checkout) + ' (' + n + ' ' + (n === 1 ? (S.night || 'night') : (S.nights || 'nights')) + ')');
             if (b.statusLabel && b.status !== 'confirmed') parts.push(b.statusLabel);
-            if (b.imported && b.source && b.source.ota) parts.push((S.via || 'via') + ' ' + b.source.ota);
+            parts.push(sourceName(b));
+            if (b.pets) parts.push(S.pets || 'Pets');
             return parts.join(' — ');
         }
 
         // ---- AGENDA -----------------------------------------------------------
 
-        function renderAgenda(data) {
-            agendaEl.textContent = '';
-            var day = state.anchor;
+        // The day's lists, as the tiles count them — one function for both,
+        // so a tile and its list can never disagree.
+        function dayGroups(bookings, day) {
             var groups = { 'in': [], 'out': [], 'stay': [] };
-            (data.bookings || []).forEach(function (b) {
-                if (!b.checkin || !b.checkout) return;
+            var w = { from: day, to: day };
+            bookings.forEach(function (b) {
+                if (!b.checkin || !b.checkout || !passes(b, w)) return;
                 if (b.checkin === day) groups['in'].push(b);
                 else if (b.checkout === day) groups['out'].push(b);
                 else if (b.checkin < day && b.checkout > day) groups['stay'].push(b);
             });
             Object.keys(groups).forEach(function (k) { groups[k].sort(byCottage); });
+            groups.turn = dayTurnovers(groups, day);
+            return groups;
+        }
 
+        // Turnovers on one day, one entry per cottage. Its guests stay listed
+        // under Arriving and Departing too, so the counts match the lists.
+        function dayTurnovers(groups, day) {
+            var t = turnovers(groups['in'].concat(groups['out'])), out = [];
+            Object.keys(t).forEach(function (typeId) {
+                if (t[typeId][day]) out.push({ typeId: typeId, out: t[typeId][day].out, 'in': t[typeId][day]['in'] });
+            });
+            return out.sort(function (a, b) { return byCottage(a.out, b.out); });
+        }
+
+        function renderAgenda(data) {
+            agendaEl.textContent = '';
+            var day = state.anchor;
+            var groups = dayGroups(data.bookings || [], day);
+
+            agendaEl.appendChild(turnGroup(groups.turn));
             agendaEl.appendChild(group('in', S.arrivals || 'Arriving', groups['in'], S.noArrivals || ''));
             agendaEl.appendChild(group('out', S.departures || 'Departing', groups['out'], S.noDepartures || ''));
             agendaEl.appendChild(group('stay', S.inHouse || 'In house', groups['stay'], S.noInHouse || ''));
+        }
+
+        // "Cottage 22: Smith out → Jones in" — plain text, built from the
+        // payload with textContent.
+        function turnGroup(turns) {
+            var sec = document.createElement('section');
+            sec.className = 'mphbac-staff-group is-turn';
+            var head = document.createElement('div');
+            head.className = 'mphbac-staff-group-head';
+            head.appendChild(document.createTextNode(S.turnovers || 'Turnovers'));
+            var count = document.createElement('span');
+            count.className = 'mphbac-staff-group-count';
+            count.textContent = String(turns.length);
+            head.appendChild(count);
+            sec.appendChild(head);
+            if (!turns.length) {
+                var p = document.createElement('p');
+                p.className = 'mphbac-staff-group-empty';
+                p.textContent = S.noTurnovers || '';
+                sec.appendChild(p);
+                return sec;
+            }
+            turns.forEach(function (t) {
+                var c = (t.out.cottages || []).filter(function (x) { return String(x.roomTypeId) === String(t.typeId); })[0] || {};
+                var line = document.createElement('p');
+                line.className = 'mphbac-staff-turnline';
+                line.textContent = (S.turnoverLine || '{cottage}: {out} out → {in} in')
+                    .replace('{cottage}', c.number ? (S.cottageWord || 'Cottage') + ' ' + c.number : (c.title || ''))
+                    .replace('{out}', lastName(t.out.guestName || ('#' + t.out.id)))
+                    .replace('{in}', lastName((t['in'] || {}).guestName || ('#' + (t['in'] || {}).id)));
+                sec.appendChild(line);
+            });
+            return sec;
+        }
+
+        // "Ann Smith" -> "Smith"; a single word or a booking number passes through.
+        function lastName(full) {
+            var w = String(full || '').trim().split(/\s+/);
+            return w.length > 1 && w[0].charAt(0) !== '#' ? w[w.length - 1] : w[0];
         }
 
         function byCottage(a, b) {
@@ -628,7 +920,7 @@
         function item(b, kind) {
             var btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'mphbac-staff-item';
+            btn.className = 'mphbac-staff-item is-src-' + sourceOf(b);
             btn.setAttribute('data-booking-id', String(b.id));
 
             var cot = document.createElement('span');
@@ -652,6 +944,7 @@
             var name = document.createElement('span');
             name.className = 'mphbac-staff-item-name';
             if (b.imported) name.appendChild(otaBadge(b));
+            if (b.pets) name.appendChild(paw());
             name.appendChild(document.createTextNode(b.guestName || ('#' + b.id)));
             main.appendChild(name);
 
@@ -706,6 +999,7 @@
                 renderDetail(json.data);
             }).catch(function (err) {
                 if (seq !== detailSeq) return;
+                if (tokenReload(err)) return;
                 sheetBody.textContent = failureText(err);
             });
         }
@@ -726,6 +1020,30 @@
                     var el = rowsSection(pair[0], pair[1], d.id);
                     if (el) sheetBody.appendChild(el);
                 });
+            // OPEN IN WP-ADMIN (0.44.0): the server sends the link ONLY to a
+            // logged-in visitor with the staff capability who may edit this
+            // booking; its absence is the decision. Same-origin http(s) only.
+            var admin = safeUrl(d.adminUrl);
+            if (admin) {
+                var p = document.createElement('p');
+                p.className = 'mphbac-staff-admin';
+                var a = document.createElement('a');
+                a.className = 'mphbac-staff-adminlink';
+                a.href = admin;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = S.openAdmin || 'Open in WP-Admin';
+                p.appendChild(a);
+                sheetBody.appendChild(p);
+            }
+        }
+
+        function safeUrl(u) {
+            if (typeof u !== 'string' || !u) return '';
+            try {
+                var x = new URL(u, window.location.href);
+                return (x.origin === window.location.origin && /^https?:$/.test(x.protocol)) ? x.href : '';
+            } catch (e) { return ''; }
         }
 
         function section(title) {
@@ -786,7 +1104,32 @@
         function addRow(dl, label, value, flags) {
             if (value === undefined || value === null || value === '') return;
             var dt = document.createElement('dt'); dt.textContent = label;
-            var dd = document.createElement('dd'); dd.textContent = String(value);
+            var dd = document.createElement('dd');
+            // TAP TO CALL / TEXT / EMAIL (0.44.0). The server sends a cleaned
+            // target beside the text as entered; it is checked again here and
+            // the links are built with DOM APIs. Anything else stays text.
+            var tel = flags && typeof flags.tel === 'string' && /^\+?\d{7,15}$/.test(flags.tel) ? flags.tel : '';
+            var mail = flags && typeof flags.email === 'string' && /^[^\s@<>"'()]+@[^\s@<>"'()]+\.[^\s@<>"'()]+$/.test(flags.email) ? flags.email : '';
+            if (tel) {
+                var call = document.createElement('a');
+                call.className = 'mphbac-staff-tel';
+                call.href = 'tel:' + tel;
+                call.textContent = String(value);
+                dd.appendChild(call);
+                var sms = document.createElement('a');
+                sms.className = 'mphbac-staff-sms';
+                sms.href = 'sms:' + tel;
+                sms.textContent = S.text || 'Text';
+                dd.appendChild(sms);
+            } else if (mail) {
+                var m = document.createElement('a');
+                m.className = 'mphbac-staff-mail';
+                m.href = 'mailto:' + mail;
+                m.textContent = String(value);
+                dd.appendChild(m);
+            } else {
+                dd.textContent = String(value);
+            }
             if (flags && flags.muted) {
                 dd.className = 'is-unknown';
                 dd.title = S.importedTip || '';
@@ -932,6 +1275,324 @@
             resizeT = setTimeout(render, 150);
         });
 
+        // ---- today tiles (0.44.0) ---------------------------------------------
+        // Arriving / leaving / in house / turnovers mean the REAL today (Rob,
+        // conflict 4), whatever period is on screen; "Booked" follows the
+        // period shown. All five respect the filters. Today's numbers come
+        // from the same dayGroups() the Daily lists use, so a tile and its list
+        // cannot disagree.
+        function renderTiles(data, w) {
+            if (!tilesEl) return;
+            var today = config.today;
+            var td = cachedCovering(today, today) || state.todayData;
+            if (!td) { ensureToday(function () { renderTiles(data, w); }); }
+            var g = td ? dayGroups(td.bookings || [], today) : null;
+            var pct = bookedPct(data, w);
+            tilesEl.textContent = '';
+            [
+                ['arriving', S.tileArriving, g ? g['in'].length : '…'],
+                ['leaving', S.tileLeaving, g ? g['out'].length : '…'],
+                ['inhouse', S.tileInHouse, g ? g.stay.length : '…'],
+                ['turnovers', S.tileTurnovers, g ? g.turn.length : '…'],
+                ['booked', S.tileBooked, pct === null ? '—' : pct + '%']
+            ].forEach(function (t) {
+                var tile = document.createElement('div');
+                tile.className = 'mphbac-staff-tile is-' + t[0];
+                var n = document.createElement('span');
+                n.className = 'mphbac-staff-tile-num';
+                n.textContent = String(t[2]);
+                var l = document.createElement('span');
+                l.className = 'mphbac-staff-tile-label';
+                l.textContent = t[1] || '';
+                tile.appendChild(n);
+                tile.appendChild(l);
+                if (t[0] === 'booked') tile.title = S.tileBookedTip || '';
+                tilesEl.appendChild(tile);
+            });
+        }
+
+        // The real today's data, for the tiles, when the period on screen
+        // does not cover it: its month, fetched once and cached like any other.
+        function ensureToday(cb) {
+            var today = config.today;
+            var m = windowOf(today, 'month');
+            var seq = ++state.todayReq;
+            post('mphbac_staff_month', { from: m.from, to: m.to }).then(function (json) {
+                if (seq !== state.todayReq || !json || !json.success || !json.data) return;
+                state.cache[m.from + '|' + m.to] = json.data;
+                state.todayData = json.data;
+                cb();
+            }).catch(function (err) { tokenReload(err); });
+        }
+
+        // % booked = booked cottage-nights ÷ (cottages × nights in the period),
+        // each cottage-night once however many bookings or channel blocks
+        // cover it, counting the visible statuses the payload carries.
+        function bookedPct(data, w) {
+            var from = data.from && data.from > w.from ? data.from : w.from;
+            var to = data.to && data.to < w.to ? data.to : w.to;
+            var nights = daysBetween(from, to);
+            var cots = cottagesShown(data);
+            if (!nights.length || !cots.length) return null;
+            var want = {};
+            cots.forEach(function (c) { want[c.id] = true; });
+            var taken = {}, n = 0;
+            (data.bookings || []).forEach(function (b) {
+                if (!passes(b, w)) return;
+                (b.cottages || []).forEach(function (c) {
+                    if (!want[c.roomTypeId]) return;
+                    nights.forEach(function (d) {
+                        if (d >= b.checkin && d < b.checkout && !taken[c.roomTypeId + '|' + d]) {
+                            taken[c.roomTypeId + '|' + d] = true;
+                            n++;
+                        }
+                    });
+                });
+            });
+            return Math.round(100 * n / (cots.length * nights.length));
+        }
+
+        // ---- the filters panel (0.44.0) ---------------------------------------
+        var cottageFilterBuilt = false;
+        function buildCottageFilter(data) {
+            if (cottageFilterBuilt || !filtersEl) return;
+            var fs = filtersEl.querySelector('.mphbac-staff-fgroup--cottage');
+            if (!fs || !(data.cottages || []).length) return;
+            cottageFilterBuilt = true;
+            data.cottages.forEach(function (c) {
+                var l = document.createElement('label');
+                l.className = 'mphbac-staff-check';
+                var i = document.createElement('input');
+                i.type = 'checkbox';
+                i.name = 'cottage';
+                i.value = String(c.id);
+                i.checked = !!state.filters.cottages[c.id];
+                l.appendChild(i);
+                l.appendChild(document.createTextNode((c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
+                fs.appendChild(l);
+            });
+        }
+
+        function readFilters() {
+            var f = { cottages: {}, sources: {}, pets: false, moves: false };
+            [].forEach.call(filtersEl.querySelectorAll('input[type=checkbox]'), function (i) {
+                if (!i.checked) return;
+                if (i.name === 'cottage') f.cottages[i.value] = true;
+                else if (i.name === 'source' && SOURCES.indexOf(i.value) >= 0) f.sources[i.value] = true;
+                else if (i.name === 'pets') f.pets = true;
+                else if (i.name === 'moves') f.moves = true;
+            });
+            state.filters = f;
+            showFilterCount();
+        }
+
+        function writeFilters() {
+            if (!filtersEl) return;
+            var f = state.filters;
+            [].forEach.call(filtersEl.querySelectorAll('input[type=checkbox]'), function (i) {
+                i.checked = i.name === 'cottage' ? !!f.cottages[i.value]
+                    : i.name === 'source' ? !!f.sources[i.value]
+                    : i.name === 'pets' ? f.pets : i.name === 'moves' ? f.moves : false;
+            });
+            showFilterCount();
+        }
+
+        function showFilterCount() {
+            var el = filtersEl && filtersEl.querySelector('.mphbac-staff-filters-count');
+            if (!el) return;
+            var n = filterCount();
+            el.hidden = !n;
+            el.textContent = n ? String(n) : '';
+            filtersEl.classList.toggle('is-active', n > 0);
+        }
+
+        if (filtersEl) {
+            filtersEl.addEventListener('change', function (e) {
+                if (!e.target || e.target.type !== 'checkbox') return;
+                readFilters();
+                render({ keepScroll: true });
+            });
+            var clearBtn = filtersEl.querySelector('.mphbac-staff-filters-clear');
+            if (clearBtn) clearBtn.addEventListener('click', function () {
+                state.filters = { cottages: {}, sources: {}, pets: false, moves: false };
+                writeFilters();
+                render({ keepScroll: true });
+            });
+        }
+
+        // ---- quick preview (0.44.0) -------------------------------------------
+        // Hover on a computer, long-press on a phone: name, cottage, dates,
+        // guests, source — from the data already on the board, with
+        // textContent. A long-press must not ALSO open the sheet.
+        var suppressClick = false;
+        var previewTimer = 0;
+        var previewFor = null;
+        var finePointer = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
+
+        function bindPreview(btn, b, cottage) {
+            btn.addEventListener('mouseenter', function () {
+                if (!finePointer || !finePointer.matches) return;
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(function () { showPreview(btn, b, cottage); }, HOVER_DELAY_MS);
+            });
+            btn.addEventListener('mouseleave', function () {
+                clearTimeout(previewTimer);
+                if (previewFor === btn) hidePreview();
+            });
+            var x0 = 0, y0 = 0;
+            btn.addEventListener('touchstart', function (e) {
+                suppressClick = false;
+                if (!e.touches || e.touches.length !== 1) return;
+                x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(function () {
+                    suppressClick = true;
+                    showPreview(btn, b, cottage);
+                }, LONG_PRESS_MS);
+            }, { passive: true });
+            btn.addEventListener('touchmove', function (e) {
+                var t = e.touches && e.touches[0];
+                if (t && (Math.abs(t.clientX - x0) > 10 || Math.abs(t.clientY - y0) > 10)) clearTimeout(previewTimer);
+            }, { passive: true });
+            ['touchend', 'touchcancel'].forEach(function (ev) {
+                btn.addEventListener(ev, function () { clearTimeout(previewTimer); }, { passive: true });
+            });
+            // The long-press's own menu / callout would cover the preview.
+            btn.addEventListener('contextmenu', function (e) { if (suppressClick) e.preventDefault(); });
+        }
+
+        function showPreview(btn, b, cottage) {
+            if (!previewEl) return;
+            previewEl.textContent = '';
+            var line = function (cls, text) {
+                if (!text) return;
+                var d = document.createElement('div');
+                d.className = cls;
+                d.textContent = text;
+                previewEl.appendChild(d);
+            };
+            var n = nightsBetween(b.checkin, b.checkout);
+            line('mphbac-staff-preview-name', b.guestName || ('#' + b.id));
+            line('mphbac-staff-preview-line', (cottage && cottage.title) || '');
+            line('mphbac-staff-preview-line', shortDate(b.checkin) + ' → ' + shortDate(b.checkout) + ' · '
+                + n + ' ' + (n === 1 ? (S.night || 'night') : (S.nights || 'nights')));
+            if (b.guests) line('mphbac-staff-preview-line', (S.guests || 'Guests') + ': ' + b.guests);
+            line('mphbac-staff-preview-line', (S.source || 'Source') + ': ' + sourceName(b));
+            if (b.pets) line('mphbac-staff-preview-line', S.pets || 'Pets');
+            if (b.status && b.status !== 'confirmed' && b.statusLabel) line('mphbac-staff-preview-line', b.statusLabel);
+            previewEl.hidden = false;
+            previewFor = btn;
+            var r = btn.getBoundingClientRect(), p = previewEl.getBoundingClientRect();
+            var top = r.top - p.height - 8;
+            if (top < 8) top = r.bottom + 8;
+            var left = Math.max(8, Math.min(r.left, window.innerWidth - p.width - 8));
+            previewEl.style.top = Math.round(top) + 'px';
+            previewEl.style.left = Math.round(left) + 'px';
+        }
+
+        function hidePreview() {
+            if (!previewEl || previewEl.hidden) return;
+            previewEl.hidden = true;
+            previewEl.textContent = '';
+            previewFor = null;
+        }
+        gridEl.addEventListener('scroll', hidePreview, { passive: true });
+        window.addEventListener('scroll', hidePreview, { passive: true });
+        document.addEventListener('touchstart', function (e) {
+            if (previewFor && !previewFor.contains(e.target)) hidePreview();
+        }, { passive: true, capture: true });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hidePreview(); });
+
+        // ---- auto-refresh (0.44.0) --------------------------------------------
+        // Every 3 minutes while the board is visible, keeping the period, the
+        // scroll position and the filters — all in memory. SKIPPED ONLY while
+        // a text field (the date picker) has focus or the sheet / preview is
+        // open; NEVER merely because a button has focus — the Sync Watchdog
+        // stopped refreshing for exactly that reason after one tap.
+        var refreshT = 0;
+        function busy() {
+            var a = document.activeElement;
+            if (a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT'
+                && !/^(checkbox|radio|button|submit|reset)$/i.test(a.type || '')))) return true;
+            if (!sheet.hidden) return true;
+            if (previewEl && !previewEl.hidden) return true;
+            return false;
+        }
+        function scheduleRefresh(ms) {
+            clearTimeout(refreshT);
+            refreshT = setTimeout(tick, ms);
+        }
+        function tick() {
+            if (document.visibilityState === 'hidden') return;      // resumes on return
+            if (busy()) { scheduleRefresh(REFRESH_RETRY_MS); return; }
+            refresh();
+        }
+        function refresh() {
+            // Emptying the cache is what makes this a refetch: every window
+            // is then a miss, and today's month is fetched again for the tiles.
+            state.cache = {};
+            state.todayData = null;
+            render({ keepScroll: true, quiet: true });
+        }
+        function markUpdated() {
+            state.lastRefresh = Date.now();
+            scheduleRefresh(REFRESH_MS);
+            if (!updatedEl) return;
+            var d = new Date();
+            updatedEl.textContent = (S.updated || 'Updated {time}').replace('{time}', pad(d.getHours()) + ':' + pad(d.getMinutes()));
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible' || !state.lastRefresh) return;
+            var due = REFRESH_MS - (Date.now() - state.lastRefresh);
+            if (due <= 0) tick(); else scheduleRefresh(due);
+        });
+
+        // ---- the expired token (0.44.0) ----------------------------------------
+        // A WordPress nonce lasts 12–24 hours, so a board left open meets a 403
+        // with "X-MPHBAC-Staff: nonce" every day. On THAT response only, reload
+        // ONCE for a fresh nonce: the staff password cookie lasts 15 days, so
+        // the board simply comes back. The guard is a timestamp in
+        // sessionStorage — the only thing stored — and while it is under 10
+        // minutes old a second 403 stops with the existing message instead:
+        // never a loop. No storage, no reload. A 403 WITHOUT the nonce header
+        // (the password itself expired) never reloads.
+        //
+        // The view comes back with it — period, date, scroll, filters — in the
+        // URL fragment, which is not storage and carries no guest data, and is
+        // removed the moment it is read, so a reload the USER makes still opens
+        // on Monthly.
+        function tokenReload(err) {
+            if (!err || !err.forbidden || !err.nonce) return false;
+            try {
+                var t = parseInt(window.sessionStorage.getItem(RELOAD_GUARD), 10);
+                if (t && Date.now() - t < RELOAD_GUARD_MS) return false;
+                window.sessionStorage.setItem(RELOAD_GUARD, String(Date.now()));
+            } catch (e) { return false; }
+            var f = state.filters;
+            var v = { p: state.period, a: state.anchor, x: Math.round(gridEl.scrollLeft || 0),
+                      y: Math.round(window.scrollY || 0), c: Object.keys(f.cottages), s: Object.keys(f.sources),
+                      pets: f.pets ? 1 : 0, moves: f.moves ? 1 : 0 };
+            try { window.history.replaceState(null, '', '#' + VIEW_HASH + encodeURIComponent(JSON.stringify(v))); } catch (e) { /* ignore */ }
+            window.location.reload();
+            return true;
+        }
+        function clearReloadGuard() {
+            try { window.sessionStorage.removeItem(RELOAD_GUARD); } catch (e) { /* ignore */ }
+        }
+        function restoreView() {
+            var h = window.location.hash || '';
+            var i = h.indexOf(VIEW_HASH);
+            if (i < 0) return null;
+            var v = null;
+            try { v = JSON.parse(decodeURIComponent(h.slice(i + VIEW_HASH.length))); } catch (e) { v = null; }
+            try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* ignore */ }
+            if (!v || PERIODS.indexOf(v.p) < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(String(v.a)) || v.a < CAP_LO || v.a > CAP_HI) return null;
+            var f = { cottages: {}, sources: {}, pets: !!v.pets, moves: !!v.moves };
+            (v.c || []).forEach(function (id) { if (/^\d+$/.test(String(id))) f.cottages[id] = true; });
+            (v.s || []).forEach(function (k) { if (SOURCES.indexOf(k) >= 0) f.sources[k] = true; });
+            return { period: v.p, anchor: v.a, filters: f, x: +v.x || 0, y: +v.y || 0 };
+        }
+
         // ---- date helpers ---------------------------------------------------
 
         function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -1018,7 +1679,16 @@
         // Monthly on every load, every device (Rob, 0.43.3) — and the old
         // remembered choice is removed so it cannot come back.
         forgetOldPeriod();
-        setPeriod('month');
+        var back = restoreView();
+        if (back) {
+            state.anchor = back.anchor;
+            state.filters = back.filters;
+            writeFilters();
+            state.restoreScroll = { x: back.x, y: back.y };
+            setPeriod(back.period);
+        } else {
+            setPeriod('month');
+        }
     }
 
     function boot() {

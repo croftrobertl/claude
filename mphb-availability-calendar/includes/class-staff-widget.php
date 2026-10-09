@@ -117,6 +117,39 @@ final class Staff_Widget
                 'viewPhoto'    => __('View photo ID', 'mphb-availability-calendar'),
                 'photoNote'    => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
+                // ---- 0.44.0 ----
+                'srcDirect'    => __('Direct', 'mphb-availability-calendar'),
+                'srcAirbnb'    => __('Airbnb', 'mphb-availability-calendar'),
+                'srcBooking'   => __('Booking.com', 'mphb-availability-calendar'),
+                'srcVrbo'      => __('Vrbo', 'mphb-availability-calendar'),
+                'srcOther'     => __('Other', 'mphb-availability-calendar'),
+                'tagIn'        => __('IN', 'mphb-availability-calendar'),
+                'tagOut'       => __('OUT', 'mphb-availability-calendar'),
+                'nightsShort'  => __('{n}n', 'mphb-availability-calendar'),
+                'pets'         => __('Pets', 'mphb-availability-calendar'),
+                'turnovers'    => __('Turnovers', 'mphb-availability-calendar'),
+                'noTurnovers'  => __('No turnovers.', 'mphb-availability-calendar'),
+                'turnoverLine' => __('{cottage}: {out} out → {in} in', 'mphb-availability-calendar'),
+                'cottageWord'  => __('Cottage', 'mphb-availability-calendar'),
+                'turnoverTip'  => __('Turnover: one guest leaves and another arrives', 'mphb-availability-calendar'),
+                'tileArriving' => __('Arriving today', 'mphb-availability-calendar'),
+                'tileLeaving'  => __('Leaving today', 'mphb-availability-calendar'),
+                'tileInHouse'  => __('In house now', 'mphb-availability-calendar'),
+                'tileTurnovers'=> __('Turnovers today', 'mphb-availability-calendar'),
+                'tileBooked'   => __('Booked', 'mphb-availability-calendar'),
+                'tileBookedTip'=> __('Booked nights ÷ (cottages × nights in the period shown), counting confirmed and pending bookings. A cottage-night counts once, however many bookings or channel blocks cover it.', 'mphb-availability-calendar'),
+                'filters'      => __('Filters', 'mphb-availability-calendar'),
+                'fCottage'     => __('Cottage', 'mphb-availability-calendar'),
+                'fSource'      => __('Source', 'mphb-availability-calendar'),
+                'fPets'        => __('Pets only', 'mphb-availability-calendar'),
+                'fMoves'       => __('Arrivals or departures only', 'mphb-availability-calendar'),
+                'fClear'       => __('Clear filters', 'mphb-availability-calendar'),
+                'guests'       => __('Guests', 'mphb-availability-calendar'),
+                'source'       => __('Source', 'mphb-availability-calendar'),
+                'call'         => __('Call', 'mphb-availability-calendar'),
+                'text'         => __('Text', 'mphb-availability-calendar'),
+                'openAdmin'    => __('Open in WP-Admin', 'mphb-availability-calendar'),
+                'updated'      => __('Updated {time}', 'mphb-availability-calendar'),
             ],
         ];
 
@@ -128,6 +161,11 @@ final class Staff_Widget
         ob_start();
         ?>
         <div class="mphbac-staff" data-staff-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
+            <?php // TODAY TILES (0.44.0). Filled by staff.js from the gated month
+            // data, with textContent; empty in the page. Arriving / leaving /
+            // in house / turnovers mean the REAL today; "Booked" follows the
+            // period shown; all five respect the filters. ?>
+            <div class="mphbac-staff-tiles" role="group" aria-label="<?php echo esc_attr__('Today at a glance', 'mphb-availability-calendar'); ?>"></div>
             <div class="mphbac-staff-topbar">
                 <?php // Same stroked SVG chevrons as the public widget's nav (0.23.2):
                 // the &#8249;/&#8250; glyphs rendered in whatever face the theme
@@ -174,10 +212,49 @@ final class Staff_Widget
                         <input type="date" class="mphbac-staff-input mphbac-staff-goto">
                     </label>
                 </div>
+                <?php // FILTERS (0.44.0): Cottage, Source, Pets, Arrivals or departures
+                // only. A native <details> — keyboard- and screen-reader-complete
+                // with no script of its own. staff.js fills the cottage list from
+                // the gated data; nothing is remembered between loads. ?>
+                <details class="mphbac-staff-filters">
+                    <summary class="mphbac-staff-filters-toggle"><?php echo esc_html__('Filters', 'mphb-availability-calendar'); ?><span class="mphbac-staff-filters-count" hidden></span></summary>
+                    <div class="mphbac-staff-filters-body">
+                        <fieldset class="mphbac-staff-fgroup mphbac-staff-fgroup--cottage">
+                            <legend><?php echo esc_html__('Cottage', 'mphb-availability-calendar'); ?></legend>
+                        </fieldset>
+                        <fieldset class="mphbac-staff-fgroup mphbac-staff-fgroup--source">
+                            <legend><?php echo esc_html__('Source', 'mphb-availability-calendar'); ?></legend>
+                            <?php // Written out, not looped: the shell is also extracted
+                            // from this file by the test harness, which strips PHP. ?>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="source" value="direct"><span class="mphbac-staff-swatch is-src-direct" aria-hidden="true"></span><?php echo esc_html__('Direct', 'mphb-availability-calendar'); ?></label>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="source" value="airbnb"><span class="mphbac-staff-swatch is-src-airbnb" aria-hidden="true"></span><?php echo esc_html__('Airbnb', 'mphb-availability-calendar'); ?></label>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="source" value="booking"><span class="mphbac-staff-swatch is-src-booking" aria-hidden="true"></span><?php echo esc_html__('Booking.com', 'mphb-availability-calendar'); ?></label>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="source" value="vrbo"><span class="mphbac-staff-swatch is-src-vrbo" aria-hidden="true"></span><?php echo esc_html__('Vrbo', 'mphb-availability-calendar'); ?></label>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="source" value="other"><span class="mphbac-staff-swatch is-src-other" aria-hidden="true"></span><?php echo esc_html__('Other', 'mphb-availability-calendar'); ?></label>
+                        </fieldset>
+                        <fieldset class="mphbac-staff-fgroup mphbac-staff-fgroup--more">
+                            <legend class="mphbac-sr-only"><?php echo esc_html__('More', 'mphb-availability-calendar'); ?></legend>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="pets" value="1"><?php echo esc_html__('Pets only', 'mphb-availability-calendar'); ?></label>
+                            <label class="mphbac-staff-check"><input type="checkbox" name="moves" value="1"><?php echo esc_html__('Arrivals or departures only', 'mphb-availability-calendar'); ?></label>
+                        </fieldset>
+                        <button type="button" class="mphbac-staff-filters-clear"><?php echo esc_html__('Clear filters', 'mphb-availability-calendar'); ?></button>
+                    </div>
+                </details>
+                <?php // THE LEGEND (0.44.0, Rob's option C): the five source colours,
+                // the IN / OUT tags, pending stripes, the turnover mark and the
+                // paw. Every bar also carries its source as a letter badge (on
+                // imports) and in its description, so colour is never the only
+                // carrier. ?>
                 <div class="mphbac-staff-legend" aria-hidden="true">
-                    <span class="mphbac-staff-key mphbac-staff-key--in"><?php echo esc_html__('Check-in', 'mphb-availability-calendar'); ?></span>
-                    <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
-                    <span class="mphbac-staff-key mphbac-staff-key--out"><?php echo esc_html__('Check-out', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key is-src-direct"><?php echo esc_html__('Direct', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key is-src-airbnb"><?php echo esc_html__('Airbnb', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key is-src-booking"><?php echo esc_html__('Booking.com', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key is-src-vrbo"><?php echo esc_html__('Vrbo', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key is-src-other"><?php echo esc_html__('Other', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--tags"><span class="mphbac-staff-tag"><?php echo esc_html__('IN', 'mphb-availability-calendar'); ?></span><span class="mphbac-staff-tag"><?php echo esc_html__('OUT', 'mphb-availability-calendar'); ?></span><?php echo esc_html__('Check-in / check-out', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--pending"><?php echo esc_html__('Pending', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--turn"><span class="mphbac-staff-turnmark"></span><?php echo esc_html__('Turnover', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--paw"><span class="mphbac-staff-paw"></span><?php echo esc_html__('Pets', 'mphb-availability-calendar'); ?></span>
                 </div>
             </div>
             <?php // Two presentations of the same gated payload: the list is the
@@ -190,6 +267,13 @@ final class Staff_Widget
             <div class="mphbac-staff-grid" role="region" tabindex="0"
                  aria-label="<?php echo esc_attr__('Booking chart', 'mphb-availability-calendar'); ?>" hidden></div>
             <div class="mphbac-staff-status" role="status" aria-live="polite"></div>
+            <?php // "Updated hh:mm" (0.44.0): the auto-refresh's last success. Not
+            // live: a line that changes every three minutes must not be read out. ?>
+            <div class="mphbac-staff-updated"></div>
+            <?php // The quick preview (0.44.0): hover on a computer, long-press on a
+            // phone. One per board, filled with textContent from data the board
+            // already holds — it fetches nothing. ?>
+            <div class="mphbac-staff-preview" role="tooltip" hidden></div>
 
             <?php // Overlay + dialog are moved to <body> while open (staff.js), so
             // position:fixed measures the real viewport instead of whichever
