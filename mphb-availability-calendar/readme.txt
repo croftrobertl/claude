@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.2
+Stable tag: 0.43.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.43.3 =
+* **The staff board always opens on Monthly**, on every device, every time. A period picked from the menu lasts until the page is left or reloaded; nothing is remembered any more, and the old remembered choice is cleared.
+* **Weekly keeps the full cottage column on phones** — number and name, the same as every other view — and the days narrow instead. "#22" and "Cottages" no longer wrap.
+* **Daily shows just the date at the top** (for example "Sat, Oct 10, 2026"), without the month line under it.
+* **The date hint in the public calendar reads "mm/dd/yy"**, in the two date fields and in the booking popup.
+* **The hint sits exactly where the date will appear** — centred on iPhones, and clear of the calendar icon on desktop Chrome — and is the same size as the date, so nothing jumps when a date is picked.
+* Fixed: a date cleared or picked in the booking popup did not update the popup's empty-field state.
 
 = 0.43.2 =
 * **"View photo ID" opens the photo again.** It was opening a blank tab for every booking, because the board did not recognise the way MotoPress stores the photo's location. Photos taken on an iPhone (HEIC) now show in the tab too, instead of downloading. If a photo really is missing, the tab now says "This photo could not be found." instead of staying blank.
