@@ -177,13 +177,6 @@
     text-align: center;
     overflow-wrap: anywhere;
 }
-/* Daily's second line ("Today" / the month), kept small under the label. */
-.mphbac-staff-title .mphbac-staff-title-sub {
-    display: block;
-    color: var(--staff-muted);
-    font-size: 12px;
-    font-weight: 600;
-}
 .mphbac-staff-nav {
     display: inline-flex;
     align-items: center;
@@ -588,14 +581,6 @@
     pointer-events: none;
 }
 
-/* WEEKLY ON A PHONE: the cottage column shrinks to its number (staff.js sets
-   --staff-label-w to 48px on the chart), so its name is not shown — it is
-   still in the cell's title, the bar's description and the detail sheet. */
-.mphbac-staff-chart.is-compact .mphbac-staff-rowname { display: none; }
-.mphbac-staff-chart.is-compact .mphbac-staff-corner {
-    font-size: 0.7em;
-    overflow-wrap: anywhere;
-}
 
 .mphbac-staff-daycell {
     border-left: 1px solid var(--staff-frame);

@@ -8,8 +8,9 @@
  *               cottages, columns are days, a bar per booking. Weekly fills
  *               the screen; Monthly and Yearly scroll sideways with the
  *               cottage column and date header pinned.
- * Every device opens on Monthly until it chooses; after that it reopens its
- * last period. Tapping a booking loads its full detail lazily into a dialog.
+ * Every load opens on Monthly, on every device (Rob, 0.43.3); a period
+ * picked from the menu lasts until the page is left or reloaded. Tapping a
+ * booking loads its full detail lazily into a dialog.
  *
  * SECURITY CONTRACT (do not relax):
  *   - Every byte of guest data arrives from the gated endpoints in
@@ -28,10 +29,12 @@
     'use strict';
 
     var NARROW = '(max-width: 700px)';
-    // The key 0.42.x stored 'agenda' / 'chart' under. Reused, so a device's
-    // old choice carries over (agenda -> Daily, chart -> Monthly) and no
-    // orphaned key is left behind. Only a period NAME is ever stored here.
-    var PREF_KEY = 'mphbacStaffView';
+    // The key 0.42.x - 0.43.2 remembered a device's period under. Nothing is
+    // remembered since 0.43.3 (Rob: always open on Monthly), so the key is
+    // only ever REMOVED — an old stored value can never win again. Rob's
+    // phone opened on Daily because of exactly that: a 0.42.x "List" choice
+    // carried over as Daily.
+    var OLD_PREF_KEY = 'mphbacStaffView';
     var PERIODS = ['day', 'week', 'month', 'year'];
     var SWIPE_MIN_PX = 60;
 
@@ -115,16 +118,11 @@
 
         // ---- periods: Daily / Weekly / Monthly / Yearly ---------------------
 
-        function savedPeriod() {
-            try {
-                var v = window.localStorage.getItem(PREF_KEY);
-                if (v === 'agenda') return 'day';      // 0.42.x "List"
-                if (v === 'chart') return 'month';     // 0.42.x "Chart"
-                return PERIODS.indexOf(v) >= 0 ? v : null;
-            } catch (e) { return null; }               // storage blocked: Monthly
+        function forgetOldPeriod() {
+            try { window.localStorage.removeItem(OLD_PREF_KEY); } catch (e) { /* storage blocked: nothing to forget */ }
         }
 
-        function setPeriod(period, byUser) {
+        function setPeriod(period) {
             if (PERIODS.indexOf(period) < 0) return;
             state.period = period;
             if (periodSel && periodSel.value !== period) periodSel.value = period;
@@ -135,16 +133,11 @@
             var cap = period.charAt(0).toUpperCase() + period.slice(1);
             prevBtn.setAttribute('aria-label', S['prev' + cap] || 'Previous');
             nextBtn.setAttribute('aria-label', S['next' + cap] || 'Next');
-            // Written ONLY on a deliberate choice, never on load, so a device
-            // that has never chosen keeps opening on Monthly.
-            if (byUser) {
-                try { window.localStorage.setItem(PREF_KEY, period); } catch (e) { /* private mode */ }
-            }
             render();
         }
 
         if (periodSel) {
-            periodSel.addEventListener('change', function () { setPeriod(periodSel.value, true); });
+            periodSel.addEventListener('change', function () { setPeriod(periodSel.value); });
         }
         if (gotoEl) {
             gotoEl.min = CAP_LO;
@@ -255,13 +248,11 @@
             titleEl.textContent = '';
             var p = state.period;
             if (p === 'day') {
+                // The date alone (Rob, 0.43.3): the month/year line that sat
+                // under it is gone in Daily. Phones get the short form
+                // ("Sat, Oct 10, 2026") so it stays on one line.
                 var day = state.anchor;
-                // Phones get the short form so the title stays on one line.
-                titleEl.appendChild(document.createTextNode((mq && mq.matches) ? mediumDate(day) : longDate(day)));
-                var sub = document.createElement('span');
-                sub.className = 'mphbac-staff-title-sub';
-                sub.textContent = (day === config.today) ? (S.today || 'Today') : monthName(day.slice(0, 7));
-                titleEl.appendChild(sub);
+                titleEl.textContent = (mq && mq.matches) ? mediumDate(day) : longDate(day);
             } else {
                 // A chart period names a MONTH (0.43.1, Rob's option C): the
                 // one filling most of what is on screen, kept current by
@@ -480,30 +471,24 @@
         }
 
         // WEEKLY FILLS THE SCREEN (Rob's choice, 2026-10-08). Seven days share
-        // whatever width the board has, so on a desktop the columns grow wide
-        // enough for full names. A phone cannot give a week more than its own
-        // width, so there the cottage column shrinks to its number (about
-        // 48px), leaving roughly 47px a day rather than the ~40 a 96px column
-        // would leave. Never below the 44px the other periods use on a phone
-        // that is wide enough; never wider than the screen, so a week never
-        // scrolls sideways.
+        // whatever width the board has after the cottage column, so on a
+        // desktop they grow wide enough for full names; never wider than the
+        // screen, so a week never scrolls sideways.
+        // THE SAME COTTAGE COLUMN AS EVERY OTHER PERIOD (Rob, 0.43.3): number
+        // and name, same width. The phone-only 48px column of 0.43.0 wrapped
+        // "#22" to "#2 / 2" and "Cottages" to "Cott / ages" on his iPhone;
+        // the DAYS narrow instead (~32px at a 320px chart).
         function sizeWeek(chart) {
-            var compact = !!(mq && mq.matches);
-            var labelW = compact ? 48 : label_w();
             var avail = gridEl.clientWidth || 0;
-            var dayW = avail ? Math.floor((avail - labelW - 1) / 7) : 44;
+            var dayW = avail ? Math.floor((avail - label_w() - 1) / 7) : 44;
             chart.style.setProperty('--staff-day-w', Math.max(24, dayW) + 'px');
-            if (compact) {
-                chart.classList.add('is-compact');
-                chart.style.setProperty('--staff-label-w', labelW + 'px');
-            }
         }
 
         function label_w() {
             var v = parseFloat(getComputedStyle(root).getPropertyValue('--staff-label-w'));
             return isNaN(v) ? 96 : v;
         }
-        // The cottage column as drawn — compact Weekly narrows it on the chart.
+        // The cottage column as drawn on a chart.
         function chartLabelW(chart) {
             var v = parseFloat(getComputedStyle(chart).getPropertyValue('--staff-label-w'));
             return isNaN(v) ? label_w() : v;
@@ -1030,9 +1015,10 @@
             return w[0] + ' ' + w[w.length - 1].charAt(0).toUpperCase() + '.';
         }
 
-        // Monthly for any device that has never chosen — phones included, by
-        // Rob's decision (2026-10-08); 0.42.x opened phones on the list.
-        setPeriod(savedPeriod() || 'month', false);
+        // Monthly on every load, every device (Rob, 0.43.3) — and the old
+        // remembered choice is removed so it cannot come back.
+        forgetOldPeriod();
+        setPeriod('month');
     }
 
     function boot() {
