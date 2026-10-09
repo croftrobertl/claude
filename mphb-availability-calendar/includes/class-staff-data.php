@@ -99,11 +99,32 @@ final class Staff_Data
             $reserved_by_booking[(int) $r->booking_id][] = (int) $r->reserved_id;
         }
 
+        // 0.44.0: the pet rule and the guest count travel with each booking
+        // (the paw, the Pets filter, the quick preview). Both are read from
+        // meta this method has ALREADY primed — never the MPHB entity, which
+        // would be a repository call per booking — and the pet-fee check is
+        // ONE services lookup for the whole window, not one per booking.
+        $rooms_by_booking = [];
+        foreach ($rows as $r) {
+            $rooms_by_booking[(int) $r->booking_id][] = [
+                'entity'       => null,
+                'room_id'      => (int) $r->room_id,
+                'room_type_id' => (int) $r->room_type_id,
+                'post_id'      => (int) $r->reserved_id,
+            ];
+        }
+        $service_ids = [];
+        foreach ($rooms_by_booking as $rooms) {
+            $service_ids += self::service_ids_on($rooms);
+        }
+        $pet_services = self::pet_service_ids($service_ids);
+
         $bookings = [];
         foreach ($rows as $r) {
             $bid = (int) $r->booking_id;
             if (!isset($bookings[$bid])) {
                 $source = self::source_for($bid, $reserved_by_booking[$bid] ?? []);
+                $rooms  = $rooms_by_booking[$bid] ?? [];
                 $bookings[$bid] = [
                     'id'         => $bid,
                     'status'     => (string) $r->status,
@@ -113,6 +134,15 @@ final class Staff_Data
                     'guestName'  => self::guest_name($bid),
                     'imported'   => $source['imported'],
                     'source'     => $source,
+                    // direct | airbnb | booking | vrbo | other — the bar colour
+                    // and the Source filter key off this, never off a
+                    // translatable name.
+                    'sourceKey'  => $source['key'],
+                    'pets'       => self::has_pet($bid, $rooms, $pet_services),
+                    // The sheet's own rule: '' where an import carries only the
+                    // cottage's default capacity, so the preview never shows a
+                    // count the sheet would not.
+                    'guests'     => self::guest_count_text($rooms, $source),
                     'cottages'   => [],
                 ];
             }
@@ -413,8 +443,13 @@ final class Staff_Data
 
         self::push($out, __('First Name', 'mphb-availability-calendar'), $pick(['getFirstName'], ['firstname', 'fname']));
         self::push($out, __('Last Name', 'mphb-availability-calendar'), $pick(['getLastName'], ['lastname', 'lname']));
-        self::push($out, __('Email', 'mphb-availability-calendar'), $pick(['getEmail'], ['email']));
-        self::push($out, __('Phone', 'mphb-availability-calendar'), $pick(['getPhone'], ['phone']));
+        // Tap to email / call / text (0.44.0): the row carries a CLEANED
+        // value the board builds its mailto: / tel: / sms: links from — the
+        // display text stays as entered. No usable value, no link.
+        $email = $pick(['getEmail'], ['email']);
+        self::push($out, __('Email', 'mphb-availability-calendar'), $email, ['email' => self::mail_target($email)]);
+        $phone = $pick(['getPhone'], ['phone']);
+        self::push($out, __('Phone', 'mphb-availability-calendar'), $phone, ['tel' => self::tel_target($phone)]);
         self::push($out, __('Address', 'mphb-availability-calendar'), $pick(['getAddress1', 'getAddress'], ['address1', 'address']));
         // Missing until 0.43.0 (found by the Website Director: 6 confirmed
         // bookings carry one). A checkout CUSTOM field, "apartment-units",
@@ -440,7 +475,8 @@ final class Staff_Data
         // exact one — installs spell them guest2_first_name, guest_2_fname, …
         self::push($out, __('Guest2 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2firstname', 'guest2fname', 'guest2first']));
         self::push($out, __('Guest2 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2lastname', 'guest2lname', 'guest2last']));
-        self::push($out, __('Guest 2 Phone', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2phone', 'guest2telephone', 'guest2tel']));
+        $g2phone = self::custom_get($custom, ['guest2phone', 'guest2telephone', 'guest2tel']);
+        self::push($out, __('Guest 2 Phone', 'mphb-availability-calendar'), $g2phone, ['tel' => self::tel_target($g2phone)]);
         self::push($out, __('Guest3 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest3firstname', 'guest3fname', 'guest3first']));
         self::push($out, __('Guest3 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest3lastname', 'guest3lname', 'guest3last']));
         self::push($out, __('Guest4 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest4firstname', 'guest4fname', 'guest4first']));
@@ -585,7 +621,6 @@ final class Staff_Data
      */
     private static function has_pet_service(array $rooms): bool
     {
-        $ids = [];
         foreach ($rooms as $r) {
             // The entity's own services first, when MPHB exposes them.
             $svc = self::first_of($r['entity'] ?? null, ['getServices', 'getReservedServices']);
@@ -595,6 +630,28 @@ final class Staff_Data
                     if ($title !== '' && preg_match('/\b(pet|dog)/i', $title)) {
                         return true;
                     }
+                }
+            }
+        }
+        $ids = self::service_ids_on($rooms);
+        // ONE query for every service on the booking — not one per service.
+        return (bool) array_intersect_key($ids, self::pet_service_ids($ids));
+    }
+
+    /**
+     * Every service id attached to these reserved rooms: from the entity when
+     * it exposes them, and from the reserved-room post's _mphb_services meta.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     * @return array<int,true>
+     */
+    private static function service_ids_on(array $rooms): array
+    {
+        $ids = [];
+        foreach ($rooms as $r) {
+            $svc = self::first_of($r['entity'] ?? null, ['getServices', 'getReservedServices']);
+            if (is_array($svc)) {
+                foreach ($svc as $one) {
                     $sid = is_scalar($one) ? (int) $one : (int) self::scalar($one, ['getId'], 0);
                     if ($sid > 0) {
                         $ids[$sid] = true;
@@ -621,10 +678,22 @@ final class Staff_Data
                 }
             }
         }
+        return $ids;
+    }
+
+    /**
+     * Which of these service ids are a pet / dog fee — ONE query for all of
+     * them, however many bookings they came from.
+     *
+     * @param array<int,true> $ids
+     * @return array<int,true>
+     */
+    private static function pet_service_ids(array $ids): array
+    {
         if (!$ids) {
-            return false;
+            return [];
         }
-        // ONE query for every service on the booking — not one per service.
+        $pets = [];
         $posts = get_posts([
             'post_type'      => 'mphb_room_service',
             'post__in'       => array_map('intval', array_keys($ids)),
@@ -634,10 +703,58 @@ final class Staff_Data
         ]);
         foreach ($posts as $post) {
             if (preg_match('/\b(pet|dog)/i', (string) $post->post_title)) {
-                return true;
+                $pets[(int) $post->ID] = true;
             }
         }
-        return false;
+        return $pets;
+    }
+
+    /**
+     * THE PET RULE, for the board (0.44.0): the same two facts the sheet's
+     * pet block is gated on — a non-empty dog type, or a pet / dog fee on a
+     * reserved room. NEVER dog size or dog hair, which hold old select
+     * defaults on every historical booking (see section_customer()).
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     * @param array<int,true>                $pet_services
+     */
+    private static function has_pet(int $booking_id, array $rooms, array $pet_services): bool
+    {
+        $dog_type = self::custom_get(self::custom_fields($booking_id, null), ['dogtype', 'typeofdog', 'dogbreed']);
+        if (!self::is_blank($dog_type)) {
+            return true;
+        }
+        return (bool) array_intersect_key(self::service_ids_on($rooms), $pet_services);
+    }
+
+    /**
+     * The guest count as the sheet would show it, for the quick preview:
+     * a confirmed count whatever its source; nothing for an import that only
+     * carries the cottage's default capacity; otherwise the stored count.
+     * Read from the reserved rooms' meta — no entity.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     * @param array<string,mixed>            $source
+     */
+    private static function guest_count_text(array $rooms, array $source): string
+    {
+        $confirmed = self::confirmed_occupancy($rooms);
+        if ($confirmed !== null) {
+            return self::guest_label($confirmed['adults'], $confirmed['children']);
+        }
+        $adults = 0;
+        $children = 0;
+        foreach ($rooms as $r) {
+            $rr = (int) ($r['post_id'] ?? 0);
+            if ($rr > 0) {
+                $adults   += (int) get_post_meta($rr, '_mphb_adults', true);
+                $children += (int) get_post_meta($rr, '_mphb_children', true);
+            }
+        }
+        if (!empty($source['imported']) && self::is_capacity_default($rooms, $adults, $children)) {
+            return '';
+        }
+        return self::guest_label($adults, $children);
     }
 
     /**
@@ -653,11 +770,42 @@ final class Staff_Data
     }
 
     /**
+     * A phone number as a tel: / sms: target: digits, with one leading "+"
+     * kept. Fewer than 7 digits is not a number anyone can dial — no link.
+     *
+     * @param mixed $v
+     */
+    private static function tel_target($v): string
+    {
+        $s = is_scalar($v) ? trim((string) $v) : '';
+        $digits = preg_replace('/\D+/', '', $s);
+        if (strlen($digits) < 7 || strlen($digits) > 15) {
+            return '';
+        }
+        return (strpos($s, '+') === 0 ? '+' : '') . $digits;
+    }
+
+    /**
+     * An email address as a mailto: target, or '' when it is not one.
+     *
+     * @param mixed $v
+     */
+    private static function mail_target($v): string
+    {
+        $s = is_scalar($v) ? trim((string) $v) : '';
+        if ($s === '' || !function_exists('is_email') || !is_email($s)) {
+            return '';
+        }
+        $clean = function_exists('sanitize_email') ? sanitize_email($s) : $s;
+        return is_string($clean) ? $clean : '';
+    }
+
+    /**
      * Append a row unless the value is empty AFTER formatting.
      *
      * @param array<int,array<string,mixed>> $out
      * @param mixed                          $value
-     * @param array<string,bool>             $flags
+     * @param array<string,bool|string>      $flags
      */
     private static function push(array &$out, string $label, $value, array $flags = []): void
     {
@@ -950,7 +1098,7 @@ final class Staff_Data
     /**
      * Is this booking an OTA import, and from where?
      *
-     * @return array{imported:bool,ota:string,prodid:string,uid:string,summary:string}
+     * @return array{imported:bool,key:string,ota:string,prodid:string,uid:string,summary:string}
      */
     public static function source_for(int $booking_id, ?array $reserved_ids = null): array
     {
@@ -978,15 +1126,29 @@ final class Staff_Data
             }
         }
         if ($prodid === '') {
-            return ['imported' => false, 'ota' => '', 'prodid' => '', 'uid' => '', 'summary' => ''];
+            return ['imported' => false, 'key' => 'direct', 'ota' => '', 'prodid' => '', 'uid' => '', 'summary' => ''];
         }
         return [
             'imported' => true,
+            // A stable key for the board (0.44.0): the bar colour and the
+            // Source filter. "other" is the external channel ota_name() cannot
+            // name — matched here, not on its translatable text.
+            'key'      => self::ota_key($prodid),
             'ota'      => self::ota_name($prodid),
             'prodid'   => $prodid,
             'uid'      => (string) get_post_meta($booking_id, self::META_ICAL_UID, true),
             'summary'  => (string) get_post_meta($booking_id, self::META_ICAL_SUMM, true),
         ];
+    }
+
+    /** direct | airbnb | booking | vrbo | other — the same tests as ota_name(). */
+    private static function ota_key(string $prodid): string
+    {
+        $p = strtolower($prodid);
+        if (strpos($p, 'airbnb') !== false)     return 'airbnb';
+        if (strpos($p, 'booking.com') !== false || strpos($p, 'booking') !== false) return 'booking';
+        if (strpos($p, 'vrbo') !== false || strpos($p, 'homeaway') !== false || strpos($p, 'expedia') !== false) return 'vrbo';
+        return 'other';
     }
 
     /** Human OTA name from an iCal PRODID string. */

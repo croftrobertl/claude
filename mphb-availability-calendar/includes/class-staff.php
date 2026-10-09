@@ -253,7 +253,27 @@ final class Staff
             // other miss — no probing difference.
             wp_send_json_error(['message' => __('Booking not found.', 'mphb-availability-calendar')], 404);
         }
+        // OPEN IN WP-ADMIN (0.44.0) is decided HERE, server-side, and the link
+        // is simply absent otherwise — never sent and hidden. Only a visitor
+        // LOGGED IN with the staff capability who may edit this very booking
+        // gets it; a password-only visitor never does, whatever the client
+        // asks. mphb_booking has map_meta_cap, so edit_post maps to
+        // edit_mphb_booking (verified on live by the Website Director).
+        $admin = self::admin_link_for($booking_id);
+        if ($admin !== '') {
+            $detail['adminUrl'] = $admin;
+        }
         wp_send_json_success($detail);
+    }
+
+    /** The booking's edit screen, or '' for anyone who may not use it. */
+    public static function admin_link_for(int $booking_id): string
+    {
+        if (!is_user_logged_in() || !current_user_can(self::capability()) || !current_user_can('edit_post', $booking_id)) {
+            return '';
+        }
+        $url = get_edit_post_link($booking_id, 'raw');
+        return is_string($url) ? $url : '';
     }
 
     /**
