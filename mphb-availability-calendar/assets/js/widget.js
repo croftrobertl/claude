@@ -568,6 +568,55 @@
         if (el && el.classList) el.classList.toggle('mphbac-input--empty', !el.value);
     }
 
+    // TWO-DIGIT YEARS (0.43.4, Rob's decision). The hint reads "mm/dd/yy",
+    // so on a desktop a guest types 1 0 1 2 2 6 — and Chromium stores the
+    // year 26 AD: 0026-10-12, before today, refused by min, and Show did
+    // nothing at all (found by the Website Director on staging). A year
+    // below 100 becomes 20YY when the value COMMITS, which is when the field
+    // loses focus: Chromium fires `change` while the year is still being
+    // typed (after "2" the value is already 0002-10-12), so correcting there
+    // would fight the keystrokes. Leaving the field always comes before a
+    // click on Show or Book Now. Both fields of a pair are corrected FIRST,
+    // then `change` is sent, so the existing rules — check-out after
+    // check-in, min, the estimate — run on corrected values and never see one
+    // field fixed and its partner not.
+    function fixTwoDigitYear(el) {
+        var m = el && /^(\d{4})-(\d{2})-(\d{2})$/.exec(el.value || '');
+        if (!m || parseInt(m[1], 10) >= 100) return false;
+        el.value = (2000 + parseInt(m[1], 10)) + '-' + m[2] + '-' + m[3];
+        return true;
+    }
+
+    // When a value COMMITS: on leaving the field, and on Tab / Enter inside
+    // it. Tab is needed on its own because in Chrome on a desktop the first
+    // Tab after the year does NOT leave the field — it moves to the calendar
+    // icon inside it, so focus (and focusout) stays on the input.
+    function isCommitKey(e) {
+        return e.key === 'Tab' || e.key === 'Enter';
+    }
+
+    function commitYears(fields) {
+        var changed = [];
+        for (var i = 0; i < fields.length; i++) {
+            if (fixTwoDigitYear(fields[i])) changed.push(fields[i]);
+        }
+        for (var j = 0; j < changed.length; j++) {
+            markEmpty(changed[j]);
+            changed[j].dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    // A date that cannot be used (0.43.4, the Website Director's addition):
+    // before today, or UNREADABLE — a field holding part of a date (a click
+    // at the centre of an empty field lands in the year segment, so typed
+    // digits all go there) has an empty value and validity.badInput. Never
+    // while the field still has focus: the guest is not finished.
+    function dateProblem(el, today) {
+        if (!el) return false;
+        if (el !== document.activeElement && el.validity && el.validity.badInput) return true;
+        return !!(el.value && today && el.value < today);
+    }
+
     function syncEmptyState(root) {
         var inputs = root.querySelectorAll('.mphbac-input');
         for (var i = 0; i < inputs.length; i++) markEmpty(inputs[i]);
@@ -773,7 +822,35 @@
         var reset = root.querySelector('.mphbac-btn-reset');
         var resetEmpty = root.querySelector('.mphbac-btn-reset-empty');
 
+        var filterError = root.querySelector('.mphbac-filter-error');
+        function showFilterError() {
+            if (!filterError) return;
+            filterError.textContent = (config.strings && config.strings.checkDates) || 'Please check the dates.';
+            filterError.hidden = false;
+        }
+        function hideFilterError() {
+            if (!filterError) return;
+            filterError.hidden = true;
+            filterError.textContent = '';
+        }
+        var filterFields = [checkin, checkout];
+        root.addEventListener('focusout', function (e) {
+            if (e.target === checkin || e.target === checkout) commitYears(filterFields);
+        });
+        root.addEventListener('keydown', function (e) {
+            if ((e.target === checkin || e.target === checkout) && isCommitKey(e)) commitYears(filterFields);
+        });
+        filterFields.forEach(function (f) {
+            if (f) f.addEventListener('change', hideFilterError);
+        });
+
         function doApply() {
+            commitYears(filterFields);
+            if (dateProblem(checkin, config.today) || dateProblem(checkout, config.today)) {
+                showFilterError();
+                return;
+            }
+            hideFilterError();
             var hasCi = checkin && checkin.value;
             var hasCo = checkout && checkout.value;
             state.filtered = !!(hasCi || hasCo);
@@ -800,6 +877,7 @@
         }
 
         function doReset() {
+            hideFilterError();
             if (checkin) { checkin.value = ''; markEmpty(checkin); }
             if (checkout) { checkout.value = ''; markEmpty(checkout); }
             applyDefaultWindow(config, state);
@@ -2383,6 +2461,18 @@
                 if (t && t.classList && t.classList.contains('mphbac-input')) markEmpty(t);
             });
         });
+        // Two-digit years, committed when a popup date field loses focus —
+        // bound on the sheet so it travels through the portal. Then the range
+        // is re-judged as an edit, so an unreadable field says so on leaving
+        // it rather than leaving Book Now silently disabled.
+        sheet.addEventListener('focusout', function (e) {
+            if (e.target !== checkinEl && e.target !== checkoutEl) return;
+            commitYears([checkinEl, checkoutEl]);
+            setTimeout(function () { updateSheetValidity(true); }, 0);
+        });
+        sheet.addEventListener('keydown', function (e) {
+            if ((e.target === checkinEl || e.target === checkoutEl) && isCommitKey(e)) commitYears([checkinEl, checkoutEl]);
+        });
 
         // ---- Price estimate (0.20.0) --------------------------------------
         // Informative only: it never gates the Confirm flow. Debounced so
@@ -2571,6 +2661,12 @@
         function rangeState() {
             var ci = checkinEl ? checkinEl.value : '';
             var co = checkoutEl ? checkoutEl.value : '';
+            // Before today, or unreadable (0.43.4): Book Now stays disabled,
+            // as it always did for these, but now it SAYS why.
+            if (dateProblem(checkinEl, config.today) || dateProblem(checkoutEl, config.today)) {
+                return { ok: false, complete: true,
+                    msg: (config.strings && config.strings.checkDates) || 'Please check the dates.' };
+            }
             if (!ci || !co) {
                 // Half-filled is not yet an error: nothing has gone wrong,
                 // the visitor simply is not finished.

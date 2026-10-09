@@ -1097,7 +1097,8 @@ body.mphbac-info-open {
     color: #111111;
     text-align: center;
 }
-.mphbac-sheet-error.mphbac-sheet-error {
+.mphbac-sheet-error.mphbac-sheet-error,
+.mphbac-filter-error.mphbac-filter-error {
     text-align: center;
 }
 @media (max-width: 600px) {
@@ -1110,7 +1111,8 @@ body.mphbac-info-open {
         padding-right: 14px;
     }
 }
-.mphbac-sheet-error {
+.mphbac-sheet-error,
+.mphbac-filter-error {
     flex-basis: 100%;
     margin: 0;
     padding: 0.5em 0.7em;
@@ -1119,7 +1121,9 @@ body.mphbac-info-open {
     border-radius: var(--mphbac-radius);
     font-size: 0.9em;
 }
-.mphbac-sheet-error[hidden] { display: none; }
+.mphbac-filter-error { grid-column: 1 / -1; }
+.mphbac-sheet-error[hidden],
+.mphbac-filter-error[hidden] { display: none; }
 .mphbac-sheet-estimate {
     flex-basis: 100%;
     margin: 0;

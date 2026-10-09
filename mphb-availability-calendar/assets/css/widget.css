@@ -2181,7 +2181,8 @@ body.mphbac-info-open {
 /* Centred like the estimate block above it. Class-doubled: the sheet is
    portaled to <body> on open, so a .mphbac-root-scoped rule stops matching
    at exactly the moment the message can appear. */
-.mphbac-sheet-error.mphbac-sheet-error {
+.mphbac-sheet-error.mphbac-sheet-error,
+.mphbac-filter-error.mphbac-filter-error {
     text-align: center;
 }
 /* Booking popup on a phone (0.27.0).
@@ -2208,7 +2209,12 @@ body.mphbac-info-open {
     }
 }
 
-.mphbac-sheet-error {
+/* The filter row's message (0.43.4) is the same alert, so it is listed with
+   it rather than restyled: a full-width row under the fields and buttons in
+   the flex layout, both grid columns on a phone. [hidden] is display: none —
+   no box at all — so the filter row is exactly as before until it speaks. */
+.mphbac-sheet-error,
+.mphbac-filter-error {
     flex-basis: 100%;
     margin: 0;
     padding: 0.5em 0.7em;
@@ -2217,7 +2223,9 @@ body.mphbac-info-open {
     border-radius: var(--mphbac-radius);
     font-size: 0.9em;
 }
-.mphbac-sheet-error[hidden] { display: none; }
+.mphbac-filter-error { grid-column: 1 / -1; }
+.mphbac-sheet-error[hidden],
+.mphbac-filter-error[hidden] { display: none; }
 
 /* Estimated-price row (0.20.0) — one quiet line in the sheet, not a banner.
    Sizing mirrors .mphbac-sheet-error's 0.9em row scale; every color is

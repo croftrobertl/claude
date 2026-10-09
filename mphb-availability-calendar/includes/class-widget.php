@@ -1753,6 +1753,11 @@ class Widget extends Widget_Base
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
                 'loading'       => (string) ($settings['str_loading'] ?? ''),
                 'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),
+                // 0.43.4 (WD): shown when Show / the booking step meets a date
+                // that cannot be used — before today, or unreadable (digits
+                // typed into the year segment alone). A plain translatable
+                // string, not a panel control: the panel is unchanged.
+                'checkDates'    => __('Please check the dates.', 'mphb-availability-calendar'),
             ],
         ];
 
@@ -1814,6 +1819,10 @@ class Widget extends Widget_Base
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html(self::tc($settings['str_reset'])); ?></button>
                 </div>
                 <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
+                <?php // 0.43.4: "Please check the dates." when Show meets a date that
+                // cannot be used. Hidden — no box, no space — until then; the
+                // popup's .mphbac-sheet-error style; written with textContent. ?>
+                <p class="mphbac-filter-error" role="alert" hidden></p>
             </div>
             <?php endif; ?>
 
