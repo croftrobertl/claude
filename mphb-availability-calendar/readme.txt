@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.0
+Stable tag: 0.43.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.43.1 =
+* **The staff board's controls now look exactly like the public calendar's.** The arrows, the month label and Today sit in the same centred row as on /cottages/, and the Show and Go to date fields are the same gold rounded fields, with their labels above them. The date field had been taking the theme's grey style instead.
+* **Today is always shown.** If today is already in the period you are looking at — a year scrolled to March, say — it scrolls back to today.
+* **Easier to tell which month you are in.** In Weekly, Monthly and Yearly a band above the dates names each month, and its name stays in view while you scroll through that month. A bold blue line runs down every 1st of the month, and the label at the top names the month filling most of the screen as you scroll.
+* Go to date within the year on screen now scrolls to that date.
+* Fixed a fault that could show one booking's custom fields (apartment / unit, Guest 2, dog details) on another booking when several were read at once. The board reads one at a time, so it never showed on the board; it is fixed before the next releases read many at once.
 
 = 0.43.0 =
 * **Staff board: a Daily / Weekly / Monthly / Yearly menu** replaces the List and Chart buttons. Daily is the old list of who is arriving, leaving and in house; Weekly fills the screen so names fit; Monthly is the board as it was; Yearly is the whole year in one sideways scroll, opening on today. The arrows step a whole day, week, month or year, Today works in every one, and a new Go to date picker jumps straight to any date.
