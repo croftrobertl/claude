@@ -32,7 +32,7 @@ const GUARD = '@media (hover: hover) and (pointer: fine)';
   console.log('\n-- bare :focus is banned for STYLING a focus state --');
   {
     // It is what leaves a fill behind after a mouse click. Two rules need it
-    // to HIDE things while a field is being edited: the mm/dd/yyyy hint, and
+    // to HIDE things while a field is being edited: the mm/dd/yy hint, and
     // Blink's native empty-field text, which would otherwise swallow a partly
     // typed date. Those are named; a third use fails.
     const bare = (code.match(/[^{}]*:focus(?![-\w])[^{}]*\{/g) || []).map(r => r.trim());

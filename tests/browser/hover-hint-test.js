@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Guards 0.31.0 and 0.31.1: the hover tokens, the (0,6,0) cascade trap, and
- * the mm/dd/yyyy hint.
+ * the mm/dd/yy hint.
  *
  * REBUILT 2026-09-17 after the scratchpad harnesses were lost. Every
  * assertion here has a matching entry in tests/mutate.php; nothing counts as
@@ -202,7 +202,7 @@ const INFO_SHEET = (() => {
     await ctx.close();
   }
 
-  console.log('\n-- 1: the mm/dd/yyyy hint --');
+  console.log('\n-- 1: the mm/dd/yy hint --');
   for (const w of [320, 360, 393]) {
     const { ctx, p } = await open({ touch: true, w });
     await p.addScriptTag({ content: H.js() });
@@ -213,7 +213,7 @@ const INFO_SHEET = (() => {
       const cs = getComputedStyle(ph);
       const before = { text: ph.textContent.trim(), shown: vis(ph), color: cs.color,
         align: cs.justifyContent, position: cs.position, weight: cs.fontWeight,
-        size: cs.fontSize, valueSize: getComputedStyle(inp).fontSize,
+        size: cs.fontSize, valueSize: getComputedStyle(inp).fontSize, valueWeight: getComputedStyle(inp).fontWeight,
         aria: ph.getAttribute('aria-hidden'), pe: cs.pointerEvents,
         htmlWeight: getComputedStyle(document.documentElement).fontWeight,
         fieldW: +inp.getBoundingClientRect().width.toFixed(2) };
@@ -223,14 +223,18 @@ const INFO_SHEET = (() => {
       inp.value = ''; inp.dispatchEvent(new Event('change', { bubbles: true }));
       return { before, after, back: vis(ph) };
     });
-    check(`1: ${w}px — reads exactly "mm/dd/yyyy"`, m.before.text === 'mm/dd/yyyy', m.before.text);
+    check(`1: ${w}px — reads exactly "mm/dd/yy" (0.43.3)`, m.before.text === 'mm/dd/yy', m.before.text);
     check(`1: ${w}px — shown while empty, gone the moment a value is set, back when cleared`,
       m.before.shown && !m.after.shown && m.back, m);
     check(`1: ${w}px — NOT bold, despite html{font-weight:700} on this site`,
       m.before.weight !== '700' && m.before.htmlWeight === '700',
       { hint: m.before.weight, html: m.before.htmlWeight });
+    // The VALUE's, whatever it is: widget.js copies the input's computed
+    // type onto the hint since 0.43.3. With no Elementor panel in this
+    // fixture the input is 400; on live the Filter Fields control makes it
+    // 300 — hint-test.js asserts that case with live's values.
     check(`1: ${w}px — matches the value's weight and size`,
-      m.before.weight === '300' && m.before.size === m.before.valueSize, m.before);
+      m.before.weight === m.before.valueWeight && m.before.size === m.before.valueSize, m.before);
     check(`1: ${w}px — out of flow, so it cannot widen the field`,
       m.before.position === 'absolute' && m.before.fieldW === m.after.fieldW, m);
     check(`1: ${w}px — muted, centred, aria-hidden and not tappable`,
@@ -246,7 +250,7 @@ const INFO_SHEET = (() => {
     check('1: the two FILTER fields carry --empty from the server, so the hint is right with no JS',
       inputs.filter(x => x.includes('mphbac-input--empty')).length === 2);
     check('1: the hint text is translatable rather than a bare literal',
-      /esc_html__\('mm\/dd\/yyyy', 'mphb-availability-calendar'\)/.test(php));
+      /esc_html__\('mm\/dd\/yy', 'mphb-availability-calendar'\)/.test(php));
   }
 
   await browser.close();

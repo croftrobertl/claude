@@ -2212,6 +2212,63 @@ assertion made at one width says nothing about another.**
 derived 16.2px from widget.css; the live value comes from the placement.
 **A value derived from a stylesheet is not a measurement of the page.**
 
+## Always Monthly; one cottage column; the date hint placed exactly (0.43.3)
+
+**Rob decided** (from his phone on staging): the board opens on Monthly on
+every load and every device — REPLACING "remember last choice"; a chosen
+period lasts until the page is left or reloaded, and the old localStorage key
+is removed so a stored value cannot win again (his phone opened on Daily
+because a 0.42.x "List" choice had carried over). Weekly uses the SAME
+cottage column as every period; the phone-only 48px column wrapped "#22" and
+"Cottages". Daily's label is the date alone. The hint becomes "mm/dd/yy" and
+sits centred in the pill.
+
+**The hint text, settled after the record disagreed with itself.** 0.31.0
+drew "MM/DD/YY" (Rob asked for it back); 0.31.1, the same day, changed it to
+"mm/dd/yyyy", relayed as "the owner's wording"; widget.css kept the 0.31.0
+heading. Before reverting, the history and two desktop facts went back to
+Rob and the WD: in Chromium, typing a two-digit year by habit (1 0 1 2 2 6)
+stores **0026-10-12**, and Chrome shows its own "mm/dd/yyyy" once a field is
+focused. The answer was **"mm/dd/yy"**. Also found: a click at the CENTRE of
+an empty field lands in the YEAR segment, so typed digits all go into the
+year — pre-existing, independent of the hint, reported not changed.
+
+**The hint is fitted by measurement, not by a constant (WD item 6, Rob item
+5).** It is a sibling of its input, so no CSS can give it the input's
+computed type (live: 18px from the Filter Fields control, against the hint's
+19px from the theme's label) or tell it whether a picker icon is painted
+(Chrome desktop: yes; iOS under appearance: none: no). WebKit accepts every
+::-webkit- selector, so @supports cannot tell either. widget.js copies the
+input's computed family, size, weight and style onto the hint, and measures
+the icon per field with two invisible copies at natural width, one with the
+icon switched off; the difference (0 on iOS) is reserved on the right.
+Without script the hint is centred over the whole field — right on iOS.
+
+**A latent fault the new test exposed:** the empty-state listener is
+delegated on the widget ROOT, and an open booking popup lives under <body>,
+so its fields' input/change never reached it. A date picked into an empty
+popup field kept the EMPTY state, which hides the date and draws the hint
+over it. The popup now has its own listener.
+
+**Instrument notes (hint-test.js).** Centring against the date is compared by
+painted pixels, with the SAME string in both states — different glyphs have
+different side bearings (~1.5px for "mm/dd/yyyy" vs "10/12/2026"). "Dark"
+excludes the gold border, whose rounded ends reach inside any crop. "Clear of
+the icon" is measured against the icon as drawn, not the reserved strip,
+which includes its margin. **No WebKit here**: the iOS case is Chromium with
+the icon switched off; Rob checks the real thing on staging.
+
+**Three mutations survived the first full run, all fixed.** (1) "the bold
+default is inherited again" — once widget.js copies the input's weight, only
+the page BEFORE the script runs can show it; the no-script case now asserts
+300. (2) "its weight is not taken from the input" — live's 300 equals the CSS
+fallback, so copying and not copying looked the same; a field control at
+500 / italic / 17px now proves the copy. (3) "a remembered period wins over
+Monthly again" — a fault in the MUTATION: it read the stored value after
+forgetOldPeriod() had removed it, so it could not change anything. It now
+reads before the removal. **A test page whose values equal the fallback cannot
+prove the copy.**
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

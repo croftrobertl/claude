@@ -144,25 +144,30 @@ ${markup}
   const choose = async (p, v) => { await p.selectOption('.mphbac-staff-period', v); await p.waitForTimeout(60); };
   const click = async (p, sel) => { await p.click(sel); await p.waitForTimeout(60); };
 
-  console.log('-- first visit: Monthly, on every device --');
+  console.log('-- every load: Monthly, on every device (Rob, 0.43.3) --');
   for (const phone of [false, true]) {
     const { ctx, p } = await open({ phone });
     const s = await st(p);
     const who = phone ? 'PHONE' : 'DESKTOP';
-    check(`${who}: a device that has never chosen opens on Monthly`, s.period === 'month' && s.chart && !s.agenda, s);
+    check(`${who}: the board opens on Monthly`, s.period === 'month' && s.chart && !s.agenda, s);
     check(`${who}: ...this month`, s.title === 'October 2026', s.title);
     check(`${who}: ...in ONE request for exactly the month`, s.reqs.length === 1
       && s.reqs[0].from === '2026-10-01' && s.reqs[0].to === '2026-10-31', s.reqs);
     check(`${who}: Today is SHOWN even though this month holds today (0.43.1: always in the row)`, s.today);
-    check(`${who}: opening the board stores NOTHING — only a deliberate choice does`, s.stored === null, s.stored);
+    check(`${who}: opening the board stores nothing`, s.stored === null, s.stored);
     await ctx.close();
   }
 
-  console.log('\n-- the remembered choice, carried over from 0.42.x --');
-  for (const [stored, want] of [['agenda', 'day'], ['chart', 'month'], ['week', 'week'], ['year', 'year'], ['nonsense', 'month']]) {
+  console.log('\n-- nothing is remembered any more, and the old key is removed --');
+  /* 0.42.x - 0.43.2 reopened each device's last period from localStorage
+     ('mphbacStaffView'); a 0.42.x "List" choice carried over as Daily, which
+     is why Rob's phone opened on Daily. Since 0.43.3 every load is Monthly,
+     whatever was stored, and the stored value is deleted so it cannot win
+     again if this code ever changes back. */
+  for (const stored of ['agenda', 'chart', 'day', 'week', 'year', 'nonsense']) {
     const { ctx, p } = await open({ phone: true, stored });
     const s = await st(p);
-    check(`stored "${stored}" opens ${want}`, s.period === want, s.period);
+    check(`an old stored "${stored}" opens Monthly anyway, and the key is gone`, s.period === 'month' && s.stored === null, [s.period, s.stored]);
     await ctx.close();
   }
   {
@@ -171,13 +176,18 @@ ${markup}
     check('storage BLOCKED: the board still opens, on Monthly, with no error',
       s.period === 'month' && s.title === 'October 2026' && p.__errors.length === 0, [s.period, p.__errors]);
     await choose(p, 'week');
-    check('...and choosing a period still works, it just is not remembered', (await st(p)).period === 'week' && p.__errors.length === 0);
+    check('...and choosing a period still works', (await st(p)).period === 'week' && p.__errors.length === 0);
     await ctx.close();
   }
   {
     const { ctx, p } = await open();
     await choose(p, 'year');
-    check('choosing a period stores its NAME, and nothing else', (await st(p)).stored === 'year');
+    check('choosing a period stores NOTHING', (await st(p)).stored === null && (await st(p)).period === 'year', (await st(p)).stored);
+    await p.reload();
+    await p.waitForFunction(() => document.querySelector('.mphbac-staff-title').textContent !== '');
+    await p.waitForTimeout(80);
+    check('...so a reload is back on Monthly — a choice lasts until the page is left or reloaded',
+      (await st(p)).period === 'month', (await st(p)).period);
     await ctx.close();
   }
 
@@ -187,7 +197,8 @@ ${markup}
     await choose(p, 'day');
     let s = await st(p);
     check('Daily: the list, not the chart, and no legend', s.agenda && !s.chart && !s.legend, s);
-    check('Daily: today, titled as such', /Thursday, October 8, 2026/.test(s.title) && /Today/.test(s.title), s.title);
+    check('Daily: the date ALONE — no month/year line under it (Rob, 0.43.3)', s.title === 'Thursday, October 8, 2026', s.title);
+    check('...nothing nested in the label at all', await p.evaluate(() => document.querySelector('.mphbac-staff-title').children.length === 0));
     const groups = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-group')].map(g =>
       [g.querySelector('.mphbac-staff-group-head').firstChild.textContent, g.querySelectorAll('.mphbac-staff-item').length]));
     check("Daily: today's Arriving / Departing / In house, each with its one guest",
@@ -312,27 +323,35 @@ ${markup}
     await ctx.close();
   }
 
-  console.log('\n-- Weekly fills the screen; on a phone the cottage column shrinks --');
-  for (const phone of [false, true]) {
+  console.log('\n-- Weekly fills the screen with the SAME cottage column as every period (Rob, 0.43.3) --');
+  /* 0.43.0's phone-only 48px column wrapped "#22" to "#2 / 2" and
+     "Cottages" to "Cott / ages" on Rob's iPhone. The days narrow instead.
+     Measured three ways: a desktop, the 375px phone with no page margin, and
+     a 320px chart — Rob's, from his screenshots (the live page's margins). */
+  for (const [phone, inset, who] of [[false, 0, 'DESKTOP 1280px'], [true, 0, 'PHONE 375px'], [true, 27, 'PHONE, a 320px chart']]) {
     const { ctx, p } = await open({ phone });
+    const monthly = await p.evaluate(() => Math.round(document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect().width));
+    if (inset) await p.evaluate(px => { document.body.style.padding = '0 ' + px + 'px'; }, inset);
     await choose(p, 'week');
     const m = await p.evaluate(() => {
-      const g = document.querySelector('.mphbac-staff-grid'), c = document.querySelector('.mphbac-staff-chart');
-      const head = document.querySelector('.mphbac-staff-dayhead'), lab = document.querySelector('.mphbac-staff-rowlabel');
-      const name = document.querySelector('.mphbac-staff-rowname');
-      return { scrolls: g.scrollWidth > g.clientWidth + 1, day: Math.round(head.getBoundingClientRect().width),
-               label: Math.round(lab.getBoundingClientRect().width), compact: c.classList.contains('is-compact'),
-               nameShown: !!name && getComputedStyle(name).display !== 'none' };
+      const g = document.querySelector('.mphbac-staff-grid');
+      const heads = [...document.querySelectorAll('.mphbac-staff-dayhead')], lab = document.querySelector('.mphbac-staff-rowlabel');
+      const corner = document.querySelector('.mphbac-staff-corner'), num = lab.querySelector('.mphbac-staff-rownum');
+      const name = lab.querySelector('.mphbac-staff-rowname');
+      const lines = el => { const r = document.createRange(); r.selectNodeContents(el); return r.getClientRects().length; };
+      return { chart: Math.round(g.clientWidth), scrolls: g.scrollWidth > g.clientWidth + 1,
+               day: +heads[0].getBoundingClientRect().width.toFixed(1),
+               label: Math.round(lab.getBoundingClientRect().width),
+               nameShown: !!name && getComputedStyle(name).display !== 'none',
+               numLines: lines(num), cornerLines: lines(corner),
+               headsFit: heads.every(h => h.scrollWidth <= h.clientWidth + 0.5) };
     });
-    const who = phone ? 'PHONE 375px' : 'DESKTOP 1280px';
     check(`${who}: the week never scrolls sideways`, !m.scrolls, m);
-    if (phone) {
-      check(`${who}: the cottage column shrinks to its number (≈48px)`, m.compact && m.label === 48 && !m.nameShown, m);
-      check(`${who}: which leaves days no narrower than 44px — wider than the 40px a full column would leave`, m.day >= 44, m.day);
-    } else {
-      check(`${who}: days grow well past 44px, room for full names`, m.day > 120 && m.label === 96 && m.nameShown, m);
-    }
-    console.log(`      ${who}: cottage column ${m.label}px, day ${m.day}px`);
+    check(`${who}: the cottage column is Monthly's — same width, number AND name`, m.label === monthly && m.nameShown, [m.label, monthly]);
+    check(`${who}: "#22" stays on one line, and so does "Cottages"`, m.numLines === 1 && m.cornerLines === 1, m);
+    check(`${who}: every day header fits its column`, m.headsFit, m);
+    if (!phone) check(`${who}: days grow well past 44px, room for full names`, m.day > 120, m.day);
+    console.log(`      ${who}: chart ${m.chart}px, cottage column ${m.label}px, day ${m.day}px`);
     await ctx.close();
   }
 
