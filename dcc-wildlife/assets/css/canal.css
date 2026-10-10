@@ -675,3 +675,28 @@
 	min-height: 44px;
 }
 
+
+/* ======================================================================
+ * THE HUB'S HOVER LIFT UNDER REDUCED MOTION (1.42.0).
+ *
+ * Killing the transition is only half the job, and doing only that makes
+ * the hover WORSE: with nothing to carry it, the 2px lift becomes an
+ * instant jump under the cursor. widget.css has said exactly that since
+ * 1.21.0 and drops the lift as well — but its rule names .dccwl-tile,
+ * and these are .dccwl-hub-tile / .dccwl-month-tile, so it never reached
+ * them. The tile still reports hover through its border and shadow.
+ *
+ * Touch devices are already covered by the (hover: none) block above,
+ * for a different reason (a finger must not leave a tile looking
+ * selected). This is the pointer case.
+ *
+ * It lives at the END of this file on purpose: the lift is declared at
+ * (0,4,0) on `.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover`, a
+ * media query adds no specificity, and an equal-specificity rule only
+ * wins when it comes later. The reduced-motion block near the top of
+ * this file is BEFORE those declarations and would silently lose.
+ * ====================================================================== */
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover,
+	.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover { transform: none; }
+}

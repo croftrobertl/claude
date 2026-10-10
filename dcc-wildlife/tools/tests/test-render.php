@@ -223,6 +223,81 @@ check_matches(
 	'each one sits at the END of its panel body, inside the panel'
 );
 
+dcc_section( 'the tile photo offers both renditions (1.42.0)' );
+
+/*
+ * THE DEFECT: the tile face shipped one -320 file and no srcset, so the
+ * smallest rendition served every surface — while the detail sheet has
+ * built a correct srcset since 1.29.0. Measured on the hub at
+ * deviceScaleFactor 2, the tile needs 380 device pixels at 1280px wide and
+ * 807 at 2560; it was given 320.
+ *
+ * These assertions are about the CONTRACT, not the numbers: both
+ * candidates present, each with a width descriptor, and a `sizes` that
+ * names a stop for the phone. The measurements live beside
+ * Render::TILE_SIZES, where changing them is a deliberate edit.
+ */
+check_matches(
+	$hub,
+	'/<img class="dccwl-tile-photo"[^>]*\ssrcset="[^"]*320w[^"]*600w"/',
+	'a tile photo offers the 320 and the 600, in that order'
+);
+check_matches(
+	$hub,
+	'/<img class="dccwl-tile-photo"[^>]*\ssizes="\(max-width: 700px\)[^"]*"/',
+	'and a sizes list that starts with a phone stop'
+);
+
+/*
+ * NOTHING COMPOSES A URL. The srcset must hold two resolved attachment
+ * URLs; the string surgery this replaced ("-600" onto a base) is what
+ * WordPress's filename dedupe silently broke. Both must be real,
+ * DIFFERENT urls — a species whose mid resolves to the same file as its
+ * thumb gets no srcset at all rather than a candidate list that lies.
+ */
+if ( preg_match( '/<img class="dccwl-tile-photo"[^>]*\ssrcset="([^"]*)"/', $hub, $m ) ) {
+	$parts = array_map( 'trim', explode( ',', $m[1] ) );
+	check_same( 2, count( $parts ), 'exactly two candidates' );
+	$urls = array_map(
+		static function ( $p ) {
+			return explode( ' ', $p )[0];
+		},
+		$parts
+	);
+	check( $urls[0] !== $urls[1], 'the two candidates are different files' );
+	check_matches( $urls[1], '/-600\.jpg$/', 'the wide candidate is the mid rendition' );
+} else {
+	check( false, 'a tile photo with a srcset was found to inspect' );
+}
+
+/*
+ * THE GUARD THAT MATTERS ON A FRESH INSTALL. assets/photos is excluded
+ * from the plugin zip, so a site can hold a thumb and no mid until the
+ * photo pack lands or the import runs. That tile must render exactly as
+ * it did before — no srcset, no sizes, no empty attribute.
+ */
+check_lacks( $hub, 'srcset=""', 'no tile ships an empty srcset' );
+check_lacks( $hub, 'sizes=""', 'no tile ships an empty sizes' );
+
+/*
+ * THE CLIENT MUST AGREE WITH THE SERVER. widget.js re-renders these tiles
+ * on a month or filter change, so a guest would otherwise see two
+ * different pictures of one species depending on which drew it. Asserted
+ * as a source lint, which is what catches a one-sided edit.
+ */
+$js = (string) file_get_contents( DCC_WL_DIR . 'assets/js/widget.js' );
+check_matches( $js, '/img\.srcset = sp\.src\.thumb \+ . 320w, ./', 'the client builds the same srcset' );
+if ( preg_match( "/var TILE_SIZES = '([^']+)'/", $js, $jm ) ) {
+	$ref = new \ReflectionClass( Render::class );
+	check_same(
+		$ref->getConstant( 'TILE_SIZES' ),
+		$jm[1],
+		'and uses the same sizes string as Render::TILE_SIZES'
+	);
+} else {
+	check( false, 'the client declares TILE_SIZES' );
+}
+
 dcc_section( 'escaping' );
 
 // A stored title must not be able to open a tag. This is the one place a

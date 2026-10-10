@@ -1231,3 +1231,44 @@
 	overflow-x: visible;
 	scroll-snap-type: none;
 }
+
+/* ======================================================================
+ * REDUCED MOTION, IN THE SHARED LAYER (1.42.0, found by a self-audit).
+ *
+ * widget.css has carried a blanket "nothing inside this widget animates"
+ * rule since 1.21.0, scoped to .dccwl-root. The HUB's own chrome is not
+ * inside a .dccwl-root — Canal_Render wraps it in .dccwl-canal — so the
+ * twelve month tiles and the two hub doors kept
+ * `transition: transform .3s cubic-bezier(.34,1.56,.64,1)` with the OS
+ * setting on. Measured with the media query genuinely applied: 836
+ * elements animate a transform normally, and 14 still did.
+ *
+ * The same fault reached the STANDALONE water widget, which loads neither
+ * widget.css nor canal.css. So the rule belongs here, in the layer every
+ * surface depends on, scoped to the class every root carries
+ * (Render::app_classes() puts .dccwl-app on the month root, the hub
+ * wrapper, the water section AND the sheet host). This is the rule the
+ * 1.40.1 lesson names: a shared component lives in the shared layer, and
+ * no single widget's stylesheet may own it. widget.css's .dccwl-root
+ * block is now a subset of this one and is left in place — removing it
+ * changes nothing and risks something.
+ *
+ * WHY IT IS SAFE TO COVER THE SHEET, WHERE THE CHAIN MAP LIVES. An
+ * earlier pass of this audit claimed Leaflet would strand a zoom without
+ * `transitionend`, and recommended a narrower scope on that basis. That
+ * was reasoned, not checked, and it is wrong: Leaflet 1.9.4 in
+ * assets/vendor/leaflet/ reaches _onZoomTransitionEnd three independent
+ * ways — the proxy's transitionend, an immediate call inside its own
+ * `zoomanim` handler for the case where the transform value did NOT
+ * change, and an unconditional setTimeout(…, 250). Read the vendored
+ * source before asserting a mechanism about it.
+ *
+ * The sheet's own rules above still decide how the sheet behaves; this
+ * only removes duration, which they already do for it.
+ * ====================================================================== */
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-app,
+	.dccwl-app *,
+	.dccwl-app *::before,
+	.dccwl-app *::after { animation: none !important; transition: none !important; }
+}

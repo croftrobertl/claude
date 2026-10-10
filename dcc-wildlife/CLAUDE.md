@@ -3348,3 +3348,100 @@ invalidates passes the first assertion on its own.
   with comments stripped. The comments are this repo's documentation and must
   stay in the SOURCE; the saving is a build-step question (strip on the way
   into the zip), which is Rob's to decide, not something to take silently.
+
+### 32. 1.42.0 — two defects from a self-audit, and four rules about auditing
+
+Two real defects shipped here. Both were found by a read-only audit, and both
+were found in the SECOND and THIRD passes over that audit rather than the
+first — so the rules the passes produced are recorded with them, because the
+audit was wrong in more interesting ways than the plugin was.
+
+**REDUCED MOTION NEVER REACHED THE HUB OR THE STANDALONE WATER WIDGET.**
+widget.css has carried a blanket *nothing in here animates* rule since 1.21.0,
+scoped to `.dccwl-root`. The hub's own chrome is not inside one —
+`Canal_Render` wraps it in `.dccwl-canal` — so with the OS setting on, the
+twelve month tiles and the two hub doors kept
+`transition: transform .3s cubic-bezier(.34,1.56,.64,1)`. Measured with the
+query genuinely applied: **865 elements animate normally on the hub and 14
+still did**; the standalone water section went 13 → 0.
+
+The rule now lives in **app.css**, scoped to `.dccwl-app`, which
+`Render::app_classes()` puts on the month root, the hub wrapper, the water
+section and the sheet host. That is the 1.40.1 rule — *a shared component
+lives in the shared layer* — in its fourth instance. widget.css's
+`.dccwl-root` block is now a subset and is left alone: removing it changes
+nothing and risks something.
+
+**AND KILLING THE TRANSITION ALONE WOULD HAVE MADE THE HOVER WORSE.**
+widget.css also drops the hover LIFT under the same query, with the reason
+written beside it since 1.21.0: with no transition to carry it, a 2px lift is
+an instant jump under the cursor. That rule names `.dccwl-tile`, and the hub's
+tiles are `.dccwl-hub-tile` / `.dccwl-month-tile`, so it never reached them.
+The drop lives at the **end of canal.css** on purpose — the lift is declared
+at (0,4,0), a media query adds no specificity, and the reduced-motion block
+near the top of that file would silently lose.
+
+**THE TILE PHOTO HAD NO `srcset`, SO EVERY SCREEN GOT THE SMALLEST FILE.** The
+detail sheet has built a correct one since 1.29.0; the tile face never did.
+Measured on the hub (the shape /explore/ renders): the tile is 133 CSS px at
+320, 168 at 390, 190 at 1280, 257 at 1680, **404 at 2560** — all drawn from a
+320px file.
+
+`Render::tile_srcset()` and the JS twin in `tileMedia()` now offer both
+renditions. Three rules carried over from the sheet, each load-bearing:
+**nothing composes a URL** (both are resolved attachments — the class header
+says why), **either may be missing** (assets/photos is excluded from the zip,
+so a fresh install may hold a thumb and no mid, and that tile renders exactly
+as before), and **the width descriptors come from `Photo_Library::width()`**,
+never literals, which is the 1.33.0 `PHOTO_W` lesson.
+
+**`TILE_SIZES` IS TUNED, AND THE TUNING IS THE INTERESTING PART.** An honest
+45vw phone stop made a DPR-2 phone fetch the 600 rendition for a **four pixel**
+shortfall — 324 device pixels wanted against a 320 file — at 43 KB instead of
+18 KB per visible tile (measured averages over all 402). At **40vw** a DPR-2
+phone keeps exactly the file and the bytes it had in 1.41.1, while a DPR-3
+phone needs 504 device pixels and gets the 600. So **no phone pays more than
+it did, and every screen that was under-served stops being.** The honest fix
+for the DPR-2 phone is a rendition between 320 and 600 — 402 photographs and a
+new photo pack, which is the owner's call. `lib.mjs` gained a `dpr` option for
+this; it had been fixed at 2 since the harness was written, which hid the only
+case that justifies the change.
+
+### The four rules about auditing, each paid for in this round
+
+1. **RUN THE HARNESS. AN AUDIT THAT DOES NOT IS STANDING ON NOTHING.** The
+   first pass declared the plugin "in good shape — no errors" without running
+   a single suite. `test-bootstrap.php` exists *because* 1.33.0 fataled on
+   activation with 23 suites green; the suites are the cheapest evidence in
+   the repository and they were the one thing not consulted. 28/28, exit 0,
+   nothing skipped, is now the first line of any audit.
+2. **RE-READING THE CODE IS NOT RE-MEASURING.** The second pass re-verified
+   every finding against source and carried forward every NUMBER from the
+   first — latencies, heap, element counts — from scripts it never reopened.
+   That is 1.38.1's lesson (*measure against what was asked, never against a
+   previous summary of it*) in a new place. Re-reading confirms a defect
+   exists; it says nothing about the figure attached to it.
+3. **CHECK THE VENDORED SOURCE BEFORE ASSERTING A MECHANISM ABOUT IT.** The
+   second pass claimed a blanket `transition: none` would strand Leaflet's
+   zoom, and recommended the narrower scope on that basis. One grep disproved
+   it: Leaflet 1.9.4 reaches `_onZoomTransitionEnd` three independent ways —
+   the proxy's `transitionend`, an immediate call in its own `zoomanim`
+   handler for when the transform value did NOT change, and an unconditional
+   `setTimeout(…, 250)`. A plausible mechanism argued me out of the correct
+   fix. Same family as *find out which stacking context each number is
+   measured in*.
+4. **MEASURE THE SURFACE YOU ARE TALKING ABOUT.** The first pass reported tile
+   widths "164 → 420px" and the second asserted "~170 CSS px at 390". The hub
+   deck and the standalone widget do not agree: the standalone caps at
+   **122 CSS px at every width from 390 up**, while the hub reaches 404 at
+   2560. One number quoted for "the tile" was two different surfaces, and the
+   `sizes` list is fitted to the hub for that reason, with the cost to the
+   legacy widget written down beside it.
+
+**WHAT THE AUDIT COULD NOT SEE, AND WHY THAT MATTERS MORE THAN ITS FINDINGS.**
+No live egress, no media library, no Raleway, no SpeedyCache. So every
+layout-fits and no-overflow result is sandbox-only — the standing trap, and
+the footnote row is the precedent: it passed at 361px here and wrapped at
+393px on live. The defensible sentence is *"I found no defects in the narrow
+set of things measurable in this container"*, and a limitations note at the
+foot of a report does not repair a verdict at its head.

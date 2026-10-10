@@ -222,6 +222,13 @@
 	}
 
 	/* Photo-first tile face (1.19.0) — mirrors Render::tile_media(). */
+	/*
+	 * Mirrors Render::TILE_SIZES, which carries the measurements that
+	 * produced it. Changing one without the other makes the server-
+	 * rendered tiles and the client-rendered tiles disagree.
+	 */
+	var TILE_SIZES = '(max-width: 700px) 40vw, (max-width: 1000px) 23vw, 17vw';
+
 	function tileMedia(sp) {
 		var media = el('span', 'dccwl-tile-media');
 		// 1.29.0: a resolved URL from the server, never a base plus a filename.
@@ -236,6 +243,23 @@
 			img.loading = 'lazy';
 			img.decoding = 'async';
 			img.src = sp.src.thumb;
+			/*
+			 * THE TILE'S srcset (1.42.0) — in step with
+			 * Render::tile_srcset() and TILE_SIZES. Keep them together:
+			 * this builds the tiles the client re-renders on a month or
+			 * filter change, and the server builds the ones in the cached
+			 * HTML, so a guest would otherwise see two different pictures
+			 * of the same species depending on which drew it.
+			 *
+			 * Guarded exactly as the sheet's is: the mid rendition may be
+			 * absent (the photo pack or the media import may not have run)
+			 * and then the tile renders as it always did.
+			 */
+			if (sp.src.mid && sp.src.mid !== sp.src.thumb) {
+				img.srcset = sp.src.thumb + ' 320w, ' +
+					sp.src.mid + ' ' + (sp.src.midW || 600) + 'w';
+				img.sizes = TILE_SIZES;
+			}
 			media.appendChild(img);
 		} else if (sp.sprite) {
 			// The species' own drawing before the group glyph (1.23.0) —

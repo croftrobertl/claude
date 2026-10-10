@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.41.1
+Stable tag: 1.42.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,17 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.42.0 =
+* **Species photographs are sharper on high-resolution screens.** Each tile
+  now offers the browser both sizes of the photograph and lets it choose, as
+  the detail sheet has always done. On a modern phone or a large desktop the
+  tile was being drawn from the smallest file and looked soft; it no longer
+  is. Phones at ordinary resolution download exactly what they did before —
+  no page is heavier than it was.
+* **The "reduce motion" setting now works on every part of the widget.** With
+  that setting on, the month tiles and the two hub doors still animated, and
+  so did the standalone water section. Nothing in the widget animates now.
 
 = 1.41.1 =
 * **Pages build about five times faster on the server.** The 402-species list

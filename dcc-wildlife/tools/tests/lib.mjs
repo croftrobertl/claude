@@ -151,13 +151,31 @@ export async function buildPage(browser, opts = {}) {
      * default stays touch so nothing already written changes behaviour.
      */
     touch = true,
+    /*
+     * REDUCED MOTION (1.42.0). This was NOT forwarded, and the gap was
+     * found the hard way: a self-audit passed `reducedMotion` to
+     * widgetPage, measured a page where the setting had never been
+     * applied, and reported a clean result. Any suite asking the question
+     * has to be able to turn it on here, and should assert
+     * matchMedia(...).matches before trusting what it measures.
+     */
+    reducedMotion = null,
+    /*
+     * DEVICE PIXEL RATIO (1.42.0). Fixed at 2 since this harness was
+     * written, which hid the case that justifies the tile srcset: Rob
+     * reviews on an iPhone at DPR 3, where a 168 CSS px tile needs 504
+     * device pixels and the 320 file is a 1.58x upscale. A claim about a
+     * DPR-3 screen has to be measured on one.
+     */
+    dpr = 2,
   } = opts;
 
   const page = await browser.newPage({
     viewport: { width, height },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: dpr,
     hasTouch: touch,
     isMobile: touch,
+    ...(reducedMotion ? { reducedMotion } : {}),
   });
 
   /*

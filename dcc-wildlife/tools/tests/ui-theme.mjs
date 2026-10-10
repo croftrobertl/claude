@@ -566,5 +566,63 @@ check(inSheet.peakBg && inSheet.peakBg.includes('240, 128, 128'),
   String(inSheet.peakBg));
 await sheetW.page.close();
 
+/* ==================================================================
+ * THE TILE PHOTO PICKS THE RENDITION IT NEEDS (1.42.0).
+ *
+ * The markup contract is asserted in test-render.php. What that cannot
+ * see is the only thing a guest experiences: WHICH FILE the browser
+ * actually fetches. Through 1.41.1 it was always the 320, on every
+ * screen, because there was no srcset to choose from — so the hub's
+ * tile was drawn from 320 pixels into 380 device pixels at 1280 and
+ * 807 at 2560.
+ *
+ * Measured, not reasoned about: `currentSrc` after layout. The narrow
+ * case is asserted too, so a `sizes` that simply always picks the big
+ * file cannot pass this as an improvement.
+ * ================================================================== */
+section('the tile photo picks its rendition by width');
+
+for (const [w, dpr, want, why] of [
+  /*
+   * THE PHONE STOP IS TUNED, AND THESE THREE ROWS ARE WHY.
+   *
+   * An honest 45vw made a DPR-2 phone fetch the 600 for a FOUR PIXEL
+   * shortfall (324 needed against a 320 file) — 43 KB instead of 18 KB
+   * per visible tile, measured, for nothing anyone can see. 40vw keeps
+   * that phone on exactly the file and the bytes it got in 1.41.1, and
+   * still sends the 600 to the DPR-3 phone that genuinely needs 504
+   * device pixels, and to every desktop from 1024 up.
+   *
+   * So the rule this pins is: NO PHONE PAYS MORE THAN IT DID, and every
+   * screen that was being under-served stops being.
+   */
+  [390, 2, '-320.jpg', 'a DPR-2 phone keeps the light file it already had'],
+  [390, 3, '-600.jpg', 'a DPR-3 phone — Rob reviews on one — gets the sharper file'],
+  [1680, 2, '-600.jpg', 'and so does a wide desktop'],
+]) {
+  const t = await widgetPage(browser, 'canal', {
+    width: w, height: 1000, sitekit: true, touch: w < 700, dpr,
+  });
+  await t.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await t.page.waitForTimeout(500);
+  const got = await t.page.evaluate(() => {
+    const img = Array.from(document.querySelectorAll('.dccwl-tile-photo'))
+      .find(i => i.getBoundingClientRect().width > 0 && i.currentSrc);
+    if (!img) { return null; }
+    const r = img.getBoundingClientRect();
+    return {
+      file: img.currentSrc.split('/').pop(),
+      css: Math.round(r.width),
+      need: Math.round(r.width * window.devicePixelRatio),
+    };
+  });
+  check(!!got, `a laid-out tile photo was found at ${w}px, DPR ${dpr}`);
+  if (got) {
+    note(`${w}px @${dpr}x: tile ${got.css} CSS px, needs ${got.need} device px, fetched ${got.file}`);
+    check(got.file.endsWith(want), `${why} (${got.file})`);
+  }
+  await t.page.close();
+}
+
 await browser.close();
 done();

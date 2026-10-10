@@ -33,6 +33,44 @@ final class Render {
 	 */
 	public const PEAK_TAB = '__peak';
 
+	/**
+	 * The tile photo's `sizes`, derived from MEASURED tile widths (1.42.0).
+	 *
+	 * Measured on the hub at nine viewports, then TUNED, and the tuning is
+	 * the part worth reading. Real tile widths:
+	 *
+	 *   320 -> 133    390 -> 168    768 -> 168
+	 *   1024 -> 148   1280 -> 190   1680 -> 257   2560 -> 404
+	 *
+	 * The desktop stops sit just above the tile, so a browser never
+	 * under-estimates: 23vw = 177 at 768, 17vw = 174 at 1024, 218 at 1280,
+	 * 435 at 2560.
+	 *
+	 * THE PHONE STOP IS DELIBERATELY ~14% UNDER THE TILE, and 45vw was
+	 * tried first. It made a DPR-2 phone fetch the 600 rendition for a
+	 * FOUR PIXEL shortfall — 324 device pixels wanted against a 320 file —
+	 * which costs 43 KB instead of 18 KB per visible tile (measured
+	 * averages over all 402) for a difference nobody can see. At 40vw a
+	 * DPR-2 phone keeps exactly the file and the bytes it had in 1.41.1,
+	 * while a DPR-3 phone still needs 504 device pixels and gets the 600.
+	 * ui-theme.mjs pins all three cases on real renders at both ratios.
+	 *
+	 * The honest fix for the DPR-2 phone is a rendition between 320 and
+	 * 600, which means rebuilding 402 photographs and a new photo pack —
+	 * the owner's call, not a session's.
+	 *
+	 * ONE VALUE SERVES TWO LAYOUTS, and it fits the hub. The standalone
+	 * [dcc_wildlife] widget caps its tiles at about 122 CSS px at every
+	 * width, so on a wide desktop this over-states that surface and it may
+	 * fetch the 600 where the 320 would do. /explore/ is the hub, so the
+	 * hub is what this is fitted to; the legacy surface pays some bytes
+	 * rather than rendering soft. Teaching tile_media() which surface it
+	 * is on would be the alternative and costs a parameter through four
+	 * call sites — not worth it until that widget is the one being looked
+	 * at.
+	 */
+	private const TILE_SIZES = '(max-width: 700px) 40vw, (max-width: 1000px) 23vw, 17vw';
+
 	private static bool $config_added  = false;
 	private static bool $sheet_printed = false;
 
@@ -626,6 +664,50 @@ final class Render {
 	 * animal. Flag marks sit on the corner. The same face is built
 	 * client-side by widget.js for spotlight tiles; keep the two in step.
 	 */
+	/**
+	 * THE TILE'S OWN srcset (1.42.0, found by a self-audit).
+	 *
+	 * The tile face shipped one -320 file and no srcset, while the DETAIL
+	 * SHEET has built a correct one since 1.29.0 — so the smallest
+	 * rendition was serving every surface. Measured on the hub (the shape
+	 * /explore/ renders), at deviceScaleFactor 2, the tile is:
+	 *
+	 *   320px  133 CSS px -> 266 device px   (within the 320 file)
+	 *   390px  168        -> 336             upscaled 1.05x
+	 *   1280   190        -> 380             upscaled 1.19x
+	 *   1920   297        -> 594             upscaled 1.86x
+	 *   2560   404        -> 807             upscaled 2.52x
+	 *
+	 * On a DPR-3 phone the 390px case needs 504 device pixels from a
+	 * 320px file. (That last figure is arithmetic on a measured CSS
+	 * width, not a measured DPR-3 render — this harness runs at 2.)
+	 *
+	 * TWO RULES CARRIED OVER FROM THE SHEET, both load-bearing:
+	 *
+	 * 1. NOTHING COMPOSES A URL. Both are resolved attachments from
+	 *    Photo_Library, never a base plus "-600" — WordPress's filename
+	 *    dedupe is what made that unsafe (see the class header).
+	 * 2. EITHER MAY BE MISSING. assets/photos is excluded from the plugin
+	 *    zip, so on a fresh install the renditions arrive from the photo
+	 *    pack or the media import. A species with a thumb but no mid gets
+	 *    NO srcset and renders exactly as it did before.
+	 *
+	 * The descriptors come from Photo_Library::width() rather than
+	 * literals, which is the 1.33.0 PHOTO_W lesson: a width descriptor
+	 * that disagrees with the file makes a browser pick the wrong
+	 * rendition, silently.
+	 */
+	private static function tile_srcset( string $id, string $thumb ): string {
+		$mid = Photo_Library::url( $id, 'mid' );
+		if ( '' === $mid || $mid === $thumb ) {
+			return '';
+		}
+		$set = $thumb . ' ' . Photo_Library::width( $id, 'thumb' ) . 'w, '
+			. $mid . ' ' . Photo_Library::width( $id, 'mid' ) . 'w';
+
+		return ' srcset="' . esc_attr( $set ) . '" sizes="' . esc_attr( self::TILE_SIZES ) . '"';
+	}
+
 	private static function tile_media( array $sp ): string {
 		$out = '<span class="dccwl-tile-media">';
 		// 1.29.0: the URL comes from the media library, then from a bundled
@@ -635,7 +717,9 @@ final class Render {
 		// always had. A missing attachment must never be a broken image.
 		$thumb = Photo_Library::url( (string) $sp['id'], 'thumb' );
 		if ( '' !== $thumb ) {
-			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( $thumb ) . '" alt="" width="320" height="240" loading="lazy" decoding="async">';
+			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( $thumb ) . '"'
+				. self::tile_srcset( (string) $sp['id'], $thumb )
+				. ' alt="" width="320" height="240" loading="lazy" decoding="async">';
 		} elseif ( Sprites::has( (string) $sp['id'] ) ) {
 			// 1.23.0: the species' own drawing before the group glyph. It is
 			// still not a photograph, but it is THIS animal rather than a
