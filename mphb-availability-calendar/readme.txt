@@ -66,6 +66,8 @@ Then clear the SpeedyCache cache once. The calendar will render normally on ever
 
 = 0.45.2 =
 * **A ✕ to close search.** While the Search box has text, a ✕ at its right end clears it, closes the results and puts the phone's keyboard away, all in one tap. iPhones draw no clear button of their own on a search box, so closing the results used to mean deleting every letter. Escape still does the same on a computer, and the browser's own ✕ is hidden so there are never two.
+* **Long stays slide smoothly.** When the calendar is scrolled sideways, a long stay's name now moves with the scroll itself, so on a phone it no longer lags behind a flick, slips under the cottage column or jumps into place.
+* **The board's buttons are the calendar's buttons.** The arrows, Today, the close ✕, the search ✕ and the View Photo ID, Text and Open in WP-Admin buttons now look and behave exactly like the buttons on the home page and the cottage pages, in every state: the same blue, the same coral when hovered or tapped (including after a tap on a phone, as on the public pages), the same focus ring and the same faded look when an arrow can't go further. Booking bars keep their own colours.
 * **The Search box looks like the other fields.** The site theme underlined every form label, and on an iPhone the line also ran under the placeholder and the typed text. The labels, the fields and the placeholder are no longer underlined. The placeholder now looks like the public calendar's "mm/dd/yy" hint: same grey, same lettering as the field, centred. Typed text is centred in the same lettering as "Monthly" and the date.
 
 = 0.45.1 =

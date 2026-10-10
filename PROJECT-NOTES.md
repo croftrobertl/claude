@@ -2689,9 +2689,9 @@ the "Monthly" value. The left alignment 0.45.0 gave the typed text is gone.
 tap on "Search" still focuses the field; the input carries its own
 aria-label ("Search") so its name never reads "Search Clear search". Shown
 by CSS (:placeholder-shown + …), so no state of ours can disagree with the
-field. A 36px disc in a 44px target (padding + background-clip). The kit's
-`button:hover, button:focus` is held off by restating ground, ink and shape
-at (0,3,0); there is no hover colour at all. The field pads 52px each side
+field. A 36px disc in a 44px target (padding + background-clip). (Its first
+version held the kit's coral off it at (0,3,0) — superseded the same day by
+the addendum below: it now follows the public X.) The field pads 52px each side
 while it has text (3px inset + 44px + 5px), 20px while empty.
 **mousedown is prevented on the ✕**, so pressing it never moves focus off
 the field — as on iOS, which never focuses a tapped button. Without it,
@@ -2708,3 +2708,77 @@ the board's handler is for browsers that do not, so it stays, and a
 synthetic Escape (no default action) now proves the handler alone.
 
 No change to .mphbac-btn's look; no login-page styles.
+
+### The 0.45.2 addendum: the sliding label, and the buttons (Rob's 2nd recording)
+
+**Rob** (iPhone recording of 0.45.1): the long-stay label is "glitchy" — it
+lags a flick, slides under the cottage column ("OCK BLOCK"), then jumps. And:
+"Why aren't the buttons using the same styling as the buttons elsewhere on
+the availability calendars? … Make the buttons' styles / colours / states /
+etc. match what we already set up … on the home page and the cottages pages."
+**WD:** sticky positioning proposed (or the smoothest provable alternative);
+a mid-scroll test; every button-style control to match its public twin in
+every state, on desktop and after a tap on iOS; Rob's instruction supersedes
+0.44.1's "nav stays blue after a tap" for BUTTONS; bars are not buttons.
+
+**THE LABEL IS STICKY.** The bar was `overflow: hidden`, which makes it a
+scroll container of its own — a sticky child would stick inside the bar and
+never move — so the bar now CLIPS (`overflow: clip`, no scroll container),
+and the label is in flow, `position: sticky; left: var(--staff-label-w)`.
+The browser positions it frame for frame; staff.js only refits it (name,
+nights, icons) to the visible width from the existing rAF. Inside
+`@supports (overflow: clip)`: Safari before 16 keeps 0.45.0's script-moved
+label. **Own mistake, caught at once:** `inset: auto` written after `left`
+reset `left` to auto — the shorthand covers all four sides.
+**The test that proves it** sets the scroll position and measures in the
+same task — no scroll event can run between — sweeping RIGHT from the left
+end (the first version swept from Monthly's opening position, its right
+end, so it only ever moved the way a late label stays clear, and passed on
+0.45.0's code). Re-run against 0.45.0's behaviour it fails on every view
+(Ivy's name drawn at x=90 under a column ending at 97); sticky passes ~600
+samples. A real wheel scroll sampled every frame after the board's own work
+is the second check. **Honest limit:** the REFIT (name → count → icons) is
+still the scroll handler's; at the very end of a bar, on a phone, that
+switch can come a frame or two late — the position cannot.
+
+**THE BUTTONS: WHERE THE PUBLIC CORAL COMES FROM.** widget.css gates its
+own hover behind (hover: hover) and (pointer: fine), so the plugin never
+paints a tapped public button coral. The kit does: `.elementor-kit-N
+button:hover, button:focus` (0,2,1) beats the public rests at (0,1,0) —
+coral on hover, while focused after a click, and after a tap on an iPhone.
+0.44.1 had put the staff nav's rest at (0,3,0) precisely to stop that; that
+is what made the two calendars differ. **Measured side by side** (both
+widgets, the kit rule, the live 30px nav radius), before: staff nav blue
+after a click and a tap, no disabled look, a blue ring; staff ✕ never coral
+on focus or tap, blue ring (public: coral + gold ring); staff pills #0f6dbf
+(public #0A50B2), Text / WP-Admin with no hover, no focus fill.
+**Now each staff rule sits where its public twin sits:**
+- ‹ › and Today → `.mphbac-nav-btn`: rest (0,1,0); `:focus-visible` coral,
+  the browser's own ring (`outline: revert`); hover in the guard; disabled
+  0.4 / not-allowed (new — the staff arrows had none).
+- sheet ✕ and search ✕ → `.mphbac-sheet-close`: ground, ink, circle at
+  (0,2,0), below the kit's (0,2,1); hover coral in the guard; keyboard the
+  public gold 2px ring at +2px. The search ✕'s "never coral" (this
+  release's first version) is superseded.
+- View Photo ID, Text, Open in WP-Admin → `.mphbac-info-view-link`: #0A50B2
+  via --dcc-button-bg, 0.2s colour change, coral hover in the guard, coral
+  fill + browser ring on keyboard focus. Sizes unchanged (the Text pill
+  stays the smaller one beside the number).
+- NOT buttons, unchanged: booking bars (Rob, 0.44.1), Daily rows, search
+  result rows, the Stats toggle (a <summary>, which the kit rule does not
+  reach).
+**WHY NOT ONE SHARED STYLESHEET:** /staff/ cannot load widget.css — its
+print block hides everything outside .mphbac-root, and it carries global
+rules (the jQuery UI datepicker) — and splitting the public button rules
+into a shared file means re-ordering the live public stylesheet against
+Elementor's own CSS, a public-calendar change this staff release should not
+carry. Instead staff-board-test.js renders BOTH widgets and compares every
+state pair by pair (rest, hover, pressed, after a click, keyboard, disabled;
+a phone tap) — a drift on either side turns it red. A shared file remains a
+possible follow-up. One documented exclusion: the search ✕'s "after a click"
+— a press never takes focus from the field and the click hides the ✕.
+**Tests that encoded the old contract were corrected, not deleted:** the
+touch-linger check keeps the bar and the row; the ✕ token / no-fill checks
+now drop the kit rule on the staff page, as the public fixture never had it
+(like with like); the 0.44.1 mutation "a tapped nav arrow stays coral" is
+retired and replaced by its reverse.
