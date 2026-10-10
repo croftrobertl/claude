@@ -439,6 +439,105 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await ctx.close();
   }
 
+  console.log('\n-- 0.45.2: the ✕ that closes search (Rob: iOS draws none) --');
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    const { ctx, p } = await open({ phone, inset: phone ? 27 : 0 });
+    const reqs = () => p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_search').map(r => r.q));
+    const st = () => p.evaluate(() => {
+      const q = document.querySelector('.mphbac-staff-q'), x = document.querySelector('.mphbac-staff-qclear');
+      const c = getComputedStyle(x), r = x.getBoundingClientRect(), qr = q.getBoundingClientRect(), qc = getComputedStyle(q);
+      return { value: q.value, shown: c.display !== 'none', w: r.width, h: r.height, label: x.getAttribute('aria-label'), qname: q.getAttribute('aria-label'),
+        open: !document.querySelector('.mphbac-staff-results').hidden, focused: document.activeElement === q, xfocused: document.activeElement === x,
+        padL: parseFloat(qc.paddingLeft), padR: parseFloat(qc.paddingRight), under: qr.right - r.left, bg: c.backgroundColor, radius: c.borderRadius,
+        inside: r.left >= qr.left && r.right <= qr.right && r.top >= qr.top - 0.5 && r.bottom <= qr.bottom + 0.5 };
+    });
+    const tapX = async () => { if (phone) await p.tap('.mphbac-staff-qclear'); else await p.click('.mphbac-staff-qclear'); };
+    let s0 = await st();
+    check(`${who}: no ✕ while the field is empty`, !s0.shown && s0.value === '', s0);
+    if (phone) await p.tap('.mphbac-staff-q'); else await p.click('.mphbac-staff-q');
+    await p.keyboard.type('smi', { delay: 30 });
+    await p.waitForTimeout(450);
+    s0 = await st();
+    check(`${who}: with text, the ✕ shows inside the pill — a 44px target, "Clear search"; the field's own name stays "Search"`,
+      s0.shown && s0.inside && s0.w >= 44 && s0.h >= 44 && s0.label === 'Clear search' && s0.qname === 'Search' && s0.open, s0);
+    check(`${who}: symmetric padding, and the text area ends before the ✕`, s0.padL === s0.padR && s0.padR >= s0.under, s0);
+    await tapX();
+    await p.waitForTimeout(100);
+    s0 = await st();
+    check(`${who}: ONE tap — the field empty, the results closed, the field let go of (keyboard down), the ✕ gone`,
+      s0.value === '' && !s0.open && !s0.focused && !s0.shown, s0);
+    const before = (await reqs()).length;
+    if (phone) await p.tap('.mphbac-staff-q'); else await p.click('.mphbac-staff-q');
+    await p.keyboard.type('sm');
+    await tapX();                                  // inside the 250ms debounce
+    await p.waitForTimeout(500);
+    s0 = await st();
+    check(`${who}: a search still waiting on its debounce is cancelled — no request, no list`,
+      (await reqs()).length === before && !s0.open && s0.value === '', { reqs: await reqs(), s0 });
+    /* Never coral: the kit's button:hover / :focus (0,2,1) against ours. */
+    await p.fill('.mphbac-staff-q', 'sm');
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-qclear').style.transition = 'none'; });
+    const rest = (await st()).bg;
+    if (!phone) await p.hover('.mphbac-staff-qclear');
+    await p.evaluate(() => document.querySelector('.mphbac-staff-qclear').focus());
+    s0 = await st();
+    check(`${who}: hovered or focused, the ✕ keeps its own ground and disc — never the theme's coral pill`,
+      s0.xfocused && s0.bg === rest && s0.bg !== 'rgb(240, 128, 128)' && s0.radius === '50%', s0);
+    /* The sheet's ✕, scaled: the same mark, ink and ground. */
+    const look = await p.evaluate(() => {
+      const a = document.querySelector('.mphbac-staff-qclear'), b = document.querySelector('.mphbac-staff-close');
+      const ca = getComputedStyle(a), cb = getComputedStyle(b);
+      return { same: a.querySelector('path').getAttribute('d') === b.querySelector('path').getAttribute('d'),
+        ink: [ca.color, cb.color], stroke: [getComputedStyle(a.querySelector('path')).strokeWidth, getComputedStyle(b.querySelector('path')).strokeWidth] };
+    });
+    check(`${who}: it is the booking sheet's ✕ — the same mark, ink and stroke`, look.same && look.ink[0] === look.ink[1] && look.stroke[0] === look.stroke[1], look);
+    if (!phone) {
+      await p.fill('.mphbac-staff-q', 'smi');
+      await p.waitForTimeout(450);
+      await p.focus('.mphbac-staff-q');
+      await p.keyboard.press('Escape');
+      s0 = await st();
+      check(`${who}: Escape still clears the field and closes the results`, s0.value === '' && !s0.open, s0);
+      /* Chrome clears a search field on Escape by itself (and fires
+         'search'); the board's own handler is for browsers that do not. A
+         synthetic keydown has no default action, so only the handler acts. */
+      await p.fill('.mphbac-staff-q', 'smi');
+      await p.waitForTimeout(450);
+      await p.evaluate(() => document.querySelector('.mphbac-staff-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+      s0 = await st();
+      check(`${who}: ...by the board's own handler, not only the browser's`, s0.value === '' && !s0.open, s0);
+    }
+    /* NO NATIVE CANCEL BUTTON. Chrome paints one at the end of the text area
+       of a focused search field with text. Measured as ink, in the strip
+       where it would sit, with our ✕ made invisible — and the instrument
+       proven by putting the native one back. */
+    const nativeInk = async () => {
+      await p.fill('.mphbac-staff-q', 'ab');
+      await p.focus('.mphbac-staff-q');
+      await p.evaluate(() => { document.querySelector('.mphbac-staff-qclear').style.visibility = 'hidden'; });
+      await p.waitForTimeout(100);
+      const box = await p.evaluate(() => { const q = document.querySelector('.mphbac-staff-q'), r = q.getBoundingClientRect(), c = getComputedStyle(q);
+        const right = r.right - parseFloat(c.borderRightWidth) - parseFloat(c.paddingRight);
+        return { x: right - 26, y: r.top + 6, width: 26, height: r.height - 12 }; });
+      const shot = await p.screenshot({ clip: box, scale: 'css' });
+      return p.evaluate(async u => {
+        const img = new Image(); await new Promise(r => { img.onload = r; img.src = u; });
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data; let n = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 600) n++;
+        return n;
+      }, 'data:image/png;base64,' + shot.toString('base64'));
+    };
+    const none = await nativeInk();
+    await p.addStyleTag({ content: '.mphbac-staff .mphbac-staff-q.mphbac-staff-q::-webkit-search-cancel-button { -webkit-appearance: searchfield-cancel-button !important; appearance: auto !important; display: block !important; }' });
+    const back = await nativeInk();
+    check(`${who}: (instrument check) with the native cancel button put back, the strip shows its ink`, back > 20, back);
+    check(`${who}: no native cancel button — never two ✕`, none === 0, { none, back });
+    await ctx.close();
+  }
+
   console.log('\n-- 6: the sheet — tap to call / text / email, Open in WP-Admin --');
   {
     const { ctx, p } = await open();

@@ -2648,3 +2648,63 @@ and failed with the WD's own symptoms.
 **Fixture lesson, again:** booking #32 silently overwrote the room type with
 post id 32 (the cottage numbers had been used as post ids). New room types
 use post ids 9032 / 9033; the number comes from the title, as on live.
+
+## Rob's iPhone review of 0.45.1: the underline, and a ✕ (0.45.2)
+
+**Rob** (screen recording on his iPhone): search works — results, sheet,
+jump. Two things before live: the Search box "looks bad" (placeholder grey,
+UNDERLINED, left-aligned; the typed text and the "Search" label underlined
+too), and there is no ✕ to close search, so he deleted every letter by hand.
+**Rob's rule:** the placeholder looks like the public calendar's empty-field
+hint (.mphbac-field-ph). **WD:** typed text centred in the type of "Monthly";
+the Search label identical to Show / Go to date; and the ✕ spec (inside the
+field at the right end, only with text; clears, closes, cancels, blurs in
+one tap; Escape unchanged; native cancel hidden; the sheet's ✕ scaled;
+44px, "Clear search", never coral; symmetric padding).
+
+**THE UNDERLINE PROPAGATES, so it is fixed at its source.** The WD found it
+on live: `.elementor-kit-331 label { … text-decoration: underline }` in
+post-331.css. A text decoration is not inherited — it propagates from the
+box that declares it to the text inside, and `text-decoration: none` on a
+child cannot remove it. Each field IS a <label>, so the fix is on the label
+(.mphbac-staff .mphbac-staff-field at (0,2,0) over the kit's (0,1,1)), plus
+none on the input and ::placeholder (-webkit- too), as the /staff/ password
+field needed. **Why only Search on the phone:** there, Show and Go to date
+are display: contents (the two-across grid) — no box, nothing to draw an
+underline from. 0.45.0 gave Search back its box to centre its label, and
+with it the underline. On a desktop all three labels had boxes, so all three
+were underlined; all three are fixed. The harness now carries the kit rule
+verbatim (body class elementor-kit-331), with a control <label> proving it
+underlines; computed text-decoration is "none" on every field label, the
+three fields and the placeholder, at 1280 and 375. Chromium does not paint
+a propagated underline into an input as Safari does — the decisive check is
+the label, the source.
+
+**The placeholder** takes --dcc-muted (declared on .mphbac-staff now, from
+--dcc-site-muted like the public token) and inherits the field's own face,
+size, weight and centring — measured equal to the public hint's ink and to
+the "Monthly" value. The left alignment 0.45.0 gave the typed text is gone.
+
+**The ✕** sits in a positioned span with the input, inside the label, so a
+tap on "Search" still focuses the field; the input carries its own
+aria-label ("Search") so its name never reads "Search Clear search". Shown
+by CSS (:placeholder-shown + …), so no state of ours can disagree with the
+field. A 36px disc in a 44px target (padding + background-clip). The kit's
+`button:hover, button:focus` is held off by restating ground, ink and shape
+at (0,3,0); there is no hover colour at all. The field pads 52px each side
+while it has text (3px inset + 44px + 5px), 20px while empty.
+**mousedown is prevented on the ✕**, so pressing it never moves focus off
+the field — as on iOS, which never focuses a tapped button. Without it,
+Chromium focused the button, the field lost focus anyway, and the "keyboard
+goes down" check could not tell whether blur() ran.
+**Native cancel hidden**, proven by ink: in the strip where Chrome paints
+its own ✕, nothing; with it put back (the instrument), 79 dark pixels.
+
+**Two equivalent mutations, two outcomes.** "The ✕ no longer cancels the
+pending debounce" survived because the waiting search reads the emptied field
+and sends nothing — the clearTimeout was dead, so it is gone. "Escape does
+nothing" survived because Chromium clears a search field on Escape itself;
+the board's handler is for browsers that do not, so it stays, and a
+synthetic Escape (no default action) now proves the handler alone.
+
+No change to .mphbac-btn's look; no login-page styles.

@@ -95,7 +95,11 @@ const THEME = `
     pill-shaped on hover, and on a phone after a tap (focus stays). */
  .elementor-kit-9 button:hover, .elementor-kit-9 button:focus {
    background-color: #F08080; color: #FFFFFF; border-radius: 30px;
- }`;
+ }
+ /* The LIVE kit's label rule, verbatim from uploads/elementor/css/post-331.css
+    as the Website Director found it (0.45.2): it underlined the Search label,
+    and on Rob's iPhone the typed text and the placeholder with it. */
+ .elementor-kit-331 label { color:#02000094; font-family:"Raleway",Sans-serif; font-size:19px; text-decoration:underline; }`;
 
 function page({ panel = emitDefaults(), body = '', sheet = '' } = {}) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -103,7 +107,7 @@ function page({ panel = emitDefaults(), body = '', sheet = '' } = {}) {
 <style>body{margin:0;font-family:Raleway,Georgia,serif}${THEME}</style>
 <style id="elementor">${panel}</style>
 <style id="plugin">${css()}</style></head>
-<body class="elementor-18102 elementor-kit-9">
+<body class="elementor-18102 elementor-kit-9 elementor-kit-331">
 <div class="${WRAPPER.replace(/\./g, ' ').trim()}"><div class="elementor-widget-container">
   <div class="mphbac-staff">${body}</div>
 </div></div>
@@ -201,7 +205,7 @@ function boardShell({ today, cottages, bookings, details = {}, search = {}, sow 
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{margin:0;font-family:Raleway,Georgia,serif;${bodyStyle}}${THEME}</style>
-<style>${css()}</style>${head}</head><body class="elementor-kit-9">
+<style>${css()}</style>${head}</head><body class="elementor-kit-9 elementor-kit-331">
 ${markup}
 <script>
   window.__reqs = [];

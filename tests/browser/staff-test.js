@@ -703,6 +703,49 @@ const BUTTONLIKE = [
     }
   }
 
+  console.log('\n-- 0.45.2: the theme\'s label underline, and Search\'s text (Rob\'s iPhone) --');
+  {
+    /* The live kit: `.elementor-kit-331 label { … text-decoration: underline }`
+       (the harness carries it verbatim). An underline PROPAGATES from the
+       box that declares it, so the decisive check is the <label> itself; the
+       input and its ::placeholder are checked too, as Safari painted the
+       label's underline into both. The placeholder is the public calendar's
+       empty-field hint: its ink, the field's own type, centred. */
+    const pctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const pp = await pctx.newPage();
+    await pp.setContent(H.page({ body: H.filtersHtml() }));
+    const hint = await pp.evaluate(() => { const h = document.querySelector('.mphbac-field-ph'); return h ? getComputedStyle(h).color : null; });
+    await pctx.close();
+    check('(instrument check) the public hint was found', !!hint, hint);
+    for (const [w, who] of [[1280, 'DESKTOP'], [375, 'PHONE']]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: 900 } });
+      const p = await ctx.newPage();
+      await p.setContent(S.page({ body: S.TOOLS + '<label class="t-kit-probe">probe</label>' }));
+      const m = await p.evaluate(() => {
+        const td = e => getComputedStyle(e).textDecorationLine;
+        const q = document.querySelector('.mphbac-staff-q'), sel = document.querySelector('.mphbac-staff-period'), go = document.querySelector('.mphbac-staff-goto');
+        const ph = getComputedStyle(q, '::placeholder'), qc = getComputedStyle(q), sc = getComputedStyle(sel);
+        return {
+          probe: td(document.querySelector('.t-kit-probe')),
+          labels: [...document.querySelectorAll('.mphbac-staff-tools label, .mphbac-staff-field-label')].map(e => [e.textContent.trim().slice(0, 12), td(e)]),
+          inputs: [q, sel, go].map(td),
+          ph: { line: ph.textDecorationLine, color: ph.color, size: ph.fontSize, weight: ph.fontWeight, family: ph.fontFamily, align: ph.textAlign },
+          typed: { size: qc.fontSize, weight: qc.fontWeight, family: qc.fontFamily, align: qc.textAlign },
+          value: { size: sc.fontSize, weight: sc.fontWeight, family: sc.fontFamily, align: sc.textAlign },
+        };
+      });
+      check(`${who}: (instrument check) the live kit's label rule is in force here — a plain label is underlined`, m.probe === 'underline', m.probe);
+      check(`${who}: no field label is underlined — Show, Go to date and Search`, m.labels.length >= 6 && m.labels.every(l => l[1] === 'none'), m.labels);
+      check(`${who}: no field's own text is underlined — the search box, the menu, the date`, m.inputs.every(t => t === 'none'), m.inputs);
+      check(`${who}: the placeholder is not underlined`, m.ph.line === 'none', m.ph);
+      check(`${who}: the placeholder is the public hint — its ink, the field's own size, weight and face, centred`,
+        m.ph.color === hint && m.ph.size === m.value.size && m.ph.weight === m.value.weight && m.ph.family === m.value.family && m.ph.align === 'center', [m.ph, hint, m.value]);
+      check(`${who}: typed text is centred, in the face, size and weight of "Monthly"`,
+        m.typed.align === 'center' && m.typed.size === m.value.size && m.typed.weight === m.value.weight && m.typed.family === m.value.family, [m.typed, m.value]);
+      await ctx.close();
+    }
+  }
+
   console.log('\n-- the fade is gone from the bar and the row, the sheet still animates --');
   {
     const { ctx, p } = await open(false);
