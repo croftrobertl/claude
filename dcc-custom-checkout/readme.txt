@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.30.3
+Stable tag: 0.31.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,24 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.31.0 =
+A "Bringing a boat or trailer?" question (owner's picks, 2026-10-10), so Rob
+and Tony can plan trailer parking.
+* Created once, on the first admin page load after the update, as a native
+  MotoPress Checkout Field: Yes / No, starting blank, not required, asked of
+  every guest on every cottage. MotoPress saves the answer with the booking,
+  where the Availability Calendar reads it.
+* Checkout: the last question in the guest's details, right after Photo ID,
+  so on Cottage 34 it sits directly above the pet questions. To get there it
+  takes Dog Type's place in the field order and the fields from Dog Type on
+  move down one -- only if the order is still the one on the site today; if
+  the fields have been reordered by hand, nothing is renumbered and the
+  question goes last. The previous positions are recorded.
+* WP-Admin (Add New and editing a booking, imported ones included): its own
+  "Boat / trailer" heading after Dog, never hidden.
+* Never recreated: if the question is deleted or trashed later, it stays
+  gone. A question already named "boat" is used as it is, never duplicated.
 
 = 0.30.3 =
 Corrections from a self-audit (2026-10-09). No change to the checkout.

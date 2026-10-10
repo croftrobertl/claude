@@ -748,6 +748,50 @@ function summary(doc) {
 }
 
 /* ===================================================================== *
+ * v0.31.0 — the boat / trailer question is asked of EVERY guest.
+ *
+ * checkout.js has no knowledge of it, on purpose: it acts only on the names
+ * in its config (guest groups, dog fields) and on service inputs. So the
+ * guarantee is that a no-dog checkout — the one that DISABLES and hides the
+ * dog selects beside it — leaves the boat select visible, enabled, blank and
+ * in place, and that it submits blank (MotoPress's _buildFormData() then
+ * sends nothing for an empty custom field, so nothing is stored).
+ * ===================================================================== */
+{
+    const cfgs = [
+        ['no dog (dog fields disabled)', { dogFieldNames: ['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair'] }],
+        ['with guest groups configured', { dogFieldNames: ['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair'],
+            guestGroups: [{ min: 2, names: ['mphb_guest2_first_name'], prefix: 'guest2', title: 'Guest #2', sectionClass: 'g2' }] }],
+    ];
+    for (const [label, cfg] of cfgs) {
+        const { window, doc } = await render(F.boatField, Object.assign({ i18n: { subtotal: 'Subtotal' } }, cfg));
+        await new Promise(r => setTimeout(r, 50));
+        const boat = doc.querySelector('[name="mphb_boat"]');
+        const form = doc.querySelector('form');
+        const sent = Array.from(new window.FormData(form).entries()).filter(([k]) => k === 'mphb_boat');
+        check(`boat (${label}): visible, enabled, still unanswered`,
+            [visible(boat), boat.disabled, boat.value], [true, false, '']);
+        check(`boat (${label}): submitted blank, as the only answer MotoPress will skip`, sent, [['mphb_boat', '']]);
+        // checkout.js moves the dog rows into their own "Pet Information"
+        // section, placed straight after the customer details. The boat row
+        // is not moved: it stays in the customer details, and so sits
+        // directly above the pet section (Rob's pick A).
+        const own = boat.closest('section');
+        const pet = doc.querySelector('.dcc_checkout-pet-section');
+        check(`boat (${label}): left in the customer details, which the Pet Information section directly follows`,
+            [own.classList.contains('mphb-customer-details'), !!pet && pet.previousElementSibling === own,
+             !!pet && pet.contains(doc.querySelector('[name="mphb_dog_type"]'))], [true, true, true]);
+        check(`guard (${label}): the dog fields beside it really were disabled`,
+            doc.querySelector('[name="mphb_dog_size"]').disabled, true);
+        boat.value = 'Yes';
+        boat.dispatchEvent(new window.Event('change', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 700));
+        check(`boat (${label}): a guest's "Yes" is kept and submitted`,
+            [boat.value, new window.FormData(form).get('mphb_boat')], ['Yes', 'Yes']);
+    }
+}
+
+/* ===================================================================== *
  * AUDIT 2026-09-18 — deferred work must not strand when a touch-up is lost.
  *
  * The comment above armTouchWatch() used to claim a 3s ceiling made starvation

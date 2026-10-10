@@ -77,6 +77,9 @@ const MOTOPRESS_ORDER = [
     ['guest2_phone', 'Guest 2: Phone Number'], ['apartment-units', 'Apartment/Unit #'],
     // Live has this row (Director, 2026-10-06). No named input; two shapes.
     ['upload_id', 'Upload Photo ID', 'link'],
+    // v0.31.0 — the boat field sits at menu_order 15, between Photo ID and the
+    // dog questions, so MotoPress draws it there; the layout moves it.
+    ['boat', 'Bringing a boat or trailer?', 'boat'],
     ['dog_type', 'Dog Type'], ['dog_size', 'Dog Size', 'select'], ['dog_hair', 'Dog Hair', 'select'],
     ['guest3_first_name', 'Guest 3: First Name'], ['guest3_last_name', 'Guest 3: Last Name'],
     ['guest4_first_name', 'Guest 4: First Name'], ['guest4_last_name', 'Guest 4: Last Name'],
@@ -90,14 +93,22 @@ const TIDY = [
     '## Guest 3', 'Guest 3: First Name', 'Guest 3: Last Name',
     '## Guest 4', 'Guest 4: First Name', 'Guest 4: Last Name',
     '## Dog', 'Dog Type', 'Dog Size', 'Dog Hair',
+    '## Boat / trailer', 'Bringing a boat or trailer?',
     '## Note', 'Customer Note',
 ];
 const ALL_HEADINGS = TIDY.filter(x => x.startsWith('## '));
+
+/* The boat field's own options, as Boat_Field stores them (v0.31.0). */
+function boatSelect(id, v) {
+    return `<select id="${id}" name="${id}"><option value="">— Select —</option>` +
+        ['No', 'Yes'].map(o => `<option value="${o}"${v === o ? ' selected' : ''}>${o}</option>`).join('') + '</select>';
+}
 
 /* Synthetic values only — never anything resembling a real guest. */
 function control(name, label, kind, value) {
     const id = 'mphb_' + name, v = value || '';
     if (kind === 'link') { return '<a href="#">View</a>'; }
+    if (kind === 'boat') { return boatSelect(id, v); }
     if (kind === 'select') {
         return `<select id="${id}" name="${id}"><option value="">—</option>` +
             `<option value="A"${v === 'A' ? ' selected' : ''}>A</option>` +
@@ -192,6 +203,7 @@ const RECORDED_ORDER = [
     ['address1', 'Street Address'], ['apartment-units', 'Apartment/Unit #'], ['city', 'City'],
     ['state', 'State / Province'], ['country', 'Country', 'select'], ['zip', 'Postal Code'],
     ['upload_id', 'Upload Photo ID', 'file'],
+    ['boat', 'Bringing a boat or trailer?', 'boat'],
     ['dog_type', 'Dog Type'], ['dog_size', 'Dog Size', 'select'], ['dog_hair', 'Dog Hair', 'select'],
     ['guest3_first_name', 'Guest 3: First Name'], ['guest3_last_name', 'Guest 3: Last Name'],
     ['guest4_first_name', 'Guest 4: First Name'], ['guest4_last_name', 'Guest 4: Last Name'],
@@ -204,6 +216,7 @@ const ADDNEW_TIDY = [
     '## Guest 3', 'Guest 3: First Name', 'Guest 3: Last Name',
     '## Guest 4', 'Guest 4: First Name', 'Guest 4: Last Name',
     '## Dog', 'Dog Type', 'Dog Size', 'Dog Hair',
+    '## Boat / trailer', 'Bringing a boat or trailer?',
 ];
 
 function flowField(name, label, kind, value, hintsOutside) {
@@ -224,7 +237,9 @@ function flowField(name, label, kind, value, hintsOutside) {
             `<span class="mphp-accepted-upload-types">Accepted file types: jpeg, jpg, png, pdf, webp, heic.</span></p>`;
     }
     let c;
-    if (kind === 'select') {
+    if (kind === 'boat') {
+        c = boatSelect(id, v);
+    } else if (kind === 'select') {
         c = `<select id="${id}" name="${id}"><option value="">— Select —</option>` +
             `<option value="A"${v === 'A' ? ' selected' : ''}>A</option><option value="B">B</option></select>`;
     } else {
@@ -444,7 +459,7 @@ async function visibleServiceRows(pg) {
         const ex = (rooms, values, more) => open(browser, width, editPage(MOTOPRESS_ORDER, values, more || {}), EX, undefined, bk(rooms));
         let r = await ex([{ type: 1604, adults: 2 }]);
         check(`${width}px edit, 2 guests, no pet fee: Guest 3, 4 and Dog hidden`,
-            headingsIn(await seen(r.pg, EDIT_BOX)), ['## Guest 1', '## Address', '## Guest 2', '## Note']);
+            headingsIn(await seen(r.pg, EDIT_BOX)), ['## Guest 1', '## Address', '## Guest 2', '## Boat / trailer', '## Note']);
         await r.ctx.close();
 
         r = await ex([{ type: 1065, adults: 3 }]);
@@ -621,13 +636,13 @@ async function visibleServiceRows(pg) {
     /* --- E4. A save changes no stored field; nothing feeds the observer. ---- */
     {
         const vals = {};
-        MOTOPRESS_ORDER.forEach(([n, , k]) => { if (k !== 'link') { vals[n] = k === 'select' ? 'B' : 'x-' + n; } });
+        MOTOPRESS_ORDER.forEach(([n, , k]) => { if (k !== 'link') { vals[n] = k === 'select' ? 'B' : k === 'boat' ? 'Yes' : 'x-' + n; } });
         const booking = bk([{ type: 1604, adults: 2 }]);
         const base = await open(browser, 1280, editPage(MOTOPRESS_ORDER, vals, { noScript: true }), EX, undefined, booking);
         const before = await formData(base.pg);
         await base.ctx.close();
         const { ctx, pg } = await open(browser, 1280, editPage(MOTOPRESS_ORDER, vals), EX, undefined, booking);
-        check('edit, the guard: the baseline carries every named field (21 + rooms-hide)', before.length, 22);
+        check('edit, the guard: the baseline carries every named field (22 incl. boat + rooms-hide)', before.length, 23);
         check('edit, with everything applied the form submits exactly the same fields and values',
             await formData(pg), before);
         const n = await pg.evaluate(() => new Promise(res => {
@@ -961,6 +976,67 @@ async function visibleServiceRows(pg) {
         r.pg.on('pageerror', e => errs.push(String(e)));
         await typeName(r.pg, 'Ann', 'Example');
         check('Add New, no Full Guest Name on the page: nothing happens, no error', errs, []);
+        await r.ctx.close();
+    }
+
+    /* --- B. The boat / trailer question (v0.31.0): never gated, anywhere. -- */
+    {
+        const boatVal = pg => pg.$eval('[name="mphb_boat"]', e => e.value);
+        const boatShown = list => list.includes('## Boat / trailer') && list.includes('Bringing a boat or trailer?');
+        for (const width of [1280, 390]) {
+            // An imported-style booking: no pet fee, 1 guest saved, non-pet cottage —
+            // every gated group that CAN hide does.
+            let r = await open(browser, width, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1065, adults: 1 }]));
+            let s = await seen(r.pg, EDIT_BOX);
+            check(`${width}px edit, 1 guest, no pet fee: Guest 2 and Dog hidden, Boat / trailer SHOWN`,
+                [s.includes('## Guest 2'), s.includes('## Dog'), boatShown(s)], [false, false, true]);
+            check(`${width}px edit: it sits after Dog's place and before Note, under its own heading`,
+                s.slice(s.indexOf('## Boat / trailer'), s.indexOf('## Boat / trailer') + 3),
+                ['## Boat / trailer', 'Bringing a boat or trailer?', '## Note']);
+            check(`${width}px edit: the blank default stays blank (the script never answers it)`, await boatVal(r.pg), '');
+            check(`${width}px edit: the row is the one MotoPress drew, moved — its control is still in the form`,
+                (await formData(r.pg)).filter(x => x.startsWith('mphb_boat=')), ['mphb_boat=']);
+            await r.ctx.close();
+        }
+        // Pet cottage, fee not carried: Dog hidden, boat not.
+        let r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [] }]));
+        let s = await seen(r.pg, EDIT_BOX);
+        check('edit, Cottage 34 without the pet fee: Dog hidden, Boat / trailer shown', [s.includes('## Dog'), boatShown(s)], [false, true]);
+        await r.ctx.close();
+        // A saved Yes (as an admin would set on an imported booking) is shown and submitted unchanged.
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, { boat: 'Yes' }), EX, undefined, bk([{ type: 1065, adults: 2 }]));
+        check('edit, a saved "Yes": shown as Yes, and the form submits mphb_boat=Yes',
+            [await boatVal(r.pg), (await formData(r.pg)).filter(x => x.startsWith('mphb_boat='))], ['Yes', ['mphb_boat=Yes']]);
+        await r.pg.selectOption('[name="mphb_boat"]', 'No');
+        await r.pg.waitForTimeout(400);
+        check('... an admin can change it, and nothing puts it back', await boatVal(r.pg), 'No');
+        await r.ctx.close();
+        // A site where the field does not exist (yet): no heading, the rest unchanged.
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER.filter(([n]) => n !== 'boat')), EX, undefined,
+            bk([{ type: 1607, adults: 4, services: [17712] }]));
+        check('edit, no boat field on the page: no "Boat / trailer" heading, everything else as before',
+            await seen(r.pg, EDIT_BOX), TIDY.filter(x => x !== '## Boat / trailer' && x !== 'Bringing a boat or trailer?'));
+        await r.ctx.close();
+
+        // Add New: every cottage, every guest count, either pet answer.
+        for (const [label, page] of [
+            ['a couch cottage, 1 guest', addNewPage({ preset: 1, marker: COUCH })],
+            ['Cottage 34, Pet Fee No', addNewPage({ preset: 2, fee: false, pet: 3, marker: PETCOT(W1) })],
+        ]) {
+            r = await open(browser, 1280, page);
+            s = await seen(r.pg, ADD_BOX);
+            check(`Add New, ${label}: Boat / trailer shown, blank`, [boatShown(s), await boatVal(r.pg)], [true, '']);
+            await r.ctx.close();
+        }
+        r = await open(browser, 1280, addNewPage({ preset: 2, fee: false, pet: 3, marker: PETCOT(W1) }));
+        await choose(r.pg, '[name="mphb_boat"]', 'Yes');
+        await choose(r.pg, '#dcc_admin_pet_fee', 'yes');
+        await choose(r.pg, '#dcc_admin_pet_fee', 'no');
+        await choose(r.pg, '[name="mphb_room_details[0][adults]"]', '1');
+        await r.pg.waitForTimeout(300);
+        s = await seen(r.pg, ADD_BOX);
+        check('Add New: answering Yes, then flipping Pet Fee and the guest count, never hides it or changes the answer',
+            [boatShown(s), await boatVal(r.pg)], [true, 'Yes']);
         await r.ctx.close();
     }
 

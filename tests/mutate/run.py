@@ -69,6 +69,7 @@ SUITES = {
     'policy-browser': ('node', 'tests/policy/browser.js'),
     'results':      ('php',  'tests/results/run.php'),
     'results-browser': ('node', 'tests/results/browser.js'),
+    'boat':         ('php',  'tests/boat/run.php'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

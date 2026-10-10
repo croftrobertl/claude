@@ -379,6 +379,13 @@ final class Admin_Fields
                 'fields' => [$one($dog['type']), $one($dog['size']), $one($dog['hair'])],
             ],
             [
+                // v0.31.0 — its own heading after Dog (owner's pick B). Never
+                // gated: nothing in admin-booking.js governs it, so it shows on
+                // every booking, imported ones included.
+                'key' => 'boat', 'title' => __('Boat / trailer', 'dcc-checkout'),
+                'fields' => [$mp(Boat_Field::NAME)],
+            ],
+            [
                 'key' => 'note', 'title' => __('Note', 'dcc-checkout'),
                 'fields' => [$mp('note')],
             ],

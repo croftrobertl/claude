@@ -16,6 +16,10 @@
  *    rooms (guest counts the owner set; MotoPress's own key, and the
  *    Availability Calendar's contract).
  *  - dcc_policy_version posts — the saved policy texts those records point at.
+ *  - The "Bringing a boat or trailer?" Checkout Field (v0.31.0) and its
+ *    marker option dcc_checkout_boat_field. The field is MotoPress's own now,
+ *    holds guests' answers, and the Availability Calendar reads it; the
+ *    marker is what keeps a deleted field from ever being recreated.
  *  - Per-booking dog info, written by MotoPress from its native Checkout
  *    Fields.
  *

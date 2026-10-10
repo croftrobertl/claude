@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       DCC Custom Checkout
  * Plugin URI:        https://doracanalcourt.com/
- * Description:       Customizations for MotoPress Hotel Booking on doracanalcourt.com. Checkout: restyled to the site standard; extra-guest details and fee; the Cottage 34 "Traveling with a dog?" pet fee via native MotoPress Services; the acceptance box with both policy links and an acceptance record on each online booking. WP-Admin booking screens: the customer fields in the owner's order, shown or hidden by guest count and pet fee; a guest-count control; photo-ID deletion; clearer Add New results labels. Front-end files load on the checkout page only. Touches no MotoPress core files.
- * Version:           0.30.3
+ * Description:       Customizations for MotoPress Hotel Booking on doracanalcourt.com. Checkout: restyled to the site standard; extra-guest details and fee; the Cottage 34 "Traveling with a dog?" pet fee via native MotoPress Services; the acceptance box with both policy links and an acceptance record on each online booking; creates the "Bringing a boat or trailer?" Checkout Field. WP-Admin booking screens: the customer fields in the owner's order, shown or hidden by guest count and pet fee; a guest-count control; photo-ID deletion; clearer Add New results labels. Front-end files load on the checkout page only. Touches no MotoPress core files.
+ * Version:           0.31.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCC_CHECKOUT_VERSION', '0.30.3');
+define('DCC_CHECKOUT_VERSION', '0.31.0');
 define('DCC_CHECKOUT_FILE', __FILE__);
 define('DCC_CHECKOUT_DIR', plugin_dir_path(__FILE__));
 define('DCC_CHECKOUT_URL', plugin_dir_url(__FILE__));

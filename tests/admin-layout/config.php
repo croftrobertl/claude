@@ -148,6 +148,7 @@ function maybe_unserialize($v) {
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-boat-field.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');

@@ -1111,6 +1111,51 @@ yours to improvise.
     browser suite REPRODUCES only WordPress's `.widefat`/`table.fixed` rules
     (core admin CSS is not available here) — the Director's read-only look at
     step 2 is the real check.
+- **0.31.0 — THE BOAT / TRAILER CHECKOUT FIELD** (owner's picks A–D,
+  2026-10-10; `Boat_Field`, suite `tests/boat/run.php`). A NATIVE Checkout
+  Fields field this plugin creates ONCE; MotoPress renders and saves it on the
+  checkout, Add New and the edit screen. **The Availability Calendar depends
+  on the contract**: post_title "Bringing a boat or trailer?", `mphb_cf_name`
+  `boat`, type `select`, options blank / No / Yes, required 0, enabled 1;
+  MotoPress stores the answer as booking meta `mphb_boat`
+  (getCustomFields()['boat']). Every value is copied from the Director's RAW
+  read of Dog Size (17727) on live: the full `mphb_cf_*` key set, and
+  `mphb_cf_options` as a PHP array of `['value','label']` rows — the add-on
+  1.2.3 reads it with `get_post_meta(…, true)` and uses it only `if
+  (is_array())`, so JSON would be an EMPTY dropdown with no error (the brief
+  first showed it as JSON; the CLAUDE.md entry above was right). Label = the
+  post_title (`mapPostToEntity()`); no definition cache in the add-on.
+  - **Created once, never recreated** (C): on an administrator's admin page
+    load (never AJAX), with the add-on active. A marker option
+    `dcc_checkout_boat_field` records the run, and while it exists nothing
+    runs — no query at all. A field named `boat` in ANY status, trash
+    included, is ADOPTED untouched. The claim is `add_option()` of the marker
+    BEFORE anything is written; a failed insert releases it. **A request that
+    dies after the claim and before the record leaves `state => creating`
+    for good** — then nothing more happens; the Director can read the option.
+  - **Position** (A, which overrides the brief's "never renumber"): live had
+    upload_id 14 and dog_type 15, no gap, and the add-on's order for TIES is
+    unknown, so renumbering is the only proven way. Only in the creating
+    request, and only if Photo ID is still directly before Dog Type with
+    nothing between: boat takes 15 and every field at 15+ moves down one
+    (dog_type…guest4_last_name → 16–23), each move recorded `{id,name,from,to}`
+    in the marker. A gap → boat takes it, nothing moves. Anything else (Rob
+    reordered, a field missing) → boat goes LAST, nothing moves. Positions are
+    written with `$wpdb->update` on menu_order + `clean_post_cache`, never
+    `wp_update_post()` (that fires every save_post handler); meta is written
+    AFTER `wp_insert_post()` so a save_post handler cannot override it.
+  - **Where it renders on the checkout** (measured in `tests/breakdown`):
+    `checkout.js` moves the dog rows into the "Pet Information" section placed
+    straight after the customer details, and the guest 3/4 rows into their own
+    sections, and `note` is disabled on live — so boat is the LAST field in the
+    customer details, after Photo ID, with Pet Information (Cottage 34)
+    directly below. `checkout.js` knows nothing of it and was not changed.
+  - **WP-Admin**: group `boat`, "Boat / trailer", after Dog, before Note in
+    `customer_layout()`. Nothing in the gating governs it, so it shows on every
+    booking — asserted with Guest 2 and Dog both hidden around it.
+  - **NOT verifiable here**: that MotoPress saves the answer on an imported
+    booking's edit screen, and that getCustomFields()['boat'] returns it — both
+    are MotoPress's code. Rob checks both on staging (D).
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1322,9 +1367,13 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 175
-  mutations, 175 killed, 0 of everything else, exit 0, in ONE run (2026-10-10,
-  v0.30.3; sixteen suites). At v0.30.2, 174; at v0.30.1, 173. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 189
+  mutations, 189 killed, 0 of everything else, exit 0, in ONE run (2026-10-10,
+  v0.31.0; seventeen suites). At v0.30.3, 175; at v0.30.2, 174; at v0.30.1, 173.
+  0.31.0's first boat-only run was 10 killed + 2 SURVIVED + 1 HARNESS: the
+  marker check and the creation claim each covered the other, so neither was
+  isolated until a "no query after the run" test and a constructed race were
+  added; the HARNESS was the suite missing a `wp_json_encode` stand-in. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
   search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
   retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code

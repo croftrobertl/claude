@@ -264,7 +264,25 @@ const dogFields = `
   <input type="text" name="mphb_first_name" value="Rob">
 </section>`;
 
+// v0.31.0: the boat Checkout Field where MotoPress will draw it — menu_order
+// 15, after Photo ID and before the dog questions — with the options
+// Boat_Field stores (blank / No / Yes). The rows around it are dogFields'.
+// The select's markup follows the dog selects above (MotoPress renders every
+// Checkout Fields select the same way); the live boat row cannot be read
+// until the field exists, so the Director's look at staging is the check.
+const boatField = dogFields.replace(`  <p class="mphb-text-control">
+    <label for="mphb_dog_type">`, `  <p class="mphb-text-control">
+    <label for="mphb_boat">Bringing a boat or trailer?</label>
+    <select id="mphb_boat" name="mphb_boat">
+      <option value="">— Select —</option>
+      <option value="No">No</option>
+      <option value="Yes">Yes</option>
+    </select>
+  </p>
+  <p class="mphb-text-control">
+    <label for="mphb_dog_type">`);
+
 module.exports = {
     withService, noService, twoAccommodations, renamedLabels, sharedSection,
-    servicesWithDetails, totalWithoutBreakdown, plainSubtotal, dogFields
+    servicesWithDetails, totalWithoutBreakdown, plainSubtotal, dogFields, boatField
 };

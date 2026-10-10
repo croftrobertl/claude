@@ -1936,5 +1936,159 @@
   "find": "untrailingslashit($route) === $fragment . '/admin';",
   "replace": "true;",
   "count": 1
+ },
+ {
+  "id": "boat-options-json",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 options stored as a PHP array (Dog Size's shape), never JSON",
+  "find": "            'mphb_cf_options'      => self::options(),",
+  "replace": "            'mphb_cf_options'      => wp_json_encode(self::options()),",
+  "count": 1
+ },
+ {
+  "id": "boat-no-blank",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 the dropdown starts blank: a blank first option",
+  "find": "            ['value' => '', 'label' => '— Select —'],\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "boat-required",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 not required",
+  "find": "            'mphb_cf_required'     => '0',",
+  "replace": "            'mphb_cf_required'     => '1',",
+  "count": 1
+ },
+ {
+  "id": "boat-recreated",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 created once, never recreated (C): the marker stops every later run",
+  "find": "        if (get_option(self::MARKER, null) !== null) {\n            return null;",
+  "replace": "        if (false) {\n            return null;",
+  "count": 1
+ },
+ {
+  "id": "boat-trash-missed",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 a boat field in the trash is adopted, not duplicated",
+  "find": "        return array_values(array_diff(array_keys(get_post_stati()), ['auto-draft']));",
+  "replace": "        return ['publish'];",
+  "count": 1
+ },
+ {
+  "id": "boat-no-claim",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 a held claim stops a second request creating it too",
+  "find": "        if (!add_option(self::MARKER, ['state' => 'creating', 'at_gmt' => gmdate('Y-m-d H:i:s')], '', 'no')) {",
+  "replace": "        if (!add_option(self::MARKER, ['state' => 'creating', 'at_gmt' => gmdate('Y-m-d H:i:s')], '', 'no') && false) {",
+  "count": 1
+ },
+ {
+  "id": "boat-fights-reorder",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 if Rob has reordered, nothing is renumbered",
+  "find": "        if ($before <= $after) {\n            return $end(",
+  "replace": "        if (false) {\n            return $end(",
+  "count": 1
+ },
+ {
+  "id": "boat-between-ignored",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 a field between Photo ID and Dog Type means reordered: nothing renumbered",
+  "find": "                return $end('another field sits between Photo ID and Dog Type (reordered)');",
+  "replace": "                break;",
+  "count": 1
+ },
+ {
+  "id": "boat-no-shift",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 on the live order, Dog Type and every later field move down one",
+  "find": "            if ($f['order'] >= $before) {",
+  "replace": "            if ($f['order'] > $before + 100) {",
+  "count": 1
+ },
+ {
+  "id": "boat-shift-all",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 fields before Dog Type never move",
+  "find": "            if ($f['order'] >= $before) {",
+  "replace": "            if ($f['order'] >= 0) {",
+  "count": 1
+ },
+ {
+  "id": "boat-meta-before-insert",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 meta written AFTER the insert, so a save_post handler cannot override it",
+  "find": "        foreach (self::meta() as $key => $value) {\n            update_post_meta($id, $key, $value);\n        }",
+  "replace": "        foreach (self::meta() as $key => $value) {\n            if (get_post_meta($id, $key, true) === '') { update_post_meta($id, $key, $value); }\n        }",
+  "count": 1
+ },
+ {
+  "id": "boat-no-admin-check",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 runs on an administrator's page load only",
+  "find": "        if (wp_doing_ajax() || !current_user_can('manage_options')) {",
+  "replace": "        if (wp_doing_ajax()) {",
+  "count": 1
+ },
+ {
+  "id": "boat-insert-fail-locks",
+  "file": "dcc-custom-checkout/includes/class-boat-field.php",
+  "suites": [
+   "boat"
+  ],
+  "claim": "0.31.0 a failed insert releases the claim so a later load can try again",
+  "find": "            delete_option(self::MARKER); // nothing was created: free to try again\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "boat-admin-group-missing",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.31.0 WP-Admin: its own 'Boat / trailer' heading after Dog",
+  "find": "                'fields' => [$mp(Boat_Field::NAME)],",
+  "replace": "                'fields' => [$mp('no_such_field')],",
+  "count": 1
  }
 ]

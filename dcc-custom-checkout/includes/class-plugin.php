@@ -65,6 +65,9 @@ final class Plugin
         (new Policy_Record())->register();
         // v0.30.1: clearer labels on Add New Booking's search results table.
         (new Results_Labels())->register();
+        // v0.31.0: the "Bringing a boat or trailer?" Checkout Field, created
+        // once as a native MotoPress field (the Availability Calendar reads it).
+        (new Boat_Field())->register();
     }
 
     public function load_textdomain(): void
