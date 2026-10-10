@@ -154,6 +154,11 @@ final class Staff_Widget
                 'stCapped'     => __('Custom ranges are limited to 400 days: showing {from} – {to}.', 'mphb-availability-calendar'),
                 'stClamped'    => __('Part of this timeframe is outside the board\'s ±3-year range: showing {from} – {to}.', 'mphb-availability-calendar'),
                 'stBadRange'   => __('Please check the dates.', 'mphb-availability-calendar'),
+                // Search (0.45.0)
+                'srchCount'    => __('{n} bookings', 'mphb-availability-calendar'),
+                'srchOne'      => __('1 booking', 'mphb-availability-calendar'),
+                'srchNone'     => __('No bookings match.', 'mphb-availability-calendar'),
+                'srchOutside'  => __('Outside the board\'s ±3-year range.', 'mphb-availability-calendar'),
             ],
         ];
 
@@ -193,6 +198,21 @@ final class Staff_Widget
                         <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
                         <input type="date" class="mphbac-staff-input mphbac-staff-goto">
                     </label>
+                </div>
+                <?php // SEARCH (0.45.0). Live as you type from 2 characters, one list,
+                // best match first (Rob). Answered by the gated search endpoint;
+                // the results are written with textContent. Nothing typed here is
+                // kept — not in the browser, not on the server (WD). ?>
+                <div class="mphbac-staff-search">
+                    <label class="mphbac-staff-field mphbac-staff-search-field">
+                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Search', 'mphb-availability-calendar'); ?></span>
+                        <input type="search" class="mphbac-staff-input mphbac-staff-q" autocomplete="off" spellcheck="false" enterkeyhint="search"
+                               placeholder="<?php echo esc_attr__('Name, phone, date, booking #', 'mphb-availability-calendar'); ?>">
+                    </label>
+                    <div class="mphbac-staff-results" hidden>
+                        <p class="mphbac-staff-results-count" role="status" aria-live="polite"></p>
+                        <ul class="mphbac-staff-results-list"></ul>
+                    </div>
                 </div>
             </div>
             <div class="mphbac-staff-topbar">

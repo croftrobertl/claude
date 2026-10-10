@@ -223,9 +223,11 @@
             ensureRange(load.from, load.to, function (data) {
                 if (state.period === 'day') {
                     renderAgenda(data);
+                    applyHighlight();
                     if (state.restoreScroll) { window.scrollTo(0, state.restoreScroll.y); state.restoreScroll = null; }
                 } else {
                     renderChart(data, w, opts);
+                    applyHighlight();
                 }
                 // Judged against what is ON SCREEN, not the payload's own flag:
                 // a week served from a cached, clamped year may itself be
@@ -379,6 +381,7 @@
                 if (best === null || px[m] > px[best]) best = m;
             }
             if (best) setLabel(best);
+            stickLabels();
         }
         var scrollRaf = 0;
         gridEl.addEventListener('scroll', function () {
@@ -564,6 +567,7 @@
             }
 
             gridEl.appendChild(chart);
+            measureBars(chart);
 
             if (state.restoreScroll) {
                 // Back from the one token reload: exactly where the reader was.
@@ -656,29 +660,20 @@
             btn.className = cls;
             btn.setAttribute('data-booking-id', String(b.id));
 
-            var px = (bar.end - bar.start) * (dayW || 44) / 2 - 2;        // the bar's margins
-            var room = px - 2 * LABEL_PAD;
-            var icons = ICON_ORDER.filter(function (k) { return !!b[k]; });
-            var iconsW = function (list) { return list.length * (ICON_W + ICON_GAP); };
-            var textFont = '600 13px ' + family;
-            var who = b.guestName || ('#' + b.id);
-            var name = nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who));
-            var count = (S.nightsShort || '{n}n').replace('{n}', String(nights));
-            var fits = function (t) { return textW(t, textFont) <= room - iconsW(icons); };
-            var text = fits(name) ? name : (fits(count) ? count : '');
-            if (!text) {
-                // Icons alone; drop from the end of the order until they fit.
-                while (icons.length && iconsW(icons) - ICON_GAP > room) icons.pop();
-            }
-
             var label = document.createElement('span');
             label.className = 'mphbac-staff-bar-label';
-            icons.forEach(function (k) { label.appendChild(icon(k)); });
-            var tx = document.createElement('span');
-            tx.className = 'mphbac-staff-bar-text';
-            tx.textContent = text;
-            label.appendChild(tx);
             btn.appendChild(label);
+            var who = b.guestName || ('#' + b.id);
+            btn._fit = {
+                b: b,
+                label: label,
+                icons: ICON_ORDER.filter(function (k) { return !!b[k]; }),
+                name: nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who)),
+                count: (S.nightsShort || '{n}n').replace('{n}', String(nights)),
+                textFont: '600 13px ' + family,
+                key: ''
+            };
+            fitLabel(btn, (bar.end - bar.start) * (dayW || 44) / 2 - 2);   // the bar's margins
 
             // The preview carries the detail on hover, so the native title
             // tooltip would only repeat it (the WD); the accessible name stays.
@@ -691,6 +686,65 @@
             });
             bindPreview(btn, b, cottage);
             return btn;
+        }
+
+        // What a bar's label shows in `px` of width — the fit rule above —
+        // rebuilt only when the outcome changes. Called at render with the
+        // bar's whole width, and on scroll with its VISIBLE width (0.45.0).
+        function fitLabel(btn, px) {
+            var f = btn._fit;
+            if (!f) return;
+            var room = px - 2 * LABEL_PAD;
+            var icons = f.icons.slice();
+            var iconsW = function (list) { return list.length * (ICON_W + ICON_GAP); };
+            var fits = function (t) { return textW(t, f.textFont) <= room - iconsW(icons); };
+            var text = fits(f.name) ? f.name : (fits(f.count) ? f.count : '');
+            if (!text) {
+                // Icons alone; drop from the end of the order until they fit.
+                while (icons.length && iconsW(icons) - ICON_GAP > room) icons.pop();
+            }
+            var key = icons.join(',') + '|' + text;
+            if (key === f.key) return;
+            f.key = key;
+            f.label.textContent = '';
+            icons.forEach(function (k) { f.label.appendChild(icon(k)); });
+            var tx = document.createElement('span');
+            tx.className = 'mphbac-staff-bar-text';
+            tx.textContent = text;
+            f.label.appendChild(tx);
+        }
+
+        // THE LABEL FOLLOWS THE VISIBLE LEFT EDGE (0.45.0, the Website
+        // Director's spec). Monthly and Yearly open scrolled to today, so a
+        // long stay that began before the visible days drew a BLANK bar: its
+        // name and icons sat at its start, off-screen to the left (#28 in the
+        // fixture, a 30-night Vrbo stay). Now, for as long as any part of a
+        // bar is on screen, its label starts just right of the pinned cottage
+        // column, stays inside the bar, and is fitted to the bar's VISIBLE
+        // width. Driven from followScroll()'s rAF; the bars' geometry is read
+        // ONCE per render (barGeo), so a scroll frame only does arithmetic and
+        // rebuilds a label only when what it shows changes.
+        var barGeo = [];
+        function measureBars(chart) {
+            barGeo = [].map.call(chart.querySelectorAll('.mphbac-staff-bar'), function (el) {
+                return { el: el, left: el.offsetLeft, width: el.offsetWidth, shift: 0 };
+            });
+        }
+        function stickLabels() {
+            if (!barGeo.length) return;
+            var chart = gridEl.firstChild;
+            var visL = gridEl.scrollLeft + (chart ? chartLabelW(chart) : 0);
+            var visR = gridEl.scrollLeft + gridEl.clientWidth;
+            barGeo.forEach(function (g) {
+                var start = Math.max(g.left, visL), end = Math.min(g.left + g.width, visR);
+                if (end <= start) return;                       // not on screen: leave it
+                var shift = Math.round(start - g.left);
+                if (shift !== g.shift) {
+                    g.shift = shift;
+                    g.el._fit.label.style.left = shift ? shift + 'px' : '';
+                }
+                fitLabel(g.el, end - start);
+            });
         }
 
         // THE ICONS: Tabler's outline paw, sofa and speedboat (MIT, Paweł
@@ -1468,6 +1522,123 @@
             [statsSpan, statsDate, statsFrom, statsTo].forEach(function (i) {
                 if (i) i.addEventListener('change', function () { if (statsEl.open) renderStats(); });
             });
+        }
+
+        // ---- SEARCH (0.45.0) -------------------------------------------------
+        // Live as you type from 2 characters, debounced, ONE mixed list, best
+        // match first (Rob). The server does all the matching and returns
+        // summary rows with a plain-text "why"; tapping one opens its sheet
+        // through the gated booking endpoint, jumps the calendar to the stay
+        // and highlights it. A stay outside the ±3-year range still opens its
+        // sheet; the calendar stays put and says so. Nothing typed here is
+        // kept anywhere — no storage, no history (WD).
+        var searchEl = root.querySelector('.mphbac-staff-q');
+        var resultsEl = root.querySelector('.mphbac-staff-results');
+        var resultsList = resultsEl && resultsEl.querySelector('.mphbac-staff-results-list');
+        var resultsCount = resultsEl && resultsEl.querySelector('.mphbac-staff-results-count');
+        var SEARCH_DEBOUNCE_MS = 250;
+        var searchT = 0, searchSeq = 0;
+
+        function clearResults() {
+            if (!resultsEl) return;
+            resultsEl.hidden = true;
+            resultsList.textContent = '';
+            resultsCount.textContent = '';
+        }
+
+        function runSearch() {
+            var q = (searchEl.value || '').trim();
+            var seq = ++searchSeq;
+            if (q.length < 2) { clearResults(); return; }
+            post('mphbac_staff_search', { q: q }).then(function (json) {
+                if (seq !== searchSeq) return;              // superseded by a later keystroke
+                if (!json || !json.success || !json.data) { clearResults(); return; }
+                drawResults(json.data.results || []);
+            }).catch(function (err) {
+                if (seq !== searchSeq) return;
+                if (tokenReload(err)) return;
+                clearResults();
+                say(failureText(err), true);
+            });
+        }
+
+        function drawResults(rows) {
+            resultsList.textContent = '';
+            resultsCount.textContent = !rows.length ? (S.srchNone || '')
+                : rows.length === 1 ? (S.srchOne || '1') : (S.srchCount || '{n}').replace('{n}', String(rows.length));
+            rows.forEach(function (r) {
+                var li = document.createElement('li');
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'mphbac-staff-result is-src-' + sourceOf({ sourceKey: r.sourceKey });
+                btn.setAttribute('data-booking-id', String(r.id));
+                var line = function (cls, text) {
+                    var e = document.createElement('span');
+                    e.className = cls;
+                    e.textContent = text;
+                    btn.appendChild(e);
+                    return e;
+                };
+                var head = line('mphbac-staff-result-name', '');
+                var dot = document.createElement('span');
+                dot.className = 'mphbac-staff-dot';
+                dot.setAttribute('aria-hidden', 'true');
+                head.appendChild(dot);
+                head.appendChild(document.createTextNode(r.name || ('#' + r.id)));
+                if (r.status && r.status !== 'confirmed' && r.statusLabel) {
+                    var st = document.createElement('span');
+                    st.className = 'mphbac-staff-result-status';
+                    st.textContent = r.statusLabel;
+                    head.appendChild(st);
+                }
+                var n = nightsBetween(r.checkin, r.checkout);
+                var cot = (r.cottages || []).map(function (c) { return c.number ? '#' + c.number : (c.abbrev || c.title || ''); }).join(', ');
+                line('mphbac-staff-result-meta', [cot, mediumDay(r.checkin) + ' → ' + mediumDay(r.checkout),
+                    n + ' ' + (n === 1 ? (S.night || 'night') : (S.nights || 'nights')), r.sourceName || ''].filter(Boolean).join(' · '));
+                line('mphbac-staff-result-why', r.why || '');
+                btn.addEventListener('click', function () { openResult(r, btn); });
+                li.appendChild(btn);
+                resultsList.appendChild(li);
+            });
+            resultsEl.hidden = false;
+        }
+
+        function openResult(r, btn) {
+            openDetail(r.id, btn);
+            // Outside the ±3-year range: the sheet opens, the calendar stays.
+            if (!r.checkin || !r.checkout || r.checkout <= CAP_LO || r.checkin > CAP_HI) {
+                say(S.srchOutside || '');
+                return;
+            }
+            state.anchor = r.checkin < CAP_LO ? CAP_LO : r.checkin;
+            state.highlight = r.id;
+            render();
+        }
+
+        // The stay the board jumped to, picked out for a few seconds.
+        var highlightT = 0;
+        function applyHighlight() {
+            if (!state.highlight) return;
+            var id = String(state.highlight);
+            state.highlight = null;
+            clearTimeout(highlightT);
+            var els = [].filter.call(root.querySelectorAll('.mphbac-staff-bar, .mphbac-staff-item'), function (e) {
+                return e.getAttribute('data-booking-id') === id;
+            });
+            els.forEach(function (e) { e.classList.add('is-found'); });
+            highlightT = setTimeout(function () { els.forEach(function (e) { e.classList.remove('is-found'); }); }, 4000);
+        }
+
+        if (searchEl) {
+            searchEl.addEventListener('input', function () {
+                clearTimeout(searchT);
+                searchT = setTimeout(runSearch, SEARCH_DEBOUNCE_MS);
+            });
+            searchEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { searchEl.value = ''; clearTimeout(searchT); searchSeq++; clearResults(); }
+            });
+            // The browser's own clear (×) on a search field fires `search`.
+            searchEl.addEventListener('search', function () { if (!searchEl.value) { searchSeq++; clearResults(); } });
         }
 
         // ---- quick preview (0.44.0) -------------------------------------------

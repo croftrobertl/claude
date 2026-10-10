@@ -1303,6 +1303,55 @@ body.mphbac-staff-open { overflow: hidden; }
     background: var(--staff-bar);
 }
 
+/* SEARCH (0.45.0): a full-width pill under the Show / Go to date row, and
+   the results as a plain list beneath it — one row a booking, best first. */
+.mphbac-staff-search { width: 100%; max-width: 640px; margin: 0 auto; }
+.mphbac-staff-search-field { flex: none; width: 100%; }
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-q { text-align: left; text-align-last: auto; }
+.mphbac-staff-results { margin-top: 8px; text-align: left; }
+.mphbac-staff-results[hidden] { display: none; }
+.mphbac-staff-results-count { margin: 0 0 6px; color: var(--staff-muted); font-size: 0.9em; }
+.mphbac-staff-results-list {
+    max-height: min(60vh, 60dvh);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--staff-frame);
+    border-radius: 8px;
+    background: var(--staff-surface);
+}
+.mphbac-staff-results-list:empty { display: none; }
+.mphbac-staff .mphbac-staff-result.mphbac-staff-result {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    min-height: 56px;
+    padding: 8px 12px;
+    border: 0;
+    border-top: 1px solid var(--staff-frame);
+    border-radius: 0;
+    background-color: var(--staff-surface);
+    color: var(--staff-text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: none;
+}
+.mphbac-staff-results-list li:first-child .mphbac-staff-result { border-top: 0; }
+.mphbac-staff-result-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; }
+.mphbac-staff-result-name .mphbac-staff-dot {
+    flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--staff-bar, var(--staff-src-direct));
+}
+.mphbac-staff-result-status { margin-left: 4px; color: var(--staff-muted); font-size: 12px; font-weight: 600; }
+.mphbac-staff-result-meta { color: var(--staff-text); font-size: 13px; font-weight: 600; }
+.mphbac-staff-result-why { color: var(--staff-muted); font-size: 12px; font-style: italic; overflow-wrap: anywhere; }
+
+/* The stay a search result jumped to, picked out for 4 seconds. */
+.mphbac-staff .mphbac-staff-bar.is-found { outline: 3px solid var(--staff-today); outline-offset: 1px; z-index: 3; }
+.mphbac-staff .mphbac-staff-item.is-found { box-shadow: inset 4px 0 0 var(--staff-today); }
+
 /* QUICK PREVIEW: on <body> while shown, fixed above its bar (staff.js). */
 .mphbac-staff-preview {
     position: fixed;
@@ -1430,4 +1479,5 @@ body.mphbac-staff-open { overflow: hidden; }
     /* (0,5,0): above the theme guard for the rows, so their own hover tint
        still shows on a computer. */
     .mphbac-staff .mphbac-staff-item.mphbac-staff-item.mphbac-staff-item:hover { background-color: var(--staff-namecol); }
+    .mphbac-staff .mphbac-staff-result.mphbac-staff-result.mphbac-staff-result:hover { background-color: var(--staff-namecol); }
 }
