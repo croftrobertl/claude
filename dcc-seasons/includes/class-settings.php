@@ -779,7 +779,7 @@ class Settings {
                             <input type="text" class="regular-text code" id="dcc-seasons-tap-selector"
                                    name="<?php echo esc_attr(self::OPTION); ?>[tap_selector]"
                                    value="<?php echo esc_attr($opt['tap_selector']); ?>" />
-                            <p class="description"><?php esc_html_e('Comma-separated CSS selectors. Every VISIBLE match is bound (zero-size elements are skipped — Bravada renders #branding and #site-title at 0px on this site); all matches share one tap counter. If nothing visible matches, #masthead is used.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Comma-separated CSS selectors. Every VISIBLE match is bound (zero-size elements are skipped — Bravada renders #branding and #site-title at 0px on this site); all matches share one tap counter. A page where nothing visible matches has no egg.', 'dcc-seasons'); ?></p>
                             <p class="description"><?php
                                 /* translators: %s: the default CSS selector */
                                 echo esc_html(sprintf(__('Default: %s — the title in the homepage banner. Left at the default, it follows the plugin if the default changes.', 'dcc-seasons'), self::defaults()['tap_selector']));

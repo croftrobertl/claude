@@ -144,7 +144,7 @@ final class Theme_Guide {
             /* From the SETTINGS (Settings::egg_howto), never hard-coded: the
              * target and the count are Rob's and can change. */
             /* translators: %s: how to open the egg, e.g. "Tap the title in the homepage banner 4 times" */
-            'eggNote'      => sprintf(__('%s: the Matrix rain falls in these colours and characters, then this finale. On a page without that target, the site header works instead.', 'dcc-seasons'), Settings::egg_howto($opt)),
+            'eggNote'      => sprintf(__('%s: the Matrix rain falls in these colours and characters, then this finale. Pages without that target have no egg.', 'dcc-seasons'), Settings::egg_howto($opt)),
             'special'      => __('Special', 'dcc-seasons'),
             /* translators: 1: sprite name, 2: accent name, 3: seconds */
             'turns'        => __('%1$s and the %2$s take turns: %3$s s each, the accent first, cross-fading. Never both on screen.', 'dcc-seasons'),

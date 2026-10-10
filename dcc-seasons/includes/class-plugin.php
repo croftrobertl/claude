@@ -797,7 +797,6 @@ final class Plugin {
             'engine'      => Settings::engine_needed($opt),
             'egg'         => (bool) $opt['egg'],
             'tapSelector' => (string) $opt['tap_selector'],
-            'tapFallback' => '#masthead',
             'tapCount'    => (int) $opt['tap_count'],
             'tapWindow'   => 3000,
             'density'     => (int) $opt['density'],

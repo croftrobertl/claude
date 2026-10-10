@@ -253,8 +253,13 @@
 	 *
 	 * Delegation counts each event exactly once and matches whatever is in
 	 * the DOM at tap time. Only VISIBLE matches count (Bravada renders
-	 * #branding at 0px on this site). The fallback is used only when the
-	 * configured selectors have no visible match at all. */
+	 * #branding and #site-title at 0px on this site).
+	 *
+	 * There is NO fallback (4.7.1, Rob: the egg is homepage only). Until
+	 * 4.7.1 a page with no visible configured target bound #masthead
+	 * instead, so with the default ".home #header-page-title .entry-title"
+	 * four taps on any other page's header opened the egg — measured on
+	 * live /contact/. A page without the configured target has no egg. */
 	function validSelectors(list) {
 		var out = [];
 		for (var k = 0; k < list.length; k++) {
@@ -268,26 +273,10 @@
 		var r = el.getBoundingClientRect();
 		return r.width >= 10 && r.height >= 10;
 	}
-	function anyVisible(sel) {
-		var list = D.querySelectorAll(sel);
-		for (var k = 0; k < list.length; k++) { if (visible(list[k])) { return true; } }
-		return false;
-	}
-	/* Three tiers, first with a VISIBLE match wins: the configured
-	 * selectors, then the configured fallback, then #masthead as the last
-	 * resort (the theme's header always exists, so the egg is always
-	 * reachable). Only ONE tier is ever bound — nesting two would count a
-	 * tap twice again. */
+	/* The configured selectors only; any that do not parse are dropped.
+	 * A cached pre-4.7.1 config's tapFallback is ignored on purpose. */
 	function tapSelector() {
-		var tiers = [String(CFG.tapSelector || '').split(','), [CFG.tapFallback || '#masthead'], ['#masthead']];
-		var last = '';
-		for (var k = 0; k < tiers.length; k++) {
-			var sel = validSelectors(tiers[k]).join(',');
-			if (!sel) { continue; }
-			last = sel;
-			if (anyVisible(sel)) { return sel; }
-		}
-		return last;
+		return validSelectors(String(CFG.tapSelector || '').split(',')).join(',');
 	}
 
 	/* ---- Easter egg: N taps (one shared counter, one count per tap). */

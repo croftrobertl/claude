@@ -334,9 +334,11 @@ render round and his say.
   `tap_selector` = `.home #header-page-title .entry-title` (exactly one
   element on the homepage) and `tap_count` = 4. Both are
   `Settings::TRACKED_DEFAULTS`: stored only when they differ, cleared on
-  upgrade when they equal the default. Off the homepage the selector
-  matches nothing, so `ambient.js`'s tiers fall back to `#masthead` — that
-  is unchanged pre-existing behaviour, not a Rob pick; ask before changing.
+  upgrade when they equal the default.
+- **The egg is HOMEPAGE ONLY** (Rob chose "Homepage banner title" over
+  "Banner title, every page"). 4.7.1 removed the `#masthead` fallback: a
+  page without the configured target has no egg. Do not reintroduce a
+  fallback tier.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -512,10 +514,15 @@ render round and his say.
   that starts next unless that is a one-day holiday. `HOLIDAY_ANCHOR` and
   `CLASH_WINS` are shipped in the client config, never hand-copied into
   ambient.js. Pre-3.7.0 dated rows are migrated on read (`Schedule::migrate`).
-- **Tap counting is delegated** (one document listener, `closest()` against the
-  selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
-  VISIBLE match). Binding per element double-counted nested targets — the egg
-  opened on half the configured taps until 3.7.0.
+- **Tap counting is delegated** (one document listener, `closest()` against
+  the configured selectors only, counting VISIBLE matches). Binding per
+  element double-counted nested targets — the egg opened on half the
+  configured taps until 3.7.0. Until 4.7.1 there were fallback tiers
+  (`tapFallback` → `#masthead`); on this site the banner title sits INSIDE
+  `#masthead`, so the fallback opened the egg from every page's title
+  (live /contact/, 2026-10-10). A fixture must put the title inside the
+  header too, or the regression test passes on the broken build — the
+  first 4.7.1 fixture did exactly that.
 - **The tap target must be something this theme actually SHOWS.** Bravada's
   generated CSS hides `#site-text`, so `#site-title` is 0x0 on every page;
   `#branding` is 0 wide; `.header-image` does not exist; and a bare
@@ -523,7 +530,8 @@ render round and his say.
   4.7.0 the egg was unreachable for guests on live and nobody noticed for
   weeks. `test-front.js` (`banner: true` fixture) proves the default hits
   exactly the banner title and that card titles and the header do not
-  count there. And anything that TELLS people how to open the egg must come
+  count there; `banner: 'page'` (no body.home, title "Contact Us") proves
+  another page has no egg. And anything that TELLS people how to open the egg must come
   from `Settings::egg_howto()`, never a hard-coded "tap the logo five times".
 - **Some keys are stored ONLY as overrides (`Settings::TRACKED_DEFAULTS`).**
   `sanitize()` drops a tracked value equal to its default, the upgrade

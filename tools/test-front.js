@@ -84,14 +84,14 @@ async function zIndexBand() {
 async function tapEgg() {
   console.log('\n=== the Matrix egg still fires under a full-viewport canvas ===');
   const cfg = config(LIVE);
-  const ses = await open(fixture({ kind: 'bravada', config: cfg }));
+  const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }));
   try {
     await settle(ses.page);
     const before = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
     /* Five real clicks on the configured target. If the canvas ate taps,
      * the counter would never reach the threshold. */
     for (let i = 0; i < cfg.tapCount; i++) {
-      await ses.page.click('#site-title', { delay: 20 });
+      await ses.page.click('#header-page-title .entry-title', { delay: 20 });
       await ses.page.waitForTimeout(90);
     }
     await ses.page.waitForTimeout(1200);
@@ -100,7 +100,7 @@ async function tapEgg() {
       overlay: !!document.querySelector('canvas:not(.dcc-seasons-canvas), [style*="2147483000"]'),
     }));
     console.log('  ', JSON.stringify({ before, ...r }));
-    ok(r.matrix, `${cfg.tapCount} taps in the site header (the fallback target) loaded the egg`, 'the canvas is eating taps');
+    ok(r.matrix, `${cfg.tapCount} taps on the homepage banner title loaded the egg`, 'the canvas is eating taps');
   } finally { await ses.close(); }
 }
 
@@ -108,7 +108,7 @@ async function tapEgg() {
 async function reducedMotion() {
   console.log('\n=== prefers-reduced-motion silences all three layers ===');
   const cfg = config(LIVE);
-  const ses = await open(fixture({ kind: 'bravada', config: cfg }), { reducedMotion: 'reduce' });
+  const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), { reducedMotion: 'reduce' });
   try {
     await ses.page.waitForTimeout(4000); // well past the idle-callback fetch
     const r = await ses.page.evaluate(() => ({
@@ -128,7 +128,7 @@ async function reducedMotion() {
      * rain. So open it for real and check which branch ran, rather than
      * asserting that the loader contains a line of source. */
     for (let i = 0; i < cfg.tapCount; i++) {
-      await ses.page.click('#site-title', { delay: 20 });
+      await ses.page.click('#header-page-title .entry-title', { delay: 20 });
       await ses.page.waitForTimeout(90);
     }
     await ses.page.waitForTimeout(1500);
@@ -167,14 +167,14 @@ async function reducedMotion() {
 async function eggSturdy(min) {
   console.log(`\n=== the egg (${min ? 'MINIFIED' : 'source'} build): a failed fetch is retried, and New Year's shows this year ===`);
   const cfg = config([...LIVE.slice(0, -1), '--theme=new_years', ...(min ? ['--min'] : [])]);
-  const ses = await open(fixture({ kind: 'bravada', config: cfg }), { reducedMotion: 'reduce' });
+  const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), { reducedMotion: 'reduce' });
   try {
     await ses.page.waitForTimeout(800);
     let fails = 1, fetches = 0;
     const loaded = await ses.page.evaluate(() => [...document.scripts].map(s => s.src.split('/').pop()).filter(Boolean));
     ok(loaded.includes(min ? 'ambient.min.js' : 'ambient.js'), `${min ? 'minified' : 'source'} loader on the page`, loaded.join(' '));
     await ses.page.route(min ? /matrix\.min\.js/ : /matrix\.js/, r => { fetches++; return fails-- > 0 ? r.abort() : r.fallback(); });
-    const five = async () => { for (let i = 0; i < cfg.tapCount; i++) { await ses.page.click('#site-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
+    const five = async () => { for (let i = 0; i < cfg.tapCount; i++) { await ses.page.click('#header-page-title .entry-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
     await five();
     const first = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
     await five();
@@ -206,7 +206,7 @@ async function eggTarget() {
     ok(!card, 'six taps on a cottage card title (.entry-title too) do NOT open the egg', 'opened');
     await taps('#site-title', 6);
     const header = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
-    ok(!header, 'on the homepage the header is not a target (only the first visible tier is bound)', 'opened');
+    ok(!header, 'the site header is not a target', 'opened');
     await ses.page.waitForTimeout(3200); /* let the 3 s window empty */
     await taps('#header-page-title .entry-title', cfg.tapCount - 1);
     const short = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
@@ -214,6 +214,27 @@ async function eggTarget() {
     const opened = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix && !!document.querySelector('[aria-modal="true"]'));
     ok(!short && opened, `${cfg.tapCount} taps on the banner title open it, ${cfg.tapCount - 1} do not`, JSON.stringify({ short, opened }));
   } finally { await ses.close(); }
+
+  /* 4.7.1, Rob: the egg is HOMEPAGE ONLY. Another in-scope page with the
+   * same banner title markup (live /contact/, "Contact Us") opened the egg
+   * through the old #masthead fallback. No fallback now: no egg there. */
+  console.log('\n=== another page (same banner markup, no body.home): no egg at all ===');
+  const other = await open(fixture({ kind: 'bravada', config: cfg, banner: 'page' }));
+  try {
+    await other.page.waitForTimeout(800);
+    const taps = async (sel, n) => { for (let i = 0; i < n; i++) { await other.page.click(sel, { delay: 20 }); await other.page.waitForTimeout(90); } await other.page.waitForTimeout(1200); };
+    const shape = await other.page.evaluate(sel => ({ home: document.body.classList.contains('home'), title: (document.querySelector('#header-page-title .entry-title') || {}).textContent, matches: document.querySelectorAll(sel).length }), cfg.tapSelector);
+    ok(!shape.home && shape.title === 'Contact Us' && shape.matches === 0, 'the page has a banner title the default does not match', JSON.stringify(shape));
+    /* exactly tapCount: a click after the egg opened would hang on the overlay */
+    await taps('#header-page-title .entry-title', cfg.tapCount);
+    const byTitle = await other.page.evaluate(() => ({ egg: !!window.DCCSeasonsMatrix, overlay: !!document.querySelector('[aria-modal="true"]') }));
+    ok(!byTitle.egg && !byTitle.overlay, `${cfg.tapCount} taps on its banner title: no egg, egg script never fetched`, JSON.stringify(byTitle));
+    await other.page.keyboard.press('Escape'); /* a regression's overlay would block the next clicks */
+    await other.page.waitForTimeout(3200);
+    await taps('#site-title', cfg.tapCount);
+    const byHeader = await other.page.evaluate(() => !!window.DCCSeasonsMatrix);
+    ok(!byHeader, `${cfg.tapCount} taps on the site header: no egg (the #masthead fallback is gone)`, 'opened');
+  } finally { await other.close(); }
 }
 
 /* -------------------------------------------------------- 4. performance */

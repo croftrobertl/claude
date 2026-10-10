@@ -93,6 +93,13 @@ function page(opts) {
    * that also carry .entry-title and must NOT count. Off by default so no
    * other suite's layout moves. */
   const banner = !!opts.banner;
+  /* banner: 'page' is ANOTHER page's shape (4.7.1): the same banner title
+   * markup ("Contact Us") but no body.home, so the default target does not
+   * match and that page must have no egg. The banner title sits INSIDE
+   * #masthead, as on live: that is why 4.7.0's #masthead fallback opened
+   * the egg from /contact/'s title (a fixture with it outside the header
+   * passed on 4.7.0 and proved nothing). */
+  const home = banner && opts.banner !== 'page';
   /* A --min config gets the minified LOADER too. Until 4.6.2 the fixture
    * always loaded ambient.js, so no suite ever ran the ambient.min.js that
    * ships (found in the 4.6.1 audit). */
@@ -124,17 +131,17 @@ function page(opts) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DCC Seasons fixture — ${kind}</title>
 <style>${SHARED_CSS}${kind === 'elementor' ? ELEMENTOR_CSS : ''}</style>
-</head><body${banner ? ' class="home"' : ''}>
+</head><body${home ? ' class="home"' : ''}>
   <div class="dcc-wx-banner" role="alert">Tornado Warning for Lake County until 6:15 PM EDT</div>
-  <header id="masthead"><h1 id="site-title">Dora Canal Court</h1></header>
+  <header id="masthead"><h1 id="site-title">Dora Canal Court</h1>${banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:60px 24px;color:#fff">' + (home ? 'Dora Canal Court' : 'Contact Us') + '</h1></div>' : ''}</header>
   <div class="elementor-lightbox"></div>
   <div class="mobile-nav"></div>
-  <div class="hero">${banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:140px 24px;color:#fff">Dora Canal Court</h1></div>' : ''}</div>
+  <div class="hero"></div>
   <div id="content" class="cryout">
     <main id="main" class="main">
       <article id="post-620">
         <div class="entry-content">
-${banner ? '<h2 class="entry-title card-title">Cottage one</h2><h2 class="entry-title card-title">Cottage two</h2>' : ''}
+${home ? '<h2 class="entry-title card-title">Cottage one</h2><h2 class="entry-title card-title">Cottage two</h2>' : ''}
 ${body}
         </div>
       </article>

@@ -94,7 +94,6 @@ $config = [
     /* The plugin's own defaults (4.7.0: the homepage banner title, 4 taps),
      * so the suites follow them; --tapsel= / --taps= override. */
     'tapSelector'  => (string) ($args['tapsel'] ?? \DCC_Seasons\Settings::defaults()['tap_selector']),
-    'tapFallback'  => '#masthead',
     'tapCount'     => (int) ($args['taps'] ?? \DCC_Seasons\Settings::defaults()['tap_count']),
     'tapWindow'    => 3000,
     'density'      => (int) ($args['density'] ?? 16),

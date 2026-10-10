@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.7.0
+Stable tag: 4.7.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,11 +25,11 @@ Matrix rain's deliberate glyph aesthetic):
    never intercepts a click).
 2. **Easter egg** — tapping/clicking the tap target (Settings → Tap target
    selector; default since 4.7.0: the title in the homepage banner,
-   `.home #header-page-title .entry-title`, with the site header `#masthead`
-   as the fallback on other pages) the Tap count times (default 4) within a
-   rolling 3-second window launches a
-   full-screen Matrix-style glyph rain recolored and re-glyphed for the
-   current theme (orange pumpkin rain in October, pastel egg rain at Easter…).
+   `.home #header-page-title .entry-title`; since 4.7.1 there is no
+   fallback, so a page without the target has no egg) the Tap count times
+   (default 4) within a rolling 3-second window launches a full-screen
+   Matrix-style glyph rain recolored and re-glyphed for the current theme
+   (orange pumpkin rain in October, pastel egg rain at Easter…).
    Outside every range it falls back to the classic green Matrix rain. Exit
    via the ✕ button, Escape, or tapping the overlay. The rain engine
    (`matrix.js`) is a separate file lazy-loaded only on the launching tap.
@@ -166,6 +166,18 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.7.1 =
+The logo egg is homepage only, as Rob chose (2026-10-10). Rollback:
+reinstall the 4.7.0 zip.
+
+* Removed the fallback target. When the configured tap target was not on a
+  page, the site header (`#masthead`) became the target instead, so on
+  live four taps on /contact/'s banner title "Contact Us" (which sits in
+  the header) opened the egg. A page without the configured target now has
+  no egg, and never fetches the egg's script.
+* The settings page and the Theme guide say so; "Tap the title in the
+  homepage banner 4 times" is now exactly true.
 
 = 4.7.0 =
 Rob's logo-egg choices become the plugin's defaults (2026-10-10). Rollback:
