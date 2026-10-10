@@ -128,5 +128,20 @@ echo "\n-- no PII in page HTML --\n";
 }
 
 @unlink($GLOBALS['t_errlog']);
+echo "\n-- every registered staff endpoint runs the gate FIRST (0.45.0) --\n";
+{
+    $src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff.php');
+    preg_match("/foreach \(\[([^\]]+)\] as \\\$ep\)/", $src, $m);
+    $eps = array_map(static fn($x) => trim($x, " '"), explode(',', $m[1] ?? ''));
+    check('the endpoint list is read from Staff::register() (instrument check): month, booking, photo, search',
+        $eps === ['month', 'booking', 'photo', 'search'], $eps);
+    foreach ($eps as $ep) {
+        $ok = (bool) preg_match('/public static function handle_' . $ep . '\(\): void\s*\{\s*self::require_authorization\(\);/', $src);
+        check("handle_$ep: require_authorization() is its FIRST statement", $ok);
+    }
+    check('registered for logged-out staff too (wp_ajax_nopriv_), and never as a REST route',
+        str_contains($src, "add_action('wp_ajax_nopriv_' . \$action") && !str_contains($src, 'register_rest_route'));
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);

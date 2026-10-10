@@ -184,7 +184,7 @@ function boardStrings() {
   while ((m = re.exec(block))) out[m[1]] = m[2].replace(/\\'/g, "'");
   return out;
 }
-function boardShell({ today, cottages, bookings, details = {}, sow = 0, head = '', bodyStyle = '' }) {
+function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '' }) {
   const config = {
     ajaxUrl: '/ajax', nonce: 'n', month: today.slice(0, 7), today,
     calendar: {
@@ -205,14 +205,20 @@ function boardShell({ today, cottages, bookings, details = {}, sow = 0, head = '
 ${markup}
 <script>
   window.__reqs = [];
-  var TODAY = ${JSON.stringify(today)}, BOOKINGS = ${JSON.stringify(bookings)}, COTTAGES = ${JSON.stringify(cottages)}, DETAILS = ${JSON.stringify(details)};
+  var TODAY = ${JSON.stringify(today)}, BOOKINGS = ${JSON.stringify(bookings)}, COTTAGES = ${JSON.stringify(cottages)}, DETAILS = ${JSON.stringify(details)}, SEARCH = ${JSON.stringify(search)};
   var json = function (o, st, h) { return Promise.resolve(new Response(JSON.stringify(o), { status: st || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, h || {}) })); };
   window.fetch = function (url, opts) {
     var p = new URLSearchParams(opts.body.toString());
-    var req = { action: p.get('action'), from: p.get('from'), to: p.get('to'), booking_id: p.get('booking_id'), nonce: p.get('nonce') };
+    var req = { action: p.get('action'), from: p.get('from'), to: p.get('to'), booking_id: p.get('booking_id'), nonce: p.get('nonce'), q: p.get('q') };
     window.__reqs.push(req);
     if (window.__nonceExpired || (function () { try { return sessionStorage.getItem('__nonceExpired') === '1'; } catch (e) { return false; } })()) {
       return Promise.resolve(new Response('', { status: 403, headers: { 'X-MPHBAC-Staff': 'nonce' } }));
+    }
+    if (req.action === 'mphbac_staff_search') {
+      // The server's matching is staff-search-test.php's; here, a query maps
+      // to the rows the server would send.
+      var rows = SEARCH[(req.q || '').toLowerCase()] || [];
+      return json({ success: true, data: { results: rows, count: rows.length } });
     }
     if (req.action === 'mphbac_staff_booking') {
       var d = DETAILS[req.booking_id];

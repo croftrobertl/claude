@@ -34,6 +34,7 @@ const BOOKINGS = [
   // A channel's block echoing Bob's stay on #23: the same cottage-nights,
   // which "Booked" must count once. It takes a second lane on the chart.
   bk(10, '2026-10-10', '2026-10-12', 23, 'Reserved', 'airbnb'),
+  bk(11, '2026-11-12', '2026-11-15', 24, 'Nell Vance', 'vrbo'),          // next month, for the search jump
 ];
 const DETAILS = {
   1: { id: 1, imported: false, source: SRC.direct, adminUrl: 'http://staff.test/wp-admin/post.php?post=1&action=edit',
@@ -47,4 +48,20 @@ const DETAILS = {
   3: { id: 3, imported: true, source: SRC.booking, adminUrl: 'https://evil.example/wp-admin/post.php?post=3',
        sections: { booking: [{ label: 'Accommodation Type', value: 'Cottage 23' }], customer: [], notes: [] } },
 };
-module.exports = { TODAY, COTTAGES, BOOKINGS, DETAILS };
+DETAILS[99] = { id: 99, imported: false, source: SRC.direct,
+  sections: { booking: [{ label: 'Accommodation Type', value: 'Cottage 25' }], customer: [{ label: 'First Name', value: 'Old' }], notes: [] } };
+// What the SERVER would answer per query (its matching is proved in
+// staff-search-test.php); here only the board's handling of the rows is under test.
+const row = (id, name, ci, co, cot, src, why, extra = {}) => Object.assign({ id, name, checkin: ci, checkout: co,
+  cottages: [{ id: cot, number: String(cot), title: 'Cottage ' + cot, abbrev: '' }], status: 'confirmed', statusLabel: 'Confirmed',
+  sourceKey: src, sourceName: { direct: 'Direct', airbnb: 'Airbnb', booking: 'Booking.com', vrbo: 'Vrbo' }[src] || 'Direct', why, score: 100 }, extra);
+const SEARCH = {
+  sm: [row(8, 'Hal Price', '2026-10-20', '2026-10-22', 27, 'airbnb', 'Last Name: Price'),
+       row(1, 'Ann Smith', '2026-10-06', '2026-10-09', 22, 'direct', 'Last Name: Smith')],
+  smi: [row(1, 'Ann Smith', '2026-10-06', '2026-10-09', 22, 'direct', 'Last Name: Smith')],
+  fay: [row(6, 'Fay Cross', '2026-10-14', '2026-10-20', 26, 'direct', 'First Name: Fay', { status: 'mphb-pending', statusLabel: 'Pending' })],
+  old: [row(99, 'Old Guest', '2021-07-01', '2021-07-05', 25, 'direct', 'stay includes Jul 2, 2021')],
+  nov: [row(11, 'Nell Vance', '2026-11-12', '2026-11-15', 24, 'vrbo', 'First Name: Nell')],
+  evil: [row(12, '<img src=x onerror="window.__pwned=1">', '2026-10-06', '2026-10-09', 22, 'direct', '<b>why</b>')],
+};
+module.exports = { TODAY, COTTAGES, BOOKINGS, DETAILS, SEARCH };

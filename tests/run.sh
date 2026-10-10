@@ -16,7 +16,17 @@ rc=0
 run() {  # run <runner> <label> <path>
     printf '%-28s ' "$2"
     out=$("$1" "$3" 2>&1) || rc=1
-    printf '%s\n' "$(printf '%s' "$out" | tail -1)"
+    last=$(printf '%s' "$out" | tail -1)
+    printf '%s\n' "$last"
+    # A SUITE THAT DOES NOT FINISH CANNOT PASS (0.45.0). A handler's exit()
+    # once ended staff-search-test.php half-way with exit code 0 — every check
+    # after it skipped, the run green. Every suite ends by printing its own
+    # verdict; anything else on the last line is a failure.
+    case "$last" in
+        *'all passed'*|*'ALL OK'*) ;;
+        *' FAILED'*) rc=1 ;;
+        *) printf '    did not reach its own verdict line\n'; rc=1 ;;
+    esac
     if printf '%s' "$out" | grep -q '^FAIL'; then
         printf '%s' "$out" | grep '^FAIL' | sed 's/^/    /'
         rc=1

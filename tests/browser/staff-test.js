@@ -658,7 +658,8 @@ const BUTTONLIKE = [
       await p.setContent(S.page({ body: S.TOOLS }));
       const labs = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
         const c = getComputedStyle(l); return { text: l.textContent, size: c.fontSize, weight: c.fontWeight, color: c.color, align: c.textAlign }; }));
-      check(`${who}: (instrument check) both labels found`, labs.length === 2, labs);
+      // Show, Go to date and (0.45.0) Search.
+      check(`${who}: (instrument check) all three labels found`, labs.length === 3, labs);
       for (const l of labs) {
         check(`${who}: "${l.text}" is the live public label — 19px / 600 / #111, centred`,
           l.size === LIVE_PUBLIC_LABEL.size && l.weight === LIVE_PUBLIC_LABEL.weight

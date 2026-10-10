@@ -26,7 +26,7 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const ctx = await browser.newContext(phone
       ? { viewport: { width: 375, height: 900 }, isMobile: true, hasTouch: true }
       : { viewport: { width: 1280, height: 1000 } });
-    const page = html || S.boardShell({ today: F.TODAY, cottages: F.COTTAGES, bookings: F.BOOKINGS, details: F.DETAILS,
+    const page = html || S.boardShell({ today: F.TODAY, cottages: F.COTTAGES, bookings: F.BOOKINGS, details: F.DETAILS, search: F.SEARCH,
       bodyStyle: inset ? 'padding:0 ' + inset + 'px' : '' });
     let loads = 0;
     await ctx.route(ORIGIN + '**', r => { loads++; return r.fulfill({ body: page, contentType: 'text/html' }); });
@@ -323,6 +323,119 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.reload();
     await p.waitForTimeout(250);
     check('Stats is closed again after a reload', await p.evaluate(() => !document.querySelector('.mphbac-staff-stats').open));
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.45.0: a long stay that began off-screen keeps its name in view --');
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    const { ctx, p } = await open({ phone });
+    const ivy = () => p.evaluate(() => {
+      const g = document.querySelector('.mphbac-staff-grid'), gr = g.getBoundingClientRect();
+      const col = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect();
+      const bar = document.querySelector('.mphbac-staff-bar[data-booking-id="9"]'), br = bar.getBoundingClientRect();
+      const kids = [...bar.querySelectorAll('.mphbac-staff-bar-label > *')].filter(k => k.getBoundingClientRect().width > 0).map(k => k.getBoundingClientRect());
+      const text = bar.querySelector('.mphbac-staff-bar-text').textContent;
+      const first = kids.length ? kids[0] : null;
+      return { scroll: g.scrollLeft, barLeft: Math.round(br.left), colRight: Math.round(col.right), text,
+        firstLeft: first ? Math.round(first.left) : null,
+        inView: kids.every(k => k.left >= col.right - 0.5 && k.right <= gr.right + 0.5),
+        inBar: kids.every(k => k.left >= br.left - 0.5 && k.right <= br.right + 0.5),
+        icons: bar.querySelectorAll('svg.mphbac-staff-ico').length };
+    });
+    let v = await ivy();
+    check(`${who} Monthly opens scrolled to today: Ivy's 30-night bar starts OFF-screen (instrument check)`, v.scroll > 0 && v.barLeft < v.colRight, v);
+    check(`${who} ...and yet her name and paw are in view, just right of the cottage column`,
+      v.text === 'Ivy Moss' && v.icons === 1 && v.inView && v.firstLeft >= v.colRight && v.firstLeft <= v.colRight + 8, v);
+    check(`${who} ...inside her bar`, v.inBar, v);
+    await p.evaluate(() => { const g = document.querySelector('.mphbac-staff-grid'); g.scrollLeft = 0; g.dispatchEvent(new Event('scroll')); });
+    await p.waitForTimeout(120);
+    v = await ivy();
+    check(`${who} scrolled back to the 1st: the label returns to the bar's own start`, v.scroll === 0 && Math.abs(v.firstLeft - v.barLeft - 6) <= 1, v);
+    // A bar with only a sliver left on screen: fitted to what is visible,
+    // never clipped. In Yearly, which scrolls far enough on any screen.
+    await choose(p, 'year');
+    await p.evaluate(() => { const g = document.querySelector('.mphbac-staff-grid');
+      const b = document.querySelector('.mphbac-staff-bar[data-booking-id="1"]');
+      const col = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect().width;
+      g.scrollLeft = b.offsetLeft + b.offsetWidth - col - 30; g.dispatchEvent(new Event('scroll')); });
+    await p.waitForTimeout(120);
+    const ann = await p.evaluate(() => {
+      const g = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
+      const col = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect();
+      const bar = document.querySelector('.mphbac-staff-bar[data-booking-id="1"]'), br = bar.getBoundingClientRect();
+      const kids = [...bar.querySelectorAll('.mphbac-staff-bar-label > *')].filter(k => k.getBoundingClientRect().width > 0).map(k => k.getBoundingClientRect());
+      return { visible: Math.round(br.right - col.right), text: bar.querySelector('.mphbac-staff-bar-text').textContent,
+        icons: bar.querySelectorAll('svg.mphbac-staff-ico').length,
+        ok: kids.every(k => k.left >= col.right - 0.5 && k.right <= br.right + 0.5) };
+    });
+    check(`${who} Ann's bar with ~30px left on screen: refitted to the visible width (no name, fewer icons) and nothing clipped`,
+      ann.ok && ann.text === '' && ann.icons < 3, ann);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.45.0: search — live from 2 characters, one list, tap to open and jump --');
+  {
+    const { ctx, p } = await open();
+    const reqs = () => p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_search').map(r => r.q));
+    await p.click('.mphbac-staff-q');
+    await p.keyboard.type('s');
+    await p.waitForTimeout(400);
+    check('one character: no request, no list', (await reqs()).length === 0 && await p.evaluate(() => document.querySelector('.mphbac-staff-results').hidden));
+    await p.keyboard.type('mi', { delay: 40 });
+    await p.waitForTimeout(400);
+    check('typing on: ONE request, debounced, for the whole word ("smi")', JSON.stringify(await reqs()) === '["smi"]', await reqs());
+    await p.fill('.mphbac-staff-q', 'sm');
+    await p.dispatchEvent('.mphbac-staff-q', 'input');
+    await p.waitForTimeout(400);
+    const list = await p.evaluate(() => ({
+      count: document.querySelector('.mphbac-staff-results-count').textContent,
+      rows: [...document.querySelectorAll('.mphbac-staff-result')].map(b => [b.querySelector('.mphbac-staff-result-name').textContent,
+        b.querySelector('.mphbac-staff-result-meta').textContent, b.querySelector('.mphbac-staff-result-why').textContent,
+        getComputedStyle(b.querySelector('.mphbac-staff-dot')).backgroundColor]) }));
+    check('"sm": the rows in the server\'s order (best first), counted', list.count === '2 bookings' && list.rows[0][0] === 'Hal Price' && list.rows[1][0] === 'Ann Smith', list);
+    check('...each with cottage, dates, nights and source, and WHY it matched',
+      list.rows[1][1] === '#22 · Oct 6, 2026 → Oct 9, 2026 · 3 nights · Direct' && list.rows[1][2] === 'Last Name: Smith', list.rows[1]);
+    check('...and a dot in its source colour', list.rows[0][3] === RGB.airbnb && list.rows[1][3] === RGB.direct, list.rows.map(r => r[3]));
+
+    await p.fill('.mphbac-staff-q', 'nov');
+    await p.dispatchEvent('.mphbac-staff-q', 'input');
+    await p.waitForTimeout(400);
+    await p.click('.mphbac-staff-result');
+    await p.waitForTimeout(400);
+    const jump = await p.evaluate(() => ({ sheet: !document.querySelector('.mphbac-staff-sheet').hidden,
+      sheetReq: window.__reqs.some(r => r.action === 'mphbac_staff_booking' && r.booking_id === '11'),
+      from: document.querySelector('.mphbac-staff-chart').dataset.from, period: document.querySelector('.mphbac-staff-period').value,
+      found: (document.querySelector('.mphbac-staff-bar[data-booking-id="11"]') || { classList: { contains: () => false } }).classList.contains('is-found') }));
+    check('tapping a result opens its sheet through the gated booking endpoint', jump.sheet && jump.sheetReq, jump);
+    check('...jumps the calendar to the stay (November, same period) and highlights it', jump.from === '2026-11-01' && jump.period === 'month' && jump.found, jump);
+    await p.click('.mphbac-staff-close');
+    await p.waitForTimeout(300);
+
+    await p.fill('.mphbac-staff-q', 'old');
+    await p.dispatchEvent('.mphbac-staff-q', 'input');
+    await p.waitForTimeout(400);
+    const before = await p.evaluate(() => document.querySelector('.mphbac-staff-chart').dataset.from);
+    await p.click('.mphbac-staff-result');
+    await p.waitForTimeout(400);
+    const out = await p.evaluate(() => ({ sheet: !document.querySelector('.mphbac-staff-sheet').hidden,
+      from: document.querySelector('.mphbac-staff-chart').dataset.from, status: document.querySelector('.mphbac-staff-status').textContent }));
+    check('a stay outside the ±3-year range: the sheet still opens, the calendar stays, and it SAYS so',
+      out.sheet && out.from === before && out.status === "Outside the board's ±3-year range.", out);
+    await p.click('.mphbac-staff-close');
+    await p.waitForTimeout(300);
+
+    await p.fill('.mphbac-staff-q', 'evil');
+    await p.dispatchEvent('.mphbac-staff-q', 'input');
+    await p.waitForTimeout(400);
+    const evil = await p.evaluate(() => ({ pwned: !!window.__pwned, imgs: document.querySelectorAll('.mphbac-staff-results img, .mphbac-staff-results b').length,
+      text: document.querySelector('.mphbac-staff-result-name').textContent }));
+    check('a hostile name or why is shown as text — nothing becomes markup', !evil.pwned && evil.imgs === 0 && /<img/.test(evil.text), evil);
+    await p.focus('.mphbac-staff-q');
+    await p.keyboard.press('Escape');
+    check('Escape clears the field and the list', await p.evaluate(() => document.querySelector('.mphbac-staff-q').value === '' && document.querySelector('.mphbac-staff-results').hidden));
+    const stored = await p.evaluate(() => { const o = []; for (let i = 0; i < localStorage.length; i++) o.push(localStorage.key(i)); for (let i = 0; i < sessionStorage.length; i++) o.push(sessionStorage.key(i)); return o; });
+    check('nothing typed is kept: no storage at all', stored.length === 0, stored);
     await ctx.close();
   }
 

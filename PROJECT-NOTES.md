@@ -2511,3 +2511,80 @@ One mutation survived the full run, and it found a rule my own change had
 killed: once the nav's resting colour moved to (0,3,0), its old (0,2,0)
 `:focus-visible` rule could never win, so deleting it changed nothing. The
 dead rule is gone and the mutation now targets the live (0,4,0) one.
+
+## Search; long stays keep their name in view (0.45.0)
+
+**Rob decided** (relayed by the WD with his 0.44.1 staging check): short bars
+stay as built — name, then the nights count, then icons alone; then drop Boat,
+then Couch, then Pets. KEEP the nav-button coral fix. Live stays 0.43.4 until
+he signs off; staging has 0.44.1.
+
+**The WD decided:** search goes ahead in 0.45.0 and covers Boat; and the
+sticky-label spec — in any view where the grid scrolls sideways, a bar's name
+and icons follow the visible left edge, just right of the pinned cottage
+column, inside the bar, fitted by the existing rules to the bar's VISIBLE
+width, updated from followScroll()'s rAF (no new listener), phone and
+desktop, with no change to the preview, the aria-label or the sheet.
+
+**The search brief (from the original brief and the WD's answers):**
+Staff::VISIBLE_STATUSES only (cancelled and abandoned are never searched);
+anyone with the staff password; no result cap, no rate limit; everything the
+sheet shows except the Photo ID, plus the booking number, the cottage and the
+sync text (summary and mphb_ical_description, literal surrounding quotes
+stripped); country names to codes; phone digits regardless of formatting,
+the last four alone; "Dec 24" / "12/24" / "2026-12-24" find every stay over
+that night, "12/2024" is the month, and "12/24" is Dec 24 in ANY year
+(month/day wins); prefix and substring from 2 characters, fuzzy and phonetic
+from 4; one list, best first, each row saying why in plain text; no recent
+searches anywhere; tapping opens the sheet, jumps and highlights — outside
+the ±3-year cap the calendar stays put and says "Outside the board's ±3-year
+range."
+
+**The endpoint** — `mphbac_staff_search`, registered in the same loop as
+month / booking / photo (wp_ajax_ + wp_ajax_nopriv_, no REST route):
+`Staff::require_authorization()` is its first statement (403, empty body),
+then POST only (405, empty body), then the query is cut to 100 characters and
+never logged or stored. staff-gate-test.php now asserts, for EVERY action in
+the register loop, that require_authorization() is the first statement — a
+new endpoint added without the gate fails the suite, not just a review.
+
+**The index** is one non-autoloaded transient, `mphbac_staff_search_v1`
+(6 hours), built from Staff_Data::search_doc() — which starts from
+booking_detail(), so search can never see a field or a status the sheet
+would not show. It is flushed by the two iCal hooks the WD verified on live,
+deleted_post (bookings and payments only), save_post for bookings, payments
+and room types, and mphb_booking_status_changed (NOT verified on live — a
+status change from WP-Admin also fires save_post, so it is belt and braces).
+Uninstall already deletes `_transient_mphbac_%`. The 6-hour expiry is only a
+backstop for a change nobody hooked. A result row carries what the board
+shows (name, cottages, dates, status, source, why, score); the sheet itself
+still comes from the gated booking endpoint, so the payload per keystroke
+stays small with no cap.
+
+**Matching, and two calls I made while testing it:**
+- Scores: booking number 1000; a date 600; phone last four 550, digits
+  anywhere 500; country 300; per word exact 100, prefix 85, contains 70,
+  then fuzzy — Damerau-Levenshtein (1 edit up to 5 letters, 2 above) 62−8
+  per edit, Jaro-Winkler ≥ 0.9 55, Metaphone 52, n-gram Dice ≥ 0.5 48,
+  Soundex 42; +50 when the whole query appears as a phrase. Several words
+  must ALL match (AND) — "ann jon" finds nobody.
+- **Fuzzy needs BOTH sides to be 4+ letters.** With only the query checked,
+  "Jones" matched the guest "Jon" by Jaro-Winkler (a 3-letter prefix is
+  almost everything Jaro-Winkler measures).
+- **A date query is ONLY a date.** "Dec 24" also matched "Dec" in notes and
+  "24" in phone numbers, burying the stays over that night.
+
+**Sticky labels.** measureBars() reads each bar's offsetLeft / offsetWidth
+once per render; stickLabels() then works out, per frame, the visible part
+of each bar (from the grid's scrollLeft plus the cottage column, to its
+right edge), shifts the label to its start and calls fitLabel() with the
+visible width. fitLabel() rebuilds the label only when its icons-and-text key
+changes, so a scroll frame is arithmetic. Yearly still renders well inside
+its budget (best of five).
+
+**A test that exits early must not pass.** The suite's GET-405 check called
+the real handler in-process; its `exit` ended the suite with code 0 halfway
+through, and run.sh counted it green. The check now runs in a child process,
+staff-search-test.php ends with an instrument check that it reached its end,
+and run.sh fails any suite whose last line is not its own verdict ("all
+passed" / "ALL OK").
