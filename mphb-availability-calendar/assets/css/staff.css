@@ -43,7 +43,6 @@
     --staff-src-airbnb:  #bc003e;
     --staff-src-booking: #002e7a;
     --staff-src-vrbo:    #0f6dbf;
-    --staff-src-other:   #334155;
     /* app-layer tokens, mirrored from widget.css */
     --staff-header:     #0A50B2;
     /* Nav defaults are the PUBLIC widget's LIVE values on /cottages/, not the
@@ -221,8 +220,10 @@
    trading a hover bug for a keyboard-focus bug. :focus-visible stays here,
    ungated, because a keyboard user needs it on every device; :hover lives in
    the pointer guard at the end of this file. The control was split the same
-   way. Same pattern as widget.css's nav. */
-.mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }
+   way. Same pattern as widget.css's nav.
+   0.44.1: the rule itself moved to (0,4,0), beside the nav's (0,3,0) resting
+   colour that holds off the theme's button:focus — see "AND THE NAV" below.
+   At (0,2,0) here it had become dead, and a mutation deleting it survived. */
 /* The Today button carries a word rather than an arrow. Always shown since
    0.43.1 — when today is already in the period it scrolls back to it. */
 .mphbac-staff-today {
@@ -371,7 +372,8 @@
     cursor: pointer;
     transition: none;
 }
-.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period {
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span {
     padding-right: 40px;
     padding-left: 40px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -410,28 +412,44 @@
     background: var(--staff-bar);
 }
 .mphbac-staff-key--pending::before {
-    background-color: var(--staff-src-other);
+    background-color: var(--staff-stay);
     background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0 3px, transparent 3px 6px);
 }
-.mphbac-staff-key--tags .mphbac-staff-tag { --staff-bar: var(--staff-src-other); border: 1px solid var(--staff-src-other); }
-.mphbac-staff-key .mphbac-staff-paw { color: var(--staff-text); }
-/* The legend's paw is markup with no SVG of its own; a mask draws the same mark. */
-span.mphbac-staff-paw {
+/* THE LEGEND'S ICONS (0.44.1): white on a NEUTRAL slate swatch — never a
+   source colour, which would read as "this is Vrbo". The marks are CSS masks
+   of the SAME Tabler paths staff.js draws on the bars (staff-board-test.js
+   asserts the two copies agree), because the shell's legend is plain markup. */
+span.mphbac-staff-ico {
+    position: relative;
     display: inline-block;
-    width: 14px;
-    height: 14px;
-    background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='6' cy='10' r='2.3'/%3E%3Ccircle cx='10' cy='5.6' r='2.3'/%3E%3Ccircle cx='14' cy='5.6' r='2.3'/%3E%3Ccircle cx='18' cy='10' r='2.3'/%3E%3Cellipse cx='12' cy='16' rx='5.2' ry='4.4'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='6' cy='10' r='2.3'/%3E%3Ccircle cx='10' cy='5.6' r='2.3'/%3E%3Ccircle cx='14' cy='5.6' r='2.3'/%3E%3Ccircle cx='18' cy='10' r='2.3'/%3E%3Cellipse cx='12' cy='16' rx='5.2' ry='4.4'/%3E%3C/svg%3E") center / contain no-repeat;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--staff-stay);
 }
+span.mphbac-staff-ico::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+.mphbac-staff-ico.is-pets::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 13.5c-1.1 -2 -1.441 -2.5 -2.7 -2.5c-1.259 0 -1.736 .755 -2.836 2.747c-.942 1.703 -2.846 1.845 -3.321 3.291c-.097 .265 -.145 .677 -.143 .962c0 1.176 .787 2 1.8 2c1.259 0 3 -1 4.5 -1s3.241 1 4.5 1c1.013 0 1.8 -.823 1.8 -2c0 -.285 -.049 -.697 -.146 -.962c-.475 -1.451 -2.512 -1.835 -3.454 -3.538'/%3E%3Cpath d='M20.188 8.082a1.039 1.039 0 0 0 -.406 -.082h-.015c-.735 .012 -1.56 .75 -1.993 1.866c-.519 1.335 -.28 2.7 .538 3.052c.129 .055 .267 .082 .406 .082c.739 0 1.575 -.742 2.011 -1.866c.516 -1.335 .273 -2.7 -.54 -3.052l-.001 0'/%3E%3Cpath d='M9.474 9c.055 0 .109 0 .163 -.011c.944 -.128 1.533 -1.346 1.32 -2.722c-.203 -1.297 -1.047 -2.267 -1.932 -2.267c-.055 0 -.109 0 -.163 .011c-.944 .128 -1.533 1.346 -1.32 2.722c.204 1.293 1.048 2.267 1.933 2.267'/%3E%3Cpath d='M16.456 6.733c.214 -1.376 -.375 -2.594 -1.32 -2.722a1.164 1.164 0 0 0 -.162 -.011c-.885 0 -1.728 .97 -1.93 2.267c-.214 1.376 .375 2.594 1.32 2.722c.054 .007 .108 .011 .162 .011c.885 0 1.73 -.974 1.93 -2.267'/%3E%3Cpath d='M5.69 12.918c.816 -.352 1.054 -1.719 .536 -3.052c-.436 -1.124 -1.271 -1.866 -2.009 -1.866c-.14 0 -.277 .027 -.407 .082c-.816 .352 -1.054 1.719 -.536 3.052c.436 1.124 1.271 1.866 2.009 1.866c.14 0 .277 -.027 .407 -.082'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 13.5c-1.1 -2 -1.441 -2.5 -2.7 -2.5c-1.259 0 -1.736 .755 -2.836 2.747c-.942 1.703 -2.846 1.845 -3.321 3.291c-.097 .265 -.145 .677 -.143 .962c0 1.176 .787 2 1.8 2c1.259 0 3 -1 4.5 -1s3.241 1 4.5 1c1.013 0 1.8 -.823 1.8 -2c0 -.285 -.049 -.697 -.146 -.962c-.475 -1.451 -2.512 -1.835 -3.454 -3.538'/%3E%3Cpath d='M20.188 8.082a1.039 1.039 0 0 0 -.406 -.082h-.015c-.735 .012 -1.56 .75 -1.993 1.866c-.519 1.335 -.28 2.7 .538 3.052c.129 .055 .267 .082 .406 .082c.739 0 1.575 -.742 2.011 -1.866c.516 -1.335 .273 -2.7 -.54 -3.052l-.001 0'/%3E%3Cpath d='M9.474 9c.055 0 .109 0 .163 -.011c.944 -.128 1.533 -1.346 1.32 -2.722c-.203 -1.297 -1.047 -2.267 -1.932 -2.267c-.055 0 -.109 0 -.163 .011c-.944 .128 -1.533 1.346 -1.32 2.722c.204 1.293 1.048 2.267 1.933 2.267'/%3E%3Cpath d='M16.456 6.733c.214 -1.376 -.375 -2.594 -1.32 -2.722a1.164 1.164 0 0 0 -.162 -.011c-.885 0 -1.728 .97 -1.93 2.267c-.214 1.376 .375 2.594 1.32 2.722c.054 .007 .108 .011 .162 .011c.885 0 1.73 -.974 1.93 -2.267'/%3E%3Cpath d='M5.69 12.918c.816 -.352 1.054 -1.719 .536 -3.052c-.436 -1.124 -1.271 -1.866 -2.009 -1.866c-.14 0 -.277 .027 -.407 .082c-.816 .352 -1.054 1.719 -.536 3.052c.436 1.124 1.271 1.866 2.009 1.866c.14 0 .277 -.027 .407 -.082'/%3E%3C/svg%3E"); }
+.mphbac-staff-ico.is-couch::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11a2 2 0 0 1 2 2v1h12v-1a2 2 0 1 1 4 0v5a1 1 0 0 1 -1 1h-18a1 1 0 0 1 -1 -1v-5a2 2 0 0 1 2 -2'/%3E%3Cpath d='M4 11v-3a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v3'/%3E%3Cpath d='M12 5v9'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 11a2 2 0 0 1 2 2v1h12v-1a2 2 0 1 1 4 0v5a1 1 0 0 1 -1 1h-18a1 1 0 0 1 -1 -1v-5a2 2 0 0 1 2 -2'/%3E%3Cpath d='M4 11v-3a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v3'/%3E%3Cpath d='M12 5v9'/%3E%3C/svg%3E"); }
+.mphbac-staff-ico.is-boat::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 17h14.4a3 3 0 0 0 2.5 -1.34l3.1 -4.66h-6.23a4 4 0 0 0 -1.49 .29l-3.56 1.42a4 4 0 0 1 -1.49 .29h-5.73l-1.5 4'/%3E%3Cpath d='M6 13l1.5 -5'/%3E%3Cpath d='M6 8h8l2 3'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 17h14.4a3 3 0 0 0 2.5 -1.34l3.1 -4.66h-6.23a4 4 0 0 0 -1.49 .29l-3.56 1.42a4 4 0 0 1 -1.49 .29h-5.73l-1.5 4'/%3E%3Cpath d='M6 13l1.5 -5'/%3E%3Cpath d='M6 8h8l2 3'/%3E%3C/svg%3E"); }
 
-/* One class per source sets --staff-bar; the bar, its tags, its badge, the
-   legend swatches and the filter swatches all read it. */
+/* One class per source sets --staff-bar; the bar, the legend swatches, the
+   Daily list's dot and the Stats pie all read it. There are four sources:
+   a channel nobody recognises shows as Direct (Rob, 0.44.1). */
 .is-src-direct  { --staff-bar: var(--staff-src-direct); }
 .is-src-airbnb  { --staff-bar: var(--staff-src-airbnb); }
 .is-src-booking { --staff-bar: var(--staff-src-booking); }
 .is-src-vrbo    { --staff-bar: var(--staff-src-vrbo); }
-.is-src-other   { --staff-bar: var(--staff-src-other); }
 
 .mphbac-staff-status { margin-top: 0.5em; font-size: 0.9em; color: var(--staff-muted); }
 .mphbac-staff-status:empty { display: none; }
@@ -646,7 +664,7 @@ span.mphbac-staff-paw {
     border: 0;
     border-radius: 6px;
     /* The WHOLE bar is its source (0.44.0, option C). */
-    background: var(--staff-bar, var(--staff-src-other));
+    background: var(--staff-bar, var(--staff-src-direct));
     color: #ffffff;
     text-align: left;
     overflow: hidden;
@@ -689,42 +707,51 @@ span.mphbac-staff-paw {
     overflow: hidden;
 }
 .mphbac-staff-bar-label .mphbac-staff-bar-text:empty { display: none; }
-/* IN / OUT (0.44.0): small white tags in the bar's own colour. On a bar too
-   short for the words they shrink to ▸ / ◂ (.is-compact). OUT sits at the
-   bar's right end, wherever the name stops. */
-.mphbac-staff-tag {
-    flex: 0 0 auto;
-    padding: 2px 3px;
-    border-radius: 3px;
-    background: #ffffff;
-    color: var(--staff-bar, var(--staff-src-other));
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.02em;
+/* THE THEME'S BUTTON STATES MUST NOT REACH A BAR (0.44.1, found by the
+   Website Director in Rob's screenshots). Bars are <button>s, and the
+   Elementor kit's `.elementor-kit-N button:hover, … button:focus { background-
+   color: #F08080; color: #FFF; border-radius: 30px }` sits at (0,2,1) — above
+   the bar's own (0,1,0) colour — so a hovered bar, and a TAPPED one on a phone
+   (which keeps focus), turned coral and pill-shaped. The bar's colour, ink and
+   shape are restated at (0,3,0), which outranks (0,2,1) in every state with
+   no :hover / :focus of our own (those live only in the pointer guard). The
+   subtle brightness change on hover, in the guard below, stays. */
+.mphbac-staff .mphbac-staff-bar.mphbac-staff-bar {
+    background-color: var(--staff-bar, var(--staff-src-direct));
+    color: #ffffff;
+    border-radius: 6px;
 }
-.mphbac-staff-bar .mphbac-staff-tag.is-out { margin-left: auto; }
-/* Compact: the measured layout staff.js uses for arrows — 2px padding, 2px gaps. */
-.mphbac-staff-bar.is-compact .mphbac-staff-bar-label { padding: 0 2px; gap: 2px; }
-.mphbac-staff-bar svg.mphbac-staff-paw {
-    flex: 0 0 auto;
-    width: 14px;
-    height: 14px;
-    fill: #ffffff;
+.mphbac-staff .mphbac-staff-bar.mphbac-staff-bar.is-cont-left  { border-top-left-radius: 0;  border-bottom-left-radius: 0; }
+.mphbac-staff .mphbac-staff-bar.mphbac-staff-bar.is-cont-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+/* The Daily rows are <button>s too: the same guard, their own white ground. */
+.mphbac-staff .mphbac-staff-item.mphbac-staff-item {
+    background-color: var(--staff-surface);
+    color: var(--staff-text);
+    border-radius: 0;
 }
-.mphbac-staff-otabadge {
+/* AND THE NAV (0.44.1), found by the same harness once it carried the kit
+   rule: a tapped arrow or Today keeps focus on a phone, so the kit's
+   `button:focus` held it coral — the very linger 0.31.0 removed. Its resting
+   colour goes to (0,3,0); its keyboard-focus colour, here, and its hover
+   colour, in the guard, go above that. The Navigation controls write tokens,
+   so they still drive all three. */
+.mphbac-staff .mphbac-staff-nav.mphbac-staff-nav {
+    background-color: var(--staff-nav-bg);
+    color: var(--staff-nav-text);
+}
+.mphbac-staff .mphbac-staff-nav.mphbac-staff-nav:focus-visible { background-color: var(--staff-nav-hover); }
+
+/* PETS / COUCH / BOAT (0.44.1): thin white outline icons, 18px. staff.js
+   draws only what fits — never a clipped one. */
+.mphbac-staff-bar svg.mphbac-staff-ico {
     flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #ffffff;
-    color: var(--staff-bar, var(--staff-stay));
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 1;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* THE TURNOVER MARK (0.44.0): a white diamond on the day one guest leaves a
@@ -845,8 +872,23 @@ span.mphbac-staff-paw {
     line-height: 1.2;
     overflow-wrap: anywhere;
 }
-.mphbac-staff-item-name .mphbac-staff-otabadge { color: #ffffff; background: var(--staff-bar, var(--staff-stay)); }
-.mphbac-staff-item-name svg.mphbac-staff-paw { flex: 0 0 auto; width: 16px; height: 16px; fill: var(--staff-text); }
+.mphbac-staff-item-name .mphbac-staff-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--staff-bar, var(--staff-src-direct));
+}
+.mphbac-staff-item-name svg.mphbac-staff-ico {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--staff-text);
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
 .mphbac-staff-item-meta {
     margin-top: 3px;
     color: var(--staff-muted);
@@ -1126,140 +1168,142 @@ body.mphbac-staff-open { overflow: hidden; }
     border: 0;
 }
 
-/* TODAY TILES: arriving / leaving / in house / turnovers (the real today)
-   and % booked (the period shown). */
-.mphbac-staff-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+/* STATS (0.44.1): one section below the calendar, closed on every load. */
+.mphbac-staff-stats { margin-top: 16px; }
+.mphbac-staff-stats-toggle {
+    display: flex;
+    align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    min-height: 46px;
+    padding: 0 16px;
+    border: 1px solid var(--staff-frame);
+    border-radius: 8px;
+    background: var(--staff-surface);
+    color: var(--staff-text);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
 }
-.mphbac-staff-tiles:empty { display: none; }
-.mphbac-staff-tile {
+.mphbac-staff-stats-toggle::-webkit-details-marker { display: none; }
+.mphbac-staff-stats-toggle::after {
+    content: "▸";
+    margin-left: auto;
+    color: var(--staff-muted);
+    transition: none;
+}
+.mphbac-staff-stats[open] > .mphbac-staff-stats-toggle::after { content: "▾"; }
+.mphbac-staff-stats-body {
+    padding: 14px 4px 4px;
+}
+.mphbac-staff-stats-pick {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5em 0.75em;
+}
+.mphbac-staff-sfield {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 0.25em;
+    flex: 0 1 12em;
+    min-width: 0;
+    margin: 0;
+}
+.mphbac-staff-sfield[hidden] { display: none; }
+.mphbac-staff-stats-note {
+    margin: 10px 0 0;
+    color: var(--staff-muted);
+    font-size: 0.9em;
+    text-align: center;
+}
+.mphbac-staff-stats-note[hidden] { display: none; }
+.mphbac-staff-stats-range {
+    margin: 12px 0 8px;
+    color: var(--staff-text);
+    font-weight: 700;
+    text-align: center;
+}
+.mphbac-staff-stats-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 8px;
+    margin: 0 0 16px;
+}
+.mphbac-staff-kpi {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
     justify-content: center;
-    min-height: 64px;
+    min-height: 60px;
     padding: 8px 6px;
     border: 1px solid var(--staff-frame);
     border-radius: 8px;
     background: var(--staff-surface);
     text-align: center;
 }
-.mphbac-staff-tile-num {
+.mphbac-staff-kpi.is-booked { cursor: help; }
+.mphbac-staff-kpi-num {
+    margin: 0;
     color: var(--staff-text);
     font-size: 22px;
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
-.mphbac-staff-tile-label {
+.mphbac-staff-kpi-label {
     margin-top: 2px;
     color: var(--staff-muted);
     font-size: 12px;
     font-weight: 600;
-    line-height: 1.2;
 }
-.mphbac-staff-tile.is-booked { cursor: help; }
-
-/* FILTERS: a native <details>; the summary is the row's pill. */
-.mphbac-staff-filters { width: 100%; text-align: center; }
-.mphbac-staff-filters-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 44px;
-    padding: 0 18px;
-    border: 2px solid var(--dcc-gold, #f4da62);
-    border-radius: 30px;
-    background: #ffffff;
+.mphbac-staff-stats-block { margin-top: 12px; }
+.mphbac-staff-stats-h {
+    margin: 0 0 8px;
     color: var(--staff-text);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    list-style: none;
-}
-.mphbac-staff-filters-toggle::-webkit-details-marker { display: none; }
-.mphbac-staff-filters-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 11px;
-    background: var(--staff-header);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-}
-.mphbac-staff-filters-count[hidden] { display: none; }
-.mphbac-staff-filters-body {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px 18px;
-    margin-top: 10px;
-    padding: 12px;
-    border: 1px solid var(--staff-frame);
-    border-radius: 8px;
-    background: var(--staff-surface);
-    text-align: left;
-}
-.mphbac-staff-fgroup {
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 4px 12px;
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-}
-.mphbac-staff-fgroup legend {
-    width: 100%;
-    margin-bottom: 2px;
-    padding: 0;
-    color: var(--staff-muted);
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-.mphbac-staff-check {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 44px;
     font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+    font-weight: 700;
 }
-.mphbac-staff-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--staff-header); }
-.mphbac-staff-swatch {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
+.mphbac-staff-stats-empty { margin: 0; color: var(--staff-muted); }
+.mphbac-staff-percot { margin: 0; padding: 0; list-style: none; }
+.mphbac-staff-percot-row {
+    display: grid;
+    grid-template-columns: minmax(6em, 9em) 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 13px;
+}
+.mphbac-staff-percot-name { font-weight: 600; white-space: nowrap; overflow: hidden; }
+.mphbac-staff-percot-track {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--staff-weekend);
+    overflow: hidden;
+}
+.mphbac-staff-percot-fill { display: block; height: 100%; background: var(--staff-header); }
+.mphbac-staff-percot-num { color: var(--staff-muted); font-variant-numeric: tabular-nums; }
+.mphbac-staff-pie-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px 24px;
+}
+.mphbac-staff-pie { width: 160px; height: 160px; }
+.mphbac-staff-pie-slice { fill: var(--staff-bar); stroke: #ffffff; stroke-width: 1.5; }
+.mphbac-staff-pie-label { fill: #ffffff; font-size: 13px; font-weight: 700; }
+.mphbac-staff-pie-list { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.mphbac-staff-pie-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.mphbac-staff-pie-swatch {
+    width: 12px;
+    height: 12px;
     border-radius: 3px;
     background: var(--staff-bar);
 }
-.mphbac-staff-filters-clear.mphbac-staff-filters-clear {
-    align-self: center;
-    min-height: 44px;
-    padding: 0 16px;
-    border: 1px solid var(--staff-frame);
-    border-radius: 999px;
-    background: #ffffff;
-    color: var(--staff-text);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: none;
-}
 
-/* QUICK PREVIEW: fixed to the viewport by staff.js, beside the bar. */
+/* QUICK PREVIEW: on <body> while shown, fixed above its bar (staff.js). */
 .mphbac-staff-preview {
     position: fixed;
     z-index: 1002;
@@ -1329,7 +1373,8 @@ body.mphbac-staff-open { overflow: hidden; }
         padding-left: 12px;
         padding-right: 12px;
     }
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period {
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span {
         padding-left: 12px;
         padding-right: 34px;
         background-position: right 12px center;
@@ -1369,7 +1414,7 @@ body.mphbac-staff-open { overflow: hidden; }
    bug, which does not care about that distinction.
    ====================================================================== */
 @media (hover: hover) and (pointer: fine) {
-    .mphbac-staff-nav:hover { background: var(--staff-nav-hover); }
+    .mphbac-staff .mphbac-staff-nav.mphbac-staff-nav:hover { background-color: var(--staff-nav-hover); }
 
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {
         background: var(--dcc-button-hover-bg, #f08080);
@@ -1382,5 +1427,7 @@ body.mphbac-staff-open { overflow: hidden; }
 
     /* Surfaces, unchanged — moved here only for the guard. */
     .mphbac-staff-bar:hover { filter: brightness(1.08); }
-    .mphbac-staff-item:hover { background: var(--staff-namecol); }
+    /* (0,5,0): above the theme guard for the rows, so their own hover tint
+       still shows on a computer. */
+    .mphbac-staff .mphbac-staff-item.mphbac-staff-item.mphbac-staff-item:hover { background-color: var(--staff-namecol); }
 }

@@ -38,7 +38,7 @@
     var PERIODS = ['day', 'week', 'month', 'year'];
     var SWIPE_MIN_PX = 60;
     // 0.44.0
-    var SOURCES = ['direct', 'airbnb', 'booking', 'vrbo', 'other'];
+    var SOURCES = ['direct', 'airbnb', 'booking', 'vrbo'];
     var REFRESH_MS = 3 * 60 * 1000;           // auto-refresh while visible
     var REFRESH_RETRY_MS = 30 * 1000;         // a skipped refresh tries again
     var LONG_PRESS_MS = 500;
@@ -67,8 +67,7 @@
         var todayBtn = root.querySelector('.mphbac-staff-today');
         var periodSel = root.querySelector('.mphbac-staff-period');
         var gotoEl   = root.querySelector('.mphbac-staff-goto');
-        var tilesEl  = root.querySelector('.mphbac-staff-tiles');
-        var filtersEl = root.querySelector('.mphbac-staff-filters');
+        var statsEl  = root.querySelector('.mphbac-staff-stats');
         var updatedEl = root.querySelector('.mphbac-staff-updated');
         var previewEl = root.querySelector('.mphbac-staff-preview');
         var legendEl = root.querySelector('.mphbac-staff-legend');
@@ -92,11 +91,7 @@
             anchor: config.today,      // a date inside the window, 'YYYY-MM-DD'
             req:   0,                  // last-write-wins guard for month loads
             cache: {},                 // 'from|to' -> payload (session only)
-            // Filters (0.44.0) live in memory only: Cottage (room type ids),
-            // Source (keys), Pets, Arrivals or departures only.
-            filters: { cottages: {}, sources: {}, pets: false, moves: false },
-            todayData: null,           // the payload covering the real today, for the tiles
-            todayReq: 0,
+            statsReq: 0,               // last-write-wins guard for the Stats section
             lastRefresh: 0
         };
         var lastTrigger = null;
@@ -226,14 +221,12 @@
             // a time is a cache hit rather than a request per tap.
             var load = (state.period === 'day') ? windowOf(state.anchor, 'month') : w;
             ensureRange(load.from, load.to, function (data) {
-                buildCottageFilter(data);
                 if (state.period === 'day') {
                     renderAgenda(data);
                     if (state.restoreScroll) { window.scrollTo(0, state.restoreScroll.y); state.restoreScroll = null; }
                 } else {
                     renderChart(data, w, opts);
                 }
-                renderTiles(data, w);
                 // Judged against what is ON SCREEN, not the payload's own flag:
                 // a week served from a cached, clamped year may itself be
                 // entirely inside the cap.
@@ -284,33 +277,14 @@
             });
         }
 
-        // ---- filters (0.44.0) -------------------------------------------------
+        // ---- sources, turnovers, measuring ---------------------------------------
 
-        function anyKey(o) { for (var k in o) { if (o[k]) return true; } return false; }
+        // The source as the board shows it (0.44.1): Direct, Airbnb,
+        // Booking.com or Vrbo. A channel nobody recognises shows in the Direct
+        // colour (Rob); the sheet still names where it came from.
         function sourceOf(b) {
             var k = b.sourceKey || (b.imported ? 'other' : 'direct');
-            return SOURCES.indexOf(k) >= 0 ? k : 'other';
-        }
-        // Does a booking pass the active filters, for the window `w` shown?
-        // Cottage, Source and Pets are properties of the booking; "Arrivals or
-        // departures only" keeps a booking that checks in or out INSIDE w.
-        function passes(b, w) {
-            var f = state.filters;
-            if (anyKey(f.cottages) && !(b.cottages || []).some(function (c) { return f.cottages[c.roomTypeId]; })) return false;
-            if (anyKey(f.sources) && !f.sources[sourceOf(b)]) return false;
-            if (f.pets && !b.pets) return false;
-            if (f.moves && !((b.checkin >= w.from && b.checkin <= w.to) || (b.checkout >= w.from && b.checkout <= w.to))) return false;
-            return true;
-        }
-        function cottagesShown(data) {
-            var f = state.filters;
-            return (data.cottages || []).filter(function (c) { return !anyKey(f.cottages) || f.cottages[c.id]; });
-        }
-        function filterCount() {
-            var f = state.filters, n = 0;
-            for (var k in f.cottages) if (f.cottages[k]) n++;
-            for (var j in f.sources) if (f.sources[j]) n++;
-            return n + (f.pets ? 1 : 0) + (f.moves ? 1 : 0);
+            return (k === 'airbnb' || k === 'booking' || k === 'vrbo') ? k : 'direct';
         }
 
         // TURNOVERS (0.44.0): a day on which one booking checks out of a
@@ -427,9 +401,7 @@
             // A refresh keeps the reader exactly where they were (0.44.0).
             var keepX = gridEl.scrollLeft, keepY = gridEl.scrollTop;
             gridEl.textContent = '';
-            // Only what passes the filters is drawn (0.44.0); the Cottage
-            // filter also removes the other cottages' rows.
-            var shown = (data.bookings || []).filter(function (b) { return passes(b, w); });
+            var shown = (data.bookings || []).slice();
             var turns = turnovers(shown);
 
             var period = state.period;
@@ -520,7 +492,7 @@
             // cottage rows
             var row = 3;
             var barFont = getComputedStyle(gridEl).fontFamily || 'sans-serif';
-            cottagesShown(data).forEach(function (c, ci) {
+            (data.cottages || []).forEach(function (c, ci) {
                 var bars = barsByType[c.id] || [];
                 var lanes = assignLanes(bars);
 
@@ -654,19 +626,23 @@
             return Math.max(1, laneEnds.length);
         }
 
-        // THE BAR (0.44.0, Rob's option C). The WHOLE bar is the source's
-        // colour; the check-in and check-out days carry small white IN / OUT
-        // tags in that colour; pending bookings keep their stripes; imports
-        // keep their letter badge; a booking that passes the pet rule gets a
-        // paw. So the source never rests on colour alone.
+        // THE BAR (0.44.0 option C, reworked in 0.44.1 by Rob). The WHOLE bar is
+        // the source's colour; its own start and end show arrival and
+        // departure (no IN / OUT tags, no letter badge any more); pending keeps
+        // its stripes. Three facts ride on it as thin white outline icons
+        // (Tabler, MIT): Pets, Couch, Boat.
         //
-        // WHAT FITS, measured rather than guessed (Rob, conflict 2): today's
-        // name rule — 1 night initials, 2–3 "First L.", 4+ the full name —
-        // wherever it fits beside the tags, badge and paw; else the nights
-        // count; else nothing (the name is always in the preview, the sheet,
-        // the title and the aria-label). Never an ellipsis. On a bar too short
-        // for the words, the tags shrink to ▸ / ◂ (conflict 2, the 1-night
-        // case), and the name is preferred over word tags.
+        // WHAT FITS IS MEASURED (canvas, the board's own face), never an
+        // ellipsis. The name rule — 1 night initials, 2–3 "First L.", 4+ the
+        // full name — beside the icons; else the nights count; else the icons
+        // alone. Then, if even the icons do not fit, they drop one at a time:
+        // Boat first, then Couch, Pets last. Pets goes last because it is the
+        // one with a fee and a cleaning consequence on every arrival; Boat is
+        // a planning fact for busy check-in days, and Stats and the Daily list
+        // carry it too. The preview, the sheet and the bar's description
+        // always list all three.
+        var ICON_ORDER = ['pets', 'couch', 'boat'];
+        var ICON_W = 18, ICON_GAP = 4, LABEL_PAD = 6;
         function barEl(bar, cottage, dayW, family) {
             var b = bar.b;
             var btn = document.createElement('button');
@@ -680,72 +656,33 @@
             btn.className = cls;
             btn.setAttribute('data-booking-id', String(b.id));
 
-            var hasIn = !bar.contLeft, hasOut = !bar.contRight;
             var px = (bar.end - bar.start) * (dayW || 44) / 2 - 2;        // the bar's margins
-            var tagFont = '700 10px ' + family, textFont = '600 13px ' + family;
-            // Full layout: 6px label padding, 4px gaps. Compact (arrows): 2px
-            // and 2px, so a one-night bar on a phone's ~31px day still fits
-            // both arrows. These numbers are the CSS's (.is-compact).
-            var lay = function (pad, gap) {
-                var r = px - 2 * pad;
-                if (b.imported) r -= 16 + gap;
-                if (b.pets) r -= 14 + gap;
-                return { room: r, gap: gap };
-            };
-            var full = lay(6, 4), tight = lay(2, 2);
-            var tagW = function (t, gap) { return textW(t, tagFont) + 6 + gap; };
-            var words = (hasIn ? tagW(S.tagIn || 'IN', full.gap) : 0) + (hasOut ? tagW(S.tagOut || 'OUT', full.gap) : 0);
-            var arrows = (hasIn ? tagW('▸', tight.gap) : 0) + (hasOut ? tagW('◂', tight.gap) : 0);
+            var room = px - 2 * LABEL_PAD;
+            var icons = ICON_ORDER.filter(function (k) { return !!b[k]; });
+            var iconsW = function (list) { return list.length * (ICON_W + ICON_GAP); };
+            var textFont = '600 13px ' + family;
             var who = b.guestName || ('#' + b.id);
             var name = nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who));
             var count = (S.nightsShort || '{n}n').replace('{n}', String(nights));
-            var fitsFull = function (t) { return t !== '' && textW(t, textFont) <= full.room - words; };
-            var fitsTight = function (t) { return t !== '' && textW(t, textFont) <= tight.room - arrows; };
-            var compact, text;
-            if (fitsFull(name)) { compact = false; text = name; }
-            else if (fitsTight(name)) { compact = true; text = name; }
-            else if (fitsFull(count)) { compact = false; text = count; }
-            else if (fitsTight(count)) { compact = true; text = count; }
-            else { compact = full.room < words; text = ''; }
-            // THE SLIVER RULE: a bar that is only part of a day wide (a stay
-            // starting on the window's last afternoon) may not hold even the
-            // arrows and the badge. Then pieces drop, least important first —
-            // the paw, the OUT arrow, the badge, the IN arrow — until the rest
-            // fits; never a clipped one. The SOURCE BADGE outlasts the OUT
-            // arrow: on a one-night bar the badge is the only non-colour mark
-            // of the source (the Website Director's requirement), while the
-            // bar's own end — and the turnover mark — still show the check-out.
-            // Source and pets stay in the preview, the sheet and the bar's
-            // description whatever drops.
-            var showBadge = !!b.imported, showPaw = !!b.pets;
-            if (compact && !text) {
-                var used = function () {
-                    return (hasIn ? tagW('▸', tight.gap) : 0) + (hasOut ? tagW('◂', tight.gap) : 0)
-                        + (showBadge ? 16 + tight.gap : 0) + (showPaw ? 14 + tight.gap : 0);
-                };
-                var avail = px - 4;
-                if (used() > avail) showPaw = false;
-                if (used() > avail) hasOut = false;
-                if (used() > avail) showBadge = false;
-                if (used() > avail) hasIn = false;
+            var fits = function (t) { return textW(t, textFont) <= room - iconsW(icons); };
+            var text = fits(name) ? name : (fits(count) ? count : '');
+            if (!text) {
+                // Icons alone; drop from the end of the order until they fit.
+                while (icons.length && iconsW(icons) - ICON_GAP > room) icons.pop();
             }
-            if (compact) btn.classList.add('is-compact');
 
             var label = document.createElement('span');
             label.className = 'mphbac-staff-bar-label';
-            if (hasIn) label.appendChild(tag('in', compact ? '▸' : (S.tagIn || 'IN')));
-            if (showBadge) label.appendChild(otaBadge(b));
-            if (showPaw) label.appendChild(paw());
+            icons.forEach(function (k) { label.appendChild(icon(k)); });
             var tx = document.createElement('span');
             tx.className = 'mphbac-staff-bar-text';
             tx.textContent = text;
             label.appendChild(tx);
-            if (hasOut) label.appendChild(tag('out', compact ? '◂' : (S.tagOut || 'OUT')));
             btn.appendChild(label);
 
-            var desc = describe(b, cottage);
-            btn.title = desc;
-            btn.setAttribute('aria-label', desc);
+            // The preview carries the detail on hover, so the native title
+            // tooltip would only repeat it (the WD); the accessible name stays.
+            btn.setAttribute('aria-label', describe(b, cottage));
             btn.addEventListener('click', function (e) {
                 // A long-press opened the preview; that tap must not ALSO open
                 // the sheet (the brief: "a long-press must not also open it").
@@ -756,31 +693,45 @@
             return btn;
         }
 
-        function tag(kind, text) {
-            var t = document.createElement('span');
-            t.className = 'mphbac-staff-tag is-' + kind;
-            t.setAttribute('aria-hidden', 'true');
-            t.textContent = text;
-            return t;
-        }
-
-        // A paw, drawn with DOM APIs — never markup in a string.
-        function paw() {
+        // THE ICONS: Tabler's outline paw, sofa and speedboat (MIT, Paweł
+        // Kuna), path for path; drawn with DOM APIs, never markup in a string.
+        // staff.css draws the legend's from the SAME paths as masks, and
+        // staff-board-test.js asserts the two copies agree.
+        var ICONS = {
+            pets: ['M14.7 13.5c-1.1 -2 -1.441 -2.5 -2.7 -2.5c-1.259 0 -1.736 .755 -2.836 2.747c-.942 1.703 -2.846 1.845 -3.321 3.291c-.097 .265 -.145 .677 -.143 .962c0 1.176 .787 2 1.8 2c1.259 0 3 -1 4.5 -1s3.241 1 4.5 1c1.013 0 1.8 -.823 1.8 -2c0 -.285 -.049 -.697 -.146 -.962c-.475 -1.451 -2.512 -1.835 -3.454 -3.538',
+                   'M20.188 8.082a1.039 1.039 0 0 0 -.406 -.082h-.015c-.735 .012 -1.56 .75 -1.993 1.866c-.519 1.335 -.28 2.7 .538 3.052c.129 .055 .267 .082 .406 .082c.739 0 1.575 -.742 2.011 -1.866c.516 -1.335 .273 -2.7 -.54 -3.052l-.001 0',
+                   'M9.474 9c.055 0 .109 0 .163 -.011c.944 -.128 1.533 -1.346 1.32 -2.722c-.203 -1.297 -1.047 -2.267 -1.932 -2.267c-.055 0 -.109 0 -.163 .011c-.944 .128 -1.533 1.346 -1.32 2.722c.204 1.293 1.048 2.267 1.933 2.267',
+                   'M16.456 6.733c.214 -1.376 -.375 -2.594 -1.32 -2.722a1.164 1.164 0 0 0 -.162 -.011c-.885 0 -1.728 .97 -1.93 2.267c-.214 1.376 .375 2.594 1.32 2.722c.054 .007 .108 .011 .162 .011c.885 0 1.73 -.974 1.93 -2.267',
+                   'M5.69 12.918c.816 -.352 1.054 -1.719 .536 -3.052c-.436 -1.124 -1.271 -1.866 -2.009 -1.866c-.14 0 -.277 .027 -.407 .082c-.816 .352 -1.054 1.719 -.536 3.052c.436 1.124 1.271 1.866 2.009 1.866c.14 0 .277 -.027 .407 -.082'],
+            couch: ['M4 11a2 2 0 0 1 2 2v1h12v-1a2 2 0 1 1 4 0v5a1 1 0 0 1 -1 1h-18a1 1 0 0 1 -1 -1v-5a2 2 0 0 1 2 -2',
+                    'M4 11v-3a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v3',
+                    'M12 5v9'],
+            boat: ['M2 17h14.4a3 3 0 0 0 2.5 -1.34l3.1 -4.66h-6.23a4 4 0 0 0 -1.49 .29l-3.56 1.42a4 4 0 0 1 -1.49 .29h-5.73l-1.5 4',
+                   'M6 13l1.5 -5',
+                   'M6 8h8l2 3']
+        };
+        function icon(kind) {
             var NS = 'http://www.w3.org/2000/svg';
             var svg = document.createElementNS(NS, 'svg');
             svg.setAttribute('viewBox', '0 0 24 24');
-            svg.setAttribute('class', 'mphbac-staff-paw');
+            svg.setAttribute('class', 'mphbac-staff-ico is-' + kind);
             svg.setAttribute('aria-hidden', 'true');
             svg.setAttribute('focusable', 'false');
-            [[6, 10, 2.3], [10, 5.6, 2.3], [14, 5.6, 2.3], [18, 10, 2.3]].forEach(function (p) {
-                var c = document.createElementNS(NS, 'circle');
-                c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]); c.setAttribute('r', p[2]);
-                svg.appendChild(c);
+            (ICONS[kind] || []).forEach(function (d) {
+                var p = document.createElementNS(NS, 'path');
+                p.setAttribute('d', d);
+                svg.appendChild(p);
             });
-            var e = document.createElementNS(NS, 'ellipse');
-            e.setAttribute('cx', '12'); e.setAttribute('cy', '16'); e.setAttribute('rx', '5.2'); e.setAttribute('ry', '4.4');
-            svg.appendChild(e);
             return svg;
+        }
+
+        // Pets / Couch / Boat as words, for the description, preview and list.
+        function facts(b) {
+            var out = [];
+            if (b.pets) out.push(S.pets || 'Pets');
+            if (b.couch) out.push(S.couch || 'Couch');
+            if (b.boat) out.push(S.boat || 'Boat');
+            return out;
         }
 
         // The source by name, from the stable key — never colour alone.
@@ -789,15 +740,6 @@
             return S['src' + k.charAt(0).toUpperCase() + k.slice(1)] || k;
         }
 
-        function otaBadge(b) {
-            var s = document.createElement('span');
-            s.className = 'mphbac-staff-otabadge';
-            var ota = (b.source && b.source.ota) || '';
-            s.textContent = ota ? ota.charAt(0).toUpperCase() : '!';
-            s.title = ota;
-            s.setAttribute('aria-hidden', 'true');
-            return s;
-        }
 
         // Full sentence for title/aria: name — cottage — dates (n nights) — status — via OTA
         function describe(b, cottage) {
@@ -807,19 +749,18 @@
             parts.push(shortDate(b.checkin) + ' → ' + shortDate(b.checkout) + ' (' + n + ' ' + (n === 1 ? (S.night || 'night') : (S.nights || 'nights')) + ')');
             if (b.statusLabel && b.status !== 'confirmed') parts.push(b.statusLabel);
             parts.push(sourceName(b));
-            if (b.pets) parts.push(S.pets || 'Pets');
+            facts(b).forEach(function (f) { parts.push(f); });
             return parts.join(' — ');
         }
 
         // ---- AGENDA -----------------------------------------------------------
 
-        // The day's lists, as the tiles count them — one function for both,
-        // so a tile and its list can never disagree.
+        // The day's lists — shared with Stats' "Day", so the section and the
+        // list can never disagree.
         function dayGroups(bookings, day) {
             var groups = { 'in': [], 'out': [], 'stay': [] };
-            var w = { from: day, to: day };
             bookings.forEach(function (b) {
-                if (!b.checkin || !b.checkout || !passes(b, w)) return;
+                if (!b.checkin || !b.checkout) return;
                 if (b.checkin === day) groups['in'].push(b);
                 else if (b.checkout === day) groups['out'].push(b);
                 else if (b.checkin < day && b.checkout > day) groups['stay'].push(b);
@@ -943,9 +884,15 @@
             main.className = 'mphbac-staff-item-main';
             var name = document.createElement('span');
             name.className = 'mphbac-staff-item-name';
-            if (b.imported) name.appendChild(otaBadge(b));
-            if (b.pets) name.appendChild(paw());
+            // 0.44.1: a small dot in the source colour (no letter — the WD's
+            // suggestion, as the bars dropped theirs), then the name, then the
+            // same three icons as the bars (Rob).
+            var dot = document.createElement('span');
+            dot.className = 'mphbac-staff-dot';
+            dot.setAttribute('aria-hidden', 'true');
+            name.appendChild(dot);
             name.appendChild(document.createTextNode(b.guestName || ('#' + b.id)));
+            ICON_ORDER.forEach(function (k) { if (b[k]) name.appendChild(icon(k)); });
             main.appendChild(name);
 
             var meta = document.createElement('span');
@@ -1275,148 +1222,251 @@
             resizeT = setTimeout(render, 150);
         });
 
-        // ---- today tiles (0.44.0) ---------------------------------------------
-        // Arriving / leaving / in house / turnovers mean the REAL today (Rob,
-        // conflict 4), whatever period is on screen; "Booked" follows the
-        // period shown. All five respect the filters. Today's numbers come
-        // from the same dayGroups() the Daily lists use, so a tile and its list
-        // cannot disagree.
-        function renderTiles(data, w) {
-            if (!tilesEl) return;
-            var today = config.today;
-            var td = cachedCovering(today, today) || state.todayData;
-            if (!td) { ensureToday(function () { renderTiles(data, w); }); }
-            var g = td ? dayGroups(td.bookings || [], today) : null;
-            var pct = bookedPct(data, w);
-            tilesEl.textContent = '';
-            [
-                ['arriving', S.tileArriving, g ? g['in'].length : '…'],
-                ['leaving', S.tileLeaving, g ? g['out'].length : '…'],
-                ['inhouse', S.tileInHouse, g ? g.stay.length : '…'],
-                ['turnovers', S.tileTurnovers, g ? g.turn.length : '…'],
-                ['booked', S.tileBooked, pct === null ? '—' : pct + '%']
-            ].forEach(function (t) {
-                var tile = document.createElement('div');
-                tile.className = 'mphbac-staff-tile is-' + t[0];
-                var n = document.createElement('span');
-                n.className = 'mphbac-staff-tile-num';
-                n.textContent = String(t[2]);
-                var l = document.createElement('span');
-                l.className = 'mphbac-staff-tile-label';
-                l.textContent = t[1] || '';
-                tile.appendChild(n);
-                tile.appendChild(l);
-                if (t[0] === 'booked') tile.title = S.tileBookedTip || '';
-                tilesEl.appendChild(tile);
+        // ---- STATS (0.44.1, Rob) ------------------------------------------------
+        // One section BELOW the calendar, closed on every load, with its own
+        // timeframe — Day / Week / Month / Year around a date, or Custom
+        // from–to — independent of the calendar. Fetched only when opened,
+        // through the same gated range endpoint (same gate, ±3-year cap); a
+        // Custom range past the endpoint's 400 days is cut to 400 and says so.
+        //
+        // Every cottage-night counts ONCE, and belongs to the booking that
+        // reaches it first (earliest check-in, then lowest id) — so a channel
+        // block echoing a booking neither inflates "% booked" nor takes a
+        // slice of the pie.
+        var statsSpan = statsEl && statsEl.querySelector('.mphbac-staff-stats-span');
+        var statsDate = statsEl && statsEl.querySelector('.mphbac-staff-stats-date');
+        var statsFrom = statsEl && statsEl.querySelector('.mphbac-staff-stats-from');
+        var statsTo   = statsEl && statsEl.querySelector('.mphbac-staff-stats-to');
+        var statsNote = statsEl && statsEl.querySelector('.mphbac-staff-stats-note');
+        var statsOut  = statsEl && statsEl.querySelector('.mphbac-staff-stats-out');
+        var STATS_MAX_DAYS = 400;
+
+        function statsWindow() {
+            var span = statsSpan ? statsSpan.value : 'month';
+            var notes = [];
+            var w;
+            if (span === 'custom') {
+                var f = statsFrom.value, t = statsTo.value;
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || !/^\d{4}-\d{2}-\d{2}$/.test(t) || t < f) return { bad: true };
+                if (daysBetween(f, t).length > STATS_MAX_DAYS) {
+                    t = shiftDay(f, STATS_MAX_DAYS - 1);
+                    notes.push('capped');
+                }
+                w = { from: f, to: t };
+            } else {
+                var d = /^\d{4}-\d{2}-\d{2}$/.test(statsDate.value) ? statsDate.value : config.today;
+                w = windowOf(d, span === 'day' ? 'day' : span);
+            }
+            if (w.to < CAP_LO || w.from > CAP_HI) return { bad: true };
+            if (w.from < CAP_LO || w.to > CAP_HI) {
+                w = { from: w.from < CAP_LO ? CAP_LO : w.from, to: w.to > CAP_HI ? CAP_HI : w.to };
+                notes.push('clamped');
+            }
+            w.span = span;
+            w.notes = notes;
+            return w;
+        }
+
+        function statsSay(text) {
+            statsNote.textContent = text || '';
+            statsNote.hidden = !text;
+        }
+
+        function renderStats() {
+            if (!statsEl || !statsOut) return;
+            var custom = statsSpan.value === 'custom';
+            [].forEach.call(statsEl.querySelectorAll('.mphbac-staff-stats-custom'), function (el) { el.hidden = !custom; });
+            [].forEach.call(statsEl.querySelectorAll('.mphbac-staff-stats-on'), function (el) { el.hidden = custom; });
+            var w = statsWindow();
+            if (w.bad) { statsOut.textContent = ''; statsSay(S.stBadRange || ''); return; }
+            var notes = [];
+            if (w.notes.indexOf('capped') >= 0) notes.push((S.stCapped || '').replace('{from}', mediumDay(w.from)).replace('{to}', mediumDay(w.to)));
+            if (w.notes.indexOf('clamped') >= 0) notes.push((S.stClamped || '').replace('{from}', mediumDay(w.from)).replace('{to}', mediumDay(w.to)));
+            statsSay(notes.join(' '));
+            var seq = ++state.statsReq;
+            var hit = cachedCovering(w.from, w.to);
+            var draw = function (data) { if (seq === state.statsReq) drawStats(data, w); };
+            if (hit) { draw(hit); return; }
+            statsOut.textContent = S.loading || 'Loading…';
+            post('mphbac_staff_month', { from: w.from, to: w.to }).then(function (json) {
+                if (seq !== state.statsReq) return;
+                if (!json || !json.success || !json.data) { statsOut.textContent = S.error || ''; return; }
+                state.cache[w.from + '|' + w.to] = json.data;
+                draw(json.data);
+            }).catch(function (err) {
+                if (seq !== state.statsReq) return;
+                if (tokenReload(err)) return;
+                statsOut.textContent = failureText(err);
             });
         }
 
-        // The real today's data, for the tiles, when the period on screen
-        // does not cover it: its month, fetched once and cached like any other.
-        function ensureToday(cb) {
-            var today = config.today;
-            var m = windowOf(today, 'month');
-            var seq = ++state.todayReq;
-            post('mphbac_staff_month', { from: m.from, to: m.to }).then(function (json) {
-                if (seq !== state.todayReq || !json || !json.success || !json.data) return;
-                state.cache[m.from + '|' + m.to] = json.data;
-                state.todayData = json.data;
-                cb();
-            }).catch(function (err) { tokenReload(err); });
-        }
-
-        // % booked = booked cottage-nights ÷ (cottages × nights in the period),
-        // each cottage-night once however many bookings or channel blocks
-        // cover it, counting the visible statuses the payload carries.
-        function bookedPct(data, w) {
-            var from = data.from && data.from > w.from ? data.from : w.from;
-            var to = data.to && data.to < w.to ? data.to : w.to;
-            var nights = daysBetween(from, to);
-            var cots = cottagesShown(data);
-            if (!nights.length || !cots.length) return null;
-            var want = {};
-            cots.forEach(function (c) { want[c.id] = true; });
-            var taken = {}, n = 0;
-            (data.bookings || []).forEach(function (b) {
-                if (!passes(b, w)) return;
+        function statsNumbers(data, w) {
+            var nights = daysBetween(w.from, w.to);
+            var bookings = (data.bookings || []).filter(function (b) { return b.checkin && b.checkout; })
+                .sort(function (a, b) { return a.checkin < b.checkin ? -1 : a.checkin > b.checkin ? 1 : a.id - b.id; });
+            var owner = {}, perCottage = {}, bySource = { direct: 0, airbnb: 0, booking: 0, vrbo: 0 }, booked = 0;
+            bookings.forEach(function (b) {
                 (b.cottages || []).forEach(function (c) {
-                    if (!want[c.roomTypeId]) return;
                     nights.forEach(function (d) {
-                        if (d >= b.checkin && d < b.checkout && !taken[c.roomTypeId + '|' + d]) {
-                            taken[c.roomTypeId + '|' + d] = true;
-                            n++;
+                        var k = c.roomTypeId + '|' + d;
+                        if (d >= b.checkin && d < b.checkout && !owner[k]) {
+                            owner[k] = b;
+                            booked++;
+                            perCottage[c.roomTypeId] = (perCottage[c.roomTypeId] || 0) + 1;
+                            bySource[sourceOf(b)]++;
                         }
                     });
                 });
             });
-            return Math.round(100 * n / (cots.length * nights.length));
+            var inRange = function (d) { return d >= w.from && d <= w.to; };
+            var staying = bookings.filter(function (b) { return b.checkin <= w.to && b.checkout > w.from; });
+            var turns = 0, t = turnovers(bookings);
+            Object.keys(t).forEach(function (typeId) { Object.keys(t[typeId]).forEach(function (d) { if (inRange(d)) turns++; }); });
+            var cots = data.cottages || [];
+            return {
+                nights: nights.length,
+                cottages: cots,
+                booked: booked,
+                pct: cots.length && nights.length ? Math.round(100 * booked / (cots.length * nights.length)) : null,
+                arrivals: bookings.filter(function (b) { return inRange(b.checkin); }).length,
+                departures: bookings.filter(function (b) { return inRange(b.checkout); }).length,
+                turnovers: turns,
+                inHouse: w.span === 'day' ? dayGroups(bookings, w.from).stay.length : null,
+                pets: staying.filter(function (b) { return b.pets; }).length,
+                couch: staying.filter(function (b) { return b.couch; }).length,
+                boat: staying.filter(function (b) { return b.boat; }).length,
+                perCottage: perCottage,
+                bySource: bySource
+            };
         }
 
-        // ---- the filters panel (0.44.0) ---------------------------------------
-        var cottageFilterBuilt = false;
-        function buildCottageFilter(data) {
-            if (cottageFilterBuilt || !filtersEl) return;
-            var fs = filtersEl.querySelector('.mphbac-staff-fgroup--cottage');
-            if (!fs || !(data.cottages || []).length) return;
-            cottageFilterBuilt = true;
-            data.cottages.forEach(function (c) {
-                var l = document.createElement('label');
-                l.className = 'mphbac-staff-check';
-                var i = document.createElement('input');
-                i.type = 'checkbox';
-                i.name = 'cottage';
-                i.value = String(c.id);
-                i.checked = !!state.filters.cottages[c.id];
-                l.appendChild(i);
-                l.appendChild(document.createTextNode((c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
-                fs.appendChild(l);
+        function drawStats(data, w) {
+            var n = statsNumbers(data, w);
+            statsOut.textContent = '';
+            var el = function (tag, cls, text) {
+                var e = document.createElement(tag);
+                if (cls) e.className = cls;
+                if (text !== undefined) e.textContent = text;
+                return e;
+            };
+            statsOut.appendChild(el('p', 'mphbac-staff-stats-range', w.from === w.to ? mediumDay(w.from) : mediumDay(w.from) + ' – ' + mediumDay(w.to)));
+
+            var grid = el('dl', 'mphbac-staff-stats-kpis');
+            var kpi = function (key, label, value, tip) {
+                var box = el('div', 'mphbac-staff-kpi is-' + key);
+                box.appendChild(el('dt', 'mphbac-staff-kpi-label', label || ''));
+                box.appendChild(el('dd', 'mphbac-staff-kpi-num', String(value)));
+                if (tip) box.title = tip;
+                grid.appendChild(box);
+            };
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip);
+            kpi('arrivals', S.stArrivals, n.arrivals);
+            kpi('departures', S.stDepartures, n.departures);
+            kpi('turnovers', S.stTurnovers, n.turnovers);
+            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse);
+            kpi('pets', S.stWithPets, n.pets);
+            kpi('couch', S.stWithCouch, n.couch);
+            kpi('boat', S.stWithBoat, n.boat);
+            statsOut.appendChild(grid);
+
+            // Nights booked per cottage: a short horizontal bar each.
+            var per = el('section', 'mphbac-staff-stats-block');
+            per.appendChild(el('h3', 'mphbac-staff-stats-h', S.stPerCottage || ''));
+            var list = el('ul', 'mphbac-staff-percot');
+            n.cottages.forEach(function (c) {
+                var v = n.perCottage[c.id] || 0;
+                var li = el('li', 'mphbac-staff-percot-row');
+                li.appendChild(el('span', 'mphbac-staff-percot-name', (c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
+                var track = el('span', 'mphbac-staff-percot-track');
+                var fill = el('span', 'mphbac-staff-percot-fill');
+                fill.style.width = (n.nights ? Math.round(1000 * v / n.nights) / 10 : 0) + '%';
+                track.appendChild(fill);
+                li.appendChild(track);
+                li.appendChild(el('span', 'mphbac-staff-percot-num', (v === 1 ? (S.stNight || '{n} night') : (S.stNights || '{n} nights')).replace('{n}', String(v))));
+                list.appendChild(li);
             });
+            per.appendChild(list);
+            statsOut.appendChild(per);
+
+            // Share of NIGHTS booked by source (Rob: nights, not bookings): an
+            // inline SVG pie in the source colours, and the same numbers as
+            // plain text for anyone not looking at the picture.
+            var src = el('section', 'mphbac-staff-stats-block');
+            src.appendChild(el('h3', 'mphbac-staff-stats-h', S.stBySource || ''));
+            if (!n.booked) {
+                src.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoNights || ''));
+            } else {
+                var wrap = el('div', 'mphbac-staff-pie-wrap');
+                wrap.appendChild(pie(n.bySource, n.booked));
+                var ul = el('ul', 'mphbac-staff-pie-list');
+                SOURCES.forEach(function (k) {
+                    var v = n.bySource[k];
+                    if (!v) return;
+                    var li = el('li', 'mphbac-staff-pie-item is-src-' + k);
+                    li.appendChild(el('span', 'mphbac-staff-pie-swatch'));
+                    li.appendChild(document.createTextNode(sourceName({ sourceKey: k }) + ' — ' + pctOf(v, n.booked) + '% ('
+                        + (v === 1 ? (S.stNight || '{n} night') : (S.stNights || '{n} nights')).replace('{n}', String(v)) + ')'));
+                    ul.appendChild(li);
+                });
+                wrap.appendChild(ul);
+                src.appendChild(wrap);
+            }
+            statsOut.appendChild(src);
         }
 
-        function readFilters() {
-            var f = { cottages: {}, sources: {}, pets: false, moves: false };
-            [].forEach.call(filtersEl.querySelectorAll('input[type=checkbox]'), function (i) {
-                if (!i.checked) return;
-                if (i.name === 'cottage') f.cottages[i.value] = true;
-                else if (i.name === 'source' && SOURCES.indexOf(i.value) >= 0) f.sources[i.value] = true;
-                else if (i.name === 'pets') f.pets = true;
-                else if (i.name === 'moves') f.moves = true;
+        function pctOf(v, total) { return Math.round(100 * v / total); }
+
+        function pie(bySource, total) {
+            var NS = 'http://www.w3.org/2000/svg';
+            var R = 70, C = 80;
+            var svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 160 160');
+            svg.setAttribute('class', 'mphbac-staff-pie');
+            svg.setAttribute('aria-hidden', 'true');
+            var at = -Math.PI / 2;
+            SOURCES.forEach(function (k) {
+                var v = bySource[k];
+                if (!v) return;
+                var frac = v / total, end = at + frac * 2 * Math.PI, shape;
+                if (frac >= 0.9999) {
+                    shape = document.createElementNS(NS, 'circle');
+                    shape.setAttribute('cx', C); shape.setAttribute('cy', C); shape.setAttribute('r', R);
+                } else {
+                    shape = document.createElementNS(NS, 'path');
+                    var x1 = C + R * Math.cos(at), y1 = C + R * Math.sin(at);
+                    var x2 = C + R * Math.cos(end), y2 = C + R * Math.sin(end);
+                    shape.setAttribute('d', 'M' + C + ' ' + C + ' L' + x1.toFixed(2) + ' ' + y1.toFixed(2)
+                        + ' A' + R + ' ' + R + ' 0 ' + (frac > 0.5 ? 1 : 0) + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + ' Z');
+                }
+                shape.setAttribute('class', 'mphbac-staff-pie-slice is-src-' + k);
+                shape.setAttribute('data-source', k);
+                svg.appendChild(shape);
+                // The label sits in its slice; one too thin to hold it is
+                // labelled in the list beside the pie only.
+                if (frac >= 0.08) {
+                    var mid = (at + end) / 2, lr = frac >= 0.9999 ? 0 : R * 0.62;
+                    var t = document.createElementNS(NS, 'text');
+                    t.setAttribute('x', (C + lr * Math.cos(mid)).toFixed(2));
+                    t.setAttribute('y', (C + lr * Math.sin(mid)).toFixed(2));
+                    t.setAttribute('class', 'mphbac-staff-pie-label');
+                    t.setAttribute('text-anchor', 'middle');
+                    t.setAttribute('dominant-baseline', 'central');
+                    t.textContent = pctOf(v, total) + '%';
+                    svg.appendChild(t);
+                }
+                at = end;
             });
-            state.filters = f;
-            showFilterCount();
+            return svg;
         }
 
-        function writeFilters() {
-            if (!filtersEl) return;
-            var f = state.filters;
-            [].forEach.call(filtersEl.querySelectorAll('input[type=checkbox]'), function (i) {
-                i.checked = i.name === 'cottage' ? !!f.cottages[i.value]
-                    : i.name === 'source' ? !!f.sources[i.value]
-                    : i.name === 'pets' ? f.pets : i.name === 'moves' ? f.moves : false;
-            });
-            showFilterCount();
-        }
-
-        function showFilterCount() {
-            var el = filtersEl && filtersEl.querySelector('.mphbac-staff-filters-count');
-            if (!el) return;
-            var n = filterCount();
-            el.hidden = !n;
-            el.textContent = n ? String(n) : '';
-            filtersEl.classList.toggle('is-active', n > 0);
-        }
-
-        if (filtersEl) {
-            filtersEl.addEventListener('change', function (e) {
-                if (!e.target || e.target.type !== 'checkbox') return;
-                readFilters();
-                render({ keepScroll: true });
-            });
-            var clearBtn = filtersEl.querySelector('.mphbac-staff-filters-clear');
-            if (clearBtn) clearBtn.addEventListener('click', function () {
-                state.filters = { cottages: {}, sources: {}, pets: false, moves: false };
-                writeFilters();
-                render({ keepScroll: true });
+        if (statsEl) {
+            if (statsDate) statsDate.value = config.today;
+            if (statsFrom) statsFrom.value = windowOf(config.today, 'month').from;
+            if (statsTo) statsTo.value = windowOf(config.today, 'month').to;
+            [statsDate, statsFrom, statsTo].forEach(function (i) { if (i) { i.min = CAP_LO; i.max = CAP_HI; } });
+            statsEl.addEventListener('toggle', function () { if (statsEl.open) renderStats(); });
+            [statsSpan, statsDate, statsFrom, statsTo].forEach(function (i) {
+                if (i) i.addEventListener('change', function () { if (statsEl.open) renderStats(); });
             });
         }
 
@@ -1427,6 +1477,8 @@
         var suppressClick = false;
         var previewTimer = 0;
         var previewFor = null;
+        var previewMarker = document.createComment('mphbac-staff-preview');
+        if (previewEl && !previewEl.id) previewEl.id = 'mphbac-staff-preview-' + Math.random().toString(36).slice(2, 9);
         var finePointer = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
 
         function bindPreview(btn, b, cottage) {
@@ -1478,14 +1530,33 @@
                 + n + ' ' + (n === 1 ? (S.night || 'night') : (S.nights || 'nights')));
             if (b.guests) line('mphbac-staff-preview-line', (S.guests || 'Guests') + ': ' + b.guests);
             line('mphbac-staff-preview-line', (S.source || 'Source') + ': ' + sourceName(b));
-            if (b.pets) line('mphbac-staff-preview-line', S.pets || 'Pets');
+            if (facts(b).length) line('mphbac-staff-preview-line', facts(b).join(' · '));
             if (b.status && b.status !== 'confirmed' && b.statusLabel) line('mphbac-staff-preview-line', b.statusLabel);
+
+            // ANCHORED TO THE BAR (0.44.1). On Rob's phone it showed at the top-
+            // left of the screen: position: fixed measures from the nearest
+            // ancestor with a transform — an Elementor wrapper — not from the
+            // screen. The fix is the sheet's own: move it to <body> while
+            // shown. Then: directly ABOVE the bar, centred on the part of the
+            // bar on screen, kept inside the screen; below only when there is
+            // no room above.
+            if (previewEl.parentNode !== document.body) {
+                previewEl.parentNode.insertBefore(previewMarker, previewEl);
+                document.body.appendChild(previewEl);
+            }
             previewEl.hidden = false;
             previewFor = btn;
+            btn.setAttribute('aria-describedby', previewEl.id);
             var r = btn.getBoundingClientRect(), p = previewEl.getBoundingClientRect();
+            var vw = document.documentElement.clientWidth || window.innerWidth;
+            var vh = window.innerHeight;
+            var visL = Math.max(r.left, 0), visR = Math.min(r.right, vw);
+            var centre = visR > visL ? (visL + visR) / 2 : r.left + r.width / 2;
+            var left = Math.max(8, Math.min(centre - p.width / 2, vw - p.width - 8));
             var top = r.top - p.height - 8;
-            if (top < 8) top = r.bottom + 8;
-            var left = Math.max(8, Math.min(r.left, window.innerWidth - p.width - 8));
+            var below = top < 8;
+            if (below) top = Math.min(r.bottom + 8, vh - p.height - 8);
+            previewEl.classList.toggle('is-below', below);
             previewEl.style.top = Math.round(top) + 'px';
             previewEl.style.left = Math.round(left) + 'px';
         }
@@ -1494,7 +1565,13 @@
             if (!previewEl || previewEl.hidden) return;
             previewEl.hidden = true;
             previewEl.textContent = '';
+            if (previewFor) previewFor.removeAttribute('aria-describedby');
             previewFor = null;
+            // Back where it came from, so the shell stays self-contained.
+            if (previewMarker.parentNode) {
+                previewMarker.parentNode.insertBefore(previewEl, previewMarker);
+                previewMarker.parentNode.removeChild(previewMarker);
+            }
         }
         gridEl.addEventListener('scroll', hidePreview, { passive: true });
         window.addEventListener('scroll', hidePreview, { passive: true });
@@ -1505,7 +1582,7 @@
 
         // ---- auto-refresh (0.44.0) --------------------------------------------
         // Every 3 minutes while the board is visible, keeping the period, the
-        // scroll position and the filters — all in memory. SKIPPED ONLY while
+        // scroll position and the Stats section — all in memory. SKIPPED ONLY while
         // a text field (the date picker) has focus or the sheet / preview is
         // open; NEVER merely because a button has focus — the Sync Watchdog
         // stopped refreshing for exactly that reason after one tap.
@@ -1531,8 +1608,8 @@
             // Emptying the cache is what makes this a refetch: every window
             // is then a miss, and today's month is fetched again for the tiles.
             state.cache = {};
-            state.todayData = null;
             render({ keepScroll: true, quiet: true });
+            if (statsEl && statsEl.open) renderStats();
         }
         function markUpdated() {
             state.lastRefresh = Date.now();
@@ -1557,7 +1634,7 @@
         // never a loop. No storage, no reload. A 403 WITHOUT the nonce header
         // (the password itself expired) never reloads.
         //
-        // The view comes back with it — period, date, scroll, filters — in the
+        // The view comes back with it — period, date, scroll — in the
         // URL fragment, which is not storage and carries no guest data, and is
         // removed the moment it is read, so a reload the USER makes still opens
         // on Monthly.
@@ -1568,10 +1645,8 @@
                 if (t && Date.now() - t < RELOAD_GUARD_MS) return false;
                 window.sessionStorage.setItem(RELOAD_GUARD, String(Date.now()));
             } catch (e) { return false; }
-            var f = state.filters;
             var v = { p: state.period, a: state.anchor, x: Math.round(gridEl.scrollLeft || 0),
-                      y: Math.round(window.scrollY || 0), c: Object.keys(f.cottages), s: Object.keys(f.sources),
-                      pets: f.pets ? 1 : 0, moves: f.moves ? 1 : 0 };
+                      y: Math.round(window.scrollY || 0) };
             try { window.history.replaceState(null, '', '#' + VIEW_HASH + encodeURIComponent(JSON.stringify(v))); } catch (e) { /* ignore */ }
             window.location.reload();
             return true;
@@ -1587,10 +1662,7 @@
             try { v = JSON.parse(decodeURIComponent(h.slice(i + VIEW_HASH.length))); } catch (e) { v = null; }
             try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* ignore */ }
             if (!v || PERIODS.indexOf(v.p) < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(String(v.a)) || v.a < CAP_LO || v.a > CAP_HI) return null;
-            var f = { cottages: {}, sources: {}, pets: !!v.pets, moves: !!v.moves };
-            (v.c || []).forEach(function (id) { if (/^\d+$/.test(String(id))) f.cottages[id] = true; });
-            (v.s || []).forEach(function (k) { if (SOURCES.indexOf(k) >= 0) f.sources[k] = true; });
-            return { period: v.p, anchor: v.a, filters: f, x: +v.x || 0, y: +v.y || 0 };
+            return { period: v.p, anchor: v.a, x: +v.x || 0, y: +v.y || 0 };
         }
 
         // ---- date helpers ---------------------------------------------------
@@ -1650,6 +1722,10 @@
             var d = new Date(s + 'T00:00:00');
             return ((CAL.months || [])[d.getMonth()] || '').slice(0, 3) + ' ' + d.getDate();
         }
+        function mediumDay(s) {
+            var d = new Date(s + 'T00:00:00');
+            return shortDate(s) + ', ' + d.getFullYear();
+        }
         function mediumDate(s) {
             var d = new Date(s + 'T00:00:00');
             return ((CAL.weekdays || [])[d.getDay()] || '') + ', ' + shortDate(s) + ', ' + d.getFullYear();
@@ -1682,8 +1758,6 @@
         var back = restoreView();
         if (back) {
             state.anchor = back.anchor;
-            state.filters = back.filters;
-            writeFilters();
             state.restoreScroll = { x: back.x, y: back.y };
             setPeriod(back.period);
         } else {
