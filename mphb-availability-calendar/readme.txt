@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.44.1
+Stable tag: 0.45.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.45.0 =
+* **Search the staff board.** A Search box under the dates finds bookings as you type (from two letters): by guest name, email, phone (any formatting, or just the last four digits), country ("United States" finds US), booking number, cottage, a date ("Dec 24", "12/24", "2026-12-24" find every stay over that night; "12/2024" finds that month), any answer on the booking (boat, couch, pets, notes, and so on) and the text an imported booking came with. It forgives small typos and finds names that sound alike ("Philips" finds Fillips). One list, best match first, and each result says why it matched. Tapping a result opens the booking, moves the calendar to that stay and highlights it; a stay outside the board's ±3-year range opens without moving the calendar. Cancelled and abandoned bookings are not searched, the Photo ID is never searched, and nothing you type is saved or logged.
+* **Long stays keep their name in view.** When the calendar is scrolled sideways, a stay that began off-screen now shows its name and icons at the visible left edge, just right of the cottage column, instead of a blank bar. The name and icons fit what is visible of the bar, the same way a short bar does.
 
 = 0.44.1 =
 * **Cleaner bars.** The IN / OUT tags, the ▸ / ◂ arrows and the V / A / B letters are gone: a bar's colour is its source, and its start and end show arrival and departure. Pending stripes and turnover marks stay.
