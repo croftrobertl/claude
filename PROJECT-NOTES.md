@@ -2448,3 +2448,66 @@ the refresh passed a `fresh` flag to bypass the cache, but refresh() had
 already emptied the cache, so the flag changed nothing. The flag is gone; the
 mutation now removes the cache clear, which is what actually makes the
 refresh a refetch.
+
+## Rob's review of 0.44.0 → 0.44.1
+
+Rob, on the board: "looking great and will be a great help to us during busy
+season." Then, choosing symbols and the stats layout from rendered mockups
+(**Rob decided** all of this unless marked WD):
+- No IN / OUT tags, no ▸ / ◂, no letter badges: the colour is the source, the
+  bar's ends are the stay. Pending and turnovers KEPT (he reversed both).
+- "Other" removed. **WD:** the DDay.iCal PRODID is Vrbo — its only two
+  bookings (#5948, #5952, Apr 25–27 2025) are Vrbo HA-3P743P / HA-664503 in
+  the 2025 payout file. Any future unknown source shows in the Direct colour;
+  the server still keys it "other" (for search) and the sheet names it.
+- Pets (paw), **Couch** (3+ guests, ONLY from a count a person set: a staff-
+  confirmed count, or a booking that is not a platform import — never an
+  import's own number) and **Boat** (the new "boat" checkout field = yes) as
+  thin white Tabler outline icons; the same beside the name in Daily; Pets /
+  Couch / Boat in the preview; a Boat row on the sheet after the dog rows.
+  **WD facts:** website and WP-Admin bookings cannot be told apart in the data,
+  hence "not an import"; today none of the 117 has 3+ guests; 9 carry the
+  staff-confirmed marker.
+- Legend: Direct · Airbnb · Booking.com · Vrbo · Pending · Turnover · Pets ·
+  Couch · Boat; the icons white on a NEUTRAL slate swatch (WD — a source
+  colour would read as that source).
+- Stats in ONE collapsed section below the calendar with its own timeframe;
+  the pie is share of NIGHTS (Rob). Filters removed completely (Rob).
+- The preview anchored above its bar (WD: no native title alongside it).
+- The order: dates row, nav, legend, calendar, Stats.
+
+**MY PROPOSAL, for Rob to confirm — the icon drop order on short bars.** The
+text goes first (name, then the nights count, then nothing); then the icons,
+BOAT first, then COUCH, PETS last. Pets carries a fee and a cleaning
+consequence on every arrival; Boat is planning for busy check-in days and is
+in Stats and Daily too. At 31px Weekly days a 3-night bar shows its three
+icons and no name — the name is one hover / long-press away.
+
+**THE PREVIEW'S "RANDOM PLACES" WERE A TRANSFORMED ANCESTOR.** position: fixed
+measures from the nearest ancestor with a transform — an Elementor wrapper —
+not from the screen; the sheet has been moved to <body> for exactly this since
+0.20.x. The preview now does the same while shown, and goes back on hide.
+The test wraps the board in a transformed div to prove it.
+
+**THE CORAL BARS WERE THE KIT'S BUTTON STATES** (WD: `.elementor-kit-N
+button:hover, … button:focus` at (0,2,1)). The bar's colour, ink and shape
+are restated at (0,3,0), which beats it in every state with no :hover of our
+own outside the pointer guard. **The same rule, once the harness carried it,
+caught the NAV:** a tapped arrow or Today keeps focus on a phone and stayed
+coral — the linger 0.31.0 removed, back on live through the theme. Fixed the
+same way; staff-test.js's "ON TOUCH nav does not change" now runs against the
+real kit rule.
+
+**Instrument note:** the theme also fades every button's background over
+0.75s, so a check that focuses a button and reads its colour at once reads
+the fade's first frame. The "kit rule is live" instrument switches the fade
+off on its own probe button.
+
+**Stats: each cottage-night counted once and credited to the booking that
+reaches it first** (earliest check-in, then lowest id), so a channel block
+echoing a booking neither inflates % booked nor takes a slice of the pie.
+
+One mutation survived the full run, and it found a rule my own change had
+killed: once the nav's resting colour moved to (0,3,0), its old (0,2,0)
+`:focus-visible` rule could never win, so deleting it changed nothing. The
+dead rule is gone and the mutation now targets the live (0,4,0) one.

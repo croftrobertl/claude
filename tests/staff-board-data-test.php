@@ -103,8 +103,10 @@ namespace {
         5 => [['mphb_ical_prodid' => '-//ddaysoftware.com//NONSGML DDay.iCal 1.0//EN'], []],
     ]);
     $keys = array_map(static fn($x) => $x['sourceKey'], $b);
-    check('direct / airbnb / booking / vrbo / other', $keys === [1 => 'direct', 2 => 'airbnb', 3 => 'booking', 4 => 'vrbo', 5 => 'other'], $keys);
-    check('...and the DDay.iCal channel is "other", whatever its translatable name says', $b[5]['source']['key'] === 'other', $b[5]['source']);
+    check('direct / airbnb / booking / vrbo, and DDay.iCal is VRBO (0.44.1)', $keys === [1 => 'direct', 2 => 'airbnb', 3 => 'booking', 4 => 'vrbo', 5 => 'vrbo'], $keys);
+    check('...named Vrbo in the sheet too — the two bookings that carry it are Vrbo reservations', $b[5]['source']['ota'] === 'Vrbo', $b[5]['source']);
+    $b6 = board([6 => [['mphb_ical_prodid' => '-//Some New Channel//EN'], []]]);
+    check('a channel nobody recognises is still "other" — the board shows it in the Direct colour', $b6[6]['sourceKey'] === 'other', $b6[6]['source']);
 
     echo "\n-- the pet rule: dog type OR a pet fee, never size or hair --\n";
     $b = board([
@@ -138,6 +140,35 @@ namespace {
     check('the same, confirmed by a person: shown', $g[32] === '4', $g);
     check('an import with a real, different count: shown', $g[33] === '3', $g);
 
+    echo "\n-- 0.44.1 Couch: 3+ guests, only from a count a PERSON set --\n";
+    $imp = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];
+    $b = board([
+        40 => [[], ['_mphb_adults' => 2, '_mphb_children' => 1]],                       // website / WP-Admin, 3
+        41 => [[], ['_mphb_adults' => 2]],                                              // website, 2
+        42 => [$imp, ['_mphb_adults' => 4]],                                            // import's own (default) 4
+        43 => [$imp, ['_mphb_adults' => 3]],                                            // import's own 3: still NOT
+        44 => [$imp, ['_mphb_adults' => 3, '_mphb_adults_confirmed' => 1]],             // staff-confirmed 3
+        45 => [[], ['_mphb_adults' => 5, '_mphb_adults_confirmed' => 1, '_mphb_children' => 0]],
+        46 => [$imp, ['_mphb_adults' => 2, '_mphb_adults_confirmed' => 1]],             // confirmed 2
+    ]);
+    $c = array_map(static fn($x) => $x['couch'], $b);
+    check('a website / WP-Admin booking of 3 (2 adults + 1 child): Couch', $c[40] === true, $c);
+    check('...of 2: no Couch', $c[41] === false, $c);
+    check('an IMPORT\'s own count, 4 or 3: NEVER Couch — the platforms send no real count', $c[42] === false && $c[43] === false, $c);
+    check('an import whose count staff CONFIRMED as 3: Couch', $c[44] === true, $c);
+    check('a confirmed 5: Couch; a confirmed 2: none', $c[45] === true && $c[46] === false, $c);
+
+    echo "\n-- 0.44.1 Boat: the \"boat\" checkout field says yes --\n";
+    $b = board([
+        50 => [['mphb_boat' => 'Yes'], []],
+        51 => [['mphb_boat' => 'yes'], []],
+        52 => [['mphb_boat' => 'No'], []],
+        53 => [['mphb_boat' => ''], []],
+        54 => [[], []],
+    ]);
+    $bt = array_map(static fn($x) => $x['boat'], $b);
+    check('"Yes" and "yes": Boat; "No", blank and no field: none', $bt === [50 => true, 51 => true, 52 => false, 53 => false, 54 => false], $bt);
+
     echo "\n-- no query per booking for any of it --\n";
     {
         $spec = static function (int $n): array {
@@ -169,6 +200,14 @@ namespace {
             ($rows['Phone']['value'] ?? '') === '+1 (555) 010-4421' && ($rows['Phone']['tel'] ?? '') === '+15550104421', $rows['Phone'] ?? null);
         check('Email: linked as a cleaned address', ($rows['Email']['email'] ?? '') === 'ann@example.com', $rows['Email'] ?? null);
         check('Guest 2 Phone: linked too', ($rows['Guest 2 Phone']['tel'] ?? '') === '5550109999', $rows['Guest 2 Phone'] ?? null);
+        check('no "boat" answer: no Boat row', !isset($rows['Boat']));
+        $GLOBALS['t_meta'][900]['mphb_boat'] = 'Yes';
+        $GLOBALS['t_meta'][900]['mphb_dog_type'] = 'Poodle';
+        $rows = []; $order = [];
+        foreach (Staff_Data::booking_detail(900)['sections']['customer'] as $r) { $rows[$r['label']] = $r; $order[] = $r['label']; }
+        check('0.44.1: a Boat row, "Yes", after the dog rows', ($rows['Boat']['value'] ?? '') === 'Yes'
+            && array_search('Boat', $order, true) > array_search('Dog Type', $order, true), $order);
+        unset($GLOBALS['t_meta'][900]['mphb_boat'], $GLOBALS['t_meta'][900]['mphb_dog_type']);
         $GLOBALS['t_meta'][900]['mphb_phone'] = 'ask at desk';
         $GLOBALS['t_meta'][900]['mphb_email'] = 'not an address';
         $rows = [];

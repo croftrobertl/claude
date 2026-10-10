@@ -89,6 +89,12 @@ const THEME = `
  .elementor-kit-9 .elementor-element .elementor-widget-container select {
    line-height: 1px; border: 1px dotted #999; border-radius: 0; padding: 1px 2px;
    background-color: #eeeeee; color: #999999; min-height: 0; text-align: left;
+ }
+ /* The kit's button states, as the Website Director found them on live
+    (0.44.1): (0,2,1), above a bar's own colour. It turned bars coral and
+    pill-shaped on hover, and on a phone after a tap (focus stays). */
+ .elementor-kit-9 button:hover, .elementor-kit-9 button:focus {
+   background-color: #F08080; color: #FFFFFF; border-radius: 30px;
  }`;
 
 function page({ panel = emitDefaults(), body = '', sheet = '' } = {}) {
@@ -195,7 +201,7 @@ function boardShell({ today, cottages, bookings, details = {}, sow = 0, head = '
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{margin:0;font-family:Raleway,Georgia,serif;${bodyStyle}}${THEME}</style>
-<style>${css()}</style>${head}</head><body>
+<style>${css()}</style>${head}</head><body class="elementor-kit-9">
 ${markup}
 <script>
   window.__reqs = [];

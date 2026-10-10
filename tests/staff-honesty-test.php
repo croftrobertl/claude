@@ -103,8 +103,10 @@ echo "\n-- with no capacity configured, nothing is claimed --\n";
 echo "\n-- the client is told, so it can render the banner --\n";
 {
     $js = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/assets/js/staff.js');
-    check('the imported flag drives a visible badge and banner, not just a class',
-        str_contains($js, 'otaBadge') && str_contains($js, 'mphbac-staff-imported'));
+    // 0.44.1: the letter badge is gone (Rob — the bar's colour is the
+    // source); the sheet's banner and the source BY NAME remain.
+    check('the imported flag drives a visible banner, and the source is named, not just coloured',
+        str_contains($js, 'mphbac-staff-imported') && str_contains($js, 'function sourceName'));
     $w = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-widget.php');
     check('the explanation is a translatable string, not baked into the script',
         str_contains($w, 'importedTip'));

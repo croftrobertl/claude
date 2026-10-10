@@ -2,9 +2,11 @@
 /**
  * THE 0.44.0 BOARD, DRIVEN IN A REAL PAGE WITH THE REAL staff.js.
  *
- * Bars (Rob's option C), turnovers, the today tiles, the four filters, the
- * quick preview, the sheet's tap-to-call / text / email and Open in WP-Admin,
- * the 3-minute auto-refresh and the one-shot token reload. The shell is
+ * 0.44.1: bars in their source colour with Pets / Couch / Boat icons (no
+ * tags, no badges), turnovers, the legend, Stats below the calendar, the
+ * quick preview anchored to its bar, the theme's button states held off the
+ * bars, the sheet's tap-to-call / text / email and Open in WP-Admin, the
+ * 3-minute auto-refresh and the one-shot token reload. No filters, no tiles. The shell is
  * EXTRACTED FROM THE PHP and fetch() is answered by staff-harness.js's
  * stand-in server; the fixture is board-fixture.js, "today" pinned to
  * Thursday 2026-10-08.
@@ -44,8 +46,9 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const kids = [...b.querySelectorAll('.mphbac-staff-bar-label > *')].map(k => k.getBoundingClientRect());
     return { id: +b.dataset.bookingId, cls: b.className, bg: getComputedStyle(b).backgroundColor,
       img: getComputedStyle(b).backgroundImage, text: t ? t.textContent : '',
-      tags: [...b.querySelectorAll('.mphbac-staff-tag')].map(x => x.textContent),
-      badge: (b.querySelector('.mphbac-staff-otabadge') || {}).textContent || '', paw: !!b.querySelector('svg.mphbac-staff-paw'),
+      icons: [...b.querySelectorAll('svg.mphbac-staff-ico')].map(x => x.getAttribute('class').replace('mphbac-staff-ico is-', '')),
+      iconStroke: b.querySelector('svg.mphbac-staff-ico') ? getComputedStyle(b.querySelector('svg.mphbac-staff-ico')).stroke : null,
+      iconFill: b.querySelector('svg.mphbac-staff-ico') ? getComputedStyle(b.querySelector('svg.mphbac-staff-ico')).fill : null,
       // Every piece of the label lies inside the bar: nothing is clipped. Bars
       // running off a scrolled chart are judged against their own box.
       inside: kids.every(k => k.width === 0 || (k.left >= r.left - 0.5 && k.right <= r.right + 0.5)),
@@ -54,29 +57,48 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
   const byId = list => Object.fromEntries(list.map(b => [b.id, b]));
   const choose = async (p, v) => { await p.selectOption('.mphbac-staff-period', v); await p.waitForTimeout(80); };
 
-  console.log('-- 1: bars — the whole bar is its source (Rob, option C) --');
+  console.log('-- 5: the order, top to bottom (Rob, 0.44.1) --');
+  {
+    const { ctx, p } = await open();
+    const o = await p.evaluate(() => {
+      const top = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top) : null; };
+      return { fields: top('.mphbac-staff-fields'), nav: top('.mphbac-staff-topbar'), legend: top('.mphbac-staff-legend'),
+        chart: top('.mphbac-staff-grid'), stats: top('.mphbac-staff-stats'),
+        statsOpen: document.querySelector('.mphbac-staff-stats').open,
+        gone: ['.mphbac-staff-filters', '.mphbac-staff-tiles', '.mphbac-staff-tile', '.mphbac-staff-tag', '.mphbac-staff-otabadge']
+          .filter(s => document.querySelector(s)) };
+    });
+    check('Show / Go to date, then the navigation row, then the legend, then the calendar, then Stats',
+      o.fields < o.nav && o.nav < o.legend && o.legend < o.chart && o.chart < o.stats, o);
+    check('Stats is closed on load', o.statsOpen === false);
+    check('no Filters, no tiles above the calendar, no IN / OUT tags, no letter badges anywhere', o.gone.length === 0, o.gone);
+    await ctx.close();
+  }
+
+  console.log('\n-- 1: bars — the source colour, and three facts as icons --');
   {
     const { ctx, p } = await open();
     const b = byId(await bars(p));
-    for (const [id, src] of [[1, 'direct'], [2, 'airbnb'], [3, 'booking'], [4, 'vrbo'], [5, 'other']]) {
+    for (const [id, src] of [[1, 'direct'], [2, 'airbnb'], [3, 'booking'], [4, 'vrbo']]) {
       check(`booking ${id} (${src}): the whole bar is ${RGB[src]}`, b[id] && b[id].bg === RGB[src] && b[id].cls.includes('is-src-' + src), b[id] && b[id].bg);
     }
-    check('imports keep their letter badge (A / B / V); direct bookings carry none — the source never rests on colour alone',
-      b[2].badge === 'A' && b[3].badge === 'B' && b[4].badge === 'V' && b[1].badge === '', [b[1].badge, b[2].badge, b[3].badge, b[4].badge]);
+    check('"Other" is gone: a channel nobody recognises shows in the Direct colour (Ed)', b[5].bg === RGB.direct && b[5].cls.includes('is-src-direct'), b[5].bg);
     check('a pending booking keeps its stripes, over the whole bar', b[6].img.includes('repeating-linear-gradient') && b[1].img === 'none', [b[6].img.slice(0, 40), b[1].img]);
-    check('a booking that passes the pet rule carries the paw; others do not', b[1].paw && b[9].paw && !b[2].paw && !b[3].paw);
-    check('IN and OUT tags on a stay that starts and ends in the month', b[2].tags.join() === 'IN,OUT', b[2].tags);
-    check('...and on a 1-night bar at 44px days they shrink to ▸ / ◂ (or ▸ alone) instead of overlapping',
-      (b[7].tags.join() === '▸,◂' || b[7].tags.join() === '▸') && b[7].cls.includes('is-compact'), b[7].tags);
+    check('Ann (pets, couch, boat): all three icons, in that order, beside "Ann S."',
+      JSON.stringify(b[1].icons) === '["pets","couch","boat"]' && b[1].text === 'Ann S.', [b[1].icons, b[1].text]);
+    check('Fay (couch only): just the sofa', JSON.stringify(b[6].icons) === '["couch"]', b[6].icons);
+    check('Dee, one night with all three: the icons drop BOAT first, then COUCH — the paw stays',
+      JSON.stringify(b[4].icons) === '["pets"]', b[4].icons);
+    check('the icons are thin WHITE outlines', b[1].iconStroke === 'rgb(255, 255, 255)' && b[1].iconFill === 'none', [b[1].iconStroke, b[1].iconFill]);
     const all = Object.values(b);
-    check('NO bar clips anything: every tag, badge, paw and name lies inside its bar', all.every(x => x.inside && !x.textClipped),
+    check('NO bar clips anything: every icon and name lies inside its bar', all.every(x => x.inside && !x.textClipped),
       all.filter(x => !x.inside || x.textClipped).map(x => x.id));
-    console.log('      monthly 44px: ' + all.map(x => `#${x.id} ${x.tags.join('/')} "${x.text}"`).join(' | '));
+    console.log('      monthly 44px: ' + all.map(x => `#${x.id} [${x.icons}] "${x.text}"`).join(' | '));
     check('the name rule where it fits: 4+ nights the full name ("Bob Jones")', b[2].text === 'Bob Jones', b[2].text);
-    check('...2–3 nights "First L." beside the tags ("Ann S.")', b[1].text === 'Ann S.', b[1].text);
-    check('...on a short bar the NAME wins over word tags: "Hal P." beside ▸ / ◂', b[8].text === 'Hal P.' && b[8].tags.join() === '▸,◂', [b[8].text, b[8].tags]);
-    const t = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar')].find(x => x.dataset.bookingId === '8').getAttribute('aria-label'));
-    check('...the name is never lost: it is in the bar\'s description, with the source by name', /Hal Price/.test(t) && /Airbnb/.test(t), t);
+    const desc = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar')].find(x => x.dataset.bookingId === '4').getAttribute('aria-label'));
+    check('...and what a bar cannot show is in its description: Vrbo, Pets, Couch, Boat', /Vrbo/.test(desc) && /Pets/.test(desc) && /Couch/.test(desc) && /Boat/.test(desc), desc);
+    const titles = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar')].filter(x => x.hasAttribute('title')).length);
+    check('no bar carries a title attribute — the preview replaces the native tooltip (the WD)', titles === 0, titles);
     await ctx.close();
   }
   for (const [phone, inset, who] of [[false, 0, 'DESKTOP Weekly'], [true, 0, 'PHONE Weekly 375px'], [true, 27, 'PHONE Weekly, a 320px chart']]) {
@@ -85,23 +107,66 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const all = await bars(p);
     const dayW = await p.evaluate(() => Math.round(document.querySelector('.mphbac-staff-dayhead').getBoundingClientRect().width));
     check(`${who} (${dayW}px days): nothing clipped on any bar`, all.every(x => x.inside && !x.textClipped),
-      all.filter(x => !x.inside || x.textClipped).map(x => [x.id, x.tags, x.text]));
-    console.log(`      ${who} ${dayW}px: ` + all.map(x => `#${x.id} ${x.tags.join('/')} "${x.text}"`).join(' | '));
+      all.filter(x => !x.inside || x.textClipped).map(x => [x.id, x.icons, x.text]));
+    console.log(`      ${who} ${dayW}px: ` + all.map(x => `#${x.id} [${x.icons}] "${x.text}"`).join(' | '));
     const b = byId(all);
-    if (!phone) {
-      check(`${who}: with room, a 1-night bar gets initials beside word tags ("GL")`, b[7].text === 'GL' && b[7].tags.join() === 'IN,OUT', [b[7].text, b[7].tags]);
-    }
-    if (inset) {
-      check(`${who}: the nights count where the name does not fit ("4n" for Bob Jones)`, b[2].text === '4n', b[2].text);
-    }
+    if (!phone) check(`${who}: with room, a 1-night bar gets initials ("GL")`, b[7].text === 'GL', b[7].text);
+    if (!phone) check(`${who}: a half-day sliver (Dee, arriving on the week's last day) still holds all three icons`,
+      JSON.stringify(b[4].icons) === '["pets","couch","boat"]', b[4].icons);
+    if (inset) check(`${who}: the nights count where the name does not fit ("1n" for Gus at 31px)`, b[7].text === '1n', b[7].text);
+    await ctx.close();
+  }
+  {
+    // The icon paths: the bars' (staff.js) and the legend's (CSS masks) are one set.
+    const fs = require('fs'), path = require('path');
+    const js = fs.readFileSync(path.join(S.ROOT, 'assets/js/staff.js'), 'utf8');
+    // Decode only the data: URLs — the rest of the stylesheet has bare "%".
+    const cssText = fs.readFileSync(path.join(S.ROOT, 'assets/css/staff.css'), 'utf8')
+      .replace(/url\("(data:[^"]+)"\)/g, (m, u) => 'url("' + decodeURIComponent(u) + '")');
+    const block = js.slice(js.indexOf('var ICONS = {'), js.indexOf('function icon(kind)'));
+    const same = ['pets', 'couch', 'boat'].every(k => {
+      const m = block.match(new RegExp(k + ':\\s*\\[([\\s\\S]*?)\\]'));
+      const paths = (m ? m[1].match(/'([^']+)'/g) : []).map(x => x.slice(1, -1));
+      const rule = cssText.slice(cssText.indexOf('.mphbac-staff-ico.is-' + k + '::before'));
+      const line = rule.slice(0, rule.indexOf('}'));
+      return paths.length > 0 && paths.every(d => line.includes("d='" + d + "'"));
+    });
+    check('the legend\'s icons are drawn from the SAME Tabler paths as the bars\'', same);
+    check('...Tabler\'s paw, sofa and speedboat, credited (MIT)', /Tabler/.test(block + js) && /MIT/.test(js));
+  }
+
+  console.log('\n-- 6 (WD): a bar keeps its colour and shape under the theme\'s button states --');
+  {
+    const { ctx, p } = await open();
+    // The theme also fades every button's background over 0.75s, so the
+    // instrument switches that off before reading — else it reads the fade's
+    // first frame and the check proves nothing. (The bars have no fade.)
+    const kit = await p.evaluate(() => { const b = document.createElement('button'); b.textContent = 'x'; b.style.transition = 'none';
+      document.body.appendChild(b); b.focus(); const c = getComputedStyle(b).backgroundColor; b.remove(); return c; });
+    check('(instrument check) the kit rule is live here: a focused plain button turns coral', kit === 'rgb(240, 128, 128)', kit);
+    const sel = '.mphbac-staff-bar[data-booking-id="2"]';
+    const look = () => p.evaluate(s => { const c = getComputedStyle(document.querySelector(s)); return [c.backgroundColor, c.borderTopLeftRadius, c.color]; }, sel);
+    await p.hover(sel);
+    const hov = await look();
+    await p.focus(sel);
+    const foc = await look();
+    await p.mouse.move(5, 5);
+    await p.evaluate(s => document.querySelector(s).dispatchEvent(new MouseEvent('mousedown', { bubbles: true })), sel);
+    check('hover: still Airbnb red, still its 6px shape — not coral, not a pill', hov[0] === RGB.airbnb && hov[1] === '6px', hov);
+    check('focus (a tapped bar on a phone keeps focus): still Airbnb red, 6px', foc[0] === RGB.airbnb && foc[1] === '6px' && foc[2] === 'rgb(255, 255, 255)', foc);
+    await p.selectOption('.mphbac-staff-period', 'day');
+    await p.waitForTimeout(80);
+    await p.focus('.mphbac-staff-item');
+    const row = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-item')).backgroundColor);
+    check('a Daily row keeps its white ground when focused', row === 'rgb(255, 255, 255)', row);
     await ctx.close();
   }
 
-  console.log('\n-- 3: turnovers — on the chart and first in Daily --');
+  console.log('\n-- 3: turnovers — on the chart and first in Daily (kept) --');
   {
     const { ctx, p } = await open();
     const marks = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-turn')].map(m => ({
-      day: m.dataset.day, row: m.style.gridRow, pe: getComputedStyle(m).pointerEvents, label: m.getAttribute('aria-label') })));
+      day: m.dataset.day, pe: getComputedStyle(m).pointerEvents, label: m.getAttribute('aria-label') })));
     check('two turnover marks: #22 on Oct 9 (Ann → Gus) and #23 on Oct 8 (Cy → Bob)',
       marks.length === 2 && marks.some(m => m.day === '2026-10-09' && /Ann Smith.*Gus Long/.test(m.label))
       && marks.some(m => m.day === '2026-10-08' && /Cy Lee.*Bob Jones/.test(m.label)), marks);
@@ -111,130 +176,67 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
       head: x.querySelector('.mphbac-staff-group-head').firstChild.textContent,
       lines: [...x.querySelectorAll('.mphbac-staff-turnline')].map(l => l.textContent),
       items: x.querySelectorAll('.mphbac-staff-item').length })));
-    check('Daily: Turnovers is FIRST, one line per cottage', g[0].head === 'Turnovers' && g[0].lines.length === 1, g[0]);
-    check('...reading "Cottage 23: Lee out → Jones in"', g[0].lines[0] === 'Cottage 23: Lee out → Jones in', g[0].lines);
-    check('...and those guests are still listed under Arriving and Departing, so the counts match',
-      g[1].head === 'Arriving' && g[1].items === 1 && g[2].head === 'Departing' && g[2].items === 1, g);
-    const paw = await p.evaluate(() => !![...document.querySelectorAll('.mphbac-staff-item')].find(i => i.dataset.bookingId === '1').querySelector('svg.mphbac-staff-paw'));
-    check('Daily: the pet booking carries its paw in the list too', paw);
+    check('Daily: Turnovers is FIRST, "Cottage 23: Lee out → Jones in"', g[0].head === 'Turnovers' && g[0].lines[0] === 'Cottage 23: Lee out → Jones in', g[0]);
+    check('...those guests still under Arriving and Departing', g[1].head === 'Arriving' && g[1].items === 1 && g[2].head === 'Departing' && g[2].items === 1, g);
+    const ann = await p.evaluate(() => { const i = [...document.querySelectorAll('.mphbac-staff-item')].find(x => x.dataset.bookingId === '1');
+      const dot = i.querySelector('.mphbac-staff-dot');
+      return { dot: dot ? getComputedStyle(dot).backgroundColor : null, icons: [...i.querySelectorAll('svg.mphbac-staff-ico')].map(x => x.getAttribute('class').replace('mphbac-staff-ico is-', '')),
+               bob: getComputedStyle([...document.querySelectorAll('.mphbac-staff-item')].find(x => x.dataset.bookingId === '2').querySelector('.mphbac-staff-dot')).backgroundColor }; });
+    check('Daily: a dot in the source colour, no letter (Direct green, Airbnb red)', ann.dot === RGB.direct && ann.bob === RGB.airbnb, ann);
+    check('Daily: the same three icons beside the name', JSON.stringify(ann.icons) === '["pets","couch","boat"]', ann.icons);
     await ctx.close();
   }
 
-  console.log('\n-- the legend says what a bar can carry --');
+  console.log('\n-- 1: the legend — Direct · Airbnb · Booking.com · Vrbo · Pending · Turnover · Pets · Couch · Boat --');
   {
     const { ctx, p } = await open();
     const l = await p.evaluate(() => ({
       keys: [...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key')].map(k => k.textContent.trim()),
-      sw: [...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key[class*="is-src-"]')].map(k => getComputedStyle(k, '::before').backgroundColor) }));
-    check('the five sources in their colours, then the tags, pending, turnover and pets',
-      JSON.stringify(l.sw) === JSON.stringify(['direct', 'airbnb', 'booking', 'vrbo', 'other'].map(k => RGB[k]))
-      && l.keys.some(k => /Check-in \/ check-out/.test(k)) && l.keys.includes('Pending') && l.keys.includes('Turnover') && l.keys.includes('Pets'), l);
+      sw: [...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key[class*="is-src-"]')].map(k => getComputedStyle(k, '::before').backgroundColor),
+      ico: [...document.querySelectorAll('.mphbac-staff-legend span.mphbac-staff-ico')].map(i => [getComputedStyle(i).backgroundColor, getComputedStyle(i, '::before').backgroundColor]) }));
+    check('exactly those nine, in that order', JSON.stringify(l.keys) === JSON.stringify(['Direct', 'Airbnb', 'Booking.com', 'Vrbo', 'Pending', 'Turnover', 'Pets', 'Couch', 'Boat']), l.keys);
+    check('the four sources in their colours', JSON.stringify(l.sw) === JSON.stringify(['direct', 'airbnb', 'booking', 'vrbo'].map(k => RGB[k])), l.sw);
+    check('each icon WHITE on the neutral slate (#334155), never a source colour (WD)',
+      l.ico.length === 3 && l.ico.every(([bg, fg]) => bg === 'rgb(51, 65, 85)' && fg === 'rgb(255, 255, 255)'), l.ico);
     await ctx.close();
   }
 
-  console.log('\n-- 4: today tiles — the real today; % booked follows the period; all respect the filters --');
+  console.log('\n-- 4: the quick preview — directly above its bar, centred, on screen --');
   {
     const { ctx, p } = await open();
-    const tiles = () => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-tile')].map(t =>
-      [t.className.replace('mphbac-staff-tile is-', ''), t.querySelector('.mphbac-staff-tile-num').textContent])));
-    let t = await tiles();
-    check('arriving 1 (Bob), leaving 1 (Cy), in house 2 (Ann, Ivy), turnovers 1 (#23)',
-      t.arriving === '1' && t.leaving === '1' && t.inhouse === '2' && t.turnovers === '1', t);
-    check('Booked for October: 52 cottage-nights of 8 × 31 = 21% — the block echoing Bob\'s nights counts ONCE', t.booked === '21%', t.booked);
-    const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-tile.is-booked').title);
-    check('...and its tooltip says how it is counted', /Booked nights ÷ \(cottages × nights/.test(tip), tip);
-    await p.click('.mphbac-staff-next');
-    await p.waitForTimeout(80);
-    t = await tiles();
-    check('in November the TODAY tiles still mean today; Booked follows November (0%)',
-      t.arriving === '1' && t.leaving === '1' && t.inhouse === '2' && t.turnovers === '1' && t.booked === '0%', t);
-    await p.click('.mphbac-staff-today');
-    await p.waitForTimeout(80);
-    await p.click('.mphbac-staff-filters-toggle');
-    await p.check('.mphbac-staff-filters input[name=source][value=airbnb]');
-    await p.waitForTimeout(80);
-    t = await tiles();
-    check('Source = Airbnb: arriving 1, leaving 0, in house 0, turnovers 0, booked 6 of 248 nights = 2%',
-      t.arriving === '1' && t.leaving === '0' && t.inhouse === '0' && t.turnovers === '0' && t.booked === '2%', t);
-    await p.uncheck('.mphbac-staff-filters input[name=source][value=airbnb]');
-    await p.check('.mphbac-staff-filters input[name=cottage][value="23"]');
-    await p.waitForTimeout(80);
-    t = await tiles();
-    check('Cottage = #23: booked 7 of 31 nights = 23% (one cottage in the denominator, the block counted once)', t.booked === '23%', t.booked);
-    await ctx.close();
-  }
-  {
-    // Opened on a period that does NOT hold today: the tiles fetch today's month.
-    const { ctx, p } = await open();
-    await p.fill('.mphbac-staff-goto', '2027-03-10');
-    await p.dispatchEvent('.mphbac-staff-goto', 'change');
-    await p.waitForTimeout(150);
-    const t = await p.evaluate(() => document.querySelector('.mphbac-staff-tile.is-arriving .mphbac-staff-tile-num').textContent);
-    check('away from today, the tiles still count today', t === '1', t);
-    await ctx.close();
-  }
-
-  console.log('\n-- 5: filters — Cottage, Source, Pets, Arrivals or departures only --');
-  {
-    const { ctx, p } = await open();
-    const rows = () => p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-rownum')].map(r => r.textContent));
-    const ids = async () => (await bars(p)).map(b => b.id).sort((a, b) => a - b);
-    await p.click('.mphbac-staff-filters-toggle');
-    const labels = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-fgroup--cottage label')].map(l => l.textContent));
-    check('the cottage list is built from the board\'s data: all eight', labels.length === 8 && labels[0] === '#22 Blue Heron', labels);
-    // Within the chart's scroll range (1280px viewport, ~182px of scroll).
-    const x0 = await p.evaluate(() => { const g = document.querySelector('.mphbac-staff-grid'); g.scrollLeft = 120; return g.scrollLeft; });
-    await p.check('.mphbac-staff-filters input[name=cottage][value="22"]');
-    await p.check('.mphbac-staff-filters input[name=cottage][value="23"]');
-    await p.waitForTimeout(80);
-    check('Cottage #22 + #23: only their rows', JSON.stringify(await rows()) === '["#22","#23"]', await rows());
-    const x1 = await p.evaluate(() => document.querySelector('.mphbac-staff-grid').scrollLeft);
-    check('...the chart keeps its scroll through a filter change', x0 === 120 && Math.abs(x1 - x0) <= 1, [x0, x1]);
-    const n = await p.evaluate(() => document.querySelector('.mphbac-staff-filters-count').textContent);
-    check('...and the toggle counts the active filters', n === '2', n);
-    await p.click('.mphbac-staff-filters-clear');
-    await p.waitForTimeout(80);
-    check('Clear filters: every row back', (await rows()).length === 8);
-    await p.check('.mphbac-staff-filters input[name=source][value=vrbo]');
-    await p.waitForTimeout(80);
-    check('Source = Vrbo: only Dee and Ivy', JSON.stringify(await ids()) === '[4,9]', await ids());
-    await p.check('.mphbac-staff-filters input[name=source][value=other]');
-    await p.waitForTimeout(80);
-    check('Source = Vrbo + Other: Ed (the channel the plugin cannot name) joins', JSON.stringify(await ids()) === '[4,5,9]', await ids());
-    await p.click('.mphbac-staff-filters-clear');
-    await p.check('.mphbac-staff-filters input[name=pets]');
-    await p.waitForTimeout(80);
-    check('Pets only: Ann and Ivy', JSON.stringify(await ids()) === '[1,9]', await ids());
-    await p.click('.mphbac-staff-filters-clear');
-    await choose(p, 'week');
-    await p.check('.mphbac-staff-filters input[name=moves]');
-    await p.waitForTimeout(80);
-    check('Arrivals or departures only, Oct 4–10: everyone arriving or leaving that week (Ed leaves Oct 4) — not Ivy, there all month',
-      JSON.stringify(await ids()) === '[1,2,3,4,5,7,10]', await ids());
-    await choose(p, 'month');
-    check('filters survive a change of period (in memory)', await p.isChecked('.mphbac-staff-filters input[name=moves]'));
-    const stored = await p.evaluate(() => { const o = {}; try { for (let i = 0; i < localStorage.length; i++) o[localStorage.key(i)] = 1; for (let i = 0; i < sessionStorage.length; i++) o['s:' + sessionStorage.key(i)] = 1; } catch (e) {} return Object.keys(o); });
-    check('...and nothing is stored anywhere', stored.length === 0, stored);
-    await ctx.close();
-  }
-
-  console.log('\n-- 6: quick preview — hover or long-press, never also the sheet --');
-  {
-    const { ctx, p } = await open();
-    const barSel = id => `.mphbac-staff-bar[data-booking-id="${id}"]`;
-    await p.hover(barSel(1));
-    await p.waitForTimeout(400);
-    let pv = await p.evaluate(() => { const e = document.querySelector('.mphbac-staff-preview'); return { shown: !e.hidden, text: e.innerText }; });
-    check('hover: name, cottage, dates and nights, guests, source, pets',
-      pv.shown && /Ann Smith/.test(pv.text) && /Oct 6 → Oct 9 · 3 nights/.test(pv.text) && /Guests: 3 \(2 adults, 1 child\)/.test(pv.text)
-      && /Source: Direct/.test(pv.text) && /Pets/.test(pv.text), pv.text);
-    await p.hover(barSel(2));
-    await p.waitForTimeout(400);
-    pv = await p.evaluate(() => document.querySelector('.mphbac-staff-preview').innerText);
-    check('an import that carries only the default count shows NO guest line, as the sheet would', !/Guests/.test(pv) && /Source: Airbnb/.test(pv), pv);
+    // An Elementor-like wrapper WITH A TRANSFORM, the cause of "random places":
+    // position: fixed measures from it unless the preview leaves for <body>.
+    await p.evaluate(() => { const st = document.querySelector('.mphbac-staff'); const w = document.createElement('div');
+      w.style.transform = 'translateX(0)'; w.style.marginTop = '40px'; st.parentNode.insertBefore(w, st); w.appendChild(st); });
+    const at = async id => {
+      await p.hover(`.mphbac-staff-bar[data-booking-id="${id}"]`);
+      await p.waitForTimeout(400);
+      return p.evaluate(id => {
+        const b = document.querySelector(`.mphbac-staff-bar[data-booking-id="${id}"]`).getBoundingClientRect();
+        const e = document.querySelector('.mphbac-staff-preview'), r = e.getBoundingClientRect();
+        return { shown: !e.hidden, onBody: e.parentNode === document.body, text: e.innerText,
+          gapAbove: b.top - r.bottom, centreOff: Math.abs((r.left + r.right) / 2 - (Math.max(b.left, 0) + Math.min(b.right, innerWidth)) / 2),
+          inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+          described: document.querySelector(`.mphbac-staff-bar[data-booking-id="${id}"]`).getAttribute('aria-describedby') === e.id };
+      }, id);
+    };
+    let r = await at(2);
+    check('it opens on <body> — out of reach of a transformed wrapper', r.shown && r.onBody, r);
+    check('...directly ABOVE the bar (8px gap)', Math.abs(r.gapAbove - 8) <= 1, r.gapAbove);
+    check('...horizontally centred on it, and on screen', r.centreOff <= 1 && r.inside, r);
+    check('...and the bar is described by it while it shows', r.described, r);
+    r = await at(1);
+    check('it lists Pets · Couch · Boat, and the guests, when they apply', /Pets · Couch · Boat/.test(r.text) && /Guests: 3/.test(r.text), r.text);
     await p.mouse.move(5, 5);
     await p.waitForTimeout(80);
-    check('leaving the bar hides it', await p.evaluate(() => document.querySelector('.mphbac-staff-preview').hidden));
+    const back = await p.evaluate(() => { const e = document.querySelector('.mphbac-staff-preview'); return { hidden: e.hidden, home: !!e.closest('.mphbac-staff') }; });
+    check('leaving the bar hides it and puts it back in the board', back.hidden && back.home, back);
+    // No room above: the bar at the very top of the screen (room added below
+    // the board so the page can scroll that far).
+    await p.evaluate(() => { document.body.style.paddingBottom = '2000px';
+      const b = document.querySelector('.mphbac-staff-bar[data-booking-id="2"]'); window.scrollTo(0, window.scrollY + b.getBoundingClientRect().top - 2); });
+    r = await at(2);
+    check('no room above: it flips BELOW the bar, still on screen', r.gapAbove < 0 && r.inside, r);
     await ctx.close();
   }
   {
@@ -247,15 +249,80 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
       b.dispatchEvent(new TouchEvent('touchstart', { touches: [t], targetTouches: [t], changedTouches: [t], bubbles: true }));
       await new Promise(r => setTimeout(r, ms));
       b.dispatchEvent(new TouchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [t], bubbles: true }));
+      const pv = document.querySelector('.mphbac-staff-preview'), pr = pv.getBoundingClientRect(), br = b.getBoundingClientRect();
+      const placed = { above: br.top - pr.bottom, inside: pr.left >= 0 && pr.right <= innerWidth && pr.top >= 0 };
       b.click();                                           // the click the tap produces
       await new Promise(r => setTimeout(r, 60));
-      return { preview: !document.querySelector('.mphbac-staff-preview').hidden,
+      return { preview: !pv.hidden || placed.above !== undefined && false, shownBefore: pr.height > 0, placed,
                sheet: !document.querySelector('.mphbac-staff-sheet').hidden };
     }, [id, ms]);
     let r = await press(1, 650);
-    check('long-press: the preview opens, and the sheet does NOT', r.preview && !r.sheet, r);
+    check('phone long-press: the preview opens above the bar, on screen — and the sheet does NOT', r.shownBefore && Math.abs(r.placed.above - 8) <= 1 && r.placed.inside && !r.sheet, r);
     r = await press(1, 80);
     check('a plain tap after it opens the sheet, as always', r.sheet, r);
+    await ctx.close();
+  }
+
+  console.log('\n-- 2: Stats — below the calendar, closed, its own timeframe --');
+  {
+    const { ctx, p } = await open();
+    const reqs = () => p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_month').map(r => r.from + '|' + r.to));
+    const kpis = () => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-kpi')].map(k =>
+      [k.className.replace('mphbac-staff-kpi is-', ''), k.querySelector('.mphbac-staff-kpi-num').textContent])));
+    const n0 = (await reqs()).length;
+    await p.click('.mphbac-staff-stats-toggle');
+    await p.waitForTimeout(150);
+    let k = await kpis();
+    check('opened: this month by default — the month already loaded, so no request', (await reqs()).length === n0, await reqs());
+    check('October: booked 21% (52 of 248 cottage-nights, the echoing block counted once)', k.booked === '21%', k);
+    check('...arrivals 10, departures 10, turnovers 2', k.arrivals === '10' && k.departures === '10' && k.turnovers === '2', k);
+    check('...with pets 3, with couch 3, with boat 2 — no "in house" outside Day', k.pets === '3' && k.couch === '3' && k.boat === '2' && !('inhouse' in k), k);
+    const per = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-percot-row')].map(r =>
+      [r.querySelector('.mphbac-staff-percot-name').textContent, [r.querySelector('.mphbac-staff-percot-num').textContent, r.querySelector('.mphbac-staff-percot-fill').style.width]])));
+    check('nights booked per cottage: #28 30 nights (96.8%), #23 7 (the block counted once), #29 none',
+      per['#28 C28'][0] === '30 nights' && per['#28 C28'][1] === '96.8%' && per['#23 Kingfisher'][0] === '7 nights' && per['#29 C29'][0] === '0 nights', per);
+    const pie = await p.evaluate(() => ({
+      slices: [...document.querySelectorAll('.mphbac-staff-pie-slice')].map(x => [x.dataset.source, getComputedStyle(x).fill]),
+      labels: [...document.querySelectorAll('.mphbac-staff-pie-label')].map(x => x.textContent),
+      list: [...document.querySelectorAll('.mphbac-staff-pie-item')].map(x => x.textContent) }));
+    check('the pie: Direct, Airbnb, Booking.com, Vrbo in their colours', JSON.stringify(pie.slices) === JSON.stringify([['direct', RGB.direct], ['airbnb', RGB.airbnb], ['booking', RGB.booking], ['vrbo', RGB.vrbo]]), pie.slices);
+    check('...share of NIGHTS: Direct 23% (12), Airbnb 12% (6), Booking.com 6% (3), Vrbo 60% (31) — as text too',
+      JSON.stringify(pie.list) === JSON.stringify(['Direct — 23% (12 nights)', 'Airbnb — 12% (6 nights)', 'Booking.com — 6% (3 nights)', 'Vrbo — 60% (31 nights)']), pie.list);
+    check('...labelled with % where the slice holds it', pie.labels.includes('60%') && pie.labels.includes('23%'), pie.labels);
+    const blank = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-out').innerHTML.includes('<script'));
+    check('(textContent only) nothing in Stats became markup', !blank);
+
+    await p.selectOption('.mphbac-staff-stats-span', 'day');
+    await p.waitForTimeout(150);
+    k = await kpis();
+    check('Day: today by default — arriving 1, leaving 1, turnovers 1, IN HOUSE 2 (only for Day)',
+      k.arrivals === '1' && k.departures === '1' && k.turnovers === '1' && k.inhouse === '2', k);
+    await p.selectOption('.mphbac-staff-stats-span', 'year');
+    await p.waitForTimeout(200);
+    check('Year: one request for Jan 1 – Dec 31 (the same gated range endpoint)', (await reqs()).includes('2026-01-01|2026-12-31'), await reqs());
+    await p.selectOption('.mphbac-staff-stats-span', 'custom');
+    await p.fill('.mphbac-staff-stats-from', '2026-01-01');
+    await p.fill('.mphbac-staff-stats-to', '2027-12-31');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change');
+    await p.waitForTimeout(200);
+    let note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
+    check('Custom over 400 days: capped to 400, and it SAYS so', (await reqs()).includes('2026-01-01|2027-02-04') && /limited to 400 days/.test(note), [note, (await reqs()).slice(-1)]);
+    await p.fill('.mphbac-staff-stats-to', '2025-12-01');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change');
+    await p.waitForTimeout(100);
+    note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
+    check('Custom with To before From: "Please check the dates."', note === 'Please check the dates.', note);
+    await p.fill('.mphbac-staff-stats-from', '2023-01-01');
+    await p.fill('.mphbac-staff-stats-to', '2023-12-31');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change');
+    await p.waitForTimeout(150);
+    note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
+    const range = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-range').textContent);
+    check('Custom reaching past the ±3-year range: clamped to Oct 8 – Dec 31, 2023, and it says so',
+      /±3-year range: showing Oct 8, 2023 – Dec 31, 2023/.test(note) && range === 'Oct 8, 2023 – Dec 31, 2023', [note, range]);
+    await p.reload();
+    await p.waitForTimeout(250);
+    check('Stats is closed again after a reload', await p.evaluate(() => !document.querySelector('.mphbac-staff-stats').open));
     await ctx.close();
   }
 
@@ -292,19 +359,19 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
   {
     const { ctx, p } = await open({ clock: true });
     const reqs = () => p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_month').length);
-    await choose(p, 'week');
-    await p.click('.mphbac-staff-filters-toggle');
-    await p.check('.mphbac-staff-filters input[name=pets]');
     await choose(p, 'year');
+    await p.click('.mphbac-staff-stats-toggle');
+    await p.waitForTimeout(100);
     await p.evaluate(() => { document.querySelector('.mphbac-staff-grid').scrollLeft = 2000; });
     const before = { n: await reqs(), upd: await p.evaluate(() => document.querySelector('.mphbac-staff-updated').textContent) };
     await p.clock.fastForward(3 * 60 * 1000 + 1000);
     await p.waitForTimeout(150);
     const after = await p.evaluate(() => ({ period: document.querySelector('.mphbac-staff-period').value,
-      x: document.querySelector('.mphbac-staff-grid').scrollLeft, pets: document.querySelector('.mphbac-staff-filters input[name=pets]').checked,
+      x: document.querySelector('.mphbac-staff-grid').scrollLeft, stats: document.querySelector('.mphbac-staff-stats').open
+        && document.querySelectorAll('.mphbac-staff-kpi').length > 0,
       upd: document.querySelector('.mphbac-staff-updated').textContent }));
     check('after 3 minutes the board fetched again', (await reqs()) > before.n, [before.n, await reqs()]);
-    check('...keeping the period, the scroll position and the filters', after.period === 'year' && Math.abs(after.x - 2000) <= 1 && after.pets, after);
+    check('...keeping the period, the scroll position, and Stats open and filled', after.period === 'year' && Math.abs(after.x - 2000) <= 1 && after.stats, after);
     check('..."Updated hh:mm" moved on', /^Updated \d\d:\d\d$/.test(after.upd) && after.upd !== before.upd, [before.upd, after.upd]);
 
     // A BUTTON with focus must not stop it (the Sync Watchdog bug).
@@ -350,8 +417,6 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
   {
     const { ctx, p } = await open({ clock: true });
     await choose(p, 'week');
-    await p.click('.mphbac-staff-filters-toggle');
-    await p.check('.mphbac-staff-filters input[name=pets]');
     await p.click('.mphbac-staff-next');
     await p.waitForTimeout(80);
     await p.evaluate(() => { window.__nonceExpired = true; });
@@ -361,12 +426,12 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.waitForTimeout(400);
     const back = await p.evaluate(() => ({ period: document.querySelector('.mphbac-staff-period').value,
       from: (document.querySelector('.mphbac-staff-chart') || {}).dataset && document.querySelector('.mphbac-staff-chart').dataset.from,
-      pets: document.querySelector('.mphbac-staff-filters input[name=pets]').checked, hash: location.hash,
+      hash: location.hash,
       guard: (() => { try { return sessionStorage.getItem('mphbacStaffReload'); } catch (e) { return 'X'; } })(),
       storage: (() => { const o = []; for (let i = 0; i < sessionStorage.length; i++) o.push(sessionStorage.key(i)); for (let i = 0; i < localStorage.length; i++) o.push(localStorage.key(i)); return o; })(),
       status: document.querySelector('.mphbac-staff-status').textContent }));
     check('the expired-token 403 reloaded the page ONCE', p.loads() === loads0 + 1, [loads0, p.loads()]);
-    check('...and the board came back on the SAME view: Weekly, the next week, Pets on', back.period === 'week' && back.from === '2026-10-11' && back.pets, back);
+    check('...and the board came back on the SAME view: Weekly, the next week', back.period === 'week' && back.from === '2026-10-11', back);
     check('...the view fragment is gone from the address at once, so a reload by the user opens Monthly', back.hash === '', back.hash);
     check('...the guard cleared after a request that worked, and NOTHING else is stored', back.guard === null && back.storage.length === 0, back);
     await p.reload();
