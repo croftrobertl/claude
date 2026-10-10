@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.44.0
+Stable tag: 0.44.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.44.1 =
+* **Cleaner bars.** The IN / OUT tags, the ▸ / ◂ arrows and the V / A / B letters are gone: a bar's colour is its source, and its start and end show arrival and departure. Pending stripes and turnover marks stay.
+* **Pets, Couch and Boat.** Small white icons on a bar (and beside the name in Daily) show a booking with pets, with three or more guests (a count someone set — not the number Airbnb, Booking.com or Vrbo send), or bringing a boat or trailer (from the new "boat" checkout question). On a short bar the icons that don't fit are left off — the quick preview and the booking details always list all three. The booking details also show a "Boat" row.
+* **Four sources.** "Other" is gone: the two old bookings from an unrecognised channel were Vrbo reservations and now show as Vrbo; any future unknown source shows in the Direct colour.
+* **Stats, below the calendar.** One "Stats" section, closed until you open it, with its own timeframe (day, week, month, year or your own dates): how booked, arrivals, departures, turnovers, in house (for a day), bookings with pets / couch / boat, nights per cottage, and a pie of each source's share of nights. The tiles at the top are gone.
+* **The Filters control is gone.**
+* **The quick preview sits right above the bar it belongs to**, centred on it (below it only near the top of the screen), and the browser's own tooltip no longer appears with it.
+* **The page is reordered:** dates, then the arrows, then the legend, the calendar, and Stats.
+* **Fixed:** bars (and the Daily rows, and the arrows after a tap on a phone) turned coral when hovered or tapped, because of a site-wide button style. They now keep their own colour and shape.
 
 = 0.44.0 =
 * **Bars in the source's colour.** On the staff board each booking's bar is now the colour of where it came from — Direct green, Airbnb red, Booking.com navy, Vrbo blue, anything else slate — with small white IN and OUT tags on the arrival and departure days. Imported bookings keep their letter badge, pending bookings keep their stripes, and the legend shows it all.
