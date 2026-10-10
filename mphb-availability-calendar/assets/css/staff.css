@@ -700,6 +700,28 @@ span.mphbac-staff-ico::before {
     overflow: hidden;
     pointer-events: none;
 }
+/* THE LABEL FOLLOWS THE SCROLL IN THE BROWSER, NOT IN SCRIPT (0.45.2, Rob's
+   iPhone recording). 0.45.0 moved it from followScroll(): iOS sends scroll
+   events sparsely during a flick, so the label lagged, slid under the pinned
+   cottage column ("OCK BLOCK") and jumped into place. Now it is sticky inside
+   its bar, held at the pinned column's right edge — positioned by the
+   browser's own scrolling, frame for frame. Two things make that possible:
+   the bar CLIPS instead of HIDING (overflow: hidden makes the bar a scroll
+   container of its own, and the label would stick inside the bar and never
+   move), and the label is IN FLOW (sticky does nothing to an absolute box).
+   A browser without overflow: clip (Safari before 16) keeps the 0.45.0
+   arrangement, and staff.js keeps moving the label there. */
+@supports (overflow: clip) {
+    .mphbac-staff-bar { overflow: clip; }
+    .mphbac-staff-bar .mphbac-staff-bar-label {
+        position: -webkit-sticky;
+        position: sticky;
+        inset: auto;                           /* before left: it resets all four */
+        left: var(--staff-label-w, 0px);
+        flex: 0 0 auto;
+        align-self: stretch;
+    }
+}
 /* No ellipsis: staff.js shows a name only where it FITS (else the nights
    count, else nothing), measured — never a silently clipped name. */
 .mphbac-staff-bar-label .mphbac-staff-bar-text {
@@ -730,17 +752,27 @@ span.mphbac-staff-ico::before {
     color: var(--staff-text);
     border-radius: 0;
 }
-/* AND THE NAV (0.44.1), found by the same harness once it carried the kit
-   rule: a tapped arrow or Today keeps focus on a phone, so the kit's
-   `button:focus` held it coral — the very linger 0.31.0 removed. Its resting
-   colour goes to (0,3,0); its keyboard-focus colour, here, and its hover
-   colour, in the guard, go above that. The Navigation controls write tokens,
-   so they still drive all three. */
-.mphbac-staff .mphbac-staff-nav.mphbac-staff-nav {
-    background-color: var(--staff-nav-bg);
-    color: var(--staff-nav-text);
-}
-.mphbac-staff .mphbac-staff-nav.mphbac-staff-nav:focus-visible { background-color: var(--staff-nav-hover); }
+/* THE BOARD'S BUTTONS ARE THE PUBLIC CALENDAR'S BUTTONS, IN EVERY STATE
+   (0.45.2, Rob: "make the buttons' styles / colours / states match what we
+   already set up for the availability calendar on the home page and the
+   cottages pages"). Each staff rule sits where its public twin in widget.css
+   sits — the same specificity, the same pointer guard, the same tokens — and
+   staff-board-test.js renders the two widgets side by side and compares them
+   state by state, so they cannot drift apart unnoticed.
+
+   THE NAV (‹ › and Today) follows .mphbac-nav-btn. This SUPERSEDES 0.44.1,
+   which restated the nav's resting colour at (0,3,0) to hold the theme's
+   `.elementor-kit-N button:hover, button:focus` (0,2,1) off it: the public
+   nav's rest is (0,1,0), so on the public pages that rule DOES reach it —
+   coral on hover, while focused after a click, and after a tap on an iPhone
+   (which keeps :hover). The staff rest is back at (0,1,0) (.mphbac-staff-nav
+   above), so the same rule reaches the staff nav the same way. Keyboard
+   focus: the coral fill and the browser's own ring, as .mphbac-nav-btn:
+   focus-visible has no outline of its own. Disabled: faded, as
+   .mphbac-nav-btn:disabled — the staff nav had no disabled look at all. */
+.mphbac-staff-nav:focus-visible { background-color: var(--staff-nav-hover); }
+.mphbac-staff .mphbac-staff-nav:focus-visible { outline: revert; outline-offset: revert; }
+.mphbac-staff-nav:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* PETS / COUCH / BOAT (0.44.1): thin white outline icons, 18px. staff.js
    draws only what fits — never a clipped one. */
@@ -1019,7 +1051,6 @@ span.mphbac-staff-ico::before {
     min-height: 46px;
     padding: 0;
     border: 0;
-    border-radius: 50%;
     /* REST AND HOVER RESOLVE THROUGH THE SAME LAYER as the public popup's X,
        token for token — rest --dcc-button-bg, hover --dcc-button-hover-bg /
        --dcc-button-hover-fg — which is the whole point of declaring the
@@ -1028,10 +1059,9 @@ span.mphbac-staff-ico::before {
        a 46px icon button. #0A50B2 on #E7EEF7 is 6.4:1; it was #111111 on
        #eeeeee at 17.4:1, so the drop is real and still far above AA. The
        literal comes FIRST as the pre-color-mix() fallback — otherwise those
-       browsers get a dropped declaration and an X with no ground. */
-    background: #E7EEF7;
-    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
-    color: var(--dcc-button-bg, #0A50B2);
+       browsers get a dropped declaration and an X with no ground.
+       0.45.2: the ground, ink and circle moved to the (0,2,0) rule shared
+       with the search ✕ (after .mphbac-staff-qclear), the public X's level. */
     /* font-size: 24px is gone with the &times; it sized. The glyph is now the
        same SVG the public popup uses, so the mark no longer depends on which
        font happens to load — which is what "the two cannot drift" requires.
@@ -1136,11 +1166,11 @@ span.mphbac-staff-ico::before {
     padding: 0 16px;
     margin: 2px 0;
     border-radius: 999px;
-    background: #0f6dbf;
+    background: var(--dcc-button-bg, #0A50B2);
     color: #ffffff;
     font-weight: 600;
     text-decoration: none;
-    transition: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo-note {
     display: block;
@@ -1350,10 +1380,8 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 /* The booking sheet's ✕, scaled into the pill: the same mark and stroke, the
    same tinted ground, a 36px disc inside a 44px tap target (the padding is
-   the margin of the target; background-clip keeps the disc inside it). A
-   <button>, so the kit's `button:hover, button:focus` (0,2,1) reaches it:
-   ground, ink and shape are restated here at (0,3,0), and there is NO hover
-   colour anywhere — it never turns coral. */
+   the margin of the target; background-clip keeps the disc inside it). Its
+   ground, ink and circle are in the rule shared with the sheet's ✕ below. */
 .mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear {
     position: absolute;
     top: 50%;
@@ -1369,11 +1397,6 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 0;
     padding: 4px;
     border: 0;
-    border-radius: 50%;
-    background: #E7EEF7;
-    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
-    background-clip: content-box;
-    color: var(--dcc-button-bg, #0A50B2);
     box-shadow: none;
     font: inherit;
     line-height: 1;
@@ -1384,9 +1407,25 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff .mphbac-staff-q:placeholder-shown + .mphbac-staff-qclear.mphbac-staff-qclear { display: none; }
 .mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg { display: block; width: 22px; height: 22px; }
 .mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg path { stroke-width: 2.75; }
+/* THE TWO ✕ ARE THE PUBLIC X (.mphbac-sheet-close) IN EVERY STATE (0.45.2,
+   Rob). Ground, ink and circle at (0,2,0) — below the theme's `button:hover,
+   button:focus` (0,2,1), as the public X's own (0,1,0) is — so a hovered,
+   focused or tapped ✕ turns the site's coral exactly where the public one
+   does (this supersedes the search ✕'s "never coral" of earlier in 0.45.2).
+   Hover coral in the pointer guard too; keyboard focus the public X's 2px
+   gold ring. */
+.mphbac-staff-close.mphbac-staff-close,
+.mphbac-staff-qclear.mphbac-staff-qclear {
+    border-radius: 50%;
+    background: #E7EEF7;
+    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
+    color: var(--dcc-button-bg, #0A50B2);
+}
+.mphbac-staff-qclear.mphbac-staff-qclear { background-clip: content-box; }
+.mphbac-staff-sheet .mphbac-staff-close.mphbac-staff-close:focus-visible,
 .mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear:focus-visible {
-    outline: 2px solid var(--staff-focus, #0f6dbf);
-    outline-offset: 0;
+    outline: 2px solid var(--staff-today, #f4da62);
+    outline-offset: 2px;
 }
 .mphbac-staff-results { margin-top: 8px; text-align: left; }
 .mphbac-staff-results[hidden] { display: none; }
@@ -1473,11 +1512,24 @@ body.mphbac-staff-open { overflow: hidden; }
     min-height: 44px;
     padding: 0 16px;
     border-radius: 999px;
-    background: #0f6dbf;
+    background: var(--dcc-button-bg, #0A50B2);
     color: #ffffff;
     font-weight: 600;
     text-decoration: none;
-    transition: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+/* THE SHEET'S PILLS ARE THE PUBLIC "View" PILL (.mphbac-info-view-link) IN
+   EVERY STATE (0.45.2, Rob): its blue (#0A50B2, was #0f6dbf here), its 0.2s
+   colour change, coral on hover (in the pointer guard), and on keyboard focus
+   the coral fill with the browser's own ring. Links, so the theme's button
+   rule never reaches them — on either widget. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:focus-visible,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms:focus-visible,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-adminlink:focus-visible {
+    background-color: var(--dcc-button-hover-bg, #f08080);
+    color: var(--dcc-button-hover-fg, #ffffff);
+    outline: revert;
+    outline-offset: revert;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms { margin-left: 10px; min-height: 36px; padding: 0 12px; font-size: 0.9em; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-admin { margin: 16px 0 0; text-align: center; }
@@ -1546,12 +1598,17 @@ body.mphbac-staff-open { overflow: hidden; }
    bug, which does not care about that distinction.
    ====================================================================== */
 @media (hover: hover) and (pointer: fine) {
-    .mphbac-staff .mphbac-staff-nav.mphbac-staff-nav:hover { background-color: var(--staff-nav-hover); }
+    /* At their public twins' levels: .mphbac-nav-btn:hover,
+       .mphbac-sheet-close:hover, .mphbac-info-view-link:hover. */
+    .mphbac-staff-nav:hover { background-color: var(--staff-nav-hover); }
 
-    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {
-        background: var(--dcc-button-hover-bg, #f08080);
+    .mphbac-staff-close:hover,
+    .mphbac-staff-qclear:hover {
+        background-color: var(--dcc-button-hover-bg, #f08080);
         color: var(--dcc-button-hover-fg, #ffffff);
     }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms:hover,
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-adminlink:hover,
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:hover {
         background: var(--dcc-button-hover-bg, #f08080);
         color: var(--dcc-button-hover-fg, #ffffff);

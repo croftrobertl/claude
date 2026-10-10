@@ -724,6 +724,9 @@
         // width. Driven from followScroll()'s rAF; the bars' geometry is read
         // ONCE per render (barGeo), so a scroll frame only does arithmetic and
         // rebuilds a label only when what it shows changes.
+        // Sticky labels (0.45.2): where the browser can, staff.css holds
+        // the label at the column's edge itself and this only refits it.
+        var STICKY = !!(window.CSS && CSS.supports && CSS.supports('overflow', 'clip'));
         var barGeo = [];
         function measureBars(chart) {
             barGeo = [].map.call(chart.querySelectorAll('.mphbac-staff-bar'), function (el) {
@@ -738,7 +741,7 @@
             barGeo.forEach(function (g) {
                 var start = Math.max(g.left, visL), end = Math.min(g.left + g.width, visR);
                 if (end <= start) return;                       // not on screen: leave it
-                var shift = Math.round(start - g.left);
+                var shift = STICKY ? 0 : Math.round(start - g.left);
                 if (shift !== g.shift) {
                     g.shift = shift;
                     g.el._fit.label.style.left = shift ? shift + 'px' : '';
