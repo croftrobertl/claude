@@ -204,10 +204,24 @@ final class Staff_Widget
                 // the results are written with textContent. Nothing typed here is
                 // kept — not in the browser, not on the server (WD). ?>
                 <div class="mphbac-staff-search">
+                    <?php // THE CLEAR BUTTON (0.45.2, Rob on his iPhone): iOS draws no
+                    // native cancel button on a search field, so closing the
+                    // results meant deleting every letter. This one is ours, on
+                    // every device; the native one is hidden in staff.css so a
+                    // desktop never shows two. It sits inside the label, so the
+                    // input carries its own aria-label — otherwise its name
+                    // would read "Search Clear search". CSS shows it only while
+                    // the field has text (:placeholder-shown), so no state of
+                    // ours can disagree with the field. ?>
                     <label class="mphbac-staff-field mphbac-staff-search-field">
                         <span class="mphbac-staff-field-label"><?php echo esc_html__('Search', 'mphb-availability-calendar'); ?></span>
-                        <input type="search" class="mphbac-staff-input mphbac-staff-q" autocomplete="off" spellcheck="false" enterkeyhint="search"
-                               placeholder="<?php echo esc_attr__('Name, phone, date, booking #', 'mphb-availability-calendar'); ?>">
+                        <span class="mphbac-staff-qbox">
+                            <input type="search" class="mphbac-staff-input mphbac-staff-q" autocomplete="off" spellcheck="false" enterkeyhint="search"
+                                   aria-label="<?php echo esc_attr__('Search', 'mphb-availability-calendar'); ?>"
+                                   placeholder="<?php echo esc_attr__('Name, phone, date, booking #', 'mphb-availability-calendar'); ?>">
+                            <button type="button" class="mphbac-staff-qclear"
+                                    aria-label="<?php echo esc_attr__('Clear search', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        </span>
                     </label>
                     <div class="mphbac-staff-results" hidden>
                         <p class="mphbac-staff-results-count" role="status" aria-live="polite"></p>

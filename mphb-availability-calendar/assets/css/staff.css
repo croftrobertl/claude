@@ -338,6 +338,7 @@
 .mphbac-staff {
     --dcc-gold:         var(--dcc-site-gold, #f4da62);
     --dcc-label:        var(--dcc-site-label, #000000);
+    --dcc-muted:        var(--dcc-site-muted, #6b7280);
     --dcc-field-radius: var(--dcc-site-field-radius, 30px);
     --dcc-field-border: var(--dcc-site-field-border, 2px);
 }
@@ -1307,7 +1308,86 @@ body.mphbac-staff-open { overflow: hidden; }
    the results as a plain list beneath it — one row a booking, best first. */
 .mphbac-staff-search { width: 100%; max-width: 640px; margin: 0 auto; }
 .mphbac-staff-search-field { flex: none; width: 100%; }
-.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-q { text-align: left; text-align-last: auto; }
+/* THE THEME'S LABEL UNDERLINE (0.45.2, Rob's iPhone). Bravada's kit has
+   `.elementor-kit-331 label { … text-decoration: underline }` at (0,1,1), and
+   each field IS a <label>. An underline cannot be taken off a child — it
+   PROPAGATES from the box that declares it, and only that box can drop it —
+   so it goes at the source, the label, at (0,2,0). On a phone Show and Go to
+   date escaped it by accident (display: contents has no box to draw from);
+   Search, which keeps its box, carried it into its label text, and Safari
+   painted it into the typed text and the placeholder as well. The input and
+   ::placeholder say none too, -webkit- included, as the /staff/ password
+   field needed. */
+.mphbac-staff .mphbac-staff-field,
+.mphbac-staff .mphbac-staff-field-label,
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input,
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input::placeholder {
+    -webkit-text-decoration: none;
+    text-decoration: none;
+}
+/* The placeholder is the public calendar's empty-field hint (.mphbac-field-
+   ph, Rob): the --dcc-muted ink, and the field's own font, size, weight and
+   centring — a placeholder inherits all four from its input, as the hint
+   copies them from its own. Search's typed text is centred like "Monthly"
+   and the date beside it (0.45.0 had set it left). */
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input::placeholder {
+    color: var(--dcc-muted, #6b7280);
+    opacity: 1;                    /* Firefox dims placeholders by default */
+}
+/* The clear button inside the pill. Symmetric padding while there is text,
+   so centred text stays centred AND never runs under the ✕ (3px inset +
+   44px button + 5px). Empty, the placeholder keeps the field's own 20px. */
+.mphbac-staff-qbox { position: relative; display: block; width: 100%; }
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-q:not(:placeholder-shown) {
+    padding-left: 52px;
+    padding-right: 52px;
+}
+.mphbac-staff .mphbac-staff-q::-webkit-search-cancel-button,
+.mphbac-staff .mphbac-staff-q::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+/* The booking sheet's ✕, scaled into the pill: the same mark and stroke, the
+   same tinted ground, a 36px disc inside a 44px tap target (the padding is
+   the margin of the target; background-clip keeps the disc inside it). A
+   <button>, so the kit's `button:hover, button:focus` (0,2,1) reaches it:
+   ground, ink and shape are restated here at (0,3,0), and there is NO hover
+   colour anywhere — it never turns coral. */
+.mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear {
+    position: absolute;
+    top: 50%;
+    right: 3px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 4px;
+    border: 0;
+    border-radius: 50%;
+    background: #E7EEF7;
+    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
+    background-clip: content-box;
+    color: var(--dcc-button-bg, #0A50B2);
+    box-shadow: none;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    transition: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.mphbac-staff .mphbac-staff-q:placeholder-shown + .mphbac-staff-qclear.mphbac-staff-qclear { display: none; }
+.mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg { display: block; width: 22px; height: 22px; }
+.mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg path { stroke-width: 2.75; }
+.mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear:focus-visible {
+    outline: 2px solid var(--staff-focus, #0f6dbf);
+    outline-offset: 0;
+}
 .mphbac-staff-results { margin-top: 8px; text-align: left; }
 .mphbac-staff-results[hidden] { display: none; }
 .mphbac-staff-results-count { margin: 0 0 6px; color: var(--staff-muted); font-size: 0.9em; }

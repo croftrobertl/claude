@@ -1533,6 +1533,7 @@
         // sheet; the calendar stays put and says so. Nothing typed here is
         // kept anywhere — no storage, no history (WD).
         var searchEl = root.querySelector('.mphbac-staff-q');
+        var clearBtn = root.querySelector('.mphbac-staff-qclear');
         var resultsEl = root.querySelector('.mphbac-staff-results');
         var resultsList = resultsEl && resultsEl.querySelector('.mphbac-staff-results-list');
         var resultsCount = resultsEl && resultsEl.querySelector('.mphbac-staff-results-count');
@@ -1635,10 +1636,32 @@
                 searchT = setTimeout(runSearch, SEARCH_DEBOUNCE_MS);
             });
             searchEl.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { searchEl.value = ''; clearTimeout(searchT); searchSeq++; clearResults(); }
+                if (e.key === 'Escape') closeSearch(false);
             });
-            // The browser's own clear (×) on a search field fires `search`.
+            // Enter on a phone's keyboard fires `search` too; only an empty
+            // field closes the results.
             searchEl.addEventListener('search', function () { if (!searchEl.value) { searchSeq++; clearResults(); } });
+        }
+        // Clear, close and cancel in one: the field emptied, the results
+        // closed, a search in flight ignored (searchSeq) — one still waiting
+        // on its debounce reads the emptied field and sends nothing — and,
+        // from the ✕, the field let go of so a phone's keyboard goes down:
+        // the page is back in one tap.
+        function closeSearch(letGo) {
+            searchEl.value = '';
+            searchSeq++;
+            clearResults();
+            if (letGo) {
+                searchEl.blur();
+                if (document.activeElement === clearBtn) clearBtn.blur();
+            }
+        }
+        if (searchEl && clearBtn) {
+            // A press on the ✕ never takes focus from the field, as on iOS
+            // (which never focuses a tapped button): letting go is then always
+            // the click handler's blur(), the same on every device.
+            clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+            clearBtn.addEventListener('click', function () { closeSearch(true); });
         }
 
         // ---- quick preview (0.44.0) -------------------------------------------
