@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-button-tests",
+  "private": true,
+  "description": "Computed-style tests for the DCC Custom Checkout button spec.",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}

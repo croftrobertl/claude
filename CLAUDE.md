@@ -123,5 +123,1528 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Git workflow
 
-- Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
+- Active branch: **`claude/dcc-checkout-customizations-zx1jrx`**. Develop and push
+  there. Don't open a PR unless the user asks.
+  (This line read `claude/review-shared-chat-bExtl` until 2026-09-20 — that is the
+  **Availability Calendar's** branch, not this plugin's. It was corrected outright
+  rather than annotated: a stale branch name inside the section about not pushing
+  into the wrong history is the trap itself, and a parenthetical leaves the wrong
+  name readable.)
 - The repo has only the plugin folder at root — no other deliverables.
+
+### VERIFY AGAINST THE REMOTE, NOT AGAINST LOCAL REFS (standing rule, 2026-09-19)
+
+**Before the first commit of a session, query the remote live** and confirm the
+local branch descends from what it returns:
+
+```bash
+git ls-remote origin <branch>                       # a LIVE query
+git merge-base --is-ancestor <remote-sha> HEAD      # must succeed
+```
+
+**`origin/...` is a local cache, not the remote.** A remote-tracking ref can be
+written without the remote ever being contacted — one was, on 2026-09-19, and it
+held **a different plugin's history**. Anything that trusts `origin/...`,
+`git status`'s ahead/behind count, or a `git fetch` that may not have run is
+reading that cache and can be confidently wrong.
+
+**NEVER force-push these branches.** If a push is rejected as non-fast-forward,
+**STOP and report it** — do not diagnose it into a fix. A rejected push is
+information, not an obstacle.
+
+**The reason first recorded here was WRONG, and the truth is more dangerous.**
+This file used to say `--force-with-lease` would match the bogus tracking ref,
+succeed, and destroy the remote. It does not. Measured in a throwaway repo with
+the tracking ref poisoned exactly as these containers do it (2026-09-20, owner's
+result reproduced independently here rather than taken on trust):
+
+| state | command | result | remote |
+|---|---|---|---|
+| poisoned cache | `git push` | `! [rejected] (non-fast-forward)` | unchanged |
+| poisoned cache | `git push --force-with-lease` | `! [rejected] (stale info)` | **unchanged** |
+| **after `git fetch`** | `git push --force-with-lease` | `+ 00e90d8...313473d (forced update)` | **HISTORY REPLACED** |
+
+So **the lease does protect you while the cache is stale.** What removes the
+protection is the FETCH — the very thing you do to repair the disagreement.
+**THE DANGEROUS SEQUENCE IS "FETCH, THEN FORCE", and it is the sequence a
+careful person reaches for.** The conclusion is unchanged; the mechanism was
+not, and **a rule with a wrong mechanism is the thing this whole exercise exists
+to prevent.**
+
+**AGREEING WITH WHOEVER GAVE YOU THE RULE IS NOT VERIFICATION.** This entry
+carried the wrong mechanism because it was written down as received, without
+being tested. A sibling session that worked out the lease would be rejected in
+its own case, and said so plainly against what it had been told, was right to.
+
+### WHAT IS ACTUALLY WRONG (don't re-diagnose it from scratch)
+
+One repository, **a branch per plugin, and every plugin's history is intact on
+its own remote branch. There is NO collision on the remote.** Containers are
+being provisioned carrying the **Availability Calendar's** workspace —
+`f25db77` shows up as local HEAD in unrelated plugins — and a branch named for
+the incoming session is created at that HEAD, with
+`refs/remotes/origin/<branch>` written **without contacting the server**. That
+is exactly why `git status` looks clean: it compares HEAD against a cache that
+agrees with it. **Four of eight checkouts came back wrong**, so re-run the live
+check at the START OF EVERY SESSION — a container that was clean yesterday
+proves nothing about the one you are in now.
+
+### RECOVERY, if the live `ls-remote` disagrees with local HEAD
+
+**First establish that nothing local is worth keeping, and verify it yourself.**
+In every case seen so far the local commits belong to ANOTHER plugin and are
+already safe on that plugin's own remote branch (`f25db77` is the tip of
+`claude/review-shared-chat-bExtl`), so discarding them locally loses nothing.
+Confirm the working tree is clean and that **every local commit is reachable
+from some branch in `git ls-remote origin`** — do not take that from anyone.
+
+Then, and only then:
+
+```bash
+git fetch origin <your-branch>
+git reset --hard origin/<your-branch>    # or `git merge --ff-only` if merely behind
+```
+
+That touches nothing on the server; it is local-only and it is the whole repair.
+
+**AFTER THAT FETCH YOU ARE IN THE DANGEROUS STATE IN THE TABLE ABOVE.** Your
+next push must be an ordinary fast-forward. **If it is rejected, STOP AND REPORT
+IT** — do not force, do not `--force-with-lease`, do not "reconcile" it. A
+rejection after a repair means something is still wrong, and the repair is not
+yours to improvise.
+
+## DCC Custom Checkout — release artifacts
+
+- **Live MotoPress Hotel Booking is 6.3.0** (Director, the plugin header,
+  2026-10-07). Earlier entries here — and `SITE-CONTEXT.md`, which this
+  plugin does not edit — say 6.1.0; that was wrong. Facts marked "live 6.3.0"
+  were read from the live files.
+
+- **Naming of files handed to the owner** (owner preference, corrected
+  2026-09-13). Two rules, and the distinction matters:
+  - **Plugin zips take NO dash**: `Custom Checkout <version>.zip` (e.g.
+    `Custom Checkout 0.34.0.zip`), matching the version in the plugin header.
+  - **Everything else takes the dash**: `Custom Checkout - <name>.<ext>` —
+    images, markdown, JS, reports, audits, exports, anything that is not the
+    plugin zip.
+
+  The folder *inside* the zip stays `dcc-custom-checkout/` — that is the
+  WordPress plugin slug and must not change.
+- Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
+- **The "Rate:" row is removed from the price breakdown unconditionally**
+  (owner decision, v0.6.1). Every rate on this site is named after its cottage,
+  so the row only ever restated the accommodation title above it. The
+  consequence: **a rate named anything else — "Winter Special", say — will not
+  appear on the checkout breakdown either.** If a differently-named rate is
+  ever created and its name needs to be visible, `dropRateRows()` in
+  `assets/checkout.js` has to become conditional (drop it only when the label
+  after "Rate:" matches the accommodation title).
+- **The native "Choose Additional Services" section is hidden on the checkout**
+  (owner decision, v0.7.0). Both fees this site charges are driven by controls
+  the guest already used — the pet fee by "Traveling with a dog?", the
+  extra-guest fee by "Number of Guests" — so the native section was a second
+  control for a decision already made. The consequence: **any service added in
+  MotoPress in future that is NOT driven by one of this plugin's own controls
+  will be uncheckable, because a guest never sees it.** Whoever adds one must
+  either wire a control for it in `checkout.js` or narrow
+  `hideNativeServices()` to skip that service's row.
+- Hiding there is display-based on purpose: a hidden-but-checked input still
+  submits and MotoPress still prices it. Never switch it to `disabled`,
+  `remove()`, or anything that stops the input submitting — that would silently
+  stop charging the $50 extra-guest fee.
+- **Buttons follow the site button spec** (owner decision, v0.8.0): the "Send
+  Message" button at /contact/ — Raleway 20px/500, line-height 50px,
+  letter-spacing 0.5px, text-transform none, #fff on #006BCF, no border,
+  radius 30px. Every DCC plugin declares it rather than inheriting from the
+  theme. It is asserted **without `!important`**: Bravada forces
+  `text-transform: uppercase` (0,0,1) and the Elementor kit forces
+  18px/900/1.5px/capitalize (0,1,1), and the doubled `form.mphb_sc_checkout-form`
+  class reaches (0,3,1)-(0,3,2), which wins outright. Keep it that way — a
+  later deliberate override should still be able to win.
+- **Blue buttons hover to coral** `#F08080` with `#FFFFFF` text (site standard,
+  v0.8.1) — not the older `--dcc-blue-hover`, which is kept only because other
+  rules use it. White on `#F08080` is 2.59:1, below WCAG AA; the owner has
+  chosen it knowingly, so the focus treatment must stay an outline and never
+  depend on the fill. Any hover selector must be **the resting selector with
+  `:hover` appended** — a hover rule that loses to its own resting rule fails
+  silently and still looks right in the file.
+- Button appearance is measured in real Chromium at `tests/button/`
+  (`npm install && npm test`). It renders the button in isolation, because
+  `/submit-booking/` only exists with a live reservation. Run it after touching
+  any button rule.
+- **Fixtures must come from real /submit-booking/ markup.** Three defects
+  survived several releases with a green suite because the fixtures were
+  plausible rather than real (v0.9.0). Two traps worth knowing:
+  `.mphb_sc_checkout-service` is on the CHECKBOX, not its row, and
+  `Element.closest()` matches the element itself — so resolving a row from a
+  service input needs an explicit "a form control is never a row" guard. And
+  the "Rate:" line is a `<div class="mphb-price-breakdown-rate">` inside a
+  `<td>`, not a row.
+- **Never match on text this plugin has written into the page.** The tax
+  asterisk is appended to the Taxes cell, so a second pass read that row as
+  "Taxes*" and the whole footnote control died. Injected elements carry
+  `data-dcc-injected` and `rowLabel()` skips them. Anything that reads a label
+  and might run twice must do the same.
+- **Guest photo IDs are deleted on request only** — no schedule (owner
+  decision, v0.10.0). The button is on the booking screen; the file also goes
+  when a booking is PERMANENTLY deleted, but not when it is trashed. The image
+  is never rendered in the admin, only its filename.
+- **`Id_Files::contain()` is the only thing between post meta and `unlink()`.**
+  It is a pure static function for exactly that reason, and it is tested
+  directly at `tests/id-files/` (`php tests/id-files/run.php`) against
+  symlinks, encoded traversal and prefix-colliding sibling directories. If you
+  add any code path that deletes a file, route it through `contain()` — never
+  build a path from meta and unlink it.
+- **Deletion notes go into MotoPress's own booking log** (v0.10.1):
+  `\MPHB\Entities\Booking::addLog()` via
+  `MPHB()->getBookingRepository()->findById()`. Logs are `wp_comments` rows
+  with `comment_type` `mphb_booking_log`. The write is verified by counting
+  those rows before and after — `addLog()` returns nothing, so a silent no-op
+  would otherwise pass for success. If the count does not rise, the plugin's
+  own history panel renders instead; it is a fallback, never a second copy.
+- The protected store's `index.php` and `.htaccess` are self-healing (on
+  activation, after a checkout upload, hourly in admin) because /privacy/
+  promises IDs are blocked and a host migration can drop dotfiles. Whether the
+  server honours them is checked live by **DCC → Custom Checkout → Guest ID
+  storage → "Check public access now"**, which probes over real HTTP; no local
+  test can answer that.
+- **The fields here are the site standard** for the Guest Guide Support Report
+  form and the Availability Calendar — those two only, not site-wide (owner
+  decision, v0.11.0). Each of those repos keeps its OWN copy of the values;
+  exported as `Custom Checkout - Field Standard.css`. Not a shared mu-plugin
+  layer: mu-plugins cannot be installed from the WP Admin upload screen, which
+  is how these are deployed, and it would be a single point of failure across
+  three plugins. Tokens read an optional `--dcc-site-*` first and fall back to
+  the literal, so a shared layer can still be added later without anything
+  depending on it.
+- **The typed-value and `::placeholder` colours are declared, not inherited.**
+  They had no rules until v0.11.0 and inherited black and a UA grey. That is
+  invisible on the checkout and wrong in any other cascade — do not delete them
+  as redundant.
+- **Every hover rule on the checkout lives inside
+  `@media (hover: hover) and (pointer: fine)`.** On iOS the first tap applies
+  `:hover` and it sticks until the next tap elsewhere, so a hover-styled
+  control eats a tap and will not revert. Focus rules stay OUTSIDE that query.
+  Touch behaviour is asserted in `tests/button/` with an emulated coarse-pointer
+  context — that proves the rules are gated, not that iOS behaves.
+- **Tap diagnostic**: `?dcc_tap_debug=1` on the checkout, administrators only
+  (v0.12.0). Records pointer/touch/mouse/click with defaultPrevented and the
+  real topmost element at the touch coordinates. Listener-only — it must never
+  gain a preventDefault or a stopPropagation, or it stops being a measurement.
+  Gated on capability AND the URL flag, so nothing persists and there is no
+  default to get wrong.
+- **Field width is TWO rules, and both are required** (owner decision, v0.14.0:
+  "match the Availability Calendar's date pills"). The calendar's field is
+  `width: 100%; max-width: 100%; min-width: 0` — it fills its track, and the
+  TRACK is what makes it narrow. So the checkout keeps `width: 100%` on the
+  field and caps the WRAPPER (`.dcc_checkout-field-row`, put on by
+  `markFieldRows()`, with `p.mphb-text-control` as the no-JS fallback) at
+  `--dcc-field-max`. Capping the field alone reintroduces the dead strip that
+  v0.13.0 removed, and it looks correct in the stylesheet while doing it.
+  **360px is chosen so the cap is inert on a phone** — at 390px the section's
+  content box is ~358px — so anything below ~358 trades phone tap area for
+  desktop proportions. Asserted at both widths in `tests/fields/`.
+- **`input[type="date"]` needs `appearance: none`.** iOS Safari will not shrink
+  a native date control below its intrinsic content width; it ignores the width
+  its container granted and overflows. Chromium shrinks it without complaint,
+  so **no Chromium harness can catch this** — it is the calendar's measured
+  iPhone overlap bug (a ~215px control in a ~172px track at 393px). The
+  checkout renders its dates as hidden inputs today, so the rule is a guard.
+- **The tax footnote must never contribute to the widget's intrinsic width**
+  (v0.14.0). It is a `<p>` beside the breakdown table, and the container is
+  content-sized: opening it took the widget from 210px to 769px and every field
+  grew with it. `width: 0` + `min-width: 100%` is the pair that fixes it —
+  `width: 100%` alone looks identical in the file and reintroduces the defect.
+  Asserted in `tests/footnote/`.
+- **Breakdown matchers must know BOTH spellings of every label** (v0.14.0).
+  `Assets::string_overrides()` renames Services→Extras, Service→Item and
+  Services Total→Extras Total via a gettext filter on the checkout — but the
+  owner's live screenshots still show MotoPress's original words, so that
+  filter may not be firing. `Assets::label_aliases()` feeds both spellings to
+  the JS (`CFG.labelAliases`, used by `labelIs()`), so a matcher works either
+  way. Never match one spelling only; that is how the services section survived
+  three releases looking right and matching nothing.
+- **The extra-guest row is relabelled for DISPLAY, never renamed** (item 14,
+  v0.14.0). MotoPress service 18063 keeps its post_title, which is what admin
+  screens and guest emails show. `Config::guest_service_titles()` reads that
+  title BY ID so a rename in the MotoPress admin moves the match with it. The
+  guest count in the details cell comes from the `[adults]` select this plugin
+  sets itself — a number it wrote, not prose it parsed — and the cell is left
+  alone when that cannot be read. Verified service terms: $50, per_night,
+  per_adult, min 1, max 2, attached to 1065/1067/1069/1071/1740/1742 (all
+  capacity 4); Cottages 33 (1604) and 34 (1607) are capacity 2 with no
+  extra-guest service, so the row cannot appear there.
+- **`Config::couch_note_text()` is the single copy of the pull-out-couch
+  sentence** (v0.14.0). The checkout, the admin preview and the Cottage
+  Selector all read it, because the owner requires the two plugins to match
+  character for character. It is a LITERAL, not a template, for that reason —
+  and so it assumes 2 included / 4 capacity / queen + pull-out couch, which
+  holds for the six cottages that can show it. The caller's `max <= included`
+  guard is what keeps it off Cottages 33 and 34.
+  **v0.19.0 literal, pinned:** sha256
+  `8a638fb2e266a645cbf93b300dec44113c0989a9531dbb5abb00bb55a420783f`, 138
+  bytes, asserted in `tests/copy/run.php` (`php tests/copy/run.php`). The
+  Cottage Selector pins the same hash. **Change one, change both, change both
+  pins.** The owner's line break between the two sentences is applied at
+  render (`\n` after the first full stop + `white-space: pre-line`), never in
+  the literal — the literal must hash identical.
+- **The upload hints share the tax footnote's rule** (v0.20.0). MotoPress's
+  `mphb-checkout-fields` renders `.mphb-max-upload-file` and
+  `.mphp-accepted-upload-types` (sic — misspelt in its source, target it as
+  written); they are styled, never re-marked-up. One rule with
+  `.dcc_checkout-tax-footnote` so the three cannot drift, and **no
+  `font-weight` on any of them**: the footnote's is inherited from the site's
+  `html{font-weight:700}`, and the hints must match its computed weight, not a
+  number from the standard. The preceding `<br>`s are hidden with `:has()`.
+  Asserted in `tests/fields/` against `html{font-weight:700}`.
+- **Site-level CSS that is not in this repo.** doracanalcourt.com carries
+  ~1.3KB of Customizer "Additional CSS" on every page: it hides
+  `.mphb-guest-name-wrapper`, forces `.mphb_sc_search-form` to `display: block`
+  (a Safari flexbox workaround), puts `.ui-datepicker` and `.pac-container` at
+  `z-index: 99999`, and fully restyles the Google Places dropdown. None of it
+  sets an input width. The `pac-container` note matters to the tap diagnostic:
+  if a log ever shows it "present/VISIBLE", that z-index is why it would be on
+  top of everything.
+- **A service row can never be the form.** `serviceRowWrapper()` walks up from
+  a service checkbox and its last fallback is `input.parentNode`; until v0.15.0
+  nothing stopped that resolving to the `<form>`, which then got the hide class
+  and took the whole checkout with it — blank page, no explanation, no booking.
+  `tooBigToBeAServiceRow()` is the ceiling: nothing containing the price
+  breakdown, the customer details, another service's checkbox, or the form
+  itself. **Any future widening of that walk must keep the ceiling.**
+- **ONE error ink.** `--dcc-required` is *defined as* `--dcc-error`, not a copy
+  of its value, so the asterisks, the validation banner and MotoPress's own
+  messages cannot drift apart (they had: #611a15 text, #c62828 border, #bc003e
+  asterisks). The banner's ground is WHITE (owner decision, v0.21.0; it was
+  #fdecea at 6.29:1, white is 6.55:1). The fields are white with a gold border,
+  so the banner's 2px red border is what keeps it distinct — never drop it.
+- **Error timing is presentational and never hooks MotoPress's validator**
+  (item 1, v0.15.0). The form carries `.dcc_checkout-preflight` from load until
+  the first submit attempt (a `submit` event OR a click on a submit control —
+  MotoPress submits over REST, so a submit event is not guaranteed), and CSS
+  hides error elements that were not in the markup at load. **Everything
+  present at load is tagged `data-dcc-preexisting` and left visible**, because
+  it may be a real server-rendered error and hiding that strands the guest. An
+  admin-only note reports the count. Never replace this with a hook into
+  MotoPress's validation.
+- **The Services→Extras rename fires on MotoPress's AJAX/REST too** (v0.15.0).
+  `is_checkout_page()` returns false for AJAX/REST by design — it also gates
+  enqueueing — but MotoPress re-renders the price breakdown over AJAX/REST
+  whenever the guest count or dates change, so the first paint said "Extras"
+  and every re-render said "Services". `should_rename_strings()` is the widened
+  gate, for the string substitution only, and still excludes requests refered
+  from wp-admin. `gettext_with_context_` and `ngettext_` are registered
+  alongside `gettext_` because `_x()` and `_n()` never fire the plain one.
+  DCC-VERIFY: the REST re-render path is reasoned, not observed.
+- **Tap targets declare `touch-action: manipulation`** (item 6, v0.15.0), and
+  the breakdown expander also carries `-webkit-touch-callout: none`,
+  `user-select: none` and `draggable="false"`. Evidence: in the owner's round-3
+  log `a.mphb-price-breakdown-expand` failed at 76ms and 77ms while
+  `button.dcc_checkout-tax-asterisk` succeeded at 79ms — no single timing
+  threshold produces that, but an element-specific gesture recogniser does, and
+  iOS arms link-drag and the press-and-hold callout on `<a>` and not on
+  `<button>`. The served bundle had zero occurrences of either property, so the
+  anchor ran on iOS defaults. **This is a prediction:** anchor presses of
+  80-110ms should now click. If they do not, the hypothesis is wrong — and the
+  next step is replacing the anchor with a real `<button>`, which is the one
+  control in that log that never failed.
+- **The breakdown expander is a real `<button>`** (v0.17.0). `hardenTapTargets()`
+  replaces the `<a>` node, carrying every class over — MotoPress's handler is
+  delegated on `.mphb-price-breakdown-expand` (`mphb.js:1446`) — with
+  `type="button"` so it can never submit. **Do not re-add a keyboard handler:**
+  a native button activates on Enter and Space, and the one v0.16.0 needed for
+  a hrefless `<a>` would toggle twice. Evidence: the tax asterisk (a button) is
+  4 of 4 across four tap logs at 64-96ms; the expander failed 15 of 18 clean
+  taps as an `<a>` and as an `<a>` without href.
+- **A `<button>` does not inherit link colour** (v0.22.0). When v0.17.0 swapped
+  the expander's `<a>` for a `<button>`, the bare-control reset's
+  `color: inherit` took the table's black and the control stopped reading as
+  tappable — for five releases, because nothing asserted the colour. It is now
+  `var(--dcc-blue)` (#006bcf) on a DOUBLED class, (0,4,1), because the reset is
+  (0,3,1) and would tie and win on source order. **Its hover and focus rules
+  were `a.mphb-price-breakdown-expand` and silently stopped matching at the
+  same moment** — key on the class alone, never the element, for anything this
+  plugin may re-tag. Asserted in `tests/fields/`.
+  **`tests/button/` asserted that colour throughout and never caught it**, because
+  its fixture was still the `<a>` MotoPress renders. It now carries BOTH forms —
+  the `<a>` and the swapped `<button>` — and asserts both. **When this plugin
+  replaces an element, every fixture holding the old one is stale**; that is the
+  v0.9.0 lesson in a new shape.
+- **`setDisabled()` refuses to disable anything that carries money** (v0.22.0).
+  The dog Checkout Fields are disabled when the pet question is off, because a
+  hidden control still submits — they were posting "10-20 lbs" and
+  "short-haired" on no-dog bookings. But the SERVICES rule above still stands
+  absolutely: a hidden-but-checked service input must keep submitting or the
+  fee stops being charged, silently, with the page looking normal. So the
+  helper hard-refuses any control named `[services]` or classed
+  `mphb_sc_checkout-service`. **Never route a service control through it**, and
+  keep the test that asserts the service checkbox stays enabled and submits.
+  **The submit path is confirmed, not assumed** (2026-09-18): MotoPress does
+  not walk inputs — `parseFormToJSON()` in `assets/js/public/mphb.js` is
+  `return this.element.serializeJSON();`, and `serializeJSON` is built on
+  jQuery's `serializeArray`, which applies the HTML "successful controls" rule
+  — the same rule `FormData` applies. So the `FormData` assertion in
+  `tests/breakdown` measures the real mechanism even though MotoPress submits
+  over REST. Separately, `_buildFormData()` skips empty custom fields outright
+  (`} else if (value !== '') { formData.append("customer_fields[...]", value); }`),
+  so an unanswered dog question would send nothing even without `disabled`.
+  **That second fact is a belt, not the braces** — it is MotoPress's internal
+  and can change in any update, whereas `disabled` is the spec. Do not drop
+  `setDisabled()` on the strength of it.
+- **`mphb_cf_options` IS PHP-SERIALISED ON THIS SITE, NOT JSON.** Checkout
+  Fields store their option lists that way, so `json_decode()` returns null and
+  a careless write silently changes nothing — no error, no effect. **Always
+  `maybe_unserialize()` first and write back in the shape you found.** It cost
+  a round to discover; nothing in this repo reads those options today, and
+  anything that starts to must obey this.
+- **The dog-field contamination is CLEANED AND FIXED AT SOURCE** (2026-09-17,
+  by the owner's team, not by this plugin). Checkout fields 17727 (`dog_size`)
+  and 17728 (`dog_hair`) now carry a blank first option, so "no answer" is
+  representable at all — that is what stops it recurring. The phantom values
+  were cleared from #17457, #17459, #18098, #18159 and #18433, backed up in the
+  option `dcc_bak_dogmeta_20260917`. **#17730 and #17795 were deliberately
+  KEPT** — both `dog_type = "Poodle"`, and #17795 carries non-default size and
+  hair: real pet bookings, not contamination.
+  **The pet gate still tests the pet fee or `dog_type`, never emptiness** — and
+  that is now the principled test rather than a historical workaround: a guest
+  with a real dog who accepts the first option is indistinguishable from a
+  default by value alone, however clean the data is. The blank option and
+  v0.22.0's `disabled` both reduce how often that arises; neither makes
+  emptiness a sound test.
+- **The admin guest-count control writes `_mphb_adults` on the reserved room**
+  (v0.22.0, `Admin_Guests`). MotoPress fills that meta with the ROOM TYPE'S
+  CAPACITY when an import supplies no count (#18433: 4 for a 2-guest
+  Booking.com reservation), so a number there is not necessarily anyone's
+  answer. **"Not provided" DELETES the meta — it must never store 0**, or
+  /staff/ loses the difference between "nobody told us" and a real count.
+  Capacity that cannot be read widens the range rather than capping it, and the
+  screen says so — but `MAX_OPTIONS` (20) bounds it absolutely, because `max`
+  drives both the `<option>` loop and the accepted range and comes from the
+  database: a corrupted `mphb_adults_capacity` of 9999 would otherwise render
+  9999 options and wedge the booking screen. Tested at `tests/admin-guests/` (`php tests/admin-guests/run.php`):
+  nonce, capability, range, delete-not-zero, cross-booking isolation, and the
+  marker contract below.
+  **CONFIRMED on live (2026-09-17):** `_mphb_adults` is present on all 417
+  reserved rooms (261 twos, 145 ones, seven fours, four threes), and the chain
+  booking → `post_parent` → `_mphb_room_id` → room's `mphb_room_type_id` is the
+  one the calendar's SQL already uses. No DCC-VERIFY outstanding.
+- **`_mphb_adults_confirmed = 1` IS THE CONTRACT WITH THE AVAILABILITY
+  CALENDAR** (v0.23.0), on the same reserved room, written whenever the owner
+  submits a count and deleted with the count on "Not provided". Present means
+  `_mphb_adults` is a real count whatever its value; absent means the
+  Calendar's own capacity-plus-iCal heuristic applies. **It is written even when
+  the submitted count equals the stored one** — v0.22.0 returned early there,
+  which would have broken the only case the control exists for (confirming
+  MotoPress's defaulted 4 as a genuine 4 changes no digit, so nothing was
+  written and /staff/ kept saying "not provided"). **Never reinstate an
+  unchanged-value early return in front of the marker**, and never let the
+  marker outlive the number. The seven speculative booking-meta key names the
+  Calendar used to search for do not exist on any booking — that search is gone
+  rather than kept as apparent coverage.
+  **BOTH PLUGINS TEST THE MARKER AS "non-empty AND not `0`"** (aligned v0.23.2).
+  They had drifted: the Calendar used the strict test, this half tested only
+  `!== ''`, so a stored `"0"` would have read as CONFIRMED here and UNCONFIRMED
+  there. No divergence existed on live — the one marker in the database is `'1'`
+  — and **nothing anywhere would have failed if it had**, which is the reason it
+  is pinned rather than left. `Admin_Guests::is_confirmed()` is the single test,
+  used by both the save path and the screen; the Calendar keeps its own copy and
+  each names the other. The strict reading is the right one because of the
+  direction it fails in: `"0"` read loosely asserts that a human confirmed
+  nobody is staying, a claim about a real booking that no human made. It also
+  self-heals — with the strict test `$had_mark` is false for `"0"`, so the next
+  save rewrites the marker as `1`, where the loose test left the bad value in
+  place through every subsequent save. Asserted in `tests/admin-guests/`, and
+  the assertions were checked to FAIL against the loose test before shipping.
+- **`dcc_guest34_enabled` IS A CROSS-PLUGIN SWITCH AND NEITHER PLUGIN OWNS IT**
+  (v0.24.0). One toggle for the whole Guest 3 / Guest 4 concept, rendered at
+  **DCC → Custom Checkout → "Guests 3 and 4"** because that is where the owner
+  will look for it, but **stored as a STANDALONE WP option, deliberately not a
+  key inside `dcc_checkout_settings`** — the DCC Cottage Selector reads it for
+  its matching quiz and **must keep working when this plugin is deactivated**.
+  THE CONTRACT, and both sides implement it independently:
+  - **ABSENT MEANS ON.** A site that has never seen the setting behaves exactly
+    as it did before the setting existed.
+  - `'1'` or `1` → ON. **Anything else → OFF.** This plugin WRITES `'1'` for on
+    and `''` for off. Read leniently, write strictly; a present-but-unrecognised
+    value reads as OFF because that is the direction that does not charge a guest
+    for an offering whose switch state cannot be read.
+  - `Config::guest34_enabled()` is the whole implementation and is deliberately
+    four lines, so the Selector's copy CAN match it character for character.
+    **IT DOES NOT, and this line used to say it did** (measured 2026-09-27 on the
+    Selector's branch at `a2ac0e6`, read-only). The Selector reads
+    `$v === null ? true : (bool) $v` and applies no filter, so `'no'`, `'off'`
+    and `'false'` read ON there and OFF here, and a `dcc_guest34_enabled` filter
+    reaches only this half. **Its CLAUDE.md also records the WRITER wrongly** —
+    "integer 1 or 0, like `guest_fee_enabled`" — and calls `''` out of contract,
+    when `''` is exactly what `sanitize_guest34()` stores for OFF.
+    **No live divergence**: the only values ever written, `'1'` and `''`, read
+    the same on both sides. It is the `_mphb_adults_confirmed` shape again
+    (0.23.2) — two readers of one value, agreeing only on what happens to be
+    stored. **Reported to the owner, NOT fixed from here**: the fix belongs in
+    the Selector (adopt the strict reader, correct its recorded writer). Until
+    it lands, "change one, change both" is a goal, not a fact.
+    **Owner's answer (2026-09-27): the Selector adopts THIS plugin's reading and
+    corrects its notes in its 0.50.0.** When that ships, compare the two readers
+    on its branch yourself (read-only fetch into a scratch ref, as before) —
+    "they said they would" is not "they match".
+  - **NO FILTER ON THE SWITCH — DONE IN 0.26.0** (owner decision 2026-09-27,
+    folded into the next release as he asked; confirmed for 0.26.0 by the
+    courier on 2026-10-06, asked because that brief said "change nothing else"). `Config::guest34_enabled()`
+    reads the option and nothing else; the "Guests 3 and 4" row is its own
+    method, `Settings::render_guest34_row()`, so the rendered checkbox is
+    asserted directly — and a filter can no longer make the box disagree with
+    storage, so a save cannot persist an override. Asserted both ways round in
+    `tests/guest34/` (a filter cannot turn a stored ON off, nor a stored OFF
+    on) and on the rendered box in `tests/settings/`; mutation
+    `cfg-guest34-filter-readded` puts the hook back and must go red. The
+    Selector adopts this reader in its 0.50.0 — compare the two then.
+  - **No `default` is registered** with `register_setting()`. Registering one
+    would make `get_option()` return it on a site that never saved the setting,
+    and "absent" is a meaningful third state.
+  - The checkbox is paired with a **hidden field of the same name**. An unchecked
+    box posts nothing and the Settings API only saves keys it finds in the POST,
+    so without it switching OFF would appear to work and change nothing.
+- **THE FEE IS MOTOPRESS'S, SO SUPPRESSING IT IS ACTIVE WORK AND MUST FAIL
+  CLOSED** (v0.24.0). Service 18063 is linked in **MotoPress's own
+  `mphb_services` meta on room types 1065/1067/1069/1071**, and MotoPress renders
+  and prices it without asking this plugin. So "don't attach the fee when the
+  switch is off" is not something achieved by not doing something — there was
+  nothing being done. The switch reaches `Config::guest_fee_enabled()`, which
+  makes `guest_fee_active()` false, and `Extra_Guest_Service::find_violation()`'s
+  existing inactive branch then **refuses both** an attached extra-guest service
+  and any room over `included_guests()`. That covers the 302 path and the REST
+  path, because `Rest_Guard` calls the same `find_violation()`. **The UI half
+  alone would be a cosmetic lie.** Asserted by posting the fee with the switch
+  off, in `tests/guest34/`.
+  **DO NOT TOUCH `mphb_services`.** That meta is the owner's MotoPress
+  configuration across his room types; rewriting it from here would be a silent
+  bulk edit of live config and would strand him if he ever deactivated the plugin
+  — the fee would stay gone with nothing to explain it. Suppress at render and at
+  submit; leave his configuration exactly as he set it.
+  **THE CHECKOUT IS THE ONLY GUEST-FACING SURFACE THE SERVICE APPEARS ON**
+  (measured 2026-09-19, not inferred). I had flagged that MotoPress's own
+  accommodation pages might still show the service outside the checkout.
+  `/accommodation/cottage-22/` and `/accommodation/cottage-32/` were fetched —
+  both 400KB+ — and neither contains any `mphb` service markup, any reference to
+  service 18063, or the string "Extra Guest Fee". **The accommodation templates on
+  this site do not render a services list at all**, so the guest path is fully
+  covered by the checkout gate.
+  **Scope of that check, stated honestly:** guest-facing PAGES were verified.
+  **Confirmation emails and the MPHB admin were NOT** — a booking cannot be
+  submitted to test them. So if the switch is ever off and a stale confirmation
+  email still mentions the fee, look at the email templater, not at this gate.
+- **THE SWITCH GOVERNS COLLECTION, NOT HISTORY — AND THAT SPLIT IS TWO PAIRS OF
+  METHODS** (v0.24.0, owner decision: existing bookings keep their data).
+  - `collected_guest_field_groups()` honours the switch → the checkout JS
+    sections and the server required-fields backstop.
+  - `guest_field_groups()` ignores it → **Admin_Fields / `admin-booking.js`**, so
+    a booking that already carries Guest 3 details still shows them, and
+    **Settings**, so the owner can still edit the section titles while it is off.
+  - `offered_guest_fee_steps()` honours the switch → every label on the checkout.
+  - `guest_fee_steps()` ignores it → **Admin_Fields**, so wp-admin can still
+    price a fee an existing booking really carries.
+  - **The settings page's "What the guest sees" preview is a GUEST-SIDE reader**
+    even though it renders in wp-admin (v0.25.2). It read `guest_fee_steps(4)`
+    and `couch_note_text()` — the ungated pair — so with the switch off, or
+    `included_guests` not 2, it showed the owner labels and a note no guest
+    would see. It now reads `guest_fee_active()`, `offered_guest_fee_steps()` and
+    `offered_couch_note()`, the same gates `class-assets.php` hands the checkout.
+    **Classify a reader by whose view it models, not by which screen it is on.**
+    Asserted in `tests/settings/` with the render-when-it-should guard first.
+  - **The switch-off checkout path clears any extra-guest service box**
+    (`uncheckGuestServices()`, v0.25.2). The server's inactive branch refuses ANY
+    attached one, and the services section is hidden, so a box arriving ticked
+    was a refusal the guest could not fix. The fee-on path's `apply()` always
+    unticked unwanted buckets; the fee-off path returned before doing the same.
+    Unticked, never `disabled`. Init-only, and `checked` is a property, so it
+    records no mutation — **the tap path is untouched**. Whether MotoPress ever
+    renders the box pre-ticked on a fresh checkout is NOT observed; the fixture
+    presets it, and the fix is correct either way because nothing it clears can
+    be charged while this path runs. `capAdultsSelects()`, the other half of
+    switch-off, had **no test at all** until the same round.
+  **Getting either pair the wrong way round strips data off past bookings.** The
+  first version of this change gated `guest_fee_steps()` itself and would have
+  removed the price label from historical bookings in wp-admin; caught by
+  checking who called it, not by the suite. Both directions are asserted now.
+  Scope limits, all deliberate: **Guest 2 is not affected** (the cottages sleep
+  two as standard; the filter is `min <= 2`), the staff-side guest-count selector
+  is not affected, and **nothing about MotoPress capacity changes** — a guest can
+  still pick 4 in MPHB's own control; the switch governs what this plugin
+  collects and what fee it permits. **The Availability Calendar needs nothing**:
+  `Staff_Data::push()` already returns early when the value is blank, so the
+  Guest3/Guest4 rows only render when the booking has the data. There is no
+  cross-plugin contract to build for decision 1 and none was built.
+- **THE ADMIN CUSTOMER INFORMATION BOX IS ORDERED IN THE BROWSER** (owner's
+  picks 2026-10-06, v0.26.0; `customerLayout()` in `admin-booking.js`, groups
+  from `Admin_Fields::customer_layout()`). Rob's "full tidy order" — Guest 1
+  (First, Last, Phone, Email), Address (Address, Apartment/Unit #, City,
+  State / County, Postcode, Country), Guest 2, Guest 3, Guest 4, Dog (Type,
+  Size, Hair), Note — with a quiet heading over each. It cannot be done with
+  `menu_order`: MotoPress renders its built-in fields first regardless, and
+  `menu_order` would also move the GUEST checkout form, which he does not want.
+  **WP-Admin only**; checkout, emails and invoices are untouched. Labels are
+  untouched ("State / County", "Postcode" stay — his choice). The rules:
+  - **Rows are MOVED, never re-created**, so names, values, saving and
+    validation are untouched. Proven by the form's successful controls being
+    identical with and without the script, before and after the toggle and a
+    cottage change.
+  - **"The same box" = the known fields' rows are `<tr>`s sharing one
+    parent**, and at least two of them. Anything else and it stands down: the
+    box stays exactly as MotoPress drew it, with a console note naming the
+    reason (never a value). That rule is also what decides the add-booking
+    step: the same table is ordered, a different form is left alone.
+  - A missing field is skipped; a group with no rows gets no heading. A field
+    it does not know stays visible after the known groups under an **"Other"**
+    heading (owner's pick), which exists only while such a row does.
+  - **A heading hides when every row under it is hidden by the gating**, and
+    comes back when the guest count, the Pet Fee choice or a filled value
+    shows a row again (since 0.28.0; it used to follow the "Show all" toggle,
+    which is gone).
+  - **Idempotent**: an already-ordered box is not touched, so the gating's
+    MutationObserver, which now calls it, cannot feed itself. Asserted (zero
+    childList records after a provoked re-run).
+  - **THE FIXTURE IS A PATTERN, NOT A CAPTURE.** The edit screen needs a login
+    and the session's network policy blocks wordpress.org and GitHub, so no
+    real admin markup was read. `tests/admin-layout/` carries the 21 rows in the
+    exact order and labels the Director read on booking 19615, in core's
+    `form-table` shape with a REPRODUCTION of core's 782px rule, and the input
+    names follow the `mphb_` pattern (built-ins are tried as `mphb_<name>` then
+    `<name>`). Whether live matches is the Director's label-order check; if it
+    does not, the stand-down means the screen is unchanged, not broken. **When
+    real markup becomes available, replace the fixture with it** — the v0.9.0
+    rule exists because plausible fixtures hid three defects.
+  - The config the suite uses is NOT a copy: `tests/admin-layout/config.php`
+    calls the shipped `Admin_Fields::script_config()`.
+  - Harness note, measured: `addInitScript` does not reach a `setContent`
+    page; the suite's first draft ran with no config at all and timed out
+    rather than passing. The config is now printed inline, as
+    `wp_localize_script` does.
+  - **0.26.0 VERIFIED ON LIVE** (Director, 2026-10-06, booking 19615, labels
+    and structure only): the layout applied with no fallback, exact order,
+    headings rendered, labels unchanged; `checkout.js`/`checkout.css`
+    byte-identical to 0.25.2; the Guests 3 and 4 box ticked with no stored
+    row (absent = ON) and no `apply_filters` left for it. **The pattern's
+    SHAPE matched — but live had a row the fixture lacked** (Upload Photo ID,
+    below), which 0.26.0 put under "Other". That is the v0.9.0 lesson again:
+    a plausible fixture is missing exactly what nobody thought to put in it.
+  - **UPLOAD PHOTO ID ENDS GUEST 1** (owner's pick, v0.27.0; matcher FIXED
+    in v0.27.1). The row has NO named input and takes TWO shapes on live
+    (Director, 2026-10-06, attributes only):
+    - file stored (19615): `tr.mphb-link-button-row` > `th` > `label[for="mphb-mphb_upload_id"]`;
+      `td` > `div.mphb-ctrl-wrapper.mphb-ctrl.mphb-ctrl-link-button` > `a.button` "View file";
+    - no file (19600, 18462 — most bookings; only 19 hold a photo):
+      `tr.mphb-placeholder-row`, same `th` label and `for`; `td` > `div…mphb-ctrl-placeholder` >
+      `label` "File is not uploaded".
+    **The match is the label's `for="mphb-mphb_upload_id"`** (prefix doubled:
+    MotoPress's `mphb-` + the field name), which both shapes carry; the value is
+    built from `Id_Files::META_KEY`, never retyped. **0.27.0 matched on
+    `mphb-link-button-row` and so missed every booking without a photo** — the
+    class changes with the row's STATE, and `mphb-placeholder-row` is generic
+    MotoPress. So: never a row class alone, never the label text, and no match
+    leaves the row under "Other", visible. The fixture carries both live shapes,
+    a class-only row (must not match) and an unrelated placeholder row (must not
+    be taken). Mutation `js-photo-nofile-missed` reproduces 0.27.0's defect and
+    the no-file fixture kills it. **Lesson: a fixture holding one STATE of a row
+    tests that state** — the v0.9.0 rule needs "every state the live markup
+    takes", not only "real markup".
+  - **EXISTING BOOKINGS ARE GATED BY THEIR OWN COTTAGE** (owner's pick,
+    v0.27.0; **RETIRED in 0.28.0** — kept for the record. Nothing on the edit
+    screen is gated by cottage any more: Guest 3/4 follow the count and Dog
+    follows the pet fee. The 0.28.0 mutation run proved it — the two mutations
+    on this path SURVIVED because the value fed only the fee's couch test, and
+    the edit screen has no service boxes — so `booking_room_types()` and
+    `CFG.statedRoomTypes` were removed rather than kept as apparent coverage.) The edit screen carries no accommodation control (the only
+    room-ish input is `mphb_rooms-hide`), so the gating read nothing and showed
+    everything. `Admin_Fields::booking_room_types()` reads the reserved rooms
+    by the live-confirmed chain (post_parent → `_mphb_room_id` →
+    `mphb_room_type_id`) and states them as `CFG.statedRoomTypes`, which the
+    script treats exactly like the add-booking step's marker. **All or
+    nothing**: one unreadable room states nothing, and the screen shows
+    everything as before — a partial answer could hide a group the unreadable
+    room needs. **SUPERSEDED IN 0.28.0 for Guest 3/4:** they now follow the
+    saved guest count (see the 0.28.0 entry below). 0.27.0 hid them unless
+    stored or "Show all" and read no count; Rob then chose the count, used AS
+    STORED — so an import whose `_mphb_adults` MotoPress filled with the
+    capacity (4) now shows Guest 3 and 4 headings over empty rows. That is
+    his informed pick, not an oversight.
+  - **"Show all booking fields" and its hint are GONE** (owner's pick,
+    0.28.0: "Remove it; dropdown everywhere"). With it went the full-width
+    `tr.dcc_admin-showall-row` (0.27.0), the fail-open `hatch.update()` path
+    (0.27.0), `NEED_SHOW_ALL` and the "Guest %s details are hidden…" hint —
+    those strings no longer exist, so LocoTranslate will list their
+    translations as obsolete.
+- **0.28.0 — THE BOOKING SCREENS ARE DRIVEN BY FACTS, NOT BY A TOGGLE** (Rob's
+  picks from his Add New recordings, 2026-10-06/07; `admin-booking.js`
+  rewritten). Three rules in order: **fail open** (anything unreadable shows),
+  **a filled field always stays visible** (with a note when the facts say it
+  would otherwise be hidden — nothing is ever cleared), **facts decide**.
+  - **Guest count drives Guest 3/4** — and Guest 2 since 0.29.0 (below), so
+    `guestGroups` now carries EVERY group and "Guests included" no longer
+    moves which are gated (it still moves the fee). A group shows when the
+    count is ≥ its `min` from `guestGroups` (never a literal). The count is the SAME one the fee sync reads: MotoPress's
+    `[adults]` selects, else the Guests box (`dcc_adults[...]`), else
+    `CFG.statedGuests`. Several rooms → the maximum; any blank → null → show.
+    Lowering the count re-hides an empty group; a filled one stays with the
+    note "More guest names than guests." (`dcc_admin-group-note`).
+  - **`Admin_Fields::booking_guest_count()`** states the saved count on the
+    edit screen: max `_mphb_adults` over the reserved rooms, used AS STORED
+    (Rob's pick — see the capacity-fill caveat in the 0.27.0 entry above).
+    One room unreadable or < 1 → null → show everything.
+  - **The Extra Guest Fee row is NEVER shown on wp-admin**
+    (`.dcc_admin-fee-row`, `!important`), not even before the count is read.
+    Number of Guests is its only control: `syncExtraGuestFee()` ticks it above
+    the included guests and **always writes the multiplier**, unticking too —
+    MotoPress prices a ticked box × its "for N" select, and a stale N was a
+    wrong charge waiting for the next tick. No waive or override (Rob). If
+    every service row on the screen is ours, the "Additional Services"
+    heading hides with it.
+  - **The read-only fee line** `p.dcc_admin-feeline` under Number of Guests:
+    "Extra guest fee: 1 guest × $50/night" / "%1$d guests × …". Nothing at or
+    below the included guests. Add New only — the edit screen has no services
+    UI.
+  - **"Pet Fee:" Yes/No dropdown** (Rob's own design, replacing a checkbox he
+    called "floating mislabeled"), placed after Number of Guests on Add New.
+    Yes ticks the stay-length bucket and shows Dog; No unticks it and hides
+    Dog. **The bucket is chosen by PHP**: `wizard_pet_service()` →
+    `Config::service_id_for_nights()`, printed as `data-dcc-pet-service` on
+    the room-context marker — the JS never re-derives it. With no stated
+    bucket the room's ONLY pet box is used; with several and none stated the
+    native rows stay visible with "Choose the pet fee under Additional
+    Services." — never a guess between prices. **SUPERSEDED IN 0.29.0:** it
+    was offered on every cottage, saying "This cottage has no pet fee, so
+    nothing is charged." on the others; it now appears on a pet-fee cottage
+    only (below). The dropdown has NO `name`, so it never submits. The native
+    pet rows are hidden; the boxes still submit (display-only hiding, as on
+    the checkout). The search step (no `[adults]` chooser) gets no dropdown.
+    VERIFIED (live 6.3.0): Booking has `getCheckInDate()`/`getCheckOutDate()`
+    (booking.php:487/495); Rob's 0.29.0 phone test added the pet fee on 34.
+  - **Edit screen: a read-only "Pet fee: Yes/No" line** at the end of the
+    Guests box (`Admin_Guests::render()`), and Dog follows it.
+    **`Admin_Fields::booking_pet_fee()`** reads `_mphb_services` on the
+    reserved rooms in the three shapes the Calendar's `has_pet_service`
+    accepts (list of ids, map id⇒qty, list of arrays with `id`) against
+    `Config::pet_service_id_list()`. Absent/empty → no fee; any other
+    unreadable shape → null → "could not be read, so the dog details are
+    shown." **Read correctly on live** (Director, 2026-10-07, 0.28.0): the line
+    said "Yes" on 17730 and "No" on 19615, 19600 and 18462 — the PHP reading
+    works. It was the trip to the browser that lost it (0.29.0 entry).
+  - **Add New customer step gets the order and headings** (C). That step is
+    MotoPress's FRONT-END form (`<p>` rows in `section#mphb-customer-details`),
+    so `customerLayout()` has a FLOW mode beside TABLE mode: headings are
+    `div.dcc_admin-group-heading`, control-less elements before the first
+    known row stay first, control-less ones after a known row travel with it
+    (hints, `<br>`s). It **stands down** — a console note, the step left as
+    drawn — if the box also holds an adults select or services, because then
+    it is not the customer box. Labels untouched.
+  - **THE ADD NEW FIXTURE IS A STAND-IN BUILT FROM ROB'S RECORDINGS** (Cottage
+    36, Nov 20–21 2026), not markup: that step needs a login and a Reserve
+    press. **It MATCHED on live** (Rob's phone, 0.28.0, Cottage 22, Oct 23–24
+    2026): headings Guest 1 / Address / Guest 2 drawn, MotoPress's labels
+    unchanged, and Total Price / Status / "Submit Booking" sit after the
+    fields with NO "Other" heading — so they do not share the customer
+    container. The live step has **no Customer Note field**, so "Note" never
+    appears there. Still a reconstruction: **when real markup is available,
+    replace it** (v0.9.0, again).
+  - **Price Breakdown "proof" is of the INPUTS**: the suite's stand-in prices
+    $175 + $50 × multiplier per ticked fee + $35 pet, and asserts 1/2/3/4/2/1
+    guests read $194.25 / $194.25 / $244.25 / $294.25 / … and the pet total.
+    It proves what MotoPress is GIVEN (which boxes, which N), not MotoPress's
+    arithmetic.
+  - **Fixed in passing: the Guests box was being decorated as a fee chooser**
+    since 0.27.0 — `dcc_adults[...]` matched the `select[name*="adults"]`
+    fallback and got "(+$50/night)" option suffixes on couch cottages.
+    `adultsSelects()` now excludes `dcc_` names and anything under
+    `[services]`. **That exclusion is now a BELT, not the guard**: once
+    `statedRoomTypes` was retired (below), the edit screen has no cottage
+    stated and no accommodation control, so `couch` is false there and nothing
+    is decorated either way. Mutation `js-adults-includes-dcc` was therefore an
+    equivalent mutant — it SURVIVED the second 0.28.0 run — and was retired
+    rather than kept as apparent coverage. The outcome assertion ("the Guests
+    box options carry NO fee label") stays in `tests/admin-layout/`.
+  - **Phone width (F), admin only**: at ≤ 782px a service label stacks — tick
+    + name, price (`<em>`), the "for N" picker — via
+    `label:has(input[name*="[services]"][name$="[id]"])`. Unchanged at 1280.
+    **The public checkout cannot have this overflow**: it hides the native
+    services section outright (v0.7.0), so there is nothing to report there.
+  - Unchanged: stored data, field names, save logic; `checkout.js` /
+    `checkout.css` untouched.
+- **0.29.0 — A BOOLEAN DOES NOT SURVIVE `wp_localize_script`** (Director's
+  live check of 0.28.0, 2026-10-07). `WP_Scripts::localize()` casts every
+  TOP-LEVEL scalar with `(string)` (WordPress 6.6.2,
+  `class-wp-scripts.php:589-597`, read from source): `true` → `"1"`,
+  `false` → `""`, ints → strings; `null` and arrays pass untouched. 0.28.0
+  sent `statedPetFee` as `true/false/null` and the script tested
+  `=== true / === false`, so Yes and No both read as unknown and Dog showed
+  on every booking. **It shipped green because the suite printed PHP's
+  `json_encode()` straight into the page** — the step that does the damage
+  was never in the harness. Now:
+  - `statedPetFee` is ONE WORD from `Admin_Fields::booking_pet_state()`:
+    `yes` / `no` (pet-fee cottage, fee carried or not), `none` (not a pet-fee
+    cottage), `unknown` (cottage or services unreadable → Dog shows).
+  - `tests/admin-layout/config.php` runs WordPress's localize loop, copied
+    verbatim, before printing, so every suite case sees what a browser sees,
+    and asserts `typeof statedPetFee === 'string'`. Mutations
+    `php-stated-pet-boolean` and `js-pet-state-reads-boolean` put the 0.28.0
+    defect back and must go red.
+  - **Audit, done**: every other top-level value either is already a string,
+    is numeric and read with `parseInt`/`Number` (`statedGuests`,
+    `includedGuests`), or is an array. The PUBLIC checkout localizes three
+    booleans (`petFeeEnabled`, `guestFeeEnabled`, `isAdmin`) and reads each by
+    truthiness, which `"1"`/`""` preserve — no defect there, nothing changed.
+  - **Rule: never localize a three-state as a boolean, and never test a
+    localized top-level value with `===` against `true`/`false`.** Use a word,
+    or nest it in an array, or `wp_add_inline_script` with `wp_json_encode`.
+- **0.29.0 — THE PET FEE BELONGS TO A PET-FEE COTTAGE** (owner: "Keep 34 as the
+  only pet fee cottage" / "No Pet Fee on others"; [Director] defaults marked).
+  A pet-fee cottage is one whose MotoPress services include a pet service —
+  read, never listed: `Config::room_type_has_pet_services()` via the admin
+  `roomTypes` map and `Admin_Fields::booking_pet_cottage()`. **Not**
+  `Config::pet_accommodations()`, which was deliberately not touched.
+  - Add New: the Pet Fee dropdown only there. Any other cottage: no dropdown,
+    no Dog, no message (Dog still shows if a dog value is present). Cottage
+    unreadable [Director], or a pet-fee cottage with no pet service on screen:
+    no dropdown (nothing it could be sure of charging) and Dog SHOWS.
+  - Edit screen: the "Pet fee: Yes/No" line only there [Director]; elsewhere,
+    and on an unreadable cottage, no line. Dog: hidden on other cottages unless
+    dog values are saved; shown when anything is unknown.
+  - **AN EMPTY SERVICES LIST IS A DEFINITE "NONE"** (Director). Cottage 33
+    (1604) has one, and `room_type_service_ids()` turned every empty result
+    into `null`, so the map called it `unknown`. It now returns `[]` for a
+    list READ AS EMPTY; a list with entries none of which parse is still
+    `null`. Mutation `cfg-empty-services-unknown`. Only the admin calls it.
+  - MotoPress services, the public checkout and `checkout.js`/`checkout.css`
+    are unchanged (byte-identical to 0.27.1/0.28.0).
+  - **The search step is now guarded three times** — the `[adults]$` name
+    test, the pet-fee-cottage test and "a pet service on screen" (the search
+    step has none). So mutation `js-pet-on-search-step`, which removed the
+    first, became an equivalent mutant and SURVIVED 0.29.0's first full run;
+    it was retired, and the search-step fixture now carries the recordings'
+    Accommodation Type select set to Cottage 34 — the worst case for it.
+- **0.29.0 — GUEST 2 FOLLOWS THE COUNT** (owner: "responsive to the number of
+  guests selected … just like Guest3, Guest4"). Same rules: shown from 2,
+  hidden at 1 unless a value is typed or saved (then it stays with the note),
+  never cleared; an unknown count ("Not provided") shows it [Director]. Done
+  by sending every group in `guestGroups` (mins 2, 3, 4) — the filter on
+  `min > included_guests` is gone, so **"Guests included" no longer changes
+  which fields are gated**; it still moves the fee and the fee line.
+  Mutation `php-guest2-not-gated`.
+- **0.29.0 — FULL GUEST NAME FILLS FROM GUEST 1 ON ADD NEW** (owner's pick).
+  `fillGuestNames()` in `admin-booking.js`: First + Last, joined by a space,
+  into every room's box as they are typed. A box that holds anything other
+  than what the script last wrote — prefilled, or edited by hand — is the
+  admin's and is never written again. It sets `.value` (a property, no DOM
+  mutation, so the observer and the three-tap rules are untouched) and only
+  reaches the server if the admin submits. Found by MotoPress's own markup —
+  `mphb_room_details[N][guest_name]` or the input in
+  `.mphb-guest-name-wrapper` (that class is confirmed: the site's Customizer
+  CSS hides it on the public checkout). **VERIFIED** (live 6.3.0,
+  checkout-view.php:290–294): `<p class="mphb-guest-name-wrapper"><label
+  for="{idPrefix}-guest-name">…<input type="text" name="{namePrefix}[guest_name]">`,
+  preset via `mphb_sc_checkout_preset_guest_name`; Rob's phone test: it
+  fills. When neither selector matches it does nothing. Add New only.
+- **0.30.0 — THE ACCEPTANCE BOX AND THE ACCEPTANCE RECORD** (Rob's picks
+  2026-10-07: "One box, both links" / "Yes, record it"; `Policies` and
+  `Policy_Record`; suites `tests/policy/run.php` and `tests/policy/browser.js`).
+  - **ROB'S STANDING RULE: THE POLICY'S TERMS LIVE ONLY ON THE POLICY PAGE.**
+    This plugin, its settings defaults and its notes LINK to it and never
+    restate it — no time limits, amounts or conditions of any kind. If the
+    policy changes, nothing here can be left saying the old thing.
+    `tests/policy/run.php` scans the feature's PHP, the readme and THIS FILE
+    for such wording and goes red on a hit.
+  - **Label**: "I've read and accept the Terms & Conditions and the
+    Cancellation & Refund Policy." — two links, new tab (`target=_blank`,
+    `rel=noopener`). Terms URL from MotoPress's `mphb_terms_and_conditions_page`
+    (2515); the policy page BY ID from the settings picker
+    (`refund_page_id`, default 2394 — "Checkout policies" on the settings
+    page). Either page missing/unpublished, or none chosen → MotoPress's
+    original label exactly [Director].
+  - **How it is swapped**: a `gettext_with_context` filter added at
+    `mphb_sc_checkout_form` priority 59 and removed at 61, around MotoPress's
+    `renderTermsAndConditions` at 60. It matches
+    the exact msgid + context the Director read, and returns the full label
+    with every `%` doubled, because MotoPress feeds it to `printf()` with its
+    own link as the one argument (ignored — ours has no placeholder; PHP 8
+    throws on an unknown specifier, so an unescaped `%` in a URL would crash
+    the checkout render). Scoped, so any OTHER use of that msgid keeps
+    MotoPress's wording. **VERIFIED in live MotoPress 6.3.0** (Director,
+    2026-10-07): `checkout-view.php:498` prints the label UNESCAPED (phpcs:ignore),
+    the box's only caller is `step-checkout.php:79`, the sentence appears
+    nowhere else in MotoPress's PHP or JS, and Add New Booking has no terms
+    box. The label is rendered only when `mphb_open_terms_in_new_window` is on
+    or terms text is set (live: on). Its `<label>` has NO `for` — it wraps the
+    input; the test render is now that markup verbatim.
+  - **THE TICK DOES REACH THE SERVER — inside `customer_fields`** (Director,
+    live 6.3.0 source, 2026-10-07; the "probably not" this entry first carried
+    came from an old staging trace and was WRONG). `mphb.js`
+    `_parseBookingDetails()` puts every unknown `mphb…` form field into
+    custom_fields, and `_buildFormData()` sends it as
+    `customer_fields[mphb_accept_terms]=1` (multipart, so `$_POST` is filled
+    too); an unticked box is not sent at all. `ParseUtils::parseCustomer()`
+    then keeps only REGISTERED customer fields, so the BOOKING never carries
+    it. The record therefore reads the REQUEST (captured at
+    `rest_request_before_callbacks`), never booking data, and "received" means
+    exactly the string `'1'`. Lesson: a payload "trace" of the keys that
+    survive is not a trace of what was SENT.
+  - **The record** (`_dcc_policy_acceptance` on the booking, written once at
+    `mphb_create_booking_by_user`, `add_post_meta(..., unique)`, never over an
+    existing row and never to an existing booking): `at_gmt`, `tick`
+    (`received`/`not_received`), `label` (plain text as shown), and per page
+    `role`, `id`, `sha256`, `modified_gmt`, `saved`. **Nothing about the
+    guest.** `not_received` is never displayed as "accepted" ("Booked online:
+    …. The acceptance tick did not reach the server …").
+  - **A VERSION IS ITS CONTENT, NOT ITS DATE.** The fingerprint is SHA-256 of
+    `{page_id, title, post_content, _elementor_data}` — the Director found
+    CLI edits to `_elementor_data` that never bump `post_modified`, which is
+    kept only as a hint. One copy per distinct fingerprint, in the private
+    post type `dcc_policy_version` (meta `_dcc_pv_bundle` + `_dcc_pv_sha256`).
+    **Stored in META, slashed**: post_content passes kses for an anonymous
+    guest's request, and `add_post_meta()` UNSLASHES — Elementor's JSON is
+    full of backslashes, so an unslashed write comes back altered. The copy is
+    read back and re-hashed; one that does not match is not reported saved,
+    and the viewer says so. Mutation `pol-version-unslashed` pins it.
+  - **Who made the booking** (display order): a record → it; an import
+    (`mphb_ical_prodid` non-empty on the booking — live: on 143 of 413
+    bookings, on no reserved room; the reserved-room fallback is kept from the
+    Availability Calendar's reader) → "Imported booking — not accepted on this
+    site" (Rob's pick "Distinguish imports"); a staff mark → "Entered by staff —
+    not accepted online"; otherwise "No online acceptance on record".
+  - **STAFF IS DECIDED BY MOTOPRESS'S OWN SIGNALS, NOT A REFERRER** (0.30.1).
+    0.30.0 used the wp-admin referrer and was wrong in the way that matters:
+    Add New Booking's "Submit Booking" POSTs to `/mphb/v1/checkout/admin`
+    (`SubmitAdminCheckoutController extends SubmitCheckoutController`), whose
+    parent FIRES `mphb_create_booking_by_user` — so a staff booking would have
+    been recorded "online" whenever no referrer came through. Now staff = any
+    of: `mphb_is_current_request_for_admin_ui` true (the admin controller adds
+    `__return_true` around its parent call), the
+    `mphb_admin_checkout_rest_before_start` action, or the admin route itself
+    — each tested ALONE, with a mutation each. An online record needs the
+    exact public route `/mphb/v1/checkout`. The `$_POST` fallback and the
+    `wp_insert_post` staff marker were REMOVED: no live path was shown to use
+    them, and the owner's rule is to act only on what is proven.
+  - **STAFF ADD NEW BOOKINGS SKIP THE REST BACKSTOPS** (Rob: "Skip for staff",
+    0.30.1). Found in 0.30.0: `Rest_Guard::route_matches()` is a SUBSTRING
+    test on `/mphb/v1/checkout`, which `/mphb/v1/checkout/admin` contains, so
+    the Guest 2/3/4, pet and extra-guest backstops validated every Add New
+    submission although the wp_loaded backstops deliberately exempt wp-admin.
+    Now `intercept()` returns untouched for the EXACT admin route
+    (`Rest_Guard::is_admin_route()`, trailing slash tolerated, look-alikes still
+    checked). Safe because MotoPress's `SubmitAdminCheckoutController::
+    is_request_allowed()` requires `checkPostPermissions(booking, 'create')`
+    (Director, live 6.3.0). **`route_matches()` was deliberately NOT narrowed**:
+    `defer_to_rest()` shares it and must keep the wp_loaded backstops standing
+    down on BOTH routes. **The brief asked for `mphb_is_current_request_for_
+    admin_ui` to back this — it cannot**: the guard runs at
+    `rest_request_before_callbacks`, and MotoPress adds that filter inside the
+    admin controller's callback, AFTER it; code testing it there would always
+    read false, so none was added. Tested by sending one violating payload to
+    both routes (`tests/backstops/`): refused on the public route (the
+    guard-on-the-guard), passed on the admin route; mutations
+    `guard-admin-checked`, `guard-admin-prefix`, `guard-exempt-all`.
+  - **Viewer**: `admin-post.php?action=dcc_policy_version&sha=…`, `edit_posts`,
+    read only, the derived text through `wp_kses_post` plus the exact stored
+    data escaped. No enforcement anywhere: a booking is never refused over
+    the tick (owner's instruction).
+  - `checkout.js` / `checkout.css` UNCHANGED. The browser suite places the
+    PHP-rendered box in a form styled by the shipped `checkout.css` at 390
+    and 1280: wording, both links, a real new tab, still `required` (the
+    form will not submit unticked), no overflow, and the fallback.
+  - **The runner's "WIRED UP BUT NOT ON DISK" was itself wrong for any suite
+    not named `run.*`** — it tested membership of a `run.*` glob, not
+    existence, so `tests/policy/browser.js` read as missing while it ran.
+    Fixed to test existence; proved both ways (moved away → flagged).
+- **0.30.1 — ADD NEW BOOKING'S RESULTS TABLE SAYS WHAT ITS NUMBERS ARE**
+  (Rob's picks 2026-10-07; `Results_Labels`, suites `tests/results/run.php`
+  and `tests/results/browser.js`). Rob searched 2 adults and read "Capacity:
+  Adults: 4 Children: 0" as a wrong count (it is the cottage's MAXIMUM), and
+  "Base price" is the WHOLE STAY's total before fees and taxes (live: $700
+  for 4 nights). Now "Capacity" → **"Sleeps up to"**, cell =
+  `RoomType::calcTotalCapacity()` (total capacity if set, else adults +
+  children — verified 6.3.0), plus " · up to N child/children" ONLY when the
+  children capacity is > 0 (none live: 1065/1067/1069/1071/1740/1742 = 4/0/4,
+  1604/1607 = 2/0/2); "Base price" → **"Stay total before fees & taxes"**
+  (Rob corrected an earlier "Nightly rates…": the amount is per stay). The
+  search form, including Children, is untouched.
+  - **Scope, by MotoPress's own hooks**: the template
+    `templates/create-booking/results/reserve-rooms.php` (read VERBATIM by the
+    Director on live 6.3.0; the test renders a copy of it) fires
+    `mphb_cb_reserve_rooms_form_before_start` and `…_after_end` around the
+    form. Only between them, only on `page=mphb_add_new_booking&step=2` in
+    wp-admin, is the output buffered and rewritten. **No gettext filter of any
+    kind** — 'Capacity' is MotoPress's word in Google Hotels data, the
+    room-type editor and the accommodation list; asserted.
+  - **All or nothing**: every table must have exactly MotoPress's four
+    headings, every row must match (checkbox naming its room type, the
+    "Adults:&nbsp;N Children:&nbsp;M" cell AGREEING with that room type's own
+    capacities), or the whole form is printed exactly as drawn. Matched on
+    MotoPress's strings AS TRANSLATED, so a translated site still matches.
+    Constructed: unreadable room type, disagreeing cell, total 0, a fifth
+    column, one changed table beside a normal one, one odd row beside a
+    normal one, a foreign table — each leaves the form byte-identical.
+    Mutation `res-head-unmatched` SURVIVED at first: every "changed heading"
+    case changed EVERY table, where skipping one and refusing all look the
+    same; the mixed case (one changed, one normal) is what tells them apart.
+  - **0.30.2 — HEADINGS IN ROB'S WORDS** (2026-10-07, after 0.30.1 passed
+    live): the capacity column is headed **"Capacity"** again — MotoPress's
+    OWN heading, left byte-for-byte as it prints it (not re-printed under
+    `dcc-checkout`), so a translated site keeps MotoPress's translation — and
+    the price column reads **"Total (minus taxes/fees)"**. "Sleeps up to" and
+    "Stay total before fees & taxes" are gone (LocoTranslate will list them
+    obsolete). Cells unchanged. **Consequence: the Capacity heading no longer
+    distinguishes "relabelled" from "left as drawn"** — the CELLS do (no
+    "Adults:" in a recognised table) plus the price heading. Recognition
+    still requires all four of MotoPress's headings. Asserted on the cells;
+    mutation `res-cells-not-rewritten` (recognise, count, but leave the cell)
+    must go red.
+  - **0.30.3 — EVERY ROW IS COUNTED, HOWEVER ITS TAG IS WRITTEN** (self-audit,
+    2026-10-09; reproduced before fixing). The row total counted bare `<tr>`
+    only, and the row pattern matches bare `<tr>` only, so a row written
+    `<tr class="…">` was neither matched NOR counted: the table passed the
+    all-or-nothing check and was relabelled around one row left in MotoPress's
+    wording. Now `<tr\b` (any case) is counted, so such a row refuses the whole
+    table. Latent — the live template (Director's verbatim read) uses bare
+    `<tr>` — but a MotoPress update or a theme template override could change
+    that, and **only SSH can say whether the theme overrides
+    `create-booking/results/reserve-rooms.php`**. Mutation
+    `res-row-count-bare-tr`.
+  - The rendered markup (Director, K) has `&nbsp;` in the cell and the price
+    as `<span class="mphb-price">`; the price cell is never touched. The
+    browser suite REPRODUCES only WordPress's `.widefat`/`table.fixed` rules
+    (core admin CSS is not available here) — the Director's read-only look at
+    step 2 is the real check.
+- **0.31.0 — THE BOAT / TRAILER CHECKOUT FIELD** (owner's picks A–D,
+  2026-10-10; `Boat_Field`, suite `tests/boat/run.php`). A NATIVE Checkout
+  Fields field this plugin creates ONCE; MotoPress renders and saves it on the
+  checkout, Add New and the edit screen. **The Availability Calendar depends
+  on the contract**: post_title "Bringing a boat or trailer?", `mphb_cf_name`
+  `boat`, type `select`, options blank / No / Yes, required 0, enabled 1;
+  MotoPress stores the answer as booking meta `mphb_boat`
+  (getCustomFields()['boat']). Every value is copied from the Director's RAW
+  read of Dog Size (17727) on live: the full `mphb_cf_*` key set, and
+  `mphb_cf_options` as a PHP array of `['value','label']` rows — the add-on
+  1.2.3 reads it with `get_post_meta(…, true)` and uses it only `if
+  (is_array())`, so JSON would be an EMPTY dropdown with no error (the brief
+  first showed it as JSON; the CLAUDE.md entry above was right). Label = the
+  post_title (`mapPostToEntity()`); no definition cache in the add-on.
+  - **Created once, never recreated** (C): on an administrator's admin page
+    load (never AJAX), with the add-on active. A marker option
+    `dcc_checkout_boat_field` records the run, and while it exists nothing
+    runs — no query at all. A field named `boat` in ANY status, trash
+    included, is ADOPTED untouched. The claim is `add_option()` of the marker
+    BEFORE anything is written; a failed insert releases it. **A request that
+    dies after the claim and before the record leaves `state => creating`
+    for good** — then nothing more happens; the Director can read the option.
+  - **Position** (A, which overrides the brief's "never renumber"): live had
+    upload_id 14 and dog_type 15, no gap, and the add-on's order for TIES is
+    unknown, so renumbering is the only proven way. Only in the creating
+    request, and only if Photo ID is still directly before Dog Type with
+    nothing between: boat takes 15 and every field at 15+ moves down one
+    (dog_type…guest4_last_name → 16–23), each move recorded `{id,name,from,to}`
+    in the marker. A gap → boat takes it, nothing moves. Anything else (Rob
+    reordered, a field missing) → boat goes LAST, nothing moves. Positions are
+    written with `$wpdb->update` on menu_order + `clean_post_cache`, never
+    `wp_update_post()` (that fires every save_post handler); meta is written
+    AFTER `wp_insert_post()` so a save_post handler cannot override it.
+  - **Where it renders on the checkout** (measured in `tests/breakdown`):
+    `checkout.js` moves the dog rows into the "Pet Information" section placed
+    straight after the customer details, and the guest 3/4 rows into their own
+    sections, and `note` is disabled on live — so boat is the LAST field in the
+    customer details, after Photo ID, with Pet Information (Cottage 34)
+    directly below. `checkout.js` knows nothing of it and was not changed.
+  - **WP-Admin**: group `boat`, "Boat / trailer", after Dog, before Note in
+    `customer_layout()`. Nothing in the gating governs it, so it shows on every
+    booking — asserted with Guest 2 and Dog both hidden around it.
+  - **NOT verifiable here**: that MotoPress saves the answer on an imported
+    booking's edit screen, and that getCustomFields()['boat'] returns it — both
+    are MotoPress's code. Rob checks both on staging (D).
+- **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
+  spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
+  a full-width blue pill inside the price breakdown — measured at
+  `rgb(0, 107, 207)`, 30px radius, before it shipped. The class is what the
+  spec excludes; the tax asterisk carries it too, replacing an
+  exclusion-by-name repeated in three selectors. **Add the class, never another
+  `:not()`.** Asserted in `tests/fields/`.
+- **EVERY DOM write in `checkout.js` is idempotent** (v0.18.0): `addClass`,
+  `removeClass`, `setClass`, `setAttr`, `setText`, and "decide the set first,
+  then write only the difference" for anything that used to strip a class from
+  every row and add it back. Never call `classList.add/remove/toggle`,
+  `setAttribute` or `textContent =` directly on an existing node — a no-op
+  `classList.add` still queues a MutationRecord per spec. Why it matters: the
+  pipeline's no-op re-run produced 42 records on the fixture (35 changed
+  nothing) and ~100 on the live page, mid-tap, in every tap-log round, on
+  inputs and on the expander alike; iOS decides click-vs-hover by watching for
+  content changes around a tap. **A no-op re-run now records ZERO mutations and
+  `tests/breakdown` fails on one.** That test is the guard; keep it.
+- **The observer never installs a timer during a touch** (v0.18.0). WebKit
+  tracks DOM timers installed while handling a touch and watches what they do.
+  While `fingerDown`, the MutationObserver callback only sets `onTouchUp`; the
+  touch-up handler schedules the run 450ms later. Asserted.
+- **The restructure pipeline never runs while a finger is down** (v0.17.0).
+  `observeReRenders()` holds while a touch is live and for 400ms after it
+  lifts, on a 500ms debounce (was 150ms). Evidence: every press in tap-log
+  rounds 3 and 4 that carried the pipeline's ~100-attribute burst mid-tap
+  failed, 6 of 6. **Any new work scheduled off that observer must respect the
+  same gate** — `touchSettling()`.
+  **The guarantee is recovery on the next touch-up, NOT a wall-clock ceiling**
+  (corrected by audit, 2026-09-18). This entry used to claim a 3s ceiling made
+  starvation impossible; it did not. The ceiling is only read inside `run()`,
+  and `run()` only fires from a timer — exactly what is not installed while a
+  finger is down. Measured: with a touch-up that never arrived, deferred work
+  sat unrun for five seconds and counting. Every pending form now registers a
+  checker in `touchUpChecks`, asked on each touch-up by name rather than
+  through one shared slot the last deferral happened to own. That is
+  sufficient — the pipeline always runs once directly at init, so a stranded
+  deferral only leaves the most recent MotoPress re-render in MotoPress's own
+  shape. **Do not "restore" a ceiling by installing a timer during a touch**;
+  that is the thing v0.18.0 removed.
+- **(v0.16.0, superseded but still in force) The expander is not a hyperlink.**
+  `hardenTapTargets()` removes its `href` (kept in `data-dcc-href`) and gives
+  back `role="button"`, `tabindex="0"` and Enter/Space activation. iOS arms its
+  link recognisers on the HREF, not on the tag. MotoPress's handler is
+  delegated on the class (`mphb.js:1446`) so it still fires, and its own
+  `preventDefault()` shows the href was never navigated. **Do not "restore" the
+  href as tidy-up**, and if the expander is ever rebuilt, keep the re-run from
+  the MutationObserver — a rebuilt anchor comes back as a link.
+- **Round 4 killed the timing hypothesis** (v0.16.0). With 0.15.0's gesture
+  hints installed the expander clicked twice at 82ms — in round 3 nothing above
+  27ms ever had — but still lost taps at 63ms, 79ms and 81ms. A 63ms failure
+  beside an 82ms success rules out any duration threshold. **The live lead is
+  now sticky `:hover`**: round 4's two successes were each the SECOND tap of a
+  pair. The round-5 diagnostic reads `el.matches(':hover')` at touchstart to
+  settle it. If that is the mechanism, the hover rule responsible is NOT one of
+  this plugin's (all of ours are gated behind `hover: hover`) — look at the
+  theme and at MotoPress's own CSS.
+  **Eliminated on the live page (measured 2026-09-17 — do not re-chase):**
+  Bravada's document `mousemove` is never bound here (`mousedir()` returns
+  unless `<body>` has `.bravada-landing-page`); this plugin's only `mouseenter`
+  is on the asterisk and gated by `pointerHasHover()`; the served 474KB bundle
+  AND the 17 inline `<style>` blocks (the Elementor kit is inline, not in the
+  bundle) contain exactly two ungated hover rules that can match the anchor
+  chain — `a:hover{color:#000}` and `a:hover,a:active{outline:0}` — with no
+  transition on it; no Elementor hover/motion settings are stored on the
+  container or the widget; no focus handlers in `checkout.js` or `mphb.js`; and
+  SpeedyCache's instant.page (document-level mouseover + touchstart, treating
+  `href="#"` as prefetchable) was switched off site-wide by the owner on
+  2026-09-16 and is gone from the served page.
+  **Unconfirmed hypothesis, labelled as such:** WebKit's iOS content
+  observation — a synthetic mousemove precedes the click, and if content
+  changes, a transition starts, or a short DOM timer is installed during it, no
+  click is dispatched (webkit.org/blog/5610). It fits the alternation and the
+  button's immunity, and v0.17.0's pipeline hold targets it — but it is NOT
+  confirmed on this site, and round 4's press 6 (failed, no mutation burst,
+  colour-only hover) is not explained by it or by anything else found.
+  **SpeedyCache serves a stale bundle after every install.** It handed out
+  0.15.0 after 0.16.0 shipped, and did the same a release earlier. Purging is
+  part of every install now — a log that disagrees with the source may simply
+  be the previous build.
+- **Every tap log must identify its own build.** Round 4 arrived with no
+  version and could not be attributed without asking, which cost a round. The
+  diagnostic now stamps `DCC_CHECKOUT_VERSION` in its header and records, per
+  press, whether the touched element is still a link, its `draggable` state and
+  its computed `touch-action`. Presses are numbered and the 900ms verdict line
+  names its own press — it fires on a later press's clock, which is why round 4
+  appeared to say "+5ms NO CLICK".
+- **The published standard is the source of truth, and it drifted once.**
+  Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
+  injected pet fields, while `Custom Checkout - Field Standard.css` — which is
+  generated from it and is the standard for the other two plugins — declared
+  the full pill for text inputs too. MotoPress's own First Name / Address /
+  Apartment fields were therefore sized by the THEME for several releases.
+  **After editing either file, diff the two.** Three of those declarations are
+  load-bearing, not cosmetic: `width: 100%` (a field narrower than its wrapper
+  leaves a dead strip that looks tappable and is not), `min-height: 44px`, and
+  `font-size: 16px` — **under 16px iOS Safari zooms the whole page on focus**,
+  which moves everything under the finger.
+- **Nothing on the checkout may write layout on a bare `resize` event.** On iOS
+  `resize` fires when the URL bar collapses during ordinary scrolling.
+  `matchFileFieldWidth()` did exactly that on a 150ms debounce, landing just as
+  the page settled and the guest tapped. It now ignores height-only resizes and
+  skips no-op writes. Any new resize handler must do the same.
+- **MOBILE MULTI-TAP: CLOSED (v0.18.0, confirmed on the owner's phone
+  2026-09-17).** Round-6 log, build stamped 0.18.0: 8 of 8 stationary presses
+  clicked on the first tap — the breakdown expander (which had failed 15 of 18
+  across rounds 1–4), three text inputs, empty space, and the asterisk four
+  times, at 42–61ms. The only three presses without a click travelled
+  100–180px and were correctly cancelled as scrolls. Mutations mid-tap fell
+  from ~107 to exactly the diagnostic's own log lines (4 per press; 5 on the
+  press that also logged a MISSED line; 3 on one cancelled before touchend) —
+  the plugin contributes zero.
+  **The two changes that fixed it, and they are both load-bearing:**
+  (1) v0.17.0 — the expander is a real `<button>` (bare-control class, no
+  keyboard handler); (2) v0.18.0 — every DOM write is idempotent, so a
+  pipeline re-run with nothing to do records ZERO mutations, and the observer
+  installs no timer while a finger is down. **Neither may be "simplified"
+  away; the zero-mutation assertion in `tests/breakdown` is the guard.**
+  Mechanism, now supported rather than hypothesised: iOS content observation —
+  the page was rewriting ~100 attributes on a 150ms timer after every
+  breakdown change, which landed inside the next tap and read to Safari as
+  hover-revealed content, so no click was synthesised. That also explains the
+  round-4 fail→success alternation (a successful toggle scheduled the burst
+  that killed the following tap) and the button's apparent immunity (its own
+  handler never re-rendered the breakdown). `ALREADY :HOVER` was logged on
+  every press in round 6, including all eight successes, so sticky hover is
+  ruled out as the cause.
+  The diagnostic (`?dcc_tap_debug=1`) stays — admin-only, flag-gated, zero
+  cost — as the instrument for any regression.
+  *History follows, kept for the record.*
+- **Mobile multi-tap: cause partly identified (v0.13.0).** Gating the hover rules (v0.11.0) fixed
+  desktop and did not fix mobile, so sticky hover is not the whole cause. Two
+  in-plugin candidates were tested in v0.12.0: a self-feeding MutationObserver
+  loop was refuted, and the tax asterisk's 44x44 box was measured overflowing
+  its 20px row by 12px each way (real, but its neighbours are static text, so
+  not the page-wide cause). The untested lead is Elementor's two delegated
+  document-level click handlers bound to `a, [data-elementor-lightbox]`
+  (frontend.js:1102 and :1254) — but the owner's own enumeration came back
+  NEGATIVE: /submit-booking/ and /cottages/ carry identical document- and
+  body-level click handlers, so there is no extra handler on the misbehaving
+  page. What his tap log did establish: nothing intercepts clicks (no
+  defaultPrevented anywhere, every click that fired reached the document) — the
+  browser is not GENERATING the click. The dead-strip defect above explains the
+  lost taps that landed on a wrapper; it does NOT explain three stationary taps
+  on an input that produced no click. Still open, and the round-2 diagnostic
+  measures the remaining candidates directly (page movement, page zoom, node
+  replacement mid-press, Places' pac-container).
+  **What round 2's log established (v0.14.0).** The page does NOT scroll during
+  a press — every press reported `page still`. What moves is the VIEWPORT: the
+  iOS URL bar swings it 108px (393x665 / 393x712 / 393x773), and every
+  pointercancel press contains one of those resizes. One press measured
+  `MISSED input#mphb_first_name ... off by 0px x, 39px y` — dead on
+  horizontally, 39px out vertically. Three of six failures in that log are the
+  URL-bar resize. The other three are not: two were clean stationary presses
+  that produced no click at all, one of them with 90 mutations. Those three are
+  what is still unexplained. Baseline measured on the live page: 0 mutations at
+  rest and while scrolling, 1 per `resize` (Elementor writing
+  `data-elementor-device-mode` on `<body>`).
+  **Two reading errors the logger itself introduced, fixed in round 3:** iOS
+  splits one tap into a touch block and a synthesised mouse block ~300ms later,
+  and round 2 opened a new press for the second half — so the verdict line
+  fired hardest on the taps that WORKED. And `<body>` is an ancestor of
+  everything, so Elementor's attribute write counted as churn on every touched
+  path. Read any round-2 log with both in mind.
+- **A TEST WRITTEN FROM THE SAME BELIEF AS THE CODE CANNOT DISAGREE WITH IT.**
+  Named as its own rule (owner, 2026-09-18) because it is the failure the seven
+  suites here are structurally blind to: they were all green through every
+  defect listed below. The shape is always the same — a guarantee stated in
+  prose, code that does not provide it, and a test that asserts the INTENT
+  rather than constructing the CONDITION the prose names.
+  **The check: for every "never", "always", "cannot", "at most" or ceiling in
+  a comment or in this file, find the test that creates that case. If the only
+  test is the happy path, the claim is unverified prose, however many
+  assertions surround it.** "Cannot be starved" is only tested by constructing
+  starvation; "bounded" is only tested by an absurd input.
+  Worked examples from this repo, each of which shipped green:
+  - The 3s ceiling (v0.23.1) is the sharpest. The reason it could never fire —
+    `run()` only enters from a timer, and the `fingerDown` branch deliberately
+    installs none — is visible in four lines and went unread for six versions,
+    because the test asserted that deferred work runs after a touch-up, which
+    is the case the ceiling does not cover. Measured once written the right
+    way round: five seconds and counting, unrun.
+  - The option range (v0.23.1): asserted at capacity 4, never at a corrupt
+    9999 from the database.
+  - The expander's colour (v0.22.0): asserted throughout, against a fixture
+    still holding the `<a>` the code had stopped producing.
+  - The field standard (v0.13.0): the export was diffed against nothing, and
+    drifted from its source for several releases.
+  A fixture copied from the code's own assumptions is the same error one level
+  down — hence the v0.9.0 rule that fixtures come from real markup.
+- **AN EXIT CODE IS NOT A TEST RESULT** (rule named by the owner, 2026-09-19;
+  full write-up in `tests/mutate/README.md`). **Any runner that infers "the
+  assertion failed" from "the process failed" reports a broken harness as proof
+  that it works** — a crash, a syntax error, a missing dependency and a real
+  failure all exit non-zero. Same family as the rule above: a signal that cannot
+  tell success from absence of measurement.
+  This runner had exactly that fault (`p.returncode == 0`) and it cost real
+  coverage. Measured: with `tests/footnote/node_modules` moved aside a mutation
+  was reported KILLED by a suite that ran zero assertions; and
+  `js-form-ceiling-ALL` left `checkout.js` with **unbalanced braces**, so every
+  suite crashed on parse and it was reported KILLED **for five days** — meaning
+  *"a service row can never be the form"*, the defect that once blanked the whole
+  checkout, had no evidence behind it. **The same fault had been seen here four
+  days earlier** (two Chromium suites crashing on `require('playwright')`) and
+  only its trigger was fixed, not the mechanism.
+  **On the fixed runner the count did NOT hold: 49 killed, 1 HARNESS.** It holds
+  at 50/50 only after re-targeting that one mutation
+  (`js-form-ceiling-none`, which kills honestly). Say it that way round.
+- **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
+  `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
+  alone. It applies one textual mutation, runs the suites that claim to cover it,
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 189
+  mutations, 189 killed, 0 of everything else, exit 0, in ONE run (2026-10-10,
+  v0.31.0; seventeen suites). At v0.30.3, 175; at v0.30.2, 174; at v0.30.1, 173.
+  0.31.0's first boat-only run was 10 killed + 2 SURVIVED + 1 HARNESS: the
+  marker check and the creation claim each covered the other, so neither was
+  isolated until a "no query after the run" test and a constructed race were
+  added; the HARNESS was the suite missing a `wp_json_encode` stand-in. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
+  search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
+  retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
+  on the retired cottage-gating path above, which was dead code, so the code
+  went and the two mutations with it. Its second was 120 + 1 SURVIVED:
+  removing that code made `js-adults-includes-dcc` an equivalent mutant (see
+  the 0.28.0 entry), so it was retired too, and the third run is the count. It read 50 here through three rounds that took it to
+  75 — a count in prose is a claim that goes stale silently. 0.26.0's first full
+  run was 88 + 4 STALE: four `g34-*` mutations aimed at the line the hook
+  removal rewrote. Re-anchored with their intent unchanged, then re-run whole.
+  A suite's outcome is read from what it PRINTED: `FAIL` lines kill, no
+  PASS-or-FAIL line is `NO RUN`, a missing script is `NO SUITE`, and both of
+  those become **HARNESS** — not red, and they fail the exit code. A mutated file
+  is syntax-checked (`node --check` / `php -l`) before any suite runs; a file
+  that does not parse is **INVALID**, which is what now catches the brace bug
+  automatically. A **baseline preflight** runs every suite unmutated first and
+  stops the run if one is not green, because after that every mutation looks
+  killed — and it prints the suite files on disk beside the suites executed, so a
+  suite that exists but was never wired up is visible.
+  **STALE IS NOT A PASS** and is printed as loudly as SURVIVED: it means the
+  find-string did not match, or matched a different number of times than
+  declared, so the mutation never landed and proves nothing. Half the first
+  run's apparent "gaps" were bad mutations, not gaps — a mutation aimed at a
+  fallback branch the fixture never reaches (`setAttr(el,'type','button')` at
+  checkout.js:2544 rather than the real `btn.type` at 2518), and two defeated by
+  a second guard downstream (the FORM name-check is backed by the
+  contains-breakdown check; `rowLabel()`'s injected-node skip is backed by the
+  asterisk retirement pass). **Check the mutation before believing the verdict.**
+  Two STALE results were themselves findings: "pattern found 2x" is how the
+  four-copies-of-the-bucket-logic discovery below was made.
+- **THE BUCKET LOGIC SHIPS IN FOUR COPIES, TWO LANGUAGES** (found 2026-09-19).
+  `Config::service_id_for_nights()` ↔ `serviceForNights()` for the pet fee, and
+  `Config::guest_service_id_for_nights()` ↔ `guestServiceForNights()` for the
+  $50 extra-guest fee. Each pair carries its own "Mirrors … — keep the two in
+  step" comment and **nothing enforced it.** `tests/pricing/` now does:
+  `mirror.js` EXTRACTS both functions from the shipped `checkout.js` and runs
+  them against a table PHP produced, so a copy is never made (a copy would be a
+  fifth implementation to keep in step). A renamed function FAILS the extraction
+  rather than skipping it — asserted. Thresholds are localized
+  (`class-assets.php:303`), so the JS fallback `{2,7,30}` can only bite if
+  localization fails, and it matches PHP's own fallback; checked, sound.
+- **THE EXTRA-GUEST SERVICE IDS DEFAULT TO 0**, and that made the first draft of
+  `tests/pricing/` eight green tautologies (0 == 0 at every night count) — the
+  exact failure this file's rule names, committed by the sweep that was looking
+  for it, and caught only because the mutation runner killed nothing. The suite
+  now SEEDS distinct ids (901/902/903) so a wrong bucket is visible in the value.
+  **The defaults are a test-harness trap, NOT the live configuration.** My sweep
+  report claimed the extra-guest service IDs "sit at their shipped 0" — **that
+  was never true of live**, at any point; all three buckets have pointed at 18063
+  throughout. Corrected from live 2026-09-19. Measured in
+  `dcc_checkout_settings`:
+  - `guest_service_daily` / `weekly` / `monthly` are **all 18063**, and 18063 is
+    "Extra Guest Fee (per guest beyond 2)", published, `mphb_price = 50`. **The
+    fee attaches and does charge $50.** The stored settings override the shipped
+    defaults, so the defaults never come into it.
+  - `guest_accommodations` = `[1071,1069,1067,1065,1740,1742]` — the six
+    capacity-4 cottages, as expected.
+  - `guest_fee_amount` was **0.0 and is now 50** — changed on live 2026-09-19
+    with the owner's approval, backup option
+    `dcc_bak_checkout_settings_20260919`. **So `guest_fee_steps()` returns steps
+    for the first time, `guestFeeAmountText` is "$50", and the two-line
+    "$50/night / x N guests" detail built to the v0.19.0 spec renders for the
+    first time.** It had never rendered before, which is worth knowing when
+    reading any earlier screenshot.
+  While the amount was 0 this was a gap and not a defect, because
+  `guest_fee_steps()` returns `[]` when the amount is unknown — the guest was
+  told **nothing** rather than "$0.00", which is the right direction to fail.
+  The `$expected`-is-0 consequence no longer arises for the amount, but the
+  shape is worth keeping in mind: `Extra_Guest_Service`'s backstop *fails open*
+  when `$expected` is 0 (`$can_expect = $nights > 0 && $expected > 0`), so a
+  configuration that stopped resolving a service would go unnoticed rather than
+  blocking a booking.
+- **"NEVER REDIRECT DURING AN AJAX SUBMISSION" IS TESTED NOW, IN ALL FOUR FILES
+  THAT CLAIM IT** (`tests/backstops/`, added 2026-09-19). The sentence appears
+  in `class-pet-service.php:54`, `class-guest-fields.php:35`,
+  `class-extra-guest-service.php:43` and `class-checkout-request.php:307`; a 302
+  mid-AJAX loses the guest's booking with no message, and **nothing tested any
+  of them.** They are separate code paths, not shared, so one test would have
+  left three sentences unbacked. `wp_safe_redirect` is shimmed to throw, which
+  makes the attempt observable and survives `exit`, so the assertions really
+  distinguish "redirected" from "stood down". The REST stand-down
+  (`defer_to_rest()`) had no test at all and now covers all three URL forms —
+  plus the inverse, that an ordinary checkout URL is NOT mistaken for the REST
+  route, because over-matching would silently disable every backstop.
+  **Every stand-down suite needs its guard-on-the-guards**: the assertion that
+  the payload really is a violation. Without it, "no redirect" passes because
+  nothing was ever going to redirect — and `php-violation-detector-dead` in the
+  mutation set is what keeps that honest.
+- **`--dcc-required` IS DEAD FOR `.dcc_checkout-req`** (found 2026-09-19; no
+  behaviour change, so deliberately not "fixed"). Two `!important` rules at the
+  same (0,2,0) specificity both match it — `checkout.css:609` via
+  `var(--dcc-required)` and `:639` via `var(--dcc-error)` — and the later one
+  wins on source order. Measured: setting `--dcc-required` to `#c62828` leaves
+  the marker at `rgb(188,0,62)`. The outcome is right today because both tokens
+  resolve to the same literal, but **the token indirection does nothing for
+  this element**, and a future editor changing `:609` would move MotoPress's own
+  `.required` markers and not the plugin's. `tests/fields/` now measures an
+  `abbr.required` too, which is the only element `--dcc-required` really paints,
+  so the "one ink cannot drift" claim is under test at last.
+- **A FIXTURE THAT CARRIES ONLY THE FALLBACK SELECTOR TESTS THE FALLBACK.**
+  Every field wrapper in `tests/fields/fields.html` carried MotoPress's
+  `p.mphb-text-control` — the no-JS fallback — and none carried
+  `.dcc_checkout-field-row`, the class `markFieldRows()` actually applies on the
+  live page. So the selector the live site depends on had no test, and a rename
+  on either side would be masked by the fallback until MotoPress changed its own
+  class, at which point nothing would hold the cap. The fixture now carries a
+  wrapper with the JS class and NOT the fallback.
+- **THE JSDOM `visible()` PROXY IS NOW PINNED IN A REAL BROWSER.**
+  `tests/breakdown/` has no layout, so it reads hide-class NAMES as a stand-in
+  for `display:none`. Nothing checked the stand-in was true: rename a class on
+  either side and the jsdom suite would go on reporting things hidden that a
+  guest can see. `tests/fields/` now asserts all three compute to `display:none`.
+  The helper was also missing `dcc_checkout-option-hidden` — the third class the
+  code emits — so a hidden `<option>` would have been reported VISIBLE.
+- **`setDisabled()`'s money guard is tested directly now**, because the outcome
+  assertion could not fail: `setDisabled()` has exactly ONE caller
+  (`checkout.js:1489`, the dog fields) and it never passes a service control, so
+  "the SERVICE checkbox is never disabled" held with the guard deleted. Measured:
+  `return false` in `isMoneyControl()` left the suite green. Both functions are
+  extracted from the shipped file and driven directly — including that a money
+  control can still be RE-ENABLED, since a guard that trapped one in `disabled`
+  would stop the fee submitting, which is the thing it exists to prevent.
+- **THE TWO FEES ARE NOT THE SAME SHAPE, AND THAT IS WHY BUCKET EXCLUSIVITY IS
+  LATENT** (measured from live, 2026-09-19). The PET fee uses **three DISTINCT
+  services** — `service_daily` 17712 / `weekly` 17711 / `monthly` 14926 —
+  because the rate genuinely varies by length of stay (the owner confirmed it
+  does on Cottage 34). The EXTRA-GUEST fee points all three buckets at the
+  single service 18063. So a pet bucket bug is observable in the ID and an
+  extra-guest one is invisible by construction.
+  **Do NOT "fix" the extra-guest buckets to match the pet pattern.** A flat $50
+  regardless of stay length may be exactly what the owner wants; he is being
+  asked, and until he answers the single-service config is to be treated as
+  deliberate. `tests/pricing/` is correspondingly stronger for the pet fee than
+  for the extra-guest fee, and the seeded 901/902/903 ids exist so the
+  extra-guest boundaries are testable at all.
+- **Known gaps, named rather than papered over** (2026-09-19). Each is a
+  behavioural guarantee in a comment with no test that constructs its condition:
+  `checkout.js` — "at most ONE bucket checked per room" (:1510, money; latent
+  because all three extra-guest buckets are the same service, per the entry
+  above, so a double-charge cannot currently arise); "a re-render can never stack suffixes"
+  (:1637); "idempotent per (select, kind) so re-asserts never stack duplicates"
+  (:2042); "a height-only resize can never change the answer" (:1867, and that
+  one is mobile-behaviour-adjacent, so it matters more than it looks).
+  **Closed 2026-09-27:** "we only DISABLE existing options — never inject any"
+  (`capAdultsSelects()`) is now constructed in `tests/breakdown/` — option count
+  pinned, mutation `js-feeoff-cap-injects`. `class-settings.php` is no longer
+  suite-less: `tests/settings/` covers the sanitiser and the guest preview; the
+  rest of the page's rendering is still untested.
+  Whole files with no suite at all: `class-assets.php` (418), `tap-debug.js`
+  (450). (`admin-booking.js` and `class-admin-fields.php` gained
+  `tests/admin-layout/` in 0.26.0 — the layout and, through it, the gating's
+  hide/show per cottage and sticky values; 0.28.0 added the guest-count and
+  pet gating, and the Extra Guest Fee slaving in `syncExtraGuestFee()` —
+  tick, multiplier, fee line — is now tested against a stand-in breakdown.) The fail-open family — `class-config.php:493-495`
+  ("callers MUST treat null as unknown and fail open"),
+  `class-admin-fields.php:30-31`, `admin-booking.js:302/357` — is untested
+  everywhere it is claimed.
+- Pet-fee and extra-guest bucket selection, in PHP and in the JS mirror, are at
+  `tests/pricing/` (`php tests/pricing/run.php`; it shells to node for the
+  mirror and FAILS rather than skipping if node is absent).
+- The server-side backstops' stand-down rules are at `tests/backstops/`
+  (`php tests/backstops/run.php`).
+- The Guest 3/4 switch is at `tests/guest34/` (`php tests/guest34/run.php`). It
+  **posts the fee with the switch off and requires a refusal** — the never-claim
+  needs the case constructed, and a test that only checked the field was absent
+  from the rendered form would be the happy path. Mutations run in **both
+  directions**: "off does nothing" and "on does nothing" are different bugs and
+  one assertion catches neither.
+- Field geometry (tap targets) is asserted in real Chromium at 390x844 with
+  touch emulation, and the width cap at 1280, at `tests/fields/`
+  (`npm install && npm test`). Run it after touching any field rule.
+- The tax footnote's width behaviour is asserted at `tests/footnote/`
+  (`npm install && npm test`).
+- Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
+  (`npm install && npm test` there). Run them after touching
+  `restructureBreakdown()` or anything else that moves a figure on the
+  checkout — that code decides what a guest is told they owe.
+- **THE DOCUMENTED "UPGRADE DEFAULTS DON'T MERGE" TRAP DOES NOT APPLY TO THIS
+  PLUGIN** (established 2026-09-24, not assumed). The trap — a new version's
+  defaults not reaching an already-stored option row, so new features look
+  switched off — is real elsewhere (Seasons 4.0.0 hit it). Here
+  `Config::settings()` is `array_merge(self::defaults(), $saved)` **at READ
+  time, on every call**, so a row stored by any older version picks new keys up
+  immediately. `tests/settings/` constructs a pre-0.25.0 row containing none of
+  the new keys and asserts they read as defaults; a mutation reversing the merge
+  direction, and another removing it, both go red. **Direction matters**: saved
+  values must win over defaults, including a stored `0`, or every read would
+  silently undo the owner's settings.
+- **THE ADVANCED SETTINGS ARE CLAMPED, AND ONE CEILING IS NOT CONFIGURABLE**
+  (v0.25.0). Four literals became settings — `included_guests` (2),
+  `guest_fee_steps_max` (8), `admin_guest_fallback` (8), `admin_guest_max` (20)
+  — each defaulting to the value the code already used, asserted BY VALUE
+  because a silent behaviour change on a checkout is a lost booking.
+  `Admin_Guests` clamps `admin_guest_max` with its own `MAX_OPTIONS` constant
+  (`min(setting, 20)`), so **a setting can only ever shrink that range**: it
+  drives an `<option>` loop partly fed from `mphb_adults_capacity`. Bad input on
+  any of the four falls back to its DEFAULT, never to 0 and never to the posted
+  value. A mutation removing the clamp SURVIVED at first — the guarantee was
+  only exercised at the default setting, where it makes no difference — so the
+  suite now seeds the setting ABOVE the ceiling, which is the only way the clamp
+  is observable.
+- **`included_guests` FLOORS AT 1; ZERO IS A BOOKING OUTAGE, NOT A
+  CONFIGURATION** (v0.25.1, found by self-audit of v0.25.0 before it was
+  installed). v0.25.0 exposed the value and its sanitiser accepted 0 as
+  "coherent" — with a test asserting exactly that. It is not: at 0,
+  `Extra_Guest_Service`'s inactive branch refuses every room with
+  `adults > included` (every booking, while the Guest 3/4 switch is off), and
+  the non-guest-accommodation cap refuses every booking on Cottages 33/34
+  regardless; `checkout.js` meanwhile treats 0 as "unset" and uses 2, so PHP
+  and JS would disagree about who is charged. The floor is in BOTH the
+  sanitiser and `Config::included_guests()` (`max(1, …)`), because a filter
+  bypasses the sanitiser. `tests/guest34/` constructs the outage — drives the
+  accessor to 0 through its filter and asserts a one-guest booking still passes
+  on both paths. **The wrong test was the tell**: it encoded the belief rather
+  than the condition, and the rule at the top of this list would have caught it
+  if it had been run against the new code before shipping. Run it against your
+  own additions, not only the existing ones.
+  **The couch note is gated on `included_guests === 2`**
+  (`Config::offered_couch_note()`, which `Assets` reads). `couch_note_text()`
+  is a hash-pinned literal that says "Guests 1-2 are included" and cannot
+  follow the setting; now that the setting is on the admin page, any other value
+  would put a falsehood in front of a paying guest. Empty means the JS renders
+  nothing (it already tests `!I18N.couchNote`). The hash pin stays on the
+  literal; the gate is a separate method precisely so it can be tested.
+  **Render check, done properly**: 26 default keys, 23 rendered by a `*_row(`
+  call, 2 (`pet_accommodations`, `guest_accommodations`) rendered as dynamically
+  named checkbox sets, 1 (`min_daily`) **deliberately dormant** since 0.3.5 —
+  "no longer consulted", so exposing it would mislead. The "22 of 23" in the
+  v0.25.0 report came from a single-line regex that could not see multi-line
+  `*_row(__(...), 'key'` calls; it was wrong in both numbers.
+- **A SETTING MUST REACH ITS CONSUMER — STANDING RULE ACROSS ALL DCC PLUGINS**
+  (named by the owner's courier 2026-09-26, after three other plugins were
+  found the same week with settings nothing reads). A knob that is registered,
+  rendered, sanitised and stored, but never read on the path that matters, is
+  worse than no knob: it looks wired up. Two instances caught in this plugin
+  before shipping, both by following the call chain rather than the diff:
+  `offered_guest_fee_steps()` hardcoding `8` (the CHECKOUT path) while
+  `guest_fee_steps()` honoured the setting, and the `admin_guest_max` clamp
+  that only made a difference at a value the default never reached. **The
+  check, for every new setting:** name each reader, confirm the value on the
+  guest-facing path is the one the setting produced, and add a mutation that
+  makes the setting inert — it must go red. Mutations
+  `cfg-offered-ignores-setting` and `ag-ceiling-raisable` are the two pins.
+  **v0.25.2 is installed and verified on live (2026-09-27)** — version, checkout
+  loads, no console errors; a booking cannot be placed to test further. Both
+  fixes accepted.
+  **v0.25.1 is installed and accepted on live (2026-09-26)**: the floor of 1
+  in both the sanitiser and `Config::included_guests()`, and the couch-note
+  gate. Keep `min_daily` unexposed. First-tap behaviour on the owner's iPhone
+  remains his to verify, not this repo's.
+- **TWO KNOBS WERE DELIBERATELY NOT EXPOSED**, against a general "expose
+  everything tunable" instruction (v0.25.0, stated in the report rather than
+  silently omitted):
+  - **The tap-handling timings** in `checkout.js` (500ms debounce, 400ms touch
+    settle, 450ms schedule). These ARE the v0.18.0 three-tap fix. Exposing them
+    would mean editing that path and handing an admin screen the ability to
+    reintroduce a bug that took six diagnostic rounds to close.
+  - **User-facing strings** beyond the section titles already exposed. They are
+    translatable and LocoTranslate is hand-tuned here; turning a translated
+    string into a setting takes it out of the translation layer.
+- **`Config::offered_guest_fee_steps()` MUST NOT HARDCODE THE LADDER LENGTH.**
+  It is the CHECKOUT path. Its `$max_extra` default is `null`, meaning "use the
+  setting"; leaving it at `8` made `guest_fee_steps_max` inert exactly where it
+  matters while looking wired up. Mutation `cfg-offered-ignores-setting` pins it.
+- **Bravada's button-font trap is verified for the BARE controls too**
+  (2026-09-24). The theme sets Pavanam on `<button>` at (0,0,1) while the site
+  face is Raleway. `tests/button/` already reproduced that and asserted the
+  submit button beats it — but the breakdown expander and the tax asterisk carry
+  no font of their own and rely on `font: inherit` in the bare-control reset, and
+  no fixture reproduced the trap for them. `tests/fields/` now sets Pavanam on
+  `button` and asserts both bare controls compute the inherited face; a mutation
+  weakening the reset to `font-size: inherit` goes red. The
+  `html{font-weight:700}` trap was already covered by the upload-hint assertions.
+- Bump the version in all three places whenever behaviour changes:
+  the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.

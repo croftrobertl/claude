@@ -1,0 +1,129 @@
+/**
+ * DCC Custom Checkout — admin booking screens.
+ * Hiding, the Customer Information group headings (v0.26.0), and the Pet Fee
+ * and extra-guest-fee lines (v0.28.0). MotoPress's own rows keep their styling;
+ * only their order and visibility change.
+ */
+.dcc_admin-field-hidden {
+    display: none !important;
+}
+
+/* The room-type context marker printed by Admin_Fields on the create-booking
+   wizard's checkout step. It carries the `hidden` attribute; this is belt and
+   braces against an admin stylesheet that overrides [hidden]. */
+.dcc_admin-room-context {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Guest count metabox (v0.22.0).
+ * Core admin styles do the rest; these two rules only stop the explanatory
+ * text running into the control it explains.
+ * ------------------------------------------------------------------------- */
+.dcc_admin-guests .description {
+    display: block;
+    margin: 4px 0 0;
+}
+
+.dcc_admin-guests select {
+    max-width: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Customer Information group headings (v0.26.0).
+ * Quiet sub-headings, not boxes: no fill, no border box — a label and a
+ * hairline, in the admin's own text colours. The element is a role="heading"
+ * <div> rather than an <h3>, because core styles headings inside #poststuff at
+ * ID specificity and this must look the same on every admin screen.
+ * `tr.` + class is (0,1,2), above core's `.form-table td` (0,1,1), so the
+ * cell's padding is ours whatever order the stylesheets print in.
+ * ------------------------------------------------------------------------- */
+tr.dcc_admin-group-heading > td {
+    padding: 14px 10px 2px 0;
+}
+
+tr.dcc_admin-group-heading:first-child > td {
+    padding-top: 4px;
+}
+
+.dcc_admin-group-heading__title {
+    margin: 0;
+    padding: 0 0 4px;
+    border-bottom: 1px solid #dcdcde;
+    color: #50575e;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+ * v0.28.0 — the fees' native service rows are never shown in wp-admin: Number
+ * of Guests and Pet Fee are their only controls. Display-based on purpose, so
+ * a ticked service still submits and MotoPress still prices it.
+ * ------------------------------------------------------------------------- */
+.dcc_admin-fee-row {
+    display: none !important;
+}
+
+/* "More guest names than guests." — quiet, under its group's heading. */
+.dcc_admin-group-note__text {
+    color: #996800;
+    font-size: 12px;
+    font-style: italic;
+}
+
+tr.dcc_admin-group-note > td {
+    padding: 0 10px 6px 0;
+}
+
+p.dcc_admin-group-note {
+    margin: 0 0 8px;
+}
+
+/* Add New draws a flowing form, not a table: the same headings as blocks. */
+div.dcc_admin-group-heading {
+    margin: 16px 0 8px;
+}
+
+div.dcc_admin-group-heading:first-child {
+    margin-top: 4px;
+}
+
+/* Pet Fee: Yes / No, and the read-only extra-guest-fee line, under Number of
+   Guests. */
+.dcc_admin-petfee label {
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.dcc_admin-petfee select {
+    max-width: 100%;
+}
+
+.dcc_admin-petfee__note {
+    display: block;
+    margin-top: 4px;
+}
+
+.dcc_admin-feeline {
+    margin: 4px 0 8px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone width (owner's pick, v0.28.0): a service row stacks — tick box and
+ * name, then the price, then the "for N guest(s)" picker — instead of running
+ * off the screen. Inside core's own 782px breakpoint, so a computer screen is
+ * unchanged; admin-only, because this file loads only in wp-admin.
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 782px) {
+    label:has(input[name*="[services]"][name$="[id]"]) {
+        display: block;
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    label:has(input[name*="[services]"][name$="[id]"]) > em {
+        display: block;
+    }
+}

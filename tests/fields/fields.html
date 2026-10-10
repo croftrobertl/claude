@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DCC Custom Checkout — field geometry harness</title>
+
+<!--
+  Reproduces the customer-details block of /submit-booking/ at phone width, so
+  the FIELDS' GEOMETRY can be measured without creating a reservation on a live
+  booking site.
+
+  The markup is MotoPress's own, taken from the element names in the owner's
+  tap log: each control sits in a <p class="mphb-customer-* mphb-text-control">
+  inside <section id="mphb-customer-details">. That nesting is the whole point
+  of this harness — the log showed nearly every press landing on the <p> rather
+  than on the input inside it.
+
+  The Elementor kit's input reset is reproduced first, at its measured
+  specificity, because until v0.13.0 the kit was what actually sized these
+  fields: the plugin styled only `select` and its own injected pet fields, and
+  left MotoPress's text inputs alone.
+
+  What this proves: the plugin's rule now sizes MotoPress's own fields and
+  out-specifies the kit. What it CANNOT prove: that nothing else on the live
+  page also targets them.
+-->
+
+<style>
+  html, body { margin: 0; padding: 0; }
+  /* As on the live site: the footnote's weight is INHERITED from this. */
+  html { font-weight: 700; }
+  /* The site's body font, so "inherit" has something real to inherit. */
+  body { font-family: "Raleway", sans-serif; }
+
+  /* SWEEP 2026-09-24 — BRAVADA'S BUTTON FONT TRAP, reproduced.
+     The theme sets Pavanam on <button> at (0,0,1) while the site font is
+     Raleway. tests/button/ already asserts the SUBMIT button beats this. The
+     BARE controls (the breakdown expander and the tax asterisk) rely on
+     `font: inherit` in the bare-control reset instead, and nothing reproduced
+     the trap for them — so if that reset ever lost, both would quietly render
+     in the wrong face inside the price breakdown. */
+  button { font-family: Pavanam, sans-serif; }
+
+  /* --- Elementor kit input reset, as measured: (0,1,1) ------------------ */
+  .elementor-kit-331 input[type="text"],
+  .elementor-kit-331 input[type="email"],
+  .elementor-kit-331 input[type="tel"],
+  .elementor-kit-331 textarea,
+  .elementor-kit-331 select {
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 3px;
+      /* THE DEFECT THIS HARNESS EXISTS FOR: a field narrower than its block.
+         On the owner's 390px screen this left a dead strip on each side that
+         looks tappable and is not. */
+      width: 260px;
+      box-sizing: content-box;
+  }
+  .elementor-kit-331 label { text-decoration: underline; }
+
+  /* MotoPress's own wrapper spacing. */
+  #mphb-customer-details p { margin: 0 0 16px; padding: 0; }
+  #mphb-customer-details label { display: block; margin-bottom: 4px; }
+  #mphb-customer-details { padding: 0 16px; }
+</style>
+
+<link rel="stylesheet" href="../../dcc-custom-checkout/assets/checkout.css">
+</head>
+<body class="elementor-kit-331">
+
+<form class="mphb_sc_checkout-form mphb_sc_checkout-form">
+  <section id="mphb-customer-details" class="mphb-checkout-section mphb-customer-details">
+
+    <p class="mphb-customer-first-name mphb-customer-name mphb-text-control">
+      <label for="mphb_first_name">First Name</label>
+      <input type="text" id="mphb_first_name" name="mphb_first_name" value="">
+    </p>
+
+    <p class="mphb-customer-last-name mphb-text-control">
+      <label for="mphb_last_name">Last Name</label>
+      <input type="text" id="mphb_last_name" name="mphb_last_name" value="">
+    </p>
+
+    <p class="mphb-customer-email mphb-text-control">
+      <label for="mphb_email">Email</label>
+      <input type="email" id="mphb_email" name="mphb_email" value="">
+    </p>
+
+    <p class="mphb-customer-phone mphb-text-control">
+      <label for="mphb_phone">Phone</label>
+      <input type="tel" id="mphb_phone" name="mphb_phone" value="">
+    </p>
+
+    <!-- Google Places binds to this one on the live page; the class is carried
+         here so a selector that accidentally excludes it would show up. -->
+    <p class="mphb-customer-address1 mphb-text-control">
+      <label for="mphb_address1">Address</label>
+      <input type="text" id="mphb_address1" name="mphb_address1"
+             class="pac-target-input" autocomplete="off" value="">
+    </p>
+
+    <p class="mphb-customer-apartment-units mphb-text-control">
+      <label for="mphb_apartment_units">Apartment / Unit</label>
+      <input type="text" id="mphb_apartment_units" name="mphb_apartment_units" value="">
+    </p>
+
+    <p class="mphb-customer-country mphb-text-control">
+      <label for="mphb_country">Country</label>
+      <select id="mphb_country" name="mphb_country">
+        <option>United States</option>
+      </select>
+    </p>
+
+    <p class="mphb-customer-note mphb-text-control">
+      <label for="mphb_note">Note</label>
+      <textarea id="mphb_note" name="mphb_note" rows="3"></textarea>
+    </p>
+
+  </section>
+
+  <!-- v0.17.0: the expander is now a real <button>, as hardenTapTargets()
+       leaves it. The site button spec above matches a bare `button`, so
+       without .dcc_checkout-bare-button this would render as a full-width
+       blue 50px pill inside the price breakdown. -->
+  <button type="button" id="expander"
+          class="mphb-price-breakdown-expand dcc_checkout-bare-button">-</button>
+
+  <!-- Item 2 (v0.15.0): the validation banner, in the asterisks' own ink. -->
+  <div class="dcc_checkout-error-banner" role="alert" id="banner">
+    Please complete all of the required fields.
+  </div>
+  <abbr class="dcc_checkout-req" id="req" title="Required">*</abbr>
+
+  <!-- SWEEP 2026-09-19. MotoPress's OWN required marker. It matters because it
+       is the only element whose colour actually comes through --dcc-required:
+       .dcc_checkout-req above is matched by BOTH the --dcc-required rule and
+       the later, broader --dcc-error rule, and the later one wins. So without
+       this element, changing --dcc-required to a different value moves nothing
+       the suite measures, and "one ink cannot drift" is untested. -->
+  <abbr class="required" id="req-mphb" title="Required">*</abbr>
+
+  <!-- SWEEP 2026-09-19. The wrapper class markFieldRows() actually applies at
+       runtime. Every other wrapper in this fixture carries only MotoPress's
+       p.mphb-text-control, which is the NO-JS FALLBACK -- so the selector the
+       live page relies on was never exercised. This one carries the JS class
+       and NOT the fallback, so the cap has to hold through it alone. -->
+  <div class="dcc_checkout-field-row" id="jsrow">
+    <input type="text" id="jsrow-input" value="x">
+  </div>
+
+  <!-- SWEEP 2026-09-19. The three hide classes. tests/breakdown runs in jsdom,
+       which has no layout, so its visible() helper treats these class names as
+       a proxy for display:none. Nothing checked that the proxy was true. These
+       pin it in a real browser: if a class is renamed on either side, the
+       jsdom suite would go on reporting things hidden that a guest can see. -->
+  <div class="dcc_checkout-section-hidden" id="hide-section">section</div>
+  <div class="dcc_checkout-service-hidden" id="hide-service">service</div>
+  <select id="hide-option-select">
+    <option class="dcc_checkout-option-hidden" id="hide-option">4</option>
+  </select>
+
+  <!-- v0.20.0: MotoPress's file-upload hints, exactly as mphb-checkout-fields
+       1.2.3 renders them (FileUploadField.php:66-97), misspelt class and all,
+       next to the tax footnote they must match. -->
+  <p class="mphb-customer-photo-id mphb-file-control">
+    <label for="mphb_photo_id">Photo ID</label>
+    <input type="file" id="mphb_photo_id" name="mphb_photo_id">
+    <br><span class="mphb-max-upload-file" id="hint1">Maximum upload file size: 14 MB.</span>
+    <br><span class="mphp-accepted-upload-types" id="hint2">Accepted file types: jpeg, jpg, png, pdf, webp, heic.</span>
+  </p>
+  <p class="dcc_checkout-tax-footnote" id="footnote">* Taxes applied: Lake County Tourist Development Tax 4%.</p>
+</form>
+
+</body>
+</html>

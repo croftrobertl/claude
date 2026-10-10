@@ -1,0 +1,182 @@
+<?php
+/**
+ * Prints the admin script's config exactly as Admin_Fields builds it, as JSON.
+ *
+ *     php tests/admin-layout/config.php [included_guests] [booking-json]
+ *
+ * booking-json describes an EXISTING booking being edited, e.g.
+ *     {"rooms":[{"type":1604,"adults":2,"services":[17712]},{"type":1065}]}
+ * Each room becomes a `mphb_reserved_room` child of booking 19615 with an
+ * `_mphb_room_id`, and that room carries `mphb_room_type_id` — the chain
+ * confirmed on live. {"type":0} is a room whose type cannot be read.
+ * `adults` becomes `_mphb_adults` (omitted = missing meta); `services` becomes
+ * `_mphb_services` exactly as given — a list, a map, a list of arrays, or a
+ * string — so each storage shape is constructed rather than assumed.
+ * Omitted: a NEW booking (no post), as before.
+ *
+ * [wizard-json] {"nights":N} adds `_wizardPetService`: what the shipped
+ * Admin_Fields::wizard_pet_service() picks for a stay of N nights.
+ *
+ * TWO THINGS THIS DOES THAT 0.28.0'S HARNESS DID NOT (v0.29.0):
+ *  - The config goes through WordPress's OWN localize step before it is
+ *    printed: every top-level scalar cast to a string, exactly as
+ *    WP_Scripts::localize() does. 0.28.0 printed PHP's json_encode() directly,
+ *    so `statedPetFee` reached the suite as a real true/false and reached the
+ *    live browser as "1"/"" — the suite could not see the defect.
+ *  - The cottage map (`roomTypes`) is the SHIPPED room_type_map(), fed by an
+ *    MPHB() stand-in carrying each cottage's services, instead of a literal in
+ *    run.js — so the "empty list = no pet services" reading is exercised.
+ *
+ * The layout suite reads this instead of keeping its own copy of the group
+ * list, so the test exercises the SHIPPED PHP: a renamed field, a reordered
+ * group or a wrong `governed` flag in Admin_Fields::customer_layout() changes
+ * what the browser sees, and the mutation runner can prove it.
+ */
+define('ABSPATH', __DIR__);
+
+$GLOBALS['opt']     = [];
+$GLOBALS['filters'] = [];
+// The LIVE fee configuration, as measured 2026-09-19 (CLAUDE.md): service
+// 18063 in all three extra-guest buckets at $50, on the six couch cottages.
+// The shipped defaults are 0, and with them every fee assertion in this suite
+// would pass vacuously — nothing would ever be ticked or labelled.
+$GLOBALS['opt']['dcc_checkout_settings'] = [
+    'guest_fee_enabled'     => 1,
+    'guest_fee_amount'      => 50,
+    'guest_service_daily'   => 18063,
+    'guest_service_weekly'  => 18063,
+    'guest_service_monthly' => 18063,
+    'guest_accommodations'  => [1071, 1069, 1067, 1065, 1740, 1742],
+];
+if (isset($argv[1]) && $argv[1] !== '') {
+    $GLOBALS['opt']['dcc_checkout_settings']['included_guests'] = (int) $argv[1];
+}
+
+function get_option($k, $d = false) { return array_key_exists($k, $GLOBALS['opt']) ? $GLOBALS['opt'][$k] : $d; }
+function apply_filters($hook, $value) {
+    return array_key_exists($hook, $GLOBALS['filters']) ? $GLOBALS['filters'][$hook] : $value;
+}
+function add_action() {} function add_filter() {}
+function __($t, $d = null) { return $t; }
+function esc_html__($t, $d = null) { return $t; }
+function sanitize_text_field($v) { return is_string($v) ? trim($v) : ''; }
+function sanitize_key($v) { return is_string($v) ? strtolower(preg_replace('/[^a-z0-9_\-]/i', '', $v)) : ''; }
+function wp_strip_all_tags($t) { return strip_tags((string) $t); }
+function number_format_i18n($n, $d = 0) { return number_format((float) $n, (int) $d); }
+class WP_Post { public $ID = 0; public $post_type = ''; public $post_status = ''; }
+
+$GLOBALS['booking'] = null;
+$GLOBALS['meta']    = [];
+$GLOBALS['reserved']      = [];
+if (isset($argv[2]) && $argv[2] !== '') {
+    $spec = json_decode($argv[2], true);
+    $b = new WP_Post();
+    $b->ID = 19615; $b->post_type = 'mphb_booking'; $b->post_status = 'confirmed';
+    $GLOBALS['booking'] = $b;
+    foreach ((array) ($spec['rooms'] ?? []) as $i => $room) {
+        $rr = new WP_Post();
+        $rr->ID = 900 + $i; $rr->post_type = 'mphb_reserved_room';
+        $GLOBALS['reserved'][] = $rr;
+        $room_id = 500 + $i;
+        $GLOBALS['meta'][$rr->ID]['_mphb_room_id'] = (string) $room_id;
+        if ((int) ($room['type'] ?? 0) > 0) {
+            $GLOBALS['meta'][$room_id]['mphb_room_type_id'] = (string) (int) $room['type'];
+        }
+        if (array_key_exists('adults', $room)) {
+            $GLOBALS['meta'][$rr->ID]['_mphb_adults'] = (string) $room['adults'];
+        }
+        if (array_key_exists('services', $room)) {
+            $GLOBALS['meta'][$rr->ID]['_mphb_services'] = $room['services'];
+        }
+    }
+}
+
+/*
+ * Accommodation types and the services MotoPress has attached to each — the
+ * live picture (CLAUDE.md, Director 2026-10-07): the six couch cottages carry
+ * the Extra Guest Fee 18063; Cottage 34 (1607) carries the three pet services;
+ * Cottage 33 (1604) carries an EMPTY list. 1999 stands for a type that cannot
+ * be read at all (the repository returns nothing for it).
+ */
+$GLOBALS['room_types'] = [
+    1065 => [18063], 1067 => [18063], 1069 => [18063], 1071 => [18063],
+    1740 => [18063], 1742 => [18063],
+    1607 => [17712, 17711, 14926],
+    1604 => [],
+    1999 => null,
+];
+function MPHB() {
+    return new class {
+        public function getRoomTypeRepository() {
+            return new class {
+                public function findById($id) {
+                    $svc = $GLOBALS['room_types'][(int) $id] ?? null;
+                    if ($svc === null) {
+                        return null;
+                    }
+                    return new class($svc) {
+                        private $s;
+                        public function __construct($s) { $this->s = $s; }
+                        public function getServices() { return $this->s; }
+                    };
+                }
+            };
+        }
+    };
+}
+
+function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][(int) $id][$k] ?? ''; }
+function get_posts($a = []) {
+    if (($a['post_type'] ?? '') === 'mphb_room_type') {
+        return array_keys($GLOBALS['room_types']);
+    }
+    if (($a['post_type'] ?? '') === 'mphb_reserved_room' && $GLOBALS['booking']
+        && (int) ($a['post_parent'] ?? 0) === $GLOBALS['booking']->ID) {
+        return $GLOBALS['reserved'];
+    }
+    return [];
+}
+function get_post($id = null) { return $GLOBALS['booking']; }
+function did_action($h) { return 0; }
+function maybe_unserialize($v) {
+    if (is_string($v)) {
+        $u = @unserialize($v);
+        return ($u === false && $v !== 'b:0;') ? $v : $u;
+    }
+    return $v;
+}
+
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-boat-field.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
+
+$m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
+$m->setAccessible(true);
+$out = $m->invoke(new \DCC_Checkout\Admin_Fields());
+
+// WP_Scripts::localize(), WordPress 6.6.2 src/wp-includes/class-wp-scripts.php
+// lines 589-597, copied verbatim (read from wordpress-develop, 2026-10-07):
+// every TOP-LEVEL scalar becomes a string; arrays (and null) pass untouched.
+foreach ($out as $key => $value) {
+    if (!is_scalar($value)) {
+        continue;
+    }
+    $out[$key] = html_entity_decode((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+if (isset($argv[3]) && $argv[3] !== '') {
+    $w = json_decode($argv[3], true);
+    $nights = (int) ($w['nights'] ?? 0);
+    $booking = new class($nights) {
+        private $n;
+        public function __construct($n) { $this->n = $n; }
+        public function getCheckInDate() { return new DateTime('2026-11-20'); }
+        public function getCheckOutDate() { return (new DateTime('2026-11-20'))->modify('+' . $this->n . ' days'); }
+    };
+    $wp = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'wizard_pet_service');
+    $wp->setAccessible(true);
+    $out['_wizardPetService'] = $wp->invoke(null, $booking);
+}
+
+echo json_encode($out, JSON_UNESCAPED_UNICODE);

@@ -1,0 +1,158 @@
+/* =========================================================================
+ * DCC FIELD STANDARD
+ *
+ * Source of truth: dcc-custom-checkout 0.11.0, assets/checkout.css.
+ * Scope: the Guest Guide Support Report form, and the Availability Calendar.
+ *        NOT site-wide, and NOT theme forms.
+ *
+ * HOW TO USE THIS
+ * Replace every occurrence of .YOUR-SCOPE below with your plugin's own root
+ * selector, and paste the result into your stylesheet. Do not @import it and
+ * do not depend on the checkout plugin being active — each repo keeps its own
+ * copy so it stays installable and testable on its own.
+ *
+ * WHY A COPY RATHER THAN A SHARED LAYER
+ * A shared :root layer would need to ship as an mu-plugin, and mu-plugins
+ * cannot be installed from the WP Admin upload screen — which is how these
+ * plugins are deployed, from a phone. It would also be a single point of
+ * failure: disable it and three plugins lose their field styling mid-booking.
+ * Every token below still reads an optional --dcc-site-* first, so if a
+ * shared layer is ever added, all three follow it without any of them
+ * depending on it existing.
+ *
+ * TWO THINGS THAT WERE NEVER WRITTEN DOWN
+ * On the checkout, the typed-in value colour and the ::placeholder colour had
+ * no rules at all — they inherited black from the form's ancestors and a
+ * browser default grey. That is invisible there and wrong everywhere else,
+ * because your plugin sits in a different cascade. Both are declared here.
+ * They are the two lines most likely to be dropped as "redundant". Keep them.
+ * ========================================================================= */
+
+.YOUR-SCOPE {
+    --dcc-gold:            var(--dcc-site-gold, #f4da62);
+    --dcc-blue:            var(--dcc-site-blue, #006bcf);
+    --dcc-label:           var(--dcc-site-label, #000000);
+    --dcc-muted:           var(--dcc-site-muted, #6b7280);
+    --dcc-field-radius:    var(--dcc-site-field-radius, 30px);
+    --dcc-field-border:    var(--dcc-site-field-border, 2px);
+    --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
+    --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
+    --dcc-field-max: var(--dcc-site-field-max, 360px);
+    --dcc-error: var(--dcc-site-error, #bc003e);
+}
+
+/* --- The pill ---------------------------------------------------------- */
+.YOUR-SCOPE input[type="text"],
+.YOUR-SCOPE input[type="email"],
+.YOUR-SCOPE input[type="tel"],
+.YOUR-SCOPE input[type="number"],
+.YOUR-SCOPE input[type="url"],
+.YOUR-SCOPE input[type="date"],
+.YOUR-SCOPE textarea,
+.YOUR-SCOPE select {
+    background-color: #ffffff;
+    border: var(--dcc-field-border) solid var(--dcc-gold);
+    border-radius: var(--dcc-field-radius);
+    min-height: 44px;              /* also the minimum comfortable tap target */
+    padding: 10px 20px;
+    font-family: "Raleway", sans-serif;
+    font-size: 18px;               /* NEVER below 16px, or iOS zooms on focus */
+    line-height: 1.3;
+    text-align: center;
+    color: var(--dcc-label);       /* declared, not inherited — see header */
+    box-sizing: border-box;
+    width: 100%;                   /* fill the wrapper: see the note below */
+}
+
+/* --- The wrapper ------------------------------------------------------- *
+   BOTH HALVES OR NEITHER. The field fills its wrapper, and the WRAPPER is what
+   constrains the width — cap the field alone and the wrapper still stretches
+   the full column, leaving a strip beside the field that looks tappable and is
+   not. Put this class on the block that directly contains each control. */
+.YOUR-SCOPE .dcc_checkout-field-row {
+    max-width: var(--dcc-field-max);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* --- Native date controls ---------------------------------------------- *
+   iOS Safari will not shrink an <input type="date"> below its intrinsic
+   content width: it ignores the width its container granted and overflows.
+   Chromium shrinks the same control without complaint, so a Chromium harness
+   will not catch this. appearance:none is what removes the refusal. */
+.YOUR-SCOPE input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* WIDTH IS PART OF THE STANDARD, not a layout preference (added v0.13.0).
+   A field narrower than the block that contains it leaves a dead strip down
+   each side that looks tappable and is not. On the checkout this was measured
+   from a real phone: on a 390px-wide screen the presses that reached an input
+   were at x 261-277, while the presses that hit dead space were at x 339-374,
+   and tapping dead space does nothing at all. The guest reads that as "the
+   field did not respond" and taps again.
+
+   min-height: 44px and font-size: 16px above are load-bearing for the same
+   reason. 44px is the smallest comfortable target; under 16px, iOS Safari
+   zooms the whole page when the field takes focus, which moves everything
+   under the finger. */
+
+.YOUR-SCOPE input::placeholder,
+.YOUR-SCOPE textarea::placeholder {
+    color: var(--dcc-muted);       /* declared, not inherited — see header */
+    opacity: 1;                    /* Firefox dims placeholders by default */
+}
+
+/* --- Select: same pill, native chrome removed, own caret ---------------- */
+.YOUR-SCOPE select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    height: auto;
+    padding: 10px 40px 10px 20px;  /* room on the right for the caret */
+    text-align-last: center;       /* text-align alone does not centre a select */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23006bcf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+}
+
+.YOUR-SCOPE select::-ms-expand {
+    display: none;
+}
+
+/* --- Focus: an outline, never a fill change ---------------------------- */
+.YOUR-SCOPE input:focus-visible,
+.YOUR-SCOPE textarea:focus-visible,
+.YOUR-SCOPE select:focus-visible {
+    outline: 3px solid var(--dcc-blue);
+    outline-offset: 2px;
+}
+
+/* --- Hover: ONLY where hover exists ------------------------------------ *
+ * On iOS the first tap applies :hover and it sticks until the next tap
+ * elsewhere, so a hover-styled control eats a tap and then will not revert.
+ * On this site that turned the price-breakdown link black and swallowed the
+ * tap. Every hover rule you add must live inside this query. */
+@media (hover: hover) and (pointer: fine) {
+    .YOUR-SCOPE button:hover,
+    .YOUR-SCOPE input[type="submit"]:hover {
+        background-color: var(--dcc-button-hover-bg);
+        color: var(--dcc-button-hover-fg);
+    }
+}
+
+/* --- Specificity note --------------------------------------------------- *
+ * Bravada's Elementor kit resets inputs and buttons at (0,3,1). If your
+ * scope selector is a single class these rules will lose. Double the class —
+ * .YOUR-SCOPE.YOUR-SCOPE — to reach (0,2,x) and beyond, or add an element
+ * qualifier, rather than reaching for !important: a later deliberate
+ * override should still be able to win.
+ *
+ * White on #f08080 is 2.59:1, below WCAG AA. The owner has chosen it
+ * knowingly. Because of that, focus must stay an outline and must never
+ * depend on the fill colour for visibility.
+ * ========================================================================= */
