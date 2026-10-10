@@ -1848,6 +1848,17 @@
   "count": 1
  },
  {
+  "id": "res-row-count-bare-tr",
+  "file": "dcc-custom-checkout/includes/class-results-labels.php",
+  "suites": [
+   "results"
+  ],
+  "claim": "0.30.3 a row whose <tr> carries an attribute is counted, so the table is refused rather than half-relabelled",
+  "find": "preg_match_all('#<tr\\b#i', $part)",
+  "replace": "preg_match_all('#<tr>#', $part)",
+  "count": 1
+ },
+ {
   "id": "res-foreign-table",
   "file": "dcc-custom-checkout/includes/class-results-labels.php",
   "suites": [

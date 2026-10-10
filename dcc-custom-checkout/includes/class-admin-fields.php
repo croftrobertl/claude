@@ -443,8 +443,11 @@ final class Admin_Fields
      * Calendar's has_pet_service() does: MotoPress stores it as a LIST of ids,
      * a MAP of id => quantity, or a list of arrays carrying 'id'. Matched
      * against this plugin's configured pet service IDs, never by title.
-     * DCC-VERIFY: the storage shapes are the Calendar's reading, not observed
-     * here; the Director's check list carries a booking with the fee.
+     * PARTLY VERIFIED (Director, live 0.28.0): the line read "Yes" on 17730,
+     * which carries the fee, and "No" on 19615, 19600 and 18462. That proves
+     * the shape 17730 is stored in — which of the three it is was not
+     * recorded — and the "No"s may be bookings with no services stored at
+     * all. The other shapes remain the Calendar's reading, not observed here.
      *
      * true  — a pet service is attached to some room;
      * false — every room was read and none carries one (an absent or empty

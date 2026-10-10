@@ -30,15 +30,6 @@ final class Assets
     }
 
     /**
-     * Rewrite MotoPress's own wording on the checkout page only.
-     *
-     * @param mixed  $translation Translated string (post-MO, post-Loco).
-     * @param mixed  $text        Original msgid.
-     * @param mixed  $domain      Text domain (already motopress-hotel-booking
-     *                            via the domain-specific hook).
-     * @return mixed
-     */
-    /**
      * MotoPress msgid => the word this site uses instead, on the checkout only.
      *
      * Shared by the gettext filter AND by the script config, so the JS knows
@@ -95,6 +86,15 @@ final class Assets
         return $out;
     }
 
+    /**
+     * Rewrite MotoPress's own wording on the checkout page only.
+     *
+     * @param mixed  $translation Translated string (post-MO, post-Loco).
+     * @param mixed  $text        Original msgid.
+     * @param mixed  $domain      Text domain (already motopress-hotel-booking
+     *                            via the domain-specific hook).
+     * @return mixed
+     */
     public function filter_accommodation_label($translation, $text, $domain = '')
     {
         return self::apply_override($translation, $text);
@@ -147,14 +147,6 @@ final class Assets
         return $map[$text];
     }
 
-    /**
-     * Detect the MotoPress checkout page.
-     *
-     * MotoPress stores the checkout page ID in its settings; the checkout
-     * Elementor widget lives on that page (/submit-booking/, ID 1399 on this
-     * site). We trust the configured ID rather than sniffing markup so we never
-     * load on the wrong page.
-     */
     /**
      * Whether the Services -> Extras rename applies to THIS request.
      *
@@ -213,6 +205,14 @@ final class Assets
         return false;
     }
 
+    /**
+     * Detect the MotoPress checkout page.
+     *
+     * MotoPress stores the checkout page ID in its settings; the checkout
+     * Elementor widget lives on that page (/submit-booking/, ID 1399 on this
+     * site). We trust the configured ID rather than sniffing markup so we never
+     * load on the wrong page.
+     */
     public static function is_checkout_page(): bool
     {
         // Never in admin / feeds / REST.
@@ -373,17 +373,9 @@ final class Assets
                 'petFeeNote'    => __('A per-night pet fee will be added to your total.', 'dcc-checkout'),
                 'requiredMsg'   => __('Please complete all of the required fields.', 'dcc-checkout'),
                 'errGuest2'     => __('Please complete the details for every additional guest.', 'dcc-checkout'),
-                /*
-                 * The canonical, owner-approved explanation of the pull-out
-                 * couch. Wording is Rob's and is used verbatim wherever this
-                 * needs explaining; only the numbers are substituted, so a
-                 * cottage that sleeps a different number or charges a different
-                 * fee still reads correctly.
-                 *
-                 * translators: 1: maximum guests for this cottage, 2: sleeping
-                 * arrangement (e.g. "1 queen-sized bed and a pull-out couch"),
-                 * 3: formatted per-night fee (e.g. $50).
-                 */
+                // The canonical, owner-approved explanation of the pull-out
+                // couch, in Rob's wording. (It was once a template with three
+                // placeholders; it has been a fixed literal since v0.14.0.)
                 // ITEM 9 (v0.14.0) — the owner's replacement wording. This is a
                 // LITERAL, not a template, and deliberately so: the identical
                 // sentence ships in the Cottage Selector this same round and the
@@ -404,13 +396,13 @@ final class Assets
                 // nothing (it already tests !I18N.couchNote). Default path is
                 // byte-identical.
                 'couchNote'     => Config::offered_couch_note(),
+                // Item 7 — MotoPress's own label on the duplicate total below the
+                // upload field. Localised so a translated site can still match it.
+                'totalPriceLabel'   => __('Total Price', 'dcc-checkout'),
                 // Item 14 — the extra-guest row, relabelled for DISPLAY in the
                 // price breakdown. The MotoPress service itself (18063) keeps
                 // its own title, which is what admin screens and guest emails
                 // show.
-                // Item 7 — MotoPress's own label on the duplicate total below the
-                // upload field. Localised so a translated site can still match it.
-                'totalPriceLabel'   => __('Total Price', 'dcc-checkout'),
                 'extraGuestService' => __('Extra Guest(s) Fee', 'dcc-checkout'),
                 // Two lines, joined by the JS with a newline (item 3, v0.19.0).
                 // Lowercase x by owner decision.

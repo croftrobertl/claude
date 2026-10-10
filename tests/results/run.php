@@ -185,6 +185,15 @@ check('guard-on-the-guard: the fixture really is ONE table holding TWO rows, one
 check('guard: the two-row table is recognised as a whole', is_string(Results_Labels::transform($merged, [Results_Labels::class, 'capacity_of'])), true);
 check('... but if ONE of its rows does not match, the whole form is left as drawn (never half-relabelled)',
     Results_Labels::transform($partial, [Results_Labels::class, 'capacity_of']), null);
+// v0.30.3 — a row whose <tr> carries an attribute is not matched by the row
+// pattern; it used to go uncounted too, so the table was half-relabelled.
+$pos = strpos($merged, 'mphb_rooms[1067]');
+$trpos = strrpos(substr($merged, 0, $pos), '<tr>');
+$alt = substr_replace($merged, '<tr class="alt">', $trpos, 4);
+check('guard-on-the-guard: the second row\'s <tr> carries a class, the first\'s does not',
+    [substr_count($alt, '<tr class="alt">'), substr_count($alt, 'type="checkbox"')], [1, 2]);
+check('a row whose <tr> carries an attribute: the whole form is left as drawn (not one row skipped)',
+    Results_Labels::transform($alt, [Results_Labels::class, 'capacity_of']), null);
 $mixed = preg_replace('#<th class="row-title">Capacity</th>#', '<th class="row-title">Capacity (new)</th>', $good, 1);
 check('guard-on-the-guard: one table\'s heading changed, the other\'s not', [substr_count($mixed, 'Capacity (new)'), substr_count($mixed, '>Capacity</th>')], [1, 1]);
 check('ONE table with changed headings beside a normal one: the WHOLE form is left as drawn (the normal one is not relabelled alone)',

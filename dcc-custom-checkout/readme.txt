@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.30.2
+Stable tag: 0.30.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,16 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.30.3 =
+Corrections from a self-audit (2026-10-09). No change to the checkout.
+* Add New Booking search results: if any row of the table is not exactly the
+  expected shape, the whole table is now left as MotoPress drew it. Before,
+  a row whose tag carried an attribute could be skipped on its own, leaving
+  it in MotoPress's wording beside relabelled rows.
+* Notes corrected to match what has been verified on the live site: the
+  plugin description, the uninstall notes (what is kept and why), and
+  several code comments.
 
 = 0.30.2 =
 Add New Booking search results: the two column headings in the owner's

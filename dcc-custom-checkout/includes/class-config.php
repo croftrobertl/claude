@@ -354,7 +354,12 @@ final class Config
     /**
      * A MotoPress Service's own price.
      *
-     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * NOT REACHED ON LIVE (established 2026-10-09 from the code and the live
+     * settings): its only caller is guest_fee_amount(), which calls it only
+     * when the guest_fee_amount setting is 0, and live's has been 50 since
+     * 2026-09-19. So nothing on live has exercised this path; it is
+     * unverified, not provisional. Confirm it before ever clearing that
+     * setting.
      * Reads the public API first and falls back to the mphb_price post meta
      * (confirmed on live: service 18063 has mphb_price = 50). Returns 0.0 when
      * it cannot be determined, and every caller treats 0 as "say nothing"

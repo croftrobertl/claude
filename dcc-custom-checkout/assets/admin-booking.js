@@ -190,8 +190,10 @@
      * only if the admin submits the booking.
      *
      * Found by MotoPress's own markup — the `…[guest_name]` input of
-     * `mphb_room_details`, or the input inside its `.mphb-guest-name-wrapper`
-     * — and NOT confirmed on live: when neither is there, nothing happens.
+     * `mphb_room_details`, or the input inside its `.mphb-guest-name-wrapper`.
+     * VERIFIED: the markup in live MotoPress 6.3.0 (checkout-view.php:290–294,
+     * read by the Director) and Rob's phone test, where it filled. When
+     * neither selector matches, nothing happens.
      */
     function fillGuestNames() {
         var first = document.querySelector('[name="mphb_first_name"]');

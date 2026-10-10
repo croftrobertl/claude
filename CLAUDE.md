@@ -1095,6 +1095,17 @@ yours to improvise.
     still requires all four of MotoPress's headings. Asserted on the cells;
     mutation `res-cells-not-rewritten` (recognise, count, but leave the cell)
     must go red.
+  - **0.30.3 — EVERY ROW IS COUNTED, HOWEVER ITS TAG IS WRITTEN** (self-audit,
+    2026-10-09; reproduced before fixing). The row total counted bare `<tr>`
+    only, and the row pattern matches bare `<tr>` only, so a row written
+    `<tr class="…">` was neither matched NOR counted: the table passed the
+    all-or-nothing check and was relabelled around one row left in MotoPress's
+    wording. Now `<tr\b` (any case) is counted, so such a row refuses the whole
+    table. Latent — the live template (Director's verbatim read) uses bare
+    `<tr>` — but a MotoPress update or a theme template override could change
+    that, and **only SSH can say whether the theme overrides
+    `create-booking/results/reserve-rooms.php`**. Mutation
+    `res-row-count-bare-tr`.
   - The rendered markup (Director, K) has `&nbsp;` in the cell and the price
     as `<span class="mphb-price">`; the price cell is never touched. The
     browser suite REPRODUCES only WordPress's `.widefat`/`table.fixed` rules
@@ -1311,9 +1322,9 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 174
-  mutations, 174 killed, 0 of everything else, exit 0, in ONE run (2026-10-07,
-  v0.30.2; sixteen suites). At v0.30.1, 173. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 175
+  mutations, 175 killed, 0 of everything else, exit 0, in ONE run (2026-10-10,
+  v0.30.3; sixteen suites). At v0.30.2, 174; at v0.30.1, 173. At v0.30.0, 156 in fourteen; at v0.29.0, 134 in twelve. 0.29.0's first full run was 134 + 1 SURVIVED: the
   search-step guard became an equivalent mutant (0.29.0 pet-fee entry) and was
   retired. Before that, at v0.28.0, it was 120. 0.28.0's first full run was 121 + 2 SURVIVED: both
   on the retired cottage-gating path above, which was dead code, so the code

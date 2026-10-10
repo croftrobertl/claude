@@ -153,7 +153,11 @@ final class Results_Labels
             if (preg_match_all($head, $part) !== 1) {
                 return null;
             }
-            $rows_total = preg_match_all('#<tr>#', $part) - 1; // minus the thead row
+            // Count EVERY row, however its tag is written (v0.30.3): a row whose
+            // <tr> carries an attribute is not one the row pattern matches, and
+            // it must refuse the table rather than be skipped uncounted, which
+            // left that row as MotoPress drew it beside relabelled ones.
+            $rows_total = preg_match_all('#<tr\b#i', $part) - 1; // minus the thead row
             $rows_found = 0;
             $bad = false;
             $part = preg_replace_callback($row, static function (array $m) use ($capacity, &$rows_found, &$bad): string {
