@@ -31,6 +31,10 @@ const INFO_SHEET = (() => {
     + H.dephp(btn[0]) + '<p style="height:600px">photos</p></div></div>';
 })();
 const SALMON = 'rgb(240, 128, 128)';
+/* In-page: remove the theme's kit `button:hover, button:focus` rule (for
+   checks that compare against the public fixture, which never carried it). */
+const dropKitButtons = () => { for (const sh of document.styleSheets) { const rs = sh.cssRules;
+  for (let i = rs.length - 1; i >= 0; i--) if (/elementor-kit-\d+ button:hover/.test(rs[i].selectorText || '')) sh.deleteRule(i); } };
 const BUTTONLIKE = [
   ['nav', '.mphbac-staff-prev'],
   // The List / Chart tabs were here until 0.43.0; the period menu replaced
@@ -127,7 +131,13 @@ const BUTTONLIKE = [
     const { ctx, p } = await open(true);
     check('the touch context really reports hover:none (instrument check)',
       await p.evaluate(() => matchMedia('(hover: none)').matches));
-    for (const [label, sel] of [...BUTTONLIKE, ['booking bar', '.mphbac-staff-bar'], ['room row', '.mphbac-staff-item']]) {
+    /* 0.45.2: the BUTTONS left this loop. Rob asked for the public buttons'
+       behaviour in every state, and on the public pages the theme's ungated
+       `button:hover, button:focus` leaves a tapped button coral — so a tapped
+       staff button now does the same, and staff-board-test.js proves the
+       tap state equal to the public one. The plugin's OWN hover rules are
+       still all gated (above). The bar and the row are not buttons. */
+    for (const [label, sel] of [['booking bar', '.mphbac-staff-bar'], ['room row', '.mphbac-staff-item']]) {
       const r = await hoverRead(p, sel);
       check(`ON TOUCH ${label} does not change — no iOS linger`,
         r.hov.bg === r.rest.bg && r.hov.fg === r.rest.fg && r.hov.filter === 'none',
@@ -138,8 +148,8 @@ const BUTTONLIKE = [
       return { fv: e.matches(':focus-visible'), bg: c.backgroundColor, outline: c.outlineColor }; });
     check('THE SPLIT, as behaviour: focus-visible keeps its background on a TOUCH device',
       f.fv === true && f.bg === SALMON, f);
-    check('...and the focus OUTLINE is untouched — it is not a hover state',
-      f.outline === 'rgb(15, 109, 191)', f.outline);
+    const fo = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-prev')).outlineStyle);
+    check('...and its ring is the browser\'s own, as the public nav\'s is (0.45.2)', fo === 'auto', fo);
     await ctx.close();
   }
 
@@ -162,8 +172,10 @@ const BUTTONLIKE = [
     check('the close button uses min-height, not a fixed height that would clip the glyph',
       /\.mphbac-staff-close\s*\{[^}]*min-height:\s*46px/.test(code)
       && !/\.mphbac-staff-close\s*\{[^}]*\sheight:\s*4\dpx/.test(code));
-    check('no transition survives on any of them — a fade reads as a flicker',
-      m.every(x => x.dur === '0s'), m.map(x => [x.s, x.dur]));
+    check('no transition survives on the buttons and fields — a fade reads as a flicker',
+      m.filter(x => !/photo/.test(x.s)).every(x => x.dur === '0s'), m.map(x => [x.s, x.dur]));
+    check('the Photo ID pill changes colour over 0.2s, as the public "View" pill does (0.45.2)',
+      m.find(x => /photo/.test(x.s)).dur === '0.2s, 0.2s', m.find(x => /photo/.test(x.s)));
     // The theme's 0.75s really is in this fixture, so the pass is not vacuous.
     const bare = await p.evaluate(() => { const b = document.createElement('button');
       document.body.appendChild(b); const d = getComputedStyle(b).transitionDuration; b.remove(); return d; });
@@ -288,6 +300,10 @@ const BUTTONLIKE = [
     };
     const pubT = await repaint(pub, '.mphbac-sheet-close');
     const infT = await repaint(inf, '.mphbac-info-close--floating');
+    // Like with like: the public fixture carries no kit button rule, so the
+    // staff one drops it here. With it, its coral wins over this token on
+    // BOTH widgets alike (0.45.2 — see the parity section of the board test).
+    await stf.evaluate(dropKitButtons);
     const stfT = await repaint(stf, '.mphbac-staff-close');
     for (const [label, r] of [['public', pubT], ['floating', infT], ['staff', stfT]]) {
       check(label + ': the REST mark follows --dcc-site-button-bg', r.rest.fg === 'rgb(1, 2, 3)', r.rest);
@@ -315,6 +331,9 @@ const BUTTONLIKE = [
     ]) {
       const p = await ctx.newPage();
       await p.setContent(mk());
+      // Like with like, as above: the PLUGIN paints no focus fill on either
+      // widget; the theme's button:focus coral reaches both alike (0.45.2).
+      await p.evaluate(dropKitButtons);
       await p.evaluate(s => { document.querySelector(s).style.cssText +=
         ';transform:none;opacity:1;left:20px;top:20px;right:auto;bottom:auto;'; }, sheetSel);
       await p.waitForTimeout(400);
@@ -330,7 +349,7 @@ const BUTTONLIKE = [
         return { fv: e.matches(':focus-visible'), bg: c.backgroundColor, fg: c.color,
                  w: c.outlineWidth, style: c.outlineStyle, off: c.outlineOffset }; }, closeSel);
       check(label + ': (instrument check) the browser really is in focus-visible mode', f.fv);
-      check(label + ': focus paints NO fill — the ground and the mark do not move',
+      check(label + ': the plugin paints NO focus fill — the ground and the mark do not move',
         f.bg === rest.bg && f.fg === rest.fg, { rest, focus: { bg: f.bg, fg: f.fg } });
       check(label + ': focus IS a 2px outline, held clear of the round edge',
         f.w === '2px' && f.style === 'solid' && f.off === '2px', f);

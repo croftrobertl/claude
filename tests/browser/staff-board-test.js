@@ -374,6 +374,111 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await ctx.close();
   }
 
+  console.log('\n-- 0.45.2: a browser without overflow: clip (Safari before 16) — the script still moves the label --');
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    // As such a browser sees the board: CSS.supports says no, and the
+    // @supports block does not apply (restated here as 0.45.0's rules).
+    const { ctx, p } = await open({ phone, init: () => {
+      const real = CSS.supports.bind(CSS);
+      CSS.supports = (a, b) => (a === 'overflow' && b === 'clip') ? false : real(a, b);
+      document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style');
+        st.textContent = '.mphbac-staff .mphbac-staff-bar.mphbac-staff-bar { overflow: hidden; } .mphbac-staff .mphbac-staff-bar .mphbac-staff-bar-label { position: absolute; top: 0; right: 0; bottom: 0; }';
+        document.head.appendChild(st); });
+    } });
+    const v = await p.evaluate(() => {
+      const col = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect();
+      const bar = document.querySelector('.mphbac-staff-bar[data-booking-id="9"]'), br = bar.getBoundingClientRect();
+      const lab = bar.querySelector('.mphbac-staff-bar-label'), first = lab.firstElementChild.getBoundingClientRect();
+      return { sticky: getComputedStyle(lab).position, barLeft: Math.round(br.left), colRight: Math.round(col.right), firstLeft: Math.round(first.left), left: lab.style.left };
+    });
+    check(`${who}: (instrument check) the label is the old absolute one here, and Ivy's bar starts off-screen`, v.sticky === 'absolute' && v.barLeft < v.colRight, v);
+    check(`${who}: ...and the script has moved her name just right of the cottage column`, v.firstLeft >= v.colRight && v.firstLeft <= v.colRight + 8 && v.left !== '', v);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.45.2: the label tracks the scroll itself — sampled MID-scroll, not at rest --');
+  /* Rob's iPhone: the label lagged a flick, slid under the cottage column
+     ("OCK BLOCK") and jumped. iOS sends scroll events sparsely, and 0.45.0
+     moved the label from one. (1) Sample with NO scroll event let through:
+     set the position and measure in the same task, many times — what the
+     browser lays out, before any script could react, as on a phone between
+     two late events. (2) A real wheel scroll, sampled every frame AFTER the
+     board's own frame work: every label on screen, all bars. */
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    for (const period of ['month', 'year']) {
+      const { ctx, p } = await open({ phone });
+      if (period === 'year') await choose(p, 'year');
+      const r = await p.evaluate(async () => {
+        const g = document.querySelector('.mphbac-staff-grid');
+        const colR = () => document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect().right;
+        const max = g.scrollWidth - g.clientWidth;
+        // Settle at the left end first (let the board react), then sweep
+        // RIGHT — later days, bars moving left — which is the direction a
+        // late label is dragged under the column. (Monthly opens at its
+        // right end, so a sweep from the opening position only ever moved
+        // the other way and could not fail.)
+        g.scrollLeft = 0;
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        let samples = 0, stuck = 0, bad = [];
+        for (let x = 0; x <= max; x += 9) {
+          g.scrollLeft = x;                       // no scroll event runs before the reads below
+          const cr = colR();
+          for (const bar of document.querySelectorAll('.mphbac-staff-bar')) {
+            const br = bar.getBoundingClientRect(), lab = bar.querySelector('.mphbac-staff-bar-label');
+            const kids = [...lab.children].filter(k => k.getBoundingClientRect().width > 0);
+            if (!kids.length) continue;
+            // What is DRAWN — the name and icons — not the label's box (in
+            // 0.45.0 that box stretched to the bar's end).
+            const first = kids[0].getBoundingClientRect(), last = kids[kids.length - 1].getBoundingClientRect();
+            const drawn = last.right - first.left + 12;          // + the label's 6px padding each side
+            // Only while what is drawn FITS what is visible of its bar — the
+            // refit to a narrower label is the script's, a frame later.
+            if (br.left >= cr || br.right - cr < drawn) continue;
+            samples++;
+            if (first.left < cr - 0.5) bad.push({ x, id: bar.getAttribute('data-booking-id'), drawn: Math.round(first.left), col: Math.round(cr) }); else stuck++;
+          }
+        }
+        return { samples, stuck, bad: bad.slice(0, 4), nbad: bad.length };
+      });
+      check(`${who} ${period}: (instrument check) bars that began off-screen were sampled mid-scroll`, r.samples >= 10, r);
+      check(`${who} ${period}: with no scroll event yet, every such label is already right of the cottage column`, r.nbad === 0, r);
+      await ctx.close();
+    }
+  }
+  {
+    const { ctx, p } = await open();
+    await choose(p, 'year');
+    await p.evaluate(() => {
+      window.__under = []; window.__frames = 0;
+      const g = document.querySelector('.mphbac-staff-grid');
+      // Registered AFTER the board's listener, so this frame callback runs
+      // after the board's (the refit) — what is painted that frame.
+      g.addEventListener('scroll', () => requestAnimationFrame(() => {
+        window.__frames++;
+        const cr = document.querySelector('.mphbac-staff-rowlabel').getBoundingClientRect().right;
+        for (const bar of document.querySelectorAll('.mphbac-staff-bar')) {
+          const br = bar.getBoundingClientRect();
+          if (br.right <= cr) continue;
+          for (const k of bar.querySelectorAll('.mphbac-staff-bar-label > *')) {
+            const kr = k.getBoundingClientRect();
+            if (kr.width > 0 && kr.left < cr - 0.5) window.__under.push([bar.getAttribute('data-booking-id'), Math.round(kr.left), Math.round(cr), g.scrollLeft]);
+          }
+        }
+      }), { passive: true });
+    });
+    const gb = await p.locator('.mphbac-staff-grid').boundingBox();
+    await p.mouse.move(gb.x + gb.width / 2, gb.y + 60);
+    for (let i = 0; i < 40; i++) { await p.mouse.wheel(37, 0); await p.waitForTimeout(16); }
+    for (let i = 0; i < 25; i++) { await p.mouse.wheel(-53, 0); await p.waitForTimeout(16); }
+    await p.waitForTimeout(150);
+    const w = await p.evaluate(() => ({ frames: window.__frames, under: window.__under.slice(0, 5), n: window.__under.length }));
+    check('DESKTOP year, a real wheel scroll: (instrument check) frames were sampled while it moved', w.frames >= 20, w);
+    check('DESKTOP year, a real wheel scroll: no label, icon or name, is ever under the cottage column', w.n === 0, w);
+    await ctx.close();
+  }
+
   console.log('\n-- 0.45.0: search — live from 2 characters, one list, tap to open and jump --');
   {
     const { ctx, p } = await open();
@@ -475,15 +580,11 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     s0 = await st();
     check(`${who}: a search still waiting on its debounce is cancelled — no request, no list`,
       (await reqs()).length === before && !s0.open && s0.value === '', { reqs: await reqs(), s0 });
-    /* Never coral: the kit's button:hover / :focus (0,2,1) against ours. */
+    /* Its states are the public X's — see the parity section below, which
+       supersedes the "never coral" this check asserted earlier in 0.45.2. */
     await p.fill('.mphbac-staff-q', 'sm');
-    await p.evaluate(() => { document.querySelector('.mphbac-staff-qclear').style.transition = 'none'; });
-    const rest = (await st()).bg;
-    if (!phone) await p.hover('.mphbac-staff-qclear');
-    await p.evaluate(() => document.querySelector('.mphbac-staff-qclear').focus());
-    s0 = await st();
-    check(`${who}: hovered or focused, the ✕ keeps its own ground and disc — never the theme's coral pill`,
-      s0.xfocused && s0.bg === rest && s0.bg !== 'rgb(240, 128, 128)' && s0.radius === '50%', s0);
+    await p.evaluate(() => document.activeElement && document.activeElement.blur());
+    await p.mouse.move(1, 1).catch(() => {});
     /* The sheet's ✕, scaled: the same mark, ink and ground. */
     const look = await p.evaluate(() => {
       const a = document.querySelector('.mphbac-staff-qclear'), b = document.querySelector('.mphbac-staff-close');
@@ -536,6 +637,90 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check(`${who}: (instrument check) with the native cancel button put back, the strip shows its ink`, back > 20, back);
     check(`${who}: no native cancel button — never two ✕`, none === 0, { none, back });
     await ctx.close();
+  }
+
+  console.log('\n-- 0.45.2: the board\'s buttons ARE the public calendar\'s buttons, in every state --');
+  {
+    /* Rob: "make the buttons' styles / colours / states match what we already
+       set up for the availability calendar on the home page and the cottages
+       pages". The two widgets, side by side, with the theme's kit button rule
+       (in the staff harness) and the live public nav radius (30px, from its
+       panel): every state on a desktop, the state a tap leaves on a phone.
+       Pairs: ‹ › and Today ↔ .mphbac-nav-btn; the sheet ✕ and the search ✕
+       ↔ .mphbac-sheet-close; Photo ID / Text / WP-Admin ↔ the public "View"
+       pill (.mphbac-info-view-link). Bars are not buttons here (Rob, 0.44.1). */
+    const KIT = S.THEME.match(/\.elementor-kit-9 button:hover[^}]*}/)[0];
+    const LIVE_PANEL = `${H.POST}${H.WRAPPER} .mphbac-root.mphbac-root .mphbac-nav-btn{border-radius:30px}`;
+    const pubHtml = H.page({ panel: LIVE_PANEL, body: H.dephp(H.extractBlock(H.php(), '<div class="mphbac-nav">')) + H.filtersHtml()
+      + '<p><a class="mphbac-info-view-link" href="#v">View</a></p>', sheet: H.sheetHtml() }).replace('</head>', `<style>${KIT}</style></head>`);
+    const details = JSON.parse(JSON.stringify(F.DETAILS));
+    details[1].sections.customer.push({ label: 'Photo ID', value: 'id.jpg', photo: { field: 'upload_id' } });
+    const PROPS = ['backgroundColor', 'color', 'borderTopLeftRadius', 'outlineStyle', 'outlineWidth', 'outlineColor', 'outlineOffset', 'opacity', 'cursor'];
+    const read = (p, sel) => p.evaluate(([s2, props]) => { const e = document.querySelector(s2); e.style.transition = 'none';
+      const c = getComputedStyle(e); const o = {}; for (const k of props) o[k] = c[k]; return o; }, [sel, PROPS]);
+    const states = async (p, sel, phone) => {
+      const out = {};
+      await p.evaluate(s2 => { const e = document.querySelector(s2); e.hidden = false;
+        // A press must not close the sheet or change the period: what is
+        // measured is the state the press LEAVES the button in.
+        window.addEventListener('click', ev => { if (ev.target.closest(s2)) { ev.preventDefault(); ev.stopImmediatePropagation(); } }, true); }, sel);
+      await p.mouse.move(1, 1).catch(() => {});
+      await p.evaluate(() => document.activeElement && document.activeElement.blur());
+      out.rest = await read(p, sel);
+      const bb = await p.locator(sel).first().boundingBox();
+      if (phone) { await p.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.waitForTimeout(80); out.tapped = await read(p, sel); return out; }
+      await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); out.hover = await read(p, sel);
+      await p.mouse.down(); out.pressed = await read(p, sel); await p.mouse.up(); out.clicked = await read(p, sel);
+      await p.mouse.move(1, 1); out.clickedAway = await read(p, sel);
+      await p.evaluate(() => document.activeElement && document.activeElement.blur());
+      await p.keyboard.press('Shift'); await p.evaluate(s2 => document.querySelector(s2).focus(), sel); out.keyboard = await read(p, sel);
+      await p.evaluate(s2 => { const e = document.querySelector(s2); e.blur(); e.disabled = true; }, sel); out.disabled = await read(p, sel);
+      return out;
+    };
+    const measured = {};
+    for (const phone of [false, true]) {
+      const dev = phone ? 'PHONE' : 'DESKTOP';
+      const opts = phone ? { viewport: { width: 375, height: 900 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } };
+      for (const [k, sel, sheet] of [['nav', '.mphbac-nav-prev'], ['today', '.mphbac-nav-today'], ['close', '.mphbac-sheet .mphbac-sheet-close', 1], ['view', '.mphbac-info-view-link']]) {
+        const ctx = await browser.newContext(opts); const p = await ctx.newPage();
+        await p.setContent(pubHtml);
+        if (sheet) {
+          await p.evaluate(() => { for (const e of document.querySelectorAll('.mphbac-sheet, .mphbac-sheet-overlay')) { e.hidden = false; e.classList.add('is-open'); e.style.cssText += ';display:flex;opacity:1;transform:none;visibility:visible'; } });
+          await p.waitForTimeout(700);                   // its open animation moves the button
+        }
+        measured[dev + ' public ' + k] = await states(p, sel, phone);
+        await ctx.close();
+      }
+      for (const [k, sel, sheet] of [['nav', '.mphbac-staff-prev'], ['today', '.mphbac-staff-today'], ['close', '.mphbac-staff-close', 1], ['qclear', '.mphbac-staff-qclear'],
+        ['photo', '.mphbac-staff-photo a', 1], ['sms', '.mphbac-staff-sms', 1], ['admin', '.mphbac-staff-adminlink', 1]]) {
+        const html = S.boardShell({ today: F.TODAY, cottages: F.COTTAGES, bookings: F.BOOKINGS, details, search: F.SEARCH, bodyStyle: phone ? 'padding:0 27px' : '' });
+        const ctx = await browser.newContext(opts);
+        await ctx.route(ORIGIN + '**', r => r.fulfill({ body: html, contentType: 'text/html' }));
+        const p = await ctx.newPage(); await p.goto(ORIGIN); await p.waitForTimeout(300);
+        if (k === 'qclear') await p.fill('.mphbac-staff-q', 'sm');
+        if (sheet) { await p.click('.mphbac-staff-bar[data-booking-id="1"]'); await p.waitForTimeout(400); }
+        measured[dev + ' staff ' + k] = await states(p, sel, phone);
+        await ctx.close();
+      }
+    }
+    const inst = measured['DESKTOP public nav'];
+    check('(instrument check) the kit rule reaches the PUBLIC nav: coral on hover, and still coral after a click', inst.hover.backgroundColor === 'rgb(240, 128, 128)'
+      && inst.clickedAway.backgroundColor === 'rgb(240, 128, 128)' && inst.rest.backgroundColor === 'rgb(10, 80, 178)', inst);
+    check('(instrument check) a tap on the PUBLIC nav leaves it coral on a phone', measured['PHONE public nav'].tapped.backgroundColor === 'rgb(240, 128, 128)', measured['PHONE public nav']);
+    for (const dev of ['DESKTOP', 'PHONE']) {
+      for (const [pub, staff, label] of [['nav', 'nav', '‹ ›'], ['today', 'today', 'Today'], ['close', 'close', 'the sheet ✕'], ['close', 'qclear', 'the search ✕'],
+        ['view', 'photo', 'View Photo ID'], ['view', 'sms', 'Text'], ['view', 'admin', 'Open in WP-Admin']]) {
+        const A = measured[dev + ' public ' + pub], B = measured[dev + ' staff ' + staff], diffs = [];
+        for (const st of Object.keys(A)) {
+          // The search ✕ never keeps focus (a press leaves it in the field,
+          // so blur() puts a phone's keyboard away) and a click empties the
+          // field, which hides it: its "after a click" state is never seen.
+          if (staff === 'qclear' && st === 'clickedAway') continue;
+          for (const k of PROPS) if (A[st][k] !== B[st][k]) diffs.push(`${st}.${k}: public ${A[st][k]} / staff ${B[st][k]}`);
+        }
+        check(`${dev}: ${label} looks and behaves exactly like its public twin — ${Object.keys(A).join(', ')}`, diffs.length === 0, diffs);
+      }
+    }
   }
 
   console.log('\n-- 6: the sheet — tap to call / text / email, Open in WP-Admin --');
