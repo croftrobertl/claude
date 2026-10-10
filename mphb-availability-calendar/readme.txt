@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.1
+Stable tag: 0.45.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.45.2 =
+* **A ✕ to close search.** While the Search box has text, a ✕ at its right end clears it, closes the results and puts the phone's keyboard away, all in one tap. iPhones draw no clear button of their own on a search box, so closing the results used to mean deleting every letter. Escape still does the same on a computer, and the browser's own ✕ is hidden so there are never two.
+* **The Search box looks like the other fields.** The site theme underlined every form label, and on an iPhone the line also ran under the placeholder and the typed text. The labels, the fields and the placeholder are no longer underlined. The placeholder now looks like the public calendar's "mm/dd/yy" hint: same grey, same lettering as the field, centred. Typed text is centred in the same lettering as "Monthly" and the date.
 
 = 0.45.1 =
 * **Search: numbers are numbers.** A number now finds only a booking number, a cottage number or phone digits. "19600" used to bring back every booking as "Check-in sounds like…", because the sounds-alike check treated every number as alike.
