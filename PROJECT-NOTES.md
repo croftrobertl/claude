@@ -2588,3 +2588,10 @@ through, and run.sh counted it green. The check now runs in a child process,
 staff-search-test.php ends with an instrument check that it reached its end,
 and run.sh fails any suite whose last line is not its own verdict ("all
 passed" / "ALL OK").
+
+**Caught on the release screenshots, not by a suite: Search's label sat at
+the left on a phone.** The phone's two-across date row makes every
+.mphbac-staff-field display: contents; Search carries that class, so its
+label became bare inline text and its own text-align: center did nothing.
+Search keeps its flex column at (0,2,0), and staff-test.js now measures the
+label's text centred over the field at 1280px and 375px.

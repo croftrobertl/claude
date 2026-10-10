@@ -667,6 +667,17 @@ const BUTTONLIKE = [
         check(`${who}: "${l.text}" matches the public label's weight, ink and alignment as the public stylesheet renders them`,
           l.weight === pub.weight && l.color === pub.color && l.align === pub.align, [l, pub]);
       }
+      /* 0.45.0: the phone's two-across grid turns each field into display:
+         contents; Search must not inherit it, or its label is bare inline
+         text pinned to the left whatever its text-align says. */
+      const sg = await p.evaluate(() => {
+        const lab = document.querySelector('.mphbac-staff-search-field .mphbac-staff-field-label');
+        const inp = document.querySelector('.mphbac-staff-q');
+        const r = n => { const b = n.getBoundingClientRect(); return { l: b.left, w: b.width, mid: b.left + b.width / 2 }; };
+        const t = document.createRange(); t.selectNodeContents(lab); const tb = t.getBoundingClientRect();
+        return { text: tb.left + tb.width / 2, field: r(inp), above: lab.getBoundingClientRect().bottom <= inp.getBoundingClientRect().top + 1 };
+      });
+      check(`${who}: "Search" sits centred above its field`, sg.above && Math.abs(sg.text - sg.field.mid) <= 2, sg);
       await ctx.close();
     }
   }

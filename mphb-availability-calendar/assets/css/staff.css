@@ -1417,6 +1417,9 @@ body.mphbac-staff-open { overflow: hidden; }
     }
     .mphbac-staff-field { display: contents; }
     .mphbac-staff-field-label { grid-row: 1; }
+    /* Search is not part of that two-across grid: it keeps its own column,
+       or its label lays out as bare inline text and its centring is lost. */
+    .mphbac-staff-search .mphbac-staff-search-field { display: flex; }
     .mphbac-staff-input { grid-row: 2; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto {
         padding-left: 12px;
