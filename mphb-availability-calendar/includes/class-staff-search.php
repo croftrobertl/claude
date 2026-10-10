@@ -20,6 +20,19 @@
  * and a plain-text "why it matched". The sheet itself is fetched through the
  * gated booking endpoint when a result is tapped.
  *
+ * NUMBERS AND SOUNDS (0.45.1, the Website Director's staging tests on 249
+ * real bookings): PHP's soundex() gives every string of digits the same key,
+ * "0000", so "19600" "sounded like" every check-in date. A word with a digit
+ * in it is now never matched by typo or sound, and a query that is only a
+ * number reads as a booking number, a cottage number ("23", "#23", "c23",
+ * "cottage 23") or phone digits — nothing else. A month name on its own is a
+ * date: every stay over that month, the nearest upcoming first. The typo and
+ * sound measures need words of similar length (two letters apart at most),
+ * a Metaphone key of three or more, a trigram overlap of 0.6, and a Soundex
+ * match only when Metaphone agrees on the opening — "boat" no longer finds
+ * "Bodie", nor "boathouse" "Betsy", nor "november" "Number". A yes / no row
+ * that says yes is found by its label: "boat" finds Boat: Yes first.
+ *
  * PRIVACY: the query is never logged and never stored, here or in the
  * browser. The index holds guest details, so it lives in a NON-autoloaded
  * transient (it has an expiry), is cleared on every booking change, and is
@@ -34,7 +47,9 @@ defined('ABSPATH') || exit;
 
 final class Staff_Search
 {
-    public const INDEX_KEY = 'mphbac_staff_search_v1';
+    public const INDEX_KEY = 'mphbac_staff_search_v2';
+    /** 0.45.0's index, a different shape: cleared with the current one. */
+    private const OLD_KEYS = ['mphbac_staff_search_v1'];
     private const INDEX_TTL = 6 * HOUR_IN_SECONDS;
     public const MAX_QUERY = 100;
 
@@ -47,6 +62,9 @@ final class Staff_Search
     public static function flush(): void
     {
         delete_transient(self::INDEX_KEY);
+        foreach (self::OLD_KEYS as $old) {
+            delete_transient($old);
+        }
     }
 
     /** deleted_post passes ($post_id, $post): only a booking clears it. */
@@ -87,6 +105,7 @@ final class Staff_Search
             }
             $tokens = [];
             $phones = [];
+            $flags = [];
             foreach ($doc['fields'] as $fi => $f) {
                 $norm = self::norm($f[1]);
                 $doc['fields'][$fi][2] = $norm;
@@ -100,10 +119,24 @@ final class Staff_Search
                     if (strlen((string) $d) >= 4) {
                         $phones[] = [(string) $d, $fi];
                     }
+                } elseif (preg_match_all('/phone[^:]{0,40}:\s*(\+?\d[\d\s().\-]*\d)/i', $f[1], $pm)) {
+                    // Airbnb's description: "Phone Number (Last 4 Digits): 9876".
+                    foreach ($pm[1] as $raw) {
+                        $d = (string) preg_replace('/\D+/', '', $raw);
+                        if (strlen($d) >= 4) {
+                            $phones[] = [$d, $fi];
+                        }
+                    }
+                }
+                // A yes / no row that says yes is found by its LABEL: "boat"
+                // means Boat: Yes, not just a word in a cottage's name.
+                if (preg_match('/^(yes|y|true)$/i', trim($f[1]))) {
+                    $flags[self::norm($f[0])] = $fi;
                 }
             }
             $doc['tokens'] = $tokens;
             $doc['phones'] = $phones;
+            $doc['flags'] = $flags;
             $index[] = $doc;
         }
         set_transient(self::INDEX_KEY, $index, self::INDEX_TTL);
@@ -122,23 +155,16 @@ final class Staff_Search
             return [];
         }
         $index = self::index();
-        $hits = [];   // id => [score, why]
-        $keep = static function (int $id, int $score, string $why) use (&$hits): void {
+        $hits = [];   // id => [score, why, nearest-first]
+        $keep = static function (int $id, int $score, string $why, bool $near = false) use (&$hits): void {
             if (!isset($hits[$id]) || $score > $hits[$id][0]) {
-                $hits[$id] = [$score, $why];
+                $hits[$id] = [$score, $why, $near];
             }
         };
 
-        // 1. A booking number finds that booking directly.
-        if (preg_match('/^#?\s*(\d+)$/', $q, $m)) {
-            foreach ($index as $doc) {
-                if ((int) $doc['id'] === (int) $m[1]) {
-                    $keep((int) $doc['id'], 1000, sprintf(__('booking #%d', 'mphb-availability-calendar'), (int) $doc['id']));
-                }
-            }
-        }
-
-        // 2. A date: every stay that includes that night (or month).
+        // 1. A date: every stay that includes that night (or month). A query
+        // that reads as a date is searched as a date only: its parts ("2026",
+        // "12") are in every booking's own dates and would match them all.
         $date = self::parse_date($q);
         if ($date !== null) {
             foreach ($index as $doc) {
@@ -146,27 +172,54 @@ final class Staff_Search
                     $keep((int) $doc['id'], 600, $date['why']);
                 }
             }
-        }
-
-        // A query that reads as a DATE is searched as a date only: its parts
-        // ("2026", "12") are in every booking's own dates and would match
-        // them all as words.
-        if ($date !== null) {
             return self::rows($hits, $index);
         }
 
-        // 3. Phone digits, however formatted, the last four alone included.
-        if (preg_match('/^[\d\s().+\-]+$/', $q)) {
-            $digits = preg_replace('/\D+/', '', $q);
-            if (strlen((string) $digits) >= 4) {
+        // 2. A number is a booking number, a cottage number or phone digits —
+        // never a word, a typo or a sound (soundex() keys every string of
+        // digits "0000", so "19600" once "sounded like" every check-in).
+        $num = self::number_query($q);
+        if ($num !== null) {
+            $n = $num['digits'];
+            $cottage = false;
+            if ($num['cottage']) {
                 foreach ($index as $doc) {
-                    foreach ($doc['phones'] as [$p]) {
-                        if ($p === $digits || str_ends_with($p, (string) $digits)) {
-                            $keep((int) $doc['id'], 550, sprintf(__('phone ends %s', 'mphb-availability-calendar'), substr($p, -4)));
-                        } elseif (strpos($p, (string) $digits) !== false) {
-                            $keep((int) $doc['id'], 500, sprintf(__('phone contains %s', 'mphb-availability-calendar'), $digits));
+                    foreach ($doc['cottages'] as $c) {
+                        if ((string) $c['number'] !== '' && (int) $c['number'] === (int) $n) {
+                            $cottage = true;
+                            $keep((int) $doc['id'], 900, sprintf(__('cottage #%s', 'mphb-availability-calendar'), $c['number']));
                         }
                     }
+                }
+            }
+            if ($num['booking']) {
+                foreach ($index as $doc) {
+                    if ((int) $doc['id'] === (int) $n) {
+                        // Below the cottage's stays when "23" is also a cottage.
+                        $keep((int) $doc['id'], $cottage ? 800 : 1000, sprintf(__('booking #%d', 'mphb-availability-calendar'), (int) $doc['id']));
+                    }
+                }
+            }
+            foreach ($index as $doc) {
+                foreach ($doc['phones'] as [$p]) {
+                    if ($p === $n || str_ends_with($p, $n)) {
+                        $keep((int) $doc['id'], 550, sprintf(__('phone ends %s', 'mphb-availability-calendar'), substr($p, -4)));
+                    } elseif (strpos($p, $n) !== false) {
+                        $keep((int) $doc['id'], 500, sprintf(__('phone contains %s', 'mphb-availability-calendar'), $n));
+                    }
+                }
+            }
+            return self::rows($hits, $index);
+        }
+
+        // 3. A month name on its own is a date too: every stay over that
+        // month, any year, the nearest upcoming first; text matches follow.
+        $alone = rtrim(strtolower($q), '.');
+        if (isset(self::MONTHS[$alone])) {
+            $mo = self::MONTHS[$alone];
+            foreach ($index as $doc) {
+                if (self::stay_in_month($doc, $mo)) {
+                    $keep((int) $doc['id'], 600, sprintf(__('stay in %s', 'mphb-availability-calendar'), date('F', mktime(0, 0, 0, $mo, 1, 2024))), true);
                 }
             }
         }
@@ -231,7 +284,9 @@ final class Staff_Search
             $byId[(int) $doc['id']] = $doc;
         }
         $out = [];
-        foreach ($hits as $id => [$score, $why]) {
+        $near = [];
+        foreach ($hits as $id => [$score, $why, $isNear]) {
+            $near[$id] = $isNear;
             $doc = $byId[$id];
             $out[] = [
                 'id'         => $id,
@@ -247,8 +302,24 @@ final class Staff_Search
                 'score'      => $score,
             ];
         }
-        // Best match first (Rob); among equals, the latest stay first.
-        usort($out, static fn($a, $b) => [$b['score'], $b['checkin'], $b['id']] <=> [$a['score'], $a['checkin'], $a['id']]);
+        // Best match first (Rob); among equals, the latest stay first — except
+        // a month's stays, nearest upcoming first, then the most recent past.
+        $today = Data_Provider::today()->format('Y-m-d');
+        usort($out, static function ($a, $b) use ($near, $today): int {
+            if ($a['score'] !== $b['score']) {
+                return $b['score'] <=> $a['score'];
+            }
+            if ($near[$a['id']] && $near[$b['id']]) {
+                $ua = $a['checkout'] > $today;
+                $ub = $b['checkout'] > $today;
+                if ($ua !== $ub) {
+                    return $ua ? -1 : 1;
+                }
+                return $ua ? [$a['checkin'], $a['id']] <=> [$b['checkin'], $b['id']]
+                    : [$b['checkin'], $b['id']] <=> [$a['checkin'], $a['id']];
+            }
+            return [$b['checkin'], $b['id']] <=> [$a['checkin'], $a['id']];
+        });
         return $out;
     }
 
@@ -266,6 +337,15 @@ final class Staff_Search
                 $best = $m;
             }
         };
+        foreach ($doc['flags'] ?? [] as $flag => $fi) {
+            $flag = (string) $flag;
+            if ($flag === $qw || strpos($flag, $qw) === 0) {
+                $take([$flag === $qw ? 110 : 90, $doc['fields'][$fi][0], 'flag', $doc['fields'][$fi][1]]);
+            }
+        }
+        $digit = preg_match('/\d/', $qw) === 1;
+        $qmeta = metaphone($qw);
+        $qsdx = soundex($qw);
         foreach ($doc['tokens'] as $tok => [$fi, $meta, $sdx]) {
             $tok = (string) $tok;
             $label = $doc['fields'][$fi][0];
@@ -286,6 +366,12 @@ final class Staff_Search
                 // is 0.91 Jaro-Winkler from "jon", which is noise, not a typo.
                 continue;
             }
+            if ($digit || preg_match('/\d/', $tok)) {
+                continue;                       // a number is never a typo or a sound
+            }
+            if (abs($len - self::len($tok)) > 2) {
+                continue;                       // "november" is not "number"
+            }
             $dl = self::damerau($qw, $tok);
             $limit = $len <= 5 ? 1 : 2;
             if ($dl <= $limit) {
@@ -296,15 +382,17 @@ final class Staff_Search
                 $take([55, $label, 'typo', $tok]);
                 continue;
             }
-            if ($meta !== '' && $meta === metaphone($qw)) {
+            if (strlen($meta) >= 3 && $meta === $qmeta) {      // "BT" fits boat, bodie, bette…
                 $take([52, $label, 'sound', $tok]);
                 continue;
             }
-            if (self::dice($qw, $tok) >= 0.5) {
+            if (self::dice($qw, $tok) >= 0.6) {
                 $take([48, $label, 'typo', $tok]);
                 continue;
             }
-            if ($sdx !== '' && $sdx === soundex($qw)) {
+            // Soundex alone is loose (boat = Bodie = B300, boathouse = Betsy =
+            // B320): it counts only where Metaphone agrees on three sounds too.
+            if ($sdx !== '' && $sdx === $qsdx && strlen($meta) >= 3 && strncmp($meta, $qmeta, 3) === 0) {
                 $take([42, $label, 'sound', $tok]);
             }
         }
@@ -329,6 +417,8 @@ final class Staff_Search
                 return sprintf(__('%1$s sounds like %2$s', 'mphb-availability-calendar'), $label, self::show($word));
             case 'typo':
                 return sprintf(__('%1$s close to %2$s', 'mphb-availability-calendar'), $label, self::show($word));
+            case 'flag':
+                return sprintf(__('%1$s: %2$s', 'mphb-availability-calendar'), $label, $word);
             default:
                 return sprintf(__('%1$s: %2$s', 'mphb-availability-calendar'), $label, self::show($word));
         }
@@ -424,6 +514,48 @@ final class Staff_Search
             }
             $night = sprintf('%04d-%02d-%02d', $y, $date['m'], $date['d']);
             if ($in <= $night && $night < $out) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A query that is only a number: "19600" / "#19600" (a booking — or, up
+     * to three digits, a cottage too), "c23" / "C 23" / "cottage 23" (a
+     * cottage), or phone digits however formatted. Null for anything else.
+     *
+     * @return array{digits:string,booking:bool,cottage:bool}|null
+     */
+    private static function number_query(string $q): ?array
+    {
+        $q = trim($q);
+        if (preg_match('/^#?\s*(\d+)$/', $q, $m)) {
+            return ['digits' => $m[1], 'booking' => true, 'cottage' => strlen($m[1]) <= 3];
+        }
+        if (preg_match('/^(?:cottage|cott|c)\.?\s*#?\s*(\d{1,3})$/i', $q, $m)) {
+            return ['digits' => $m[1], 'booking' => false, 'cottage' => true];
+        }
+        if (preg_match('/^[\d\s().+\-]+$/', $q)) {
+            $d = (string) preg_replace('/\D+/', '', $q);
+            if (strlen($d) >= 2) {
+                return ['digits' => $d, 'booking' => false, 'cottage' => false];
+            }
+        }
+        return null;
+    }
+
+    /** Does the stay include a night in month $m, any year? */
+    private static function stay_in_month(array $doc, int $m): bool
+    {
+        $in = (string) $doc['checkin'];
+        $out = (string) $doc['checkout'];
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $in) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $out) || $out <= $in) {
+            return false;
+        }
+        $last = date('Y-m-d', strtotime($out . ' -1 day'));
+        for ($d = substr($in, 0, 7) . '-01'; $d <= $last; $d = date('Y-m-01', strtotime($d . ' +1 month'))) {
+            if ((int) substr($d, 5, 2) === $m) {
                 return true;
             }
         }
