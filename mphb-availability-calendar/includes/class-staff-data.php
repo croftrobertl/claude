@@ -139,6 +139,10 @@ final class Staff_Data
                     // translatable name.
                     'sourceKey'  => $source['key'],
                     'pets'       => self::has_pet($bid, $rooms, $pet_services),
+                    // 0.44.1 (Rob): Couch — 3+ guests, only from a count a
+                    // PERSON set; Boat — the "boat" checkout field says yes.
+                    'couch'      => self::has_couch($rooms, $source),
+                    'boat'       => self::has_boat($bid),
                     // The sheet's own rule: '' where an import carries only the
                     // cottage's default capacity, so the preview never shows a
                     // count the sheet would not.
@@ -503,6 +507,11 @@ final class Staff_Data
             self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
             self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));
         }
+        // BOAT (0.44.1): the new "boat" checkout field, after the dog rows —
+        // Rob's standing rule is that the sheet shows every booking field, and
+        // these rows are listed explicitly. Yes / No as answered; push() drops
+        // an unanswered (blank) one.
+        self::push($out, __('Boat', 'mphb-availability-calendar'), self::custom_get($custom, ['boat']));
 
         return $out;
     }
@@ -725,6 +734,47 @@ final class Staff_Data
             return true;
         }
         return (bool) array_intersect_key(self::service_ids_on($rooms), $pet_services);
+    }
+
+    /**
+     * COUCH (0.44.1, Rob): three or more guests, so the extra linen goes out
+     * and the extra-guest fee is collected — but ONLY from a count a person
+     * set: a staff-confirmed count (_mphb_adults_confirmed on a reserved
+     * room, set with the WP-Admin guest dropdown), or a booking that is not a
+     * platform import (the website or WP-Admin; the data cannot tell those
+     * two apart — verified on live by the Website Director). NEVER an
+     * import's own number: Airbnb / Booking.com / Vrbo send no real count.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     * @param array<string,mixed>            $source
+     */
+    private static function has_couch(array $rooms, array $source): bool
+    {
+        $confirmed = self::confirmed_occupancy($rooms);
+        if ($confirmed !== null) {
+            return $confirmed['adults'] + $confirmed['children'] >= 3;
+        }
+        if (!empty($source['imported'])) {
+            return false;
+        }
+        $total = 0;
+        foreach ($rooms as $r) {
+            $rr = (int) ($r['post_id'] ?? 0);
+            if ($rr > 0) {
+                $total += (int) get_post_meta($rr, '_mphb_adults', true) + (int) get_post_meta($rr, '_mphb_children', true);
+            }
+        }
+        return $total >= 3;
+    }
+
+    /**
+     * BOAT (0.44.1, Rob): the "boat" checkout field (No / Yes, added by the
+     * Custom Checkout plugin) says yes, case-insensitively. Until the field
+     * exists no booking has it, and nothing shows.
+     */
+    private static function has_boat(int $booking_id): bool
+    {
+        return strtolower(trim(self::custom_get(self::custom_fields($booking_id, null), ['boat']))) === 'yes';
     }
 
     /**
@@ -1145,6 +1195,7 @@ final class Staff_Data
     private static function ota_key(string $prodid): string
     {
         $p = strtolower($prodid);
+        if (strpos($p, 'ddaysoftware') !== false) return 'vrbo';
         if (strpos($p, 'airbnb') !== false)     return 'airbnb';
         if (strpos($p, 'booking.com') !== false || strpos($p, 'booking') !== false) return 'booking';
         if (strpos($p, 'vrbo') !== false || strpos($p, 'homeaway') !== false || strpos($p, 'expedia') !== false) return 'vrbo';
@@ -1155,6 +1206,11 @@ final class Staff_Data
     private static function ota_name(string $prodid): string
     {
         $p = strtolower($prodid);
+        // "-//ddaysoftware.com//NONSGML DDay.iCal 1.0//EN" is VRBO (0.44.1):
+        // the only two bookings carrying it, #5948 and #5952 (Apr 25–27 2025),
+        // are Vrbo reservations HA-3P743P and HA-664503 in Vrbo's 2025 payout
+        // file — matched by the Website Director.
+        if (strpos($p, 'ddaysoftware') !== false) return 'Vrbo';
         if (strpos($p, 'airbnb') !== false)     return 'Airbnb';
         if (strpos($p, 'booking.com') !== false || strpos($p, 'booking') !== false) return 'Booking.com';
         if (strpos($p, 'vrbo') !== false || strpos($p, 'homeaway') !== false || strpos($p, 'expedia') !== false) return 'Vrbo';
