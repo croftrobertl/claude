@@ -680,6 +680,27 @@ const BUTTONLIKE = [
       check(`${who}: "Search" sits centred above its field`, sg.above && Math.abs(sg.text - sg.field.mid) <= 2, sg);
       await ctx.close();
     }
+    /* 0.45.1 (WD: "make its focus style match Show and Go to date, whatever
+       theirs is"). Measured: one rule gives all three the same 2px blue ring,
+       after a click or a tap as after Tab — Search only shows it longer,
+       because you type in it while a picker covers the other two. Pinned so
+       the three can never drift apart. */
+    for (const [w, who, touch] of [[1280, 'DESKTOP', false], [375, 'PHONE', true]]) {
+      const ring = [];
+      for (const sel of ['.mphbac-staff-period', '.mphbac-staff-goto', '.mphbac-staff-q']) {
+        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, hasTouch: touch, isMobile: touch });
+        const p = await ctx.newPage();
+        await p.setContent(S.page({ body: S.TOOLS }));
+        const bb = await p.locator(sel).boundingBox();
+        if (touch) await p.touchscreen.tap(bb.x + 20, bb.y + bb.height / 2); else await p.mouse.click(bb.x + 20, bb.y + bb.height / 2);
+        ring.push(await p.evaluate(s => { const e = document.querySelector(s); const c = getComputedStyle(e);
+          return { sel: s, focused: document.activeElement === e, ring: [c.outlineStyle, c.outlineWidth, c.outlineColor, c.outlineOffset, c.boxShadow, c.borderColor].join(' / ') }; }, sel));
+        await ctx.close();
+      }
+      check(`${who}: (instrument check) each field took focus from a ${touch ? 'tap' : 'click'}`, ring.every(r => r.focused), ring);
+      check(`${who}: Search's focus ring is exactly Show's and Go to date's`, ring[2].ring === ring[0].ring && ring[2].ring === ring[1].ring
+        && /^solid \/ 2px/.test(ring[0].ring), ring.map(r => r.ring));
+    }
   }
 
   console.log('\n-- the fade is gone from the bar and the row, the sheet still animates --');

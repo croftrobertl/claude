@@ -2553,8 +2553,8 @@ new endpoint added without the gate fails the suite, not just a review.
 booking_detail(), so search can never see a field or a status the sheet
 would not show. It is flushed by the two iCal hooks the WD verified on live,
 deleted_post (bookings and payments only), save_post for bookings, payments
-and room types, and mphb_booking_status_changed (NOT verified on live — a
-status change from WP-Admin also fires save_post, so it is belt and braces).
+and room types, and mphb_booking_status_changed (verified by the WD in 0.45.1:
+MotoPress 6.3.0 fires it in includes/post-types/booking-cpt/statuses.php:182).
 Uninstall already deletes `_transient_mphbac_%`. The 6-hour expiry is only a
 backstop for a change nobody hooked. A result row carries what the board
 shows (name, cottages, dates, status, source, why, score); the sheet itself
@@ -2595,3 +2595,56 @@ the left on a phone.** The phone's two-across date row makes every
 label became bare inline text and its own text-align: center did nothing.
 Search keeps its flex column at (0,2,0), and staff-test.js now measures the
 label's text centred over the field at 1280px and 375px.
+
+## Search on real data: numbers, cottages, months, sounds (0.45.1)
+
+**The WD tested 0.45.0 on staging, against 249 real bookings** (reporting
+counts and match labels only). Confirmed: every staff endpoint refuses an
+anonymous POST with a 403 and 0 bytes (a GET too — the gate answers before
+the method check); the index builds in 582 ms, reads in 3.5 ms, is 753 KB
+and not autoloaded; booking number, last-4 phone, full name, a swapped-letter
+typo and a 3-letter prefix all find a real booking; "usa" = "united states"
+= 110. mphb_booking_status_changed is real in 6.3.0.
+
+**The WD's bugs, and the rules that fix them (WD decided the rules):**
+1. **A number is never a sound or a typo.** PHP's soundex() keys ANY string
+   of digits "0000", so "19600" "sounded like" every check-in year and came
+   back with all 249. A digits-only query now reads ONLY as a booking number,
+   a cottage number or phone digits (substring, from 2 digits); dates stay
+   dates. A word with a digit in it is never typo- or sound-matched.
+2. **A month name alone is a date:** every stay over that month in any year,
+   nearest upcoming first (then the most recent past), text matches below.
+3. **Cottages:** "23", "#23", "c23", "C 23", "cottage 23" — exactly that
+   cottage's stays first (score 900), never a neighbouring number's; then
+   phone digits. A booking with that number follows the cottage's stays
+   (800); with "c" or "cottage" in front it is a cottage only.
+4. **Tighter sound and typo matching** — measured on the WD's pairs:
+   november/number passed on trigram overlap at exactly 0.5; boat/Bodie on a
+   two-letter Metaphone key (BT) and on Soundex (B300); boathouse/Betsy on
+   Soundex alone (B320). Now: lengths within 2, trigram overlap 0.6,
+   Metaphone keys of 3+, and Soundex only where Metaphone agrees on three
+   sounds. Philips → Fillips, Smoth → Smith, Bodey → Bodie still work;
+   Smithson → Smith (Jaro-Winkler 0.93 alone) no longer does.
+   **Mine:** a yes / no row that says yes is found by its LABEL at 110, so
+   "boat" ranks Boat: Yes above The Boathouse (85) — the WD's rule, done for
+   every yes / no answer rather than for Boat by name. And the "Phone Number
+   (Last 4 Digits): 9876" in Airbnb's description is read as a phone, since a
+   number query no longer reaches the sync text as words.
+5. **The focus ring:** measured, not changed. One rule gives Show, Go to
+   date and Search the same 2px #0f6dbf ring at a 2px offset, after a click,
+   a tap or Tab, at 1280 and 375. Search only shows it for longer: you type
+   in it, while a tap on the other two opens a picker over them. A test now
+   pins the three to one style. If Rob wants no ring after a tap on ANY of
+   them (keyboard only), that is a separate, small change.
+
+The index key is now mphbac_staff_search_v2 (a new field, `flags`); a flush
+also deletes 0.45.0's v1, which would otherwise hold guest details until its
+6-hour expiry. Every case above is a fixture booking in staff-search-test.php
+— cottages 22 / 23 / 32 / 33 (32 is "The Boathouse"), booking #19600 and #32,
+Novembers past and upcoming (dated from today, so the order never goes
+stale), Bodie and Betsy — and each check was run against 0.45.0's code first
+and failed with the WD's own symptoms.
+
+**Fixture lesson, again:** booking #32 silently overwrote the room type with
+post id 32 (the cottage numbers had been used as post ids). New room types
+use post ids 9032 / 9033; the number comes from the title, as on live.

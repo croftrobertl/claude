@@ -88,8 +88,32 @@ namespace {
     $book(104, 'confirmed', '2024-12-23', '2024-12-26', 230, ['mphb_ical_prodid' => '-//HomeAway.com, Inc.//NONSGML HomeAway Calendar//EN',
         'mphb_ical_summary' => '"Reserved - Carla"']);
     $book(105, 'confirmed', '2021-07-01', '2021-07-05', 220, ['mphb_first_name' => 'Dee', 'mphb_last_name' => 'March']);
+    // "Dec 24" as WORDS would find this note ("Deck", "24th"); as a date, not.
+    $GLOBALS['t_note'][105] = 'Deck chairs out by the 24th';
     $book(106, 'pending', '2027-03-14', '2027-03-17', 230, ['mphb_first_name' => 'Eve', 'mphb_last_name' => 'Long']);
     $book(107, 'confirmed', '2025-06-01', '2025-06-04', 220, ['mphb_first_name' => 'Kim', 'mphb_last_name' => 'Fillips']);
+
+    /* 0.45.1, the Website Director's staging cases: cottages 32 and 33 beside
+       22 and 23 (one of them "The Boathouse"), a 5-digit booking number, a
+       booking whose number is also a cottage's, Novembers past and upcoming,
+       and guests whose names a loose sound match took for "boat" (Bodie, BT)
+       and "boathouse" (Betsy, B320). The upcoming November is worked out from
+       today, so "nearest upcoming first" never goes stale. */
+    // Post ids 9032 / 9033: the cottage NUMBER comes from the title, and post
+    // id 32 is booking #32 below (a shared id once overwrote a room type).
+    t_post(9032, 'mphb_room_type', 'publish', 'Cottage 32: The Boathouse', ['mphb_adults_capacity' => 4]);
+    t_post(9033, 'mphb_room_type', 'publish', 'Cottage 33: Osprey', ['mphb_adults_capacity' => 4]);
+    t_post(3200, 'mphb_room', 'publish', 'R32', ['mphb_room_type_id' => 9032]);
+    t_post(3300, 'mphb_room', 'publish', 'R33', ['mphb_room_type_id' => 9033]);
+    $nowY = (int) date('Y');
+    $NOV = date('Y-m-d') < "$nowY-11-05" ? $nowY : $nowY + 1;       // the next November stay
+    $book(108, 'confirmed', "$NOV-11-02", "$NOV-11-05", 3200, ['mphb_first_name' => 'Gus', 'mphb_last_name' => 'Hale']);
+    $book(109, 'confirmed', ($NOV - 3) . '-11-28', ($NOV - 3) . '-12-02', 3300, ['mphb_first_name' => 'Bodie', 'mphb_last_name' => 'Hart',
+        'mphb_phone' => '555-777-2323']);
+    $book(19600, 'confirmed', ($NOV + 1) . '-01-10', ($NOV + 1) . '-01-13', 230, ['mphb_first_name' => 'Betsy', 'mphb_last_name' => 'Novak']);
+    $book(32, 'confirmed', '2020-01-01', '2020-01-03', 220, ['mphb_first_name' => 'Lou', 'mphb_last_name' => 'Park']);
+    // A LATER upcoming November: latest-first would put it before 108.
+    $book(111, 'confirmed', ($NOV + 1) . '-11-20', ($NOV + 1) . '-11-22', 220, ['mphb_first_name' => 'Ida', 'mphb_last_name' => 'Ross']);
 
     $fail = 0;
     function check(string $l, bool $c, $x = null): void {
@@ -116,7 +140,7 @@ namespace {
 
     echo "-- what is searched: the sheet, the number, the cottage, the sync text --\n";
     $index = Staff_Search::index();
-    check('every VISIBLE booking is indexed, the cancelled one is not', count($index) === 6 && !in_array(103, $ids($index), true), $ids($index));
+    check('every VISIBLE booking is indexed, the cancelled one is not', count($index) === 11 && !in_array(103, $ids($index), true), $ids($index));
     $f101 = array_column($index[array_search(101, $ids($index), true)]['fields'], 1, 0);
     check('the sheet\'s rows: name, phone, apartment / unit, Boat, the customer note and the internal note',
         ($f101['First Name'] ?? '') === 'Ann' && isset($f101['Phone']) && ($f101['Apartment / Unit'] ?? '') === '4B'
@@ -174,6 +198,58 @@ namespace {
     check('"late arrival": a phrase from the customer note', ($find('late arrival')[0]['id'] ?? 0) === 101);
     check('"secretfile": the Photo ID is never searched', $find('secretfile') === []);
 
+    echo "\n-- 0.45.1: a number is never a sound or a typo --\n";
+    $whys = static fn(array $r): array => array_map(static fn($x) => $x['id'] . ' ' . $x['why'], $r);
+    $r = $find('19600');
+    check('"19600": that booking and nothing else (was: every booking, "Check-in sounds like 19600")', $ids($r) === [19600] && $r[0]['why'] === 'booking #19600', $whys($r));
+    check('"#19600": the same', $ids($find('#19600')) === [19600]);
+    $r = $find('2323');
+    check('"2323": the phone that ends 2323, nothing else', $ids($r) === [109] && $r[0]['why'] === 'phone ends 2323', $whys($r));
+    $bad = [];
+    foreach (['19600', '2323', '7972', '2026', '1102', '23', '#23', 'c23', '33', '555'] as $nq) {
+        foreach ($find($nq) as $x) {
+            if (!preg_match('/^(booking #|cottage #|phone )/', $x['why'])) { $bad[] = "$nq → " . $x['why']; }
+        }
+    }
+    check('a number only ever matches a booking, a cottage or a phone — never "sounds like" or "close to"', $bad === [], $bad);
+    $r = $find('hmabc124');
+    check('a word with digits in it is not typo-matched either ("hmabc124" is not HMABC123)', $r === [], $whys($r));
+
+    echo "\n-- 0.45.1: a month name on its own is a date --\n";
+    $r = $find('november');
+    check('"november": the stays over a November, nearest upcoming first — and no "Sync text close to Number"',
+        $ids($r) === [108, 111, 109] && $r[0]['why'] === 'stay in November', $whys($r));
+    $r = $find('nov');
+    check('"nov": the same stays first, then the text match (Novak) below them', $ids($r) === [108, 111, 109, 19600]
+        && str_contains($r[3]['why'], 'Novak'), $whys($r));
+    check('"Nov." reads the same', $ids($find('Nov.')) === [108, 111, 109, 19600]);
+
+    echo "\n-- 0.45.1: cottage numbers --\n";
+    $c23 = [106, 19600, 102, 104];            // cottage 23's stays, latest first
+    foreach (['23', '#23', 'c23', 'C 23', 'cottage 23', 'Cottage #23'] as $cq) {
+        $r = $find($cq);
+        check("\"$cq\": exactly cottage 23's stays first, never 22, 32 or 33's; then a phone with 23 in it",
+            array_slice($ids($r), 0, 4) === $c23 && array_slice($ids($r), 4) === [109]
+            && $r[0]['why'] === 'cottage #23' && str_starts_with($r[4]['why'], 'phone'), $whys($r));
+    }
+    $r = $find('32');
+    check('"32": cottage 32\'s stay first, then booking #32 (it exists), then a phone with 32 in it',
+        $ids($r) === [108, 32, 109] && $r[1]['why'] === 'booking #32', $whys($r));
+    $r = $find('c32');
+    check('"c32": the cottage only — "c" asks for a cottage, not booking #32', $ids($r) === [108, 109], $whys($r));
+    check('"c99": no cottage 99 — nothing', $find('c99') === []);
+
+    echo "\n-- 0.45.1: sounds-like, tightened; Boat: Yes first --\n";
+    $r = $find('boat');
+    check('"boat": Boat: Yes first, then The Boathouse — and not Bodie (who only shares the key BT)',
+        $ids($r) === [101, 108] && $r[0]['why'] === 'Boat: Yes', $whys($r));
+    $r = $find('boathouse');
+    check('"boathouse": The Boathouse only — not Betsy (Soundex B320 alone)', $ids($r) === [108], $whys($r));
+    check('typos still work: "Bodey" finds Bodie', $ids($find('Bodey')) === [109]);
+    $r = $find('Smithson');
+    check('words of clearly different length are not typos: "Smithson" is not Smith (Jaro-Winkler alone says 0.93)', $r === [], $whys($r));
+    check('...and sound still works: "Phillips" finds Fillips', $ids($find('Phillips')) === [107]);
+
     echo "\n-- what comes back --\n";
     $r = $find('sm');
     $keys = array_keys($r[0]);
@@ -182,8 +258,8 @@ namespace {
         $keys === ['checkin', 'checkout', 'cottages', 'id', 'name', 'score', 'sourceKey', 'sourceName', 'status', 'statusLabel', 'why'], $keys);
     check('no email, phone or note leaks into a row that did not match on it',
         !str_contains(json_encode($r), 'example.com') && !str_contains(json_encode($r), 'kayak'), $r);
-    $many = $find('20');
-    check('no cap: "20" (in every year) brings back all six visible bookings', count($many) === 6, $ids($many));
+    $many = $find('cottage');
+    check('no cap: "cottage" (in every stay\'s cottage) brings back all eleven visible bookings', count($many) === 11, $ids($many));
 
     echo "\n-- the index: built once, cleared on a booking change --\n";
     $GLOBALS['t_transients'] = []; $GLOBALS['t_set'] = []; t_reset();
@@ -193,8 +269,10 @@ namespace {
     check('...in a transient WITH an expiry, so it is never autoloaded', ($built[0][1] ?? 0) > 0, $built[0] ?? null);
     Staff_Search::flush_if_booking(5, (object) ['post_type' => 'page']);
     check('deleting a page does not clear it', isset($GLOBALS['t_transients'][Staff_Search::INDEX_KEY]));
+    $GLOBALS['t_transients']['mphbac_staff_search_v1'] = ['0.45.0 shape'];
     Staff_Search::flush_if_booking(101, (object) ['post_type' => 'mphb_booking']);
     check('deleting a booking does', !isset($GLOBALS['t_transients'][Staff_Search::INDEX_KEY]));
+    check('...and clears 0.45.0\'s index too (a different shape, still holding guest details)', !isset($GLOBALS['t_transients']['mphbac_staff_search_v1']));
     $plugin = file_get_contents($ROOT . '/includes/class-plugin.php');
     foreach (['mphb_create_booking_via_ical', 'mphb_update_booking_via_ical', 'save_post_mphb_booking', 'save_post_mphb_payment', 'mphb_booking_status_changed'] as $hook) {
         check("cleared on $hook", (bool) preg_match("/add_action\\('$hook', \\['\\\\\\\\MPHBAC\\\\\\\\Staff_Search', 'flush'\\]\\)/", $plugin));
