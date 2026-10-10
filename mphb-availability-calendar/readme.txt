@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.0
+Stable tag: 0.45.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.45.1 =
+* **Search: numbers are numbers.** A number now finds only a booking number, a cottage number or phone digits. "19600" used to bring back every booking as "Check-in sounds like…", because the sounds-alike check treated every number as alike.
+* **Search: cottages.** "23", "#23", "c23", "C 23" and "cottage 23" put exactly Cottage 23's stays first, never 22's, 32's or 33's, then any phone with 23 in it. A booking whose number is also a cottage's (#32) follows that cottage's stays.
+* **Search: months.** "november" or "nov" on its own finds every stay over a November, the nearest upcoming first, with any text matches (a name like Novak) below them.
+* **Search: sounds-alike and typos are stricter.** Words of very different length no longer count as typos ("november" is not "Number"), and short sound-alikes are gone ("boat" no longer finds Bodie, "boathouse" no longer finds Betsy). "Philips" still finds Fillips and "Smoth" still finds Smith.
+* **Search: "boat" finds Boat: Yes first**, then The Boathouse. The same works for any yes / no answer on a booking.
+* **Search: the last four phone digits in an Airbnb booking's text** are now read as a phone, so they work like any other phone.
 
 = 0.45.0 =
 * **Search the staff board.** A Search box under the dates finds bookings as you type (from two letters): by guest name, email, phone (any formatting, or just the last four digits), country ("United States" finds US), booking number, cottage, a date ("Dec 24", "12/24", "2026-12-24" find every stay over that night; "12/2024" finds that month), any answer on the booking (boat, couch, pets, notes, and so on) and the text an imported booking came with. It forgives small typos and finds names that sound alike ("Philips" finds Fillips). One list, best match first, and each result says why it matched. Tapping a result opens the booking, moves the calendar to that stay and highlights it; a stay outside the board's ±3-year range opens without moving the calendar. Cancelled and abandoned bookings are not searched, the Photo ID is never searched, and nothing you type is saved or logged.
