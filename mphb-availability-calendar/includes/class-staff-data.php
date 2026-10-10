@@ -47,6 +47,7 @@ final class Staff_Data
     private const META_ICAL_PROD = 'mphb_ical_prodid';
     private const META_ICAL_UID  = 'mphb_ical_uid';
     private const META_ICAL_SUMM = 'mphb_ical_summary';
+    private const META_ICAL_DESC = 'mphb_ical_description';
 
     /**
      * MPHB records payments as their own post type, linked to the booking by
@@ -272,6 +273,93 @@ final class Staff_Data
                 'notes'    => self::section_notes($booking_id, $booking),
             ],
         ];
+    }
+
+    /**
+     * ONE BOOKING AS SEARCH SEES IT (0.45.0). Everything the detail sheet
+     * shows — every row of booking_detail(), so a field added to the sheet is
+     * searchable with no change here — EXCEPT the Photo ID, plus the booking
+     * number, the cottage, and the sync text: source_for()'s summary and the
+     * mphb_ical_description meta, both stripped of the literal double quotes
+     * every stored value carries on live (verified by the Website Director).
+     *
+     * Not cached here: Staff_Search builds the index from these once and
+     * caches that. Ungated, like the rest of Staff_Data — the gate is the
+     * endpoint's.
+     *
+     * @return array<string,mixed>|null null when the booking is not visible
+     */
+    public static function search_doc(int $booking_id): ?array
+    {
+        $detail = self::booking_detail($booking_id);
+        if ($detail === null) {
+            return null;
+        }
+        $types = [];
+        foreach (Data_Provider::list_room_types() as $t) {
+            $types[(int) $t['id']] = $t;
+        }
+        $cottages = [];
+        foreach (self::reserved_entities($booking_id, null) as $r) {
+            $tid = (int) ($r['room_type_id'] ?: ($r['room_id'] ? (int) get_post_meta((int) $r['room_id'], 'mphb_room_type_id', true) : 0));
+            if ($tid > 0 && isset($types[$tid]) && !isset($cottages[$tid])) {
+                $cottages[$tid] = [
+                    'id'     => $tid,
+                    'title'  => (string) $types[$tid]['title'],
+                    'abbrev' => (string) ($types[$tid]['abbrev'] ?? ''),
+                    'number' => (string) ($types[$tid]['number'] ?? ''),
+                ];
+            }
+        }
+
+        $fields = [];
+        foreach ($detail['sections'] as $rows) {
+            foreach ((array) $rows as $row) {
+                if (!is_array($row) || !empty($row['photo'])) {
+                    continue;                                   // never the Photo ID
+                }
+                $v = trim((string) ($row['value'] ?? ''));
+                if ($v !== '') {
+                    $fields[] = [(string) $row['label'], $v];
+                }
+            }
+        }
+        foreach ($cottages as $c) {
+            $fields[] = [__('Cottage', 'mphb-availability-calendar'), trim(($c['number'] !== '' ? $c['number'] . ' ' : '') . $c['title'] . ' ' . $c['abbrev'])];
+        }
+        $source = $detail['source'];
+        foreach ([(string) ($source['summary'] ?? ''), (string) get_post_meta($booking_id, self::META_ICAL_DESC, true)] as $sync) {
+            $sync = self::unquote($sync);
+            if ($sync !== '') {
+                $fields[] = [__('Sync text', 'mphb-availability-calendar'), $sync];
+            }
+        }
+
+        $post = get_post($booking_id);
+        $status = $post ? (string) $post->post_status : '';
+        return [
+            'id'         => $booking_id,
+            'status'     => $status,
+            'statusLabel'=> self::status_label($status),
+            'checkin'    => (string) get_post_meta($booking_id, self::META_CHECKIN, true),
+            'checkout'   => (string) get_post_meta($booking_id, self::META_CHECKOUT, true),
+            'name'       => self::guest_name($booking_id),
+            'imported'   => (bool) $source['imported'],
+            'sourceKey'  => (string) ($source['key'] ?? 'direct'),
+            'sourceName' => $source['imported'] ? (string) $source['ota'] : __('Direct', 'mphb-availability-calendar'),
+            'cottages'   => array_values($cottages),
+            'fields'     => $fields,
+        ];
+    }
+
+    /** The sync text as stored on live is wrapped in literal double quotes. */
+    private static function unquote(string $s): string
+    {
+        $s = trim(self::plain($s));
+        while (strlen($s) >= 2 && $s[0] === '"' && substr($s, -1) === '"') {
+            $s = trim(substr($s, 1, -1));
+        }
+        return $s;
     }
 
     /**

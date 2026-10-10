@@ -142,7 +142,7 @@ final class Staff
     {
         // Logged-out staff (password cookie only) hit the _nopriv variants,
         // so both must be registered — the gate, not the hook, is the check.
-        foreach (['month', 'booking', 'photo'] as $ep) {
+        foreach (['month', 'booking', 'photo', 'search'] as $ep) {
             $action = 'mphbac_staff_' . $ep;
             add_action('wp_ajax_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
             add_action('wp_ajax_nopriv_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
@@ -264,6 +264,30 @@ final class Staff
             $detail['adminUrl'] = $admin;
         }
         wp_send_json_success($detail);
+    }
+
+    /**
+     * SEARCH (0.45.0). Registered exactly like month / booking / photo
+     * (wp_ajax_ + wp_ajax_nopriv_, never a REST route), and gated the same
+     * way, FIRST: an unauthorized caller gets a 403 with an empty body before
+     * anything is read — and the index is never built for them. POST only.
+     * No result cap and no rate limit (Rob, answer 13).
+     *
+     * THE QUERY IS NEVER LOGGED OR STORED (WD, answer 13): nothing in this
+     * handler or in Staff_Search writes it anywhere, and the response is
+     * private no-store like every staff response.
+     */
+    public static function handle_search(): void
+    {
+        self::require_authorization();
+
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
+            status_header(405);
+            exit;
+        }
+        $q = isset($_POST['q']) && is_string($_POST['q']) ? (string) wp_unslash($_POST['q']) : '';
+        $results = Staff_Search::search($q);
+        wp_send_json_success(['results' => $results, 'count' => count($results)]);
     }
 
     /** The booking's edit screen, or '' for anyone who may not use it. */

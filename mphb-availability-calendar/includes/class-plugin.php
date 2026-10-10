@@ -118,6 +118,20 @@ final class Plugin
         add_action('elementor/document/after_save', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_booking_status_changed', ['\\MPHBAC\\Cache', 'flush_all']);
 
+        // THE SEARCH INDEX (0.45.0) holds every visible booking's sheet, so it
+        // is cleared on exactly the booking changes above — an iCal create or
+        // date change, a permanent delete, a save (checkout, WP-Admin, trash,
+        // restore), a status change — and on a payment save, since the sheet
+        // shows money. And when a cottage is renamed. The next search
+        // rebuilds it.
+        add_action('mphb_create_booking_via_ical', ['\\MPHBAC\\Staff_Search', 'flush']);
+        add_action('mphb_update_booking_via_ical', ['\\MPHBAC\\Staff_Search', 'flush']);
+        add_action('deleted_post', ['\\MPHBAC\\Staff_Search', 'flush_if_booking'], 10, 2);
+        add_action('save_post_mphb_booking', ['\\MPHBAC\\Staff_Search', 'flush']);
+        add_action('save_post_mphb_payment', ['\\MPHBAC\\Staff_Search', 'flush']);
+        add_action('save_post_mphb_room_type', ['\\MPHBAC\\Staff_Search', 'flush']);
+        add_action('mphb_booking_status_changed', ['\\MPHBAC\\Staff_Search', 'flush']);
+
         add_action('admin_notices', ['\\MPHBAC\\Cache_Integration', 'admin_notice']);
     }
 
