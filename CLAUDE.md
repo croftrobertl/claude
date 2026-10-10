@@ -229,6 +229,12 @@ Two naming rules, and they differ — the plugin zip is the exception:
 the dash on the zips too. Deliveries earlier in the history carry whichever
 name was current then.)
 
+**Attach every new version in the chat** (Rob, 2026-10-10: "Always give me
+the new versions in this chat so that I can save them in Google Drive").
+Every release's `Seasons <version>.zip`, and its checklist, goes to him as
+a file in the conversation — not just a path in `build/` — with a one-line
+caption saying whether it is ready to install.
+
 Build the zip from the `dcc-seasons/` folder as usual — the folder INSIDE the
 zip keeps its own name, which is what WordPress installs; only the delivered
 filename changes.
@@ -851,7 +857,14 @@ render round and his say.
   of the document AND a re-mount is still possible (behind layering, under
   20 tries) — so `ensureMounted()` can put it back. In front mode nothing
   re-mounts, so a removed canvas stops the loop (4.6.1; it drew into a
-  detached canvas for the rest of the visit before). 30 fps is
+  detached canvas for the rest of the visit before). **At the re-mount cap,
+  set `running = false` directly — NEVER call `setRunning()` from inside a
+  frame:** it calls `play()`, which requests a frame on top of the one
+  `next()` requests, and with no IntersectionObserver (onScreen stuck true)
+  every frame doubled — 4.6.1 measured 65,536 then 786,432 requests a
+  second, a frozen tab. Fixed in 4.6.2; `test-pacing.js` deletes
+  IntersectionObserver and proves it. A test of the common browser only is
+  how 4.6.1 shipped it. 30 fps is
   "visually identical" on measurement: every effect steps at most 1.54px
   and 4.5deg per repaint. **Rob's decision (2026-10-06): option A, 30 fps
   stays. 20 fps (embers 1.7px, confetti 2.3px; 79 ms/s at 390px x4) was
@@ -877,6 +890,13 @@ render round and his say.
   digits. New Year's carried a literal '2','0','2','7' until 4.6.1, which
   would have shown 2027 at New Year's 2028. `theme-guide.js` mirrors the
   rule for its picture. Never type a year into a theme.
+- **The suites load the READABLE sources unless the config says `--min`.**
+  `tools/fixture.js` picks `ambient.min.js` only for a `--min` config
+  (since 4.6.2; before, no suite ever ran the shipped loader), and only
+  `test-min.js` and `test-front.js`'s egg check pass `--min`. A change to
+  ambient, matrix or engine is not proven in what ships until one of them
+  exercises it. And finish the suite on the FINAL code before committing:
+  4.6.1 was committed while suites were still running on half-old code.
 - **Wall-clock waits in a browser suite are load-sensitive — use the
   mocked clock.** `test-orphans.js`'s letter check sampled 11 s of real
   time and failed under load (4.6.1 audit); it now ticks 90 simulated

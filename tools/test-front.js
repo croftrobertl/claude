@@ -160,13 +160,17 @@ async function reducedMotion() {
 }
 
 /* --------------------- 3b. the egg: a failed fetch retries; YEAR digits */
-async function eggSturdy() {
-  console.log('\n=== the egg: a failed fetch is retried, and New Year\'s shows this year ===');
-  const ses = await open(fixture({ kind: 'bravada', config: config([...LIVE.slice(0, -1), '--theme=new_years']) }), { reducedMotion: 'reduce' });
+/* Run on the readable AND the minified build: the minified files are what
+ * ship, and until 4.6.2 no suite opened the egg in them. */
+async function eggSturdy(min) {
+  console.log(`\n=== the egg (${min ? 'MINIFIED' : 'source'} build): a failed fetch is retried, and New Year's shows this year ===`);
+  const ses = await open(fixture({ kind: 'bravada', config: config([...LIVE.slice(0, -1), '--theme=new_years', ...(min ? ['--min'] : [])]) }), { reducedMotion: 'reduce' });
   try {
     await ses.page.waitForTimeout(800);
     let fails = 1, fetches = 0;
-    await ses.page.route(/matrix(\.min)?\.js/, r => { fetches++; return fails-- > 0 ? r.abort() : r.fallback(); });
+    const loaded = await ses.page.evaluate(() => [...document.scripts].map(s => s.src.split('/').pop()).filter(Boolean));
+    ok(loaded.includes(min ? 'ambient.min.js' : 'ambient.js'), `${min ? 'minified' : 'source'} loader on the page`, loaded.join(' '));
+    await ses.page.route(min ? /matrix\.min\.js/ : /matrix\.js/, r => { fetches++; return fails-- > 0 ? r.abort() : r.fallback(); });
     const five = async () => { for (let i = 0; i < 5; i++) { await ses.page.click('#site-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
     await five();
     const first = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
@@ -311,7 +315,8 @@ async function mobile() {
   await zIndexBand();
   await tapEgg();
   await reducedMotion();
-  await eggSturdy();
+  await eggSturdy(false);
+  await eggSturdy(true);
   await performance();
   await hiddenTab();
   await mobile();

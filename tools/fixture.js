@@ -88,6 +88,10 @@ function paras(n, tag) {
  */
 function page(opts) {
   const kind = opts.kind || 'bravada';
+  /* A --min config gets the minified LOADER too. Until 4.6.2 the fixture
+   * always loaded ambient.js, so no suite ever ran the ambient.min.js that
+   * ships (found in the 4.6.1 audit). */
+  const loader = /\.min\.js$/.test((opts.config && opts.config.engineSrc) || '') ? 'ambient.min.js' : 'ambient.js';
   const noFooter = !!opts.noFooter;
 
   const body = kind === 'elementor'
@@ -131,7 +135,7 @@ ${body}
     </main>
   </div>${footer}
 <script>window.DCC_SEASONS = ${JSON.stringify(opts.config)};</script>
-<script src="/ambient.js"></script>
+<script src="/${loader}"></script>
 </body></html>`;
 }
 

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.6.1
+Stable tag: 4.6.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,22 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 == Changelog ==
 
+= 4.6.2 =
+Corrects 4.6.1, which should not be installed. Nothing looks different and
+no setting or stored data changes. Rollback: reinstall the 4.6.0 zip.
+
+* 4.6.1's "stop drawing into a removed canvas" could freeze the browser
+  tab: under "Behind interactive widgets" layering, in a browser without
+  IntersectionObserver, a page that kept removing the effects canvas made
+  the plugin request frames twice as fast every frame (65,536 a second,
+  then a hang). It now simply stops. "In front of everything" layering
+  never reached that code.
+* The tests now run the logo egg on the minified files that actually ship,
+  and the minified loader for the first time.
+* Everything else in 4.6.1 is kept: the New Year's egg spells the year it
+  counts toward, the Theme guide shows that year, and a failed egg
+  download is retried on the next five taps.
+
 = 4.6.1 =
 Fixes from a self-audit. Nothing looks different, and no setting or stored
 data changes. Rollback: reinstall the 4.6.0 zip.
@@ -181,7 +197,7 @@ data changes. Rollback: reinstall the 4.6.0 zip.
   was reloaded.
 * If a page script removes the effects canvas and it cannot be put back,
   the plugin now stops drawing instead of drawing into an invisible canvas
-  for the rest of the visit.
+  for the rest of the visit. (Defective: see 4.6.2.)
 
 = 4.6.0 =
 Lighter, looking exactly the same (Rob, 2026-10-06). Rollback: reinstall

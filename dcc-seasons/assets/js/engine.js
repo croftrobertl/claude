@@ -4295,8 +4295,15 @@
 			 * from another would let one of them disable the other. */
 			var now = (W.performance && performance.now) ? performance.now() : +new Date();
 			if (!CFG.layer || D.body.contains(cv) || now < remountNext) { return; }
-			/* Out of re-mounts: stop drawing into a canvas nobody can see. */
-			if (remounts >= 20) { setRunning(); return; }
+			/* Out of re-mounts: stop drawing into a canvas nobody can see.
+			 * Set the flag directly — NEVER setRunning() here: this runs inside
+			 * a frame, and where onScreen is stale or there is no
+			 * IntersectionObserver, setRunning() calls play(), which requests a
+			 * frame on top of the one this frame's next() requests. That
+			 * doubled every frame: 786,432 requests a second within two
+			 * seconds (4.6.1, measured). A later visibility or observer event
+			 * may restart the loop; the next frame lands back here. */
+			if (remounts >= 20) { running = false; return; }
 			remountNext = now + 1000;
 			remounts++;
 			/* The old margin correction belongs to the old layout; carrying it

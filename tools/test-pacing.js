@@ -12,6 +12,8 @@
  *   - hidden tab → no repaints, resumes when shown;
  *   - footer canvas scrolled off-screen → no repaints, resumes on screen;
  *   - a removed canvas is still put back (the loop must not stop for it);
+ *   - once it cannot be put back, the loop stops — and never multiplies
+ *     its frame requests (4.6.1's runaway, no IntersectionObserver);
  *   - reduced motion → no engine, as before.
  *
  * Usage: node tools/test-pacing.js
@@ -44,6 +46,7 @@ async function boot(args, tweak, opts = {}) {
   const html = fixture({ kind: 'bravada', config: cfg });
   const ses = await open('<!doctype html><title>x</title>', { viewport: opts.viewport || { width: 390, height: 844 }, reducedMotion: opts.reducedMotion });
   await ses.page.addInitScript(COUNTER);
+  if (opts.init) { await ses.page.addInitScript(opts.init); }
   /* a LATER page of the visit, so no first-page hero crosses at 3-5 s */
   if (!opts.firstPage) { await ses.page.addInitScript(() => { try { sessionStorage.setItem('dcc_seasons_visit', '1'); } catch (e) { /* blocked */ } }); }
   await ses.page.route('http://dcc.test/', r => r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }));
@@ -163,6 +166,37 @@ const QUIET = c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; };
       const after = await framesIn(ses.page, 2000);
       ok(after === 0, 'no repaints into a detached canvas', `${after}`);
     } finally { await ses.close(); }
+  }
+
+  console.log('\n  --- no IntersectionObserver, re-mounts used up: the loop stops, it never multiplies ---');
+  /* 4.6.1 called setRunning() from inside a frame at the re-mount cap; with
+   * no IntersectionObserver (onScreen stays true) that called play(), which
+   * requested a second frame per frame: 65,536 requests a second, then
+   * 786,432. Real time on purpose: the cap is paced by performance.now(). */
+  {
+    const ses = await boot(['--theme=halloween', '--layering=behind'], c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; }, {
+      init: () => {
+        delete window.IntersectionObserver;
+        const o = window.requestAnimationFrame.bind(window); window.__raf = 0;
+        window.requestAnimationFrame = f => { window.__raf++; return o(f); };
+      },
+    });
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForTimeout(1500);
+      /* A runaway can hang the page: a reading that never comes back counts
+       * as one, rather than hanging the suite. */
+      const rafIn = ms => Promise.race([
+        ses.page.evaluate(ms => new Promise(r => { const a = window.__raf; setTimeout(() => r(window.__raf - a), ms); }), ms),
+        new Promise(r => setTimeout(() => r(Infinity), ms + 8000)),
+      ]);
+      const before = await rafIn(1000);
+      await ses.page.evaluate(() => { setInterval(() => { const c = document.querySelector('canvas.dcc-seasons-canvas'); if (c && c.parentNode) { c.parentNode.removeChild(c); } }, 150); });
+      await ses.page.waitForTimeout(24000);
+      const after = [await rafIn(1000), await rafIn(1000)];
+      ok(before >= 45, `drawing at full rate before (${before} frame requests/s)`, `${before}`);
+      ok(after.every(n => n <= 2), `after 20 re-mounts: no frame requests, no runaway (${after.join(', ')}/s)`, after.join(', '));
+    } finally { await Promise.race([ses.close(), new Promise(r => setTimeout(r, 10000))]); }
   }
 
   console.log('\n  --- reduced motion: as before, no engine ---');
