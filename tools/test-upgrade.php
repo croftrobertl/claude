@@ -27,6 +27,7 @@ define('DCC_SEASONS_URL', './');
 define('DCC_SEASONS_FILE', __DIR__ . '/../dcc-seasons/dcc-seasons.php');
 
 function __($s, $d = null) { return $s; }
+function _n($one, $many, $n, $d = null) { return $n == 1 ? $one : $many; }
 function esc_html__($s, $d = null) { return $s; }
 function esc_attr__($s, $d = null) { return $s; }
 function esc_html($s) { return $s; }
@@ -113,8 +114,10 @@ ok($after['layering'] === 'front', "layering stayed 'front'", (string) ($after['
 ok((int) $after['density'] === 16, 'density stayed 16', (string) ($after['density'] ?? 'gone'));
 
 echo "\n=== every default key is now present ===\n";
-$still = array_values(array_diff(array_keys(Settings::defaults()), array_keys($after)));
-ok($still === [], 'no default key is missing from the stored row', implode(' ', $still));
+$still = array_values(array_diff(array_keys(Settings::defaults()), array_keys($after), Settings::TRACKED_DEFAULTS));
+ok($still === [], 'no default key is missing from the stored row (TRACKED_DEFAULTS aside)', implode(' ', $still));
+$tracked = array_values(array_intersect(Settings::TRACKED_DEFAULTS, array_keys($after)));
+ok($tracked === [], 'TRACKED_DEFAULTS are never written back as "missing" keys', implode(' ', $tracked));
 
 echo "\n=== a deliberate falsy value is NOT treated as missing ===\n";
 $off = Settings::defaults();
@@ -125,6 +128,54 @@ run_upgrade();
 $after2 = $GLOBALS['OPTIONS'][Settings::OPTION];
 ok((int) $after2['subtle'] === 0, 'subtle=0 was not "helpfully" reset to the default 1');
 ok((int) $after2['guide_effects'] === 0, 'guide_effects=0 stayed 0');
+
+/* ---- 4.7.0: the egg's tap target and count are Rob's, in the DEFAULTS. ---- */
+echo "\n=== 4.7.0: stored tap_selector / tap_count equal to the new defaults are cleared ===\n";
+$d = Settings::defaults();
+ok($d['tap_selector'] === '.home #header-page-title .entry-title' && $d['tap_count'] === 4,
+    'defaults: ".home #header-page-title .entry-title", 4 (Rob, 2026-10-10)', json_encode([$d['tap_selector'], $d['tap_count']]));
+/* The live row on 2026-10-10: the Director stored exactly the new values
+ * (count possibly as a string), plus Rob's other choices. */
+$row = $live;
+$row['tap_selector'] = ' .home #header-page-title .entry-title ';
+$row['tap_count']    = '4';
+$row['scope']        = 'no_cottages';
+$GLOBALS['OPTIONS'] = [Settings::OPTION => $row, 'dcc_seasons_version' => '4.6.2'];
+run_upgrade();
+$a3 = $GLOBALS['OPTIONS'][Settings::OPTION];
+ok(!array_key_exists('tap_selector', $a3) && !array_key_exists('tap_count', $a3), 'both stored keys cleared', json_encode(array_intersect_key($a3, array_flip(Settings::TRACKED_DEFAULTS))));
+$eff = Settings::options();
+ok($eff['tap_selector'] === $d['tap_selector'] && (int) $eff['tap_count'] === 4, 'options() now supplies the defaults');
+ok($a3['scope'] === 'no_cottages' && (int) $a3['density'] === 16 && $a3['layering'] === 'front', 'nothing else in the row moved');
+
+/* A value the owner chose that DIFFERS is never touched, by the upgrade or by a save. */
+$own = $live;
+$own['tap_selector'] = '#custom-target';
+$own['tap_count']    = 6;
+$GLOBALS['OPTIONS'] = [Settings::OPTION => $own, 'dcc_seasons_version' => '4.6.2'];
+run_upgrade();
+$a4 = $GLOBALS['OPTIONS'][Settings::OPTION];
+ok(($a4['tap_selector'] ?? '') === '#custom-target' && (int) ($a4['tap_count'] ?? 0) === 6, 'different values survive the upgrade', json_encode([$a4['tap_selector'] ?? null, $a4['tap_count'] ?? null]));
+$mixed = $live;
+$mixed['tap_selector'] = '#custom-target';
+$mixed['tap_count']    = 4;
+$GLOBALS['OPTIONS'] = [Settings::OPTION => $mixed, 'dcc_seasons_version' => '4.6.2'];
+run_upgrade();
+$a5 = $GLOBALS['OPTIONS'][Settings::OPTION];
+ok(($a5['tap_selector'] ?? '') === '#custom-target' && !array_key_exists('tap_count', $a5), 'each key is judged on its own');
+
+echo "\n=== a settings SAVE stores them only when they differ ===\n";
+$posted = ['enabled' => 1, 'egg' => 1, 'tap_selector' => '.home #header-page-title .entry-title', 'tap_count' => '4'];
+$saved = Settings::sanitize($posted);
+ok(!array_key_exists('tap_selector', $saved) && !array_key_exists('tap_count', $saved), 'saving the defaults stores neither key', json_encode(array_intersect_key($saved, array_flip(Settings::TRACKED_DEFAULTS))));
+$saved2 = Settings::sanitize(['tap_selector' => '#custom-target', 'tap_count' => '6'] + $posted);
+ok(($saved2['tap_selector'] ?? '') === '#custom-target' && ($saved2['tap_count'] ?? 0) === 6, 'saving different values stores both');
+$saved3 = Settings::sanitize(['tap_selector' => ''] + $posted);
+ok(!array_key_exists('tap_selector', $saved3), 'an emptied selector falls back to the default and is not stored');
+
+echo "\n=== the instructions follow the settings ===\n";
+ok(Settings::egg_howto($d) === 'Tap the title in the homepage banner 4 times', 'default: "' . Settings::egg_howto($d) . '"');
+ok(Settings::egg_howto(['tap_selector' => '#x', 'tap_count' => 6]) === 'Tap the element matching #x 6 times', 'custom: "' . Settings::egg_howto(['tap_selector' => '#x', 'tap_count' => 6]) . '"');
 
 /* ---- The other half of the same question: does every theme resolve? ---- */
 echo "\n=== all 27 themes resolve to a subtle effect ===\n";

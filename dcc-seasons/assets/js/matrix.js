@@ -1,5 +1,5 @@
 /* DCC Seasons — Matrix-style glyph rain engine.
- * Lazy-loaded by ambient.js on the Nth logo tap; never in the critical path.
+ * Lazy-loaded by ambient.js on the Nth tap on the tap target; never in the critical path.
  * One engine, themed via {colors[], glyphs[], dir, glitch} from the active
  * seasonal theme. Exit: ✕ button, Escape, or tapping anywhere on the overlay.
  * prefers-reduced-motion: shows a static themed banner instead of animating. */

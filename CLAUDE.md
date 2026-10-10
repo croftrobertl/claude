@@ -328,6 +328,16 @@ render round and his say.
   (40px) + four `duckling` (17px), mottled duck, facing travel. W-B colour
   witch, F-B glide/one-leg and D-B storybook ducks were declined.
 
+### Rob's recorded picks (for 4.7.0, chosen 2026-10-10)
+
+- **The egg opens from the homepage banner title, 4 taps.** Defaults
+  `tap_selector` = `.home #header-page-title .entry-title` (exactly one
+  element on the homepage) and `tap_count` = 4. Both are
+  `Settings::TRACKED_DEFAULTS`: stored only when they differ, cleared on
+  upgrade when they equal the default. Off the homepage the selector
+  matches nothing, so `ambient.js`'s tiers fall back to `#masthead` — that
+  is unchanged pre-existing behaviour, not a Rob pick; ask before changing.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -506,6 +516,22 @@ render round and his say.
   selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
   VISIBLE match). Binding per element double-counted nested targets — the egg
   opened on half the configured taps until 3.7.0.
+- **The tap target must be something this theme actually SHOWS.** Bravada's
+  generated CSS hides `#site-text`, so `#site-title` is 0x0 on every page;
+  `#branding` is 0 wide; `.header-image` does not exist; and a bare
+  `.entry-title` matches every cottage card title on the homepage. Until
+  4.7.0 the egg was unreachable for guests on live and nobody noticed for
+  weeks. `test-front.js` (`banner: true` fixture) proves the default hits
+  exactly the banner title and that card titles and the header do not
+  count there. And anything that TELLS people how to open the egg must come
+  from `Settings::egg_howto()`, never a hard-coded "tap the logo five times".
+- **Some keys are stored ONLY as overrides (`Settings::TRACKED_DEFAULTS`).**
+  `sanitize()` drops a tracked value equal to its default, the upgrade
+  clears a stored one equal to it, and the upgrade's "persist missing
+  default keys" step SKIPS them — without that skip the same upgrade would
+  write the default straight back and freeze it. Rob's rule: his site
+  choices live in plugin defaults, so a later default change reaches the
+  site. Add a key here when a Rob pick is delivered as a setting default.
 - **A resize is DESTRUCTIVE and must be earned.** Writing `cv.width` clears
   the canvas, and `applySize()` used to re-seed every particle and kill any
   hero or vignette with it. On iOS the URL bar collapsing fires a
@@ -870,8 +896,9 @@ render round and his say.
   stays. 20 fps (embers 1.7px, confetti 2.3px; 79 ms/s at 390px x4) was
   rendered side by side for him (artifact MDrM4k7N887m7ST2dMg6kg, kept as
   the record) and DECLINED. Do not build or re-propose it.** He watched
-  4.6.0 on his phone and it looks good; Scope stays "Homepage only" until
-  he says otherwise (a settings change, not a release). `tools/test-pacing.js` proves no trails,
+  4.6.0 on his phone and it looks good. (Live Scope is "no_cottages" —
+  the Director, 2026-10-10; the 4.6.x checklists' "Homepage only" was
+  wrong. Scope is a setting, not a release.) `tools/test-pacing.js` proves no trails,
   the rates and every pause; the mocked clock (`_state.tick`) always does
   full clears, so only the real-rAF suite exercises this path. Measured
   (`tools/measure-perf.js`, Halloween, ambient=0, subtle=1, background-only

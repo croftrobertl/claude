@@ -88,6 +88,11 @@ function paras(n, tag) {
  */
 function page(opts) {
   const kind = opts.kind || 'bravada';
+  /* banner: the live homepage's shape for the egg (4.7.0) — body.home, the
+   * banner title the default tap target names, and cottage card titles
+   * that also carry .entry-title and must NOT count. Off by default so no
+   * other suite's layout moves. */
+  const banner = !!opts.banner;
   /* A --min config gets the minified LOADER too. Until 4.6.2 the fixture
    * always loaded ambient.js, so no suite ever ran the ambient.min.js that
    * ships (found in the 4.6.1 audit). */
@@ -119,16 +124,17 @@ function page(opts) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DCC Seasons fixture — ${kind}</title>
 <style>${SHARED_CSS}${kind === 'elementor' ? ELEMENTOR_CSS : ''}</style>
-</head><body>
+</head><body${banner ? ' class="home"' : ''}>
   <div class="dcc-wx-banner" role="alert">Tornado Warning for Lake County until 6:15 PM EDT</div>
   <header id="masthead"><h1 id="site-title">Dora Canal Court</h1></header>
   <div class="elementor-lightbox"></div>
   <div class="mobile-nav"></div>
-  <div class="hero"></div>
+  <div class="hero">${banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:140px 24px;color:#fff">Dora Canal Court</h1></div>' : ''}</div>
   <div id="content" class="cryout">
     <main id="main" class="main">
       <article id="post-620">
         <div class="entry-content">
+${banner ? '<h2 class="entry-title card-title">Cottage one</h2><h2 class="entry-title card-title">Cottage two</h2>' : ''}
 ${body}
         </div>
       </article>

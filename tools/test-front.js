@@ -83,13 +83,14 @@ async function zIndexBand() {
 /* ------------------------------------------------------------- 2. the egg */
 async function tapEgg() {
   console.log('\n=== the Matrix egg still fires under a full-viewport canvas ===');
-  const ses = await open(fixture({ kind: 'bravada', config: config(LIVE) }));
+  const cfg = config(LIVE);
+  const ses = await open(fixture({ kind: 'bravada', config: cfg }));
   try {
     await settle(ses.page);
     const before = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
     /* Five real clicks on the configured target. If the canvas ate taps,
      * the counter would never reach the threshold. */
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < cfg.tapCount; i++) {
       await ses.page.click('#site-title', { delay: 20 });
       await ses.page.waitForTimeout(90);
     }
@@ -99,14 +100,15 @@ async function tapEgg() {
       overlay: !!document.querySelector('canvas:not(.dcc-seasons-canvas), [style*="2147483000"]'),
     }));
     console.log('  ', JSON.stringify({ before, ...r }));
-    ok(r.matrix, 'five taps on #site-title loaded the egg', 'the canvas is eating taps');
+    ok(r.matrix, `${cfg.tapCount} taps in the site header (the fallback target) loaded the egg`, 'the canvas is eating taps');
   } finally { await ses.close(); }
 }
 
 /* ----------------------------------------------- 3. prefers-reduced-motion */
 async function reducedMotion() {
   console.log('\n=== prefers-reduced-motion silences all three layers ===');
-  const ses = await open(fixture({ kind: 'bravada', config: config(LIVE) }), { reducedMotion: 'reduce' });
+  const cfg = config(LIVE);
+  const ses = await open(fixture({ kind: 'bravada', config: cfg }), { reducedMotion: 'reduce' });
   try {
     await ses.page.waitForTimeout(4000); // well past the idle-callback fetch
     const r = await ses.page.evaluate(() => ({
@@ -125,7 +127,7 @@ async function reducedMotion() {
      * not ANIMATE: matrix.js draws a static themed banner instead of the
      * rain. So open it for real and check which branch ran, rather than
      * asserting that the loader contains a line of source. */
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < cfg.tapCount; i++) {
       await ses.page.click('#site-title', { delay: 20 });
       await ses.page.waitForTimeout(90);
     }
@@ -164,14 +166,15 @@ async function reducedMotion() {
  * ship, and until 4.6.2 no suite opened the egg in them. */
 async function eggSturdy(min) {
   console.log(`\n=== the egg (${min ? 'MINIFIED' : 'source'} build): a failed fetch is retried, and New Year's shows this year ===`);
-  const ses = await open(fixture({ kind: 'bravada', config: config([...LIVE.slice(0, -1), '--theme=new_years', ...(min ? ['--min'] : [])]) }), { reducedMotion: 'reduce' });
+  const cfg = config([...LIVE.slice(0, -1), '--theme=new_years', ...(min ? ['--min'] : [])]);
+  const ses = await open(fixture({ kind: 'bravada', config: cfg }), { reducedMotion: 'reduce' });
   try {
     await ses.page.waitForTimeout(800);
     let fails = 1, fetches = 0;
     const loaded = await ses.page.evaluate(() => [...document.scripts].map(s => s.src.split('/').pop()).filter(Boolean));
     ok(loaded.includes(min ? 'ambient.min.js' : 'ambient.js'), `${min ? 'minified' : 'source'} loader on the page`, loaded.join(' '));
     await ses.page.route(min ? /matrix\.min\.js/ : /matrix\.js/, r => { fetches++; return fails-- > 0 ? r.abort() : r.fallback(); });
-    const five = async () => { for (let i = 0; i < 5; i++) { await ses.page.click('#site-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
+    const five = async () => { for (let i = 0; i < cfg.tapCount; i++) { await ses.page.click('#site-title', { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
     await five();
     const first = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
     await five();
@@ -181,8 +184,35 @@ async function eggSturdy(min) {
       return { loaded: !!window.DCCSeasonsMatrix, text: ov ? ov.innerText : '', want: yr.split('').join(' ') };
     });
     console.log('  ', JSON.stringify({ first, fetches, ...r }));
-    ok(!first && r.loaded && fetches === 2, 'a failed egg fetch is retried on the next five taps', JSON.stringify({ first, fetches, loaded: r.loaded }));
+    ok(!first && r.loaded && fetches === 2, 'a failed egg fetch is retried on the next round of taps', JSON.stringify({ first, fetches, loaded: r.loaded }));
     ok(r.text.indexOf(r.want) >= 0 && !/YEAR/.test(r.text), `New Year's banner shows the coming year's digits (${r.want})`, JSON.stringify(r.text.slice(0, 40)));
+  } finally { await ses.close(); }
+}
+
+/* ------------- 3c. the default tap target: the homepage banner title (4.7.0) */
+async function eggTarget() {
+  console.log('\n=== the default tap target: the homepage banner title, and nothing else on the page ===');
+  const cfg = config(LIVE);
+  ok(cfg.tapSelector === '.home #header-page-title .entry-title' && cfg.tapCount === 4,
+    'defaults: ".home #header-page-title .entry-title", 4 taps (Rob, 2026-10-10)', JSON.stringify([cfg.tapSelector, cfg.tapCount]));
+  const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }));
+  try {
+    await ses.page.waitForTimeout(800);
+    const matches = await ses.page.evaluate(sel => document.querySelectorAll(sel).length, cfg.tapSelector);
+    ok(matches === 1, 'the default matches exactly one element on the homepage', `${matches}`);
+    const taps = async (sel, n) => { for (let i = 0; i < n; i++) { await ses.page.click(sel, { delay: 20 }); await ses.page.waitForTimeout(90); } await ses.page.waitForTimeout(1200); };
+    await taps('.card-title', 6);
+    const card = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
+    ok(!card, 'six taps on a cottage card title (.entry-title too) do NOT open the egg', 'opened');
+    await taps('#site-title', 6);
+    const header = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
+    ok(!header, 'on the homepage the header is not a target (only the first visible tier is bound)', 'opened');
+    await ses.page.waitForTimeout(3200); /* let the 3 s window empty */
+    await taps('#header-page-title .entry-title', cfg.tapCount - 1);
+    const short = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix);
+    await taps('#header-page-title .entry-title', 1);
+    const opened = await ses.page.evaluate(() => !!window.DCCSeasonsMatrix && !!document.querySelector('[aria-modal="true"]'));
+    ok(!short && opened, `${cfg.tapCount} taps on the banner title open it, ${cfg.tapCount - 1} do not`, JSON.stringify({ short, opened }));
   } finally { await ses.close(); }
 }
 
@@ -315,6 +345,7 @@ async function mobile() {
   await zIndexBand();
   await tapEgg();
   await reducedMotion();
+  await eggTarget();
   await eggSturdy(false);
   await eggSturdy(true);
   await performance();

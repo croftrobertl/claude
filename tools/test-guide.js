@@ -32,7 +32,7 @@ function render(tab, opt) {
   const of = path.join(TMP, `opt-${tab}.json`);
   fs.writeFileSync(of, JSON.stringify(opt));
   const html = execFileSync('php', [path.join(__dirname, 'render-settings.php'), `--tab=${tab}`, `--opt=${of}`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 << 20 });
-  const f = path.join(TMP, `${tab}-${Object.values(opt).join('')}.html`);
+  const f = path.join(TMP, `${tab}-${Object.values(opt).join('').replace(/[^A-Za-z0-9_.-]/g, '')}.html`);
   fs.writeFileSync(f, html);
   return { f, html };
 }
@@ -104,9 +104,13 @@ const ALLON = { ...LIVE, ambient: 1 };
       if (s.off !== want) { bad.push(`${r.ids[i]}:${s.label}${s.off ? ' (tagged)' : ' (not tagged)'}`); }
     }));
     ok(!bad.length, 'Ambient off: only the sprite lines are tagged "Switched off in Settings"', bad.slice(0, 6).join(' '));
-    ok(/Falling and drifting sprites/.test(r.note) && /background layer, corner accents, scenes, heroes and the logo egg still play/.test(r.note), 'the notice says only the sprites are off', r.note.slice(0, 100));
+    ok(/Falling and drifting sprites/.test(r.note) && /background layer, corner accents, scenes, heroes and the Matrix egg still play/.test(r.note), 'the notice says only the sprites are off', r.note.slice(0, 100));
     ok(/45 s each/.test(r.turns) && /Hands holding the Earth|hands holding the earth/.test(r.turns), 'Earth Day shows its 45-second hands/globe turns', r.turns.slice(0, 120));
     ok(/countdown/.test(r.newyears), 'New Year\'s shows its midnight countdown', '');
+    /* 4.7.0: how to open the egg comes from the settings, never a
+     * hard-coded "tap the logo five times". */
+    ok(/Tap the title in the homepage banner 4 times/.test(r.newyears) && !/\blogo\b|five times/i.test(r.text),
+      'the egg note follows the settings (default target, 4 taps) and never says "logo" or "five times"', (r.newyears.match(/Tap[^:]*:/) || [''])[0]);
     await p.close();
   }
 
@@ -119,6 +123,15 @@ const ALLON = { ...LIVE, ambient: 1 };
       keys: (document.querySelector('#dcc-guide-florida_keys') || { innerText: '' }).innerText }));
     ok(r.off === 0 && !r.note, 'no "Switched off" tags and no notice', `${r.off} tags`);
     ok(/Osprey carrying a fish/.test(r.keys) && /Jon boat/.test(r.keys) && /White ibis/.test(r.keys) && !/Sun in sunglasses/.test(r.keys), 'Florida Keys card: osprey, jon boat, ibis, no sun-in-sunglasses', r.keys.slice(0, 160));
+    await p.close();
+  }
+
+  console.log('\n  --- the egg note follows CHANGED settings too ---');
+  {
+    const custom = render('guide', { ...LIVE, tap_selector: '#my-target', tap_count: 6 });
+    const { p } = await load(custom.f, 1280);
+    const t = await p.evaluate(() => document.querySelectorAll('.dcc-guide-card')[0].innerText);
+    ok(/Tap the element matching #my-target 6 times/.test(t), 'custom target and count are what the guide says', (t.match(/Tap[^:]*:/) || [''])[0]);
     await p.close();
   }
 

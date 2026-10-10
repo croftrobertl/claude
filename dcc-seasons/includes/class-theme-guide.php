@@ -111,12 +111,12 @@ final class Theme_Guide {
                 'density'   => (int) $opt['density'],
             ],
             'names'    => self::names(),
-            'i18n'     => self::strings(),
+            'i18n'     => self::strings($opt),
         ];
     }
 
     /** UI strings the script needs, translatable. */
-    private static function strings(): array {
+    private static function strings(array $opt): array {
         return [
             'notScheduled' => __('Not scheduled', 'dcc-seasons'),
             'preview'      => __('Preview this theme', 'dcc-seasons'),
@@ -140,15 +140,18 @@ final class Theme_Guide {
             'hero'         => __('Hero', 'dcc-seasons'),
             /* translators: 1: first-hero delay range in seconds, 2: repeat range in seconds */
             'heroTiming'   => __('Crosses the screen about %1$s s into the first page of a visit, then every %2$s s (on later pages the first one waits %2$s s). Each crossing picks one of these at random.', 'dcc-seasons'),
-            'egg'          => __('Logo egg', 'dcc-seasons'),
-            'eggNote'      => __('Tap the logo five times: the Matrix rain falls in these colours and characters, then this finale.', 'dcc-seasons'),
+            'egg'          => __('Matrix egg', 'dcc-seasons'),
+            /* From the SETTINGS (Settings::egg_howto), never hard-coded: the
+             * target and the count are Rob's and can change. */
+            /* translators: %s: how to open the egg, e.g. "Tap the title in the homepage banner 4 times" */
+            'eggNote'      => sprintf(__('%s: the Matrix rain falls in these colours and characters, then this finale. On a page without that target, the site header works instead.', 'dcc-seasons'), Settings::egg_howto($opt)),
             'special'      => __('Special', 'dcc-seasons'),
             /* translators: 1: sprite name, 2: accent name, 3: seconds */
             'turns'        => __('%1$s and the %2$s take turns: %3$s s each, the accent first, cross-fading. Never both on screen.', 'dcc-seasons'),
             /* translators: %d: minimum number of sprites */
             'phoneMin'     => __('On a phone it never shows fewer than %d sprites.', 'dcc-seasons'),
             'countdown'    => __('At 11:59:50 pm on 31 December, a 10-second countdown to midnight takes over the screen.', 'dcc-seasons'),
-            'spritesOff'   => __('“Falling and drifting sprites” is off in Settings, so those lines (and the boats and birds, and anything that needs a sprite) are tagged below. The background layer, corner accents, scenes, heroes and the logo egg still play.', 'dcc-seasons'),
+            'spritesOff'   => __('“Falling and drifting sprites” is off in Settings, so those lines (and the boats and birds, and anything that needs a sprite) are tagged below. The background layer, corner accents, scenes, heroes and the Matrix egg still play.', 'dcc-seasons'),
             'masterOff'    => __('DCC Seasons is switched off in Settings (Master enable), so guests see none of this.', 'dcc-seasons'),
             /* translators: %d: year */
             'datesIn'      => __('Dates in %d', 'dcc-seasons'),

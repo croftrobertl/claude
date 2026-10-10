@@ -355,6 +355,41 @@ class Settings {
     }
 
     /**
+     * Keys stored ONLY when they differ from the default, so a site choice
+     * Rob makes lives in the plugin's defaults and a later default change
+     * reaches the site (his standing rule). sanitize() leaves a value equal
+     * to its default out of the saved row, the upgrade routine clears a
+     * stored value equal to it (Plugin::maybe_purge_after_upgrade) and never
+     * writes it back as a "missing key", and options() merges it in.
+     */
+    public const TRACKED_DEFAULTS = ['tap_selector', 'tap_count'];
+
+    /** True when a stored value of a tracked key is just its default. */
+    public static function is_default_value(string $key, $value): bool {
+        $d = self::defaults()[$key] ?? null;
+        if (is_int($d)) {
+            return is_numeric($value) && (int) $value === $d;
+        }
+        return is_string($value) && trim($value) === $d;
+    }
+
+    /**
+     * How a guest opens the egg, in words, built from the SETTINGS — every
+     * place that tells people how to open it uses this, never a hard-coded
+     * "tap the logo five times" (wrong on this site from 4.7.0).
+     */
+    public static function egg_howto(array $opt): string {
+        $n   = max(2, (int) ($opt['tap_count'] ?? 4));
+        $sel = trim((string) ($opt['tap_selector'] ?? ''));
+        if ($sel === self::defaults()['tap_selector']) {
+            /* translators: %d: number of taps */
+            return sprintf(_n('Tap the title in the homepage banner %d time', 'Tap the title in the homepage banner %d times', $n, 'dcc-seasons'), $n);
+        }
+        /* translators: 1: CSS selector, 2: number of taps */
+        return sprintf(_n('Tap the element matching %1$s %2$d time', 'Tap the element matching %1$s %2$d times', $n, 'dcc-seasons'), $sel, $n);
+    }
+
+    /**
      * Option defaults, including the pre-seeded 2026–27 schedule.
      */
     public static function defaults(): array {
@@ -365,8 +400,14 @@ class Settings {
             'layering'        => 'behind',
             'scope'           => 'all',
             'placement'       => 'footer',
-            'tap_selector'    => '#branding, .header-image .entry-title, .entry-title, #site-title',
-            'tap_count'       => 5,
+            /* Rob, 2026-10-10: the title in the homepage banner, tapped 4
+             * times. The old default could not work on this site: Bravada
+             * hides #site-text (so #site-title is 0x0), #branding is 0 wide,
+             * .header-image does not exist, and a bare .entry-title also
+             * matched every cottage card title on the homepage. These two
+             * are TRACKED_DEFAULTS: stored only when they differ. */
+            'tap_selector'    => '.home #header-page-title .entry-title',
+            'tap_count'       => 4,
             'density'         => 10,
             'opacity'         => 0.35,
             'richness'        => 'full',
@@ -523,6 +564,13 @@ class Settings {
         $out['tap_selector'] = $selector !== '' ? $selector : $d['tap_selector'];
 
         $out['tap_count'] = min(10, max(2, (int) ($in['tap_count'] ?? $d['tap_count'])));
+        // TRACKED_DEFAULTS: a value equal to its default is not stored, so
+        // options() supplies it and a later default change reaches the site.
+        foreach (self::TRACKED_DEFAULTS as $key) {
+            if (self::is_default_value($key, $out[$key])) {
+                unset($out[$key]);
+            }
+        }
         $out['density']   = min(16, max(1, (int) ($in['density'] ?? $d['density'])));
 
         $opacity        = (float) ($in['opacity'] ?? $d['opacity']);
@@ -645,7 +693,7 @@ class Settings {
         <div class="wrap dcc-seasons-wrap">
             <h1><?php esc_html_e('DCC Seasons', 'dcc-seasons'); ?></h1>
             <p class="description">
-                <?php esc_html_e('Seasonal ambient particles + a tap-the-logo Matrix easter egg. The active theme is picked in the visitor\'s browser from their local date, so page caching never serves a stale season.', 'dcc-seasons'); ?>
+                <?php esc_html_e('Seasonal ambient particles + a hidden tap-to-open Matrix easter egg. The active theme is picked in the visitor\'s browser from their local date, so page caching never serves a stale season.', 'dcc-seasons'); ?>
             </p>
             <?php Theme_Guide::tabs(); ?>
             <?php if (Theme_Guide::is_tab()) : ?>
@@ -677,7 +725,8 @@ class Settings {
                             <p class="description dcc-seasons-layer-note"><?php esc_html_e('Switches the falling and drifting sprites only, including the boats and birds. The background layer, corner accents, scenes and heroes keep playing; they have their own settings below.', 'dcc-seasons'); ?></p>
                             <label>
                                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[egg]" value="1" <?php checked(!empty($opt['egg'])); ?> />
-                                <?php esc_html_e('Matrix easter egg (tap the logo)', 'dcc-seasons'); ?>
+                                <?php esc_html_e('Matrix easter egg', 'dcc-seasons'); ?>
+                                (<?php echo esc_html(self::egg_howto($opt)); ?>)
                             </label>
                         </td>
                     </tr>
@@ -730,7 +779,11 @@ class Settings {
                             <input type="text" class="regular-text code" id="dcc-seasons-tap-selector"
                                    name="<?php echo esc_attr(self::OPTION); ?>[tap_selector]"
                                    value="<?php echo esc_attr($opt['tap_selector']); ?>" />
-                            <p class="description"><?php esc_html_e('Comma-separated CSS selectors. Every VISIBLE match is bound (zero-size elements are skipped — Bravada renders #branding at 0px on this site); all matches share one tap counter. If nothing visible matches, #masthead is used.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Comma-separated CSS selectors. Every VISIBLE match is bound (zero-size elements are skipped — Bravada renders #branding and #site-title at 0px on this site); all matches share one tap counter. If nothing visible matches, #masthead is used.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php
+                                /* translators: %s: the default CSS selector */
+                                echo esc_html(sprintf(__('Default: %s — the title in the homepage banner. Left at the default, it follows the plugin if the default changes.', 'dcc-seasons'), self::defaults()['tap_selector']));
+                            ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -741,7 +794,10 @@ class Settings {
                             <input type="number" min="2" max="10" step="1" id="dcc-seasons-tap-count"
                                    name="<?php echo esc_attr(self::OPTION); ?>[tap_count]"
                                    value="<?php echo esc_attr((string) $opt['tap_count']); ?>" />
-                            <p class="description"><?php esc_html_e('Taps within a rolling 3-second window needed to launch the egg (default 5).', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php
+                                /* translators: %d: the default tap count */
+                                echo esc_html(sprintf(__('Taps within a rolling 3-second window needed to launch the egg (default %d).', 'dcc-seasons'), self::defaults()['tap_count']));
+                            ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -960,7 +1016,7 @@ class Settings {
                     <?php
                     printf( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the links are escaped in preview_link()
                         /* translators: 1: example preview link, 2: "off" preview link */
-                        esc_html__('Open a link such as %1$s (or add ?dcc_season= and a theme key to any front-end URL) to force that theme for the page view — ambient runs in that theme and the tap-the-logo egg uses its Matrix palette. %2$s forces no theme. Links open in a new tab and work only for logged-in administrators (manage_options, verified server-side); visitors always get the date-driven schedule.', 'dcc-seasons'),
+                        esc_html__('Open a link such as %1$s (or add ?dcc_season= and a theme key to any front-end URL) to force that theme for the page view — ambient runs in that theme and the tap egg uses its Matrix palette. %2$s forces no theme. Links open in a new tab and work only for logged-in administrators (manage_options, verified server-side); visitors always get the date-driven schedule.', 'dcc-seasons'),
                         self::preview_link('halloween'), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built escaped
                         self::preview_link('off')
                     );

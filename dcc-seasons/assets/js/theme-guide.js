@@ -287,7 +287,7 @@
 			c.appendChild(s2);
 		});
 
-		/* The logo egg */
+		/* The Matrix egg (how to open it comes from the settings: T.eggNote) */
 		var egg = th.egg;
 		if (egg) {
 			var es = section(T.egg, on.egg);

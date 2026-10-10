@@ -124,9 +124,40 @@ final class Plugin {
          * overwrite a choice the owner made, and a key they deliberately
          * set to a falsy value stays falsy.
          */
+        /*
+         * Settings::TRACKED_DEFAULTS are the exception to the paragraph
+         * above: they are stored only when they DIFFER from the default, so
+         * a stored copy that merely equals the default is cleared here (it
+         * would freeze today's default into the row and stop a later one
+         * from reaching the site), and the fill below never writes them.
+         * A value the owner chose that differs is never touched.
+         *
+         * 4.7.0: on the live site this clears tap_selector and tap_count,
+         * which the Director had set to exactly the new defaults.
+         */
+        if (is_array($stored)) {
+            $cleared = [];
+            foreach (Settings::TRACKED_DEFAULTS as $key) {
+                if (array_key_exists($key, $stored) && Settings::is_default_value($key, $stored[$key])) {
+                    unset($stored[$key]);
+                    $cleared[] = $key;
+                }
+            }
+            if ($cleared) {
+                update_option(Settings::OPTION, $stored);
+                if (function_exists('error_log')) {
+                    error_log('DCC Seasons: cleared stored option keys equal to their defaults on upgrade to '
+                        . DCC_SEASONS_VERSION . ': ' . implode(', ', $cleared));
+                }
+            }
+        }
+
         if (is_array($stored)) {
             $added = [];
             foreach (Settings::defaults() as $key => $value) {
+                if (in_array($key, Settings::TRACKED_DEFAULTS, true)) {
+                    continue;
+                }
                 if (!array_key_exists($key, $stored)) {
                     $stored[$key] = $value;
                     $added[] = $key;

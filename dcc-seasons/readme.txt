@@ -4,12 +4,12 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.6.2
+Stable tag: 4.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Date-scheduled seasonal ambient particles plus a tap-the-logo Matrix-style
-easter egg, built cache-safe and performance-first for doracanalcourt.com.
+Date-scheduled seasonal ambient particles plus a hidden tap-to-open
+Matrix-style easter egg, built cache-safe and performance-first for doracanalcourt.com.
 
 == Description ==
 
@@ -23,8 +23,11 @@ Matrix rain's deliberate glyph aesthetic):
    requestAnimationFrame-driven, paused when the tab is hidden, drawn on a
    `position:fixed`, `pointer-events:none`, `aria-hidden` canvas (zero CLS,
    never intercepts a click).
-2. **Easter egg** — tapping/clicking the site logo (`#branding`, fallback
-   `#site-title`) 5 times within a rolling 3-second window launches a
+2. **Easter egg** — tapping/clicking the tap target (Settings → Tap target
+   selector; default since 4.7.0: the title in the homepage banner,
+   `.home #header-page-title .entry-title`, with the site header `#masthead`
+   as the fallback on other pages) the Tap count times (default 4) within a
+   rolling 3-second window launches a
    full-screen Matrix-style glyph rain recolored and re-glyphed for the
    current theme (orange pumpkin rain in October, pastel egg rain at Easter…).
    Outside every range it falls back to the classic green Matrix rain. Exit
@@ -58,13 +61,11 @@ sliders (or Visual richness) to tone any of it down.
   `MPHB()->settings()->pages()->getCheckoutPageId()` when MotoPress is
   active) and the Elementor editor/preview. Filterable.
 
-= Logo tap behavior =
+= Tap target behavior =
 
-When the logo links to the page the visitor is already on (the usual case:
-the home-page logo on the home page), the click's default reload is cancelled
-so tap counting can survive five rapid taps. Logo links to *other* pages
-still navigate normally — on those pages the first tap goes home, and the
-egg is found there.
+When a tap target is a link to the page the visitor is already on, the
+click's default reload is cancelled so tap counting can survive several rapid
+taps. Links to *other* pages still navigate normally.
 
 = Settings =
 
@@ -156,7 +157,7 @@ the normal date-driven behavior. The settings page lists every valid key.
 == Manual smoke-test checklist ==
 
 * On a date inside a range: sparse particles drift; on any other date: none.
-* N quick taps on the logo (N = the Tap count setting) → themed rain; ✕, Escape, and overlay tap all exit.
+* N quick taps on the tap target (N = the Tap count setting; by default the homepage banner title, 4 taps) → themed rain; ✕, Escape, and overlay tap all exit.
 * Outside every range: N taps → classic green rain.
 * On 09/08–09/11 or 01/18 (adjust a row to today to simulate): Patriot Day
   and MLK Day run full, egg included.
@@ -165,6 +166,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.7.0 =
+Rob's logo-egg choices become the plugin's defaults (2026-10-10). Rollback:
+reinstall the 4.6.2 zip and re-enter the two settings below by hand.
+
+* The egg is opened by tapping the title in the homepage banner
+  (`.home #header-page-title .entry-title`) 4 times. The old default could
+  not work on this site: the theme hides the site title (0x0), `#branding`
+  is 0 wide, `.header-image` does not exist, and a bare `.entry-title`
+  also matched every cottage card title on the homepage.
+* The Tap target selector and Tap count are now stored only when they
+  differ from the defaults, so a later change of default reaches the site.
+  On upgrade, a stored value equal to the new default is cleared (live and
+  staging hold exactly these values today); a value that differs is never
+  touched.
+* Everything that tells people how to open the egg follows the settings:
+  the settings page and the Theme guide no longer say "tap the logo five
+  times".
 
 = 4.6.2 =
 Corrects 4.6.1, which should not be installed. Nothing looks different and
