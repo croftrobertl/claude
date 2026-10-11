@@ -374,7 +374,9 @@
     transition: none;
 }
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
-.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span {
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
+.mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
     padding-right: 40px;
     padding-left: 40px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -1253,11 +1255,17 @@ body.mphbac-staff-open { overflow: hidden; }
     text-align: center;
 }
 .mphbac-staff-stats-note[hidden] { display: none; }
+/* THE RANGE LINE (0.45.3, Rob): "much bigger", and ONE line — it is what
+   tells staff what they are looking at. This is its full size; staff.js
+   steps it down only as far as the width needs (fitRange). */
 .mphbac-staff-stats-range {
-    margin: 12px 0 8px;
+    margin: 14px 0 10px;
     color: var(--staff-text);
+    font-size: 30px;
     font-weight: 700;
+    line-height: 1.2;
     text-align: center;
+    white-space: nowrap;
 }
 .mphbac-staff-stats-kpis {
     display: grid;
@@ -1286,6 +1294,7 @@ body.mphbac-staff-open { overflow: hidden; }
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
+.mphbac-staff-kpi-unit { font-size: 0.6em; font-weight: 700; }
 .mphbac-staff-kpi-label {
     margin-top: 2px;
     color: var(--staff-muted);
@@ -1352,6 +1361,7 @@ body.mphbac-staff-open { overflow: hidden; }
    ::placeholder say none too, -webkit- included, as the /staff/ password
    field needed. */
 .mphbac-staff .mphbac-staff-field,
+.mphbac-staff .mphbac-staff-sfield,           /* the Stats fields too (0.45.3) */
 .mphbac-staff .mphbac-staff-field-label,
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input,
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input::placeholder {
@@ -1556,12 +1566,29 @@ body.mphbac-staff-open { overflow: hidden; }
        or its label lays out as bare inline text and its centring is lost. */
     .mphbac-staff-search .mphbac-staff-search-field { display: flex; }
     .mphbac-staff-input { grid-row: 2; }
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto {
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-date,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-from,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-to {
         padding-left: 12px;
         padding-right: 12px;
     }
+    /* THE STATS FILTERS SIDE BY SIDE (0.45.3, Rob), like Show / Go to date:
+       Timeframe and its second box share a row; for Custom, Timeframe takes
+       the first row and From / To share the second (the WD). */
+    .mphbac-staff-stats-pick {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: end;
+    }
+    .mphbac-staff-stats-pick.is-custom .mphbac-staff-stats-spanfield { grid-column: 1 / -1; }
+    /* Two full rows of three tiles (the WD's order), at 320px too. */
+    .mphbac-staff-stats-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .mphbac-staff-kpi { padding: 8px 2px; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span {
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
         padding-left: 12px;
         padding-right: 34px;
         background-position: right 12px center;
@@ -1623,4 +1650,25 @@ body.mphbac-staff-open { overflow: hidden; }
        still shows on a computer. */
     .mphbac-staff .mphbac-staff-item.mphbac-staff-item.mphbac-staff-item:hover { background-color: var(--staff-namecol); }
     .mphbac-staff .mphbac-staff-result.mphbac-staff-result.mphbac-staff-result:hover { background-color: var(--staff-namecol); }
+}
+
+/* THE NARROWEST PHONES (under 360px, 0.45.3). Half of a 320px row is about
+   134px: a full date ("12/28/2026") plus the calendar icon some browsers
+   draw did not fit at 12px a side — measured clipped in the Go to date field
+   and in the Stats date fields alike. Tighter sides and a 16px icon fit it.
+   iPhones draw no icon; this costs them only a little padding. */
+@media (max-width: 359px) {
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-date,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-from,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-to {
+        padding-left: 6px;
+        padding-right: 4px;
+    }
+    .mphbac-staff .mphbac-staff-input[type="date"]::-webkit-calendar-picker-indicator {
+        width: 16px;
+        height: 16px;
+        margin-left: 2px;
+        padding: 0;
+    }
 }

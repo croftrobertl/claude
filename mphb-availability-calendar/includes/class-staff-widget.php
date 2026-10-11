@@ -143,11 +143,16 @@ final class Staff_Widget
                 'stDepartures' => __('Departures', 'mphb-availability-calendar'),
                 'stTurnovers'  => __('Turnovers', 'mphb-availability-calendar'),
                 'stInHouse'    => __('In house', 'mphb-availability-calendar'),
-                'stWithPets'   => __('With pets', 'mphb-availability-calendar'),
-                'stWithCouch'  => __('With couch', 'mphb-availability-calendar'),
-                'stWithBoat'   => __('With boat', 'mphb-availability-calendar'),
-                'stPerCottage' => __('Nights booked per cottage', 'mphb-availability-calendar'),
-                'stBySource'   => __('Share of nights booked, by source', 'mphb-availability-calendar'),
+                // 0.45.3 (Rob): no Pets / Couch / Boat tiles — those features
+                // are new, so there are no accurate figures for them yet.
+                'stBookings'   => __('Bookings', 'mphb-availability-calendar'),
+                'stBookingsTip'=> __('Bookings with at least one night in the timeframe. A booking repeated by a channel block counts once.', 'mphb-availability-calendar'),
+                'stLength'     => __('Length', 'mphb-availability-calendar'),
+                'stLengthTip'  => __('The average length of those bookings\' whole stays, including any nights outside the timeframe.', 'mphb-availability-calendar'),
+                'stDayLabel'   => __('Day', 'mphb-availability-calendar'),
+                'stWeekOf'     => __('Week of', 'mphb-availability-calendar'),
+                'stPerCottage' => __('Nights Booked by Cottage', 'mphb-availability-calendar'),
+                'stBySource'   => __('Nights Booked by Source', 'mphb-availability-calendar'),
                 'stNights'     => __('{n} nights', 'mphb-availability-calendar'),
                 'stNight'      => __('{n} night', 'mphb-availability-calendar'),
                 'stNoNights'   => __('No nights booked in this timeframe.', 'mphb-availability-calendar'),
@@ -259,7 +264,9 @@ final class Staff_Widget
                 <span class="mphbac-staff-key is-src-airbnb"><?php echo esc_html__('Airbnb', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key is-src-booking"><?php echo esc_html__('Booking.com', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key is-src-vrbo"><?php echo esc_html__('Vrbo', 'mphb-availability-calendar'); ?></span>
-                <span class="mphbac-staff-key mphbac-staff-key--pending"><?php echo esc_html__('Pending', 'mphb-availability-calendar'); ?></span>
+                <?php // No "Pending" entry (0.45.3, Rob: on a phone it pushed the
+                // legend onto a third line). A pending booking keeps its
+                // stripes, and its quick preview and sheet name the status. ?>
                 <span class="mphbac-staff-key mphbac-staff-key--turn"><span class="mphbac-staff-turnmark"></span><?php echo esc_html__('Turnover', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--pets"><span class="mphbac-staff-ico is-pets"></span><?php echo esc_html__('Pets', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--couch"><span class="mphbac-staff-ico is-couch"></span><?php echo esc_html__('Couch', 'mphb-availability-calendar'); ?></span>
@@ -286,7 +293,12 @@ final class Staff_Widget
                 <summary class="mphbac-staff-stats-toggle"><?php echo esc_html__('Stats', 'mphb-availability-calendar'); ?></summary>
                 <div class="mphbac-staff-stats-body">
                     <div class="mphbac-staff-stats-pick">
-                        <label class="mphbac-staff-sfield">
+                        <?php // THE SECOND BOX FOLLOWS "Timeframe" (0.45.3, Rob's design):
+                        // its label and kind change with it — a date for Day and
+                        // Week of, a month list, a year list, or From / To — so no
+                        // box ever sits there doing nothing. staff.js carries the
+                        // period across a switch (Month Mar 2025 → Year 2025). ?>
+                        <label class="mphbac-staff-sfield mphbac-staff-stats-spanfield">
                             <span class="mphbac-staff-field-label"><?php echo esc_html__('Timeframe', 'mphb-availability-calendar'); ?></span>
                             <select class="mphbac-staff-input mphbac-staff-stats-span">
                                 <option value="day"><?php echo esc_html__('Day', 'mphb-availability-calendar'); ?></option>
@@ -296,9 +308,17 @@ final class Staff_Widget
                                 <option value="custom"><?php echo esc_html__('Custom', 'mphb-availability-calendar'); ?></option>
                             </select>
                         </label>
-                        <label class="mphbac-staff-sfield mphbac-staff-stats-on">
-                            <span class="mphbac-staff-field-label"><?php echo esc_html__('Date', 'mphb-availability-calendar'); ?></span>
+                        <label class="mphbac-staff-sfield mphbac-staff-stats-on" hidden>
+                            <span class="mphbac-staff-field-label mphbac-staff-stats-on-label"><?php echo esc_html__('Day', 'mphb-availability-calendar'); ?></span>
                             <input type="date" class="mphbac-staff-input mphbac-staff-stats-date">
+                        </label>
+                        <label class="mphbac-staff-sfield mphbac-staff-stats-monthfield">
+                            <span class="mphbac-staff-field-label"><?php echo esc_html__('Month', 'mphb-availability-calendar'); ?></span>
+                            <select class="mphbac-staff-input mphbac-staff-stats-month"></select>
+                        </label>
+                        <label class="mphbac-staff-sfield mphbac-staff-stats-yearfield" hidden>
+                            <span class="mphbac-staff-field-label"><?php echo esc_html__('Year', 'mphb-availability-calendar'); ?></span>
+                            <select class="mphbac-staff-input mphbac-staff-stats-year"></select>
                         </label>
                         <label class="mphbac-staff-sfield mphbac-staff-stats-custom" hidden>
                             <span class="mphbac-staff-field-label"><?php echo esc_html__('From', 'mphb-availability-calendar'); ?></span>

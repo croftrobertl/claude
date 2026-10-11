@@ -403,14 +403,16 @@
             opts = opts || {};
             // A refresh keeps the reader exactly where they were (0.44.0).
             var keepX = gridEl.scrollLeft, keepY = gridEl.scrollTop;
-            gridEl.textContent = '';
+            // THE NEW CHART IS BUILT OFF THE PAGE AND SWAPPED IN ONE STEP
+            // (0.45.3, Rob: "the page jumps to the footer, then comes back"):
+            // nothing may lay the page out while the grid is empty.
             var shown = (data.bookings || []).slice();
             var turns = turnovers(shown);
 
             var period = state.period;
             var days = daysBetween(w.from, w.to);
             var N = days.length;
-            if (!N) return;
+            if (!N) { gridEl.textContent = ''; return; }
             var idx = {};
             days.forEach(function (d, i) { idx[d] = i; });
             var first = days[0], last = days[N - 1];
@@ -566,6 +568,7 @@
                 });
             }
 
+            gridEl.textContent = '';
             gridEl.appendChild(chart);
             measureBars(chart);
 
@@ -838,14 +841,16 @@
         }
 
         function renderAgenda(data) {
-            agendaEl.textContent = '';
             var day = state.anchor;
             var groups = dayGroups(data.bookings || [], day);
-
-            agendaEl.appendChild(turnGroup(groups.turn));
-            agendaEl.appendChild(group('in', S.arrivals || 'Arriving', groups['in'], S.noArrivals || ''));
-            agendaEl.appendChild(group('out', S.departures || 'Departing', groups['out'], S.noDepartures || ''));
-            agendaEl.appendChild(group('stay', S.inHouse || 'In house', groups['stay'], S.noInHouse || ''));
+            // Built off the page, swapped in one step (0.45.3), as the chart.
+            var frag = document.createDocumentFragment();
+            frag.appendChild(turnGroup(groups.turn));
+            frag.appendChild(group('in', S.arrivals || 'Arriving', groups['in'], S.noArrivals || ''));
+            frag.appendChild(group('out', S.departures || 'Departing', groups['out'], S.noDepartures || ''));
+            frag.appendChild(group('stay', S.inHouse || 'In house', groups['stay'], S.noInHouse || ''));
+            agendaEl.textContent = '';
+            agendaEl.appendChild(frag);
         }
 
         // "Cottage 22: Smith out → Jones in" — plain text, built from the
@@ -1303,7 +1308,16 @@
         var statsTo   = statsEl && statsEl.querySelector('.mphbac-staff-stats-to');
         var statsNote = statsEl && statsEl.querySelector('.mphbac-staff-stats-note');
         var statsOut  = statsEl && statsEl.querySelector('.mphbac-staff-stats-out');
+        var statsMonth = statsEl && statsEl.querySelector('.mphbac-staff-stats-month');
+        var statsYear  = statsEl && statsEl.querySelector('.mphbac-staff-stats-year');
+        var statsOnLabel = statsEl && statsEl.querySelector('.mphbac-staff-stats-on-label');
         var STATS_MAX_DAYS = 400;
+        // THE PERIOD THE STATS ARE IN (0.45.3): one day, carried across a
+        // Timeframe switch — Month "Mar 2025" → Year 2025 → back to Month is
+        // still March; Day → Week is that day's week. Each second box reads
+        // and writes this, never a value of its own.
+        var statsAnchor = config.today;
+        var statsLastSpan = 'month';
 
         function statsWindow() {
             var span = statsSpan ? statsSpan.value : 'month';
@@ -1318,8 +1332,7 @@
                 }
                 w = { from: f, to: t };
             } else {
-                var d = /^\d{4}-\d{2}-\d{2}$/.test(statsDate.value) ? statsDate.value : config.today;
-                w = windowOf(d, span === 'day' ? 'day' : span);
+                w = windowOf(statsAnchor, span);
             }
             if (w.to < CAP_LO || w.from > CAP_HI) return { bad: true };
             if (w.from < CAP_LO || w.to > CAP_HI) {
@@ -1336,11 +1349,14 @@
             statsNote.hidden = !text;
         }
 
-        function renderStats() {
+        function renderStats(opts) {
             if (!statsEl || !statsOut) return;
-            var custom = statsSpan.value === 'custom';
-            [].forEach.call(statsEl.querySelectorAll('.mphbac-staff-stats-custom'), function (el) { el.hidden = !custom; });
-            [].forEach.call(statsEl.querySelectorAll('.mphbac-staff-stats-on'), function (el) { el.hidden = custom; });
+            // QUIET = the 3-minute refresh (0.45.3). The figures on screen stay
+            // until the new ones are ready and then change in one step:
+            // swapping them for "Loading…" took the section's height away for
+            // as long as the request took, and the page jumped with it.
+            var quiet = !!(opts && opts.quiet);
+            statsSync();
             var w = statsWindow();
             if (w.bad) { statsOut.textContent = ''; statsSay(S.stBadRange || ''); return; }
             var notes = [];
@@ -1351,16 +1367,16 @@
             var hit = cachedCovering(w.from, w.to);
             var draw = function (data) { if (seq === state.statsReq) drawStats(data, w); };
             if (hit) { draw(hit); return; }
-            statsOut.textContent = S.loading || 'Loading…';
+            if (!quiet) statsOut.textContent = S.loading || 'Loading…';
             post('mphbac_staff_month', { from: w.from, to: w.to }).then(function (json) {
                 if (seq !== state.statsReq) return;
-                if (!json || !json.success || !json.data) { statsOut.textContent = S.error || ''; return; }
+                if (!json || !json.success || !json.data) { if (!quiet) statsOut.textContent = S.error || ''; return; }
                 state.cache[w.from + '|' + w.to] = json.data;
                 draw(json.data);
             }).catch(function (err) {
                 if (seq !== state.statsReq) return;
                 if (tokenReload(err)) return;
-                statsOut.textContent = failureText(err);
+                if (!quiet) statsOut.textContent = failureText(err);
             });
         }
 
@@ -1368,13 +1384,14 @@
             var nights = daysBetween(w.from, w.to);
             var bookings = (data.bookings || []).filter(function (b) { return b.checkin && b.checkout; })
                 .sort(function (a, b) { return a.checkin < b.checkin ? -1 : a.checkin > b.checkin ? 1 : a.id - b.id; });
-            var owner = {}, perCottage = {}, bySource = { direct: 0, airbnb: 0, booking: 0, vrbo: 0 }, booked = 0;
+            var owner = {}, perCottage = {}, bySource = { direct: 0, airbnb: 0, booking: 0, vrbo: 0 }, booked = 0, counted = {};
             bookings.forEach(function (b) {
                 (b.cottages || []).forEach(function (c) {
                     nights.forEach(function (d) {
                         var k = c.roomTypeId + '|' + d;
                         if (d >= b.checkin && d < b.checkout && !owner[k]) {
                             owner[k] = b;
+                            counted[b.id] = b;     // owns a night here: a booking of this timeframe
                             booked++;
                             perCottage[c.roomTypeId] = (perCottage[c.roomTypeId] || 0) + 1;
                             bySource[sourceOf(b)]++;
@@ -1383,7 +1400,13 @@
                 });
             });
             var inRange = function (d) { return d >= w.from && d <= w.to; };
-            var staying = bookings.filter(function (b) { return b.checkin <= w.to && b.checkout > w.from; });
+            // BOOKINGS and LENGTH (0.45.3, Rob): the bookings that own at least
+            // one cottage-night in the timeframe — the same ownership as the
+            // nights, so a channel block echoing a booking is not a second
+            // booking — and the average of their WHOLE stays, nights outside
+            // the timeframe included.
+            var mine = Object.keys(counted).map(function (k) { return counted[k]; });
+            var stayNights = mine.reduce(function (t, b) { return t + nightsBetween(b.checkin, b.checkout); }, 0);
             var turns = 0, t = turnovers(bookings);
             Object.keys(t).forEach(function (typeId) { Object.keys(t[typeId]).forEach(function (d) { if (inRange(d)) turns++; }); });
             var cots = data.cottages || [];
@@ -1396,9 +1419,8 @@
                 departures: bookings.filter(function (b) { return inRange(b.checkout); }).length,
                 turnovers: turns,
                 inHouse: w.span === 'day' ? dayGroups(bookings, w.from).stay.length : null,
-                pets: staying.filter(function (b) { return b.pets; }).length,
-                couch: staying.filter(function (b) { return b.couch; }).length,
-                boat: staying.filter(function (b) { return b.boat; }).length,
+                bookings: mine.length,
+                length: mine.length ? stayNights / mine.length : null,
                 perCottage: perCottage,
                 bySource: bySource
             };
@@ -1406,14 +1428,16 @@
 
         function drawStats(data, w) {
             var n = statsNumbers(data, w);
-            statsOut.textContent = '';
+            // Built off the page and swapped in one step (0.45.3): see renderStats.
+            var out = document.createDocumentFragment();
             var el = function (tag, cls, text) {
                 var e = document.createElement(tag);
                 if (cls) e.className = cls;
                 if (text !== undefined) e.textContent = text;
                 return e;
             };
-            statsOut.appendChild(el('p', 'mphbac-staff-stats-range', w.from === w.to ? mediumDay(w.from) : mediumDay(w.from) + ' – ' + mediumDay(w.to)));
+            var range = el('p', 'mphbac-staff-stats-range', w.from === w.to ? mediumDay(w.from) : mediumDay(w.from) + ' – ' + mediumDay(w.to));
+            out.appendChild(range);
 
             var grid = el('dl', 'mphbac-staff-stats-kpis');
             var kpi = function (key, label, value, tip) {
@@ -1423,15 +1447,23 @@
                 if (tip) box.title = tip;
                 grid.appendChild(box);
             };
+            // Order (WD): two full rows of three on a phone.
+            kpi('bookings', S.stBookings, n.bookings, S.stBookingsTip);
             kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip);
+            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), S.stLengthTip);
+            // "nights" in a smaller size, so the figure fits a phone's tile;
+            // the text still reads "4.2 nights".
+            (function (dd) {
+                var m = n.length === null ? null : /^([\d.]+)(\s.*)$/.exec(dd.textContent);
+                if (!m) return;
+                dd.textContent = m[1];
+                dd.appendChild(el('span', 'mphbac-staff-kpi-unit', m[2]));
+            })(grid.lastChild.querySelector('.mphbac-staff-kpi-num'));
             kpi('arrivals', S.stArrivals, n.arrivals);
             kpi('departures', S.stDepartures, n.departures);
             kpi('turnovers', S.stTurnovers, n.turnovers);
             if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse);
-            kpi('pets', S.stWithPets, n.pets);
-            kpi('couch', S.stWithCouch, n.couch);
-            kpi('boat', S.stWithBoat, n.boat);
-            statsOut.appendChild(grid);
+            out.appendChild(grid);
 
             // Nights booked per cottage: a short horizontal bar each.
             var per = el('section', 'mphbac-staff-stats-block');
@@ -1450,7 +1482,7 @@
                 list.appendChild(li);
             });
             per.appendChild(list);
-            statsOut.appendChild(per);
+            out.appendChild(per);
 
             // Share of NIGHTS booked by source (Rob: nights, not bookings): an
             // inline SVG pie in the source colours, and the same numbers as
@@ -1475,7 +1507,58 @@
                 wrap.appendChild(ul);
                 src.appendChild(wrap);
             }
-            statsOut.appendChild(src);
+            out.appendChild(src);
+            statsOut.textContent = '';
+            statsOut.appendChild(out);
+            fitRange(range);
+        }
+
+        // THE RANGE LINE IS BIG AND ONE LINE (0.45.3, Rob): it is what says
+        // what the figures are for. It starts at its full CSS size and steps
+        // down only as far as the width needs — never wrapping, never cut.
+        function fitRange(p) {
+            if (!p || !p.isConnected) return;
+            p.style.fontSize = '';
+            var size = parseFloat(getComputedStyle(p).fontSize) || 28;
+            while (size > 12 && p.scrollWidth > p.clientWidth + 0.5) {
+                size -= 1;
+                p.style.fontSize = size + 'px';
+            }
+        }
+        window.addEventListener('resize', function () {
+            if (statsOut) fitRange(statsOut.querySelector('.mphbac-staff-stats-range'));
+        });
+
+        // The second box follows Timeframe (0.45.3, Rob's design): its label
+        // and kind, shown from the one period above.
+        function statsSync() {
+            var span = statsSpan.value;
+            var show = function (sel, on) { [].forEach.call(statsEl.querySelectorAll(sel), function (e) { e.hidden = !on; }); };
+            show('.mphbac-staff-stats-on', span === 'day' || span === 'week');
+            show('.mphbac-staff-stats-monthfield', span === 'month');
+            show('.mphbac-staff-stats-yearfield', span === 'year');
+            show('.mphbac-staff-stats-custom', span === 'custom');
+            statsEl.querySelector('.mphbac-staff-stats-pick').classList.toggle('is-custom', span === 'custom');
+            if (statsOnLabel) statsOnLabel.textContent = span === 'week' ? (S.stWeekOf || 'Week of') : (S.stDayLabel || 'Day');
+            if (statsDate) statsDate.value = statsAnchor;
+            if (statsMonth) statsMonth.value = statsAnchor.slice(0, 7);
+            if (statsYear) statsYear.value = statsAnchor.slice(0, 4);
+        }
+        // A day inside the board's ±3-year window.
+        function statsClamp(d) { return d < CAP_LO ? CAP_LO : (d > CAP_HI ? CAP_HI : d); }
+        function statsOptions() {
+            var opt = function (sel, value, text) { var o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+            if (statsMonth) {
+                for (var m = CAP_LO.slice(0, 7); m <= CAP_HI.slice(0, 7);) {
+                    opt(statsMonth, m, shortMonth(m + '-01') + ' ' + m.slice(0, 4));
+                    var y = +m.slice(0, 4), mo = +m.slice(5, 7) + 1;
+                    if (mo > 12) { mo = 1; y++; }
+                    m = y + '-' + pad(mo);
+                }
+            }
+            if (statsYear) {
+                for (var yy = +CAP_LO.slice(0, 4); yy <= +CAP_HI.slice(0, 4); yy++) opt(statsYear, String(yy), String(yy));
+            }
         }
 
         function pctOf(v, total) { return Math.round(100 * v / total); }
@@ -1524,14 +1607,43 @@
         }
 
         if (statsEl) {
-            if (statsDate) statsDate.value = config.today;
+            statsAnchor = statsClamp(config.today);
+            statsOptions();
             if (statsFrom) statsFrom.value = windowOf(config.today, 'month').from;
             if (statsTo) statsTo.value = windowOf(config.today, 'month').to;
             [statsDate, statsFrom, statsTo].forEach(function (i) { if (i) { i.min = CAP_LO; i.max = CAP_HI; } });
+            statsSync();
             statsEl.addEventListener('toggle', function () { if (statsEl.open) renderStats(); });
-            [statsSpan, statsDate, statsFrom, statsTo].forEach(function (i) {
-                if (i) i.addEventListener('change', function () { if (statsEl.open) renderStats(); });
+            var restat = function () { if (statsEl.open) renderStats(); else statsSync(); };
+            statsSpan.addEventListener('change', function () {
+                var to = statsSpan.value, from = statsLastSpan;
+                if (from === 'custom' && /^\d{4}-\d{2}-\d{2}$/.test(statsFrom.value)) statsAnchor = statsClamp(statsFrom.value);
+                if (to === 'custom' && from !== 'custom') {
+                    // Custom opens on the period that was showing.
+                    var pw = windowOf(statsAnchor, from);
+                    statsFrom.value = statsClamp(pw.from);
+                    statsTo.value = statsClamp(pw.to);
+                }
+                statsLastSpan = to;
+                restat();
             });
+            if (statsDate) statsDate.addEventListener('change', function () {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(statsDate.value)) statsAnchor = statsClamp(statsDate.value);
+                restat();
+            });
+            if (statsMonth) statsMonth.addEventListener('change', function () {
+                var m = statsMonth.value;
+                if (statsAnchor.slice(0, 7) !== m) statsAnchor = statsClamp(m + '-01');
+                restat();
+            });
+            if (statsYear) statsYear.addEventListener('change', function () {
+                var y = statsYear.value;
+                // The same month of that year if the period was in it already,
+                // else its January (the WD).
+                if (statsAnchor.slice(0, 4) !== y) statsAnchor = statsClamp(y + '-01-01');
+                restat();
+            });
+            [statsFrom, statsTo].forEach(function (i) { if (i) i.addEventListener('change', restat); });
         }
 
         // ---- SEARCH (0.45.0) -------------------------------------------------
@@ -1813,7 +1925,7 @@
             // is then a miss, and today's month is fetched again for the tiles.
             state.cache = {};
             render({ keepScroll: true, quiet: true });
-            if (statsEl && statsEl.open) renderStats();
+            if (statsEl && statsEl.open) renderStats({ quiet: true });
         }
         function markUpdated() {
             state.lastRefresh = Date.now();
