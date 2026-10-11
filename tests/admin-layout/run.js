@@ -1273,6 +1273,26 @@ async function visibleServiceRows(pg) {
         check('... ticking one by hand stays ticked (nothing unticks it)', await petBoxes(r.pg), [17712]);
         await r.ctx.close();
 
+        // Number of Guests itself is never detached and keeps focus, through a
+        // stray change, tapped at phone width (Director's question, 2026-10-11:
+        // did the 0.32.0 loop move THAT select? Measured on the 0.32.0 file
+        // with this case: no — 21 other nodes went round, this one never did).
+        for (const over of [FLOW, {}]) {
+            r = await open(browser, 390, addNewPage({ preset: 1, capacity: 2, fee: false, pet: 3, marker: { types: '1607', pet: '' } }), over,
+                undefined, undefined, undefined, { hasTouch: true, isMobile: true });
+            await r.pg.tap('[name="mphb_room_details[0][adults]"]');
+            const res = await r.pg.evaluate(() => new Promise(done => {
+                const el = document.querySelector('[name="mphb_room_details[0][adults]"]');
+                let detached = 0;
+                const mo = new MutationObserver(l => l.forEach(m => m.removedNodes.forEach(n => { if (n === el || (n.contains && n.contains(el))) { detached++; } })));
+                mo.observe(document.body, { childList: true, subtree: true });
+                document.body.appendChild(document.createElement('span'));
+                setTimeout(() => { mo.disconnect(); done([detached, document.activeElement === el, el.value]); }, 1500);
+            }));
+            check(`390px touch, ${over.__page ? 'flow' : 'no flow word'}: Number of Guests tapped — never detached, still focused, still 1`, res, [0, true, '1']);
+            await r.ctx.close();
+        }
+
         // THE COUNT. Rob: on 19674 a confirmed 1 came back as 2. The script
         // must never write Number of Guests — in the flow, AND as 0.32.0 ran
         // there (no flow word), which is how it ran on 19674. Matrix as asked:

@@ -1269,8 +1269,11 @@ yours to improvise.
     on `page=mphb_edit_booking` — the slug of MotoPress's own button, the only
     part proven — and the script draws no Pet Fee and moves nothing there.
     MotoPress's pet rows stay visible: that flow is the manual fallback.
-    Full Guest Name there is unchanged (Rob). **Whether every STEP of the flow
-    keeps that page slug is unverified** — the Director's check.
+    Full Guest Name there is unchanged (Rob). **VERIFIED for every step**
+    (Director, live 6.3.0, 2026-10-11): every step's form posts to
+    `EditBookingMenuPage::getUrl()` = `admin.php?page=mphb_edit_booking&booking_id=N`
+    (+ `&lang=`), steps told apart only by `$_POST['step']` (edit → summary →
+    checkout → booking, `detectStep()` ~97–108); the button opens the same URL.
   - **BUG 2 (a confirmed 1 came back 2) IS NOT FIXED, BECAUSE ITS SOURCE IS NOT
     PROVEN.** Proven: the script never writes Number of Guests — a matrix of
     confirmed 1 and 2 on a 2-sleeper and a 4-sleeper, each in the flow AND as
@@ -1278,11 +1281,26 @@ yours to improvise.
     `js-writes-count` plants a write and must go red. Proven by reading: no
     PHP here writes `_mphb_adults` in that flow (Admin_Guests needs its nonce;
     Ical_Defaults is iCal-only; Edit_Flow_Markers writes the marker only).
-    Left: MotoPress's flow (a default or the summary step) or a pick on the
-    flashing iPhone picker. **The carry rule is unchanged** (same physical room
-    AND same count): carrying across a changed count would confirm a number
-    nobody chose if MotoPress set it. Rob's reproduction (check list §4) and
-    the Director's source read decide it.
+    **The carry rule is unchanged** (same physical room AND same count):
+    carrying across a changed count would confirm a number nobody chose
+    (Director agrees: keep it).
+    **MOTOPRESS DOES NOT DEFAULT IT EITHER** (Director, live 6.3.0 source,
+    2026-10-11): the final step's `ParseUtils::parseRooms()` (~295/328) takes
+    `mphb_room_details[i][adults]` through `validateInt()` — empty or
+    non-numeric stops the save with "Adults number is not valid", missing
+    gives 0, no default. The checkout step's select
+    (`CheckoutView::renderGuestsChooser`, ~207–260; first option empty
+    "— Select —", then 1..capacity) is preset via
+    `mphb_sc_checkout_preset_adults` ← `CheckoutControl::presetAdults()` ←
+    `BookingDetailsUtil::addPresets()` = the EXISTING room's `getAdults()`.
+    And **0.32.0's loop never moved that select**: measured on the 0.32.0 file
+    (flow stand-in, tapped at 390px, one stray change): 21 other nodes went
+    round in 1.5s, Number of Guests was never detached, kept focus, stayed 1 —
+    now a standing assertion. So nothing in the code path turns 1 into 2; the
+    remaining explanation is a pick in the flow. The label Rob saw, "Number of
+    Guests" where MotoPress says "Guests", is NOT this plugin's (no string or
+    gettext override here produces it) — site-level, e.g. a LocoTranslate
+    entry. Rob's one-run check on 19674 decides it.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
