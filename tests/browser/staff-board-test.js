@@ -668,10 +668,16 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
       await p.evaluate(() => document.activeElement && document.activeElement.blur());
       out.rest = await read(p, sel);
       const bb = await p.locator(sel).first().boundingBox();
-      if (phone) { await p.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.waitForTimeout(80); out.tapped = await read(p, sel); return out; }
+      // FOCUSED BY SCRIPT after a pointer interaction — how both popups put
+      // focus on their ✕ when a tap or a click opens them (0.45.2, asked by
+      // the Website Director after measuring the public one on live).
+      const scriptFocus = () => p.evaluate(s2 => { const e = document.querySelector(s2); e.blur(); e.focus(); }, sel);
+      if (phone) { await p.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.waitForTimeout(80); out.tapped = await read(p, sel);
+        await scriptFocus(); out.scriptFocus = await read(p, sel); return out; }
       await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); out.hover = await read(p, sel);
       await p.mouse.down(); out.pressed = await read(p, sel); await p.mouse.up(); out.clicked = await read(p, sel);
       await p.mouse.move(1, 1); out.clickedAway = await read(p, sel);
+      await scriptFocus(); out.scriptFocus = await read(p, sel);
       await p.evaluate(() => document.activeElement && document.activeElement.blur());
       await p.keyboard.press('Shift'); await p.evaluate(s2 => document.querySelector(s2).focus(), sel); out.keyboard = await read(p, sel);
       await p.evaluate(s2 => { const e = document.querySelector(s2); e.blur(); e.disabled = true; }, sel); out.disabled = await read(p, sel);
@@ -714,8 +720,9 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
         for (const st of Object.keys(A)) {
           // The search ✕ never keeps focus (a press leaves it in the field,
           // so blur() puts a phone's keyboard away) and a click empties the
-          // field, which hides it: its "after a click" state is never seen.
-          if (staff === 'qclear' && st === 'clickedAway') continue;
+          // field, which hides it: its "after a click" state is never seen,
+          // and no script ever focuses it.
+          if (staff === 'qclear' && (st === 'clickedAway' || st === 'scriptFocus')) continue;
           for (const k of PROPS) if (A[st][k] !== B[st][k]) diffs.push(`${st}.${k}: public ${A[st][k]} / staff ${B[st][k]}`);
         }
         check(`${dev}: ${label} looks and behaves exactly like its public twin — ${Object.keys(A).join(', ')}`, diffs.length === 0, diffs);
