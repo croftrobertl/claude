@@ -1299,8 +1299,11 @@ yours to improvise.
     now a standing assertion. So nothing in the code path turns 1 into 2; the
     remaining explanation is a pick in the flow. The label Rob saw, "Number of
     Guests" where MotoPress says "Guests", is NOT this plugin's (no string or
-    gettext override here produces it) — site-level, e.g. a LocoTranslate
-    entry. Rob's one-run check on 19674 decides it.
+    gettext override here produces it) — it is MotoPress's own site
+    translation, `wp-content/languages/plugins/motopress-hotel-booking-en_US.po`
+    / `.l10n.php` ("Guests" → "Number of Guests"; Director, 2026-10-11). So
+    the Number of Guests label on Add New and in the flow is MotoPress's
+    "Guests" chooser. Rob's one-run check on 19674 decides the rest.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
