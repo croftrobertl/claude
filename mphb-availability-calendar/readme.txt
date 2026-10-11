@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.3
+Stable tag: 0.45.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.45.4 =
+* **Faster pages.** The calendar's scripts are now sent compacted: about 43 KB instead of 156 KB on the home page and cottage pages (13 KB instead of 43 KB after compression), and 44 KB instead of 109 KB on the staff board. Nothing else changes.
 
 = 0.45.3 =
 * **Stats: Bookings and Length.** Two new tiles: how many bookings have at least one night in the timeframe (a booking a channel repeats counts once), and their average stay in nights, whole stays included. The With pets, With couch and With boat tiles are gone until those features have a season of data. The tiles now run Bookings, Booked, Length, Arrivals, Departures, Turnovers — two rows of three on a phone.

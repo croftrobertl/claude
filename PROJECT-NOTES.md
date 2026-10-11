@@ -2979,6 +2979,5 @@ for the build call — it passed with the call still there but no longer
 used. Ask the code; do not grep it. mutate.php now resolves tests/ paths
 (beside tools/) so a harness can be mutated too.
 
-**At the next version bump:** add the changelog line ("The calendar's
-scripts are now sent compacted: about 43 KB instead of 156 KB on the home
-page and cottage pages.").
+**Released as 0.45.4 on its own (Rob, via the WD, 2026-10-11: "on live now
+rather than waiting"), with no other code change.**
