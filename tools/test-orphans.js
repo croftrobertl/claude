@@ -1,22 +1,19 @@
 'use strict';
 /**
- * DCC Seasons — the four sprites the contact sheet called "not referenced".
+ * DCC Seasons — sprites a labeller once called "not referenced", and the
+ * heron that replaced three of them.
  *
  * heron0, heron1, heron2 and letter1 were flagged by the sheet's theme
- * labeller. Last time a label like that turned out to be real it was four
- * vignettes that never ran, so these were worth chasing rather than
- * assuming decorative — but the answer this time is the opposite: all four
- * ARE reached, by forms the labeller could not see.
+ * labeller in 4.1.0. All four WERE drawn, by forms the labeller could not
+ * see: the heron frames from an ARRAY indexed at draw time, letter1 by a
+ * TERNARY on the particle's height (key = p.y > vh * 0.5 ? 'letter1' :
+ * 'letter0').
  *
- *   heron0/1/2  named in an ARRAY (HERON_FRAMES) and INDEXED at draw time,
- *               never as sprite('heron0') literals.
- *   letter1     chosen by a TERNARY on the particle's height:
- *               key = p.y > vh * 0.5 ? 'letter1' : 'letter0'
- *
- * Showing that the reference exists in a table would prove nothing — that
- * is exactly what the broken labeller did. So this proves they DRAW:
- * it forces a heron, watches the wingbeat cycle through every frame, and
- * reads the canvas's own pixels where the bird is.
+ * 4.9.0 retired the three heron sprites: the heron is drawn in code (Rob's
+ * style A) and pre-drawn as pose canvases. Its pose keys (b0-b23 beat,
+ * g1-g6 glide) are computed, never written as literals, so the same rule
+ * applies — prove it DRAWS: force a heron, watch the wingbeat run through
+ * its poses, and read the canvas's own pixels where the bird is.
  *
  * Usage: node tools/test-orphans.js
  */
@@ -32,12 +29,14 @@ function ok(cond, label, detail) {
 
 /* ------------------------------------------------- the heron flyover */
 async function heron() {
-  console.log('\n=== the heron actually flies, and every frame reaches the screen ===');
+  console.log('\n=== the heron actually flies, and its wingbeat reaches the screen ===');
   /* 'valentines' has no theme hero of its own, so heroPool is ['heron']
-   * alone and pick() cannot choose anything else. heroevery=1 spawns one
-   * within a couple of seconds instead of the usual two to three minutes. */
+   * alone and pick() cannot choose anything else. heroFirst puts the first
+   * one a second in (since 4.9.0 it would otherwise follow the first
+   * scene), heroevery=1 the next ones a second after each leaves. */
   const cfg = config(['--theme=valentines', '--placement=content', '--layering=front',
     '--heroevery=1', '--noparticles', '--diag']);
+  cfg.heroFirst = [1, 1.5]; cfg.heronLand = 0;
   const ses = await open(fixture({ kind: 'bravada', config: cfg }));
   try {
     await settle(ses.page);
@@ -58,22 +57,17 @@ async function heron() {
           for (let i = 3; i < d.length; i += 4 * 11) { if (d[i] > 40) lit++; }
           ink = Math.max(ink, lit);
         }
-        if (++ticks > 150) { clearInterval(id); resolve({ kind, frames, ink }); }
+        if (++ticks > 150) { clearInterval(id); resolve({ kind, frames, ink, cached: window.DCCSeasonsEngine._state.heron.cached }); }
       }, 90);
     }));
     console.log('  ', JSON.stringify(seen));
     ok(seen.kind === 'heron', 'a heron hero spawned', String(seen.kind));
-    const got = Object.keys(seen.frames);
-    for (const f of ['heron0', 'heron1', 'heron2']) {
-      ok(got.includes(f), `${f} was drawn`, `saw ${got.join(', ') || 'nothing'}`);
-    }
+    const got = Object.keys(seen.frames), beats = got.filter(k => /^b\d+$/.test(k));
+    /* a continuous wingbeat: sampled every 90 ms at two beats a second,
+     * the crossing shows a good spread of the 24 beat poses */
+    ok(beats.length >= 12, 'the wingbeat runs through at least 12 of its 24 poses', `saw ${got.join(', ') || 'nothing'}`);
     ok(seen.ink > 0, 'the bird puts ink on the canvas', `max lit ${seen.ink}`);
-    /* heron1 appears TWICE in the cycle [0,1,2,1], so a correct wingbeat
-     * shows it roughly twice as often as the others. That is the cheapest
-     * proof the ARRAY is what is driving it, not a single stuck frame. */
-    const f = seen.frames;
-    ok((f.heron1 || 0) > (f.heron0 || 0), 'heron1 leads the cycle, as [0,1,2,1] requires',
-      JSON.stringify(f));
+    ok(seen.cached >= 26, 'the poses were pre-drawn (beat, glide, flare, standing)', `cached ${seen.cached}`);
   } finally { await ses.close(); }
 }
 

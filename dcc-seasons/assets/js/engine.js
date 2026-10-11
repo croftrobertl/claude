@@ -82,10 +82,6 @@
 		petal: '18 22|<path d="M9 1 Q15.4 6.4 15 13 Q14.6 18.6 10.6 20.4 Q9.6 19.6 9 18.6 Q8.4 19.6 7.4 20.4 Q3.4 18.6 3 13 Q2.6 6.4 9 1 Z" fill="%s"/><path d="M9 4 L9 17" stroke="%u" stroke-width="1" fill="none"/><path d="M9 9.4 Q12.2 12 12.6 15.6 M9 9.4 Q5.8 12 5.4 15.6" stroke="%u" stroke-width="0.8" fill="none"/>',
 		dragonfly: '40 26|<g fill="#9CCBEF" opacity="0.85"><ellipse cx="14" cy="7" rx="8" ry="2.6" transform="rotate(-14 14 7)"/><ellipse cx="14" cy="19" rx="8" ry="2.6" transform="rotate(14 14 19)"/><ellipse cx="20.4" cy="8.6" rx="6.6" ry="2.2" transform="rotate(-8 20 8.6)"/><ellipse cx="20.4" cy="17.4" rx="6.6" ry="2.2" transform="rotate(8 20 17)"/></g><path d="M11 13 38 13" stroke="#1864AB" stroke-width="2.6" stroke-linecap="round"/><g stroke="#74C0FC" stroke-width="1"><path d="M23 12v2.8M27 12v2.4M31 12v2M35 12v2"/></g><ellipse cx="11" cy="13" rx="4.2" ry="3.4" fill="#1864AB"/><circle cx="6.4" cy="13" r="3.6" fill="#1864AB"/><circle cx="5.2" cy="11.6" r="1.4" fill="#74C0FC"/>',
 		/* — birds & wildlife — */
-		heron0: '90 60|<path d="M50 32 L87 35" stroke="%f" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M50 34 L85 38" stroke="%f" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M42 26 Q50 10 68 6 Q58 20 48 29 Z" fill="#3E5A75"/><path d="M27 26 Q40 19 54 26 Q57 32 47 35 Q33 36 27 30 Z" fill="%v"/><path d="M50 28 L64 31 L50 35 Z" fill="#3E5A75"/><path d="M29 28 Q21 27 19 22" stroke="%v" stroke-width="5.4" stroke-linecap="round" fill="none"/><ellipse cx="17" cy="20" rx="6.2" ry="4.4" fill="%v"/><path d="M20 16.6 Q26 14.6 29 16.6 Q24 18 20 19 Z" fill="%x"/><path d="M11 19.4 L1 21.6 L11 23.4 Z" fill="%a"/><circle cx="15" cy="19" r="1.05" fill="#111"/><path d="M39 26 Q47 3 70 8 Q57 20 46 30 Z" fill="%v"/><path d="M41 26 Q49 12 64 13" stroke="#3E5A75" stroke-width="1.6" fill="none"/>',
-		heron1: '90 60|<path d="M50 32 L87 35" stroke="%f" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M50 34 L85 38" stroke="%f" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M42 27 Q54 21 72 23 Q58 29 48 31 Z" fill="#3E5A75"/><path d="M27 26 Q40 19 54 26 Q57 32 47 35 Q33 36 27 30 Z" fill="%v"/><path d="M50 28 L64 31 L50 35 Z" fill="#3E5A75"/><path d="M29 28 Q21 27 19 22" stroke="%v" stroke-width="5.4" stroke-linecap="round" fill="none"/><ellipse cx="17" cy="20" rx="6.2" ry="4.4" fill="%v"/><path d="M20 16.6 Q26 14.6 29 16.6 Q24 18 20 19 Z" fill="%x"/><path d="M11 19.4 L1 21.6 L11 23.4 Z" fill="%a"/><circle cx="15" cy="19" r="1.05" fill="#111"/><path d="M39 27 Q52 19 75 22 Q58 30 46 33 Z" fill="%v"/><path d="M41 27 Q53 23 69 24" stroke="#3E5A75" stroke-width="1.6" fill="none"/>',
-		heron2: '90 60|<path d="M50 32 L87 35" stroke="%f" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M50 34 L85 38" stroke="%f" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M42 28 Q50 42 66 48 Q56 36 48 30 Z" fill="#3E5A75"/><path d="M27 26 Q40 19 54 26 Q57 32 47 35 Q33 36 27 30 Z" fill="%v"/><path d="M50 28 L64 31 L50 35 Z" fill="#3E5A75"/><path d="M29 28 Q21 27 19 22" stroke="%v" stroke-width="5.4" stroke-linecap="round" fill="none"/><ellipse cx="17" cy="20" rx="6.2" ry="4.4" fill="%v"/><path d="M20 16.6 Q26 14.6 29 16.6 Q24 18 20 19 Z" fill="%x"/><path d="M11 19.4 L1 21.6 L11 23.4 Z" fill="%a"/><circle cx="15" cy="19" r="1.05" fill="#111"/><path d="M39 28 Q46 46 67 52 Q52 38 45 31 Z" fill="%v"/><path d="M41 29 Q48 40 62 46" stroke="#3E5A75" stroke-width="1.6" fill="none"/>',
-		heronstand: '44 64|<path d="M18 10q8 2 10 12v12q0 10-8 12l-4-2q6-6 4-14-8-6-2-20Z" fill="%v"/><path d="M20 6q-6 0-8 6l6-1q4 1 2 6" fill="none" stroke="#5D6D7E" stroke-width="3"/><path d="M12 8 2 6l8 5Z" fill="%a"/><circle cx="17" cy="9" r="1" fill="#111"/><line x1="20" y1="46" x2="19" y2="60" stroke="%f" stroke-width="2"/><line x1="24" y1="46" x2="26" y2="60" stroke="%f" stroke-width="2"/><path d="M15 60h17" stroke="%f" stroke-width="2"/>',
 		manatee: '92 48|<path d="M69 17 Q88 9.6 89 25 Q88 40.4 69 33 Z" fill="#7B8794"/><path d="M13 25 Q13 9 40 9 Q64 9 71 20 L71 30 Q64 41 40 41 Q13 41 13 25 Z" fill="#8D99A6"/><ellipse cx="14" cy="28" rx="8" ry="6.5" fill="#7B8794"/><circle cx="10" cy="25.6" r="1.2" fill="%b"/><circle cx="14.4" cy="25.2" r="1.2" fill="%b"/><circle cx="21" cy="19" r="1.4" fill="%b"/><path d="M28 40 Q32 48 41 44 Z" fill="#7B8794"/><path d="M48 41 Q52 47 59 44 Z" fill="#7B8794"/><path d="M30 15 Q44 12 58 15" stroke="#7B8794" stroke-width="1.2" fill="none"/>',
 		dove: '46 34|<path d="M8 15q2-7 11-6 8 2 13 7l12 2-9 5 3 7-10-6q-9 3-16-3T8 15Z" fill="%d" stroke="#5A6B7C" stroke-width="2.8"/><path d="M19 15q6-10 14-9-2 7-6 11-4 3-8-2Z" fill="%q" stroke="#5A6B7C" stroke-width="2.4"/><path d="M7 14 2 16l5 2Z" fill="%a"/><circle cx="11" cy="13" r="1.4" fill="%g"/><ellipse cx="6" cy="21" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 6 21)"/><ellipse cx="10" cy="22" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 10 22)"/>',
 		/* 4.2.0 — the eagle hero, drawn as a two-frame wingbeat (July 4 and Patriot Day). */
@@ -624,13 +620,15 @@
 		return specs;
 	}
 
-	/* --- Timing, in seconds of VISIBLE time (Rob, 4.8.0): the flyer (hero)
-	 * first at 3-5 s on a visit's first page; the season's scene first at
-	 * 6-10 s, after the flyer and never on top of it; after that ONE
-	 * appearance every 60-90 s (counted from the end of the last one),
-	 * hero and scene taking turns, never two at once. `every` is the
-	 * fallback for a config without CFG.every (Plugin::EVERY sends it). --- */
-	var TIMING = { heroFirst: [3, 5], vigFirst: [6, 10], every: [60, 90], breath: 2, xaTurn: 45 };
+	/* --- Timing, in seconds of VISIBLE time (Rob, 4.9.0: scene first,
+	 * flyer second). The season's scene first at 6-10 s; on a visit's
+	 * first page the flyer (hero) follows `breath` (2 s) after the scene
+	 * ends, never on top of it; a theme with no scene sends its hero at
+	 * 6-10 s instead. After that ONE appearance every 60-90 s (counted from
+	 * the end of the last one), scene and hero taking turns, never two at
+	 * once. `every` is the fallback for a config without CFG.every
+	 * (Plugin::EVERY sends it). 4.8.0 had the flyer first at 3-5 s. --- */
+	var TIMING = { vigFirst: [6, 10], every: [60, 90], breath: 2, xaTurn: 45 };
 	/* Scenes added only in the evening, and the theme with the midnight countdown. */
 	var EVENING_VIGS = { christmas: ['sleighmoon'] };
 	var COUNTDOWN_THEME = 'new_years';
@@ -638,13 +636,335 @@
 	 * guide — the hero's own sprite, or the scene's main actor. */
 	/* The one emoji a hero draws (Rob's exception): the rainbow's clover strip. */
 	var HERO_GLYPHS = { rainbow: '☘' };
-	var HERO_ART = { heron: 'heron0', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
+	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
 	var SCENE_ART = {
 		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witchsil',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
 		ospreycatch: 'ospreyup', cranes: 'cranedance', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
 		doubloons: 'doubloon', swans: 'swan', catch1: 'berry', egghunt: 'bunny', hatch: 'chick', bananaslip: 'peel', duckparade: 'duckhen'
+	};
+
+	/* ---------- The heron (4.9.0, Rob's pick: style A · Field guide) ------
+	 * A Great Blue Heron drawn in code: the neck folded back in an S with
+	 * the head drawn in, the legs trailing past the tail, long broad wings
+	 * with dark flight feathers, a slate back, the white face with the black
+	 * stripe running back into the plumes, a heavy yellow dagger bill, a
+	 * pale streaked foreneck, rust at the thighs and the wrist.
+	 *
+	 * ONE continuous wingbeat, about two a second, the downstroke the longer
+	 * of the two: the wing straightens and the primaries fan on the way
+	 * down and it folds at the wrist on the way up; the body lifts on each
+	 * downstroke and the neck lags it. Bouts of 4-6 beats with short glides.
+	 *
+	 * Drawn fresh, the bird cost ~4 ms a frame on a slow phone, so it is
+	 * PRE-DRAWN once after the page loads (`hnCache` in start()): 24 points
+	 * through the beat, 6 glide blends, the landing flare and the standing
+	 * bird, each on its own tight canvas. A crossing is then one drawImage a
+	 * frame, like the old three-frame sprite. Only the legs are drawn live —
+	 * two thin lines — so they can swing down for the landing.
+	 *
+	 * The bird faces LEFT and is ~100 units from bill tip to toes; the
+	 * engine draws it at w / 100 px a unit. The standing bird has its
+	 * origin at the feet. Pose keys: b0-b23 beat, g1-g6 glide blend (g0 is
+	 * b10), f flare, s standing. */
+	var HN_DOWN = 0.56, HN_BEATS = 24, HN_GLIDES = 6, HN_GB = 10;
+	var HN = {
+		back: '#7F95AE', back2: '#62788F', belly: '#5D6B7C', cov: '#86A0BA', cov2: '#6E87A2', covLine: '#5B7189',
+		flight: '#2E394A', prim: '#222A36', rachis: '#56657A', farTint: 0.72, edge: 'rgba(226,232,240,.5)',
+		neck: '#ECE7DD', neckBack: '#A3AEBE', streak: 'rgba(58,66,80,.55)', face: '#F6F4EE', cap: '#1A1D22',
+		bill: '#E2B23E', billTop: '#7A6326', eye: '#F2C230', leg: '#55553F', thigh: '#8E4A2A', wrist: '#A75C36', tail: '#5E7389'
+	};
+	function hnEase(t) { return 0.5 - 0.5 * cos(MT.PI * clamp(t, 0, 1)); }
+	/* phase 0 = top of the upstroke; the downstroke runs 0 -> HN_DOWN. psi is
+	 * the wing's direction from the shoulder (-1.85 up and back, +1.05 down),
+	 * flex how far the hand folds at the wrist, spread how far the
+	 * primaries fan. */
+	function hnBeat(ph) {
+		var p = ph - MT.floor(ph), u, psi, flex, spread, PI = MT.PI;
+		if (p < HN_DOWN) {
+			u = hnEase(p / HN_DOWN);
+			psi = lerp(-1.85, 1.05, u);
+			flex = 0.12 + 0.18 * (1 - sin(PI * p / HN_DOWN));
+			spread = sin(PI * p / HN_DOWN);
+		} else {
+			u = hnEase((p - HN_DOWN) / (1 - HN_DOWN));
+			psi = lerp(1.05, -1.85, u);
+			flex = 0.3 + 0.7 * sin(PI * (p - HN_DOWN) / (1 - HN_DOWN));
+			spread = 0.15 * (1 - sin(PI * (p - HN_DOWN) / (1 - HN_DOWN)));
+		}
+		return { psi: psi, flex: flex, spread: spread, bob: -sin(TAU * (p - 0.12)) * 2.2, neck: -sin(TAU * (p - 0.28)) * 1.1 };
+	}
+	var HN_GLIDE = { psi: 0.22, flex: 0.18, spread: 0.55, bob: 0, neck: 0 };
+	/* the landing flare: wings raised and fanned, braking */
+	var HN_FLARE = { psi: -1.45, flex: 0.04, spread: 1, bob: 0, neck: -0.8 };
+	function hnMix(a, b, t) {
+		return { psi: lerp(a.psi, b.psi, t), flex: lerp(a.flex, b.flex, t), spread: lerp(a.spread, b.spread, t), bob: lerp(a.bob, b.bob, t), neck: lerp(a.neck, b.neck, t) };
+	}
+	function hnPose(key) {
+		var n = +key.slice(1);
+		if (key[0] === 'b') { return hnBeat(n / HN_BEATS); }
+		if (key[0] === 'g') { return hnMix(hnBeat(HN_GB / HN_BEATS), HN_GLIDE, n / HN_GLIDES); }
+		return HN_FLARE;
+	}
+	function hnShade(hex, f) {
+		var n = parseInt(hex.slice(1), 16);
+		return 'rgb(' + MT.round(((n >> 16) & 255) * f) + ',' + MT.round(((n >> 8) & 255) * f) + ',' + MT.round((n & 255) * f) + ')';
+	}
+	/* One wing's outline from the pose, plus its seven primaries. */
+	function hnWing(pose, far) {
+		var k = far ? 0.86 : 1, S = far ? [-1, -6.5] : [-3, -4.6], ps = pose.psi;
+		/* a wing pointing at the viewer is foreshortened, never to nothing */
+		var fore = 0.62 + 0.38 * abs(sin(ps));
+		var La = 30 * k * fore, Lh = 41 * k * (0.55 + 0.45 * fore);
+		var ax = 0.42 + 0.22 * cos(ps), ay = sin(ps), an = sqrt(ax * ax + ay * ay);
+		ax /= an; ay /= an;
+		var aa = atan2(ay, ax), Wr = [S[0] + ax * La, S[1] + ay * La];
+		/* the hand: the arm's line, folded back toward the tail */
+		var hb = ay < 0 ? aa + pose.flex * 1.1 : aa - pose.flex * 0.9;
+		var Tp = [Wr[0] + cos(hb) * Lh, Wr[1] + sin(hb) * Lh];
+		var nx = -sin(aa), ny = cos(aa);
+		if (nx < 0) { nx = -nx; ny = -ny; }
+		var hx = -sin(hb), hy = cos(hb);
+		if (hx < 0) { hx = -hx; hy = -hy; }
+		var w = { S: S, W: Wr, T: Tp, Wt: [Wr[0] + nx * 19 * k, Wr[1] + ny * 19 * k], R: [14 * k, -3.5], hb: hb, hx: hx, hy: hy, ax: ax, ay: ay, Lh: Lh, prim: [] };
+		for (var i = 0; i < 7; i++) {
+			var q = i / 6;
+			var bx = lerp(Wr[0], Tp[0], 0.35 + 0.25 * q), by = lerp(Wr[1], Tp[1], 0.35 + 0.25 * q);
+			var ang = hb + (q - 0.3) * (0.25 + 0.55 * pose.spread) * (ay < 0 ? 1 : -1);
+			var L = Lh * (0.62 - 0.05 * abs(q - 0.3));
+			w.prim.push([bx, by, bx + cos(ang) * L, by + sin(ang) * L, ang, q]);
+		}
+		return w;
+	}
+	function hnWingPath(g, w) {
+		g.beginPath();
+		g.moveTo(w.S[0], w.S[1]);
+		g.quadraticCurveTo((w.S[0] + w.W[0]) / 2 - w.ax * 2, (w.S[1] + w.W[1]) / 2 - 2.5, w.W[0], w.W[1]);
+		g.quadraticCurveTo((w.W[0] + w.T[0]) / 2, (w.W[1] + w.T[1]) / 2 - 1.5 * (w.ay < 0 ? -1 : 1), w.T[0], w.T[1]);
+		g.quadraticCurveTo((w.T[0] + w.Wt[0]) / 2 + w.hx * 6, (w.T[1] + w.Wt[1]) / 2 + w.hy * 6, w.Wt[0], w.Wt[1]);
+		g.quadraticCurveTo((w.Wt[0] + w.R[0]) / 2 + 2, (w.Wt[1] + w.R[1]) / 2 + 2, w.R[0], w.R[1]);
+		g.closePath();
+	}
+	function hnDrawWing(g, w, far) {
+		var f = far ? HN.farTint : 1, i;
+		/* the flight feathers: the whole wing, dark */
+		hnWingPath(g, w);
+		g.fillStyle = hnShade(HN.flight, f); g.fill();
+		/* the primaries, separate at the tip, each with its shaft */
+		for (i = 0; i < 7; i++) {
+			var p = w.prim[i], ang = p[4], px = -sin(ang) * 2.1, py = cos(ang) * 2.1;
+			g.beginPath();
+			g.moveTo(p[0] - px, p[1] - py);
+			g.quadraticCurveTo(p[2] - px * 0.6 - cos(ang) * 3, p[3] - py * 0.6 - sin(ang) * 3, p[2], p[3]);
+			g.quadraticCurveTo(p[2] + px * 0.6 - cos(ang) * 3, p[3] + py * 0.6 - sin(ang) * 3, p[0] + px, p[1] + py);
+			g.closePath();
+			g.fillStyle = hnShade(HN.prim, f * (0.9 + 0.2 * p[5])); g.fill();
+			g.strokeStyle = hnShade(HN.rachis, f); g.lineWidth = 0.35;
+			g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[2], p[3]); g.stroke();
+		}
+		/* the coverts: the slate inner wing over the flight feathers */
+		var cT = [lerp(w.W[0], w.T[0], 0.25), lerp(w.W[1], w.T[1], 0.25)];
+		var cB = [lerp(w.Wt[0], w.R[0], 0.12), lerp(w.Wt[1], w.R[1], 0.12)];
+		g.beginPath();
+		g.moveTo(w.S[0], w.S[1]);
+		g.quadraticCurveTo((w.S[0] + w.W[0]) / 2 - w.ax * 2, (w.S[1] + w.W[1]) / 2 - 2.5, w.W[0], w.W[1]);
+		g.lineTo(cT[0], cT[1]);
+		g.quadraticCurveTo(lerp(cT[0], cB[0], 0.5) + w.hx * 3, lerp(cT[1], cB[1], 0.5) + w.hy * 3, cB[0], cB[1]);
+		g.quadraticCurveTo((cB[0] + w.R[0]) / 2, (cB[1] + w.R[1]) / 2 - 1, w.R[0], w.R[1]);
+		g.closePath();
+		var gr = g.createLinearGradient(w.S[0], w.S[1], cB[0], cB[1]);
+		gr.addColorStop(0, hnShade(HN.cov, f)); gr.addColorStop(1, hnShade(HN.cov2, f));
+		g.fillStyle = gr; g.fill();
+		/* two soft rows of coverts */
+		g.strokeStyle = hnShade(HN.covLine, f); g.lineWidth = 0.5;
+		for (i = 1; i <= 2; i++) {
+			var t = i / 3, a0 = [lerp(w.S[0], w.R[0], t), lerp(w.S[1], w.R[1], t)], a1 = [lerp(w.W[0], cB[0], t), lerp(w.W[1], cB[1], t)];
+			g.beginPath(); g.moveTo(a0[0], a0[1]);
+			g.quadraticCurveTo((a0[0] + a1[0]) / 2 + w.hx * 1.5, (a0[1] + a1[1]) / 2 + w.hy * 1.5, a1[0], a1[1]); g.stroke();
+		}
+		g.lineCap = 'round';
+		/* the pale leading edge of the near arm */
+		if (!far) {
+			g.strokeStyle = HN.edge; g.lineWidth = 0.7;
+			g.beginPath(); g.moveTo(lerp(w.S[0], w.W[0], 0.1), lerp(w.S[1], w.W[1], 0.1) + 0.6); g.lineTo(lerp(w.S[0], w.W[0], 0.5), lerp(w.S[1], w.W[1], 0.5) + 0.5); g.stroke();
+		}
+		/* rust at the wrist */
+		g.strokeStyle = hnShade(HN.wrist, f); g.lineWidth = 1.8;
+		g.beginPath(); g.moveTo(lerp(w.S[0], w.W[0], 0.55), lerp(w.S[1], w.W[1], 0.55) - 0.6); g.lineTo(w.W[0], w.W[1]); g.stroke();
+	}
+	/* The head with its plumes and bill, at (hx, hy); pl bends the plumes. */
+	function hnHead(g, hx, hy, pl, r) {
+		r = r || 1;
+		g.fillStyle = HN.neckBack;
+		g.beginPath(); g.ellipse(hx, hy, 5.2 * r, 4.1 * r, -0.12, 0, TAU); g.fill();
+		g.fillStyle = HN.face;
+		g.beginPath(); g.ellipse(hx - 1.8 * r, hy + 0.6 * r, 3.5 * r, 2.6 * r, -0.2, 0, TAU); g.fill();
+		/* the black stripe over the eye, back into two plumes */
+		g.fillStyle = HN.cap;
+		g.beginPath();
+		g.moveTo(hx - 4 * r, hy - 1.4 * r);
+		g.quadraticCurveTo(hx, hy - 4.1 * r, hx + 5 * r, hy - 2.6 * r);
+		g.lineTo(hx + 4.8 * r, hy - 1.2 * r);
+		g.quadraticCurveTo(hx, hy - 2.3 * r, hx - 3.8 * r, hy - 0.5 * r);
+		g.closePath(); g.fill();
+		g.strokeStyle = HN.cap; g.lineCap = 'round'; g.lineWidth = 0.75;
+		g.beginPath(); g.moveTo(hx + 4.2 * r, hy - 2 * r); g.quadraticCurveTo(hx + 9.5 * r, hy - 3 * r + pl * 0.4, hx + 14.5 * r, hy - r + pl * 0.6); g.stroke();
+		g.beginPath(); g.moveTo(hx + 4 * r, hy - 1.5 * r); g.quadraticCurveTo(hx + 8.5 * r, hy - 1.8 * r, hx + 12.5 * r, hy + 0.5 * r + pl * 0.3); g.stroke();
+		/* the bill: deep at the base, the culmen almost straight */
+		var bx = hx - 3.6 * r, by = hy + 0.6 * r;
+		g.beginPath();
+		g.moveTo(bx + 0.8 * r, by - 1.9 * r);
+		g.quadraticCurveTo(bx - 10 * r, by - 1.5 * r, bx - 24 * r, by + 0.7 * r);
+		g.quadraticCurveTo(bx - 10 * r, by + 1.9 * r, bx + 0.8 * r, by + 2 * r);
+		g.closePath();
+		var bg = g.createLinearGradient(0, by - 2 * r, 0, by + 2 * r);
+		bg.addColorStop(0, HN.billTop); bg.addColorStop(0.45, HN.bill); bg.addColorStop(1, HN.bill);
+		g.fillStyle = bg; g.fill();
+		g.strokeStyle = 'rgba(90,70,30,.6)'; g.lineWidth = 0.4;
+		g.beginPath(); g.moveTo(bx + 1.2 * r, by + 0.5 * r); g.quadraticCurveTo(bx - 10 * r, by + 0.6 * r, bx - 21 * r, by + 0.75 * r); g.stroke();
+		g.fillStyle = HN.eye;
+		g.beginPath(); g.arc(hx - 2 * r, hy - 0.4 * r, 1.05 * r, 0, TAU); g.fill();
+		g.fillStyle = '#111';
+		g.beginPath(); g.arc(hx - 2.15 * r, hy - 0.4 * r, 0.5 * r, 0, TAU); g.fill();
+	}
+	/* streaks down a cubic (the pale foreneck) */
+	function hnStreaks(g, P, n) {
+		g.strokeStyle = HN.streak; g.lineWidth = 0.42;
+		for (var i = 0; i < n; i++) {
+			var u = (i + 0.5) / n, v = 1 - u;
+			var sx = v * v * v * P[0] + 3 * v * v * u * P[2] + 3 * v * u * u * P[4] + u * u * u * P[6];
+			var sy = v * v * v * P[1] + 3 * v * v * u * P[3] + 3 * v * u * u * P[5] + u * u * u * P[7];
+			g.beginPath(); g.moveTo(sx + 0.4, sy - 0.6); g.lineTo(sx - 0.2, sy + 0.6); g.stroke();
+		}
+	}
+	/* The flying bird, legs excluded (they are drawn live), no bob. */
+	function hnFly(g, pose) {
+		var far = hnWing(pose, true), near = hnWing(pose, false), i;
+		hnDrawWing(g, far, true);
+		/* the tail: short and square */
+		g.fillStyle = HN.tail;
+		g.beginPath(); g.moveTo(14, -3.2); g.lineTo(27, -2.4); g.lineTo(27, 1.4); g.lineTo(14, 3); g.closePath(); g.fill();
+		/* the body: a long teardrop, slate over a darker belly */
+		g.beginPath();
+		g.moveTo(-17, -1);
+		g.bezierCurveTo(-14, -8, 6, -7.5, 18, -2.8);
+		g.bezierCurveTo(19, 0.5, 14, 5.5, 6, 6.6);
+		g.bezierCurveTo(-4, 7.6, -14, 6, -17, -1);
+		g.closePath();
+		var gr = g.createLinearGradient(0, -7, 0, 7);
+		gr.addColorStop(0, HN.back); gr.addColorStop(0.55, HN.back2); gr.addColorStop(1, HN.belly);
+		g.fillStyle = gr; g.fill();
+		g.strokeStyle = 'rgba(236,231,221,.55)'; g.lineWidth = 0.55;
+		for (i = 0; i < 5; i++) { g.beginPath(); g.moveTo(-10 + i * 4, 4.4); g.lineTo(-7 + i * 4, 5.6); g.stroke(); }
+		g.fillStyle = HN.thigh;
+		g.beginPath(); g.ellipse(9.5, 4.6, 3.8, 1.9, 0.05, 0, TAU); g.fill();
+		/* the folded neck: a slim S forward and down from the shoulders,
+		 * back up under the head, which sits drawn in on the chest */
+		var hx = -28, hy = -5.5 + pose.neck;
+		g.lineCap = 'round'; g.lineJoin = 'round';
+		g.strokeStyle = HN.neckBack; g.lineWidth = 6.2;
+		g.beginPath(); g.moveTo(-12.5, -3); g.bezierCurveTo(-17, 3.4, -23.5, 5.6, -26.2, 0.6); g.lineTo(hx + 0.5, hy + 1); g.stroke();
+		g.strokeStyle = HN.neck; g.lineWidth = 2.5;
+		g.beginPath(); g.moveTo(-14.5, 1.4); g.bezierCurveTo(-18.8, 6.2, -25.5, 8, -28.3, 2.4); g.stroke();
+		hnStreaks(g, [-14.5, 1.4, -18.8, 6.2, -25.5, 8, -28.3, 2.4], 6);
+		hnHead(g, hx, hy, pose.neck);
+		hnDrawWing(g, near, false);
+	}
+	/* The legs, live: 0 = trailing straight back past the tail, 1 = hanging
+	 * down and reaching forward for the landing. The heel bends back. */
+	function hnLegs(g, legs) {
+		var e = hnEase(legs), a1 = lerp(-0.05, 1.3, e), a2 = lerp(-0.06, 2.0, e), ta = lerp(-0.1, 2.5, e);
+		g.strokeStyle = HN.leg; g.lineCap = 'round'; g.lineJoin = 'round';
+		for (var i = 0; i < 2; i++) {
+			var hx = 10 + i * 0.5, hy = 4.5 + i, kx = hx + cos(a1 + i * 0.06) * 18, ky = hy + sin(a1 + i * 0.06) * 18;
+			var fx = kx + cos(a2 - i * 0.1) * 24, fy = ky + sin(a2 - i * 0.1) * 24;
+			g.lineWidth = i ? 1.5 : 1.7;
+			g.beginPath(); g.moveTo(hx, hy); g.lineTo(kx, ky); g.lineTo(fx, fy);
+			g.lineTo(fx + cos(ta) * 5, fy + sin(ta) * 5); g.stroke();
+		}
+	}
+	/* Standing in the shallows, origin at the feet: long legs with the
+	 * heel joint, rust thighs, the body tilted up with the wing folded and
+	 * the black shoulder patch, shaggy pale breast plumes, the neck up in
+	 * an S and the head level. */
+	function hnStand(g) {
+		g.lineCap = 'round'; g.lineJoin = 'round';
+		/* legs */
+		g.strokeStyle = HN.leg; g.lineWidth = 1.8;
+		g.beginPath(); g.moveTo(1.5, -36); g.lineTo(0.5, -18); g.lineTo(-0.5, 0); g.moveTo(-0.5, 0); g.lineTo(-5, 0.6); g.stroke();
+		g.lineWidth = 1.6;
+		g.beginPath(); g.moveTo(5, -36); g.lineTo(6.5, -18); g.lineTo(7.5, 0); g.lineTo(3, 0.6); g.stroke();
+		g.fillStyle = HN.thigh;
+		g.beginPath(); g.ellipse(3, -37, 3.6, 2.6, 0.2, 0, TAU); g.fill();
+		/* body and folded wing, tilted up at the front */
+		g.save(); g.translate(6, -45); g.rotate(0.42);
+		g.beginPath();
+		g.moveTo(-18, -2);
+		g.bezierCurveTo(-15, -10, 8, -10, 21, -2.5);
+		g.bezierCurveTo(22, 3, 12, 8.5, 0, 8.5);
+		g.bezierCurveTo(-11, 8.5, -18, 4.5, -18, -2);
+		g.closePath();
+		var gr = g.createLinearGradient(0, -10, 0, 8.5);
+		gr.addColorStop(0, HN.back); gr.addColorStop(0.6, HN.back2); gr.addColorStop(1, HN.belly);
+		g.fillStyle = gr; g.fill();
+		/* the folded flight feathers down the back to the tail */
+		g.fillStyle = HN.prim;
+		g.beginPath(); g.moveTo(-1, 0); g.quadraticCurveTo(14, -4, 27, 1.2); g.quadraticCurveTo(15, 6.5, 0, 5); g.closePath(); g.fill();
+		/* the coverts over them, with one soft row */
+		var cg = g.createLinearGradient(-14, -8, 12, 3);
+		cg.addColorStop(0, HN.cov); cg.addColorStop(1, HN.cov2);
+		g.fillStyle = cg;
+		g.beginPath(); g.moveTo(-14, -3); g.bezierCurveTo(-10, -9.5, 9, -9, 18, -2); g.quadraticCurveTo(5, 4, -12, 2.5); g.closePath(); g.fill();
+		g.strokeStyle = HN.covLine; g.lineWidth = 0.5;
+		g.beginPath(); g.moveTo(-9, -1.5); g.quadraticCurveTo(3, -4.5, 13, -1); g.stroke();
+		g.beginPath(); g.moveTo(-6, 1); g.quadraticCurveTo(5, -1.5, 15, 1); g.stroke();
+		/* the black shoulder patch and the rust bend of the wing */
+		g.fillStyle = HN.cap;
+		g.beginPath(); g.ellipse(-14, 1.5, 3.4, 2.6, 0.3, 0, TAU); g.fill();
+		g.strokeStyle = HN.wrist; g.lineWidth = 1.6;
+		g.beginPath(); g.moveTo(-14.5, -2.5); g.lineTo(-10, -5.5); g.stroke();
+		g.restore();
+		/* the neck: a thick S up from the front of the body to the head */
+		g.strokeStyle = HN.neckBack; g.lineWidth = 6.6;
+		g.beginPath(); g.moveTo(-6, -53); g.bezierCurveTo(-15, -61, -1, -69, -5.5, -79); g.stroke();
+		g.strokeStyle = HN.neck; g.lineWidth = 3;
+		var P = [-8.6, -53, -17.2, -61, -3.6, -68.5, -8.2, -78];
+		g.beginPath(); g.moveTo(P[0], P[1]); g.bezierCurveTo(P[2], P[3], P[4], P[5], P[6], P[7]); g.stroke();
+		hnStreaks(g, P, 6);
+		/* shaggy pale plumes hanging over the breast */
+		g.strokeStyle = 'rgba(214,220,228,.9)'; g.lineWidth = 0.8;
+		for (var i = 0; i < 6; i++) {
+			g.beginPath(); g.moveTo(-10 + i * 0.8, -55 + i * 0.5); g.quadraticCurveTo(-13 + i * 0.5, -49 + i, -11.5 + i * 0.9, -43 + i * 1.1); g.stroke();
+		}
+		hnHead(g, -6, -81, 0.6, 1.05);
+	}
+	/* Each pose's box in units, a little generous: the body, the bill and
+	 * the head plumes, both wings and their primaries. */
+	function hnBounds(key) {
+		if (key === 's') { return [-36, -92, 34, 3]; }
+		var p = hnPose(key), b = [-57, -13, 30, 10], ws = [hnWing(p, true), hnWing(p, false)];
+		function add(x, y) { b[0] = mn(b[0], x); b[1] = mn(b[1], y); b[2] = mx2(b[2], x); b[3] = mx2(b[3], y); }
+		for (var i = 0; i < 2; i++) {
+			var w = ws[i];
+			add(w.W[0], w.W[1]); add(w.T[0], w.T[1]); add(w.Wt[0], w.Wt[1]);
+			add(w.T[0] + w.hx * 6, w.T[1] + w.hy * 6);
+			for (var j = 0; j < 7; j++) { add(w.prim[j][2], w.prim[j][3]); }
+		}
+		return [MT.floor(b[0] - 4), MT.floor(b[1] - 4), MT.ceil(b[2] + 4), MT.ceil(b[3] + 4)];
+	}
+	/* Drawn heroes for the admin Theme guide: fn(g, width, height) paints
+	 * the hero into that box (HERO_ART names the key). */
+	var HERO_DRAW = {
+		heron: function (g, w, h) {
+			var b = hnBounds('g6'), s = mn(w / (b[2] - b[0] + 26), h / (b[3] - b[1]));
+			g.save();
+			g.translate(w / 2 - (b[0] + b[2] + 26) / 2 * s, h / 2 - (b[1] + b[3]) / 2 * s);
+			g.scale(s, s);
+			hnLegs(g, 0);
+			hnFly(g, hnPose('g6'));
+			g.restore();
+		}
 	};
 
 	function start(boot) {
@@ -3147,25 +3467,79 @@
 			cx.restore();
 		}
 
-		/* --- Heroes: rare crossers. The heron (3-frame wingbeat, occasional
-		 * full landing sequence) is always in the rotation. --- */
+		/* --- Heroes: rare crossers. The heron (drawn in code, a continuous
+		 * wingbeat, an occasional landing) is always in the rotation. --- */
 		var hero = null, heroFrame = '';
 		var heroPool = ['heron'];
 		if (A.hero) { heroPool.push(A.hero); }
 		if (DEBUG && CFG.heroOnly) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
-		var HERON_FRAMES = ['heron0', 'heron1', 'heron2', 'heron1'];
+		/* The heron's poses, pre-drawn once after load in idle time (see
+		 * HN_ above), at the bird's size and the screen's density (capped at
+		 * 2). A pose the idle pass has not reached yet is drawn on first use,
+		 * so nothing waits on it. Kept for the page's life: the heron comes
+		 * back every other appearance. */
+		var HN_W = 96, hnCache = {}, hnStats = { poses: 0, ms: 0, bytes: 0 };
+		function hnBuild(key) {
+			var t0 = nowMs(), b = hnBounds(key), u = HN_W / 100, s = u * mn(W.devicePixelRatio || 1, 2);
+			var c = D.createElement('canvas');
+			c.width = MT.ceil((b[2] - b[0]) * s);
+			c.height = MT.ceil((b[3] - b[1]) * s);
+			var g = c.getContext('2d');
+			if (g) {
+				g.setTransform(s, 0, 0, s, -b[0] * s, -b[1] * s);
+				if (key === 's') { hnStand(g); } else { hnFly(g, hnPose(key)); }
+			}
+			hnStats.poses++; hnStats.bytes += c.width * c.height * 4; hnStats.ms += nowMs() - t0;
+			return (hnCache[key] = { c: c, x: b[0] * u, y: b[1] * u, w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u, bob: key === 's' ? 0 : hnPose(key).bob * u });
+		}
+		function hnGet(key) { return hnCache[key] || hnBuild(key); }
+		if (FX.heroes && heroPool.indexOf('heron') >= 0) {
+			var hnTodo = ['s', 'f'], hnI;
+			for (hnI = 0; hnI < HN_BEATS; hnI++) { hnTodo.push('b' + hnI); }
+			for (hnI = 1; hnI <= HN_GLIDES; hnI++) { hnTodo.push('g' + hnI); }
+			var hnIdle = function (dl) {
+				var t0 = nowMs();
+				do { var k = hnTodo.shift(); if (k && !hnCache[k]) { hnBuild(k); } }
+				while (hnTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+				if (hnTodo.length) { hnLater(hnIdle); }
+			};
+			var hnLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
+			hnLater(hnIdle);
+		}
+		/* The flight: bouts of 4-6 beats, then a glide out of the downstroke
+		 * with the wings held bowed. Returns this frame's pose key. */
+		function hnStep(f, dt) {
+			if (f.gl > 0) {
+				f.gt += dt;
+				if (f.gt >= f.gl) { f.gl = 0; f.ph = MT.floor(f.ph) + HN_GB / HN_BEATS; f.beats = 4 + ((rand() * 3) | 0); return 'b' + HN_GB; }
+				var u = f.gt < 0.35 ? f.gt / 0.35 : (f.gl - f.gt < 0.3 ? (f.gl - f.gt) / 0.3 : 1);
+				var gi = MT.round(hnEase(u) * HN_GLIDES);
+				return gi ? 'g' + gi : 'b' + HN_GB;
+			}
+			var was = f.ph;
+			f.ph += dt * f.bps;
+			if (MT.floor(f.ph) > MT.floor(was)) { f.beats--; }
+			var fr = f.ph - MT.floor(f.ph);
+			if (f.beats <= 0 && f.glides && fr >= HN_GB / HN_BEATS) {
+				f.ph = MT.floor(f.ph) + HN_GB / HN_BEATS;
+				f.gl = f.hold ? 1e9 : rnd(0.9, 1.6); f.gt = 0;
+				return 'b' + HN_GB;
+			}
+			return 'b' + (MT.round(fr * HN_BEATS) % HN_BEATS);
+		}
 		/* Drawn heroes with a two-frame wingbeat: [up, down, ms per frame].
 		 * Every hero is a drawing (4.2.0) — device emoji looked different on
 		 * iPhone, Android and Windows and matched nothing else on screen. The
 		 * ONE exception is Rob's own: the rainbow keeps its ☘ clover strip. */
 
-		/* --- Hero timing (4.2.0) -------------------------------------------
+		/* --- Hero timing (4.2.0; the order is Rob's 4.9.0 pick) -------------
 		 * The clock is VISIBLE time: rAF stops in a hidden tab, so vt only
 		 * moves while someone can see the page.
-		 *  - The first page of a visit (sessionStorage, i.e. this tab) gets
-		 *    its first hero 3-5s after the effects start; later pages keep
-		 *    the 120-180s cadence, and so does a browser that refuses
-		 *    storage (null) — today's timing, never a guess.
+		 *  - Every page opens with the season's scene at 6-10 s. On the
+		 *    first page of a visit (sessionStorage, i.e. this tab) the hero
+		 *    follows 2 s after that scene ends; on later pages, and in a
+		 *    browser that refuses storage (null), the scene and hero simply
+		 *    take turns. A theme with no scene sends its hero at 6-10 s.
 		 *  - The home page's hero-image show (dcc-hero-life, 3.11.0+:
 		 *    seaplane, then the fishing catch) publishes
 		 *    window.DCCHeroFx.state = none | busy | done and fires
@@ -3191,8 +3565,10 @@
 			if (DEBUG && kind === 'vig' && CFG.vigGap) { return CFG.vigGap / 1000; }
 			return rnd(EVERY[0], EVERY[1]);
 		}
-		var heroFirst = (DEBUG && CFG.heroFirst) || (firstPage ? TIMING.heroFirst : null);
+		var heroFirst = (DEBUG && CFG.heroFirst) || null;
 		var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : INF, heroCount = 0, heroLive = false;
+		/* First page: the flyer's turn comes when the first scene ends. */
+		var heroAfterScene = !!firstPage && !heroFirst;
 		var FX_CAP = 70, fxBusySeen = false, fxDoneAt = -1;
 		function heroFxState() {
 			var h = W.DCCHeroFx;
@@ -3206,7 +3582,7 @@
 		D.addEventListener('dcc:herofx', watchHeroFx);
 		var heroLog = [], vigLog = [];
 		function spawnHero(t) {
-			if (!FX.heroes) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + TIMING.breath; } return; }
+			if (!FX.heroes) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + gapAfter('hero'); } return; }
 			if (vig) { heroAt = vt + 4; return; }
 			var kind = pick(heroPool);
 			var dir = sgn();
@@ -3215,13 +3591,15 @@
 				hero.x = dir > 0 ? -110 : vw + 110;
 				hero.y = rnd(vh * 0.15, vh * 0.45);
 				hero.vx = dir * rnd(60, 90);
-				hero.w = 96;
-				HERON_FRAMES.forEach(sprite); sprite('heronstand');
+				hero.w = HN_W;
+				hero.fl = { ph: rand(), bps: 2, beats: 4 + ((rand() * 3) | 0), gl: 0, gt: 0, glides: true };
+				hero.key = hnStep(hero.fl, 0); hero.legs = 0; hero.pitch = 0; hero.sa = 0;
 				/* The only day the heron flies inverted: April Fool's, rarely. */
 				hero.invert = themeKey === 'april_fools' && rand() < 0.25;
-				/* Classic landing sequence: glide in → land → stand → leave. */
+				/* The landing: glide in, flare, stand, take off. */
 				hero.land = !hero.invert && water && rand() < (themeKey === 'classic' || themeKey === 'florida_keys' ? 0.5 : 0.15);
-				if (hero.land) { hero.lx = rnd(vw * 0.25, vw * 0.75); hero.st = 1; }
+				if (DEBUG && CFG.heronLand != null) { hero.land = !!CFG.heronLand && water; }
+				if (hero.land) { hero.lx = rnd(vw * 0.3, vw * 0.7); hero.st = 1; }
 			} else if (kind === 'eagle' || kind === 'witch') {
 				hero.w = kind === 'eagle' ? 104 : 92;
 				hero.x = dir > 0 ? -hero.w : vw + hero.w;
@@ -3280,6 +3658,12 @@
 		function canHero() { return !!FX.heroes; }
 		function canVig() { return vigList.length > 0; }
 		function nextTurn(kind) {
+			/* The first scene of a visit's first page hands straight over to
+			 * the flyer, a breath after it leaves. */
+			if (kind === 'vig' && heroAfterScene) {
+				heroAfterScene = false;
+				if (canHero()) { heroAt = vt + TIMING.breath; vigAt = INF; return; }
+			}
 			var other = kind === 'hero' ? 'vig' : 'hero';
 			var otherAt = other === 'hero' ? heroAt : vigAt;
 			var otherOk = other === 'hero' ? canHero() : canVig();
@@ -3322,26 +3706,59 @@
 				if (h.vy > 0 && h.y >= waterY) { addRipple(h.x, waterY, true); hero = null; }
 				return;
 			}
+			if (h.kind === 'heron' && !h.land) { h.key = hnStep(h.fl, dt); }
 			if (h.kind === 'heron' && h.land) {
-				if (h.st === 1) { /* glide toward the landing spot */
+				/* The landing (4.9.0): fly in, glide down with the legs
+				 * lowering, flare (the wings swing up and fan, braking), touch
+				 * down and stand 2.5 s, then take off on hard beats with the
+				 * legs still hanging. (h.x, h.y) is the flying bird's body;
+				 * standing, its feet are 44 units below that, in the water. */
+				var u4 = HN_W / 100, yLand = waterY + 2 - 44 * u4, dxl = h.lx - h.x, ahead = dxl * h.dir;
+				h.t2 = (h.t2 || 0) + dt;
+				if (h.st === 1) { /* in on the ordinary flight, then into a held glide */
+					h.key = hnStep(h.fl, dt);
 					h.x += h.vx * dt;
-					var dxl = h.lx - h.x;
-					if ((h.dir > 0 && dxl < 140) || (h.dir < 0 && dxl > -140)) {
-						h.y += (waterY - 26 - h.y) * mn(1, dt * 1.6);
-						h.vx *= 1 - dt * 0.8;
-					}
-					if (abs(dxl) < 12 || abs(h.vx) < 12) {
-						h.st = 2; h.t2 = 2.5;
-						addRipple(h.x, waterY);
-					}
-				} else if (h.st === 2) { /* stand a moment */
-					h.y = waterY - 26;
-					h.t2 -= dt;
-					if (h.t2 <= 0) { h.st = 3; addRipple(h.x, waterY); }
-				} else { /* take off */
-					h.vx += h.dir * 60 * dt;
+					h.y += sin(h.ph) * 8 * dt;
+					/* a long drop starts its glide further out */
+					if (ahead < mx2(220, 1.2 * (yLand - h.y))) { h.fl.beats = mn(h.fl.beats, 0); h.fl.hold = true; }
+					if (h.fl.gl > 0) { h.st = 2; h.t2 = 0; h.y0 = h.y; h.a0 = mx2(ahead, 60); }
+				} else if (h.st === 2) { /* the glide down */
+					h.key = hnStep(h.fl, dt);
+					h.vx = lerp(h.vx, h.dir * clamp(ahead * 0.8, 24, 90), mn(1, dt * 1.5));
 					h.x += h.vx * dt;
-					h.y -= 55 * dt;
+					/* down an eased slope from where the glide began to the
+					 * landing spot, steepest mid-way, level at both ends */
+					h.y = lerp(h.y0, yLand, hnEase(1 - (ahead - 26) / (h.a0 - 26)));
+					h.legs = clamp((140 - ahead) / 100, 0, 1);
+					h.pitch = 0.12 * h.legs;
+					if (ahead < 26) { h.st = 3; h.t2 = 0; }
+				} else if (h.st === 3) { /* the flare: out of the glide, wings up, braking */
+					var ft = h.t2;
+					h.key = ft < 0.2 ? (MT.round((1 - ft / 0.2) * HN_GLIDES) ? 'g' + MT.round((1 - ft / 0.2) * HN_GLIDES) : 'b' + HN_GB)
+						: ft < 0.55 ? 'b' + mn(HN_BEATS - 1, HN_GB + MT.floor((ft - 0.2) / 0.35 * (HN_BEATS - HN_GB))) : 'f';
+					h.vx *= 1 - mn(1, dt * 3.5);
+					h.x += h.vx * dt;
+					h.y += (yLand - h.y) * mn(1, dt * 6);
+					h.legs = 1;
+					h.pitch = lerp(h.pitch, 0.32, mn(1, dt * 5));
+					if (ft >= 0.8) { h.st = 4; h.t2 = 0; h.y = yLand; addRipple(h.x, waterY); }
+				} else if (h.st === 4) { /* stand: the flying bird fades into the standing one */
+					h.sa = clamp(h.t2 / 0.3, 0, 1);
+					h.pitch *= 1 - mn(1, dt * 6);
+					if (h.t2 >= 2.8) {
+						h.st = 5; h.t2 = 0; addRipple(h.x, waterY);
+						h.fl = { ph: 0, bps: 2.6, beats: 99, gl: 0, gt: 0, glides: false };
+						h.vx = h.dir * 20;
+					}
+				} else { /* take off: hard beats, legs hanging, then away */
+					h.key = hnStep(h.fl, dt);
+					h.sa = 1 - clamp(h.t2 / 0.25, 0, 1);
+					h.legs = 1 - clamp((h.t2 - 0.5) / 1.1, 0, 1);
+					h.pitch = 0.22 * (1 - clamp(h.t2 / 1.6, 0, 1));
+					h.vx = h.dir * mn(95, abs(h.vx) + 55 * dt);
+					h.x += h.vx * dt;
+					h.y -= mn(70, 25 + 30 * h.t2) * dt;
+					if (h.t2 > 2.2) { h.fl.bps = 2; h.fl.glides = true; }
 					if ((h.dir > 0 && h.x > vw + 150) || (h.dir < 0 && h.x < -150) || h.y < -80) { hero = null; }
 				}
 				return;
@@ -3401,20 +3818,27 @@
 			cx.globalAlpha = mn(1, alphaBase * 2) * (h.kind === 'manatee' ? 0.55 : 1) * (evening ? 0.92 : 1);
 			cx.translate(h.x, h.y);
 			if (h.kind === 'heron') {
-				var stand = h.land && h.st === 2;
-				var frame = stand ? 'heronstand' : HERON_FRAMES[((t / 260) | 0) % 4];
-				/* Recorded so a suite can prove the wingbeat actually cycles.
-				 * The frames are named in an ARRAY and indexed here, never as
-				 * sprite('heron0') literals, which is why a tool that only
-				 * greps for literal calls reports them unreferenced. */
-				heroFrame = frame;
-				var him = sprite(frame);
-				if (him.ready) {
-					if (h.dir > 0) { cx.scale(-1, 1); }
-					if (h.invert) { cx.scale(1, -1); }
-					var hw = stand ? 52 : h.w;
-					cx.drawImage(him.img, -hw / 2, -hw * him.ratio / 2, hw, hw * him.ratio);
+				/* One pre-drawn pose a frame (hnCache), the legs drawn live
+				 * behind it; landing, it crossfades with the standing bird.
+				 * heroFrame records the pose so a suite can prove the beat
+				 * cycles. */
+				var hA = cx.globalAlpha, hu = HN_W / 100;
+				if (h.dir > 0) { cx.scale(-1, 1); }
+				if (h.invert) { cx.scale(1, -1); }
+				if (h.sa > 0) {
+					var hs = hnGet('s');
+					cx.globalAlpha = hA * h.sa;
+					cx.drawImage(hs.c, hs.x, hs.y + 44 * hu, hs.w, hs.h);
 				}
+				if (h.sa < 1) {
+					var hf = hnGet(h.key);
+					cx.globalAlpha = hA * (1 - h.sa);
+					cx.rotate(h.pitch);
+					cx.translate(0, hf.bob);
+					cx.save(); cx.scale(hu, hu); hnLegs(cx, h.legs); cx.restore();
+					cx.drawImage(hf.c, hf.x, hf.y, hf.w, hf.h);
+				}
+				heroFrame = h.sa >= 1 ? 's' : h.key;
 			} else if (h.kind === 'sleigh' || h.kind === 'manatee') {
 				var sim = sprite(h.kind);
 				if (sim.ready) {
@@ -3504,10 +3928,6 @@
 		 * the moon is placed so the loop (plus half her width) stays on
 		 * screen from 320px up. */
 		var WITCH_W = 72;
-		/* How she rides the loop — rendered both ways for Rob (4.8.0):
-		 * 'bank' follows the curve (upside down over the top), 'upright'
-		 * stays level and turns to face where she is going. */
-		var WITCH_LOOP = (DEBUG && CFG.witchLoop) || 'bank';
 		function sq(v) { return v * v; }
 		function bezPts(out, p0, p1, p2, p3, n) {
 			for (var i = 1; i <= n; i++) {
@@ -3676,20 +4096,16 @@
 					if (d > l0 - 60 && d < l1 + 60) { glow = sin(MT.PI * clamp((d - l0 + 60) / (l1 - l0 + 120), 0, 1)); }
 					moonDraw(st.mx, st.my, a, glow);
 					var head = atan2(w.dy, w.dx), rot, flip;
-					if (WITCH_LOOP === 'bank') {
-						/* she banks with the curve: upside down over the top */
-						flip = st.dir > 0; rot = st.dir > 0 ? head : head - MT.PI;
-					} else {
-						/* she stays upright and faces where she is going */
-						if (abs(w.dx) > 0.35 * sqrt(sq(w.dx) + sq(w.dy))) { st.face = w.dx > 0 ? 1 : -1; }
-						if (!st.face) { st.face = st.dir; }
-						flip = st.face > 0;
-						/* a gentle tilt with the climb, never a roll */
-						var tilt = head - (st.face > 0 ? 0 : MT.PI);
-						while (tilt > MT.PI) { tilt -= TAU; }
-						while (tilt < -MT.PI) { tilt += TAU; }
-						rot = clamp(tilt, -0.35, 0.35);
-					}
+					/* B · Upright (Rob, 4.9.0): she stays seated, tilts a little
+					 * with the climb, and turns round to face the way she is
+					 * flying (banking through the loop was rendered and declined) */
+					if (abs(w.dx) > 0.35 * sqrt(sq(w.dx) + sq(w.dy))) { st.face = w.dx > 0 ? 1 : -1; }
+					if (!st.face) { st.face = st.dir; }
+					flip = st.face > 0;
+					var tilt = head - (st.face > 0 ? 0 : MT.PI);
+					while (tilt > MT.PI) { tilt -= TAU; }
+					while (tilt < -MT.PI) { tilt += TAU; }
+					rot = clamp(tilt, -0.35, 0.35);
 					st.wx = w.x; st.wy = w.y; st.glow = glow;
 					/* W-A (Rob, 4.3.0): the hero's silhouette witch and cat, not an emoji */
 					dspr('witchsil', w.x, w.y, WITCH_W, flip, rot);
@@ -4267,7 +4683,7 @@
 		 * (or none at this hour) gives that slot to its hero on a later page,
 		 * where the 3-5 s first-page flyer does not apply. */
 		if (vigList.length) { vigAt = (DEBUG && CFG.vigFirst) ? CFG.vigFirst / 1000 : rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
-		else if (heroAt >= INF) { heroAt = rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
+		else { heroAfterScene = false; if (heroAt >= INF) { heroAt = rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); } }
 
 		function startVig(name) {
 			var sc = SCENES[name];
@@ -4367,7 +4783,7 @@
 			}
 			/* Scenes switched off mid-visit (the degrade ladder): a scene
 			 * that was due hands its turn to the hero. */
-			if (!vigList.length) { if (vigAt < INF) { if (canHero()) { heroAt = mn(heroAt, vigAt); } vigAt = INF; } return; }
+			if (!vigList.length) { if (vigAt < INF || heroAfterScene) { heroAfterScene = false; if (canHero()) { heroAt = mn(heroAt, vigAt < INF ? vigAt : vt); } vigAt = INF; } return; }
 			if (hero || vt < vigAt) { return; }
 			/* startVig() returns without starting anything if the name has
 			 * no scene. Until 4.1.0 nothing then moved the clock on, so a
@@ -4660,6 +5076,7 @@
 				},
 				get accents() { return accents.map(function (el) { return el.innerHTML.length; }).length; },
 				get heroFrame() { return heroFrame; },
+				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },
 				get shed() { return shed; },
@@ -4712,7 +5129,7 @@
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
 		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, vigs: VIGS, eveningVigs: EVENING_VIGS,
-		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
+		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, heroDraw: HERO_DRAW, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
 		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
 	} };
 })();

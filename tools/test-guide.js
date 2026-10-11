@@ -108,8 +108,8 @@ const ALLON = { ...LIVE, ambient: 1 };
     ok(/45 s each/.test(r.turns) && /Hands holding the Earth|hands holding the earth/.test(r.turns), 'Earth Day shows its 45-second hands/globe turns', r.turns.slice(0, 120));
     ok(/countdown/.test(r.newyears), 'New Year\'s shows its midnight countdown', '');
     /* 4.8.0 timing (Rob): scene first at 6-10 s, then one every 60-90 s */
-    ok(/First scene 6[–-]10 s/.test(r.text) && /one every 60[–-]90 s/.test(r.text) && /3[–-]5 s into the first page/.test(r.text) && !/120|20[–-]28|90[–-]150/.test(r.text),
-      'the guide quotes the 4.8.0 timing (3-5, 6-10, 60-90) and none of the old', (r.text.match(/First scene[^.]*\./) || [''])[0]);
+    ok(/First scene 6[–-]10 s/.test(r.text) && /one every 60[–-]90 s/.test(r.text) && /crosses about 2 s after the first scene ends/.test(r.text) && !/3[–-]5 s|120|20[–-]28|90[–-]150/.test(r.text),
+      'the guide quotes the 4.9.0 timing (scene 6-10, flyer 2 s after it, then 60-90) and none of the old', (r.text.match(/First scene[^.]*\./) || [''])[0]);
     /* 4.7.0: how to open the egg comes from the settings, never a
      * hard-coded "tap the logo five times". */
     ok(/Tap the title in the homepage banner 4 times/.test(r.newyears) && !/\blogo\b|five times/i.test(r.text),

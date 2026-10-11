@@ -5,8 +5,8 @@
  * (so every frame is exact and nothing depends on machine load).
  *
  *   node tools/scene-reel.js --scene=witchmoon --theme=halloween --width=390 \
- *        --out="build/Seasons - witch 390" [--set=witchLoop:upright] [--frames=8]
- *   node tools/scene-reel.js --hero=heron --theme=florida_keys --width=1280 --out=...
+ *        --out="build/Seasons - witch 390" [--frames=8]
+ *   node tools/scene-reel.js --hero=heron --theme=florida_keys --width=1280 --out=... [--set=heronLand:1]
  *
  * --set=key:value (repeatable) sets a debug CFG key on the page config.
  * The video is VP8 WebM (the only encoder in Playwright's bundled ffmpeg),

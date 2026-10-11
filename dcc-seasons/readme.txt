@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.8.0
+Stable tag: 4.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,33 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.9.0 =
+Rob's picks from the 4.8.0 renders. Staging first; live only after Rob
+signs off. Rollback: reinstall the 4.8.0 zip (or 4.7.1, which live runs);
+no setting or stored data changes.
+
+* The heron is now a Great Blue Heron drawn in code, in the "Field guide"
+  style Rob picked: the neck folded back in an S, the legs trailing past
+  the tail, dark flight feathers, the white face with the black stripe
+  into the plumes, a heavy yellow bill. One continuous wingbeat (about
+  two a second, with short glides), instead of three frames. Its poses
+  are drawn once after the page loads, in idle time, so a crossing costs
+  what the old heron did (measured on a phone at 4x slowed CPU: 537
+  against 570 ms of main thread a second, 60 fps both; the one-off
+  drawing takes 92 ms spread over idle time and holds 3.3 MB).
+* The heron's landing is redrawn: it glides in with its legs coming
+  down, flares with its wings up to brake, stands in the shallows for
+  2.5 s, and takes off on hard beats with its legs still hanging. The
+  same heron flies on Memorial Day, and the Theme guide shows it.
+* The witch stays upright in her loop round the moon: she stays seated,
+  tilts a little with the climb, and turns round to face the way she is
+  flying (Rob's pick; banking was declined).
+* Timing, on every theme: the season's scene comes first, at 6-10 s; on
+  a visit's first page the flyer follows about 2 s after the scene ends,
+  never on top of it. After that one appearance every 60-90 s, scene and
+  hero taking turns. Later pages are unchanged (the scene at 6-10 s). A
+  theme with no scene sends its hero at 6-10 s. The Theme guide says so.
 
 = 4.8.0 =
 Rob's round of 2026-10-11: the witch's whole pass, and timing that guests

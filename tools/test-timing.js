@@ -2,13 +2,13 @@
 /**
  * DCC Seasons — when things appear (Rob, 2026-10-11, 4.8.0).
  *
- *   - the flyer (hero) first at 3-5 s on a visit's FIRST page;
- *   - the season's scene first at 6-10 s, after the flyer and never on top
- *     of it (if the flyer is still crossing, 2 s after it leaves);
+ *   - the season's scene first at 6-10 s (4.9.0, Rob: scene first);
+ *   - on a visit's FIRST page the flyer (hero) follows 2 s after that
+ *     scene ends, never on top of it;
  *   - after that ONE appearance every 60-90 s, counted from the end of the
- *     last, hero and scene taking turns, never two at once;
- *   - on a LATER page the scene still comes at 6-10 s (a theme with no
- *     scene gives that slot to its hero);
+ *     last, scene and hero taking turns, never two at once;
+ *   - a theme with no scene (or none at this hour) sends its hero at
+ *     6-10 s, on any page;
  *   - every theme, including hero-only ones, and Christmas's evening-only
  *     sleighmoon (forceHour 20).
  *
@@ -77,21 +77,21 @@ async function run(theme, later, hour) {
     for (let i = 1; i < ev.length; i++) { if (ev[i - 1].b == null || ev[i].a < ev[i - 1].b - 1e-6) { overlap = [ev[i - 1], ev[i]]; break; } }
     ok(!overlap, `${tag}: never two at once`, JSON.stringify(overlap));
     if (!ev.length) { ok(false, `${tag}: something appears`, 'nothing in 330 s'); continue; }
-    if (!later) {
-      ok(ev[0].k === 'hero' && ev[0].a >= 3 - TOL && ev[0].a <= 5 + TOL, `${tag}: the flyer first, at 3-5 s`, JSON.stringify(ev[0]));
-    }
-    const firstScene = ev.find(e => e.k === 'scene');
+    /* 4.9.0 (Rob): scene first at 6-10 s; on a first page the flyer
+     * follows 2 s after that scene ends; a theme with no scene sends its
+     * hero at 6-10 s on every page */
     if (scenes) {
-      const before = ev[ev.indexOf(firstScene) - 1];
-      const due = before && before.b != null ? Math.max(6, before.b + 2) : 6;
-      ok(firstScene && firstScene.a >= 6 - TOL && firstScene.a <= Math.max(10, due) + TOL && ev.indexOf(firstScene) <= (later ? 0 : 1),
-        `${tag}: the first scene at 6-10 s, or 2 s after the flyer leaves`, JSON.stringify({ firstScene, before }));
+      ok(ev[0].k === 'scene' && ev[0].a >= 6 - TOL && ev[0].a <= 10 + TOL, `${tag}: the scene first, at 6-10 s`, JSON.stringify(ev[0]));
+      if (!later) {
+        ok(ev[1] && ev[1].k === 'hero' && ev[0].b != null && Math.abs(ev[1].a - ev[0].b - 2) <= TOL,
+          `${tag}: the flyer second, 2 s after the scene ends`, JSON.stringify(ev.slice(0, 2)));
+      }
     } else {
-      ok(!firstScene, `${tag}: no scene (the theme has none at this hour)`, JSON.stringify(firstScene));
-      if (later) { ok(ev[0].k === 'hero' && ev[0].a >= 6 - TOL && ev[0].a <= 10 + TOL, `${tag}: hero-only theme, later page: the hero at 6-10 s`, JSON.stringify(ev[0])); }
+      ok(!ev.some(e => e.k === 'scene'), `${tag}: no scene (the theme has none at this hour)`, JSON.stringify(ev.find(e => e.k === 'scene')));
+      ok(ev[0].k === 'hero' && ev[0].a >= 6 - TOL && ev[0].a <= 10 + TOL, `${tag}: no scene, so the hero at 6-10 s`, JSON.stringify(ev[0]));
     }
     /* after the opening appearances: one every 60-90 s after the last ends */
-    const intro = later ? 1 : (scenes ? 2 : 1);
+    const intro = !later && scenes ? 2 : 1;
     for (let i = intro; i < ev.length; i++) {
       const gap = ev[i].a - ev[i - 1].b;
       ok(gap >= 60 - TOL && gap <= 90 + TOL, `${tag}: appearance ${i + 1} comes 60-90 s after the last one ended`, `${gap.toFixed(2)} s (${JSON.stringify(ev[i])})`);

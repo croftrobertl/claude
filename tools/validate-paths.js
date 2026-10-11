@@ -137,6 +137,9 @@ function collectVignettes(js) {
   for (const n of named) if (defined.has(n) && !sceneArt.has(n)) art.push(`scene '${n}' has no SCENE_ART picture for the Theme guide`);
   for (const [k] of sceneArt) if (!defined.has(k)) art.push(`SCENE_ART names '${k}', which is not a scene`);
   art.sceneArt = sceneArt; art.heroArt = new Map(table('HERO_ART'));
+  /* a hero drawn in code (the heron, 4.9.0) is pictured by HERO_DRAW */
+  const hd = js.match(/var HERO_DRAW = \{([\s\S]*?)\n\t\};/);
+  art.drawn = new Set(hd ? [...hd[1].matchAll(/\n\t\t([a-z0-9_]+): function/g)].map(x => x[1]) : []);
   return { defined, named, missing: [...named].filter(n => !defined.has(n)), art };
 }
 
@@ -190,7 +193,7 @@ function main() {
   for (const [k, where] of dangling) console.log(`DANGLING  '${k}' named by ${where} — no such sprite`);
   for (const h of heroes.missing) console.log(`DANGLING  hero '${h}' — the engine implements no such kind`);
   for (const v of vig.missing) console.log(`DANGLING  vignette '${v}' — VIGS names it but SCENES has no such scene`);
-  for (const [k, v] of [...vig.art.sceneArt, ...vig.art.heroArt]) if (!keys.has(v)) vig.art.push(`'${k}' is pictured by '${v}', which is not a sprite`);
+  for (const [k, v] of [...vig.art.sceneArt, ...vig.art.heroArt]) if (!keys.has(v) && !vig.art.drawn.has(v)) vig.art.push(`'${k}' is pictured by '${v}', which is not a sprite`);
   for (const m of vig.art) console.log(`GUIDE     ${m}`);
   /* THE UNREFERENCED DIRECTION WARNS; IT DOES NOT FAIL THE BUILD.
    *

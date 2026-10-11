@@ -64,6 +64,20 @@
 		s.title = name;
 		return s;
 	}
+	/* A hero drawn in code rather than a sprite (the heron, 4.9.0): the
+	 * engine's own HERO_DRAW function paints it into a canvas. */
+	function drawnPic(fn, name) {
+		var cv = el('canvas', 'dcc-guide-pic'), dpr = Math.min(window.devicePixelRatio || 1, 2), w = 72, h = 34;
+		cv.width = w * dpr; cv.height = h * dpr;
+		cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', name); cv.title = name;
+		var g = cv.getContext('2d');
+		if (g) { g.scale(dpr, dpr); try { fn(g, w, h); } catch (e) { /* shown blank */ } }
+		return cv;
+	}
+	function heroPic(h, name) {
+		var k = E.heroArt[h];
+		return E.heroDraw && E.heroDraw[k] ? drawnPic(E.heroDraw[k], name) : spriteImg(k, name);
+	}
 	function spriteName(key) { return (N.sprites && N.sprites[key]) || key; }
 	/* A particle drawn by code rather than a sprite (star, heart, egg…):
 	 * the engine's own PRIMS function, once per colour the theme gives it. */
@@ -262,10 +276,14 @@
 			var pool = ['heron'];
 			if (A.hero && pool.indexOf(A.hero) < 0) { pool.push(A.hero); }
 			var hs = section(T.hero, on.hero);
-			hs.appendChild(el('p', 'dcc-guide-total', fmt(T.heroTiming, range(E.timing.heroFirst), range(D.every || E.timing.every))));
+			/* 4.9.0 (Rob): scene first, flyer second; a theme with no scene
+			 * sends its hero at the scene's 6-10 s */
+			hs.appendChild(el('p', 'dcc-guide-total', scenes.length
+				? fmt(T.heroTiming, String(E.timing.breath), range(D.every || E.timing.every))
+				: fmt(T.heroTimingOnly, range(E.timing.vigFirst), range(D.every || E.timing.every))));
 			pool.forEach(function (h) {
 				var nm = (N.heroes && N.heroes[h]) || h;
-				var pics = [spriteImg(E.heroArt[h], nm)];
+				var pics = [heroPic(h, nm)];
 				if (E.heroGlyphs[h]) { pics.push(glyph(E.heroGlyphs[h], nm)); }
 				hs.appendChild(item(pics, nm));
 			});

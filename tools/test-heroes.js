@@ -5,7 +5,8 @@
  * faster under the debug-only CFG.vtScale, so "the first hero waits 70s"
  * is proven in a few real seconds.
  *
- *   first-hero timing  — absent/'none' → 3-5s; busy → done → 2s later;
+ *   first-hero timing  — absent/'none' → a scene-less theme's hero at
+ *                        6-10 s (4.9.0); busy → done → 2s later;
  *                        busy forever → the 70s cap; the second page of a
  *                        visit → the scene first at 6-10 s (4.8.0); storage
  *                        blocked → the same;
@@ -14,6 +15,7 @@
  *                        while a scene runs
  *   no emoji           — every canvas fillText while each theme's own hero
  *                        crosses; only the rainbow's ☘ is allowed
+ *   the heron landing  — glide in, flare, stand ~2.5 s, take off (4.9.0)
  *   phones             — Christmas never below 5 sprites (4 in a scene);
  *                        a scene borrows at most 1 sprite on a phone
  *
@@ -67,18 +69,21 @@ async function waitVt(page, v, maxMs = 60000) {
 
 (async () => {
   console.log('\n  --- first-hero timing (mocked clock) ---');
+  /* 4.9.0 (Rob): scene first, flyer second. These use 'classic', which has
+   * no scene, so its hero is the first appearance, at 6-10 s; the
+   * scene-then-flyer order is proven theme by theme in test-timing.js. */
   for (const [name, init] of [['DCCHeroFx absent', null], ["DCCHeroFx 'none'", () => { window.DCCHeroFx = { state: 'none' }; }]]) {
-    const cfg = cfgFor('patriot_day'); cfg.vtScale = 4;
+    const cfg = cfgFor('classic'); cfg.vtScale = 4;
     const s = await bootWith(cfg, init);
     try {
-      await waitVt(s.page, 8);
+      await waitVt(s.page, 12);
       const st = await s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { first: x.firstPage, log: x.heroLog }; });
       const t0 = st.log[0] && st.log[0].start;
-      ok(st.first === true && t0 >= 3 && t0 <= 5.3, `${name}: the first page's first hero crosses 3-5s in`, `first=${st.first} start=${t0}`);
+      ok(st.first === true && t0 >= 6 && t0 <= 10.3, `${name}: a theme with no scene sends its hero 6-10 s in`, `first=${st.first} start=${t0}`);
     } finally { await s.close(); }
   }
   {
-    const cfg = cfgFor('patriot_day'); cfg.vtScale = 8;
+    const cfg = cfgFor('classic'); cfg.vtScale = 8;
     const s = await bootWith(cfg, () => { window.DCCHeroFx = { state: 'busy' }; });
     try {
       await waitVt(s.page, 47);
@@ -93,7 +98,7 @@ async function waitVt(page, v, maxMs = 60000) {
     } finally { await s.close(); }
   }
   {
-    const cfg = cfgFor('patriot_day'); cfg.vtScale = 10;
+    const cfg = cfgFor('classic'); cfg.vtScale = 10;
     const s = await bootWith(cfg, () => { window.DCCHeroFx = { state: 'busy' }; });
     try {
       await waitVt(s.page, 69);
@@ -169,7 +174,7 @@ async function waitVt(page, v, maxMs = 60000) {
     christmas: 'sleigh', snowbird: 'manatee', st_patricks: 'rainbow', memorial_day: 'heron' };
   const EMOJI = /\p{Extended_Pictographic}/u;
   for (const [theme, kind] of Object.entries(HEROES)) {
-    const cfg = cfgFor(theme, ['--noparticles', '--subtle=off']); cfg.vtScale = 1; cfg.heroEvery = [1, 1.5]; cfg.heroOnly = kind;
+    const cfg = cfgFor(theme, ['--noparticles', '--subtle=off']); cfg.vtScale = 1; cfg.heroEvery = [1, 1.5]; cfg.heroFirst = [1, 1.5]; cfg.heroOnly = kind;
     if (theme === 'july4') { cfg.themes.july4.ambient.mode = 'drift'; }   // the fireworks draw the year as text
     const s = await bootWith(cfg, () => {
       window.__txt = [];
@@ -192,6 +197,34 @@ async function waitVt(page, v, maxMs = 60000) {
       const emoji = drawn.filter(t => EMOJI.test(t) && !(kind === 'rainbow' && t === '☘'));
       ok(seen && !emoji.length, `${theme}: the ${kind} hero crossed and drew no emoji`, `seen=${seen} emoji=${emoji.join(' ')}`);
       if (kind === 'rainbow') { ok(drawn.includes('☘'), 'st_patricks: the rainbow keeps its ☘ strip (Rob\'s exception)', drawn.join(' ')); }
+    } finally { await s.close(); }
+  }
+
+  console.log('\n  --- the heron lands: glide in, flare, stand, take off (4.9.0, mocked clock) ---');
+  for (const width of [390, 1280]) {
+    const cfg = cfgFor('florida_keys', ['--noparticles', '--subtle=off']);
+    cfg.heroOnly = 'heron'; cfg.heroFirst = [0.5, 0.6]; cfg.heronLand = 1;
+    const s = await bootWith(cfg, null, width);
+    try {
+      const r = await s.page.evaluate(() => {
+        const x = window.DCCSeasonsEngine._state; x.manual(true);
+        const seq = [], trace = []; let last = null, maxLegs = 0, standAt = -1, standEnd = -1, minY = 1e9, maxY = -1e9;
+        for (let i = 0; i < 30 * 60 && !(seq.length && x.heron.st === -1); i++) {
+          x.tick(1000 / 60, 1);
+          const h = x.heron;
+          if (h.st > 0 && h.st !== last) { seq.push(h.st); last = h.st; }
+          if (h.st > 0) { maxLegs = Math.max(maxLegs, h.legs || 0); }
+          if (x.heroFrame === 's') { if (standAt < 0) { standAt = x.vt; } standEnd = x.vt; }
+          if (h.st > 0) { trace.push(x.heroFrame); }
+        }
+        return { seq, maxLegs, stood: standEnd - standAt, keys: [...new Set(trace)].length, gone: x.heron.st === -1, log: x.heroLog, waterY: x.waterY };
+      });
+      console.log(`      @${width}: states ${r.seq.join('>')} · stood ${r.stood.toFixed(2)} s · ${r.keys} distinct poses`);
+      ok(r.seq.join('') === '12345', `@${width}: the landing runs fly-in, glide, flare, stand, take-off in order`, r.seq.join('>'));
+      ok(r.maxLegs >= 0.99, `@${width}: the legs come fully down for the landing`, String(r.maxLegs));
+      ok(r.stood >= 2.3 && r.stood <= 2.8, `@${width}: it stands about 2.5 s`, r.stood.toFixed(2));
+      ok(r.gone && r.log.length === 1 && r.log[0].end > 0, `@${width}: it takes off and leaves the screen`, JSON.stringify(r.log));
+      ok(r.keys >= 20, `@${width}: the wingbeat, glide and flare all play`, String(r.keys));
     } finally { await s.close(); }
   }
 

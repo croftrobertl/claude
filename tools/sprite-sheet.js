@@ -11,7 +11,7 @@
  *
  * Usage:
  *   node tools/sprite-sheet.js                 every sprite, paged
- *   node tools/sprite-sheet.js heron0 pelican  just these
+ *   node tools/sprite-sheet.js swan pelican    just these
  *   node tools/sprite-sheet.js --group=canal   a named group
  *
  * Output: build/Seasons - sprites <page>.png
@@ -25,7 +25,7 @@ const ENGINE = path.join(ROOT, 'dcc-seasons', 'assets', 'js', 'engine.js');
 const OUT = path.join(ROOT, 'build');
 
 const GROUPS = {
-  canal: ['manatee', 'heron0', 'heron1', 'heron2', 'heronstand', 'swan', 'pelican', 'pelican1', 'dragonfly', 'lilypad', 'kayak', 'skiff', 'bass', 'bobber'],
+  canal: ['manatee', 'swan', 'pelican', 'pelican1', 'dragonfly', 'lilypad', 'kayak', 'skiff', 'bass', 'bobber'],
   patriotic: ['flagcloth', 'sparkler', 'dove', 'poppy', 'medal', 'sparkle', 'ribbon', 'eagle'],
   disputed: ['bottle', 'peel', 'lure', 'hands', 'stilts', 'letter1', 'letter0', 'bunnycarry', 'cornucopia', 'web', 'sleigh', 'ribbon'],
 };

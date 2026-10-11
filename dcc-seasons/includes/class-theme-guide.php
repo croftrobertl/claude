@@ -134,12 +134,14 @@ final class Theme_Guide {
             'accentNote'   => __('Fixed in a corner of the screen.', 'dcc-seasons'),
             'scenes'       => __('Scenes', 'dcc-seasons'),
             /* translators: 1: first delay range in seconds, 2: repeat range in seconds */
-            'sceneTiming'  => __('First scene %1$s s after the page opens (after the hero, if it is still crossing). After that, hero and scene take turns: one every %2$s s, never two at once.', 'dcc-seasons'),
+            'sceneTiming'  => __('First scene %1$s s after the page opens. After that, scene and hero take turns: one every %2$s s, never two at once.', 'dcc-seasons'),
             'oneOf'        => __('One of these plays each time, picked at random.', 'dcc-seasons'),
             'evenings'     => __('Evenings only', 'dcc-seasons'),
             'hero'         => __('Hero', 'dcc-seasons'),
-            /* translators: 1: first-hero delay range in seconds, 2: repeat range in seconds */
-            'heroTiming'   => __('Crosses the screen about %1$s s into the first page of a visit. After that it takes turns with the scenes: one appearance every %2$s s, never two at once. Each crossing picks one of these at random.', 'dcc-seasons'),
+            /* translators: 1: seconds after the first scene ends, 2: repeat range in seconds */
+            'heroTiming'   => __('On the first page of a visit it crosses about %1$s s after the first scene ends. After that it takes turns with the scenes: one appearance every %2$s s, never two at once. Each crossing picks one of these at random.', 'dcc-seasons'),
+            /* translators: 1: first delay range in seconds, 2: repeat range in seconds */
+            'heroTimingOnly' => __('Crosses the screen %1$s s after the page opens, then again every %2$s s. Each crossing picks one of these at random.', 'dcc-seasons'),
             'egg'          => __('Matrix egg', 'dcc-seasons'),
             /* From the SETTINGS (Settings::egg_howto), never hard-coded: the
              * target and the count are Rob's and can change. */

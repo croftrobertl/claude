@@ -349,20 +349,42 @@ render round and his say.
   walked by arc length (`witchPath`/`witchAt`); loop radius
   clamp(vw*0.2, 80, 100) clears the moon's halo plus half the witch, and
   the moon is placed so the loop stays on screen from 320px up. 8.0 s at
-  390, 9.0 s at 1280. `WITCH_LOOP` 'bank' | 'upright' awaits Rob's pick
-  from the renders (`build/reels`); the build ships 'bank'.
-- **Timing (all themes):** flyer first at 3-5 s on a visit's first page;
-  scene first at 6-10 s, never on top of the flyer (2 s after it leaves);
-  then ONE appearance every 60-90 s counted from the end of the last,
-  hero and scene alternating (a theme with only one kind repeats it).
-  Later pages: the scene at 6-10 s (hero-only themes: the hero then).
-  `Plugin::EVERY` = [60, 90] replaced HERO_EVERY; nothing stored overrides
-  it. Measured: a heron takes ~8.5 s to cross a phone and ~19 s a desktop,
-  so the first scene lands at ~14 s / ~24 s on a first page.
-- **The heron (Great Blue, drawn in code)**: three candidate styles in
-  `tools/heron-lab.js` (A field guide, B painted, C silhouette+), one
-  continuous wingbeat; renders in `build/reels`. NOT in the engine until
-  Rob picks.
+  390, 9.0 s at 1280. How she rides the loop: see 4.9.0 (upright).
+- **Timing (all themes):** ONE appearance every 60-90 s counted from the
+  end of the last, hero and scene alternating (a theme with only one kind
+  repeats it). `Plugin::EVERY` = [60, 90] replaced HERO_EVERY; nothing
+  stored overrides it. The OPENING order was changed by Rob in 4.9.0.
+- **The heron (Great Blue, drawn in code)**: three candidate styles were
+  rendered from `tools/heron-lab.js` (A field guide, B painted, C
+  silhouette+). Rob picked A in 4.9.0.
+
+### Rob's recorded picks (for 4.9.0, chosen 2026-10-11)
+
+- **Heron: style A · Field guide**, in the engine (`hnFly`/`hnStand`/
+  `hnLegs`, the HN_ block above `start()`). It is PRE-DRAWN after load in
+  idle time (`hnCache`: 24 beat poses, 6 glide blends, the flare, the
+  standing bird; each on its own tight canvas at min(DPR, 2)) so a
+  crossing is one drawImage a frame; the legs alone are drawn live so
+  they can swing down. Pose keys are computed (`'b' + n`), so a literal
+  key in engine.js reads as a dangling sprite to `validate-paths.js` —
+  keep them computed. The landing is glide in (legs lowering), flare,
+  stand 2.5 s, take off on hard beats with legs hanging; crossfades
+  flying <-> standing. Debug knob `heronLand` (0/1) forces it. The
+  heron0/1/2/heronstand sprites are gone; the Theme guide paints the bird
+  with `HERO_DRAW.heron`. `tools/heron-poses.js` renders the shipped
+  poses; `tools/measure-heron.js` measures a crossing against an older
+  build (`DCC_ASSETS=`).
+- **Witch: B · Upright in the loop.** She stays seated, tilts with the
+  climb (clamped to ±0.35 rad) and turns round to face the way she flies.
+  Banking (A) was rendered and declined; `WITCH_LOOP` is gone.
+- **Timing: SCENE FIRST, FLYER SECOND.** Every page opens with the
+  season's scene at 6-10 s. On a visit's first page the hero follows 2 s
+  (`TIMING.breath`) after that scene ends, never on top of it
+  (`heroAfterScene`). Later pages: unchanged, the scene at 6-10 s then
+  turns. A theme with no scene (or none at this hour) sends its hero at
+  6-10 s on any page. Evening-only scenes keep their condition. Because
+  the first-page hero now waits for a scene, a suite that pushes scenes
+  away (`vigFirst = 1e9`) and still wants a hero must set `heroFirst`.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -383,7 +405,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 129,444 raw / 43,746 gzipped (4.4.0, `gzip -c`; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 140,774 raw / 48,875 gzipped (4.9.0, `gzip -c`; the drawn heron replacing four sprites is +8.7KB raw over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -848,8 +870,9 @@ render round and his say.
 - **Heroes AND scenes run on VISIBLE time (`vt`), one scheduler, since
   4.8.0.** `heroAt` / `vigAt` are due times (INF = not its turn);
   `nextTurn()` runs when either leaves. First page of a visit
-  (sessionStorage key `dcc_seasons_visit`) → hero 3-5 s, scene 6-10 s;
-  later pages, or storage blocked (`firstPage === null`) → scene 6-10 s.
+  (sessionStorage key `dcc_seasons_visit`) → scene 6-10 s, hero 2 s after
+  it ends (4.9.0); later pages, or storage blocked (`firstPage === null`)
+  → scene 6-10 s; no scene → hero 6-10 s.
   Until 4.8.0 scenes ran on wall-clock `t` with their own `vigNext`, so the
   two could not take turns. Debug knobs: `heroFirst` (s, any page),
   `heroEvery` (s, the gap after a hero), `vigFirst`/`vigGap` (ms).

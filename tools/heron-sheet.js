@@ -3,8 +3,9 @@
  * DCC Seasons — the heron candidates as frame strips: 12 points through one
  * wingbeat plus the glide pose and the standing bird, for every style, large,
  * on a sky tile and a dark tile (the effects run over photos and the navy
- * footer). Also renders the CURRENT heron's three frames for comparison, and
- * times each style's draw call.
+ * footer), and times each style's draw call. This is the 4.8.0 candidate
+ * round; Rob picked A, and the shipped bird is in engine.js — render it
+ * with tools/heron-poses.js.
  *
  *   node tools/heron-sheet.js "build/reels/Seasons - heron poses.png" [scale]
  */
@@ -55,25 +56,6 @@ const ENGINE = fs.readFileSync(path.join(__dirname, '../dcc-seasons/assets/js/en
       while (performance.now() - t0 < 400) { g.setTransform(1, 0, 0, 1, 200, 150); L.drawFlying(g, L.beatPose((n % 60) / 60), st, 100); n++; }
       times[st] = (performance.now() - t0) / n;
     }
-    /* the current heron, for comparison */
-    const E = window.DCCSeasonsEngine.guide;
-    const h = document.createElement('h2'); h.textContent = 'Current heron (4.7.1): three drawn frames, played 0-1-2-1'; root.appendChild(h);
-    const row = document.createElement('div'); row.className = 'row';
-    for (const k of ['heron0', 'heron1', 'heron2', 'heronstand']) {
-      const svg = E.svgDoc && E.svgs[k] ? E.svgDoc(E.svgs[k]) : null;
-      const c = document.createElement('div'); c.className = 'c';
-      const im = new Image(); im.style.width = (k === 'heronstand' ? 52 : 96) * S * 0.9 + 'px'; im.style.background = '#9fc3df'; im.style.padding = '20px';
-      if (svg) { im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }
-      const sp = document.createElement('span'); sp.textContent = k;
-      c.appendChild(im); c.appendChild(sp); row.appendChild(c);
-    }
-    root.appendChild(row);
-    await new Promise(r => setTimeout(r, 400));
-    /* the current heron's cost: one drawImage of a cached sprite */
-    const cv2 = document.createElement('canvas'); cv2.width = 400; cv2.height = 300; const g2 = cv2.getContext('2d');
-    const im = row.querySelector('img'); let n = 0; const t0 = performance.now();
-    while (performance.now() - t0 < 400) { g2.drawImage(im, 150, 120, 96, 64); n++; }
-    times.current = (performance.now() - t0) / n;
     return { times, w: document.body.scrollWidth, h: document.body.scrollHeight };
   }, SCALE);
   await p.setViewportSize({ width: Math.max(1200, res.w), height: res.h });
