@@ -48,6 +48,8 @@ final class Staff_Data
     private const META_ICAL_UID  = 'mphb_ical_uid';
     private const META_ICAL_SUMM = 'mphb_ical_summary';
     private const META_ICAL_DESC = 'mphb_ical_description';
+    /** Custom Checkout 0.32.0's "Extra Details/Options": 'yes' / 'no', absent = not asked. */
+    private const META_DCC_DOG   = '_dcc_dog';
 
     /**
      * MPHB records payments as their own post type, linked to the booking by
@@ -606,6 +608,12 @@ final class Staff_Data
             self::push($out, __('Dog Type', 'mphb-availability-calendar'), $dog_type);
             self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
             self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));
+        } elseif (self::staff_dog($id)) {
+            // A DOG RECORDED BY STAFF with nothing else said (0.45.3, the
+            // Website Director): an import charges no pet fee (Rob: the OTA
+            // adds its own) and the type may be left blank, so this row is
+            // what tells staff why the bar has a paw.
+            self::push($out, __('Dog', 'mphb-availability-calendar'), __('Yes', 'mphb-availability-calendar'));
         }
         // BOAT (0.44.1): the new "boat" checkout field, after the dog rows —
         // Rob's standing rule is that the sheet shows every booking field, and
@@ -800,7 +808,25 @@ final class Staff_Data
         if (!self::is_blank($dog_type)) {
             return true;
         }
+        if (self::staff_dog($booking_id)) {
+            return true;
+        }
         return (bool) array_intersect_key(self::service_ids_on($rooms), $pet_services);
+    }
+
+    /**
+     * Did staff record a dog on this booking (0.45.3)? Custom Checkout
+     * 0.32.0 writes `_dcc_dog` = 'yes' / 'no' from its "Extra Details/Options"
+     * box; absent means nobody was asked. STRICT, like the guest-count marker:
+     * only 'yes' is a dog — not "1", not "Yes " from some other writer. On an
+     * import it is often the ONLY sign: no pet fee is charged there, and the
+     * dog type may be left blank.
+     */
+    private static function staff_dog(int $booking_id): bool
+    {
+        $v = get_post_meta($booking_id, self::META_DCC_DOG, true);
+        $v = is_array($v) ? reset($v) : $v;
+        return is_string($v) && $v === 'yes';
     }
 
     /**
