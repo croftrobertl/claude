@@ -153,7 +153,7 @@ const BODY = H.filtersHtml();
   console.log('\n-- 4: empty vs typed, the ::placeholder mapping --');
   {
     const { ctx, p } = await open();
-    await p.addScriptTag({ content: H.js() });
+    await p.addScriptTag({ content: H.jsShipped() });
     const st = await p.evaluate(() => {
       const empty = document.querySelector('.mphbac-input-checkin');
       empty.value = ''; empty.dispatchEvent(new Event('change', { bubbles: true }));

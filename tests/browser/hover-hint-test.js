@@ -205,7 +205,7 @@ const INFO_SHEET = (() => {
   console.log('\n-- 1: the mm/dd/yy hint --');
   for (const w of [320, 360, 393]) {
     const { ctx, p } = await open({ touch: true, w });
-    await p.addScriptTag({ content: H.js() });
+    await p.addScriptTag({ content: H.jsShipped() });
     const m = await p.evaluate(() => {
       const inp = document.querySelector('.mphbac-input-checkin');
       const ph = inp.parentElement.querySelector('.mphbac-field-ph');

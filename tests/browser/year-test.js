@@ -40,7 +40,7 @@ const CELL = `<div class="mphbac-grid"><div class="mphbac-row" data-room-type-id
       document.querySelector('.mphbac-root').dataset.config = JSON.stringify({
         ajaxUrl: '/ajax', popupEnabled: true, minNights: 2, strings: { checkDates: 'Please check the dates.' } });
     });
-    await p.addScriptTag({ content: H.js() });
+    await p.addScriptTag({ content: H.jsShipped() });
     await p.waitForTimeout(80);
     return { ctx, p };
   };

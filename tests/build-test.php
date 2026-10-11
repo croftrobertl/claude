@@ -142,5 +142,64 @@ echo "\n-- the source keeps its reasoning --\n";
         !str_contains((string) $min, 'THE TOKENS ARE DECLARED WHERE'));
 }
 
+echo "\n-- 0.45.4: the scripts ship minified, and the minified files are what the suites ran --\n";
+{
+    $tools_ok = is_file($TOOLS . '/node_modules/terser/package.json');
+    check('the build tools are installed (tools/node_modules/terser) — if not: (cd tools && npm ci)', $tools_ok);
+    $pin = json_decode((string) file_get_contents($TOOLS . '/package.json'), true);
+    check('terser is pinned to an exact version, so a rebuild changes only when a source does',
+        preg_match('/^\d+\.\d+\.\d+$/', (string) ($pin['devDependencies']['terser'] ?? '')) === 1, $pin['devDependencies'] ?? null);
+    foreach (['widget', 'staff'] as $name) {
+        $min = @file_get_contents($ROOT . "/assets/js/$name.min.js");
+        $srcjs = (string) file_get_contents($ROOT . "/assets/js/$name.js");
+        check("$name.min.js exists in the plugin folder, so the zip carries it", is_string($min) && $min !== '');
+        check("$name.min.js is under half its source (" . strlen((string) $min) . ' of ' . strlen($srcjs) . ' bytes)',
+            is_string($min) && strlen($min) * 2 < strlen($srcjs));
+        check("$name.min.js is plain ASCII — every \"…\", \"→\", \"✕\" escaped, whatever charset it is served with",
+            is_string($min) && preg_match('/[^\x09\x0A\x0D\x20-\x7E]/', $min) === 0);
+        check("$name.min.js says what it is built from and by what", is_string($min)
+            && preg_match('#^/\*! ' . $name . '\.js - built by tools/build-js\.js \(terser \d+\.\d+\.\d+\)#', $min) === 1);
+    }
+    // PROPERTY NAMES ARE NEVER MANGLED: the scripts read config objects, the
+    // server's JSON and Elementor's API by name. A sample of each, by name.
+    $wmin = (string) @file_get_contents($ROOT . '/assets/js/widget.min.js');
+    $smin = (string) @file_get_contents($ROOT . '/assets/js/staff.min.js');
+    $names = ['widget' => ['elementorFrontend', 'mphbac_query', 'mphbac_info', 'availability', 'roomTypeId'],
+              'staff'  => ['mphbac_staff_month', 'mphbac_staff_search', 'staffInit', 'guestName', 'sourceKey', 'statusLabel']];
+    foreach ($names as $file => $list) {
+        $code = $file === 'widget' ? $wmin : $smin;
+        $missing = array_values(array_filter($list, static fn($n) => !str_contains($code, $n)));
+        check("$file.min.js keeps the names it reads and sends — " . implode(', ', $list), $missing === [], $missing);
+    }
+    if ($tools_ok) {
+        $out = [];
+        $code = 0;
+        exec('node ' . escapeshellarg($TOOLS . '/build-js.js') . ' --check 2>&1', $out, $code);
+        // THE RELEASE CHECK. The browser suites run the build of the current
+        // source (browser/harness.js); this says the committed .min.js IS that
+        // build, byte for byte — so what the suites ran is what ships.
+        check('both .min.js are exactly what the current sources build to — rebuild if this fails', $code === 0, implode(' / ', $out));
+    }
+    foreach ([['class-widget.php', 'widget'], ['class-staff-widget.php', 'staff']] as [$file, $name]) {
+        $php = (string) file_get_contents($ROOT . '/includes/' . $file);
+        check("$file enqueues $name.min.js, and the readable $name.js only under SCRIPT_DEBUG",
+            preg_match("/\\(defined\\('SCRIPT_DEBUG'\\) && SCRIPT_DEBUG\\) \\? '$name\\.js' : '$name\\.min\\.js'/", $php) === 1
+            && str_contains($php, "MPHBAC_URL . 'assets/js/' . self::script_file()")
+            && !preg_match("#MPHBAC_URL \\. 'assets/js/$name\\.js'#", $php));
+    }
+    // ASKED, NOT READ: what each harness would put in a page, compared byte
+    // for byte with the file that ships. (A text search for the build call
+    // passed with the call still present but no longer used.)
+    if ($tools_ok) {
+        foreach ([['harness.js', 'jsShipped', 'widget'], ['staff-harness.js', 'staffJsShipped', 'staff']] as [$h, $fn, $name]) {
+            $got = shell_exec('cd ' . escapeshellarg(__DIR__ . '/browser') . ' && node -e '
+                . escapeshellarg("process.stdout.write(require('./$h').$fn())") . ' 2>&1');
+            check("the browser suites run exactly $name.min.js — $h's $fn() is the file that ships",
+                is_string($got) && $got === (string) @file_get_contents($ROOT . "/assets/js/$name.min.js"),
+                is_string($got) ? strlen($got) . ' bytes' : null);
+        }
+    }
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);

@@ -188,6 +188,11 @@ function boardStrings() {
   while ((m = re.exec(block))) out[m[1]] = m[2].replace(/\\'/g, "'");
   return out;
 }
+/** The minified build of the CURRENT staff.js — what staff.min.js ships (0.45.4). */
+function staffJsShipped() {
+  return require('./harness.js').shipped(fs.readFileSync(path.join(ROOT, 'assets/js/staff.js'), 'utf8'), 'staff.js');
+}
+
 function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '', foot = '' }) {
   const config = {
     ajaxUrl: '/ajax', nonce: 'n', month: today.slice(0, 7), today,
@@ -201,7 +206,8 @@ function boardShell({ today, cottages, bookings, details = {}, search = {}, sow 
   };
   const markup = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff" data-staff-config='))
     .replace('data-staff-config=""', "data-staff-config='" + JSON.stringify(config).replace(/'/g, '&#39;') + "'");
-  const js = fs.readFileSync(path.join(ROOT, 'assets/js/staff.js'), 'utf8');
+  // The script that ships: the minified build of the current staff.js (0.45.4).
+  const js = staffJsShipped();
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{margin:0;font-family:Raleway,Georgia,serif;${bodyStyle}}${THEME}</style>
@@ -240,5 +246,5 @@ ${foot}
 </body></html>`;
 }
 
-module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults, boardShell, boardStrings,
+module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults, boardShell, boardStrings, staffJsShipped,
   page, TOOLS, SHEET, THEME, CHROMIUM, POST, WRAPPER };

@@ -2944,3 +2944,41 @@ clause and its mutation are gone (the Tab-side clause is live and caught).
 The refresh test once read the test's OWN scrollTo event, arriving late, as
 a "move" to the same y; it now lets that settle and counts only real moves
 — and still turns red on both refresh mutations.
+
+## The scripts ship minified (queued for the next release — WD: "fold it in")
+
+**WD (speed audit of live 0.45.3):** widget.js was served unminified on
+every page with the calendar (152 KB raw / 58 KB gzipped); staff.js (~92 KB)
+on /staff/. Ship minified builds, enqueue them, keep the readable sources,
+and make the tests and the release check run against what ships. Not to be
+touched from this plugin: MotoPress's own group-availability-calendar
+bundle, which the WD is handling separately.
+
+**Built:** tools/build-js.js — terser pinned to exactly 5.36.0
+(tools/package.json + lock; node_modules ignored; `cd tools && npm ci`).
+Local names shortened and dead code dropped; property names never touched;
+ES5 output, Safari 10 workaround on, every non-ASCII character escaped (the
+strings carry "…", "→", "±", "✕"); a /*! header naming the source and the
+terser version. widget.js 155,799 → 43,168 bytes (gzip -9: 43,443 → 12,756);
+staff.js 109,100 → 44,283 (29,232 → 13,977). Widget::script_file() and
+Staff_Widget::script_file() enqueue the .min.js, and the readable source
+under SCRIPT_DEBUG — the stylesheet's rule. The optimiser opt-out attributes
+match the HANDLE, so they still apply.
+
+**THE SUITES RUN WHAT SHIPS.** Every browser suite that RUNS a script now
+gets the minified build of the CURRENT source (harness.js jsShipped(),
+staff-harness.js staffJsShipped(), via build-js.js --stdin, memoised per
+run) — so a minifier fault fails the suites, and a mutation made to the
+readable source still reaches the code under test. Checks that READ the code
+(regexes over the source) keep reading the source. build-test.php then
+proves the chain: `build-js.js --check` (the committed .min.js are exactly
+what the sources build to), and each harness ASKED for the script it would
+run, compared byte for byte with the shipped file. **Lesson, from a
+survivor:** the first version of that last check searched the harness text
+for the build call — it passed with the call still there but no longer
+used. Ask the code; do not grep it. mutate.php now resolves tests/ paths
+(beside tools/) so a harness can be mutated too.
+
+**At the next version bump:** add the changelog line ("The calendar's
+scripts are now sent compacted: about 43 KB instead of 156 KB on the home
+page and cottage pages.").

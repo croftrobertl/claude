@@ -20,8 +20,8 @@ $root  = dirname(__DIR__);
 $base = $root . '/mphb-availability-calendar/';
 /** includes/ is implied for a bare class file; assets/ paths are given in full. */
 $resolve = static function (string $file) use ($base, $root): string {
-    // tools/ is repository-level, beside the plugin folder, not inside it.
-    if (str_starts_with($file, 'tools/')) {
+    // tools/ and tests/ are repository-level, beside the plugin folder.
+    if (str_starts_with($file, 'tools/') || str_starts_with($file, 'tests/')) {
         return $root . '/' . $file;
     }
     return str_contains($file, '/') ? $base . $file : $base . 'includes/' . $file;
@@ -1934,6 +1934,24 @@ $mutations = [
      "            } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === titleEl)) {",
      "            } else if (!e.shiftKey && document.activeElement === last) {",
      'lazy-panel-test.js'],
+
+    // --- 0.45.4: the scripts ship minified, and the suites run what ships
+    ["build js: the public page is sent the readable widget.js again", 'class-widget.php',
+     "return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'widget.js' : 'widget.min.js';",
+     "return 'widget.js';",
+     'build-test.php'],
+    ["build js: /staff/ is sent the readable staff.js again", 'class-staff-widget.php',
+     "return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'staff.js' : 'staff.min.js';",
+     "return 'staff.js';",
+     'build-test.php'],
+    ["build js: the build stops escaping non-ASCII (the committed files no longer match it)", 'tools/build-js.js',
+     "            ascii_only: true,",
+     "            ascii_only: false,",
+     'build-test.php'],
+    ["build js: the browser suites run the readable source, not what ships", 'tests/browser/harness.js',
+     "const jsShipped = () => shipped(js(), 'widget.js');",
+     "const jsShipped = () => js();",
+     'build-test.php'],
 ];
 
 $originals = [];

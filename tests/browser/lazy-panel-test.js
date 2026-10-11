@@ -74,7 +74,7 @@ function page(lazyIds, inlineIds, { infoDelayMs = 0, tall = false } = {}) {
         }
         return Promise.reject(new Error('unexpected fetch ' + action));
       };
-    </script><script>${H.js()}</script></body>`);
+    </script><script>${H.jsShipped()}</script></body>`);
   return html;
 }
 

@@ -42,6 +42,23 @@ const minCss = () => read('assets/css/widget.min.css');
  */
 const cssCode = () => css().replace(/\/\*[\s\S]*?\*\//g, '');
 const js = () => read('assets/js/widget.js');
+/**
+ * THE SCRIPT THAT SHIPS (0.45.4): the minified build of the CURRENT widget.js,
+ * made by the same tools/build-js.js that writes widget.min.js. Every suite
+ * that RUNS the widget runs this, so a minifier fault fails them, and a
+ * mutation made to the source still reaches the code under test. js() stays
+ * the readable source, for the checks that read the code rather than run it.
+ * tests/run.sh's build check then ties the committed .min.js to this build.
+ */
+const built = {};
+function shipped(source, name) {
+  if (!built[source]) {
+    built[source] = require('child_process').execFileSync(process.execPath,
+      [path.resolve(ROOT, '..', 'tools', 'build-js.js'), '--stdin', name], { input: source, encoding: 'utf8' });
+  }
+  return built[source];
+}
+const jsShipped = () => shipped(js(), 'widget.js');
 const php = () => read('includes/class-widget.php');
 
 /** A control's Elementor-emitted CSS, built from the source. */
@@ -195,5 +212,5 @@ function reporter() {
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 
-module.exports = { ROOT, css, minCss, cssCode, js, php, constOf, emit, extractBlock, dephp,
+module.exports = { ROOT, css, minCss, cssCode, js, jsShipped, shipped, php, constOf, emit, extractBlock, dephp,
   filtersHtml, sheetHtml, THEME, page, SENTINEL, reporter, CHROMIUM, WRAPPER, POST };

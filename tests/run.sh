@@ -40,6 +40,14 @@ for f in *-test.php; do run php "$f" "$f"; done
 # aggregate reported green without them.
 for f in js/*-test.js; do run node "$f" "$f"; done
 
+# The browser suites run the MINIFIED scripts (0.45.4), built on the fly by
+# tools/build-js.js, which needs its pinned terser: (cd ../tools && npm ci).
+if [ ! -d ../tools/node_modules/terser ]; then
+    echo
+    echo "build tools MISSING — run: (cd tools && npm ci)"
+    rc=1
+fi
+
 if [ -d browser/node_modules ]; then
     for f in browser/*-test.js; do run node "$(basename "$f")" "$f"; done
 else

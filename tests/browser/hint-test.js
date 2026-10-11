@@ -53,7 +53,7 @@ const CELL = `<div class="mphbac-grid"><div class="mphbac-row" data-room-type-id
     await p.setContent(html);
     await p.evaluate(() => { document.querySelector('.mphbac-root').dataset.config =
       JSON.stringify({ popupEnabled: true, minNights: 2, today: '2026-10-09', strings: {} }); });
-    if (script) { await p.addScriptTag({ content: H.js() }); await p.waitForTimeout(80); }
+    if (script) { await p.addScriptTag({ content: H.jsShipped() }); await p.waitForTimeout(80); }
     return { ctx, p };
   };
   // Geometry of one field: the pill, the hint's TEXT box, the type of both.
@@ -163,7 +163,7 @@ const CELL = `<div class="mphbac-grid"><div class="mphbac-row" data-room-type-id
     const ctx = await browser.newContext({ viewport: { width: 375, height: 860 } });
     const p = await ctx.newPage();
     await p.setContent(H.page({ panel: LIVE + ' .mphbac-input.mphbac-input{font-weight:500;font-style:italic;font-size:17px}', body: H.filtersHtml() }));
-    await p.addScriptTag({ content: H.js() }); await p.waitForTimeout(80);
+    await p.addScriptTag({ content: H.jsShipped() }); await p.waitForTimeout(80);
     const g = await geo(p, FIELDS[0]);
     check('a field control at 500 / italic / 17px: the hint follows it exactly',
       g.h.weight === '500' && g.h.style === 'italic' && g.h.size === '17px' && g.i.weight === '500', [g.h, g.i]);

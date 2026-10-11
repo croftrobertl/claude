@@ -69,7 +69,7 @@ const code = H.cssCode(), js = H.js();
   console.log('\n-- the label sits on its own row --');
   {
     const { ctx, p } = await open();
-    await p.addScriptTag({ content: js });
+    await p.addScriptTag({ content: H.jsShipped() });
     const rows = await p.evaluate(() => {
       const line = document.querySelector('.mphbac-estimate-line');
       line.innerHTML = '<strong class="mphbac-estimate-label">Estimated total:</strong> '

@@ -69,7 +69,7 @@ function shell(sow) {
   };
   const markup = S.dephp(S.extractBlock(S.widgetPhp(), '<div class="mphbac-staff" data-staff-config='))
     .replace('data-staff-config=""', "data-staff-config='" + JSON.stringify(config).replace(/'/g, '&#39;') + "'");
-  const js = require('fs').readFileSync(require('path').join(S.ROOT, 'assets/js/staff.js'), 'utf8');
+  const js = S.staffJsShipped();                       // what ships (0.45.4)
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{margin:0;font-family:Raleway,Georgia,serif}${S.THEME}</style>
