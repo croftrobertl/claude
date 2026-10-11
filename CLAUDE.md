@@ -1184,8 +1184,12 @@ yours to improvise.
     `before_delete_post` remembers a confirmed room's physical room + count,
     `mphb_booking_edited` writes the marker back on the new room with the SAME
     physical room AND count. Fails safe: nothing remembered → nothing written.
-    **That MotoPress deletes through `wp_delete_post()` (so the hook fires) is
-    UNVERIFIED** — the staging check list tests it.
+    **VERIFIED from live 6.3.0 source (Director, 2026-10-11):**
+    `AbstractPostRepository::delete()` → `ReservedRoomPersistence` (extends
+    `CPTPersistence`, no override) → `CPTPersistence::delete()`
+    (persistences/cpt-persistence.php ~194) fires
+    `mphb_reserved_room_persistence_before_delete_post` then `wp_delete_post()`
+    — so `before_delete_post` fires and the carry holds.
   - **C — imports record, never charge** (Rob: "all extra fees have to be
     added in the OTA"). Import = `mphb_ical_prodid` (`Policies::is_imported`).
     Pet part on an import: "Bringing a dog?" → booking meta **`_dcc_dog` =
@@ -1200,8 +1204,10 @@ yours to improvise.
   - **D — imports start at 2.** On `mphb_create_booking_via_ical($booking)`
     (rooms already saved, read fresh by `post_parent`): `_mphb_adults` →
     min(2, importer's value); never raised, never on a confirmed room, never
-    marked confirmed. Children NOT written (key unread from source; live
-    children capacity 0). Nothing hooks `mphb_update_booking_via_ical`, and
+    marked confirmed. Children NOT written: the key IS `_mphb_children`
+    (ReservedRoomRepository::mapEntityToPostData ~187, Director 2026-10-11),
+    but every live cottage's children capacity is 0, so the importer already
+    writes 0 and writing it again would change nothing. Nothing hooks `mphb_update_booking_via_ical`, and
     `updateBooking()` never writes adults (Director), so syncs keep the 2. No
     migration: the Director changes #18098/#19600/#19639/#19670 by hand.
   - **E — confirm only on a choice.** EVERY Update submits the Guest count
@@ -1219,6 +1225,42 @@ yours to improvise.
     stand-in had no booking repository, so every "no log line" assertion read
     an array nothing ever wrote; and an `inBox` helper read `<label>` text, so
     "no pet part" could not fail on the label-less "Pet fee:" line.
+- **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
+  (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
+  0.32.0, folding in his findings — not before).
+  - `ReservedRoom` getters: `getId()`, `getRoomId()`, `getRateId()`,
+    `getBookingId()`, `getRoomTypeId()`, `getAdults()`, `getChildren()`,
+    `getReservedServices()` (ReservedService[]), `getReservedServiceIds()`,
+    `getGuestName()`, `getStatus()`, `getUid()`. Constructor atts: `id`,
+    `room_id`, `booking_id`, `rate_id`, `adults`, `children`,
+    `reserved_services`, `guest_name`, `status` (default publish), `uid`.
+    **`uid` is read with array_key_exists — omit it and the constructor
+    GENERATES A NEW UID, which breaks the room's tie to the iCal feeds. Always
+    pass the room's own `getUid()`.**
+  - `ReservedService::create($atts)` (entities/reserved-service.php ~34):
+    needs `id` and `adults` (null otherwise, or for an unknown id); a
+    flexible-pay service (`periodicity == 'flexible'`) also needs `quantity`.
+    The three pet services (17712/17711/14926) are `per_night`, NOT flexible.
+    Stored `_mphb_services` rows are `['id' => ORIGINAL id, 'adults' => int,
+    'quantity' => int]`; live rows MotoPress wrote for a ticked pet box:
+    `a:1:{i:0;a:3:{s:2:"id";i:17712;s:6:"adults";i:1;s:8:"quantity";i:1;}}` —
+    write adults 1 / quantity 1 to price exactly like a ticked box.
+  - `BookingRepository::updateReservedRooms(int $bookingId)`
+    (repositories/booking-repository.php ~360) acts on the rooms `save()` took
+    from `$entity->getReservedRooms()`: a room whose `getId()` is listed is
+    saved IN PLACE (`CPTPersistence::createOrUpdate()`), any other existing
+    room of the booking is DELETED. So rebuilding each room with its existing
+    id, rate, adults, children, guest name, uid and other services keeps the
+    posts and their `_mphb_adults_confirmed`.
+  - MotoPress's own sequence (BookingControl::setup()): clone the booking,
+    (setDates — skip), `setRooms($rooms)`, `updateTotal()` (calcPrice →
+    getPriceBreakdown → PriceBreakdownHelper, coupons included), 
+    `BookingRepository::save($booking)` (writes `mphb_total_price` and
+    `_mphb_booking_price_breakdown`), `updateReservedRooms($id)`, `addLog()`.
+    No status change → no status emails (prove on staging: no new email-log
+    entry). Proof of the total: two identical staging bookings, one through
+    one-tap and one through Edit Accommodations, totals and breakdowns
+    compared by the Director.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
