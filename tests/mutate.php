@@ -1828,6 +1828,14 @@ $mutations = [
      "                if (!empty(\$row['muted'])) {",
      "                if (false) {",
      'staff-search-test.php'],
+    ["sheet: it opens with focus on the ✕ again (a coral ✕ on every open)", 'assets/js/staff.js',
+     "                try { sheetTitle.focus({ preventScroll: true }); } catch (e) { /* ignore */ }",
+     "                try { closeBtn.focus(); } catch (e) { /* ignore */ }",
+     'staff-board-test.js'],
+    ["sheet: Shift+Tab from the title leaves the dialog", 'assets/js/staff.js',
+     "(document.activeElement === first || document.activeElement === sheetTitle)",
+     "(document.activeElement === first)",
+     'staff-board-test.js'],
 ];
 
 $originals = [];

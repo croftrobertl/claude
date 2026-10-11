@@ -2810,3 +2810,18 @@ and "provided" would have found every import, and "canada" found a Vrbo
 booking ("count" is Metaphone KNT, as is "canada"). Muted rows — the
 board's own wording, never guest data; the only one today is this — are no
 longer indexed.
+
+**Found on the release screenshots, my call (flagged to the WD): the sheet
+now opens with focus on its TITLE, not its ✕.** Once the ✕ follows the
+public X, the theme's `button:focus` turns it coral — and the sheet focused
+it on open, so every booking details sheet opened with a coral ✕, a state
+that reads as its resting colour (the 0.24.0 complaint about the public
+info popup). The public BOOKING popup focuses its first field, not its X;
+this sheet has no field, so its title (tabindex="-1", no ring — it is a
+starting point, not a control). Tab goes on to the ✕; Shift+Tab from the
+title wraps to the last control, so focus cannot leave the dialog. The
+public cottage-info popup still focuses its X on open, so on live it
+probably opens coral — not changed here (a public-widget change).
+staff-test.js's long-title instrument matched the title markup verbatim and
+silently injected nothing once tabindex was added; it now matches the
+element whatever its attributes.

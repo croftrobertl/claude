@@ -723,6 +723,31 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     }
   }
 
+  console.log('\n-- 0.45.2: the sheet opens with focus on its title, so the ✕ does not open coral --');
+  for (const phone of [false, true]) {
+    const who = phone ? 'PHONE' : 'DESKTOP';
+    const { ctx, p } = await open({ phone });
+    if (phone) await p.tap('.mphbac-staff-bar[data-booking-id="1"]'); else await p.click('.mphbac-staff-bar[data-booking-id="1"]');
+    await p.waitForTimeout(500);
+    const st = () => p.evaluate(() => { const x = document.querySelector('.mphbac-staff-close'); x.style.transition = 'none';
+      const a = document.activeElement, sh = document.querySelector('.mphbac-staff-sheet');
+      return { on: a === document.querySelector('.mphbac-staff-sheet-title') ? 'title' : a === x ? 'close' : (sh.contains(a) ? 'inside' : 'OUTSIDE'),
+        bg: getComputedStyle(x).backgroundColor }; });
+    let v = await st();
+    check(`${who}: opened, focus is in the sheet, on its title`, v.on === 'title', v);
+    check(`${who}: ...so the ✕ opens at its resting tint, not the theme's coral`, v.bg !== 'rgb(240, 128, 128)' && /color\(srgb|231, 238, 247/.test(v.bg), v);
+    if (!phone) {
+      await p.keyboard.press('Tab');
+      v = await st();
+      check(`${who}: Tab from the title reaches the ✕ (which then shows the public X's keyboard focus)`, v.on === 'close' && v.bg === 'rgb(240, 128, 128)', v);
+      await p.evaluate(() => document.querySelector('.mphbac-staff-sheet-title').focus());
+      await p.keyboard.press('Shift+Tab');
+      v = await st();
+      check(`${who}: Shift+Tab from the title stays inside the sheet`, v.on !== 'OUTSIDE', v);
+    }
+    await ctx.close();
+  }
+
   console.log('\n-- 6: the sheet — tap to call / text / email, Open in WP-Admin --');
   {
     const { ctx, p } = await open();

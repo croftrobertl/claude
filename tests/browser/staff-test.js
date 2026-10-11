@@ -411,8 +411,7 @@ const BUTTONLIKE = [
         : { viewport: { width: w, height: 900 } });
       const p = await ctx.newPage();
       await p.setContent(S.page({ body: S.TOOLS,
-        sheet: S.SHEET.replace('class="mphbac-staff-sheet-title" id=""></div>',
-                               'class="mphbac-staff-sheet-title" id="">' + LONG + '</div>') }));
+        sheet: S.SHEET.replace(/(class="mphbac-staff-sheet-title"[^>]*>)<\/div>/, (_, open) => open + LONG + '</div>') }));
       await p.evaluate(() => { document.querySelector('.mphbac-staff-sheet')
         .style.cssText += ';transform:translate(-50%,-50%);opacity:1;'; });
       await p.waitForTimeout(400);
