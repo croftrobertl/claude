@@ -429,26 +429,31 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check(`${w}px: the six tiles are two full rows of three`, tiles.length === 6 && new Set(tiles).size === 2 && tiles.filter(t => t === tiles[0]).length === 3, tiles);
     await ctx.close();
   }
-  {
-    const { ctx, p } = await open({ phone: true });
+  for (const phone of [true, false]) {
+    const DEV = phone ? 'PHONE' : 'DESKTOP';
+    const { ctx, p } = await open({ phone });
     await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; });
     await p.waitForTimeout(200);
     const m = await p.evaluate(() => {
       const td = e => getComputedStyle(e).textDecorationLine;
       const kit = document.createElement('label'); kit.textContent = 'x'; document.body.appendChild(kit);
       const probe = td(kit); kit.remove();
+      // The chevron and the room made for it are part of "the Show list".
       const st = sel => { const e = document.querySelector(sel), c = getComputedStyle(e);
-        return [c.fontSize, c.fontWeight, c.color, c.borderTopColor, c.borderTopLeftRadius, c.fontFamily, c.textAlign].join(' | '); };
+        return [c.fontSize, c.fontWeight, c.color, c.borderTopColor, c.borderTopLeftRadius, c.fontFamily, c.textAlign,
+          c.paddingLeft, c.paddingRight, c.backgroundImage.slice(0, 40), c.backgroundPosition].join(' | '); };
       const lab = sel => { const e = document.querySelector(sel), c = getComputedStyle(e); return [c.fontSize, c.fontWeight, c.color, c.textAlign].join(' | '); };
       return { probe,
         deco: [...document.querySelectorAll('.mphbac-staff-stats-pick label, .mphbac-staff-stats-pick .mphbac-staff-field-label, .mphbac-staff-stats-pick .mphbac-staff-input')].map(td),
         spanSel: st('.mphbac-staff-stats-span'), showSel: st('.mphbac-staff-period'), monSel: st('.mphbac-staff-stats-month'),
+        yrSel: (() => { const f = document.querySelector('.mphbac-staff-stats-yearfield'); f.hidden = false; const r = st('.mphbac-staff-stats-year'); f.hidden = true; return r; })(),
         statsLab: lab('.mphbac-staff-stats-pick .mphbac-staff-field-label'), topLab: lab('.mphbac-staff-tools .mphbac-staff-field-label') };
     });
-    check('(instrument check) the live kit\'s label underline is in force on this page', m.probe === 'underline', m.probe);
-    check('PHONE: no Stats label, label text or field is underlined (0.45.3 — the 0.45.2 fix, now on Stats too)', m.deco.length >= 6 && m.deco.every(d => d === 'none'), m.deco);
-    check('PHONE: the Stats lists are the Show list — size, weight, ink, border, radius, face, centring', m.spanSel === m.showSel && m.monSel === m.showSel, [m.spanSel, m.monSel, m.showSel]);
-    check('PHONE: the Stats labels are the Show / Go to date labels', m.statsLab === m.topLab, [m.statsLab, m.topLab]);
+    check(`${DEV}: (instrument check) the live kit's label underline is in force on this page`, m.probe === 'underline', m.probe);
+    check(`${DEV}: no Stats label, label text or field is underlined (0.45.3 — the 0.45.2 fix, now on Stats too)`, m.deco.length >= 6 && m.deco.every(d => d === 'none'), m.deco);
+    check(`${DEV}: the Stats lists are the Show list — size, weight, ink, border, radius, face, centring, the chevron and its room`,
+      m.spanSel === m.showSel && m.monSel === m.showSel && m.yrSel === m.showSel, [m.spanSel, m.monSel, m.yrSel, m.showSel]);
+    check(`${DEV}: the Stats labels are the Show / Go to date labels`, m.statsLab === m.topLab, [m.statsLab, m.topLab]);
     await ctx.close();
   }
 
