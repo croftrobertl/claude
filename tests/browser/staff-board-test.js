@@ -22,12 +22,12 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
 
 (async () => {
   const browser = await chromium.launch(S.CHROMIUM);
-  const open = async ({ phone = false, inset = 0, clock = false, html = null, init = null } = {}) => {
+  const open = async ({ phone = false, inset = 0, clock = false, html = null, init = null, foot = '' } = {}) => {
     const ctx = await browser.newContext(phone
       ? { viewport: { width: 375, height: 900 }, isMobile: true, hasTouch: true }
       : { viewport: { width: 1280, height: 1000 } });
     const page = html || S.boardShell({ today: F.TODAY, cottages: F.COTTAGES, bookings: F.BOOKINGS, details: F.DETAILS, search: F.SEARCH,
-      bodyStyle: inset ? 'padding:0 ' + inset + 'px' : '' });
+      bodyStyle: inset ? 'padding:0 ' + inset + 'px' : '', foot });
     let loads = 0;
     await ctx.route(ORIGIN + '**', r => { loads++; return r.fulfill({ body: page, contentType: 'text/html' }); });
     if (init) await ctx.addInitScript(init);
@@ -187,14 +187,14 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await ctx.close();
   }
 
-  console.log('\n-- 1: the legend — Direct · Airbnb · Booking.com · Vrbo · Pending · Turnover · Pets · Couch · Boat --');
+  console.log('\n-- 1: the legend — Direct · Airbnb · Booking.com · Vrbo · Turnover · Pets · Couch · Boat (no Pending, 0.45.3) --');
   {
     const { ctx, p } = await open();
     const l = await p.evaluate(() => ({
       keys: [...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key')].map(k => k.textContent.trim()),
       sw: [...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key[class*="is-src-"]')].map(k => getComputedStyle(k, '::before').backgroundColor),
       ico: [...document.querySelectorAll('.mphbac-staff-legend span.mphbac-staff-ico')].map(i => [getComputedStyle(i).backgroundColor, getComputedStyle(i, '::before').backgroundColor]) }));
-    check('exactly those nine, in that order', JSON.stringify(l.keys) === JSON.stringify(['Direct', 'Airbnb', 'Booking.com', 'Vrbo', 'Pending', 'Turnover', 'Pets', 'Couch', 'Boat']), l.keys);
+    check('exactly those eight, in that order — "Pending" gone (Rob, 0.45.3)', JSON.stringify(l.keys) === JSON.stringify(['Direct', 'Airbnb', 'Booking.com', 'Vrbo', 'Turnover', 'Pets', 'Couch', 'Boat']), l.keys);
     check('the four sources in their colours', JSON.stringify(l.sw) === JSON.stringify(['direct', 'airbnb', 'booking', 'vrbo'].map(k => RGB[k])), l.sw);
     check('each icon WHITE on the neutral slate (#334155), never a source colour (WD)',
       l.ico.length === 3 && l.ico.every(([bg, fg]) => bg === 'rgb(51, 65, 85)' && fg === 'rgb(255, 255, 255)'), l.ico);
@@ -276,7 +276,13 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('opened: this month by default — the month already loaded, so no request', (await reqs()).length === n0, await reqs());
     check('October: booked 21% (52 of 248 cottage-nights, the echoing block counted once)', k.booked === '21%', k);
     check('...arrivals 10, departures 10, turnovers 2', k.arrivals === '10' && k.departures === '10' && k.turnovers === '2', k);
-    check('...with pets 3, with couch 3, with boat 2 — no "in house" outside Day', k.pets === '3' && k.couch === '3' && k.boat === '2' && !('inhouse' in k), k);
+    check('0.45.3: BOOKINGS 9 — the channel block echoing Bob is not a tenth (it owns no night)', k.bookings === '9', k);
+    check('...LENGTH 5.8 nights — (3+1+4+3+1+2+6+2+30) ÷ 9 whole stays, Ivy\'s 30 included', k.length === '5.8 nights', k);
+    const order = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-kpi')].map(x => x.className.replace('mphbac-staff-kpi is-', '')));
+    check('...in the order Bookings, Booked, Length, Arrivals, Departures, Turnovers — no Pets / Couch / Boat, no "in house" outside Day',
+      JSON.stringify(order) === JSON.stringify(['bookings', 'booked', 'length', 'arrivals', 'departures', 'turnovers']), order);
+    const heads = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-h')].map(h => h.textContent));
+    check('...headed "Nights Booked by Cottage" and "Nights Booked by Source" (Rob\'s words)', JSON.stringify(heads) === '["Nights Booked by Cottage","Nights Booked by Source"]', heads);
     const per = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-percot-row')].map(r =>
       [r.querySelector('.mphbac-staff-percot-name').textContent, [r.querySelector('.mphbac-staff-percot-num').textContent, r.querySelector('.mphbac-staff-percot-fill').style.width]])));
     check('nights booked per cottage: #28 30 nights (96.8%), #23 7 (the block counted once), #29 none',
@@ -297,6 +303,13 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     k = await kpis();
     check('Day: today by default — arriving 1, leaving 1, turnovers 1, IN HOUSE 2 (only for Day)',
       k.arrivals === '1' && k.departures === '1' && k.turnovers === '1' && k.inhouse === '2', k);
+    // A timeframe that CUTS a stay: Oct 4–10. Ivy's 30 nights mostly fall
+    // outside it, and Length counts them all (Rob: whole stays).
+    await p.selectOption('.mphbac-staff-stats-span', 'week');
+    await p.waitForTimeout(150);
+    k = await kpis();
+    check('Week Oct 4–10: 6 bookings own a night (Ed leaves on the 4th, the echo block owns none)', k.bookings === '6', k);
+    check('...Length 7.0 nights — whole stays 3+1+4+3+1+30, not the 18 nights inside the week (3.0)', k.length === '7.0 nights', k);
     await p.selectOption('.mphbac-staff-stats-span', 'year');
     await p.waitForTimeout(200);
     check('Year: one request for Jan 1 – Dec 31 (the same gated range endpoint)', (await reqs()).includes('2026-01-01|2026-12-31'), await reqs());
@@ -324,6 +337,135 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.waitForTimeout(250);
     check('Stats is closed again after a reload', await p.evaluate(() => !document.querySelector('.mphbac-staff-stats').open));
     await ctx.close();
+  }
+
+  console.log('\n-- 0.45.3: the Stats second box follows Timeframe, and the period goes with it --');
+  {
+    const { ctx, p } = await open();
+    await p.click('.mphbac-staff-stats-toggle');
+    await p.waitForTimeout(150);
+    const look = () => p.evaluate(() => {
+      const shown = [...document.querySelectorAll('.mphbac-staff-stats-pick .mphbac-staff-sfield')].filter(f => !f.hidden && getComputedStyle(f).display !== 'none');
+      return { boxes: shown.map(f => [f.querySelector('.mphbac-staff-field-label').textContent, f.querySelector('select, input').tagName === 'SELECT' ? 'select' : f.querySelector('input').type,
+                 f.querySelector('select, input').value]),
+               range: document.querySelector('.mphbac-staff-stats-range').textContent };
+    });
+    const pick = async (sel, v) => { await p.selectOption(sel, v); await p.waitForTimeout(150); };
+    let v = await look();
+    check('Month (the default): "Timeframe" and "Month", a list of months showing Oct 2026 — no "Date" box',
+      JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'month'], ['Month', 'select', '2026-10']]) && v.range === 'Oct 1, 2026 – Oct 31, 2026', v);
+    const months = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-month option')].map(o => o.textContent));
+    check('...the months run the board\'s ±3-year window, labelled like "Oct 2026"', months[0] === 'Oct 2023' && months[months.length - 1] === 'Oct 2029' && months.includes('Mar 2025'), [months[0], months.length, months[months.length - 1]]);
+    await pick('.mphbac-staff-stats-month', '2025-03');
+    v = await look();
+    check('Month "Mar 2025": Mar 1 – Mar 31, 2025', v.range === 'Mar 1, 2025 – Mar 31, 2025', v);
+    await pick('.mphbac-staff-stats-span', 'year');
+    v = await look();
+    check('→ Year: "Year", a list of years showing 2025 — the period came with it', JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'year'], ['Year', 'select', '2025']]) && v.range === 'Jan 1, 2025 – Dec 31, 2025', v);
+    const years = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-year option')].map(o => o.textContent));
+    check('...the years 2023–2029 (the ±3-year window)', JSON.stringify(years) === JSON.stringify(['2023', '2024', '2025', '2026', '2027', '2028', '2029']), years);
+    await pick('.mphbac-staff-stats-span', 'month');
+    v = await look();
+    check('→ back to Month: still Mar 2025', v.boxes[1][2] === '2025-03', v);
+    await pick('.mphbac-staff-stats-span', 'year');
+    await pick('.mphbac-staff-stats-year', '2027');
+    await pick('.mphbac-staff-stats-span', 'month');
+    v = await look();
+    check('Year changed to 2027, then Month: January 2027 (the WD)', v.boxes[1][2] === '2027-01', v);
+    await pick('.mphbac-staff-stats-span', 'year');
+    await pick('.mphbac-staff-stats-year', '2023');
+    v = await look();
+    const note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
+    check('Year 2023, partly outside the window: the range line shows the CLAMPED dates, and the note says so',
+      v.range === 'Oct 8, 2023 – Dec 31, 2023' && /±3-year range/.test(note), [v.range, note]);
+    await pick('.mphbac-staff-stats-span', 'day');
+    await p.fill('.mphbac-staff-stats-date', '2026-10-14');
+    await p.dispatchEvent('.mphbac-staff-stats-date', 'change');
+    await p.waitForTimeout(150);
+    v = await look();
+    check('Day: "Day", a date picker, the one day', v.boxes[1][0] === 'Day' && v.boxes[1][1] === 'date' && v.range === 'Oct 14, 2026', v);
+    await pick('.mphbac-staff-stats-span', 'week');
+    v = await look();
+    check('→ Week: "Week of", a date picker, the Sunday–Saturday week holding that day (the board\'s weeks)',
+      v.boxes[1][0] === 'Week of' && v.boxes[1][1] === 'date' && v.range === 'Oct 11, 2026 – Oct 17, 2026', v);
+    await pick('.mphbac-staff-stats-span', 'custom');
+    v = await look();
+    check('→ Custom: "From" and "To", opened on the week that was showing', JSON.stringify(v.boxes.map(b => [b[0], b[1]])) === JSON.stringify([['Timeframe', 'select'], ['From', 'date'], ['To', 'date']])
+      && v.boxes[1][2] === '2026-10-11' && v.boxes[2][2] === '2026-10-17', v);
+    await p.fill('.mphbac-staff-stats-from', '2025-12-28'); await p.fill('.mphbac-staff-stats-to', '2026-01-03');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change'); await p.waitForTimeout(150);
+    const len = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-length .mphbac-staff-kpi-num').textContent);
+    check('Length with no bookings in the timeframe: "—"', len === '—', len);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.45.3: Stats on a phone — side by side, the range line big and ONE line, the fields like Show / Go to date --');
+  for (const w of [320, 375]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, isMobile: true, hasTouch: true });
+    const html = S.boardShell({ today: F.TODAY, cottages: F.COTTAGES, bookings: F.BOOKINGS, details: F.DETAILS, search: F.SEARCH, bodyStyle: 'padding:0 16px' });
+    await ctx.route(ORIGIN + '**', r => r.fulfill({ body: html, contentType: 'text/html' }));
+    const p = await ctx.newPage(); await p.goto(ORIGIN); await p.waitForTimeout(300);
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; });
+    await p.waitForTimeout(200);
+    const rows = () => p.evaluate(() => {
+      const f = [...document.querySelectorAll('.mphbac-staff-stats-pick .mphbac-staff-sfield')].filter(x => !x.hidden);
+      return f.map(x => { const r = x.getBoundingClientRect(), i = x.querySelector('select, input').getBoundingClientRect();
+        return { top: Math.round(r.top), left: Math.round(i.left), right: Math.round(i.right) }; });
+    });
+    let r = await rows();
+    check(`${w}px: Timeframe and Month share one row, inside the screen`, r.length === 2 && r[0].top === r[1].top && r.every(x => x.left >= 0 && x.right <= w), r);
+    await p.selectOption('.mphbac-staff-stats-span', 'custom'); await p.waitForTimeout(150);
+    await p.fill('.mphbac-staff-stats-from', '2025-12-28'); await p.fill('.mphbac-staff-stats-to', '2026-01-03');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change'); await p.waitForTimeout(200);
+    r = await rows();
+    check(`${w}px Custom: Timeframe takes the first row, From and To share the second, nothing past the edge`,
+      r.length === 3 && r[1].top === r[2].top && r[1].top > r[0].top && r.every(x => x.left >= 0 && x.right <= w), r);
+    const line = await p.evaluate(() => { const e = document.querySelector('.mphbac-staff-stats-range'), c = getComputedStyle(e);
+      return { text: e.textContent, size: parseFloat(c.fontSize), lines: Math.round(e.getBoundingClientRect().height / parseFloat(c.lineHeight)),
+        fits: e.scrollWidth <= e.clientWidth + 0.5, inside: e.getBoundingClientRect().right <= innerWidth }; });
+    check(`${w}px: the longest real range ("${line.text}") on ONE line, whole, and big (≥ 22px; 30px where it fits)`,
+      line.text === 'Dec 28, 2025 – Jan 3, 2026' && line.lines === 1 && line.fits && line.inside && line.size >= 22, line);
+    const tiles = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-kpi')].map(k => Math.round(k.getBoundingClientRect().top)));
+    check(`${w}px: the six tiles are two full rows of three`, tiles.length === 6 && new Set(tiles).size === 2 && tiles.filter(t => t === tiles[0]).length === 3, tiles);
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open({ phone: true });
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; });
+    await p.waitForTimeout(200);
+    const m = await p.evaluate(() => {
+      const td = e => getComputedStyle(e).textDecorationLine;
+      const kit = document.createElement('label'); kit.textContent = 'x'; document.body.appendChild(kit);
+      const probe = td(kit); kit.remove();
+      const st = sel => { const e = document.querySelector(sel), c = getComputedStyle(e);
+        return [c.fontSize, c.fontWeight, c.color, c.borderTopColor, c.borderTopLeftRadius, c.fontFamily, c.textAlign].join(' | '); };
+      const lab = sel => { const e = document.querySelector(sel), c = getComputedStyle(e); return [c.fontSize, c.fontWeight, c.color, c.textAlign].join(' | '); };
+      return { probe,
+        deco: [...document.querySelectorAll('.mphbac-staff-stats-pick label, .mphbac-staff-stats-pick .mphbac-staff-field-label, .mphbac-staff-stats-pick .mphbac-staff-input')].map(td),
+        spanSel: st('.mphbac-staff-stats-span'), showSel: st('.mphbac-staff-period'), monSel: st('.mphbac-staff-stats-month'),
+        statsLab: lab('.mphbac-staff-stats-pick .mphbac-staff-field-label'), topLab: lab('.mphbac-staff-tools .mphbac-staff-field-label') };
+    });
+    check('(instrument check) the live kit\'s label underline is in force on this page', m.probe === 'underline', m.probe);
+    check('PHONE: no Stats label, label text or field is underlined (0.45.3 — the 0.45.2 fix, now on Stats too)', m.deco.length >= 6 && m.deco.every(d => d === 'none'), m.deco);
+    check('PHONE: the Stats lists are the Show list — size, weight, ink, border, radius, face, centring', m.spanSel === m.showSel && m.monSel === m.showSel, [m.spanSel, m.monSel, m.showSel]);
+    check('PHONE: the Stats labels are the Show / Go to date labels', m.statsLab === m.topLab, [m.statsLab, m.topLab]);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.45.3: the legend fits two lines on a phone; a pending stay keeps its stripes and the preview names it --');
+  {
+    const { ctx, p } = await open({ phone: true, inset: 27 });
+    const lines = await p.evaluate(() => new Set([...document.querySelectorAll('.mphbac-staff-legend .mphbac-staff-key')].map(k => Math.round(k.getBoundingClientRect().top))).size);
+    check('375px: the legend is at most 2 lines', lines <= 2, lines);
+    const striped = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-bar[data-booking-id="6"]')).backgroundImage);
+    check('Fay\'s pending stay keeps its stripes', /repeating-linear-gradient/.test(striped), striped);
+    await ctx.close();
+    const d = await open();
+    await d.p.hover('.mphbac-staff-bar[data-booking-id="6"]');
+    await d.p.waitForTimeout(700);
+    const pv = await d.p.evaluate(() => { const e = document.querySelector('.mphbac-staff-preview'); return e && !e.hidden ? e.textContent : null; });
+    check('...and its quick preview says "Pending"', !!pv && /Pending/.test(pv), pv);
+    await d.ctx.close();
   }
 
   console.log('\n-- 0.45.0: a long stay that began off-screen keeps its name in view --');
@@ -753,6 +895,57 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
       check(`${who}: Shift+Tab from the title stays inside the sheet`, v.on !== 'OUTSIDE', v);
     }
     await ctx.close();
+  }
+
+  console.log('\n-- 0.45.3: an auto-refresh never moves the page (Rob: "jumps to the footer, then comes back") --');
+  {
+    /* A phone, scrolled down the page, a site footer below the board (the
+       real one is Elfsight panels; this stand-in is just tall), requests
+       answered 800ms late as on a phone's network. The auto-refresh is
+       driven by the fake clock one 16ms frame at a time, and window.scrollY
+       read after EVERY frame — each read forces the layout in which a
+       browser would clamp the scroll — plus a scroll listener for anything
+       in between. Monthly with Stats open, Weekly, Daily. */
+    const FOOT = '<footer class="t-footer" style="height:1600px;background:#ececec">site footer</footer>';
+    for (const [label, setup] of [
+      ['Monthly, Stats open', async p => { await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; }); }],
+      ['Weekly', async p => { await choose(p, 'week'); }],
+      ['Daily', async p => { await choose(p, 'day'); }],
+    ]) {
+      for (const where of ['near the bottom of the board', 'mid-page']) {
+        const { ctx, p } = await open({ phone: true, clock: true, foot: FOOT });
+        await setup(p);
+        await p.clock.runFor(500);
+        // Near the bottom of the board: the top of the footer just in view
+        // — the place a page that briefly gets shorter pulls toward.
+        const y = await p.evaluate(where => { const f = document.querySelector('.t-footer').getBoundingClientRect().top + window.scrollY;
+          const target = where === 'mid-page' ? Math.round(f / 2) : Math.round(f - window.innerHeight + 120);
+          window.scrollTo(0, target); return Math.round(window.scrollY); }, where);
+        // Let the test's own scrollTo deliver its scroll event before
+        // listening — it once arrived late and read as a "move" to the same y.
+        await p.clock.runFor(100);
+        await p.evaluate(() => { window.__fetchDelay = 800; window.__moves = [];
+          window.addEventListener('scroll', () => window.__moves.push(Math.round(window.scrollY)), { passive: true }); });
+        const before = (await p.evaluate(() => window.__reqs.length));
+        // iOS has no scroll anchoring: there a page that gets shorter keeps
+        // its scrollY and the FOOTER slides up into view instead — "jumps to
+        // the footer". So the page's height and the footer's place on the
+        // screen are held to the same standard as scrollY.
+        const look = () => p.evaluate(() => ({ y: Math.round(window.scrollY), h: document.documentElement.scrollHeight,
+          foot: Math.round(document.querySelector('.t-footer').getBoundingClientRect().top) }));
+        const start = await look();
+        await p.clock.fastForward(3 * 60 * 1000 + 1000);
+        const frames = [];
+        for (let i = 0; i < 90; i++) { await p.clock.runFor(16); frames.push(await look()); }
+        const after = await p.evaluate(() => ({ reqs: window.__reqs.length, moves: window.__moves }));
+        check(`${label}, ${where}: (instrument check) the refresh really ran, with its requests in flight across the frames`, after.reqs > before && y > 0, { y, before, after: after.reqs });
+        const moved = frames.filter(f => f.y !== start.y || f.h !== start.h || f.foot !== start.foot);
+        const shifted = after.moves.filter(v => v !== start.y);
+        check(`${label}, ${where}: at every frame of the refresh, scrollY, the page's height and the footer's place on screen stay put`,
+          moved.length === 0 && shifted.length === 0, { start, frames: frames.length, moved: moved.slice(0, 4), scrollEvents: after.moves.slice(0, 6) });
+        await ctx.close();
+      }
+    }
   }
 
   console.log('\n-- 6: the sheet — tap to call / text / email, Open in WP-Admin --');

@@ -165,6 +165,22 @@ namespace {
     check('direct bookings unchanged: 2 and 4', $g[54] === '2' && $g[55] === '4', $g);
     check('import, 2 in a 2-sleeper: nothing unconfirmed, 2 confirmed', $g[56] === '' && $g[57] === '2', $g);
 
+    echo "\n-- 0.45.3: a dog recorded by STAFF (_dcc_dog) is a pet, strictly 'yes' --\n";
+    $imp = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];
+    $b = board([
+        60 => [$imp + ['_dcc_dog' => 'yes'], ['_mphb_adults' => 2]],     // import, no fee, no dog type
+        61 => [$imp + ['_dcc_dog' => 'no'], ['_mphb_adults' => 2]],
+        62 => [$imp, ['_mphb_adults' => 2]],                             // absent: nobody asked
+        63 => [$imp + ['_dcc_dog' => 'Yes'], ['_mphb_adults' => 2]],     // not the writer's value
+        64 => [$imp + ['_dcc_dog' => '1'], ['_mphb_adults' => 2]],
+        65 => [['_dcc_dog' => 'yes'], ['_mphb_adults' => 2]],             // a direct booking too
+    ]);
+    $pets = array_map(static fn($x) => $x['pets'], $b);
+    check("an import with _dcc_dog 'yes' and nothing else: pets — the paw, Daily, the preview", $pets[60] === true, $pets);
+    check("'no', or absent: not pets", $pets[61] === false && $pets[62] === false, $pets);
+    check("strict: 'Yes' and '1' are not 'yes'", $pets[63] === false && $pets[64] === false, $pets);
+    check("the same rule on a direct booking", $pets[65] === true, $pets);
+
     echo "\n-- 0.44.1 Couch: 3+ guests, only from a count a PERSON set --\n";
     $imp = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];
     $b = board([

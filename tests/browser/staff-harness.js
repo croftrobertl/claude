@@ -188,7 +188,7 @@ function boardStrings() {
   while ((m = re.exec(block))) out[m[1]] = m[2].replace(/\\'/g, "'");
   return out;
 }
-function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '' }) {
+function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '', foot = '' }) {
   const config = {
     ajaxUrl: '/ajax', nonce: 'n', month: today.slice(0, 7), today,
     calendar: {
@@ -207,10 +207,14 @@ function boardShell({ today, cottages, bookings, details = {}, search = {}, sow 
 <style>body{margin:0;font-family:Raleway,Georgia,serif;${bodyStyle}}${THEME}</style>
 <style>${css()}</style>${head}</head><body class="elementor-kit-9 elementor-kit-331">
 ${markup}
+${foot}
 <script>
   window.__reqs = [];
   var TODAY = ${JSON.stringify(today)}, BOOKINGS = ${JSON.stringify(bookings)}, COTTAGES = ${JSON.stringify(cottages)}, DETAILS = ${JSON.stringify(details)}, SEARCH = ${JSON.stringify(search)};
-  var json = function (o, st, h) { return Promise.resolve(new Response(JSON.stringify(o), { status: st || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, h || {}) })); };
+  // window.__fetchDelay (ms): answer late, as a phone's network does — so a
+  // test can see what the page looks like while a request is in flight.
+  var json = function (o, st, h) { var r = new Response(JSON.stringify(o), { status: st || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, h || {}) });
+    return window.__fetchDelay ? new Promise(function (res) { setTimeout(function () { res(r); }, window.__fetchDelay); }) : Promise.resolve(r); };
   window.fetch = function (url, opts) {
     var p = new URLSearchParams(opts.body.toString());
     var req = { action: p.get('action'), from: p.get('from'), to: p.get('to'), booking_id: p.get('booking_id'), nonce: p.get('nonce'), q: p.get('q') };

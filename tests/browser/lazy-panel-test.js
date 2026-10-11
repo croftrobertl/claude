@@ -317,6 +317,61 @@ function page(lazyIds, inlineIds, { infoDelayMs = 0, tall = false } = {}) {
     await ctx.close();
   }
 
+  console.log('\n-- 0.45.3: the cottage-info popup opens with focus on its TITLE, so its ✕ does not open coral --');
+  {
+    // The Website Director's copy of the LIVE kit rule, verbatim from
+    // uploads/elementor/css/post-331.css (2026-10-10), on a body that
+    // carries the live kit class.
+    const KIT331 = '.elementor-kit-331 button:hover,.elementor-kit-331 button:focus,.elementor-kit-331 input[type="button"]:hover,.elementor-kit-331 input[type="button"]:focus,.elementor-kit-331 input[type="submit"]:hover,.elementor-kit-331 input[type="submit"]:focus,.elementor-kit-331 .elementor-button:hover,.elementor-kit-331 .elementor-button:focus{background-color:#F08080;color:#FFFFFF;border-radius:30px 30px 30px 30px;}';
+    for (const touch of [false, true]) {
+      const who = touch ? 'PHONE' : 'DESKTOP';
+      const ctx = await browser.newContext(touch ? { viewport: { width: 393, height: 860 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
+      const p = await ctx.newPage();
+      p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
+      await p.setContent(page([], [22]).replace('</head>', `<style>${KIT331}</style></head>`).replace('<body class="', '<body class="elementor-kit-331 '));
+      await p.waitForSelector('.mphbac-row-toggle', { timeout: 5000 });
+      const kit = await p.evaluate(() => { const b = document.createElement('button'); b.style.transition = 'none'; document.body.appendChild(b); b.focus();
+        const c = getComputedStyle(b).backgroundColor; b.remove(); return c; });
+      check(`${who}: (instrument check) the verbatim kit rule is live here — a focused button turns coral`, kit === 'rgb(240, 128, 128)', kit);
+      if (touch) await p.tap(toggle(22)); else await p.click(toggle(22));
+      await p.waitForTimeout(700);
+      const st = () => p.evaluate(() => { const sh = document.querySelector('.mphbac-info-sheet'), x = sh.querySelector('.mphbac-info-close');
+        x.style.transition = 'none'; const a = document.activeElement;
+        return { on: a === sh.querySelector('.mphbac-sheet-header--info .mphbac-sheet-title') ? 'title' : a === x ? 'close' : (sh.contains(a) ? 'inside' : 'OUTSIDE'),
+          bg: getComputedStyle(x).backgroundColor, open: sh.classList.contains('is-open'), hasFocus: document.hasFocus() }; });
+      let v = await st();
+      check(`${who}: (instrument check) the popup is open and the page has focus`, v.open && v.hasFocus, v);
+      check(`${who}: opened by a ${touch ? 'tap' : 'click'}, focus is on the title`, v.on === 'title', v);
+      check(`${who}: ...so the ✕ is at its resting tint, not the kit's coral`, v.bg !== 'rgb(240, 128, 128)' && /color\(srgb|231, 238, 247/.test(v.bg), v);
+      if (!touch) {
+        await p.keyboard.press('Tab');
+        v = await st();
+        check(`${who}: Tab from the title reaches the ✕`, v.on === 'close', v);
+        await p.evaluate(() => document.querySelector('.mphbac-sheet-header--info .mphbac-sheet-title').focus());
+        await p.keyboard.press('Shift+Tab');
+        v = await st();
+        check(`${who}: Shift+Tab from the title stays inside the popup`, v.on !== 'OUTSIDE', v);
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        let back = await p.evaluate(() => ({ open: document.querySelector('.mphbac-info-sheet').classList.contains('is-open'),
+          inside: document.querySelector('.mphbac-info-sheet').contains(document.activeElement) }));
+        check(`${who}: Escape still closes it (clicked open: focus handed back to the page, no ring left on the row — unchanged)`, !back.open && !back.inside, back);
+        // Opened from the KEYBOARD, focus returns to the row and stays.
+        await p.focus(toggle(22));
+        await p.keyboard.press('Enter');
+        await p.waitForTimeout(700);
+        v = await st();
+        check(`${who}: opened from the keyboard, focus is on the title too`, v.open && v.on === 'title', v);
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        back = await p.evaluate(s => ({ open: document.querySelector('.mphbac-info-sheet').classList.contains('is-open'),
+          on: document.activeElement === document.querySelector(s) }), toggle(22));
+        check(`${who}: ...and Escape closes it with focus back on the row that opened it`, !back.open && back.on, back);
+      }
+      await ctx.close();
+    }
+  }
+
   await browser.close();
   done();
 })().catch(e => { console.error(e); process.exit(2); });

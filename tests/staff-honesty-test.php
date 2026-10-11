@@ -40,7 +40,7 @@ function scene(array $opts): array {
     t_post(22, 'mphb_room_type', 'publish', 'Cottage 22', ['mphb_adults_capacity' => $opts['capacity'] ?? 4]);
     t_post(220, 'mphb_room', 'publish', 'R', ['mphb_room_type_id' => 22]);
     t_post(300, 'mphb_booking', 'confirmed', 'B',
-        ['mphb_total_price' => 0] + (isset($opts['prodid']) ? ['mphb_ical_prodid' => $opts['prodid']] : []));
+        ['mphb_total_price' => 0] + (isset($opts['prodid']) ? ['mphb_ical_prodid' => $opts['prodid']] : []) + ($opts['meta'] ?? []));
     t_post(301, 'mphb_reserved_room', 'publish', 'RR',
         ['_mphb_room_id' => 220, '_mphb_adults' => $opts['adults'] ?? 4]
         + (!empty($opts['confirmed']) ? ['_mphb_adults_confirmed' => 1] : []));
@@ -108,6 +108,22 @@ echo "\n-- 0.45.2: an UNCONFIRMED imported count is never a real count, whatever
         $g = guests(scene(['adults' => $n, 'capacity' => $cap]));
         check("a DIRECT booking, $n in a $cap-sleeper: unchanged, $n", ($g['value'] ?? '') === (string) $n && empty($g['muted']), $g);
     }
+}
+
+echo "\n-- 0.45.3: a dog recorded by staff, and nothing else said: a \"Dog: Yes\" row --\n";
+{
+    $row = static function (array $d, string $label) {
+        foreach ($d['sections'] as $rows) { foreach ((array) $rows as $r) { if (($r['label'] ?? '') === $label) { return $r['value']; } } }
+        return null;
+    };
+    $d = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2, 'meta' => ['_dcc_dog' => 'yes']]);
+    check("an import with _dcc_dog 'yes', no dog details: the sheet says Dog: Yes (why the paw is there)", $row($d, 'Dog') === 'Yes', $row($d, 'Dog'));
+    $d = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2, 'meta' => ['_dcc_dog' => 'no']]);
+    check("'no': no Dog row", $row($d, 'Dog') === null, $row($d, 'Dog'));
+    $d = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2]);
+    check("absent: no Dog row", $row($d, 'Dog') === null, $row($d, 'Dog'));
+    $d = scene(['adults' => 2, 'meta' => ['_dcc_dog' => 'yes', 'mphb_dog_type' => 'Beagle']]);
+    check("a dog type filled in as well: the dog details show instead, no extra Dog row", $row($d, 'Dog Type') === 'Beagle' && $row($d, 'Dog') === null, [$row($d, 'Dog Type'), $row($d, 'Dog')]);
 }
 
 echo "\n-- with no capacity configured, nothing is claimed --\n";
