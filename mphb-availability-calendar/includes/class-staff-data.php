@@ -318,6 +318,12 @@ final class Staff_Data
                 if (!is_array($row) || !empty($row['photo'])) {
                     continue;                                   // never the Photo ID
                 }
+                if (!empty($row['muted'])) {
+                    // The board's own wording, not the guest's ("count not
+                    // provided by Vrbo", 0.45.2): indexed, every import would
+                    // answer "count" — and "canada", which sounds like it.
+                    continue;
+                }
                 $v = trim((string) ($row['value'] ?? ''));
                 if ($v !== '') {
                     $fields[] = [(string) $row['label'], $v];
@@ -416,16 +422,14 @@ final class Staff_Data
         self::push($out, __('Check-in', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
         self::push($out, __('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
 
-        // OTA HONESTY, refined. An imported booking's occupancy is usually
-        // MPHB's max-capacity default rather than the guest's actual party —
-        // but "usually" is not "always", and blanking every imported count
-        // also throws away a real number once somebody enters one.
-        //
-        // The default is identifiable: it equals the room type's
-        // mphb_adults_capacity AND the booking came from an iCal import. That
-        // COMBINATION is what makes it a default; either half alone does not.
-        // Anything else on an imported booking is a figure somebody actually
-        // entered, so it is shown.
+        // OTA HONESTY. An imported booking's occupancy is never the guest's
+        // party: Airbnb, Booking.com and Vrbo send none, so what is stored is
+        // MotoPress's default, or a later default (Custom Checkout starts
+        // imports at 2). Until 0.45.2 only a count EQUAL to the cottage's
+        // capacity was treated as unknown, which let a stored 2 in a
+        // 4-sleeper pass as a real party — see the branch below. A real
+        // number on an import is one a person confirmed, and that is the
+        // marker's job.
         // PROVENANCE FIRST. A count a human confirmed is shown whatever its
         // value and whatever the booking's source — that is the whole reason
         // the marker exists, and it is what finally settles a genuine party of
@@ -437,7 +441,15 @@ final class Staff_Data
                 __('Number of Guests', 'mphb-availability-calendar'),
                 self::guest_label($confirmed['adults'], $confirmed['children'])
             );
-        } elseif ($source['imported'] && self::is_capacity_default($rooms, $adults, $children)) {
+        } elseif ($source['imported']) {
+            // AN UNCONFIRMED IMPORTED COUNT IS NEVER A REAL COUNT, WHATEVER
+            // THE NUMBER (0.45.2, the Website Director). Until 0.45.2 only an
+            // import that EQUALLED the cottage's capacity read as unknown; on
+            // live 68 imports in 4-sleepers carry 2 — most likely from before
+            // the September capacity change — and showed as "2 guests", as if
+            // a guest had said so, and Custom Checkout 0.32.0 starts every new
+            // import at 2 (Rob). Airbnb, Booking.com and Vrbo send no count:
+            // only a person's (the marker above) is one. As Couch already was.
             self::push(
                 $out,
                 __('Number of Guests', 'mphb-availability-calendar'),
@@ -670,39 +682,6 @@ final class Staff_Data
     }
 
     /**
-     * Is this occupancy MPHB's capacity default rather than a real count?
-     *
-     * True only when the adults figure equals the room type's configured
-     * adult capacity and no children are recorded. The caller additionally
-     * requires the booking to be an iCal import — the two together are what
-     * identify the default. On a 4-capacity cottage a genuine party of 4 is
-     * indistinguishable from the default, which is why the WP-Admin override
-     * above exists and is checked FIRST.
-     *
-     * @param array<int,array<string,mixed>> $rooms
-     */
-    private static function is_capacity_default(array $rooms, int $adults, int $children): bool
-    {
-        if ($children > 0) {
-            return false;
-        }
-        $capacity = 0;
-        foreach ($rooms as $r) {
-            $type_id = (int) ($r['room_type_id'] ?? 0);
-            if ($type_id <= 0) {
-                continue;
-            }
-            $cap = (int) get_post_meta($type_id, 'mphb_adults_capacity', true);
-            if ($cap > 0) {
-                $capacity += $cap;
-            }
-        }
-        // No capacity configured tells us nothing, so fall back to the old
-        // behaviour of not trusting an imported count.
-        return $capacity === 0 || $adults === $capacity;
-    }
-
-    /**
      * Does this booking carry a pet fee?
      *
      * The pet questions were `select` controls with no blank option, so the
@@ -867,8 +846,8 @@ final class Staff_Data
 
     /**
      * The guest count as the sheet would show it, for the quick preview:
-     * a confirmed count whatever its source; nothing for an import that only
-     * carries the cottage's default capacity; otherwise the stored count.
+     * a confirmed count whatever its source; nothing for an unconfirmed
+     * import, whatever its number (0.45.2); otherwise the stored count.
      * Read from the reserved rooms' meta — no entity.
      *
      * @param array<int,array<string,mixed>> $rooms
@@ -880,6 +859,9 @@ final class Staff_Data
         if ($confirmed !== null) {
             return self::guest_label($confirmed['adults'], $confirmed['children']);
         }
+        if (!empty($source['imported'])) {
+            return '';                       // an import's own number is never a count (0.45.2)
+        }
         $adults = 0;
         $children = 0;
         foreach ($rooms as $r) {
@@ -888,9 +870,6 @@ final class Staff_Data
                 $adults   += (int) get_post_meta($rr, '_mphb_adults', true);
                 $children += (int) get_post_meta($rr, '_mphb_children', true);
             }
-        }
-        if (!empty($source['imported']) && self::is_capacity_default($rooms, $adults, $children)) {
-            return '';
         }
         return self::guest_label($adults, $children);
     }
