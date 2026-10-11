@@ -34,7 +34,11 @@ if (!defined('ABSPATH')) {
  * at 10) saves the booking with BookingRepository::save(), which calls
  * wp_update_post() and so fires save_post AGAIN inside itself. A handler on
  * save_post would therefore first run nested inside MotoPress's save, before
- * that save has finished writing. So save_post only RECORDS that a rebuild is
+ * that save has finished writing. VERIFIED (Director, live 6.3.0):
+ * CPTPersistence::update() (~172) calls wp_update_post() FIRST and only then
+ * updatePostRelatedData(), which writes the meta including mphb_total_price —
+ * so any save_post handler, at any priority, runs before MotoPress writes its
+ * reloaded total, and would be overwritten. So save_post only RECORDS that a rebuild is
  * due (after the nonce, capability and post_ID checks), and the rebuild runs on
  * `redirect_post_location` — the filter WordPress's post.php applies once,
  * after edit_post() and every save handler have returned, just before it
@@ -55,7 +59,8 @@ final class Fee_Sync
 
     /**
      * Statuses whose fees are never changed (Rob). MotoPress's booking
-     * post_status values. DCC-VERIFY: the two strings, read from source.
+     * post_status values. VERIFIED (Director, live 6.3.0,
+     * post-types/booking-cpt/statuses.php ~9–15): exactly these two.
      */
     public const FROZEN_STATUSES = ['cancelled', 'abandoned'];
 

@@ -26,9 +26,12 @@
  *
  * MOTOPRESS'S OWN UPDATE is modelled too (EditCPTPage::saveMetaBoxes on
  * save_post at 10: removes itself, reloads, sets the posted status, saves) —
- * in its WORST plausible form: it writes the reloaded (stale) total AFTER its
- * own nested save_post has run. That is the case that decides where the
- * rebuild may run; it is constructed, not assumed away.
+ * in the order it really runs: it writes the reloaded (stale) total AFTER its
+ * own nested save_post has run. First built as the worst plausible case; then
+ * VERIFIED as MotoPress's real order (Director, live 6.3.0:
+ * CPTPersistence::update() ~172 calls wp_update_post() before
+ * updatePostRelatedData(), which writes mphb_total_price). That is what
+ * decides where the rebuild may run.
  */
 namespace {
 define('ABSPATH', __DIR__);
@@ -229,7 +232,7 @@ function check($name, $actual, $expected) {
     if (!$ok) { echo '      expected: ' . var_export($expected, true) . "\n      actual:   " . var_export($actual, true) . "\n"; }
 }
 
-/** MotoPress's own Update (EditCPTPage::saveMetaBoxes), worst plausible form. */
+/** MotoPress's own Update (EditCPTPage::saveMetaBoxes), in its verified write order. */
 function motopress_save($post_id, $post = null) {
     if ((int) ($_POST['post_ID'] ?? 0) !== (int) $post_id) { return; }
     remove_action('save_post', 'motopress_save', 10);

@@ -1317,7 +1317,8 @@ yours to improvise.
   `updateTotal()`, `save()`, `updateReservedRooms()`, `addLog()` — one line
   per Update, e.g. "Pet fee added; total $200 → $250", and the same text as a
   one-time admin notice. Imports and cancelled/abandoned bookings: never.
-  - **ONLY ON A CHANGE MADE IN THAT UPDATE** (my default, flagged to Rob). A
+  - **ONLY ON A CHANGE MADE IN THAT UPDATE** (Rob's decision, 2026-10-11:
+    "Leave it alone"). A
     booking whose stored fee disagrees with its count — an old booking, a fee
     the owner waived — is left alone when saved for any other reason. The
     count's "change" is the stored `_mphb_adults` snapshotted at
@@ -1332,8 +1333,12 @@ yours to improvise.
     so save_post fires AGAIN inside MotoPress's save, before that save returns.
     A save_post handler therefore runs nested, and if MotoPress writes its
     reloaded total after `wp_update_post()` returns, the new total is
-    overwritten — services say Yes, total says No. Whether it does is NOT
-    verified; the suite models that worst case and shows both outcomes (the
+    overwritten — services say Yes, total says No. **VERIFIED that it does**
+    (Director, live 6.3.0): `CPTPersistence::update()` (~172) calls
+    `wp_update_post()` FIRST and only then `updatePostRelatedData()`, which
+    writes the meta including `mphb_total_price` — so ANY save_post handler,
+    at any priority, would be overwritten; the Director withdrew "priority 20".
+    The suite models exactly that order and shows both outcomes (the
     save_post-at-20 variant loses the total; the redirect does not). save_post
     only records that a rebuild is due, after nonce (`dcc_fee_sync`, printed
     in "Guest count"), `edit_post`, the form's `post_ID`, not autosave or
@@ -1360,11 +1365,17 @@ yours to improvise.
   - **The stand-in is a model, not MotoPress.** `tests/fees/` models the
     repository and entities from the Director's reads, with its own prices;
     it proves what MotoPress is GIVEN and that it is asked to reprice, never
-    the total. **DCC-VERIFY (Director, before staging):** the class names
-    `\MPHB\Entities\ReservedRoom` / `\MPHB\Entities\ReservedService`; the
-    status strings `cancelled` / `abandoned`; the stored `_mphb_services` row
-    MotoPress writes for a ticked Extra Guest Fee (its `quantity`; this writes
-    1); that the booking screen is the classic form. **Proof of the money**:
+    the total. **VERIFIED (Director, live 6.3.0 source and data, 2026-10-11):**
+    `\MPHB\Entities\ReservedRoom` (entities/reserved-room.php) and
+    `\MPHB\Entities\ReservedService extends Service` with `public static
+    create()` (~34); statuses exactly `cancelled` / `abandoned` (statuses.php
+    ~9–15; live: 153 cancelled, 16 abandoned); service 18063 is per_night,
+    `mphb_price_quantity` **per_adult**, min/max quantity 1/2, and its stored
+    row for one extra guest is
+    `a:1:{i:0;a:3:{s:2:"id";i:18063;s:6:"adults";i:1;s:8:"quantity";i:1;}}`
+    — so `adults` = guests beyond 2, `quantity` = 1 matches MotoPress's own;
+    the `mphb_booking` CPT has `'supports' => false` and no `show_in_rest`, so
+    the edit screen IS the classic post.php form. **Proof of the money**:
     the staging comparison — the same change by Update and by Edit
     Accommodations on two identical bookings, `mphb_total_price` and
     `_mphb_booking_price_breakdown` compared, and no new email-log entry.
