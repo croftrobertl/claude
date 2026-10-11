@@ -2825,3 +2825,40 @@ probably opens coral — not changed here (a public-widget change).
 staff-test.js's long-title instrument matched the title markup verbatim and
 silently injected nothing once tabindex was added; it now matches the
 element whatever its attributes.
+
+### The live kit rule, verified (2026-10-11) — and a retracted reading
+
+**The rule, verbatim from wp-content/uploads/elementor/css/post-331.css
+(WD, 2026-10-10):**
+`.elementor-kit-331 button:hover,.elementor-kit-331 button:focus,
+.elementor-kit-331 input[type="button"]:hover,… input[type="submit"]:focus,
+.elementor-kit-331 .elementor-button:hover,… .elementor-button:focus
+{background-color:#F08080;color:#FFFFFF;border-radius:30px 30px 30px 30px;}`
+— plain `:focus`, at (0,2,1). The harness copy (staff-harness.js THEME,
+`.elementor-kit-9 button:hover, … button:focus`) is CORRECT; keep it.
+
+**Retracted:** a reading of the public cottage-info ✕ "focused on open, yet
+at rest" came from a browser pane without document focus
+(document.hasFocus() false, innerWidth 0), where :focus never matches — an
+instrument artifact, not live behaviour. My reply had argued from it that
+the live rule was probably `:focus-visible`; that reasoning is withdrawn.
+**Lesson: before reading a focus state, check document.hasFocus().**
+So on a real device the public cottage-info ✕, focused when the popup
+opens, almost certainly opens coral (widget.css has no focus override for
+it — only :focus-visible outlines and guarded hover colours). Not checked
+on a real phone.
+
+**Kept from that exchange:** the board parity test's "focused by script
+after a tap or a click" state (commit 868f5f7), and — verified separately —
+parity holds whichever of the two forms a kit rule takes.
+
+**Queued for 0.45.3 (after Rob's review of 0.45.2, folding in his findings):**
+- 6 (WD): Pets = dog type non-blank OR the pet fee OR `_dcc_dog` === 'yes'
+  (strict, like _mphb_adults_confirmed), via has_pet() — so the paw, Daily,
+  the preview and Stats follow; a "Dog: Yes" sheet row when 'yes' and no dog
+  details are filled in (which search then indexes).
+- 7 (WD): the PUBLIC cottage-info popup opens with focus on its title
+  (tabindex="-1", no ring), not its ✕ — as the staff sheet does since
+  0.45.2; Tab reaches the ✕, Shift+Tab stays inside, Escape closes, focus
+  returns to the opening row; no other public change; tested with the
+  verbatim kit rule at desktop and phone widths.
