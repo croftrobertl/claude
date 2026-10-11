@@ -1031,6 +1031,9 @@ span.mphbac-staff-ico::before {
     text-align: center;
     overflow-wrap: anywhere;
 }
+/* The title takes focus when the sheet opens (0.45.2, see staff.js): it is a
+   starting point for Tab, not a control, so it draws no ring. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title:focus { outline: none; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close {
     position: absolute;
     top: 50%;

@@ -1166,7 +1166,14 @@
             requestAnimationFrame(function () { requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
-                try { closeBtn.focus(); } catch (e) { /* ignore */ }
+                // Focus the TITLE, not the ✕ (0.45.2). The theme's
+                // `button:focus` turns a focused button coral, and the ✕ now
+                // takes it like the public X does — so focusing it here made
+                // every sheet OPEN with a coral ✕, a state that reads as its
+                // resting colour (what 0.24.0 removed from the public popup).
+                // The public booking popup focuses its first field, not its X;
+                // this sheet has no field, so its title. Tab goes on to the ✕.
+                try { sheetTitle.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
             }); });
             document.addEventListener('keydown', onKeydown);
         }
@@ -1200,7 +1207,7 @@
             if (!sheet.contains(document.activeElement)) {
                 e.preventDefault(); (e.shiftKey ? last : first).focus(); return;
             }
-            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            if (e.shiftKey && (document.activeElement === first || document.activeElement === sheetTitle)) { e.preventDefault(); last.focus(); }
             else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
         }
 

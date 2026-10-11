@@ -326,7 +326,7 @@ final class Staff_Widget
             <div class="mphbac-staff-sheet" role="dialog" aria-modal="true"
                  aria-labelledby="<?php echo esc_attr($title_id); ?>" hidden>
                 <div class="mphbac-staff-sheet-head">
-                    <div class="mphbac-staff-sheet-title" id="<?php echo esc_attr($title_id); ?>"></div>
+                    <div class="mphbac-staff-sheet-title" id="<?php echo esc_attr($title_id); ?>" tabindex="-1"></div>
                     <?php // The same mark the public booking popup uses, character for
                     // character: a shared snippet is the only version of "these two
                     // cannot drift" that a stylesheet cannot undo. stroke-width is
