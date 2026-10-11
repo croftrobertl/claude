@@ -753,6 +753,7 @@ button.mphbac-cell-label {
     align-items: flex-start;
     gap: 0.5em;
 }
+.mphbac-sheet-header--info .mphbac-sheet-title:focus-visible { outline: none; }
 .mphbac-sheet-header--info .mphbac-sheet-title {
     padding-right: 2.2em;
 }

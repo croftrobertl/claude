@@ -1499,8 +1499,15 @@
                 // have cached zero-dimension state in the hidden source.
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
                 // Move focus inside the dialog so Tab cycling has a
-                // defined starting point and the trap below activates.
-                if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
+                // defined starting point and the trap below activates —
+                // onto the TITLE, not the X (0.45.3, the Website Director):
+                // the theme's `button:focus` turns a focused X coral, so the
+                // popup opened with a coral X, which reads as its resting
+                // colour. The staff sheet has done the same since 0.45.2.
+                // Tab goes on to the X.
+                var infoTitle = sheet.querySelector('.mphbac-sheet-header--info .mphbac-sheet-title');
+                var start = infoTitle || closeBtn;
+                if (start) { try { start.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
             }); });
             // Once the slide-in transition settles and the popup is at full
             // width, do the heavier slider repair. refreshSwipers above runs
@@ -1641,9 +1648,15 @@
                 (e.shiftKey ? last : first).focus();
                 return;
             }
+            // The title is where focus starts (0.45.3) but is not in the Tab
+            // order. The floating X comes BEFORE it in the markup: Shift+Tab
+            // from the title lands on the X by itself, but nothing focusable
+            // follows it, so Tab from the title is sent to the first control
+            // (the X) rather than out to the page behind.
+            var titleEl = sheet.querySelector('.mphbac-sheet-header--info .mphbac-sheet-title');
             if (e.shiftKey && document.activeElement === first) {
                 e.preventDefault(); last.focus();
-            } else if (!e.shiftKey && document.activeElement === last) {
+            } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === titleEl)) {
                 e.preventDefault(); first.focus();
             }
         }

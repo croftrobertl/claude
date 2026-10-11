@@ -1909,7 +1909,7 @@ class Widget extends Widget_Base
                         // .mphbac-sheet-title pins every property that differs — see the
                         // font-size note in widget.css. aria-labelledby below still names
                         // the dialog from this id; a div is a valid name source. ?>
-                        <div class="mphbac-sheet-title" id="mphbac-info-title"></div>
+                        <div class="mphbac-sheet-title" id="mphbac-info-title" tabindex="-1"></div>
                         <?php
                         $view_icon_html = '';
                         if (!empty($settings['view_icon']['value'])) {

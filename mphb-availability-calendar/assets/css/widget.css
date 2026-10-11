@@ -1593,6 +1593,11 @@ button.mphbac-cell-label {
     align-items: flex-start;
     gap: 0.5em;
 }
+/* The info title takes focus when the popup opens (0.45.3, see widget.js):
+   a starting point for Tab, not a control, so it draws no ring — the only
+   ring a browser would draw on it is :focus-visible's, after a keyboard
+   open (a bare :focus rule is banned in this file; see polish-test.js). */
+.mphbac-sheet-header--info .mphbac-sheet-title:focus-visible { outline: none; }
 .mphbac-sheet-header--info .mphbac-sheet-title {
     /* The X is no longer a flex sibling; leave room so the title never
        collides with the floating button. */
