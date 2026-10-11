@@ -2782,3 +2782,31 @@ touch-linger check keeps the bar and the row; the ✕ token / no-fill checks
 now drop the kit rule on the staff page, as the public fixture never had it
 (like with like); the 0.44.1 mutation "a tapped nav arrow stays coral" is
 retired and replaced by its reverse.
+
+### Second addendum: an unconfirmed imported count is never a count (0.45.2)
+
+**WD (decided):** for an imported booking, show a guest number ONLY when it
+is staff-confirmed (_mphb_adults_confirmed); otherwise the sheet says
+"count not provided by <OTA>" (muted) and the preview shows nothing. Couch
+already followed this and is unchanged. **The WD's live figures:** of the
+unconfirmed imported rooms, 70 carry 2 in the 2-sleepers (C33 / C34 — read
+as unknown already, since 2 was their capacity), **68 carry 2 in 4-sleepers**
+(most likely from before the September capacity change — shown as "2 guests"
+as if a guest had said so), and 4 carry 4 in 4-sleepers. **Rob:** Custom
+Checkout 0.32.0 will start every new import at 2, which would have added to
+the 68.
+**Built:** the sheet's branch and guest_count_text() (the preview, via
+month_view's 'guests') now test `imported` alone after the confirmed check.
+is_capacity_default() had no callers left and is gone, with its mutation
+retired; its two siblings were retargeted onto the new branches.
+**Tests:** the WD's matrix in staff-honesty-test.php (the sheet) and
+staff-board-data-test.php (the preview): imports at 2 and at 4 in a
+4-sleeper and at 2 in a 2-sleeper, each unconfirmed and confirmed, and a
+direct booking unchanged. Three earlier checks that said "an import's
+non-capacity number is a real figure" were rewritten to the new rule.
+**Found on the way (mine):** the search index holds what the sheet shows,
+so every import now carried the words "count not provided by …" — "count"
+and "provided" would have found every import, and "canada" found a Vrbo
+booking ("count" is Metaphone KNT, as is "canada"). Muted rows — the
+board's own wording, never guest data; the only one today is this — are no
+longer indexed.
