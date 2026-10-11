@@ -2547,5 +2547,270 @@
   "find": "        return '<table class=\"form-table dcc_guests-boat\"><tbody id=\"dcc_boat_row\"></tbody></table>';",
   "replace": "        return '';",
   "count": 1
+ },
+ {
+  "id": "fs-redirect-dead",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the rebuild runs on redirect_post_location",
+  "find": "        if (self::$running || !array_key_exists($post_id, self::$pending)) {\n            return $location;",
+  "replace": "        if (true) {\n            return $location;",
+  "count": 1
+ },
+ {
+  "id": "fs-nonce-unchecked",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: only with the booking screen's fee nonce",
+  "find": "        if (empty($_POST[self::NONCE . '_nonce'])\n            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[self::NONCE . '_nonce'])), self::NONCE)) {\n            return false;\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-postid-unchecked",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: only for the form's own post_ID",
+  "find": "        if (!isset($_POST['post_ID']) || (int) $_POST['post_ID'] !== $post_id) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "fs-cap-unchecked",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: only with edit_post",
+  "find": "        return current_user_can('edit_post', $post_id);",
+  "replace": "        return true;",
+  "count": 1
+ },
+ {
+  "id": "fs-imports-allowed",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: imports never get a fee",
+  "find": "        if ($booking_id <= 0 || Policies::is_imported($booking_id)) {",
+  "replace": "        if ($booking_id <= 0) {",
+  "count": 1
+ },
+ {
+  "id": "fs-frozen-allowed",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees",
+   "admin-layout"
+  ],
+  "claim": "0.33.0: cancelled / abandoned bookings are never repriced",
+  "find": "    public const FROZEN_STATUSES = ['cancelled', 'abandoned'];",
+  "replace": "    public const FROZEN_STATUSES = [];",
+  "count": 1
+ },
+ {
+  "id": "fs-snapshot-last-wins",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the FIRST snapshot wins (MotoPress's nested save fires the hook again)",
+  "find": "        if (self::$running || isset(self::$before[$post_id]) || !self::request_is_ours($post_id)) {",
+  "replace": "        if (self::$running || !self::request_is_ours($post_id)) {",
+  "count": 1
+ },
+ {
+  "id": "fs-count-change-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the fee follows a CHANGED count only — an old mismatch is left alone",
+  "find": "                if (!array_key_exists($rid, $before) || $before[$rid] === $r['adults']) {",
+  "replace": "                if (!array_key_exists($rid, $before)) {",
+  "count": 1
+ },
+ {
+  "id": "fs-pet-unchanged-acts",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: an unchanged pet choice writes nothing",
+  "find": "                if ($has !== $want) {",
+  "replace": "                if (true) {",
+  "count": 1
+ },
+ {
+  "id": "fs-uid-dropped",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the room keeps its own uid",
+  "find": "                    'uid'               => $room->getUid(),\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-other-services-dropped",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: other services ride through",
+  "find": "                    $rows = self::without($rooms[$rid]['services'], $pet_ids);",
+  "replace": "                    $rows = [];",
+  "count": 1
+ },
+ {
+  "id": "fs-tier-fixed",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the pet tier follows the stay's length",
+  "find": "                        $tier = $nights > 0 ? Config::service_id_for_nights($nights) : 0;",
+  "replace": "                        $tier = $nights > 0 ? Config::service_id_for_nights(1) : 0;",
+  "count": 1
+ },
+ {
+  "id": "fs-nights-off-by-one",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: nights are the dates' difference",
+  "find": "        return (int) $a->diff($b)->days;",
+  "replace": "        return (int) $a->diff($b)->days + 1;",
+  "count": 1
+ },
+ {
+  "id": "fs-multiplier-whole-count",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the fee is for guests BEYOND those included",
+  "find": "                $extra = max(0, $count - $included);",
+  "replace": "                $extra = max(0, $count);",
+  "count": 1
+ },
+ {
+  "id": "fs-two-pet-rooms",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: two pet rooms: the pet choice is not applied",
+  "find": "            if (count($pet_rooms) === 1) {",
+  "replace": "            if (count($pet_rooms) >= 1) {",
+  "count": 1
+ },
+ {
+  "id": "fs-control-two-pet-rooms",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: two pet rooms: no control on the screen",
+  "find": "        return $pet_rooms === 1 ? 'select' : 'readonly';",
+  "replace": "        return $pet_rooms >= 1 ? 'select' : 'readonly';",
+  "count": 1
+ },
+ {
+  "id": "fs-unknown-service-continues",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: every check before the first write — an unbuildable service writes NOTHING",
+  "find": "                    if (!$svc) {\n                        return $fail;    // an id MotoPress does not know\n                    }",
+  "replace": "                    if (!$svc) {\n                        continue;\n                    }",
+  "count": 1
+ },
+ {
+  "id": "fs-switch-off-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the Guest 3/4 switch off: a count changes no fee",
+  "find": "        if (Config::guest_fee_active()) {",
+  "replace": "        if (true) {",
+  "count": 1
+ },
+ {
+  "id": "fs-fee-cottage-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: only cottages that carry the fee",
+  "find": "                if ($r['type'] <= 0 || !in_array($r['type'], $fee_types, true)) {",
+  "replace": "                if ($r['type'] <= 0) {",
+  "count": 1
+ },
+ {
+  "id": "fs-read-services-lenient",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: a services shape it cannot rebuild is never rewritten",
+  "find": "            if (!is_array($row) || !isset($row['id'], $row['adults']) || !is_numeric($row['id']) || !is_numeric($row['adults'])) {\n                return null;\n            }",
+  "replace": "            if (!is_array($row)) {\n                $row = ['id' => $row, 'adults' => 1];\n            }",
+  "count": 1
+ },
+ {
+  "id": "fs-notice-unescaped",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the notice is escaped",
+  "find": "        echo '<div class=\"notice notice-info is-dismissible\"><p>' . esc_html($message) . '</p></div>';",
+  "replace": "        echo '<div class=\"notice notice-info is-dismissible\"><p>' . $message . '</p></div>';",
+  "count": 1
+ },
+ {
+  "id": "ag-fee-nonce-missing",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.0: the Guest count box carries the fee nonce",
+  "find": "        echo Fee_Sync::nonce_field(); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field() output\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "ed-select-when-frozen",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.33.0: a cancelled booking gets no Pet fee control",
+  "find": "                if ($control === 'select' && ($pet === 'yes' || $pet === 'no')) {",
+  "replace": "                if ($pet === 'yes' || $pet === 'no') {",
+  "count": 1
+ },
+ {
+  "id": "js-pet-select-ignored",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.33.0: Dog follows the Pet fee control before the save",
+  "find": "                var feeSel = document.getElementById('dcc_pet_fee');\n                if (feeSel) {",
+  "replace": "                var feeSel = null;\n                if (feeSel) {",
+  "count": 1
  }
 ]

@@ -111,16 +111,33 @@ final class Extra_Details
                     . '</span></p>';
             } else {
                 $pet = Admin_Fields::booking_pet_state($booking_id);
-                $out .= '<p class="dcc_admin-petfee-line"><strong>' . esc_html__('Pet fee:', 'dcc-checkout') . '</strong> ';
-                $out .= ($pet === 'yes' || $pet === 'no')
-                    ? esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'))
-                    : esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
-                $out .= '</p>';
+                $control = Fee_Sync::pet_control($booking_id);
+                if ($control === 'select' && ($pet === 'yes' || $pet === 'no')) {
+                    // v0.33.0 — Update adds or removes the pet fee (Fee_Sync).
+                    $out .= '<p class="dcc_admin-petfee-line"><label for="dcc_pet_fee"><strong>'
+                        . esc_html__('Pet fee:', 'dcc-checkout') . '</strong></label><br>'
+                        . '<select id="dcc_pet_fee" name="' . esc_attr(Fee_Sync::PET_FIELD) . '" style="width:100%">'
+                        . '<option value="no"' . ($pet === 'no' ? ' selected' : '') . '>' . esc_html__('No', 'dcc-checkout') . '</option>'
+                        . '<option value="yes"' . ($pet === 'yes' ? ' selected' : '') . '>' . esc_html__('Yes', 'dcc-checkout') . '</option>'
+                        . '</select><span class="description">'
+                        . esc_html__('Change it and press Update: the pet fee for this stay\'s length is added or removed and the total recalculated.', 'dcc-checkout')
+                        . '</span></p>';
+                    $prompt = __('Or change it by hand in Edit Accommodations.', 'dcc-checkout');
+                } else {
+                    $out .= '<p class="dcc_admin-petfee-line"><strong>' . esc_html__('Pet fee:', 'dcc-checkout') . '</strong> ';
+                    $out .= ($pet === 'yes' || $pet === 'no')
+                        ? esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'))
+                        : esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
+                    $out .= '</p>';
+                    $prompt = Fee_Sync::eligible($booking_id)
+                        ? __('To add or remove the pet fee, use Edit Accommodations — MotoPress then recalculates the total.', 'dcc-checkout')
+                        : __('Fees aren\'t changed on a cancelled or abandoned booking.', 'dcc-checkout');
+                }
                 // admin-booking.js turns this into a copy of MotoPress's own
                 // "Edit Accommodations" link when that link is on the screen.
-                $out .= '<p class="dcc_extras-edit description" data-dcc-edit-accommodations="1">'
-                    . esc_html__('To add or remove the pet fee, use Edit Accommodations — MotoPress then recalculates the total.', 'dcc-checkout')
-                    . '</p>';
+                $out .= '<p class="dcc_extras-edit description"'
+                    . (Fee_Sync::eligible($booking_id) ? ' data-dcc-edit-accommodations="1"' : '') . '>'
+                    . esc_html($prompt) . '</p>';
             }
         }
         // The Dog rows are moved in here by admin-booking.js.

@@ -109,6 +109,9 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 // v0.32.0: the Pet fee line moved to the "Extra Details/Options" box.
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-policies.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-details.php';
+// v0.33.0: a booking's status (Fee_Sync::eligible); 'confirmed' unless a test sets one.
+if (!function_exists('get_post_status')) { function get_post_status($id = null) { return $GLOBALS['post_status'][(int) $id] ?? 'confirmed'; } }
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-fee-sync.php';
 
 use DCC_Checkout\Admin_Guests;
 
@@ -329,12 +332,17 @@ $GLOBALS['opt'] = [];
 \DCC_Checkout\Config::flush_cache();
 
 /* --- v0.28.0: the read-only "Pet fee" line, rendered. --------------------
-   Constructed both ways and the unreadable case; never a dropdown, because
-   the fee cannot be changed from this box. */
+   Constructed both ways and the unreadable case. v0.33.0: on an active
+   direct booking whose services can be rebuilt it is a Yes / No control
+   (Fee_Sync), so this reads whichever is shown: the line's text, or the
+   control's selected option. */
 function pet_line(Admin_Guests $g): string {
     // v0.32.0: the line lives in "Extra Details/Options" now.
     $h = \DCC_Checkout\Extra_Details::box_html(18433);
-    return preg_match('#<p class="dcc_admin-petfee-line"><strong>Pet fee:</strong> (.*?)</p>#', $h, $m) ? $m[1] : '(no line)';
+    if (preg_match('#<p class="dcc_admin-petfee-line"><strong>Pet fee:</strong> (.*?)</p>#', $h, $m)) {
+        return $m[1];
+    }
+    return preg_match('#<select id="dcc_pet_fee"[^>]*>.*?<option value="\w+" selected>(\w+)</option>#s', $h, $m) ? $m[1] : '(no line)';
 }
 // On the pet-fee cottage (Cottage 34, 1607).
 function seed34() { seed(); $GLOBALS['meta'][500]['mphb_room_type_id'] = 1607; }

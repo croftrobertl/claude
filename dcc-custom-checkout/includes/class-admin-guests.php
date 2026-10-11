@@ -129,6 +129,11 @@ final class Admin_Guests
         }
 
         wp_nonce_field(self::NONCE, self::NONCE . '_nonce');
+        // v0.33.0 — the fees follow Update (Fee_Sync); its own nonce.
+        echo Fee_Sync::nonce_field(); // phpcs:ignore WordPress.Security.EscapeOutput -- wp_nonce_field() output
+        $direct = !Policies::is_imported((int) $post->ID);
+        $active = $direct && Fee_Sync::eligible((int) $post->ID);
+        $fee_rooms = false;
 
         echo '<p class="description">'
             . esc_html__('An imported booking starts at 2 guests, and that number is not confirmed: it is a default, not what the guest said. Choose the real number — choosing the number already shown confirms it — and the staff panel will treat it as a real count. Choose "Not provided" if nobody told us. Saving the booking without choosing here changes nothing.', 'dcc-checkout')
@@ -177,6 +182,21 @@ final class Admin_Guests
                     : esc_html__('Not confirmed: this may be the importer\'s default. Choose a number to confirm it.', 'dcc-checkout');
                 echo '</span>';
             }
+            // v0.33.0 — what this room is charged for extra guests, read
+            // from its own services (imports never carry the fee).
+            if ($direct && Fee_Sync::fee_cottage($room['id'])) {
+                $fee_rooms = true;
+                $mult = Fee_Sync::room_fee_multiplier($room['id']);
+                $amount = Config::guest_fee_amount();
+                if ($mult !== null && $mult > 0 && $amount > 0) {
+                    $line = $mult === 1
+                        /* translators: %s: per-night amount for one extra guest (e.g. $50). */
+                        ? sprintf(__('Extra guest fee: 1 guest × %s/night', 'dcc-checkout'), Config::format_price($amount))
+                        /* translators: 1: number of extra guests, 2: per-night amount for one extra guest (e.g. $50). */
+                        : sprintf(__('Extra guest fee: %1$d guests × %2$s/night', 'dcc-checkout'), $mult, Config::format_price($amount));
+                    echo '<span class="description dcc_admin-feeline">' . esc_html($line) . '</span>';
+                }
+            }
             if (!$room['capacity_known']) {
                 echo '<span class="description">'
                     . esc_html__('This cottage\'s capacity could not be read, so the list is not capped to it.', 'dcc-checkout')
@@ -187,6 +207,11 @@ final class Admin_Guests
 
         // v0.32.0 — the pet fee line moved to the "Extra Details/Options" box
         // directly below this one (Rob's pick A).
+        if ($fee_rooms) {
+            echo '<p class="description dcc_admin-feehint">' . esc_html($active
+                ? __('Change the number and press Update: the extra guest fee is added, changed or removed and the total recalculated.', 'dcc-checkout')
+                : __('Fees aren\'t changed on a cancelled or abandoned booking.', 'dcc-checkout')) . '</p>';
+        }
         echo self::boat_home_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- static markup
         echo '</div>';
     }

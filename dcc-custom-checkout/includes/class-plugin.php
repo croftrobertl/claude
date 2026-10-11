@@ -64,6 +64,8 @@ final class Plugin
         (new Ical_Defaults())->register();
         // v0.32.0: a confirmed count survives MotoPress's Edit Accommodations.
         (new Edit_Flow_Markers())->register();
+        // v0.33.0 — fees follow the booking screen's Update button.
+        (new Fee_Sync())->register();
         // Guest ID images: one-click deletion, deletion with the booking, and
         // keeping the protected store unreadable.
         (new Id_Files())->register();

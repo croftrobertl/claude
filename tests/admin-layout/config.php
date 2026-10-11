@@ -83,6 +83,8 @@ if (isset($argv[2]) && $argv[2] !== '') {
     // recorded dog (_dcc_dog), when the spec says so.
     if (!empty($spec['imported'])) { $GLOBALS['meta'][19615]['mphb_ical_prodid'] = '-//Airbnb Inc//Hosting Calendar//EN'; }
     if (isset($spec['dog'])) { $GLOBALS['meta'][19615]['_dcc_dog'] = (string) $spec['dog']; }
+    // v0.33.0: the booking's status (Fee_Sync: cancelled / abandoned are frozen).
+    if (isset($spec['status'])) { $GLOBALS['post_status'][19615] = (string) $spec['status']; }
     // v0.32.1: a dog answer saved on the booking (MotoPress's mphb_<name> meta).
     foreach ((array) ($spec['dogMeta'] ?? []) as $k => $v) { $GLOBALS['meta'][19615][$k] = (string) $v; }
     foreach ((array) ($spec['rooms'] ?? []) as $i => $room) {
@@ -170,6 +172,9 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-policies.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-details.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
+// v0.33.0: a booking's status (Fee_Sync::eligible); 'confirmed' unless a test sets one.
+if (!function_exists('get_post_status')) { function get_post_status($id = null) { return $GLOBALS['post_status'][(int) $id] ?? 'confirmed'; } }
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-fee-sync.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
 $m->setAccessible(true);

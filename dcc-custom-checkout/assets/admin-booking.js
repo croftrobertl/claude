@@ -793,6 +793,12 @@
                 if (dogSel) {
                     return { state: function () { return dogSel.value === 'yes'; }, apply: function () {} };
                 }
+                // v0.33.0 — a direct booking's "Pet fee" control, which Update
+                // acts on: Dog follows it before the save, as on Add New.
+                var feeSel = document.getElementById('dcc_pet_fee');
+                if (feeSel) {
+                    return { state: function () { return feeSel.value === 'yes'; }, apply: function () {} };
+                }
                 var s = String(CFG.statedPetFee || '');
                 var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);
                 return { state: function () { return known; }, apply: function () {} };

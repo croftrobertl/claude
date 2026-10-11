@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.32.1
+Stable tag: 0.33.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,18 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.33.0 =
+Fees follow the Update button (Rob: "Both follow Update").
+
+* New: on a direct booking that is not cancelled or abandoned, the booking screen's Update brings the fees into line.
+  * The "Pet fee" Yes / No control in "Extra Details/Options" (a pet-fee cottage) adds or removes the pet fee for the stay's length.
+  * Changing a room's guest count adds, adjusts or removes the Extra Guest Fee on a cottage that carries it.
+  * MotoPress then reprices the booking. One booking log line and a notice say what changed, with the total before and after.
+* Only a change made in that Update changes a fee. A booking whose fee already disagrees with its count is left alone when it is saved for any other reason.
+* Nothing else changes: dates, rates, children, guest names, other services, payments and status. Nothing is refunded if the total falls below what has been paid.
+* Imports never get a fee. Cancelled and abandoned bookings show their fees read-only.
+* If anything cannot be read safely, nothing is changed and staff are told to use Edit Accommodations, which stays as the manual way to change a fee.
 
 = 0.32.1 =
 Rob's review of 0.32.0 on staging (2026-10-11), items 1–4.

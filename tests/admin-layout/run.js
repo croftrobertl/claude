@@ -1080,11 +1080,36 @@ async function visibleServiceRows(pg) {
         await r.ctx.close();
 
         // Direct, no pet fee: Dog hidden, boat shown; a saved Yes is kept and submitted.
+        // v0.33.0: an active direct booking gets the Yes / No control Update acts on.
         r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, { boat: 'Yes' }), EX, undefined, bk([{ type: 1607, adults: 2, services: [] }]));
-        check('edit, Cottage 34 without the pet fee: Pet fee: No, Dog hidden, boat shown with its saved Yes',
-            [await r.pg.$eval('#dcc-checkout-extras .dcc_admin-petfee-line', e => e.textContent.trim()), await dogShown(r.pg), await boatVal(r.pg)],
-            ['Pet fee: No', false, 'Yes']);
+        check('edit, Cottage 34 without the pet fee: the Pet fee control opens on No, Dog hidden, boat shown with its saved Yes',
+            [await r.pg.$eval('#dcc_pet_fee', e => e.value), await dogShown(r.pg), await boatVal(r.pg)],
+            ['no', false, 'Yes']);
         await r.ctx.close();
+
+        /* ---- v0.33.0: the Pet fee control (fees follow Update). ------------- */
+        // MotoPress's live shape for a ticked pet box (Director): a list of rows.
+        const PET_ROW = [{ id: 17712, adults: 1, quantity: 1 }];
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: PET_ROW }]));
+        check('Pet fee control, a booking carrying the fee: opens on Yes, Dog shown',
+            [await r.pg.$eval('#dcc_pet_fee', e => e.value), await dogShown(r.pg)], ['yes', true]);
+        await choose(r.pg, '#dcc_pet_fee', 'no');
+        check('... No: Dog hides at once, before the save (nothing is cleared)', await dogShown(r.pg), false);
+        check('... and the form submits dcc_pet_fee=no, for Update to act on (the nonce is in "Guest count"; tested in tests/fees)',
+            (await formData(r.pg)).filter(x => x.startsWith('dcc_pet_fee=')), ['dcc_pet_fee=no']);
+        check('... and Edit Accommodations stays as the fallback (MotoPress\'s own link, copied)',
+            await r.pg.evaluate(() => !!document.querySelector('#dcc-checkout-extras .dcc_extras-edit-link')), true);
+        await r.ctx.close();
+        for (const status of ['cancelled', 'abandoned']) {
+            r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, { rooms: [{ type: 1607, adults: 2, services: PET_ROW }], status });
+            check(`${status} booking: no control — "Pet fee: Yes" read-only, says fees are not changed, no Edit Accommodations link`,
+                await r.pg.evaluate(() => [!!document.querySelector('#dcc_pet_fee'),
+                    document.querySelector('#dcc-checkout-extras .dcc_admin-petfee-line').textContent.trim(),
+                    document.querySelector('#dcc-checkout-extras .dcc_extras-edit').textContent.trim(),
+                    !!document.querySelector('.dcc_extras-edit-link')]),
+                [false, 'Pet fee: Yes', "Fees aren't changed on a cancelled or abandoned booking.", false]);
+            await r.ctx.close();
+        }
 
         // No MotoPress link on the page (as on an import): no button is invented.
         r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, null, { editLink: false }), EX, undefined, bk([{ type: 1607, adults: 2, services: [] }]));

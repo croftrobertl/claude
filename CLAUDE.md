@@ -1304,6 +1304,70 @@ yours to improvise.
     / `.l10n.php` ("Guests" → "Number of Guests"; Director, 2026-10-11). So
     the Number of Guests label on Add New and in the flow is MotoPress's
     "Guests" chooser. Rob's one-run check on 19674 decides the rest.
+- **0.33.0 — FEES FOLLOW THE UPDATE BUTTON** (Rob: "Both follow Update";
+  `Fee_Sync`, suite `tests/fees/run.php`). On a DIRECT booking that is not
+  cancelled or abandoned, Update brings the reserved rooms' fee services into
+  line with the booking screen: the "Pet fee" Yes/No control (Extra
+  Details/Options, a pet-fee cottage with exactly ONE such room) adds or
+  removes the pet service for the stay's length (`service_id_for_nights()`),
+  and a CHANGED guest count adds, adjusts or removes the Extra Guest Fee on a
+  cottage that carries it (`guest_service_id_for_nights()`, `count -
+  included_guests()`, only while `guest_fee_active()`). Then MotoPress's own
+  sequence: `findById($id, true)`, rebuilt rooms, `setRooms()`,
+  `updateTotal()`, `save()`, `updateReservedRooms()`, `addLog()` — one line
+  per Update, e.g. "Pet fee added; total $200 → $250", and the same text as a
+  one-time admin notice. Imports and cancelled/abandoned bookings: never.
+  - **ONLY ON A CHANGE MADE IN THAT UPDATE** (my default, flagged to Rob). A
+    booking whose stored fee disagrees with its count — an old booking, a fee
+    the owner waived — is left alone when saved for any other reason. The
+    count's "change" is the stored `_mphb_adults` snapshotted at
+    `save_post_mphb_booking` priority 5, BEFORE Admin_Guests writes it at 10;
+    the FIRST snapshot wins, because MotoPress's own save fires that hook
+    again after the write (mutation `fs-snapshot-last-wins`). The pet
+    control opens on the stored answer, so "changed" is "differs from what is
+    stored".
+  - **IT RUNS ON `redirect_post_location`, NOT ON save_post** (departs from the
+    Director's "save_post at 20", deliberately). MotoPress's Update
+    (save_post at 10) saves with `BookingRepository::save()` → `wp_update_post()`,
+    so save_post fires AGAIN inside MotoPress's save, before that save returns.
+    A save_post handler therefore runs nested, and if MotoPress writes its
+    reloaded total after `wp_update_post()` returns, the new total is
+    overwritten — services say Yes, total says No. Whether it does is NOT
+    verified; the suite models that worst case and shows both outcomes (the
+    save_post-at-20 variant loses the total; the redirect does not). save_post
+    only records that a rebuild is due, after nonce (`dcc_fee_sync`, printed
+    in "Guest count"), `edit_post`, the form's `post_ID`, not autosave or
+    revision. **Consequence: only the classic edit form's Update changes
+    fees** — a REST or block-editor save would not reach the redirect, and
+    changes no fee (fails safe).
+  - **A ROOM IS REBUILT IN PLACE, CHECKED BEFORE THE FIRST WRITE.** Its own
+    id, room, rate, adults, children, guest name, status and **uid** (omitted,
+    MotoPress makes a new one and the iCal tie breaks — mutation
+    `fs-uid-dropped`). Its services are rebuilt from `_mphb_services` rows via
+    `ReservedService::create()`; every row must build, every room in the plan
+    must be on the booking, every method must exist — or NOTHING is written
+    and staff get "Fees were not changed … Use Edit Accommodations." A
+    services shape other than MotoPress's row list (a list of bare ids, a map)
+    is never rewritten (`read_services()` → null; mutation
+    `fs-read-services-lenient`). Rooms not in the plan are passed as loaded.
+  - **The screen**: Extra Details/Options shows the control only when
+    `Fee_Sync::pet_control()` says 'select'; otherwise the read-only line
+    (cancelled/abandoned say "Fees aren't changed on a cancelled or abandoned
+    booking." and get no Edit Accommodations link). Guest count shows each
+    room's STORED fee ("Extra guest fee: N guests × $50/night", the admin JS's
+    own msgids) and a hint. Dog follows the control live (`admin-booking.js`).
+    Edit Accommodations stays as the manual fallback.
+  - **The stand-in is a model, not MotoPress.** `tests/fees/` models the
+    repository and entities from the Director's reads, with its own prices;
+    it proves what MotoPress is GIVEN and that it is asked to reprice, never
+    the total. **DCC-VERIFY (Director, before staging):** the class names
+    `\MPHB\Entities\ReservedRoom` / `\MPHB\Entities\ReservedService`; the
+    status strings `cancelled` / `abandoned`; the stored `_mphb_services` row
+    MotoPress writes for a ticked Extra Guest Fee (its `quantity`; this writes
+    1); that the booking screen is the classic form. **Proof of the money**:
+    the staging comparison — the same change by Update and by Edit
+    Accommodations on two identical bookings, `mphb_total_price` and
+    `_mphb_booking_price_breakdown` compared, and no new email-log entry.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1551,9 +1615,14 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 230
-  mutations, 230 killed, 0 of everything else, exit 0, in ONE run (2026-10-11,
-  v0.32.1; eighteen suites). 0.32.1's targeted run was 16 killed + 1 HARNESS:
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 254
+  mutations, 254 killed, 0 of everything else, exit 0, in ONE run (v0.33.0;
+  nineteen suites — `fees` added). 0.33.0's targeted run was 22 killed + 2
+  SURVIVED: the notice-escaping mutation (no notice the suite built contained
+  a character escaping changes) and the extra-guest cottage-list check (on a
+  2-sleeper the count cannot exceed 2, so the list never decided anything —
+  the real case is a 4-sleeper the owner takes OFF the list in settings, now
+  constructed). At v0.32.1, 230 in eighteen. 0.32.1's targeted run was 16 killed + 1 HARNESS:
   `ed-dog-answer-ignored` removed the box, and the browser suite CRASHED on
   `null.includes` instead of failing — fixed to fail, then the whole set run.
   Two anchors (`js-layout-not-idempotent`, `boat-admin-group-missing`) were

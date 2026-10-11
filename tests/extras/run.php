@@ -50,6 +50,7 @@ function esc_html__($t, $d = null) { return htmlspecialchars($t, ENT_QUOTES); }
 function esc_html($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
 function esc_attr($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
 function maybe_unserialize($v) { if (is_string($v)) { $u = @unserialize($v); return ($u === false && $v !== 'b:0;') ? $v : $u; } return $v; }
+function get_post_status($id = null) { return $GLOBALS['post_status'][(int) $id] ?? 'confirmed'; }
 class WP_Post { public $ID = 0; public $post_type = ''; public function __construct($id = 0) { $this->ID = $id; $this->post_type = 'mphb_booking'; } }
 
 /* Room types and their services, as live: 1607 (Cottage 34) the pet services; 1065 the extra-guest fee. */
@@ -70,7 +71,7 @@ function MPHB() {
     };
 }
 
-foreach (['config', 'policies', 'id-files', 'boat-field', 'admin-fields', 'admin-guests', 'extra-details', 'ical-defaults', 'edit-flow-markers'] as $c) {
+foreach (['config', 'policies', 'id-files', 'boat-field', 'admin-fields', 'admin-guests', 'extra-details', 'ical-defaults', 'edit-flow-markers', 'fee-sync'] as $c) {
     require __DIR__ . '/../../dcc-custom-checkout/includes/class-' . $c . '.php';
 }
 use DCC_Checkout\{Extra_Details, Ical_Defaults, Edit_Flow_Markers, Admin_Fields, Admin_Guests};
