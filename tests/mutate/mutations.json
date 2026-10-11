@@ -1262,13 +1262,13 @@
  },
  {
   "id": "php-guests-box-pet-line",
-  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
   "suites": [
    "admin-guests"
   ],
-  "claim": "0.28.0 the Guests box says Pet fee: Yes when one is saved",
-  "find": "                echo esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));",
-  "replace": "                echo esc_html(__('No', 'dcc-checkout'));",
+  "claim": "0.28.0 the pet fee line says Yes when one is saved (in Extra Details/Options since 0.32.0)",
+  "find": "                    ? esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'))",
+  "replace": "                    ? esc_html(__('No', 'dcc-checkout'))",
   "count": 1
  },
  {
@@ -1362,13 +1362,13 @@
  },
  {
   "id": "php-pet-line-everywhere",
-  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
   "suites": [
    "admin-guests"
   ],
-  "claim": "0.29.0 the Pet fee line is on a pet-fee cottage only",
-  "find": "        if (Admin_Fields::booking_pet_cottage((int) $post->ID) === true) {",
-  "replace": "        if (Admin_Fields::booking_pet_cottage((int) $post->ID) !== false) {",
+  "claim": "0.29.0 the Pet fee line is on a pet-fee cottage only (in Extra Details/Options since 0.32.0)",
+  "find": "        if (Admin_Fields::booking_pet_cottage($booking_id) === true) {",
+  "replace": "        if (Admin_Fields::booking_pet_cottage($booking_id) !== false) {",
   "count": 1
  },
  {
@@ -2084,11 +2084,299 @@
   "id": "boat-admin-group-missing",
   "file": "dcc-custom-checkout/includes/class-admin-fields.php",
   "suites": [
+   "extras",
    "admin-layout"
   ],
-  "claim": "0.31.0 WP-Admin: its own 'Boat / trailer' heading after Dog",
-  "find": "                'fields' => [$mp(Boat_Field::NAME)],",
-  "replace": "                'fields' => [$mp('no_such_field')],",
+  "claim": "0.31.0/0.32.0 WP-Admin: the boat question is placed by this plugin (Extra Details/Options since 0.32.0)",
+  "find": "        return array_merge(array_values(Config::dog_field_names()), ['mphb_' . Boat_Field::NAME]);",
+  "replace": "        return array_merge(array_values(Config::dog_field_names()), ['mphb_no_such_field']);",
+  "count": 1
+ },
+ {
+  "id": "e-keep-not-rendered",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.32.0 E: an unconfirmed count opens on its keep option, so an untouched save confirms nothing",
+  "find": "            $keep = $room['adults'] > 0 && !$room['confirmed'];",
+  "replace": "            $keep = false;",
+  "count": 1
+ },
+ {
+  "id": "e-number-preselected",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.32.0 E: with the keep option, no number is pre-selected",
+  "find": "                    $keep ? '' : selected($room['adults'], $n, false)",
+  "replace": "                    selected($room['adults'], $n, false)",
+  "count": 1
+ },
+ {
+  "id": "e-help-text-capacity",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.32.0 D: the help text no longer says MotoPress fills the capacity",
+  "find": "esc_html__('An imported booking starts at 2 guests,",
+  "replace": "esc_html__('MotoPress fills this with the cottage\\'s capacity. An imported booking starts at 2 guests,",
+  "count": 1
+ },
+ {
+  "id": "pet-line-back-in-guests",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests"
+  ],
+  "claim": "0.32.0 A: the Pet fee line left the Guest count box",
+  "find": "        // v0.32.0 — the pet fee line moved to the \"Extra Details/Options\" box\n",
+  "replace": "        echo '<p class=\"dcc_admin-petfee-line\">x</p>';\n",
+  "count": 1
+ },
+ {
+  "id": "ed-import-gets-fee-line",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: an import gets \"Bringing a dog?\", never a pet fee line",
+  "find": "            if (Policies::is_imported($booking_id)) {\n                $dog",
+  "replace": "            if (false) {\n                $dog",
+  "count": 1
+ },
+ {
+  "id": "ed-pet-part-everywhere",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 A: the pet part on pet-fee cottages only",
+  "find": "        if (Admin_Fields::booking_pet_cottage($booking_id) === true) {",
+  "replace": "        if (Admin_Fields::booking_pet_cottage($booking_id) !== false || true) {",
+  "count": 1
+ },
+ {
+  "id": "ed-save-direct",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: _dcc_dog is written for imports only",
+  "find": "        if (!Policies::is_imported($post_id) || Admin_Fields::booking_pet_cottage($post_id) !== true) {",
+  "replace": "        if (Admin_Fields::booking_pet_cottage($post_id) !== true) {",
+  "count": 1
+ },
+ {
+  "id": "ed-save-any-cottage",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: _dcc_dog only where the control is drawn (pet-fee cottage)",
+  "find": "        if (!Policies::is_imported($post_id) || Admin_Fields::booking_pet_cottage($post_id) !== true) {",
+  "replace": "        if (!Policies::is_imported($post_id)) {",
+  "count": 1
+ },
+ {
+  "id": "ed-save-no-nonce",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: the dog record needs the box's nonce",
+  "find": "            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[self::NONCE . '_nonce'])), self::NONCE)) {",
+  "replace": "            || false) {",
+  "count": 1
+ },
+ {
+  "id": "ed-save-any-value",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: only yes / no are stored",
+  "find": "        if (($v === 'yes' || $v === 'no') && $v !== $had) {",
+  "replace": "        if ($v !== $had) {",
+  "count": 1
+ },
+ {
+  "id": "af-import-state-fee",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 C: an import's Dog follows _dcc_dog, not a fee",
+  "find": "        if (Policies::is_imported($booking_id)) {\n            return (string) get_post_meta($booking_id, Extra_Details::DOG_META, true) === 'yes' ? 'yes' : 'no';",
+  "replace": "        if (false) {\n            return (string) get_post_meta($booking_id, Extra_Details::DOG_META, true) === 'yes' ? 'yes' : 'no';",
+  "count": 1
+ },
+ {
+  "id": "af-dog-back-in-customer",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "extras",
+   "admin-layout"
+  ],
+  "claim": "0.32.0 A: Dog and boat leave Customer Information",
+  "find": "            // v0.32.0 — Dog and \"Bringing a boat or trailer?\" are no longer in\n",
+  "replace": "            ['key' => 'dog', 'title' => 'Dog', 'fields' => [['mphb_dog_type']]],\n",
+  "count": 1
+ },
+ {
+  "id": "ic-not-hooked",
+  "file": "dcc-custom-checkout/includes/class-ical-defaults.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 D: new imports start at 2",
+  "find": "        add_action('mphb_create_booking_via_ical', [self::class, 'on_import'], 10, 1);",
+  "replace": "        add_action('mphb_create_booking_via_ical_x', [self::class, 'on_import'], 10, 1);",
+  "count": 1
+ },
+ {
+  "id": "ic-touches-confirmed",
+  "file": "dcc-custom-checkout/includes/class-ical-defaults.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 D: a staff-confirmed count is never touched",
+  "find": "                continue; // staff-confirmed: never touched",
+  "replace": "                // continue;",
+  "count": 1
+ },
+ {
+  "id": "ic-raises",
+  "file": "dcc-custom-checkout/includes/class-ical-defaults.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 D: a count at or below 2 is never raised",
+  "find": "            if (!is_numeric($raw) || (int) $raw <= self::DEFAULT_ADULTS) {",
+  "replace": "            if (!is_numeric($raw)) {",
+  "count": 1
+ },
+ {
+  "id": "ic-marks-confirmed",
+  "file": "dcc-custom-checkout/includes/class-ical-defaults.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 D: the default is never marked confirmed",
+  "find": "            update_post_meta($rid, Admin_Guests::META_KEY, self::DEFAULT_ADULTS);",
+  "replace": "            update_post_meta($rid, Admin_Guests::META_KEY, self::DEFAULT_ADULTS);\n            update_post_meta($rid, Admin_Guests::CONFIRMED_KEY, 1);",
+  "count": 1
+ },
+ {
+  "id": "em-not-restored",
+  "file": "dcc-custom-checkout/includes/class-edit-flow-markers.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 B fallback: a confirmed count survives Edit Accommodations",
+  "find": "        add_action('mphb_booking_edited', [self::class, 'restore'], 10, 1);",
+  "replace": "        add_action('mphb_booking_edited_x', [self::class, 'restore'], 10, 1);",
+  "count": 1
+ },
+ {
+  "id": "em-changed-count-carried",
+  "file": "dcc-custom-checkout/includes/class-edit-flow-markers.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 B fallback: a changed count is not carried",
+  "find": "            if (is_numeric($count) && (int) $count === self::$seen[$id][$room]",
+  "replace": "            if (is_numeric($count)",
+  "count": 1
+ },
+ {
+  "id": "em-unconfirmed-carried",
+  "file": "dcc-custom-checkout/includes/class-edit-flow-markers.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 B fallback: only a confirmed room's marker is carried",
+  "find": "        if (!Admin_Guests::is_confirmed(get_post_meta($post_id, Admin_Guests::CONFIRMED_KEY, true))) {\n            return;\n        }\n        $count",
+  "replace": "        $count",
+  "count": 1
+ },
+ {
+  "id": "em-any-room",
+  "file": "dcc-custom-checkout/includes/class-edit-flow-markers.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.0 B fallback: only to the same physical room",
+  "find": "            if (!isset(self::$seen[$id][$room])) {\n                continue;\n            }",
+  "replace": "            $room = (int) array_key_first(self::$seen[$id]);",
+  "count": 1
+ },
+ {
+  "id": "js-import-ticks-fee",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 C: an import never gets the extra-guest fee from wp-admin",
+  "find": "            if (!GUEST_IDS.length || CFG.isImported === '1') { return; }",
+  "replace": "            if (!GUEST_IDS.length) { return; }",
+  "count": 1
+ },
+ {
+  "id": "js-extras-not-moved",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 A: Dog and boat rows move into Extra Details/Options",
+  "find": "    ready(function () {\n        extras();",
+  "replace": "    ready(function () {",
+  "count": 1
+ },
+ {
+  "id": "js-edit-link-missing",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 B fallback: the box carries MotoPress's Edit Accommodations link",
+  "find": "        if (!src) { return; }\n        var a = document.createElement('a');",
+  "replace": "        return;\n        var a = document.createElement('a');",
+  "count": 1
+ },
+ {
+  "id": "js-keep-unread",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 E: the not-confirmed option stands for its stored number",
+  "find": "                    var raw = sels[i].value === 'keep' ? sels[i].getAttribute('data-dcc-stored') : sels[i].value;",
+  "replace": "                    var raw = sels[i].value;",
+  "count": 1
+ },
+ {
+  "id": "js-dog-select-ignored",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 C: an import's Dog follows Bringing a dog? live",
+  "find": "                if (dogSel) {\n                    return { state: function () { return dogSel.value === 'yes'; }",
+  "replace": "                if (false) {\n                    return { state: function () { return dogSel.value === 'yes'; }",
+  "count": 1
+ },
+ {
+  "id": "js-petfee-not-in-block",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.0 A: on Add New the Pet Fee dropdown opens the Extra Details/Options block",
+  "find": "            if (extrasBlock && extrasBlock.firstElementChild) {",
+  "replace": "            if (false) {",
   "count": 1
  }
 ]

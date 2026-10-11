@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.31.0
+Stable tag: 0.32.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,27 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.32.0 =
+Rob's review of 0.31.0 on staging (2026-10-10).
+* Booking edit screen: a new "Extra Details/Options" box directly under
+  "Guest count", holding the pet questions (pet-fee cottages only -- today
+  Cottage 34) and "Bringing a boat or trailer?" (every cottage). Dog and the
+  boat question leave Customer Information; the "Pet fee" line leaves Guest
+  count. Add New Booking gets the same block right after Number of Guests,
+  with its Pet Fee dropdown.
+* Direct bookings: the box shows the pet fee and MotoPress's own Edit
+  Accommodations button to add or remove it -- MotoPress then recalculates
+  the total. A confirmed guest count now stays confirmed through that flow.
+* Imported bookings (Airbnb / Booking.com / Vrbo): "Bringing a dog?" records
+  the dog only and never adds a fee; the guest count never adds the extra-guest
+  fee either. All extra fees for imports are charged through the booking site.
+* New imports start at 2 guests, not confirmed (MotoPress used the cottage's
+  capacity, 4). A count staff have confirmed is never touched, and later syncs
+  do not change it.
+* Fixed: saving a booking for any reason marked its guest count "confirmed".
+  An unconfirmed count now opens on "N (not confirmed)"; only choosing a
+  number -- the same one included -- confirms it.
 
 = 0.31.0 =
 A "Bringing a boat or trailer?" question (owner's picks, 2026-10-10), so Rob

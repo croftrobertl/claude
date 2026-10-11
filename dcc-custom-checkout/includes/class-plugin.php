@@ -57,6 +57,13 @@ final class Plugin
         // fills _mphb_adults with the room type's CAPACITY when an import
         // supplies no count, and nothing in the admin could correct it.
         (new Admin_Guests())->register();
+        // v0.32.0: "Extra Details/Options", registered straight after the
+        // Guest count box so WordPress draws it directly under it.
+        (new Extra_Details())->register();
+        // v0.32.0: new iCal imports start at 2 guests, not confirmed.
+        (new Ical_Defaults())->register();
+        // v0.32.0: a confirmed count survives MotoPress's Edit Accommodations.
+        (new Edit_Flow_Markers())->register();
         // Guest ID images: one-click deletion, deletion with the booking, and
         // keeping the protected store unreadable.
         (new Id_Files())->register();

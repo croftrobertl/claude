@@ -10,7 +10,8 @@
  *  - dcc_guest34_enabled — a standalone option because the DCC Cottage
  *    Selector reads it too, and "absent" means ON: deleting it here would
  *    silently switch Guests 3 and 4 back on in the other plugin.
- *  - Booking post meta: _dcc_policy_acceptance and _dcc_policy_staff (who
+ *  - Booking post meta: _dcc_dog (the dog recorded on an imported booking —
+ *    the Availability Calendar reads it), _dcc_policy_acceptance and _dcc_policy_staff (who
  *    accepted which policy version), _dcc_id_deletions (the photo-ID
  *    deletion log), and _mphb_adults / _mphb_adults_confirmed on reserved
  *    rooms (guest counts the owner set; MotoPress's own key, and the

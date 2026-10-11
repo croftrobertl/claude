@@ -45,11 +45,12 @@ function get_posts($args) {
     $out = [];
     foreach ($GLOBALS['posts'] as $id => $p) {
         if (($p['type'] ?? '') === ($args['post_type'] ?? '') && ($p['parent'] ?? 0) === ($args['post_parent'] ?? 0)) {
-            $out[] = (object) ['ID' => $id];
+            $out[] = ($args['fields'] ?? '') === 'ids' ? $id : (object) ['ID' => $id];
         }
     }
     return $out;
 }
+function sanitize_key($v) { return strtolower(preg_replace('/[^a-z0-9_\-]/i', '', (string) $v)); }
 
 /* v0.25.0: the guest-count range now comes from Config (the setting
    admin_guest_fallback, clamped by Admin_Guests::MAX_OPTIONS), so Config is
@@ -71,6 +72,20 @@ class WP_Post { public $ID = 0; public $post_type = ''; }
 $GLOBALS['room_types'] = [1065 => [18063], 1607 => [17712, 17711, 14926], 1999 => null];
 function MPHB() {
     return new class {
+        // v0.32.0: a booking repository whose addLog() RECORDS, so "no log
+        // line" is an observation and not an assertion about an array nothing
+        // ever writes (the stand-in had none, and every log call failed silently).
+        public function getBookingRepository() {
+            return new class {
+                public function findById($id) {
+                    return new class($id) {
+                        private $id;
+                        public function __construct($id) { $this->id = $id; }
+                        public function addLog($m, $a = null) { $GLOBALS['logs'][$this->id][] = $m; }
+                    };
+                }
+            };
+        }
         public function getRoomTypeRepository() {
             return new class {
                 public function findById($id) {
@@ -91,6 +106,9 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
 // v0.28.0: the Guests box prints the read-only "Pet fee" line from
 // Admin_Fields::booking_pet_fee(), so the box cannot be rendered without it.
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
+// v0.32.0: the Pet fee line moved to the "Extra Details/Options" box.
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-policies.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-details.php';
 
 use DCC_Checkout\Admin_Guests;
 
@@ -314,11 +332,8 @@ $GLOBALS['opt'] = [];
    Constructed both ways and the unreadable case; never a dropdown, because
    the fee cannot be changed from this box. */
 function pet_line(Admin_Guests $g): string {
-    $post = new WP_Post();
-    $post->ID = 18433;
-    ob_start();
-    $g->render($post);
-    $h = (string) ob_get_clean();
+    // v0.32.0: the line lives in "Extra Details/Options" now.
+    $h = \DCC_Checkout\Extra_Details::box_html(18433);
     return preg_match('#<p class="dcc_admin-petfee-line"><strong>Pet fee:</strong> (.*?)</p>#', $h, $m) ? $m[1] : '(no line)';
 }
 // On the pet-fee cottage (Cottage 34, 1607).
@@ -342,6 +357,80 @@ check('Cottage 22 (no pet fee): NO Pet fee line at all', pet_line($g), '(no line
 seed();
 $GLOBALS['meta'][500]['mphb_room_type_id'] = 1999;
 check('a cottage that cannot be read: no Pet fee line either', pet_line($g), '(no line)');
+
+/* ===================================================================== *
+ * v0.32.0 (A) — the Pet fee line LEFT the Guest count box.
+ * ===================================================================== */
+seed34();
+$GLOBALS['meta'][99]['_mphb_services'] = [17712];
+$post = new WP_Post(); $post->ID = 18433;
+ob_start(); $g->render($post); $h = (string) ob_get_clean();
+check('the Guest count box no longer carries a Pet fee line (it is in Extra Details/Options)',
+    strpos($h, 'dcc_admin-petfee-line'), false);
+check('... and its help text no longer says MotoPress fills it with the capacity (D)',
+    [strpos($h, 'starts at 2 guests') !== false, strpos($h, 'fills this with the cottage') === false], [true, true]);
+
+/* ===================================================================== *
+ * v0.32.0 (E) — EVERY Update submits this select. An untouched one must
+ * write NOTHING; only a choice confirms.
+ * ===================================================================== */
+function box_html(Admin_Guests $g): string {
+    $post = new WP_Post(); $post->ID = 18433;
+    ob_start(); $g->render($post); return (string) ob_get_clean();
+}
+seed();
+$GLOBALS['logs'] = [];
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '2']];
+$g->save(18433);
+check('guard-on-the-guard: a real change DOES write a log line (so "no log" below can fail)',
+    count($GLOBALS['logs'][18433] ?? []), 1);
+seed();   // an unconfirmed 4 (MotoPress's default)
+$GLOBALS['logs'] = [];
+$h = box_html($g);
+check('render, unconfirmed count: the select OPENS on "4 (not confirmed)" — the keep option',
+    (bool) preg_match('#<option value="keep" selected>4 \(not confirmed\)</option>#', $h), true);
+check('... and no number is pre-selected, so choosing 4 is a real choice',
+    (bool) preg_match('#<option value="4" selected>#', $h), false);
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => 'keep']];
+$g->save(18433);
+check('UNTOUCHED save (keep submitted): NO marker, count untouched, no log',
+    [array_key_exists('_mphb_adults_confirmed', $GLOBALS['meta'][99]), $GLOBALS['meta'][99]['_mphb_adults'], $GLOBALS['logs'][18433] ?? []],
+    [false, 4, []]);
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '4']];
+$g->save(18433);
+check('picking the SAME number (4) confirms it: marker written, count unchanged',
+    [$GLOBALS['meta'][99]['_mphb_adults_confirmed'] ?? null, $GLOBALS['meta'][99]['_mphb_adults']], [1, 4]);
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '2']];
+$g->save(18433);
+check('picking a DIFFERENT number: marker plus the new count',
+    [$GLOBALS['meta'][99]['_mphb_adults_confirmed'] ?? null, $GLOBALS['meta'][99]['_mphb_adults']], [1, 2]);
+seed();
+$GLOBALS['meta'][99]['_mphb_adults_confirmed'] = 1;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '']];
+$g->save(18433);
+check('"Not provided" removes both keys',
+    [array_key_exists('_mphb_adults', $GLOBALS['meta'][99]), array_key_exists('_mphb_adults_confirmed', $GLOBALS['meta'][99])], [false, false]);
+seed();
+$GLOBALS['meta'][99]['_mphb_adults_confirmed'] = 1;
+$h = box_html($g);
+check('render, CONFIRMED count: no keep option, the number itself is selected',
+    [strpos($h, 'value="keep"'), (bool) preg_match('#<option value="4" selected>#', $h)], [false, true]);
+$GLOBALS['logs'] = [];
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '4']];
+$g->save(18433);
+check('... an untouched CONFIRMED count resubmits its own number: nothing written, no log',
+    [$GLOBALS['meta'][99]['_mphb_adults'], $GLOBALS['meta'][99]['_mphb_adults_confirmed'], $GLOBALS['logs'][18433] ?? []], [4, 1, []]);
+seed();
+unset($GLOBALS['meta'][99]['_mphb_adults']);
+$h = box_html($g);
+check('render, no count stored: "Not provided" is selected, no keep option',
+    [strpos($h, 'value="keep"'), (bool) preg_match('#<option value="" selected>Not provided#', $h)], [false, true]);
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '']];
+$g->save(18433);
+check('... untouched: still nothing stored, no marker',
+    [array_key_exists('_mphb_adults', $GLOBALS['meta'][99]), array_key_exists('_mphb_adults_confirmed', $GLOBALS['meta'][99])], [false, false]);
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

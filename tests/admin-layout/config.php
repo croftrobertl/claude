@@ -73,6 +73,10 @@ if (isset($argv[2]) && $argv[2] !== '') {
     $b = new WP_Post();
     $b->ID = 19615; $b->post_type = 'mphb_booking'; $b->post_status = 'confirmed';
     $GLOBALS['booking'] = $b;
+    // v0.32.0: an imported booking (mphb_ical_prodid, as on live) and its
+    // recorded dog (_dcc_dog), when the spec says so.
+    if (!empty($spec['imported'])) { $GLOBALS['meta'][19615]['mphb_ical_prodid'] = '-//Airbnb Inc//Hosting Calendar//EN'; }
+    if (isset($spec['dog'])) { $GLOBALS['meta'][19615]['_dcc_dog'] = (string) $spec['dog']; }
     foreach ((array) ($spec['rooms'] ?? []) as $i => $room) {
         $rr = new WP_Post();
         $rr->ID = 900 + $i; $rr->post_type = 'mphb_reserved_room';
@@ -132,11 +136,16 @@ function get_posts($a = []) {
     }
     if (($a['post_type'] ?? '') === 'mphb_reserved_room' && $GLOBALS['booking']
         && (int) ($a['post_parent'] ?? 0) === $GLOBALS['booking']->ID) {
-        return $GLOBALS['reserved'];
+        return ($a['fields'] ?? '') === 'ids'
+            ? array_map(function ($r) { return $r->ID; }, $GLOBALS['reserved'])
+            : $GLOBALS['reserved'];
     }
     return [];
 }
 function get_post($id = null) { return $GLOBALS['booking']; }
+function esc_html($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
+function esc_attr($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
+function wp_nonce_field($a, $n, $r = true, $e = true) { return '<input type="hidden" name="' . $n . '" value="test-nonce">'; }
 function did_action($h) { return 0; }
 function maybe_unserialize($v) {
     if (is_string($v)) {
@@ -149,11 +158,17 @@ function maybe_unserialize($v) {
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-boat-field.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-policies.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-details.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
 $m->setAccessible(true);
 $out = $m->invoke(new \DCC_Checkout\Admin_Fields());
+// v0.32.0: the edit screen's "Extra Details/Options" box, from the shipped PHP.
+if ($GLOBALS['booking']) {
+    $out['_extrasBox'] = \DCC_Checkout\Extra_Details::box_html(19615);
+}
 
 // WP_Scripts::localize(), WordPress 6.6.2 src/wp-includes/class-wp-scripts.php
 // lines 589-597, copied verbatim (read from wordpress-develop, 2026-10-07):

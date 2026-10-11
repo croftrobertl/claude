@@ -127,3 +127,34 @@ div.dcc_admin-group-heading:first-child {
         display: block;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * "Extra Details/Options" (v0.32.0). In the side column the moved rows stack —
+ * label above field, full width — at every width: a 200px label column does
+ * not fit in a ~250px box. The Add New block sits in the main form, under
+ * Number of Guests.
+ * ------------------------------------------------------------------------- */
+#dcc-checkout-extras .dcc_extras-table {
+    margin-top: 0;
+}
+
+#dcc-checkout-extras .dcc_extras-table th,
+#dcc-checkout-extras .dcc_extras-table td {
+    display: block;
+    width: auto;
+    padding: 6px 0 0;
+}
+
+#dcc-checkout-extras .dcc_extras-table td {
+    padding-bottom: 6px;
+}
+
+#dcc-checkout-extras .dcc_extras-table select,
+#dcc-checkout-extras .dcc_extras-table input[type="text"] {
+    width: 100%;
+    max-width: 100%;
+}
+
+.dcc_admin-extras {
+    margin: 12px 0;
+}

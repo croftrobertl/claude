@@ -1156,6 +1156,69 @@ yours to improvise.
   - **NOT verifiable here**: that MotoPress saves the answer on an imported
     booking's edit screen, and that getCustomFields()['boat'] returns it — both
     are MotoPress's code. Rob checks both on staging (D).
+- **0.32.0 — "EXTRA DETAILS/OPTIONS", IMPORTS, THE IMPORT DEFAULT, AND THE
+  CONFIRM-ON-EVERY-SAVE FIX** (Rob's picks A–D + the Director's E,
+  2026-10-10; `Extra_Details`, `Ical_Defaults`, `Edit_Flow_Markers`; suite
+  `tests/extras/run.php`, plus `tests/admin-guests/` and `tests/admin-layout/`).
+  - **A — the box**: `dcc-checkout-extras`, side/default, registered NEXT after
+    `Admin_Guests` in `Plugin::boot()` so WordPress draws it directly under
+    "Guest count" (asserted from the boot order). PHP draws only what this
+    plugin owns — the pet part and an empty `tbody#dcc_extras_rows`;
+    `admin-booking.js` `extras()` MOVES MotoPress's Dog and boat rows into it
+    (never re-creates: same form, same submitted fields — asserted), BEFORE the
+    Customer Information layout so they are never "Other", and again on every
+    observed re-render. `customer_layout()` no longer has `dog`/`boat` groups.
+    Add New: a `div.dcc_admin-extras` block right after the room's Number of
+    Guests, opened by the Pet Fee dropdown (Rob's pick 6). No script → the
+    rows stay in Customer Information, still working.
+  - **B — NOT BUILT AS ONE TAP; THE FALLBACK SHIPPED.** The brief: prove room
+    ids and `_mphb_adults_confirmed` unchanged AND the total equal to
+    MotoPress's own flow, or fall back. The total cannot be proven without
+    MotoPress, and the one-tap code needs calls never read here (ReservedRoom
+    getters, `ReservedService::create()` args, `updateReservedRooms()`
+    signature). So a direct pet-fee booking's box shows "Pet fee: Yes/No" and
+    a COPY of MotoPress's own `a[href*="page=mphb_edit_booking"]` (only the
+    slug is proven; no link is built when MotoPress shows none — it does not
+    on imports). **`Edit_Flow_Markers`** carries the marker across that flow,
+    which DELETES and recreates every reserved room (Director, live 6.3.0):
+    `before_delete_post` remembers a confirmed room's physical room + count,
+    `mphb_booking_edited` writes the marker back on the new room with the SAME
+    physical room AND count. Fails safe: nothing remembered → nothing written.
+    **That MotoPress deletes through `wp_delete_post()` (so the hook fires) is
+    UNVERIFIED** — the staging check list tests it.
+  - **C — imports record, never charge** (Rob: "all extra fees have to be
+    added in the OTA"). Import = `mphb_ical_prodid` (`Policies::is_imported`).
+    Pet part on an import: "Bringing a dog?" → booking meta **`_dcc_dog` =
+    `yes`/`no`, absent = not asked — THE CONTRACT WITH THE CALENDAR** (its
+    Pets rule: dog_type OR pet fee OR `_dcc_dog = yes`), written only by
+    `Extra_Details::save()` (nonce, `edit_post`, import AND pet-fee cottage,
+    yes/no only). `booking_pet_state()` reads it for imports; the live select
+    drives Dog in the browser. `syncExtraGuestFee()` returns at once for an
+    import (`CFG.isImported`, a word) — constructed with the fee's row, a
+    4-guest chooser and a couch cottage on the page, which on a direct booking
+    DOES tick (the guard-on-the-guard).
+  - **D — imports start at 2.** On `mphb_create_booking_via_ical($booking)`
+    (rooms already saved, read fresh by `post_parent`): `_mphb_adults` →
+    min(2, importer's value); never raised, never on a confirmed room, never
+    marked confirmed. Children NOT written (key unread from source; live
+    children capacity 0). Nothing hooks `mphb_update_booking_via_ical`, and
+    `updateBooking()` never writes adults (Director), so syncs keep the 2. No
+    migration: the Director changes #18098/#19600/#19639/#19670 by hand.
+  - **E — confirm only on a choice.** EVERY Update submits the Guest count
+    select, so 0.23.0's "submitting IS the human act" confirmed the importer's
+    default on any save (found on staging: 18433, 19600). Now an UNCONFIRMED
+    count renders a first option `keep` = "N (not confirmed)", selected, with
+    no number pre-selected; `keep` writes nothing; choosing any number — the
+    same one included — confirms; a confirmed count resubmitting itself writes
+    nothing; "Not provided" unchanged. The JS reads `keep` as the stored number
+    (`data-dcc-stored`) — tested with a stored 2, because an unreadable count
+    would fail open and show Guest 3 anyway. The save-side `keep` guard is a
+    BELT (`(int) 'keep'` is 0, refused by the range check), so it carries no
+    mutation of its own. Existing markers left alone.
+  - Two vacuous checks found while writing these, both fixed: the admin-guests
+    stand-in had no booking repository, so every "no log line" assertion read
+    an array nothing ever wrote; and an `inBox` helper read `<label>` text, so
+    "no pet part" could not fail on the label-less "Pet fee:" line.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at
@@ -1367,9 +1430,12 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 189
-  mutations, 189 killed, 0 of everything else, exit 0, in ONE run (2026-10-10,
-  v0.31.0; seventeen suites). At v0.30.3, 175; at v0.30.2, 174; at v0.30.1, 173.
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 215
+  mutations, 215 killed, 0 of everything else, exit 0, in ONE run (2026-10-11,
+  v0.32.0; eighteen suites). 0.32.0's first full run was 212 + 3 STALE: three
+  mutations aimed at the pet-fee line and the boat layout group, which 0.32.0
+  MOVED (to Extra_Details / extras_fields()); re-anchored with their intent
+  unchanged, each killed alone, then the whole set re-run. At v0.31.0, 189; at v0.30.3, 175; at v0.30.2, 174; at v0.30.1, 173.
   0.31.0's first boat-only run was 10 killed + 2 SURVIVED + 1 HARNESS: the
   marker check and the creation claim each covered the other, so neither was
   isolated until a "no query after the run" test and a constructed race were

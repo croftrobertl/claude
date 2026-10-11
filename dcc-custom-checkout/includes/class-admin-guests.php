@@ -40,7 +40,7 @@ final class Admin_Guests
 {
     private const BOOKING_POST_TYPE = 'mphb_booking';
     private const RESERVED_POST_TYPE = 'mphb_reserved_room';
-    private const META_KEY = '_mphb_adults';
+    public const META_KEY = '_mphb_adults';
 
     /**
      * PROVENANCE, on the same reserved room: "a human set this".
@@ -60,7 +60,10 @@ final class Admin_Guests
      * equal to what is already stored, which is precisely the case the feature
      * exists for — and deleted with the count on "Not provided".
      */
-    private const CONFIRMED_KEY = '_mphb_adults_confirmed';
+    public const CONFIRMED_KEY = '_mphb_adults_confirmed';
+
+    /** The untouched unconfirmed count's option value (v0.32.0, E). Not a number, so never stored. */
+    public const KEEP = 'keep';
     private const NONCE = 'dcc_admin_guests';
 
     /*
@@ -126,7 +129,7 @@ final class Admin_Guests
         wp_nonce_field(self::NONCE, self::NONCE . '_nonce');
 
         echo '<p class="description">'
-            . esc_html__('MotoPress fills this with the cottage\'s capacity when an import supplies no count, so a number here is not necessarily what the guest said. Set the real number — or re-select the number already shown to confirm it is right — and the staff panel will treat it as a real count. Choose "Not provided" if nobody told us.', 'dcc-checkout')
+            . esc_html__('An imported booking starts at 2 guests, and that number is not confirmed: it is a default, not what the guest said. Choose the real number — choosing the number already shown confirms it — and the staff panel will treat it as a real count. Choose "Not provided" if nobody told us. Saving the booking without choosing here changes nothing.', 'dcc-checkout')
             . '</p>';
 
         foreach ($rooms as $room) {
@@ -134,13 +137,29 @@ final class Admin_Guests
             echo '<p>';
             echo '<label for="' . esc_attr($field) . '"><strong>'
                 . esc_html($room['label']) . '</strong></label><br>';
-            echo '<select id="' . esc_attr($field) . '" name="dcc_adults[' . esc_attr((string) $room['id']) . ']" style="width:100%">';
-            echo '<option value="">' . esc_html__('Not provided', 'dcc-checkout') . '</option>';
+            // v0.32.0 (E) — an UNCONFIRMED count opens on its own "keep" option,
+            // so saving the booking without touching this writes nothing. Every
+            // Update submits the select; before this, an untouched one confirmed
+            // the importer's default. Picking ANY number below — the same one
+            // included, which a native select cannot signal by itself — is a
+            // real choice and confirms it.
+            $keep = $room['adults'] > 0 && !$room['confirmed'];
+            echo '<select id="' . esc_attr($field) . '" name="dcc_adults[' . esc_attr((string) $room['id']) . ']" style="width:100%"'
+                . ($keep ? ' data-dcc-stored="' . esc_attr((string) $room['adults']) . '"' : '') . '>';
+            if ($keep) {
+                printf(
+                    '<option value="%1$s" selected>%2$s</option>',
+                    esc_attr(self::KEEP),
+                    /* translators: %d: the stored, unconfirmed guest count. */
+                    esc_html(sprintf(__('%d (not confirmed)', 'dcc-checkout'), $room['adults']))
+                );
+            }
+            echo '<option value=""' . ($room['adults'] > 0 ? '' : ' selected') . '>' . esc_html__('Not provided', 'dcc-checkout') . '</option>';
             for ($n = 1; $n <= $room['max']; $n++) {
                 printf(
                     '<option value="%1$d"%2$s>%1$d</option>',
                     $n,
-                    selected($room['adults'], $n, false)
+                    $keep ? '' : selected($room['adults'], $n, false)
                 );
             }
             echo '</select>';
@@ -153,7 +172,7 @@ final class Admin_Guests
                 echo '<span class="description">';
                 echo $room['confirmed']
                     ? esc_html__('Confirmed — the staff panel shows this as a real count.', 'dcc-checkout')
-                    : esc_html__('Not confirmed: this may be the importer\'s default. Re-select it to confirm.', 'dcc-checkout');
+                    : esc_html__('Not confirmed: this may be the importer\'s default. Choose a number to confirm it.', 'dcc-checkout');
                 echo '</span>';
             }
             if (!$room['capacity_known']) {
@@ -164,22 +183,8 @@ final class Admin_Guests
             echo '</p>';
         }
 
-        // v0.28.0 — the pet fee, read-only (owner's pick, 2026-10-07): it
-        // cannot be changed from here, so nothing here pretends to. The Dog
-        // fields in Customer Information follow this same reading.
-        // v0.29.0 — on a pet-fee cottage ONLY (today Cottage 34). Elsewhere,
-        // and where the cottage cannot be read, there is no line at all.
-        if (Admin_Fields::booking_pet_cottage((int) $post->ID) === true) {
-            $pet = Admin_Fields::booking_pet_state((int) $post->ID);
-            echo '<p class="dcc_admin-petfee-line"><strong>' . esc_html__('Pet fee:', 'dcc-checkout') . '</strong> ';
-            if ($pet === 'yes' || $pet === 'no') {
-                echo esc_html($pet === 'yes' ? __('Yes', 'dcc-checkout') : __('No', 'dcc-checkout'));
-            } else {
-                echo esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
-            }
-            echo '</p>';
-        }
-
+        // v0.32.0 — the pet fee line moved to the "Extra Details/Options" box
+        // directly below this one (Rob's pick A).
         echo '</div>';
     }
 
@@ -215,6 +220,9 @@ final class Admin_Guests
                 continue;
             }
             $raw = trim((string) $submitted[$id]);
+            if ($raw === self::KEEP) {
+                continue; // untouched unconfirmed count: write nothing (E)
+            }
 
             $had_count = (string) get_post_meta($id, self::META_KEY, true);
             $had_mark  = self::is_confirmed(get_post_meta($id, self::CONFIRMED_KEY, true));
@@ -245,8 +253,16 @@ final class Admin_Guests
             // 4 because the party really is four. The number does not change,
             // so nothing was written, so no marker appeared, so /staff/ went on
             // saying "count not provided" for a count that had just been
-            // confirmed by hand. Submitting the form IS the human act being
-            // recorded; whether the digit moved is beside the point.
+            // confirmed by hand.
+            //
+            // v0.32.0 (E) — what "the human act" is had to be corrected: EVERY
+            // Update submits this select, so a bare submission confirmed the
+            // importer's default whenever anyone saved the booking for any
+            // reason. Now an unconfirmed count submits KEEP unless a number was
+            // chosen (handled above), and a confirmed count resubmitting its own
+            // number changes nothing below. So a number arriving here for an
+            // unconfirmed room was CHOSEN — the same digit included — and that
+            // choice is what confirms it.
             $changed = false;
             if ($had_count !== (string) $value) {
                 update_post_meta($id, self::META_KEY, $value);
@@ -336,7 +352,7 @@ final class Admin_Guests
      *
      * @param mixed $raw Whatever get_post_meta() returned.
      */
-    private static function is_confirmed($raw): bool
+    public static function is_confirmed($raw): bool
     {
         $value = (string) $raw;
         return $value !== '' && $value !== '0';

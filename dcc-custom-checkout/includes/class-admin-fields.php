@@ -284,6 +284,12 @@ final class Admin_Fields
             // the script read both as "unknown" — Dog showed on every booking.
             // See booking_pet_state() for the four values.
             'statedPetFee'    => $existing ? self::booking_pet_state($booking) : 'unknown',
+            // v0.32.0 — an imported booking (Airbnb / Booking.com / Vrbo) never
+            // gets a fee from wp-admin (Rob: "all extra fees have to be added
+            // in the OTA"). A word, as wp_localize_script requires.
+            'isImported'      => $existing && Policies::is_imported($booking) ? '1' : '',
+            // v0.32.0 — moved into "Extra Details/Options", in this order.
+            'extrasFields'    => self::extras_fields(),
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
@@ -291,6 +297,8 @@ final class Admin_Fields
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
                 'petFee'      => __('Pet Fee:', 'dcc-checkout'),
+                'extrasTitle' => __('Extra Details/Options', 'dcc-checkout'),
+                'editAccommodations' => __('Edit Accommodations', 'dcc-checkout'),
                 'petYes'      => __('Yes', 'dcc-checkout'),
                 'petNo'       => __('No', 'dcc-checkout'),
                 'petManual'   => __('Choose the pet fee under Additional Services.', 'dcc-checkout'),
@@ -325,6 +333,18 @@ final class Admin_Fields
      *
      * @return array<int, array{key:string,title:string,fields:array<int,mixed>}>
      */
+    /**
+     * The fields admin-booking.js moves into "Extra Details/Options"
+     * (v0.32.0, Rob's pick A), in order: the dog questions, then the boat
+     * question. Input names, as MotoPress renders them.
+     *
+     * @return string[]
+     */
+    public static function extras_fields(): array
+    {
+        return array_merge(array_values(Config::dog_field_names()), ['mphb_' . Boat_Field::NAME]);
+    }
+
     public static function customer_layout(): array
     {
         $mp = static function (string $name): array {
@@ -374,17 +394,9 @@ final class Admin_Fields
                 'key' => 'guest4', 'title' => __('Guest 4', 'dcc-checkout'),
                 'fields' => [$one($g4['first_name']), $one($g4['last_name'])],
             ],
-            [
-                'key' => 'dog', 'title' => __('Dog', 'dcc-checkout'),
-                'fields' => [$one($dog['type']), $one($dog['size']), $one($dog['hair'])],
-            ],
-            [
-                // v0.31.0 — its own heading after Dog (owner's pick B). Never
-                // gated: nothing in admin-booking.js governs it, so it shows on
-                // every booking, imported ones included.
-                'key' => 'boat', 'title' => __('Boat / trailer', 'dcc-checkout'),
-                'fields' => [$mp(Boat_Field::NAME)],
-            ],
+            // v0.32.0 — Dog and "Bringing a boat or trailer?" are no longer in
+            // Customer Information: they move to the "Extra Details/Options"
+            // box (edit screen) or block (Add New) — see extras_fields().
             [
                 'key' => 'note', 'title' => __('Note', 'dcc-checkout'),
                 'fields' => [$mp('note')],
@@ -547,6 +559,11 @@ final class Admin_Fields
         }
         if ($cottage === null) {
             return 'unknown';
+        }
+        // v0.32.0 (C) — an import never carries a pet fee: its dog is the one
+        // recorded in "Bringing a dog?" (`_dcc_dog`), so that is what Dog follows.
+        if (Policies::is_imported($booking_id)) {
+            return (string) get_post_meta($booking_id, Extra_Details::DOG_META, true) === 'yes' ? 'yes' : 'no';
         }
         $fee = self::booking_pet_fee($booking_id);
         return $fee === null ? 'unknown' : ($fee ? 'yes' : 'no');

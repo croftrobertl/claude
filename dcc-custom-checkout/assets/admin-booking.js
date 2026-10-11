@@ -172,7 +172,79 @@
         }
     }
 
+    /**
+     * "Extra Details/Options" (v0.32.0, Rob's pick A): the dog questions and
+     * "Bringing a boat or trailer?" leave Customer Information.
+     *  - Edit screen: into the box PHP draws under "Guest count"
+     *    (#dcc_extras_rows), as table rows.
+     *  - Add New: into a block right after Number of Guests, which the Pet Fee
+     *    dropdown then opens (Rob's pick 6).
+     * The rows are MOVED, never re-created: they stay inside the booking form,
+     * so MotoPress saves them exactly as before. Runs BEFORE the Customer
+     * Information layout, so they are never taken for unknown rows ("Other").
+     * Idempotent: a row already in place is not touched. No container found
+     * (the search step, no script config) -> nothing moves.
+     */
+    var extrasBlock = null;
+    function extras() {
+        var names = CFG.extrasFields || [];
+        if (!names.length) { return; }
+        var box = document.getElementById('dcc_extras_rows');
+        if (!box) {
+            var chooser = adultsSelects(document).filter(function (s) {
+                return /\[adults\]$/.test(String(s.name || ''));
+            })[0];
+            if (!chooser) { return; }
+            box = document.querySelector('.dcc_admin-extras');
+            if (!box) {
+                box = document.createElement('div');
+                box.className = 'dcc_admin-extras';
+                var h = document.createElement('div');
+                h.className = 'dcc_admin-group-heading dcc_admin-extras__title';
+                h.textContent = I18N.extrasTitle || 'Extra Details/Options';
+                box.appendChild(h);
+                insertAfter(box, chooserAnchor(chooser));
+            }
+            extrasBlock = box;
+        }
+        var table = box.tagName === 'TBODY';
+        names.forEach(function (name) {
+            var el = document.querySelector('[name="' + esc(name) + '"]');
+            if (!el) { return; }
+            var row = table ? el.closest('tr') : el.closest('.mphb-field, .mphb-text-control, p, li');
+            if (!row || row === box || row.contains(box)) { return; }
+            if (row.parentNode !== box || box.lastElementChild !== row) {
+                box.appendChild(row);
+            }
+        });
+        editLink();
+    }
+
+    /**
+     * Direct booking on a pet-fee cottage: the pet fee changes through
+     * MotoPress's own "Edit Accommodations" (the brief's fallback for B), so
+     * the box carries a copy of MotoPress's own link — found on the screen,
+     * never built — and only when it is there (MotoPress shows it for
+     * non-imported bookings only).
+     */
+    function editLink() {
+        var spot = document.querySelector('[data-dcc-edit-accommodations]');
+        if (!spot || spot.querySelector('a')) { return; }
+        var src = Array.prototype.filter.call(
+            document.querySelectorAll('a[href*="page=mphb_edit_booking"]'),
+            function (a) { return !a.closest('.dcc_extras'); }
+        )[0];
+        if (!src) { return; }
+        var a = document.createElement('a');
+        a.className = 'button dcc_extras-edit-link';
+        a.href = src.href;
+        a.textContent = I18N.editAccommodations || 'Edit Accommodations';
+        spot.appendChild(document.createElement('br'));
+        spot.appendChild(a);
+    }
+
     ready(function () {
+        extras();
         // The layout is independent of the gating: it runs even where there is
         // nothing to gate, and the gating keeps its headings in step.
         var layout = customerLayout();
@@ -275,7 +347,10 @@
             if (sels.length) {
                 var max = 0;
                 for (var i = 0; i < sels.length; i++) {
-                    var v = parseInt(sels[i].value, 10);
+                    // v0.32.0 (E): an untouched unconfirmed count is submitted
+                    // as "keep"; for the gating it is the number it stands for.
+                    var raw = sels[i].value === 'keep' ? sels[i].getAttribute('data-dcc-stored') : sels[i].value;
+                    var v = parseInt(raw, 10);
                     if (!(v > 0)) { return null; }
                     if (v > max) { max = v; }
                 }
@@ -418,7 +493,8 @@
          * screen that disagreed with Number of Guests.
          */
         function syncExtraGuestFee(ids) {
-            if (!GUEST_IDS.length) { return; }
+            // v0.32.0 (C) — an imported booking never gets a fee from here.
+            if (!GUEST_IDS.length || CFG.isImported === '1') { return; }
             var included = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
             var steps    = CFG.guestFeeSteps || {};
 
@@ -636,6 +712,12 @@
             var none = { state: function () { return null; }, apply: function () {} };
             var off  = { state: function () { return false; }, apply: function () {} };
             if (CFG.isExisting === '1') {
+                // v0.32.0 (C) — an import's dog is the one recorded in
+                // "Bringing a dog?" (record only), and Dog follows it live.
+                var dogSel = document.getElementById('dcc_dog');
+                if (dogSel) {
+                    return { state: function () { return dogSel.value === 'yes'; }, apply: function () {} };
+                }
                 var s = String(CFG.statedPetFee || '');
                 var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);
                 return { state: function () { return known; }, apply: function () {} };
@@ -672,7 +754,11 @@
             wrap.appendChild(document.createTextNode(' '));
             wrap.appendChild(sel);
             wrap.appendChild(note);
-            insertAfter(wrap, chooserAnchor(chooser));
+            if (extrasBlock && extrasBlock.firstElementChild) {
+                insertAfter(wrap, extrasBlock.firstElementChild);   // under the block's heading
+            } else {
+                insertAfter(wrap, chooserAnchor(chooser));
+            }
 
             // Opens at what the form already says: Yes if a pet fee is ticked.
             sel.value = serviceBoxes(PET_IDS).some(function (b) { return b.checked; }) ? 'yes' : 'no';
@@ -743,6 +829,7 @@
             new MutationObserver(function () {
                 if (timer) { clearTimeout(timer); }
                 timer = setTimeout(function () {
+                    extras();   // a re-render brings rows back: move them again first
                     if (layout) { layout.arrange(); }
                     managed = collect(groups);
                     evaluate();
