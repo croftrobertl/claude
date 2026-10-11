@@ -340,6 +340,30 @@ render round and his say.
   page without the configured target has no egg. Do not reintroduce a
   fallback tier.
 
+### Rob's recorded picks (for 4.8.0, chosen 2026-10-11)
+
+- **The witch over the moon flies edge to edge** (`witchmoon`): the moon
+  fades in, she enters off one side, dips, makes ONE loop around the moon
+  while it glows, leaves off the far side, then the moon fades. Kept: the
+  `witchsil` sprite (72px) and the drawn moon. The pass is a polyline
+  walked by arc length (`witchPath`/`witchAt`); loop radius
+  clamp(vw*0.2, 80, 100) clears the moon's halo plus half the witch, and
+  the moon is placed so the loop stays on screen from 320px up. 8.0 s at
+  390, 9.0 s at 1280. `WITCH_LOOP` 'bank' | 'upright' awaits Rob's pick
+  from the renders (`build/reels`); the build ships 'bank'.
+- **Timing (all themes):** flyer first at 3-5 s on a visit's first page;
+  scene first at 6-10 s, never on top of the flyer (2 s after it leaves);
+  then ONE appearance every 60-90 s counted from the end of the last,
+  hero and scene alternating (a theme with only one kind repeats it).
+  Later pages: the scene at 6-10 s (hero-only themes: the hero then).
+  `Plugin::EVERY` = [60, 90] replaced HERO_EVERY; nothing stored overrides
+  it. Measured: a heron takes ~8.5 s to cross a phone and ~19 s a desktop,
+  so the first scene lands at ~14 s / ~24 s on a first page.
+- **The heron (Great Blue, drawn in code)**: three candidate styles in
+  `tools/heron-lab.js` (A field guide, B painted, C silhouette+), one
+  continuous wingbeat; renders in `build/reels`. NOT in the engine until
+  Rob picks.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -706,7 +730,12 @@ render round and his say.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `tools/scene-reel.js` renders any scene or hero from the real engine on
+  the mocked clock to a WebM + frame strip + path trace (Playwright's
+  ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process
+  dies at once); `tools/heron-sheet.js` / `tools/heron-reel.js` render the
+  heron candidates.
   `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
   `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
   them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
@@ -816,10 +845,16 @@ render round and his say.
   ripple reserve is NOT scaled. `fitParts()` re-targets on a real resize,
   never mid-scene (`endVig()` calls it). On a phone a scene borrows at most
   ONE sprite (`startVig`). Rob's density setting is never touched.
-- **Hero timing runs on VISIBLE time (`vt`), advanced once per frame before
-  the scene step.** First page of a visit (sessionStorage key
-  `dcc_seasons_visit`) → first hero 3-5s; later pages, or storage blocked
-  (`firstPage === null`) → 120-180s. `window.DCCHeroFx.state` is the
+- **Heroes AND scenes run on VISIBLE time (`vt`), one scheduler, since
+  4.8.0.** `heroAt` / `vigAt` are due times (INF = not its turn);
+  `nextTurn()` runs when either leaves. First page of a visit
+  (sessionStorage key `dcc_seasons_visit`) → hero 3-5 s, scene 6-10 s;
+  later pages, or storage blocked (`firstPage === null`) → scene 6-10 s.
+  Until 4.8.0 scenes ran on wall-clock `t` with their own `vigNext`, so the
+  two could not take turns. Debug knobs: `heroFirst` (s, any page),
+  `heroEvery` (s, the gap after a hero), `vigFirst`/`vigGap` (ms).
+  `tools/test-timing.js` walks every theme, first and later page, and
+  Christmas evening, on the mocked clock. `window.DCCHeroFx.state` is the
   home-page hero-image show's contract (dcc-hero-life 3.11.0+: `none |
   busy | done`, plus a `dcc:herofx` event): no hero STARTS while busy;
   busy → done → the first hero 2s later; busy that never ends is ignored

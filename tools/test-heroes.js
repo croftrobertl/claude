@@ -7,7 +7,8 @@
  *
  *   first-hero timing  — absent/'none' → 3-5s; busy → done → 2s later;
  *                        busy forever → the 70s cap; the second page of a
- *                        visit → 120-180s; storage blocked → 120-180s;
+ *                        visit → the scene first at 6-10 s (4.8.0); storage
+ *                        blocked → the same;
  *                        no hero STARTS while DCCHeroFx says busy
  *   exclusion          — no scene starts while a hero crosses, no hero
  *                        while a scene runs
@@ -103,23 +104,25 @@ async function waitVt(page, v, maxMs = 60000) {
     } finally { await s.close(); }
   }
   {
-    const cfg = cfgFor('patriot_day'); cfg.vtScale = 4;
+    const cfg = cfgFor('patriot_day'); cfg.vtScale = 4; delete cfg.vigFirst;
     const s = await bootWith(cfg, null);
     try {
       await s.page.reload({ waitUntil: 'load' });   // the same tab: the second page of the visit
       await s.page.waitForFunction(S, null, { timeout: 15000 });
-      const st = await s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { first: x.firstPage, at: x.heroAt }; });
-      ok(st.first === false && st.at >= 120 && st.at <= 180, 'second page of the visit: the first hero waits 120-180s', JSON.stringify(st));
+      const st = await s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { first: x.firstPage, at: x.heroAt, vigAt: x.vigAt }; });
+      /* 4.8.0 (Rob): on a later page the season's scene comes first, at
+       * 6-10 s; the hero waits its turn (60-90 s after the scene ends). */
+      ok(st.first === false && st.at >= 1e11 && st.vigAt >= 6 && st.vigAt <= 10, 'second page of the visit: the scene first at 6-10 s, the hero waits its turn', JSON.stringify(st));
     } finally { await s.close(); }
   }
   {
-    const cfg = cfgFor('patriot_day'); cfg.vtScale = 4;
+    const cfg = cfgFor('patriot_day'); cfg.vtScale = 4; delete cfg.vigFirst;
     const s = await bootWith(cfg, () => {
       Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('blocked'); } });
     });
     try {
-      const st = await s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { first: x.firstPage, at: x.heroAt }; });
-      ok(st.first === null && st.at >= 120 && st.at <= 180, 'storage blocked: today\'s 120-180s timing', JSON.stringify(st));
+      const st = await s.page.evaluate(() => { const x = window.DCCSeasonsEngine._state; return { first: x.firstPage, at: x.heroAt, vigAt: x.vigAt }; });
+      ok(st.first === null && st.at >= 1e11 && st.vigAt >= 6 && st.vigAt <= 10, 'storage blocked: treated as a later page (scene at 6-10 s)', JSON.stringify(st));
     } finally { await s.close(); }
   }
 

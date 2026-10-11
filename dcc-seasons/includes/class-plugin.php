@@ -15,8 +15,13 @@ final class Plugin {
 
     /** Stores the version last seen running, to detect an install/upgrade. */
     public const VERSION_OPTION = 'dcc_seasons_version';
-    /** Seconds between hero crossings after the first; the Theme guide quotes it. */
-    public const HERO_EVERY = [120, 180];
+    /**
+     * Seconds between appearances after the first hero and first scene:
+     * one every 60-90 s, hero and scene taking turns (Rob, 4.8.0). A code
+     * default, not a setting; the engine and the Theme guide both read it.
+     * Was HERO_EVERY = [120, 180], heroes only, until 4.7.1.
+     */
+    public const EVERY = [60, 90];
 
     private static ?Plugin $instance = null;
 
@@ -865,7 +870,7 @@ final class Plugin {
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
-            'heroEvery'   => self::HERO_EVERY,
+            'every'       => self::EVERY,
             'preview'      => null,
             'previewLabel' => '',
             'version'      => DCC_SEASONS_VERSION,

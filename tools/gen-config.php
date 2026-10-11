@@ -44,6 +44,7 @@ if (!function_exists('sanitize_key')) {
 require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
 require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
 require __DIR__ . '/../dcc-seasons/includes/class-settings.php';
+require_once __DIR__ . '/../dcc-seasons/includes/class-plugin.php';
 
 use DCC_Seasons\Schedule;
 use DCC_Seasons\Themes;
@@ -136,11 +137,13 @@ $config = [
      * .min.js, and that is what actually ships. */
     'matrixSrc'    => !empty($args['min']) ? 'matrix.min.js' : 'matrix.js',
     'engineSrc'    => !empty($args['min']) ? 'engine.min.js' : 'engine.js',
-    /* Heroes normally cross every 2-3 minutes. --heroevery=<seconds>
-     * shortens that so a suite can observe one without waiting. */
+    /* One appearance every 60-90 s after the first ones (4.8.0), from the
+     * plugin's own constant. --heroevery=<seconds> is a DEBUG knob: the gap
+     * after a hero, so a suite can observe several without waiting. */
+    'every'        => \DCC_Seasons\Plugin::EVERY,
     'heroEvery'    => isset($args['heroevery'])
         ? [(int) $args['heroevery'], (int) $args['heroevery'] + 1]
-        : [120, 180],
+        : null,
     'preview'      => isset($args['theme']) ? (string) $args['theme'] : null,
     'previewLabel' => isset($args['theme']) ? (string) $args['theme'] : '',
     'version'      => 'test',

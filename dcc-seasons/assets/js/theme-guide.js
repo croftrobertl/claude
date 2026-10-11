@@ -248,7 +248,7 @@
 		if (S.evening) { (E.eveningVigs[key] || []).forEach(function (s) { scenes.push([s, true]); }); }
 		if (scenes.length) {
 			var vs = section(T.scenes, on.scenes);
-			vs.appendChild(el('p', 'dcc-guide-total', fmt(T.sceneTiming, range(E.timing.vigFirst), range(E.timing.vigGap)) +
+			vs.appendChild(el('p', 'dcc-guide-total', fmt(T.sceneTiming, range(E.timing.vigFirst), range(D.every || E.timing.every)) +
 				(scenes.length > 1 ? ' ' + T.oneOf : '')));
 			scenes.forEach(function (s) {
 				var nm = (N.scenes && N.scenes[s[0]]) || s[0];
@@ -262,7 +262,7 @@
 			var pool = ['heron'];
 			if (A.hero && pool.indexOf(A.hero) < 0) { pool.push(A.hero); }
 			var hs = section(T.hero, on.hero);
-			hs.appendChild(el('p', 'dcc-guide-total', fmt(T.heroTiming, range(E.timing.heroFirst), range(D.heroEvery || E.timing.heroEvery))));
+			hs.appendChild(el('p', 'dcc-guide-total', fmt(T.heroTiming, range(E.timing.heroFirst), range(D.every || E.timing.every))));
 			pool.forEach(function (h) {
 				var nm = (N.heroes && N.heroes[h]) || h;
 				var pics = [spriteImg(E.heroArt[h], nm)];

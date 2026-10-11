@@ -94,7 +94,8 @@ const QUIET = c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; };
 
   console.log('\n  --- nothing to draw: no repaints, and the hero still comes ---');
   {
-    const ses = await boot(['--theme=earth_day', '--ambient=0', '--subtle=off'], c => { c.heroEvery = [6, 7]; c.vigFirst = 1e9; });
+    /* heroFirst (debug) puts a hero at 6-7 s on this later page */
+    const ses = await boot(['--theme=earth_day', '--ambient=0', '--subtle=off'], c => { c.heroFirst = [6, 7]; c.vigFirst = 1e9; });
     try {
       await ses.page.waitForFunction(S, null, { timeout: 15000 });
       await ses.page.waitForTimeout(800);

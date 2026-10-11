@@ -27,7 +27,7 @@ const SCENES = [
   ['limpkinsnail', 'florida_keys', 'KD — a limpkin wades to the reeds, probes, and pulls up an apple snail'],
   ['hibfloat', 'florida_keys', 'K3 — a hibiscus bloom drops, floats, and a fish nibbles it'],
   /* 4.3.0: the three scenes that were emoji, now Rob's drawn picks */
-  ['witchmoon', 'halloween', 'W-A — the silhouette witch and her cat cross the moon'],
+  ['witchmoon', 'halloween', 'W-A — the silhouette witch and her cat fly edge to edge, looping the moon (4.8.0)'],
   ['arrival', 'snowbird', 'F-A — three flamingos flap down, land, and flap away'],
   ['duckparade', 'spring_canal', 'D-A — a mottled duck hen leads four ducklings along the water'],
 ];
@@ -102,6 +102,53 @@ function ok(c, label, detail) {
       strips.push({ name, story, frames: [...pick].sort((a, b) => a - b).slice(0, 6).map(i => frames[i]) });
     } finally { await ses.close(); }
   }
+  /* 4.8.0 (Rob): the witch flies EDGE TO EDGE with one loop around the
+   * moon — never vanishing mid-screen, the loop on screen from 320px up,
+   * the moon up before she arrives and fading after she has gone. */
+  if (!ONLY.length || ONLY.includes('witchmoon')) {
+    console.log('\n  --- witchmoon: edge to edge, one loop, at 320 / 390 / 1280 ---');
+    for (const w of [320, 390, 1280]) {
+      const cfg = config(['--theme=halloween', '--placement=content', '--layering=front', '--density=16', '--diag']);
+      cfg.vigOnly = 'witchmoon'; cfg.vigFirst = 300; cfg.vigGap = 1e9; cfg.heroEvery = [9999, 10000]; cfg.forceHour = 12;
+      const ses = await open(fixture({ kind: 'bravada', config: cfg }), { viewport: { width: w, height: w < 768 ? 640 : 800 } });
+      try {
+        await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 15000 });
+        const r = await ses.page.evaluate(() => {
+          const s = window.DCCSeasonsEngine._state; s.manual(true);
+          for (let i = 0; i < 600 && !s.vig; i++) { s.tick(1000 / 30, 1); }
+          const out = []; let geo = null;
+          for (let i = 0; i < 30 * 15 && s.vig; i++) {
+            const v = s.vigSt;
+            if (v && v.R && !geo) { geo = { R: v.R, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh }; }
+            out.push(v ? { x: v.wx, y: v.wy, a: v.moonA, t: v.t2 } : null);
+            s.tick(1000 / 30, 1);
+          }
+          return { out, geo, ended: !s.vig };
+        });
+        const g = r.geo, seen = r.out.map(o => o && o.x != null);
+        const i0 = seen.indexOf(true), i1 = seen.lastIndexOf(true);
+        const gaps = seen.slice(i0, i1 + 1).filter(x => !x).length;
+        const xs = r.out.filter(o => o && o.x != null);
+        const first = xs[0], last = xs[xs.length - 1];
+        ok(r.ended && gaps === 0, `${w}px: she is drawn continuously from entry to exit (${xs.length} frames)`, `gaps ${gaps}`);
+        ok((first.x < 0 && last.x > g.vw) || (first.x > g.vw && last.x < 0), `${w}px: she enters off one side and leaves off the other`, `${first.x.toFixed(0)} → ${last.x.toFixed(0)} (vw ${g.vw})`);
+        const loop = xs.filter(o => Math.abs(Math.hypot(o.x - g.mx, o.y - g.my) - g.R) < 2);
+        const half = 36;
+        const out = loop.filter(o => o.x < half || o.x > g.vw - half || o.y < half || o.y > g.vh - half);
+        ok(loop.length > 20 && !out.length, `${w}px: the loop (${loop.length} frames, radius ${g.R}) stays inside the screen with her whole width`, JSON.stringify(out[0]));
+        const ang = loop.map(o => Math.atan2(o.y - g.my, o.x - g.mx));
+        let turn = 0; for (let k = 1; k < ang.length; k++) { let d = ang[k] - ang[k - 1]; while (d > Math.PI) { d -= 2 * Math.PI; } while (d < -Math.PI) { d += 2 * Math.PI; } turn += d; }
+        ok(Math.abs(turn) > 5.5 && Math.abs(turn) < 7.2, `${w}px: one full loop around the moon (${(turn * 180 / Math.PI).toFixed(0)}°)`, `${turn}`);
+        const total = r.out.length / 30;
+        ok(total >= 7 && total <= 9.5, `${w}px: the whole pass takes ${total.toFixed(1)} s (7-9.5)`, `${total}`);
+        const onAt = r.out.find(o => o && o.x != null && o.x > 0 && o.x < g.vw);
+        ok(onAt && onAt.a >= 0.99, `${w}px: the moon is fully up before she comes on screen`, JSON.stringify(onAt));
+        const after = r.out.slice(i1 + 1).filter(Boolean);
+        ok(after.length >= 20 && after[after.length - 1].a < 0.1 && after.every((o, k) => k === 0 || o.a <= after[k - 1].a + 1e-9), `${w}px: the moon fades out after she has gone (${(after.length / 30).toFixed(1)} s)`, JSON.stringify(after.slice(-1)));
+      } finally { await ses.close(); }
+    }
+  }
+
   /* composite */
   if (strips.length) {
     const { chromium } = playwright();

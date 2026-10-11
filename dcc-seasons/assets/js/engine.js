@@ -624,9 +624,13 @@
 		return specs;
 	}
 
-	/* --- Timing, in seconds. heroEvery is the fallback for a config that
-	 * predates CFG.heroEvery (Plugin::HERO_EVERY sends the live value). --- */
-	var TIMING = { heroFirst: [3, 5], heroEvery: [120, 180], vigFirst: [20, 28], vigGap: [90, 150], xaTurn: 45 };
+	/* --- Timing, in seconds of VISIBLE time (Rob, 4.8.0): the flyer (hero)
+	 * first at 3-5 s on a visit's first page; the season's scene first at
+	 * 6-10 s, after the flyer and never on top of it; after that ONE
+	 * appearance every 60-90 s (counted from the end of the last one),
+	 * hero and scene taking turns, never two at once. `every` is the
+	 * fallback for a config without CFG.every (Plugin::EVERY sends it). --- */
+	var TIMING = { heroFirst: [3, 5], vigFirst: [6, 10], every: [60, 90], breath: 2, xaTurn: 45 };
 	/* Scenes added only in the evening, and the theme with the midnight countdown. */
 	var EVENING_VIGS = { christmas: ['sleighmoon'] };
 	var COUNTDOWN_THEME = 'new_years';
@@ -671,7 +675,7 @@
 		function phoneScale() { return phoneScaleAt(W.innerWidth); }
 		function partTarget() { return partTargetFor(A, CFG.density, W.innerWidth); }
 		var maxParts = partTarget();
-		var heroEvery = CFG.heroEvery || TIMING.heroEvery;
+		var EVERY = CFG.every || TIMING.every, INF = 1e12;
 		/* CFG.diag, not CFG.debug: the plugin has only ever emitted 'diag'
 		 * (Plugin::config), so this read a key that was never sent and DEBUG
 		 * was permanently false on every real page. The diagnostics PANEL
@@ -3178,8 +3182,17 @@
 				return true;
 			} catch (e) { return null; }
 		})();
-		function heroGap() { return rnd(heroEvery[0], heroEvery[1]); }
-		var heroAt = firstPage ? rnd(TIMING.heroFirst[0], TIMING.heroFirst[1]) : heroGap(), heroCount = 0, heroLive = false;
+		/* One scheduler for heroes AND scenes (4.8.0). heroAt / vigAt are the
+		 * visible times each is due; INF means "not its turn". The suites'
+		 * debug knobs: heroFirst (s, any page), heroEvery (s, the gap after a
+		 * hero), vigFirst / vigGap (ms). */
+		function gapAfter(kind) {
+			if (DEBUG && kind === 'hero' && CFG.heroEvery) { return rnd(CFG.heroEvery[0], CFG.heroEvery[1]); }
+			if (DEBUG && kind === 'vig' && CFG.vigGap) { return CFG.vigGap / 1000; }
+			return rnd(EVERY[0], EVERY[1]);
+		}
+		var heroFirst = (DEBUG && CFG.heroFirst) || (firstPage ? TIMING.heroFirst : null);
+		var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : INF, heroCount = 0, heroLive = false;
 		var FX_CAP = 70, fxBusySeen = false, fxDoneAt = -1;
 		function heroFxState() {
 			var h = W.DCCHeroFx;
@@ -3193,7 +3206,8 @@
 		D.addEventListener('dcc:herofx', watchHeroFx);
 		var heroLog = [], vigLog = [];
 		function spawnHero(t) {
-			if (!FX.heroes || vig) { heroAt = vt + 4; return; }
+			if (!FX.heroes) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + TIMING.breath; } return; }
+			if (vig) { heroAt = vt + 4; return; }
 			var kind = pick(heroPool);
 			var dir = sgn();
 			hero = { kind: kind, dir: dir, t: 0, ph: 0 };
@@ -3255,8 +3269,28 @@
 		function heroGone() {
 			if (hero || !heroLive) { return; }
 			heroLive = false;
-			heroAt = vt + heroGap();
 			if (heroLog.length) { heroLog[heroLog.length - 1].end = vt; }
+			nextTurn('hero');
+		}
+		/* Something just left the screen: whose turn is next, and when. A
+		 * first appearance still waiting (the first scene, or a first hero
+		 * held back by the hero-image show) keeps its turn, just not sooner
+		 * than a breath after this one left. Otherwise the OTHER kind goes
+		 * next if this theme has it, else the same kind again, 60-90 s on. */
+		function canHero() { return !!FX.heroes; }
+		function canVig() { return vigList.length > 0; }
+		function nextTurn(kind) {
+			var other = kind === 'hero' ? 'vig' : 'hero';
+			var otherAt = other === 'hero' ? heroAt : vigAt;
+			var otherOk = other === 'hero' ? canHero() : canVig();
+			if (otherOk && otherAt < INF) {
+				if (other === 'hero') { heroAt = mx2(heroAt, vt + TIMING.breath); vigAt = INF; }
+				else { vigAt = mx2(vigAt, vt + TIMING.breath); heroAt = INF; }
+				return;
+			}
+			var at = vt + gapAfter(kind), nk = otherOk ? other : kind;
+			heroAt = nk === 'hero' ? at : INF;
+			vigAt = nk === 'vig' ? at : INF;
 		}
 		function stepHero(dt, t) {
 			if (!hero) {
@@ -3268,6 +3302,7 @@
 				if (vt < at || vig) { return; }
 				spawnHero(t);
 				if (hero) {
+					heroAt = INF;
 					heroLive = true; heroCount++;
 					heroLog.push({ kind: hero.kind, start: vt, end: -1, fx: heroFxState() });
 				}
@@ -3414,7 +3449,7 @@
 		/* --- Vignette director: rare 5–12s choreographed scenes. One at a
 		 * time, ≥90s apart, first ≥20s in, never alongside a hero, actors
 		 * borrow (dormant) pool slots so the cap holds. --- */
-		var vig = null, vigNext = 0, countdownDone = false;
+		var vig = null, vigAt = INF, countdownDone = false;
 		var VA = mn(1, alphaBase * 2.2); /* scenes read a touch stronger */
 		function dspr(key, x, y, w, flipX, rot, alpha) {
 			var im = sprite(key);
@@ -3447,14 +3482,60 @@
 			cx.beginPath();
 		}
 		function sEnd() { cx.stroke(); cx.restore(); }
-		function moonDraw(mx, my, a) {
+		function moonDraw(mx, my, a, glow) {
 			cx.save();
-			cx.globalAlpha = clamp(a * 0.5, 0, 1);
 			cx.fillStyle = '#F4EFD8';
+			if (glow > 0) { /* the witch's pass lights it up (4.8.0) */
+				cx.globalAlpha = clamp(a * 0.16 * glow, 0, 1);
+				cx.beginPath(); cx.arc(mx, my, 58 + 26 * glow, 0, TAU); cx.fill();
+			}
+			cx.globalAlpha = clamp(a * (0.5 + 0.2 * (glow || 0)), 0, 1);
 			cx.beginPath(); cx.arc(mx, my, 46, 0, TAU); cx.fill();
 			cx.globalAlpha = clamp(a * 0.18, 0, 1);
 			cx.beginPath(); cx.arc(mx, my, 58, 0, TAU); cx.fill();
 			cx.restore();
+		}
+		/* The witch's pass over the moon (Rob, 4.8.0): she enters off one
+		 * side, dips, makes one loop around the moon while it glows, and
+		 * leaves off the far side; the moon fades in before she arrives and
+		 * out after she has gone. Built as a polyline in the left-to-right
+		 * frame and mirrored, walked by ARC LENGTH so her speed is even.
+		 * The loop radius clears the moon's halo plus half the witch, and
+		 * the moon is placed so the loop (plus half her width) stays on
+		 * screen from 320px up. */
+		var WITCH_W = 72;
+		/* How she rides the loop — rendered both ways for Rob (4.8.0):
+		 * 'bank' follows the curve (upside down over the top), 'upright'
+		 * stays level and turns to face where she is going. */
+		var WITCH_LOOP = (DEBUG && CFG.witchLoop) || 'bank';
+		function sq(v) { return v * v; }
+		function bezPts(out, p0, p1, p2, p3, n) {
+			for (var i = 1; i <= n; i++) {
+				var u = i / n, v = 1 - u;
+				out.push([v * v * v * p0[0] + 3 * v * v * u * p1[0] + 3 * v * u * u * p2[0] + u * u * u * p3[0],
+					v * v * v * p0[1] + 3 * v * v * u * p1[1] + 3 * v * u * u * p2[1] + u * u * u * p3[1]]);
+			}
+		}
+		function witchPath(st) {
+			var R = st.R, mx = st.dir > 0 ? st.mx : vw - st.mx, my = st.my;
+			var B = [mx, my + R], P0 = [-WITCH_W, my + R * 0.15], P3 = [vw + WITCH_W, my - R * 0.35];
+			var pts = [P0], i, th;
+			bezPts(pts, P0, [lerp(P0[0], B[0], 0.45), B[1] + R * 0.85], [B[0] - R * 0.9, B[1]], B, 48);
+			st.loop0 = pts.length - 1;
+			for (i = 1; i <= 72; i++) { th = MT.PI / 2 - TAU * i / 72; pts.push([mx + R * cos(th), my + R * sin(th)]); }
+			st.loop1 = pts.length - 1;
+			bezPts(pts, B, [B[0] + R * 0.9, B[1]], [lerp(B[0], P3[0], 0.55), B[1] + R * 0.1], P3, 48);
+			if (st.dir < 0) { for (i = 0; i < pts.length; i++) { pts[i][0] = vw - pts[i][0]; } }
+			var len = [0];
+			for (i = 1; i < pts.length; i++) { len.push(len[i - 1] + sqrt(sq(pts[i][0] - pts[i - 1][0]) + sq(pts[i][1] - pts[i - 1][1]))); }
+			st.pts = pts; st.len = len; st.L = len[len.length - 1];
+		}
+		function witchAt(st, d) {
+			var len = st.len, pts = st.pts, lo = 0, hi = len.length - 1;
+			while (hi - lo > 1) { var m = (lo + hi) >> 1; if (len[m] <= d) { lo = m; } else { hi = m; } }
+			var f = len[hi] > len[lo] ? (d - len[lo]) / (len[hi] - len[lo]) : 0;
+			return { x: lerp(pts[lo][0], pts[hi][0], f), y: lerp(pts[lo][1], pts[hi][1], f),
+				dx: pts[hi][0] - pts[lo][0], dy: pts[hi][1] - pts[lo][1], i: lo };
 		}
 
 		function crosserScene(key, w, yOff, speed, onWater) {
@@ -3572,18 +3653,52 @@
 				return false;
 			} },
 			/* Halloween: the witch crosses a faint full moon */
+			/* 4.8.0 (Rob): edge to edge with one loop around the moon. Until
+			 * 4.7.1 she was drawn only from 1.2 to 4.2 s along a 280px hop
+			 * across the moon, so she vanished mid-screen by design. */
 			witchmoon: { actors: 2, run: function (st, dt) {
-				if (!st.on) { st.on = 1; st.mx = rand() < 0.5 ? vw * 0.2 : vw * 0.8; st.my = vh * 0.16; st.t2 = 0; }
-				st.t2 += dt;
-				var a = st.t2 < 1 ? st.t2 : (st.t2 > 5 ? clamp(6 - st.t2, 0, 1) : 1);
-				moonDraw(st.mx, st.my, a);
-				if (st.t2 > 1.2 && st.t2 < 4.2) {
-					var u = (st.t2 - 1.2) / 3;
-					var wx = lerp(st.mx - 140, st.mx + 140, u);
-					/* W-A (Rob, 4.3.0): the hero's silhouette witch and cat, not an emoji */
-					dspr('witchsil', wx, st.my + sin(u * 6) * 6, 72, true, -0.12);
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.dir = sgn();
+					st.R = clamp(vw * 0.2, 80, 100);
+					var edge = st.R + WITCH_W / 2 + 8;
+					st.mx = clamp(vw * rnd(0.38, 0.62), edge, vw - edge);
+					st.my = mx2(vh * 0.16, st.R + WITCH_W / 2 + 8);
+					witchPath(st);
+					st.T = clamp(st.L / 240, 6, 7);   /* her flight, entry to exit */
+					st.in = 0.8;                       /* the moon is up before she arrives */
 				}
-				return st.t2 > 6;
+				st.t2 += dt;
+				var tw = st.t2 - st.in, gone = st.in + st.T, a, glow = 0;
+				a = st.t2 < 1 ? st.t2 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 1.2, 0, 1) : 1);
+				if (tw > 0 && tw < st.T) {
+					var w = witchAt(st, st.L * tw / st.T);
+					var l0 = st.len[st.loop0], l1 = st.len[st.loop1], d = st.L * tw / st.T;
+					if (d > l0 - 60 && d < l1 + 60) { glow = sin(MT.PI * clamp((d - l0 + 60) / (l1 - l0 + 120), 0, 1)); }
+					moonDraw(st.mx, st.my, a, glow);
+					var head = atan2(w.dy, w.dx), rot, flip;
+					if (WITCH_LOOP === 'bank') {
+						/* she banks with the curve: upside down over the top */
+						flip = st.dir > 0; rot = st.dir > 0 ? head : head - MT.PI;
+					} else {
+						/* she stays upright and faces where she is going */
+						if (abs(w.dx) > 0.35 * sqrt(sq(w.dx) + sq(w.dy))) { st.face = w.dx > 0 ? 1 : -1; }
+						if (!st.face) { st.face = st.dir; }
+						flip = st.face > 0;
+						/* a gentle tilt with the climb, never a roll */
+						var tilt = head - (st.face > 0 ? 0 : MT.PI);
+						while (tilt > MT.PI) { tilt -= TAU; }
+						while (tilt < -MT.PI) { tilt += TAU; }
+						rot = clamp(tilt, -0.35, 0.35);
+					}
+					st.wx = w.x; st.wy = w.y; st.glow = glow;
+					/* W-A (Rob, 4.3.0): the hero's silhouette witch and cat, not an emoji */
+					dspr('witchsil', w.x, w.y, WITCH_W, flip, rot);
+				} else {
+					st.wx = null;
+					moonDraw(st.mx, st.my, a, 0);
+				}
+				st.moonA = a;
+				return st.t2 > gone + 1.2;
 			} },
 			/* ---- 4.2.0: Summer on the Canal and Florida Keys scenes. Each
 			 * picked by Rob from rendered frame strips; the approved art and
@@ -4148,6 +4263,11 @@
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
 		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
 		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
+		/* The first scene: 6-10 s in, on every page. A theme with no scenes
+		 * (or none at this hour) gives that slot to its hero on a later page,
+		 * where the 3-5 s first-page flyer does not apply. */
+		if (vigList.length) { vigAt = (DEBUG && CFG.vigFirst) ? CFG.vigFirst / 1000 : rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
+		else if (heroAt >= INF) { heroAt = rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
 
 		function startVig(name) {
 			var sc = SCENES[name];
@@ -4169,7 +4289,7 @@
 			for (var k = 0; k < parts.length; k++) {
 				if (parts[k].dormant) { parts[k].dormant = false; seed(parts[k]); }
 			}
-			vigNext = (t || 0) + ((DEBUG && CFG.vigGap) || rnd(TIMING.vigGap[0], TIMING.vigGap[1]) * 1000);
+			nextTurn('vig');
 			fitParts();
 		}
 		/* xa turns (Rob's option A, 4.3.0): the corner accent and the xa
@@ -4245,20 +4365,16 @@
 				if (vig.sc.run(vig.st, dt, t)) { endVig(t); }
 				return;
 			}
-			if (!vigList.length || hero) { return; }
-			if (!vigNext) { vigNext = t + ((DEBUG && CFG.vigFirst) || rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]) * 1000); return; } /* let the page settle */
-			if (t >= vigNext) {
-				/* startVig() returns without starting anything if the name
-				 * has no scene, and vigNext is only pushed forward by
-				 * endVig(). A name with nothing behind it therefore retried
-				 * on EVERY FRAME for the life of the page — which is what
-				 * MLK and Patriot Day did, since their only listed vignette
-				 * did not exist. Push the clock on regardless of whether
-				 * anything started. */
-				var picked = pick(vigList);
-				startVig(picked);
-				if (!vig) { vigNext = t + 4000; }
-			}
+			/* Scenes switched off mid-visit (the degrade ladder): a scene
+			 * that was due hands its turn to the hero. */
+			if (!vigList.length) { if (vigAt < INF) { if (canHero()) { heroAt = mn(heroAt, vigAt); } vigAt = INF; } return; }
+			if (hero || vt < vigAt) { return; }
+			/* startVig() returns without starting anything if the name has
+			 * no scene. Until 4.1.0 nothing then moved the clock on, so a
+			 * name with nothing behind it retried on EVERY FRAME for the life
+			 * of the page (MLK and Patriot Day did). Push it on regardless. */
+			startVig(pick(vigList));
+			vigAt = vig ? INF : vt + 4;
 		}
 
 		/* --- Boot + main loop with the degrade ladder. --- */
@@ -4526,6 +4642,7 @@
 				get xa() { return { on: xaOn, live: !!xaP, alpha: xaP ? xaP.alpha : 0, globes: parts.filter(function (q) { return !q.dormant && q.sp === xaSp; }).length, accent: accents.length ? accents[0].style.opacity : null }; },
 				get vt() { return vt; },
 				get heroAt() { return heroAt; },
+				get vigAt() { return vigAt; },
 				get firstPage() { return firstPage; },
 				get heroLog() { return heroLog.slice(0); },
 				get vigLog() { return vigLog.slice(0); },

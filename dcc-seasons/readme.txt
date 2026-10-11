@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.7.1
+Stable tag: 4.8.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,27 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.8.0 =
+Rob's round of 2026-10-11: the witch's whole pass, and timing that guests
+actually see. Live only after Rob signs off on the renders. Rollback:
+reinstall the 4.7.1 zip; no setting or stored data changes.
+
+* The witch over the moon flies EDGE TO EDGE: the moon comes up, she
+  enters off one side, dips, makes one loop around the moon while it
+  glows, and leaves off the far side; the moon then fades. About 8 s on a
+  phone, 9 s on a desktop; the loop stays on screen from 320px up. Until
+  4.7.1 she was drawn for 3 s along a 280px hop and vanished mid-screen.
+  How she rides the loop (banking with the curve, or staying upright) is
+  Rob's pick from the renders; this build banks.
+* Timing, on every theme: the flyer first at 3-5 s on a visit's first
+  page; the season's scene first at 6-10 s (2 s after the flyer leaves if
+  it is still crossing); after that one appearance every 60-90 s, hero and
+  scene taking turns, never two at once. On later pages the scene still
+  comes at 6-10 s. Was: hero every 2-3 minutes, scene first at 20-28 s and
+  then every 1.5-2.5 minutes, each on its own clock. The corner-accent
+  turns (45 s) are unchanged.
+* The Theme guide quotes the new timing.
 
 = 4.7.1 =
 The logo egg is homepage only, as Rob chose (2026-10-10). Rollback:

@@ -98,7 +98,7 @@ final class Theme_Guide {
             'subtle'   => array_map(static function ($k) use ($effects) {
                 return ['key' => (string) $k, 'name' => ($k !== '' && isset($effects[$k])) ? (string) $effects[$k] : ''];
             }, $map),
-            'heroEvery' => Plugin::HERO_EVERY,
+            'every'     => Plugin::EVERY,
             'settings' => [
                 'enabled'   => !empty($opt['enabled']),
                 'ambient'   => !empty($opt['ambient']),
@@ -134,12 +134,12 @@ final class Theme_Guide {
             'accentNote'   => __('Fixed in a corner of the screen.', 'dcc-seasons'),
             'scenes'       => __('Scenes', 'dcc-seasons'),
             /* translators: 1: first delay range in seconds, 2: repeat range in seconds */
-            'sceneTiming'  => __('First scene %1$s s after the page opens, then one every %2$s s, one at a time, never while a hero crosses.', 'dcc-seasons'),
+            'sceneTiming'  => __('First scene %1$s s after the page opens (after the hero, if it is still crossing). After that, hero and scene take turns: one every %2$s s, never two at once.', 'dcc-seasons'),
             'oneOf'        => __('One of these plays each time, picked at random.', 'dcc-seasons'),
             'evenings'     => __('Evenings only', 'dcc-seasons'),
             'hero'         => __('Hero', 'dcc-seasons'),
             /* translators: 1: first-hero delay range in seconds, 2: repeat range in seconds */
-            'heroTiming'   => __('Crosses the screen about %1$s s into the first page of a visit, then every %2$s s (on later pages the first one waits %2$s s). Each crossing picks one of these at random.', 'dcc-seasons'),
+            'heroTiming'   => __('Crosses the screen about %1$s s into the first page of a visit. After that it takes turns with the scenes: one appearance every %2$s s, never two at once. Each crossing picks one of these at random.', 'dcc-seasons'),
             'egg'          => __('Matrix egg', 'dcc-seasons'),
             /* From the SETTINGS (Settings::egg_howto), never hard-coded: the
              * target and the count are Rob's and can change. */
