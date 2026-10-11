@@ -8,14 +8,21 @@ if (!defined('ABSPATH')) {
 /**
  * The "Extra Details/Options" box on the booking edit screen (v0.32.0, Rob's
  * picks A–C, 2026-10-10): directly under "Guest count", holding the pet part
- * (pet-fee cottages only — today Cottage 34) and "Bringing a boat or
- * trailer?" (every cottage).
+ * (pet-fee cottages only — today Cottage 34) and the dog questions. The boat
+ * question moved into "Guest count" in v0.32.1 (Rob's change).
+ *
+ * THE BOX IS ONLY DRAWN WHEN IT HAS SOMETHING TO HOLD (v0.32.1, Rob: "hide the
+ * box rather than show an empty one"): a pet-fee cottage (the pet part), a
+ * cottage that cannot be read (the dog questions show — fail open), or a
+ * booking that already carries a dog answer (a filled field always stays
+ * visible). On a cottage known to have no pet fee and no dog answer saved,
+ * there is no box.
  *
  * What is server-rendered here is only what this plugin owns: the pet part
- * and an empty table. The Dog and boat questions are MotoPress's own Checkout
- * Fields; admin-booking.js MOVES their rows into that table (never
- * re-creates them), so they stay inside the booking form and MotoPress goes on
- * saving them. Without the script they simply stay in Customer Information.
+ * and an empty table. The Dog questions are MotoPress's own Checkout Fields;
+ * admin-booking.js MOVES their rows into that table (never re-creates them),
+ * so they stay inside the booking form and MotoPress goes on saving them.
+ * Without the script they simply stay in Customer Information.
  *
  * THE PET PART:
  *  - IMPORTED booking (Airbnb / Booking.com / Vrbo): "Bringing a dog?" —
@@ -38,12 +45,16 @@ final class Extra_Details
         // Registered straight after Admin_Guests (Plugin::boot order), in the
         // same column and priority, so WordPress draws it directly under
         // "Guest count".
-        add_action('add_meta_boxes', [$this, 'add_box']);
+        add_action('add_meta_boxes', [$this, 'add_box'], 10, 2);  // ($post_type, $post)
         add_action('save_post_' . self::BOOKING_POST_TYPE, [$this, 'save'], 10, 2);
     }
 
-    public function add_box(): void
+    /** @param mixed $post_type @param mixed $post */
+    public function add_box($post_type = '', $post = null): void
     {
+        if (!$post instanceof \WP_Post || !self::wanted((int) $post->ID)) {
+            return;
+        }
         add_meta_box(
             'dcc-checkout-extras',
             __('Extra Details/Options', 'dcc-checkout'),
@@ -52,6 +63,24 @@ final class Extra_Details
             'side',
             'default'
         );
+    }
+
+    /**
+     * Does the box have anything to hold? Pure apart from reads: tested
+     * directly. Not a pet-fee cottage (read, not guessed) and no dog answer
+     * saved on the booking → no box.
+     */
+    public static function wanted(int $booking_id): bool
+    {
+        if (Admin_Fields::booking_pet_cottage($booking_id) !== false) {
+            return true;   // a pet-fee cottage, or one that cannot be read
+        }
+        foreach (Config::dog_meta_keys() as $key) {
+            if (trim((string) get_post_meta($booking_id, (string) $key, true)) !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @param mixed $post */
@@ -94,7 +123,7 @@ final class Extra_Details
                     . '</p>';
             }
         }
-        // The Dog and boat rows are moved in here by admin-booking.js.
+        // The Dog rows are moved in here by admin-booking.js.
         $out .= '<table class="form-table dcc_extras-table"><tbody id="dcc_extras_rows"></tbody></table>';
         $out .= '</div>';
         return $out;

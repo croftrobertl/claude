@@ -134,27 +134,35 @@ div.dcc_admin-group-heading:first-child {
  * not fit in a ~250px box. The Add New block sits in the main form, under
  * Number of Guests.
  * ------------------------------------------------------------------------- */
-#dcc-checkout-extras .dcc_extras-table {
+#dcc-checkout-extras .dcc_extras-table,
+.dcc_admin-guests .dcc_guests-boat {
     margin-top: 0;
 }
 
+/* v0.32.1 — the boat question under the count in "Guest count": the same
+   stacked row as "Extra Details/Options". */
 #dcc-checkout-extras .dcc_extras-table th,
-#dcc-checkout-extras .dcc_extras-table td {
+#dcc-checkout-extras .dcc_extras-table td,
+.dcc_admin-guests .dcc_guests-boat th,
+.dcc_admin-guests .dcc_guests-boat td {
     display: block;
     width: auto;
     padding: 6px 0 0;
 }
 
-#dcc-checkout-extras .dcc_extras-table td {
+#dcc-checkout-extras .dcc_extras-table td,
+.dcc_admin-guests .dcc_guests-boat td {
     padding-bottom: 6px;
 }
 
 #dcc-checkout-extras .dcc_extras-table select,
-#dcc-checkout-extras .dcc_extras-table input[type="text"] {
+#dcc-checkout-extras .dcc_extras-table input[type="text"],
+.dcc_admin-guests .dcc_guests-boat select {
     width: 100%;
     max-width: 100%;
 }
 
-.dcc_admin-extras {
+.dcc_admin-extras,
+.dcc_admin-boat {
     margin: 12px 0;
 }

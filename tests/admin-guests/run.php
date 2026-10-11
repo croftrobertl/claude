@@ -370,6 +370,17 @@ check('the Guest count box no longer carries a Pet fee line (it is in Extra Deta
 check('... and its help text no longer says MotoPress fills it with the capacity (D)',
     [strpos($h, 'starts at 2 guests') !== false, strpos($h, 'fills this with the cottage') === false], [true, true]);
 
+/* v0.32.1 (Rob's change) — the boat question's home is in this box, UNDER
+   the count: after the last room's select, inside the box's own wrapper. */
+$home = '<table class="form-table dcc_guests-boat"><tbody id="dcc_boat_row"></tbody></table>';
+check('the Guest count box carries the boat question\'s home, after the count, last in the box',
+    [strpos($h, $home) !== false, strpos($h, $home) > strrpos($h, '</select>'), substr($h, -strlen($home . '</div>')) === $home . '</div>'],
+    [true, true, true]);
+unset($GLOBALS['posts'][99]);   // the booking's only reserved room
+ob_start(); $g->render($post); $h0 = (string) ob_get_clean();
+check('... and so does a booking with no accommodation yet (the question still needs a home)',
+    [strpos($h0, 'No accommodation is attached') !== false, strpos($h0, $home) !== false], [true, true]);
+
 /* ===================================================================== *
  * v0.32.0 (E) — EVERY Update submits this select. An untouched one must
  * write NOTHING; only a choice confirms.

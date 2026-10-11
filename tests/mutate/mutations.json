@@ -924,8 +924,8 @@
    "admin-layout"
   ],
   "claim": "0.26.0 an already-ordered box is not touched again (cannot feed its observer)",
-  "find": "            if (!same) {\n                desired.forEach",
-  "replace": "            if (true) {\n                desired.forEach",
+  "find": "            if (!same) {\n                // Every node is re-appended",
+  "replace": "            if (true) {\n                // Every node is re-appended",
   "count": 1
  },
  {
@@ -2087,9 +2087,9 @@
    "extras",
    "admin-layout"
   ],
-  "claim": "0.31.0/0.32.0 WP-Admin: the boat question is placed by this plugin (Extra Details/Options since 0.32.0)",
-  "find": "        return array_merge(array_values(Config::dog_field_names()), ['mphb_' . Boat_Field::NAME]);",
-  "replace": "        return array_merge(array_values(Config::dog_field_names()), ['mphb_no_such_field']);",
+  "claim": "0.31.0/0.32.1 WP-Admin: the boat question is placed by this plugin (Guest count since 0.32.1)",
+  "find": "        return 'mphb_' . Boat_Field::NAME;",
+  "replace": "        return 'mphb_no_such_field';",
   "count": 1
  },
  {
@@ -2377,6 +2377,175 @@
   "claim": "0.32.0 A: on Add New the Pet Fee dropdown opens the Extra Details/Options block",
   "find": "            if (extrasBlock && extrasBlock.firstElementChild) {",
   "replace": "            if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-extras-loop-0320",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 iPhone: moved rows are placed only when out of place (0.32.0 re-moved them forever)",
+  "find": "        if (settled) { return; }",
+  "replace": "        if (settled && rows.length === 1) { return; }",
+  "count": 1
+ },
+ {
+  "id": "js-extras-moves-focused",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 iPhone: a row holding focus is never moved by extras()",
+  "find": "        if (holdsFocus(rows)) {\n            afterBlur(extras);",
+  "replace": "        if (false) {\n            afterBlur(extras);",
+  "count": 1
+ },
+ {
+  "id": "js-layout-moves-focused",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 iPhone: the Customer Information layout never re-appends a box holding focus",
+  "find": "                if (holdsFocus([box])) {",
+  "replace": "                if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-flow-pet-dropdown",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 3: no Pet Fee dropdown in Edit Accommodations",
+  "find": "            if (EDIT_FLOW) { return none; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-flow-extras-moved",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1: nothing is moved in Edit Accommodations",
+  "find": "        if (EDIT_FLOW) { return; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-boat-into-extras",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 4: the boat question goes to Guest count, not Extra Details",
+  "find": "        place(boatBox, boat);",
+  "replace": "        place(dogBox, boat);",
+  "count": 1
+ },
+ {
+  "id": "js-addnew-boat-after-block",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 4: Add New — boat right after Number of Guests, BEFORE the block",
+  "find": "                insertAfter(dogBox, boatBox);",
+  "replace": "                insertAfter(dogBox, chooserAnchor(chooser));",
+  "count": 1
+ },
+ {
+  "id": "js-addnew-empty-block-shown",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1: Add New never draws an empty \"Extra Details/Options\" heading",
+  "find": "                setHidden(extrasBlock, !Array.prototype.some",
+  "replace": "                setHidden(extrasBlock, false && !Array.prototype.some",
+  "count": 1
+ },
+ {
+  "id": "js-writes-count",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 2, guard-on-the-guard: the count tests SEE a write to Number of Guests",
+  "find": "                var svc = serviceFor(sel);\n",
+  "replace": "                var svc = serviceFor(sel);\n                if (sel.value === '1') { sel.value = '2'; }\n",
+  "count": 1
+ },
+ {
+  "id": "af-flow-never",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "extras",
+   "admin-layout"
+  ],
+  "claim": "0.32.1: PHP knows the Edit Accommodations flow by its page",
+  "find": "        return $page === 'mphb_edit_booking';",
+  "replace": "        return false;",
+  "count": 1
+ },
+ {
+  "id": "af-flow-word-dropped",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.32.1: the flow word reaches the script",
+  "find": "            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations' : '',",
+  "replace": "            'flow'            => '',",
+  "count": 1
+ },
+ {
+  "id": "ed-box-always",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras",
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 4: no Extra Details box on a non-pet cottage with no dog answer",
+  "find": "        if (Admin_Fields::booking_pet_cottage($booking_id) !== false) {\n            return true;",
+  "replace": "        if (true) {\n            return true;",
+  "count": 1
+ },
+ {
+  "id": "ed-box-one-arg",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras"
+  ],
+  "claim": "0.32.1: add_box receives the post (two hook arguments)",
+  "find": "add_action('add_meta_boxes', [$this, 'add_box'], 10, 2);",
+  "replace": "add_action('add_meta_boxes', [$this, 'add_box']);",
+  "count": 1
+ },
+ {
+  "id": "ed-dog-answer-ignored",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "extras",
+   "admin-layout"
+  ],
+  "claim": "0.32.1: a saved dog answer keeps the box",
+  "find": "            if (trim((string) get_post_meta($booking_id, (string) $key, true)) !== '') {",
+  "replace": "            if (false) {",
+  "count": 1
+ },
+ {
+  "id": "ag-boat-home-missing",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests",
+   "admin-layout"
+  ],
+  "claim": "0.32.1 item 4: Guest count carries the boat question's home",
+  "find": "        return '<table class=\"form-table dcc_guests-boat\"><tbody id=\"dcc_boat_row\"></tbody></table>';",
+  "replace": "        return '';",
   "count": 1
  }
 ]

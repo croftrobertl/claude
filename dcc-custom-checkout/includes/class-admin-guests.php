@@ -122,7 +122,9 @@ final class Admin_Guests
         if (!$rooms) {
             echo '<p class="description">'
                 . esc_html__('No accommodation is attached to this booking yet. Save it once and the guest count can be set here.', 'dcc-checkout')
-                . '</p></div>';
+                . '</p>';
+            echo self::boat_home_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- static markup
+            echo '</div>';
             return;
         }
 
@@ -185,7 +187,19 @@ final class Admin_Guests
 
         // v0.32.0 — the pet fee line moved to the "Extra Details/Options" box
         // directly below this one (Rob's pick A).
+        echo self::boat_home_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- static markup
         echo '</div>';
+    }
+
+    /**
+     * Where "Bringing a boat or trailer?" goes on the edit screen: under the
+     * count (v0.32.1, Rob's change). Empty here; admin-booking.js MOVES
+     * MotoPress's own row in, so it stays in the booking form and MotoPress
+     * goes on saving it. Without the script it stays in Customer Information.
+     */
+    public static function boat_home_html(): string
+    {
+        return '<table class="form-table dcc_guests-boat"><tbody id="dcc_boat_row"></tbody></table>';
     }
 
     /**

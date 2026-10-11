@@ -18,9 +18,12 @@ define('DOING_AUTOSAVE', false);
 $GLOBALS['posts'] = []; $GLOBALS['meta'] = []; $GLOBALS['opt'] = []; $GLOBALS['caps'] = true; $GLOBALS['hooks'] = [];
 function get_option($k, $d = false) { return array_key_exists($k, $GLOBALS['opt']) ? $GLOBALS['opt'][$k] : $d; }
 function apply_filters($h, $v) { return $v; }
-function add_action($h, $cb, $p = 10, $a = 1) { $GLOBALS['hooks'][$h][] = $cb; }
-function do_action($h, ...$args) { foreach ($GLOBALS['hooks'][$h] ?? [] as $cb) { $cb(...$args); } }
-function add_meta_box() {}
+/* As WordPress does: a callback receives only as many arguments as it was
+   registered for (v0.32.1 — add_box needs the SECOND argument of add_meta_boxes). */
+function add_action($h, $cb, $p = 10, $a = 1) { $GLOBALS['hooks'][$h][] = [$cb, $a]; }
+function do_action($h, ...$args) { foreach ($GLOBALS['hooks'][$h] ?? [] as [$cb, $a]) { $cb(...array_slice($args, 0, $a)); } }
+$GLOBALS['boxes'] = [];
+function add_meta_box($id) { $GLOBALS['boxes'][] = $id; }
 function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][(int) $id][$k] ?? ''; }
 function update_post_meta($id, $k, $v) { $GLOBALS['meta'][(int) $id][$k] = $v; return true; }
 function delete_post_meta($id, $k) { unset($GLOBALS['meta'][(int) $id][$k]); return true; }
@@ -47,7 +50,7 @@ function esc_html__($t, $d = null) { return htmlspecialchars($t, ENT_QUOTES); }
 function esc_html($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
 function esc_attr($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
 function maybe_unserialize($v) { if (is_string($v)) { $u = @unserialize($v); return ($u === false && $v !== 'b:0;') ? $v : $u; } return $v; }
-class WP_Post { public $ID = 0; public $post_type = ''; }
+class WP_Post { public $ID = 0; public $post_type = ''; public function __construct($id = 0) { $this->ID = $id; $this->post_type = 'mphb_booking'; } }
 
 /* Room types and their services, as live: 1607 (Cottage 34) the pet services; 1065 the extra-guest fee. */
 $GLOBALS['room_types'] = [1065 => [18063], 1607 => [17712, 17711, 14926]];
@@ -110,9 +113,43 @@ $h = Extra_Details::box_html(19674);
 check('Cottage 22 (not a pet-fee cottage): no pet part at all, just the table the rows move into',
     [strpos($h, 'dcc_dog'), strpos($h, 'Pet fee'), strpos($h, 'id="dcc_extras_rows"') !== false], [false, false, true]);
 booking(1607, true);
-check('every cottage gets the table for the moved rows (Dog, then boat)', strpos(Extra_Details::box_html(19674), 'id="dcc_extras_rows"') !== false, true);
-check('the moved fields, in order: Dog type, size, hair, then the boat question',
-    Admin_Fields::extras_fields(), ['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair', 'mphb_boat']);
+check('every box drawn gets the table for the moved dog rows', strpos(Extra_Details::box_html(19674), 'id="dcc_extras_rows"') !== false, true);
+check('v0.32.1: the box holds the dog questions only, in order — the boat question has left it',
+    [Admin_Fields::extras_fields(), Admin_Fields::boat_field()], [['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair'], 'mphb_boat']);
+
+/* --- v0.32.1: the box is drawn only when it has something to hold. ------- */
+$draws = static function () {
+    $GLOBALS['boxes'] = []; $GLOBALS['hooks'] = [];
+    (new Extra_Details())->register();
+    do_action('add_meta_boxes', 'mphb_booking', new WP_Post(19674));   // WordPress passes both
+    return in_array('dcc-checkout-extras', $GLOBALS['boxes'], true);
+};
+booking(1607, false);
+check('Cottage 34 (a pet-fee cottage): the box is drawn — through the real hook, both arguments', [Extra_Details::wanted(19674), $draws()], [true, true]);
+booking(1607, true);
+check('an import on Cottage 34: drawn ("Bringing a dog?")', $draws(), true);
+booking(1065);
+check('Cottage 22, no dog answer saved: NO box (Rob: hide it rather than show an empty one)', [Extra_Details::wanted(19674), $draws()], [false, false]);
+booking(1065); $GLOBALS['meta'][19674]['mphb_dog_type'] = 'Poodle';
+check('Cottage 22 WITH a dog answer saved: drawn, so the filled field keeps a home', $draws(), true);
+booking(1065); $GLOBALS['meta'][19674]['mphb_dog_hair'] = '   ';
+check('... a whitespace-only answer is no answer: no box', $draws(), false);
+booking(1999);
+check('a cottage that cannot be read: drawn (the dog questions show — fail open)', $draws(), true);
+$GLOBALS['posts'] = [19674 => ['post_type' => 'mphb_booking', 'post_parent' => 0]]; $GLOBALS['meta'] = [];
+check('a booking with no accommodation yet: drawn (nothing can be read)', $draws(), true);
+booking(1607, false);
+$GLOBALS['boxes'] = []; (new Extra_Details())->add_box('mphb_booking');
+check('guard: called WITHOUT the post (what a one-argument registration gets), nothing is drawn — so the hook test above can fail',
+    $GLOBALS['boxes'], []);
+
+/* --- v0.32.1: MotoPress's Edit Accommodations flow is known by its page. -- */
+foreach ([['mphb_edit_booking', true], ['MPHB_EDIT_BOOKING', true], ['mphb_add_new_booking', false], [null, false], ['mphb_edit_booking_x', false]] as [$page, $want]) {
+    $_GET = $page === null ? [] : ['page' => $page];
+    check('Edit Accommodations flow when page=' . var_export($page, true) . ': ' . var_export($want, true),
+        Admin_Fields::is_edit_accommodations_flow(), $want);
+}
+$_GET = [];
 check('Customer Information no longer has Dog or Boat / trailer groups (Note stays)',
     array_column(Admin_Fields::customer_layout(), 'key'), ['guest1', 'address', 'guest2', 'guest3', 'guest4', 'note']);
 

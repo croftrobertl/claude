@@ -1225,6 +1225,64 @@ yours to improvise.
     stand-in had no booking repository, so every "no log line" assertion read
     an array nothing ever wrote; and an `inBox` helper read `<label>` text, so
     "no pet part" could not fail on the label-less "Pet fee:" line.
+- **0.32.1 — ROB'S 0.32.0 REVIEW, ITEMS 1–4** (2026-10-11; `admin-booking.js`,
+  `Extra_Details::wanted()`, `Admin_Guests::boat_home_html()`,
+  `Admin_Fields::boat_field()` / `is_edit_accommodations_flow()`).
+  - **THE iPHONE "SELECT FLASHES AND CLOSES" WAS A SELF-FEEDING LOOP IN
+    `extras()`** (bug 1, reproduced before fixing). 0.32.0 re-appended a moved
+    row whenever it was not the container's LAST child — with several rows,
+    always — so each run moved every row, the MutationObserver saw it, and ran
+    again 200ms later, forever. It needed ONE stray DOM change to start (the
+    probe: zero moves with none, 28 node removals in 1.5s with one, and the
+    focused boat select lost focus); WordPress's admin scripts supply those.
+    A detached-and-reattached `<select>` drops iOS's picker, which is why the
+    MOVED boat / Dog Size / Dog Hair failed and our own "Bringing a dog?"
+    (never moved) opened. **The 0.26.0 idempotence test missed it because it
+    observed only the Customer Information tbody**; the new assertion
+    observes `document.body` after a constructed stray change, on the edit
+    screen and Add New. Fix: `place()` writes only when the rows are not
+    already the container's last rows in order (mutation `js-extras-loop-0320`).
+  - **NOTHING IS MOVED WHILE IT HOLDS FOCUS** — `holdsFocus()` / `afterBlur()`,
+    for `extras()` AND `customerLayout().arrange()` (which re-appends every node
+    of its box, so a focused field anywhere in it would be detached). A move
+    that finds focus inside waits for `focusout`, then runs. Asserted with a
+    row put out of place and focused (mutations `js-extras-moves-focused`,
+    `js-layout-moves-focused`), and per select with touch emulation: tapped,
+    still focused 1.2s later, never detached. **A headless browser cannot open
+    a native picker**; focus and detachment are what close it, and those are
+    what is measured. The iPhone is the real check.
+  - **The boat question lives in "Guest count", under the count** (item 4,
+    Rob's change): `Admin_Guests::boat_home_html()` (`tbody#dcc_boat_row`),
+    printed in both the rooms and no-rooms branches. "Extra Details/Options"
+    holds the pet part and Dog only, and **is not registered at all** unless
+    `Extra_Details::wanted()`: a pet-fee cottage, an unreadable cottage (fail
+    open), or a booking with a dog answer saved (a filled field keeps a home).
+    That needs `add_meta_boxes`' SECOND argument — registered `10, 2`; the
+    extras suite's `do_action` stub now passes only the registered argument
+    count, as WordPress does, so `ed-box-one-arg` is observable. Add New:
+    Number of Guests → (fee line) → `div.dcc_admin-boat` → `div.dcc_admin-extras`,
+    whose heading hides when nothing in it is visible. Checkout unchanged.
+  - **EDIT ACCOMMODATIONS IS LEFT AS MOTOPRESS DRAWS IT** (item 3). The admin
+    script loads on every screen id containing `mphb`, so 0.32.0 drew the Pet
+    Fee dropdown in that flow, where no tier is stated: "Pet Fee: Yes" over
+    three unticked boxes. PHP now sends `flow = 'edit-accommodations'` (a WORD)
+    on `page=mphb_edit_booking` — the slug of MotoPress's own button, the only
+    part proven — and the script draws no Pet Fee and moves nothing there.
+    MotoPress's pet rows stay visible: that flow is the manual fallback.
+    Full Guest Name there is unchanged (Rob). **Whether every STEP of the flow
+    keeps that page slug is unverified** — the Director's check.
+  - **BUG 2 (a confirmed 1 came back 2) IS NOT FIXED, BECAUSE ITS SOURCE IS NOT
+    PROVEN.** Proven: the script never writes Number of Guests — a matrix of
+    confirmed 1 and 2 on a 2-sleeper and a 4-sleeper, each in the flow AND as
+    0.32.0 ran there, through a pet tick, a guest-name edit and a stray change;
+    `js-writes-count` plants a write and must go red. Proven by reading: no
+    PHP here writes `_mphb_adults` in that flow (Admin_Guests needs its nonce;
+    Ical_Defaults is iCal-only; Edit_Flow_Markers writes the marker only).
+    Left: MotoPress's flow (a default or the summary step) or a pick on the
+    flashing iPhone picker. **The carry rule is unchanged** (same physical room
+    AND same count): carrying across a changed count would confirm a number
+    nobody chose if MotoPress set it. Rob's reproduction (check list §4) and
+    the Director's source read decide it.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1472,9 +1530,14 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 215
-  mutations, 215 killed, 0 of everything else, exit 0, in ONE run (2026-10-11,
-  v0.32.0; eighteen suites). 0.32.0's first full run was 212 + 3 STALE: three
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 230
+  mutations, 230 killed, 0 of everything else, exit 0, in ONE run (2026-10-11,
+  v0.32.1; eighteen suites). 0.32.1's targeted run was 16 killed + 1 HARNESS:
+  `ed-dog-answer-ignored` removed the box, and the browser suite CRASHED on
+  `null.includes` instead of failing — fixed to fail, then the whole set run.
+  Two anchors (`js-layout-not-idempotent`, `boat-admin-group-missing`) were
+  re-anchored, intent unchanged, onto lines 0.32.1 rewrote. At v0.32.0, 215.
+  0.32.0's first full run was 212 + 3 STALE: three
   mutations aimed at the pet-fee line and the boat layout group, which 0.32.0
   MOVED (to Extra_Details / extras_fields()); re-anchored with their intent
   unchanged, each killed alone, then the whole set re-run. At v0.31.0, 189; at v0.30.3, 175; at v0.30.2, 174; at v0.30.1, 173.

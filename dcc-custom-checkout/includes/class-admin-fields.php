@@ -290,6 +290,11 @@ final class Admin_Fields
             'isImported'      => $existing && Policies::is_imported($booking) ? '1' : '',
             // v0.32.0 — moved into "Extra Details/Options", in this order.
             'extrasFields'    => self::extras_fields(),
+            // v0.32.1 — moved under the guest count (Rob's change).
+            'boatField'       => self::boat_field(),
+            // v0.32.1 — a WORD: 'edit-accommodations' in MotoPress's Edit
+            // Accommodations flow, where the script leaves the form alone.
+            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations' : '',
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
@@ -334,15 +339,42 @@ final class Admin_Fields
      * @return array<int, array{key:string,title:string,fields:array<int,mixed>}>
      */
     /**
-     * The fields admin-booking.js moves into "Extra Details/Options"
-     * (v0.32.0, Rob's pick A), in order: the dog questions, then the boat
-     * question. Input names, as MotoPress renders them.
+     * The rows "Extra Details/Options" holds, moved there by admin-booking.js
+     * (v0.32.0, Rob's pick A): the dog questions, in order. Input names, as
+     * MotoPress renders them. The boat question left this list in v0.32.1 —
+     * see boat_field().
      *
      * @return string[]
      */
     public static function extras_fields(): array
     {
-        return array_merge(array_values(Config::dog_field_names()), ['mphb_' . Boat_Field::NAME]);
+        return array_values(Config::dog_field_names());
+    }
+
+    /**
+     * "Bringing a boat or trailer?" — moved by admin-booking.js under the
+     * count in "Guest count" on the edit screen, and right after Number of
+     * Guests on Add New (v0.32.1, Rob's change). Its input name, as MotoPress
+     * renders it.
+     */
+    public static function boat_field(): string
+    {
+        return 'mphb_' . Boat_Field::NAME;
+    }
+
+    /**
+     * Is this MotoPress's own Edit Accommodations flow? (v0.32.1.) The script
+     * loads on every MotoPress admin page, and in that flow it must leave
+     * MotoPress's form alone: no Pet Fee dropdown (Rob's review: it ticked
+     * nothing there), nothing moved. Known by the page slug MotoPress's own
+     * "Edit Accommodations" button links to — the one part of that link
+     * proven on live.
+     */
+    public static function is_edit_accommodations_flow(): bool
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing check, nothing saved
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash((string) $_GET['page'])) : '';
+        return $page === 'mphb_edit_booking';
     }
 
     public static function customer_layout(): array

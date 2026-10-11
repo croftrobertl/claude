@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.32.0
+Stable tag: 0.32.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,15 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.32.1 =
+Rob's review of 0.32.0 on staging (2026-10-11), items 1–4.
+
+* Fixed: on an iPhone, "Bringing a boat or trailer?", Dog Size and Dog Hair would flash and close on the booking edit screen. The rows this plugin moves were being moved again every 200ms once any other change happened on the page. They are now placed once, and nothing is moved while it has focus.
+* Changed (Rob): "Bringing a boat or trailer?" sits in the "Guest count" box, under the count. On Add New Booking it comes right after Number of Guests, before the Pet Fee block. The guest checkout page is unchanged.
+* Changed: "Extra Details/Options" holds the pet part only. It isn't drawn on a cottage with no pet fee unless the booking already has a dog answer. On Add New, an empty heading is no longer drawn.
+* Changed: in MotoPress's Edit Accommodations flow this plugin no longer draws the Pet Fee dropdown or moves any rows. MotoPress's own pet services stay visible there, as the manual way to change the fee. Full Guest Name is unchanged.
+* Investigated: a guest count that came back different after Edit Accommodations. This plugin's script never writes Number of Guests (tested, including against the 0.32.0 script), so nothing here is changed until the source is known. See the check list.
 
 = 0.32.0 =
 Rob's review of 0.31.0 on staging (2026-10-10).

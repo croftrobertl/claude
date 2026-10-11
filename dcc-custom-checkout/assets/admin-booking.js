@@ -80,6 +80,12 @@
         if (el && el.hidden !== !show) { el.hidden = !show; }
     }
 
+    function visibleNode(el) {
+        if (!el || el.hidden || el.classList.contains(HIDDEN_CLASS) || el.classList.contains(FEE_ROW_CLASS)) { return false; }
+        var cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
+        return !(cs && cs.display === 'none');
+    }
+
     function fire(el) {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -173,51 +179,113 @@
     }
 
     /**
-     * "Extra Details/Options" (v0.32.0, Rob's pick A): the dog questions and
-     * "Bringing a boat or trailer?" leave Customer Information.
-     *  - Edit screen: into the box PHP draws under "Guest count"
-     *    (#dcc_extras_rows), as table rows.
-     *  - Add New: into a block right after Number of Guests, which the Pet Fee
-     *    dropdown then opens (Rob's pick 6).
+     * Where the moved MotoPress rows live (v0.32.0, Rob's pick A; v0.32.1,
+     * Rob's change: the boat question joins the guest count).
+     *  - Edit screen: the dog questions into "Extra Details/Options"
+     *    (#dcc_extras_rows); "Bringing a boat or trailer?" into "Guest count",
+     *    under the count (#dcc_boat_row). Both containers are drawn by PHP;
+     *    a missing one leaves its rows where MotoPress drew them.
+     *  - Add New: the boat question right after Number of Guests, then the
+     *    "Extra Details/Options" block (Pet Fee, then the dog questions).
+     *  - Edit Accommodations (MotoPress's flow, v0.32.1): nothing moves and no
+     *    block is drawn — that flow is left as MotoPress draws it.
      * The rows are MOVED, never re-created: they stay inside the booking form,
      * so MotoPress saves them exactly as before. Runs BEFORE the Customer
      * Information layout, so they are never taken for unknown rows ("Other").
-     * Idempotent: a row already in place is not touched. No container found
-     * (the search step, no script config) -> nothing moves.
+     *
+     * IDEMPOTENT, AND THAT IS THE iPHONE FIX (v0.32.1). 0.32.0 re-appended
+     * every row whenever one was not the container's LAST child — which, with
+     * four rows, is always — so each run moved them all, the MutationObserver
+     * saw that, and ran it again 200ms later, for as long as the page was
+     * open. A moved <select> loses its native picker, which is why the boat,
+     * Dog Size and Dog Hair selects flashed and closed while our own
+     * "Bringing a dog?" (never moved) opened. Now the rows are placed only
+     * when they are not already the container's last rows in order, and never
+     * while one of them holds focus (then once focus leaves).
      */
     var extrasBlock = null;
+    var EDIT_FLOW = CFG.flow === 'edit-accommodations';
     function extras() {
-        var names = CFG.extrasFields || [];
-        if (!names.length) { return; }
-        var box = document.getElementById('dcc_extras_rows');
-        if (!box) {
+        if (EDIT_FLOW) { return; }
+        var dogs = (CFG.extrasFields || []).map(rowFor);
+        var boat = (CFG.boatField ? [CFG.boatField] : []).map(rowFor);
+        var dogBox, boatBox;
+        if (CFG.isExisting === '1') {
+            dogBox  = document.getElementById('dcc_extras_rows');
+            boatBox = document.getElementById('dcc_boat_row');
+        } else {
             var chooser = adultsSelects(document).filter(function (s) {
                 return /\[adults\]$/.test(String(s.name || ''));
             })[0];
             if (!chooser) { return; }
-            box = document.querySelector('.dcc_admin-extras');
-            if (!box) {
-                box = document.createElement('div');
-                box.className = 'dcc_admin-extras';
+            boatBox = document.querySelector('.dcc_admin-boat');
+            if (!boatBox) {
+                boatBox = document.createElement('div');
+                boatBox.className = 'dcc_admin-boat';
+                insertAfter(boatBox, chooserAnchor(chooser));
+            }
+            dogBox = document.querySelector('.dcc_admin-extras');
+            if (!dogBox) {
+                dogBox = document.createElement('div');
+                dogBox.className = 'dcc_admin-extras';
                 var h = document.createElement('div');
                 h.className = 'dcc_admin-group-heading dcc_admin-extras__title';
                 h.textContent = I18N.extrasTitle || 'Extra Details/Options';
-                box.appendChild(h);
-                insertAfter(box, chooserAnchor(chooser));
+                dogBox.appendChild(h);
+                insertAfter(dogBox, boatBox);
             }
-            extrasBlock = box;
+            extrasBlock = dogBox;
         }
-        var table = box.tagName === 'TBODY';
-        names.forEach(function (name) {
-            var el = document.querySelector('[name="' + esc(name) + '"]');
-            if (!el) { return; }
-            var row = table ? el.closest('tr') : el.closest('.mphb-field, .mphb-text-control, p, li');
-            if (!row || row === box || row.contains(box)) { return; }
-            if (row.parentNode !== box || box.lastElementChild !== row) {
-                box.appendChild(row);
-            }
-        });
+        place(boatBox, boat);
+        place(dogBox, dogs);
         editLink();
+
+        function rowFor(name) {
+            var el = document.querySelector('[name="' + esc(name) + '"]');
+            if (!el) { return null; }
+            return CFG.isExisting === '1' ? el.closest('tr') : el.closest('.mphb-field, .mphb-text-control, p, li');
+        }
+    }
+
+    /**
+     * Never move a node while a control in it has focus (v0.32.1): moving a
+     * focused <select> closes it — on iOS the native picker drops. A move
+     * that finds focus inside waits for focus to leave, then runs again. A
+     * listener writes nothing to the DOM, and each waiting function is queued
+     * once.
+     */
+    var blurWaiters = [];
+    function holdsFocus(nodes) {
+        var f = document.activeElement;
+        return !!f && f !== document.body && nodes.some(function (n) { return !!n && n.contains(f); });
+    }
+    function afterBlur(fn) {
+        if (blurWaiters.indexOf(fn) !== -1) { return; }
+        blurWaiters.push(fn);
+        if (blurWaiters.length === 1) { document.addEventListener('focusout', onBlur, true); }
+    }
+    function onBlur() {
+        document.removeEventListener('focusout', onBlur, true);
+        var list = blurWaiters;
+        blurWaiters = [];
+        // After the blur has finished, so activeElement is no longer the control.
+        setTimeout(function () { list.forEach(function (fn) { fn(); }); }, 0);
+    }
+
+    /** Put `rows` (in order) at the end of `box` — only if they are not there already. */
+    function place(box, rows) {
+        if (!box) { return; }
+        rows = rows.filter(function (row) { return row && row !== box && !row.contains(box); });
+        if (!rows.length) { return; }
+        var kids = box.children;
+        var at = kids.length - rows.length;
+        var settled = at >= 0 && rows.every(function (row, i) { return kids[at + i] === row; });
+        if (settled) { return; }
+        if (holdsFocus(rows)) {
+            afterBlur(extras);
+            return;
+        }
+        rows.forEach(function (row) { box.appendChild(row); });
     }
 
     /**
@@ -383,6 +451,13 @@
             });
 
             syncExtraGuestFee(selectedRoomTypes());
+            // Add New (v0.32.1): an "Extra Details/Options" heading over
+            // nothing — no Pet Fee here and Dog hidden — is not drawn.
+            if (extrasBlock) {
+                setHidden(extrasBlock, !Array.prototype.some.call(extrasBlock.children, function (c) {
+                    return !c.classList.contains('dcc_admin-extras__title') && visibleNode(c);
+                }));
+            }
             // A heading hides when every row under it is hidden; notes are put
             // under their heading. arrange() moves nothing when in order.
             if (layout) { layout.arrange(); layout.refresh(); }
@@ -722,6 +797,12 @@
                 var known = s === 'yes' ? true : (s === 'no' || s === 'none' ? false : null);
                 return { state: function () { return known; }, apply: function () {} };
             }
+            // v0.32.1 — not in MotoPress's Edit Accommodations flow: no bucket
+            // is stated there, so the dropdown could only say "Choose the pet
+            // fee under Additional Services" over three unticked boxes (Rob's
+            // review). That flow keeps MotoPress's own pet rows, visible —
+            // it is the manual way to change the fee.
+            if (EDIT_FLOW) { return none; }
             // The checkout form's per-room chooser only (…[adults]). The Add
             // New SEARCH step has an adults select too, and must not get a pet
             // control.
@@ -1093,7 +1174,13 @@
             var current = Array.prototype.slice.call(box.children);
             var same = current.length === desired.length && current.every(function (c, i) { return c === desired[i]; });
             if (!same) {
-                desired.forEach(function (node) { box.appendChild(node); });
+                // Every node is re-appended, so a focused field anywhere in the
+                // box would be detached: wait for focus to leave (v0.32.1).
+                if (holdsFocus([box])) {
+                    afterBlur(arrangeLater);
+                } else {
+                    desired.forEach(function (node) { box.appendChild(node); });
+                }
             }
             if (box.getAttribute('data-dcc-layout') !== 'arranged') {
                 box.setAttribute('data-dcc-layout', 'arranged');
@@ -1102,6 +1189,8 @@
             refresh();
             return state;
         }
+
+        function arrangeLater() { arrange(); }
 
         function shown(node) {
             if (!node || node.hidden) { return false; }

@@ -39,12 +39,13 @@ const ROOT   = path.resolve(__dirname, '../..');
 const SCRIPT = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.js'), 'utf8');
 const CSS    = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.css'), 'utf8');
 
-function phpConfig(included, booking, wizard) {
+function phpConfig(included, booking, wizard, page) {
     const args = [path.join(__dirname, 'config.php'),
         included === undefined ? '' : String(included),
         booking ? JSON.stringify(booking) : '',
         wizard ? JSON.stringify(wizard) : ''];
-    return JSON.parse(execFileSync('php', args, { encoding: 'utf8' }));
+    return JSON.parse(execFileSync('php', args, { encoding: 'utf8',
+        env: Object.assign({}, process.env, { DCC_TEST_PAGE: page || '' }) }));
 }
 
 let failures = 0, passes = 0;
@@ -270,7 +271,7 @@ function addNewPage(opts) {
     const chooser = `<p class="mphb-adults-chooser"><label for="mphb_adults-0">Number of Guests <abbr>*</abbr></label>
         <select id="mphb_adults-0" name="mphb_room_details[0][adults]" class="mphb_sc_checkout-guests-chooser">
           <option value="">— Select —</option>` +
-        [1, 2, 3, 4].map(n => `<option${preset === n ? ' selected' : ''}>${n}</option>`).join('') +
+        [1, 2, 3, 4].slice(0, opts.capacity || 4).map(n => `<option${preset === n ? ' selected' : ''}>${n}</option>`).join('') +
         `</select></p>`;
     let j = 0;
     const svcs = [];
@@ -353,20 +354,26 @@ ${opts.noScript ? '' : '<script>' + SCRIPT + '</script>'}
 </body></html>`;
 }
 
-async function open(browser, width, html, cfgOver, included, booking, wizard) {
-    const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+async function open(browser, width, html, cfgOver, included, booking, wizard, ctxOpts) {
+    const ctx = await browser.newContext(Object.assign({ viewport: { width, height: 900 } }, ctxOpts || {}));
     const pg  = await ctx.newPage();
     pg.setDefaultTimeout(5000);
     const logs = [];
     pg.on('console', m => logs.push(m.text()));
-    const cfg = Object.assign(phpConfig(included, booking, wizard), cfgOver || {});
+    // `__page`: the ?page= of the request, handed to the shipped PHP (v0.32.1).
+    const page = cfgOver && cfgOver.__page;
+    if (page) { cfgOver = Object.assign({}, cfgOver); delete cfgOver.__page; }
+    const cfg = Object.assign(phpConfig(included, booking, wizard, page), cfgOver || {});
     // Printed inline ahead of the script, as wp_localize_script does. (An
     // addInitScript does NOT reach a setContent page — measured.)
     const cfgTag = '<script>window.DCC_CHECKOUT_ADMIN = ' +
         JSON.stringify(cfg).replace(/</g, '\\u003c') + ';</script>';
     // v0.32.0: the Extra Details/Options box exactly as the shipped PHP draws it.
-    const extrasBox = cfg._extrasBox === undefined ? '' :
-        `<div class="postbox" id="dcc-checkout-extras"><h2>Extra Details/Options</h2><div class="inside">${cfg._extrasBox}</div></div>`;
+    // v0.32.1: and "Guest count" with the boat question's home, from the shipped PHP.
+    const guestCountBox = cfg._boatHome === undefined ? '' :
+        `<div class="postbox" id="dcc-checkout-guests"><h2>Guest count</h2><div class="inside"><div class="dcc_admin-guests">${cfg._boatHome}</div></div></div>`;
+    const extrasBox = guestCountBox + (cfg._extrasBox === undefined ? '' :
+        `<div class="postbox" id="dcc-checkout-extras"><h2>Extra Details/Options</h2><div class="inside">${cfg._extrasBox}</div></div>`);
     await pg.setContent(html.replace('<!--DCC-CFG-->', cfgTag).replace('<!--DCC-EXTRAS-->', extrasBox));
     await pg.waitForTimeout(350);
     return { ctx, pg, logs, cfg };
@@ -1006,16 +1013,23 @@ async function visibleServiceRows(pg) {
                     : ((n.querySelector('label') || {}).textContent || '').trim()).filter(Boolean);
         }, sel);
         const parentOf = (pg, name) => pg.$eval(`[name="${name}"]`, e => {
-            const box = e.closest('#dcc-checkout-extras, #mphb_customer, .dcc_admin-extras, #mphb-customer-details');
+            const box = e.closest('#dcc-checkout-guests, #dcc-checkout-extras, #mphb_customer, .dcc_admin-boat, .dcc_admin-extras, #mphb-customer-details');
             return box ? (box.id || box.className) : null;
         });
 
+        const GUESTS_BOX = '#dcc-checkout-guests .inside';
+        const hasExtrasBox = pg => pg.evaluate(() => !!document.querySelector('#dcc-checkout-extras'));
         for (const width of [1280, 390]) {
-            // Direct booking on Cottage 34 with the pet fee: everything visible.
+            // Direct booking on Cottage 34 with the pet fee.
             let r = await open(browser, width, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [17712] }]));
-            const labels = await inBox(r.pg, EXTRAS_BOX);
-            check(`${width}px edit: the moved rows sit in the box, in order (Dog Type, Size, Hair, then boat)`,
-                labels.filter(l => /^(Dog|Bringing)/.test(l)), ['Dog Type', 'Dog Size', 'Dog Hair', 'Bringing a boat or trailer?']);
+            check(`${width}px edit: "Extra Details/Options" holds the dog questions only, in order (v0.32.1)`,
+                (await inBox(r.pg, EXTRAS_BOX)).filter(l => /^(Dog|Bringing)/.test(l)), ['Dog Type', 'Dog Size', 'Dog Hair']);
+            check(`${width}px edit: "Bringing a boat or trailer?" sits in "Guest count", under the count, as its last row`,
+                await r.pg.evaluate(() => {
+                    const el = document.querySelector('[name="mphb_boat"]');
+                    const g = document.querySelector('#dcc-checkout-guests .dcc_admin-guests');
+                    return [!!(g && g.contains(el)), g && g.lastElementChild.contains(el)];
+                }), [true, true]);
             check(`${width}px edit: none of them is left in Customer Information, and no "Other" heading appears for them`,
                 [(await seen(r.pg, EDIT_BOX)).filter(l => /^(Dog|Bringing)/.test(l)), headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Other')], [[], false]);
             check(`${width}px edit: the pet fee reads Yes, with a copy of MotoPress's own Edit Accommodations link`,
@@ -1023,11 +1037,9 @@ async function visibleServiceRows(pg) {
                     const a = document.querySelector('#dcc-checkout-extras .dcc_extras-edit-link');
                     return [document.querySelector('#dcc-checkout-extras .dcc_admin-petfee-line').textContent.trim(), a && a.getAttribute('href')];
                 }), ['Pet fee: Yes', 'admin.php?page=mphb_edit_booking&booking_id=19615']);
-            const geo = await r.pg.evaluate(() => {
-                const b = document.querySelector('#dcc-checkout-extras');
-                return b.scrollWidth - b.clientWidth;
-            });
-            check(`${width}px edit: nothing in the box runs past its edge`, geo <= 0, true);
+            const geo = await r.pg.evaluate(() => ['#dcc-checkout-extras', '#dcc-checkout-guests']
+                .map(sel => { const b = document.querySelector(sel); return b.scrollWidth - b.clientWidth; }));
+            check(`${width}px edit: nothing in either box runs past its edge`, geo.every(x => x <= 0), true);
             await r.ctx.close();
         }
 
@@ -1039,20 +1051,32 @@ async function visibleServiceRows(pg) {
             const before = (await formData(base.pg)).filter(x => !x.startsWith('dcc_'));
             await base.ctx.close();
             const r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, vals), EX, undefined, booking);
-            check('edit: with the rows moved into the box, the form submits exactly the same MotoPress fields and values',
+            check('edit: with the rows moved, the form submits exactly the same MotoPress fields and values',
                 (await formData(r.pg)).filter(x => !x.startsWith('dcc_')), before);
-            check('... and the moved controls really are inside the box (guard)',
-                [await parentOf(r.pg, 'mphb_dog_type'), await parentOf(r.pg, 'mphb_boat')], ['dcc-checkout-extras', 'dcc-checkout-extras']);
+            check('... and the moved controls really are in their boxes (guard)',
+                [await parentOf(r.pg, 'mphb_dog_type'), await parentOf(r.pg, 'mphb_boat')], ['dcc-checkout-extras', 'dcc-checkout-guests']);
             await r.ctx.close();
         }
 
-        // Not a pet-fee cottage: no pet part; the boat question still there.
+        // Not a pet-fee cottage, no dog answer saved: NO box (Rob: hide it
+        // rather than show an empty one); the boat question in Guest count.
         let r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1065, adults: 1 }]));
-        let b = await inBox(r.pg, EXTRAS_BOX);
-        check('edit, Cottage 22, 1 guest: no pet part, Dog hidden, the boat question shown and blank',
-            [await r.pg.evaluate(() => !!document.querySelector('#dcc-checkout-extras .dcc_admin-petfee-line, #dcc_dog, [data-dcc-edit-accommodations]')),
-             await dogShown(r.pg), b.includes('Bringing a boat or trailer?'), await boatVal(r.pg)],
+        check('edit, Cottage 22, no dog answer: no "Extra Details/Options" box at all; Dog hidden; boat in Guest count, blank',
+            [await hasExtrasBox(r.pg), await dogShown(r.pg), (await inBox(r.pg, GUESTS_BOX)).includes('Bringing a boat or trailer?'), await boatVal(r.pg)],
             [false, false, true, '']);
+        check('... and Customer Information shows no "Other" heading for the hidden dog rows left there',
+            headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Other'), false);
+        await r.ctx.close();
+        // A dog answer saved on such a booking keeps its box (a filled field stays visible).
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, { dog_type: 'Poodle' }), EX, undefined,
+            { rooms: [{ type: 1065, adults: 2 }], dogMeta: { mphb_dog_type: 'Poodle' } });
+        check('edit, Cottage 22 WITH a saved dog answer: the box is drawn and shows it',
+            [await hasExtrasBox(r.pg), ((await inBox(r.pg, EXTRAS_BOX)) || []).includes('Dog Type')], [true, true]);
+        await r.ctx.close();
+        // A cottage that cannot be read: the box, with the dog questions shown (fail open).
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1999, adults: 2 }]));
+        check('edit, cottage unreadable: the box is drawn, the dog questions shown (fail open)',
+            [await hasExtrasBox(r.pg), await dogShown(r.pg)], [true, true]);
         await r.ctx.close();
 
         // Direct, no pet fee: Dog hidden, boat shown; a saved Yes is kept and submitted.
@@ -1110,26 +1134,33 @@ async function visibleServiceRows(pg) {
             [headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Guest 3'), headingsIn(await seen(r.pg, EDIT_BOX)).includes('## Guest 4')], [false, false]);
         await r.ctx.close();
 
-        /* ---- Add New: the block right after Number of Guests (Rob's pick 6). -- */
+        /* ---- Add New: boat right after Number of Guests, then the block. ----- */
+        const addOrder = pg => pg.evaluate(() => {
+            const sel = document.querySelector('[name="mphb_room_details[0][adults]"]');
+            const out = [];
+            for (let n = sel.closest('p').nextElementSibling; n && out.length < 3; n = n.nextElementSibling) {
+                if (!n.getClientRects().length) { continue; }
+                out.push(n.className.split(' ')[0]);
+            }
+            return out;
+        });
         for (const width of [1280, 390]) {
             r = await open(browser, width, addNewPage({ preset: 2, fee: false, pet: 3, marker: PETCOT(W1) }));
-            const block = await inBox(r.pg, '.dcc_admin-extras');
-            check(`${width}px Add New, Cottage 34: "Extra Details/Options" holds Pet Fee, then (when Yes) Dog, then the boat question`,
-                block, ['## Extra Details/Options', 'Pet Fee:', 'Bringing a boat or trailer?']);
+            check(`${width}px Add New, Cottage 34: after Number of Guests comes the boat question, then "Extra Details/Options"`,
+                (await addOrder(r.pg)).slice(0, 2), ['dcc_admin-boat', 'dcc_admin-extras']);
+            check(`${width}px Add New: the boat block holds the boat question; the block holds Pet Fee (No: Dog hidden)`,
+                [await inBox(r.pg, '.dcc_admin-boat'), await inBox(r.pg, '.dcc_admin-extras')],
+                [['Bringing a boat or trailer?'], ['## Extra Details/Options', 'Pet Fee:']]);
             await choose(r.pg, '#dcc_admin_pet_fee', 'yes');
-            check(`${width}px Add New: Pet Fee Yes shows Dog inside the block, above the boat question`,
-                await inBox(r.pg, '.dcc_admin-extras'), ['## Extra Details/Options', 'Pet Fee:', 'Dog Type', 'Dog Size', 'Dog Hair', 'Bringing a boat or trailer?']);
-            check(`${width}px Add New: the block sits right after Number of Guests`,
-                await r.pg.evaluate(() => {
-                    const b = document.querySelector('.dcc_admin-extras');
-                    return !!(b.previousElementSibling && b.previousElementSibling.querySelector('[name$="[adults]"]'));
-                }), true);
+            check(`${width}px Add New: Pet Fee Yes shows Dog inside the block`,
+                await inBox(r.pg, '.dcc_admin-extras'), ['## Extra Details/Options', 'Pet Fee:', 'Dog Type', 'Dog Size', 'Dog Hair']);
             check(`${width}px Add New: nothing runs past the edge`, await r.pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth <= 0), true);
             await r.ctx.close();
         }
-        r = await open(browser, 1280, addNewPage({ preset: 1, marker: COUCH }));
-        check('Add New, a couch cottage: the block holds only the boat question (no Pet Fee, Dog hidden), blank',
-            [await inBox(r.pg, '.dcc_admin-extras'), await boatVal(r.pg)], [['## Extra Details/Options', 'Bringing a boat or trailer?'], '']);
+        r = await open(browser, 1280, addNewPage({ preset: 3, marker: COUCH }));
+        check('Add New, a couch cottage at 3 guests: the fee line, then the boat question; the empty "Extra Details/Options" block is not drawn',
+            [await addOrder(r.pg), await inBox(r.pg, '.dcc_admin-extras'), await boatVal(r.pg)],
+            [['dcc_admin-feeline', 'dcc_admin-boat', 'mphb-guest-name-wrapper'], [], '']);
         check('... and Customer Information no longer lists Dog or the boat question',
             (await seen(r.pg, ADD_BOX)).filter(l => /^(Dog|Bringing)/.test(l) || l === '## Dog' || l === '## Other'), []);
         await r.ctx.close();
@@ -1140,8 +1171,129 @@ async function visibleServiceRows(pg) {
         await choose(r.pg, '[name="mphb_room_details[0][adults]"]', '1');
         await r.pg.waitForTimeout(300);
         check('Add New: answering the boat question Yes, then flipping Pet Fee and the guest count, never hides it or changes the answer',
-            [(await inBox(r.pg, '.dcc_admin-extras')).includes('Bringing a boat or trailer?'), await boatVal(r.pg)], [true, 'Yes']);
+            [(await inBox(r.pg, '.dcc_admin-boat')).includes('Bringing a boat or trailer?'), await boatVal(r.pg)], [true, 'Yes']);
         await r.ctx.close();
+    }
+
+    /* =====================================================================
+     * v0.32.1 — THE iPHONE BUG: a moved MotoPress select flashed and closed.
+     *
+     * 0.32.0's extras() re-appended every row on each run (a row was only
+     * "in place" if it was the box's LAST child), so one unrelated DOM change
+     * — WordPress's admin scripts make them all the time — started a loop:
+     * move, observe, 200ms, move again, for as long as the page was open. A
+     * select that is detached and re-attached loses focus and its native
+     * picker. Constructed here with ONE stray mutation, which is what starts
+     * it; measured on 0.32.0 with the same probe: 28 node removals in 1.5s,
+     * and the focused boat select lost focus.
+     * ===================================================================== */
+    {
+        const stray = (pg, ms) => pg.evaluate(ms => new Promise(res => {
+            let removed = 0, records = 0;
+            const mo = new MutationObserver(l => l.forEach(m => { records++; removed += m.removedNodes.length; }));
+            const trigger = document.createElement('span');
+            document.body.appendChild(trigger);          // the stray change
+            mo.observe(document.body, { childList: true, subtree: true });
+            setTimeout(() => { mo.disconnect(); res({ removed, records }); }, ms);
+        }), ms);
+        let r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [17712] }]));
+        check('edit: after one stray DOM change, NOTHING is moved again for 1.5s (no self-feeding loop)', await stray(r.pg, 1500), { removed: 0, records: 0 });
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 2, fee: false, pet: 3, marker: PETCOT(W1) }));
+        await choose(r.pg, '#dcc_admin_pet_fee', 'yes');
+        check('Add New: the same (Pet Fee Yes, so the dog rows are on screen too)', await stray(r.pg, 1500), { removed: 0, records: 0 });
+        await r.ctx.close();
+
+        // A moved MotoPress select, TAPPED (touch emulation, 390px): it keeps
+        // focus and its node is never detached while it has it, through a
+        // stray change. A picker cannot be opened headless; losing focus and
+        // being detached are what close it on iOS, and those are measured.
+        for (const name of ['mphb_boat', 'mphb_dog_size', 'mphb_dog_hair']) {
+            r = await open(browser, 390, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [17712] }]),
+                undefined, { hasTouch: true, isMobile: true });
+            await r.pg.tap(`[name="${name}"]`);
+            const res = await r.pg.evaluate(name => new Promise(done => {
+                const el = document.querySelector(`[name="${name}"]`);
+                const row = el.closest('tr');
+                let detached = 0;
+                const mo = new MutationObserver(l => l.forEach(m => m.removedNodes.forEach(n => { if (n === row || n.contains(el)) { detached++; } })));
+                mo.observe(document.body, { childList: true, subtree: true });
+                document.body.appendChild(document.createElement('span'));
+                setTimeout(() => { mo.disconnect(); done([document.activeElement === el, detached]); }, 1200);
+            }), name);
+            check(`390px touch, edit: ${name} tapped — still focused 1.2s later and never detached`, res, [true, 0]);
+            await r.ctx.close();
+        }
+
+        // The focus guard: a row that IS out of place but holds focus is not
+        // moved until focus leaves — then it is.
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [17712] }]));
+        const res = await r.pg.evaluate(() => new Promise(done => {
+            const el = document.querySelector('[name="mphb_boat"]');
+            const row = el.closest('tr');
+            document.querySelector('#mphb_customer tbody').appendChild(row);   // as a re-render would
+            el.focus();
+            setTimeout(() => {
+                const held = [document.activeElement === el, !!row.closest('#mphb_customer')];
+                el.blur();
+                setTimeout(() => done(held.concat([!!row.closest('#dcc-checkout-guests')])), 600);
+            }, 600);
+        }));
+        check('edit: an out-of-place row holding focus is left alone (still focused, not moved), then moved home once focus leaves',
+            res, [true, true, true]);
+        await r.ctx.close();
+    }
+
+    /* =====================================================================
+     * v0.32.1 — MotoPress's EDIT ACCOMMODATIONS flow.
+     *
+     * Stand-in: that flow's checkout step is NOT captured. It is modelled on
+     * the Add New step (Number of Guests, services, Full Guest Name), which
+     * is what Rob's recording of the flow shows. `flow` is the word PHP sends
+     * on page=mphb_edit_booking (tested in tests/extras).
+     * ===================================================================== */
+    {
+        // The request's ?page=, handed to the SHIPPED PHP: the word is its.
+        const FLOW = { __page: 'mphb_edit_booking' };
+        const adults = pg => pg.$eval('[name="mphb_room_details[0][adults]"]', e => e.value);
+        const posted = async pg => (await formData(pg)).filter(x => x.startsWith('mphb_room_details[0][adults]='));
+        // Guard: without the word, this page DOES draw the Pet Fee dropdown.
+        let r = await open(browser, 1280, addNewPage({ preset: 1, capacity: 2, fee: false, pet: 3, marker: PETCOT('') }));
+        check('guard: the same page outside the flow draws the Pet Fee dropdown (so the flow case can fail)',
+            await r.pg.evaluate(() => !!document.querySelector('#dcc_admin_pet_fee')), true);
+        await r.ctx.close();
+        r = await open(browser, 1280, addNewPage({ preset: 1, capacity: 2, fee: false, pet: 3, marker: PETCOT('') }), FLOW);
+        check('guard: PHP sent the flow word for page=mphb_edit_booking', r.cfg.flow, 'edit-accommodations');
+        check('Edit Accommodations, Cottage 34: no Pet Fee dropdown, no "Choose the pet fee…" note, no moved blocks',
+            await r.pg.evaluate(() => [!!document.querySelector('#dcc_admin_pet_fee, .dcc_admin-petfee__note'), !!document.querySelector('.dcc_admin-extras, .dcc_admin-boat')]),
+            [false, false]);
+        check('... MotoPress\'s own three pet rows stay visible: the manual way to change the fee', (await visibleServiceRows(r.pg)).sort(), [14926, 17711, 17712]);
+        await r.pg.click('input[value="17712"]');
+        await r.pg.waitForTimeout(300);
+        check('... ticking one by hand stays ticked (nothing unticks it)', await petBoxes(r.pg), [17712]);
+        await r.ctx.close();
+
+        // THE COUNT. Rob: on 19674 a confirmed 1 came back as 2. The script
+        // must never write Number of Guests — in the flow, AND as 0.32.0 ran
+        // there (no flow word), which is how it ran on 19674. Matrix as asked:
+        // a confirmed 1 and 2, on a 2-sleeper (34) and a 4-sleeper (22).
+        for (const [label, types, cap, fee, pet] of [['2-sleeper (Cottage 34)', '1607', 2, false, 3], ['4-sleeper (Cottage 22)', '1065', 4, true, 0]]) {
+            for (const n of [1, 2]) {
+                for (const over of [FLOW, {}]) {
+                    const tag = over.flow ? 'flow' : 'as 0.32.0 ran there';
+                    r = await open(browser, 1280, addNewPage({ preset: n, capacity: cap, fee, feeMult: cap, pet, marker: { types, pet: '' } }), over);
+                    const start = [await adults(r.pg), await posted(r.pg)];
+                    if (pet) { await r.pg.click('input[value="17711"]'); }
+                    await r.pg.fill('[name="mphb_room_details[0][guest_name]"]', 'A Guest');
+                    await r.pg.evaluate(() => document.body.appendChild(document.createElement('span')));
+                    await r.pg.waitForTimeout(400);
+                    check(`${label}, ${n} guest(s), ${tag}: Number of Guests is ${n} at load and still ${n} — shown and submitted`,
+                        [start, await adults(r.pg), await posted(r.pg)],
+                        [[String(n), [`mphb_room_details[0][adults]=${n}`]], String(n), [`mphb_room_details[0][adults]=${n}`]]);
+                    await r.ctx.close();
+                }
+            }
+        }
     }
 
     await browser.close();

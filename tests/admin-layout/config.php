@@ -48,6 +48,11 @@ $GLOBALS['opt']['dcc_checkout_settings'] = [
     'guest_service_monthly' => 18063,
     'guest_accommodations'  => [1071, 1069, 1067, 1065, 1740, 1742],
 ];
+// v0.32.1: the admin page being requested (?page=…), so the shipped
+// is_edit_accommodations_flow() decides the `flow` word.
+if (getenv('DCC_TEST_PAGE') !== false && getenv('DCC_TEST_PAGE') !== '') {
+    $_GET['page'] = getenv('DCC_TEST_PAGE');
+}
 if (isset($argv[1]) && $argv[1] !== '') {
     $GLOBALS['opt']['dcc_checkout_settings']['included_guests'] = (int) $argv[1];
 }
@@ -61,6 +66,7 @@ function __($t, $d = null) { return $t; }
 function esc_html__($t, $d = null) { return $t; }
 function sanitize_text_field($v) { return is_string($v) ? trim($v) : ''; }
 function sanitize_key($v) { return is_string($v) ? strtolower(preg_replace('/[^a-z0-9_\-]/i', '', $v)) : ''; }
+function wp_unslash($v) { return $v; }
 function wp_strip_all_tags($t) { return strip_tags((string) $t); }
 function number_format_i18n($n, $d = 0) { return number_format((float) $n, (int) $d); }
 class WP_Post { public $ID = 0; public $post_type = ''; public $post_status = ''; }
@@ -77,6 +83,8 @@ if (isset($argv[2]) && $argv[2] !== '') {
     // recorded dog (_dcc_dog), when the spec says so.
     if (!empty($spec['imported'])) { $GLOBALS['meta'][19615]['mphb_ical_prodid'] = '-//Airbnb Inc//Hosting Calendar//EN'; }
     if (isset($spec['dog'])) { $GLOBALS['meta'][19615]['_dcc_dog'] = (string) $spec['dog']; }
+    // v0.32.1: a dog answer saved on the booking (MotoPress's mphb_<name> meta).
+    foreach ((array) ($spec['dogMeta'] ?? []) as $k => $v) { $GLOBALS['meta'][19615][$k] = (string) $v; }
     foreach ((array) ($spec['rooms'] ?? []) as $i => $room) {
         $rr = new WP_Post();
         $rr->ID = 900 + $i; $rr->post_type = 'mphb_reserved_room';
@@ -161,13 +169,19 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-boat-field.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-policies.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-details.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-fields.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
 
 $m = new ReflectionMethod(\DCC_Checkout\Admin_Fields::class, 'script_config');
 $m->setAccessible(true);
 $out = $m->invoke(new \DCC_Checkout\Admin_Fields());
 // v0.32.0: the edit screen's "Extra Details/Options" box, from the shipped PHP.
+// v0.32.1: only when the shipped wanted() draws the box at all, and the
+// "Guest count" box's home for the boat question.
 if ($GLOBALS['booking']) {
-    $out['_extrasBox'] = \DCC_Checkout\Extra_Details::box_html(19615);
+    if (\DCC_Checkout\Extra_Details::wanted(19615)) {
+        $out['_extrasBox'] = \DCC_Checkout\Extra_Details::box_html(19615);
+    }
+    $out['_boatHome'] = \DCC_Checkout\Admin_Guests::boat_home_html();
 }
 
 // WP_Scripts::localize(), WordPress 6.6.2 src/wp-includes/class-wp-scripts.php
