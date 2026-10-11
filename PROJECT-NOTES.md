@@ -2862,3 +2862,85 @@ parity holds whichever of the two forms a kit rule takes.
   0.45.2; Tab reaches the ✕, Shift+Tab stays inside, Escape closes, focus
   returns to the opening row; no other public change; tested with the
   verbatim kit rule at desktop and phone widths.
+
+## 0.45.2 live; Rob's next round → 0.45.3
+
+0.45.2 went live (Rob: "All of those changes look great"). **WD on live:**
+the 4 unconfirmed imported rooms at 4 adults are now 2 — all 142
+unconfirmed imported rooms are 2.
+
+**Rob decided:** (1) Stats loses With pets / couch / boat ("features are
+new, so no accurate stats yet") and gains Bookings (≥1 night in the
+timeframe) and Length (average WHOLE stay); (2) fix the page jumping to
+the footer and back; (3) drop "Pending" from the legend but KEEP the
+stripes; (4) the box beside Timeframe follows it (his chosen design);
+renames "Nights Booked by Source" / "Nights Booked by Cottage" (his words);
+(5) the Stats filters side by side on a phone; (6) the range line much
+bigger, one line. **WD:** Bookings deduplicated as the nights are; Length
+to one decimal, "—" when none; the tile order (two rows of three); the
+second box's kinds and how a switch carries the period; Custom on two rows
+on a phone; the range line fitted and tested at 320 / 375; (7) the Stats
+underline; (8) `_dcc_dog`; (9) the public info popup's focus.
+
+**THE JUMP, FOUND (item 2).** The WD's lead was the refresh emptying the
+grid and Stats. Reproduced in the harness with a stand-in footer, requests
+answered 800ms late, and the fake clock stepped a frame at a time: with
+Stats open, refresh() swapped the figures for "Loading…" until the
+request returned, and the page shrank by about 795px — the footer moved up
+the screen by that much and back. Chromium hides most of it (scroll
+anchoring kept the footer still by moving scrollY: 1062 → 1050 → 1062);
+**iOS Safari has no scroll anchoring, so there scrollY stays and the
+footer slides into view — Rob's "jumps to the footer, then comes back".**
+The test therefore holds scrollY, the page's height AND the footer's place
+on screen fixed at every frame. Fix: a quiet refresh keeps the old figures
+until the new ones are ready and swaps them in one step; the chart and the
+Daily list are also built off the page and swapped in one step, so nothing
+lays the page out while one is empty (Weekly read gridEl.clientWidth with
+the grid emptied). Weekly and Daily did not move in the harness; the swap
+is defensive there. **Not verified on the real page** (no staging access):
+the footer's Elfsight panels are not in the harness. A console snippet for
+the WD to run on staging, before and after, is in the 0.45.3 report.
+
+**Stats (items 1, 4–7).** One anchor day carries the period across a
+Timeframe switch (Month Mar 2025 → Year 2025 → Month Mar 2025; a new year
+→ its January; Day → that day's week; → Custom opens on the period that
+was showing). Week uses the board's windowOf (Sunday–Saturday). The month
+and year lists run the ±3-year window; a partial year is clamped and the
+range line shows the clamped dates. Bookings = the bookings that own a
+cottage-night in the timeframe (the nights' own ownership, so a channel
+echo is not a second booking): 9 in the fixture's October, not 10; Length
+5.8 = 52 ÷ 9, not 5.4. The range line is 30px, nowrap, and fitRange()
+steps it down until it fits (25px for "Dec 28, 2025 – Jan 3, 2026" at
+320px). The Stats fields join the 0.45.2 underline fix and the Show list's
+chevron rule. **Found on the way:** at 320px a full date did not fit a half
+row with Chromium's calendar icon — in Go to date too, since 0.43.x — so
+under 360px the date pills take 6/4px sides and a 16px icon. Three tiles a
+row on a phone; "nights" in Length is set smaller to fit a 90px tile.
+
+**The legend (item 3):** 8 entries; the pending bar keeps its stripes; the
+preview already named the status ("Pending") — now tested.
+
+**The staff dog (item 8):** has_pet() also says yes for `_dcc_dog` ===
+'yes' (strict: 'Yes' and '1' are not), so the paw, Daily, the preview and
+search follow; the sheet shows "Dog: Yes" when the dog block itself is not
+shown (no dog type, no pet fee). Arrives with Custom Checkout 0.32.0.
+
+**The public info popup (item 9, the only public change):** it focuses its
+title on open (tabindex="-1", no :focus-visible ring — bare :focus is
+banned in widget.css) instead of its ✕. Tested in lazy-panel-test.js with
+the live kit rule verbatim on a body carrying elementor-kit-331. **Found
+by that test:** the floating ✕ comes BEFORE the header in the markup, so
+Tab from the title walked out of the popup; the trap now sends it to the
+first control (the ✕). Escape after a pointer open hands focus back to the
+page (the existing no-ring rule from Rob's earlier round); after a keyboard
+open, focus returns to the row — both tested.
+**Two survivors, both answered:** "Length averages only the nights inside
+the timeframe" survived because every October stay in the fixture lies
+wholly inside October — whole-stay and in-window averages were both 5.8.
+A week that cuts Ivy's stay now tells them apart (Oct 4–10: 7.0, not
+3.0). And the info popup's Shift+Tab-from-the-title clause was dead: the
+floating X precedes the title, so the browser lands on it unaided — the
+clause and its mutation are gone (the Tab-side clause is live and caught).
+The refresh test once read the test's OWN scrollTo event, arriving late, as
+a "move" to the same y; it now lets that settle and counts only real moves
+— and still turns red on both refresh mutations.

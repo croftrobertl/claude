@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.2
+Stable tag: 0.45.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.45.3 =
+* **Stats: Bookings and Length.** Two new tiles: how many bookings have at least one night in the timeframe (a booking a channel repeats counts once), and their average stay in nights, whole stays included. The With pets, With couch and With boat tiles are gone until those features have a season of data. The tiles now run Bookings, Booked, Length, Arrivals, Departures, Turnovers — two rows of three on a phone.
+* **Stats: the second box follows Timeframe.** Day and Week of pick a date (a week runs Sunday to Saturday, like the board), Month picks from a list of months, Year from a list of years, and Custom shows From and To. Switching Timeframe keeps the period you were looking at. On a phone the boxes sit side by side, like Show and Go to date, with no underlining.
+* **Stats: the dates are big.** The line saying which dates the figures cover is large and always on one line. The two lists are now headed "Nights Booked by Cottage" and "Nights Booked by Source".
+* **The page no longer jumps during the 3-minute refresh.** With Stats open, the page used to shrink for a moment while the figures reloaded, so on a phone the footer slid into view and then went away again. The new figures and calendar now replace the old ones in one step.
+* **The legend fits on a phone.** "Pending" is no longer listed, so the legend fits in two lines. A pending booking still has its stripes, and its quick preview and details say "Pending".
+* **A dog recorded by staff shows a paw.** When staff record a dog on a booking in the Extra Details/Options box (Custom Checkout 0.32.0), the booking shows the paw even with no pet fee and no dog type. Its details say "Dog: Yes".
+* **Home page and cottage pages:** the cottage-information popup opens with its close ✕ in its normal colour, rather than already highlighted.
 
 = 0.45.2 =
 * **A ✕ to close search.** While the Search box has text, a ✕ at its right end clears it, closes the results and puts the phone's keyboard away, all in one tap. iPhones draw no clear button of their own on a search box, so closing the results used to mean deleting every letter. Escape still does the same on a computer, and the browser's own ✕ is hidden so there are never two.
