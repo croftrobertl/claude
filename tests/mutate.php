@@ -55,10 +55,10 @@ $mutations = [
      'return $found ? [\'adults\' => $adults, \'children\' => $children] : null;',
      'return null;',
      'staff-panel-test.php'],
-    ['staff panel: every imported count is treated as the capacity default', 'class-staff-data.php',
-     'return $capacity === 0 || $adults === $capacity;',
-     'return true;',
-     'staff-panel-test.php'],
+    // RETIRED IN 0.45.2: "every imported count is treated as the capacity
+    // default" mutated is_capacity_default(), which is gone — every
+    // unconfirmed import is now unknown by rule (the Website Director).
+    // Its successor: "guests: an unconfirmed import's own number is shown".
 
     // --- rule 5: the pet gate -------------------------------------------
     ['staff panel: the pet block is ungated', 'class-staff-data.php',
@@ -451,8 +451,8 @@ $mutations = [
      "        \$posts = [];\n        foreach (array_keys(\$ids) as \$one) { \$posts = array_merge(\$posts, get_posts(['post_type' => 'mphb_room_service', 'post__in' => [(int) \$one], 'posts_per_page' => 1])); }\n        \$unused = ([",
      'staff-nplus1-test.php'],
     ['staff-honesty: an imported booking prints the capacity default as a fact', 'class-staff-data.php',
-     "} elseif (\$source['imported'] && self::is_capacity_default(\$rooms, \$adults, \$children)) {",
-     '} elseif (false) {',
+     "        } elseif (\$source['imported']) {",
+     '        } elseif (false) {',
      'staff-honesty-test.php'],
     ['staff-elementor: a control emits a paint property again', 'class-staff-elementor.php',
      "self::SEL . '.mphbac-staff-nav' => '--staff-nav-hover: {{VALUE}};',",
@@ -1267,7 +1267,7 @@ $mutations = [
      "        return self::has_pet_service(\$rooms);",
      'staff-board-data-test.php'],
     ["guests: an import's default capacity is shown as a real count", 'class-staff-data.php',
-     "        if (!empty(\$source['imported']) && self::is_capacity_default(\$rooms, \$adults, \$children)) {\n            return '';\n        }\n",
+     "        if (!empty(\$source['imported'])) {\n            return '';                       // an import's own number is never a count (0.45.2)\n        }\n",
      "",
      'staff-board-data-test.php'],
     ["contact: the leading + is lost from the tel: target", 'class-staff-data.php',
@@ -1735,10 +1735,11 @@ $mutations = [
      ".mphbac-staff .mphbac-staff-q::-webkit-search-cancel-button,\n",
      ".mphbac-staff .mphbac-staff-q::-t-none,\n",
      'staff-board-test.js'],
-    ["clear: the ✕ at (0,1,0) — the theme turns it coral", 'assets/css/staff.css',
-     ".mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear {\n    position: absolute;",
-     ".mphbac-staff-qclear {\n    position: absolute;",
-     'staff-board-test.js'],
+    // RETIRED (0.45.2 addendum): "the ✕ at (0,1,0) — the theme turns it
+    // coral" guarded the search ✕'s first contract, "never coral". Rob's
+    // button instruction reversed it — the ✕ now follows the public X, coral
+    // included — and its reverse is "buttons: the search ✕ held above the
+    // theme" below.
     ["clear: the ✕ is not the sheet's mark", 'assets/css/staff.css',
      ".mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg path { stroke-width: 2.75; }",
      ".mphbac-staff .mphbac-staff-qclear.mphbac-staff-qclear svg path { stroke-width: 2; }",
@@ -1813,6 +1814,20 @@ $mutations = [
      "CSS.supports('overflow', 'clip'))",
      "CSS.supports('overflow', 't-none-0452'))",
      'staff-board-test.js'],
+
+    // --- 0.45.2, second addendum: an unconfirmed imported count is never a count
+    ["guests: an unconfirmed import's own number is shown again when it is not the capacity", 'class-staff-data.php',
+     "        } elseif (\$source['imported']) {",
+     "        } elseif (\$source['imported'] && \$adults === 4) {",
+     'staff-honesty-test.php'],
+    ["guests: the preview shows an unconfirmed import's number", 'class-staff-data.php',
+     "        if (!empty(\$source['imported'])) {\n            return '';                       // an import's own number is never a count (0.45.2)",
+     "        if (!empty(\$source['imported']) && false) {\n            return '';                       // an import's own number is never a count (0.45.2)",
+     'staff-board-data-test.php'],
+    ["search: the board's own muted wording is indexed", 'class-staff-data.php',
+     "                if (!empty(\$row['muted'])) {",
+     "                if (false) {",
+     'staff-search-test.php'],
 ];
 
 $originals = [];

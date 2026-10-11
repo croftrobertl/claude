@@ -73,18 +73,21 @@ namespace {
     function board(array $specs): array {
         $GLOBALS['t_posts'] = []; $GLOBALS['t_meta'] = [];
         t_post(22, 'mphb_room_type', 'publish', 'Cottage 22', ['mphb_adults_capacity' => 4]);
+        t_post(9033, 'mphb_room_type', 'publish', 'Cottage 33: Osprey', ['mphb_adults_capacity' => 2]);   // a 2-sleeper
         t_post(77, 'mphb_room_service', 'publish', 'Pet Fee');
         t_post(78, 'mphb_room_service', 'publish', 'Early Check-in');
         t_post(79, 'mphb_room_service', 'publish', 'Dog bed');
         $rows = [];
         $i = 0;
-        foreach ($specs as $bid => [$bmeta, $rmeta]) {
+        foreach ($specs as $bid => $spec) {
+            [$bmeta, $rmeta] = $spec;
+            $type = $spec[2] ?? 22;
             t_post($bid, 'mphb_booking', 'confirmed', 'B', $bmeta);
             $rid = 50000 + $i++;
             t_post($rid, 'mphb_reserved_room', 'publish', 'RR', $rmeta + ['_mphb_room_id' => 220]);
             $GLOBALS['t_posts'][$rid]->post_parent = $bid;
             $rows[] = (object) ['reserved_id' => $rid, 'booking_id' => $bid, 'status' => 'confirmed',
-                'room_id' => 220, 'room_type_id' => 22, 'checkin' => '2026-10-05', 'checkout' => '2026-10-09'];
+                'room_id' => 220, 'room_type_id' => $type, 'checkin' => '2026-10-05', 'checkout' => '2026-10-09'];
         }
         $GLOBALS['t_rows'] = $rows;
         $out = [];
@@ -138,7 +141,29 @@ namespace {
     check('a direct booking: its count, children broken out', str_starts_with($g[30], '3') && str_contains($g[30], 'child'), $g);
     check('an import carrying only the cottage\'s capacity: NO count', $g[31] === '', $g);
     check('the same, confirmed by a person: shown', $g[32] === '4', $g);
-    check('an import with a real, different count: shown', $g[33] === '3', $g);
+    check('an import\'s own different number is not a count either (0.45.2): NO count', $g[33] === '', $g);
+
+    echo "\n-- 0.45.2: the preview shows an imported count ONLY when a person confirmed it --\n";
+    $air = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];
+    $b = board([
+        // 4-sleeper (the fixture's room type 22): imports at 2 and at 4.
+        50 => [$air, ['_mphb_adults' => 2]],
+        51 => [$air, ['_mphb_adults' => 2, '_mphb_adults_confirmed' => 1]],
+        52 => [$air, ['_mphb_adults' => 4]],
+        53 => [$air, ['_mphb_adults' => 4, '_mphb_adults_confirmed' => 1]],
+        54 => [[], ['_mphb_adults' => 2]],                              // direct: unchanged
+        55 => [[], ['_mphb_adults' => 4]],
+        // 2-sleeper: an import at 2 (the case the old rule already blanked).
+        56 => [$air, ['_mphb_adults' => 2], 9033],
+        57 => [$air, ['_mphb_adults' => 2, '_mphb_adults_confirmed' => 1], 9033],
+    ]);
+    $g = array_map(static fn($x) => $x['guests'], $b);
+    check('import, 2 in a 4-sleeper, unconfirmed: nothing (live: 68 of these read "2 guests")', $g[50] === '', $g);
+    check('import, 2 in a 4-sleeper, confirmed: 2', $g[51] === '2', $g);
+    check('import, 4 in a 4-sleeper, unconfirmed: nothing', $g[52] === '', $g);
+    check('import, 4 in a 4-sleeper, confirmed: 4', $g[53] === '4', $g);
+    check('direct bookings unchanged: 2 and 4', $g[54] === '2' && $g[55] === '4', $g);
+    check('import, 2 in a 2-sleeper: nothing unconfirmed, 2 confirmed', $g[56] === '' && $g[57] === '2', $g);
 
     echo "\n-- 0.44.1 Couch: 3+ guests, only from a count a PERSON set --\n";
     $imp = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];

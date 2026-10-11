@@ -78,8 +78,8 @@ echo "\n-- a DIRECT booking is not muted and gets its real number --\n";
 echo "\n-- the default is identified by BOTH halves, not one --\n";
 {
     $a = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2, 'capacity' => 4]));
-    check('imported but NOT at capacity is a real figure somebody entered, so it shows',
-        $a['value'] === '2', $a['value'] ?? null);
+    check('imported and NOT at capacity is STILL not a count unless confirmed (0.45.2): not provided',
+        str_contains($a['value'] ?? '', 'not provided') && !empty($a['muted']), $a);
     $b = guests(scene(['adults' => 4, 'capacity' => 4]));
     check('at capacity but NOT imported is also shown — either half alone proves nothing',
         $b['value'] === '4', $b['value'] ?? null);
@@ -91,6 +91,23 @@ echo "\n-- a human-confirmed count beats all of it --\n";
     check('imported, at capacity, but CONFIRMED: the number is shown',
         $g['value'] === '4', $g['value'] ?? null);
     check('...and it is not muted, because it is no longer an absence', empty($g['muted']), $g);
+}
+
+echo "\n-- 0.45.2: an UNCONFIRMED imported count is never a real count, whatever the number --\n";
+{
+    // The Website Director's matrix: imports at 2 and at 4 in a 4-sleeper,
+    // at 2 in a 2-sleeper, each without and with the staff marker.
+    foreach ([[2, 4], [4, 4], [2, 2]] as [$n, $cap]) {
+        $g = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => $n, 'capacity' => $cap]));
+        check("import, $n in a $cap-sleeper, unconfirmed: \"count not provided by Airbnb\", muted",
+            ($g['value'] ?? '') === 'count not provided by Airbnb' && !empty($g['muted']), $g);
+        $g = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => $n, 'capacity' => $cap, 'confirmed' => true]));
+        check("import, $n in a $cap-sleeper, CONFIRMED: $n", ($g['value'] ?? '') === (string) $n && empty($g['muted']), $g);
+    }
+    foreach ([[2, 4], [4, 4], [2, 2]] as [$n, $cap]) {
+        $g = guests(scene(['adults' => $n, 'capacity' => $cap]));
+        check("a DIRECT booking, $n in a $cap-sleeper: unchanged, $n", ($g['value'] ?? '') === (string) $n && empty($g['muted']), $g);
+    }
 }
 
 echo "\n-- with no capacity configured, nothing is claimed --\n";

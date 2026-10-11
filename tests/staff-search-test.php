@@ -193,6 +193,8 @@ namespace {
     check('"9876": the last four in Airbnb\'s description text', in_array(102, $ids($find('9876')), true));
     check('"United States": the code US', $ids($find('United States')) === [101]);
     check('"canada": CA', $ids($find('canada')) === [102]);
+    check('the board\'s own wording is not indexed: "count" and "provided" find nobody (an import\'s "count not provided by …", 0.45.2)',
+        $find('count') === [] && $find('provided') === [], [$ids($find('count')), $ids($find('provided'))]);
     check('"HMABC123": the Airbnb reservation code in the sync text', $ids($find('HMABC123')) === [102]);
     check('"Carla": a Vrbo summary\'s first name', $ids($find('Carla')) === [104]);
     check('"late arrival": a phrase from the customer note', ($find('late arrival')[0]['id'] ?? 0) === 101);

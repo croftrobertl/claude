@@ -168,8 +168,8 @@ check('2: an OVERPAYMENT shows a negative balance rather than being flattened to
 
 echo "\n-- 4: the guest count, and the provenance marker that settles it --\n";
 $d = booking(18437, [], ['adults' => 2]);
-check('4: two adults in a four-capacity cottage is a figure somebody entered, so it shows',
-    value_of($d, 'booking', 'Number of Guests') === '2', value_of($d, 'booking', 'Number of Guests'));
+check('4: two adults on an IMPORT in a four-capacity cottage, unconfirmed: not provided (0.45.2 — was shown as 2)',
+    str_contains((string) value_of($d, 'booking', 'Number of Guests'), 'not provided'), value_of($d, 'booking', 'Number of Guests'));
 
 // THE CASE THE MARKER EXISTS FOR. Four guests in a four-capacity cottage is
 // indistinguishable from MotoPress's default BY VALUE. Only provenance
