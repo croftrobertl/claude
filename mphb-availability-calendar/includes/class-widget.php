@@ -161,6 +161,16 @@ class Widget extends Widget_Base
         return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'widget.css' : 'widget.min.css';
     }
 
+    /**
+     * The script the browser is sent (0.45.4, the Website Director's speed
+     * audit): widget.min.js, built from widget.js by tools/build-js.js — the
+     * same rule as the stylesheet. SCRIPT_DEBUG serves the readable source.
+     */
+    public static function script_file(): string
+    {
+        return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'widget.js' : 'widget.min.js';
+    }
+
     public static function register_assets(): void
     {
         wp_register_style(
@@ -178,7 +188,7 @@ class Widget extends Widget_Base
         // and Firefox) never trigger.
         wp_register_script(
             'mphbac-widget',
-            MPHBAC_URL . 'assets/js/widget.js',
+            MPHBAC_URL . 'assets/js/' . self::script_file(),
             [],
             MPHBAC_VERSION,
             true

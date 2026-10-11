@@ -28,10 +28,16 @@ final class Staff_Widget
         add_action('wp_enqueue_scripts', ['\\MPHBAC\\Staff_Widget', 'register_assets']);
     }
 
+    /** staff.min.js, built from staff.js by tools/build-js.js (0.45.4); SCRIPT_DEBUG serves the source. */
+    public static function script_file(): string
+    {
+        return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'staff.js' : 'staff.min.js';
+    }
+
     public static function register_assets(): void
     {
         wp_register_style('mphbac-staff', MPHBAC_URL . 'assets/css/staff.css', [], MPHBAC_VERSION);
-        wp_register_script('mphbac-staff', MPHBAC_URL . 'assets/js/staff.js', [], MPHBAC_VERSION, true);
+        wp_register_script('mphbac-staff', MPHBAC_URL . 'assets/js/' . self::script_file(), [], MPHBAC_VERSION, true);
 
         // Same zero-cost rule as the public widget: nothing is emitted unless
         // a colour has actually been changed. The staff board is behind a

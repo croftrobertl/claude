@@ -1,0 +1,6 @@
+{
+  "name": "mphbac-build-tools",
+  "private": true,
+  "description": "Build-time tools for mphb-availability-calendar. Nothing here ships in the plugin zip.",
+  "devDependencies": { "terser": "5.36.0" }
+}
