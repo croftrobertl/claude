@@ -193,7 +193,7 @@ const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
     const box = await p.evaluate(() => { const b = document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').getBoundingClientRect(),
       t = document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tip'), c = getComputedStyle(t);
       return { l: b.left, r: b.right, w: innerWidth, top: b.top, btn: t.getBoundingClientRect().bottom, bg: c.backgroundColor, radius: c.borderRadius, size: [t.offsetWidth, t.offsetHeight] }; });
-    check(`${DEV}: ...the bubble under its button, wholly on screen`, box.l >= 0 && box.r <= box.w && box.top > box.btn, box);
+    check(`${DEV}: ...the bubble under its button, wholly on screen`, box.l >= 0 && box.r <= (phone ? 375 : 1280) && box.w === (phone ? 375 : 1280) && box.top > box.btn, box);
     check(`${DEV}: ...the ⓘ stays an icon after the tap: no theme coral (button:focus), 24px target`, box.bg === 'rgba(0, 0, 0, 0)' && box.size.join() === '24,24', box);
     await p.click('.mphbac-staff-stats-block.is-source .mphbac-staff-tip');
     s = await state();
@@ -236,6 +236,12 @@ const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
       await p.tap('.mphbac-staff-kpi.is-turnovers .mphbac-staff-tip');
       s = await state();
       check('phone: a TAP opens it (no hover on a touch screen)', JSON.stringify(s) === '[["turnovers","true"]]', s);
+      const edge = await p.evaluate(() => { const b = document.querySelector('.mphbac-staff-kpi.is-turnovers .mphbac-staff-tipbox').getBoundingClientRect(),
+        t = document.querySelector('.mphbac-staff-kpi.is-turnovers .mphbac-staff-tip').getBoundingClientRect();
+        return { l: b.left, r: b.right, w: innerWidth, btnRight: t.right }; });
+      // Against the PHONE's 375, not innerWidth: a mobile page that overflows
+      // widens its own layout viewport, and innerWidth grows with the spill.
+      check('phone: the right-hand tile\'s bubble is kept on screen (it would spill past the edge centred under its ⓘ)', edge.l >= 0 && edge.r <= 375 && edge.w === 375, edge);
     }
     await ctx.close();
   }

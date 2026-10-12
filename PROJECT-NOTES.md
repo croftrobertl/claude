@@ -3120,6 +3120,18 @@ taking taps; aggregate figures only.
   Redraws keep the old figures until the new are ready (no "Loading…"
   flash on an arrow either).
 
+**Mutations, 0.46.0:** 91 new or moved entries, run in three batches.
+Four survivors, each fixed with a stronger test: the legend's phone rows
+(now checked at 430 and 600px), Stats taking what the session holds
+(January 2026: no request), the wrapped Show field's place in the phone
+grid (checked in the live board suite — staff-test.js uses static markup
+without the script), and the ⓘ bubble kept on screen (the right-hand
+tile at 375px). One entry was REMOVED as equivalent: openTip()'s "close
+the other one first" — every way to open a second tip (a click, a tap,
+Enter on another ⓘ) passes the document's capture-phase click handler,
+which closes the first already. The line stays as a guard for the
+redraw path.
+
 **FOR THE WD (question, no change made):** Arrivals, Departures and the
 weekday chart count EVERY booking, channel blocks included (unchanged
 since 0.44.1): in the October fixture Arrivals is 10 against Bookings 9.
