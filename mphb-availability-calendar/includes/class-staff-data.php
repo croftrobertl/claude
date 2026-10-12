@@ -150,6 +150,10 @@ final class Staff_Data
                     // cottage's default capacity, so the preview never shows a
                     // count the sheet would not.
                     'guests'     => self::guest_count_text($rooms, $source),
+                    // MADE ON (0.46.0): the booking post's date, in the site's
+                    // time zone (WordPress stores post_date that way) — for
+                    // the Stats pace and lead-time figures. Staff data only.
+                    'madeOn'     => self::made_on($bid),
                     'cottages'   => [],
                 ];
             }
@@ -591,14 +595,14 @@ final class Staff_Data
         // dog_size or dog_hair.
         //
         // Those two were `select` controls with no blank option, so the first
-        // value was always stored: every booking taken before 2026-09-17
-        // carries "10-20 lbs" / "short-haired" whether or not a dog was ever
-        // mentioned. dog_type is a text field, which is why it alone came
-        // through empty. A blank first option has since been added, so an
-        // empty select is meaningful for NEW bookings — and still meaningless
-        // for the whole existing history. Gating on their emptiness therefore
-        // gives the wrong answer on every historical booking, which is most
-        // of them.
+        // value was always stored: "10-20 lbs" / "short-haired" carried on
+        // bookings taken before 2026-09-17 whether or not a dog was ever
+        // mentioned; those values were cleared from the database, and today
+        // only #17730 and #17795 (cancelled tests) hold a size. dog_type is a
+        // text field, which is why it alone came through empty. The selects
+        // now open on a blank option and Custom Checkout leaves the dog fields
+        // out when no dog is coming — but a size was never a sign of a dog,
+        // and the gate still does not read one.
         //
         // Two things do survive both eras: a pet fee attached to the reserved
         // room (somebody chose and paid for it), and a non-empty dog_type
@@ -693,10 +697,11 @@ final class Staff_Data
      * Does this booking carry a pet fee?
      *
      * The pet questions were `select` controls with no blank option, so the
-     * first value was always stored — every booking taken before 2026-09-17
-     * carries "10-20 lbs" / "short-haired" whether or not a dog was ever
-     * mentioned. A blank first option has since been added, so emptiness is
-     * trustworthy for NEW bookings and worthless for old ones.
+     * first value was always stored — "10-20 lbs" / "short-haired" carried on
+     * bookings taken before 2026-09-17 whether or not a dog was ever
+     * mentioned; those values were cleared from the database, and today only
+     * #17730 and #17795 (cancelled tests) hold a size. A size is still not
+     * read as a sign of a dog.
      *
      * The fee is the fact that survives both eras: a pet service attached to
      * the reserved room is something somebody chose and paid for.
@@ -858,6 +863,18 @@ final class Staff_Data
             }
         }
         return $total >= 3;
+    }
+
+    /**
+     * The day the booking was made (0.46.0): the booking post's post_date,
+     * which WordPress stores in the site's time zone — so the date part is the
+     * site's calendar day. '' when there is none.
+     */
+    private static function made_on(int $booking_id): string
+    {
+        $post = get_post($booking_id);
+        $d = $post ? substr((string) ($post->post_date ?? ''), 0, 10) : '';
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && $d !== '0000-00-00' ? $d : '';
     }
 
     /**

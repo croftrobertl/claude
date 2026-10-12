@@ -51,7 +51,7 @@ final class Settings
     public const VERSION_OPT = 'mphbac_settings_version';
 
     /** Bump when a key is ADDED or its default CHANGES, never for a re-label. */
-    public const SCHEMA_VERSION = 1;
+    public const SCHEMA_VERSION = 2;   // 2: records_complete_from (0.46.0)
 
     /** Runtime memo. Not a cache — the option is already object-cached by WP. */
     private static ?array $resolved = null;
@@ -130,6 +130,11 @@ final class Settings
             'group' => $group, 'type' => 'int', 'label' => $label,
             'default' => $default, 'min' => $min, 'max' => $max, 'help' => $help,
         ];
+        // A calendar date, YYYY-MM-DD (0.46.0, for "Records complete from").
+        $date = static fn(string $group, string $label, string $default, string $help = ''): array => [
+            'group' => $group, 'type' => 'date', 'label' => $label,
+            'default' => $default, 'help' => $help,
+        ];
         $bool = static fn(string $group, string $label, bool $default, string $help = ''): array => [
             'group' => $group, 'type' => 'bool', 'label' => $label,
             'default' => $default, 'help' => $help,
@@ -206,6 +211,13 @@ final class Settings
                 'edit_posts'         => __('Anyone who can edit posts', 'mphb-availability-calendar'),
                 'manage_options'     => __('Administrators only', 'mphb-availability-calendar'),
             ], __('This is in addition to the page password, never instead of it.', 'mphb-availability-calendar')),
+            // 0.46.0 (Rob: "a missing figure beats a false one"). The Website
+            // Director's 2026-10-08 reconciliation against Airbnb, Booking.com
+            // and Vrbo found the records complete from October 2025; earlier
+            // ones are not verified. A Stats comparison that would reach before
+            // this date shows "—" instead of a figure.
+            'records_complete_from' => $date('staff', __('Records complete from', 'mphb-availability-calendar'), '2025-10-01',
+                __('Stats comparisons with an earlier period (vs last year, vs the previous period, bookings on the books a year ago) show “—” where they would reach before this date. Every other figure shows whatever the site holds.', 'mphb-availability-calendar')),
 
             // ---- layout (advanced) ---------------------------------------
             'namecol_width'          => $int('layout', __('Cottage column width (px)', 'mphb-availability-calendar'), 96, 40, 300),
@@ -321,6 +333,10 @@ final class Settings
             case 'choice':
                 return is_string($value) && array_key_exists($value, $field['choices'])
                     ? $value : $field['default'];
+            case 'date':
+                $v = is_string($value) ? trim($value) : '';
+                return (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]))
+                    ? $v : $field['default'];
         }
         return $field['default'];
     }
