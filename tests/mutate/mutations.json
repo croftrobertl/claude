@@ -701,8 +701,8 @@
    "settings"
   ],
   "claim": "saved values win over defaults -- reversing the merge silently undoes the owner's settings",
-  "find": "            self::$cache = array_merge(self::defaults(), $saved);",
-  "replace": "            self::$cache = array_merge($saved, self::defaults());",
+  "find": "            self::$cache = array_merge(self::defaults(), self::upgrade($saved));",
+  "replace": "            self::$cache = array_merge(self::upgrade($saved), self::defaults());",
   "count": 1
  },
  {
@@ -712,8 +712,8 @@
    "settings"
   ],
   "claim": "THE UPGRADE TRAP: new keys must read as defaults on an old stored row",
-  "find": "            self::$cache = array_merge(self::defaults(), $saved);",
-  "replace": "            self::$cache = $saved ?: self::defaults();",
+  "find": "            self::$cache = array_merge(self::defaults(), self::upgrade($saved));",
+  "replace": "            self::$cache = self::upgrade($saved) ?: self::defaults();",
   "count": 1
  },
  {
@@ -1155,8 +1155,8 @@
    "admin-layout"
   ],
   "claim": "0.28.0 with several pet services and none stated, nothing is guessed",
-  "find": "                            (list.length === 1 ? list[0] : null);",
-  "replace": "                            list[0];",
+  "find": "                            (target <= 0 && list.length === 1 ? list[0] : null);",
+  "replace": "                            (target <= 0 ? list[0] : null);",
   "count": 1
  },
  {
@@ -3020,6 +3020,487 @@
   "claim": "0.33.1: the note beside Edit Accommodations says it reprices the whole stay",
   "find": "                if (Fee_Sync::eligible($booking_id)) {\n                    $out .= '<p class=\"dcc_extras-edit-note description\">'",
   "replace": "                if (false) {\n                    $out .= '<p class=\"dcc_extras-edit-note description\">'",
+  "count": 1
+ },
+ {
+  "id": "cfg-upgrade-dead",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy",
+   "pricing"
+  ],
+  "claim": "0.34.0: today's stored option (tiers all 19692, no mode) is read as flat with the baked tiers",
+  "find": "self::$cache = array_merge(self::defaults(), self::upgrade($saved));",
+  "replace": "self::$cache = array_merge(self::defaults(), $saved);",
+  "count": 1
+ },
+ {
+  "id": "cfg-upgrade-flat-left-in-tiers",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the flat id is never left in a tier slot",
+  "find": "            foreach ($keys as $k) {\n                $saved[$k] = $d[$k];\n            }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "cfg-upgrade-distinct-made-flat",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a site with three distinct tiers and no mode stays on tiers",
+  "find": "        $saved['pet_fee_mode'] = 'tiers';\n        return $saved;",
+  "replace": "        $saved['pet_fee_mode'] = 'flat';\n        return $saved;",
+  "count": 1
+ },
+ {
+  "id": "cfg-mode-ignored",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "pricing",
+   "petpolicy",
+   "fees"
+  ],
+  "claim": "0.34.0: flat mode charges the flat service for every stay",
+  "find": "        if (self::pet_fee_mode() === 'flat') {\n            $flat = self::pet_flat_service_id();",
+  "replace": "        if (false) {\n            $flat = self::pet_flat_service_id();",
+  "count": 1
+ },
+ {
+  "id": "cfg-recognised-active-only",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy",
+   "fees",
+   "admin-layout"
+  ],
+  "claim": "0.34.0: the old tiers stay RECOGNISED as pet fees whatever the mode",
+  "find": "        return array_values(array_unique(array_filter(array_map('intval', array_merge(\n            [self::pet_flat_service_id()],\n            array_values(self::pet_tier_service_ids())\n        )))));",
+  "replace": "        return self::active_pet_service_ids();",
+  "count": 1
+ },
+ {
+  "id": "cfg-recognised-no-flat",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the flat service is recognised in tiers mode too",
+  "find": "            [self::pet_flat_service_id()],\n            array_values(self::pet_tier_service_ids())",
+  "replace": "            [],\n            array_values(self::pet_tier_service_ids())",
+  "count": 1
+ },
+ {
+  "id": "cfg-pet-cottage-active-only",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.34.0: a pet cottage is one carrying ANY recognised pet service",
+  "find": "        foreach (self::recognised_pet_service_ids() as $pet_id) {",
+  "replace": "        foreach (self::active_pet_service_ids() as $pet_id) {",
+  "count": 1
+ },
+ {
+  "id": "cfg-sizes-all-active",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: only sizes switched on are offered",
+  "find": "            array_filter(self::dog_sizes(), static function ($r) { return $r['active']; })));",
+  "replace": "            self::dog_sizes()));",
+  "count": 1
+ },
+ {
+  "id": "set-mode-not-saved",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the settings page saves the chosen mode",
+  "find": "        $out['pet_fee_mode'] = in_array($mode, ['flat', 'tiers'], true) ? $mode : (string) $defaults['pet_fee_mode'];",
+  "replace": "        $out['pet_fee_mode'] = (string) $defaults['pet_fee_mode'];",
+  "count": 1
+ },
+ {
+  "id": "set-flat-id-not-saved",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: both id sets are saved whatever the mode",
+  "find": "foreach (['service_flat', 'service_daily',",
+  "replace": "foreach (['service_daily',",
+  "count": 1
+ },
+ {
+  "id": "set-sizes-none-offered",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a list with no size offered is refused (every dog booking would be refused)",
+  "find": "        if ($sizes === [] || $offered === []) {",
+  "replace": "        if ($sizes === []) {",
+  "count": 1
+ },
+ {
+  "id": "set-warn-dead",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the page warns when the active service is not attached to the pet cottage",
+  "find": "                if (in_array((int) $sid, $attached, true)) {\n                    continue;\n                }",
+  "replace": "                continue;",
+  "count": 1
+ },
+ {
+  "id": "set-warn-recognised",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the warning is about the ACTIVE mode's services only",
+  "find": "            foreach (Config::active_pet_service_ids() as $sid) {",
+  "replace": "            foreach (Config::recognised_pet_service_ids() as $sid) {",
+  "count": 1
+ },
+ {
+  "id": "pet-other-loop-active",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "petpolicy",
+   "backstops"
+  ],
+  "claim": "0.34.0: any recognised pet service other than the active one is refused",
+  "find": "            foreach (Config::recognised_pet_service_ids() as $sid) {\n                if ($sid !== $expected_id",
+  "replace": "            foreach (Config::active_pet_service_ids() as $sid) {\n                if ($sid !== $expected_id",
+  "count": 1
+ },
+ {
+  "id": "pet-present-active",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a dog booking is seen by ANY recognised pet service",
+  "find": "    private function any_pet_service_present(): bool\n    {\n        foreach (Config::recognised_pet_service_ids() as $sid) {",
+  "replace": "    private function any_pet_service_present(): bool\n    {\n        foreach (Config::active_pet_service_ids() as $sid) {",
+  "count": 1
+ },
+ {
+  "id": "pet-size-check-dead",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a dog booking's size is checked on the server",
+  "find": "        if ($size_code !== null) {\n            return $size_code;\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "ds-guest-gets-all",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the guest checkout offers only the active sizes",
+  "find": "        $labels = self::guest_facing() ? Config::active_dog_sizes() : Config::all_dog_sizes();",
+  "replace": "        $labels = Config::all_dog_sizes();",
+  "count": 1
+ },
+ {
+  "id": "ds-admin-gets-active",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the booking screen lists every size, so a stored one survives Update",
+  "find": "        $labels = self::guest_facing() ? Config::active_dog_sizes() : Config::all_dog_sizes();",
+  "replace": "        $labels = Config::active_dog_sizes();",
+  "count": 1
+ },
+ {
+  "id": "ds-addnew-full",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: Add New Booking offers the active sizes only",
+  "find": "        return $page === 'mphb_add_new_booking';",
+  "replace": "        return false;",
+  "count": 1
+ },
+ {
+  "id": "ds-ajax-admin-referer",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: an AJAX request from a wp-admin screen gets every size",
+  "find": "            return !($referer !== '' && strpos($referer, admin_url()) === 0);",
+  "replace": "            return true;",
+  "count": 1
+ },
+ {
+  "id": "ds-any-field",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: only the Dog Size field's options are served",
+  "find": "            && (string) get_post_meta($id, 'mphb_cf_name', true) === $slug;",
+  "replace": "            ;",
+  "count": 1
+ },
+ {
+  "id": "ds-shortcircuit-ignored",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a value another filter already decided passes through",
+  "find": "        if ($meta_key !== self::OPTIONS_META || $value !== null) {",
+  "replace": "        if ($meta_key !== self::OPTIONS_META) {",
+  "count": 1
+ },
+ {
+  "id": "ds-empty-allowed",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a dog booking with no size is refused while the field is in use",
+  "find": "            return self::field_in_use() ? 'dogsize' : null;",
+  "replace": "            return null;",
+  "count": 1
+ },
+ {
+  "id": "ds-inactive-allowed",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a size not offered is refused",
+  "find": "        return in_array($size, Config::active_dog_sizes(), true) ? null : 'dogsize';",
+  "replace": "        return in_array($size, Config::all_dog_sizes(), true) ? null : 'dogsize';",
+  "count": 1
+ },
+ {
+  "id": "ds-enabled-ignored",
+  "file": "dcc-custom-checkout/includes/class-dog-sizes.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: a switched-off Dog Size field makes nothing required",
+  "find": "        return (string) get_post_meta((int) $ids[0], 'mphb_cf_enabled', true) === '1';",
+  "replace": "        return true;",
+  "count": 1
+ },
+ {
+  "id": "guard-dogsize-message",
+  "file": "dcc-custom-checkout/includes/class-rest-guard.php",
+  "suites": [
+   "petpolicy"
+  ],
+  "claim": "0.34.0: the REST refusal for a dog size says so",
+  "find": "            case 'dogsize':\n                return __('Please choose your dog\\'s size from the list.', 'dcc-checkout');",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-pet-ids-active",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.34.0: an old tier fee counts as the pet fee in Update (no second line)",
+  "find": "        $pet_ids = Config::recognised_pet_service_ids();",
+  "replace": "        $pet_ids = Config::active_pet_service_ids();",
+  "count": 1
+ },
+ {
+  "id": "af-pet-fee-active",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout",
+   "fees"
+  ],
+  "claim": "0.34.0: the booking screen reads an old tier fee as Yes",
+  "find": "        $pet = Config::recognised_pet_service_ids();\n        if (empty($pet)) {",
+  "replace": "        $pet = Config::active_pet_service_ids();\n        if (empty($pet)) {",
+  "count": 1
+ },
+ {
+  "id": "af-petids-active",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.34.0: the admin script recognises every pet service",
+  "find": "            'petServiceIds'  => Config::recognised_pet_service_ids(),",
+  "replace": "            'petServiceIds'  => Config::active_pet_service_ids(),",
+  "count": 1
+ },
+ {
+  "id": "ed-hint-mode-flipped",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "fees",
+   "admin-layout"
+  ],
+  "claim": "0.34.0: the Pet fee hint follows the mode",
+  "find": "        if (Config::pet_fee_mode() === 'tiers') {\n            return __('Change it and press Update: the pet fee for this stay",
+  "replace": "        if (Config::pet_fee_mode() !== 'tiers') {\n            return __('Change it and press Update: the pet fee for this stay",
+  "count": 1
+ },
+ {
+  "id": "fs-flat-message-tiers",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.34.0: in flat mode the refusal names the missing attachment",
+  "find": "                            return ['error' => Config::pet_fee_mode() === 'tiers'",
+  "replace": "                            return ['error' => true",
+  "count": 1
+ },
+ {
+  "id": "js-pet-only-box-fallback",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "admin-layout"
+  ],
+  "claim": "0.34.0: Add New never ticks an old tier because it is the room's only pet box when the active one is stated",
+  "find": "(target <= 0 && list.length === 1 ? list[0] : null);",
+  "replace": "(list.length === 1 ? list[0] : null);",
+  "count": 1
+ },
+ {
+  "id": "js-recalc-not-armed",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: the price is asked for the included guests while the count is unchosen",
+  "find": "    // price at page load. See armRecalcCount().\n    armRecalcCount();",
+  "replace": "    // price at page load. See armRecalcCount().",
+  "count": 1
+ },
+ {
+  "id": "js-recalc-capacity",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: never more than the room's capacity",
+  "find": "        return max > 0 ? Math.min(inc, max) : inc;",
+  "replace": "        return inc;",
+  "count": 1
+ },
+ {
+  "id": "js-recalc-service-adults",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: a service's 'for N' is never taken for the guest count",
+  "find": "        if (segs[segs.length - 1] !== 'adults' || segs.indexOf('services') !== -1) {",
+  "replace": "        if (segs[segs.length - 1] !== 'adults') {",
+  "count": 1
+ },
+ {
+  "id": "js-recalc-any-action",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: only the two price questions are touched",
+  "find": "        if (RECALC_ACTIONS.indexOf(action) === -1) {\n            return query;",
+  "replace": "        if (false) {\n            return query;",
+  "count": 1
+ },
+ {
+  "id": "js-recalc-body-path",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: a urlencoded body (updateRatePrices) is adjusted too",
+  "find": "                try { args[0] = rewriteRecalcQuery(body); } catch (_) { args[0] = body; }",
+  "replace": "                args[0] = body;",
+  "count": 1
+ },
+ {
+  "id": "js-guests-row-shown",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: the Guests row is hidden while the count is provisional",
+  "find": "            setClass(root, 'dcc_checkout-guests-provisional', unchosen);",
+  "replace": "            setClass(root, 'dcc_checkout-guests-provisional', false);",
+  "count": 1
+ },
+ {
+  "id": "js-preflight-empty-preexisting",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: an EMPTY error box at load is not a pre-existing error",
+  "find": "        if (!String(el.textContent || '').trim()) { return false; }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-preflight-hidden-preexisting",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: a HIDDEN error box at load is not a pre-existing error",
+  "find": "        for (var n = el; n && n.nodeType === 1; n = n.parentElement) {\n            if (n.hidden || n.classList.contains('mphb-hide')) { return false; }\n            var cs = null;\n            try { cs = window.getComputedStyle(n); } catch (_) { cs = null; }\n            if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) { return false; }\n        }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-preflight-tags-nothing",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: an error showing at load still shows (the safety catch)",
+  "find": "            showsErrorAtLoad\n        );",
+  "replace": "            function () { return false; }\n        );",
+  "count": 1
+ },
+ {
+  "id": "js-dogsize-banner",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: the dog-size refusal is shown in its own words",
+  "find": "        } else if (code === 'dogsize') {\n            msg = I18N.errDogSize;\n        }",
+  "replace": "        }",
+  "count": 1
+ },
+ {
+  "id": "css-guests-row-provisional",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.0: the Guests row is hidden while provisional",
+  "find": ".mphb_sc_checkout-form.dcc_checkout-guests-provisional tr.mphb-price-breakdown-guests {\n    display: none !important;\n}",
+  "replace": ".mphb_sc_checkout-form.dcc_checkout-guests-provisional tr.mphb-price-breakdown-guests {\n    display: table-row;\n}",
   "count": 1
  }
 ]

@@ -44,18 +44,31 @@ function check($name, $actual, $expected) {
     }
 }
 
+/* --- v0.34.0: Rob's flat pet fee is the DEFAULT. Every stay length is
+   charged the one flat service (19692, "Pet Fee (per night)", $50 —
+   Director, 2026-10-12). Checked across 1–45 nights, as the Director did
+   on staging with 0.33.1. --------------------------------------------- */
+$flat = [];
+for ($n = 1; $n <= 45; $n++) { $flat[] = Config::service_id_for_nights($n); }
+check('flat mode is the default, and every stay of 1–45 nights is charged 19692',
+    [Config::pet_fee_mode(), array_values(array_unique($flat))], ['flat', [19692]]);
+check('flat mode: 0 nights still charges nothing', Config::service_id_for_nights(0), 0);
+$flatIds = Config::pet_service_ids();
+check('flat mode: the per-bucket ACTIVE ids handed to checkout.js are all the flat service',
+    array_values($flatIds), [19692, 19692, 19692]);
+
+/* --- THE LENGTH-OF-STAY TIERS, switched back on. Pinned because it is
+   what makes the boundary assertions below meaningful: three DISTINCT
+   services, so a wrong bucket is visible in the returned id. The rate
+   genuinely varies by stay length, which is why this mode has three and
+   the extra-guest fee has one. */
+$GLOBALS['opt']['dcc_checkout_settings'] = ['pet_fee_mode' => 'tiers'];
+Config::flush_cache();
 $ids = Config::pet_service_ids();
 $t   = Config::bucket_thresholds();
-
-/* --- The shipped defaults match the live configuration FOR THE PET FEE.
-   Confirmed from dcc_checkout_settings on live, 2026-09-19. Pinned because
-   it is what makes the pet assertions below meaningful: three DISTINCT
-   services, so a wrong bucket is visible in the returned id. The rate
-   genuinely varies by stay length (the owner confirmed it does on Cottage
-   34), which is why this fee has three and the extra-guest fee has one. */
 check('default thresholds are 2 / 7 / 30',
     [$t['min_daily'], $t['min_weekly'], $t['min_monthly']], [2, 7, 30]);
-check('the pet buckets are three DISTINCT services, as on live',
+check('tiers mode: the buckets are the three DISTINCT kept services',
     [$ids['daily'], $ids['weekly'], $ids['monthly']], [17712, 17711, 14926]);
 check('... so a pet bucket bug is observable in the value',
     count(array_unique(array_values($ids))), 3);
@@ -80,7 +93,7 @@ check('a long stay stays monthly', Config::service_id_for_nights(400), $ids['mon
 
 /* --- The thresholds come from the settings option, so a changed setting
    must actually move the boundary -- otherwise the admin screen lies. --- */
-$GLOBALS['opt']['dcc_checkout_settings'] = ['min_weekly' => 4, 'min_monthly' => 10];
+$GLOBALS['opt']['dcc_checkout_settings'] = ['pet_fee_mode' => 'tiers', 'min_weekly' => 4, 'min_monthly' => 10];
 Config::flush_cache();
 $ids2 = Config::pet_service_ids();
 check('a changed min_weekly moves the boundary',
@@ -156,8 +169,17 @@ check('and 0 nights still charges nothing even then',
    missing node is reported as a failure, never skipped quietly: a check
    that did not run must not read as a check that passed. */
 $nights = [0, -3, 1, 2, 6, 7, 8, 29, 30, 31, 400];
+$GLOBALS['opt']['dcc_checkout_settings'] = ['pet_fee_mode' => 'tiers'];
+Config::flush_cache();
 $table  = [];
 foreach ($nights as $n) { $table[(string) $n] = Config::service_id_for_nights($n); }
+/* ...and the same table in FLAT mode, through the same JS function: the
+   mode reaches checkout.js only through the ids script_config hands it. */
+$GLOBALS['opt']['dcc_checkout_settings'] = [];
+Config::flush_cache();
+$flatTable = [];
+foreach ($nights as $n) { $flatTable[(string) $n] = Config::service_id_for_nights($n); }
+$flatIds = Config::pet_service_ids();
 /* Seed distinct ids again for the mirror table, for the same reason. */
 $GLOBALS['opt']['dcc_checkout_settings'] = [
     'guest_service_daily'   => 901,
@@ -171,8 +193,10 @@ foreach ($nights as $n) { $gtable[(string) $n] = Config::guest_service_id_for_ni
 $payload = [
     'thresholds'      => Config::bucket_thresholds(),
     'serviceIds'      => $ids,
+    'flatServiceIds'  => $flatIds,
     'guestServiceIds' => $g,
     'expected'        => $table,
+    'expectedFlat'    => $flatTable,
     'expectedGuest'   => $gtable,
 ];
 $tmp = sys_get_temp_dir() . '/dcc-pricing-' . getmypid() . '.json';

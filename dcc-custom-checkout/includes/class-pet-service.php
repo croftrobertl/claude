@@ -65,15 +65,16 @@ final class Pet_Service
             return;
         }
 
-        if ($this->find_violation() !== null) {
-            Checkout_Request::redirect_back_with_error('pet');
+        $code = $this->find_violation();
+        if ($code !== null) {
+            Checkout_Request::redirect_back_with_error($code);
         }
     }
 
     /**
      * Shared validator — transport-agnostic (reads via Checkout_Request, which
      * serves $_POST or the parsed REST payload alike). Returns the error code
-     * ('pet') or null when the submission is fine.
+     * ('pet', or 'dogsize' since v0.34.0) or null when the submission is fine.
      */
     public function find_violation(): ?string
     {
@@ -94,9 +95,12 @@ final class Pet_Service
             return null; // No pet service attached → no-dog booking → nothing to enforce.
         }
 
-        // A pet service is attached: it must be exactly the bucket service.
-        // If the stay length is unknown we can't say WHICH bucket, so skip the
-        // bucket check rather than reject a booking we cannot evaluate (the
+        // A pet service is attached: it must be exactly the ACTIVE one — the
+        // service the current mode charges for this stay (flat: the flat
+        // service; tiers: the bucket). Every other RECOGNISED pet service is
+        // refused, so a stale page carrying an old tier is caught.
+        // If the stay length is unknown we can't say WHICH service, so skip
+        // this check rather than reject a booking we cannot evaluate (the
         // required-info rule below still applies).
         $nights      = Checkout_Request::nights();
         $expected_id = Config::service_id_for_nights($nights);
@@ -104,11 +108,23 @@ final class Pet_Service
             if (!Checkout_Request::contains_service_id($expected_id)) {
                 return 'pet';
             }
-            foreach (Config::pet_service_id_list() as $sid) {
+            foreach (Config::recognised_pet_service_ids() as $sid) {
                 if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
                     return 'pet';
                 }
             }
+        }
+
+        // v0.34.0 — the dog's size must be one the checkout OFFERS. MotoPress
+        // does not check a posted select against its options (parse-utils.php
+        // parseCustomer runs sanitize_text_field only), so a size switched off
+        // in the settings, or none at all, is refused here. Only on a dog
+        // booking: with no pet fee, nothing about the size is required.
+        $size_code = Dog_Sizes::violation(
+            Checkout_Request::customer_field_value(Config::dog_field_names()['size'])
+        );
+        if ($size_code !== null) {
+            return $size_code;
         }
 
         // Required-when-dog: any native dog field that is present must be filled.
@@ -124,9 +140,10 @@ final class Pet_Service
         return null;
     }
 
+    /** RECOGNISED: any pet service, flat or tier, whatever the mode. */
     private function any_pet_service_present(): bool
     {
-        foreach (Config::pet_service_id_list() as $sid) {
+        foreach (Config::recognised_pet_service_ids() as $sid) {
             if (Checkout_Request::contains_service_id($sid)) {
                 return true;
             }

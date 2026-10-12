@@ -120,7 +120,7 @@ final class Extra_Details
                         . '<option value="no"' . ($pet === 'no' ? ' selected' : '') . '>' . esc_html__('No', 'dcc-checkout') . '</option>'
                         . '<option value="yes"' . ($pet === 'yes' ? ' selected' : '') . '>' . esc_html__('Yes', 'dcc-checkout') . '</option>'
                         . '</select><span class="description">'
-                        . esc_html__('Change it and press Update: the pet fee for this stay\'s length is added or removed. The room price is not changed.', 'dcc-checkout')
+                        . esc_html(self::pet_update_hint())
                         . '</span></p>';
                     $prompt = __('Or change it by hand in Edit Accommodations.', 'dcc-checkout');
                 } else {
@@ -151,6 +151,27 @@ final class Extra_Details
         $out .= '<table class="form-table dcc_extras-table"><tbody id="dcc_extras_rows"></tbody></table>';
         $out .= '</div>';
         return $out;
+    }
+
+    /**
+     * The Pet fee control's hint, in the words of the current mode (v0.34.0):
+     * flat names the flat Service's own per-night amount (never a literal);
+     * tiers says the stay's length decides. Whole sentences, for translators.
+     */
+    public static function pet_update_hint(): string
+    {
+        if (Config::pet_fee_mode() === 'tiers') {
+            return __('Change it and press Update: the pet fee for this stay\'s length is added or removed. The room price is not changed.', 'dcc-checkout');
+        }
+        $amount = Config::flat_pet_fee_text();
+        if ($amount === '') {
+            return __('Change it and press Update: the pet fee is added or removed. The room price is not changed.', 'dcc-checkout');
+        }
+        return sprintf(
+            /* translators: %s: the pet fee per night, e.g. $50. */
+            __('Change it and press Update: the pet fee (%s per night) is added or removed. The room price is not changed.', 'dcc-checkout'),
+            $amount
+        );
     }
 
     /**

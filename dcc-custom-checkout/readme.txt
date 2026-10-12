@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.33.1
+Stable tag: 0.34.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,18 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.34.0 =
+Rob's new pet policy (11 October), and two fixes from his live check of the checkout.
+
+* New: Pet fee mode, on the settings page. "Flat — one service for every stay length" (on, service 19692, $50 a night) or "By length of stay — daily / weekly / monthly" (kept, off). Both sets of services and the night thresholds are kept, so switching back needs nothing retyped. A warning shows when the active mode's service is not attached to the pet cottage in MotoPress.
+* The settings saved before this version (all three length-of-stay slots holding 19692) are read as Flat on 19692, with the length-of-stay services back at 17712 / 17711 / 14926.
+* Pet fees on existing bookings are recognised whichever mode is on. Update on a booking that already has an old length-of-stay pet fee never adds a second pet line; "No" removes the old one; a new pet fee is always the one the current mode charges.
+* New: Dog sizes, on the settings page. "Up to 20 lbs" is offered; 10-20, 20-30 and 30-40 lbs are kept but not offered, and any can be switched back on. The guest checkout and Add New Booking offer only the offered sizes. The booking screen lists every size, so a booking that already has an old size keeps it through Update.
+* The server refuses a booking with a dog whose size is missing or not offered: "Please choose your dog's size from the list."
+* Wording follows the mode: the booking screen's pet fee hint names the flat fee's own amount ("the pet fee ($50 per night) is added or removed").
+* Fixed: on the checkout, "Please select the number of guests." showed before the guest had tried to book, and answering Yes to the dog question added no pet fee until a number of guests was chosen. While the number is still "— Select —", the price is now shown for the included guests (2), with the Guests line hidden. The pet fee appears at once. The booking itself always sends the guest's own choice, and still needs one.
+* Fixed: no error message shows on the checkout before the first attempt to book; after it, every message shows as MotoPress gives it. An error already on the page when it loads is still shown.
 
 = 0.33.1 =
 The Director's 0.33.0 staging run, and Rob's decision: only add or remove the fee, never reprice the stay.

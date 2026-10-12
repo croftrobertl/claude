@@ -43,6 +43,9 @@ final class Plugin
         // Server-side backstops (cannot be bypassed by editing the DOM).
         (new Guest_Fields())->register();
         (new Pet_Service())->register();
+        // v0.34.0: the Dog Size field's options follow the settings — the
+        // offered sizes for guests, every size on the booking screens.
+        (new Dog_Sizes())->register();
         (new Extra_Guest_Service())->register();
         // REST-pipeline enforcement: the same three validators run on the
         // parsed /mphb/v1/checkout request body (JSON and multipart alike),

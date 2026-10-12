@@ -24,6 +24,8 @@ $GLOBALS['opt'] = [];       // v0.25.0: Config reads its settings row from here.
 
 function get_option($k, $d = false) { return array_key_exists($k, $GLOBALS['opt']) ? $GLOBALS['opt'][$k] : $d; }
 function get_post_meta($id, $key, $single = false) { return $GLOBALS['meta'][$id][$key] ?? ''; }
+// v0.34.0: Config::service_price() falls back to the service post; none here.
+if (!function_exists('get_post')) { function get_post($id = null) { return null; } }
 function update_post_meta($id, $key, $value) { $GLOBALS['meta'][$id][$key] = $value; return true; }
 function delete_post_meta($id, $key) { unset($GLOBALS['meta'][$id][$key]); return true; }
 function get_the_title($id) { return $GLOBALS['posts'][$id]['title'] ?? ''; }

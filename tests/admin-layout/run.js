@@ -39,13 +39,15 @@ const ROOT   = path.resolve(__dirname, '../..');
 const SCRIPT = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.js'), 'utf8');
 const CSS    = fs.readFileSync(path.join(ROOT, 'dcc-custom-checkout/assets/admin-booking.css'), 'utf8');
 
+// v0.34.0 — the pet fee mode the shipped PHP runs in for the next config.
+let PET_MODE = 'tiers';
 function phpConfig(included, booking, wizard, page) {
     const args = [path.join(__dirname, 'config.php'),
         included === undefined ? '' : String(included),
         booking ? JSON.stringify(booking) : '',
         wizard ? JSON.stringify(wizard) : ''];
     return JSON.parse(execFileSync('php', args, { encoding: 'utf8',
-        env: Object.assign({}, process.env, { DCC_TEST_PAGE: page || '' }) }));
+        env: Object.assign({}, process.env, { DCC_TEST_PAGE: page || '', DCC_TEST_PET_MODE: PET_MODE }) }));
 }
 
 let failures = 0, passes = 0;
@@ -288,6 +290,12 @@ function addNewPage(opts) {
           Pet Fee (${span}) <em>($35 / Per Day)</em></label></li>`);
         j++;
     });
+    // v0.34.0 — the live Cottage 34 since 2026-10-11: ONE pet service, 19692.
+    if (opts.flatPet) {
+        svcs.push(`<li><label><input type="checkbox" name="mphb_room_details[0][services][${j}][id]" value="19692" class="mphb_sc_checkout-service">
+          Pet Fee (per night) <em>($35 / Per Day)</em></label></li>`);
+        j++;
+    }
     if (opts.other) {
         svcs.push(`<li><label><input type="checkbox" name="mphb_room_details[0][services][${j}][id]" value="999" class="mphb_sc_checkout-service">
           Late Checkout and Early Arrival Together Package <em>($20 / Per Accommodation)</em> for
@@ -344,7 +352,7 @@ document.addEventListener('change', function () {
     var m = document.querySelector('[name="' + f.name.replace(/\\[id\\]$/, '[adults]') + '"]');
     sub += 50 * (parseInt(m.value, 10) || 0);
   }
-  if (Array.prototype.some.call(document.querySelectorAll('input[value="17712"],input[value="17711"],input[value="14926"]'), function (b) { return b.checked; })) { sub += 35; }
+  if (Array.prototype.some.call(document.querySelectorAll('input[value="17712"],input[value="17711"],input[value="14926"],input[value="19692"]'), function (b) { return b.checked; })) { sub += 35; }
   document.querySelector('.sub').textContent = '$' + sub;
   document.querySelector('.tot').textContent = '$' + (sub + 19.25).toFixed(2);
 }, false);
@@ -437,7 +445,7 @@ async function feeState(pg) {
 
 async function petBoxes(pg) {
     return pg.evaluate(() => Array.from(
-        document.querySelectorAll('input[value="17712"],input[value="17711"],input[value="14926"]')
+        document.querySelectorAll('input[value="17712"],input[value="17711"],input[value="14926"],input[value="19692"]')
     ).filter(b => b.checked).map(b => Number(b.value)));
 }
 
@@ -812,6 +820,39 @@ async function visibleServiceRows(pg) {
         await ctx.close();
     }
 
+    /* --- A3b. v0.34.0 — FLAT MODE, as live since 2026-10-11: one pet service
+       (19692) attached to Cottage 34, charged for every stay length. ------- */
+    {
+        PET_MODE = 'flat';
+        const F = [1, 7, 30].map(n => phpConfig(undefined, null, { nights: n })._wizardPetService);
+        check('flat mode: the shipped wizard_pet_service() picks the flat service for 1, 7 and 30 nights', F, [19692, 19692, 19692]);
+        check('flat mode: the script RECOGNISES the flat service and the three old tiers',
+            phpConfig().petServiceIds.map(Number).sort(), [14926, 17711, 17712, 19692]);
+        for (const [n, w] of [[1, F[0]], [7, F[1]], [30, F[2]]]) {
+            const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 2, fee: false, flatPet: true, marker: PETCOT(w) }));
+            check(`flat mode (${n} nights): Pet Fee opens at No; the pet row is never on screen`,
+                [await pg.$eval('#dcc_admin_pet_fee', e => e.value), await petBoxes(pg), await visibleServiceRows(pg)],
+                ['no', [], []]);
+            await choose(pg, '#dcc_admin_pet_fee', 'yes');
+            check(`flat mode (${n} nights): Yes ticks 19692, Dog shows, the breakdown carries the fee`,
+                [await petBoxes(pg), await dogShown(pg), (await feeState(pg)).total], [[19692], true, '$229.25']);
+            await choose(pg, '#dcc_admin_pet_fee', 'no');
+            check(`flat mode (${n} nights): No unticks it`, [await petBoxes(pg), (await feeState(pg)).total], [[], '$194.25']);
+            await ctx.close();
+        }
+        // A page still showing only an OLD tier box while PHP states the flat
+        // service: the ACTIVE service is not there, so nothing is ticked —
+        // never the old tier because it is "the room's only pet box".
+        const { ctx, pg } = await open(browser, 1280, addNewPage({ preset: 2, fee: false, pet: 1, marker: PETCOT(F[0]) }));
+        await choose(pg, '#dcc_admin_pet_fee', 'yes');
+        check('flat mode, only an old tier on screen: nothing ticked, the row stays, and it says so',
+            [await petBoxes(pg), (await visibleServiceRows(pg)).length,
+             await pg.$eval('.dcc_admin-petfee__note', e => e.hidden ? '' : e.textContent)],
+            [[], 1, 'Choose the pet fee under Additional Services.']);
+        await ctx.close();
+        PET_MODE = 'tiers';
+    }
+
     /* --- A4. No Pet Fee anywhere but a pet-fee cottage (v0.29.0). ---------- */
     {
         // Rob: "Keep 34 as the only pet fee cottage" / "No Pet Fee on others".
@@ -1110,6 +1151,26 @@ async function visibleServiceRows(pg) {
                 [false, 'Pet fee: Yes', "Fees aren't changed on a cancelled or abandoned booking.", false]);
             await r.ctx.close();
         }
+
+        // v0.34.0 — FLAT MODE, a booking holding an OLD tier fee (17712): it
+        // is still a pet fee. The control opens on Yes, Dog shows, and the
+        // hint names the flat fee's own amount.
+        PET_MODE = 'flat';
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: PET_ROW }]));
+        check('flat mode, a booking carrying an OLD tier fee: the control opens on Yes and Dog shows',
+            [await r.pg.$eval('#dcc_pet_fee', e => e.value), await dogShown(r.pg)], ['yes', true]);
+        check('... the hint names the flat fee from its own service, and says the room price is not changed',
+            await r.pg.$eval('#dcc-checkout-extras .dcc_admin-petfee-line .description', e => e.textContent),
+            'Change it and press Update: the pet fee ($50 per night) is added or removed. The room price is not changed.');
+        check('... and the note beside Edit Accommodations is there',
+            await r.pg.$eval('#dcc-checkout-extras .dcc_extras-edit-note', e => e.textContent),
+            "Edit Accommodations recalculates the whole stay at today's rates.");
+        await r.ctx.close();
+        r = await open(browser, 1280, editPage(MOTOPRESS_ORDER), EX, undefined, bk([{ type: 1607, adults: 2, services: [{ id: 19692, adults: 1, quantity: 1 }] }]));
+        check('flat mode, a booking carrying the flat fee: opens on Yes',
+            await r.pg.$eval('#dcc_pet_fee', e => e.value), 'yes');
+        await r.ctx.close();
+        PET_MODE = 'tiers';
 
         // No MotoPress link on the page (as on an import): no button is invented.
         r = await open(browser, 1280, editPage(MOTOPRESS_ORDER, null, { editLink: false }), EX, undefined, bk([{ type: 1607, adults: 2, services: [] }]));

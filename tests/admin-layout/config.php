@@ -47,6 +47,10 @@ $GLOBALS['opt']['dcc_checkout_settings'] = [
     'guest_service_weekly'  => 18063,
     'guest_service_monthly' => 18063,
     'guest_accommodations'  => [1071, 1069, 1067, 1065, 1740, 1742],
+    // v0.34.0 — the pet fee mode. The Add New fixtures carry MotoPress's three
+    // length-of-stay pet boxes, so the suite runs in 'tiers' unless a test asks
+    // for the live mode with DCC_TEST_PET_MODE=flat (one box, 19692).
+    'pet_fee_mode'          => getenv('DCC_TEST_PET_MODE') === 'flat' ? 'flat' : 'tiers',
 ];
 // v0.32.1: the admin page being requested (?page=…), so the shipped
 // is_edit_accommodations_flow() decides the `flow` word.
@@ -115,7 +119,9 @@ if (isset($argv[2]) && $argv[2] !== '') {
 $GLOBALS['room_types'] = [
     1065 => [18063], 1067 => [18063], 1069 => [18063], 1071 => [18063],
     1740 => [18063], 1742 => [18063],
-    1607 => [17712, 17711, 14926],
+    // Cottage 34: what each mode has attached on live — the flat service
+    // since 2026-10-11 (Director), the three tiers before that.
+    1607 => getenv('DCC_TEST_PET_MODE') === 'flat' ? [19692] : [17712, 17711, 14926],
     1604 => [],
     1999 => null,
 ];
@@ -132,6 +138,20 @@ function MPHB() {
                         private $s;
                         public function __construct($s) { $this->s = $s; }
                         public function getServices() { return $this->s; }
+                    };
+                }
+            };
+        }
+        // v0.34.0: a service's own price, for the mode-aware wording
+        // (the flat fee is $50 a night on live — Director, 2026-10-12).
+        public function getServiceRepository() {
+            return new class {
+                public function findById($id) {
+                    $price = [19692 => 50][(int) $id] ?? null;
+                    return $price === null ? null : new class($price) {
+                        private $p;
+                        public function __construct($p) { $this->p = $p; }
+                        public function getPrice() { return $this->p; }
                     };
                 }
             };

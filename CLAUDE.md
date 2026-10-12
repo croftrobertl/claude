@@ -1451,6 +1451,131 @@ yours to improvise.
     array; `read_services()` reads both. On live, the details string is
     MotoPress's own `toString()`, so the stand-in's price formatting decides
     nothing there.
+- **0.34.0 — ROB'S PET POLICY (11 October): FLAT FEE, OLD FEES RECOGNISED,
+  DOG SIZES KEPT** (Director, 2026-10-12; `Config`, `Settings`, `Dog_Sizes`,
+  suites `tests/petpolicy/run.php`, `tests/pricing/`, `tests/fees/`,
+  `tests/admin-layout/`). Cottage 34 only, ONE dog up to 20 lbs, a flat $50
+  per night whatever the stay length. The Director had already changed DATA
+  on live and staging (no code): service #19692 "Pet Fee (per night)"
+  (per_night, quantity once, 1/1, untaxed); 17712 / 17711 / 14926 kept
+  published, prices unchanged, DETACHED from 1607 (whose `mphb_services` is
+  now ["19692"]); `dcc_checkout_settings` tier keys all 19692; Dog Size
+  (17727) options "— Select —" + "Up to 20 lbs".
+  - **THE MODE**: `pet_fee_mode` 'flat' | 'tiers' (anything else reads flat),
+    `service_flat` (19692) and the three tier ids are ALL stored whatever the
+    mode, so switching back is a radio button. Defaults: flat, 19692,
+    17712/17711/14926, thresholds 2/7/30. **UPGRADE at READ time**
+    (`Config::upgrade()`, like the array_merge): no mode key + all three tier
+    slots ONE id → flat on that id with the BAKED tiers (19692 never left in a
+    tier slot); no mode key + three distinct ids → 'tiers' unchanged; no tier
+    keys → the defaults. Nothing is written until the settings page is saved.
+  - **ACTIVE vs RECOGNISED — name the set you mean.**
+    - ACTIVE (what the current mode charges): `Config::service_id_for_nights()`,
+      `pet_service_ids()` (per bucket — all three = the flat id in flat mode,
+      so checkout.js's `serviceForNights()` follows the mode with no second
+      path; the pricing mirror runs both modes), `active_pet_service_ids()`.
+      Readers: Pet_Service's expected id; Fee_Sync's ADD (and its "offered"
+      check); Admin_Fields::wizard_pet_service() (Add New "Pet Fee: Yes");
+      checkout.js `serviceIds` → the box ticked; Settings' attachment warning
+      and the accommodations field's "services not enabled" flag.
+    - RECOGNISED (flat + the three tiers, whatever the mode):
+      `recognised_pet_service_ids()` (and `pet_service_id_list()`, kept as an
+      alias for outside callers). Readers: Pet_Service's
+      any-pet-service-present and the "any other pet service → refused" loop;
+      Fee_Sync's has_any / remove-by-index; Admin_Fields::booking_pet_fee()
+      (→ booking_pet_state, the edit screen's Yes/No) and `petServiceIds`
+      (admin-booking.js finds/hides/unticks); checkout.js `serviceIdList`
+      (finds/hides/unticks); `Config::room_type_has_pet_services()` (what a pet
+      cottage IS).
+    - The guest-fee `guestServiceIds` lookup in checkout.js is untouched.
+  - **An old tier fee on a booking is a pet fee.** Update with Yes adds no
+    second line; No removes it by index with 0.33.1's calcPrice check (the old
+    services' prices are unchanged, so it holds); a later Yes adds the ACTIVE
+    flat fee. Asserted on #17730's raw breakdown under flat mode.
+  - **admin-booking.js ticks the ACTIVE service only.** With PHP stating the
+    service (`data-dcc-pet-service`), a page showing only an old tier box no
+    longer falls back to "the room's only pet box" — nothing is ticked and the
+    rows stay with "Choose the pet fee under Additional Services." The
+    only-box fallback remains for a stay whose dates could not be read.
+  - **Settings**: "Pet fee mode" (radio) + flat id + the three tiers + the
+    thresholds, and a red warning per pet cottage for each ACTIVE service
+    MotoPress has not attached (`Config::room_type_service_ids()`, silent when
+    unreadable). Switching back to tiers needs 17712/17711/14926 re-attached
+    to 1607 — a MotoPress data change the Director makes when Rob asks.
+  - **DOG SIZES** (`dog_sizes`: rows {label, active}; baked: "Up to 20 lbs"
+    on; 10-20 / 20-30 / 30-40 lbs off; value = label). The settings page keeps
+    every size and flips "Offered"; a save offering NONE is refused (the size
+    is required on a dog booking, so it would refuse every one) and says so.
+    **Served, not written**: `Dog_Sizes` answers `get_post_metadata` for the
+    Dog Size field's `mphb_cf_options` (the add-on reads them with
+    get_post_meta(…, true) — 0.31.0) — the guest checkout, front-end AJAX and
+    Add New get the offered sizes; every other wp-admin screen (the edit
+    screen) gets ALL sizes. Why: the edit screen's core SelectField selects
+    only a key in the CURRENT options and its sanitize() keeps only such keys
+    (Director, live 6.3.0), so an offered-only list would show #17795's
+    "30-40 lbs" as "— Select —" and ERASE it on Update. Modelled and asserted
+    in tests/petpolicy (with the guard that the guest list WOULD erase it).
+    Consequence: while this plugin is active, the options typed on field
+    17727 in MotoPress are replaced by the setting; nothing in MotoPress's
+    data is changed.
+  - **The size is checked on the server** (`Dog_Sizes::violation()`, called
+    from `Pet_Service::find_violation()`, so the wp_loaded path AND Rest_Guard):
+    MotoPress does not check a posted select against its options
+    (parse-utils.php parseCustomer → sanitize_text_field only). On a DOG
+    booking a size not offered is refused, and so is NO size while the field
+    is published + `mphb_cf_enabled` = '1' (MotoPress sends nothing for an
+    empty select, so empty arrives as absent). Code 'dogsize', message
+    "Please choose your dog's size from the list." (Rest_Guard + the banner).
+    No dog → nothing about the size is required.
+  - **Wording, mode-aware** (A4): Extra_Details::pet_update_hint() (flat:
+    "the pet fee ($50 per night)…", the amount from the flat Service's own
+    price via `Config::flat_pet_fee_text()`, never a literal; none named if
+    unreadable); Fee_Sync's not-attached refusal; the settings page's mode
+    section, its bottom reminder and the Dog size help; Admin_Fields' and
+    admin-booking.js's doc comments. Checked and NOT changed: checkout.js
+    `petFeeNote` ("A per-night pet fee will be added to your total." — true in
+    both modes), the email tag's description, admin-booking.js's strings.
+- **0.34.0 — "PRICE FOR 2 MEANWHILE" AND ERRORS ONLY AFTER THE MISTAKE**
+  (Rob's live report and pick; the Director's read of live MotoPress 6.3.0;
+  `checkout.js` armRecalcCount() / markProvisional() / armPreflight(),
+  `checkout.css`; suite `tests/recalc/run.js`, real Chromium, 390 + 1280).
+  - **The cause** (Director): MotoPress re-prices over admin-ajax
+    (`mphb_update_checkout_info`, GET, formValues = the serialised form) at
+    load (mphb.js ~1239) and on guest-chooser / rate / service changes
+    (~1413–1423); update-checkout-info.php (~86–95) throws when a room's
+    adults < 1, which Loco turns into "Please select the number of guests.";
+    showError() fills the `p.mphb-errors-wrapper.mphb-hide` printed EMPTY at
+    load (checkout-view.php ~912); on failure the breakdown keeps its old
+    content — so Yes to the dog added no pet line until a count was chosen.
+  - **B1, in the browser** (my choice; the Director left it open): an
+    XMLHttpRequest wrapper, installed at SCRIPT EXECUTION (before MotoPress's
+    ready-time init), rewrites ONLY requests whose `action` is
+    `mphb_update_checkout_info` or `mphb_update_rate_prices` (URL query or a
+    urlencoded string body): an EMPTY parameter whose name ENDS WITH an
+    unchosen chooser's field name (`formValues[mphb_room_details][0][adults]`
+    ↔ `mphb_room_details[0][adults]`), or with one room any `[adults]`
+    outside a `[services]` branch, becomes min(included_guests, that
+    chooser's highest option). Why browser: it needs only what the page
+    shows, and nothing of how MotoPress's server parses formValues, which
+    nobody has read. The booking (REST /mphb/v1/checkout, FormData) never
+    matches, so the guest's real choice — including none — is what is
+    submitted, and MotoPress still refuses a booking without a count. A
+    request it cannot read goes as it was (MotoPress's behaviour); admins get
+    a console note. **NOT observed on live**: the encoded shape is jQuery's
+    param of the serialised form, modelled, not captured — the Director's
+    network-tab read is the check.
+  - **The Guests row** (`tr.mphb-price-breakdown-guests`, booking-view.php
+    ~100–111) is hidden while any chooser is unchosen, by a CLASS ON THE FORM
+    (`dcc_checkout-guests-provisional`) + CSS, so a re-rendered table is
+    covered the moment it lands — no flash, no per-row writes, idempotent.
+  - **B2**: armPreflight() now tags as pre-existing only an error box that
+    SHOWS something at load — text, and neither it nor an ancestor hidden
+    (`hidden`, `mphb-hide`, computed display:none / visibility:hidden).
+    0.15.0 tagged MotoPress's EMPTY wrapper, so everything MotoPress put in it
+    went straight past the hold-back. A server-rendered error with text at
+    load still shows (the safety catch, asserted).
+  - **Tap rules kept**: markProvisional() is one idempotent setClass on a
+    change event; nothing is scheduled during a touch.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1698,8 +1823,18 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 273
-  mutations, 273 killed, 0 of everything else, exit 0, in ONE run (v0.33.1;
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 316
+  mutations, 316 killed, 0 of everything else, exit 0, in ONE run (v0.34.0;
+  its first full run was 313 + 3 STALE — `cfg-merge-direction-reversed`,
+  `cfg-no-default-merge` and `js-pet-guess-bucket`, aimed at lines 0.34.0
+  rewrote; re-anchored with their intent unchanged, each killed alone, then
+  the whole set re-run; twenty-one suites — `petpolicy` and
+  `recalc` added; 0.34.0's targeted run was 42 killed + 2 SURVIVED:
+  `js-recalc-chosen-overwritten`, equivalent (a parameter is only rewritten
+  when its own value is empty, so a chosen count never reaches that line) and
+  retired, and `js-preflight-empty-preexisting`, a real gap — MotoPress's
+  empty wrapper is also hidden, so the hidden check masked the empty one;
+  an empty VISIBLE box is now constructed. At v0.33.1, 273 in ONE run;
   nineteen suites; 0.33.1's targeted run was 40 killed + 1 SURVIVED —
   `fs-cents-truncates`: no fixture total fell just below a whole cent, now
   constructed with $266.40. At v0.33.0, 254 in ONE run;

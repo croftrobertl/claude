@@ -153,10 +153,32 @@ final class Settings
             $out['pet_accommodations'] = $defaults['pet_accommodations'];
         }
 
-        foreach (['service_daily', 'service_weekly', 'service_monthly', 'min_daily', 'min_weekly', 'min_monthly'] as $key) {
+        // v0.34.0 — the pet fee mode. BOTH id sets are kept whatever the
+        // mode, so switching back never needs anything retyped.
+        $mode = isset($input['pet_fee_mode']) && is_scalar($input['pet_fee_mode']) ? (string) $input['pet_fee_mode'] : '';
+        $out['pet_fee_mode'] = in_array($mode, ['flat', 'tiers'], true) ? $mode : (string) $defaults['pet_fee_mode'];
+
+        foreach (['service_flat', 'service_daily', 'service_weekly', 'service_monthly', 'min_daily', 'min_weekly', 'min_monthly'] as $key) {
             $val       = isset($input[$key]) ? (int) $input[$key] : (int) $defaults[$key];
             $out[$key] = $val > 0 ? $val : (int) $defaults[$key];
         }
+
+        // v0.34.0 — dog sizes: every size kept, each offered or not. At least
+        // one must stay offered: the size is required on a dog booking, so a
+        // list with none offered would refuse every booking with a dog. A list
+        // that cannot be read, or offers nothing, leaves the saved list as it
+        // was and says so.
+        $sizes = Config::normalise_dog_sizes($input['dog_sizes'] ?? null);
+        $offered = array_filter($sizes, static function ($r) { return $r['active']; });
+        if ($sizes === [] || $offered === []) {
+            $sizes = Config::dog_sizes();
+            if (function_exists('add_settings_error')) {
+                add_settings_error(Config::OPTION, 'dcc_dog_sizes', __('At least one dog size must be offered, so the dog sizes were not changed.', 'dcc-checkout'));
+            }
+        }
+        $out['dog_sizes'] = array_map(static function ($r) {
+            return ['label' => sanitize_text_field($r['label']), 'active' => $r['active'] ? 1 : 0];
+        }, $sizes);
 
         foreach (['dog_field_type', 'dog_field_size', 'dog_field_hair'] as $key) {
             $name      = isset($input[$key]) ? sanitize_key($input[$key]) : '';
@@ -262,7 +284,7 @@ final class Settings
                     <tr>
                         <th scope="row"><?php echo esc_html__('Applies to accommodations', 'dcc-checkout'); ?></th>
                         <td>
-                            <?php $this->render_accommodations_field($s['pet_accommodations'], 'pet_accommodations', Config::pet_service_id_list()); ?>
+                            <?php $this->render_accommodations_field($s['pet_accommodations'], 'pet_accommodations', Config::active_pet_service_ids()); ?>
                             <p class="description">
                                 <?php echo esc_html__('The dog flow shows only when the booking\'s accommodation is selected here AND the pet fee is enabled. Default: Cottage 34.', 'dcc-checkout'); ?>
                             </p>
@@ -270,19 +292,7 @@ final class Settings
                     </tr>
                 </table>
 
-                <h2><?php echo esc_html__('Services &amp; night buckets', 'dcc-checkout'); ?></h2>
-                <p class="description" style="max-width:640px">
-                    <?php echo esc_html__('These native MotoPress Service IDs are applied by length of stay; the fee itself (amount, taxed/untaxed) is configured on the Service in MotoPress — this plugin only ticks the right one. The weekly and monthly night thresholds are SHARED by the pet fee and the pull-out couch fee. Both fees apply from the first night (there is no minimum-nights threshold for the daily bucket).', 'dcc-checkout'); ?>
-                </p>
-                <table class="form-table" role="presentation">
-                    <?php
-                    $this->service_id_row(__('Daily service ID', 'dcc-checkout'), 'service_daily', (int) $s['service_daily'], __('Applied for stays in the "daily" bucket.', 'dcc-checkout'));
-                    $this->service_id_row(__('Weekly service ID', 'dcc-checkout'), 'service_weekly', (int) $s['service_weekly'], '');
-                    $this->service_id_row(__('Monthly service ID', 'dcc-checkout'), 'service_monthly', (int) $s['service_monthly'], '');
-                    $this->number_row(__('Weekly bucket: minimum nights', 'dcc-checkout'), 'min_weekly', (int) $s['min_weekly'], '');
-                    $this->number_row(__('Monthly bucket: minimum nights', 'dcc-checkout'), 'min_monthly', (int) $s['min_monthly'], '');
-                    ?>
-                </table>
+                <?php $this->render_pet_mode_section($s); ?>
 
                 <h2><?php echo esc_html__('Pull-out Couch Guests', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
@@ -339,10 +349,12 @@ final class Settings
                 <table class="form-table" role="presentation">
                     <?php
                     $this->field_name_row(__('Dog type — rendered input name', 'dcc-checkout'), 'dog_field_type', (string) $s['dog_field_type'], __('Text field. Create it in MotoPress as dog_type.', 'dcc-checkout'));
-                    $this->field_name_row(__('Dog size — rendered input name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs. Create it as dog_size.', 'dcc-checkout'));
+                    $this->field_name_row(__('Dog size — rendered input name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select. Create it as dog_size; its sizes are set under "Dog sizes" below, not in MotoPress.', 'dcc-checkout'));
                     $this->field_name_row(__('Dog hair — rendered input name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long. Create it as dog_hair.', 'dcc-checkout'));
                     ?>
                 </table>
+
+                <?php $this->render_dog_sizes_section(); ?>
 
                 <h2><?php echo esc_html__('Guests 3 and 4', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
@@ -379,7 +391,9 @@ final class Settings
             <hr>
             <h2><?php echo esc_html__('Reminder', 'dcc-checkout'); ?></h2>
             <p style="max-width:640px">
-                <?php echo esc_html__('For every cottage you add above, the three pet-fee Services must also be enabled for that accommodation type in MotoPress: Bookings → Accommodation Types → (cottage) → Services. Without that, ticking the service has no effect for that cottage.', 'dcc-checkout'); ?>
+                <?php echo esc_html(Config::pet_fee_mode() === 'flat'
+                    ? __('For every cottage you add above, the flat pet-fee Service must also be enabled for that accommodation type in MotoPress: Bookings → Accommodation Types → (cottage) → Services. Without that, the pet fee cannot be charged on that cottage.', 'dcc-checkout')
+                    : __('For every cottage you add above, the three length-of-stay pet-fee Services must also be enabled for that accommodation type in MotoPress: Bookings → Accommodation Types → (cottage) → Services. Without that, the pet fee cannot be charged on that cottage.', 'dcc-checkout')); ?>
             </p>
             <p style="max-width:640px">
                 <?php
@@ -387,6 +401,109 @@ final class Settings
                 ?>
             </p>
         </div>
+        <?php
+    }
+
+    /**
+     * v0.34.0 — the pet fee mode, the flat service and the kept tiers.
+     *
+     * Both id sets and the thresholds are rendered and saved whatever the
+     * mode, so switching back is a radio button, never retyping.
+     */
+    private function render_pet_mode_section(array $s): void
+    {
+        $mode = Config::pet_fee_mode();
+        $name = esc_attr(Config::OPTION) . '[pet_fee_mode]';
+        ?>
+        <h2><?php echo esc_html__('Pet fee mode', 'dcc-checkout'); ?></h2>
+        <p class="description" style="max-width:640px">
+            <?php echo esc_html__('The fee itself (amount, taxed or untaxed) is configured on the Service in MotoPress; this plugin only applies the right one. Both modes\' Services are kept here, so switching back needs nothing retyped. Pet fees on existing bookings are recognised whichever mode is on.', 'dcc-checkout'); ?>
+        </p>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th scope="row"><?php echo esc_html__('Mode', 'dcc-checkout'); ?></th>
+                <td>
+                    <label style="display:block;margin-bottom:6px">
+                        <input type="radio" name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above ?>" value="flat" <?php checked('flat', $mode); ?> />
+                        <?php echo esc_html__('Flat — one service for every stay length', 'dcc-checkout'); ?>
+                    </label>
+                    <label style="display:block">
+                        <input type="radio" name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above ?>" value="tiers" <?php checked('tiers', $mode); ?> />
+                        <?php echo esc_html__('By length of stay — daily / weekly / monthly', 'dcc-checkout'); ?>
+                    </label>
+                </td>
+            </tr>
+            <?php
+            $this->service_id_row(__('Flat pet fee service ID', 'dcc-checkout'), 'service_flat', (int) $s['service_flat'], __('Charged for every stay length while the mode is Flat.', 'dcc-checkout'));
+            $this->service_id_row(__('Daily service ID', 'dcc-checkout'), 'service_daily', (int) $s['service_daily'], __('By length of stay only: stays shorter than the weekly minimum.', 'dcc-checkout'));
+            $this->service_id_row(__('Weekly service ID', 'dcc-checkout'), 'service_weekly', (int) $s['service_weekly'], '');
+            $this->service_id_row(__('Monthly service ID', 'dcc-checkout'), 'service_monthly', (int) $s['service_monthly'], '');
+            $this->number_row(__('Weekly bucket: minimum nights', 'dcc-checkout'), 'min_weekly', (int) $s['min_weekly'], __('Shared with the pull-out couch fee, whatever the pet fee mode.', 'dcc-checkout'));
+            $this->number_row(__('Monthly bucket: minimum nights', 'dcc-checkout'), 'min_monthly', (int) $s['min_monthly'], '');
+            ?>
+        </table>
+        <?php
+        echo $this->pet_attachment_warnings_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- built escaped
+    }
+
+    /**
+     * Warnings, one per pet cottage, for each Service the ACTIVE mode charges
+     * that MotoPress does not have attached to it. Read with
+     * Config::room_type_service_ids(); a list that cannot be read warns
+     * nothing (never a false alarm). Escaped markup, '' when all is well.
+     */
+    public function pet_attachment_warnings_html(): string
+    {
+        $out = '';
+        foreach (Config::pet_accommodations() as $type_id) {
+            $attached = Config::room_type_service_ids((int) $type_id);
+            if ($attached === null) {
+                continue;
+            }
+            foreach (Config::active_pet_service_ids() as $sid) {
+                if (in_array((int) $sid, $attached, true)) {
+                    continue;
+                }
+                $out .= '<p class="description" style="color:#b32d2e;max-width:640px"><strong>' . esc_html(sprintf(
+                    /* translators: 1: service title, 2: service ID, 3: accommodation title, 4: accommodation ID. */
+                    __('⚠ The active pet fee "%1$s" (#%2$d) is not attached to %3$s (#%4$d) in MotoPress, so the pet fee cannot be charged there. Attach it under Bookings → Accommodation Types → Services.', 'dcc-checkout'),
+                    html_entity_decode((string) get_the_title((int) $sid), ENT_QUOTES, 'UTF-8'),
+                    (int) $sid,
+                    html_entity_decode((string) get_the_title((int) $type_id), ENT_QUOTES, 'UTF-8'),
+                    (int) $type_id
+                )) . '</strong></p>';
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * v0.34.0 — the dog sizes. Every size is kept; "Offered" decides whether
+     * the guest checkout lists it. A booking that already holds a size no
+     * longer offered keeps it, and the booking screen still shows it.
+     */
+    private function render_dog_sizes_section(): void
+    {
+        $base = esc_attr(Config::OPTION) . '[dog_sizes]';
+        ?>
+        <h2><?php echo esc_html__('Dog sizes', 'dcc-checkout'); ?></h2>
+        <p class="description" style="max-width:640px">
+            <?php echo esc_html__('The sizes in the Dog size dropdown. The guest checkout offers only the ticked sizes, after "— Select —", and on a booking with a dog a size must be chosen. Sizes not offered are kept: a booking that already has one keeps it, and the booking screen still shows it. These replace the options set on the Dog Size field in MotoPress.', 'dcc-checkout'); ?>
+        </p>
+        <table class="form-table" role="presentation">
+            <?php foreach (Config::dog_sizes() as $i => $row) : ?>
+            <tr>
+                <th scope="row"><?php echo esc_html($row['label']); ?></th>
+                <td>
+                    <input type="hidden" name="<?php echo $base; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above ?>[<?php echo (int) $i; ?>][label]" value="<?php echo esc_attr($row['label']); ?>" />
+                    <label>
+                        <input type="checkbox" name="<?php echo $base; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above ?>[<?php echo (int) $i; ?>][active]" value="1" <?php checked(true, $row['active']); ?> />
+                        <?php echo esc_html__('Offered on the checkout', 'dcc-checkout'); ?>
+                    </label>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        </table>
         <?php
     }
 

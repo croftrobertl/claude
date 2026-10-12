@@ -79,6 +79,7 @@ function get_posts($a) {
     return $out;
 }
 function get_the_title($id) { return 'Cottage ' . $id; }
+function get_post($id = null) { return null; }
 function current_user_can($c, $id = 0) { return $GLOBALS['caps']; }
 function get_current_user_id() { return 7; }
 class WP_User { public $display_name = 'Rob'; public function exists() { return true; } }
@@ -119,6 +120,9 @@ $GLOBALS['room_types'] = [
 ];
 /* The stand-in's services: today's title, price, and how MotoPress prices it. */
 $GLOBALS['svc'] = [
+    // v0.34.0 — Rob's flat pet fee (Director, 2026-10-12): $50 a night, per
+    // night, quantity once; its line reads "Pet Fee (per night) | $50 × 2 nights | 100".
+    19692 => ['title' => 'Pet Fee (per night)', 'price' => 50, 'night' => true, 'adult' => false],
     17712 => ['title' => 'Pet Fee &#8211; Daily Rate', 'price' => 25, 'night' => true, 'adult' => false],
     17711 => ['title' => 'Pet Fee &#8211; Weekly Rate', 'price' => 20, 'night' => true, 'adult' => false],
     14926 => ['title' => 'Pet Fee &#8211; Monthly Rate', 'price' => 10, 'night' => true, 'adult' => false],
@@ -145,9 +149,10 @@ function MPHB() {
             return new class {
                 public function findById($id) {
                     $s = $GLOBALS['svc'][(int) $id] ?? null;
-                    return $s === null ? null : new class($s['title']) {
-                        private $t; public function __construct($t) { $this->t = $t; }
+                    return $s === null ? null : new class($s['title'], $s['price']) {
+                        private $t, $p; public function __construct($t, $p) { $this->t = $t; $this->p = $p; }
                         public function getTitle() { return $this->t; }
+                        public function getPrice() { return $this->p; }
                     };
                 }
             };
@@ -393,7 +398,10 @@ const MONEY_PATHS = ['.rooms[0].services.list', '.rooms[0].services.total', '.ro
 
 $PET = ['id' => 17712, 'adults' => 1, 'quantity' => 1];
 $OTHER = ['id' => 999, 'adults' => 1, 'quantity' => 1];
-$GLOBALS['opt']['dcc_checkout_settings'] = ['guest_service_daily' => 18063, 'guest_service_weekly' => 18063, 'guest_service_monthly' => 18063, 'guest_fee_amount' => 50];
+// v0.34.0 — everything down to the FLAT MODE block runs in 'tiers' mode: the
+// 0.33.1 proofs were built on the length-of-stay prices ($25 / $20 / $10) the
+// Director measured, and stay valid as proofs of the add-only arithmetic.
+$GLOBALS['opt']['dcc_checkout_settings'] = ['pet_fee_mode' => 'tiers', 'guest_service_daily' => 18063, 'guest_service_weekly' => 18063, 'guest_service_monthly' => 18063, 'guest_fee_amount' => 50];
 Config::flush_cache();
 
 /* ===================================================================== *
@@ -828,6 +836,92 @@ seed(1607, ['nights' => 2, 'rows' => [17712]]);
 update(['dcc_pet_fee' => 'no', 'dcc_adults' => [900 => 'keep']]);
 check('the notice is escaped', notice(),
     '<div class="notice notice-info is-dismissible"><p>Fees were not changed: this booking&#039;s services could not be read. Use Edit Accommodations.</p></div>');
+
+/* ===================================================================== *
+ * v0.34.0 — FLAT MODE, as live since 2026-10-11. Cottage 34 carries only
+ * 19692 ($50 a night); the three tier services stay published, detached,
+ * and are still RECOGNISED on the bookings that carry them.
+ * ===================================================================== */
+$GLOBALS['opt']['dcc_checkout_settings']['pet_fee_mode'] = 'flat';
+unset($GLOBALS['opt']['dcc_checkout_settings']['service_flat']);
+Config::flush_cache();
+$GLOBALS['room_types'][1607]['services'] = [19692, 999];
+check('guard: flat mode, the flat service is 19692 and every stay is charged it',
+    [Config::pet_fee_mode(), Config::service_id_for_nights(2), Config::service_id_for_nights(8), Config::service_id_for_nights(35)],
+    ['flat', 19692, 19692, 19692]);
+
+/* Flat prices 2 / 8 / 35 nights at $100 / $400 / $1,750, and each round
+   trip ends exactly where it started. */
+foreach ([[2, 10000], [8, 40000], [35, 175000]] as [$nights, $fee]) {
+    seed(1607, ['nights' => $nights, 'room_cents' => 10000 * $nights]);
+    $orig = bd();
+    $was  = total();
+    update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+    $line = bd()->rooms[0]->services->list[0] ?? null;
+    check("flat, $nights nights, pet on: + exactly \$" . ($fee / 100) . ", the flat line as MotoPress builds it, only the money paths changed",
+        [total() - $was, ids(), $line ? $line->title : null, $line ? $line->details : null, diff_paths($orig, bd())],
+        [$fee, [19692], 'Pet Fee (per night)',
+         '<span class="mphb-price"><span class="mphb-currency">&#36;</span>50</span> &#215; ' . $nights . ' nights', MONEY_PATHS]);
+    update(['dcc_pet_fee' => 'no', 'dcc_adults' => [900 => 'keep']]);
+    check("flat, $nights nights, pet off: back EXACTLY (every path, and byte for byte)", [total(), diff_paths($orig, bd()), raw()], [$was, [], json_encode($orig)]);
+}
+
+/* The Director's staging figures with 0.33.1 under the flat settings:
+   #10222 (2 nights) +$100, #8798 (8 nights) +$400. */
+seed(1607, ['nights' => 2, 'room_cents' => 25000]);
+update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+check('#10222 shape (2 nights): pet on adds $100', total(), 27750 + 10000);
+seed(1607, ['nights' => 8, 'room_cents' => 92000]);
+update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+check('#8798 shape (8 nights): pet on adds $400 — $1,021.20 → $1,421.20', [total(), bd()->total], [142120, 1421.2]);
+
+/* AN OLD-TIER BOOKING under flat mode (#17730, raw): its 17712 line is a pet
+   fee. Yes adds NO second line; No removes it by index with the calcPrice
+   check (the old service's price is unchanged); a later Yes adds the flat. */
+seed(1607, ['in' => '2026-09-04', 'nights' => 2, 'rows' => SVC_17730, 'raw' => RAW_17730]);
+$snap = snapshot_meta();
+update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+check('old-tier booking, flat mode, pet Yes (already on): NO second line — nothing written at all, byte-identical',
+    [snapshot_meta() === $snap, raw(), feelogs(), notice()], [true, RAW_17730, [], '']);
+check('... the screen offers the control, opening on Yes (the old fee is recognised)',
+    [Fee_Sync::pet_control(19674), \DCC_Checkout\Admin_Fields::booking_pet_state(19674)], ['select', 'yes']);
+update(['dcc_pet_fee' => 'no', 'dcc_adults' => [900 => 'keep']]);
+$off = bd();
+check('old-tier booking, flat mode, pet No: the OLD line is removed, $383 → $333, only the money paths changed',
+    [ids(), total(), $off->rooms[0]->services->list, diff_paths(json_decode(RAW_17730), $off), feelogs()[0][1] ?? ''],
+    [[], 33300, [], MONEY_PATHS, 'Pet fee removed; total $383 → $333']);
+update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+check('... then Yes: the ACTIVE flat fee is added (2 × $50), never the old tier',
+    [ids(), total(), bd()->rooms[0]->services->list[0]->title], [[19692], 43300, 'Pet Fee (per night)']);
+update(['dcc_pet_fee' => 'no', 'dcc_adults' => [900 => 'keep']]);
+check('... and No again: back to the off state exactly', [total(), diff_paths($off, bd())], [33300, []]);
+
+/* A stored line that is not the old service's price today refuses, as 0.33.1. */
+seed(1607, ['in' => '2026-09-04', 'nights' => 2, 'rows' => SVC_17730, 'raw' => RAW_17730]);
+$GLOBALS['svc'][17712]['price'] = 30;
+$snap = snapshot_money();
+update(['dcc_pet_fee' => 'no', 'dcc_adults' => [900 => 'keep']]);
+check('old-tier line whose service price has changed since: refused, nothing written',
+    [snapshot_money() === $snap, strpos(notice(), 'is not the one this would remove') !== false], [true, true]);
+$GLOBALS['svc'][17712]['price'] = 25;
+
+/* The flat service not attached to the cottage: the mode-aware refusal. */
+seed(1607, ['nights' => 2]);
+$GLOBALS['room_types'][1607]['services'] = [17712, 999];
+update(['dcc_pet_fee' => 'yes', 'dcc_adults' => [900 => 'keep']]);
+check('flat mode, the flat service not attached: nothing added, and the message names the attachment',
+    [ids(), strpos(notice(), 'its service is not attached to this cottage in MotoPress') !== false], [[], true]);
+$GLOBALS['room_types'][1607]['services'] = [19692, 999];
+
+seed(1607, ['nights' => 2, 'rows' => [['id' => 19692, 'adults' => 1, 'quantity' => 1]]]);
+check('flat mode screen hint: the flat fee\'s own amount, from its service',
+    \DCC_Checkout\Extra_Details::pet_update_hint(),
+    'Change it and press Update: the pet fee ($50 per night) is added or removed. The room price is not changed.');
+$GLOBALS['opt']['dcc_checkout_settings']['pet_fee_mode'] = 'tiers';
+Config::flush_cache();
+check('tiers mode screen hint: the stay\'s length decides',
+    \DCC_Checkout\Extra_Details::pet_update_hint(),
+    "Change it and press Update: the pet fee for this stay's length is added or removed. The room price is not changed.");
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

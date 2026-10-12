@@ -13,8 +13,10 @@ if (!defined('ABSPATH')) {
  * the booking screen adds, changes or removes a fee line to match what staff
  * set there:
  *  - "Pet fee: Yes / No" (one room, on a pet-fee cottage) adds or removes the
- *    pet service for the stay's length — Config::service_id_for_nights(), the
- *    tier the checkout and Add New use;
+ *    ACTIVE pet service — Config::service_id_for_nights(): the flat service
+ *    for any stay, or the length-of-stay tier (v0.34.0), as the checkout and
+ *    Add New use. An existing pet line of ANY recognised service (flat or an
+ *    old tier) counts as the pet fee: Yes adds no second line, No removes it;
  *  - a changed guest count adds, adjusts or removes the Extra Guest Fee on a
  *    cottage that carries it — Config::guest_service_id_for_nights() and
  *    `count - included_guests()`, the service and multiplier the checkout and
@@ -326,7 +328,10 @@ final class Fee_Sync
         }
 
         $nights  = self::nights($booking_id);
-        $pet_ids = array_values(array_filter(array_map('intval', Config::pet_service_id_list())));
+        // RECOGNISED (v0.34.0): the flat pet service AND the old tiers. A
+        // booking holding an old tier fee already HAS a pet fee — Yes adds
+        // no second line, No removes it — whatever the mode is now.
+        $pet_ids = Config::recognised_pet_service_ids();
         $fee_ids = array_values(array_filter(array_map('intval', Config::guest_service_id_list())));
         $unreadable = __('Fees were not changed: this booking\'s services could not be read. Use Edit Accommodations.', 'dcc-checkout');
         $ops     = [];   // reserved room id => ops
@@ -349,7 +354,9 @@ final class Fee_Sync
                     if ($want) {
                         $tier = $nights > 0 ? Config::service_id_for_nights($nights) : 0;
                         if ($tier <= 0 || !is_array($rooms[$rid]['offered']) || !in_array($tier, $rooms[$rid]['offered'], true)) {
-                            return ['error' => __('The pet fee was not added: the service for this stay\'s length could not be found on this cottage. Use Edit Accommodations.', 'dcc-checkout')];
+                            return ['error' => Config::pet_fee_mode() === 'tiers'
+                                ? __('The pet fee was not added: the service for this stay\'s length could not be found on this cottage. Use Edit Accommodations.', 'dcc-checkout')
+                                : __('The pet fee was not added: its service is not attached to this cottage in MotoPress. Use Edit Accommodations.', 'dcc-checkout')];
                         }
                         $ops[$rid][] = ['add', ['id' => $tier, 'adults' => 1, 'quantity' => 1]];
                         $notes[] = __('Pet fee added', 'dcc-checkout');

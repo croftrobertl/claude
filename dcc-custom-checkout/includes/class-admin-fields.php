@@ -24,7 +24,8 @@ if (!defined('ABSPATH')) {
  * In the browser only, on the admin booking screens only, it SHOWS AND HIDES
  * rows, and (v0.28.0) drives the two fees from their own dropdowns: Number of
  * Guests ticks the Extra Guest Fee and sets its multiplier; "Pet Fee: Yes /
- * No" on Add New ticks the pet service for the stay's length. It does not
+ * No" on Add New ticks the ACTIVE pet service (flat, or the stay's tier —
+ * v0.34.0). It does not
  * validate, does not block a save, does not remove anything from the DOM, and
  * does not extend any server-side backstop into wp-admin — the exemptions stay
  * exactly as they are. Three rules keep an admin from ever losing data:
@@ -99,11 +100,13 @@ final class Admin_Fields
     }
 
     /**
-     * The pet service for the stay being booked — the same length-of-stay
-     * bucket the public checkout charges (Config::service_id_for_nights()), so
-     * the "Pet Fee" dropdown ticks exactly what a guest would have paid
-     * (v0.28.0). 0 when the dates cannot be read; the script then uses the
-     * room's only pet service, or leaves the pet fee to be chosen by hand.
+     * The pet service for the stay being booked — ACTIVE: the one the public
+     * checkout charges in the current mode (Config::service_id_for_nights():
+     * the flat service for any stay, or the length-of-stay tier), so the
+     * "Pet Fee" dropdown ticks exactly what a guest would have paid (v0.28.0;
+     * mode-aware since v0.34.0). 0 when the dates cannot be read; the script
+     * then uses the room's only pet service, or leaves the pet fee to be
+     * chosen by hand.
      *
      * VERIFIED (Director, live MotoPress 6.3.0, 2026-10-07): Booking has
      * getCheckInDate()/getCheckOutDate() (booking.php:487/495), and Rob's
@@ -263,8 +266,12 @@ final class Admin_Fields
             'dogFieldNames'  => Config::dog_field_name_list(),
             'guestGroups'    => $groups,
             'petFeeEnabled'  => Config::pet_fee_enabled() ? '1' : '',
-            // v0.28.0 — the pet services the "Pet Fee" dropdown drives.
-            'petServiceIds'  => array_values(array_filter(Config::pet_service_id_list())),
+            // v0.28.0 — the pet services the script finds, hides and reads.
+            // RECOGNISED (v0.34.0): the flat service AND the old tiers, so a
+            // booking's pet fee is found whichever mode it was taken under.
+            // What it TICKS is the active one, stated per room by PHP
+            // (data-dcc-pet-service, wizard_pet_service()).
+            'petServiceIds'  => Config::recognised_pet_service_ids(),
             // Extra-guest fee: Number of Guests is the ONLY control for it
             // (owner's pick, v0.28.0). Its service row is never shown in
             // wp-admin; it is ticked and its multiplier set from the count.
@@ -493,7 +500,8 @@ final class Admin_Fields
      * Reads `_mphb_services` on each reserved room the way the Availability
      * Calendar's has_pet_service() does: MotoPress stores it as a LIST of ids,
      * a MAP of id => quantity, or a list of arrays carrying 'id'. Matched
-     * against this plugin's configured pet service IDs, never by title.
+     * against the RECOGNISED pet service IDs (flat and tiers, whatever the
+     * mode — v0.34.0), never by title.
      * PARTLY VERIFIED (Director, live 0.28.0): the line read "Yes" on 17730,
      * which carries the fee, and "No" on 19615, 19600 and 18462. That proves
      * the shape 17730 is stored in — which of the three it is was not
@@ -507,7 +515,7 @@ final class Admin_Fields
      */
     public static function booking_pet_fee(int $booking_id): ?bool
     {
-        $pet = array_values(array_filter(array_map('intval', Config::pet_service_id_list())));
+        $pet = Config::recognised_pet_service_ids();
         if (empty($pet)) {
             return null;
         }

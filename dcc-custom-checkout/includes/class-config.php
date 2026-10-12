@@ -49,12 +49,28 @@ final class Config
         return [
             'pet_fee_enabled'   => 1,
             'pet_accommodations' => [1607],           // Cottage 34 — Coconut Cottage
-            'service_daily'     => 17712,             // 2–6 nights   · $25/night
-            'service_weekly'    => 17711,             // 7–29 nights  · $20/night
-            'service_monthly'   => 14926,             // 30+ nights   · $10/night
+            // v0.34.0 — Rob's pet policy of 11 October: ONE flat per-night
+            // service for every stay length (#19692 "Pet Fee (per night)",
+            // $50). The old length-of-stay tiers are KEPT, switched off, so
+            // 'tiers' can be turned back on without retyping anything.
+            'pet_fee_mode'      => 'flat',
+            'service_flat'      => 19692,
+            'service_daily'     => 17712,             // tiers: 2–6 nights  · $25/night
+            'service_weekly'    => 17711,             // tiers: 7–29 nights · $20/night
+            'service_monthly'   => 14926,             // tiers: 30+ nights  · $10/night
             'min_daily'         => 2,
             'min_weekly'        => 7,
             'min_monthly'       => 30,
+            // v0.34.0 — the dog sizes the guest may choose from. Every size is
+            // KEPT; 'active' decides whether the guest checkout offers it. The
+            // value MotoPress stores IS the label (as on live since 2026-09-17).
+            // Dog_Sizes serves this list as the Dog Size field's options.
+            'dog_sizes'         => [
+                ['label' => 'Up to 20 lbs', 'active' => 1],
+                ['label' => '10-20 lbs',    'active' => 0],
+                ['label' => '20-30 lbs',    'active' => 0],
+                ['label' => '30-40 lbs',    'active' => 0],
+            ],
             // Native MotoPress Checkout Field NAMES for the dog info. The owner
             // creates these fields (Bookings → Settings → Checkout Fields); the
             // plugin shows/hides + requires them by the dog toggle. MotoPress
@@ -129,9 +145,55 @@ final class Config
             if (!is_array($saved)) {
                 $saved = [];
             }
-            self::$cache = array_merge(self::defaults(), $saved);
+            self::$cache = array_merge(self::defaults(), self::upgrade($saved));
         }
         return self::$cache;
+    }
+
+    /**
+     * v0.34.0 — a stored option from before the pet fee mode existed, read as
+     * what it meant. READ TIME ONLY, like the merge in settings(): nothing is
+     * written; the next save of the settings page stores the new shape.
+     *
+     *  - no mode key, all three tier slots holding ONE id (live and staging
+     *    since 2026-10-11: 19692 in all three) -> flat mode on that id, and the
+     *    tier slots take the BAKED tier ids. The flat id never stays in a tier
+     *    slot, or switching back to tiers would charge the flat fee three ways.
+     *  - no mode key, three DIFFERENT tier ids -> 'tiers', unchanged: that site
+     *    was charging by length of stay and still is.
+     *  - no mode key and no tier ids stored -> nothing to read; the defaults
+     *    (flat 19692) apply.
+     *
+     * @param array<string,mixed> $saved
+     * @return array<string,mixed>
+     */
+    public static function upgrade(array $saved): array
+    {
+        if (array_key_exists('pet_fee_mode', $saved)) {
+            return $saved;
+        }
+        $keys = ['service_daily', 'service_weekly', 'service_monthly'];
+        $tiers = [];
+        foreach ($keys as $k) {
+            if (array_key_exists($k, $saved)) {
+                $tiers[$k] = (int) $saved[$k];
+            }
+        }
+        if (count($tiers) !== 3) {
+            return $saved;
+        }
+        $distinct = array_values(array_unique($tiers));
+        if (count($distinct) === 1 && $distinct[0] > 0) {
+            $d = self::defaults();
+            $saved['pet_fee_mode'] = 'flat';
+            $saved['service_flat'] = $distinct[0];
+            foreach ($keys as $k) {
+                $saved[$k] = $d[$k];
+            }
+            return $saved;
+        }
+        $saved['pet_fee_mode'] = 'tiers';
+        return $saved;
     }
 
     /** Clear the per-request cache (used after a settings save). */
@@ -185,13 +247,29 @@ final class Config
      * --------------------------------------------------------------------- */
 
     /**
-     * Native MotoPress Service IDs for the per-night pet fee, keyed by
-     * length-of-stay bucket. Global across all pet accommodations. Only ever ONE
-     * is applied at a time; all three are untaxed.
+     * The pet fee mode (v0.34.0): 'flat' — one service for every stay length —
+     * or 'tiers' — daily / weekly / monthly by length of stay. Anything but
+     * 'tiers' reads as 'flat', the site's policy since 11 October.
+     */
+    public static function pet_fee_mode(): string
+    {
+        return (string) (self::settings()['pet_fee_mode'] ?? '') === 'tiers' ? 'tiers' : 'flat';
+    }
+
+    /** The flat-mode pet service (stored whatever the mode). */
+    public static function pet_flat_service_id(): int
+    {
+        return max(0, (int) (self::settings()['service_flat'] ?? 0));
+    }
+
+    /**
+     * The STORED length-of-stay tier ids, whatever the mode — what 'tiers'
+     * charges when it is on, and pet services this plugin must still
+     * RECOGNISE when it is off (old bookings carry them).
      *
      * @return array{daily:int,weekly:int,monthly:int}
      */
-    public static function pet_service_ids(): array
+    public static function pet_tier_service_ids(): array
     {
         $s   = self::settings();
         $ids = apply_filters('dcc_checkout_pet_service_ids', [
@@ -207,13 +285,73 @@ final class Config
     }
 
     /**
-     * Flat list of the three pet service IDs (for "is this a pet service?" tests).
+     * ACTIVE: the service the CURRENT MODE charges, per length-of-stay bucket.
+     * In flat mode all three are the flat service, so the bucket lookup
+     * (here and checkout.js's serviceForNights()) answers the flat id for
+     * every stay without a second code path.
+     *
+     * @return array{daily:int,weekly:int,monthly:int}
+     */
+    public static function pet_service_ids(): array
+    {
+        if (self::pet_fee_mode() === 'flat') {
+            $flat = self::pet_flat_service_id();
+            return ['daily' => $flat, 'weekly' => $flat, 'monthly' => $flat];
+        }
+        return self::pet_tier_service_ids();
+    }
+
+    /**
+     * ACTIVE, as a list: every service the current mode can charge (flat: one;
+     * tiers: three). For "is the right fee attached to this cottage?" checks.
+     *
+     * @return int[]
+     */
+    public static function active_pet_service_ids(): array
+    {
+        return array_values(array_unique(array_filter(array_map('intval', self::pet_service_ids()))));
+    }
+
+    /**
+     * RECOGNISED: every pet service this plugin knows, WHATEVER THE MODE — the
+     * flat service plus the three tier services. For detecting, reading,
+     * hiding and removing a pet fee, and for deciding what a pet cottage is:
+     * a booking taken under the other mode still carries a pet fee.
+     *
+     * @return int[]
+     */
+    public static function recognised_pet_service_ids(): array
+    {
+        return array_values(array_unique(array_filter(array_map('intval', array_merge(
+            [self::pet_flat_service_id()],
+            array_values(self::pet_tier_service_ids())
+        )))));
+    }
+
+    /**
+     * The flat pet fee's own per-night amount, formatted ("$50"), read from
+     * the flat Service itself so wording can never disagree with the charge.
+     * '' in tiers mode, or when the price cannot be read — callers then name
+     * no amount rather than a wrong one.
+     */
+    public static function flat_pet_fee_text(): string
+    {
+        if (self::pet_fee_mode() !== 'flat') {
+            return '';
+        }
+        $price = self::service_price(self::pet_flat_service_id());
+        return $price > 0 ? self::format_price($price) : '';
+    }
+
+    /**
+     * Kept for any caller outside this plugin: since v0.34.0 it is the
+     * RECOGNISED list. Code here names the set it means instead.
      *
      * @return int[]
      */
     public static function pet_service_id_list(): array
     {
-        return array_values(self::pet_service_ids());
+        return self::recognised_pet_service_ids();
     }
 
     /**
@@ -237,7 +375,8 @@ final class Config
     }
 
     /**
-     * Resolve the correct pet Service ID for a given night count.
+     * ACTIVE: the pet Service to charge for a stay of $nights, in the current
+     * mode — the flat service for any stay, or the length-of-stay tier.
      *
      * Since 0.3.5 the daily bucket has no lower bound — the fee applies from
      * the first night (owner decision, 2026-08-31), matching the extra-guest
@@ -661,8 +800,10 @@ final class Config
     }
 
     /**
-     * Does this accommodation actually carry the pet Services?
-     * true / false / null = couldn't tell (callers fail open).
+     * Is this a pet cottage — does it carry ANY recognised pet Service (the
+     * flat one or a tier)? true / false / null = couldn't tell (callers fail
+     * open). RECOGNISED, not active: a cottage stays a pet cottage while its
+     * services are being switched from one mode to the other.
      */
     public static function room_type_has_pet_services(int $room_type_id): ?bool
     {
@@ -670,7 +811,7 @@ final class Config
         if ($attached === null) {
             return null;
         }
-        foreach (array_filter(self::pet_service_id_list()) as $pet_id) {
+        foreach (self::recognised_pet_service_ids() as $pet_id) {
             if (in_array((int) $pet_id, $attached, true)) {
                 return true;
             }
@@ -1069,5 +1210,66 @@ final class Config
             'size' => (string) ($keys['size'] ?? 'mphb_dog_size'),
             'hair' => (string) ($keys['hair'] ?? 'mphb_dog_hair'),
         ];
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Dog sizes (v0.34.0)
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Every dog size, in order, with whether the guest checkout offers it.
+     * Bad rows are dropped; an unusable stored list falls back to the baked one.
+     *
+     * @return array<int, array{label:string, active:bool}>
+     */
+    public static function dog_sizes(): array
+    {
+        $out = self::normalise_dog_sizes(self::settings()['dog_sizes'] ?? null);
+        return $out !== [] ? $out : self::normalise_dog_sizes(self::defaults()['dog_sizes']);
+    }
+
+    /**
+     * @param mixed $rows
+     * @return array<int, array{label:string, active:bool}>
+     */
+    public static function normalise_dog_sizes($rows): array
+    {
+        if (!is_array($rows)) {
+            return [];
+        }
+        $out  = [];
+        $seen = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || !isset($row['label']) || !is_scalar($row['label'])) {
+                continue;
+            }
+            $label = trim((string) $row['label']);
+            if ($label === '' || isset($seen[$label])) {
+                continue;
+            }
+            $seen[$label] = true;
+            $out[] = ['label' => $label, 'active' => !empty($row['active'])];
+        }
+        return $out;
+    }
+
+    /** @return string[] the sizes the guest checkout offers */
+    public static function active_dog_sizes(): array
+    {
+        return array_values(array_map(static function ($r) { return $r['label']; },
+            array_filter(self::dog_sizes(), static function ($r) { return $r['active']; })));
+    }
+
+    /** @return string[] every size, offered or not */
+    public static function all_dog_sizes(): array
+    {
+        return array_values(array_map(static function ($r) { return $r['label']; }, self::dog_sizes()));
+    }
+
+    /** The Dog Size Checkout Field's own name (its input name without "mphb_"). */
+    public static function dog_size_field_slug(): string
+    {
+        $name = self::dog_field_names()['size'];
+        return strncmp($name, 'mphb_', 5) === 0 ? substr($name, 5) : $name;
     }
 }

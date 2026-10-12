@@ -291,6 +291,9 @@ final class Assets
      */
     private function script_config(): array
     {
+        // ACTIVE, per bucket: what the current mode charges. In flat mode all
+        // three are the flat service, so serviceForNights() follows the mode
+        // with no second code path (v0.34.0).
         $service_ids = Config::pet_service_ids();
 
         return [
@@ -299,7 +302,9 @@ final class Assets
                 'weekly'  => $service_ids['weekly'],
                 'monthly' => $service_ids['monthly'],
             ],
-            'serviceIdList'    => Config::pet_service_id_list(),
+            // RECOGNISED: every pet service, flat and tiers, whatever the
+            // mode — the boxes the script finds, hides and unticks.
+            'serviceIdList'    => Config::recognised_pet_service_ids(),
             'thresholds'       => Config::bucket_thresholds(),
             'petFeeEnabled'    => Config::pet_fee_enabled(),
             'petAccommodations' => Config::pet_accommodations(),
@@ -415,6 +420,7 @@ final class Assets
                 'capNote'       => __('This cottage sleeps up to %s guests.', 'dcc-checkout'),
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),
                 'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
+                'errDogSize'    => __('Please choose your dog\'s size from the list.', 'dcc-checkout'),
                 'adminNoticePrefix' => __('Visible to administrators only:', 'dcc-checkout'),
                 'subtotal'      => __('Subtotal', 'dcc-checkout'),
                 'taxNoteLead'   => __('Taxes applied:', 'dcc-checkout'),

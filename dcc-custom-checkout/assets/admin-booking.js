@@ -772,9 +772,9 @@
          *
          * Add New: on a pet-fee cottage, a "Pet Fee: Yes / No" dropdown under
          * Number of Guests. It behaves like Number of Guests: Yes ticks the
-         * pet service for this stay's length (the bucket PHP stated on the
-         * marker, else the room's only pet service) and shows Dog; No unticks
-         * it. The native pet rows are then never shown, so the dropdown is the
+         * ACTIVE pet service PHP stated on the marker (the flat service, or
+         * the stay's tier — v0.34.0; else, with nothing stated, the room's
+         * only pet service) and shows Dog; No unticks every pet box. The native pet rows are then never shown, so the dropdown is the
          * only pet fee control. Where the bucket cannot be told (several pet
          * services, none stated), the native rows stay visible and the
          * dropdown asks for the fee to be chosen there. On any other cottage:
@@ -869,8 +869,13 @@
                     });
                     Object.keys(rooms).forEach(function (p) {
                         var list = rooms[p];
+                        // ACTIVE only (v0.34.0): when PHP states the service
+                        // this stay is charged, only that box is ever ticked —
+                        // never "the room's only pet box", which could be an
+                        // old tier. The fallback is for a stay whose dates
+                        // could not be read (nothing stated).
                         var t = list.filter(function (b) { return parseInt(b.value, 10) === target; })[0] ||
-                            (list.length === 1 ? list[0] : null);
+                            (target <= 0 && list.length === 1 ? list[0] : null);
                         if (!t) {
                             // Cannot tell which bucket: leave this room's pet
                             // rows visible and untouched, and say so.

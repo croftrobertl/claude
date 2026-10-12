@@ -663,6 +663,18 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
     display: none !important;
 }
 
+/*
+ * B1 (v0.34.0) — while a room's guest count is still "— Select —", MotoPress
+ * is asked to price the stay for the included guests (checkout.js,
+ * armRecalcCount), so the breakdown's Guests row would state a number the
+ * guest never gave. Hidden by a class on the FORM, so a re-rendered table is
+ * covered the moment it lands. MotoPress's own row class (booking-view.php
+ * ~100–111, Director, live 6.3.0).
+ */
+.mphb_sc_checkout-form.dcc_checkout-guests-provisional tr.mphb-price-breakdown-guests {
+    display: none !important;
+}
+
 .mphb_sc_checkout-form .dcc_checkout-tip-asterisk {
     font-weight: 700;
 }

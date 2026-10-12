@@ -44,5 +44,16 @@ function compare(label, fn, table) {
     }
 }
 compare('pet', petFn, payload.expected);
+// v0.34.0 — flat mode: the same shipped function, fed the ids script_config
+// hands it in flat mode, must answer the flat service for every stay.
+if (!payload.expectedFlat || !payload.flatServiceIds) {
+    console.log('FAIL  the flat-mode mirror table is missing — not run, not passed');
+    failures++;
+} else {
+    const flatFn = new Function('CFG', petSrc + '; return serviceForNights;')({
+        thresholds: payload.thresholds, serviceIds: payload.flatServiceIds,
+    });
+    compare('pet (flat mode)', flatFn, payload.expectedFlat);
+}
 compare('extra-guest', guestFn, payload.expectedGuest);
 process.exit(failures ? 1 : 0);

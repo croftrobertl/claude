@@ -155,6 +155,8 @@ final class Rest_Guard
                 return __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout');
             case 'guests':
                 return __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout');
+            case 'dogsize':
+                return __('Please choose your dog\'s size from the list.', 'dcc-checkout');
         }
         return __('Please review your entries and try again.', 'dcc-checkout');
     }

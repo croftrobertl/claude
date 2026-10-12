@@ -50,6 +50,8 @@ function wp_safe_redirect($url) { throw new DccRedirected($url); }
 function sanitize_text_field($v) { return is_string($v) ? trim($v) : ''; }
 function absint($v) { return abs((int) $v); }
 function get_post_meta($id, $k, $s = false) { return ''; }
+// v0.34.0: Dog_Sizes::field_in_use() looks the Dog Size field up; none here.
+function get_posts($a = []) { return []; }
 function did_action($h) { return 0; }
 function untrailingslashit($s) { return rtrim((string) $s, '/\\'); }
 class WP_Error { public $code; public function __construct($c = '', $m = '', $d = []) { $this->code = $c; } }
@@ -65,6 +67,7 @@ require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-rest-guard.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-checkout-request.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-pet-service.php';
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-dog-sizes.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-guest-fields.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-extra-guest-service.php';
 
@@ -88,12 +91,14 @@ function check($name, $actual, $expected) {
 }
 
 /**
- * A tampering submission: 3 nights (the DAILY bucket) with the MONTHLY pet
- * service attached instead. find_violation() must call this 'pet'.
+ * A tampering submission: 3 nights with the MONTHLY TIER pet service attached
+ * — wrong in BOTH modes (tiers wants the daily tier for 3 nights; flat, the
+ * default since v0.34.0, wants the flat service). find_violation() must call
+ * this 'pet'.
  */
 function seed_violation(): void
 {
-    $ids = Config::pet_service_ids();
+    $ids = Config::pet_tier_service_ids();
     $_SERVER['REQUEST_METHOD'] = 'POST';
     $_SERVER['REQUEST_URI']    = '/submit-booking/';
     $_POST = [
@@ -104,7 +109,7 @@ function seed_violation(): void
                 'room_type_id' => 1065,
                 'adults'       => 2,
                 'services'     => [
-                    0 => ['id' => $ids['monthly'], 'quantity' => 1],  // WRONG bucket
+                    0 => ['id' => $ids['monthly'], 'quantity' => 1],  // WRONG service
                 ],
             ],
         ],
