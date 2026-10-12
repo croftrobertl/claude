@@ -1954,8 +1954,20 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 337
-  mutations, 337 killed, 0 of everything else (v0.34.1, in TWO runs: the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 374
+  mutations, 374 killed, 0 of everything else (v0.34.1 final, with the
+  dropdown list: twenty-two suites — `selectlist` added — run in TWO HALVES
+  of 187 because one full run now outlasts the session's 2-hour background
+  limit; 186 + 1 STALE, then 187. The STALE was `css-field-width`: the new
+  button rule repeated its `width: 100% !important;` line, so the find
+  matched twice; re-anchored with its intent unchanged and killed alone.
+  The targeted select-list run found one SURVIVOR, `css-sl-error-ink`: an
+  equivalent mutant, because the form's shared `[class*="error"]` rule sets the
+  ink with !important, so the colour line it mutated never applied. The line was
+  removed and the mutation retired. That run's FIRST pass was 37 HARNESS +
+  1 STALE: the session's copy of the runner had no `selectlist` suite, and
+  the real runner said so rather than passing them.
+  Earlier in 0.34.1, before the list: 337 killed, in TWO runs: the
   full run hit the session's 2-hour limit at 290 killed + 1 STALE —
   `af-flow-word-dropped`, aimed at the `flow` line 0.34.1 rewrote,
   re-anchored with its intent unchanged — and the 47 it never reached, that

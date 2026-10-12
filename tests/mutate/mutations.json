@@ -96,8 +96,8 @@
    "fields"
   ],
   "claim": "v0.13.0 width:100% on the field -- no dead strip",
-  "find": "    width: 100% !important;",
-  "replace": "    width: 60% !important;",
+  "find": "    width: 100% !important;\n    box-sizing: border-box !important;\n    background-color: #ffffff !important;",
+  "replace": "    width: 60% !important;\n    box-sizing: border-box !important;\n    background-color: #ffffff !important;",
   "count": 1
  },
  {
