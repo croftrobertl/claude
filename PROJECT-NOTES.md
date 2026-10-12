@@ -2998,10 +2998,18 @@ or sizes. A pet fee is recognised by its TITLE, `/\b(pet|dog)/i`
 count — for the paw, the Daily icons, the preview and search (the board's
 Pets FILTER was removed in 0.44.1; Stats stopped counting pets in 0.45.3).
 The sheet prints Dog Type / Size / Hair as stored, so "Up to 20 lbs" and the
-old values both show. The "10-20 lbs" in comments is the OLD select's
-default — still accurate history. **The trap repeats, and is already
-handled:** with "Up to 20 lbs" the only option, every new booking may store
-it whether or not a dog is coming — exactly how "10-20 lbs" behaved. The
-gate never reads size, so a size alone shows neither the paw nor the dog
-rows. Fixtures for all of it in staff-panel-test.php and
-staff-board-data-test.php.
+old values both show. The "10-20 lbs" in comments describes the OLD era, when
+"10-20 lbs" was the select's FIRST option and so was stored on bookings with
+no dog — history, and those values are no longer in the database.
+**Corrected by the WD (2026-10-12), from live:** a no-dog booking does NOT
+store a size today. Of 419 bookings, 24 carry dog rows and only 2 of each
+are filled in (#17730 and #17795, cancelled tests that did have a dog); the
+other 22 are empty strings. Two reasons: the Dog Size select's first option
+is a blank "— Select —", never pre-selected; and Custom Checkout (since
+0.22.0) disables the dog fields when "Bringing a dog?" is No, so the browser
+does not send them. (My first note said new bookings would "probably" store
+"Up to 20 lbs" by default — wrong, withdrawn.) **The rule stays anyway:** a
+dog size is never treated as a sign of a dog — the gate reads only a dog
+type, a pet fee or staff's _dcc_dog — so a size alone shows neither the paw
+nor the dog rows, whatever a future form does. Fixtures for all of it in
+staff-panel-test.php and staff-board-data-test.php.

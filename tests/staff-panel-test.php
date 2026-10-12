@@ -231,7 +231,7 @@ check('...with a Dog Type: all three rows, as stored', value_of($d, 'customer', 
 $d = booking(18462, [], ['services' => [17712 => 1], 'service_posts' => [17712 => 'Pet Fee – Daily Rate']]);
 check('the old "Pet Fee – Daily Rate" (#17712, kept for past bookings) still shows the block, its old size as stored',
     value_of($d, 'customer', 'Dog Size') === '10-20 lbs', labels($d, 'customer'));
-check('"Up to 20 lbs" with NO fee and NO dog type shows nothing — the only option is every booking\'s value',
+check('"Up to 20 lbs" with NO fee and NO dog type shows nothing — a size is never the sign of a dog',
     !in_array('Dog Size', labels(booking(18463, ['mphb_dog_size' => 'Up to 20 lbs']), 'customer'), true));
 
 echo "\n-- efficiency: one booking, one reserved-room query --\n";
