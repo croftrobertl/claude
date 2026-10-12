@@ -3013,3 +3013,13 @@ dog size is never treated as a sign of a dog — the gate reads only a dog
 type, a pet fee or staff's _dcc_dog — so a size alone shows neither the paw
 nor the dog rows, whatever a future form does. Fixtures for all of it in
 staff-panel-test.php and staff-board-data-test.php.
+
+### QUEUED FOR THE NEXT RELEASE (whenever that is — no release for these alone)
+
+- **class-staff-data.php, two comments to the past tense** (WD, 2026-10-12):
+  the pet-block comment (~line 595) and has_pet_service()'s docblock (~line
+  697) both say the old select "carries "10-20 lbs" / "short-haired" whether
+  or not a dog was ever mentioned". Reword, in the WD's words: "carried on
+  bookings taken before 2026-09-17; those values were cleared from the
+  database, and today only #17730 and #17795 (cancelled tests) hold a
+  size." Comment-only; no mutation needle contains that text (checked).
