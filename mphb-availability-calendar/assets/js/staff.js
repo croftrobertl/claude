@@ -51,6 +51,8 @@
     // storage — and removed the moment it is read back, so a reload the USER
     // makes still opens on Monthly.
     var VIEW_HASH = 'mphbac-view=';
+    // ⓘ bubbles' ids (0.46.0), unique on the page.
+    var TIP_SEQ = 0;
 
     function init(root) {
         if (!root || root.dataset.staffInit === '1') return;
@@ -68,6 +70,7 @@
         var periodSel = root.querySelector('.mphbac-staff-period');
         var gotoEl   = root.querySelector('.mphbac-staff-goto');
         var statsEl  = root.querySelector('.mphbac-staff-stats');
+        var ghostsEl = root.querySelector('.mphbac-staff-ghosts');
         var updatedEl = root.querySelector('.mphbac-staff-updated');
         var previewEl = root.querySelector('.mphbac-staff-preview');
         var legendEl = root.querySelector('.mphbac-staff-legend');
@@ -154,6 +157,8 @@
             agendaEl.hidden = !isDay;
             gridEl.hidden = isDay;
             if (legendEl) legendEl.hidden = isDay;
+            // Last year's ghosts ride on the chart's bars; Daily has none.
+            if (ghostsEl) ghostsEl.disabled = isDay;
             var cap = period.charAt(0).toUpperCase() + period.slice(1);
             prevBtn.setAttribute('aria-label', S['prev' + cap] || 'Previous');
             nextBtn.setAttribute('aria-label', S['next' + cap] || 'Next');
@@ -494,10 +499,12 @@
 
             // cottage rows
             var row = 3;
+            var rowOf = {};                  // room type id -> its first grid row (the ghosts')
             var barFont = getComputedStyle(gridEl).fontFamily || 'sans-serif';
             (data.cottages || []).forEach(function (c, ci) {
                 var bars = barsByType[c.id] || [];
                 var lanes = assignLanes(bars);
+                rowOf[c.id] = row;
 
                 var label = document.createElement('div');
                 label.className = 'mphbac-staff-rowlabel' + (ci % 2 ? ' is-alt' : '');
@@ -569,6 +576,9 @@
             gridEl.textContent = '';
             gridEl.appendChild(chart);
             measureBars(chart);
+            chart._rows = rowOf;
+            chart._days = days;
+            if (ghostsEl && ghostsEl.checked) drawGhosts(chart);
 
             if (state.restoreScroll) {
                 // Back from the one token reload: exactly where the reader was.
@@ -1306,6 +1316,14 @@
         // reaches it first (earliest check-in, then lowest id) — so a channel
         // block echoing a booking neither inflates "% booked" nor takes a
         // slice of the pie.
+        //
+        // 0.46.0 (Rob, from a list; the WD's spec): a ⓘ on every tile and
+        // block; the cottages ranked by % booked with ▲ ▼ against the previous
+        // timeframe; ‹ › arrows round the date line; the tiles against the
+        // same dates a year earlier; and five new blocks — length of stay,
+        // arrivals by weekday, how far ahead they book, pace, and the year
+        // as a heat map. Every figure is an AGGREGATE: no element here
+        // carries a guest's name.
         var statsSpan = statsEl && statsEl.querySelector('.mphbac-staff-stats-span');
         var statsDate = statsEl && statsEl.querySelector('.mphbac-staff-stats-date');
         var statsFrom = statsEl && statsEl.querySelector('.mphbac-staff-stats-from');
@@ -1315,7 +1333,16 @@
         var statsMonth = statsEl && statsEl.querySelector('.mphbac-staff-stats-month');
         var statsYear  = statsEl && statsEl.querySelector('.mphbac-staff-stats-year');
         var statsOnLabel = statsEl && statsEl.querySelector('.mphbac-staff-stats-on-label');
+        var statsRange = statsEl && statsEl.querySelector('.mphbac-staff-stats-range');
+        var statsPrev  = statsEl && statsEl.querySelector('.mphbac-staff-stats-prev');
+        var statsNext  = statsEl && statsEl.querySelector('.mphbac-staff-stats-next');
         var STATS_MAX_DAYS = 400;
+        // RECORDS COMPLETE FROM (0.46.0, Rob: a missing figure beats a false
+        // one). A plugin setting, default 2025-10-01: no comparison — vs last
+        // year, vs the previous timeframe, pace — reaches before it. The heat
+        // map, the weekday chart and every other figure show what the site
+        // holds for any period.
+        var RECORDS_FROM = /^\d{4}-\d{2}-\d{2}$/.test(String(config.recordsFrom || '')) ? config.recordsFrom : '';
         // THE PERIOD THE STATS ARE IN (0.45.3): one day, carried across a
         // Timeframe switch — Month "Mar 2025" → Year 2025 → back to Month is
         // still March; Day → Week is that day's week. Each second box reads
@@ -1340,12 +1367,78 @@
             }
             if (w.to < CAP_LO || w.from > CAP_HI) return { bad: true };
             if (w.from < CAP_LO || w.to > CAP_HI) {
-                w = { from: w.from < CAP_LO ? CAP_LO : w.from, to: w.to > CAP_HI ? CAP_HI : w.to };
+                w = clampCap(w);
                 notes.push('clamped');
             }
             w.span = span;
             w.notes = notes;
+            w.clamped = notes.indexOf('clamped') >= 0;
             return w;
+        }
+        function clampCap(r) {
+            return { from: r.from < CAP_LO ? CAP_LO : r.from, to: r.to > CAP_HI ? CAP_HI : r.to };
+        }
+
+        // ‹ › (0.46.0, Rob): one whole timeframe on — the period's own step,
+        // and a Custom range by its own length.
+        function statsStepAnchor(span, delta) {
+            var a = statsAnchor;
+            if (span === 'day') return shiftDay(a, delta);
+            if (span === 'week') return shiftDay(windowOf(a, 'week').from, 7 * delta);
+            if (span === 'month') return shiftMonth(a.slice(0, 7), delta) + '-01';
+            return (parseInt(a.slice(0, 4), 10) + delta) + '-01-01';
+        }
+        function statsStepWindow(w, delta) {
+            if (w.span === 'custom') {
+                var n = daysBetween(w.from, w.to).length * delta;
+                return { from: shiftDay(w.from, n), to: shiftDay(w.to, n) };
+            }
+            return windowOf(statsStepAnchor(w.span, delta), w.span);
+        }
+        // Disabled where the next timeframe lies wholly outside the ±3-year
+        // window — the board's own arrows' rule.
+        function statsArrows(w) {
+            if (!statsPrev || !statsNext) return;
+            var bad = !w || w.bad;
+            statsPrev.disabled = bad || statsStepWindow(w, -1).to < CAP_LO;
+            statsNext.disabled = bad || statsStepWindow(w, 1).from > CAP_HI;
+            var span = bad ? 'custom' : w.span;
+            var cap = span === 'custom' ? 'Range' : span.charAt(0).toUpperCase() + span.slice(1);
+            statsPrev.setAttribute('aria-label', S['prev' + cap] || 'Previous');
+            statsNext.setAttribute('aria-label', S['next' + cap] || 'Next');
+        }
+        function statsStep(delta) {
+            var w = statsWindow();
+            if (w.bad) return;
+            if (w.span === 'custom') {
+                var s = statsStepWindow(w, delta);
+                statsFrom.value = s.from;
+                statsTo.value = s.to;
+            } else {
+                statsAnchor = statsClamp(statsStepAnchor(w.span, delta));
+            }
+            renderStats();
+        }
+
+        // The same dates a year earlier; a 29 February is the 28th.
+        function yearBack(d) {
+            return d.slice(5) === '02-29' ? (parseInt(d.slice(0, 4), 10) - 1) + '-02-28' : shiftYears(d, -1);
+        }
+        // WHETHER A COMPARISON CAN BE TRUE: never reaching before "Records
+        // complete from", never outside the ±3-year window, never against a
+        // timeframe that was itself cut short. '' = it can.
+        function comparable(w, c) {
+            if (w.clamped) return 'range';
+            if (c.from < CAP_LO || c.to > CAP_HI) return 'range';
+            if (RECORDS_FROM && c.from < RECORDS_FROM) return 'records';
+            return '';
+        }
+        function noCompareText(why) {
+            if (why === 'records') {
+                var d = RECORDS_FROM.slice(8) === '01' ? shortMonth(RECORDS_FROM) + ' ' + RECORDS_FROM.slice(0, 4) : mediumDay(RECORDS_FROM);
+                return (S.stNoRecords || '').replace('{date}', d);
+            }
+            return S.stNoCompare || '';
         }
 
         function statsSay(text) {
@@ -1353,108 +1446,311 @@
             statsNote.hidden = !text;
         }
 
+        // ---- fetching -------------------------------------------------------
+
+        function fetchRange(r) {
+            var hit = cachedCovering(r.from, r.to);
+            if (hit) return Promise.resolve(hit);
+            return post('mphbac_staff_month', { from: r.from, to: r.to }).then(function (json) {
+                if (!json || !json.success || !json.data) throw new Error('stats');
+                state.cache[r.from + '|' + r.to] = json.data;
+                return json.data;
+            });
+        }
+        // EVERY RANGE THE STATS NEED, IN AS FEW REQUESTS AS THE ENDPOINT
+        // ALLOWS: what the session already holds is not asked for again, and
+        // ranges that touch (a month and the month before it) go as one, up
+        // to the endpoint's 400 days. Resolves to one payload per range, in
+        // order (null for a range not asked for). A refresh may empty the
+        // cache mid-flight, so the answers are kept here, not looked up again.
+        function fetchAll(ranges) {
+            var have = ranges.map(function (r) { return r ? cachedCovering(r.from, r.to) : null; });
+            var need = ranges.filter(function (r, i) { return r && !have[i]; })
+                .map(function (r) { return { from: r.from, to: r.to }; })
+                .sort(function (a, b) { return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
+            var merged = [];
+            need.forEach(function (r) {
+                var m = merged[merged.length - 1];
+                if (m && r.from <= shiftDay(m.to, 1)) {
+                    var to = r.to > m.to ? r.to : m.to;
+                    if (daysBetween(m.from, to).length <= STATS_MAX_DAYS) { m.to = to; return; }
+                }
+                merged.push(r);
+            });
+            return Promise.all(merged.map(fetchRange)).then(function (got) {
+                return ranges.map(function (r, i) {
+                    if (!r) return null;
+                    if (have[i]) return have[i];
+                    for (var j = 0; j < merged.length; j++) {
+                        if (merged[j].from <= r.from && merged[j].to >= r.to) return got[j];
+                    }
+                    return null;
+                });
+            });
+        }
+
+        // What one timeframe's figures need besides its own data.
+        function statsPlan(w) {
+            var prevW = statsStepWindow(w, -1);
+            var lyW = { from: yearBack(w.from), to: yearBack(w.to), span: w.span };
+            var y = w.from.slice(0, 4);
+            var agoDay = yearBack(config.today);
+            var plan = {
+                prev: { w: prevW, why: comparable(w, prevW) },
+                ly: { w: lyW, why: comparable(w, lyW) },
+                year: { y: y, w: clampCap({ from: y + '-01-01', to: y + '-12-31' }) },
+                pace: { now: { from: config.today, to: shiftDay(config.today, 89) },
+                        ago: { from: agoDay, to: shiftDay(agoDay, 89) }, asOf: agoDay }
+            };
+            plan.pace.why = comparable({}, plan.pace.ago);
+            plan.ranges = [w, plan.prev.why ? null : prevW, plan.ly.why ? null : lyW, plan.year.w,
+                plan.pace.now, plan.pace.why ? null : plan.pace.ago];
+            return plan;
+        }
+
         function renderStats(opts) {
             if (!statsEl || !statsOut) return;
             // QUIET = the 3-minute refresh (0.45.3). The figures on screen stay
-            // until the new ones are ready and then change in one step:
-            // swapping them for "Loading…" took the section's height away for
-            // as long as the request took, and the page jumped with it.
+            // until the new ones are ready and then change in one step. Since
+            // 0.46.0 that holds for EVERY redraw that has figures to keep — an
+            // arrow, a picker — so the section never collapses to "Loading…"
+            // and back, which moved the page.
             var quiet = !!(opts && opts.quiet);
             statsSync();
             var w = statsWindow();
-            if (w.bad) { statsOut.textContent = ''; statsSay(S.stBadRange || ''); return; }
+            statsArrows(w);
+            if (w.bad) {
+                ++state.statsReq;
+                statsOut.textContent = '';
+                if (statsRange) statsRange.textContent = '';
+                statsSay(S.stBadRange || '');
+                return;
+            }
             var notes = [];
             if (w.notes.indexOf('capped') >= 0) notes.push((S.stCapped || '').replace('{from}', mediumDay(w.from)).replace('{to}', mediumDay(w.to)));
-            if (w.notes.indexOf('clamped') >= 0) notes.push((S.stClamped || '').replace('{from}', mediumDay(w.from)).replace('{to}', mediumDay(w.to)));
+            if (w.clamped) notes.push((S.stClamped || '').replace('{from}', mediumDay(w.from)).replace('{to}', mediumDay(w.to)));
             statsSay(notes.join(' '));
+            if (statsRange) {
+                statsRange.textContent = rangeLabel(w.from, w.to);
+                fitRange(statsRange);
+            }
+            var plan = statsPlan(w);
             var seq = ++state.statsReq;
-            var hit = cachedCovering(w.from, w.to);
-            var draw = function (data) { if (seq === state.statsReq) drawStats(data, w); };
-            if (hit) { draw(hit); return; }
-            if (!quiet) statsOut.textContent = S.loading || 'Loading…';
-            post('mphbac_staff_month', { from: w.from, to: w.to }).then(function (json) {
+            if (!quiet && !statsOut.querySelector('.mphbac-staff-stats-kpis')) statsOut.textContent = S.loading || 'Loading…';
+            statsOut.setAttribute('aria-busy', 'true');
+            fetchAll(plan.ranges).then(function (got) {
                 if (seq !== state.statsReq) return;
-                if (!json || !json.success || !json.data) { if (!quiet) statsOut.textContent = S.error || ''; return; }
-                state.cache[w.from + '|' + w.to] = json.data;
-                draw(json.data);
+                statsOut.removeAttribute('aria-busy');
+                if (!got[0]) throw new Error('stats');
+                drawStats(got, w, plan);
             }).catch(function (err) {
                 if (seq !== state.statsReq) return;
+                statsOut.removeAttribute('aria-busy');
                 if (tokenReload(err)) return;
                 if (!quiet) statsOut.textContent = failureText(err);
             });
         }
 
-        function statsNumbers(data, w) {
-            var nights = daysBetween(w.from, w.to);
-            var bookings = (data.bookings || []).filter(function (b) { return b.checkin && b.checkout; })
+        // ---- the numbers ------------------------------------------------------
+
+        // WHO OWNS EACH COTTAGE-NIGHT. Every cottage-night counts ONCE, and
+        // belongs to the booking that reaches it first (earliest check-in,
+        // then lowest id): a channel block echoing a booking is not a second
+        // night. Returns the count, per cottage, per source, per night (=
+        // cottages booked that night), and the bookings owning ≥1 night.
+        function own(list, nights) {
+            var bookings = list.filter(function (b) { return b.checkin && b.checkout; })
                 .sort(function (a, b) { return a.checkin < b.checkin ? -1 : a.checkin > b.checkin ? 1 : a.id - b.id; });
-            var owner = {}, perCottage = {}, bySource = { direct: 0, airbnb: 0, booking: 0, vrbo: 0 }, booked = 0, counted = {};
+            var owner = {}, perCottage = {}, perNight = {}, counted = {}, booked = 0;
+            var bySource = { direct: 0, airbnb: 0, booking: 0, vrbo: 0 };
             bookings.forEach(function (b) {
                 (b.cottages || []).forEach(function (c) {
                     nights.forEach(function (d) {
                         var k = c.roomTypeId + '|' + d;
                         if (d >= b.checkin && d < b.checkout && !owner[k]) {
                             owner[k] = b;
-                            counted[b.id] = b;     // owns a night here: a booking of this timeframe
+                            counted[b.id] = b;
                             booked++;
                             perCottage[c.roomTypeId] = (perCottage[c.roomTypeId] || 0) + 1;
+                            perNight[d] = (perNight[d] || 0) + 1;
                             bySource[sourceOf(b)]++;
                         }
                     });
                 });
             });
+            return {
+                sorted: bookings, booked: booked, perCottage: perCottage, perNight: perNight, bySource: bySource,
+                mine: Object.keys(counted).map(function (k) { return counted[k]; })
+            };
+        }
+
+        function statsNumbers(data, w) {
+            var nights = daysBetween(w.from, w.to);
+            var o = own(data.bookings || [], nights);
+            var bookings = o.sorted;
             var inRange = function (d) { return d >= w.from && d <= w.to; };
             // BOOKINGS and LENGTH (0.45.3, Rob): the bookings that own at least
             // one cottage-night in the timeframe — the same ownership as the
             // nights, so a channel block echoing a booking is not a second
             // booking — and the average of their WHOLE stays, nights outside
             // the timeframe included.
-            var mine = Object.keys(counted).map(function (k) { return counted[k]; });
+            var mine = o.mine;
             var stayNights = mine.reduce(function (t, b) { return t + nightsBetween(b.checkin, b.checkout); }, 0);
             var turns = 0, t = turnovers(bookings);
             Object.keys(t).forEach(function (typeId) { Object.keys(t[typeId]).forEach(function (d) { if (inRange(d)) turns++; }); });
+            // ARRIVALS / DEPARTURES count EVERY booking, channel blocks
+            // included (unchanged since 0.44.1) — and so does the weekday
+            // chart, so its bars add up to the tiles.
+            var ins = bookings.filter(function (b) { return inRange(b.checkin); });
+            var outs = bookings.filter(function (b) { return inRange(b.checkout); });
+            var byDay = function (list, key) {
+                var a = [0, 0, 0, 0, 0, 0, 0];
+                list.forEach(function (b) { a[new Date(b[key] + 'T00:00:00').getDay()]++; });
+                return a;
+            };
             var cots = data.cottages || [];
             return {
                 nights: nights.length,
                 cottages: cots,
-                booked: booked,
-                pct: cots.length && nights.length ? Math.round(100 * booked / (cots.length * nights.length)) : null,
-                arrivals: bookings.filter(function (b) { return inRange(b.checkin); }).length,
-                departures: bookings.filter(function (b) { return inRange(b.checkout); }).length,
+                booked: o.booked,
+                pct: cots.length && nights.length ? Math.round(100 * o.booked / (cots.length * nights.length)) : null,
+                arrivals: ins.length,
+                departures: outs.length,
+                inByDay: byDay(ins, 'checkin'),
+                outByDay: byDay(outs, 'checkout'),
                 turnovers: turns,
                 inHouse: w.span === 'day' ? dayGroups(bookings, w.from).stay.length : null,
                 bookings: mine.length,
+                mine: mine,
                 length: mine.length ? stayNights / mine.length : null,
-                perCottage: perCottage,
-                bySource: bySource
+                perCottage: o.perCottage,
+                bySource: o.bySource
             };
         }
 
-        function drawStats(data, w) {
+        // STAY-LENGTH MIX (0.46.0): the Bookings set by whole-stay length.
+        var MIX = [[1, 2], [3, 6], [7, 27], [28, Infinity]];
+        function stayMix(mine) {
+            var out = MIX.map(function () { return 0; });
+            mine.forEach(function (b) {
+                var n = nightsBetween(b.checkin, b.checkout);
+                for (var i = 0; i < MIX.length; i++) if (n >= MIX[i][0] && n <= MIX[i][1]) { out[i]++; break; }
+            });
+            return out;
+        }
+
+        // HOW FAR AHEAD THEY BOOK (0.46.0): whole days from the day a booking
+        // was made (madeOn, its post_date in the site's timezone) to its
+        // check-in, averaged by source, for the stays ARRIVING in the
+        // timeframe — taken from the Bookings set, so a channel block echoing
+        // a booking is not a second stay. Left out: a booking made AFTER its
+        // own check-in (13 on live, the WD) and one with no made-on date.
+        function leadTimes(mine, w) {
+            var by = { all: { n: 0, days: 0 } };
+            mine.forEach(function (b) {
+                if (b.checkin < w.from || b.checkin > w.to || !b.madeOn || b.madeOn > b.checkin) return;
+                var k = sourceOf(b), d = nightsBetween(b.madeOn, b.checkin);
+                by[k] = by[k] || { n: 0, days: 0 };
+                by[k].n++; by[k].days += d;
+                by.all.n++; by.all.days += d;
+            });
+            return by;
+        }
+
+        // PACE (0.46.0, Rob): cottage-nights on the books for the k nights
+        // from `start`. With `asOf`, only what was on the books ON THAT DATE —
+        // made on or before it — so a booking made after its own check-in
+        // counts from the day it was made, and one with no made-on date is
+        // not counted. Cancelled bookings are not in the data at all, so a
+        // year-ago figure is slightly low (said in the tip).
+        function paceNights(data, start, k, asOf) {
+            var list = (data.bookings || []).filter(function (b) { return !asOf || (b.madeOn && b.madeOn <= asOf); });
+            return own(list, daysBetween(start, shiftDay(start, k - 1))).booked;
+        }
+
+        // ---- drawing ----------------------------------------------------------
+
+        function el(tag, cls, text) {
+            var e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text !== undefined) e.textContent = text;
+            return e;
+        }
+        function nightsText(v) { return (v === 1 ? (S.stNight || '{n} night') : (S.stNights || '{n} nights')).replace('{n}', String(v)); }
+
+        // ▲8 / ▼3 / ±0 / —. What is SEEN is the arrow; what is READ is a
+        // sentence, "up 8 points on the same dates a year earlier".
+        function deltaEl(tag, cls, v, decimals, vs) {
+            var e = el(tag, cls);
+            var seen = el('span', '');
+            seen.setAttribute('aria-hidden', 'true');
+            var said = el('span', 'mphbac-sr-only');
+            if (v === null || v === undefined || isNaN(v)) {
+                e.className += ' is-none';
+                seen.textContent = '—';
+                said.textContent = S.stSrNone || '';
+            } else {
+                var f = Math.pow(10, decimals || 0), r = Math.round(v * f) / f;
+                var abs = Math.abs(r).toFixed(decimals || 0);
+                if (r === 0) {
+                    e.className += ' is-same';
+                    seen.textContent = '±0';
+                    said.textContent = (S.stSrSame || '').replace('{vs}', vs || '');
+                } else {
+                    e.className += r > 0 ? ' is-up' : ' is-down';
+                    seen.textContent = (r > 0 ? '▲' : '▼') + abs;
+                    said.textContent = ((r > 0 ? S.stSrUp : S.stSrDown) || '').replace('{n}', abs).replace('{vs}', vs || '');
+                }
+            }
+            e.appendChild(seen);
+            e.appendChild(said);
+            return e;
+        }
+
+        function blockHead(sec, key, title, lines) {
+            var row = el('div', 'mphbac-staff-stats-hrow');
+            row.appendChild(el('h3', 'mphbac-staff-stats-h', title || ''));
+            row.appendChild(tipEl(key, title || '', lines));
+            sec.appendChild(row);
+        }
+
+        function drawStats(got, w, plan) {
+            var data = got[0];
             var n = statsNumbers(data, w);
+            var ly = got[2] ? statsNumbers(got[2], plan.ly.w) : null;
+            var pv = got[1] ? statsNumbers(got[1], plan.prev.w) : null;
+            // A pinned tip (or a focused ⓘ) survives the 3-minute refresh.
+            var keepTip = tipOpen && tipOpen.pinned ? tipOpen.key : null;
+            var focusTip = document.activeElement && document.activeElement.classList.contains('mphbac-staff-tip')
+                && statsOut.contains(document.activeElement) ? document.activeElement.parentNode.getAttribute('data-tip') : null;
+            closeTip();
             // Built off the page and swapped in one step (0.45.3): see renderStats.
             var out = document.createDocumentFragment();
-            var el = function (tag, cls, text) {
-                var e = document.createElement(tag);
-                if (cls) e.className = cls;
-                if (text !== undefined) e.textContent = text;
-                return e;
-            };
-            var range = el('p', 'mphbac-staff-stats-range', w.from === w.to ? mediumDay(w.from) : mediumDay(w.from) + ' – ' + mediumDay(w.to));
-            out.appendChild(range);
 
+            // THE TILES, each with its ⓘ and ▲ ▼ against the same dates a year
+            // earlier (0.46.0): points for %, nights for Length, counts for the
+            // rest.
+            var vsLine = plan.ly.why ? noCompareText(plan.ly.why)
+                : (S.stVsLastYear || '').replace('{range}', rangeLabel(plan.ly.w.from, plan.ly.w.to));
             var grid = el('dl', 'mphbac-staff-stats-kpis');
-            var kpi = function (key, label, value, tip) {
+            var minus = function (a, b) {
+                return (!ly || a === null || a === undefined || b === null || b === undefined) ? null : a - b;
+            };
+            var kpi = function (key, label, value, tip, delta, decimals) {
                 var box = el('div', 'mphbac-staff-kpi is-' + key);
                 box.appendChild(el('dt', 'mphbac-staff-kpi-label', label || ''));
                 box.appendChild(el('dd', 'mphbac-staff-kpi-num', String(value)));
-                if (tip) box.title = tip;
+                box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, S.stVsYearSr));
+                var more = el('dd', 'mphbac-staff-kpi-more');
+                more.appendChild(tipEl(key, label || '', [tip, vsLine]));
+                box.appendChild(more);
                 grid.appendChild(box);
             };
             // Order (WD): two full rows of three on a phone.
-            kpi('bookings', S.stBookings, n.bookings, S.stBookingsTip);
-            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip);
-            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), S.stLengthTip);
+            kpi('bookings', S.stBookings, n.bookings, S.stBookingsTip, minus(n.bookings, ly && ly.bookings));
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip, minus(n.pct, ly && ly.pct));
+            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), S.stLengthTip,
+                minus(n.length, ly && ly.length), 1);
             // "nights" in a smaller size, so the figure fits a phone's tile;
             // the text still reads "4.2 nights".
             (function (dd) {
@@ -1463,36 +1759,48 @@
                 dd.textContent = m[1];
                 dd.appendChild(el('span', 'mphbac-staff-kpi-unit', m[2]));
             })(grid.lastChild.querySelector('.mphbac-staff-kpi-num'));
-            kpi('arrivals', S.stArrivals, n.arrivals);
-            kpi('departures', S.stDepartures, n.departures);
-            kpi('turnovers', S.stTurnovers, n.turnovers);
-            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse);
+            kpi('arrivals', S.stArrivals, n.arrivals, S.stArrivalsTip, minus(n.arrivals, ly && ly.arrivals));
+            kpi('departures', S.stDepartures, n.departures, S.stDeparturesTip, minus(n.departures, ly && ly.departures));
+            kpi('turnovers', S.stTurnovers, n.turnovers, S.stTurnoversTip, minus(n.turnovers, ly && ly.turnovers));
+            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, S.stInHouseTip, minus(n.inHouse, ly && ly.inHouse));
             out.appendChild(grid);
 
-            // Nights booked per cottage: a short horizontal bar each.
-            var per = el('section', 'mphbac-staff-stats-block');
-            per.appendChild(el('h3', 'mphbac-staff-stats-h', S.stPerCottage || ''));
+            // NIGHTS BOOKED BY COTTAGE (0.46.0, Rob): nights, % of the
+            // timeframe's nights and its bar; ranked by %, highest first, ties
+            // in cottage order; ▲ ▼ in points against the PREVIOUS timeframe.
+            var per = el('section', 'mphbac-staff-stats-block is-percot');
+            blockHead(per, 'percot', S.stPerCottage, [
+                (S.stPerCottageTip || '').replace('{n}', String(n.nights)),
+                plan.prev.why ? noCompareText(plan.prev.why)
+                    : (S.stVsPrev || '').replace('{range}', rangeLabel(plan.prev.w.from, plan.prev.w.to))]);
             var list = el('ul', 'mphbac-staff-percot');
-            n.cottages.forEach(function (c) {
-                var v = n.perCottage[c.id] || 0;
-                var li = el('li', 'mphbac-staff-percot-row');
-                li.appendChild(el('span', 'mphbac-staff-percot-name', (c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
-                var track = el('span', 'mphbac-staff-percot-track');
-                var fill = el('span', 'mphbac-staff-percot-fill');
-                fill.style.width = (n.nights ? Math.round(1000 * v / n.nights) / 10 : 0) + '%';
-                track.appendChild(fill);
-                li.appendChild(track);
-                li.appendChild(el('span', 'mphbac-staff-percot-num', (v === 1 ? (S.stNight || '{n} night') : (S.stNights || '{n} nights')).replace('{n}', String(v))));
-                list.appendChild(li);
-            });
+            var pct = function (v, of) { return of ? Math.round(100 * v / of) : 0; };
+            n.cottages.map(function (c, i) { return { c: c, i: i, v: n.perCottage[c.id] || 0 }; })
+                .sort(function (a, b) { return b.v - a.v || a.i - b.i; })
+                .forEach(function (r) {
+                    var c = r.c, v = r.v, p = pct(v, n.nights);
+                    var li = el('li', 'mphbac-staff-percot-row');
+                    li.setAttribute('data-cottage', String(c.id));
+                    li.appendChild(el('span', 'mphbac-staff-percot-name', (c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
+                    var track = el('span', 'mphbac-staff-percot-track');
+                    var fill = el('span', 'mphbac-staff-percot-fill');
+                    fill.style.width = (n.nights ? Math.round(1000 * v / n.nights) / 10 : 0) + '%';
+                    track.appendChild(fill);
+                    li.appendChild(track);
+                    li.appendChild(el('span', 'mphbac-staff-percot-num', nightsText(v)));
+                    li.appendChild(el('span', 'mphbac-staff-percot-pct', p + '%'));
+                    li.appendChild(deltaEl('span', 'mphbac-staff-percot-delta',
+                        pv ? p - pct(pv.perCottage[c.id] || 0, pv.nights) : null, 0, S.stVsPrevSr));
+                    list.appendChild(li);
+                });
             per.appendChild(list);
             out.appendChild(per);
 
             // Share of NIGHTS booked by source (Rob: nights, not bookings): an
             // inline SVG pie in the source colours, and the same numbers as
             // plain text for anyone not looking at the picture.
-            var src = el('section', 'mphbac-staff-stats-block');
-            src.appendChild(el('h3', 'mphbac-staff-stats-h', S.stBySource || ''));
+            var src = el('section', 'mphbac-staff-stats-block is-source');
+            blockHead(src, 'source', S.stBySource, [S.stBySourceTip]);
             if (!n.booked) {
                 src.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoNights || ''));
             } else {
@@ -1504,22 +1812,365 @@
                     if (!v) return;
                     var li = el('li', 'mphbac-staff-pie-item is-src-' + k);
                     li.appendChild(el('span', 'mphbac-staff-pie-swatch'));
-                    li.appendChild(document.createTextNode(sourceName({ sourceKey: k }) + ' — ' + pctOf(v, n.booked) + '% ('
-                        + (v === 1 ? (S.stNight || '{n} night') : (S.stNights || '{n} nights')).replace('{n}', String(v)) + ')'));
+                    li.appendChild(document.createTextNode(sourceName({ sourceKey: k }) + ' — ' + pctOf(v, n.booked) + '% (' + nightsText(v) + ')'));
                     ul.appendChild(li);
                 });
                 wrap.appendChild(ul);
                 src.appendChild(wrap);
             }
             out.appendChild(src);
+
+            out.appendChild(drawMix(n));
+            out.appendChild(drawWeekdays(n));
+            out.appendChild(drawLead(n, w));
+            out.appendChild(drawPace(got[4], got[5], plan));
+            out.appendChild(drawHeat(got[3], plan.year, w, n.cottages.length));
+
             statsOut.textContent = '';
             statsOut.appendChild(out);
-            fitRange(range);
+            if (keepTip || focusTip) {
+                var again = statsOut.querySelector('.mphbac-staff-tipwrap[data-tip="' + (keepTip || focusTip) + '"]');
+                if (again && keepTip) openTip(again, true);
+                if (again && focusTip) again.firstChild.focus();
+            }
+        }
+
+        // LENGTH OF STAY (0.46.0): 1–2, 3–6, 7–27 and 28+ nights.
+        function drawMix(n) {
+            var sec = el('section', 'mphbac-staff-stats-block is-mix');
+            blockHead(sec, 'mix', S.stMix, [S.stMixTip]);
+            if (!n.bookings) {
+                sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoStays || ''));
+                return sec;
+            }
+            var counts = stayMix(n.mine);
+            var ul = el('ul', 'mphbac-staff-mix');
+            counts.forEach(function (v, i) {
+                var li = el('li', 'mphbac-staff-mix-row');
+                li.appendChild(el('span', 'mphbac-staff-mix-name', S['stMix' + i] || ''));
+                var track = el('span', 'mphbac-staff-percot-track');
+                var fill = el('span', 'mphbac-staff-percot-fill');
+                fill.style.width = pctOf(v, n.bookings) + '%';
+                track.appendChild(fill);
+                li.appendChild(track);
+                li.appendChild(el('span', 'mphbac-staff-mix-num', v + ' (' + pctOf(v, n.bookings) + '%)'));
+                ul.appendChild(li);
+            });
+            sec.appendChild(ul);
+            return sec;
+        }
+
+        // ARRIVALS AND DEPARTURES BY WEEKDAY (0.46.0), Sunday to Saturday.
+        function drawWeekdays(n) {
+            var sec = el('section', 'mphbac-staff-stats-block is-weekdays');
+            blockHead(sec, 'weekdays', S.stWeekdays, [S.stWeekdaysTip]);
+            var max = Math.max.apply(null, n.inByDay.concat(n.outByDay).concat([1]));
+            var chart = el('div', 'mphbac-staff-wk');
+            chart.setAttribute('aria-hidden', 'true');
+            var said = el('ul', 'mphbac-sr-only');
+            for (var d = 0; d < 7; d++) {
+                var col = el('div', 'mphbac-staff-wk-day');
+                var bars = el('div', 'mphbac-staff-wk-bars');
+                [['in', n.inByDay[d]], ['out', n.outByDay[d]]].forEach(function (k) {
+                    var c = el('span', 'mphbac-staff-wk-col is-' + k[0]);
+                    c.appendChild(el('span', 'mphbac-staff-wk-num', String(k[1])));
+                    var bar = el('span', 'mphbac-staff-wk-bar');
+                    bar.style.height = Math.round(72 * k[1] / max) + 'px';
+                    c.appendChild(bar);
+                    bars.appendChild(c);
+                });
+                col.appendChild(bars);
+                col.appendChild(el('span', 'mphbac-staff-wk-name', ((CAL.weekdays || [])[d] || '').slice(0, 3)));
+                chart.appendChild(col);
+                said.appendChild(el('li', '', (S.stWeekdaySr || '').replace('{day}', (CAL.weekdaysFull || CAL.weekdays || [])[d] || '')
+                    .replace('{in}', String(n.inByDay[d])).replace('{out}', String(n.outByDay[d]))));
+            }
+            var key = el('p', 'mphbac-staff-wk-key');
+            key.setAttribute('aria-hidden', 'true');
+            [['in', S.stArrivals], ['out', S.stDepartures]].forEach(function (k) {
+                var s = el('span', 'mphbac-staff-wk-keyitem is-' + k[0]);
+                s.appendChild(el('span', 'mphbac-staff-wk-swatch'));
+                s.appendChild(document.createTextNode(k[1] || ''));
+                key.appendChild(s);
+            });
+            sec.appendChild(chart);
+            sec.appendChild(key);
+            sec.appendChild(said);
+            return sec;
+        }
+
+        // HOW FAR AHEAD THEY BOOK (0.46.0), by source, then all together.
+        function drawLead(n, w) {
+            var sec = el('section', 'mphbac-staff-stats-block is-lead');
+            blockHead(sec, 'lead', S.stLead, [S.stLeadTip]);
+            var by = leadTimes(n.mine, w);
+            if (!by.all.n) {
+                sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoLead || ''));
+                return sec;
+            }
+            var ul = el('ul', 'mphbac-staff-lead');
+            SOURCES.concat(['all']).forEach(function (k) {
+                var v = by[k];
+                if (!v || !v.n) return;
+                var days = Math.round(v.days / v.n);
+                var li = el('li', 'mphbac-staff-lead-row' + (k === 'all' ? ' is-all' : ' is-src-' + k));
+                li.setAttribute('data-source', k);
+                if (k !== 'all') li.appendChild(el('span', 'mphbac-staff-pie-swatch'));
+                li.appendChild(el('span', 'mphbac-staff-lead-name', k === 'all' ? (S.stAllSources || '') : sourceName({ sourceKey: k })));
+                li.appendChild(el('span', 'mphbac-staff-lead-num',
+                    ((days === 1 ? S.stDay : S.stDays) || '{n} days').replace('{n}', String(days))
+                    + ' (' + ((v.n === 1 ? S.stStay : S.stStays) || '{n} stays').replace('{n}', String(v.n)) + ')'));
+                ul.appendChild(li);
+            });
+            sec.appendChild(ul);
+            return sec;
+        }
+
+        // PACE (0.46.0): the next 30 / 60 / 90 nights from tonight, against
+        // what was on the books on this date a year ago for the same nights a
+        // year earlier. It does not follow the timeframe.
+        function drawPace(nowData, agoData, plan) {
+            var sec = el('section', 'mphbac-staff-stats-block is-pace');
+            blockHead(sec, 'pace', S.stPace, [S.stPaceTip, plan.pace.why ? noCompareText(plan.pace.why) : '']);
+            var ul = el('ul', 'mphbac-staff-pace');
+            [30, 60, 90].forEach(function (k) {
+                var now = paceNights(nowData, plan.pace.now.from, k, null);
+                var ago = agoData ? paceNights(agoData, plan.pace.ago.from, k, plan.pace.asOf) : null;
+                var li = el('li', 'mphbac-staff-pace-row');
+                li.setAttribute('data-days', String(k));
+                li.appendChild(el('span', 'mphbac-staff-pace-name', (S.stPaceNext || '').replace('{n}', String(k))));
+                li.appendChild(el('span', 'mphbac-staff-pace-num', (S.stPaceNights || '{n} nights booked').replace('{n}', String(now))));
+                var d = deltaEl('span', 'mphbac-staff-pace-delta', ago === null ? null : now - ago, 0, S.stVsAgo);
+                var vs = el('span', 'mphbac-staff-pace-vs', ' ' + (S.stVsAgo || ''));
+                vs.setAttribute('aria-hidden', 'true');
+                d.insertBefore(vs, d.lastChild);
+                li.appendChild(d);
+                ul.appendChild(li);
+            });
+            sec.appendChild(ul);
+            return sec;
+        }
+
+        // THE YEAR AS A HEAT MAP (0.46.0): one square a night of the calendar
+        // year holding the timeframe, shaded by how many cottages were booked
+        // that night — nine steps of the site's button blue, #0A50B2 — with
+        // the timeframe outlined. Tapping a night opens the board on it.
+        function drawHeat(data, year, w, total) {
+            var sec = el('section', 'mphbac-staff-stats-block is-heat');
+            var title = (S.stHeat || '{year}').replace('{year}', year.y);
+            blockHead(sec, 'heat', title, [(S.stHeatTip || '').replace('{year}', year.y).replace('{n}', String(total))]);
+            var nights = daysBetween(year.w.from, year.w.to);
+            var per = data ? own(data.bookings || [], nights).perNight : {};
+            var grid = el('div', 'mphbac-staff-heat');
+            var inW = function (d) { return !!d && d >= w.from && d <= w.to; };
+            for (var m = 1; m <= 12; m++) {
+                var ym = year.y + '-' + pad(m);
+                var mon = el('div', 'mphbac-staff-heat-month');
+                mon.appendChild(el('span', 'mphbac-staff-heat-name', shortMonth(ym + '-01')));
+                var days = el('div', 'mphbac-staff-heat-days');
+                var lead = (new Date(ym + '-01T00:00:00').getDay() - SOW + 7) % 7;
+                for (var i = 0; i < lead; i++) days.appendChild(el('span', 'mphbac-staff-heat-pad'));
+                var md = monthDays(ym);
+                md.forEach(function (d, i) {
+                    var cell = el('span', 'mphbac-staff-heat-day');
+                    if (d < year.w.from || d > year.w.to || !data) {
+                        cell.className += ' is-none';
+                    } else {
+                        var v = Math.min(total, per[d] || 0);
+                        var lvl = !v ? 0 : Math.max(1, Math.round(8 * v / Math.max(1, total)));
+                        cell.className += ' is-l' + lvl;
+                        cell.setAttribute('data-day', d);
+                        cell.setAttribute('data-n', String(v));
+                        cell.title = (S.stHeatDay || '').replace('{date}', mediumDay(d)).replace('{n}', String(v)).replace('{total}', String(total));
+                    }
+                    // The outline: only the timeframe's OUTER edges in this
+                    // month's 7-column grid, so it reads as one shape.
+                    if (inW(d)) {
+                        var p = lead + i, e = ' is-in';
+                        if (!inW(md[i - 7])) e += ' is-et';
+                        if (!inW(md[i + 7])) e += ' is-eb';
+                        if (p % 7 === 0 || !inW(md[i - 1])) e += ' is-el';
+                        if (p % 7 === 6 || !inW(md[i + 1])) e += ' is-er';
+                        cell.className += e;
+                    }
+                    days.appendChild(cell);
+                });
+                mon.appendChild(days);
+                grid.appendChild(mon);
+            }
+            // The picture is for the eye; its tip says what it shows, and the
+            // board holds every night it is drawn from.
+            grid.setAttribute('aria-hidden', 'true');
+            grid.addEventListener('click', function (e) {
+                var c = e.target.closest ? e.target.closest('.mphbac-staff-heat-day[data-day]') : null;
+                if (c) jumpBoard(c.getAttribute('data-day'));
+            });
+            sec.appendChild(grid);
+            var key = el('p', 'mphbac-staff-heat-key');
+            key.setAttribute('aria-hidden', 'true');
+            key.appendChild(el('span', 'mphbac-staff-heat-keylabel', '0'));
+            for (var l = 0; l <= 8; l++) key.appendChild(el('span', 'mphbac-staff-heat-day is-l' + l));
+            key.appendChild(el('span', 'mphbac-staff-heat-keylabel', (S.stHeatAll || '{n}').replace('{n}', String(total))));
+            sec.appendChild(key);
+            return sec;
+        }
+
+        // The board, sent to a night from the heat map — in whatever period
+        // it shows — and brought into view.
+        function jumpBoard(d) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < CAP_LO || d > CAP_HI) return;
+            state.anchor = d;
+            render();
+            var top = root.querySelector('.mphbac-staff-topbar') || gridEl;
+            if (top.scrollIntoView) top.scrollIntoView({ block: 'start' });
+        }
+
+        // ---- ⓘ TIPS (0.46.0, Rob) ----------------------------------------------
+        // A real button on every tile and block: tap or click opens its bubble,
+        // tapping anywhere else (or Escape) closes it, and one is open at a
+        // time. On a computer, hovering shows it too; a click then keeps it.
+        // aria-expanded says which is open, and the bubble follows its button
+        // in reading order. The text is the server's, written with textContent.
+        var tipOpen = null;
+        var FINE = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
+        function tipEl(key, name, lines) {
+            var wrap = el('span', 'mphbac-staff-tipwrap');
+            wrap.setAttribute('data-tip', key);
+            var btn = el('button', 'mphbac-staff-tip');
+            btn.type = 'button';
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', (S.stAbout || '{name}').replace('{name}', name));
+            btn.appendChild(infoIcon());
+            var box = el('span', 'mphbac-staff-tipbox');
+            box.id = 'mphbac-staff-tip-' + (++TIP_SEQ);
+            box.hidden = true;
+            lines.forEach(function (t) { if (t) box.appendChild(el('span', 'mphbac-staff-tipline', t)); });
+            btn.setAttribute('aria-controls', box.id);
+            wrap.appendChild(btn);
+            wrap.appendChild(box);
+            btn.addEventListener('click', function () {
+                if (tipOpen && tipOpen.wrap === wrap) {
+                    if (tipOpen.pinned) closeTip(); else tipOpen.pinned = true;
+                } else {
+                    openTip(wrap, true);
+                }
+            });
+            btn.addEventListener('mouseenter', function () {
+                if (FINE && FINE.matches && !(tipOpen && tipOpen.pinned)) openTip(wrap, false);
+            });
+            // A tap on the bubble closes it too: on a phone it covers the
+            // tiles under it, and a tap there means "done with this".
+            box.addEventListener('click', function () { closeTip(); });
+            wrap.addEventListener('mouseleave', function () {
+                if (tipOpen && tipOpen.wrap === wrap && !tipOpen.pinned) closeTip();
+            });
+            return wrap;
+        }
+        function infoIcon() {
+            var NS = 'http://www.w3.org/2000/svg';
+            var svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('aria-hidden', 'true');
+            svg.setAttribute('focusable', 'false');
+            [['circle', { cx: 12, cy: 12, r: 9 }], ['path', { d: 'M12 8h.01M11 12h1v4h1' }]].forEach(function (s) {
+                var e = document.createElementNS(NS, s[0]);
+                Object.keys(s[1]).forEach(function (a) { e.setAttribute(a, String(s[1][a])); });
+                svg.appendChild(e);
+            });
+            return svg;
+        }
+        function openTip(wrap, pinned) {
+            if (tipOpen && tipOpen.wrap !== wrap) closeTip();
+            wrap.lastChild.hidden = false;
+            wrap.firstChild.setAttribute('aria-expanded', 'true');
+            tipOpen = { wrap: wrap, pinned: pinned, key: wrap.getAttribute('data-tip') };
+            placeTip(wrap);
+        }
+        function closeTip() {
+            if (!tipOpen) return;
+            tipOpen.wrap.lastChild.hidden = true;
+            tipOpen.wrap.firstChild.setAttribute('aria-expanded', 'false');
+            tipOpen = null;
+        }
+        // Under its button, and kept inside the Stats section's width.
+        function placeTip(wrap) {
+            var btn = wrap.firstChild, box = wrap.lastChild;
+            box.style.left = '0px';
+            box.style.top = '0px';
+            var par = (box.offsetParent || statsOut).getBoundingClientRect();
+            var lim = statsOut.getBoundingClientRect();
+            var b = btn.getBoundingClientRect(), bw = box.offsetWidth;
+            var left = Math.max(lim.left, Math.min(b.left + b.width / 2 - bw / 2, lim.right - bw));
+            box.style.left = Math.round(left - par.left) + 'px';
+            box.style.top = Math.round(b.bottom - par.top + 6) + 'px';
+        }
+        document.addEventListener('click', function (e) {
+            if (tipOpen && !tipOpen.wrap.contains(e.target)) closeTip();
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || !tipOpen) return;
+            var b = tipOpen.wrap.firstChild;
+            closeTip();
+            b.focus();
+        });
+        window.addEventListener('resize', function () { if (tipOpen) placeTip(tipOpen.wrap); });
+
+        // ---- LAST YEAR'S GHOSTS (0.46.0, Rob) -----------------------------------
+        // A switch beside Show: last year's bookings, by calendar date, drawn
+        // as faint dashed outlines behind this year's bars. Off on every load.
+        // A ghost is aria-hidden, takes no taps (pointer-events: none), and
+        // carries no name, no number and no colour of a source — nothing on it
+        // can be read as a booking.
+        function drawGhosts(chart) {
+            var from = chart.getAttribute('data-from'), to = chart.getAttribute('data-to');
+            if (!from || !to || !chart._rows) return;
+            var r = clampCap({ from: yearBack(from), to: yearBack(to) });
+            if (r.from > r.to) return;
+            fetchRange(r).then(function (data) {
+                if (!chart.isConnected || !ghostsEl || !ghostsEl.checked || chart.querySelector('.mphbac-staff-ghost')) return;
+                var days = chart._days, N = days.length, idx = {}, seen = {};
+                days.forEach(function (d, i) { idx[d] = i; });
+                var frag = document.createDocumentFragment();
+                (data.bookings || []).forEach(function (b) {
+                    if (!b.checkin || !b.checkout) return;
+                    var ci = shiftYears(b.checkin, 1), co = shiftYears(b.checkout, 1);
+                    if (co < from || ci > to) return;
+                    var s = ci < from ? 0 : 2 * idx[ci] + 1;
+                    var e = co > to ? 2 * N : 2 * idx[co] + 1;
+                    if (isNaN(s) || isNaN(e) || e <= s) return;
+                    (b.cottages || []).forEach(function (c) {
+                        var row = chart._rows[c.roomTypeId], k = c.roomTypeId + '|' + ci + '|' + co;
+                        if (!row || seen[k]) return;
+                        seen[k] = 1;
+                        var g = document.createElement('div');
+                        g.className = 'mphbac-staff-ghost';
+                        g.setAttribute('aria-hidden', 'true');
+                        g.style.gridColumn = (2 + s) + ' / ' + (2 + e);
+                        g.style.gridRow = String(row);
+                        frag.appendChild(g);
+                    });
+                });
+                chart.appendChild(frag);
+            }).catch(function (err) {
+                if (!tokenReload(err)) say(failureText(err), true);
+            });
+        }
+        function clearGhosts() {
+            [].forEach.call(gridEl.querySelectorAll('.mphbac-staff-ghost'), function (g) { g.parentNode.removeChild(g); });
+        }
+        if (ghostsEl) {
+            ghostsEl.checked = false;          // off on every load, whatever a browser restores
+            ghostsEl.addEventListener('change', function () {
+                if (ghostsEl.checked && gridEl.firstChild) drawGhosts(gridEl.firstChild);
+                else clearGhosts();
+            });
         }
 
         // THE RANGE LINE IS BIG AND ONE LINE (0.45.3, Rob): it is what says
         // what the figures are for. It starts at its full CSS size and steps
         // down only as far as the width needs — never wrapping, never cut.
+        // Since 0.46.0 it sits between ‹ and ›, so the width is what the
+        // arrows leave it.
         function fitRange(p) {
             if (!p || !p.isConnected) return;
             p.style.fontSize = '';
@@ -1529,9 +2180,7 @@
                 p.style.fontSize = size + 'px';
             }
         }
-        window.addEventListener('resize', function () {
-            if (statsOut) fitRange(statsOut.querySelector('.mphbac-staff-stats-range'));
-        });
+        window.addEventListener('resize', function () { fitRange(statsRange); });
 
         // The second box follows Timeframe (0.45.3, Rob's design): its label
         // and kind, shown from the one period above.
@@ -1565,7 +2214,7 @@
             }
         }
 
-        function pctOf(v, total) { return Math.round(100 * v / total); }
+        function pctOf(v, total) { return total ? Math.round(100 * v / total) : 0; }
 
         function pie(bySource, total) {
             var NS = 'http://www.w3.org/2000/svg';
@@ -1618,6 +2267,8 @@
             [statsDate, statsFrom, statsTo].forEach(function (i) { if (i) { i.min = CAP_LO; i.max = CAP_HI; } });
             statsSync();
             statsEl.addEventListener('toggle', function () { if (statsEl.open) renderStats(); });
+            if (statsPrev) statsPrev.addEventListener('click', function () { statsStep(-1); });
+            if (statsNext) statsNext.addEventListener('click', function () { statsStep(1); });
             var restat = function () { if (statsEl.open) renderStats(); else statsSync(); };
             statsSpan.addEventListener('change', function () {
                 var to = statsSpan.value, from = statsLastSpan;

@@ -127,6 +127,24 @@ echo "\n-- no PII in page HTML --\n";
         && !preg_match("/'url'\s*=>\s*\\\$(photo|url)/", $data));
 }
 
+echo "\n-- the made-on date goes to the staff endpoint only (0.46.0, the WD) --\n";
+{
+    $inc = dirname(__DIR__) . '/mphb-availability-calendar/includes';
+    $with = [];
+    foreach (glob($inc . '/*.php') as $f) {
+        if (str_contains(file_get_contents($f), 'madeOn')) { $with[] = basename($f); }
+    }
+    check('"madeOn" is written by class-staff-data.php and nowhere else in the plugin\'s PHP',
+        $with === ['class-staff-data.php'], $with);
+    $data = file_get_contents($inc . '/class-staff-data.php');
+    check('...inside month_view(), the payload the gated range endpoint sends',
+        (bool) preg_match('/function month_view\(.*?\'madeOn\'\s*=>\s*self::made_on\(\$bid\)/s', $data)
+        && substr_count($data, "'madeOn'") === 1);
+    $widget = file_get_contents($inc . '/class-staff-widget.php');
+    check('the page carries only the "Records complete from" SETTING (a date, no guest data), read from the plugin setting',
+        str_contains($widget, "'recordsFrom' => (string) Settings::get('records_complete_from')"));
+}
+
 @unlink($GLOBALS['t_errlog']);
 echo "\n-- every registered staff endpoint runs the gate FIRST (0.45.0) --\n";
 {

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.4
+Stable tag: 0.46.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,22 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.0 =
+Staff board only (/staff/). Nothing changes on the home page or cottage pages.
+
+* **The legend:** a little more space under it, and on a phone two tidy rows: the sources (Direct, Airbnb, Booking.com, Vrbo), then Turnover, Pets, Couch and Boat.
+* **The date line shows the days on screen** and follows as you scroll, in every Show mode: "Oct 12 – Nov 8, 2026", "Dec 20, 2026 – Jan 16, 2027", or "Oct 12, 2026" for one day. It stays on one line on a phone.
+* **The month band** is white on blue, a little larger, with a white line at each 1st. The header is no taller.
+* **Short bars** show the guest's name, then their initials, then the nights, then only the icons. A booking with no name shows its number.
+* "No bookings match." is centred; the values in Timeframe, Month, Show and Go to date are centred in their boxes.
+* **Stats: a ⓘ on every tile and section.** Tap or click it for what the figure counts; tap anywhere else to close. On a computer, hovering shows it too.
+* **Stats: ‹ › arrows** either side of the dates step one timeframe back or on (a custom range by its own length). The boxes above follow.
+* **Stats: compared with a year earlier.** Each tile shows ▲ or ▼ against the same dates a year before: points for Booked, nights for Length, a count for the rest.
+* **Stats: Nights Booked by Cottage** shows each cottage's % of the timeframe's nights, highest first, with ▲ or ▼ in points against the previous timeframe.
+* **Stats: five new sections.** Length of Stay (1–2, 3–6, 7–27, 28+ nights); Arrivals and Departures by Weekday; How Far Ahead They Book (average days from booking to check-in, by source); Pace (nights booked for the next 30 / 60 / 90 days against what was on the books on this date a year ago); and the year as a heat map, one square a night, darker the more cottages were booked. Tap a night to open the calendar on it.
+* **New setting: Records complete from** (Settings, default Oct 1, 2025). No comparison reaches before it; one that would shows "—", and its ⓘ says why.
+* **Last year switch** beside Show: draws last year's bookings as faint dashed outlines behind this year's, by calendar date. Off every time the page loads.
 
 = 0.45.4 =
 * **Faster pages.** The calendar's scripts are now sent compacted: about 43 KB instead of 156 KB on the home page and cottage pages (13 KB instead of 43 KB after compression), and 44 KB instead of 109 KB on the staff board. Nothing else changes.

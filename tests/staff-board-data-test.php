@@ -169,13 +169,15 @@ namespace {
     check('import, 2 in a 2-sleeper: nothing unconfirmed, 2 confirmed', $g[56] === '' && $g[57] === '2', $g);
 
     echo "\n-- 0.46.0: each booking's made-on date (post_date, site time), for pace and lead time --\n";
-    $b = board([80 => [[], ['_mphb_adults' => 2]], 81 => [[], ['_mphb_adults' => 2]]]);
+    $b = board([80 => [[], ['_mphb_adults' => 2]], 81 => [[], ['_mphb_adults' => 2]], 82 => [[], ['_mphb_adults' => 2]]]);
     $GLOBALS['t_posts'][80]->post_date = '2026-02-28 23:40:00';     // late evening, site time
+    $GLOBALS['t_posts'][82]->post_date = '0000-00-00 00:00:00';     // WordPress's "no date"
     $b = (static function () { $out = [];
         foreach (\MPHBAC\Staff_Data::month_view(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-31'))['bookings'] as $x) { $out[$x['id']] = $x; }
         return $out; })();
     check('madeOn is the post_date\'s calendar day, as stored (the site\'s own time zone — no UTC shift)', ($b[80]['madeOn'] ?? null) === '2026-02-28', $b[80]['madeOn'] ?? null);
     check('no post_date: madeOn is empty, never a made-up day', ($b[81]['madeOn'] ?? null) === '', $b[81]['madeOn'] ?? null);
+    check('WordPress\'s zero date (0000-00-00): empty too — never counted as made in year 0', ($b[82]['madeOn'] ?? null) === '', $b[82]['madeOn'] ?? null);
 
     echo "\n-- 2026-10-11 pet policy: the new fee is a pet for the paw, Daily and the preview --\n";
     $b = board([

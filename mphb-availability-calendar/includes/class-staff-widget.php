@@ -157,7 +157,7 @@ final class Staff_Widget
                 'stBookings'   => __('Bookings', 'mphb-availability-calendar'),
                 'stBookingsTip'=> __('Bookings with at least one night in the timeframe. A booking repeated by a channel block counts once.', 'mphb-availability-calendar'),
                 'stLength'     => __('Length', 'mphb-availability-calendar'),
-                'stLengthTip'  => __('The average length of those bookings\' whole stays, including any nights outside the timeframe.', 'mphb-availability-calendar'),
+                'stLengthTip'  => __('The average whole stay of the bookings counted in Bookings, including any nights outside the timeframe.', 'mphb-availability-calendar'),
                 'stDayLabel'   => __('Day', 'mphb-availability-calendar'),
                 'stWeekOf'     => __('Week of', 'mphb-availability-calendar'),
                 'stPerCottage' => __('Nights Booked by Cottage', 'mphb-availability-calendar'),
@@ -168,6 +168,53 @@ final class Staff_Widget
                 'stCapped'     => __('Custom ranges are limited to 400 days: showing {from} – {to}.', 'mphb-availability-calendar'),
                 'stClamped'    => __('Part of this timeframe is outside the board\'s ±3-year range: showing {from} – {to}.', 'mphb-availability-calendar'),
                 'stBadRange'   => __('Please check the dates.', 'mphb-availability-calendar'),
+                // 0.46.0 (Rob): the ⓘ tips, the comparisons, the new blocks.
+                'prevRange'    => __('Previous timeframe', 'mphb-availability-calendar'),
+                'nextRange'    => __('Next timeframe', 'mphb-availability-calendar'),
+                'stAbout'      => __('About {name}', 'mphb-availability-calendar'),
+                'stArrivalsTip' => __('Check-ins in this timeframe. Every booking counts, channel blocks included, so a stay a channel also blocks counts twice.', 'mphb-availability-calendar'),
+                'stDeparturesTip' => __('Check-outs in this timeframe. Every booking counts, channel blocks included, so a stay a channel also blocks counts twice.', 'mphb-availability-calendar'),
+                'stTurnoversTip' => __('Days in this timeframe on which one booking checks out of a cottage and a different one checks in: one per cottage per day.', 'mphb-availability-calendar'),
+                'stInHouseTip' => __('Bookings that arrived before this day and leave after it. Arrivals and departures on the day are not included; channel blocks count, as in Arrivals.', 'mphb-availability-calendar'),
+                'stVsLastYear' => __('▲ ▼ compare with the same dates a year earlier ({range}): points for Booked, nights for Length, a count for the rest.', 'mphb-availability-calendar'),
+                'stVsYearSr'   => __('on the same dates a year earlier', 'mphb-availability-calendar'),
+                'stVsPrev'     => __('▲ ▼: the change in points from the previous timeframe ({range}).', 'mphb-availability-calendar'),
+                'stVsPrevSr'   => __('points on the previous timeframe', 'mphb-availability-calendar'),
+                'stVsAgo'      => __('vs a year ago', 'mphb-availability-calendar'),
+                'stSrUp'       => __('up {n} {vs}', 'mphb-availability-calendar'),
+                'stSrDown'     => __('down {n} {vs}', 'mphb-availability-calendar'),
+                'stSrSame'     => __('no change {vs}', 'mphb-availability-calendar'),
+                'stSrNone'     => __('no comparison', 'mphb-availability-calendar'),
+                'stNoRecords'  => __('No complete records before {date}.', 'mphb-availability-calendar'),
+                'stNoCompare'  => __('No comparison: the dates it needs are outside the board\'s ±3-year range.', 'mphb-availability-calendar'),
+                'stPerCottageTip' => __('Each cottage\'s booked nights in this timeframe, and that share of its {n} nights, highest first. A night a channel block repeats counts once.', 'mphb-availability-calendar'),
+                'stBySourceTip' => __('Booked cottage-nights in this timeframe by where the booking came from. A night covered twice (a booking and a channel block) counts once, for the earlier check-in.', 'mphb-availability-calendar'),
+                'stMix'        => __('Length of Stay', 'mphb-availability-calendar'),
+                'stMixTip'     => __('The bookings counted in Bookings, by the length of their whole stay.', 'mphb-availability-calendar'),
+                'stMix0'       => __('1–2 nights', 'mphb-availability-calendar'),
+                'stMix1'       => __('3–6 nights', 'mphb-availability-calendar'),
+                'stMix2'       => __('7–27 nights', 'mphb-availability-calendar'),
+                'stMix3'       => __('28+ nights', 'mphb-availability-calendar'),
+                'stNoStays'    => __('No bookings in this timeframe.', 'mphb-availability-calendar'),
+                'stWeekdays'   => __('Arrivals and Departures by Weekday', 'mphb-availability-calendar'),
+                'stWeekdaysTip' => __('Check-ins and check-outs in this timeframe by day of the week. The same bookings as the Arrivals and Departures tiles, channel blocks included.', 'mphb-availability-calendar'),
+                'stWeekdaySr'  => __('{day}: {in} arrivals, {out} departures', 'mphb-availability-calendar'),
+                'stLead'       => __('How Far Ahead They Book', 'mphb-availability-calendar'),
+                'stLeadTip'    => __('The average number of days from the day a booking was made to its check-in, by source, for stays arriving in this timeframe (the bookings counted in Bookings). Bookings made after their own check-in are left out.', 'mphb-availability-calendar'),
+                'stNoLead'     => __('No arrivals in this timeframe.', 'mphb-availability-calendar'),
+                'stAllSources' => __('All sources', 'mphb-availability-calendar'),
+                'stDays'       => __('{n} days', 'mphb-availability-calendar'),
+                'stDay'        => __('{n} day', 'mphb-availability-calendar'),
+                'stStays'      => __('{n} stays', 'mphb-availability-calendar'),
+                'stStay'       => __('{n} stay', 'mphb-availability-calendar'),
+                'stPace'       => __('Pace', 'mphb-availability-calendar'),
+                'stPaceTip'    => __('Cottage-nights booked for the next 30, 60 and 90 nights from tonight, against what was on the books on this date a year ago for the same nights a year earlier, judged by the day each booking was made. Cancelled bookings are not kept, so the year-ago figure is slightly low. Pace does not follow the timeframe.', 'mphb-availability-calendar'),
+                'stPaceNext'   => __('Next {n} days', 'mphb-availability-calendar'),
+                'stPaceNights' => __('{n} nights booked', 'mphb-availability-calendar'),
+                'stHeat'       => __('Cottages Booked Each Night, {year}', 'mphb-availability-calendar'),
+                'stHeatTip'    => __('One square a night of {year}, shaded by how many of the {n} cottages were booked that night: grey for none, darkest blue for all. The timeframe is outlined. Tap a night to open the calendar on it.', 'mphb-availability-calendar'),
+                'stHeatDay'    => __('{date}: {n} of {total} cottages booked', 'mphb-availability-calendar'),
+                'stHeatAll'    => __('{n} booked', 'mphb-availability-calendar'),
                 // Search (0.45.0)
                 'srchCount'    => __('{n} bookings', 'mphb-availability-calendar'),
                 'srchOne'      => __('1 booking', 'mphb-availability-calendar'),
@@ -207,6 +254,16 @@ final class Staff_Widget
                             <option value="month" selected><?php echo esc_html__('Monthly', 'mphb-availability-calendar'); ?></option>
                             <option value="year"><?php echo esc_html__('Yearly', 'mphb-availability-calendar'); ?></option>
                         </select>
+                    </label>
+                    <?php // LAST YEAR'S GHOSTS (0.46.0, Rob): beside Show, because it
+                    // changes what the chart draws, as Show does; on a phone, its
+                    // own line under Show / Go to date. OFF ON EVERY LOAD: unchecked
+                    // here, autocomplete="off" so no browser restores it, and
+                    // staff.js unchecks it again. A real checkbox announced as a
+                    // switch; disabled in Daily, which has no bars. ?>
+                    <label class="mphbac-staff-ghostfield">
+                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Last year', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-staff-ghostbox"><input type="checkbox" role="switch" class="mphbac-staff-ghosts" autocomplete="off"></span>
                     </label>
                     <label class="mphbac-staff-field">
                         <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
@@ -345,6 +402,16 @@ final class Staff_Widget
                         </label>
                     </div>
                     <p class="mphbac-staff-stats-note" hidden></p>
+                    <?php // ‹ › AROUND THE DATE LINE (0.46.0, Rob): one timeframe back or on
+                    // — a Custom range by its own length — disabled at the ±3-year
+                    // window, with the pickers following. ONE row on a phone: the
+                    // arrows keep their 44px, and the line steps down to fit
+                    // between them (fitRange). The board's own nav buttons. ?>
+                    <div class="mphbac-staff-stats-head">
+                        <button type="button" class="mphbac-staff-nav mphbac-staff-stats-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        <p class="mphbac-staff-stats-range"></p>
+                        <button type="button" class="mphbac-staff-nav mphbac-staff-stats-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    </div>
                     <div class="mphbac-staff-stats-out" aria-live="polite"></div>
                 </div>
             </details>

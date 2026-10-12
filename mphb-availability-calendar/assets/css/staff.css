@@ -1272,6 +1272,11 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff-stats[open] > .mphbac-staff-stats-toggle::after { content: "▾"; }
 .mphbac-staff-stats-body {
+    /* Restated, not inherited (0.46.0): a <details> lays its content out in
+       the browser's own slot, which carries the default content-box — so
+       inside Stats `box-sizing: inherit` gave content-box, and the ‹ ›
+       arrows came out 52px wide instead of the board's 44. */
+    box-sizing: border-box;
     padding: 14px 4px 4px;
 }
 .mphbac-staff-stats-pick {
@@ -1301,7 +1306,9 @@ body.mphbac-staff-open { overflow: hidden; }
    tells staff what they are looking at. This is its full size; staff.js
    steps it down only as far as the width needs (fitRange). */
 .mphbac-staff-stats-range {
-    margin: 14px 0 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
     color: var(--staff-text);
     font-size: 30px;
     font-weight: 700;
@@ -1316,18 +1323,22 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 0 0 16px;
 }
 .mphbac-staff-kpi {
+    position: relative;                /* the ⓘ's corner (0.46.0) */
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 60px;
-    padding: 8px 6px;
+    padding: 18px 6px 8px;             /* the top clears the ⓘ */
     border: 1px solid var(--staff-frame);
     border-radius: 8px;
     background: var(--staff-surface);
     text-align: center;
 }
-.mphbac-staff-kpi.is-booked { cursor: help; }
+/* The figure, its ▲ ▼, then the label (0.46.0); the ⓘ sits in the corner. */
+.mphbac-staff-kpi-num { order: 1; }
+.mphbac-staff-kpi-delta { order: 2; }
+.mphbac-staff-kpi-label { order: 3; }
 .mphbac-staff-kpi-num {
     margin: 0;
     color: var(--staff-text);
@@ -1343,7 +1354,7 @@ body.mphbac-staff-open { overflow: hidden; }
     font-size: 12px;
     font-weight: 600;
 }
-.mphbac-staff-stats-block { margin-top: 12px; }
+.mphbac-staff-stats-block { position: relative; margin-top: 18px; }
 .mphbac-staff-stats-h {
     margin: 0 0 8px;
     color: var(--staff-text);
@@ -1354,7 +1365,8 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-percot { margin: 0; padding: 0; list-style: none; }
 .mphbac-staff-percot-row {
     display: grid;
-    grid-template-columns: minmax(6em, 9em) 1fr auto;
+    /* name, bar, nights, %, ▲ ▼ (0.46.0) */
+    grid-template-columns: minmax(6em, 9em) minmax(0, 1fr) auto 2.6em 2.6em;
     align-items: center;
     gap: 8px;
     padding: 3px 0;
@@ -1369,6 +1381,278 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff-percot-fill { display: block; height: 100%; background: var(--staff-header); }
 .mphbac-staff-percot-num { color: var(--staff-muted); font-variant-numeric: tabular-nums; }
+.mphbac-staff-percot-pct { color: var(--staff-text); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.mphbac-staff-percot-delta { text-align: right; }
+
+/* ---- 0.46.0 STATS (Rob): ‹ › round the date line, ⓘ tips, ▲ ▼, and the
+   new blocks. Every one is filled by staff.js with textContent. ---- */
+.mphbac-staff-stats-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 14px 0 10px;
+}
+.mphbac-staff-stats-head .mphbac-staff-nav { flex: 0 0 auto; }
+
+/* ▲ ▼ — green up, rust down, grey for ±0 and for "—" (no comparison). */
+.mphbac-staff-kpi-delta,
+.mphbac-staff-percot-delta,
+.mphbac-staff-pace-delta {
+    color: var(--staff-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff-kpi-delta { margin: 2px 0 0; }
+.mphbac-staff-kpi-delta.is-up,
+.mphbac-staff-percot-delta.is-up,
+.mphbac-staff-pace-delta.is-up { color: var(--staff-in); }
+.mphbac-staff-kpi-delta.is-down,
+.mphbac-staff-percot-delta.is-down,
+.mphbac-staff-pace-delta.is-down { color: var(--staff-out); }
+
+/* THE ⓘ: a real button, 24px, in the tile's corner or after a heading.
+   (0,3,0) holds the theme's `button:hover, button:focus` (0,2,1) off it —
+   it is an icon, not one of the board's pill buttons, and must not turn
+   coral on a tap. */
+.mphbac-staff-kpi-more { position: absolute; top: 0; right: 0; margin: 0; }
+.mphbac-staff .mphbac-staff-tip.mphbac-staff-tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: none;
+    color: var(--staff-muted);
+    line-height: 1;
+    cursor: pointer;
+    transition: none;
+}
+.mphbac-staff .mphbac-staff-tip.mphbac-staff-tip[aria-expanded="true"] { color: var(--staff-header); }
+.mphbac-staff-tip svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* The bubble: placed by staff.js under its button, inside the section. */
+.mphbac-staff-tipbox {
+    position: absolute;
+    z-index: 30;
+    display: block;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 40px));
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #1f2937;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.mphbac-staff-tipbox[hidden] { display: none; }
+.mphbac-staff-tipline { display: block; }
+.mphbac-staff-tipline + .mphbac-staff-tipline { margin-top: 6px; }
+
+.mphbac-staff-stats-hrow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 8px;
+}
+.mphbac-staff-stats-hrow .mphbac-staff-stats-h { margin: 0; }
+
+/* Length of stay: the per-cottage bar's look. */
+.mphbac-staff-mix { margin: 0; padding: 0; list-style: none; }
+.mphbac-staff-mix-row {
+    display: grid;
+    grid-template-columns: 6.5em minmax(0, 1fr) 5.5em;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 13px;
+}
+.mphbac-staff-mix-name { font-weight: 600; white-space: nowrap; }
+.mphbac-staff-mix-num { color: var(--staff-muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Arrivals and departures by weekday: the Daily list's two colours. */
+.mphbac-staff-wk {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.mphbac-staff-wk-day { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.mphbac-staff-wk-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    height: 96px;
+}
+.mphbac-staff-wk-col {
+    display: flex;
+    flex: 0 1 18px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    height: 100%;
+}
+.mphbac-staff-wk-num { color: var(--staff-text); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mphbac-staff-wk-bar { display: block; width: 100%; border-radius: 3px 3px 0 0; }
+.mphbac-staff-wk-name { color: var(--staff-muted); font-size: 12px; font-weight: 600; }
+.mphbac-staff-wk-key { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; font-size: 13px; }
+.mphbac-staff-wk-keyitem { display: inline-flex; align-items: center; gap: 6px; }
+.mphbac-staff-wk-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.mphbac-staff-wk-col.is-in .mphbac-staff-wk-bar,
+.mphbac-staff-wk-keyitem.is-in .mphbac-staff-wk-swatch { background: var(--staff-in); }
+.mphbac-staff-wk-col.is-out .mphbac-staff-wk-bar,
+.mphbac-staff-wk-keyitem.is-out .mphbac-staff-wk-swatch { background: var(--staff-out); }
+
+/* How far ahead they book; pace. */
+.mphbac-staff-lead,
+.mphbac-staff-pace { max-width: 440px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.mphbac-staff-lead-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.mphbac-staff-lead-row.is-all { margin-top: 2px; padding-top: 5px; border-top: 1px solid var(--staff-frame); font-weight: 700; }
+.mphbac-staff-lead-num { margin-left: auto; font-variant-numeric: tabular-nums; }
+.mphbac-staff-pace-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 3px 0; }
+.mphbac-staff-pace-name { min-width: 7.5em; font-weight: 700; }
+.mphbac-staff-pace-num { font-variant-numeric: tabular-nums; }
+.mphbac-staff-pace-delta { font-size: 13px; }
+
+/* THE YEAR AS A HEAT MAP: twelve small months, one square a night, in nine
+   steps of the site's button blue (#0A50B2, --staff-header): grey for none,
+   full blue for every cottage. The timeframe is outlined on its OUTER
+   edges only (is-et / is-er / is-eb / is-el, set by staff.js), the line
+   drawn in the 2px gap round the squares. */
+.mphbac-staff-heat {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 12px 14px;
+}
+.mphbac-staff-heat-month { min-width: 0; }
+.mphbac-staff-heat-name { display: block; margin: 0 0 3px; color: var(--staff-muted); font-size: 12px; font-weight: 700; }
+.mphbac-staff-heat-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.mphbac-staff-heat-day {
+    position: relative;
+    display: block;
+    aspect-ratio: 1 / 1;
+    border-radius: 2px;
+    background: #e9edf2;
+    cursor: pointer;
+}
+.mphbac-staff-heat-day.is-l1 { background: #c7d7ed; }
+.mphbac-staff-heat-day.is-l2 { background: #acc4e5; }
+.mphbac-staff-heat-day.is-l3 { background: #91b0dc; }
+.mphbac-staff-heat-day.is-l4 { background: #769dd4; }
+.mphbac-staff-heat-day.is-l5 { background: #5b8acb; }
+.mphbac-staff-heat-day.is-l6 { background: #4077c3; }
+.mphbac-staff-heat-day.is-l7 { background: #2563ba; }
+.mphbac-staff-heat-day.is-l8 { background: #0a50b2; }
+.mphbac-staff-heat-day.is-none { background: #f6f7f9; cursor: default; }
+.mphbac-staff-heat-day.is-in::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 0 solid #111111;
+    pointer-events: none;
+}
+.mphbac-staff-heat-day.is-et::after { border-top-width: 2px; }
+.mphbac-staff-heat-day.is-er::after { border-right-width: 2px; }
+.mphbac-staff-heat-day.is-eb::after { border-bottom-width: 2px; }
+.mphbac-staff-heat-day.is-el::after { border-left-width: 2px; }
+.mphbac-staff-heat-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin: 10px 0 0;
+    color: var(--staff-muted);
+    font-size: 12px;
+}
+.mphbac-staff-heat-key .mphbac-staff-heat-day { width: 12px; height: 12px; cursor: default; }
+.mphbac-staff-heat-keylabel { margin: 0 4px; }
+
+/* LAST YEAR'S GHOSTS (0.46.0): a dashed outline the height of a bar, in the
+   first lane, BEHIND the bars (z-index 1 to their 2). No fill of a source,
+   no text, and no pointer events — a tap goes to whatever is beneath. */
+.mphbac-staff-ghost {
+    position: relative;
+    z-index: 1;
+    align-self: center;
+    height: calc(var(--staff-row-h) - 10px);
+    margin: 0 1px;
+    border: 2px dashed rgba(51, 65, 85, 0.55);
+    border-radius: 6px;
+    background: rgba(51, 65, 85, 0.06);
+    pointer-events: none;
+}
+/* Its switch, beside Show: a checkbox drawn as a switch, at (0,4,0) like the
+   field pills, above the theme's input reset. */
+.mphbac-staff-ghostfield {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25em;
+    margin: 0;
+    cursor: pointer;
+}
+/* The pills' own height (18px type: 49.4px), so on a computer "Last year"
+   lines up with Show and Go to date. */
+.mphbac-staff-ghostbox { display: flex; align-items: center; justify-content: center; min-height: max(44px, calc(1.3em + 26px)); font-size: 18px; }
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts {
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    display: block;
+    width: 48px;
+    height: 28px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--staff-header);
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: none;
+    line-height: normal;
+    cursor: pointer;
+    transition: none;
+}
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--staff-header);
+}
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:checked { background: var(--staff-header); }
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:checked::before { left: 22px; background: #ffffff; }
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:disabled { opacity: 0.4; cursor: not-allowed; }
+.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:focus-visible { outline: 2px solid var(--staff-focus, #0f6dbf); outline-offset: 2px; }
 .mphbac-staff-pie-wrap {
     display: flex;
     flex-wrap: wrap;
@@ -1404,6 +1688,7 @@ body.mphbac-staff-open { overflow: hidden; }
    field needed. */
 .mphbac-staff .mphbac-staff-field,
 .mphbac-staff .mphbac-staff-sfield,           /* the Stats fields too (0.45.3) */
+.mphbac-staff .mphbac-staff-ghostfield,       /* and the ghosts' switch (0.46.0) */
 .mphbac-staff .mphbac-staff-field-label,
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input,
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input::placeholder {
@@ -1637,6 +1922,9 @@ body.mphbac-staff-open { overflow: hidden; }
         background-position: right 12px center;
     }
     .mphbac-staff-legend { font-size: 0.8em; }
+    /* The ghosts' switch: its own line under Show / Go to date (0.46.0). */
+    .mphbac-staff-ghostfield { grid-column: 1 / -1; grid-row: 3; flex-direction: row; justify-self: center; gap: 10px; }
+    .mphbac-staff-percot-row { grid-template-columns: minmax(5em, 7em) minmax(0, 1fr) auto 2.4em 2.4em; gap: 6px; }
     /* Two rows, grouped by kind (0.46.0, Rob): sources, then extras. */
     .mphbac-staff-legend-group { flex: 0 0 100%; flex-wrap: nowrap; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }

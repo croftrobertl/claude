@@ -273,7 +273,12 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.click('.mphbac-staff-stats-toggle');
     await p.waitForTimeout(150);
     let k = await kpis();
-    check('opened: this month by default — the month already loaded, so no request', (await reqs()).length === n0, await reqs());
+    const fresh = (await reqs()).slice(n0);
+    // 0.46.0: the comparisons, the year and pace need more — in as few
+    // requests as touch: last year's October with pace a year ago, and the
+    // year with September and pace now. The month on screen is not asked again.
+    check('opened: this month by default — the month already loaded is not asked again; the rest is TWO requests',
+      fresh.length === 2 && !fresh.includes('2026-10-01|2026-10-31') && fresh.includes('2025-10-01|2026-01-05') && fresh.includes('2026-01-01|2027-01-05'), fresh);
     check('October: booked 21% (52 of 248 cottage-nights, the echoing block counted once)', k.booked === '21%', k);
     check('...arrivals 10, departures 10, turnovers 2', k.arrivals === '10' && k.departures === '10' && k.turnovers === '2', k);
     check('0.45.3: BOOKINGS 9 — the channel block echoing Bob is not a tenth (it owns no night)', k.bookings === '9', k);
@@ -282,7 +287,9 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('...in the order Bookings, Booked, Length, Arrivals, Departures, Turnovers — no Pets / Couch / Boat, no "in house" outside Day',
       JSON.stringify(order) === JSON.stringify(['bookings', 'booked', 'length', 'arrivals', 'departures', 'turnovers']), order);
     const heads = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-h')].map(h => h.textContent));
-    check('...headed "Nights Booked by Cottage" and "Nights Booked by Source" (Rob\'s words)', JSON.stringify(heads) === '["Nights Booked by Cottage","Nights Booked by Source"]', heads);
+    check('...headed "Nights Booked by Cottage" and "Nights Booked by Source" (Rob\'s words), then the five 0.46.0 blocks',
+      JSON.stringify(heads) === JSON.stringify(['Nights Booked by Cottage', 'Nights Booked by Source', 'Length of Stay', 'Arrivals and Departures by Weekday',
+        'How Far Ahead They Book', 'Pace', 'Cottages Booked Each Night, 2026']), heads);
     const per = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-percot-row')].map(r =>
       [r.querySelector('.mphbac-staff-percot-name').textContent, [r.querySelector('.mphbac-staff-percot-num').textContent, r.querySelector('.mphbac-staff-percot-fill').style.width]])));
     check('nights booked per cottage: #28 30 nights (96.8%), #23 7 (the block counted once), #29 none',
@@ -312,7 +319,8 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('...Length 7.0 nights — whole stays 3+1+4+3+1+30, not the 18 nights inside the week (3.0)', k.length === '7.0 nights', k);
     await p.selectOption('.mphbac-staff-stats-span', 'year');
     await p.waitForTimeout(200);
-    check('Year: one request for Jan 1 – Dec 31 (the same gated range endpoint)', (await reqs()).includes('2026-01-01|2026-12-31'), await reqs());
+    check('Year: Jan 1 – Dec 31 comes from the same gated range endpoint (already fetched for the heat map)',
+      (await reqs()).some(r => r.split('|')[0] <= '2026-01-01' && r.split('|')[1] >= '2026-12-31'), await reqs());
     await p.selectOption('.mphbac-staff-stats-span', 'custom');
     await p.fill('.mphbac-staff-stats-from', '2026-01-01');
     await p.fill('.mphbac-staff-stats-to', '2027-12-31');
@@ -332,7 +340,7 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
     const range = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-range').textContent);
     check('Custom reaching past the ±3-year range: clamped to Oct 8 – Dec 31, 2023, and it says so',
-      /±3-year range: showing Oct 8, 2023 – Dec 31, 2023/.test(note) && range === 'Oct 8, 2023 – Dec 31, 2023', [note, range]);
+      /±3-year range: showing Oct 8, 2023 – Dec 31, 2023/.test(note) && range === 'Oct 8 – Dec 31, 2023', [note, range]);
     await p.reload();
     await p.waitForTimeout(250);
     check('Stats is closed again after a reload', await p.evaluate(() => !document.querySelector('.mphbac-staff-stats').open));
@@ -353,15 +361,15 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const pick = async (sel, v) => { await p.selectOption(sel, v); await p.waitForTimeout(150); };
     let v = await look();
     check('Month (the default): "Timeframe" and "Month", a list of months showing Oct 2026 — no "Date" box',
-      JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'month'], ['Month', 'select', '2026-10']]) && v.range === 'Oct 1, 2026 – Oct 31, 2026', v);
+      JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'month'], ['Month', 'select', '2026-10']]) && v.range === 'Oct 1 – 31, 2026', v);
     const months = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-month option')].map(o => o.textContent));
     check('...the months run the board\'s ±3-year window, labelled like "Oct 2026"', months[0] === 'Oct 2023' && months[months.length - 1] === 'Oct 2029' && months.includes('Mar 2025'), [months[0], months.length, months[months.length - 1]]);
     await pick('.mphbac-staff-stats-month', '2025-03');
     v = await look();
-    check('Month "Mar 2025": Mar 1 – Mar 31, 2025', v.range === 'Mar 1, 2025 – Mar 31, 2025', v);
+    check('Month "Mar 2025": Mar 1 – 31, 2025', v.range === 'Mar 1 – 31, 2025', v);
     await pick('.mphbac-staff-stats-span', 'year');
     v = await look();
-    check('→ Year: "Year", a list of years showing 2025 — the period came with it', JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'year'], ['Year', 'select', '2025']]) && v.range === 'Jan 1, 2025 – Dec 31, 2025', v);
+    check('→ Year: "Year", a list of years showing 2025 — the period came with it', JSON.stringify(v.boxes) === JSON.stringify([['Timeframe', 'select', 'year'], ['Year', 'select', '2025']]) && v.range === 'Jan 1 – Dec 31, 2025', v);
     const years = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-year option')].map(o => o.textContent));
     check('...the years 2023–2029 (the ±3-year window)', JSON.stringify(years) === JSON.stringify(['2023', '2024', '2025', '2026', '2027', '2028', '2029']), years);
     await pick('.mphbac-staff-stats-span', 'month');
@@ -377,7 +385,7 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     v = await look();
     const note = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-note').textContent);
     check('Year 2023, partly outside the window: the range line shows the CLAMPED dates, and the note says so',
-      v.range === 'Oct 8, 2023 – Dec 31, 2023' && /±3-year range/.test(note), [v.range, note]);
+      v.range === 'Oct 8 – Dec 31, 2023' && /±3-year range/.test(note), [v.range, note]);
     await pick('.mphbac-staff-stats-span', 'day');
     await p.fill('.mphbac-staff-stats-date', '2026-10-14');
     await p.dispatchEvent('.mphbac-staff-stats-date', 'change');
@@ -387,7 +395,7 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await pick('.mphbac-staff-stats-span', 'week');
     v = await look();
     check('→ Week: "Week of", a date picker, the Sunday–Saturday week holding that day (the board\'s weeks)',
-      v.boxes[1][0] === 'Week of' && v.boxes[1][1] === 'date' && v.range === 'Oct 11, 2026 – Oct 17, 2026', v);
+      v.boxes[1][0] === 'Week of' && v.boxes[1][1] === 'date' && v.range === 'Oct 11 – 17, 2026', v);
     await pick('.mphbac-staff-stats-span', 'custom');
     v = await look();
     check('→ Custom: "From" and "To", opened on the week that was showing', JSON.stringify(v.boxes.map(b => [b[0], b[1]])) === JSON.stringify([['Timeframe', 'select'], ['From', 'date'], ['To', 'date']])
@@ -421,10 +429,15 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check(`${w}px Custom: Timeframe takes the first row, From and To share the second, nothing past the edge`,
       r.length === 3 && r[1].top === r[2].top && r[1].top > r[0].top && r.every(x => x.left >= 0 && x.right <= w), r);
     const line = await p.evaluate(() => { const e = document.querySelector('.mphbac-staff-stats-range'), c = getComputedStyle(e);
-      return { text: e.textContent, size: parseFloat(c.fontSize), lines: Math.round(e.getBoundingClientRect().height / parseFloat(c.lineHeight)),
-        fits: e.scrollWidth <= e.clientWidth + 0.5, inside: e.getBoundingClientRect().right <= innerWidth }; });
-    check(`${w}px: the longest real range ("${line.text}") on ONE line, whole, and big (≥ 22px; 30px where it fits)`,
-      line.text === 'Dec 28, 2025 – Jan 3, 2026' && line.lines === 1 && line.fits && line.inside && line.size >= 22, line);
+      const a = document.querySelector('.mphbac-staff-stats-prev').getBoundingClientRect(), b = document.querySelector('.mphbac-staff-stats-next').getBoundingClientRect(), r = e.getBoundingClientRect();
+      return { text: e.textContent, size: parseFloat(c.fontSize), lines: Math.round(r.height / parseFloat(c.lineHeight)),
+        fits: e.scrollWidth <= e.clientWidth + 0.5, inside: b.right <= innerWidth && a.left >= 0,
+        oneRow: Math.abs((a.top + a.bottom) / 2 - (r.top + r.bottom) / 2) <= 2 && Math.abs(a.top - b.top) < 1 && a.right <= r.left && r.right <= b.left,
+        taps: [a.width, a.height, b.width, b.height].every(x => x >= 44) }; });
+    // 0.46.0: ‹ › either side (Rob: ONE row, the arrows proper tap targets);
+    // the line steps down to what they leave it — never below 12px.
+    check(`${w}px: the longest real range ("${line.text}") on ONE line between ‹ and ›, whole, ≥ 12px, the arrows 44px`,
+      line.text === 'Dec 28, 2025 – Jan 3, 2026' && line.lines === 1 && line.fits && line.inside && line.oneRow && line.taps && line.size >= 12, line);
     const tiles = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-kpi')].map(k => Math.round(k.getBoundingClientRect().top)));
     check(`${w}px: the six tiles are two full rows of three`, tiles.length === 6 && new Set(tiles).size === 2 && tiles.filter(t => t === tiles[0]).length === 3, tiles);
     await ctx.close();

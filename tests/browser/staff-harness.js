@@ -193,9 +193,11 @@ function staffJsShipped() {
   return require('./harness.js').shipped(fs.readFileSync(path.join(ROOT, 'assets/js/staff.js'), 'utf8'), 'staff.js');
 }
 
-function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '', foot = '' }) {
+function boardShell({ today, cottages, bookings, details = {}, search = {}, sow = 0, head = '', bodyStyle = '', foot = '', recordsFrom = '2025-10-01' }) {
   const config = {
     ajaxUrl: '/ajax', nonce: 'n', month: today.slice(0, 7), today,
+    // The setting's shipped default (0.46.0), as Staff_Widget passes it.
+    recordsFrom,
     calendar: {
       weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       weekdaysFull: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],

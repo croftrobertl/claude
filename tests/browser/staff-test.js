@@ -597,7 +597,8 @@ const BUTTONLIKE = [
 
       const lay = await p.evaluate(() => {
         const r = s => document.querySelector(s).getBoundingClientRect();
-        const labels = [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
+        // Show and Go to date (the ghosts' switch, 0.46.0, sits between them).
+        const labels = [...document.querySelectorAll('.mphbac-staff-field > .mphbac-staff-field-label')].filter(l => !l.closest('.mphbac-staff-search')).map(l => {
           const c = getComputedStyle(l); return { b: l.getBoundingClientRect().bottom, t: l.getBoundingClientRect().top,
             size: c.fontSize, weight: c.fontWeight, color: c.color }; });
         const t = getComputedStyle(document.querySelector('.mphbac-staff-title'));
@@ -677,7 +678,9 @@ const BUTTONLIKE = [
       const labs = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
         const c = getComputedStyle(l); return { text: l.textContent, size: c.fontSize, weight: c.fontWeight, color: c.color, align: c.textAlign }; }));
       // Show, Go to date and (0.45.0) Search.
-      check(`${who}: (instrument check) all three labels found`, labs.length === 3, labs);
+      // 0.46.0: and "Last year", the ghosts' switch.
+      check(`${who}: (instrument check) all four labels found — Show, Last year, Go to date, Search`,
+        JSON.stringify(labs.map(l => l.text)) === '["Show","Last year","Go to date","Search"]', labs);
       for (const l of labs) {
         check(`${who}: "${l.text}" is the live public label — 19px / 600 / #111, centred`,
           l.size === LIVE_PUBLIC_LABEL.size && l.weight === LIVE_PUBLIC_LABEL.weight

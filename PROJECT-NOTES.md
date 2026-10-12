@@ -3014,7 +3014,7 @@ type, a pet fee or staff's _dcc_dog — so a size alone shows neither the paw
 nor the dog rows, whatever a future form does. Fixtures for all of it in
 staff-panel-test.php and staff-board-data-test.php.
 
-### QUEUED FOR THE NEXT RELEASE (whenever that is — no release for these alone)
+### QUEUED FOR THE NEXT RELEASE — DONE in 0.46.0 (comments reworded as the WD wrote them)
 
 - **class-staff-data.php, two comments to the past tense** (WD, 2026-10-12):
   the pet-block comment (~line 595) and has_pet_service()'s docblock (~line
@@ -3023,3 +3023,89 @@ staff-panel-test.php and staff-board-data-test.php.
   bookings taken before 2026-09-17; those values were cleared from the
   database, and today only #17730 and #17795 (cancelled tests) hold a
   size." Comment-only; no mutation needle contains that text (checked).
+
+## The staff board round → 0.46.0 (WD, 2026-10-12)
+
+**Rob decided** (from multiple-choice lists): A1 space under the legend;
+A2 the legend in two rows on a phone, sources then extras; A3 the date
+line shows the days ON SCREEN and follows the scroll in every Show mode,
+in his style ("Oct 12 – Nov 8, 2026"; across a year "Dec 20, 2026 – Jan
+16, 2027"; one day "Oct 12, 2026"), one line, never cut — "if it would
+have to drop below 12px at 375px, stop and tell me"; A4 the month band
+white on #0A50B2, ~14px, header no taller, the 1st's rule kept (white);
+A5 a short bar: name → INITIALS → nights → icons; A6 "No bookings match."
+centred; A7 the chosen value centred in Timeframe / Month / Show / Go to
+date; B8 a ⓘ on every tile; B9 per-cottage nights + % + bar, ranked by %,
+▲ ▼ in points vs the PREVIOUS timeframe; B10 ‹ › round the stats date
+line; C11 the year heat map; C12 arrivals/departures by weekday; C13 every
+tile vs a year earlier; C14 pace 30/60/90; C15 how far ahead they book;
+C16 stay-length mix; C17 last year's ghosts. **WD:** the exact rules —
+tips written from what the code counts and listed in the check list;
+ties keep cottage order; arrows disabled at ±3 years with the pickers
+following; one row on a phone with proper tap targets; the "Records
+complete from" setting (default 2025-10-01) and the "—" gate; the 13
+made-after-check-in bookings (out of lead time, counted from made-on in
+pace); the cancellations caveat in pace's tip; madeOn only on the staff
+endpoint; ghosts off on every load, never mistaken for bookings, never
+taking taps; aggregate figures only.
+
+**MEASURED.**
+- A3 (Chromium, real fonts in the harness, 27px page inset): the worst
+  case "Dec 28, 2026 – Jan 24, 2027" fits at **12.5px at 375**, 13.5px at
+  390, and at 430 needs no step-down (the title's own 15px). Above Rob's
+  12px floor, so it shipped. fitTitle steps 0.5px at a time from the CSS
+  size; the line is nowrap with overflow hidden only as the box it
+  measures against.
+- A7 (Chromium): before, the values sat ~11px LEFT of centre (the date
+  field's calendar icon, and the phone selects' asymmetric padding). After:
+  within 0.5px at 1280 and 375, the date at 320 −3px. **iOS Safari cannot
+  be run here** — it rests on `::-webkit-date-and-time-value { text-align:
+  center }` and symmetric padding. Staging check item.
+- B10: the longest stats range ("Dec 28, 2026 – Jan 24, 2027") between two
+  44px arrows: **19px at 375**. One row at 320/375/390/430. (Inside a
+  <details> box-sizing is NOT inherited — the browser's slot is content-box —
+  so the Stats body restates border-box; the arrows had been 52px wide.)
+
+**DESIGN DECISIONS (mine, for the WD to overrule):**
+- Heat-map hue: **#0A50B2**, the site's button / nav blue (--staff-header),
+  in 8 steps mixed with white; grey #e9edf2 for none. Laid out as twelve
+  mini-months (7 columns, the WordPress week start) so a phone gets ~21px
+  squares rather than 365 dots in one strip. The timeframe outlined on its
+  OUTER edges only. The grid is aria-hidden (the board holds the same
+  nights); each square's hover text is a count, never a name. Tapping a
+  night: Go to date on the board, in its current Show mode, scrolled into
+  view.
+- Ghost switch: **beside Show** in the tools row ("Last year"), on a phone
+  its own centred line under Show / Go to date. Disabled in Daily (no
+  bars). Dashed slate outline, faint fill, first lane, z-index 1 under the
+  bars' 2, pointer-events none, aria-hidden, no text. Dates shifted +1
+  year by calendar date.
+- ⓘ also on each Stats SECTION, not only the tiles (pace needed one for the
+  cancellations caveat anyway). A tap on the bubble closes it (on a phone
+  it covers the tiles beneath). Hover opens on fine pointers only; a click
+  while hovering keeps it; a redraw keeps an open one open.
+- "Same timeframe a year earlier" = the same DATES a year earlier (a week
+  Oct 4–10 → Oct 4–10 of last year, not the matching weekday week); a 29
+  Feb is the 28th.
+- The ▲ ▼ for % are differences of the ROUNDED percentages shown, so they
+  match what a reader gets by stepping back.
+- A comparison is also "—" when the timeframe was clamped at the ±3-year
+  edge, or the compared dates fall outside it (a different tip says so).
+- Pace "now" counts everything on the books; pace "a year ago" counts
+  bookings with madeOn ≤ today − 1 year (no madeOn → not counted).
+- Stats now fetch: the timeframe, the previous one, last year's, the
+  calendar year, and the two pace windows — skipping what the session
+  holds, merging ranges that touch (≤ 400 days). Opening Stats on this
+  month = 2 requests. Comparisons that cannot be shown are not fetched.
+  Redraws keep the old figures until the new are ready (no "Loading…"
+  flash on an arrow either).
+
+**FOR THE WD (question, no change made):** Arrivals, Departures and the
+weekday chart count EVERY booking, channel blocks included (unchanged
+since 0.44.1): in the October fixture Arrivals is 10 against Bookings 9.
+The tips now say so plainly. Should they be deduplicated like Bookings?
+
+**Timing note:** the Yearly render budget (best of 5 < 500ms) measured
+371–524ms on this VM across runs, the same spread with fitTitle disabled —
+noise, not the date line; the budget was left as it is.
+
