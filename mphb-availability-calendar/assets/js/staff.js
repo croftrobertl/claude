@@ -323,42 +323,39 @@
             return measureCtx.measureText(str).width;
         }
 
+        // THE DATE LINE SHOWS THE DAYS ON SCREEN (0.46.0, Rob), in every
+        // period: "Oct 12 – Nov 8, 2026", "Dec 20, 2026 – Jan 16, 2027", or one
+        // day, "Oct 12, 2026". Daily shows its day; a chart shows its window
+        // until it is drawn, then followScroll() keeps it to the days in view.
         function renderTitle(w) {
-            titleEl.textContent = '';
-            var p = state.period;
-            if (p === 'day') {
-                // The date alone (Rob, 0.43.3): the month/year line that sat
-                // under it is gone in Daily. Phones get the short form
-                // ("Sat, Oct 10, 2026") so it stays on one line.
-                var day = state.anchor;
-                titleEl.textContent = (mq && mq.matches) ? mediumDate(day) : longDate(day);
-            } else {
-                // A chart period names a MONTH (0.43.1, Rob's option C): the
-                // one filling most of what is on screen, kept current by
-                // followScroll() once the chart is drawn. Until then, the
-                // month that will fill it — the week's larger part, or the
-                // anchor's month for a month or a year.
-                setLabel(p === 'week' ? mostOf(w.from, w.to) : state.anchor.slice(0, 7));
+            if (state.period === 'day') setRange(state.anchor, state.anchor, false);
+            else setRange(w.from, w.to, false);
+        }
+
+        // Writes only on a change, and fitted to its space (fitTitle). The
+        // title is aria-live for a period change (an arrow, Today, Show); a
+        // SCROLL changes it a day at a time, so those writes are not announced.
+        function setRange(from, to, quiet) {
+            var t = rangeLabel(from, to);
+            if (titleEl.textContent === t) return;
+            titleEl.setAttribute('aria-live', quiet ? 'off' : 'polite');
+            titleEl.textContent = t;
+            fitTitle();
+        }
+
+        // ONE LINE, NEVER CUT (Rob's condition). Its full CSS size, stepped
+        // down only as far as the space between ‹ and Today needs — the stats
+        // line's rule (fitRange). Measured at 375px (0.46.0): the longest,
+        // "Dec 28, 2026 – Jan 24, 2027", fits at 12.5px; 13.5px at 390px.
+        function fitTitle() {
+            titleEl.style.fontSize = '';
+            var size = parseFloat(getComputedStyle(titleEl).fontSize) || 15;
+            while (size > 9 && titleEl.scrollWidth > titleEl.clientWidth + 0.5) {
+                size -= 0.5;
+                titleEl.style.fontSize = size + 'px';
             }
         }
-
-        // Writes only on a change: the label is aria-live, and a scroll that
-        // stays inside one month must not re-announce it on every frame.
-        function setLabel(m) {
-            var t = monthName(m);
-            if (titleEl.textContent !== t) titleEl.textContent = t;
-        }
-
-        // The month holding the most days of [from, to]; the earlier on a tie.
-        function mostOf(from, to) {
-            var n = {}, best = null;
-            daysBetween(from, to).forEach(function (d) {
-                var m = d.slice(0, 7);
-                n[m] = (n[m] || 0) + 1;
-                if (best === null || n[m] > n[best]) best = m;
-            });
-            return best || from.slice(0, 7);
-        }
+        window.addEventListener('resize', function () { if (titleEl.textContent) fitTitle(); });
 
         // THE LABEL FOLLOWS THE SCROLL. The visible days are those between
         // the pinned cottage column's right edge and the grid's right edge;
@@ -371,16 +368,17 @@
             if (!heads.length) return;
             var lw = chartLabelW(chart);
             var lo = gridEl.scrollLeft + lw, hi = gridEl.scrollLeft + gridEl.clientWidth;
-            var px = {}, best = null;
+            // The days ON SCREEN: more than half of a day's column in view.
+            var first = null, last = null;
             for (var i = 0; i < heads.length; i++) {
                 var h = heads[i], a = h.offsetLeft, b = a + h.offsetWidth;
                 var seen = Math.min(b, hi) - Math.max(a, lo);
-                if (seen <= 0) continue;
-                var m = h.getAttribute('data-day').slice(0, 7);
-                px[m] = (px[m] || 0) + seen;
-                if (best === null || px[m] > px[best]) best = m;
+                if (seen * 2 <= (b - a)) continue;
+                var d = h.getAttribute('data-day');
+                if (first === null) first = d;
+                last = d;
             }
-            if (best) setLabel(best);
+            if (first) setRange(first, last, true);
             stickLabels();
         }
         var scrollRaf = 0;
@@ -672,6 +670,10 @@
                 label: label,
                 icons: ICON_ORDER.filter(function (k) { return !!b[k]; }),
                 name: nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who)),
+                // NAME, THEN INITIALS, then nights (0.46.0, Rob): a 2–3-night
+                // stay used to jump from "Dock B." straight to "2n". Only a
+                // named guest has initials; "#19674" goes on to nights as before.
+                initials: b.guestName ? initials(who) : '',
                 count: (S.nightsShort || '{n}n').replace('{n}', String(nights)),
                 textFont: '600 13px ' + family,
                 key: ''
@@ -701,7 +703,9 @@
             var icons = f.icons.slice();
             var iconsW = function (list) { return list.length * (ICON_W + ICON_GAP); };
             var fits = function (t) { return textW(t, f.textFont) <= room - iconsW(icons); };
-            var text = fits(f.name) ? f.name : (fits(f.count) ? f.count : '');
+            var text = fits(f.name) ? f.name
+                : (f.initials && f.initials !== f.name && fits(f.initials)) ? f.initials
+                : (fits(f.count) ? f.count : '');
             if (!text) {
                 // Icons alone; drop from the end of the order until they fit.
                 while (icons.length && iconsW(icons) - ICON_GAP > room) icons.pop();
@@ -1689,6 +1693,7 @@
             resultsList.textContent = '';
             resultsCount.textContent = !rows.length ? (S.srchNone || '')
                 : rows.length === 1 ? (S.srchOne || '1') : (S.srchCount || '{n}').replace('{n}', String(rows.length));
+            resultsCount.classList.toggle('is-none', !rows.length);
             rows.forEach(function (r) {
                 var li = document.createElement('li');
                 var btn = document.createElement('button');
@@ -2037,6 +2042,15 @@
             if (!s) return '';
             var d = new Date(s + 'T00:00:00');
             return ((CAL.months || [])[d.getMonth()] || '').slice(0, 3) + ' ' + d.getDate();
+        }
+        // "Oct 12, 2026"; "Oct 1 – 31, 2026"; "Oct 12 – Nov 8, 2026";
+        // "Dec 20, 2026 – Jan 16, 2027" — short months, the year once (Rob).
+        function rangeLabel(from, to) {
+            if (!to || to === from) return mediumDay(from);
+            var y1 = from.slice(0, 4), y2 = to.slice(0, 4);
+            if (y1 !== y2) return mediumDay(from) + ' – ' + mediumDay(to);
+            if (from.slice(0, 7) === to.slice(0, 7)) return shortDate(from) + ' – ' + (+to.slice(8, 10)) + ', ' + y1;
+            return shortDate(from) + ' – ' + shortDate(to) + ', ' + y1;
         }
         function mediumDay(s) {
             var d = new Date(s + 'T00:00:00');

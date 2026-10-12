@@ -73,6 +73,9 @@ final class Staff_Widget
             'nonce'    => wp_create_nonce(Staff::NONCE_ACTION),
             'month'    => $today->format('Y-m'),
             'today'    => $today->format('Y-m-d'),
+            // Stats comparisons never reach before this (0.46.0, Rob's rule:
+            // a missing figure beats a false one). A plugin setting.
+            'recordsFrom' => (string) Settings::get('records_complete_from'),
             'calendar' => [
                 'weekdays'    => self::weekday_labels(),
                 'weekdaysFull'=> self::weekday_labels(false),
@@ -265,18 +268,24 @@ final class Staff_Widget
             // each a white outline icon on a NEUTRAL slate swatch, never a
             // source colour. The icons are CSS masks of the same Tabler paths
             // staff.js draws on the bars. ?>
+            <?php // Two groups (0.46.0, Rob): the sources, then the extras — one
+            // row each on a phone, one line together where there is room. ?>
             <div class="mphbac-staff-legend" aria-hidden="true">
+                <span class="mphbac-staff-legend-group is-sources">
                 <span class="mphbac-staff-key is-src-direct"><?php echo esc_html__('Direct', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key is-src-airbnb"><?php echo esc_html__('Airbnb', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key is-src-booking"><?php echo esc_html__('Booking.com', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key is-src-vrbo"><?php echo esc_html__('Vrbo', 'mphb-availability-calendar'); ?></span>
+                </span>
                 <?php // No "Pending" entry (0.45.3, Rob: on a phone it pushed the
                 // legend onto a third line). A pending booking keeps its
                 // stripes, and its quick preview and sheet name the status. ?>
+                <span class="mphbac-staff-legend-group is-extras">
                 <span class="mphbac-staff-key mphbac-staff-key--turn"><span class="mphbac-staff-turnmark"></span><?php echo esc_html__('Turnover', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--pets"><span class="mphbac-staff-ico is-pets"></span><?php echo esc_html__('Pets', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--couch"><span class="mphbac-staff-ico is-couch"></span><?php echo esc_html__('Couch', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--boat"><span class="mphbac-staff-ico is-boat"></span><?php echo esc_html__('Boat', 'mphb-availability-calendar'); ?></span>
+                </span>
             </div>
             <?php // Two presentations of the same gated payload: the list is the
             // Daily period, the chart is Weekly / Monthly / Yearly. Since 0.43.0

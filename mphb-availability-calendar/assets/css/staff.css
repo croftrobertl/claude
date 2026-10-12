@@ -86,10 +86,9 @@
     --staff-row-h:   46px;
     --staff-head-h:  48px;
     /* The month band (0.43.1): a row above the day numbers naming each month,
-       and a bold rule down each 1st. #E7EEF7 is the palette's pale blue; the
-       rule is the header blue. */
+       and a bold rule down each 1st, in the header blue. Since 0.46.0 the
+       band itself is that blue, with white text. */
     --staff-band-h:     24px;
-    --staff-band-bg:    #E7EEF7;
     --staff-month-line: #0A50B2;
     --staff-label-w: 96px;
 }
@@ -182,7 +181,12 @@
     font-weight: 600;
     line-height: 1.3;
     text-align: center;
-    overflow-wrap: anywhere;
+    /* ONE LINE (0.46.0, Rob): the days on screen, "Dec 28, 2026 – Jan 24,
+       2027" at the longest. staff.js steps the size down until it fits
+       (fitTitle) — so nothing is ever clipped by the overflow below, which
+       only gives the measurement a box to overflow. */
+    white-space: nowrap;
+    overflow: hidden;
 }
 .mphbac-staff-nav {
     display: inline-flex;
@@ -389,6 +393,25 @@
     opacity: 0.75;
     cursor: pointer;
 }
+/* THE VALUE IS CENTRED ON THE WHOLE PILL (0.46.0, Rob: it sat off centre).
+   Measured in Chromium: a date's text centred in what the calendar icon left
+   of the field, so it sat ~11px left of the pill's centre. The icon is taken
+   out of the text's layout and pinned in the right padding; the sides are
+   equal, so the text centres on the pill and the icon never covers it. iOS
+   draws no icon; its value box is centred explicitly. The lists' padding is
+   symmetric for the same reason (the chevron lives in the right padding). */
+.mphbac-staff .mphbac-staff-input[type="date"] { position: relative; }
+.mphbac-staff .mphbac-staff-input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    margin: 0;
+    transform: translateY(-50%);
+}
+.mphbac-staff .mphbac-staff-input[type="date"]::-webkit-date-and-time-value {
+    margin: 0;
+    text-align: center;
+}
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input:focus-visible {
     outline: 2px solid var(--staff-focus, #0f6dbf);
     outline-offset: 2px;
@@ -398,7 +421,18 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4em 1em;
+    /* SPACE ABOVE THE CALENDAR (0.46.0, Rob): the Pets / Couch / Boat
+       swatches sat right on the chart's top edge. */
+    margin-bottom: 10px;
     font-size: 0.85em;
+}
+/* The sources and the extras (0.46.0, Rob): each group keeps its keys on
+   one line; on a phone each group is a row of its own (below). */
+.mphbac-staff-legend-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4em 1em;
 }
 .mphbac-staff-legend[hidden] { display: none; }
 /* THE LEGEND (0.44.0): the five sources, the IN / OUT tags, pending stripes,
@@ -597,6 +631,10 @@ span.mphbac-staff-ico::before {
        overlay through every cottage row ABOVE the bars, so a stay crossing
        the 1st cannot hide it. The overlay ignores the pointer.
    The nav label follows the scroll as well — staff.js. */
+/* THE BAND, BLUE (0.46.0, Rob): white on a solid #0A50B2 — the site's menu
+   blue and the board's nav-button blue, 7.5:1 — at 14px (was 12px, blue on
+   pale #E7EEF7). It stays 24px tall: 14px at line-height 1 fits,
+   so the header row does not grow. */
 .mphbac-staff-monthband {
     position: sticky;
     top: 0;
@@ -604,11 +642,11 @@ span.mphbac-staff-ico::before {
     display: flex;
     align-items: center;
     min-width: 0;
-    background: var(--staff-band-bg);
+    background: var(--staff-month-line);
     border-left: 1px solid var(--staff-frame);
     border-bottom: 1px solid var(--staff-frame);
-    color: var(--staff-month-line);
-    font-size: 12px;
+    color: #ffffff;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
@@ -620,9 +658,13 @@ span.mphbac-staff-ico::before {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.mphbac-staff-monthband.is-month-start,
 .mphbac-staff-dayhead.is-month-start {
     box-shadow: inset 3px 0 0 var(--staff-month-line);
+}
+/* On the blue band a blue rule would vanish: the 1st is marked in white
+   there (0.46.0); the day header and the rows keep their blue rule. */
+.mphbac-staff-monthband.is-month-start {
+    box-shadow: inset 3px 0 0 #ffffff;
 }
 .mphbac-staff-dayhead.is-month-start {
     color: var(--staff-month-line);
@@ -1443,6 +1485,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-results { margin-top: 8px; text-align: left; }
 .mphbac-staff-results[hidden] { display: none; }
 .mphbac-staff-results-count { margin: 0 0 6px; color: var(--staff-muted); font-size: 0.9em; }
+.mphbac-staff-results-count.is-none { text-align: center; }   /* "No bookings match." (0.46.0, Rob) */
 .mphbac-staff-results-list {
     max-height: min(60vh, 60dvh);
     margin: 0;
@@ -1589,11 +1632,13 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
-        padding-left: 12px;
+        padding-left: 34px;       /* = the right: the value centres on the pill (0.46.0) */
         padding-right: 34px;
         background-position: right 12px center;
     }
     .mphbac-staff-legend { font-size: 0.8em; }
+    /* Two rows, grouped by kind (0.46.0, Rob): sources, then extras. */
+    .mphbac-staff-legend-group { flex: 0 0 100%; flex-wrap: nowrap; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
     /* Same arithmetic as the base rule — only the vertical padding tightens
        on a phone. It was 52px, which put the title 6px under the X. */
@@ -1663,12 +1708,21 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-from,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-to {
         padding-left: 6px;
-        padding-right: 4px;
+        padding-right: 6px;       /* symmetric; the icon is pinned, out of the text's way */
     }
     .mphbac-staff .mphbac-staff-input[type="date"]::-webkit-calendar-picker-indicator {
         width: 16px;
         height: 16px;
-        margin-left: 2px;
+        right: 5px;
         padding: 0;
+    }
+    /* The lists, symmetric too, with the chevron closer in: "Oct 2026" fits. */
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
+    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
+        padding-left: 26px;
+        padding-right: 26px;
+        background-position: right 8px center;
     }
 }
