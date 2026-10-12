@@ -206,6 +206,11 @@ final class Admin_Fields
             true
         );
         wp_localize_script('dcc-checkout-admin', 'DCC_CHECKOUT_ADMIN', $this->script_config());
+        // v0.34.1 — Add New Booking draws MotoPress's own checkout form, so it
+        // gets the guest checkout's fixes for an unchosen guest count.
+        if (self::is_add_new_flow()) {
+            Guest_Count_Script::enqueue(false);
+        }
         $this->enqueued = true;
         return true;
     }
@@ -301,7 +306,11 @@ final class Admin_Fields
             'boatField'       => self::boat_field(),
             // v0.32.1 — a WORD: 'edit-accommodations' in MotoPress's Edit
             // Accommodations flow, where the script leaves the form alone.
-            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations' : '',
+            // v0.34.1 — 'add-new' on Add New Booking, where the script holds
+            // MotoPress's messages until Submit Booking and hides the Guests
+            // row while the count is unchosen.
+            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations'
+                : (self::is_add_new_flow() ? 'add-new' : ''),
             // v0.26.0 — the Customer Information box's order and headings.
             'customerLayout'     => self::customer_layout(),
             'customerOtherTitle' => __('Other', 'dcc-checkout'),
@@ -382,6 +391,17 @@ final class Admin_Fields
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing check, nothing saved
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash((string) $_GET['page'])) : '';
         return $page === 'mphb_edit_booking';
+    }
+
+    /**
+     * v0.34.1 — MotoPress's Add New Booking (every step; the guest-count fixes
+     * act only where a guest chooser is on the page).
+     */
+    public static function is_add_new_flow(): bool
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing check, nothing saved
+        $page = isset($_GET['page']) && is_scalar($_GET['page']) ? sanitize_key(wp_unslash((string) $_GET['page'])) : '';
+        return $page === 'mphb_add_new_booking';
     }
 
     public static function customer_layout(): array

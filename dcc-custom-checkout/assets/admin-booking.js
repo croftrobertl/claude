@@ -319,7 +319,92 @@
         gate(layout);
         if (layout) { layout.refresh(); }
         if (CFG.isExisting !== '1') { fillGuestNames(); }
+        addNewGuestCount();
     });
+
+    /**
+     * v0.34.1 — Add New Booking gets the guest checkout's two fixes (Rob: "Yes,
+     * in 0.34.1"). Its checkout step is MotoPress's own checkout form, and
+     * MotoPress's own script prices it: while Number of Guests is on
+     * "— Select —" every recalculation was refused ("Please select the number
+     * of guests." at once) and a Pet Fee: Yes added nothing to the total.
+     *
+     * The price questions themselves are asked for the included guests by
+     * assets/guest-count.js, shared with the checkout and loaded in the head.
+     * What is done here is this screen's own half, as checkout.js does it for
+     * the guest:
+     *  - the breakdown's Guests row is hidden while a count is unchosen (a
+     *    class on the form; the stylesheet does the hiding, so a re-rendered
+     *    breakdown is covered the moment it lands);
+     *  - MotoPress's message box is held back until Submit Booking is pressed
+     *    — Rob's rule, an error appears only after the error is made. A box
+     *    that SHOWS a message when the page loads is left alone: it may be a
+     *    real error from a failed submit.
+     * Nothing is submitted differently: the count staff chose — or none — is
+     * what goes, and MotoPress still refuses a booking without one.
+     */
+    function addNewGuestCount() {
+        if (CFG.flow !== 'add-new') { return; }
+        // Only MotoPress's room guest chooser — never the search step's own
+        // adults field, which the widest fallbacks would also match.
+        var room = function (scope) {
+            return adultsSelects(scope).filter(function (s) {
+                return /^mphb_room_details\[[^\]]*\]\[adults\]$/.test(String(s.name || '')) ||
+                    s.classList.contains('mphb_sc_checkout-guests-chooser') ||
+                    s.classList.contains('mphb_checkout-guests-chooser');
+            });
+        };
+        var forms = [];
+        room(document).forEach(function (s) {
+            if (s.form && forms.indexOf(s.form) === -1) { forms.push(s.form); }
+        });
+        forms.forEach(function (form) {
+            function update() {
+                var unchosen = room(form).some(function (s) { return String(s.value) === ''; });
+                setClassFlag(form, 'dcc_admin-guests-provisional', unchosen);
+            }
+            update();
+            form.addEventListener('change', update, true);
+
+            Array.prototype.filter.call(form.querySelectorAll('.mphb-errors-wrapper'), showsMessageNow)
+                .forEach(function (el) {
+                    if (el.getAttribute('data-dcc-preexisting') !== '1') {
+                        el.setAttribute('data-dcc-preexisting', '1');
+                    }
+                });
+            addClass(form, 'dcc_admin-preflight');
+            function release() { setClassFlag(form, 'dcc_admin-preflight', false); }
+            form.addEventListener('submit', release, true);
+            // MotoPress books over REST from the click; a submit event is not
+            // guaranteed to fire.
+            form.addEventListener('click', function (e) {
+                var el = e.target && e.target.closest
+                    ? e.target.closest('input[type="submit"], button')
+                    : null;
+                if (el && el.type === 'submit') { release(); }
+            }, true);
+        });
+    }
+
+    function setClassFlag(el, name, on) {
+        if (el && el.classList.contains(name) !== on) {
+            if (on) { el.classList.add(name); } else { el.classList.remove(name); }
+        }
+    }
+
+    // A message box that is really showing a message right now: it has text,
+    // and neither it nor an ancestor is hidden. MotoPress prints its box empty
+    // and hidden (mphb-hide) and fills it later; that is not a message.
+    function showsMessageNow(el) {
+        if (!String(el.textContent || '').trim()) { return false; }
+        for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+            if (n.hidden || n.classList.contains('mphb-hide')) { return false; }
+            var cs = null;
+            try { cs = window.getComputedStyle(n); } catch (_) { cs = null; }
+            if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) { return false; }
+        }
+        return true;
+    }
 
     /**
      * Add New: Full Guest Name (Accommodation Details) follows Guest 1's First

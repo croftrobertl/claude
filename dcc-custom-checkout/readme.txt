@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.34.0
+Stable tag: 0.34.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,13 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.34.1 =
+Add New Booking gets the same two checkout fixes (Rob: "Yes, in 0.34.1"), and the guest select gets the site's message.
+
+* Fixed: on Add New Booking, while Number of Guests is still "— Select —", "Please select the number of guests." showed at once and Pet Fee: Yes added nothing to the total. The price is now shown for the included guests (2, never more than the cottage sleeps), with the Guests line hidden, so the pet fee appears at once. Messages wait until Submit Booking is pressed; one already showing when the page loads still shows. What is submitted is always the number staff chose, and a booking still needs one.
+* Fixed: pressing Book Now (or Submit Booking) with no number of guests, the browser said "Please select an item in the list." It now says "Please select the number of guests.", only after the press, and the message clears as soon as a number is chosen. The browser's check itself is unchanged.
+* The checkout's price fix now lives in a small shared script (guest-count.js) that the checkout and Add New Booking both load, so the two cannot drift apart. Nothing else on the checkout changes.
 
 = 0.34.0 =
 Rob's new pet policy (11 October), and two fixes from his live check of the checkout.

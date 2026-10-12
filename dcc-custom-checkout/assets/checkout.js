@@ -17,11 +17,6 @@
     var CFG  = window.DCC_CHECKOUT || {};
     var I18N = CFG.i18n || {};
 
-    // B1 (v0.34.0) — installed NOW, while the page is still loading, so it is
-    // in place before MotoPress's own checkout script asks for its first
-    // price at page load. See armRecalcCount().
-    armRecalcCount();
-
     // The tax disclosure's open state, held OUTSIDE foldTaxDetail.
     // formatBreakdown() rebuilds the breakdown table from MotoPress's seed row
     // on every re-render, destroying the note and its button and recreating
@@ -2499,146 +2494,10 @@
     /* ===================================================================== *
      * B1 (v0.34.0) — "Price for 2 meanwhile" (Rob's pick).
      *
-     * MotoPress re-prices the checkout over admin-ajax (action
-     * mphb_update_checkout_info) at page load and whenever a guest count,
-     * rate or service changes, and the per-rate labels likewise (action
-     * mphb_update_rate_prices). Both send each room's adults. While the guest
-     * count is still "— Select —" that is empty, MotoPress's server refuses
-     * ("The number of guests is not valid." — on this site, through Loco,
-     * "Please select the number of guests."), the message is shown at load,
-     * and the breakdown keeps its old figures: so answering Yes to the dog
-     * question added no pet line until a count was chosen (Director, live
-     * 6.3.0, mphb.js ~1239–1290, update-checkout-info.php ~86–95).
-     *
-     * So, for THOSE TWO REQUESTS ONLY, an EMPTY guest count is sent as the
-     * included guests (Config::included_guests(), 2), never more than that
-     * room's own capacity. The breakdown, total and deposit are an
-     * included-guests stay, the pet line appears the moment it is asked for,
-     * and the breakdown's Guests row is hidden while the number is not the
-     * guest's (markProvisional()).
-     *
-     * DONE IN THE BROWSER, NOT ON THE SERVER, deliberately: rewriting the
-     * request needs only what this page can see — the action name and a
-     * parameter that carries the chooser's own field name. Doing it on the
-     * server would mean relying on how MotoPress's AJAX handler parses
-     * formValues, which has not been read. And it is narrower: nothing but
-     * these two price questions is touched. The booking itself (REST POST
-     * /mphb/v1/checkout, a FormData body) never matches, so what the guest
-     * chose — including "nothing yet" — is exactly what is submitted, and
-     * MotoPress still refuses a booking with no count.
-     *
-     * Fails safe: a request whose shape this cannot read is sent as it was,
-     * which is MotoPress's own behaviour; administrators get a console note.
+     * The request rewrite itself lives in assets/guest-count.js since 0.34.1,
+     * shared with WP-Admin's Add New Booking, and is loaded before this file.
+     * What stays here is the guest checkout's own half: the Guests row.
      * ===================================================================== */
-    var RECALC_ACTIONS = ['mphb_update_checkout_info', 'mphb_update_rate_prices'];
-
-    function decodePart(str) {
-        try { return decodeURIComponent(String(str).replace(/\+/g, ' ')); } catch (_) { return String(str); }
-    }
-
-    function nameSegments(name) {
-        return String(name).replace(/\]/g, '').split('[');
-    }
-
-    // The provisional count for an unchosen room: the included guests, never
-    // above what that room's chooser offers.
-    function provisionalAdults(sel) {
-        var inc = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
-        var max = maxOptionValue(sel);
-        return max > 0 ? Math.min(inc, max) : inc;
-    }
-
-    // Which room's guest chooser does this request parameter carry? Only a
-    // parameter whose name ENDS WITH the chooser's own field name
-    // (formValues[mphb_room_details][0][adults] for mphb_room_details[0][adults]),
-    // or — with a single room on the page — any [adults] parameter outside
-    // a services branch. An extra-guest service's "for N" ([services][j][adults])
-    // is never a guest count.
-    function chooserForParam(param, choosers) {
-        var segs = nameSegments(param);
-        if (segs[segs.length - 1] !== 'adults' || segs.indexOf('services') !== -1) {
-            return null;
-        }
-        for (var i = 0; i < choosers.length; i++) {
-            var own = nameSegments(choosers[i].name);
-            if (own.length <= segs.length &&
-                segs.slice(segs.length - own.length).join('\u0001') === own.join('\u0001')) {
-                return choosers[i];
-            }
-        }
-        return choosers.length === 1 ? choosers[0] : null;
-    }
-
-    // A query string (URL part or urlencoded body). Returned unchanged unless
-    // it is one of the two price questions AND carries an empty count for a
-    // room whose chooser is still unchosen.
-    function rewriteRecalcQuery(query) {
-        var parts = String(query).split('&');
-        var action = '';
-        parts.forEach(function (p) {
-            var i = p.indexOf('=');
-            if (i > 0 && decodePart(p.slice(0, i)) === 'action') { action = decodePart(p.slice(i + 1)); }
-        });
-        if (RECALC_ACTIONS.indexOf(action) === -1) {
-            return query;
-        }
-        var form = document.querySelector('.mphb_sc_checkout-form') ||
-                   document.querySelector('.mphb_sc_checkout-wrapper');
-        var choosers = form ? roomAdultsSelects(form) : [];
-        var unchosen = choosers.filter(function (s) { return String(s.value) === ''; });
-        if (!unchosen.length) {
-            return query;
-        }
-        var changed = false;
-        var out = parts.map(function (p) {
-            var i = p.indexOf('=');
-            if (i <= 0 || decodePart(p.slice(i + 1)) !== '') { return p; }
-            var sel = chooserForParam(decodePart(p.slice(0, i)), choosers);
-            if (!sel || String(sel.value) !== '') { return p; }
-            changed = true;
-            return p.slice(0, i + 1) + provisionalAdults(sel);
-        });
-        if (!changed) {
-            adminConsole('A price recalculation (' + action + ') was sent while a guest count ' +
-                'is unchosen, but no empty guest count could be found in it, so it went as it was.');
-            return query;
-        }
-        return out.join('&');
-    }
-
-    function armRecalcCount() {
-        var X = window.XMLHttpRequest;
-        if (!X || !X.prototype || X.prototype.dccRecalcArmed) {
-            return;
-        }
-        var open = X.prototype.open;
-        var send = X.prototype.send;
-        X.prototype.open = function (method, url) {
-            var args = Array.prototype.slice.call(arguments);
-            try {
-                var u = String(url);
-                var q = u.indexOf('?');
-                if (q !== -1) {
-                    var hash = u.indexOf('#', q);
-                    var query = hash === -1 ? u.slice(q + 1) : u.slice(q + 1, hash);
-                    var next = rewriteRecalcQuery(query);
-                    if (next !== query) {
-                        args[1] = u.slice(0, q + 1) + next + (hash === -1 ? '' : u.slice(hash));
-                    }
-                }
-            } catch (_) { /* never stand between MotoPress and its request */ }
-            return open.apply(this, args);
-        };
-        X.prototype.send = function (body) {
-            var args = Array.prototype.slice.call(arguments);
-            if (typeof body === 'string') {
-                try { args[0] = rewriteRecalcQuery(body); } catch (_) { args[0] = body; }
-            }
-            return send.apply(this, args);
-        };
-        X.prototype.dccRecalcArmed = true;
-    }
-
     // While any room's count is unchosen the breakdown is priced for the
     // included guests, so its Guests row would state a number the guest never
     // gave: hidden (by a class on the form, so a re-rendered table is covered
@@ -2650,12 +2509,6 @@
         }
         update();
         root.addEventListener('change', update, true);
-    }
-
-    // Console only, administrators only: a diagnostic, never a message.
-    function adminConsole(msg) {
-        if (!CFG.isAdmin) { return; }
-        try { window.console && console.info('DCC Custom Checkout: ' + msg); } catch (_) {}
     }
 
     /* ===================================================================== *

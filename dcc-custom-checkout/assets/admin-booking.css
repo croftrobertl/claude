@@ -166,3 +166,21 @@ div.dcc_admin-group-heading:first-child {
 .dcc_admin-boat {
     margin: 12px 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * v0.34.1 — Add New Booking while Number of Guests is on "— Select —"
+ * (admin-booking.js addNewGuestCount(); the guest checkout does the same in
+ * checkout.css).
+ *  - The breakdown is priced for the included guests meanwhile
+ *    (assets/guest-count.js), so its Guests row would state a number staff
+ *    never chose: hidden. MotoPress's own row class (booking-view.php).
+ *  - MotoPress's message box is held back until Submit Booking is pressed,
+ *    unless it was already showing a message when the page loaded.
+ * ------------------------------------------------------------------------- */
+form.dcc_admin-guests-provisional tr.mphb-price-breakdown-guests {
+    display: none !important;
+}
+
+form.dcc_admin-preflight .mphb-errors-wrapper:not([data-dcc-preexisting]) {
+    display: none !important;
+}

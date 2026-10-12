@@ -2497,8 +2497,8 @@
    "admin-layout"
   ],
   "claim": "0.32.1: the flow word reaches the script",
-  "find": "            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations' : '',",
-  "replace": "            'flow'            => '',",
+  "find": "            'flow'            => self::is_edit_accommodations_flow() ? 'edit-accommodations'\n",
+  "replace": "            'flow'            => false ? 'edit-accommodations'\n",
   "count": 1
  },
  {
@@ -3384,55 +3384,55 @@
  },
  {
   "id": "js-recalc-not-armed",
-  "file": "dcc-custom-checkout/assets/checkout.js",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
   "suites": [
    "recalc"
   ],
-  "claim": "0.34.0: the price is asked for the included guests while the count is unchosen",
-  "find": "    // price at page load. See armRecalcCount().\n    armRecalcCount();",
-  "replace": "    // price at page load. See armRecalcCount().",
+  "claim": "0.34.0 (guest-count.js since 0.34.1): the price is asked for the included guests while the count is unchosen",
+  "find": "    armRecalcCount();\n    armMessage();",
+  "replace": "    armMessage();",
   "count": 1
  },
  {
   "id": "js-recalc-capacity",
-  "file": "dcc-custom-checkout/assets/checkout.js",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
   "suites": [
    "recalc"
   ],
-  "claim": "0.34.0: never more than the room's capacity",
+  "claim": "0.34.0 (guest-count.js since 0.34.1): never more than the room's capacity",
   "find": "        return max > 0 ? Math.min(inc, max) : inc;",
   "replace": "        return inc;",
   "count": 1
  },
  {
   "id": "js-recalc-service-adults",
-  "file": "dcc-custom-checkout/assets/checkout.js",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
   "suites": [
    "recalc"
   ],
-  "claim": "0.34.0: a service's 'for N' is never taken for the guest count",
+  "claim": "0.34.0 (guest-count.js since 0.34.1): a service's 'for N' is never taken for the guest count",
   "find": "        if (segs[segs.length - 1] !== 'adults' || segs.indexOf('services') !== -1) {",
   "replace": "        if (segs[segs.length - 1] !== 'adults') {",
   "count": 1
  },
  {
   "id": "js-recalc-any-action",
-  "file": "dcc-custom-checkout/assets/checkout.js",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
   "suites": [
    "recalc"
   ],
-  "claim": "0.34.0: only the two price questions are touched",
+  "claim": "0.34.0 (guest-count.js since 0.34.1): only the two price questions are touched",
   "find": "        if (RECALC_ACTIONS.indexOf(action) === -1) {\n            return query;",
   "replace": "        if (false) {\n            return query;",
   "count": 1
  },
  {
   "id": "js-recalc-body-path",
-  "file": "dcc-custom-checkout/assets/checkout.js",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
   "suites": [
    "recalc"
   ],
-  "claim": "0.34.0: a urlencoded body (updateRatePrices) is adjusted too",
+  "claim": "0.34.0 (guest-count.js since 0.34.1): a urlencoded body (updateRatePrices) is adjusted too",
   "find": "                try { args[0] = rewriteRecalcQuery(body); } catch (_) { args[0] = body; }",
   "replace": "                args[0] = body;",
   "count": 1
@@ -3501,6 +3501,237 @@
   "claim": "0.34.0: the Guests row is hidden while provisional",
   "find": ".mphb_sc_checkout-form.dcc_checkout-guests-provisional tr.mphb-price-breakdown-guests {\n    display: none !important;\n}",
   "replace": ".mphb_sc_checkout-form.dcc_checkout-guests-provisional tr.mphb-price-breakdown-guests {\n    display: table-row;\n}",
+  "count": 1
+ },
+ {
+  "id": "gc-message-not-armed",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the required chooser says the site's words, not the browser's",
+  "find": "    armRecalcCount();\n    armMessage();",
+  "replace": "    armRecalcCount();",
+  "count": 1
+ },
+ {
+  "id": "gc-message-only-belt",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the message is set by the press itself, before the browser checks",
+  "find": "            if (el && el.type === 'submit' && el.form) {\n                refreshAll();",
+  "replace": "            if (false) {\n                refreshAll();",
+  "count": 1
+ },
+ {
+  "id": "gc-message-no-belt",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: a submit with no click (requestSubmit) still gets the site's words",
+  "find": "            if (isChooser(e.target)) { refreshMessage(e.target); }",
+  "replace": "            /* belt removed */",
+  "count": 1
+ },
+ {
+  "id": "gc-message-not-required",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: a select that is not required is never given a message (no added check)",
+  "find": "        var msg = (sel.required && String(sel.value) === '')",
+  "replace": "        var msg = (String(sel.value) === '')",
+  "count": 1
+ },
+ {
+  "id": "gc-message-not-cleared",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: choosing a count clears the message at once",
+  "find": "                sel.setCustomValidity('');\n            }\n        }, true);",
+  "replace": "            }\n        }, true);",
+  "count": 1
+ },
+ {
+  "id": "gc-message-at-load",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the message appears only after a submit attempt, never at load",
+  "find": "    armRecalcCount();\n    armMessage();",
+  "replace": "    armRecalcCount();\n    armMessage();\n    refreshAll();",
+  "count": 1
+ },
+ {
+  "id": "gc-message-on-change-select",
+  "file": "dcc-custom-checkout/assets/guest-count.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: picking '— Select —' again sets nothing until the next submit attempt",
+  "find": "            if (isChooser(sel) && sel.validity && sel.validity.customError && String(sel.value) !== '') {\n                sel.setCustomValidity('');\n            }",
+  "replace": "            if (isChooser(sel)) { refreshMessage(sel); }",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-off",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Add New gets the guest-count half (Guests row, held messages)",
+  "find": "        if (CFG.flow !== 'add-new') { return; }",
+  "replace": "        return;",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-provisional-off",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Add New hides the Guests row while the count is unchosen",
+  "find": "                setClassFlag(form, 'dcc_admin-guests-provisional', unchosen);",
+  "replace": "                setClassFlag(form, 'dcc_admin-guests-provisional', false);",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-no-preflight",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Add New holds MotoPress's messages until Submit Booking",
+  "find": "            addClass(form, 'dcc_admin-preflight');",
+  "replace": "            /* no hold */",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-tags-all",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: an empty hidden box at load is not a message, so a later one is held",
+  "find": "            Array.prototype.filter.call(form.querySelectorAll('.mphb-errors-wrapper'), showsMessageNow)",
+  "replace": "            Array.prototype.filter.call(form.querySelectorAll('.mphb-errors-wrapper'), function () { return true; })",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-tags-none",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: a box showing a message at load is never hidden (the safety catch)",
+  "find": "            Array.prototype.filter.call(form.querySelectorAll('.mphb-errors-wrapper'), showsMessageNow)",
+  "replace": "            Array.prototype.filter.call(form.querySelectorAll('.mphb-errors-wrapper'), function () { return false; })",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-hidden-tagged",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: a HIDDEN box with text at load is not a showing message",
+  "find": "            if (n.hidden || n.classList.contains('mphb-hide')) { return false; }\n            var cs = null;\n            try { cs = window.getComputedStyle(n); } catch (_) { cs = null; }\n            if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) { return false; }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "ab-addnew-search-chooser",
+  "file": "dcc-custom-checkout/assets/admin-booking.js",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: only MotoPress's room chooser counts, never a widest-fallback select",
+  "find": "                return /^mphb_room_details\\[[^\\]]*\\]\\[adults\\]$/.test(String(s.name || '')) ||",
+  "replace": "                return true ||",
+  "count": 1
+ },
+ {
+  "id": "php-addnew-flow-word",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Add New is told it is Add New",
+  "find": "                : (self::is_add_new_flow() ? 'add-new' : ''),",
+  "replace": "                : '',",
+  "count": 1
+ },
+ {
+  "id": "php-addnew-no-script",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Add New loads guest-count.js",
+  "find": "        if (self::is_add_new_flow()) {\n            Guest_Count_Script::enqueue(false);",
+  "replace": "        if (false) {\n            Guest_Count_Script::enqueue(false);",
+  "count": 1
+ },
+ {
+  "id": "php-addnew-script-footer",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: on Add New guest-count.js is in the head",
+  "find": "            Guest_Count_Script::enqueue(false);",
+  "replace": "            Guest_Count_Script::enqueue(true);",
+  "count": 1
+ },
+ {
+  "id": "php-addnew-script-everywhere",
+  "file": "dcc-custom-checkout/includes/class-admin-fields.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: Edit Accommodations and the edit screen do not get guest-count.js",
+  "find": "        if (self::is_add_new_flow()) {\n            Guest_Count_Script::enqueue(false);",
+  "replace": "        if (true) {\n            Guest_Count_Script::enqueue(false);",
+  "count": 1
+ },
+ {
+  "id": "php-checkout-no-dep",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: checkout.js depends on guest-count.js, so it runs first",
+  "find": "            [Guest_Count_Script::HANDLE],",
+  "replace": "            [],",
+  "count": 1
+ },
+ {
+  "id": "php-checkout-no-script",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the checkout loads guest-count.js",
+  "find": "        Guest_Count_Script::enqueue(true);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "php-gc-message-missing",
+  "file": "dcc-custom-checkout/includes/class-guest-count-script.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the site's words reach the script",
+  "find": "                'guestsRequired' => __('Please select the number of guests.', 'dcc-checkout'),",
+  "replace": "                'guestsRequired' => '',",
   "count": 1
  }
 ]

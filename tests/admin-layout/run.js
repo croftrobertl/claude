@@ -369,7 +369,10 @@ async function open(browser, width, html, cfgOver, included, booking, wizard, ct
     const logs = [];
     pg.on('console', m => logs.push(m.text()));
     // `__page`: the ?page= of the request, handed to the shipped PHP (v0.32.1).
-    const page = cfgOver && cfgOver.__page;
+    // v0.34.1: an Add New page is requested as live requests it
+    // (?page=mphb_add_new_booking), so the shipped PHP says flow "add-new" and
+    // the guest-count half runs under every Add New assertion here too.
+    const page = (cfgOver && cfgOver.__page) || (/<h1>Add New Booking<\/h1>/.test(html) ? 'mphb_add_new_booking' : '');
     if (page) { cfgOver = Object.assign({}, cfgOver); delete cfgOver.__page; }
     const cfg = Object.assign(phpConfig(included, booking, wizard, page), cfgOver || {});
     // Printed inline ahead of the script, as wp_localize_script does. (An
@@ -1400,6 +1403,19 @@ async function visibleServiceRows(pg) {
                 }
             }
         }
+    }
+
+    // v0.34.1 — the guard on the defaulting above: an Add New fixture really
+    // runs as Add New (flow "add-new"), so the guest-count half is live under
+    // this suite's layout and idempotence assertions; the edit screen does not.
+    {
+        const r = await open(browser, 1280, addNewPage({ preset: '' }));
+        check('v0.34.1 Add New fixtures run as Add New: flow "add-new", the form held and provisional while unchosen',
+            await r.pg.evaluate(() => {
+                const f = document.querySelector('form.mphb_sc_checkout-form');
+                return [window.DCC_CHECKOUT_ADMIN.flow, f.classList.contains('dcc_admin-preflight'), f.classList.contains('dcc_admin-guests-provisional')];
+            }), ['add-new', true, true]);
+        await r.ctx.close();
     }
 
     await browser.close();

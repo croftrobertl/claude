@@ -1579,8 +1579,10 @@ yours to improvise.
     `mphb_room_details[0][adults]` left on "", produce
     `formValues%5Bmphb_room_details%5D%5B0%5D%5Badults%5D=` in the GET query;
     a service's own count encodes as `…[services][0][adults]=1`, which the
-    `services` exclusion skips. Not yet captured from a live page load —
-    Rob's section 3 (checkout on his phone and desktop) is the end-to-end proof.
+    `services` exclusion skips. **CAPTURED from a real page load** (Director,
+    staging, 2026-10-12, section 3): `formValues[mphb_room_details][0][adults]=2`
+    with the menu on "— Select —", response 200. Moved to `guest-count.js` in
+    0.34.1 (entry below).
   - **The Guests row** (`tr.mphb-price-breakdown-guests`, booking-view.php
     ~100–111) is hidden while any chooser is unchosen, by a CLASS ON THE FORM
     (`dcc_checkout-guests-provisional`) + CSS, so a re-rendered table is
@@ -1593,6 +1595,65 @@ yours to improvise.
     load still shows (the safety catch, asserted).
   - **Tap rules kept**: markProvisional() is one idempotent setClass on a
     change event; nothing is scheduled during a touch.
+- **0.34.1 — ADD NEW BOOKING GETS B1/B2, AND THE CHOOSER SPEAKS THE SITE'S
+  WORDS** (Director's staging run of Rob's sections 3/5/6, 2026-10-12, all
+  passed; Rob: "Yes, in 0.34.1"; `assets/guest-count.js`,
+  `Guest_Count_Script`, `admin-booking.js` addNewGuestCount(); suite
+  `tests/recalc/` — run.js + enqueue.php + config.php).
+  - **SECTION 3'S PROOF (live capture, Director):** a real page load's
+    `mphb_update_checkout_info` carried
+    `formValues[mphb_room_details][0][adults]=2` with the menu on
+    "— Select —", 200; Yes to the dog added $50 × nights at once; Cottage 31
+    3 guests +$100, 4 +$200 (2 nights). Section 5: #17730 / #17795 kept
+    "10-20 lbs" / "30-40 lbs" through Update. Section 6: Pet Fee Yes on Add
+    New ticks 19692, +$50 × nights; No unticks it.
+  - **THE REWRITE MOVED, UNCHANGED, INTO `guest-count.js`**, which the guest
+    checkout (footer, as `checkout.js`'s dependency — the timing the live
+    capture proved) and Add New (`page=mphb_add_new_booking`, HEAD) both
+    load: ONE copy, so the screens cannot drift. `checkout.js` keeps only
+    its own half (markProvisional, armPreflight). NOT loaded on Edit
+    Accommodations or the edit screen (0.32.1: that flow is MotoPress's).
+    The chooser lookup is the first four of `roomAdultsSelects()`' tries —
+    never the widest `select[name*="adults"]`, which matches Add New's
+    SEARCH step.
+  - **ADD NEW: WHICH SCRIPT AND REQUEST PRICE IT IS INFERRED, NOT CAPTURED.**
+    `checkout.js` is not loaded there (`is_checkout_page()` is false in
+    wp-admin), so 0.34.0 never touched it. That MotoPress's own script prices
+    step 3 with the same `mphb_update_checkout_info` rests on what the
+    Director saw: the same chooser name, the same `.mphb-errors-wrapper`, the
+    same message, and a recalc that fails until a count is chosen. If the
+    request differs, the rewrite does nothing (MotoPress's own behaviour) —
+    the Director's network-tab read on staging settles it.
+  - **Add New's own half** (`addNewGuestCount()`, `flow = 'add-new'` — a
+    WORD): the chooser's FORM (found from the chooser, no class assumed)
+    gets `dcc_admin-guests-provisional` (Guests row hidden) and
+    `dcc_admin-preflight` (`.mphb-errors-wrapper` held until Submit Booking
+    — a click on a submit control or a submit event). A box SHOWING text at
+    load is tagged and stays visible. Narrower than the checkout's
+    `[class*="error"]` on purpose: an admin screen, and that box is the one
+    proven to carry the message there. WordPress's own notices are outside
+    the form and untouched (asserted).
+  - **ITEM 2, the browser's message:** live, the guest chooser is
+    `required` (Director), so the BROWSER stops the form with "Please select
+    an item in the list." and MotoPress's message never appears. Kept as a
+    check; its WORDS become `Guest_Count_Script`'s "Please select the number
+    of guests." (`dcc-checkout` domain) via `setCustomValidity()`:
+    - set on a click on a submit control — BEFORE the browser validates
+      (Enter in a field clicks the default button too) — and on `invalid` as
+      a belt (requestSubmit, no click); asserted separately: the press sets
+      it before the browser starts checking, the belt alone after;
+    - cleared the moment a count is chosen; picking "— Select —" again sets
+      nothing until the next attempt; never set at load;
+    - **never on a select that is not `required`** — that would ADD a check
+      MotoPress does not make; asserted (it submits and MotoPress refuses).
+    - A property write: no DOM mutation (asserted: zero on the chooser) and
+      no timer, so the tap rules hold. Same on Add New.
+    - A headless browser shows no bubble; what is measured is the chooser's
+      `validationMessage` when the browser reports it (an `invalid` listener
+      on the element), and that the form was not sent.
+  - `tests/admin-layout/` now requests its Add New fixtures as
+    `page=mphb_add_new_booking`, as live does, so the layout and
+    zero-mutation assertions run with the new half live (guard asserted).
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1840,8 +1901,15 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 316
-  mutations, 316 killed, 0 of everything else, exit 0, in ONE run (v0.34.0;
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 337
+  mutations, 337 killed, 0 of everything else (v0.34.1, in TWO runs: the
+  full run hit the session's 2-hour limit at 290 killed + 1 STALE —
+  `af-flow-word-dropped`, aimed at the `flow` line 0.34.1 rewrote,
+  re-anchored with its intent unchanged — and the 47 it never reached, that
+  one included, were run on their own; the baseline was green in all
+  twenty-one suites. A run stopped mid-mutation LEAVES THAT FILE MUTATED —
+  `class-dog-sizes.php` was, and was restored from git; check `git status`
+  after any interrupted run. At v0.34.0, 316 in ONE run;
   its first full run was 313 + 3 STALE — `cfg-merge-direction-reversed`,
   `cfg-no-default-merge` and `js-pet-guess-bucket`, aimed at lines 0.34.0
   rewrote; re-anchored with their intent unchanged, each killed alone, then

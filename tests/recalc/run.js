@@ -1,13 +1,29 @@
 /**
- * v0.34.0 — the guest checkout while the guest count is still "— Select —".
+ * v0.34.0 / v0.34.1 — the guest count while it is still "— Select —", on the
+ * guest checkout AND on WP-Admin's Add New Booking (0.34.1).
  *
  *   cd tests/recalc && npm install && node run.js
  *
  * B1 "Price for 2 meanwhile" and B2 "errors only after the mistake", in real
  * Chromium at 390px and 1280px, on Cottage 34 (the pet cottage, capacity 2)
- * and a 4-guest cottage (1065, the extra-guest fee).
+ * and a 4-guest cottage (1065, the extra-guest fee); and (0.34.1) the
+ * browser's own "required" message on the chooser in the site's words, only
+ * at a submit attempt. First it runs enqueue.php: WHERE the shipped PHP loads
+ * guest-count.js (Add New in the head, the checkout before checkout.js, never
+ * Edit Accommodations or the edit screen).
  *
- * WHAT IS REAL: the shipped checkout.js and checkout.css.
+ * WHAT IS REAL: the shipped guest-count.js, checkout.js, checkout.css,
+ * admin-booking.js and admin-booking.css, with configs from the shipped PHP
+ * (tests/recalc/config.php, tests/admin-layout/config.php) after WordPress's
+ * localize step.
+ *
+ * Add New is a STAND-IN built from the Director's staging observation
+ * (2026-10-12, step=3, Cottage 34): MotoPress's own form, the chooser
+ * mphb_room_details[0][adults] on "— Select —" (— Select — | 1 | 2),
+ * .mphb-errors-wrapper, the pet service 19692 and this plugin's Pet Fee
+ * dropdown. That Add New prices over the SAME mphb_update_checkout_info
+ * request is inferred (the same chooser, box and message), not captured —
+ * the Director's network-tab read on staging is the check.
  *
  * WHAT IS A STAND-IN, built from the Director's reads of live MotoPress 6.3.0:
  *  - MotoPress's checkout script (mphb.js): at load and on a change to the
@@ -32,8 +48,23 @@ const fs   = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
-const SCRIPT = fs.readFileSync(path.join(__dirname, '../../dcc-custom-checkout/assets/checkout.js'), 'utf8');
-const CSS    = fs.readFileSync(path.join(__dirname, '../../dcc-custom-checkout/assets/checkout.css'), 'utf8');
+const { execFileSync } = require('child_process');
+const ASSETS = path.join(__dirname, '../../dcc-custom-checkout/assets');
+const SCRIPT = fs.readFileSync(path.join(ASSETS, 'checkout.js'), 'utf8');
+const CSS    = fs.readFileSync(path.join(ASSETS, 'checkout.css'), 'utf8');
+// v0.34.1 — the request rewrite and the chooser's message, shared by the guest
+// checkout and Add New Booking, and loaded before checkout.js.
+const GC     = fs.readFileSync(path.join(ASSETS, 'guest-count.js'), 'utf8');
+const ADMIN_JS  = fs.readFileSync(path.join(ASSETS, 'admin-booking.js'), 'utf8');
+const ADMIN_CSS = fs.readFileSync(path.join(ASSETS, 'admin-booking.css'), 'utf8');
+// Configs from the SHIPPED PHP, after WordPress's localize step — never a copy.
+function php(args, env) {
+    return execFileSync('php', args, { encoding: 'utf8', env: Object.assign({}, process.env, env || {}) });
+}
+const GC_CFG = { guest: php([path.join(__dirname, 'config.php'), 'guest']), admin: php([path.join(__dirname, 'config.php'), 'admin']) };
+const ADMIN_CFG = php([path.join(__dirname, '../admin-layout/config.php')],
+    { DCC_TEST_PAGE: 'mphb_add_new_booking', DCC_TEST_PET_MODE: 'flat' });
+const BROWSER_MSG = 'Please select an item in the list.';
 const GUESTS_MSG = 'Please select the number of guests.';
 
 function chromiumPath() {
@@ -101,7 +132,7 @@ function html(o) {
   <input type="hidden" name="mphb_check_out_date" value="2026-11-04">
   <section class="mphb-room-details">
     <p class="mphb-adults-chooser"><label for="mphb_adults-0">Guests</label>
-      <select id="mphb_adults-0" name="mphb_room_details[0][adults]" class="mphb_sc_checkout-guests-chooser mphb_checkout-guests-chooser">${options}</select></p>
+      <select id="mphb_adults-0" name="mphb_room_details[0][adults]" class="mphb_sc_checkout-guests-chooser mphb_checkout-guests-chooser"${o.required === false ? '' : ' required'}>${options}</select></p>
     <section class="mphb-services-details"><h4 class="services-heading">Choose Additional Services</h4>
       <ul class="mphb_sc_checkout-services-list">${services}</ul></section>
   </section>
@@ -122,12 +153,21 @@ function html(o) {
   ${err}
   <p class="mphb_sc_checkout-submit-wrapper"><input type="submit" class="button" value="Book Now"></p>
 </form>
+<script>window.DCC_GUEST_COUNT = ${GC_CFG.guest};</script>
+<script>${GC}</script>
 <script>window.DCC_CHECKOUT = ${JSON.stringify(cfg(type))};</script>
 <script>${SCRIPT}</script>
-<script>
-/* MotoPress's checkout script — the stand-in described at the top of run.js. */
+${standIn('.mphb_sc_checkout-form', '/wp-json/mphb/v1/checkout', o.nights || 2)}
+</body></html>`;
+}
+
+/* MotoPress's checkout script — the stand-in described at the top of run.js.
+   The same on both screens: Add New's checkout step is MotoPress's own form. */
+function standIn(formSel, submitPath, nights) {
+    return `<script>
 (function () {
-  var form = document.querySelector('.mphb_sc_checkout-form');
+  var form = document.querySelector('${formSel}');
+  window.__nights = ${nights};
   var errs = form.querySelector('.mphb-errors-wrapper');
   window.__recalc = 0; window.__rates = 0; window.__submitted = 0;
   function nest(obj, name, value) {
@@ -191,13 +231,70 @@ function html(o) {
     var fd = new FormData(form);
     window.__lastSubmit = Array.from(fd.entries()).map(function (p) { return [p[0], String(p[1])]; });
     var x = new XMLHttpRequest();
-    x.open('POST', '/wp-json/mphb/v1/checkout');
+    x.open('POST', '${submitPath}');
     x.onload = function () { var r = JSON.parse(x.responseText); if (!r.success) { showError(r.data.message); } window.__submitted++; };
     x.send(fd);
   });
   document.addEventListener('DOMContentLoaded', function () { updateRatePrices(); updateCheckoutInfo(); });
 })();
-</script></body></html>`;
+</script>`;
+}
+
+/* Add New's SEARCH step: an adults select of its own that is NOT MotoPress's
+   room chooser (the widest fallbacks would match it). Nothing may be held or
+   marked there. */
+function adminSearchHtml() {
+    return `<!doctype html><html><head><style>${ADMIN_CSS}</style>
+<script>window.DCC_GUEST_COUNT = ${GC_CFG.admin};</script><script>${GC}</script></head>
+<body class="wp-admin"><div class="wrap"><h1>Add New Booking</h1>
+<form method="get" id="dcc-test-search"><select name="mphb_room_type_id"><option value="1607" selected>Cottage 34</option></select>
+<select name="mphb_adults"><option value="">— Select —</option><option>1</option><option>2</option></select>
+<p class="mphb-errors-wrapper mphb-hide"></p><input type="submit" value="Search"></form></div>
+<script>window.DCC_CHECKOUT_ADMIN = ${ADMIN_CFG};</script><script>${ADMIN_JS}</script></body></html>`;
+}
+
+/* WP-Admin's Add New Booking, the checkout step (step=3) as the Director
+   observed it on staging: Cottage 34, Number of Guests on "— Select —"
+   (— Select — | 1 | 2), MotoPress's message box, the pet service 19692 and
+   this plugin's Pet Fee dropdown. The form carries NO class this plugin keys
+   on: the admin half finds it from the chooser. A WordPress error notice sits
+   OUTSIDE the form and must never be touched. */
+function adminHtml(o) {
+    const options = ['<option value="">— Select —</option>']
+        .concat([1, 2].map(n => `<option value="${n}">${n}</option>`)).join('');
+    const err = `<p class="mphb-errors-wrapper mphb-hide">${o.hiddenText || ''}</p>` +
+        (o.preErr === undefined ? '' : `<p class="mphb-errors-wrapper">${o.preErr}</p>`);
+    return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>.mphb-hide{display:none}</style><style>${ADMIN_CSS}</style>
+<script>window.DCC_GUEST_COUNT = ${GC_CFG.admin};</script>
+<script>${GC}</script>
+</head><body class="wp-admin"><div class="wrap"><h1>Add New Booking</h1>
+<div class="notice notice-error"><p>An unrelated admin notice.</p></div>
+<form method="post" id="dcc-test-admin-checkout">
+  <section class="mphb-checkout-section mphb-booking-details">
+    <h3>Accommodation Details</h3>
+    <p class="mphb-adults-chooser"><label for="mphb_adults-0">Number of Guests</label>
+      <select id="mphb_adults-0" name="mphb_room_details[0][adults]" class="mphb_sc_checkout-guests-chooser mphb_checkout-guests-chooser"${o.required === false ? '' : ' required'}>${options}</select></p>
+    <section class="mphb-services-details"><ul class="mphb_sc_checkout-services-list">
+      <li><label><input type="checkbox" class="mphb_sc_checkout-service mphb_checkout-service" name="mphb_room_details[0][services][0][id]" value="19692"> Pet Fee (per night)</label></li>
+    </ul></section>
+    <div class="dcc_admin-room-context" data-dcc-room-types="1607" data-dcc-pet-service="19692" hidden></div>
+  </section>
+  <section id="mphb-price-details"><h3>Price Breakdown</h3>
+    <table class="mphb-price-breakdown" data-adults="load"><tbody>
+      <tr class="mphb-price-breakdown-booking"><td colspan="2">#1 Cottage 34</td><td>$450</td></tr>
+      <tr class="mphb-price-breakdown-guests"><td>Guests</td><td>—</td></tr>
+      <tr class="mphb-price-breakdown-total"><th colspan="2">Total</th><td>$450</td></tr>
+    </tbody></table>
+  </section>
+  <p class="mphb-total-price">Total Price: <output class="mphb-total-price-field">$450</output></p>
+  ${err}
+  <p><input type="submit" class="button button-primary" value="Submit Booking"></p>
+</form></div>
+<script>window.DCC_CHECKOUT_ADMIN = ${ADMIN_CFG};</script>
+<script>${ADMIN_JS}</script>
+${standIn('#dcc-test-admin-checkout', '/wp-json/mphb/v1/checkout/admin', o.nights || 3)}
+</body></html>`;
 }
 
 /* ---- The server ------------------------------------------------------------ */
@@ -220,6 +317,8 @@ async function openPage(browser, width, o) {
         hasTouch: width < 600, isMobile: width < 600 });
     const pg = await ctx.newPage();
     pg.setDefaultTimeout(5000);
+    // A script error on either page is a failure, never a quiet pass.
+    pg.on('pageerror', e => { failures++; console.log(`FAIL  page error (${o.admin ? 'Add New' : 'checkout'}): ${e.message}`); });
     const log = { recalc: [], rates: [], submits: 0, failed: 0 };
     let first = true;
     await pg.route('**/wp-admin/admin-ajax.php**', async route => {
@@ -241,7 +340,7 @@ async function openPage(browser, width, o) {
             log.failed++;
             body = { success: false, data: { message: GUESTS_MSG } };
         } else {
-            const nights = 2;
+            const nights = o.nights || (o.admin ? 3 : 2);
             let total = 150 * nights;
             const lines = [];
             for (let j = 0; j < 4; j++) {
@@ -262,16 +361,32 @@ async function openPage(browser, width, o) {
         }
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     });
-    await pg.route('**/wp-json/mphb/v1/checkout', async route => {
+    await pg.route(u => /\/wp-json\/mphb\/v1\/checkout(\/admin)?$/.test(u.pathname), async route => {
         log.submits++;
+        log.submitPath = new URL(route.request().url()).pathname;
         const raw = route.request().postData() || '';
         const m = /name="mphb_room_details\[0\]\[adults\]"\r\n\r\n([^\r]*)\r\n/.exec(raw);
         log.submittedAdults = m ? m[1] : null;
         const body = m && m[1] !== '' ? { success: true } : { success: false, data: { message: GUESTS_MSG } };
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     });
-    await pg.route(u => u.href.startsWith('http://dcc.test/submit-booking/'), route => route.fulfill({ status: 200, contentType: 'text/html', body: html(o) }));
-    await pg.goto('http://dcc.test/submit-booking/' + (o.query || ''));
+    const page = o.admin ? 'http://dcc.test/wp-admin/admin.php?page=mphb_add_new_booking&step=3' : 'http://dcc.test/submit-booking/';
+    await pg.route(u => u.href.startsWith(page.split('?')[0]), route => route.fulfill({ status: 200, contentType: 'text/html', body: o.search ? adminSearchHtml() : o.admin ? adminHtml(o) : html(o) }));
+    // The browser's own "required" message, as it would show it: what the
+    // chooser says when the browser reports it (an `invalid` listener on the
+    // element runs after the capture-phase ones, just before the report).
+    await pg.addInitScript(() => {
+        window.__invalid = [];
+        // Registered before any page script: what the chooser said when the
+        // browser BEGAN reporting it, before this plugin's `invalid` belt ran.
+        window.__invalidEarly = [];
+        document.addEventListener('invalid', e => window.__invalidEarly.push(e.target.validationMessage), true);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('select').forEach(s => s.addEventListener('invalid', () => window.__invalid.push(s.validationMessage)));
+        });
+    });
+    await pg.goto(page + (o.query || ''));
+    if (o.search) { return { ctx, pg, log }; }
     await pg.waitForFunction(() => window.__recalc >= 1 && window.__rates >= 1);
     return { ctx, pg, log };
 }
@@ -285,7 +400,8 @@ async function settle(pg, n) {
 async function seen(pg) {
     return pg.evaluate(() => {
         const vis = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
-        const errors = Array.from(document.querySelectorAll('[class*="error" i], [role="alert"]'))
+        // Inside the checkout form only: WP-Admin's own notices are not ours.
+        const errors = Array.from(document.querySelector('form').querySelectorAll('[class*="error" i], [role="alert"]'))
             .filter(el => vis(el) && el.textContent.trim()).map(el => el.textContent.trim());
         const t = document.querySelector('table.mphb-price-breakdown');
         const guests = t && t.querySelector('tr.mphb-price-breakdown-guests');
@@ -311,6 +427,22 @@ async function dog(pg, yes, expectRecalcs) {
 }
 
 (async () => {
+    // Where the plugin loads guest-count.js — the shipped PHP (enqueue.php).
+    {
+        let out;
+        try {
+            out = execFileSync('php', [path.join(__dirname, 'enqueue.php')], { encoding: 'utf8' });
+        } catch (e) {
+            out = String(e.stdout || '') + '\nFAIL  enqueue.php exited ' + e.status + '\n';
+        }
+        out.split('\n').forEach(line => {
+            if (/^PASS/.test(line)) { passes++; console.log(line); }
+            else if (/^FAIL/.test(line)) { failures++; console.log(line); }
+            else if (/^      /.test(line)) { console.log(line); }
+        });
+        if (!/all passing|failing/.test(out)) { failures++; console.log('FAIL  enqueue.php printed no result'); }
+    }
+
     const browser = await chromium.launch({ executablePath: chromiumPath() });
 
     for (const width of [390, 1280]) {
@@ -363,15 +495,70 @@ async function dog(pg, yes, expectRecalcs) {
             await ctx.close();
         }
 
-        /* --- Pressing the booking button with no count. ----------------- */
+        /* --- Pressing the booking button with no count (0.34.1, item 2). --
+           Live, the chooser is `required`, so the BROWSER stops the form
+           before MotoPress sees it. Its check stays; its words become the
+           site's, and only at the submit attempt. */
         {
             const { ctx, pg, log } = await openPage(browser, width, { type: 1607 });
             await pg.waitForTimeout(150);
-            check(`${width}px before any submit: no "${GUESTS_MSG}"`, (await seen(pg)).errors, []);
+            const chooser = 'select[name="mphb_room_details[0][adults]"]';
+            check(`${width}px before any submit: no "${GUESTS_MSG}", and none set on the chooser yet`,
+                [(await seen(pg)).errors, await pg.$eval(chooser, e => e.validity.customError)], [[], false]);
+            // The guard on the guard: this chooser really is one the browser stops.
+            check(`${width}px ... the chooser is required and empty, so the browser will stop the form — in its own words, "${BROWSER_MSG}"`,
+                await pg.$eval(chooser, e => [e.required, e.validity.valueMissing, e.validationMessage]), [true, true, BROWSER_MSG]);
+            await pg.$eval(chooser, e => {
+                window.__chooserMutations = 0;
+                new MutationObserver(r => { window.__chooserMutations += r.length; }).observe(e, { attributes: true, childList: true, subtree: true });
+            });
+            await pg.click('input[type="submit"]');
+            await pg.waitForTimeout(150);
+            check(`${width}px press Book Now with no count: the browser reports "${GUESTS_MSG}" — not "${BROWSER_MSG}"`,
+                await pg.evaluate(() => window.__invalid), [GUESTS_MSG]);
+            check(`${width}px ... set by the press itself, BEFORE the browser started checking (not left to the belt)`,
+                await pg.evaluate(() => window.__invalidEarly), [GUESTS_MSG]);
+            check(`${width}px ... and the form was stopped: nothing was sent to MotoPress`,
+                [log.submits, await pg.evaluate(() => window.__submitted)], [0, 0]);
+            await chooseGuests(pg, '1', 2);
+            check(`${width}px pick 1: the message is cleared at once`,
+                await pg.$eval(chooser, e => [e.validity.customError, e.validationMessage, e.validity.valid]), [false, '', true]);
+            check(`${width}px ... setting and clearing it wrote nothing to the page (no mutation on the chooser)`,
+                await pg.evaluate(() => window.__chooserMutations), 0);
+            await pg.click('input[type="submit"]');
+            await pg.waitForFunction(() => window.__submitted >= 1);
+            check(`${width}px ... Book Now then sends the guest's own count`, [log.submits, log.submittedAdults], [1, '1']);
+            await ctx.close();
+        }
+
+        /* --- Back to "— Select —": nothing until the next attempt. ------- */
+        {
+            const { ctx, pg } = await openPage(browser, width, { type: 1607 });
+            const chooser = 'select[name="mphb_room_details[0][adults]"]';
+            await chooseGuests(pg, '2', 2);
+            await chooseGuests(pg, '', 3);
+            check(`${width}px pick 2 then "— Select —" again: no message is set until a submit attempt`,
+                await pg.$eval(chooser, e => e.validity.customError), false);
+            await pg.click('input[type="submit"]');
+            await pg.waitForTimeout(100);
+            check(`${width}px ... the next attempt gets the site's words`, await pg.evaluate(() => window.__invalid), [GUESTS_MSG]);
+            await ctx.close();
+        }
+
+        /* --- A select that is NOT required never gets a message: that would
+               ADD a check the page does not make. (The submit then reaches
+               MotoPress, which refuses it, and its message shows then.) ---- */
+        {
+            const { ctx, pg, log } = await openPage(browser, width, { type: 1607, required: false });
+            await pg.waitForTimeout(150);
+            check(`${width}px not required: before any submit, no "${GUESTS_MSG}"`, (await seen(pg)).errors, []);
             await pg.click('input[type="submit"]');
             await pg.waitForFunction(() => window.__submitted >= 1);
             await pg.waitForTimeout(50);
-            check(`${width}px press Book Now with no count: "${GUESTS_MSG}" appears THEN`, (await seen(pg)).errors, [GUESTS_MSG]);
+            check(`${width}px ... the browser did not stop it (no message was added to the chooser)`,
+                [await pg.evaluate(() => window.__invalid), await pg.$eval('select[name="mphb_room_details[0][adults]"]', e => e.validity.valid)],
+                [[], true]);
+            check(`${width}px ... MotoPress's "${GUESTS_MSG}" appears THEN`, (await seen(pg)).errors, [GUESTS_MSG]);
             check(`${width}px ... and the booking request carried the guest's real choice — empty, never a provisional 2`,
                 [log.submits, log.submittedAdults, await pg.evaluate(() => (window.__lastSubmit.find(p => p[0] === 'mphb_room_details[0][adults]') || [])[1])],
                 [1, '', '']);
@@ -380,7 +567,7 @@ async function dog(pg, yes, expectRecalcs) {
 
         /* --- Any OTHER early message is held back too, until a submit. ---- */
         {
-            const { ctx, pg } = await openPage(browser, width, { type: 1607, failFirst: true });
+            const { ctx, pg } = await openPage(browser, width, { type: 1607, failFirst: true, required: false });
             await pg.waitForTimeout(150);
             check(`${width}px a different error at load (the wrapper MotoPress printed empty): held back`,
                 [(await seen(pg)).errors, await pg.$eval('.mphb-errors-wrapper', e => e.textContent)],
@@ -403,6 +590,127 @@ async function dog(pg, yes, expectRecalcs) {
                     document.querySelector('.mphb-errors-wrapper').hasAttribute('data-dcc-preexisting')]), [true, false]);
             await ctx.close();
         }
+    }
+
+    /* --- A submit with no click (requestSubmit): the `invalid` belt. ------ */
+    {
+        const { ctx, pg, log } = await openPage(browser, 1280, { type: 1607 });
+        await pg.evaluate(() => document.querySelector('form').requestSubmit());
+        await pg.waitForTimeout(100);
+        check('requestSubmit() with no count: the browser still reports the site\'s words, and nothing is sent',
+            [await pg.evaluate(() => window.__invalid), log.submits], [[GUESTS_MSG], 0]);
+        check('... there was no click, so it was the `invalid` belt that set them (the browser\'s own words until then)',
+            await pg.evaluate(() => window.__invalidEarly), [BROWSER_MSG]);
+        await ctx.close();
+    }
+
+    /* === WP-Admin, Add New Booking (0.34.1, item 1) ======================== */
+    for (const width of [390, 1280]) {
+        {
+            const { ctx, pg, log } = await openPage(browser, width, { admin: true });
+            await pg.waitForTimeout(150);
+            check(`${width}px Add New: the shipped config says this is Add New (flow "add-new")`,
+                await pg.evaluate(() => window.DCC_CHECKOUT_ADMIN.flow), 'add-new');
+            let s = await seen(pg);
+            check(`${width}px Add New at load: no message, priced for 2 (MotoPress was ASKED for 2), the Guests row hidden`,
+                [s.errors, s.pricedFor, s.guestsRow, s.total, log.recalc, log.rates, log.failed], [[], '2', null, '$450', ['2'], ['2'], 0]);
+            check(`${width}px ... Number of Guests still says "— Select —"`,
+                await pg.$eval('select[name="mphb_room_details[0][adults]"]', e => e.value), '');
+            check(`${width}px ... WordPress's own notice outside the form is untouched`,
+                await pg.$eval('.notice-error', e => [e.getClientRects().length > 0, e.hasAttribute('data-dcc-preexisting')]), [true, false]);
+
+            await pg.selectOption('#dcc_admin_pet_fee', 'yes');
+            await settle(pg, 2);
+            s = await seen(pg);
+            check(`${width}px Pet Fee: Yes with no count — 19692 ticked, the pet line ($50 × 3 nights) appears, the total rises`,
+                [await pg.$eval('input[value="19692"]', e => e.checked), s.petLine, s.total, s.errors, s.guestsRow],
+                [true, ['$150'], '$600', [], null]);
+            await pg.selectOption('#dcc_admin_pet_fee', 'no');
+            await settle(pg, 3);
+            s = await seen(pg);
+            check(`${width}px ... Pet Fee: No — unticked, back to the stay alone`,
+                [await pg.$eval('input[value="19692"]', e => e.checked), s.petLine, s.total], [false, [], '$450']);
+
+            await chooseGuests(pg, '2', 4);
+            s = await seen(pg);
+            check(`${width}px pick 2: the Guests row says 2, the total unchanged, the real count sent`,
+                [s.guestsRow, s.total, log.recalc[log.recalc.length - 1]], ['2', '$450', '2']);
+            check(`${width}px ... nothing failed at any point`, log.failed, 0);
+            await ctx.close();
+        }
+
+        /* Submit Booking with no count: the browser stops it, in the site's words. */
+        {
+            const { ctx, pg, log } = await openPage(browser, width, { admin: true });
+            await pg.waitForTimeout(150);
+            await pg.click('input[type="submit"]');
+            await pg.waitForTimeout(150);
+            check(`${width}px Add New, Submit Booking with no count: "${GUESTS_MSG}", and nothing is sent`,
+                [await pg.evaluate(() => window.__invalid), log.submits], [[GUESTS_MSG], 0]);
+            await chooseGuests(pg, '1', 2);
+            await pg.click('input[type="submit"]');
+            await pg.waitForFunction(() => window.__submitted >= 1);
+            check(`${width}px ... with 1 chosen it goes to MotoPress's ADMIN route with staff's own 1`,
+                [log.submitPath, log.submittedAdults], ['/wp-json/mphb/v1/checkout/admin', '1']);
+            await ctx.close();
+        }
+
+        /* Not required: MotoPress still refuses, and says so only after the press. */
+        {
+            const { ctx, pg, log } = await openPage(browser, width, { admin: true, required: false });
+            await pg.waitForTimeout(150);
+            check(`${width}px Add New, chooser not required: nothing before Submit Booking`, (await seen(pg)).errors, []);
+            await pg.click('input[type="submit"]');
+            await pg.waitForFunction(() => window.__submitted >= 1);
+            await pg.waitForTimeout(50);
+            check(`${width}px ... after the press MotoPress's "${GUESTS_MSG}" shows, and the booking carried staff's real (empty) choice`,
+                [(await seen(pg)).errors, log.submittedAdults, await pg.evaluate(() => window.__invalid)], [[GUESTS_MSG], '', []]);
+            await ctx.close();
+        }
+
+        /* Any other early message is held back until Submit Booking. */
+        {
+            const { ctx, pg } = await openPage(browser, width, { admin: true, failFirst: true, required: false });
+            await pg.waitForTimeout(150);
+            check(`${width}px Add New, a different error at load: held back`,
+                [(await seen(pg)).errors, await pg.$eval('.mphb-errors-wrapper', e => e.textContent)], [[], 'Something else went wrong.']);
+            await pg.click('input[type="submit"]');
+            await pg.waitForFunction(() => window.__submitted >= 1);
+            await pg.waitForTimeout(50);
+            check(`${width}px ... after Submit Booking it shows`, (await seen(pg)).errors, [GUESTS_MSG]);
+            await ctx.close();
+        }
+
+        /* A message SHOWING at load is never hidden (a failed submit's error). */
+        {
+            const { ctx, pg } = await openPage(browser, width, { admin: true, preErr: 'Accommodation is not available.' });
+            await pg.waitForTimeout(150);
+            check(`${width}px Add New, a box showing a message at load: still shown, and only it is tagged`,
+                [(await seen(pg)).errors, await pg.evaluate(() => Array.from(document.querySelectorAll('.mphb-errors-wrapper')).map(e => e.hasAttribute('data-dcc-preexisting')))],
+                [['Accommodation is not available.'], [false, true]]);
+            await ctx.close();
+        }
+    }
+
+    /* Add New's search step: its own adults select is not the room chooser. */
+    {
+        const { ctx, pg } = await openPage(browser, 1280, { admin: true, search: true });
+        await pg.waitForTimeout(150);
+        check('Add New search step: its adults select is not the room chooser — nothing held, nothing marked, no message set',
+            await pg.evaluate(() => {
+                const f = document.getElementById('dcc-test-search');
+                return [window.DCC_CHECKOUT_ADMIN.flow, f.className, document.querySelector('[name="mphb_adults"]').validity.customError];
+            }), ['add-new', '', false]);
+        await ctx.close();
+    }
+
+    /* Add New, a hidden box with text at load is not a showing message. */
+    {
+        const { ctx, pg } = await openPage(browser, 1280, { admin: true, hiddenText: 'Stale text', failFirst: true, required: false });
+        await pg.waitForTimeout(150);
+        check('Add New: a hidden box with text at load is not tagged, so a later message in it is held back',
+            [await pg.$eval('.mphb-errors-wrapper', e => e.hasAttribute('data-dcc-preexisting')), (await seen(pg)).errors], [false, []]);
+        await ctx.close();
     }
 
     /* --- A HIDDEN box with text at load is not a showing error either. ----- */

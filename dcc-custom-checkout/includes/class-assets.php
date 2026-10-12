@@ -248,10 +248,15 @@ final class Assets
             DCC_CHECKOUT_VERSION
         );
 
+        // v0.34.1 — the guest-count script (the price questions and the
+        // chooser's message) is shared with Add New Booking; it must run
+        // before checkout.js, as the same code did inside it in 0.34.0.
+        Guest_Count_Script::enqueue(true);
+
         wp_enqueue_script(
             'dcc-checkout',
             DCC_CHECKOUT_URL . 'assets/checkout.js',
-            [],
+            [Guest_Count_Script::HANDLE],
             DCC_CHECKOUT_VERSION,
             true
         );

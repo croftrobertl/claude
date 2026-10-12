@@ -1,7 +1,7 @@
 {
   "name": "dcc-checkout-recalc-tests",
   "private": true,
-  "description": "Guest checkout: price-for-2 recalculation while the guest count is unchosen, and errors only after a submit attempt (DCC Custom Checkout 0.34.0).",
+  "description": "Guest checkout and Add New Booking: price-for-2 recalculation while the guest count is unchosen, errors only after a submit attempt, and the site's words on the required guest select (DCC Custom Checkout 0.34.0 / 0.34.1).",
   "scripts": { "test": "node run.js" },
   "devDependencies": { "playwright": "^1.47.0" }
 }
