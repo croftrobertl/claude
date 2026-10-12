@@ -279,6 +279,11 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     // year with September and pace now. The month on screen is not asked again.
     check('opened: this month by default — the month already loaded is not asked again; the rest is TWO requests',
       fresh.length === 2 && !fresh.includes('2026-10-01|2026-10-31') && fresh.includes('2025-10-01|2026-01-05') && fresh.includes('2026-01-01|2027-01-05'), fresh);
+    // Drawn again (the same timeframe): everything is in the session already.
+    const n1 = (await reqs()).length;
+    await p.evaluate(() => document.querySelector('.mphbac-staff-stats-span').dispatchEvent(new Event('change')));
+    await p.waitForTimeout(150);
+    check('...and drawn again, NOTHING is asked for: every range comes from what the session holds', (await reqs()).length === n1, (await reqs()).slice(n1));
     check('October: booked 21% (52 of 248 cottage-nights, the echoing block counted once)', k.booked === '21%', k);
     check('...arrivals 10, departures 10, turnovers 2', k.arrivals === '10' && k.departures === '10' && k.turnovers === '2', k);
     check('0.45.3: BOOKINGS 9 — the channel block echoing Bob is not a tenth (it owns no night)', k.bookings === '9', k);
@@ -341,6 +346,13 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const range = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-range').textContent);
     check('Custom reaching past the ±3-year range: clamped to Oct 8 – Dec 31, 2023, and it says so',
       /±3-year range: showing Oct 8, 2023 – Dec 31, 2023/.test(note) && range === 'Oct 8 – Dec 31, 2023', [note, range]);
+    // January 2026: its month, December before it and the year are all held
+    // (the year and last autumn's fetch). Nothing may be merged into a new,
+    // larger request just because a held range touches another.
+    await p.selectOption('.mphbac-staff-stats-span', 'month'); await p.waitForTimeout(200);
+    const n2 = (await reqs()).length;
+    await p.selectOption('.mphbac-staff-stats-month', '2026-01'); await p.waitForTimeout(200);
+    check('January 2026: every range it needs is held — no request at all', (await reqs()).length === n2, (await reqs()).slice(n2));
     await p.reload();
     await p.waitForTimeout(250);
     check('Stats is closed again after a reload', await p.evaluate(() => !document.querySelector('.mphbac-staff-stats').open));
