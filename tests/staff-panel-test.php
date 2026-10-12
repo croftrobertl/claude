@@ -214,6 +214,26 @@ check('5: a non-pet service does NOT show it',
 check('5: and the defaults alone never show it — the trap this rule exists for',
     !in_array('Dog Size', labels(booking(18443), 'customer'), true));
 
+echo "\n-- 2026-10-11 pet policy (Rob): Cottage 34, one dog up to 20 lbs, \$50 a night --\n";
+// The new service #19692 "Pet Fee (per night)" and the new only Dog Size,
+// "Up to 20 lbs" (the Website Director, 2026-10-12). Matched by TITLE
+// (/\b(pet|dog)/i), so neither the new name nor the new size needed code.
+$d = booking(18460, ['mphb_dog_size' => 'Up to 20 lbs', 'mphb_dog_hair' => 'Short'],
+    ['services' => [19692 => 3], 'service_posts' => [19692 => 'Pet Fee (per night)']]);
+check('policy: "Pet Fee (per night)" shows the dog rows — Size "Up to 20 lbs", Hair as stored',
+    value_of($d, 'customer', 'Dog Size') === 'Up to 20 lbs' && value_of($d, 'customer', 'Dog Hair') === 'Short',
+    labels($d, 'customer'));
+check('...and a blank Dog Type is left out, not printed empty', value_of($d, 'customer', 'Dog Type') === null, labels($d, 'customer'));
+$d = booking(18461, ['mphb_dog_type' => 'Beagle', 'mphb_dog_size' => 'Up to 20 lbs'],
+    ['services' => [19692 => 3], 'service_posts' => [19692 => 'Pet Fee (per night)']]);
+check('...with a Dog Type: all three rows, as stored', value_of($d, 'customer', 'Dog Type') === 'Beagle'
+    && value_of($d, 'customer', 'Dog Size') === 'Up to 20 lbs', labels($d, 'customer'));
+$d = booking(18462, [], ['services' => [17712 => 1], 'service_posts' => [17712 => 'Pet Fee – Daily Rate']]);
+check('the old "Pet Fee – Daily Rate" (#17712, kept for past bookings) still shows the block, its old size as stored',
+    value_of($d, 'customer', 'Dog Size') === '10-20 lbs', labels($d, 'customer'));
+check('"Up to 20 lbs" with NO fee and NO dog type shows nothing — the only option is every booking\'s value',
+    !in_array('Dog Size', labels(booking(18463, ['mphb_dog_size' => 'Up to 20 lbs']), 'customer'), true));
+
 echo "\n-- efficiency: one booking, one reserved-room query --\n";
 {
     // Both sections need the reserved rooms — booking for occupancy, customer

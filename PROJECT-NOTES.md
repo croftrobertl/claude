@@ -2981,3 +2981,27 @@ used. Ask the code; do not grep it. mutate.php now resolves tests/ paths
 
 **Released as 0.45.4 on its own (Rob, via the WD, 2026-10-11: "on live now
 rather than waiting"), with no other code change.**
+
+## Pet policy change, 2026-10-11 (Rob) — no code change needed
+
+**Rob:** from 11 October, pets in Cottage 34 only — one dog up to 20 lbs, a
+flat $50 a night. **WD, on live (2026-10-12):** a new MotoPress service
+**#19692 "Pet Fee (per night)"** is the only pet fee attached to Cottage 34;
+the old **#17712 / #17711 / #14926 "Pet Fee – Daily / Weekly / Monthly
+Rate"** stay published because past bookings carry them; the Dog Size
+checkout field now offers only **"Up to 20 lbs"** (two cancelled test
+bookings, #17730 and #17795, still hold "10-20 lbs" and "30-40 lbs").
+
+**Checked (2026-10-12):** nothing in the plugin assumes the old titles, ids
+or sizes. A pet fee is recognised by its TITLE, `/\b(pet|dog)/i`
+(has_pet_service(), pet_service_ids()), so #19692 and the old rates all
+count — for the paw, the Daily icons, the preview and search (the board's
+Pets FILTER was removed in 0.44.1; Stats stopped counting pets in 0.45.3).
+The sheet prints Dog Type / Size / Hair as stored, so "Up to 20 lbs" and the
+old values both show. The "10-20 lbs" in comments is the OLD select's
+default — still accurate history. **The trap repeats, and is already
+handled:** with "Up to 20 lbs" the only option, every new booking may store
+it whether or not a dog is coming — exactly how "10-20 lbs" behaved. The
+gate never reads size, so a size alone shows neither the paw nor the dog
+rows. Fixtures for all of it in staff-panel-test.php and
+staff-board-data-test.php.

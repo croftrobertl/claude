@@ -77,6 +77,9 @@ namespace {
         t_post(77, 'mphb_room_service', 'publish', 'Pet Fee');
         t_post(78, 'mphb_room_service', 'publish', 'Early Check-in');
         t_post(79, 'mphb_room_service', 'publish', 'Dog bed');
+        // The live services, 2026-10-12: the new per-night fee and an old rate.
+        t_post(19692, 'mphb_room_service', 'publish', 'Pet Fee (per night)');
+        t_post(17712, 'mphb_room_service', 'publish', 'Pet Fee – Daily Rate');
         $rows = [];
         $i = 0;
         foreach ($specs as $bid => $spec) {
@@ -164,6 +167,17 @@ namespace {
     check('import, 4 in a 4-sleeper, confirmed: 4', $g[53] === '4', $g);
     check('direct bookings unchanged: 2 and 4', $g[54] === '2' && $g[55] === '4', $g);
     check('import, 2 in a 2-sleeper: nothing unconfirmed, 2 confirmed', $g[56] === '' && $g[57] === '2', $g);
+
+    echo "\n-- 2026-10-11 pet policy: the new fee is a pet for the paw, Daily and the preview --\n";
+    $b = board([
+        70 => [['mphb_dog_size' => 'Up to 20 lbs'], ['_mphb_services' => [19692 => 3]]],   // the new fee
+        71 => [[], ['_mphb_services' => [17712 => 1]]],                                    // an old rate, past bookings
+        72 => [['mphb_dog_size' => 'Up to 20 lbs'], ['_mphb_adults' => 2]],               // the size alone
+    ]);
+    $pets = array_map(static fn($x) => $x['pets'], $b);
+    check('"Pet Fee (per night)" (#19692): pets', $pets[70] === true, $pets);
+    check('the old "Pet Fee – Daily Rate" (#17712): still pets', $pets[71] === true, $pets);
+    check('"Up to 20 lbs" alone: NOT pets — size is never the signal', $pets[72] === false, $pets);
 
     echo "\n-- 0.45.3: a dog recorded by STAFF (_dcc_dog) is a pet, strictly 'yes' --\n";
     $imp = ['mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar//EN'];
