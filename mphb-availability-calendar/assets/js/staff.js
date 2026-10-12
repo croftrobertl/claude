@@ -53,6 +53,8 @@
     var VIEW_HASH = 'mphbac-view=';
     // ⓘ bubbles' ids (0.46.0), unique on the page.
     var TIP_SEQ = 0;
+    // The site-drawn lists' ids (0.46.0).
+    var PICK_SEQ = 0;
 
     function init(root) {
         if (!root || root.dataset.staffInit === '1') return;
@@ -2732,6 +2734,205 @@
             if (w.length < 2) return s;
             return w[0] + ' ' + w[w.length - 1].charAt(0).toUpperCase() + '.';
         }
+
+        // ---- THE LISTS, DRAWN BY THE SITE (0.46.0; Rob, via the WD) --------------
+        // An OPENED <select> is drawn by the operating system, out of reach of
+        // CSS: on Rob's computer it opened off-centre to the right, on his
+        // iPhone fully left-aligned. So Show, Timeframe, Month and Year open a
+        // list the board draws itself, "dropping down under the field" on
+        // phones and computers alike — the Custom Checkout's list, value for
+        // value: a rounded white list, 2px #F4DA62 border, the field's radius
+        // and type, items centred, rows ≥ 44px, the choice bold #0A50B2 on
+        // #E7EEF7, scrolling within a maximum height, opened at the current
+        // choice, upward when there is no room below.
+        //
+        // THE CLOSED FIELD IS STILL THE <select> (Rob: "the closed pickers are
+        // fine"), untouched. A transparent button lies over it and takes the
+        // taps and the keyboard; the <select> stays the SOURCE OF TRUTH — a
+        // choice sets it and fires its real input and change events, so every
+        // handler on the board is the one that was there before. Anything
+        // that sets the <select> (a period change, the Stats pickers following
+        // an arrow, a rebuilt Month list) shows in the button's name at once.
+        //
+        // The button: aria-haspopup="listbox", aria-expanded, named "Show
+        // Monthly" from the field's label and its value. The list: role
+        // listbox, aria-activedescendant, role="option" items with
+        // aria-selected. Keys: arrows, Home / End, Enter / Space, Escape, Tab,
+        // and type-ahead. Focus returns to the field on close. The <select>
+        // leaves the tab order and the accessibility tree; it is not removed.
+        // "Go to date" and the Stats dates open a calendar, not a list: native.
+        var openPick = null;
+        var VALUE = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value');
+        function pickList(sel) {
+            if (!sel || sel.getAttribute('data-picker') === '1') return;
+            sel.setAttribute('data-picker', '1');
+            var n = ++PICK_SEQ, id = 'mphbac-staff-pick-' + n;
+            var label = sel.closest('label');
+            var cap = label && label.querySelector('.mphbac-staff-field-label');
+            var wrap = el('span', 'mphbac-staff-pickwrap');
+            sel.parentNode.insertBefore(wrap, sel);
+            var btn = el('button', 'mphbac-staff-pickbtn');
+            btn.type = 'button';
+            btn.id = id;
+            var said = el('span', 'mphbac-sr-only');
+            said.id = id + '-v';
+            btn.appendChild(said);
+            if (cap) {
+                if (!cap.id) cap.id = id + '-l';
+                btn.setAttribute('aria-labelledby', cap.id + ' ' + said.id);
+            }
+            btn.setAttribute('aria-haspopup', 'listbox');
+            btn.setAttribute('aria-expanded', 'false');
+            var list = el('ul', 'mphbac-staff-picklist');
+            list.id = id + '-list';
+            list.setAttribute('role', 'listbox');
+            list.tabIndex = -1;
+            list.hidden = true;
+            if (cap) list.setAttribute('aria-labelledby', cap.id);
+            btn.setAttribute('aria-controls', list.id);
+            wrap.appendChild(btn);
+            wrap.appendChild(sel);
+            wrap.appendChild(list);
+            sel.tabIndex = -1;
+            sel.setAttribute('aria-hidden', 'true');
+
+            var active = -1, typed = '', typedT = 0;
+            var sync = function () {
+                var o = sel.options[sel.selectedIndex];
+                said.textContent = o ? o.textContent : '';
+            };
+            // Every way the <select> changes reaches the button: a script
+            // setting .value (the board does, a lot), a real change, and a
+            // list rebuilt or re-selected.
+            if (VALUE && VALUE.set) {
+                Object.defineProperty(sel, 'value', {
+                    configurable: true,
+                    get: function () { return VALUE.get.call(this); },
+                    set: function (v) { VALUE.set.call(this, v); sync(); }
+                });
+            }
+            sel.addEventListener('change', sync);
+            if (window.MutationObserver) new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
+            sync();
+
+            function setActive(i, centre) {
+                var items = list.children;
+                if (!items.length) return;
+                i = Math.max(0, Math.min(items.length - 1, i));
+                if (items[active]) items[active].classList.remove('is-active');
+                active = i;
+                var li = items[i];
+                li.classList.add('is-active');
+                list.setAttribute('aria-activedescendant', li.id);
+                if (centre) {
+                    list.scrollTop = Math.max(0, li.offsetTop - (list.clientHeight - li.offsetHeight) / 2);
+                } else if (li.offsetTop < list.scrollTop) {
+                    list.scrollTop = li.offsetTop;
+                } else if (li.offsetTop + li.offsetHeight > list.scrollTop + list.clientHeight) {
+                    list.scrollTop = li.offsetTop + li.offsetHeight - list.clientHeight;
+                }
+            }
+            // Under the field; above it when the screen has no room below and
+            // more above. The list scrolls inside whatever height it is given.
+            function place() {
+                wrap.classList.remove('is-up');
+                list.style.maxHeight = '';
+                var r = wrap.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
+                var below = vh - r.bottom - 12, above = r.top - 12;
+                var want = Math.min(list.scrollHeight, parseFloat(getComputedStyle(list).maxHeight) || 320);
+                var up = below < want && above > below;
+                if (up) wrap.classList.add('is-up');
+                list.style.maxHeight = Math.max(132, Math.min(want, up ? above : below)) + 'px';
+            }
+            function open() {
+                if (openPick && openPick.wrap !== wrap) openPick.close(false);
+                var c = getComputedStyle(sel);
+                list.style.fontFamily = c.fontFamily;
+                list.style.fontSize = Math.max(16, parseFloat(c.fontSize) || 18) + 'px';
+                list.textContent = '';
+                [].forEach.call(sel.options, function (o, i) {
+                    var li = el('li', 'mphbac-staff-pickopt' + (o.selected ? ' is-selected' : ''), o.textContent);
+                    li.id = list.id + '-' + i;
+                    li.setAttribute('role', 'option');
+                    li.setAttribute('aria-selected', o.selected ? 'true' : 'false');
+                    li.setAttribute('data-i', String(i));
+                    list.appendChild(li);
+                });
+                list.hidden = false;
+                btn.setAttribute('aria-expanded', 'true');
+                openPick = api;
+                active = -1;
+                place();
+                setActive(Math.max(0, sel.selectedIndex), true);
+                try { list.focus({ preventScroll: true }); } catch (e) { list.focus(); }
+            }
+            function close(refocus) {
+                if (list.hidden) return;
+                list.hidden = true;
+                btn.setAttribute('aria-expanded', 'false');
+                list.removeAttribute('aria-activedescendant');
+                if (openPick === api) openPick = null;
+                if (refocus) { try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); } }
+            }
+            function choose(i) {
+                var o = sel.options[i];
+                close(true);
+                if (!o || o.selected) return;
+                sel.value = o.value;
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            var api = { wrap: wrap, close: close };
+
+            btn.addEventListener('click', function () { if (list.hidden) open(); else close(true); });
+            btn.addEventListener('keydown', function (e) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); }
+            });
+            list.addEventListener('click', function (e) {
+                var li = e.target.closest ? e.target.closest('.mphbac-staff-pickopt') : null;
+                if (li) choose(parseInt(li.getAttribute('data-i'), 10));
+            });
+            list.addEventListener('keydown', function (e) {
+                var k = e.key, last = list.children.length - 1;
+                if (k === 'ArrowDown') setActive(active + 1);
+                else if (k === 'ArrowUp') setActive(active - 1);
+                else if (k === 'Home') setActive(0);
+                else if (k === 'End') setActive(last);
+                else if (k === 'PageDown') setActive(active + 5);
+                else if (k === 'PageUp') setActive(active - 5);
+                else if (k === 'Enter' || k === ' ') choose(active);
+                else if (k === 'Escape') { close(true); e.stopPropagation(); }
+                else if (k === 'Tab') { close(false); return; }
+                else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    // Type-ahead: the letters typed in the last moment, from
+                    // the next option on ("o" again moves to the next "Oct").
+                    clearTimeout(typedT);
+                    typed += k.toLowerCase();
+                    typedT = setTimeout(function () { typed = ''; }, 700);
+                    var items = list.children, from = typed.length === 1 ? active + 1 : active;
+                    for (var j = 0; j <= last; j++) {
+                        var x = (from + j) % (last + 1);
+                        if (items[x].textContent.toLowerCase().indexOf(typed) === 0) { setActive(x); break; }
+                    }
+                } else return;
+                e.preventDefault();
+            });
+            list.addEventListener('focusout', function (e) {
+                if (!list.hidden && e.relatedTarget && !wrap.contains(e.relatedTarget)) close(false);
+            });
+            // The field's label: a tap on its words focuses the field, and a
+            // tap inside the list is the list's alone — neither may "click" the
+            // label's control a second time.
+            if (label) label.addEventListener('click', function (e) {
+                if (btn.contains(e.target)) return;
+                e.preventDefault();
+                if (!list.contains(e.target)) btn.focus();
+            });
+        }
+        document.addEventListener('pointerdown', function (e) {
+            if (openPick && !openPick.wrap.contains(e.target)) openPick.close(false);
+        }, true);
+        [periodSel, statsSpan, statsMonth, statsYear].forEach(pickList);
 
         // Monthly on every load, every device (Rob, 0.43.3) — and the old
         // remembered choice is removed so it cannot come back.

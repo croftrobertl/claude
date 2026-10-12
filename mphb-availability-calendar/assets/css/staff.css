@@ -393,25 +393,6 @@
     opacity: 0.75;
     cursor: pointer;
 }
-/* THE VALUE IS CENTRED ON THE WHOLE PILL (0.46.0, Rob: it sat off centre).
-   Measured in Chromium: a date's text centred in what the calendar icon left
-   of the field, so it sat ~11px left of the pill's centre. The icon is taken
-   out of the text's layout and pinned in the right padding; the sides are
-   equal, so the text centres on the pill and the icon never covers it. iOS
-   draws no icon; its value box is centred explicitly. The lists' padding is
-   symmetric for the same reason (the chevron lives in the right padding). */
-.mphbac-staff .mphbac-staff-input[type="date"] { position: relative; }
-.mphbac-staff .mphbac-staff-input[type="date"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    margin: 0;
-    transform: translateY(-50%);
-}
-.mphbac-staff .mphbac-staff-input[type="date"]::-webkit-date-and-time-value {
-    margin: 0;
-    text-align: center;
-}
 .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input:focus-visible {
     outline: 2px solid var(--staff-focus, #0f6dbf);
     outline-offset: 2px;
@@ -1593,6 +1574,71 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-heat-key .mphbac-staff-heat-day { width: 12px; height: 12px; cursor: default; }
 .mphbac-staff-heat-keylabel { margin: 0 4px; }
 
+/* THE LISTS, DRAWN BY THE SITE (0.46.0; Rob, via the WD — the Custom
+   Checkout's list, value for value). The closed field is still the <select>,
+   as it was; the transparent button over it opens the list. (0,3,0) holds the
+   theme's `button:hover, button:focus` (0,2,1) coral off the button. */
+.mphbac-staff-pickwrap { position: relative; display: block; width: 100%; min-width: 0; }
+.mphbac-staff .mphbac-staff-pickbtn.mphbac-staff-pickbtn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dcc-field-radius, 30px);
+    background: transparent;
+    box-shadow: none;
+    color: transparent;
+    cursor: pointer;
+    transition: none;
+}
+.mphbac-staff-picklist {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 900;
+    max-height: 320px;
+    margin: 0;
+    padding: 6px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    list-style: none;
+    border: 2px solid #f4da62;
+    border-radius: var(--dcc-field-radius, 30px);
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    color: #111111;
+    font-weight: 400;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    outline: none;
+}
+.mphbac-staff-picklist[hidden] { display: none; }
+.mphbac-staff-pickwrap.is-up .mphbac-staff-picklist { top: auto; bottom: calc(100% + 4px); }
+.mphbac-staff-pickopt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin: 0;
+    padding: 6px 16px;
+    cursor: pointer;
+}
+.mphbac-staff-pickopt.is-active { background: #e7eef7; }
+.mphbac-staff-pickopt.is-selected { background: #e7eef7; color: #0a50b2; font-weight: 700; }
+
 /* LAST YEAR'S GHOSTS (0.46.0): a dashed outline the height of a bar, in the
    first lane, BEHIND the bars (z-index 1 to their 2). No fill of a source,
    no text, and no pointer events — a tap goes to whatever is beneath. */
@@ -1894,6 +1940,8 @@ body.mphbac-staff-open { overflow: hidden; }
        or its label lays out as bare inline text and its centring is lost. */
     .mphbac-staff-search .mphbac-staff-search-field { display: flex; }
     .mphbac-staff-input { grid-row: 2; }
+    /* The <select> now sits in its list's wrapper (0.46.0): the wrapper takes its row. */
+    .mphbac-staff-fields .mphbac-staff-pickwrap { grid-row: 2; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-goto,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-date,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-from,
@@ -1917,7 +1965,7 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
-        padding-left: 34px;       /* = the right: the value centres on the pill (0.46.0) */
+        padding-left: 12px;
         padding-right: 34px;
         background-position: right 12px center;
     }
@@ -1978,6 +2026,8 @@ body.mphbac-staff-open { overflow: hidden; }
     }
 
     /* Surfaces, unchanged — moved here only for the guard. */
+    /* The site-drawn lists' rows (0.46.0). */
+    .mphbac-staff-pickopt:hover { background: #e7eef7; }
     .mphbac-staff-bar:hover { filter: brightness(1.08); }
     /* (0,5,0): above the theme guard for the rows, so their own hover tint
        still shows on a computer. */
@@ -1996,21 +2046,12 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-from,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-to {
         padding-left: 6px;
-        padding-right: 6px;       /* symmetric; the icon is pinned, out of the text's way */
+        padding-right: 4px;
     }
     .mphbac-staff .mphbac-staff-input[type="date"]::-webkit-calendar-picker-indicator {
         width: 16px;
         height: 16px;
-        right: 5px;
+        margin-left: 2px;
         padding: 0;
-    }
-    /* The lists, symmetric too, with the chevron closer in: "Oct 2026" fits. */
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
-    .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-year {
-        padding-left: 26px;
-        padding-right: 26px;
-        background-position: right 8px center;
     }
 }

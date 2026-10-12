@@ -977,7 +977,7 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     return { ctx, p };
   };
   // A1 + A2: space under the legend; two rows by kind on a phone.
-  for (const [w, phone] of [[1280, false], [375, true], [320, true]]) {
+  for (const [w, phone] of [[1280, false], [375, true], [430, true], [600, true], [320, true]]) {
     const { ctx, p } = await openHtml(shellWith([], { bodyStyle: phone ? 'padding:0 27px' : '' }), phone, w);
     const L = await p.evaluate(() => {
       const leg = document.querySelector('.mphbac-staff-legend').getBoundingClientRect(), grid = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
@@ -986,8 +986,10 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
       return { gap: Math.round(grid.top - ico), legGap: Math.round(grid.top - leg.bottom), src: rows('is-sources'), ext: rows('is-extras') };
     });
     check(`${w}px: the legend's icons clear the calendar's top edge (A1)`, L.gap >= 8, L);
-    if (w === 375) {
-      check('375px: the legend is two rows — Direct, Airbnb, Booking.com, Vrbo; then Turnover, Pets, Couch, Boat (A2)',
+    // 430 and 600 too (the phone breakpoint's widest): there the eight keys
+    // would otherwise run on, sources and extras mixed on one line.
+    if (w >= 375 && phone) {
+      check(`${w}px: the legend is two rows — Direct, Airbnb, Booking.com, Vrbo; then Turnover, Pets, Couch, Boat (A2)`,
         L.src.length === 4 && new Set(L.src).size === 1 && L.ext.length === 4 && new Set(L.ext).size === 1 && L.ext[0] > L.src[0], L);
     }
     await ctx.close();
@@ -1058,27 +1060,135 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('...while a count ("1 booking") keeps its place', n !== 'center', n);
     await ctx.close();
   }
-  // A7: each picker's value centred on its pill (measured from the pixels).
-  for (const [w, phone] of [[1280, false], [375, true], [320, true]]) {
-    const { ctx, p } = await openHtml(shellWith([], { bodyStyle: phone ? 'padding:0 27px' : '' }), phone, w);
+  // A7, AS CORRECTED BY THE WD (2026-10-12): the CLOSED pickers were fine;
+  // the OPENED lists were off-centre (computer) or left-aligned (iPhone),
+  // drawn by the operating system. Show, Timeframe, Month and Year now open a
+  // list the site draws — the Custom Checkout's, value for value.
+  console.log('\n-- A7: the lists the site draws (Show, Timeframe, Month, Year) --');
+  for (const [w, phone] of [[1280, false], [375, true]]) {
+    const DEV = w + 'px';
+    const { ctx, p } = await openHtml(shellWith([], { bodyStyle: phone ? 'padding:0 16px' : '' }), phone, w);
     await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; }); await p.waitForTimeout(250);
-    const offs = [];
-    for (const sel of ['.mphbac-staff-period', '.mphbac-staff-goto', '.mphbac-staff-stats-span', '.mphbac-staff-stats-month']) {
-      const skip = await p.evaluate(s2 => { const e = document.querySelector(s2);
-        if (e.type === 'date') return innerWidth < 360 ? 24 : 33;
-        const m = /right (\d+)px/.exec(getComputedStyle(e).backgroundPosition); return (m ? +m[1] : 16) + 22; }, sel);
-      const shot = await (await p.$(sel)).screenshot({ scale: 'css' });
-      offs.push([sel.replace('.mphbac-staff-', ''), await p.evaluate(async ([u, sk]) => {
-        const img = new Image(); await new Promise(r => { img.onload = r; img.src = u; });
-        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-        const x = c.getContext('2d'); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data;
-        let x0 = 1e9, x1 = -1;
-        for (let yy = Math.round(c.height * 0.25); yy < Math.round(c.height * 0.75); yy++) for (let xx = 8; xx < c.width - sk; xx++) {
-          const i = (yy * c.width + xx) * 4; if (d[i] + d[i + 1] + d[i + 2] < 250) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; } }
-        return +((x0 + x1) / 2 - c.width / 2).toFixed(1);
-      }, ['data:image/png;base64,' + shot.toString('base64'), skip])]);
-    }
-    check(`${w}px: Show, Go to date, Timeframe and Month each have their value centred on the pill (within 3px) (A7)`, offs.every(o2 => Math.abs(o2[1]) <= 3), offs);
+    const closed = await p.evaluate(() => ['.mphbac-staff-period', '.mphbac-staff-stats-span', '.mphbac-staff-stats-month', '.mphbac-staff-stats-year'].map(sel => {
+      const s = document.querySelector(sel), b = s.parentNode.querySelector('.mphbac-staff-pickbtn');
+      const name = (b.getAttribute('aria-labelledby') || '').split(' ').map(id => document.getElementById(id).textContent).join(' ');
+      const r1 = s.getBoundingClientRect(), r2 = b.getBoundingClientRect();
+      return { sel, popup: b.getAttribute('aria-haspopup'), exp: b.getAttribute('aria-expanded'), name, tab: s.tabIndex, hid: s.getAttribute('aria-hidden'),
+        covers: ['top', 'left', 'width', 'height'].every(k => Math.abs(r1[k] - r2[k]) < 0.5), bg: getComputedStyle(b).backgroundColor };
+    }));
+    check(`${DEV}: Show, Timeframe, Month and Year each a button over the closed field — aria-haspopup="listbox", collapsed, named "Show Monthly"`,
+      closed.every(c => c.popup === 'listbox' && c.exp === 'false' && c.covers && c.tab === -1 && c.hid === 'true') && closed[0].name === 'Show Monthly' && closed[2].name === 'Month Oct 2026', closed);
+    const native = await p.evaluate(() => ['.mphbac-staff-goto', '.mphbac-staff-stats-date', '.mphbac-staff-stats-from'].every(s => !document.querySelector(s).parentNode.querySelector('.mphbac-staff-pickbtn')));
+    check(`${DEV}: Go to date and the Stats dates stay the native calendar`, native);
+    const phonePad = await p.evaluate(() => { const c = getComputedStyle(document.querySelector('.mphbac-staff-period')); return [c.paddingLeft, c.paddingRight]; });
+    check(`${DEV}: the CLOSED field is as it was (0.45.4 padding: ${phone ? '12px / 34px' : '40px / 40px'})`, phonePad.join() === (phone ? '12px,34px' : '40px,40px'), phonePad);
+
+    const look = () => p.evaluate(() => {
+      const l = document.querySelector('.mphbac-staff-picklist:not([hidden])');
+      if (!l) return null;
+      const wrap = l.parentNode, f = wrap.querySelector('select').getBoundingClientRect(), r = l.getBoundingClientRect(), c = getComputedStyle(l);
+      const items = [...l.children].map(li => { const s = getComputedStyle(li); return { t: li.textContent, role: li.getAttribute('role'), sel: li.getAttribute('aria-selected'),
+        h: li.getBoundingClientRect().height, bg: s.backgroundColor, color: s.color, weight: s.fontWeight, just: s.justifyContent, al: getComputedStyle(l).textAlign }; });
+      const act = document.getElementById(l.getAttribute('aria-activedescendant'));
+      return { role: l.getAttribute('role'), items, border: [c.borderTopWidth, c.borderTopColor], radius: c.borderTopLeftRadius, fieldRadius: getComputedStyle(wrap.querySelector('select')).borderTopLeftRadius,
+        size: c.fontSize, fieldSize: getComputedStyle(wrap.querySelector('select')).fontSize, gap: r.top - f.bottom, upGap: f.top - r.bottom, up: wrap.classList.contains('is-up'),
+        lr: [Math.round(r.left - f.left), Math.round(r.right - f.right)], bg: c.backgroundColor, active: act ? act.textContent : null,
+        actVisible: act ? (act.getBoundingClientRect().top >= r.top - 1 && act.getBoundingClientRect().bottom <= r.bottom + 1) : false,
+        scrolls: l.scrollHeight > l.clientHeight + 1, exp: wrap.querySelector('.mphbac-staff-pickbtn').getAttribute('aria-expanded'), focus: document.activeElement === l };
+    });
+    await p.click('.mphbac-staff-fields .mphbac-staff-pickbtn');
+    let L = await look();
+    check(`${DEV}: Show opens a role="listbox" right UNDER the field, as wide as it`, L && L.role === 'listbox' && L.gap >= 0 && L.gap <= 8 && L.lr.join() === '0,0' && L.exp === 'true' && L.focus, L);
+    check(`${DEV}: ...white, a 2px #F4DA62 border, the field's radius and type size (≥ 16px)`,
+      L.bg === 'rgb(255, 255, 255)' && L.border.join() === '2px,rgb(244, 218, 98)' && L.radius === L.fieldRadius && L.size === L.fieldSize && parseFloat(L.size) >= 16, L);
+    check(`${DEV}: ...four role="option" rows, centred, each ≥ 44px tall`,
+      JSON.stringify(L.items.map(i => i.t)) === '["Daily","Weekly","Monthly","Yearly"]' && L.items.every(i => i.role === 'option' && i.h >= 44 && i.just === 'center' && i.al === 'center'), L.items);
+    const cur = L.items[2];
+    check(`${DEV}: ...the current choice bold #0A50B2 on #E7EEF7, aria-selected; the others not`,
+      cur.sel === 'true' && cur.color === 'rgb(10, 80, 178)' && +cur.weight >= 700 && cur.bg === 'rgb(231, 238, 247)' && L.items.filter(i => i.sel === 'true').length === 1, cur);
+    await p.click('.mphbac-staff-picklist:not([hidden]) li:nth-child(2)');
+    await p.waitForTimeout(250);
+    let after = await p.evaluate(() => ({ v: document.querySelector('.mphbac-staff-period').value, chart: document.querySelector('.mphbac-staff-chart').className,
+      open: !!document.querySelector('.mphbac-staff-picklist:not([hidden])'), focus: document.activeElement.className,
+      name: document.getElementById(document.querySelector('.mphbac-staff-fields .mphbac-staff-pickbtn').getAttribute('aria-labelledby').split(' ')[1]).textContent }));
+    check(`${DEV}: choosing Weekly sets the REAL <select> and fires its change — the board goes Weekly; the list closes, focus back on the field`,
+      after.v === 'week' && /is-week/.test(after.chart) && !after.open && /pickbtn/.test(after.focus) && after.name === 'Weekly', after);
+    const coral = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-fields .mphbac-staff-pickbtn')).backgroundColor);
+    check(`${DEV}: ...the focused field shows no theme coral (button:focus)`, coral === 'rgba(0, 0, 0, 0)', coral);
+
+    // Keyboard: arrows, Home / End, type-ahead, Enter, Escape.
+    await p.focus('.mphbac-staff-fields .mphbac-staff-pickbtn');
+    await p.keyboard.press('ArrowDown');
+    L = await look();
+    check(`${DEV}: keyboard — ArrowDown on the field opens the list at the current choice (Weekly)`, L && L.active === 'Weekly' && L.focus, L && L.active);
+    await p.keyboard.press('ArrowDown'); L = await look();
+    const k1 = L.active;
+    await p.keyboard.press('End'); L = await look(); const k2 = L.active;
+    await p.keyboard.press('Home'); L = await look(); const k3 = L.active;
+    await p.keyboard.press('y'); L = await look(); const k4 = L.active;
+    check(`${DEV}: ...ArrowDown → Monthly, End → Yearly, Home → Daily, type "y" → Yearly`, [k1, k2, k3, k4].join() === 'Monthly,Yearly,Daily,Yearly', [k1, k2, k3, k4]);
+    await p.keyboard.press('Escape');
+    after = await p.evaluate(() => ({ v: document.querySelector('.mphbac-staff-period').value, open: !!document.querySelector('.mphbac-staff-picklist:not([hidden])'), focus: document.activeElement.className }));
+    check(`${DEV}: ...Escape closes it WITHOUT choosing, focus back on the field`, after.v === 'week' && !after.open && /pickbtn/.test(after.focus), after);
+    await p.keyboard.press('ArrowUp'); await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter');
+    await p.waitForTimeout(250);
+    after = await p.evaluate(() => ({ v: document.querySelector('.mphbac-staff-period').value, open: !!document.querySelector('.mphbac-staff-picklist:not([hidden])') }));
+    check(`${DEV}: ...Enter chooses (Monthly)`, after.v === 'month' && !after.open, after);
+    await p.keyboard.press('Enter'); await p.keyboard.press(' ');
+    after = await p.evaluate(() => document.querySelector('.mphbac-staff-period').value);
+    check(`${DEV}: ...Enter opens, Space on a row chooses it (still Monthly)`, after === 'month' && !(await look()), after);
+
+    // A tap on the field's label: focus, no list (and never the native one).
+    await p.click('.mphbac-staff-fields .mphbac-staff-field-label');
+    const lab = await p.evaluate(() => [!!document.querySelector('.mphbac-staff-picklist:not([hidden])'), document.activeElement.className]);
+    check(`${DEV}: a tap on the word "Show" focuses the field and opens nothing`, !lab[0] && /pickbtn/.test(lab[1]), lab);
+    // Outside tap closes; one list at a time.
+    await p.click('.mphbac-staff-fields .mphbac-staff-pickbtn');
+    await p.click('.mphbac-staff-legend', { force: true });
+    check(`${DEV}: a tap outside closes it, nothing chosen`, !(await look()) && await p.evaluate(() => document.querySelector('.mphbac-staff-period').value) === 'month');
+    const sp = await p.$$('.mphbac-staff-stats .mphbac-staff-pickbtn');
+    await p.click('.mphbac-staff-fields .mphbac-staff-pickbtn');
+    await sp[0].click();
+    const opened = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-picklist:not([hidden])')].length);
+    check(`${DEV}: one list open at a time`, opened === 1, opened);
+    await p.keyboard.press('Escape');
+
+    // Month: long, opened AT the current choice, scrolling inside its height.
+    await sp[1].click();
+    L = await look();
+    check(`${DEV}: Month (73 months) scrolls within its height and opens AT Oct 2026, in view`,
+      L.scrolls && L.active === 'Oct 2026' && L.actVisible && L.items.length === 73, [L.scrolls, L.active, L.actVisible, L.items.length]);
+    await p.click('.mphbac-staff-picklist:not([hidden]) li:nth-child(36)');
+    await p.waitForTimeout(250);
+    const m = await p.evaluate(() => [document.querySelector('.mphbac-staff-stats-month').value, document.querySelector('.mphbac-staff-stats-range').textContent]);
+    check(`${DEV}: choosing Sep 2026 drives the Stats as the <select> always did`, m.join() === '2026-09,Sep 1 – 30, 2026', m);
+    // Kept in sync when the <select> changes by itself.
+    await p.click('.mphbac-staff-stats-next'); await p.waitForTimeout(250);
+    let nm = await p.evaluate(() => { const b = document.querySelector('.mphbac-staff-stats-month').parentNode.querySelector('.mphbac-staff-pickbtn');
+      return document.getElementById(b.getAttribute('aria-labelledby').split(' ')[1]).textContent; });
+    check(`${DEV}: the › arrow moves the Month <select>; the field's name follows (Oct 2026)`, nm === 'Oct 2026', nm);
+    await p.evaluate(() => { const s = document.querySelector('.mphbac-staff-stats-month'); s.textContent = '';
+      ['2026-11', '2026-12'].forEach((v, i) => { const o = document.createElement('option'); o.value = v; o.textContent = 'New ' + v; if (i) o.selected = true; s.appendChild(o); }); });
+    await p.waitForTimeout(50);
+    nm = await p.evaluate(() => { const b = document.querySelector('.mphbac-staff-stats-month').parentNode.querySelector('.mphbac-staff-pickbtn');
+      return document.getElementById(b.getAttribute('aria-labelledby').split(' ')[1]).textContent; });
+    await sp[1].click();
+    L = await look();
+    check(`${DEV}: a REBUILT list shows at once: the name ("New 2026-12") and the opened rows`, nm === 'New 2026-12' && L.items.map(i => i.t).join() === 'New 2026-11,New 2026-12', [nm, L.items.map(i => i.t)]);
+    await p.keyboard.press('Escape');
+    await ctx.close();
+  }
+  {
+    // Upward when there is no room below: a short window, Year near its bottom.
+    const { ctx, p } = await openHtml(shellWith([]), false, 1280);
+    await p.setViewportSize({ width: 1280, height: 500 });
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; }); await p.waitForTimeout(250);
+    await p.selectOption('.mphbac-staff-stats-span', 'year'); await p.waitForTimeout(200);
+    await p.evaluate(() => { const f = document.querySelector('.mphbac-staff-stats-year').getBoundingClientRect(); window.scrollBy(0, f.bottom - innerHeight + 20); });
+    await p.click('.mphbac-staff-stats-year + .mphbac-staff-picklist, .mphbac-staff-stats-yearfield .mphbac-staff-pickbtn');
+    const u = await p.evaluate(() => { const l = document.querySelector('.mphbac-staff-picklist:not([hidden])'), f = l.parentNode.querySelector('select').getBoundingClientRect(), r = l.getBoundingClientRect();
+      return { up: l.parentNode.classList.contains('is-up'), gap: f.top - r.bottom, top: r.top }; });
+    check('no room below the field: the list opens UPWARD, against the field', u.up && u.gap >= 0 && u.gap <= 8 && u.top >= 0, u);
     await ctx.close();
   }
 

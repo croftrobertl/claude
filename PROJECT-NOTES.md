@@ -3056,11 +3056,31 @@ taking taps; aggregate figures only.
   12px floor, so it shipped. fitTitle steps 0.5px at a time from the CSS
   size; the line is nowrap with overflow hidden only as the box it
   measures against.
-- A7 (Chromium): before, the values sat ~11px LEFT of centre (the date
-  field's calendar icon, and the phone selects' asymmetric padding). After:
-  within 0.5px at 1280 and 375, the date at 320 −3px. **iOS Safari cannot
-  be run here** — it rests on `::-webkit-date-and-time-value { text-align:
-  center }` and symmetric padding. Staging check item.
+- A7 — **CORRECTED by the WD (2026-10-12): Rob meant the OPENED lists**
+  (desktop: off-centre to the right; iPhone: fully left-aligned), drawn by
+  the operating system; "the closed pickers are fine". I had first centred
+  the CLOSED fields (date icon pinned absolute, date value centred, phone
+  select padding 12/34 → 34/34, under 360px 26/26 and the date's padding
+  6/4 → 6/6). **All of that was reverted** — the closed fields are byte for
+  byte their 0.45.4 CSS again (checked against 648a6f7). **Rob chose:** the
+  site draws its own list for Show, Timeframe, Month and Year (all four are
+  <select>s); Go to date and the Stats dates stay native (a calendar, not a
+  list). **The spec is the Custom Checkout session's** (the two must look
+  identical): rounded white list right under the field, 2px #F4DA62, the
+  field's radius and type size (18px here, ≥ 16); items centred, rows ≥ 44px;
+  the current choice bold #0A50B2 on #E7EEF7, which also marks hover and the
+  keyboard's row; scrolls within 320px, opened AT the current choice; opens
+  upward with no room below; closes on choice, outside tap, Escape (and Tab).
+  **How:** the <select> stays where it was, looking as it did, and remains
+  the source of truth; a transparent button lies over it
+  (aria-haspopup="listbox", aria-expanded, named from the label + value),
+  the <select> leaves the tab order and the a11y tree. A choice sets
+  .value and fires real input + change events, so no board handler changed.
+  Programmatic changes reach the button through an own `value` setter on
+  each <select> plus a MutationObserver (options rebuilt). The list is a
+  role="listbox" with aria-activedescendant and role="option" rows with
+  aria-selected; arrows, Home/End, PageUp/Down, Enter/Space, Escape,
+  type-ahead. A tap on the field's label focuses it and opens nothing.
 - B10: the longest stats range ("Dec 28, 2026 – Jan 24, 2027") between two
   44px arrows: **19px at 375**. One row at 320/375/390/430. (Inside a
   <details> box-sizing is NOT inherited — the browser's slot is content-box —

@@ -71,7 +71,8 @@ Staff board only (/staff/). Nothing changes on the home page or cottage pages.
 * **The date line shows the days on screen** and follows as you scroll, in every Show mode: "Oct 12 – Nov 8, 2026", "Dec 20, 2026 – Jan 16, 2027", or "Oct 12, 2026" for one day. It stays on one line on a phone.
 * **The month band** is white on blue, a little larger, with a white line at each 1st. The header is no taller.
 * **Short bars** show the guest's name, then their initials, then the nights, then only the icons. A booking with no name shows its number.
-* "No bookings match." is centred; the values in Timeframe, Month, Show and Go to date are centred in their boxes.
+* "No bookings match." is centred.
+* **Show, Timeframe, Month and Year open the board's own list**, right under the field, on phones and computers alike: centred, the current choice in bold blue, scrolling to it when the list is long (Month), opening upward when there is no room below. The closed boxes look as before. Go to date still opens the phone's or browser's calendar.
 * **Stats: a ⓘ on every tile and section.** Tap or click it for what the figure counts; tap anywhere else to close. On a computer, hovering shows it too.
 * **Stats: ‹ › arrows** either side of the dates step one timeframe back or on (a custom range by its own length). The boxes above follow.
 * **Stats: compared with a year earlier.** Each tile shows ▲ or ▼ against the same dates a year before: points for Booked, nights for Length, a count for the rest.
