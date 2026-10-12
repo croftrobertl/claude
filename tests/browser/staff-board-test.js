@@ -953,6 +953,122 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     }
   }
 
+  console.log('\n-- 0.46.0 A: the legend, the date line, the band, short-stay labels, the empty search, centred pickers --');
+  const shellWith = (extra, opts = {}) => S.boardShell(Object.assign({ today: F.TODAY, cottages: F.COTTAGES,
+    bookings: F.BOOKINGS.concat(extra), details: F.DETAILS, search: F.SEARCH }, opts));
+  const openHtml = async (html, phone, w) => {
+    const ctx = await browser.newContext(phone ? { viewport: { width: w || 375, height: 900 }, isMobile: true, hasTouch: true } : { viewport: { width: w || 1280, height: 1000 } });
+    await ctx.route(ORIGIN + '**', r => r.fulfill({ body: html, contentType: 'text/html' }));
+    const p = await ctx.newPage(); p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
+    await p.goto(ORIGIN); await p.waitForFunction(() => document.querySelector('.mphbac-staff-title').textContent !== ''); await p.waitForTimeout(150);
+    return { ctx, p };
+  };
+  // A1 + A2: space under the legend; two rows by kind on a phone.
+  for (const [w, phone] of [[1280, false], [375, true], [320, true]]) {
+    const { ctx, p } = await openHtml(shellWith([], { bodyStyle: phone ? 'padding:0 27px' : '' }), phone, w);
+    const L = await p.evaluate(() => {
+      const leg = document.querySelector('.mphbac-staff-legend').getBoundingClientRect(), grid = document.querySelector('.mphbac-staff-grid').getBoundingClientRect();
+      const ico = Math.max(...[...document.querySelectorAll('.mphbac-staff-legend span.mphbac-staff-ico')].map(i => i.getBoundingClientRect().bottom));
+      const rows = g => [...document.querySelectorAll('.mphbac-staff-legend-group.' + g + ' .mphbac-staff-key')].map(k => Math.round(k.getBoundingClientRect().top));
+      return { gap: Math.round(grid.top - ico), legGap: Math.round(grid.top - leg.bottom), src: rows('is-sources'), ext: rows('is-extras') };
+    });
+    check(`${w}px: the legend's icons clear the calendar's top edge (A1)`, L.gap >= 8, L);
+    if (w === 375) {
+      check('375px: the legend is two rows — Direct, Airbnb, Booking.com, Vrbo; then Turnover, Pets, Couch, Boat (A2)',
+        L.src.length === 4 && new Set(L.src).size === 1 && L.ext.length === 4 && new Set(L.ext).size === 1 && L.ext[0] > L.src[0], L);
+    }
+    await ctx.close();
+  }
+  // A3: the date line — the worst case on ONE line, whole, at 375 / 390 / 430.
+  for (const w of [375, 390, 430]) {
+    const { ctx, p } = await openHtml(shellWith([], { bodyStyle: 'padding:0 27px' }), true, w);
+    await choose(p, 'week');
+    await p.fill('.mphbac-staff-goto', '2026-12-30'); await p.dispatchEvent('.mphbac-staff-goto', 'change'); await p.waitForTimeout(150);
+    const fitOf = () => p.evaluate(() => { const t = document.querySelector('.mphbac-staff-title'), c = getComputedStyle(t), r = t.getBoundingClientRect();
+      const prev = document.querySelector('.mphbac-staff-prev').getBoundingClientRect(), today = document.querySelector('.mphbac-staff-today').getBoundingClientRect();
+      return { text: t.textContent, size: parseFloat(c.fontSize), lines: Math.round(r.height / parseFloat(c.lineHeight)), whole: t.scrollWidth <= t.clientWidth + 0.5,
+        between: r.left >= prev.right - 0.5 && r.right <= today.left + 0.5 }; });
+    let f = await fitOf();
+    check(`${w}px: a week across the new year — "${f.text}" — one line, whole, between ‹ and Today, ≥ 12px (${f.size}px)`,
+      f.text === 'Dec 27, 2026 – Jan 2, 2027' && f.lines === 1 && f.whole && f.between && f.size >= 12, f);
+    // The WD's worst case, literally: written in and refitted the way a resize refits it.
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-title').textContent = 'Dec 28, 2026 – Jan 24, 2027'; window.dispatchEvent(new Event('resize')); });
+    f = await fitOf();
+    check(`${w}px: the longest, "Dec 28, 2026 – Jan 24, 2027": one line, whole, ≥ 12px (${f.size}px)`, f.lines === 1 && f.whole && f.between && f.size >= 12, f);
+    await ctx.close();
+  }
+  // A4: the band — white on #0A50B2 at 14px, a WHITE rule on the 1st there, the header no taller.
+  {
+    const { ctx, p } = await openHtml(shellWith([]), false);
+    await choose(p, 'year');
+    const B = await p.evaluate(() => {
+      const band = document.querySelector('.mphbac-staff-monthband'), c = getComputedStyle(band);
+      const start = document.querySelector('.mphbac-staff-monthband.is-month-start'), dstart = document.querySelector('.mphbac-staff-dayhead.is-month-start');
+      const corner = document.querySelector('.mphbac-staff-corner').getBoundingClientRect();
+      return { bg: c.backgroundColor, ink: c.color, size: c.fontSize, bandShadow: start && getComputedStyle(start).boxShadow,
+        headShadow: dstart && getComputedStyle(dstart).boxShadow, headerH: Math.round(corner.height),
+        nameH: Math.round(document.querySelector('.mphbac-staff-monthname').getBoundingClientRect().height), bandH: Math.round(band.getBoundingClientRect().height) };
+    });
+    check('the month band is white on #0A50B2, at 14px (A4)', B.bg === 'rgb(10, 80, 178)' && B.ink === 'rgb(255, 255, 255)' && B.size === '14px', B);
+    check('...the 1st is ruled in WHITE on the band, still in blue in the day header', /rgb\(255, 255, 255\)/.test(B.bandShadow || '') && /rgb\(10, 80, 178\)/.test(B.headShadow || ''), B);
+    check('...and the header row is no taller: band 24px + days 48px = 72px, the name inside its band', B.headerH === 72 && B.bandH === 24 && B.nameH <= 24, B);
+    await ctx.close();
+  }
+  // A5: name, then INITIALS, then nights, then icons.
+  {
+    const extra = [Object.assign({}, F.BOOKINGS[0], { id: 30, checkin: '2026-10-06', checkout: '2026-10-08', guestName: 'Dock Buchanan', pets: false, couch: false, boat: false,
+        cottages: [{ roomTypeId: 25, roomId: 250, title: 'Cottage 25', abbrev: 'C25', number: '25' }] }),
+      Object.assign({}, F.BOOKINGS[0], { id: 19674, checkin: '2026-10-06', checkout: '2026-10-08', guestName: '', pets: false, couch: false, boat: false,
+        cottages: [{ roomTypeId: 27, roomId: 270, title: 'Cottage 27', abbrev: 'C27', number: '27' }] })];
+    const lab = p => p.evaluate(() => Object.fromEntries([30, 19674].map(id => { const b = document.querySelector(`.mphbac-staff-bar[data-booking-id="${id}"]`);
+      return [id, b ? b.querySelector('.mphbac-staff-bar-text').textContent : null]; })));
+    let o = await openHtml(shellWith(extra), false);
+    let t = await lab(o.p);
+    check('2 nights with room: the short name, "Dock B."', t[30] === 'Dock B.', t);
+    await o.ctx.close();
+    // A 320px phone's week: ~24px days, so a 2-night bar has ~36px of label room.
+    o = await openHtml(shellWith(extra, { bodyStyle: 'padding:0 27px' }), true, 320);
+    await choose(o.p, 'week');
+    t = await lab(o.p);
+    check('2 nights in a narrow week: INITIALS "DB", before the nights count (A5, Rob — was "2n")', t[30] === 'DB', t);
+    check('...a booking with no guest name (Rob\'s #19674) keeps its own rule: no initials, the nights', t[19674] === '2n', t);
+    await o.ctx.close();
+  }
+  // A6: "No bookings match." centred.
+  {
+    const { ctx, p } = await openHtml(shellWith([]), true);
+    await p.fill('.mphbac-staff-q', 'qqzz'); await p.waitForTimeout(450);
+    const e = await p.evaluate(() => { const c = document.querySelector('.mphbac-staff-results-count'); return [c.textContent, getComputedStyle(c).textAlign]; });
+    check('"No bookings match." is centred (A6)', e[0] === 'No bookings match.' && e[1] === 'center', e);
+    await p.fill('.mphbac-staff-q', 'smi'); await p.waitForTimeout(450);
+    const n = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-results-count')).textAlign);
+    check('...while a count ("1 booking") keeps its place', n !== 'center', n);
+    await ctx.close();
+  }
+  // A7: each picker's value centred on its pill (measured from the pixels).
+  for (const [w, phone] of [[1280, false], [375, true], [320, true]]) {
+    const { ctx, p } = await openHtml(shellWith([], { bodyStyle: phone ? 'padding:0 27px' : '' }), phone, w);
+    await p.evaluate(() => { document.querySelector('.mphbac-staff-stats').open = true; }); await p.waitForTimeout(250);
+    const offs = [];
+    for (const sel of ['.mphbac-staff-period', '.mphbac-staff-goto', '.mphbac-staff-stats-span', '.mphbac-staff-stats-month']) {
+      const skip = await p.evaluate(s2 => { const e = document.querySelector(s2);
+        if (e.type === 'date') return innerWidth < 360 ? 24 : 33;
+        const m = /right (\d+)px/.exec(getComputedStyle(e).backgroundPosition); return (m ? +m[1] : 16) + 22; }, sel);
+      const shot = await (await p.$(sel)).screenshot({ scale: 'css' });
+      offs.push([sel.replace('.mphbac-staff-', ''), await p.evaluate(async ([u, sk]) => {
+        const img = new Image(); await new Promise(r => { img.onload = r; img.src = u; });
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data;
+        let x0 = 1e9, x1 = -1;
+        for (let yy = Math.round(c.height * 0.25); yy < Math.round(c.height * 0.75); yy++) for (let xx = 8; xx < c.width - sk; xx++) {
+          const i = (yy * c.width + xx) * 4; if (d[i] + d[i + 1] + d[i + 2] < 250) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; } }
+        return +((x0 + x1) / 2 - c.width / 2).toFixed(1);
+      }, ['data:image/png;base64,' + shot.toString('base64'), skip])]);
+    }
+    check(`${w}px: Show, Go to date, Timeframe and Month each have their value centred on the pill (within 3px) (A7)`, offs.every(o2 => Math.abs(o2[1]) <= 3), offs);
+    await ctx.close();
+  }
+
   console.log('\n-- 6: the sheet — tap to call / text / email, Open in WP-Admin --');
   {
     const { ctx, p } = await open();

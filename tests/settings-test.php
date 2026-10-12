@@ -49,14 +49,24 @@ echo "-- the schema is well formed --\n";
     $types = array_unique(array_column($schema, 'type'));
     sort($types);
     check('every field has a type the coercer handles',
-        $types === ['bool', 'choice', 'color', 'int'], $types);
+        $types === ['bool', 'choice', 'color', 'date', 'int'], $types);
     $bad = [];
     foreach ($schema as $k => $f) {
         if ($f['type'] === 'color' && !preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) $f['default'])) { $bad[] = $k; }
         if ($f['type'] === 'int' && ($f['default'] < $f['min'] || $f['default'] > $f['max'])) { $bad[] = $k; }
         if ($f['type'] === 'choice' && !array_key_exists($f['default'], $f['choices'])) { $bad[] = $k; }
+        if ($f['type'] === 'date' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $f['default'])) { $bad[] = $k; }
     }
     check('no field ships a default its own rules would reject', $bad === [], $bad);
+    // 0.46.0: the first date field, "Records complete from" (Rob's rule).
+    check('records_complete_from ships as 2025-10-01, in the staff group',
+        ($schema['records_complete_from']['default'] ?? null) === '2025-10-01' && ($schema['records_complete_from']['group'] ?? null) === 'staff',
+        $schema['records_complete_from'] ?? null);
+    $d = static fn($v) => Settings::sanitize(['records_complete_from' => $v])['records_complete_from'];
+    check('a date field keeps a real date, and refuses garbage and an impossible day (back to the default)',
+        $d('2024-10-01') === '2024-10-01' && $d('next tuesday') === '2025-10-01' && $d('2025-02-30') === '2025-10-01'
+        && $d('2025-1-5') === '2025-10-01' && $d(['2024-10-01']) === '2025-10-01',
+        [$d('2024-10-01'), $d('next tuesday'), $d('2025-02-30'), $d('2025-1-5')]);
     check('there is at least one advanced group and one common one',
         count(array_filter($groups, static fn($g) => $g['advanced'])) > 0
         && count(array_filter($groups, static fn($g) => !$g['advanced'])) > 0);

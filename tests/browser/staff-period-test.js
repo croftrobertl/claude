@@ -142,6 +142,25 @@ ${markup}
     };
   });
   const choose = async (p, v) => { await p.selectOption('.mphbac-staff-period', v); await p.waitForTimeout(60); };
+  /* 0.46.0 (Rob): the label shows the DAYS ON SCREEN — the day columns more
+     than half in view, between the pinned cottage column and the grid's
+     right edge — as "Oct 12 – Nov 8, 2026" / "Oct 1 – 31, 2026" /
+     "Dec 20, 2026 – Jan 16, 2027" / "Oct 12, 2026". Worked out here from
+     the chart itself, independently of staff.js. */
+  const onScreen = p => p.evaluate(() => {
+    const g = document.querySelector('.mphbac-staff-grid'), chart = g.firstChild;
+    const lw = parseFloat(getComputedStyle(chart).getPropertyValue('--staff-label-w')) || 96;
+    const lo = g.scrollLeft + lw, hi = g.scrollLeft + g.clientWidth;
+    const days = [...chart.querySelectorAll('.mphbac-staff-dayhead')].filter(h => {
+      const a = h.offsetLeft, b = a + h.offsetWidth; return (Math.min(b, hi) - Math.max(a, lo)) * 2 > (b - a); }).map(h => h.dataset.day);
+    const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const md = d => M[+d.slice(5, 7) - 1] + ' ' + (+d.slice(8, 10));
+    const f = days[0], t = days[days.length - 1];
+    if (f === t) return md(f) + ', ' + f.slice(0, 4);
+    if (f.slice(0, 4) !== t.slice(0, 4)) return md(f) + ', ' + f.slice(0, 4) + ' – ' + md(t) + ', ' + t.slice(0, 4);
+    if (f.slice(0, 7) === t.slice(0, 7)) return md(f) + ' – ' + (+t.slice(8, 10)) + ', ' + f.slice(0, 4);
+    return md(f) + ' – ' + md(t) + ', ' + f.slice(0, 4);
+  });
   const click = async (p, sel) => { await p.click(sel); await p.waitForTimeout(60); };
 
   console.log('-- every load: Monthly, on every device (Rob, 0.43.3) --');
@@ -150,7 +169,7 @@ ${markup}
     const s = await st(p);
     const who = phone ? 'PHONE' : 'DESKTOP';
     check(`${who}: the board opens on Monthly`, s.period === 'month' && s.chart && !s.agenda, s);
-    check(`${who}: ...this month`, s.title === 'October 2026', s.title);
+    check(`${who}: ...this month — the label is the October days on screen (0.46.0)`, /^Oct /.test(s.title) && s.title === await onScreen(p), [s.title, await onScreen(p)]);
     check(`${who}: ...in ONE request for exactly the month`, s.reqs.length === 1
       && s.reqs[0].from === '2026-10-01' && s.reqs[0].to === '2026-10-31', s.reqs);
     check(`${who}: Today is SHOWN even though this month holds today (0.43.1: always in the row)`, s.today);
@@ -174,7 +193,7 @@ ${markup}
     const { ctx, p } = await open({ blocked: true });
     const s = await st(p);
     check('storage BLOCKED: the board still opens, on Monthly, with no error',
-      s.period === 'month' && s.title === 'October 2026' && p.__errors.length === 0, [s.period, p.__errors]);
+      s.period === 'month' && s.title === await onScreen(p) && p.__errors.length === 0, [s.period, s.title, p.__errors]);
     await choose(p, 'week');
     check('...and choosing a period still works', (await st(p)).period === 'week' && p.__errors.length === 0);
     await ctx.close();
@@ -197,7 +216,7 @@ ${markup}
     await choose(p, 'day');
     let s = await st(p);
     check('Daily: the list, not the chart, and no legend', s.agenda && !s.chart && !s.legend, s);
-    check('Daily: the date ALONE — no month/year line under it (Rob, 0.43.3)', s.title === 'Thursday, October 8, 2026', s.title);
+    check('Daily: the date ALONE, as "Oct 8, 2026" (Rob, 0.43.3; the 0.46.0 style)', s.title === 'Oct 8, 2026', s.title);
     check('...nothing nested in the label at all', await p.evaluate(() => document.querySelector('.mphbac-staff-title').children.length === 0));
     const groups = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-group')].map(g =>
       [g.querySelector('.mphbac-staff-group-head').firstChild.textContent,
@@ -210,14 +229,14 @@ ${markup}
     await choose(p, 'week');
     s = await st(p);
     check('Weekly: the calendar week holding today, Sunday-first (start_of_week = 0)', s.win === '2026-10-04..2026-10-10', s.win);
-    check('Weekly: the label names the month on screen', s.title === 'October 2026', s.title);
+    check('Weekly: the label is the week on screen', s.title === 'Oct 4 – 10, 2026', s.title);
     check('Weekly: seven day columns', s.heads === 7, s.heads);
     check('Weekly: the arrows say "week"', s.prev === STRINGS.prevWeek, s.prev);
 
     await choose(p, 'year');
     s = await st(p);
     check('Yearly: the calendar year', s.win === '2026-01-01..2026-12-31', s.win);
-    check('Yearly: the label names the month on screen — opened on today, October', s.title === 'October 2026', s.title);
+    check('Yearly: the label is the days on screen — opened on today, October', /^Oct /.test(s.title) && s.title === await onScreen(p), [s.title, await onScreen(p)]);
     check('Yearly: 365 day columns', s.heads === 365, s.heads);
     check('Yearly: ONE request for the whole year', s.reqs.slice(-1)[0].from === '2026-01-01' && s.reqs.slice(-1)[0].to === '2026-12-31', s.reqs.slice(-1));
     const marks = await p.evaluate(() => ({
@@ -271,7 +290,7 @@ ${markup}
     // Daily is identified by its label; the chart periods by their window.
     const where = s => s.period === 'day' ? s.title : s.win;
     for (const [period, next, home] of [
-      ['day', 'Friday, October 9, 2026', 'Thursday, October 8, 2026'],
+      ['day', 'Oct 9, 2026', 'Oct 8, 2026'],
       ['week', '2026-10-11..2026-10-17', '2026-10-04..2026-10-10'],
       ['month', '2026-11-01..2026-11-30', '2026-10-01..2026-10-31'],
       ['year', '2027-01-01..2027-12-31', '2026-01-01..2026-12-31']]) {
@@ -299,9 +318,9 @@ ${markup}
     const go = async v => { await p.fill('.mphbac-staff-goto', v); await p.dispatchEvent('.mphbac-staff-goto', 'change'); await p.waitForTimeout(60); };
     await go('2027-03-15');
     check('Monthly: Go to date shows that date\'s month', (await st(p)).win === '2027-03-01..2027-03-31'
-      && (await st(p)).title === 'March 2027', [(await st(p)).win, (await st(p)).title]);
+      && /^Mar /.test((await st(p)).title) && (await st(p)).title === await onScreen(p), [(await st(p)).win, (await st(p)).title]);
     await choose(p, 'day');
-    check('...and switching to Daily lands on that very day', /March 15, 2027/.test((await st(p)).title), (await st(p)).title);
+    check('...and switching to Daily lands on that very day', (await st(p)).title === 'Mar 15, 2027', (await st(p)).title);
     const before = (await st(p)).title;
     await go('2031-01-01');
     const s = await st(p);
@@ -378,7 +397,7 @@ ${markup}
     b = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-monthband')].map(x => [x.textContent, x.title]));
     check(`${who} Weekly Sep 27 – Oct 3: two band cells, September then October`,
       s.win === '2026-09-27..2026-10-03' && b.length === 2 && b[0][1] === 'September 2026' && b[1][1] === 'October 2026', [s.win, b]);
-    check(`${who} Weekly: the label names the month with more of the week (4 days of September)`, s.title === 'September 2026', s.title);
+    check(`${who} Weekly: the label is the week, across the month boundary`, s.title === 'Sep 27 – Oct 3, 2026', s.title);
     // The label while that week is still LOADING: mostOf() names the larger
     // part before there is a chart to measure. Asserted on a window never
     // fetched, with the answer held back.
@@ -396,11 +415,11 @@ ${markup}
       return r;
     };
     const held = await heldLabel('2026-06-10', '2026-08-04');
-    check(`${who} (instrument check) a request really was held, and the loading label is the week's month`,
-      held.pending && held.t === 'August 2026', held);
+    check(`${who} (instrument check) a request really was held, and while loading the label is that week`,
+      held.pending && held.t === 'Aug 2 – 8, 2026', held);
     const held2 = await heldLabel('2026-06-10', '2026-08-01');
-    check(`${who} Weekly Jul 26 – Aug 1, while still loading: July, the larger part (6 days), not the anchor's August`,
-      held2.pending && held2.t === 'July 2026', held2);
+    check(`${who} Weekly Jul 26 – Aug 1, while still loading: that week, not the anchor's month`,
+      held2.pending && held2.t === 'Jul 26 – Aug 1, 2026', held2);
     await go('2026-09-30');
     const lines = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-monthline')].map(l => l.style.gridColumn));
     check(`${who} Weekly: one rule, on October 1st`, lines.length === 1, lines);
@@ -411,9 +430,9 @@ ${markup}
     const lw = await labelW();
     await scrollTo((await dayX('2026-03-10')) - lw);
     s = await st(p);
-    check(`${who} Yearly: scrolled to mid-March, the label says March`, s.title === 'March 2026', s.title);
+    check(`${who} Yearly: scrolled to mid-March, the label starts at Mar 10 — the days on screen`, s.title.indexOf('Mar 10 – ') === 0 && s.title === await onScreen(p), [s.title, await onScreen(p)]);
     await scrollTo((await dayX('2026-11-05')) - lw);
-    check(`${who} Yearly: ...and November when scrolled there`, (await st(p)).title === 'November 2026', (await st(p)).title);
+    check(`${who} Yearly: ...and from Nov 5 when scrolled there`, (await st(p)).title.indexOf('Nov 5 – ') === 0 && (await st(p)).title === await onScreen(p), (await st(p)).title);
 
     // The month's name stays pinned while its month is on screen.
     const pin = await p.evaluate(() => {
@@ -466,7 +485,7 @@ ${markup}
       const t = document.querySelector('.mphbac-staff-dayhead.is-today').getBoundingClientRect();
       return t.left >= g.left && t.right <= g.right;
     });
-    check(`${who} Yearly scrolled to January: Today scrolls back to today`, tv && s.title === 'October 2026' && s.today, [tv, s.title]);
+    check(`${who} Yearly scrolled to January: Today scrolls back to today`, tv && /^Oct /.test(s.title) && s.title === await onScreen(p) && s.today, [tv, s.title]);
     check(`${who} ...without redrawing or fetching the year`, same && s.reqs.length === reqs, [same, s.reqs.length - reqs]);
 
     // Go to date inside the loaded year scrolls to that date.
@@ -476,7 +495,7 @@ ${markup}
       const t = document.querySelector('.mphbac-staff-dayhead[data-day="2026-06-15"]').getBoundingClientRect();
       return t.left >= g.left && t.right <= g.right;
     });
-    check(`${who} Yearly: Go to date in the same year scrolls to that date`, gv && (await st(p)).title === 'June 2026', [gv, (await st(p)).title]);
+    check(`${who} Yearly: Go to date in the same year scrolls to that date`, gv && /^Jun /.test((await st(p)).title) && (await st(p)).title === await onScreen(p), [gv, (await st(p)).title]);
     await ctx.close();
   }
 
@@ -492,15 +511,16 @@ ${markup}
       el.dispatchEvent(new TouchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [t1], bubbles: true }));
     }, [sel, dx, dy]).then(() => p.waitForTimeout(60));
     await swipe('.mphbac-staff-title', -120, 4);
-    check('swipe LEFT on the header: next month', (await st(p)).title === 'November 2026', (await st(p)).title);
+    // The period is read from its WINDOW: since 0.46.0 the label is the days on screen.
+    check('swipe LEFT on the header: next month', (await st(p)).win === '2026-11-01..2026-11-30', (await st(p)).win);
     await swipe('.mphbac-staff-title', 120, 4);
-    check('swipe RIGHT: back', (await st(p)).title === 'October 2026');
+    check('swipe RIGHT: back', (await st(p)).win === '2026-10-01..2026-10-31', (await st(p)).win);
     await swipe('.mphbac-staff-grid', -150, 2);
-    check('the SAME swipe on the chart changes nothing — its sideways scroll is its own', (await st(p)).title === 'October 2026', (await st(p)).title);
+    check('the SAME swipe on the chart changes nothing — its sideways scroll is its own', (await st(p)).win === '2026-10-01..2026-10-31', (await st(p)).win);
     await swipe('.mphbac-staff-title', -40, 2);
-    check('a short drag is not a swipe', (await st(p)).title === 'October 2026');
+    check('a short drag is not a swipe', (await st(p)).win === '2026-10-01..2026-10-31', (await st(p)).win);
     await swipe('.mphbac-staff-title', -90, 80);
-    check('a mostly-vertical drag (a page scroll) is not a swipe', (await st(p)).title === 'October 2026');
+    check('a mostly-vertical drag (a page scroll) is not a swipe', (await st(p)).win === '2026-10-01..2026-10-31', (await st(p)).win);
     await choose(p, 'day');
     await swipe('.mphbac-staff-agenda', -120, 6);
     // A phone titles Daily in the short form ("Fri, Oct 9, 2026").

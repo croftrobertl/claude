@@ -168,6 +168,15 @@ namespace {
     check('direct bookings unchanged: 2 and 4', $g[54] === '2' && $g[55] === '4', $g);
     check('import, 2 in a 2-sleeper: nothing unconfirmed, 2 confirmed', $g[56] === '' && $g[57] === '2', $g);
 
+    echo "\n-- 0.46.0: each booking's made-on date (post_date, site time), for pace and lead time --\n";
+    $b = board([80 => [[], ['_mphb_adults' => 2]], 81 => [[], ['_mphb_adults' => 2]]]);
+    $GLOBALS['t_posts'][80]->post_date = '2026-02-28 23:40:00';     // late evening, site time
+    $b = (static function () { $out = [];
+        foreach (\MPHBAC\Staff_Data::month_view(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-31'))['bookings'] as $x) { $out[$x['id']] = $x; }
+        return $out; })();
+    check('madeOn is the post_date\'s calendar day, as stored (the site\'s own time zone — no UTC shift)', ($b[80]['madeOn'] ?? null) === '2026-02-28', $b[80]['madeOn'] ?? null);
+    check('no post_date: madeOn is empty, never a made-up day', ($b[81]['madeOn'] ?? null) === '', $b[81]['madeOn'] ?? null);
+
     echo "\n-- 2026-10-11 pet policy: the new fee is a pet for the paw, Daily and the preview --\n";
     $b = board([
         70 => [['mphb_dog_size' => 'Up to 20 lbs'], ['_mphb_services' => [19692 => 3]]],   // the new fee
