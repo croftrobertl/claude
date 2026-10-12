@@ -1446,9 +1446,9 @@ yours to improvise.
     room taxes (4% / 1% / 6%, which reproduce both raw breakdowns to the cent);
     nights and tiers there are the stand-in's. The Director's rerun on the
     real bookings is the proof.
-  - **NOT verified**: what `_mphb_services` looks like on a room MotoPress
-    saved with no services (`a:0:{}` or absent) — 0.33.1 writes an empty
-    array; `read_services()` reads both. On live, the details string is
+  - **VERIFIED (Director, live, 2026-10-12)**: a room with no services
+    stores `_mphb_services` as `a:0:{}` (416 of 419 reserved rooms; never
+    absent), so 0.33.1's empty array is MotoPress's own shape. On live, the details string is
     MotoPress's own `toString()`, so the stand-in's price formatting decides
     nothing there.
 - **0.34.0 — ROB'S PET POLICY (11 October): FLAT FEE, OLD FEES RECOGNISED,
@@ -1517,7 +1517,19 @@ yours to improvise.
     in tests/petpolicy (with the guard that the guest list WOULD erase it).
     Consequence: while this plugin is active, the options typed on field
     17727 in MotoPress are replaced by the setting; nothing in MotoPress's
-    data is changed.
+    data is changed. **Rob's decision (2026-10-12): keep it as built** —
+    every size on the edit screen, offered sizes only for guests and Add New.
+  - **0.34.0 STAGING, Director's sections PASSED (2026-10-12)**: the upgrade
+    read (flat 19692, tiers 17712/17711/14926, active [19692], recognised all
+    four, no warning); a save through `Settings::sanitize()`; the mode round
+    trip (three warnings on tiers, none back on flat, nothing retyped); a
+    nothing-offered list refused; #17730 (old 17712 fee, made confirmed for
+    the test and restored) Yes → no change, No → $383 → $333, Yes → $333 →
+    $433 with "Pet Fee (per night) | $50 × 2 nights | 100"; #10222 $277.50 →
+    $377.50 → back and #8798 $1,021.20 → $1,421.20 → back, byte-identical;
+    `Dog_Sizes::violation()` and the served options on each screen as built;
+    17727's stored meta unchanged. Rob's sections 3, 5 and 6 are with him;
+    live after his sign-off.
   - **The size is checked on the server** (`Dog_Sizes::violation()`, called
     from `Pet_Service::find_violation()`, so the wp_loaded path AND Rest_Guard):
     MotoPress does not check a posted select against its options
@@ -1561,9 +1573,14 @@ yours to improvise.
     matches, so the guest's real choice — including none — is what is
     submitted, and MotoPress still refuses a booking without a count. A
     request it cannot read goes as it was (MotoPress's behaviour); admins get
-    a console note. **NOT observed on live**: the encoded shape is jQuery's
-    param of the serialised form, modelled, not captured — the Director's
-    network-tab read is the check.
+    a console note. **SHAPE CONFIRMED with the site's real libraries**
+    (Director, staging, 2026-10-12): MotoPress's vendored
+    jquery.serializejson + jQuery 3.7.1, on a chooser
+    `mphb_room_details[0][adults]` left on "", produce
+    `formValues%5Bmphb_room_details%5D%5B0%5D%5Badults%5D=` in the GET query;
+    a service's own count encodes as `…[services][0][adults]=1`, which the
+    `services` exclusion skips. Not yet captured from a live page load —
+    Rob's section 3 (checkout on his phone and desktop) is the end-to-end proof.
   - **The Guests row** (`tr.mphb-price-breakdown-guests`, booking-view.php
     ~100–111) is hidden while any chooser is unchosen, by a CLASS ON THE FORM
     (`dcc_checkout-guests-provisional`) + CSS, so a re-rendered table is
