@@ -1090,6 +1090,11 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     }));
     check(`${DEV}: Show, Timeframe, Month and Year each a button over the closed field — aria-haspopup="listbox", collapsed, named "Show Monthly"`,
       closed.every(c => c.popup === 'listbox' && c.exp === 'false' && c.covers && c.tab === -1 && c.hid === 'true') && closed[0].name === 'Show Monthly' && closed[2].name === 'Month Oct 2026', closed);
+    const place = await p.evaluate(() => { const c = e => { const r = e.getBoundingClientRect(); return [r.left, r.right, (r.left + r.right) / 2]; };
+      const labs = [...document.querySelectorAll('.mphbac-staff-fields .mphbac-staff-field > .mphbac-staff-field-label')].map(l => c(l)[2]);
+      const show = c(document.querySelector('.mphbac-staff-period')), go = c(document.querySelector('.mphbac-staff-goto'));
+      return { ok: labs[0] > show[0] && labs[0] < show[1] && labs[1] > go[0] && labs[1] < go[1], labs, show, go }; });
+    check(`${DEV}: the wrapped Show field keeps its place — under "Show", and Go to date under "Go to date"`, place.ok, place);
     const native = await p.evaluate(() => ['.mphbac-staff-goto', '.mphbac-staff-stats-date', '.mphbac-staff-stats-from'].every(s => !document.querySelector(s).parentNode.querySelector('.mphbac-staff-pickbtn')));
     check(`${DEV}: Go to date and the Stats dates stay the native calendar`, native);
     const phonePad = await p.evaluate(() => { const c = getComputedStyle(document.querySelector('.mphbac-staff-period')); return [c.paddingLeft, c.paddingRight]; });

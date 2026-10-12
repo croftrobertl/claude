@@ -2076,7 +2076,7 @@ $mutations = [
     ["A7 lists: on a phone the wrapped <select> loses its row", 'assets/css/staff.css',
      "    .mphbac-staff-fields .mphbac-staff-pickwrap { grid-row: 2; }\n",
      "",
-     'staff-test.js'],
+     'staff-board-test.js'],
     ["B8 tips: two can be open at once", 'assets/js/staff.js',
      "            if (tipOpen && tipOpen.wrap !== wrap) closeTip();\n",
      "",
