@@ -2555,7 +2555,7 @@
    "fees"
   ],
   "claim": "0.33.0: the rebuild runs on redirect_post_location",
-  "find": "        if (self::$running || !array_key_exists($post_id, self::$pending)) {\n            return $location;",
+  "find": "        if (!array_key_exists($post_id, self::$pending)) {\n            return $location;",
   "replace": "        if (true) {\n            return $location;",
   "count": 1
  },
@@ -2622,8 +2622,8 @@
    "fees"
   ],
   "claim": "0.33.0: the FIRST snapshot wins (MotoPress's nested save fires the hook again)",
-  "find": "        if (self::$running || isset(self::$before[$post_id]) || !self::request_is_ours($post_id)) {",
-  "replace": "        if (self::$running || !self::request_is_ours($post_id)) {",
+  "find": "        if (isset(self::$before[$post_id]) || !self::request_is_ours($post_id)) {",
+  "replace": "        if (!self::request_is_ours($post_id)) {",
   "count": 1
  },
  {
@@ -2633,8 +2633,8 @@
    "fees"
   ],
   "claim": "0.33.0: the fee follows a CHANGED count only — an old mismatch is left alone",
-  "find": "                if (!array_key_exists($rid, $before) || $before[$rid] === $r['adults']) {",
-  "replace": "                if (!array_key_exists($rid, $before)) {",
+  "find": "                'changed'  => array_key_exists($id, $before) && $before[$id] !== $adults,",
+  "replace": "                'changed'  => array_key_exists($id, $before),",
   "count": 1
  },
  {
@@ -2649,25 +2649,14 @@
   "count": 1
  },
  {
-  "id": "fs-uid-dropped",
-  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
-  "suites": [
-   "fees"
-  ],
-  "claim": "0.33.0: the room keeps its own uid",
-  "find": "                    'uid'               => $room->getUid(),\n",
-  "replace": "",
-  "count": 1
- },
- {
   "id": "fs-other-services-dropped",
   "file": "dcc-custom-checkout/includes/class-fee-sync.php",
   "suites": [
    "fees"
   ],
-  "claim": "0.33.0: other services ride through",
-  "find": "                    $rows = self::without($rooms[$rid]['services'], $pet_ids);",
-  "replace": "                    $rows = [];",
+  "claim": "0.33.1: rows this does not change ride through, as stored",
+  "find": "            $kept  = $raw;",
+  "replace": "            $kept  = [];",
   "count": 1
  },
  {
@@ -2723,17 +2712,6 @@
   "claim": "0.33.0: two pet rooms: no control on the screen",
   "find": "        return $pet_rooms === 1 ? 'select' : 'readonly';",
   "replace": "        return $pet_rooms >= 1 ? 'select' : 'readonly';",
-  "count": 1
- },
- {
-  "id": "fs-unknown-service-continues",
-  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
-  "suites": [
-   "fees"
-  ],
-  "claim": "0.33.0: every check before the first write — an unbuildable service writes NOTHING",
-  "find": "                    if (!$svc) {\n                        return $fail;    // an id MotoPress does not know\n                    }",
-  "replace": "                    if (!$svc) {\n                        continue;\n                    }",
   "count": 1
  },
  {
@@ -2811,6 +2789,237 @@
   "claim": "0.33.0: Dog follows the Pet fee control before the save",
   "find": "                var feeSel = document.getElementById('dcc_pet_fee');\n                if (feeSel) {",
   "replace": "                var feeSel = null;\n                if (feeSel) {",
+  "count": 1
+ },
+ {
+  "id": "fs-list-length-unchecked",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a line is touched only when the list is exactly as long as the rows",
+  "find": "            if (!is_array($list) || count($list) !== count($rows)) {",
+  "replace": "            if (!is_array($list)) {",
+  "count": 1
+ },
+ {
+  "id": "fs-line-total-unchecked",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a removed/replaced line must equal calcPrice() of its row, to the cent",
+  "find": "                    if ($old_cents !== self::cents($old->calcPrice($in, $out))) {",
+  "replace": "                    if (false) {",
+  "count": 1
+ },
+ {
+  "id": "fs-coupon-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a coupon on the booking refuses the change",
+  "find": "        if (trim((string) get_post_meta($booking_id, 'mphb_coupon_id', true)) !== '') {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "fs-service-taxes-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: configured service taxes refuse the change",
+  "find": "        if (!empty($service_taxes)) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "fs-service-discount-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a non-zero service discount refuses the change",
+  "find": "        if (self::cents($room->services->discount) !== 0\n            || ",
+  "replace": "        if (false\n            || ",
+  "count": 1
+ },
+ {
+  "id": "fs-total-mismatch-ignored",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the breakdown total must equal mphb_total_price to the cent",
+  "find": "\n            || self::cents(get_post_meta($booking_id, 'mphb_total_price', true)) !== self::cents($breakdown->total)) {",
+  "replace": "\n            ) {",
+  "count": 1
+ },
+ {
+  "id": "fs-breakdown-unslashed",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the breakdown is written as MotoPress writes it — wp_slash()ed",
+  "find": "wp_slash(json_encode($breakdown))",
+  "replace": "json_encode($breakdown)",
+  "count": 1
+ },
+ {
+  "id": "fs-breakdown-flags",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: json_encode with DEFAULT flags (escaped slashes), as BookingRepository",
+  "find": "wp_slash(json_encode($breakdown))",
+  "replace": "wp_slash(json_encode($breakdown, JSON_UNESCAPED_SLASHES))",
+  "count": 1
+ },
+ {
+  "id": "fs-adults-not-set",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a count change through Update sets the breakdown's room.adults (with a fee change)",
+  "find": "        if ($plan['adults'] !== null) {\n            $room->room->adults = $plan['adults'];\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-adults-only-not-set",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a count-only change sets room.adults too",
+  "find": "                $breakdown->rooms[0]->room->adults = $plan['adults'];\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-room-total-not-moved",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the room's total moves by the fee",
+  "find": "        $room->total                    = self::money(self::cents($room->total) + $delta);",
+  "replace": "        $room->total                    = $room->total;",
+  "count": 1
+ },
+ {
+  "id": "fs-total-price-not-written",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: mphb_total_price moves by exactly the fee",
+  "find": "        update_post_meta($booking_id, 'mphb_total_price', self::money($was + $delta));\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-rows-not-written",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the room's _mphb_services rows follow the line",
+  "find": "        update_post_meta($rid, '_mphb_services', array_values($kept));\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-title-untranslated",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the title is looked up through _mphb_translate_post_id, as PriceBreakdownHelper",
+  "find": "apply_filters('_mphb_translate_post_id', $svc->getId(), null)",
+  "replace": "$svc->getId()",
+  "count": 1
+ },
+ {
+  "id": "fs-title-own-only",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the title comes from the service repository, not the reserved service's own",
+  "find": "                $title = (string) $found->getTitle();",
+  "replace": "                $title = '';",
+  "count": 1
+ },
+ {
+  "id": "fs-details-one-night",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: details = toString('price', the booking's nights)",
+  "find": "        $line->details = (string) $svc->toString('price', $nights);",
+  "replace": "        $line->details = (string) $svc->toString('price', 1);",
+  "count": 1
+ },
+ {
+  "id": "fs-snapshot-reused",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: each Update takes its own snapshot (two Updates in one process)",
+  "find": "        unset(self::$before[$post_id]);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "fs-multi-room-allowed",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: one accommodation only",
+  "find": "        if (count($rooms) !== 1) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "fs-cents-truncates",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: arithmetic in whole cents, rounded",
+  "find": "        return (int) round(((float) $amount) * 100);",
+  "replace": "        return (int) (((float) $amount) * 100);",
+  "count": 1
+ },
+ {
+  "id": "fs-delta-sign",
+  "file": "dcc-custom-checkout/includes/class-fee-sync.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: a removed line subtracts its own price",
+  "find": "                    $delta -= $old_cents;",
+  "replace": "                    $delta += $old_cents;",
+  "count": 1
+ },
+ {
+  "id": "ed-ea-note-missing",
+  "file": "dcc-custom-checkout/includes/class-extra-details.php",
+  "suites": [
+   "fees"
+  ],
+  "claim": "0.33.1: the note beside Edit Accommodations says it reprices the whole stay",
+  "find": "                if (Fee_Sync::eligible($booking_id)) {\n                    $out .= '<p class=\"dcc_extras-edit-note description\">'",
+  "replace": "                if (false) {\n                    $out .= '<p class=\"dcc_extras-edit-note description\">'",
   "count": 1
  }
 ]

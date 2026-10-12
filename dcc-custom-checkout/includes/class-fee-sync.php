@@ -6,51 +6,67 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * FEES FOLLOW THE UPDATE BUTTON (v0.33.0, Rob: "Both follow Update").
+ * FEES FOLLOW THE UPDATE BUTTON (v0.33.0, Rob: "Both follow Update"; v0.33.1:
+ * "only add / remove the fee — never reprice the stay").
  *
  * On a DIRECT booking that is not cancelled or abandoned, pressing Update on
- * the booking screen makes the reserved rooms' fee services match what staff
+ * the booking screen adds, changes or removes a fee line to match what staff
  * set there:
- *  - "Pet fee: Yes / No" (pet-fee cottages, one such room) adds or removes the
+ *  - "Pet fee: Yes / No" (one room, on a pet-fee cottage) adds or removes the
  *    pet service for the stay's length — Config::service_id_for_nights(), the
  *    tier the checkout and Add New use;
  *  - a changed guest count adds, adjusts or removes the Extra Guest Fee on a
- *    room whose cottage carries it — Config::guest_service_id_for_nights()
- *    and `count - included_guests()`, the service and multiplier the checkout
- *    and Add New use;
- * then MotoPress reprices the booking its own way. Imports never get a fee.
+ *    cottage that carries it — Config::guest_service_id_for_nights() and
+ *    `count - included_guests()`, the service and multiplier the checkout and
+ *    Add New use (18063 is priced per adult, so adults = guests beyond 2).
+ * Imports never get a fee.
  *
- * ONLY ON A CHANGE MADE IN THIS UPDATE. A booking whose stored fee already
- * disagrees with its count (an old booking, a fee the owner waived) is left
- * exactly as it is when it is saved for any other reason; it changes only when
- * staff change the pet fee or that room's count.
+ * ONLY ON A CHANGE MADE IN THIS UPDATE (Rob: "Leave it alone"). A booking
+ * whose stored fee already disagrees with its count (an old booking, a fee the
+ * owner waived) is left exactly as it is when saved for any other reason.
  *
- * NOTHING ELSE CHANGES: dates, rates, children, guest names, UIDs, other
- * services, payments and status are carried over as they are. No status
- * change, so MotoPress sends no status email. A total that falls below what
- * has been paid is left that way — nothing is refunded.
+ * THE FEE IS ADDED TO THE BOOKING AS IT WAS PRICED, NEVER REPRICED (v0.33.1).
+ * 0.33.0 called MotoPress's updateTotal(), which reprices the WHOLE stay at
+ * today's rates (Director, staging: #10212, booked at $555, read $666 after
+ * pet on/off). Now nothing of MotoPress's is re-run. Each fee line is priced
+ * with MotoPress's own per-service calculation —
+ * ReservedService::create($row)->calcPrice($checkIn, $checkOut) — and built
+ * exactly as PriceBreakdownHelper::getServicesBreakdown() builds one (title
+ * from the service repository, details = toString('price', $nights), total =
+ * calcPrice()). Then, consistently and by exactly that amount:
+ *  - the room's `_mphb_services` rows;
+ *  - in `_mphb_booking_price_breakdown`: that room's services.list,
+ *    services.total / discount_total, the room's total / discount_total, and
+ *    the booking total;
+ *  - `mphb_total_price`.
+ * The room price, its nightly list, its taxes and every other line are left
+ * untouched. Arithmetic is in whole cents. A changed guest count also sets the
+ * breakdown's room.adults, so invoices print the right number.
+ *
+ * A LINE IS FOUND BY POSITION, NEVER BY TITLE. List items carry no service id,
+ * and their titles are the title at booking time. MotoPress builds the list in
+ * the order of the room's `_mphb_services` rows, skipping a row whose service
+ * no longer exists — so a line is touched only when the list is exactly as
+ * long as the rows AND its total equals calcPrice() of that row to the cent.
+ *
+ * FAILS SAFE. A coupon on the booking, any service discount, service taxes
+ * configured (`mphb_service_taxes`), more than one accommodation, a breakdown
+ * not in MotoPress's shape or not matching `mphb_total_price`, or anything
+ * else unreadable: nothing is written and staff are told to use Edit
+ * Accommodations (MotoPress's own flow, which DOES reprice the stay).
+ *
+ * NOTHING ELSE CHANGES: dates, rates, children, guest names, UIDs, payments
+ * and status. No reserved room is rebuilt or saved through MotoPress, so no
+ * count is ever written from a cached booking (0.33.0's stale-count defect).
+ * A total that falls below what has been paid is left that way.
  *
  * WHEN IT RUNS. MotoPress's own Update (EditCPTPage::saveMetaBoxes, save_post
- * at 10) saves the booking with BookingRepository::save(), which calls
- * wp_update_post() and so fires save_post AGAIN inside itself. A handler on
- * save_post would therefore first run nested inside MotoPress's save, before
- * that save has finished writing. VERIFIED (Director, live 6.3.0):
- * CPTPersistence::update() (~172) calls wp_update_post() FIRST and only then
- * updatePostRelatedData(), which writes the meta including mphb_total_price —
- * so any save_post handler, at any priority, runs before MotoPress writes its
- * reloaded total, and would be overwritten. So save_post only RECORDS that a rebuild is
- * due (after the nonce, capability and post_ID checks), and the rebuild runs on
- * `redirect_post_location` — the filter WordPress's post.php applies once,
- * after edit_post() and every save handler have returned, just before it
- * redirects. An edit that does not end in that redirect changes no fee.
- *
- * THE SEQUENCE is MotoPress's own (BookingControl::setup(), Director's read of
- * live 6.3.0): reload the booking, setRooms(), updateTotal(),
- * BookingRepository::save(), updateReservedRooms(), addLog(). A room is
- * rebuilt with its own id, room, rate, adults, children, guest name, status
- * and uid, so updateReservedRooms() saves it IN PLACE: same post, same uid,
- * same `_mphb_adults_confirmed`. Every check runs before the first write;
- * anything unreadable means nothing is written and staff are told.
+ * at 10) saves the booking, and CPTPersistence::update() (~172) calls
+ * wp_update_post() before it writes the booking meta (Director, live 6.3.0),
+ * so any save_post handler runs before MotoPress's own writes. So save_post
+ * only RECORDS that work is due (after the nonce, capability and post_ID
+ * checks), and the work runs on `redirect_post_location` — the filter
+ * post.php applies once, after every save handler has returned.
  */
 final class Fee_Sync
 {
@@ -73,8 +89,6 @@ final class Fee_Sync
 
     /** booking id => pet choice ('yes' | 'no' | '') for a rebuild that is due */
     private static array $pending = [];
-
-    private static bool $running = false;
 
     public function register(): void
     {
@@ -163,7 +177,7 @@ final class Fee_Sync
     public static function snapshot($post_id): void
     {
         $post_id = (int) $post_id;
-        if (self::$running || isset(self::$before[$post_id]) || !self::request_is_ours($post_id)) {
+        if (isset(self::$before[$post_id]) || !self::request_is_ours($post_id)) {
             return;
         }
         $counts = [];
@@ -183,7 +197,7 @@ final class Fee_Sync
     public static function mark($post_id, $post = null): void
     {
         $post_id = (int) $post_id;
-        if (self::$running || !$post instanceof \WP_Post || $post->post_type !== self::BOOKING_POST_TYPE) {
+        if (!$post instanceof \WP_Post || $post->post_type !== self::BOOKING_POST_TYPE) {
             return;
         }
         if (!self::request_is_ours($post_id)) {
@@ -230,12 +244,16 @@ final class Fee_Sync
     public static function on_redirect($location, $post_id = 0)
     {
         $post_id = (int) $post_id;
-        if (self::$running || !array_key_exists($post_id, self::$pending)) {
+        // This Update's snapshot is used once: a second Update in the same
+        // process must take its own (v0.33.1 — two Updates in one process).
+        $before = self::$before[$post_id] ?? [];
+        unset(self::$before[$post_id]);
+        if (!array_key_exists($post_id, self::$pending)) {
             return $location;
         }
         $pet = self::$pending[$post_id];
         unset(self::$pending[$post_id]);
-        $result = self::sync($post_id, $pet, self::$before[$post_id] ?? []);
+        $result = self::sync($post_id, $pet, $before);
         if ($result !== '') {
             self::queue_notice($result);
         }
@@ -277,35 +295,42 @@ final class Fee_Sync
      * What should change. Pure apart from reads: tested directly.
      *
      * null — nothing to change;
-     * ['error' => message] — a change was asked for but cannot be made safely;
-     * ['rooms' => [reserved room id => service rows], 'notes' => [...]].
+     * ['error' => message] — a fee change was asked for but cannot be made;
+     * ['room' => reserved room id, 'ops' => [...], 'notes' => [...],
+     *  'adults' => new count | null] — ops on that room's service rows, by
+     *  their index in `_mphb_services`: ['add', row], ['remove', i],
+     *  ['replace', i, row].
      *
      * @param array<int,string> $before
      * @return array<string,mixed>|null
      */
     public static function plan(int $booking_id, string $pet_choice, array $before): ?array
     {
+        $posts = self::room_posts($booking_id);
+        if (empty($posts)) {
+            return null;
+        }
         $rooms = [];
-        foreach (self::room_posts($booking_id) as $rr) {
+        foreach ($posts as $rr) {
             $id      = (int) $rr->ID;
             $room_id = (int) get_post_meta($id, '_mphb_room_id', true);
             $type_id = $room_id > 0 ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0;
+            $adults  = (string) get_post_meta($id, Admin_Guests::META_KEY, true);
             $rooms[$id] = [
                 'type'     => $type_id,
-                'adults'   => (string) get_post_meta($id, Admin_Guests::META_KEY, true),
+                'adults'   => $adults,
+                'changed'  => array_key_exists($id, $before) && $before[$id] !== $adults,
                 'services' => self::read_services(get_post_meta($id, '_mphb_services', true)),
                 'offered'  => $type_id > 0 ? Config::room_type_service_ids($type_id) : null,
             ];
         }
-        if (empty($rooms)) {
-            return null;
-        }
 
-        $nights   = self::nights($booking_id);
-        $pet_ids  = array_values(array_filter(array_map('intval', Config::pet_service_id_list())));
-        $fee_ids  = array_values(array_filter(array_map('intval', Config::guest_service_id_list())));
-        $desired  = [];
-        $notes    = [];
+        $nights  = self::nights($booking_id);
+        $pet_ids = array_values(array_filter(array_map('intval', Config::pet_service_id_list())));
+        $fee_ids = array_values(array_filter(array_map('intval', Config::guest_service_id_list())));
+        $unreadable = __('Fees were not changed: this booking\'s services could not be read. Use Edit Accommodations.', 'dcc-checkout');
+        $ops     = [];   // reserved room id => ops
+        $notes   = [];
 
         /* ---- The pet fee: only when the choice differs from what is stored. */
         if ($pet_choice === 'yes' || $pet_choice === 'no') {
@@ -313,35 +338,39 @@ final class Fee_Sync
                 return $r['type'] > 0 && Config::pet_fee_enabled() && Config::room_type_has_pet_services($r['type']) === true;
             }));
             if (count($pet_rooms) === 1) {
-                $rid = $pet_rooms[0];
-                if ($rooms[$rid]['services'] === null) {
-                    return ['error' => __('Fees were not changed: this booking\'s services could not be read. Use Edit Accommodations.', 'dcc-checkout')];
+                $rid  = $pet_rooms[0];
+                $rows = $rooms[$rid]['services'];
+                if ($rows === null) {
+                    return ['error' => $unreadable];
                 }
-                $has = self::has_any($rooms[$rid]['services'], $pet_ids);
+                $has  = self::has_any($rows, $pet_ids);
                 $want = $pet_choice === 'yes';
                 if ($has !== $want) {
-                    $rows = self::without($rooms[$rid]['services'], $pet_ids);
                     if ($want) {
                         $tier = $nights > 0 ? Config::service_id_for_nights($nights) : 0;
                         if ($tier <= 0 || !is_array($rooms[$rid]['offered']) || !in_array($tier, $rooms[$rid]['offered'], true)) {
                             return ['error' => __('The pet fee was not added: the service for this stay\'s length could not be found on this cottage. Use Edit Accommodations.', 'dcc-checkout')];
                         }
-                        $rows[] = ['id' => $tier, 'adults' => 1, 'quantity' => 1];
+                        $ops[$rid][] = ['add', ['id' => $tier, 'adults' => 1, 'quantity' => 1]];
                         $notes[] = __('Pet fee added', 'dcc-checkout');
                     } else {
+                        foreach ($rows as $i => $row) {
+                            if (in_array((int) $row['id'], $pet_ids, true)) {
+                                $ops[$rid][] = ['remove', $i];
+                            }
+                        }
                         $notes[] = __('Pet fee removed', 'dcc-checkout');
                     }
-                    $desired[$rid] = $rows;
                 }
             }
         }
 
         /* ---- The extra-guest fee: per room, only when its count changed. */
         if (Config::guest_fee_active()) {
-            $included = Config::included_guests();
+            $included  = Config::included_guests();
             $fee_types = Config::guest_accommodations();
             foreach ($rooms as $rid => $r) {
-                if (!array_key_exists($rid, $before) || $before[$rid] === $r['adults']) {
+                if (!$r['changed']) {
                     continue; // count not changed in this Update
                 }
                 if ($r['type'] <= 0 || !in_array($r['type'], $fee_types, true)) {
@@ -351,139 +380,312 @@ final class Fee_Sync
                 if ($count < 1) {
                     continue; // "Not provided": no number to charge for
                 }
-                $current = $desired[$rid] ?? $r['services'];
-                if ($current === null) {
-                    return ['error' => __('Fees were not changed: this booking\'s services could not be read. Use Edit Accommodations.', 'dcc-checkout')];
+                if ($r['services'] === null) {
+                    return ['error' => $unreadable];
+                }
+                $at = [];
+                foreach ($r['services'] as $i => $row) {
+                    if (in_array((int) $row['id'], $fee_ids, true)) {
+                        $at[] = $i;
+                    }
+                }
+                if (count($at) > 1) {
+                    return ['error' => $unreadable];
                 }
                 $extra = max(0, $count - $included);
-                $have  = self::fee_multiplier($current, $fee_ids);
+                $have  = $at ? max(0, (int) $r['services'][$at[0]]['adults']) : 0;
                 if ($have === $extra) {
                     continue;
                 }
-                $rows = self::without($current, $fee_ids);
                 if ($extra > 0) {
                     $svc = $nights > 0 ? Config::guest_service_id_for_nights($nights) : 0;
                     if ($svc <= 0 || !is_array($r['offered']) || !in_array($svc, $r['offered'], true)) {
                         return ['error' => __('The extra guest fee was not changed: its service could not be found on this cottage. Use Edit Accommodations.', 'dcc-checkout')];
                     }
-                    $rows[] = ['id' => $svc, 'adults' => $extra, 'quantity' => 1];
+                    $row = ['id' => $svc, 'adults' => $extra, 'quantity' => 1];
+                    $ops[$rid][] = $at ? ['replace', $at[0], $row] : ['add', $row];
                     $notes[] = sprintf(
                         /* translators: %d: number of guests beyond those included. */
                         _n('Extra guest fee set to %d guest', 'Extra guest fee set to %d guests', $extra, 'dcc-checkout'),
                         $extra
                     );
                 } else {
+                    $ops[$rid][] = ['remove', $at[0]];
                     $notes[] = __('Extra guest fee removed', 'dcc-checkout');
                 }
-                $desired[$rid] = $rows;
             }
         }
 
-        if (empty($desired)) {
+        $counts = array_filter($rooms, static function ($r) {
+            return $r['changed'] && (int) $r['adults'] > 0;
+        });
+        if (empty($ops) && empty($counts)) {
             return null;
         }
-        return ['rooms' => $desired, 'notes' => $notes];
+        // One accommodation only: the breakdown's room for each reserved room
+        // is not something this can prove on a multi-room booking.
+        if (count($rooms) !== 1) {
+            return empty($ops) ? null : ['error' => __('Fees were not changed: this booking has more than one accommodation. Use Edit Accommodations.', 'dcc-checkout')];
+        }
+        $rid = (int) array_key_first($rooms);
+        return [
+            'room'   => $rid,
+            'ops'    => $ops[$rid] ?? [],
+            'notes'  => $notes,
+            'adults' => $rooms[$rid]['changed'] && (int) $rooms[$rid]['adults'] > 0 ? (int) $rooms[$rid]['adults'] : null,
+        ];
     }
 
     /**
-     * MotoPress's own sequence. Every MotoPress call is checked before the
-     * first write; a failure before then writes nothing.
+     * Write the change: the room's service rows, the matching lines and totals
+     * in the stored price breakdown, and `mphb_total_price` — all by the same
+     * amount, in cents. Every check runs before the first write.
      *
-     * @param array{rooms:array<int,array<int,array{id:int,adults:int,quantity:int}>>,notes:string[]} $plan
+     * @param array{room:int,ops:array,notes:string[],adults:?int} $plan
      */
     private static function apply(int $booking_id, array $plan): string
     {
-        $fail = __('Fees were not changed: MotoPress could not reprice this booking here. Use Edit Accommodations.', 'dcc-checkout');
-        if (!function_exists('MPHB')
-            || !class_exists('\\MPHB\\Entities\\ReservedRoom')
-            || !class_exists('\\MPHB\\Entities\\ReservedService')
+        $fail = __('Fees were not changed: MotoPress could not price this change here. Use Edit Accommodations.', 'dcc-checkout');
+        $rid  = (int) $plan['room'];
+        $ops  = (array) $plan['ops'];
+
+        $breakdown = self::read_breakdown($booking_id);
+        if (empty($ops)) {
+            // Only the count changed: record it where invoices read it, if the
+            // breakdown can be read; there is no money to get wrong.
+            if ($breakdown !== null && $plan['adults'] !== null
+                && (int) $breakdown->rooms[0]->room->adults !== $plan['adults']) {
+                $breakdown->rooms[0]->room->adults = $plan['adults'];
+                self::write_breakdown($booking_id, $breakdown);
+            }
+            return '';
+        }
+
+        if ($breakdown === null) {
+            return __('Fees were not changed: this booking\'s price breakdown is not in the form this can safely change. Use Edit Accommodations.', 'dcc-checkout');
+        }
+        if (trim((string) get_post_meta($booking_id, 'mphb_coupon_id', true)) !== '') {
+            return __('Fees were not changed: this booking has a coupon. Use Edit Accommodations.', 'dcc-checkout');
+        }
+        $service_taxes = get_option('mphb_service_taxes', []);
+        if (!empty($service_taxes)) {
+            return __('Fees were not changed: service taxes are configured. Use Edit Accommodations.', 'dcc-checkout');
+        }
+        $room = $breakdown->rooms[0];
+        if (self::cents($room->services->discount) !== 0
+            || self::cents(get_post_meta($booking_id, 'mphb_total_price', true)) !== self::cents($breakdown->total)) {
+            return __('Fees were not changed: this booking\'s price breakdown is not in the form this can safely change. Use Edit Accommodations.', 'dcc-checkout');
+        }
+
+        if (!function_exists('MPHB') || !class_exists('\\MPHB\\Entities\\ReservedService')
             || !method_exists('\\MPHB\\Entities\\ReservedService', 'create')) {
             return $fail;
         }
-        self::$running = true;
         try {
-            $repo = MPHB()->getBookingRepository();
-            if (!$repo || !method_exists($repo, 'findById') || !method_exists($repo, 'save') || !method_exists($repo, 'updateReservedRooms')) {
+            $booking = MPHB()->getBookingRepository()->findById($booking_id);
+            if (!$booking || !method_exists($booking, 'getCheckInDate') || !method_exists($booking, 'getCheckOutDate')
+                || !method_exists($booking, 'getNightsCount')) {
                 return $fail;
             }
-            $booking = $repo->findById($booking_id, true);
-            if (!$booking || !method_exists($booking, 'getReservedRooms') || !method_exists($booking, 'setRooms')
-                || !method_exists($booking, 'updateTotal')) {
+            $in     = $booking->getCheckInDate();
+            $out    = $booking->getCheckOutDate();
+            $nights = (int) $booking->getNightsCount();
+
+            $stored = get_post_meta($rid, '_mphb_services', true);
+            $rows   = self::read_services($stored);
+            if ($rows === null) {
                 return $fail;
+            }
+            // Rows this does not change are written back exactly as stored.
+            $raw = $rows === [] ? [] : array_values((array) maybe_unserialize($stored));
+            $list = $room->services->list;
+            // The list is built from the rows in order, skipping a service that
+            // no longer exists: equal lengths, or positions cannot be trusted.
+            if (!is_array($list) || count($list) !== count($rows)) {
+                return __('Fees were not changed: this booking\'s services and its price breakdown do not line up. Use Edit Accommodations.', 'dcc-checkout');
             }
 
-            $rooms = [];
-            $seen  = [];
-            foreach ((array) $booking->getReservedRooms() as $room) {
-                if (!is_object($room) || !method_exists($room, 'getId')) {
-                    return $fail;
-                }
-                $rid = (int) $room->getId();
-                if (!isset($plan['rooms'][$rid])) {
-                    $rooms[] = $room;        // untouched, as MotoPress loaded it
-                    continue;
-                }
-                foreach (['getRoomId', 'getRateId', 'getAdults', 'getChildren', 'getGuestName', 'getStatus', 'getUid'] as $m) {
-                    if (!method_exists($room, $m)) {
+            $delta = 0;
+            $lines = $list;
+            $kept  = $raw;
+            $gone  = [];
+            $adds  = [];
+            foreach ($ops as $op) {
+                if ($op[0] === 'remove' || $op[0] === 'replace') {
+                    $i = (int) $op[1];
+                    if (!isset($rows[$i], $list[$i]) || !is_object($list[$i]) || !isset($list[$i]->total)) {
                         return $fail;
                     }
-                }
-                $services = [];
-                foreach ($plan['rooms'][$rid] as $row) {
-                    $svc = \MPHB\Entities\ReservedService::create($row);
-                    if (!$svc) {
-                        return $fail;    // an id MotoPress does not know
+                    $old = \MPHB\Entities\ReservedService::create($rows[$i]);
+                    if (!$old || !method_exists($old, 'calcPrice')) {
+                        return $fail;
                     }
-                    $services[] = $svc;
+                    $old_cents = self::cents($list[$i]->total);
+                    if ($old_cents !== self::cents($old->calcPrice($in, $out))) {
+                        return __('Fees were not changed: the fee line in this booking\'s price breakdown is not the one this would remove. Use Edit Accommodations.', 'dcc-checkout');
+                    }
+                    $delta -= $old_cents;
+                    if ($op[0] === 'remove') {
+                        $gone[] = $i;
+                        continue;
+                    }
+                    $line = self::line($op[2], $in, $out, $nights);
+                    if ($line === null) {
+                        return $fail;
+                    }
+                    $kept[$i]  = $op[2];
+                    $lines[$i] = $line;
+                    $delta    += self::cents($line->total);
+                } elseif ($op[0] === 'add') {
+                    $line = self::line($op[1], $in, $out, $nights);
+                    if ($line === null) {
+                        return $fail;
+                    }
+                    $adds[]  = [$op[1], $line];
+                    $delta  += self::cents($line->total);
+                } else {
+                    return $fail;
                 }
-                $rooms[] = new \MPHB\Entities\ReservedRoom([
-                    'id'                => $rid,
-                    'room_id'           => $room->getRoomId(),
-                    'booking_id'        => $booking_id,
-                    'rate_id'           => $room->getRateId(),
-                    'adults'            => $room->getAdults(),
-                    'children'          => $room->getChildren(),
-                    'reserved_services' => $services,
-                    'guest_name'        => $room->getGuestName(),
-                    'status'            => $room->getStatus(),
-                    // Always the room's own uid: omitted, MotoPress makes a NEW
-                    // one, and the room's tie to the iCal feeds breaks.
-                    'uid'               => $room->getUid(),
-                ]);
-                $seen[] = $rid;
             }
-            if (count($seen) !== count($plan['rooms'])) {
-                return $fail;    // a room in the plan is not on the booking
+            rsort($gone);
+            foreach ($gone as $i) {
+                array_splice($kept, $i, 1);
+                array_splice($lines, $i, 1);
             }
+            foreach ($adds as [$row, $line]) {
+                $kept[]  = $row;
+                $lines[] = $line;
+            }
+        } catch (\Throwable $e) {
+            return $fail;
+        }
 
-            $was = (float) get_post_meta($booking_id, 'mphb_total_price', true);
-            // From here on MotoPress writes.
-            $booking->setRooms($rooms);
-            $booking->updateTotal();
-            $repo->save($booking);
-            $repo->updateReservedRooms($booking_id);
-            if (function_exists('wp_cache_delete')) {
-                wp_cache_delete($booking_id, 'post_meta');
-            }
-            $now = (float) get_post_meta($booking_id, 'mphb_total_price', true);
+        $was = self::cents($breakdown->total);
+        $room->services->list           = array_values($lines);
+        $room->services->total          = self::money(self::cents($room->services->total) + $delta);
+        $room->services->discount_total = self::money(self::cents($room->services->discount_total) + $delta);
+        $room->total                    = self::money(self::cents($room->total) + $delta);
+        $room->discount_total           = self::money(self::cents($room->discount_total) + $delta);
+        $breakdown->total               = self::money($was + $delta);
+        if ($plan['adults'] !== null) {
+            $room->room->adults = $plan['adults'];
+        }
 
-            $message = sprintf(
-                /* translators: 1: what changed, e.g. "Pet fee added"; 2: total before; 3: total after. */
-                __('%1$s; total %2$s → %3$s', 'dcc-checkout'),
-                implode('; ', $plan['notes']),
-                Config::format_price($was),
-                Config::format_price($now)
-            );
-            if (method_exists($booking, 'addLog')) {
+        // From here on: writes, all of them already decided.
+        update_post_meta($rid, '_mphb_services', array_values($kept));
+        self::write_breakdown($booking_id, $breakdown);
+        update_post_meta($booking_id, 'mphb_total_price', self::money($was + $delta));
+
+        $message = sprintf(
+            /* translators: 1: what changed, e.g. "Pet fee added"; 2: total before; 3: total after. */
+            __('%1$s; total %2$s → %3$s', 'dcc-checkout'),
+            implode('; ', $plan['notes']),
+            Config::format_price($was / 100),
+            Config::format_price(($was + $delta) / 100)
+        );
+        try {
+            if (isset($booking) && method_exists($booking, 'addLog')) {
                 $who = wp_get_current_user();
                 $booking->addLog($message, ($who && $who->exists()) ? $who->display_name : null);
             }
-            return $message;
         } catch (\Throwable $e) {
-            return $fail;
-        } finally {
-            self::$running = false;
+            // The change is written; a log that cannot be written must not undo it.
         }
+        return $message;
+    }
+
+    /**
+     * One services.list line, built exactly as
+     * PriceBreakdownHelper::getServicesBreakdown() builds it (live 6.3.0,
+     * ~326–380): title from the service repository (via the translation
+     * filter), falling back to the service's own; details = toString('price',
+     * nights); total = calcPrice(check-in, check-out). null if MotoPress cannot
+     * build it.
+     *
+     * @param array{id:int,adults:int,quantity:int} $row
+     */
+    private static function line(array $row, $in, $out, int $nights): ?\stdClass
+    {
+        $svc = \MPHB\Entities\ReservedService::create($row);
+        if (!$svc || !method_exists($svc, 'calcPrice') || !method_exists($svc, 'toString')) {
+            return null;
+        }
+        $title = '';
+        $repo  = MPHB()->getServiceRepository();
+        if ($repo && method_exists($svc, 'getId')) {
+            $found = $repo->findById(apply_filters('_mphb_translate_post_id', $svc->getId(), null));
+            if ($found && method_exists($found, 'getTitle')) {
+                $title = (string) $found->getTitle();
+            }
+        }
+        if ($title === '' && method_exists($svc, 'getTitle')) {
+            $title = (string) $svc->getTitle();
+        }
+        $line          = new \stdClass();
+        $line->title   = $title;
+        $line->details = (string) $svc->toString('price', $nights);
+        $line->total   = $svc->calcPrice($in, $out);
+        return $line;
+    }
+
+    /**
+     * The stored breakdown, decoded to OBJECTS (so an empty `{}` stays an
+     * object when written back), checked for the shape MotoPress writes: ONE
+     * room, carrying room / services / fees / taxes / total / discount /
+     * discount_total, with no service taxes. null for anything else.
+     */
+    public static function read_breakdown(int $booking_id): ?\stdClass
+    {
+        $raw = get_post_meta($booking_id, '_mphb_booking_price_breakdown', true);
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        $b = json_decode($raw);
+        if (!$b instanceof \stdClass || !isset($b->rooms, $b->total) || !is_array($b->rooms)
+            || count($b->rooms) !== 1 || !is_numeric($b->total)) {
+            return null;
+        }
+        $r = $b->rooms[0];
+        if (!$r instanceof \stdClass) {
+            return null;
+        }
+        foreach (['room', 'services', 'fees', 'taxes'] as $k) {
+            if (!isset($r->$k) || !$r->$k instanceof \stdClass) {
+                return null;
+            }
+        }
+        foreach (['total', 'discount', 'discount_total'] as $k) {
+            if (!isset($r->$k) || !is_numeric($r->$k) || !isset($r->services->$k) || !is_numeric($r->services->$k)) {
+                return null;
+            }
+        }
+        if (!isset($r->services->list) || !is_array($r->services->list) || !isset($r->room->adults)) {
+            return null;
+        }
+        $st = $r->taxes->services ?? null;
+        if (!$st instanceof \stdClass || !isset($st->list, $st->total) || !is_array($st->list)
+            || $st->list !== [] || self::cents($st->total) !== 0) {
+            return null;
+        }
+        return $b;
+    }
+
+    /** As BookingRepository writes it (~328–329): json_encode, default flags, wp_slash. */
+    private static function write_breakdown(int $booking_id, \stdClass $breakdown): void
+    {
+        update_post_meta($booking_id, '_mphb_booking_price_breakdown', wp_slash(json_encode($breakdown)));
+    }
+
+    /** Money as whole cents. */
+    public static function cents($amount): int
+    {
+        return (int) round(((float) $amount) * 100);
+    }
+
+    /** Cents back to a stored number: an int when whole, as MotoPress's are. */
+    public static function money(int $cents)
+    {
+        return $cents % 100 === 0 ? intdiv($cents, 100) : $cents / 100;
     }
 
     /* --------------------------------------------------------------------- *
@@ -544,14 +746,6 @@ final class Fee_Sync
             }
         }
         return false;
-    }
-
-    /** @param array<int,array{id:int}> $rows @param int[] $ids */
-    private static function without(array $rows, array $ids): array
-    {
-        return array_values(array_filter($rows, static function ($row) use ($ids) {
-            return !in_array((int) $row['id'], $ids, true);
-        }));
     }
 
     /** The extra-guest fee's "for N" on these rows; 0 when it is not attached. */

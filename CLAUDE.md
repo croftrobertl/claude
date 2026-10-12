@@ -1312,9 +1312,10 @@ yours to improvise.
   removes the pet service for the stay's length (`service_id_for_nights()`),
   and a CHANGED guest count adds, adjusts or removes the Extra Guest Fee on a
   cottage that carries it (`guest_service_id_for_nights()`, `count -
-  included_guests()`, only while `guest_fee_active()`). Then MotoPress's own
+  included_guests()`, only while `guest_fee_active()`). ~~Then MotoPress's own
   sequence: `findById($id, true)`, rebuilt rooms, `setRooms()`,
-  `updateTotal()`, `save()`, `updateReservedRooms()`, `addLog()` — one line
+  `updateTotal()`, `save()`, `updateReservedRooms()`~~ — **SUPERSEDED IN
+  0.33.1: that repriced the whole stay (entry below).** `addLog()` — one line
   per Update, e.g. "Pet fee added; total $200 → $250", and the same text as a
   one-time admin notice. Imports and cancelled/abandoned bookings: never.
   - **ONLY ON A CHANGE MADE IN THAT UPDATE** (Rob's decision, 2026-10-11:
@@ -1379,6 +1380,77 @@ yours to improvise.
     the staging comparison — the same change by Update and by Edit
     Accommodations on two identical bookings, `mphb_total_price` and
     `_mphb_booking_price_breakdown` compared, and no new email-log entry.
+- **0.33.1 — ONLY THE FEE MOVES; THE STAY IS NEVER REPRICED** (Rob's
+  decision after the Director's 0.33.0 staging run, 2026-10-11; `Fee_Sync`,
+  suite `tests/fees/run.php`). 0.33.0's `updateTotal()` / `calcPrice()`
+  recalculates the WHOLE stay at TODAY's rates — measured: #10212, booked at
+  $555, read $766 with the pet fee and $666 without; #10198 went $333 →
+  $488.50 — and MotoPress's Edit Accommodations does exactly the same, which
+  is why 0.33.0's "identical to Edit Accommodations" check passed. Now:
+  - **Nothing of MotoPress's is re-run.** No `updateTotal()`, no `setRooms()`,
+    no repository `save()`, no `updateReservedRooms()`, no ReservedRoom rebuilt.
+    A fee line is built from public calls only, exactly as
+    `PriceBreakdownHelper::getServicesBreakdown()` (~326–380) builds one:
+    title = the service repository's `findById(apply_filters(
+    '_mphb_translate_post_id', id, null))->getTitle()`, falling back to the
+    reserved service's own; details = `toString('price', $booking->
+    getNightsCount())`; total = `calcPrice(checkIn, checkOut)`.
+  - **Written by exactly the fee's amount, in whole cents**: the room's
+    `_mphb_services` rows (rows it does not change are written back AS STORED),
+    and in `_mphb_booking_price_breakdown` that room's `services.list`,
+    `services.total` / `discount_total`, the room's `total` / `discount_total`,
+    and the booking `total`; then `mphb_total_price`. A changed count also sets
+    the breakdown's `room.adults`. Every other key and value is untouched — the
+    suite compares the DECODED breakdown path by path, type-strict.
+  - **Stored as MotoPress stores it** (Director, booking-repository.php
+    ~328–329): decoded to OBJECTS (so `{}` stays `{}`), `json_encode` with
+    DEFAULT flags (`<\/span>`), then `wp_slash()` — `update_post_meta()`
+    unslashes. Numbers are written back as ints when whole, else floats, as
+    MotoPress's are; the server's own `json_encode` decides the digits, the same
+    one MotoPress uses. (The Director's #8798 shows `1021.2000000000000454…` —
+    the exact double of 1021.2 — so live prints floats at more than the
+    default precision; the stand-in here prints `1021.2`. Same number.)
+  - **A line is found by POSITION, never by title** (titles are booking-time:
+    #17730 says "Pet Fee &#8211; Daily", the service is now "…Daily Rate").
+    MotoPress builds the list in `_mphb_services` order and SKIPS a row whose
+    `create()` is null, so a line is removed or replaced only when the list is
+    exactly as long as the rows AND that line's total equals `calcPrice()` of
+    its row to the cent. Added lines are appended (rows and list alike).
+  - **FAILS SAFE — nothing written, staff told to use Edit Accommodations**:
+    `mphb_coupon_id` non-empty; `mphb_service_taxes` non-empty (`[]` on live);
+    a non-zero `services.discount`; a non-empty `taxes.services`; a breakdown
+    not in MotoPress's shape (one room; room / services / fees / taxes objects;
+    numeric totals); `mphb_total_price` ≠ the breakdown total; list ≠ rows; a
+    line that is not its row's price; more than one accommodation when a fee
+    must change; MotoPress unable to build the line. A count-only change
+    (Cottages 33/34, or no fee change) just sets `room.adults` — no money moves,
+    so no money checks — and is skipped on a multi-room booking.
+  - **PROBLEM 2 (a count reverted on a second Update in one process) is gone
+    with the rebuild**: nothing in the fee path reads or writes `_mphb_adults`
+    any more. Also fixed in passing: the first-call-wins snapshot was never
+    cleared, so a SECOND Update in the same process compared against the FIRST
+    one's counts (2→3 then 3→2 would have kept the fee). `on_redirect()` now
+    consumes it. Both are asserted in one process (mutation
+    `fs-snapshot-reused`).
+  - **The dead re-entry guard went with it**: `$running` was set only around
+    the repository save, which 0.33.1 no longer makes, and `update_post_meta()`
+    / `addLog()` fire no save_post.
+  - **The screen**: "The room price is not changed." on both Update hints, and
+    beside the Edit Accommodations button (eligible bookings only):
+    "Edit Accommodations recalculates the whole stay at today's rates."
+  - **Fixtures are the Director's raw values**: #17730's breakdown byte for
+    byte (it re-encodes to itself — asserted), its `_mphb_services` row, and
+    #19656's line. The four expected totals (#10212 $555→$655, #8798
+    $1,021.20→$1,181.20, #10198 $333→$433→$533→$333, #10222 →$327.50) are
+    reproduced on breakdowns BUILT in MotoPress's shape from the site's three
+    room taxes (4% / 1% / 6%, which reproduce both raw breakdowns to the cent);
+    nights and tiers there are the stand-in's. The Director's rerun on the
+    real bookings is the proof.
+  - **NOT verified**: what `_mphb_services` looks like on a room MotoPress
+    saved with no services (`a:0:{}` or absent) — 0.33.1 writes an empty
+    array; `read_services()` reads both. On live, the details string is
+    MotoPress's own `toString()`, so the stand-in's price formatting decides
+    nothing there.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1626,8 +1698,11 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 254
-  mutations, 254 killed, 0 of everything else, exit 0, in ONE run (v0.33.0;
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 273
+  mutations, 273 killed, 0 of everything else, exit 0, in ONE run (v0.33.1;
+  nineteen suites; 0.33.1's targeted run was 40 killed + 1 SURVIVED —
+  `fs-cents-truncates`: no fixture total fell just below a whole cent, now
+  constructed with $266.40. At v0.33.0, 254 in ONE run;
   nineteen suites — `fees` added). 0.33.0's targeted run was 22 killed + 2
   SURVIVED: the notice-escaping mutation (no notice the suite built contained
   a character escaping changes) and the extra-guest cottage-list check (on a

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.33.0
+Stable tag: 0.33.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,16 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.33.1 =
+The Director's 0.33.0 staging run, and Rob's decision: only add or remove the fee, never reprice the stay.
+
+* Fixed: Update repriced the whole stay at today's rates (MotoPress's own recalculation), so a $555 booking read $666 after the pet fee was added and removed. Now the fee line is added, changed or removed and the total moves by exactly that amount. The room price, its taxes and every other line are untouched.
+* The fee line is priced and worded by MotoPress's own per-service calculation, as MotoPress would write it.
+* If the booking has a coupon, a service discount or service taxes, or its price breakdown is not in the expected form, nothing is changed and staff are told to use Edit Accommodations.
+* Changing the guest count also updates the guest count stored in the price breakdown.
+* Fixed: two Updates in a row in the same request could leave the earlier guest count behind. The fee change no longer rebuilds the room at all.
+* New: beside Edit Accommodations, "Edit Accommodations recalculates the whole stay at today's rates."
 
 = 0.33.0 =
 Fees follow the Update button (Rob: "Both follow Update").

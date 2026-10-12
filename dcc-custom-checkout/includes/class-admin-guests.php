@@ -209,7 +209,7 @@ final class Admin_Guests
         // directly below this one (Rob's pick A).
         if ($fee_rooms) {
             echo '<p class="description dcc_admin-feehint">' . esc_html($active
-                ? __('Change the number and press Update: the extra guest fee is added, changed or removed and the total recalculated.', 'dcc-checkout')
+                ? __('Change the number and press Update: the extra guest fee is added, changed or removed. The room price is not changed.', 'dcc-checkout')
                 : __('Fees aren\'t changed on a cancelled or abandoned booking.', 'dcc-checkout')) . '</p>';
         }
         echo self::boat_home_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- static markup

@@ -120,7 +120,7 @@ final class Extra_Details
                         . '<option value="no"' . ($pet === 'no' ? ' selected' : '') . '>' . esc_html__('No', 'dcc-checkout') . '</option>'
                         . '<option value="yes"' . ($pet === 'yes' ? ' selected' : '') . '>' . esc_html__('Yes', 'dcc-checkout') . '</option>'
                         . '</select><span class="description">'
-                        . esc_html__('Change it and press Update: the pet fee for this stay\'s length is added or removed and the total recalculated.', 'dcc-checkout')
+                        . esc_html__('Change it and press Update: the pet fee for this stay\'s length is added or removed. The room price is not changed.', 'dcc-checkout')
                         . '</span></p>';
                     $prompt = __('Or change it by hand in Edit Accommodations.', 'dcc-checkout');
                 } else {
@@ -130,7 +130,7 @@ final class Extra_Details
                         : esc_html__('could not be read, so the dog details are shown.', 'dcc-checkout');
                     $out .= '</p>';
                     $prompt = Fee_Sync::eligible($booking_id)
-                        ? __('To add or remove the pet fee, use Edit Accommodations — MotoPress then recalculates the total.', 'dcc-checkout')
+                        ? __('To add or remove the pet fee, use Edit Accommodations.', 'dcc-checkout')
                         : __('Fees aren\'t changed on a cancelled or abandoned booking.', 'dcc-checkout');
                 }
                 // admin-booking.js turns this into a copy of MotoPress's own
@@ -138,6 +138,13 @@ final class Extra_Details
                 $out .= '<p class="dcc_extras-edit description"'
                     . (Fee_Sync::eligible($booking_id) ? ' data-dcc-edit-accommodations="1"' : '') . '>'
                     . esc_html($prompt) . '</p>';
+                // v0.33.1 — Update adds or removes only the fee; MotoPress's
+                // own flow reprices the stay (Director, staging: #10212).
+                if (Fee_Sync::eligible($booking_id)) {
+                    $out .= '<p class="dcc_extras-edit-note description">'
+                        . esc_html__('Edit Accommodations recalculates the whole stay at today\'s rates.', 'dcc-checkout')
+                        . '</p>';
+                }
             }
         }
         // The Dog rows are moved in here by admin-booking.js.
