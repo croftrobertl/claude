@@ -27,7 +27,7 @@ const SCENES = [
   ['limpkinsnail', 'florida_keys', 'KD — a limpkin wades to the reeds, probes, and pulls up an apple snail'],
   ['hibfloat', 'florida_keys', 'K3 — a hibiscus bloom drops, floats, and a fish nibbles it'],
   /* 4.3.0: the three scenes that were emoji, now Rob's drawn picks */
-  ['witchmoon', 'halloween', 'W-A — the silhouette witch and her cat fly edge to edge, looping the moon (4.8.0)'],
+  ['witchmoon', 'halloween', 'The witch and her cat swoop across the full moon and loop it (4.10.0)'],
   ['arrival', 'snowbird', 'F-A — three flamingos flap down, land, and flap away'],
   ['duckparade', 'spring_canal', 'D-A — a mottled duck hen leads four ducklings along the water'],
 ];
@@ -106,7 +106,7 @@ function ok(c, label, detail) {
    * moon — never vanishing mid-screen, the loop on screen from 320px up,
    * the moon up before she arrives and fading after she has gone. */
   if (!ONLY.length || ONLY.includes('witchmoon')) {
-    console.log('\n  --- witchmoon: edge to edge, one loop, at 320 / 390 / 1280 ---');
+    console.log('\n  --- witchmoon: the swoop across the moon, one loop, at 320 / 390 / 1280 ---');
     for (const w of [320, 390, 1280]) {
       const cfg = config(['--theme=halloween', '--placement=content', '--layering=front', '--density=16', '--diag']);
       cfg.vigOnly = 'witchmoon'; cfg.vigFirst = 300; cfg.vigGap = 1e9; cfg.heroEvery = [9999, 10000]; cfg.forceHour = 12;
@@ -119,11 +119,13 @@ function ok(c, label, detail) {
           const out = []; let geo = null;
           for (let i = 0; i < 30 * 15 && s.vig; i++) {
             const v = s.vigSt;
-            if (v && v.R && !geo) { geo = { R: v.R, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh }; }
-            out.push(v ? { x: v.wx, y: v.wy, a: v.moonA, t: v.t2 } : null);
+            if (v && v.R && !geo) { geo = { R: v.R, MR: v.MR, W: v.W, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh, l0: v.loop0, l1: v.loop1 }; }
+            const tail = v && v.cape && v.wx != null ? v.cape[0][v.cape[0].length - 1] : null;
+            out.push(v ? { x: v.wx, y: v.wy, a: v.moonA, t: v.t2, rot: v.rot, wi: v.wi, onMoon: !!(v.wx != null && v.onMoon), vx: v.vx, vy: v.vy,
+              tx: tail && tail.x, ty: tail && tail.y } : null);
             s.tick(1000 / 30, 1);
           }
-          return { out, geo, ended: !s.vig };
+          return { out, geo, ended: !s.vig, pre: s.witch };
         });
         const g = r.geo, seen = r.out.map(o => o && o.x != null);
         const i0 = seen.indexOf(true), i1 = seen.lastIndexOf(true);
@@ -132,13 +134,34 @@ function ok(c, label, detail) {
         const first = xs[0], last = xs[xs.length - 1];
         ok(r.ended && gaps === 0, `${w}px: she is drawn continuously from entry to exit (${xs.length} frames)`, `gaps ${gaps}`);
         ok((first.x < 0 && last.x > g.vw) || (first.x > g.vw && last.x < 0), `${w}px: she enters off one side and leaves off the other`, `${first.x.toFixed(0)} → ${last.x.toFixed(0)} (vw ${g.vw})`);
-        const loop = xs.filter(o => Math.abs(Math.hypot(o.x - g.mx, o.y - g.my) - g.R) < 2);
-        const half = 36;
+        const loop = xs.filter(o => o.wi >= g.l0 && o.wi < g.l1);
+        ok(loop.every(o => Math.abs(Math.hypot(o.x - g.mx, o.y - g.my) - g.R) < 2), `${w}px: the loop is a circle of radius ${g.R} round the moon`, '');
+        const half = g.W / 2;
         const out = loop.filter(o => o.x < half || o.x > g.vw - half || o.y < half || o.y > g.vh - half);
         ok(loop.length > 20 && !out.length, `${w}px: the loop (${loop.length} frames, radius ${g.R}) stays inside the screen with her whole width`, JSON.stringify(out[0]));
         const ang = loop.map(o => Math.atan2(o.y - g.my, o.x - g.mx));
         let turn = 0; for (let k = 1; k < ang.length; k++) { let d = ang[k] - ang[k - 1]; while (d > Math.PI) { d -= 2 * Math.PI; } while (d < -Math.PI) { d += 2 * Math.PI; } turn += d; }
         ok(Math.abs(turn) > 5.5 && Math.abs(turn) < 7.2, `${w}px: one full loop around the moon (${(turn * 180 / Math.PI).toFixed(0)}°)`, `${turn}`);
+        /* 4.10.0 (Rob: "Swoop + banked loop") */
+        const near = (o, a) => { const d = Math.atan2(o.y - g.my, o.x - g.mx); return Math.abs(Math.atan2(Math.sin(d - a), Math.cos(d - a))) < 0.35; };
+        const spd = o => Math.hypot(o.vx, o.vy);
+        const topV = loop.filter(o => near(o, -Math.PI / 2)).map(spd), botV = loop.filter(o => near(o, Math.PI / 2)).map(spd);
+        const avg = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+        ok(topV.length && botV.length && avg(topV) < 0.62 * avg(botV), `${w}px: she slows over the top of the loop and speeds up at the bottom (${avg(topV).toFixed(0)} vs ${avg(botV).toFixed(0)} px/s)`, `${topV.length}/${botV.length}`);
+        const crossing = xs.filter(o => o.onMoon && Math.hypot(o.x - g.mx, o.y - g.my) < g.MR);
+        ok(crossing.length >= 3, `${w}px: she dives across the moon's face, silhouetted (${crossing.length} frames)`, String(crossing.length));
+        const maxRot = Math.max(...xs.map(o => Math.abs(o.rot)));
+        const leanIn = loop.filter(o => near(o, 0) || near(o, Math.PI)).filter(o => Math.sign(o.rot) === Math.sign(g.mx - o.x)).length;
+        ok(maxRot <= 0.6 + 1e-9, `${w}px: she stays upright, never tilted past 0.6 rad (max ${maxRot.toFixed(2)})`, String(maxRot));
+        ok(leanIn >= 4, `${w}px: on the sides of the loop she leans INTO the turn (${leanIn} frames)`, String(leanIn));
+        const trail = xs.filter(o => o.tx != null && spd(o) > 60).map(o => ((o.tx - o.x) * o.vx + (o.ty - o.y) * o.vy) / spd(o));
+        /* behind her, or swung out to the side in a turn (which a real cape
+         * does): never streaming FORWARD, i.e. never more than half its
+         * length ahead of her along her flight */
+        const capeLen = 8 * 4.6 * g.W / 100;
+        const behind = trail.filter(d => d < 0).length / Math.max(1, trail.length), worst = Math.max(...trail);
+        ok(trail.length > 20 && behind >= 0.8 && worst < capeLen / 2, `${w}px: her cape trails her (behind ${(100 * behind).toFixed(0)}% of frames, otherwise swung out; never more than ${worst.toFixed(0)} px ahead)`, `${behind} ${worst}`);
+        ok(r.pre && r.pre.frames === 12 && r.pre.moon, `${w}px: the moon and her 12 riding frames were pre-drawn`, JSON.stringify(r.pre));
         const total = r.out.length / 30;
         ok(total >= 7 && total <= 9.5, `${w}px: the whole pass takes ${total.toFixed(1)} s (7-9.5)`, `${total}`);
         const onAt = r.out.find(o => o && o.x != null && o.x > 0 && o.x < g.vw);

@@ -638,7 +638,7 @@
 	var HERO_GLYPHS = { rainbow: '☘' };
 	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
 	var SCENE_ART = {
-		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witchsil',
+		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
 		ospreycatch: 'ospreyup', cranes: 'cranedance', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
@@ -953,9 +953,394 @@
 		}
 		return [MT.floor(b[0] - 4), MT.floor(b[1] - 4), MT.ceil(b[2] + 4), MT.ceil(b[3] + 4)];
 	}
-	/* Drawn heroes for the admin Theme guide: fn(g, width, height) paints
-	 * the hero into that box (HERO_ART names the key). */
-	var HERO_DRAW = {
+	/* ---------- The full moon (4.10.0, Rob: "Real full moon, clear sky") --
+	 * The near side as it hangs over Florida, north up: the dark maria that
+	 * make the "man in the moon", each placed from its real selenographic
+	 * centre (latitude, longitude) and size and projected onto the disc, so
+	 * Crisium sits near the right-hand limb, Imbrium is the big upper-left
+	 * eye, Serenitatis the right one, Tranquillitatis below it, Procellarum
+	 * the grey sweep down the left side. The young craters show as they do
+	 * at full moon: Tycho bright near the south with its long rays,
+	 * Copernicus, Kepler and Aristarchus bright on the western maria,
+	 * Proclus by Crisium; Plato and Grimaldi are dark floors. Faint mottling
+	 * in the highlands, gentle shading toward the limb, a faint glow. No
+	 * clouds. Pre-rendered once (moonPaint) and drawn as one image.
+	 * Rows: [lat, lon, radius (all degrees), darkness 0-1, seed]. */
+	var MARIA = [
+		[32.8, -15.6, 18.5, 0.62, 1], [28.0, 17.5, 11.0, 0.5, 2], [8.5, 31.4, 13.5, 0.66, 3],
+		[17.0, 59.1, 9.0, 0.7, 4], [-7.8, 51.3, 12.5, 0.58, 5], [-15.2, 35.5, 5.6, 0.55, 6],
+		[-21.3, -16.6, 11.0, 0.52, 7], [-24.4, -38.6, 6.4, 0.6, 8], [13.3, 3.6, 4.2, 0.5, 9],
+		[7.5, -30.9, 8.0, 0.55, 10], [-10.0, -23.1, 4.6, 0.5, 11], [2.4, 1.7, 3.0, 0.42, 12],
+		[10.9, -8.8, 3.6, 0.5, 13], [44.1, -31.5, 4.0, 0.5, 14],
+		/* Oceanus Procellarum: a broad irregular sweep, built from overlaps */
+		[10, -50, 16, 0.56, 15], [26, -55, 15, 0.56, 16], [40, -48, 11, 0.52, 17], [-2, -44, 13, 0.52, 18],
+		[-8, -56, 11, 0.52, 19], [30, -38, 11, 0.54, 20], [16, -66, 10, 0.54, 21], [-14, -40, 9, 0.5, 31],
+		/* Mare Frigoris: the thin band across the north */
+		[56, -38, 5, 0.45, 22], [57, -22, 5.5, 0.45, 23], [57, -6, 5, 0.45, 24], [58, 10, 5, 0.45, 25], [57, 26, 4.5, 0.42, 26],
+		/* small maria near the eastern limb */
+		[15.6, 87, 6, 0.5, 27], [1.3, 86.9, 5.5, 0.45, 28], [7, 68.5, 3.5, 0.45, 29], [-1, 65, 3, 0.4, 30]
+	];
+	function mRng(seed) {
+		var a = seed * 2654435761 >>> 0;
+		return function () { a = (a + 0x6D2B79F5) >>> 0; var t = a; t = MT.imul(t ^ (t >>> 15), t | 1); t ^= t + MT.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+	}
+	var DEG = MT.PI / 180;
+	/* the point rho away from (lat, lon) along bearing b (radians), on the sphere */
+	function mDest(lat, lon, rho, b) {
+		var la = MT.asin(sin(lat) * cos(rho) + cos(lat) * sin(rho) * cos(b));
+		return [la, lon + atan2(sin(b) * sin(rho) * cos(lat), cos(rho) - sin(lat) * sin(la))];
+	}
+	/* orthographic, north up, east (positive longitude) to the right */
+	function mProj(lat, lon) {
+		var x = cos(lat) * sin(lon), y = -sin(lat), z = cos(lat) * cos(lon);
+		if (z < 0) { var n = sqrt(x * x + y * y) || 1; x /= n; y /= n; }
+		return [x, y, z];
+	}
+	function mBlob(g, r, lat, lon, rho, rnd2) {
+		var a1 = rnd2() * TAU, a2 = rnd2() * TAU, a3 = rnd2() * TAU, a4 = rnd2() * TAU, k1 = 0.06 + rnd2() * 0.06, k2 = 0.04 + rnd2() * 0.04;
+		g.beginPath();
+		for (var i = 0; i <= 72; i++) {
+			var b = TAU * i / 72, rr = rho * (1 + k1 * sin(2 * b + a1) + k2 * sin(3 * b + a2) + 0.035 * sin(5 * b + a3) + 0.025 * sin(9 * b + a4));
+			var d = mDest(lat, lon, rr, b), p = mProj(d[0], d[1]);
+			if (i) { g.lineTo(p[0] * r, p[1] * r); } else { g.moveTo(p[0] * r, p[1] * r); }
+		}
+		g.closePath();
+	}
+	function mSpot(g, r, lat, lon, rad, color, alpha) {
+		var p = mProj(lat * DEG, lon * DEG);
+		if (p[2] <= 0) { return; }
+		/* foreshortened toward the limb: squash along the radius */
+		var d = sqrt(p[0] * p[0] + p[1] * p[1]), ang = atan2(p[1], p[0]);
+		g.save();
+		g.translate(p[0] * r, p[1] * r); g.rotate(ang); g.scale(mx2(0.3, p[2]), 1);
+		var gr = g.createRadialGradient(0, 0, 0, 0, 0, rad);
+		gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)');
+		g.globalAlpha = alpha; g.fillStyle = gr;
+		g.beginPath(); g.arc(0, 0, rad, 0, TAU); g.fill();
+		g.restore();
+		return d;
+	}
+	/* rays: great-circle streaks out of a crater */
+	function mRays(g, r, lat, lon, n, len0, len1, alpha, seed) {
+		var R2 = mRng(seed);
+		g.lineCap = 'round';
+		for (var i = 0; i < n; i++) {
+			var b = TAU * i / n + R2() * 0.4, L = (len0 + R2() * (len1 - len0)) * DEG, w = r * (0.012 + R2() * 0.014);
+			for (var j = 0; j < 10; j++) {
+				var d0 = mDest(lat * DEG, lon * DEG, L * j / 10, b), d1 = mDest(lat * DEG, lon * DEG, L * (j + 1) / 10, b);
+				var p0 = mProj(d0[0], d0[1]), p1 = mProj(d1[0], d1[1]);
+				if (p0[2] <= 0 || p1[2] <= 0) { break; }
+				g.globalAlpha = alpha * (1 - j / 10);
+				g.strokeStyle = '#FFFDF4'; g.lineWidth = w * (1 - j / 14);
+				g.beginPath(); g.moveTo(p0[0] * r, p0[1] * r); g.lineTo(p1[0] * r, p1[1] * r); g.stroke();
+			}
+		}
+		g.globalAlpha = 1;
+	}
+	/* Paint the moon of radius r centred on the origin, glow included (the
+	 * glow reaches 1.3 r). */
+	function moonPaint(g, r) {
+		var i, R1 = mRng(99);
+		/* the faint glow */
+		var gl = g.createRadialGradient(0, 0, r * 0.95, 0, 0, r * 1.3);
+		gl.addColorStop(0, 'rgba(255,248,226,.36)'); gl.addColorStop(0.4, 'rgba(255,246,220,.12)'); gl.addColorStop(1, 'rgba(255,244,214,0)');
+		g.fillStyle = gl; g.beginPath(); g.arc(0, 0, r * 1.3, 0, TAU); g.fill();
+		g.save();
+		g.beginPath(); g.arc(0, 0, r, 0, TAU); g.clip();
+		/* the highlands: warm grey-white, a touch brighter to the south */
+		var hl = g.createLinearGradient(0, -r, 0, r);
+		hl.addColorStop(0, '#E7E3D6'); hl.addColorStop(1, '#EFEBDF');
+		g.fillStyle = hl; g.fillRect(-r, -r, 2 * r, 2 * r);
+		/* the highlands' fine texture: a dust of tiny, low-contrast specks
+		 * and a few broad, faint variations — never visible dots */
+		for (i = 0; i < 26; i++) {
+			mSpot(g, r, MT.asin(R1() * 2 - 1) / DEG, (R1() * 2 - 1) * 85, r * (0.12 + R1() * 0.18), R1() < 0.5 ? '#D3CEBF' : '#F6F3EA', 0.25);
+		}
+		var sp = mx2(1, r / 60);
+		for (i = 0; i < 1400; i++) {
+			var px = (R1() * 2 - 1) * r, py = (R1() * 2 - 1) * r;
+			if (px * px + py * py > r * r) { continue; }
+			g.globalAlpha = 0.05 + R1() * 0.08;
+			g.fillStyle = R1() < 0.55 ? '#8F8A7E' : '#FFFFFF';
+			g.fillRect(px, py, sp * (0.5 + R1()), sp * (0.5 + R1()));
+		}
+		g.globalAlpha = 1;
+		/* the maria: painted solid on a small canvas and scaled up, which
+		 * softens their edges the way the eye sees them (no canvas filter:
+		 * Safari has none). Two layers: a wide faint one, a firmer core. */
+		[[7, 0.3, 1.1], [2.4, 0.42, 1]].forEach(function (L) {
+			var k = L[0], n = MT.ceil(2 * r / k) + 2, c = D.createElement('canvas');
+			c.width = c.height = n;
+			var q = c.getContext('2d');
+			if (!q) { return; }
+			q.translate(n / 2, n / 2);
+			for (var j = 0; j < MARIA.length; j++) {
+				var m = MARIA[j];
+				mBlob(q, r / k, m[0] * DEG, m[1] * DEG, m[2] * DEG * L[2], mRng(m[4]));
+				var v = MT.round(255 * (1 - m[3]));
+				q.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+				q.globalCompositeOperation = 'darken';
+				q.fill();
+			}
+			/* white where there is no mare, so 'multiply' leaves it alone */
+			q.globalCompositeOperation = 'destination-over';
+			q.fillStyle = '#FFFFFF'; q.fillRect(-n, -n, 2 * n, 2 * n);
+			g.save();
+			g.globalAlpha = L[1];
+			g.globalCompositeOperation = 'multiply';
+			g.imageSmoothingEnabled = true;
+			if ('imageSmoothingQuality' in g) { g.imageSmoothingQuality = 'high'; }
+			g.drawImage(c, -n / 2 * k, -n / 2 * k, n * k, n * k);
+			g.restore();
+		});
+		/* the maria's cool grey cast and a little texture inside them */
+		for (i = 0; i < 40; i++) {
+			var mm = MARIA[(R1() * 14) | 0], dd = mDest(mm[0] * DEG, mm[1] * DEG, mm[2] * 0.75 * R1() * DEG, R1() * TAU);
+			mSpot(g, r, dd[0] / DEG, dd[1] / DEG, r * (0.08 + R1() * 0.1), R1() < 0.5 ? '#5F6672' : '#9A9890', 0.08);
+		}
+		/* the dark floors */
+		mSpot(g, r, 51.6, -9.4, r * 0.05, '#3F444C', 0.75);   /* Plato */
+		mSpot(g, r, -5.2, -68.6, r * 0.07, '#454950', 0.7);   /* Grimaldi */
+		/* the bright craters and their rays */
+		mRays(g, r, -43.3, -11.2, 18, 18, 62, 0.3, 7);        /* Tycho */
+		mRays(g, r, 9.6, -20.1, 12, 8, 22, 0.2, 8);           /* Copernicus */
+		mRays(g, r, 8.1, -38, 9, 5, 14, 0.16, 9);             /* Kepler */
+		mRays(g, r, 16.1, 46.8, 7, 6, 16, 0.18, 10);          /* Proclus */
+		mSpot(g, r, -43.3, -11.2, r * 0.07, '#FFFFFA', 0.95);
+		mSpot(g, r, -43.3, -11.2, r * 0.03, '#FFFFFF', 1);
+		mSpot(g, r, 9.6, -20.1, r * 0.055, '#FFFDF2', 0.9);
+		mSpot(g, r, 8.1, -38, r * 0.035, '#FFFDF2', 0.85);
+		mSpot(g, r, 23.7, -47.4, r * 0.04, '#FFFFFF', 1);      /* Aristarchus, the brightest spot */
+		mSpot(g, r, 16.1, 46.8, r * 0.03, '#FFFDF2', 0.85);
+		mSpot(g, r, -8.9, 61.1, r * 0.025, '#FFFDF2', 0.7);    /* Langrenus */
+		/* gentle shading toward the limb, a little warm */
+		var ld = g.createRadialGradient(0, 0, r * 0.45, 0, 0, r);
+		ld.addColorStop(0, 'rgba(80,70,55,0)'); ld.addColorStop(0.75, 'rgba(80,70,55,.08)'); ld.addColorStop(1, 'rgba(70,60,48,.3)');
+		g.fillStyle = ld; g.fillRect(-r, -r, 2 * r, 2 * r);
+		g.restore();
+		/* a crisp but soft limb */
+		g.strokeStyle = 'rgba(255,252,240,.45)'; g.lineWidth = mx2(0.6, r * 0.012);
+		g.beginPath(); g.arc(0, 0, r - g.lineWidth / 2, 0, TAU); g.stroke();
+	}
+
+	/* ---------- The witch (4.10.0, drawn to the heron's standard) ---------
+	 * Seated upright on her broom (Rob's 4.9.0 pick) with her black cat on
+	 * the handle behind her (his 4.2.0 pick): pointed hat with a purple band
+	 * and buckle, long dark hair, a profile with the long nose, bodice and
+	 * bell sleeve, a skirt that flutters, purple-and-black striped
+	 * stockings, pointed boots; an ash handle with a twine collar and a
+	 * fan of separate straw bristles. Faces LEFT; about 106 units from the
+	 * handle's tip to the bristle ends, drawn at width / 100 px a unit.
+	 * witchBody() is ONE phase of the riding cycle (the bristles flick, the
+	 * hat tip, skirt hem and cat's tail sway); the engine pre-draws 12 of
+	 * them at load. Her CAPE and HAIR are not in it: they are short chains
+	 * the engine simulates live (gravity, air drag), so they trail behind
+	 * her through every turn. WITCH_CAPE / WITCH_HAIR are their anchors. */
+	var WITCH_CAPE = [[-3, -22], [2, -17.5]], WITCH_HAIR = [[-1.5, -29], [0.2, -27], [-0.8, -25]];
+	var WITCH_BOX = [-56, -56, 58, 17];
+	var WC = { ink: '#16131D', dress: '#1E1928', dress2: '#2A2236', purple: '#9C36B5', purple2: '#6E2A86', skin: '#E2CDB6', skin2: '#C4AA90',
+		hat: '#17141E', band: '#9C36B5', gold: '#E2B23E', wood: '#6B4A2E', wood2: '#4A321F', twine: '#B89A62', straw: ['#C9A55A', '#B38F48', '#D8B96E', '#A07E3E'],
+		boot: '#121016', stripe: '#7B2F96', cat: '#121016', catEye: '#F2D13A', hair: '#231D2B' };
+	function witchBody(g, ph) {
+		var T = ph * TAU, i;
+		g.lineCap = 'round'; g.lineJoin = 'round';
+		/* the far leg, in shadow */
+		g.strokeStyle = '#0E0C12'; g.lineWidth = 2.6;
+		g.beginPath(); g.moveTo(3, -3); g.lineTo(-7, 0.5); g.lineTo(-7.5, 8); g.stroke();
+		g.fillStyle = '#0E0C12';
+		g.beginPath(); g.moveTo(-6, 7); g.lineTo(-9, 9.6); g.quadraticCurveTo(-13, 10, -14.5, 7.8); g.lineTo(-9, 7.4); g.closePath(); g.fill();
+		/* the broom handle: ash, a little bowed, with a knot */
+		var hg = g.createLinearGradient(0, -3.4, 0, 2.6);
+		hg.addColorStop(0, '#8A6544'); hg.addColorStop(0.5, WC.wood); hg.addColorStop(1, WC.wood2);
+		g.strokeStyle = hg; g.lineWidth = 2.4;
+		g.beginPath(); g.moveTo(-52, -3.2); g.quadraticCurveTo(-14, -1.6, 27, 1); g.stroke();
+		g.fillStyle = WC.wood2; g.beginPath(); g.ellipse(-31, -2.3, 1.1, 0.7, 0, 0, TAU); g.fill();
+		/* the bristles: separate straws fanning back, each flicking a little */
+		for (i = 0; i < 16; i++) {
+			var q = i / 15, a0 = lerp(-0.2, 0.36, q) + 0.07 * sin(T + i * 0.9) + 0.03 * sin(2 * T + i * 1.7);
+			var L = 22 + 4 * sin(i * 2.3) + (q > 0.4 && q < 0.7 ? 3 : 0);
+			var bx = 27 + q * 1.2, by = -1.6 + q * 4.6;
+			g.strokeStyle = WC.straw[i % 4]; g.lineWidth = 0.9 - q * 0.15;
+			g.beginPath(); g.moveTo(bx, by);
+			g.quadraticCurveTo(bx + L * 0.55 * cos(a0 * 0.6), by + L * 0.55 * sin(a0 * 0.6), bx + L * cos(a0), by + L * sin(a0)); g.stroke();
+		}
+		/* the twine collar binding them on */
+		g.fillStyle = WC.twine;
+		g.beginPath(); g.moveTo(24.5, -2.8); g.lineTo(30, -2.4); g.lineTo(30.4, 4.4); g.lineTo(24.8, 3.8); g.closePath(); g.fill();
+		g.strokeStyle = '#7E6538'; g.lineWidth = 0.5;
+		for (i = 0; i < 4; i++) { g.beginPath(); g.moveTo(25.4 + i * 1.3, -2.6); g.lineTo(25.7 + i * 1.3, 4.1); g.stroke(); }
+		/* the cat, sitting on the handle behind her, tail curling */
+		var ct = sin(T) * 0.5;
+		g.strokeStyle = WC.cat; g.lineWidth = 1.5;
+		g.beginPath(); g.moveTo(20.5, -2.5); g.bezierCurveTo(25, -4, 23 + ct * 2, -11, 21 + ct * 3, -12.5 - ct); g.stroke();
+		/* a thin purple rim keeps the black cat clear of the cape behind it */
+		g.strokeStyle = WC.purple; g.lineWidth = 0.9;
+		g.beginPath(); g.ellipse(18, -4.2, 3.9, 3.4, -0.2, 0, TAU); g.stroke();
+		g.beginPath(); g.arc(14.6, -9.4, 2.5, 0, TAU); g.stroke();
+		g.beginPath(); g.moveTo(12.7, -10.6); g.lineTo(12.9, -13.6); g.lineTo(14.4, -11.6); g.moveTo(15, -11.8); g.lineTo(16.6, -14.1); g.lineTo(16.8, -10.9); g.stroke();
+		g.fillStyle = WC.cat;
+		g.beginPath(); g.ellipse(18, -4.2, 3.9, 3.4, -0.2, 0, TAU); g.fill();
+		g.beginPath(); g.ellipse(15.8, -6.2, 2.2, 2.6, 0.3, 0, TAU); g.fill();
+		g.beginPath(); g.arc(14.6, -9.4, 2.5, 0, TAU); g.fill();
+		g.beginPath(); g.moveTo(12.7, -10.6); g.lineTo(12.9, -13.6); g.lineTo(14.4, -11.6); g.closePath(); g.fill();
+		g.beginPath(); g.moveTo(15, -11.8); g.lineTo(16.6, -14.1); g.lineTo(16.8, -10.9); g.closePath(); g.fill();
+		g.fillStyle = WC.catEye;
+		g.beginPath(); g.ellipse(13.4, -9.6, 0.55, 0.42, 0, 0, TAU); g.fill();
+		g.beginPath(); g.ellipse(15.3, -9.7, 0.5, 0.42, 0, 0, TAU); g.fill();
+		/* the skirt: over the hips and down, the hem fluttering back */
+		var f1 = sin(T) * 1.2, f2 = sin(T + 1.3) * 1.6, f3 = sin(T + 2.4) * 1.3;
+		var sk = g.createLinearGradient(-10, -9, 14, 8);
+		sk.addColorStop(0, WC.dress2); sk.addColorStop(1, WC.dress);
+		g.fillStyle = sk;
+		g.beginPath();
+		g.moveTo(7.5, -8.5); g.lineTo(-2.5, -9.2);
+		g.quadraticCurveTo(-9, -5, -12.2, 0.5);
+		g.lineTo(-12.8, 4.8);
+		g.quadraticCurveTo(-8, 6.5 + f1 * 0.4, -3.5, 7 + f1);
+		g.quadraticCurveTo(2, 8.6 + f2, 7.5, 8 + f2);
+		g.quadraticCurveTo(12, 7.6 + f3, 15.5, 5.5 + f3);
+		g.quadraticCurveTo(14, 1, 10.5, -3);
+		g.closePath(); g.fill();
+		g.strokeStyle = WC.purple2; g.lineWidth = 0.5;
+		g.beginPath(); g.moveTo(-6, -3); g.quadraticCurveTo(-4, 2, -2.5, 6.8 + f1); g.moveTo(2, -4); g.quadraticCurveTo(4, 2, 5.5, 7.8 + f2); g.stroke();
+		/* the near leg: striped stocking and a pointed boot */
+		g.save();
+		g.beginPath(); g.moveTo(-11.6, 3); g.lineTo(-8.4, 3); g.lineTo(-8.6, 9); g.lineTo(-11.8, 9); g.closePath(); g.clip();
+		for (i = 0; i < 4; i++) { g.fillStyle = i % 2 ? WC.ink : WC.stripe; g.fillRect(-12, 3 + i * 1.6, 4, 1.6); }
+		g.restore();
+		g.fillStyle = WC.boot;
+		g.beginPath(); g.moveTo(-8.3, 8.4); g.lineTo(-11.9, 8.3); g.quadraticCurveTo(-15.5, 9.6, -18.4, 8.2);
+		g.quadraticCurveTo(-18.2, 10.8, -14.5, 11.4); g.lineTo(-8.4, 11.2); g.closePath(); g.fill();
+		/* the bodice, leaning forward over the broom */
+		var bd = g.createLinearGradient(-6, -21, 6, -8);
+		bd.addColorStop(0, WC.dress2); bd.addColorStop(1, WC.dress);
+		g.fillStyle = bd;
+		g.beginPath(); g.moveTo(6.5, -8.5); g.lineTo(-3, -9.3); g.quadraticCurveTo(-6.5, -15, -5.6, -20.4);
+		g.quadraticCurveTo(-2, -23, 1.8, -21.4); g.quadraticCurveTo(5.8, -15, 6.5, -8.5); g.closePath(); g.fill();
+		g.strokeStyle = WC.purple; g.lineWidth = 0.45;
+		g.beginPath(); g.moveTo(-4.4, -18.5); g.lineTo(-2.4, -10.5); g.stroke();
+		/* the belt and its buckle */
+		g.fillStyle = WC.purple2; g.beginPath(); g.moveTo(-3.2, -10.6); g.lineTo(6.6, -9.8); g.lineTo(6.5, -8.2); g.lineTo(-3, -9); g.closePath(); g.fill();
+		g.strokeStyle = WC.gold; g.lineWidth = 0.45; g.strokeRect(0.2, -10.5, 1.8, 1.8);
+		/* the arm reaching forward to the handle, a bell sleeve at the wrist */
+		g.strokeStyle = WC.dress2; g.lineWidth = 3;
+		g.beginPath(); g.moveTo(-2.4, -19); g.quadraticCurveTo(-10, -14, -14.6, -5.6); g.stroke();
+		g.fillStyle = WC.dress2;
+		g.beginPath(); g.moveTo(-13, -8); g.lineTo(-17.6, -6.4 + sin(T) * 0.4); g.lineTo(-15.6, -2.4); g.closePath(); g.fill();
+		g.fillStyle = WC.skin;
+		g.beginPath(); g.ellipse(-17.4, -3, 1.7, 1.3, 0.3, 0, TAU); g.fill();
+		/* the head in profile: the long nose and pointed chin */
+		g.fillStyle = WC.skin;
+		g.beginPath();
+		g.moveTo(-2.6, -24); g.quadraticCurveTo(-3, -31, -7.8, -30.6);
+		g.quadraticCurveTo(-9.8, -29.4, -10.2, -27.4);
+		g.lineTo(-13.4, -25.2); g.lineTo(-10.2, -25.4);
+		g.quadraticCurveTo(-10.4, -24, -9.6, -23.4); g.quadraticCurveTo(-10.6, -21.6, -8.6, -21.4);
+		g.quadraticCurveTo(-5.2, -21.4, -2.6, -24); g.closePath(); g.fill();
+		g.fillStyle = WC.skin2;
+		g.beginPath(); g.ellipse(-5, -24.6, 2.4, 2.6, 0, 0, TAU); g.fill();
+		g.fillStyle = WC.ink; g.beginPath(); g.ellipse(-8.2, -27.4, 0.75, 0.55, -0.2, 0, TAU); g.fill();
+		g.fillStyle = WC.catEye; g.beginPath(); g.arc(-8.4, -27.5, 0.28, 0, TAU); g.fill();
+		g.strokeStyle = '#7A4E52'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(-9.8, -23.6); g.lineTo(-8.4, -23.4); g.stroke();
+		/* hair under the brim, falling at the back of the head */
+		g.fillStyle = WC.hair;
+		g.beginPath(); g.moveTo(-8, -30.8); g.quadraticCurveTo(-1, -32.4, 0.6, -26); g.quadraticCurveTo(0.8, -22, -1.6, -20.6);
+		g.quadraticCurveTo(-2, -25, -4.4, -28.4); g.closePath(); g.fill();
+		/* the hat: a wide brim, a bent cone whose tip lags, a purple band and buckle */
+		var tip = sin(T - 0.8) * 1.2;
+		g.fillStyle = WC.hat;
+		g.beginPath(); g.ellipse(-4.6, -31.2, 12.4, 2.5, -0.12, 0, TAU); g.fill();
+		g.beginPath(); g.moveTo(-10, -31.6); g.quadraticCurveTo(-7, -40, -3, -44.5);
+		g.quadraticCurveTo(1.5, -48.5, 9 + tip, -50.4 + tip * 0.6);
+		g.quadraticCurveTo(4, -45.5, 2.2, -41); g.quadraticCurveTo(1.2, -36, 1.4, -32.6); g.closePath(); g.fill();
+		g.strokeStyle = WC.purple2; g.lineWidth = 0.4;
+		g.beginPath(); g.moveTo(-6.4, -37.6); g.quadraticCurveTo(-3.6, -41, -1.4, -43.6); g.stroke();
+		g.fillStyle = WC.band;
+		g.beginPath(); g.moveTo(-9.7, -32.4); g.lineTo(1.4, -33.2); g.lineTo(1.4, -35.4); g.lineTo(-8.9, -34.6); g.closePath(); g.fill();
+		g.strokeStyle = WC.gold; g.lineWidth = 0.5; g.strokeRect(-5.4, -35.1, 2.1, 2);
+		/* a thin purple rim on the brim and the cone, as in the old silhouette */
+		g.strokeStyle = WC.purple; g.lineWidth = 0.35;
+		g.beginPath(); g.ellipse(-4.6, -31.2, 12.4, 2.5, -0.12, 0, TAU); g.stroke();
+	}
+	/* The cape, from its two chains (points in the same units): a dark
+	 * purple sheet hanging from the shoulders, drawn with smooth edges
+	 * through the chain points, a rounded scalloped hem, a flutter that
+	 * grows toward the hem (fl: its phase), the lining showing along the
+	 * lower edge and a long fold. */
+	function witchCape(g, top, bot, fl, amp) {
+		var n = top.length, i, T = [], B = [];
+		/* the flutter: a travelling ripple, stronger toward the hem and the
+		 * faster she flies (amp: 0 at rest, about 1 at full speed) */
+		amp = amp == null ? 0.5 : amp;
+		for (i = 0; i < n; i++) {
+			var dx = bot[i][0] - top[i][0], dy = bot[i][1] - top[i][1], q = i / (n - 1);
+			var k = (0.35 + 0.65 * amp) * q * (sin((fl || 0) * TAU * 3 - i * 1.3) + 0.4 * sin((fl || 0) * TAU * 5 - i * 2.1));
+			T.push([top[i][0] + dy * 0.2 * k, top[i][1] - dx * 0.2 * k]);
+			B.push([bot[i][0] + dy * 0.34 * k, bot[i][1] - dx * 0.34 * k]);
+		}
+		function edge(P, back) {
+			var a = back ? P.length - 1 : 0, e = back ? 0 : P.length - 1, st2 = back ? -1 : 1;
+			for (var j = a; j !== e; j += st2) {
+				var m0 = (P[j][0] + P[j + st2][0]) / 2, m1 = (P[j][1] + P[j + st2][1]) / 2;
+				g.quadraticCurveTo(P[j][0], P[j][1], m0, m1);
+			}
+			g.lineTo(P[e][0], P[e][1]);
+		}
+		g.fillStyle = '#2B1C3D';
+		g.beginPath(); g.moveTo(T[0][0], T[0][1]);
+		edge(T, false);
+		/* the hem: two soft scallops from the top corner to the bottom one */
+		var h0 = T[n - 1], h1 = B[n - 1], hm = [(h0[0] + h1[0]) / 2, (h0[1] + h1[1]) / 2], hx = h0[0] - T[n - 2][0], hy = h0[1] - T[n - 2][1];
+		var h3 = [lerp(h0[0], h1[0], 0.33), lerp(h0[1], h1[1], 0.33)], h4 = [lerp(h0[0], h1[0], 0.66), lerp(h0[1], h1[1], 0.66)];
+		g.quadraticCurveTo(h0[0] + hx * 0.7, h0[1] + hy * 0.7, h3[0] + hx * 0.15, h3[1] + hy * 0.15);
+		g.quadraticCurveTo(hm[0] + hx * 0.8, hm[1] + hy * 0.8, h4[0] + hx * 0.2, h4[1] + hy * 0.2);
+		g.quadraticCurveTo(h1[0] + hx * 0.9, h1[1] + hy * 0.9, h1[0], h1[1]);
+		edge(B, true);
+		g.closePath(); g.fill();
+		/* the lining along the lower edge */
+		g.strokeStyle = '#6E2A86'; g.lineWidth = 1.1; g.lineCap = 'round';
+		g.beginPath(); g.moveTo(B[0][0], B[0][1]); edge(B, false); g.stroke();
+		/* a long fold */
+		g.strokeStyle = 'rgba(14,10,20,.45)'; g.lineWidth = 0.6;
+		for (var f = 1; f <= 1; f++) {
+			var q = 0.45;
+			g.beginPath(); g.moveTo(lerp(T[1][0], B[1][0], q), lerp(T[1][1], B[1][1], q));
+			for (i = 2; i < n; i++) { g.lineTo(lerp(T[i][0], B[i][0], q), lerp(T[i][1], B[i][1], q)); }
+			g.stroke();
+		}
+	}
+	function witchHair(g, s) {
+		g.strokeStyle = WC.hair; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 1.5;
+		g.beginPath();
+		for (var i = 0; i < s.length; i++) {
+			var c = s[i];
+			g.moveTo(c[0][0], c[0][1]);
+			for (var j = 1; j < c.length - 1; j++) { g.quadraticCurveTo(c[j][0], c[j][1], (c[j][0] + c[j + 1][0]) / 2, (c[j][1] + c[j + 1][1]) / 2); }
+			g.lineTo(c[c.length - 1][0], c[c.length - 1][1]);
+		}
+		g.stroke();
+	}
+	/* Her in level flight to the left, cape and hair streaming as they
+	 * settle at a steady speed: the Theme guide's picture and the sheets. */
+	function witchStill(g, ph) {
+		var A = WITCH_CAPE, top = [], bot = [], i, j;
+		witchBody(g, ph);
+		for (i = 0; i <= 8; i++) {
+			var q = i / 8, f = sin(ph * TAU - i * 1.1) * 1.4 * q;
+			top.push([A[0][0] + q * 34, A[0][1] + q * 8 + f]);
+			bot.push([A[1][0] + q * 31, A[1][1] + q * 15 + f * 1.2]);
+		}
+		witchCape(g, top, bot, ph);
+		witchHair(g, WITCH_HAIR.map(function (a, k) {
+			var c = [];
+			for (j = 0; j <= 5; j++) { c.push([a[0] + j * 2.6, a[1] + j * (1.2 + k * 0.4) + sin(ph * TAU - j) * 0.4]); }
+			return c;
+		}));
+	}
+
+	/* Art drawn in code for the admin Theme guide: fn(g, width, height)
+	 * paints it into that box (HERO_ART / SCENE_ART name the key). */
+	var ART_DRAW = {
 		heron: function (g, w, h) {
 			var b = hnBounds('g6'), s = mn(w / (b[2] - b[0] + 26), h / (b[3] - b[1]));
 			g.save();
@@ -963,6 +1348,14 @@
 			g.scale(s, s);
 			hnLegs(g, 0);
 			hnFly(g, hnPose('g6'));
+			g.restore();
+		},
+		witch: function (g, w, h) {
+			var b = WITCH_BOX, s2 = mn(w / (b[2] - b[0] + 20), h / (b[3] - b[1]));
+			g.save();
+			g.translate(w / 2 - (b[0] + b[2] + 20) / 2 * s2, h / 2 - (b[1] + b[3]) / 2 * s2);
+			g.scale(s2, s2);
+			witchStill(g, 0.2);
 			g.restore();
 		}
 	};
@@ -3919,15 +4312,17 @@
 			cx.beginPath(); cx.arc(mx, my, 58, 0, TAU); cx.fill();
 			cx.restore();
 		}
-		/* The witch's pass over the moon (Rob, 4.8.0): she enters off one
-		 * side, dips, makes one loop around the moon while it glows, and
-		 * leaves off the far side; the moon fades in before she arrives and
-		 * out after she has gone. Built as a polyline in the left-to-right
-		 * frame and mirrored, walked by ARC LENGTH so her speed is even.
-		 * The loop radius clears the moon's halo plus half the witch, and
-		 * the moon is placed so the loop (plus half her width) stays on
-		 * screen from 320px up. */
-		var WITCH_W = 72;
+		/* The witch's pass (Rob, 4.10.0: "Swoop + banked loop"): she comes in
+		 * high and DIVES across the face of the moon — the one moment she is
+		 * silhouetted against it — pulls out below it, makes ONE wide loop
+		 * around it and climbs away off the far edge. Built as a polyline in
+		 * the left-to-right frame and mirrored. Her speed follows the height
+		 * like a real loop (energy: v² = vB² − 2g·climb): fastest at the
+		 * bottom, slowing to 45% over the top, never below 42% on the climb
+		 * out; the whole flight is then scaled to the scene's length. */
+		/* her width: 84 px on a phone, 100 on a wider screen (the loop is wider there) */
+		var WITCH_W = 84, WFR = 12;
+		function witchW() { var w = vw < 768 ? 84 : 100; if (w !== WITCH_W) { WITCH_W = w; wcFrames = []; } return w; }
 		function sq(v) { return v * v; }
 		function bezPts(out, p0, p1, p2, p3, n) {
 			for (var i = 1; i <= n; i++) {
@@ -3937,27 +4332,195 @@
 			}
 		}
 		function witchPath(st) {
-			var R = st.R, mx = st.dir > 0 ? st.mx : vw - st.mx, my = st.my;
-			var B = [mx, my + R], P0 = [-WITCH_W, my + R * 0.15], P3 = [vw + WITCH_W, my - R * 0.35];
-			var pts = [P0], i, th;
-			bezPts(pts, P0, [lerp(P0[0], B[0], 0.45), B[1] + R * 0.85], [B[0] - R * 0.9, B[1]], B, 48);
+			var R = st.R, MR = st.MR, mx = st.dir > 0 ? st.mx : vw - st.mx, my = st.my, i;
+			/* in and out high, but never so high her hat leaves the top of the screen */
+			var top = WITCH_W * 0.6 + 6;
+			var P0 = [-WITCH_W, mx2(top, my - R * 1.05)], Q = [mx - MR * 0.45, my - MR * 0.05], B = [mx, my + R], P3 = [vw + WITCH_W, mx2(top, my - R * 1.3)];
+			var L1 = sqrt(sq(Q[0] - P0[0]) + sq(Q[1] - P0[1])), L2 = sqrt(sq(B[0] - Q[0]) + sq(B[1] - Q[1]));
+			var pts = [P0];
+			/* the swoop: level at first, then steeply down across the moon's
+			 * face, pulling out underneath it; x only ever moves forward, so
+			 * she never turns round in the dive */
+			bezPts(pts, P0, [lerp(P0[0], Q[0], 0.5), P0[1]], [Q[0] - 0.3 * L1 * 0.4, mx2(P0[1], Q[1] - 0.95 * L1 * 0.4)], Q, 40);
+			bezPts(pts, Q, [lerp(Q[0], B[0], 0.15), Q[1] + L2 * 0.45], [lerp(Q[0], B[0], 0.6), B[1]], B, 30);
 			st.loop0 = pts.length - 1;
-			for (i = 1; i <= 72; i++) { th = MT.PI / 2 - TAU * i / 72; pts.push([mx + R * cos(th), my + R * sin(th)]); }
+			for (i = 1; i <= 96; i++) { var th = MT.PI / 2 - TAU * i / 96; pts.push([mx + R * cos(th), my + R * sin(th)]); }
 			st.loop1 = pts.length - 1;
-			bezPts(pts, B, [B[0] + R * 0.9, B[1]], [lerp(B[0], P3[0], 0.55), B[1] + R * 0.1], P3, 48);
+			/* the climb away */
+			bezPts(pts, B, [B[0] + R * 0.9, B[1]], [lerp(B[0], P3[0], 0.6), B[1] - R * 0.25], P3, 48);
 			if (st.dir < 0) { for (i = 0; i < pts.length; i++) { pts[i][0] = vw - pts[i][0]; } }
-			var len = [0];
-			for (i = 1; i < pts.length; i++) { len.push(len[i - 1] + sqrt(sq(pts[i][0] - pts[i - 1][0]) + sq(pts[i][1] - pts[i - 1][1]))); }
-			st.pts = pts; st.len = len; st.L = len[len.length - 1];
+			var len = [0], tm = [0], yB = my + R, gk = 0.199 / R, vmin = 0.42;
+			for (i = 1; i < pts.length; i++) {
+				var ds = sqrt(sq(pts[i][0] - pts[i - 1][0]) + sq(pts[i][1] - pts[i - 1][1]));
+				var v = sqrt(mx2(vmin * vmin, 1 - 2 * gk * (yB - (pts[i][1] + pts[i - 1][1]) / 2)));
+				len.push(len[i - 1] + ds);
+				tm.push(tm[i - 1] + ds / v);
+			}
+			st.pts = pts; st.len = len; st.L = len[len.length - 1]; st.tm = tm; st.TT = tm[tm.length - 1];
 		}
-		function witchAt(st, d) {
-			var len = st.len, pts = st.pts, lo = 0, hi = len.length - 1;
-			while (hi - lo > 1) { var m = (lo + hi) >> 1; if (len[m] <= d) { lo = m; } else { hi = m; } }
-			var f = len[hi] > len[lo] ? (d - len[lo]) / (len[hi] - len[lo]) : 0;
-			return { x: lerp(pts[lo][0], pts[hi][0], f), y: lerp(pts[lo][1], pts[hi][1], f),
-				dx: pts[hi][0] - pts[lo][0], dy: pts[hi][1] - pts[lo][1], i: lo };
+		/* where she is at fraction f of her flight time */
+		function witchAt(st, f) {
+			var tm = st.tm, pts = st.pts, d = f * st.TT, lo = 0, hi = tm.length - 1;
+			while (hi - lo > 1) { var m = (lo + hi) >> 1; if (tm[m] <= d) { lo = m; } else { hi = m; } }
+			var k = tm[hi] > tm[lo] ? clamp((d - tm[lo]) / (tm[hi] - tm[lo]), 0, 1) : 0;
+			return { x: lerp(pts[lo][0], pts[hi][0], k), y: lerp(pts[lo][1], pts[hi][1], k), dx: pts[hi][0] - pts[lo][0], dy: pts[hi][1] - pts[lo][1], i: lo };
 		}
-
+		/* The moon and the witch's 12 riding frames, pre-drawn (4.10.0): in
+		 * idle time after load when this page has the scene, else on first
+		 * use. The moon is drawn for this screen's size and redrawn only if
+		 * a resize changes its radius. */
+		var moonC = null, wcFrames = [], wcScr = null, wcStats = { frames: 0, ms: 0, bytes: 0 };
+		function moonR() { return MT.round(clamp(vw * 0.11, 40, 60)); }
+		function moonGet() {
+			var r = moonR();
+			if (moonC && moonC.r === r) { return moonC; }
+			var t0 = nowMs(), dc = mn(W.devicePixelRatio || 1, 2), half = MT.ceil(r * 1.3), c = D.createElement('canvas');
+			c.width = c.height = MT.ceil(2 * half * dc);
+			var g = c.getContext('2d');
+			if (g) { g.scale(dc, dc); g.translate(half, half); moonPaint(g, r); }
+			wcStats.ms += nowMs() - t0; wcStats.bytes += c.width * c.height * 4;
+			return (moonC = { c: c, r: r, half: half });
+		}
+		function wcGet(i) {
+			if (wcFrames[i]) { return wcFrames[i]; }
+			var t0 = nowMs(), b = WITCH_BOX, u = WITCH_W / 100, s = u * mn(W.devicePixelRatio || 1, 2), c = D.createElement('canvas');
+			c.width = MT.ceil((b[2] - b[0]) * s); c.height = MT.ceil((b[3] - b[1]) * s);
+			var g = c.getContext('2d');
+			if (g) { g.setTransform(s, 0, 0, s, -b[0] * s, -b[1] * s); witchBody(g, i / WFR); }
+			wcStats.frames++; wcStats.ms += nowMs() - t0; wcStats.bytes += c.width * c.height * 4;
+			return (wcFrames[i] = { c: c, x: b[0] * u, y: b[1] * u, w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u });
+		}
+		/* Her cape and hair: short chains under gravity and air drag (Verlet),
+		 * pinned at her shoulders and head, so they stream behind her and
+		 * swing out through every turn. The cape is two chains (its top edge
+		 * and its lower edge) held at the cape's width, a strip of cloth. */
+		var WC_SEG = 4.6, WC_N = 8, HR_SEG = 2.8, HR_N = 5;
+		function wcChain(n, x, y, bx, by, seg) {
+			var c = [];
+			for (var i = 0; i <= n; i++) { c.push({ x: x + bx * seg * i, y: y + by * seg * i, ox: x + bx * seg * i, oy: y + by * seg * i }); }
+			return c;
+		}
+		function wcMove(c, x, y, dt) {
+			var damp = MT.exp(-4 * dt), gy = 480 * dt * dt;
+			c[0].ox = c[0].x; c[0].oy = c[0].y; c[0].x = x; c[0].y = y;
+			for (var i = 1; i < c.length; i++) {
+				var p = c[i], vx = (p.x - p.ox) * damp, vy = (p.y - p.oy) * damp;
+				p.ox = p.x; p.oy = p.y; p.x += vx; p.y += vy + gy;
+			}
+		}
+		function wcLink(p, q, d, wq) {
+			var dx = q.x - p.x, dy = q.y - p.y, l = sqrt(dx * dx + dy * dy) || 1e-6, k = (l - d) / l;
+			p.x += dx * k * (1 - wq); p.y += dy * k * (1 - wq); q.x -= dx * k * wq; q.y -= dy * k * wq;
+		}
+		/* local units (facing left) -> page px, for her pose this frame */
+		function wcWorld(st, ux, uy) {
+			var u = WITCH_W / 100, lx = -st.fs * ux * u, ly = uy * u, c = cos(st.rot), s = sin(st.rot);
+			return [st.wx + lx * c - ly * s, st.wy + lx * s + ly * c];
+		}
+		function witchStep(st, w, dt) {
+			var u = WITCH_W / 100, i, j;
+			/* velocity and a smoothed acceleration, from her path */
+			if (st.vx == null) {
+				var dl = sqrt(sq(w.dx) + sq(w.dy)) || 1;
+				st.vx = w.dx / dl * 160; st.vy = w.dy / dl * 160; st.ax = 0; st.ay = 0; st.face = st.dir; st.fs = st.dir; st.ph = 0;
+			} else if (dt > 0) {
+				var nvx = (w.x - st.wx) / dt, nvy = (w.y - st.wy) / dt, kk = mn(1, dt / 0.12);
+				st.ax += ((nvx - st.vx) / dt - st.ax) * kk; st.ay += ((nvy - st.vy) / dt - st.ay) * kk;
+				st.vx = nvx; st.vy = nvy;
+			}
+			st.wx = w.x; st.wy = w.y;
+			var sp = sqrt(sq(st.vx) + sq(st.vy));
+			/* upright (Rob, 4.9.0): she faces the way she flies, turning round
+			 * (squeezing through edge-on) rather than flipping */
+			if (abs(st.vx) > 0.35 * sp) { st.face = st.vx > 0 ? 1 : -1; }
+			st.fs += clamp(st.face - st.fs, -dt * 8, dt * 8);
+			/* she leans into the turn like a rider: along the felt gravity
+			 * (the path's acceleration plus g), never more than about 34° */
+			var lean = atan2(st.ax, -(st.ay - 900));
+			var tilt = atan2(st.vy, st.vx) - (st.face > 0 ? 0 : MT.PI);
+			while (tilt > MT.PI) { tilt -= TAU; }
+			while (tilt < -MT.PI) { tilt += TAU; }
+			st.lean = lean;
+			st.rot = clamp(lean + clamp(tilt, -0.35, 0.35) * 0.6, -0.6, 0.6);
+			/* the riding cycle runs faster through the turn: the bristles flick */
+			st.ph = (st.ph + dt * (1.4 + 3 * abs(lean))) % 1;
+			/* cape and hair */
+			var A0 = wcWorld(st, WITCH_CAPE[0][0], WITCH_CAPE[0][1]), A1 = wcWorld(st, WITCH_CAPE[1][0], WITCH_CAPE[1][1]);
+			var bx = -st.vx / (sp || 1), by = -st.vy / (sp || 1);
+			if (!st.cape) {
+				st.cape = [wcChain(WC_N, A0[0], A0[1], bx, by, WC_SEG * u), wcChain(WC_N, A1[0], A1[1], bx, by, WC_SEG * u)];
+				st.hair = WITCH_HAIR.map(function (h) { var p = wcWorld(st, h[0], h[1]); return wcChain(HR_N, p[0], p[1], bx, by, HR_SEG * u); });
+				st.pA = [A0, A1]; st.pH = st.hair.map(function (c) { return [c[0].x, c[0].y]; });
+			}
+			var H = WITCH_HAIR.map(function (h) { return wcWorld(st, h[0], h[1]); });
+			var n = mx2(1, MT.ceil(dt / 0.017)), sd = dt / n;
+			for (var k = 1; k <= n; k++) {
+				var f = k / n;
+				wcMove(st.cape[0], lerp(st.pA[0][0], A0[0], f), lerp(st.pA[0][1], A0[1], f), sd);
+				wcMove(st.cape[1], lerp(st.pA[1][0], A1[0], f), lerp(st.pA[1][1], A1[1], f), sd);
+				for (j = 0; j < st.hair.length; j++) { wcMove(st.hair[j], lerp(st.pH[j][0], H[j][0], f), lerp(st.pH[j][1], H[j][1], f), sd); }
+				for (var it = 0; it < 2; it++) {
+					for (i = 1; i <= WC_N; i++) {
+						wcLink(st.cape[0][i - 1], st.cape[0][i], WC_SEG * u, i === 1 ? 1 : 0.5);
+						wcLink(st.cape[1][i - 1], st.cape[1][i], WC_SEG * 1.05 * u, i === 1 ? 1 : 0.5);
+						var cw = (5 + 5 * sin(MT.PI / 2 * i / WC_N)) * u;
+						wcLink(st.cape[0][i], st.cape[1][i], cw, 0.5);
+						/* the diagonals keep it a sheet: without them the two
+						 * edges fold onto one line */
+						if (it === 0) { wcLink(st.cape[0][i - 1], st.cape[1][i], sqrt(sq(WC_SEG * u) + sq(cw)), i === 1 ? 1 : 0.5); wcLink(st.cape[1][i - 1], st.cape[0][i], sqrt(sq(WC_SEG * u) + sq(cw)), i === 1 ? 1 : 0.5); }
+					}
+					for (j = 0; j < st.hair.length; j++) { for (i = 1; i <= HR_N; i++) { wcLink(st.hair[j][i - 1], st.hair[j][i], HR_SEG * u, i === 1 ? 1 : 0.5); } }
+				}
+			}
+			st.pA = [A0, A1]; st.pH = H;
+		}
+		/* Draw her: this phase's pre-drawn frame, then the live cape and
+		 * hair over her back, straight onto the page canvas. Only while she
+		 * is in front of the moon is the same picture also composed on a
+		 * small scratch canvas and drawn again as a black silhouette clipped
+		 * to the moon's disc (a scratch canvas every frame cost ~45% more). */
+		function witchPaint(g, ox, oy, sc) {
+			var u = WITCH_W / 100, fr = wcGet(MT.floor(st0.ph * WFR) % WFR), st = st0;
+			g.save();
+			g.translate((st.wx - ox) * sc, (st.wy - oy) * sc); g.rotate(st.rot);
+			/* turning round: a quick squeeze, never thinner than 30% */
+			var fsx = st.fs < 0 ? mn(-0.3, st.fs) : mx2(0.3, st.fs);
+			g.scale(-fsx * sc, sc);
+			g.drawImage(fr.c, fr.x, fr.y, fr.w, fr.h);
+			g.restore();
+			g.save();
+			g.scale(sc * u, sc * u);
+			var f = function (p) { return [(p.x - ox) / u, (p.y - oy) / u]; };
+			witchCape(g, st.cape[0].map(f), st.cape[1].map(f), st.ph, clamp(sqrt(sq(st.vx) + sq(st.vy)) / 400, 0, 1));
+			witchHair(g, st.hair.map(function (c) { return c.map(f); }));
+			g.restore();
+		}
+		var st0 = null;
+		function witchDraw(st, a) {
+			st0 = st;
+			cx.save();
+			cx.globalAlpha = clamp(a, 0, 1);
+			witchPaint(cx, 0, 0, 1);
+			/* the scratch canvas fits her and her cape (100 units each way) */
+			var mr = st.MR, Sz = MT.ceil(200 * WITCH_W / 100), h2 = Sz / 2;
+			st.onMoon = sq(st.wx - st.mx) + sq(st.wy - st.my) < sq(mr + 0.8 * h2);
+			if (st.onMoon) {
+				var dc = mn(W.devicePixelRatio || 1, 2);
+				if (!wcScr || wcScr.dc !== dc || wcScr.sz !== Sz) {
+					wcScr = D.createElement('canvas'); wcScr.width = wcScr.height = MT.ceil(Sz * dc); wcScr.dc = dc; wcScr.sz = Sz;
+				}
+				var q = wcScr.getContext('2d');
+				if (q) {
+					q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = 'source-over';
+					q.clearRect(0, 0, wcScr.width, wcScr.height);
+					witchPaint(q, st.wx - h2, st.wy - h2, dc);
+					q.globalCompositeOperation = 'source-in'; q.fillStyle = '#0B0910'; q.fillRect(0, 0, wcScr.width, wcScr.height);
+					cx.beginPath(); cx.arc(st.mx, st.my, mr - 0.5, 0, TAU); cx.clip();
+					cx.drawImage(wcScr, st.wx - h2, st.wy - h2, Sz, Sz);
+				}
+			}
+			cx.restore();
+		}
 		function crosserScene(key, w, yOff, speed, onWater) {
 			return { actors: 2, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -60 : vw + 60; st.ph = 0; st.wk = 1; }
@@ -4072,46 +4635,40 @@
 				}
 				return false;
 			} },
-			/* Halloween: the witch crosses a faint full moon */
-			/* 4.8.0 (Rob): edge to edge with one loop around the moon. Until
-			 * 4.7.1 she was drawn only from 1.2 to 4.2 s along a 280px hop
-			 * across the moon, so she vanished mid-screen by design. */
+			/* Halloween (Rob, 4.10.0): the witch dives across the full moon,
+			 * makes one wide loop around it and climbs away. 4.8.0 flew her
+			 * edge to edge at an even speed; until 4.7.1 she vanished
+			 * mid-screen by design. */
 			witchmoon: { actors: 2, run: function (st, dt) {
 				if (!st.on) {
 					st.on = 1; st.t2 = 0; st.dir = sgn();
-					st.R = clamp(vw * 0.2, 80, 100);
+					st.MR = moonR(); st.W = witchW();
+					st.R = st.MR + 46 + clamp((vw - 375) * 0.03, 0, 24);
 					var edge = st.R + WITCH_W / 2 + 8;
 					st.mx = clamp(vw * rnd(0.38, 0.62), edge, vw - edge);
-					st.my = mx2(vh * 0.16, st.R + WITCH_W / 2 + 8);
+					st.my = mx2(vh * 0.18, st.R + st.W / 2 + 8);
 					witchPath(st);
-					st.T = clamp(st.L / 240, 6, 7);   /* her flight, entry to exit */
-					st.in = 0.8;                       /* the moon is up before she arrives */
+					st.T = clamp(5.9 + vw / 1280 * 1.4, 6.3, 7.3);   /* her flight, entry to exit */
+					st.in = 0.8;                                    /* the moon is up before she arrives */
 				}
 				st.t2 += dt;
-				var tw = st.t2 - st.in, gone = st.in + st.T, a, glow = 0;
+				var tw = st.t2 - st.in, gone = st.in + st.T, a;
 				a = st.t2 < 1 ? st.t2 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 1.2, 0, 1) : 1);
+				var mo = moonGet();
+				cx.save();
+				cx.globalAlpha = clamp(a * 0.96, 0, 1);
+				/* on whole device pixels: a fractional position makes the
+				 * browser resample every pixel of it, every frame */
+				var mdp = mn(W.devicePixelRatio || 1, 2);
+				cx.drawImage(mo.c, MT.round((st.mx - mo.half) * mdp) / mdp, MT.round((st.my - mo.half) * mdp) / mdp, mo.half * 2, mo.half * 2);
+				cx.restore();
 				if (tw > 0 && tw < st.T) {
-					var w = witchAt(st, st.L * tw / st.T);
-					var l0 = st.len[st.loop0], l1 = st.len[st.loop1], d = st.L * tw / st.T;
-					if (d > l0 - 60 && d < l1 + 60) { glow = sin(MT.PI * clamp((d - l0 + 60) / (l1 - l0 + 120), 0, 1)); }
-					moonDraw(st.mx, st.my, a, glow);
-					var head = atan2(w.dy, w.dx), rot, flip;
-					/* B · Upright (Rob, 4.9.0): she stays seated, tilts a little
-					 * with the climb, and turns round to face the way she is
-					 * flying (banking through the loop was rendered and declined) */
-					if (abs(w.dx) > 0.35 * sqrt(sq(w.dx) + sq(w.dy))) { st.face = w.dx > 0 ? 1 : -1; }
-					if (!st.face) { st.face = st.dir; }
-					flip = st.face > 0;
-					var tilt = head - (st.face > 0 ? 0 : MT.PI);
-					while (tilt > MT.PI) { tilt -= TAU; }
-					while (tilt < -MT.PI) { tilt += TAU; }
-					rot = clamp(tilt, -0.35, 0.35);
-					st.wx = w.x; st.wy = w.y; st.glow = glow;
-					/* W-A (Rob, 4.3.0): the hero's silhouette witch and cat, not an emoji */
-					dspr('witchsil', w.x, w.y, WITCH_W, flip, rot);
+					var wp = witchAt(st, tw / st.T);
+					st.wi = wp.i;   /* which stretch of the path: swoop, loop (loop0-loop1) or climb */
+					witchStep(st, wp, dt);
+					witchDraw(st, 1);
 				} else {
 					st.wx = null;
-					moonDraw(st.mx, st.my, a, 0);
 				}
 				st.moonA = a;
 				return st.t2 > gone + 1.2;
@@ -4679,6 +5236,21 @@
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
 		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
 		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
+		/* The witch and her moon are pre-drawn in idle time after load (4.10.0). */
+		if (vigList.indexOf('witchmoon') >= 0) {
+			var wcTodo = [-1], wcI;
+			for (wcI = 0; wcI < WFR; wcI++) { wcTodo.push(wcI); }
+			var wcIdle = function (dl) {
+				var t0 = nowMs();
+				if (!vw) { wcLater(wcIdle); return; }   /* not sized yet */
+				witchW();
+				do { var k = wcTodo.shift(); if (k === -1) { moonGet(); } else if (k != null) { wcGet(k); } }
+				while (wcTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+				if (wcTodo.length) { wcLater(wcIdle); }
+			};
+			var wcLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
+			wcLater(wcIdle);
+		}
 		/* The first scene: 6-10 s in, on every page. A theme with no scenes
 		 * (or none at this hour) gives that slot to its hero on a later page,
 		 * where the 3-5 s first-page flyer does not apply. */
@@ -5076,6 +5648,7 @@
 				},
 				get accents() { return accents.map(function (el) { return el.innerHTML.length; }).length; },
 				get heroFrame() { return heroFrame; },
+				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },
@@ -5129,7 +5702,7 @@
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
 		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, vigs: VIGS, eveningVigs: EVENING_VIGS,
-		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, heroDraw: HERO_DRAW, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
+		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, artDraw: ART_DRAW, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, witch: { body: witchBody, cape: witchCape, hair: witchHair, still: witchStill, box: WITCH_BOX, capeAt: WITCH_CAPE, hairAt: WITCH_HAIR }, moon: moonPaint, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
 		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
 	} };
 })();

@@ -5,7 +5,7 @@
  * (so every frame is exact and nothing depends on machine load).
  *
  *   node tools/scene-reel.js --scene=witchmoon --theme=halloween --width=390 \
- *        --out="build/Seasons - witch 390" [--frames=8]
+ *        --out="build/Seasons - witch 390" [--frames=8] [--closeup=18] [--follow=18]
  *   node tools/scene-reel.js --hero=heron --theme=florida_keys --width=1280 --out=... [--set=heronLand:1]
  *
  * --set=key:value (repeatable) sets a debug CFG key on the page config.
@@ -60,14 +60,17 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
     ff.stderr.on('data', d => { ffErr += d; });
     ff.stdin.on('error', () => { /* reported via the exit code */ });
     const frames = [], track = [];
+    let pathPts = null;
     let n = 0, tail = Math.round(TAIL * FPS), done = false;
     while (n < FPS * 40) {
       const st = await P.evaluate(live => {
         const s = window.DCCSeasonsEngine._state;
         s.tick(1000 / 30, 1);
         const v = s.vigSt || {};
-        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, glow: v.glow, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, pts: v.pts && v.pts.length };
+        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, MR: v.MR, pts: v.pts || null };
       }, live);
+      if (st.pts && !pathPts) { pathPts = st.pts; }
+      st.pts = null;
       const jpg = await P.screenshot({ type: 'jpeg', quality: 92 });
       ff.stdin.write(jpg);
       frames.push(jpg); track.push(st);
@@ -79,7 +82,7 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
     if (code) { throw new Error('ffmpeg failed: ' + ffErr.slice(0, 300)); }
     if (!done) { console.warn('warning: it did not end within 40 s'); }
     /* the path, as the engine built it */
-    const pts = await P.evaluate(() => { const v = window.DCCSeasonsEngine._state.vigSt; return v && v.pts ? v.pts : null; });
+    const pts = pathPts;
     const xy = track.map(t => t.wx != null ? [t.wx, t.wy] : (t.hero ? t.hero : null));
     const on = track.map((t, i) => xy[i] ? i : -1).filter(i => i >= 0);
     const pick = [];
@@ -96,6 +99,37 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
     const sw = await strip.evaluate(() => document.querySelector('.row').scrollWidth);
     await strip.setViewportSize({ width: sw, height: 900 });
     await strip.locator('.row').screenshot({ path: OUT + ' strip.png' });
+    /* --closeup=N: N frames magnified around the scene's centre (mx, my)
+     * and its loop radius, in a grid, for judging the motion itself */
+    const CLOSE = +arg('closeup', 0), g0 = track.find(t => t.R);
+    if (CLOSE && g0) {
+      const half = g0.R + 80, bx = g0.mx - half, by = g0.my - half, box = 2 * half, cell = 300, k = cell / box;
+      const inBox = on.filter(i => xy[i] && xy[i][0] > bx - 20 && xy[i][0] < bx + box + 20 && xy[i][1] > by - 20 && xy[i][1] < by + box + 20);
+      const cp = [];
+      for (let j = 0; j < CLOSE; j++) { cp.push(inBox[Math.round(j * (inBox.length - 1) / (CLOSE - 1))]); }
+      await strip.setViewportSize({ width: 1600, height: 900 });
+      await strip.setContent(`<!doctype html><style>body{margin:0;background:#1f2328;font:13px system-ui;color:#eee}
+        .g{display:grid;grid-template-columns:repeat(${Math.min(CLOSE, 6)},${cell}px);gap:6px;padding:8px}.c div{width:${cell}px;height:${cell}px;overflow:hidden;border:1px solid #444}
+        .c img{width:${W * k}px;display:block;margin-left:${-bx * k}px;margin-top:${-by * k}px}.t{padding:3px 0}</style><div class="g">${cp.map(i => `<div class="c"><div><img src="${b64(i)}"></div><p class="t">${(i / FPS).toFixed(2)} s</p></div>`).join('')}</div>`);
+      await strip.waitForTimeout(300);
+      await strip.setViewportSize({ width: Math.min(CLOSE, 6) * (cell + 6) + 16, height: 900 });
+      await strip.locator('.g').screenshot({ path: OUT + ' closeup.png' });
+    }
+    /* --follow=N: N frames magnified 3x around the actor itself */
+    const FOL = +arg('follow', 0);
+    if (FOL) {
+      const half = 70, cell = 280, k = cell / (2 * half);
+      const fp = [];
+      const vis = on.filter(i => xy[i][0] > 30 && xy[i][0] < W - 30 && xy[i][1] > 20);
+      for (let j = 0; j < FOL; j++) { fp.push(vis[Math.round(j * (vis.length - 1) / (FOL - 1))]); }
+      await strip.setViewportSize({ width: 1600, height: 900 });
+      await strip.setContent(`<!doctype html><style>body{margin:0;background:#1f2328;font:13px system-ui;color:#eee}
+        .g{display:grid;grid-template-columns:repeat(6,${cell}px);gap:6px;padding:8px}.c div{width:${cell}px;height:${cell}px;overflow:hidden;border:1px solid #444}
+        .c img{width:${W * k}px;display:block}.t{padding:3px 0}</style><div class="g">${fp.map(i => `<div class="c"><div><img src="${b64(i)}" style="margin-left:${-(xy[i][0] - half) * k}px;margin-top:${-(xy[i][1] - half) * k}px"></div><p class="t">${(i / FPS).toFixed(2)} s</p></div>`).join('')}</div>`);
+      await strip.waitForTimeout(300);
+      await strip.setViewportSize({ width: 6 * (cell + 6) + 16, height: 900 });
+      await strip.locator('.g').screenshot({ path: OUT + ' follow.png' });
+    }
     /* path trace: every frame's position over the middle frame, plus the
      * screen edges, so "stays on screen" can be seen, not just asserted */
     const mid = on[Math.floor(on.length / 2)];

@@ -1,8 +1,9 @@
 'use strict';
 /**
- * DCC Seasons — what one heron crossing costs the main thread (4.9.0).
+ * DCC Seasons — what one heron crossing costs the main thread (4.9.0), or
+ * one play of a scene (--scene=witchmoon, 4.10.0).
  *
- *   node tools/measure-heron.js [--width=390] [--dsf=3] [--throttle=4] [--runs=3]
+ *   node tools/measure-heron.js [--width=390] [--dsf=3] [--throttle=4] [--runs=3] [--scene=witchmoon --theme=halloween]
  *   DCC_ASSETS=/path/to/old/assets/js node tools/measure-heron.js …   (a previous build)
  *
  * Valentine's Day (the heron is its only hero), no sprites, no background
@@ -18,11 +19,14 @@ const { config, open } = require('./harness');
 const { page: fixture } = require('./fixture');
 const argv = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 const W = +(argv.width || 390), DSF = +(argv.dsf || 3), THR = +(argv.throttle || 4), RUNS = +(argv.runs || 3);
+const SCENE = argv.scene || null, THEME = argv.theme || (SCENE ? 'halloween' : 'valentines');
 
 async function run(withHero, dur) {
-  const cfg = config(['--theme=valentines', '--placement=content', '--layering=front', '--density=16', '--noparticles', '--subtle=off', '--diag']);
-  cfg.forceHour = 12; cfg.vigFirst = 1e9; cfg.vigGap = 1e9; cfg.heroOnly = 'heron'; cfg.heronLand = 0;
-  cfg.heroFirst = withHero ? [3, 3.05] : [1e6, 1e6 + 1];
+  const cfg = config([`--theme=${THEME}`, '--placement=content', '--layering=front', '--density=16', '--noparticles', '--subtle=off', '--diag']);
+  cfg.forceHour = 12; cfg.vigGap = 1e9;
+  if (SCENE) { cfg.vigOnly = SCENE; cfg.vigFirst = withHero ? 3000 : 1e9; cfg.heroFirst = [1e6, 1e6 + 1]; }
+  else { cfg.vigFirst = 1e9; cfg.heroOnly = 'heron'; cfg.heronLand = 0; cfg.heroFirst = withHero ? [3, 3.05] : [1e6, 1e6 + 1]; }
+  const LOG = SCENE ? 'vigLog' : 'heroLog';
   const ses = await open('<!doctype html><title>x</title>', { viewport: { width: W, height: W < 768 ? 844 : 900 }, dsf: DSF });
   try {
     const cdp = await ses.page.context().newCDPSession(ses.page);
@@ -35,9 +39,9 @@ async function run(withHero, dur) {
     await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 30000 });
     let a, b, fa, fb, t0, t1;
     if (withHero) {
-      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.heroLog.length, null, { timeout: 60000, polling: 20 });
+      await ses.page.waitForFunction(L => window.DCCSeasonsEngine._state[L].length, LOG, { timeout: 60000, polling: 20 });
       a = await m(); fa = await ses.page.evaluate(() => window.__fr); t0 = Date.now();
-      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.heroLog[0].end > 0, null, { timeout: 60000, polling: 20 });
+      await ses.page.waitForFunction(L => window.DCCSeasonsEngine._state[L][0].end > 0, LOG, { timeout: 60000, polling: 20 });
       b = await m(); fb = await ses.page.evaluate(() => window.__fr); t1 = Date.now();
     } else {
       await ses.page.waitForTimeout(4000);
@@ -45,7 +49,7 @@ async function run(withHero, dur) {
       await ses.page.waitForTimeout(dur * 1000);
       b = await m(); fb = await ses.page.evaluate(() => window.__fr); t1 = Date.now();
     }
-    const pre = await ses.page.evaluate(() => { const h = window.DCCSeasonsEngine._state.heron; return h ? h.stats : null; });
+    const pre = await ses.page.evaluate(sc => { const s = window.DCCSeasonsEngine._state, h = sc ? s.witch : s.heron; return h ? h.stats : null; }, SCENE);
     const secs = (t1 - t0) / 1000, busy = (b.TaskDuration - a.TaskDuration) * 1000;
     return { secs, msPerSec: busy / secs, frames: fb - fa, msPerFrame: busy / Math.max(1, fb - fa), pre };
   } finally { await ses.close(); }

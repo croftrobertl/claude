@@ -64,8 +64,8 @@
 		s.title = name;
 		return s;
 	}
-	/* A hero drawn in code rather than a sprite (the heron, 4.9.0): the
-	 * engine's own HERO_DRAW function paints it into a canvas. */
+	/* Art drawn in code rather than a sprite (the heron, 4.9.0; the
+	 * witch, 4.10.0): the engine's own ART_DRAW function paints it. */
 	function drawnPic(fn, name) {
 		var cv = el('canvas', 'dcc-guide-pic'), dpr = Math.min(window.devicePixelRatio || 1, 2), w = 72, h = 34;
 		cv.width = w * dpr; cv.height = h * dpr;
@@ -74,9 +74,8 @@
 		if (g) { g.scale(dpr, dpr); try { fn(g, w, h); } catch (e) { /* shown blank */ } }
 		return cv;
 	}
-	function heroPic(h, name) {
-		var k = E.heroArt[h];
-		return E.heroDraw && E.heroDraw[k] ? drawnPic(E.heroDraw[k], name) : spriteImg(k, name);
+	function artPic(k, name) {
+		return E.artDraw && E.artDraw[k] ? drawnPic(E.artDraw[k], name) : spriteImg(k, name);
 	}
 	function spriteName(key) { return (N.sprites && N.sprites[key]) || key; }
 	/* A particle drawn by code rather than a sprite (star, heart, egg…):
@@ -266,7 +265,7 @@
 				(scenes.length > 1 ? ' ' + T.oneOf : '')));
 			scenes.forEach(function (s) {
 				var nm = (N.scenes && N.scenes[s[0]]) || s[0];
-				vs.appendChild(item([spriteImg(E.sceneArt[s[0]], nm)], nm, s[1] ? T.evenings : ''));
+				vs.appendChild(item([artPic(E.sceneArt[s[0]], nm)], nm, s[1] ? T.evenings : ''));
 			});
 			c.appendChild(vs);
 		}
@@ -283,7 +282,7 @@
 				: fmt(T.heroTimingOnly, range(E.timing.vigFirst), range(D.every || E.timing.every))));
 			pool.forEach(function (h) {
 				var nm = (N.heroes && N.heroes[h]) || h;
-				var pics = [heroPic(h, nm)];
+				var pics = [artPic(E.heroArt[h], nm)];
 				if (E.heroGlyphs[h]) { pics.push(glyph(E.heroGlyphs[h], nm)); }
 				hs.appendChild(item(pics, nm));
 			});

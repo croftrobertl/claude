@@ -243,6 +243,14 @@ The repo keeps one tracked build artifact at `dcc-seasons.zip` so a version-name
 copy isn't accumulated per release; rebuild it in the same commit as the version
 bump so the tracked zip never lags the source.
 
+## DCC Seasons — the standard (PROJECT-NOTES.md)
+
+**Read `PROJECT-NOTES.md` before drawing anything that moves.** Rob made
+the 4.9.0 heron the gold standard for every sprite, scene and hero
+(2026-10-12): drawn in code with real anatomy, a many-frame cycle
+pre-drawn at load, a measured cost no higher than what it replaces,
+believable physics, and frame strips plus a video for Rob before it ships.
+
 ## DCC Seasons — Rob designs it by choosing, never by default
 
 Every design decision in DCC Seasons is Rob's, made by multiple choice from
@@ -371,7 +379,8 @@ render round and his say.
   stand 2.5 s, take off on hard beats with legs hanging; crossfades
   flying <-> standing. Debug knob `heronLand` (0/1) forces it. The
   heron0/1/2/heronstand sprites are gone; the Theme guide paints the bird
-  with `HERO_DRAW.heron`. `tools/heron-poses.js` renders the shipped
+  with `ART_DRAW.heron` (was HERO_DRAW; renamed in 4.10.0 when the witch
+  scene got `ART_DRAW.witch`). `tools/heron-poses.js` renders the shipped
   poses; `tools/measure-heron.js` measures a crossing against an older
   build (`DCC_ASSETS=`).
 - **Witch: B · Upright in the loop.** She stays seated, tilts with the
@@ -385,6 +394,50 @@ render round and his say.
   6-10 s on any page. Evening-only scenes keep their condition. Because
   the first-page hero now waits for a scene, a suite that pushes scenes
   away (`vigFirst = 1e9`) and still wants a hero must set `heroFirst`.
+
+### Rob's recorded picks (for 4.10.0, chosen 2026-10-12)
+
+- **Witch flight: "Swoop + banked loop".** `witchmoon` comes in high,
+  DIVES across the moon's face (the one moment she is silhouetted against
+  it), pulls out underneath, makes ONE wide loop round the moon and climbs
+  off the far edge. Her speed follows height (v² = vB² − 2g·climb: 45% of
+  the bottom speed over the top, never below 42% on the climb out), and
+  the whole flight is scaled to `st.T`. She stays UPRIGHT (the 4.9.0
+  pick): she leans along the felt gravity (path acceleration + g), the
+  total tilt clamped to ±0.6 rad, and turns round through a quick squeeze
+  (never thinner than 30%) instead of flipping. The dive is monotone in x
+  so she never turns round in it. The loop is radius MR + 46 (+ up to 24
+  on wide screens); she is 84 px on a phone, 100 px from 768 px.
+- **Her drawing:** hat with a purple band and buckle, long dark hair,
+  profile, bodice and bell sleeve, a skirt that flutters, purple-and-black
+  stockings, pointed boots, an ash broom with a twine collar and 16
+  separate straw bristles, and the black cat (his 4.2.0 pick) on the
+  handle with a purple rim. `witchBody(g, phase)` is ONE phase; 12 are
+  pre-drawn. The cape (a two-chain strip with diagonals so it stays a
+  sheet) and three hair strands are Verlet chains under gravity and drag,
+  drawn live OVER her back (under it they were invisible). In front of
+  the moon the whole picture is drawn again as a black silhouette clipped
+  to the disc, on a scratch canvas sized to her — only while she overlaps
+  it (a scratch canvas every frame cost ~45% more).
+- **The moon: "Real full moon, clear sky".** `moonPaint(g, r)`: the
+  maria from their real selenographic centres and sizes (`MARIA`),
+  projected orthographically north up with east to the right, painted on
+  a small canvas and scaled up for soft edges (no `ctx.filter`: Safari),
+  Tycho/Copernicus/Kepler/Proclus rays, Aristarchus bright, Plato and
+  Grimaldi dark, fine highland speckle (never dots), gentle limb shading,
+  a faint glow to 1.3 r. No clouds. Pre-rendered once per radius
+  (`moonGet`, r = clamp(vw·0.11, 40, 60)) and drawn on WHOLE device
+  pixels — at a fractional position the browser resamples every pixel,
+  every frame (measured: ~85 ms/s on the slowed phone).
+- **Christmas's evening `sleighmoon` keeps the old `moonDraw`** — the
+  brief kept every other theme exactly as 4.9.0. The Halloween HERO witch
+  (`witchsil`) is also unchanged.
+- **Cost (PROJECT-NOTES.md):** about 10% MORE than 4.9.0's witch, over
+  the heron's "no more" bar and reported as such: phone (390, 3x, 4x CPU)
+  mean 474 vs 429 ms/s over four alternating 5-run sets (single sets
+  ranged 387-555 vs 351-526 with machine load), desktop 72 vs 64, 60 fps
+  all. The extra is the live cape/hair and the silhouette pass. Pre-draw
+  ~48 ms, 1.3 MB on a phone.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -405,7 +458,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 140,774 raw / 48,875 gzipped (4.9.0, `gzip -c`; the drawn heron replacing four sprites is +8.7KB raw over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 158,072 raw / 54,984 gzipped (4.10.0, `gzip -c`; the drawn witch and the real moon are +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -759,6 +812,13 @@ render round and his say.
   dies at once); `tools/heron-sheet.js` / `tools/heron-reel.js` render the
   heron candidates.
   `tools/theme-sheet.js themes|heroes` renders the eye-check sheets.
+  `tools/witch-poses.js` renders the witch's frames and the moon large;
+  `tools/heron-poses.js` the heron's poses; `tools/measure-heron.js`
+  (`--scene=<name>` for a scene) measures an effect against an older
+  build. `scene-reel.js --closeup=N --follow=N` adds magnified strips.
+  **Rebuild the minified files before `test-guide.js`**: the guide page
+  loads `engine.min.js`, and a stale one silently draws the old pictures
+  (4.10.0's run counted 285 pictures until it was rebuilt).
   `test-schedule.js` walks 2027-2036 through BOTH resolvers and requires
   them to reproduce `tools/fixtures/calendar-2027-2036.json` — the table Rob
   confirmed — exactly.

@@ -137,8 +137,8 @@ function collectVignettes(js) {
   for (const n of named) if (defined.has(n) && !sceneArt.has(n)) art.push(`scene '${n}' has no SCENE_ART picture for the Theme guide`);
   for (const [k] of sceneArt) if (!defined.has(k)) art.push(`SCENE_ART names '${k}', which is not a scene`);
   art.sceneArt = sceneArt; art.heroArt = new Map(table('HERO_ART'));
-  /* a hero drawn in code (the heron, 4.9.0) is pictured by HERO_DRAW */
-  const hd = js.match(/var HERO_DRAW = \{([\s\S]*?)\n\t\};/);
+  /* art drawn in code (the heron, 4.9.0; the witch, 4.10.0) is pictured by ART_DRAW */
+  const hd = js.match(/var ART_DRAW = \{([\s\S]*?)\n\t\};/);
   art.drawn = new Set(hd ? [...hd[1].matchAll(/\n\t\t([a-z0-9_]+): function/g)].map(x => x[1]) : []);
   return { defined, named, missing: [...named].filter(n => !defined.has(n)), art };
 }

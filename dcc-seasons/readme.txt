@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.9.0
+Stable tag: 4.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,31 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.0 =
+Rob's Halloween round, to the heron's standard. Staging first; live only
+after Rob signs off. Rollback: reinstall the 4.9.0 zip; no setting or
+stored data changes.
+
+* The witch over the moon is redrawn in code and flies Rob's pick, "Swoop
+  + banked loop": she comes in high, dives across the face of the full
+  moon (a black silhouette against it as she passes), makes one wide loop
+  round it and climbs away off the far edge. She stays upright on her
+  broom, leans into the turn, slows over the top of the loop and speeds
+  up on the way down. Her cape and hair stream behind her and swing out
+  through the turns; the bristles flick, the hat tip and skirt sway, and
+  her black cat rides on the handle. Her riding frames are drawn once
+  after the page loads.
+* The moon is a real full moon, Rob's pick "Real full moon, clear sky":
+  the dark patches of the "man in the moon" in their true places, the
+  bright craters with their rays, soft shading to the edge and a faint
+  glow. No clouds. It is drawn once after the page loads.
+* Cost, measured on a phone at 4x slowed CPU: about 10% more than 4.9.0's
+  simpler witch (474 against 429 ms of main thread a second, averaged
+  over four alternating runs), still 60 fps. The extra is the live cape
+  and hair.
+* Timing, the order of scene and flyer, and every other theme are
+  exactly as 4.9.0.
 
 = 4.9.0 =
 Rob's picks from the 4.8.0 renders. Staging first; live only after Rob
