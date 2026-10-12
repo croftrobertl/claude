@@ -263,6 +263,17 @@ final class Assets
 
         wp_localize_script('dcc-checkout', 'DCC_CHECKOUT', $this->script_config());
 
+        // v0.34.1 — the site's own dropdown list (Rob's pick): every visible
+        // <select> opens a centred list drawn by the page. After checkout.js,
+        // whose preflight state it reads; the select stays the source of truth.
+        wp_enqueue_script(
+            'dcc-checkout-select-list',
+            DCC_CHECKOUT_URL . 'assets/select-list.js',
+            ['dcc-checkout'],
+            DCC_CHECKOUT_VERSION,
+            true
+        );
+
         $this->maybe_enqueue_tap_debug();
     }
 

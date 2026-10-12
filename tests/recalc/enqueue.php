@@ -71,6 +71,8 @@ check('Add New: with its config — the included guests and the site\'s words',
     [$GLOBALS['localized'][H][0] ?? null, $GLOBALS['localized'][H][1]['includedGuests'] ?? null,
      $GLOBALS['localized'][H][1]['i18n']['guestsRequired'] ?? null],
     ['DCC_GUEST_COUNT', 2, 'Please select the number of guests.']);
+check('Add New: the guest checkout\'s dropdown list is NOT loaded there (guest checkout only)',
+    isset($GLOBALS['scripts']['dcc-checkout-select-list']), false);
 check('Add New: the admin script is told it is Add New',
     $GLOBALS['localized']['dcc-checkout-admin'][1]['flow'] ?? null, 'add-new');
 
@@ -108,6 +110,9 @@ check('The checkout: checkout.js loads (guard)', isset($GLOBALS['scripts']['dcc-
 check('The checkout: guest-count.js in the footer, and checkout.js depends on it (so it runs first)',
     [isset($GLOBALS['scripts'][H]), $GLOBALS['scripts'][H]['footer'] ?? null,
      in_array(H, $GLOBALS['scripts']['dcc-checkout']['deps'] ?? [], true)], [true, true, true]);
+check('The checkout: select-list.js (0.34.1, the site\'s own dropdown list) in the footer, after checkout.js',
+    [isset($GLOBALS['scripts']['dcc-checkout-select-list']), $GLOBALS['scripts']['dcc-checkout-select-list']['footer'] ?? null,
+     $GLOBALS['scripts']['dcc-checkout-select-list']['deps'] ?? null], [true, true, ['dcc-checkout']]);
 check('The checkout: a guest is not told it is an administrator',
     $GLOBALS['localized'][H][1]['isAdmin'] ?? null, '');
 

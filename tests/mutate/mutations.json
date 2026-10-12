@@ -3733,5 +3733,412 @@
   "find": "                'guestsRequired' => __('Please select the number of guests.', 'dcc-checkout'),",
   "replace": "                'guestsRequired' => '',",
   "count": 1
+ },
+ {
+  "id": "sl-typography-not-copied",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the closed field keeps the select's typography whatever the theme does to <button>",
+  "find": "            btn.style[p] = cs[p];\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-select-not-hidden",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the real select is hidden visually once the field stands in",
+  "find": "        sel.classList.add('dcc_checkout-select-native');\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-no-change-event",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a choice fires the select's REAL change event (MotoPress reprices)",
+  "find": "            sel.dispatchEvent(new Event('change', { bubbles: true }));\n        }\n        sync(sel);",
+  "replace": "        }\n        sync(sel);",
+  "count": 1
+ },
+ {
+  "id": "sl-no-input-event",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a choice fires the select's real input event",
+  "find": "            sel.dispatchEvent(new Event('input', { bubbles: true }));\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-not-under",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the list opens right under its field",
+  "find": "r.bottom + window.pageYOffset + gap) + 'px';",
+  "replace": "r.bottom + window.pageYOffset + 40) + 'px';",
+  "count": 1
+ },
+ {
+  "id": "sl-never-up",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the list opens upward when there is no room below",
+  "find": "        var up = below < natural && above > below;",
+  "replace": "        var up = false;",
+  "count": 1
+ },
+ {
+  "id": "sl-no-scroll-to-current",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a long list opens scrolled to the current choice",
+  "find": "        scrollToActive(true);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-hidden-options-shown",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: an option checkout.js caps (hidden) is not offered",
+  "find": "            return !o.hidden && !o.classList.contains('dcc_checkout-option-hidden');",
+  "replace": "            return true;",
+  "count": 1
+ },
+ {
+  "id": "sl-no-select-observer",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the field follows the select's options and disabled state",
+  "find": "            new MutationObserver(function () { sync(sel); }).observe(sel, {",
+  "replace": "            ({ observe: function () {} }).observe(sel, {",
+  "count": 1
+ },
+ {
+  "id": "sl-replaced-select-ignored",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a select MotoPress replaces gets its own field",
+  "find": "                        if (n.tagName === 'SELECT') { enhance(n); }",
+  "replace": "                        if (false) { enhance(n); }",
+  "count": 1
+ },
+ {
+  "id": "sl-no-retire",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a select removed on its own takes its field with it",
+  "find": "                        gone.forEach(function (s) { if (s.dccList && !s.isConnected) { retire(s); } });",
+  "replace": "                        gone.forEach(function () {});",
+  "count": 1
+ },
+ {
+  "id": "sl-message-at-load",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: nothing shows before a submit attempt (a script's checkValidity at load)",
+  "find": "        if (sel.form && sel.form.classList.contains('dcc_checkout-preflight')) { return; }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-bubble-not-prevented",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the browser is told not to bubble at the hidden select",
+  "find": "        // The browser cannot show its bubble on a hidden control; say it here.\n        e.preventDefault();",
+  "replace": "        // The browser cannot show its bubble on a hidden control; say it here.",
+  "count": 1
+ },
+ {
+  "id": "sl-no-focus-on-invalid",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the first invalid field takes focus",
+  "find": "        if (roundFirst === sel) {\n            try { ui.btn.focus(); } catch (_) {}",
+  "replace": "        if (roundFirst === sel) {",
+  "count": 1
+ },
+ {
+  "id": "sl-native-jumps-past",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a later native control does not steal the report from the first (ours)",
+  "find": "        } else if (roundFirst && t && !t.dccList) {\n            e.preventDefault();",
+  "replace": "        } else if (roundFirst && t && !t.dccList) {",
+  "count": 1
+ },
+ {
+  "id": "sl-message-not-cleared",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a choice that satisfies the select clears its message",
+  "find": "        if (sel.validity ? !sel.validity.valid : String(sel.value) === '') { return; }",
+  "replace": "        return;",
+  "count": 1
+ },
+ {
+  "id": "sl-escape-chooses",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: Escape closes without choosing",
+  "find": "        else if (k === 'Escape' || k === 'Esc') { close(true); }",
+  "replace": "        else if (k === 'Escape' || k === 'Esc') { choose(o.active); }",
+  "count": 1
+ },
+ {
+  "id": "sl-typeahead-no-cycle",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the same letter again cycles through the matches",
+  "find": "        if (cycling) { q = q[0]; }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-outside-no-close",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a tap or click outside closes the list",
+  "find": "        if (open.list.contains(t) || open.ui.btn.contains(t)) { return; }\n        close(false);",
+  "replace": "        if (open.list.contains(t) || open.ui.btn.contains(t)) { return; }",
+  "count": 1
+ },
+ {
+  "id": "sl-no-aria-expanded",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: aria-expanded says the list is open",
+  "find": "        setAttr(ui.btn, 'aria-expanded', 'true');\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-no-labelledby",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the field is named by its label",
+  "find": "            setAttr(btn, 'aria-labelledby', label.id + ' ' + btn.id);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-no-option-role",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: items are role=option",
+  "find": "            setAttr(li, 'role', 'option');\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-no-selected-mark",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the current choice is marked",
+  "find": "            if (opt === current) { li.classList.add('dcc_checkout-select-list__option--selected'); }\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sl-label-focuses-select",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the label never focuses the hidden select (iOS picker)",
+  "find": "                if (ui.wrap.contains(e.target)) { return; }\n                e.preventDefault();",
+  "replace": "                if (ui.wrap.contains(e.target)) { return; }",
+  "count": 1
+ },
+ {
+  "id": "sl-select-focus-not-redirected",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: focusing the select lands on the field",
+  "find": "        sel.addEventListener('focus', function () { if (!btn.disabled) { btn.focus(); } });",
+  "replace": "        sel.addEventListener('focus', function () {});",
+  "count": 1
+ },
+ {
+  "id": "sl-services-taken",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the services' own 'for N' select is left alone",
+  "find": "            n.indexOf('[services]') === -1 && !sel.hasAttribute('data-dcc-native');",
+  "replace": "            !sel.hasAttribute('data-dcc-native');",
+  "count": 1
+ },
+ {
+  "id": "sl-tab-does-not-close",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: Tab closes the list",
+  "find": "        else if (k === 'Tab') { close(true); }",
+  "replace": "        else if (k === 'Tab') { return; }",
+  "count": 1
+ },
+ {
+  "id": "sl-home-end-dead",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: Home and End move to the first and last",
+  "find": "        else if (k === 'End') { setActive(step(o.items.length, -1)); scrollToActive(false); }",
+  "replace": "        else if (k === 'End') { }",
+  "count": 1
+ },
+ {
+  "id": "co-file-width-hidden-select",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the upload field takes the width of the Country field the guest sees",
+  "find": "            var box = shownFieldFor(ref);",
+  "replace": "            var box = ref;",
+  "count": 1
+ },
+ {
+  "id": "co-chooser-check-hidden-select",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: checkout.js's chooser check reads the field the guest sees (else it un-hides the services)",
+  "find": "            return hidingAncestor(shownFieldFor(sel)) === null;",
+  "replace": "            return hidingAncestor(sel) === null;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-selected-colour",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the current choice is bold #0A50B2 on #E7EEF7",
+  "find": "    background: #e7eef7;\n    color: #0a50b2;",
+  "replace": "    background: #e7eef7;\n    color: #000000;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-row-height",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: every row is at least 44px",
+  "find": "    min-height: 44px;\n    margin: 0 !important;\n    padding: 10px 16px !important;",
+  "replace": "    min-height: 20px;\n    margin: 0 !important;\n    padding: 2px 16px !important;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-border",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: a 2px #F4DA62 border",
+  "find": "    list-style: none !important;\n    background: #ffffff !important;\n    border: 2px solid #f4da62 !important;",
+  "replace": "    list-style: none !important;\n    background: #ffffff !important;\n    border: 1px solid #cccccc !important;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-items-left",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: items are centred",
+  "find": "    justify-content: center;\n    box-sizing: border-box;\n    min-height: 44px;",
+  "replace": "    justify-content: flex-start;\n    box-sizing: border-box;\n    min-height: 44px;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-button-padding",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the closed field keeps the select's padding (caret room)",
+  "find": "    padding: 10px 40px 10px 20px !important;\n    background-color: #ffffff !important;",
+  "replace": "    padding: 10px 20px !important;\n    background-color: #ffffff !important;",
+  "count": 1
+ },
+ {
+  "id": "css-sl-native-shown",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.34.1: the real select takes no room once hidden",
+  "find": "    position: absolute !important;\n    width: 1px !important;",
+  "replace": "    width: 1px !important;",
+  "count": 1
+ },
+ {
+  "id": "php-selectlist-not-enqueued",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.34.1: the checkout loads select-list.js",
+  "find": "        wp_enqueue_script(\n            'dcc-checkout-select-list',",
+  "replace": "        if (false) wp_enqueue_script(\n            'dcc-checkout-select-list',",
+  "count": 1
  }
 ]

@@ -74,6 +74,7 @@ SUITES = {
     'fees':         ('php',  'tests/fees/run.php'),
     'petpolicy':    ('php',  'tests/petpolicy/run.php'),
     'recalc':       ('node', 'tests/recalc/run.js'),
+    'selectlist':   ('node', 'tests/selectlist/run.js'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

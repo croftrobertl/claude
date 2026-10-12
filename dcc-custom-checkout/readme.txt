@@ -229,11 +229,14 @@ also filterable for snippet-level overrides:
 == Changelog ==
 
 = 0.34.1 =
-Add New Booking gets the same two checkout fixes (Rob: "Yes, in 0.34.1"), and the guest select gets the site's message.
+Add New Booking gets the same two checkout fixes (Rob: "Yes, in 0.34.1"), the guest select gets the site's message, and the checkout's dropdowns open the site's own centred list (Rob's pick).
 
 * Fixed: on Add New Booking, while Number of Guests is still "— Select —", "Please select the number of guests." showed at once and Pet Fee: Yes added nothing to the total. The price is now shown for the included guests (2, never more than the cottage sleeps), with the Guests line hidden, so the pet fee appears at once. Messages wait until Submit Booking is pressed; one already showing when the page loads still shows. What is submitted is always the number staff chose, and a booking still needs one.
-* Fixed: pressing Book Now (or Submit Booking) with no number of guests, the browser said "Please select an item in the list." It now says "Please select the number of guests.", only after the press, and the message clears as soon as a number is chosen. The browser's check itself is unchanged.
-* The checkout's price fix now lives in a small shared script (guest-count.js) that the checkout and Add New Booking both load, so the two cannot drift apart. Nothing else on the checkout changes.
+* Fixed: pressing Submit Booking on Add New Booking with no number of guests, the browser said "Please select an item in the list." It now says "Please select the number of guests.", only after the press, and the message clears as soon as a number is chosen. The browser's check itself is unchanged. (On the checkout the same words now appear under the field; see below.)
+* New: on the checkout, every dropdown (number of guests, Country, Dog Size and the others) opens the site's own list, right under its field and centred, on phones and computers alike. The closed fields look exactly as before. The list scrolls when it is long (Country), opens at the current choice, opens upward when there is no room below, and closes on a choice, a tap outside or Escape. Keyboard: arrows, Home/End, Enter/Space, Escape, and typing to jump (useful for Country). Screen readers get a button and a list box.
+* The real dropdown stays in the form, so what is booked, the price recalculation and every other checkout behaviour are unchanged.
+* Pressing Book Now with no number of guests shows "Please select the number of guests." under that field and moves to it. Nothing shows before the first press.
+* The checkout's price fix now lives in a small shared script (guest-count.js) that the checkout and Add New Booking both load, so the two cannot drift apart.
 
 = 0.34.0 =
 Rob's new pet policy (11 October), and two fixes from his live check of the checkout.

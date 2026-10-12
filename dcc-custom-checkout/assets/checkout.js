@@ -1757,8 +1757,12 @@
         // safety net un-hide everything during early paint. hidingAncestor()
         // answers the question actually being asked: is anything up the tree
         // set to display:none / visibility:hidden?
+        //
+        // v0.34.1 — judged on the field the guest SEES: once select-list.js
+        // has taken a select over, the select itself is hidden on purpose
+        // (opacity 0, clipped) and its button is the chooser.
         return selects.every(function (sel) {
-            return hidingAncestor(sel) === null;
+            return hidingAncestor(shownFieldFor(sel)) === null;
         });
     }
 
@@ -1845,8 +1849,12 @@
 
         var lastWritten = '';
         function apply() {
-            var width = ref.getBoundingClientRect
-                ? ref.getBoundingClientRect().width
+            // v0.34.1 — when select-list.js shows Country as the site's own
+            // field, the select itself is hidden at 1px: measure the field the
+            // guest sees, or the upload field would be pinned to 1px.
+            var box = shownFieldFor(ref);
+            var width = box.getBoundingClientRect
+                ? box.getBoundingClientRect().width
                 : 0;
             if (!(width > 0)) {
                 return;
@@ -1886,6 +1894,14 @@
         // Fonts and late layout can change the select's width after first paint.
         setTimeout(apply, 400);
         return apply;
+    }
+
+    // The box a guest sees for a select: select-list.js's field (the wrapper
+    // it puts directly after a select it has taken over), else the select.
+    function shownFieldFor(sel) {
+        var next = sel.nextElementSibling;
+        return sel.classList.contains('dcc_checkout-select-native') && next &&
+            next.classList.contains('dcc_checkout-select') ? next : sel;
     }
 
     // The Country select the owner named, with fallbacks that never pick a

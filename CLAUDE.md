@@ -1651,9 +1651,62 @@ yours to improvise.
     - A headless browser shows no bubble; what is measured is the chooser's
       `validationMessage` when the browser reports it (an `invalid` listener
       on the element), and that the form was not sent.
+    - **On the GUEST checkout the bubble never shows any more**: the site's
+      own dropdown list (entry below) hides the select and puts this same
+      `validationMessage` under the field. The message's words still come from
+      here; the bubble path is Add New's, where select-list.js is not loaded.
   - `tests/admin-layout/` now requests its Add New fixtures as
     `page=mphb_add_new_booking`, as live does, so the layout and
     zero-mutation assertions run with the new half live (guard asserted).
+- **0.34.1 — THE SITE'S OWN DROPDOWN LIST ON THE GUEST CHECKOUT** (Rob's
+  pick via the Director, 2026-10-12; `assets/select-list.js`, CSS at the end
+  of `checkout.css`; suite `tests/selectlist/`; THE SPEC IS IN
+  `PROJECT-NOTES.md` at the repo root, shared with the Availability
+  Calendar's staff board — change it there first, then in both).
+  - Why: the OPENED list of a native select is the OS's (left-aligned on
+    iPhone, off-centre on desktop) and no CSS reaches it. Every visible
+    select on /submit-booking/ — guest count, Country, Dog Size, Dog Hair,
+    any other — becomes a button in the field's style opening a list drawn
+    at the end of `<body>` (outside the form `checkout.js` observes). Never
+    the services' own "for N" select (never shown; `checkout.js` sets it
+    without an event), never multi-selects. Guest checkout ONLY: not loaded
+    on Add New (asserted in `tests/recalc/enqueue.php`).
+  - **THE SELECT IS THE SOURCE OF TRUTH**: kept in the form, hidden VISUALLY
+    (1px clip + opacity 0), `tabindex=-1`, `aria-hidden`; a choice sets it and
+    fires its real `input` + `change`; a MutationObserver per select keeps the
+    field and list in step (options, text, disabled, class); a replaced select
+    is picked up by an observer on the form. Submitted data is identical to
+    the page without the script (asserted, FormData).
+  - **THE CLOSED FIELD DOES NOT CHANGE** — asserted against the same page
+    WITHOUT the script at 375 and 1280, with the theme's traps reproduced
+    (html{font-weight:700}, Pavanam + uppercase on button, an Elementor-kit
+    900/1.5px/capitalize button rule): position, size, every border, radius,
+    padding, caret, colours and typography identical. Typography is COPIED
+    from the select's computed style onto the button at enhancement, because
+    the theme's button rules would otherwise reach it.
+  - **TWO `checkout.js` READERS HAD TO LEARN THE FIELD** — both found by the
+    "closed field" comparison, not by reading:
+    `matchFileFieldWidth()` measured the Country SELECT (now 1px → the upload
+    field would be 1px), and `guestChooserVisible()` counts `opacity: 0` as
+    hidden, so it decided the guest chooser was lost and UN-HID THE NATIVE
+    SERVICES SECTION (80px of "Choose Additional Services" back on the page).
+    Both now read `shownFieldFor(sel)`. Anything that measures or judges a
+    select's visibility must do the same.
+  - **Validation**: `invalid` (only a submit attempt fires it; the form's
+    `dcc_checkout-preflight` gates a script's `checkValidity()`) → message
+    under the field (`.dcc_checkout-field-error`, the error ink), the field
+    `aria-invalid` + described by it, `preventDefault()` so the browser never
+    tries to bubble at a hidden control. An ATTEMPT is a submit-control press
+    (`attemptAt`); the first invalid control of it takes focus, and when that
+    is one of these fields a LATER native control's report is held back —
+    measured: otherwise Chromium jumped focus to Dog Type and bubbled there.
+    Rounds by time alone were tried first and FAILED: a `checkValidity()` at
+    load within 250ms of the press joined the press's round.
+  - Tap rules kept: opens on `click`; the only write on
+    touchstart/pointerdown is closing an OPEN list; type-ahead uses
+    timestamps; zero mutations on a tap while closed (asserted).
+  - NOT verifiable here: iOS Safari and VoiceOver. Chromium proves the roles,
+    names, keys and geometry; the phone is Rob's check list.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
