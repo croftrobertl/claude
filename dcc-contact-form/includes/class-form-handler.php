@@ -153,17 +153,26 @@ final class Form_Handler
             ];
         }
 
-        // 3) Time-trap — reject submissions faster than the site minimum. JS
-        //    writes elapsed ms into dcc_ts; a non-JS submit leaves it empty and
-        //    skips this layer (the other layers still apply).
+        // 3) Time-trap. The timing field is REQUIRED: a submission that omits
+        //    it, or sends something non-numeric, FAILS the minimum-time check
+        //    rather than skipping it. Previously an absent dcc_ts skipped the
+        //    layer entirely, so the cheapest possible bypass was to not send
+        //    the field — which is exactly what a scripted POST does.
+        //
+        //    This means submitting requires JavaScript. That is already true
+        //    whenever reCAPTCHA is enabled, since v3 cannot mint a token
+        //    without it; with reCAPTCHA off, this layer becomes the one that
+        //    requires it. Turn the time-trap off to accept scripted or
+        //    JS-less submissions.
         if (!empty($config['spam']['time_trap'])) {
             $elapsed_raw = isset($post['dcc_ts']) ? (string) wp_unslash($post['dcc_ts']) : '';
-            if ($elapsed_raw !== '' && is_numeric($elapsed_raw)) {
-                $min_ms = Settings::min_submit_time() * 1000;
-                if ((float) $elapsed_raw < $min_ms) {
-                    self::store_spam($config, $form_id, 'time', $rows);
-                    return $fail(__('This form was submitted too quickly. Please wait a moment and try again.', 'dcc-contact-form'));
-                }
+            $min_ms      = Settings::min_submit_time() * 1000;
+            $too_fast    = ($elapsed_raw === '' || !is_numeric($elapsed_raw))
+                || ((float) $elapsed_raw < $min_ms);
+
+            if ($too_fast) {
+                self::store_spam($config, $form_id, 'time', $rows);
+                return $fail(__('This form was submitted too quickly. Please wait a moment and try again.', 'dcc-contact-form'));
             }
         }
 
@@ -191,6 +200,17 @@ final class Form_Handler
             }
         }
 
+        // 6) Per-IP limit. Checked after the spam layers and before anything
+        //    is stored or sent, so it meters ACCEPTED submissions — the only
+        //    kind that can be used to send mail. See Rate_Limit for why
+        //    attempts are deliberately not metered, and for the privacy
+        //    posture (an HMAC of the address in a short-lived transient; no
+        //    raw IP anywhere, nothing in the entries table).
+        if (Rate_Limit::exceeded()) {
+            self::store_spam($config, $form_id, 'rate', $rows);
+            return $fail(__('You have sent several messages recently. Please wait a few minutes and try again.', 'dcc-contact-form'));
+        }
+
         // Passed all layers. Build subject, store, email.
         $subject = self::build_subject($config, $config['fields'], $values);
 
@@ -201,13 +221,14 @@ final class Form_Handler
         $config_for_email['reply_to'] = self::resolve_reply_to($config, $config['fields'], $values);
         $sent = Email::send($config_for_email, $rows, $subject);
 
-        // Opt-in courtesy copy. Reached only after every spam layer has passed,
-        // and only ever addressed to the email the visitor typed into the form's
-        // own email field — so this cannot be driven as a relay to a third party.
+        // Opt-in acknowledgement. It carries NONE of the submitted content —
+        // fixed text only — so supplying someone else's address here delivers
+        // nothing of the sender's to them. That is what closed the relay: the
+        // address is still attacker-chosen, but the payload is gone.
         if (!empty($config['copy_enabled']) && $submitter !== '') {
             $wants_copy = isset($post['dcc_copy']) && (string) wp_unslash($post['dcc_copy']) !== '';
             if ($wants_copy) {
-                Email::send_copy($config_for_email, $rows, $submitter);
+                Email::send_copy($config_for_email, $submitter);
             }
         }
 
@@ -217,6 +238,9 @@ final class Form_Handler
         if (!$sent && $entry_id > 0) {
             Entries::set_status($entry_id, Entries::STATUS_MAIL_FAILED);
         }
+
+        // Count this submission against the address's allowance.
+        Rate_Limit::record();
 
         return ['ok' => true, 'confirmation' => self::confirmation_html($config), 'message' => '', 'errors' => []];
     }

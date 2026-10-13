@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,7 @@ Highlights:
 == Installation ==
 
 1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
-   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.6.0.zip`).
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.7.0.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -102,26 +102,43 @@ A site whose DNS authorises a third-party sender can opt out:
 
 == "Send me a copy" ==
 
-An opt-in checkbox, off by default, under **Submit & Confirmation** in the
-Elementor panel (with an editable label). When a visitor ticks it, the same
-branded message is also sent to the address they entered.
+An opt-in checkbox, off by default, with an editable label.
 
-It is only ever sent to the address typed into the form's own email field, and
-only after every spam layer has passed — so the form cannot be driven as a relay
-to a third party. The copy is sent From the site's aligned address with Reply-To
-pointing back at the site, and carries `Auto-Submitted: auto-generated` so it
-does not trip vacation responders.
+When a visitor ticks it they receive a **fixed acknowledgement** — "we have your
+message, we will reply as soon as we can" — and nothing else. It deliberately
+contains none of the submitted data, in the body or the subject.
 
-== Settings ==
+That matters: the earlier version mailed the submitted fields back, which made
+the form usable as a spam relay. An attacker typed their payload into the
+message field and someone else's address into the email field, and the site
+delivered it from an on-domain sender with valid SPF and DKIM. The address is
+still chosen by whoever fills the form — that is unavoidable for this feature —
+but there is no longer any attacker-supplied content to put in front of it.
 
-**DCC → Contact Form** holds the defaults every form inherits. Common controls
-first (recipient, subject, confirmation message, button text, "send me a copy");
-deliverability and the four spam layers sit in a collapsed **Advanced** section.
+The acknowledgement is sent only after every spam layer passes, only within the
+per-IP limit, and carries `Auto-Submitted: auto-generated` so it does not trip
+vacation responders.
 
-An Elementor widget can override any of these for one placement. Controls in the
-widget ship blank and show the inherited value as placeholder text, so a control
-left alone stores nothing and keeps following this screen. Once a value is
-settled here, clearing the widget override makes that placement follow again.
+== Submission rate limit ==
+
+Each address may have **3 accepted submissions per 15 minutes**. Over that, the
+submission is rejected, recorded as `spam:rate`, and no mail is sent.
+
+Only *accepted* submissions are counted. Metering attempts instead would lock
+out a guest who mistyped their email three times while buying nothing — a
+submission that fails validation sends no mail and cannot be used for abuse.
+
+No IP address is stored. The limiter keys a 15-minute transient on an HMAC of
+the address salted with the site's own salt: not reversible to an address, and
+gone when the window expires. Nothing reaches the entries table, so the
+no-IP-storage posture is unchanged.
+
+The address is read from `REMOTE_ADDR` only. `X-Forwarded-For` is set by the
+client, so trusting it would let an attacker rotate the header for unlimited
+fresh buckets. A site genuinely behind its own proxy can supply the real address
+via the `dcc_contact_client_ip` filter. Limits live in `Rate_Limit` as
+`MAX_IN_WINDOW` and `WINDOW_SECONDS`; they are not on the settings screen on
+purpose, since a security control the owner can set to 9999 is not one.
 
 == Admin: submissions ==
 
@@ -137,6 +154,30 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.7.0 =
+**Security release — fixes a spam relay. Install this one.**
+
+* The "send me a copy" acknowledgement no longer contains any submitted data.
+  Previously it mailed the submitted fields to whatever address was typed into
+  the email field, from an on-domain sender with valid SPF and DKIM — so the
+  form could be used to deliver an attacker's content to a third party. Subject
+  and body are now fixed text.
+* New per-IP limit: 3 accepted submissions per 15 minutes, rejected as
+  `spam:rate` beyond that. Accepted submissions only, so a guest mistyping their
+  email is not locked out. No IP is stored — the limiter keys a short-lived
+  transient on a salted HMAC of the address, and the no-IP-storage posture is
+  unchanged.
+* The timing field is now REQUIRED. A submission that omits it, or sends
+  something non-numeric, fails the minimum-time check instead of skipping it;
+  omitting the field was the cheapest possible bypass and exactly what a
+  scripted POST does. **Submitting now requires JavaScript** — already true
+  whenever reCAPTCHA is enabled, since v3 cannot mint a token without it.
+* reCAPTCHA and the honeypot are unchanged.
+* The owner's notification is byte-for-byte unchanged (verified by hash), and
+  still contains the full submission.
+* Tests: 40 security checks plus the existing 47 settings checks, and a mutation
+  run in which all five reversions of these fixes are caught.
 
 = 1.6.0 =
 * Settings: the screen now carries every inheritable default — recipient,

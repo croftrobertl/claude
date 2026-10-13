@@ -70,12 +70,49 @@ final class Email
                 . '</td></tr>';
         }
 
-        $logo = esc_url(self::LOGO_URL);
+        return self::wrap($rows);
+    }
+
+    /**
+     * The acknowledgement sent to a visitor who ticked "send me a copy".
+     *
+     * SECURITY — this deliberately contains NONE of the submitted data, not in
+     * the body and not in the subject. The earlier version mailed the submitted
+     * fields back, which turned the form into a spam relay: an attacker typed
+     * their payload into the message field and a victim's address into the email
+     * field, and the site delivered it from support@ with valid SPF and DKIM.
+     * Every byte of this message is fixed text, so there is nothing for an
+     * attacker to put in front of a third party. Do not reintroduce field
+     * values, the subject line, or any other submitted value here.
+     */
+    public static function render_acknowledgement(): string
+    {
+        $heading = esc_html__('Thank you — we have your message', 'dcc-contact-form');
+        $body    = esc_html__('This is a confirmation that your enquiry reached Dora Canal Court. We will reply as soon as we can.', 'dcc-contact-form');
+        $tail    = esc_html__('No reply is needed to this message.', 'dcc-contact-form');
+
+        $card = '<tr><td style="padding:0;">'
+            . '<div style="font-weight:700;font-size:16px;line-height:1.4;margin:0 0 12px 0;">' . $heading . '</div>'
+            . '<div style="font-size:15px;line-height:1.6;margin:0 0 12px 0;">' . $body . '</div>'
+            . '<div style="font-size:13px;line-height:1.5;color:#777;">' . $tail . '</div>'
+            . '</td></tr>';
+
+        return self::wrap($card);
+    }
+
+    /**
+     * The branded shell both emails share: round logo on the page background,
+     * a rounded content card, muted footer, and a prefers-color-scheme dark
+     * variant. Inline styles carry the light scheme (broadest client support);
+     * the <style> block adds the dark override for clients that honour it.
+     *
+     * @param string $card Pre-escaped <tr> rows for the content card.
+     */
+    private static function wrap(string $card): string
+    {
+        $logo   = esc_url(self::LOGO_URL);
         $footer = esc_html__('Sent from DORA CANAL COURT', 'dcc-contact-form');
 
-        // Inline styles carry the light scheme (broadest client support); the
-        // <style> block adds the prefers-color-scheme dark override for clients
-        // that honor it (Apple Mail, iOS Mail, etc.).
         return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -111,7 +148,7 @@ final class Email
           <tr>
             <td class="dcc-card" style="background:#ffffff;color:#333333;border-radius:12px;padding:30px 32px;font-family:Arial,Helvetica,sans-serif;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                {$rows}
+                {$card}
               </table>
             </td>
           </tr>
@@ -164,15 +201,16 @@ HTML;
     }
 
     /**
-     * Opt-in courtesy copy to the person who filled the form.
+     * Opt-in acknowledgement to the person who filled the form.
      *
-     * Only ever sent to the address typed into the form's own email field, and
-     * only after every spam layer has passed — so the form cannot be used to
-     * relay mail to an arbitrary third party. From stays domain-aligned; the
-     * Reply-To points back at the site so a reply to the copy reaches the owner
-     * rather than bouncing off the sending mailbox.
+     * Carries NO submitted content — see render_acknowledgement(). Subject and
+     * body are both fixed text, so an attacker who supplies a third party's
+     * address has nothing of their own delivered to it. Sent only to the address
+     * typed into the form's own email field, only after every spam layer passes,
+     * and only within the per-IP rate limit. From stays domain-aligned; Reply-To
+     * points back at the site.
      */
-    public static function send_copy(array $config, array $fields, string $to): bool
+    public static function send_copy(array $config, string $to): bool
     {
         $to = sanitize_email($to);
         if ($to === '' || !is_email($to)) {
@@ -190,9 +228,11 @@ HTML;
             $reply_to = $from_email;
         }
 
+        // Fixed subject. The notification's subject carries the {Name} merge tag
+        // and therefore submitted text, so it must never be reused here.
         $subject = sprintf(
             /* translators: %s: site name */
-            __('Copy of your message to %s', 'dcc-contact-form'),
+            __('We received your message — %s', 'dcc-contact-form'),
             get_bloginfo('name')
         );
 
@@ -205,7 +245,7 @@ HTML;
             'X-Auto-Response-Suppress: All',
         ];
 
-        return (bool) wp_mail($to, $subject, self::render($fields), $headers);
+        return (bool) wp_mail($to, $subject, self::render_acknowledgement(), $headers);
     }
 
     private static function site_domain(): string
