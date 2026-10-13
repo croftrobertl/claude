@@ -4192,6 +4192,13 @@
 			}
 			if ((h.dir > 0 && h.x > vw + 150) || (h.dir < 0 && h.x < -150)) { hero = null; }
 		}
+		/* the flyers that cross the sky; the bass and the manatee are on the
+		 * water, the rainbow in a corner */
+		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
+		function heroBounds(h) {
+			var w = (h.w || 100) * 1.3;
+			return [[h.x - w, h.y - w, 2 * w, 2 * w]];
+		}
 		function drawHero(t) {
 			if (!hero) { return; }
 			var h = hero;
@@ -4778,10 +4785,17 @@
 			if (fgList && t - fgAt < 0.5) { return fgList; }
 			fgAt = t; fgList = [];
 			if (!FG_SEL || CFG.layer || footMode || typeof Path2D !== 'function') { return fgList; }
-			var roots, i;
-			try { roots = D.querySelectorAll(FG_SEL); } catch (e) { roots = []; }
+			var found, roots = [], i;
+			try { found = D.querySelectorAll(FG_SEL); } catch (e) { found = []; }
+			/* outermost matches only, so nothing is cut twice */
+			for (i = 0; i < found.length; i++) {
+				var fe = found[i];
+				if (roots.some(function (r) { return r.contains(fe); })) { continue; }
+				roots = roots.filter(function (r) { return !fe.contains(r); });
+				roots.push(fe);
+			}
 			for (i = 0; i < roots.length; i++) {
-				var root = roots[i], svgs = [], media = [];
+				var root = roots[i], svgs = [], media = [], boxes = [];
 				var ss = root.localName === 'svg' ? [root] : root.querySelectorAll('svg');
 				for (var j = 0; j < ss.length; j++) {
 					var sv = ss[j];
@@ -4792,7 +4806,13 @@
 				}
 				var mm = /^(img|canvas|video)$/.test(root.localName) ? [root] : root.querySelectorAll('img, canvas, video');
 				for (j = 0; j < mm.length; j++) { media.push(mm[j]); }
-				if (svgs.length || media.length) { fgList.push({ root: root, svgs: svgs, media: media }); }
+				/* CSS-painted parts, opted in one by one (4.10.5): cut by their
+				 * transformed border box. Nothing CSS-painted is cut unless it
+				 * carries the attribute, so the soft water glints never are. */
+				var bm = [].slice.call(root.querySelectorAll('[data-dcc-fore-box]'));
+				if (root.hasAttribute('data-dcc-fore-box')) { bm.unshift(root); }
+				for (j = 0; j < bm.length; j++) { boxes.push(bm[j]); }
+				if (svgs.length || media.length || boxes.length) { fgList.push({ root: root, svgs: svgs, media: media, boxes: boxes }); }
 			}
 			return fgList;
 		}
@@ -4934,6 +4954,56 @@
 			return fgAff(fgBox(sv, w, h), fgViewBox(sv, w, h));
 		}
 		function fgM6(m) { return [m.a, m.b, m.c, m.d, m.e, m.f]; }
+		/* A CSS-painted foreground part (data-dcc-fore-box): its border box,
+		 * transformed exactly as the page draws it (skew, scale, flip, from
+		 * the element and every ancestor: fgBox), with its border-radius, and
+		 * each outer box-shadow's offset and spread (its blur is not cut). */
+		function fgShadows(el) {
+			var v = W.getComputedStyle(el).boxShadow, out = [];
+			if (!v || v === 'none') { return out; }
+			v.split(/,(?![^(]*\))/).forEach(function (sh) {
+				if (/inset/.test(sh)) { return; }
+				var col = /rgba?\(([^)]*)\)/.exec(sh), al = 1;
+				if (col) { var cp = col[1].split(/[\s,\/]+/).filter(Boolean); al = cp.length > 3 ? parseFloat(cp[3]) : 1; }
+				var nums = sh.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g) || [];
+				var q = nums.map(parseFloat);
+				if (al > 0) { out.push({ x: q[0] || 0, y: q[1] || 0, s: q[3] || 0, a: al }); }
+			});
+			return out;
+		}
+		function fgShadowPad(el) {
+			var p = 0;
+			fgShadows(el).forEach(function (q) { p = mx2(p, abs(q.x) + q.s, abs(q.y) + q.s); });
+			return p;
+		}
+		function fgRadii(cs, w, h) {
+			return ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius'].map(function (k) {
+				var v = (cs[k] || '0').split(/\s+/), rx = parseFloat(v[0]) || 0, ry = parseFloat(v[1] == null ? v[0] : v[1]) || 0;
+				if (/%/.test(v[0])) { rx = rx / 100 * w; }
+				if (/%/.test(v[1] == null ? v[0] : v[1])) { ry = ry / 100 * h; }
+				return { x: mn(rx, w / 2), y: mn(ry, h / 2) };
+			});
+		}
+		function fgRound(P, x, y, w, h, R) {
+			if (P.roundRect && R.some(function (r) { return r.x > 0 || r.y > 0; })) { P.roundRect(x, y, w, h, R); } else { P.rect(x, y, w, h); }
+		}
+		function fgBoxCut(g, el, dp, ox, oy, memo) {
+			var cs = W.getComputedStyle(el), w = el.offsetWidth, h = el.offsetHeight, a = fgOp(el, memo);
+			if (!w || !h || a <= 0 || cs.visibility !== 'visible') { return 0; }
+			var B = fgBox(el, w, h), R = fgRadii(cs, w, h);
+			g.setTransform(dp * B[0], dp * B[1], dp * B[2], dp * B[3], dp * B[4] - ox, dp * B[5] - oy);
+			var P = new Path2D();
+			fgRound(P, 0, 0, w, h, R);
+			g.globalAlpha = a;
+			g.fill(P);
+			fgShadows(el).forEach(function (q) {
+				var Q = new Path2D();
+				fgRound(Q, q.x - q.s, q.y - q.s, w + 2 * q.s, h + 2 * q.s, R.map(function (r) { return { x: r.x ? r.x + q.s : 0, y: r.y ? r.y + q.s : 0 }; }));
+				g.globalAlpha = a * q.a;
+				g.fill(Q);
+			});
+			return 1;
+		}
 		/* Before the scene draws: does the foreground meet it this frame?
 		 * Where it can (O: each foreground part's box inside where the scene
 		 * drew last frame, padded), the scene is drawn on a small scratch
@@ -4986,6 +5056,7 @@
 							}
 						} catch (e) { /* not rendered */ }
 					}
+					if (kind === 'box') { var sp = fgShadowPad(el); r = [r[0] - sp, r[1] - sp, r[2] + sp, r[3] + sp]; }
 					if (rnone(r) || rnone(rcut(r, bb))) { return; }
 					if (!clip) { clip = rcut(fgClip(it.root), rbox(co)); }
 					var o = rcut(rcut(r, clip), bb);
@@ -4995,6 +5066,7 @@
 				};
 				for (j = 0; j < it.svgs.length; j++) { add(it.svgs[j].svg, 'svg', it.svgs[j].shapes); }
 				for (j = 0; j < it.media.length; j++) { add(it.media[j], 'media'); }
+				for (j = 0; j < it.boxes.length; j++) { add(it.boxes[j], 'box'); }
 			}
 			if (!u) { return null; }
 			/* O on whole device pixels, so the page's clip and the scratch
@@ -5040,7 +5112,9 @@
 					g.save();
 					g.setTransform(1, 0, 0, 1, 0, 0);
 					g.beginPath(); g.rect(c[0] * dp - ox, c[1] * dp - oy, (c[2] - c[0]) * dp, (c[3] - c[1]) * dp); g.clip();
-					if (pt.kind === 'media') {
+					if (pt.kind === 'box') {
+						n += fgBoxCut(g, pt.el, dp, ox, oy, memo);
+					} else if (pt.kind === 'media') {
 						var el = pt.el, a = fgOp(el, memo), mw = el.clientWidth || el.width || 0, mh = el.clientHeight || el.height || 0;
 						var ok = el.localName !== 'img' || (el.complete && el.naturalWidth && fgOwn(el.currentSrc || el.src));
 						if (a > 0 && ok && mw && mh) {
@@ -6152,7 +6226,10 @@
 			try { stepVig(dt, t); } finally { if (fgF) { foreEnd(fgF); } }
 			stepHero(dt, t);
 			heroGone();
-			drawHero(t);
+			/* a sky flyer goes behind the header picture's foreground too
+			 * (4.10.5, Rob: higher in the sky than the seaplane) */
+			var fgH = hero && SKY_HERO[hero.kind] && hero.x != null && hero.y != null ? foreBegin(heroBounds(hero)) : null;
+			try { drawHero(t); } finally { if (fgH) { foreEnd(fgH); } }
 			drawReflections(t);
 			if (DEBUG && DBG && W.DCCSeasonsEngine._slow) {
 				var until = performance.now() + W.DCCSeasonsEngine._slow;
@@ -6253,7 +6330,7 @@
 				},
 				get accents() { return accents.map(function (el) { return el.innerHTML.length; }).length; },
 				get heroFrame() { return heroFrame; },
-				get fore() { return { stats: fgStat, roots: (fgList || []).length, sel: FG_SEL }; },
+				get fore() { var L = fgList || [], c = function (k) { return L.reduce(function (n, it) { return n + it[k].length; }, 0); }; return { stats: fgStat, roots: L.length, sel: FG_SEL, svgs: c('svgs'), media: c('media'), boxes: c('boxes') }; },
 				/* the matrix the cut uses for an SVG shape (debug: the suite checks
 				 * it against Chromium's own getScreenCTM) */
 				foreM: function (el) { var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },

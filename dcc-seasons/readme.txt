@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.4
+Stable tag: 4.10.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,25 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.5 =
+Rob's answers on 4.10.4. Staging first; live only after Rob signs off,
+together with 4.10.3 and 4.10.4. Rollback: reinstall the 4.10.4 zip
+(staging) or 4.10.2 (live); no setting or stored data changes.
+
+* The seaplane's towed banner, its rope and the taxi wake are in front of
+  the moon and the witch too, in their exact shape: the banner follows the
+  plane when it turns west, banks or flutters. The soft water glints are
+  never cut.
+* The flyers that cross the sky (the Halloween witch on her broom, the
+  heron, eagle, osprey and sleigh) now pass behind the header picture's
+  plane, banner, reeds, gator, heron and fishing catch as well.
+* Timing unchanged, Rob's pick "Share the sky": the moon and the plane can
+  be up together; the plane passes in front.
+* For developers: a CSS-painted foreground part opts in with the
+  data-dcc-fore-box attribute and is cut by its transformed border box,
+  border-radius and box-shadow spread. Without the attribute nothing
+  CSS-painted is cut.
 
 = 4.10.4 =
 Rob: the seaplane must fly in front of the moon and the witch, "since in

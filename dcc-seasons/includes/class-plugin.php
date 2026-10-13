@@ -855,12 +855,16 @@ final class Plugin {
              * (dcc-sun-canal), and anything marked data-dcc-fore. In front
              * layering the engine takes the scene back out wherever these
              * paint, in their exact shape (SVG shapes, img, canvas, video).
+             * CSS-painted parts are cut only when they carry
+             * data-dcc-fore-box (4.10.5): by their transformed border box,
+             * border-radius and box-shadow spread (the plane's banner rope
+             * and cloth, the taxi wake). The sky flyers go behind it too.
              *
              * @param string $selector Comma-separated; empty turns it off.
              */
             'foreSel'     => (string) apply_filters(
                 'dcc_seasons_foreground',
-                '.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore]'
+                '.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore], [data-dcc-fore-box]'
             ),
             /**
              * CSS selector for the element the ambient canvas is mounted

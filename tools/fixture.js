@@ -47,6 +47,23 @@ const SHARED_CSS = `
     animation: hfxspin .2s linear infinite; animation-play-state: paused; animation-delay: -.05s; }
   @keyframes hfxspin { to { transform: rotate(360deg); } }
   .dcc-catch { position: absolute; left: 0; top: 0; width: 60px; height: 30px; }
+  /* 4.10.5: the towed banner is CSS-painted on live (dcc-hero-life): a
+   * 1.5px rope div with a .6px shadow and a cloth div with a border,
+   * radius and live text, skewing ±.8deg; both opt in to the box cut */
+  .dcc-hl-banner { position: absolute; left: -150px; top: 14px; width: 150px; height: 26px; }
+  .dcc-hl-banner .rope { position: absolute; left: 92px; right: 0; top: 12px; height: 1.5px;
+    background: rgba(248,250,251,.92); box-shadow: 0 .6px 0 rgba(0,0,0,.35); }
+  .dcc-hl-banner .cloth { position: absolute; left: 0; top: 0; width: 92px; height: 26px; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center; background: var(--hl-banner-bg, #f6f8f9);
+    border: 1px solid #c9d1d6; border-radius: 2px; font: 700 10px Georgia, serif; color: #0B3D91;
+    animation: hfxskew 1.6s ease-in-out infinite alternate; animation-play-state: paused; animation-delay: -.4s; }
+  @keyframes hfxskew { from { transform: skewY(-.8deg); } to { transform: skewY(.8deg); } }
+  .dcc-hl-wake { position: absolute; left: 0; top: 0; width: 120px; height: 12px; }
+  .dcc-hl-wake span { position: absolute; left: 0; height: 2px; width: 120px; background: rgba(255,255,255,.85); border-radius: 1px; }
+  .dcc-hl-wake span + span { top: 8px; left: 20px; width: 80px; }
+  /* the water glints: soft, screen-blended, never cut */
+  .dcc-hl-glint { position: absolute; left: 0; top: 0; width: 70px; height: 26px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(255,255,240,.95), rgba(255,255,240,0) 70%); mix-blend-mode: screen; }
   .dcc-gh-fore { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .dcc-gh-fore .reeds { position: absolute; left: 0; top: 0; width: 30px; height: 120px; overflow: visible; }
   .dcc-gh-fore canvas { position: absolute; left: 0; top: 0; width: 80px; height: 30px; }
@@ -115,7 +132,9 @@ function paras(n, tag) {
 const HERO_FX = `<div id="header-image-main-inside">
   <div class="dcc-gh"></div>
   <div class="dcc-hl-wrap">
-    <div class="dcc-hl-fly"><div class="dcc-hl-face"><div class="dcc-hl-body">
+    <div class="dcc-hl-fly"><div class="dcc-hl-face">
+      <div class="dcc-hl-banner" style="display:none"><div class="rope" data-dcc-fore-box></div><div class="cloth" data-dcc-fore-box>DORA CANAL COURT</div></div>
+      <div class="dcc-hl-body">
       <svg viewBox="0 0 150 56" xmlns="http://www.w3.org/2000/svg">
         <g class="banner"><line x1="2" y1="22" x2="-30" y2="24" stroke="#333" stroke-width="1"/>
           <rect x="-110" y="12" width="80" height="22" fill="#FFD400"/>
@@ -128,6 +147,8 @@ const HERO_FX = `<div id="header-image-main-inside">
         <g class="prop"><rect x="137" y="10" width="4" height="32" fill="#111"/></g>
       </svg>
     </div></div></div>
+    <div class="dcc-hl-wake"><span data-dcc-fore-box></span><span data-dcc-fore-box></span></div>
+    <div class="dcc-hl-glint"></div>
     <div class="dcc-catch" data-dcc-fore><svg viewBox="0 0 60 30" width="60" height="30"><path d="M4 15 Q20 2 42 15 Q20 28 4 15 Z M42 15 L56 5 L56 25 Z" fill="#2A9D8F"/></svg></div>
   </div>
   <div class="dcc-gh-fore">
@@ -144,13 +165,18 @@ const HERO_FX = `<div id="header-image-main-inside">
    * viewport px; angle in degrees */
   window.dccPose = function (which, o) {
     var host = document.getElementById('header-image-main-inside').getBoundingClientRect();
-    var el = { plane: '.dcc-hl-fly', catch: '.dcc-catch', reeds: '.dcc-gh-fore .reeds', gator: '.dcc-gh-fore canvas' }[which];
+    var el = { plane: '.dcc-hl-fly', catch: '.dcc-catch', reeds: '.dcc-gh-fore .reeds', gator: '.dcc-gh-fore canvas', wake: '.dcc-hl-wake', glint: '.dcc-hl-glint' }[which];
     el = document.querySelector(el);
     var w = el.offsetWidth || el.getBoundingClientRect().width, h = el.offsetHeight || el.getBoundingClientRect().height;
     el.style.transform = 'translate(' + (o.x - host.left - w / 2) + 'px,' + (o.y - host.top - h / 2) + 'px)' + (which !== 'plane' && o.angle ? ' rotate(' + o.angle + 'deg)' : '');
     if (which === 'plane') {
-      document.querySelector('.dcc-hl-face').style.transform = 'rotate(' + (o.angle || 0) + 'deg) scaleX(' + (o.flip ? -1 : 1) + ')';
-      document.querySelector('.dcc-hl-body .banner').style.display = o.banner ? '' : 'none';
+      var face = document.querySelector('.dcc-hl-face');
+      face.style.transform = 'rotate(' + (o.angle || 0) + 'deg) scaleX(' + (o.flip ? -1 : 1) + ')';
+      face.classList.toggle('is-west', !!o.flip);
+      /* banner: the live CSS banner (rope + cloth); svgBanner: a drawing
+       * the plane's svg makes OUTSIDE its own box (an overflow test) */
+      document.querySelector('.dcc-hl-banner').style.display = o.banner ? '' : 'none';
+      document.querySelector('.dcc-hl-body .banner').style.display = o.svgBanner ? '' : 'none';
     }
   };
 })();

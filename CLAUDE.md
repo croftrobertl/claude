@@ -622,7 +622,42 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   stacking, stand-in art, `window.dccPose()`); `tools/test-foreground.js`;
   `tools/fore-reel.js` (plane crossing the moon, before/after strip and
   video). Config `foreSel` (filter `dcc_seasons_foreground`, default
-  `.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore]`).
+  `.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore]`; `[data-dcc-fore-box]`
+  added in 4.10.5).
+
+### Rob's answers on 4.10.4 (for 4.10.5, 2026-10-13)
+
+- **Timing: "Share the sky."** Scenes are NOT held until `DCCHeroFx` is
+  done; the plane passes in front when they meet. Do not add a hold.
+- **Sky flyers go behind the foreground too** (the witch flyer: "the
+  witch/moon would be higher in the sky than the seaplane"): `SKY_HERO` =
+  heron, eagle, witch, sleigh, osprey are drawn through `foreBegin(
+  heroBounds(hero))`/`foreEnd` around `drawHero`. Bass and manatee (water)
+  and the rainbow (a corner) are unchanged. Sprites stay in front.
+- **The Director's answers**: the plane, the catch (inside `.dcc-hl-wrap`),
+  reeds, gator and heron are SVG. CSS-painted: the towed banner (`.rope`
+  1.5px div with a .6px shadow; `.cloth` bordered, rounded, live text,
+  skewY ±.8deg, flipped west via `.dcc-hl-face.is-west`, opacity .82 at
+  golden hour), the taxi wake spans, and the water glints (soft radial
+  gradients, screen-blended — never to be cut).
+- **`data-dcc-fore-box`** (the Director adds it to `.dcc-hl-banner .rope`,
+  `.dcc-hl-banner .cloth` and `.dcc-hl-wake span` in his file): cut by the
+  element's TRANSFORMED border box (`fgBox`: skew, scale, flip, rotation
+  from it and every ancestor), border-radius per corner, plus each outer
+  box-shadow's offset + spread (blur not cut) — `fgBoxCut`. Nothing
+  CSS-painted is cut without the attribute (the glints). The default
+  `foreSel` gained `[data-dcc-fore-box]`, and roots are de-duplicated to
+  the outermost match: a part found twice would be cut twice, and at .82
+  opacity the moon would show at 3% instead of 18%.
+- **Tests** (`test-foreground.js`, 136): the CSS banner east and west,
+  mid-skew and banked 10°, the moon above/below the rope, the wake cut and
+  the glints not, each part counted once, the witch and heron flyers
+  behind the plane (on `classic`, which has no scene, so flyer follows
+  flyer until enough cross the picture; wait ~800ms for the flyer's
+  sprite to decode first). Mutation-checked: box parts ignored, every CSS
+  div cut, box transform ignored (caught only by the banked case — flip
+  and ±.8deg skew are near-symmetric), flyers in front, witch not a sky
+  flyer, roots cut twice. `fore-reel.js --mode=moon|banner|flyer`.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -643,7 +678,7 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 171,669 raw / 60,512 gzipped (4.10.4, `gzip -c`; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 173,735 raw / 61,323 gzipped (4.10.5, `gzip -c`; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the

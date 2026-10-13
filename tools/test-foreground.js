@@ -26,9 +26,12 @@ function ok(c, label, detail) {
   if (c) { pass++; console.log(`    PASS  ${label}`); }
   else { fail++; problems.push(`${label} — ${detail}`); console.log(`    FAIL  ${label} — ${detail}`); }
 }
+const CLOTH = [255, 122, 0], ROPE = [0, 0, 204];
 const PLANE = [224, 16, 42], WING = [181, 18, 27], REED = [11, 93, 30], GATOR = [46, 94, 31], FISH = [42, 157, 143];
 const near = (p, c, tol) => Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) < (tol || 40);
-const moonish = p => (p[0] + p[1] + p[2]) / 3 > 120 && Math.max(p[0], p[1], p[2]) - Math.min(p[0], p[1], p[2]) < 40;
+/* the moon is grey (its dark seas included, ~100-120); the sky and the
+ * water behind it are strongly coloured, so low saturation tells them apart */
+const moonish = p => (p[0] + p[1] + p[2]) / 3 > 80 && Math.max(p[0], p[1], p[2]) - Math.min(p[0], p[1], p[2]) < 40;
 
 /* screenshot the page and read pixels at client points */
 async function pixels(pg, pts) {
@@ -76,7 +79,7 @@ function userPts(pg, sel, pts) {
        * proven by test-scenes.js; hidden here so samples read what is
        * behind it (hidden letters are not cut from the moon). The corner
        * web is in front too, at half opacity: hidden for the same reason. */
-      await pg.addStyleTag({ content: '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{display:none!important} #masthead h1{visibility:hidden} .dcc-seasons-accent{display:none!important}' });
+      await pg.addStyleTag({ content: '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{display:none!important} #masthead h1{visibility:hidden} .dcc-seasons-accent{display:none!important} .dcc-hl-banner .cloth{--hl-banner-bg:#ff7a00;color:#ff7a00;border-color:#ff7a00} .dcc-hl-banner .rope{background:#0000cc;box-shadow:0 .6px 0 #0000cc}' });
       await pg.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 15000 });
       /* park everything off to the side until it is posed */
       await pg.evaluate(() => { ['plane', 'catch', 'reeds', 'gator'].forEach(k => window.dccPose(k, { x: -500, y: -500 })); });
@@ -116,11 +119,69 @@ function userPts(pg, sel, pts) {
         }
       }
       /* the towed banner, which the plane's svg draws OUTSIDE its own box */
-      await pose('plane', { x: g.mx + 145, y: g.my + 5, angle: 0, flip: false, banner: true });
+      await pose('plane', { x: g.mx + 145, y: g.my + 5, angle: 0, flip: false, svgBanner: true });
       await tick(1);
       const bP = (await userPts(pg, '.dcc-hl-body .banner rect', [[-104, 15], [-100, 30], [-40, 16], [-36, 30]])).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
       const bnq = await pixels(pg, bP);
-      ok(bP.length >= 1 && bnq.every(p => near(p, [255, 212, 0], 50)), `the towed banner (drawn outside the plane's own box) is in front of the moon (${bP.length} points)`, JSON.stringify(bnq));
+      ok(bP.length >= 1 && bnq.every(p => near(p, [255, 212, 0], 50)), `an svg's drawing outside its own box is in front of the moon (${bP.length} points)`, JSON.stringify(bnq));
+
+      /* 4.10.5: the live banner is CSS: a rope div and a cloth div, each
+       * marked data-dcc-fore-box, the cloth skewed (paused mid-skew), and
+       * the whole thing flipped when the plane heads west. Coloured here so
+       * the shape can be told from the moon (live they are near-white). */
+      for (const west of [false, true]) {
+        const sgn = west ? -1 : 1, lab = west ? 'heading west (flipped)' : 'heading east';
+        /* the cloth's centre on the moon */
+        await pose('plane', { x: g.mx + sgn * 179, y: g.my + 1, angle: 0, flip: west, banner: true });
+        await tick(1);
+        const cl = await pg.evaluate(() => { const r = document.querySelector('.dcc-hl-banner .cloth').getBoundingClientRect(); return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 }; });
+        const clP = [[0, 0], [-25, -6], [25, 6], [-30, 5], [30, -5]].map(d => [cl.x + d[0], cl.y + d[1]]).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
+        const clq = await pixels(pg, clP);
+        ok(clP.length >= 2 && clq.every(p => near(p, CLOTH, 50)), `${lab}: the banner's cloth (CSS, skewed) is in front of the moon (${clP.length} points)`, JSON.stringify(clq));
+        /* the rope's middle on the moon; the moon just above and below it */
+        await pose('plane', { x: g.mx + sgn * 104, y: g.my + 1.25, angle: 0, flip: west, banner: true });
+        await tick(1);
+        const rp = await pg.evaluate(() => { const r = document.querySelector('.dcc-hl-banner .rope').getBoundingClientRect(); return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, l: r.left, r: r.right }; });
+        const onR = [-12, 0, 12].map(d => [rp.x + d, rp.y]).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
+        const offR = [[-8, -5], [8, -5], [-8, 6], [8, 6]].map(d => [rp.x + d[0], rp.y + d[1]]).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
+        const rq = await pixels(pg, onR.concat(offR));
+        ok(onR.length >= 2 && rq.slice(0, onR.length).every(p => near(p, ROPE, 60)), `${lab}: the rope (a 1.5px CSS line) is in front of the moon (${onR.length} points)`, JSON.stringify(rq.slice(0, onR.length)));
+        ok(offR.length >= 2 && rq.slice(onR.length).every(moonish), `${lab}: the moon still shows just above and below the rope (${offR.length} points)`, JSON.stringify(rq.slice(onR.length)));
+      }
+      /* banked 10° with the banner out: the cloth turns with the plane, so
+       * its cut must follow the turn, not its upright box */
+      {
+        const ang = 10 * Math.PI / 180;
+        /* the cloth centre sits at (-179, -1) from the plane's centre, turned */
+        const dx = -179, dy = -1, px = g.mx - (dx * Math.cos(ang) - dy * Math.sin(ang)), py = g.my - (dx * Math.sin(ang) + dy * Math.cos(ang));
+        await pose('plane', { x: px, y: py, angle: 10, flip: false, banner: true });
+        await tick(1);
+        const cl = await pg.evaluate(() => { const r = document.querySelector('.dcc-hl-banner .cloth').getBoundingClientRect(); return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 }; });
+        const along = [-30, -15, 15, 30].map(d => [cl.x + d * Math.cos(ang), cl.y + d * Math.sin(ang)]).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
+        /* off the cloth across its width, where an upright box would reach */
+        const off = [-22, 22].map(d => [cl.x + d * Math.cos(ang) + Math.sin(ang) * (d > 0 ? 17 : -17), cl.y + d * Math.sin(ang) - Math.cos(ang) * (d > 0 ? 17 : -17)]).filter(p => Math.hypot(p[0] - g.mx, p[1] - g.my) < g.MR - 3);
+        const bq2 = await pixels(pg, along.concat(off));
+        ok(along.length >= 2 && bq2.slice(0, along.length).every(p => near(p, CLOTH, 50)), `banked 10°: the cloth is in front of the moon along its turned length (${along.length} points)`, JSON.stringify(bq2.slice(0, along.length)));
+        ok(off.length >= 1 && bq2.slice(along.length).every(moonish), `banked 10°: just off the turned cloth the moon shows (${off.length} points)`, JSON.stringify(bq2.slice(along.length)));
+      }
+      await pose('plane', { x: -500, y: -500 });
+
+      /* the taxi wake (CSS lines, opted in) is cut; the soft glints (CSS,
+       * not opted in) never are */
+      await pose('wake', { x: g.mx, y: g.my });
+      await pose('glint', { x: g.mx, y: g.my - g.MR * 0.5 });
+      await tick(1);
+      const wk = await pg.evaluate(([mx, my, MR]) => {
+        const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), k = c.width / innerWidth;
+        const a = (x, y) => cg.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data[3];
+        const sp = [...document.querySelectorAll('.dcc-hl-wake span')].map(e => e.getBoundingClientRect());
+        const gl = document.querySelector('.dcc-hl-glint').getBoundingClientRect();
+        return { onLine: a(mx, sp[0].top + 1), between: a(mx + 10, (sp[0].bottom + sp[1].top) / 2), glint: a((gl.left + gl.right) / 2, (gl.top + gl.bottom) / 2), glint2: a(gl.left + 12, (gl.top + gl.bottom) / 2) };
+      }, [g.mx, g.my, g.MR]);
+      ok(wk.onLine < 20, `the taxi wake's lines are cut from the moon (canvas alpha ${wk.onLine} on a line)`, JSON.stringify(wk));
+      ok(wk.between > 240, `between the wake's lines the moon is whole (alpha ${wk.between})`, JSON.stringify(wk));
+      ok(wk.glint > 240 && wk.glint2 > 240, `the water glints cut nothing (alpha ${wk.glint} and ${wk.glint2} under one)`, JSON.stringify(wk));
+      for (const k of ['wake', 'glint']) { await pose(k, { x: -500, y: -500 }); }
       await pose('plane', { x: -500, y: -500 });
 
       /* the reeds, the canvas gator and the fishing catch over the moon */
@@ -158,7 +219,7 @@ function userPts(pg, sel, pts) {
        * right, so here the two must agree, for every pose. */
       let worst = 0;
       for (const o of [{ angle: 0, flip: false }, { angle: -12, flip: true }, { angle: 17, flip: false }, { angle: 8, flip: true }]) {
-        await pose('plane', Object.assign({ x: g.mx + 20, y: g.my - 10, banner: true }, o));
+        await pose('plane', Object.assign({ x: g.mx + 20, y: g.my - 10, svgBanner: true }, o));
         worst = Math.max(worst, await pg.evaluate(() => {
           let d = 0;
           document.querySelectorAll('.dcc-hl-body svg path, .dcc-hl-body svg rect, .dcc-hl-body svg text').forEach(el => {
@@ -191,6 +252,11 @@ function userPts(pg, sel, pts) {
       await pose('plane', { x: -500, y: -500 });
       const st = await pg.evaluate(() => window.DCCSeasonsEngine._state.fore);
       ok(st && st.stats.cuts > 0, `the cut ran (${st && st.stats.cuts} frames)`, JSON.stringify(st));
+      /* each part once: the default selector matches the wrap AND the
+       * marked parts inside it; a part found twice would be cut twice, and
+       * at the banner's golden-hour opacity (.82) the moon would show
+       * through at 3% instead of 18% */
+      ok(st.svgs === 3 && st.media === 1 && st.boxes === 4, `each foreground part is cut once (${st.svgs} svgs, ${st.media} canvas, ${st.boxes} CSS boxes)`, JSON.stringify(st));
     } finally { await ses.close(); }
   }
 
@@ -223,6 +289,69 @@ function userPts(pg, sel, pts) {
       const q = await pixels(pg, [[px0, py0]]);
       ok(hook && near(q[0], [255, 0, 255], 30), 'a sprite drawn over the plane stays in front of it while the scene plays', JSON.stringify(q));
     } finally { await ses.close(); }
+  }
+
+  /* 4.10.5 (Rob: the flyer witch too, and any other sky flyer): a hero
+   * crossing the header picture goes behind its foreground. */
+  for (const kind of ['witch', 'heron']) {
+    console.log(`\n  --- the ${kind} flyer behind the plane ---`);
+    for (const w of [390, 1280]) {
+      /* 'classic' has no scene, so flyer follows flyer (heroOnly picks
+       * which), crossing after crossing, each at its own random height,
+       * until enough of them pass through the header picture */
+      const cfg = config(['--theme=classic', '--placement=content', '--layering=front', '--density=16', '--noparticles', '--subtle=off', '--diag']);
+      cfg.heroOnly = kind; cfg.heroFirst = [0.3, 0.31]; cfg.heroEvery = [0.3, 0.4]; cfg.vigFirst = 1e9; cfg.heronLand = 0; cfg.forceHour = 12;
+      const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true, heroFx: true }), { viewport: { width: w, height: w < 768 ? 640 : 800 }, dsf: 2 });
+      const pg = ses.page;
+      try {
+        await pg.addStyleTag({ content: '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{display:none!important} #masthead h1{visibility:hidden} .dcc-seasons-accent{display:none!important}' });
+        await pg.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 15000 });
+        await pg.waitForTimeout(800); /* the flyer's sprite decodes */
+        await pg.evaluate(() => { ['plane', 'catch', 'reeds', 'gator', 'wake', 'glint'].forEach(k => window.dccPose(k, { x: -900, y: -900 })); window.DCCSeasonsEngine._state.manual(true); });
+        const pose = (k, o) => pg.evaluate(([k, o]) => window.dccPose(k, o), [k, o]);
+        const host = await pg.evaluate(() => { const r = document.getElementById('header-image-main-inside').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; });
+        let checked = 0, met = 0;
+        for (let i = 0; i < 60 && checked < 4; i++) {
+          /* run on (in the page) until the flyer is inside the picture */
+          const xy = await pg.evaluate(([w, host]) => {
+            const s = window.DCCSeasonsEngine._state;
+            for (let k = 0; k < 3000; k++) {
+              s.tick(1000 / 30, 1);
+              const p = s.heroXY;
+              if (p && k % 7 === 0 && p[0] > 80 && p[0] < w - 80 && p[1] > host[1] + 20 && p[1] < host[3] - 20) { return p; }
+            }
+            return null;
+          }, [w, host]);
+          if (!xy) { break; }
+          /* where the flyer is drawn, before the plane is put there */
+          const cand = await pg.evaluate(([x, y]) => {
+            const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), k = c.width / innerWidth, out = [];
+            for (let dy = -6; dy <= 6; dy += 3) { for (let dx = -40; dx <= 40; dx += 4) { const a = cg.getImageData(Math.round((x + dx) * k), Math.round((y + dy) * k), 1, 1).data[3]; if (a > 200) { out.push([dx, dy]); } } }
+            return out;
+          }, xy);
+          if (cand.length < 3) { continue; }
+          met++;
+          await pose('plane', { x: xy[0], y: xy[1] - 1, angle: 0, flip: false, banner: false });
+          await pg.evaluate(() => window.DCCSeasonsEngine._state.tick(1, 1));
+          /* fuselage points that the flyer covered a moment ago */
+          const fz = await pg.evaluate(([x, y, cand]) => {
+            const el = document.querySelector('.dcc-hl-body .fuse');
+            return cand.map(d => [x + d[0], y + d[1]]).filter(p => { const e = document.elementFromPoint(p[0], p[1]); return false || (el && (() => { const r = el.getBoundingClientRect(); return p[0] > r.left + 4 && p[0] < r.right - 20 && p[1] > r.top + 4 && p[1] < r.bottom - 4; })()); });
+          }, [xy[0], xy[1], cand]);
+          const inF = [];
+          for (const p of fz) {
+            const isFuse = await pg.evaluate(([px, py]) => { const el = document.querySelector('.dcc-hl-body .fuse'); const m = el.getScreenCTM().inverse(); const q = new DOMPoint(px, py).matrixTransform(m); return el.isPointInFill(new DOMPoint(q.x, q.y)) && !(q.x > 56 && q.x < 82); }, p);
+            if (isFuse) { inF.push(p); }
+          }
+          if (!inF.length) { await pose('plane', { x: -900, y: -900 }); continue; }
+          const q = await pixels(pg, inF.slice(0, 6));
+          ok(q.every(c => near(c, PLANE)), `${w}px: the ${kind} flyer is behind the plane (${Math.min(6, inF.length)} points where she was drawn)`, JSON.stringify(q));
+          checked++;
+          await pose('plane', { x: -900, y: -900 });
+        }
+        ok(checked >= 2, `${w}px: checked the ${kind} behind the plane ${checked} times`, `met ${met}`);
+      } finally { await ses.close(); }
+    }
   }
 
   /* How Rob saw them together: the hero show (DCCHeroFx busy) holds back
