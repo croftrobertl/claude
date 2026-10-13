@@ -127,6 +127,27 @@ function paras(n, tag) {
  * @param {boolean} [opts.noFooter] omit the footer entirely
  * @returns {string} a complete HTML document
  */
+const LIVE_FX = `<style>
+  .hfx-live .dcc-hl-fly { will-change: transform; animation: hfxfly var(--hfx-t, 7s) linear 1 both; }
+  .hfx-live.west .dcc-hl-fly { animation-name: hfxflyw; }
+  @keyframes hfxfly { from { transform: translate3d(-260px, var(--hfx-y, 100px), 0); } to { transform: translate3d(calc(100vw + 120px), var(--hfx-y, 100px), 0); } }
+  @keyframes hfxflyw { from { transform: translate3d(calc(100vw + 120px), var(--hfx-y, 100px), 0); } to { transform: translate3d(-260px, var(--hfx-y, 100px), 0); } }
+  .hfx-live .dcc-hl-body { filter: drop-shadow(0 4px 3px rgba(0,0,0,.35)); }
+  .hfx-live .dcc-hl-body .prop { animation: hfxspin .11s linear infinite !important; animation-play-state: running !important; animation-delay: 0s !important; }
+</style>
+<script>
+window.dccFly = function (y, t, dir) {
+  var w = document.querySelector('.dcc-hl-wrap'), f = document.querySelector('.dcc-hl-fly');
+  var host = document.getElementById('header-image-main-inside').getBoundingClientRect();
+  w.style.setProperty('--hfx-y', (y - host.top - 28) + 'px'); w.style.setProperty('--hfx-t', t + 's');
+  w.classList.toggle('west', dir < 0);
+  document.querySelector('.dcc-hl-face').classList.toggle('is-west', dir < 0);
+  document.querySelector('.dcc-hl-face').style.transform = dir < 0 ? 'scaleX(-1)' : '';
+  document.querySelector('.dcc-hl-banner').style.display = '';
+  f.style.transform = ''; w.classList.remove('hfx-live'); void w.offsetWidth; w.classList.add('hfx-live');
+};
+</script>`;
+
 /* The header picture's layers for heroFx (see page()). The plane faces
  * right; dccPose() moves, banks, flips it and shows or hides its banner. */
 const HERO_FX = `<div id="header-image-main-inside">
@@ -211,6 +232,12 @@ function page(opts) {
    * element (SVG shapes with CSS transforms, a CSS-animated propeller, a
    * canvas). The suite poses them with window.dccPose(). */
   const heroFx = !!opts.heroFx;
+  /* heroFx: 'live' (4.10.6) moves the plane the way dcc-hero-life does on
+   * the site: a compositor translateX animation (will-change: transform)
+   * on .dcc-hl-fly, a drop-shadow filter on .dcc-hl-body and the
+   * propeller spinning every 0.11 s. window.dccFly(y, seconds, dir)
+   * starts a flyover at that height. For frame-pacing measurements. */
+  const liveFx = opts.heroFx === 'live';
 
   const body = kind === 'elementor'
     ? `
@@ -237,7 +264,7 @@ function page(opts) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DCC Seasons fixture — ${kind}</title>
 <style>${SHARED_CSS}${kind === 'elementor' ? ELEMENTOR_CSS : ''}</style>
-</head><body class="${home ? 'home' : ''}${heroFx ? ' hfx' : ''}">
+${liveFx ? LIVE_FX : ''}</head><body class="${home ? 'home' : ''}${heroFx ? ' hfx' : ''}">
   <div class="dcc-wx-banner" role="alert">Tornado Warning for Lake County until 6:15 PM EDT</div>
   <header id="masthead">${heroFx ? HERO_FX : ''}<h1 id="site-title" style="position:relative;z-index:5">Dora Canal Court</h1>${banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:60px 24px;color:#fff">' + (home ? 'Dora Canal Court' : 'Contact Us') + '</h1></div>' : ''}</header>
   <div class="elementor-lightbox"></div>

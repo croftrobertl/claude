@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.5
+Stable tag: 4.10.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,29 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.6 =
+Smooth motion on a Retina Mac (Rob: the plane and the witch "moving
+forward is slightly glitchy"). Nothing looks different. Staging first;
+live only after Rob signs off. Rollback: reinstall the 4.10.5 zip; no
+setting or stored data changes.
+
+* Every repaint clears the whole canvas. Since 4.6.0 the background layer
+  cleared only around its particles, which is cheaper when the computer
+  draws the canvas, but where the graphics chip draws it (Macs, iPhones,
+  Android) it made the browser copy the whole previous picture first. On a
+  GPU-drawn canvas at 1280 px and 2x, with the seaplane flying: the page
+  went from 18 to 34 frames a second (in a slow software GPU; a Mac's is
+  many times faster).
+* The foreground cut draws the plane's still shapes from one picture made
+  when they change, and cuts only what moves (the propeller) shape by shape;
+  it reads the page once a frame, before anything is drawn, and stops
+  reading a part that is clearly far from the scene. Main-thread script at
+  1280 px 2x: 131 -> 101 ms/s.
+* New: tools/test-frame-pacing.js (frame pacing at 1280 and 1440 px at 2x
+  and 390 px at 3x, with the plane crossing the moon), and
+  tools/measure-pacing.js --gpu=1 (a GPU-drawn canvas), and
+  tools/crossing-reel.js (the crossing as a 60 fps video).
 
 = 4.10.5 =
 Rob's answers on 4.10.4. Staging first; live only after Rob signs off,

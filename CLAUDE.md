@@ -659,6 +659,58 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   and ±.8deg skew are near-symmetric), flyers in front, witch not a sky
   flyer, roots cut twice. `fore-reel.js --mode=moon|banner|flyer`.
 
+### Rob on staging (for 4.10.6, 2026-10-13): smooth motion on a Retina Mac
+
+4.10.5 "looks good except that their motion moving forward is slightly
+glitchy" (the plane and the witch; 2x MacBook, Chrome; the scene ran at a
+flat 30 fps in the Director's recording). Nothing visible changes.
+
+- **This container cannot see GPU cost in frame times.** It rasterises
+  and composites on the CPU, so rAF runs at 60 whatever a GPU would pay;
+  every build reads ~100% of frames within 17 ms. `measure-pacing.js
+  --gpu=1` launches Chromium with its GPU canvas on SwiftShader
+  (`--use-angle=swiftshader --enable-unsafe-swiftshader
+  --ignore-gpu-blocklist --enable-gpu-rasterization
+  --enable-accelerated-2d-canvas`): there the GPU holds frames back as on
+  a Mac, ~20x slower, so read it build against build, never as fps.
+  `DCC_CHROME_ARGS` passes extra launch flags through `harness.js`.
+- **Never partial-clear the canvas** (see the pacing note): on a GPU
+  canvas the background-only window went 18 → 34 page fps with the live
+  plane, 23 → 46 with the plane's own repaint taken out.
+- **The cut's still shapes are one picture** (`fgSvgPlan`/`fgSvgCut`):
+  a shape whose key (style `sig`, own attributes `fgGeo`, opacity, matrix
+  relative to its svg) changed in the last 30 frames is cut live, shape by
+  shape; the rest are drawn once in the svg's frame WITHOUT its position
+  (keyed on dp and the svg's linear part) and drawn moved, bilinear, as the
+  compositor moves the plane's own layer. Each shape as its own fill cost
+  the GPU more than the scene (11 → 15 fps over the moon, emulated).
+- **Reads once a frame, before drawing** (`fgMm()`, keyed on `fgFrame`,
+  bumped once per frame before the scene's `foreBegin`): `fgLin` per
+  element (ancestors shared), `fgSvgM`, `fgClip`, opacity, the svg plan;
+  `foreEnd` only draws. A debug helper that reads outside a frame must
+  reset `fgMemo` (`_state.foreM` does). An svg clearly far from the scene
+  (its box plus how far it drew outside it when last measured, < 0.5 s
+  ago, plus 40 px) is skipped without `getBBox`. Script 131 → 101 ms/s
+  at 1280 2x (4.10.2: 47).
+- **Not done, measured**: redirecting the whole scene into a scratch (no
+  tee, no evenodd clip) was ~10% faster emulated, but trusts every scene's
+  and hero's declared bounds and changes what `hdrCut` erases; bucketed
+  scratch sizes, dirty clears at full rate (much slower: a partial clear
+  is the copy) and no draw-back gained nothing.
+- **The Director's plane is the largest single cost**: `.dcc-hl-body`'s
+  `filter: drop-shadow` re-filters the whole plane on every propeller
+  frame. Plane alone, emulated GPU: as is 49 fps (81% within 17 ms);
+  without the filter 57 (98%); without the spin 59 (99%). Recommended to
+  him (his file): the propeller in its own composited element outside the
+  filtered body.
+- **Tests**: `tools/test-frame-pacing.js` (19: 1280/1440 at 2x, 390 at 3x;
+  ≥95% within 17 ms in the scene and over the moon, sprites on, the flyer
+  witch, background window at 30 repaints; every clear full; still shapes
+  from ≤4 pictures a crossing). Mutation-checked: a partial clear and the
+  picture disabled each fail their checks. `tools/crossing-reel.js`: the
+  crossing at 60 fps at 2x, seeded `Math.random`, the live plane's
+  animations seeked to the mocked clock.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -678,7 +730,7 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 173,735 raw / 61,323 gzipped (4.10.5, `gzip -c`; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 176,708 raw / 62,678 gzipped (4.10.6, `gzip -c`; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1025,7 +1077,7 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
   ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process
@@ -1224,10 +1276,15 @@ front canvas (fixed, FRONT_Z) painted over all of it.
   `IDLE_MS` (250 ms, no clear at all) when nothing is drawn. `next()`
   sleeps on a TIMER until a slow repaint is due — a rAF every vsync that
   returns at once still makes the browser produce 60 frames a second, and
-  that was most of the remaining cost. Subtle-only frames clear just last
-  frame's particle boxes (`dirtyBoxes`, r*4+4: measured extents are at
-  most 3.6r) plus the shimmer strip; any other frame, and the first
-  subtle-only frame after one, clears in full. Drawing stops off screen
+  that was most of the remaining cost. **Every repaint clears the WHOLE
+  canvas since 4.10.6** — never go back to partial clears: 4.6.0's
+  `dirtyBoxes` (clear only the subtle particles' boxes) were cheaper on a
+  CPU-drawn canvas, but on a GPU-drawn one (Mac, iPhone, Android) a clear
+  that leaves pixels standing makes the browser copy last frame's whole
+  canvas first; a full clear lets it discard. Measured with Chromium's GPU
+  canvas on SwiftShader, 1280 px at 2x: 23 vs 46 page fps. The CPU-drawn
+  case pays +35% main thread for it (116 → 158 ms/s at 1280 2x, 261 → 343
+  at 390 3x 4x CPU, background window). Drawing stops off screen
   (IntersectionObserver) and when hidden, EXCEPT while the canvas is out
   of the document AND a re-mount is still possible (behind layering, under
   20 tries) — so `ensureMounted()` can put it back. In front mode nothing

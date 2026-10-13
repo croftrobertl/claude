@@ -48,7 +48,7 @@ async function open(html, opts = {}) {
   /* PLAYWRIGHT_BROWSERS_PATH points at the pre-installed browsers, so the
    * default resolution normally works. Fall back to the known-good path
    * only if the pinned version in this repo's playwright disagrees. */
-  const launch = { args: ['--no-sandbox', '--disable-dev-shm-usage'] };
+  const launch = { args: ['--no-sandbox', '--disable-dev-shm-usage', ...(process.env.DCC_CHROME_ARGS ? process.env.DCC_CHROME_ARGS.split(' ') : [])] };
   if (opts.executablePath) { launch.executablePath = opts.executablePath; }
   let browser;
   try {

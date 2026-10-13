@@ -4,9 +4,10 @@
  * lighter, keep the look exactly as it is"). On the REAL rAF loop, not the
  * mocked clock, because pacing is exactly what the mocked clock bypasses.
  *
- *   - background layer alone → ~30 repaints a second, and the partial
- *     clears leave NO trail: after every sampled frame, no painted pixel
- *     lies outside the boxes of the particles just drawn (six effects);
+ *   - background layer alone → ~30 repaints a second, and NO trail: after
+ *     every sampled frame, no painted pixel lies outside the boxes of the
+ *     particles just drawn (six effects; every repaint clears in full since
+ *     4.10.6, so this guards any return of a partial clear);
  *   - nothing to draw → no repaints at all, yet a hero still starts on time
  *     and is drawn at full rate;
  *   - hidden tab → no repaints, resumes when shown;
