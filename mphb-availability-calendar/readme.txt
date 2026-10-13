@@ -71,6 +71,8 @@ Staff board only (/staff/).
 * **"Compare to Last Year"** (the Last year switch, renamed) now sits under the calendar on the left, with "Updated" on the right as before. Show and Go to date are back to two boxes.
 * **The Stats dates sit level with their ‹ › arrows** on a phone.
 * **Nights Booked by Cottage:** every cottage name shows in full, "100%" stays on one line, and the bars all line up.
+* **Stats is centred throughout:** every heading, with its ⓘ right after the words, and every section's contents.
+* **Every ⓘ is rewritten** in plain words: one sentence, then the details as a short list.
 
 = 0.46.1 =
 Staff board Stats only (/staff/).

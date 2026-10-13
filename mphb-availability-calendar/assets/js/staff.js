@@ -1740,11 +1740,21 @@
             return e;
         }
 
-        function blockHead(sec, key, title, lines) {
+        // A SECTION'S HEADING (0.46.2, Rob: centred, every one): the ⓘ right
+        // after the text — held to the LAST WORD, so a heading that wraps
+        // takes it along — and the bubble under the heading.
+        function blockHead(sec, key, title, lead, bullets) {
             var row = el('div', 'mphbac-staff-stats-hrow');
-            row.appendChild(el('h3', 'mphbac-staff-stats-h', title || ''));
-            // Every Stats figure leaves dock blocks out (0.46.1), and says so.
-            row.appendChild(tipEl(key, title || '', [lines[0], S.stNoDock].concat(lines.slice(1))));
+            var h = el('h3', 'mphbac-staff-stats-h');
+            var words = String(title || '').split(' ');
+            var last = words.pop();
+            if (words.length) h.appendChild(document.createTextNode(words.join(' ') + ' '));
+            var tail = el('span', 'mphbac-staff-stats-hlast', last);
+            var t = tipParts(key, title || '', lead, bullets);
+            tail.appendChild(t.btn);
+            h.appendChild(tail);
+            row.appendChild(h);
+            row.appendChild(t.box);
             sec.appendChild(row);
         }
 
@@ -1756,7 +1766,7 @@
             // A pinned tip (or a focused ⓘ) survives the 3-minute refresh.
             var keepTip = tipOpen && tipOpen.pinned ? tipOpen.key : null;
             var focusTip = document.activeElement && document.activeElement.classList.contains('mphbac-staff-tip')
-                && statsOut.contains(document.activeElement) ? document.activeElement.parentNode.getAttribute('data-tip') : null;
+                && statsOut.contains(document.activeElement) ? document.activeElement.getAttribute('data-tip') : null;
             closeTip();
             // Built off the page and swapped in one step (0.45.3): see renderStats.
             var out = document.createDocumentFragment();
@@ -1764,26 +1774,31 @@
             // THE TILES, each with its ⓘ and ▲ ▼ against the same dates a year
             // earlier (0.46.0): points for %, nights for Length, counts for the
             // rest.
-            var vsLine = plan.ly.why ? noCompareText(plan.ly.why)
-                : (S.stVsLastYear || '').replace('{range}', rangeLabel(plan.ly.w.from, plan.ly.w.to));
+            // ▲ ▼'s line in each tile's tip: what it compares with, in what.
+            var vsLine = function (str) {
+                return plan.ly.why ? noCompareText(plan.ly.why) : (str || '').replace('{range}', rangeLabel(plan.ly.w.from, plan.ly.w.to));
+            };
             var grid = el('dl', 'mphbac-staff-stats-kpis');
             var minus = function (a, b) {
                 return (!ly || a === null || a === undefined || b === null || b === undefined) ? null : a - b;
             };
             var kpi = function (key, label, value, tip, delta, decimals, unit) {
+                // tip: [lead, bullet, bullet, …]
                 var box = el('div', 'mphbac-staff-kpi is-' + key);
                 box.appendChild(el('dt', 'mphbac-staff-kpi-label', label || ''));
                 box.appendChild(el('dd', 'mphbac-staff-kpi-num', String(value)));
                 box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, S.stVsYearSr, unit));
                 var more = el('dd', 'mphbac-staff-kpi-more');
-                more.appendChild(tipEl(key, label || '', [tip, S.stNoDock, vsLine]));
+                var t = tipParts(key, label || '', tip[0], tip.slice(1));
+                more.appendChild(t.btn);
+                more.appendChild(t.box);
                 box.appendChild(more);
                 grid.appendChild(box);
             };
             // Order (WD): two full rows of three on a phone.
-            kpi('bookings', S.stBookings, n.bookings, S.stBookingsTip, minus(n.bookings, ly && ly.bookings));
-            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip, minus(n.pct, ly && ly.pct), 0, 'point');
-            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), S.stLengthTip,
+            kpi('bookings', S.stBookings, n.bookings, [S.stBookingsTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.bookings, ly && ly.bookings));
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', [S.stBookedTip, S.stTipNightOnce, S.stBookedDock, vsLine(S.stTipVsPct)], minus(n.pct, ly && ly.pct), 0, 'point');
+            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), [S.stLengthTip, S.stLengthWhole, S.stTipDock, vsLine(S.stTipVsNights)],
                 minus(n.length, ly && ly.length), 1, 'night');
             // "nights" in a smaller size, so the figure fits a phone's tile;
             // the text still reads "4.2 nights".
@@ -1793,20 +1808,19 @@
                 dd.textContent = m[1];
                 dd.appendChild(el('span', 'mphbac-staff-kpi-unit', m[2]));
             })(grid.lastChild.querySelector('.mphbac-staff-kpi-num'));
-            kpi('arrivals', S.stArrivals, n.arrivals, S.stArrivalsTip, minus(n.arrivals, ly && ly.arrivals));
-            kpi('departures', S.stDepartures, n.departures, S.stDeparturesTip, minus(n.departures, ly && ly.departures));
-            kpi('turnovers', S.stTurnovers, n.turnovers, S.stTurnoversTip, minus(n.turnovers, ly && ly.turnovers));
-            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, S.stInHouseTip, minus(n.inHouse, ly && ly.inHouse));
+            kpi('arrivals', S.stArrivals, n.arrivals, [S.stArrivalsTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.arrivals, ly && ly.arrivals));
+            kpi('departures', S.stDepartures, n.departures, [S.stDeparturesTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.departures, ly && ly.departures));
+            kpi('turnovers', S.stTurnovers, n.turnovers, [S.stTurnoversTip, S.stTurnoversOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.turnovers, ly && ly.turnovers));
+            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, [S.stInHouseTip, S.stInHouseNot, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.inHouse, ly && ly.inHouse));
             out.appendChild(grid);
 
             // NIGHTS BOOKED BY COTTAGE (0.46.0, Rob): nights, % of the
             // timeframe's nights and its bar; ranked by %, highest first, ties
             // in cottage order; ▲ ▼ in points against the PREVIOUS timeframe.
             var per = el('section', 'mphbac-staff-stats-block is-percot');
-            blockHead(per, 'percot', S.stPerCottage, [
-                (S.stPerCottageTip || '').replace('{n}', String(n.nights)),
+            blockHead(per, 'percot', S.stPerCottage, (S.stPerCottageTip || '').replace('{n}', String(n.nights)), [S.stTipNightOnce, S.stTipDock,
                 plan.prev.why ? noCompareText(plan.prev.why)
-                    : (S.stVsPrev || '').replace('{range}', rangeLabel(plan.prev.w.from, plan.prev.w.to))]);
+                    : (S.stTipVsPrev || '').replace('{range}', rangeLabel(plan.prev.w.from, plan.prev.w.to))]);
             var list = el('ul', 'mphbac-staff-percot');
             var pct = function (v, of) { return of ? Math.round(100 * v / of) : 0; };
             n.cottages.map(function (c, i) { return { c: c, i: i, v: n.perCottage[c.id] || 0 }; })
@@ -1834,7 +1848,7 @@
             // inline SVG pie in the source colours, and the same numbers as
             // plain text for anyone not looking at the picture.
             var src = el('section', 'mphbac-staff-stats-block is-source');
-            blockHead(src, 'source', S.stBySource, [S.stBySourceTip]);
+            blockHead(src, 'source', S.stBySource, S.stBySourceTip, [S.stBySourceOnce, S.stTipDock]);
             if (!n.booked) {
                 src.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoNights || ''));
             } else {
@@ -1863,16 +1877,16 @@
             statsOut.textContent = '';
             statsOut.appendChild(out);
             if (keepTip || focusTip) {
-                var again = statsOut.querySelector('.mphbac-staff-tipwrap[data-tip="' + (keepTip || focusTip) + '"]');
+                var again = statsOut.querySelector('.mphbac-staff-tip[data-tip="' + (keepTip || focusTip) + '"]');
                 if (again && keepTip) openTip(again, true);
-                if (again && focusTip) again.firstChild.focus();
+                if (again && focusTip) again.focus();
             }
         }
 
         // LENGTH OF STAY (0.46.0): 1–2, 3–6, 7–27 and 28+ nights.
         function drawMix(n) {
             var sec = el('section', 'mphbac-staff-stats-block is-mix');
-            blockHead(sec, 'mix', S.stMix, [S.stMixTip]);
+            blockHead(sec, 'mix', S.stMix, S.stMixTip, [S.stTipDock]);
             if (!n.bookings) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoStays || ''));
                 return sec;
@@ -1897,7 +1911,7 @@
         // ARRIVALS AND DEPARTURES BY WEEKDAY (0.46.0), Sunday to Saturday.
         function drawWeekdays(n) {
             var sec = el('section', 'mphbac-staff-stats-block is-weekdays');
-            blockHead(sec, 'weekdays', S.stWeekdays, [S.stWeekdaysTip]);
+            blockHead(sec, 'weekdays', S.stWeekdays, S.stWeekdaysTip, [S.stWeekdaysSame, S.stTipDock]);
             var max = Math.max.apply(null, n.inByDay.concat(n.outByDay).concat([1]));
             var chart = el('div', 'mphbac-staff-wk');
             chart.setAttribute('aria-hidden', 'true');
@@ -1937,7 +1951,7 @@
         // HOW FAR AHEAD THEY BOOK (0.46.0), by source, then all together.
         function drawLead(n, w) {
             var sec = el('section', 'mphbac-staff-stats-block is-lead');
-            blockHead(sec, 'lead', S.stLead, [S.stLeadTip]);
+            blockHead(sec, 'lead', S.stLead, S.stLeadTip, [S.stLeadAfter, S.stTipDock]);
             var by = leadTimes(n.mine, w);
             if (!by.all.n) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoLead || ''));
@@ -1966,7 +1980,7 @@
         // year earlier. It does not follow the timeframe.
         function drawPace(nowData, agoData, plan) {
             var sec = el('section', 'mphbac-staff-stats-block is-pace');
-            blockHead(sec, 'pace', S.stPace, [S.stPaceTip, plan.pace.why ? noCompareText(plan.pace.why) : '']);
+            blockHead(sec, 'pace', S.stPace, S.stPaceTip, [plan.pace.why ? noCompareText(plan.pace.why) : S.stPaceVs, S.stPaceLow, S.stPaceFixed, S.stTipDock]);
             var ul = el('ul', 'mphbac-staff-pace');
             [30, 60, 90].forEach(function (k) {
                 var now = paceNights(nowData, plan.pace.now.from, k, null);
@@ -1993,7 +2007,7 @@
         function drawHeat(data, year, w, total) {
             var sec = el('section', 'mphbac-staff-stats-block is-heat');
             var title = (S.stHeat || '{year}').replace('{year}', year.y);
-            blockHead(sec, 'heat', title, [(S.stHeatTip || '').replace('{year}', year.y).replace('{n}', String(total))]);
+            blockHead(sec, 'heat', title, (S.stHeatTip || '').replace('{year}', year.y).replace('{n}', String(total)), [S.stHeatOutline, S.stHeatTap, S.stTipDock]);
             var nights = daysBetween(year.w.from, year.w.to);
             var per = data ? own(data.bookings || [], nights).perNight : {};
             var grid = el('div', 'mphbac-staff-heat');
@@ -2098,38 +2112,55 @@
         // in reading order. The text is the server's, written with textContent.
         var tipOpen = null;
         var FINE = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
-        function tipEl(key, name, lines) {
-            var wrap = el('span', 'mphbac-staff-tipwrap');
-            wrap.setAttribute('data-tip', key);
+        // THE TIP (0.46.2, Rob: "complete sentences or bullet points"): one
+        // lead sentence, then the facts as a real list. The button and its
+        // bubble are returned apart, so a heading can carry the ⓘ beside its
+        // last word while the bubble sits under the heading.
+        function tipParts(key, name, lead, bullets) {
             var btn = el('button', 'mphbac-staff-tip');
             btn.type = 'button';
+            btn.setAttribute('data-tip', key);
             btn.setAttribute('aria-expanded', 'false');
             btn.setAttribute('aria-label', (S.stAbout || '{name}').replace('{name}', name));
             btn.appendChild(infoIcon());
-            var box = el('span', 'mphbac-staff-tipbox');
+            var box = el('div', 'mphbac-staff-tipbox');
             box.id = 'mphbac-staff-tip-' + (++TIP_SEQ);
             box.hidden = true;
-            lines.forEach(function (t) { if (t) box.appendChild(el('span', 'mphbac-staff-tipline', t)); });
+            box.appendChild(el('p', 'mphbac-staff-tiplead', lead || ''));
+            var items = (bullets || []).filter(Boolean);
+            if (items.length) {
+                // A space between the parts too, so the text never reads
+                // "counts once.Dock blocks" to anything that joins it up.
+                box.appendChild(document.createTextNode(' '));
+                var ul = el('ul', 'mphbac-staff-tiplist');
+                items.forEach(function (t, n) {
+                    if (n) ul.appendChild(document.createTextNode(' '));
+                    ul.appendChild(el('li', '', t));
+                });
+                box.appendChild(ul);
+            }
             btn.setAttribute('aria-controls', box.id);
-            wrap.appendChild(btn);
-            wrap.appendChild(box);
+            btn._box = box;
             btn.addEventListener('click', function () {
-                if (tipOpen && tipOpen.wrap === wrap) {
+                if (tipOpen && tipOpen.btn === btn) {
                     if (tipOpen.pinned) closeTip(); else tipOpen.pinned = true;
                 } else {
-                    openTip(wrap, true);
+                    openTip(btn, true);
                 }
             });
             btn.addEventListener('mouseenter', function () {
-                if (FINE && FINE.matches && !(tipOpen && tipOpen.pinned)) openTip(wrap, false);
+                if (FINE && FINE.matches && !(tipOpen && tipOpen.pinned)) openTip(btn, false);
             });
+            var leave = function (e) {
+                var to = e.relatedTarget;
+                if (tipOpen && tipOpen.btn === btn && !tipOpen.pinned && !(to && (btn.contains(to) || box.contains(to)))) closeTip();
+            };
+            btn.addEventListener('mouseleave', leave);
+            box.addEventListener('mouseleave', leave);
             // A tap on the bubble closes it too: on a phone it covers the
             // tiles under it, and a tap there means "done with this".
             box.addEventListener('click', function () { closeTip(); });
-            wrap.addEventListener('mouseleave', function () {
-                if (tipOpen && tipOpen.wrap === wrap && !tipOpen.pinned) closeTip();
-            });
-            return wrap;
+            return { btn: btn, box: box };
         }
         function infoIcon() {
             var NS = 'http://www.w3.org/2000/svg';
@@ -2144,22 +2175,22 @@
             });
             return svg;
         }
-        function openTip(wrap, pinned) {
-            if (tipOpen && tipOpen.wrap !== wrap) closeTip();
-            wrap.lastChild.hidden = false;
-            wrap.firstChild.setAttribute('aria-expanded', 'true');
-            tipOpen = { wrap: wrap, pinned: pinned, key: wrap.getAttribute('data-tip') };
-            placeTip(wrap);
+        function openTip(btn, pinned) {
+            if (tipOpen && tipOpen.btn !== btn) closeTip();
+            btn._box.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+            tipOpen = { btn: btn, box: btn._box, pinned: pinned, key: btn.getAttribute('data-tip') };
+            placeTip(btn);
         }
         function closeTip() {
             if (!tipOpen) return;
-            tipOpen.wrap.lastChild.hidden = true;
-            tipOpen.wrap.firstChild.setAttribute('aria-expanded', 'false');
+            tipOpen.box.hidden = true;
+            tipOpen.btn.setAttribute('aria-expanded', 'false');
             tipOpen = null;
         }
         // Under its button, and kept inside the Stats section's width.
-        function placeTip(wrap) {
-            var btn = wrap.firstChild, box = wrap.lastChild;
+        function placeTip(btn) {
+            var box = btn._box;
             box.style.left = '0px';
             box.style.top = '0px';
             var par = (box.offsetParent || statsOut).getBoundingClientRect();
@@ -2170,15 +2201,15 @@
             box.style.top = Math.round(b.bottom - par.top + 6) + 'px';
         }
         document.addEventListener('click', function (e) {
-            if (tipOpen && !tipOpen.wrap.contains(e.target)) closeTip();
+            if (tipOpen && !tipOpen.btn.contains(e.target) && !tipOpen.box.contains(e.target)) closeTip();
         }, true);
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape' || !tipOpen) return;
-            var b = tipOpen.wrap.firstChild;
+            var b = tipOpen.btn;
             closeTip();
             b.focus();
         });
-        window.addEventListener('resize', function () { if (tipOpen) placeTip(tipOpen.wrap); });
+        window.addEventListener('resize', function () { if (tipOpen) placeTip(tipOpen.btn); });
 
         // ---- LAST YEAR'S GHOSTS (0.46.0, Rob) -----------------------------------
         // A switch beside Show: last year's bookings, by calendar date, drawn

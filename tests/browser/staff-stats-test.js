@@ -106,7 +106,7 @@ const DOCKS = [
       k.booked[2] === 'up 6 points on the same dates a year earlier' && k.length[2] === 'up 4.3 nights on the same dates a year earlier'
       && k.arrivals[2] === 'up 1 on the same dates a year earlier', [k.booked[2], k.length[2], k.arrivals[2]]);
     const tipText = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
-    check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates a year earlier \(Oct 1 – 31, 2025\)/.test(tipText), tipText);
+    check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates last year \(Oct 1 – 31, 2025\)/.test(tipText), tipText);
 
     const per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => [
       r.querySelector('.mphbac-staff-percot-name').textContent, r.querySelector('.mphbac-staff-percot-num').textContent,
@@ -120,7 +120,7 @@ const DOCKS = [
     check('▲ ▼ in points against the PREVIOUS timeframe (Sep): #24 ▲39, #22 ▼18 (32 − 50), #25 ▼7 (3 − 10), #23 ▲16, #27 ±0',
       per[0][3] === '▲39' && per[1][3] === '▼18' && per[4][3] === '▼7' && per[3][3] === '▲16' && per[5][3] === '±0', per.map(r => r[3]));
     const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
-    check('...its tip: the share of its 31 nights, and the previous timeframe named (Sep 1 – 30, 2026)', /share of its 31 nights/.test(tip) && /previous timeframe \(Sep 1 – 30, 2026\)/.test(tip), tip);
+    check('...its tip: the share of its 31 nights, and the previous timeframe named (Sep 1 – 30, 2026)', /share of this period's 31 nights/.test(tip) && /period before \(Sep 1 – 30, 2026\)/.test(tip), tip);
 
     // C16 stay-length mix: the Bookings set — 2 (Cal), 3 (Ben), 4 (Eli),
     // 7 (Fay), 10 (Amy), 31 (Dot).
@@ -157,7 +157,7 @@ const DOCKS = [
     check('Pace: 28 / 47 / 51 nights booked, ▲25 / ▲44 / ▲34 vs a year ago',
       JSON.stringify(pace) === JSON.stringify([['28 nights booked', '▲25 vs a year ago'], ['47 nights booked', '▲44 vs a year ago'], ['51 nights booked', '▲34 vs a year ago']]), pace);
     const paceTip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-pace .mphbac-staff-tipbox').textContent);
-    check('...its tip says the year-ago figure is slightly low (cancellations are not kept)', /Cancelled bookings are not kept, so the year-ago figure is slightly low/.test(paceTip), paceTip);
+    check('...its tip says the year-ago figure is slightly low (cancellations are not kept)', /a little low: cancelled bookings are not kept/.test(paceTip), paceTip);
 
     // C11 the heat map: 2026, Oct outlined; Oct 5 has #22 and #23 (the echo
     // is the same cottage) = 2; Oct 20 #24 + #26 = 2; Oct 14 #26 = 1.
@@ -206,8 +206,8 @@ const DOCKS = [
       console.log('   EVERY TIP\'S TEXT (for the check list):');
       all.forEach(b => console.log('   · ' + b.label.replace('About ', '') + ': ' + b.text));
     }
-    const state = () => p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tipwrap')].filter(w => !w.lastChild.hidden)
-      .map(w => [w.getAttribute('data-tip'), w.firstChild.getAttribute('aria-expanded')]));
+    const state = () => p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tip')].filter(b => !document.getElementById(b.getAttribute('aria-controls')).hidden)
+      .map(b => [b.getAttribute('data-tip'), b.getAttribute('aria-expanded')]));
     await p.click('.mphbac-staff-kpi.is-booked .mphbac-staff-tip');
     let s = await state();
     check(`${DEV}: tap / click opens it — aria-expanded true`, JSON.stringify(s) === '[["booked","true"]]', s);
@@ -235,7 +235,7 @@ const DOCKS = [
     await p.keyboard.press('Enter');
     s = await state();
     await p.keyboard.press('Escape');
-    const after = await p.evaluate(() => [document.activeElement.parentNode.getAttribute('data-tip'), document.querySelectorAll('.mphbac-staff-tipbox:not([hidden])').length]);
+    const after = await p.evaluate(() => [document.activeElement.getAttribute('data-tip'), document.querySelectorAll('.mphbac-staff-tipbox:not([hidden])').length]);
     check(`${DEV}: keyboard — Enter opens, Escape closes and leaves focus on the ⓘ`, JSON.stringify(s) === '[["length","true"]]' && after[0] === 'length' && after[1] === 0, [s, after]);
     if (!phone) {
       await p.hover('.mphbac-staff-kpi.is-turnovers .mphbac-staff-tip');
@@ -307,7 +307,7 @@ const DOCKS = [
       tile: document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-kpi-delta [aria-hidden]').textContent,
       tip: document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent }));
     check('...a timeframe CUT at the window\'s edge is compared with nothing: "—", and the tip says why',
-      cut.per.every(x => x === '—') && cut.tile === '—' && /outside the board's ±3-year range/.test(cut.tip), cut);
+      cut.per.every(x => x === '—') && cut.tile === '—' && /outside the calendar's 3-year range/.test(cut.tip), cut);
     await p.selectOption('.mphbac-staff-stats-span', 'month');
     await p.selectOption('.mphbac-staff-stats-month', '2028-02'); await settle(p);
     const leap = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
@@ -349,7 +349,7 @@ const DOCKS = [
     let per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-delta [aria-hidden]')].map(d => d.textContent));
     let tip = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').textContent);
     check('Oct 2025: vs last year (Oct 2024) reaches before Oct 2025 — every tile shows "—"', Object.values(k).every(t => t[1] === '—' && t[2] === 'no comparison'), k);
-    check('...and its tip says why: "No complete records before Oct 2025."', /No complete records before Oct 2025\./.test(tip), tip);
+    check('...and its tip says why: "No comparison: records before Oct 2025 are not complete."', /records before Oct 2025 are not complete\./.test(tip), tip);
     check('...the cottages\' ▲ ▼ against Sep 2025, also before it: "—"', per.length === 8 && per.every(x => x === '—'), per);
     check('...but the figures themselves still show (what the site holds): Bookings 4', k.bookings[0] === '4', k.bookings);
     await p.selectOption('.mphbac-staff-stats-month', '2025-11'); await settle(p);
@@ -365,7 +365,7 @@ const DOCKS = [
     const pace = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-pace-row')].map(r => [...r.querySelectorAll('.mphbac-staff-pace-delta [aria-hidden]')].map(x => x.textContent).join('')));
     const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-pace .mphbac-staff-tipbox').textContent);
     check('setting at 2025-11-15: pace shows "—" vs a year ago, and the tip says "No complete records before Nov 15, 2025."',
-      pace.every(x => x === '— vs a year ago') && /No complete records before Nov 15, 2025\./.test(tip), [pace, tip]);
+      pace.every(x => x === '— vs a year ago') && /records before Nov 15, 2025 are not complete\./.test(tip), [pace, tip]);
     const reqs = await p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_month').map(r => r.from + '|' + r.to));
     check('...and a comparison that cannot be shown is not even fetched (nothing from 2025)', reqs.every(r => r >= '2026'), reqs);
     await ctx.close();
@@ -406,9 +406,9 @@ const DOCKS = [
     // Each stay once, in house: Oct 6 — Amy and Ben; the echo of Ben is not a third guest.
     check('Day Oct 6: In house 2 (Amy, Ben — the channel block echoing Ben is not a third)', withDocks.dayTiles.inhouse[0] === '2', withDocks.dayTiles);
     const tip = await docked.p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tipbox')].map(b => b.textContent));
-    check('every ⓘ says dock blocks are left out', tip.length >= 13 && tip.every(t => /Dock blocks \(cottages the owner closed\) are left out\./.test(t)), tip.length);
+    check('every ⓘ says dock blocks are left out', tip.length >= 13 && tip.every(t => /Dock blocks (are left out|are not counted as booked)/.test(t)), tip.length);
     const tips2 = await docked.p.evaluate(() => ['arrivals', 'departures'].map(k => document.querySelector('.mphbac-staff-kpi.is-' + k + ' .mphbac-staff-tipbox').textContent));
-    check('Arrivals and Departures say each stay counts once', tips2.every(t => /each stay once/.test(t)), tips2);
+    check('Arrivals and Departures say each stay counts once', tips2.every(t => /counts once/.test(t)), tips2);
     // The BOARD still draws them, and last year's outlines are unchanged.
     await docked.p.evaluate(() => scrollTo(0, 0));
     await docked.p.selectOption('.mphbac-staff-period', 'month'); await settle(docked.p);
@@ -517,7 +517,9 @@ const DOCKS = [
   console.log('\n-- 0.46.2: Nights Booked by Cottage — names in full, "100%" on one line --');
   {
     // Rob's screenshot: Feb 2027, "#35 Blue Heron" cut, "100" over "%".
-    const cots = F.COTTAGES.map(c => c.id === 22 ? Object.assign({}, c, { number: '35', abbrev: 'Blue Heron' }) : c.id === 24 ? Object.assign({}, c, { number: '34', abbrev: 'Great Egret' }) : c);
+    // Rob's three longest names (the WD): "#23 Lighthouse", "#33 Pineapple", "#35 Blue Heron".
+    const cots = F.COTTAGES.map(c => c.id === 22 ? Object.assign({}, c, { number: '35', abbrev: 'Blue Heron' })
+      : c.id === 23 ? Object.assign({}, c, { number: '23', abbrev: 'Lighthouse' }) : c.id === 24 ? Object.assign({}, c, { number: '33', abbrev: 'Pineapple' }) : c);
     const full = bk(601, '2027-02-01', '2027-03-01', 22, 'direct', '2026-10-01');
     for (const w of [320, 375, 390]) {
       const { ctx, p } = await open({ phone: true, w, html: shell({ cottages: cots, bookings: BOOKINGS.concat([full]) }) });
@@ -525,15 +527,99 @@ const DOCKS = [
       const rows = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => {
         const n = r.querySelector('.mphbac-staff-percot-name'), pc = r.querySelector('.mphbac-staff-percot-pct'), t = r.querySelector('.mphbac-staff-percot-track');
         const lh = parseFloat(getComputedStyle(pc).lineHeight) || parseFloat(getComputedStyle(pc).fontSize) * 1.3;
-        return { name: n.textContent, whole: n.scrollWidth <= n.clientWidth + 0.5 && n.getBoundingClientRect().width >= n.scrollWidth - 0.5, pct: pc.textContent,
+        const parts = [...r.children].filter(x => !x.classList.contains('mphbac-staff-percot-track'));
+        const fits = parts.every(x => x.scrollWidth <= x.clientWidth + 0.5 && x.getBoundingClientRect().height < (parseFloat(getComputedStyle(x).lineHeight) || 17) * 1.5);
+        const d = r.querySelector('.mphbac-staff-percot-delta [aria-hidden]');
+        return { name: n.textContent, whole: n.scrollWidth <= n.clientWidth + 0.5 && n.getBoundingClientRect().width >= n.scrollWidth - 0.5, pct: pc.textContent, fits, delta: d.textContent,
           oneLine: pc.getBoundingClientRect().height < lh * 1.5, track: Math.round(t.getBoundingClientRect().width), inside: r.getBoundingClientRect().right <= innerWidth + 0.5 }; }));
       const top = rows[0];
-      check(`${w}px: Feb 2027 — "${top.name}" ${top.pct} on ONE line`, top.name === '#35 Blue Heron' && top.pct === '100%' && top.oneLine, top);
+      check(`${w}px: Feb 2027 — "${top.name}" ${top.pct} ${top.delta}: the %, and a three-digit change, each on ONE line`, top.name === '#35 Blue Heron' && top.pct === '100%' && top.delta === '▲100' && top.oneLine && top.fits, top);
+      check(`${w}px: "#23 Lighthouse", "#33 Pineapple" and "#35 Blue Heron" in full; in every row nothing overflows or wraps`,
+        ['#23 Lighthouse', '#33 Pineapple', '#35 Blue Heron'].every(nm => rows.some(r => r.name === nm && r.whole)) && rows.length === 8 && rows.every(r => r.fits), rows.filter(r => !r.fits || !r.whole));
       check(`${w}px: every cottage name in full ("#35 Blue Heron", "#34 Great Egret", "#23 Kingfisher"…), every figure on one line, the bar still there (≥ 24px)`,
         rows.every(r => r.whole && r.oneLine && r.track >= 24 && r.inside), rows.filter(r => !(r.whole && r.oneLine && r.track >= 24 && r.inside)).concat([rows.map(r => r.track).join(',')]));
       check(`${w}px: ...and every bar the same length, as the rows share their columns`, new Set(rows.map(r => r.track)).size === 1, rows.map(r => r.track));
       await ctx.close();
     }
+  }
+
+  console.log('\n-- 0.46.2: everything in Stats centred (Rob) — headings and blocks within 1px of the section\'s centre --');
+  for (const [w, phone] of [[320, true], [375, true], [390, true], [1280, false]]) {
+    const { ctx, p } = await open({ phone, w });
+    const m = await p.evaluate(() => {
+      const visible = e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';
+      const union = els => { const r = els.map(e => e.getBoundingClientRect()).filter(x => x.width || x.height);
+        return r.length ? { l: Math.min(...r.map(x => x.left)), r: Math.max(...r.map(x => x.right)) } : null; };
+      const mid = u => u ? (u.l + u.r) / 2 : NaN;
+      const out = document.querySelector('.mphbac-staff-stats-out').getBoundingClientRect();
+      const res = [];
+      // The tiles, as one block.
+      res.push({ s: 'tiles', head: 0, block: +(mid(union([...document.querySelectorAll('.mphbac-staff-kpi')])) - (out.left + out.right) / 2).toFixed(1) });
+      document.querySelectorAll('.mphbac-staff-stats-block').forEach(sec => {
+        const c = (sec.getBoundingClientRect().left + sec.getBoundingClientRect().right) / 2;
+        const h = sec.querySelector('.mphbac-staff-stats-h'), rg = document.createRange(); rg.selectNodeContents(h);
+        const hr = rg.getBoundingClientRect();
+        // The block: every LEAF that shows, outside the heading and the tip.
+        const own = e => !e.closest('.mphbac-staff-stats-hrow') && !e.closest('.mphbac-sr-only') && visible(e);
+        // A picture (the pie) counts as one shape, its own box.
+        const leaves = [...sec.querySelectorAll('*')].filter(e => own(e) && (e.tagName.toLowerCase() === 'svg' || (!e.closest('svg') && !e.children.length)));
+        // ...and the TEXT itself, where it sits beside an element (the pie's list).
+        const texts = [...sec.querySelectorAll('*')].filter(own).flatMap(e => [...e.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim() && e.children.length)
+          .map(n => { const r = document.createRange(); r.selectNodeContents(n); return { getBoundingClientRect: () => r.getBoundingClientRect() }; }));
+        res.push({ s: sec.className.replace('mphbac-staff-stats-block is-', ''), head: +((hr.left + hr.right) / 2 - c).toFixed(1), block: +(mid(union(leaves.concat(texts))) - c).toFixed(1),
+          tipAfter: (() => { const t = h.querySelector('.mphbac-staff-tip').getBoundingClientRect(), last = h.querySelector('.mphbac-staff-stats-hlast');
+            const rr = document.createRange(); rr.selectNodeContents(last.firstChild); const lw = rr.getBoundingClientRect();
+            return t.left >= lw.right - 0.5 && t.left - lw.right <= 8 && Math.abs((t.top + t.bottom) / 2 - (lw.top + lw.bottom) / 2) < 6; })() });
+      });
+      return res;
+    });
+    check(`${w}px: every section heading centred (±1px): ${m.filter(x => x.s !== 'tiles').map(x => x.s + ' ' + x.head).join(', ')}`, m.every(x => Math.abs(x.head) <= 1), m);
+    check(`${w}px: every section's content centred as a block (±1px): ${m.map(x => x.s + ' ' + x.block).join(', ')}`, m.every(x => Math.abs(x.block) <= 1), m);
+    check(`${w}px: every heading's ⓘ sits right after its last word, on its line`, m.filter(x => x.s !== 'tiles').every(x => x.tipAfter), m.filter(x => x.tipAfter === false));
+    await ctx.close();
+  }
+  {
+    // A heading that wraps (a narrow window) takes its ⓘ along with the last word.
+    const { ctx, p } = await open({ phone: true, w: 320 });
+    const r = await p.evaluate(() => { const h = document.querySelector('.mphbac-staff-stats-block.is-weekdays .mphbac-staff-stats-h');
+      h.style.width = '150px'; h.style.margin = '0 auto';
+      const last = h.querySelector('.mphbac-staff-stats-hlast'), t = h.querySelector('.mphbac-staff-tip');
+      const rr = document.createRange(); rr.selectNodeContents(last.firstChild); const lw = rr.getBoundingClientRect(), tb = t.getBoundingClientRect();
+      const first = document.createRange(); first.selectNodeContents(h.firstChild); const f = first.getClientRects()[0];
+      return { wrapped: lw.top > f.top + 5, sameLine: Math.abs((tb.top + tb.bottom) / 2 - (lw.top + lw.bottom) / 2) < 6 && tb.left >= lw.right - 0.5 }; });
+    check('a heading that wraps keeps its ⓘ with its last word', r.wrapped && r.sameLine, r);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.46.2: every ⓘ rewritten — a lead sentence, then a real list; no run-together sentences; within its lines at 375 --');
+  {
+    const { ctx, p } = await open({ phone: true, w: 375 });
+    const keys = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tip')].map(b => b.getAttribute('data-tip')));
+    const res = [];
+    for (const k of keys) {
+      await p.evaluate(k => { const b = document.querySelector('.mphbac-staff-tip[data-tip="' + k + '"]'); b.scrollIntoView({ block: 'center' }); b.click(); }, k);
+      res.push(await p.evaluate(k => {
+        const box = document.getElementById(document.querySelector('.mphbac-staff-tip[data-tip="' + k + '"]').getAttribute('aria-controls'));
+        const lh = parseFloat(getComputedStyle(box).lineHeight);
+        const lines = e => Math.round(e.getBoundingClientRect().height / lh);
+        const lead = box.querySelector('.mphbac-staff-tiplead'), items = [...box.querySelectorAll('ul.mphbac-staff-tiplist > li')];
+        const r = box.getBoundingClientRect();
+        return { k, lead: lead.textContent, items: items.map(li => li.textContent), leadLines: lines(lead), itemLines: items.map(lines), total: Math.round(r.height / lh),
+          text: box.textContent, list: !!box.querySelector('ul > li'), on: r.left >= 0 && r.right <= 375 };
+      }, k));
+      await p.evaluate(() => document.querySelector('.mphbac-staff-stats-range').click());
+    }
+    check(`all ${res.length} tips: a lead sentence and a real <ul> list`, res.length === 13 && res.every(t => t.lead.length > 10 && /[.]$/.test(t.lead) && t.list), res.map(t => [t.k, t.lead]));
+    check('...every line a complete sentence ending in a full stop', res.every(t => t.items.every(i => /[.]$/.test(i) && /^[A-Z▲]/.test(i))), res.map(t => t.items));
+    check('...nothing run together ("counts once.Dock blocks"): never a full stop, colon or bracket straight against the next word',
+      res.every(t => !/[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))), res.filter(t => /[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))).map(t => t.text));
+    check('...none of the old jargon ("timeframe", "points", "echo", "channel block")', res.every(t => !/timeframe|points|echo|channel block/i.test(t.text)), res.filter(t => /timeframe|points|echo|channel block/i.test(t.text)).map(t => t.k));
+    check('...at 375: the lead at most 2 lines, each point at most 2, the whole bubble on screen',
+      res.every(t => t.leadLines <= 2 && t.itemLines.every(n => n <= 2) && t.on), res.map(t => [t.k, t.leadLines, t.itemLines.join('+'), t.total]));
+    console.log('   LINES AT 375 (lead + points = total): ' + res.map(t => t.k + ' ' + t.leadLines + '+' + t.itemLines.join('+') + '=' + t.total).join(' · '));
+    console.log('   EVERY TIP (the check list):');
+    res.forEach(t => console.log('   · ' + t.k + ': ' + t.lead + ' | ' + t.items.join(' | ')));
+    await ctx.close();
   }
 
   console.log('\n-- 0.46.0 C17: last year\'s ghosts --');
@@ -584,13 +670,15 @@ const DOCKS = [
       const R = s => document.querySelector(s).getBoundingClientRect();
       const g = R('.mphbac-staff-grid'), f = R('.mphbac-staff-ghostfield'), u = R('.mphbac-staff-updated'), sh = R('.mphbac-staff-period'), go = R('.mphbac-staff-goto'), tools = R('.mphbac-staff-fields');
       const overlap = !(f.right <= u.left || u.right <= f.left || f.bottom <= u.top || u.bottom <= f.top);
-      return { left: Math.round(f.left - g.left), under: Math.round(f.top - g.bottom), updRight: Math.round(g.right - u.right), updText: document.querySelector('.mphbac-staff-updated').textContent,
+      const ue = document.querySelector('.mphbac-staff-updated');
+      return { left: Math.round(f.left - g.left), under: Math.round(f.top - g.bottom), updRight: Math.round(g.right - u.right), updText: ue.textContent,
+        updOneLine: u.height < (parseFloat(getComputedStyle(ue).lineHeight) || 16) * 1.5,
         overlap, tap: Math.round(f.height), fieldsW: [Math.round(sh.width), Math.round(go.width)], tops: Math.abs(sh.top - go.top),
         centre: +(((sh.left + go.right) / 2) - ((tools.left + tools.right) / 2)).toFixed(1), inside: sh.left >= 0 && go.right <= innerWidth };
     });
     check(`${w}px: the switch is LEFT-ALIGNED under the calendar (its left edge on the calendar's), a 44px tap target`,
       Math.abs(m.left) <= 1 && m.under >= 0 && m.under <= 12 && m.tap >= 44, m);
-    check(`${w}px: "${m.updText}" stays right-aligned under the calendar, and the two never overlap`, /^Updated \d\d:\d\d$/.test(m.updText) && Math.abs(m.updRight) <= 1 && !m.overlap, m);
+    check(`${w}px: "${m.updText}" stays right-aligned under the calendar on one line, and the two never overlap`, /^Updated \d\d:\d\d$/.test(m.updText) && Math.abs(m.updRight) <= 1 && !m.overlap && m.updOneLine, m);
     check(`${w}px: Show / Go to date, two again: the same width, level, the pair centred, on screen`,
       m.fieldsW[0] === m.fieldsW[1] && m.tops < 0.5 && Math.abs(m.centre) <= 1 && m.inside, m);
     await ctx.close();

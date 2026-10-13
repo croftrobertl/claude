@@ -3263,3 +3263,27 @@ because that run was filtered to its own entries; repaired now, with the
 two switch entries replaced by 0.46.2's. The stale check now runs over the
 whole list before each release.
 
+**Added to 0.46.2 — Stats polish (WD, 2026-10-13, Rob on his iPhone):**
+(1) "Make them all centre aligned": every section heading centred, the ⓘ
+straight after its last word and held to it (a nowrap span, so a wrapped
+heading takes it along), every block centred — the cottage and stay-length
+rows as one centred block of shared columns (max 560px), How Far Ahead and
+Pace centred (Pace is now a small grid: name | nights | ▲ ▼, the ▲ ▼ under
+its nights on a phone), empty messages centred. Tested: heading and block
+centres within 1px of the section's at 320 / 375 / 390 / 1280 (the block
+measured as the union of what shows — leaf elements, text, the pie as one
+shape). (2) Nights Booked by Cottage resized — supersedes item 5: the
+0.46.2 columns (names never narrower than the longest, figures sized to
+their text, the rows a subgrid) already fit "#23 Lighthouse", "#33
+Pineapple", "#35 Blue Heron", "100%" and "▲100" at 320 / 375 / 390 at the
+Stats row size (13px) — no smaller type was needed; the bar is 38px at 320.
+(3) Every ⓘ rewritten: a lead sentence and a real <ul> of points; plain
+words (no "timeframe", "points", "echo", "channel block"); every fact kept.
+The bubble is 320px wide (was 280) so each line holds; at 375 every lead
+and every point is at most 2 lines, the longest tip (Booked) 9 lines in
+all — the WD's own example is 6, so "about 3 lines" could not hold with
+the facts kept. The old run-together text ("counts once.Dock blocks") was
+the bubble's lines joined without a space by anything reading its text; the
+parts are now separated, and a test forbids a full stop, colon or bracket
+against the next word.
+
