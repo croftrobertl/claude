@@ -106,7 +106,7 @@ const DOCKS = [
       k.booked[2] === 'up 6 points on the same dates a year earlier' && k.length[2] === 'up 4.3 nights on the same dates a year earlier'
       && k.arrivals[2] === 'up 1 on the same dates a year earlier', [k.booked[2], k.length[2], k.arrivals[2]]);
     const tipText = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
-    check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates last year \(Oct 1 – 31, 2025\)/.test(tipText), tipText);
+    check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\)/.test(tipText), tipText);
 
     const per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => [
       r.querySelector('.mphbac-staff-percot-name').textContent, r.querySelector('.mphbac-staff-percot-num').textContent,
@@ -120,7 +120,7 @@ const DOCKS = [
     check('▲ ▼ in points against the PREVIOUS timeframe (Sep): #24 ▲39, #22 ▼18 (32 − 50), #25 ▼7 (3 − 10), #23 ▲16, #27 ±0',
       per[0][3] === '▲39' && per[1][3] === '▼18' && per[4][3] === '▼7' && per[3][3] === '▲16' && per[5][3] === '±0', per.map(r => r[3]));
     const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
-    check('...its tip: the share of its 31 nights, and the previous timeframe named (Sep 1 – 30, 2026)', /share of this period's 31 nights/.test(tip) && /period before \(Sep 1 – 30, 2026\)/.test(tip), tip);
+    check('...its tip: the share of its 31 nights, and the previous timeframe named (Sep 1 – 30, 2026)', /share of this period's 31 nights/.test(tip) && /period before \(Sep\u00a01\u00a0–\u00a030, 2026\)/.test(tip), tip);
 
     // C16 stay-length mix: the Bookings set — 2 (Cal), 3 (Ben), 4 (Eli),
     // 7 (Fay), 10 (Amy), 31 (Dot).
@@ -311,7 +311,7 @@ const DOCKS = [
     await p.selectOption('.mphbac-staff-stats-span', 'month');
     await p.selectOption('.mphbac-staff-stats-month', '2028-02'); await settle(p);
     const leap = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
-    check('Feb 2028 (29 days) against a year earlier: Feb 1 – 28, 2027 — a 29 February is the 28th', /\(Feb 1 – 28, 2027\)/.test(leap), leap);
+    check('Feb 2028 (29 days) against a year earlier: Feb 1 – 28, 2027 — a 29 February is the 28th', /\(Feb\u00a01\u00a0–\u00a028, 2027\)/.test(leap), leap);
     await p.selectOption('.mphbac-staff-stats-span', 'year');
     await p.selectOption('.mphbac-staff-stats-year', '2029'); await settle(p);
     await p.selectOption('.mphbac-staff-stats-year', '2023'); await settle(p);
@@ -617,6 +617,7 @@ const DOCKS = [
     check('...nothing run together ("counts once.Dock blocks"): never a full stop, colon or bracket straight against the next word',
       res.every(t => !/[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))), res.filter(t => /[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))).map(t => t.text));
     check('...none of the old jargon ("timeframe", "points", "echo", "channel block")', res.every(t => !/timeframe|points|echo|channel block/i.test(t.text)), res.filter(t => /timeframe|points|echo|channel block/i.test(t.text)).map(t => t.k));
+    check('...a date range in a tip is never broken at its dash ("Oct 1 – 31" stays together)', res.every(t => !/ –|– /.test(t.text)), res.filter(t => / –|– /.test(t.text)).map(t => t.k));
     check('...at 375: the lead at most 2 lines, each point at most 2, the whole bubble on screen',
       res.every(t => t.leadLines <= 2 && t.itemLines.every(n => n <= 2) && t.on), res.map(t => [t.k, t.leadLines, t.itemLines.join('+'), t.total]));
     console.log('   LINES AT 375 (lead + points = total): ' + res.map(t => t.k + ' ' + t.leadLines + '+' + t.itemLines.join('+') + '=' + t.total).join(' · '));

@@ -1740,6 +1740,10 @@
             return e;
         }
 
+        // A date range inside a tip: "Oct 1 – 31" held together, so a line
+        // never ends on the dash (0.46.2).
+        function tipRange(from, to) { return rangeLabel(from, to).replace(/ – /g, '\u00a0–\u00a0').replace(/^(\w+) (\d)/, '$1\u00a0$2'); }
+
         // A SECTION'S HEADING (0.46.2, Rob: centred, every one): the ⓘ right
         // after the text — held to the LAST WORD, so a heading that wraps
         // takes it along — and the bubble under the heading.
@@ -1776,7 +1780,7 @@
             // rest.
             // ▲ ▼'s line in each tile's tip: what it compares with, in what.
             var vsLine = function (str) {
-                return plan.ly.why ? noCompareText(plan.ly.why) : (str || '').replace('{range}', rangeLabel(plan.ly.w.from, plan.ly.w.to));
+                return plan.ly.why ? noCompareText(plan.ly.why) : (str || '').replace('{range}', tipRange(plan.ly.w.from, plan.ly.w.to));
             };
             var grid = el('dl', 'mphbac-staff-stats-kpis');
             var minus = function (a, b) {
@@ -1820,7 +1824,7 @@
             var per = el('section', 'mphbac-staff-stats-block is-percot');
             blockHead(per, 'percot', S.stPerCottage, (S.stPerCottageTip || '').replace('{n}', String(n.nights)), [S.stTipNightOnce, S.stTipDock,
                 plan.prev.why ? noCompareText(plan.prev.why)
-                    : (S.stTipVsPrev || '').replace('{range}', rangeLabel(plan.prev.w.from, plan.prev.w.to))]);
+                    : (S.stTipVsPrev || '').replace('{range}', tipRange(plan.prev.w.from, plan.prev.w.to))]);
             var list = el('ul', 'mphbac-staff-percot');
             var pct = function (v, of) { return of ? Math.round(100 * v / of) : 0; };
             n.cottages.map(function (c, i) { return { c: c, i: i, v: n.perCottage[c.id] || 0 }; })
