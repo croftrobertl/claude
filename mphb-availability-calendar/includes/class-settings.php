@@ -51,7 +51,7 @@ final class Settings
     public const VERSION_OPT = 'mphbac_settings_version';
 
     /** Bump when a key is ADDED or its default CHANGES, never for a re-label. */
-    public const SCHEMA_VERSION = 2;   // 2: records_complete_from (0.46.0)
+    public const SCHEMA_VERSION = 3;   // 2: records_complete_from (0.46.0); 3: dock_block_names (0.46.1)
 
     /** Runtime memo. Not a cache — the option is already object-cached by WP. */
     private static ?array $resolved = null;
@@ -133,6 +133,11 @@ final class Settings
         // A calendar date, YYYY-MM-DD (0.46.0, for "Records complete from").
         $date = static fn(string $group, string $label, string $default, string $help = ''): array => [
             'group' => $group, 'type' => 'date', 'label' => $label,
+            'default' => $default, 'help' => $help,
+        ];
+        // One line of plain text (0.46.1, for "Dock block names").
+        $text = static fn(string $group, string $label, string $default, string $help = ''): array => [
+            'group' => $group, 'type' => 'text', 'label' => $label,
             'default' => $default, 'help' => $help,
         ];
         $bool = static fn(string $group, string $label, bool $default, string $help = ''): array => [
@@ -218,6 +223,13 @@ final class Settings
             // this date shows "—" instead of a figure.
             'records_complete_from' => $date('staff', __('Records complete from', 'mphb-availability-calendar'), '2025-10-01',
                 __('Stats comparisons with an earlier period (vs last year, vs the previous period, bookings on the books a year ago) show “—” where they would reach before this date. Every other figure shows whatever the site holds.', 'mphb-availability-calendar')),
+            // DOCK BLOCKS ARE NOT STAYS (0.46.1, Rob: "Leave them out"). Rob
+            // closes a cottage for his own reasons with a booking named first
+            // "DOCK", last "BLOCK". The board still draws them; every Stats
+            // figure leaves them out. Matched on the server (Staff_Data), on
+            // the guest's first + last name, case and spacing ignored.
+            'dock_block_names' => $text('staff', __('Dock block names', 'mphb-availability-calendar'), 'DOCK BLOCK',
+                __('Bookings whose guest name (first name, then last name) is one of these are cottages closed by the owner, not stays: the board still shows them, Stats leaves them out. Separate several names with commas; capitals and extra spaces do not matter. Leave empty to count every booking.', 'mphb-availability-calendar')),
 
             // ---- layout (advanced) ---------------------------------------
             'namecol_width'          => $int('layout', __('Cottage column width (px)', 'mphb-availability-calendar'), 96, 40, 300),
@@ -333,6 +345,11 @@ final class Settings
             case 'choice':
                 return is_string($value) && array_key_exists($value, $field['choices'])
                     ? $value : $field['default'];
+            case 'text':
+                // One line, plain, at most 200 characters. Empty is allowed.
+                $v = is_scalar($value) ? (string) $value : '';
+                $v = trim((string) preg_replace('/\s+/u', ' ', wp_strip_all_tags($v)));
+                return function_exists('mb_substr') ? mb_substr($v, 0, 200) : substr($v, 0, 200);
             case 'date':
                 $v = is_string($value) ? trim($value) : '';
                 return (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]))

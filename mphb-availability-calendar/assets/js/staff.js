@@ -1571,6 +1571,12 @@
                         var k = c.roomTypeId + '|' + d;
                         if (d >= b.checkin && d < b.checkout && !owner[k]) {
                             owner[k] = b;
+                            // A DOCK BLOCK (0.46.1, Rob: "Leave them out")
+                            // still owns its nights — so a channel's echo of
+                            // it cannot count either — but they are not booked
+                            // nights and it is not a booking. The night stays
+                            // in the total (the denominator), as Rob asked.
+                            if (b.notStay) return;
                             counted[b.id] = b;
                             booked++;
                             perCottage[c.roomTypeId] = (perCottage[c.roomTypeId] || 0) + 1;
@@ -1586,6 +1592,26 @@
             };
         }
 
+        // EACH STAY ONCE (0.46.1, Rob). A stay is a booking that owns at
+        // least one night of its OWN stay — the nights' rule above, over the
+        // whole stay, not just the timeframe — so a channel block repeating a
+        // booking (or a dock block) is not a second arrival, departure or
+        // guest in house. Dock blocks are never stays.
+        function staysOf(sorted) {
+            var owner = {}, keep = {};
+            sorted.forEach(function (b) {
+                (b.cottages || []).forEach(function (c) {
+                    for (var d = b.checkin; d < b.checkout; d = shiftDay(d, 1)) {
+                        var k = c.roomTypeId + '|' + d;
+                        if (owner[k]) continue;
+                        owner[k] = b;
+                        if (!b.notStay) keep[b.id] = b;
+                    }
+                });
+            });
+            return sorted.filter(function (b) { return keep[b.id] === b; });
+        }
+
         function statsNumbers(data, w) {
             var nights = daysBetween(w.from, w.to);
             var o = own(data.bookings || [], nights);
@@ -1598,13 +1624,14 @@
             // the timeframe included.
             var mine = o.mine;
             var stayNights = mine.reduce(function (t, b) { return t + nightsBetween(b.checkin, b.checkout); }, 0);
-            var turns = 0, t = turnovers(bookings);
+            var stays = staysOf(bookings);
+            var turns = 0, t = turnovers(stays);
             Object.keys(t).forEach(function (typeId) { Object.keys(t[typeId]).forEach(function (d) { if (inRange(d)) turns++; }); });
-            // ARRIVALS / DEPARTURES count EVERY booking, channel blocks
-            // included (unchanged since 0.44.1) — and so does the weekday
-            // chart, so its bars add up to the tiles.
-            var ins = bookings.filter(function (b) { return inRange(b.checkin); });
-            var outs = bookings.filter(function (b) { return inRange(b.checkout); });
+            // ARRIVALS / DEPARTURES: each stay once (0.46.1, Rob — until then
+            // every booking, channel blocks included). The weekday chart uses
+            // the same stays, so its bars add up to the tiles.
+            var ins = stays.filter(function (b) { return inRange(b.checkin); });
+            var outs = stays.filter(function (b) { return inRange(b.checkout); });
             var byDay = function (list, key) {
                 var a = [0, 0, 0, 0, 0, 0, 0];
                 list.forEach(function (b) { a[new Date(b[key] + 'T00:00:00').getDay()]++; });
@@ -1621,7 +1648,7 @@
                 inByDay: byDay(ins, 'checkin'),
                 outByDay: byDay(outs, 'checkout'),
                 turnovers: turns,
-                inHouse: w.span === 'day' ? dayGroups(bookings, w.from).stay.length : null,
+                inHouse: w.span === 'day' ? dayGroups(stays, w.from).stay.length : null,
                 bookings: mine.length,
                 mine: mine,
                 length: mine.length ? stayNights / mine.length : null,
@@ -1682,7 +1709,7 @@
 
         // ▲8 / ▼3 / ±0 / —. What is SEEN is the arrow; what is READ is a
         // sentence, "up 8 points on the same dates a year earlier".
-        function deltaEl(tag, cls, v, decimals, vs) {
+        function deltaEl(tag, cls, v, decimals, vs, unit) {
             var e = el(tag, cls);
             var seen = el('span', '');
             seen.setAttribute('aria-hidden', 'true');
@@ -1701,7 +1728,11 @@
                 } else {
                     e.className += r > 0 ? ' is-up' : ' is-down';
                     seen.textContent = (r > 0 ? '▲' : '▼') + abs;
-                    said.textContent = ((r > 0 ? S.stSrUp : S.stSrDown) || '').replace('{n}', abs).replace('{vs}', vs || '');
+                    // "up 1 point", "down 3 points", "up 0.4 nights" (0.46.1:
+                    // it read "up 1 points").
+                    var amount = unit === 'point' ? ((abs === '1' ? S.stPoint : S.stPoints) || '{n}').replace('{n}', abs)
+                        : unit === 'night' ? ((abs === '1' ? S.stNight : S.stNights) || '{n}').replace('{n}', abs) : abs;
+                    said.textContent = ((r > 0 ? S.stSrUp : S.stSrDown) || '').replace('{n}', amount).replace('{vs}', vs || '');
                 }
             }
             e.appendChild(seen);
@@ -1712,7 +1743,8 @@
         function blockHead(sec, key, title, lines) {
             var row = el('div', 'mphbac-staff-stats-hrow');
             row.appendChild(el('h3', 'mphbac-staff-stats-h', title || ''));
-            row.appendChild(tipEl(key, title || '', lines));
+            // Every Stats figure leaves dock blocks out (0.46.1), and says so.
+            row.appendChild(tipEl(key, title || '', [lines[0], S.stNoDock].concat(lines.slice(1))));
             sec.appendChild(row);
         }
 
@@ -1738,21 +1770,21 @@
             var minus = function (a, b) {
                 return (!ly || a === null || a === undefined || b === null || b === undefined) ? null : a - b;
             };
-            var kpi = function (key, label, value, tip, delta, decimals) {
+            var kpi = function (key, label, value, tip, delta, decimals, unit) {
                 var box = el('div', 'mphbac-staff-kpi is-' + key);
                 box.appendChild(el('dt', 'mphbac-staff-kpi-label', label || ''));
                 box.appendChild(el('dd', 'mphbac-staff-kpi-num', String(value)));
-                box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, S.stVsYearSr));
+                box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, S.stVsYearSr, unit));
                 var more = el('dd', 'mphbac-staff-kpi-more');
-                more.appendChild(tipEl(key, label || '', [tip, vsLine]));
+                more.appendChild(tipEl(key, label || '', [tip, S.stNoDock, vsLine]));
                 box.appendChild(more);
                 grid.appendChild(box);
             };
             // Order (WD): two full rows of three on a phone.
             kpi('bookings', S.stBookings, n.bookings, S.stBookingsTip, minus(n.bookings, ly && ly.bookings));
-            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip, minus(n.pct, ly && ly.pct));
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', S.stBookedTip, minus(n.pct, ly && ly.pct), 0, 'point');
             kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), S.stLengthTip,
-                minus(n.length, ly && ly.length), 1);
+                minus(n.length, ly && ly.length), 1, 'night');
             // "nights" in a smaller size, so the figure fits a phone's tile;
             // the text still reads "4.2 nights".
             (function (dd) {
@@ -1792,7 +1824,7 @@
                     li.appendChild(el('span', 'mphbac-staff-percot-num', nightsText(v)));
                     li.appendChild(el('span', 'mphbac-staff-percot-pct', p + '%'));
                     li.appendChild(deltaEl('span', 'mphbac-staff-percot-delta',
-                        pv ? p - pct(pv.perCottage[c.id] || 0, pv.nights) : null, 0, S.stVsPrevSr));
+                        pv ? p - pct(pv.perCottage[c.id] || 0, pv.nights) : null, 0, S.stVsPrevSr, 'point'));
                     list.appendChild(li);
                 });
             per.appendChild(list);
@@ -1885,7 +1917,8 @@
                 col.appendChild(el('span', 'mphbac-staff-wk-name', ((CAL.weekdays || [])[d] || '').slice(0, 3)));
                 chart.appendChild(col);
                 said.appendChild(el('li', '', (S.stWeekdaySr || '').replace('{day}', (CAL.weekdaysFull || CAL.weekdays || [])[d] || '')
-                    .replace('{in}', String(n.inByDay[d])).replace('{out}', String(n.outByDay[d]))));
+                    .replace('{in}', ((n.inByDay[d] === 1 ? S.stArrival1 : S.stArrivalN) || '{n}').replace('{n}', String(n.inByDay[d])))
+                    .replace('{out}', ((n.outByDay[d] === 1 ? S.stDeparture1 : S.stDepartureN) || '{n}').replace('{n}', String(n.outByDay[d])))));
             }
             var key = el('p', 'mphbac-staff-wk-key');
             key.setAttribute('aria-hidden', 'true');
@@ -1942,7 +1975,7 @@
                 li.setAttribute('data-days', String(k));
                 li.appendChild(el('span', 'mphbac-staff-pace-name', (S.stPaceNext || '').replace('{n}', String(k))));
                 li.appendChild(el('span', 'mphbac-staff-pace-num', (S.stPaceNights || '{n} nights booked').replace('{n}', String(now))));
-                var d = deltaEl('span', 'mphbac-staff-pace-delta', ago === null ? null : now - ago, 0, S.stVsAgo);
+                var d = deltaEl('span', 'mphbac-staff-pace-delta', ago === null ? null : now - ago, 0, S.stVsAgo, 'night');
                 var vs = el('span', 'mphbac-staff-pace-vs', ' ' + (S.stVsAgo || ''));
                 vs.setAttribute('aria-hidden', 'true');
                 d.insertBefore(vs, d.lastChild);
@@ -1984,6 +2017,9 @@
                         cell.setAttribute('data-day', d);
                         cell.setAttribute('data-n', String(v));
                         cell.title = (S.stHeatDay || '').replace('{date}', mediumDay(d)).replace('{n}', String(v)).replace('{total}', String(total));
+                        cell.setAttribute('role', 'button');
+                        cell.setAttribute('aria-label', cell.title);
+                        cell.tabIndex = -1;
                     }
                     // The outline: only the timeframe's OUTER edges in this
                     // month's 7-column grid, so it reads as one shape.
@@ -2000,12 +2036,36 @@
                 mon.appendChild(days);
                 grid.appendChild(mon);
             }
-            // The picture is for the eye; its tip says what it shows, and the
-            // board holds every night it is drawn from.
-            grid.setAttribute('aria-hidden', 'true');
+            // THE KEYBOARD (0.46.1, the WD): ONE tab stop — the timeframe's
+            // first night, else the year's first — and the arrows from there:
+            // ← → a night, ↑ ↓ a week, Home / End the month's first and last;
+            // Enter or Space opens the board on it, as a tap does.
+            grid.setAttribute('role', 'group');
+            grid.setAttribute('aria-label', (S.stHeatNav || '').replace('{year}', year.y));
+            var stop = grid.querySelector('.mphbac-staff-heat-day.is-in[data-day]') || grid.querySelector('.mphbac-staff-heat-day[data-day]');
+            if (stop) stop.tabIndex = 0;
             grid.addEventListener('click', function (e) {
                 var c = e.target.closest ? e.target.closest('.mphbac-staff-heat-day[data-day]') : null;
                 if (c) jumpBoard(c.getAttribute('data-day'));
+            });
+            grid.addEventListener('keydown', function (e) {
+                var c = e.target.closest ? e.target.closest('.mphbac-staff-heat-day[data-day]') : null;
+                if (!c) return;
+                var d = c.getAttribute('data-day'), k = e.key, to = null;
+                if (k === 'Enter' || k === ' ') { e.preventDefault(); jumpBoard(d, true); return; }
+                if (k === 'ArrowRight') to = shiftDay(d, 1);
+                else if (k === 'ArrowLeft') to = shiftDay(d, -1);
+                else if (k === 'ArrowDown') to = shiftDay(d, 7);
+                else if (k === 'ArrowUp') to = shiftDay(d, -7);
+                else if (k === 'Home') to = d.slice(0, 8) + '01';
+                else if (k === 'End') { var md = monthDays(d.slice(0, 7)); to = md[md.length - 1]; }
+                else return;
+                e.preventDefault();
+                var t = grid.querySelector('.mphbac-staff-heat-day[data-day="' + to + '"]');
+                if (!t) return;
+                c.tabIndex = -1;
+                t.tabIndex = 0;
+                t.focus();
             });
             sec.appendChild(grid);
             var key = el('p', 'mphbac-staff-heat-key');
@@ -2019,12 +2079,15 @@
 
         // The board, sent to a night from the heat map — in whatever period
         // it shows — and brought into view.
-        function jumpBoard(d) {
+        function jumpBoard(d, byKey) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < CAP_LO || d > CAP_HI) return;
             state.anchor = d;
             render();
             var top = root.querySelector('.mphbac-staff-topbar') || gridEl;
             if (top.scrollIntoView) top.scrollIntoView({ block: 'start' });
+            // From the keyboard, focus goes with it: to the chart (a
+            // keyboard-reachable region) — Daily's list has no tab stop.
+            if (byKey && state.period !== 'day') { try { gridEl.focus({ preventScroll: true }); } catch (e) { gridEl.focus(); } }
         }
 
         // ---- ⓘ TIPS (0.46.0, Rob) ----------------------------------------------

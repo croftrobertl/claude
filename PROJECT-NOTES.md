@@ -3141,3 +3141,58 @@ The tips now say so plainly. Should they be deduplicated like Bookings?
 371–524ms on this VM across runs, the same spread with fitTitle disabled —
 noise, not the date line; the budget was left as it is.
 
+## 0.46.0 on staging; Rob's answers → 0.46.1 (WD, 2026-10-12)
+
+**WD on staging (computer, Rob's session):** band, legend gap, date line,
+empty search, the lists, Last-year outlines, arrows, ⓘ, ranked rows and
+the heat-map tap all pass; October 2026's 8 bookings / 32% match the
+staging database exactly (80 of 248 cottage-nights). My three calls (heat
+map in #0A50B2, Last year beside Show and disabled in Daily, same-dates
+comparison) stand unless Rob says otherwise.
+
+**Rob decided:** (1) DOCK BLOCKS ARE NOT STAYS — "Leave them out". He closes
+a cottage with a booking named first "DOCK", last "BLOCK" (live: 3
+confirmed, Sep 7 – Nov 10 2026, 125 nights; 28 cancelled; no other booking
+uses the name). Out of EVERY Stats figure and comparison; the denominator
+stays all cottage-nights; the board still draws them and the Last-year
+outlines are unchanged. (2) COUNT EACH STAY ONCE in Arrivals, Departures
+and the weekday chart (my question in 0.46.0). **WD:** match server-side,
+case-insensitive and trimmed, sent as `notStay` so the browser never reads
+a name; the names a setting, "DOCK BLOCK" baked in; every affected tip
+says so; the heat map reachable by keyboard; "1 point" not "1 points".
+
+**HOW.** Staff_Data::is_dock_block(): name_from_meta() (first + last),
+whitespace folded, lowercased, against the comma-separated
+`dock_block_names` setting (a new `text` setting type: one plain line,
+markup stripped, ≤ 200 characters, empty = no dock blocks). In staff.js a
+dock block still OWNS its cottage-nights in the ownership rule — so a
+channel's echo of it (same dates, later id) owns nothing and cannot count
+either — but those nights are not booked nights and it is never a
+booking. "Each stay once": staysOf() applies the same ownership over each
+booking's WHOLE stay (not just the timeframe, or a departure on the
+timeframe's first day would be lost); Arrivals, Departures, In house,
+Turnovers and the weekday chart count stays. I applied it to In house
+and Turnovers too: they are the same "guest" counts and would otherwise
+disagree with Arrivals (a dock block ending the day a guest arrives is
+no turnover). Every Stats ⓘ now carries "Dock blocks (cottages the owner
+closed) are left out."; Booked's adds that their nights stay in the total.
+
+**Heat map keyboard:** one tab stop (the timeframe's first night, else
+the year's first), roving: ← → a night, ↑ ↓ a week, Home / End the month's
+first / last, Enter or Space opens the board on it and moves focus to the
+chart. Each night is a role="button" named "Oct 5, 2026: 2 of 8 cottages
+booked"; the grid is a labelled group (it was aria-hidden).
+
+**Singular:** "up 1 point", "up 1 night", and in the weekday chart's text
+"1 arrival, 1 departure" (found while fixing the WD's case).
+
+**Proof that dock blocks change nothing:** staff-stats-test.js renders the
+board with and without seven dock blocks — this October (plus a channel's
+echo of it), the previous timeframe, last October, pace now, pace a year
+ago, and one ending the day a guest arrives — and requires the Stats
+section to be IDENTICAL on Month, Day, Week, Year and Nov 2025: every
+figure, every heat-map night, every bar width.
+
+**Rollback** to 0.46.0: the `dock_block_names` setting is dropped by its
+upgrade merge (unknown key); everything else stays.
+

@@ -46,6 +46,22 @@ const BOOKINGS = [
   bk(206, '2025-10-20', '2025-10-22', 25, 'direct', '', 'Ned Noon'),               // 2; NO made-on date
 ];
 const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
+// DOCK BLOCKS (0.46.1, Rob: "Leave them out"): the owner's own closures,
+// flagged notStay BY THE SERVER (staff-board-data-test.php proves the
+// matching). One in every window Stats reads — this October (with a
+// channel's echo of it, which must not count either), last September (the
+// previous timeframe), last October (a year earlier), December (pace now)
+// and November 2025 (pace a year ago).
+const dock = (id, ci, co, cottage, src, madeOn, name = 'DOCK BLOCK') => Object.assign(bk(id, ci, co, cottage, src, madeOn, name), { notStay: name === 'DOCK BLOCK' });
+const DOCKS = [
+  dock(301, '2026-10-01', '2026-11-10', 29, 'direct', '2026-09-30'),
+  dock(302, '2026-10-01', '2026-11-10', 29, 'airbnb', '2026-10-01', 'Reserved'),   // the channel's echo of the dock block
+  dock(303, '2026-09-07', '2026-09-30', 28, 'direct', '2026-09-01'),
+  dock(304, '2025-10-05', '2025-10-25', 29, 'direct', '2025-09-01'),
+  dock(305, '2026-12-01', '2026-12-20', 27, 'direct', '2026-10-01'),
+  dock(306, '2025-11-01', '2025-11-20', 27, 'direct', '2025-09-01'),
+  dock(307, '2026-10-10', '2026-10-14', 26, 'direct', '2026-10-01'),   // ends the day Fay arrives in #26: no turnover
+];
 
 (async () => {
   const browser = await chromium.launch(S.CHROMIUM);
@@ -76,16 +92,19 @@ const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
     const k = await tiles(p);
     // Oct 2026: 35 cottage-nights (22: 10, 23: 3+2, 24: 12, 25: 1, 26: 7) of
     // 248 = 14%; six bookings own a night (the echo owns none); Length
-    // (10+3+2+31+4+7)/6 = 9.5; arrivals 6 (the echo counts), departures 6;
-    // one turnover (#23 on Oct 5: Cal out, Ben in).
+    // (10+3+2+31+4+7)/6 = 9.5; arrivals 5 and departures 5 — each STAY once
+    // (0.46.1, Rob: the echo of Ben is not a second arrival); one turnover
+    // (#23 on Oct 5: Cal out, Ben in). The dock blocks (#29) count nowhere.
     // Oct 2025: 21 nights (7+2+10+2) = 8%; 4 bookings; Length 21/4 = 5.25;
     // 4 arrivals, 4 departures, no turnover.
     check('Bookings 6 ▲2', k.bookings[0] === '6' && k.bookings[1] === '▲2', k.bookings);
     check('Booked 14% ▲6 — in POINTS (14 − 8)', k.booked[0] === '14%' && k.booked[1] === '▲6', k.booked);
     check('Length 9.5 nights ▲4.3 — in NIGHTS (9.5 − 5.25)', k.length[0] === '9.5 nights' && k.length[1] === '▲4.3', k.length);
-    check('Arrivals 6 ▲2, Departures 6 ▲2, Turnovers 1 ▲1 — counts',
-      k.arrivals.slice(0, 2).join() === '6,▲2' && k.departures.slice(0, 2).join() === '6,▲2' && k.turnovers.slice(0, 2).join() === '1,▲1', k);
-    check('...each read as a sentence: "up 6 on the same dates a year earlier"', k.booked[2] === 'up 6 on the same dates a year earlier', k.booked[2]);
+    check('Arrivals 5 ▲1, Departures 5 ▲1 — each stay ONCE: Ben and the channel block echoing him are one arrival (0.46.1); Turnovers 1 ▲1',
+      k.arrivals.slice(0, 2).join() === '5,▲1' && k.departures.slice(0, 2).join() === '5,▲1' && k.turnovers.slice(0, 2).join() === '1,▲1', k);
+    check('...each read as a sentence: "up 6 points on the same dates a year earlier"; Length in nights; counts plain',
+      k.booked[2] === 'up 6 points on the same dates a year earlier' && k.length[2] === 'up 4.3 nights on the same dates a year earlier'
+      && k.arrivals[2] === 'up 1 on the same dates a year earlier', [k.booked[2], k.length[2], k.arrivals[2]]);
     const tipText = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
     check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates a year earlier \(Oct 1 – 31, 2025\)/.test(tipText), tipText);
 
@@ -110,15 +129,17 @@ const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
       JSON.stringify(mix) === JSON.stringify(['1–2 nights1 (17%)', '3–6 nights2 (33%)', '7–27 nights2 (33%)', '28+ nights1 (17%)']), mix);
 
     // C12 weekday chart. Oct 1 2026 is a Thursday. In: Thu 1 (Amy), Sat 3
-    // (Cal), Mon 5 (Ben + the echo), Wed 14 (Fay), Tue 20 (Dot). Out: Fri 2
-    // (Eli), Mon 5 (Cal), Thu 8 (Ben + echo), Sun 11 (Amy), Wed 21 (Fay).
+    // (Cal), Mon 5 (Ben — the echo is not a second stay), Wed 14 (Fay), Tue
+    // 20 (Dot). Out: Fri 2 (Eli), Mon 5 (Cal), Thu 8 (Ben), Sun 11 (Amy), Wed
+    // 21 (Fay).
     const wk = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-wk-day')].map(d =>
       [d.querySelector('.mphbac-staff-wk-name').textContent, d.querySelector('.is-in .mphbac-staff-wk-num').textContent, d.querySelector('.is-out .mphbac-staff-wk-num').textContent]));
     check('Arrivals and Departures by Weekday, Sunday to Saturday',
-      JSON.stringify(wk) === JSON.stringify([['Sun', '0', '1'], ['Mon', '2', '1'], ['Tue', '1', '0'], ['Wed', '1', '1'], ['Thu', '1', '2'], ['Fri', '0', '1'], ['Sat', '1', '0']]), wk);
-    check('...adding up to the tiles (6 and 6)', wk.reduce((t, d) => t + +d[1], 0) === 6 && wk.reduce((t, d) => t + +d[2], 0) === 6);
+      JSON.stringify(wk) === JSON.stringify([['Sun', '0', '1'], ['Mon', '1', '1'], ['Tue', '1', '0'], ['Wed', '1', '1'], ['Thu', '1', '1'], ['Fri', '0', '1'], ['Sat', '1', '0']]), wk);
+    check('...adding up to the tiles (5 and 5)', wk.reduce((t, d) => t + +d[1], 0) === 5 && wk.reduce((t, d) => t + +d[2], 0) === 5);
     const wkSr = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-weekdays ul.mphbac-sr-only').textContent);
-    check('...and as text for a screen reader ("Monday: 2 arrivals, 1 departures")', /Monday: 2 arrivals, 1 departures/.test(wkSr), wkSr);
+    check('...and as text for a screen reader, singular for one ("Monday: 1 arrival, 1 departure"; "Sunday: 0 arrivals, 1 departure")',
+      /Monday: 1 arrival, 1 departure/.test(wkSr) && /Sunday: 0 arrivals, 1 departure/.test(wkSr), wkSr);
 
     // C15 lead time: arrivals in Oct from the Bookings set — Amy 30, Ben 40,
     // Dot 120, Fay 7; Cal was made AFTER her check-in and is left out; the
@@ -347,6 +368,90 @@ const NAMES = BOOKINGS.map(b => b.guestName).filter(n => n !== 'Reserved');
       pace.every(x => x === '— vs a year ago') && /No complete records before Nov 15, 2025\./.test(tip), [pace, tip]);
     const reqs = await p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_month').map(r => r.from + '|' + r.to));
     check('...and a comparison that cannot be shown is not even fetched (nothing from 2025)', reqs.every(r => r >= '2026'), reqs);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.46.1: dock blocks are not stays — every Stats figure leaves them out --');
+  {
+    // Every figure, on every view: the page WITH the dock blocks must read
+    // exactly as the page without them — tiles, ▲ ▼, cottages, sources,
+    // length, weekdays, lead time, pace and every heat-map night.
+    const sig = p => p.evaluate(() => {
+      const o = document.querySelector('.mphbac-staff-stats-out');
+      return o.textContent + '|' + [...o.querySelectorAll('.mphbac-staff-heat-day[data-day]')].map(c => c.dataset.n).join('')
+        + '|' + [...o.querySelectorAll('.mphbac-staff-percot-fill, .mphbac-staff-wk-bar')].map(f => f.style.width + f.style.height).join(',');
+    });
+    const views = async p => {
+      const out = {};
+      out.month = await sig(p);
+      await p.selectOption('.mphbac-staff-stats-span', 'day'); await p.fill('.mphbac-staff-stats-date', '2026-10-06');
+      await p.dispatchEvent('.mphbac-staff-stats-date', 'change'); await settle(p); out.day = await sig(p);
+      out.dayTiles = await tiles(p);
+      await p.selectOption('.mphbac-staff-stats-span', 'week'); await settle(p); out.week = await sig(p);
+      await p.selectOption('.mphbac-staff-stats-span', 'year'); await p.selectOption('.mphbac-staff-stats-year', '2026'); await settle(p); out.year = await sig(p);
+      await p.selectOption('.mphbac-staff-stats-span', 'month'); await p.selectOption('.mphbac-staff-stats-month', '2025-11'); await settle(p); out.nov25 = await sig(p);
+      return out;
+    };
+    const plain = await open();
+    const without = await views(plain.p);
+    await plain.ctx.close();
+    const docked = await open({ html: shell({ bookings: BOOKINGS.concat(DOCKS) }) });
+    const withDocks = await views(docked.p);
+    for (const v of ['month', 'day', 'week', 'year', 'nov25']) {
+      check(`${v}: with seven dock blocks (and a channel's echo of one) every figure is IDENTICAL to the page without them`, withDocks[v] === without[v],
+        withDocks[v] === without[v] ? v : [withDocks[v].slice(0, 300), without[v].slice(0, 300)]);
+    }
+    check('...including Booked\'s denominator: still all 248 cottage-nights (#29 sits at 0%, not left out of the total)',
+      /#29 C290 nights0%/.test(withDocks.month) && /14%/.test(withDocks.month), withDocks.month.slice(0, 200));
+    // Each stay once, in house: Oct 6 — Amy and Ben; the echo of Ben is not a third guest.
+    check('Day Oct 6: In house 2 (Amy, Ben — the channel block echoing Ben is not a third)', withDocks.dayTiles.inhouse[0] === '2', withDocks.dayTiles);
+    const tip = await docked.p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tipbox')].map(b => b.textContent));
+    check('every ⓘ says dock blocks are left out', tip.length >= 13 && tip.every(t => /Dock blocks \(cottages the owner closed\) are left out\./.test(t)), tip.length);
+    const tips2 = await docked.p.evaluate(() => ['arrivals', 'departures'].map(k => document.querySelector('.mphbac-staff-kpi.is-' + k + ' .mphbac-staff-tipbox').textContent));
+    check('Arrivals and Departures say each stay counts once', tips2.every(t => /each stay once/.test(t)), tips2);
+    // The BOARD still draws them, and last year's outlines are unchanged.
+    await docked.p.evaluate(() => scrollTo(0, 0));
+    await docked.p.selectOption('.mphbac-staff-period', 'month'); await settle(docked.p);
+    const bar = await docked.p.evaluate(() => !!document.querySelector('.mphbac-staff-bar[data-booking-id="301"]'));
+    check('the board still draws this October\'s dock block as a bar', bar);
+    await docked.p.check('.mphbac-staff-ghosts'); await settle(docked.p);
+    const ghosts = await docked.p.evaluate(() => document.querySelectorAll('.mphbac-staff-ghost').length);
+    check('...and last year\'s outlines include last October\'s dock block (5: the four stays and the dock block)', ghosts === 5, ghosts);
+    await docked.ctx.close();
+  }
+
+  console.log('\n-- 0.46.1: the heat map by keyboard; "1 point" --');
+  {
+    const { ctx, p } = await open();
+    const st = () => p.evaluate(() => ({ stops: [...document.querySelectorAll('.mphbac-staff-heat-day[tabindex="0"]')].map(c => c.dataset.day),
+      focus: document.activeElement.dataset ? document.activeElement.dataset.day : null, role: document.activeElement.getAttribute('role'),
+      label: document.activeElement.getAttribute('aria-label'), group: document.querySelector('.mphbac-staff-heat').getAttribute('role'),
+      hidden: document.querySelector('.mphbac-staff-heat').getAttribute('aria-hidden') }));
+    let k = await st();
+    check('ONE tab stop in the heat map — the timeframe\'s first night (Oct 1) — in a labelled group, no longer hidden',
+      JSON.stringify(k.stops) === '["2026-10-01"]' && k.group === 'group' && k.hidden === null, k);
+    await p.focus('.mphbac-staff-heat-day[tabindex="0"]');
+    await p.keyboard.press('ArrowRight'); k = await st(); const a1 = k.focus;
+    await p.keyboard.press('ArrowDown'); k = await st(); const a2 = k.focus;
+    await p.keyboard.press('ArrowLeft'); await p.keyboard.press('ArrowUp'); k = await st(); const a3 = k.focus;
+    await p.keyboard.press('End'); k = await st(); const a4 = k.focus;
+    await p.keyboard.press('Home'); k = await st(); const a5 = k.focus;
+    check('arrows move a night (→ Oct 2) and a week (↓ Oct 9, ← Oct 8, ↑ Oct 1); End / Home the month\'s last and first',
+      [a1, a2, a3, a4, a5].join() === '2026-10-02,2026-10-09,2026-10-01,2026-10-31,2026-10-01', [a1, a2, a3, a4, a5]);
+    check('...each night a button named by its count ("Oct 1, 2026: 2 of 8 cottages booked"), and still ONE tab stop',
+      k.role === 'button' && k.label === 'Oct 1, 2026: 2 of 8 cottages booked' && JSON.stringify(k.stops) === '["2026-10-01"]', k);
+    await p.keyboard.press('End'); await p.keyboard.press('Enter'); await settle(p);
+    const j = await p.evaluate(() => ({ go: document.querySelector('.mphbac-staff-goto').value, focus: document.activeElement.className }));
+    check('Enter opens the board on that night (Oct 31), and focus goes to the chart', j.go === '2026-10-31' && /mphbac-staff-grid/.test(j.focus), j);
+    await ctx.close();
+  }
+  {
+    // A cottage one point down on the previous timeframe: #27 two nights in
+    // October (6%) against two in September (7%).
+    const { ctx, p } = await open({ html: shell({ bookings: BOOKINGS.concat([bk(401, '2026-10-25', '2026-10-27', 27, 'direct', '2026-10-01'), bk(402, '2026-09-15', '2026-09-17', 27, 'direct', '2026-09-01')]) }) });
+    const r = await p.evaluate(() => { const row = document.querySelector('.mphbac-staff-percot-row[data-cottage="27"]');
+      return [row.querySelector('.mphbac-staff-percot-delta [aria-hidden]').textContent, row.querySelector('.mphbac-staff-percot-delta .mphbac-sr-only').textContent]; });
+    check('one point is "1 point": ▼1 is read "down 1 point on the previous timeframe" (was "down 1 points")', r[0] === '▼1' && r[1] === 'down 1 point on the previous timeframe', r);
     await ctx.close();
   }
 

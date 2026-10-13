@@ -1558,6 +1558,7 @@ body.mphbac-staff-open { overflow: hidden; }
     border: 0 solid #111111;
     pointer-events: none;
 }
+.mphbac-staff-heat-day:focus-visible { outline: 2px solid var(--staff-focus, #0f6dbf); outline-offset: 1px; z-index: 2; }
 .mphbac-staff-heat-day.is-et::after { border-top-width: 2px; }
 .mphbac-staff-heat-day.is-er::after { border-right-width: 2px; }
 .mphbac-staff-heat-day.is-eb::after { border-bottom-width: 2px; }

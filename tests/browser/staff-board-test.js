@@ -285,7 +285,9 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.waitForTimeout(150);
     check('...and drawn again, NOTHING is asked for: every range comes from what the session holds', (await reqs()).length === n1, (await reqs()).slice(n1));
     check('October: booked 21% (52 of 248 cottage-nights, the echoing block counted once)', k.booked === '21%', k);
-    check('...arrivals 10, departures 10, turnovers 2', k.arrivals === '10' && k.departures === '10' && k.turnovers === '2', k);
+    // 0.46.1 (Rob): each STAY once — the channel block echoing Bob is not a
+    // tenth arrival or departure (it was 10 / 10 until then).
+    check('...arrivals 9, departures 9 (each stay once), turnovers 2', k.arrivals === '9' && k.departures === '9' && k.turnovers === '2', k);
     check('0.45.3: BOOKINGS 9 — the channel block echoing Bob is not a tenth (it owns no night)', k.bookings === '9', k);
     check('...LENGTH 5.8 nights — (3+1+4+3+1+2+6+2+30) ÷ 9 whole stays, Ivy\'s 30 included', k.length === '5.8 nights', k);
     const order = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-kpi')].map(x => x.className.replace('mphbac-staff-kpi is-', '')));

@@ -299,6 +299,24 @@ final class Admin
                 );
                 break;
 
+            case 'text':
+                printf(
+                    '<input type="text" class="regular-text" id="%1$s" name="%2$s" value="%3$s"%4$s>',
+                    esc_attr($id),
+                    esc_attr($name),
+                    esc_attr((string) $value),
+                    $desc !== '' ? ' aria-describedby="' . esc_attr($desc) . '"' : ''
+                );
+                printf(
+                    '<span class="mphbac-shipped">%s</span>',
+                    esc_html(sprintf(
+                        /* translators: %s: the text the plugin ships with */
+                        __('ships as “%s”', 'mphb-availability-calendar'),
+                        (string) $field['default']
+                    ))
+                );
+                break;
+
             case 'date':
                 printf(
                     '<input type="date" id="%1$s" name="%2$s" value="%3$s"%4$s>',

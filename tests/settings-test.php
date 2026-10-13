@@ -49,7 +49,7 @@ echo "-- the schema is well formed --\n";
     $types = array_unique(array_column($schema, 'type'));
     sort($types);
     check('every field has a type the coercer handles',
-        $types === ['bool', 'choice', 'color', 'date', 'int'], $types);
+        $types === ['bool', 'choice', 'color', 'date', 'int', 'text'], $types);
     $bad = [];
     foreach ($schema as $k => $f) {
         if ($f['type'] === 'color' && !preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) $f['default'])) { $bad[] = $k; }
@@ -67,6 +67,15 @@ echo "-- the schema is well formed --\n";
         $d('2024-10-01') === '2024-10-01' && $d('next tuesday') === '2025-10-01' && $d('2025-02-30') === '2025-10-01'
         && $d('2025-1-5') === '2025-10-01' && $d(['2024-10-01']) === '2025-10-01',
         [$d('2024-10-01'), $d('next tuesday'), $d('2025-02-30'), $d('2025-1-5')]);
+    // 0.46.1: the first text field, "Dock block names" (Rob: dock blocks are not stays).
+    check('dock_block_names ships as "DOCK BLOCK", in the staff group',
+        ($schema['dock_block_names']['default'] ?? null) === 'DOCK BLOCK' && ($schema['dock_block_names']['group'] ?? null) === 'staff',
+        $schema['dock_block_names'] ?? null);
+    $t = static fn($v) => Settings::sanitize(['dock_block_names' => $v])['dock_block_names'];
+    check('a text field keeps one plain line: markup stripped, spaces and line breaks folded, 200 characters at most, empty allowed',
+        $t('  DOCK   BLOCK ,  Owner Hold ') === 'DOCK BLOCK , Owner Hold' && $t("<b>DOCK</b>\nBLOCK") === 'DOCK BLOCK'
+        && $t('') === '' && strlen($t(str_repeat('x', 300))) === 200 && $t(['x']) === '',
+        [$t('  DOCK   BLOCK ,  Owner Hold '), $t("<b>DOCK</b>\nBLOCK"), $t('')]);
     check('there is at least one advanced group and one common one',
         count(array_filter($groups, static fn($g) => $g['advanced'])) > 0
         && count(array_filter($groups, static fn($g) => !$g['advanced'])) > 0);

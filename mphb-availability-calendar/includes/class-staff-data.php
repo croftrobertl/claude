@@ -154,6 +154,12 @@ final class Staff_Data
                     // time zone (WordPress stores post_date that way) — for
                     // the Stats pace and lead-time figures. Staff data only.
                     'madeOn'     => self::made_on($bid),
+                    // NOT A STAY (0.46.1, Rob): a dock block — a cottage the
+                    // owner closed, under the name in the "Dock block names"
+                    // setting. Stats leaves it out of every figure; the board
+                    // still draws it. Decided HERE, so the browser never has
+                    // to read a name to know.
+                    'notStay'    => self::is_dock_block($bid),
                     'cottages'   => [],
                 ];
             }
@@ -870,6 +876,37 @@ final class Staff_Data
      * which WordPress stores in the site's time zone — so the date part is the
      * site's calendar day. '' when there is none.
      */
+    /**
+     * Is this booking one of Rob's dock blocks? Its guest name — first name,
+     * then last name, as name_from_meta() reads it — against the "Dock block
+     * names" setting: comma-separated, capitals and spacing ignored. Meta is
+     * already primed for the month view, so this costs no query.
+     */
+    private static function is_dock_block(int $booking_id): bool
+    {
+        $names = self::dock_names();
+        return $names !== [] && in_array(self::name_key(self::name_from_meta($booking_id)), $names, true);
+    }
+
+    /** @return string[] the setting's names, normalised; [] = none. */
+    private static function dock_names(): array
+    {
+        $out = [];
+        foreach (explode(',', (string) Settings::get('dock_block_names')) as $n) {
+            $k = self::name_key($n);
+            if ($k !== '') {
+                $out[] = $k;
+            }
+        }
+        return $out;
+    }
+
+    private static function name_key(string $name): string
+    {
+        $k = trim((string) preg_replace('/\s+/u', ' ', $name));
+        return function_exists('mb_strtolower') ? mb_strtolower($k, 'UTF-8') : strtolower($k);
+    }
+
     private static function made_on(int $booking_id): string
     {
         $post = get_post($booking_id);

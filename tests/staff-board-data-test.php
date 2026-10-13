@@ -179,6 +179,32 @@ namespace {
     check('no post_date: madeOn is empty, never a made-up day', ($b[81]['madeOn'] ?? null) === '', $b[81]['madeOn'] ?? null);
     check('WordPress\'s zero date (0000-00-00): empty too — never counted as made in year 0', ($b[82]['madeOn'] ?? null) === '', $b[82]['madeOn'] ?? null);
 
+    echo "\n-- 0.46.1: dock blocks are not stays (Rob) — decided on the server, sent as notStay --\n";
+    $dock = static function (?string $setting): array {
+        $GLOBALS['t_options'][\MPHBAC\Settings::OPTION] = $setting === null ? [] : ['dock_block_names' => $setting];
+        \MPHBAC\Settings::flush();
+        return board([
+            90 => [['mphb_first_name' => 'DOCK', 'mphb_last_name' => 'BLOCK'], ['_mphb_adults' => 2]],
+            91 => [['mphb_first_name' => ' dock ', 'mphb_last_name' => 'Block  '], ['_mphb_adults' => 2]],
+            92 => [['mphb_first_name' => 'Dock', 'mphb_last_name' => 'Blockley'], ['_mphb_adults' => 2]],
+            93 => [['mphb_first_name' => 'Ann', 'mphb_last_name' => 'Dock'], ['_mphb_adults' => 2]],
+            94 => [['mphb_first_name' => 'Owner', 'mphb_last_name' => 'Hold'], ['_mphb_adults' => 2]],
+            95 => [[], ['_mphb_adults' => 2]],
+        ]);
+    };
+    $flags = static fn(array $b): array => array_map(static fn($x) => $x['notStay'] ?? null, $b);
+    $f = $flags($dock(null));
+    check('shipped default "DOCK BLOCK": DOCK / BLOCK is a dock block, and so is " dock " / "Block  " (case and spaces ignored)',
+        $f[90] === true && $f[91] === true, $f);
+    check('..."Dock Blockley", "Ann Dock", another name and a booking with no name are stays (notStay false, always sent)',
+        $f[92] === false && $f[93] === false && $f[94] === false && $f[95] === false, $f);
+    $f = $flags($dock('owner hold, Dock Block'));
+    check('the setting can name several, comma-separated: "owner hold, Dock Block"', $f[90] && $f[94] && !$f[92], $f);
+    $f = $flags($dock(''));
+    check('an EMPTY setting: no booking is a dock block', !array_filter($f), $f);
+    $GLOBALS['t_options'][\MPHBAC\Settings::OPTION] = [];
+    \MPHBAC\Settings::flush();
+
     echo "\n-- 2026-10-11 pet policy: the new fee is a pet for the paw, Daily and the preview --\n";
     $b = board([
         70 => [['mphb_dog_size' => 'Up to 20 lbs'], ['_mphb_services' => [19692 => 3]]],   // the new fee

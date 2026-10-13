@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.0
+Stable tag: 0.46.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.1 =
+Staff board Stats only (/staff/).
+
+* **Dock blocks are not stays.** Bookings named "DOCK BLOCK" (Rob's own closures) are left out of every Stats figure: Bookings, Booked, Length, Arrivals, Departures, Turnovers, In house, each cottage's row, By Source, Length of Stay, the weekday chart, How Far Ahead, Pace, the heat map and every ▲ ▼. Their nights still count in the total, so Booked % is out of every cottage-night. The board still shows them. The name is a new setting, "Dock block names" (several can be listed, separated by commas).
+* **Each stay counts once** in Arrivals, Departures, In house, Turnovers and the weekday chart: a stay that a channel also blocks is one arrival, not two.
+* The heat map can be used from the keyboard: Tab to it, move with the arrow keys, Enter opens the calendar on that night.
+* Screen readers hear "1 point", "1 arrival", "1 night" in the singular.
 
 = 0.46.0 =
 Staff board only (/staff/). Nothing changes on the home page or cottage pages.

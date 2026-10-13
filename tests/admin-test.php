@@ -222,6 +222,16 @@ echo "\n-- capability and nonce: SAVE --\n";
         str_contains($form, 'action="https://example.test/wp-admin/admin-post.php"')
         && str_contains($form, 'name="action" value="' . Admin::SAVE_ACTION . '"'));
 
+    // 0.46.1: the first TEXT field renders as one, with its shipped value.
+    check('"Dock block names" is a text box showing DOCK BLOCK, and says what it ships as',
+        (bool) preg_match('/<input type="text" class="regular-text" id="[^"]*dock_block_names[^"]*" name="[^"]*dock_block_names[^"]*" value="DOCK BLOCK"/', $form)
+        && str_contains($form, 'ships as “DOCK BLOCK”'));
+    $GLOBALS['t_options'] = [Settings::OPTION => ['dock_block_names' => 'A "B" <c>']]; Settings::flush();
+    $hostile = render_page();
+    check('...its stored value is escaped on the way back to the page',
+        !str_contains($hostile, '<c>') && str_contains($hostile, 'value="A &quot;B&quot;'));
+    $GLOBALS['t_options'] = []; Settings::flush();
+
     // And the notice comes from the query string, matched against a fixed
     // list — never echoed back.
     $_GET = ['mphbac-notice' => 'saved'];
