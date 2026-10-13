@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.3
+Stable tag: 4.10.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,27 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.4 =
+Rob: the seaplane must fly in front of the moon and the witch, "since in
+real life the witch/moon would be higher in the sky than the seaplane."
+Staging first; live only after Rob signs off. Rollback: reinstall the
+4.10.3 zip (staging) or 4.10.2 (live); no setting or stored data changes.
+
+* Scenes now pass BEHIND the homepage header picture's own foreground:
+  the seaplane (and its banner), the fishing catch, and the golden-hour
+  reeds, gator and heron. Wherever any of them overlaps the moon, the
+  witch or another scene, the foreground is in front, in its exact shape
+  (never a box), in every flight mode, flipped or banked, with or without
+  the banner. The falling sprites and the corner accent stay in front as
+  before, and the header title stays in front of everything.
+* Nothing else changes: the scene's path, timing and look, and every
+  other theme.
+* For developers: the foreground is chosen by the new
+  dcc_seasons_foreground filter (default ".dcc-hl-wrap, .dcc-gh-fore,
+  [data-dcc-fore]"); any element can opt in with data-dcc-fore. SVG
+  shapes, images, canvases and videos are cut exactly; anything painted
+  only by CSS backgrounds is not.
 
 = 4.10.3 =
 Rob's pick: the Halloween corner spider web is medium. Staging first;

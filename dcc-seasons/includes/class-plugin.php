@@ -848,6 +848,21 @@ final class Plugin {
                 '#masthead, header.site-header, header[role="banner"], .elementor-location-header'
             ),
             /**
+             * CSS selector for the header picture's FOREGROUND (4.10.4): the
+             * things in it that are nearer than the sky, so every scene goes
+             * behind them — the seaplane and the fishing catch
+             * (dcc-hero-life), the golden-hour reeds, gator and heron
+             * (dcc-sun-canal), and anything marked data-dcc-fore. In front
+             * layering the engine takes the scene back out wherever these
+             * paint, in their exact shape (SVG shapes, img, canvas, video).
+             *
+             * @param string $selector Comma-separated; empty turns it off.
+             */
+            'foreSel'     => (string) apply_filters(
+                'dcc_seasons_foreground',
+                '.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore]'
+            ),
+            /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque
              * content column. Empty (the default) means the engine finds it

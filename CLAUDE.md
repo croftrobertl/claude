@@ -559,6 +559,71 @@ header) still gets the click. The fixture's test weather banner
 it is what the tap finds. The Theme guide shows accents at its own
 picture size, so it had nothing to change.
 
+### Rob (for 4.10.4, 2026-10-13): the seaplane flies in front of the moon and the witch
+
+"The seaplane flyover goes behind the moon, which is an impossibility in
+real life ... the witch/moon would be higher in the sky than the
+seaplane." The plane, the fishing catch (dcc-hero-life, `.dcc-hl-wrap`)
+and the golden-hour reeds/gator/heron (dcc-sun-canal, `.dcc-gh-fore`) are
+the Director's mu-plugins, DOM inside `#header-image-main-inside`; our
+front canvas (fixed, FRONT_Z) painted over all of it.
+
+- **Option (b), no visible change beyond the fix**: a SCENE goes behind
+  the header picture's foreground in its exact painted shape. Option (a),
+  drawing the scene inside the hero, would make it scroll with the page
+  and clip to the picture: Rob's call, not taken.
+- **How** (`foreBegin`/`foreEnd`, around `stepVig` in the frame loop):
+  where a foreground part meets the scene (its box ∩ the scene's own
+  `st.fgB` rects from last frame, padded 60px) — the overlap box O, on
+  whole device px — the scene draws through `fgTee` (a Proxy forwarding
+  every call) into BOTH the page canvas, clipped `evenodd` to everything
+  but O, and a scratch canvas of exactly O's size. The foreground's shape
+  is cut from the scratch with `destination-out`, and the scratch is drawn
+  back into O. The two halves fit exactly, so no pixel is lost; sprites
+  never pass through it, so they stay in front.
+- **Never read the page canvas**: `drawImage(cv, …)` measured 3.7 ms a
+  frame (it flushes). And size the scratch EXACTLY to O: the browser
+  uploads the whole scratch when it is drawn back (0.26 ms at 273 px
+  square, 3.3 ms at 600). Both measured; the first two designs paid them.
+- **The shape**: every SVG shape (path/rect/circle/ellipse/line/poly*/
+  text/image) at its fill, stroke, dashes and full opacity chain; img,
+  canvas, video by their box; clipped by every ancestor that clips; an
+  svg's box includes what it draws outside itself (`getBBox`, the towed
+  banner). Paint props are cached per half second (`fgStyle`); position
+  and opacity are read per frame. Not cut: CSS-only paint (backgrounds,
+  borders), `<use>`, SVG filters/masks — tell the Director if one is used.
+- **Never trust getScreenCTM across the HTML boundary.** WebKit's ignores
+  CSS rotation/scale/flip on HTML ancestors ("FIXME: This doesn't work
+  correctly with CSS transforms"), and the plane is flipped and banked by
+  CSS. `fgSvgM()` builds the svg box's matrix itself (the linear part from
+  every ancestor's computed `transform`/`rotate`/`scale`, the translation
+  solved from `getBoundingClientRect`) and uses getScreenCTM only
+  RELATIVE to the svg (both halves cancel). `test-foreground.js` asserts
+  it equals Chromium's getScreenCTM to < 0.5px, flipped and banked.
+- **Which scenes**: those that say where they draw (`st.fgB`):
+  `witchmoon` (the moon and witch rects it already cut the title from)
+  and `sleighmoon` (moon + sleigh track). Others draw as before. Heroes
+  are unchanged (a question for Rob: the Halloween hero witch is "the
+  witch" too, but heroes are held back while the show runs).
+- **How Rob saw them together**: `DCCHeroFx` busy holds back HEROES only
+  (`stepHero`). Scenes were never held, and since 4.9.0 every page opens
+  with its scene at 6–10 s, so on the homepage the witch and moon play
+  while the hero show (plane, then catch) is still running — any visit,
+  first page or later, any plane mode. `test-foreground.js` records it.
+  The fix holds regardless; holding scenes too is a timing change (Rob's).
+- **Cost** (headless, only while foreground and scene overlap): ~+1 ms a
+  frame at 390 (0.5 → 1.5–1.9), ~+6–10 ms at 4× CPU, +1 ms at 1280;
+  nothing when they do not meet (a box test per frame while a bounded
+  scene plays). Mutation-checked: ten breaks (no cut, rectangular hole,
+  Safari-style matrix, page canvas unclipped, scene not teed, scratch not
+  drawn back, no strokes, no img/canvas, svg overflow ignored, media
+  opacity ignored) each fail the test written for them.
+- **Tools**: `tools/fixture.js` `heroFx: true` (the live markup and
+  stacking, stand-in art, `window.dccPose()`); `tools/test-foreground.js`;
+  `tools/fore-reel.js` (plane crossing the moon, before/after strip and
+  video). Config `foreSel` (filter `dcc_seasons_foreground`, default
+  `.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore]`).
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -578,7 +643,7 @@ picture size, so it had nothing to change.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 162,169 raw / 56,792 gzipped (4.10.2, `gzip -c`; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 171,669 raw / 60,512 gzipped (4.10.4, `gzip -c`; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -925,7 +990,7 @@ picture size, so it had nothing to change.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
   ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process

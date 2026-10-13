@@ -4748,6 +4748,366 @@
 			hdrCuts += any ? 1 : 0;
 		}
 		var hdrCuts = 0;
+		/* --- Behind the hero picture's foreground (4.10.4, Rob: "Make the
+		 * seaplane fly in front of the moon and witch since in real life the
+		 * witch/moon would be higher in the sky than the seaplane") ---------
+		 * The home page's header picture has a foreground of its own, drawn
+		 * in the page by the site's mu-plugins: the seaplane and the fishing
+		 * catch (dcc-hero-life, .dcc-hl-wrap) and the golden-hour reeds,
+		 * gator and heron (dcc-sun-canal, .dcc-gh-fore). All of it is nearer
+		 * than the sky, so a SCENE goes behind it: while the foreground can
+		 * meet the scene, the scene draws on a scratch canvas, the
+		 * foreground's painted shape is cut out of it, and the result goes
+		 * onto the page's canvas. The sprites never pass through it, so they
+		 * stay in front as before. Only the scene moves behind, and only in
+		 * the foreground's exact painted shape, never a box. The shape is rebuilt every frame from
+		 * the page: each SVG shape with its own getScreenCTM (so the plane's
+		 * flight, bank, flip and propeller are followed), each img, canvas
+		 * and video by its box, at its own fill and stroke and its whole
+		 * chain of opacity, clipped wherever an ancestor clips (the picture's
+		 * edges). Front layering only (behind it, the page is already on
+		 * top); heroes are unchanged. The selector is the config's foreSel
+		 * (Plugin::config, filter dcc_seasons_foreground). */
+		var FG_SEL = CFG.foreSel || '';
+		var FG_SHAPES = 'path, rect, circle, ellipse, line, polyline, polygon, text, image';
+		var FG_SKIP = 'defs, clipPath, mask, pattern, symbol, marker';
+		var fgList = null, fgAt = -INF, fgPaths = typeof WeakMap === 'function' ? new WeakMap() : null, fgImgs = {};
+		var fgStat = { frames: 0, cuts: 0, shapes: 0, ms: 0 };
+		/* the foreground's painted parts, looked up again every half second */
+		function fgCollect(t) {
+			if (fgList && t - fgAt < 0.5) { return fgList; }
+			fgAt = t; fgList = [];
+			if (!FG_SEL || CFG.layer || footMode || typeof Path2D !== 'function') { return fgList; }
+			var roots, i;
+			try { roots = D.querySelectorAll(FG_SEL); } catch (e) { roots = []; }
+			for (i = 0; i < roots.length; i++) {
+				var root = roots[i], svgs = [], media = [];
+				var ss = root.localName === 'svg' ? [root] : root.querySelectorAll('svg');
+				for (var j = 0; j < ss.length; j++) {
+					var sv = ss[j];
+					/* the outermost svg holds every shape, nested ones included */
+					if (sv !== root && sv.parentNode && sv.parentNode.closest && sv.parentNode.closest('svg') && root.contains(sv.parentNode.closest('svg'))) { continue; }
+					var sh = [].slice.call(sv.querySelectorAll(FG_SHAPES)).filter(function (e) { return !e.closest(FG_SKIP); }).map(fgStyle);
+					if (sh.length) { svgs.push({ svg: sv, shapes: sh }); }
+				}
+				var mm = /^(img|canvas|video)$/.test(root.localName) ? [root] : root.querySelectorAll('img, canvas, video');
+				for (j = 0; j < mm.length; j++) { media.push(mm[j]); }
+				if (svgs.length || media.length) { fgList.push({ root: root, svgs: svgs, media: media }); }
+			}
+			return fgList;
+		}
+		/* where the foreground can show at all: the viewport, cut down by
+		 * every ancestor that clips (the header picture's edges) */
+		function fgClip(el) {
+			var c = [0, 0, W.innerWidth, W.innerHeight];
+			for (var a = el.parentElement; a && a !== D.documentElement; a = a.parentElement) {
+				var cs = W.getComputedStyle(a);
+				if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') { c = rcut(c, rbox(a.getBoundingClientRect())); }
+			}
+			return c;
+		}
+		function rbox(r) { return [r.left, r.top, r.right, r.bottom]; }
+		function rcut(a, b) { return [mx2(a[0], b[0]), mx2(a[1], b[1]), mn(a[2], b[2]), mn(a[3], b[3])]; }
+		function rnone(a) { return a[2] <= a[0] || a[3] <= a[1]; }
+		/* the opacity an element is painted at: its own times every ancestor's */
+		function fgOp(el, memo) {
+			if (!el || el.nodeType !== 1) { return 1; }
+			var v = memo.get(el);
+			if (v != null) { return v; }
+			var cs = W.getComputedStyle(el);
+			v = cs.display === 'none' ? 0 : (+cs.opacity) * fgOp(el.parentNode, memo);
+			memo.set(el, v);
+			return v;
+		}
+		/* a shape's paint, read when the list is built (every half second):
+		 * only where it is and how opaque it is change frame to frame */
+		function fgStyle(el) {
+			var cs = W.getComputedStyle(el), sw = parseFloat(cs.strokeWidth) || 0;
+			return { el: el, tag: el.localName, vis: cs.visibility === 'visible' && cs.display !== 'none',
+				fill: cs.fill !== 'none', stroke: cs.stroke !== 'none' && sw > 0, sw: sw, fo: +cs.fillOpacity, so: +cs.strokeOpacity,
+				rule: cs.fillRule === 'evenodd' ? 'evenodd' : 'nonzero', cap: cs.strokeLinecap, join: cs.strokeLinejoin, miter: +cs.strokeMiterlimit || 4,
+				font: cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily, anchor: cs.textAnchor,
+				dash: cs.strokeDasharray && cs.strokeDasharray !== 'none' ? cs.strokeDasharray.split(/[\s,]+/).map(parseFloat).filter(function (v) { return v >= 0; }) : [], doff: parseFloat(cs.strokeDashoffset) || 0 };
+		}
+		function fgNum(el, k) { return parseFloat(el.getAttribute(k)) || 0; }
+		function fgPath(el) {
+			var tag = el.localName, P, i;
+			if (tag === 'path') {
+				var d = el.getAttribute('d') || '', c = fgPaths && fgPaths.get(el);
+				if (c && c.d === d) { return c.p; }
+				P = new Path2D(d);
+				if (fgPaths) { fgPaths.set(el, { d: d, p: P }); }
+				return P;
+			}
+			P = new Path2D();
+			if (tag === 'rect') {
+				var x = fgNum(el, 'x'), y = fgNum(el, 'y'), w = fgNum(el, 'width'), h = fgNum(el, 'height'), rx = fgNum(el, 'rx'), ry = fgNum(el, 'ry');
+				rx = mn(rx || ry, w / 2); ry = mn(ry || rx, h / 2);
+				if ((rx || ry) && P.roundRect) { P.roundRect(x, y, w, h, [{ x: rx, y: ry }]); } else { P.rect(x, y, w, h); }
+			} else if (tag === 'circle') {
+				P.arc(fgNum(el, 'cx'), fgNum(el, 'cy'), fgNum(el, 'r'), 0, TAU);
+			} else if (tag === 'ellipse') {
+				P.ellipse(fgNum(el, 'cx'), fgNum(el, 'cy'), fgNum(el, 'rx'), fgNum(el, 'ry'), 0, 0, TAU);
+			} else if (tag === 'line') {
+				P.moveTo(fgNum(el, 'x1'), fgNum(el, 'y1')); P.lineTo(fgNum(el, 'x2'), fgNum(el, 'y2'));
+			} else if (tag === 'polyline' || tag === 'polygon') {
+				var q = (el.getAttribute('points') || '').trim().split(/[\s,]+/).map(parseFloat);
+				for (i = 0; i + 1 < q.length; i += 2) { if (i) { P.lineTo(q[i], q[i + 1]); } else { P.moveTo(q[i], q[i + 1]); } }
+				if (tag === 'polygon') { P.closePath(); }
+			}
+			return P;
+		}
+		function fgImg(src) {
+			var im = fgImgs[src];
+			if (!im) { im = fgImgs[src] = new Image(); im.src = src; }
+			return im.complete && im.naturalWidth ? im : null;
+		}
+		/* same-origin pictures only: a foreign one would taint the canvas */
+		function fgOwn(src) {
+			try { return new URL(src, location.href).origin === location.origin || /^data:/.test(src); } catch (e) { return false; }
+		}
+		/* Where an element's own box lands on screen, as a matrix (box px ->
+		 * viewport px). Not getScreenCTM: Safari's ignores CSS rotation, scale
+		 * and flip on HTML ancestors ("FIXME: This doesn't work correctly
+		 * with CSS transforms" in WebKit), and the plane is flipped and
+		 * banked exactly that way. Instead: the LINEAR part is the product
+		 * of every ancestor's computed transform (rotate/scale/transform),
+		 * and the translation is solved from where the browser actually put
+		 * the box (getBoundingClientRect, which every engine gets right). */
+		function fgLin(el) {
+			var L = [1, 0, 0, 1];
+			for (var e = el; e && e.nodeType === 1; e = e.parentElement) {
+				var cs = W.getComputedStyle(e), m = [1, 0, 0, 1], v;
+				if (cs.transform && cs.transform !== 'none') {
+					v = cs.transform.match(/-?[\d.e+-]+/g).map(parseFloat);
+					m = cs.transform.indexOf('matrix3d') === 0 ? [v[0], v[1], v[4], v[5]] : [v[0], v[1], v[2], v[3]];
+				}
+				if (cs.scale && cs.scale !== 'none') {
+					v = cs.scale.split(/\s+/).map(parseFloat);
+					m = fgMul([v[0], 0, 0, v.length > 1 ? v[1] : v[0]], m);
+				}
+				if (cs.rotate && cs.rotate !== 'none') {
+					v = /(-?[\d.]+)(deg|rad|turn|grad)\s*$/.exec(cs.rotate);
+					if (v) {
+						var r = +v[1] * ({ deg: MT.PI / 180, rad: 1, turn: TAU, grad: MT.PI / 200 })[v[2]];
+						m = fgMul([cos(r), sin(r), -sin(r), cos(r)], m);
+					}
+				}
+				L = fgMul(m, L);
+			}
+			return L;
+		}
+		/* 2x2 linear parts [a, b, c, d] (column-major, like DOMMatrix) */
+		function fgMul(A, B) { return [A[0] * B[0] + A[2] * B[1], A[1] * B[0] + A[3] * B[1], A[0] * B[2] + A[2] * B[3], A[1] * B[2] + A[3] * B[3]]; }
+		function fgBox(el, w, h) {
+			var L = fgLin(el), r = el.getBoundingClientRect();
+			var xs = [0, L[0] * w, L[2] * h, L[0] * w + L[2] * h], ys = [0, L[1] * w, L[3] * h, L[1] * w + L[3] * h];
+			return [L[0], L[1], L[2], L[3], r.left - MT.min.apply(MT, xs), r.top - MT.min.apply(MT, ys)];
+		}
+		/* full affine [a, b, c, d, e, f] product A * B */
+		function fgAff(A, B) {
+			return [A[0] * B[0] + A[2] * B[1], A[1] * B[0] + A[3] * B[1], A[0] * B[2] + A[2] * B[3], A[1] * B[2] + A[3] * B[3],
+				A[0] * B[4] + A[2] * B[5] + A[4], A[1] * B[4] + A[3] * B[5] + A[5]];
+		}
+		function fgInv(m) {
+			var det = m[0] * m[3] - m[1] * m[2];
+			if (!det) { return null; }
+			return [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det, (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det];
+		}
+		/* the outermost svg's user space -> its box px: viewBox and
+		 * preserveAspectRatio, as the browser applies them */
+		function fgViewBox(sv, w, h) {
+			var vb = sv.viewBox && sv.viewBox.baseVal;
+			if (!vb || !vb.width || !vb.height) { return [1, 0, 0, 1, 0, 0]; }
+			var par = (sv.getAttribute('preserveAspectRatio') || 'xMidYMid meet').trim().split(/\s+/), al = par[0], sx = w / vb.width, sy = h / vb.height;
+			if (al !== 'none') {
+				var k = par[1] === 'slice' ? mx2(sx, sy) : mn(sx, sy);
+				var fx = /xMid/.test(al) ? 0.5 : (/xMax/.test(al) ? 1 : 0), fy = /YMid/.test(al) ? 0.5 : (/YMax/.test(al) ? 1 : 0);
+				return [k, 0, 0, k, (w - vb.width * k) * fx - vb.x * k, (h - vb.height * k) * fy - vb.y * k];
+			}
+			return [sx, 0, 0, sy, -vb.x * sx, -vb.y * sy];
+		}
+		/* the outermost svg's user space -> viewport px */
+		function fgSvgM(sv) {
+			var w = sv.clientWidth || parseFloat(W.getComputedStyle(sv).width) || 0, h = sv.clientHeight || parseFloat(W.getComputedStyle(sv).height) || 0;
+			if (!w || !h) { return null; }
+			return fgAff(fgBox(sv, w, h), fgViewBox(sv, w, h));
+		}
+		function fgM6(m) { return [m.a, m.b, m.c, m.d, m.e, m.f]; }
+		/* Before the scene draws: does the foreground meet it this frame?
+		 * Where it can (O: each foreground part's box inside where the scene
+		 * drew last frame, padded), the scene is drawn on a small scratch
+		 * canvas instead; everywhere else it draws on the page's canvas as
+		 * always. One draw feeds both (fgTee forwards every call), the page
+		 * canvas clipped to everything but O, so the two halves fit exactly.
+		 * Never READ the page canvas: a drawImage from it measured 3.7 ms a
+		 * frame (it flushes); and keep the scratch small: drawing it back
+		 * costs by its size. Only scenes that say where they draw (st.fgB)
+		 * take part. */
+		var fgC = null, fgG = null;
+		function fgTee(a, b) {
+			return new Proxy(a, {
+				get: function (t, k) {
+					var v = t[k];
+					if (typeof v !== 'function') { return v; }
+					return function () {
+						var bv = b[k];
+						if (typeof bv === 'function') { bv.apply(b, arguments); }
+						return v.apply(a, arguments);
+					};
+				},
+				set: function (t, k, v) { a[k] = v; b[k] = v; return true; }
+			});
+		}
+		function foreBegin(bounds) {
+			if (!FG_SEL || CFG.layer || footMode || !bounds || !bounds.length || typeof Proxy !== 'function') { return null; }
+			var list = fgCollect(vt);
+			if (!list.length) { return null; }
+			var t0 = DEBUG ? performance.now() : 0, co = cv.getBoundingClientRect(), parts = [], i, j, u = null;
+			/* last frame's region, with room for this frame's movement */
+			var bb = [INF, INF, -INF, -INF], PAD = 60;
+			for (i = 0; i < bounds.length; i++) { var b0 = bounds[i]; bb = [mn(bb[0], b0[0] - PAD), mn(bb[1], b0[1] - PAD), mx2(bb[2], b0[0] + b0[2] + PAD), mx2(bb[3], b0[1] + b0[3] + PAD)]; }
+			bb = [bb[0] + co.left, bb[1] + co.top, bb[2] + co.left, bb[3] + co.top];
+			for (i = 0; i < list.length; i++) {
+				var it = list[i], clip = null;
+				var add = function (el, kind, sh) {
+					var r = rbox(el.getBoundingClientRect());
+					/* an svg may draw outside its own box (overflow: visible; the
+					 * plane's towed banner): take its drawing's box too */
+					if (kind === 'svg' && el.getBBox) {
+						try {
+							var bx = el.getBBox(), M = fgSvgM(el);
+							if (M && bx.width + bx.height > 0) {
+								var cs4 = [[bx.x, bx.y], [bx.x + bx.width, bx.y], [bx.x, bx.y + bx.height], [bx.x + bx.width, bx.y + bx.height]].map(function (p) {
+									return [M[0] * p[0] + M[2] * p[1] + M[4], M[1] * p[0] + M[3] * p[1] + M[5]];
+								});
+								r = [mn(r[0], mn(cs4[0][0], cs4[1][0], cs4[2][0], cs4[3][0])), mn(r[1], mn(cs4[0][1], cs4[1][1], cs4[2][1], cs4[3][1])),
+									mx2(r[2], mx2(cs4[0][0], cs4[1][0], cs4[2][0], cs4[3][0])), mx2(r[3], mx2(cs4[0][1], cs4[1][1], cs4[2][1], cs4[3][1]))];
+							}
+						} catch (e) { /* not rendered */ }
+					}
+					if (rnone(r) || rnone(rcut(r, bb))) { return; }
+					if (!clip) { clip = rcut(fgClip(it.root), rbox(co)); }
+					var o = rcut(rcut(r, clip), bb);
+					if (rnone(o)) { return; }
+					parts.push({ el: el, kind: kind, sh: sh, clip: clip });
+					u = u ? [mn(u[0], o[0]), mn(u[1], o[1]), mx2(u[2], o[2]), mx2(u[3], o[3])] : o;
+				};
+				for (j = 0; j < it.svgs.length; j++) { add(it.svgs[j].svg, 'svg', it.svgs[j].shapes); }
+				for (j = 0; j < it.media.length; j++) { add(it.media[j], 'media'); }
+			}
+			if (!u) { return null; }
+			/* O on whole device pixels, so the page's clip and the scratch
+			 * meet without a seam */
+			var dp = lastDpr || 1;
+			var rx = mx2(0, MT.floor((u[0] - co.left) * dp)), ry = mx2(0, MT.floor((u[1] - co.top) * dp));
+			var rw = mn(cv.width, MT.ceil((u[2] - co.left) * dp)) - rx, rh = mn(cv.height, MT.ceil((u[3] - co.top) * dp)) - ry;
+			if (rw <= 0 || rh <= 0) { return null; }
+			if (!fgC) { fgC = D.createElement('canvas'); }
+			/* exactly O's size: the browser uploads the WHOLE scratch when it
+			 * is drawn back, so a larger one costs by its own size (measured:
+			 * 0.26 ms at 273 px square, 3.3 ms at 600) */
+			if (fgC.width !== rw || fgC.height !== rh) { fgC.width = rw; fgC.height = rh; fgG = null; }
+			fgG = fgG || fgC.getContext('2d');
+			if (!fgG) { return null; }
+			fgG.setTransform(1, 0, 0, 1, 0, 0); fgG.globalCompositeOperation = 'source-over'; fgG.globalAlpha = 1;
+			fgG.clearRect(0, 0, rw, rh);
+			fgG.setTransform(dp, 0, 0, dp, -rx, -ry);
+			fgG.save();
+			var main = cx;
+			main.save();
+			main.beginPath(); main.rect(0, 0, cv.width / dp, cv.height / dp); main.rect(rx / dp, ry / dp, rw / dp, rh / dp); main.clip('evenodd');
+			cx = fgTee(main, fgG);
+			return { main: main, parts: parts, co: co, dp: dp, t0: t0, R: [rx, ry, rw, rh] };
+		}
+		/* After the scene: back to the page's canvas; cut the foreground's
+		 * painted shape out of the scratch (alpha: scene * (1 - a)); then draw
+		 * O onto the page, where the scene was clipped out. */
+		function foreEnd(f) {
+			cx = f.main;
+			cx.restore();
+			fgG.restore();
+			var dp = f.dp, g = fgG, memo = typeof Map === 'function' ? new Map() : { get: function () {}, set: function () {} }, n = 0, i;
+			var R = f.R, rx = R[0], ry = R[1], rw = R[2], rh = R[3];
+			var ox = f.co.left * dp + rx, oy = f.co.top * dp + ry;
+			g.save();
+			g.setTransform(1, 0, 0, 1, 0, 0);
+			g.globalCompositeOperation = 'destination-out';
+			g.fillStyle = g.strokeStyle = '#000';
+			if (rw > 0 && rh > 0) {
+				for (i = 0; i < f.parts.length; i++) {
+					var pt = f.parts[i], c = pt.clip;
+					g.save();
+					g.setTransform(1, 0, 0, 1, 0, 0);
+					g.beginPath(); g.rect(c[0] * dp - ox, c[1] * dp - oy, (c[2] - c[0]) * dp, (c[3] - c[1]) * dp); g.clip();
+					if (pt.kind === 'media') {
+						var el = pt.el, a = fgOp(el, memo), mw = el.clientWidth || el.width || 0, mh = el.clientHeight || el.height || 0;
+						var ok = el.localName !== 'img' || (el.complete && el.naturalWidth && fgOwn(el.currentSrc || el.src));
+						if (a > 0 && ok && mw && mh) {
+							var B = fgBox(el, mw, mh);
+							g.setTransform(dp * B[0], dp * B[1], dp * B[2], dp * B[3], dp * B[4] - ox, dp * B[5] - oy);
+							g.globalAlpha = a;
+							try { g.drawImage(el, 0, 0, mw, mh); n++; } catch (e) { /* not drawable yet */ }
+						}
+					} else {
+						/* the svg's own user space to the screen, then each shape
+						 * relative to it (getScreenCTM's two halves cancel, so only
+						 * the SVG-internal part is used, which every engine has right) */
+						var base = fgSvgM(pt.el), rc = pt.el.getScreenCTM && pt.el.getScreenCTM(), ri = rc && fgInv(fgM6(rc));
+						if (base && ri) {
+							base = fgAff(base, ri);
+							for (var k = 0; k < pt.sh.length; k++) { n += fgShape(g, pt.sh[k], dp, ox, oy, memo, base); }
+						}
+					}
+					g.restore();
+				}
+			}
+			g.restore();
+			if (rw > 0 && rh > 0) {
+				cx.save();
+				cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+				cx.drawImage(fgC, 0, 0, rw, rh, rx, ry, rw, rh);
+				cx.restore();
+			}
+			if (n) { fgStat.cuts++; }
+			fgStat.frames++; fgStat.shapes = n;
+			if (DEBUG) { fgStat.ms += performance.now() - f.t0; }
+		}
+		/* one SVG shape into the mask, as the browser paints it */
+		function fgShape(g, q, dp, ox, oy, memo, base) {
+			var el = q.el;
+			if (!q.vis) { return 0; }
+			var a = fgOp(el, memo), c = a > 0 && el.getScreenCTM && el.getScreenCTM();
+			if (!c) { return 0; }
+			var m = fgAff(base, fgM6(c));
+			g.setTransform(dp * m[0], dp * m[1], dp * m[2], dp * m[3], dp * m[4] - ox, dp * m[5] - oy);
+			var tag = q.tag, fo = q.fo, so = q.so, sw = q.sw, fill = q.fill, stroke = q.stroke;
+			if (tag === 'image') {
+				var href = el.getAttribute('href') || el.getAttribute('xlink:href') || '', im = href && fgOwn(href) && fgImg(href);
+				if (!im) { return 0; }
+				g.globalAlpha = a;
+				g.drawImage(im, fgNum(el, 'x'), fgNum(el, 'y'), fgNum(el, 'width'), fgNum(el, 'height'));
+				return 1;
+			}
+			if (tag === 'text') {
+				var anc = q.anchor;
+				g.font = q.font;
+				g.textAlign = anc === 'middle' ? 'center' : (anc === 'end' ? 'end' : 'start');
+				g.textBaseline = 'alphabetic';
+				if (fill) { g.globalAlpha = a * fo; g.fillText(el.textContent, fgNum(el, 'x'), fgNum(el, 'y')); }
+				if (stroke) { g.globalAlpha = a * so; g.lineWidth = sw; g.strokeText(el.textContent, fgNum(el, 'x'), fgNum(el, 'y')); }
+				return 1;
+			}
+			var P = fgPath(el);
+			if (fill && tag !== 'line') { g.globalAlpha = a * fo; g.fill(P, q.rule); }
+			if (stroke) {
+				g.globalAlpha = a * so; g.lineWidth = sw; g.lineCap = q.cap; g.lineJoin = q.join;
+				g.miterLimit = q.miter;
+				if (g.setLineDash) { g.setLineDash(q.dash); g.lineDashOffset = q.doff; }
+				g.stroke(P);
+			}
+			return fill || stroke ? 1 : 0;
+		}
 		function crosserScene(key, w, yOff, speed, onWater) {
 			return { actors: 2, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -60 : vw + 60; st.ph = 0; st.wk = 1; }
@@ -4908,6 +5268,7 @@
 				var cut = [[st.mx - mo.half, st.my - mo.half, mo.half * 2, mo.half * 2]];
 				if (st.wx != null) { var wb = 1.2 * st.W; cut.push([st.wx - wb, st.wy - wb, 2 * wb, 2 * wb]); }
 				hdrCut(cut, st.t2);
+				st.fgB = cut;   /* where it drew: the foreground cut looks only here (4.10.4) */
 				st.moonA = a;
 				return st.t2 > gone + 0.8;
 			} },
@@ -5165,6 +5526,8 @@
 					var u = (st.t2 - 1) / 3.6;
 					dspr('sleigh', lerp(st.mx - 150, st.mx + 150, u), st.my + sin(u * 5) * 5, 100, true);
 				}
+				/* the moon and the sleigh's track: the foreground cut looks only here */
+				st.fgB = [[st.mx - 90, st.my - 90, 180, 180], [st.mx - 210, st.my - 60, 420, 120]];
 				return st.t2 > 6;
 			} },
 			/* New Year's: the cork goes off in a corner. The cork sprite was
@@ -5782,7 +6145,11 @@
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
 			stepTurns(dt);
-			stepVig(dt, t);
+			/* a scene goes behind the header picture's foreground (4.10.4) */
+			/* (debug: the foreground suite draws a stand-in sprite here) */
+			if (DEBUG && DBG && W.DCCSeasonsEngine._state && W.DCCSeasonsEngine._state.preScene) { W.DCCSeasonsEngine._state.preScene(cx); }
+			var fgF = vig ? foreBegin(vig.st.fgB) : null;
+			try { stepVig(dt, t); } finally { if (fgF) { foreEnd(fgF); } }
 			stepHero(dt, t);
 			heroGone();
 			drawHero(t);
@@ -5886,6 +6253,10 @@
 				},
 				get accents() { return accents.map(function (el) { return el.innerHTML.length; }).length; },
 				get heroFrame() { return heroFrame; },
+				get fore() { return { stats: fgStat, roots: (fgList || []).length, sel: FG_SEL }; },
+				/* the matrix the cut uses for an SVG shape (debug: the suite checks
+				 * it against Chromium's own getScreenCTM) */
+				foreM: function (el) { var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: cv }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
