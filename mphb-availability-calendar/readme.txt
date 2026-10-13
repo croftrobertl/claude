@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.1
+Stable tag: 0.46.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.2 =
+Staff board only (/staff/).
+
+* **New source colours.** Booking.com is Florida citrus with dark text on its bars; Vrbo is purple. Direct and Airbnb are unchanged, and the board's own blue (the month band, ‹ › and Today) stays. Bars, the legend, the dots, and Stats' pie and lists all use them.
+* **"Compare to Last Year"** (the Last year switch, renamed) now sits under the calendar on the left, with "Updated" on the right as before. Show and Go to date are back to two boxes.
+* **The Stats dates sit level with their ‹ › arrows** on a phone.
+* **Nights Booked by Cottage:** every cottage name shows in full, "100%" stays on one line, and the bars all line up.
 
 = 0.46.1 =
 Staff board Stats only (/staff/).

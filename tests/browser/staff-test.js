@@ -678,9 +678,10 @@ const BUTTONLIKE = [
       const labs = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-field-label')].map(l => {
         const c = getComputedStyle(l); return { text: l.textContent, size: c.fontSize, weight: c.fontWeight, color: c.color, align: c.textAlign }; }));
       // Show, Go to date and (0.45.0) Search.
-      // 0.46.0: and "Last year", the ghosts' switch.
-      check(`${who}: (instrument check) all four labels found — Show, Last year, Go to date, Search`,
-        JSON.stringify(labs.map(l => l.text)) === '["Show","Last year","Go to date","Search"]', labs);
+      // Show, Go to date and (0.45.0) Search — the Last-year switch left this
+      // row for the foot of the calendar in 0.46.2.
+      check(`${who}: (instrument check) all three labels found — Show, Go to date, Search`,
+        JSON.stringify(labs.map(l => l.text)) === '["Show","Go to date","Search"]', labs);
       for (const l of labs) {
         check(`${who}: "${l.text}" is the live public label — 19px / 600 / #111, centred`,
           l.size === LIVE_PUBLIC_LABEL.size && l.weight === LIVE_PUBLIC_LABEL.weight

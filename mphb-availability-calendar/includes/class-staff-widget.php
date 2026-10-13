@@ -264,16 +264,6 @@ final class Staff_Widget
                             <option value="year"><?php echo esc_html__('Yearly', 'mphb-availability-calendar'); ?></option>
                         </select>
                     </label>
-                    <?php // LAST YEAR'S GHOSTS (0.46.0, Rob): beside Show, because it
-                    // changes what the chart draws, as Show does; on a phone, its
-                    // own line under Show / Go to date. OFF ON EVERY LOAD: unchecked
-                    // here, autocomplete="off" so no browser restores it, and
-                    // staff.js unchecks it again. A real checkbox announced as a
-                    // switch; disabled in Daily, which has no bars. ?>
-                    <label class="mphbac-staff-ghostfield">
-                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Last year', 'mphb-availability-calendar'); ?></span>
-                        <span class="mphbac-staff-ghostbox"><input type="checkbox" role="switch" class="mphbac-staff-ghosts" autocomplete="off"></span>
-                    </label>
                     <label class="mphbac-staff-field">
                         <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
                         <input type="date" class="mphbac-staff-input mphbac-staff-goto">
@@ -365,7 +355,23 @@ final class Staff_Widget
             <div class="mphbac-staff-status" role="status" aria-live="polite"></div>
             <?php // "Updated hh:mm" (0.44.0): the auto-refresh's last success. Not
             // live: a line that changes every three minutes must not be read out. ?>
-            <div class="mphbac-staff-updated"></div>
+            <?php // UNDER THE CALENDAR, ONE ROW (0.46.2, Rob: "Left-aligned under the
+            // calendar"): the Last-year switch on the left, "Updated hh:mm" where
+            // it always was, on the right. On a narrow phone the row wraps
+            // rather than letting the two overlap.
+            // COMPARE TO LAST YEAR (0.46.0's "Last year", moved and renamed in
+            // 0.46.2): last year's bookings as dashed outlines behind the bars.
+            // OFF ON EVERY LOAD — unchecked here, autocomplete="off" so no
+            // browser restores it, and staff.js unchecks it again. A real
+            // checkbox announced as a switch, named by its label; disabled in
+            // Daily, which has no bars. ?>
+            <div class="mphbac-staff-under">
+                <label class="mphbac-staff-ghostfield">
+                    <span class="mphbac-staff-ghostbox"><input type="checkbox" role="switch" class="mphbac-staff-ghosts" autocomplete="off"></span>
+                    <span class="mphbac-staff-ghostlabel"><?php echo esc_html__('Compare to Last Year', 'mphb-availability-calendar'); ?></span>
+                </label>
+                <div class="mphbac-staff-updated"></div>
+            </div>
             <?php // STATS (0.44.1, Rob): everything statistical in ONE section below
             // the calendar, closed on every load, with its own timeframe —
             // independent of the calendar. Filled by staff.js from the gated

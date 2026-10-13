@@ -455,6 +455,87 @@ const DOCKS = [
     await ctx.close();
   }
 
+  console.log('\n-- 0.46.2: the source colours (Rob: "four blues" — Booking.com citrus, Vrbo purple), each with its own ink --');
+  {
+    // WCAG 2 contrast of two computed colours.
+    const contrastFn = `(function () {
+      const lum = c => { const m = c.match(/[\\d.]+/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
+      return (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    })()`;
+    // A pending Booking.com stay with all three icons, on the board and in Stats.
+    const extra = [Object.assign(bk(501, '2026-10-22', '2026-10-30', 28, 'booking', '2026-10-01', 'Pat Pine'), { status: 'mphb-pending', statusLabel: 'Pending', pets: true, couch: true, boat: true })];
+    const { ctx, p } = await open({ phone: true, html: shell({ bookings: BOOKINGS.concat(extra) }) });
+    const want = { direct: ['rgb(7, 135, 50)', 'rgb(255, 255, 255)'], airbnb: ['rgb(188, 0, 62)', 'rgb(255, 255, 255)'],
+                   booking: ['rgb(255, 160, 0)', 'rgb(17, 17, 17)'], vrbo: ['rgb(107, 63, 184)', 'rgb(255, 255, 255)'] };
+    const bars = await p.evaluate(fn => { const contrast = eval(fn);
+      return Object.fromEntries(['direct', 'airbnb', 'booking', 'vrbo'].map(k => {
+        const b = document.querySelector('.mphbac-staff-bar.is-src-' + k), c = getComputedStyle(b), ico = b.querySelector('svg.mphbac-staff-ico');
+        const key = getComputedStyle(document.querySelector('.mphbac-staff-key.is-src-' + k), '::before').backgroundColor;
+        return [k, { bg: c.backgroundColor, ink: c.color, ratio: +contrast(c.backgroundColor, c.color).toFixed(2), key, ico: ico ? getComputedStyle(ico).stroke : null }];
+      })); }, contrastFn);
+    for (const k of Object.keys(want)) {
+      check(`${k}: its bar is ${want[k][0]} with ${want[k][1]} ink — contrast ${bars[k].ratio}:1 (≥ 4.5), and its legend chip the same colour`,
+        bars[k].bg === want[k][0] && bars[k].ink === want[k][1] && bars[k].ratio >= 4.5 && bars[k].key === want[k][0], bars[k]);
+    }
+    const icos = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar[data-booking-id="501"] svg.mphbac-staff-ico')].map(i => getComputedStyle(i).stroke));
+    check('...the Pets / Couch / Boat icons on a Booking.com bar are drawn in its DARK ink, not white', icos.length === 3 && icos.every(c => c === 'rgb(17, 17, 17)'), icos);
+    const pend = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-bar[data-booking-id="501"]')).backgroundImage);
+    check('...a PENDING Booking.com bar keeps its stripes, dark ones that show on citrus', /rgba\(17, 17, 17, 0\.14\)/.test(pend), pend);
+    const blues = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar')].map(b => getComputedStyle(b).backgroundColor).filter(c => c === 'rgb(0, 46, 122)' || c === 'rgb(15, 109, 191)'));
+    check('no bar is either of the old blues (#002e7a, #0f6dbf); the board\'s own #0A50B2 band stays',
+      blues.length === 0 && await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-monthband')).backgroundColor) === 'rgb(10, 80, 178)', blues);
+    // Stats: the pie, its labels in each slice's ink, the lead-time swatches.
+    const pie = await p.evaluate(fn => { const contrast = eval(fn);
+      return [...document.querySelectorAll('.mphbac-staff-pie-label')].map(t => { const k = (t.getAttribute('class').match(/is-src-(\w+)/) || [])[1];
+        const slice = document.querySelector('.mphbac-staff-pie-slice.is-src-' + k);
+        return { k, label: getComputedStyle(t).fill, slice: getComputedStyle(slice).fill, ratio: +contrast(getComputedStyle(t).fill, getComputedStyle(slice).fill).toFixed(2) }; }); }, contrastFn);
+    check('Nights Booked by Source: every % drawn ON a slice is in that slice\'s ink, ≥ 4.5:1 (Booking.com\'s dark)',
+      pie.length >= 3 && pie.every(x => x.slice === want[x.k][0] && x.label === want[x.k][1] && x.ratio >= 4.5) && pie.some(x => x.k === 'booking'), pie);
+    const sw = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-pie-item, .mphbac-staff-lead-row[data-source]:not(.is-all)')].map(li => [li.className.match(/is-src-(\w+)/)[1], getComputedStyle(li.querySelector('.mphbac-staff-pie-swatch')).backgroundColor]));
+    check('...its list and How Far Ahead\'s swatches in the new colours', sw.length >= 6 && sw.every(([k, c]) => c === want[k][0]), sw);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.46.2: the Stats dates centred on their arrows (Rob\'s iPhone: they sat above) --');
+  for (const [w, phone] of [[320, true], [375, true], [390, true], [1280, false]]) {
+    // A stand-in for a theme's paragraph spacing — an Elementor kit's
+    // `p { margin-block-end }` at (0,1,1) — the likely lift on Rob's phone.
+    const { ctx, p } = await open({ phone, w, html: shell({ head: '<style>.elementor-kit-331 p { margin-block-end: 20px; }</style>' }) });
+    await p.selectOption('.mphbac-staff-stats-span', 'custom');
+    await p.fill('.mphbac-staff-stats-from', '2026-12-28'); await p.fill('.mphbac-staff-stats-to', '2027-01-24');
+    await p.dispatchEvent('.mphbac-staff-stats-to', 'change'); await settle(p);
+    const m = await p.evaluate(() => { const e = document.querySelector('.mphbac-staff-stats-range'), r = e.getBoundingClientRect(), c = getComputedStyle(e),
+      a = document.querySelector('.mphbac-staff-stats-prev').getBoundingClientRect(), b = document.querySelector('.mphbac-staff-stats-next').getBoundingClientRect();
+      return { text: e.textContent, dy: +(((r.top + r.bottom) / 2) - ((a.top + a.bottom) / 2)).toFixed(2), dyb: +(((b.top + b.bottom) / 2) - ((a.top + a.bottom) / 2)).toFixed(2),
+        size: parseFloat(c.fontSize), lines: Math.round(r.height / parseFloat(c.lineHeight)), fits: e.scrollWidth <= e.clientWidth + 0.5 }; });
+    check(`${w}px: "${m.text}" — its centre line within 1px of the arrows' (${m.dy}px), one line, whole (${m.size}px)`,
+      Math.abs(m.dy) <= 1 && Math.abs(m.dyb) <= 1 && m.lines === 1 && m.fits && m.size >= 12, m);
+    await ctx.close();
+  }
+
+  console.log('\n-- 0.46.2: Nights Booked by Cottage — names in full, "100%" on one line --');
+  {
+    // Rob's screenshot: Feb 2027, "#35 Blue Heron" cut, "100" over "%".
+    const cots = F.COTTAGES.map(c => c.id === 22 ? Object.assign({}, c, { number: '35', abbrev: 'Blue Heron' }) : c.id === 24 ? Object.assign({}, c, { number: '34', abbrev: 'Great Egret' }) : c);
+    const full = bk(601, '2027-02-01', '2027-03-01', 22, 'direct', '2026-10-01');
+    for (const w of [320, 375, 390]) {
+      const { ctx, p } = await open({ phone: true, w, html: shell({ cottages: cots, bookings: BOOKINGS.concat([full]) }) });
+      await p.selectOption('.mphbac-staff-stats-month', '2027-02'); await settle(p);
+      const rows = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => {
+        const n = r.querySelector('.mphbac-staff-percot-name'), pc = r.querySelector('.mphbac-staff-percot-pct'), t = r.querySelector('.mphbac-staff-percot-track');
+        const lh = parseFloat(getComputedStyle(pc).lineHeight) || parseFloat(getComputedStyle(pc).fontSize) * 1.3;
+        return { name: n.textContent, whole: n.scrollWidth <= n.clientWidth + 0.5 && n.getBoundingClientRect().width >= n.scrollWidth - 0.5, pct: pc.textContent,
+          oneLine: pc.getBoundingClientRect().height < lh * 1.5, track: Math.round(t.getBoundingClientRect().width), inside: r.getBoundingClientRect().right <= innerWidth + 0.5 }; }));
+      const top = rows[0];
+      check(`${w}px: Feb 2027 — "${top.name}" ${top.pct} on ONE line`, top.name === '#35 Blue Heron' && top.pct === '100%' && top.oneLine, top);
+      check(`${w}px: every cottage name in full ("#35 Blue Heron", "#34 Great Egret", "#23 Kingfisher"…), every figure on one line, the bar still there (≥ 24px)`,
+        rows.every(r => r.whole && r.oneLine && r.track >= 24 && r.inside), rows.filter(r => !(r.whole && r.oneLine && r.track >= 24 && r.inside)).concat([rows.map(r => r.track).join(',')]));
+      check(`${w}px: ...and every bar the same length, as the rows share their columns`, new Set(rows.map(r => r.track)).size === 1, rows.map(r => r.track));
+      await ctx.close();
+    }
+  }
+
   console.log('\n-- 0.46.0 C17: last year\'s ghosts --');
   {
     const { ctx, p } = await open({ stats: false });
@@ -463,10 +544,14 @@ const DOCKS = [
       return { col: e.style.gridColumn, row: e.style.gridRow, aria: e.getAttribute('aria-hidden'), pe: c.pointerEvents, text: e.textContent, kids: e.children.length,
         title: e.getAttribute('title'), z: c.zIndex, border: c.borderStyle, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
     }));
-    const sw = await p.evaluate(() => { const s = document.querySelector('.mphbac-staff-ghosts'), f = s.closest('.mphbac-staff-fields');
-      return { checked: s.checked, role: s.getAttribute('role'), label: s.closest('label').textContent.trim(), inFields: !!f,
-        afterShow: s.closest('label').previousElementSibling.querySelector('.mphbac-staff-period') !== null }; });
-    check('a "Last year" switch beside Show (role="switch"), OFF on load, no ghosts', !sw.checked && sw.role === 'switch' && sw.label === 'Last year' && sw.afterShow && (await g()).length === 0, sw);
+    const sw = await p.evaluate(() => { const s = document.querySelector('.mphbac-staff-ghosts');
+      return { checked: s.checked, role: s.getAttribute('role'), label: s.closest('label').textContent.trim(), inFields: !!s.closest('.mphbac-staff-fields, .mphbac-staff-tools'),
+        underGrid: s.closest('.mphbac-staff-under') !== null && s.closest('.mphbac-staff-under').previousElementSibling.matches('.mphbac-staff-status')
+          && s.closest('.mphbac-staff-under').previousElementSibling.previousElementSibling.matches('.mphbac-staff-grid') }; });
+    const named = await p.getByRole('switch', { name: 'Compare to Last Year', exact: true }).count();
+    // 0.46.2 (Rob): moved under the calendar and renamed, exactly "Compare to Last Year".
+    check('a "Compare to Last Year" switch (role="switch", named exactly that) UNDER the calendar, not in the Show / Go to date row; OFF on load, no ghosts',
+      !sw.checked && sw.role === 'switch' && sw.label === 'Compare to Last Year' && named === 1 && !sw.inFields && sw.underGrid && (await g()).length === 0, [sw, named]);
     await p.check('.mphbac-staff-ghosts'); await settle(p);
     let gs = await g();
     // Oct 2025 shifted a year: Ida #22, Jo #27, Lou #24, Ned #25 (Kit is November).
@@ -490,18 +575,24 @@ const DOCKS = [
     check('a reload: OFF again, whatever the browser would restore', await p.evaluate(() => !document.querySelector('.mphbac-staff-ghosts').checked && !document.querySelector('.mphbac-staff-ghost')));
     await ctx.close();
   }
-  {
-    const { ctx, p } = await open({ phone: true, stats: false });
-    const m = await p.evaluate(() => { const f = document.querySelector('.mphbac-staff-ghostfield').getBoundingClientRect(), s = document.querySelector('.mphbac-staff-period').getBoundingClientRect(),
-      q = document.querySelector('.mphbac-staff-search').getBoundingClientRect(), sw = document.querySelector('.mphbac-staff-ghosts').getBoundingClientRect();
-      return { below: f.top >= s.bottom, above: f.bottom <= q.top, inside: f.left >= 0 && f.right <= innerWidth, centred: Math.abs((f.left + f.right) / 2 - innerWidth / 2) < 2, sw: [sw.width, sw.height] }; });
-    check('375px: the switch on its own centred line under Show / Go to date, above Search', m.below && m.above && m.inside && m.centred, m);
-    await ctx.close();
-  }
-  {
-    const { ctx, p } = await open({ stats: false });
-    const m = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-fields .mphbac-staff-field-label')].map(l => [l.textContent, Math.round(l.getBoundingClientRect().top * 10) / 10]));
-    check('desktop: Show | Last year | Go to date in one row, the labels level', m.length === 3 && m[1][0] === 'Last year' && m.every(x => x[1] === m[0][1]), m);
+  // Where it sits (0.46.2): left-aligned under the calendar; "Updated hh:mm"
+  // where it was, on the right; never overlapping, at 320 / 375 / 390 and
+  // on a computer. And the Show / Go to date row, now two again, balanced.
+  for (const [w, phone] of [[320, true], [375, true], [390, true], [1280, false]]) {
+    const { ctx, p } = await open({ phone, w, stats: false });
+    const m = await p.evaluate(() => {
+      const R = s => document.querySelector(s).getBoundingClientRect();
+      const g = R('.mphbac-staff-grid'), f = R('.mphbac-staff-ghostfield'), u = R('.mphbac-staff-updated'), sh = R('.mphbac-staff-period'), go = R('.mphbac-staff-goto'), tools = R('.mphbac-staff-fields');
+      const overlap = !(f.right <= u.left || u.right <= f.left || f.bottom <= u.top || u.bottom <= f.top);
+      return { left: Math.round(f.left - g.left), under: Math.round(f.top - g.bottom), updRight: Math.round(g.right - u.right), updText: document.querySelector('.mphbac-staff-updated').textContent,
+        overlap, tap: Math.round(f.height), fieldsW: [Math.round(sh.width), Math.round(go.width)], tops: Math.abs(sh.top - go.top),
+        centre: +(((sh.left + go.right) / 2) - ((tools.left + tools.right) / 2)).toFixed(1), inside: sh.left >= 0 && go.right <= innerWidth };
+    });
+    check(`${w}px: the switch is LEFT-ALIGNED under the calendar (its left edge on the calendar's), a 44px tap target`,
+      Math.abs(m.left) <= 1 && m.under >= 0 && m.under <= 12 && m.tap >= 44, m);
+    check(`${w}px: "${m.updText}" stays right-aligned under the calendar, and the two never overlap`, /^Updated \d\d:\d\d$/.test(m.updText) && Math.abs(m.updRight) <= 1 && !m.overlap, m);
+    check(`${w}px: Show / Go to date, two again: the same width, level, the pair centred, on screen`,
+      m.fieldsW[0] === m.fieldsW[1] && m.tops < 0.5 && Math.abs(m.centre) <= 1 && m.inside, m);
     await ctx.close();
   }
 

@@ -3196,3 +3196,70 @@ figure, every heat-map night, every bar width.
 **Rollback** to 0.46.0: the `dock_block_names` setting is dropped by its
 upgrade merge (unknown key); everything else stays.
 
+## Rob's iPhone review of 0.46.1 → 0.46.2 (WD, 2026-10-13)
+
+**WD on staging (0.46.1):** October 2026 Stats 8 → 6 bookings, 32% → 7%
+(18 of 248; denominator unchanged); #31 / #32 at 0 nights; dock bars still
+drawn; 27 tips mention dock blocks; "1 point"; the heat map's one tab stop
+and keys work. My extension of count-once to In house and Turnovers is
+accepted.
+
+**Rob decided:** (1) "four blues": KEEP #0A50B2 for the board (month band,
+‹ › / Today); Booking.com → #FFA000 (Florida citrus, his site list) with
+dark ink #111111 (white is 2.0:1), Vrbo → #6b3fb8 (purple, off his list,
+his pick), white ink; Direct and Airbnb unchanged. (2) The Last-year switch
+moves under the calendar, LEFT-ALIGNED, renamed "Compare to Last Year".
+(3) The Stats range sat above its arrows on his phone — centre it (a
+smaller font is fine). (4) The board's date line: NO change (he saw three
+layouts and kept it). **WD:** an ink variable per source; every place a
+source colour shows; the focus colour #0f6dbf stays; Updated stays put and
+must not overlap at 320; the Show / Go to date row balanced; (5) "100%"
+wrapped and "#35 Blue Heron" was cut in Nights Booked by Cottage.
+
+**COLOURS.** --staff-src-{direct,airbnb,booking,vrbo} plus
+--staff-src-*-ink; each .is-src-* class sets --staff-bar, --staff-bar-ink
+and (Booking.com only) a dark pending stripe, rgba(17,17,17,.14) — white
+stripes vanish on citrus. The bar's text and its Pets / Couch / Boat icons
+take the ink; so do the pie's % labels (each label now carries its slice's
+source class). Measured contrast, tested ≥ 4.5: Direct 4.65, Airbnb 6.55,
+Booking.com 9.24, Vrbo 6.93. The sheet and the quick preview show the
+source as text only — no colour to change. The Last-year outlines are
+slate, not tinted by source — unchanged. States on citrus: hover is
+brightness 1.08 (10.1:1 with dark ink); the found / focus rings are drawn
+outside the bar, against the cell; the turnover diamond keeps its black
+edge.
+
+**THE SWITCH.** Out of the tools row; a new row under the calendar
+(.mphbac-staff-under): the switch left (its edge on the calendar's), the
+"Updated" line right, its top where it was. The row wraps when narrow, so
+at 320 Updated drops under the switch, still right — never overlapping.
+The label, "Compare to Last Year", is the switch's accessible name (the
+input is inside the <label>). The kit's label rule is (0,1,1); the label's
+type is restated at (0,2,0).
+
+**THE STATS DATES.** In the harness the line was already centred by box;
+on Rob's phone it sat high. My best explanation, NOT verified on live: the
+Elementor kit's paragraph spacing — `.elementor-kit-N p { margin… }` at
+(0,1,1) — outranks the (0,1,0) rule that zeroed the <p>'s margin, and the
+flex row centres the margin box. Now zeroed at (0,3,0); the test runs with
+a stand-in kit rule (`margin-block-end: 20px`). Box centres within 1px at
+320 / 375 / 390 / 1280 for the longest label; the ink measured within
+1.5px. **WD: please check on live whether the kit sets a paragraph
+spacing.** If it does, the other staff <p>s (the notes, the empty
+messages, the search count) get the kit's margin too; not touched here.
+
+**THE COTTAGE ROWS.** Every figure nowrap; the name column never narrower
+than its longest name (minmax(max-content, 9em); 7em on a phone); the bar
+takes the rest, ≥ 24px (38px at 320 with "#35 Blue Heron"). Sized to their
+text, the columns would differ row to row and the bars end at different
+places, so the rows are a SUBGRID of the list: one set of columns, every
+bar the same length (iOS 16+; older Safari keeps per-row columns, names
+still whole). That evens the bar ends, which used to vary a little with
+"1 night" vs "30 nights" — the one visible change, an alignment.
+
+**Stale mutations found:** three needles had gone stale in 0.46.1 (the In
+house and Length comparisons, which 0.46.1 rewrote) and were not noticed
+because that run was filtered to its own entries; repaired now, with the
+two switch entries replaced by 0.46.2's. The stale check now runs over the
+whole list before each release.
+

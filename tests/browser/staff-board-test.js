@@ -18,7 +18,7 @@ const F = require('./board-fixture.js');
 const { check, done } = H.reporter();
 
 const ORIGIN = 'http://staff.test/';
-const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rgb(0, 46, 122)', vrbo: 'rgb(15, 109, 191)', other: 'rgb(51, 65, 85)' };
+const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rgb(255, 160, 0)', vrbo: 'rgb(107, 63, 184)', other: 'rgb(51, 65, 85)' };
 
 (async () => {
   const browser = await chromium.launch(S.CHROMIUM);

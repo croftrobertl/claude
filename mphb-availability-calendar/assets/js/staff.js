@@ -2313,7 +2313,7 @@
                     var t = document.createElementNS(NS, 'text');
                     t.setAttribute('x', (C + lr * Math.cos(mid)).toFixed(2));
                     t.setAttribute('y', (C + lr * Math.sin(mid)).toFixed(2));
-                    t.setAttribute('class', 'mphbac-staff-pie-label');
+                    t.setAttribute('class', 'mphbac-staff-pie-label is-src-' + k);   // its slice's ink (0.46.2)
                     t.setAttribute('text-anchor', 'middle');
                     t.setAttribute('dominant-baseline', 'central');
                     t.textContent = pctOf(v, total) + '%';
