@@ -3217,6 +3217,53 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario AD: AI search sends ids, never guide text (v0.23.5) ------
+    // The server builds the context now; the browser must not send one. The
+    // page below carries real guide text in its sections, so a regression that
+    // stitches it back into the request would show up in the request body.
+    {
+        console.log('\nAD. AI search: the request names the guide, it does not carry it');
+        const errors = [];
+        const sent = [];
+        const cfg = { ajaxUrl: 'https://dccgg.test/wp-admin/admin-ajax.php', nonce: 'n1', postId: 4645, widgetId: 'abc123',
+            enableSearch: true, logMisses: false, revealMode: 'stage', strings: {},
+            searchIndex: [{ section: 'pool', item_idx: 0, title: 'Pool hours', text: 'pool open eight to ten' }],
+            aiSearch: { enabled: true, label: 'Ask anything', thinking: 'Thinking…', error: 'AI-ERROR', offline: 'AI-OFFLINE' } };
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>
+            <div class="dccgg-root" data-config='${JSON.stringify(cfg)}'>
+            <div class="dccgg-search"><input type="search" class="dccgg-search-input">
+            <div class="dccgg-search-results" role="group" hidden></div></div>
+            <div class="dccgg-stage"><div class="dccgg-detail" data-key="pool" hidden>
+              <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-text">Pool</span></h2>
+              <article class="dccgg-item" data-item-title="Pool hours"><div class="dccgg-item-body"><p>GUIDE-BODY-TEXT open eight to ten.</p></div></article>
+            </div></div></div><script>${JS}</script></body></html>`;
+        const ctx = await browser.newContext({ viewport: PHONE });
+        const page = await ctx.newPage();
+        page.on('pageerror', (e) => errors.push(String(e)));
+        await page.route('**/admin-ajax.php', (r) => {
+            const b = r.request().postData() || '';
+            sent.push(b);
+            if (b.includes('dccgg_ai_query')) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"data":{"answer":"The pool is open eight to ten."}}' });
+            return r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+        });
+        await page.route('https://dccgg.test/guest/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: html }));
+        await page.goto('https://dccgg.test/guest/', { waitUntil: 'load' });
+        await page.fill('.dccgg-search-input', 'when can we swim');
+        await page.waitForTimeout(900);
+        check('a search miss offers the AI button', !!(await page.$('.dccgg-ai-button')));
+        await page.click('.dccgg-ai-button');
+        await page.waitForTimeout(600);
+        const req = sent.find((b) => b.includes('action=dccgg_ai_query')) || '';
+        const p = new URLSearchParams(req);
+        check('the request carries the question, the page id and the widget id',
+            p.get('question') === 'when can we swim' && p.get('post_id') === '4645' && p.get('widget_id') === 'abc123', req);
+        check('and no context field and none of the guide text', !p.has('context') && !req.includes('GUIDE-BODY-TEXT'), req);
+        check('the answer is shown', (await page.$eval('.dccgg-ai-answer', (e) => e.textContent)) === 'The pool is open eight to ten.');
+        await ctx.close();
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

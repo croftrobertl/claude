@@ -1331,11 +1331,47 @@ final class Plugin
             wp_send_json_error(['message' => __('AI search is not configured on this site.', 'dcc-guest-guide')], 503);
         }
         $question = isset($_POST['question']) ? sanitize_textarea_field(wp_unslash((string) $_POST['question'])) : '';
-        $context  = isset($_POST['context'])  ? wp_kses_post(wp_unslash((string) $_POST['context']))            : '';
         $question = mb_substr($question, 0, 500);
-        $context  = mb_substr($context, 0, 20000);
-        if ($question === '' || $context === '') {
-            wp_send_json_error(['message' => __('Question and context are required.', 'dcc-guest-guide')], 400);
+        if ($question === '') {
+            wp_send_json_error(['message' => __('Please type a question.', 'dcc-guest-guide')], 400);
+        }
+
+        // v0.23.5: the guide content is built HERE, from the widget's saved
+        // settings, and nothing the browser sends as "context" is read. Until
+        // v0.23.4 this forwarded up to 20,000 characters of caller-supplied
+        // text to Gemini, which made the endpoint an open proxy to the key.
+        // The lookup is the report form's (post_id + widget_id), behind the
+        // same visibility test as the search index and the reveal endpoint:
+        // serve only a guide the caller could open, and answer 404 for every
+        // failure so nothing is learned about which check failed.
+        $post_id   = isset($_POST['post_id'])   ? (int) $_POST['post_id'] : 0;
+        $widget_id = isset($_POST['widget_id']) ? sanitize_text_field(wp_unslash((string) $_POST['widget_id'])) : '';
+        if ($post_id <= 0 || $widget_id === '') {
+            wp_send_json_error(['message' => __('AI search is not available here.', 'dcc-guest-guide')], 404);
+        }
+        $post = get_post($post_id);
+        if (!$post
+            || ($post->post_status !== 'publish' && !current_user_can('read_post', $post_id))
+            || post_password_required($post)) {
+            wp_send_json_error(['message' => __('AI search is not available here.', 'dcc-guest-guide')], 404);
+        }
+        $settings = $this->find_widget_settings($post_id, $widget_id);
+        if ($settings && Widget::is_public_mode($settings)) {
+            // The one choke point: it also switches AI search off, exactly as
+            // the public render does, so a public guide is never a way in.
+            Widget::apply_public_mode($settings);
+        }
+        if (!$settings || ($settings['enable_ai_search'] ?? '') !== 'yes') {
+            wp_send_json_error(['message' => __('AI search is not available here.', 'dcc-guest-guide')], 404);
+        }
+        $ctx_key = 'dccgg_aictx_' . $post_id . '_' . substr(sha1((string) wp_json_encode($settings)), 0, 12);
+        $context = get_transient($ctx_key);
+        if (!is_string($context)) {
+            $context = Widget::build_ai_context($settings);
+            set_transient($ctx_key, $context, HOUR_IN_SECONDS);
+        }
+        if (trim($context) === '') {
+            wp_send_json_error(['message' => __('AI search is not available here.', 'dcc-guest-guide')], 404);
         }
 
         $system = "You are a helpful concierge for a vacation rental. Answer ONLY using the guide content provided. "

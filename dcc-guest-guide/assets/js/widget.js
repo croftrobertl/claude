@@ -1591,11 +1591,13 @@
             return;
         }
         answer.textContent = config.aiSearch.thinking;
-        const context = buildAiContext(root);
+        // v0.23.5: no guide text leaves the page. The server builds the
+        // context from this widget's saved settings; it ignores any sent.
         const body = new URLSearchParams();
         body.set('action', 'dccgg_ai_query');
         body.set('question', question);
-        body.set('context', context);
+        body.set('post_id', String(config.postId || 0));
+        body.set('widget_id', String(config.widgetId || ''));
         dccggFetch(config, body).then(r => r.json()).then(json => {
             delete answer.dataset.state;
             btn.disabled = false;
@@ -1611,28 +1613,6 @@
             answer.textContent = config.aiSearch.error;
         });
     }
-    function buildAiContext(root) {
-        // Stitch together section titles + item titles + item plain text.
-        const parts = [];
-        root.querySelectorAll('.dccgg-detail').forEach(detail => {
-            // v0.9.7.35: read the real title text. The old '.dccgg-detail-title
-            // span' matched the ICON span (empty for font icons), so sections
-            // fell back to their raw key ('wifi' instead of 'Internet'); and
-            // 'span:last-of-type' on item titles has matched the empty
-            // trailing-controls wrapper since the v0.9.7.28 title grid, so
-            // every item heading sent to the AI was blank.
-            const title = (detail.querySelector('.dccgg-detail-title-text') || {}).textContent || detail.dataset.key || '';
-            parts.push('## ' + title.trim());
-            detail.querySelectorAll('.dccgg-item').forEach(item => {
-                const itTitle = item.dataset.itemTitle
-                    || (item.querySelector('.dccgg-item-title-text') || {}).textContent || '';
-                const body    = (item.querySelector('.dccgg-item-body') || {}).textContent || '';
-                parts.push('### ' + itTitle.trim() + '\n' + body.trim());
-            });
-        });
-        return parts.join('\n\n').slice(0, 18000);
-    }
-
     // -- Click-to-play video posters (v0.6) -------------------------------
     function wireVideoPosters(root) {
         root.querySelectorAll('.dccgg-video-poster').forEach(btn => {

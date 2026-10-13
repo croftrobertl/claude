@@ -185,6 +185,13 @@ guide's full index, so it verifies post visibility before answering — without
 that check it is a way to read a private or password-protected guide. Keep that
 guard if you touch the endpoint.
 
+`Plugin::handle_ai_query()` (Gemini, anonymous) builds its guide context on
+the SERVER with `Widget::build_ai_context()` from post_id + widget_id, behind
+the same visibility test, the AI switch and public mode. It must never read
+a `context` from the request: until v0.23.5 it did, and that made it an open
+proxy to the Gemini key. `tests/ai-query.test.php` and
+`tests/ai-query.mutations.py` guard this.
+
 `Widget::config_emergency_contacts()` gates the data-config contact list on an
 emergency section being present in THIS render; apply_public_mode() drops a
 guest-only Emergency section, so the public page gets none. Don't emit that
@@ -206,8 +213,8 @@ mode). The manifest and service worker are served from the site ROOT via
 the plugin directory could not. The worker never caches wp-admin, wp-json,
 admin-ajax, logins or previews, and turning the toggle off unregisters it.
 
-Run `php tests/public-mode.test.php`, `php tests/discovery.test.php` and
-`node tests/popup.test.js` after touching any of it. Those tests guard
+Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
+`php tests/ai-query.test.php` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

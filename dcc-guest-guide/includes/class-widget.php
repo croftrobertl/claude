@@ -4332,6 +4332,58 @@ final class Widget extends Widget_Base
         return mb_substr(trim(preg_replace('/\s+/u', ' ', implode(' ', $parts)) ?: ''), 0, 1500);
     }
 
+    /** Longest AI context sent to Gemini, in characters. */
+    public const AI_CONTEXT_MAX = 18000;
+
+    /**
+     * v0.23.5: the guide content the AI search answers from, built on the
+     * SERVER from the widget's saved settings. Until v0.23.4 the browser
+     * stitched this together and posted it, and the endpoint forwarded
+     * whatever arrived — up to 20,000 characters of anyone's text — to Gemini
+     * on the site's key. That made the endpoint an open proxy: a caller could
+     * run their own prompts until the daily cap ran out, taking AI search
+     * offline for real guests. Now the browser sends only post_id and
+     * widget_id, and this decides what the model sees.
+     *
+     * Same shape the browser sent, so answers do not change: "## Section"
+     * then "### Item" and its body text, in guide order. Public mode is
+     * applied first, through the one choke point. A masked value is never
+     * included (it is not body text, and the browser never sent it either).
+     * Template items contribute their rendered text, as they did when the
+     * browser read it off the page.
+     */
+    public static function build_ai_context(array $settings): string
+    {
+        if (self::is_public_mode($settings)) {
+            self::apply_public_mode($settings);
+        }
+        $items_by_section = [];
+        foreach ((array) ($settings['guide_items'] ?? []) as $item) {
+            if (!is_array($item)) { continue; }
+            $key = trim((string) ($item['item_section'] ?? ''));
+            if ($key !== '') { $items_by_section[$key][] = $item; }
+        }
+        $parts = [];
+        foreach ((array) ($settings['guide_sections'] ?? []) as $sec) {
+            if (!is_array($sec)) { continue; }
+            $key = trim((string) ($sec['section_key'] ?? ''));
+            if ($key === '') { continue; }
+            $title = trim((string) ($sec['section_title'] ?? ''));
+            $parts[] = '## ' . ($title !== '' ? $title : $key);
+            foreach ($items_by_section[$key] ?? [] as $item) {
+                $source = (string) ($item['content_source'] ?? 'wysiwyg');
+                if ($source === 'template') {
+                    $body = wp_strip_all_tags(self::render_template((int) ($item['item_template'] ?? 0)));
+                } else {
+                    $body = wp_strip_all_tags((string) ($item['item_content'] ?? ''));
+                }
+                $body = trim(preg_replace('/[ \t]+/u', ' ', (string) $body) ?? '');
+                $parts[] = '### ' . trim((string) ($item['item_title'] ?? '')) . "\n" . $body;
+            }
+        }
+        return mb_substr(implode("\n\n", $parts), 0, self::AI_CONTEXT_MAX);
+    }
+
     /**
      * v0.9.7.14: Build the search index for a widget's saved sections + items.
      * Shared by Widget::render() and Plugin::handle_search_index() so the lazy

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.4
+Stable tag: 0.23.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,23 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.5 =
+
+**Security: AI search can no longer be used to run other people's prompts
+on the site's Gemini key.** The browser used to send the guide text along
+with each question, and the server forwarded whatever arrived (up to 20,000
+characters) to Gemini. Anyone could send their own text instead and use the
+key until the daily cap ran out, which took AI search offline for real
+guests. The guide content is now built on the server from the guide's saved
+settings, the way the report form already finds its settings, and anything
+the browser sends as context is ignored.
+
+The endpoint now answers only for a guide the caller could open themselves
+(published, or readable by them, and not password-protected), with AI search
+switched on in that guide's settings and not in public mode. The per-visitor
+limit (5 questions per 15 minutes) and the site-wide daily cap (500) are
+unchanged. Guests see no difference.
 
 = 0.23.4 =
 
