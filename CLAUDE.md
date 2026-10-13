@@ -543,6 +543,22 @@ avoid any turn-round he picked **"One swoop, no loop"**:
   4.10.2 alike, passing alone). It now reads `vt` in the same call as the
   dispatch; the engine's listener runs inside `dispatchEvent`.
 
+### Rob's pick (for 4.10.3, 2026-10-13): the Halloween web is medium
+
+4.10.2 is live ("It looks good"). Rob: "Right now it's small so make it
+medium" — he chose **96px** (1.5× the old 64px) for `ACCENTS.halloween`.
+Opacity .5, the corner and `pointer-events:none` unchanged. The web is
+an inline SVG on a 40-unit viewBox with a 1-unit stroke, so its lines
+scale with it (1.6px → 2.4px) and stay vector-sharp: nothing to retune.
+`tools/test-accents.js` proves at 320/390/1280, front and behind
+layering: the drawing is 96×96 (measure the SVG, not the div — an inline
+SVG leaves a ~7.6px baseline gap below it in its div), the line width,
+the opacity, and that a button right under it (z 8000, above the page
+header) still gets the click. The fixture's test weather banner
+(`.dcc-wx-banner`, z 10000) spans the top and must be hidden there, or
+it is what the tap finds. The Theme guide shows accents at its own
+picture size, so it had nothing to change.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -909,7 +925,7 @@ avoid any turn-round he picked **"One swoop, no loop"**:
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
   ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process

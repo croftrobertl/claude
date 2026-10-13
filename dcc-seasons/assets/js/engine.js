@@ -551,7 +551,10 @@
 	}
 
 	var ACCENTS = {
-		halloween: ['web', 'right:0;top:0;width:64px;opacity:.5;'],
+		/* The web is 96px since 4.10.3 (Rob: "make it medium", 1.5x the old
+		 * 64): its stroke scales with the viewBox (1 unit of 40 = 2.4px),
+		 * so it is the same drawing bigger, never thinner. */
+		halloween: ['web', 'right:0;top:0;width:96px;opacity:.5;'],
 		thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.55;'],
 		snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
 		earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],

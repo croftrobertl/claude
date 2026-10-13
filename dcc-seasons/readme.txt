@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.2
+Stable tag: 4.10.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,17 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.3 =
+Rob's pick: the Halloween corner spider web is medium. Staging first;
+live only after Rob signs off. Rollback: reinstall the 4.10.2 zip; no
+setting or stored data changes.
+
+* The spider web in the top-right corner on Halloween is 96px wide (was
+  64px). Its lines grow with it, so it is the same web, bigger and just
+  as sharp. Same corner, same faintness, and it still never takes a tap:
+  a button underneath it works as before.
+* Nothing else changes.
 
 = 4.10.2 =
 Rob's pick on staging: "One swoop, no loop". Staging first; live only
