@@ -540,12 +540,14 @@ final class Staff_Data
         // The photo ID is found by SHAPE, not by name, and never emitted as a
         // URL — the client gets an opaque booking-scoped reference it can only
         // redeem through the gated proxy.
+        // 0.46.3 (the audit): ONLY MotoPress's upload field — "upload_id"
+        // as the customer carries it, "mphb_upload_id" as booking meta — and
+        // the client is always told "upload_id", the one field the photo
+        // endpoint accepts. Other checkout fields never become a photo row.
         $photo = null;
-        foreach ($custom as $key => $val) {
-            if (self::looks_like_attachment((string) $key, $val)) {
-                $photo = ['field' => (string) $key];
-                break;
-            }
+        $key = self::photo_key($custom);
+        if ($key !== null && self::looks_like_attachment((string) $key, $custom[$key])) {
+            $photo = ['field' => (string) self::PHOTO_FIELD];
         }
 
         $out = [];
@@ -1397,15 +1399,20 @@ final class Staff_Data
      */
     public static function attachment_path_for(int $booking_id, string $field): ?string
     {
+        // The photo-ID field ONLY (0.46.3, the audit).
+        if ($field !== self::PHOTO_FIELD) {
+            return null;
+        }
         $post = get_post($booking_id);
         if (!$post || $post->post_type !== 'mphb_booking') {
             return null;
         }
         $custom = self::custom_fields($booking_id, self::first_of(self::booking_entity($booking_id), ['getCustomer']));
-        if (!array_key_exists($field, $custom)) {
+        $key = self::photo_key($custom);
+        if ($key === null) {
             return null;
         }
-        $val = $custom[$field];
+        $val = $custom[$key];
         if (is_array($val)) {
             $val = reset($val);
         }
@@ -1479,6 +1486,27 @@ final class Staff_Data
         foreach ($candidates as $c) {
             if (is_file($c)) {
                 return $c;
+            }
+        }
+        return null;
+    }
+
+    /** The one checkout field a photo ID may come from (0.46.3). */
+    public const PHOTO_FIELD = 'upload_id';
+
+    /** Where MotoPress keeps checkout uploads; the photo proxy serves nothing else. */
+    public static function protected_uploads_dir(): string
+    {
+        $uploads = wp_get_upload_dir();
+        return trailingslashit((string) ($uploads['basedir'] ?? '')) . 'mphb_protected_uploads';
+    }
+
+    /** @param array<string,mixed> $custom  The key the upload field is stored under, or null. */
+    private static function photo_key(array $custom): ?string
+    {
+        foreach (['upload_id', 'mphb_upload_id'] as $k) {
+            if (array_key_exists($k, $custom)) {
+                return $k;
             }
         }
         return null;

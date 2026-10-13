@@ -128,6 +128,16 @@ check('1: the Photo ID row returns when a file is actually attached',
     in_array('Photo ID', labels($d, 'customer'), true), labels($d, 'customer'));
 $d = booking(18435, ['mphb_upload_id' => '0']);
 check('1: ...but "0" is not an attachment', !in_array('Photo ID', labels($d, 'customer'), true));
+// 0.46.3 (the 2026-10-13 audit): the row always asks for "upload_id", the one
+// field the photo proxy accepts; no other checkout field becomes a photo row.
+$photoField = static function (array $d) {
+    foreach ($d['sections']['customer'] ?? [] as $r) { if (($r['label'] ?? '') === 'Photo ID') { return $r['photo']['field'] ?? null; } }
+    return null;
+};
+$d = booking(18434, ['mphb_upload_id' => '904']);
+check('0.46.3: the Photo ID row asks for field "upload_id" (stored as mphb_upload_id)', $photoField($d) === 'upload_id', $photoField($d));
+$d = booking(18449, ['mphb_passport_scan' => 'wp-content/uploads/mphb_protected_uploads/p.jpg', 'mphb_notes' => 'https://example.test/wp-content/uploads/2026/09/other.jpg']);
+check('0.46.3: another field that LOOKS like a file (a "passport" name, an uploads URL) gives no Photo ID row', $photoField($d) === null, labels($d, 'customer'));
 
 echo "\n-- 2: Total and Paid only when owed; Balance Due whenever a price exists --\n";
 $d = booking(18436, ['mphb_total_price' => 1200]);

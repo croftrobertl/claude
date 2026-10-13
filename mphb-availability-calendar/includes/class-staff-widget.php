@@ -63,6 +63,13 @@ final class Staff_Widget
             return '';
         }
 
+        // Never indexed (0.46.3): the page's own hooks (Staff::robots_header,
+        // ::robots_meta) say so before anything is sent; where the widget is
+        // rendered before the headers have gone, it says so itself too.
+        if (!headers_sent()) {
+            header('X-Robots-Tag: noindex, nofollow', true);
+        }
+
         self::register_assets();
         wp_enqueue_style('mphbac-staff');
         wp_enqueue_script('mphbac-staff');

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.2
+Stable tag: 0.46.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.3 =
+Security fixes from the 2026-10-13 audit (staff board only).
+
+* **"View photo ID" opens only the guest's ID photo.** The staff photo link now serves only the checkout's photo-ID upload, and only from the protected uploads folder. Anything else is refused. Before, a text field typed at checkout could make the link open another file in the uploads folder.
+* **/staff/ tells search engines not to index or follow it**, with both a robots meta tag and an X-Robots-Tag header, whoever is looking.
 
 = 0.46.2 =
 Staff board only (/staff/).

@@ -147,6 +147,48 @@ final class Staff
             add_action('wp_ajax_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
             add_action('wp_ajax_nopriv_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
         }
+        // NEVER INDEXED (0.46.3, the 2026-10-13 audit: /staff/ printed no
+        // robots tag although AIOSEO stores noindex for it). An Elementor
+        // widget renders after the headers and the <head> have gone out, so
+        // the page says it here, before either: an X-Robots-Tag header and a
+        // robots meta tag of its own — not through AIOSEO or core's wp_robots,
+        // either of which a setting can switch off.
+        add_action('template_redirect', ['\\MPHBAC\\Staff', 'robots_header']);
+        add_action('wp_head', ['\\MPHBAC\\Staff', 'robots_meta'], 1);
+    }
+
+    /**
+     * Is the page being viewed one that shows the staff board? The staff page
+     * itself, or any page whose Elementor content holds the staff widget.
+     */
+    public static function is_board_page(): bool
+    {
+        if (!function_exists('is_singular') || !is_singular()) {
+            return false;
+        }
+        $id = (int) get_queried_object_id();
+        if ($id <= 0) {
+            return false;
+        }
+        if ($id === self::page_id()) {
+            return true;
+        }
+        $data = get_post_meta($id, '_elementor_data', true);
+        return is_string($data) && strpos($data, '"widgetType":"dccac_staff"') !== false;
+    }
+
+    public static function robots_header(): void
+    {
+        if (self::is_board_page() && !headers_sent()) {
+            header('X-Robots-Tag: noindex, nofollow', true);
+        }
+    }
+
+    public static function robots_meta(): void
+    {
+        if (self::is_board_page()) {
+            echo "<meta name=\"robots\" content=\"noindex, nofollow\">\n";
+        }
     }
 
     /** Calendar data for one month: bookings overlapping the range. */
@@ -316,9 +358,15 @@ final class Staff
 
         $booking_id = absint($_REQUEST['booking_id'] ?? 0);
         $field      = isset($_REQUEST['field']) ? sanitize_key((string) wp_unslash($_REQUEST['field'])) : '';
-        if ($booking_id <= 0 || $field === '') {
+        if ($booking_id <= 0) {
             status_header(400);
             exit;
+        }
+        // ONLY THE PHOTO-ID FIELD (0.46.3, the 2026-10-13 audit). Any other
+        // checkout field is refused: a text field a guest typed at checkout
+        // could otherwise name another file under uploads for staff to open.
+        if ($field !== Staff_Data::PHOTO_FIELD) {
+            self::photo_refused();
         }
 
         // Re-derive from the booking rather than trusting any client-supplied
@@ -328,14 +376,19 @@ final class Staff
             self::photo_not_found();
         }
 
-        $uploads = wp_get_upload_dir();
-        $base    = trailingslashit((string) ($uploads['basedir'] ?? ''));
-        $real    = realpath($path);
-        $realbase = $base !== '/' ? realpath($base) : false;
-        if ($real === false || $realbase === false || strpos($real, $realbase . DIRECTORY_SEPARATOR) !== 0) {
-            // Path traversal / symlink escape / file outside uploads.
-            error_log('MPHBAC staff: refused out-of-uploads photo path for booking ' . $booking_id);
+        // ONLY INSIDE uploads/mphb_protected_uploads/ (0.46.3, the audit): the
+        // folder MotoPress writes checkout uploads to. Anywhere else under
+        // uploads — or outside it, by "..", a symlink or an absolute path —
+        // is refused with the same empty 403; a file named but not on disk
+        // is the 404 below.
+        $real = realpath($path);
+        if ($real === false) {
             self::photo_not_found();
+        }
+        $realprot = realpath(Staff_Data::protected_uploads_dir());
+        if ($realprot === false || strpos($real, $realprot . DIRECTORY_SEPARATOR) !== 0) {
+            error_log('MPHBAC staff: refused a photo path outside mphb_protected_uploads for booking ' . $booking_id);
+            self::photo_refused();
         }
         if (!is_readable($real)) {
             self::photo_not_found();
@@ -378,6 +431,16 @@ final class Staff
      * anything. Plain text, nosniff, no booking detail and no path. Only the
      * 404 gets a body: the 403 from require_authorization() stays EMPTY.
      */
+    /** 403, EMPTY, like the gate's own (0.46.3): nothing about why or what. */
+    private static function photo_refused(): void
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        status_header(403);
+        exit;
+    }
+
     private static function photo_not_found(): void
     {
         while (ob_get_level() > 0) {

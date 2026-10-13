@@ -54,28 +54,34 @@ check('a field the booking does not have is refused',
     Staff_Data::attachment_path_for(900, 'mphb_other_field') === null);
 check('a field name from another namespace is refused',
     Staff_Data::attachment_path_for(900, '../../wp-config.php') === null);
+// 0.46.3 (the audit): ONE field, "upload_id" — not even the meta key it is stored under.
+check('only "upload_id" is redeemable: the stored key "mphb_upload_id" itself is refused',
+    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null && Staff_Data::attachment_path_for(900, 'upload_id') !== null);
+seed(['mphb_upload_id' => 55, 'mphb_notes' => 'wp-content/uploads/2026/09/id.jpg']);
+check('another checkout field holding a path is refused (a text field typed at checkout)',
+    Staff_Data::attachment_path_for(900, 'mphb_notes') === null && Staff_Data::attachment_path_for(900, 'notes') === null);
 seed(['mphb_upload_id' => 55], 'page');
-check('a post that is not a booking is refused', Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null);
-check('a missing booking is refused', Staff_Data::attachment_path_for(999999, 'mphb_upload_id') === null);
+check('a post that is not a booking is refused', Staff_Data::attachment_path_for(900, 'upload_id') === null);
+check('a missing booking is refused', Staff_Data::attachment_path_for(999999, 'upload_id') === null);
 
 echo "\n-- the three storage shapes MPHB has used --\n";
 seed(['mphb_upload_id' => 55]);
 check('an attachment ID resolves through get_attached_file',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === '/var/www/uploads/2026/09/id.jpg');
+    Staff_Data::attachment_path_for(900, 'upload_id') === '/var/www/uploads/2026/09/id.jpg');
 seed(['mphb_upload_id' => 'https://example.test/wp-content/uploads/2026/09/id.jpg']);
 $GLOBALS['t_urls']['https://example.test/wp-content/uploads/2026/09/id.jpg'] = 55;
 check('a full URL resolves through attachment_url_to_postid',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === '/var/www/uploads/2026/09/id.jpg');
+    Staff_Data::attachment_path_for(900, 'upload_id') === '/var/www/uploads/2026/09/id.jpg');
 seed(['mphb_upload_id' => 'https://example.test/wp-content/uploads/2026/09/loose.jpg']);
 check('a URL inside uploads with no attachment row maps to the basedir path',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === '/var/www/uploads/2026/09/loose.jpg',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id'));
+    Staff_Data::attachment_path_for(900, 'upload_id') === '/var/www/uploads/2026/09/loose.jpg',
+    Staff_Data::attachment_path_for(900, 'upload_id'));
 
 echo "\n-- and it refuses the shapes that would escape uploads --\n";
 seed(['mphb_upload_id' => 'https://evil.test/wp-content/uploads/2026/09/id.jpg']);
 check('a URL on another host is not mapped into our uploads dir',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null,
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id'));
+    Staff_Data::attachment_path_for(900, 'upload_id') === null,
+    Staff_Data::attachment_path_for(900, 'upload_id'));
 /* WHERE CONTAINMENT ACTUALLY LIVES, asserted at the layer that provides it.
  *
  * attachment_path_for() does NOT guarantee the path is inside uploads, and
@@ -93,29 +99,30 @@ check('a URL on another host is not mapped into our uploads dir',
  * this layer does not make. staff-photo-test.php proves the refusal end to
  * end, through the real handler, for every new shape. */
 seed(['mphb_upload_id' => '/../../etc/passwd']);
-$escaped = Staff_Data::attachment_path_for(900, 'mphb_upload_id');
+$escaped = Staff_Data::attachment_path_for(900, 'upload_id');
 check('(recorded) this function alone does not contain a leading-slash path',
     $escaped !== null && str_contains((string) $escaped, '..'), $escaped);
 {
     $staff = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff.php');
-    check('the PROXY contains it: realpath must sit under realpath(basedir)',
-        str_contains($staff, 'realpath($path)') && str_contains($staff, 'realpath($base)')
+    // 0.46.3 (the audit): under realpath(uploads/mphb_protected_uploads), not just uploads.
+    check('the PROXY contains it: realpath must sit under realpath(uploads/mphb_protected_uploads)',
+        str_contains($staff, 'realpath($path)') && str_contains($staff, 'realpath(Staff_Data::protected_uploads_dir())')
         && str_contains($staff, 'DIRECTORY_SEPARATOR) !== 0'), null);
     check('...and it refuses rather than serving, with a log line',
-        str_contains($staff, 'refused out-of-uploads photo path'));
+        str_contains($staff, 'refused a photo path outside mphb_protected_uploads'));
     check('...after re-checking authorization, not before',
         strpos($staff, 'require_authorization') < strpos($staff, 'attachment_path_for'));
     check('a file outside uploads is never streamed: the readfile is after the check',
         strpos($staff, 'DIRECTORY_SEPARATOR) !== 0') < strpos($staff, 'readfile('));
 }
 seed(['mphb_upload_id' => '']);
-check('an empty value is refused', Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null);
+check('an empty value is refused', Staff_Data::attachment_path_for(900, 'upload_id') === null);
 seed(['mphb_upload_id' => 0]);
 check('a zero id is refused — get_attached_file returns false for it',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null);
+    Staff_Data::attachment_path_for(900, 'upload_id') === null);
 seed(['mphb_upload_id' => 999]);   // no file on disk
 check('an id with no file behind it is refused',
-    Staff_Data::attachment_path_for(900, 'mphb_upload_id') === null);
+    Staff_Data::attachment_path_for(900, 'upload_id') === null);
 
 echo "\n-- an empty field produces no Photo ID row at all --\n";
 {
@@ -167,9 +174,10 @@ echo "\n-- exactly ONE caller, because containment lives with the caller --\n";
 echo "\n-- the client never receives a URL --\n";
 {
     $src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-data.php');
-    check('the photo row carries a FIELD name, not a path or a URL',
+    check('the photo row carries a FIELD name, not a path or a URL — always "upload_id" (0.46.3)',
         preg_match("/'photo'\s*=>\s*\\\$photo/", $src) === 1
-        && preg_match("/'field'\s*=>\s*\(string\) \\\$key/", $src) === 1);
+        && preg_match("/'field'\s*=>\s*\(string\) self::PHOTO_FIELD/", $src) === 1
+        && str_contains($src, "public const PHOTO_FIELD = 'upload_id';"));
     check('...and the reason is recorded next to it', str_contains($src, 'never emitted as a'));
 }
 

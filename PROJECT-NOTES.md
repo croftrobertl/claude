@@ -3299,3 +3299,37 @@ strengthened: Updated kept on one line, the ⓘ held to its heading's last
 word (tested with the heading exactly the word's width), and earlier the
 right-hand bubble. Six needles had gone stale (0.46.1 and the tip rewrite)
 and were repaired; the whole list is stale-checked before each run now.
+
+## 0.46.3 — security fixes from the 2026-10-13 audit (WD)
+
+**1. The photo proxy** (Staff::handle_photo, Staff_Data::attachment_path_for)
+accepted any checkout field and any file under uploads, so a TEXT field a
+guest typed at checkout could make "View photo ID" open another uploads
+file for staff. Now: `field` must be exactly "upload_id"
+(Staff_Data::PHOTO_FIELD) — anything else, the stored key "mphb_upload_id"
+and an empty field included, is a 403 with an empty body (like the gate's);
+behind "upload_id" the data layer reads the customer's "upload_id" or the
+booking's "mphb_upload_id"; the resolved file must realpath() INSIDE
+uploads/mphb_protected_uploads/ (Staff_Data::protected_uploads_dir()) —
+anywhere else, by "..", a symlink or an absolute path, is a 403; a named
+file that is not on disk stays the 404 with its sentence. The sheet's Photo
+ID row now comes ONLY from that field and always asks for "upload_id"; the
+old "looks like a file" key guess (photo / passport / licence / upload…)
+no longer makes a row. Live (WD, 0.43.2): all 13 photos are mphb_upload_id
+values under mphb_protected_uploads — unaffected.
+
+**2. Never indexed.** /staff/ printed no robots tag although AIOSEO stores
+noindex=1. An Elementor widget renders after the headers and <head>, so
+the PAGE says it: Staff::register() adds template_redirect (X-Robots-Tag:
+noindex, nofollow) and wp_head priority 1 (<meta name="robots"
+content="noindex, nofollow">) on the staff page (Staff::page_id()) and on
+any single page whose _elementor_data holds the dccac_staff widget —
+password form included, whoever is looking; nowhere else. Our own tag,
+not core's wp_robots or AIOSEO's, either of which a setting can switch
+off. The widget's render() also sends the header while headers are still
+open. If AIOSEO later prints its own noindex too, the two agree.
+
+**Not added (already on the server, per the WD):** the 5-tries-per-15-
+minutes page-password lockout (mu-plugin dcc-postpass-guard.php) and
+"Reserved"-only iCal titles (mu-plugin dcc-ical-privacy.php).
+

@@ -84,7 +84,8 @@ namespace {
     if (getenv('T_PHOTO_CHILD') === '1') {
         $c = json_decode((string) getenv('T_PHOTO_CASE'), true);
         $GLOBALS['t_auth'] = (bool) ($c['auth'] ?? true);
-        t_post(900, 'mphb_booking', 'confirmed', 'B', [$c['field'] => $c['value']]);
+        // Stored as MotoPress stores it; asked for as the sheet asks (0.46.3: "upload_id").
+        t_post(900, 'mphb_booking', 'confirmed', 'B', [($c['meta'] ?? 'mphb_upload_id') => $c['value']] + ($c['also'] ?? []));
         $_REQUEST = ['booking_id' => '900', 'field' => $c['field'], 'nonce' => 'good'];
         register_shutdown_function(static function () {
             fwrite(STDERR, json_encode(['status' => $GLOBALS['t_status'], 'headers' => $GLOBALS['t_headers']]));
@@ -109,15 +110,18 @@ namespace {
     file_put_contents($prot . '/guest-id.jpg', $jpeg);
     file_put_contents($prot . '/guest-id.HEIC', "\0\0\0\x18ftypheic fake-heic-bytes");
     file_put_contents(ABSPATH . 'secret.jpg', 'NOT AN UPLOAD — must never be streamed');
+    // A real file under uploads but OUTSIDE mphb_protected_uploads (0.46.3).
+    @mkdir(ABSPATH . 'wp-content/uploads/2026', 0777, true);
+    file_put_contents(ABSPATH . 'wp-content/uploads/2026/other.jpg', 'ANOTHER UPLOAD — not a photo ID');
     register_shutdown_function(static function () use ($prot) {
-        foreach ([$prot . '/guest-id.jpg', $prot . '/guest-id.HEIC', ABSPATH . 'secret.jpg'] as $f) { @unlink($f); }
-        @rmdir($prot); @rmdir(ABSPATH . 'wp-content/uploads'); @rmdir(ABSPATH . 'wp-content'); @rmdir(rtrim(ABSPATH, '/'));
+        foreach ([$prot . '/guest-id.jpg', $prot . '/guest-id.HEIC', ABSPATH . 'secret.jpg', ABSPATH . 'wp-content/uploads/2026/other.jpg'] as $f) { @unlink($f); }
+        @rmdir($prot); @rmdir(ABSPATH . 'wp-content/uploads/2026'); @rmdir(ABSPATH . 'wp-content/uploads'); @rmdir(ABSPATH . 'wp-content'); @rmdir(rtrim(ABSPATH, '/'));
     });
 
     function photo(array $case, array $env = []): array {
         $spec = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
         $proc = proc_open([PHP_BINARY, __FILE__], $spec, $pipes, null,
-            ['T_PHOTO_CHILD' => '1', 'T_PHOTO_ROOT' => rtrim(ABSPATH, '/'), 'T_PHOTO_CASE' => json_encode($case + ['field' => 'mphb_upload_id'])] + $env + getenv());
+            ['T_PHOTO_CHILD' => '1', 'T_PHOTO_ROOT' => rtrim(ABSPATH, '/'), 'T_PHOTO_CASE' => json_encode($case + ['field' => 'upload_id'])] + $env + getenv());
         $out = stream_get_contents($pipes[1]); $err = stream_get_contents($pipes[2]);
         proc_close($proc);
         $r = json_decode(substr($err, (int) strrpos($err, '{"status"')), true) ?: ['status' => null, 'headers' => [], 'raw' => $err];
@@ -155,7 +159,7 @@ namespace {
         $r['status'] === 200 && ($r['h']['content-type'] ?? '') === 'image/heic'
         && str_starts_with($r['h']['content-disposition'] ?? '', 'inline'), $r['h']);
 
-    echo "\n-- containment is unchanged: nothing outside uploads, by any new shape --\n";
+    echo "\n-- containment: nothing outside uploads/mphb_protected_uploads, by any shape (0.46.3: 403, empty) --\n";
     foreach ([
         'secret.jpg'                                                    => 'an ABSPATH-relative file outside uploads',
         ABSPATH . 'secret.jpg'                                          => 'an absolute path outside uploads',
@@ -163,11 +167,24 @@ namespace {
         '/etc/passwd'                                                   => 'a system file',
     ] as $value => $what) {
         $r = photo(['value' => $value]);
-        check("$what is refused (404)", $r['status'] === 404, [$r['status'], substr($r['body'], 0, 40)]);
+        check("$what is refused: 403, empty", $r['status'] === 403 && $r['body'] === '', [$r['status'], substr($r['body'], 0, 40)]);
         check('...and none of its bytes are streamed', !str_contains($r['body'], 'NOT AN UPLOAD') && !str_contains($r['body'], 'root:'));
     }
     check('(instrument check) the outside file really exists, so those refusals were containment, not absence',
         is_file(ABSPATH . 'secret.jpg'));
+
+    echo "\n-- 0.46.3 (the 2026-10-13 audit) --\n";
+    $r = photo(['value' => 'wp-content/uploads/2026/other.jpg']);
+    check('a file INSIDE uploads but outside mphb_protected_uploads is refused: 403, empty, none of it streamed',
+        $r['status'] === 403 && $r['body'] === '' && is_file(ABSPATH . 'wp-content/uploads/2026/other.jpg'), [$r['status'], $r['body']]);
+    $r = photo(['value' => 'wp-content/uploads/mphb_protected_uploads/../2026/other.jpg']);
+    check('...and so is a ".." walk from the protected folder into the rest of uploads', $r['status'] === 403 && $r['body'] === '', [$r['status'], $r['body']]);
+    foreach (['mphb_upload_id' => 'the stored meta key itself', 'notes' => 'another checkout field (a text field typed at checkout)', '' => 'no field at all'] as $f => $what) {
+        $r = photo(['value' => 'wp-content/uploads/mphb_protected_uploads/guest-id.jpg', 'meta' => 'mphb_' . ($f === '' ? 'upload_id' : ltrim(str_replace('mphb_', '', $f), '_')), 'field' => $f]);
+        check("field=\"$f\" ($what): 403, empty — only field=upload_id is served", $r['status'] === 403 && $r['body'] === '', [$r['status'], strlen($r['body'])]);
+    }
+    $r = photo(['value' => 'wp-content/uploads/2026/other.jpg', 'meta' => 'mphb_notes', 'field' => 'notes', 'also' => ['mphb_upload_id' => 'wp-content/uploads/mphb_protected_uploads/guest-id.jpg']]);
+    check('a checkout text field holding a path to another upload never opens it', $r['status'] === 403 && !str_contains($r['body'], 'ANOTHER UPLOAD'), [$r['status'], $r['body']]);
     $r = photo(['value' => 'https://evil.test/wp-content/uploads/mphb_protected_uploads/guest-id.jpg']);
     check('a URL on another host is not read as a path', $r['status'] === 404, $r['status']);
 
