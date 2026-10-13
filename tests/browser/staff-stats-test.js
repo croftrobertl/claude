@@ -582,8 +582,11 @@ const DOCKS = [
     // A heading that wraps (a narrow window) takes its ⓘ along with the last word.
     const { ctx, p } = await open({ phone: true, w: 320 });
     const r = await p.evaluate(() => { const h = document.querySelector('.mphbac-staff-stats-block.is-weekdays .mphbac-staff-stats-h');
-      h.style.width = '150px'; h.style.margin = '0 auto';
+      // As wide as the last word alone: there is no room for the ⓘ beside it,
+      // so it stays with the word only because the two are held together.
       const last = h.querySelector('.mphbac-staff-stats-hlast'), t = h.querySelector('.mphbac-staff-tip');
+      const w0 = document.createRange(); w0.selectNodeContents(last.firstChild);
+      h.style.width = Math.ceil(w0.getBoundingClientRect().width + 6) + 'px'; h.style.margin = '0 auto';
       const rr = document.createRange(); rr.selectNodeContents(last.firstChild); const lw = rr.getBoundingClientRect(), tb = t.getBoundingClientRect();
       const first = document.createRange(); first.selectNodeContents(h.firstChild); const f = first.getClientRects()[0];
       return { wrapped: lw.top > f.top + 5, sameLine: Math.abs((tb.top + tb.bottom) / 2 - (lw.top + lw.bottom) / 2) < 6 && tb.left >= lw.right - 0.5 }; });

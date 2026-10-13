@@ -3287,3 +3287,15 @@ the bubble's lines joined without a space by anything reading its text; the
 parts are now separated, and a test forbids a full stop, colon or bracket
 against the next word.
 
+
+**0.46.2 mutations:** 30 new or repaired entries; 24 caught on the first run. Three
+survivors were dropped as EQUIVALENT on real data, each still in the CSS as a guard:
+"100%" nowrap (the column is sized to its text, so nothing can wrap it);
+the name column's max-content minimum (in the list's own 15px type 7em is
+105px, and Rob's longest names fit — it matters only for a longer name);
+the switch row's wrap (at 320 "Compare to Last Year" and "Updated" fit on
+one line, so it only acts on a narrower screen). Three were real and
+strengthened: Updated kept on one line, the ⓘ held to its heading's last
+word (tested with the heading exactly the word's width), and earlier the
+right-hand bubble. Six needles had gone stale (0.46.1 and the tip rewrite)
+and were repaired; the whole list is stale-checked before each run now.
