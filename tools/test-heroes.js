@@ -15,7 +15,9 @@
  *                        while a scene runs
  *   no emoji           — every canvas fillText while each theme's own hero
  *                        crosses; only the rainbow's ☘ is allowed
- *   the heron landing  — glide in, flare, stand ~2.5 s, take off (4.9.0)
+ *   the heron          — crosses the header picture and never lands there,
+ *                        even with the landing forced (Rob, 4.10.7; the
+ *                        4.9.0 landing has nowhere to happen since)
  *   phones             — Christmas never below 5 sprites (4 in a scene);
  *                        a scene borrows at most 1 sprite on a phone
  *
@@ -202,7 +204,7 @@ async function waitVt(page, v, maxMs = 60000) {
     } finally { await s.close(); }
   }
 
-  console.log('\n  --- the heron lands: glide in, flare, stand, take off (4.9.0, mocked clock) ---');
+  console.log('\n  --- the heron crosses the header picture without landing (4.10.7, mocked clock) ---');
   for (const width of [390, 1280]) {
     const cfg = cfgFor('florida_keys', ['--noparticles', '--subtle=off']);
     cfg.heroOnly = 'heron'; cfg.heroFirst = [0.5, 0.6]; cfg.heronLand = 1;
@@ -211,7 +213,7 @@ async function waitVt(page, v, maxMs = 60000) {
       const r = await s.page.evaluate(() => {
         const x = window.DCCSeasonsEngine._state; x.manual(true);
         const seq = [], trace = []; let last = null, maxLegs = 0, standAt = -1, standEnd = -1, minY = 1e9, maxY = -1e9;
-        for (let i = 0; i < 30 * 60 && !(seq.length && x.heron.st === -1); i++) {
+        for (let i = 0; i < 60 * 45 && !(seq.length && x.heron.st === -1); i++) {
           x.tick(1000 / 60, 1);
           const h = x.heron;
           if (h.st > 0 && h.st !== last) { seq.push(h.st); last = h.st; }
@@ -221,12 +223,8 @@ async function waitVt(page, v, maxMs = 60000) {
         }
         return { seq, maxLegs, stood: standEnd - standAt, keys: [...new Set(trace)].length, gone: x.heron.st === -1, log: x.heroLog, waterY: x.waterY };
       });
-      console.log(`      @${width}: states ${r.seq.join('>')} · stood ${r.stood.toFixed(2)} s · ${r.keys} distinct poses`);
-      ok(r.seq.join('') === '12345', `@${width}: the landing runs fly-in, glide, flare, stand, take-off in order`, r.seq.join('>'));
-      ok(r.maxLegs >= 0.99, `@${width}: the legs come fully down for the landing`, String(r.maxLegs));
-      ok(r.stood >= 2.3 && r.stood <= 2.8, `@${width}: it stands about 2.5 s`, r.stood.toFixed(2));
-      ok(r.gone && r.log.length === 1 && r.log[0].end > 0, `@${width}: it takes off and leaves the screen`, JSON.stringify(r.log));
-      ok(r.keys >= 20, `@${width}: the wingbeat, glide and flare all play`, String(r.keys));
+      ok(!r.seq.length && r.stood <= 0 && r.maxLegs === 0, `@${width}: landing forced on, it never lands in the header picture`, JSON.stringify({ seq: r.seq, stood: r.stood, legs: r.maxLegs }));
+      ok(r.log.length >= 1 && r.log[0].end > 0, `@${width}: it crosses and leaves`, JSON.stringify(r.log));
     } finally { await s.close(); }
   }
 

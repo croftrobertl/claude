@@ -48,8 +48,8 @@ async function session() {
     const s = window.DCCSeasonsEngine._state, v = s.vigSt, out = { best: 1e9, tc: 0, n: 0 };
     for (let i = 0; i < 2000 && s.vig; i++) {
       s.tick(1000 / fps, 1); out.n++;
-      if (out.n === 1) { out.mx = v.mx; out.my = v.my; out.MR = v.MR; }
-      if (v.wx != null && Math.abs(v.wx - v.mx) < out.best) { out.best = Math.abs(v.wx - v.mx); out.tc = out.n; }
+      if (out.n === 1) { out.mx = v.mx + s.sky.left; out.my = v.my + s.sky.top; out.MR = v.MR; }
+      if (v.wx != null && Math.abs(v.wx - v.mx) < out.best) { out.best = Math.abs(v.wx - v.mx); out.tc = out.n; } /* sky px, both */
     }
     return out;
   }, FPS);
@@ -65,7 +65,7 @@ async function session() {
     const x0 = cxAt(0), x1 = cxAt(D);
     /* the flight and the propeller follow the scene's clock; the banner's
      * flutter stays where the fixture holds it */
-    window.__seek = an.filter(a => a === A || a.animationName === 'hfxspin');
+    window.__seek = an.filter(a => a === A || a.animationName === 'dccHlProp');
     return { D, cStar: (mx - x0) / (x1 - x0) * D };
   }, [g.my, g.mx, W]);
   const t0 = fly.cStar - g.tc * 1000 / FPS;   /* the flight's clock when the scene's clock is 0 */

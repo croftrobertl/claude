@@ -14,6 +14,9 @@
  *   - every repaint clears the WHOLE canvas (never a partial clear: on a
  *     GPU-drawn canvas one makes the browser copy last frame's canvas
  *     first), during the scene and with the background layer alone;
+ *   - scrolling down past the header picture and back while the scene
+ *     plays (4.10.7: it scrolls with the picture): 95% within 17 ms, and
+ *     no more layouts or style recalcs a second than with Seasons off;
  *   - the foreground cut draws the plane's still shapes from ONE picture,
  *     made again only when they change: a handful of pictures over a
  *     crossing that cuts every frame.
@@ -62,6 +65,23 @@ const pct = s => s ? `${s.within17}% of ${s.frames} frames within 17 ms (p95 ${s
     const r = await measure({ width: 1280, height: 700, dsf: 2, runs: RUNS, hero: 'witch' });
     ok(r.scene && r.scene.frames > 60 && r.scene.within17 >= 95, `the flyer witch: ${pct(r.scene)}`, JSON.stringify(r.scene));
     ok(r.planeOverMoon && r.planeOverMoon.frames > 10 && r.planeOverMoon.within17 >= 95, `the plane meeting her: ${pct(r.planeOverMoon)}`, JSON.stringify(r.planeOverMoon));
+  }
+
+  /* 4.10.7: the scene is on a canvas inside the header picture and
+   * scrolls with it on the compositor. A guest wheels down past the
+   * picture and back up, twice, while it plays: the frames stay even, and
+   * the page does no more layout or style work a second than it does with
+   * Seasons off (nothing is read or written per scroll). */
+  console.log('\n  --- scrolling while the scene plays ---');
+  for (const [w, h, d] of sizes) {
+    const tag = `${w}x${h} at ${d}x, scrolling`;
+    const off = await measure({ width: w, height: h, dsf: d, runs: 1, scroll: true, seasons: false });
+    const r = await measure({ width: w, height: h, dsf: d, runs: RUNS, scroll: true });
+    ok(r.scrolled > 420, `${tag}: the page scrolled past the picture (${r.scrolled} px)`, String(r.scrolled));
+    ok(r.scene && r.scene.frames > 100 && r.scene.within17 >= 95, `${tag}: ${pct(r.scene)}`, JSON.stringify(r.scene));
+    ok(r.clears.part === 0, `${tag}: every repaint a full clear (${r.clears.full} full, both canvases)`, JSON.stringify(r.clears));
+    ok(r.perSec.layouts <= off.perSec.layouts + 3 && r.perSec.styleRecalcs <= off.perSec.styleRecalcs + 6,
+      `${tag}: no extra layout work (${r.perSec.layouts} layouts/s and ${r.perSec.styleRecalcs} style recalcs/s, Seasons off ${off.perSec.layouts} and ${off.perSec.styleRecalcs})`, JSON.stringify({ on: r.perSec, off: off.perSec }));
   }
 
   console.log('\n  --- the background layer alone, the plane flying (1280x700 at 2x) ---');

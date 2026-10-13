@@ -32,11 +32,13 @@ const COUNTER = () => {
   const orig = CanvasRenderingContext2D.prototype.clearRect;
   window.__frames = 0; window.__full = 0;
   CanvasRenderingContext2D.prototype.clearRect = function (x, y, w, h) {
-    if (this.canvas && this.canvas.classList && this.canvas.classList.contains('dcc-seasons-canvas')) {
+    /* the page's canvas, and the header picture's sky canvas (4.10.7: the
+     * heron and the other sky flyers are drawn there) */
+    if (this.canvas && this.canvas.classList && (this.canvas.classList.contains('dcc-seasons-canvas') || this.canvas.classList.contains('dcc-seasons-sky'))) {
       const now = performance.now();
       if (!(now - (window.__lc || 0) < 5)) { window.__frames++; }
       window.__lc = now;
-      if (x === 0 && y === 0 && w >= this.canvas.clientWidth - 1) { window.__full++; }
+      if (x === 0 && y === 0 && (w >= this.canvas.clientWidth - 1 || w >= this.canvas.width)) { window.__full++; }
     }
     return orig.apply(this, arguments);
   };

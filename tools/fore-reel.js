@@ -51,7 +51,7 @@ async function shoot(assets, video) {
         let last = null;
         for (let k = 0; k < 20000; k++) {
           s.tick(1000 / 30, 1);
-          const p = s.heroXY;
+          const p0 = s.heroXY, p = p0 && [p0[0] + s.sky.left, p0[1] + s.sky.top];   /* sky px to the viewport (4.10.7) */
           if (p && last && p[1] > r.top + 40 && p[1] < r.bottom - 40 && Math.abs(p[0] - innerWidth * (p[0] > last[0] ? 0.3 : 0.7)) < 4) { return { x: p[0], y: p[1], dir: p[0] > last[0] ? 1 : -1, vx: (p[0] - last[0]) * 30 }; }
           last = p;
         }
@@ -64,7 +64,7 @@ async function shoot(assets, video) {
       g = await pg.evaluate(() => {
         const s = window.DCCSeasonsEngine._state; s.manual(true);
         for (let i = 0; i < 900 && !(s.vig && s.vigSt && s.vigSt.moonA >= 0.99); i++) { s.tick(1000 / 30, 1); }
-        return { mx: s.vigSt.mx, my: s.vigSt.my, MR: s.vigSt.MR };
+        return { mx: s.vigSt.mx + s.sky.left, my: s.vigSt.my + s.sky.top, MR: s.vigSt.MR };
       });
       /* the moon, with room either side for the plane coming and going */
       clip = { x: Math.max(0, g.mx - g.MR - 70), y: Math.max(0, g.my - g.MR - 22), width: 2 * g.MR + 140, height: 2 * g.MR + 44 };

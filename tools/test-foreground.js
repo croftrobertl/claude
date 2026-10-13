@@ -87,7 +87,8 @@ function userPts(pg, sel, pts) {
       const g = await pg.evaluate(() => {
         const s = window.DCCSeasonsEngine._state; s.manual(true);
         for (let i = 0; i < 900 && !(s.vig && s.vigSt && s.vigSt.moonA >= 0.99); i++) { s.tick(1000 / 30, 1); }
-        const v = s.vigSt; return v ? { mx: v.mx, my: v.my, MR: v.MR, W: v.W, on: !!s.vig } : null;
+        /* the scene is in the header picture's px (4.10.7): to the viewport */
+        const v = s.vigSt, o = s.sky; return v ? { mx: v.mx + o.left, my: v.my + o.top, MR: v.MR, W: v.W, on: !!s.vig } : null;
       });
       ok(g && g.on, 'the witch-and-moon scene is playing, the moon fully up', JSON.stringify(g));
       if (!g) { continue; }
@@ -114,8 +115,10 @@ function userPts(pg, sel, pts) {
         ok(oP.length >= 1 && po.every(moonish), `${mode}: just outside its shape the moon is still there, no box cut out (${oP.length} points)`, JSON.stringify(po));
         if (mode === 'flyover') {
           /* the propeller blade, turned 90° by its paused CSS animation */
-          const pp = (await userPts(pg, '.dcc-hl-body .prop rect', [[139, 22], [139, 30]])).filter(inMoon);
-          if (pp.length) { const q = await pixels(pg, pp); ok(q.every(p => (p[0] + p[1] + p[2]) / 3 < 60), 'flyover: the spinning propeller is in front too (its CSS rotation followed)', JSON.stringify(q)); }
+          /* dcc-hero-life 3.12.0: each disc is its own svg, squashed by a
+           * CSS scaleY about the hub (held mid-squash here) */
+          const pp = (await userPts(pg, '.dcc-hl-prop-svg:not(.p2) rect', [[139, 22], [139, 30]])).filter(inMoon);
+          if (pp.length) { const q = await pixels(pg, pp); ok(q.every(p => (p[0] + p[1] + p[2]) / 3 < 60), 'flyover: the propeller disc is in front too (its own svg, its CSS scaleY followed)', JSON.stringify(q)); }
         }
       }
       /* the towed banner, which the plane's svg draws OUTSIDE its own box */
@@ -172,8 +175,9 @@ function userPts(pg, sel, pts) {
       await pose('glint', { x: g.mx, y: g.my - g.MR * 0.5 });
       await tick(1);
       const wk = await pg.evaluate(([mx, my, MR]) => {
-        const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), k = c.width / innerWidth;
-        const a = (x, y) => cg.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data[3];
+        /* viewport px to the header picture canvas's own (4.10.7) */
+        const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), o = s.sky, k = c.width / c.getBoundingClientRect().width;
+        const a = (x, y) => cg.getImageData(Math.round((x - o.left + o.ox) * k), Math.round((y - o.top + o.oy) * k), 1, 1).data[3];
         const sp = [...document.querySelectorAll('.dcc-hl-wake span')].map(e => e.getBoundingClientRect());
         const gl = document.querySelector('.dcc-hl-glint').getBoundingClientRect();
         return { onLine: a(mx, sp[0].top + 1), between: a(mx + 10, (sp[0].bottom + sp[1].top) / 2), glint: a((gl.left + gl.right) / 2, (gl.top + gl.bottom) / 2), glint2: a(gl.left + 12, (gl.top + gl.bottom) / 2) };
@@ -239,7 +243,7 @@ function userPts(pg, sel, pts) {
       let checked = 0, dark = 0, light = 0;
       for (let i = 0; i < 400 && checked < 6; i++) {
         await tick(1000 / 30);
-        const v = await pg.evaluate(() => { const v = window.DCCSeasonsEngine._state.vigSt; return v && v.wx != null ? { x: v.wx, y: v.wy, sil: v.sil || 0, on: v.wx > 40 && v.wx < window.innerWidth - 40 } : null; });
+        const v = await pg.evaluate(() => { const s = window.DCCSeasonsEngine._state, v = s.vigSt, o = s.sky; return v && v.wx != null ? { x: v.wx + o.left, y: v.wy + o.top, sil: v.sil || 0, on: v.wx + o.left > 40 && v.wx + o.left < window.innerWidth - 40 } : null; });
         if (!v || !v.on || i % 4) { continue; }
         await pose('plane', { x: v.x, y: v.y, angle: 0, flip: (i % 8) === 0, banner: false });
         await tick(1);
@@ -256,7 +260,8 @@ function userPts(pg, sel, pts) {
        * marked parts inside it; a part found twice would be cut twice, and
        * at the banner's golden-hour opacity (.82) the moon would show
        * through at 3% instead of 18% */
-      ok(st.svgs === 3 && st.media === 1 && st.boxes === 4, `each foreground part is cut once (${st.svgs} svgs, ${st.media} canvas, ${st.boxes} CSS boxes)`, JSON.stringify(st));
+      /* svgs: the plane, its two propeller discs (3.12.0), the catch, the reeds */
+      ok(st.svgs === 5 && st.media === 1 && st.boxes === 4, `each foreground part is cut once (${st.svgs} svgs, ${st.media} canvas, ${st.boxes} CSS boxes)`, JSON.stringify(st));
     } finally { await ses.close(); }
   }
 
@@ -274,7 +279,7 @@ function userPts(pg, sel, pts) {
       const r = await pg.evaluate(() => {
         const s = window.DCCSeasonsEngine._state; s.manual(true);
         for (let i = 0; i < 900 && !(s.vig && s.vigSt && s.vigSt.moonA >= 0.99); i++) { s.tick(1000 / 30, 1); }
-        return { mx: s.vigSt.mx, my: s.vigSt.my, MR: s.vigSt.MR };
+        return { mx: s.vigSt.mx + s.sky.left, my: s.vigSt.my + s.sky.top, MR: s.vigSt.MR };
       });
       /* the plane well clear of the moon; a magenta square drawn on the
        * engine's canvas under it, as a sprite would be (before the scene) */
@@ -317,7 +322,7 @@ function userPts(pg, sel, pts) {
             const s = window.DCCSeasonsEngine._state;
             for (let k = 0; k < 3000; k++) {
               s.tick(1000 / 30, 1);
-              const p = s.heroXY;
+              const p0 = s.heroXY, p = p0 && [p0[0] + s.sky.left, p0[1] + s.sky.top];
               if (p && k % 7 === 0 && p[0] > 80 && p[0] < w - 80 && p[1] > host[1] + 20 && p[1] < host[3] - 20) { return p; }
             }
             return null;
@@ -325,8 +330,10 @@ function userPts(pg, sel, pts) {
           if (!xy) { break; }
           /* where the flyer is drawn, before the plane is put there */
           const cand = await pg.evaluate(([x, y]) => {
-            const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), k = c.width / innerWidth, out = [];
-            for (let dy = -6; dy <= 6; dy += 3) { for (let dx = -40; dx <= 40; dx += 4) { const a = cg.getImageData(Math.round((x + dx) * k), Math.round((y + dy) * k), 1, 1).data[3]; if (a > 200) { out.push([dx, dy]); } } }
+            /* the flyer is on the header picture's canvas (4.10.7) */
+            const s = window.DCCSeasonsEngine._state, c = s.witch.canvas, cg = c.getContext('2d'), o = s.sky, k = c.width / c.getBoundingClientRect().width, out = [];
+            const cxp = q => Math.round((q - o.left + o.ox) * k), cyp = q => Math.round((q - o.top + o.oy) * k);
+            for (let dy = -6; dy <= 6; dy += 3) { for (let dx = -40; dx <= 40; dx += 4) { const a = cg.getImageData(cxp(x + dx), cyp(y + dy), 1, 1).data[3]; if (a > 200) { out.push([dx, dy]); } } }
             return out;
           }, xy);
           if (cand.length < 3) { continue; }

@@ -2350,13 +2350,15 @@
 			if (restart) {
 				for (k = 0; k < parts.length; k++) { seed(parts[k], true); }
 				ripples.length = 0;
-				if (hero) { hero = null; }
-				if (vig) { endVig(); }
+				/* the sky's actors live in the header picture's box, which
+				 * skyEnsure() follows on its own */
+				if (hero && !hero.sky) { hero = null; }
+				if (vig && !vig.sky) { endVig(); }
 			} else {
 				for (k = 0; k < parts.length; k++) { scaleXY(parts[k], sx, sy); }
 				for (k = 0; k < ripples.length; k++) { scaleXY(ripples[k], sx, sy); }
-				if (hero) { scaleXY(hero, sx, sy); }
-				if (vig && vig.st) { scaleXY(vig.st, sx, sy); }
+				if (hero && !hero.sky) { scaleXY(hero, sx, sy); }
+				if (vig && vig.st && !vig.sky) { scaleXY(vig.st, sx, sy); }
 			}
 			/* The subtle layer follows the same rule as the sprites: a
 			 * resize RESCALES it, it does not restart it. Re-seeding here
@@ -3698,7 +3700,7 @@
 		 * a phone scene must not do. */
 		var RIDERS = ' cruise float frogger ', actorX = null;
 		function sceneActors() {
-			if (!water || !vig || !vig.st) { return null; }
+			if (!water || !vig || !vig.st || vig.sky) { return null; }
 			var st = vig.st, out = [], k2, keys = ['x', 'sx', 'gx', 'tx'];
 			for (k2 = 0; k2 < keys.length; k2++) { if (typeof st[keys[k2]] === 'number') { out.push(st[keys[k2]]); } }
 			return out.length ? out : null;
@@ -3886,12 +3888,123 @@
 			cx.restore();
 		}
 
+		/* --- The sky belongs to the header picture (4.10.7, Rob: "The
+		 * witch/moon appear whenever I scroll down the page, too, but I only
+		 * wanted it in the hero area"). The sky scenes and the sky flyers are
+		 * drawn on a second canvas INSIDE the page's header picture
+		 * (CFG.skySel, the first match): laid out against its box, clipped by
+		 * it, scrolling with it on the compositor (no scroll listener, no
+		 * per-scroll work, nothing to lag behind the picture). They wait for
+		 * the picture to be at least half in view; a page without one has no
+		 * sky scene and no sky flyer. The falling sprites, the water-line
+		 * scenes, the bass, the manatee and the rainbow stay on the page's
+		 * canvas exactly as before; that canvas is above the header's
+		 * stacking context (#masthead, z 999 on the site), so embers and
+		 * falling bits drift in FRONT of the moon and the flyers (Rob's
+		 * pick A). The same title and foreground cut-outs run on the sky
+		 * canvas, which sits above everything else in the header.
+		 * While a sky actor runs, inSky() points the drawing state (cv, cx,
+		 * vw, vh, waterY, ground, lastDpr) at the sky canvas, so every scene
+		 * and flyer works in the picture's own coordinates unchanged. --- */
+		var SKY_VIG = { witchmoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1 };
+		/* the flyers that cross the sky; the bass and the manatee are on the
+		 * water, the rainbow in a corner */
+		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
+		var SKY_SEL = CFG.skySel == null ? '#header-image-main-inside' : CFG.skySel;
+		var skyPic = null;
+		try { skyPic = SKY_SEL ? D.querySelector(SKY_SEL) : null; } catch (e) { skyPic = null; }
+		var sky = null, skyMode = false, cvOX = 0, cvOY = 0, cvUX = 0, cvUY = 0, skyRatio = -1, skyStat = { builds: 0, frames: 0 };
+		if (skyPic && W.IntersectionObserver) {
+			new W.IntersectionObserver(function (es) { skyRatio = es[es.length - 1].intersectionRatio; }, { threshold: [0, 0.25, 0.5, 0.75, 1] }).observe(skyPic);
+		}
+		/* in view: at least half the picture on screen */
+		function skyInView() {
+			if (!skyPic) { return false; }
+			if (skyRatio >= 0) { return skyRatio >= 0.499; }
+			var r = skyPic.getBoundingClientRect(), vis = mn(r.bottom, W.innerHeight) - mx2(r.top, 0);
+			return r.height > 0 && vis >= r.height / 2;
+		}
+		/* the sky canvas: made on first use, sized to the picture's box (a
+		 * ResizeObserver marks a change; nothing is read on scroll) */
+		function skyEnsure() {
+			if (!skyPic) { return null; }
+			if (!sky) {
+				var c = D.createElement('canvas');
+				c.className = 'dcc-seasons-sky';
+				c.setAttribute('aria-hidden', 'true');
+				c.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;display:block;z-index:' + FRONT_Z + ';';
+				var g = c.getContext('2d');
+				if (!g) { skyPic = null; return null; }
+				if (W.getComputedStyle(skyPic).position === 'static') { skyPic.style.position = 'relative'; }
+				sky = { c: c, g: g, w: 0, h: 0, dpr: 0, ox: 0, oy: 0, dirty: false, resized: true };
+				if (W.ResizeObserver) { new W.ResizeObserver(function () { sky.resized = true; }).observe(skyPic); }
+			}
+			if (!sky.c.isConnected) { skyPic.appendChild(sky.c); sky.resized = true; }
+			if (sky.resized) {
+				sky.resized = false;
+				var w = mx2(1, skyPic.clientWidth), h = mx2(1, skyPic.clientHeight), dpr = mn(W.devicePixelRatio || 1, 2);
+				/* The canvas sits on WHOLE device pixels of the page, whatever
+				 * fraction the picture lands on (on the site it is 115.19 px
+				 * down at 1x), and the picture's own px are drawn offset by
+				 * that fraction: the title's letters are cut on the page's
+				 * pixel grid, and half a pixel off let the moon show through
+				 * a serif's hairline (4.10.1). */
+				var pr = skyPic.getBoundingClientRect(), pX = (pr.left + (W.pageXOffset || 0)) * dpr, pY = (pr.top + (W.pageYOffset || 0)) * dpr;
+				var ox = (pX - MT.floor(pX + 0.001)) / dpr, oy = (pY - MT.floor(pY + 0.001)) / dpr;
+				if (w !== sky.w || h !== sky.h || dpr !== sky.dpr || abs(ox - sky.ox) > 1e-3 || abs(oy - sky.oy) > 1e-3) {
+					var sx = sky.w ? w / sky.w : 1, sy = sky.h ? h / sky.h : 1;
+					var cw = MT.ceil((w + ox) * dpr), ch = MT.ceil((h + oy) * dpr);
+					sky.c.width = cw; sky.c.height = ch;
+					sky.c.style.left = (-ox) + 'px'; sky.c.style.top = (-oy) + 'px';
+					sky.c.style.width = (cw / dpr) + 'px'; sky.c.style.height = (ch / dpr) + 'px';
+					sky.g.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
+					sky.g.textAlign = 'center'; sky.g.textBaseline = 'middle';
+					sky.w = w; sky.h = h; sky.dpr = dpr; sky.ox = ox; sky.oy = oy; sky.dirty = false;
+					skyStat.builds++;
+					/* the actors in flight slide into the new box */
+					if (sx !== 1 || sy !== 1) {
+						if (hero && hero.sky) { scaleXY(hero, sx, sy); }
+						if (vig && vig.sky && vig.st) { scaleXY(vig.st, sx, sy); }
+					}
+				}
+			}
+			return sky;
+		}
+		/* run fn with the drawing state on the sky canvas */
+		function inSky(fn) {
+			var S = skyEnsure();
+			if (!S) { return; }
+			var r = S.c.getBoundingClientRect();
+			/* still on whole device pixels? (something above the picture
+			 * moved it by a fraction: realign, a rare write, never per scroll) */
+			var px = (r.left + (W.pageXOffset || 0)) * S.dpr, py = (r.top + (W.pageYOffset || 0)) * S.dpr;
+			if (abs(px - MT.round(px)) > 0.02 || abs(py - MT.round(py)) > 0.02) { S.resized = true; S = skyEnsure(); r = S.c.getBoundingClientRect(); }
+			var o = [cv, cx, vw, vh, waterY, ground, lastDpr, cvOX, cvOY, cvUX, cvUY];
+			cv = S.c; cx = S.g; vw = S.w; vh = S.h; waterY = vh * 0.92; ground = vh - 16; lastDpr = S.dpr;
+			/* the picture's origin: in the viewport, and inside the canvas */
+			cvUX = S.ox; cvUY = S.oy; cvOX = r.left + S.ox; cvOY = r.top + S.oy;
+			skyMode = true; S.dirty = true;
+			try { return fn(); } finally {
+				skyMode = false;
+				cv = o[0]; cx = o[1]; vw = o[2]; vh = o[3]; waterY = o[4]; ground = o[5]; lastDpr = o[6]; cvOX = o[7]; cvOY = o[8]; cvUX = o[9]; cvUY = o[10];
+			}
+		}
+		/* once a frame, before anything is drawn on it: a sky canvas that
+		 * was drawn on last frame starts clean */
+		function skyClear() {
+			if (!sky || !sky.dirty) { return; }
+			sky.g.save(); sky.g.setTransform(1, 0, 0, 1, 0, 0); sky.g.clearRect(0, 0, sky.c.width, sky.c.height); sky.g.restore();
+			sky.dirty = false; skyStat.frames++;
+		}
+
 		/* --- Heroes: rare crossers. The heron (drawn in code, a continuous
 		 * wingbeat, an occasional landing) is always in the rotation. --- */
-		var hero = null, heroFrame = '';
+		var hero = null, heroFrame = '', heroNext = '';
 		var heroPool = ['heron'];
 		if (A.hero) { heroPool.push(A.hero); }
 		if (DEBUG && CFG.heroOnly) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
+		/* no header picture: no sky flyers */
+		if (!skyPic) { heroPool = heroPool.filter(function (k) { return !SKY_HERO[k]; }); }
 		/* The heron's poses, pre-drawn once after load in idle time (see
 		 * HN_ above), at the bird's size and the screen's density (capped at
 		 * 2). A pose the idle pass has not reached yet is drawn on first use,
@@ -4000,12 +4113,9 @@
 		}
 		D.addEventListener('dcc:herofx', watchHeroFx);
 		var heroLog = [], vigLog = [];
-		function spawnHero(t) {
-			if (!FX.heroes) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + gapAfter('hero'); } return; }
-			if (vig) { heroAt = vt + 4; return; }
-			var kind = pick(heroPool);
+		function spawnHero(t, kind) {
 			var dir = sgn();
-			hero = { kind: kind, dir: dir, t: 0, ph: 0 };
+			hero = { kind: kind, dir: dir, t: 0, ph: 0, sky: !!SKY_HERO[kind] };
 			if (kind === 'heron') {
 				hero.x = dir > 0 ? -110 : vw + 110;
 				hero.y = rnd(vh * 0.15, vh * 0.45);
@@ -4018,6 +4128,8 @@
 				/* The landing: glide in, flare, stand, take off. */
 				hero.land = !hero.invert && water && rand() < (themeKey === 'classic' || themeKey === 'florida_keys' ? 0.5 : 0.15);
 				if (DEBUG && CFG.heronLand != null) { hero.land = !!CFG.heronLand && water; }
+				/* in the header picture it just flies across (Rob, 4.10.7) */
+				if (hero.sky) { hero.land = false; }
 				if (hero.land) { hero.lx = rnd(vw * 0.3, vw * 0.7); hero.st = 1; }
 			} else if (kind === 'eagle' || kind === 'witch') {
 				hero.w = kind === 'eagle' ? 104 : 92;
@@ -4074,7 +4186,7 @@
 		 * held back by the hero-image show) keeps its turn, just not sooner
 		 * than a breath after this one left. Otherwise the OTHER kind goes
 		 * next if this theme has it, else the same kind again, 60-90 s on. */
-		function canHero() { return !!FX.heroes; }
+		function canHero() { return !!FX.heroes && heroPool.length > 0; }
 		function canVig() { return vigList.length > 0; }
 		function nextTurn(kind) {
 			/* The first scene of a visit's first page hands straight over to
@@ -4102,8 +4214,15 @@
 				if (heroFxState() === 'busy' && vt < FX_CAP) { return; }
 				var at = heroAt;
 				if (!heroCount && fxDoneAt >= 0) { at = mx2(at, fxDoneAt + 2); }
-				if (vt < at || vig) { return; }
-				spawnHero(t);
+				if (vt < at) { return; }
+				if (!canHero()) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + gapAfter('hero'); } return; }
+				if (vig) { heroAt = vt + 4; return; }
+				/* chosen once; a sky flyer waits for the header picture */
+				heroNext = heroNext || pick(heroPool);
+				if (SKY_HERO[heroNext] && !skyInView()) { return; }
+				var kind = heroNext;
+				heroNext = '';
+				if (SKY_HERO[kind]) { inSky(function () { spawnHero(t, kind); }); } else { spawnHero(t, kind); }
 				if (hero) {
 					heroAt = INF;
 					heroLive = true; heroCount++;
@@ -4111,6 +4230,9 @@
 				}
 				return;
 			}
+			if (hero.sky) { inSky(function () { stepHero1(dt); }); } else { stepHero1(dt); }
+		}
+		function stepHero1(dt) {
 			var h = hero;
 			h.ph += dt * 2;
 			h.t += dt;
@@ -4192,9 +4314,6 @@
 			}
 			if ((h.dir > 0 && h.x > vw + 150) || (h.dir < 0 && h.x < -150)) { hero = null; }
 		}
-		/* the flyers that cross the sky; the bass and the manatee are on the
-		 * water, the rainbow in a corner */
-		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
 		function heroBounds(h) {
 			var w = (h.w || 100) * 1.3;
 			return [[h.x - w, h.y - w, 2 * w, 2 * w]];
@@ -4299,7 +4418,7 @@
 		/* --- Vignette director: rare 5–12s choreographed scenes. One at a
 		 * time, ≥90s apart, first ≥20s in, never alongside a hero, actors
 		 * borrow (dormant) pool slots so the cap holds. --- */
-		var vig = null, vigAt = INF, countdownDone = false;
+		var vig = null, vigAt = INF, countdownDone = false, vigNext = '';
 		var VA = mn(1, alphaBase * 2.2); /* scenes read a touch stronger */
 		function dspr(key, x, y, w, flipX, rot, alpha) {
 			var im = sprite(key);
@@ -4363,7 +4482,10 @@
 		 * 390px phone (moon 41, witch 84, path scale moon + 0.6 witch + 6),
 		 * so a desktop is the phone's picture made bigger. */
 		var WITCH_W = 84, WFR = 12;
-		function witchK() { return clamp(vw / 390, 0.82, 1.3); }
+		/* by width, as before; and never taller than the header picture
+		 * leaves room for (the swoop needs about 277k + 28 px; the site's
+		 * pictures are 420 px tall, so this only guards a shorter one) */
+		function witchK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.4, (vh - 28) / 277)); }
 		function witchW() { var w = MT.round(84 * witchK()); if (w !== WITCH_W) { WITCH_W = w; wcFrames = []; wcPts = null; } return w; }
 		function sq(v) { return v * v; }
 		function bezPts(out, p0, p1, p2, p3, n) {
@@ -4671,7 +4793,7 @@
 		}
 		function hdrBuild() {
 			hdr = null;
-			if (CFG.layer || footMode || !D.createRange || !D.createTreeWalker) { return; }
+			if ((!skyMode && (CFG.layer || footMode)) || !D.createRange || !D.createTreeWalker) { return; }
 			var list, roots = [], i, j;
 			try { list = D.querySelectorAll(HDR_SEL); } catch (e) { list = []; }
 			for (i = 0; i < list.length; i++) {
@@ -4737,10 +4859,12 @@
 		/* Erase the header's letters from the canvas inside these rects (where
 		 * the scene drew this frame), if they meet the header at all. */
 		function hdrCut(rects, t) {
-			if (CFG.layer || footMode) { return; }
+			if (!skyMode && (CFG.layer || footMode)) { return; }
 			if (!hdr || hdr.vw !== vw || hdr.vh !== vh || (hdr.moving && t - hdr.at > 0.3)) { hdrBuild(); if (hdr) { hdr.at = t; } }
 			if (!hdr) { return; }
-			var hx = hdr.x - (hdr.fixed ? 0 : (W.pageXOffset || 0)), hy = hdr.y - (hdr.fixed ? 0 : (W.pageYOffset || 0)), any = false;
+			/* viewport px, then the canvas's own px (the sky canvas is where
+			 * the header picture is; the page's front canvas is at 0, 0) */
+			var hx = hdr.x - (hdr.fixed ? 0 : (W.pageXOffset || 0)) - cvOX, hy = hdr.y - (hdr.fixed ? 0 : (W.pageYOffset || 0)) - cvOY, any = false;
 			cx.save(); cx.beginPath();
 			for (var i = 0; i < rects.length; i++) {
 				var r = rects[i];
@@ -4784,7 +4908,7 @@
 		function fgCollect(t) {
 			if (fgList && t - fgAt < 0.5) { return fgList; }
 			fgAt = t; fgList = [];
-			if (!FG_SEL || CFG.layer || footMode || typeof Path2D !== 'function') { return fgList; }
+			if (!FG_SEL || (!skyMode && (CFG.layer || footMode)) || typeof Path2D !== 'function') { return fgList; }
 			var found, roots = [], i;
 			try { found = D.querySelectorAll(FG_SEL); } catch (e) { found = []; }
 			/* outermost matches only, so nothing is cut twice */
@@ -5059,14 +5183,16 @@
 			});
 		}
 		function foreBegin(bounds) {
-			if (!FG_SEL || CFG.layer || footMode || !bounds || !bounds.length || typeof Proxy !== 'function') { return null; }
+			if (!FG_SEL || (!skyMode && (CFG.layer || footMode)) || !bounds || !bounds.length || typeof Proxy !== 'function') { return null; }
 			var list = fgCollect(vt);
 			if (!list.length) { return null; }
 			var t0 = DEBUG ? performance.now() : 0, co = cv.getBoundingClientRect(), parts = [], i, j, u = null;
 			/* last frame's region, with room for this frame's movement */
 			var bb = [INF, INF, -INF, -INF], PAD = 60;
 			for (i = 0; i < bounds.length; i++) { var b0 = bounds[i]; bb = [mn(bb[0], b0[0] - PAD), mn(bb[1], b0[1] - PAD), mx2(bb[2], b0[0] + b0[2] + PAD), mx2(bb[3], b0[1] + b0[3] + PAD)]; }
-			bb = [bb[0] + co.left, bb[1] + co.top, bb[2] + co.left, bb[3] + co.top];
+			/* to the viewport: the canvas's place, plus where its own px
+			 * start inside it (the sky canvas, 4.10.7) */
+			bb = [bb[0] + co.left + cvUX, bb[1] + co.top + cvUY, bb[2] + co.left + cvUX, bb[3] + co.top + cvUY];
 			for (i = 0; i < list.length; i++) {
 				var it = list[i], clip = null;
 				var add = function (el, kind, sh) {
@@ -5132,11 +5258,11 @@
 			if (!fgG) { return null; }
 			fgG.setTransform(1, 0, 0, 1, 0, 0); fgG.globalCompositeOperation = 'source-over'; fgG.globalAlpha = 1;
 			fgG.clearRect(0, 0, rw, rh);
-			fgG.setTransform(dp, 0, 0, dp, -rx, -ry);
+			fgG.setTransform(dp, 0, 0, dp, cvUX * dp - rx, cvUY * dp - ry);
 			fgG.save();
 			var main = cx;
 			main.save();
-			main.beginPath(); main.rect(0, 0, cv.width / dp, cv.height / dp); main.rect(rx / dp, ry / dp, rw / dp, rh / dp); main.clip('evenodd');
+			main.beginPath(); main.rect(-cvUX, -cvUY, cv.width / dp, cv.height / dp); main.rect(rx / dp - cvUX, ry / dp - cvUY, rw / dp, rh / dp); main.clip('evenodd');
 			cx = fgTee(main, fgG);
 			return { main: main, parts: parts, co: co, dp: dp, t0: t0, R: [rx, ry, rw, rh] };
 		}
@@ -6054,16 +6180,22 @@
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
 		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
 		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
+		/* no header picture: no sky scene (4.10.7) */
+		if (!skyPic) { vigList = vigList.filter(function (n) { return !SKY_VIG[n]; }); }
 		/* The witch and her moon are pre-drawn in idle time after load (4.10.0). */
 		if (vigList.indexOf('witchmoon') >= 0) {
 			var wcTodo = [-1], wcI;
 			for (wcI = 0; wcI < WFR; wcI++) { wcTodo.push(wcI); }
 			var wcIdle = function (dl) {
 				var t0 = nowMs();
+				if (!skyPic) { return; }
 				if (!vw) { wcLater(wcIdle); return; }   /* not sized yet */
-				witchW();
-				do { var k = wcTodo.shift(); if (k === -1) { moonGet(); } else if (k != null) { wcGet(k); } }
-				while (wcTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+				/* at the header picture's size, where she will fly */
+				inSky(function () {
+					witchW();
+					do { var k = wcTodo.shift(); if (k === -1) { moonGet(); } else if (k != null) { wcGet(k); } }
+					while (wcTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+				});
 				if (wcTodo.length) { wcLater(wcIdle); }
 			};
 			var wcLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
@@ -6085,7 +6217,7 @@
 			for (var k = 0; k < parts.length && freed < need; k++) {
 				if (!parts[k].dormant) { parts[k].dormant = true; freed++; }
 			}
-			vig = { name: name, st: { t: 0 }, sc: sc };
+			vig = { name: name, st: { t: 0 }, sc: sc, sky: !!SKY_VIG[name] };
 			vigLog.push({ name: name, start: vt, end: -1, borrowed: freed });
 		}
 		function endVig(t) {
@@ -6168,7 +6300,15 @@
 				return;
 			}
 			if (vig) {
-				if (vig.sc.run(vig.st, dt, t)) { endVig(t); }
+				var done;
+				if (vig.sky) {
+					/* in the header picture, behind its title and foreground */
+					done = inSky(function () {
+						var fgF = foreBegin(vig.st.fgB);
+						try { return vig.sc.run(vig.st, dt, t); } finally { if (fgF) { foreEnd(fgF); } }
+					});
+				} else { done = vig.sc.run(vig.st, dt, t); }
+				if (done) { endVig(t); }
 				return;
 			}
 			/* Scenes switched off mid-visit (the degrade ladder): a scene
@@ -6179,7 +6319,12 @@
 			 * no scene. Until 4.1.0 nothing then moved the clock on, so a
 			 * name with nothing behind it retried on EVERY FRAME for the life
 			 * of the page (MLK and Patriot Day did). Push it on regardless. */
-			startVig(pick(vigList));
+			/* a sky scene waits for the header picture (Rob, 4.10.7); the
+			 * pick is kept, so the wait is for THIS scene */
+			vigNext = vigNext || pick(vigList);
+			if (SKY_VIG[vigNext] && !skyInView()) { return; }
+			startVig(vigNext);
+			vigNext = '';
 			vigAt = vig ? INF : vt + 4;
 		}
 
@@ -6278,16 +6423,22 @@
 		 * 1280 px and 2x, the background layer at 30 fps with the plane
 		 * flying: 23 page frames a second with box clears, 46 with full
 		 * clears. */
+		/* The PAGE canvas's pace. A sky scene or flyer (4.10.7) is on the
+		 * header picture's own canvas and does not hurry this one: while only
+		 * the sky moves, the page's background layer keeps its 30 fps and the
+		 * page canvas is not redrawn in between. */
 		function pace() {
-			if (hero || vig || burstMode || ripples.length || bgFills.length || footMode || xaP) { return 0; }
+			if ((hero && !hero.sky) || (vig && !vig.sky) || burstMode || ripples.length || bgFills.length || footMode || xaP) { return 0; }
 			for (var k = 0; k < parts.length; k++) { if (!parts[k].dormant) { return 0; } }
 			return (subEff && subParts.length) ? SLOW_MS : IDLE_MS;
 		}
+		function skyBusy() { return !!((hero && hero.sky) || (vig && vig.sky) || (sky && sky.dirty)); }
+		var lastPage = 0;
 		function frame(t, tick) {
 			raf = 0;
 			if (manual && !tick) { return; }
 			if (!running && !tick) { return; }
-			var pc = pace();
+			var pp = pace(), pc = skyBusy() ? 0 : pp;
 			/* -1ms: rAF timestamps jitter, and a 33.3ms target on a 16.7ms
 			 * display must land on every second frame, not every third. */
 			if (!tick && pc && lastDraw && t - lastDraw < pc - 1) { next(pc - (t - lastDraw)); return; }
@@ -6298,55 +6449,62 @@
 			 * and the clocks must see all of it. */
 			var dt = last ? mn((t - last) / 1000, pc === IDLE_MS ? 0.3 : 0.05) : 0.016;
 			last = t;
-			/* Nothing was drawn last frame and nothing will be: leave the
-			 * already-empty canvas alone. */
-			if (!(pc === IDLE_MS && blank)) { cx.clearRect(0, 0, vw, vh); }
-			var clipped = footMode && clipText();
-			drawBgFills();
-			/* Layer 1 before everything else on the canvas: the subtle layer
-			 * is the calm baseline and every sprite belongs on top of it. */
-			stepSubtle(dt);
-			drawSubtle();
-			if (burstMode) {
-				if (!nextBurst) { nextBurst = t + 1500; }
-				else if (t >= nextBurst) { fire(t); }
-				stepBursts(dt);
-				drawFlash(dt);
-				if (yearFx) {
-					yearFx.a -= dt * 0.42;
-					yearFx.y -= dt * 12;
-					if (yearFx.a <= 0) { yearFx = null; }
-					else {
-						cx.save();
-						cx.globalAlpha = clamp(mn(1, alphaBase * 2.4) * clamp(yearFx.a, 0, 1), 0, 1);
-						cx.font = 'bold 46px sans-serif';
-						cx.lineWidth = 4;
-						cx.strokeStyle = '#7A4E00';
-						cx.strokeText(yearText, yearFx.x, yearFx.y);
-						cx.fillStyle = sparkCl[0];
-						cx.fillText(yearText, yearFx.x, yearFx.y);
-						cx.restore();
+			/* the page's canvas, when its own pace says so (always, unless
+			 * only the sky is moving) */
+			var pageDue = tick || !pp || !lastPage || t - lastPage >= pp - 1, clipped = false;
+			if (pageDue) {
+				var pdt = lastPage && !tick ? mn((t - lastPage) / 1000, pp === IDLE_MS ? 0.3 : 0.05) : dt;
+				lastPage = t;
+				/* Nothing was drawn last frame and nothing will be: leave the
+				 * already-empty canvas alone. */
+				if (!(pp === IDLE_MS && blank)) { cx.clearRect(0, 0, vw, vh); }
+				clipped = footMode && clipText();
+				drawBgFills();
+				/* Layer 1 before everything else on the canvas: the subtle layer
+				 * is the calm baseline and every sprite belongs on top of it. */
+				stepSubtle(pdt);
+				drawSubtle();
+				if (burstMode) {
+					if (!nextBurst) { nextBurst = t + 1500; }
+					else if (t >= nextBurst) { fire(t); }
+					stepBursts(pdt);
+					drawFlash(pdt);
+					if (yearFx) {
+						yearFx.a -= pdt * 0.42;
+						yearFx.y -= pdt * 12;
+						if (yearFx.a <= 0) { yearFx = null; }
+						else {
+							cx.save();
+							cx.globalAlpha = clamp(mn(1, alphaBase * 2.4) * clamp(yearFx.a, 0, 1), 0, 1);
+							cx.font = 'bold 46px sans-serif';
+							cx.lineWidth = 4;
+							cx.strokeStyle = '#7A4E00';
+							cx.strokeText(yearText, yearFx.x, yearFx.y);
+							cx.fillStyle = sparkCl[0];
+							cx.fillText(yearText, yearFx.x, yearFx.y);
+							cx.restore();
+						}
 					}
 				}
-			}
-			var k, p;
-			deClump(dt);
-			actorX = sceneActors();
-			for (k = 0; k < parts.length; k++) {
-				p = parts[k];
-				if (p.dormant) { continue; }
-				repel(p, dt);
-				step(p, dt, t);
-				riderYield(p, dt);
-			}
-			/* FAR layer first, then water, then NEAR */
-			for (k = 0; k < parts.length; k++) { p = parts[k]; if (!p.dormant && p.far) { drawP(p, t); } }
-			stepRipples(dt);
-			drawRipples();
-			for (k = 0; k < parts.length; k++) {
-				p = parts[k];
-				if (p.dormant || p.far) { continue; }
-				drawP(p, t);
+				var k, p;
+				deClump(pdt);
+				actorX = sceneActors();
+				for (k = 0; k < parts.length; k++) {
+					p = parts[k];
+					if (p.dormant) { continue; }
+					repel(p, pdt);
+					step(p, pdt, t);
+					riderYield(p, pdt);
+				}
+				/* FAR layer first, then water, then NEAR */
+				for (k = 0; k < parts.length; k++) { p = parts[k]; if (!p.dormant && p.far) { drawP(p, t); } }
+				stepRipples(pdt);
+				drawRipples();
+				for (k = 0; k < parts.length; k++) {
+					p = parts[k];
+					if (p.dormant || p.far) { continue; }
+					drawP(p, t);
+				}
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
 			stepTurns(dt);
@@ -6354,15 +6512,20 @@
 			/* (debug: the foreground suite draws a stand-in sprite here) */
 			if (DEBUG && DBG && W.DCCSeasonsEngine._state && W.DCCSeasonsEngine._state.preScene) { W.DCCSeasonsEngine._state.preScene(cx); }
 			fgFrame++;
-			var fgF = vig ? foreBegin(vig.st.fgB) : null;
-			try { stepVig(dt, t); } finally { if (fgF) { foreEnd(fgF); } }
+			skyClear();
+			stepVig(dt, t);
 			stepHero(dt, t);
 			heroGone();
-			/* a sky flyer goes behind the header picture's foreground too
-			 * (4.10.5, Rob: higher in the sky than the seaplane) */
-			var fgH = hero && SKY_HERO[hero.kind] && hero.x != null && hero.y != null ? foreBegin(heroBounds(hero)) : null;
-			try { drawHero(t); } finally { if (fgH) { foreEnd(fgH); } }
-			drawReflections(t);
+			/* a sky flyer crosses the header picture, behind its foreground
+			 * (4.10.5, Rob: higher in the sky than the seaplane; 4.10.7: in
+			 * the picture only) */
+			if (hero && hero.sky) {
+				inSky(function () {
+					var fgH = hero.x != null && hero.y != null ? foreBegin(heroBounds(hero)) : null;
+					try { drawHero(t); } finally { if (fgH) { foreEnd(fgH); } }
+				});
+			} else { drawHero(t); }
+			if (pageDue) { drawReflections(t); }
 			if (DEBUG && DBG && W.DCCSeasonsEngine._slow) {
 				var until = performance.now() + W.DCCSeasonsEngine._slow;
 				while (performance.now() < until) { /* synthetic load for tests */ }
@@ -6372,6 +6535,7 @@
 			 * step, because a hero or scene may have started in it. */
 			var pn = pace();
 			blank = pn === IDLE_MS;
+			if (skyBusy()) { pn = 0; }
 			if (t0 && !tick) { degrade(performance.now() - t0, t); }
 			if (!tick) { next(pn); }
 		}
@@ -6390,7 +6554,7 @@
 		}
 		function play() {
 			if (sleep) { W.clearTimeout(sleep); sleep = 0; }
-			if (!raf && running) { last = 0; lastDraw = 0; raf = W.requestAnimationFrame(frame); }
+			if (!raf && running) { last = 0; lastDraw = 0; lastPage = 0; raf = W.requestAnimationFrame(frame); }
 		}
 		/* Draw only while someone can see it: the tab is showing AND the
 		 * canvas is on screen (a footer or sticky canvas scrolls away). The
@@ -6436,6 +6600,15 @@
 				get vig() { return vig && vig.name; },
 				get hero() { return hero && hero.kind; },
 				get heroXY() { return hero ? [hero.x, hero.y] : null; },
+				/* where the sky is drawn (4.10.7): heroXY and vigSt of a sky
+				 * actor are in the sky canvas's px; add left/top for the
+				 * viewport */
+				get sky() {
+					var r = sky && sky.c.isConnected ? sky.c.getBoundingClientRect() : null;
+					return { pic: !!skyPic, inView: skyInView(), ratio: skyRatio, canvas: !!sky, w: sky ? sky.w : 0, h: sky ? sky.h : 0,
+						left: r ? r.left + sky.ox : 0, top: r ? r.top + sky.oy : 0, ox: sky ? sky.ox : 0, oy: sky ? sky.oy : 0, heroSky: !!(hero && hero.sky), vigSky: !!(vig && vig.sky), stats: skyStat,
+						vigs: vigList.slice(), heroes: heroPool.slice() };
+				},
 				get vigSt() { return vig && vig.st; },
 				get xa() { return { on: xaOn, live: !!xaP, alpha: xaP ? xaP.alpha : 0, globes: parts.filter(function (q) { return !q.dormant && q.sp === xaSp; }).length, accent: accents.length ? accents[0].style.opacity : null }; },
 				get vt() { return vt; },
@@ -6462,7 +6635,7 @@
 				/* the matrix the cut uses for an SVG shape (debug: the suite checks
 				 * it against Chromium's own getScreenCTM) */
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
-				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: cv }; },
+				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },

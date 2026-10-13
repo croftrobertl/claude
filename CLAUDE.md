@@ -711,6 +711,86 @@ flat 30 fps in the Director's recording). Nothing visible changes.
   crossing at 60 fps at 2x, seeded `Math.random`, the live plane's
   animations seeked to the mocked clock.
 
+### Rob's picks (for 4.10.7, 2026-10-13): the sky belongs to the header picture
+
+Rob: "The witch/moon appear whenever I scroll down the page, too, but I
+only wanted it in the hero area." Picked: "Scroll away with header",
+"Wait for the header", "Yes, header only"; then (A) embers and falling
+bits in FRONT of the header sky, (A) the heron never lands there, (A)
+only the SKY scenes move, flyers wait too. The Director's probe of live
+(homepage, /contact/, a cottage; 1265 and 390 wide): the picture is
+`div#header-image-main-inside` (relative, overflow hidden, 420 px tall
+everywhere) inside `#header-image-main`, inside `header#masthead` (z 999,
+the stacking context, below our frontZ 9000).
+
+- **The sky canvas** (`skyEnsure`/`inSky`, `canvas.dcc-seasons-sky`):
+  made on first use INSIDE the first `CFG.skySel` match (Plugin::config,
+  filter `dcc_seasons_sky`, default `#header-image-main-inside`; '' = no
+  sky anywhere), absolute, z FRONT_Z inside the header's stacking
+  context, so above the plane, reeds and title, which the SAME cut-outs
+  (`hdrCut`, `foreBegin`/`foreEnd`) keep in front. It scrolls with the
+  picture on the compositor: nothing listens to scroll, nothing is read
+  or written per scroll. A ResizeObserver marks a size change. `inSky(fn)`
+  swaps cv, cx, vw, vh, waterY, ground, lastDpr to the sky canvas, so every
+  scene and flyer runs unchanged in the picture's own px.
+- **Sky actors**: `SKY_VIG` = witchmoon, sleighmoon, doveflight, flagfly,
+  corkpop; `SKY_HERO` = heron, eagle, witch, sleigh, osprey (`vig.sky`,
+  `hero.sky`). Water-line scenes, bass, manatee and the rainbow stay on the
+  page canvas, unchanged. No picture → both lists are filtered at start,
+  so a theme left with nothing in a list simply has nothing there
+  (`canHero()` checks the pool).
+- **Waiting**: the chosen scene (`vigNext`) or flyer (`heroNext`) is held
+  until at least HALF the picture is on screen (IntersectionObserver;
+  `skyInView`). Once running it never pauses: scrolled away it runs on
+  out of sight and shows again on the way back.
+- **Whole device pixels**: the picture sits at a fractional page offset on
+  the site (115.19 px at 1x in the fixture). The canvas is placed at
+  `-frac` and drawn with that offset (`sky.ox/oy`, `cvUX/cvUY`), so its
+  pixel grid is the page's and the title mask lands 1:1 — at the raw
+  fraction 25% of letter samples showed moon through them. `cvOX/cvOY` is
+  the picture's origin in the viewport for `hdrCut`; `foreBegin` adds
+  `cvUX/cvUY` wherever it converts between the viewport and the canvas.
+- **Pacing**: `pace()` is now the PAGE canvas's pace (sky actors excluded)
+  and `skyBusy()` keeps the loop at full rate while the sky moves; the
+  page canvas is redrawn only when its own pace is due (`pageDue`, its own
+  `pdt`), so on live (ambient off) the embers stay at 30 fps during a sky
+  scene and the page canvas is not re-produced in between.
+- **The heron's 4.9.0 landing is unreachable since 4.10.7** (the heron is
+  a sky flyer, never lands in the header, and does not appear on a page
+  without one). The code is kept; `test-heroes.js` now proves it never
+  lands with `heronLand = 1`.
+- **Short pictures**: `witchK()` = min(width factor, (vh − 28) / 277): the
+  swoop needs ~277k + 28 px; 420 px never triggers it, 220 px shrinks the
+  moon to r 28 and the swoop to 12–149 px (`test-sky.js`).
+- **The fixture** (`tools/fixture.js`) now has the live header on every
+  page: `#masthead` z 999 > `#header-image-main` > `#header-image-main-
+  inside` (420 px) with the banner title over it; `headerPic: false` is a
+  page without one. `test-subtle.js` uses `headerPic: false`: with the
+  taller page the behind mount stays on `<main>` and moves the article's
+  white onto the canvas (its documented trade), which a whole-canvas ink
+  read would count. dcc-hero-life 3.12.0's propeller is in the fixture:
+  two `svg.dcc-hl-prop-svg` (`.p2`) siblings over `.dcc-hl-plane-inner`,
+  a compositor scaleY (`dccHlProp`), the drop-shadow on
+  `.dcc-hl-plane-inner` and `.dcc-hl-banner`; the cut finds 5 svgs.
+- **Debug**: `_state.sky` = { pic, inView, ratio, w, h, left/top (the
+  picture's origin in the viewport), ox/oy, heroSky, vigSky, vigs, heroes };
+  `heroXY` and `vigSt` of a sky actor are in the picture's px — add
+  left/top for the viewport. `_state.witch.canvas` is the sky canvas.
+- **Tests**: `tools/test-sky.js` (65: at 320/390/1280 a screenshot with
+  everything but the two canvases hidden shows nothing outside the
+  picture before, during and after a scroll; the scene and the flyer wait
+  when loaded scrolled down; no sky on a page without a picture while the
+  gator scenes and the bass still play; sprites still full-page; the heron
+  never lands; the 220 px fit). `test-frame-pacing.js` scrolls past the
+  picture and back during the scene at 1280/1440 2x and 390 3x: ≥95%
+  within 17 ms and no more layouts or style recalcs a second than with
+  Seasons off. `tools/scroll-reel.js` renders the scroll at 60 fps.
+- **Cost**: in this container (CPU canvases) main thread at 1280 2x during
+  the scene is ~670 ms/s against 4.10.6's ~490-510: each canvas a frame is
+  copied whole in software (the sky canvas is 2560×841 at 2x). On the GPU
+  canvas (SwiftShader) the two builds read the same (scene 14-16 fps
+  both, within noise).
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -730,7 +810,7 @@ flat 30 fps in the Director's recording). Nothing visible changes.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 176,708 raw / 62,678 gzipped (4.10.6, `gzip -c`; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 179,951 raw / 63,939 gzipped (4.10.7, `gzip -c`; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1077,7 +1157,7 @@ flat 30 fps in the Director's recording). Nothing visible changes.
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
   ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process

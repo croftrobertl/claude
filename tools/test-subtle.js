@@ -66,7 +66,12 @@ async function one(effect) {
    * when the numbers were measuring a heron. */
   const cfg = config([`--subtle=${effect}`, '--theme=florida_keys', '--placement=content',
     '--noparticles', '--richness=minimal', '--diag']);
-  const ses = await open(fixture({ kind: 'bravada', config: cfg }), { viewport: { width: 1280, height: 900 } });
+  /* headerPic: false (4.10.7) keeps the page the shape these ceilings were
+   * set on. With the site's 420 px header picture above the content, the
+   * behind-layering mount stays on <main> and moves the article's white
+   * background onto the canvas (its documented trade, test-layering.js),
+   * and that fill, not the layer, is what a whole-canvas ink read sees. */
+  const ses = await open(fixture({ kind: 'bravada', config: cfg, headerPic: false }), { viewport: { width: 1280, height: 900 } });
   try {
     await settle(ses.page);
     await ses.page.evaluate(() => window.scrollTo(0, 600));

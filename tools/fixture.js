@@ -30,22 +30,35 @@ const SHARED_CSS = `
    * it. Without this the banner sits over the header and swallows the taps
    * that open the egg — a fixture artefact that reads as a plugin bug. */
   body { margin: 0; padding-top: 44px; font: 16px/1.6 system-ui, sans-serif; background: #d8e6f2; }
-  #masthead { background: #0f6dbf; color: #fff; padding: 18px; }
-  #site-title { font-size: 22px; margin: 0; }
+  /* #masthead as on the site (4.10.7, the Director's probe of live): a
+   * stacking context at z 999, holding the header picture
+   * #header-image-main > #header-image-main-inside (relative, overflow
+   * hidden, 420 px tall at every width, on every page). */
+  #masthead { background: #0f6dbf; color: #fff; position: relative; z-index: 999; }
+  #site-title { font-size: 22px; margin: 0; padding: 18px; }
+  #header-image-main { position: relative; overflow: hidden; }
+  #header-image-main-inside { position: relative; overflow: hidden; height: 420px;
+    background: radial-gradient(circle at 78% 30%, #ffe9a8 0 6%, rgba(255,233,168,0) 16%),
+      linear-gradient(#7fb3d9 0%, #b9d6ea 52%, #2f6f8f 53%, #24566e 100%); }
   .hero { height: 380px; background: #35617f; }
 
-  .hfx #masthead { position: relative; overflow: hidden; }
-  .hfx #header-page-title { position: relative; z-index: 5; background: none; }
-  #header-image-main-inside { position: absolute; inset: 0; overflow: hidden; }
   .dcc-gh { position: absolute; inset: 0; z-index: 2; background: linear-gradient(#f6b26b, #f9d9a8 60%, #3d6f8a 61%, #2b5670); }
   .dcc-hl-wrap { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
   .dcc-hl-fly { position: absolute; left: 0; top: 0; width: 150px; height: 56px; }
   .dcc-hl-face, .dcc-hl-body { width: 100%; height: 100%; }
   .dcc-hl-face { transform-origin: 50% 50%; }
+  .dcc-hl-body { position: relative; }
+  .dcc-hl-plane-inner { width: 100%; height: 100%; }
   .dcc-hl-body svg { width: 100%; height: 100%; display: block; overflow: visible; }
-  .dcc-hl-body .prop { transform-box: fill-box; transform-origin: 50% 50%;
-    animation: hfxspin .2s linear infinite; animation-play-state: paused; animation-delay: -.05s; }
-  @keyframes hfxspin { to { transform: rotate(360deg); } }
+  /* dcc-hero-life 3.12.0: each propeller disc is its own svg on the
+   * plane's viewBox, laid over .dcc-hl-plane-inner, a compositor scaleY
+   * about the hub (.11 s and .085 s); here held still unless 'live' */
+  .dcc-hl-body .dcc-hl-prop-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    transform-origin: 92.67% 46.43%; will-change: transform;
+    animation: dccHlProp .11s linear infinite; animation-play-state: paused; animation-delay: -.03s; }
+  .dcc-hl-body .dcc-hl-prop-svg.p2 { animation-duration: .085s; animation-delay: -.06s; }
+  @keyframes dccHlProp { 0% { transform: scaleY(1); } 50% { transform: scaleY(.18); } 100% { transform: scaleY(1); } }
+  .is-silhouette .dcc-hl-prop-svg { filter: brightness(0); opacity: .9; }
   .dcc-catch { position: absolute; left: 0; top: 0; width: 60px; height: 30px; }
   /* 4.10.5: the towed banner is CSS-painted on live (dcc-hero-life): a
    * 1.5px rope div with a .6px shadow and a cloth div with a border,
@@ -67,11 +80,10 @@ const SHARED_CSS = `
   .dcc-gh-fore { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
   .dcc-gh-fore .reeds { position: absolute; left: 0; top: 0; width: 30px; height: 120px; overflow: visible; }
   .dcc-gh-fore canvas { position: absolute; left: 0; top: 0; width: 80px; height: 30px; }
-  /* The banner (banner: true / 'page'): a header PICTURE with the page title
-   * over it, white, uppercase and letter-spaced with a soft shadow, the way
+  /* The banner (banner: true / 'page'): the page title over the header
+   * picture, white, uppercase and letter-spaced with a soft shadow, the way
    * Bravada shows it — what the 4.10.1 moon and witch pass behind. */
-  #header-page-title { background: radial-gradient(circle at 78% 30%, #ffe9a8 0 6%, rgba(255,233,168,0) 16%),
-    linear-gradient(#7fb3d9 0%, #b9d6ea 52%, #2f6f8f 53%, #24566e 100%); }
+  #header-image-main-inside #header-page-title { position: absolute; left: 0; right: 0; top: 110px; z-index: 5; }
   #header-page-title .entry-title { font: 700 40px/1.2 Georgia, serif; text-transform: uppercase; letter-spacing: 3px;
     text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,.55); }
   #content.cryout { max-width: 1100px; margin: 0 auto; }
@@ -132,8 +144,9 @@ const LIVE_FX = `<style>
   .hfx-live.west .dcc-hl-fly { animation-name: hfxflyw; }
   @keyframes hfxfly { from { transform: translate3d(-260px, var(--hfx-y, 100px), 0); } to { transform: translate3d(calc(100vw + 120px), var(--hfx-y, 100px), 0); } }
   @keyframes hfxflyw { from { transform: translate3d(calc(100vw + 120px), var(--hfx-y, 100px), 0); } to { transform: translate3d(-260px, var(--hfx-y, 100px), 0); } }
-  .hfx-live .dcc-hl-body { filter: drop-shadow(0 4px 3px rgba(0,0,0,.35)); }
-  .hfx-live .dcc-hl-body .prop { animation: hfxspin .11s linear infinite !important; animation-play-state: running !important; animation-delay: 0s !important; }
+  /* 3.12.0: the shadow on the plane and its banner, not on the body */
+  .hfx-live .dcc-hl-plane-inner, .hfx-live .dcc-hl-banner { filter: drop-shadow(0 4px 3px rgba(0,0,0,.35)); }
+  .hfx-live .dcc-hl-body .dcc-hl-prop-svg { animation-play-state: running !important; animation-delay: 0s !important; }
 </style>
 <script>
 window.dccFly = function (y, t, dir) {
@@ -150,12 +163,12 @@ window.dccFly = function (y, t, dir) {
 
 /* The header picture's layers for heroFx (see page()). The plane faces
  * right; dccPose() moves, banks, flips it and shows or hides its banner. */
-const HERO_FX = `<div id="header-image-main-inside">
+const HERO_FX = `
   <div class="dcc-gh"></div>
   <div class="dcc-hl-wrap">
     <div class="dcc-hl-fly"><div class="dcc-hl-face">
       <div class="dcc-hl-banner" style="display:none"><div class="rope" data-dcc-fore-box></div><div class="cloth" data-dcc-fore-box>DORA CANAL COURT</div></div>
-      <div class="dcc-hl-body">
+      <div class="dcc-hl-body"><div class="dcc-hl-plane-inner">
       <svg viewBox="0 0 150 56" xmlns="http://www.w3.org/2000/svg">
         <g class="banner"><line x1="2" y1="22" x2="-30" y2="24" stroke="#333" stroke-width="1"/>
           <rect x="-110" y="12" width="80" height="22" fill="#FFD400"/>
@@ -165,8 +178,9 @@ const HERO_FX = `<div id="header-image-main-inside">
         <path d="M14 26 L4 8 L22 24 Z" fill="#E0102A"/>
         <ellipse cx="80" cy="48" rx="44" ry="4" fill="#222"/>
         <line x1="70" y1="34" x2="66" y2="45" stroke="#222" stroke-width="2"/>
-        <g class="prop"><rect x="137" y="10" width="4" height="32" fill="#111"/></g>
-      </svg>
+      </svg></div>
+      <svg class="dcc-hl-prop-svg" viewBox="0 0 150 56" xmlns="http://www.w3.org/2000/svg"><rect class="disc" x="137" y="10" width="4" height="32" fill="#111"/></svg>
+      <svg class="dcc-hl-prop-svg p2" viewBox="0 0 150 56" xmlns="http://www.w3.org/2000/svg"><rect class="disc" x="138" y="14" width="2" height="24" fill="#333"/></svg>
     </div></div></div>
     <div class="dcc-hl-wake"><span data-dcc-fore-box></span><span data-dcc-fore-box></span></div>
     <div class="dcc-hl-glint"></div>
@@ -177,7 +191,6 @@ const HERO_FX = `<div id="header-image-main-inside">
       <ellipse cx="6" cy="14" rx="4" ry="12" fill="#5A3A1A"/></svg>
     <canvas class="gator" width="160" height="60"></canvas>
   </div>
-</div>
 <script>
 (function () {
   var c = document.querySelector('.dcc-gh-fore canvas'), g = c.getContext('2d');
@@ -232,6 +245,9 @@ function page(opts) {
    * element (SVG shapes with CSS transforms, a CSS-animated propeller, a
    * canvas). The suite poses them with window.dccPose(). */
   const heroFx = !!opts.heroFx;
+  /* headerPic: false (4.10.7) is a page without a header picture: no sky
+   * scene and no sky flyer may appear on it */
+  const headerPic = opts.headerPic !== false;
   /* heroFx: 'live' (4.10.6) moves the plane the way dcc-hero-life does on
    * the site: a compositor translateX animation (will-change: transform)
    * on .dcc-hl-fly, a drop-shadow filter on .dcc-hl-body and the
@@ -259,6 +275,7 @@ function page(opts) {
     <p><a href="/contact/">Contact us</a> &middot; <a href="/tours/">Canal tours</a></p>
   </footer>`;
 
+  const titleHtml = banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:60px 24px;color:#fff">' + (home ? 'Dora Canal Court' : 'Contact Us') + '</h1></div>' : '';
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -266,7 +283,7 @@ function page(opts) {
 <style>${SHARED_CSS}${kind === 'elementor' ? ELEMENTOR_CSS : ''}</style>
 ${liveFx ? LIVE_FX : ''}</head><body class="${home ? 'home' : ''}${heroFx ? ' hfx' : ''}">
   <div class="dcc-wx-banner" role="alert">Tornado Warning for Lake County until 6:15 PM EDT</div>
-  <header id="masthead">${heroFx ? HERO_FX : ''}<h1 id="site-title" style="position:relative;z-index:5">Dora Canal Court</h1>${banner ? '<div id="header-page-title"><h1 class="entry-title" style="margin:0;padding:60px 24px;color:#fff">' + (home ? 'Dora Canal Court' : 'Contact Us') + '</h1></div>' : ''}</header>
+  <header id="masthead" class="cryout"><h1 id="site-title" style="position:relative;z-index:5">Dora Canal Court</h1>${headerPic ? '<div id="header-image-main"><div id="header-image-main-inside">' + (heroFx ? HERO_FX : '') + titleHtml + '</div></div>' : titleHtml}</header>
   <div class="elementor-lightbox"></div>
   <div class="mobile-nav"></div>
   <div class="hero"></div>

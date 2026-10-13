@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.6
+Stable tag: 4.10.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,25 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.7 =
+Rob: the moon and the witch belong to the header picture. Staging first;
+live only after Rob signs off, together with 4.10.3-4.10.6. Rollback:
+reinstall the 4.10.6 zip; no setting or stored data changes.
+
+* The sky scenes (moon and witch, sleigh and moon, doves, flag, cork pop)
+  and the sky flyers (witch, heron, eagle, osprey, sleigh) are drawn
+  inside the page's header picture: laid out against it, clipped to it,
+  and scrolling away and back with it.
+* If the picture is not at least half on screen when their turn comes,
+  they wait for it. A page without a header picture has none of them.
+* The heron just flies across the picture; it no longer lands.
+* The falling sprites, the background layer, the water-line scenes, the
+  bass, the manatee and the rainbow are unchanged and full-page; the
+  embers and falling bits drift in front of the header sky.
+* The title and the plane, banner, reeds, gator, heron and catch stay in
+  front of the moon and the witch, as before.
+* New filter dcc_seasons_sky (default #header-image-main-inside).
 
 = 4.10.6 =
 Smooth motion on a Retina Mac (Rob: the plane and the witch "moving

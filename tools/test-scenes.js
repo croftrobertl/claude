@@ -196,9 +196,10 @@ function ok(c, label, detail) {
     }
   }
 
-  /* 4.10.1 (Rob: "Can the witch and moon appear behind it?"): in front
-   * layering the header's letters are cut out of the scene, so the page's
-   * title shows through; behind layering cuts nothing. Read the canvas's
+  /* 4.10.1 (Rob: "Can the witch and moon appear behind it?"): the header's
+   * letters are cut out of the scene, so the page's title shows through.
+   * Since 4.10.7 the scene is on the header picture's own canvas, above
+   * everything in the header in BOTH layerings, so both cut. Read the canvas's
    * own pixels: inside the moon, where the mask has a letter, the canvas
    * is empty; just beside the letters, the moon is there. */
   if (!ONLY.length || ONLY.includes('witchmoon')) {
@@ -219,7 +220,7 @@ function ok(c, label, detail) {
               const v = s.vigSt, H = s.witch.hdr;
               if (!H || !v || v.moonA < 0.99 || i % 5) { continue; }
               frames++;
-              const cv = s.witch.canvas, dpr = cv.width / cv.getBoundingClientRect().width, g = cv.getContext('2d');
+              const cv = s.witch.canvas, dpr = cv.width / cv.getBoundingClientRect().width, g = cv.getContext('2d'), o = s.sky;
               const mk = H.c.getContext('2d'), mdc = H.c.width / H.w, sy = window.pageYOffset; /* exact: built on whole device pixels */
               /* sample the moon's disc on a grid */
               for (let yy = -v.MR + 4; yy < v.MR - 4; yy += 3) {
@@ -228,9 +229,10 @@ function ok(c, label, detail) {
                   const px = v.mx + xx, py = v.my + yy;
                   /* keep clear of the witch */
                   if (v.wx != null && Math.hypot(px - v.wx, py - v.wy) < v.W) { continue; }
-                  const mx = Math.round((px - H.x) * mdc), my = Math.round((py + sy - H.y) * mdc);
+                  /* px/py are the sky canvas's own; the mask is page px */
+                  const mx = Math.round((px + o.left - H.x) * mdc), my = Math.round((py + o.top + sy - H.y) * mdc);
                   if (mx < 0 || my < 0 || mx >= H.c.width || my >= H.c.height) { continue; }
-                  const ma = mk.getImageData(mx, my, 1, 1).data[3], ca = g.getImageData(Math.round(px * dpr), Math.round(py * dpr), 1, 1).data[3];
+                  const ma = mk.getImageData(mx, my, 1, 1).data[3], ca = g.getImageData(Math.round((px + o.ox) * dpr), Math.round((py + o.oy) * dpr), 1, 1).data[3];
                   if (ma > 250) { letter++; if (ca < 12) { letterHit++; } }
                   else if (ma === 0) {
                     /* "beside": no letter within 3 px either way */
@@ -244,11 +246,9 @@ function ok(c, label, detail) {
             return { letter, letterHit, beside, besideHit, frames, hdr: !!s.witch.hdr, cuts: s.witch.cuts };
           });
           const tag = `${w}px ${banner === true ? 'homepage' : 'other page'}, ${layer}`;
-          if (layer === 'front') {
+          {
             ok(r.hdr && r.letter > 30 && r.letterHit / r.letter > 0.97, `${tag}: where the title's letters cross the moon, the letters show through (${r.letterHit}/${r.letter} letter samples clear)`, JSON.stringify(r));
             ok(r.beside > 30 && r.besideHit / r.beside > 0.97, `${tag}: beside the letters the moon is solid (${r.besideHit}/${r.beside})`, JSON.stringify(r));
-          } else {
-            ok(!r.hdr && r.cuts === 0, `${tag}: behind layering cuts nothing (the text is already on top)`, JSON.stringify(r));
           }
         } finally { await ses.close(); }
       }

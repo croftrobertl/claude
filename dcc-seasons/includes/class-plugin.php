@@ -867,6 +867,19 @@ final class Plugin {
                 '.dcc-hl-wrap, .dcc-gh-fore, [data-dcc-fore], [data-dcc-fore-box]'
             ),
             /**
+             * CSS selector for the page's HEADER PICTURE (4.10.7, Rob: the
+             * moon and witch belong to the hero banner, not the whole page).
+             * The sky scenes (moon and witch, sleigh and moon, doves, flag,
+             * cork pop) and the sky flyers (heron, eagle, witch, osprey,
+             * sleigh) are drawn on a canvas inside the FIRST match, clipped
+             * to its box and scrolling with it; they wait until it is in
+             * view, and a page without one has none of them. Falling sprites
+             * and the water-line scenes stay full-page.
+             *
+             * @param string $selector Empty turns the sky off on every page.
+             */
+            'skySel'      => (string) apply_filters('dcc_seasons_sky', '#header-image-main-inside'),
+            /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque
              * content column. Empty (the default) means the engine finds it

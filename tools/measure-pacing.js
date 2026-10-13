@@ -14,11 +14,14 @@
  *
  *   node tools/measure-pacing.js [--width=1280] [--height=700] [--dsf=2] [--runs=3]
  *        [--plane=1|0] [--seasons=1|0] [--noscene=1] [--throttle=N]
- *        [--hero=<kind>] [--css=<extra css>] [--cfg=<json merged into the config>] [--gpu=1]
+ *        [--hero=<kind>] [--scroll=1] [--css=<extra css>] [--cfg=<json merged into the config>] [--gpu=1]
  *   DCC_ASSETS=/path/to/old/assets/js node tools/measure-pacing.js …   (a previous build)
  *
  * --noscene measures the background layer alone (the plane still flies);
- * --hero=witch a flyer meeting the plane instead of the scene.
+ * --hero=witch a flyer meeting the plane instead of the scene;
+ * --scroll=1 wheels the page down past the header picture and back, twice,
+ * through the window (4.10.7: the scene scrolls with the picture), and
+ * the layouts and style recalcs a second are reported.
  * --gpu=1 draws the canvas on the GPU as a Mac does, through Chromium's
  * SwiftShader (a GPU in software, many times slower than a real one): only
  * there does the GPU's work hold frames back, so only there do GPU costs
@@ -56,8 +59,9 @@ async function once(o) {
      * height, timed so it passes the moon in the middle of the scene */
     const geo = await pg.evaluate(([plane, seasons, W, noscene, hero]) => {
       const s = seasons && window.DCCSeasonsEngine && window.DCCSeasonsEngine._state;
-      const v = s && s.vigSt, hp = hero && s && s.heroXY;
-      const my = hp ? hp[1] : (v && v.my ? v.my : 150), mx = v && v.mx ? v.mx : W / 2;
+      /* the sky scene and flyers are in the header picture's px (4.10.7) */
+      const v = s && s.vigSt, ko = s && s.sky ? s.sky : { left: 0, top: 0 }, hp = hero && s && s.heroXY;
+      const my = hp ? hp[1] + ko.top : (v && v.my ? v.my + ko.top : 150), mx = v && v.mx ? v.mx + ko.left : W / 2;
       /* a flyer: the plane comes the other way to meet her */
       if (plane) { window.dccFly(my, (W + 380) / 260, hp && hp[0] < W / 2 ? -1 : 1); }
       /* every frame's time and where the plane is */
@@ -68,9 +72,11 @@ async function once(o) {
       if (cv && !P.__dccWrapped) {
         P.__dccWrapped = 1;
         P.clearRect = function (x, y, w, h) {
-          if (this.canvas === cv && window.__on) {
+          /* the page's canvas and the header picture's sky canvas (4.10.7) */
+          if ((this.canvas === cv || (this.canvas.classList && this.canvas.classList.contains('dcc-seasons-sky'))) && window.__on) {
             const t = this.getTransform(), X = t.a * x + t.e, Y = t.d * y + t.f, Wd = t.a * w, Hd = t.d * h;
-            window.__clears[X <= 0 && Y <= 0 && X + Wd >= cv.width && Y + Hd >= cv.height ? 'full' : 'part']++;
+            const C = this.canvas;
+            window.__clears[X <= 0 && Y <= 0 && X + Wd >= C.width && Y + Hd >= C.height ? 'full' : 'part']++;
           }
           return cr.apply(this, arguments);
         };
@@ -79,15 +85,29 @@ async function once(o) {
       const step = (ts) => {
         if (!window.__on) { return; }
         const r = plane ? fly.getBoundingClientRect() : null;
-        const hx = hero && s && s.heroXY;
-        window.__fr.push([ts, r ? (r.left + r.right) / 2 : -1, hero ? !!hx : (s && !noscene ? !!s.vig : true), hx ? hx[0] : mx]);
+        window.__maxScroll = Math.max(window.__maxScroll || 0, window.pageYOffset);
+        const hx = hero && s && s.heroXY, kl = hx && s.sky ? s.sky.left : 0;
+        window.__fr.push([ts, r ? (r.left + r.right) / 2 : -1, hero ? !!hx : (s && !noscene ? !!s.vig : true), hx ? hx[0] + kl : mx]);
         requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
       return { mx, my, MR: v && v.MR || 50, f0: s && s.fore ? s.fore.stats : null };
     }, [plane, seasons, o.width, !!o.noscene, o.hero || '']);
     const m0 = await cdp.send('Performance.getMetrics');
-    await pg.waitForTimeout(o.ms || 5200);
+    if (o.scroll) {
+      /* a guest scrolling with a wheel (the compositor scrolls; the page
+       * hears wheel events): down past the picture and back up, twice */
+      const t0 = Date.now(), dur = o.ms || 5200;
+      await pg.mouse.move(o.width / 2, 300);
+      while (Date.now() - t0 < dur - 100) {
+        const ph = ((Date.now() - t0) / (dur / 4)) | 0;
+        await pg.mouse.wheel(0, ph % 2 ? -60 : 60);
+        await pg.waitForTimeout(40);
+      }
+      await pg.waitForTimeout(Math.max(0, dur - (Date.now() - t0)));
+    } else {
+      await pg.waitForTimeout(o.ms || 5200);
+    }
     const m1 = await cdp.send('Performance.getMetrics');
     const fin = await pg.evaluate(() => {
       window.__on = false;
@@ -106,7 +126,9 @@ async function once(o) {
     }
     const f0 = geo.f0 || { frames: 0, cuts: 0, builds: 0 }, f1 = fin.fore || f0;
     return { gaps, over, clears: fin.clears, fore: { frames: f1.frames - f0.frames, cuts: f1.cuts - f0.cuts, builds: (f1.builds || 0) - (f0.builds || 0) },
-      busy: { task: busy('TaskDuration'), script: busy('ScriptDuration'), style: busy('RecalcStyleDuration'), layout: busy('LayoutDuration') } };
+      busy: { task: busy('TaskDuration'), script: busy('ScriptDuration'), style: busy('RecalcStyleDuration'), layout: busy('LayoutDuration'),
+        layouts: +((met(m1, 'LayoutCount') - met(m0, 'LayoutCount')) / span).toFixed(1), styles: +((met(m1, 'RecalcStyleCount') - met(m0, 'RecalcStyleCount')) / span).toFixed(1) },
+      scrolled: await pg.evaluate(() => window.__maxScroll || 0) };
   } finally { await ses.close(); }
 }
 
@@ -119,10 +141,10 @@ function sum(g) {
 /** Measure o.runs crossings; returns the summary (see the header). */
 async function measure(o) {
   o = Object.assign({ width: 1280, height: 700, dsf: 2, runs: 3, throttle: 1 }, o);
-  const all = [], over = [], busy = [], clears = { full: 0, part: 0 }, fore = { frames: 0, cuts: 0, builds: 0 };
+  const all = [], over = [], busy = [], scr = [0], clears = { full: 0, part: 0 }, fore = { frames: 0, cuts: 0, builds: 0 };
   for (let r = 0; r < o.runs; r++) {
     const x = await once(o);
-    all.push(...x.gaps); over.push(...x.over); busy.push(x.busy);
+    all.push(...x.gaps); over.push(...x.over); busy.push(x.busy); scr.push(x.scrolled);
     clears.full += x.clears.full; clears.part += x.clears.part;
     for (const k in fore) { fore[k] += x.fore[k]; }
   }
@@ -130,7 +152,8 @@ async function measure(o) {
   return { build: process.env.DCC_ASSETS || 'working tree', width: o.width, height: o.height, dsf: o.dsf, throttle: o.throttle, gpu: !!o.gpu,
     plane: o.plane !== false, seasons: o.seasons !== false, noscene: !!o.noscene, hero: o.hero || '', runs: o.runs,
     scene: sum(all), planeOverMoon: sum(over), clears, fore,
-    mainThreadMsPerSec: { task: avg('task'), script: avg('script'), style: avg('style'), layout: avg('layout') } };
+    mainThreadMsPerSec: { task: avg('task'), script: avg('script'), style: avg('style'), layout: avg('layout') },
+    perSec: { layouts: avg('layouts'), styleRecalcs: avg('styles') }, scrolled: Math.max(...scr) };
 }
 
 module.exports = { measure, GPU_ARGS };
@@ -139,7 +162,7 @@ if (require.main === module) {
   const argv = Object.fromEntries(process.argv.slice(2).map(a => { const i = a.indexOf('='); return i < 0 ? [a.replace(/^--/, ''), '1'] : [a.slice(0, i).replace(/^--/, ''), a.slice(i + 1)]; }));
   measure({
     width: +(argv.width || 1280), height: +(argv.height || 700), dsf: +(argv.dsf || 2), runs: +(argv.runs || 3), throttle: +(argv.throttle || 1),
-    plane: argv.plane !== '0', seasons: argv.seasons !== '0', noscene: argv.noscene === '1', gpu: argv.gpu === '1', hero: argv.hero || '',
+    plane: argv.plane !== '0', seasons: argv.seasons !== '0', noscene: argv.noscene === '1', gpu: argv.gpu === '1', hero: argv.hero || '', scroll: argv.scroll === '1',
     css: argv.css || '', cfg: argv.cfg ? JSON.parse(argv.cfg) : null, gen: argv.gen ? argv.gen.split(' ') : [],
   }).then(r => console.log(JSON.stringify(r))).catch(e => { console.error(e); process.exit(1); });
 }
