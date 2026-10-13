@@ -358,6 +358,7 @@ render round and his say.
   clamp(vw*0.2, 80, 100) clears the moon's halo plus half the witch, and
   the moon is placed so the loop stays on screen from 320px up. 8.0 s at
   390, 9.0 s at 1280. How she rides the loop: see 4.9.0 (upright).
+  (The loop is gone since 4.10.2: see "one swoop, no loop" below.)
 - **Timing (all themes):** ONE appearance every 60-90 s counted from the
   end of the last, hero and scene alternating (a theme with only one kind
   repeats it). `Plugin::EVERY` = [60, 90] replaced HERO_EVERY; nothing
@@ -385,7 +386,9 @@ render round and his say.
   build (`DCC_ASSETS=`).
 - **Witch: B · Upright in the loop.** She stays seated, tilts with the
   climb (clamped to ±0.35 rad) and turns round to face the way she flies.
-  Banking (A) was rendered and declined; `WITCH_LOOP` is gone.
+  Banking (A) was rendered and declined; `WITCH_LOOP` is gone. (4.10.2
+  removed the loop: she still rides upright, and since she now flies one
+  way across she never turns round, so the turn-round squeeze is gone.)
 - **Timing: SCENE FIRST, FLYER SECOND.** Every page opens with the
   season's scene at 6-10 s. On a visit's first page the hero follows 2 s
   (`TIMING.breath`) after that scene ends, never on top of it
@@ -407,7 +410,9 @@ render round and his say.
   total tilt clamped to ±0.6 rad, and turns round through a quick squeeze
   (never thinner than 30%) instead of flipping. The dive is monotone in x
   so she never turns round in it. Sizes and the path were reworked in
-  4.10.1 (one size factor, tangent joins) — see below.
+  4.10.1 (one size factor, tangent joins) — see below. **The loop and the
+  turn-round were removed in 4.10.2** (Rob: one swoop, no loop); her
+  drawing, upright riding and the moon stand.
 - **Her drawing:** hat with a purple band and buckle, long dark hair,
   profile, bodice and bell sleeve, a skirt that flutters, purple-and-black
   stockings, pointed boots, an ash broom with a twine collar and 16
@@ -454,7 +459,8 @@ render round and his say.
   serif hairlines and the moon showed through them. Range rects include
   letter-spacing on the right: take it off before centring the glyph.
   Behind layering and footer placement cut nothing. No second canvas.
-- **The path** (`witchPath`): a level glide in, the dive across the
+- **The path, as 4.10.1 shipped it (replaced in 4.10.2, below)**: a
+  level glide in, the dive across the
   moon's centre, a pull-out that is ONE continuous turn joining the loop
   tangentially at −15° (above level, right side, heading up), a 335° loop
   leaving at +10°, and a climb that levels out at the top. A curve that
@@ -465,9 +471,12 @@ render round and his say.
   1/30 s frame, tilt ≤ 2.2 rad/s, no turn-round or squeeze in the dive,
   hat on screen.
 - **One size factor** `k = clamp(vw/390, 0.82, 1.3)`: moon 41k, witch 84k,
-  loop MR + 0.6W + 6, so desktop is the phone's picture made bigger. Speed
-  is 3.3 R/s at the bottom; far from the moon a cruise floor rises
-  smoothly (2–4.5 R) so long desktop glides do not crawl.
+  path scale R = MR + 0.6W + 6 (4.10.1's loop radius, kept in 4.10.2 so
+  the glide and dive are unchanged), so desktop is the phone's picture
+  made bigger. Speed is 3.3 R/s one R below the moon's centre; far from
+  the moon a cruise floor rises smoothly (2–5.5 R since 4.10.2; 2–4.5 R
+  slowed by up to 7.2% a frame on desktop) so long desktop glides do not
+  crawl.
 - **The cape is cloth**: a fan of four Verlet strands pinned across the
   shoulders, SOFT spacing that widens to the hem (no diagonals — they made
   it a rigid board), a travelling flutter, a drape spring toward hanging
@@ -477,7 +486,7 @@ render round and his say.
   curved folds and a scalloped hem showing the lining.
 - **Silhouette**: while ANY of her painted pixels (`wcPts`, sampled once
   from frame 0 — her body box has empty corners that reached the moon from
-  the loop) or cape/hair point overlaps the moon, her WHOLE figure fades to
+  beside it) or cape/hair point overlaps the moon, her WHOLE figure fades to
   black over 150 ms: the same picture on a scratch canvas, 'source-in'
   black, on whole device pixels, so the outline is exact.
 - **Her tilt never snaps**: at most 2.2 rad/s; acceleration smoothed 0.18 s.
@@ -489,6 +498,50 @@ render round and his say.
   ms/s, desktop 218 vs 196, 60 fps; at 4× both saturate (47–48 vs 51–52
   fps). Saturation hides cost in ms/s: if both builds read the same busy
   time, drop the throttle until neither is pinned.
+
+### Rob's pick on staging (for 4.10.2, 2026-10-13): one swoop, no loop
+
+Rob approved the title in front and the moon arrival; "The turn-round at
+the beginning and end of the loop bother me." From three options that
+avoid any turn-round he picked **"One swoop, no loop"**:
+
+- **The path** (`witchPath`): 4.10.1's level glide in and dive across the
+  moon's centre, unchanged (`st.cross` marks the centre), then ONE cubic
+  swoop out: handle 1.0 R on the dive heading, pulling out about R/3
+  below the centre, climbing to R/10 above it and arriving LEVEL at the
+  far edge (`E = [vw, …]`, handle 0.3 of the way), then a level run to
+  vw + W. Every control point is further along x than the last, so x is
+  monotone by construction: she never reverses, `st.fs` is `st.dir` for
+  the whole flight, and the turn-round squeeze code is gone. Over the
+  moon's middle she is dark exactly once.
+- **Measured** (`tools/test-scenes.js`, random moon position and
+  direction, 13 runs at 320/390/1280): heading ≤ 0.19 rad and speed ≤ 5.7%
+  per 1/30 s frame (limits 0.23 and 7%); in her last frame before the edge
+  she climbs 1–13°, against 8–31° at the steepest of the climb. The scene is about 4.2 s on a phone (flight 2.9 s) and 6.3 s
+  at 1280 (flight 5.1 s: the arrival's long desktop glide is 4.10.1's).
+  The moon comes up in 0.5 s (she starts 0.45 s in, off screen) and fades
+  over 0.8 s after she has gone.
+- **The cruise floor's band widened from 2–4.5 R to 2–5.5 R**: 4.10.1's
+  desktop arrival slowed by up to 7.2% in one frame near the moon, over
+  the new 7% limit. The path's shape is unchanged; the desktop glide is
+  0.05–0.15 s longer.
+- **Cost** (`measure-heron.js --scene=witchmoon`, two alternating
+  5-run sets, same machine): phone 2× CPU 663 ms/s vs 4.10.1's 646 and
+  4.9.0's 622; desktop 240 vs 240 and 224; 60 fps. The same per second as
+  4.10.1, ~7% over 4.9.0, for half the scene length. Desktop is measured
+  at `--dsf=1 --throttle=1`: the tool's defaults are the phone's (3×, 4×)
+  and saturate at 1280 (20 fps), which reads as nothing.
+- **Mutation-checked**: twelve one-line breaks of the path (exit on the
+  entry side, a doubled-back handle, a sharp pull-out, a steep exit, a
+  climbing run-out, an abrupt floor, facing backwards, a late moon, dark
+  off the moon, dark twice, tilt unclamped, no hat clamp) each fail the
+  test written for them. `tools/scene-reel.js --exit=N` renders the swoop
+  out at the far edge; `--arrival=N` no longer needs the loop.
+- **`test-heroes.js` "first hero 2s after done" was racy**: it sent the
+  `dcc:herofx` event and read `vt` in two round-trips, so under load a
+  frame of the sped-up clock slipped in between (1.87 s on 4.10.1 and
+  4.10.2 alike, passing alone). It now reads `vt` in the same call as the
+  dispatch; the engine's listener runs inside `dispatchEvent`.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -509,7 +562,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 162,754 raw / 57,056 gzipped (4.10.1, `gzip -c`; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 162,169 raw / 56,792 gzipped (4.10.2, `gzip -c`; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the

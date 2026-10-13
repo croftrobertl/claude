@@ -27,7 +27,7 @@ const SCENES = [
   ['limpkinsnail', 'florida_keys', 'KD — a limpkin wades to the reeds, probes, and pulls up an apple snail'],
   ['hibfloat', 'florida_keys', 'K3 — a hibiscus bloom drops, floats, and a fish nibbles it'],
   /* 4.3.0: the three scenes that were emoji, now Rob's drawn picks */
-  ['witchmoon', 'halloween', 'The witch and her cat swoop across the full moon and loop it (4.10.0)'],
+  ['witchmoon', 'halloween', 'The witch and her cat swoop once across the full moon (4.10.2)'],
   ['arrival', 'snowbird', 'F-A — three flamingos flap down, land, and flap away'],
   ['duckparade', 'spring_canal', 'D-A — a mottled duck hen leads four ducklings along the water'],
 ];
@@ -102,11 +102,13 @@ function ok(c, label, detail) {
       strips.push({ name, story, frames: [...pick].sort((a, b) => a - b).slice(0, 6).map(i => frames[i]) });
     } finally { await ses.close(); }
   }
-  /* 4.8.0 (Rob): the witch flies EDGE TO EDGE with one loop around the
-   * moon — never vanishing mid-screen, the loop on screen from 320px up,
-   * the moon up before she arrives and fading after she has gone. */
+  /* 4.10.2 (Rob: "One swoop, no loop"): the witch glides in, dives across
+   * the moon and swoops out off the FAR side, moving one way across from
+   * entry to exit — never reversing, never turning round — as smoothly as
+   * the arrival; the moon up before she arrives and fading after she has
+   * gone. */
   if (!ONLY.length || ONLY.includes('witchmoon')) {
-    console.log('\n  --- witchmoon: the swoop across the moon, one loop, at 320 / 390 / 1280 ---');
+    console.log('\n  --- witchmoon: one swoop across the moon, at 320 / 390 / 1280 ---');
     for (const w of [320, 390, 1280]) {
       const cfg = config(['--theme=halloween', '--placement=content', '--layering=front', '--density=16', '--diag']);
       cfg.vigOnly = 'witchmoon'; cfg.vigFirst = 300; cfg.vigGap = 1e9; cfg.heroEvery = [9999, 10000]; cfg.forceHour = 12;
@@ -119,7 +121,7 @@ function ok(c, label, detail) {
           const out = []; let geo = null;
           for (let i = 0; i < 30 * 15 && s.vig; i++) {
             const v = s.vigSt;
-            if (v && v.R && !geo) { geo = { R: v.R, MR: v.MR, W: v.W, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh, l0: v.loop0, l1: v.loop1, cross: v.cross }; }
+            if (v && v.R && !geo) { geo = { R: v.R, MR: v.MR, W: v.W, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh, cross: v.cross, dir: v.dir }; }
             const tail = v && v.cape && v.wx != null ? v.cape[0][v.cape[0].length - 1] : null;
             out.push(v ? { x: v.wx, y: v.wy, a: v.moonA, t: v.t2, rot: v.rot, wi: v.wi, onMoon: !!(v.wx != null && v.onMoon), vx: v.vx, vy: v.vy,
               tx: tail && tail.x, ty: tail && tail.y, fs: v.fs, sil: v.sil || 0 } : null);
@@ -132,41 +134,34 @@ function ok(c, label, detail) {
         const gaps = seen.slice(i0, i1 + 1).filter(x => !x).length;
         const xs = r.out.filter(o => o && o.x != null);
         const first = xs[0], last = xs[xs.length - 1];
-        ok(r.ended && gaps === 0, `${w}px: she is drawn continuously from entry to exit (${xs.length} frames)`, `gaps ${gaps}`);
-        ok((first.x < 0 && last.x > g.vw) || (first.x > g.vw && last.x < 0), `${w}px: she enters off one side and leaves off the other`, `${first.x.toFixed(0)} → ${last.x.toFixed(0)} (vw ${g.vw})`);
-        const loop = xs.filter(o => o.wi >= g.l0 && o.wi < g.l1);
-        ok(loop.every(o => Math.abs(Math.hypot(o.x - g.mx, o.y - g.my) - g.R) < 2), `${w}px: the loop is a circle of radius ${g.R} round the moon`, '');
-        const half = g.W / 2;
-        const out = loop.filter(o => o.x < half || o.x > g.vw - half || o.y < half || o.y > g.vh - half);
-        ok(loop.length > 20 && !out.length, `${w}px: the loop (${loop.length} frames, radius ${g.R}) stays inside the screen with her whole width`, JSON.stringify(out[0]));
-        const ang = loop.map(o => Math.atan2(o.y - g.my, o.x - g.mx));
-        let turn = 0; for (let k = 1; k < ang.length; k++) { let d = ang[k] - ang[k - 1]; while (d > Math.PI) { d -= 2 * Math.PI; } while (d < -Math.PI) { d += 2 * Math.PI; } turn += d; }
-        ok(Math.abs(turn) > 5.5 && Math.abs(turn) < 7.2, `${w}px: one full loop around the moon (${(turn * 180 / Math.PI).toFixed(0)}°)`, `${turn}`);
-        /* 4.10.0 (Rob: "Swoop + banked loop") */
-        const near = (o, a) => { const d = Math.atan2(o.y - g.my, o.x - g.mx); return Math.abs(Math.atan2(Math.sin(d - a), Math.cos(d - a))) < 0.35; };
         const spd = o => Math.hypot(o.vx, o.vy);
-        const topV = loop.filter(o => near(o, -Math.PI / 2)).map(spd), botV = loop.filter(o => near(o, Math.PI / 2)).map(spd);
-        const avg = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
-        ok(topV.length && botV.length && avg(topV) < 0.62 * avg(botV), `${w}px: she slows over the top of the loop and speeds up at the bottom (${avg(topV).toFixed(0)} vs ${avg(botV).toFixed(0)} px/s)`, `${topV.length}/${botV.length}`);
+        ok(r.ended && gaps === 0, `${w}px: she is drawn continuously from entry to exit (${xs.length} frames)`, `gaps ${gaps}`);
+        ok((first.x < 0 && last.x > g.vw) || (first.x > g.vw && last.x < 0), `${w}px: she enters off one side and leaves off the FAR side`, `${first.x.toFixed(0)} → ${last.x.toFixed(0)} (vw ${g.vw})`);
+        /* one way across: her horizontal velocity never changes sign, and
+         * never even comes close to stopping */
+        const minVx = Math.min(...xs.slice(1).map(o => o.vx * g.dir));
+        ok(minVx > 20, `${w}px: she only ever moves one way across, entry to exit (slowest sideways ${minVx.toFixed(0)} px/s)`, String(minVx));
+        const facing = new Set(xs.map(o => o.fs));
+        ok(facing.size === 1 && first.fs === g.dir, `${w}px: she faces the way she flies the whole time, never turning round or flipping`, [...facing].join(','));
         const crossing = xs.filter(o => o.onMoon && Math.hypot(o.x - g.mx, o.y - g.my) < g.MR);
         ok(crossing.length >= 3, `${w}px: she dives across the moon's face, silhouetted (${crossing.length} frames)`, String(crossing.length));
         const maxRot = Math.max(...xs.map(o => Math.abs(o.rot)));
-        const leanIn = loop.filter(o => near(o, 0) || near(o, Math.PI)).filter(o => Math.sign(o.rot) === Math.sign(g.mx - o.x)).length;
         ok(maxRot <= 0.6 + 1e-9, `${w}px: she stays upright, never tilted past 0.6 rad (max ${maxRot.toFixed(2)})`, String(maxRot));
-        ok(leanIn >= 4, `${w}px: on the sides of the loop she leans INTO the turn (${leanIn} frames)`, String(leanIn));
+        /* the swoop out ends with her tilt easing back toward level */
+        const outFr = xs.filter(o => o.wi >= g.cross && o.x > 0 && o.x < g.vw);
+        const outMax = Math.max(...outFr.map(o => Math.abs(o.rot))), exitRot = Math.abs(outFr[outFr.length - 1].rot);
+        const climb = o => Math.atan2(-o.vy, Math.abs(o.vx)) * 180 / Math.PI;
+        const steep = Math.max(...outFr.map(climb)), atEdge = climb(outFr[outFr.length - 1]);
+        ok(outFr.length > 10 && atEdge <= 25 && atEdge < steep - 2, `${w}px: she levels off as she leaves (climbing ${atEdge.toFixed(0)}° at the edge, ${steep.toFixed(0)}° at the steepest)`, `${atEdge} ${steep}`);
+        ok(outFr.length > 10 && exitRot < outMax - 0.05, `${w}px: as she leaves her tilt eases back toward level (${exitRot.toFixed(2)} at the edge, ${outMax.toFixed(2)} at most in the swoop out)`, `${exitRot} ${outMax}`);
         const trail = xs.filter(o => o.tx != null && spd(o) > 60).map(o => ((o.tx - o.x) * o.vx + (o.ty - o.y) * o.vy) / spd(o));
-        /* behind her, or swung out to the side in a turn (which a real cape
-         * does): never streaming FORWARD, i.e. never more than half its
-         * length ahead of her along her flight */
+        /* behind her, or swung out to the side as she pulls out (which a
+         * real cape does): never streaming FORWARD, i.e. never more than
+         * half its length ahead of her along her flight */
         const capeLen = 7 * 4.9 * g.W / 100;
         const behind = trail.filter(d => d < 0).length / Math.max(1, trail.length), worst = Math.max(...trail);
         ok(trail.length > 20 && behind >= 0.8 && worst < capeLen / 2, `${w}px: her cape trails her (behind ${(100 * behind).toFixed(0)}% of frames, otherwise swung out; never more than ${worst.toFixed(0)} px ahead)`, `${behind} ${worst}`);
         ok(r.pre && r.pre.frames === 12 && r.pre.moon, `${w}px: the moon and her 12 riding frames were pre-drawn`, JSON.stringify(r.pre));
-        /* 4.10.1 (Rob: "the motion when it starts to go behind the moon is
-         * really weird"): the arrival is smooth */
-        const dive = xs.filter(o => o.wi < g.l0);
-        const minFs = Math.min(...dive.map(o => Math.abs(o.fs)));
-        ok(dive.length > 20 && minFs >= 0.999 && dive.every(o => Math.sign(o.fs) === Math.sign(dive[0].fs)), `${w}px: no turn-round and no squeeze anywhere in the swoop and the dive (min width ${minFs.toFixed(2)})`, String(minFs));
         let maxTurn = 0, maxJump = 0, maxTilt = 0;
         for (let k = 2; k < xs.length; k++) {
           const a0 = Math.atan2(xs[k - 1].vy, xs[k - 1].vx), a1 = Math.atan2(xs[k].vy, xs[k].vx);
@@ -174,24 +169,29 @@ function ok(c, label, detail) {
           maxJump = Math.max(maxJump, Math.abs(spd(xs[k]) - spd(xs[k - 1])) / Math.max(1, spd(xs[k - 1])));
           maxTilt = Math.max(maxTilt, Math.abs(xs[k].rot - xs[k - 1].rot));
         }
-        ok(maxTurn < 0.3, `${w}px: her heading changes smoothly, no kink (largest change ${maxTurn.toFixed(3)} rad in a 1/30 s frame)`, String(maxTurn));
-        ok(maxJump < 0.12, `${w}px: no jump in speed (largest ${(100 * maxJump).toFixed(1)}% in a frame)`, String(maxJump));
+        ok(maxTurn <= 0.23, `${w}px: her heading changes smoothly, no kink (largest change ${maxTurn.toFixed(3)} rad in a 1/30 s frame, limit 0.23)`, String(maxTurn));
+        ok(maxJump <= 0.07, `${w}px: no jump in speed (largest ${(100 * maxJump).toFixed(1)}% in a frame, limit 7%)`, String(maxJump));
         ok(maxTilt <= 2.2 / 30 + 1e-6, `${w}px: her tilt never snaps (largest ${maxTilt.toFixed(3)} rad in a frame, limit ${(2.2 / 30).toFixed(3)})`, String(maxTilt));
-        /* the silhouette: her WHOLE figure, one stretch only, faded, never
-         * during a turn-round */
-        let rises = 0; for (let k = 1; k < xs.length; k++) { if (xs[k].onMoon && !xs[k - 1].onMoon) { rises++; } }
+        /* the silhouette: her WHOLE figure, exactly once, only over the moon */
+        let rises = 0, darkRuns = 0;
+        for (let k = 1; k < xs.length; k++) {
+          if (xs[k].onMoon && !xs[k - 1].onMoon) { rises++; }
+          if (xs[k].sil > 0 && !(xs[k - 1].sil > 0)) { darkRuns++; }
+        }
+        if (xs[0].sil > 0) { darkRuns++; }
         const fullDark = xs.filter(o => o.sil >= 1).length, fadeIn = xs.filter((o, k) => k && o.sil > 0 && o.sil < 1 && o.sil > xs[k - 1].sil).length;
-        ok(rises === 1 && fullDark >= 4, `${w}px: she goes dark once, across the moon (${fullDark} frames fully dark)`, `rises ${rises}`);
+        const farOn = xs.filter(o => o.onMoon && Math.hypot(o.x - g.mx, o.y - g.my) > g.MR + g.W);
+        ok(rises === 1 && darkRuns === 1 && fullDark >= 4, `${w}px: she goes dark exactly once, across the moon (${fullDark} frames fully dark)`, `rises ${rises}, dark runs ${darkRuns}`);
+        ok(!farOn.length, `${w}px: she is dark only while she overlaps the moon`, JSON.stringify(farOn[0]));
         ok(fadeIn >= 3 && fadeIn <= 6, `${w}px: the silhouette fades in over about 150 ms (${fadeIn} frames)`, String(fadeIn));
-        ok(xs.filter(o => o.sil > 0).every(o => Math.abs(o.fs) >= 0.999), `${w}px: no turn-round while she is dark`, '');
         const top = Math.min(...xs.filter(o => o.x > 0 && o.x < g.vw).map(o => o.y));
         ok(top - 0.56 * g.W >= -2, `${w}px: her hat never leaves the top of the screen (highest point ${top.toFixed(0)}, hat ${(0.56 * g.W).toFixed(0)} above it)`, String(top));
-        const total = r.out.length / 30;
-        ok(total >= 7 && total <= 11.5, `${w}px: the whole pass takes ${total.toFixed(1)} s (7-11.5)`, `${total}`);
-        const onAt = r.out.find(o => o && o.x != null && o.x > 0 && o.x < g.vw);
-        ok(onAt && onAt.a >= 0.99, `${w}px: the moon is fully up before she comes on screen`, JSON.stringify(onAt));
+        const total = r.out.length / 30, flight = xs.length / 30;
+        ok(total >= 3.5 && total <= 6.8, `${w}px: the whole scene takes ${total.toFixed(1)} s, her flight ${flight.toFixed(1)} s (scene 3.5-6.8)`, `${total}`);
+        const onAt = r.out.find(o => o && o.x != null && o.x > -g.W / 2 && o.x < g.vw + g.W / 2);
+        ok(onAt && onAt.a >= 0.99, `${w}px: the moon is fully up before any of her comes on screen`, JSON.stringify(onAt));
         const after = r.out.slice(i1 + 1).filter(Boolean);
-        ok(after.length >= 20 && after[after.length - 1].a < 0.1 && after.every((o, k) => k === 0 || o.a <= after[k - 1].a + 1e-9), `${w}px: the moon fades out after she has gone (${(after.length / 30).toFixed(1)} s)`, JSON.stringify(after.slice(-1)));
+        ok(after.length >= 15 && after[after.length - 1].a < 0.1 && after.every((o, k) => k === 0 || o.a <= after[k - 1].a + 1e-9), `${w}px: the moon fades out after she has gone (${(after.length / 30).toFixed(1)} s)`, JSON.stringify(after.slice(-1)));
       } finally { await ses.close(); }
     }
   }

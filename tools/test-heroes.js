@@ -89,8 +89,10 @@ async function waitVt(page, v, maxMs = 60000) {
       await waitVt(s.page, 47);
       const before = await s.page.evaluate(() => window.DCCSeasonsEngine._state.heroLog.length);
       ok(before === 0, 'busy: no hero starts while the hero-image show runs', `${before} heroes by 47s`);
-      await s.page.evaluate(() => { window.DCCHeroFx.state = 'done'; document.dispatchEvent(new CustomEvent('dcc:herofx', { detail: { state: 'done' } })); });
-      const doneAt = await s.page.evaluate(() => window.DCCSeasonsEngine._state.vt);
+      /* read the clock in the SAME call as the event (the engine's listener
+       * runs inside dispatchEvent): a second round-trip let a frame of the
+       * sped-up clock slip in between and read ~0.13 s late under load */
+      const doneAt = await s.page.evaluate(() => { window.DCCHeroFx.state = 'done'; document.dispatchEvent(new CustomEvent('dcc:herofx', { detail: { state: 'done' } })); return window.DCCSeasonsEngine._state.vt; });
       await waitVt(s.page, doneAt + 4);
       const log = await s.page.evaluate(() => window.DCCSeasonsEngine._state.heroLog);
       const d = log[0] ? log[0].start - doneAt : null;

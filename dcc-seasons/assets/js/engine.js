@@ -1135,7 +1135,7 @@
 	 * hat tip, skirt hem and cat's tail sway); the engine pre-draws 12 of
 	 * them at load. Her CAPE and HAIR are not in it: they are short chains
 	 * the engine simulates live (gravity, air drag), so they trail behind
-	 * her through every turn. WITCH_CAPE / WITCH_HAIR are their anchors. */
+	 * her through the dive and the swoop. WITCH_CAPE / WITCH_HAIR are their anchors. */
 	var WITCH_CAPE = [[-3, -22], [2.5, -17.5]], WITCH_CAPE_K = 4, WITCH_HAIR = [[-1.5, -29], [0.2, -27], [-0.8, -25]];
 	var WITCH_BOX = [-56, -56, 58, 17];
 	var WC = { ink: '#16131D', dress: '#1E1928', dress2: '#2A2236', purple: '#9C36B5', purple2: '#6E2A86', skin: '#E2CDB6', skin2: '#C4AA90',
@@ -4335,26 +4335,23 @@
 			cx.beginPath(); cx.arc(mx, my, 58, 0, TAU); cx.fill();
 			cx.restore();
 		}
-		/* The witch's pass (Rob, 4.10.0 "Swoop + banked loop"; smoothed in
-		 * 4.10.1). Built in the left-to-right frame and mirrored:
+		/* The witch's pass (Rob, 4.10.2 "One swoop, no loop"). Built in the
+		 * left-to-right frame and mirrored:
 		 *   - a level glide in from the side edge, high;
 		 *   - the dive: down across the CENTRE of the moon, heading down and
 		 *     forward — the one stretch where she is in front of it;
-		 *   - the pull-out: ONE continuous turn, through level to climbing,
-		 *     joining the loop TANGENTIALLY on its right side (15° above
-		 *     level), heading up — no kink, no turn-round anywhere in
-		 *     the dive. (A curve that starts at a circle's centre can only
-		 *     meet the circle tangentially by bending through ~180°: joining
-		 *     lower down forced an S-bend, 0.9 rad in one frame.)
-		 *   - ONE loop round the moon (335°: it leaves 25° past where it
-		 *     joined, heading up and a little forward);
-		 *   - the climb away, on the same heading, off the far edge.
-		 * Every join is tangent-continuous. Her speed follows height like a
-		 * real loop (v² = vB² − 2g·climb: 45% of the bottom speed over the
-		 * top), with a floor that rises smoothly far from the moon so long
-		 * desktop glides do not crawl. All sizes come from ONE factor k of
-		 * the 390px phone (moon 41, witch 84, loop moon + 0.6 witch + 6), so
-		 * a desktop is the phone's picture made bigger, not a wider path. */
+		 *   - the swoop out: ONE continuous curve that pulls out below the
+		 *     moon, climbs and levels off as it leaves the FAR edge.
+		 * The glide and the dive are 4.10.1's, unchanged. Every control
+		 * point of the swoop out lies further along than the one before
+		 * it, so x only ever grows: she never slows to a stop sideways,
+		 * never reverses and never turns round (4.10.1's loop made her turn
+		 * round twice, which Rob did not like). Her speed follows height
+		 * (v² = vB² − 2g·climb, vB at one path scale below the moon), with
+		 * a floor that rises smoothly far from the moon so long desktop
+		 * glides do not crawl. All sizes come from ONE factor k of the
+		 * 390px phone (moon 41, witch 84, path scale moon + 0.6 witch + 6),
+		 * so a desktop is the phone's picture made bigger. */
 		var WITCH_W = 84, WFR = 12;
 		function witchK() { return clamp(vw / 390, 0.82, 1.3); }
 		function witchW() { var w = MT.round(84 * witchK()); if (w !== WITCH_W) { WITCH_W = w; wcFrames = []; wcPts = null; } return w; }
@@ -4366,48 +4363,38 @@
 					v * v * v * p0[1] + 3 * v * v * u * p1[1] + 3 * v * u * u * p2[1] + u * u * u * p3[1]]);
 			}
 		}
-		var WJ = -15 * MT.PI / 180;  /* where the pull-out joins the loop: its right side, heading up */
-		var WJ2 = 10 * MT.PI / 180;  /* where the climb away leaves it */
 		function witchPath(st) {
 			var R = st.R, Wd = st.W, mx = st.dir > 0 ? st.mx : vw - st.mx, my = st.my, i;
 			/* in and out high, but never so high her hat leaves the screen */
 			var top = Wd * 0.6 + 6;
 			var P0 = [-Wd, mx2(top, my - R * 1.1)], Q = [mx, my], d1 = [0.62, 0.78];
-			var J = [mx + R * cos(WJ), my + R * sin(WJ)], tJ = [sin(WJ), -cos(WJ)];
-			var P3 = [vw + Wd, mx2(top, my - R * 1.3)], d3 = [0.993, -0.12];
-			var L1 = sqrt(sq(Q[0] - P0[0]) + sq(Q[1] - P0[1])), L2 = sqrt(sq(J[0] - Q[0]) + sq(J[1] - Q[1])), L3 = sqrt(sq(P3[0] - J[0]) + sq(P3[1] - J[1]));
+			var L1 = sqrt(sq(Q[0] - P0[0]) + sq(Q[1] - P0[1]));
 			/* the entry's last handle along the dive heading, but never above
 			 * the glide (so the curve never bulges up past where it started) */
 			var h1 = mn(0.42 * L1, (Q[1] - P0[1]) / d1[1]);
 			var pts = [P0];
 			bezPts(pts, P0, [P0[0] + 0.5 * (Q[0] - P0[0]), P0[1]], [Q[0] - d1[0] * h1, Q[1] - d1[1] * h1], Q, 48);
 			st.cross = pts.length - 1;
-			/* the pull-out: one continuous turn, down-and-forward, forward,
-			 * then up (handles 0.7 R and 0.55 R, tuned so the heading never
-			 * turns more than ~0.23 rad in a 30 fps frame; at 15° above level
-			 * she is heading up and only a little back, so she never turns
-			 * round in it) */
-			bezPts(pts, Q, [Q[0] + d1[0] * 0.7 * R, Q[1] + d1[1] * 0.7 * R], [J[0] - tJ[0] * 0.55 * R, J[1] - tJ[1] * 0.55 * R], J, 40);
-			st.loop0 = pts.length - 1;
-			/* one loop, ending 25° short of a full turn on its right side
-			 * (+10°), heading up and a little forward: the climb away starts
-			 * there with room above it to turn gently */
-			var WX = WJ2 - TAU, span = WJ - WX;
-			for (i = 1; i <= 120; i++) { var th = WJ - span * i / 120; pts.push([mx + R * cos(th), my + R * sin(th)]); }
-			J = [mx + R * cos(WJ2), my + R * sin(WJ2)]; tJ = [sin(WJ2), -cos(WJ2)];
-			st.loop1 = pts.length - 1;
-			/* the climb's first handle, never above where her hat would leave the screen */
-			L3 = sqrt(sq(P3[0] - J[0]) + sq(P3[1] - J[1]));
-			var h3 = mn(0.45 * L3, 1.8 * R, (J[1] - top) / -tJ[1]);
-			bezPts(pts, J, [J[0] + tJ[0] * h3, J[1] + tJ[1] * h3], [P3[0] - d3[0] * 0.45 * L3, P3[1] - d3[1] * 0.45 * L3], P3, 64);
+			/* the swoop out: from the moon's centre on the dive heading
+			 * (handle 1.0 R) it pulls out about a third of R below the
+			 * centre and climbs to a tenth of R above it, arriving LEVEL at
+			 * the far edge (handle 0.3 of the way) — so her climb eases off
+			 * on screen and she leaves flying level. Tuned so the heading
+			 * never turns more than ~0.19 rad in a 30 fps frame, and so she
+			 * clears the moon once she has left it. */
+			var E = [vw, mx2(top, my - R * 0.1)], L3 = sqrt(sq(E[0] - Q[0]) + sq(E[1] - Q[1]));
+			bezPts(pts, Q, [Q[0] + d1[0] * R, Q[1] + d1[1] * R], [E[0] - 0.3 * L3, E[1]], E, 96);
+			for (i = 1; i <= 8; i++) { pts.push([vw + Wd * i / 8, E[1]]); }
 			if (st.dir < 0) { for (i = 0; i < pts.length; i++) { pts[i][0] = vw - pts[i][0]; } }
-			/* time along the path: speed from height, a floor far from the moon */
-			var yB = -1e9, len = [0], tm = [0], gk = 0.1994 / R, vB = 3.3 * R, cxm = st.mx;
-			for (i = 0; i < pts.length; i++) { yB = mx2(yB, pts[i][1]); }
+			/* time along the path: speed from height (vB one path scale below
+			 * the moon's centre, where 4.10.1 set it), a floor far from it */
+			var yB = my + R, len = [0], tm = [0], gk = 0.1994 / R, vB = 3.3 * R, cxm = st.mx;
 			for (i = 1; i < pts.length; i++) {
 				var ds = sqrt(sq(pts[i][0] - pts[i - 1][0]) + sq(pts[i][1] - pts[i - 1][1]));
 				var ym = (pts[i][1] + pts[i - 1][1]) / 2, xm = (pts[i][0] + pts[i - 1][0]) / 2;
-				var far = clamp((abs(xm - cxm) / R - 2) / 2.5, 0, 1), vf = 0.42 + 0.53 * far * far * (3 - 2 * far);
+				/* the floor eases in over 2-5.5 R from the moon: never more
+				 * than ~5% slower from one frame to the next */
+				var far = clamp((abs(xm - cxm) / R - 2) / 3.5, 0, 1), vf = 0.42 + 0.53 * far * far * (3 - 2 * far);
 				var v = sqrt(mx2(vf * vf, 1 - 2 * gk * (yB - ym)));
 				len.push(len[i - 1] + ds);
 				tm.push(tm[i - 1] + ds / (v * vB));
@@ -4521,7 +4508,7 @@
 			/* velocity and a smoothed acceleration, from her path */
 			if (st.vx == null) {
 				var dl = sqrt(sq(w.dx) + sq(w.dy)) || 1;
-				st.vx = w.dx / dl * 160; st.vy = w.dy / dl * 160; st.ax = 0; st.ay = 0; st.face = st.dir; st.fs = st.dir; st.ph = 0; st.ft = 0;
+				st.vx = w.dx / dl * 160; st.vy = w.dy / dl * 160; st.ax = 0; st.ay = 0; st.fs = st.dir; st.ph = 0; st.ft = 0;
 			} else if (dt > 0) {
 				var nvx = (w.x - st.wx) / dt, nvy = (w.y - st.wy) / dt, kk = mn(1, dt / 0.18);
 				st.ax += ((nvx - st.vx) / dt - st.ax) * kk; st.ay += ((nvy - st.vy) / dt - st.ay) * kk;
@@ -4529,14 +4516,12 @@
 			}
 			st.wx = w.x; st.wy = w.y;
 			var sp = sqrt(sq(st.vx) + sq(st.vy));
-			/* upright (Rob, 4.9.0): she faces the way she flies, turning round
-			 * (squeezing through edge-on) rather than flipping */
-			if (abs(st.vx) > 0.35 * sp) { st.face = st.vx > 0 ? 1 : -1; }
-			st.fs += clamp(st.face - st.fs, -dt * 8, dt * 8);
+			/* upright (Rob, 4.9.0), facing the way she flies: her path only
+			 * ever moves one way across (4.10.2), so st.fs is st.dir, fixed */
 			/* she leans into the turn like a rider: along the felt gravity
 			 * (the path's acceleration plus g), never more than about 34° */
 			var lean = atan2(st.ax, -(st.ay - 900));
-			var tilt = atan2(st.vy, st.vx) - (st.face > 0 ? 0 : MT.PI);
+			var tilt = atan2(st.vy, st.vx) - (st.fs > 0 ? 0 : MT.PI);
 			while (tilt > MT.PI) { tilt -= TAU; }
 			while (tilt < -MT.PI) { tilt += TAU; }
 			st.lean = lean;
@@ -4593,9 +4578,7 @@
 			var u = WITCH_W / 100, fr = wcGet(MT.floor(st.ph * WFR) % WFR);
 			g.save();
 			g.translate((st.wx - ox) * sc, (st.wy - oy) * sc); g.rotate(st.rot);
-			/* turning round: a quick squeeze, never thinner than 30% */
-			var fsx = st.fs < 0 ? mn(-0.3, st.fs) : mx2(0.3, st.fs);
-			g.scale(-fsx * sc, sc);
+			g.scale(-st.fs * sc, sc);
 			g.drawImage(fr.c, fr.x, fr.y, fr.w, fr.h);
 			g.restore();
 			g.save();
@@ -4607,14 +4590,14 @@
 		}
 		/* Does any part of her overlap the moon? Her painted pixels (wcPts,
 		 * in her own frame — her body BOX has empty corners that reach the
-		 * moon from the loop when nothing of her does), or any point of her
+		 * moon from beside it when nothing of her does), or any point of her
 		 * cape or hair. */
 		function witchOnMoon(st) {
 			var u = WITCH_W / 100, r = st.MR, c = cos(st.rot), s = sin(st.rot), i, j;
 			wcGet(0);
 			var dx = st.mx - st.wx, dy = st.my - st.wy, lx = (dx * c + dy * s) / u, ly = (-dx * s + dy * c) / u;
-			var fsx = st.fs < 0 ? mn(-0.3, st.fs) : mx2(0.3, st.fs), rr = sq(r / u), P = wcPts || [];
-			for (i = 0; i < P.length; i++) { if (sq(lx - -fsx * P[i][0]) + sq(ly - P[i][1]) < rr) { return true; } }
+			var rr = sq(r / u), P = wcPts || [];
+			for (i = 0; i < P.length; i++) { if (sq(lx - -st.fs * P[i][0]) + sq(ly - P[i][1]) < rr) { return true; } }
 			var all = st.cape.concat(st.hair);
 			for (j = 0; j < all.length; j++) { for (i = 1; i < all[j].length; i++) { if (sq(all[j][i].x - st.mx) + sq(all[j][i].y - st.my) < r * r) { return true; } } }
 			return false;
@@ -4876,15 +4859,17 @@
 				}
 				return false;
 			} },
-			/* Halloween (Rob, 4.10.0): the witch dives across the full moon,
-			 * makes one wide loop around it and climbs away. 4.8.0 flew her
-			 * edge to edge at an even speed; until 4.7.1 she vanished
-			 * mid-screen by design. */
+			/* Halloween (Rob, 4.10.2 "One swoop, no loop"): the full moon comes
+			 * up, the witch dives across it and swoops out off the far side,
+			 * and the moon fades. 4.10.0-4.10.1 looped her round it; 4.8.0
+			 * flew her edge to edge at an even speed; until 4.7.1 she
+			 * vanished mid-screen by design. */
 			witchmoon: { actors: 2, run: function (st, dt) {
 				if (!st.on) {
 					st.on = 1; st.t2 = 0; st.dir = sgn();
 					st.MR = moonR(); st.W = witchW();
-					/* the loop clears the moon by her own half-width (4.10.1) */
+					/* the path's scale: 4.10.1's, so the glide and the dive are
+					 * unchanged (it was the radius of the loop) */
 					st.R = st.MR + 0.6 * st.W + 6;
 					var edge = st.R + 0.58 * st.W + 8;
 					st.mx = clamp(vw * rnd(0.38, 0.62), edge, vw - edge);
@@ -4892,11 +4877,12 @@
 					witchPath(st);
 					hdr = null;                                     /* the header's letters, measured afresh */
 					st.T = st.TT;                                   /* her flight, entry to exit, at her own speed */
-					st.in = 0.8;                                    /* the moon is up before she arrives */
+					st.in = 0.45;                                   /* the moon is up before she arrives */
 				}
 				st.t2 += dt;
 				var tw = st.t2 - st.in, gone = st.in + st.T, a;
-				a = st.t2 < 1 ? st.t2 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 1.2, 0, 1) : 1);
+				/* the moon: up in 0.5 s, fading over 0.8 s once she has gone */
+				a = st.t2 < 0.5 ? st.t2 / 0.5 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 0.8, 0, 1) : 1);
 				var mo = moonGet();
 				cx.save();
 				/* fully opaque once up: nothing but the witch crosses it (a
@@ -4909,7 +4895,7 @@
 				cx.restore();
 				if (tw > 0 && tw < st.T) {
 					var wp = witchAt(st, tw / st.T);
-					st.wi = wp.i;   /* which stretch of the path: swoop, loop (loop0-loop1) or climb */
+					st.wi = wp.i;   /* where on the path: glide and dive up to st.cross, then the swoop out */
 					witchStep(st, wp, dt);
 					witchDraw(st, 1, dt);
 				} else {
@@ -4920,7 +4906,7 @@
 				if (st.wx != null) { var wb = 1.2 * st.W; cut.push([st.wx - wb, st.wy - wb, 2 * wb, 2 * wb]); }
 				hdrCut(cut, st.t2);
 				st.moonA = a;
-				return st.t2 > gone + 1.2;
+				return st.t2 > gone + 0.8;
 			} },
 			/* ---- 4.2.0: Summer on the Canal and Florida Keys scenes. Each
 			 * picked by Rob from rendered frame strips; the approved art and

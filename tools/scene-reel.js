@@ -5,7 +5,7 @@
  * (so every frame is exact and nothing depends on machine load).
  *
  *   node tools/scene-reel.js --scene=witchmoon --theme=halloween --width=390 \
- *        --out="build/Seasons - witch 390" [--frames=8] [--closeup=18] [--follow=18] [--arrival=18] [--banner=home|page]
+ *        --out="build/Seasons - witch 390" [--frames=8] [--closeup=18] [--follow=18] [--arrival=18] [--exit=18] [--banner=home|page]
  *   node tools/scene-reel.js --hero=heron --theme=florida_keys --width=1280 --out=... [--set=heronLand:1]
  *
  * --set=key:value (repeatable) sets a debug CFG key on the page config.
@@ -70,7 +70,7 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
         const s = window.DCCSeasonsEngine._state;
         s.tick(1000 / 30, 1);
         const v = s.vigSt || {};
-        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, MR: v.MR, W: v.W, wi: v.wi, l0: v.loop0, pts: v.pts || null };
+        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, MR: v.MR, W: v.W, wi: v.wi, cross: v.cross, dir: v.dir, pts: v.pts || null };
       }, live);
       if (st.pts && !pathPts) { pathPts = st.pts; }
       st.pts = null;
@@ -103,7 +103,7 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
     await strip.setViewportSize({ width: sw, height: 900 });
     await strip.locator('.row').screenshot({ path: OUT + ' strip.png' });
     /* --closeup=N: N frames magnified around the scene's centre (mx, my)
-     * and its loop radius, in a grid, for judging the motion itself */
+     * and its path scale R, in a grid, for judging the motion itself */
     const CLOSE = +arg('closeup', 0), g0 = track.find(t => t.R);
     if (CLOSE && g0) {
       const half = g0.R + 80, bx = g0.mx - half, by = g0.my - half, box = 2 * half, cell = 300, k = cell / box;
@@ -118,21 +118,36 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
       await strip.setViewportSize({ width: Math.min(CLOSE, 6) * (cell + 6) + 16, height: 900 });
       await strip.locator('.g').screenshot({ path: OUT + ' closeup.png' });
     }
-    /* --arrival=N: the dive onto the moon, a fixed camera on the moon,
-     * N frames from just before she reaches it until she is on the loop */
-    const ARR = +arg('arrival', 0);
-    if (ARR && g0 && g0.MR) {
-      const near = on.filter(i => track[i].wi != null && Math.hypot(xy[i][0] - g0.mx, xy[i][1] - g0.my) < g0.MR + 1.6 * g0.W && track[i].wi <= track[i].l0 + 12);
-      const half = g0.MR + 1.4 * g0.W, cell = 300, k = cell / (2 * half), bx = g0.mx - half, by = g0.my - half;
-      const ap = [];
-      for (let j = 0; j < ARR; j++) { ap.push(near[Math.round(j * (near.length - 1) / (ARR - 1))]); }
+    /* a fixed camera: N frames of `sel`, in a box of side 2*half centred
+     * on (cx, cy), magnified to 300px cells */
+    const sheet = async (sel, N, cx, cy, half, name) => {
+      const cell = 300, k = cell / (2 * half), bx = cx - half, by = cy - half, ap = [];
+      for (let j = 0; j < N; j++) { ap.push(sel[Math.round(j * (sel.length - 1) / (N - 1))]); }
       await strip.setViewportSize({ width: 1600, height: 900 });
       await strip.setContent(`<!doctype html><style>body{margin:0;background:#1f2328;font:13px system-ui;color:#eee}
         .g{display:grid;grid-template-columns:repeat(6,${cell}px);gap:6px;padding:8px}.c div{width:${cell}px;height:${cell}px;overflow:hidden;border:1px solid #444}
         .c img{width:${W * k}px;display:block;margin-left:${-bx * k}px;margin-top:${-by * k}px}.t{padding:3px 0}</style><div class="g">${ap.map(i => `<div class="c"><div><img src="${b64(i)}"></div><p class="t">${(i / FPS).toFixed(2)} s</p></div>`).join('')}</div>`);
       await strip.waitForTimeout(300);
       await strip.setViewportSize({ width: 6 * (cell + 6) + 16, height: 900 });
-      await strip.locator('.g').screenshot({ path: OUT + ' arrival.png' });
+      await strip.locator('.g').screenshot({ path: OUT + ` ${name}.png` });
+    };
+    /* --arrival=N: the dive onto the moon, a fixed camera on the moon, N
+     * frames from just before she reaches it until she has left it */
+    const ARR = +arg('arrival', 0);
+    const nearMoon = i => track[i].wi != null && Math.hypot(xy[i][0] - g0.mx, xy[i][1] - g0.my) < g0.MR + 1.6 * g0.W;
+    if (ARR && g0 && g0.MR) {
+      const a0 = on.findIndex(nearMoon);
+      let a1 = a0; while (a1 + 1 < on.length && nearMoon(on[a1 + 1])) { a1++; }
+      await sheet(on.slice(a0, a1 + 1), ARR, g0.mx, g0.my, g0.MR + 1.4 * g0.W, 'arrival');
+    }
+    /* --exit=N: the swoop out, a fixed camera flush with the far edge of
+     * the screen, N frames from clearing the moon until she has gone */
+    const EXT = +arg('exit', 0);
+    if (EXT && g0 && g0.MR) {
+      const sel = on.filter(i => track[i].wi >= track[i].cross && Math.hypot(xy[i][0] - g0.mx, xy[i][1] - g0.my) > g0.MR + 0.7 * g0.W);
+      const half = g0.MR + 1.4 * g0.W, ys = sel.map(i => xy[i][1]);
+      const cx = g0.dir > 0 ? W - half : half;
+      await sheet(sel, EXT, cx, (Math.min(...ys) + Math.max(...ys)) / 2, half, 'exit');
     }
     /* --follow=N: N frames magnified 3x around the actor itself */
     const FOL = +arg('follow', 0);

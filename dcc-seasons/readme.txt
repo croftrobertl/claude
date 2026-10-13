@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.1
+Stable tag: 4.10.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.2 =
+Rob's pick on staging: "One swoop, no loop". Staging first; live only
+after Rob signs off. Rollback: reinstall the 4.10.1 zip (staging) or
+4.9.0 (live); no setting or stored data changes.
+
+* The witch no longer loops the moon, so she never turns round: she
+  glides in and dives across the moon in silhouette exactly as before,
+  then swoops out below it, climbs, and levels off as she leaves the far
+  side of the screen. She moves one way across from start to finish and
+  always faces the way she flies.
+* The swoop out is as smooth as the arrival: no kink, no jump in speed,
+  her tilt easing back toward level as she goes, her hat always on the
+  screen. She goes dark once, only while she is in front of the moon.
+* The scene is shorter: about 4 seconds on a phone, about 6 on a desktop.
+  The moon is up before she arrives and fades once she has gone.
+* Unchanged: the title in front of the moon and the witch, her cape and
+  riding cycle, the opaque moon, the timing, and every other theme.
 
 = 4.10.1 =
 Rob's review of 4.10.0 on staging ("It looks great"), fixed. Staging

@@ -29,8 +29,8 @@ page — a sprite, a scene, a hero — meets all of this before it ships:
    ±10% with machine load) and report both, with the frame rate.
 4. **Believable physics.** Eased, never constant speed: the heron's
    downstroke is longer than its upstroke and it glides between bouts;
-   the witch's speed follows her height round the loop (fast at the
-   bottom, slow over the top) and she leans into the turn along the felt
+   the witch's speed follows her height through the dive and the swoop
+   out (fast at the bottom, slower high up) and she leans along the felt
    gravity; cloth and hair are simulated chains under gravity and drag.
 5. **Rob sees it before it ships.** Frame strips (a close-up of the
    motion, and the subject large on a light and a dark ground) plus a
@@ -49,6 +49,7 @@ made from rendered options (CLAUDE.md, "Rob designs it by choosing").
 | 4.9.0 | Great Blue Heron crossing | 537 ms/s (old heron 570) | 100 (106) | 32 poses, 92 ms, 3.3 MB |
 | 4.10.0 | Witch over the full moon | mean 474 ms/s over four alternating 5-run sets (4.9.0's witch: 429) — **about 10% more** | 72 (64) | moon + 12 frames, ~48 ms, 1.3 MB |
 | 4.10.1 | Witch over the moon, smoothed, cloth cape, behind the title | a slower machine: at 2× CPU 621 ms/s vs 4.9.0's witch 566 (two alternating 5-run sets) — **about 10% more**; at 4× both saturate, 47–48 fps vs 51–52 | 218 (196) | moon + 12 frames, 42–56 ms, 1.3 MB |
+| 4.10.2 | Witch over the moon, one swoop, no loop | another machine: at 2× CPU mean 663 ms/s vs 4.10.1's 646 and 4.9.0's 622 (two alternating 5-run sets each) — **the same per second as 4.10.1, about 7% over 4.9.0**, for a scene half as long (4.3 s vs 8.2 s), so about half the work per scene | 240 (4.10.1 240, 4.9.0 224); 6.3 s vs 10.1 s | moon + 12 frames, ~48 ms, 1.3 MB |
 
 All at 60 fps unless stated. Absolute numbers depend on the machine the
 run is on (the 4.10.1 container was about twice as slow): compare only
