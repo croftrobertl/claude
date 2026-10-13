@@ -106,6 +106,7 @@ $config = [
     'frontZ'       => isset($args['frontz']) ? (int) $args['frontz'] : 9000,
     'placement'    => (string) ($args['placement'] ?? 'footer'),
     'footerSel'    => 'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer',
+    'headerSel'    => '#masthead, header.site-header, header[role="banner"], .elementor-location-header',
     'backdropHost' => '',
     /* Layer 1. --subtle=<effect> pins one effect for a contact sheet;
      * --subtle=off turns the layer off entirely. */

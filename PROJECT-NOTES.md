@@ -48,8 +48,11 @@ made from rendered options (CLAUDE.md, "Rob designs it by choosing").
 |---|---|---|---|---|
 | 4.9.0 | Great Blue Heron crossing | 537 ms/s (old heron 570) | 100 (106) | 32 poses, 92 ms, 3.3 MB |
 | 4.10.0 | Witch over the full moon | mean 474 ms/s over four alternating 5-run sets (4.9.0's witch: 429) — **about 10% more** | 72 (64) | moon + 12 frames, ~48 ms, 1.3 MB |
+| 4.10.1 | Witch over the moon, smoothed, cloth cape, behind the title | a slower machine: at 2× CPU 621 ms/s vs 4.9.0's witch 566 (two alternating 5-run sets) — **about 10% more**; at 4× both saturate, 47–48 fps vs 51–52 | 218 (196) | moon + 12 frames, 42–56 ms, 1.3 MB |
 
-All at 60 fps. Most of an effect's cost is the canvas repainting at full
+All at 60 fps unless stated. Absolute numbers depend on the machine the
+run is on (the 4.10.1 container was about twice as slow): compare only
+builds measured side by side on the same machine. Most of an effect's cost is the canvas repainting at full
 rate while anything moves, which every hero and scene pays.
 
 **4.10.0 is over the bar by about 10%, and that was reported, not

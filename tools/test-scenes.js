@@ -119,10 +119,10 @@ function ok(c, label, detail) {
           const out = []; let geo = null;
           for (let i = 0; i < 30 * 15 && s.vig; i++) {
             const v = s.vigSt;
-            if (v && v.R && !geo) { geo = { R: v.R, MR: v.MR, W: v.W, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh, l0: v.loop0, l1: v.loop1 }; }
+            if (v && v.R && !geo) { geo = { R: v.R, MR: v.MR, W: v.W, mx: v.mx, my: v.my, vw: s.vw, vh: s.vh, l0: v.loop0, l1: v.loop1, cross: v.cross }; }
             const tail = v && v.cape && v.wx != null ? v.cape[0][v.cape[0].length - 1] : null;
             out.push(v ? { x: v.wx, y: v.wy, a: v.moonA, t: v.t2, rot: v.rot, wi: v.wi, onMoon: !!(v.wx != null && v.onMoon), vx: v.vx, vy: v.vy,
-              tx: tail && tail.x, ty: tail && tail.y } : null);
+              tx: tail && tail.x, ty: tail && tail.y, fs: v.fs, sil: v.sil || 0 } : null);
             s.tick(1000 / 30, 1);
           }
           return { out, geo, ended: !s.vig, pre: s.witch };
@@ -158,17 +158,100 @@ function ok(c, label, detail) {
         /* behind her, or swung out to the side in a turn (which a real cape
          * does): never streaming FORWARD, i.e. never more than half its
          * length ahead of her along her flight */
-        const capeLen = 8 * 4.6 * g.W / 100;
+        const capeLen = 7 * 4.9 * g.W / 100;
         const behind = trail.filter(d => d < 0).length / Math.max(1, trail.length), worst = Math.max(...trail);
         ok(trail.length > 20 && behind >= 0.8 && worst < capeLen / 2, `${w}px: her cape trails her (behind ${(100 * behind).toFixed(0)}% of frames, otherwise swung out; never more than ${worst.toFixed(0)} px ahead)`, `${behind} ${worst}`);
         ok(r.pre && r.pre.frames === 12 && r.pre.moon, `${w}px: the moon and her 12 riding frames were pre-drawn`, JSON.stringify(r.pre));
+        /* 4.10.1 (Rob: "the motion when it starts to go behind the moon is
+         * really weird"): the arrival is smooth */
+        const dive = xs.filter(o => o.wi < g.l0);
+        const minFs = Math.min(...dive.map(o => Math.abs(o.fs)));
+        ok(dive.length > 20 && minFs >= 0.999 && dive.every(o => Math.sign(o.fs) === Math.sign(dive[0].fs)), `${w}px: no turn-round and no squeeze anywhere in the swoop and the dive (min width ${minFs.toFixed(2)})`, String(minFs));
+        let maxTurn = 0, maxJump = 0, maxTilt = 0;
+        for (let k = 2; k < xs.length; k++) {
+          const a0 = Math.atan2(xs[k - 1].vy, xs[k - 1].vx), a1 = Math.atan2(xs[k].vy, xs[k].vx);
+          maxTurn = Math.max(maxTurn, Math.abs(Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0))));
+          maxJump = Math.max(maxJump, Math.abs(spd(xs[k]) - spd(xs[k - 1])) / Math.max(1, spd(xs[k - 1])));
+          maxTilt = Math.max(maxTilt, Math.abs(xs[k].rot - xs[k - 1].rot));
+        }
+        ok(maxTurn < 0.3, `${w}px: her heading changes smoothly, no kink (largest change ${maxTurn.toFixed(3)} rad in a 1/30 s frame)`, String(maxTurn));
+        ok(maxJump < 0.12, `${w}px: no jump in speed (largest ${(100 * maxJump).toFixed(1)}% in a frame)`, String(maxJump));
+        ok(maxTilt <= 2.2 / 30 + 1e-6, `${w}px: her tilt never snaps (largest ${maxTilt.toFixed(3)} rad in a frame, limit ${(2.2 / 30).toFixed(3)})`, String(maxTilt));
+        /* the silhouette: her WHOLE figure, one stretch only, faded, never
+         * during a turn-round */
+        let rises = 0; for (let k = 1; k < xs.length; k++) { if (xs[k].onMoon && !xs[k - 1].onMoon) { rises++; } }
+        const fullDark = xs.filter(o => o.sil >= 1).length, fadeIn = xs.filter((o, k) => k && o.sil > 0 && o.sil < 1 && o.sil > xs[k - 1].sil).length;
+        ok(rises === 1 && fullDark >= 4, `${w}px: she goes dark once, across the moon (${fullDark} frames fully dark)`, `rises ${rises}`);
+        ok(fadeIn >= 3 && fadeIn <= 6, `${w}px: the silhouette fades in over about 150 ms (${fadeIn} frames)`, String(fadeIn));
+        ok(xs.filter(o => o.sil > 0).every(o => Math.abs(o.fs) >= 0.999), `${w}px: no turn-round while she is dark`, '');
+        const top = Math.min(...xs.filter(o => o.x > 0 && o.x < g.vw).map(o => o.y));
+        ok(top - 0.56 * g.W >= -2, `${w}px: her hat never leaves the top of the screen (highest point ${top.toFixed(0)}, hat ${(0.56 * g.W).toFixed(0)} above it)`, String(top));
         const total = r.out.length / 30;
-        ok(total >= 7 && total <= 9.5, `${w}px: the whole pass takes ${total.toFixed(1)} s (7-9.5)`, `${total}`);
+        ok(total >= 7 && total <= 11.5, `${w}px: the whole pass takes ${total.toFixed(1)} s (7-11.5)`, `${total}`);
         const onAt = r.out.find(o => o && o.x != null && o.x > 0 && o.x < g.vw);
         ok(onAt && onAt.a >= 0.99, `${w}px: the moon is fully up before she comes on screen`, JSON.stringify(onAt));
         const after = r.out.slice(i1 + 1).filter(Boolean);
         ok(after.length >= 20 && after[after.length - 1].a < 0.1 && after.every((o, k) => k === 0 || o.a <= after[k - 1].a + 1e-9), `${w}px: the moon fades out after she has gone (${(after.length / 30).toFixed(1)} s)`, JSON.stringify(after.slice(-1)));
       } finally { await ses.close(); }
+    }
+  }
+
+  /* 4.10.1 (Rob: "Can the witch and moon appear behind it?"): in front
+   * layering the header's letters are cut out of the scene, so the page's
+   * title shows through; behind layering cuts nothing. Read the canvas's
+   * own pixels: inside the moon, where the mask has a letter, the canvas
+   * is empty; just beside the letters, the moon is there. */
+  if (!ONLY.length || ONLY.includes('witchmoon')) {
+    console.log('\n  --- witchmoon behind the header text, on the homepage banner and another page ---');
+    for (const [w, banner] of [[390, true], [1280, true], [390, 'page'], [1280, 'page']]) {
+      for (const layer of ['front', 'behind']) {
+        const cfg = config(['--theme=halloween', '--placement=content', `--layering=${layer}`, '--density=16', '--noparticles', '--diag']);
+        cfg.vigOnly = 'witchmoon'; cfg.vigFirst = 300; cfg.vigGap = 1e9; cfg.heroEvery = [9999, 10000]; cfg.forceHour = 12;
+        const ses = await open(fixture({ kind: 'bravada', config: cfg, banner }), { viewport: { width: w, height: w < 768 ? 844 : 800 } });
+        try {
+          await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 15000 });
+          const r = await ses.page.evaluate(() => {
+            const s = window.DCCSeasonsEngine._state; s.manual(true);
+            for (let i = 0; i < 600 && !s.vig; i++) { s.tick(1000 / 30, 1); }
+            let letter = 0, letterHit = 0, beside = 0, besideHit = 0, frames = 0;
+            for (let i = 0; i < 30 * 12 && s.vig; i++) {
+              s.tick(1000 / 30, 1);
+              const v = s.vigSt, H = s.witch.hdr;
+              if (!H || !v || v.moonA < 0.99 || i % 5) { continue; }
+              frames++;
+              const cv = s.witch.canvas, dpr = cv.width / cv.getBoundingClientRect().width, g = cv.getContext('2d');
+              const mk = H.c.getContext('2d'), mdc = H.c.width / H.w, sy = window.pageYOffset; /* exact: built on whole device pixels */
+              /* sample the moon's disc on a grid */
+              for (let yy = -v.MR + 4; yy < v.MR - 4; yy += 3) {
+                for (let xx = -v.MR + 4; xx < v.MR - 4; xx += 3) {
+                  if (xx * xx + yy * yy > (v.MR - 5) * (v.MR - 5)) { continue; }
+                  const px = v.mx + xx, py = v.my + yy;
+                  /* keep clear of the witch */
+                  if (v.wx != null && Math.hypot(px - v.wx, py - v.wy) < v.W) { continue; }
+                  const mx = Math.round((px - H.x) * mdc), my = Math.round((py + sy - H.y) * mdc);
+                  if (mx < 0 || my < 0 || mx >= H.c.width || my >= H.c.height) { continue; }
+                  const ma = mk.getImageData(mx, my, 1, 1).data[3], ca = g.getImageData(Math.round(px * dpr), Math.round(py * dpr), 1, 1).data[3];
+                  if (ma > 250) { letter++; if (ca < 12) { letterHit++; } }
+                  else if (ma === 0) {
+                    /* "beside": no letter within 3 px either way */
+                    const near = mk.getImageData(Math.max(0, mx - 6), Math.max(0, my - 6), 13, 13).data;
+                    let clear = true; for (let q = 3; q < near.length; q += 4) { if (near[q]) { clear = false; break; } }
+                    if (clear) { beside++; if (ca > 240) { besideHit++; } }
+                  }
+                }
+              }
+            }
+            return { letter, letterHit, beside, besideHit, frames, hdr: !!s.witch.hdr, cuts: s.witch.cuts };
+          });
+          const tag = `${w}px ${banner === true ? 'homepage' : 'other page'}, ${layer}`;
+          if (layer === 'front') {
+            ok(r.hdr && r.letter > 30 && r.letterHit / r.letter > 0.97, `${tag}: where the title's letters cross the moon, the letters show through (${r.letterHit}/${r.letter} letter samples clear)`, JSON.stringify(r));
+            ok(r.beside > 30 && r.besideHit / r.beside > 0.97, `${tag}: beside the letters the moon is solid (${r.besideHit}/${r.beside})`, JSON.stringify(r));
+          } else {
+            ok(!r.hdr && r.cuts === 0, `${tag}: behind layering cuts nothing (the text is already on top)`, JSON.stringify(r));
+          }
+        } finally { await ses.close(); }
+      }
     }
   }
 

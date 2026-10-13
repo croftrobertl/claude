@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.0
+Stable tag: 4.10.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,26 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.10.1 =
+Rob's review of 4.10.0 on staging ("It looks great"), fixed. Staging
+first; live only after Rob signs off. Rollback: reinstall the 4.10.0 zip
+(staging) or 4.9.0 (live); no setting or stored data changes.
+
+* The moon and the witch pass BEHIND the header text: the site title and
+  the banner title stay in front of them, letter by letter, on the
+  homepage and on every other page; the header picture stays behind.
+* Her arrival on the moon is smooth: one steady dive across its face and
+  one continuous turn up into the loop, with no squeeze, no flip, no kink
+  and no jump in speed; her lean changes gradually.
+* While any part of her is in front of the moon, her WHOLE figure goes
+  dark, fading in and out over 150 ms, with exactly her outline.
+* Her cape is cloth: narrow at the shoulders, a wide soft hem that
+  ripples, folds that curve; it billows in the turns and never goes stiff
+  or stands up.
+* Desktop now looks like the phone, bigger: the same loop round the moon
+  in proportion, the same smoothness, her size in proportion to the loop.
+* The moon is fully opaque once up, so nothing shows through it.
 
 = 4.10.0 =
 Rob's Halloween round, to the heron's standard. Staging first; live only

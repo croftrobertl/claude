@@ -835,6 +835,19 @@ final class Plugin {
                 'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer'
             ),
             /**
+             * CSS selector for the site header whose TEXT the Halloween moon
+             * and witch pass behind (4.10.1). In front layering the engine
+             * cuts the visible letters inside these elements (and their
+             * text-shadow) out of the scene, so the page's own title shows
+             * through; the header picture stays covered.
+             *
+             * @param string $selector Comma-separated.
+             */
+            'headerSel'   => (string) apply_filters(
+                'dcc_seasons_header_text',
+                '#masthead, header.site-header, header[role="banner"], .elementor-location-header'
+            ),
+            /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque
              * content column. Empty (the default) means the engine finds it

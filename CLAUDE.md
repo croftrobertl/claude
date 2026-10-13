@@ -406,8 +406,8 @@ render round and his say.
   pick): she leans along the felt gravity (path acceleration + g), the
   total tilt clamped to ±0.6 rad, and turns round through a quick squeeze
   (never thinner than 30%) instead of flipping. The dive is monotone in x
-  so she never turns round in it. The loop is radius MR + 46 (+ up to 24
-  on wide screens); she is 84 px on a phone, 100 px from 768 px.
+  so she never turns round in it. Sizes and the path were reworked in
+  4.10.1 (one size factor, tangent joins) — see below.
 - **Her drawing:** hat with a purple band and buckle, long dark hair,
   profile, bodice and bell sleeve, a skirt that flutters, purple-and-black
   stockings, pointed boots, an ash broom with a twine collar and 16
@@ -415,10 +415,9 @@ render round and his say.
   handle with a purple rim. `witchBody(g, phase)` is ONE phase; 12 are
   pre-drawn. The cape (a two-chain strip with diagonals so it stays a
   sheet) and three hair strands are Verlet chains under gravity and drag,
-  drawn live OVER her back (under it they were invisible). In front of
-  the moon the whole picture is drawn again as a black silhouette clipped
-  to the disc, on a scratch canvas sized to her — only while she overlaps
-  it (a scratch canvas every frame cost ~45% more).
+  drawn live OVER her back (under it they were invisible). (The cape and
+  the silhouette were reworked in 4.10.1 — see below; a scratch canvas
+  every frame cost ~45% more, so it is used only while she is dark.)
 - **The moon: "Real full moon, clear sky".** `moonPaint(g, r)`: the
   maria from their real selenographic centres and sizes (`MARIA`),
   projected orthographically north up with east to the right, painted on
@@ -426,7 +425,7 @@ render round and his say.
   Tycho/Copernicus/Kepler/Proclus rays, Aristarchus bright, Plato and
   Grimaldi dark, fine highland speckle (never dots), gentle limb shading,
   a faint glow to 1.3 r. No clouds. Pre-rendered once per radius
-  (`moonGet`, r = clamp(vw·0.11, 40, 60)) and drawn on WHOLE device
+  (`moonGet`, r = 41k since 4.10.1) and drawn on WHOLE device
   pixels — at a fractional position the browser resamples every pixel,
   every frame (measured: ~85 ms/s on the slowed phone).
 - **Christmas's evening `sleighmoon` keeps the old `moonDraw`** — the
@@ -438,6 +437,58 @@ render round and his say.
   ranged 387-555 vs 351-526 with machine load), desktop 72 vs 64, 60 fps
   all. The extra is the live cape/hair and the silhouette pass. Pre-draw
   ~48 ms, 1.3 MB on a phone.
+
+### Rob's review of 4.10.0 on staging (for 4.10.1, 2026-10-12)
+
+"It looks great." The moon and her riding cycle are approved. Fixed:
+
+- **Behind the header text.** In front layering the scene cuts the
+  header's letters out of what it drew (`hdrBuild`/`hdrCut`): every
+  visible character inside `CFG.headerSel` (Plugin::config,
+  filter `dcc_seasons_header_text`, default `#masthead, header.site-header,
+  header[role="banner"], .elementor-location-header`), measured with a
+  Range per character, drawn in its computed font and text-shadow on a
+  mask built on WHOLE device pixels and erased 1:1 with
+  'destination-out' — the page's own letters show through, the header
+  picture stays covered. A mask stretched by a fraction of a pixel blurred
+  serif hairlines and the moon showed through them. Range rects include
+  letter-spacing on the right: take it off before centring the glyph.
+  Behind layering and footer placement cut nothing. No second canvas.
+- **The path** (`witchPath`): a level glide in, the dive across the
+  moon's centre, a pull-out that is ONE continuous turn joining the loop
+  tangentially at −15° (above level, right side, heading up), a 335° loop
+  leaving at +10°, and a climb that levels out at the top. A curve that
+  starts at a circle's centre meets it tangentially only by bending ~180°:
+  joining lower (70°, 10°) gave S-bends of 0.9 and 0.4 rad in one frame.
+  Every handle that could lift the path above the hat line is clamped.
+  `tools/test-scenes.js` asserts: heading ≤ 0.3 rad and speed ≤ 12% per
+  1/30 s frame, tilt ≤ 2.2 rad/s, no turn-round or squeeze in the dive,
+  hat on screen.
+- **One size factor** `k = clamp(vw/390, 0.82, 1.3)`: moon 41k, witch 84k,
+  loop MR + 0.6W + 6, so desktop is the phone's picture made bigger. Speed
+  is 3.3 R/s at the bottom; far from the moon a cruise floor rises
+  smoothly (2–4.5 R) so long desktop glides do not crawl.
+- **The cape is cloth**: a fan of four Verlet strands pinned across the
+  shoulders, SOFT spacing that widens to the hem (no diagonals — they made
+  it a rigid board), a travelling flutter, a drape spring toward hanging
+  down her back (firm at the shoulders, loose at the hem) and a loose cap
+  at hat height. A hard limit at the shoulder line pressed it into a
+  straight bar in the dive. Drawn as shaded panels between strands with
+  curved folds and a scalloped hem showing the lining.
+- **Silhouette**: while ANY of her painted pixels (`wcPts`, sampled once
+  from frame 0 — her body box has empty corners that reached the moon from
+  the loop) or cape/hair point overlaps the moon, her WHOLE figure fades to
+  black over 150 ms: the same picture on a scratch canvas, 'source-in'
+  black, on whole device pixels, so the outline is exact.
+- **Her tilt never snaps**: at most 2.2 rad/s; acceleration smoothed 0.18 s.
+- **The moon is fully opaque once up**: at 96% a spider's thread showed
+  through it.
+- **Cost** (Rob kept the cape and hair at full rate): about 10% more than
+  4.9.0's witch, as in 4.10.0 — measured on a container about twice as
+  slow as before, so use only same-machine pairs: phone 2× CPU 621 vs 566
+  ms/s, desktop 218 vs 196, 60 fps; at 4× both saturate (47–48 vs 51–52
+  fps). Saturation hides cost in ms/s: if both builds read the same busy
+  time, drop the throttle until neither is pinned.
 
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
@@ -458,7 +509,7 @@ render round and his say.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 158,072 raw / 54,984 gzipped (4.10.0, `gzip -c`; the drawn witch and the real moon are +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 162,754 raw / 57,056 gzipped (4.10.1, `gzip -c`; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -815,7 +866,10 @@ render round and his say.
   `tools/witch-poses.js` renders the witch's frames and the moon large;
   `tools/heron-poses.js` the heron's poses; `tools/measure-heron.js`
   (`--scene=<name>` for a scene) measures an effect against an older
-  build. `scene-reel.js --closeup=N --follow=N` adds magnified strips.
+  build. `scene-reel.js --closeup=N --follow=N --arrival=N` adds magnified
+  strips (`--arrival`: a fixed camera on the moon through the dive), and
+  `--banner=home|page` uses the live banner shape (a header picture with
+  the page title over it, `tools/fixture.js`).
   **Rebuild the minified files before `test-guide.js`**: the guide page
   loads `engine.min.js`, and a stale one silently draws the old pictures
   (4.10.0's run counted 285 pictures until it was rebuilt).

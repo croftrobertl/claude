@@ -5,7 +5,7 @@
  * (so every frame is exact and nothing depends on machine load).
  *
  *   node tools/scene-reel.js --scene=witchmoon --theme=halloween --width=390 \
- *        --out="build/Seasons - witch 390" [--frames=8] [--closeup=18] [--follow=18]
+ *        --out="build/Seasons - witch 390" [--frames=8] [--closeup=18] [--follow=18] [--arrival=18] [--banner=home|page]
  *   node tools/scene-reel.js --hero=heron --theme=florida_keys --width=1280 --out=... [--set=heronLand:1]
  *
  * --set=key:value (repeatable) sets a debug CFG key on the page config.
@@ -40,7 +40,10 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
     st.textContent = '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{display:none!important}';
     document.head.appendChild(st);
   }); });
-  await ses.page.route('http://dcc.test/', r => r.fulfill({ contentType: 'text/html; charset=utf-8', body: fixture({ kind: 'bravada', config: cfg }) }));
+  /* --banner=home|page: the live banner shape (a header picture with the
+   * page title over it), the homepage's or another page's */
+  const BANNER = arg('banner', '');
+  await ses.page.route('http://dcc.test/', r => r.fulfill({ contentType: 'text/html; charset=utf-8', body: fixture({ kind: 'bravada', config: cfg, banner: BANNER === 'home' ? true : (BANNER === 'page' ? 'page' : false) }) }));
   await ses.page.goto('http://dcc.test/', { waitUntil: 'load' });
   const P = ses.page;
   try {
@@ -67,7 +70,7 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
         const s = window.DCCSeasonsEngine._state;
         s.tick(1000 / 30, 1);
         const v = s.vigSt || {};
-        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, MR: v.MR, pts: v.pts || null };
+        return { on: !!s[live], wx: v.wx, wy: v.wy, moon: v.moonA, hero: s.heroXY, mx: v.mx, my: v.my, R: v.R, MR: v.MR, W: v.W, wi: v.wi, l0: v.loop0, pts: v.pts || null };
       }, live);
       if (st.pts && !pathPts) { pathPts = st.pts; }
       st.pts = null;
@@ -114,6 +117,22 @@ const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
       await strip.waitForTimeout(300);
       await strip.setViewportSize({ width: Math.min(CLOSE, 6) * (cell + 6) + 16, height: 900 });
       await strip.locator('.g').screenshot({ path: OUT + ' closeup.png' });
+    }
+    /* --arrival=N: the dive onto the moon, a fixed camera on the moon,
+     * N frames from just before she reaches it until she is on the loop */
+    const ARR = +arg('arrival', 0);
+    if (ARR && g0 && g0.MR) {
+      const near = on.filter(i => track[i].wi != null && Math.hypot(xy[i][0] - g0.mx, xy[i][1] - g0.my) < g0.MR + 1.6 * g0.W && track[i].wi <= track[i].l0 + 12);
+      const half = g0.MR + 1.4 * g0.W, cell = 300, k = cell / (2 * half), bx = g0.mx - half, by = g0.my - half;
+      const ap = [];
+      for (let j = 0; j < ARR; j++) { ap.push(near[Math.round(j * (near.length - 1) / (ARR - 1))]); }
+      await strip.setViewportSize({ width: 1600, height: 900 });
+      await strip.setContent(`<!doctype html><style>body{margin:0;background:#1f2328;font:13px system-ui;color:#eee}
+        .g{display:grid;grid-template-columns:repeat(6,${cell}px);gap:6px;padding:8px}.c div{width:${cell}px;height:${cell}px;overflow:hidden;border:1px solid #444}
+        .c img{width:${W * k}px;display:block;margin-left:${-bx * k}px;margin-top:${-by * k}px}.t{padding:3px 0}</style><div class="g">${ap.map(i => `<div class="c"><div><img src="${b64(i)}"></div><p class="t">${(i / FPS).toFixed(2)} s</p></div>`).join('')}</div>`);
+      await strip.waitForTimeout(300);
+      await strip.setViewportSize({ width: 6 * (cell + 6) + 16, height: 900 });
+      await strip.locator('.g').screenshot({ path: OUT + ' arrival.png' });
     }
     /* --follow=N: N frames magnified 3x around the actor itself */
     const FOL = +arg('follow', 0);

@@ -33,6 +33,13 @@ const SHARED_CSS = `
   #masthead { background: #0f6dbf; color: #fff; padding: 18px; }
   #site-title { font-size: 22px; margin: 0; }
   .hero { height: 380px; background: #35617f; }
+  /* The banner (banner: true / 'page'): a header PICTURE with the page title
+   * over it, white, uppercase and letter-spaced with a soft shadow, the way
+   * Bravada shows it — what the 4.10.1 moon and witch pass behind. */
+  #header-page-title { background: radial-gradient(circle at 78% 30%, #ffe9a8 0 6%, rgba(255,233,168,0) 16%),
+    linear-gradient(#7fb3d9 0%, #b9d6ea 52%, #2f6f8f 53%, #24566e 100%); }
+  #header-page-title .entry-title { font: 700 40px/1.2 Georgia, serif; text-transform: uppercase; letter-spacing: 3px;
+    text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,.55); }
   #content.cryout { max-width: 1100px; margin: 0 auto; }
   /* The opaque content column: position + numeric z-index = a real stacking
    * context that paints over any body-level canvas below 9. */
