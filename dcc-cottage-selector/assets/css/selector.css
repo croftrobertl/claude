@@ -28,16 +28,20 @@
      shows the CURRENT mode, so it is selected; the option is not) and the answer
      chips. Navy on white is 12.6:1. The hover tint is navy at 8% over white
      (~#EBEEF4), 10.8:1 under navy text. The focus ring on a navy control is
-     WHITE, 12.6:1 against navy — a navy ring on a navy button would be no ring
-     at all. Rob offered gold or white; white, because "no gold anywhere in the
-     plugin" is a standing guard against the Elementor kit's gold focus accent
-     (see the checkbox focus rules), and a gold literal here would blunt it. */
+     the site GOLD (0.53.1, Rob), 9.0:1 against navy — a navy ring on a navy
+     button would be no ring at all. This token is the ONE place gold may appear
+     in the plugin, and it may only be consumed by the two focus rules on navy
+     (the mode button, a ticked Compare row's checkbox). The Elementor kit's gold
+     focus accent on checkboxes is still blocked; a test enforces both halves. */
   --dccs-sel-bg: #002E7A;
   --dccs-sel-text: #FFFFFF;
   --dccs-unsel-bg: #FFFFFF;
   --dccs-unsel-text: #002E7A;
   --dccs-unsel-hover-bg: rgba(0, 46, 122, 0.08);
-  --dccs-ring-on-navy: #FFFFFF;
+  --dccs-ring-on-navy: #F4DA62;
+  /* Unselected answer text (0.53.1, Rob): black, while the selected answer stays
+     navy with white text. */
+  --dccs-chip-text: #000000;
   /* --dccs-action is deliberately NOT given a value here. It is fed by the
      "Action button color" style control, and action buttons resolve
      var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue))). Declaring a
@@ -137,7 +141,19 @@
 }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:first-child { margin-right: 0.3em; }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:last-child { margin-left: 0.3em; }
-.dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
+/* The intro line is styled EXACTLY like the line above the calendars on the same
+   pages, <p class="dcc-cal-intro"> (0.53.1, Rob), measured on live: 22px, 400,
+   normal, #000000, line-height 26.4px, letter-spacing 0.1px, centred, margin
+   33px 0 11px. Every property is stated, not inherited, because the page around
+   the widget is bold and not ours to change. font-family stays `inherit` (the
+   page font, Raleway on live) for the same reason as the buttons. The Mini
+   Entry's line (.dccs-entry-intro) repeats these values: it sits outside
+   .dccs-root and gets none of its tokens. */
+.dccs-root.dccs-root .dccs-intro {
+  margin: 33px 0 11px; max-width: none;
+  font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
+  color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+}
 
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
@@ -255,6 +271,9 @@
 .dccs-root.dccs-root .dccs-ico-left { margin-inline-end: 0.45em; margin-inline-start: 0; }
 .dccs-root.dccs-root .dccs-ico-right { margin-inline-start: 0.45em; margin-inline-end: 0; }
 .dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
+/* The packaged inline icons (Icons, 0.53.1) are 1em tall and as wide as the glyph
+   is, like the Font Awesome font glyph they stand in for. */
+.dccs-root.dccs-root .dccs-ico svg.dccs-svg-icon { width: auto; }
 .dccs-root.dccs-root .dccs-ico:empty { display: none; }
 
 /* The TYPE half of the site button spec, on every button in the widget.
@@ -342,9 +361,9 @@
 .dccs-root.dccs-root .dccs-matrix-nav button:focus-visible {
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
 }
-/* The navy mode button gets a WHITE ring, drawn INSIDE its edge (0.53.0, Rob): a
-   navy ring would vanish against navy, and a white one outside would be invisible
-   on the white page. Inset, it is white on navy, 12.6:1. */
+/* The navy mode button gets a GOLD ring, drawn INSIDE its edge (0.53.1, Rob): a
+   navy ring would vanish against navy, and gold outside would sit on the white
+   page at 1.3:1. Inset, it is gold on navy, 9.0:1. */
 .dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible {
   outline: 2px solid var(--dccs-ring-on-navy); outline-offset: -5px;
 }
@@ -477,10 +496,10 @@
 }
 .dccs-root.dccs-root .dccs-chip {
   padding: 0 var(--dccs-btn-pad-x); border-radius: var(--dccs-btn-radius);
-  /* Unselected answer = white with navy text (0.53.0, Rob); it was the page's
-     black. Gold border and the coral hover are unchanged. */
+  /* Unselected answer = white with BLACK text (0.53.1, Rob; 0.53.0 had navy).
+     Selected stays navy/white; gold border and the coral hover are unchanged. */
   border: 1px solid var(--dccs-border); background: var(--dccs-unsel-bg);
-  color: var(--dccs-unsel-text); cursor: pointer;
+  color: var(--dccs-chip-text); cursor: pointer;
   /* THE SECOND AGREED EXCEPTION to the site button spec (0.32.0). Rob asked for the
      answer chips a step heavier than the spec's 500; 0.31.0 raised the rest of the
      quiz's text and left these alone precisely because they are buttons, and he
@@ -525,6 +544,20 @@
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+/* A TICKED row is selected, so it is navy with white text (0.53.1, Rob) — at rest,
+   hovered, tapped and focused alike; no coral on a ticked row (white on coral was
+   2.6:1). (0,5,0) for the hover/focus-within forms beats the (0,4,0) row hover.
+   Its checkbox is drawn rather than native, so it stays legible on navy: a white
+   box with a navy tick (a native checked box is navy on navy). */
+.dccs-root.dccs-root .dccs-cmp-option.is-checked,
+.dccs-root.dccs-root .dccs-cmp-option.is-checked:hover,
+.dccs-root.dccs-root .dccs-cmp-option.is-checked:focus-within {
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
+}
+.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; margin: 0; border: 0; border-radius: 4px;
+  background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cpath d='M5 11.5l4 4 8-9' fill='none' stroke='%23002E7A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 22px 22px no-repeat;
+}
 /* Compare Mode's one-sentence intro is centred (0.53.0, Rob) — set here rather
    than inherited, because the page around the widget is not ours to align. */
 .dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
@@ -535,8 +568,11 @@
    the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */
 .dccs-root.dccs-root .dccs-modetab:hover,
 .dccs-root.dccs-root .dccs-modetab:focus-visible {
-  background: var(--dccs-unsel-hover-bg); color: var(--dccs-unsel-text);
-  text-decoration: underline; text-underline-offset: 3px;
+  /* The site-wide button hover (0.53.1, Rob's choice): white on #F08080, no
+     underline. 2.6:1 — below 4.5:1, knowingly; keyboard focus keeps its outline,
+     so focus is never signalled by this fill alone. */
+  background: var(--dccs-btn-blue-hover); color: var(--dccs-btn-on-blue-hover);
+  text-decoration: none;
 }
 .dccs-root.dccs-root .dccs-cmp-option:hover,
 .dccs-root.dccs-root .dccs-cmp-option:focus-within {
@@ -751,6 +787,10 @@
   outline: 2px solid var(--dccs-accent);
   outline-offset: 2px;
 }
+/* On a ticked (navy) row the navy ring would vanish: gold there (0.53.1). (0,6,1). */
+.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"]:focus-visible {
+  outline-color: var(--dccs-ring-on-navy);
+}
 
 .dccs-root.dccs-root .dccs-empty {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);
@@ -768,12 +808,37 @@
 .dccs-root.dccs-root .dccs-noscript ul,
 .dccs-root.dccs-root .dccs-noscript { margin: 0; }
 
-/* Mini entry */
+/* Mini entry (0.53.1, Rob): the intro line, then a button that is an EXACT match
+   of the full Selector's landing buttons. Everything is literal: the entry sits
+   OUTSIDE .dccs-root, so it gets neither the --dccs-* tokens nor the root's button
+   rules (the 0.27.0 lesson). Each value below copies the landing-choice rule it
+   mirrors; the Chromium harness compares the two buttons' computed styles. */
 .dccs-entry.dccs-entry { margin: 12px 0; }
+.dccs-entry.dccs-entry .dccs-entry-intro {
+  margin: 33px 0 11px; max-width: none;
+  font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
+  color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+}
 .dccs-entry.dccs-entry .dccs-entry-btn {
-  display: inline-block; min-height: 44px; padding: 10px 18px; cursor: pointer;
-  border: 1px solid #0f6dbf; background: rgba(15,109,191,0.08); color: #0f6dbf;
-  border-radius: 999px; font-weight: 600; font-size: 0.95rem; line-height: 1.2;
+  display: flex; align-items: center; justify-content: center; gap: 0.5em;
+  width: 100%; max-width: 420px; margin: 18px auto 0; padding: 0 24px; cursor: pointer;
+  border: none; border-radius: 30px; box-shadow: none;
+  background: #006BCF; color: #FFFFFF;
+  font-family: inherit; font-size: 20px; font-weight: 500; font-style: normal;
+  line-height: 50px; letter-spacing: 0.5px; text-transform: none; text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.dccs-entry.dccs-entry .dccs-entry-btn:hover,
+.dccs-entry.dccs-entry .dccs-entry-btn:focus-visible {
+  background: #F08080; color: #FFFFFF; text-decoration: none;
+}
+.dccs-entry.dccs-entry .dccs-entry-btn:focus-visible { outline: 2px solid #002E7A; outline-offset: 2px; }
+.dccs-entry.dccs-entry .dccs-entry-ico {
+  display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em;
+}
+.dccs-entry.dccs-entry .dccs-entry-ico svg { height: 1em; width: auto; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) {
+  .dccs-entry.dccs-entry .dccs-entry-btn { transition: none; }
 }
 
 /* Modal — constrained to the viewport with an internal scroll area */

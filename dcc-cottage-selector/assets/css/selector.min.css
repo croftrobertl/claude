@@ -16,7 +16,8 @@
   --dccs-unsel-bg: #FFFFFF;
   --dccs-unsel-text: #002E7A;
   --dccs-unsel-hover-bg: rgba(0, 46, 122, 0.08);
-  --dccs-ring-on-navy: #FFFFFF;
+  --dccs-ring-on-navy: #F4DA62;
+  --dccs-chip-text: #000000;
   --dccs-btn-size: 20px;
   --dccs-btn-weight: 500;
   --dccs-btn-line: 50px;
@@ -57,7 +58,11 @@
 }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:first-child { margin-right: 0.3em; }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:last-child { margin-left: 0.3em; }
-.dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
+.dccs-root.dccs-root .dccs-intro {
+  margin: 33px 0 11px; max-width: none;
+  font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
+  color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+}
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 .dccs-root.dccs-root .dccs-landing { text-align: var(--dccs-align, center); }
 .dccs-root.dccs-root .dccs-landing-choices {
@@ -131,6 +136,7 @@
 .dccs-root.dccs-root .dccs-ico-left { margin-inline-end: 0.45em; margin-inline-start: 0; }
 .dccs-root.dccs-root .dccs-ico-right { margin-inline-start: 0.45em; margin-inline-end: 0; }
 .dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
+.dccs-root.dccs-root .dccs-ico svg.dccs-svg-icon { width: auto; }
 .dccs-root.dccs-root .dccs-ico:empty { display: none; }
 .dccs-root.dccs-root button {
   font-family: inherit;
@@ -269,7 +275,7 @@
 .dccs-root.dccs-root .dccs-chip {
   padding: 0 var(--dccs-btn-pad-x); border-radius: var(--dccs-btn-radius);
   border: 1px solid var(--dccs-border); background: var(--dccs-unsel-bg);
-  color: var(--dccs-unsel-text); cursor: pointer;
+  color: var(--dccs-chip-text); cursor: pointer;
   font-weight: 600;
 }
 .dccs-root.dccs-root .dccs-chip.is-active {
@@ -300,12 +306,21 @@
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-cmp-option.is-checked,
+.dccs-root.dccs-root .dccs-cmp-option.is-checked:hover,
+.dccs-root.dccs-root .dccs-cmp-option.is-checked:focus-within {
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
+}
+.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; margin: 0; border: 0; border-radius: 4px;
+  background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cpath d='M5 11.5l4 4 8-9' fill='none' stroke='%23002E7A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 22px 22px no-repeat;
+}
 .dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-modetab:hover,
 .dccs-root.dccs-root .dccs-modetab:focus-visible {
-  background: var(--dccs-unsel-hover-bg); color: var(--dccs-unsel-text);
-  text-decoration: underline; text-underline-offset: 3px;
+  background: var(--dccs-btn-blue-hover); color: var(--dccs-btn-on-blue-hover);
+  text-decoration: none;
 }
 .dccs-root.dccs-root .dccs-cmp-option:hover,
 .dccs-root.dccs-root .dccs-cmp-option:focus-within {
@@ -430,6 +445,9 @@
   outline: 2px solid var(--dccs-accent);
   outline-offset: 2px;
 }
+.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"]:focus-visible {
+  outline-color: var(--dccs-ring-on-navy);
+}
 .dccs-root.dccs-root .dccs-empty {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);
   border-radius: var(--dccs-radius); padding: 16px;
@@ -444,10 +462,31 @@
 .dccs-root.dccs-root .dccs-noscript ul,
 .dccs-root.dccs-root .dccs-noscript { margin: 0; }
 .dccs-entry.dccs-entry { margin: 12px 0; }
+.dccs-entry.dccs-entry .dccs-entry-intro {
+  margin: 33px 0 11px; max-width: none;
+  font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
+  color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+}
 .dccs-entry.dccs-entry .dccs-entry-btn {
-  display: inline-block; min-height: 44px; padding: 10px 18px; cursor: pointer;
-  border: 1px solid #0f6dbf; background: rgba(15,109,191,0.08); color: #0f6dbf;
-  border-radius: 999px; font-weight: 600; font-size: 0.95rem; line-height: 1.2;
+  display: flex; align-items: center; justify-content: center; gap: 0.5em;
+  width: 100%; max-width: 420px; margin: 18px auto 0; padding: 0 24px; cursor: pointer;
+  border: none; border-radius: 30px; box-shadow: none;
+  background: #006BCF; color: #FFFFFF;
+  font-family: inherit; font-size: 20px; font-weight: 500; font-style: normal;
+  line-height: 50px; letter-spacing: 0.5px; text-transform: none; text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.dccs-entry.dccs-entry .dccs-entry-btn:hover,
+.dccs-entry.dccs-entry .dccs-entry-btn:focus-visible {
+  background: #F08080; color: #FFFFFF; text-decoration: none;
+}
+.dccs-entry.dccs-entry .dccs-entry-btn:focus-visible { outline: 2px solid #002E7A; outline-offset: 2px; }
+.dccs-entry.dccs-entry .dccs-entry-ico {
+  display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em;
+}
+.dccs-entry.dccs-entry .dccs-entry-ico svg { height: 1em; width: auto; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) {
+  .dccs-entry.dccs-entry .dccs-entry-btn { transition: none; }
 }
 .dccs-modal {
   position: fixed; inset: 0; z-index: 99999;

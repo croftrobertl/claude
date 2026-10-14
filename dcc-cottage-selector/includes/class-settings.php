@@ -38,13 +38,16 @@ final class Settings
     {
         return [
             // --- Results ---
-            'results_count'     => 3,      // selector.js ranked.slice(0, 3)
+            // LIVE VALUES (0.53.1, Rob): every default below equals the stored row on
+            // doracanalcourt.com as exported 2026-10-14, so a blind install behaves like
+            // live. Until 0.53.0 these reproduced 0.43.0 (3 results, all three modes).
+            'results_count'     => 8,
             'badges_max'        => 3,      // badges.slice(0, 3)
             'reasons_max'       => 3,      // labels.js whyFits(...).slice(0, 3)
 
             // --- Modes ---
             'start_mode'        => 'quick',
-            'enabled_modes'     => ['quick', 'weights', 'compare'],
+            'enabled_modes'     => ['quick', 'compare'],
             'show_heading'      => true,
             'show_review'       => false,
             'show_compare_tip'  => false,

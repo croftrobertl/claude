@@ -23,7 +23,9 @@ final class Config
         return [
             // Shell / modes
             'heading'           => __('Find your perfect cottage', 'dcc-cottage-selector'),
-            'intro'             => __('Every cottage has a queen bed, and six sleep up to 4 with a pull-out couch. Answer a few quick questions and we will match you in seconds.', 'dcc-cottage-selector'),
+            /* The one line above the mode buttons (0.53.1, Rob), also shown above the Mini
+               Entry's "Cottage Wizard" button. A sentence, so sentence case. */
+            'intro'             => __('Answer a few questions to find your best match, or select cottages to compare side by side.', 'dcc-cottage-selector'),
             'mode_quick'        => __('Matching Quiz', 'dcc-cottage-selector'),
             'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare Mode', 'dcc-cottage-selector'),

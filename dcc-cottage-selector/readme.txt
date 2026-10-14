@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.0
+Stable tag: 0.53.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ elegant decision tool:
   cottages in a checklist, then tap **Compare N Cottages** to open a side-by-side
   table in a pop-up you page through with arrows.
 
-Results show the top three matches with friendly badges, a "why this fits your
+Results list the matches (all eight, best first, by default) with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
 
 The whole experience is client-side over a tiny bundled dataset
@@ -141,7 +141,7 @@ stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "Skip", no preference) and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question the guest goes straight to the
-**Top 3** (an optional **Review Your Answers** step can be enabled in the editor to
+**matches** (an optional **Review Your Answers** step can be enabled in the editor to
 add a confirm-first screen). The **Edit answers** button on the results always opens
 that review screen on demand, so answers can be changed even when the forced step is
 off. Answers are never remembered — every page load starts fresh.
@@ -228,6 +228,26 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.53.1 =
+* Compare Mode: a ticked cottage is navy with white text — resting, hovered, tapped
+  and focused — with a white checkbox and a navy tick. No more coral on a ticked row.
+* Mode menu: keyboard focus on the navy button shows a gold ring; the option's hover
+  is white on the site coral with no underline.
+* Matching Quiz: unselected answers are black (selected answers stay navy).
+* New intro line, styled exactly like the calendar intro on the same pages: "Answer a
+  few questions to find your best match, or select cottages to compare side by side."
+  The Cottage Wizard button on cottage pages gets the same line above it.
+* The Cottage Wizard button on cottage pages now matches the full Selector's buttons
+  (blue, white, 30px corners, 50px tall) and leads with a single wizard-hat icon in
+  place of the two emojis.
+* New icons: clipboard-check (Matching Quiz) and balance-scale (Compare Mode), drawn
+  as inline SVG from Font Awesome 5 Free (CC BY 4.0), so they show even on pages
+  where the Font Awesome font is not loaded.
+* Packaged defaults now equal live: 8 results, Matching Quiz + Compare Mode, and the
+  rest of the live settings row. A source whose page has been deleted is ignored.
+* Nothing is written on install, activation or upgrade. Stored values still win;
+  see the release notes for the stored keys to clear after install.
 
 = 0.53.0 =
 * Mode menu: "Compare" is now "Compare Mode" wherever the mode's name shows (landing

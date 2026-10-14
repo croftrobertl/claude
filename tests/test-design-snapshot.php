@@ -36,7 +36,9 @@ namespace {
     // Passthrough, so a guest34 reader that grows a filter hook still RUNS here and
     // is caught by the no-hook assertion, rather than a fatal hiding which check bit.
     function apply_filters($hook, $value) { return $value; }
-    function update_option($k, $v, $autoload = null) { $GLOBALS['__opts'][$k] = $v; return true; }
+    function update_option($k, $v, $autoload = null) { $GLOBALS['__opts'][$k] = $v; $GLOBALS['__writes'][] = $k; return true; }
+    // Posts that exist (0.53.1 design_sources() skips sources whose post is gone).
+    function get_post_status($id) { return in_array((int) $id, $GLOBALS['__posts'] ?? [], true) ? 'publish' : false; }
 }
 
 // Minimal Elementor base so the widget class can load (design_snapshot et al. are
@@ -89,6 +91,7 @@ namespace {
     require DCCS_DIR . 'includes/class-settings.php';
     require DCCS_DIR . 'includes/class-menu.php';
     require DCCS_DIR . 'includes/class-config.php';
+    require DCCS_DIR . 'includes/class-icons.php';
     require DCCS_DIR . 'includes/class-selector-widget.php';
 
     use DCCS\Selector_Widget;
@@ -346,16 +349,19 @@ namespace {
     // ones that used to be hard-coded in Config::build() and in the JS; if a
     // default here drifts, a fresh install stops matching the shipped release.
     $d = \DCCS\Settings::defaults();
+    // 0.53.1 (Rob, Part D): the defaults ARE live's stored dccs_settings row, as
+    // exported 2026-10-14. Until 0.53.0 they reproduced 0.43.0 (3 results, all
+    // three modes); a blind install now behaves like live instead.
     $wasHardCoded = [
-        'results_count' => 3, 'badges_max' => 3, 'reasons_max' => 3,
-        'start_mode' => 'quick', 'enabled_modes' => ['quick', 'weights', 'compare'],
+        'results_count' => 8, 'badges_max' => 3, 'reasons_max' => 3,
+        'start_mode' => 'quick', 'enabled_modes' => ['quick', 'compare'],
         'show_heading' => true, 'show_review' => false, 'show_compare_tip' => false,
         'capacity_fee_url' => '', 'pet_fee_url' => '',
         'avail_enable' => false, 'avail_max_nights' => 95,
         'avail_action' => 'mphbac_query', 'avail_calendar_url' => '',
     ];
     foreach ($wasHardCoded as $k => $v) {
-        ok('default ' . $k . ' reproduces the pre-0.44.0 value', ($d[$k] ?? null) === $v);
+        ok('default ' . $k . ' equals the live value', ($d[$k] ?? null) === $v);
     }
     ok('and defaults() covers every key the page writes, with no extras',
         array_keys($d) === array_keys($wasHardCoded));
@@ -363,7 +369,8 @@ namespace {
     // The config a widget-less caller builds must carry those same values.
     $fresh = \DCCS\Config::build([], []);
     ok('a fresh install still opens on the quick finder', $fresh['startMode'] === 'quick');
-    ok('a fresh install still lists three cottages', $fresh['resultsCount'] === 3);
+    ok('a fresh install lists eight cottages, as live does', $fresh['resultsCount'] === 8);
+    ok('a fresh install offers Matching Quiz and Compare Mode only, as live does', $fresh['enabledModes'] === ['quick', 'compare']);
     ok('a fresh install still has availability OFF', $fresh['availability']['enabled'] === false);
     ok('a fresh install still caps the stay at 95 nights', $fresh['availability']['maxNights'] === 95);
 
@@ -374,7 +381,7 @@ namespace {
     $merged = \DCCS\Settings::get();
     ok('a stored value still wins after the merge', $merged['start_mode'] === 'compare');
     ok('a second stored value too', $merged['show_review'] === true);
-    ok('a key the stored row never had picks up its default', $merged['results_count'] === 3);
+    ok('a key the stored row never had picks up its default', $merged['results_count'] === 8);
     ok('including one added after that row was written', $merged['avail_max_nights'] === 95);
     ok('every default key is present after merging a partial row',
         array_diff(array_keys($d), array_keys($merged)) === []);
@@ -395,7 +402,7 @@ namespace {
         'avail_max_nights' => '0', 'avail_action' => 'drop tables; --',
         'avail_calendar_url' => 'data:text/html,<script>',
     ]);
-    ok('an out-of-range count falls back to the default', $bad['results_count'] === 3);
+    ok('an out-of-range count falls back to the default', $bad['results_count'] === 8);
     ok('a negative count does too', $bad['badges_max'] === 3);
     ok('a non-numeric count does too', $bad['reasons_max'] === 3);
     ok('an unknown mode is dropped', $bad['enabled_modes'] === ['quick']);
@@ -633,7 +640,7 @@ namespace {
     $cfgJson = null;
     // The harness's esc_attr() stub does not escape quotes, so slice between the
     // attribute's fixed delimiters rather than regex-matching a quoted value.
-    $p0 = strpos($html, 'data-entry="'); $p1 = strpos($html, '"><button');
+    $p0 = strpos($html, 'data-entry="'); $p1 = strpos($html, '"><p class="dccs-entry-intro"');
     if ($p0 !== false && $p1 !== false) {
         $raw = substr($html, $p0 + 12, $p1 - $p0 - 12);
         $entryData = json_decode(html_entity_decode($raw, ENT_QUOTES), true);
@@ -918,6 +925,126 @@ namespace {
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
 
+    // ---- 0.53.1: Rob's A–D -----------------------------------------------------
+    $s531 = \DCCS\Config::strings();
+    $LIVE = json_decode(file_get_contents(__DIR__ . '/fixtures/live-state-0.53.0.json'), true);
+    ok('0.53.1: the live export fixture loads (positive control)', is_array($LIVE) && count($LIVE['widgets']) === 10);
+
+    // B1/B2: the intro line.
+    ok('0.53.1: intro is exactly Rob\'s sentence',
+        $s531['intro'] === 'Answer a few questions to find your best match, or select cottages to compare side by side.');
+    ok('0.53.1: the preset no longer pins the old intro or its navy colour',
+        !array_key_exists('str_intro', $preset) && !array_key_exists('intro_color', $preset));
+    ok('0.53.1: str_intro\'s control defaults to the new line', ($reg['str_intro']['default'] ?? null) === $s531['intro']);
+
+    // B6: icons are inline SVG for the three packaged values, Elementor for the rest.
+    foreach (['fas fa-clipboard-check' => '0 0 384 512', 'fas fa-balance-scale' => '0 0 640 512', 'fas fa-hat-wizard' => '0 0 512 512'] as $v => $vb) {
+        $svg = \DCCS\Icons::svg($v);
+        ok("0.53.1: $v renders as decorative inline SVG", strpos($svg, '<svg') === 0 && strpos($svg, 'viewBox="' . $vb . '"') !== false
+            && strpos($svg, 'aria-hidden="true"') !== false && strpos($svg, 'fill="currentColor"') !== false && strpos($svg, '<i') === false);
+    }
+    ok('0.53.1: any other icon value is left to Elementor', \DCCS\Icons::svg('fas fa-list-ol') === '' && \DCCS\Icons::svg('') === '');
+    ok('0.53.1: the icon file carries the Font Awesome CC BY 4.0 licence note',
+        strpos(file_get_contents(DCCS_DIR . 'includes/class-icons.php'), 'CC BY 4.0') !== false);
+    ok('0.53.1: preset Matching Quiz icon is clipboard-check', ($preset['icon_mode_quick']['value'] ?? '') === 'fas fa-clipboard-check');
+    ok('0.53.1: preset Compare Mode icon is balance-scale', ($preset['icon_mode_compare']['value'] ?? '') === 'fas fa-balance-scale');
+    $snapI = Selector_Widget::design_snapshot(['icon_mode_quick' => $preset['icon_mode_quick'], 'icon_mode_compare' => $preset['icon_mode_compare'],
+        'icon_submit' => ['value' => 'fas fa-check', 'library' => 'fa-solid']]);
+    ok('0.53.1: the landing icons reach the config as SVG, needing no icon font',
+        strpos((string) ($snapI['icons']['mode_quick'] ?? ''), 'viewBox="0 0 384 512"') !== false
+        && strpos((string) ($snapI['icons']['mode_compare'] ?? ''), 'viewBox="0 0 640 512"') !== false);
+
+    // B2/B3/B6: the Mini Entry markup — line, button, ONE icon, no emoji.
+    $entryHtml = \DCCS\Mini_Entry_Widget::shortcode(['current' => '34']);
+    // This file's esc_attr() stub does not escape quotes, so the data-entry JSON is
+    // sliced out (as the shortcode test above does) and the markup after it parsed.
+    $tailAt = strpos($entryHtml, '"><p class="dccs-entry-intro"');
+    $entryMarkup = '<div class="dccs-entry">' . ($tailAt === false ? '' : substr($entryHtml, $tailAt + 2));
+    $ed = new DOMDocument(); libxml_use_internal_errors(true); $ed->loadHTML('<?xml encoding="utf-8"?>' . $entryMarkup); libxml_clear_errors();
+    $ex = new DOMXPath($ed);
+    $line = $ex->query('//div[@class="dccs-entry"]/p[@class="dccs-entry-intro"]');
+    $btn  = $ex->query('//div[@class="dccs-entry"]/button[@class="dccs-entry-btn"]');
+    ok('0.53.1: Mini Entry has the intro line directly above its button',
+        $line->length === 1 && $btn->length === 1 && $line->item(0)->nextSibling === $btn->item(0));
+    ok('0.53.1: ...reading the intro string', $line->length === 1 && trim($line->item(0)->textContent) === $s531['intro']);
+    ok('0.53.1: the button holds exactly one icon, a hat-wizard SVG, hidden from screen readers',
+        $btn->length === 1 && $ex->query('.//svg', $btn->item(0))->length === 1
+        && stripos($ed->saveHTML($btn->item(0)), 'viewBox="0 0 512 512"') !== false   // libxml lowercases viewBox
+        && $ex->query('.//*[@aria-hidden="true"]//svg | .//svg[@aria-hidden="true"]', $btn->item(0))->length >= 1);
+    ok('0.53.1: its label is "Cottage Wizard", with no emoji anywhere',
+        trim($btn->item(0)->textContent) === 'Cottage Wizard' && !preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $entryHtml));
+
+    // D: "P" — a source whose post is gone — is never read; "Primary" is.
+    $GLOBALS['__posts'] = [1005, 620];
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = $LIVE['options']['dccs_design_sources'];
+    $GLOBALS['__writes'] = [];
+    $src = Selector_Widget::design_sources();
+    ok('0.53.1: the stale source "P" (post 9389, deleted) is ignored', !isset($src['P']));
+    ok('0.53.1: "Primary" (post 1005) is still offered', isset($src['Primary']) && (int) $src['Primary']['post_id'] === 1005);
+    ok('0.53.1: ignoring is read-only — the option still holds "P", and nothing was written',
+        isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['P']) && $GLOBALS['__writes'] === []);
+    $mini = new class extends \DCCS\Mini_Entry_Widget {
+        public $s = [];
+        public function get_settings_for_display($k = null) { return $this->s; }
+        public function out(): string { ob_start(); $this->render(); return (string) ob_get_clean(); }
+    };
+    $entryOf = function (string $html): array {
+        $a = strpos($html, 'data-entry="'); $b = strpos($html, '"><p class="dccs-entry-intro"');
+        return ($a === false || $b === false) ? [] : (json_decode(html_entity_decode(substr($html, $a + 12, $b - $a - 12), ENT_QUOTES), true) ?: []);
+    };
+    $mini->s = ['mirror_source' => 'P', 'copy' => '', 'current' => '34'];
+    $eP = $entryOf($mini->out());
+    ok('0.53.1: a Mini Entry still set to mirror "P" falls back to its own settings, not P\'s old strings',
+        ($eP['modalConfig']['strings']['mode_compare'] ?? null) === 'Compare Mode' && !isset($eP['scope']));
+    $mini->s = ['mirror_source' => 'Primary', 'copy' => '', 'current' => '34'];
+    $eQ = $entryOf($html = $mini->out());
+    ok('0.53.1: mirroring "Primary" still works (positive control)', ($eQ['scope']['el'] ?? '') === 'elementor-element-5be94a3');
+    ok('0.53.1: the line above the button follows the mirrored source\'s intro',
+        strpos($html, '<p class="dccs-entry-intro">' . htmlspecialchars($LIVE['options']['dccs_design_sources']['Primary']['overrides']['string_overrides']['intro']) . '</p>') !== false);
+    $GLOBALS['__posts'] = [];
+
+    // D: packaged defaults = live values, for every control live stores.
+    $instanceKeys = ['share_design', 'design_name', 'mirror_source', 'current', 'selector_url', 'avail_enable'];
+    $changedOn531 = ['str_intro' => true, 'copy' => true];   // B1 / B6 replace these on purpose
+    $drift = [];
+    foreach ($LIVE['widgets'] as $wd) {
+        if ($wd['widget_type'] !== 'dccs_selector') { continue; }   // Mini Entries mirror: their own keys are not read
+        foreach ($wd['stored_settings'] as $k => $v) {
+            if ($k[0] === '_' || in_array($k, $instanceKeys, true) || isset($changedOn531[$k]) || !isset($reg[$k])) { continue; }
+            if (is_array($v) && array_key_exists('size', $v) && $v['size'] === '') { continue; }   // empty responsive value = unset
+            $def = $reg[$k]['default'] ?? ($reg[$k]['placeholder'] ?? null);
+            if (json_encode($def) !== json_encode($v)) { $drift[] = "$k: live " . json_encode($v) . ' vs default ' . json_encode($def); }
+        }
+    }
+    ok('0.53.1: every control live stores has that value as its packaged default' . ($drift ? ' [' . implode('; ', $drift) . ']' : ''), $drift === []);
+    $d531 = \DCCS\Settings::defaults();
+    foreach ($LIVE['options']['dccs_settings'] as $k => $v) {
+        ok("0.53.1: Settings default '$k' equals the live row", ($d531[$k] ?? '(missing)') === $v);
+    }
+    // Precedence unchanged: a stored value still beats every default.
+    $own = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([
+        'str_intro' => 'STORED INTRO', 'icon_mode_quick' => ['value' => 'fas fa-list-ol', 'library' => 'fa-solid']]));
+    ok('0.53.1: a stored intro still beats the packaged one', $own['strings']['intro'] === 'STORED INTRO');
+    ok('0.53.1: a stored icon still beats the packaged one (and goes to Elementor, not the SVG map)',
+        strpos((string) ($own['icons']['mode_quick'] ?? 'x'), 'viewBox="0 0 384 512"') === false);
+    // Nothing writes options on install / activation / upgrade.
+    $code = '';
+    // uninstall.php is excluded: it runs only when someone DELETES the plugin
+    // (guarded by WP_UNINSTALL_PLUGIN, pinned below), never on install or upgrade.
+    foreach (array_filter(glob(DCCS_DIR . '{*.php,includes/*.php}', GLOB_BRACE), fn($f) => basename($f) !== 'uninstall.php') as $f) {
+        foreach (token_get_all(file_get_contents($f)) as $t) {
+            if (is_array($t) && in_array($t[0], [T_COMMENT, T_DOC_COMMENT], true)) { continue; }
+            $code .= is_array($t) ? $t[1] : $t;
+        }
+    }
+    ok('0.53.1: no activation / deactivation / upgrade hook exists',
+        !preg_match('/register_activation_hook|register_deactivation_hook|upgrader_process_complete|activated_plugin/', $code));
+    preg_match_all('/\b(update_option|add_option|delete_option|update_post_meta|delete_post_meta)\s*\(/', $code, $w);
+    ok('0.53.1: the only option writes are the three known runtime ones (publish, prune, settings save) [' . count($w[0]) . ']',
+        count($w[0]) === 3 && !in_array('delete_option', $w[1], true) && !preg_grep('/post_meta/', $w[1]));
+    ok('0.53.1: uninstall.php deletes only under WP_UNINSTALL_PLUGIN',
+        (bool) preg_match('/^\s*<\?php.*?if\s*\(\s*!\s*defined\(\s*[\'"]WP_UNINSTALL_PLUGIN[\'"]\s*\)\s*\)\s*\{\s*exit;/s', (string) @file_get_contents(DCCS_DIR . 'uninstall.php')));
+
     // ---- 0.53.0: Rob's mode menu / Compare Mode / quiz changes -----------------
     // Baked in as PACKAGED defaults. The preset copies of the old wording were
     // removed (not edited): a preset copy would be the two-copies hazard, and a
@@ -1019,8 +1146,9 @@ namespace {
     // so nobody "fixes" the heading back to matching it.
     ok('the heading default carries no emoji, since the marks supply them',
         !preg_match('/[\x{1F300}-\x{1FAFF}]/u', (string) ($preset['str_heading'] ?? '')));
-    ok('the Mini Entry prompt keeps its emoji (it gets no marks)',
-        ($preset['copy'] ?? null) === '🏠 Cottage Wizard 🧙‍♂️');
+    // 0.53.1 (Rob, B6): the label lost both emojis; ONE inline hat-wizard icon
+    // leads it instead, and the plain label is the translatable packaged default.
+    ok('the Mini Entry label is no longer preset (it was the emoji version)', !array_key_exists('copy', $preset));
     // The guarantee Rob depends on: a preset is a control DEFAULT, and a widget's
     // OWN saved value must still win. Anything else would silently overwrite the
     // hand-tuned settings across this site.

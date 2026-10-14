@@ -1501,6 +1501,11 @@ class Selector_Widget extends Widget_Base
      */
     private static function icon_html($icon): string
     {
+        // The packaged default icons render as inline SVG (Icons), so they appear even
+        // where the Font Awesome font is not loaded. Anything else goes to Elementor.
+        if (is_array($icon) && is_string($icon['value'] ?? null) && ($svg = Icons::svg($icon['value'])) !== '') {
+            return $svg;
+        }
         if (!is_array($icon) || empty($icon['value']) || !class_exists('\Elementor\Icons_Manager')) {
             return '';
         }
@@ -1700,6 +1705,35 @@ class Selector_Widget extends Widget_Base
      *
      * @param array<string,mixed> $settings
      */
+    /**
+     * The published design sources whose post still EXISTS (0.53.1). A source is keyed
+     * by name; when its page is deleted the entry stays in the option (nothing here
+     * deletes or rewrites stored data), so every reader goes through this filter
+     * instead. On live "P" (post 9389, deleted) still carries the pre-0.53.0 strings;
+     * filtered out, it can neither appear in the "Mirror design from" list nor be
+     * mirrored. "Primary" (post 1005) is untouched.
+     *
+     * @return array<string,array<string,mixed>>
+     */
+    public static function design_sources(): array
+    {
+        $sources = get_option(self::DESIGN_OPTION, []);
+        if (!is_array($sources)) {
+            return [];
+        }
+        $live = [];
+        foreach ($sources as $name => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $status = function_exists('get_post_status') ? get_post_status((int) ($entry['post_id'] ?? 0)) : false;
+            if ($status !== false && $status !== 'trash') {
+                $live[(string) $name] = $entry;
+            }
+        }
+        return $live;
+    }
+
     public static function publish_design(string $name, int $post_id, string $el_id, array $settings): void
     {
         $name = trim($name);

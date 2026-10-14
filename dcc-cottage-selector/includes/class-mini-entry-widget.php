@@ -86,12 +86,11 @@ class Mini_Entry_Widget extends Selector_Widget
         // Mirror a Cottage Selector's published design (see Selector_Widget::publish_design).
         // Choosing one hides this widget's own design/text controls and makes the pop-up
         // reuse the source's styling + copy, updating automatically when the source changes.
-        $sources = get_option(Selector_Widget::DESIGN_OPTION, []);
+        // Only sources whose page still exists (0.53.1): a deleted page's entry — "P"
+        // on live — must not be offered.
         $source_options = ['' => __('— None (use my own settings) —', 'dcc-cottage-selector')];
-        if (is_array($sources)) {
-            foreach (array_keys($sources) as $name) {
-                $source_options[(string) $name] = (string) $name;
-            }
+        foreach (array_keys(Selector_Widget::design_sources()) as $name) {
+            $source_options[(string) $name] = (string) $name;
         }
 
         $this->preset_control('mirror_source', [
@@ -170,7 +169,11 @@ class Mini_Entry_Widget extends Selector_Widget
             }
         }
 
-        echo self::markup($current, $url, $copy, $modal_config, $scope); // phpcs:ignore WordPress.Security.EscapeOutput
+        // The line above the button is the same intro the pop-up opens with — the
+        // mirrored source's when mirroring, else this widget's own (0.53.1, Rob).
+        $intro = is_array($modal_config) ? (string) ($modal_config['strings']['intro'] ?? '') : (string) ($this->build_config()['strings']['intro'] ?? '');
+
+        echo self::markup($current, $url, $copy, $modal_config, $scope, $intro); // phpcs:ignore WordPress.Security.EscapeOutput
     }
 
     /**
@@ -184,8 +187,10 @@ class Mini_Entry_Widget extends Selector_Widget
         if ($name === '') {
             return null;
         }
-        $sources = get_option(Selector_Widget::DESIGN_OPTION, []);
-        if (is_array($sources) && isset($sources[$name]) && is_array($sources[$name]) && !empty($sources[$name]['overrides'])) {
+        // design_sources() drops entries whose page is gone, so a stale name (live's
+        // "P") falls back to this widget's own settings instead of old strings.
+        $sources = Selector_Widget::design_sources();
+        if (isset($sources[$name]) && !empty($sources[$name]['overrides'])) {
             return $sources[$name];
         }
         return null;
@@ -215,9 +220,11 @@ class Mini_Entry_Widget extends Selector_Widget
         return self::markup((string) $a['current'], (string) $a['url'], (string) $a['text']);
     }
 
+    /** The button label. The live label carried two emojis (🏠 … 🧙‍♂️); since 0.53.1
+        it is plain text and the icon is a packaged inline SVG (Icons). */
     private static function default_copy(): string
     {
-        return __('Not sure this layout fits you best? Open our 30-Second Selector.', 'dcc-cottage-selector');
+        return __('Cottage Wizard', 'dcc-cottage-selector');
     }
 
     /**
@@ -239,7 +246,7 @@ class Mini_Entry_Widget extends Selector_Widget
      * @param array<string,mixed>|null $modal_config
      * @param array<string,string>|null $scope
      */
-    private static function markup(string $current, string $selector_url, string $copy, ?array $modal_config = null, ?array $scope = null): string
+    private static function markup(string $current, string $selector_url, string $copy, ?array $modal_config = null, ?array $scope = null, ?string $intro = null): string
     {
         // Normalize/validate the link server-side (the JS safeUrl() guards at runtime too).
         $selector_url = $selector_url !== '' ? esc_url_raw($selector_url) : '';
@@ -267,12 +274,21 @@ class Mini_Entry_Widget extends Selector_Widget
         }
 
         $label = $copy !== '' ? $copy : self::default_copy();
+        if ($intro === null || $intro === '') {
+            $intro = (string) (Config::strings()['intro'] ?? '');
+        }
 
+        // 0.53.1 (Rob, B2/B3/B6): the intro line above, and a button that matches the
+        // full Selector's landing buttons, led by ONE decorative hat-wizard icon.
         return sprintf(
             '<div class="dccs-entry" data-entry="%1$s">'
-            . '<button type="button" class="dccs-entry-btn">%2$s</button>'
+            . '<p class="dccs-entry-intro">%2$s</p>'
+            . '<button type="button" class="dccs-entry-btn"><span class="dccs-entry-ico" aria-hidden="true">%3$s</span>'
+            . '<span class="dccs-entry-label">%4$s</span></button>'
             . '</div>',
             esc_attr((string) (wp_json_encode($entry) ?: '{}')),
+            esc_html($intro),
+            Icons::svg('fas fa-hat-wizard'),
             esc_html($label)
         );
     }

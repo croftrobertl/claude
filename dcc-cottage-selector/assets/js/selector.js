@@ -710,7 +710,9 @@
     var n = st.compareIds.length;
     var list = config.cottages.map(function (c) {
       var on = st.compareIds.indexOf(String(c.id)) !== -1;
-      return '<label class="dccs-cmp-option">' +
+      // is-checked paints a ticked row navy with white text (0.53.1, Rob's
+      // selected = navy rule). A class, not :has(), so older browsers get it too.
+      return '<label class="dccs-cmp-option' + (on ? ' is-checked' : '') + '">' +
         '<input type="checkbox" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') + '> ' +
         esc(cname(config, c)) + '</label>';
     }).join('');

@@ -1698,6 +1698,10 @@ function configWith(overrides) {
 function availConfig(extra) {
   const cfg = JSON.parse(CONFIG);
   cfg.availability = { enabled: true, ajaxUrl: '/wp-admin/admin-ajax.php', action: 'mphbac_query', calendarUrl: '/availability/', maxNights: 95 };
+  // These blocks test re-ranking around a top-N CUT, so they pin N = 3 (the
+  // default until 0.53.1). Live shows 8 (Settings default since 0.53.1); with all
+  // eight on screen there is no cut for a booked cottage to fall behind.
+  cfg.resultsCount = 3;
   return JSON.stringify(Object.assign(cfg, extra || {}));
 }
 // Stub the endpoint. `booked` lists cottage IDs to report as booked; `fail` makes
@@ -2320,7 +2324,23 @@ defer(async function () {
   ok('it is offset off the control, so it sits on the row',
     /outline-offset:\s*2px/.test(ringBody));
   ok('and it is not faked with a background', !/background/.test(ringBody));
-  ok('no gold anywhere in the plugin', !/F4DA62/i.test(cssCode) && !/F4DA62/i.test(selSrc));
+  // NARROWED in 0.53.1 (Rob): gold is allowed ONLY as the focus ring on navy —
+  // the token's own definition, consumed only by the mode button's and a ticked
+  // Compare row's :focus-visible. Anywhere else (the checkboxes above all) it is
+  // still the Elementor kit's gold leaking in, and this must still fail.
+  const goldHits = cssCode.match(/F4DA62/gi) || [];
+  const tokenDef = cssCode.match(/--dccs-ring-on-navy:\s*#F4DA62\s*;/gi) || [];
+  ok('gold appears exactly once in the stylesheet, as the ring token\'s value', goldHits.length === 1 && tokenDef.length === 1);
+  ok('and never in the controller', !/F4DA62/i.test(selSrc));
+  const ringUsers = [];
+  cssCode.replace(/([^{}]+)\{([^{}]*var\(--dccs-ring-on-navy\)[^{}]*)\}/g, (m, sel) => { ringUsers.push(sel.trim()); return m; });
+  const allowedRing = (sel) => sel.split(',').map(x => x.trim()).every(x =>
+    x === '.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible' ||
+    x === '.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"]:focus-visible');
+  ok('the ring token is consumed (positive control)', ringUsers.length >= 2);
+  ok('only by the two focus-on-navy rules', ringUsers.every(allowedRing));
+  ok('no checkbox accent-color is ever gold or the ring token',
+    !/accent-color:\s*(#F4DA62|var\(--dccs-ring-on-navy\))/i.test(cssCode));
 })();
 
 // ---- 76. 0.35.0: the modal's header row and its close mark ----
@@ -3288,9 +3308,11 @@ defer(async function () {
   ok('99: hover keeps it navy (no coral under white text)', eq(rgb(resolve(decl(T + ':hover', 'background'))), NAVY));
   ok('99: the option = UNSELECTED: white background, navy text',
     eq(rgb(resolve(decl(M, 'background'))), WHITE) && eq(rgb(resolve(decl(M, 'color'))), NAVY));
+  // 0.53.1 (Rob, B5): the option hover became the site-wide button hover —
+  // white on #F08080, no underline. (0.53.0 had a navy tint + underline.)
   const hov = rgb(resolve(decl(M + ':hover', 'background')));
-  ok('99: option hover is a navy tint, not pink', !!hov && hov.slice(0, 3).join() === '0,46,122' && hov[3] > 0 && hov[3] <= 0.15);
-  ok('99: ...with an underline', decl(M + ':hover', 'text-decoration') === 'underline');
+  ok('99: option hover is white on the site coral #F08080', eq(hov, [240, 128, 128, 1]) && eq(rgb(resolve(decl(M + ':hover', 'color'))), WHITE));
+  ok('99: ...with no underline', decl(M + ':hover', 'text-decoration') === 'none');
   ok('99: ...and it no longer reads the item palette (whose hover is coral)',
     !/--dccs-item/.test(String(decl(M, 'background')) + decl(M, 'color') + decl(M + ':hover', 'background')));
   ok('99: no gap: the open menu starts at the button\'s bottom edge',
@@ -3305,13 +3327,108 @@ defer(async function () {
   ok('99: ...and it stands out against navy (>= 3:1)', !!ringCol && cr(ringCol, NAVY) >= 3);
   ok('99: the mode label never wraps', decl(T + ' > span:first-child', 'white-space') === 'nowrap');
   const C = '.dccs-root.dccs-root .dccs-chip';
-  ok('99: unselected answer chip: white with navy text',
-    eq(rgb(resolve(decl(C, 'background'))), WHITE) && eq(rgb(resolve(decl(C, 'color'))), NAVY));
+  ok('99: unselected answer chip: white with BLACK text (0.53.1, Rob)',
+    eq(rgb(resolve(decl(C, 'background'))), WHITE) && eq(rgb(resolve(decl(C, 'color'))), [0, 0, 0, 1]));
   ok('99: selected answer chip: navy with white text',
     eq(rgb(resolve(decl(C + '.is-active', 'background'))), NAVY) && eq(rgb(resolve(decl(C + '.is-active', 'color'))), WHITE));
   ok('99: the Compare Mode intro is centred', decl('.dccs-root.dccs-root .dccs-compare > .dccs-hint', 'text-align') === 'center');
-  ok('99: every text/background pair is at least 4.5:1',
-    cr(WHITE, NAVY) >= 4.5 && !!hov && cr(NAVY, over(hov, WHITE)) >= 4.5);
+  // The option's hover is EXEMPT (Rob chose white on coral knowingly, 2.6:1);
+  // everything else still has to clear 4.5:1.
+  ok('99: every other text/background pair is at least 4.5:1', cr(WHITE, NAVY) >= 4.5 && cr([0, 0, 0, 1], WHITE) >= 4.5);
+  ok('99: the exempt option hover is the known 2.6:1, not something worse', !!hov && Math.abs(cr(WHITE, hov) - 2.59) < 0.05);
+})();
+
+// ==== 0.53.1: Rob's A–D ==========================================================
+// ---- 100. Stylesheet: intro = .dcc-cal-intro, Mini Entry button = landing button,
+//      ticked Compare rows navy, gold ring on navy only ----
+(function () {
+  const raw = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; let depth = 0, start = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '{') {
+      const pre = raw.slice(start, i).trim();
+      if (depth === 0 && pre.startsWith('@')) { depth++; start = i + 1; continue; }
+      const end = raw.indexOf('}', i);
+      rules.push({ sel: pre.split(',').map(x => x.trim()), body: raw.slice(i + 1, end), top: depth === 0 });
+      i = end; start = i + 1; continue;
+    }
+    if (ch === '}') { depth = Math.max(0, depth - 1); start = i + 1; }
+  }
+  const decls = (sel) => { const o = {}; rules.filter(r => r.top && r.sel.indexOf(sel) !== -1).forEach(r =>
+    r.body.split(';').forEach(d => { const m = d.match(/^\s*([\w-]+)\s*:\s*([\s\S]+?)\s*$/); if (m) { o[m[1]] = m[2]; } })); return o; };
+  const root = decls('.dccs-root.dccs-root');
+  const res = (v) => { let m; while (v && (m = String(v).match(/var\((--[\w-]+)\)/))) { v = String(v).replace(m[0], root[m[1]] || ''); } return v; };
+  ok('100: parser found the root tokens (control)', !!root['--dccs-btn-blue'] && rules.length > 100);
+
+  // B1: the intro is the calendar line's typography, value for value.
+  const CAL = { 'margin': '33px 0 11px', 'font-size': '22px', 'font-weight': '400', 'font-style': 'normal', 'color': '#000000',
+    'line-height': '26.4px', 'letter-spacing': '0.1px', 'text-align': 'center' };
+  const intro = decls('.dccs-root.dccs-root .dccs-intro');
+  Object.keys(CAL).forEach(k => ok('100: V1 intro ' + k + ' = ' + CAL[k] + ' (as .dcc-cal-intro)', String(intro[k]).toLowerCase() === CAL[k].toLowerCase()));
+  // B2: the Mini Entry's line declares exactly the same set.
+  const eIntro = decls('.dccs-entry.dccs-entry .dccs-entry-intro');
+  ok('100: the Mini Entry line declares exactly what the V1 intro declares',
+    JSON.stringify(Object.keys(intro).sort().map(k => [k, String(intro[k]).toLowerCase()])) ===
+    JSON.stringify(Object.keys(eIntro).sort().map(k => [k, String(eIntro[k]).toLowerCase()])));
+
+  // B3: the entry button resolves to the same values the landing buttons do.
+  const land = Object.assign({}, decls('.dccs-root.dccs-root button'), decls('.dccs-root.dccs-root .dccs-landing-choice'));
+  const ebtn = decls('.dccs-entry.dccs-entry .dccs-entry-btn');
+  const pairs = [['background', 'background'], ['color', 'color'], ['border', 'border'], ['border-radius', 'border-radius'],
+    ['font-size', 'font-size'], ['font-weight', 'font-weight'], ['line-height', 'line-height'], ['letter-spacing', 'letter-spacing'],
+    ['text-transform', 'text-transform'], ['font-family', 'font-family'], ['padding', 'padding'], ['gap', 'gap']];
+  ok('100: the landing values resolve to the measured spec (control)', /#006BCF/i.test(res(land.background)) && res(land['border-radius']) === '30px' && res(land['line-height']) === '50px');
+  pairs.forEach(([a, b]) => ok('100: Mini Entry button ' + a + ' = landing button ' + b,
+    String(res(ebtn[a])).replace(/\s+/g, ' ').toLowerCase() === String(res(land[b])).replace(/\s+/g, ' ').toLowerCase().replace(/^var\(--dccs-btn-bg, var\(--dccs-action, (#006bcf)\)\)$/, '$1')));
+  const ehov = decls('.dccs-entry.dccs-entry .dccs-entry-btn:hover');
+  ok('100: Mini Entry button hover = white on #F08080, no underline',
+    /#F08080/i.test(ehov.background) && /#FFFFFF/i.test(ehov.color) && ehov['text-decoration'] === 'none');
+
+  // A2: a ticked Compare row is navy/white at rest, hovered and focused; its box is
+  // a white square with a NAVY tick; focus shows gold.
+  const T = '.dccs-root.dccs-root .dccs-cmp-option.is-checked';
+  const rowRule = rules.find(r => r.top && r.sel.indexOf(T) !== -1 && /background/.test(r.body));
+  ok('100: ticked row rule covers rest, hover and focus-within',
+    !!rowRule && rowRule.sel.indexOf(T + ':hover') !== -1 && rowRule.sel.indexOf(T + ':focus-within') !== -1);
+  const row = decls(T);
+  ok('100: ticked row = navy background, white text', /#002E7A/i.test(res(row.background)) && /#FFFFFF/i.test(res(row.color)));
+  const box = decls(T + ' input[type="checkbox"]');
+  ok('100: its checkbox is drawn (appearance none)', box.appearance === 'none');
+  ok('100: ...as a WHITE box', /^#FFFFFF\b/i.test(String(box.background)));
+  const tick = (String(box.background).match(/stroke='([^']+)'/) || [])[1];
+  ok('100: ...with a NAVY tick, never a white one', tick === '%23002E7A');
+  const tf = decls(T + ' input[type="checkbox"]:focus-visible');
+  ok('100: ...and keyboard focus on it shows the gold ring', /#F4DA62/i.test(res(tf['outline-color'])));
+  ok('100: the unticked row keeps its old hover (control: it is not navy)', !/#002E7A/i.test(res(decls('.dccs-root.dccs-root .dccs-cmp-option:hover').background || '')));
+
+  // A1: the navy button's focus ring is gold now.
+  ok('100: mode button focus ring is gold #F4DA62', /#F4DA62/i.test(res(decls('.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible').outline)));
+  // B6: the inline icons keep their glyph proportions.
+  ok('100: inline SVG icons are 1em tall, width from their own proportions',
+    decls('.dccs-root.dccs-root .dccs-ico svg.dccs-svg-icon').width === 'auto' && decls('.dccs-entry.dccs-entry .dccs-entry-ico svg').width === 'auto');
+})();
+
+// ---- 101. Compare rows carry is-checked; the intro renders; 8 results by default ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const w = freshDom();
+  const r = mountSelector(w);
+  ok('101: the landing shows the intro line', !!r.querySelector('.dccs-intro') && r.querySelector('.dccs-intro').textContent === S.intro &&
+    S.intro === 'Answer a few questions to find your best match, or select cottages to compare side by side.');
+  enter(r, 'compare');
+  const rows = () => Array.prototype.slice.call(r.querySelectorAll('.dccs-cmp-option'));
+  ok('101: no row is ticked at first (control)', rows().every(l => !l.classList.contains('is-checked')));
+  const b = r.querySelectorAll('.dccs-cmp-option input')[3]; b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok('101: ticking a row marks exactly that row is-checked',
+    rows().filter(l => l.classList.contains('is-checked')).length === 1 && rows()[3].classList.contains('is-checked'));
+  const b2 = r.querySelectorAll('.dccs-cmp-option input')[3]; b2.checked = false; b2.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok('101: unticking clears it', rows().every(l => !l.classList.contains('is-checked')));
+  const q = mountSelector(freshDom()); enter(q, 'quick'); stepThrough(q, 'either'); seeMatches(q);
+  ok('101: with every answer skipped, all 8 cottages are listed (live results_count 8)', cardNames(q).length === 8 && JSON.parse(CONFIG).resultsCount === 8);
+  // (The two-mode default is asserted in the PHP suite on Config::build(): this
+  // suite's dump-config pins all three modes on purpose, for the Weigh tests.)
 })();
 
 (async function runDeferred() {

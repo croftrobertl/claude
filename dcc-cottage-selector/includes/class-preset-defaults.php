@@ -36,7 +36,6 @@ final class Preset_Defaults
     {
         return [
             // ---- Content ----
-            'copy' => '🏠 Cottage Wizard 🧙‍♂️',
             'enabled_modes' => ['quick', 'compare'],
 
             // ---- Text & labels ----
@@ -49,7 +48,6 @@ final class Preset_Defaults
             // merges saved settings over defaults, so a widget that already stores
             // its own heading keeps it, emoji and all, until someone edits the panel.
             'str_heading' => 'Cottage Wizard',
-            'str_intro' => 'Answer a few quick questions to find your best match.',
             'str_lvl_high' => 'High',
             'str_lvl_low' => 'Low',
             'str_lvl_med' => 'Medium',
@@ -64,6 +62,11 @@ final class Preset_Defaults
             'str_opt_party2' => '1-2',
             'str_opt_party34' => '3-4',
             'str_w_party' => 'Room for 3-4 guests',
+            // NOTE (0.53.1): 'copy' (the Mini Entry label, with its two emojis),
+            // str_intro and intro_color were REMOVED. The label is now the packaged
+            // default "Cottage Wizard" with an inline hat-wizard icon, the intro line
+            // is Config's, and its type/colour live in selector.css (black, 22px, 400)
+            // — a navy intro_color here would emit at (0,4,0) and beat that.
             // NOTE (0.53.0): str_mode_compare, str_opt_either, str_q_layout,
             // str_q_pullout and str_compare_prompt were REMOVED, not edited. Rob's
             // new wording is now the packaged Config::strings() default, and a preset
@@ -98,8 +101,10 @@ final class Preset_Defaults
             // ---- Icons ----
             'icon_back' => ['value' => 'fas fa-arrow-left', 'library' => 'fa-solid'],
             'icon_edit_answers' => ['value' => 'fas fa-edit', 'library' => 'fa-solid'],
-            'icon_mode_compare' => ['value' => 'fas fa-object-ungroup', 'library' => 'fa-solid'],
-            'icon_mode_quick' => ['value' => 'fas fa-list-ol', 'library' => 'fa-solid'],
+            // 0.53.1 (Rob, B6): rendered as inline SVG by Icons, so they show where the
+            // Font Awesome font is not loaded.
+            'icon_mode_compare' => ['value' => 'fas fa-balance-scale', 'library' => 'fa-solid'],
+            'icon_mode_quick' => ['value' => 'fas fa-clipboard-check', 'library' => 'fa-solid'],
             'icon_mode_weights' => ['value' => 'fas fa-balance-scale', 'library' => 'fa-solid'],
             'icon_next' => ['value' => 'fas fa-arrow-right', 'library' => 'fa-solid'],
             'icon_restart' => ['value' => 'fas fa-undo', 'library' => 'fa-solid'],
@@ -128,7 +133,6 @@ final class Preset_Defaults
             'cmpmenu_panel_radius' => ['unit' => 'px', 'size' => 15, 'sizes' => []],
             'dot_height' => ['unit' => 'px', 'size' => 10, 'sizes' => []],
             'heading_color' => '#000000',
-            'intro_color' => '#002E7A',
             'matrix_head_bg' => '#020101',
             'mode_item_padding' => ['unit' => 'px', 'top' => '0', 'right' => '0', 'bottom' => '0', 'left' => '0', 'isLinked' => false],
             'mode_item_radius' => ['unit' => 'px', 'size' => 0, 'sizes' => []],
