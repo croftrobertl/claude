@@ -555,7 +555,9 @@
   background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
 }
 .dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"] {
-  -webkit-appearance: none; appearance: none; margin: 0; border: 0; border-radius: 4px;
+  /* margin = the native checkbox's own (3px 3px 3px 4px), so ticking a row changes
+     neither its height nor where the box sits — the list must not jump. */
+  -webkit-appearance: none; appearance: none; margin: 3px 3px 3px 4px; border: 0; border-radius: 4px;
   background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cpath d='M5 11.5l4 4 8-9' fill='none' stroke='%23002E7A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 22px 22px no-repeat;
 }
 /* Compare Mode's one-sentence intro is centred (0.53.0, Rob) — set here rather

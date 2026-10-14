@@ -1021,6 +1021,16 @@ namespace {
     foreach ($LIVE['options']['dccs_settings'] as $k => $v) {
         ok("0.53.1: Settings default '$k' equals the live row", ($d531[$k] ?? '(missing)') === $v);
     }
+    // Packaged strings = live: every str_ value the preset hands a NEW widget is
+    // also the packaged Config string, so the shortcode (no preset), a blind install
+    // and a CLEARED field (which falls through to Config) all show live's words.
+    $split = [];
+    foreach ($preset as $k => $v) {
+        if (strpos($k, 'str_') === 0 && ($s531[substr($k, 4)] ?? null) !== $v) { $split[] = substr($k, 4); }
+    }
+    ok('0.53.1: every preset string equals its packaged string' . ($split ? ' [' . implode(', ', $split) . ']' : ''), $split === []);
+    ok('0.53.1: ...including the twelve that differed before (spot-check)',
+        $s531['heading'] === 'Cottage Wizard' && $s531['view_cottage'] === 'View Cottage' && $s531['w_workspace'] === 'Deskspace');
     // Precedence unchanged: a stored value still beats every default.
     $own = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([
         'str_intro' => 'STORED INTRO', 'icon_mode_quick' => ['value' => 'fas fa-list-ol', 'library' => 'fa-solid']]));

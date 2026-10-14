@@ -358,8 +358,11 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   question left in 0.53.0, so the array now holds eight entries).
   `wizardTrack()` is the single place that knows.
 - **Site-wide choices live in `Settings`; `Settings::defaults()` is the canonical
-  map** and every value in it reproduces 0.43.0 exactly (proved by rebuilding that
-  release's config from git and diffing: no shared key changed). `Config::build()`
+  map**, and since 0.53.1 every value in it equals LIVE's stored row (Rob: a blind
+  install must behave like live) — 8 results, Matching Quiz + Compare Mode. The
+  export it was taken from is `tests/fixtures/live-state-0.53.0.json`, and a PHP
+  test fails if any default drifts from it (until 0.53.0 they reproduced 0.43.0:
+  3 results, all three modes). `Config::build()`
   reads it; `config_from_snapshot()` passes a key to `Config::build()` only when
   the snapshot carries it. **Never reintroduce a literal fallback there**; the
   fallback belongs in `Settings::defaults()`.
@@ -526,13 +529,24 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **Rob's colour rule is four tokens: `--dccs-sel-*` (navy #002E7A / white) for
   selected things, `--dccs-unsel-*` (white / navy) for unselected ones**, literal
   on purpose so the palette's generic `--dccs-accent` default cannot leak in. The
-  closed mode button is SELECTED (it shows the mode in use); the menu option and
-  unselected answer chips are UNSELECTED. The option's hover is a navy tint plus
-  underline and must never read `--dccs-item-*` again (that palette hovers coral).
-  The navy button hovers to navy (underline), not coral — coral under white text
-  is 2.6:1. Its keyboard ring is WHITE and INSET (`outline-offset: -5px`): Rob
-  offered gold or white, and white keeps "no gold anywhere in the plugin" — the
-  guard against the Elementor kit's gold focus accent — meaningful.
+  closed mode button and a TICKED Compare row are SELECTED; the menu option is
+  UNSELECTED. Unselected ANSWER chips are the exception Rob chose in 0.53.1: black
+  text (`--dccs-chip-text`), not navy. The option's hover is the site-wide button
+  hover — white on #F08080, no underline (0.53.1, Rob, knowingly 2.6:1; a test
+  exempts exactly that state from the 4.5:1 check). The navy button hovers to navy
+  (underline), not coral. Its keyboard ring is GOLD #F4DA62 and INSET
+  (`outline-offset: -5px`), 9.0:1 on navy (0.53.1; 0.53.0 used white).
+  **Gold is allowed in exactly one place**: the `--dccs-ring-on-navy` token, consumed
+  only by the mode button's and a ticked row's checkbox `:focus-visible`. The test
+  that used to say "no gold anywhere" now checks exactly that — one literal, two
+  consumers, and no checkbox `accent-color` ever gold — so the Elementor kit's gold
+  checkbox focus is still blocked.
+- **A ticked Compare row is navy with white text at rest, hover, tap and focus
+  (0.53.1)** via an `is-checked` class (not `:has()`, for older browsers). Its
+  checkbox is DRAWN (`appearance: none`): a white box with a navy tick, because a
+  native checked box is navy on navy. The drawn box keeps the native margins
+  (3px 3px 3px 4px) — with `margin: 0` every ticked row came out 3px shorter and
+  the list jumped (measured, caught before release).
   **Stored per-element values beat all of this.** `modetab_bg` / `modetab_color`
   emit at (0,4,0); the 0.52.0 preset stored white/black, so live widgets need those
   two keys CLEARED (together — clearing only the colour leaves white on white).
@@ -558,6 +572,29 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   criteria, with `pet` as the positive control that the link IS read. Dining seats
   stay in `cottages.json` and the Compare table. Weigh Priorities (off on live)
   keeps its dining priority — it was not in scope.
+- **The packaged icons are inline SVG (`class-icons.php`, 0.53.1).** clipboard-check
+  (Matching Quiz), balance-scale (Compare Mode) and hat-wizard (the Mini Entry) are
+  Font Awesome 5.15.4 Free paths with their CC BY 4.0 note, rendered by
+  `icon_html()` before Elementor's Icons_Manager is asked — so they show on pages
+  where the FA font is not loaded (0.53.0's icons did not; measured). Any other
+  icon value still goes to Elementor. Height 1em, width from the glyph's own
+  proportions, `fill: currentColor`, `aria-hidden`.
+- **The Mini Entry is a line plus a button that copies the landing buttons
+  (0.53.1).** The line is the same `intro` the pop-up opens with (the mirrored
+  source's, else its own); the button repeats the landing-button values as
+  LITERALS because `.dccs-entry` is outside `.dccs-root` and gets no tokens. Its
+  label is the packaged "Cottage Wizard"; the old emoji label lived in the preset
+  and on all eight live instances (`copy`), which mask it until cleared.
+- **A design source whose post is gone is IGNORED, never pruned on read
+  (0.53.1).** `Selector_Widget::design_sources()` filters by `get_post_status()`;
+  the dropdown and `mirror_source()` both go through it. Live's "P" (post 9389)
+  stays in the option untouched. Nothing in this plugin writes options on install,
+  activation or upgrade — a PHP test tokenises the plugin and allows exactly three
+  runtime writes (publish, prune-on-save, settings save) plus uninstall.php.
+- **Changing a preset/control default does not reach a page until Elementor
+  regenerates that page's CSS.** Elementor caches per-post CSS built from control
+  values INCLUDING defaults; the 0.53.1 checklist runs Elementor → Tools →
+  Regenerate Files & Data after install.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
@@ -662,6 +699,15 @@ preset value never affects an already-placed widget. Preset values are literal t
 and bypass Loco, so **only add a key that was genuinely captured from a live widget** —
 duplicating a `Config::strings()` default there just creates a two-copies-must-agree
 drift hazard (it bit us in 0.22.2; the notes were removed from the preset in 0.22.3).
+
+**Since 0.53.1 every preset `str_` value equals its packaged `Config::strings()`
+text, and a PHP test fails if one drifts.** Twelve had diverged (the preset held
+live's words — "Cottage Wizard", "View Cottage", "Deskspace" — while Config held
+older ones). That mattered in three places the preset never reaches: the
+`[dcc_selector_entry]` shortcode, a blind install's placeholder-only fields, and any
+field CLEARED in the panel (it stores `''`, which falls through to Config). Before
+telling anyone a stored key is "safe to clear", check that clearing it lands on the
+same text — that is how this was found.
 
 ## Testing
 

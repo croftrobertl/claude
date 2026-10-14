@@ -22,12 +22,17 @@ final class Config
     {
         return [
             // Shell / modes
-            'heading'           => __('Find your perfect cottage', 'dcc-cottage-selector'),
+            // 0.53.1 (Rob, Part D): every string below that the live widgets show
+            // from the site preset now carries the SAME text here, so a blind install,
+            // the [dcc_selector_entry] shortcode (which has no preset) and a cleared
+            // field all show what live shows. Twelve differed; a PHP test now fails if
+            // a preset str_ value and its packaged string ever drift apart again.
+            'heading'           => __('Cottage Wizard', 'dcc-cottage-selector'),
             /* The one line above the mode buttons (0.53.1, Rob), also shown above the Mini
                Entry's "Cottage Wizard" button. A sentence, so sentence case. */
             'intro'             => __('Answer a few questions to find your best match, or select cottages to compare side by side.', 'dcc-cottage-selector'),
             'mode_quick'        => __('Matching Quiz', 'dcc-cottage-selector'),
-            'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
+            'mode_weights'      => __('Weigh Priorities', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare Mode', 'dcc-cottage-selector'),
             /* The comparison pop-up's title. Was mode_compare until 0.53.0; split out when
                the mode was renamed "Compare Mode", because the pop-up also opens from the
@@ -39,7 +44,7 @@ final class Config
             'name_format'       => /* translators: %1$s: cottage number, %2$s: cottage name */ __('Cottage %1$s: %2$s', 'dcc-cottage-selector'),
             'match_count'       => /* translators: %d: number of matching cottages (2+) */ __('%d cottages match', 'dcc-cottage-selector'),
             'match_count_one'   => /* translators: %d: number of matching cottages (always 1) */ __('%d cottage matches', 'dcc-cottage-selector'),
-            'count_zero_hint'   => __('Closest options shown at the end.', 'dcc-cottage-selector'),
+            'count_zero_hint'   => __('Your closest matches are shown at the end.', 'dcc-cottage-selector'),
             'sr_top_match'      => /* translators: %s: cottage name */ __('Top match: %s', 'dcc-cottage-selector'),
             'loading'           => __('Loading…', 'dcc-cottage-selector'),
             'unavailable'       => __('The cottage selector is temporarily unavailable.', 'dcc-cottage-selector'),
@@ -58,12 +63,12 @@ final class Config
             'dates_none'        => __('No dates yet', 'dcc-cottage-selector'),
             'dates_hint'        => __('Optional. Give us dates and we will only recommend cottages that are free.', 'dcc-cottage-selector'),
             'dates_invalid'     => __('Check-out must be after check-in.', 'dcc-cottage-selector'),
-            'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
+            'q_desk'            => __('Do you need a computer desk?', 'dcc-cottage-selector'),
             'q_pullout'         => __('What about a pull-out couch?', 'dcc-cottage-selector'),
             'q_layout'          => __('Which layout: studio or 1-bedroom?', 'dcc-cottage-selector'),
             'q_pet'             => __('Do you need a pet-friendly cottage?', 'dcc-cottage-selector'),
             'q_ground'          => __('Do you need ground floor only?', 'dcc-cottage-selector'),
-            'q_screenedporch'   => __('Do you want a private screened-in porch?', 'dcc-cottage-selector'),
+            'q_screenedporch'   => __('Do you prefer a private, screened-in porch?', 'dcc-cottage-selector'),
 
             // Wizard flow
             'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
@@ -72,7 +77,7 @@ final class Config
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
             'review_heading'    => __('Review Your Answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
-            'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
+            'edit_answers'      => __('Edit Answers', 'dcc-cottage-selector'),
             // Title Case is carried by the STRING now, not by a text-transform:
             // the site button spec sets text-transform:none (0.27.0), so whatever
             // is stored here is what renders.
@@ -95,21 +100,21 @@ final class Config
             'opt_no'            => __('No', 'dcc-cottage-selector'),
             'opt_either'        => __('Skip', 'dcc-cottage-selector'),
             'opt_studio'        => __('Studio', 'dcc-cottage-selector'),
-            'opt_onebed'        => __('1-bedroom', 'dcc-cottage-selector'),
+            'opt_onebed'        => __('1-Bedroom', 'dcc-cottage-selector'),
             'opt_party2'        => __('1-2', 'dcc-cottage-selector'),
             'opt_party34'       => __('3-4', 'dcc-cottage-selector'),
 
             // What Matters Most rows + 3-state toggle
             'w_question'        => /* translators: %s: a priority, e.g. "Workspace" */ __('How much does %s matter?', 'dcc-cottage-selector'),
-            'w_workspace'       => __('Workspace', 'dcc-cottage-selector'),
+            'w_workspace'       => __('Deskspace', 'dcc-cottage-selector'),
             'w_moreroom'        => __('More room', 'dcc-cottage-selector'),
-            'w_fewerstairs'     => __('Fewer stairs', 'dcc-cottage-selector'),
+            'w_fewerstairs'     => __('No stairway', 'dcc-cottage-selector'),
             'w_pet'             => __('Pet-friendly', 'dcc-cottage-selector'),
             'w_studio'          => __('Studio simplicity', 'dcc-cottage-selector'),
             'w_onebed'          => __('1-bedroom separation', 'dcc-cottage-selector'),
-            'w_dining'          => __('Dining comfort', 'dcc-cottage-selector'),
+            'w_dining'          => __('4+ dining comfort', 'dcc-cottage-selector'),
             'w_pullout'         => __('Pull-out couch flexibility', 'dcc-cottage-selector'),
-            'w_screenedporch'   => __('Screened-in porch', 'dcc-cottage-selector'),
+            'w_screenedporch'   => __('Private, screened-in porch', 'dcc-cottage-selector'),
             'w_party'           => __('Room for 3-4 guests', 'dcc-cottage-selector'),
             'lvl_low'           => __('Low', 'dcc-cottage-selector'),
             'lvl_med'           => __('Medium', 'dcc-cottage-selector'),
@@ -139,7 +144,7 @@ final class Config
 
             // Results
             'results_heading'   => __('Your Top Matches', 'dcc-cottage-selector'),
-            'view_cottage'      => __('View this cottage', 'dcc-cottage-selector'),
+            'view_cottage'      => __('View Cottage', 'dcc-cottage-selector'),
             /* The narrow-screen form of view_cottage. Both ship in the markup and CSS
                picks one, so a full-page cache can serve the same HTML to every device. */
             'view_cottage_short' => __('View', 'dcc-cottage-selector'),

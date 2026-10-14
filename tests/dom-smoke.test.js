@@ -3396,6 +3396,7 @@ defer(async function () {
   ok('100: ticked row = navy background, white text', /#002E7A/i.test(res(row.background)) && /#FFFFFF/i.test(res(row.color)));
   const box = decls(T + ' input[type="checkbox"]');
   ok('100: its checkbox is drawn (appearance none)', box.appearance === 'none');
+  ok('100: ...with the native box\'s margins, so ticking never changes the row\'s height (no list jump)', box.margin === '3px 3px 3px 4px');
   ok('100: ...as a WHITE box', /^#FFFFFF\b/i.test(String(box.background)));
   const tick = (String(box.background).match(/stroke='([^']+)'/) || [])[1];
   ok('100: ...with a NAVY tick, never a white one', tick === '%23002E7A');
