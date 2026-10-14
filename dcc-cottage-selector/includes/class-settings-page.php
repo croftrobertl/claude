@@ -262,7 +262,7 @@ final class Settings_Page
         echo '<details class="dccs-advanced" style="margin-top:1.5em">';
         echo '<summary style="cursor:pointer;font-size:1.3em;font-weight:600;padding:.4em 0">'
             . esc_html__('Advanced', 'dcc-cottage-selector') . '</summary>';
-        echo '<p class="description">' . esc_html__('Defaults here reproduce the behaviour shipped before this page existed. Change them only with a reason.', 'dcc-cottage-selector') . '</p>';
+        echo '<p class="description">' . esc_html__('Defaults here match the live site\'s settings. Change them only with a reason.', 'dcc-cottage-selector') . '</p>';
         echo '<table class="form-table" role="presentation"><tbody>';
         self::number_row('badges_max', __('Badges per cottage', 'dcc-cottage-selector'), $s, 1, 6, '');
         self::number_row('reasons_max', __('Match reasons per cottage', 'dcc-cottage-selector'), $s, 1, 6, '');
@@ -278,7 +278,7 @@ final class Settings_Page
 
         echo '<p class="description">' . sprintf(
             /* translators: %s: plugin version */
-            esc_html__('DCC Cottage Selector %s. Defaults reproduce the behaviour of the release before this page existed.', 'dcc-cottage-selector'),
+            esc_html__('DCC Cottage Selector %s. Defaults match the live site.', 'dcc-cottage-selector'),
             esc_html(defined('DCCS_VERSION') ? DCCS_VERSION : '')
         ) . '</p>';
 

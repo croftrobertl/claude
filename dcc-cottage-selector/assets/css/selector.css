@@ -100,11 +100,18 @@
   box-sizing: border-box;
   color: var(--dccs-text);
   background: var(--dccs-bg);
-  padding: 16px;
+  padding: var(--dccs-shell-pad);
   border-radius: var(--dccs-radius);
-  max-width: 720px;
+  max-width: var(--dccs-shell-max);
   margin: 0 auto;
 }
+/* THE ONE SOURCE for the Selector's width (0.53.2). The full Selector's box is
+   --dccs-shell-max wide with --dccs-shell-pad inside it, so its text runs at most
+   max − 2 × pad (720 − 44 = 676px). The Mini Entry's line sits OUTSIDE .dccs-root,
+   so the same two tokens are declared on .dccs-entry too, and the line is capped
+   with them (.dccs-entry-intro) — change either value here and both move. */
+.dccs-root.dccs-root,
+.dccs-entry.dccs-entry { --dccs-shell-max: 720px; --dccs-shell-pad: 16px; }
 
 .dccs-root.dccs-root *,
 .dccs-root.dccs-root *::before,
@@ -153,6 +160,10 @@
   margin: 33px 0 11px; max-width: none;
   font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
   color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+  /* Balanced wrap (0.53.2, Rob, option 2): a two-line wrap is evened out instead of
+     stranding a word or two on the second line. Typography is unchanged; browsers
+     without support wrap normally. */
+  text-wrap: balance;
 }
 
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
@@ -817,9 +828,13 @@
    mirrors; the Chromium harness compares the two buttons' computed styles. */
 .dccs-entry.dccs-entry { margin: 12px 0; }
 .dccs-entry.dccs-entry .dccs-entry-intro {
-  margin: 33px 0 11px; max-width: none;
+  /* Capped at the full Selector's text width and centred (0.53.2, Rob): max − 2 ×
+     pad from the shared tokens above. Where the column is narrower than that
+     (phones, most tablets) the cap never engages. Balanced wrap, as on V1. */
+  margin: 33px auto 11px; max-width: calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad));
   font-family: inherit; font-size: 22px; font-weight: 400; font-style: normal;
   color: #000000; line-height: 26.4px; letter-spacing: 0.1px; text-align: center;
+  text-wrap: balance;
 }
 .dccs-entry.dccs-entry .dccs-entry-btn {
   display: flex; align-items: center; justify-content: center; gap: 0.5em;
@@ -836,9 +851,14 @@
 }
 .dccs-entry.dccs-entry .dccs-entry-btn:focus-visible { outline: 2px solid #002E7A; outline-offset: 2px; }
 .dccs-entry.dccs-entry .dccs-entry-ico {
-  display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em;
+  /* Two hats (0.53.2, Rob, option B "facing in"): the button's 0.5em (10px) gap is
+     the ONLY space either side, so the hats are identical boxes and the label sits
+     exactly centred between them. */
+  display: inline-flex; align-items: center; line-height: 0; margin: 0; vertical-align: -0.1em;
 }
 .dccs-entry.dccs-entry .dccs-entry-ico svg { height: 1em; width: auto; fill: currentColor; }
+/* The right hat is the same glyph mirrored, so both tips lean toward the words. */
+.dccs-entry.dccs-entry .dccs-entry-ico-end svg { transform: scaleX(-1); }
 @media (prefers-reduced-motion: reduce) {
   .dccs-entry.dccs-entry .dccs-entry-btn { transition: none; }
 }
@@ -934,7 +954,8 @@
    area, so nothing is clipped (measured at 320-1280px). */
 
 @media (min-width: 640px) {
-  .dccs-root.dccs-root { padding: 22px; }
+  .dccs-root.dccs-root,
+  .dccs-entry.dccs-entry { --dccs-shell-pad: 22px; }
   .dccs-root.dccs-root .dccs-heading { font-size: 1.7rem; }
 }
 

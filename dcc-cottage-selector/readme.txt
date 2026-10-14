@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.1
+Stable tag: 0.53.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.53.2 =
+* Cottage pages: the line above the Cottage Wizard button now has its own text, "Use
+  the Cottage Wizard below to compare cottages or find your best match." It is the
+  Mini Entry's own setting, so mirroring a Selector no longer changes it. The pop-up's
+  first screen is unchanged.
+* Cottage pages: the button carries two wizard hats, the right one mirrored so both
+  lean toward the words; the label stays exactly centred.
+* Cottage pages: the line is capped at the full Selector's text width (676px) and
+  centred, derived from the same setting as the Selector.
+* Both intro lines use balanced wrapping, so a two-line wrap is evened out.
+* Labels in Title Case: compare-table and review rows, "Ranked #N for You", the
+  result-card tags, the Weigh Priorities, dates and availability labels, and "Fee
+  Details". Status lines, screen-reader names, questions and sentences are unchanged.
+* Settings page: two lines now say the defaults match the live site.
+* Stored lowercase copies of those labels mask the new defaults until cleared; see
+  the release notes for the list.
 
 = 0.53.1 =
 * Compare Mode: a ticked cottage is navy with white text — resting, hovered, tapped

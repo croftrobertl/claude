@@ -39,6 +39,10 @@ namespace {
     function update_option($k, $v, $autoload = null) { $GLOBALS['__opts'][$k] = $v; $GLOBALS['__writes'][] = $k; return true; }
     // Posts that exist (0.53.1 design_sources() skips sources whose post is gone).
     function get_post_status($id) { return in_array((int) $id, $GLOBALS['__posts'] ?? [], true) ? 'publish' : false; }
+    // For rendering a real Selector (0.53.2: does the homepage widget publish?).
+    if (!function_exists('esc_url')) { function esc_url($u) { return (string) $u; } }
+    function is_singular() { return true; }
+    function get_the_ID() { return 620; }
 }
 
 // Minimal Elementor base so the widget class can load (design_snapshot et al. are
@@ -927,7 +931,9 @@ namespace {
 
     // ---- 0.53.1: Rob's A–D -----------------------------------------------------
     $s531 = \DCCS\Config::strings();
-    $LIVE = json_decode(file_get_contents(__DIR__ . '/fixtures/live-state-0.53.0.json'), true);
+    // Live as exported after 0.53.1 went in (2026-10-14 17:47): the homepage widget
+    // no longer shares, so /cottages/ (1005) is the only "Primary".
+    $LIVE = json_decode(file_get_contents(__DIR__ . '/fixtures/live-state-0.53.1.json'), true);
     ok('0.53.1: the live export fixture loads (positive control)', is_array($LIVE) && count($LIVE['widgets']) === 10);
 
     // B1/B2: the intro line.
@@ -966,11 +972,21 @@ namespace {
     $btn  = $ex->query('//div[@class="dccs-entry"]/button[@class="dccs-entry-btn"]');
     ok('0.53.1: Mini Entry has the intro line directly above its button',
         $line->length === 1 && $btn->length === 1 && $line->item(0)->nextSibling === $btn->item(0));
-    ok('0.53.1: ...reading the intro string', $line->length === 1 && trim($line->item(0)->textContent) === $s531['intro']);
-    ok('0.53.1: the button holds exactly one icon, a hat-wizard SVG, hidden from screen readers',
-        $btn->length === 1 && $ex->query('.//svg', $btn->item(0))->length === 1
-        && stripos($ed->saveHTML($btn->item(0)), 'viewBox="0 0 512 512"') !== false   // libxml lowercases viewBox
-        && $ex->query('.//*[@aria-hidden="true"]//svg | .//svg[@aria-hidden="true"]', $btn->item(0))->length >= 1);
+    ok('0.53.2: the line reads its OWN packaged text (A1)', $line->length === 1 && trim($line->item(0)->textContent) === $s531['entry_line']
+        && $s531['entry_line'] === 'Use the Cottage Wizard below to compare cottages or find your best match.');
+    $icos = $ex->query('./span[contains(concat(" ", @class, " "), " dccs-entry-ico ")]', $btn->item(0));
+    ok('0.53.2: the button holds TWO hats, one each side of the label (A3)',
+        $icos->length === 2 && $ex->query('.//svg', $btn->item(0))->length === 2
+        && $icos->item(0)->nextSibling && $icos->item(0)->nextSibling->getAttribute('class') === 'dccs-entry-label'
+        && $btn->item(0)->lastChild === $icos->item(1));
+    ok('0.53.2: both are the same hat-wizard glyph', $icos->length === 2
+        && $ed->saveHTML($icos->item(0)->firstChild) === $ed->saveHTML($icos->item(1)->firstChild)
+        && stripos($ed->saveHTML($icos->item(0)), 'viewBox="0 0 512 512"') !== false);   // libxml lowercases viewBox
+    ok('0.53.2: only the RIGHT one carries the mirroring class', $icos->length === 2
+        && strpos($icos->item(0)->getAttribute('class'), 'dccs-entry-ico-end') === false
+        && strpos($icos->item(1)->getAttribute('class'), 'dccs-entry-ico-end') !== false);
+    ok('0.53.2: both hats are hidden from screen readers, so the name stays "Cottage Wizard"', $icos->length === 2
+        && $icos->item(0)->getAttribute('aria-hidden') === 'true' && $icos->item(1)->getAttribute('aria-hidden') === 'true');
     ok('0.53.1: its label is "Cottage Wizard", with no emoji anywhere',
         trim($btn->item(0)->textContent) === 'Cottage Wizard' && !preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $entryHtml));
 
@@ -999,24 +1015,86 @@ namespace {
     $mini->s = ['mirror_source' => 'Primary', 'copy' => '', 'current' => '34'];
     $eQ = $entryOf($html = $mini->out());
     ok('0.53.1: mirroring "Primary" still works (positive control)', ($eQ['scope']['el'] ?? '') === 'elementor-element-5be94a3');
-    ok('0.53.1: the line above the button follows the mirrored source\'s intro',
-        strpos($html, '<p class="dccs-entry-intro">' . htmlspecialchars($LIVE['options']['dccs_design_sources']['Primary']['overrides']['string_overrides']['intro']) . '</p>') !== false);
+    $lineOf = function (string $html): string { return preg_match('#<p class="dccs-entry-intro">(.*?)</p>#s', $html, $m) ? html_entity_decode($m[1], ENT_QUOTES) : '(none)'; };
+    ok('0.53.2: while mirroring, the line is NOT the source\'s intro (A1)',
+        $lineOf($html) === $s531['entry_line'] && $lineOf($html) !== $LIVE['options']['dccs_design_sources']['Primary']['overrides']['string_overrides']['intro']);
+    ok('0.53.2: ...and the pop-up still opens on the mirrored intro (A2)',
+        ($eQ['modalConfig']['strings']['intro'] ?? null) === $LIVE['options']['dccs_design_sources']['Primary']['overrides']['string_overrides']['intro']);
+    // Every live Mini Entry still stores an unread str_intro with an OLDER intro. The
+    // line must never read it.
+    $mini->s = ['mirror_source' => 'Primary', 'copy' => '', 'str_intro' => 'Answer a few quick questions to find your best match.'];
+    ok('0.53.2: a stored stale str_intro never reaches the line', $lineOf($mini->out()) === $s531['entry_line']);
+    $mini->s = ['mirror_source' => 'Primary', 'copy' => '', 'entry_line' => 'OWN LINE QQQ'];
+    ok('0.53.2: a stored entry_line wins, even while mirroring', $lineOf($mini->out()) === 'OWN LINE QQQ');
+    $mini->s = ['mirror_source' => '', 'copy' => '', 'entry_line' => ''];
+    ok('0.53.2: an emptied entry_line falls back to the packaged line', $lineOf($mini->out()) === $s531['entry_line']);
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    $home = []; foreach ($LIVE['widgets'] as $wd) { if ($wd['widget_id'] === 'd1ae1cf') { $home = $wd['stored_settings']; } }
+    $homeW = new class extends \DCCS\Selector_Widget {
+        public $s = [];
+        public function get_settings_for_display($k = null) { return $this->s; }
+        public function get_id() { return 'd1ae1cf'; }
+        public function out(): string { ob_start(); $this->render(); return (string) ob_get_clean(); }
+    };
+    $homeW->s = $home; $GLOBALS['__writes'] = [];
+    $homeW->out();
+    ok('0.53.2: the homepage widget (share_design "") does not publish "Primary" again',
+        !isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']) && $GLOBALS['__writes'] === []);
+    $homeW->s = ['share_design' => 'yes'] + $home; $homeW->out();
+    ok('0.53.2: ...while a sharing widget does publish (positive control)', isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']));
     $GLOBALS['__posts'] = [];
 
     // D: packaged defaults = live values, for every control live stores.
     $instanceKeys = ['share_design', 'design_name', 'mirror_source', 'current', 'selector_url', 'avail_enable'];
-    $changedOn531 = ['str_intro' => true, 'copy' => true];   // B1 / B6 replace these on purpose
-    $drift = [];
+    // 0.53.2 Part B Title-Cases labels that BOTH V1 widgets store in lowercase. Those
+    // are the expected exceptions — the must-clear list — and nothing else may differ.
+    $partB = ['str_w_moreroom', 'str_w_fewerstairs', 'str_w_pet', 'str_w_studio', 'str_w_onebed', 'str_w_dining',
+              'str_w_pullout', 'str_w_screenedporch', 'str_w_party', 'str_fee_link'];
+    $drift = []; $masks = [];
     foreach ($LIVE['widgets'] as $wd) {
         if ($wd['widget_type'] !== 'dccs_selector') { continue; }   // Mini Entries mirror: their own keys are not read
         foreach ($wd['stored_settings'] as $k => $v) {
-            if ($k[0] === '_' || in_array($k, $instanceKeys, true) || isset($changedOn531[$k]) || !isset($reg[$k])) { continue; }
+            if ($k[0] === '_' || in_array($k, $instanceKeys, true) || !isset($reg[$k])) { continue; }
             if (is_array($v) && array_key_exists('size', $v) && $v['size'] === '') { continue; }   // empty responsive value = unset
             $def = $reg[$k]['default'] ?? ($reg[$k]['placeholder'] ?? null);
-            if (json_encode($def) !== json_encode($v)) { $drift[] = "$k: live " . json_encode($v) . ' vs default ' . json_encode($def); }
+            if (json_encode($def) !== json_encode($v)) {
+                if (in_array($k, $partB, true)) { $masks[$wd['widget_id']][] = $k; } else { $drift[] = "$k: live " . json_encode($v) . ' vs default ' . json_encode($def); }
+            }
         }
     }
-    ok('0.53.1: every control live stores has that value as its packaged default' . ($drift ? ' [' . implode('; ', $drift) . ']' : ''), $drift === []);
+    ok('0.53.2: every other control live stores has that value as its packaged default' . ($drift ? ' [' . implode('; ', $drift) . ']' : ''), $drift === []);
+    foreach (['5be94a3', 'd1ae1cf'] as $wid) {
+        $got = $masks[$wid] ?? []; sort($got); $want = $partB; sort($want);
+        ok("0.53.2: V1 $wid's stored lowercase labels are exactly the must-clear list", $got === $want);
+    }
+    // The Director's read-only WP-CLI check (tools/check-stored-keys.php) must flag
+    // EXACTLY what masks a default on each widget that reads it — run against the
+    // live fixture through a stand-in $wpdb, compared with the masks computed above
+    // from the real control defaults (an independent derivation).
+    $runCheck = function (array $live): string {
+        $wpdb = new class($live) { public $postmeta = 'portal_postmeta'; public $posts = 'portal_posts'; private $l;
+            public function __construct($l) { $this->l = $l; }
+            public function get_results($sql) { $r = []; foreach ($this->l['widgets'] as $w) { $r[] = (object) ['post_id' => $w['post_id'], 'post_title' => $w['post_title'], 'post_type' => $w['post_type'],
+                'meta_value' => json_encode([['elType' => 'container', 'elements' => [['elType' => 'widget', 'widgetType' => $w['widget_type'], 'id' => $w['widget_id'], 'settings' => $w['stored_settings']]]]])]; } return $r; } };
+        $GLOBALS['wpdb'] = $wpdb; $GLOBALS['__opts']['dccs_design_sources'] = $live['options']['dccs_design_sources'];
+        ob_start(); include __DIR__ . '/../tools/check-stored-keys.php'; return (string) ob_get_clean();
+    };
+    $GLOBALS['__posts'] = [1005, 620, 3043, 3196, 3254, 3265, 3293, 3301, 3305, 3312];
+    $report = $runCheck($LIVE);
+    $flagged = [];
+    foreach (preg_split('/\n(?===)/', $report) as $chunk) {
+        if (preg_match('/dccs_\w+ (\w{7})/', $chunk, $m)) { preg_match_all('/MASKS \(read\)\s+(\w+)/', $chunk, $k); $flagged[$m[1]] = $k[1]; }
+    }
+    foreach (['5be94a3', 'd1ae1cf'] as $wid) {
+        $got = $flagged[$wid] ?? []; sort($got); $want = $masks[$wid] ?? []; sort($want);
+        ok("0.53.2: the check script flags exactly what masks a default on V1 $wid", $want !== [] && $got === $want);
+    }
+    ok('0.53.2: the check script flags nothing as read on a mirroring Mini Entry (their copies are unread)',
+        array_filter(array_intersect_key($flagged, array_flip(['8c85f6c', 'ca8b36f', '032b915', '8aa78cd', '192db90', '2ce41db', '38d1421', '34ebe3d']))) === []);
+    ok('0.53.2: ...and lists their stale str_intro as unread', substr_count($report, 'str_intro is stored but NOT read') === 8);
+    $cleared = $LIVE; foreach ($cleared['widgets'] as &$cw) { foreach ($partB as $k) { unset($cw['stored_settings'][$k]); } } unset($cw);
+    ok('0.53.2: after clearing the list, the check script reports nothing to clear', strpos($runCheck($cleared), 'TOTAL keys that mask 0.53.2: 0') !== false);
+    $GLOBALS['__posts'] = [];
     $d531 = \DCCS\Settings::defaults();
     foreach ($LIVE['options']['dccs_settings'] as $k => $v) {
         ok("0.53.1: Settings default '$k' equals the live row", ($d531[$k] ?? '(missing)') === $v);

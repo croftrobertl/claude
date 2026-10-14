@@ -83,6 +83,19 @@ class Mini_Entry_Widget extends Selector_Widget
             'label_block' => true,
         ]);
 
+        // The line above the button (0.53.2, Rob). This widget's OWN text: a mirrored
+        // source never overwrites it, and it is a NEW key on purpose — all eight live
+        // Mini Entries still store an unread `str_intro` with an older intro, which
+        // would show on every cottage page if this read it. Placeholder-only (no
+        // default), like the notes: an empty field shows the packaged, translatable
+        // line, and pressing Update never freezes today's English into the database.
+        $this->preset_control('entry_line', [
+            'label'       => __('Line above the button', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'placeholder' => Config::strings()['entry_line'] ?? '',
+            'label_block' => true,
+        ]);
+
         // Mirror a Cottage Selector's published design (see Selector_Widget::publish_design).
         // Choosing one hides this widget's own design/text controls and makes the pop-up
         // reuse the source's styling + copy, updating automatically when the source changes.
@@ -169,9 +182,10 @@ class Mini_Entry_Widget extends Selector_Widget
             }
         }
 
-        // The line above the button is the same intro the pop-up opens with — the
-        // mirrored source's when mirroring, else this widget's own (0.53.1, Rob).
-        $intro = is_array($modal_config) ? (string) ($modal_config['strings']['intro'] ?? '') : (string) ($this->build_config()['strings']['intro'] ?? '');
+        // The line above the button is this widget's own `entry_line` (0.53.2): NOT
+        // the pop-up's intro, so mirroring cannot change it and the pop-up keeps its
+        // own first screen. Empty falls through to the packaged line in markup().
+        $intro = trim((string) ($s['entry_line'] ?? ''));
 
         echo self::markup($current, $url, $copy, $modal_config, $scope, $intro); // phpcs:ignore WordPress.Security.EscapeOutput
     }
@@ -275,20 +289,25 @@ class Mini_Entry_Widget extends Selector_Widget
 
         $label = $copy !== '' ? $copy : self::default_copy();
         if ($intro === null || $intro === '') {
-            $intro = (string) (Config::strings()['intro'] ?? '');
+            $intro = (string) (Config::strings()['entry_line'] ?? '');
         }
 
-        // 0.53.1 (Rob, B2/B3/B6): the intro line above, and a button that matches the
-        // full Selector's landing buttons, led by ONE decorative hat-wizard icon.
+        // The line above, and a button matching the full Selector's landing buttons
+        // with TWO decorative hats "facing in" (0.53.2, Rob, option B): the same
+        // hat-wizard both sides, the right one mirrored in CSS (.dccs-entry-ico-end),
+        // so both tips lean toward the words. Both aria-hidden: the accessible name
+        // stays the label alone.
+        $hat = Icons::svg('fas fa-hat-wizard');
         return sprintf(
             '<div class="dccs-entry" data-entry="%1$s">'
             . '<p class="dccs-entry-intro">%2$s</p>'
             . '<button type="button" class="dccs-entry-btn"><span class="dccs-entry-ico" aria-hidden="true">%3$s</span>'
-            . '<span class="dccs-entry-label">%4$s</span></button>'
+            . '<span class="dccs-entry-label">%4$s</span>'
+            . '<span class="dccs-entry-ico dccs-entry-ico-end" aria-hidden="true">%3$s</span></button>'
             . '</div>',
             esc_attr((string) (wp_json_encode($entry) ?: '{}')),
             esc_html($intro),
-            Icons::svg('fas fa-hat-wizard'),
+            $hat,
             esc_html($label)
         );
     }

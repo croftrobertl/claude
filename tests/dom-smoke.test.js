@@ -389,14 +389,14 @@ function enter(root, mode) {
     return null;
   }
   ok('matrix has Sleeps (max) + Bed + Screened-porch rows',
-    rowValue('Sleeps (max)') !== null && rowValue('Bed') !== null && rowValue('Screened porch') !== null);
+    rowValue('Sleeps (Max)') !== null && rowValue('Bed') !== null && rowValue('Screened Porch') !== null);
   // Rotation-proof (0.23.0): whichever cottage heads column 1 today, the
   // Sleeps (max) cell must equal that cottage's `guests` in the data file.
   var col1 = w.document.querySelector('.dccs-modal .dccs-matrix thead th:not(.dccs-corner)');
   var col1Id = ((col1.getAttribute('aria-label') || '').match(/Cottage (\d\d)/) || [])[1];
   var col1Guests = String((JSON.parse(CONFIG).cottages.find(c => c.id === col1Id) || {}).guests);
   ok('matrix Sleeps (max) matches the data for the first column (Cottage ' + col1Id + ') and Bed is constant',
-    rowValue('Sleeps (max)') === col1Guests && rowValue('Bed') === 'Queen');
+    rowValue('Sleeps (Max)') === col1Guests && rowValue('Bed') === 'Queen');
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
@@ -1227,7 +1227,7 @@ function configWith(overrides) {
   for (let read = 0; read < 4; read++) {
     w.document.querySelectorAll('.dccs-modal .dccs-matrix tbody tr').forEach(tr => {
       const th = tr.querySelector('th');
-      if (th && th.textContent.trim() === 'Sleeps (max)') {
+      if (th && th.textContent.trim() === 'Sleeps (Max)') {
         tr.querySelectorAll('td').forEach(td => vals.push(td.textContent.trim()));
       }
     });
@@ -1295,7 +1295,7 @@ function configWith(overrides) {
   enter(r2, 'quick');
   const link = r2.querySelector('.dccs-q-note a.dccs-q-note-link');
   ok('a set capacity URL renders the fee-details link',
-    !!link && link.getAttribute('href') === '/extra-guest-fees/' && link.textContent === 'Fee details');
+    !!link && link.getAttribute('href') === '/extra-guest-fees/' && link.textContent === 'Fee Details');
 })();
 
 // ---- 44. Compare checkbox hides when the results page shows only one card ----
@@ -1381,7 +1381,7 @@ function configWith(overrides) {
   const cfg = JSON.parse(CONFIG);
   ok('why_pullout says the couch sleeps TWO extra guests',
     cfg.strings.why_pullout === 'a pull-out couch for two extra guests');
-  ok('w_party uses a plain hyphen', cfg.strings.w_party === 'Room for 3-4 guests');
+  ok('w_party uses a plain hyphen (Title Case since 0.53.2)', cfg.strings.w_party === 'Room for 3-4 Guests');
   // Every guest-visible string uses the hyphenated "pull-out couch" — no bare
   // "pullout" survives anywhere in the shipped copy. (Data keys like
   // pulloutCouch and the ?pullout= param are intentionally untouched.)
@@ -1401,8 +1401,8 @@ function configWith(overrides) {
   const badW = wKeys.filter(k => /pullout/i.test(cfg.strings[k]) || cfg.strings[k].indexOf('\u2013') !== -1);
   ok('every Weigh Priorities label is hyphen-clean' + (badW.length ? ' [' + badW.join(',') + ']' : ''),
     badW.length === 0);
-  ok('w_pullout reads "Pull-out couch flexibility"',
-    cfg.strings.w_pullout === 'Pull-out couch flexibility');
+  ok('w_pullout reads "Pull-Out Couch Flexibility" (Title Case since 0.53.2)',
+    cfg.strings.w_pullout === 'Pull-Out Couch Flexibility');
 
   // A pull-out cottage's "why this fits" carries the corrected reason end-to-end.
   const root = mountSelector(w, JSON.stringify(cfg));
@@ -1549,7 +1549,7 @@ function configWith(overrides) {
   stepThrough(root, 'either');
   const first = root.querySelector('.dccs-review-list li .dccs-review-q');
   ok('party row reads "Guests" on the review screen', !!first && first.textContent.trim() === 'Guests');
-  ok('the compare matrix caption is untouched', JSON.parse(CONFIG).strings.diff_guests === 'Sleeps (max)');
+  ok('the compare matrix row label is the 0.53.2 Title Case', JSON.parse(CONFIG).strings.diff_guests === 'Sleeps (Max)');
 })();
 
 // ---- 50. Card link + checkbox carry the cottage name for assistive tech ----
@@ -1783,13 +1783,13 @@ defer(async function () {
   ok('booked top matches are still shown, never dropped', names.length > 3);
   ok('every would-be leader is still present, none silently dropped',
     leaders.every(n => names.indexOf(n) !== -1));
-  ok('a booked cottage is labelled "Booked for your dates"',
-    !bookedShown.length || /Booked for your dates/.test(bookedShown[0].textContent));
+  ok('a booked cottage is labelled "Booked for Your Dates"',
+    !bookedShown.length || /Booked for Your Dates/.test(bookedShown[0].textContent));
   const order = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'))
     .map(c => c.querySelector('.dccs-avail-booked') ? 'booked' : 'free');
   ok('free cottages rank above booked ones', order.join(',') === order.slice().sort().reverse().join(','));
-  ok('a free cottage says "Available for your dates"',
-    !!root.querySelector('.dccs-avail-free') && /Available for your dates/.test(root.querySelector('.dccs-avail-free').textContent));
+  ok('a free cottage says "Available for Your Dates"',
+    !!root.querySelector('.dccs-avail-free') && /Available for Your Dates/.test(root.querySelector('.dccs-avail-free').textContent));
   ok('a booked card links to the calendar to pick other dates',
     !bookedShown.length || !!bookedShown[0].querySelector('.dccs-avail-link[href="/availability/"]'));
 });
@@ -3369,9 +3369,11 @@ defer(async function () {
   Object.keys(CAL).forEach(k => ok('100: V1 intro ' + k + ' = ' + CAL[k] + ' (as .dcc-cal-intro)', String(intro[k]).toLowerCase() === CAL[k].toLowerCase()));
   // B2: the Mini Entry's line declares exactly the same set.
   const eIntro = decls('.dccs-entry.dccs-entry .dccs-entry-intro');
-  ok('100: the Mini Entry line declares exactly what the V1 intro declares',
-    JSON.stringify(Object.keys(intro).sort().map(k => [k, String(intro[k]).toLowerCase()])) ===
-    JSON.stringify(Object.keys(eIntro).sort().map(k => [k, String(eIntro[k]).toLowerCase()])));
+  // Typography identical; only the box differs on purpose (0.53.2, A4): the line
+  // is capped at V1's text width and centred, so margin/max-width are its own.
+  const typo = (o) => JSON.stringify(Object.keys(o).filter(k => k !== 'margin' && k !== 'max-width').sort().map(k => [k, String(o[k]).toLowerCase()]));
+  ok('100: the Mini Entry line declares exactly the V1 intro\'s typography', typo(intro) === typo(eIntro) && typo(intro).length > 100);
+  ok('100: ...with the same vertical spacing, centred horizontally', eIntro.margin === '33px auto 11px');
 
   // B3: the entry button resolves to the same values the landing buttons do.
   const land = Object.assign({}, decls('.dccs-root.dccs-root button'), decls('.dccs-root.dccs-root .dccs-landing-choice'));
@@ -3430,6 +3432,82 @@ defer(async function () {
   ok('101: with every answer skipped, all 8 cottages are listed (live results_count 8)', cardNames(q).length === 8 && JSON.parse(CONFIG).resultsCount === 8);
   // (The two-mode default is asserted in the PHP suite on Config::build(): this
   // suite's dump-config pins all three modes on purpose, for the Weigh tests.)
+})();
+
+// ==== 0.53.2 =======================================================================
+// ---- 102. V2 line cap, balanced wrap, two hats; Title Case labels; status lines kept ----
+(function () {
+  const raw = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  // Split into top-level rules and @media blocks (brace depth), keeping which is which.
+  const top = [], media = [];
+  let depth = 0, start = 0, cur = null;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '{') {
+      const pre = raw.slice(start, i).trim();
+      if (depth === 0 && pre.startsWith('@')) { cur = { q: pre, rules: [] }; media.push(cur); depth = 1; start = i + 1; continue; }
+      const end = raw.indexOf('}', i);
+      const r = { sel: pre.split(',').map(x => x.trim()), body: raw.slice(i + 1, end) };
+      (depth === 0 ? top : cur.rules).push(r);
+      i = end; start = i + 1; continue;
+    }
+    if (ch === '}') { depth = 0; cur = null; start = i + 1; }
+  }
+  const decl = (rules, sel, prop) => { let v = null; rules.filter(r => r.sel.indexOf(sel) !== -1).forEach(r => {
+    const m = r.body.match(new RegExp('(?:^|;)\\s*' + prop.replace(/[-]/g, '\\-') + '\\s*:\\s*([^;]+)')); if (m) { v = m[1].trim(); } }); return v; };
+  const R = '.dccs-root.dccs-root', E = '.dccs-entry.dccs-entry';
+  const shared = top.find(r => r.sel.length === 2 && r.sel.indexOf(R) !== -1 && r.sel.indexOf(E) !== -1 && /--dccs-shell-max/.test(r.body));
+  ok('102: ONE rule declares the shell tokens for both the root and the entry', !!shared);
+  const max = shared && (shared.body.match(/--dccs-shell-max:\s*([\d.]+)px/) || [])[1];
+  const padSm = shared && (shared.body.match(/--dccs-shell-pad:\s*([\d.]+)px/) || [])[1];
+  const m640 = media.find(m => /min-width:\s*640px/.test(m.q) && m.rules.some(r => r.sel.indexOf(R) !== -1 && r.sel.indexOf(E) !== -1 && /--dccs-shell-pad/.test(r.body)));
+  const padLg = m640 && (m640.rules.find(r => /--dccs-shell-pad/.test(r.body)).body.match(/--dccs-shell-pad:\s*([\d.]+)px/) || [])[1];
+  ok('102: the wide-screen padding is overridden for both at once', !!m640 && padLg === '22');
+  ok('102: V1\'s box reads the tokens', decl(top, R, 'max-width') === 'var(--dccs-shell-max)' && decl(top, R, 'padding') === 'var(--dccs-shell-pad)');
+  const cap = decl(top, E + ' .dccs-entry-intro', 'max-width');
+  ok('102: V2\'s line is capped by the SAME tokens (A4)', cap === 'calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad))');
+  ok('102: ...which resolves to V1\'s 676px text width on wide screens', Number(max) - 2 * Number(padLg) === 676 && padSm === '16');
+  ok('102: balanced wrap on V1\'s intro (A5)', decl(top, R + ' .dccs-intro', 'text-wrap') === 'balance');
+  ok('102: balanced wrap on V2\'s line (A5)', decl(top, E + ' .dccs-entry-intro', 'text-wrap') === 'balance');
+  ok('102: the hats sit at the button\'s 10px gap only (A3)', decl(top, E + ' .dccs-entry-ico', 'margin') === '0' && decl(top, E + ' .dccs-entry-btn', 'gap') === '0.5em');
+  ok('102: the right hat is mirrored', decl(top, E + ' .dccs-entry-ico-end svg', 'transform') === 'scaleX(-1)');
+  ok('102: the left hat is not', !top.some(r => r.sel.some(x => /dccs-entry-ico(?!-end)[^,]*svg$/.test(x)) && /transform/.test(r.body)));
+
+  // Part B: labels in Title Case; status lines and screen-reader names unchanged.
+  const S = JSON.parse(CONFIG).strings;
+  const WANT = { diff_guests: 'Sleeps (Max)', diff_diningSeats: 'Dining Table', diff_desk: 'Desk / Workspace', diff_pulloutCouch: 'Pull-Out Couch',
+    diff_screenedPorch: 'Screened Porch', rank_label: 'Ranked #%d for You', tag_pet: 'Not Pet-Friendly', tag_porch: 'No Screened Porch', tag_desk: 'No Desk',
+    tag_pullout: 'No Pull-Out Couch', tag_studio: 'Not a Studio', tag_onebed: 'Not a 1-Bedroom', tag_moreroom: 'Less Square Footage', tag_party: 'Sleeps 2 Max',
+    w_moreroom: 'More Room', w_fewerstairs: 'No Stairway', w_studio: 'Studio Simplicity', w_onebed: '1-Bedroom Separation', w_dining: '4+ Dining Comfort',
+    w_pullout: 'Pull-Out Couch Flexibility', w_screenedporch: 'Private, Screened-In Porch', w_party: 'Room for 3-4 Guests', w_pet: 'Pet-Friendly',
+    dates_in: 'Check-In', dates_out: 'Check-Out', dates_skip: 'Not Sure Yet', dates_none: 'No Dates Yet',
+    avail_yes: 'Available for Your Dates', avail_no: 'Booked for Your Dates', avail_calendar: 'See Open Dates', fee_link: 'Fee Details' };
+  Object.keys(WANT).forEach(k => ok('102: label ' + k + ' = "' + WANT[k] + '"', S[k] === WANT[k]));
+  const KEEP = { match_count: '%d cottages match', match_count_one: '%d cottage matches', wiz_progress: 'Step %1$d of %2$d',
+    cmp_range: 'Showing %1$d-%2$d of %3$d', mode_current: 'Current mode: %s', cmp_prev: 'Previous cottages', cmp_next: 'Next cottages',
+    next_hint: 'Choose an answer to continue', entry_line: 'Use the Cottage Wizard below to compare cottages or find your best match.',
+    intro: 'Answer a few questions to find your best match, or select cottages to compare side by side.' };
+  Object.keys(KEEP).forEach(k => ok('102: kept in sentence case: ' + k, S[k] === KEEP[k]));
+
+  // Rendered: the tags on a no-match card, the rank label, the review rows.
+  const nm = mountSelector(freshDom('https://example.com/?pet=true&porch=true'));
+  const tags = Array.prototype.map.call(nm.querySelectorAll('.dccs-miss'), e => e.textContent.trim());
+  ok('102: a no-match card shows Title Case tags', tags.length > 0 && tags.every(t => [WANT.tag_pet, WANT.tag_porch].indexOf(t) !== -1));
+  const q = mountSelector(freshDom(), configWith({ showReview: true })); enter(q, 'quick');
+  stepThrough(q, 'either');
+  const rows = Array.prototype.map.call(q.querySelectorAll('.dccs-review-list .dccs-review-q'), e => e.textContent.trim());
+  ok('102: review rows read the Title Case labels', rows.indexOf('Desk / Workspace') !== -1 && rows.indexOf('Pull-Out Couch') !== -1 && rows.indexOf('Screened Porch') !== -1);
+  // The rank label shows only on the highlighted EXTRA card (a deep-linked cottage
+  // outside the cut). Rotation decides who leads, so try each id with a 1-card cut.
+  let rankText = null;
+  JSON.parse(CONFIG).cottages.some(c => {
+    const r = mountSelector(freshDom(), configWith({ resultsCount: 1, highlight: String(c.id) })); enter(r, 'quick');
+    stepThrough(r, 'either'); seeMatches(r);
+    // textContent runs the next badge on without a space, so match only the label.
+    const m = r.textContent.match(/Ranked #\d+ for [Yy]ou/); if (m) { rankText = m[0]; } return !!m;
+  });
+  ok('102: a highlighted extra card reads "Ranked #N for You"', !!rankText && /^Ranked #\d+ for You$/.test(rankText));
 })();
 
 (async function runDeferred() {

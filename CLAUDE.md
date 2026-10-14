@@ -360,7 +360,8 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **Site-wide choices live in `Settings`; `Settings::defaults()` is the canonical
   map**, and since 0.53.1 every value in it equals LIVE's stored row (Rob: a blind
   install must behave like live) — 8 results, Matching Quiz + Compare Mode. The
-  export it was taken from is `tests/fixtures/live-state-0.53.0.json`, and a PHP
+  export it was taken from is `tests/fixtures/live-state-0.53.0.json` (0.53.2 tests read
+  the later `live-state-0.53.1.json`), and a PHP
   test fails if any default drifts from it (until 0.53.0 they reproduced 0.43.0:
   3 results, all three modes). `Config::build()`
   reads it; `config_from_snapshot()` passes a key to `Config::build()` only when
@@ -580,11 +581,31 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   icon value still goes to Elementor. Height 1em, width from the glyph's own
   proportions, `fill: currentColor`, `aria-hidden`.
 - **The Mini Entry is a line plus a button that copies the landing buttons
-  (0.53.1).** The line is the same `intro` the pop-up opens with (the mirrored
-  source's, else its own); the button repeats the landing-button values as
-  LITERALS because `.dccs-entry` is outside `.dccs-root` and gets no tokens. Its
-  label is the packaged "Cottage Wizard"; the old emoji label lived in the preset
-  and on all eight live instances (`copy`), which mask it until cleared.
+  (0.53.1).** Since 0.53.2 the line is the widget's OWN `entry_line` control
+  ("Use the Cottage Wizard below…"), never the pop-up's intro: mirroring cannot
+  touch it, and it is a NEW key on purpose — every live Mini Entry still stores an
+  unread `str_intro` with an older intro that must never surface. Placeholder-only
+  (no default), so Update never freezes the English. The pop-up keeps the mirrored
+  intro. The button repeats the landing-button values as LITERALS because
+  `.dccs-entry` is outside `.dccs-root` and gets no tokens; it carries TWO
+  hat-wizard SVGs, the right one mirrored (`.dccs-entry-ico-end`, `scaleX(-1)`), with
+  only the button's 0.5em gap either side so the label is exactly centred
+  (measured offset 0 at every width).
+- **One source for the Selector's width (0.53.2).** `--dccs-shell-max` (720px) and
+  `--dccs-shell-pad` (16px, 22px from 640px) are declared on BOTH `.dccs-root` and
+  `.dccs-entry`. The root's box reads them, and the Mini Entry line is capped at
+  `max − 2 × pad` (676px) and centred — change a token and both move. Both intro
+  lines use `text-wrap: balance`; typography stays identical to `.dcc-cal-intro`.
+- **Labels are Title Case; status lines, screen-reader names, questions and
+  sentences are not (0.53.2, Rob).** Compare/review row labels, "Ranked #N for You",
+  the miss tags, Weigh Priorities, dates, availability and "Fee Details". Kept as
+  they are: "Step x of y", "N cottages match", "Showing 1-3 of 8", "Current mode: …",
+  "Previous/Next cottages", "Choose an answer to continue". dom-smoke 102 pins both
+  lists. Both live V1 widgets store ten lowercase copies (str_w_* and str_fee_link)
+  that mask the new labels until cleared; the PHP drift test pins exactly that set.
+- **Since 2026-10-14 only /cottages/ (1005/5be94a3) shares as "Primary"** (Rob). The
+  homepage widget stores `share_design` "" and renders its own text; a PHP test
+  renders it from the live fixture and asserts it does not publish.
 - **A design source whose post is gone is IGNORED, never pruned on read
   (0.53.1).** `Selector_Widget::design_sources()` filters by `get_post_status()`;
   the dropdown and `mirror_source()` both go through it. Live's "P" (post 9389)

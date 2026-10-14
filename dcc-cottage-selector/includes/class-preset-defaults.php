@@ -61,7 +61,7 @@ final class Preset_Defaults
             'str_q_party' => 'How many guests will there be?',
             'str_opt_party2' => '1-2',
             'str_opt_party34' => '3-4',
-            'str_w_party' => 'Room for 3-4 guests',
+            'str_w_party' => 'Room for 3-4 Guests',
             // NOTE (0.53.1): 'copy' (the Mini Entry label, with its two emojis),
             // str_intro and intro_color were REMOVED. The label is now the packaged
             // default "Cottage Wizard" with an inline hat-wizard icon, the intro line
@@ -87,15 +87,15 @@ final class Preset_Defaults
             'str_results_heading' => 'Your Top Matches',
             'str_review_heading' => 'Review Your Answers',
             'str_view_cottage' => 'View Cottage',
-            'str_w_dining' => '4+ dining comfort',
-            'str_w_fewerstairs' => 'No stairway',
-            'str_w_moreroom' => 'More room',
-            'str_w_onebed' => '1-bedroom separation',
-            'str_w_pet' => 'Pet-friendly',
-            'str_w_pullout' => 'Pull-out couch flexibility',
+            'str_w_dining' => '4+ Dining Comfort',
+            'str_w_fewerstairs' => 'No Stairway',
+            'str_w_moreroom' => 'More Room',
+            'str_w_onebed' => '1-Bedroom Separation',
+            'str_w_pet' => 'Pet-Friendly',
+            'str_w_pullout' => 'Pull-Out Couch Flexibility',
             'str_w_question' => 'How much does %s matter?',
-            'str_w_screenedporch' => 'Private, screened-in porch',
-            'str_w_studio' => 'Studio simplicity',
+            'str_w_screenedporch' => 'Private, Screened-In Porch',
+            'str_w_studio' => 'Studio Simplicity',
             'str_w_workspace' => 'Deskspace',
 
             // ---- Icons ----
