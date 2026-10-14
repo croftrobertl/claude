@@ -141,8 +141,8 @@ echo "\n-- the hook priorities are the ones the contract names --\n";
     check('55 collides with nothing on the live register',
         !array_intersect($prios, array_keys($TAKEN)),
         array_intersect_key($TAKEN, array_flip($prios)));
-    check('the persisted upgrade merge runs on admin_init, never on a front-end view',
-        isset($GLOBALS['t_actions']['admin_init']));
+    check('nothing is hooked to admin_init: no upgrade write persists defaults (0.46.6)',
+        !isset($GLOBALS['t_actions']['admin_init']), array_keys($GLOBALS['t_actions']));
     check('the save has its own entry point rather than riding on the render',
         isset($GLOBALS['t_actions']['admin_post_' . Admin::SAVE_ACTION]));
 }

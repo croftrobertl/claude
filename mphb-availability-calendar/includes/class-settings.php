@@ -19,17 +19,20 @@ if (!defined('ABSPATH')) {
  * below is the only place a default is written, and defaults-test.php fails if
  * a control default or a stylesheet fallback disagrees with it.
  *
- * THE UPGRADE TRAP, GUARDED TWICE. A new version's defaults do NOT merge into
- * an already-stored option row, so a new key reads as empty and its feature
+ * THE UPGRADE TRAP. A new version's defaults do NOT merge into an
+ * already-stored option row, so a new key reads as empty and its feature
  * silently looks switched off. (The Seasons plugin shipped exactly this.)
- *   - READ SIDE: all() merges the stored row OVER the defaults on every read,
- *     so a key that has never been stored always reads its default. This is
- *     the one that actually protects behaviour.
- *   - WRITE SIDE: maybe_upgrade() persists the merge when the stored schema
- *     version is behind, so the form shows new keys and anything reading the
- *     raw option sees them too.
- * The read side alone would be enough for correctness; both are here because
- * the failure is silent and cheap to prevent twice.
+ * all() merges the stored row OVER the defaults on every read, so a key that
+ * has never been stored always reads its default.
+ *
+ * NOTHING WRITES THE ROW BUT THE SETTINGS SCREEN (0.46.6). Until 0.46.6 a
+ * maybe_upgrade() on admin_init also PERSISTED that merge whenever the
+ * schema version moved — which on a fresh install wrote every packaged
+ * default into the database on the first admin page view. A default written
+ * to the row is no longer a default: it masks every later release's value
+ * for that key (exactly how live's day cells stayed at 38px when 0.41.0
+ * shipped 44). Rob's rule for 0.46.6: install, activation and upgrade never
+ * write, migrate or delete an option. The read side was always enough.
  *
  * THIS CLASS IS A LEAF. It names no other class in the plugin, and the
  * defaults below are literals rather than references to Cache::DEFAULT_TTL
@@ -50,8 +53,13 @@ final class Settings
     public const OPTION      = 'mphbac_settings';
     public const VERSION_OPT = 'mphbac_settings_version';
 
-    /** Bump when a key is ADDED or its default CHANGES, never for a re-label. */
-    public const SCHEMA_VERSION = 3;   // 2: records_complete_from (0.46.0); 3: dock_block_names (0.46.1)
+    /**
+     * The version of the schema below: 2 added records_complete_from (0.46.0),
+     * 3 dock_block_names (0.46.1). A record only since 0.46.6 — nothing reads
+     * it or writes it any more (see the class docblock); live's
+     * mphbac_settings_version row still says 3 and is left alone.
+     */
+    public const SCHEMA_VERSION = 3;
 
     /** Runtime memo. Not a cache — the option is already object-cached by WP. */
     private static ?array $resolved = null;
@@ -233,7 +241,11 @@ final class Settings
 
             // ---- layout (advanced) ---------------------------------------
             'namecol_width'          => $int('layout', __('Cottage column width (px)', 'mphb-availability-calendar'), 96, 40, 300),
-            'cell_min_height'        => $int('layout', __('Day cell height (px)', 'mphb-availability-calendar'), 44, 24, 120,
+            // 38, AS LIVE RENDERS (0.46.6). 0.41.0 raised this default to 44
+            // for the touch target, but live's option row has stored 38 since
+            // 0.40.0, so 38 is what every calendar on live draws. Baked as-is
+            // per Rob's brief; 44 is one change on the settings screen.
+            'cell_min_height'        => $int('layout', __('Day cell height (px)', 'mphb-availability-calendar'), 38, 24, 120,
                 __('Tapping a day opens the booking popup, so this is a touch target. 44 is the floor to stay on or above.', 'mphb-availability-calendar')),
             'header_min_height'      => $int('layout', __('Date header height (px)', 'mphb-availability-calendar'), 38, 24, 120),
             'cell_radius'            => $int('layout', __('Day cell corner radius (px)', 'mphb-availability-calendar'), 4, 0, 24),
@@ -250,7 +262,8 @@ final class Settings
             'max_range_days'    => $int('engine', __('Largest range one request may ask for (days)', 'mphb-availability-calendar'), 95, 31, 400),
             'clamp_past_days'   => $int('engine', __('How far back a request may ask (days)', 'mphb-availability-calendar'), 400, 0, 3650),
             'clamp_future_days' => $int('engine', __('How far ahead a request may ask (days)', 'mphb-availability-calendar'), 730, 31, 3650),
-            'lazy_cottage_panels' => $bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), false,
+            // ON, AS LIVE RUNS (0.46.6).
+            'lazy_cottage_panels' => $bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), true,
                 __('The multi-cottage calendar renders every cottage’s info panel into the page whether or not anyone opens one — measured at 413 KB of the home page. With this on they are fetched on first open (usually already fetched, from the hover prefetch) and kept, so re-opening is instant. Verify on staging before switching it on live.', 'mphb-availability-calendar')),
             'keep_assets_unoptimized' => $bool('engine', __('Keep the calendar’s script and stylesheet out of combine/defer optimisers', 'mphb-availability-calendar'), true,
                 __('The calendar draws itself in the browser. Folded into a combined bundle it can fail to run at all, leaving a grey skeleton. Turn this off only if you have removed the optimiser.', 'mphb-availability-calendar')),
@@ -382,36 +395,6 @@ final class Settings
                 : $field['default'];
         }
         return $out;
-    }
-
-    /**
-     * Persist the merge when the stored schema version is behind. See the
-     * class docblock: all() already protects behaviour, this protects the
-     * form and anything reading the raw option.
-     */
-    public static function maybe_upgrade(): void
-    {
-        $stored_version = (int) get_option(self::VERSION_OPT, 0);
-        if ($stored_version === self::SCHEMA_VERSION) {
-            return;
-        }
-        $stored = get_option(self::OPTION, []);
-        if (!is_array($stored)) {
-            $stored = [];
-        }
-        $merged = [];
-        foreach (self::schema() as $key => $field) {
-            $merged[$key] = array_key_exists($key, $stored)
-                ? self::coerce($field, $stored[$key])
-                : $field['default'];
-        }
-        // Only write when something actually changed — an update_option that
-        // stores an identical array still bumps the row and busts caches.
-        if ($merged !== $stored) {
-            update_option(self::OPTION, $merged, false);
-        }
-        update_option(self::VERSION_OPT, self::SCHEMA_VERSION, true);
-        self::flush();
     }
 
     /**

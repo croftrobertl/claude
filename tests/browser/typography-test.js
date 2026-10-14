@@ -73,9 +73,11 @@ const BODY = `
     return i < 0 || php.slice(i, i + 400).indexOf(t.php) < 0;
   });
   check('the harness agrees with the source about every control selector', drift.length === 0, drift.map(d => d.name));
-  check('all ten typography controls are covered',
-    TARGETS.length === (php.match(/'\w+_typography'/g) || []).length,
-    (php.match(/'\w+_typography'/g) || []).length);
+  // Counts the group DECLARATIONS ('name' => 'x_typography'). A bare
+  // 'x_typography' count also matched 0.46.6's live defaults, which name a
+  // group's own popover toggle ('button_typography_typography').
+  const groups = php.match(/'name'\s*=>\s*'\w+_typography'/g) || [];
+  check('all ten typography controls are covered', TARGETS.length === groups.length && groups.length === 10, groups.length);
 
   console.log('\n-- every typography control owns what it emits --');
   {

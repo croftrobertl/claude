@@ -23,7 +23,7 @@
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 18px;
     --mphbac-days: 7;
-    --mphbac-cell-min: 44px;
+    --mphbac-cell-min: 38px;
     --mphbac-header-min: 38px;
     --mphbac-label-width: 96px;
     --mphbac-radius: 4px;
@@ -1186,7 +1186,7 @@ body.mphbac-info-open {
     display: grid;
     grid-template-columns: var(--mphbac-label-width, 96px) 1fr;
     gap: var(--mphbac-gap, 2px);
-    min-height: var(--mphbac-cell-min, 44px);
+    min-height: var(--mphbac-cell-min, 38px);
     background: var(--mphbac-color-namecol, #F8F9FA);
     border-radius: var(--mphbac-cell-radius, 0);
 }

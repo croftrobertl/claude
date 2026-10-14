@@ -65,10 +65,8 @@ final class Admin
         //      the only guard on the only path that writes, so removing it
         //      goes red.
         add_action('admin_post_' . self::SAVE_ACTION, [self::class, 'handle_save']);
-        // The persisted half of the upgrade merge. admin_init, not
-        // plugins_loaded: it writes an option, and the front end must never
-        // pay for a write on a cached page view.
-        add_action('admin_init', ['\\MPHBAC\\Settings', 'maybe_upgrade']);
+        // NO admin_init upgrade write (0.46.6): it persisted every packaged
+        // default on a fresh install, masking later defaults. See Settings.
     }
 
     public static function register_page(): void

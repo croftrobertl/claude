@@ -104,21 +104,22 @@ echo "\n-- THE UPGRADE TRAP, from both sides --\n";
     check('...and no key is missing from the answer',
         array_keys($all) === array_keys(Settings::defaults()));
 
+    // NOTHING WRITES ON READ OR UPGRADE (0.46.6). The write side that used
+    // to persist this merge is gone: on a fresh install it wrote every
+    // packaged default into the row, where it masked every later default.
     reset_store([Settings::OPTION => ['color_booked' => '#123456']]);
-    Settings::maybe_upgrade();
-    $stored = $GLOBALS['t_options'][Settings::OPTION];
-    check('WRITE SIDE: maybe_upgrade persists every missing key',
-        array_keys($stored) === array_keys(Settings::defaults()));
-    check('...without trampling the value that was already there',
-        $stored['color_booked'] === '#123456');
-    check('...and records the schema version so it does not run again',
-        (int) $GLOBALS['t_options'][Settings::VERSION_OPT] === Settings::SCHEMA_VERSION);
-
-    // Second run must be a no-op rather than another write.
-    $before = $GLOBALS['t_options'][Settings::OPTION];
-    Settings::maybe_upgrade();
-    check('a second upgrade run writes nothing new',
-        $GLOBALS['t_options'][Settings::OPTION] === $before);
+    $before = $GLOBALS['t_options'];
+    Settings::all();
+    Settings::get('min_nights');
+    Settings::tokens_css();
+    check('reading never writes: the stored row is exactly as it was',
+        $GLOBALS['t_options'] === $before, $GLOBALS['t_options']);
+    reset_store();
+    Settings::all();
+    check('a FRESH install reads every default and writes no row at all',
+        $GLOBALS['t_options'] === [], array_keys($GLOBALS['t_options']));
+    check('...and there is no upgrade writer left to call',
+        !method_exists(Settings::class, 'maybe_upgrade'));
 }
 
 echo "\n-- sanitisation rejects bad input rather than storing it --\n";

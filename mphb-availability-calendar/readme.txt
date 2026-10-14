@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.5
+Stable tag: 0.46.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.6 =
+* **The overview calendar (homepage, /cottages/) now shows past days in grey** when you page back with ‹, the same grey the cottage pages use, and its key reads Available, Booked, Past. It still opens on today. Past days cannot be booked.
+* **A fresh install now looks and behaves exactly like the live site.** Every default the plugin ships with is now the value live uses: the overview calendar's dark-blue date band, 28 days across, plain divider lines, "Show" and "More Info", its eight cottage info popups, the 38px day cells, the cottage info panels loading when opened, and the rest. Settings you have stored still win, as before; nothing is written to the database on install, activation or upgrade.
+* Nothing else changes on the live pages.
 
 = 0.46.5 =
 * **Per-cottage calendar days now pass Lighthouse's "label matches the visible text" check.** A screen reader could read a day's number and its tooltip as one run-together word ("1Past"); there is now an invisible space between them. Nothing looks different.

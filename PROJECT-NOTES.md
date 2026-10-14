@@ -3410,3 +3410,89 @@ guests, before any taxes/fees". The WD changed the stored copies on live
 (homepage, /cottages/, Cottage 22 template) and added a temporary gettext
 swap mu-plugin; both come out once 0.46.5 is live. Covered by
 single-widget-test.php, which checks the registered default on both widgets.
+
+## 0.46.6 — past days on the overview calendar; live's state as the defaults
+
+The three widgets (Rob): **V1** the overview calendar (mphbac_calendar: home
+page 620/b7318c3, /cottages/ 1005/5f8802c); **V2** the cottage calendar
+(dccac_single, the 8 cottage templates); **V3** the staff calendar
+(dccac_staff, /staff/ 18102/afeefb0).
+
+**Part A (Rob's item 3).** V1 showed past days blank white and keyed only
+Available, Booked; V2 shows them grey and keys Past. Rob: V1 still OPENS on
+today, but paging back shows past days in V2's Past grey, and V1's key lists
+Available, Booked, Past. "Show past days" did both things at once (colour
+the past AND start the window at yesterday), so they were separated:
+Widget::hides_past_days() is false on V1 (never mphbac-hide-past, Past always
+in the key); show_past on V1 now only moves the start to yesterday
+(render()'s base_from, widget.js baseFrom()). Widget_Single::hides_past_days()
+keeps the old rule (show_past !== 'yes'), so V2 is unchanged. Past cells stay
+unbookable (only `available` is clickable) and keep "<date> — Past" with the
+0.46.5 word-match. No stored key needs changing: V1's stored show_past ""
+already means "open on today", and 0.46.6 makes that V1's default too.
+The show_past control's description ("Past days are shown greyed out…") is
+now only half true on V1; Rob's "change no wording" kept it — flagged.
+
+**Part B (Rob's brief: a blind install must look and behave exactly like
+live).** Source: the WD's export of live, 2026-10-14 15:20 UTC — committed as
+tests/render/live-state-0.46.5.json (no personal data).
+- Settings schema = live's option row. Two keys differed: cell_min_height
+  (44 → 38: live's row has stored 38 since 0.40.0, so 0.41.0's 44 never
+  reached live; the token block and the skeleton fallback follow) and
+  lazy_cottage_panels (off → on, as live runs it).
+- Per-widget defaults: Widget::live_defaults() (V1) and
+  Widget_Single::live_defaults() (V2) list, as control id => value, every
+  control whose default would otherwise differ from what live renders. Applied
+  at the end of register_controls() through Elementor's update_control(), so
+  group-control fields (button_typography_font_weight) and device controls
+  (dow_format_tablet) are reached by their own ids. V2's list REPLACES V1's;
+  V2 needs only str_property "Property". V3 stores nothing and its globals
+  already equal the defaults: untouched.
+- Where V1's live value used to come from the settings screen (show_past,
+  heading_show, visible_days, namecol_style, cell_gap, the info popup's sizes),
+  V1 now defaults to its own live value: V2 shares those settings and renders
+  differently, so one global cannot hold both. calheader_bg (#002E7A on V1)
+  is the one "follow DCC" colour given a default; namecol_bg/alt are NOT
+  (the home page stores exactly the settings colours; a default would re-arm
+  the 0.40.0 trap).
+- Precedence unchanged: a stored value beats the default; the settings
+  screen still reaches every control a widget neither stores nor defaults.
+- single_cottage has no default, deliberately.
+- Not baked: Elementor's own "_" keys; str_info_loading / str_info_unavail
+  (orphans: no control). V1's three inert typography weights (stored with
+  their typography switched off) ARE baked, inert as on live.
+- NOTHING WRITES ON INSTALL, ACTIVATION OR UPGRADE (Rob's rule). The
+  admin_init Settings::maybe_upgrade() persisted every default on a fresh
+  install — the very trap that kept live at 38px — and is removed; all()
+  merges over the defaults on read, which was always enough. The settings
+  row is written only by the settings screen's Save and Reset. The one
+  activation hook (SpeedyCache exclusion) writes SpeedyCache's own option,
+  never the plugin's.
+
+**Proof** (tests/render/, committed):
+- elementor-emu.php: an Elementor emulator — default merging, responsive
+  devices, popover/group fields with their conditions, section conditions,
+  get_settings_for_display()'s nulling, per-post CSS with media queries.
+- render.php renders any live instance from the export under ANY plugin tree
+  (live | blind | strip:keys | live+{json} | defaults); snapshot.php,
+  redundant.php, shoot.js (screenshots, pixel diff, 390/768/1280, states:
+  open, ‹, booking popup, info popup, staff board).
+- live-render-0.46.5.json: what 0.46.5 rendered, normalised, so
+  live-defaults-test.php holds the tree to it without a 0.46.5 checkout.
+- Screenshots (shoot.js, 99 per run, 2026-10-14): 0.46.5 against itself
+  98/99 (one booking-popup shot, under load; identical on 3 reruns);
+  0.46.5 → 0.46.6 from live's settings with Part A masked 98/99 (one
+  info-popup shot, under load; identical on rerun); unmasked, 24 differ —
+  all on the two overview pages, the key's new "Past" and, after ‹, the
+  grey past days; the 72 cottage-page and 3 staff shots identical; 0.46.6
+  live → 0.46.6 blind install 99/99 identical.
+- Harness determinism, learned the hard way: the booking popup focuses its
+  check-in field on a timer (settle, THEN blur); a ‹ re-render leaves a
+  compositor layer whose rounded corner anti-aliases differently (reduced
+  motion + repaint the grid box); a focused caret blinks (transparent).
+
+**Deliverables to the WD:** the redundant-keys list per instance (every
+stored key but single_cottage is redundant, a settings colour, an orphan or
+Elementor's own); tools/wp-cli/mphbac-redundant-keys.php, a read-only
+WP-CLI check of the same with real Elementor; the Title Case audit (no
+wording changed).

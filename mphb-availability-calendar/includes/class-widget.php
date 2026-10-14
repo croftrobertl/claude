@@ -272,6 +272,104 @@ class Widget extends Widget_Base
         $this->register_cell_style_controls();
         $this->register_view_button_style_controls();
         $this->register_popup_title_style_controls();
+
+        // LIVE'S VALUES ARE THE DEFAULTS (0.46.6). Applied last, through
+        // Elementor's own update_control(), so a group control's fields
+        // (button_typography_font_weight) and a responsive control's devices
+        // (dow_format_tablet) are reached by the ids Elementor gives them.
+        // Defaults only: a value an instance has stored still wins, as
+        // before. See live_defaults().
+        foreach ($this->live_defaults() as $id => $default) {
+            $this->update_control($id, ['default' => $default]);
+        }
+    }
+
+    /**
+     * WHAT THE OVERVIEW CALENDAR RENDERS ON LIVE, AS ITS DEFAULTS (0.46.6,
+     * Rob's brief: "a blind install must look and behave exactly like live
+     * does today").
+     *
+     * From the Website Director's export of live, 2026-10-14: the two
+     * instances (home page 620/b7318c3, /cottages/ 1005/5f8802c) store these
+     * values, and the home page's are a superset of /cottages/'s. Only the
+     * controls whose default would otherwise DIFFER from live are listed —
+     * everything else already defaults to live's value, most of it through
+     * the settings screen (Settings::get()). Where a value here used to come
+     * from the settings screen (show_past, heading_show, visible_days,
+     * namecol_style, cell_gap, the info popup's sizes), this widget now
+     * defaults to its own live value instead: the cottage calendar shares
+     * those settings and renders differently, so one global cannot hold
+     * both. calheader_bg is the one "follow DCC" colour given a default:
+     * live's overview header is #002E7A, the settings' #0A50B2 is the
+     * cottage calendars'.
+     *
+     * NOT HERE, deliberately:
+     *   - namecol_bg / namecol_alt_bg: the home page stores exactly the
+     *     settings-screen colours, which an empty control already follows.
+     *     A default would re-arm the 0.40.0 trap (masking the settings).
+     *   - Elementor's own keys (_margin, _padding, _element_width…).
+     *   - str_info_loading / str_info_unavail: no such control exists.
+     *
+     * The single-cottage widget has its own list: Widget_Single::live_defaults().
+     *
+     * @return array<string, mixed> control id => default
+     */
+    protected function live_defaults(): array
+    {
+        $px = static fn(int $n): array => ['unit' => 'px', 'size' => $n, 'sizes' => []];
+        $info = static fn(string $id, string $cottage, string $template, string $slug): array => [
+            '_id' => $id, 'ci_cottage' => $cottage, 'ci_source' => 'template', 'ci_template' => $template,
+            'ci_title_url' => 'https://doracanalcourt.com/accommodation/' . $slug . '/',
+        ];
+        return [
+            // Content and Display.
+            'heading_show'          => '',
+            'heading_text'          => __('Availability & Booking Calendar', 'mphb-availability-calendar'),
+            'visible_days'          => 28,
+            'dow_format_tablet'     => 'short',
+            'show_past'             => '',
+            'namecol_style'         => 'dividers',
+            'info_popup_full_width' => '',
+            'info_popup_max_width'  => 490,
+            'info_popup_side_margin'        => $px(10),
+            'info_popup_side_margin_mobile' => $px(37),
+            // Labels and info popups. ci_title_url is what live stores; the
+            // rows' _ids are live's, so a stored copy compares equal.
+            'cottage_labels' => [['_id' => '4e56d57', 'cl_cottage' => '1071']],
+            'cottage_info'   => [
+                $info('570db9a', '1071', '11973', 'cottage-22'),
+                $info('55251bc', '1069', '11935', 'cottage-23'),
+                $info('efeb212', '1067', '11940', 'cottage-31'),
+                $info('18732fc', '1065', '11946', 'cottage-32'),
+                $info('39fcc18', '1604', '11951', 'cottage-33'),
+                $info('2b5b96a', '1607', '11957', 'cottage-34'),
+                $info('cfd0729', '1740', '11962', 'cottage-35'),
+                $info('cba1349', '1742', '11968', 'cottage-36'),
+            ],
+            // Strings live has reworded.
+            'str_apply'           => __('Show', 'mphb-availability-calendar'),
+            'str_view_cottage'    => __('More Info', 'mphb-availability-calendar'),
+            'str_all_booked'      => __('All cottages are booked through {through}.', 'mphb-availability-calendar'),
+            'str_book_min_nights' => __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar'),
+            // Style.
+            'calheader_bg'         => '#002E7A',
+            'calheader_bg_weekend' => '#002E7A',
+            'cell_gap'             => $px(1),
+            'view_icon_size'       => $px(16),
+            'button_typography_typography'     => 'custom',
+            'button_typography_font_weight'    => '500',
+            'button_typography_text_transform' => 'capitalize',
+            'field_typography_typography'      => 'custom',
+            'field_typography_font_weight'     => '300',
+            'namecol_typography_typography'       => 'custom',
+            'namecol_typography_font_size_mobile' => $px(18),
+            // Stored on live with their typography switched OFF, so they
+            // draw nothing — there as well as here. Kept so an editor who
+            // switches one on sees what live would show.
+            'calheader_typography_font_weight' => '900',
+            'dow_typography_font_weight'       => '700',
+            'legend_typography_font_weight'    => '800',
+        ];
     }
 
     /**
@@ -1420,6 +1518,32 @@ class Widget extends Widget_Base
     }
 
     /**
+     * Whether past days are left BLANK (the mphbac-hide-past class) and kept
+     * out of the legend.
+     *
+     * NEVER, ON THE OVERVIEW CALENDAR (0.46.6, Rob's item 3). Paging back
+     * showed past days as blank white and the key read only "Available,
+     * Booked"; the cottage calendar shows them grey and lists "Past". Rob
+     * wants the overview to match — and still to OPEN on today. "Show past
+     * days" used to do both things at once (colour the past AND start the
+     * window at yesterday), so here they are separated: on this widget
+     * show_past now only decides where the window starts (render()'s
+     * base_from, widget.js baseFrom()), and past days are always the "Past"
+     * colour, listed as Available, Booked, Past. Past cells stay unbookable
+     * (only an available cell is clickable) and keep their "<date> — Past"
+     * name.
+     *
+     * The single-cottage widget keeps the old rule unchanged: see
+     * Widget_Single::hides_past_days().
+     *
+     * @param array<string,mixed> $settings
+     */
+    protected function hides_past_days(array $settings): bool
+    {
+        return false;
+    }
+
+    /**
      * Whether to render the check-in/check-out/Apply/Reset filter bar. The
      * multi-cottage widget always does (no control, unchanged behavior). The
      * single-cottage variant has a "Show date filters" switcher defaulting
@@ -1775,7 +1899,7 @@ class Widget extends Widget_Base
         if ($settings['inherit_theme'] === 'yes') {
             $root_classes[] = 'mphbac-inherit-theme';
         }
-        if ($settings['show_past'] !== 'yes') {
+        if ($this->hides_past_days($settings)) {
             $root_classes[] = 'mphbac-hide-past';
         }
         if ($popup_enabled) {
@@ -1840,7 +1964,7 @@ class Widget extends Widget_Base
                 <div class="mphbac-legend" aria-hidden="false">
                     <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-available" aria-hidden="true"></span><?php echo esc_html($settings['str_legend_avail']); ?></span>
                     <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-booked" aria-hidden="true"></span><?php echo esc_html($settings['str_legend_booked']); ?></span>
-                    <?php if ($settings['show_past'] === 'yes') : ?>
+                    <?php if (!$this->hides_past_days($settings)) : ?>
                         <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-past" aria-hidden="true"></span><?php echo esc_html($settings['str_legend_past']); ?></span>
                     <?php endif; ?>
                 </div>

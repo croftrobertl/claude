@@ -158,14 +158,13 @@ echo "\n-- the engine defaults ARE the shipped constants --\n";
 
 echo "\n-- the sizing tokens agree with the schema, in every place they are written --\n";
 {
-    /* THE DAY CELL IS A TOUCH TARGET, and 0.41.0 raised it from 38 to 44 —
-       an INTENDED behaviour change, the one place the "defaults reproduce
-       current behaviour" rule was deliberately set aside. It is asserted
-       here because the number is written in three places that nothing warns
-       about: the schema, the token block, and the skeleton's var() fallback.
-       Those last two disagreed before this release (38 and 42), which meant
-       the loading skeleton was a different height from the grid replacing
-       it — exactly the shift that block exists to prevent. */
+    /* THE DAY CELL HEIGHT is written in three places that nothing else
+       warns about: the schema, the token block, and the skeleton's var()
+       fallback. Those last two once disagreed (38 and 42), so the loading
+       skeleton was a different height from the grid replacing it — exactly
+       the shift that block exists to prevent. 0.41.0 raised all three to 44;
+       0.46.6 put them back to 38, because live's settings row had stored 38
+       all along and 38 is what live draws (Rob's brief: bake live as-is). */
     $SIZES = ['cell_min_height' => 'mphbac-cell-min',
               'header_min_height' => 'mphbac-header-min',
               'namecol_width' => 'mphbac-label-width',
@@ -200,8 +199,8 @@ echo "\n-- the sizing tokens agree with the schema, in every place they are writ
     }
     check('no var() fallback disagrees with the token it falls back from', $amb === [], $amb);
 
-    check('the day cell is at or above the 44px touch target', $d['cell_min_height'] >= 44,
-        $d['cell_min_height']);
+    check('the day cell defaults to live\'s 38px (0.46.6 — 0.41.0\'s 44 never reached live; one setting restores it)',
+        $d['cell_min_height'] === 38, $d['cell_min_height']);
     check('the header row is deliberately NOT raised — it is a label, not a control',
         $d['header_min_height'] === 38, $d['header_min_height']);
 }

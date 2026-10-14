@@ -603,9 +603,11 @@ $mutations = [
     // DOUBLE-quoted targets, deliberately: a single-quoted PHP string turns
     // \n into a literal backslash-n, which left three mutations permanently
     // STALE in 0.33.x. Every $ below is escaped for the same reason.
-    ["settings: the upgrade merge stops persisting new keys", 'class-settings.php',
-     "        if (\$merged !== \$stored) {\n            update_option(self::OPTION, \$merged, false);\n        }",
-     "        if (false) {\n            update_option(self::OPTION, \$merged, false);\n        }",
+    // RETARGETED in 0.46.6: the upgrade writer it disabled is gone. Now:
+    // reading the settings persists them (a written default masks later ones).
+    ["settings: reading the settings writes the row (masking later defaults)", 'class-settings.php',
+     "        return self::\$resolved = \$out;",
+     "        update_option(self::OPTION, \$out, false);\n        return self::\$resolved = \$out;",
      'settings-test.php'],
     ["settings: all() stops merging over the defaults, so a new key reads empty", 'class-settings.php',
      "            \$out[\$key] = array_key_exists(\$key, \$stored)\n                ? self::coerce(\$field, \$stored[\$key])\n                : \$field['default'];\n        }\n        return self::\$resolved = \$out;",
@@ -659,9 +661,11 @@ $mutations = [
      "        check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
      "        // check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
      'admin-test.php'],
-    ["admin: the upgrade merge is moved onto a front-end hook", 'class-admin.php',
-     "        add_action('admin_init', ['\\\\MPHBAC\\\\Settings', 'maybe_upgrade']);",
-     "        add_action('wp_head', ['\\\\MPHBAC\\\\Settings', 'maybe_upgrade']);",
+    // RETARGETED in 0.46.6: the upgrade merge it moved is gone. Now: an
+    // admin_init write of the settings row comes back.
+    ["admin: an admin_init hook persists the settings row again (masking later defaults)", 'class-admin.php',
+     "        add_action('admin_post_' . self::SAVE_ACTION, [self::class, 'handle_save']);\n",
+     "        add_action('admin_post_' . self::SAVE_ACTION, [self::class, 'handle_save']);\n        add_action('admin_init', static function () { update_option(Settings::OPTION, Settings::all(), false); });\n",
      'admin-test.php'],
     ["admin: a field loses its <label for>", 'class-admin.php',
      "        echo '<tr><th scope=\"row\"><label for=\"' . esc_attr(\$id) . '\">' . esc_html(\$field['label']) . '</label></th><td>';",
@@ -714,14 +718,15 @@ $mutations = [
      "add_action('admin_menu', [self::class, 'register_page'], 55);",
      "add_action('admin_menu', [self::class, 'register_page'], 40);",
      'admin-test.php'],
-    ["tap: the day cell drops back under the 44px touch target", 'assets/css/widget.css',
-     "    --mphbac-cell-min: 44px;",
+    // RETARGETED in 0.46.6: the day cell is live's 38 again (Rob's brief).
+    ["cells: the stylesheet's day-cell height drifts from the schema (back to 44)", 'assets/css/widget.css',
      "    --mphbac-cell-min: 38px;",
+     "    --mphbac-cell-min: 44px;",
      'defaults-test.php'],
-    ["tap: the schema and the stylesheet disagree about the day cell again", 'class-settings.php',
-     "__('Day cell height (px)', 'mphb-availability-calendar'), 44, 24, 120,",
+    ["cells: the schema's day-cell height drifts from live's 38 (back to 44)", 'class-settings.php',
      "__('Day cell height (px)', 'mphb-availability-calendar'), 38, 24, 120,",
-     'defaults-test.php'],
+     "__('Day cell height (px)', 'mphb-availability-calendar'), 44, 24, 120,",
+     'live-defaults-test.php'],
     ["tap: a var() fallback drifts from the token it falls back from", 'assets/css/widget.css',
      "    grid-template-columns: var(--mphbac-label-width, 96px) 1fr;",
      "    grid-template-columns: var(--mphbac-label-width, 180px) 1fr;",
@@ -789,9 +794,10 @@ $mutations = [
     // DELETED in 0.42.1, not retargeted: the shape check moved into
     // Widget::verify_info_src() alongside the signature, and "F8: the endpoint
     // accepts an unsigned reference again" is that mutation now.
-    ["lazy: the setting ships switched ON, changing the two heaviest pages on install", 'class-settings.php',
-     "'lazy_cottage_panels' => \$bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), false,",
+    // RETARGETED in 0.46.6: live runs it on, so it now ships on.
+    ["lazy: the setting ships switched OFF, unlike live", 'class-settings.php',
      "'lazy_cottage_panels' => \$bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), true,",
+     "'lazy_cottage_panels' => \$bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), false,",
      'lazy-panel-test.php'],
     ["lazy: Elementor is never re-bound to the injected markup, so carousels do not move", 'assets/js/widget.js',
      "            // whatever is on screen actually has handlers attached.\n            reinitElementorWidgets(bodyEl);",
@@ -2608,6 +2614,131 @@ $mutations = [
      '__(\'for 2 guests, before any taxes/fees\', \'mphb-availability-calendar\')',
      '__(\'for 2 guests, before any taxes/fees — final price shown at checkout\', \'mphb-availability-calendar\')',
      'single-widget-test.php'],
+
+    // --- 0.46.6: Part A and live's state as the defaults ----------------------
+    ['0.46.6 Part A: the overview calendar\'s past days are blank again', 'class-widget.php',
+     '    protected function hides_past_days(array $settings): bool
+    {
+        return false;
+    }',
+     '    protected function hides_past_days(array $settings): bool
+    {
+        return true;
+    }',
+     'past-days-test.js'],
+    ['0.46.6 Part A: past days blank again, by the old show_past rule', 'class-widget.php',
+     '    protected function hides_past_days(array $settings): bool
+    {
+        return false;
+    }',
+     '    protected function hides_past_days(array $settings): bool
+    {
+        return ($settings[\'show_past\'] ?? \'\') !== \'yes\';
+    }',
+     'live-defaults-test.php'],
+    ['0.46.6 Part A: the overview calendar opens on yesterday', 'class-widget.php',
+     '            \'show_past\'             => \'\',',
+     '            \'show_past\'             => \'yes\',',
+     'live-defaults-test.php'],
+    ['0.46.6 Part A: ...or opens on yesterday through the window start itself', 'class-widget.php',
+     '                $base_from = ($settings[\'show_past\'] ?? (Settings::get(\'show_past\') ? \'yes\' : \'\')) === \'yes\' ? $today->modify(\'-1 day\') : $today;',
+     '                $base_from = $today->modify(\'-1 day\');',
+     'live-defaults-test.php'],
+    ['0.46.6 Part A: "Past" is missing from the key', 'class-widget.php',
+     '                    <?php if (!$this->hides_past_days($settings)) : ?>',
+     '                    <?php if (false) : ?>',
+     'past-days-test.js'],
+    ['0.46.6 Part A: "Past" is listed out of order (before Booked)', 'class-widget.php',
+     '                    <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-booked" aria-hidden="true"></span><?php echo esc_html($settings[\'str_legend_booked\']); ?></span>
+                    <?php if (!$this->hides_past_days($settings)) : ?>
+                        <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-past" aria-hidden="true"></span><?php echo esc_html($settings[\'str_legend_past\']); ?></span>
+                    <?php endif; ?>',
+     '                    <?php if (!$this->hides_past_days($settings)) : ?>
+                        <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-past" aria-hidden="true"></span><?php echo esc_html($settings[\'str_legend_past\']); ?></span>
+                    <?php endif; ?>
+                    <span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-booked" aria-hidden="true"></span><?php echo esc_html($settings[\'str_legend_booked\']); ?></span>',
+     'live-defaults-test.php'],
+    ['0.46.6 V2 changed: the cottage calendar\'s past days follow the overview\'s new rule', 'class-widget-single.php',
+     '        return ($settings[\'show_past\'] ?? \'\') !== \'yes\';',
+     '        return false;',
+     'live-defaults-test.php'],
+    ['0.46.6 V2 changed: the cottage calendar loses its own live value (str_property)', 'class-widget-single.php',
+     '            \'str_property\' => __(\'Property\', \'mphb-availability-calendar\'),
+',
+     '',
+     'live-defaults-test.php'],
+    ['0.46.6 V2 changed: the cottage calendar inherits the overview\'s live values', 'class-widget-single.php',
+     '    protected function live_defaults(): array
+    {
+        return [
+            \'str_property\' => __(\'Property\', \'mphb-availability-calendar\'),
+        ];
+    }',
+     '    protected function live_defaults(): array
+    {
+        return parent::live_defaults() + [\'str_property\' => __(\'Property\', \'mphb-availability-calendar\')];
+    }',
+     'live-defaults-test.php'],
+    ['0.46.6 V3 changed: the staff calendar\'s nav corner radius', 'class-staff-elementor.php',
+     '            \'default\'    => [\'size\' => 30, \'unit\' => \'px\'],',
+     '            \'default\'    => [\'size\' => 28, \'unit\' => \'px\'],',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: the overview header colour drifts from live\'s #002E7A', 'class-widget.php',
+     '            \'calheader_bg\'         => \'#002E7A\',',
+     '            \'calheader_bg\'         => \'#0A50B2\',',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: the overview\'s days across drift from live\'s 28', 'class-widget.php',
+     '            \'visible_days\'          => 28,',
+     '            \'visible_days\'          => 31,',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: the overview\'s button typography drifts (no longer capitalised)', 'class-widget.php',
+     '            \'button_typography_text_transform\' => \'capitalize\',
+',
+     '',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: the overview\'s info popups drift (one row lost)', 'class-widget.php',
+     '                $info(\'cba1349\', \'1742\', \'11968\', \'cottage-36\'),
+',
+     '',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: the live defaults are never applied', 'class-widget.php',
+     '        foreach ($this->live_defaults() as $id => $default) {
+            $this->update_control($id, [\'default\' => $default]);
+        }',
+     '        foreach ([] as $id => $default) {
+            $this->update_control($id, [\'default\' => $default]);
+        }',
+     'live-defaults-test.php'],
+    ['0.46.6 drift: a settings default drifts from live\'s option row (min_nights)', 'class-settings.php',
+     '__(\'Minimum nights\', \'mphb-availability-calendar\'), 2, 1, 30,',
+     '__(\'Minimum nights\', \'mphb-availability-calendar\'), 3, 1, 30,',
+     'live-defaults-test.php'],
+    ['0.46.6 activation writes the settings row (masking every later default)', 'class-cache-integration.php',
+     '        $result = self::add_speedycache_exclusion();',
+     '        update_option(Settings::OPTION, Settings::defaults(), false);
+        $result = self::add_speedycache_exclusion();',
+     'live-defaults-test.php'],
+    ['0.46.6 stored values no longer beat the defaults (live values forced at render)', 'class-widget.php',
+     '        $settings = $this->get_settings_for_display();
+
+        $all_types',
+     '        $settings = array_replace($this->get_settings_for_display(), $this->live_defaults());
+
+        $all_types',
+     'live-defaults-test.php'],
+    ['0.46.6 the per-cottage id is baked as a default', 'class-widget-single.php',
+     '            \'default\'     => \'\',
+            \'description\' => __(\'Which cottage this calendar shows.',
+     '            \'default\'     => \'1071\',
+            \'description\' => __(\'Which cottage this calendar shows.',
+     'live-defaults-test.php'],
+    ['0.46.6 the per-cottage id is baked through live_defaults()', 'class-widget-single.php',
+     '            \'str_property\' => __(\'Property\', \'mphb-availability-calendar\'),
+',
+     '            \'str_property\' => __(\'Property\', \'mphb-availability-calendar\'),
+            \'single_cottage\' => \'1071\',
+',
+     'live-defaults-test.php'],
 ];
 
 $originals = [];

@@ -72,14 +72,16 @@ $widget = file_get_contents($ROOT . '/includes/class-widget.php');
 $js     = file_get_contents($ROOT . '/assets/js/widget.js');
 $ajax   = file_get_contents($ROOT . '/includes/class-ajax.php');
 
-echo "-- the setting ships OFF --\n";
+echo "-- the setting ships ON, as live runs it (0.46.6) --\n";
 {
     check('lazy_cottage_panels exists', array_key_exists('lazy_cottage_panels', Settings::schema()));
-    /* DEFAULT OFF, deliberately, and it is the one-line rollback for this
-       feature. It cannot be verified from here and it changes the two
-       heaviest pages, so it must not arrive switched on. */
-    check('and it defaults to OFF, so installing 0.42.0 changes nothing until it is switched on',
-        Settings::defaults()['lazy_cottage_panels'] === false);
+    /* 0.42.0 shipped it OFF so installing could change nothing until it had
+       been verified on staging. It was, and live has run it ON since; 0.46.6
+       bakes live's settings as the defaults (Rob's brief), so a fresh
+       install now arrives the way live is. Switching it off is still the
+       one-line rollback, on the settings screen. */
+    check('and it defaults to ON, as live\'s settings row has it',
+        Settings::defaults()['lazy_cottage_panels'] === true);
     check('it is in the advanced section, not the common one',
         Settings::schema()['lazy_cottage_panels']['group'] === 'engine');
 }

@@ -83,6 +83,39 @@ class Widget_Single extends Widget
     }
 
     /**
+     * WHAT THE EIGHT COTTAGE CALENDARS RENDER ON LIVE, AS THEIR DEFAULTS
+     * (0.46.6). All eight store the same values; every one but this already
+     * equals its default. Replaces — does not add to — the overview
+     * calendar's list (Widget::live_defaults()), which describes a different
+     * widget.
+     *
+     * single_cottage is deliberately ABSENT: it is the one genuinely
+     * per-instance value (which cottage this page is), and a default would
+     * make an unconfigured calendar quietly show Cottage 22.
+     *
+     * @return array<string, mixed>
+     */
+    protected function live_defaults(): array
+    {
+        return [
+            'str_property' => __('Property', 'mphb-availability-calendar'),
+        ];
+    }
+
+    /**
+     * Unchanged by 0.46.6: on this widget "Show past days" off still means
+     * past days are blank and "Past" is not in the legend. (The month grid
+     * draws its past cells regardless — widget.css keeps them visible inside
+     * .mphbac-monthgrid — so this decides the legend in practice.)
+     *
+     * @param array<string,mixed> $settings
+     */
+    protected function hides_past_days(array $settings): bool
+    {
+        return ($settings['show_past'] ?? '') !== 'yes';
+    }
+
+    /**
      * Default OFF — same missing-key fallback pattern as `layout`, so the
      * already-placed instances (no stored value) lose the filter bar
      * automatically and the site's mu-plugin hide rule can be retired. The

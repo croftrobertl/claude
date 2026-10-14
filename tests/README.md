@@ -128,3 +128,22 @@ red — a suite that passes but cannot fail does not count as rebuilt.
 If a suite is ever removed or cannot be written honestly, put it back on this
 list with the reason. A visible gap is worth more than a suite reporting
 coverage it does not have.
+
+## tests/render/ — rendering live's widgets offline (0.46.6)
+
+`elementor-emu.php` resolves Elementor controls the way Elementor does
+(default merging, responsive devices, popover group fields and their
+conditions, section conditions, per-post CSS), so `render.php` can render any
+instance in `live-state-0.46.5.json` (the Website Director's export of live)
+under any plugin tree — this checkout, or a `git worktree` of an older tag.
+`live-defaults-test.php` and `browser/past-days-test.js` use it on every run.
+`shoot.js` compares two set-ups by screenshot (`node tests/render/shoot.js
+OLD=live NEW=live --mask-part-a`); it is a proof run, not part of `run.sh`.
+
+Screenshot comparisons are only as good as their determinism. Three things
+made identical code differ shot to shot: a focused field's caret and
+highlighted date segment (the booking popup focuses check-in on a TIMER —
+settle first, then blur); a re-rendered grid's rounded corner keeping a
+compositor layer from the loading pulse (reduced motion, then repaint the
+box); and CPU load from another job. Self-compare a version against itself
+before believing any difference between two.

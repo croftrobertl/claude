@@ -78,6 +78,41 @@ abstract class Widget_Base
         $this->t_groups[$name] = $args + ['__type' => $type];
     }
 
+    /** @var array<string,array> every update_control(), by the id it named */
+    public array $t_updates = [];
+
+    /**
+     * update_control() as Elementor resolves it: a plain control, a
+     * responsive control's device (namecol_width_tablet → the base control's
+     * tablet_default), or a group control's field ({group}_{field}, kept in
+     * t_updates). An id that names none of those returns false, as
+     * Elementor's does — and is recorded, so a suite can insist on none.
+     */
+    public function update_control($id, array $args, array $options = [])
+    {
+        $this->t_updates[$id] = $args;
+        if (isset($this->t_controls[$id])) {
+            $this->t_controls[$id] = array_merge($this->t_controls[$id], $args);
+            return true;
+        }
+        if (preg_match('/^(.+)_(tablet|mobile)$/', $id, $m) && !empty($this->t_controls[$m[1]]['__responsive'])) {
+            if (array_key_exists('default', $args)) {
+                $this->t_controls[$m[1]][$m[2] . '_default'] = $args['default'];
+            }
+            return true;
+        }
+        foreach (array_keys($this->t_groups) as $group) {
+            if (strncmp($id, $group . '_', strlen($group) + 1) === 0) {
+                return true;
+            }
+        }
+        $this->t_update_misses[] = $id;
+        return false;
+    }
+
+    /** @var string[] update_control() ids that matched nothing */
+    public array $t_update_misses = [];
+
     public function start_controls_section($id, array $args = []) { $this->t_sections[] = $id; }
     public function end_controls_section() {}
     public function start_controls_tabs($id, array $args = []) {}

@@ -65,18 +65,18 @@
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 18px;
     --mphbac-days: 7;
-    /* 44, NOT 38, SINCE 0.41.0 — AN INTENDED CHANGE, NOT A DRIFT. The day
-       cell is the booking control: tapping one opens the booking popup. At
-       38px tall it was under the 44px target at every phone width measured
-       (month grid 38.9x38 at 320, 44.6x38 at 360, 49.3x38 at 393). Height is
-       free here — nothing constrains the calendar vertically — so it is the
-       one axis that can be fixed. WIDTH cannot: seven columns at 44 plus the
-       96px cottage column plus the 18px Elementor inset needs 440px, wider
-       than any phone, so the strip layout stays under 44 across and that is
-       accepted rather than contorted around.
-       The HEADER row stays at 38: it is a label, not a control, and nothing
-       in it is tappable. */
-    --mphbac-cell-min: 44px;
+    /* 38, AS LIVE DRAWS IT (0.46.6). 0.41.0 raised this to 44 for the touch
+       target: the day cell is the booking control, and at 38px tall it was
+       under 44 at every phone width measured (month grid 38.9x38 at 320,
+       44.6x38 at 360, 49.3x38 at 393). But live's settings row had stored
+       38 since 0.40.0, and Elementor emits the control's default from that
+       row, so every live calendar kept drawing 38 and the 44 never reached
+       the site. Rob's 0.46.6 brief bakes live as-is, so the default is 38
+       again; 44 is one change on DCC → Availability Calendar → Day cell
+       height. WIDTH could never be 44: seven columns plus the 96px cottage
+       column plus the 18px Elementor inset needs 440px, wider than any
+       phone. The HEADER row is 38 either way: it is a label, not a control. */
+    --mphbac-cell-min: 38px;
     --mphbac-header-min: 38px;
     --mphbac-label-width: 96px;
     --mphbac-radius: 4px;
@@ -2337,7 +2337,7 @@ body.mphbac-info-open {
        38, so a browser that somehow lost the token drew a skeleton a
        different height from the grid that replaces it — the one thing this
        block exists to prevent. */
-    min-height: var(--mphbac-cell-min, 44px);
+    min-height: var(--mphbac-cell-min, 38px);
     background: var(--mphbac-color-namecol, #F8F9FA);
     border-radius: var(--mphbac-cell-radius, 0);
 }
