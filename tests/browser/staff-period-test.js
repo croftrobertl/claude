@@ -222,8 +222,8 @@ ${markup}
       [g.querySelector('.mphbac-staff-group-head').firstChild.textContent,
        g.querySelectorAll('.mphbac-staff-item').length + g.querySelectorAll('.mphbac-staff-turnline').length]));
     // 0.44.0: Turnovers first — Cy leaves cottage 23 the day Bob arrives.
-    check("Daily: Turnovers first, then today's Arriving / Departing / In house, each with its one guest",
-      JSON.stringify(groups) === JSON.stringify([['Turnovers', 1], ['Arriving', 1], ['Departing', 1], ['In house', 1]]), groups);
+    check("Daily: Turnovers first, then today's Arriving / Departing / In House, each with its one guest",
+      JSON.stringify(groups) === JSON.stringify([['Turnovers', 1], ['Arriving', 1], ['Departing', 1], ['In House', 1]]), groups);
     check('Daily: no new request — it reuses the month already loaded', s.reqs.length === 1, s.reqs.length);
 
     await choose(p, 'week');

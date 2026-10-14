@@ -431,8 +431,8 @@ final class Staff_Data
 
         $out = [];
         self::push($out, __('Accommodation Type', 'mphb-availability-calendar'), implode(', ', $names));
-        self::push($out, __('Check-in', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
-        self::push($out, __('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
+        self::push($out, __('Check-In', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
+        self::push($out, __('Check-Out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
 
         // OTA HONESTY. An imported booking's occupancy is never the guest's
         // party: Airbnb, Booking.com and Vrbo send none, so what is stored is

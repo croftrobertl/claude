@@ -38,61 +38,7 @@ if ($case === 'list') {
     exit(0);
 }
 
-// ---- WordPress, as far as rendering a widget needs ------------------------
-// Defined BEFORE the shared bootstrap, whose own versions are guarded by
-// function_exists: Elementor IS loaded here, and an editor can see the board.
-function did_action($t) { return $t === 'elementor/loaded' ? 1 : 0; }
-function is_user_logged_in() { return !empty($GLOBALS['r_staff_user']); }
-function current_user_can($c) { return !empty($GLOBALS['r_staff_user']); }
-require dirname(__DIR__) . '/bootstrap.php';
-
-function MPHB() { return new stdClass(); }
-function plugin_dir_path($f) { return rtrim(dirname($f), '/') . '/'; }
-function plugin_dir_url($f) { return 'https://example.test/wp-content/plugins/' . basename(dirname($f)) . '/'; }
-function plugin_basename($f) { return basename(dirname($f)) . '/' . basename($f); }
-function register_activation_hook($f, $cb) { $GLOBALS['r_activation'][] = $cb; }
-function register_deactivation_hook($f, $cb) {}
-function add_action(...$a) { return true; }
-function add_filter(...$a) { return true; }
-function is_admin() { return false; }
-function esc_attr($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
-function esc_url($t) { return htmlspecialchars((string) $t, ENT_QUOTES); }
-function esc_html__($t, $d = '') { return esc_html($t); }
-function esc_attr__($t, $d = '') { return esc_attr($t); }
-function esc_html_e($t, $d = '') { echo esc_html($t); }
-function admin_url($p = '') { return 'https://example.test/wp-admin/' . $p; }
-function home_url($p = '') { return 'https://example.test' . $p; }
-function wpautop($t) { return '<p>' . $t . '</p>'; }
-function wp_kses_post($t) { return (string) $t; }
-function wp_hash($d) { return hash('sha256', 'salt|' . $d); }
-function get_transient($k) { return false; }
-function set_transient($k, $v, $t = 0) { return true; }
-function delete_transient($k) { return true; }
-function wp_register_style(...$a) {}
-function wp_register_script(...$a) {}
-function wp_enqueue_style(...$a) {}
-function wp_enqueue_script(...$a) {}
-function wp_add_inline_style(...$a) {}
-function wp_create_nonce($a = '') { return 'nonce'; }
-function get_locale() { return 'en_US'; }
-if (!defined('MINUTE_IN_SECONDS')) { define('MINUTE_IN_SECONDS', 60); }
-if (!defined('DAY_IN_SECONDS')) { define('DAY_IN_SECONDS', 86400); }
-
-require __DIR__ . '/elementor-emu.php';
-require rtrim($dir, '/') . '/mphb-availability-calendar.php';
-
-// ---- the site: eight cottages, the info templates, the staff page ---------
-$cottages = [1071 => 'Cottage 22: The Boathouse', 1069 => 'Cottage 23: The Lighthouse', 1067 => 'Cottage 31: Hibiscus Hut',
-             1065 => 'Cottage 32: Flamingo Bungalow', 1604 => 'Cottage 33: Pineapple Place', 1607 => 'Cottage 34: Coconut Cottage',
-             1740 => 'Cottage 35: Blue Heron Hideaway', 1742 => 'Cottage 36: Sunshine Suite'];
-foreach ($cottages as $id => $title) {
-    t_post($id, 'mphb_room_type', 'publish', $title);
-}
-foreach ([11973, 11935, 11940, 11946, 11951, 11957, 11962, 11968] as $tpl) {
-    t_post($tpl, 'elementor_library', 'publish', 'Info ' . $tpl);
-}
-t_post(18102, 'page', 'publish', 'Staff');
-$GLOBALS['t_posts'][18102]->post_password = 'x';
+require __DIR__ . '/boot.php';
 
 // ---- the instance ---------------------------------------------------------
 [$post_id, $widget_id] = explode(':', (string) $case) + [null, null];
@@ -137,11 +83,11 @@ if ($inst['widget_type'] === 'dccac_staff') {
     $GLOBALS['r_staff_user'] = true;
 }
 $widget = new $class(['id' => $widget_id, 'settings' => $stored]);
-$rc = new ReflectionMethod($widget, 'register_controls');
-$rc->setAccessible(true);
-$rc->invoke($widget);
 
 if ($mode === 'defaults') {
+    // Every control, as the CSS writer sees them: per device, style ones in.
+    \Elementor\Core\Frontend\Performance::set_use_style_controls(true);
+    \Elementor\Plugin::$instance->breakpoints->set_responsive_control_duplication_mode('on');
     // Each data control's resolved default (no stored value), and for a
     // "follow DCC" colour — a control with no default whose name is also a
     // settings key — the settings-screen value it follows when empty.
@@ -163,22 +109,36 @@ if ($mode === 'defaults') {
     exit(0);
 }
 
+// THE ORDER OF ONE REQUEST. 'cached' (an ordinary page view: the post's
+// CSS is already written) renders with Elementor's default 'off' stack.
+// 'fresh' (the first view after a save, when Elementor rewrites the post's
+// CSS before the widgets render) leaves the stack rebuilt 'on' for the render.
+$order = getenv('MPHBAC_ORDER') ?: 'cached';
+$wrapper = '.elementor-' . $post_id . ' .elementor-element.elementor-element-' . $widget_id;
+if ($order === 'fresh') {
+    $css = $widget->emu_css($wrapper);
+}
 ob_start();
 $rr = new ReflectionMethod($widget, 'render');
 $rr->setAccessible(true);
 $rr->invoke($widget);
 $html = ob_get_clean();
+$display = $widget->get_settings_for_display();
+$data_controls = array_keys(array_filter($widget->get_controls(), static fn($c) => in_array($c['type'] ?? '', \Elementor\Controls_Manager::DATA, true)));
+if ($order !== 'fresh') {
+    $css = $widget->emu_css($wrapper);
+}
 
-$wrapper = '.elementor-' . $post_id . ' .elementor-element.elementor-element-' . $widget_id;
 echo json_encode([
+    'order'    => $order,
     'case'     => $case,
     'type'     => $inst['widget_type'],
     'mode'     => $mode,
     'version'  => MPHBAC_VERSION,
     'html'     => $html,
-    'css'      => $widget->emu_css($wrapper),
+    'css'      => $css,
     'tokens'   => \MPHBAC\Settings::tokens_css(),
-    'settings' => $widget->get_settings_for_display(),
-    'controls' => array_keys(array_filter($widget->get_controls(), static fn($c) => in_array($c['type'] ?? '', \Elementor\Controls_Manager::DATA, true))),
+    'settings' => $display,
+    'controls' => $data_controls,
     'activation' => array_map(static fn($cb) => is_array($cb) ? implode('::', $cb) : (string) $cb, $GLOBALS['r_activation'] ?? []),
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

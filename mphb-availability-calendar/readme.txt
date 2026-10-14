@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.6
+Stable tag: 0.46.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.7 =
+* **Title Case labels (Rob's pick).** Guests: "Check-In", "Check-Out", "Estimated Total:". Staff board: the booking sheet's "Check-In" / "Check-Out", "In House", "View Photo ID", "Go to Date", "All Sources", "Next 30 / 60 / 90 Days", "Week Of". Messages, hints, tooltips and the search placeholder keep sentence case. Screen readers hear exactly the new wording.
+* **The calendar now sends the same settings to the page on every view.** Elementor arranges a widget's per-device settings differently on the page view that rewrites its CSS, and the overview calendar's phone info-popup margin came out 37 on some views and 12 on others. It is now the same every time (12: the margin only applies to a full-width popup, which is off). Nothing on the page looks different.
+* The overview calendar's "Show past days" help text in Elementor now says what the switch does: it only decides whether the calendar starts at yesterday.
+* The read-only WP-CLI check of stored settings now sees every control (it mistook style and per-device settings for unused ones).
 
 = 0.46.6 =
 * **The overview calendar (homepage, /cottages/) now shows past days in grey** when you page back with ‹, the same grey the cottage pages use, and its key reads Available, Booked, Past. It still opens on today. Past days cannot be booked.

@@ -63,7 +63,9 @@ echo "\n-- the callers' own bounds --\n";
     // (0.40.0). Both shapes are matched, so a site that moved to the settings
     // does not silently drop out of this sweep — which is how a guard quietly
     // stops guarding anything.
-    preg_match_all('/device_number\([^,]+,\s*((?:\(int\) )?Settings::get\(\'\w+\'\)|\d+),\s*(\d+),\s*(\d+)\)/', $src, $mm, PREG_SET_ORDER);
+    // The first argument may itself be a call with commas (0.46.7:
+    // $this->device_setting($settings, 'months_shown', 'tablet')).
+    preg_match_all('/device_number\((?:[^,()]|\((?:[^()]|\([^()]*\))*\))+,\s*((?:\(int\) )?Settings::get\(\'\w+\'\)|\d+),\s*(\d+),\s*(\d+)\)/', $src, $mm, PREG_SET_ORDER);
     check('every call site was found (instrument check)', count($mm) >= 3, count($mm));
     foreach ($mm as $c) {
         [$all, $def, $min, $max] = $c;

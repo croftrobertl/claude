@@ -30,6 +30,15 @@
  * list, and "keep" must read the same.
  *
  * Revisions and autosaves are skipped — they hold copies of _elementor_data.
+ *
+ * SEES EVERY CONTROL (0.46.7). The 0.46.6 version asked Elementor for a
+ * widget's controls as a page view does, and outside wp-admin Elementor
+ * keeps two kinds back: style controls (anything with CSS selectors, filed
+ * apart unless Performance::set_use_style_controls(true)) and per-device
+ * controls (namecol_width_mobile exists only in Elementor's 'on' duplication
+ * mode). Everything it could not see it called "orphan" — 22 keys on the
+ * home page, 14 on /cottages/, all of them read by the page. It now asks the
+ * way Elementor's own CSS writer does: style controls on, duplication 'on'.
  */
 
 if (!defined('WP_CLI') || !WP_CLI) {
@@ -66,6 +75,11 @@ $norm = static function ($v) use (&$norm) {
     return $v === null ? '' : (string) $v;
 };
 $same = static fn($a, $b): bool => $norm($a) === $norm($b);
+
+// See every control, as Elementor's CSS writer does (Core\Files\CSS\Base::
+// parse_content()): style controls included, one control per device.
+\Elementor\Core\Frontend\Performance::set_use_style_controls(true);
+\Elementor\Plugin::$instance->breakpoints->set_responsive_control_duplication_mode('on');
 
 $schema = \MPHBAC\Settings::schema();
 $controls_manager = \Elementor\Plugin::$instance->controls_manager;

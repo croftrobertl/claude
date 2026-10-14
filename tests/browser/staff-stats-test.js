@@ -146,7 +146,7 @@ const DOCKS = [
     // echo is not in the set. Direct (30+7)/2 = 18.5 → 19.
     const lead = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-lead-row')].map(r => r.textContent));
     check('How Far Ahead They Book: Direct 19 days (2 stays), Airbnb 40 (1), Vrbo 120 (1), all 49 (4) — no Booking.com (Cal made after check-in)',
-      JSON.stringify(lead) === JSON.stringify(['Direct19 days (2 stays)', 'Airbnb40 days (1 stay)', 'Vrbo120 days (1 stay)', 'All sources49 days (4 stays)']), lead);
+      JSON.stringify(lead) === JSON.stringify(['Direct19 days (2 stays)', 'Airbnb40 days (1 stay)', 'Vrbo120 days (1 stay)', 'All Sources49 days (4 stays)']), lead);
 
     // C14 pace from tonight (Oct 8). Now: Amy 3 (8–10), Dot 18 / 31 / 31,
     // Fay 7, Hal 0 / 6 / 10 → 28 / 47 / 51. A year ago, as booked ON

@@ -115,6 +115,12 @@ class Widget_Single extends Widget
         return ($settings['show_past'] ?? '') !== 'yes';
     }
 
+    /** Unchanged: on this widget the switch still decides how past days look. */
+    protected function show_past_description(): string
+    {
+        return __('Past days are shown greyed out using the "Past" color.', 'mphb-availability-calendar');
+    }
+
     /**
      * Default OFF — same missing-key fallback pattern as `layout`, so the
      * already-placed instances (no stored value) lose the filter bar

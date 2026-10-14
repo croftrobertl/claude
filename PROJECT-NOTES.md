@@ -3496,3 +3496,62 @@ stored key but single_cottage is redundant, a settings colour, an orphan or
 Elementor's own); tools/wp-cli/mphbac-redundant-keys.php, a read-only
 WP-CLI check of the same with real Elementor; the Title Case audit (no
 wording changed).
+
+## 0.46.7 — Title Case labels; the same config on every view; the WP-CLI check sees every control
+
+Live after 0.46.6 (WD, 2026-10-14): verified, then the WD cleared the keys
+0.46.6's script called redundant (fresh export: tests/render/live-state-0.46.6.json).
+Day cells measured 38 on live; 38 stays the default (WD).
+
+**Part A (Rob's pick, labels only).** Guests: "Check-In", "Check-Out",
+"Estimated Total:" (control defaults; the WD had already cleared every stored
+copy). Staff: the sheet's "Check-In" / "Check-Out" rows, "In House" (daily
+group and Stats tile), "View Photo ID", "Go to Date", "All Sources",
+"Next {n} Days", "Week Of" — and the board's unused checkIn/checkOut strings,
+so one spelling exists. Messages, hints, help text, tooltips and the search
+placeholder keep sentence case; editor-only labels unchanged. Every name
+comes from its visible text (wrapping <label>, the link's own text), so
+names follow; title-case-labels-test.js checks each name equals its label.
+
+**Part B, finding 1 — the WP-CLI script called style controls "orphan".**
+Elementor (core/frontend/performance.php, includes/managers/controls.php):
+outside wp-admin, Controls_Manager files every control with CSS selectors
+(and the typography popover toggle, render_type 'ui') as a STYLE control,
+and get_controls() leaves them out unless Performance::set_use_style_controls
+(true) — which only the CSS writer calls. Separately, a responsive control's
+_tablet/_mobile are real controls only in duplication mode 'on'. The script
+now sets both, as Core\Files\CSS\Base::parse_content() does. Under the
+emulator the 0.46.6 script reproduces live's wrong counts exactly (24 and 16
+orphans); the fixed one finds the two true orphans.
+
+**Part B, finding 2 — blind ≠ live for infoPopupSideMargin.** NOT the
+clearing. Elementor builds a widget's controls stack in the duplication mode
+current at the time and rebuilds only upward (Controls_Manager::
+should_clean_stack). Ordinary view: 'off' — one control, device keys raw (no
+default, no condition), so /cottages/' stored phone margin (37) came through
+although its condition (full width on) fails. The view that rewrites the post
+CSS: the CSS writer switched to 'on', the stack stayed 'on' for the render —
+per-device controls, condition applied — 12. The WD's "after" load was such a
+view. Widget::device_setting() now resolves every device value the 'on' way
+in both shapes: condition-hidden → null on every device; else stored, else the
+control's own device default (device control's 'default', or the single
+control's {device}_default). Live and blind: {32, 20, 12} on every view.
+Also: 0.46.6's DEVICE live defaults (dow_format_tablet, info_popup_side_margin
+_mobile, namecol_typography_font_size_mobile) only ever reached the CSS
+(update_control fails on a device id in the 'off' stack); they are now set as
+the base control's {device}_default there too.
+
+**The emulator** (tests/render/elementor-emu.php) now models both stack
+shapes, the upward-only rebuild, the style-control split and
+Performance::use_style_controls, the CSS writer's switch to 'on', and the
+manager APIs the script uses; render.php takes MPHBAC_ORDER=cached|fresh.
+Source read from Elementor's GitHub main (raw.githubusercontent.com).
+
+**Part C.** The overview's "Show past days" description now says what it does
+(Widget::show_past_description(); the cottage widget keeps its text).
+
+**Tests:** live-defaults-test.php compares EVERY emitted config value, live vs
+blind, both exports, both request orders, and cached vs fresh; against
+live-render-0.46.6.json (0.46.6's render of live now) only the labels and the
+settled margin differ. wp-cli-script-test.php runs the real script under the
+emulator. title-case-labels-test.js. 22 new mutations; two needles retargeted.

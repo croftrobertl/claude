@@ -864,7 +864,7 @@
             frag.appendChild(turnGroup(groups.turn));
             frag.appendChild(group('in', S.arrivals || 'Arriving', groups['in'], S.noArrivals || ''));
             frag.appendChild(group('out', S.departures || 'Departing', groups['out'], S.noDepartures || ''));
-            frag.appendChild(group('stay', S.inHouse || 'In house', groups['stay'], S.noInHouse || ''));
+            frag.appendChild(group('stay', S.inHouse || 'In House', groups['stay'], S.noInHouse || ''));
             agendaEl.textContent = '';
             agendaEl.appendChild(frag);
         }
@@ -1115,7 +1115,7 @@
             a.href = u.toString();
             a.target = '_blank';
             a.rel = 'noopener noreferrer nofollow';
-            a.textContent = S.viewPhoto || 'View photo ID';
+            a.textContent = S.viewPhoto || 'View Photo ID';
             dd.appendChild(a);
             var note = document.createElement('span');
             note.className = 'mphbac-staff-photo-note';
@@ -2292,7 +2292,7 @@
             show('.mphbac-staff-stats-yearfield', span === 'year');
             show('.mphbac-staff-stats-custom', span === 'custom');
             statsEl.querySelector('.mphbac-staff-stats-pick').classList.toggle('is-custom', span === 'custom');
-            if (statsOnLabel) statsOnLabel.textContent = span === 'week' ? (S.stWeekOf || 'Week of') : (S.stDayLabel || 'Day');
+            if (statsOnLabel) statsOnLabel.textContent = span === 'week' ? (S.stWeekOf || 'Week Of') : (S.stDayLabel || 'Day');
             if (statsDate) statsDate.value = statsAnchor;
             if (statsMonth) statsMonth.value = statsAnchor.slice(0, 7);
             if (statsYear) statsYear.value = statsAnchor.slice(0, 4);

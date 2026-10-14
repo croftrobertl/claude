@@ -99,12 +99,12 @@ final class Staff_Widget
                 'outOfRange'   => __('That date is outside the board\'s ±3-year range.', 'mphb-availability-calendar'),
                 'today'        => __('Today', 'mphb-availability-calendar'),
                 'cottage'      => __('Cottages', 'mphb-availability-calendar'),
-                'checkIn'      => __('Check-in', 'mphb-availability-calendar'),
-                'checkOut'     => __('Check-out', 'mphb-availability-calendar'),
+                'checkIn'      => __('Check-In', 'mphb-availability-calendar'),
+                'checkOut'     => __('Check-Out', 'mphb-availability-calendar'),
                 'staying'      => __('Staying', 'mphb-availability-calendar'),
                 'arrivals'     => __('Arriving', 'mphb-availability-calendar'),
                 'departures'   => __('Departing', 'mphb-availability-calendar'),
-                'inHouse'      => __('In house', 'mphb-availability-calendar'),
+                'inHouse'      => __('In House', 'mphb-availability-calendar'),
                 'noArrivals'   => __('No arrivals.', 'mphb-availability-calendar'),
                 'noDepartures' => __('No departures.', 'mphb-availability-calendar'),
                 'noInHouse'    => __('No one in house.', 'mphb-availability-calendar'),
@@ -130,7 +130,7 @@ final class Staff_Widget
                 'secBooking'   => __('Booking Information', 'mphb-availability-calendar'),
                 'secCustomer'  => __('Customer Information', 'mphb-availability-calendar'),
                 'secNotes'     => __('Notes', 'mphb-availability-calendar'),
-                'viewPhoto'    => __('View photo ID', 'mphb-availability-calendar'),
+                'viewPhoto'    => __('View Photo ID', 'mphb-availability-calendar'),
                 'photoNote'    => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
                 // ---- 0.44.0 / 0.44.1 ----
@@ -158,7 +158,7 @@ final class Staff_Widget
                 'stArrivals'   => __('Arrivals', 'mphb-availability-calendar'),
                 'stDepartures' => __('Departures', 'mphb-availability-calendar'),
                 'stTurnovers'  => __('Turnovers', 'mphb-availability-calendar'),
-                'stInHouse'    => __('In house', 'mphb-availability-calendar'),
+                'stInHouse'    => __('In House', 'mphb-availability-calendar'),
                 // 0.45.3 (Rob): no Pets / Couch / Boat tiles — those features
                 // are new, so there are no accurate figures for them yet.
                 'stBookings'   => __('Bookings', 'mphb-availability-calendar'),
@@ -166,7 +166,7 @@ final class Staff_Widget
                 'stLength'     => __('Length', 'mphb-availability-calendar'),
                 'stLengthTip'  => __('The average stay, in nights, of the bookings counted in Bookings.', 'mphb-availability-calendar'),
                 'stDayLabel'   => __('Day', 'mphb-availability-calendar'),
-                'stWeekOf'     => __('Week of', 'mphb-availability-calendar'),
+                'stWeekOf'     => __('Week Of', 'mphb-availability-calendar'),
                 'stPerCottage' => __('Nights Booked by Cottage', 'mphb-availability-calendar'),
                 'stBySource'   => __('Nights Booked by Source', 'mphb-availability-calendar'),
                 'stNights'     => __('{n} nights', 'mphb-availability-calendar'),
@@ -211,14 +211,14 @@ final class Staff_Widget
                 'stLead'       => __('How Far Ahead They Book', 'mphb-availability-calendar'),
                 'stLeadTip'    => __('How many days ahead, on average, the stays arriving in this period were booked, by source.', 'mphb-availability-calendar'),
                 'stNoLead'     => __('No arrivals in this timeframe.', 'mphb-availability-calendar'),
-                'stAllSources' => __('All sources', 'mphb-availability-calendar'),
+                'stAllSources' => __('All Sources', 'mphb-availability-calendar'),
                 'stDays'       => __('{n} days', 'mphb-availability-calendar'),
                 'stDay'        => __('{n} day', 'mphb-availability-calendar'),
                 'stStays'      => __('{n} stays', 'mphb-availability-calendar'),
                 'stStay'       => __('{n} stay', 'mphb-availability-calendar'),
                 'stPace'       => __('Pace', 'mphb-availability-calendar'),
                 'stPaceTip'    => __('Nights booked for the next 30, 60 and 90 days.', 'mphb-availability-calendar'),
-                'stPaceNext'   => __('Next {n} days', 'mphb-availability-calendar'),
+                'stPaceNext'   => __('Next {n} Days', 'mphb-availability-calendar'),
                 'stPaceNights' => __('{n} nights booked', 'mphb-availability-calendar'),
                 'stHeat'       => __('Cottages Booked Each Night, {year}', 'mphb-availability-calendar'),
                 'stHeatTip'    => __('One square per night of {year}: the darker it is, the more of the {n} cottages were booked.', 'mphb-availability-calendar'),
@@ -290,7 +290,7 @@ final class Staff_Widget
                         </select>
                     </label>
                     <label class="mphbac-staff-field">
-                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to date', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-staff-field-label"><?php echo esc_html__('Go to Date', 'mphb-availability-calendar'); ?></span>
                         <input type="date" class="mphbac-staff-input mphbac-staff-goto">
                     </label>
                 </div>

@@ -680,8 +680,8 @@ const BUTTONLIKE = [
       // Show, Go to date and (0.45.0) Search.
       // Show, Go to date and (0.45.0) Search — the Last-year switch left this
       // row for the foot of the calendar in 0.46.2.
-      check(`${who}: (instrument check) all three labels found — Show, Go to date, Search`,
-        JSON.stringify(labs.map(l => l.text)) === '["Show","Go to date","Search"]', labs);
+      check(`${who}: (instrument check) all three labels found — Show, Go to Date, Search`,
+        JSON.stringify(labs.map(l => l.text)) === '["Show","Go to Date","Search"]', labs);
       for (const l of labs) {
         check(`${who}: "${l.text}" is the live public label — 19px / 600 / #111, centred`,
           l.size === LIVE_PUBLIC_LABEL.size && l.weight === LIVE_PUBLIC_LABEL.weight

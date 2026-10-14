@@ -31,9 +31,14 @@
  */
 $ROOT = dirname(__DIR__);
 $PLUGIN = $ROOT . '/mphb-availability-calendar';
-$LIVE = __DIR__ . '/render/live-state-0.46.5.json';
-$live = json_decode((string) file_get_contents($LIVE), true);
-$golden = json_decode((string) file_get_contents(__DIR__ . '/render/live-render-0.46.5.json'), true);
+// Live as it is now (exported after the Website Director cleared the keys
+// 0.46.6 made redundant), and live as it was before (0.46.5's export, every
+// key still stored). Both must render the same as a blind install.
+$LIVE6 = __DIR__ . '/render/live-state-0.46.6.json';
+$LIVE5 = __DIR__ . '/render/live-state-0.46.5.json';
+$LIVE = $LIVE6;
+$live = json_decode((string) file_get_contents($LIVE6), true);
+$golden = json_decode((string) file_get_contents(__DIR__ . '/render/live-render-0.46.6.json'), true);
 
 $fail = 0;
 function check(string $l, bool $c, $x = null): void {
@@ -41,10 +46,16 @@ function check(string $l, bool $c, $x = null): void {
     echo ($c ? 'PASS  ' : 'FAIL  ') . $l . ($x !== null ? '   [' . (is_string($x) ? $x : json_encode($x, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . ']' : '') . "\n";
     if (!$c) { $fail++; }
 }
-function render(string $case, string $mode): array {
+/**
+ * $order: 'cached' — an ordinary page view (Elementor's controls stack in its
+ * default single-control shape); 'fresh' — the view that rewrites the post's
+ * CSS first, leaving the per-device stack for the render. See
+ * Widget::device_setting(): 0.46.6 emitted different config in the two.
+ */
+function render(string $case, string $mode, string $order = 'cached', ?string $export = null): array {
     global $PLUGIN, $LIVE;
-    $out = shell_exec('php ' . escapeshellarg(__DIR__ . '/render/render.php') . ' ' . escapeshellarg($PLUGIN) . ' '
-        . escapeshellarg($LIVE) . ' ' . escapeshellarg($case) . ' ' . escapeshellarg($mode) . ' 2>&1');
+    $out = shell_exec('MPHBAC_ORDER=' . escapeshellarg($order) . ' php ' . escapeshellarg(__DIR__ . '/render/render.php') . ' '
+        . escapeshellarg($PLUGIN) . ' ' . escapeshellarg($export ?? $LIVE) . ' ' . escapeshellarg($case) . ' ' . escapeshellarg($mode) . ' 2>&1');
     $r = json_decode((string) $out, true);
     if (!is_array($r)) {
         echo "FAIL  render.php could not render $case ($mode): " . substr((string) $out, 0, 300) . "\n";
@@ -54,8 +65,19 @@ function render(string $case, string $mode): array {
     return $r;
 }
 function config(array $r): array {
-    preg_match('/data-config="([^"]*)"/', $r['html'], $m);
+    preg_match('/data-(?:staff-)?config="([^"]*)"/', $r['html'], $m);
     return json_decode(html_entity_decode($m[1] ?? '{}', ENT_QUOTES), true) ?: [];
+}
+/** Every emitted config value that differs, as "path: a ≠ b". */
+function config_diff($a, $b, string $path = ''): array {
+    if (is_array($a) && is_array($b)) {
+        $out = [];
+        foreach (array_unique(array_merge(array_keys($a), array_keys($b))) as $k) {
+            $out = array_merge($out, config_diff($a[$k] ?? '(absent)', $b[$k] ?? '(absent)', $path . '.' . $k));
+        }
+        return $out;
+    }
+    return $a === $b ? [] : [ltrim($path, '.') . ': ' . json_encode($a) . ' ≠ ' . json_encode($b)];
 }
 function legend(array $r): array {
     preg_match('/<div class="mphbac-legend"[^>]*>(.*?)<\/div>/s', $r['html'], $m);
@@ -77,6 +99,8 @@ function snap(string $html): string {
     $html = preg_replace('/\d{4}-\d{2}-\d{2}/', 'D', $html);
     return preg_replace('/\d{4}-\d{2}(?!\d)/', 'Y-M', $html);
 }
+/** 0.46.7's Part A labels, as 0.46.5's export stored them before the WD cleared them. */
+const OLD_LABELS = ['>Check-in<' => '>Check-In<', '>Check-out<' => '>Check-Out<', 'Estimated total:' => 'Estimated Total:'];
 
 $cases = [];
 foreach ($live['widgets'] as $w) {
@@ -98,61 +122,101 @@ echo "-- 1. the packaged settings defaults ARE live's option row --\n";
     }
     check('every key in live\'s mphbac_settings equals its packaged default', $drift === [], $drift);
     check('...and the schema has no key live\'s row lacks', array_diff_key($defaults, $row) === [], array_keys(array_diff_key($defaults, $row)));
-    check('...including the two that differed: day cells 38px and lazy panels on',
+    check('...including day cells 38px (the WD measured 38 on live) and lazy panels on',
         $defaults['cell_min_height'] === 38 && $defaults['lazy_cottage_panels'] === true);
 }
 
-echo "\n-- 1. a BLIND install renders what live renders, instance by instance --\n";
+echo "\n-- 1. a BLIND install emits what live emits: every config value, the HTML, the CSS --\n";
+// Both exports, and both request orders — an ordinary view and the one that
+// rewrites the post's CSS. 0.46.6 failed this on live: /cottages/' phone side
+// margin came out 37 or 12 depending on the request.
 $liveR = [];
-foreach ($cases as $case => $w) {
-    $a = $liveR[$case] = render($case, 'live');
-    $b = render($case, 'blind');
-    $orphans = ['str_info_loading', 'str_info_unavail'];
-    $sa = array_diff_key($a['settings'], array_flip($orphans));
-    $sb = array_diff_key($b['settings'], array_flip($orphans));
-    // Elementor's own keys are not the plugin's to default (blind keeps them).
-    $diff = [];
-    foreach (array_keys($sa + $sb) as $k) {
-        if (norm($sa[$k] ?? null) !== norm($sb[$k] ?? null)) { $diff[] = $k; }
+foreach (['live now (0.46.6 export)' => $LIVE6, 'live before the clearing (0.46.5 export)' => $LIVE5] as $which => $export) {
+    $exp = json_decode((string) file_get_contents($export), true);
+    foreach ($exp['widgets'] as $w) {
+        $case = $w['post_id'] . ':' . $w['widget_id'];
+        $label = sprintf('%-13s %-16s', $case, $w['widget_type']);
+        $byOrder = [];
+        foreach (['cached', 'fresh'] as $order) {
+            $a = render($case, 'live', $order, $export);
+            $b = render($case, 'blind', $order, $export);
+            if ($export === $LIVE6 && $order === 'cached') {
+                $liveR[$case] = $a;
+            }
+            // 0.46.5's export still stores the three labels Part A retitles:
+            // a blind install shows the new ones, and must differ by nothing else.
+            if ($export === $LIVE5) {
+                $a['html'] = strtr($a['html'], OLD_LABELS);
+            }
+            $cssA = str_replace(['--mphbac-color-namecol:#F8F9FA;', '--mphbac-color-namecol-alt:#F1F3F5;'], '', $a['css']);
+            $cd = config_diff(config($a), config($b));
+            check("$which, $order view — $label: every emitted config value identical", $cd === [], $cd);
+            check("$which, $order view — $label: HTML, per-post CSS and tokens identical",
+                $a['html'] === $b['html'] && $cssA === $b['css'] && $a['tokens'] === $b['tokens'],
+                $a['html'] === $b['html'] ? 'css differs' : 'html differs');
+            $byOrder[$order] = $a;
+        }
+        check("$which — $label: the ordinary view and the CSS-rewriting view emit the SAME config and HTML",
+            config_diff(config($byOrder['cached']), config($byOrder['fresh'])) === [] && $byOrder['cached']['html'] === $byOrder['fresh']['html'],
+            config_diff(config($byOrder['cached']), config($byOrder['fresh'])));
     }
-    // The home page stores the two column colours the settings screen has;
-    // a blind install follows those through the stylesheet instead of
-    // emitting them, so its CSS lacks exactly those two declarations.
-    $cssA = str_replace(['--mphbac-color-namecol:#F8F9FA;', '--mphbac-color-namecol-alt:#F1F3F5;'], '', $a['css']);
-    $label = sprintf('%-13s %-16s', $case, $w['widget_type']);
-    check("$label settings: identical (only the controls stored on live differ in storage, never in value)",
-        array_diff($diff, ['namecol_bg', 'namecol_alt_bg']) === [], $diff);
-    check("$label HTML, per-post CSS and tokens: identical", $a['html'] === $b['html'] && $cssA === $b['css'] && $a['tokens'] === $b['tokens'],
-        $a['html'] === $b['html'] ? 'css differs' : 'html differs');
 }
 {
     $css = file_get_contents($PLUGIN . '/assets/css/widget.css');
-    check('...and those two colours ARE the stylesheet\'s own (so the home page looks the same either way)',
+    check('the home page\'s two stored column colours ARE the stylesheet\'s own (so it looks the same either way)',
         str_contains($css, '--mphbac-color-namecol: #F8F9FA;') && str_contains($css, '--mphbac-color-namecol-alt: #F1F3F5;'));
+    $c = config($liveR['1005:5f8802c']);
+    check('/cottages/\' info popup side margin is {32, 20, 12} on every view: full width is off, so its condition hides it on every device',
+        $c['infoPopupSideMargin'] === ['desktop' => 32, 'tablet' => 20, 'mobile' => 12], $c['infoPopupSideMargin']);
 }
 
-echo "\n-- 2. against what 0.46.5 rendered from the same settings --\n";
+{
+    // Live keeps "Full viewport width" off, so the side margin's condition
+    // hides it and its device defaults never come into play there. Switch it
+    // on, store no margin at all, and the per-device defaults must be the
+    // ones Elementor's CSS writer uses — live's phone 37 included — on BOTH
+    // kinds of view (0.46.6's ordinary view fell through to 12).
+    $exp = json_decode((string) file_get_contents($LIVE6), true);
+    foreach ($exp['widgets'] as &$w) {
+        if (in_array($w['post_id'] . ':' . $w['widget_id'], $V1, true)) {
+            $w['stored_settings'] = array_diff_key((array) $w['stored_settings'],
+                array_flip(['info_popup_side_margin', 'info_popup_side_margin_tablet', 'info_popup_side_margin_mobile']));
+            $w['stored_settings']['info_popup_full_width'] = 'yes';
+        }
+    }
+    unset($w);
+    $tmp = tempnam(sys_get_temp_dir(), 'mphbac-fw');
+    file_put_contents($tmp, json_encode($exp));
+    foreach ($V1 as $case) {
+        $got = [];
+        foreach (['cached', 'fresh'] as $order) {
+            $got[$order] = config(render($case, 'live', $order, $tmp))['infoPopupSideMargin'] ?? null;
+        }
+        check("$case with full width on and no stored margin: side margin {10, 20, 37} on the ordinary AND the CSS-rewriting view",
+            $got['cached'] === ['desktop' => 10, 'tablet' => 20, 'mobile' => 37] && $got['fresh'] === $got['cached'], $got);
+    }
+    unlink($tmp);
+}
+
+echo "\n-- 2. against what 0.46.6 rendered from live's settings now --\n";
+// 0.46.7 changes exactly two things a page can carry: Part A's labels, and
+// the phone side margin an ordinary view of the overview calendar emitted
+// (37 → 12, now the same on every view; invisible: full width is off).
 foreach ($cases as $case => $w) {
     $now = ['html' => snap($liveR[$case]['html']), 'css' => $liveR[$case]['css'], 'tokens' => $liveR[$case]['tokens']];
     $was = $golden[$case];
     $label = sprintf('%-13s %-16s', $case, $w['widget_type']);
-    if (!in_array($case, $V1, true)) {
-        check("$label byte-identical to 0.46.5 (HTML, CSS, tokens)",
-            $now['html'] === $was['html'] && $now['css'] === $was['css'] && $now['tokens'] === $was['tokens']);
-        continue;
+    $expect = strtr($was['html'], OLD_LABELS + [
+        '>Go to date<' => '>Go to Date<', '&quot;In house&quot;' => '&quot;In House&quot;', '&quot;View photo ID&quot;' => '&quot;View Photo ID&quot;',
+        '&quot;Week of&quot;' => '&quot;Week Of&quot;', '&quot;All sources&quot;' => '&quot;All Sources&quot;', '&quot;Next {n} days&quot;' => '&quot;Next {n} Days&quot;',
+        '&quot;checkIn&quot;:&quot;Check-in&quot;' => '&quot;checkIn&quot;:&quot;Check-In&quot;', '&quot;checkOut&quot;:&quot;Check-out&quot;' => '&quot;checkOut&quot;:&quot;Check-Out&quot;',
+    ]);
+    if (in_array($case, $V1, true)) {
+        $expect = str_replace('&quot;mobile&quot;:37}', '&quot;mobile&quot;:12}', $expect);
     }
-    // Part A, applied to 0.46.5's output by hand, must give exactly today's.
-    $expect = str_replace(' mphbac-hide-past', '', $was['html']);
-    $expect = preg_replace('#(<span class="mphbac-legend-item"><span class="mphbac-swatch mphbac-swatch-booked"[^>]*></span>Booked</span>)#',
-        "$1\n                                            <span class=\"mphbac-legend-item\"><span class=\"mphbac-swatch mphbac-swatch-past\" aria-hidden=\"true\"></span>Past</span>", $expect);
-    check("$label HTML = 0.46.5's plus Part A, and nothing else", $now['html'] === $expect);
-    // /cottages/ stores no cottage-name typography; it now takes the home
-    // page's (18px on phones), which the 16px/12px label spans do not
-    // inherit — shoot.js shows it pixel-identical.
-    $extra = $case === '1005:5f8802c'
-        ? '.elementor-1005 .elementor-element.elementor-element-5f8802c .mphbac-root.mphbac-root .mphbac-row-toggle{font-size:18px;}' : '';
-    check("$label per-post CSS = 0.46.5's" . ($extra ? ' plus the home page\'s cottage-name size on phones' : ''),
-        $extra === '' ? $now['css'] === $was['css'] : str_replace($extra, '', $now['css']) === $was['css'] && substr_count($now['css'], $extra) === 1);
+    check("$label HTML = 0.46.6's with Part A's labels" . (in_array($case, $V1, true) ? ' and the side margin settled' : '') . ', nothing else',
+        $now['html'] === $expect);
+    check("$label per-post CSS and tokens = 0.46.6's", $now['css'] === $was['css'] && $now['tokens'] === $was['tokens']);
 }
 
 echo "\n-- 3. Part A: the overview calendar's past days --\n";
@@ -196,13 +260,28 @@ echo "\n-- 4. the rules around it --\n";
     $src = file_get_contents($PLUGIN . '/includes/class-widget-single.php');
     check('...and no live_defaults() entry names it', !preg_match("/'single_cottage'\\s*=>/", substr($src, strpos($src, 'function live_defaults'), 1200)));
 
-    $red = json_decode((string) shell_exec('php ' . escapeshellarg(__DIR__ . '/render/redundant.php') . ' ' . escapeshellarg($PLUGIN) . ' ' . escapeshellarg($LIVE) . ' --json'), true);
+    $red = json_decode((string) shell_exec('php ' . escapeshellarg(__DIR__ . '/render/redundant.php') . ' ' . escapeshellarg($PLUGIN) . ' ' . escapeshellarg($LIVE5) . ' --json'), true);
     $keep = [];
     foreach ($red as $case => $o) {
         if ($o['keep']) { $keep[$case] = $o['keep']; }
     }
-    check('every stored key but each cottage page\'s single_cottage is redundant, a settings-screen colour, an orphan or Elementor\'s own',
-        array_unique(array_merge(...array_values($keep))) === ['single_cottage'] && count($keep) === 8, $keep);
+    // 0.46.5's export: everything but single_cottage, and Part A's three
+    // labels, which it still stored in their old wording.
+    $labels = ['str_checkin', 'str_checkout', 'str_price_label'];
+    $bad = [];
+    foreach ($keep as $case => $k) {
+        $rest = array_values(array_diff($k, $labels, ['single_cottage']));
+        if ($rest) { $bad[$case] = $rest; }
+    }
+    check('0.46.5\'s export: every stored key but single_cottage and Part A\'s three old labels is redundant, a settings colour, an orphan or Elementor\'s own',
+        $bad === [] && count($keep) === 10, $keep);
+    $red6 = json_decode((string) shell_exec('php ' . escapeshellarg(__DIR__ . '/render/redundant.php') . ' ' . escapeshellarg($PLUGIN) . ' ' . escapeshellarg($LIVE6) . ' --json'), true);
+    $keep6 = [];
+    foreach ($red6 as $case => $o) {
+        if ($o['keep'] || $o['orphan']) { $keep6[$case] = array_merge($o['keep'], $o['orphan']); }
+    }
+    check('live NOW: every key still stored is redundant, a settings colour or Elementor\'s own — but each cottage page\'s single_cottage',
+        array_unique(array_merge(...array_values($keep6))) === ['single_cottage'] && count($keep6) === 8, $keep6);
     check('...the overview pages\' cottage_info and cottage_labels among the redundant',
         in_array('cottage_info', $red['620:b7318c3']['redundant'], true) && in_array('cottage_labels', $red['1005:5f8802c']['redundant'], true));
 }

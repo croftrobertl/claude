@@ -9,13 +9,13 @@
  * and the settings token CSS — normalised so two runs on different days
  * compare: every date becomes D, every month Y-M, the render timestamp 0.
  *
- * tests/render/live-render-0.46.5.json is this script's output for the
- * 0.46.5 tree, made once, so live-defaults-test.php can hold the current
- * tree to "renders exactly what 0.46.5 rendered" (Part A apart) without a
- * 0.46.5 checkout:
- *   git worktree add /tmp/v0465 c82c3ff
- *   php tests/render/snapshot.php /tmp/v0465/mphb-availability-calendar \
- *       tests/render/live-state-0.46.5.json > tests/render/live-render-0.46.5.json
+ * tests/render/live-render-0.46.6.json is this script's output for the
+ * 0.46.6 tree from live's current export, made once, so
+ * live-defaults-test.php can hold the current tree to "renders exactly what
+ * 0.46.6 rendered" (0.46.7's two changes apart) without a 0.46.6 checkout:
+ *   git worktree add /tmp/v0466 4e380cc
+ *   MPHBAC_ORDER=cached php tests/render/snapshot.php /tmp/v0466/mphb-availability-calendar \
+ *       tests/render/live-state-0.46.6.json > tests/render/live-render-0.46.6.json
  */
 [$self, $dir, $json, $mode] = $argv + [null, null, null, 'live'];
 $live = json_decode((string) file_get_contents($json), true);

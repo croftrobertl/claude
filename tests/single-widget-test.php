@@ -130,6 +130,16 @@ foreach (['full' => $full, 'single' => $single] as $label => $w) {
 check('...and the old " — final price shown at checkout" is gone from the widget',
     !str_contains(file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-widget.php'), 'final price shown at checkout'));
 
+echo "\n-- the Show past days help text (0.46.7 Part C) --\n";
+{
+    $d = $full->t_controls['show_past']['description'] ?? null;
+    check('overview widget: it says the switch only decides whether the calendar starts at yesterday',
+        $d === 'On: the calendar starts at yesterday. Off: it starts at today. Either way, earlier days are shown in the "Past" color when you page back.', $d);
+    $d = $single->t_controls['show_past']['description'] ?? null;
+    check('cottage widget: keeps its own text (there the switch still hides past days)',
+        $d === 'Past days are shown greyed out using the "Past" color.', $d);
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);
 

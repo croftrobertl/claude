@@ -48,6 +48,53 @@ class Widget extends Widget_Base
     }
 
     /**
+     * ONE DEVICE'S VALUE OF A RESPONSIVE CONTROL, WHATEVER STACK ELEMENTOR
+     * BUILT (0.46.7).
+     *
+     * Elementor builds a widget's controls in one of two shapes and keeps
+     * whichever it built first for the rest of the request, rebuilding only
+     * "upward" (Controls_Manager::should_clean_stack()):
+     *   - 'off', its default and every ordinary page view: a responsive
+     *     control is ONE control, and its _tablet / _mobile values are raw
+     *     stored keys — no default, and the control's condition is NOT
+     *     applied to them;
+     *   - 'on', set while it rewrites a post's CSS (the first view after a
+     *     save): one control per device, each with its own default and the
+     *     parent's condition.
+     * render() read $settings['x_mobile'] directly, so what it emitted
+     * depended on the request: on live, /cottages/' info popup side margin
+     * came out 37 (the stored phone value, its condition ignored) on an
+     * ordinary view and 12 (condition applied: full width is off) on the
+     * view that rewrote the CSS — the Website Director's "blind ≠ live".
+     *
+     * Resolved here the same way every time, as the 'on' shape would:
+     *   - hidden by its condition (the desktop value is null) → null on every
+     *     device, so the caller's own default applies;
+     *   - otherwise the stored device value, or, unset, the control's own
+     *     default for that device — the device control's (stack 'on') or the
+     *     single control's {device}_default (stack 'off'); null if neither.
+     *
+     * @param array<string,mixed> $settings get_settings_for_display()
+     * @return mixed
+     */
+    protected function device_setting(array $settings, string $id, string $device)
+    {
+        if (array_key_exists($id, $settings) && $settings[$id] === null) {
+            return null;
+        }
+        $value = $settings[$id . '_' . $device] ?? null;
+        if ($value !== null && $value !== '' && !(is_array($value) && ($value['size'] ?? 'x') === '')) {
+            return $value;
+        }
+        $per_device = $this->get_controls($id . '_' . $device);
+        if (is_array($per_device) && array_key_exists('default', $per_device)) {
+            return $per_device['default'];
+        }
+        $single = $this->get_controls($id);
+        return is_array($single) ? ($single[$device . '_default'] ?? null) : null;
+    }
+
+    /**
      * Portal-proof selector for the "View Cottage Page" button. When the info
      * popup opens, widget.js moves the whole sheet to <body> to escape
      * transformed Elementor ancestors — so {{WRAPPER}}-scoped controls no
@@ -279,8 +326,18 @@ class Widget extends Widget_Base
         // (dow_format_tablet) are reached by the ids Elementor gives them.
         // Defaults only: a value an instance has stored still wins, as
         // before. See live_defaults().
+        // A DEVICE default (dow_format_tablet) has its own control only when
+        // Elementor has built the per-device stack; in its default single-
+        // control stack it is the base control's {device}_default arg — so
+        // it is set there instead (0.46.7: in 0.46.6 those three defaults
+        // only ever reached the CSS). See device_setting().
         foreach ($this->live_defaults() as $id => $default) {
-            $this->update_control($id, ['default' => $default]);
+            if ($this->update_control($id, ['default' => $default])) {
+                continue;
+            }
+            if (preg_match('/^(.+)_(tablet|mobile)$/', $id, $m)) {
+                $this->update_control($m[1], [$m[2] . '_default' => $default]);
+            }
         }
     }
 
@@ -908,7 +965,7 @@ class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'default'      => Settings::get('show_past') ? 'yes' : '',
-            'description'  => __('Past days are shown greyed out using the "Past" color.', 'mphb-availability-calendar'),
+            'description'  => $this->show_past_description(),
         ]);
 
         $this->add_control('font_size', [
@@ -989,8 +1046,8 @@ class Widget extends Widget_Base
 
         $strings = [
             'str_property'      => [__('Cottage-column header label', 'mphb-availability-calendar'), __('Cottages', 'mphb-availability-calendar')],
-            'str_checkin'       => [__('Check-in label', 'mphb-availability-calendar'), __('Check-in', 'mphb-availability-calendar')],
-            'str_checkout'      => [__('Check-out label', 'mphb-availability-calendar'), __('Check-out', 'mphb-availability-calendar')],
+            'str_checkin'       => [__('Check-in label', 'mphb-availability-calendar'), __('Check-In', 'mphb-availability-calendar')],
+            'str_checkout'      => [__('Check-out label', 'mphb-availability-calendar'), __('Check-Out', 'mphb-availability-calendar')],
             'str_apply'         => [__('Apply button', 'mphb-availability-calendar'), __('Apply', 'mphb-availability-calendar')],
             'str_reset'         => [__('Reset button', 'mphb-availability-calendar'), __('Reset', 'mphb-availability-calendar')],
             'str_empty'         => [__('Empty-state message', 'mphb-availability-calendar'), __('No cottages available — try different dates.', 'mphb-availability-calendar')],
@@ -1012,7 +1069,7 @@ class Widget extends Widget_Base
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
             'str_book_min_nights' => [__('Popup minimum-nights message ({nights} is replaced with the Minimum nights setting)', 'mphb-availability-calendar'), __('Must be a minimum of {nights} nights. Please select new dates.', 'mphb-availability-calendar')],
             'str_view_cottage'   => [__('Info popup: view-cottage button', 'mphb-availability-calendar'), __('View Cottage Page', 'mphb-availability-calendar')],
-            'str_price_label'      => [__('Booking popup: estimate label', 'mphb-availability-calendar'), __('Estimated total:', 'mphb-availability-calendar')],
+            'str_price_label'      => [__('Booking popup: estimate label', 'mphb-availability-calendar'), __('Estimated Total:', 'mphb-availability-calendar')],
             'str_price_for_nights' => [__('Booking popup: estimate amount ({price}, {nights} replaced)', 'mphb-availability-calendar'), __('{price} for {nights} nights', 'mphb-availability-calendar')],
             'str_price_one_night'  => [__('Booking popup: estimate amount for one night ({price} replaced)', 'mphb-availability-calendar'), __('{price} for 1 night', 'mphb-availability-calendar')],
             'str_price_avg'        => [__('Booking popup: per-night average ({avg} replaced)', 'mphb-availability-calendar'), __('({avg}/night)', 'mphb-availability-calendar')],
@@ -1544,6 +1601,18 @@ class Widget extends Widget_Base
     }
 
     /**
+     * The "Show past days" switch's help text in the Elementor panel. On this
+     * widget the switch only decides where the calendar STARTS (0.46.6, Part
+     * A); past days are always the Past colour. 0.46.7 makes the text say so
+     * (the Website Director: "it no longer matches what the control does").
+     * The cottage calendar keeps its own, still accurate, wording.
+     */
+    protected function show_past_description(): string
+    {
+        return __('On: the calendar starts at yesterday. Off: it starts at today. Either way, earlier days are shown in the "Past" color when you page back.', 'mphb-availability-calendar');
+    }
+
+    /**
      * Whether to render the check-in/check-out/Apply/Reset filter bar. The
      * multi-cottage widget always does (no control, unchanged behavior). The
      * single-cottage variant has a "Show date filters" switcher defaulting
@@ -1647,9 +1716,9 @@ class Widget extends Widget_Base
         // user edits the widget without touching the per-device switcher.
         $days_desktop = (int) ($settings['visible_days'] ?? 0);
         $days_desktop = $days_desktop > 0 ? $days_desktop : 31;
-        $days_tablet  = (int) ($settings['visible_days_tablet'] ?? 0);
+        $days_tablet  = (int) ($this->device_setting($settings, 'visible_days', 'tablet') ?? 0);
         $days_tablet  = $days_tablet  > 0 ? $days_tablet  : 14;
-        $days_mobile  = (int) ($settings['visible_days_mobile'] ?? 0);
+        $days_mobile  = (int) ($this->device_setting($settings, 'visible_days', 'mobile') ?? 0);
         $days_mobile  = $days_mobile  > 0 ? $days_mobile  : 7;
 
         $rooms_by_id = [];
@@ -1673,8 +1742,8 @@ class Widget extends Widget_Base
         // widget's control defaults read it from — so the two paths a widget
         // storing nothing can take cannot drift apart any more.
         $months_desktop = self::device_number($settings['months_shown']        ?? null, (int) Settings::get('months_shown'), 1, 4);
-        $months_tablet  = self::device_number($settings['months_shown_tablet'] ?? null, (int) Settings::get('months_shown_tablet'), 1, 4);
-        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, (int) Settings::get('months_shown_mobile'), 1, 4);
+        $months_tablet  = self::device_number($this->device_setting($settings, 'months_shown', 'tablet'), (int) Settings::get('months_shown_tablet'), 1, 4);
+        $months_mobile  = self::device_number($this->device_setting($settings, 'months_shown', 'mobile'), (int) Settings::get('months_shown_mobile'), 1, 4);
         $min_nights    = max(1, (int) ($settings['min_nights'] ?? Settings::get('min_nights')));
 
         $property_label = (string) ($settings['str_property'] ?? '');
@@ -1860,15 +1929,15 @@ class Widget extends Widget_Base
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => [
                 'desktop' => self::device_number($settings['info_popup_max_width']        ?? null, 1200, 320, 1600),
-                'tablet'  => self::device_number($settings['info_popup_max_width_tablet'] ?? null, 800, 320, 1600),
-                'mobile'  => self::device_number($settings['info_popup_max_width_mobile'] ?? null, 480, 320, 1600),
+                'tablet'  => self::device_number($this->device_setting($settings, 'info_popup_max_width', 'tablet'), 800, 320, 1600),
+                'mobile'  => self::device_number($this->device_setting($settings, 'info_popup_max_width', 'mobile'), 480, 320, 1600),
             ],
             'infoTitles'       => $info_titles,
             'infoTitleUrls'    => $info_title_urls,
             'infoPopupSideMargin' => [
                 'desktop' => self::device_number($settings['info_popup_side_margin']['size']        ?? null, 32, 0, 200),
-                'tablet'  => self::device_number($settings['info_popup_side_margin_tablet']['size'] ?? null, 20, 0, 200),
-                'mobile'  => self::device_number($settings['info_popup_side_margin_mobile']['size'] ?? null, 12, 0, 200),
+                'tablet'  => self::device_number($this->device_setting($settings, 'info_popup_side_margin', 'tablet')['size'] ?? null, 20, 0, 200),
+                'mobile'  => self::device_number($this->device_setting($settings, 'info_popup_side_margin', 'mobile')['size'] ?? null, 12, 0, 200),
             ],
             'strings'        => [
                 'bookHeading'   => (string) ($settings['str_book_heading'] ?? ''),

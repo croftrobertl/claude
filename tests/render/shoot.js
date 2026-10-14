@@ -2,7 +2,7 @@
 /**
  * SCREENSHOT EVERY LIVE INSTANCE UNDER TWO SET-UPS AND COMPARE (0.46.6).
  *
- *   node tests/render/shoot.js A B [--out DIR] [--mask-part-a] [--only CASE]
+ *   node tests/render/shoot.js A B [--out DIR] [--mask-part-a] [--mask-labels] [--only CASE]
  *
  *   A, B   <plugin_dir>=<mode>, mode as tests/render/render.php takes it:
  *          live | blind | strip:<keys>. For example, 0.46.5 against this
@@ -34,7 +34,8 @@ const H = require('../browser/harness.js');
 const SH = require('../browser/staff-harness.js');
 const FIX = require('../browser/board-fixture.js');
 
-const LIVE = path.join(__dirname, 'live-state-0.46.5.json');
+// Live's current export (after the 0.46.6 clearing); --export chooses another.
+let LIVE = path.join(__dirname, 'live-state-0.46.6.json');
 const RENDER = path.join(__dirname, 'render.php');
 const TODAY = '2026-10-14';
 const CLOCK = new Date('2026-10-14T16:00:00Z');   // noon on the property's clock
@@ -128,8 +129,18 @@ async function drive(p, state) {
   // shadowed corner can keep a compositor layer from the loading state and
   // anti-alias 4 pixels differently from one shot to the next.
   await p.evaluate(() => document.querySelectorAll('.mphbac-grid-wrap').forEach(g => { g.style.display = 'none'; void g.offsetHeight; g.style.display = ''; }));
+  if (globalThis.__maskLabels) {
+    await p.evaluate(sels => sels.forEach(sel => document.querySelectorAll(sel).forEach(e => { e.textContent = 'Label'; })), LABELS_0467);
+  }
   await p.waitForTimeout(500);
 }
+
+/* 0.46.7's Part A: only these texts were renamed. --mask-labels writes the
+   same neutral text into them in both versions just before the shot (a mask
+   box would take each label's own, different, width), so 0.46.6 against
+   0.46.7 must then show no difference at all. */
+const LABELS_0467 = ['.mphbac-filter-label', '.mphbac-sheet-field > span:first-child',
+  'label:has(.mphbac-staff-goto) .mphbac-staff-field-label'];
 
 async function shots(browser, spec, cases, widths) {
   const [dir, mode] = spec.split('=');
@@ -152,8 +163,8 @@ async function shots(browser, spec, cases, widths) {
         await drive(p, state);
         out[`${cas}|${w}|${state}`] = { type: r.type, version: r.version, errors,
           png: await p.screenshot({ fullPage: true, animations: 'disabled',
-            mask: globalThis.__maskPartA && r.type === 'mphbac_calendar'
-              ? [p.locator('.mphbac-legend'), p.locator('.mphbac-grid .mphbac-cell-status.is-past')] : [] }),
+            mask: (globalThis.__maskPartA && r.type === 'mphbac_calendar'
+              ? [p.locator('.mphbac-legend'), p.locator('.mphbac-grid .mphbac-cell-status.is-past')] : []) }),
           facts: await p.evaluate(() => {
             const leg = document.querySelector('.mphbac-legend');
             return { legend: leg ? [...leg.querySelectorAll('.mphbac-legend-item')].map(x => x.textContent.trim()) : null,
@@ -196,7 +207,9 @@ async function main() {
   const opt = k => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
   const [A, B] = args.filter(a => a.includes('='));
   const outDir = opt('--out');
+  if (opt('--export')) LIVE = path.resolve(opt('--export'));
   globalThis.__maskPartA = args.includes('--mask-part-a');
+  globalThis.__maskLabels = args.includes('--mask-labels');
   const live = JSON.parse(fs.readFileSync(LIVE, 'utf8'));
   let cases = live.widgets.map(w => w.post_id + ':' + w.widget_id);
   if (opt('--only')) cases = cases.filter(c => opt('--only').split(',').includes(c));
@@ -224,7 +237,7 @@ async function main() {
     }
   }
   await browser.close();
-  console.log(`\n${n} screenshots compared, ${bad} differ` + (globalThis.__maskPartA ? ' (Part A masked)' : ''));
+  console.log(`\n${n} screenshots compared, ${bad} differ` + (globalThis.__maskPartA ? ' (Part A masked)' : '') + (globalThis.__maskLabels ? ' (0.46.7 labels masked)' : ''));
   process.exit(bad ? 1 : 0);
 }
 

@@ -408,8 +408,8 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('Day: "Day", a date picker, the one day', v.boxes[1][0] === 'Day' && v.boxes[1][1] === 'date' && v.range === 'Oct 14, 2026', v);
     await pick('.mphbac-staff-stats-span', 'week');
     v = await look();
-    check('→ Week: "Week of", a date picker, the Sunday–Saturday week holding that day (the board\'s weeks)',
-      v.boxes[1][0] === 'Week of' && v.boxes[1][1] === 'date' && v.range === 'Oct 11 – 17, 2026', v);
+    check('→ Week: "Week Of", a date picker, the Sunday–Saturday week holding that day (the board\'s weeks)',
+      v.boxes[1][0] === 'Week Of' && v.boxes[1][1] === 'date' && v.range === 'Oct 11 – 17, 2026', v);
     await pick('.mphbac-staff-stats-span', 'custom');
     v = await look();
     check('→ Custom: "From" and "To", opened on the week that was showing', JSON.stringify(v.boxes.map(b => [b[0], b[1]])) === JSON.stringify([['Timeframe', 'select'], ['From', 'date'], ['To', 'date']])

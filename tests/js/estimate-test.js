@@ -93,7 +93,7 @@ console.log('\n-- the estimate line --');
   const fallback = el();
   R.renderEstimateLine(fallback, {}, 3, PRICE, null);
   check('missing strings fall back to English rather than rendering empty',
-    fallback.textContent.includes('Estimated total') && fallback.textContent.includes('3 nights'),
+    fallback.textContent.includes('Estimated Total') && fallback.textContent.includes('3 nights'),
     fallback.textContent);
 }
 {

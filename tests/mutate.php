@@ -1869,7 +1869,7 @@ $mutations = [
      "                    statsFrom.value = statsFrom.value;",
      'staff-board-test.js'],
     ["stats 0.45.3: Week of still says \"Day\"", 'assets/js/staff.js',
-     "span === 'week' ? (S.stWeekOf || 'Week of') : (S.stDayLabel || 'Day')",
+     "span === 'week' ? (S.stWeekOf || 'Week Of') : (S.stDayLabel || 'Day')",
      "(S.stDayLabel || 'Day')",
      'staff-board-test.js'],
     ["stats 0.45.3: the Month list shows with Year", 'assets/js/staff.js',
@@ -2703,11 +2703,9 @@ $mutations = [
      'live-defaults-test.php'],
     ['0.46.6 drift: the live defaults are never applied', 'class-widget.php',
      '        foreach ($this->live_defaults() as $id => $default) {
-            $this->update_control($id, [\'default\' => $default]);
-        }',
+            if ($this->update_control($id, [\'default\' => $default])) {',
      '        foreach ([] as $id => $default) {
-            $this->update_control($id, [\'default\' => $default]);
-        }',
+            if ($this->update_control($id, [\'default\' => $default])) {',
      'live-defaults-test.php'],
     ['0.46.6 drift: a settings default drifts from live\'s option row (min_nights)', 'class-settings.php',
      '__(\'Minimum nights\', \'mphb-availability-calendar\'), 2, 1, 30,',
@@ -2739,6 +2737,110 @@ $mutations = [
             \'single_cottage\' => \'1071\',
 ',
      'live-defaults-test.php'],
+
+    // --- 0.46.7: Title Case labels, device-value parity, the WP-CLI check -----
+    ['0.46.7 label: guests\' "Check-In" back to "Check-in"', 'class-widget.php',
+     '__(\'Check-In\', \'mphb-availability-calendar\')',
+     '__(\'Check-in\', \'mphb-availability-calendar\')',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: guests\' "Check-Out" back to "Check-out"', 'class-widget.php',
+     '__(\'Check-Out\', \'mphb-availability-calendar\')',
+     '__(\'Check-out\', \'mphb-availability-calendar\')',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: "Estimated Total:" back to "Estimated total:"', 'class-widget.php',
+     '__(\'Estimated Total:\', \'mphb-availability-calendar\')',
+     '__(\'Estimated total:\', \'mphb-availability-calendar\')',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: the sheet\'s "Check-In" row back to "Check-in"', 'class-staff-data.php',
+     'self::push($out, __(\'Check-In\', \'mphb-availability-calendar\')',
+     'self::push($out, __(\'Check-in\', \'mphb-availability-calendar\')',
+     'staff-panel-test.php'],
+    ['0.46.7 label: the sheet\'s "Check-Out" row back to "Check-out"', 'class-staff-data.php',
+     'self::push($out, __(\'Check-Out\', \'mphb-availability-calendar\')',
+     'self::push($out, __(\'Check-out\', \'mphb-availability-calendar\')',
+     'staff-panel-test.php'],
+    ['0.46.7 label: the daily group "In House" back to "In house"', 'class-staff-widget.php',
+     '\'inHouse\'      => __(\'In House\',',
+     '\'inHouse\'      => __(\'In house\',',
+     'staff-period-test.js'],
+    ['0.46.7 label: the Stats tile "In House" back to "In house"', 'class-staff-widget.php',
+     '\'stInHouse\'    => __(\'In House\',',
+     '\'stInHouse\'    => __(\'In house\',',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: "View Photo ID" back to "View photo ID"', 'class-staff-widget.php',
+     '\'viewPhoto\'    => __(\'View Photo ID\',',
+     '\'viewPhoto\'    => __(\'View photo ID\',',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: "Go to Date" back to "Go to date"', 'class-staff-widget.php',
+     'esc_html__(\'Go to Date\', \'mphb-availability-calendar\')',
+     'esc_html__(\'Go to date\', \'mphb-availability-calendar\')',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: "All Sources" back to "All sources"', 'class-staff-widget.php',
+     '\'stAllSources\' => __(\'All Sources\',',
+     '\'stAllSources\' => __(\'All sources\',',
+     'staff-stats-test.js'],
+    ['0.46.7 label: "Next {n} Days" back to "Next {n} days"', 'class-staff-widget.php',
+     '\'stPaceNext\'   => __(\'Next {n} Days\',',
+     '\'stPaceNext\'   => __(\'Next {n} days\',',
+     'title-case-labels-test.js'],
+    ['0.46.7 label: "Week Of" back to "Week of"', 'class-staff-widget.php',
+     '\'stWeekOf\'     => __(\'Week Of\',',
+     '\'stWeekOf\'     => __(\'Week of\',',
+     'staff-board-test.js'],
+    ['0.46.7 a11y: the check-in field\'s name drifts from its label (aria-label "Check-in")', 'class-widget.php',
+     '<input type="date" class="mphbac-input mphbac-input--empty mphbac-input-checkin"',
+     '<input type="date" aria-label="Check-in" class="mphbac-input mphbac-input--empty mphbac-input-checkin"',
+     'title-case-labels-test.js'],
+    ['0.46.7 a11y: the popup\'s check-out field\'s name drifts from its label', 'class-widget.php',
+     '<input type="date" class="mphbac-input mphbac-sheet-checkout"',
+     '<input type="date" aria-label="Check out date" class="mphbac-input mphbac-sheet-checkout"',
+     'title-case-labels-test.js'],
+    ['0.46.7 a11y: "Go to Date"\'s field is named "Go to date"', 'class-staff-widget.php',
+     '<input type="date" class="mphbac-staff-input mphbac-staff-goto">',
+     '<input type="date" aria-label="Go to date" class="mphbac-staff-input mphbac-staff-goto">',
+     'title-case-labels-test.js'],
+    ['0.46.7 script: style controls left out again (calheader_bg read as an orphan)', 'tools/wp-cli/mphbac-redundant-keys.php',
+     '\\Elementor\\Core\\Frontend\\Performance::set_use_style_controls(true);
+',
+     '',
+     'wp-cli-script-test.php'],
+    ['0.46.7 script: per-device controls left out again (namecol_width_mobile read as an orphan)', 'tools/wp-cli/mphbac-redundant-keys.php',
+     '\\Elementor\\Plugin::$instance->breakpoints->set_responsive_control_duplication_mode(\'on\');
+',
+     '',
+     'wp-cli-script-test.php'],
+    ['0.46.7 parity: a condition-hidden control\'s device value is emitted anyway (37 on an ordinary view)', 'class-widget.php',
+     '        if (array_key_exists($id, $settings) && $settings[$id] === null) {
+            return null;
+        }
+',
+     '',
+     'live-defaults-test.php'],
+    ['0.46.7 parity: render reads the phone side margin straight from the settings again', 'class-widget.php',
+     'self::device_number($this->device_setting($settings, \'info_popup_side_margin\', \'mobile\')[\'size\'] ?? null, 12, 0, 200)',
+     'self::device_number($settings[\'info_popup_side_margin_mobile\'][\'size\'] ?? null, 12, 0, 200)',
+     'live-defaults-test.php'],
+    ['0.46.7 parity: an unset device value ignores the control\'s own device default', 'class-widget.php',
+     '        $per_device = $this->get_controls($id . \'_\' . $device);
+        if (is_array($per_device) && array_key_exists(\'default\', $per_device)) {
+            return $per_device[\'default\'];
+        }
+        $single = $this->get_controls($id);
+        return is_array($single) ? ($single[$device . \'_default\'] ?? null) : null;',
+     '        return null;',
+     'live-defaults-test.php'],
+    ['0.46.7 parity: device live defaults never reach Elementor\'s single-control stack', 'class-widget.php',
+     '            if (preg_match(\'/^(.+)_(tablet|mobile)$/\', $id, $m)) {
+                $this->update_control($m[1], [$m[2] . \'_default\' => $default]);
+            }',
+     '            if (false) {
+                $this->update_control($id, []);
+            }',
+     'live-defaults-test.php'],
+    ['0.46.7 Part C: the overview\'s show_past description is the old, inaccurate one', 'class-widget.php',
+     '        return __(\'On: the calendar starts at yesterday. Off: it starts at today. Either way, earlier days are shown in the "Past" color when you page back.\', \'mphb-availability-calendar\');',
+     '        return __(\'Past days are shown greyed out using the "Past" color.\', \'mphb-availability-calendar\');',
+     'single-widget-test.php'],
 ];
 
 $originals = [];

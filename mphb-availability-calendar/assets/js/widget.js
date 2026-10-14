@@ -2188,7 +2188,7 @@
         // kept so the line still reads correctly if that CSS never lands —
         // leading whitespace collapses when it does.
         label.className = 'mphbac-estimate-label';
-        label.textContent = (strings.priceLabel || 'Estimated total:');
+        label.textContent = (strings.priceLabel || 'Estimated Total:');
         lineEl.appendChild(label);
         lineEl.appendChild(document.createTextNode(' '));
         var amount = document.createElement('span');

@@ -120,7 +120,9 @@ check('4: guest count stays honest when _mphb_adults equals capacity on an impor
     value_of($d, 'booking', 'Number of Guests'));
 check('what IS entered still shows: the guest name and the dates',
     value_of($d, 'customer', 'First Name') === 'Dana'
-    && value_of($d, 'booking', 'Check-in') === '2026-09-20', labels($d, 'booking'));
+    && value_of($d, 'booking', 'Check-In') === '2026-09-20', labels($d, 'booking'));
+check('0.46.7 (Rob, Title Case): the sheet\'s date rows are labelled exactly "Check-In" and "Check-Out"',
+    array_values(array_intersect(labels($d, 'booking'), ['Check-In', 'Check-Out'])) === ['Check-In', 'Check-Out'], labels($d, 'booking'));
 
 echo "\n-- 1: a real photo ID must still appear --\n";
 $d = booking(18434, ['mphb_upload_id' => '904']);
