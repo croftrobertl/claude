@@ -1,6 +1,7 @@
 'use strict';
 /**
- * THE FOUR LIGHTHOUSE FINDINGS ON LIVE, 2026-10-13 (0.46.4).
+ * THE FOUR LIGHTHOUSE FINDINGS ON LIVE, 2026-10-13 (0.46.4), AND THE ONE
+ * 0.46.4 DID NOT FIX (0.46.5): see section 2.
  *
  * The Website Director ran Lighthouse (Chrome DevTools, mobile) on 0.46.3:
  *
@@ -42,12 +43,18 @@ const ROOMS = [[22, 'BB'], [23, 'SS'], [33, 'PP']].map(([id, abbrev]) => ({ id, 
 const AVAIL = {};
 for (const r of ROOMS) { AVAIL[r.id] = {}; dayList('2026-09-01', 150).forEach((d, i) => { AVAIL[r.id][d] = i % 3 ? 'available' : 'booked'; }); }
 
-const config = (month) => ({
+// What an editor might type into the three status labels: punctuation,
+// numbers, a price, a parenthesis. The tip shows exactly this text.
+const CUSTOM_LABELS = { available: 'Available from $250/night', booked: 'Booked – call 555-0100', past: 'Check-out day (past)' };
+
+const config = (month, labels = null) => ({
   today: '2026-10-13', daysDesktop: 14, daysTablet: 14, daysMobile: 7,
   monthsDesktop: 2, monthsTablet: 2, monthsMobile: 2,
   monthMode: month, singleMode: month,
   popupEnabled: true, minNights: 2,
-  statusLabels: { available: 'Available', booked: 'Booked', past: 'Past' },
+  // Shows yesterday too, so the overview has a past cell to judge.
+  showPast: true,
+  statusLabels: labels || { available: 'Available', booked: 'Booked', past: 'Past' },
   strings: { property: 'Cottage' },
   roomTitles: { 22: 'Cottage 22', 23: 'Cottage 23' },
   // 22 has a cottage page, 23 does not.
@@ -79,14 +86,14 @@ const LIVE_THEME = '<style>:root{--e-global-color-text:#7A7A7A;--e-global-color-
 
 (async () => {
   const browser = await chromium.launch(H.CHROMIUM);
-  const open = async ({ month = false, legacy = false, inherit = true, w = 1280 } = {}) => {
+  const open = async ({ month = false, legacy = false, inherit = true, w = 1280, labels = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: 1000 }, deviceScaleFactor: 1 });
     const p = await ctx.newPage();
     p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
     let html = H.page({ body: body(legacy) }).replace('</head>', LIVE_THEME + '</head>');
     if (inherit) html = html.replace('class="mphbac-root"', 'class="mphbac-root mphbac-inherit-theme"');
     await p.setContent(html);
-    await p.evaluate(c => { document.querySelector('.mphbac-root').dataset.config = JSON.stringify(c); }, config(month));
+    await p.evaluate(c => { document.querySelector('.mphbac-root').dataset.config = JSON.stringify(c); }, config(month, labels));
     await p.addScriptTag({ content: H.jsShipped() });
     await p.waitForSelector('.mphbac-grid');
     await p.waitForTimeout(150);
@@ -188,35 +195,84 @@ const LIVE_THEME = '<style>:root{--e-global-color-text:#7A7A7A;--e-global-color-
     await ctx.close();
   }
 
-  console.log('\n-- 2. the month grid: each name starts with what the cell shows --');
+  console.log('\n-- 2. every day cell\'s name contains what it shows, tip hidden AND shown --');
+  // 0.46.4 FAILED THIS ON LIVE. The day number and the tip were two touching
+  // spans, so with the tip counted as shown the visible text was "1Past" —
+  // one word, not in "1 — Past". This suite's old "tip showing" check set
+  // opacity: 1 but the tip has a 0.15s opacity transition, so axe read it
+  // mid-fade, still invisible, and the check proved nothing. The tip is now
+  // shown with the transition OFF, and every tip's computed opacity is
+  // checked before axe runs.
+  const SHOW_TIPS = '.mphbac-cell-tip{transition:none!important;opacity:1!important}';
+  for (const w of [390, 1280]) {
+    for (const labels of [null, CUSTOM_LABELS]) {
+      const which = (labels ? 'custom labels' : 'default labels') + ', ' + w + 'px';
+      for (const month of [true, false]) {
+        const grid = month ? 'month grid' : 'overview';
+        const { ctx, p } = await open({ month, w, labels });
+        const want = month ? 61 : 3 * (w < 768 ? 7 : 14);
+        const statuses = await p.evaluate(() => [...new Set([...document.querySelectorAll('.mphbac-cell-status')].map(c => c.dataset.status))].sort());
+        check(`${grid} (${which}): the cells cover every status a cell can show (instrument check)`,
+          JSON.stringify(statuses) === '["available","booked","past"]', statuses);
+        for (const shown of [false, true]) {
+          if (shown) await p.addStyleTag({ content: SHOW_TIPS });
+          const op = await p.evaluate(() => [...new Set([...document.querySelectorAll('.mphbac-cell-tip')].map(t => getComputedStyle(t).opacity))]);
+          check(`${grid} (${which}), tip ${shown ? 'SHOWN' : 'hidden'}: every tip really is ${shown ? 'at opacity 1' : 'at opacity 0'} (instrument check)`,
+            JSON.stringify(op) === (shown ? '["1"]' : '["0"]'), op);
+          const a = await axe(p, ['label-content-name-mismatch']);
+          check(`${grid} (${which}), tip ${shown ? 'SHOWN' : 'hidden'}: label-content-name-mismatch on no cell`,
+            a['label-content-name-mismatch'].violations === 0, a['label-content-name-mismatch']);
+          // Month cells always show their number; overview cells show text
+          // only through the tip, so with it hidden axe has nothing to judge.
+          const judged = month || shown ? want : 0;
+          check(`...and axe judged all ${judged} cells`, a['label-content-name-mismatch'].passes === judged,
+            a['label-content-name-mismatch'].passes);
+        }
+        await ctx.close();
+      }
+    }
+  }
   {
     const { ctx, p } = await open({ month: true });
-    const a = await axe(p, ['label-content-name-mismatch', 'aria-required-children', 'aria-required-parent']);
-    check('label-content-name-mismatch: no cell (the Lighthouse finding)',
-      a['label-content-name-mismatch'].violations === 0, a['label-content-name-mismatch']);
-    check('...and axe judged all 61 (October + November), not a rule that matched nothing',
-      a['label-content-name-mismatch'].passes === 61, a['label-content-name-mismatch'].passes);
-    check('...and the month grid\'s rows are still all cells',
+    const a = await axe(p, ['aria-required-children', 'aria-required-parent']);
+    check('the month grid\'s rows are still all cells',
       a['aria-required-children'].violations === 0 && a['aria-required-parent'].violations === 0, a);
-
     const cells = await p.evaluate(() => [...document.querySelectorAll('.mphbac-monthgrid .mphbac-cell-status')].map(c => {
       const desc = document.getElementById(c.getAttribute('aria-describedby') || '');
       return { label: c.getAttribute('aria-label'), num: c.querySelector('.mphbac-day-num').textContent,
-        tip: c.querySelector('.mphbac-cell-tip').textContent, desc: desc ? desc.textContent : null,
+        tip: c.querySelector('.mphbac-cell-tip').textContent, text: c.textContent,
+        between: [...c.childNodes].map(n => n.nodeType === 3 ? JSON.stringify(n.nodeValue) : n.className).join(' | '),
+        desc: desc ? desc.textContent : null,
         isTitle: !!desc && desc.classList.contains('mphbac-month-title') && desc.closest('.mphbac-monthbox') === c.closest('.mphbac-monthbox') };
     }));
     check('every name STARTS with the day number shown, then the status the tip shows: "1 — Past"',
       cells.length === 61 && cells.every(c => c.label === c.num + ' — ' + c.tip), cells.slice(0, 2));
+    check('the cell\'s text is the number, ONE space, then the tip: "1 Past", not "1Past"',
+      cells.every(c => c.text === c.num + ' ' + c.tip), cells.slice(0, 2).map(c => [c.text, c.between]));
     check('the month and year are the description, read from that month\'s own title bar',
       cells.every(c => c.isTitle) && cells[0].desc === 'October 2026' && cells[60].desc === 'November 2026',
       [cells[0].desc, cells[60].desc]);
-    // A keyboard user sees the tip as well: the visible text is then the
-    // number AND the status, and the name must still contain both, in order.
-    await p.evaluate(() => { const c = document.querySelector('.mphbac-monthgrid .is-clickable'); c.classList.add('t-focus'); });
-    await p.addStyleTag({ content: '.t-focus .mphbac-cell-tip{opacity:1!important}' });
-    const f = await axe(p, ['label-content-name-mismatch'], '.t-focus');
-    check('...and with its tip showing (keyboard focus), the cell still passes',
-      f['label-content-name-mismatch'].violations === 0 && f['label-content-name-mismatch'].passes === 1, f);
+    await ctx.close();
+  }
+  // ZERO VISUAL CHANGE: the month grids with the space and with it removed
+  // are the same pixels — tips hidden, and tips shown — at both widths.
+  for (const w of [390, 1280]) {
+    const { ctx, p } = await open({ month: true, w });
+    const shot = () => p.locator('.mphbac-months').screenshot();
+    const strip = () => p.evaluate(() => document.querySelectorAll('.mphbac-monthgrid .mphbac-day-num').forEach(n => {
+      const t = n.nextSibling; if (t && t.nodeType === 3) t.remove(); }));
+    const withSpace = await shot();
+    await p.addStyleTag({ content: SHOW_TIPS });
+    const withSpaceShown = await shot();
+    await strip();
+    const noSpaceShown = await shot();
+    await p.evaluate(() => document.querySelectorAll('style').forEach(st => { if (st.textContent.includes('transition:none!important')) st.remove(); }));
+    await p.waitForTimeout(400); // the tips' own 0.15s fade back
+    const noSpace = await shot();
+    check(`${w}px: the month grids look EXACTLY the same with the space as without it, tips hidden`,
+      withSpace.equals(noSpace), [withSpace.length, noSpace.length]);
+    check(`${w}px: ...and with every tip showing`, withSpaceShown.equals(noSpaceShown) && !withSpaceShown.equals(withSpace),
+      [withSpaceShown.length, noSpaceShown.length]);
     await ctx.close();
   }
 

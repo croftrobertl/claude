@@ -3378,3 +3378,35 @@ label-content-name-mismatch and color-contrast. Each run also checks how
 many nodes axe judged. The test also covers Chromium's own accessibility
 tree, popups still opening, and both markups for the link. Mutation pass:
 16 entries named "0.46.4 …", one per piece of each fix.
+
+## 0.46.5 — the A2 fix that did not hold on live; the price note (WD, Rob)
+
+**A2, again (WD, 2026-10-14).** Lighthouse 13.5 on live (axe 4.14) still
+failed label-content-name-mismatch on all 61 cells of cottage-34 after
+0.46.4. The cell's two spans touched (`<span class="mphbac-day-num">1</span>
+<span class="mphbac-cell-tip">Past</span>` with nothing between them), so
+when Lighthouse counted the tooltip as visible, axe read "1Past". That is one
+word, which "1 — Past" does not contain. The fix is in buildMonthGrid: one
+`document.createTextNode(' ')` between the spans. The cell is a flex
+container, so whitespace between its items is never drawn. The test shows the
+pixels are identical with and without the space, tips hidden and shown, at
+390 and 1280px.
+
+WHY 0.46.4'S TEST MISSED IT, AND THE LESSON. The test did build cells through
+the shipped minified widget.js. Its "tip showing" case set `opacity: 1` and
+ran axe at once, but `.mphbac-cell-tip` has `transition: opacity 0.15s`, so
+axe read the tip mid-fade, at opacity 0, and the case judged only the number.
+Any state forced through CSS has to switch off the property's transition and
+assert the computed value before measuring. lighthouse-a11y-test.js now does
+both, for every tip on the page, and covers all three statuses (past,
+available, booked; Data_Provider has no others) and an editor's custom
+labels with punctuation, a price and a parenthesis, at 390 and 1280px.
+The overview strip is covered too: its cells show text only through the tip,
+and "2026-10-13 — Booked" holds the tip as whole words. It was already at 0,
+and it stays there.
+
+**Price note (Rob).** The str_price_note default is now exactly "for 2
+guests, before any taxes/fees". The WD changed the stored copies on live
+(homepage, /cottages/, Cottage 22 template) and added a temporary gettext
+swap mu-plugin; both come out once 0.46.5 is live. Covered by
+single-widget-test.php, which checks the registered default on both widgets.

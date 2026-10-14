@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.4
+Stable tag: 0.46.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.5 =
+* **Per-cottage calendar days now pass Lighthouse's "label matches the visible text" check.** A screen reader could read a day's number and its tooltip as one run-together word ("1Past"); there is now an invisible space between them. Nothing looks different.
+* **The booking popup's price note now reads "for 2 guests, before any taxes/fees"** by default (" — final price shown at checkout" is gone). A widget whose note was edited in Elementor keeps its own text.
 
 = 0.46.4 =
 Accessibility fixes from Lighthouse on the live site (public calendars only; nothing looks different apart from the month titles).

@@ -2314,6 +2314,13 @@
                 num.className = 'mphbac-day-num';
                 num.textContent = String(d.getDate());
                 cell.appendChild(num);
+                // A SPACE BETWEEN THE NUMBER AND THE TIP (0.46.5). With the two
+                // spans touching, the cell's visible text was "1Past" whenever
+                // the tip counts as shown — one word, which "1 — Past" does not
+                // contain, so Lighthouse still failed all 61 cells on live.
+                // The cell is a flex container, so whitespace between its
+                // items is never drawn: nothing moves.
+                cell.appendChild(document.createTextNode(' '));
 
                 var tipEl = document.createElement('span');
                 tipEl.className = 'mphbac-cell-tip';

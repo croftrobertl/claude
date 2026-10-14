@@ -121,6 +121,15 @@ echo "\n-- A7: neither calendar widget may be served from Elementor's element ca
     }
 }
 
+echo "\n-- the price note's default (0.46.5, Rob) --\n";
+foreach (['full' => $full, 'single' => $single] as $label => $w) {
+    $d = $w->t_controls['str_price_note']['default'] ?? null;
+    check("$label widget: str_price_note defaults to exactly \"for 2 guests, before any taxes/fees\"",
+        $d === 'for 2 guests, before any taxes/fees', $d);
+}
+check('...and the old " — final price shown at checkout" is gone from the widget',
+    !str_contains(file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-widget.php'), 'final price shown at checkout'));
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);
 

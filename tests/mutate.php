@@ -2581,6 +2581,33 @@ $mutations = [
 }',
      '',
      'lighthouse-a11y-test.js'],
+
+    // --- 0.46.5: the cell text Lighthouse read as "1Past"; the price note ----
+    ['0.46.5 a11y: no space between the day number and the tip (0.46.4: visible text "1Past")', 'assets/js/widget.js',
+     '                cell.appendChild(document.createTextNode(\' \'));
+',
+     '',
+     'lighthouse-a11y-test.js'],
+    ['0.46.5 a11y: the space becomes a visible separator', 'assets/js/widget.js',
+     'cell.appendChild(document.createTextNode(\' \'));',
+     'cell.appendChild(document.createTextNode(\' · \'));',
+     'lighthouse-a11y-test.js'],
+    ['0.46.5 a11y: month cells are named by the number alone (the shown tip is not in the name)', 'assets/js/widget.js',
+     'cell.setAttribute(\'aria-label\', d.getDate() + \' — \' + tip);',
+     'cell.setAttribute(\'aria-label\', String(d.getDate()));',
+     'lighthouse-a11y-test.js'],
+    ['0.46.5 a11y: overview cells are named by the date alone (the shown tip is not in the name)', 'assets/js/widget.js',
+     '                cell.setAttribute(\'aria-label\', day + \' — \' + tip);
+                if (clickable) cell.setAttribute(\'tabindex\', \'0\');
+                var tipEl',
+     '                cell.setAttribute(\'aria-label\', day);
+                if (clickable) cell.setAttribute(\'tabindex\', \'0\');
+                var tipEl',
+     'lighthouse-a11y-test.js'],
+    ['0.46.5 price note: the default keeps " — final price shown at checkout"', 'class-widget.php',
+     '__(\'for 2 guests, before any taxes/fees\', \'mphb-availability-calendar\')',
+     '__(\'for 2 guests, before any taxes/fees — final price shown at checkout\', \'mphb-availability-calendar\')',
+     'single-widget-test.php'],
 ];
 
 $originals = [];
