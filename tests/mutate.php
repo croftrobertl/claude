@@ -2471,6 +2471,116 @@ $mutations = [
      "        if (!headers_sent()) {\n            header('X-Robots-Tag: noindex, nofollow', true);\n        }\n",
      "",
      'staff-robots-test.php'],
+
+    // --- 0.46.4: the Lighthouse findings (lighthouse-a11y-test.js) ----------
+    ['0.46.4 a11y: the cottage button goes back to a direct child of its row', 'assets/js/widget.js',
+     '                rowHead.appendChild(labelBtn);
+                row.appendChild(rowHead);',
+     '                row.appendChild(labelBtn);',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: the name cell is not a rowheader', 'assets/js/widget.js',
+     'rowHead.setAttribute(\'role\', \'rowheader\');',
+     'rowHead.setAttribute(\'role\', \'presentation\');',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: the rowheader cell becomes a grid item (layout moves)', 'assets/css/widget.css',
+     '.mphbac-rowheader {
+    display: contents;
+}',
+     '.mphbac-rowheader {
+    display: block;
+}',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: bookable days are role=button again', 'assets/js/widget.js',
+     '                cell.setAttribute(\'role\', \'gridcell\');
+                cell.setAttribute(\'data-date\', day);
+                cell.setAttribute(\'data-status\', status);
+                cell.setAttribute(\'aria-label\', day + \' — \' + tip);',
+     '                cell.setAttribute(\'role\', clickable ? \'button\' : \'cell\');
+                cell.setAttribute(\'data-date\', day);
+                cell.setAttribute(\'data-status\', status);
+                cell.setAttribute(\'aria-label\', day + \' — \' + tip);',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: the overview is a table again', 'assets/js/widget.js',
+     'grid.setAttribute(\'role\', \'grid\');
+
+        var strings',
+     'grid.setAttribute(\'role\', \'table\');
+
+        var strings',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: the info click finds the row by parentNode (now the rowheader)', 'assets/js/widget.js',
+     '            if (!btn) return;
+            var row = btn.closest(\'.mphbac-row\');
+            var typeId = row ? row.getAttribute(\'data-room-type-id\') : \'\';
+            if (!typeId) return;
+            var content = root.querySelector(\'.mphbac-info-content[data-room-type-id="\' + typeId + \'"]\');
+            if (!content) return; // this cottage',
+     '            if (!btn) return;
+            var row = btn.parentNode;
+            var typeId = row ? row.getAttribute(\'data-room-type-id\') : \'\';
+            if (!typeId) return;
+            var content = root.querySelector(\'.mphbac-info-content[data-room-type-id="\' + typeId + \'"]\');
+            if (!content) return; // this cottage',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: month cells are named by the ISO date again', 'assets/js/widget.js',
+     'cell.setAttribute(\'aria-label\', d.getDate() + \' — \' + tip);',
+     'cell.setAttribute(\'aria-label\', day + \' — \' + tip);',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: month cells name the status before the number', 'assets/js/widget.js',
+     'cell.setAttribute(\'aria-label\', d.getDate() + \' — \' + tip);',
+     'cell.setAttribute(\'aria-label\', tip + \' — \' + d.getDate());',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 a11y: month cells lose the month-and-year description', 'assets/js/widget.js',
+     '                cell.setAttribute(\'aria-describedby\', titleId);
+',
+     '',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 view link: served as the bare hidden <a> again', 'class-widget.php',
+     '<template class="mphbac-info-view-tpl"><a class="mphbac-info-view-link" target="_blank" rel="noopener noreferrer"><?php
+                            echo $view_inner; // phpcs:ignore WordPress.Security.EscapeOutput — label esc_html\'d above, icon is first-party Elementor render
+                        ?></a></template>',
+     '<a class="mphbac-info-view-link" target="_blank" rel="noopener noreferrer" hidden><?php
+                            echo $view_inner; // phpcs:ignore WordPress.Security.EscapeOutput — label esc_html\'d above, icon is first-party Elementor render
+                        ?></a>',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 view link: never detached, so it never reaches the page (or stays bare)', 'assets/js/widget.js',
+     '        if (viewBtn) viewBtn.parentNode.removeChild(viewBtn);
+',
+     '',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 view link: the legacy bare <a> is left on the page', 'assets/js/widget.js',
+     '                viewBtn.parentNode.insertBefore(viewSlot, viewBtn);
+            }
+        }
+        // Detached either way — from the imported fragment or from the page —
+        // so "has a parent" means "is on the page" below.
+        if (viewBtn) viewBtn.parentNode.removeChild(viewBtn);',
+     '                viewBtn.parentNode.insertBefore(viewSlot, viewBtn);
+            }
+        }
+        // Detached either way — from the imported fragment or from the page —
+        // so "has a parent" means "is on the page" below.
+        if (viewBtn && viewSlot.nodeType !== 8) viewBtn.parentNode.removeChild(viewBtn);',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 view link: a cottage without a page only hides it (0.46.3)', 'assets/js/widget.js',
+     '                if (viewBtn && viewBtn.parentNode) viewBtn.parentNode.removeChild(viewBtn);',
+     '                if (viewBtn) { viewBtn.hidden = true; }',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 view link: opening never inserts it', 'assets/js/widget.js',
+     '                    if (!viewBtn.parentNode) viewSlot.parentNode.insertBefore(viewBtn, viewSlot);
+',
+     '',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 month title: the token goes back to the theme grey', 'assets/css/widget.css',
+     '    --mphbac-color-month-title: #666666;',
+     '    --mphbac-color-month-title: #7A7A7A;',
+     'lighthouse-a11y-test.js'],
+    ['0.46.4 month title: the colour rule is dropped (inherits the theme again)', 'assets/css/widget.css',
+     '.mphbac-month-title.mphbac-month-title {
+    color: var(--mphbac-color-month-title, #666666);
+}',
+     '',
+     'lighthouse-a11y-test.js'],
 ];
 
 $originals = [];

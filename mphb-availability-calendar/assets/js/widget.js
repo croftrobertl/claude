@@ -1239,7 +1239,25 @@
         var titleEl = sheet.querySelector('.mphbac-sheet-title');
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
-        var viewBtn = sheet.querySelector('.mphbac-info-view-link');
+        // The View button is OFF THE PAGE until it has an href (0.46.4): it
+        // arrives in a <template>, and an <a> without an href is "not
+        // crawlable". viewSlot marks where it goes. A page cached before
+        // 0.46.4 still carries the bare hidden <a>; that one is lifted out
+        // here the same way, so the old markup passes too.
+        var viewBtn = null;
+        var viewSlot = sheet.querySelector('template.mphbac-info-view-tpl');
+        if (viewSlot && viewSlot.content) {
+            viewBtn = document.importNode(viewSlot.content, true).querySelector('.mphbac-info-view-link');
+        } else {
+            viewBtn = sheet.querySelector('.mphbac-info-view-link');
+            if (viewBtn) {
+                viewSlot = document.createComment('mphbac-info-view');
+                viewBtn.parentNode.insertBefore(viewSlot, viewBtn);
+            }
+        }
+        // Detached either way — from the imported fragment or from the page —
+        // so "has a parent" means "is on the page" below.
+        if (viewBtn) viewBtn.parentNode.removeChild(viewBtn);
         var scrollbar = sheet.querySelector('.mphbac-info-scrollbar');
         var scrollTrack = sheet.querySelector('.mphbac-info-scrollbar-track');
         var scrollThumb = sheet.querySelector('.mphbac-info-scrollbar-thumb');
@@ -1301,7 +1319,7 @@
         root.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
-            var row = btn.parentNode;
+            var row = btn.closest('.mphbac-row');
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
             if (!typeId) return;
             var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
@@ -1345,7 +1363,7 @@
             if (e.pointerType === 'touch') return; // handled by touchstart below
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
-            var row = btn.parentNode;
+            var row = btn.closest('.mphbac-row');
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
             if (!typeId) return;
             clearTimeout(hoverTimer);
@@ -1357,7 +1375,7 @@
         root.addEventListener('touchstart', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
-            var row = btn.parentNode;
+            var row = btn.closest('.mphbac-row');
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
             if (!typeId) return;
             // NOT FOR A LAZY PANEL (0.42.1). touchstart fires for a scrolling
@@ -1415,10 +1433,14 @@
                 titleLink.className = 'mphbac-sheet-title-link';
                 renderSplitTitle(titleLink, titleText);
                 titleEl.appendChild(titleLink);
-                if (viewBtn) { viewBtn.href = titleUrl; viewBtn.hidden = false; }
+                if (viewBtn) {
+                    viewBtn.href = titleUrl;
+                    viewBtn.hidden = false;
+                    if (!viewBtn.parentNode) viewSlot.parentNode.insertBefore(viewBtn, viewSlot);
+                }
             } else {
                 renderSplitTitle(titleEl, titleText);
-                if (viewBtn) { viewBtn.hidden = true; }
+                if (viewBtn && viewBtn.parentNode) viewBtn.parentNode.removeChild(viewBtn);
             }
             // Move the original .mphbac-info-content into the popup body.
             // If a previous cottage's content is still mounted (rapid open
@@ -1971,7 +1993,11 @@
         var grid = document.createElement('div');
         grid.className = 'mphbac-grid' + (single ? ' mphbac-grid--single' : '');
         grid.style.setProperty('--mphbac-days', String(days.length));
-        grid.setAttribute('role', 'table');
+        // A GRID, NOT A TABLE (0.46.4). A row may hold only cells, so the
+        // bookable days are gridcells — a role="button" there is not allowed
+        // (Lighthouse, live, 2026-10-13) — and focusable gridcells belong in
+        // a grid. The month layout below was already built this way.
+        grid.setAttribute('role', 'grid');
 
         var strings = (config && config.strings) || {};
         var customLabels = (config && config.customLabels) || {};
@@ -2042,7 +2068,16 @@
                     // 0.23.8; the bare form in 0.23.5 was a mistake).
                     labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
                 }
-                row.appendChild(labelBtn);
+                // THE NAME AND ITS BUTTON SIT IN A ROWHEADER CELL (0.46.4): a
+                // row may hold only cells, and the button was a direct child.
+                // The cell is display: contents, so the button is still the
+                // grid item every layout rule was written for; find the row
+                // with closest('.mphbac-row'), never parentNode.
+                var rowHead = document.createElement('div');
+                rowHead.className = 'mphbac-rowheader';
+                rowHead.setAttribute('role', 'rowheader');
+                rowHead.appendChild(labelBtn);
+                row.appendChild(rowHead);
             }
 
             var roomAvail = availability[room.id] || {};
@@ -2057,7 +2092,7 @@
                 if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
                     cell.classList.add('is-month-start');
                 }
-                cell.setAttribute('role', clickable ? 'button' : 'cell');
+                cell.setAttribute('role', 'gridcell');
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
                 cell.setAttribute('aria-label', day + ' — ' + tip);
@@ -2265,7 +2300,14 @@
                 // Carried on the CELL because the parent row here is a week,
                 // not a cottage row; openSheetFromCell() reads it from either.
                 if (room) cell.setAttribute('data-room-type-id', String(room.id));
-                cell.setAttribute('aria-label', day + ' — ' + tip);
+                // THE NAME STARTS WITH WHAT THE CELL SHOWS (0.46.4): its day
+                // number, then the status its tip shows on hover and focus.
+                // "2026-10-01 — Available" did not contain the visible "1"
+                // as a word (Lighthouse "label-content-name-mismatch", 61
+                // cells on live). The month and year are the description,
+                // read from the title bar already on screen.
+                cell.setAttribute('aria-label', d.getDate() + ' — ' + tip);
+                cell.setAttribute('aria-describedby', titleId);
                 if (clickable) cell.setAttribute('tabindex', '0');
 
                 var num = document.createElement('span');

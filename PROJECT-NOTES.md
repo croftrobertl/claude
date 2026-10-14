@@ -3333,3 +3333,48 @@ open. If AIOSEO later prints its own noindex too, the two agree.
 minutes page-password lockout (mu-plugin dcc-postpass-guard.php) and
 "Reserved"-only iCal titles (mu-plugin dcc-ical-privacy.php).
 
+
+## 0.46.4 — Lighthouse accessibility fixes on live, 2026-10-13 (WD)
+
+Lighthouse (Chrome DevTools, mobile) on 0.46.3. The WD: "keep everything
+else looking exactly the same."
+
+**1. The overview grid** (homepage, /cottages/). Each `.mphbac-row[role=row]`
+held the cottage `<button>` directly, and every bookable day was
+`role="button"`: a row may hold only cells. Now the button sits in
+`<div class="mphbac-rowheader" role="rowheader">`, which is `display:
+contents` (as the rows already are), so the button is still the grid item
+and the layout cannot move. The test proves this by screenshot: the grid with
+the cell and with it unwrapped are the same pixels. The days are
+`role="gridcell"` (tabindex and Enter/Space unchanged), and the grid is
+`role="grid"`, not "table", because focusable cells belong in a grid. The
+month layout was already built this way. The three row lookups from the
+button now use `closest('.mphbac-row')`; `parentNode` is the new cell.
+
+**2. The per-cottage month grid.** Cells were named "2026-10-01 — Available",
+which does not contain the visible "1" as a word. Now the name is
+"1 — Available" (the number shown, then the status its tip shows on
+hover/focus), and `aria-describedby` points at that month's title bar
+("October 2026"). Why only axe 4.14 catches it: 4.14 compares WORDS, while
+4.13 did a substring test that "20261001" passed. Lighthouse 13 resolves
+^4.13.0 to 4.14.0, so the test pins axe-core 4.14.0 exactly.
+
+**3. The View Cottage Page link** had no href until a popup opened, so it
+was "not crawlable". class-widget.php now serves it inside `<template
+class="mphbac-info-view-tpl">`. widget.js detaches it, inserts it before the
+template with its href set when a cottage with a page URL opens, and removes
+it for one without. A page cached with the old bare hidden `<a>` is handled
+the same way: the link is lifted out at init and a comment marks its place.
+
+**4. Month titles**, #7A7A7A (the kit's global text colour, inherited) on
+white = 4.29:1. Now they use their own token, `--mphbac-color-month-title:
+#666666` (5.74:1), applied at (0,2,0) like the day number. It is a
+plugin default, not an Elementor control.
+
+Tests: tests/browser/lighthouse-a11y-test.js runs axe-core (devDependency of
+tests/browser, pinned 4.14.0) with Lighthouse's rules on the real shipped
+build: aria-required-children, aria-required-parent,
+label-content-name-mismatch and color-contrast. Each run also checks how
+many nodes axe judged. The test also covers Chromium's own accessibility
+tree, popups still opening, and both markups for the link. Mutation pass:
+16 entries named "0.46.4 …", one per piece of each fix.

@@ -1932,9 +1932,15 @@ class Widget extends Widget_Base
                             ? $view_icon_html . $view_label
                             : $view_label . $view_icon_html;
                         ?>
-                        <a class="mphbac-info-view-link" target="_blank" rel="noopener noreferrer" hidden><?php
+                        <?php // NO LINK WITHOUT AN HREF (0.46.4). The button's URL is the
+                        // cottage's, known only when a popup opens, and an <a> with
+                        // no href is "not crawlable" (Lighthouse SEO, live,
+                        // 2026-10-13). So it ships inert, in a <template>: widget.js
+                        // puts it on the page when a cottage with a page URL opens,
+                        // href already set, and takes it off for one without. ?>
+                        <template class="mphbac-info-view-tpl"><a class="mphbac-info-view-link" target="_blank" rel="noopener noreferrer"><?php
                             echo $view_inner; // phpcs:ignore WordPress.Security.EscapeOutput — label esc_html'd above, icon is first-party Elementor render
-                        ?></a>
+                        ?></a></template>
                     </div>
                     <div class="mphbac-info-body"></div>
                 </div>

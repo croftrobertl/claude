@@ -55,6 +55,12 @@
        Deliberately a SEPARATE token from the fills, so re-tinting a fill
        cannot silently drag the number colour with it. */
     --mphbac-color-day-num: #1F2937;
+    /* The month grid's title bar ("October 2026"). It inherited the theme's
+       text colour, which on live is #7A7A7A: 4.29:1 on white, under AA's 4.5
+       (Lighthouse, 2026-10-13). #666666 is 5.74:1. Its own token for the
+       same reason as the day number above: a theme or kit text colour must
+       not be able to drag it back under. */
+    --mphbac-color-month-title: #666666;
     --mphbac-color-text: #000000;
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 18px;
@@ -888,6 +894,11 @@ button.mphbac-info-close--floating {
     font-weight: 700;
     padding: 0.4em 0;
 }
+/* Class-doubled (0,2,0), like the day number: inheriting left it at the
+   theme's #7A7A7A. */
+.mphbac-month-title.mphbac-month-title {
+    color: var(--mphbac-color-month-title, #666666);
+}
 /* Days outside the displayed month: inert placeholders holding the grid
    shape. No number, no status class, no background, not focusable. */
 .mphbac-monthgrid .mphbac-cell-blank {
@@ -951,6 +962,12 @@ button.mphbac-info-close--floating {
 }
 
 .mphbac-row {
+    display: contents;
+}
+/* The rowheader cell around the cottage button (0.46.4) is there for screen
+   readers only: a row may hold only cells. display: contents keeps the
+   button itself the grid item, so the layout cannot change. */
+.mphbac-rowheader {
     display: contents;
 }
 

@@ -18,6 +18,7 @@
     --mphbac-color-legend-text: #111111;
     --mphbac-color-today-outline: #f4da62;
     --mphbac-color-day-num: #1F2937;
+    --mphbac-color-month-title: #666666;
     --mphbac-color-text: #000000;
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 18px;
@@ -338,6 +339,9 @@ button.mphbac-info-close--floating {
     font-weight: 700;
     padding: 0.4em 0;
 }
+.mphbac-month-title.mphbac-month-title {
+    color: var(--mphbac-color-month-title, #666666);
+}
 .mphbac-monthgrid .mphbac-cell-blank {
     background: transparent;
     pointer-events: none;
@@ -374,6 +378,9 @@ button.mphbac-info-close--floating {
     text-align: center;
 }
 .mphbac-row {
+    display: contents;
+}
+.mphbac-rowheader {
     display: contents;
 }
 .mphbac-cell {

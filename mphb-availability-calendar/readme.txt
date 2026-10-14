@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.3
+Stable tag: 0.46.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.46.4 =
+Accessibility fixes from Lighthouse on the live site (public calendars only; nothing looks different apart from the month titles).
+
+* **The overview calendar reads properly in a screen reader.** Each cottage's name and info button now sit in a row-header cell, and the bookable days are grid cells.
+* **Per-cottage calendar days are named by what they show**, e.g. "1 — Available", with the month and year read from the title above.
+* **The "View Cottage Page" button is only on the page once it has a link**, so search engines no longer see a link without an address.
+* **Month titles are darker** (#666666), to meet the 4.5:1 contrast minimum.
 
 = 0.46.3 =
 Security fixes from the 2026-10-13 audit (staff board only).
