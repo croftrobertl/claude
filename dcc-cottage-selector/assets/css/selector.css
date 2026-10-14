@@ -20,6 +20,24 @@
   --dccs-gap: 10px;
   --dccs-good: #2e9e6b;
   --dccs-diff: #fff4e0;
+  /* ---- Rob's selected / unselected rule (0.53.0) ---------------------------
+     "Selected things match, unselected things match." Selected = navy with white
+     text; unselected = white with navy text. Literal values, not the palette
+     tokens: --dccs-accent defaults to a generic blue above, and these are Rob's
+     colours whatever the palette says. Used by the mode menu (the closed button
+     shows the CURRENT mode, so it is selected; the option is not) and the answer
+     chips. Navy on white is 12.6:1. The hover tint is navy at 8% over white
+     (~#EBEEF4), 10.8:1 under navy text. The focus ring on a navy control is
+     WHITE, 12.6:1 against navy — a navy ring on a navy button would be no ring
+     at all. Rob offered gold or white; white, because "no gold anywhere in the
+     plugin" is a standing guard against the Elementor kit's gold focus accent
+     (see the checkbox focus rules), and a gold literal here would blunt it. */
+  --dccs-sel-bg: #002E7A;
+  --dccs-sel-text: #FFFFFF;
+  --dccs-unsel-bg: #FFFFFF;
+  --dccs-unsel-text: #002E7A;
+  --dccs-unsel-hover-bg: rgba(0, 46, 122, 0.08);
+  --dccs-ring-on-navy: #FFFFFF;
   /* --dccs-action is deliberately NOT given a value here. It is fed by the
      "Action button color" style control, and action buttons resolve
      var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue))). Declaring a
@@ -151,16 +169,25 @@
   width: 100%; padding: 0 var(--dccs-btn-pad-x); cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid var(--dccs-border); border-radius: var(--dccs-btn-radius);
-  background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-text);
+  /* Shows the mode in use, so it wears the SELECTED pair (0.53.0). Until then it
+     was white with the page's text colour. */
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
   /* Two steps up the weight scale from the button spec's 500 (0.31.0): as a menu
      header it read too light against the rest of the widget. A deliberate
      exception to the spec, agreed, and it applies to the menu items too. */
   font-weight: 700;
 }
-.dccs-root.dccs-root .dccs-caret { font-size: 0.8em; color: var(--dccs-muted); }
+.dccs-root.dccs-root .dccs-caret { font-size: 0.8em; color: inherit; }
+/* "Compare Mode ▾" stays on one line down to 320px. */
+.dccs-root.dccs-root .dccs-modeselect-trigger > span:first-child { white-space: nowrap; }
 .dccs-root.dccs-root .dccs-modeselect-list {
-  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
-  background: var(--dccs-btn-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border); border-radius: 14px;
+  /* Flush against the button (0.53.0): top 100%, no gap. Until then a 6px band
+     separated them. Absolutely positioned, so opening it overlays what is below
+     and moves nothing. z-index 20 lifts it over the quiz and the cottage list;
+     .dccs-root sets no stacking context, so 20 competes in the PAGE's context,
+     where a sticky site header (Elementor uses 99) stays above it. */
+  display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 20;
+  background: var(--dccs-unsel-bg); border: 1px solid var(--dccs-border); border-radius: 14px;
   box-shadow: 0 12px 30px rgba(20,28,40,0.18);
   /* Cap height + scroll so the menu can't run off a short viewport (overflow:auto
      still clips children to the rounded panel). */
@@ -169,7 +196,10 @@
 .dccs-root.dccs-root .dccs-modeselect.is-open .dccs-modeselect-list { display: block; }
 .dccs-root.dccs-root .dccs-modetab {
   display: block; width: 100%; text-align: var(--dccs-menu-align, center); padding: 0 var(--dccs-btn-pad-x); cursor: pointer;
-  border: 0; background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
+  /* Only modes NOT in use are listed (0.53.0), so every option is UNSELECTED. It
+     no longer reads the drop-down item palette (--dccs-item-*), whose hover is
+     the site coral: Rob asked for no pink here. */
+  border: 0; background: var(--dccs-unsel-bg); color: var(--dccs-unsel-text);
   font-weight: 700;                 /* with the trigger, +2 from the spec's 500 */
 }
 .dccs-root.dccs-root .dccs-modetab + .dccs-modetab { border-top: 1px solid var(--dccs-border); }
@@ -307,11 +337,16 @@
 .dccs-root.dccs-root .dccs-edit-answers:focus-visible,
 .dccs-root.dccs-root .dccs-view:focus-visible,
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
-.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible,
 .dccs-root.dccs-root .dccs-matrix-nav button:focus-visible {
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
+}
+/* The navy mode button gets a WHITE ring, drawn INSIDE its edge (0.53.0, Rob): a
+   navy ring would vanish against navy, and a white one outside would be invisible
+   on the white page. Inset, it is white on navy, 12.6:1. */
+.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible {
+  outline: 2px solid var(--dccs-ring-on-navy); outline-offset: -5px;
 }
 /* The modal close button was in the list above and got NO focus ring at all:
    --dccs-accent is declared on .dccs-root and this button is outside it, so
@@ -442,8 +477,10 @@
 }
 .dccs-root.dccs-root .dccs-chip {
   padding: 0 var(--dccs-btn-pad-x); border-radius: var(--dccs-btn-radius);
-  border: 1px solid var(--dccs-border); background: var(--dccs-surface);
-  color: var(--dccs-text); cursor: pointer;
+  /* Unselected answer = white with navy text (0.53.0, Rob); it was the page's
+     black. Gold border and the coral hover are unchanged. */
+  border: 1px solid var(--dccs-border); background: var(--dccs-unsel-bg);
+  color: var(--dccs-unsel-text); cursor: pointer;
   /* THE SECOND AGREED EXCEPTION to the site button spec (0.32.0). Rob asked for the
      answer chips a step heavier than the spec's 500; 0.31.0 raised the rest of the
      quiz's text and left these alone precisely because they are buttons, and he
@@ -453,7 +490,7 @@
   font-weight: 600;
 }
 .dccs-root.dccs-root .dccs-chip.is-active {
-  background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent);
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text); border-color: var(--dccs-accent);
 }
 
 /* Compare — an always-visible cottage checklist (no tap-to-open dropdown), so the
@@ -488,18 +525,19 @@
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
-/* Plain-language "the list scrolls" cue — an inline span continuing the .dccs-hint
-   subheader paragraph (one paragraph by owner request), so size/alignment/color all
-   inherit from the hint. The class remains as a styling hook. */
-.dccs-root.dccs-root .dccs-cmp-count { font-size: inherit; color: inherit; }
+/* Compare Mode's one-sentence intro is centred (0.53.0, Rob) — set here rather
+   than inherited, because the page around the widget is not ours to align. */
+.dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
 /* Hint shown under the Compare button while fewer than 2 cottages are ticked. */
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
 
 /* Default hover/focus feedback for both dropdown menus. Kept at low specificity so
    the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */
-.dccs-root.dccs-root .dccs-modeselect-trigger:hover { border-color: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-modetab:hover,
-.dccs-root.dccs-root .dccs-modetab:focus-visible,
+.dccs-root.dccs-root .dccs-modetab:focus-visible {
+  background: var(--dccs-unsel-hover-bg); color: var(--dccs-unsel-text);
+  text-decoration: underline; text-underline-offset: 3px;
+}
 .dccs-root.dccs-root .dccs-cmp-option:hover,
 .dccs-root.dccs-root .dccs-cmp-option:focus-within {
   background: var(--dccs-item-bg-hover, var(--dccs-bg));
@@ -554,10 +592,17 @@
 /* Not spec buttons — they keep their own surface fill, so they keep their own
    hover. (The mode trigger and the review-row Edit are outline-style controls.) */
 .dccs-root.dccs-root .dccs-edit:hover,
-.dccs-root.dccs-root .dccs-edit:focus-visible,
+.dccs-root.dccs-root .dccs-edit:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-surface)));
+}
+/* The mode button stays navy on hover — it is the selected state, and coral would
+   put 2.6:1 white text on it. Its label underlines instead, like the option. */
 .dccs-root.dccs-root .dccs-modeselect-trigger:hover,
 .dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible {
-  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-surface)));
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
+}
+.dccs-root.dccs-root .dccs-modeselect-trigger:hover > span:first-child {
+  text-decoration: underline; text-underline-offset: 3px;
 }
 
 /* Compare table — pinned attribute column + ‹ › paging */
@@ -814,16 +859,12 @@
    font the way the × character did. */
 .dccs-modal.dccs-modal .dccs-modal-x { display: block; width: 19px; height: 19px; }
 
-/* Inside the popup the mode-switcher panel must flow in the scrollable content. When
-   absolutely positioned it is laid out against its .dccs-modeselect parent, not the
-   scroll box, so it overflows the modal and gets clipped. Scoped with the doubled
-   .dccs-root so it outranks the base (0,3,0) dropdown rules. (The compare checklist is
-   already in-flow, so it needs no override here.) */
-.dccs-modal-content .dccs-root.dccs-root .dccs-modeselect-list {
-  position: static; transform: none; left: auto; right: auto; top: auto;
-  width: auto; min-width: 0; max-width: 100%; margin-top: 8px;
-  box-shadow: none; max-height: 50vh;
-}
+/* The pop-up's mode menu OVERLAYS like the full Selector's (0.53.0). Until then it
+   was position:static here, pushing the quiz down ~55px every time it opened,
+   because a long menu could overflow the modal. Since 0.53.0 it lists one mode
+   (two at most), so it is short, and it sits at the TOP of a scroll box whose
+   content runs well past it — an absolutely positioned child extends the scroll
+   area, so nothing is clipped (measured at 320-1280px). */
 
 @media (min-width: 640px) {
   .dccs-root.dccs-root { padding: 22px; }

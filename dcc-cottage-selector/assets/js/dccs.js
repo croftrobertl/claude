@@ -546,7 +546,7 @@
   function defaultState(config) {
     // Quick answers start UNSET ('') so no option is pre-highlighted; a step is
     // "answered" once the guest taps something ('either' = an explicit skip).
-    var quick = { party: '', desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
+    var quick = { party: '', desk: '', pullout: '', layout: '', pet: '', ground: '', screenedporch: '' };
     var n = (config.cottages || []).length;
     // Dates are their own thing, not a quick answer: they don't filter, they
     // annotate and re-rank. '' = not asked yet, 'skip' = "not sure yet".
@@ -667,7 +667,8 @@
     if (p.has('desk')) { state.quick.desk = normYesNoLevel(p.get('desk')); }
     if (p.has('pullout')) { state.quick.pullout = normYesNoLevel(p.get('pullout')); }
     if (p.has('layout')) { state.quick.layout = p.get('layout'); }
-    if (p.has('dining')) { state.quick.dining = p.get('dining') === '4' ? 4 : (p.get('dining') === '2' ? 2 : 'either'); }
+    // ?dining= is deliberately NOT read (0.53.0): the dining question is gone, and a
+    // link shared before then must not filter on an answer the guest cannot see.
     if (p.has('party')) {
       var pv = String(p.get('party'));
       state.quick.party = /^(1|2|1-2|12)$/.test(pv) ? '2' : (/^3|^4/.test(pv) ? '34' : 'either');
@@ -771,10 +772,9 @@
     if (q.pullout === 'yes') { hard.push('pullout'); }
     if (q.layout === 'studio') { hard.push('studio'); }
     if (q.layout === 'onebed') { hard.push('onebed'); }
-    if (q.dining === 4 || q.dining === '4') { hard.push('dining4'); }
-    // "Table for two" is NOT a constraint: a 4-seat table serves two guests fine, and
-    // excluding the only 4-top cottage (#22, the largest) misdirected couples who just
-    // meant "we don't need four". Answering "two" now behaves like "No preference".
+    // No dining filter (0.53.0): the question was removed, and any dining answer
+    // still sitting in state (an old link, a stale object) is ignored HERE, at the
+    // boundary the engine sees, not just hidden from the wizard.
     if (q.pet === 'yes') { hard.push('pet'); }
     if (q.ground === 'yes') { hard.push('ground'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
@@ -808,12 +808,14 @@
   }
 
   // The wizard's questions (party size + the meaningful differences), in natural
-  // order. Each option is [stringKey, value]; the last is always "No preference".
+  // order. Each option is [stringKey, value]; the last is always 'either', shown as
+  // "Skip" since 0.53.0 and still meaning no preference: it imposes no filter.
   // THE RENDERED COUNT IS NOT FIXED — two entries are conditional, so don't
   // reason from the length of this array. Nine entries live here: the dates step
   // renders only when a widget enables availability, and the party step only
-  // while the site-wide 3-4 guest switch is on. Eight render by default; seven
-  // with that switch off. wizardTrack() is the only thing that knows.
+  // while the site-wide 3-4 guest switch is on. Seven render by default; six
+  // with that switch off. wizardTrack() is the only thing that knows. (The dining
+  // question left in 0.53.0: only two cottages seat four, and not roomily.)
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
     // kind:'dates' renders two date inputs instead of chips (see renderDatesStep).
@@ -823,7 +825,6 @@
     { group: 'desk', qKey: 'q_desk', shortKey: 'diff_desk', opts: YND },
     { group: 'pullout', qKey: 'q_pullout', shortKey: 'diff_pulloutCouch', opts: YND },
     { group: 'layout', qKey: 'q_layout', shortKey: 'diff_layoutType', opts: [['opt_studio', 'studio'], ['opt_onebed', 'onebed'], ['opt_either', 'either']] },
-    { group: 'dining', qKey: 'q_dining', shortKey: 'diff_diningSeats', opts: [['opt_seats2', '2'], ['opt_seats4', '4'], ['opt_either', 'either']] },
     { group: 'pet', qKey: 'q_pet', shortKey: 'diff_petAllowed', opts: YND },
     { group: 'ground', qKey: 'q_ground', shortKey: 'diff_floorLevel', opts: YND },
     { group: 'screenedporch', qKey: 'q_screenedporch', shortKey: 'diff_screenedPorch', opts: YND }
@@ -1144,31 +1145,31 @@
         esc(cname(config, c)) + '</label>';
     }).join('');
 
-    // Always-present "Compare" button (disabled until 2+ are ticked). It reuses the
-    // .dccs-open-compare class so the existing click handler opens the shared popup.
+    // The "Compare N Cottages" button exists only once 2+ are ticked (0.53.0, Rob's
+    // pick): a button that cannot do anything yet is noise. It sits BELOW the list,
+    // so appearing pushes later content down but never moves the list. The live
+    // region announces it (see announce()). It reuses .dccs-open-compare so the
+    // existing click handler opens the shared popup. The Matching Quiz's own
+    // compare button (compareButton) is separate and unchanged.
     var canCompare = n >= 2;
-    var btnLabel = canCompare ? fmt(S.compare_btn, n) : S.mode_compare;
     // The "pick 2" tip is opt-in (it duplicates the subheader above the list).
     // Strict === true so a missing key — old placed instances, mirrored snapshots
     // published before the switch existed — reads as off.
     var note = (canCompare || config.showCompareTip !== true)
       ? '' : '<p class="dccs-compare-note">' + esc(S.compare_need_two) + '</p>';
-    var btn = '<div class="dccs-compare-actions">' +
-      '<button type="button" class="dccs-open-compare"' + (canCompare ? '' : ' disabled') + '>' +
-      esc(btnLabel) + '</button>' + note + '</div>';
+    var btn = (canCompare || note) ? '<div class="dccs-compare-actions">' +
+      (canCompare ? '<button type="button" class="dccs-open-compare">' + esc(fmt(S.compare_btn, n)) + '</button>' : '') +
+      note + '</div>' : '';
 
-    // A plain-language cue that the list holds every cottage and scrolls — reassuring
-    // for guests who might not notice the scrollbar. %d = total cottages. Rendered
-    // INSIDE the subheader paragraph (owner request: one paragraph, not two); the
-    // span keeps the .dccs-cmp-count hook and the string stays separately editable.
-    var count = ' <span class="dccs-cmp-count">' + esc(fmt(S.compare_scroll_all, config.cottages.length)) + '</span>';
+    // The subheader is ONE sentence since 0.53.0 (Rob): the "scroll the list to see
+    // all N cottages" cue that used to continue it was dropped, string and all.
     // The list scrolls internally; an always-visible custom scrollbar (.dccs-cmp-bar,
     // positioned by wireCmpScrollbar) sits on its right edge so guests can see there's
     // more to scroll — reliable even on iOS, where native scrollbars auto-hide.
     var scroller = '<div class="dccs-cmp-scroller">' +
       '<div class="dccs-cmp-list dccs-cmp-static" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div>' +
       '<div class="dccs-cmp-bar" aria-hidden="true"><div class="dccs-cmp-bar-thumb"></div></div></div>';
-    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + count + '</p>' +
+    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
       scroller + btn + '</div>';
   }
 
@@ -1444,21 +1445,25 @@
   }
 
   /** Top mode switcher as a dropdown (cleaner than 3 long pills on mobile).
-      Hidden when only one mode is enabled. */
+      Hidden when only one mode is enabled. The button shows the CURRENT mode; the
+      menu lists ONLY the other modes (0.53.0, Rob) — offering the mode you are
+      already in is a choice that does nothing. So the items are plain menuitems,
+      not a radio set: there is no "checked" one to announce. */
   function modeSelect(config, state, S) {
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
     if (!modes || modes.length <= 1) { return ''; }
     var current = S[MODE_LABEL[state.mode]] || state.mode;
-    var opts = modes.map(function (m) {
-      var on = state.mode === m;
-      return '<button type="button" role="menuitemradio" aria-checked="' + (on ? 'true' : 'false') +
-        '" class="dccs-modetab' + (on ? ' is-active' : '') + '" data-mode="' + m + '">' +
+    var opts = modes.filter(function (m) { return m !== state.mode; }).map(function (m) {
+      return '<button type="button" role="menuitem" class="dccs-modetab" data-mode="' + esc(m) + '">' +
         esc(S[MODE_LABEL[m]] || m) + '</button>';
     }).join('');
+    // The accessible name says it is the current mode and contains the visible
+    // label word for word (WCAG 2.5.3); aria-haspopup/expanded say it opens a menu.
+    var name = S.mode_current ? fmt(S.mode_current, current) : current;
     // The open/close state lives on the DOM (is-open class), not in app state, so
     // re-renders triggered by other actions don't fight the toggle.
     return '<div class="dccs-modeselect">' +
-      '<button type="button" class="dccs-modeselect-trigger" aria-haspopup="menu" aria-expanded="false">' +
+      '<button type="button" class="dccs-modeselect-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="' + esc(name) + '">' +
       '<span>' + esc(current) + '</span> <span class="dccs-caret" aria-hidden="true">\u25BE</span></button>' +
       '<div class="dccs-modeselect-list" role="menu">' + opts + '</div></div>';
   }
@@ -1868,7 +1873,10 @@
     }
     function onKey(e) {
       if (!isTopmost()) { return; }
-      if (e.key === 'Escape') { close(); return; }
+      // An Escape the widget already handled (closing the open mode menu calls
+      // preventDefault) is not also a request to close the pop-up: until 0.53.0
+      // one press closed the menu AND the whole pop-up.
+      if (e.key === 'Escape') { if (!e.defaultPrevented) { close(); } return; }
       if (e.key === 'Tab') {
         var f = focusables();
         if (!f.length) { return; }
@@ -1890,7 +1898,8 @@
 
   function openCompareModal(config, state, trigger) {
     if (state.compareIds.length < 2) { return; }
-    var o = buildOverlay(trigger, config.strings.mode_compare, null, config.strings.mode_compare);
+    var title = config.strings.compare_title || config.strings.mode_compare;
+    var o = buildOverlay(trigger, title, null, title);
     var start = 0;
     function paint() {
       // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply

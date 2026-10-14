@@ -41,8 +41,6 @@ final class Preset_Defaults
 
             // ---- Text & labels ----
             'str_compare_need_two' => 'Tip: check at least 2 cottages, then tap “Compare”.',
-            'str_compare_prompt' => 'Select 2+ cottages to compare side by side.',
-            'str_compare_scroll_all' => 'Scroll the list to see all %d cottages.',
             'str_count_zero_hint' => 'Your closest matches are shown at the end.',
             'str_edit_answers' => 'Edit Answers',
             // Plain text, because 0.26.0 draws the marks: the heading renders as
@@ -55,14 +53,10 @@ final class Preset_Defaults
             'str_lvl_high' => 'High',
             'str_lvl_low' => 'Low',
             'str_lvl_med' => 'Medium',
-            'str_mode_compare' => 'Compare',
             'str_mode_quick' => 'Matching Quiz',
             'str_mode_weights' => 'Weigh Priorities',
-            'str_opt_either' => 'No Preference',
             'str_opt_no' => 'No',
             'str_opt_onebed' => '1-Bedroom',
-            'str_opt_seats2' => 'Table for 2',
-            'str_opt_seats4' => 'Table for 4',
             'str_opt_studio' => 'Studio',
             'str_opt_yes' => 'Yes',
             'str_q_desk' => 'Do you need a computer desk?',
@@ -70,15 +64,21 @@ final class Preset_Defaults
             'str_opt_party2' => '1-2',
             'str_opt_party34' => '3-4',
             'str_w_party' => 'Room for 3-4 guests',
+            // NOTE (0.53.0): str_mode_compare, str_opt_either, str_q_layout,
+            // str_q_pullout and str_compare_prompt were REMOVED, not edited. Rob's
+            // new wording is now the packaged Config::strings() default, and a preset
+            // copy would be the two-copies-must-agree hazard again. str_q_dining,
+            // str_opt_seats2/4 and str_compare_scroll_all went with the question and
+            // the sentence they labelled. modetab_bg / modetab_color (white / black)
+            // went too: the closed mode button is navy with white text now, set in
+            // selector.css, and these controls emit at (0,4,0) — a preset value here
+            // would pin every new widget back to the old colours.
             // NOTE: str_capacity_note / str_pet_note are deliberately NOT preset.
             // They were never captured from a live widget and only duplicated the
             // Config::strings() defaults verbatim — creating a two-copies-must-agree
             // drift hazard (bitten in 0.22.2) and bypassing Loco translation. New
             // widgets pick up the translatable Config default instead (0.22.3).
-            'str_q_dining' => 'Do you need a dining table for 2 or 4?',
-            'str_q_layout' => 'Which layout do you prefer: studio or 1-bedroom?',
             'str_q_pet' => 'Do you need a pet-friendly cottage?',
-            'str_q_pullout' => 'Do you need a pull-out couch?',
             'str_q_screenedporch' => 'Do you prefer a private, screened-in porch?',
             'str_reset' => 'Restart',
             'str_results_heading' => 'Your Top Matches',
@@ -134,9 +134,7 @@ final class Preset_Defaults
             'mode_item_radius' => ['unit' => 'px', 'size' => 0, 'sizes' => []],
             'mode_panel_radius' => ['unit' => 'px', 'size' => 25, 'sizes' => []],
             'mode_trigger_radius' => ['unit' => 'px', 'size' => 25, 'sizes' => []],
-            'modetab_bg' => '#FFFFFF',
             'modetab_bg_active' => '#002E7A',
-            'modetab_color' => '#000000',
             'modetab_color_active' => '#FFFFFF',
             'progress_label_color' => '#000000',
             'question_color' => '#000000',

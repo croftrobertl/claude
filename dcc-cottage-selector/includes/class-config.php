@@ -24,9 +24,16 @@ final class Config
             // Shell / modes
             'heading'           => __('Find your perfect cottage', 'dcc-cottage-selector'),
             'intro'             => __('Every cottage has a queen bed, and six sleep up to 4 with a pull-out couch. Answer a few quick questions and we will match you in seconds.', 'dcc-cottage-selector'),
-            'mode_quick'        => __('Quick finder', 'dcc-cottage-selector'),
+            'mode_quick'        => __('Matching Quiz', 'dcc-cottage-selector'),
             'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
-            'mode_compare'      => __('Compare', 'dcc-cottage-selector'),
+            'mode_compare'      => __('Compare Mode', 'dcc-cottage-selector'),
+            /* The comparison pop-up's title. Was mode_compare until 0.53.0; split out when
+               the mode was renamed "Compare Mode", because the pop-up also opens from the
+               Matching Quiz's results and is a comparison, not a mode. */
+            'compare_title'     => __('Compare', 'dcc-cottage-selector'),
+            /* Accessible name of the mode-menu button: it must say which mode is current
+               and contain the visible label (WCAG 2.5.3). %s: the current mode's name. */
+            'mode_current'      => /* translators: %s: name of the mode in use, e.g. Matching Quiz */ __('Current mode: %s', 'dcc-cottage-selector'),
             'name_format'       => /* translators: %1$s: cottage number, %2$s: cottage name */ __('Cottage %1$s: %2$s', 'dcc-cottage-selector'),
             'match_count'       => /* translators: %d: number of matching cottages (2+) */ __('%d cottages match', 'dcc-cottage-selector'),
             'match_count_one'   => /* translators: %d: number of matching cottages (always 1) */ __('%d cottage matches', 'dcc-cottage-selector'),
@@ -50,11 +57,10 @@ final class Config
             'dates_hint'        => __('Optional. Give us dates and we will only recommend cottages that are free.', 'dcc-cottage-selector'),
             'dates_invalid'     => __('Check-out must be after check-in.', 'dcc-cottage-selector'),
             'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
-            'q_pullout'         => __('Do you want a pull-out couch?', 'dcc-cottage-selector'),
-            'q_layout'          => __('Studio or 1-bedroom?', 'dcc-cottage-selector'),
-            'q_dining'          => __('Table for two or four?', 'dcc-cottage-selector'),
+            'q_pullout'         => __('What about a pull-out couch?', 'dcc-cottage-selector'),
+            'q_layout'          => __('Which layout: studio or 1-bedroom?', 'dcc-cottage-selector'),
             'q_pet'             => __('Do you need a pet-friendly cottage?', 'dcc-cottage-selector'),
-            'q_ground'          => __('Ground floor only?', 'dcc-cottage-selector'),
+            'q_ground'          => __('Do you need ground floor only?', 'dcc-cottage-selector'),
             'q_screenedporch'   => __('Do you want a private screened-in porch?', 'dcc-cottage-selector'),
 
             // Wizard flow
@@ -85,11 +91,9 @@ final class Config
             // Generic chip answers
             'opt_yes'           => __('Yes', 'dcc-cottage-selector'),
             'opt_no'            => __('No', 'dcc-cottage-selector'),
-            'opt_either'        => __('No preference', 'dcc-cottage-selector'),
+            'opt_either'        => __('Skip', 'dcc-cottage-selector'),
             'opt_studio'        => __('Studio', 'dcc-cottage-selector'),
             'opt_onebed'        => __('1-bedroom', 'dcc-cottage-selector'),
-            'opt_seats2'        => __('Table for 2', 'dcc-cottage-selector'),
-            'opt_seats4'        => __('Table for 4', 'dcc-cottage-selector'),
             'opt_party2'        => __('1-2', 'dcc-cottage-selector'),
             'opt_party34'       => __('3-4', 'dcc-cottage-selector'),
 
@@ -125,9 +129,8 @@ final class Config
             'val_queen'         => __('Queen', 'dcc-cottage-selector'),
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
-            'compare_prompt'    => __('Select 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
+            'compare_prompt'    => __('Pick 2+ cottages to compare their features side by side.', 'dcc-cottage-selector'),
             'compare_need_two'  => __('Tip: check at least 2 cottages, then tap “Compare”.', 'dcc-cottage-selector'),
-            'compare_scroll_all' => /* translators: %d: total number of cottages */ __('Scroll the list to see all %d cottages.', 'dcc-cottage-selector'),
             'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d-%2$d of %3$d', 'dcc-cottage-selector'),
             'cmp_prev'          => __('Previous cottages', 'dcc-cottage-selector'),
             'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),

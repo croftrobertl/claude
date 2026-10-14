@@ -918,6 +918,70 @@ namespace {
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
 
+    // ---- 0.53.0: Rob's mode menu / Compare Mode / quiz changes -----------------
+    // Baked in as PACKAGED defaults. The preset copies of the old wording were
+    // removed (not edited): a preset copy would be the two-copies hazard, and a
+    // preset colour on the mode button would pin new widgets to white/black.
+    $s53 = \DCCS\Config::strings();
+    $want53 = [
+        'mode_compare'   => 'Compare Mode',
+        'mode_quick'     => 'Matching Quiz',
+        'q_pullout'      => 'What about a pull-out couch?',
+        'q_layout'       => 'Which layout: studio or 1-bedroom?',
+        'q_ground'       => 'Do you need ground floor only?',
+        'opt_either'     => 'Skip',
+        'compare_prompt' => 'Pick 2+ cottages to compare their features side by side.',
+        'compare_title'  => 'Compare',
+    ];
+    foreach ($want53 as $k => $v) {
+        ok("0.53.0: Config '$k' is exactly " . json_encode($v), ($s53[$k] ?? null) === $v);
+    }
+    ok('0.53.0: the mode button\'s accessible-name template takes the mode name',
+        isset($s53['mode_current']) && substr_count($s53['mode_current'], '%s') === 1);
+    foreach (['q_dining', 'opt_seats2', 'opt_seats4', 'compare_scroll_all'] as $gone) {
+        ok("0.53.0: string '$gone' is gone", !array_key_exists($gone, $s53));
+    }
+    // Compare-table data is untouched: dining seats are still a compared field.
+    ok('0.53.0: dining seats are still compared', in_array('diningSeats', \DCCS\Data::DIFF_FIELDS ?? \DCCS\Config::build()['diffFields'], true));
+    foreach (['str_mode_compare', 'str_opt_either', 'str_q_layout', 'str_q_pullout', 'str_compare_prompt',
+              'str_compare_scroll_all', 'str_q_dining', 'str_opt_seats2', 'str_opt_seats4', 'modetab_bg', 'modetab_color'] as $k) {
+        ok("0.53.0: preset no longer carries '$k'", !array_key_exists($k, $preset));
+    }
+    foreach (['str_q_dining', 'str_opt_seats2', 'str_opt_seats4', 'str_compare_scroll_all', 'icon_q_dining'] as $k) {
+        ok("0.53.0: control '$k' is no longer registered (its stored value is inert)", !isset($reg[$k]));
+    }
+    // The colour controls stay usable in the panel — they just no longer ship a value.
+    foreach (['modetab_bg', 'modetab_color'] as $k) {
+        ok("0.53.0: '$k' is still a registered control", isset($reg[$k]));
+        ok("0.53.0: '$k' carries no default (selector.css supplies navy/white)", !array_key_exists('default', $reg[$k] ?? []));
+    }
+    // Questions/answers fell back to PLACEHOLDER-only once their preset default went.
+    foreach (['str_q_layout', 'str_q_pullout', 'str_opt_either'] as $k) {
+        ok("0.53.0: '$k' has no default (placeholder-only, Loco keeps working)", isset($reg[$k]) && !array_key_exists('default', $reg[$k]));
+    }
+    ok('0.53.0: the mode-name control defaults to the new name',
+        ($reg['str_mode_compare']['default'] ?? null) === 'Compare Mode');
+
+    // THE CLEAR-LIST, as the plugin sees it. A live widget that still stores the
+    // 0.52.0 wording keeps showing it (stored beats packaged) — the reason the
+    // Director gets a list of keys to clear. A cleared field is stored as '' and
+    // falls through to the new packaged default.
+    $old52 = [
+        'str_mode_compare'   => 'Compare',
+        'str_opt_either'     => 'No Preference',
+        'str_q_pullout'      => 'Do you need a pull-out couch?',
+        'str_q_layout'       => 'Which layout do you prefer: studio or 1-bedroom?',
+        'str_compare_prompt' => 'Select 2+ cottages to compare side by side.',
+    ];
+    $stale = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot($old52))['strings'];
+    ok('0.53.0: a widget STILL storing the old wording shows it (positive control: clearing is necessary)',
+        $stale['mode_compare'] === 'Compare' && $stale['opt_either'] === 'No Preference');
+    $cleared = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(array_fill_keys(array_keys($old52), '')))['strings'];
+    foreach ($old52 as $k => $_) {
+        $key = substr($k, 4);
+        ok("0.53.0: clearing '$k' in the panel shows the new default", $cleared[$key] === $s53[$key]);
+    }
+
     // 0.40.0: the two load-bearing notes are PLACEHOLDER-only controls. Elementor
     // materialises a control DEFAULT into the settings it saves, so leaving one on
     // these would let the next Update in the editor re-create the per-widget

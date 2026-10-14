@@ -104,13 +104,13 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
-  ok('progress reads Step 1 of 8', /1\b.*\b8/.test(progress(root)));
+  ok('progress reads Step 1 of 7 (dining question removed, 0.53.0)', /1\b.*\b7/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
   ok('no answer preselected', !activeChip(root));
   ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
   ok('live count shows 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
   ok('no Back on first step', !root.querySelector('.dccs-back'));
-  ok('mode switcher is a dropdown (3 options)', !!root.querySelector('.dccs-modeselect-trigger') && root.querySelectorAll('.dccs-modetab').length === 3);
+  ok('mode switcher is a dropdown listing only the OTHER two modes (0.53.0)', !!root.querySelector('.dccs-modeselect-trigger') && root.querySelectorAll('.dccs-modetab').length === 2 && !root.querySelector('.dccs-modetab[data-mode="quick"]'));
   ok('no "I\'m flexible" shortcut', !root.querySelector('.dccs-flexible'));
   ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
 })();
@@ -131,7 +131,7 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 5)
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 4 since 0.53.0)
   clickAnswer(root, 'yes'); // pet=yes -> only Coconut
   ok('singular count reads "1 cottage matches"', /\b1 cottage matches\b/.test(root.querySelector('.dccs-count').textContent));
 })();
@@ -143,10 +143,10 @@ function enter(root, mode) {
   enter(root, 'quick');
   clickAnswer(root, '34');
   ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === '34');
-  ok('still on step 1 (no auto-advance)', /1\b.*\b8/.test(progress(root)));
+  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
   ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
   clickNext(root);
-  ok('Next advances to step 2', /2\b.*\b8/.test(progress(root)));
+  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
   ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
   ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
@@ -159,7 +159,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, '34');
   root.querySelector('.dccs-back').click();
-  ok('Back returns to step 1', /1\b.*\b8/.test(progress(root)));
+  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
   ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === '34');
 })();
 
@@ -170,11 +170,11 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, '34');      // step 1 (party size)
   answerNext(root, 'no');      // step 2 (desk) -> now on step 3
-  ok('on step 3', /3\b.*\b8/.test(progress(root)));
+  ok('on step 3', /3\b.*\b7/.test(progress(root)));
   var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
   ok('answered steps are clickable dots', !!dot);
   dot.click();
-  ok('stepper dot jumps to step 1', /1\b.*\b8/.test(progress(root)));
+  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
 })();
 
 // ---- 5. Review step + edit returns to where you came from ----
@@ -183,7 +183,7 @@ function enter(root, mode) {
   const root = mountSelector(w, configWith({ showReview: true }));   // review is off by default
   enter(root, 'quick');
   stepThrough(root, 'either');
-  ok('review lists all 8 answers', root.querySelectorAll('.dccs-review-list li').length === 8);
+  ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
   const reviewBtns = root.querySelectorAll('.dccs-tail-nav > button');
   ok('review: Restart is left, Submit is right',
@@ -191,9 +191,9 @@ function enter(root, mode) {
     reviewBtns[0].classList.contains('dccs-reset') &&
     reviewBtns[1].classList.contains('dccs-see-matches'));
   root.querySelector('.dccs-edit[data-step="3"]').click();
-  ok('edit jumps to that question (step 4)', /4\b.*\b8/.test(progress(root)));
+  ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
   clickNext(root);
-  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 8);
+  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 7);
 })();
 
 // ---- 6. See matches -> results, full names, recap, edit-answers ----
@@ -267,14 +267,14 @@ function enter(root, mode) {
   ok('deeplink porch=true -> only The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
 
-// ---- 8c. Screened-porch question appears as the last (8th) Quick-Match step ----
+// ---- 8c. Screened-porch question appears as the last (7th since 0.53.0) Quick-Match step ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 7)
-  ok('step 8 of 8 is the screened-porch question', /8\b.*\b8/.test(progress(root)) &&
+  answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 6)
+  ok('step 7 of 7 is the screened-porch question', /7\b.*\b7/.test(progress(root)) &&
     /porch/i.test(root.querySelector('.dccs-step-q').textContent));
   clickAnswer(root, 'yes'); clickNext(root);                    // last step -> review
   seeMatches(root);
@@ -283,7 +283,9 @@ function enter(root, mode) {
 
 // ---- 9. No-match: new heading/subhead + fallback cards tagged with what they miss ----
 (function () {
-  const w = freshDom('https://example.com/?pet=true&dining=4');
+  // pet + porch: no cottage has both. (Was pet + dining=4 until 0.53.0; ?dining= is
+  // now ignored, so that link no longer contradicts anything.)
+  const w = freshDom('https://example.com/?pet=true&porch=true');
   const root = mountSelector(w);
   ok('empty heading reads "No Perfect Matches"', /No Perfect Matches/.test(root.querySelector('.dccs-empty h3').textContent));
   ok('fallback card tagged with what it misses', !!root.querySelector('.dccs-miss'));
@@ -312,8 +314,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'compare');
   ok('no inline comparison table in compare mode', !root.querySelector('.dccs-matrix'));
-  const btn0 = root.querySelector('.dccs-open-compare');
-  ok('compare button is present but disabled with <2 ticked', !!btn0 && btn0.disabled === true);
+  ok('compare button is ABSENT with <2 ticked (0.53.0, Rob: hidden until 2+)', !root.querySelector('.dccs-open-compare'));
   // Tick every cottage in the dropdown; re-query after each (re-render detaches nodes).
   for (let i = 0; i < 8; i++) {
     const cb = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
@@ -509,7 +510,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
-  answerNext(root, 'either'); answerNext(root, 'either');          // advance to the pet step
+  answerNext(root, 'either');                                      // advance to the pet step
   ok('count starts at all 8 on the pet step', /\b8\b/.test(countText(root)));
   clickAnswer(root, 'yes');                                        // pet = yes (no advance)
   ok('answering pet=Yes drops the live count to 1',
@@ -559,7 +560,7 @@ function enter(root, mode) {
   const anyChecked = Array.prototype.some.call(
     root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked);
   ok('compare selections reset after switching modes',
-    !anyChecked && !!root.querySelector('.dccs-open-compare[disabled]'));
+    !anyChecked && !root.querySelector('.dccs-open-compare'));
 })();
 
 // ---- 20. Compare subheader uses the new "Select 2 or more..." wording ----
@@ -567,7 +568,8 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'compare');
-  ok('compare subheader reads "Select 2 or more..."', /^Select 2 or more cottages/.test(root.querySelector('.dccs-compare .dccs-hint').textContent));
+  ok('compare subheader is exactly the Config prompt (0.53.0 wording)',
+    root.querySelector('.dccs-compare .dccs-hint').textContent === JSON.parse(CONFIG).strings.compare_prompt);
 })();
 
 function configWith(overrides) {
@@ -618,7 +620,8 @@ function configWith(overrides) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('mode dropdown is a menu trigger', !!root.querySelector('.dccs-modeselect-trigger[aria-haspopup="menu"]') &&
-    root.querySelectorAll('.dccs-modetab[role="menuitemradio"]').length === 3 &&
+    root.querySelectorAll('.dccs-modetab[role="menuitem"]').length === 2 &&
+    root.querySelectorAll('.dccs-modetab[role="menuitemradio"]').length === 0 &&
     root.querySelectorAll('.dccs-modetab[role="tab"]').length === 0);
   ok('current step has aria-current', !!root.querySelector('.dccs-step-dot[aria-current="step"]'));
   ok('disabled Next exposes a hint', /\w/.test(root.querySelector('.dccs-next').getAttribute('aria-label') || ''));
@@ -685,9 +688,9 @@ function configWith(overrides) {
   // Simpler: drive a fresh wizard to the contradiction.
   const r = mountSelector(freshDom());
   enter(r, 'quick');
-  // party/desk/pullout/layout/dining → no preference; pet = yes; ground = no pref; porch = yes.
+  // party/desk/pullout/layout → no preference; pet = yes; ground = no pref; porch = yes.
   answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either');
-  answerNext(r, 'either'); answerNext(r, 'either');
+  answerNext(r, 'either');
   answerNext(r, 'yes');                                       // pet = yes
   answerNext(r, 'either');                                    // ground = no pref
   clickAnswer(r, 'yes');                                      // screened porch = yes → contradiction
@@ -737,15 +740,11 @@ function configWith(overrides) {
   ok('compare renders the scroller + custom bar + thumb',
     !!root.querySelector('.dccs-cmp-scroller .dccs-cmp-list') &&
     !!root.querySelector('.dccs-cmp-bar .dccs-cmp-bar-thumb'));
-  ok('compare shows a "scroll to see all N" count cue',
-    /\ball 8 cottages\b/i.test(root.querySelector('.dccs-cmp-count').textContent));
-  // Owner request (0.21.2): the cue continues the subheader as ONE paragraph.
+  // 0.53.0 (Rob): the "scroll the list to see all N" cue was DROPPED; the intro is
+  // one sentence, exactly the Config string (asserted in block 94).
+  ok('no "scroll to see all" cue any more', !root.querySelector('.dccs-cmp-count'));
   const hint = root.querySelector('.dccs-compare .dccs-hint');
-  ok('the cue lives inside the subheader paragraph (one <p>, not two)',
-    !!hint.querySelector('span.dccs-cmp-count') && !root.querySelector('p.dccs-cmp-count'));
-  ok('the merged paragraph reads prompt then cue',
-    /^Select 2 or more cottages to compare side by side\.\s+Scroll the list to see all 8 cottages\.$/
-      .test(hint.textContent.replace(/\s+/g, ' ').trim()));
+  ok('the intro is still one paragraph', !!hint && root.querySelectorAll('.dccs-compare p.dccs-hint').length === 1);
 })();
 
 // ---- 26b. The per-widget document listener self-removes once the widget is gone ----
@@ -932,14 +931,8 @@ function configWith(overrides) {
   DCCS.score.run(cfg.cottages, { hard: [] });
   ok('run() clears stale duplicateGroup flags', !cfg.cottages.some(c => c.duplicateGroup));
 
-  // (3) answering "table for two" no longer excludes the 4-seat Boathouse.
-  enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either');
-  answerNext(root, 'either'); answerNext(root, 'either'); // party/desk/pullout/layout
-  answerNext(root, '2');                                  // dining: two
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pet/ground/porch
-  const sm = root.querySelector('.dccs-see-matches'); if (sm) { sm.click(); }
-  // Intent: "table for two" must not EXCLUDE the 4-seat Boathouse. Assert on the
+  // (3) "table for two" never excluded the 4-seat Boathouse. The dining QUESTION
+  // left in 0.53.0, so this is now an engine-level check only. Assert on the
   // engine's full result set — the visible top 3 rotates day by day (0.23.0).
   const critTwo = { hard: [], wDesk: 0, wPullout: 0, wStudio: 0, wOneBed: 0, wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0, wParty: 0 };
   const resTwo = DCCS.score.run(cfg.cottages, critTwo);
@@ -1129,9 +1122,9 @@ function configWith(overrides) {
   }
   tick(root, w, 0);
   ok('still no tip at 1 ticked', !root.querySelector('.dccs-compare-note'));
-  ok('Compare button still disabled below 2', !!root.querySelector('.dccs-open-compare[disabled]'));
+  ok('Compare button still hidden below 2', !root.querySelector('.dccs-open-compare'));
   tick(root, w, 1);
-  ok('Compare enables at 2 exactly as before', root.querySelector('.dccs-open-compare').disabled === false);
+  ok('Compare appears, enabled, at 2', !!root.querySelector('.dccs-open-compare') && root.querySelector('.dccs-open-compare').disabled === false);
 
   // Toggled on: today's old behavior, including the per-instance string override.
   const w2 = freshDom();
@@ -1284,8 +1277,7 @@ function configWith(overrides) {
   ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
   answerNext(root, 'either');
   ok('other steps carry no note', !root.querySelector('.dccs-q-note'));
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pullout/layout/dining
-  answerNext(root, 'either');                                                          // -> pet (step 6)
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // desk/pullout/layout -> pet (step 5 since 0.53.0)
   const pnote = root.querySelector('.dccs-q-note');
   ok('pet step names Cottage 34 and that approval is required',
     !!pnote && /Cottage 34\b/.test(pnote.textContent) && /pre-approved/.test(pnote.textContent));
@@ -1319,8 +1311,9 @@ function configWith(overrides) {
   ok('no compare checkbox/text on a single-result page',
     !r.querySelector('.dccs-cmp-toggle') && !r.querySelector('.dccs-card input[data-cmp]'));
 
-  // Exactly two results (3-4 + table for 4 -> 22 and 23): the boundary case.
-  const r2 = mountSelector(freshDom('https://example.com/?party=3-4&dining=4'));
+  // Exactly two results (desk -> 22 and 23): the boundary case. (Was 3-4 + table
+  // for 4 until 0.53.0, when ?dining= stopped being read.)
+  const r2 = mountSelector(freshDom('https://example.com/?desk=yes'));
   ok('two-result page renders two cards', r2.querySelectorAll('.dccs-card').length === 2);
   ok('compare checkboxes return at 2+ results', r2.querySelectorAll('.dccs-cmp-toggle').length === 2);
 
@@ -1359,7 +1352,7 @@ function configWith(overrides) {
   ok('party chips still carry the values 2 / 34 / either',
     chips.map(c => c.dataset.value).join(',') === '2,34,either');
   ok('party chips display the revised labels',
-    chips.map(c => c.textContent.trim()).join(',') === '1-2,3-4,No preference');
+    chips.map(c => c.textContent.trim()).join(',') === '1-2,3-4,Skip');
   ok('the labels use straight hyphens, not en dashes',
     !chips.some(c => c.textContent.indexOf('\u2013') !== -1));
 
@@ -1590,8 +1583,10 @@ function configWith(overrides) {
   ok('trigger announces a menu', trig.getAttribute('aria-haspopup') === 'menu');
   ok('the list is a menu', !!root.querySelector('.dccs-modeselect-list[role="menu"]'));
   const items = root.querySelectorAll('.dccs-modetab');
-  ok('items are menuitemradio', Array.prototype.every.call(items, b => b.getAttribute('role') === 'menuitemradio'));
-  ok('exactly one item is checked', root.querySelectorAll('.dccs-modetab[aria-checked="true"]').length === 1);
+  // 0.53.0: only the modes NOT in use are listed, so there is no checked item to
+  // announce — plain menuitems, not a radio set.
+  ok('items are menuitems', items.length > 0 && Array.prototype.every.call(items, b => b.getAttribute('role') === 'menuitem'));
+  ok('no item carries aria-checked', !root.querySelector('.dccs-modetab[aria-checked]'));
   ok('no listbox/option/aria-selected remnants', !root.querySelector('[role="listbox"],[role="option"],[aria-selected]'));
 })();
 
@@ -1673,7 +1668,7 @@ function configWith(overrides) {
   cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   root.querySelector('.dccs-modetab[data-mode="quick"]').click();
   ok('back in the quiz: count is 8 again (answers cleared)', /\b8\b/.test(countText(root)));
-  ok('back on step 1', /1\b.*\b8/.test(progress(root)));
+  ok('back on step 1', /1\b.*\b7/.test(progress(root)));
   ok('nothing preselected', !activeChip(root));
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
   ok('compare picks were cleared too', !root.querySelector('.dccs-cmp-option input[data-cmp]:checked'));
@@ -1829,11 +1824,11 @@ defer(async function () {
   const off = mountSelector(freshDom());
   enter(off, 'quick');
   ok('feature off: no dates step', !off.querySelector('.dccs-dates'));
-  ok('feature off: wizard is still 8 steps', /1\b.*\b8/.test(progress(off)));
+  ok('feature off: wizard is 7 steps', /1\b.*\b7/.test(progress(off)));
   const on = mountSelector(freshDom(), availConfig());
   enter(on, 'quick');
   ok('feature on: dates step is first', !!on.querySelector('.dccs-dates'));
-  ok('feature on: wizard is 9 steps', /1\b.*\b9/.test(progress(on)));
+  ok('feature on: wizard is 8 steps', /1\b.*\b8/.test(progress(on)));
   ok('dates step offers a "not sure yet" skip', !!on.querySelector('.dccs-date-skip'));
   ok('dates step has check-in and check-out inputs',
     !!on.querySelector('input.dccs-date-in[type="date"]') && !!on.querySelector('input.dccs-date-out[type="date"]'));
@@ -2055,7 +2050,7 @@ defer(async function () {
 
   const items = Array.prototype.map.call(
     root.querySelectorAll('.dccs-review-list li'), li => li.textContent);
-  ok('the review screen lists only the real questions', items.length === 8);
+  ok('the review screen lists only the real questions', items.length === 7);
   ok('the review screen has no date row',
     !items.some(t => /Dates|Check-in|Check-out|No dates yet/i.test(t)));
   ok('no review row is blank', items.every(t => t.trim() !== ''));
@@ -2378,8 +2373,8 @@ defer(async function () {
   ok('the modal title is in the header', !!title && title.closest('.dccs-modal-head') === head);
   ok('and no longer inside the scrolling content',
     !!content && !content.querySelector('.dccs-modal-title'));
-  ok('it reads the Compare label',
-    !!title && title.textContent === JSON.parse(CONFIG).strings.mode_compare);
+  ok('it reads the comparison title (compare_title, not the mode name, since 0.53.0)',
+    !!title && title.textContent === JSON.parse(CONFIG).strings.compare_title);
 
   // The mark: an SVG cross, not a font glyph.
   const svg = close && close.querySelector('svg.dccs-modal-x');
@@ -2713,7 +2708,7 @@ defer(async function () {
   // --- the pet note is ONE sentence: it must NOT be split ---
   // (Positive control for the negative: the capacity assertions above prove the
   // detector finds .dccs-q-note-s when it is there.)
-  const pet = noteFor(CONFIG, 5);
+  const pet = noteFor(CONFIG, 4);   // pet is step index 4 since 0.53.0 (dining removed)
   ok('the pet step renders a note too', !!pet && pet.textContent.length > 10);
   ok('a one-sentence note is left as a single block',
     !!pet && pet.querySelectorAll('.dccs-q-note-s').length === 0);
@@ -2792,9 +2787,9 @@ defer(async function () {
   ok('the review lists the quick questions at all', quickOnA.length > 0);
   ok('and the priorities too', wOnA.length > 0);
 
-  ok('ON by absence: 8 quick questions', quickOnA.length === 8);
-  ok('ON explicitly: the same 8', quickOnT.length === 8 && String(quickOnT) === String(quickOnA));
-  ok('OFF: seven', quickOff.length === 7);
+  ok('ON by absence: 7 quick questions', quickOnA.length === 7);
+  ok('ON explicitly: the same 7', quickOnT.length === 7 && String(quickOnT) === String(quickOnA));
+  ok('OFF: six', quickOff.length === 6);
   ok('ON: 10 priorities', wOnA.length === 10);
   ok('OFF: nine', wOff.length === 9);
 
@@ -2920,14 +2915,14 @@ defer(async function () {
   // POSITIVE FIRST: the route exists and the detector can see review rows.
   const on = reviewRows(ON);
   ok('the shared link lands on results with a way back into the quiz', on.rows !== null);
-  ok('ON: the review of the in-progress quiz lists its questions', !!on.rows && on.rows.length === 8);
+  ok('ON: the review of the in-progress quiz lists its questions', !!on.rows && on.rows.length === 7);
   ok('ON: including the party row the link answered', !!on.rows && on.rows.indexOf(S.party_short) !== -1);
 
   let threw = null, off = null;
   try { off = reviewRows(OFF); } catch (e) { threw = e && e.message; }
   ok('OFF: re-opening a quiz carrying a stale party answer does not throw', threw === null);
   ok('OFF: the review still renders', !!off && off.rows !== null);
-  ok('OFF: with seven rows', !!off && off.rows.length === 7);
+  ok('OFF: with six rows', !!off && off.rows.length === 6);
   ok('OFF: and no party row among them', !!off && off.rows.indexOf(S.party_short) === -1);
 
   // ...and the quiz still completes from there, scoring without the dropped answer.
@@ -3075,6 +3070,246 @@ defer(async function () {
   ok('the results heading is centred', /text-align:\s*center/.test(h) && /justify-content:\s*center/.test(head));
   ok('the feature chips are centred', /justify-content:\s*center/.test(badges));
   ok('the View button row is NOT centred — Rob kept it left', !/justify-content:\s*center/.test(actions));
+})();
+
+// ==== 0.53.0: Rob's mode menu, Compare Mode and quiz changes =====================
+
+// ---- 94. Mode menu lists ONLY the modes not in use; renamed name, same keys ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const two = configWith({ enabledModes: ['quick', 'compare'] });
+  // Positive control first: the trigger and list exist, or every "only" below is vacuous.
+  const r0 = mountSelector(freshDom(), two); enter(r0, 'quick');
+  ok('94: the mode menu renders', !!r0.querySelector('.dccs-modeselect-trigger') && !!r0.querySelector('.dccs-modeselect-list'));
+  const items = (r) => Array.prototype.map.call(r.querySelectorAll('.dccs-modeselect-list .dccs-modetab'), b => b.dataset.mode);
+  ok('94: in Matching Quiz the menu lists only Compare Mode', String(items(r0)) === 'compare');
+  ok('94: and that option reads the renamed mode name', r0.querySelector('.dccs-modetab').textContent === S.mode_compare);
+  r0.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  ok('94: in Compare Mode the menu lists only Matching Quiz', String(items(r0)) === 'quick');
+  ok('94: and that option reads Matching Quiz', r0.querySelector('.dccs-modetab').textContent === S.mode_quick);
+  // Three modes on: whatever is current is never offered, every other mode is.
+  ['quick', 'weights', 'compare'].forEach(m => {
+    const r = mountSelector(freshDom(), configWith({ enabledModes: ['quick', 'weights', 'compare'] })); enter(r, m);
+    const got = items(r);
+    ok('94: three modes, current ' + m + ' — never listed, the other two are',
+      got.indexOf(m) === -1 && got.length === 2);
+  });
+  // The trigger: shows the current name, says so, and says it opens a menu.
+  const trig = r0.querySelector('.dccs-modeselect-trigger');
+  ok('94: the button shows the current mode', trig.textContent.indexOf(S.mode_compare) === 0);
+  ok('94: its accessible name says it is the current mode', trig.getAttribute('aria-label') === S.mode_current.replace('%s', S.mode_compare));
+  ok('94: and contains the visible label word for word (WCAG 2.5.3)', trig.getAttribute('aria-label').indexOf(S.mode_compare) !== -1);
+  ok('94: it announces a menu, collapsed', trig.getAttribute('aria-haspopup') === 'menu' && trig.getAttribute('aria-expanded') === 'false');
+  // Renamed NAME, unchanged KEYS: the landing choice, the menu option, ?mode= and stored picks.
+  const rl = mountSelector(freshDom(), two);
+  const choice = rl.querySelector('.dccs-landing-choice[data-mode="compare"]');
+  ok('94: landing choice is still data-mode="compare" and reads "Compare Mode"',
+    !!choice && choice.textContent.trim() === S.mode_compare && S.mode_compare === 'Compare Mode');
+  const rq = mountSelector(freshDom('https://example.com/?mode=compare'), two);
+  ok('94: an existing ?mode=compare link still opens Compare Mode', !!rq.querySelector('.dccs-cmp-list'));
+  const ws = freshDom();
+  ws.sessionStorage.setItem('dccs:cmp:i0', JSON.stringify(['22', '33']));   // the 0.52.0 key, verbatim
+  const rs = mountSelector(ws, two); enter(rs, 'compare');
+  const picked = Array.prototype.filter.call(rs.querySelectorAll('.dccs-cmp-option input'), c => c.checked).map(c => c.dataset.cmp);
+  ok('94: compare picks saved under the old storage key come back', String(picked) === '22,33');
+})();
+
+// ---- 95. The menu closes on Escape, outside tap and choosing — and Escape in the
+//      pop-up closes only the menu, not the pop-up (0.52.0 closed both) ----
+(function () {
+  const w = freshDom();
+  const r = mountSelector(w, configWith({ enabledModes: ['quick', 'compare'] })); enter(r, 'quick');
+  const open = () => { r.querySelector('.dccs-modeselect-trigger').click(); return !!r.querySelector('.dccs-modeselect.is-open'); };
+  ok('95: opens (control)', open() && r.querySelector('.dccs-modeselect-trigger').getAttribute('aria-expanded') === 'true');
+  r.querySelector('.dccs-modeselect-trigger').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('95: Escape closes it and returns focus to the button',
+    !r.querySelector('.dccs-modeselect.is-open') && w.document.activeElement === r.querySelector('.dccs-modeselect-trigger') &&
+    r.querySelector('.dccs-modeselect-trigger').getAttribute('aria-expanded') === 'false');
+  open();
+  w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+  ok('95: a tap outside closes it', !r.querySelector('.dccs-modeselect.is-open'));
+  open(); r.querySelector('.dccs-modetab').click();
+  ok('95: choosing the option closes it and switches mode', !r.querySelector('.dccs-modeselect.is-open') && !!r.querySelector('.dccs-cmp-list'));
+
+  // In the pop-up.
+  const w2 = freshDom();
+  const cfg = JSON.parse(configWith({ enabledModes: ['quick', 'compare'] }));
+  const node = w2.document.createElement('div');
+  node.className = 'dccs-entry'; node.dataset.entry = JSON.stringify({ current: '31', selectorUrl: '', modalConfig: cfg });
+  node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+  w2.document.body.appendChild(node); w2.DCCS.bootAll(w2.document);
+  node.querySelector('.dccs-entry-btn').click();
+  const mr = w2.document.querySelector('.dccs-modal .dccs-root'); enter(mr, 'quick');
+  mr.querySelector('.dccs-modeselect-trigger').click();
+  ok('95: pop-up menu opens (control)', !!mr.querySelector('.dccs-modeselect.is-open'));
+  // cancelable, like every real key press (preventDefault is a no-op otherwise).
+  mr.querySelector('.dccs-modeselect-trigger').dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('95: Escape in the pop-up closes the MENU', !mr.querySelector('.dccs-modeselect.is-open'));
+  ok('95: ...and leaves the pop-up open', !!w2.document.querySelector('.dccs-modal'));
+  w2.document.activeElement.dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('95: a second Escape, with no menu open, does close the pop-up (control)', !w2.document.querySelector('.dccs-modal'));
+})();
+
+// ---- 96. Compare Mode: one centred sentence; button hidden until 2+, announced ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const w = freshDom();
+  const r = mountSelector(w, configWith({ enabledModes: ['quick', 'compare'] })); enter(r, 'compare');
+  ok('96: the intro is exactly Rob\'s sentence',
+    r.querySelector('.dccs-compare .dccs-hint').textContent === 'Pick 2+ cottages to compare their features side by side.' &&
+    S.compare_prompt === 'Pick 2+ cottages to compare their features side by side.');
+  ok('96: no "scroll to see all" sentence anywhere', !/Scroll the list/.test(r.textContent) && !('compare_scroll_all' in S));
+  const live = r.querySelector('.dccs-sr-only[aria-live="polite"]');
+  const btn = () => r.querySelector('.dccs-compare .dccs-open-compare');
+  const tick = (i, on) => { const b = r.querySelectorAll('.dccs-cmp-option input')[i]; b.checked = on; b.dispatchEvent(new w.Event('change', { bubbles: true })); };
+  ok('96: 0 ticked — no Compare button', !btn());
+  tick(0, true);
+  ok('96: 1 ticked — still none', !btn());
+  ok('96: the live region is polite and present (control)', !!live);
+  tick(5, true);
+  ok('96: 2 ticked — the button appears', !!btn() && !btn().disabled && btn().textContent === S.compare_btn.replace('%d', 2));
+  ok('96: ...and the live region announces it', live.textContent === S.compare_btn.replace('%d', 2));
+  ok('96: the button sits AFTER the list, so the list cannot move',
+    !!(r.querySelector('.dccs-cmp-scroller').compareDocumentPosition(btn()) & w.Node.DOCUMENT_POSITION_FOLLOWING));
+  tick(5, false);
+  ok('96: back to 1 — hidden again', !btn());
+  // The Matching Quiz's own Compare N button is untouched: present at 2 ticked cards.
+  const q = mountSelector(freshDom(), configWith({ enabledModes: ['quick', 'compare'] })); enter(q, 'quick');
+  stepThrough(q, 'either'); seeMatches(q);
+  const tg = q.querySelectorAll('.dccs-card input[data-cmp]');
+  ok('96: quiz results have compare toggles (control)', tg.length >= 2);
+  [0, 1].forEach(i => { const b = q.querySelectorAll('.dccs-card input[data-cmp]')[i]; b.checked = true; b.dispatchEvent(new q.ownerDocument.defaultView.Event('change', { bubbles: true })); });
+  ok('96: the Matching Quiz "Compare 2 Cottages" button is unchanged', !!q.querySelector('.dccs-results .dccs-open-compare, .dccs-open-compare'));
+})();
+
+// ---- 97. Matching Quiz: dining question gone — including from old links ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const r = mountSelector(freshDom()); enter(r, 'quick');
+  const groups = [], qs = [];
+  for (let k = 0; k < 12 && r.querySelector('.dccs-chips-wizard'); k++) {
+    groups.push(r.querySelector('.dccs-chips-wizard .dccs-chip').dataset.group);
+    qs.push(r.querySelector('.dccs-step-q').textContent);
+    if (k === 0) { ok('97: Step 1 of 7', /1\b.*\b7/.test(progress(r))); }
+    answerNext(r, 'either');
+  }
+  ok('97: the walk saw every step (control)', groups.length === 7 && groups.indexOf('pet') !== -1);
+  ok('97: no dining step', groups.indexOf('dining') === -1);
+  ok('97: the steps, in order', String(groups) === 'party,desk,pullout,layout,pet,ground,screenedporch');
+  ok('97: the three reworded questions render exactly',
+    qs.indexOf('What about a pull-out couch?') !== -1 && qs.indexOf('Which layout: studio or 1-bedroom?') !== -1 &&
+    qs.indexOf('Do you need ground floor only?') !== -1);
+  ok('97: the dining strings are gone from the config', !('q_dining' in S) && !('opt_seats2' in S) && !('opt_seats4' in S));
+  ok('97: the comparison data still carries dining seats', JSON.parse(CONFIG).cottages.every(c => typeof c.diningSeats === 'number') &&
+    JSON.parse(CONFIG).diffFields.indexOf('diningSeats') !== -1);
+
+  // AT THE BOUNDARY: an old ?dining=4 link must not reach the engine as a filter.
+  const w = freshDom('https://example.com/?dining=4&pet=true');
+  const seen = [];
+  const orig = w.DCCS.score.run;
+  w.DCCS.score.run = function (c, crit) { seen.push(crit); return orig.apply(this, arguments); };
+  let threw = null, rr = null;
+  try { rr = mountSelector(w); } catch (e) { threw = e.message; }
+  ok('97: an old ?dining=4 link loads without error', threw === null && !!rr);
+  ok('97: the engine was called (control)', seen.length > 0);
+  ok('97: and pet=true still filters (control: the link IS read)', seen.every(c => c.hard.indexOf('pet') !== -1));
+  ok('97: but no dining filter ever reaches the engine', seen.every(c => c.hard.indexOf('dining4') === -1 && !c.wDining));
+  ok('97: so it lands on the pet result, not "No Perfect Matches"', !rr.querySelector('.dccs-empty') && cardNames(rr).length === 1);
+})();
+
+// ---- 98. "Skip" is "No preference" renamed: it filters nothing ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const w = freshDom();
+  const seen = [];
+  const orig = w.DCCS.score.run;
+  w.DCCS.score.run = function (c, crit) { seen.push(crit); return orig.apply(this, arguments); };
+  const r = mountSelector(w); enter(r, 'quick');
+  const labels = [];
+  for (let k = 0; k < 12 && r.querySelector('.dccs-chips-wizard'); k++) {
+    const sk = curChips(r).filter(c => c.dataset.value === 'either')[0];
+    labels.push(sk && sk.textContent.trim());
+    answerNext(r, 'either');
+  }
+  ok('98: every step offers Skip, with the old value', labels.length === 7 && labels.every(l => l === 'Skip') && S.opt_either === 'Skip');
+  const last = seen[seen.length - 1];
+  ok('98: Skip on every step sends NO filter to the engine', !!last && last.hard.length === 0);
+  ok('98: and every cottage still matches', /\b8\b/.test(countText(r)) || cardNames(r).length > 0);
+})();
+
+// ---- 99. Colours, gap and focus ring, read from the shipped CSS -------------
+// jsdom has no cascade/layout. This parses the stylesheet with a brace-depth walk
+// (so a rule inside @media is never mistaken for a top-level one), resolves var()
+// through the root tokens, and checks the RESOLVED colours and their contrast.
+// Geometry (the 0px gap, nothing moving, 44px targets) is measured in Chromium.
+(function () {
+  const raw = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; let depth = 0, start = 0, media = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '{') {
+      const pre = raw.slice(start, i).trim();
+      if (depth === 0 && pre.startsWith('@')) { media = true; depth++; start = i + 1; continue; }
+      const end = raw.indexOf('}', i);
+      rules.push({ sel: pre.split(',').map(x => x.trim()), body: raw.slice(i + 1, end), top: depth === 0 });
+      i = end; start = i + 1; continue;
+    }
+    if (ch === '}') { depth = Math.max(0, depth - 1); media = depth > 0; start = i + 1; }
+  }
+  const decl = (sel, prop) => {   // last top-level declaration wins, as in the cascade at equal specificity
+    let v = null;
+    rules.filter(r => r.top && r.sel.indexOf(sel) !== -1).forEach(r => {
+      const m = r.body.match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)'));
+      if (m) { v = m[1].trim(); }
+    });
+    return v;
+  };
+  const root = rules.find(r => r.top && r.sel.length === 1 && r.sel[0] === '.dccs-root.dccs-root').body;
+  const tok = (name) => { const m = root.match(new RegExp(name + '\\s*:\\s*([^;]+);')); return m ? m[1].trim() : null; };
+  const resolve = (v) => { const m = v && v.match(/^var\((--[\w-]+)\)$/); return m ? tok(m[1]) : v; };
+  const rgb = (c) => { c = String(c).trim();
+    let m = c.match(/^#([0-9a-f]{6})$/i); if (m) { const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255, 1]; }
+    m = c.match(/^rgba?\(([^)]+)\)$/i); if (m) { const p = m[1].split(',').map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+    return null; };
+  const over = (fg, bg) => [0, 1, 2].map(i => fg[i] * fg[3] + bg[i] * (1 - fg[3])).concat(1);
+  const L = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const NAVY = [0, 46, 122, 1], WHITE = [255, 255, 255, 1];
+  const eq = (a, b) => !!a && !!b && a.slice(0, 3).join() === b.slice(0, 3).join();
+  const T = '.dccs-root.dccs-root .dccs-modeselect-trigger', M = '.dccs-root.dccs-root .dccs-modetab';
+
+  ok('99: the parser found the root tokens (control)', !!tok('--dccs-sel-bg') && rules.length > 100);
+  ok('99: closed button = SELECTED: navy background', eq(rgb(resolve(decl(T, 'background'))), NAVY));
+  ok('99: ...white text', eq(rgb(resolve(decl(T, 'color'))), WHITE));
+  ok('99: ...and the caret follows the text', decl('.dccs-root.dccs-root .dccs-caret', 'color') === 'inherit');
+  ok('99: hover keeps it navy (no coral under white text)', eq(rgb(resolve(decl(T + ':hover', 'background'))), NAVY));
+  ok('99: the option = UNSELECTED: white background, navy text',
+    eq(rgb(resolve(decl(M, 'background'))), WHITE) && eq(rgb(resolve(decl(M, 'color'))), NAVY));
+  const hov = rgb(resolve(decl(M + ':hover', 'background')));
+  ok('99: option hover is a navy tint, not pink', !!hov && hov.slice(0, 3).join() === '0,46,122' && hov[3] > 0 && hov[3] <= 0.15);
+  ok('99: ...with an underline', decl(M + ':hover', 'text-decoration') === 'underline');
+  ok('99: ...and it no longer reads the item palette (whose hover is coral)',
+    !/--dccs-item/.test(String(decl(M, 'background')) + decl(M, 'color') + decl(M + ':hover', 'background')));
+  ok('99: no gap: the open menu starts at the button\'s bottom edge',
+    decl('.dccs-root.dccs-root .dccs-modeselect-list', 'top') === '100%' && decl('.dccs-root.dccs-root .dccs-modeselect-list', 'position') === 'absolute');
+  ok('99: the pop-up no longer turns it into an in-flow block that pushes content',
+    !rules.some(r => r.sel.some(s => /\.dccs-modal-content .*\.dccs-modeselect-list/.test(s)) && /position:\s*static/.test(r.body)));
+  ok('99: the menu keeps its gold border token', decl('.dccs-root.dccs-root .dccs-modeselect-list', 'border') === '1px solid var(--dccs-border)');
+  const ring = decl(T + ':focus-visible', 'outline');
+  const ringCol = ring && rgb(resolve((ring.match(/var\(--[\w-]+\)|#[0-9a-f]{6}/i) || [])[0]));
+  ok('99: keyboard focus on the navy button: a ring that is NOT navy', !!ringCol && !eq(ringCol, NAVY));
+  ok('99: ...drawn inside the edge, so it sits on navy', /^-\d/.test(String(decl(T + ':focus-visible', 'outline-offset'))));
+  ok('99: ...and it stands out against navy (>= 3:1)', !!ringCol && cr(ringCol, NAVY) >= 3);
+  ok('99: the mode label never wraps', decl(T + ' > span:first-child', 'white-space') === 'nowrap');
+  const C = '.dccs-root.dccs-root .dccs-chip';
+  ok('99: unselected answer chip: white with navy text',
+    eq(rgb(resolve(decl(C, 'background'))), WHITE) && eq(rgb(resolve(decl(C, 'color'))), NAVY));
+  ok('99: selected answer chip: navy with white text',
+    eq(rgb(resolve(decl(C + '.is-active', 'background'))), NAVY) && eq(rgb(resolve(decl(C + '.is-active', 'color'))), WHITE));
+  ok('99: the Compare Mode intro is centred', decl('.dccs-root.dccs-root .dccs-compare > .dccs-hint', 'text-align') === 'center');
+  ok('99: every text/background pair is at least 4.5:1',
+    cr(WHITE, NAVY) >= 4.5 && cr(NAVY, over(hov, WHITE)) >= 4.5);
 })();
 
 (async function runDeferred() {
