@@ -1157,6 +1157,7 @@ the stacking context, below our frontZ 9000).
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
+  `node tools/test-scope-browser.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
@@ -1199,6 +1200,24 @@ the stacking context, below our frontZ 9000).
   live NWS tornado warnings. The Matrix egg stays at 2.147e9 — it is a modal
   the visitor just invoked and can dismiss. Anything that must sit above the
   canvas only has to clear FRONT_Z.
+- **The scope tiers are NOT all nested since 4.11.0.** Rob asked for "All
+  pages except for homepage" (`not_home`, listed after "All pages") so
+  Seasons can run on the homepage while the Director's Hero Effects
+  mu-plugin (3.14.0, the same option) runs everywhere else and the two never
+  stack. It is "All pages" minus the front page: `page` post types and
+  cottage pages, never posts, archives, search or 404. Read
+  `Plugin::scope_allows()`'s matrix as a COLUMN per tier, never as an
+  order — a wider-looking tier can now lose a context a narrower one had.
+  The hard exclusions still run first and are untouched; the tier covers
+  the egg too (whose target is the homepage banner title, so `not_home`
+  has no egg at all). The packaged default stays `all` and NOTHING writes
+  the option — `test-scope.php` scans the plugin, comments stripped, and
+  requires exactly one assignment to the key, in `sanitize()`.
+  `tools/scope-stubs.php` is the shared fake WordPress; `tools/scope-decide.php`
+  prints the real `should_load()` verdict for one page kind, which
+  `tools/test-scope-browser.js` uses to serve each page the way the site
+  would and then look at what a guest gets (config, canvas, fetched
+  scripts, the egg).
 - **Scope is not the same question as exclusion, and the booking flow is the
   reason.** Scope says which KINDS of page may be decorated; exclusions say
   which pages never are, in EVERY tier including 'all'. `no_cottages` means

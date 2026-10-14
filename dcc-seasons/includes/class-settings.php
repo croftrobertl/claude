@@ -44,9 +44,12 @@ class Settings {
     }
 
     /**
-     * "Where effects appear" choices, narrowest first. The tiers are
-     * strictly nested (home < no_cottages < pages < all); the matrix each
-     * one covers lives on Plugin::scope_allows().
+     * "Where effects appear" choices, narrowest first — except
+     * 'not_home' (4.11.0), which is "All pages" minus the homepage and so
+     * is not part of the nesting; it sits after 'pages' because that is
+     * where Rob asked for it, and because the Hero Effects mu-plugin
+     * (3.14.0) lists the identical option in the same place. The matrix
+     * each one covers lives on Plugin::scope_allows().
      *
      * @return array<string, string>
      */
@@ -142,6 +145,7 @@ class Settings {
             'home'         => __('Homepage only', 'dcc-seasons'),
             'no_cottages'  => __('All pages except cottage pages', 'dcc-seasons'),
             'pages'        => __('All pages', 'dcc-seasons'),
+            'not_home'     => __('All pages except for homepage', 'dcc-seasons'),
             'all'          => __('All pages and posts', 'dcc-seasons'),
         ];
     }
@@ -740,7 +744,7 @@ class Settings {
                                     <option value="<?php echo esc_attr($key); ?>" <?php selected($opt['scope'], $key); ?>><?php echo esc_html($label); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <p class="description"><?php esc_html_e('Pages outside this scope load none of the plugin at all — no script, no config, no styles — so they cost nothing. "All pages except cottage pages" keeps the booking screens calm while the rest of the site stays festive; cottage pages are matched by MotoPress post type, not by URL. This covers the ambient particles AND the tap easter egg together, so the egg only fires where effects appear.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Pages outside this scope load none of the plugin at all — no script, no config, no styles — so they cost nothing. "All pages except cottage pages" keeps the booking screens calm while the rest of the site stays festive; cottage pages are matched by MotoPress post type, not by URL. "All pages except for homepage" is "All pages" without the front page — pages and cottage pages, never posts — so the homepage can be left to another effect. This covers the ambient particles AND the tap easter egg together, so the egg only fires where effects appear.', 'dcc-seasons'); ?></p>
                             <p class="description"><?php esc_html_e('Saving purges the page cache automatically — already-cached pages would otherwise keep the old scope. Admin theme previews (?dcc_season=) ignore this setting, so you can always preview anywhere.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>

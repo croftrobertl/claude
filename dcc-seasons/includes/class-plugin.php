@@ -467,36 +467,42 @@ final class Plugin {
          * effects on the checkout or in the Elementor editor.
          *
          * @param bool   $in_scope
-         * @param string $scope Stored setting: home|no_cottages|pages|all.
+         * @param string $scope Stored setting:
+         *                      home|no_cottages|pages|not_home|all.
          */
         return (bool) apply_filters('dcc_seasons_in_scope', $this->scope_allows($scope), $scope);
     }
 
     /**
-     * The scope matrix. Tiers are strictly nested
-     * (home < no_cottages < pages < all), so a wider tier never loses a
-     * context a narrower one had.
+     * The scope matrix. The first four tiers are nested
+     * (home < no_cottages < pages < all), but `not_home` is NOT (4.11.0,
+     * Rob): it is "All pages" with the homepage taken away, so that Seasons
+     * can run on the homepage while the Hero Effects run everywhere else and
+     * the two never stack on one page. Read the column, not the order.
      *
-     *                              home  no_cottages  pages  all
-     *   front page / homepage       Y         Y         Y     Y
-     *   `page` post type            -         Y         Y     Y
-     *   cottage (mphb_room_type)    -         -         Y     Y
-     *   blog post / other CPT       -         -         -     Y
+     *                              home  no_cottages  pages  not_home  all
+     *   front page / homepage       Y         Y         Y        -      Y
+     *   `page` post type            -         Y         Y        Y      Y
+     *   cottage (mphb_room_type)    -         -         Y        Y      Y
+     *   blog post / other CPT       -         -         -        -      Y
      *   archives, search, 404,
-     *   blog index                  -         -         -     Y
+     *   blog index                  -         -         -        -      Y
+     *
+     * The hard exclusions (checkout, booking, payment, the Elementor
+     * editor) are applied before this and are unaffected by any tier.
      */
     private function scope_allows(string $scope): bool {
         if (is_front_page()) {
-            return true;
+            return $scope !== 'not_home';
         }
         if ($scope === 'home') {
             return false;
         }
         if ($this->is_cottage()) {
-            return $scope === 'pages' || $scope === 'all';
+            return $scope === 'pages' || $scope === 'not_home' || $scope === 'all';
         }
         if (is_page()) {
-            return true; // no_cottages, pages, all
+            return true; // no_cottages, pages, not_home, all
         }
         return $scope === 'all';
     }

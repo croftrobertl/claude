@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.10.7
+Stable tag: 4.11.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -97,14 +97,33 @@ for the admin table, and the two are cross-checked by the test suite.
 
 = Where effects appear =
 
-Four nested tiers, default "All pages and posts" (today's behaviour):
+Five tiers, default "All pages and posts" (today's behaviour). The first
+four are nested — each one covers everything the one before it did — but
+"All pages except for homepage" is not: it is "All pages" with the front
+page taken away.
 
 * **Homepage only** — the front page and nothing else.
 * **All pages except cottage pages** — every WordPress page, but not the
   MotoPress accommodation singles, so the booking screens stay calm.
 * **All pages** — pages including cottage pages.
+* **All pages except for homepage** — the same as "All pages", minus the
+  front page: pages and cottage pages, never posts. For running Seasons on
+  the homepage and another effect everywhere else, so the two never appear
+  on the same page.
 * **All pages and posts** — everything: posts, other post types, archives,
   categories, search and 404 as well.
+
+                              home  no cottages  pages  not homepage  all
+  front page / homepage        Y         Y         Y         -         Y
+  page                         -         Y         Y         Y         Y
+  cottage page                 -         -         Y         Y         Y
+  post or other post type      -         -         -         -         Y
+  archive, search, 404,
+  blog index                   -         -         -         -         Y
+
+The booking, checkout and payment pages, the Elementor editor and the other
+hard exclusions are applied FIRST and are unaffected by any tier, this one
+included.
 
 Cottage pages are matched by MotoPress POST TYPE (`mphb_room_type`), never by
 URL or slug — the live slugs don't correspond to cottage numbers
@@ -119,7 +138,9 @@ already-cached URLs pick up the change; if no cache plugin can be purged
 automatically, the settings page says so and asks you to purge by hand.
 
 Scope covers the ambient particles AND the tap easter egg together, so with
-"Homepage only" the egg does not fire on interior pages. Admin theme previews
+"Homepage only" the egg does not fire on interior pages, and with "All pages
+except for homepage" it does not fire at all (its target is the homepage
+banner title). Admin theme previews
 (`?dcc_season=`) ignore the scope entirely, so you can always preview
 anywhere.
 
@@ -166,6 +187,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.11.0 =
+One new option, at Rob's request, so Seasons and the Hero Effects never
+stack on the same page. Staging first; live after Rob signs off. Rollback:
+reinstall the 4.10.7 zip. Your settings do not change: the option is
+offered, never selected for you.
+
+* New choice in "Where effects appear": **All pages except for homepage**
+  (key `not_home`), listed after "All pages". It is "All pages" minus the
+  front page — pages and cottage pages, never posts, archives or search.
+* The hard exclusions (checkout, booking, payment, the Elementor editor)
+  still come first and are unchanged, as is every other tier.
+* It covers the ambient particles AND the tap easter egg, like every tier;
+  pages outside it still load nothing at all.
+* The packaged default stays "All pages and posts", and nothing writes the
+  option on install, activation or upgrade.
+* The same option was added to the Hero Effects mu-plugin (3.14.0), so the
+  two lists match.
 
 = 4.10.7 =
 Rob: the moon and the witch belong to the header picture. Staging first;

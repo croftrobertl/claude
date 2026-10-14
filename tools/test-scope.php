@@ -20,72 +20,7 @@
  * @package DCC_Seasons
  */
 
-class WP_Post { public $ID = 0; public $post_name = ''; }
-
-define('ABSPATH', 1);
-define('DCC_SEASONS_VERSION', 'test');
-define('DCC_SEASONS_URL', './');
-define('DCC_SEASONS_FILE', __DIR__ . '/../dcc-seasons/dcc-seasons.php');
-
-/** The request under test. Every stub below reads this. */
-$GLOBALS['REQ'] = [
-    'front' => false, 'page' => false, 'cottage' => false,
-    'id' => 0, 'slug' => '', 'path' => '/',
-];
-
-function __($s, $d = null) { return $s; }
-function esc_html__($s, $d = null) { return $s; }
-function esc_attr__($s, $d = null) { return $s; }
-function esc_html($s) { return $s; }
-function esc_attr($s) { return $s; }
-function esc_textarea($s) { return $s; }
-function apply_filters($tag, $value) { return $value; }
-function do_action() {}
-function add_action() {}
-function add_filter() {}
-function did_action() { return false; }
-function sanitize_key($k) { return strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $k)); }
-function sanitize_text_field($v) { return trim(strip_tags((string) $v)); }
-function wp_unslash($v) { return $v; }
-function absint($v) { return abs((int) $v); }
-function wp_parse_args($a, $d) { return array_merge($d, is_array($a) ? $a : []); }
-function wp_parse_url($u, $c = -1) { return parse_url($u, $c); }
-function plugin_basename($f) { return basename($f); }
-function plugin_dir_url($f) { return './'; }
-function get_option($k, $d = false) { return $GLOBALS['OPTIONS'][$k] ?? $d; }
-function update_option($k, $v, $a = null) { $GLOBALS['OPTIONS'][$k] = $v; return true; }
-function is_front_page() { return (bool) $GLOBALS['REQ']['front']; }
-function is_singular($types = '') {
-    if (!$GLOBALS['REQ']['cottage']) { return false; }
-    $types = (array) $types;
-    return in_array('mphb_room_type', $types, true) || $types === [];
-}
-function is_page($x = '') {
-    if (!$GLOBALS['REQ']['page']) { return false; }
-    if ($x === '' || $x === []) { return true; }
-    foreach ((array) $x as $v) {
-        if (is_int($v) || ctype_digit((string) $v)) {
-            if ((int) $v === (int) $GLOBALS['REQ']['id']) { return true; }
-        } elseif ((string) $v === (string) $GLOBALS['REQ']['slug']) {
-            return true;
-        }
-    }
-    return false;
-}
-function get_queried_object() {
-    if (!$GLOBALS['REQ']['page']) { return null; }
-    $p = new \WP_Post();
-    $p->ID = (int) $GLOBALS['REQ']['id'];
-    $p->post_name = (string) $GLOBALS['REQ']['slug'];
-    return $p;
-}
-
-require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
-require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
-require __DIR__ . '/../dcc-seasons/includes/class-settings.php';
-require __DIR__ . '/../dcc-seasons/includes/class-menu.php';
-require __DIR__ . '/../dcc-seasons/includes/class-cache-purge.php';
-require __DIR__ . '/../dcc-seasons/includes/class-plugin.php';
+require_once __DIR__ . '/scope-stubs.php';
 
 use DCC_Seasons\Plugin;
 use DCC_Seasons\Settings;
@@ -135,7 +70,7 @@ $flow = [
     [627, 'booking-submitted', '/booking-submitted/', 'Booking Submitted'],
     [623, 'cancel-booking', '/cancel-booking/', 'Cancel Booking'],
 ];
-foreach (['home', 'no_cottages', 'pages', 'all'] as $scope) {
+foreach (['home', 'no_cottages', 'pages', 'not_home', 'all'] as $scope) {
     $bad = [];
     foreach ($flow as [$id, $slug, $path, $name]) {
         if (loads(['page' => true, 'id' => $id, 'slug' => $slug, 'path' => $path], ['scope' => $scope])) {
@@ -173,6 +108,76 @@ ok(!loads(['page' => true, 'id' => 4242, 'slug' => 'anything', 'path' => '/anyth
 ok(loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'],
         $LIVE + ['exclude_ids' => '']),
     'clearing the field re-enables the page');
+
+/* ---- The whole matrix, every tier x every kind of request (4.11.0,
+ * when 'not_home' made the tiers no longer nested: a column, not an
+ * order). 'post' here stands for a blog post or any other post type:
+ * not the front page, not a `page`, not a cottage. ---- */
+echo "\n=== the scope matrix: every tier x every kind of page ===\n";
+$kinds = [
+    'front page'        => ['front' => true, 'path' => '/'],
+    '`page` post type'  => ['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'],
+    'cottage page'      => ['cottage' => true, 'path' => '/accommodation/cottage-34/'],
+    'post / other CPT'  => ['path' => '/2026/10/a-post/'],
+    'archive or search' => ['path' => '/?s=canal'],
+];
+$MATRIX = [
+    'home'        => ['front page' => true,  '`page` post type' => false, 'cottage page' => false, 'post / other CPT' => false, 'archive or search' => false],
+    'no_cottages' => ['front page' => true,  '`page` post type' => true,  'cottage page' => false, 'post / other CPT' => false, 'archive or search' => false],
+    'pages'       => ['front page' => true,  '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => false, 'archive or search' => false],
+    'not_home'    => ['front page' => false, '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => false, 'archive or search' => false],
+    'all'         => ['front page' => true,  '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => true,  'archive or search' => true],
+];
+foreach ($MATRIX as $scope => $row) {
+    foreach ($row as $kind => $want) {
+        $got = loads($kinds[$kind], ['scope' => $scope]);
+        ok($got === $want, sprintf('scope=%-11s %-17s %s', $scope, $kind, $want ? 'decorated' : 'left alone'),
+            $got ? 'loaded' : 'did not load');
+    }
+    /* every tier leaves the booking flow alone: checked above for all of
+     * them; here the one page Rob names most often, for the row's sake */
+    ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'], ['scope' => $scope]),
+        sprintf('scope=%-11s %-17s left alone', $scope, 'checkout'));
+}
+
+/* Rob's reason for not_home (4.11.0): Seasons on the homepage, the Hero
+ * Effects everywhere else, never both on one page. */
+echo "\n=== not_home is 'All pages' minus the homepage ===\n";
+ok(!loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'the homepage is left alone');
+ok(loads(['page' => true, 'id' => 13, 'slug' => 'cottages', 'path' => '/cottages/'], ['scope' => 'not_home']), 'an ordinary page is decorated');
+ok(loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], ['scope' => 'not_home']), 'a cottage page is decorated');
+ok(!loads(['path' => '/2026/10/a-post/'], ['scope' => 'not_home']), 'a post is not');
+ok(!loads(['path' => '/?s=canal'], ['scope' => 'not_home']), 'a search page is not');
+ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'], ['scope' => 'not_home']), 'the checkout is not');
+ok(!loads(['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'], ['scope' => 'not_home']), 'the staff board is not');
+/* the same contract as every other tier: the filter can still speak */
+$GLOBALS['FILTERS']['dcc_seasons_in_scope'] = function ($in, $scope) { return $scope === 'not_home' ? true : $in; };
+ok(loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'the dcc_seasons_in_scope filter can still re-enable the homepage');
+unset($GLOBALS['FILTERS']['dcc_seasons_in_scope']);
+ok(!loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'and removing it puts it back');
+
+/* The option is a CHOICE, never written for the owner: Rob's rule that his
+ * site settings live in plugin defaults, so a default change reaches the
+ * site. The packaged default stays 'all'. */
+echo "\n=== not_home is never written by the plugin ===\n";
+ok(Settings::defaults()['scope'] === 'all', "the packaged default is still 'all'", (string) Settings::defaults()['scope']);
+/* Scanned as CODE, comments stripped, as the parent-menu check below is:
+ * exactly ONE place may write the scope key — sanitize(), which stores
+ * what the owner picked in the form. An activation or upgrade hook that
+ * wrote 'not_home' for them would freeze it on the site. */
+$writes = [];
+foreach (glob(__DIR__ . '/../dcc-seasons/**/*.php') + glob(__DIR__ . '/../dcc-seasons/*.php') as $f) {
+    $code = '';
+    foreach (token_get_all(file_get_contents($f)) as $tok) {
+        $code .= is_array($tok) ? (in_array($tok[0], [T_COMMENT, T_DOC_COMMENT], true) ? ' ' : $tok[1]) : $tok;
+    }
+    if (preg_match_all("/\\[\s*'scope'\s*\]\s*=(?!=)/", $code, $m)) {
+        foreach ($m[0] as $hit) { $writes[] = basename($f); }
+    }
+}
+ok(count($writes) === 1 && $writes[0] === 'class-settings.php',
+    'exactly one place writes the scope option (sanitize), and no hook does',
+    implode(', ', $writes) ?: 'none');
 
 echo "\n=== cottage pages still follow the scope tier ===\n";
 ok(!loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], $LIVE), 'cottage page absent under no_cottages');
