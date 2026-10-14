@@ -3097,8 +3097,9 @@ defer(async function () {
   // The trigger: shows the current name, says so, and says it opens a menu.
   const trig = r0.querySelector('.dccs-modeselect-trigger');
   ok('94: the button shows the current mode', trig.textContent.indexOf(S.mode_compare) === 0);
-  ok('94: its accessible name says it is the current mode', trig.getAttribute('aria-label') === S.mode_current.replace('%s', S.mode_compare));
-  ok('94: and contains the visible label word for word (WCAG 2.5.3)', trig.getAttribute('aria-label').indexOf(S.mode_compare) !== -1);
+  const aria = trig.getAttribute('aria-label') || '';
+  ok('94: its accessible name says it is the current mode', aria === String(S.mode_current).replace('%s', S.mode_compare));
+  ok('94: and contains the visible label word for word (WCAG 2.5.3)', aria !== '' && aria.indexOf(S.mode_compare) !== -1);
   ok('94: it announces a menu, collapsed', trig.getAttribute('aria-haspopup') === 'menu' && trig.getAttribute('aria-expanded') === 'false');
   // Renamed NAME, unchanged KEYS: the landing choice, the menu option, ?mode= and stored picks.
   const rl = mountSelector(freshDom(), two);
@@ -3188,8 +3189,9 @@ defer(async function () {
   const r = mountSelector(freshDom()); enter(r, 'quick');
   const groups = [], qs = [];
   for (let k = 0; k < 12 && r.querySelector('.dccs-chips-wizard'); k++) {
-    groups.push(r.querySelector('.dccs-chips-wizard .dccs-chip').dataset.group);
-    qs.push(r.querySelector('.dccs-step-q').textContent);
+    const c0 = r.querySelector('.dccs-chips-wizard .dccs-chip'), q0 = r.querySelector('.dccs-step-q');
+    groups.push(c0 ? c0.dataset.group : '?');
+    qs.push(q0 ? q0.textContent : '');
     if (k === 0) { ok('97: Step 1 of 7', /1\b.*\b7/.test(progress(r))); }
     answerNext(r, 'either');
   }
@@ -3309,7 +3311,7 @@ defer(async function () {
     eq(rgb(resolve(decl(C + '.is-active', 'background'))), NAVY) && eq(rgb(resolve(decl(C + '.is-active', 'color'))), WHITE));
   ok('99: the Compare Mode intro is centred', decl('.dccs-root.dccs-root .dccs-compare > .dccs-hint', 'text-align') === 'center');
   ok('99: every text/background pair is at least 4.5:1',
-    cr(WHITE, NAVY) >= 4.5 && cr(NAVY, over(hov, WHITE)) >= 4.5);
+    cr(WHITE, NAVY) >= 4.5 && !!hov && cr(NAVY, over(hov, WHITE)) >= 4.5);
 })();
 
 (async function runDeferred() {

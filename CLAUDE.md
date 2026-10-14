@@ -354,7 +354,8 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **The wizard's question count is not fixed — never reason from the length of
   `WIZARD_QUESTIONS`.** Nine entries live in the array; the dates step renders only
   when a widget enables availability, and the party step only while the 3-4 guest
-  switch is on. Eight render by default, seven with the switch off.
+  switch is on. Seven render by default, six with the switch off (the dining
+  question left in 0.53.0, so the array now holds eight entries).
   `wizardTrack()` is the single place that knows.
 - **Site-wide choices live in `Settings`; `Settings::defaults()` is the canonical
   map** and every value in it reproduces 0.43.0 exactly (proved by rebuilding that
@@ -514,6 +515,49 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   exceed 8px to do anything at all: margins COLLAPSE against the preceding copy
   block's own 8px bottom margin rather than adding to it, and a first attempt at
   6px changed nothing and looked like the rule had not applied.
+- **The mode menu shows the current mode on the button and lists ONLY the
+  others (0.53.0, Rob).** Items are plain `role="menuitem"` — no radio set, since
+  nothing listed is "checked". The button's `aria-label` is `mode_current`
+  ("Current mode: %s") and contains the visible name (WCAG 2.5.3). The list opens
+  at `top: 100%` (flush, no gap) as an absolute overlay **in the pop-up too** —
+  the old `position: static` pop-up override pushed the quiz down ~55px and went.
+  z-index 20 with no stacking context on `.dccs-root`, so a sticky site header
+  (Elementor uses 99) stays above it.
+- **Rob's colour rule is four tokens: `--dccs-sel-*` (navy #002E7A / white) for
+  selected things, `--dccs-unsel-*` (white / navy) for unselected ones**, literal
+  on purpose so the palette's generic `--dccs-accent` default cannot leak in. The
+  closed mode button is SELECTED (it shows the mode in use); the menu option and
+  unselected answer chips are UNSELECTED. The option's hover is a navy tint plus
+  underline and must never read `--dccs-item-*` again (that palette hovers coral).
+  The navy button hovers to navy (underline), not coral — coral under white text
+  is 2.6:1. Its keyboard ring is WHITE and INSET (`outline-offset: -5px`): Rob
+  offered gold or white, and white keeps "no gold anywhere in the plugin" — the
+  guard against the Elementor kit's gold focus accent — meaningful.
+  **Stored per-element values beat all of this.** `modetab_bg` / `modetab_color`
+  emit at (0,4,0); the 0.52.0 preset stored white/black, so live widgets need those
+  two keys CLEARED (together — clearing only the colour leaves white on white).
+- **Escape on an open mode menu inside a pop-up closes only the menu.** The menu
+  handler calls `preventDefault()`; the overlay's document-level handler skips an
+  Escape that is already `defaultPrevented`. Until 0.53.0 one press closed both.
+  Tests must dispatch key events with `cancelable: true`, as real ones are, or
+  `preventDefault()` is a no-op and the test measures nothing.
+- **Compare Mode's "Compare N Cottages" button does not exist below 2 picks
+  (0.53.0, Rob's pick B).** Not disabled — absent. It renders after the list, so
+  appearing can only push LATER content; the live region announces it. The
+  Matching Quiz's results button (`compareButton()`) is separate and unchanged.
+  The intro is ONE sentence (`compare_prompt`), centred by its own rule; the
+  "scroll to see all N" cue and its string were removed.
+- **Mode NAMES are strings; mode KEYS never change.** "Compare Mode" is
+  `mode_compare`'s text; `data-mode="compare"`, `?mode=compare` and the
+  `dccs:cmp:<id>` storage key are untouched (dom-smoke 94 pins all three, including
+  picks stored under the 0.52.0 key). The comparison pop-up's title is its own
+  string, `compare_title` ("Compare"), because it opens from the quiz too.
+- **The dining question is gone, and a dining answer can never reach the engine.**
+  `?dining=` is not read and `criteriaFromState()` emits no `dining4`; test 97
+  intercepts `score.run` with an old `?dining=4&pet=true` link and asserts the
+  criteria, with `pet` as the positive control that the link IS read. Dining seats
+  stay in `cottages.json` and the Compare table. Weigh Priorities (off on live)
+  keeps its dining priority — it was not in scope.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.52.0
+Stable tag: 0.53.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,16 +17,15 @@ Every cottage has a queen bed; six also sleep up to 4 with a pull-out couch
 amenities, so guests face needless choice overload. This plugin adds a short,
 elegant decision tool:
 
-* **Quick finder (default)** — a step-through wizard, one tappable question per
-  screen (how many guests? desk? pull-out couch? studio or 1-bedroom? table for
-  2 or 4? pet-friendly? ground floor? screened porch?), then straight to the
-  top matches.
+* **Matching Quiz (default)** — a step-through wizard, one tappable question per
+  screen (how many guests? desk? pull-out couch? studio or 1-bedroom?
+  pet-friendly? ground floor? screened porch?), then straight to the top matches.
   An optional "Review Your Answers" step can be switched on in the editor.
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
-* **Compare** (mode menu, or tick cottages on the results) — choose from a
-  checkbox list, then tap **Compare** to open a side-by-side table in a pop-up you
-  page through with arrows.
+* **Compare Mode** (mode menu, or tick cottages on the results) — tick 2 or more
+  cottages in a checklist, then tap **Compare N Cottages** to open a side-by-side
+  table in a pop-up you page through with arrows.
 
 Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
@@ -40,7 +39,7 @@ requests at all.
 = Provided widgets / shortcode =
 
 * **Cottage Selector** (Elementor) — the full wizard finder (plus Weigh
-  priorities / Compare in the header mode menu).
+  priorities / Compare Mode in the header mode menu).
 * **Cottage Selector — Mini Entry** (Elementor) — a compact cross-sell prompt for
   individual cottage pages. Its pop-up can **mirror a Cottage Selector's design**
   (see below) so you style everything in one place.
@@ -135,11 +134,11 @@ only server round-trip is the optional availability check, and only once the
 guest has actually given dates.
 
 The widget opens on a **start screen** with the heading, a short intro, and a
-choice of Quick finder, Weigh priorities, or Compare; picking one enters that mode.
-The default Quick finder is a **step-through wizard**: one question per screen so a
-guest never scrolls to find their results. Each step shows a clickable progress
-stepper ("Step 3 of 8") and a live "N cottages match" count; nothing is
-pre-selected — the guest taps an answer (including "No preference") and presses
+choice of Matching Quiz, Weigh priorities, or Compare Mode; picking one enters that
+mode. The default Matching Quiz is a **step-through wizard**: one question per screen
+so a guest never scrolls to find their results. Each step shows a clickable progress
+stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
+pre-selected — the guest taps an answer (including "Skip", no preference) and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question the guest goes straight to the
 **Top 3** (an optional **Review Your Answers** step can be enabled in the editor to
@@ -148,16 +147,15 @@ that review screen on demand, so answers can be changed even when the forced ste
 off. Answers are never remembered — every page load starts fresh.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
-(party of 3–4, pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks
-whatever survives
-by softer preferences. If a hard filter leaves three or fewer cottages they are
-returned directly. If a combination is impossible (e.g. pet-friendly AND a table
-for four), the closest matches are shown, each **tagged with the must-have it
-misses** ("Upstairs", "No table for 4").
+(party of 3–4, pet-friendly, ground-floor-only, and the other Yes answers); Phase 2
+ranks whatever survives by softer preferences. If a hard filter leaves three or fewer
+cottages they are returned directly. If a combination is impossible (e.g.
+pet-friendly AND a screened porch), the closest matches are shown, each **tagged
+with the must-have it misses** ("Upstairs", "No screened porch").
 
-A header **mode menu** (dropdown) switches between the Quick finder, **Weigh
-priorities** (a parallel step-by-step wizard that ranks by Low/Medium/High
-importance) and **Compare**. On the results, ticking two or more cottages reveals a
+A header **mode menu** (dropdown) shows the mode in use and lists the others: the
+Matching Quiz, **Weigh priorities** (a parallel step-by-step wizard that ranks by
+Low/Medium/High importance) and **Compare Mode**. On the results, ticking two or more cottages reveals a
 **"Compare N cottages"** button that opens the side-by-side table in a pop-up, with
 a pinned attribute column and ‹ › arrows to page through the cottages.
 
@@ -230,6 +228,31 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.53.0 =
+* Mode menu: "Compare" is now "Compare Mode" wherever the mode's name shows (landing
+  choice, menu button, menu option). Internal keys, ?mode=compare links and saved
+  compare picks are unchanged. The comparison pop-up keeps its "Compare" title.
+* The open menu lists only the mode not in use, opens flush against the button with
+  no gap, and overlays the page without moving it — now in the cottage pop-ups too.
+* Mode menu colours: the button (the current mode) is navy with white text and caret;
+  the option is white with navy text, hovering to a light navy tint with an
+  underline. Keyboard focus on the navy button shows a white ring inside its edge.
+  The button's accessible name says which mode is current.
+* Fixed: pressing Escape with the mode menu open in a cottage pop-up closed the whole
+  pop-up. It now closes only the menu.
+* Compare Mode: the intro is one centred sentence, "Pick 2+ cottages to compare their
+  features side by side." The "Compare N Cottages" button appears once 2 or more
+  cottages are ticked and is announced to screen readers; it hides again below 2.
+  The Matching Quiz's own Compare button is unchanged.
+* Matching Quiz: the dining-table question is removed (Step x of 7). Old links that
+  carry ?dining= are ignored. Dining seats stay in the Compare table.
+* Wording: "What about a pull-out couch?", "Which layout: studio or 1-bedroom?",
+  "Do you need ground floor only?", and "No Preference" is now "Skip" (it still
+  means no preference).
+* Answer buttons: unselected is white with navy text (was black); selected unchanged.
+* Existing widgets that stored the old wording or the old mode-button colours keep
+  showing them until those fields are cleared — see the release notes for the list.
 
 = 0.52.0 =
 * Fixed: after Save Changes on DCC > Cottage Selector the browser landed on
