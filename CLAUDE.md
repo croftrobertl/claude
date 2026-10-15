@@ -810,7 +810,7 @@ the stacking context, below our frontZ 9000).
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 179,951 raw / 63,939 gzipped (4.10.7, `gzip -c`; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 181,626 raw / 64,617 gzipped (4.12.0, `gzip -c`; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1157,7 +1157,7 @@ the stacking context, below our frontZ 9000).
   `test-min.js`, `test-front.js`, `test-orphans.js`, `test-counts.js`,
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
-  `node tools/test-scope-browser.js`,
+  `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
@@ -1199,7 +1199,13 @@ the stacking context, below our frontZ 9000).
   (10000) and any consent UI. It was 99990 until 4.1.0, so sprites drew over
   live NWS tornado warnings. The Matrix egg stays at 2.147e9 — it is a modal
   the visitor just invoked and can dismiss. Anything that must sit above the
-  canvas only has to clear FRONT_Z.
+  canvas only has to clear FRONT_Z. **Measured 2026-10-15 and reported to
+  the Director: 9000 is ABOVE the Availability Calendar's own pop-ups
+  (overlay 1000, sheet 1001), so in front placement sprites DRAW OVER a
+  booking or info pop-up — clicks are unaffected (`pointer-events:none`),
+  and Hero Effects' flight layer at 900 is below us as intended. Lowering
+  it is a visible change and so Rob's call; 4.12.0 was told not to touch
+  it.**
 - **The scope tiers are NOT all nested since 4.11.0.** Rob asked for "All
   pages except for homepage" (`not_home`, listed after "All pages") so
   Seasons can run on the homepage while the Director's Hero Effects
@@ -1301,6 +1307,49 @@ the stacking context, below our frontZ 9000).
   ripple reserve is NOT scaled. `fitParts()` re-targets on a real resize,
   never mid-scene (`endVig()` calls it). On a phone a scene borrows at most
   ONE sprite (`startVig`). Rob's density setting is never touched.
+- **Since 4.12.0 the Director's queue owns the timing where it exists.**
+  Hero Effects 3.16.2 gives a visit ONE queue per tab (sessionStorage
+  `dcc_moments`, Rob's order: the Seasons moment, the seaplane, its heron,
+  the fish and rod), because nobody stays on the header long enough to see
+  them one after another. We register at SCRIPT RUN — top of engine.js,
+  before any image or idle work: push to `window.DCCMomentsPending` AND
+  call `DCCMoments.register` when it is already there, which is the
+  Director's snippet, so the queue must dedupe by object identity. The
+  hooks are installed later by `start()` (`momentHooks`); until then
+  ready() is false and play() finishes at once.
+  - **The moment** = this page's scene, then a breath (`TIMING.breath`),
+    then its flyer, both in the header picture (4.10.7 stands).
+    `momPlay`/`momStep` is a four-stage machine driven from the frame loop
+    on visible time; `done()` fires exactly once (`fired`), and either half
+    may decline without taking the other with it.
+  - **Whether the header is in view is asked ONCE**, when play() is called
+    (`mom.inView`): the queue only calls while it is in view, and Rob's
+    "don't abort if the visitor scrolls away" means a scroll must not cut
+    the moment short.
+  - **`momentsOn()` parks everything of ours**: `vigAt`/`heroAt` stay INF,
+    `nextTurn()` returns at once, `stepVig`/`stepHero` never self-start,
+    and the first-page rule is never consulted — which is why `firstPage()`
+    is now LAZY: reading it WRITES `dcc_seasons_visit`, and under the queue
+    that would spend the visit's first page on a turn we never take.
+  - **Our net is 50 s of visible time** (`MOM_CAP`), inside the queue's own
+    60. Rob's budget is "about 30 s or less", and `tools/measure-moment.js`
+    measured a phone moment at 14-24 s and a 1280 px one at 25-44 (Florida
+    Keys, its longest scene and the osprey): the flyer crosses the header
+    picture's whole width at the speed Rob chose, so a wide screen takes
+    longer. Reported to the Director rather than trimmed, because cutting a
+    flyer off mid-flight is the one thing a guest would see.
+  - **The heron yields** (`heronOff()`, Rob's pick): where
+    `window.DCCHeroFx.heron === true` the Hero Effects heron is on and ours
+    stands down — read at every choice (`heroPoolNow()`), never cached, and
+    the hnCache idle pre-build is skipped, including when the flag arrives
+    late. A theme-less day then has no flyer and NO substitute bird;
+    `CFG.heroOnly` (a preview or a debug knob) still forces it.
+  - **Tests**: `tools/test-moments.js` (47, a stand-in queue in both load
+    orders) and `tools/test-moments-browser.js` (18, both plugins on the
+    homepage at 390 and 1280). Mutation-checked nine ways, including the
+    self-timer firing under the queue, late registration, done() twice or
+    never, aborting on scroll, the flyer dropped, the heron picked with the
+    flag on, a substitute bird, and the no-queue path broken.
 - **Heroes AND scenes run on VISIBLE time (`vt`), one scheduler, since
   4.8.0.** `heroAt` / `vigAt` are due times (INF = not its turn);
   `nextTurn()` runs when either leaves. First page of a visit

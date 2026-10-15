@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.11.0
+Stable tag: 4.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,29 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.12.0 =
+Seasons takes its turn in the Hero Effects "moments queue", and its heron
+steps aside for the Hero Effects one. Staging first; live after Rob signs
+off. Rollback: reinstall the 4.11.0 zip. No settings change, and nothing is
+written on install, activation or upgrade.
+
+* Where Hero Effects runs its queue, it decides when the Seasons moment
+  plays: this page's scene and then, a breath later, its flyer, both in the
+  header picture. Nothing of ours starts by itself there — our own timers
+  stay parked and the first-page rule is never consulted.
+* A moment that has nothing to show says so and is skipped silently; one
+  that can only show half of it (no scene today, or no flyer) shows that
+  half. A visitor who scrolls away mid-moment does not cut it short.
+* Where Hero Effects is absent (it is off, the page has no header picture,
+  or the visitor asked for reduced motion), 4.11.0's own timing runs
+  exactly as before.
+* On a page where the Hero Effects heron is switched on, the Seasons heron
+  stands down and its poses are not pre-drawn. On a day with no other bird
+  that day simply has no flyer; no other bird is substituted. A preview or
+  a debug knob can still force it.
+* The falling sprites, the background layer and the tap easter egg are not
+  moments and are unchanged.
 
 = 4.11.0 =
 One new option, at Rob's request, so Seasons and the Hero Effects never

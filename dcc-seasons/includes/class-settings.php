@@ -955,6 +955,7 @@ class Settings {
                                 <option value="classic" <?php selected($opt['richness'], 'classic'); ?>><?php esc_html_e('Classic — v2 behavior (sprites + heroes, no extras)', 'dcc-seasons'); ?></option>
                                 <option value="minimal" <?php selected($opt['richness'], 'minimal'); ?>><?php esc_html_e('Minimal — sprites only, no motion extras', 'dcc-seasons'); ?></option>
                             </select>
+                            <p class="description"><?php esc_html_e('On a page where the Hero Effects heron is switched on, the Seasons heron stands down and leaves that flight to it — on days with no other bird, that day simply has no flyer.', 'dcc-seasons'); ?></p>
                             <details style="margin-top:8px;">
                                 <summary><?php esc_html_e('Advanced visuals (apply within Full)', 'dcc-seasons'); ?></summary>
                                 <p style="margin:8px 0 0;">

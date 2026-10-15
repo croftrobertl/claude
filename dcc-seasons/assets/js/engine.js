@@ -4002,9 +4002,28 @@
 		var hero = null, heroFrame = '', heroNext = '';
 		var heroPool = ['heron'];
 		if (A.hero) { heroPool.push(A.hero); }
-		if (DEBUG && CFG.heroOnly) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
+		var heroForced = !!(DEBUG && CFG.heroOnly);
+		if (heroForced) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
+		/* 4.12.0 (Rob): the Hero Effects mu-plugin carries its own copy of the
+		 * 4.9.0 heron (3.16.2). Where its heron is on it says so with
+		 * window.DCCHeroFx.heron === true, and ours stands down — read at
+		 * every choice, never cached, because the flag can be set after we
+		 * start. A preview or a debug knob that names the heron still gets
+		 * it. On a theme with no other flyer this empties the pool, and a
+		 * Seasons moment is then its scene alone: never another bird. */
+		function heronOff() {
+			var h = W.DCCHeroFx;
+			return !heroForced && !!(h && h.heron === true);
+		}
+		function heroPoolNow() {
+			if (!heronOff()) { return heroPool; }
+			var out = [], k;
+			for (k = 0; k < heroPool.length; k++) { if (heroPool[k] !== 'heron') { out.push(heroPool[k]); } }
+			return out;
+		}
 		/* no header picture: no sky flyers */
 		if (!skyPic) { heroPool = heroPool.filter(function (k) { return !SKY_HERO[k]; }); }
+		/* the pre-draw is idle work for a bird we may never fly */
 		/* The heron's poses, pre-drawn once after load in idle time (see
 		 * HN_ above), at the bird's size and the screen's density (capped at
 		 * 2). A pose the idle pass has not reached yet is drawn on first use,
@@ -4025,12 +4044,13 @@
 			return (hnCache[key] = { c: c, x: b[0] * u, y: b[1] * u, w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u, bob: key === 's' ? 0 : hnPose(key).bob * u });
 		}
 		function hnGet(key) { return hnCache[key] || hnBuild(key); }
-		if (FX.heroes && heroPool.indexOf('heron') >= 0) {
+		if (FX.heroes && heroPool.indexOf('heron') >= 0 && !heronOff()) {
 			var hnTodo = ['s', 'f'], hnI;
 			for (hnI = 0; hnI < HN_BEATS; hnI++) { hnTodo.push('b' + hnI); }
 			for (hnI = 1; hnI <= HN_GLIDES; hnI++) { hnTodo.push('g' + hnI); }
 			var hnIdle = function (dl) {
 				var t0 = nowMs();
+				if (heronOff()) { hnTodo.length = 0; return; }   /* the flag came late */
 				do { var k = hnTodo.shift(); if (k && !hnCache[k]) { hnBuild(k); } }
 				while (hnTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
 				if (hnTodo.length) { hnLater(hnIdle); }
@@ -4080,14 +4100,22 @@
 		 *    that never reports done is ignored after 70s of visible time.
 		 *  - A scene and a hero never share the screen (both directions). */
 		var vt = 0, VT_X = (DEBUG && CFG.vtScale) || 1;
-		var firstPage = (function () {
+		/* Read LAZILY (4.12.0): under the moments queue our own first-page
+		 * rule must not run at all, and reading this WRITES the visit key —
+		 * which would spend the visitor's first page on a turn we never
+		 * take. The queue may also appear after us, so the question is
+		 * asked at the moment it is needed, not at start. */
+		var firstPageAt = 0;
+		function firstPage() {
+			if (firstPageAt) { return firstPageAt > 0 ? (firstPageAt === 1) : null; }
 			try {
 				var ss = W.sessionStorage, visitKey = 'dcc_seasons_visit';
-				if (ss.getItem(visitKey)) { return false; }
+				if (ss.getItem(visitKey)) { firstPageAt = 2; return false; }
 				ss.setItem(visitKey, '1');
+				firstPageAt = 1;
 				return true;
-			} catch (e) { return null; }
-		})();
+			} catch (e) { firstPageAt = -1; return null; }
+		}
 		/* One scheduler for heroes AND scenes (4.8.0). heroAt / vigAt are the
 		 * visible times each is due; INF means "not its turn". The suites'
 		 * debug knobs: heroFirst (s, any page), heroEvery (s, the gap after a
@@ -4099,8 +4127,10 @@
 		}
 		var heroFirst = (DEBUG && CFG.heroFirst) || null;
 		var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : INF, heroCount = 0, heroLive = false;
-		/* First page: the flyer's turn comes when the first scene ends. */
-		var heroAfterScene = !!firstPage && !heroFirst;
+		/* First page: the flyer's turn comes when the first scene ends. Under
+		 * the moments queue there is no first-page rule and the question is
+		 * never asked (reading it writes the visit key). */
+		var heroAfterScene = false;
 		var FX_CAP = 70, fxBusySeen = false, fxDoneAt = -1;
 		function heroFxState() {
 			var h = W.DCCHeroFx;
@@ -4112,6 +4142,105 @@
 			else if (st === 'done' && fxBusySeen && fxDoneAt < 0) { fxDoneAt = vt; }
 		}
 		D.addEventListener('dcc:herofx', watchHeroFx);
+
+		/* --- Our turn in the queue (4.12.0, Rob) --------------------------
+		 * While window.DCCMoments exists it OWNS the timing on this page:
+		 * nothing of ours starts by itself, our clocks stay at INF, and the
+		 * first-page rule is never consulted. The moment is this page's
+		 * scene and then, a breath later, its flyer — the opening order of
+		 * 4.9.0, now played on the queue's word instead of our own. Either
+		 * may decline (nothing today, the header out of view); whatever is
+		 * left still plays, and done() is called exactly once. A scroll
+		 * never aborts it. When the queue is absent everything below is
+		 * inert and 4.11.0's timing runs unchanged. */
+		/* Our own net, in seconds of visible time. Rob's budget is "about 30 s
+		 * or less". Measured (tools/measure-moment.js): a phone moment runs
+		 * 14-24 s, and a 1280 px one 25-44 — the flyer crosses the header
+		 * picture's whole width at the speed Rob chose, so a wide screen
+		 * simply takes longer (Florida Keys, its longest scene and the
+		 * osprey, is the 44). Cutting a flyer off mid-flight to hit 30
+		 * exactly is the one thing a guest would see, so the net sits just
+		 * inside the queue's own 60 s instead, and the measured lengths went
+		 * to the Director rather than a silent trim. */
+		var MOM_CAP = 50;
+		var mom = null, momStat = { plays: 0, dones: 0, scenes: 0, flyers: 0, capped: 0, last: 0 };
+		function momentsOn() { return !!W.DCCMoments; }
+		function momReady() {
+			/* cheap and without side effects: it is asked every turn */
+			return !!(cv && !reduced() && (canVig() || canHero()));
+		}
+		function momPlay(done) {
+			var fired = false;
+			var fin = function () {
+				if (fired) { return; }
+				fired = true;
+				momStat.last = mom ? mom.t : 0;
+				mom = null;
+				momStat.dones++;
+				if (typeof done === 'function') { try { done(); } catch (e) { /* the queue's business */ } }
+			};
+			momStat.plays++;
+			if (mom) { fin(); return; }          /* already playing: decline politely */
+			/* Whether the header picture is there to be seen is asked ONCE,
+			 * now: the queue only calls us while it is in view, and a
+			 * visitor who scrolls away mid-moment must not cut it short
+			 * (Rob, 4.12.0) — it plays on out of sight, exactly as a scene
+			 * already does in 4.10.7. */
+			mom = { fin: fin, stage: 0, wait: 0, t: 0, inView: skyInView() };
+			momStep(0);
+		}
+		/* Stepped from the frame loop, on visible time, after vt advances. */
+		function momStep(dt) {
+			if (!mom) { return; }
+			mom.t += dt;
+			if (mom.t > MOM_CAP) { momStat.capped++; mom.fin(); return; }
+			if (mom.stage === 0) {
+				/* the scene; it may decline (no scene today, or the header
+				 * is not in view for a sky one) */
+				if (canVig()) {
+					vigNext = vigNext || pick(vigList);
+					if (!SKY_VIG[vigNext] || mom.inView) {
+						startVig(vigNext);
+						vigNext = '';
+						if (vig) { momStat.scenes++; mom.stage = 1; return; }
+					}
+				}
+				mom.stage = 2;
+				momStep(0);
+				return;
+			}
+			if (mom.stage === 1) {
+				if (vig) { return; }
+				mom.wait += dt;
+				if (mom.wait < TIMING.breath) { return; }
+				mom.stage = 2;
+				momStep(0);
+				return;
+			}
+			if (mom.stage === 2) {
+				if (canHero() && !vig) {
+					if (heroNext && heronOff() && heroNext === 'heron') { heroNext = ''; }
+					heroNext = heroNext || pick(heroPoolNow());
+					if (!SKY_HERO[heroNext] || mom.inView) {
+						var kind = heroNext;
+						heroNext = '';
+						if (SKY_HERO[kind]) { inSky(function () { spawnHero(0, kind); }); } else { spawnHero(0, kind); }
+						if (hero) {
+							momStat.flyers++;
+							heroLive = true; heroCount++;
+							heroLog.push({ kind: hero.kind, start: vt, end: -1, fx: heroFxState() });
+							mom.stage = 3;
+							return;
+						}
+					}
+				}
+				mom.fin();
+				return;
+			}
+			if (!hero) { mom.fin(); }            /* stage 3: the flyer has gone */
+		}
+		momentHooks = { ready: momReady, play: momPlay };
+
 		var heroLog = [], vigLog = [];
 		function spawnHero(t, kind) {
 			var dir = sgn();
@@ -4186,9 +4315,11 @@
 		 * held back by the hero-image show) keeps its turn, just not sooner
 		 * than a breath after this one left. Otherwise the OTHER kind goes
 		 * next if this theme has it, else the same kind again, 60-90 s on. */
-		function canHero() { return !!FX.heroes && heroPool.length > 0; }
+		function canHero() { return !!FX.heroes && heroPoolNow().length > 0; }
 		function canVig() { return vigList.length > 0; }
 		function nextTurn(kind) {
+			/* The queue decides what comes next, and when (4.12.0). */
+			if (momentsOn()) { heroAt = INF; vigAt = INF; heroAfterScene = false; return; }
 			/* The first scene of a visit's first page hands straight over to
 			 * the flyer, a breath after it leaves. */
 			if (kind === 'vig' && heroAfterScene) {
@@ -4210,6 +4341,8 @@
 		function stepHero(dt, t) {
 			if (!hero) {
 				heroGone();
+				/* the queue starts flyers through play(), never this path */
+				if (momentsOn()) { heroAt = INF; return; }
 				watchHeroFx();
 				if (heroFxState() === 'busy' && vt < FX_CAP) { return; }
 				var at = heroAt;
@@ -4218,7 +4351,8 @@
 				if (!canHero()) { heroAt = INF; if (vigList.length && vigAt >= INF) { vigAt = vt + gapAfter('hero'); } return; }
 				if (vig) { heroAt = vt + 4; return; }
 				/* chosen once; a sky flyer waits for the header picture */
-				heroNext = heroNext || pick(heroPool);
+				if (heroNext && heronOff() && heroNext === 'heron') { heroNext = ''; }
+				heroNext = heroNext || pick(heroPoolNow());
 				if (SKY_HERO[heroNext] && !skyInView()) { return; }
 				var kind = heroNext;
 				heroNext = '';
@@ -6203,9 +6337,16 @@
 		}
 		/* The first scene: 6-10 s in, on every page. A theme with no scenes
 		 * (or none at this hour) gives that slot to its hero on a later page,
-		 * where the 3-5 s first-page flyer does not apply. */
-		if (vigList.length) { vigAt = (DEBUG && CFG.vigFirst) ? CFG.vigFirst / 1000 : rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
-		else { heroAfterScene = false; if (heroAt >= INF) { heroAt = rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); } }
+		 * where the 3-5 s first-page flyer does not apply. None of this runs
+		 * under the moments queue, which owns the timing (4.12.0) — including
+		 * the first-page question, which is why it is asked here and not at
+		 * start. */
+		if (momentsOn()) { vigAt = INF; heroAt = INF; }
+		else {
+			heroAfterScene = !!firstPage() && !heroFirst;
+			if (vigList.length) { vigAt = (DEBUG && CFG.vigFirst) ? CFG.vigFirst / 1000 : rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); }
+			else { heroAfterScene = false; if (heroAt >= INF) { heroAt = rnd(TIMING.vigFirst[0], TIMING.vigFirst[1]); } }
+		}
 
 		function startVig(name) {
 			var sc = SCENES[name];
@@ -6311,6 +6452,8 @@
 				if (done) { endVig(t); }
 				return;
 			}
+			/* the queue starts scenes through play(), never this path */
+			if (momentsOn()) { vigAt = INF; return; }
 			/* Scenes switched off mid-visit (the degrade ladder): a scene
 			 * that was due hands its turn to the hero. */
 			if (!vigList.length) { if (vigAt < INF || heroAfterScene) { heroAfterScene = false; if (canHero()) { heroAt = mn(heroAt, vigAt < INF ? vigAt : vt); } vigAt = INF; } return; }
@@ -6508,6 +6651,7 @@
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
 			stepTurns(dt);
+			momStep(dt * VT_X);   /* our turn in the queue, if one is playing */
 			/* a scene goes behind the header picture's foreground (4.10.4) */
 			/* (debug: the foreground suite draws a stand-in sprite here) */
 			if (DEBUG && DBG && W.DCCSeasonsEngine._state && W.DCCSeasonsEngine._state.preScene) { W.DCCSeasonsEngine._state.preScene(cx); }
@@ -6614,7 +6758,15 @@
 				get vt() { return vt; },
 				get heroAt() { return heroAt; },
 				get vigAt() { return vigAt; },
-				get firstPage() { return firstPage; },
+				get firstPage() { return firstPageAt ? (firstPageAt === 1 ? true : (firstPageAt === 2 ? false : null)) : 'unread'; },
+				/* 4.12.0: our turn in Rob's queue */
+				/* finish the moment twice over, for the done()-once check */
+				momForce: function () { if (mom) { var f = mom.fin; f(); f(); } },
+				get moments() {
+					return { on: momentsOn(), playing: !!mom, stage: mom ? mom.stage : -1, t: mom ? mom.t : 0,
+						stats: momStat, reg: momentReg, heronOff: heronOff(), pool: heroPoolNow().slice(0),
+						heroAt: heroAt, vigAt: vigAt, ready: momReady() };
+				},
 				get heroLog() { return heroLog.slice(0); },
 				get vigLog() { return vigLog.slice(0); },
 				get maxParts() { return maxParts; },
@@ -6685,6 +6837,31 @@
 		}
 		play();
 	}
+
+	/* --- Rob's moments queue (4.12.0) ------------------------------------
+	 * The Hero Effects mu-plugin (3.16.2) gives the visit ONE queue per tab:
+	 * the Seasons moment, then the seaplane, the heron, the fish and rod,
+	 * round again, a few seconds apart and then a minute apart, carried
+	 * across pages in sessionStorage. Nobody stays on the header long enough
+	 * to see all four otherwise.
+	 *
+	 * We register the moment HERE, as the script runs, before any image or
+	 * idle work: Hero Effects drains window.DCCMomentsPending when it
+	 * starts, so either load order works, and it waits up to 3 s for us
+	 * before giving our slot away. The hooks are installed later by start();
+	 * until then ready() is false and play() finishes at once, which is the
+	 * honest answer for an engine that has not drawn anything yet. */
+	var momentHooks = null;
+	var momentReg = {
+		kind: 'seasons',
+		ready: function () { return !!(momentHooks && momentHooks.ready()); },
+		play: function (done) {
+			if (momentHooks) { momentHooks.play(done); }
+			else if (typeof done === 'function') { done(); }
+		}
+	};
+	(W.DCCMomentsPending = W.DCCMomentsPending || []).push(momentReg);
+	if (W.DCCMoments && typeof W.DCCMoments.register === 'function') { W.DCCMoments.register(momentReg); }
 
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
