@@ -3633,3 +3633,23 @@ failure the board refreshes again only when the tab is shown again.
 Tests: staff-refresh-0471-test.js; staff-board-test.js now checks no
 timestamp after a refresh. 5 mutations; the 0.46.2 "Updated on the right"
 mutation retired.
+
+## 0.47.2 — a failed refresh keeps trying (WD, Rob's pick of 2026-10-16)
+
+Reported in 0.47.1: a failed refresh scheduled nothing (only markFetched()
+on success did). Now ensureRange's two failure paths call markFetched() too
+— a refused answer (success: false) and the catch (network error, a 5xx, a
+body that is not JSON) — so the next attempt is 3 minutes after the last,
+whatever it did. The server tells the cases apart already: the gate's own
+refusal is an empty 403 with NO header (Staff::require_authorization, the
+fail-closed path) → stopRefresh(): state.stopped, the timer cleared, and
+tick / scheduleRefresh / visibilitychange all respect it; a stale nonce is
+403 + "X-MPHBAC-Staff: nonce" → tokenReload() as before (no reschedule,
+unchanged). One timer: scheduleRefresh() always clears the last one (it
+did). Never two board requests at once from the timer: state.inFlight
+counts ensureRange's requests and tick() waits 30s (REFRESH_RETRY_MS) while
+one is out, as it does for a focused field. A user's navigation can still
+send a request while one is out; the older answer is dropped (state.req).
+The error line clears on success via say('') (it did). Tests:
+staff-refresh-0472-test.js — long timers and month requests counted in the
+page on a fake clock. 6 mutations; two 0.47.1 needles retargeted.

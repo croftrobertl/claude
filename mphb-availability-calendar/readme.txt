@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.1
+Stable tag: 0.47.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.47.2 =
+* **A failed refresh keeps trying (Rob's pick).** The staff calendar's 3-minute refresh used to stop after one failure; now a refused answer, a server error or a network error is retried 3 minutes later, as after a success. The error line stays while it fails and clears on the first success. If the staff password is no longer valid, it stops trying, as before. One timer at a time, never two requests at once. Nothing is written on install, activation or upgrade.
 
 = 0.47.1 =
 * **"Updated hh:mm" removed from the staff calendar (Rob's pick).** On a phone it dropped under the Compare to Last Year control; now that row is a single 44px line at every width. The 3-minute automatic refresh is unchanged, and a refresh that fails still shows its error under the calendar. Nothing is written on install, activation or upgrade.

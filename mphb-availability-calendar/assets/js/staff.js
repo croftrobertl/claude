@@ -98,7 +98,9 @@
             req:   0,                  // last-write-wins guard for month loads
             cache: {},                 // 'from|to' -> payload (session only)
             statsReq: 0,               // last-write-wins guard for the Stats section
-            lastRefresh: 0
+            lastRefresh: 0,            // the last board fetch that came back (or failed, 0.47.2)
+            inFlight: 0,               // board fetches on their way (0.47.2)
+            stopped: false             // the gate said no: no more refreshes (0.47.2)
         };
         var lastTrigger = null;
         var mq = window.matchMedia ? window.matchMedia(NARROW) : null;
@@ -273,18 +275,31 @@
             if (!opts.quiet) say(S.loading || 'Loading…');
             gridEl.setAttribute('aria-busy', 'true');
             agendaEl.setAttribute('aria-busy', 'true');
+            state.inFlight++;
             post('mphbac_staff_month', { from: from, to: to }).then(function (json) {
                 if (seq !== state.req) return;              // superseded
-                if (!json || !json.success || !json.data) { say(S.error, true); return; }
+                // A refusal for a passing reason (success: false): say so,
+                // and try again on the 3-minute rhythm (0.47.2, Rob).
+                if (!json || !json.success || !json.data) { say(S.error, true); markFetched(); return; }
                 state.cache[from + '|' + to] = json.data;
-                say('');
+                say('');                                    // a success clears the error line
                 markFetched();
                 cb(json.data);
             }).catch(function (err) {
                 if (seq !== state.req) return;
                 if (tokenReload(err)) return;
                 say(failureText(err), true);
+                // KEEP TRYING (0.47.2, Rob) — after a network error, a server
+                // error or an answer that is not JSON, exactly as after a
+                // success. NOT after the gate's own refusal (an empty 403 with
+                // no "nonce" header: the staff password is no longer valid,
+                // the fail-closed path): that stops every retry, as Staff::
+                // is_authorized() means it to. A stale token (403 + "nonce")
+                // keeps its one reload above, and otherwise its message.
+                if (err && err.forbidden) { if (!err.nonce) stopRefresh(); return; }
+                markFetched();
             }).then(function () {
+                state.inFlight--;
                 if (seq === state.req) {
                     gridEl.removeAttribute('aria-busy');
                     agendaEl.removeAttribute('aria-busy');
@@ -2911,13 +2926,24 @@
             if (previewEl && !previewEl.hidden) return true;
             return false;
         }
+        // ONE TIMER, ALWAYS (0.47.2): every schedule replaces the one before.
         function scheduleRefresh(ms) {
             clearTimeout(refreshT);
+            if (state.stopped) return;
             refreshT = setTimeout(tick, ms);
         }
+        function stopRefresh() {
+            state.stopped = true;
+            clearTimeout(refreshT);
+        }
         function tick() {
+            if (state.stopped) return;
             if (document.visibilityState === 'hidden') return;      // resumes on return
             if (busy()) { scheduleRefresh(REFRESH_RETRY_MS); return; }
+            // Never a second board request on top of one still on its way
+            // (a slow answer, a navigation): the refresh waits, as it does
+            // for a focused field.
+            if (state.inFlight) { scheduleRefresh(REFRESH_RETRY_MS); return; }
             refresh();
         }
         function refresh() {
@@ -2927,16 +2953,15 @@
             render({ keepScroll: true, quiet: true });
             if (statsEl && statsEl.open) renderStats({ quiet: true });
         }
-        // A fetch that worked: the next refresh is due 3 minutes from now.
-        // (Until 0.47.1 this also wrote "Updated hh:mm" under the calendar;
-        // Rob had the line removed. The refresh is unchanged, and a failed
-        // one still says so through say() / failureText().)
+        // A fetch that came back — worked, or (0.47.2) failed for a passing
+        // reason: the next refresh is due 3 minutes from now. (Until 0.47.1
+        // this also wrote "Updated hh:mm"; Rob had the line removed.)
         function markFetched() {
             state.lastRefresh = Date.now();
             scheduleRefresh(REFRESH_MS);
         }
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState !== 'visible' || !state.lastRefresh) return;
+            if (document.visibilityState !== 'visible' || !state.lastRefresh || state.stopped) return;
             var due = REFRESH_MS - (Date.now() - state.lastRefresh);
             if (due <= 0) tick(); else scheduleRefresh(due);
         });
