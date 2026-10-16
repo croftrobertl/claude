@@ -1251,16 +1251,17 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     await p.click('.mphbac-staff-stats-toggle');
     await p.waitForTimeout(100);
     await p.evaluate(() => { document.querySelector('.mphbac-staff-grid').scrollLeft = 2000; });
-    const before = { n: await reqs(), upd: await p.evaluate(() => document.querySelector('.mphbac-staff-updated').textContent) };
+    const before = { n: await reqs() };
     await p.clock.fastForward(3 * 60 * 1000 + 1000);
     await p.waitForTimeout(150);
     const after = await p.evaluate(() => ({ period: document.querySelector('.mphbac-staff-period').value,
       x: document.querySelector('.mphbac-staff-grid').scrollLeft, stats: document.querySelector('.mphbac-staff-stats').open
         && document.querySelectorAll('.mphbac-staff-kpi').length > 0,
-      upd: document.querySelector('.mphbac-staff-updated').textContent }));
+      upd: document.querySelector('.mphbac-staff-updated'), text: document.querySelector('.mphbac-staff').textContent }));
     check('after 3 minutes the board fetched again', (await reqs()) > before.n, [before.n, await reqs()]);
     check('...keeping the period, the scroll position, and Stats open and filled', after.period === 'year' && Math.abs(after.x - 2000) <= 1 && after.stats, after);
-    check('..."Updated hh:mm" moved on', /^Updated \d\d:\d\d$/.test(after.upd) && after.upd !== before.upd, [before.upd, after.upd]);
+    // 0.47.1 (Rob): the refresh no longer shows its time.
+    check('...and shows no "Updated hh:mm" (removed in 0.47.1)', after.upd === null && !/Updated/.test(after.text), after.upd);
 
     // A BUTTON with focus must not stop it (the Sync Watchdog bug).
     await p.focus('.mphbac-staff-today');

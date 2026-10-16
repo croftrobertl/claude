@@ -75,7 +75,6 @@
         // Compare to Last Year (0.47.0): Off · Behind · In Front.
         var lyGroup  = root.querySelector('.mphbac-staff-ghostfield');
         var lySegs   = lyGroup ? [].slice.call(lyGroup.querySelectorAll('.mphbac-staff-segbtn')) : [];
-        var updatedEl = root.querySelector('.mphbac-staff-updated');
         var previewEl = root.querySelector('.mphbac-staff-preview');
         var legendEl = root.querySelector('.mphbac-staff-legend');
         var agendaEl = root.querySelector('.mphbac-staff-agenda');
@@ -279,7 +278,7 @@
                 if (!json || !json.success || !json.data) { say(S.error, true); return; }
                 state.cache[from + '|' + to] = json.data;
                 say('');
-                markUpdated();
+                markFetched();
                 cb(json.data);
             }).catch(function (err) {
                 if (seq !== state.req) return;
@@ -2928,12 +2927,13 @@
             render({ keepScroll: true, quiet: true });
             if (statsEl && statsEl.open) renderStats({ quiet: true });
         }
-        function markUpdated() {
+        // A fetch that worked: the next refresh is due 3 minutes from now.
+        // (Until 0.47.1 this also wrote "Updated hh:mm" under the calendar;
+        // Rob had the line removed. The refresh is unchanged, and a failed
+        // one still says so through say() / failureText().)
+        function markFetched() {
             state.lastRefresh = Date.now();
             scheduleRefresh(REFRESH_MS);
-            if (!updatedEl) return;
-            var d = new Date();
-            updatedEl.textContent = (S.updated || 'Updated {time}').replace('{time}', pad(d.getHours()) + ':' + pad(d.getMinutes()));
         }
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState !== 'visible' || !state.lastRefresh) return;

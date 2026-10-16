@@ -3616,3 +3616,20 @@ wider), staff-lastyear-proof.js (needs a 0.46.7 checkout); stats/board/staff
 tests updated for the reversed rules. 40 new mutations; seven retargeted,
 three retired (the dock/once tip lines — reversed by Rob — and B9's
 "previous % over this timeframe's nights", now equivalent).
+
+## 0.47.1 — "Updated hh:mm" removed (WD, Rob's pick of 2026-10-16)
+
+Rob's answer to where the timestamp should go once it fell under the
+switch on phones: nowhere. Removed: the .mphbac-staff-updated div, its CSS,
+the 'updated' string, and the write in staff.js. markUpdated() was also
+where the next refresh is scheduled (scheduleRefresh(REFRESH_MS)) and
+lastRefresh recorded — that stays, as markFetched(). The error path never
+used the line: a refused or failed fetch says S.error / failureText() in
+the status line (ensureRange). The line was never aria-live, so nothing
+announced a time. The row under the calendar is the switch alone: 44px at
+every width. Noticed, not changed (the brief: the refresh exactly as it
+is): a refresh that FAILS does not schedule the next one, so after a
+failure the board refreshes again only when the tab is shown again.
+Tests: staff-refresh-0471-test.js; staff-board-test.js now checks no
+timestamp after a refresh. 5 mutations; the 0.46.2 "Updated on the right"
+mutation retired.

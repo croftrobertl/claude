@@ -151,7 +151,6 @@ final class Staff_Widget
                 'source'       => __('Source', 'mphb-availability-calendar'),
                 'text'         => __('Text', 'mphb-availability-calendar'),
                 'openAdmin'    => __('Open in WP-Admin', 'mphb-availability-calendar'),
-                'updated'      => __('Updated {time}', 'mphb-availability-calendar'),
                 // Stats (0.44.1)
                 'stBooked'     => __('Booked', 'mphb-availability-calendar'),
                 'stBookedTip'  => __('The share of all cottage-nights in this period that are booked, confirmed or pending.', 'mphb-availability-calendar'),
@@ -385,12 +384,11 @@ final class Staff_Widget
             <div class="mphbac-staff-grid" role="region" tabindex="0"
                  aria-label="<?php echo esc_attr__('Booking chart', 'mphb-availability-calendar'); ?>" hidden></div>
             <div class="mphbac-staff-status" role="status" aria-live="polite"></div>
-            <?php // "Updated hh:mm" (0.44.0): the auto-refresh's last success. Not
-            // live: a line that changes every three minutes must not be read out. ?>
             <?php // UNDER THE CALENDAR, ONE ROW (0.46.2, Rob: "Left-aligned under the
-            // calendar"): the Last-year switch on the left, "Updated hh:mm" where
-            // it always was, on the right. On a narrow phone the row wraps
-            // rather than letting the two overlap.
+            // calendar"): the Last-year switch on the left. "Updated hh:mm" sat
+            // on the right until 0.47.1 (Rob: remove it — on a phone it fell
+            // under the switch); the 3-minute refresh is unchanged, only its
+            // time is no longer shown.
             // COMPARE TO LAST YEAR (0.46.0's "Last year", moved and renamed in
             // 0.46.2): last year's bookings drawn on this year's chart.
             // OFF · BEHIND · IN FRONT (0.47.0, Rob's pick W1): a three-way
@@ -411,7 +409,6 @@ final class Staff_Widget
                         <button type="button" role="radio" class="mphbac-staff-segbtn" data-ly="front" aria-checked="false" tabindex="-1"><?php echo esc_html__('In Front', 'mphb-availability-calendar'); ?></button>
                     </span>
                 </div>
-                <div class="mphbac-staff-updated"></div>
             </div>
             <?php // STATS (0.44.1, Rob): everything statistical in ONE section below
             // the calendar, closed on every load, with its own timeframe —

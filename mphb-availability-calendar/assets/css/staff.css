@@ -1817,9 +1817,8 @@ body.mphbac-staff-open { overflow: hidden; }
     pointer-events: none;
 }
 /* UNDER THE CALENDAR (0.46.2, Rob: "Left-aligned under the calendar"): the
-   switch on the left, "Updated hh:mm" on the right exactly where it was (the
-   row's top is its old top). Too narrow for both, the row wraps: Updated
-   goes to the next line, still on the right — never on top of the switch. */
+   switch, on the left. Since 0.47.1 it is alone there ("Updated hh:mm", on
+   the right until then, is gone — Rob), so on a phone too it is one 44px row. */
 .mphbac-staff-under {
     display: flex;
     flex-wrap: wrap;
@@ -1827,7 +1826,6 @@ body.mphbac-staff-open { overflow: hidden; }
     gap: 0 12px;
     margin-top: 4px;
 }
-.mphbac-staff-under .mphbac-staff-updated { margin: 0 0 0 auto; }
 /* COMPARE TO LAST YEAR: OFF · BEHIND · IN FRONT (0.47.0, Rob's pick W1) —
    the label, then a segmented control dressed as the Today and ‹ › buttons:
    a 2px #0A50B2 pill, the chosen segment filled #0A50B2 with white text, the
@@ -2195,15 +2193,6 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff-preview[hidden] { display: none; }
 .mphbac-staff-preview-name { font-size: 14px; font-weight: 700; }
-
-/* "Updated hh:mm" */
-.mphbac-staff-updated {
-    margin-top: 4px;
-    color: var(--staff-muted);
-    font-size: 12px;
-    text-align: right;
-}
-.mphbac-staff-updated:empty { display: none; }
 
 /* SHEET LINKS: the phone and email ARE the links; "Text" is a pill beside
    the phone. Open in WP-Admin is the photo link's pill. */

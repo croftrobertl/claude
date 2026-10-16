@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.0
+Stable tag: 0.47.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.47.1 =
+* **"Updated hh:mm" removed from the staff calendar (Rob's pick).** On a phone it dropped under the Compare to Last Year control; now that row is a single 44px line at every width. The 3-minute automatic refresh is unchanged, and a refresh that fails still shows its error under the calendar. Nothing is written on install, activation or upgrade.
 
 = 0.47.0 =
 * **Last year on the staff calendar: Off · Behind · In Front (Rob's picks).** "Compare to Last Year" is now a three-way control. Behind is the 0.46 grey dashed outlines, unchanged. In Front brings last year's bookings above this year's: striped in pale tints of each booking's source colour with a solid edge, tagged "2025 · Name"; tap one to open its booking sheet under a grey "Last Year · 2025" heading. This year's bars fade and take no taps while it is on. Off on every load; disabled in Daily. No new request: last year is fetched once and switched, not redrawn.

@@ -380,8 +380,7 @@ const BLUE = 'rgb(10, 80, 178)', CORAL = 'rgb(240, 128, 128)', WHITE = 'rgb(255,
     await p.clock.fastForward(3 * 60 * 1000 + 1000);
     for (let i = 0; i < 40; i++) await p.clock.runFor(50);
     const after = await p.evaluate(() => ({ n: document.querySelectorAll('.mphbac-staff-ghost').length, reqs: window.__reqs.length, ly: window.__reqs.filter(r => r.from < '2026').length,
-      swaps: window.__swaps, on: document.querySelector('.mphbac-staff-segbtn[aria-checked="true"]').getAttribute('data-ly'),
-      updated: document.querySelector('.mphbac-staff-updated').textContent }));
+      swaps: window.__swaps, on: document.querySelector('.mphbac-staff-segbtn[aria-checked="true"]').getAttribute('data-ly') }));
     check('the 3-minute refresh ran (this year fetched again) and kept In Front', after.reqs > before.reqs && after.on === 'front', [before, after]);
     check('...with the same 5 boxes — no duplicate — and no second request for last year', after.n === 5 && after.ly === before.ly, [before, after]);
     check('...and no flicker: the new chart came in WITH its boxes, In Front, in the same step', after.swaps.length >= 1 && after.swaps.every(s => s[0] === 5 && s[1]), after.swaps);
