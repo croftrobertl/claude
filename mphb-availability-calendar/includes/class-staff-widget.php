@@ -167,8 +167,9 @@ final class Staff_Widget
                 'stLengthTip'  => __('The average stay, in nights, of the bookings counted in Bookings.', 'mphb-availability-calendar'),
                 'stDayLabel'   => __('Day', 'mphb-availability-calendar'),
                 'stWeekOf'     => __('Week Of', 'mphb-availability-calendar'),
-                'stPerCottage' => __('Nights Booked by Cottage', 'mphb-availability-calendar'),
-                'stBySource'   => __('Nights Booked by Source', 'mphb-availability-calendar'),
+                // Section names, one "what by what" pattern (0.47.0, Rob's pick N1).
+                'stPerCottage' => __('Nights by Cottage', 'mphb-availability-calendar'),
+                'stBySource'   => __('Nights by Source', 'mphb-availability-calendar'),
                 'stNights'     => __('{n} nights', 'mphb-availability-calendar'),
                 'stNight'      => __('{n} night', 'mphb-availability-calendar'),
                 'stNoNights'   => __('No nights booked in this timeframe.', 'mphb-availability-calendar'),
@@ -184,7 +185,13 @@ final class Staff_Widget
                 'stTurnoversTip' => __('Days when one stay checks out of a cottage and another checks in.', 'mphb-availability-calendar'),
                 'stInHouseTip' => __('Stays that arrived before this day and leave after it.', 'mphb-availability-calendar'),
                 'stVsYearSr'   => __('on the same dates a year earlier', 'mphb-availability-calendar'),
-                'stVsPrevSr'   => __('on the previous timeframe', 'mphb-availability-calendar'),
+                // Nights by Cottage's ▲▼, read out (0.47.0): "up 10 points vs the same dates in 2025".
+                'stVsDatesSr'  => __('vs the same dates in {year}', 'mphb-availability-calendar'),
+                // Nights by Cottage's columns (0.47.0, Rob's pick: a real table).
+                'stColCottage' => __('Cottage', 'mphb-availability-calendar'),
+                'stColNights'  => __('Nights', 'mphb-availability-calendar'),
+                'stColOcc'     => __('Occupancy', 'mphb-availability-calendar'),
+                'stColVs'      => __('vs {year}', 'mphb-availability-calendar'),
                 'stVsAgo'      => __('vs a year ago', 'mphb-availability-calendar'),
                 'stSrUp'       => __('up {n} {vs}', 'mphb-availability-calendar'),
                 'stSrDown'     => __('down {n} {vs}', 'mphb-availability-calendar'),
@@ -194,21 +201,21 @@ final class Staff_Widget
                 'stNoCompare'  => __('No comparison: those dates are outside the calendar\'s 3-year range.', 'mphb-availability-calendar'),
                 'stPerCottageTip' => __('Each cottage\'s booked nights, and its share of this period\'s {n} nights, busiest first.', 'mphb-availability-calendar'),
                 'stBySourceTip' => __('Booked nights in this period, by where each booking came from.', 'mphb-availability-calendar'),
-                'stMix'        => __('Length of Stay', 'mphb-availability-calendar'),
+                'stMix'        => __('Stays by Length', 'mphb-availability-calendar'),
                 'stMixTip'     => __('The bookings counted in Bookings, by the length of their whole stay.', 'mphb-availability-calendar'),
                 'stMix0'       => __('1–2 nights', 'mphb-availability-calendar'),
                 'stMix1'       => __('3–6 nights', 'mphb-availability-calendar'),
                 'stMix2'       => __('7–27 nights', 'mphb-availability-calendar'),
                 'stMix3'       => __('28+ nights', 'mphb-availability-calendar'),
                 'stNoStays'    => __('No bookings in this timeframe.', 'mphb-availability-calendar'),
-                'stWeekdays'   => __('Arrivals and Departures by Weekday', 'mphb-availability-calendar'),
+                'stWeekdays'   => __('Arrivals & Departures by Day', 'mphb-availability-calendar'),
                 'stWeekdaysTip' => __('Check-ins and check-outs in this period, by day of the week.', 'mphb-availability-calendar'),
                 'stWeekdaySr'  => __('{day}: {in}, {out}', 'mphb-availability-calendar'),
                 'stArrival1'   => __('{n} arrival', 'mphb-availability-calendar'),
                 'stArrivalN'   => __('{n} arrivals', 'mphb-availability-calendar'),
                 'stDeparture1' => __('{n} departure', 'mphb-availability-calendar'),
                 'stDepartureN' => __('{n} departures', 'mphb-availability-calendar'),
-                'stLead'       => __('How Far Ahead They Book', 'mphb-availability-calendar'),
+                'stLead'       => __('Days Booked Ahead by Source', 'mphb-availability-calendar'),
                 'stLeadTip'    => __('How many days ahead, on average, the stays arriving in this period were booked, by source.', 'mphb-availability-calendar'),
                 'stNoLead'     => __('No arrivals in this timeframe.', 'mphb-availability-calendar'),
                 'stAllSources' => __('All Sources', 'mphb-availability-calendar'),
@@ -216,30 +223,24 @@ final class Staff_Widget
                 'stDay'        => __('{n} day', 'mphb-availability-calendar'),
                 'stStays'      => __('{n} stays', 'mphb-availability-calendar'),
                 'stStay'       => __('{n} stay', 'mphb-availability-calendar'),
-                'stPace'       => __('Pace', 'mphb-availability-calendar'),
+                'stPace'       => __('Upcoming Nights vs Last Year', 'mphb-availability-calendar'),
                 'stPaceTip'    => __('Nights booked for the next 30, 60 and 90 days.', 'mphb-availability-calendar'),
                 'stPaceNext'   => __('Next {n} Days', 'mphb-availability-calendar'),
                 'stPaceNights' => __('{n} nights booked', 'mphb-availability-calendar'),
-                'stHeat'       => __('Cottages Booked Each Night, {year}', 'mphb-availability-calendar'),
+                'stHeat'       => __('Nights Booked in {year}', 'mphb-availability-calendar'),
                 'stHeatTip'    => __('One square per night of {year}: the darker it is, the more of the {n} cottages were booked.', 'mphb-availability-calendar'),
                 'stHeatDay'    => __('{date}: {n} of {total} cottages booked', 'mphb-availability-calendar'),
                 'stHeatAll'    => __('{n} booked', 'mphb-availability-calendar'),
                 // 0.46.2 (Rob: "complete sentences or bullet points"): each tip is a lead
                 // sentence (the *Tip strings) and these lines, shown as a list.
-                'stTipOnce'    => __('A stay that Airbnb, Booking.com or Vrbo also blocks counts once.', 'mphb-availability-calendar'),
-                'stTipNightOnce' => __('A night counts once, even if Airbnb, Booking.com or Vrbo also blocks it.', 'mphb-availability-calendar'),
-                'stTipDock'    => __('Dock blocks are left out.', 'mphb-availability-calendar'),
+                // 0.47.0 (Rob): only lines that say what a figure means or what
+                // it is compared with — the eight counting-rule lines are gone.
                 'stTipVs'      => __('▲▼ compare with the same dates last year ({range}).', 'mphb-availability-calendar'),
                 'stTipVsPct'   => __('▲▼ compare with the same dates last year ({range}), in % booked.', 'mphb-availability-calendar'),
                 'stTipVsNights' => __('▲▼ compare with the same dates last year ({range}), in nights.', 'mphb-availability-calendar'),
-                'stTipVsPrev'  => __('▲▼ compare with the period before ({range}), in % booked.', 'mphb-availability-calendar'),
-                'stBookedDock' => __('Dock blocks are not counted as booked, but their nights stay in the total.', 'mphb-availability-calendar'),
+                'stTipVsOcc'   => __('▲▼ compare with the same dates last year ({range}), in % occupancy.', 'mphb-availability-calendar'),
                 'stLengthWhole' => __('The whole stay counts, even nights outside this period.', 'mphb-availability-calendar'),
-                'stTurnoversOnce' => __('One per cottage per day.', 'mphb-availability-calendar'),
                 'stInHouseNot' => __('Arrivals and departures on the day are not included.', 'mphb-availability-calendar'),
-                'stBySourceOnce' => __('A night booked twice counts once, for the stay that arrived first.', 'mphb-availability-calendar'),
-                'stWeekdaysSame' => __('The same stays as the Arrivals and Departures tiles: each counts once.', 'mphb-availability-calendar'),
-                'stLeadAfter'  => __('Bookings made after their check-in are left out.', 'mphb-availability-calendar'),
                 'stPaceVs'     => __('▲▼ compare with what was booked by this date last year, for the same days.', 'mphb-availability-calendar'),
                 'stPaceLow'    => __('Last year\'s figure is a little low: cancelled bookings are not kept.', 'mphb-availability-calendar'),
                 'stPaceFixed'  => __('Pace does not change with the period you pick.', 'mphb-availability-calendar'),
@@ -249,6 +250,12 @@ final class Staff_Widget
                 'stPoint'      => __('{n} point', 'mphb-availability-calendar'),
                 'stPoints'     => __('{n} points', 'mphb-availability-calendar'),
                 'stHeatNav'    => __('Nights of {year}: arrow keys move between nights, Enter opens the calendar on one', 'mphb-availability-calendar'),
+                // 0.47.0 (Rob): last year In Front — each box's tag, its
+                // accessible name, and the sheet's heading for it.
+                'lyTag'        => __('{year} · {name}', 'mphb-availability-calendar'),
+                'lyName'       => __('Last year: {name}, {dates}, {source}', 'mphb-availability-calendar'),
+                'lyDates'      => __('{from} to {to}', 'mphb-availability-calendar'),
+                'lyHead'       => __('Last Year · {year}', 'mphb-availability-calendar'),
                 // Search (0.45.0)
                 'srchCount'    => __('{n} bookings', 'mphb-availability-calendar'),
                 'srchOne'      => __('1 booking', 'mphb-availability-calendar'),
@@ -385,16 +392,25 @@ final class Staff_Widget
             // it always was, on the right. On a narrow phone the row wraps
             // rather than letting the two overlap.
             // COMPARE TO LAST YEAR (0.46.0's "Last year", moved and renamed in
-            // 0.46.2): last year's bookings as dashed outlines behind the bars.
-            // OFF ON EVERY LOAD — unchecked here, autocomplete="off" so no
-            // browser restores it, and staff.js unchecks it again. A real
-            // checkbox announced as a switch, named by its label; disabled in
-            // Daily, which has no bars. ?>
+            // 0.46.2): last year's bookings drawn on this year's chart.
+            // OFF · BEHIND · IN FRONT (0.47.0, Rob's pick W1): a three-way
+            // segmented control in place of the 0.46.x switch. Behind is the
+            // old dashed outlines; In Front brings last year above this year's
+            // bars to study it. A radiogroup of real buttons, each named by
+            // its own text; arrow keys move between them. staff.js names the
+            // group by its label (ids are its, unique on the page). OFF ON
+            // EVERY LOAD: Off is checked here, and staff.js sets Off again on
+            // a back/forward-cache restore. Disabled in Daily, which has no
+            // bars. ?>
             <div class="mphbac-staff-under">
-                <label class="mphbac-staff-ghostfield">
-                    <span class="mphbac-staff-ghostbox"><input type="checkbox" role="switch" class="mphbac-staff-ghosts" autocomplete="off"></span>
+                <div class="mphbac-staff-ghostfield" role="radiogroup">
                     <span class="mphbac-staff-ghostlabel"><?php echo esc_html__('Compare to Last Year', 'mphb-availability-calendar'); ?></span>
-                </label>
+                    <span class="mphbac-staff-seg">
+                        <button type="button" role="radio" class="mphbac-staff-segbtn" data-ly="off" aria-checked="true"><?php echo esc_html__('Off', 'mphb-availability-calendar'); ?></button>
+                        <button type="button" role="radio" class="mphbac-staff-segbtn" data-ly="behind" aria-checked="false" tabindex="-1"><?php echo esc_html__('Behind', 'mphb-availability-calendar'); ?></button>
+                        <button type="button" role="radio" class="mphbac-staff-segbtn" data-ly="front" aria-checked="false" tabindex="-1"><?php echo esc_html__('In Front', 'mphb-availability-calendar'); ?></button>
+                    </span>
+                </div>
                 <div class="mphbac-staff-updated"></div>
             </div>
             <?php // STATS (0.44.1, Rob): everything statistical in ONE section below

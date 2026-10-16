@@ -112,15 +112,18 @@ const DOCKS = [
       r.querySelector('.mphbac-staff-percot-name').textContent, r.querySelector('.mphbac-staff-percot-num').textContent,
       r.querySelector('.mphbac-staff-percot-pct').textContent, r.querySelector('.mphbac-staff-percot-delta [aria-hidden]').textContent,
       r.querySelector('.mphbac-staff-percot-fill').style.width]));
-    // % of the timeframe's 31 nights; Sep (30 nights): #22 15 = 50%, #25 3 = 10%.
+    // % of the timeframe's 31 nights. Since 0.47.0 ▲ ▼ is against the SAME
+    // DATES LAST YEAR (Oct 2025, 31 nights): #22 Ida 7 = 23%, #24 Lou 10 =
+    // 32%, #25 Ned 2 = 6%, #27 Jo 2 = 6%, the rest 0.
     check('RANKED by % booked, highest first; ties (0%) in cottage order',
       JSON.stringify(per.map(r => r[0])) === JSON.stringify(['#24 C24', '#22 Blue Heron', '#26 C26', '#23 Kingfisher', '#25 C25', '#27 C27', '#28 C28', '#29 C29']), per.map(r => r[0]));
-    check('each row: nights, % of the timeframe\'s nights, its bar — #24 12 nights 39%, bar 38.7%',
-      per[0][1] === '12 nights' && per[0][2] === '39%' && per[0][4] === '38.7%', per[0]);
-    check('▲ ▼ in points against the PREVIOUS timeframe (Sep): #24 ▲39, #22 ▼18 (32 − 50), #25 ▼7 (3 − 10), #23 ▲16, #27 ±0',
-      per[0][3] === '▲39' && per[1][3] === '▼18' && per[4][3] === '▼7' && per[3][3] === '▲16' && per[5][3] === '±0', per.map(r => r[3]));
+    check('each row: Nights, Occupancy (% of the timeframe\'s nights), and a bar showing that same % — #24 12, 39%, bar 39%',
+      per[0][1] === '12' && per[0][2] === '39%' && per[0][4] === '39%', per[0]);
+    check('▲ ▼ in occupancy points against the SAME DATES LAST YEAR (0.47.0): #24 ▲7 (39 − 32), #22 ▲9 (32 − 23), #26 ▲23, #23 ▲16, #25 ▼3 (3 − 6), #27 ▼6, #28 ±0',
+      JSON.stringify(per.map(r => r[3])) === JSON.stringify(['▲7', '▲9', '▲23', '▲16', '▼3', '▼6', '±0', '±0']), per.map(r => r[3]));
     const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
-    check('...its tip: the share of its 31 nights, and the previous timeframe named (Sep 1 – 30, 2026)', /share of this period's 31 nights/.test(tip) && /period before \(Sep\u00a01\u00a0–\u00a030, 2026\)/.test(tip), tip);
+    check('...its tip: the share of its 31 nights, and last year\'s dates named (Oct 1 – 31, 2025), in % occupancy',
+      /share of this period's 31 nights/.test(tip) && /same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\), in % occupancy/.test(tip) && !/period before/.test(tip), tip);
 
     // C16 stay-length mix: the Bookings set — 2 (Cal), 3 (Ben), 4 (Eli),
     // 7 (Fay), 10 (Amy), 31 (Dot).
@@ -350,13 +353,16 @@ const DOCKS = [
     let tip = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').textContent);
     check('Oct 2025: vs last year (Oct 2024) reaches before Oct 2025 — every tile shows "—"', Object.values(k).every(t => t[1] === '—' && t[2] === 'no comparison'), k);
     check('...and its tip says why: "No comparison: records before Oct 2025 are not complete."', /records before Oct 2025 are not complete\./.test(tip), tip);
-    check('...the cottages\' ▲ ▼ against Sep 2025, also before it: "—"', per.length === 8 && per.every(x => x === '—'), per);
+    check('...the cottages\' ▲ ▼, against the same Oct 2024: "—" too', per.length === 8 && per.every(x => x === '—'), per);
     check('...but the figures themselves still show (what the site holds): Bookings 4', k.bookings[0] === '4', k.bookings);
     await p.selectOption('.mphbac-staff-stats-month', '2025-11'); await settle(p);
     per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-delta [aria-hidden]')].map(d => d.textContent));
     k = await tiles(p);
-    check('Nov 2025: the previous timeframe (Oct 2025) is complete — the cottages get ▲ ▼; vs Nov 2024 still "—"',
-      per.every(x => x !== '—') && k.bookings[1] === '—', [per, k.bookings]);
+    check('Nov 2025: vs Nov 2024 still "—" — for the tiles AND the cottages, which since 0.47.0 compare with the same dates (no longer Oct 2025)',
+      per.length === 8 && per.every(x => x === '—') && k.bookings[1] === '—', [per, k.bookings]);
+    await p.selectOption('.mphbac-staff-stats-month', '2026-11'); await settle(p);
+    per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-delta [aria-hidden]')].map(d => d.textContent));
+    check('Nov 2026: vs Nov 2025 is complete — every cottage gets its ▲ ▼', per.length === 8 && per.every(x => x !== '—'), per);
     await ctx.close();
   }
   {
@@ -402,19 +408,19 @@ const DOCKS = [
         withDocks[v] === without[v] ? v : [withDocks[v].slice(0, 300), without[v].slice(0, 300)]);
     }
     check('...including Booked\'s denominator: still all 248 cottage-nights (#29 sits at 0%, not left out of the total)',
-      /#29 C290 nights0%/.test(withDocks.month) && /14%/.test(withDocks.month), withDocks.month.slice(0, 200));
+      /#29 C2900%/.test(withDocks.month) && /14%/.test(withDocks.month), withDocks.month.slice(0, 200));
     // Each stay once, in house: Oct 6 — Amy and Ben; the echo of Ben is not a third guest.
     check('Day Oct 6: In house 2 (Amy, Ben — the channel block echoing Ben is not a third)', withDocks.dayTiles.inhouse[0] === '2', withDocks.dayTiles);
     const tip = await docked.p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tipbox')].map(b => b.textContent));
-    check('every ⓘ says dock blocks are left out', tip.length >= 13 && tip.every(t => /Dock blocks (are left out|are not counted as booked)/.test(t)), tip.length);
-    const tips2 = await docked.p.evaluate(() => ['arrivals', 'departures'].map(k => document.querySelector('.mphbac-staff-kpi.is-' + k + ' .mphbac-staff-tipbox').textContent));
-    check('Arrivals and Departures say each stay counts once', tips2.every(t => /counts once/.test(t)), tips2);
+    // 0.47.0 (Rob): the counting rules stay — the figures above prove it —
+    // but the tips no longer say so (staff-stats-047-test.js has the rest).
+    check('...and no ⓘ explains the counting any more: no "dock blocks", no "counts once"', tip.length >= 13 && tip.every(t => !/[Dd]ock blocks|counts? once/.test(t)), tip.filter(t => /[Dd]ock blocks|counts? once/.test(t)));
     // The BOARD still draws them, and last year's outlines are unchanged.
     await docked.p.evaluate(() => scrollTo(0, 0));
     await docked.p.selectOption('.mphbac-staff-period', 'month'); await settle(docked.p);
     const bar = await docked.p.evaluate(() => !!document.querySelector('.mphbac-staff-bar[data-booking-id="301"]'));
     check('the board still draws this October\'s dock block as a bar', bar);
-    await docked.p.check('.mphbac-staff-ghosts'); await settle(docked.p);
+    await docked.p.click('.mphbac-staff-segbtn[data-ly="behind"]'); await settle(docked.p);
     const ghosts = await docked.p.evaluate(() => document.querySelectorAll('.mphbac-staff-ghost').length);
     check('...and last year\'s outlines include last October\'s dock block (5: the four stays and the dock block)', ghosts === 5, ghosts);
     await docked.ctx.close();
@@ -446,12 +452,14 @@ const DOCKS = [
     await ctx.close();
   }
   {
-    // A cottage one point down on the previous timeframe: #27 two nights in
-    // October (6%) against two in September (7%).
-    const { ctx, p } = await open({ html: shell({ bookings: BOOKINGS.concat([bk(401, '2026-10-25', '2026-10-27', 27, 'direct', '2026-10-01'), bk(402, '2026-09-15', '2026-09-17', 27, 'direct', '2026-09-01')]) }) });
+    // A cottage one point down on the same dates last year (0.47.0): Year
+    // 2026 against 2025 (records complete from 2024 here), #27 two nights in
+    // 2026 (2/365 = 1%) against six in 2025 (Jo's two and four more: 2%).
+    const { ctx, p } = await open({ html: shell({ recordsFrom: '2024-01-01', bookings: BOOKINGS.concat([bk(401, '2026-10-25', '2026-10-27', 27, 'direct', '2026-10-01'), bk(402, '2025-09-15', '2025-09-19', 27, 'direct', '2025-09-01')]) }) });
+    await p.selectOption('.mphbac-staff-stats-span', 'year'); await p.selectOption('.mphbac-staff-stats-year', '2026'); await settle(p);
     const r = await p.evaluate(() => { const row = document.querySelector('.mphbac-staff-percot-row[data-cottage="27"]');
       return [row.querySelector('.mphbac-staff-percot-delta [aria-hidden]').textContent, row.querySelector('.mphbac-staff-percot-delta .mphbac-sr-only').textContent]; });
-    check('one point is "1 point": ▼1 is read "down 1 point on the previous timeframe" (was "down 1 points")', r[0] === '▼1' && r[1] === 'down 1 point on the previous timeframe', r);
+    check('one point is "1 point": ▼1 is read "down 1 point vs the same dates in 2025" (was "down 1 points")', r[0] === '▼1' && r[1] === 'down 1 point vs the same dates in 2025', r);
     await ctx.close();
   }
 
@@ -514,34 +522,8 @@ const DOCKS = [
     await ctx.close();
   }
 
-  console.log('\n-- 0.46.2: Nights Booked by Cottage — names in full, "100%" on one line --');
-  {
-    // Rob's screenshot: Feb 2027, "#35 Blue Heron" cut, "100" over "%".
-    // Rob's three longest names (the WD): "#23 Lighthouse", "#33 Pineapple", "#35 Blue Heron".
-    const cots = F.COTTAGES.map(c => c.id === 22 ? Object.assign({}, c, { number: '35', abbrev: 'Blue Heron' })
-      : c.id === 23 ? Object.assign({}, c, { number: '23', abbrev: 'Lighthouse' }) : c.id === 24 ? Object.assign({}, c, { number: '33', abbrev: 'Pineapple' }) : c);
-    const full = bk(601, '2027-02-01', '2027-03-01', 22, 'direct', '2026-10-01');
-    for (const w of [320, 375, 390]) {
-      const { ctx, p } = await open({ phone: true, w, html: shell({ cottages: cots, bookings: BOOKINGS.concat([full]) }) });
-      await p.selectOption('.mphbac-staff-stats-month', '2027-02'); await settle(p);
-      const rows = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => {
-        const n = r.querySelector('.mphbac-staff-percot-name'), pc = r.querySelector('.mphbac-staff-percot-pct'), t = r.querySelector('.mphbac-staff-percot-track');
-        const lh = parseFloat(getComputedStyle(pc).lineHeight) || parseFloat(getComputedStyle(pc).fontSize) * 1.3;
-        const parts = [...r.children].filter(x => !x.classList.contains('mphbac-staff-percot-track'));
-        const fits = parts.every(x => x.scrollWidth <= x.clientWidth + 0.5 && x.getBoundingClientRect().height < (parseFloat(getComputedStyle(x).lineHeight) || 17) * 1.5);
-        const d = r.querySelector('.mphbac-staff-percot-delta [aria-hidden]');
-        return { name: n.textContent, whole: n.scrollWidth <= n.clientWidth + 0.5 && n.getBoundingClientRect().width >= n.scrollWidth - 0.5, pct: pc.textContent, fits, delta: d.textContent,
-          oneLine: pc.getBoundingClientRect().height < lh * 1.5, track: Math.round(t.getBoundingClientRect().width), inside: r.getBoundingClientRect().right <= innerWidth + 0.5 }; }));
-      const top = rows[0];
-      check(`${w}px: Feb 2027 — "${top.name}" ${top.pct} ${top.delta}: the %, and a three-digit change, each on ONE line`, top.name === '#35 Blue Heron' && top.pct === '100%' && top.delta === '▲100' && top.oneLine && top.fits, top);
-      check(`${w}px: "#23 Lighthouse", "#33 Pineapple" and "#35 Blue Heron" in full; in every row nothing overflows or wraps`,
-        ['#23 Lighthouse', '#33 Pineapple', '#35 Blue Heron'].every(nm => rows.some(r => r.name === nm && r.whole)) && rows.length === 8 && rows.every(r => r.fits), rows.filter(r => !r.fits || !r.whole));
-      check(`${w}px: every cottage name in full ("#35 Blue Heron", "#34 Great Egret", "#23 Kingfisher"…), every figure on one line, the bar still there (≥ 24px)`,
-        rows.every(r => r.whole && r.oneLine && r.track >= 24 && r.inside), rows.filter(r => !(r.whole && r.oneLine && r.track >= 24 && r.inside)).concat([rows.map(r => r.track).join(',')]));
-      check(`${w}px: ...and every bar the same length, as the rows share their columns`, new Set(rows.map(r => r.track)).size === 1, rows.map(r => r.track));
-      await ctx.close();
-    }
-  }
+  // 0.46.2's "Nights Booked by Cottage — names in full" moved, with the
+  // table that replaced the list, to staff-stats-047-test.js (0.47.0).
 
   console.log('\n-- 0.46.2: everything in Stats centred (Rob) — headings and blocks within 1px of the section\'s centre --');
   for (const [w, phone] of [[320, true], [375, true], [390, true], [1280, false]]) {
@@ -608,11 +590,16 @@ const DOCKS = [
         const lead = box.querySelector('.mphbac-staff-tiplead'), items = [...box.querySelectorAll('ul.mphbac-staff-tiplist > li')];
         const r = box.getBoundingClientRect();
         return { k, lead: lead.textContent, items: items.map(li => li.textContent), leadLines: lines(lead), itemLines: items.map(lines), total: Math.round(r.height / lh),
-          text: box.textContent, list: !!box.querySelector('ul > li'), on: r.left >= 0 && r.right <= 375 };
+          text: box.textContent, list: !!box.querySelector('ul > li'), ul: box.querySelectorAll('ul').length, on: r.left >= 0 && r.right <= 375 };
       }, k));
       await p.evaluate(() => document.querySelector('.mphbac-staff-stats-range').click());
     }
-    check(`all ${res.length} tips: a lead sentence and a real <ul> list`, res.length === 13 && res.every(t => t.lead.length > 10 && /[.]$/.test(t.lead) && t.list), res.map(t => [t.k, t.lead]));
+    // 0.47.0 (Rob): with the counting-rule lines gone, four tips are their
+    // lead sentence alone — and carry no list at all, not an empty one.
+    const LEAD_ONLY = ['source', 'mix', 'weekdays', 'lead'];
+    check(`all ${res.length} tips: a lead sentence; a real <ul> list wherever there are points, and none (never an empty one) where there are not`,
+      res.length === 13 && res.every(t => t.lead.length > 10 && /[.]$/.test(t.lead) && (LEAD_ONLY.includes(t.k) ? t.ul === 0 && !t.items.length : t.list && t.ul === 1)),
+      res.map(t => [t.k, t.lead, t.ul, t.items.length]));
     check('...every line a complete sentence ending in a full stop', res.every(t => t.items.every(i => /[.]$/.test(i) && /^[A-Z▲]/.test(i))), res.map(t => t.items));
     check('...nothing run together ("counts once.Dock blocks"): never a full stop, colon or bracket straight against the next word',
       res.every(t => !/[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))), res.filter(t => /[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))).map(t => t.text));
@@ -626,67 +613,8 @@ const DOCKS = [
     await ctx.close();
   }
 
-  console.log('\n-- 0.46.0 C17: last year\'s ghosts --');
-  {
-    const { ctx, p } = await open({ stats: false });
-    const g = () => p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-ghost')].map(e => {
-      const c = getComputedStyle(e), r = e.getBoundingClientRect();
-      return { col: e.style.gridColumn, row: e.style.gridRow, aria: e.getAttribute('aria-hidden'), pe: c.pointerEvents, text: e.textContent, kids: e.children.length,
-        title: e.getAttribute('title'), z: c.zIndex, border: c.borderStyle, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
-    }));
-    const sw = await p.evaluate(() => { const s = document.querySelector('.mphbac-staff-ghosts');
-      return { checked: s.checked, role: s.getAttribute('role'), label: s.closest('label').textContent.trim(), inFields: !!s.closest('.mphbac-staff-fields, .mphbac-staff-tools'),
-        underGrid: s.closest('.mphbac-staff-under') !== null && s.closest('.mphbac-staff-under').previousElementSibling.matches('.mphbac-staff-status')
-          && s.closest('.mphbac-staff-under').previousElementSibling.previousElementSibling.matches('.mphbac-staff-grid') }; });
-    const named = await p.getByRole('switch', { name: 'Compare to Last Year', exact: true }).count();
-    // 0.46.2 (Rob): moved under the calendar and renamed, exactly "Compare to Last Year".
-    check('a "Compare to Last Year" switch (role="switch", named exactly that) UNDER the calendar, not in the Show / Go to date row; OFF on load, no ghosts',
-      !sw.checked && sw.role === 'switch' && sw.label === 'Compare to Last Year' && named === 1 && !sw.inFields && sw.underGrid && (await g()).length === 0, [sw, named]);
-    await p.check('.mphbac-staff-ghosts'); await settle(p);
-    let gs = await g();
-    // Oct 2025 shifted a year: Ida #22, Jo #27, Lou #24, Ned #25 (Kit is November).
-    check('on: last October\'s 4 stays as outlines on THIS October, in their cottages\' rows', gs.length === 4, gs);
-    check('...dashed, behind the bars (z-index 1), aria-hidden, NO taps (pointer-events: none), no text, no name, no title',
-      gs.every(x => x.border === 'dashed' && x.z === '1' && x.aria === 'true' && x.pe === 'none' && x.text === '' && x.kids === 0 && x.title === null), gs);
-    const hit = await p.evaluate(gs => gs.map(x => { const e = document.elementFromPoint(x.cx, x.cy); return e ? e.className : ''; }), gs);
-    check('...a tap where a ghost is drawn lands on the cell beneath, never on the ghost', hit.every(c => !/ghost/.test(c)), hit);
-    const reqs = await p.evaluate(() => window.__reqs.filter(r => r.action === 'mphbac_staff_month').map(r => r.from + '|' + r.to));
-    check('...fetched through the same gated range endpoint: Oct 1 – 31, 2025', reqs.includes('2025-10-01|2025-10-31'), reqs);
-    await p.click('.mphbac-staff-next'); await settle(p);
-    gs = await g();
-    check('...they follow the chart: November shows last November\'s (Kit #23)', gs.length === 1, gs);
-    await p.selectOption('.mphbac-staff-period', 'day'); await settle(p);
-    check('Daily (no bars): the switch is disabled', await p.evaluate(() => document.querySelector('.mphbac-staff-ghosts').disabled));
-    await p.selectOption('.mphbac-staff-period', 'month'); await settle(p);
-    await p.uncheck('.mphbac-staff-ghosts'); await settle(p);
-    check('off again: every ghost gone', (await g()).length === 0);
-    await p.check('.mphbac-staff-ghosts'); await settle(p);
-    await p.reload(); await p.waitForTimeout(300);
-    check('a reload: OFF again, whatever the browser would restore', await p.evaluate(() => !document.querySelector('.mphbac-staff-ghosts').checked && !document.querySelector('.mphbac-staff-ghost')));
-    await ctx.close();
-  }
-  // Where it sits (0.46.2): left-aligned under the calendar; "Updated hh:mm"
-  // where it was, on the right; never overlapping, at 320 / 375 / 390 and
-  // on a computer. And the Show / Go to date row, now two again, balanced.
-  for (const [w, phone] of [[320, true], [375, true], [390, true], [1280, false]]) {
-    const { ctx, p } = await open({ phone, w, stats: false });
-    const m = await p.evaluate(() => {
-      const R = s => document.querySelector(s).getBoundingClientRect();
-      const g = R('.mphbac-staff-grid'), f = R('.mphbac-staff-ghostfield'), u = R('.mphbac-staff-updated'), sh = R('.mphbac-staff-period'), go = R('.mphbac-staff-goto'), tools = R('.mphbac-staff-fields');
-      const overlap = !(f.right <= u.left || u.right <= f.left || f.bottom <= u.top || u.bottom <= f.top);
-      const ue = document.querySelector('.mphbac-staff-updated');
-      return { left: Math.round(f.left - g.left), under: Math.round(f.top - g.bottom), updRight: Math.round(g.right - u.right), updText: ue.textContent,
-        updOneLine: u.height < (parseFloat(getComputedStyle(ue).lineHeight) || 16) * 1.5,
-        overlap, tap: Math.round(f.height), fieldsW: [Math.round(sh.width), Math.round(go.width)], tops: Math.abs(sh.top - go.top),
-        centre: +(((sh.left + go.right) / 2) - ((tools.left + tools.right) / 2)).toFixed(1), inside: sh.left >= 0 && go.right <= innerWidth };
-    });
-    check(`${w}px: the switch is LEFT-ALIGNED under the calendar (its left edge on the calendar's), a 44px tap target`,
-      Math.abs(m.left) <= 1 && m.under >= 0 && m.under <= 12 && m.tap >= 44, m);
-    check(`${w}px: "${m.updText}" stays right-aligned under the calendar on one line, and the two never overlap`, /^Updated \d\d:\d\d$/.test(m.updText) && Math.abs(m.updRight) <= 1 && !m.overlap && m.updOneLine, m);
-    check(`${w}px: Show / Go to date, two again: the same width, level, the pair centred, on screen`,
-      m.fieldsW[0] === m.fieldsW[1] && m.tops < 0.5 && Math.abs(m.centre) <= 1 && m.inside, m);
-    await ctx.close();
-  }
+  // 0.46.0 C17 (last year's ghosts) and 0.46.2's switch placement moved to
+  // staff-lastyear-test.js with 0.47.0's Off · Behind · In Front.
 
   await browser.close();
   done();

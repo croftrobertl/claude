@@ -3555,3 +3555,64 @@ blind, both exports, both request orders, and cached vs fresh; against
 live-render-0.46.6.json (0.46.6's render of live now) only the labels and the
 settled margin differ. wp-cli-script-test.php runs the real script under the
 emulator. title-case-labels-test.js. 22 new mutations; two needles retargeted.
+
+## 0.47.0 — Last year Off · Behind · In Front; Stats (WD, Rob's picks of 2026-10-16)
+
+**Part A — Compare to Last Year: Off · Behind · In Front.** The 0.46.x
+checkbox is a radiogroup of three real buttons (role radio, roving tabindex,
+arrow keys / Home / End; the group named by its visible label, ids set by
+staff.js). W1: a 2px #0A50B2 pill, chosen segment filled, coral hover in the
+pointer guard, the board's focus ring; (0,3,0)+ so the kit's button:focus and
+Bravada's button type cannot reach it. Every segment is 44px and so is the
+control: the ring is a ::after drawn ABOVE the segments, so it adds no
+height. One line at 360 / 390 / 1280 (Raleway: 351px of 358 at 390; under
+390 the segments' sides go to 8px). "Updated hh:mm" no longer fits beside it
+on a phone and wraps to its own right-aligned line under the control (the
+control's row itself stays 44px; the calendar is unchanged).
+Behind is 0.46.0's ghost, pixel for pixel (staff-lastyear-proof.js against
+0.46.7: 18/18 identical, Monthly and Weekly, Off and Behind, 360/390/1280;
+In Front the calendar and every row are 0.46.7's height). The box is now a
+<button>, restated at (0,3,0), with its tag hidden. In Front (T2): class
+is-ly-front on the chart; boxes z-index 2 appended after bars, diamonds and
+month rules, so above them and under the pinned column/header; 135° stripes
+of color-mix() tints of --staff-bar (flat white-over-token fallback outside
+@supports); 2px solid edge; the tag "<year> · <name>" (barName(), the bars'
+own name rule; the booking's own check-in year; year alone where even
+"2025 · A…" does not fit, measured; CSS ellipsis; sticky like bar labels).
+Each box a named button ("Last year: Amy Archer, Nov 2 to Nov 9 2025,
+Airbnb"); ONE delegated click on the grid opens openDetail(id, box, year):
+the same gated endpoint, a grey "Last Year · 2025" first in the body and in
+the dialog's name; Close returns focus to the box. This year's bars and
+diamonds fade to 0.22 (0.15s, none for reduced motion), pointer-events none,
+bars inert + tabindex -1. touch-action: manipulation (a swipe on a box
+scrolls the chart — tested with real touch events).
+ONE FETCH: drawGhosts once per chart (chart._lyState), one in-flight request
+per range (lyFlight), the answer held for the session (lyHeld) so navigation
+and the 3-minute refresh draw a new chart's boxes in the same step as its
+bars (no flicker, no request, no duplicate). lySeq drops an answer after Off
+or navigation. Off on load and on a bfcache restore (pageshow persisted).
+Disabled in Daily (aria-disabled group), the choice kept and restored.
+Last year is NOT refetched by the auto-refresh (it is history); a reload does.
+
+**Part B — Stats.** B1: stTipOnce, stTipNightOnce, stBySourceOnce,
+stWeekdaysSame, stTipDock, stBookedDock, stTurnoversOnce, stLeadAfter gone
+(strings and calls); a tip with no points has no <ul>. B2: every size +2px;
+heading line box max(24px, 1.3em), text-wrap: balance; the tile label (<dt>)
+pinned at (0,3,0) — live measured 14px there against this file's 12, a theme
+dt rule; pie labels omitted where they do not fit across their slice
+(measured, textW). B3: a real <table> with explicit roles (CSS grid would drop
+the table semantics), table = grid, thead/tbody/tr subgrids: one set of
+columns, figures right-aligned and tabular, within 1px of their labels at
+360/390/1280. Header capitals by CSS, so each th has its words as aria-label
+(Chrome passes text-transform into the name). Name column minmax(min-content,
+1fr): wraps between words before it could overflow. ▲▼ = occupancy points vs
+the same dates last year (the tiles' ly data, got[2]); the previous-timeframe
+range is no longer requested (plan.ranges[1] = null). "vs 2025", "vs 2025–26"
+across New Year (lyLabel). B4: the seven names.
+
+**Tests:** staff-lastyear-test.js, staff-stats-047-test.js (both in Raleway:
+tests/fonts, OFL — the container has no Raleway and DejaVu Serif is far
+wider), staff-lastyear-proof.js (needs a 0.46.7 checkout); stats/board/staff
+tests updated for the reversed rules. 40 new mutations; seven retargeted,
+three retired (the dock/once tip lines — reversed by Rob — and B9's
+"previous % over this timeframe's nights", now equivalent).

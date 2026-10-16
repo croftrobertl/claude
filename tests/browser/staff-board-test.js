@@ -294,13 +294,16 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     check('...in the order Bookings, Booked, Length, Arrivals, Departures, Turnovers — no Pets / Couch / Boat, no "in house" outside Day',
       JSON.stringify(order) === JSON.stringify(['bookings', 'booked', 'length', 'arrivals', 'departures', 'turnovers']), order);
     const heads = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-h')].map(h => h.textContent));
-    check('...headed "Nights Booked by Cottage" and "Nights Booked by Source" (Rob\'s words), then the five 0.46.0 blocks',
-      JSON.stringify(heads) === JSON.stringify(['Nights Booked by Cottage', 'Nights Booked by Source', 'Length of Stay', 'Arrivals and Departures by Weekday',
-        'How Far Ahead They Book', 'Pace', 'Cottages Booked Each Night, 2026']), heads);
+    // 0.47.0 (Rob's pick N1): one "what by what" pattern.
+    check('...headed in Rob\'s 0.47.0 names, in the 0.46.0 order',
+      JSON.stringify(heads) === JSON.stringify(['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arrivals & Departures by Day',
+        'Days Booked Ahead by Source', 'Upcoming Nights vs Last Year', 'Nights Booked in 2026']), heads);
     const per = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-percot-row')].map(r =>
       [r.querySelector('.mphbac-staff-percot-name').textContent, [r.querySelector('.mphbac-staff-percot-num').textContent, r.querySelector('.mphbac-staff-percot-fill').style.width]])));
-    check('nights booked per cottage: #28 30 nights (96.8%), #23 7 (the block counted once), #29 none',
-      per['#28 C28'][0] === '30 nights' && per['#28 C28'][1] === '96.8%' && per['#23 Kingfisher'][0] === '7 nights' && per['#29 C29'][0] === '0 nights', per);
+    // 0.47.0: the Nights column carries the number (its header says
+    // "Nights"), and the bar shows the Occupancy figure itself, 97%.
+    check('nights booked per cottage: #28 30 nights (97%), #23 7 (the block counted once), #29 none',
+      per['#28 C28'][0] === '30' && per['#28 C28'][1] === '97%' && per['#23 Kingfisher'][0] === '7' && per['#29 C29'][0] === '0', per);
     const pie = await p.evaluate(() => ({
       slices: [...document.querySelectorAll('.mphbac-staff-pie-slice')].map(x => [x.dataset.source, getComputedStyle(x).fill]),
       labels: [...document.querySelectorAll('.mphbac-staff-pie-label')].map(x => x.textContent),

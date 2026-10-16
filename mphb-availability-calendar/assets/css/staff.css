@@ -1069,6 +1069,16 @@ span.mphbac-staff-ico::before {
 /* The title takes focus when the sheet opens (0.45.2, see staff.js): it is a
    starting point for Tab, not a control, so it draws no ring. */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title:focus { outline: none; }
+/* LAST YEAR'S SHEET (0.47.0): "Last Year · 2025", grey, first in the body —
+   so a past stay's sheet can never be read as a current booking's. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-ly {
+    margin: 0 0 12px;
+    color: var(--staff-muted, #5b6470);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+}
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close {
     position: absolute;
     top: 50%;
@@ -1333,7 +1343,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-kpi-num {
     margin: 0;
     color: var(--staff-text);
-    font-size: 22px;
+    font-size: 24px;                   /* 22 until 0.47.0: every Stats size +2px (Rob) */
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
@@ -1342,57 +1352,138 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-kpi-label {
     margin-top: 2px;
     color: var(--staff-muted);
-    font-size: 12px;
+    font-size: 16px;
     font-weight: 600;
+    line-height: 1.25;
 }
+/* THE TILE LABEL IS A <dt>, and on live a theme rule reached it: it measured
+   14px there against this file's 12 (the WD, 0.47.0). Rob's +2 is from what
+   he sees, so 16px — said at (0,3,0), where a theme's dt rule cannot reach. */
+.mphbac-staff .mphbac-staff-kpi .mphbac-staff-kpi-label { font-size: 16px; }
 .mphbac-staff-stats-block { position: relative; margin-top: 18px; }
 .mphbac-staff-stats-h {
     margin: 0 0 8px;
     color: var(--staff-text);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
 }
 .mphbac-staff-stats-empty { margin: 0; color: var(--staff-muted); text-align: center; }
-/* CENTRED AS ONE BLOCK (0.46.2, Rob: "Make them all centre aligned"): the
-   rows keep their shared columns and sit, together, in the middle. */
-.mphbac-staff-percot { max-width: 560px; margin: 0 auto; padding: 0; list-style: none; }
-.mphbac-staff-percot-row {
+/* NIGHTS BY COTTAGE, A REAL TABLE (0.47.0, Rob's pick: a bar under each
+   name). Cottage | Nights | Occupancy | vs 2025 over every row, each
+   cottage two lines — the name and its three figures, then its occupancy bar
+   the table's full width. THE HEADER AND EVERY ROW ARE ONE GRID: the table
+   is the grid and its row groups and rows are subgrids of it, so each column
+   is exactly as wide in every row, and every figure — right-aligned, tabular
+   — ends exactly under its label's right edge, at every width. The name
+   takes what is left and is never cut; to keep it whole on a narrow phone
+   the header's letter-spacing tightens first, then the gaps — no column is
+   dropped. Centred as one block, 560px at most (0.46.2).
+   Elementor's own `table` rules (borders, 15px padding, striped rows, 0.9em)
+   are written over at (0,3,1); the roles that the grid would cost the table
+   are said in staff.js. A browser without subgrid (iOS before 16) gives
+   every row the same fixed columns instead. */
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot {
     display: grid;
-    /* name, bar, nights, %, ▲ ▼ (0.46.0). 0.46.2 (Rob's iPhone): the NAME
-       column is never narrower than the longest name — "#35 Blue Heron" was
-       cut — and the figures size to their own text, so "100%" never breaks
-       into "100" over "%". The bar takes what is left, 24px at the least. */
-    grid-template-columns: minmax(max-content, 9em) minmax(24px, 1fr) max-content max-content max-content;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 0;
-    font-size: 13px;
+    /* The name takes what the figures leave. min-content, not max-content:
+       a name wider than that space breaks between its words — never inside
+       one, never cut — rather than push the grid past the table. */
+    grid-template-columns: minmax(min-content, 1fr) max-content max-content max-content;
+    column-gap: 12px;
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: none;
+    font-size: 15px;                   /* the rows: 13 until 0.47.0 (Rob: +2) */
+    line-height: 1.3;
 }
-.mphbac-staff-percot-name { font-weight: 600; white-space: nowrap; }
-/* ONE SET OF COLUMNS FOR EVERY ROW (0.46.2). With the columns sized to their
-   text, each row on its own would size them differently and the bars would
-   end at different places; as a subgrid of the list, the name, nights, % and
-   ▲ ▼ columns are as wide as their widest entry in ANY row, and every bar is
-   the same length. A browser without subgrid (iOS before 16) keeps each row's
-   own columns: still whole names and one-line figures. */
-@supports (grid-template-columns: subgrid) {
-    .mphbac-staff-percot {
-        display: grid;
-        grid-template-columns: minmax(max-content, 9em) minmax(24px, 1fr) max-content max-content max-content;
-        column-gap: 8px;
-    }
-    .mphbac-staff-percot-row { grid-column: 1 / -1; grid-template-columns: subgrid; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot thead,
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot tbody,
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot tr {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+@supports not (grid-template-columns: subgrid) {
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot thead,
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot tbody,
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot tr { grid-template-columns: minmax(0, 1fr) 4.5em 6.5em 6.5em; }
+}
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot th,
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot td {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    line-height: inherit;
+    vertical-align: baseline;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-name { white-space: normal; overflow-wrap: normal; }
+/* The header: small capitals over a hairline rule. Each label carries its
+   words in their own case for a screen reader (staff.js): Chrome hands on the
+   capitals CSS draws, and "VS" would be spelled out. */
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-head {
+    padding: 0 0 5px;
+    border-bottom: 1px solid var(--staff-frame);
+}
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h {
+    color: var(--staff-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    align-self: end;
+}
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h.is-name,
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-name { text-align: left; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-row {
+    grid-template-rows: auto auto;
+    row-gap: 4px;
+    padding: 7px 0 3px;
+    align-items: baseline;
+}
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-name { color: var(--staff-text); font-weight: 600; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-num { color: var(--staff-muted); font-weight: 400; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-pct { color: var(--staff-text); font-weight: 700; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-delta { font-size: 15px; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-barcell {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: center;
 }
 .mphbac-staff-percot-track {
+    display: block;
     height: 10px;
     border-radius: 5px;
     background: var(--staff-weekend);
     overflow: hidden;
 }
 .mphbac-staff-percot-fill { display: block; height: 100%; background: var(--staff-header); }
-.mphbac-staff-percot-num { color: var(--staff-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mphbac-staff-percot-pct { color: var(--staff-text); font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mphbac-staff-percot-delta { text-align: right; }
+/* Phones: the header's letter-spacing first, then the gaps, then (under
+   370) its size — never a column. Measured in Raleway with "vs 2025–26" (a
+   Dec–Jan period): at 360, 291px of labels leave the name 132px, and
+   "#23 Lighthouse" needs 110; at 390, 136px. */
+@media (max-width: 479px) {
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 8px; }
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h { letter-spacing: 0.02em; }
+}
+@media (max-width: 369px) {
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 6px; }
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h { letter-spacing: 0; font-size: 11px; }
+}
 
 /* ---- 0.46.0 STATS (Rob): ‹ › round the date line, ⓘ tips, ▲ ▼, and the
    new blocks. Every one is filled by staff.js with textContent. ---- */
@@ -1422,7 +1513,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-percot-delta,
 .mphbac-staff-pace-delta {
     color: var(--staff-muted);
-    font-size: 12px;
+    font-size: 14px;                   /* the tiles' ▲▼: 12 until 0.47.0 */
     font-weight: 700;
     line-height: 1.25;
     white-space: nowrap;
@@ -1482,7 +1573,7 @@ body.mphbac-staff-open { overflow: hidden; }
     border-radius: 6px;
     background: #1f2937;
     color: #ffffff;
-    font-size: 13px;
+    font-size: 15px;                   /* 13 until 0.47.0 (Rob: +2) */
     font-weight: 500;
     line-height: 1.4;
     text-align: left;
@@ -1510,10 +1601,13 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 0;
     padding: 0;
     color: var(--staff-text);
-    font-size: 14px;
+    font-size: 16px;                   /* 14 until 0.47.0 (Rob: +2) */
     font-weight: 700;
-    line-height: 24px;
+    /* A line box that grows with the type (was a fixed 24px), never less
+       than the ⓘ's 24px; and a heading that wraps does so evenly. */
+    line-height: max(24px, 1.3em);
     text-align: center;
+    text-wrap: balance;
 }
 .mphbac-staff-stats-hlast { white-space: nowrap; }
 .mphbac-staff .mphbac-staff-stats-hlast .mphbac-staff-tip.mphbac-staff-tip { margin-left: 4px; vertical-align: top; }
@@ -1526,7 +1620,8 @@ body.mphbac-staff-open { overflow: hidden; }
     align-items: center;
     gap: 8px;
     padding: 3px 0;
-    font-size: 13px;
+    font-size: 15px;                   /* 13 until 0.47.0 (Rob: +2) */
+    line-height: 1.3;
 }
 .mphbac-staff-mix-name { font-weight: 600; white-space: nowrap; }
 .mphbac-staff-mix-num { color: var(--staff-muted); text-align: right; font-variant-numeric: tabular-nums; }
@@ -1557,10 +1652,10 @@ body.mphbac-staff-open { overflow: hidden; }
     min-width: 0;
     height: 100%;
 }
-.mphbac-staff-wk-num { color: var(--staff-text); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mphbac-staff-wk-num { color: var(--staff-text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mphbac-staff-wk-bar { display: block; width: 100%; border-radius: 3px 3px 0 0; }
-.mphbac-staff-wk-name { color: var(--staff-muted); font-size: 12px; font-weight: 600; }
-.mphbac-staff-wk-key { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; font-size: 13px; }
+.mphbac-staff-wk-name { color: var(--staff-muted); font-size: 14px; font-weight: 600; }
+.mphbac-staff-wk-key { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; font-size: 15px; }
 .mphbac-staff-wk-keyitem { display: inline-flex; align-items: center; gap: 6px; }
 .mphbac-staff-wk-swatch { width: 12px; height: 12px; border-radius: 3px; }
 .mphbac-staff-wk-col.is-in .mphbac-staff-wk-bar,
@@ -1570,7 +1665,7 @@ body.mphbac-staff-open { overflow: hidden; }
 
 /* How far ahead they book; pace. */
 .mphbac-staff-lead,
-.mphbac-staff-pace { max-width: 440px; margin: 0 auto; padding: 0; list-style: none; font-size: 14px; }
+.mphbac-staff-pace { max-width: 440px; margin: 0 auto; padding: 0; list-style: none; font-size: 16px; line-height: 1.3; }
 .mphbac-staff-lead-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
 .mphbac-staff-lead-row.is-all { margin-top: 2px; padding-top: 5px; border-top: 1px solid var(--staff-frame); font-weight: 700; }
 .mphbac-staff-lead-num { margin-left: auto; font-variant-numeric: tabular-nums; }
@@ -1586,7 +1681,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-pace-row { display: contents; }
 .mphbac-staff-pace-name { font-weight: 700; }
 .mphbac-staff-pace-num { font-variant-numeric: tabular-nums; }
-.mphbac-staff-pace-delta { font-size: 13px; }
+.mphbac-staff-pace-delta { font-size: 15px; }
 
 /* THE YEAR AS A HEAT MAP: twelve small months, one square a night, in nine
    steps of the site's button blue (#0A50B2, --staff-header): grey for none,
@@ -1599,7 +1694,7 @@ body.mphbac-staff-open { overflow: hidden; }
     gap: 12px 14px;
 }
 .mphbac-staff-heat-month { min-width: 0; }
-.mphbac-staff-heat-name { display: block; margin: 0 0 3px; color: var(--staff-muted); font-size: 12px; font-weight: 700; }
+.mphbac-staff-heat-name { display: block; margin: 0 0 3px; color: var(--staff-muted); font-size: 14px; font-weight: 700; line-height: 1.25; }
 .mphbac-staff-heat-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
 .mphbac-staff-heat-day {
     position: relative;
@@ -1637,7 +1732,7 @@ body.mphbac-staff-open { overflow: hidden; }
     gap: 3px;
     margin: 10px 0 0;
     color: var(--staff-muted);
-    font-size: 12px;
+    font-size: 14px;
 }
 .mphbac-staff-heat-key .mphbac-staff-heat-day { width: 12px; height: 12px; cursor: default; }
 .mphbac-staff-heat-keylabel { margin: 0 4px; }
@@ -1733,14 +1828,27 @@ body.mphbac-staff-open { overflow: hidden; }
     margin-top: 4px;
 }
 .mphbac-staff-under .mphbac-staff-updated { margin: 0 0 0 auto; }
-/* The switch: "Compare to Last Year" beside a checkbox drawn as a switch,
-   the whole label a 44px tap target. (0,2,0) for the type: the kit's
-   `.elementor-kit-331 label` (19px, its own ink) is (0,1,1). */
+/* COMPARE TO LAST YEAR: OFF · BEHIND · IN FRONT (0.47.0, Rob's pick W1) —
+   the label, then a segmented control dressed as the Today and ‹ › buttons:
+   a 2px #0A50B2 pill, the chosen segment filled #0A50B2 with white text, the
+   others white with #0A50B2 text, the DCC coral on hover (pointer guard,
+   below) and the board's focus ring. EVERY SEGMENT IS 44px TALL, and so is
+   the whole control — the height of the 0.46.x switch's row: the ring is
+   drawn ABOVE the segments (::after) instead of around them, so it takes no
+   height, and a hovered segment's fill stays inside it.
+   (0,3,0) and up, so the kit's `button:hover, button:focus` (0,2,1) — coral,
+   a 30px radius — and Bravada's button type (Pavanam, padding, capitals,
+   letter-spacing) cannot reach a segment; the type is the board's own.
+   One line from 360px up (measured in Raleway: 351px of 358 at 390); under
+   390 the segments' sides tighten, never the type. Below 360 the control
+   wraps under its label rather than clip. Disabled in Daily, faded. */
 .mphbac-staff .mphbac-staff-ghostfield {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 4px 10px;
+    min-width: 0;
     min-height: 44px;
     margin: 0;
     color: var(--staff-text);
@@ -1748,41 +1856,170 @@ body.mphbac-staff-open { overflow: hidden; }
     font-size: 15px;
     font-weight: 600;
     line-height: 1.2;
-    cursor: pointer;
 }
-.mphbac-staff-ghostbox { display: flex; align-items: center; }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts {
-    -webkit-appearance: none;
-    appearance: none;
+.mphbac-staff-ghostlabel { white-space: nowrap; }
+.mphbac-staff-seg {
     position: relative;
-    display: block;
-    width: 48px;
-    height: 28px;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    border: 2px solid var(--staff-header);
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 44px;
     border-radius: 999px;
     background: #ffffff;
+}
+.mphbac-staff-seg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 2px solid var(--staff-header);
+    border-radius: inherit;
+    pointer-events: none;
+}
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--staff-header);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+    white-space: nowrap;
     box-shadow: none;
-    line-height: normal;
     cursor: pointer;
     transition: none;
 }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts::before {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
+/* The 2px rule between two segments — drawn over the segment's own fill. */
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn + .mphbac-staff-segbtn { box-shadow: inset 2px 0 0 var(--staff-header); }
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn:first-child { border-radius: 999px 0 0 999px; }
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn:last-child { border-radius: 0 999px 999px 0; }
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn[aria-checked="true"] {
     background: var(--staff-header);
+    color: #ffffff;
 }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:checked { background: var(--staff-header); }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:checked::before { left: 22px; background: #ffffff; }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:disabled { opacity: 0.4; cursor: not-allowed; }
-.mphbac-staff.mphbac-staff .mphbac-staff-ghosts.mphbac-staff-ghosts:focus-visible { outline: 2px solid var(--staff-focus, #0f6dbf); outline-offset: 2px; }
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn:focus-visible { z-index: 2; }
+.mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn:disabled { cursor: not-allowed; }
+.mphbac-staff .mphbac-staff-ghostfield[aria-disabled="true"] .mphbac-staff-seg { opacity: 0.4; }
+@media (max-width: 389px) {
+    .mphbac-staff .mphbac-staff-ghostfield { column-gap: 8px; }
+    .mphbac-staff .mphbac-staff-segbtn.mphbac-staff-segbtn { padding: 0 8px; }
+}
+
+/* LAST YEAR'S BOX IS A <button> (0.47.0): In Front makes it one to tap. So
+   everything the theme's or the browser's button rules could reach is said
+   here at (0,3,0) — and Behind it still draws exactly the 0.46.0 outline
+   above, with its tag hidden. The rule's position and pointer-events are the
+   block above's alone. */
+.mphbac-staff .mphbac-staff-ghost.mphbac-staff-ghost {
+    display: flex;
+    align-items: center;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 4px;
+    border: 2px dashed rgba(51, 65, 85, 0.55);
+    border-radius: 6px;
+    background: rgba(51, 65, 85, 0.06);
+    color: #111111;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    font-style: normal;
+    line-height: 1.2;
+    letter-spacing: normal;
+    text-transform: none;
+    text-align: left;
+    box-shadow: none;
+    overflow: hidden;
+    transition: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.mphbac-staff-ghost-tag { display: none; }
+/* IN FRONT (0.47.0, Rob's pick T2): last year above everything of this
+   year's — the bars, the turnover diamonds, the pets / couch / boat icons —
+   on the same top, height and columns. z-index 2 is the bars' own; the boxes
+   come after them (and after the diamonds and the month rules) in the chart,
+   so they paint above, and stay under the pinned cottage column (4) and date
+   header (3). Fine 135° stripes of two pale tints of the booking's source
+   colour, each ~3px, mixed from the board's source tokens so a new colour
+   carries through; a 2px SOLID edge in that colour, the bars' radius. Where
+   color-mix() is missing, one flat pale tint of the same colour.
+   touch-action: manipulation — a swipe across a box still scrolls the chart. */
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.mphbac-staff-ghost {
+    z-index: 2;
+    border: 2px solid var(--staff-bar, var(--staff-src-direct));
+    background-color: var(--staff-bar, var(--staff-src-direct));
+    background-image: linear-gradient(rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.84));
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+@supports (color: color-mix(in srgb, red 50%, white)) {
+    .mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.mphbac-staff-ghost {
+        background-color: #ffffff;
+        background-image: repeating-linear-gradient(135deg,
+            color-mix(in srgb, var(--staff-bar, var(--staff-src-direct)) 24%, #ffffff) 0 3px,
+            color-mix(in srgb, var(--staff-bar, var(--staff-src-direct)) 10%, #ffffff) 3px 6px);
+    }
+}
+/* The tag: "2025 · Amy A." — white, near-black Raleway bold at the bar
+   label's 13px, one line, an ellipsis inside the box (staff.js writes the
+   year alone where not even a name's first letter fits). */
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost-tag {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #111111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+/* The year alone (a box too narrow for a name): no padding round it, so
+   "2025" fits a one-night box at Monthly's 44px day — 34px inside. */
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.mphbac-staff-ghost.is-year-only { justify-content: center; padding: 0; }
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.is-year-only .mphbac-staff-ghost-tag { padding: 2px; }
+/* Like a bar's label, the tag stays in view on a box that began before the
+   visible days: held at the pinned column's edge by the browser's own
+   scrolling, where overflow: clip lets it (see the bar label, 0.45.2). */
+@supports (overflow: clip) {
+    .mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.mphbac-staff-ghost { overflow: clip; }
+    .mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost-tag {
+        position: -webkit-sticky;
+        position: sticky;
+        left: calc(var(--staff-label-w, 0px) + 4px);
+    }
+}
+/* THIS YEAR, IN FRONT: the bars (their labels and icons inside) and the
+   turnover diamonds fade to 22% and take no taps; staff.js takes their focus
+   too. A short fade, none for reduced motion (below). */
+.mphbac-staff .mphbac-staff-chart .mphbac-staff-bar.mphbac-staff-bar,
+.mphbac-staff .mphbac-staff-chart .mphbac-staff-turn { transition: opacity 0.15s ease; }
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-bar.mphbac-staff-bar,
+.mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-turn {
+    opacity: 0.22;
+    pointer-events: none;
+}
 .mphbac-staff-pie-wrap {
     display: flex;
     flex-wrap: wrap;
@@ -1792,8 +2029,8 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff-pie { width: 160px; height: 160px; }
 .mphbac-staff-pie-slice { fill: var(--staff-bar); stroke: #ffffff; stroke-width: 1.5; }
-.mphbac-staff-pie-label { fill: var(--staff-bar-ink, #ffffff); font-size: 13px; font-weight: 700; }
-.mphbac-staff-pie-list { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.mphbac-staff-pie-label { fill: var(--staff-bar-ink, #ffffff); font-size: 15px; font-weight: 700; }
+.mphbac-staff-pie-list { margin: 0; padding: 0; list-style: none; font-size: 16px; line-height: 1.3; }
 .mphbac-staff-pie-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .mphbac-staff-pie-swatch {
     width: 12px;
@@ -2056,11 +2293,6 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff-legend { font-size: 0.8em; }
     .mphbac-staff .mphbac-staff-pace { grid-template-columns: max-content max-content; row-gap: 2px; }
     .mphbac-staff-pace-delta { grid-column: 2; margin-bottom: 6px; }
-    .mphbac-staff-percot-row { grid-template-columns: minmax(max-content, 7em) minmax(24px, 1fr) max-content max-content max-content; gap: 6px; }
-    @supports (grid-template-columns: subgrid) {
-        .mphbac-staff-percot { grid-template-columns: minmax(max-content, 7em) minmax(24px, 1fr) max-content max-content max-content; column-gap: 6px; }
-        .mphbac-staff-percot-row { grid-template-columns: subgrid; }
-    }
     /* Two rows, grouped by kind (0.46.0, Rob): sources, then extras. */
     .mphbac-staff-legend-group { flex: 0 0 100%; flex-wrap: nowrap; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
@@ -2076,6 +2308,9 @@ body.mphbac-staff-open { overflow: hidden; }
        unconditionally now, so there is nothing here to undo. */
     .mphbac-staff-overlay.mphbac-staff-overlay,
     .mphbac-staff-sheet.mphbac-staff-sheet { transition: none; }
+    /* Last year In Front (0.47.0): this year's bars change at once. */
+    .mphbac-staff .mphbac-staff-chart .mphbac-staff-bar.mphbac-staff-bar,
+    .mphbac-staff .mphbac-staff-chart .mphbac-staff-turn { transition: none; }
 }
 
 /* ======================================================================
@@ -2117,6 +2352,13 @@ body.mphbac-staff-open { overflow: hidden; }
     /* The site-drawn lists' rows (0.46.0). */
     .mphbac-staff-pickopt:hover { background: #e7eef7; }
     .mphbac-staff-bar:hover { filter: brightness(1.08); }
+    /* Last year's boxes In Front: the bars' own hover (0.47.0). */
+    .mphbac-staff .mphbac-staff-chart.is-ly-front .mphbac-staff-ghost.mphbac-staff-ghost:hover { filter: brightness(1.08); }
+    /* Compare to Last Year's segments: the nav's coral (0.47.0). */
+    .mphbac-staff .mphbac-staff-seg .mphbac-staff-segbtn.mphbac-staff-segbtn:hover:not(:disabled) {
+        background: var(--dcc-button-hover-bg, #f08080);
+        color: var(--dcc-button-hover-fg, #ffffff);
+    }
     /* (0,5,0): above the theme guard for the rows, so their own hover tint
        still shows on a computer. */
     .mphbac-staff .mphbac-staff-item.mphbac-staff-item.mphbac-staff-item:hover { background-color: var(--staff-namecol); }

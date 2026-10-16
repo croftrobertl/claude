@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.7
+Stable tag: 0.47.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.47.0 =
+* **Last year on the staff calendar: Off · Behind · In Front (Rob's picks).** "Compare to Last Year" is now a three-way control. Behind is the 0.46 grey dashed outlines, unchanged. In Front brings last year's bookings above this year's: striped in pale tints of each booking's source colour with a solid edge, tagged "2025 · Name"; tap one to open its booking sheet under a grey "Last Year · 2025" heading. This year's bars fade and take no taps while it is on. Off on every load; disabled in Daily. No new request: last year is fetched once and switched, not redrawn.
+* **Stats (Rob's picks).** Tooltips drop the counting-rule lines (the counting is unchanged). Every Stats size two steps larger. Nights by Cottage is a real table — Cottage, Nights, Occupancy, vs <year> — with a bar under each name, and its ▲▼ now compares with the same dates last year, like the tiles. New section names: Nights by Cottage, Nights by Source, Stays by Length, Arrivals & Departures by Day, Days Booked Ahead by Source, Upcoming Nights vs Last Year, Nights Booked in <year>.
+* Nothing is written on install, activation or upgrade. No new endpoint; no Elementor CSS regenerate needed.
 
 = 0.46.7 =
 * **Title Case labels (Rob's pick).** Guests: "Check-In", "Check-Out", "Estimated Total:". Staff board: the booking sheet's "Check-In" / "Check-Out", "In House", "View Photo ID", "Go to Date", "All Sources", "Next 30 / 60 / 90 Days", "Week Of". Messages, hints, tooltips and the search placeholder keep sentence case. Screen readers hear exactly the new wording.

@@ -99,6 +99,22 @@ function snap(string $html): string {
     $html = preg_replace('/\d{4}-\d{2}-\d{2}/', 'D', $html);
     return preg_replace('/\d{4}-\d{2}(?!\d)/', 'Y-M', $html);
 }
+/**
+ * A day's availability in the calendar's data ("2026-10-14": "booked") as it
+ * stands on the day the test runs: the recorded render is from 2026-10-14,
+ * and a booked day since gone by reads "past" now. What this file holds the
+ * page to is its settings and markup, not the calendar's dates, so each
+ * day's state is set aside on both sides (0.47.0: found when two days had
+ * passed).
+ */
+function undated(string $html): string {
+    return preg_replace('/D&quot;:&quot;[a-z-]+&quot;/', 'D&quot;:&quot;S&quot;', $html);
+}
+/** The staff shell's config, decoded. */
+function staff_config(string $html): array {
+    preg_match('/data-staff-config="([^"]*)"/', $html, $m);
+    return json_decode(html_entity_decode($m[1] ?? '{}', ENT_QUOTES), true) ?: [];
+}
 /** 0.46.7's Part A labels, as 0.46.5's export stored them before the WD cleared them. */
 const OLD_LABELS = ['>Check-in<' => '>Check-In<', '>Check-out<' => '>Check-Out<', 'Estimated total:' => 'Estimated Total:'];
 
@@ -214,8 +230,30 @@ foreach ($cases as $case => $w) {
     if (in_array($case, $V1, true)) {
         $expect = str_replace('&quot;mobile&quot;:37}', '&quot;mobile&quot;:12}', $expect);
     }
-    check("$label HTML = 0.46.6's with Part A's labels" . (in_array($case, $V1, true) ? ' and the side margin settled' : '') . ', nothing else',
-        $now['html'] === $expect);
+    $nowHtml = undated($now['html']);
+    $expect = undated($expect);
+    if ($w['widget_type'] === 'dccac_staff') {
+        // 0.47.0 changes two things in the staff shell, both on purpose: the
+        // row under the calendar (the Off · Behind · In Front control) and
+        // the strings it is sent. Each is checked here key by key; the rest
+        // of the shell must still be 0.46.6's, byte for byte.
+        $a = staff_config($expect)['strings'] ?? [];
+        $b = staff_config($nowHtml)['strings'] ?? [];
+        $gone = ['stTipOnce', 'stTipNightOnce', 'stBySourceOnce', 'stWeekdaysSame', 'stTipDock', 'stBookedDock', 'stTurnoversOnce', 'stLeadAfter', 'stTipVsPrev', 'stVsPrevSr'];
+        $new = ['lyTag', 'lyName', 'lyDates', 'lyHead', 'stVsDatesSr', 'stColCottage', 'stColNights', 'stColOcc', 'stColVs', 'stTipVsOcc'];
+        $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat'];
+        $same = static function (array $x, array $y): bool { sort($x); sort($y); return $x === $y; };
+        $changed = array_keys(array_filter($b, static fn($v, $k) => array_key_exists($k, $a) && $a[$k] !== $v, ARRAY_FILTER_USE_BOTH));
+        check("$label strings: 0.47.0 removes the eight counting-rule lines and the previous-timeframe pair, adds last year's and the table's, renames the seven sections — and nothing else",
+            $same(array_diff(array_keys($a), array_keys($b)), $gone) && $same(array_diff(array_keys($b), array_keys($a)), $new) && $same($changed, $renamed),
+            ['gone' => array_values(array_diff(array_keys($a), array_keys($b))), 'new' => array_values(array_diff(array_keys($b), array_keys($a))), 'changed' => $changed]);
+        $cut = static fn($h) => preg_replace(['/data-staff-config="[^"]*"/', '/<div class="mphbac-staff-under">.*?<details class="mphbac-staff-stats">/s'], ['', ''], $h);
+        check("$label the rest of the shell = 0.46.6's with Part A's labels (the row under the calendar apart)", $cut($nowHtml) === $cut($expect));
+        check("$label ...and that row is the Off · Behind · In Front control, Off checked", (bool) preg_match('/role="radiogroup".*aria-checked="true"[^>]*>Off<.*>Behind<.*>In Front</s', $nowHtml));
+    } else {
+        check("$label HTML = 0.46.6's with Part A's labels" . (in_array($case, $V1, true) ? ' and the side margin settled' : '') . ', nothing else',
+            $nowHtml === $expect);
+    }
     check("$label per-post CSS and tokens = 0.46.6's", $now['css'] === $was['css'] && $now['tokens'] === $was['tokens']);
 }
 

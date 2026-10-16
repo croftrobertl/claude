@@ -72,7 +72,9 @@
         var periodSel = root.querySelector('.mphbac-staff-period');
         var gotoEl   = root.querySelector('.mphbac-staff-goto');
         var statsEl  = root.querySelector('.mphbac-staff-stats');
-        var ghostsEl = root.querySelector('.mphbac-staff-ghosts');
+        // Compare to Last Year (0.47.0): Off · Behind · In Front.
+        var lyGroup  = root.querySelector('.mphbac-staff-ghostfield');
+        var lySegs   = lyGroup ? [].slice.call(lyGroup.querySelectorAll('.mphbac-staff-segbtn')) : [];
         var updatedEl = root.querySelector('.mphbac-staff-updated');
         var previewEl = root.querySelector('.mphbac-staff-preview');
         var legendEl = root.querySelector('.mphbac-staff-legend');
@@ -160,7 +162,12 @@
             gridEl.hidden = isDay;
             if (legendEl) legendEl.hidden = isDay;
             // Last year's ghosts ride on the chart's bars; Daily has none.
-            if (ghostsEl) ghostsEl.disabled = isDay;
+            // The choice is kept, and comes back on leaving Daily.
+            lySegs.forEach(function (b) { b.disabled = isDay; });
+            if (lyGroup) {
+                if (isDay) lyGroup.setAttribute('aria-disabled', 'true');
+                else lyGroup.removeAttribute('aria-disabled');
+            }
             var cap = period.charAt(0).toUpperCase() + period.slice(1);
             prevBtn.setAttribute('aria-label', S['prev' + cap] || 'Previous');
             nextBtn.setAttribute('aria-label', S['next' + cap] || 'Next');
@@ -575,12 +582,18 @@
                 });
             }
 
+            // Last year's mode is the chart's from the start (0.47.0): set
+            // before the swap, so an In Front chart never shows a frame of
+            // this year's bars at full strength.
+            chart._rows = rowOf;
+            chart._days = days;
+            chart._dayW = dayW;
+            chart._font = barFont;
+            applyLy(chart);
             gridEl.textContent = '';
             gridEl.appendChild(chart);
             measureBars(chart);
-            chart._rows = rowOf;
-            chart._days = days;
-            if (ghostsEl && ghostsEl.checked) drawGhosts(chart);
+            if (lyMode !== 'off') drawGhosts(chart);
 
             if (state.restoreScroll) {
                 // Back from the one token reload: exactly where the reader was.
@@ -681,7 +694,7 @@
                 b: b,
                 label: label,
                 icons: ICON_ORDER.filter(function (k) { return !!b[k]; }),
-                name: nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who)),
+                name: barName(b),
                 // NAME, THEN INITIALS, then nights (0.46.0, Rob): a 2–3-night
                 // stay used to jump from "Dock B." straight to "2n". Only a
                 // named guest has initials; "#19674" goes on to nights as before.
@@ -703,6 +716,15 @@
             });
             bindPreview(btn, b, cottage);
             return btn;
+        }
+
+        // THE NAME A BAR LEADS WITH: 1 night initials, 2–3 "First L.", 4+
+        // the full name. Last year's In Front tags (0.47.0) use it too, so a
+        // stay is named the same way in both years.
+        function barName(b) {
+            var who = b.guestName || ('#' + b.id);
+            var nights = nightsBetween(b.checkin, b.checkout);
+            return nights >= 4 ? who : (nights <= 1 ? initials(who) : shortName(who));
         }
 
         // What a bar's label shows in `px` of width — the fit rule above —
@@ -1009,28 +1031,49 @@
         var sheetMarker = document.createComment('mphbac-staff-sheet');
         var overlayMarker = document.createComment('mphbac-staff-overlay');
 
-        function openDetail(bookingId, trigger) {
+        // LAST YEAR'S SHEET (0.47.0, Rob): a last-year box opens the SAME
+        // sheet, through the same gated endpoint, with full details — under
+        // a grey "Last Year · 2025" heading, first in the body and part of
+        // the dialog's name, so it can never be taken for a current booking.
+        var sheetLabel = sheet.getAttribute('aria-labelledby') || '';
+        var sheetLy = '';
+        function sheetText(text) {
+            sheetBody.textContent = '';
+            if (sheetLy) {
+                var k = document.createElement('p');
+                k.className = 'mphbac-staff-sheet-ly';
+                k.id = sheet.id ? sheet.id + '-ly' : 'mphbac-staff-sheet-ly';
+                k.textContent = (S.lyHead || 'Last Year · {year}').replace('{year}', sheetLy);
+                sheetBody.appendChild(k);
+            }
+            if (text) sheetBody.appendChild(document.createTextNode(text));
+        }
+
+        function openDetail(bookingId, trigger, lyYear) {
             lastTrigger = trigger || null;
+            sheetLy = lyYear || '';
+            if (!sheet.id) sheet.id = 'mphbac-staff-sheet-' + Math.random().toString(36).slice(2, 9);
+            sheet.setAttribute('aria-labelledby', sheetLy ? (sheet.id + '-ly ' + sheetLabel).trim() : sheetLabel);
             var seq = ++detailSeq;
             sheetTitle.textContent = (S.detailTitle || 'Booking') + ' #' + bookingId;
-            sheetBody.textContent = S.loading || 'Loading…';
+            sheetText(S.loading || 'Loading…');
             showSheet();
             post('mphbac_staff_booking', { booking_id: bookingId }).then(function (json) {
                 if (seq !== detailSeq) return;
                 if (!json || !json.success || !json.data) {
-                    sheetBody.textContent = S.error || 'Could not load.';
+                    sheetText(S.error || 'Could not load.');
                     return;
                 }
                 renderDetail(json.data);
             }).catch(function (err) {
                 if (seq !== detailSeq) return;
                 if (tokenReload(err)) return;
-                sheetBody.textContent = failureText(err);
+                sheetText(failureText(err));
             });
         }
 
         function renderDetail(d) {
-            sheetBody.textContent = '';
+            sheetText('');
             sheetTitle.textContent = (S.detailTitle || 'Booking') + ' #' + d.id;
 
             if (d.imported) {
@@ -1491,21 +1534,22 @@
             });
         }
 
-        // What one timeframe's figures need besides its own data.
+        // What one timeframe's figures need besides its own data. Since
+        // 0.47.0 nothing compares with the previous timeframe (Nights by
+        // Cottage's ▲▼ is against the same dates last year, as the tiles'),
+        // so its range is never asked for: the slot stays, empty.
         function statsPlan(w) {
-            var prevW = statsStepWindow(w, -1);
             var lyW = { from: yearBack(w.from), to: yearBack(w.to), span: w.span };
             var y = w.from.slice(0, 4);
             var agoDay = yearBack(config.today);
             var plan = {
-                prev: { w: prevW, why: comparable(w, prevW) },
                 ly: { w: lyW, why: comparable(w, lyW) },
                 year: { y: y, w: clampCap({ from: y + '-01-01', to: y + '-12-31' }) },
                 pace: { now: { from: config.today, to: shiftDay(config.today, 89) },
                         ago: { from: agoDay, to: shiftDay(agoDay, 89) }, asOf: agoDay }
             };
             plan.pace.why = comparable({}, plan.pace.ago);
-            plan.ranges = [w, plan.prev.why ? null : prevW, plan.ly.why ? null : lyW, plan.year.w,
+            plan.ranges = [w, null, plan.ly.why ? null : lyW, plan.year.w,
                 plan.pace.now, plan.pace.why ? null : plan.pace.ago];
             return plan;
         }
@@ -1740,6 +1784,12 @@
             return e;
         }
 
+        // The year the ▲▼ compare with: "2025", or "2025–26" for dates that
+        // run across New Year (0.47.0) — always from the dates, never typed.
+        function lyLabel(r) {
+            var a = r.from.slice(0, 4), b = r.to.slice(0, 4);
+            return a === b ? a : a + '–' + b.slice(2);
+        }
         // A date range inside a tip: "Oct 1 – 31" held together, so a line
         // never ends on the dash (0.46.2).
         function tipRange(from, to) { return rangeLabel(from, to).replace(/ – /g, '\u00a0–\u00a0').replace(/^(\w+) (\d)/, '$1\u00a0$2'); }
@@ -1766,7 +1816,6 @@
             var data = got[0];
             var n = statsNumbers(data, w);
             var ly = got[2] ? statsNumbers(got[2], plan.ly.w) : null;
-            var pv = got[1] ? statsNumbers(got[1], plan.prev.w) : null;
             // A pinned tip (or a focused ⓘ) survives the 3-minute refresh.
             var keepTip = tipOpen && tipOpen.pinned ? tipOpen.key : null;
             var focusTip = document.activeElement && document.activeElement.classList.contains('mphbac-staff-tip')
@@ -1800,9 +1849,12 @@
                 grid.appendChild(box);
             };
             // Order (WD): two full rows of three on a phone.
-            kpi('bookings', S.stBookings, n.bookings, [S.stBookingsTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.bookings, ly && ly.bookings));
-            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', [S.stBookedTip, S.stTipNightOnce, S.stBookedDock, vsLine(S.stTipVsPct)], minus(n.pct, ly && ly.pct), 0, 'point');
-            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), [S.stLengthTip, S.stLengthWhole, S.stTipDock, vsLine(S.stTipVsNights)],
+            // TIPS SAY WHAT A FIGURE MEANS, not how it is kept true (0.47.0,
+            // Rob): the counting rules — a night or stay counted once, dock
+            // blocks left out — are unchanged, and no longer repeated here.
+            kpi('bookings', S.stBookings, n.bookings, [S.stBookingsTip, vsLine(S.stTipVs)], minus(n.bookings, ly && ly.bookings));
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', [S.stBookedTip, vsLine(S.stTipVsPct)], minus(n.pct, ly && ly.pct), 0, 'point');
+            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), [S.stLengthTip, S.stLengthWhole, vsLine(S.stTipVsNights)],
                 minus(n.length, ly && ly.length), 1, 'night');
             // "nights" in a smaller size, so the figure fits a phone's tile;
             // the text still reads "4.2 nights".
@@ -1812,47 +1864,90 @@
                 dd.textContent = m[1];
                 dd.appendChild(el('span', 'mphbac-staff-kpi-unit', m[2]));
             })(grid.lastChild.querySelector('.mphbac-staff-kpi-num'));
-            kpi('arrivals', S.stArrivals, n.arrivals, [S.stArrivalsTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.arrivals, ly && ly.arrivals));
-            kpi('departures', S.stDepartures, n.departures, [S.stDeparturesTip, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.departures, ly && ly.departures));
-            kpi('turnovers', S.stTurnovers, n.turnovers, [S.stTurnoversTip, S.stTurnoversOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.turnovers, ly && ly.turnovers));
-            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, [S.stInHouseTip, S.stInHouseNot, S.stTipOnce, S.stTipDock, vsLine(S.stTipVs)], minus(n.inHouse, ly && ly.inHouse));
+            kpi('arrivals', S.stArrivals, n.arrivals, [S.stArrivalsTip, vsLine(S.stTipVs)], minus(n.arrivals, ly && ly.arrivals));
+            kpi('departures', S.stDepartures, n.departures, [S.stDeparturesTip, vsLine(S.stTipVs)], minus(n.departures, ly && ly.departures));
+            kpi('turnovers', S.stTurnovers, n.turnovers, [S.stTurnoversTip, vsLine(S.stTipVs)], minus(n.turnovers, ly && ly.turnovers));
+            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, [S.stInHouseTip, S.stInHouseNot, vsLine(S.stTipVs)], minus(n.inHouse, ly && ly.inHouse));
             out.appendChild(grid);
 
-            // NIGHTS BOOKED BY COTTAGE (0.46.0, Rob): nights, % of the
-            // timeframe's nights and its bar; ranked by %, highest first, ties
-            // in cottage order; ▲ ▼ in points against the PREVIOUS timeframe.
+            // NIGHTS BY COTTAGE (0.46.0, Rob; a real table since 0.47.0, Rob's
+            // pick "bar under each name"): Cottage | Nights | Occupancy |
+            // vs 2025, each cottage on two lines — its name and three
+            // figures, then its occupancy as a full-width bar. Busiest first,
+            // ties in cottage order. Occupancy is booked nights ÷ the
+            // period's nights, and the bar shows that same %. ▲▼ IS AGAINST
+            // THE SAME DATES LAST YEAR, in occupancy points, as the tiles'
+            // (until 0.47.0: the previous timeframe) — from the last-year data
+            // the tiles already load, so no request of its own; "—" when that
+            // cannot be compared. A real <table> with the roles said outright,
+            // because the CSS grid that aligns it would otherwise cost it its
+            // table semantics: each figure is read with its column's name.
             var per = el('section', 'mphbac-staff-stats-block is-percot');
-            blockHead(per, 'percot', S.stPerCottage, (S.stPerCottageTip || '').replace('{n}', String(n.nights)), [S.stTipNightOnce, S.stTipDock,
-                plan.prev.why ? noCompareText(plan.prev.why)
-                    : (S.stTipVsPrev || '').replace('{range}', tipRange(plan.prev.w.from, plan.prev.w.to))]);
-            var list = el('ul', 'mphbac-staff-percot');
+            blockHead(per, 'percot', S.stPerCottage, (S.stPerCottageTip || '').replace('{n}', String(n.nights)), [
+                plan.ly.why ? noCompareText(plan.ly.why)
+                    : (S.stTipVsOcc || '').replace('{range}', tipRange(plan.ly.w.from, plan.ly.w.to))]);
+            var lyYear = lyLabel(plan.ly.w);
             var pct = function (v, of) { return of ? Math.round(100 * v / of) : 0; };
+            var table = el('table', 'mphbac-staff-percot');
+            table.setAttribute('role', 'table');
+            var thead = el('thead');
+            thead.setAttribute('role', 'rowgroup');
+            var hr = el('tr', 'mphbac-staff-percot-head');
+            hr.setAttribute('role', 'row');
+            [['name', S.stColCottage], ['num', S.stColNights], ['pct', S.stColOcc], ['delta', (S.stColVs || 'vs {year}').replace('{year}', lyYear)]].forEach(function (c) {
+                var th = el('th', 'mphbac-staff-percot-h is-' + c[0], c[1] || '');
+                th.setAttribute('scope', 'col');
+                th.setAttribute('role', 'columnheader');
+                // Drawn in capitals by CSS; named in its own case.
+                th.setAttribute('aria-label', c[1] || '');
+                hr.appendChild(th);
+            });
+            thead.appendChild(hr);
+            table.appendChild(thead);
+            var tbody = el('tbody');
+            tbody.setAttribute('role', 'rowgroup');
+            var vsSr = (S.stVsDatesSr || '{year}').replace('{year}', lyYear);
             n.cottages.map(function (c, i) { return { c: c, i: i, v: n.perCottage[c.id] || 0 }; })
                 .sort(function (a, b) { return b.v - a.v || a.i - b.i; })
                 .forEach(function (r) {
                     var c = r.c, v = r.v, p = pct(v, n.nights);
-                    var li = el('li', 'mphbac-staff-percot-row');
-                    li.setAttribute('data-cottage', String(c.id));
-                    li.appendChild(el('span', 'mphbac-staff-percot-name', (c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || '')));
+                    var tr = el('tr', 'mphbac-staff-percot-row');
+                    tr.setAttribute('role', 'row');
+                    tr.setAttribute('data-cottage', String(c.id));
+                    var name = el('th', 'mphbac-staff-percot-name', (c.number ? '#' + c.number + ' ' : '') + (c.abbrev || c.title || ''));
+                    name.setAttribute('scope', 'row');
+                    name.setAttribute('role', 'rowheader');
+                    tr.appendChild(name);
+                    var num = el('td', 'mphbac-staff-percot-num', String(v));
+                    num.setAttribute('role', 'cell');
+                    tr.appendChild(num);
+                    var occ = el('td', 'mphbac-staff-percot-pct', p + '%');
+                    occ.setAttribute('role', 'cell');
+                    tr.appendChild(occ);
+                    var d = deltaEl('td', 'mphbac-staff-percot-delta', ly ? p - pct(ly.perCottage[c.id] || 0, ly.nights) : null, 0, vsSr, 'point');
+                    d.setAttribute('role', 'cell');
+                    tr.appendChild(d);
+                    // The second line: the bar, a picture of the Occupancy
+                    // figure, so it is not read a second time.
+                    var bar = el('td', 'mphbac-staff-percot-barcell');
+                    bar.setAttribute('aria-hidden', 'true');
                     var track = el('span', 'mphbac-staff-percot-track');
                     var fill = el('span', 'mphbac-staff-percot-fill');
-                    fill.style.width = (n.nights ? Math.round(1000 * v / n.nights) / 10 : 0) + '%';
+                    fill.style.width = p + '%';
                     track.appendChild(fill);
-                    li.appendChild(track);
-                    li.appendChild(el('span', 'mphbac-staff-percot-num', nightsText(v)));
-                    li.appendChild(el('span', 'mphbac-staff-percot-pct', p + '%'));
-                    li.appendChild(deltaEl('span', 'mphbac-staff-percot-delta',
-                        pv ? p - pct(pv.perCottage[c.id] || 0, pv.nights) : null, 0, S.stVsPrevSr, 'point'));
-                    list.appendChild(li);
+                    bar.appendChild(track);
+                    tr.appendChild(bar);
+                    tbody.appendChild(tr);
                 });
-            per.appendChild(list);
+            table.appendChild(tbody);
+            per.appendChild(table);
             out.appendChild(per);
 
             // Share of NIGHTS booked by source (Rob: nights, not bookings): an
             // inline SVG pie in the source colours, and the same numbers as
             // plain text for anyone not looking at the picture.
             var src = el('section', 'mphbac-staff-stats-block is-source');
-            blockHead(src, 'source', S.stBySource, S.stBySourceTip, [S.stBySourceOnce, S.stTipDock]);
+            blockHead(src, 'source', S.stBySource, S.stBySourceTip, []);
             if (!n.booked) {
                 src.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoNights || ''));
             } else {
@@ -1890,7 +1985,7 @@
         // LENGTH OF STAY (0.46.0): 1–2, 3–6, 7–27 and 28+ nights.
         function drawMix(n) {
             var sec = el('section', 'mphbac-staff-stats-block is-mix');
-            blockHead(sec, 'mix', S.stMix, S.stMixTip, [S.stTipDock]);
+            blockHead(sec, 'mix', S.stMix, S.stMixTip, []);
             if (!n.bookings) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoStays || ''));
                 return sec;
@@ -1915,7 +2010,7 @@
         // ARRIVALS AND DEPARTURES BY WEEKDAY (0.46.0), Sunday to Saturday.
         function drawWeekdays(n) {
             var sec = el('section', 'mphbac-staff-stats-block is-weekdays');
-            blockHead(sec, 'weekdays', S.stWeekdays, S.stWeekdaysTip, [S.stWeekdaysSame, S.stTipDock]);
+            blockHead(sec, 'weekdays', S.stWeekdays, S.stWeekdaysTip, []);
             var max = Math.max.apply(null, n.inByDay.concat(n.outByDay).concat([1]));
             var chart = el('div', 'mphbac-staff-wk');
             chart.setAttribute('aria-hidden', 'true');
@@ -1955,7 +2050,7 @@
         // HOW FAR AHEAD THEY BOOK (0.46.0), by source, then all together.
         function drawLead(n, w) {
             var sec = el('section', 'mphbac-staff-stats-block is-lead');
-            blockHead(sec, 'lead', S.stLead, S.stLeadTip, [S.stLeadAfter, S.stTipDock]);
+            blockHead(sec, 'lead', S.stLead, S.stLeadTip, []);
             var by = leadTimes(n.mine, w);
             if (!by.all.n) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoLead || ''));
@@ -1984,7 +2079,7 @@
         // year earlier. It does not follow the timeframe.
         function drawPace(nowData, agoData, plan) {
             var sec = el('section', 'mphbac-staff-stats-block is-pace');
-            blockHead(sec, 'pace', S.stPace, S.stPaceTip, [plan.pace.why ? noCompareText(plan.pace.why) : S.stPaceVs, S.stPaceLow, S.stPaceFixed, S.stTipDock]);
+            blockHead(sec, 'pace', S.stPace, S.stPaceTip, [plan.pace.why ? noCompareText(plan.pace.why) : S.stPaceVs, S.stPaceLow, S.stPaceFixed]);
             var ul = el('ul', 'mphbac-staff-pace');
             [30, 60, 90].forEach(function (k) {
                 var now = paceNights(nowData, plan.pace.now.from, k, null);
@@ -2011,7 +2106,7 @@
         function drawHeat(data, year, w, total) {
             var sec = el('section', 'mphbac-staff-stats-block is-heat');
             var title = (S.stHeat || '{year}').replace('{year}', year.y);
-            blockHead(sec, 'heat', title, (S.stHeatTip || '').replace('{year}', year.y).replace('{n}', String(total)), [S.stHeatOutline, S.stHeatTap, S.stTipDock]);
+            blockHead(sec, 'heat', title, (S.stHeatTip || '').replace('{year}', year.y).replace('{n}', String(total)), [S.stHeatOutline, S.stHeatTap]);
             var nights = daysBetween(year.w.from, year.w.to);
             var per = data ? own(data.bookings || [], nights).perNight : {};
             var grid = el('div', 'mphbac-staff-heat');
@@ -2216,18 +2311,44 @@
         window.addEventListener('resize', function () { if (tipOpen) placeTip(tipOpen.btn); });
 
         // ---- LAST YEAR'S GHOSTS (0.46.0, Rob) -----------------------------------
-        // A switch beside Show: last year's bookings, by calendar date, drawn
-        // as faint dashed outlines behind this year's bars. Off on every load.
-        // A ghost is aria-hidden, takes no taps (pointer-events: none), and
-        // carries no name, no number and no colour of a source — nothing on it
-        // can be read as a booking.
+        // Last year's bookings, by calendar date, on this year's chart.
+        //
+        // OFF · BEHIND · IN FRONT (0.47.0, Rob's picks of 2026-10-16). Off on
+        // every load, and again on a back/forward-cache restore.
+        //   BEHIND is the 0.46.0 ghost, unchanged: a faint dashed outline
+        //   behind the bars — aria-hidden, no tab stop, no taps
+        //   (pointer-events: none), no name and no source colour; nothing on
+        //   it reads as a booking.
+        //   IN FRONT brings the same boxes above everything of this year's:
+        //   striped in two pale tints of the booking's own source colour, a
+        //   solid edge in that colour, and a white "2025 · Amy A." tag. Each
+        //   is a button named "Last year: …", and opens the booking's sheet
+        //   under a "Last Year · 2025" heading. This year's bars fade to 22%
+        //   and take no taps or focus; every other way to a current booking —
+        //   search, the Daily list — is untouched.
+        // ONE SET OF BOXES. They are drawn once per chart, from one fetch;
+        // Behind ↔ In Front is a class on the chart and each box's
+        // attributes, never a refetch or a redraw. The data is held for the
+        // session (lyHeld), so a chart redrawn by navigation or the 3-minute
+        // refresh gets its boxes in the same step as its bars: no flicker, no
+        // second request, and drawGhosts never draws a chart's boxes twice.
+        // A fetch that comes back after navigation or Off is dropped (lySeq).
+        var LY_MODES = ['off', 'behind', 'front'];
+        var lyMode = 'off';
+        var lySeq = 0;
+        var lyHeld = {};
+        var lyFlight = {};
         function drawGhosts(chart) {
             var from = chart.getAttribute('data-from'), to = chart.getAttribute('data-to');
-            if (!from || !to || !chart._rows) return;
+            // Once per chart: asked for (or drawn) already, nothing to do.
+            if (!from || !to || !chart._rows || chart._lyState) return;
             var r = clampCap({ from: yearBack(from), to: yearBack(to) });
             if (r.from > r.to) return;
-            fetchRange(r).then(function (data) {
-                if (!chart.isConnected || !ghostsEl || !ghostsEl.checked || chart.querySelector('.mphbac-staff-ghost')) return;
+            var key = r.from + '|' + r.to, seq = ++lySeq;
+            chart._lyState = 'pending';
+            var draw = function (data) {
+                if (seq !== lySeq || !chart.isConnected || lyMode === 'off' || chart.querySelector('.mphbac-staff-ghost')) return;
+                chart._lyState = 'drawn';
                 var days = chart._days, N = days.length, idx = {}, seen = {};
                 days.forEach(function (d, i) { idx[d] = i; });
                 var frag = document.createDocumentFragment();
@@ -2242,29 +2363,149 @@
                         var row = chart._rows[c.roomTypeId], k = c.roomTypeId + '|' + ci + '|' + co;
                         if (!row || seen[k]) return;
                         seen[k] = 1;
-                        var g = document.createElement('div');
-                        g.className = 'mphbac-staff-ghost';
-                        g.setAttribute('aria-hidden', 'true');
+                        var g = ghostEl(b, (e - s) * (chart._dayW || 44) / 2, chart._font);
                         g.style.gridColumn = (2 + s) + ' / ' + (2 + e);
                         g.style.gridRow = String(row);
                         frag.appendChild(g);
                     });
                 });
                 chart.appendChild(frag);
-            }).catch(function (err) {
+                applyLy(chart);
+            };
+            if (lyHeld[key]) { draw(lyHeld[key]); return; }
+            // One request per range, however often the switch is flicked
+            // while it is in flight.
+            (lyFlight[key] = lyFlight[key] || fetchRange(r).then(function (data) {
+                lyHeld[key] = data;
+                delete lyFlight[key];
+                return data;
+            }, function (err) { delete lyFlight[key]; throw err; })).then(draw).catch(function (err) {
+                if (seq !== lySeq) return;
+                chart._lyState = null;             // the next switch may try again
                 if (!tokenReload(err)) say(failureText(err), true);
+            });
+        }
+        // One box. Built Behind (as 0.46.0 drew it); applyLy() makes it a
+        // named button In Front. The tag is in the box from the start and
+        // shown only In Front — the box carries nothing else.
+        function ghostEl(b, px, family) {
+            var g = document.createElement('button');
+            g.type = 'button';
+            g.className = 'mphbac-staff-ghost is-src-' + sourceOf(b);
+            g.setAttribute('aria-hidden', 'true');
+            g.tabIndex = -1;
+            var year = b.checkin.slice(0, 4);        // the booking's own year (Dec–Jan: two)
+            var tag = document.createElement('span');
+            tag.className = 'mphbac-staff-ghost-tag';
+            tag.textContent = lyTag(b, year, px, family);
+            // The year alone gets the box's whole width (staff.css).
+            if (tag.textContent === year) g.className += ' is-year-only';
+            g.appendChild(tag);
+            g._ly = { id: b.id, year: year, name: lyName(b, year) };
+            return g;
+        }
+        // "2025 · Amy A.", clipped with an ellipsis by CSS; on a box too
+        // narrow for even a name's first letter, the year alone. Measured in
+        // the tag's own face: Raleway bold at the bar label's 13px. `px` is
+        // the box's width; the box's margins and border, its padding and the
+        // tag's are what the text cannot have.
+        var LY_TAG_FONT = '700 13px ';
+        function lyTag(b, year, px, family) {
+            var full = (S.lyTag || '{year} · {name}').replace('{year}', year).replace('{name}', barName(b));
+            var room = px - 2 - 4 - 8 - 12;
+            var least = (S.lyTag || '{year} · {name}').replace('{year}', year).replace('{name}', barName(b).charAt(0) + '…');
+            return textW(least, LY_TAG_FONT + (family || 'sans-serif')) <= room ? full : year;
+        }
+        // "Last year: Amy Archer, Oct 1 to Oct 11 2025, Direct" — and across
+        // New Year, "Dec 28 2025 to Jan 3 2026".
+        function lyName(b, year) {
+            var y2 = b.checkout.slice(0, 4);
+            var dates = (S.lyDates || '{from} to {to}')
+                .replace('{from}', shortDate(b.checkin) + (y2 !== year ? ' ' + year : ''))
+                .replace('{to}', shortDate(b.checkout) + ' ' + y2);
+            return (S.lyName || 'Last year: {name}, {dates}, {source}')
+                .replace('{name}', b.guestName || ('#' + b.id)).replace('{dates}', dates).replace('{source}', sourceName(b));
+        }
+        // THE MODE, ON ONE CHART: the class, then each box and each bar.
+        function applyLy(chart) {
+            if (!chart || !chart.classList) return;
+            var front = lyMode === 'front';
+            chart.classList.toggle('is-ly-front', front);
+            [].forEach.call(chart.querySelectorAll('.mphbac-staff-ghost'), function (g) {
+                if (front) {
+                    g.removeAttribute('aria-hidden');
+                    g.removeAttribute('tabindex');
+                    g.setAttribute('aria-label', g._ly ? g._ly.name : '');
+                } else {
+                    g.setAttribute('aria-hidden', 'true');
+                    g.tabIndex = -1;
+                    g.removeAttribute('aria-label');
+                }
+            });
+            // In Front, this year's bars take no taps (staff.css) and no
+            // focus, and leave the accessibility tree while faded.
+            [].forEach.call(chart.querySelectorAll('.mphbac-staff-bar'), function (bar) {
+                bar.inert = front;
+                if (front) bar.tabIndex = -1; else bar.removeAttribute('tabindex');
             });
         }
         function clearGhosts() {
             [].forEach.call(gridEl.querySelectorAll('.mphbac-staff-ghost'), function (g) { g.parentNode.removeChild(g); });
         }
-        if (ghostsEl) {
-            ghostsEl.checked = false;          // off on every load, whatever a browser restores
-            ghostsEl.addEventListener('change', function () {
-                if (ghostsEl.checked && gridEl.firstChild) drawGhosts(gridEl.firstChild);
-                else clearGhosts();
+        function setLy(mode) {
+            if (LY_MODES.indexOf(mode) < 0) return;
+            lyMode = mode;
+            lySegs.forEach(function (b) {
+                var on = b.getAttribute('data-ly') === mode;
+                b.setAttribute('aria-checked', on ? 'true' : 'false');
+                b.tabIndex = on ? 0 : -1;
             });
+            var chart = gridEl.firstChild;
+            if (mode === 'off') {
+                lySeq++;                           // a fetch in flight draws nothing
+                clearGhosts();
+                if (chart) chart._lyState = null;
+            } else if (chart && chart._rows) {
+                drawGhosts(chart);                 // once per chart: Behind ↔ In Front draws nothing
+            }
+            applyLy(chart);
         }
+        if (lyGroup) {
+            // Named by its visible label.
+            var lyCap = lyGroup.querySelector('.mphbac-staff-ghostlabel');
+            if (lyCap) {
+                if (!lyCap.id) lyCap.id = 'mphbac-staff-ly-' + Math.random().toString(36).slice(2, 9);
+                lyGroup.setAttribute('aria-labelledby', lyCap.id);
+            }
+            lyGroup.addEventListener('click', function (e) {
+                var b = e.target.closest ? e.target.closest('.mphbac-staff-segbtn') : null;
+                if (b && !b.disabled) setLy(b.getAttribute('data-ly'));
+            });
+            // A radio group's keys: the arrows move the choice and the focus
+            // together, round the ends; Home and End go to the first and last.
+            lyGroup.addEventListener('keydown', function (e) {
+                var i = lySegs.indexOf(document.activeElement), k = e.key, n = lySegs.length;
+                if (i < 0) return;
+                var to = k === 'ArrowRight' || k === 'ArrowDown' ? (i + 1) % n
+                    : k === 'ArrowLeft' || k === 'ArrowUp' ? (i + n - 1) % n
+                    : k === 'Home' ? 0 : k === 'End' ? n - 1 : -1;
+                if (to < 0) return;
+                e.preventDefault();
+                setLy(lySegs[to].getAttribute('data-ly'));
+                lySegs[to].focus();
+            });
+            setLy('off');                         // off on every load
+            // ...and on a page brought back from the back/forward cache,
+            // which restores the script's state as it was left.
+            window.addEventListener('pageshow', function (e) { if (e.persisted) setLy('off'); });
+        }
+        // ONE CLICK HANDLER FOR EVERY BOX, on the chart's scroller: a box
+        // carries no listener of its own. Behind, a box takes no taps at all.
+        gridEl.addEventListener('click', function (e) {
+            var g = e.target.closest ? e.target.closest('.mphbac-staff-ghost') : null;
+            if (!g || lyMode !== 'front' || !g._ly) return;
+            openDetail(g._ly.id, g, g._ly.year);
+        });
 
         // THE RANGE LINE IS BIG AND ONE LINE (0.45.3, Rob): it is what says
         // what the figures are for. It starts at its full CSS size and steps
@@ -2316,6 +2557,7 @@
 
         function pctOf(v, total) { return total ? Math.round(100 * v / total) : 0; }
 
+        var PIE_FONT = '700 15px ' + (getComputedStyle(root).fontFamily || 'sans-serif');
         function pie(bySource, total) {
             var NS = 'http://www.w3.org/2000/svg';
             var R = 70, C = 80;
@@ -2342,9 +2584,12 @@
                 shape.setAttribute('data-source', k);
                 svg.appendChild(shape);
                 // The label sits in its slice; one too thin to hold it is
-                // labelled in the list beside the pie only.
-                if (frac >= 0.08) {
-                    var mid = (at + end) / 2, lr = frac >= 0.9999 ? 0 : R * 0.62;
+                // labelled in the list beside the pie only. Since 0.47.0 (15px
+                // labels) "too thin" is measured: the label, with 3px either
+                // side, must fit across the slice where it sits.
+                var mid = (at + end) / 2, lr = frac >= 0.9999 ? 0 : R * 0.62;
+                var room = frac >= 0.5 ? Infinity : 2 * lr * Math.sin(Math.PI * frac);
+                if (frac >= 0.9999 || room >= textW(pctOf(v, total) + '%', PIE_FONT) + 6) {
                     var t = document.createElementNS(NS, 'text');
                     t.setAttribute('x', (C + lr * Math.cos(mid)).toFixed(2));
                     t.setAttribute('y', (C + lr * Math.sin(mid)).toFixed(2));

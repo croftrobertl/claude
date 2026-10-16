@@ -368,7 +368,13 @@ const BUTTONLIKE = [
        place to check that is the source. Get it backwards and those browsers
        get no ground at all: an X floating on white, which is the exact bug
        the fill was added to fix. */
-    for (const [label, css] of [['widget.css', pubCode], ['staff.css', code]]) {
+    for (const [label, all] of [['widget.css', pubCode], ['staff.css', code]]) {
+      // A color-mix() inside `@supports (color: color-mix(…))` is guarded
+      // the other way (0.47.0, last year's stripes): a browser without it
+      // never reads the block, and keeps the flat tint declared outside it
+      // (staff-lastyear-test.js checks that tint). Only the rest must carry
+      // a literal in front.
+      const css = all.replace(/@supports \(color: color-mix\([^)]*\)\) \{[\s\S]*?\}\s*\}/g, '');
       const m = css.match(/background:\s*#E7EEF7;\s*background:\s*color-mix\(/);
       check(label + ': the literal ground is declared BEFORE the color-mix() that replaces it', !!m);
       check(label + ': ...and no color-mix() is left without one in front of it',

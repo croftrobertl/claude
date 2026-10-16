@@ -170,6 +170,19 @@ const SHEET = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-sheet" r
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 
+/**
+ * RALEWAY, THE SITE'S FACE, FOR MEASURING (0.47.0). This container has no
+ * Raleway, so every page here falls back to DejaVu Serif — far wider — and a
+ * "fits on one line at 360px" measured in it says nothing about live. Tests
+ * that measure fit pass this as `head`: Raleway's latin subset (SIL Open Font
+ * License, tests/fonts/OFL.txt), the file Google Fonts serves, inlined. Not
+ * shipped; the plugin loads no font.
+ */
+function raleway() {
+  const b64 = fs.readFileSync(path.resolve(__dirname, '../fonts/Raleway-latin.woff2')).toString('base64');
+  return `<style>@font-face{font-family:Raleway;src:url(data:font/woff2;base64,${b64}) format('woff2');font-weight:100 900;font-style:normal}</style>`;
+}
+
 
 /**
  * THE BOARD, LIVE (0.44.0): the shell EXTRACTED FROM THE PHP, the real
@@ -248,5 +261,5 @@ ${foot}
 </body></html>`;
 }
 
-module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults, boardShell, boardStrings, staffJsShipped,
+module.exports = { raleway, ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults, boardShell, boardStrings, staffJsShipped,
   page, TOOLS, SHEET, THEME, CHROMIUM, POST, WRAPPER };
