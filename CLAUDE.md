@@ -192,6 +192,19 @@ a `context` from the request: until v0.23.5 it did, and that made it an open
 proxy to the Gemini key. `tests/ai-query.test.php` and
 `tests/ai-query.mutations.py` guard this.
 
+`Widget::render_more_menu()` emits ONE of two things from the same face: with
+exactly one resolved slot a real `<button class="dccgg-more … dccgg-more--direct">`
+that carries the item's own action class and `data-report-section`, so the
+existing delegated handlers drive it with no per-instance listener; with two or
+three, the `<details>` popover as before. `.dccgg-more--direct` is the
+behavioural marker the JS scopes on, `.dccgg-more--fd` is the round face — keep
+them separate, or the legacy `pill` shape loses its styling. The face's reset
+is (0,4,0) by doubling the class, because the theme's
+`.site .content .entry button` is (0,3,1) and reaches the hub (the popup header
+is portaled out of it). Accessible name = the visible label; `aria-label` is
+emitted only when there is no label. `tests/front-desk.test.php`,
+`tests/front-desk.ui.js` and `tests/front-desk.mutations.py` guard this.
+
 `Widget::config_emergency_contacts()` gates the data-config contact list on an
 emergency section being present in THIS render; apply_public_mode() drops a
 guest-only Emergency section, so the public page gets none. Don't emit that
@@ -214,7 +227,8 @@ the plugin directory could not. The worker never caches wp-admin, wp-json,
 admin-ajax, logins or previews, and turning the toggle off unregisters it.
 
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
-`php tests/ai-query.test.php` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/ai-query.test.php`, `php tests/front-desk.test.php` and
+`node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

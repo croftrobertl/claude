@@ -3264,6 +3264,182 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario AE: the Front Desk button (v0.24.0) ---------------------
+    // The WHOLE widget from render(), on the minified bundles, under the site's
+    // real ground — including the theme rule that paints every bare <button>
+    // #444 uppercase, which reaches the hub but not the portaled popup header.
+    {
+        console.log('\nAE. Front Desk: one tap to the Support Report, on the hub and in every section');
+        const errors = [];
+        const { execFileSync } = require('child_process');
+        const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
+        const MIN_CORE = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
+        const MIN_GUEST = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
+        const MIN_JS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/widget.min.js'), 'utf8');
+        const KIT = `html{font-weight:700}
+            body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0;padding:0 16px}
+            .elementor-kit-331 button{font-family:Pavanam,sans-serif;font-size:18px;font-weight:900;letter-spacing:1.5px;
+              line-height:50px;text-transform:uppercase;padding:0 18px;background:#444;color:#fff;border:2px solid #222;border-radius:3px}
+            .elementor-kit-331 summary{font-family:Pavanam,sans-serif;text-transform:uppercase;letter-spacing:1.5px}
+            .site .content .entry button{text-transform:uppercase;background:#444;color:#fff}`;
+        const pageFor = (markup) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1"><style>${MIN_CORE}${MIN_GUEST}</style><style>${KIT}</style></head>
+            <body class="elementor-kit-331"><div class="site"><div class="content"><div class="entry">
+            ${markup}</div></div></div><script>${MIN_JS}</script></body></html>`;
+        // The accessible name a screen reader computes, not the raw text.
+        const axName = (el) => {
+            const al = el.getAttribute('aria-label');
+            if (al && al.trim()) return al.trim();
+            const walk = (n) => {
+                if (n.nodeType === 3) return n.textContent;
+                if (n.nodeType !== 1) return '';
+                if (n.getAttribute('aria-hidden') === 'true' || n.hidden) return '';
+                const cs = getComputedStyle(n);
+                if (cs.display === 'none' || cs.visibility === 'hidden') return '';
+                return [...n.childNodes].map(walk).join('');
+            };
+            return walk(el).replace(/\s+/g, ' ').trim();
+        };
+        const open = async (kase, vp, touch) => {
+            const ctx = await browser.newContext({ viewport: vp, isMobile: touch, hasTouch: touch });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.route('**/admin-ajax.php', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
+            await page.route('https://dccgg.test/g/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(emit(kase)) }));
+            await page.goto('https://dccgg.test/g/', { waitUntil: 'load' });
+            await page.waitForTimeout(350);
+            return { ctx, page };
+        };
+        const PHONE_FD = { width: 390, height: 844 }, DESK_FD = { width: 1280, height: 900 };
+
+        for (const vp of [PHONE_FD, DESK_FD]) {
+            const { ctx, page } = await open('guest-fd', vp, vp === PHONE_FD);
+            // ---- the hub button, inside the theme's `.site .content .entry`
+            const hub = '.dccgg-toolbar .dccgg-more--direct';
+            check(`${vp.width}px: the hub shows ONE real button, not a details popover`,
+                (await page.$$eval('.dccgg-toolbar .dccgg-more', (e) => e.map((x) => x.tagName))).join() === 'BUTTON');
+            const m = await page.$eval(hub, (el) => {
+                const c = getComputedStyle(el), i = getComputedStyle(el.querySelector('.dccgg-fd-icon'));
+                const l = getComputedStyle(el.querySelector('.dccgg-fd-label'));
+                const lr = el.querySelector('.dccgg-fd-label').getBoundingClientRect();
+                const r = el.getBoundingClientRect();
+                return { font: c.fontFamily.split(',')[0].replace(/"/g, ''), bg: c.backgroundColor, pad: c.padding,
+                    border: c.borderTopStyle, tt: c.textTransform, ls: c.letterSpacing, w: Math.round(r.width), h: Math.round(r.height),
+                    iw: Math.round(parseFloat(i.width)), ih: Math.round(parseFloat(i.height)), ir: i.borderTopLeftRadius,
+                    ibg: i.backgroundColor, ibd: i.borderTopWidth + ' ' + i.borderTopColor, isize: i.fontSize, ilh: i.lineHeight,
+                    ifont: i.fontFamily.split(',')[0].replace(/"/g, ''),
+                    lfont: l.fontFamily.split(',')[0].replace(/"/g, ''), lsize: l.fontSize, lweight: l.fontWeight,
+                    lwrap: l.whiteSpace, ltt: l.textTransform, lcolor: l.color,
+                    llines: Math.round(lr.height / parseFloat(l.lineHeight)) };
+            });
+            check(`${vp.width}px: the theme's button font, fill, padding, border, caps and tracking are all kept out`,
+                m.font === 'Raleway' && m.bg === 'rgba(0, 0, 0, 0)' && m.pad === '0px'
+                && m.border === 'none' && m.tt === 'none' && m.ls === 'normal', JSON.stringify(m));
+            check(`${vp.width}px: a 48px white circle with a 2px #006BCF edge`,
+                m.iw === 48 && m.ih === 48 && m.ir === '50%' && m.ibg === 'rgb(255, 255, 255)'
+                && m.ibd === '2px rgb(0, 107, 207)', JSON.stringify(m));
+            check(`${vp.width}px: the emoji is 24px on its own font stack, line-height 1`,
+                m.isize === '24px' && m.ilh === '24px' && /Emoji/.test(m.ifont), m.ifont + ' ' + m.ilh);
+            check(`${vp.width}px: the label is Raleway 12px/700, Title Case, on one line`,
+                m.lfont === 'Raleway' && m.lsize === '12px' && m.lweight === '700'
+                && m.lwrap === 'nowrap' && m.ltt === 'none' && m.llines === 1, JSON.stringify(m));
+            check(`${vp.width}px: the whole control is a tap target of at least 48px`, m.w >= 48 && m.h >= 48, `${m.w}x${m.h}`);
+            check(`${vp.width}px: its accessible name is the visible label`,
+                (await page.$eval(hub, axName)) === 'Front Desk');
+            check(`${vp.width}px: the same button appears on the hub and in all 3 section headers`,
+                (await page.$$('.dccgg-more--direct')).length === 4);
+
+            // ---- states
+            const circle = async () => page.$eval(hub + ' .dccgg-fd-icon', (e) => getComputedStyle(e).backgroundColor);
+            const labelCol = async () => page.$eval(hub + ' .dccgg-fd-label', (e) => getComputedStyle(e).color);
+            await page.hover(hub); await page.waitForTimeout(350);
+            if (vp === PHONE_FD) {
+                check('390px: a touch device gets no hover fill', (await circle()) === 'rgb(255, 255, 255)', await circle());
+            } else {
+                check('1280px: hover fills the circle #f08080 and the label stays dark',
+                    (await circle()) === 'rgb(240, 128, 128)' && (await labelCol()) === 'rgb(17, 17, 17)',
+                    (await circle()) + ' / ' + (await labelCol()));
+            }
+            await page.mouse.move(1, 1); await page.waitForTimeout(250);
+            await page.$eval(hub, (e) => e.focus()); await page.waitForTimeout(300);
+            const foc = await page.$eval(hub, (e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, s: c.outlineStyle }; });
+            check(`${vp.width}px: keyboard focus draws a 3px ring and fills the circle`,
+                parseFloat(foc.w) >= 3 && foc.s === 'solid' && (await circle()) === 'rgb(240, 128, 128)', JSON.stringify(foc));
+            check(`${vp.width}px: and the label still never takes the fill colour`, (await labelCol()) === 'rgb(17, 17, 17)');
+            await ctx.close();
+        }
+
+        // ---- behaviour: one tap opens the Support Report, with the section
+        {
+            const { ctx, page } = await open('guest-fd', PHONE_FD, true);
+            await page.click('.dccgg-toolbar .dccgg-more--direct'); await page.waitForTimeout(500);
+            let st = await page.evaluate(() => { const d = document.querySelector('.dccgg-report-dialog');
+                return { open: !!(d && d.open), section: d && d.dataset.section, inside: !!(d && d.contains(document.activeElement)),
+                         popover: !!document.querySelector('.dccgg-more[open]') }; });
+            check('one tap on the hub opens the Support Report dialog, with no popover in between',
+                st.open && !st.popover && st.section === '', JSON.stringify(st));
+            check('and focus moves into the dialog', st.inside);
+            await page.click('.dccgg-report-dialog .dccgg-btn-cancel'); await page.waitForTimeout(400);
+            check('closing it returns focus to the button that opened it',
+                await page.evaluate(() => document.activeElement === document.querySelector('.dccgg-toolbar .dccgg-more--direct')));
+
+            await page.click('.dccgg-tile[data-key="wifi"]'); await page.waitForTimeout(600);
+            const inPop = '.dccgg-detail:not([hidden]) .dccgg-detail-header-titlebar .dccgg-more--direct';
+            check('the popup header button is the same control, in the portaled stage',
+                await page.$eval(inPop, (e) => e.closest('.dccgg-root') === null && !!e.querySelector('.dccgg-fd-icon')));
+            await page.click(inPop); await page.waitForTimeout(500);
+            st = await page.evaluate(() => { const d = document.querySelector('.dccgg-report-dialog');
+                return { open: !!(d && d.open), section: d && d.dataset.section }; });
+            check('tapping it reports THAT section, as the popover item did', st.open && st.section === 'wifi', JSON.stringify(st));
+            await page.click('.dccgg-report-dialog .dccgg-btn-cancel'); await page.waitForTimeout(400);
+            check('and focus returns to the popup header button',
+                await page.evaluate((s) => document.activeElement === document.querySelector(s), inPop));
+            await ctx.close();
+        }
+
+        // ---- two items keep the popover, wearing the same face
+        {
+            const { ctx, page } = await open('guest-more', PHONE_FD, true);
+            check('two items still render a details popover, with the circle face',
+                (await page.$$eval('.dccgg-toolbar .dccgg-more', (e) => e.map((x) => x.tagName))).join() === 'DETAILS'
+                && !!(await page.$('.dccgg-toolbar .dccgg-more-summary--fd .dccgg-fd-icon')));
+            check('its name is the label too', (await page.$eval('.dccgg-toolbar .dccgg-more > summary', axName)) === 'Front Desk');
+            await page.click('.dccgg-toolbar .dccgg-more > summary'); await page.waitForTimeout(400);
+            check('tapping opens the popover and fills the circle',
+                await page.evaluate(() => !!document.querySelector('.dccgg-more[open]')
+                    && getComputedStyle(document.querySelector('.dccgg-toolbar .dccgg-fd-icon')).backgroundColor === 'rgb(240, 128, 128)'));
+            check('and it holds both items', (await page.$$('.dccgg-toolbar .dccgg-more-item')).length === 2);
+            await ctx.close();
+        }
+
+        // ---- zero items: nothing rendered at all
+        {
+            const { ctx, page } = await open('guest', PHONE_FD, true);
+            check('with reporting off, the shipped defaults render no button anywhere',
+                (await page.$$('.dccgg-more')).length === 0);
+            await ctx.close();
+        }
+
+        // ---- the hub row: how far the search bar moved
+        {
+            const { ctx, page } = await open('guest-fd', PHONE_FD, true);
+            const pos = await page.evaluate(() => ({
+                search: Math.round(document.querySelector('.dccgg-search').getBoundingClientRect().top),
+                tiles: Math.round(document.querySelector('.dccgg-menu').getBoundingClientRect().top) }));
+            // 0.23.5 with the live settings put the search bar at 100 and the
+            // tiles at 169 (hub toolbar 33px tall, no Print button). The
+            // 48px circle plus its label makes the row 66px: +33 on both. The
+            // owner asked to be TOLD rather than have anything shrunk, so this
+            // records the real number instead of asserting a budget met.
+            check(`RECORDED, over the 16px budget: the search bar sits at ${pos.search} (was 100, +${pos.search - 100}) ` +
+                  `and the tiles at ${pos.tiles} (was 169, +${pos.tiles - 169})`,
+                pos.search === 133 && pos.tiles === 202, JSON.stringify(pos));
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

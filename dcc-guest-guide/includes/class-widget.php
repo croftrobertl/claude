@@ -690,12 +690,36 @@ final class Widget extends Widget_Base
             'description'  => __('Adds a compact ⋯ menu to the main hub toolbar with Print, Save as PDF, and (when enabled) Report a Problem. Visible before opening any section.', 'dcc-guest-guide'),
         ]);
 
+        // v0.24.0: the button is a round "Front Desk" control — an icon in a
+        // circle with a small label under it. The three controls below are the
+        // site's choices as plugin DEFAULTS, so the live page needs no stored
+        // Elementor values; clearing those values shows exactly this.
+        $this->add_control('more_button_shape', [
+            'label'       => __('More button shape', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'round',
+            'options'     => [
+                'round' => __('Round icon with label below', 'dcc-guest-guide'),
+                'pill'  => __('Text box (pre-0.24.0 look)', 'dcc-guest-guide'),
+            ],
+            'description' => __('Round matches the guide\'s other buttons: a white circle with the icon inside and the label underneath.', 'dcc-guest-guide'),
+            'condition'   => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
+        $this->add_control('more_button_icon', [
+            'label'       => __('More button icon', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '🛎️',
+            'description' => __('One emoji, shown inside the circle. Emoji render differently on each phone and computer.', 'dcc-guest-guide'),
+            'condition'   => ['enable_detail_more_menu' => 'yes', 'more_button_shape' => 'round'],
+        ]);
+
         $this->add_control('more_button_label', [
             'label'       => __('More button text', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => '',
-            'placeholder' => __('e.g. Options, More', 'dcc-guest-guide'),
-            'description' => __('Replaces the "⋯" icon with this text on the More button. Leave empty to keep the icon-only look.', 'dcc-guest-guide'),
+            'default'     => 'Front Desk',
+            'placeholder' => __('e.g. Front Desk, Options', 'dcc-guest-guide'),
+            'description' => __('Round: the label under the circle, and the button\'s name for screen readers. Text box: the text in place of the "⋯" icon; empty keeps the icon.', 'dcc-guest-guide'),
             'condition'   => ['enable_detail_more_menu' => 'yes'],
         ]);
 
@@ -708,10 +732,13 @@ final class Widget extends Widget_Base
             'condition'    => ['enable_detail_more_menu' => 'yes'],
         ]);
 
+        // v0.24.0 defaults: Report alone, so the button opens the Support
+        // Report dialog with no menu in between. more_menu_items() carries the
+        // same three defaults — change both together or they disagree.
         $this->add_control('more_menu_slot_1', [
             'label'       => __('More menu — slot 1', 'dcc-guest-guide'),
             'type'        => Controls_Manager::SELECT,
-            'default'     => 'print',
+            'default'     => 'report',
             'options'     => [
                 'print'    => __('Print guide', 'dcc-guest-guide'),
                 'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
@@ -725,7 +752,7 @@ final class Widget extends Widget_Base
         $this->add_control('more_menu_slot_2', [
             'label'     => __('More menu — slot 2', 'dcc-guest-guide'),
             'type'      => Controls_Manager::SELECT,
-            'default'   => 'save_pdf',
+            'default'   => 'none',
             'options'   => [
                 'print'    => __('Print guide', 'dcc-guest-guide'),
                 'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
@@ -738,7 +765,7 @@ final class Widget extends Widget_Base
         $this->add_control('more_menu_slot_3', [
             'label'     => __('More menu — slot 3', 'dcc-guest-guide'),
             'type'      => Controls_Manager::SELECT,
-            'default'   => 'report',
+            'default'   => 'none',
             'options'   => [
                 'print'    => __('Print guide', 'dcc-guest-guide'),
                 'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
@@ -3000,13 +3027,20 @@ final class Widget extends Widget_Base
      * Report is the only slot with a condition attached; print and save-PDF
      * always render when selected.
      */
+    /** v0.24.0 slot defaults: Report alone. Mirrors the three Elementor controls. */
+    public const MORE_SLOT_DEFAULTS = ['report', 'none', 'none'];
+
+    /** v0.24.0 Front Desk button defaults. */
+    public const MORE_BUTTON_ICON  = '🛎️';
+    public const MORE_BUTTON_LABEL = 'Front Desk';
+
     public static function more_menu_items(array $s): array
     {
         $report_on = ($s['enable_problem_report'] ?? '') === 'yes';
         $slots     = [
-            (string) ($s['more_menu_slot_1'] ?? 'print'),
-            (string) ($s['more_menu_slot_2'] ?? 'save_pdf'),
-            (string) ($s['more_menu_slot_3'] ?? 'report'),
+            (string) ($s['more_menu_slot_1'] ?? self::MORE_SLOT_DEFAULTS[0]),
+            (string) ($s['more_menu_slot_2'] ?? self::MORE_SLOT_DEFAULTS[1]),
+            (string) ($s['more_menu_slot_3'] ?? self::MORE_SLOT_DEFAULTS[2]),
         ];
         $out = [];
         foreach ($slots as $slot) {
@@ -3665,45 +3699,104 @@ final class Widget extends Widget_Base
      * (context='hub', $section_key='') and each popup header
      * (context='popup', $section_key=<that section's key>).
      *
-     * Honors three host-configurable settings:
-     *  - more_button_label:    empty → icon-only summary; filled → text-only summary.
+     * Honors the host-configurable settings:
+     *  - more_button_shape:    'round' (v0.24.0 default) → a circle holding
+     *                          more_button_icon with more_button_label beneath
+     *                          it; 'pill' → the pre-0.24.0 text box, or the ⋯
+     *                          icon when the label is empty.
      *  - more_menu_slot_1..3:  controls item ordering. Duplicate picks across
      *                          slots render only the first occurrence so the
      *                          host can't accidentally double up.
      *  - enable_problem_report: gates the Report a Problem slot independently.
+     *
+     * v0.24.0: when the slots resolve to exactly ONE item, this emits a real
+     * <button> that performs that item's action, instead of a <details> whose
+     * popover holds a single choice. The button carries the same action class
+     * (.dccgg-more-report etc.) and the same data-report-section, so the
+     * existing delegated click handlers drive it with no new listeners; its
+     * accessible name is the visible label, not "More".
      */
     private function render_more_menu(array $s, string $context, string $section_key = ''): void
     {
         $label_more     = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
-        $label_text     = trim((string) ($s['more_button_label'] ?? ''));
+        $label_text     = trim((string) ($s['more_button_label'] ?? self::MORE_BUTTON_LABEL));
         $label_print    = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
         $label_save_pdf = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
         $label_report   = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide'));
         $report_on      = ($s['enable_problem_report'] ?? '') === 'yes';
         $slots          = [
-            (string) ($s['more_menu_slot_1'] ?? 'print'),
-            (string) ($s['more_menu_slot_2'] ?? 'save_pdf'),
-            (string) ($s['more_menu_slot_3'] ?? 'report'),
+            (string) ($s['more_menu_slot_1'] ?? self::MORE_SLOT_DEFAULTS[0]),
+            (string) ($s['more_menu_slot_2'] ?? self::MORE_SLOT_DEFAULTS[1]),
+            (string) ($s['more_menu_slot_3'] ?? self::MORE_SLOT_DEFAULTS[2]),
         ];
         $modifier       = $context === 'popup' ? 'dccgg-more--popup' : 'dccgg-more--hub';
-        $summary_class  = $label_text !== '' ? 'dccgg-more-summary--text' : 'dccgg-more-summary--icon';
+        $round          = (string) ($s['more_button_shape'] ?? 'round') !== 'pill';
+        $icon_text      = trim((string) ($s['more_button_icon'] ?? self::MORE_BUTTON_ICON));
+        if ($round && $icon_text === '') { $icon_text = self::MORE_BUTTON_ICON; }
+        // Two classes, two jobs: --direct says "this performs the action on one
+        // tap" (the JS scopes on it), the face class says what it looks like.
+        // Keeping them apart means the legacy pill shape still styles a direct
+        // button, which one class could not do.
+        $summary_class  = $round
+            ? 'dccgg-more-summary--fd'
+            : ($label_text !== '' ? 'dccgg-more-summary--text' : 'dccgg-more-summary--icon');
+        $face_class     = $round ? 'dccgg-more--fd' : 'dccgg-more-summary--text';
         $rendered       = [];
 
         // Work out what the menu would actually contain before emitting any
         // markup, and render nothing at all when that is empty — otherwise a
         // config whose slots are all 'none', or whose only slot is Report while
         // reporting is off, still produced a button opening an empty popover.
-        if (!self::more_menu_items($s)) {
+        $items = self::more_menu_items($s);
+        if (!$items) {
+            return;
+        }
+
+        // The face of the control, identical on the button and the summary so
+        // one item and three look like the same thing.
+        $face = function () use ($round, $icon_text, $label_text) {
+            if (!$round) {
+                if ($label_text !== '') {
+                    echo '<span class="dccgg-more-summary-text">' . esc_html($label_text) . '</span>';
+                } else {
+                    echo '<i class="fas fa-ellipsis-h" aria-hidden="true"></i>';
+                }
+                return;
+            }
+            // The emoji is decoration: the label beneath it is the name, so a
+            // screen reader says "Front Desk", not "bellhop bell Front Desk".
+            echo '<span class="dccgg-fd-icon" aria-hidden="true">' . esc_html($icon_text) . '</span>';
+            if ($label_text !== '') {
+                echo '<span class="dccgg-fd-label">' . esc_html($label_text) . '</span>';
+            }
+        };
+        // Accessible name: the visible label when there is one. Only a round
+        // button with the label cleared, or the ⋯ icon, needs a spoken name of
+        // its own — and then it is the host's More-menu string.
+        $needs_aria = !$round || $label_text === '';
+
+        // v0.24.0: one item, one button. No popover to open, no second tap.
+        if (count($items) === 1) {
+            $only = $items[0];
+            $action_class = [
+                'print'    => 'dccgg-more-print',
+                'save_pdf' => 'dccgg-more-save-pdf',
+                'report'   => 'dccgg-more-report',
+            ][$only] ?? '';
+            $action_label = ['print' => $label_print, 'save_pdf' => $label_save_pdf, 'report' => $label_report][$only] ?? $label_more;
+            ?>
+            <button type="button" class="dccgg-more <?php echo esc_attr($modifier); ?> dccgg-more--direct <?php echo esc_attr($face_class); ?> <?php echo esc_attr($action_class); ?>"
+                <?php if ($only === 'report') : ?>data-report-section="<?php echo esc_attr($section_key); ?>"<?php endif; ?>
+                <?php if ($needs_aria) : ?>aria-label="<?php echo esc_attr($action_label); ?>"<?php endif; ?>>
+                <?php $face(); ?>
+            </button>
+            <?php
             return;
         }
         ?>
         <details class="dccgg-more <?php echo esc_attr($modifier); ?>">
-            <summary class="<?php echo esc_attr($summary_class); ?>" aria-label="<?php echo esc_attr($label_more); ?>">
-                <?php if ($label_text !== '') : ?>
-                    <span class="dccgg-more-summary-text"><?php echo esc_html($label_text); ?></span>
-                <?php else : ?>
-                    <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
-                <?php endif; ?>
+            <summary class="<?php echo esc_attr($summary_class); ?>"<?php if ($needs_aria) : ?> aria-label="<?php echo esc_attr($label_more); ?>"<?php endif; ?>>
+                <?php $face(); ?>
             </summary>
             <div class="dccgg-more-popover" role="menu">
                 <?php foreach ($slots as $slot) :

@@ -4241,6 +4241,152 @@ dialog.dccgg-wrapper::backdrop {
     border-color: var(--dccgg-primary, #0f6dbf);
 }
 
+/* ---- v0.24.0: the Front Desk button -------------------------------------
+   A white circle holding one emoji, with a small label underneath — the shape
+   the guide's other round controls already use. It replaces the 6px-radius
+   text box that `more_button_label` used to switch on.
+
+   ONE face, two elements. With a single menu item the control is a real
+   <button class="dccgg-more dccgg-more--direct dccgg-more--fd">; with two or three it stays a
+   <details> whose <summary class="dccgg-more-summary--fd"> wears the same
+   face. Both are styled together below so they cannot drift apart.
+
+   SPECIFICITY (0,4,0), by doubling the class. The theme's
+   `.site .content .entry button` is (0,3,1) and paints every bare <button>
+   #444 with uppercase text; it reaches the hub button, though not the popup
+   header, which is portaled out of that subtree. A single class would lose.
+
+   THREE HOSTS, as everywhere else in this file. The popup header is inside
+   .dccgg-stage, which is moved to <body> while a section is open, so a
+   `.dccgg-root ...` rule never reaches it. The doubled class also outranks the
+   theme: this kit styles every bare <button> with its own font, background,
+   padding, border, uppercase and letter-spacing, and <summary> inherits
+   html{font-weight:700}. Every one of those is reset explicitly. */
+.dccgg-root.dccgg-root .dccgg-more--fd.dccgg-more--fd,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd.dccgg-more-summary--fd,
+.dccgg-stage.dccgg-stage .dccgg-more--fd.dccgg-more--fd,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd.dccgg-more-summary--fd {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Reserved before anything paints, so the row cannot jump once the emoji
+       font or Raleway arrives. */
+    min-width: 48px;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--dccgg-text, #111);
+    font-family: inherit;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.2;
+    cursor: pointer;
+    list-style: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.dccgg-root.dccgg-root .dccgg-more--hub.dccgg-more--fd,
+.dccgg-stage.dccgg-stage .dccgg-more--hub.dccgg-more--fd { margin-left: auto; }
+/* The circle. The only thing that takes the hover/pressed fill, because the
+   label underneath sits on the page, not on the fill. */
+.dccgg-root.dccgg-root .dccgg-more .dccgg-fd-icon.dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more .dccgg-fd-icon.dccgg-fd-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--dccgg-btn-bg, #006BCF);
+    background: #fff;
+    /* An explicit emoji stack: without it the glyph can fall back to a
+       monochrome text outline on some systems. line-height 1 keeps it centred
+       whatever the chosen face's own metrics are. */
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 400;
+    transition: background var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease),
+                border-color var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease);
+}
+/* The label. Weight is stated, not inherited: this site sets html{font-weight:700}. */
+.dccgg-root.dccgg-root .dccgg-more .dccgg-fd-label.dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more .dccgg-fd-label.dccgg-fd-label {
+    display: block;
+    font-family: Raleway, var(--dccgg-font-body, inherit), sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    color: var(--dccgg-text, #111);
+}
+
+/* States — the circle only, matching the guide's other buttons. */
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-more--fd:hover .dccgg-fd-icon,
+    .dccgg-root.dccgg-root .dccgg-more-summary--fd:hover .dccgg-fd-icon,
+    .dccgg-stage.dccgg-stage .dccgg-more--fd:hover .dccgg-fd-icon,
+    .dccgg-stage.dccgg-stage .dccgg-more-summary--fd:hover .dccgg-fd-icon {
+        background: var(--dccgg-btn-hover-bg, #f08080);
+        border-color: var(--dccgg-btn-hover-bg, #f08080);
+    }
+}
+/* Pressed and open are NOT hover states — they have to work on touch, so they
+   sit outside the pointer guard. */
+.dccgg-root.dccgg-root .dccgg-more--fd:active .dccgg-fd-icon,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:active .dccgg-fd-icon,
+.dccgg-root.dccgg-root .dccgg-more[open] > .dccgg-more-summary--fd .dccgg-fd-icon,
+.dccgg-root.dccgg-root .dccgg-more--fd:focus-visible .dccgg-fd-icon,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:focus-visible .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:active .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:active .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more[open] > .dccgg-more-summary--fd .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:focus-visible .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:focus-visible .dccgg-fd-icon {
+    background: var(--dccgg-btn-hover-bg, #f08080);
+    border-color: var(--dccgg-btn-hover-bg, #f08080);
+}
+/* The label never takes the fill colour: it is on the white page throughout. */
+.dccgg-root.dccgg-root .dccgg-more--fd:hover .dccgg-fd-label,
+.dccgg-root.dccgg-root .dccgg-more--fd:active .dccgg-fd-label,
+.dccgg-root.dccgg-root .dccgg-more--fd:focus-visible .dccgg-fd-label,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:hover .dccgg-fd-label,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:active .dccgg-fd-label,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:focus-visible .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:hover .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:active .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:focus-visible .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:hover .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:active .dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:focus-visible .dccgg-fd-label {
+    color: var(--dccgg-text, #111);
+}
+/* A real ring, the same 3px one the guide's other plain controls get. The
+   element itself carries no fill, so focus must not depend on one. */
+.dccgg-root.dccgg-root .dccgg-more--fd:focus-visible,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-more--fd:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:focus-visible {
+    outline: 3px solid var(--dccgg-primary, #006BCF);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-more .dccgg-fd-icon { transition: none; }
+}
+
 /* v0.9.7.12: extended Conditions side-card rows. Each new row uses a
    stacked grid (icon · key · value on row 1, plain-English takeaway on
    row 2 spanning cols 2–3) so the interpretation reads as a soft sub-
@@ -4325,6 +4471,9 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-section-prev,
 .dccgg-root.dccgg-root .dccgg-section-next,
 .dccgg-root.dccgg-root .dccgg-more > summary,
+.dccgg-root.dccgg-root .dccgg-more--direct,
+.dccgg-root.dccgg-root .dccgg-more--fd,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd,
 .dccgg-root.dccgg-root .dccgg-flip-close,
 .dccgg-root.dccgg-root .dccgg-fab,
 .dccgg-root.dccgg-root .dccgg-sos-fab,

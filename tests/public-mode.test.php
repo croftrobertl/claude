@@ -220,9 +220,16 @@ check('capital-P "Public" still filters out guest content', stripos($blob, 'DCC3
 echo "\nI. The \"...\" menu never renders empty\n";
 // Slot resolution decides whether the button is emitted at all.
 $m = fn(array $cfg) => \DCCGG\Widget::more_menu_items($cfg);
-check('default slots produce items', $m(['enable_problem_report' => 'yes']) === ['print', 'save_pdf', 'report']);
-check('report slot drops when reporting is off',
-    $m(['enable_problem_report' => '']) === ['print', 'save_pdf']);
+// v0.24.0 defaults: Report alone, so the Front Desk button opens the Support
+// Report dialog with nothing in between.
+check('default slots produce Report alone', $m(['enable_problem_report' => 'yes']) === ['report']);
+check('and nothing at all when reporting is off', $m(['enable_problem_report' => '']) === []);
+check('explicitly chosen slots still resolve in order',
+    $m(['enable_problem_report' => 'yes', 'more_menu_slot_1' => 'print',
+        'more_menu_slot_2' => 'save_pdf', 'more_menu_slot_3' => 'report']) === ['print', 'save_pdf', 'report']);
+check('a chosen report slot still drops when reporting is off',
+    $m(['enable_problem_report' => '', 'more_menu_slot_1' => 'print',
+        'more_menu_slot_2' => 'save_pdf', 'more_menu_slot_3' => 'report']) === ['print', 'save_pdf']);
 check('all slots none -> empty (button suppressed)',
     $m(['more_menu_slot_1' => 'none', 'more_menu_slot_2' => 'none', 'more_menu_slot_3' => 'none']) === []);
 check('only-report slot with reporting off -> empty (button suppressed)',

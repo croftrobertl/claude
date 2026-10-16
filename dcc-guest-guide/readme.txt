@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.5
+Stable tag: 0.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,34 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.0 =
+
+**Changed: the top-right button is now a round "Front Desk" control.** A white
+circle with a blue edge holding a bell, with the label underneath — the shape
+the guide's other buttons already use, instead of the square box the button
+text used to switch on. The same button appears on the hub and in every
+section pop-up header.
+
+**Changed: it opens the Support Report straight away.** When the menu holds
+only one item, the control is now a plain button that performs that action on
+one tap, with no menu in between. Reports opened from a section still arrive
+tagged with that section. Two or three items still open the small menu,
+wearing the same round face. Closing the report puts focus back on the button
+that opened it.
+
+**Changed: the site's choices are now the plugin's defaults** — the bell, the
+words "Front Desk", the round shape, and Report as the only menu item — so the
+guide needs no stored settings to look like this. The previous square-box look
+is still available as a shape option, and the icon and label are editable.
+
+Nothing is written on install, activation or upgrade. The report form itself,
+the SOS button and the print layout are unchanged; the button is still hidden
+when the guide is printed.
+
+**Note for the site owner:** the hub row is 33px taller than in 0.23.5, so the
+search bar and tiles sit lower. The circle plus its label is taller than the
+old text box. Nothing was shrunk to hide this — see the release notes.
 
 = 0.23.5 =
 

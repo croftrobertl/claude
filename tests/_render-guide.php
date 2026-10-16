@@ -68,7 +68,11 @@ namespace {
     if (!defined('ABSPATH'))        define('ABSPATH', '/tmp/');
     if (!defined('DCCGG_VERSION'))  define('DCCGG_VERSION', 'test');
     if (!defined('DCCGG_URL'))      define('DCCGG_URL', 'https://example.test/wp-content/plugins/dcc-guest-guide/');
-    if (!defined('DCCGG_DIR'))      define('DCCGG_DIR', __DIR__ . '/../dcc-guest-guide/');
+    // v0.24.0: honour DCCGG_PLUGIN_DIR, so a mutation run can point this at a
+    // deliberately broken copy. Without it every mutant silently loaded the
+    // real plugin and "survived".
+    if (!defined('DCCGG_PLUGIN'))   define('DCCGG_PLUGIN', rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/') . '/');
+    if (!defined('DCCGG_DIR'))      define('DCCGG_DIR', DCCGG_PLUGIN);
     $GLOBALS['options'] = $GLOBALS['options'] ?? [];
     $stub = [
         '__' => fn($s, $d = null) => $s, 'esc_html__' => fn($s, $d = null) => $s, 'esc_attr__' => fn($s, $d = null) => $s,
@@ -106,8 +110,8 @@ namespace {
             eval("function $name(...\$a) { return (\$GLOBALS['__stub_$name'])(...\$a); }");
         }
     }
-    require_once __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
-    require_once __DIR__ . '/../dcc-guest-guide/includes/class-widget.php';
+    require_once DCCGG_PLUGIN . 'includes/class-settings.php';
+    require_once DCCGG_PLUGIN . 'includes/class-widget.php';
 
     function dccgg_render_guide(array $overrides = []): string {
         $w = new \DCCGG\Widget();

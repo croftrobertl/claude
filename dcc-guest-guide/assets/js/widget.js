@@ -334,6 +334,16 @@
             const s = el.closest && el.closest('.dccgg-stage');
             return !!(s && s.__dccggRoot === root);
         };
+        // v0.24.0: a single-item menu is a real <button>, not a <details>, so
+        // wireMoreMenu's per-popover Print listener never sees it. Delegated
+        // here beside Save-PDF, and scoped to .dccgg-more--direct so the
+        // popover's own Print item keeps its existing path untouched.
+        bindGlobal(root, document, 'click', (e) => {
+            const btn = e.target.closest('.dccgg-more--direct.dccgg-more-print');
+            if (!btn || !ownsTarget(btn)) return;
+            if (config.manualPdfUrl) { manualPdfPrint(config.manualPdfUrl); return; }
+            window.print();
+        });
         bindGlobal(root, document, 'click', (e) => {
             const btn = e.target.closest('.dccgg-more-save-pdf');
             if (!btn || !ownsTarget(btn)) return;
@@ -453,6 +463,13 @@
                 </div>
             `;
             document.body.appendChild(dialog);
+            dialog.addEventListener('close', () => {
+                const opener = dialog.__dccggOpener;
+                dialog.__dccggOpener = null;
+                if (opener && typeof opener.focus === 'function' && opener.isConnected) {
+                    try { opener.focus(); } catch (_) {}
+                }
+            });
             dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
             dialog.querySelector('.dccgg-report-close').addEventListener('click', () => dialog.close());
             dialog.querySelector('.dccgg-btn-cancel').addEventListener('click', () => dialog.close());
@@ -460,8 +477,15 @@
             return dialog;
         };
 
-        const open = (section, itemTitle) => {
+        const open = (section, itemTitle, opener) => {
             const d = ensureDialog();
+            // v0.24.0: remember the control that opened the dialog, and put
+            // focus back on it when the dialog closes. <dialog> restores focus
+            // by itself, but only to whatever held it at showModal() time — and
+            // a tap does not focus a button on every platform (Safari), which
+            // would drop a keyboard user back at the top of the page. Passing
+            // the element in makes it the opener either way.
+            d.__dccggOpener = opener || document.activeElement;
             d.dataset.section = section || '';
             d.dataset.item    = itemTitle || '';
             const desc = d.querySelector('.dccgg-report-desc');
@@ -497,14 +521,14 @@
             // Close the parent <details> popover so it doesn't sit open behind the dialog.
             const details = m.closest('details');
             if (details) details.open = false;
-            open(m.dataset.reportSection || '', '');
+            open(m.dataset.reportSection || '', '', m);
         });
 
         // Per-item Report button.
         bindGlobal(root, document, 'click', (e) => {
             const b = e.target.closest('.dccgg-item-report');
             if (!b || !ownsTarget(b)) return;
-            open(b.dataset.reportSection || '', b.dataset.reportItem || '');
+            open(b.dataset.reportSection || '', b.dataset.reportItem || '', b);
         });
     }
     function sendReport(dialog, root, config) {
@@ -1668,6 +1692,10 @@
     function wireMoreMenu(root, config) {
         if (!config.enableDetailMoreMenu) return;
         root.querySelectorAll('.dccgg-more').forEach(menu => {
+            // v0.24.0: a one-item menu renders as a <button> carrying the same
+            // .dccgg-more class. It has no popover to close and no Print item
+            // inside it, so none of the wiring below applies to it.
+            if (menu.tagName !== 'DETAILS') return;
             // Click outside closes the <details>.
             const onDocClick = (e) => {
                 if (!menu.contains(e.target) && menu.open) menu.open = false;
