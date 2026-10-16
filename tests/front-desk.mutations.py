@@ -44,8 +44,10 @@ MUTANTS = [
      '.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:focus-visible .dccgg-fd-label {\n    color: var(--dccgg-text, #111);',
      '.dccgg-stage.dccgg-stage .dccgg-more-summary--fd:focus-visible .dccgg-fd-label {\n    color: #fff;'),
     ('the theme reset drops to a specificity the kit beats', C,
-     '.dccgg-root.dccgg-root .dccgg-more--fd.dccgg-more--fd,\n.dccgg-root.dccgg-root .dccgg-more-summary--fd.dccgg-more-summary--fd,',
-     '.dccgg-root .dccgg-more--fd,\n.dccgg-root .dccgg-more-summary--fd,'),
+     # anchored on the base rule's first declaration: v0.24.1 added a second
+     # rule that opens with the same two selectors.
+     '.dccgg-root.dccgg-root .dccgg-more--fd.dccgg-more--fd,\n.dccgg-root.dccgg-root .dccgg-more-summary--fd.dccgg-more-summary--fd,\n.dccgg-stage.dccgg-stage .dccgg-more--fd.dccgg-more--fd,\n.dccgg-stage.dccgg-stage .dccgg-more-summary--fd.dccgg-more-summary--fd {\n    display: inline-flex;',
+     '.dccgg-root .dccgg-more--fd,\n.dccgg-root .dccgg-more-summary--fd,\n.dccgg-stage .dccgg-more--fd,\n.dccgg-stage .dccgg-more-summary--fd {\n    display: inline-flex;'),
     ('the emoji font stack is dropped', C,
      'font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;\n    font-size: 24px;',
      'font-family: inherit;\n    font-size: 24px;'),

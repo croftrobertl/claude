@@ -181,6 +181,10 @@ final class Widget extends Widget_Base
     {
         self::register_assets();
         wp_enqueue_script('dccgg-widget');
+        // v0.24.1: the icon picker draws our eight glyphs from this stylesheet
+        // (one masked data: URI per class). Editor only — the front end uses
+        // the inline <symbol> sprite and loads nothing extra.
+        wp_enqueue_style('dccgg-icons-picker', DCCGG_URL . 'assets/css/dccgg-icons.css', [], DCCGG_VERSION);
 
         // v0.9.4: localize editor-side data for the server-backed Export /
         // Import flow. The Elementor editor URL is ?post=ID&action=elementor,
@@ -1027,6 +1031,15 @@ final class Widget extends Widget_Base
             'label'   => __('Icon', 'dcc-guest-guide'),
             'type'    => Controls_Manager::ICONS,
             'default' => ['value' => 'fas fa-info', 'library' => 'solid'],
+        ]);
+
+        // v0.24.1: empty means "use the packaged colour for this section key",
+        // so the shipped palette needs nothing stored on the page.
+        $repeater->add_control('section_tile_color', [
+            'label'       => __('Tile colour', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::COLOR,
+            'default'     => '',
+            'description' => __('Leave empty to use this section\'s own colour from the guide palette.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('section_emoji', [
@@ -3141,6 +3154,7 @@ final class Widget extends Widget_Base
         if (!Plugin::instance()->dependencies_present()) {
             return;
         }
+        Icons::reset();   // v0.24.1: this render's own glyph set
 
         $s = $this->get_settings_for_display();
 
@@ -3570,6 +3584,10 @@ final class Widget extends Widget_Base
                 <?php endif; ?>
             </<?php echo $wrapper_tag; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 
+            <?php // v0.24.1: one <symbol> per glyph the page actually used, after
+            // the tiles because that is when the set is known. <use> resolves by
+            // id once the document has parsed, so the order does not matter.
+            Icons::sprite(); ?>
         </div>
         <?php
     }
@@ -3669,6 +3687,34 @@ final class Widget extends Widget_Base
         <?php
     }
 
+    /**
+     * v0.24.1: the sticker colour as ONE custom property, written on both the
+     * hub tile's circle and its popup-title mini tile from the same section
+     * key. One source, so the two can never drift apart. A per-section colour
+     * control overrides it; an empty control means "use the packaged default",
+     * so nothing has to be stored for the shipped palette to show.
+     */
+    public static function sticker_style(array $sec): string
+    {
+        $custom = trim((string) ($sec['section_tile_color'] ?? ''));
+        $color  = $custom !== '' ? $custom : Icons::color_for((string) ($sec['section_key'] ?? ''));
+        return ' style="--dccgg-sticker:' . esc_attr($color) . '"';
+    }
+
+    /**
+     * Render a section's icon: ours as a <use> of the page's sprite, anything
+     * else through Elementor as before — so the Font Awesome values a guide
+     * already carries keep rendering untouched.
+     */
+    public static function render_section_icon($icon): void
+    {
+        if (Icons::is_ours($icon)) {
+            Icons::render($icon);
+            return;
+        }
+        \Elementor\Icons_Manager::render_icon((array) $icon, ['aria-hidden' => 'true']);
+    }
+
     private function render_tile_inner(array $sec, int $item_count): void
     {
         $title = (string) ($sec['section_title'] ?? '');
@@ -3677,11 +3723,11 @@ final class Widget extends Widget_Base
         $emoji = trim((string) ($sec['section_emoji'] ?? ''));
         ?>
         <span class="dccgg-tile-icon-wrap">
-            <span class="dccgg-tile-icon">
+            <span class="dccgg-tile-icon"<?php echo self::sticker_style($sec); // phpcs:ignore WordPress.Security.EscapeOutput ?>>
                 <?php if ($emoji !== '') : ?>
                     <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
                 <?php else :
-                    \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+                    self::render_section_icon($icon);
                 endif; ?>
             </span>
         </span>
@@ -3763,12 +3809,28 @@ final class Widget extends Widget_Base
                 }
                 return;
             }
-            // The emoji is decoration: the label beneath it is the name, so a
+            // v0.24.1: label FIRST, then the circle — source order is reading
+            // order, so no CSS reordering and no surprise for a screen reader.
+            //
+            // The label is split into at most TWO lines, one element each,
+            // rather than left to wrap: a wrap depends on the font's metrics
+            // and could drop to a third line on a narrow face, which would
+            // make the control taller than the circle and blow the row budget.
+            // First word on line one, whatever remains on line two.
+            if ($label_text !== '') {
+                $words = preg_split('/\s+/u', $label_text, 2) ?: [$label_text];
+                echo '<span class="dccgg-fd-label">';
+                // The space between the two lines is deliberate: it is what
+                // makes the accessible name "Front Desk" and not "FrontDesk".
+                echo '<span class="dccgg-fd-line">' . esc_html($words[0]) . '</span>';
+                if (isset($words[1]) && $words[1] !== '') {
+                    echo ' <span class="dccgg-fd-line">' . esc_html($words[1]) . '</span>';
+                }
+                echo '</span>';
+            }
+            // The emoji is decoration: the label beside it is the name, so a
             // screen reader says "Front Desk", not "bellhop bell Front Desk".
             echo '<span class="dccgg-fd-icon" aria-hidden="true">' . esc_html($icon_text) . '</span>';
-            if ($label_text !== '') {
-                echo '<span class="dccgg-fd-label">' . esc_html($label_text) . '</span>';
-            }
         };
         // Accessible name: the visible label when there is one. Only a round
         // button with the label cleared, or the ⋯ icon, needs a spoken name of
@@ -3831,7 +3893,6 @@ final class Widget extends Widget_Base
         $label_back     = (string) ($s['str_back'] ?? 'Back');
         $label_prev     = (string) ($s['str_prev_section'] ?? __('Previous section', 'dcc-guest-guide'));
         $label_next     = (string) ($s['str_next_section'] ?? __('Next section', 'dcc-guest-guide'));
-        $label_more     = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
         $label_print    = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
         $show_nav       = ($s['enable_section_nav'] ?? 'yes') === 'yes';
         $show_more      = ($s['enable_detail_more_menu'] ?? '') === 'yes';
@@ -3878,8 +3939,8 @@ final class Widget extends Widget_Base
                         <div class="dccgg-detail-header-titlebar">
                             <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
                             <h2 class="dccgg-detail-title">
-                                <span class="dccgg-detail-title-icon">
-                                    <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                                <span class="dccgg-detail-title-icon"<?php echo self::sticker_style($sec); // phpcs:ignore WordPress.Security.EscapeOutput ?>>
+                                    <?php self::render_section_icon($icon); ?>
                                 </span>
                                 <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
                             </h2>

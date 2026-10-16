@@ -4272,8 +4272,12 @@ dialog.dccgg-wrapper::backdrop {
     justify-content: flex-start;
     gap: 4px;
     /* Reserved before anything paints, so the row cannot jump once the emoji
-       font or Raleway arrives. */
-    min-width: 48px;
+       font or Raleway arrives. v0.24.1: HEIGHT only. An explicit min-width
+       replaces a grid item's automatic minimum, which made the title row's
+       right column size itself to 48px while the control is wider — so the
+       button overflowed its column and ran under the section title. The circle
+       carries its own fixed width, so nothing is left unreserved. */
+    min-height: 48px;
     box-sizing: border-box;
     padding: 0;
     margin: 0;
@@ -4383,8 +4387,162 @@ dialog.dccgg-wrapper::backdrop {
     outline-offset: 2px;
     border-radius: 8px;
 }
+/* v0.24.1: focus put back after a POINTER close is silent. The report dialog
+   sets data-dccgg-quiet-focus just before returning focus, and clears it on the
+   next blur, so a guest who tapped Close is not left looking at a ring and a
+   filled circle — while the next real keyboard focus still shows both. */
+.dccgg-root.dccgg-root .dccgg-more--fd[data-dccgg-quiet-focus]:focus-visible,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd[data-dccgg-quiet-focus]:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-more--fd[data-dccgg-quiet-focus]:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd[data-dccgg-quiet-focus]:focus-visible {
+    outline: none;
+}
+.dccgg-root.dccgg-root .dccgg-more--fd[data-dccgg-quiet-focus]:focus-visible .dccgg-fd-icon,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd[data-dccgg-quiet-focus]:focus-visible .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more--fd[data-dccgg-quiet-focus]:focus-visible .dccgg-fd-icon,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd[data-dccgg-quiet-focus]:focus-visible .dccgg-fd-icon {
+    background: #fff;
+    border-color: var(--dccgg-btn-bg, #006BCF);
+}
 @media (prefers-reduced-motion: reduce) {
     .dccgg-more .dccgg-fd-icon { transition: none; }
+}
+
+/* ---- v0.24.1: Front Desk, label BESIDE the circle -----------------------
+   The label moved out from under the circle to its left, on two short lines,
+   so the control is 48px tall instead of 66px: the hub row and the popup
+   title bar both stop at the circle's own height. Source order is label then
+   circle, which is also the reading order. */
+.dccgg-root.dccgg-root .dccgg-more--fd.dccgg-more--fd,
+.dccgg-root.dccgg-root .dccgg-more-summary--fd.dccgg-more-summary--fd,
+.dccgg-stage.dccgg-stage .dccgg-more--fd.dccgg-more--fd,
+.dccgg-stage.dccgg-stage .dccgg-more-summary--fd.dccgg-more-summary--fd {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+/* Two lines, right-aligned, so the text's edge runs down beside the circle.
+   The lines are separate elements rather than a wrap: a wrap would depend on
+   the font's metrics and could fall to three lines on a narrow face. */
+.dccgg-root.dccgg-root .dccgg-more .dccgg-fd-label.dccgg-fd-label,
+.dccgg-stage.dccgg-stage .dccgg-more .dccgg-fd-label.dccgg-fd-label {
+    text-align: right;
+    line-height: 1.15;
+}
+.dccgg-root.dccgg-root .dccgg-more .dccgg-fd-line,
+.dccgg-stage.dccgg-stage .dccgg-more .dccgg-fd-line {
+    display: block;
+    white-space: nowrap;
+}
+
+/* ---- v0.24.1: colour stickers ------------------------------------------
+   Each section's icon sits in a solid circle in its own colour, taken from
+   --dccgg-sticker. That property is written on BOTH the hub tile's circle and
+   the popup title's mini tile from the same section key (Widget::sticker_style),
+   so the two can never drift apart.
+
+   The radius is set at LOW specificity, just below, so the sticker is a circle
+   by default — including on a guide saved before the frame control existed —
+   while the host's "Icon frame shape" control (0,2,0) can still square or
+   hexagon it. Only the shape follows that control; the colour, rim and shadow
+   are the sticker's own. */
+.dccgg-tile-icon,
+.dccgg-detail-title-icon { border-radius: 50%; }
+.dccgg-root.dccgg-root .dccgg-tile-icon,
+.dccgg-stage.dccgg-stage .dccgg-tile-icon,
+.dccgg-root.dccgg-root .dccgg-detail-title-icon,
+.dccgg-stage.dccgg-stage .dccgg-detail-title-icon {
+    background: var(--dccgg-sticker, var(--dccgg-btn-bg, #006BCF));
+    color: #fff;
+    border: 3px solid #fff;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.06), 0 5px 10px rgba(0,0,0,.18);
+    /* Only the shadow moves on hover; the wiggle is a transform on the glyph
+       inside, so the two never fight over the same property. */
+    transition: box-shadow var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease);
+}
+/* The glyph: white, with just enough shadow to hold its shape on the lighter
+   stickers. currentColor, so it takes the white above and nothing else. */
+.dccgg-root.dccgg-root .dccgg-tile-icon .dccgg-glyph,
+.dccgg-stage.dccgg-stage .dccgg-tile-icon .dccgg-glyph,
+.dccgg-root.dccgg-root .dccgg-detail-title-icon .dccgg-glyph,
+.dccgg-stage.dccgg-stage .dccgg-detail-title-icon .dccgg-glyph,
+.dccgg-root.dccgg-root .dccgg-tile-icon svg,
+.dccgg-stage.dccgg-stage .dccgg-tile-icon svg,
+.dccgg-root.dccgg-root .dccgg-detail-title-icon svg,
+.dccgg-stage.dccgg-stage .dccgg-detail-title-icon svg {
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+.dccgg-glyph {
+    width: 62%;
+    height: 62%;
+    display: block;
+    /* Per-glyph optical trim; 1 unless Icons::glyphs() says otherwise. */
+    transform: scale(var(--dccgg-glyph-scale, 1));
+}
+/* Font Awesome section icons, still supported, get the same white treatment. */
+.dccgg-root.dccgg-root .dccgg-tile-icon i,
+.dccgg-stage.dccgg-stage .dccgg-tile-icon i,
+.dccgg-root.dccgg-root .dccgg-detail-title-icon i,
+.dccgg-stage.dccgg-stage .dccgg-detail-title-icon i {
+    color: #fff;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+
+/* The popup title's mini tile: the same sticker, 34px, a 2px rim, with a gap
+   before the title text. The title's own font, size and colour are untouched. */
+.dccgg-root.dccgg-root .dccgg-detail-title-icon,
+.dccgg-stage.dccgg-stage .dccgg-detail-title-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-width: 2px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    margin-right: 9px;
+}
+
+/* v0.24.1: the title row is a 1fr/auto/1fr grid with the title centred. The
+   34px mini tile widens that middle column, and on a narrow screen the longest
+   title ("Boating / Fishing" at 390px) grew past the space left by the Front
+   Desk button and ran UNDER it. The title cell may now shrink, and its text
+   stops with an ellipsis at the button's edge instead of overlapping it. The
+   heading text itself is untouched in the DOM, so search and screen readers
+   still get all of it. See the release notes — the owner may prefer a shorter
+   title or a taller bar to a clipped one. */
+.dccgg-root.dccgg-root .dccgg-detail-header-titlebar .dccgg-detail-title,
+.dccgg-stage.dccgg-stage .dccgg-detail-header-titlebar .dccgg-detail-title {
+    min-width: 0;
+    overflow: hidden;
+}
+.dccgg-root.dccgg-root .dccgg-detail-header-titlebar .dccgg-detail-title-text,
+.dccgg-stage.dccgg-stage .dccgg-detail-header-titlebar .dccgg-detail-title-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Hover deepens the shadow — it does NOT recolour. Review Us is already the
+   site's hover coral, so a coral hover would make that one tile vanish. */
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-tile:hover .dccgg-tile-icon,
+    .dccgg-stage.dccgg-stage .dccgg-tile:hover .dccgg-tile-icon {
+        box-shadow: 0 0 0 2px rgba(0,0,0,.08), 0 8px 16px rgba(0,0,0,.26);
+    }
+}
+/* Keyboard focus: a ring OUTSIDE the white rim, in the guide's focus colour.
+   Drawn with box-shadow so it follows the sticker's own shape. */
+.dccgg-root.dccgg-root .dccgg-tile:focus-visible .dccgg-tile-icon,
+.dccgg-stage.dccgg-stage .dccgg-tile:focus-visible .dccgg-tile-icon {
+    box-shadow: 0 0 0 2px rgba(0,0,0,.06), 0 5px 10px rgba(0,0,0,.18),
+                0 0 0 6px var(--dccgg-primary, #0f6dbf);
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-root.dccgg-root .dccgg-tile-icon,
+    .dccgg-stage.dccgg-stage .dccgg-tile-icon { transition: none; }
 }
 
 /* v0.9.7.12: extended Conditions side-card rows. Each new row uses a

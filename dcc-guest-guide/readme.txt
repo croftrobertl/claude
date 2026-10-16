@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.0
+Stable tag: 0.24.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,41 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.1 =
+
+**Changed: the Front Desk label now sits beside the circle, not under it.**
+"Front" over "Desk" on two short lines, right-aligned against the circle. The
+control is 48px tall instead of 66px, so the hub's search bar and tiles sit
+15px lower than in 0.23.5 rather than 33px, and the section pop-up title bar
+is back to 48px. The circle, the bell and the one-tap Support Report are
+unchanged.
+
+**Fixed: closing the report by tapping no longer leaves the button lit.**
+Focus still returns to the button, but the focus ring and the coral circle
+now appear only when the report was closed with the keyboard or Escape.
+
+**Changed: each section now has its own colour sticker.** The section's icon
+sits in a solid circle in its own colour, with a white rim and a soft shadow —
+turquoise for Internet, citrus for Amenities, coral for Clubhouse, green for
+Boating, blue for Checkout, red for Rules, light blue for Map and pink for
+Review Us. Any other section uses the guide blue. The same sticker appears
+as a small tile before the section title in each pop-up. Hovering deepens
+the shadow and no longer changes any tile's colour.
+
+**Added: eight new section icons, bundled in the plugin.** A washing machine
+for Amenities, a campfire for the Clubhouse, a fish for Boating, and so on.
+They are drawn once per page and shared by every tile that uses them, so the
+page downloads no icon font and makes no request to any outside service. They
+can also be picked in the editor, under "DCC Guide" in the icon list. Icons
+from Phosphor (MIT) and Material Symbols (Apache 2.0); notices in
+assets/icons/LICENSES.md.
+
+Sections still using Font Awesome icons keep working unchanged. The colours
+and icons are plugin defaults, so nothing needs storing on the page. Each
+section also gains an optional tile-colour setting, which is empty by default.
+
+Nothing is written on install, activation or upgrade.
 
 = 0.24.0 =
 

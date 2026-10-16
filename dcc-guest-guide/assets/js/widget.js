@@ -463,17 +463,49 @@
                 </div>
             `;
             document.body.appendChild(dialog);
+            // v0.24.1: focus goes back to the opener, but the RING only comes
+            // back if the guest was using the keyboard. A phone guest who taps
+            // the close button should not be left looking at a filled, ringed
+            // circle they never asked for. A click carries detail > 0 when a
+            // pointer made it and 0 when Enter or Space on a focused button
+            // did, and Escape fires `cancel` — so each path says which it was.
+            const closeBy = (keyboard) => { dialog.__dccggCloseKeyboard = !!keyboard; dialog.close(); };
+            const byEvent = (e) => closeBy(!e || e.detail === 0);
+            dialog.addEventListener('cancel', () => { dialog.__dccggCloseKeyboard = true; });
             dialog.addEventListener('close', () => {
                 const opener = dialog.__dccggOpener;
+                const keyboard = dialog.__dccggCloseKeyboard !== false;
                 dialog.__dccggOpener = null;
+                dialog.__dccggCloseKeyboard = undefined;
                 if (opener && typeof opener.focus === 'function' && opener.isConnected) {
-                    try { opener.focus(); } catch (_) {}
+                    // Two mechanisms, because one is not enough. focus({focusVisible})
+                    // is the standard way to ask for a quiet focus, but Chromium
+                    // ignores the option outright AND treats every programmatic
+                    // focus() as keyboard focus — so on a phone, putting focus
+                    // back after a TAP would light up the ring and the coral
+                    // circle. The attribute below is what actually decides: CSS
+                    // drops both while it is set, and it is cleared on blur so
+                    // the next real keyboard focus rings normally.
+                    if (!keyboard) {
+                        opener.setAttribute('data-dccgg-quiet-focus', '');
+                        opener.addEventListener('blur', function clear() {
+                            opener.removeAttribute('data-dccgg-quiet-focus');
+                            opener.removeEventListener('blur', clear);
+                        });
+                    } else {
+                        opener.removeAttribute('data-dccgg-quiet-focus');
+                    }
+                    try { opener.focus({ focusVisible: keyboard }); }
+                    catch (_) { try { opener.focus(); } catch (__) {} }
                 }
             });
-            dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
-            dialog.querySelector('.dccgg-report-close').addEventListener('click', () => dialog.close());
-            dialog.querySelector('.dccgg-btn-cancel').addEventListener('click', () => dialog.close());
-            dialog.querySelector('.dccgg-btn-send').addEventListener('click', () => sendReport(dialog, root, config));
+            dialog.addEventListener('click', (e) => { if (e.target === dialog) byEvent(e); });
+            dialog.querySelector('.dccgg-report-close').addEventListener('click', byEvent);
+            dialog.querySelector('.dccgg-btn-cancel').addEventListener('click', byEvent);
+            dialog.querySelector('.dccgg-btn-send').addEventListener('click', (e) => {
+                dialog.__dccggCloseKeyboard = e.detail === 0;
+                sendReport(dialog, root, config);
+            });
             return dialog;
         };
 
@@ -597,7 +629,7 @@
             return r.json();
         }).then(json => {
             if (json && json.success) {
-                dialog.close();
+                dialog.close();   // __dccggCloseKeyboard set by the Send click
                 showToast(STR.thankYou || 'Thanks!');
             } else {
                 send.disabled = false;

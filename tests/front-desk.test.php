@@ -15,6 +15,12 @@
  */
 require __DIR__ . '/_render-guide.php';
 
+/** Read a plugin file from the tree under test, not always the real one. */
+function plugin_file(string $rel): string {
+    $base = rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/');
+    return (string) @file_get_contents($base . '/' . $rel);
+}
+
 $pass = 0; $fail = 0; $failures = [];
 function check($name, $cond, $detail = '') {
     global $pass, $fail, $failures;
@@ -57,8 +63,17 @@ check('a popup button keeps its own section key, as the popover item did',
 echo "\nB. The face: one emoji in a circle, label beneath\n";
 check('the icon is the bell emoji and is hidden from screen readers',
     preg_match('/<span class="dccgg-fd-icon" aria-hidden="true">🛎️<\/span>/u', $hub) === 1, $hub);
-check('the label reads Front Desk, in Title Case',
-    strpos($hub, '<span class="dccgg-fd-label">Front Desk</span>') !== false);
+// v0.24.1: two lines, one element each, so a narrow face can never push it
+// to a third line and make the control taller than the circle.
+check('the label reads Front Desk, in Title Case, on two lines',
+    strpos($hub, '<span class="dccgg-fd-label"><span class="dccgg-fd-line">Front</span> <span class="dccgg-fd-line">Desk</span></span>') !== false, $hub);
+check('and the label comes BEFORE the circle in the markup, as it does on screen',
+    strpos($hub, 'dccgg-fd-label') < strpos($hub, 'dccgg-fd-icon'));
+check('a one-word label is one line', substr_count(more_menu(REPORT_ON + ['more_button_label' => 'Reception']), 'dccgg-fd-line') === 1);
+check('a three-word label still makes only two lines',
+    substr_count(more_menu(REPORT_ON + ['more_button_label' => 'Front Desk Help']), 'dccgg-fd-line') === 2);
+check('with the rest of the words on the second line',
+    strpos(more_menu(REPORT_ON + ['more_button_label' => 'Front Desk Help']), '<span class="dccgg-fd-line">Desk Help</span>') !== false);
 check('the accessible name is the visible label, not "More"', acc_name($hub) === 'Front Desk', acc_name($hub));
 check('and the button carries no aria-label that could drift from it',
     strpos($hub, 'aria-label') === false, $hub);
@@ -75,7 +90,7 @@ $two = more_menu(['more_menu_slot_1' => 'print', 'more_menu_slot_2' => 'save_pdf
 check('two items still render a <details> popover', strpos($two, '<details') !== false && strpos($two, 'dccgg-more-popover') !== false);
 check('its summary wears the same circle and label',
     strpos($two, 'dccgg-more-summary--fd') !== false && strpos($two, 'dccgg-fd-icon') !== false
-    && strpos($two, '<span class="dccgg-fd-label">Front Desk</span>') !== false, $two);
+    && strpos($two, '<span class="dccgg-fd-line">Front</span>') !== false, $two);
 check('the summary is named by its label too', acc_name($two) === 'Front Desk', acc_name($two));
 check('both items are inside the popover',
     substr_count($two, 'dccgg-more-item') === 2 && strpos($two, 'dccgg-more-print') !== false
@@ -115,7 +130,7 @@ $live = REPORT_ON + ['more_button_label' => '🧑‍✈️🛎️', 'str_more_me
     'more_menu_slot_1' => 'report', 'more_menu_slot_2' => 'none', 'more_menu_slot_3' => 'none'];
 check('with the live stored values still set, the button is round with their label',
     strpos(more_menu($live), 'dccgg-more--direct') !== false
-    && strpos(more_menu($live), '<span class="dccgg-fd-label">🧑‍✈️🛎️</span>') !== false);
+    && strpos(more_menu($live), '<span class="dccgg-fd-line">🧑‍✈️🛎️</span>') !== false);
 check('clearing them gives exactly the default button', more_menu(REPORT_ON) === $hub);
 
 // A guide saved before these controls existed carries none of their keys:
@@ -131,7 +146,7 @@ $legacy = raw_menu(['enable_detail_more_menu' => 'yes', 'enable_problem_report' 
 check('a legacy guide with none of the new keys still gets the circle and the label',
     strpos($legacy, 'dccgg-more--direct') !== false
     && strpos($legacy, '<span class="dccgg-fd-icon" aria-hidden="true">🛎️</span>') !== false
-    && strpos($legacy, '<span class="dccgg-fd-label">Front Desk</span>') !== false, $legacy);
+    && strpos($legacy, '<span class="dccgg-fd-line">Front</span>') !== false, $legacy);
 check('and it is named by that label, not by "More"', acc_name($legacy) === 'Front Desk', acc_name($legacy));
 check('a legacy guide with no slot keys resolves to Report alone',
     strpos($legacy, 'dccgg-more-report') !== false && strpos($legacy, 'dccgg-more-print') === false);
@@ -144,10 +159,9 @@ check('and a pill with no label keeps the ⋯ icon and a spoken name',
     strpos(more_menu(REPORT_ON + ['more_button_shape' => 'pill', 'more_button_label' => '']), 'fa-ellipsis-h') !== false);
 
 echo "\nG. The stylesheet carries the look, in the guest bundle only\n";
-$dir = __DIR__ . '/../dcc-guest-guide/assets/css/';
-$src = (string) file_get_contents($dir . 'widget.css');
-$core = (string) file_get_contents($dir . 'widget.min.css');
-$guest = (string) file_get_contents($dir . 'widget-guest.min.css');
+$src   = plugin_file('assets/css/widget.css');
+$core  = plugin_file('assets/css/widget.min.css');
+$guest = plugin_file('assets/css/widget-guest.min.css');
 check('the rules ship in the minified build', strpos($guest, 'dccgg-fd-icon') !== false);
 check('and only in the guest bundle: the public guide never renders this button',
     strpos($core, 'dccgg-fd-icon') === false && strpos($core, 'dccgg-more--direct') === false);
@@ -167,6 +181,12 @@ check('the button keeps the print-hide rule by keeping .dccgg-more',
 check('and the touch-action rule names the new faces',
     strpos($src, '.dccgg-root.dccgg-root .dccgg-more--direct,') !== false
     && strpos($src, '.dccgg-root.dccgg-root .dccgg-more-summary--fd,') !== false);
+check('v0.24.1: the face is a row, label then circle, 6px apart',
+    preg_match('/\.dccgg-more--fd\.dccgg-more--fd,[\s\S]{0,400}?flex-direction: row;[\s\S]{0,120}?gap: 6px/s', $src) === 1);
+check('the label is right-aligned at line-height 1.15',
+    preg_match('/\.dccgg-fd-label\.dccgg-fd-label[\s\S]{0,200}?text-align: right;[\s\S]{0,60}?line-height: 1\.15/s', $src) === 1);
+check('each line is its own block and never wraps',
+    preg_match('/\.dccgg-fd-line[\s\S]{0,200}?display: block;[\s\S]{0,60}?white-space: nowrap/s', $src) === 1);
 check('transitions drop under prefers-reduced-motion',
     preg_match('/@media \(prefers-reduced-motion: reduce\) \{\s*\.dccgg-more \.dccgg-fd-icon \{ transition: none/s', $src) === 1);
 

@@ -101,9 +101,33 @@ const HUB = '.dccgg-toolbar .dccgg-more--direct';
             m.iw === 48 && m.ih === 48 && m.ir === '50%' && m.ibg === 'rgb(255, 255, 255)' && m.ibd === '2px rgb(0, 107, 207)', JSON.stringify(m));
         check(`${w}px: the emoji is 24px on an emoji stack, line-height 1`,
             m.isize === '24px' && m.ilh === '24px' && /Emoji/.test(m.ifont), m.ifont + ' ' + m.ilh);
-        check(`${w}px: the label is Raleway 12px/700, Title Case, ONE line`,
+        check(`${w}px: the label is Raleway 12px/700, Title Case, on TWO lines`,
             m.lfont === 'Raleway' && m.lsize === '12px' && m.lweight === '700' && m.lwrap === 'nowrap'
-            && m.ltt === 'none' && m.llines === 1, JSON.stringify(m));
+            && m.ltt === 'none' && m.llines === 2, JSON.stringify(m));
+        const geo = await page.$eval(HUB, (el) => {
+            const b = el.getBoundingClientRect();
+            const i = el.querySelector('.dccgg-fd-icon').getBoundingClientRect();
+            const l = el.querySelector('.dccgg-fd-label').getBoundingClientRect();
+            const lines = [...el.querySelectorAll('.dccgg-fd-line')].map((n) => n.getBoundingClientRect());
+            return { beside: Math.round(l.right) <= Math.round(i.left),
+                gap: Math.round(i.left - l.right),
+                centred: Math.abs((l.top + l.bottom) / 2 - (i.top + i.bottom) / 2) <= 1.5,
+                // The line spans are blocks, so their boxes fill the label whatever
+                // text-align says. Measure where the GLYPHS actually end.
+                rightAligned: (() => {
+                    const ends = [...el.querySelectorAll('.dccgg-fd-line')].map((n) => {
+                        const rg = document.createRange(); rg.selectNodeContents(n);
+                        return rg.getBoundingClientRect().right;
+                    });
+                    return ends.every((x) => Math.abs(x - Math.max(...ends)) <= 1);
+                })(),
+                lineCount: lines.length, h: Math.round(b.height), words: lines.map((r, k) => k) };
+        });
+        check(`${w}px: the label sits to the LEFT of the circle, about 6px away`,
+            geo.beside && geo.gap >= 5 && geo.gap <= 8, JSON.stringify(geo));
+        check(`${w}px: two lines, right-aligned, centred on the circle`,
+            geo.lineCount === 2 && geo.rightAligned && geo.centred, JSON.stringify(geo));
+        check(`${w}px: and the whole control is no taller than the circle`, geo.h === 48, String(geo.h));
         check(`${w}px: the tap target is at least 48px`, m.w >= 48 && m.h >= 48, `${m.w}x${m.h}`);
         check(`${w}px: the accessible name is the visible label`, (await page.$eval(HUB, axName)) === 'Front Desk',
             await page.$eval(HUB, axName));
@@ -196,6 +220,67 @@ const HUB = '.dccgg-toolbar .dccgg-more--direct';
         await ctx.close();
     }
 
+    console.log('\nCC. The ring comes back only for a keyboard close');
+    {
+        const { ctx, page } = await open('guest-fd', 390, true);
+        const ring = () => page.$eval(HUB, (e) => {
+            const c = getComputedStyle(e), i = getComputedStyle(e.querySelector('.dccgg-fd-icon'));
+            return { outline: c.outlineStyle === 'none' ? 'none' : c.outlineWidth + ' ' + c.outlineStyle,
+                circle: i.backgroundColor, fv: e.matches(':focus-visible'), focused: document.activeElement === e };
+        });
+        // TAP the button, then TAP Cancel: focus returns, but with no ring and
+        // no coral circle — a phone guest never asked for either.
+        await page.click(HUB); await page.waitForTimeout(450);
+        await page.click('.dccgg-report-dialog .dccgg-btn-cancel'); await page.waitForTimeout(450);
+        let r = await ring();
+        check('after a TAP close: focus is back on the button', r.focused, JSON.stringify(r));
+        check('...with no focus ring and no coral circle',
+            r.outline === 'none' && r.circle === 'rgb(255, 255, 255)' && !r.fv, JSON.stringify(r));
+        // The marker is what GUARANTEES that. Chromium happens to leave
+        // focus-visible off here by itself, so without asserting the marker a
+        // browser that behaves differently would show the ring and no test
+        // would notice.
+        check('...and the button is marked quiet, so no browser can ring it',
+            await page.$eval(HUB, (e) => e.hasAttribute('data-dccgg-quiet-focus')));
+        // Now the keyboard: Escape out of a dialog opened from the keyboard.
+        await page.keyboard.press('Shift');
+        await page.$eval(HUB, (e) => e.focus());
+        await page.keyboard.press('Enter'); await page.waitForTimeout(450);
+        check('the keyboard opens it too', await page.evaluate(() => !!document.querySelector('.dccgg-report-dialog[open]')));
+        await page.keyboard.press('Escape'); await page.waitForTimeout(450);
+        r = await ring();
+        check('after ESCAPE: the ring and the coral circle are back',
+            r.focused && r.fv && r.outline !== 'none' && r.circle === 'rgb(240, 128, 128)', JSON.stringify(r));
+        check('and the quiet marker is NOT set for a keyboard close',
+            await page.$eval(HUB, (e) => !e.hasAttribute('data-dccgg-quiet-focus')));
+        // The case our own code has to get right: a TAP that never focused the
+        // button (Safari does this), so the browser restores focus to nothing
+        // and we put it back ourselves. Programmatic focus counts as keyboard
+        // focus in Chromium, so without the quiet-focus marker this is exactly
+        // where a phone guest would be left with a ring and a coral circle.
+        await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
+        await page.evaluate((sel) => document.querySelector(sel).click(), HUB);
+        await page.waitForTimeout(450);
+        await page.click('.dccgg-report-dialog .dccgg-btn-cancel'); await page.waitForTimeout(450);
+        r = await ring();
+        check('a tap that never focused the button: focus returns, quietly',
+            r.focused && r.outline === 'none' && r.circle === 'rgb(255, 255, 255)', JSON.stringify(r));
+        check('and the marker clears on the next blur, so the ring can come back', await page.evaluate((sel) => {
+            const b = document.querySelector(sel); b.blur();
+            return !b.hasAttribute('data-dccgg-quiet-focus');
+        }, HUB));
+
+        // And Cancel reached by keyboard counts as a keyboard close.
+        await page.keyboard.press('Shift');
+        await page.$eval(HUB, (e) => e.focus());
+        await page.keyboard.press('Enter'); await page.waitForTimeout(450);
+        await page.$eval('.dccgg-report-dialog .dccgg-btn-cancel', (e) => e.focus());
+        await page.keyboard.press('Enter'); await page.waitForTimeout(450);
+        r = await ring();
+        check('Cancel pressed with the keyboard also brings the ring back', r.focused && r.fv, JSON.stringify(r));
+        await ctx.close();
+    }
+
     console.log('\nD. Two items keep the popover; none renders nothing');
     {
         const { ctx, page } = await open('guest-more', 390, true);
@@ -227,10 +312,14 @@ const HUB = '.dccgg-toolbar .dccgg-more--direct';
         const pos = await page.evaluate(() => ({
             search: Math.round(document.querySelector('.dccgg-search').getBoundingClientRect().top),
             tiles: Math.round(document.querySelector('.dccgg-menu').getBoundingClientRect().top) }));
-        // RECORDED, not a budget met: 0.23.5 with the live settings put these at
-        // 100 and 169. The owner asked to be told rather than have anything shrunk.
-        check(`the search bar sits at ${pos.search} (0.23.5: 100) and the tiles at ${pos.tiles} (0.23.5: 169)`,
-            pos.search === 133 && pos.tiles === 202, JSON.stringify(pos));
+        // v0.24.1 targets, against 0.23.5 live (search 100, tiles 169, bar 33).
+        check(`the search bar moved no more than 15px from 0.23.5 (at ${pos.search}, was 100)`,
+            pos.search - 100 <= 15, JSON.stringify(pos));
+        check(`the tiles moved no more than 15px (at ${pos.tiles}, was 169)`, pos.tiles - 169 <= 15, JSON.stringify(pos));
+        await page.click('.dccgg-tile'); await page.waitForTimeout(600);
+        const bar = await page.evaluate(() => Math.round(
+            document.querySelector('.dccgg-detail:not([hidden]) .dccgg-detail-header-titlebar').getBoundingClientRect().height));
+        check(`the popup title bar is 48px or less (${bar}px)`, bar <= 48, String(bar));
         await ctx.close();
     }
     check('no JS errors', errors.length === 0, errors[0]);

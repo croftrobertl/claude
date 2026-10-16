@@ -41,6 +41,8 @@ final class Plugin
         }
 
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
+        // v0.24.1: the bundled section glyphs, as a pickable icon library.
+        add_filter('elementor/icons_manager/additional_tabs', ['\\DCCGG\\Icons', 'register_tab']);
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\DCCGG\\Widget', 'register_assets']);
         add_action('wp_enqueue_scripts', [$this, 'maybe_enqueue_guest_css'], 11);

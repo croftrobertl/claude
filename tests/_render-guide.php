@@ -111,6 +111,11 @@ namespace {
         }
     }
     require_once DCCGG_PLUGIN . 'includes/class-settings.php';
+    // Absent before v0.24.1; the harness still has to load older trees for
+    // before/after measurements and mutation runs.
+    if (is_readable(DCCGG_PLUGIN . 'includes/class-icons.php')) {
+        require_once DCCGG_PLUGIN . 'includes/class-icons.php';
+    }
     require_once DCCGG_PLUGIN . 'includes/class-widget.php';
 
     function dccgg_render_guide(array $overrides = []): string {

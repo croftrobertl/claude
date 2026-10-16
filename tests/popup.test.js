@@ -3341,9 +3341,10 @@ async function run() {
                 && m.ibd === '2px rgb(0, 107, 207)', JSON.stringify(m));
             check(`${vp.width}px: the emoji is 24px on its own font stack, line-height 1`,
                 m.isize === '24px' && m.ilh === '24px' && /Emoji/.test(m.ifont), m.ifont + ' ' + m.ilh);
-            check(`${vp.width}px: the label is Raleway 12px/700, Title Case, on one line`,
+            // v0.24.1: two lines, beside the circle.
+            check(`${vp.width}px: the label is Raleway 12px/700, Title Case, on two lines`,
                 m.lfont === 'Raleway' && m.lsize === '12px' && m.lweight === '700'
-                && m.lwrap === 'nowrap' && m.ltt === 'none' && m.llines === 1, JSON.stringify(m));
+                && m.lwrap === 'nowrap' && m.ltt === 'none' && m.llines === 2, JSON.stringify(m));
             check(`${vp.width}px: the whole control is a tap target of at least 48px`, m.w >= 48 && m.h >= 48, `${m.w}x${m.h}`);
             check(`${vp.width}px: its accessible name is the visible label`,
                 (await page.$eval(hub, axName)) === 'Front Desk');
@@ -3428,13 +3429,12 @@ async function run() {
                 search: Math.round(document.querySelector('.dccgg-search').getBoundingClientRect().top),
                 tiles: Math.round(document.querySelector('.dccgg-menu').getBoundingClientRect().top) }));
             // 0.23.5 with the live settings put the search bar at 100 and the
-            // tiles at 169 (hub toolbar 33px tall, no Print button). The
-            // 48px circle plus its label makes the row 66px: +33 on both. The
-            // owner asked to be TOLD rather than have anything shrunk, so this
-            // records the real number instead of asserting a budget met.
-            check(`RECORDED, over the 16px budget: the search bar sits at ${pos.search} (was 100, +${pos.search - 100}) ` +
-                  `and the tiles at ${pos.tiles} (was 169, +${pos.tiles - 169})`,
-                pos.search === 133 && pos.tiles === 202, JSON.stringify(pos));
+            // tiles at 169. v0.24.0 put the label UNDER the circle and pushed
+            // both down 33px; v0.24.1 moved it beside, and the owner's budget
+            // is 15px. Asserted, not merely recorded.
+            check(`the search bar moved ${pos.search - 100}px from 0.23.5, within the 15px budget`,
+                pos.search - 100 <= 15, JSON.stringify(pos));
+            check(`and the tiles moved ${pos.tiles - 169}px`, pos.tiles - 169 <= 15, JSON.stringify(pos));
             await ctx.close();
         }
         check('no JS errors', errors.length === 0, errors[0]);
