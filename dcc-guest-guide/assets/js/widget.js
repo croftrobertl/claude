@@ -268,6 +268,7 @@
         wireSectionNav(root, config);
         wireWizard(root);
         wireShrinkHeader(root);
+        wireTileTap(root);
         wireMoreMenu(root, config);
         wireVideoPosters(root);
         wireChecklists(root);
@@ -1720,6 +1721,56 @@
         });
     }
 
+    // -- Tile tap colour (v0.24.2) ----------------------------------------
+    // A tile is a <button>, and the host's kit paints every button coral on
+    // :hover, :focus and :active. On a phone that means a finger that is only
+    // starting a SCROLL turns the card coral, and :focus keeps it coral after
+    // the tap. The CSS now neutralises all three and this supplies the colour
+    // itself, for a real tap only.
+    //
+    // WHEN the colour lands, and why it is not on finger-DOWN. A touch cannot
+    // be told from the start of a scroll while the finger is still down: a
+    // guest who rests a moment and then flicks would see the colour, which is
+    // the complaint. Waiting for the lift is the only way to be certain, so
+    // the colour is applied on touchend — when no meaningful movement has
+    // happened — and held briefly. It arrives with no fade, which is the part
+    // that read as wrong, and a scroll never shows it at any point.
+    const TAP_HOLD_MS = 220;    // long enough to register as the tap's answer
+    const TAP_SLOP = 10;        // px of movement that means "this is a scroll"
+    function wireTileTap(root) {
+        let tile = null, sx = 0, sy = 0, moved = false, timer = null;
+        const clearAll = () => {
+            if (timer) { clearTimeout(timer); timer = null; }
+            root.querySelectorAll('.dccgg-tile.is-tap').forEach((t) => t.classList.remove('is-tap'));
+        };
+        root.__dccggClearTileTap = clearAll;
+        bindGlobal(root, document, 'touchstart', (e) => {
+            const t = e.target.closest && e.target.closest('.dccgg-tile');
+            if (!t || !root.contains(t)) { tile = null; return; }
+            const p = e.touches && e.touches[0];
+            tile = t; moved = false;
+            sx = p ? p.clientX : 0; sy = p ? p.clientY : 0;
+        }, { passive: true });
+        bindGlobal(root, document, 'touchmove', (e) => {
+            if (!tile || moved) return;
+            const p = e.touches && e.touches[0];
+            if (!p) return;
+            if (Math.abs(p.clientX - sx) >= TAP_SLOP || Math.abs(p.clientY - sy) >= TAP_SLOP) {
+                moved = true;      // a scroll: this gesture gets no colour
+            }
+        }, { passive: true });
+        bindGlobal(root, document, 'touchend', () => {
+            const t = tile; tile = null;
+            if (!t || moved) return;
+            clearAll();
+            t.classList.add('is-tap');
+            timer = setTimeout(() => { timer = null; t.classList.remove('is-tap'); }, TAP_HOLD_MS);
+        }, { passive: true });
+        bindGlobal(root, document, 'touchcancel', () => { moved = true; tile = null; clearAll(); }, { passive: true });
+        // Any page scroll ends the gesture: nothing may be waiting to colour.
+        bindGlobal(root, window, 'scroll', () => { if (tile) { moved = true; } }, { passive: true });
+    }
+
     // -- More-menu actions (v0.5; opt-in via enable_detail_more_menu) -----
     function wireMoreMenu(root, config) {
         if (!config.enableDetailMoreMenu) return;
@@ -2047,6 +2098,9 @@
 
     function closeDetail(root) {
         if (!root.classList.contains('is-detail')) return;
+        // v0.24.2: the tile that opened this popup must not be wearing the tap
+        // colour when the guest comes back to the hub.
+        if (typeof root.__dccggClearTileTap === 'function') root.__dccggClearTileTap();
         if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
         if (typeof root.__dccggHideSecrets === 'function') root.__dccggHideSecrets();
         const wasModal = !!root.__dccggModal;

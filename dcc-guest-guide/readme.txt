@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.1
+Stable tag: 0.24.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,31 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.2 =
+
+**Fixed: the grey square behind each pop-up title's icon.** The heading was
+clipping its own icon tile, cutting the tile's soft shadow off square. The
+trimming that keeps a long title clear of the Front Desk button now applies
+to the title text alone, so nothing clips the tile. Long titles still stop
+before the button and the title bar is unchanged in height.
+
+**Fixed: the Back button no longer touches the content below it.** The
+pop-up's header is fixed in place while the content scrolls under it, so the
+first item arrived flush against the Back row. The header now keeps 10px of
+its own white below that row at every width.
+
+**Fixed: tiles no longer flash coral while scrolling on a phone.** The colour
+came from the site theme, which paints every button coral while it is touched,
+focused or hovered — so a finger that was only starting a scroll turned a tile
+coral, and it stayed coral after the tap. The guide now supplies that colour
+itself, only for a real tap, with no fade in or out. A touch that becomes a
+scroll shows nothing, no tile stays coral afterwards, and the Review Us tile
+keeps a white card so its coral icon stays visible. The grey tap shading has
+been dropped, since the colour is the feedback now. Desktop hover and keyboard
+focus are unchanged.
+
+Nothing is written on install, activation or upgrade.
 
 = 0.24.1 =
 

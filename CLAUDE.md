@@ -223,6 +223,28 @@ Test harnesses must honour `DCCGG_PLUGIN_DIR`, including any file they READ:
 mutation run reported healthy survivors only because the harness was loading
 the real plugin instead of the mutant.
 
+The tile's tap colour comes from the HOST THEME, not this plugin and nothing
+stored: a tile is a `<button>`, and `.elementor-kit-331 button:hover,:focus,:active`
+(0,2,1) outranks `.dccgg-tile{background:…}` (0,1,0). v0.24.2 neutralises all
+three states and supplies the colour itself through `.is-tap`, applied by
+`wireTileTap()` on touchEND — not touchstart, because a finger that rests then
+scrolls cannot be told from a tap while it is still down. `--dccgg-sticker`
+colliding with the tap colour is marked server-side by `Widget::sticker_flags()`
+(by value, not by naming Review Us). `background` must stay OUT of the
+`.dccgg-tile` transition or the colour fades. The pop-up header is STICKY, so
+space under the Back row has to be its own padding, not a margin: content
+scrolls under a margin. And the title heading must never carry `overflow:hidden`
+— it clips the mini tile's shadow into a grey square; the ellipsis belongs on
+`.dccgg-detail-title-text`. `tests/phone-fixes.ui.js` and
+`tests/phone-fixes.mutations.py` guard all of this.
+
+WebKit is NOT installed here and cannot be fetched (the egress proxy refuses
+cdn.playwright.dev and the Microsoft mirror). Touch work is therefore verified
+in Chromium with touch emulation only; say so rather than implying Safari
+coverage. One mutant — removing `.dccgg-tile:active` — is unreachable in
+Chromium because a pointer press always sets `:hover` too; it is listed in the
+runner's UNREACHABLE block with that reason instead of being dropped.
+
 `Widget::config_emergency_contacts()` gates the data-config contact list on an
 emergency section being present in THIS render; apply_public_mode() drops a
 guest-only Emergency section, so the public page gets none. Don't emit that
@@ -246,7 +268,8 @@ admin-ajax, logins or previews, and turning the toggle off unregisters it.
 
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
-`php tests/stickers.test.php` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/stickers.test.php`, `node tests/phone-fixes.ui.js` and
+`node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

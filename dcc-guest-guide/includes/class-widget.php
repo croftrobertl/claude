@@ -3043,6 +3043,9 @@ final class Widget extends Widget_Base
     /** v0.24.0 slot defaults: Report alone. Mirrors the three Elementor controls. */
     public const MORE_SLOT_DEFAULTS = ['report', 'none', 'none'];
 
+    /** The tap highlight a tile's card takes, matching --dccgg-btn-hover-bg. */
+    public const TAP_COLOR = '#f08080';
+
     /** v0.24.0 Front Desk button defaults. */
     public const MORE_BUTTON_ICON  = '🛎️';
     public const MORE_BUTTON_LABEL = 'Front Desk';
@@ -3619,7 +3622,7 @@ final class Widget extends Widget_Base
                 $tile_id    = 'dccgg-tile-' . $safe_key;
                 $panel_id   = 'dccgg-panel-' . $safe_key;
                 ?>
-                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>"<?php echo $anim_override !== '' ? ' data-icon-anim="' . esc_attr($anim_override) . '"' : ''; ?><?php echo $role !== '' ? ' data-section-role="' . esc_attr($role) . '"' : ''; ?>>
+                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>"<?php echo self::sticker_flags($sec); // phpcs:ignore WordPress.Security.EscapeOutput ?> data-procedure="<?php echo $procedure ? '1' : '0'; ?>"<?php echo $anim_override !== '' ? ' data-icon-anim="' . esc_attr($anim_override) . '"' : ''; ?><?php echo $role !== '' ? ' data-section-role="' . esc_attr($role) . '"' : ''; ?>>
                     <?php if ($reveal_mode === 'flip') : ?>
                         <div class="dccgg-flip-card">
                             <div class="dccgg-flip-inner">
@@ -3696,9 +3699,29 @@ final class Widget extends Widget_Base
      */
     public static function sticker_style(array $sec): string
     {
+        return ' style="--dccgg-sticker:' . esc_attr(self::sticker_color($sec)) . '"';
+    }
+
+    /** The resolved sticker colour for a section: the host's, else the palette's. */
+    public static function sticker_color(array $sec): string
+    {
         $custom = trim((string) ($sec['section_tile_color'] ?? ''));
-        $color  = $custom !== '' ? $custom : Icons::color_for((string) ($sec['section_key'] ?? ''));
-        return ' style="--dccgg-sticker:' . esc_attr($color) . '"';
+        return $custom !== '' ? $custom : Icons::color_for((string) ($sec['section_key'] ?? ''));
+    }
+
+    /**
+     * v0.24.2: mark a tile whose sticker is the SAME colour as the tap
+     * highlight, so its card stays white when tapped and the sticker does not
+     * disappear into it. Compared by value rather than by naming Review Us, so
+     * any future section given that colour is covered too.
+     */
+    public static function sticker_flags(array $sec): string
+    {
+        $hex = strtolower(trim(self::sticker_color($sec)));
+        if (strlen($hex) === 4 && $hex[0] === '#') {   // #abc -> #aabbcc
+            $hex = '#' . $hex[1] . $hex[1] . $hex[2] . $hex[2] . $hex[3] . $hex[3];
+        }
+        return $hex === self::TAP_COLOR ? ' data-sticker-coral="1"' : '';
     }
 
     /**

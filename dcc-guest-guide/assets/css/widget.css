@@ -718,6 +718,11 @@ body.dccgg-detail-open .dccgg-detail-header {
     padding-left: var(--dccgg-detail-pad-x, 24px);
     padding-right: var(--dccgg-detail-pad-x, 24px);
     padding-top: 14px;
+    /* v0.24.2: the header is STICKY and the content scrolls under it, so the
+       margin below it is transparent and the first item arrived flush against
+       the Back row. 10px of the header's own background, not a strip or a
+       rule, keeps them apart at every width. */
+    padding-bottom: 10px;
     border-radius: 16px 16px 0 0;
     background: var(--dccgg-popup-header-bg, var(--dccgg-detail-bg, #ffffff));
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
@@ -4435,6 +4440,58 @@ dialog.dccgg-wrapper::backdrop {
     white-space: nowrap;
 }
 
+/* ---- v0.24.2: the tile's tap colour ------------------------------------
+   WHERE THE CORAL CAME FROM: nothing in this plugin and nothing stored on the
+   page. A tile is a <button>, and the host's kit carries
+       .elementor-kit-331 button:hover, :focus, :active { background-color:#F08080 }
+   at (0,2,1), which outranks `.dccgg-tile { background: … }` at (0,1,0). On a
+   phone that fires on finger-DOWN — including a finger that is only starting a
+   scroll — and :focus then keeps it coral after the tap, which is why a tile
+   stayed coral on returning from a pop-up.
+
+   So the theme's three states are neutralised here, and the plugin supplies
+   its own coral for a REAL tap only, driven by the .is-tap class that
+   widget.js adds (and never adds once a touch has turned into a scroll). */
+.dccgg-root.dccgg-root .dccgg-tile:hover,
+.dccgg-root.dccgg-root .dccgg-tile:focus,
+.dccgg-root.dccgg-root .dccgg-tile:active,
+.dccgg-stage.dccgg-stage .dccgg-tile:hover,
+.dccgg-stage.dccgg-stage .dccgg-tile:focus,
+.dccgg-stage.dccgg-stage .dccgg-tile:active {
+    background: var(--dccgg-tile-bg);
+    color: var(--dccgg-text);
+}
+.dccgg-root.dccgg-root .dccgg-tile,
+.dccgg-stage.dccgg-stage .dccgg-tile {
+    /* The coral IS the feedback now; the grey wash underneath it is noise. */
+    -webkit-tap-highlight-color: transparent;
+    /* background is deliberately NOT in this list: the tap colour must land
+       and leave instantly, with no fade either way. transform keeps its
+       easing, which is what the wiggle rides on. */
+    transition: transform var(--dccgg-transition-duration) var(--dccgg-transition-easing),
+                box-shadow var(--dccgg-transition-duration) var(--dccgg-transition-easing),
+                filter var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+.dccgg-root.dccgg-root .dccgg-tile.is-tap,
+.dccgg-stage.dccgg-stage .dccgg-tile.is-tap {
+    background: var(--dccgg-btn-hover-bg, #f08080);
+    color: var(--dccgg-btn-hover-txt, #fff);
+    transition: none;
+}
+/* A section whose own sticker is that same coral keeps a white card, or the
+   sticker would disappear into it. Marked server-side by comparing the
+   resolved sticker colour with the tap colour, so a future section coloured
+   #F08080 is covered without naming it here. */
+.dccgg-root.dccgg-root .dccgg-tile-wrap[data-sticker-coral] .dccgg-tile.is-tap,
+.dccgg-stage.dccgg-stage .dccgg-tile-wrap[data-sticker-coral] .dccgg-tile.is-tap {
+    background: var(--dccgg-tile-bg);
+    color: var(--dccgg-text);
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-root.dccgg-root .dccgg-tile,
+    .dccgg-stage.dccgg-stage .dccgg-tile { transition: none; }
+}
+
 /* ---- v0.24.1: colour stickers ------------------------------------------
    Each section's icon sits in a solid circle in its own colour, taken from
    --dccgg-sticker. That property is written on BOTH the hub tile's circle and
@@ -4514,8 +4571,12 @@ dialog.dccgg-wrapper::backdrop {
    title or a taller bar to a clipped one. */
 .dccgg-root.dccgg-root .dccgg-detail-header-titlebar .dccgg-detail-title,
 .dccgg-stage.dccgg-stage .dccgg-detail-header-titlebar .dccgg-detail-title {
+    /* v0.24.2: min-width only. v0.24.1 also put overflow:hidden here, which
+       clipped the mini tile's `0 5px 10px` shadow at the heading's box and
+       left a hard-edged grey square behind every sticker. The clipping and
+       the ellipsis belong to the TEXT, below — the heading only has to be
+       allowed to shrink so the grid can give the button its column. */
     min-width: 0;
-    overflow: hidden;
 }
 .dccgg-root.dccgg-root .dccgg-detail-header-titlebar .dccgg-detail-title-text,
 .dccgg-stage.dccgg-stage .dccgg-detail-header-titlebar .dccgg-detail-title-text {
