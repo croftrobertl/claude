@@ -19,6 +19,15 @@ class Plugin {
 		add_action( 'elementor/elements/categories_registered', [ $this, 'register_category' ] );
 		add_action( 'elementor/widgets/register', [ $this, 'register_widget' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
+		// Elementor resolves a widget's get_style_depends()/get_script_depends()
+		// against handles that are already registered. wp_enqueue_scripts alone
+		// is not always early enough (template/preview renders can resolve
+		// first), and an unresolved handle is what pushes some setups into
+		// loading the asset globally instead of per-widget. Registering on
+		// Elementor's own hooks as well closes that gap; register_assets() is
+		// idempotent so running up to three times costs nothing.
+		add_action( 'elementor/frontend/after_register_styles', [ $this, 'register_assets' ] );
+		add_action( 'elementor/frontend/after_register_scripts', [ $this, 'register_assets' ] );
 		add_action( 'elementor/editor/after_enqueue_scripts', [ $this, 'enqueue_editor_assets' ] );
 
 		if ( is_admin() ) {
@@ -44,7 +53,17 @@ class Plugin {
 		$widgets_manager->register( new Widget() );
 	}
 
+	/**
+	 * Register only — never enqueue. The widget pulls these in through
+	 * get_style_depends()/get_script_depends(), so they load on a page only
+	 * when the widget actually renders there.
+	 *
+	 * Idempotent: safe to call from each of the three registration hooks.
+	 */
 	public function register_assets(): void {
+		if ( wp_script_is( 'features-amenities', 'registered' ) ) {
+			return;
+		}
 		wp_register_style(
 			'features-amenities',
 			FA_URL . 'assets/css/widget.css',

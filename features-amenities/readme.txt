@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,13 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.11.1 =
+* The packaged default list no longer bans pets. A newly added widget would have contradicted the live cottage policy, which now points guests travelling with a small dog to Cottage 34. The Rules row still bans smoking and still says no children. Content already on your pages is untouched.
+* Assets are registered on Elementor's own registration hooks as well as wp_enqueue_scripts, so the widget's stylesheet and script always resolve as per-widget dependencies rather than falling back to loading site-wide. Registration is idempotent.
+* Removed the dark-mode override. It forced near-white text, and with "Inherit Theme Styles" on the cards are transparent, so on a site with no dark theme that text landed on a white background.
+* The search clear button and the Read More button are now scoped to the widget and their hover styles only apply to devices with a real pointer. Previously the theme kit's generic button rule could paint a coral background that stuck after a tap on iOS. The clear button also gains a 44px tap area; its icon is unchanged in size.
+* Editor guidance: the repeater's title field is now labelled "Short label (e.g. Dining Area)" and the description field "The details", both with help text, so facts land in the description rather than the title. Labels only — no stored content is changed.
 
 = 1.11.0 =
 * New settings page at DCC → Features & Amenities, holding site-wide defaults for the widget. Common options first (content, behaviour, appearance) with the rarely-touched ones in a collapsed Advanced section. Every default reproduces 1.10.2 behaviour exactly, so installing this version changes nothing until you change something.

@@ -30,10 +30,6 @@
 .fal-density-comfy   .fal-container { --fal-density-pad: 34px; --fal-density-gap: 26px; --fal-density-font-scale: 1.05; }
 .fal-glass-yes .fal-container { --fal-bg: rgba(255, 255, 255, 0.6); --fal-border: rgba(255, 255, 255, 0.4); }
 
-@media (prefers-color-scheme: dark) {
-	.fal-container { --fal-bg: rgba(30, 30, 30, 0.95); --fal-border: rgba(255, 255, 255, 0.1); color: #f0f0f0; }
-}
-
 .fal-search-wrap { position: relative; margin-bottom: 25px; }
 .fal-search-input {
 	width: 100%; padding: 12px 40px; border-radius: 8px;
@@ -41,22 +37,28 @@
 	color: inherit; font-size: 1em; text-align: center;
 }
 .fal-search-icon  { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--fal-primary); opacity: 0.7; }
-.fal-search-clear {
-	position: absolute; right: 6px; top: 50%;
-	transform: translateY(-50%) scale(0.85);
-	background: none; border: none; color: inherit; cursor: pointer;
-	padding: 8px; min-width: 32px; min-height: 32px;
+.fal-container .fal-search-clear {
+	position: absolute; right: 0; top: 50%;
+	transform: translateY(-50%);
+	background: transparent; border: none; color: inherit; cursor: pointer;
+	padding: 0; min-width: 44px; min-height: 44px;
 	display: flex; align-items: center; justify-content: center;
 	opacity: 0; pointer-events: none;
-	transition: opacity 0.18s ease, transform 0.18s ease;
+	transition: opacity 0.18s ease;
 }
-.fal-search-clear.is-active {
+.fal-container .fal-search-clear.is-active {
 	opacity: 0.6; pointer-events: auto;
-	transform: translateY(-50%) scale(1);
 }
-.fal-search-clear:hover,
-.fal-search-clear:focus-visible { opacity: 1; }
-.fal-search-clear-icon { width: 14px; height: 14px; display: block; }
+/* The scale animation lives on the icon so the 44px hit area is never shrunk. */
+.fal-container .fal-search-clear-icon {
+	width: 14px; height: 14px; display: block;
+	transform: scale(0.85); transition: transform 0.18s ease;
+}
+.fal-container .fal-search-clear.is-active .fal-search-clear-icon { transform: scale(1); }
+.fal-container .fal-search-clear:focus-visible { opacity: 1; background: transparent; }
+@media (hover: hover) and (pointer: fine) {
+	.fal-container .fal-search-clear:hover { opacity: 1; background: transparent; }
+}
 
 .fal-search-status {
 	margin-top: 6px; margin-bottom: 18px;
@@ -114,7 +116,17 @@
 .fal-collapsible::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; background: linear-gradient(transparent, var(--fal-bg)); pointer-events: none; }
 .fal-collapsible.is-expanded { max-height: 1000px; }
 .fal-collapsible.is-expanded::after { display: none; }
-.fal-read-more { background: none; border: none; color: var(--fal-primary-text); font-weight: bold; cursor: pointer; padding: 5px 0; margin-top: 5px; font-size: 0.9em; }
+.fal-container .fal-read-more {
+	background: transparent; border: none; color: var(--fal-primary-text);
+	font-weight: bold; cursor: pointer; padding: 5px 0; margin-top: 5px; font-size: 0.9em;
+}
+.fal-container .fal-read-more:focus-visible {
+	background: transparent;
+	outline: 2px solid var(--fal-primary); outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+	.fal-container .fal-read-more:hover { background: transparent; text-decoration: underline; }
+}
 
 /* Accordion */
 @media (max-width: 767px) {

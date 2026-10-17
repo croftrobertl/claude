@@ -109,7 +109,7 @@ class Widget extends Widget_Base {
 			$section( 'Accessibility & Safety', 'fab fa-accessible-icon', 'fa-brands' ),
 			$amenity( 'Accessibility', 'Ground-floor unit with a stair-free, well-lit path to the entrance.' ),
 			$amenity( 'Safety', 'The property is monitored by CCTV.' ),
-			$amenity( 'Rules', 'No smoking inside the cottage. No children or pets are allowed.' ),
+			$amenity( 'Rules', 'No smoking inside the cottage. No children.' ),
 		];
 	}
 
@@ -182,18 +182,20 @@ class Widget extends Widget_Base {
 		$repeater->add_control(
 			'item_text',
 			[
-				'label'       => esc_html__( 'Text / Title', 'features-amenities' ),
+				'label'       => esc_html__( 'Short label (e.g. Dining Area)', 'features-amenities' ),
 				'type'        => Controls_Manager::TEXT,
 				'default'     => esc_html__( 'List Item', 'features-amenities' ),
+				'description' => esc_html__( 'Keep this to a few words. Put the facts in The details below, not here.', 'features-amenities' ),
 				'label_block' => true,
 			]
 		);
 		$repeater->add_control(
 			'item_description',
 			[
-				'label'       => esc_html__( 'Description', 'features-amenities' ),
+				'label'       => esc_html__( 'The details', 'features-amenities' ),
 				'type'        => Controls_Manager::TEXTAREA,
 				'condition'   => [ 'item_type' => 'amenity' ],
+				'description' => esc_html__( 'The full sentence a guest reads, e.g. "Free high-speed WiFi across the property."', 'features-amenities' ),
 				'label_block' => true,
 			]
 		);
