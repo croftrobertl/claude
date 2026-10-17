@@ -6572,20 +6572,47 @@
 		 * page canvas is not redrawn in between. */
 		function pace() {
 			if ((hero && !hero.sky) || (vig && !vig.sky) || burstMode || ripples.length || bgFills.length || footMode || xaP) { return 0; }
-			for (var k = 0; k < parts.length; k++) { if (!parts[k].dormant) { return 0; } }
+			/* Rob's pick (4.12.2), from the 4.12.1 side-by-side: the falling
+			 * and drifting SPRITES paint at 30 fps, like the background
+			 * layer. Nothing else slows down, and the separation is the
+			 * ORDER of these tests, not a new flag: every test above returns
+			 * the full rate first, so a flyer or scene on the page canvas,
+			 * a ripple, a firework burst, an Earth Day turn, a transferred
+			 * background and the footer clip are all untouched — and a SKY
+			 * flyer or scene (4.10.7) keeps the full rate through
+			 * `skyBusy()`, which is read beside this and overrides it. Only
+			 * a frame whose sole moving thing is the sprite field reaches
+			 * here. The idle drop below is unchanged. */
+			for (var k = 0; k < parts.length; k++) { if (!parts[k].dormant) { return SLOW_MS; } }
 			return (subEff && subParts.length) ? SLOW_MS : IDLE_MS;
 		}
 		function skyBusy() { return !!((hero && hero.sky) || (vig && vig.sky) || (sky && sky.dirty)); }
-		var lastPage = 0;
+		/* lastPage is the page canvas's SCHEDULE anchor; lastPageT is when it
+		 * actually last painted. They are the same thing only when the
+		 * display's interval divides the period exactly, and the motion step
+		 * must use the real one (4.12.2). */
+		var lastPage = 0, lastPageT = 0;
 		function frame(t, tick) {
 			raf = 0;
 			if (manual && !tick) { return; }
 			if (!running && !tick) { return; }
 			var pp = pace(), pc = skyBusy() ? 0 : pp;
-			/* -1ms: rAF timestamps jitter, and a 33.3ms target on a 16.7ms
-			 * display must land on every second frame, not every third. */
+			/* Paced by ELAPSED TIME, never by counting frames (4.12.2): a
+			 * 120 Hz iPhone Pro would get 60 from "every other frame", and a
+			 * phone in Low Power Mode, whose rAF is already throttled to
+			 * about 30, would get 15 — which the -1ms tolerance below is
+			 * exactly what prevents (a 33.3ms frame clears a 32.3ms gate).
+			 * -1ms also covers rAF jitter, so a 33.3ms target on a 16.7ms
+			 * display lands on every second frame, not every third. */
 			if (!tick && pc && lastDraw && t - lastDraw < pc - 1) { next(pc - (t - lastDraw)); return; }
-			lastDraw = t;
+			/* The REMAINDER IS CARRIED: the anchor advances by one period
+			 * rather than jumping to this frame, so a display whose interval
+			 * is not a factor of the period (75 Hz: 13.3ms against 33.3)
+			 * still averages the target instead of settling on the next
+			 * whole multiple. More than one period late — a tab waking, a
+			 * long task — and the schedule is restarted from now, so the
+			 * carry can never become a backlog of owed frames. */
+			lastDraw = (pc && lastDraw && t - lastDraw < 2 * pc) ? lastDraw + pc : t;
 			ensureMounted();
 			var t0 = (W.performance && performance.now) ? performance.now() : 0;
 			/* Motion steps stay capped as before; an idle tick may span 250ms,
@@ -6596,8 +6623,12 @@
 			 * only the sky is moving) */
 			var pageDue = tick || !pp || !lastPage || t - lastPage >= pp - 1, clipped = false;
 			if (pageDue) {
-				var pdt = lastPage && !tick ? mn((t - lastPage) / 1000, pp === IDLE_MS ? 0.3 : 0.05) : dt;
-				lastPage = t;
+				/* Motion is stepped by REAL elapsed time, so every speed is
+				 * exactly what it was at 60 fps — the pacing changes when a
+				 * frame is drawn, never how far anything moves per second. */
+				var pdt = lastPageT && !tick ? mn((t - lastPageT) / 1000, pp === IDLE_MS ? 0.3 : 0.05) : dt;
+				lastPage = (pp && lastPage && t - lastPage < 2 * pp) ? lastPage + pp : t;
+				lastPageT = t;
 				/* Nothing was drawn last frame and nothing will be: leave the
 				 * already-empty canvas alone. */
 				if (!(pp === IDLE_MS && blank)) { cx.clearRect(0, 0, vw, vh); }
@@ -6698,7 +6729,7 @@
 		}
 		function play() {
 			if (sleep) { W.clearTimeout(sleep); sleep = 0; }
-			if (!raf && running) { last = 0; lastDraw = 0; lastPage = 0; raf = W.requestAnimationFrame(frame); }
+			if (!raf && running) { last = 0; lastDraw = 0; lastPage = 0; lastPageT = 0; raf = W.requestAnimationFrame(frame); }
 		}
 		/* Draw only while someone can see it: the tab is showing AND the
 		 * canvas is on screen (a footer or sticky canvas scrolls away). The

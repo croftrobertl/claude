@@ -810,7 +810,7 @@ the stacking context, below our frontZ 9000).
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 181,626 raw / 64,617 gzipped (4.12.0, `gzip -c`; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 181,684 raw / 64,661 gzipped (4.12.2, `gzip -c`; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1163,6 +1163,7 @@ the stacking context, below our frontZ 9000).
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
   `node tools/test-loader.js`, `php tools/test-config-themes.php`,
+  `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
@@ -1351,8 +1352,56 @@ the stacking context, below our frontZ 9000).
   4.12.1).** That figure was in `readme.txt`, `ambient.js` and
   `class-plugin.php` and had been stale since 3.6.0. Quote the size
   baseline above, and re-measure.
-- **The always-60 fps loop was MEASURED for the Director and NOT changed
-  (4.12.1, Rob keeps the look).** `pace()` returns 0 while any sprite is
+- **The falling sprites paint at 30 fps since 4.12.2 (Rob's pick from the
+  4.12.1 side-by-side).** He watched A (60) against B (30) and chose B.
+  - **Paced by ELAPSED TIME with the remainder CARRIED, never by counting
+    frames.** The gate is `t - lastDraw < pc - 1`; the anchor then advances
+    `lastDraw + pc` while it is keeping up and restarts from `t` only when
+    more than one period late (a waking tab, a long task), so the carry can
+    never become a backlog. Three reasons, all the Director's and all
+    tested: frame-skipping gives 60 on a 120 Hz iPhone Pro; the 1 ms
+    tolerance is what stops the cap STACKING on Low Power Mode's own ~30 Hz
+    rAF throttle and halving it to 15 (a 33.3 ms frame clears a 32.3 ms
+    gate); and a display whose interval is not a whole fraction of 33.3 ms
+    (75 Hz) would settle on the next whole multiple, 25, without the carry.
+  - **Motion is still stepped by REAL elapsed time**, so every speed in
+    px/s is unchanged — `lastPageT` was split from `lastPage` for exactly
+    this: `lastPage` is the schedule anchor (carried), `lastPageT` is when
+    the canvas actually last painted, and `pdt` uses the latter. Proven on
+    the mocked clock with a seeded field: three seconds of travel is 463.7
+    px in 60 steps and 463.6 px in 30 (0.02%; worst single sprite 0.16%).
+    Compare PATH LENGTH, never net displacement — a bat's net displacement
+    over 3 s depends on where it is in its wiggle and read 19 px against 36
+    between the two cadences, which looks exactly like a speed regression
+    and is not one.
+  - **Flyers, scenes and the rest keep the full rate, and nothing was added
+    to keep them apart.** The separation is the ORDER of the tests in
+    `pace()`: hero, scene, burst, ripple, transferred background, footer
+    clip and the Earth Day turn are all asked FIRST and return 0, and a SKY
+    flyer or scene keeps the rate through `skyBusy()`, which overrides
+    `pace()` beside it. Only a frame whose sole moving thing is the sprite
+    field reaches the cap. The idle drop and the hidden-tab stop are
+    untouched.
+  - **Cost, re-measured on the shipped build** (`measure-sprites.js` in the
+    scratchpad; mean of three 8 s runs, main-thread task time, same
+    machine, 4.12.1 against 4.12.2): see the release checklist. The 4.12.1
+    round measured phone (390, 3x, 4x CPU) 901 → 532 ms/s at the top of the
+    page and 918 → 498 scrolled to the foot; desktop (1280, 2x) 530 → 273
+    and 510 → 282.
+  - **Tests**: `tools/test-sprite-rate.js` (23 checks) puts a SHIM in place
+    of requestAnimationFrame, driven by a continuous ticker at 60, 120, 30
+    and 75 Hz — a timer started per request would hide a build that paced
+    itself by asking late — and counts the engine's own clears at 390 and
+    1280; plus the flyer at 120 Hz on both canvases, and the travel
+    comparison above. `tools/test-pacing.js` gained the sprite-rate,
+    flyer-rate and hidden-tab-with-sprites cases, and its
+    no-IntersectionObserver case now expects ~30 rather than ~60 because
+    ambient is on there. Mutation-checked four ways: the cap removed,
+    every-other-frame instead of elapsed time (21 fps at 60 Hz, 15 at 30 —
+    the stacking failure itself), the cap applied to flyers, and the idle
+    drop lost.
+- **The always-60 fps loop was MEASURED for the Director in 4.12.1 and not
+  changed in that release (Rob then picked the cap; see 4.12.2 above).** `pace()` returns 0 while any sprite is
   live, so with the ambient layer on the loop runs at full rate for the
   whole visit, scrolled anywhere (the fixed full-page canvas is always "on
   screen" to the IntersectionObserver — that part is by design). Capping the
@@ -1364,8 +1413,7 @@ the stacking context, below our frontZ 9000).
   4,000 px" is the foot of the page: the fixture stops at 3,149 px on a
   phone and 1,667 px at 1280 — the cost does not depend on the offset,
   which is the Director's point.) Reported with a real-time
-  side-by-side recording; not shipped, and not to be shipped without Rob's
-  pick.
+  side-by-side recording, from which Rob picked B.
 - **Since 4.12.0 the Director's queue owns the timing where it exists.**
   Hero Effects 3.16.2 gives a visit ONE queue per tab (sessionStorage
   `dcc_moments`, Rob's order: the Seasons moment, the seaplane, its heron,

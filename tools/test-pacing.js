@@ -4,6 +4,11 @@
  * lighter, keep the look exactly as it is"). On the REAL rAF loop, not the
  * mocked clock, because pacing is exactly what the mocked clock bypasses.
  *
+ *   - the falling/drifting SPRITES alone → ~30 repaints a second (Rob's
+ *     4.12.2 pick, from the 4.12.1 side-by-side), at 390 and 1280, while a
+ *     flyer still gets the full rate — on the page canvas and in the header
+ *     picture alike — and the idle drop and the hidden tab still stop the
+ *     loop with sprites on;
  *   - background layer alone → ~30 repaints a second, and NO trail: after
  *     every sampled frame, no painted pixel lies outside the boxes of the
  *     particles just drawn (six effects; every repaint clears in full since
@@ -59,8 +64,80 @@ async function boot(args, tweak, opts = {}) {
 const S = () => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state;
 const framesIn = (page, ms) => page.evaluate(ms => new Promise(r => { const a = window.__frames; setTimeout(() => r(window.__frames - a), ms); }), ms);
 const QUIET = c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; };
+/* Nothing but the sprites: no scene, no flyer, ever. QUIET leaves the first
+ * flyer at 6-10 s, which would land inside a 3 s sample taken after a
+ * 2.5 s settle. */
+const SPRITES_ONLY = c => { QUIET(c); c.heroFirst = [9999, 10000]; c.vigGap = 1e9; };
 
 (async () => {
+  /* Rob watched the 4.12.1 side-by-side and picked the 30 fps cap. The
+   * separation is the ORDER of the tests inside pace(): everything that
+   * returns the full rate is asked BEFORE the sprite field, and a sky
+   * flyer or scene keeps it through skyBusy(). Halloween is the theme
+   * here because it has no water line, so no ripple — which keeps the
+   * full rate by design — can land inside a sample. */
+  console.log('\n  --- the sprites alone: 30 repaints a second (4.12.2) ---');
+  for (const width of [390, 1280]) {
+    const ses = await boot(['--theme=halloween', '--subtle=off'], SPRITES_ONLY, { viewport: { width, height: width < 768 ? 844 : 800 } });
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForTimeout(2500);
+      const n = await framesIn(ses.page, 3000);
+      const st = await ses.page.evaluate(() => {
+        const s = window.DCCSeasonsEngine._state;
+        return { live: s.live, ripples: s.ripples, hero: s.hero, vig: s.vig, subtle: s.subtle.on };
+      });
+      ok(st.live > 0 && !st.hero && !st.vig && !st.ripples && !st.subtle,
+        `${width}px: ${st.live} sprites moving, and nothing else on the canvas`, JSON.stringify(st));
+      ok(n >= 84 && n <= 96, `${width}px: ${(n / 3).toFixed(1)} repaints/s (target 30 ±2)`, `${n} in 3 s`);
+    } finally { await ses.close(); }
+  }
+
+  console.log('\n  --- a flyer still gets the full rate ---');
+  /* (a) on the PAGE canvas: the bass leaps out of the water line, so it is
+   * pace()'s own hero test that must keep the rate. */
+  {
+    const ses = await boot(['--theme=fall_fishing', '--subtle=off'], c => { SPRITES_ONLY(c); c.heroOnly = 'bass'; c.heroFirst = [3, 3.2]; });
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.hero, null, { timeout: 25000 });
+      const during = await framesIn(ses.page, 700);
+      const kind = await ses.page.evaluate(() => window.DCCSeasonsEngine._state.hero);
+      ok(during >= 35, `the ${kind} on the page canvas is drawn at full rate (${(during / 0.7).toFixed(0)}/s)`, `${during} in 0.7 s`);
+    } finally { await ses.close(); }
+  }
+  /* (b) in the HEADER PICTURE: a sky flyer (4.10.7) is drawn on the sky
+   * canvas, where skyBusy() — not pace() — holds the rate. */
+  {
+    const ses = await boot(['--theme=halloween', '--subtle=off'], c => { SPRITES_ONLY(c); c.heroOnly = 'witch'; c.heroFirst = [3, 3.2]; });
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.hero, null, { timeout: 25000 });
+      const during = await framesIn(ses.page, 700);
+      const r = await ses.page.evaluate(() => ({ kind: window.DCCSeasonsEngine._state.hero, sky: window.DCCSeasonsEngine._state.sky.heroSky }));
+      ok(r.sky, `the ${r.kind} flies in the header picture`, JSON.stringify(r));
+      ok(during >= 35, `and is drawn at full rate while the sprites are capped (${(during / 0.7).toFixed(0)}/s)`, `${during} in 0.7 s`);
+    } finally { await ses.close(); }
+  }
+
+  console.log('\n  --- with the sprites on: the hidden tab still stops the loop ---');
+  {
+    const ses = await boot(['--theme=halloween', '--subtle=off'], SPRITES_ONLY);
+    try {
+      await ses.page.waitForFunction(S, null, { timeout: 15000 });
+      await ses.page.waitForTimeout(1500);
+      const hide = h => ses.page.evaluate(h => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); document.dispatchEvent(new Event('visibilitychange')); }, h);
+      await hide(true);
+      await ses.page.waitForTimeout(200);
+      const hidden = await framesIn(ses.page, 2000);
+      await hide(false);
+      await ses.page.waitForTimeout(200);
+      const shown = await framesIn(ses.page, 2000);
+      ok(hidden === 0, 'hidden: no repaints at all', `${hidden}`);
+      ok(shown >= 50 && shown <= 66, `shown again: back to 30 a second (${(shown / 2).toFixed(1)}/s)`, `${shown}`);
+    } finally { await ses.close(); }
+  }
+
   console.log('\n  --- background layer alone: 30 repaints a second, and no trails ---');
   /* Each effect pinned on Halloween (--subtle=<effect>): New Year's and
    * July 4 run fireworks, which keep the full rate by design. */
@@ -198,7 +275,10 @@ const QUIET = c => { c.heroEvery = [9999, 10000]; c.vigFirst = 1e9; };
       await ses.page.evaluate(() => { setInterval(() => { const c = document.querySelector('canvas.dcc-seasons-canvas'); if (c && c.parentNode) { c.parentNode.removeChild(c); } }, 150); });
       await ses.page.waitForTimeout(24000);
       const after = [await rafIn(1000), await rafIn(1000)];
-      ok(before >= 45, `drawing at full rate before (${before} frame requests/s)`, `${before}`);
+      /* ambient is ON in this case, so the sprite field paces the loop at
+       * 30 since 4.12.2 — the check is that frames are being requested at
+       * all, and then that they stop without multiplying. */
+      ok(before >= 25, `requesting frames before (${before} a second)`, `${before}`);
       ok(after.every(n => n <= 2), `after 20 re-mounts: no frame requests, no runaway (${after.join(', ')}/s)`, after.join(', '));
     } finally { await Promise.race([ses.close(), new Promise(r => setTimeout(r, 10000))]); }
   }

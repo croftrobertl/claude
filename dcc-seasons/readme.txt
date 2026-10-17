@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.12.1
+Stable tag: 4.12.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,36 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.12.2 =
+Rob's pick from the 4.12.1 side-by-side: the falling and drifting sprites
+now paint at 30 frames a second, like the background layer. Nothing else
+changes — not the flyers or the moments, not the hero scene, not the easter
+egg, not the z-order, not where effects appear, not reduced motion, and not
+4.12.1's loader. Staging first; live after Rob signs off. Rollback:
+reinstall the 4.12.1 zip. Nothing is written on install, activation or
+upgrade.
+
+* The sprite layer is paced by ELAPSED TIME, not by skipping frames: it
+  paints when 33.3 ms have passed since its last paint, carrying the
+  remainder. On a 120 Hz iPhone Pro that is 30, where every-other-frame
+  would have given 60; on a phone in Low Power Mode, whose browser already
+  throttles animation to about 30, it stays at about 30 rather than dropping
+  to 15; and on a display whose refresh interval is not a whole fraction of
+  33.3 ms it averages 30 instead of settling on the next whole multiple.
+* Every sprite's motion is still stepped by real elapsed time, so speeds in
+  pixels per second are exactly what they were. Measured: over three
+  seconds of the same seeded field, every sprite travels the same distance
+  whether that time arrives in 60 steps or 30 — the worst case differs by
+  0.16%, the whole field by 0.02%.
+* Flyers and scenes keep the full rate, and nothing new was added to keep
+  them apart: the frame loop already asks about a flyer, a scene, a ripple,
+  a firework, an Earth Day turn, a moved background and the footer clip
+  BEFORE it looks at the sprite field, and a flyer or scene in the header
+  picture is paced separately again. Only a frame whose sole moving thing is
+  the sprite field is slowed.
+* With nothing moving at all the loop still drops to its idle pace, and a
+  hidden tab still stops it.
 
 = 4.12.1 =
 Invisible loading only. Nothing about how or where the effects look and play
