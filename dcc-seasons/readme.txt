@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.12.0
+Stable tag: 4.12.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,33 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.12.1 =
+Invisible loading only. Nothing about how or where the effects look and play
+changes, and nothing in the settings changes. Staging first; live after Rob
+signs off. Rollback: reinstall the 4.12.0 zip. Nothing is written on
+install, activation or upgrade.
+
+* The engine is no longer fetched before the page has finished loading. It
+  used to ask requestIdleCallback with a 3 s timeout and, where that does
+  not exist, a flat 1.5 s timer — and on a phone that timer fired while the
+  hero photograph and the booking widget were still coming down. Now
+  nothing starts until the window load event, and then whichever comes
+  first of a 400 ms breath (then the browser's own idle time where it
+  offers any) and the visitor's first scroll or tap. Once running, every
+  effect is identical.
+* The inline config no longer carries all 27 theme definitions on every
+  page. It carries the themes the schedule can reach from yesterday to
+  fourteen days ahead, plus the year-round base theme and the easter egg's
+  fallback palette: typically 3 to 6 themes, which takes the config from
+  about 16.0KB raw (4.0KB gzipped) to about 8.2KB (2.4KB). An administrator
+  previewing a theme — including from a Theme guide link — still receives
+  that theme in full, whatever the date. Widen the window with the
+  `dcc_seasons_theme_days` filter if a page cache ever holds HTML for
+  longer than that.
+* Corrected the stale "96KB engine" figure in the readme, the loader and the
+  plugin's own comments. The engine has been larger than that since 3.6.0;
+  it is 182KB raw, 65KB over the wire.
 
 = 4.12.0 =
 Seasons takes its turn in the Hero Effects "moments queue", and its heron
@@ -872,9 +899,13 @@ BREAKING: the layer model changed and several themes' sprite sets changed.
   date so that page caching can never serve a stale season.
 * What the homepage actually loads, measured with the network timeline: ONE
   script is enqueued, ambient.min.js at 4,392 bytes, in the footer with
-  defer. The 96KB engine is not enqueued at all — the loader fetches it on
-  requestIdleCallback, measured at +215ms AFTER the load event, so it never
-  competes for the critical path. Under prefers-reduced-motion, or with the
+  defer. The engine — 182KB raw, 65KB over the wire as of 4.12.1, not the
+  "96KB" this note claimed for nine releases — is not enqueued at all: the
+  loader fetches it after the window LOAD event, a short breath later or on
+  the visitor's first scroll or tap, whichever comes first (4.12.1; before
+  that it was requestIdleCallback with a 1.5s timer where that does not
+  exist, and on a phone the timer fired while the hero photograph was still
+  loading). It never competes for the critical path. Under prefers-reduced-motion, or with the
   ambient layer switched off, the engine is never fetched and the page pays
   4,392 bytes in total.
 * FIXED, and the one real waste the audit's instinct was right about: under

@@ -802,6 +802,7 @@ final class Plugin {
      * @return array
      */
     private function config(array $opt): array {
+        $schedule = Themes::schedule($opt['schedule']);
         $config = [
             'enabled'     => (bool) $opt['enabled'],
             'ambient'     => (bool) $opt['ambient'],   /* falling/drifting sprites only, since 4.5.0 */
@@ -829,7 +830,7 @@ final class Plugin {
             /**
              * CSS selector for the footer element the ambient canvas mounts
              * inside under 'footer' placement. ONE copy, here: both the
-             * loader (which skips fetching the 96KB engine when nothing
+             * loader (which skips fetching the 182KB engine when nothing
              * matches) and the engine (which mounts into the first match)
              * read this same string, so they cannot disagree about what a
              * footer is.
@@ -912,13 +913,18 @@ final class Plugin {
                 'pointer'     => !empty($opt['fx_pointer']),
                 'evening'     => !empty($opt['fx_evening']),
             ],
-            'schedule'    => Themes::schedule($opt['schedule']),
+            'schedule'    => $schedule,
             'anchors'     => self::client_anchors(),
             /* The calendar rules' two tables, shipped rather than copied, so
              * ambient.js resolves with exactly what Schedule::active() uses. */
             'holidays'    => Schedule::HOLIDAY_ANCHOR,
             'clashWins'   => Schedule::CLASH_WINS,
-            'themes'      => Themes::themes(),
+            /* Only the themes a page served today could need — the window
+             * from yesterday to today + Themes::WINDOW_DAYS, plus the base
+             * theme and 'classic' (the egg's fallback). 4.12.1: the full
+             * table was 10.0KB of a 16.5KB config on EVERY page, for one
+             * theme's worth of use. A preview asks for its own key below. */
+            'themes'      => Themes::reachable($schedule),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
             'every'       => self::EVERY,
@@ -941,6 +947,14 @@ final class Plugin {
         if ($preview !== null) {
             $config['preview']      = $preview['key'];
             $config['previewLabel'] = $preview['label'];
+            /* A preview (or a Theme guide ?dcc_season= link) may name any
+             * theme, including one outside the shipped window — so carry its
+             * definition too. Admin-only, and the key is validated against
+             * the full table in preview_theme(). */
+            $all = Themes::themes();
+            if (isset($all[$preview['key']]) && !isset($config['themes'][$preview['key']])) {
+                $config['themes'][$preview['key']] = $all[$preview['key']];
+            }
         }
 
         /**

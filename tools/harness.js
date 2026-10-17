@@ -62,10 +62,18 @@ async function open(html, opts = {}) {
     viewport: opts.viewport || { width: 1280, height: 900 },
     deviceScaleFactor: opts.dsf || 1,
     reducedMotion: opts.reducedMotion || 'no-preference',
+    /* opts.recordVideo: { dir, size } — a REAL-TIME capture, for showing a
+     * pacing difference. The mocked clock always draws a full frame, so a
+     * tick-by-tick reel cannot show one. */
+    ...(opts.recordVideo ? { recordVideo: opts.recordVideo } : {}),
   });
 
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
+    /* opts.extra lets a suite answer its own URLs first — test-loader.js
+     * serves a deliberately slow image so the window load event can be
+     * observed arriving AFTER the page is interactive. */
+    if (opts.extra && opts.extra(route, url)) { return; }
     if (url.hostname === 'dcc.test' && url.pathname === '/') {
       return route.fulfill({ contentType: 'text/html; charset=utf-8', body: html });
     }
@@ -84,7 +92,9 @@ async function open(html, opts = {}) {
   page.on('console', m => logs.push(`${m.type()}: ${m.text()}`));
   page.on('pageerror', e => logs.push(`pageerror: ${e.message}`));
 
-  await page.goto('http://dcc.test/', { waitUntil: 'load' });
+  /* 'load' by default. A suite watching what happens ACROSS the load event
+   * passes waitUntil: 'commit' so it is looking before load fires. */
+  await page.goto('http://dcc.test/', { waitUntil: opts.waitUntil || 'load' });
   return { browser, page, logs, close: () => browser.close() };
 }
 

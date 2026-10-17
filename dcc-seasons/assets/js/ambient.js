@@ -197,7 +197,8 @@
 		var wantEngine = CFG.engine !== undefined ? !!CFG.engine : !!CFG.ambient;
 		if (!wantEngine || reduced() || !CFG.engineSrc) { return; }
 		/* Footer placement with no footer renders nothing, so fetching the
-		 * engine to discover that costs ~96KB for no effect. Measured: on a
+		 * engine to discover that costs ~182KB (65KB over the wire) for no
+		 * effect. Measured: on a
 		 * page with no footer the engine was fetched in full and produced
 		 * zero canvases. The selector is the config's, the same one the
 		 * engine mounts by, so the two cannot disagree. */
@@ -234,8 +235,39 @@
 				}
 			});
 		}
-		if (W.requestIdleCallback) { W.requestIdleCallback(go, { timeout: 3000 }); }
-		else { setTimeout(go, 1500); }
+		/* WHEN the engine is fetched (4.12.1). It used to be
+		 * requestIdleCallback(timeout 3000), with setTimeout(go, 1500) where
+		 * that does not exist — and on a phone the 1.5 s timer fired while the
+		 * hero photograph and the booking widget were still loading, so the
+		 * engine's bytes competed with them. Now NOTHING starts before the
+		 * window load event: after it, whichever comes first of a short breath
+		 * (START_DELAY, then idle time if the browser offers it) and the
+		 * visitor's first scroll or tap. Once running, every effect is
+		 * identical — this changes only the moment the fetch begins. */
+		var START_DELAY = 400;    /* ms after load before the fetch */
+		var LOAD_NET = 10000;     /* …and a net, in case 'load' never fires */
+		var EV = ['scroll', 'pointerdown', 'touchstart', 'keydown'];
+		var evOpt = { passive: true, capture: true };
+		var armed = false, tid = 0;
+		function fire() {
+			for (var i = 0; i < EV.length; i++) { W.removeEventListener(EV[i], fire, evOpt); }
+			if (tid) { clearTimeout(tid); tid = 0; }
+			if (W.requestIdleCallback) { W.requestIdleCallback(go, { timeout: 1000 }); }
+			else { go(); }
+		}
+		function arm() {
+			if (armed) { return; }
+			armed = true;
+			for (var i = 0; i < EV.length; i++) { W.addEventListener(EV[i], fire, evOpt); }
+			tid = setTimeout(fire, START_DELAY);
+		}
+		if (D.readyState === 'complete') { arm(); }
+		else {
+			W.addEventListener('load', arm);
+			/* A page whose last image never resolves never fires 'load'. The
+			 * net is deliberately long: it is a failure mode, not a path. */
+			setTimeout(arm, LOAD_NET);
+		}
 	}
 
 	/* ---- Tap targets. The selector is a comma-separated list. Taps are

@@ -1109,10 +1109,14 @@ the stacking context, below our frontZ 9000).
   under them: 0 of 365 days in 2026 resolve to nothing. And the row is
   resolved from the VISITOR'S local date on purpose, so the server cannot know
   which season is live without breaking cache-safety. What loads, measured:
-  ONE enqueued script, `ambient.min.js` (~4.4KB, footer, defer); the ~96KB
-  engine is fetched by it on `requestIdleCallback`, +215ms AFTER the load
-  event, and not at all under reduced motion, with the ambient layer off, or
-  (since 3.18.1) under footer placement on a page with no footer. Re-measure
+  ONE enqueued script, `ambient.min.js` (~4.4KB, footer, defer); the engine
+  (182KB raw / 65KB gzipped at 4.12.1 — the "~96KB" this note carried for
+  nine releases was stale, as the readme's was) is fetched by it AFTER the
+  window `load` event: 400 ms later (then idle time where the browser offers
+  it), or on the visitor's first scroll or tap, whichever comes first
+  (4.12.1). Nothing is fetched before load. Not at all under reduced motion,
+  with the ambient layer off, or (since 3.18.1) under footer placement on a
+  page with no footer. Re-measure
   (the scratchpad audit-load script did not survive; rebuild it under `tools/`)
   before accepting any claim about what this
   plugin costs a page.
@@ -1158,6 +1162,7 @@ the stacking context, below our frontZ 9000).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
@@ -1307,6 +1312,60 @@ the stacking context, below our frontZ 9000).
   ripple reserve is NOT scaled. `fitParts()` re-targets on a real resize,
   never mid-scene (`endVig()` calls it). On a phone a scene borrows at most
   ONE sprite (`startVig`). Rob's density setting is never touched.
+- **Nothing of the engine is fetched before the window LOAD event
+  (4.12.1).** The Director's audit of live 4.12.0 caught the engine's
+  request going out ~1.9 s into an iPhone load, while the hero photograph
+  and the booking widget were still coming down: the loader asked
+  `requestIdleCallback(go, {timeout: 3000})` and, where that does not exist,
+  `setTimeout(go, 1500)` — and BOTH can fire before load. (The brief's
+  premise that Safari lacks requestIdleCallback is out of date: Safari 16.4,
+  March 2023, shipped it, so current iOS takes the idle path and iOS 16.3
+  and older take the timer. The gate is the right fix either way, and it
+  removes the difference between them.) `ambient.js` now arms on `load`
+  (or at once if `readyState === 'complete'`), and then takes whichever
+  comes first of `START_DELAY` = 400 ms (then `requestIdleCallback` with a
+  1 s timeout where the browser offers it) and the visitor's first
+  `scroll`/`pointerdown`/`touchstart`/`keydown` — capture + passive, removed
+  as soon as one fires. `LOAD_NET` = 10 s arms anyway, because a page whose
+  last image never resolves never fires `load`; it is a failure mode, not a
+  path. Once running, every effect is byte-identical.
+- **The inline config carries only the themes a page served TODAY could
+  need (4.12.1).** `Themes::reachable()` keeps the themes the schedule
+  resolves to from YESTERDAY to today + `Themes::WINDOW_DAYS` (14), plus
+  `Schedule::BASE_THEME` and `classic` — the two silent fallbacks in
+  `ambient.js` (the resolved key at line ~156, the egg's palette at
+  ~317). Yesterday is in because the resolver runs on the VISITOR'S local
+  date, which can be a day behind the server's. Measured: 3-6 themes in
+  practice, the config 16.0KB raw / 4.0KB gz → ~8.2KB / ~2.4KB.
+  **This is the one thing in the plugin a PAGE CACHE can outlive**: HTML
+  cached today and served after the window has run out resolves to a theme
+  the config no longer carries, and the loader quietly shows BASE_THEME —
+  a visible wrong season, which is why the window is 14 days and not "a few
+  days". Widen it with `dcc_seasons_theme_days`. An admin preview (and a
+  Theme guide `?dcc_season=` link) still receives its theme in full,
+  whatever the date: `Plugin::config()` adds it back after the trim. The
+  Theme guide builds its own full table (`Theme_Guide::payload()`), so it is
+  unaffected. `tools/gen-config.php --window[=N] [--today=Y-m-d]` mirrors
+  the trim for the suites; everything older still sees all 27.
+- **The engine is 182KB raw / 65KB gzipped, not "96KB" (corrected in
+  4.12.1).** That figure was in `readme.txt`, `ambient.js` and
+  `class-plugin.php` and had been stale since 3.6.0. Quote the size
+  baseline above, and re-measure.
+- **The always-60 fps loop was MEASURED for the Director and NOT changed
+  (4.12.1, Rob keeps the look).** `pace()` returns 0 while any sprite is
+  live, so with the ambient layer on the loop runs at full rate for the
+  whole visit, scrolled anywhere (the fixed full-page canvas is always "on
+  screen" to the IntersectionObserver — that part is by design). Capping the
+  sprite layer at 30 fps in a scratch build measured, same machine, mean of
+  three 8 s runs, main-thread task time: phone (390, 3x, 4x CPU) 901 → 532
+  ms/s at the top and 918 → 498 scrolled to the bottom; desktop (1280, 2x,
+  no throttle) 530 → 273 and 510 → 282 scrolled down. Biggest step a sprite
+  takes between repaints goes from 2.0-2.2 px to 2.7-3.0 px. ("Scrolled
+  4,000 px" is the foot of the page: the fixture stops at 3,149 px on a
+  phone and 1,667 px at 1280 — the cost does not depend on the offset,
+  which is the Director's point.) Reported with a real-time
+  side-by-side recording; not shipped, and not to be shipped without Rob's
+  pick.
 - **Since 4.12.0 the Director's queue owns the timing where it exists.**
   Hero Effects 3.16.2 gives a visit ONE queue per tab (sessionStorage
   `dcc_moments`, Rob's order: the Seasons moment, the seaplane, its heron,

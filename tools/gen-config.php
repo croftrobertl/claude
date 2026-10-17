@@ -56,6 +56,20 @@ foreach (array_slice($argv, 1) as $a) {
     }
 }
 
+/* The themes the inline config carries. --window[=N] mirrors
+ * Plugin::config()'s 4.12.1 trim; --today=YYYY-MM-DD pins the window's
+ * start so a suite does not change behaviour on 25 December. */
+function dcc_windowed(array $themes, array $args): array {
+    if (empty($args['window'])) { return $themes; }
+    $days = $args['window'] === true ? null : (int) $args['window'];
+    $today = isset($args['today']) && $args['today'] !== true ? (string) $args['today'] : null;
+    $out = Themes::reachable(Schedule::defaults(), $today, $days);
+    $pin = isset($args['theme']) && $args['theme'] !== true ? (string) $args['theme'] : '';
+    if ($pin !== '' && isset($themes[$pin]) && !isset($out[$pin])) { $out[$pin] = $themes[$pin]; }
+    foreach ($out as $k => $v) { $out[$k] = $themes[$k]; }  /* keep --noparticles */
+    return $out;
+}
+
 /** Anchors in the shape the client expects (mirrors Plugin::client_anchors). */
 $anchors = [];
 foreach (Schedule::anchors() as $key => $a) {
@@ -79,6 +93,8 @@ if (!empty($args['noparticles'])) {
         }
     }
 }
+
+$windowed = dcc_windowed($themes, $args);
 
 $config = [
     'enabled'      => true,
@@ -134,7 +150,11 @@ $config = [
     'anchors'      => $anchors,
     'holidays'     => Schedule::HOLIDAY_ANCHOR,
     'clashWins'    => Schedule::CLASH_WINS,
-    'themes'       => $themes,
+    /* --window[=N] ships only the themes a page served today could need —
+     * what Plugin::config() does since 4.12.1 — plus the pinned preview
+     * theme, exactly as a real preview adds it. Off by default so every
+     * older suite still sees the whole table. */
+    'themes'       => $windowed,
     /* --min points the loader at the MINIFIED build. A suite that only
      * ever exercises the readable source cannot catch a stale or broken
      * .min.js, and that is what actually ships. */

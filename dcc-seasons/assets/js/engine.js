@@ -6798,6 +6798,10 @@
 				get sep() { return sepRun; },
 				get share() { return viewShare(); },
 				get placement() { return footMode ? 'footer' : 'content'; },
+				/* which theme the loader handed us — the inline config carries
+				 * only the reachable ones since 4.12.1, so a suite has to be
+				 * able to see that the right one arrived */
+				get theme() { return themeKey; },
 				/* The frame loop's own flag, so a suite can prove the engine
 				 * actually pauses on a hidden tab rather than inferring it. The
 				 * first hidden-tab test read this before it existed, got

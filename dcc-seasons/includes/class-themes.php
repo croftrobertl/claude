@@ -798,6 +798,69 @@ class Themes {
     }
 
     /**
+     * How many days ahead of the server's today a theme must be reachable to
+     * ride along in the inline config (4.12.1). See reachable().
+     */
+    public const WINDOW_DAYS = 14;
+
+    /**
+     * The theme keys a page served TODAY could possibly need, so the inline
+     * config can carry those definitions instead of all 27 (4.12.1: the
+     * table was 10.0KB of the config's 16.5KB raw).
+     *
+     * Three things decide the set, and each is load-bearing:
+     *
+     *  - Every theme the schedule resolves to from YESTERDAY to today +
+     *    WINDOW_DAYS. Yesterday is in because the schedule is resolved from
+     *    the VISITOR'S local date, which can be a day behind the server's.
+     *  - Schedule::BASE_THEME, which ambient.js falls back to when the
+     *    resolved key is absent.
+     *  - 'classic', whose egg palette is ambient.js's egg fallback.
+     *
+     * The window is the one thing a PAGE CACHE can outlive: HTML cached
+     * today and served after the window has run out resolves to a theme the
+     * config no longer carries, and the loader quietly shows BASE_THEME
+     * instead. Fourteen days is wide enough that any sane cache lifetime —
+     * and this site's purge on a plugin version change — expires first;
+     * widen it with the filter if a cache is ever configured to hold HTML
+     * for longer.
+     *
+     * @param array       $rows  Saved schedule rows.
+     * @param string|null $today 'Y-m-d'; defaults to the site's today.
+     * @param int|null    $days  Days ahead; defaults to WINDOW_DAYS.
+     * @return array<string, array> A subset of themes(), original order.
+     */
+    public static function reachable(array $rows, ?string $today = null, ?int $days = null): array {
+        $all = self::themes();
+        /**
+         * Filter how many days ahead the inline config must cover.
+         *
+         * @param int $days
+         */
+        $days = $days === null ? (int) apply_filters('dcc_seasons_theme_days', self::WINDOW_DAYS) : $days;
+        $days = max(1, min(366, $days));
+        if ($today === null) {
+            $today = function_exists('current_time') ? (string) current_time('Y-m-d') : gmdate('Y-m-d');
+        }
+        $keep = [Schedule::BASE_THEME => true, 'classic' => true];
+        try {
+            $start = new \DateTimeImmutable($today . ' 00:00:00', new \DateTimeZone('UTC'));
+        } catch (\Throwable $e) {
+            return $all; // an unparseable date must never cost a theme
+        }
+        for ($i = -1; $i <= $days; $i++) {
+            $day = $start->modify(($i >= 0 ? '+' : '') . $i . ' day')->format('Y-m-d');
+            $row = Schedule::active($rows, $day);
+            if (is_array($row) && !empty($row['theme'])) { $keep[$row['theme']] = true; }
+        }
+        $out = [];
+        foreach ($all as $key => $theme) {
+            if (isset($keep[$key])) { $out[$key] = $theme; }
+        }
+        return $out ?: $all;
+    }
+
+    /**
      * The effective schedule (saved option rows), filterable.
      *
      * @param array $rows Saved schedule rows.
