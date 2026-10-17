@@ -150,7 +150,16 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   suite derives the emittable keys from the live engine and guards this.
 - **Every visible string must be translatable.** Text domain `dcc-cottage-selector`;
   the site uses Loco Translate. Never echo a raw user-facing string.
-- **No fee amounts anywhere in this plugin.** The capacity and pet notes describe
+- **One fee amount, and only one: the pet note's "$50 per night" (0.53.3).** Until
+  0.53.2 no string named an amount. 0.53.3's pet note — "One dog up to 20 lbs,
+  Cottage 34 only, $50 per night, pre-approval required." — is the Website
+  Director's wording from the live Cottage 34 page, sent to Rob for word-for-word
+  approval, and it CONTRADICTS the tiered figures recorded below ($25/$20/$10); the
+  page is the newer evidence, but nobody here has confirmed it. The PHP test allows
+  exactly that one figure in the pet note and none in the capacity note; any other
+  `$` in a packaged string or the rendered results still fails. What follows is the
+  pre-0.53.3 rule and its reasons, kept because they still apply to every other
+  string: the capacity and pet notes describe
   that a fee applies, never how much; amounts have one source of truth elsewhere on
   the site. There is a grep check for `$` in the test suite, and it reads the LIVE
   strings — an earlier version compared the test file's own copies of them and
@@ -225,12 +234,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   other value creates a duplicate "Dora Canal Court" section (the 0.17.1 incident).
   Surviving `claude-code` mentions are historical: a warning comment and past
   changelog entries recording what those releases did. Leave them.
-- **Never publish a shared design from the editor.** No control sets `render_type`,
-  so the Elementor preview re-renders server-side on every keystroke;
-  `Selector_Widget::render()` skips publishing when `in_editor()` is true. The
-  `elementor/document/after_save` hook is the only publisher, and it must never call
+- **`render()` never publishes, anywhere (0.53.3).** A visitor request must not
+  write an option. Until 0.53.2 render() republished on every non-editor view (and
+  skipped the editor via `in_editor()`, now deleted); the
+  `elementor/document/after_save` hook is now the ONLY publisher. It must never call
   `$document->get_elements_data()` — that recurses into Elementor's empty-document
-  conversion and takes down the editor (the 0.19.5 fatal).
+  conversion and takes down the editor (the 0.19.5 fatal). **It publishes DISPLAY
+  settings, not the raw payload**: `Plugin::display_settings()` asks Elementor's
+  `elements_manager->create_element_instance()` for the widget and reads
+  `get_settings_for_display()`, so control/preset defaults are included exactly as
+  render() sees them. The raw payload lacks them — measured on live 1005: no icons,
+  no colours, no mode list — and publishing it would strip the mirrored pop-ups
+  (until 0.53.2 the next visitor view quietly repaired that). Any failure, or an
+  empty result, falls back to the raw settings; it never throws out of a save.
 - **Availability never removes a cottage.** It re-orders and annotates. Free
   matches lead; a cottage that would have been a top match but is booked is still
   listed, marked, with a calendar link. Any failure fails OPEN — rank as if no
@@ -341,12 +357,15 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the real shortcode with the site set to Compare and pins both halves. Any OTHER
   literal fallback over a site default is still a defect.
 - **Mirrored pop-ups follow the settings page once their source has published
-  under 0.48.0+ rules, and `render()` republishes on every non-editor view.**
-  All eight cottage templates on live carry a Mini Entry mirroring `Primary`. A
-  registry entry published by ≤0.47.0 carries every key and masks the page; the
-  first uncached front-end render of the `Primary` Selector after 0.48.0
-  republishes it (publish_design dedupes by hash, and the shape changed), so a
-  cache purge after install heals it. Considered and REJECTED in 0.50.0: an
+  under 0.48.0+ rules. Since 0.53.3 the registry refreshes ONLY when the source
+  page is Updated in Elementor** (render() no longer republishes). All eight
+  cottage templates on live carry a Mini Entry mirroring `Primary`. So a release
+  that changes the SHAPE or the strings of `design_snapshot()` — or a cleared key on
+  the source widget — reaches the pop-ups only after /cottages/ (1005) is Updated;
+  a cache purge alone no longer heals it, and the checklist must say so.
+  `tools/check-stored-keys.php` lists the registry copy's stale strings. (History:
+  a ≤0.47.0 registry entry carried every key and masked the page; 0.48.0–0.53.2
+  healed that on the first uncached front-end view.) Considered and REJECTED in 0.50.0: an
   upgrade routine rebuilding the registry from `_elementor_data`. Raw stored
   settings lack Elementor's control/preset defaults, so a faithful rebuild needs
   Elementor widget instances outside a render, inside an upgrade hook — the area
@@ -359,7 +378,12 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `wizardTrack()` is the single place that knows.
 - **Site-wide choices live in `Settings`; `Settings::defaults()` is the canonical
   map**, and since 0.53.1 every value in it equals LIVE's stored row (Rob: a blind
-  install must behave like live) — 8 results, Matching Quiz + Compare Mode. The
+  install must behave like live) — with ONE deliberate exception since 0.53.3:
+  `pet_fee_url` defaults to Cottage 34's page while live stores `''`. A stored `''`
+  in THIS option means "no link" and does not fall through (unlike a widget's empty
+  field), so live keeps no link until the URL is typed on the settings page. The
+  default is ABSOLUTE (`home_url()`): the field is `<input type="url">` in a form
+  without `novalidate`, and a site-relative default would block every Save — 8 results, Matching Quiz + Compare Mode. The
   export it was taken from is `tests/fixtures/live-state-0.53.0.json` (0.53.2 tests read
   the later `live-state-0.53.1.json`), and a PHP
   test fails if any default drifts from it (until 0.53.0 they reproduced 0.43.0:
@@ -616,6 +640,24 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   regenerates that page's CSS.** Elementor caches per-post CSS built from control
   values INCLUDING defaults; the 0.53.1 checklist runs Elementor → Tools →
   Regenerate Files & Data after install.
+- **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).** An
+  absolutely positioned `::before` on the control extends its hit area: answered
+  step dots 19px above and below (48px at live's 10px bar, 44px at the 6px
+  fallback; never sideways, so the 6px gaps keep dots apart), the compare ‹ › 6px
+  each way (32px circles, 44 x 44 taps, inside the nav's 8px gap). An extension
+  must never overlap another tappable target; where one would, leave it and report
+  it. dom-smoke 103 pins the geometry from the parsed stylesheet; the Chromium
+  harness grid-scans every extension (each point must hit its own target, no live
+  neighbour may intersect, with a planted probe proving the detector sees one).
+  The dots stayed interactive: they jump back several steps at once, which Back
+  (one step) does not, and Edit Answers is not on the question screen.
+- **Outside-press closing uses `pointerdown` (0.53.3).** iOS Safari sends the
+  compatibility mouse events only for elements it considers clickable, so a tap on
+  blank page never produced the `mousedown` the menu listened for. `mousedown`
+  remains only where `window.PointerEvent` is missing. WebKit is not installable in
+  this environment; the harness emulates iOS in Chromium by cancelling `touchstart`
+  on non-clickable targets (which suppresses compat mouse events but not pointer
+  events) — 0.53.2 stays open under it, 0.53.3 closes.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in

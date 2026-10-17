@@ -9,7 +9,7 @@
  * option, and for each instance compares the watched stored keys with the 0.53.3
  * PACKAGED DEFAULT:
  *
- *   MASKS (read)        stored, differs from the 0.53.2 default, and the widget READS
+ *   MASKS (read)        stored, differs from the 0.53.3 default, and the widget READS
  *                       it — it hides a 0.53.1-0.53.3 change until cleared.
  *   unread (safe)       stored and differs, but a mirroring Mini Entry never reads its
  *                       own text keys (its pop-up uses the source's), so clearing it
@@ -27,7 +27,7 @@
 
 global $wpdb;
 
-// 0.53.2 packaged defaults for every key a 0.53.1/0.53.2 change touches.
+// 0.53.3 packaged defaults for every key a 0.53.1-0.53.3 change touches.
 $DEFAULTS = [
     // 0.53.1
     'str_intro'           => 'Answer a few questions to find your best match, or select cottages to compare side by side.',
@@ -81,7 +81,7 @@ $walk = function ($els, $row) use (&$walk, &$total, $DEFAULTS, $MINI_OWN, $LEGAC
             foreach ($watched as $k => $want) {
                 if (!array_key_exists($k, $s) || !is_scalar($s[$k]) || (string) $s[$k] === '' || (string) $s[$k] === $want) { continue; }
                 $readsIt = !$mirroring || isset($MINI_OWN[$k]);
-                if ($readsIt) { echo "  MASKS (read)    $k = " . $show($s[$k]) . "   (0.53.2 default: " . $show($want) . ")\n"; $mask++; }
+                if ($readsIt) { echo "  MASKS (read)    $k = " . $show($s[$k]) . "   (0.53.3 default: " . $show($want) . ")\n"; $mask++; }
                 else { echo "  unread (safe)   $k = " . $show($s[$k]) . "\n"; $unread++; }
             }
             // A widget's own pet link beats the site's (0.53.3). An empty one inherits.

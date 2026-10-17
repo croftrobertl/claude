@@ -1096,6 +1096,14 @@ namespace {
     ok('0.53.3: the save hook publishes exactly the snapshot render() sees (defaults included)',
         $built === ['5be94a3'] && json_encode($fullEntry) === json_encode($renderSnap)
         && !empty($fullEntry['icons']['mode_quick']) && ($fullEntry['enabledModes'] ?? null) === ['quick', 'compare']);
+    // An instance that hands back NO settings must not publish an empty design.
+    \Elementor\Plugin::$instance = (object) ['elements_manager' => new class {
+        public function create_element_instance(array $el) { return new class { public function get_settings_for_display() { return []; } }; } }];
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    \DCCS\Plugin::instance()->republish_designs(new class { public function get_main_id() { return 1005; } },
+        ['elements' => [['elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => '5be94a3', 'settings' => $live1005]]]);
+    ok('0.53.3: an instance with no settings falls back to the stored ones, never an empty design',
+        json_encode($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']['overrides'] ?? null) === json_encode($rawEntry));
     // A manager that throws must not take the save down: fall back to raw, as before.
     \Elementor\Plugin::$instance = (object) ['elements_manager' => new class { public function create_element_instance(array $el) { throw new \RuntimeException('boom'); } }];
     $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
@@ -1172,6 +1180,10 @@ namespace {
     ok('0.53.3: ...and names the Primary registry\'s stale copies (fee_link among them)',
         preg_match('/"Primary" -> post 1005[\s\S]*stale copy\s+fee_link = "Fee details"/', $report) === 1);
     ok('0.53.3: the total counts 20 widget keys + the site row', strpos($report, 'TOTAL keys that mask 0.53.3: 21') !== false);
+    // A stored pet note in the OLD wording masks the new one and must be flagged.
+    $withNote = $LIVE; foreach ($withNote['widgets'] as &$cw) { if ($cw['widget_id'] === 'd1ae1cf') { $cw['stored_settings']['str_pet_note'] = 'Pets are only allowed in Cottage 34 and must be pre-approved.'; } } unset($cw);
+    ok('0.53.3: a widget storing the old pet note is flagged', (function ($r) { foreach (preg_split('/\n(?===)/', $r) as $c) {
+        if (strpos($c, 'dccs_selector d1ae1cf') !== false) { return preg_match('/MASKS \(read\)\s+str_pet_note = "Pets are only/', $c) === 1; } } return false; })($runCheck($withNote)));
     // A widget link that differs from the default is flagged; control for the clean run below.
     $withUrl = $LIVE; foreach ($withUrl['widgets'] as &$cw) { if ($cw['widget_id'] === '5be94a3') { $cw['stored_settings']['pet_fee_url'] = ['url' => '/pet-policy/']; } } unset($cw);
     ok('0.53.3: a widget\'s own pet link is flagged as masking', (function ($r) { foreach (preg_split('/\n(?===)/', $r) as $c) { if (strpos($c, 'dccs_selector 5be94a3') !== false) { return preg_match('/MASKS \(read\)\s+pet_fee_url = "\/pet-policy\/"/', $c) === 1; } } return false; })($runCheck($withUrl)));
