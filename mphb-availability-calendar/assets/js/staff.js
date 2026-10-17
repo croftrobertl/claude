@@ -3316,7 +3316,6 @@
     }
 
     function boot() {
-        ensureViewportFitCover();
         document.querySelectorAll('.mphbac-staff').forEach(init);
     }
     if (document.readyState === 'loading') {
@@ -3325,15 +3324,9 @@
         boot();
     }
 
-    // Lets the dialog's safe-area math see real inset values on iOS Safari.
-    // Idempotent; same helper widget.js carries.
-    function ensureViewportFitCover() {
-        var meta = document.querySelector('meta[name="viewport"]');
-        if (!meta) return;
-        var content = meta.getAttribute('content') || '';
-        if (content.indexOf('viewport-fit') >= 0) return;
-        meta.setAttribute('content', content + (content ? ', ' : '') + 'viewport-fit=cover');
-    }
+    // THE PAGE'S VIEWPORT META IS NOT TOUCHED (0.47.3, the WD's audit).
+    // Until 0.47.2 boot() appended viewport-fit=cover to it — on a page this
+    // plugin does not own. The staff dialog never read a safe-area inset.
 
     // The Elementor editor mounts widget markup AFTER DOMContentLoaded, so
     // boot()'s single sweep would leave the staff widget as a dead shell in

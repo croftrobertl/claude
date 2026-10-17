@@ -1455,12 +1455,14 @@ button.mphbac-cell-label {
        which on iOS Safari is BEHIND the floating bottom toolbar — the
        toolbar overlays the viewport, so the bottom ~80px of the popup
        (background + content + padding) is clipped underneath it. The
-       env(safe-area-inset-bottom) value, available when the document's
-       viewport meta carries `viewport-fit=cover` (which boot() ensures —
-       see widget.js), reports the height of that safe-area inset; pinning
-       the popup there lifts it above the toolbar. Falls back to 0 on
-       browsers without env() support (no harm — they had the bug before
-       too, and likely don't have an overlaying toolbar). */
+       env(safe-area-inset-bottom) value reports the height of that
+       safe-area inset where the page's viewport meta carries
+       `viewport-fit=cover`; pinning the popup there lifts it above the home
+       bar. Since 0.47.3 the plugin no longer adds `viewport-fit=cover` to
+       the page's meta (the WD's audit: it is the page's, not ours). Under
+       the theme's own meta (no cover) the inset is 0 and iOS keeps fixed
+       content inside the safe area itself; a theme that opts into cover
+       gets the real inset here. Falls back to 0 without env() support. */
     bottom: env(safe-area-inset-bottom, 0px);
     width: 100%;
     border-radius: 16px 16px 0 0;
@@ -1655,6 +1657,17 @@ button.mphbac-cell-label {
     color: var(--mphbac-color-view-hover-text, #ffffff);
 }
 /* (0,1,1), below VSEL, above the theme's link rules — see input.mphbac-input. */
+/* A 44px tap target round the 37px "More Info" pill (0.47.3, the WD's
+   audit): an invisible extension above and below; the pill is unchanged. */
+.mphbac-info-view-link.mphbac-info-view-link { position: relative; }
+.mphbac-info-view-link.mphbac-info-view-link::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+}
 a.mphbac-info-view-link {
     font-family: inherit;
     font-size: inherit;
@@ -2044,6 +2057,23 @@ body.mphbac-info-open {
     .mphbac-info-body .swiper-button-next::after {
         content: none !important;
         display: none !important;
+    }
+    /* A 44px TARGET ROUND THE SAME 36px DISC (0.47.3, the WD's audit): the
+       ::after the rule above empties is an invisible square 4px beyond the
+       disc on every side — no glyph (no font, no content but the box), no
+       paint — so a tap anywhere in 44px counts and nothing drawn changes. */
+    .mphbac-info-body .elementor-swiper-button::after,
+    .mphbac-info-body .swiper-button-prev::after,
+    .mphbac-info-body .swiper-button-next::after {
+        content: "" !important;
+        display: block !important;
+        position: absolute !important;
+        inset: -4px !important;
+        width: auto !important;
+        height: auto !important;
+        font-size: 0 !important;
+        background: none !important;
+        border: 0 !important;
     }
     /* Inline-SVG chevrons. URL-encoded (# → %23) so they're safe
        inline in CSS without needing url-escape gymnastics. */

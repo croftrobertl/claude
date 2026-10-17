@@ -90,8 +90,11 @@ echo "-- cache_ttl reaches the availability cache --\n";
 {
     with(['cache_ttl' => 123]);
     Data_Provider::get_availability([22], $today, $today->modify('+3 days'));
-    check('a changed TTL is the TTL the availability answer is stored with',
-        ($GLOBALS['t_set_ttls'][0] ?? null) === 123, $GLOBALS['t_set_ttls']);
+    // Since 0.47.3 the answer is stored as one entry per month, beside the
+    // cottage list (which keeps its own hour, HOUR_IN_SECONDS, as before).
+    $avail_ttls = array_values(array_filter($GLOBALS['t_set_ttls'], static fn($t) => $t !== HOUR_IN_SECONDS));
+    check('a changed TTL is the TTL the availability answer is stored with (every month entry)',
+        $avail_ttls !== [] && array_unique($avail_ttls) === [123], $GLOBALS['t_set_ttls']);
     check('(instrument check) that is not the shipped value', 123 !== $d['cache_ttl']);
 
     with(['cache_ttl' => 0]);
@@ -103,18 +106,22 @@ echo "-- cache_ttl reaches the availability cache --\n";
 
 echo "\n-- forward_scan_days bounds the walk the scan actually makes --\n";
 {
+    // The scan stores what it fetched — since 0.47.3 one entry per calendar
+    // month (beside the cottage list) — so the months stored ARE the span it
+    // walked: today to today + the setting.
     $span = static function (int $days) use ($today): int {
         with(['forward_scan_days' => $days]);
         Data_Provider::find_first_availability([22], $today);
-        // The scan stores what it fetched; the stored value's day keys ARE
-        // the span it walked. Read it from the far side.
-        $stored = array_values($GLOBALS['t_transients']);
-        $v = $stored[0]['__v'][22] ?? $stored[0]['__v'][array_key_first($stored[0]['__v'] ?? [0])] ?? [];
-        return count($v);
+        return count(array_filter($GLOBALS['t_set_ttls'], static fn($t) => $t !== HOUR_IN_SECONDS));
     };
-    $a = $span(30); $b = $span(60);
-    check('30 days walks 31 dates, 60 walks 61 — the setting is the bound',
-        $a === 31 && $b === 61, [$a, $b]);
+    $months = static function (int $days) use ($today): int {
+        $n = 0;
+        for ($m = $today->modify('first day of this month'); $m <= $today->modify("+$days days"); $m = $m->modify('first day of next month')) { $n++; }
+        return $n;
+    };
+    $a = $span(30); $b = $span(400);
+    check('a 30-day scan stores the months of today … today+30, a 400-day one those of today … today+400 — the setting is the bound',
+        $a === $months(30) && $b === $months(400) && $b > $a, [$a, $months(30), $b, $months(400)]);
 }
 
 echo "\n-- the three request clamps reach the endpoint --\n";

@@ -12,8 +12,8 @@ final class Cache
 
     /**
      * Generation counter salted into every key. Bumping it (flush_all)
-     * invalidates every entry in O(1) even when transients live in an
-     * external object cache that the SQL DELETE below can't reach.
+     * invalidates every entry in O(1), in the options table or an external
+     * object cache alike; nothing is deleted (0.47.3).
      */
     private const GEN_OPTION = 'mphbac_cache_gen';
 
@@ -80,6 +80,37 @@ final class Cache
     }
 
     /**
+     * Read one stored entry without computing anything (0.47.3): the value,
+     * or null on a miss — and how old it is through $age. A TTL of 0 means
+     * nothing is stored, so nothing is ever read either.
+     *
+     * @return mixed|null
+     */
+    public static function peek(string $key, ?int &$age = null)
+    {
+        $age = 0;
+        if (self::ttl() <= 0) {
+            return null;
+        }
+        $cached = get_transient($key);
+        if (is_array($cached) && array_key_exists('__v', $cached) && array_key_exists('__t', $cached)) {
+            $age = max(0, time() - (int) $cached['__t']);
+            return $cached['__v'];
+        }
+        return null;
+    }
+
+    /** Store one entry for the setting's TTL; nothing at all when it is 0. */
+    public static function put(string $key, $value): void
+    {
+        $ttl = self::ttl();
+        if ($ttl <= 0) {
+            return;
+        }
+        set_transient($key, ['__v' => $value, '__t' => time()], $ttl);
+    }
+
+    /**
      * deleted_post fires for EVERY post type; only a booking's deletion
      * changes availability. The post object is passed (WordPress 5.5+)
      * because by the time this runs the post is gone and get_post_type()
@@ -99,22 +130,20 @@ final class Cache
     public static function flush_all(): void
     {
         // O(1) invalidation that works even when transients live in an
-        // external object cache (where the SQL below can't reach them):
-        // bumping the generation changes every key() result, so old entries
-        // are simply never read again and expire on their own TTL. The SQL
-        // DELETE below remains the cleanup path that actually frees
-        // options-table rows when no object cache is in play.
+        // external object cache: bumping the generation changes every key()
+        // result, so old entries are simply never read again.
+        //
+        // NO DELETE ANY MORE (0.47.3, the WD's audit). Until 0.47.2 this also
+        // ran `DELETE FROM options WHERE option_name LIKE '_transient_mphbac_%'`
+        // on every booking save, iCal change and Elementor save — a range
+        // scan and lock on the options table, which met lock conflicts on
+        // live twice (error_log, Sep 18 and Sep 28). The entries the old
+        // generation leaves behind carry their own expiry (the cache TTL, 15
+        // minutes by default) and are removed by WordPress's own daily
+        // delete_expired_transients, or on the next read of that key. Their
+        // number is bounded: one entry per calendar month the public calendar
+        // can be asked for (Data_Provider::get_availability), not one per
+        // request.
         update_option(self::GEN_OPTION, self::generation() + 1, true);
-
-        global $wpdb;
-        $like = $wpdb->esc_like('_transient_' . self::PREFIX) . '%';
-        $like_timeout = $wpdb->esc_like('_transient_timeout_' . self::PREFIX) . '%';
-        $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                $like,
-                $like_timeout
-            )
-        );
     }
 }

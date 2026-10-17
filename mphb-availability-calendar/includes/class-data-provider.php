@@ -175,50 +175,107 @@ final class Data_Provider
         $age = 0;
         $hit = false;
         $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
-        // Canonical order: the ID list is salted into the cache key, so sorting
-        // makes [1065,1067] and [1067,1065] share one transient — and gives the
-        // result map a deterministic key order, which the client relies on to
-        // byte-compare the page-embedded payload against the AJAX revalidate.
+        // Canonical order: gives the result map a deterministic key order,
+        // which the client relies on to byte-compare the page-embedded
+        // payload against the AJAX revalidate.
         sort($room_type_ids);
         if (empty($room_type_ids) || $from > $to) {
             return [];
         }
 
-        $cache_key = Cache::key([
-            'avail_v2',
-            $room_type_ids,
-            $from->format('Y-m-d'),
-            $to->format('Y-m-d'),
-            // Salt with today's date (ET): "past" is baked into the stored
-            // payload, so without this a window cached at 23:50 still serves
-            // yesterday-as-available for up to 15 min after midnight. A new
-            // day = a new key = a fresh compute; the old entry just expires.
-            self::today()->format('Y-m-d'),
-        ]);
-
-        try {
-            // null, NOT Cache::DEFAULT_TTL: null means "the setting", the
-            // constant means "the shipped value forever". 0.40.0 shipped the
-            // constant here, so the "Remember availability for" setting
-            // governed nothing and "0 disables caching" was false — found by
-            // the 0.42.0 audit, and now guarded by a test that changes the
-            // setting and watches this call site change with it.
-            return Cache::get_or_set(
-                $cache_key,
-                static fn(): array => self::query_availability_checked($room_type_ids, $from, $to),
-                null,
-                $age,
-                $hit
-            );
-        } catch (Db_Read_Failed $e) {
-            // A DB read failed mid-compute. Nothing was cached (get_or_set
-            // only stores what the producer returns), so the next request
-            // retries. Return the safe direction — an empty map renders as
-            // fully booked, never as falsely available.
-            $age = 0;
-            $hit = false;
-            return [];
+        // ONE CACHE ENTRY PER CALENDAR MONTH, NOT PER REQUEST (0.47.3, the
+        // WD's audit). Until 0.47.2 the key was the request itself — the
+        // type list, from and to — so every distinct window a script asked
+        // the public, nonce-free endpoint for minted its own options-table
+        // row (Ajax::handle() clamps the dates, but within ~3 years there are
+        // still hundreds of thousands of windows). Now a month's map for every
+        // listed cottage is stored once, and any request is cut from the
+        // months it spans. The number of rows is fixed by the calendar: one
+        // per month that can be asked for (about four years of months),
+        // per day — "today" is in the key, below — whatever is requested.
+        //
+        // TTL 0 ("do not cache") stores nothing: the window is read straight.
+        if (Cache::ttl() <= 0) {
+            try {
+                return self::query_availability_checked($room_type_ids, $from, $to);
+            } catch (Db_Read_Failed $e) {
+                return [];
+            }
         }
+
+        // Every listed cottage is in every month's entry — so a one-cottage
+        // request and an all-cottage request share it — plus any id a caller
+        // passed that the list lacks (never from the public endpoint, which
+        // accepts listed ids only).
+        $type_set = array_map(static fn($t) => (int) $t['id'], self::list_room_types());
+        $type_set = array_values(array_unique(array_merge($type_set, $room_type_ids)));
+        sort($type_set);
+        // Salt with today's date (ET): "past" is baked into the stored
+        // payload, so without this a month cached at 23:50 still serves
+        // yesterday-as-available after midnight. A new day = new keys; the
+        // old entries just expire.
+        $today_key = self::today()->format('Y-m-d');
+
+        $months = [];
+        for ($m = $from->modify('first day of this month'); $m <= $to; $m = $m->modify('first day of next month')) {
+            $months[] = $m->format('Y-m');
+        }
+        $have = [];
+        $missing = [];
+        foreach ($months as $ym) {
+            $key = Cache::key(['avail_m1', $type_set, $ym, $today_key]);
+            $got = Cache::peek($key, $a);
+            if (is_array($got)) {
+                $have[$ym] = $got;
+                $age = max($age, (int) $a);
+            } else {
+                $missing[$ym] = $key;
+            }
+        }
+        if ($missing) {
+            $tz    = self::timezone();
+            $first = array_key_first($missing);
+            $last  = array_key_last($missing);
+            $span_from = new DateTimeImmutable($first . '-01', $tz);
+            $span_to   = (new DateTimeImmutable($last . '-01', $tz))->modify('last day of this month');
+            try {
+                $computed = self::query_availability_checked($type_set, $span_from, $span_to);
+            } catch (Db_Read_Failed $e) {
+                // A DB read failed mid-compute. Nothing is cached, so the
+                // next request retries. Return the safe direction — an empty
+                // map renders as fully booked, never as falsely available.
+                $age = 0;
+                $hit = false;
+                return [];
+            }
+            foreach ($missing as $ym => $key) {
+                $month = [];
+                foreach ($type_set as $type_id) {
+                    $month[$type_id] = [];
+                    foreach (($computed[$type_id] ?? []) as $date => $status) {
+                        if (strncmp($date, $ym, 7) === 0) {
+                            $month[$type_id][$date] = $status;
+                        }
+                    }
+                }
+                Cache::put($key, $month);
+                $have[$ym] = $month;
+            }
+            $age = 0;
+        }
+        $hit = !$missing;
+
+        // The request, cut from its months. A day a month lacks (it cannot,
+        // but a stored entry is data) reads as booked: never falsely open.
+        $result = [];
+        foreach ($room_type_ids as $type_id) {
+            $result[$type_id] = [];
+            for ($cursor = $from; $cursor <= $to; $cursor = $cursor->modify('+1 day')) {
+                $date = $cursor->format('Y-m-d');
+                $result[$type_id][$date] = $have[substr($date, 0, 7)][$type_id][$date] ?? self::ST_BOOKED;
+            }
+        }
+        return $result;
     }
 
     /**
@@ -313,7 +370,7 @@ final class Data_Provider
 
         // occupied[type_id][date] = [room_id => true]
         $occupied = [];
-        $room_days = self::query_occupied_room_days(array_keys($type_of_room), $from, $to);
+        $room_days = self::query_occupied_room_days($rooms_of_type, $from, $to);
         foreach ($room_days as $rid => $days) {
             $type_id = $type_of_room[$rid] ?? 0;
             if ($type_id === 0) {
@@ -426,17 +483,24 @@ final class Data_Provider
      *     parent mphb_booking post is in a blocking status. The check-in /
      *     check-out dates live on the PARENT booking. Covers direct bookings
      *     and iCal-imported bookings alike (both stored as mphb_booking).
-     *   - Manual host blocks: {$prefix}mphb_blocks rows with not_stay_in = 1.
+     *   - Host closures ("Booking rules → Blocks", once "Custom rules"):
+     *     rows with not_stay_in = 1 — see closed_room_days().
      *
-     * @param int[] $room_ids
+     * @param array<int,int[]> $rooms_of_type type_id => its room IDs
      * @return array<int, array<string,bool>> [ room_id => [ 'YYYY-MM-DD' => true ] ]
      */
-    private static function query_occupied_room_days(array $room_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
+    private static function query_occupied_room_days(array $rooms_of_type, DateTimeImmutable $from, DateTimeImmutable $to): array
     {
         global $wpdb;
 
         $occupied = [];
-        $room_ids = array_values(array_unique(array_map('intval', $room_ids)));
+        $room_ids = [];
+        foreach ($rooms_of_type as $rids) {
+            foreach ($rids as $rid) {
+                $room_ids[] = (int) $rid;
+            }
+        }
+        $room_ids = array_values(array_unique($room_ids));
         if (empty($room_ids)) {
             return $occupied;
         }
@@ -476,27 +540,118 @@ final class Data_Provider
             }
         }
 
-        $blocks_table = $wpdb->prefix . 'mphb_blocks';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($blocks_table)));
-        if ($exists === $blocks_table) {
-            $sql2 = "SELECT room_id, date_from, date_to FROM $blocks_table
-                     WHERE not_stay_in = 1
-                       AND room_id IN ($room_ph)
-                       AND date_to >= %s AND date_from <= %s";
-            $params2 = array_merge($room_ids, [$from_str, $to_str]);
-            $rows2   = $wpdb->get_results($wpdb->prepare($sql2, $params2));
-            if ($wpdb->last_error !== '') {
-                error_log('MPHBAC: blocks query failed: ' . $wpdb->last_error);
-                self::$db_error = true;
+        foreach (self::closed_rules($rooms_of_type, $room_ids, $from_str, $to_str) as $rule) {
+            // Which rooms the closure covers — MotoPress's own reading
+            // (BookingRulesData::getBookingRulesForDate, 6.4.0): a room, or
+            // room 0 = every room of its type, or type 0 too = every room.
+            if ($rule['room_id'] > 0) {
+                $covered = [$rule['room_id']];
+            } elseif ($rule['room_type_id'] > 0) {
+                $covered = $rooms_of_type[$rule['room_type_id']] ?? [];
             } else {
-                foreach ((array) $rows2 as $row) {
-                    // Host blocks span [date_from, date_to] inclusive on both ends.
-                    self::mark_days($occupied, (int) $row->room_id, (string) $row->date_from, (string) $row->date_to, true, $from, $to);
-                }
+                $covered = $room_ids;
+            }
+            foreach ($covered as $rid) {
+                // Closures span [date_from, date_to], both ends included: a
+                // "not stay-in" date closes that night (MotoPress's own test,
+                // $date >= date_from && $date <= date_to).
+                self::mark_days($occupied, (int) $rid, $rule['date_from'], $rule['date_to'], true, $from, $to);
             }
         }
 
         return $occupied;
+    }
+
+    /**
+     * HOST CLOSURES ("not stay-in") that touch the range, for the given rooms
+     * and their types (0.47.3, the WD's audit: until then only rows naming a
+     * room were read, so a block for "all accommodations of a type" or "all
+     * accommodations" — which MotoPress stores as room 0, and type 0 — was
+     * ignored, and those dates showed as open).
+     *
+     * WHERE THEY LIVE (MotoPress's source, 6.4.0, read for this release):
+     *   - 6.0.0 and later: the table {prefix}mphb_blocks — block_id,
+     *     room_type_id, room_id, date_from, date_to (DATE, both inclusive),
+     *     not_check_in, not_check_out, not_stay_in, comment. "All" is 0.
+     *   - before 6.0.0: the option mphb_booking_rules_custom — rows of
+     *     room_type_id, room_id, date_from, date_to and restrictions[] holding
+     *     'check-in' / 'check-out' / 'stay-in'.
+     * 6.0.0 COPIED the option into the table and never deleted it, so on an
+     * upgraded site (this one) the option is a stale copy that no longer
+     * changes. MotoPress reads the table when it exists, and so does this: the
+     * option only where there is no table. Never both — a date the host has
+     * since reopened must not stay closed here.
+     *
+     * Only not_stay_in closes a night. not_check_in / not_check_out restrict
+     * arrivals and departures, which this calendar does not model (see the
+     * 0.47.3 notes). {prefix}mphb_custom_booking_rules (6.0.0+) holds no
+     * closure at all — per-date check-in/out permission, stay and advance
+     * limits, buffer days — and is not read.
+     *
+     * A failed read flags the compute as untrustworthy (self::$db_error).
+     *
+     * @param array<int,int[]> $rooms_of_type
+     * @param int[]            $room_ids
+     * @return array<int, array{room_id:int, room_type_id:int, date_from:string, date_to:string}>
+     */
+    private static function closed_rules(array $rooms_of_type, array $room_ids, string $from_str, string $to_str): array
+    {
+        global $wpdb;
+
+        $out          = [];
+        $type_ids     = array_values(array_map('intval', array_keys($rooms_of_type)));
+        $blocks_table = $wpdb->prefix . 'mphb_blocks';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($blocks_table)));
+        if ($wpdb->last_error !== '') {
+            error_log('MPHBAC: blocks table check failed: ' . $wpdb->last_error);
+            self::$db_error = true;
+            return [];
+        }
+        if ($exists === $blocks_table) {
+            $room_ph = implode(',', array_fill(0, count($room_ids), '%d'));
+            $type_ph = implode(',', array_fill(0, max(1, count($type_ids)), '%d'));
+            $sql = "SELECT room_id, room_type_id, date_from, date_to FROM $blocks_table
+                     WHERE not_stay_in = 1
+                       AND (room_id IN ($room_ph)
+                            OR (room_id = 0 AND (room_type_id = 0 OR room_type_id IN ($type_ph))))
+                       AND date_to >= %s AND date_from <= %s";
+            $params = array_merge($room_ids, $type_ids ?: [0], [$from_str, $to_str]);
+            $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
+            if ($wpdb->last_error !== '') {
+                error_log('MPHBAC: blocks query failed: ' . $wpdb->last_error);
+                self::$db_error = true;
+                return [];
+            }
+            foreach ((array) $rows as $row) {
+                $out[] = [
+                    'room_id'      => (int) $row->room_id,
+                    'room_type_id' => (int) $row->room_type_id,
+                    'date_from'    => (string) $row->date_from,
+                    'date_to'      => (string) $row->date_to,
+                ];
+            }
+            return $out;
+        }
+
+        // Before MotoPress 6.0.0: the option.
+        $rules = get_option('mphb_booking_rules_custom', []);
+        foreach (is_array($rules) ? $rules : [] as $rule) {
+            if (!is_array($rule) || !in_array('stay-in', (array) ($rule['restrictions'] ?? []), true)) {
+                continue;
+            }
+            $room_id = (int) ($rule['room_id'] ?? 0);
+            $type_id = (int) ($rule['room_type_id'] ?? 0);
+            $df = (string) ($rule['date_from'] ?? '');
+            $dt = (string) ($rule['date_to'] ?? '');
+            if ($df === '' || $dt === '' || $dt < $from_str || $df > $to_str) {
+                continue;
+            }
+            if ($room_id > 0 ? !in_array($room_id, $room_ids, true) : ($type_id > 0 && !isset($rooms_of_type[$type_id]))) {
+                continue;
+            }
+            $out[] = ['room_id' => $room_id, 'room_type_id' => $type_id, 'date_from' => $df, 'date_to' => $dt];
+        }
+        return $out;
     }
 
     /**

@@ -38,6 +38,15 @@ if (!defined('ABSPATH')) {
  * `provided: false` flag — the UI renders "not provided by Airbnb", never a
  * number. Direct bookings return real counts with `provided: true`.
  */
+/**
+ * A staff read failed, so its result must not be shown as data — an empty
+ * month and a failed query look alike from wpdb (0.47.3). Internal to the
+ * staff endpoints.
+ */
+final class Staff_Read_Failed extends \RuntimeException
+{
+}
+
 final class Staff_Data
 {
     /** Meta keys used only as a fallback when no entity getter answers. */
@@ -231,10 +240,13 @@ final class Staff_Data
 
         if ($wpdb->last_error !== '') {
             // Same discipline as Data_Provider: wpdb never throws, so a failed
-            // read looks like "no bookings". Log it and return empty rather
-            // than showing staff a confidently blank calendar.
+            // read looks like "no bookings". Until 0.47.3 this logged and
+            // returned [] — and no caller could tell that from an empty month,
+            // so staff saw "No bookings in this period" (the WD's audit). Now
+            // it THROWS: Staff answers with an error, the board says "Could not
+            // load bookings. Please try again." and its retry takes over.
             error_log('MPHBAC staff: month query failed: ' . $wpdb->last_error);
-            return [];
+            throw new Staff_Read_Failed('staff month query failed');
         }
         return is_array($rows) ? $rows : [];
     }

@@ -192,8 +192,10 @@ final class Ajax
             'bookedThrough' => $booked_through,
         ];
 
-        // Opt-in profiling (POST debug=1, or WP_DEBUG). Kept out of normal
-        // responses so the payload stays small and no internals leak.
+        // Opt-in profiling. Kept out of normal responses so the payload stays
+        // small and no internals leak. debug=1 is honoured only for a
+        // logged-in administrator (manage_options) since 0.47.3 — the WD's
+        // audit found it answered anyone; under WP_DEBUG it is on, as before.
         //   bootMs   - WordPress + all active plugins loading, BEFORE our code.
         //   queryMs  - this plugin's availability lookup.
         //   handleMs - everything this plugin did in the request.
@@ -201,7 +203,7 @@ final class Ajax
         // If bootMs dwarfs queryMs, the latency is the WordPress bootstrap on
         // admin-ajax.php, which no amount of query tuning here can fix — the
         // remedy is making fewer requests, which the client now does.
-        if (!empty($_POST['debug']) || (defined('WP_DEBUG') && WP_DEBUG)) {
+        if ((!empty($_POST['debug']) && current_user_can('manage_options')) || (defined('WP_DEBUG') && WP_DEBUG)) {
             $payload['timing'] = [
                 'bootMs'   => round($boot_ms, 1),
                 'queryMs'  => round($query_ms, 1),

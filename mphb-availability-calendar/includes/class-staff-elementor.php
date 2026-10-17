@@ -63,14 +63,20 @@ final class Staff_Elementor extends Widget_Base
         return ['staff', 'booking', 'calendar', 'guest', 'checkin', 'motopress', 'mphb'];
     }
 
+    /**
+     * Only for a visitor the gate lets in (0.47.3, the WD's audit): Elementor
+     * enqueues these for the page whatever render() decides, so the password
+     * form brought 71 KB of staff script with it. Staff_Widget also leaves
+     * the handles unregistered there.
+     */
     public function get_script_depends(): array
     {
-        return ['mphbac-staff'];
+        return Staff::is_authorized() ? ['mphbac-staff'] : [];
     }
 
     public function get_style_depends(): array
     {
-        return ['mphbac-staff'];
+        return Staff::is_authorized() ? ['mphbac-staff'] : [];
     }
 
     /**

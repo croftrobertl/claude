@@ -1890,7 +1890,10 @@ class Widget extends Widget_Base
                     // that. Both are needed: fresh data in an old page is stale.
                     'dataAge'    => (int) ($init_age ?? 0),
                     'renderedAt' => time(),
-                    'ttl'        => Cache::DEFAULT_TTL,
+                    // The SETTING, not the shipped 900 (0.47.3, the WD's
+                    // audit): with "Remember availability for" at 0 the
+                    // client must never treat the embedded data as fresh.
+                    'ttl'        => Cache::ttl(),
                 ];
             }
         } catch (\Throwable $e) {

@@ -1532,6 +1532,9 @@ body.mphbac-staff-open { overflow: hidden; }
    it is an icon, not one of the board's pill buttons, and must not turn
    coral on a tap. */
 .mphbac-staff-kpi-more { position: absolute; top: 0; right: 0; margin: 0; }
+/* Above the next tile (0.47.3), so the ⓘ's 44px tap area — which reaches a
+   few pixels into it — is the ⓘ's. Nothing visible overlaps. */
+.mphbac-staff-kpi-more { z-index: 1; }
 .mphbac-staff .mphbac-staff-tip.mphbac-staff-tip {
     display: inline-flex;
     align-items: center;
@@ -1552,6 +1555,24 @@ body.mphbac-staff-open { overflow: hidden; }
     transition: none;
 }
 .mphbac-staff .mphbac-staff-tip.mphbac-staff-tip[aria-expanded="true"] { color: var(--staff-header); }
+/* 44px TAP TARGETS, THE SAME LOOK (0.47.3, the WD's audit, measured at
+   360px): the 24px ⓘ, the sheet's phone link (18px of text) and its 36px
+   "Text" pill each get an invisible extension to 44px. Nothing beside them
+   is tappable within it (the ⓘ sits on a heading or a tile's corner). */
+.mphbac-staff .mphbac-staff-tip.mphbac-staff-tip,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-tel,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms { position: relative; }
+.mphbac-staff .mphbac-staff-tip.mphbac-staff-tip::after,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-tel::after,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+}
 .mphbac-staff-tip svg {
     display: block;
     width: 16px;

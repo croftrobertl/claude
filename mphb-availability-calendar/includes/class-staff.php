@@ -221,7 +221,23 @@ final class Staff
         }
         $last = $first->modify('last day of this month');
 
-        wp_send_json_success(Staff_Data::month_view($first, $last));
+        wp_send_json_success(self::view_or_fail($first, $last));
+    }
+
+    /**
+     * Staff_Data::month_view(), or — if its read failed — an error answer,
+     * never an empty month (0.47.3). The board shows "Could not load
+     * bookings. Please try again." for it and retries on its own rhythm. The
+     * message names nothing about the cause.
+     */
+    private static function view_or_fail(\DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        try {
+            return Staff_Data::month_view($from, $to);
+        } catch (Staff_Read_Failed $e) {
+            wp_send_json_error(['message' => __('Could not load bookings. Please try again.', 'mphb-availability-calendar')], 500);
+        }
+        return [];
     }
 
     /**
@@ -275,7 +291,7 @@ final class Staff
         $q_from = $from < $lo ? $lo : $from;
         $q_to   = $to > $hi ? $hi : $to;
 
-        $data = Staff_Data::month_view($q_from, $q_to);
+        $data = self::view_or_fail($q_from, $q_to);
         $data['clamped'] = ($q_from != $from) || ($q_to != $to);
         wp_send_json_success($data);
     }

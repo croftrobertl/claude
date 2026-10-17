@@ -142,7 +142,13 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
           const rects = [...r.getClientRects()].filter(x => x.width > 0); if (new Set(rects.map(x => Math.round(x.top))).size > 1) broken = true; } } else n.childNodes.forEach(walk); };
         walk(el); return broken; });
       return {
-        heading: fs('.mphbac-staff-stats-h'), balance: getComputedStyle(h[0]).textWrap, clipped: h.some(e => e.scrollHeight > e.clientHeight + 1),
+        // Clipped TEXT: measured with the ⓘ's invisible 44px tap area
+        // (0.47.3) set aside — it reaches past the line box by design and
+        // would count as overflow; the heading clips nothing (overflow
+        // visible).
+        heading: fs('.mphbac-staff-stats-h'), balance: getComputedStyle(h[0]).textWrap, clipped: (() => {
+          const st = document.createElement('style'); st.textContent = '.mphbac-staff .mphbac-staff-tip.mphbac-staff-tip::after { content: none !important; }';
+          document.head.appendChild(st); const c = h.some(e => e.scrollHeight > e.clientHeight + 1); st.remove(); return c; })(),
         lh: parseFloat(getComputedStyle(h[0]).lineHeight), wordBroken,
         tileNum: fs('.mphbac-staff-kpi-num'), tileLabel: fs('.mphbac-staff-kpi-label'), tileDelta: fs('.mphbac-staff-kpi-delta'),
         cottage: fs('.mphbac-staff-percot-name'), cottageNum: fs('.mphbac-staff-percot-num'), cottageDelta: fs('.mphbac-staff-percot-delta'), mix: fs('.mphbac-staff-mix-row'),

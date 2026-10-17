@@ -3653,3 +3653,54 @@ send a request while one is out; the older answer is dropped (state.req).
 The error line clears on success via say('') (it did). Tests:
 staff-refresh-0472-test.js — long timers and month requests counted in the
 page on a fake clock. 6 mutations; two 0.47.1 needles retargeted.
+
+## 0.47.3 — the WD's read-only audit (2026-10-17): ten fixes
+
+**1. Closures the public calendar ignored.** MotoPress's storage, read from
+its source (6.4.0, a GitHub mirror; WordPress.org SVN is blocked here):
+6.0.0+ keeps "Booking rules → Blocks" in {prefix}mphb_blocks (block_id,
+room_type_id, room_id, date_from, date_to — DATE, both inclusive —
+not_check_in, not_check_out, not_stay_in, comment); "All" is 0. Before 6.0
+they were the option mphb_booking_rules_custom (rows with restrictions[]
+of 'check-in'/'check-out'/'stay-in'); 6.0 copied it into the table and
+never deleted it. Data_Provider::closed_rules() reads the table where it
+exists, else the option — never both (the option is a stale copy on this
+site). Coverage is MotoPress's (BookingRulesData::getBookingRulesForDate):
+room_id > 0 → that room; room 0, type > 0 → every room of the type; both 0 →
+every room. SQL: room_id IN (rooms) OR (room_id = 0 AND (room_type_id = 0 OR
+room_type_id IN (types))) — narrower than the brief's "OR room_type_id = 0",
+which would also widen a room-specific row. Only not_stay_in closes a night.
+{prefix}mphb_custom_booking_rules (6.0+) holds no closure (per-date
+allow_check_in/out, buffer, min/max stay and advance) and is not read. A
+failed table check or blocks read sets db_error (all booked, nothing cached).
+Not modelled, reported: min/max stay (the widget's own min_nights setting,
+default 2, is used instead of MotoPress's), check-in/check-out weekdays,
+min/max advance, buffer days — MotoPress's checkout enforces them all.
+**2. Cache size.** get_availability() stores one entry per calendar month
+(key: avail_m1, the listed cottage set, Y-m, today) and cuts any request from
+its months; at most ~51 entries a day (the clamp window plus the forward
+scan), whatever is asked. TTL 0 reads the window straight; Cache::peek/put
+both honour 0. **8.** flush_all() only bumps the generation; no DELETE.
+**3.** Staff_Data::query_range() throws Staff_Read_Failed on a wpdb error;
+Staff::view_or_fail() answers 500 "Could not load bookings. Please try
+again." — the board shows it and retries (0.47.2). Nothing detected the old
+empty result. **4.** The embed's ttl is Cache::ttl(); the client never
+trusts ttl ≤ 0. **5.** debug=1 needs manage_options (WP_DEBUG still on).
+**6.** Neither script touches the viewport meta. Checked on live first: of
+48 CSS/JS assets on /, /cottages/ and a cottage page, only our own read
+safe-area insets or set viewport-fit; the theme's meta has no viewport-fit.
+**7.** Staff_Widget::register_assets() registers nothing on the staff page
+for an unauthorized visitor; Staff_Elementor declares its depends only when
+authorized. **9.** mphbac_staff_search joins the page-cache exclusions.
+**10.** Measured at 360px: gallery arrows 36×36, Stats ⓘ 24×24, More Info
+111×37, sheet phone 80×18 and Text 51×36 now take 44px through an invisible
+::after (pixel-identical — a transparent-border version changed one row of
+anti-aliasing and was dropped); .mphbac-staff-kpi-more z-index 1 so a tile's
+ⓘ area is above the next tile. Not changed (dense neighbouring targets):
+public day cells 31×43, staff bars 36px tall, heat-map days 20×20, the "Off"
+segment 35 wide at 360. The 24–26px "badges" (group counts, day numbers) are
+not tappable.
+**Tests:** tests/sqlite-wpdb.php (the plugin's real SQL on SQLite, MySQL-isms
+translated), availability-rules-test.php, audit-0473-test.php,
+browser/audit-0473-test.js (built from source, not the committed .min);
+consumer-test and staff-stats-047-test adjusted. 30 new mutations, all caught.

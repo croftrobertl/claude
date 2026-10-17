@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.2
+Stable tag: 0.47.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.47.3 =
+* **Closed dates the public calendar missed.** MotoPress blocks for "all accommodations of a type" and "all accommodations" (stored as accommodation 0 / type 0) now show as booked, exactly as MotoPress applies them; pre-6.0 MotoPress rules are read where its blocks table does not exist yet. A failed read still shows booked, never open.
+* **A fixed-size availability cache.** One entry per calendar month instead of one per request, so the public endpoint can no longer add rows to the options table without limit. Clearing the cache no longer runs a broad DELETE (it caused database lock conflicts); old entries expire on their own.
+* **Staff never see a false empty board.** A failed staff query now shows "Could not load bookings. Please try again." and retries, instead of "No bookings in this period".
+* The "Remember availability for" setting now governs the page-embedded availability too (0 really disables caching); timing details (debug=1) only for administrators; the plugin no longer changes the page's viewport meta; the staff calendar's script and styles load only after the staff password is entered; the staff search is kept out of page caches; small tap targets (gallery arrows, Stats ⓘ, More Info, the sheet's phone and Text links) answer taps over 44px without looking any different.
+* Nothing is written on install, activation or upgrade.
 
 = 0.47.2 =
 * **A failed refresh keeps trying (Rob's pick).** The staff calendar's 3-minute refresh used to stop after one failure; now a refused answer, a server error or a network error is retried 3 minutes later, as after a success. The error line stays while it fails and clears on the first success. If the staff password is no longer valid, it stops trying, as before. One timer at a time, never two requests at once. Nothing is written on install, activation or upgrade.

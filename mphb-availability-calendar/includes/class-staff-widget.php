@@ -36,6 +36,19 @@ final class Staff_Widget
 
     public static function register_assets(): void
     {
+        // NOT FOR A VISITOR THE GATE TURNS AWAY (0.47.3, the WD's audit):
+        // staff.min.js (71 KB) and staff.css were registered on every page,
+        // and Elementor enqueued them for the staff widget's page even while
+        // it showed only the password form. On the staff page they are now
+        // registered only for someone Staff::is_authorized() lets in — so an
+        // unregistered handle Elementor enqueues prints nothing. After the
+        // password is entered, WordPress redirects back with the cookie set,
+        // so that very next load is authorized and gets them. Asked only on
+        // the staff page: elsewhere nothing enqueues them, and the gate's
+        // fail-closed log line must not run on every public page.
+        if (self::on_staff_page() && !Staff::is_authorized()) {
+            return;
+        }
         wp_register_style('mphbac-staff', MPHBAC_URL . 'assets/css/staff.css', [], MPHBAC_VERSION);
         wp_register_script('mphbac-staff', MPHBAC_URL . 'assets/js/' . self::script_file(), [], MPHBAC_VERSION, true);
 
@@ -47,6 +60,13 @@ final class Staff_Widget
         if ($tokens !== '') {
             wp_add_inline_style('mphbac-staff', $tokens);
         }
+    }
+
+    /** The page Staff::page_id() names, being viewed now. */
+    private static function on_staff_page(): bool
+    {
+        $id = Staff::page_id();
+        return $id > 0 && function_exists('is_page') && is_page($id);
     }
 
     /**
