@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-field-tests",
+  "private": true,
+  "description": "Field geometry (tap target) tests for DCC Custom Checkout.",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}

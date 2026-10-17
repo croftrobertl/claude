@@ -1,0 +1,110 @@
+<?php
+namespace DCC_Checkout;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Singleton orchestrator. Wires up the collaborators and nothing else.
+ */
+final class Plugin
+{
+    private static ?Plugin $instance = null;
+
+    private bool $booted = false;
+
+    public static function instance(): self
+    {
+        return self::$instance ??= new self();
+    }
+
+    public function boot(): void
+    {
+        if ($this->booted) {
+            return;
+        }
+        $this->booted = true;
+
+        add_action('init', [$this, 'load_textdomain']);
+
+        // MotoPress is required. Without it there is no checkout to customize.
+        if (!function_exists('MPHB')) {
+            add_action('admin_notices', [$this, 'render_missing_deps_notice']);
+            return;
+        }
+
+        // Admin settings page (pet-fee on/off + which accommodations).
+        (new Settings())->register();
+
+        // Front-end: conditional CSS/JS on the checkout page only.
+        (new Assets())->register();
+
+        // Server-side backstops (cannot be bypassed by editing the DOM).
+        (new Guest_Fields())->register();
+        (new Pet_Service())->register();
+        // v0.34.0: the Dog Size field's options follow the settings — the
+        // offered sizes for guests, every size on the booking screens.
+        (new Dog_Sizes())->register();
+        (new Extra_Guest_Service())->register();
+        // REST-pipeline enforcement: the same three validators run on the
+        // parsed /mphb/v1/checkout request body (JSON and multipart alike),
+        // closing the empty-$_POST JSON bypass with a proper 422 JSON error.
+        (new Rest_Guard())->register();
+        // wp-admin only: gates the globally-enabled Checkout Fields to the
+        // accommodations that can use them. Show/hide only — the deliberate
+        // wp-admin exemptions in the backstops above are untouched.
+        (new Admin_Fields())->register();
+
+        // The guest-count control on the booking screen (v0.22.0): MotoPress
+        // fills _mphb_adults with the room type's CAPACITY when an import
+        // supplies no count, and nothing in the admin could correct it.
+        (new Admin_Guests())->register();
+        // v0.32.0: "Extra Details/Options", registered straight after the
+        // Guest count box so WordPress draws it directly under it.
+        (new Extra_Details())->register();
+        // v0.32.0: new iCal imports start at 2 guests, not confirmed.
+        (new Ical_Defaults())->register();
+        // v0.32.0: a confirmed count survives MotoPress's Edit Accommodations.
+        (new Edit_Flow_Markers())->register();
+        // v0.33.0 — fees follow the booking screen's Update button.
+        (new Fee_Sync())->register();
+        // Guest ID images: one-click deletion, deletion with the booking, and
+        // keeping the protected store unreadable.
+        (new Id_Files())->register();
+        // v0.34.2: which postmeta row the Checkout Fields upload viewer may
+        // serve — the photo-ID key, on the booking being looked at.
+        (new Upload_Access())->register();
+        // v0.30.0: the acceptance box's two links, and the acceptance record
+        // on each booking made online (the policy versions the guest was shown).
+        (new Policy_Record())->register();
+        // v0.30.1: clearer labels on Add New Booking's search results table.
+        (new Results_Labels())->register();
+        // v0.31.0: the "Bringing a boat or trailer?" Checkout Field, created
+        // once as a native MotoPress field (the Availability Calendar reads it).
+        (new Boat_Field())->register();
+    }
+
+    public function load_textdomain(): void
+    {
+        load_plugin_textdomain(
+            'dcc-checkout',
+            false,
+            dirname(plugin_basename(DCC_CHECKOUT_FILE)) . '/languages'
+        );
+    }
+
+    public function render_missing_deps_notice(): void
+    {
+        if (!current_user_can('activate_plugins')) {
+            return;
+        }
+        printf(
+            '<div class="notice notice-error"><p>%s</p></div>',
+            esc_html__(
+                'DCC Custom Checkout requires the MotoPress Hotel Booking plugin to be active.',
+                'dcc-checkout'
+            )
+        );
+    }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-footnote-tests",
+  "private": true,
+  "description": "Item 4 — the tax footnote must not widen the checkout widget.",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-policy-tests",
+  "private": true,
+  "description": "Acceptance box (label, links, required) and acceptance record tests for DCC Custom Checkout.",
+  "scripts": { "test": "php run.php && node browser.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}

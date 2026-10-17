@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-selectlist-tests",
+  "private": true,
+  "description": "Guest checkout: the site's own dropdown list in place of the operating system's (DCC Custom Checkout 0.34.1).",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}
