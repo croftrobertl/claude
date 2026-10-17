@@ -34,7 +34,7 @@ final class Guest_Count_Script
         }
         wp_enqueue_script(
             self::HANDLE,
-            DCC_CHECKOUT_URL . 'assets/guest-count.js',
+            Assets::asset_url('assets/guest-count.js'),
             [],
             DCC_CHECKOUT_VERSION,
             $in_footer

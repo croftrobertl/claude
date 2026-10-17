@@ -22,13 +22,16 @@ require __DIR__ . '/../admin-layout/config.php';
 ob_end_clean();
 
 $GLOBALS['scripts'] = [];
+$GLOBALS['styles'] = [];
 $GLOBALS['localized'] = [];
 $GLOBALS['is_admin'] = true;
 $GLOBALS['screen'] = null;
 function wp_enqueue_script($h, $src = '', $deps = [], $ver = false, $footer = false) {
     $GLOBALS['scripts'][$h] = ['src' => $src, 'deps' => $deps, 'footer' => $footer];
 }
-function wp_enqueue_style() {}
+function wp_enqueue_style($h = '', $src = '', $deps = [], $ver = false, $media = 'all') {
+    $GLOBALS['styles'][$h] = ['src' => $src];
+}
 function wp_localize_script($h, $name, $data) { $GLOBALS['localized'][$h] = [$name, $data]; return true; }
 function wp_script_is($h, $list = 'enqueued') { return isset($GLOBALS['scripts'][$h]); }
 function current_user_can($c) { return $GLOBALS['can'] ?? true; }
@@ -37,8 +40,14 @@ function wp_doing_ajax() { return false; }
 class WP_Screen { public $id = ''; public $base = ''; public $post_type = ''; }
 function get_current_screen() { return $GLOBALS['screen']; }
 if (!defined('DCC_CHECKOUT_URL')) { define('DCC_CHECKOUT_URL', 'https://example.test/wp-content/plugins/dcc-custom-checkout/'); }
+// v0.34.2: the real plugin directory, so Assets::asset_url() can see whether
+// the built files are there — this suite checks WHICH file is served.
+if (!defined('DCC_CHECKOUT_DIR')) { define('DCC_CHECKOUT_DIR', __DIR__ . '/../../dcc-custom-checkout/'); }
 if (!defined('DCC_CHECKOUT_VERSION')) { define('DCC_CHECKOUT_VERSION', 'test'); }
 
+// Assets carries asset_url(), which Guest_Count_Script calls (v0.34.2). In
+// WordPress the autoloader resolves that; here the order is explicit.
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-guest-count-script.php';
 
 $fail = 0; $pass = 0;
@@ -64,9 +73,9 @@ admin_screen('mphb_add_new_booking', 'admin_page_mphb_add_new_booking');
 (new \DCC_Checkout\Admin_Fields())->enqueue('admin_page_mphb_add_new_booking');
 check('Add New (admin_enqueue_scripts): the admin script loads — the guard on this test',
     isset($GLOBALS['scripts']['dcc-checkout-admin']), true);
-check('Add New: guest-count.js is enqueued, in the HEAD',
+check('Add New: guest-count.js is enqueued, in the HEAD, as the BUILT file (v0.34.2)',
     [isset($GLOBALS['scripts'][H]), $GLOBALS['scripts'][H]['footer'] ?? null,
-     substr($GLOBALS['scripts'][H]['src'] ?? '', -21)], [true, false, 'assets/guest-count.js']);
+     basename($GLOBALS['scripts'][H]['src'] ?? '')], [true, false, 'guest-count.min.js']);
 check('Add New: with its config — the included guests and the site\'s words',
     [$GLOBALS['localized'][H][0] ?? null, $GLOBALS['localized'][H][1]['includedGuests'] ?? null,
      $GLOBALS['localized'][H][1]['i18n']['guestsRequired'] ?? null],
@@ -107,6 +116,12 @@ $GLOBALS['filters']['dcc_checkout_is_checkout_page'] = true;
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 (new \DCC_Checkout\Assets())->enqueue();
 check('The checkout: checkout.js loads (guard)', isset($GLOBALS['scripts']['dcc-checkout']), true);
+check('The checkout: every asset a guest downloads is the BUILT one (v0.34.2)',
+    [basename($GLOBALS['scripts']['dcc-checkout']['src'] ?? ''),
+     basename($GLOBALS['scripts']['dcc-checkout-select-list']['src'] ?? ''),
+     basename($GLOBALS['scripts'][H]['src'] ?? ''),
+     basename($GLOBALS['styles']['dcc-checkout']['src'] ?? '')],
+    ['checkout.min.js', 'select-list.min.js', 'guest-count.min.js', 'checkout.min.css']);
 check('The checkout: guest-count.js in the footer, and checkout.js depends on it (so it runs first)',
     [isset($GLOBALS['scripts'][H]), $GLOBALS['scripts'][H]['footer'] ?? null,
      in_array(H, $GLOBALS['scripts']['dcc-checkout']['deps'] ?? [], true)], [true, true, true]);

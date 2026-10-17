@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.34.1
+Stable tag: 0.34.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,17 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.34.2 =
+The Website Director's read-only audit of live 0.34.1. Nothing critical was found; these are the five fixes from it.
+
+* Fixed: a booking could list a dog with no pet fee. The server decided "has a dog" only from whether the pet fee was attached, and the dog fields are not required by MotoPress — only the page disabled them. A booking on a pet cottage that carries the dog's details without the fee is now refused, with the same message a guest already sees. Off pet cottages the dog fields are ignored, as before.
+* Fixed: the guest ID viewer accepted any stored value, not only a guest ID. It now serves a file only when the row really is the booking's photo ID — the right field, on a booking, and on the booking being looked at. Only administrators can reach the viewer either way; this closes it before anyone else is given the permission.
+* Faster on a phone: the checkout's stylesheet and scripts are now also shipped built, with comments and indentation removed. On the wire they fall from about 64 KB to about 23 KB. The readable originals ship too and are what loads with SCRIPT_DEBUG on.
+* Faster on every page: the small table of renamed MotoPress labels was being rebuilt on every translated string on the site. It is now built once per page.
+* The guest ID store's "Check public access now" button now verifies the site's certificate. If the server cannot verify its own certificate, the check still runs and says so.
+
+Nothing is written on install, activation or upgrade. The checkout's behaviour is unchanged: errors still appear only after the first attempt to book, the fee sync, the ID store's protections and the cancellation links are untouched.
 
 = 0.34.1 =
 Add New Booking gets the same two checkout fixes (Rob: "Yes, in 0.34.1"), the guest select gets the site's message, and the checkout's dropdowns open the site's own centred list (Rob's pick).

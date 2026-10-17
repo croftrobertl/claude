@@ -72,6 +72,9 @@ final class Plugin
         // Guest ID images: one-click deletion, deletion with the booking, and
         // keeping the protected store unreadable.
         (new Id_Files())->register();
+        // v0.34.2: which postmeta row the Checkout Fields upload viewer may
+        // serve — the photo-ID key, on the booking being looked at.
+        (new Upload_Access())->register();
         // v0.30.0: the acceptance box's two links, and the acceptance record
         // on each booking made online (the policy versions the guest was shown).
         (new Policy_Record())->register();

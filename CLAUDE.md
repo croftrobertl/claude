@@ -1707,6 +1707,91 @@ yours to improvise.
     timestamps; zero mutations on a tap while closed (asserted).
   - NOT verifiable here: iOS Safari and VoiceOver. Chromium proves the roles,
     names, keys and geometry; the phone is Rob's check list.
+- **0.34.2 — THE DIRECTOR'S READ-ONLY AUDIT OF LIVE 0.34.1** (2026-10-17; five
+  fixes, nothing critical found — the ID store returns 403, prices are
+  server-side, and `Rest_Guard` covers `/mphb/v1/checkout`). Suites
+  `tests/upload-access/`, `tests/audit/`, `tests/minify/`, plus the new
+  `selectlist-min`; `tests/backstops/` grew the dog-fee case.
+  - **1. A DOG COULD BE BOOKED WITHOUT THE FEE** (`Pet_Service::find_violation`).
+    "Has dog" was read ONLY from the attached pet service, and the three dog
+    Checkout Fields are `req=false` in MotoPress with nothing but the browser
+    disabling them — so a tampered request, or a JS failure after a MotoPress
+    update, saved a Cottage 34 booking listing a dog at $0. Now, in the branch
+    where NO pet service is attached, any dog field with something in it is the
+    declaration of a dog and the booking is refused with the existing `pet`
+    message. Sound because MotoPress omits an empty custom field from the
+    payload entirely (`_buildFormData`) and this plugin disables them on a
+    no-dog booking: a value there is never an unanswered question.
+    **"Pet cottage" here is this file's existing `$is_pet`** — a room type in
+    `Config::pet_accommodations()`, or a pet service attached (false in this
+    branch by construction) — NOT `room_type_has_pet_services()`. That is the
+    Director's instruction ("off pet cottages, ignore dog fields as today") and
+    it keeps the gate the rest of this backstop already uses: a cottage outside
+    the list is not evaluated at all, as before.
+  - **2. THE ID VIEWER ACCEPTED ANY POSTMETA ROW** (`Upload_Access`, new). The
+    add-on's `?upload_id=` took a meta_id and checked it against neither the
+    booking nor the photo-ID key (FileUploadField.php ~245-271 — MotoPress's
+    code, NOT patched). The add-on's own
+    `mphb_cf_upload_link_has_access` filter is used instead. The rule, and it
+    only ever NARROWS: a decision already "no" is returned untouched; a request
+    with no `upload_id` is left alone (the hole is specific to that parameter);
+    otherwise the row is read from postmeta by meta_id and must exist, must
+    carry `Id_Files::META_KEY`, and must belong to an
+    `Id_Files::BOOKING_POST_TYPE` post — and to the booking named by the
+    request or by the add-on's own arguments when one is named. Anything
+    unreadable refuses.
+    **NOT VERIFIABLE HERE: the add-on's source is not in this repo or on the
+    machine**, so the filter's NAME and arguments come from the Director's read
+    of live. The callback is variadic, so any argument count is correct; a name
+    that did not match would simply never fire, leaving 0.34.1's behaviour. The
+    staging check list asks for a mismatched row to be refused for real.
+    `Id_Files::BOOKING_POST_TYPE` became public rather than retyping
+    'mphb_booking' in a second file.
+    Note `meta_row()`'s `catch (\Throwable)` turns ANY error into a refusal —
+    the right direction, and it bit in testing: an undefined `ARRAY_A` in the
+    harness read as "row unreadable" rather than crashing.
+  - **3. THE GUEST ASSETS SHIP BUILT** (`tools/build-assets.php`,
+    `Assets::asset_url()`). checkout.js and checkout.css went to every guest as
+    written. Measured: 127 KB + 57 KB + 24 KB + 12 KB raw (64 KB gzipped) →
+    50 + 21 + 14 + 5 KB (23 KB gzipped), **64% off the wire**.
+    **THE BUILDER REMOVES COMMENTS AND INDENTATION AND NOTHING ELSE.** It does
+    not rename and **does not join lines** — joining means taking on automatic
+    semicolon insertion, and renaming means scope analysis, either of which can
+    change behaviour invisibly in a file a guest runs while booking. The
+    comment-heavy style of this repo is why a strip alone wins 60%. Strings,
+    template literals and regex literals are tracked, so a `//` in a string and
+    a `/*` in a regex survive.
+    Served unless `SCRIPT_DEBUG`, filterable with
+    `dcc_checkout_use_minified_assets`, and **a missing built file serves the
+    source** — a plugin folder copied without the build output still works.
+    **Rebuild after touching any guest asset**: `php
+    dcc-custom-checkout/tools/build-assets.php`, and `--check` (run by
+    `tests/minify/`) goes red when the two disagree. Admin assets and the
+    flag-gated `tap-debug.js` are deliberately not built; `tests/minify/`
+    asserts that list, so a new guest asset enqueued around `asset_url()` is
+    caught.
+    **The structural checks read a FRESH build into a temp directory
+    (`--out=`), not the committed files**: evidence about the builder rather
+    than about what was last committed. The behavioural proof is the separate
+    suite **`selectlist-min`** — all 80 assertions of `tests/selectlist` in a
+    real browser against the built bundle.
+  - **4. THE GETTEXT MAP WAS REBUILT ON EVERY GETTEXT CALL**
+    (`Assets::string_overrides()`). `apply_override()` reads it on every call
+    of MotoPress's text domain on every page, so the array, its eight `__()`
+    lookups and the filter ran thousands of times a request for an answer that
+    cannot change within one. Cached in a static **keyed by locale** — not a
+    bare flag, so a request that renders something in another locale is not
+    served the first one's words. `flush_string_overrides()` for tests.
+  - **5. THE STORE SELF-TEST VERIFIES THE CERTIFICATE**
+    (`Id_Files::probe_public_access()`, `sslverify => true`). That probe is
+    what /privacy/'s promise rests on, and it used to accept the answer from
+    whatever replied. Only a TLS failure — matched on the message, so a refused
+    connection or a timeout is reported as itself — is retried unverified, and
+    then the note says so out loud. A shared host that cannot verify its own
+    loopback certificate still gets an answer rather than a false "publicly
+    readable".
+  - **NOT DONE, and not ours**: IDs kept on cancelled bookings (13 of 27) is
+    Rob's call, and the existing button already deletes them.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -1954,8 +2039,15 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 374
-  mutations, 374 killed, 0 of everything else (v0.34.1 final, with the
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 396
+  mutations, 396 killed, 0 of everything else (v0.34.2, twenty-six suites —
+  `upload-access`, `audit`, `minify` and `selectlist-min` added; run in two
+  halves, as below). Its targeted run of the 22 new mutations was 21 killed
+  + 1 SURVIVED: `ua-any-post-type`, masked because every "not a booking" case
+  ALSO named a different booking, so the booking check refused it first — the
+  real case, a row on a non-booking post with NO booking named, is now
+  constructed. At v0.34.1, 374
+  mutations, 374 killed, 0 of everything else (with the
   dropdown list: twenty-two suites — `selectlist` added — run in TWO HALVES
   of 187 because one full run now outlasts the session's 2-hour background
   limit; 186 + 1 STALE, then 187. The STALE was `css-field-width`: the new
@@ -2280,3 +2372,7 @@ yours to improvise.
   `html{font-weight:700}` trap was already covered by the upload-hint assertions.
 - Bump the version in all three places whenever behaviour changes:
   the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.
+- **And rebuild the guest assets after touching any of them** (v0.34.2):
+  `php dcc-custom-checkout/tools/build-assets.php`. The built `.min.` files are
+  COMMITTED — WordPress installs a plugin folder, it does not build one — and
+  `tests/minify/` goes red when they disagree with the sources.

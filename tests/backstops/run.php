@@ -193,6 +193,106 @@ check('the right bucket for the stay length is NOT a violation',
 check('and a correct booking is never redirected', ran_redirect($svc), false);
 
 /* =====================================================================
+ * v0.34.2 — A DOG WITHOUT THE FEE (the Director's audit of live 0.34.1).
+ *
+ * "Has dog" used to be read ONLY from the attached pet service, so a request
+ * that carried the dog's details and no service was taken for a no-dog
+ * booking and saved: a Cottage 34 reservation listing a dog at $0. The dog
+ * fields are req=false in MotoPress and only the browser disables them, so
+ * tampering — or a JS failure after a MotoPress update — was all it took.
+ * ===================================================================== */
+
+/**
+ * A booking on a PET ACCOMMODATION with the dog's details filled in and no pet
+ * service attached at all. $type defaults to one of Config::pet_accommodations().
+ */
+function seed_dog(array $dog, ?int $type = null, bool $with_service = false): void
+{
+    $type = $type ?? (Config::pet_accommodations()[0] ?? 1607);
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+    $_SERVER['REQUEST_URI']    = '/submit-booking/';
+    $room = [
+        'room_type_id' => $type,
+        'adults'       => 2,
+        'services'     => [],
+    ];
+    if ($with_service) {
+        $ids = Config::pet_service_ids();
+        $room['services'][] = ['id' => $ids['daily'], 'quantity' => 1];
+    }
+    $_POST = [
+        'mphb_check_in_date'  => '2026-10-01',
+        'mphb_check_out_date' => '2026-10-04',      // 3 nights
+        'mphb_room_details'   => [0 => $room],
+        'customer_fields'    => $dog,
+    ];
+}
+
+$names = Config::dog_field_names();
+$full  = [$names['type'] => 'Poodle', $names['size'] => 'Up to 20 lbs', $names['hair'] => 'Short'];
+
+/* The harness really does deliver the dog fields. Without this, every "not a
+   violation" below could pass simply because nothing was ever read. */
+seed_dog($full);
+check('the seeded dog details reach the validator',
+    \DCC_Checkout\Checkout_Request::customer_field_value($names['type']), 'Poodle');
+
+/* The guard on the guard: with the fee attached, this very payload books. */
+seed_dog($full, null, true);
+check('a normal dog booking -- details AND the pet fee -- is not a violation',
+    $svc->find_violation(), null);
+check('and is never redirected', ran_redirect($svc), false);
+
+/* The finding itself. */
+seed_dog($full);
+check('a dog declared on a pet cottage with NO pet service is refused',
+    $svc->find_violation(), 'pet');
+check('and the guest is redirected with the pet message',
+    ran_redirect($svc), true);
+
+/* One field is enough: a tampered request need not fill all three. */
+foreach ($names as $which => $name) {
+    seed_dog([$name => $which === 'size' ? 'Up to 20 lbs' : 'something']);
+    check("a single filled dog field ($which) with no pet fee is refused",
+        $svc->find_violation(), 'pet');
+}
+
+/* An empty, or absent, dog field is NOT a dog. MotoPress omits an empty
+   custom field from the payload entirely, so both shapes must pass. */
+seed_dog([$names['type'] => '', $names['size'] => '  ', $names['hair'] => '']);
+check('blank dog fields with no pet fee are not a dog booking',
+    $svc->find_violation(), null);
+seed_dog([]);
+check('no dog fields at all with no pet fee are not a dog booking',
+    $svc->find_violation(), null);
+
+/* Off a pet cottage the dog fields are ignored, exactly as before. 1065 is a
+   couch cottage, not in pet_accommodations. */
+seed_dog($full, 1065);
+check('the same details off a pet cottage are ignored, as before',
+    $svc->find_violation(), null);
+check('and nothing is redirected there', ran_redirect($svc), false);
+
+/* The master switch still stands the whole thing down. */
+seed_dog($full);
+$GLOBALS['opt']['dcc_checkout_settings'] = ['pet_fee_enabled' => 0];
+Config::flush_cache();
+check('with the pet flow switched off, a dog with no fee is not refused',
+    $svc->find_violation(), null);
+$GLOBALS['opt'] = [];
+Config::flush_cache();
+
+/* It is a BACKSTOP, so it must hold on the REST route too (Rest_Guard calls
+   the same find_violation). AJAX and wp-admin keep their stand-downs. */
+seed_dog($full);
+$GLOBALS['ajax'] = true; $GLOBALS['admin'] = false;
+check('NEVER during AJAX, even for a dog with no fee', ran_redirect($svc), false);
+seed_dog($full);
+$GLOBALS['ajax'] = false; $GLOBALS['admin'] = true;
+check('NEVER in wp-admin either', ran_redirect($svc), false);
+$GLOBALS['ajax'] = false; $GLOBALS['admin'] = false;
+
+/* =====================================================================
  * THE SAME GUARANTEE, IN THE OTHER THREE FILES THAT CLAIM IT.
  *
  * Testing it once in Pet_Service would leave the other three carrying the

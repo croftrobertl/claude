@@ -44,7 +44,21 @@ final class Assets
      */
     public static function string_overrides(): array
     {
-        return (array) apply_filters('dcc_checkout_string_overrides', [
+        // v0.34.2 — BUILT ONCE PER LOCALE, PER REQUEST (Director's audit of
+        // live 0.34.1). This map is read by apply_override(), which runs on
+        // EVERY gettext call of MotoPress's text domain on every page — so the
+        // array, its eight __() lookups and the filter were being rebuilt
+        // thousands of times a request for a result that cannot change within
+        // one. Keyed by locale, not a bare flag: a request that switches
+        // locale mid-flight (a notification email rendered for the guest, say)
+        // must not be served another locale's words.
+        $locale = function_exists('determine_locale') ? (string) determine_locale()
+            : (function_exists('get_locale') ? (string) get_locale() : '');
+        if (isset(self::$overrides_cache[$locale])) {
+            return self::$overrides_cache[$locale];
+        }
+
+        $map = (array) apply_filters('dcc_checkout_string_overrides', [
             'Accommodation Type:' => __('Accommodation:', 'dcc-checkout'),
             // "Service" is MotoPress's word, not the owner's: the pet fee and
             // the extra-guest fee are not services a guest chose from a menu —
@@ -63,6 +77,22 @@ final class Assets
             'Services Total'  => __('Extras Total', 'dcc-checkout'),
             'Services Total:' => __('Extras Total:', 'dcc-checkout'),
         ]);
+
+        self::$overrides_cache[$locale] = $map;
+        return $map;
+    }
+
+    /**
+     * string_overrides() per locale, for this request only (v0.34.2).
+     *
+     * @var array<string, array<string,string>>
+     */
+    private static $overrides_cache = [];
+
+    /** Drop the cache — for tests, and for anything that re-filters the map. */
+    public static function flush_string_overrides(): void
+    {
+        self::$overrides_cache = [];
     }
 
     /**
@@ -235,6 +265,30 @@ final class Assets
         return (bool) apply_filters('dcc_checkout_is_checkout_page', $is_checkout);
     }
 
+    /**
+     * The URL of an asset, minified unless the site asked for the source
+     * (v0.34.2). `assets/checkout.js` becomes `assets/checkout.min.js` when
+     * that file is on disk and SCRIPT_DEBUG is off.
+     *
+     * The built file MISSING means the source is served — a plugin folder that
+     * was copied without the build output still works, it is simply bigger.
+     * The sources ship too, so SCRIPT_DEBUG always has something to show.
+     *
+     * Built by tools/build-assets.php; tests/minify checks the two agree.
+     */
+    public static function asset_url(string $relative): string
+    {
+        $debug = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG;
+        if (!apply_filters('dcc_checkout_use_minified_assets', !$debug, $relative)) {
+            return DCC_CHECKOUT_URL . $relative;
+        }
+        $min = preg_replace('/\.(js|css)$/', '.min.$1', $relative);
+        if ($min !== $relative && is_readable(DCC_CHECKOUT_DIR . $min)) {
+            return DCC_CHECKOUT_URL . $min;
+        }
+        return DCC_CHECKOUT_URL . $relative;
+    }
+
     public function enqueue(): void
     {
         if (!self::is_checkout_page()) {
@@ -243,7 +297,7 @@ final class Assets
 
         wp_enqueue_style(
             'dcc-checkout',
-            DCC_CHECKOUT_URL . 'assets/checkout.css',
+            self::asset_url('assets/checkout.css'),
             [],
             DCC_CHECKOUT_VERSION
         );
@@ -255,7 +309,7 @@ final class Assets
 
         wp_enqueue_script(
             'dcc-checkout',
-            DCC_CHECKOUT_URL . 'assets/checkout.js',
+            self::asset_url('assets/checkout.js'),
             [Guest_Count_Script::HANDLE],
             DCC_CHECKOUT_VERSION,
             true
@@ -268,7 +322,7 @@ final class Assets
         // whose preflight state it reads; the select stays the source of truth.
         wp_enqueue_script(
             'dcc-checkout-select-list',
-            DCC_CHECKOUT_URL . 'assets/select-list.js',
+            self::asset_url('assets/select-list.js'),
             ['dcc-checkout'],
             DCC_CHECKOUT_VERSION,
             true

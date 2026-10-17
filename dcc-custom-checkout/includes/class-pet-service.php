@@ -16,10 +16,12 @@ if (!defined('ABSPATH')) {
  * itself (the old bespoke inputs were dropped from MotoPress's normalized
  * payload and never reached the server). What remains here:
  *
- *   1. validate_submission() — anti-tamper backstop. "Has dog" is inferred from
- *      the pet Service attached in room_details (which DOES reach the server);
- *      if present, the bucket must match and the three native dog fields must
- *      not be blank. Reads the real payload keys; skips AJAX so it never clobbers
+ *   1. validate_submission() — anti-tamper backstop. "Has dog" is read from
+ *      the pet Service attached in room_details (which DOES reach the server)
+ *      AND, since v0.34.2, from the dog fields themselves: if the service is
+ *      present the bucket must match and the three native dog fields must not
+ *      be blank; if a dog field is filled on a pet accommodation and NO pet
+ *      service is attached, the booking is refused (a dog with no fee). Reads the real payload keys; skips AJAX so it never clobbers
  *      an AJAX checkout response.
  *   2. Email tag %dcc_dog_details% — registered via mphb_email_booking_tags and
  *      filled from the native booking meta via mphb_email_replace_tag. MotoPress
@@ -92,7 +94,36 @@ final class Pet_Service
         }
 
         if (!$this->any_pet_service_present()) {
-            return null; // No pet service attached → no-dog booking → nothing to enforce.
+            // v0.34.2 — A DOG WITHOUT THE FEE (Director's audit of live 0.34.1).
+            //
+            // Until now "has dog" was inferred ONLY from the attached pet
+            // service, so a submission that carried the dog's details and no
+            // service was read as a no-dog booking and saved: a Cottage 34
+            // reservation listing a dog at $0. Nothing on the server said
+            // otherwise — the three dog fields are req=false in MotoPress, and
+            // only the browser disables them when the pet question is "No".
+            // So a tampered request, or a JS failure after a MotoPress update,
+            // got the dog for free.
+            //
+            // A dog field with something in it IS the declaration of a dog, so
+            // the fee has to be attached. MotoPress omits an empty custom field
+            // from the payload entirely (_buildFormData), and this plugin
+            // disables the fields on a no-dog booking, so a value here is never
+            // an unanswered question.
+            //
+            // Only on a pet accommodation — $is_pet is true above either
+            // because this room type is one, or because a pet service was
+            // attached, and the latter is false in this branch. Elsewhere dog
+            // fields are ignored exactly as before (the Director's
+            // instruction), which also keeps this backstop's existing gate: a
+            // cottage outside the list is not evaluated at all.
+            foreach (Config::dog_field_name_list() as $name) {
+                $value = Checkout_Request::customer_field_value($name);
+                if ($value !== null && trim($value) !== '') {
+                    return 'pet';
+                }
+            }
+            return null; // No pet service and no dog details → no-dog booking.
         }
 
         // A pet service is attached: it must be exactly the ACTIVE one — the

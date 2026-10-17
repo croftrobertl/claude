@@ -4140,5 +4140,248 @@
   "find": "        wp_enqueue_script(\n            'dcc-checkout-select-list',",
   "replace": "        if (false) wp_enqueue_script(\n            'dcc-checkout-select-list',",
   "count": 1
+ },
+ {
+  "id": "ps-dog-without-fee-allowed",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.34.2: a dog declared with no pet service is refused",
+  "find": "            foreach (Config::dog_field_name_list() as $name) {\n                $value = Checkout_Request::customer_field_value($name);\n                if ($value !== null && trim($value) !== '') {\n                    return 'pet';\n                }\n            }\n            return null; // No pet service and no dog details → no-dog booking.",
+  "replace": "            return null;",
+  "count": 1
+ },
+ {
+  "id": "ps-dog-blank-counts",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.34.2: a blank dog field is not a declared dog",
+  "find": "                if ($value !== null && trim($value) !== '') {",
+  "replace": "                if ($value !== null) {",
+  "count": 1
+ },
+ {
+  "id": "ps-dog-first-field-only",
+  "file": "dcc-custom-checkout/includes/class-pet-service.php",
+  "suites": [
+   "backstops"
+  ],
+  "claim": "0.34.2: ANY of the three dog fields is enough, not just the first",
+  "find": "            foreach (Config::dog_field_name_list() as $name) {\n                $value = Checkout_Request::customer_field_value($name);\n                if ($value !== null && trim($value) !== '') {\n                    return 'pet';\n                }\n            }",
+  "replace": "            foreach (array_slice(Config::dog_field_name_list(), 0, 1) as $name) {\n                $value = Checkout_Request::customer_field_value($name);\n                if ($value !== null && trim($value) !== '') {\n                    return 'pet';\n                }\n            }",
+  "count": 1
+ },
+ {
+  "id": "ua-widens",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: the filter can never grant access the add-on refused",
+  "find": "        if (!$has_access) {\n            return $has_access;\n        }",
+  "replace": "        if (false) {\n            return $has_access;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-any-meta-key",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: only the photo-ID meta key may be served",
+  "find": "        if ($row['meta_key'] !== Id_Files::META_KEY) {\n            return false;\n        }",
+  "replace": "        if (false) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-any-post-type",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: the row must belong to a booking",
+  "find": "        if (get_post_type($row['post_id']) !== Id_Files::BOOKING_POST_TYPE) {\n            return false;\n        }",
+  "replace": "        if (false) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-wrong-booking-ok",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: the row must belong to the booking being viewed",
+  "find": "        if ($booking_id > 0 && $booking_id !== $row['post_id']) {\n            return false;\n        }",
+  "replace": "        if (false) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-unreadable-row-opens",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: a row that cannot be read refuses, it does not fall open",
+  "find": "        if ($row === null) {\n            return false;\n        }",
+  "replace": "        if ($row === null) {\n            return $has_access;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-no-id-denies",
+  "file": "dcc-custom-checkout/includes/class-upload-access.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: a request of another shape is left exactly as it was",
+  "find": "        if ($meta_id <= 0) {\n            return $has_access; // Rule 2: not a request of this shape.\n        }",
+  "replace": "        if ($meta_id <= 0) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "ua-not-booted",
+  "file": "dcc-custom-checkout/includes/class-plugin.php",
+  "suites": [
+   "upload-access"
+  ],
+  "claim": "0.34.2: the upload-access filter is actually registered",
+  "find": "        (new Upload_Access())->register();",
+  "replace": "        // not registered",
+  "count": 1
+ },
+ {
+  "id": "as-overrides-not-cached",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: the gettext map is built once per request",
+  "find": "        if (isset(self::$overrides_cache[$locale])) {\n            return self::$overrides_cache[$locale];\n        }",
+  "replace": "        if (false) {\n            return self::$overrides_cache[$locale];\n        }",
+  "count": 1
+ },
+ {
+  "id": "as-overrides-one-locale",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: the map is cached per LOCALE, not once for all",
+  "find": "        if (isset(self::$overrides_cache[$locale])) {\n            return self::$overrides_cache[$locale];\n        }",
+  "replace": "        $locale = '';\n        if (isset(self::$overrides_cache[$locale])) {\n            return self::$overrides_cache[$locale];\n        }",
+  "count": 1
+ },
+ {
+  "id": "id-probe-unverified",
+  "file": "dcc-custom-checkout/includes/class-id-files.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: the store self-test verifies the certificate",
+  "find": "        $args = ['timeout' => 10, 'sslverify' => true, 'redirection' => 0];",
+  "replace": "        $args = ['timeout' => 10, 'sslverify' => false, 'redirection' => 0];",
+  "count": 1
+ },
+ {
+  "id": "id-probe-retries-anything",
+  "file": "dcc-custom-checkout/includes/class-id-files.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: only a TLS failure is retried unverified",
+  "find": "        if (is_wp_error($res) && self::is_tls_error($res)) {",
+  "replace": "        if (is_wp_error($res)) {",
+  "count": 1
+ },
+ {
+  "id": "id-probe-no-retry",
+  "file": "dcc-custom-checkout/includes/class-id-files.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: a host that cannot verify its own certificate still gets an answer",
+  "find": "        if (is_wp_error($res) && self::is_tls_error($res)) {\n            $args['sslverify'] = false;",
+  "replace": "        if (false) {\n            $args['sslverify'] = false;",
+  "count": 1
+ },
+ {
+  "id": "id-probe-silent-caveat",
+  "file": "dcc-custom-checkout/includes/class-id-files.php",
+  "suites": [
+   "audit"
+  ],
+  "claim": "0.34.2: an unverified answer says so",
+  "find": "                $unverified = ' ' . __('(This server could not verify its own certificate, so the check was repeated without verifying it.)', 'dcc-checkout');",
+  "replace": "                $unverified = '';",
+  "count": 1
+ },
+ {
+  "id": "bm-comments-kept",
+  "file": "dcc-custom-checkout/tools/build-assets.php",
+  "suites": [
+   "minify"
+  ],
+  "claim": "0.34.2: the builder removes comments",
+  "find": "        if ($c === '/' && $next === '/') {\n            while ($i < $len && $code[$i] !== \"\\n\") {\n                $i++;\n            }\n            continue;\n        }",
+  "replace": "        if (false) {\n            while ($i < $len && $code[$i] !== \"\\n\") {\n                $i++;\n            }\n            continue;\n        }",
+  "count": 1
+ },
+ {
+  "id": "bm-drops-code",
+  "file": "dcc-custom-checkout/tools/build-assets.php",
+  "suites": [
+   "minify"
+  ],
+  "claim": "0.34.2: the builder drops no code",
+  "find": "        if ($trim === '') {\n            continue;\n        }",
+  "replace": "        if ($trim === '' || strpos($trim, 'function') === 0) {\n            continue;\n        }",
+  "count": 1
+ },
+ {
+  "id": "bm-indentation-kept",
+  "file": "dcc-custom-checkout/tools/build-assets.php",
+  "suites": [
+   "minify"
+  ],
+  "claim": "0.34.2: the builder removes indentation",
+  "find": "        $trim = ltrim($line);",
+  "replace": "        $trim = $line === '' ? '' : $line;",
+  "count": 1
+ },
+ {
+  "id": "as-serves-source",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "minify",
+   "recalc"
+  ],
+  "claim": "0.34.2: a guest is served the built asset",
+  "find": "        if ($min !== $relative && is_readable(DCC_CHECKOUT_DIR . $min)) {\n            return DCC_CHECKOUT_URL . $min;\n        }",
+  "replace": "        if (false) {\n            return DCC_CHECKOUT_URL . $min;\n        }",
+  "count": 1
+ },
+ {
+  "id": "as-ignores-script-debug",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "minify"
+  ],
+  "claim": "0.34.2: SCRIPT_DEBUG serves the sources",
+  "find": "        $debug = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG;",
+  "replace": "        $debug = false;",
+  "count": 1
+ },
+ {
+  "id": "as-missing-build-404",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "minify"
+  ],
+  "claim": "0.34.2: with no built file the source is served, not a 404",
+  "find": "        if ($min !== $relative && is_readable(DCC_CHECKOUT_DIR . $min)) {",
+  "replace": "        if ($min !== $relative) {",
+  "count": 1
  }
 ]

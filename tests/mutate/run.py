@@ -75,6 +75,11 @@ SUITES = {
     'petpolicy':    ('php',  'tests/petpolicy/run.php'),
     'recalc':       ('node', 'tests/recalc/run.js'),
     'selectlist':   ('node', 'tests/selectlist/run.js'),
+    # v0.34.2 — the same suite against the BUILT assets a guest downloads.
+    'selectlist-min': ('node', 'tests/selectlist/run.js', {'DCC_MIN': '1'}),
+    'upload-access': ('php',  'tests/upload-access/run.php'),
+    'audit':        ('php',  'tests/audit/run.php'),
+    'minify':       ('php',  'tests/minify/run.php'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'
@@ -100,16 +105,30 @@ def parses(path):
     return False, first[0][:120] if first else f'exit {p.returncode}'
 
 
+def suite_parts(name):
+    """(command, script, extra environment) for a suite.
+
+    A suite may be the same script under a different environment -- since
+    v0.34.2 'selectlist-min' is tests/selectlist/run.js against the BUILT
+    assets. Two-element entries carry no environment of their own."""
+    entry = SUITES[name]
+    if len(entry) == 3:
+        return entry[0], entry[1], entry[2]
+    return entry[0], entry[1], {}
+
+
 def run_suite(name):
     """Return (outcome, detail). Outcome is one of the four constants above."""
     if name not in SUITES:
         return NO_SUITE, f'no such suite in this runner: {name!r}'
-    cmd, script = SUITES[name]
+    cmd, script, extra_env = suite_parts(name)
     path = os.path.join(ROOT, script)
     if not os.path.isfile(path):
         return NO_SUITE, f'{script} is not on disk'
+    env = dict(os.environ)
+    env.update(extra_env)
     try:
-        p = subprocess.run([cmd, script], cwd=ROOT,
+        p = subprocess.run([cmd, script], cwd=ROOT, env=env,
                            capture_output=True, text=True, timeout=300)
     except subprocess.TimeoutExpired:
         return NO_RUN, 'timed out after 300s'
@@ -132,7 +151,7 @@ def preflight():
     print('Suite files on disk:')
     on_disk = sorted(glob.glob(os.path.join(ROOT, 'tests/*/run.js')) +
                      glob.glob(os.path.join(ROOT, 'tests/*/run.php')))
-    wired = {os.path.join(ROOT, s) for _, s in SUITES.values()}
+    wired = {os.path.join(ROOT, e[1]) for e in SUITES.values()}
     for f in on_disk:
         rel = os.path.relpath(f, ROOT)
         print(f'  {rel:34s} {"wired up" if f in wired else "*** NOT WIRED INTO THIS RUNNER ***"}')
@@ -140,7 +159,7 @@ def preflight():
     # called run.* (tests/policy/browser.js), and the glob would report it
     # missing while it ran -- an instrument that cannot tell absent from
     # differently-named is the exit-code fault in another shape.
-    missing = [s for _, s in SUITES.values() if not os.path.isfile(os.path.join(ROOT, s))]
+    missing = [e[1] for e in SUITES.values() if not os.path.isfile(os.path.join(ROOT, e[1]))]
     for s in missing:
         print(f'  {s:34s} *** WIRED UP BUT NOT ON DISK ***')
 

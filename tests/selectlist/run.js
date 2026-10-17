@@ -25,7 +25,12 @@ const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const ASSETS = path.join(__dirname, '../../dcc-custom-checkout/assets');
-const read = f => fs.readFileSync(path.join(ASSETS, f), 'utf8');
+// v0.34.2 — DCC_MIN=1 runs the whole suite against the BUILT assets, the ones
+// a guest downloads. The minifier removes comments and indentation only, but
+// "only" is a claim about a program that rewrites every shipped line, so the
+// claim is tested rather than reasoned about: same page, same assertions.
+const MIN = process.env.DCC_MIN === '1';
+const read = f => fs.readFileSync(path.join(ASSETS, MIN ? f.replace(/\.(js|css)$/, '.min.$1') : f), 'utf8');
 const CSS = read('checkout.css'), CHECKOUT = read('checkout.js'), GC = read('guest-count.js'), LIST = read('select-list.js');
 const GC_CFG = execFileSync('php', [path.join(__dirname, '../recalc/config.php'), 'guest'], { encoding: 'utf8' });
 const GUESTS_MSG = 'Please select the number of guests.';
@@ -531,6 +536,6 @@ async function tapOrClick(pg, selector, touch) {
 
     await browser.close();
     if (shots.length) { console.log('screenshots:\n  ' + shots.join('\n  ')); }
-    console.log(failures ? `\n${failures} failing` : `\nall passing (${passes})`);
+    console.log(failures ? `\n${failures} failing` : `\nall passing (${passes})${MIN ? ' [built assets]' : ''}`);
     process.exit(failures ? 1 : 0);
 })().catch(e => { console.log('FAIL  the suite crashed: ' + (e && e.stack || e)); process.exit(1); });

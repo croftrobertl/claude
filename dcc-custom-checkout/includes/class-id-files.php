@@ -36,7 +36,9 @@ final class Id_Files
     /** Append-only deletion log, rendered on the booking screen. */
     public const LOG_META = '_dcc_id_deletions';
 
-    private const BOOKING_POST_TYPE = 'mphb_booking';
+    // Public since v0.34.2: Upload_Access names the same post type, and one
+    // definition is better than two that can drift.
+    public const BOOKING_POST_TYPE = 'mphb_booking';
     private const ACTION            = 'dcc_delete_id_image';
 
     /** Throttle for the guard-file check on admin requests. */
@@ -259,7 +261,28 @@ final class Id_Files
         $url = rtrim((string) ($uploads['baseurl'] ?? ''), '/') . '/'
             . basename(rtrim($dir, '/')) . '/' . $name;
 
-        $res  = wp_remote_get($url, ['timeout' => 10, 'sslverify' => false, 'redirection' => 0]);
+        // v0.34.2 — THE CERTIFICATE IS VERIFIED (Director's audit of live
+        // 0.34.1). This probe used to pass `sslverify => false`, so a response
+        // on this site's own URL was accepted from whatever answered it. The
+        // answer decides whether /privacy/'s promise holds, so it is worth
+        // knowing it came from this site.
+        //
+        // A shared host whose loopback cannot verify its own certificate is a
+        // real and common configuration, and failing the check there would
+        // report "publicly readable" about a store that is fine. So a TLS
+        // failure — and ONLY a TLS failure — is retried unverified, and the
+        // note says the verification could not be made.
+        $args = ['timeout' => 10, 'sslverify' => true, 'redirection' => 0];
+        $res  = wp_remote_get($url, $args);
+        $unverified = '';
+        if (is_wp_error($res) && self::is_tls_error($res)) {
+            $args['sslverify'] = false;
+            $retry = wp_remote_get($url, $args);
+            if (!is_wp_error($retry)) {
+                $res = $retry;
+                $unverified = ' ' . __('(This server could not verify its own certificate, so the check was repeated without verifying it.)', 'dcc-checkout');
+            }
+        }
         $code = is_wp_error($res) ? 0 : (int) wp_remote_retrieve_response_code($res);
         $body = is_wp_error($res) ? '' : (string) wp_remote_retrieve_body($res);
 
@@ -274,10 +297,32 @@ final class Id_Files
         return [
             'ok'   => $denied,
             'code' => $code,
-            'note' => $denied
+            'note' => ($denied
                 ? __('The web server refuses to serve files from this directory.', 'dcc-checkout')
-                : __('The web server SERVED the probe file. Guest IDs are publicly readable.', 'dcc-checkout'),
+                : __('The web server SERVED the probe file. Guest IDs are publicly readable.', 'dcc-checkout'))
+                . $unverified,
         ];
+    }
+
+    /**
+     * Is this transport error about the certificate, rather than about what
+     * the server said? Only these are retried without verification; a refused
+     * connection or a timeout is reported as it is (v0.34.2).
+     *
+     * @param mixed $error
+     */
+    private static function is_tls_error($error): bool
+    {
+        if (!is_object($error) || !method_exists($error, 'get_error_message')) {
+            return false;
+        }
+        $message = strtolower((string) $error->get_error_message());
+        foreach (['ssl', 'certificate', 'cert ', 'tls'] as $needle) {
+            if (strpos($message, $needle) !== false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /* --------------------------------------------------------------------- *
