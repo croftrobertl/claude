@@ -892,6 +892,15 @@ final class Plugin
      * From email/name (with Reply-To fallback for deliverability), plus
      * reporter Name + Cottage fields.
      */
+    /** Nobody fills in and sends a problem report faster than this. */
+    public const REPORT_MIN_DWELL_MS = 3000;
+
+    /** Reports accepted site-wide per calendar day, across every IP. */
+    public const REPORT_DAILY_CAP = 60;
+
+    /** Longest subject line, in characters. */
+    public const REPORT_SUBJECT_MAX = 180;
+
     public function handle_report_problem(): void
     {
         check_ajax_referer('dccgg_nonce', 'nonce');
@@ -901,6 +910,37 @@ final class Plugin
         $count   = (int) get_transient($rl_key);
         if ($count >= (int) Settings::get('report_rate_limit')) {
             wp_send_json_error(['message' => __('Too many reports in a short window — please try again in a few minutes.', 'dcc-guest-guide')], 429);
+        }
+
+        // v0.24.3, spam trap. A field no guest can see or tab to: a script that
+        // fills every input gives itself away. Answered with success so the
+        // sender learns nothing about why nothing arrived.
+        $trap = isset($_POST['dccgg_hp']) ? trim((string) wp_unslash($_POST['dccgg_hp'])) : '';
+        if ($trap !== '') {
+            wp_send_json_success(['sent' => true]);
+        }
+
+        // v0.24.3, dwell time. Nobody reads the form, types a problem and sends
+        // in under three seconds. The elapsed time comes from the browser, so a
+        // determined forger can lie about it — this stops scripted bulk posting,
+        // not a targeted attacker, and it is deliberately silent for the same
+        // reason as the trap above.
+        $elapsed = isset($_POST['elapsed_ms']) ? (int) $_POST['elapsed_ms'] : -1;
+        if ($elapsed >= 0 && $elapsed < self::REPORT_MIN_DWELL_MS) {
+            wp_send_json_success(['sent' => true]);
+        }
+
+        // v0.24.3, site-wide daily cap across every IP, the same shape as the AI
+        // one. The per-IP limit alone cannot stop a spread-out flood of the
+        // host's inbox. A real guest at the cap is NOT dropped silently: they
+        // are told to call or text the front desk instead.
+        $daily_cap   = (int) apply_filters('dccgg_report_daily_cap', self::REPORT_DAILY_CAP);
+        $daily_count = (int) get_transient('dccgg_report_daily');
+        if ($daily_cap > 0 && $daily_count >= $daily_cap) {
+            wp_send_json_error([
+                'message' => __('We can\'t send this just now. Please call or text the front desk and we\'ll sort it out straight away.', 'dcc-guest-guide'),
+                'at_cap'  => true,
+            ], 429);
         }
 
         $category    = isset($_POST['category'])    ? sanitize_text_field(wp_unslash((string) $_POST['category']))    : '';
@@ -915,6 +955,18 @@ final class Plugin
         $page_url    = isset($_POST['page_url'])    ? esc_url_raw(wp_unslash((string) $_POST['page_url']))            : '';
         $post_id     = isset($_POST['post_id'])     ? (int) $_POST['post_id']                                         : 0;
         $widget_id   = isset($_POST['widget_id'])   ? sanitize_text_field(wp_unslash((string) $_POST['widget_id']))   : '';
+
+        // v0.24.3: the same visibility test handle_reveal_secret() and
+        // handle_search_index() make. find_widget_settings() reads
+        // _elementor_data for ANY post id with no check of its own, so without
+        // this a caller could name a draft or password-protected page and have
+        // the plugin read its recipient list and templates.
+        $post = get_post($post_id);
+        if (!$post
+            || ($post->post_status !== 'publish' && !current_user_can('read_post', $post_id))
+            || post_password_required($post)) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
 
         // v0.9.7.14: recipient list, From identity and templates used to round-trip
         // through the JS payload (visible in page source). Now resolved server-side
@@ -970,7 +1022,13 @@ final class Plugin
         if ($subject_tpl === '') {
             $subject_tpl = '[DCC Guest Guide] {category} — {section_title}';
         }
+        // v0.24.3: the subject is a plain-text header. No markup, no newlines
+        // (a newline there splices a header), and bounded so a long paste
+        // cannot push the rest of the headers around.
         $subject = strtr($subject_tpl, $tags);
+        $subject = trim(preg_replace('/[\r\n\t]+/', ' ', wp_strip_all_tags($subject)) ?? '');
+        $subject = mb_substr($subject, 0, self::REPORT_SUBJECT_MAX);
+        if ($subject === '') { $subject = '[DCC Guest Guide] Report'; }
 
         if ($body_tpl === '') {
             $body_tpl = "<p>A guest submitted a problem report from {site_name}.</p>\n"
@@ -986,10 +1044,19 @@ final class Plugin
                      . "<blockquote>{report_text}</blockquote>\n"
                      . "<p style=\"font-size:11px;color:#888\">{user_agent}</p>";
         }
+        // v0.24.3: EVERY value is escaped before it goes into the HTML body.
+        // Each one is guest-supplied or request-supplied, and sanitize_text_field
+        // strips tags but leaves entities and bare angle brackets that an HTML
+        // mail client will still interpret. {report_text} is handled on its own
+        // line below because it also needs its newlines turned into <br>, and
+        // {page_url} through esc_url because it lands in an attribute-like spot.
+        foreach ($tags as $tag => $value) {
+            if ($tag === '{report_text}' || $tag === '{page_url}') { continue; }
+            $tags[$tag] = esc_html((string) $value);
+        }
         // {report_text} is plaintext from a textarea — newline-to-<br> so guest
         // line breaks survive into the HTML email. esc_html keeps it safe.
         $tags['{report_text}'] = nl2br(esc_html($description));
-        $tags['{user_agent}']  = $ua !== '' ? esc_html($ua) : '';
         $tags['{page_url}']    = $page_url !== '' ? esc_url($page_url) : '—';
         $body = strtr($body_tpl, $tags);
 
@@ -1015,6 +1082,13 @@ final class Plugin
         }
 
         set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
+        // v0.24.3: the site-wide counter moves only when a report actually
+        // went out, so a refused one never costs the day's allowance. Anchored
+        // to the site's own midnight, like the AI cap, so it is a calendar day
+        // rather than a sliding window that steady use could extend for ever.
+        $now = current_datetime();
+        $ttl = max(MINUTE_IN_SECONDS, $now->modify('tomorrow')->setTime(0, 0, 0)->getTimestamp() - $now->getTimestamp());
+        set_transient('dccgg_report_daily', $daily_count + 1, $ttl);
         wp_send_json_success(['ok' => true]);
     }
 

@@ -4440,6 +4440,18 @@ dialog.dccgg-wrapper::backdrop {
     white-space: nowrap;
 }
 
+/* v0.24.3: the report form's spam trap. Off-screen rather than display:none
+   or hidden — a script that skips hidden inputs would skip the trap too. It is
+   aria-hidden and not tabbable, so no guest meets it. */
+.dccgg-report-trap {
+    position: absolute !important;
+    left: -9999px !important;
+    top: auto !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+}
+
 /* ---- v0.24.2: the tile's tap colour ------------------------------------
    WHERE THE CORAL CAME FROM: nothing in this plugin and nothing stored on the
    page. A tile is a <button>, and the host's kit carries

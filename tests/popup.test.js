@@ -2083,7 +2083,11 @@ async function run() {
 
         // ---- item 3: labels, fields and heading all centred -----------------
         const centred = await page.evaluate(() => {
-            const labels = [...document.querySelectorAll('.dccgg-report-body label')];
+            // v0.24.3: the spam trap carries a label too. It is off-screen and
+            // aria-hidden, so it is not one of the form's visible fields and
+            // has no business in a check about how they are laid out.
+            const labels = [...document.querySelectorAll('.dccgg-report-body label')]
+                .filter((l) => !l.closest('.dccgg-report-trap'));
             const h3 = document.querySelector('.dccgg-report-head h3');
             const dialog = document.querySelector('.dccgg-report-dialog');
             // Where the heading's INK actually sits, not where its box does:

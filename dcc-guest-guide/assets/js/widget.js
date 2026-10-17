@@ -406,6 +406,10 @@
             if (dialog) return dialog;
             dialog = document.createElement('dialog');
             dialog.className = 'dccgg-report-dialog';
+            // v0.24.3: a modal with no name is announced as just "dialog".
+            // Point it at its own heading, which already says what this is.
+            const headId = 'dccgg-report-title-' + Math.random().toString(36).slice(2, 8);
+            dialog.setAttribute('aria-labelledby', headId);
             // v0.9.7.1: leading blank option, selected + disabled by default,
             // so the guest must pick a category. Combined with `required`,
             // the form blocks submission until something is chosen.
@@ -425,7 +429,7 @@
                 : '';
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
-                    <h3>${escHtml(STR.title || 'Report a problem')}</h3>
+                    <h3 id="${headId}">${escHtml(STR.title || 'Report a problem')}</h3>
                     <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">
                         <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false"
                              fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
@@ -456,6 +460,12 @@
                         <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
                     </label>
                     <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
+                    ${'' /* v0.24.3 spam trap: off-screen, not tabbable, not announced.
+                           A guest never sees it; a script that fills every input does. */}
+                    <div class="dccgg-report-trap" aria-hidden="true">
+                        <label>Website<input type="text" class="dccgg-report-hp" name="dccgg_hp"
+                               tabindex="-1" autocomplete="off" value=""></label>
+                    </div>
                 </div>
                 <p class="dccgg-report-error" role="alert" aria-live="polite" hidden></p>
                 <div class="dccgg-report-foot">
@@ -519,6 +529,11 @@
             // would drop a keyboard user back at the top of the page. Passing
             // the element in makes it the opener either way.
             d.__dccggOpener = opener || document.activeElement;
+            // v0.24.3: when this dialog opened, so the server can refuse a
+            // send that arrives faster than anyone could have typed it.
+            d.__dccggOpenedAt = Date.now();
+            const hp = d.querySelector('.dccgg-report-hp');
+            if (hp) hp.value = '';
             d.dataset.section = section || '';
             d.dataset.item    = itemTitle || '';
             const desc = d.querySelector('.dccgg-report-desc');
@@ -607,6 +622,9 @@
         body.set('item',             dialog.dataset.item || '');
         body.set('stay',             stayKey());
         body.set('page_url',         window.location.href);
+        body.set('elapsed_ms',       String(Math.max(0, Date.now() - (dialog.__dccggOpenedAt || 0))));
+        const hpEl = dialog.querySelector('.dccgg-report-hp');
+        body.set('dccgg_hp',         hpEl ? hpEl.value : '');
         // v0.9.7.14: recipient list, From identity, subject/body templates and
         // include-UA flag now resolved server-side from the widget's saved
         // Elementor settings (keyed by post_id + widget_id). They never leave
@@ -2310,10 +2328,39 @@
             if (openTitle && openTitle.textContent.trim()) {
                 state.stage.setAttribute('aria-label', openTitle.textContent.trim());
             }
-            const focusTarget = state.stage.querySelector('.dccgg-back')
-                || state.stage.querySelector('button, [href], input, [tabindex]:not([tabindex="-1"])');
-            if (focusTarget && typeof focusTarget.focus === 'function') {
-                try { focusTarget.focus({ preventScroll: true }); } catch (_) { focusTarget.focus(); }
+            // v0.24.3: scope this to the section that just opened. Every
+            // section has its own Back button, so a stage-wide lookup returned
+            // the FIRST one in the DOM — belonging to a hidden section — and
+            // focusing a hidden element does nothing, leaving focus on <body>.
+            // Measured at 360px: that happened for every section, not just the
+            // first, so a screen-reader user was never taken into the sheet.
+            // Visibility is tested the way the Tab trap tests it.
+            const visible = (el) => !!el && el.getClientRects().length > 0;
+            const focusIntoPanel = () => {
+                const openPanel = activeKey
+                    ? state.stage.querySelector('.dccgg-detail[data-key="' + cssEsc(activeKey) + '"]:not([hidden])')
+                    : null;
+                const scope = openPanel || state.stage;
+                let target = scope.querySelector('.dccgg-back');
+                if (!visible(target)) {
+                    target = Array.from(scope.querySelectorAll(
+                        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )).find(visible) || null;
+                }
+                if (!target || typeof target.focus !== 'function') { return false; }
+                try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
+                return scope.contains(document.activeElement);
+            };
+            // The panel is revealed inside withViewTransition() and the stage is
+            // only laid out once the modal is up, so on the first pass there is
+            // nothing visible to focus yet — which is exactly how focus used to
+            // end on <body> for EVERY section. Try now, then on the next frame,
+            // then once more after the open settles, and stop as soon as focus
+            // is actually inside the open section.
+            if (!focusIntoPanel()) {
+                requestAnimationFrame(() => {
+                    if (!focusIntoPanel()) { setTimeout(focusIntoPanel, 160); }
+                });
             }
             // v0.9.7.26: refresh the custom scrollbar now that this section's
             // content is laid out (scrollHeight differs per section). A second
@@ -3433,13 +3480,37 @@
     function memStore(config) {
         return safeStorage(((config.revealMemoryHours | 0) > 0) ? 'localStorage' : 'sessionStorage');
     }
+    // v0.24.3: the window the host sets now applies to copies ALREADY stored,
+    // not just to new ones. Entries carry `t`, the moment they were kept, so
+    // shortening the window expires anything older than the new one on the
+    // guest's next visit. An entry written before v0.24.3 has no `t`; its age
+    // is reconstructed from its expiry and the window it must have been stored
+    // under, which on this site was the 168h the owner had set.
+    const LEGACY_WINDOW_MS = 168 * 3600000;
+    function memWindowMs(config) { return (config.revealMemoryHours | 0) * 3600000; }
+    function memCreatedAt(o) {
+        if (o && typeof o.t === 'number' && o.t > 0) { return o.t; }
+        if (o && typeof o.exp === 'number' && o.exp > 0) { return o.exp - LEGACY_WINDOW_MS; }
+        return 0;
+    }
+    /** Has this stored copy run out, under the window in force right now? */
+    function memExpired(config, o) {
+        if (!o || !o.v) return true;
+        const now = Date.now();
+        if (o.exp && o.exp < now) return true;          // its own stamp
+        const win = memWindowMs(config);
+        if (win <= 0) return false;                      // session-only: the store handles it
+        const created = memCreatedAt(o);
+        return created > 0 && now > created + win;       // the window the host set TODAY
+    }
     function rememberSecret(config, ref, value) {
         try {
             const st = memStore(config);
             if (!st) return;
             const hours = config.revealMemoryHours | 0;
-            const exp = hours > 0 ? Date.now() + hours * 3600000 : 0;
-            st.setItem(memKey(config, ref), JSON.stringify({ v: value, exp: exp }));
+            const now = Date.now();
+            const exp = hours > 0 ? now + hours * 3600000 : 0;
+            st.setItem(memKey(config, ref), JSON.stringify({ v: value, exp: exp, t: now }));
         } catch (_) { /* quota: simply not remembered */ }
     }
     function recallSecret(config, ref) {
@@ -3450,7 +3521,7 @@
                 const raw = st.getItem(key);
                 if (!raw) continue;
                 const o = JSON.parse(raw);
-                if (o.exp && o.exp < Date.now()) { st.removeItem(key); continue; }
+                if (memExpired(config, o)) { st.removeItem(key); continue; }
                 if (o.v) return String(o.v);
             } catch (_) { /* unreadable: treat as absent */ }
         }
@@ -3468,7 +3539,6 @@
     // With the window set to 0 ("this browser session") nothing may outlive
     // the session, so any copy an earlier, longer window left behind goes too.
     function sweepRemembered(config) {
-        const now = Date.now();
         const keepLocal = (config.revealMemoryHours | 0) > 0;
         [['localStorage', keepLocal], ['sessionStorage', true]].forEach(([name, keep]) => {
             const st = safeStorage(name);
@@ -3480,7 +3550,7 @@
                     if (!k || k.indexOf(SECRET_MEM) !== 0) continue;
                     let o = null;
                     try { o = JSON.parse(st.getItem(k) || 'null'); } catch (_) { o = null; }
-                    if (!keep || !o || !o.v || (o.exp && o.exp < now)) dead.push(k);
+                    if (!keep || memExpired(config, o)) dead.push(k);
                 }
                 dead.forEach((k) => st.removeItem(k));
             } catch (_) { /* storage unavailable: nothing to sweep */ }

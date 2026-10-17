@@ -245,6 +245,30 @@ coverage. One mutant — removing `.dccgg-tile:active` — is unreachable in
 Chromium because a pointer press always sets `:hover` too; it is listed in the
 runner's UNREACHABLE block with that reason instead of being dropped.
 
+`handle_report_problem()` carries four guards added in v0.24.3: a hidden trap
+field, a 3s dwell floor (both answer SUCCESS, so a script learns nothing), a
+site-wide `dccgg_report_daily` cap that tells a real guest to phone instead of
+failing silently, and the same post-visibility test the reveal and search-index
+endpoints make. Every tag value is esc_html'd into the HTML body except
+{report_text} (nl2br+esc_html) and {page_url} (esc_url); the subject is
+stripped of markup and newlines and capped. Do not add a tag to that array
+without checking the loop still escapes it.
+
+Opening a section focuses INSIDE it: the panel is revealed inside
+withViewTransition() and the stage is laid out only once the modal is up, so
+the first attempt finds nothing visible — hence the rAF + timeout retry. Before
+v0.24.3 focus ended on <body> for EVERY section, not just the first. Two guards
+do this (scoping to the open panel, and a getClientRects visibility test);
+either alone is enough, which is why the mutation runner lists them as
+equivalent rather than pretending to kill them.
+
+Remembered Wi-Fi reveals carry `t` (when they were kept) as well as `exp`, so
+SHORTENING reveal_memory_hours expires older copies on the next visit. A copy
+written before v0.24.3 has no `t` and its age is reconstructed from
+`exp - 168h`, the window the live site had. reveal_memory_hours lives in the
+`dccgg_settings` OPTION, not on page 4645 — a stored value beats the packaged
+default, which is 48 from v0.24.3.
+
 `Widget::config_emergency_contacts()` gates the data-config contact list on an
 emergency section being present in THIS render; apply_public_mode() drops a
 guest-only Emergency section, so the public page gets none. Don't emit that
@@ -268,8 +292,8 @@ admin-ajax, logins or previews, and turning the toggle off unregisters it.
 
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
-`php tests/stickers.test.php`, `node tests/phone-fixes.ui.js` and
-`node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/stickers.test.php`, `node tests/phone-fixes.ui.js`, `php tests/report-hardening.test.php`,
+`node tests/audit-fixes.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

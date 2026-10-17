@@ -795,7 +795,7 @@ $setOpt(['copy_confirm_ms' => 3000, 'auto_hide_secrets' => false, 'reveal_memory
 $c = \DCCGG\Widget::settings_config();
 check('settings_config: copy_confirm_ms reaches the page', $d['copyConfirmMs'] !== 3000 && $c['copyConfirmMs'] === 3000);
 check('settings_config: auto_hide_secrets reaches the page', $d['autoHideSecrets'] === true && $c['autoHideSecrets'] === false);
-check('settings_config: reveal_memory_hours reaches the page', $d['revealMemoryHours'] === 0 && $c['revealMemoryHours'] === 24);
+check('settings_config: reveal_memory_hours reaches the page', $d['revealMemoryHours'] === 48 && $c['revealMemoryHours'] === 24);
 check('settings_config: log_search_misses reaches the page', $d['logMisses'] === true && $c['logMisses'] === false);
 $setOpt([]);
 

@@ -52,6 +52,11 @@ function plugin_dir_path($f) { return __DIR__ . '/../dcc-guest-guide/'; }
 function plugin_dir_url($f) { return 'https://doracanalcourt.com/wp-content/plugins/dcc-guest-guide/'; }
 function plugin_basename($f) { return 'dcc-guest-guide/dcc-guest-guide.php'; }
 function check_ajax_referer($a, $b) { return true; }
+// v0.24.3: the handler now consults a filterable site-wide cap and stamps the
+// counter against the site's own midnight.
+if (!function_exists('apply_filters'))    { function apply_filters($tag, $v) { return $v; } }
+if (!function_exists('current_datetime')) { function current_datetime() { return new DateTimeImmutable('2026-10-17 09:14:00'); } }
+if (!function_exists('wp_strip_all_tags'))  { function wp_strip_all_tags($s) { return strip_tags((string) $s); } }
 function get_post_meta($id, $key, $single = false) { return $GLOBALS['meta'][$id][$key] ?? ''; }
 function wp_mail($to, $subject, $body, $headers = []) {
     $GLOBALS['sent'][] = ['to' => $to, 'subject' => $subject, 'body' => $body, 'headers' => $headers];
@@ -109,6 +114,8 @@ function submit(array $widget_settings, array $overrides = []): ?array {
         'page_url'         => 'https://doracanalcourt.com/guest/',
         'post_id'          => 4645,
         'widget_id'        => 'abc123',
+        'elapsed_ms'       => 9000,   // v0.24.3 dwell floor
+        'dccgg_hp'         => '',     // v0.24.3 spam trap, empty as a guest leaves it
     ], $overrides);
     try { \DCCGG\Plugin::instance()->handle_report_problem(); }
     catch (DCCGG_Halt $e) { /* the handler always ends in a json response */ }

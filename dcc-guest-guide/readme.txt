@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.2
+Stable tag: 0.24.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,36 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.3 =
+
+**Security and spam, Support Report.** The form now carries a hidden field no
+guest can see or reach; anything that fills it is discarded. A report sent in
+under three seconds is discarded too. There is also a site-wide daily limit
+across all visitors, not just per visitor: a guest who meets it is told to
+call or text the front desk rather than left wondering. Every value that goes
+into the email to the host is now escaped, and the subject line is kept to one
+plain line of bounded length. The form will only read settings from a guide
+page the sender could actually open, matching the Wi-Fi reveal.
+
+**Fixed: opening a section now moves the reader into it.** Screen-reader and
+keyboard users were left at the top of the page instead, on every section,
+because the guide looked for the Back button before the section was on screen.
+
+**Fixed: the Report window now announces its own name** instead of just
+"dialog".
+
+**Changed: a revealed Wi-Fi password is remembered for 48 hours** instead of
+a week, and a copy already on a phone that is older than the window now
+expires on the guest's next visit rather than running to its original date.
+Note for the site owner: 48 hours is the packaged default. The live site has
+168 stored in its own settings, which wins — see the release notes.
+
+**Checked, no change needed:** the read-aloud buttons already had a 44×44 tap
+area behind their 28px icon, added in v0.21.0. Measured again here and covered
+by a test from now on.
+
+Nothing is written on install, activation or upgrade.
 
 = 0.24.2 =
 

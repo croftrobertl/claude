@@ -126,7 +126,11 @@ final class Settings
                     ],
                     'reveal_memory_hours' => [
                         'type'    => 'int',
-                        'default' => 0,
+                        // v0.24.3: 48 hours, the owner's pick. NOTE this is the
+                        // PACKAGED default — a value already stored in the
+                        // dccgg_settings option wins over it. See the release
+                        // notes: the live site has 168 stored there.
+                        'default' => 48,
                         'min'     => 0,
                         'max'     => 336,
                         'label'   => __('Remember a revealed password on the phone for (hours)', 'dcc-guest-guide'),
