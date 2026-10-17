@@ -191,10 +191,12 @@ final class Config
             'why_porch'         => __('a private screened-in porch', 'dcc-cottage-selector'),
             'why_lead'          => __('Great because it offers', 'dcc-cottage-selector'),
 
-            // Informational notes under the party-size / pet questions. No fee
-            // amounts anywhere in this plugin (single source of truth elsewhere).
+            // Informational notes under the party-size / pet questions. The capacity
+            // note names no amount (single source of truth elsewhere). The pet note
+            // carries the ONE amount this plugin states, in Rob's wording (0.53.3),
+            // matching the Cottage 34 page; a PHP test allows exactly that figure.
             'capacity_note'     => __('Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged a nightly fee.', 'dcc-cottage-selector'),
-            'pet_note'          => __('Pets are only allowed in Cottage 34 and must be pre-approved.', 'dcc-cottage-selector'),
+            'pet_note'          => __('One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required.', 'dcc-cottage-selector'),
             'fee_link'          => __('Fee Details', 'dcc-cottage-selector'),
 
             // Availability, when the guest supplied dates (see assets/js/availability.js)
@@ -209,6 +211,9 @@ final class Config
 
             // Misc value labels
             'val_yes'           => __('Yes', 'dcc-cottage-selector'),
+            // Compare table, Pets row, for a cottage that allows pets (0.53.3): the
+            // limit itself rather than a bare "Yes".
+            'val_pet_yes'       => __('1 Dog ≤20 lb', 'dcc-cottage-selector'),
             'val_no'            => __('No', 'dcc-cottage-selector'),
         ];
     }

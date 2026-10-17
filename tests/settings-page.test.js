@@ -85,11 +85,12 @@ console.log('Unsaved-changes prompt');
   sel.value = before; m.change(sel);
 
   const url = $('#dccs-pet-fee-url');
+  const urlWas = url.value;   // 0.53.3: holds the Cottage 34 page by default
   url.value = 'https://example.test/fees/'; m.change(url);
   ok('typing a URL warns', m.leaveBlocked() === true);
 
   // a field inside the collapsed Advanced section counts too
-  url.value = ''; m.change(url);
+  url.value = urlWas; m.change(url);
   const act = $('#dccs-avail-action');
   act.value = act.value + 'x'; m.change(act);
   ok('a field inside Advanced warns', m.leaveBlocked() === true);
@@ -111,6 +112,18 @@ console.log('Unsaved-changes prompt');
   // a value set by the server that differs from the field default is not a change
   const m = mount(['dccs-saved=1']);
   ok('freshly saved page never warns', m.leaveBlocked() === false);
+}
+
+console.log('0.53.3: the pet link default is a URL the browser will submit');
+{
+  const m = mount();
+  const url = m.form.querySelector('#dccs-pet-fee-url');
+  ok('the pet link field holds the Cottage 34 page by default', !!url && /\/accommodation\/cottage-34\/$/.test(url.value), url && url.value);
+  // type="url" refuses a site-relative path; the form has no novalidate, so a
+  // relative default would block EVERY save on the page.
+  ok('...as an ABSOLUTE URL, so type="url" validation passes', !!url && url.type === 'url' && url.checkValidity() === true);
+  ok('control: the same field rejects a site-relative path', (() => { url.value = '/accommodation/cottage-34/'; return url.checkValidity() === false; })());
+  ok('control: the form does not opt out of validation', !m.form.noValidate);
 }
 
 console.log('Where Save remembers the user was');

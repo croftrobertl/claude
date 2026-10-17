@@ -642,7 +642,7 @@
       case 'desk': return c.desk ? S.val_yes : S.val_no;
       case 'pulloutCouch': return c.pulloutCouch ? S.val_yes : S.val_no;
       case 'screenedPorch': return c.screenedPorch ? S.val_yes : S.val_no;
-      case 'petAllowed': return c.petAllowed ? S.val_yes : S.val_no;
+      case 'petAllowed': return c.petAllowed ? (S.val_pet_yes || S.val_yes) : S.val_no;
       case 'floorLevel': return DCCS.score.isGround(c) ? S.floor_ground : S.floor_second;
       case 'layoutType': return c.layoutType === 'Studio' ? S.opt_studio : S.opt_onebed;
       default: return c[field];
@@ -1291,14 +1291,19 @@
       }
     });
 
-    // Close either dropdown when pressing outside it (mousedown fires before any
+    // Close either dropdown when pressing outside it (a press fires before any
     // click-driven re-render, so the live target can be inspected safely).
+    // POINTERDOWN, not mousedown (0.53.3): iOS Safari sends the compatibility
+    // mouse events only for elements it treats as clickable, so a tap on blank
+    // page left the menu open. Pointer events fire for every touch. mousedown
+    // remains only as the fallback for a browser with no PointerEvent.
     // Self-removing: initSelector runs on every Mini-Entry pop-up open, so a
     // permanent document listener per init would accumulate; once this widget's
     // root leaves the DOM (pop-up closed), the handler unhooks itself.
-    document.addEventListener('mousedown', function onDocDown(e) {
+    var downEvt = window.PointerEvent ? 'pointerdown' : 'mousedown';
+    document.addEventListener(downEvt, function onDocDown(e) {
       if (!document.documentElement.contains(root)) {
-        document.removeEventListener('mousedown', onDocDown);
+        document.removeEventListener(downEvt, onDocDown);
         return;
       }
       var open = root.querySelector('.dccs-modeselect.is-open');

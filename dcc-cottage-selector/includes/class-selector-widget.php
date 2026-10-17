@@ -522,19 +522,20 @@ class Selector_Widget extends Widget_Base
             $this->preset_control('str_' . $key, $args);
         }
 
-        // Optional links after the capacity / pet notes. DEFAULT EMPTY: no link
-        // renders until the owner sets a target (the fee page is undecided).
-        // Fee AMOUNTS never appear in this plugin — one source of truth elsewhere.
+        // Optional per-widget links after the capacity / pet notes. EMPTY INHERITS
+        // the settings page (design_snapshot() emits a URL only when one is set):
+        // since 0.53.3 that gives the pet note the Cottage 34 link, and the capacity
+        // note none.
         $this->preset_control('capacity_fee_url', [
             'label'       => __('Capacity note: fee-details link', 'dcc-cottage-selector'),
-            'description' => __('Optional. When set, the capacity note ends with a link to this URL. Leave empty to show no link.', 'dcc-cottage-selector'),
+            'description' => __('Optional. When set, the capacity note ends with a link to this URL. Leave empty to use the link on DCC → Cottage Selector.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::URL,
             'options'     => false,
         ]);
 
         $this->preset_control('pet_fee_url', [
             'label'       => __('Pet note: fee-details link', 'dcc-cottage-selector'),
-            'description' => __('Optional. When set, the pet-policy note ends with a link to this URL. Leave empty to show no link.', 'dcc-cottage-selector'),
+            'description' => __('Optional. When set, the pet-policy note ends with a link to this URL. Leave empty to use the link on DCC → Cottage Selector.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::URL,
             'options'     => false,
         ]);
@@ -1701,7 +1702,8 @@ class Selector_Widget extends Widget_Base
      * Publish a Selector's design into the shared registry option so Mini Entry
      * widgets can mirror it. Stores the portable snapshot plus the source's Elementor
      * scope classes (so the mirrored pop-up can reuse the source's generated CSS).
-     * Deduped by hash so ordinary front-end views don't thrash the DB.
+     * Deduped by hash, so re-saving an unchanged design writes nothing. Called ONLY
+     * from the Elementor save hook (0.53.3) — never from render().
      *
      * @param array<string,mixed> $settings
      */
@@ -1761,57 +1763,16 @@ class Selector_Widget extends Widget_Base
         update_option(self::DESIGN_OPTION, $sources, false);
     }
 
-    /**
-     * True while rendering for the Elementor editor: the edit-mode AJAX re-render
-     * (fires on every control change) or the preview iframe. Guarded per method so a
-     * future Elementor that drops one accessor degrades to the other, not to a fatal.
-     */
-    private static function in_editor(): bool
-    {
-        if (!class_exists('\Elementor\Plugin')) {
-            return false;
-        }
-        $el = \Elementor\Plugin::$instance;
-        if (isset($el->editor) && method_exists($el->editor, 'is_edit_mode') && $el->editor->is_edit_mode()) {
-            return true;
-        }
-        return isset($el->preview) && method_exists($el->preview, 'is_preview_mode') && $el->preview->is_preview_mode();
-    }
-
     protected function render(): void
     {
         $settings = $this->get_settings_for_display();
 
-        // Publish this design for Mini Entries to mirror (the Elementor save hook is
-        // the authoritative refresh; this keeps the registry fresh on front-end views).
-        // The post id must be the document that CONTAINS the widget — get_the_ID()
-        // alone would return the host page when the Selector renders via a global
-        // template/shortcode, and a wrong id poisons the mirror's CSS scope.
-        //
-        // NEVER publish from the editor/preview: none of this widget's controls sets
-        // render_type, so the preview re-renders server-side on every keystroke, and
-        // publishing here would (a) mint junk registry entries for each partial
-        // design name as it is typed ("M", "Ma", "Mai"…) and (b) overwrite the live
-        // published design with half-typed settings while Mini Entries mirror it.
-        // In the editor the after_save hook is the only publisher.
-        if (($settings['share_design'] ?? '') === 'yes' && !self::in_editor()) {
-            $post_id = 0;
-            if (class_exists('\Elementor\Plugin')) {
-                $doc = \Elementor\Plugin::$instance->documents->get_current();
-                if ($doc) {
-                    $post_id = (int) $doc->get_main_id();
-                }
-            }
-            if ($post_id <= 0 && is_singular()) {
-                $post_id = (int) get_the_ID();
-            }
-            self::publish_design(
-                (string) ($settings['design_name'] ?? ''),
-                $post_id,
-                (string) $this->get_id(),
-                $settings
-            );
-        }
+        // NEVER publish from here (0.53.3). render() runs on visitor requests, and a
+        // visitor request must not write an option. The Elementor save hook
+        // (Plugin::republish_designs) is the only publisher, and it publishes the
+        // same display settings render() reads — see Plugin::display_settings().
+        // Consequence: a release that changes the SHAPE of design_snapshot() reaches
+        // mirroring pop-ups only after the source page is Updated in Elementor.
 
         $cottages = Data::all();
 

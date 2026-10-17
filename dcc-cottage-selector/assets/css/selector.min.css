@@ -374,6 +374,10 @@
   border: 1px solid var(--dccs-accent); background: var(--dccs-accent); color: var(--dccs-accent-text);
   font-size: 18px; line-height: 1; letter-spacing: normal;
 }
+.dccs-root.dccs-root .dccs-matrix-nav button { position: relative; }
+.dccs-root.dccs-root .dccs-matrix-nav button::before {
+  content: ''; position: absolute; top: -6px; right: -6px; bottom: -6px; left: -6px;
+}
 .dccs-root.dccs-root .dccs-matrix-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
 .dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); white-space: nowrap; }
 .dccs-root.dccs-root .dccs-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

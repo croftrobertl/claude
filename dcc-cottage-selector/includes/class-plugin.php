@@ -209,6 +209,41 @@ final class Plugin
     }
 
     /**
+     * A saved widget's settings as render() sees them: stored values over control
+     * and preset defaults.
+     *
+     * @param array<string,mixed> $el  One element from the saved payload.
+     * @param array<string,mixed> $raw Its stored settings (the fallback).
+     * @return array<string,mixed>
+     */
+    private static function display_settings(array $el, array $raw): array
+    {
+        // The saved payload holds only the values someone SET; control and preset
+        // defaults are absent (measured on live 1005: no icons, no colours, no mode
+        // list). Publishing that would strip the mirrored pop-ups' icons and colours
+        // until a visitor's render republished — which render() no longer does
+        // (0.53.3). So ask Elementor for the widget exactly as it renders it:
+        // create_element_instance() is the call Elementor itself uses to build a
+        // widget from saved data, and get_settings_for_display() merges the control
+        // defaults the same way render() sees them. Any failure falls back to the
+        // raw settings — the pre-0.53.3 behaviour — never to a fatal in the save.
+        try {
+            $el['elType'] = $el['elType'] ?? 'widget';
+            $mgr = class_exists('\Elementor\Plugin') ? (\Elementor\Plugin::$instance->elements_manager ?? null) : null;
+            $inst = ($mgr && method_exists($mgr, 'create_element_instance')) ? $mgr->create_element_instance($el) : null;
+            if ($inst && method_exists($inst, 'get_settings_for_display')) {
+                $full = $inst->get_settings_for_display();
+                if (is_array($full) && $full !== []) {
+                    return $full;
+                }
+            }
+        } catch (\Throwable $e) {
+            // fall through
+        }
+        return $raw;
+    }
+
+    /**
      * Recurse an Elementor element tree, publishing each share-enabled Cottage
      * Selector and recording the names published into $published.
      *
@@ -226,6 +261,7 @@ final class Plugin
             if ($type === 'dccs_selector') {
                 $settings = is_array($el['settings'] ?? null) ? $el['settings'] : [];
                 if (($settings['share_design'] ?? '') === 'yes') {
+                    $settings = self::display_settings($el, $settings);
                     $name = trim((string) ($settings['design_name'] ?? ''));
                     Selector_Widget::publish_design(
                         $name,

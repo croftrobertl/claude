@@ -38,6 +38,8 @@ namespace {
     function get_option($k, $d = false) { return $GLOBALS['__opts'][$k] ?? $d; }
     function update_option($k, $v, $a = null) { $GLOBALS['__calls'][] = 'update'; $GLOBALS['__opts'][$k] = $v; return true; }
     function admin_url($p = '') { return $GLOBALS['__site'] . $GLOBALS['__admin_path'] . ltrim($p, '/'); }
+    // Core's home_url(): the site root with the path appended (0.53.3: the pet link default).
+    function home_url($p = '') { return $GLOBALS['__site'] . '/' . ltrim($p, '/'); }
     function wp_get_referer() { return $GLOBALS['__ref']; }
     function wp_safe_redirect($to, $status = 302) { throw new WPRedirect($to); }
     function wp_parse_url($u, $c = -1) { return parse_url($u, $c); }

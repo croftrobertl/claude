@@ -750,6 +750,9 @@ function configWith(overrides) {
 // ---- 26b. The per-widget document listener self-removes once the widget is gone ----
 (function () {
   const w = freshDom();
+  const removed = [];
+  const rel = w.document.removeEventListener.bind(w.document);
+  w.document.removeEventListener = (t, f, o) => { removed.push(t); return rel(t, f, o); };
   const cfg = JSON.parse(CONFIG);
   const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
   const node = w.document.createElement('div');
@@ -769,13 +772,13 @@ function configWith(overrides) {
   // detached roots (the handlers detect the disconnected root and unhook).
   let threw = false;
   try {
-    w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
-    w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+    w.document.body.dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    w.document.body.dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
   } catch (e) { threw = true; }
-  ok('page mousedown after pop-up close is inert (no stale-handler errors)', !threw);
-  const src = fs.readFileSync(path.join(JS, 'selector.js'), 'utf8');
-  ok('document mousedown handler self-removes when its root is detached',
-    /onDocDown[\s\S]{0,200}documentElement\.contains\(root\)[\s\S]{0,120}removeEventListener\('mousedown', onDocDown\)/.test(src));
+  ok('page press after pop-up close is inert (no stale-handler errors)', !threw);
+  // Behavioural, not a source grep: removeEventListener was spied before boot.
+  ok('document press handler self-removes when its root is detached (3 opens -> 3 removals)',
+    removed.filter(t => t === 'pointerdown').length === 3);
 })();
 
 // ---- 27. Text-code export/import helpers (editor-io.js pure functions) ----
@@ -1279,13 +1282,24 @@ function configWith(overrides) {
   ok('other steps carry no note', !root.querySelector('.dccs-q-note'));
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // desk/pullout/layout -> pet (step 5 since 0.53.0)
   const pnote = root.querySelector('.dccs-q-note');
-  ok('pet step names Cottage 34 and that approval is required',
-    !!pnote && /Cottage 34\b/.test(pnote.textContent) && /pre-approved/.test(pnote.textContent));
-  ok('the pet note renders the Config string exactly', !!pnote && pnote.textContent === cfgNotes.pet_note);
+  // The note's own text, without the fee link that follows it (0.53.3: the link
+  // is on by default, pointing at Cottage 34's page).
+  const noteOnly = (el) => { const c = el.cloneNode(true); c.querySelectorAll('a').forEach(a => a.remove()); return c.textContent.trim(); };
+  ok('0.53.3: the pet note states the dog limits, the cottage and pre-approval',
+    !!pnote && /One dog up to 20 lbs/.test(pnote.textContent) && /Cottage 34 only/.test(pnote.textContent)
+    && /pre-approval required/.test(pnote.textContent));
+  ok('the pet note renders the Config string exactly', !!pnote && noteOnly(pnote) === cfgNotes.pet_note);
   ok('the pet note is the current wording, not a superseded one',
-    !/only, by pre-approval/.test(cfgNotes.pet_note) && !/welcome in Cottage 34 only/.test(cfgNotes.pet_note));
-  ok('pet note carries no fee amount either', pnote.textContent.indexOf('$') === -1);
-  ok('pet note has no link while unset', !pnote.querySelector('a'));
+    !/only, by pre-approval/.test(cfgNotes.pet_note) && !/welcome in Cottage 34 only/.test(cfgNotes.pet_note)
+    && !/Pets are only allowed in Cottage 34/.test(cfgNotes.pet_note));
+  ok('0.53.3: the pet note\'s ONE amount is the owner-supplied "$50 per night", and nothing else',
+    (pnote.textContent.match(/\$/g) || []).length === 1 && /\$50 per night/.test(pnote.textContent));
+  ok('0.53.3: with no stored URL the pet note links to the pet-friendly cottage\'s own page', (() => {
+    const a = pnote.querySelector('a.dccs-q-note-link');
+    const pets = cfgNotes && JSON.parse(CONFIG).cottages.filter(c => c.petAllowed);
+    return !!a && pets.length === 1 && a.getAttribute('href').endsWith(pets[0].pageUrl) && a.textContent === cfgNotes.fee_link;
+  })());
+  ok('...and the capacity note still has none (control: the link is per note)', !note.querySelector('a'));
 
   // With owner-set URLs, both notes end with a safe link.
   const cfg = JSON.parse(CONFIG);
@@ -2732,7 +2746,8 @@ defer(async function () {
   ok('the pet step renders a note too', !!pet && pet.textContent.length > 10);
   ok('a one-sentence note is left as a single block',
     !!pet && pet.querySelectorAll('.dccs-q-note-s').length === 0);
-  ok('and it still reads as its Config string', !!pet && pet.textContent === cfg.strings.pet_note);
+  ok('and it still reads as its Config string (plus the fee link after it)', !!pet && (() => {
+    const c = pet.cloneNode(true); c.querySelectorAll('a').forEach(a => a.remove()); return c.textContent.trim() === cfg.strings.pet_note; })());
 
   // --- three sentences fall through to one block, rather than splitting oddly ---
   const three = JSON.parse(CONFIG);
@@ -3147,8 +3162,23 @@ defer(async function () {
     !r.querySelector('.dccs-modeselect.is-open') && w.document.activeElement === r.querySelector('.dccs-modeselect-trigger') &&
     r.querySelector('.dccs-modeselect-trigger').getAttribute('aria-expanded') === 'false');
   open();
-  w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
-  ok('95: a tap outside closes it', !r.querySelector('.dccs-modeselect.is-open'));
+  // A press INSIDE the menu must not close it (control for the outside check).
+  r.querySelector('.dccs-modeselect-trigger').dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+  ok('95: a press inside the menu leaves it open (control)', !!r.querySelector('.dccs-modeselect.is-open'));
+  // 0.53.3: iOS sends NO mousedown for a tap on blank page, only touch/pointer
+  // events. So the outside tap here is a touch pointerdown and nothing else.
+  w.document.body.dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+  ok('95: a touch tap outside (pointerdown alone, no mousedown) closes it', !r.querySelector('.dccs-modeselect.is-open')
+    && r.querySelector('.dccs-modeselect-trigger').getAttribute('aria-expanded') === 'false');
+  {
+    // A browser with no PointerEvent falls back to mousedown.
+    const wf = freshDom(); delete wf.PointerEvent;
+    const rf = mountSelector(wf, configWith({ enabledModes: ['quick', 'compare'] })); enter(rf, 'quick');
+    rf.querySelector('.dccs-modeselect-trigger').click();
+    const was = !!rf.querySelector('.dccs-modeselect.is-open');
+    wf.document.body.dispatchEvent(new wf.MouseEvent('mousedown', { bubbles: true }));
+    ok('95: without PointerEvent, a mousedown outside still closes it', was && !rf.querySelector('.dccs-modeselect.is-open'));
+  }
   open(); r.querySelector('.dccs-modetab').click();
   ok('95: choosing the option closes it and switches mode', !r.querySelector('.dccs-modeselect.is-open') && !!r.querySelector('.dccs-cmp-list'));
 
@@ -3508,6 +3538,45 @@ defer(async function () {
     const m = r.textContent.match(/Ranked #\d+ for [Yy]ou/); if (m) { rankText = m[0]; } return !!m;
   });
   ok('102: a highlighted extra card reads "Ranked #N for You"', !!rankText && /^Ranked #\d+ for You$/.test(rankText));
+})();
+
+// ---- 103. 0.53.3: pet limits in the Compare table; tap areas from the stylesheet ----
+(function () {
+  // Packaged config, nothing stored: the Pets row names the limit for the one
+  // pet-friendly cottage and "No" for the rest.
+  const S = JSON.parse(CONFIG).strings;
+  const w = freshDom('https://example.com/?mode=compare&compare=22,34');
+  const root = mountSelector(w); root.querySelector('.dccs-open-compare').click();
+  const m = w.document.querySelector('.dccs-modal .dccs-matrix');
+  const heads = m ? [...m.querySelectorAll('thead th[scope="col"]')].map(th => th.getAttribute('aria-label')) : [];
+  const row = m && [...m.querySelectorAll('tbody tr')].find(tr => tr.querySelector('th').textContent === S.diff_petAllowed);
+  const cells = row ? [...row.querySelectorAll('td')].map(td => td.textContent) : [];
+  const i34 = heads.findIndex(h => /\b34\b/.test(h)), i22 = heads.findIndex(h => /\b22\b/.test(h));
+  ok('103: the Compare table has a Pets row and both columns (control)', !!row && i34 !== -1 && i22 !== -1);
+  ok('103: Cottage 34\'s Pets cell reads "1 Dog ≤20 lb"', cells[i34] === '1 Dog ≤20 lb' && cells[i34] === S.val_pet_yes);
+  ok('103: Cottage 22\'s reads No', cells[i22] === S.val_no);
+  ok('103: the row is still marked as a difference', !!row && row.querySelectorAll('td.is-diff').length === 2);
+
+  // Tap areas, read from the parsed stylesheet (jsdom has no layout; the Chromium
+  // harness hit-tests the same numbers).
+  const raw = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [];
+  raw.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+  const px = (sel, prop) => { let v = null; rules.filter(r => r.sel.indexOf(sel) !== -1).forEach(r => {
+    const mm = r.body.match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*(-?[\\d.]+)(?:px)?\\s*(?:;|$)')); if (mm) { v = Number(mm[1]); } }); return v; };
+  const R = '.dccs-root.dccs-root ';
+  const aW = px(R + '.dccs-matrix-nav button', 'width'), aH = px(R + '.dccs-matrix-nav button', 'height');
+  const ab = R + '.dccs-matrix-nav button::before';
+  const ext = ['top', 'right', 'bottom', 'left'].map(k => px(ab, k));
+  ok('103: the ‹ › circles still LOOK 32px (unchanged)', aW === 32 && aH === 32);
+  ok('103: their tap area is at least 44 x 44', ext.every(v => v !== null) && aW - ext[1] - ext[3] >= 44 && aH - ext[0] - ext[2] >= 44);
+  const navGap = px(R + '.dccs-matrix-nav', 'gap');
+  ok('103: the sideways extension stays inside the nav gap', navGap !== null && -ext[1] < navGap && -ext[3] < navGap);
+  const db = R + 'button.dccs-step-dot::before';
+  const dotH = Number((rules.find(r => r.sel.indexOf(R + '.dccs-step-dot') !== -1 && /--dccs-dot-h/.test(r.body)).body.match(/--dccs-dot-h,\s*([\d.]+)px/) || [])[1]);
+  ok('103: an answered step dot taps at 44px+ even at the 6px fallback height (10px on live)',
+    dotH === 6 && dotH - px(db, 'top') - px(db, 'bottom') >= 44);
+  ok('103: ...and does not reach sideways into its neighbour', px(db, 'left') === 0 && px(db, 'right') === 0);
 })();
 
 (async function runDeferred() {

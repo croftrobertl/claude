@@ -665,6 +665,14 @@
      off-centre in a fixed-width circle. */
   font-size: 18px; line-height: 1; letter-spacing: normal;
 }
+/* The circles stay 32px for looks; an invisible pseudo-element widens each one's
+   TAP area to 44 x 44 (6px each side), the same technique as the step dots. The
+   nav's 8px gap keeps the overlap clear of the other arrow, and it only reaches
+   into the static "1-2 of 3" label and the row's 10px bottom margin. */
+.dccs-root.dccs-root .dccs-matrix-nav button { position: relative; }
+.dccs-root.dccs-root .dccs-matrix-nav button::before {
+  content: ''; position: absolute; top: -6px; right: -6px; bottom: -6px; left: -6px;
+}
 .dccs-root.dccs-root .dccs-matrix-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
 .dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); white-space: nowrap; }
 .dccs-root.dccs-root .dccs-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -54,7 +54,14 @@ final class Settings
 
             // --- Links under the question notes (empty = no link rendered) ---
             'capacity_fee_url'  => '',
-            'pet_fee_url'       => '',
+            // 0.53.3 (Rob): the pet note links to Cottage 34's page, which states the
+            // dog limits and fee. The one default that is NOT live's stored value —
+            // live stores '' here, and that stored '' still wins (see the checklist).
+            // A PHP test pins it to the pageUrl of the pet-friendly cottage in
+            // data/cottages.json, so the two cannot drift apart. ABSOLUTE on purpose:
+            // the settings page renders it into an <input type="url">, and a browser
+            // refuses to submit that form while it holds a site-relative path.
+            'pet_fee_url'       => function_exists('home_url') ? home_url('/accommodation/cottage-34/') : '/accommodation/cottage-34/',
 
             // --- Availability: the plugin's ONLY runtime request, off by default ---
             'avail_enable'       => false,

@@ -213,9 +213,13 @@ namespace {
     ok('capacity fee URL is inherited (omitted) when unset, and effectively empty',
         !array_key_exists('capacityFeeUrl', Selector_Widget::design_snapshot([]))
         && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['capacityFeeUrl'] === '');
-    ok('pet fee URL is inherited (omitted) when unset, and effectively empty',
+    // 0.53.3: the pet URL's SITE default is the pet-friendly cottage's own page, so
+    // an untouched widget inherits that link. Derived from the data, not typed here.
+    $petPages = array_values(array_map(fn($c) => $c['pageUrl'], array_filter(\DCCS\Data::all(), fn($c) => !empty($c['petAllowed']))));
+    ok('0.53.3: exactly one cottage allows pets (control for the next check)', count($petPages) === 1 && $petPages[0] === '/accommodation/cottage-34/');
+    ok('0.53.3: pet fee URL is inherited (omitted) when unset, and lands on that cottage\'s page',
         !array_key_exists('petFeeUrl', Selector_Widget::design_snapshot([]))
-        && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['petFeeUrl'] === '');
+        && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['petFeeUrl'] === $petPages[0]);
     ok('a set capacity fee URL flows through the snapshot',
         Selector_Widget::design_snapshot(['capacity_fee_url' => ['url' => '/extra-guest-fees/']])['capacityFeeUrl'] === '/extra-guest-fees/');
     ok('a set pet fee URL flows through the snapshot',
@@ -239,7 +243,9 @@ namespace {
     // straight to guests, so a change here should be a decision, not a tidy-up.
     $CAPACITY = 'Guests 1-2 are included in the nightly rate and will have a queen bed. '
         . 'Guests 3-4 will have a pull-out couch and be charged a nightly fee.';
-    $PET = 'Pets are only allowed in Cottage 34 and must be pre-approved.';
+    // 0.53.3: the Website Director's wording from the live Cottage 34 policy, for
+    // Rob to approve word for word.
+    $PET = 'One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required.';
 
     ok('capacity note falls back to the Config default (live wording)',
         ($fallbackCfg['strings']['capacity_note'] ?? null) === $CAPACITY);
@@ -267,20 +273,25 @@ namespace {
         (Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(
             ['str_pet_note' => 'OVERRIDDEN']))['strings']['pet_note'] ?? null) === 'OVERRIDDEN');
 
-    // Neither note may name a fee amount — amounts have one source of truth
-    // elsewhere on the site, and the pet fee is tiered ($25/$20/$10 per night by
-    // stay length), so any single figure would be wrong for two of three tiers.
+    // Fee amounts. Until 0.53.2 NEITHER note named one (the pet fee was recorded
+    // here as tiered, $25/$20/$10 a night by stay length). 0.53.3 puts ONE figure in
+    // the pet note — "$50 per night", taken by the Website Director from the live
+    // Cottage 34 page, which contradicts that older record; flagged for Rob. So the
+    // capacity note still names none, and the pet note names exactly that one.
     // Read the LIVE strings, not the literals above: asserting against our own
     // copies would only test this file's typing and would pass however Config
     // changed. (It did exactly that until a mutation adding "$25" to the pet note
     // sailed through.)
-    $liveNotes = ($fallbackCfg['strings']['capacity_note'] ?? '')
-        . ' ' . ($fallbackCfg['strings']['pet_note'] ?? '');
+    $liveCap = $fallbackCfg['strings']['capacity_note'] ?? '';
+    $livePet = $fallbackCfg['strings']['pet_note'] ?? '';
     ok('the notes were actually read, so the checks below mean something',
-        strlen($liveNotes) > 40);
-    ok('neither note quotes a fee amount',
-        strpos($liveNotes, '$') === false
-        && preg_match('/\\b\\d+\\s*(dollars?|usd)\\b/i', $liveNotes) === 0);
+        strlen($liveCap) > 40 && strlen($livePet) > 40);
+    ok('the capacity note quotes no fee amount',
+        strpos($liveCap, '$') === false
+        && preg_match('/\\b\\d+\\s*(dollars?|usd)\\b/i', $liveCap) === 0);
+    ok('0.53.3: the pet note quotes exactly one amount, "$50 per night"',
+        substr_count($livePet, '$') === 1 && strpos($livePet, '$50 per night') !== false
+        && preg_match('/\\b\\d+\\s*(dollars?|usd)\\b/i', $livePet) === 0);
     // And the superseded wording is gone from the packaged strings entirely.
     $allStrings = implode(' ', array_filter(\DCCS\Config::strings(), 'is_string'));
     ok('the strings table is non-empty, so the search below means something',
@@ -360,7 +371,8 @@ namespace {
         'results_count' => 8, 'badges_max' => 3, 'reasons_max' => 3,
         'start_mode' => 'quick', 'enabled_modes' => ['quick', 'compare'],
         'show_heading' => true, 'show_review' => false, 'show_compare_tip' => false,
-        'capacity_fee_url' => '', 'pet_fee_url' => '',
+        // 0.53.3: the ONE default that is not live's stored value (live stores '').
+        'capacity_fee_url' => '', 'pet_fee_url' => '/accommodation/cottage-34/',
         'avail_enable' => false, 'avail_max_nights' => 95,
         'avail_action' => 'mphbac_query', 'avail_calendar_url' => '',
     ];
@@ -688,8 +700,8 @@ namespace {
         ($pre51['str_results_heading'] ?? null) === 'Your Top Matches');
     ok('the preset seeds new widgets with the Title Case review heading',
         ($pre51['str_review_heading'] ?? null) === 'Review Your Answers');
-    ok('pet note is the owner\'s new wording',
-        $str51['pet_note'] === 'Pets are only allowed in Cottage 34 and must be pre-approved.');
+    ok('pet note is the 0.53.3 wording (dog limits)',
+        $str51['pet_note'] === 'One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required.');
     ok('and the new-tab notice exists as a translatable string', ($str51['opens_new_tab'] ?? '') !== '');
 
     // ---- Never override an Elementor `final` method ----------------------------
@@ -1040,8 +1052,61 @@ namespace {
     $homeW->out();
     ok('0.53.2: the homepage widget (share_design "") does not publish "Primary" again',
         !isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']) && $GLOBALS['__writes'] === []);
-    $homeW->s = ['share_design' => 'yes'] + $home; $homeW->out();
-    ok('0.53.2: ...while a sharing widget does publish (positive control)', isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']));
+    // 0.53.3 (item 5): a front-end render NEVER writes, even for a SHARING widget
+    // facing an empty registry — the case that used to publish on the spot.
+    $live1005 = []; foreach ($LIVE['widgets'] as $wd) { if ($wd['widget_id'] === '5be94a3') { $live1005 = $wd['stored_settings']; } }
+    $homeW->s = $live1005; $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = []; $GLOBALS['__writes'] = [];
+    $out1005 = $homeW->out();
+    ok('0.53.3: rendering the live "Primary" Selector (share on, registry empty) calls update_option zero times',
+        strpos($out1005, 'dccs-root') !== false && ($live1005['share_design'] ?? '') === 'yes' && $GLOBALS['__writes'] === []);
+    // Positive control: the write detector DOES see the save hook's publish.
+    \DCCS\Plugin::instance()->republish_designs(new class { public function get_main_id() { return 1005; } },
+        ['elements' => [['elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => '5be94a3', 'settings' => $live1005]]]);
+    ok('0.53.3: ...while the Elementor save hook does publish "Primary" (control: the detector sees writes)',
+        $GLOBALS['__writes'] === [Selector_Widget::DESIGN_OPTION] && isset($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']));
+    $rawEntry = $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']['overrides'];
+
+    // The hook must publish what render() would have: stored values OVER control
+    // defaults. Raw stored settings lack the defaults (no icons, no colours, no mode
+    // list), so publishing them would strip the mirrored pop-ups. Elementor builds
+    // the instance; here a stub does it the way Elementor does (defaults, then
+    // stored values on top).
+    if (!class_exists('\\Elementor\\Plugin')) { eval('namespace Elementor; class Plugin { public static $instance; }'); }
+    $ctlDefaults = (function () {
+        $w = (new \ReflectionClass(Selector_Widget::class))->newInstanceWithoutConstructor();
+        $rc = new \ReflectionMethod($w, 'register_controls'); $rc->setAccessible(true); $rc->invoke($w);
+        $d = []; foreach ($w->__ctrls as $id => $a) { if (array_key_exists('default', $a)) { $d[$id] = $a['default']; } } return $d;
+    })();
+    $built = [];
+    \Elementor\Plugin::$instance = (object) ['elements_manager' => new class($ctlDefaults, $built) {
+        private $d; public $built;
+        public function __construct($d, &$built) { $this->d = $d; $this->built = &$built; }
+        public function create_element_instance(array $el) {
+            $this->built[] = $el['id'] ?? '';
+            $s = array_merge($this->d, $el['settings'] ?? []);
+            return new class($s) { private $s; public function __construct($s) { $this->s = $s; } public function get_settings_for_display() { return $this->s; } };
+        }
+    }];
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    \DCCS\Plugin::instance()->republish_designs(new class { public function get_main_id() { return 1005; } },
+        ['elements' => [['elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => '5be94a3', 'settings' => $live1005]]]);
+    $fullEntry = $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']['overrides'] ?? [];
+    $renderSnap = Selector_Widget::design_snapshot(array_merge($ctlDefaults, $live1005));
+    ok('0.53.3: the raw and full snapshots DIFFER (control: the next check can fail)', json_encode($rawEntry) !== json_encode($renderSnap));
+    ok('0.53.3: the save hook publishes exactly the snapshot render() sees (defaults included)',
+        $built === ['5be94a3'] && json_encode($fullEntry) === json_encode($renderSnap)
+        && !empty($fullEntry['icons']['mode_quick']) && ($fullEntry['enabledModes'] ?? null) === ['quick', 'compare']);
+    // A manager that throws must not take the save down: fall back to raw, as before.
+    \Elementor\Plugin::$instance = (object) ['elements_manager' => new class { public function create_element_instance(array $el) { throw new \RuntimeException('boom'); } }];
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    $thrown = '';
+    try {
+        \DCCS\Plugin::instance()->republish_designs(new class { public function get_main_id() { return 1005; } },
+            ['elements' => [['elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => '5be94a3', 'settings' => $live1005]]]);
+    } catch (\Throwable $e) { $thrown = $e->getMessage(); }
+    ok('0.53.3: if Elementor cannot build the widget, the save still publishes (raw, the old behaviour) and never throws',
+        $thrown === '' && json_encode($GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']['overrides'] ?? null) === json_encode($rawEntry));
+    \Elementor\Plugin::$instance = null;
     $GLOBALS['__posts'] = [];
 
     // D: packaged defaults = live values, for every control live stores.
@@ -1077,6 +1142,7 @@ namespace {
             public function get_results($sql) { $r = []; foreach ($this->l['widgets'] as $w) { $r[] = (object) ['post_id' => $w['post_id'], 'post_title' => $w['post_title'], 'post_type' => $w['post_type'],
                 'meta_value' => json_encode([['elType' => 'container', 'elements' => [['elType' => 'widget', 'widgetType' => $w['widget_type'], 'id' => $w['widget_id'], 'settings' => $w['stored_settings']]]]])]; } return $r; } };
         $GLOBALS['wpdb'] = $wpdb; $GLOBALS['__opts']['dccs_design_sources'] = $live['options']['dccs_design_sources'];
+        $GLOBALS['__opts']['dccs_settings'] = $live['options']['dccs_settings'];
         ob_start(); include __DIR__ . '/../tools/check-stored-keys.php'; return (string) ob_get_clean();
     };
     $GLOBALS['__posts'] = [1005, 620, 3043, 3196, 3254, 3265, 3293, 3301, 3305, 3312];
@@ -1092,11 +1158,34 @@ namespace {
     ok('0.53.2: the check script flags nothing as read on a mirroring Mini Entry (their copies are unread)',
         array_filter(array_intersect_key($flagged, array_flip(['8c85f6c', 'ca8b36f', '032b915', '8aa78cd', '192db90', '2ce41db', '38d1421', '34ebe3d']))) === []);
     ok('0.53.2: ...and lists their stale str_intro as unread', substr_count($report, 'str_intro is stored but NOT read') === 8);
+    // 0.53.3: neither V1 stores a pet note or a pet link (Website Director, item 1)...
+    foreach ($LIVE['widgets'] as $wd) {
+        if ($wd['widget_type'] === 'dccs_selector') {
+            ok("0.53.3: V1 {$wd['widget_id']} stores no str_pet_note and no pet_fee_url",
+                !array_key_exists('str_pet_note', $wd['stored_settings']) && !array_key_exists('pet_fee_url', $wd['stored_settings']));
+        }
+    }
+    // ...but the SITE row stores pet_fee_url '' — which means "no link" and masks the
+    // new default. The script must say so.
+    ok('0.53.3: live\'s site row stores pet_fee_url as \'\' (the premise)', ($LIVE['options']['dccs_settings']['pet_fee_url'] ?? null) === '');
+    ok('0.53.3: the check script flags the site row\'s stored pet link', preg_match('/== dccs_settings[^=]*MASKS \(read\)\s+pet_fee_url = ""/', $report) === 1);
+    ok('0.53.3: ...and names the Primary registry\'s stale copies (fee_link among them)',
+        preg_match('/"Primary" -> post 1005[\s\S]*stale copy\s+fee_link = "Fee details"/', $report) === 1);
+    ok('0.53.3: the total counts 20 widget keys + the site row', strpos($report, 'TOTAL keys that mask 0.53.3: 21') !== false);
+    // A widget link that differs from the default is flagged; control for the clean run below.
+    $withUrl = $LIVE; foreach ($withUrl['widgets'] as &$cw) { if ($cw['widget_id'] === '5be94a3') { $cw['stored_settings']['pet_fee_url'] = ['url' => '/pet-policy/']; } } unset($cw);
+    ok('0.53.3: a widget\'s own pet link is flagged as masking', (function ($r) { foreach (preg_split('/\n(?===)/', $r) as $c) { if (strpos($c, 'dccs_selector 5be94a3') !== false) { return preg_match('/MASKS \(read\)\s+pet_fee_url = "\/pet-policy\/"/', $c) === 1; } } return false; })($runCheck($withUrl)));
     $cleared = $LIVE; foreach ($cleared['widgets'] as &$cw) { foreach ($partB as $k) { unset($cw['stored_settings'][$k]); } } unset($cw);
-    ok('0.53.2: after clearing the list, the check script reports nothing to clear', strpos($runCheck($cleared), 'TOTAL keys that mask 0.53.2: 0') !== false);
+    $cleared['options']['dccs_settings']['pet_fee_url'] = '/accommodation/cottage-34/';
+    ok('0.53.3: after clearing the list and setting the site link, the check script reports nothing to clear', strpos($runCheck($cleared), 'TOTAL keys that mask 0.53.3: 0') !== false);
     $GLOBALS['__posts'] = [];
     $d531 = \DCCS\Settings::defaults();
     foreach ($LIVE['options']['dccs_settings'] as $k => $v) {
+        // 0.53.3 moves pet_fee_url off live's '' on purpose (Website Director, item 1).
+        if ($k === 'pet_fee_url') {
+            ok("0.53.3: Settings default 'pet_fee_url' is the Cottage 34 page, NOT live's stored ''", $v === '' && $d531[$k] === '/accommodation/cottage-34/');
+            continue;
+        }
         ok("0.53.1: Settings default '$k' equals the live row", ($d531[$k] ?? '(missing)') === $v);
     }
     // Packaged strings = live: every str_ value the preset hands a NEW widget is

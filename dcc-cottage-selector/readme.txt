@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.2
+Stable tag: 0.53.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,13 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.53.3 =
+* Pet note: "One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required." The Compare table's Pets row now reads "1 Dog ≤20 lb" for the pet-friendly cottage instead of "Yes".
+* The pet note links to the Cottage 34 page by default (DCC > Cottage Selector > Pet note link). A site that already saved that field empty keeps no link until the URL is entered there.
+* Compare table ‹ › arrows: 44 x 44 tap area, same 32px look.
+* The mode menu closes when you tap outside it on iPhone (pointer events instead of mousedown).
+* A visitor's page view never writes to the database: designs are published only when the page is saved in Elementor, and the save now publishes the same settings the page renders (control defaults included).
 
 = 0.53.2 =
 * Cottage pages: the line above the Cottage Wizard button now has its own text, "Use

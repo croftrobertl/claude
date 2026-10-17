@@ -248,8 +248,9 @@ final class Settings_Page
         echo '<h2>' . esc_html__('Fee links', 'dcc-cottage-selector') . '</h2>';
         echo '<table class="form-table" role="presentation"><tbody>';
         self::url_row('capacity_fee_url', __('Capacity note link', 'dcc-cottage-selector'), $s,
-            __('Optional. Leave empty and the note renders as plain text with no link. Fee AMOUNTS never appear in this plugin.', 'dcc-cottage-selector'));
-        self::url_row('pet_fee_url', __('Pet note link', 'dcc-cottage-selector'), $s, '');
+            __('Optional. Leave empty and the note renders as plain text with no link.', 'dcc-cottage-selector'));
+        self::url_row('pet_fee_url', __('Pet note link', 'dcc-cottage-selector'), $s,
+            __('Defaults to the Cottage 34 page. Leave empty and the note renders as plain text with no link.', 'dcc-cottage-selector'));
         echo '</tbody></table>';
 
         echo '<h2>' . esc_html__('Availability', 'dcc-cottage-selector') . '</h2>';
