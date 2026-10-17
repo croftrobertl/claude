@@ -239,6 +239,7 @@ final class Data_Provider
             $span_from = new DateTimeImmutable($first . '-01', $tz);
             $span_to   = (new DateTimeImmutable($last . '-01', $tz))->modify('last day of this month');
             try {
+                self::$rules_failed = false;
                 $computed = self::query_availability_checked($type_set, $span_from, $span_to);
             } catch (Db_Read_Failed $e) {
                 // A DB read failed mid-compute. Nothing is cached, so the
@@ -258,7 +259,9 @@ final class Data_Provider
                         }
                     }
                 }
-                Cache::put($key, $month);
+                if (!self::$rules_failed) {
+                    Cache::put($key, $month);
+                }
                 $have[$ym] = $month;
             }
             $age = 0;
@@ -276,6 +279,112 @@ final class Data_Provider
             }
         }
         return $result;
+    }
+
+    /**
+     * MOTOPRESS'S BOOKING RULES for each requested cottage and day (0.47.4),
+     * as Booking_Rules::read() answers them — or null when MotoPress could
+     * not be read, and the calendar then works exactly as 0.47.3 did.
+     *
+     * Stored the way availability is: one entry per calendar month for every
+     * listed cottage, salted with today's date (the advance-booking windows
+     * count from today) and the RULES generation — bumped when a rule, a
+     * season, a block or a room is saved (Plugin::boot()), and not by
+     * bookings, so an iCal import does not make every visitor wait for
+     * MotoPress to work the rules out again. TTL 0 reads straight.
+     *
+     * @param int[] $room_type_ids
+     * @return array<int, array{in:string, out:string, min:int[]|null, max:int[]}>|null
+     */
+    public static function get_rules(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to): ?array
+    {
+        $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
+        sort($room_type_ids);
+        if (empty($room_type_ids) || $from > $to) {
+            return [];
+        }
+        if (Cache::ttl() <= 0) {
+            try {
+                return Booking_Rules::read($room_type_ids, $from, $to);
+            } catch (\Throwable $e) {
+                Booking_Rules::failed($e);
+                return null;
+            }
+        }
+        $type_set = array_map(static fn($t) => (int) $t['id'], self::list_room_types());
+        $type_set = array_values(array_unique(array_merge($type_set, $room_type_ids)));
+        sort($type_set);
+        $today_key = self::today()->format('Y-m-d');
+
+        $have = [];
+        $missing = [];
+        for ($m = $from->modify('first day of this month'); $m <= $to; $m = $m->modify('first day of next month')) {
+            $ym  = $m->format('Y-m');
+            $key = Cache::rules_key(['rules_m1', $type_set, $ym, $today_key]);
+            $got = Cache::peek($key);
+            if (is_array($got)) {
+                $have[$ym] = $got;
+            } else {
+                $missing[$ym] = $key;
+            }
+        }
+        if ($missing) {
+            $tz = self::timezone();
+            $span_from = new DateTimeImmutable(array_key_first($missing) . '-01', $tz);
+            $span_to   = (new DateTimeImmutable(array_key_last($missing) . '-01', $tz))->modify('last day of this month');
+            try {
+                $read = Booking_Rules::read($type_set, $span_from, $span_to);
+            } catch (\Throwable $e) {
+                Booking_Rules::failed($e);
+                return null;
+            }
+            // Cut the span into its months: day i of the span is offset i.
+            foreach ($missing as $ym => $key) {
+                $start = (int) $span_from->diff(new DateTimeImmutable($ym . '-01', $tz))->format('%a');
+                $len   = (int) (new DateTimeImmutable($ym . '-01', $tz))->format('t');
+                $month = [];
+                foreach ($type_set as $type_id) {
+                    $r = $read[$type_id];
+                    $month[$type_id] = [
+                        'in'  => substr($r['in'], $start, $len),
+                        'out' => substr($r['out'], $start, $len),
+                        'min' => $r['min'] === null ? null : array_slice($r['min'], $start, $len),
+                        'max' => array_slice($r['max'], $start, $len),
+                    ];
+                }
+                Cache::put($key, $month);
+                $have[$ym] = $month;
+            }
+        }
+
+        // The request, cut from its months. A day a month lacks (it cannot,
+        // but a stored entry is data) reads as the strictest answer: no
+        // arrival, no departure — never a choice MotoPress would refuse.
+        $out = [];
+        foreach ($room_type_ids as $type_id) {
+            $r = ['in' => '', 'out' => '', 'min' => [], 'max' => []];
+            $no_min = false;
+            for ($d = $from; $d <= $to; $d = $d->modify('+1 day')) {
+                $month = $have[$d->format('Y-m')][$type_id] ?? null;
+                $i = (int) $d->format('j') - 1;
+                $in = is_array($month) ? substr((string) $month['in'], $i, 1) : '';
+                $o  = is_array($month) ? substr((string) $month['out'], $i, 1) : '';
+                $r['in']  .= $in !== '' ? $in : Booking_Rules::NOT_DAY;
+                $r['out'] .= $o !== '' ? $o : Booking_Rules::NOT_DAY;
+                if (!is_array($month) || $month['min'] === null) {
+                    $no_min = $no_min || (is_array($month) && $month['min'] === null);
+                    $r['min'][] = 1;
+                } else {
+                    $r['min'][] = (int) ($month['min'][$i] ?? 1);
+                }
+                $r['max'][] = is_array($month) ? (int) ($month['max'][$i] ?? 0) : 0;
+            }
+            if ($no_min) {
+                $r['min'] = null;
+            }
+            $out[$type_id] = $r;
+        }
+        return $out;
     }
 
     /**
@@ -297,6 +406,13 @@ final class Data_Provider
 
     /** Set by the low-level query helpers when $wpdb reports an error. */
     private static bool $db_error = false;
+
+    /**
+     * Set when MotoPress's rules could not be read during a compute (0.47.4).
+     * The answer is still served — it is 0.47.3's, without buffer nights —
+     * but never stored, so the very next request asks MotoPress again.
+     */
+    private static bool $rules_failed = false;
 
     /**
      * MotoPress booking post statuses that occupy a room. A "confirmed" booking
@@ -509,18 +625,39 @@ final class Data_Provider
         $to_str     = $to->format('Y-m-d');
         $room_ph    = implode(',', array_fill(0, count($room_ids), '%d'));
 
+        // BUFFER DAYS (0.47.4): MotoPress keeps a room shut for N nights
+        // before each booking's check-in and N after its check-out, so a
+        // booking that ends just before the window, or starts just after it,
+        // can still close nights inside it. Read that much further each way.
+        // MotoPress unreadable: no buffers, as 0.47.3 — and this compute is
+        // not stored (self::$rules_failed), so the next request retries.
+        $max_buf = 0;
+        try {
+            $max_buf = Booking_Rules::max_buffer();
+        } catch (\Throwable $e) {
+            Booking_Rules::failed($e);
+            self::$rules_failed = true;
+        }
+        $type_of_room = [];
+        foreach ($rooms_of_type as $type_id => $rids) {
+            foreach ($rids as $rid) {
+                $type_of_room[(int) $rid] = (int) $type_id;
+            }
+        }
+
         // Error handling note: wpdb never throws — a failed query sets
         // $wpdb->last_error and returns empty, which here would silently mean
         // "no reservations" and cache every booked day as available for the
         // full TTL. Each read is therefore checked via last_error and flags
         // self::$db_error so the compute is discarded instead of cached.
         $status_ph = implode(',', array_fill(0, count(self::BLOCKING_STATUSES), '%s'));
-        $sql = "SELECT rid.meta_value AS room_id, ci.meta_value AS checkin, co.meta_value AS checkout
+        $sql = "SELECT rid.meta_value AS room_id, ci.meta_value AS checkin, co.meta_value AS checkout, sy.meta_value AS sync_id
                 FROM {$wpdb->posts} rr
                 INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id'
                 INNER JOIN {$wpdb->posts} bk ON bk.ID = rr.post_parent AND bk.post_type = 'mphb_booking'
                 INNER JOIN {$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date'
                 INNER JOIN {$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date'
+                LEFT JOIN {$wpdb->postmeta} sy ON sy.post_id = bk.ID AND sy.meta_key = '_mphb_sync_id'
                 WHERE rr.post_type = 'mphb_reserved_room'
                   AND bk.post_status IN ($status_ph)
                   AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
@@ -528,15 +665,43 @@ final class Data_Provider
                   AND co.meta_value > %s";
         // No ORDER BY: results are folded into a keyed map, so ordering is
         // irrelevant — and sorting them only added a filesort.
-        $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
+        $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [
+            $to->modify('+' . $max_buf . ' days')->format('Y-m-d'),
+            $from->modify('-' . $max_buf . ' days')->format('Y-m-d'),
+        ]);
         $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
         if ($wpdb->last_error !== '') {
             error_log('MPHBAC: reservation query failed: ' . $wpdb->last_error);
             self::$db_error = true;
         } else {
             foreach ((array) $rows as $row) {
+                $rid = (int) $row->room_id;
+                $ci  = (string) $row->checkin;
+                $co  = (string) $row->checkout;
                 // A reservation occupies nights [check_in, check_out); checkout day is free.
-                self::mark_days($occupied, (int) $row->room_id, (string) $row->checkin, (string) $row->checkout, false, $from, $to);
+                self::mark_days($occupied, $rid, $ci, $co, false, $from, $to);
+                if ($max_buf <= 0 || !isset($type_of_room[$rid]) || self::$rules_failed) {
+                    continue;
+                }
+                try {
+                    $n = Booking_Rules::buffer_days($type_of_room[$rid], $ci, (string) $row->sync_id !== '');
+                } catch (\Throwable $e) {
+                    Booking_Rules::failed($e);
+                    self::$rules_failed = true;
+                    continue;
+                }
+                if ($n > 0) {
+                    // MotoPress's BookingHelper::getBookingBufferDates: the N
+                    // nights before check-in and the N from check-out on.
+                    try {
+                        $ci_d = new DateTimeImmutable($ci, self::timezone());
+                        $co_d = new DateTimeImmutable($co, self::timezone());
+                    } catch (\Throwable $e) {
+                        continue;
+                    }
+                    self::mark_days($occupied, $rid, $ci_d->modify("-$n days")->format('Y-m-d'), $ci, false, $from, $to);
+                    self::mark_days($occupied, $rid, $co, $co_d->modify("+$n days")->format('Y-m-d'), false, $from, $to);
+                }
             }
         }
 

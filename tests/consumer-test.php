@@ -47,6 +47,7 @@ function wp_send_json_error($d = null, $code = 200) { $e = new T_Json('err'); $e
 
 require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-staff-widget.php';
@@ -79,6 +80,22 @@ function with(array $overrides): void {
     Settings::flush();
     $GLOBALS['t_transients'] = [];
     $GLOBALS['t_set_ttls']   = [];
+    t_cache_clear();
+}
+/**
+ * The TTL each cache row was stored with (0.47.4: rows are options carrying
+ * their own expiry, ['__t' => written, '__e' => expires]), the cottage list's
+ * hour left out.
+ */
+function stored_ttls(): array {
+    $out = [];
+    foreach ($GLOBALS['t_options'] as $k => $v) {
+        if (strncmp((string) $k, 'mphbac_c_', 9) === 0 && is_array($v) && isset($v['__e'], $v['__t'])
+            && $v['__e'] - $v['__t'] !== HOUR_IN_SECONDS) {
+            $out[] = $v['__e'] - $v['__t'];
+        }
+    }
+    return $out;
 }
 $d = Settings::defaults();
 $today = Data_Provider::today();
@@ -92,16 +109,16 @@ echo "-- cache_ttl reaches the availability cache --\n";
     Data_Provider::get_availability([22], $today, $today->modify('+3 days'));
     // Since 0.47.3 the answer is stored as one entry per month, beside the
     // cottage list (which keeps its own hour, HOUR_IN_SECONDS, as before).
-    $avail_ttls = array_values(array_filter($GLOBALS['t_set_ttls'], static fn($t) => $t !== HOUR_IN_SECONDS));
+    $avail_ttls = stored_ttls();
     check('a changed TTL is the TTL the availability answer is stored with (every month entry)',
-        $avail_ttls !== [] && array_unique($avail_ttls) === [123], $GLOBALS['t_set_ttls']);
+        $avail_ttls !== [] && array_values(array_unique($avail_ttls)) === [123], $avail_ttls);
     check('(instrument check) that is not the shipped value', 123 !== $d['cache_ttl']);
 
     with(['cache_ttl' => 0]);
     Data_Provider::get_availability([22], $today, $today->modify('+3 days'));
     Data_Provider::get_availability([22], $today, $today->modify('+3 days'));
     check('"0 disables caching" is now TRUE: nothing is stored at 0',
-        $GLOBALS['t_set_ttls'] === [], $GLOBALS['t_set_ttls']);
+        stored_ttls() === [], stored_ttls());
 }
 
 echo "\n-- forward_scan_days bounds the walk the scan actually makes --\n";
@@ -112,7 +129,7 @@ echo "\n-- forward_scan_days bounds the walk the scan actually makes --\n";
     $span = static function (int $days) use ($today): int {
         with(['forward_scan_days' => $days]);
         Data_Provider::find_first_availability([22], $today);
-        return count(array_filter($GLOBALS['t_set_ttls'], static fn($t) => $t !== HOUR_IN_SECONDS));
+        return count(stored_ttls());
     };
     $months = static function (int $days) use ($today): int {
         $n = 0;

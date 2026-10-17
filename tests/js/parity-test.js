@@ -45,7 +45,7 @@ function sheet({ avail = {}, ci = '', co = '', minNights = 2, strings = {},
   // config.today is left UNSET by default: these fixtures' September dates
   // are in the past, and every older case must keep its old meaning.
   const document = { activeElement: null };
-  const built = E.build(['roomLabel', 'blockedNight', 'freeAlternative', 'dateProblem', 'rangeState'], {
+  const built = E.build(['roomLabel', 'blockedNight', 'freeAlternative', 'dateProblem', 'ruleOf', 'ruleProblem', 'rangeState'], {
     state, context, config, minNights, nightsBetween, checkinEl, checkoutEl, document,
   });
   built.config = config;

@@ -13,7 +13,6 @@ function is_user_logged_in() { return !empty($GLOBALS['r_staff_user']); }
 function current_user_can($c) { return !empty($GLOBALS['r_staff_user']); }
 require dirname(__DIR__) . '/bootstrap.php';
 
-function MPHB() { return new stdClass(); }
 function plugin_dir_path($f) { return rtrim(dirname($f), '/') . '/'; }
 function plugin_dir_url($f) { return 'https://example.test/wp-content/plugins/' . basename(dirname($f)) . '/'; }
 function plugin_basename($f) { return basename(dirname($f)) . '/' . basename($f); }
@@ -45,6 +44,15 @@ function get_locale() { return 'en_US'; }
 if (!defined('MINUTE_IN_SECONDS')) { define('MINUTE_IN_SECONDS', 60); }
 if (!defined('DAY_IN_SECONDS')) { define('DAY_IN_SECONDS', 86400); }
 
+// MOTOPRESS'S RULE ENGINE (0.47.4), with live's rules as the WD read them on
+// 2026-10-17: one 2-night minimum for every cottage and season, nothing else,
+// and live's four seasons. MPHB() is the harness's (it was a bare stdClass).
+require dirname(__DIR__) . '/mphb-rules-harness.php';
+$GLOBALS['t_options']['mphb_min_stay_length'] = [['season_ids' => [0], 'room_type_ids' => [0], 'min_stay_length' => 2]];
+foreach ([[2080, '2025-12-31', '2027-03-31'], [2082, '2025-04-15', '2025-12-15'], [2079, '2024-12-15', '2025-04-15'], [2081, '2024-04-15', '2024-12-15']] as [$sid, $a, $b]) {
+    t_mphb_season($sid, $a, $b);
+}
+
 require __DIR__ . '/elementor-emu.php';
 require rtrim($dir, '/') . '/mphb-availability-calendar.php';
 \Elementor\Plugin::$emu_types = ['mphbac_calendar' => \MPHBAC\Widget::class, 'dccac_single' => \MPHBAC\Widget_Single::class,
@@ -61,5 +69,9 @@ foreach ([11973, 11935, 11940, 11946, 11951, 11957, 11962, 11968] as $tpl) {
     t_post($tpl, 'elementor_library', 'publish', 'Info ' . $tpl);
 }
 t_post(18102, 'page', 'publish', 'Staff');
+// 0.47.4: a real database and booking rules behind the page and the endpoint.
+if (getenv('MPHBAC_FIXTURE_0474')) {
+    require __DIR__ . '/fixture-0474.php';
+}
 $GLOBALS['t_posts'][18102]->post_password = 'x';
 

@@ -11,6 +11,7 @@
  *   CAST(x AS UNSIGNED)      -> CAST(x AS INTEGER)
  *   SHOW TABLES LIKE '<n>'   -> a sqlite_master lookup of <n> (LIKE escapes
  *                               undone, as MySQL would match it)
+ *   LIKE '<with \ escapes>'   -> the same, with ESCAPE '\' (MySQL's default)
  * prepare() is as strict as the canned stub's: a placeholder/argument count
  * mismatch throws. Any statement can be made to fail like a real wpdb does —
  * last_error set, an empty result, never an exception — with fail_on (a
@@ -54,6 +55,22 @@ final class T_SQLite_WPDB
     }
     public function clear_blocks(): void { $this->pdo->exec('DELETE FROM portal_mphb_blocks'); }
 
+    /** MotoPress 6.0.0+'s per-date rules table (CustomBookingRulesRepository::createTable). */
+    public function create_custom_rules_table(): void
+    {
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS portal_mphb_custom_booking_rules (room_type_id INTEGER NOT NULL, `date` DATE NOT NULL,
+            allow_check_in INTEGER, allow_check_out INTEGER, buffer_days INTEGER, min_stay_length INTEGER, max_stay_length INTEGER,
+            min_advance_reservation INTEGER, max_advance_reservation INTEGER, PRIMARY KEY (room_type_id, `date`))');
+    }
+    /** @param array<string,int|bool|null> $rules */
+    public function custom_rule(int $type, string $date, array $rules): void
+    {
+        $cols = array_merge(['room_type_id', 'date'], array_keys($rules));
+        $st = $this->pdo->prepare('INSERT OR REPLACE INTO portal_mphb_custom_booking_rules (' . implode(',', array_map(static fn($c) => '`' . $c . '`', $cols)) . ') VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ')');
+        $st->execute(array_merge([$type, $date], array_map(static fn($v) => is_bool($v) ? (int) $v : $v, array_values($rules))));
+    }
+    public function clear_custom_rules(): void { $this->pdo->exec('DELETE FROM portal_mphb_custom_booking_rules'); }
+
     public function post(int $id, string $type, string $status = 'publish', int $parent = 0, array $meta = []): void
     {
         $this->pdo->prepare('INSERT INTO portal_posts (ID, post_type, post_status, post_parent) VALUES (?,?,?,?)')->execute([$id, $type, $status, $parent]);
@@ -91,6 +108,9 @@ final class T_SQLite_WPDB
             $sql = 'SELECT name FROM sqlite_master WHERE type = \'table\' AND name = ' . $this->pdo->quote($name);
         }
         $sql = preg_replace('/CAST\(([^()]+?) AS UNSIGNED\)/i', 'CAST($1 AS INTEGER)', $sql);
+        // MySQL's LIKE escapes with a backslash by default; SQLite's only
+        // with an ESCAPE clause (0.47.4: Cache::sweep() matches mphbac\_c\_%).
+        $sql = preg_replace("/(LIKE\\s+'[^']*\\\\[^']*')(?!\\s+ESCAPE)/i", "$1 ESCAPE '\\\\'", $sql);
         try {
             $st = $this->pdo->query($sql);
             return $st ? $st->fetchAll(PDO::FETCH_OBJ) : [];
@@ -100,7 +120,12 @@ final class T_SQLite_WPDB
         }
     }
 
-    public function get_results($sql, $out = null) { $r = $this->run((string) $sql); return $r ?? []; }
+    public function get_results($sql, $out = null)
+    {
+        $r = $this->run((string) $sql) ?? [];
+        // ARRAY_A, as MotoPress's repositories ask for (0.47.4).
+        return $out === 'ARRAY_A' ? array_map('get_object_vars', $r) : $r;
+    }
     public function get_var($sql)
     {
         $r = $this->run((string) $sql);

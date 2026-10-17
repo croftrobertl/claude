@@ -23,6 +23,7 @@ namespace {
     function delete_transient($k) { return true; }
     require $ROOT . '/includes/class-settings.php';
     require $ROOT . '/includes/class-cache.php';
+    require $ROOT . '/includes/class-booking-rules.php';
     require $ROOT . '/includes/class-data-provider.php';
     require $ROOT . '/includes/class-staff.php';
 

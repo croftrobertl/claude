@@ -30,6 +30,7 @@ function MPHB() { return new T_MPHB(); }
 // which is how this was caught before it shipped.
 require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-staff-data.php';
@@ -54,6 +55,7 @@ $GLOBALS['wpdb'] = new T_WPDB_Rows();
 
 function month_rows(int $n): void {
     $GLOBALS['t_posts'] = []; $GLOBALS['t_meta'] = [];
+    t_cache_clear();
     t_post(22, 'mphb_room_type', 'publish', 'Cottage 22: The Boathouse');
     $rows = [];
     for ($b = 1; $b <= $n; $b++) {

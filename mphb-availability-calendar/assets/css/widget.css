@@ -626,6 +626,12 @@ input.mphbac-input {
 .mphbac-swatch-available { background: var(--mphbac-color-available); }
 .mphbac-swatch-booked    { background: var(--mphbac-color-booked); }
 .mphbac-swatch-past      { background: var(--mphbac-color-past); }
+/* 0.47.4: the "No Check-In" entry, added by widget.js only while such a day
+   is on screen. The stripes of the cells, at the swatch's size. */
+.mphbac-swatch-no-checkin {
+    background: repeating-linear-gradient(135deg, var(--mphbac-color-available) 0 3px, rgba(255, 255, 255, 0.55) 3px 5px);
+}
+.mphbac-legend-item[hidden] { display: none; }
 
 /* Nav */
 .mphbac-nav {
@@ -1295,6 +1301,14 @@ button.mphbac-cell-label {
 .mphbac-cell-status.is-available { background: var(--mphbac-color-available); }
 .mphbac-cell-status.is-booked    { background: var(--mphbac-color-booked); }
 .mphbac-cell-status.is-past      { background: var(--mphbac-color-past); }
+/* OPEN, BUT NOT A DAY TO ARRIVE (0.47.4, Rob's pick: option C). MotoPress's
+   rules let no stay START here — a no-check-in weekday, too soon, too far
+   ahead — though a stay may run through it, so it keeps the available
+   colour, striped. Through the colour token, so the "Available" colour
+   control still drives it. */
+.mphbac-cell-status.is-available.is-no-checkin {
+    background: repeating-linear-gradient(135deg, var(--mphbac-color-available) 0 4px, rgba(255, 255, 255, 0.55) 4px 7px);
+}
 
 .mphbac-hide-past .mphbac-cell-status.is-past {
     visibility: hidden;
@@ -1319,6 +1333,10 @@ button.mphbac-cell-label {
     z-index: 20;
 }
 .mphbac-cell-status:focus-visible .mphbac-cell-tip {
+    opacity: 1;
+}
+/* A tapped no-check-in day shows its reason for a few seconds (0.47.4). */
+.mphbac-cell-status.is-tip-open .mphbac-cell-tip {
     opacity: 1;
 }
 

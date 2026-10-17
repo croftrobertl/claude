@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.3
+Stable tag: 0.47.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.47.4 =
+* **The public calendar follows MotoPress's booking rules (Rob's pick).** Read through MotoPress's own interface (mphb_availability_facade), so guests can only pick dates that will book: a day that cannot start a stay (a no-check-in weekday or block, too soon, too far ahead) shows the available colour, striped, with a "No Check-In" legend entry while one is on screen; tapping it says why and opens nothing. The booking pop-up applies MotoPress's minimum and maximum stay for the check-in date and its check-out days, and Book Now re-checks them with the server. Buffer days show as booked. With no MotoPress minimum-stay rule, the widget's "Minimum nights" still applies. If MotoPress cannot be read, the calendar works exactly as 0.47.3 did and logs it once an hour. Live's rules today (a 2-night minimum) change nothing a guest sees.
+* **No database lock from reading the cache.** Cache entries are now non-autoloaded options that carry their own expiry, so a page view never deletes anything (the 2026-10-17 deadlock came from WordPress deleting an expired transient as it was read). Old entries are removed once a day on WordPress's own daily events.
+* A rule, season, block or room saved in MotoPress reaches the calendar at once. The availability endpoint keeps every field; it adds one optional field, `rules`. The staff calendar is unchanged. Nothing is written on install, activation or upgrade.
 
 = 0.47.3 =
 * **Closed dates the public calendar missed.** MotoPress blocks for "all accommodations of a type" and "all accommodations" (stored as accommodation 0 / type 0) now show as booked, exactly as MotoPress applies them; pre-6.0 MotoPress rules are read where its blocks table does not exist yet. A failed read still shows booked, never open.

@@ -29,6 +29,7 @@ function trailingslashit($s) { return rtrim((string) $s, '/\\') . '/'; }
 // which is how this was caught before it shipped.
 require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-staff-data.php';

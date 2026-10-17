@@ -293,7 +293,68 @@
     // server sorts type IDs and iterates days ascending, making key order
     // deterministic on both the embedded and AJAX paths.
     function dataSig(data) {
-        return JSON.stringify([data.rooms, data.availability, data.from, data.to, data.bookedThrough || null]);
+        return JSON.stringify([data.rooms, data.availability, data.from, data.to, data.bookedThrough || null, rulesSig(data)]);
+    }
+
+    // MOTOPRESS'S BOOKING RULES (0.47.4). The response's optional `rules`
+    // (Booking_Rules::encode()) is compact and aligned to the day it starts
+    // on — `from` for an AJAX answer, the embed's own `from` for the first
+    // paint (data.rulesFrom). Expanded here, once per render, into
+    // rules[typeId][day] = { ci, co, min, max }:
+    //   ci  '1' a stay may start; 'w' no check-in that day; 'a' too soon;
+    //       'f' too far ahead        co  '1' a stay may end; 'w' it may not
+    //   min fewest nights from that day, or null: MotoPress has no minimum
+    //       and the widget's own applies      max most nights, 0 = no limit
+    // No `rules` at all (MotoPress unreadable) is null: the calendar then
+    // works exactly as 0.47.3 did. RULES ONLY REMOVE CHOICES — nothing here
+    // can make a booked night open.
+    function expandRules(rules, from) {
+        if (!rules || !from) return null;
+        var out = {};
+        Object.keys(rules).forEach(function (tid) {
+            var r = rules[tid] || {};
+            var ins = String(r['in'] || '');
+            var outs = String(r.out || '');
+            var map = {};
+            var day = from;
+            for (var i = 0; i < ins.length; i++) {
+                map[day] = {
+                    ci: ins.charAt(i),
+                    co: outs.charAt(i) || 'w',
+                    min: (r.min === undefined || r.min === null) ? null : Math.max(1, parseInt(Array.isArray(r.min) ? r.min[i] : r.min, 10) || 1),
+                    max: Math.max(0, parseInt(Array.isArray(r.max) ? r.max[i] : r.max, 10) || 0)
+                };
+                day = addDays(day, 1);
+            }
+            out[tid] = map;
+        });
+        return out;
+    }
+
+    // The rules of the days ON SCREEN, for dataSig(): the embedded first paint
+    // carries a wider range than the revalidate, so the compact strings
+    // differ even when every visible day's rule is the same.
+    function rulesSig(data) {
+        var x = expandRules(data.rules, data.rulesFrom || data.from);
+        if (!x || !data.from || !data.to) return null;
+        var days = buildDayList(data.from, data.to);
+        return Object.keys(x).sort().map(function (tid) {
+            return tid + ':' + days.map(function (d) {
+                var r = x[tid][d];
+                return r ? r.ci + r.co + r.min + '/' + r.max : '-';
+            }).join(',');
+        });
+    }
+
+    // Why a stay cannot START on an open day — '' when it can. The reason is
+    // the cell's tip, the end of its accessible name, and what a tap shows.
+    function noCheckInReason(rules, typeId, day, strings) {
+        var r = rules && rules[typeId] && rules[typeId][day];
+        if (!r || r.ci === '1') return '';
+        strings = strings || {};
+        if (r.ci === 'a') return strings.ruleTooSoon || 'Too soon to book this day.';
+        if (r.ci === 'f') return strings.ruleTooFar || 'Too far ahead to book this day.';
+        return strings.ruleNoCheckIn || 'No check-in on this day.';
     }
 
     function fetchAvailability(config, from, to) {
@@ -421,7 +482,10 @@
             availability: avail,
             from: state.from,
             to: state.to,
-            bookedThrough: bookedThrough
+            bookedThrough: bookedThrough,
+            // The embed's rules start on the embed's first day (0.47.4).
+            rules: ini.rules || null,
+            rulesFrom: ini.from
         };
         state.lastSig = dataSig(data);
         renderGrid(root, data, state, config);
@@ -516,6 +580,7 @@
         wireNav(root, config, state);
         wireInfoPopup(root, config);
         wireSwipe(root, config, state);
+        wireNoCheckInTaps(root, config);
         if (config.popupEnabled) {
             wirePopup(root, config, state);
         }
@@ -627,6 +692,102 @@
     // Delegated on the root so it also covers the booking popup's fields,
     // which are created before the popup portals to <body> — the listener
     // rides along with the element, so the move does not unbind it.
+    // THE "NO CHECK-IN" LEGEND ENTRY (0.47.4). Only while the window shows
+    // such a day: with no rule in force the legend is exactly as before.
+    // Built here rather than in the page's markup for the same reason — a
+    // site without these rules carries not one extra node.
+    function updateNoCheckInLegend(root, rooms, availability, rules, days, config) {
+        var legend = root.querySelector('.mphbac-legend');
+        if (!legend) return;
+        var any = false;
+        if (rules) {
+            for (var i = 0; i < rooms.length && !any; i++) {
+                var av = availability[rooms[i].id] || {};
+                for (var j = 0; j < days.length; j++) {
+                    if (av[days[j]] === 'available' && noCheckInReason(rules, rooms[i].id, days[j], {})) { any = true; break; }
+                }
+            }
+        }
+        var item = legend.querySelector('.mphbac-legend-item--no-checkin');
+        if (!any) {
+            if (item) item.hidden = true;
+            return;
+        }
+        if (!item) {
+            item = document.createElement('span');
+            item.className = 'mphbac-legend-item mphbac-legend-item--no-checkin';
+            var sw = document.createElement('span');
+            sw.className = 'mphbac-swatch mphbac-swatch-no-checkin';
+            sw.setAttribute('aria-hidden', 'true');
+            item.appendChild(sw);
+            item.appendChild(document.createTextNode(((config && config.strings) || {}).legendNoCheckIn || 'No Check-In'));
+            var availSwatch = legend.querySelector('.mphbac-swatch-available');
+            var after = availSwatch ? availSwatch.parentNode : null;
+            legend.insertBefore(item, after ? after.nextSibling : null);
+        }
+        item.hidden = false;
+    }
+
+    // A TAP ON A DAY THAT CANNOT START A STAY says why (0.47.4, Rob: errors
+    // only after the mistake — nothing is said until the guest taps). The
+    // cell's own tip opens with the reason and stays a few seconds, and the
+    // same words go to a polite live region for screen readers; the popup
+    // does not open. Hover (a mouse) shows the same tip, as for every cell.
+    var NO_CHECKIN_TIP_MS = 4000;
+    function wireNoCheckInTaps(root, config) {
+        var open = null;
+        var timer = null;
+        var live = null;
+        function close() {
+            if (timer) { clearTimeout(timer); timer = null; }
+            if (open) {
+                open.classList.remove('is-tip-open');
+                var t = open.querySelector('.mphbac-cell-tip');
+                if (t) t.style.removeProperty('margin-left');
+            }
+            open = null;
+        }
+        function say(cell) {
+            close();
+            var tip = cell.querySelector('.mphbac-cell-tip');
+            var msg = tip ? tip.textContent : '';
+            cell.classList.add('is-tip-open');
+            open = cell;
+            // Keep the tip on screen: centred over a cell at the edge of a
+            // phone it would run off it.
+            if (tip) {
+                var r = tip.getBoundingClientRect();
+                var vw = document.documentElement.clientWidth || window.innerWidth;
+                var shift = 0;
+                if (r.left < 4) shift = 4 - r.left;
+                else if (r.right > vw - 4) shift = (vw - 4) - r.right;
+                if (shift) tip.style.marginLeft = Math.round(shift) + 'px';
+            }
+            if (!live) {
+                live = document.createElement('span');
+                live.className = 'mphbac-sr-only mphbac-rule-status';
+                live.setAttribute('role', 'status');
+                live.setAttribute('aria-live', 'polite');
+                root.appendChild(live);
+            }
+            live.textContent = '';
+            setTimeout(function () { if (live) live.textContent = msg; }, 50);
+            timer = setTimeout(close, NO_CHECKIN_TIP_MS);
+        }
+        root.addEventListener('click', function (e) {
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-no-checkin');
+            if (cell) { say(cell); return; }
+            close();
+        });
+        root.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-no-checkin');
+            if (!cell) return;
+            e.preventDefault();
+            say(cell);
+        });
+    }
+
     function wireEmptyState(root) {
         ['input', 'change'].forEach(function (evt) {
             root.addEventListener(evt, function (e) {
@@ -1930,7 +2091,10 @@
         // sheet could not tell a booked night from a free one and only found
         // out at submit time. Assigned after normalisation so the popup sees
         // the same past/available/booked verdicts the grid does.
+        // The booking rules, beside the availability they qualify (0.47.4).
+        var rules = expandRules(data.rules, data.rulesFrom || from);
         if (state) {
+            state.rules = rules;
             state.availability = availability;
             // And the rooms (0.42.1): the free-cottage suggestion reads
             // state.rooms, which only the embedded first paint used to set —
@@ -1951,6 +2115,7 @@
         if (empty) empty.hidden = true;
 
         var days = buildDayList(from, to);
+        updateNoCheckInLegend(root, rooms, availability, rules, days, config);
 
         // Month-grid layout: same data, same status classes, same CSS custom
         // properties — only the arrangement differs (month title bar, weekday
@@ -2085,10 +2250,11 @@
             var roomAvail = availability[room.id] || {};
             days.forEach(function (day, idx) {
                 var status = roomAvail[day] || 'booked';
-                var clickable = status === 'available';
-                var tip = statusLabels[status] || status;
+                var reason = status === 'available' ? noCheckInReason(rules, room.id, day, strings) : '';
+                var clickable = status === 'available' && !reason;
+                var tip = reason || statusLabels[status] || status;
                 var cell = document.createElement('div');
-                cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
+                cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '') + (reason ? ' is-no-checkin' : '');
                 var dowJ = new Date(day + 'T00:00:00').getDay();
                 if (dowJ === 0 || dowJ === 6) cell.classList.add('is-weekend');
                 if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
@@ -2098,7 +2264,10 @@
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
                 cell.setAttribute('aria-label', day + ' — ' + tip);
-                if (clickable) cell.setAttribute('tabindex', '0');
+                if (clickable || reason) cell.setAttribute('tabindex', '0');
+                // Open, but not a day to arrive (0.47.4): reachable, so its
+                // reason can be heard and tapped, and marked as no choice.
+                if (reason) cell.setAttribute('aria-disabled', 'true');
                 var tipEl = document.createElement('span');
                 tipEl.className = 'mphbac-cell-tip';
                 tipEl.textContent = tip;
@@ -2286,14 +2455,16 @@
                     continue;
                 }
                 var status = roomAvail[day] || 'booked';
-                var clickable = status === 'available';
-                var tip = statusLabels[status] || status;
+                var reason = (status === 'available' && room) ? noCheckInReason(state && state.rules, room.id, day, (config && config.strings) || {}) : '';
+                var clickable = status === 'available' && !reason;
+                var tip = reason || statusLabels[status] || status;
                 var d = new Date(day + 'T00:00:00');
                 var dowJ = d.getDay();
 
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status
                     + (clickable ? ' is-clickable' : '')
+                    + (reason ? ' is-no-checkin' : '')
                     + (dowJ === 0 || dowJ === 6 ? ' is-weekend' : '')
                     + (todayStr === day ? ' is-today' : '');
                 cell.setAttribute('role', 'gridcell');
@@ -2310,7 +2481,8 @@
                 // read from the title bar already on screen.
                 cell.setAttribute('aria-label', d.getDate() + ' — ' + tip);
                 cell.setAttribute('aria-describedby', titleId);
-                if (clickable) cell.setAttribute('tabindex', '0');
+                if (clickable || reason) cell.setAttribute('tabindex', '0');
+                if (reason) cell.setAttribute('aria-disabled', 'true');
 
                 var num = document.createElement('span');
                 num.className = 'mphbac-day-num';
@@ -2722,6 +2894,56 @@
             return '';
         }
 
+        // The booking rule of one day for the cottage in the popup (0.47.4),
+        // or null where none is loaded — a date typed beyond the loaded
+        // window is judged as 0.47.3 judged it, and checkout still decides.
+        function ruleOf(typeId, day) {
+            var r = state && state.rules && state.rules[typeId];
+            return (r && r[day]) || null;
+        }
+        // MotoPress's minimum for a stay starting that day; the widget's own
+        // "Minimum nights" only where MotoPress has no minimum-stay rule.
+        function minFor(typeId, day) {
+            var r = ruleOf(typeId, day);
+            return (r && r.min !== null) ? r.min : minNights;
+        }
+
+        // MotoPress's rules for a stay, in the order a guest meets them
+        // (0.47.4): the arrival day, the stay's length, the departure day.
+        // The message for the first one broken, or ''. rule(day) answers a
+        // day's rule or null (not loaded: nothing is claimed about it). The
+        // minimum is MotoPress's, else the widget's own.
+        function ruleProblem(rule, ci, co) {
+            var s = config.strings || {};
+            var rIn = rule(ci);
+            if (rIn && rIn.ci !== '1') {
+                return rIn.ci === 'a' ? (s.sheetTooSoon || 'That check-in is too soon. Please select new dates.')
+                     : rIn.ci === 'f' ? (s.sheetTooFar || 'That check-in is too far ahead. Please select new dates.')
+                     : (s.sheetNoCheckIn || 'No check-in on that day. Please select new dates.');
+            }
+            var minN = (rIn && rIn.min !== null) ? rIn.min : minNights;
+            if (nightsBetween(ci, co) < minN) {
+                // The panel's wording may spell the number out — live's says
+                // "two nights", no {nights}. Right while the minimum is the
+                // widget's own; for any other (a 3-night season) the generic
+                // wording carries MotoPress's number instead.
+                var tmpl = s.bookMinNights || 'Must be a minimum of {nights} nights. Please select new dates.';
+                if (tmpl.indexOf('{nights}') === -1 && minN !== minNights) {
+                    tmpl = s.bookMinNightsN || 'Must be a minimum of {nights} nights. Please select new dates.';
+                }
+                return tmpl.replace('{nights}', String(minN));
+            }
+            if (rIn && rIn.max > 0 && nightsBetween(ci, co) > rIn.max) {
+                return (s.bookMaxNights || 'Must be a maximum of {nights} nights. Please select new dates.')
+                    .replace('{nights}', String(rIn.max));
+            }
+            var rOut = rule(co);
+            if (rOut && rOut.co !== '1') {
+                return s.sheetNoCheckOut || 'No check-out on that day. Please select new dates.';
+            }
+            return '';
+        }
+
         function rangeState() {
             var ci = checkinEl ? checkinEl.value : '';
             var co = checkoutEl ? checkoutEl.value : '';
@@ -2740,11 +2962,9 @@
                 return { ok: false, complete: true,
                     msg: (config.strings && config.strings.bookInvalid) || 'Invalid date range.' };
             }
-            if (nightsBetween(ci, co) < minNights) {
-                return { ok: false, complete: true,
-                    msg: ((config.strings && config.strings.bookMinNights) ||
-                        'Must be a minimum of {nights} nights. Please select new dates.')
-                        .replace('{nights}', String(minNights)) };
+            var problem = ruleProblem(function (d) { return ruleOf(context.roomTypeId, d); }, ci, co);
+            if (problem) {
+                return { ok: false, complete: true, msg: problem };
             }
             // Availability, checked HERE rather than only at submit — the
             // whole point of 0.23.8 item 1. A visitor should not finalise a
@@ -2823,7 +3043,7 @@
         // and the minimum-nights message explains why — which is honest,
         // where "unavailable" on a range we chose for them was not.
         function defaultCheckout(typeId, date) {
-            var proposed = addDays(date, minNights);
+            var proposed = addDays(date, minFor(typeId, date));
             var avail = (state && state.availability && state.availability[typeId]) || null;
             if (!avail || !date) return proposed;
             var cursor = new Date(date + 'T00:00:00');
@@ -2839,7 +3059,20 @@
                 }
                 cursor.setDate(cursor.getDate() + 1);
             }
-            return proposed;
+            // A departure MotoPress refuses (0.47.4): stay on, a night at a
+            // time, to the first day a stay may end — through open nights
+            // only, and never past the longest stay allowed. None in reach:
+            // the minimum stands, and the popup says why it cannot be booked.
+            var first = ruleOf(typeId, date);
+            var maxN = first ? first.max : 0;
+            var co = proposed;
+            var guard2 = 0;
+            while (ruleOf(typeId, co) && ruleOf(typeId, co).co !== '1' && guard2++ < 60) {
+                if (avail[co] !== 'available') return proposed;
+                co = addDays(co, 1);
+                if (maxN > 0 && nightsBetween(date, co) > maxN) return proposed;
+            }
+            return ruleOf(typeId, co) && ruleOf(typeId, co).co !== '1' ? proposed : co;
         }
 
         root.addEventListener('click', function (e) {
@@ -3014,7 +3247,10 @@
             var body = new URLSearchParams();
             body.append('action', config.action || 'mphbac_query');
             body.append('from', ci);
-            body.append('to', addDays(co, -1));
+            // Through the CHECK-OUT day (0.47.4), not the last night: its
+            // booking rule (may a stay end then?) comes back with the rest.
+            // Only the nights before it are checked for availability.
+            body.append('to', co);
             body.append('room_type_ids[]', String(context.roomTypeId));
 
             // Same 15s ceiling as the grid request() — without it a stalled
@@ -3055,6 +3291,16 @@
                 }
                 if (!ok) {
                     showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
+                    return;
+                }
+                // THE RULES, ASKED AGAIN (0.47.4): dates typed beyond the
+                // loaded window had none on the page, and a rule may have
+                // changed since it loaded. The server's answer decides.
+                var fresh = expandRules(json.data.rules, json.data.from);
+                var mine = fresh && (fresh[context.roomTypeId] || fresh[String(context.roomTypeId)]);
+                var problem = mine ? ruleProblem(function (d) { return mine[d] || null; }, ci, co) : '';
+                if (problem) {
+                    showError(problem);
                     return;
                 }
                 submitToMotoPress(context.roomTypeId, ci, co);

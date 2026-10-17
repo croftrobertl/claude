@@ -118,6 +118,40 @@ final class Plugin
         add_action('elementor/document/after_save', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_booking_status_changed', ['\\MPHBAC\\Cache', 'flush_all']);
 
+        // MOTOPRESS'S BOOKING RULES (0.47.4): a change reaches the public
+        // calendar at once. Cache::flush_rules() bumps the rules generation
+        // and the main one (buffer nights and closures are availability).
+        // From MotoPress 6.4.0's source:
+        //   - the rule SETTINGS (mphb_check_in_days … mphb_buffer_days, the
+        //     legacy mphb_booking_rules_custom, the admin switch, iCal "sync
+        //     with buffers") — any add, update or delete of those options;
+        add_action('added_option', ['\\MPHBAC\\Cache', 'flush_if_rule_option']);
+        add_action('updated_option', ['\\MPHBAC\\Cache', 'flush_if_rule_option']);
+        add_action('deleted_option', ['\\MPHBAC\\Cache', 'flush_if_rule_option']);
+        //   - the Booking Rules screen and REST API, which fire their own
+        //     hooks: reservation rules, all rules, per-date rules;
+        add_action('mphb_reservation_rules_updated', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('mphb_booking_rules_updated', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('mphb_set_custom_booking_rules', ['\\MPHBAC\\Cache', 'flush_rules']);
+        //   - blocks (closures and no-arrival / no-departure dates), which
+        //     until now flushed nothing — a new block waited out the TTL;
+        add_action('mphb_block_created', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('mphb_block_updated', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('mphb_block_deleted', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('mphb_blocks_deleted', ['\\MPHBAC\\Cache', 'flush_rules']);
+        //   - seasons (a seasonal rule follows its season's dates), rooms and
+        //     cottage types (a rule for "all rooms" counts them): saved,
+        //     trashed or restored (save_post), or deleted for good.
+        add_action('save_post_mphb_season', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('save_post_mphb_room', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('save_post_mphb_room_type', ['\\MPHBAC\\Cache', 'flush_rules']);
+        add_action('deleted_post', ['\\MPHBAC\\Cache', 'flush_rules_if_rule_post'], 10, 2);
+
+        // THE CACHE'S DAILY CLEAN-UP (0.47.4): on WordPress's own daily
+        // events, so nothing is scheduled — or written — on activation.
+        add_action('delete_expired_transients', ['\\MPHBAC\\Cache', 'sweep']);
+        add_action('wp_scheduled_delete', ['\\MPHBAC\\Cache', 'sweep']);
+
         // THE SEARCH INDEX (0.45.0) holds every visible booking's sheet, so it
         // is cleared on exactly the booking changes above — an iCal create or
         // date change, a permanent delete, a save (checkout, WP-Admin, trash,

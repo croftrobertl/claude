@@ -236,6 +236,10 @@ input.mphbac-input {
 .mphbac-swatch-available { background: var(--mphbac-color-available); }
 .mphbac-swatch-booked    { background: var(--mphbac-color-booked); }
 .mphbac-swatch-past      { background: var(--mphbac-color-past); }
+.mphbac-swatch-no-checkin {
+    background: repeating-linear-gradient(135deg, var(--mphbac-color-available) 0 3px, rgba(255, 255, 255, 0.55) 3px 5px);
+}
+.mphbac-legend-item[hidden] { display: none; }
 .mphbac-nav {
     display: flex;
     align-items: center;
@@ -569,6 +573,9 @@ button.mphbac-cell-label {
 .mphbac-cell-status.is-available { background: var(--mphbac-color-available); }
 .mphbac-cell-status.is-booked    { background: var(--mphbac-color-booked); }
 .mphbac-cell-status.is-past      { background: var(--mphbac-color-past); }
+.mphbac-cell-status.is-available.is-no-checkin {
+    background: repeating-linear-gradient(135deg, var(--mphbac-color-available) 0 4px, rgba(255, 255, 255, 0.55) 4px 7px);
+}
 .mphbac-hide-past .mphbac-cell-status.is-past {
     visibility: hidden;
 }
@@ -590,6 +597,9 @@ button.mphbac-cell-label {
     z-index: 20;
 }
 .mphbac-cell-status:focus-visible .mphbac-cell-tip {
+    opacity: 1;
+}
+.mphbac-cell-status.is-tip-open .mphbac-cell-tip {
     opacity: 1;
 }
 .mphbac-empty {

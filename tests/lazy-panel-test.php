@@ -49,6 +49,7 @@ function wp_enqueue_script($h, $s = '', $d = [], $v = false, $f = false) { $GLOB
 function wp_enqueue_style($h, $s = '', $d = [], $v = false, $m = 'all') { $GLOBALS['t_enq_styles'][] = $h; }
 
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-ajax.php';
@@ -241,11 +242,13 @@ echo "\n-- F3a: a fragment is rendered once per TTL, not once per visitor --\n";
     MPHBAC\Settings::flush();
     // With no Elementor in this harness the render is empty, which is fine:
     // what is under test is that the SECOND call does not run the producer.
-    $before = count($GLOBALS['t_transients']);
+    // The store is cache rows since 0.47.4 (options mphbac_c_<hash>).
+    $rows = static fn(): int => count(preg_grep('/^mphbac_c_/', array_keys($GLOBALS['t_options'])));
+    $before = $rows();
     Widget::render_info_fragment('tpl:501');
-    $stored = count($GLOBALS['t_transients']) - $before;
+    $stored = $rows() - $before;
     Widget::render_info_fragment('tpl:501');
-    $stored2 = count($GLOBALS['t_transients']) - $before;
+    $stored2 = $rows() - $before;
     check('the first call stores the fragment', $stored === 1, $stored);
     check('the second call adds nothing — it was served from the store', $stored2 === 1, $stored2);
     // The flush hooks are asserted at RUNTIME in consumer-test.php, on the

@@ -3704,3 +3704,78 @@ not tappable.
 translated), availability-rules-test.php, audit-0473-test.php,
 browser/audit-0473-test.js (built from source, not the committed .min);
 consumer-test and staff-stats-047-test adjusted. 30 new mutations, all caught.
+
+## 0.47.4 — the public calendar follows MotoPress's booking rules (Rob's pick), and a read never deletes
+
+**Reading the rules.** Booking_Rules (new) asks MotoPress 6.4.0's public
+facade, mphb_availability_facade() (RoomsAvailabilityCoreAPIFacade), for every
+day shown, isIgnoreBookingRules = false: isCheckInEarlierThanMinAdvanceDate →
+'a', isCheckInLaterThanMaxAdvanceDate → 'f', isCheckInNotAllowed (weekdays,
+blocks' not_check_in, per-date rules) → 'w', else '1'; isCheckOutNotAllowed;
+getMinStayNightsCount / getMaxStayNightsCount (MotoPress takes stay limits
+from the CHECK-IN day's rule). `min` is null when MotoPress has no min-stay
+rule at all (settings rule with value, types and seasons, or a per-date one —
+its own hasRules test); then the widget's "Minimum nights" applies,
+client-side. Any MotoPress min-stay rule → its number every day, 1 included
+(what its checkout enforces). Response: one new optional field `rules`
+{type: {in, out, min (int|int[], absent = widget's), max (int|int[], 0 =
+none)}}, aligned to `from` (Booking_Rules::encode). Embedded in the first
+paint too (initial.rules, aligned to initial.from — client: data.rulesFrom).
+
+**Buffer days** are availability: query_occupied_room_days reads bookings up
+to max_buffer() further each way (LEFT JOIN _mphb_sync_id) and marks N nights
+before check-in and N from check-out, N = getBufferDaysCount(booked type,
+check-in day, the admin-rules switch) — RoomAvailabilityHelper::getBookedDays
+exactly; imported + isSyncWithBuffers → 0.
+
+**Failure.** A throwing facade: no rules sent, no buffers (0.47.3's answer),
+nothing stored (Data_Provider::$rules_failed), the next request retries;
+error_log at most hourly (option mphbac_rules_failed_logged, written only on
+failure). No facade function at all = permanent: no buffers, availability
+stored as 0.47.3.
+
+**Cache.** Rules months are keyed by Cache::rules_key() — their own
+generation mphbac_rules_gen, NOT the booking one: reading the rules is the
+cold cost (MotoPress works out each cottage-day in full, including a room
+lookup), so a booking / iCal flush must not throw them away. Cache::
+flush_rules() bumps both generations; hooked on added/updated/deleted_option
+filtered to Cache::RULE_OPTIONS (MotoPress's ten + mphb_ical_sync_with_buffers;
+the generic hooks catch a first save, which update_option_{name} misses),
+mphb_reservation_rules_updated, mphb_booking_rules_updated,
+mphb_set_custom_booking_rules, mphb_block_created/updated/deleted,
+mphb_blocks_deleted, save_post_mphb_season/_room/_room_type, deleted_post of
+those types. Blocks flushed nothing before 0.47.4.
+
+**The look (Rob picked C from three option screenshots).** Open day that
+cannot start a stay: .is-available.is-no-checkin, striped available colour
+(through the token), no is-clickable, tabindex 0, aria-disabled, reason in the
+tip and name ("No check-in on this day." / "Too soon to book this day." /
+"Too far ahead to book this day."). Nothing at load; a tap or Enter opens the
+tip for 4 s (kept on screen) and writes the reason to a polite live region
+created on first use. Legend entry "No Check-In" built by JS only while such a
+day is on screen (none on live). Popup: ruleProblem() — arrival day, min (with
+live's "two nights" wording kept only while the minimum is the widget's;
+otherwise bookMinNightsN), max, departure day; defaultCheckout() proposes
+MotoPress's minimum and walks past a no-departure day (open nights only, ≤ max).
+Book Now re-asks the endpoint THROUGH the check-out day and applies the
+server's rules (dates typed beyond the loaded window).
+
+**Lock errors.** Cache rows are options mphbac_c_<sha1>, autoload off,
+['__v','__t','__e']; a read compares __e and never deletes; Cache::sweep()
+(on delete_expired_transients and wp_scheduled_delete — nothing scheduled by
+us) SELECTs the rows (LIKE escaped) and delete_option()s the expired ones by
+name, ≤ 2000 a run. Not a no-timeout transient: those autoload. Not changed:
+Staff_Search's index transient (staff board untouched this release; one row).
+
+**Performance** (tests/perf-0474.php: PHP time, SQLite in memory, 8 cottages,
+3 months): cached 0.9 → 2.1 ms, 1,181 → 1,250 B gzipped; after a booking
+change 3.8 → 5.4 ms (live rules) / 15 ms (fixture: buffers); fully cold 3.8 →
+~65–80 ms, only after a rule change, a new day or TTL expiry of the rules.
+
+**Tests.** tests/vendor/motopress-6.4.0 (MotoPress's own rule classes, GPL,
+unchanged) behind tests/mphb-rules-harness.php; render/fixture-0474.php +
+render/ajax.php (the real endpoint offline); browser/site-0474.js (Playwright
+routes the page's admin-ajax.php to it); rules-0474-test.php,
+browser/rules-0474-test.js, browser/pixels-0474-test.js (0.47.3 from git vs
+this, live rules, 64 pairs), browser/shots-0474.js. Chromium with touch
+emulation: Playwright WebKit cannot be installed here.

@@ -110,6 +110,27 @@ function snap(string $html): string {
 function undated(string $html): string {
     return preg_replace('/D&quot;:&quot;[a-z-]+&quot;/', 'D&quot;:&quot;S&quot;', $html);
 }
+/**
+ * 0.47.4's additions to a public widget's data-config, removed: the embedded
+ * `rules` (one entry per cottage) and the new strings (STRINGS_0474). Answers
+ * [html without them, true] — or a description of what was missing.
+ */
+const STRINGS_0474 = ['ruleNoCheckIn', 'ruleTooSoon', 'ruleTooFar', 'sheetNoCheckIn', 'sheetTooSoon', 'sheetTooFar', 'sheetNoCheckOut', 'bookMaxNights', 'bookMinNightsN', 'legendNoCheckIn'];
+function without_0474(string $html): array {
+    $n = 0;
+    $html = preg_replace('/,&quot;rules&quot;:\{(?:[^{}]|\{[^{}]*\})*\}/', '', $html, -1, $n);
+    if ($n !== 1) {
+        return [$html, "rules found $n times"];
+    }
+    foreach (STRINGS_0474 as $k) {
+        $m = 0;
+        $html = preg_replace('/,&quot;' . preg_quote($k, '/') . '&quot;:&quot;(?:[^&]|&(?!quot;))*&quot;/', '', $html, 1, $m);
+        if ($m !== 1) {
+            return [$html, "string $k missing"];
+        }
+    }
+    return [$html, true];
+}
 /** The staff shell's config, decoded. */
 function staff_config(string $html): array {
     preg_match('/data-staff-config="([^"]*)"/', $html, $m);
@@ -232,6 +253,14 @@ foreach ($cases as $case => $w) {
     }
     $nowHtml = undated($now['html']);
     $expect = undated($expect);
+    if ($w['widget_type'] !== 'dccac_staff') {
+        // 0.47.4 adds MotoPress's booking rules to the embedded first paint
+        // (a new key, `rules`, beside `availability`) and the guest messages
+        // they need. Each is checked present, then set aside; the rest of
+        // the page must still be what it was.
+        [$nowHtml, $added] = without_0474($nowHtml);
+        check("$label carries 0.47.4's embedded rules and its new strings", $added === true, $added);
+    }
     if ($w['widget_type'] === 'dccac_staff') {
         // 0.47.0 changes two things in the staff shell, both on purpose: the
         // row under the calendar (the Off · Behind · In Front control) and

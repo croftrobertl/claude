@@ -66,6 +66,7 @@ class T_Redirect extends \Exception {}
 function wp_safe_redirect($to, $status = 302) { $GLOBALS['t_redirect'] = $to; throw new T_Redirect('redirect'); }
 
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-ajax.php';

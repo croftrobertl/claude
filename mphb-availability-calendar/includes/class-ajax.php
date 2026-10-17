@@ -192,6 +192,15 @@ final class Ajax
             'bookedThrough' => $booked_through,
         ];
 
+        // MOTOPRESS'S BOOKING RULES (0.47.4): a NEW, OPTIONAL field — every
+        // field above keeps its meaning (the Cottage Selector reads them; see
+        // tests/rules-0474-test.php's contract block). Left out when
+        // MotoPress could not be read: the calendar then works as 0.47.3 did.
+        $rules = Data_Provider::get_rules($room_type_ids, $from, $to);
+        if ($rules !== null) {
+            $payload['rules'] = Booking_Rules::encode($rules);
+        }
+
         // Opt-in profiling. Kept out of normal responses so the payload stays
         // small and no internals leak. debug=1 is honoured only for a
         // logged-in administrator (manage_options) since 0.47.3 — the WD's

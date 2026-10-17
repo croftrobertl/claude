@@ -57,23 +57,48 @@ echo "\n-- get_or_set: miss, then hit --\n";
         $hit === true && $age === 0, compact('hit', 'age'));
 }
 
-echo "\n-- a pre-0.14.0 entry without the wrapper is recomputed, not returned raw --\n";
+echo "\n-- an entry not in the current shape is recomputed, not returned raw --\n";
 {
-    $GLOBALS['t_transients'][$k3] = ['bare' => 'legacy'];   // no __v / __t
+    $GLOBALS['t_options'][$k3] = ['bare' => 'legacy'];   // no __v / __t / __e
     $calls = 0;
     $age = null; $hit = null;
     $v = Cache::get_or_set($k3, function () use (&$calls) { $calls++; return 'fresh'; }, 60, $age, $hit);
     check('the unwrapped payload fails the shape check and is replaced',
         $v === 'fresh' && $calls === 1 && $hit === false, compact('calls', 'hit'));
-    check('...and the replacement IS wrapped, so the next read can age it',
-        is_array($GLOBALS['t_transients'][$k3]) && array_key_exists('__v', $GLOBALS['t_transients'][$k3])
-        && array_key_exists('__t', $GLOBALS['t_transients'][$k3]));
+    $row = $GLOBALS['t_options'][$k3] ?? null;
+    check('...and the replacement IS wrapped — value, written-at and expiry — so the next read can age it',
+        is_array($row) && array_key_exists('__v', $row) && isset($row['__t'], $row['__e']) && $row['__e'] === $row['__t'] + 60, $row);
+}
+
+echo "\n-- 0.47.4: A READ NEVER DELETES (the 2026-10-17 deadlock) --\n";
+{
+    $k = Cache::key(['expiry']);
+    Cache::get_or_set($k, static fn() => 'old', 60);
+    check('an entry is a plain option, NOT autoloaded (never in the every-page alloptions load)',
+        isset($GLOBALS['t_options'][$k]) && ($GLOBALS['t_autoload'][$k] ?? null) === false, $GLOBALS['t_autoload'][$k] ?? 'unset');
+    $GLOBALS['t_options'][$k]['__e'] = time() - 1;           // it has expired
+    t_reset();
+    $hit = null;
+    $v = Cache::get_or_set($k, static fn() => 'new', 60, $age, $hit);
+    check('an EXPIRED entry is a miss: recomputed, not served', $v === 'new' && $hit === false, compact('v', 'hit'));
+    check('...and nothing was deleted on the way — no delete_option, no get_transient (which deletes an expired transient as it reads it)',
+        !isset($GLOBALS['t_calls']['delete_option']) && !isset($GLOBALS['t_calls']['get_transient']) && !isset($GLOBALS['t_calls']['delete_transient']), $GLOBALS['t_calls']);
+    check('...the row is overwritten in place with a new expiry', ($GLOBALS['t_options'][$k]['__v'] ?? null) === 'new' && $GLOBALS['t_options'][$k]['__e'] > time());
+    $GLOBALS['t_options'][$k]['__e'] = time() - 1;
+    t_reset();
+    $p = Cache::peek($k);
+    check('peek() of an expired entry: a miss, and no delete either', $p === null && !isset($GLOBALS['t_calls']['delete_option']) && !isset($GLOBALS['t_calls']['get_transient']), [$p, $GLOBALS['t_calls']]);
+    $src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-cache.php');
+    $code = preg_replace('~/\*.*?\*/|//[^\n]*~s', '', $src);
+    check('Cache calls no transient function at all any more', !preg_match('/\b(get|set|delete)_transient\s*\(/', $code));
+    check('...and delete_option() appears only in sweep(), the daily clean-up',
+        substr_count($code, 'delete_option(') === 1 && preg_match('/function sweep\b(?:(?!function ).)*delete_option\(/s', $code) === 1);
 }
 
 echo "\n-- a stored FALSE is a value, not a miss --\n";
 {
-    // get_transient() returns false for "absent", so a cached false would be
-    // indistinguishable without the wrapper. The wrapper is what makes it
+    // get_option() answers its default for "absent", so a cached false would
+    // be indistinguishable without the wrapper. The wrapper is what makes it
     // distinguishable; prove it.
     $k = Cache::key(['falsy']);
     $calls = 0;

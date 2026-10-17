@@ -1895,6 +1895,13 @@ class Widget extends Widget_Base
                     // client must never treat the embedded data as fresh.
                     'ttl'        => Cache::ttl(),
                 ];
+                // The booking rules for the same window (0.47.4), as the
+                // endpoint sends them, so the first paint already shows
+                // which days cannot start a stay.
+                $init_rules = Data_Provider::get_rules($type_ids, $base_from, $init_to);
+                if ($init_rules !== null) {
+                    $initial['rules'] = Booking_Rules::encode($init_rules);
+                }
             }
         } catch (\Throwable $e) {
             error_log('MPHBAC: initial availability embed failed: ' . $e->getMessage());
@@ -1964,6 +1971,23 @@ class Widget extends Widget_Base
                 // typed into the year segment alone). A plain translatable
                 // string, not a panel control: the panel is unchanged.
                 'checkDates'    => __('Please check the dates.', 'mphb-availability-calendar'),
+                // 0.47.4: MotoPress's booking rules, said only after the
+                // guest taps a day or picks dates that break one. Plain
+                // translatable strings like checkDates; the panel is
+                // unchanged. Tips and taps (rule*), the popup (sheet*,
+                // bookMaxNights), and the legend entry (Title Case).
+                'ruleNoCheckIn'   => __('No check-in on this day.', 'mphb-availability-calendar'),
+                'ruleTooSoon'     => __('Too soon to book this day.', 'mphb-availability-calendar'),
+                'ruleTooFar'      => __('Too far ahead to book this day.', 'mphb-availability-calendar'),
+                'sheetNoCheckIn'  => __('No check-in on that day. Please select new dates.', 'mphb-availability-calendar'),
+                'sheetTooSoon'    => __('That check-in is too soon. Please select new dates.', 'mphb-availability-calendar'),
+                'sheetTooFar'     => __('That check-in is too far ahead. Please select new dates.', 'mphb-availability-calendar'),
+                'sheetNoCheckOut' => __('No check-out on that day. Please select new dates.', 'mphb-availability-calendar'),
+                'bookMaxNights'   => __('Must be a maximum of {nights} nights. Please select new dates.', 'mphb-availability-calendar'),
+                // The minimum's message when MotoPress's minimum is not the
+                // widget's and the panel's wording has no {nights} to fill.
+                'bookMinNightsN'  => __('Must be a minimum of {nights} nights. Please select new dates.', 'mphb-availability-calendar'),
+                'legendNoCheckIn' => __('No Check-In', 'mphb-availability-calendar'),
             ],
         ];
 

@@ -25,6 +25,7 @@ function set_transient($k, $v, $t) { return true; }
 function delete_transient($k) { return true; }
 
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-ajax.php';

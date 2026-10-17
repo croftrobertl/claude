@@ -90,11 +90,24 @@ function get_permalink($id) { return 'https://example.test/?p=' . (int) $id; }
 function sanitize_text_field($t) { return trim(strip_tags((string) $t)); }
 
 $GLOBALS['t_options'] = [];
+/**
+ * Forget every cache row (0.47.4: Cache keeps them as plain options,
+ * mphbac_c_<hash>, not transients — so a suite that stubbed get_transient()
+ * to miss now clears these instead, where it used to rely on that).
+ */
+function t_cache_clear(): void {
+    foreach (array_keys($GLOBALS['t_options']) as $k) {
+        if (strncmp((string) $k, 'mphbac_c_', 9) === 0) { unset($GLOBALS['t_options'][$k]); }
+    }
+}
+if (!function_exists('delete_option')) {
+    function delete_option($k) { t_count('delete_option'); unset($GLOBALS['t_options'][$k]); return true; }
+}
 if (!function_exists('get_option')) {
     function get_option($k, $default = false) { return $GLOBALS['t_options'][$k] ?? $default; }
 }
 if (!function_exists('update_option')) {
-    function update_option($k, $v, $auto = null) { $GLOBALS['t_options'][$k] = $v; return true; }
+    function update_option($k, $v, $auto = null) { $GLOBALS['t_options'][$k] = $v; $GLOBALS['t_autoload'][$k] = $auto; return true; }
 }
 if (!function_exists('add_option')) {
     function add_option($k, $v, $d = '', $auto = null) { $GLOBALS['t_options'][$k] = $v; return true; }

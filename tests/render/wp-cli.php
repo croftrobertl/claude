@@ -54,7 +54,12 @@ $GLOBALS['wpdb'] = new class($ids) extends T_WPDB {
 $before = $GLOBALS['t_options'];
 $args = ['--json'];
 (static function () use ($script, $args) { global $wpdb; include $script; })();
-if ($GLOBALS['t_options'] !== $before) {
+// The calendar's cache rows (Cache, mphbac_c_<hash>) are not settings: since
+// 0.47.4 they are options where they used to be transients, which this check
+// never saw. Rendering a widget fills them, as any page view does.
+$settings_only = static fn(array $o): array => array_filter($o, static fn($k) => strncmp((string) $k, 'mphbac_c_', 9) !== 0, ARRAY_FILTER_USE_KEY);
+if ($settings_only($GLOBALS['t_options']) !== $settings_only($before)) {
+    fwrite(STDERR, 'wp-cli.php: changed: ' . implode(', ', array_keys(array_diff_key($settings_only($GLOBALS['t_options']), $settings_only($before)))) . "\n");
     fwrite(STDERR, "wp-cli.php: the script WROTE an option\n");
     exit(3);
 }

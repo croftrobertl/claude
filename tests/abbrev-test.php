@@ -24,6 +24,7 @@ function delete_transient($k) { return true; }
 // which is how this was caught before it shipped.
 require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 
 use MPHBAC\Data_Provider;
@@ -39,6 +40,7 @@ function check(string $l, bool $c, $x = null): void {
 function label(string $title): array {
     $GLOBALS['t_posts'] = [];
     $GLOBALS['t_meta'] = [];
+    t_cache_clear();
     t_post(100, 'mphb_room_type', 'publish', $title);
     $t = Data_Provider::list_room_types();
     return $t[0] ?? [];

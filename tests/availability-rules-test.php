@@ -33,6 +33,7 @@ if (!function_exists('wp_unslash')) { function wp_unslash($v) { return $v; } }
 
 require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
+require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-ajax.php';
 
@@ -58,7 +59,9 @@ $today = Data_Provider::today();
 $D = static fn(int $n): string => $today->modify("+$n days")->format('Y-m-d');
 $from = $today->modify('+10 days');
 $to   = $today->modify('+40 days');
-$fresh = static function (): void { $GLOBALS['t_tr'] = []; Cache::flush_all(); };
+// Since 0.47.4 the cache's rows are options (mphbac_c_<hash>), not transients.
+$fresh = static function (): void { $GLOBALS['t_tr'] = []; t_cache_clear(); Cache::flush_all(); };
+$rows = static fn(): array => array_values(preg_grep('/^mphbac_c_/', array_map('strval', array_keys($GLOBALS['t_options']))));
 $avail = static function (array $ids = [22, 23, 31]) use (&$from, &$to, $fresh): array {
     $fresh();
     return Data_Provider::get_availability($ids, $from, $to);
@@ -171,7 +174,7 @@ $db->block(22, 0, $D(20), $D(22));
 $db->fail_on = '/mphb_blocks\b.*not_stay_in/s';
 $a = $avail();
 check('the blocks query fails: the answer is EMPTY — every night drawn as booked — not "open"', $a === [], array_slice($a[22] ?? [], 0, 3));
-check('...and nothing was stored', !array_filter(array_keys($GLOBALS['t_tr']), static fn($k) => true) || count($GLOBALS['t_tr']) <= 1, array_keys($GLOBALS['t_tr']));
+check('...and nothing was stored (the cottage list, an hour-long entry of its own, aside)', count($rows()) <= 1 && $GLOBALS['t_tr'] === [], $rows());
 $db->fail_on = null;
 $a = Data_Provider::get_availability([22, 23, 31], $from, $to);
 check('...so the next request reads again and is right: #22 booked 20–22', $booked($a, 22, 20, 22) && $open($a, 22, 19, 19));
@@ -182,7 +185,7 @@ $db->fail_on = null;
 $db->clear_blocks();
 
 echo "\n-- 2. the cache: one entry per month, never one per request --\n";
-$keys = static fn() => count(array_filter(array_keys($GLOBALS['t_tr']), static fn($k) => strpos($k, 'mphbac_') === 0));
+$keys = static fn() => count($rows()) + count($GLOBALS['t_tr']);
 $fresh();
 $valid = ['22', '23', '31'];
 $lo = $today->modify('-' . Ajax::CLAMP_PAST_DAYS . ' days');
@@ -209,7 +212,7 @@ for ($i = 0; $i < 1000; $i++) {
     $call(['room_type_ids' => $valid, 'from' => $f->format('Y-m-d'), 'to' => $f->modify('+' . mt_rand(0, 94) . ' days')->format('Y-m-d')]);
 }
 check('...1,000 more add nothing past it', $keys() <= $bound, [$keys(), $bound]);
-check('...the old per-request key (avail_v2: ids, from, to) is never written', !preg_grep('/avail_v2/', array_map('strval', array_keys($GLOBALS['t_tr']))));
+check('...the old per-request key (avail_v2: ids, from, to) is never written, and nothing is a transient any more', !preg_grep('/avail_v2/', $rows()) && $GLOBALS['t_tr'] === []);
 
 // Cutting a request from its months answers exactly what reading it straight does.
 $db->block(22, 0, $D(20), $D(22));
@@ -232,7 +235,7 @@ $direct = [];
 foreach ($wins as $k => [$f, $t, $ids]) { $direct[$k] = Data_Provider::get_availability($ids, $f, $t); }
 check('with "Remember availability for" at 0, no availability is stored at all (60 windows, not one entry)', $keys() === $k0, [$k0, $keys()]);
 Cache::put('mphbac_t_direct', ['x' => 1]);
-check('...and Cache::put() itself stores nothing at 0 (set_transient\'s 0 would mean FOREVER)', !isset($GLOBALS['t_tr']['mphbac_t_direct']), $GLOBALS['t_tr']['mphbac_t_direct'] ?? null);
+check('...and Cache::put() itself stores nothing at 0 (a 0 expiry would mean FOREVER, or nothing ever read)', !isset($GLOBALS['t_options']['mphbac_t_direct']) && !isset($GLOBALS['t_tr']['mphbac_t_direct']));
 unset($GLOBALS['t_options'][\MPHBAC\Settings::OPTION]);
 \MPHBAC\Settings::flush();
 foreach ($wins as $k => [$f, $t, $ids]) {
