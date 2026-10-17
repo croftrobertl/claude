@@ -15,6 +15,7 @@ namespace {
     $GLOBALS['MAILS'] = [];
     $GLOBALS['ENTRIES'] = [];
     $_SERVER['REMOTE_ADDR'] = '203.0.113.7';
+    $_SERVER['HTTP_REFERER'] = 'https://doracanalcourt.com/contact/';
 
     function __($t, $d = null) { return $t; }
     function esc_html__($t, $d = null) { return htmlspecialchars($t, ENT_QUOTES); }
@@ -36,7 +37,25 @@ namespace {
     function wp_json_encode($v) { return json_encode($v); }
     function wp_create_nonce($a) { return 'N_' . substr(md5($a), 0, 8); }
     function is_user_logged_in() { return false; }
-    function wp_get_referer() { return 'https://doracanalcourt.com/contact/'; }
+    /**
+     * Faithful to real WordPress, and that fidelity is load-bearing.
+     *
+     * Core's wp_get_referer() passes the header through wp_validate_redirect(),
+     * which returns FALSE for any host that is not this site. That is the whole
+     * mechanism of the bug fix 6 repairs: `if (wp_get_referer())` was falsy
+     * EXACTLY when the referer was hostile, so the check could never reject.
+     *
+     * A stub that returned the raw header would make the old, broken code look
+     * correct here — the mutation run caught precisely that and reported the
+     * referer mutation as escaping.
+     */
+    function wp_get_referer() {
+        $ref = $_SERVER['HTTP_REFERER'] ?? '';
+        if ($ref === '') { return false; }
+        $host = parse_url($ref, PHP_URL_HOST);
+        $home = parse_url(home_url(), PHP_URL_HOST);
+        return ($host && $host === $home) ? $ref : false;
+    }
     function home_url($p = '') { return 'https://doracanalcourt.com' . $p; }
     function admin_url($p = '') { return 'https://doracanalcourt.com/wp-admin/' . $p; }
     function wp_parse_url($u, $c = -1) { return parse_url($u, $c); }

@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -154,6 +154,44 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.7.1 =
+**Lead capture and hardening, from the 2026-10-17 audit.**
+
+* reCAPTCHA no longer turns a real guest away when it cannot reach a verdict.
+  A blocked script, an unreachable or slow Google, an expired token or a wrong
+  secret key previously filed the enquiry as spam and never emailed it. Those
+  are now saved AND emailed, marked "Unverified" in the subject and on the
+  Submissions screen, with the normal thank-you shown to the guest. A token
+  Google actually scores below the threshold, or one that was never minted for
+  this site, is still spam.
+* Honeypot catches keep their submitted content, so a real message trapped by
+  an aggressive autofill can be recovered instead of vanishing behind a fake
+  thank-you. One that reads human — no links, a repliable address or US phone
+  number, ordinary prose — is flagged for review on the admin notice.
+* Server-side length caps: 5,000 characters for a message, 200 for every other
+  field, with matching `maxlength` attributes. Over-long values are reported to
+  the visitor and trimmed before storage.
+* Spam CONTENT is no longer stored past 200 rows a day. Further spam is still
+  counted, and real and unverified messages are never capped, so a script
+  cannot fill the disk.
+* A submission that was stored but could not be emailed now raises a wp-admin
+  notice until the entry is opened. The count is exposed as the
+  `dcc_contact_mail_failed_count` option and filter; trapped messages awaiting
+  review as `dcc_contact_trapped_review_count`.
+* Submissions has Received / Unverified / Spam tabs, defaulting to Received.
+* The same-origin referer check now actually rejects a foreign referer. It read
+  `wp_get_referer()`, which returns false for a foreign host, so the guard was
+  skipped exactly when it was needed. An absent or empty referer is still
+  allowed, and the www. spelling of the domain is accepted.
+* The submit button no longer sticks coral after a tap on iOS: the hover rules
+  are gated to devices with a real pointer, and touch re-asserts the resting
+  blue. Keyboard focus keeps its coral fill and focus ring on every device.
+* reCAPTCHA's script is no longer a blocking footer request on every page view.
+  It loads on the first focus of a field; a very fast submit either still gets
+  a token or falls through to the unverified path above.
+* The "send me a copy" row has a 44px tap area, added as an invisible
+  extension so nothing visible changes size.
 
 = 1.7.0 =
 **Security release — fixes a spam relay. Install this one.**

@@ -14,6 +14,23 @@ final class Form_Handler
 {
     public const NONCE_ACTION = 'dcc_contact_submit';
 
+    /**
+     * Server-side length caps, in characters.
+     *
+     * The browser gets matching maxlength attributes, but those are a courtesy:
+     * a scripted POST ignores them, so the limit that matters is this one. An
+     * over-long value is reported to the visitor AND trimmed before storage,
+     * so an unbounded field can neither be stored nor emailed whole.
+     */
+    public const MAX_LEN_TEXTAREA = 5000;
+    public const MAX_LEN_FIELD    = 200;
+
+    /** The cap that applies to a field type. */
+    public static function max_len(string $type): int
+    {
+        return $type === 'textarea' ? self::MAX_LEN_TEXTAREA : self::MAX_LEN_FIELD;
+    }
+
     /* ------------------------------------------------------------------ */
     /* Entry points                                                        */
     /* ------------------------------------------------------------------ */
@@ -103,17 +120,11 @@ final class Form_Handler
         // verifies against their session — rejecting there makes the owner's
         // own tests fail while real visitors succeed. Instead every submission,
         // logged-in or not, goes through the same validation: the same-origin
-        // referer check below plus all four spam layers (reCAPTCHA, honeypot,
-        // time-trap, keyword filter). CSRF value on a public contact form is
-        // negligible — the endpoint takes no privileged action on behalf of
-        // the logged-in user.
-        $referer = wp_get_referer();
-        if ($referer) {
-            $ref_host  = wp_parse_url($referer, PHP_URL_HOST);
-            $home_host = wp_parse_url(home_url(), PHP_URL_HOST);
-            if ($ref_host && $home_host && strcasecmp($ref_host, $home_host) !== 0) {
-                return $fail(__('Your request could not be verified. Please reload the page and try again.', 'dcc-contact-form'));
-            }
+        // referer check below plus the spam layers. CSRF value on a public
+        // contact form is negligible — the endpoint takes no privileged action
+        // on behalf of the logged-in user.
+        if (!self::referer_ok()) {
+            return $fail(__('Your request could not be verified. Please reload the page and try again.', 'dcc-contact-form'));
         }
 
         $form_id = isset($post['form_id']) ? sanitize_text_field((string) wp_unslash($post['form_id'])) : '';
@@ -122,38 +133,48 @@ final class Form_Handler
             return $fail(__('This form is no longer available. Please reload the page and try again.', 'dcc-contact-form'));
         }
 
-        // 1) Honeypot — bots that fill the hidden field get a fake success and
-        //    no email. Recorded as spam for the owner's visibility. The field
-        //    is named innocuously (dcc_contact_code, label "Code") so bots
-        //    can't skip it by pattern-matching "hp"/"honeypot"; dcc_hp is still
-        //    checked for HTML cached before the rename.
+        // 1) Validate + sanitize the declared fields. Any errors are HELD here
+        //    rather than returned: the honeypot below must answer first, so a
+        //    bot never learns which fields it got wrong, and it needs the
+        //    sanitized values so that a honeypot catch is stored WITH its
+        //    content. An over-long value is recorded as an error and also
+        //    trimmed, so the stored copy is bounded either way.
+        [$values, $errors] = self::collect_fields($config['fields'], $post);
+
+        // The ordered label => value rows used for storage + email.
+        $rows = self::build_rows($config['fields'], $values);
+
+        // 2) Honeypot — bots that fill the hidden field get a fake success and
+        //    no email. Recorded as spam, WITH the submitted values: the field
+        //    is hidden from humans but an aggressive autofill (iOS, a password
+        //    manager) can still reach it, and an empty row would mean a real
+        //    enquiry vanished behind a fake thank-you with nothing left to
+        //    recover. The field is named innocuously (dcc_contact_code, label
+        //    "Code") so bots can't skip it by pattern-matching
+        //    "hp"/"honeypot"; dcc_hp is still checked for HTML cached before
+        //    the rename.
         if (!empty($config['spam']['honeypot'])) {
             $hp = isset($post['dcc_contact_code']) ? trim((string) wp_unslash($post['dcc_contact_code'])) : '';
             if ($hp === '' && isset($post['dcc_hp'])) {
                 $hp = trim((string) wp_unslash($post['dcc_hp']));
             }
             if ($hp !== '') {
-                self::store_spam($config, $form_id, 'honeypot', []);
+                // A trapped submission that reads as human is flagged for
+                // review, so the admin notice can raise a hand over it. It is
+                // still stored as spam and still goes unemailed — the flag only
+                // means "worth a look", never "deliver this".
+                $layer = Triage::looks_human($rows) ? 'honeypot:maybe-real' : 'honeypot';
+                self::store_spam($config, $form_id, $layer, $rows);
                 return ['ok' => true, 'confirmation' => self::confirmation_html($config), 'message' => '', 'errors' => []];
             }
         }
 
-        // 2) Validate + sanitize declared fields.
-        [$values, $errors] = self::collect_fields($config['fields'], $post);
+        // 3) Now the held validation errors may be reported.
         if (!empty($errors)) {
             return $fail('', $errors);
         }
 
-        // Build the ordered label => value rows used for storage + email.
-        $rows = [];
-        foreach ($config['fields'] as $field) {
-            $rows[] = [
-                'label' => $field['label'] !== '' ? $field['label'] : ucfirst($field['type']),
-                'value' => (string) ($values[$field['id']] ?? ''),
-            ];
-        }
-
-        // 3) Time-trap. The timing field is REQUIRED: a submission that omits
+        // 4) Time-trap. The timing field is REQUIRED: a submission that omits
         //    it, or sends something non-numeric, FAILS the minimum-time check
         //    rather than skipping it. Previously an absent dcc_ts skipped the
         //    layer entirely, so the cheapest possible bypass was to not send
@@ -176,7 +197,7 @@ final class Form_Handler
             }
         }
 
-        // 4) Keyword filter.
+        // 5) Keyword filter.
         if (!empty($config['spam']['keyword_filter'])) {
             $keywords = Settings::keywords();
             if (!empty($keywords) && self::contains_keyword($rows, $keywords)) {
@@ -185,22 +206,36 @@ final class Form_Handler
             }
         }
 
-        // 5) reCAPTCHA v3 — when enabled AND keys configured (graceful degrade:
+        // 6) reCAPTCHA v3 — when enabled AND keys configured (graceful degrade:
         //    blank keys skip this layer entirely). Enforced on BOTH the AJAX
         //    path and the non-JS admin-post fallback: the fallback URL is
         //    printed in the form's action attribute, and bots that scrape the
         //    form POST straight to it — exempting that path would exempt most
-        //    real bot traffic. A genuine no-JS visitor gets the failure
-        //    message (v3 requires JS to mint a token; WPForms behaves the same).
+        //    real bot traffic.
+        //
+        //    ONLY A REAL VERDICT REJECTS. Google saying "this scores below the
+        //    threshold", or "this token was not minted for your site", is
+        //    evidence and still files the submission as spam. Never obtaining a
+        //    verdict is NOT: a blocked script, a dropped or timed-out
+        //    verification call, an expired token, or a wrong secret key used to
+        //    lose the enquiry entirely. Those now go through as UNVERIFIED —
+        //    saved, emailed, flagged for the owner — and the visitor sees the
+        //    ordinary thank-you. A real guest is never turned away because a
+        //    third-party script failed to load.
+        $unverified = false;
         if (!empty($config['spam']['recaptcha']) && Settings::recaptcha_configured()) {
-            $token = isset($post['dcc_recaptcha']) ? sanitize_text_field((string) wp_unslash($post['dcc_recaptcha'])) : '';
-            if (!Recaptcha::verify($token)) {
+            $token   = isset($post['dcc_recaptcha']) ? sanitize_text_field((string) wp_unslash($post['dcc_recaptcha'])) : '';
+            $verdict = Recaptcha::check($token);
+
+            if ($verdict === Recaptcha::SPAM) {
                 self::store_spam($config, $form_id, 'recaptcha', $rows);
                 return $fail(__('Google reCAPTCHA verification failed, please try again later.', 'dcc-contact-form'));
             }
+
+            $unverified = ($verdict === Recaptcha::UNVERIFIED);
         }
 
-        // 6) Per-IP limit. Checked after the spam layers and before anything
+        // 7) Per-IP limit. Checked after the spam layers and before anything
         //    is stored or sent, so it meters ACCEPTED submissions — the only
         //    kind that can be used to send mail. See Rate_Limit for why
         //    attempts are deliberately not metered, and for the privacy
@@ -213,13 +248,27 @@ final class Form_Handler
 
         // Passed all layers. Build subject, store, email.
         $subject = self::build_subject($config, $config['fields'], $values);
+        $status  = $unverified ? Entries::STATUS_UNVERIFIED : Entries::STATUS_OK;
 
-        $entry_id = Entries::insert($rows, $subject, $form_id, Entries::STATUS_OK);
+        $entry_id = Entries::insert($rows, $subject, $form_id, $status);
+
+        // The stored subject stays clean so it still matches what the guest
+        // was told; the flag rides on the EMAIL subject, where the owner needs
+        // to see it, and on the entry's status, which drives the Submissions
+        // tab and badge.
+        $email_subject = $unverified
+            ? sprintf(
+                /* translators: 1: "Unverified" marker, 2: the message subject */
+                _x('[%1$s] %2$s', 'email subject with marker', 'dcc-contact-form'),
+                __('Unverified', 'dcc-contact-form'),
+                $subject
+            )
+            : $subject;
 
         $config_for_email = $config;
         $submitter = self::submitter_email($config['fields'], $values);
         $config_for_email['reply_to'] = self::resolve_reply_to($config, $config['fields'], $values);
-        $sent = Email::send($config_for_email, $rows, $subject);
+        $sent = Email::send($config_for_email, $rows, $email_subject);
 
         // Opt-in acknowledgement. It carries NONE of the submitted content —
         // fixed text only — so supplying someone else's address here delivers
@@ -236,7 +285,9 @@ final class Form_Handler
         // but it would otherwise be invisible. Flag it on the entry so the
         // Submissions screen shows which enquiries were never actually emailed.
         if (!$sent && $entry_id > 0) {
-            Entries::set_status($entry_id, Entries::STATUS_MAIL_FAILED);
+            Entries::set_status($entry_id, Entries::mail_failed_status($status));
+            // Keep the count the admin notice is built from true.
+            Entries::refresh_mail_failed_count();
         }
 
         // Count this submission against the address's allowance.
@@ -248,6 +299,89 @@ final class Form_Handler
     /* ------------------------------------------------------------------ */
     /* Field collection + validation                                       */
     /* ------------------------------------------------------------------ */
+
+    /**
+     * Same-origin check on the RAW Referer header.
+     *
+     * It has to be the raw header. The previous version read wp_get_referer(),
+     * which passes the value through wp_validate_redirect() and returns FALSE
+     * for any host that is not this site — so `if ($referer)` was falsy exactly
+     * when the referer was hostile, and the check could never reject anything.
+     * A POST carrying `Referer: https://evil.example/` went straight through.
+     *
+     * An absent or empty header is allowed on purpose: referrer-policy and
+     * browser privacy settings strip it from perfectly genuine submissions, and
+     * rejecting those would cost real enquiries.
+     *
+     * A header that IS present but names a different host is refused. The
+     * comparison ignores a www. prefix, so a visitor on the other spelling of
+     * the domain is not turned away.
+     */
+    private static function referer_ok(): bool
+    {
+        $referer = isset($_SERVER['HTTP_REFERER']) ? trim((string) $_SERVER['HTTP_REFERER']) : '';
+        if ($referer === '') {
+            return true;
+        }
+
+        $ref_host = wp_parse_url($referer, PHP_URL_HOST);
+        if (!is_string($ref_host) || $ref_host === '') {
+            // Present but unparseable — not the same thing as absent.
+            return false;
+        }
+
+        $home_host = wp_parse_url(home_url(), PHP_URL_HOST);
+        if (!is_string($home_host) || $home_host === '') {
+            return true;
+        }
+
+        return Urls::same_host($ref_host, $home_host);
+    }
+
+    /**
+     * The ordered label => value rows used for storage and email.
+     *
+     * @return array<int,array{label:string,value:string}>
+     */
+    private static function build_rows(array $fields, array $values): array
+    {
+        $rows = [];
+        foreach ($fields as $field) {
+            $rows[] = [
+                'label' => $field['label'] !== '' ? $field['label'] : ucfirst($field['type']),
+                'value' => (string) ($values[$field['id']] ?? ''),
+            ];
+        }
+        return $rows;
+    }
+
+    /**
+     * Enforce a length cap: report it to the visitor and trim the value.
+     *
+     * Both halves matter. Reporting alone would let an unbounded string reach
+     * storage on the honeypot path, which returns a fake success and never
+     * looks at errors; trimming alone would silently swallow part of a genuine
+     * enquiry without telling anyone.
+     *
+     * @param array<string,string> $errors Modified in place.
+     */
+    private static function cap(string $value, string $type, string $id, array &$errors): string
+    {
+        $max = self::max_len($type);
+        if (mb_strlen($value) <= $max) {
+            return $value;
+        }
+
+        if (!isset($errors[$id])) {
+            $errors[$id] = sprintf(
+                /* translators: %s: maximum number of characters */
+                __('Please shorten this to %s characters or fewer.', 'dcc-contact-form'),
+                number_format_i18n($max)
+            );
+        }
+
+        return mb_substr($value, 0, $max);
+    }
 
     /**
      * @return array{0:array<string,string>,1:array<string,string>} [values, errors]
@@ -272,6 +406,9 @@ final class Form_Handler
                 case 'name':
                     $first = is_array($in) ? sanitize_text_field((string) ($in['first'] ?? '')) : '';
                     $last  = is_array($in) ? sanitize_text_field((string) ($in['last'] ?? '')) : '';
+                    // Capped per subfield, before they are joined.
+                    $first = self::cap($first, $type, $id, $errors);
+                    $last  = self::cap($last, $type, $id, $errors);
                     $value = trim($first . ' ' . $last);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
@@ -281,6 +418,7 @@ final class Form_Handler
 
                 case 'email':
                     $value = sanitize_email(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     } elseif ($value !== '' && !is_email($value)) {
@@ -291,6 +429,7 @@ final class Form_Handler
 
                 case 'tel':
                     $value = sanitize_text_field(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     } elseif ($value !== '' && !self::valid_phone($value)) {
@@ -301,6 +440,7 @@ final class Form_Handler
 
                 case 'textarea':
                     $value = sanitize_textarea_field(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     }
@@ -309,6 +449,7 @@ final class Form_Handler
 
                 case 'number':
                     $value = sanitize_text_field(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     } elseif ($value !== '' && !is_numeric($value)) {
@@ -319,6 +460,7 @@ final class Form_Handler
 
                 case 'select':
                     $value = sanitize_text_field(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     } elseif ($value !== '' && !empty($field['options']) && !in_array($value, $field['options'], true)) {
@@ -338,6 +480,7 @@ final class Form_Handler
                 case 'text':
                 default:
                     $value = sanitize_text_field(is_array($in) ? '' : (string) $in);
+                    $value = self::cap($value, $type, $id, $errors);
                     if ($required && $value === '') {
                         $errors[$id] = __('This field is required.', 'dcc-contact-form');
                     }
@@ -467,6 +610,8 @@ final class Form_Handler
         if (is_string($subject) && $subject !== '') {
             $subject = wp_strip_all_tags($subject);
         }
-        Entries::insert($rows, (string) $subject, $form_id, 'spam:' . $type);
+        // insert_spam(), not insert(): past the daily cap the content is not
+        // written at all, only tallied.
+        Entries::insert_spam($rows, (string) $subject, $form_id, 'spam:' . $type);
     }
 }

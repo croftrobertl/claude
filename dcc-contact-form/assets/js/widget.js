@@ -100,24 +100,68 @@
         }
     }
 
-    /* reCAPTCHA v3: resolve with a token, or '' when unavailable. */
-    function getRecaptchaToken(siteKey) {
-        return new Promise(function (resolve) {
-            if (!siteKey || typeof grecaptcha === 'undefined' || !grecaptcha.ready) {
-                resolve('');
-                return;
-            }
-            try {
-                grecaptcha.ready(function () {
-                    grecaptcha.execute(siteKey, { action: 'dcc_contact' }).then(
-                        function (token) { resolve(token || ''); },
-                        function () { resolve(''); }
-                    );
-                });
-            } catch (e) {
-                resolve('');
-            }
+    /* ---- reCAPTCHA, loaded on demand ----------------------------------
+
+       api.js is no longer enqueued with the page. Every visitor to a page
+       carrying the form used to fetch and run Google's script before typing
+       anything; now the first focus of any field injects it, so a visitor who
+       only reads the page never pays for it.
+
+       Loading is attempted at most once per page, and shared by every form on
+       it. A failed load is remembered as a failure rather than retried, so a
+       blocked script does not stall each submit in turn. */
+    var rcLoad = null;
+
+    function loadRecaptcha(src) {
+        if (rcLoad) { return rcLoad; }
+        if (!src) { return Promise.resolve(false); }
+
+        rcLoad = new Promise(function (resolve) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.onload = function () { resolve(true); };
+            s.onerror = function () { resolve(false); };   /* blocked or offline */
+            (document.head || document.documentElement).appendChild(s);
         });
+        return rcLoad;
+    }
+
+    /* How long a submit will wait for Google before giving up on a token. The
+       server's own verification allows 8s, so this stays well inside it: the
+       guest must not sit on "Sending..." because a third party is slow. */
+    var RECAPTCHA_WAIT_MS = 4000;
+
+    /* Resolve with a token, or '' when one cannot be obtained in time.
+       An empty token is NOT a dead end — the server treats a submission it
+       could not verify as "unverified": stored, emailed and flagged, with the
+       normal thank-you shown. So every failure path here simply resolves ''. */
+    function getRecaptchaToken(siteKey, src) {
+        if (!siteKey) { return Promise.resolve(''); }
+
+        var token = loadRecaptcha(src).then(function (loaded) {
+            if (!loaded || typeof grecaptcha === 'undefined' || !grecaptcha.ready) {
+                return '';
+            }
+            return new Promise(function (resolve) {
+                try {
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute(siteKey, { action: 'dcc_contact' }).then(
+                            function (t) { resolve(t || ''); },
+                            function () { resolve(''); }
+                        );
+                    });
+                } catch (e) {
+                    resolve('');
+                }
+            });
+        });
+
+        var deadline = new Promise(function (resolve) {
+            window.setTimeout(function () { resolve(''); }, RECAPTCHA_WAIT_MS);
+        });
+
+        return Promise.race([token, deadline]);
     }
 
     function init(form) {
@@ -129,6 +173,16 @@
         var button = form.querySelector('.dcc-submit');
         var ajaxUrl = form.getAttribute('data-ajax-url');
         var siteKey = form.getAttribute('data-recaptcha') || '';
+        var rcSrc = form.getAttribute('data-recaptcha-src') || '';
+
+        /* Start fetching Google's script the moment the visitor engages with
+           the form, so a token is usually ready by the time they submit. Once
+           is enough: loadRecaptcha() is idempotent. */
+        if (siteKey && rcSrc) {
+            form.addEventListener('focusin', function () {
+                loadRecaptcha(rcSrc);
+            }, { once: true });
+        }
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -153,7 +207,9 @@
                 button.textContent = processing || origLabel;
             }
 
-            getRecaptchaToken(siteKey).then(function (token) {
+            /* A submit that never focused a field (autofill plus Enter, or a
+               very fast visitor) still triggers the load here. */
+            getRecaptchaToken(siteKey, rcSrc).then(function (token) {
                 var rcField = form.querySelector('input[name="dcc_recaptcha"]');
                 if (rcField) { rcField.value = token; }
 

@@ -108,16 +108,15 @@ final class Widget extends Widget_Base
         // IMPORTANT: this runs generically in the Elementor editor preview
         // (enqueue_widgets_scripts) with NO placed-instance data, so
         // get_settings_for_display() would receive null settings and fatal.
-        // Gate the reCAPTCHA dependency on the site-wide config only — it is
-        // harmless to register api.js whenever keys are present (the badge is
-        // hidden either way, and only forms with the toggle on actually call
-        // grecaptcha). The per-instance toggle still governs whether a token is
-        // required at submit time (enforced server-side in Form_Handler).
-        $deps = ['dcc-contact-form'];
-        if (Settings::recaptcha_configured()) {
-            $deps[] = 'dcc-recaptcha-api';
-        }
-        return $deps;
+        // Never read instance settings here.
+        //
+        // api.js is deliberately NOT listed. Declaring it made every visit to a
+        // page carrying the form fetch and execute Google's script in the
+        // footer, before anyone had typed a character — a third-party request
+        // on the critical path for a page most visitors only read. widget.js
+        // now injects it on the first focus of any field instead; see
+        // data-recaptcha-src on the form element.
+        return ['dcc-contact-form'];
     }
 
     /* ------------------------------------------------------------------ */
@@ -151,15 +150,19 @@ final class Widget extends Widget_Base
             'generic'  => __('Something went wrong. Please try again.', 'dcc-contact-form'),
         ]);
 
-        if (Settings::recaptcha_configured()) {
-            wp_register_script(
-                'dcc-recaptcha-api',
-                'https://www.google.com/recaptcha/api.js?render=' . rawurlencode(Settings::recaptcha_site_key()),
-                [],
-                null,
-                true
-            );
-        }
+    }
+
+    /**
+     * The reCAPTCHA api.js URL for this site's key.
+     *
+     * Kept in PHP, handed to the browser on the form element, and injected by
+     * widget.js on first interaction — so the URL still has exactly one
+     * definition even though WordPress no longer enqueues it.
+     */
+    private static function recaptcha_src(): string
+    {
+        return 'https://www.google.com/recaptcha/api.js?render='
+            . rawurlencode(Settings::recaptcha_site_key());
     }
 
     /** Force assets into the Elementor editor preview iframe. */
@@ -755,7 +758,8 @@ final class Widget extends Widget_Base
             <form class="dcc-contact-form" method="post"
                   action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
                   data-ajax-url="<?php echo esc_url(admin_url('admin-ajax.php')); ?>"
-                  <?php if ($recaptcha_on) : ?>data-recaptcha="<?php echo esc_attr(Settings::recaptcha_site_key()); ?>"<?php endif; ?>
+                  <?php if ($recaptcha_on) : ?>data-recaptcha="<?php echo esc_attr(Settings::recaptcha_site_key()); ?>"
+                  data-recaptcha-src="<?php echo esc_url(self::recaptcha_src()); ?>"<?php endif; ?>
                   novalidate>
 
                 <input type="hidden" name="action" value="<?php echo esc_attr(DCC_CONTACT_AJAX_ACTION); ?>">
@@ -843,6 +847,11 @@ final class Widget extends Widget_Base
         $req_attr = $required ? ' aria-required="true"' : '';
         $desc     = ' aria-describedby="' . esc_attr($err_id) . '"';
 
+        // Mirrors the server-side cap in Form_Handler. The browser attribute is
+        // a courtesy that stops a guest typing past the limit and losing the
+        // tail of their message; the server is what actually enforces it.
+        $maxlen = ' maxlength="' . esc_attr((string) Form_Handler::max_len($type)) . '"';
+
         echo '<div class="' . esc_attr(implode(' ', $classes)) . '" data-field="' . esc_attr($fid) . '">';
 
         // Checkboxes carry their label inline after the box; others above.
@@ -860,18 +869,18 @@ final class Widget extends Widget_Base
                 echo '<div class="dcc-name">';
                 echo '<span class="dcc-subfield">'
                     . '<label class="dcc-sublabel dcc-sr-only" for="' . esc_attr($input_id . '-first') . '">' . esc_html__('First', 'dcc-contact-form') . '</label>'
-                    . '<input type="text" class="dcc-input" id="' . esc_attr($input_id . '-first') . '" name="dcc_field[' . esc_attr($fid) . '][first]" autocomplete="given-name" placeholder="' . esc_attr__('First', 'dcc-contact-form') . '"' . $req_attr . $desc . '>'
+                    . '<input type="text" class="dcc-input" id="' . esc_attr($input_id . '-first') . '" name="dcc_field[' . esc_attr($fid) . '][first]" autocomplete="given-name" placeholder="' . esc_attr__('First', 'dcc-contact-form') . '"' . $maxlen . $req_attr . $desc . '>'
                     . '</span>';
                 echo '<span class="dcc-subfield">'
                     . '<label class="dcc-sublabel dcc-sr-only" for="' . esc_attr($input_id . '-last') . '">' . esc_html__('Last', 'dcc-contact-form') . '</label>'
-                    . '<input type="text" class="dcc-input" id="' . esc_attr($input_id . '-last') . '" name="dcc_field[' . esc_attr($fid) . '][last]" autocomplete="family-name" placeholder="' . esc_attr__('Last', 'dcc-contact-form') . '"' . $req_attr . $desc . '>'
+                    . '<input type="text" class="dcc-input" id="' . esc_attr($input_id . '-last') . '" name="dcc_field[' . esc_attr($fid) . '][last]" autocomplete="family-name" placeholder="' . esc_attr__('Last', 'dcc-contact-form') . '"' . $maxlen . $req_attr . $desc . '>'
                     . '</span>';
                 echo '</div>';
                 break;
 
             case 'textarea':
                 echo '<textarea class="dcc-textarea" id="' . esc_attr($input_id) . '" name="dcc_field[' . esc_attr($fid) . ']" rows="5"'
-                    . ($ph !== '' ? ' placeholder="' . esc_attr($ph) . '"' : '') . $req_attr . $desc . '></textarea>';
+                    . ($ph !== '' ? ' placeholder="' . esc_attr($ph) . '"' : '') . $maxlen . $req_attr . $desc . '></textarea>';
                 break;
 
             case 'select':
@@ -904,7 +913,7 @@ final class Widget extends Widget_Base
                 $autocomplete = $type === 'email' ? ' autocomplete="email"' : ($type === 'tel' ? ' autocomplete="tel"' : '');
                 $inputmode = $type === 'tel' ? ' inputmode="tel"' : ($type === 'number' ? ' inputmode="numeric"' : '');
                 echo '<input type="' . esc_attr($input_type) . '" class="dcc-input" id="' . esc_attr($input_id) . '" name="dcc_field[' . esc_attr($fid) . ']"'
-                    . $autocomplete . $inputmode
+                    . $autocomplete . $inputmode . $maxlen
                     . ($ph !== '' ? ' placeholder="' . esc_attr($ph) . '"' : '') . $req_attr . $desc . '>';
                 break;
         }

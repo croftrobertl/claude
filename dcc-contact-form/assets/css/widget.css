@@ -209,17 +209,50 @@
     cursor: pointer;
     transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-/* Hover + keyboard focus. The selector list MIRRORS the resting rule above and
-   appends the pseudo-class, giving 0,4,1 against the resting rule's 0,3,1. This
-   is deliberate and load-bearing: a resting rule applies during hover too, so a
+/* Hover. The selector list MIRRORS the resting rule above and appends the
+   pseudo-class, giving 0,4,1 against the resting rule's 0,3,1. This is
+   deliberate and load-bearing: a resting rule applies during hover too, so a
    lower-specificity hover rule (or the site kit's 0,2,1 one) silently loses and
    the button never changes colour at all. Do not simplify these selectors.
+
+   GATED ON A REAL POINTER. A tap on iOS latches :hover and holds it until the
+   visitor taps something else, so the button stayed coral after being pressed
+   and looked stuck or already-submitted. (0,4,1) is exactly why it won: our own
+   hover rule was beating the resting blue, not the site kit's. Restricting the
+   rule to devices that can actually hover removes it from touch entirely.
 
    Contrast note: #FFFFFF on #F08080 is 2.59:1, below WCAG AA 4.5:1 for normal
    text. This is a deliberate site-wide brand decision, not an oversight — the
    focus ring below is what carries perceivability. */
-.dcc-contact-form .dcc-submit:hover,
-.dcc-contact-form button[type="submit"].dcc-submit:hover,
+@media (hover: hover) and (pointer: fine) {
+    .dcc-contact-form .dcc-submit:hover,
+    .dcc-contact-form button[type="submit"].dcc-submit:hover {
+        background-color: #F08080;
+        color: #FFFFFF;
+    }
+}
+
+/* Touch: re-assert the resting blue for both :hover and :focus.
+   Belt-and-braces over simply dropping our hover rule, because the site kit
+   also paints `.elementor-kit-331 button:focus` coral, and a tap leaves the
+   button focused. That rule is (0,2,1); this one mirrors the resting selectors
+   plus a pseudo-class for (0,4,1), so it wins outright instead of relying on
+   the resting rule's (0,3,1) margin.
+
+   It must come BEFORE the :focus-visible block: on a tablet with a keyboard
+   both can match at equal specificity, and the later rule has to be the focus
+   one so a genuine keyboard focus still gets its indicator. */
+@media (hover: none), (pointer: coarse) {
+    .dcc-contact-form .dcc-submit:hover,
+    .dcc-contact-form button[type="submit"].dcc-submit:hover,
+    .dcc-contact-form .dcc-submit:focus,
+    .dcc-contact-form button[type="submit"].dcc-submit:focus {
+        background-color: #006bcf;
+        color: #fff;
+    }
+}
+
+/* Keyboard focus, OUTSIDE both media queries: it must work on every device. */
 .dcc-contact-form .dcc-submit:focus-visible,
 .dcc-contact-form button[type="submit"].dcc-submit:focus-visible {
     background-color: #F08080;
@@ -293,9 +326,36 @@
     margin: 0 0 16px;
 }
 .dcc-copy-label {
+    position: relative;
+    /* Stays `flex` (full row width) as before. Switching to inline-flex would
+       have made the label hug its text and so SHRUNK the horizontal tap area
+       while the point of this change was to grow the vertical one. */
     display: flex;
     align-items: center;
     gap: 10px;
     font-size: 16px;
     cursor: pointer;
+}
+
+/* Tap area, per the DCC standard: an INVISIBLE extension, so nothing visible
+   moves or changes size. The row renders about 24px tall, which is well under
+   the 44px minimum; this pseudo-element centres a 44px-tall target over it.
+   Being a child of the label, a tap anywhere on it toggles the checkbox.
+
+   The ~10px it adds above and below sits inside .dcc-copy's own margins, so it
+   cannot reach the last form field above or the submit button below — verified
+   with elementFromPoint at the extremes of the extension in tests/tap-test.js.
+   Width is deliberately NOT extended: the next tappable thing horizontally
+   would be whatever sits beside the row. */
+.dcc-copy-label::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 44px;
+    /* Purely a hit target. */
+    background: transparent;
+    pointer-events: auto;
 }

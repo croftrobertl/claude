@@ -56,6 +56,10 @@ final class Admin
 
         add_action('admin_init', [self::class, 'register_settings']);
         add_action('admin_init', [self::class, 'maybe_handle_actions']);
+
+        // Shown on every admin screen: a stored submission that was never
+        // emailed is otherwise completely silent.
+        add_action('admin_notices', [self::class, 'attention_notice']);
     }
 
     /**
@@ -303,6 +307,125 @@ final class Admin
     }
 
     /* ------------------------------------------------------------------ */
+    /* Attention notice                                                    */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Warn about submissions that need a human.
+     *
+     * Two kinds, counted separately and reported in one notice:
+     *
+     *  - stored but never emailed. Entries are saved before the notification
+     *    is sent, so the enquiry itself is never lost — but until now nothing
+     *    said so, and an owner who never opens the Submissions screen would
+     *    not know a lead was sitting there unsent.
+     *  - trapped by the honeypot while reading as a real message (see Triage).
+     *
+     * Each stays in its count until the entry is OPENED, which appends ":seen"
+     * to its status. Counts come from cached options, so an ordinary admin page
+     * load costs two option reads and no queries.
+     */
+    public static function attention_notice(): void
+    {
+        if (!current_user_can(self::CAP)) {
+            return;
+        }
+
+        $failed     = Entries::mail_failed_count();
+        $maybe_real = Entries::maybe_real_count();
+
+        if ($failed < 1 && $maybe_real < 1) {
+            return;
+        }
+
+        $lines = [];
+
+        if ($failed > 0) {
+            $lines[] = esc_html(sprintf(
+                /* translators: %d: number of submissions */
+                _n(
+                    '%d contact submission was received but could not be emailed.',
+                    '%d contact submissions were received but could not be emailed.',
+                    $failed,
+                    'dcc-contact-form'
+                ),
+                $failed
+            ));
+        }
+
+        if ($maybe_real > 0) {
+            $lines[] = esc_html(sprintf(
+                /* translators: %d: number of submissions */
+                _n(
+                    '%d possible real message was caught by the spam trap.',
+                    '%d possible real messages were caught by the spam trap.',
+                    $maybe_real,
+                    'dcc-contact-form'
+                ),
+                $maybe_real
+            ));
+        }
+
+        $failed_url = add_query_arg(
+            ['page' => self::SUB_SLUG, 'status' => 'received'],
+            admin_url('admin.php')
+        );
+        $spam_url = add_query_arg(
+            ['page' => self::SUB_SLUG, 'status' => 'spam'],
+            admin_url('admin.php')
+        );
+
+        echo '<div class="notice notice-warning"><p><strong>'
+            . esc_html__('DCC Contact Form', 'dcc-contact-form') . '</strong> — '
+            . implode(' ', $lines)
+            . ' <a href="' . esc_url($failed > 0 ? $failed_url : $spam_url) . '">'
+            . esc_html__('Review submissions', 'dcc-contact-form') . '</a>'
+            . '</p><p class="description">'
+            . esc_html__('Each one stops being counted here once you open it.', 'dcc-contact-form')
+            . '</p></div>';
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Submissions — tabs                                                  */
+    /* ------------------------------------------------------------------ */
+
+    /** The three Submissions buckets, in display order. Received is the default. */
+    private static function buckets(): array
+    {
+        return [
+            'received'   => __('Received', 'dcc-contact-form'),
+            'unverified' => __('Unverified', 'dcc-contact-form'),
+            'spam'       => __('Spam', 'dcc-contact-form'),
+        ];
+    }
+
+    /** The requested bucket, falling back to Received for anything unknown. */
+    private static function current_bucket(): string
+    {
+        $requested = isset($_GET['status']) ? sanitize_key((string) wp_unslash($_GET['status'])) : '';
+        return array_key_exists($requested, self::buckets()) ? $requested : 'received';
+    }
+
+    private static function render_tabs(string $current): void
+    {
+        echo '<h2 class="nav-tab-wrapper">';
+        foreach (self::buckets() as $bucket => $label) {
+            $url = add_query_arg(
+                ['page' => self::SUB_SLUG, 'status' => $bucket],
+                admin_url('admin.php')
+            );
+            printf(
+                '<a href="%s" class="nav-tab%s">%s <span class="count">(%s)</span></a>',
+                esc_url($url),
+                $bucket === $current ? ' nav-tab-active' : '',
+                esc_html($label),
+                esc_html(number_format_i18n(Entries::count($bucket)))
+            );
+        }
+        echo '</h2>';
+    }
+
+    /* ------------------------------------------------------------------ */
     /* Submissions — action handling                                       */
     /* ------------------------------------------------------------------ */
 
@@ -337,6 +460,12 @@ final class Admin
     private static function redirect_with_notice(string $notice, int $count = 1): void
     {
         $args = ['page' => self::SUB_SLUG, 'dcc_notice' => $notice, 'dcc_count' => $count];
+
+        // Stay in the tab the action was fired from.
+        $status = isset($_REQUEST['status']) ? sanitize_key((string) wp_unslash($_REQUEST['status'])) : '';
+        if ($status !== '') {
+            $args['status'] = $status;
+        }
 
         // Stay on the page of the list the action was fired from, rather than
         // bouncing back to page 1 after every delete.
@@ -379,18 +508,47 @@ final class Admin
             );
         }
 
+        // Keeps the cached attention counts honest without a query on every
+        // other admin screen: this is the page that acts on them.
+        Entries::refresh_attention_counts();
+
+        $bucket  = self::current_bucket();
         $paged   = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1;
-        $total   = Entries::count();
+        $total   = Entries::count($bucket);
         $offset  = ($paged - 1) * self::PER_PAGE;
-        $rows    = Entries::get_page(self::PER_PAGE, $offset);
+        $rows    = Entries::get_page(self::PER_PAGE, $offset, $bucket);
         $pages   = (int) ceil($total / self::PER_PAGE);
+        $tally   = Entries::spam_tally();
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('DCC Contact Form — Submissions', 'dcc-contact-form'); ?></h1>
+            <?php self::render_tabs($bucket); ?>
+            <?php
+            // When the daily spam-content cap has bitten, say so: the Spam tab
+            // would otherwise look quiet during exactly the flood it is
+            // protecting the disk from.
+            if ($bucket === 'spam' && $tally['suppressed'] > 0) {
+                printf(
+                    '<div class="notice notice-info inline"><p>%s</p></div>',
+                    esc_html(sprintf(
+                        /* translators: 1: number of submissions, 2: daily cap */
+                        _n(
+                            '%1$d further spam submission today was counted but not stored: the daily cap of %2$d is there so a flood cannot fill the disk.',
+                            '%1$d further spam submissions today were counted but not stored: the daily cap of %2$d is there so a flood cannot fill the disk.',
+                            $tally['suppressed'],
+                            'dcc-contact-form'
+                        ),
+                        $tally['suppressed'],
+                        Entries::MAX_SPAM_ROWS_PER_DAY
+                    ))
+                );
+            }
+            ?>
             <?php if ($total === 0) : ?>
-                <p><?php esc_html_e('No submissions yet.', 'dcc-contact-form'); ?></p>
+                <p><?php esc_html_e('Nothing in this tab.', 'dcc-contact-form'); ?></p>
             <?php else : ?>
                 <form method="post">
+                    <input type="hidden" name="status" value="<?php echo esc_attr($bucket); ?>">
                     <?php wp_nonce_field('dcc_bulk'); ?>
                     <div class="tablenav top">
                         <div class="alignleft actions bulkactions">
@@ -415,9 +573,9 @@ final class Admin
                         </thead>
                         <tbody>
                         <?php foreach ($rows as $row) :
-                            $view_url   = add_query_arg(['page' => self::SUB_SLUG, 'action' => 'view', 'id' => (int) $row->id], admin_url('admin.php'));
+                            $view_url   = add_query_arg(['page' => self::SUB_SLUG, 'status' => $bucket, 'action' => 'view', 'id' => (int) $row->id], admin_url('admin.php'));
                             $delete_url = wp_nonce_url(
-                                add_query_arg(['page' => self::SUB_SLUG, 'action' => 'delete', 'id' => (int) $row->id], admin_url('admin.php')),
+                                add_query_arg(['page' => self::SUB_SLUG, 'status' => $bucket, 'action' => 'delete', 'id' => (int) $row->id], admin_url('admin.php')),
                                 'dcc_delete_' . (int) $row->id
                             );
                             ?>
@@ -440,7 +598,7 @@ final class Admin
                     </table>
                 </form>
                 <?php if ($pages > 1) :
-                    $base = add_query_arg(['page' => self::SUB_SLUG, 'paged' => '%#%'], admin_url('admin.php'));
+                    $base = add_query_arg(['page' => self::SUB_SLUG, 'status' => $bucket, 'paged' => '%#%'], admin_url('admin.php'));
                     echo '<div class="tablenav bottom"><div class="tablenav-pages">';
                     echo wp_kses_post(paginate_links([
                         'base'    => $base,
@@ -457,8 +615,15 @@ final class Admin
 
     private static function render_single(int $id): void
     {
+        // Opening an entry is the acknowledgement: it drops out of the
+        // attention notice, while the row keeps its full history.
+        Entries::mark_seen($id);
+
         $row = Entries::get($id);
-        $back = add_query_arg(['page' => self::SUB_SLUG], admin_url('admin.php'));
+        $back = add_query_arg(
+            ['page' => self::SUB_SLUG, 'status' => self::current_bucket()],
+            admin_url('admin.php')
+        );
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('Submission', 'dcc-contact-form'); ?> #<?php echo esc_html((string) $id); ?></h1>
@@ -521,21 +686,57 @@ final class Admin
         return mb_strimwidth($text, 0, 70, '…');
     }
 
+    /**
+     * Render one entry's status.
+     *
+     * The stored value is a colon-separated set of flags (see Entries), so this
+     * composes a label from them rather than matching whole strings — a row can
+     * be unverified AND unemailed at once, and either can also be ":seen".
+     */
     private static function status_badge(string $result): string
     {
-        if ($result === Entries::STATUS_OK || $result === '') {
-            return '<span style="color:#1a7f37;font-weight:600;">' . esc_html__('Received', 'dcc-contact-form') . '</span>';
+        $spam        = Entries::is_spam($result);
+        $unverified  = Entries::is_unverified($result);
+        $mail_failed = Entries::is_mail_failed($result);
+        $maybe_real  = Entries::is_maybe_real($result);
+
+        if ($spam) {
+            // "spam:honeypot:maybe-real:seen" → the layer is the first segment.
+            $parts = explode(':', $result);
+            $layer = $parts[1] ?? '';
+
+            $label = sprintf(
+                /* translators: %s: spam layer that flagged the submission */
+                __('Spam (%s)', 'dcc-contact-form'),
+                $layer
+            );
+
+            if ($maybe_real) {
+                return '<span style="color:#b26200;font-weight:600;" title="'
+                    . esc_attr__('The hidden spam-trap field was filled in, but this reads like a real message. Open it and check before deleting.', 'dcc-contact-form')
+                    . '">' . esc_html($label) . ' — '
+                    . esc_html__('possible real message', 'dcc-contact-form') . '</span>';
+            }
+
+            return '<span style="color:#b32d2e;font-weight:600;">' . esc_html($label) . '</span>';
         }
-        if ($result === Entries::STATUS_MAIL_FAILED) {
+
+        if ($mail_failed) {
+            $label = $unverified
+                ? __('Received (unverified) — email failed', 'dcc-contact-form')
+                : __('Received — email failed', 'dcc-contact-form');
+
             return '<span style="color:#b26200;font-weight:600;" title="'
                 . esc_attr__('The submission was stored, but the notification email could not be sent. Check the site\'s mail configuration.', 'dcc-contact-form')
-                . '">' . esc_html__('Received — email failed', 'dcc-contact-form') . '</span>';
+                . '">' . esc_html($label) . '</span>';
         }
-        $type = str_replace('spam:', '', $result);
-        return '<span style="color:#b32d2e;font-weight:600;">' . esc_html(sprintf(
-            /* translators: %s: spam layer that flagged the submission */
-            __('Spam (%s)', 'dcc-contact-form'),
-            $type
-        )) . '</span>';
+
+        if ($unverified) {
+            return '<span style="color:#996800;font-weight:600;" title="'
+                . esc_attr__('Stored and emailed, but reCAPTCHA could not be checked — the script may have been blocked or Google unreachable. Treat it as a normal enquiry unless it looks like spam.', 'dcc-contact-form')
+                . '">' . esc_html__('Received — unverified', 'dcc-contact-form') . '</span>';
+        }
+
+        return '<span style="color:#1a7f37;font-weight:600;">' . esc_html__('Received', 'dcc-contact-form') . '</span>';
     }
 }

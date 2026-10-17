@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+  Fixture for tests/browser-test.js. Mirrors the markup Widget::render() emits
+  and loads the REAL shipped widget.css and widget.js, so the cascade and the
+  behaviour under test are the ones that ship.
+
+  It also reproduces the two live stylesheets that fight our button rules — the
+  Bravada theme's forced uppercase and the Elementor kit's coral hover/focus —
+  because fix 7 is a cascade question and testing it without the competing
+  rules would prove nothing.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DCC Contact Form fixture</title>
+
+<style>
+  /* ---- Stand-ins for the live site, loaded BEFORE the plugin as they are
+          on the real page. Values copied from the audit. ---- */
+  body { margin: 0; font-family: Raleway, Arial, sans-serif; }
+  .elementor-kit-331 button { text-transform: uppercase; }
+  .elementor-kit-331 button:hover,
+  .elementor-kit-331 button:focus { background-color: #F08080; }
+</style>
+
+<link rel="stylesheet" href="/assets/css/widget.css">
+</head>
+<body class="elementor-kit-331">
+
+<div class="dcc-contact-wrap">
+  <form class="dcc-contact-form" method="post"
+        action="/wp-admin/admin-post.php"
+        data-ajax-url="/wp-admin/admin-ajax.php"
+        data-recaptcha="TEST_SITE_KEY"
+        data-recaptcha-src="/tests/recaptcha-stub.js"
+        novalidate>
+
+    <input type="hidden" name="action" value="dcc_contact_submit">
+    <input type="hidden" name="form_id" value="fixture">
+    <input type="hidden" name="dcc_nonce" value="N_test">
+    <input type="hidden" name="dcc_ts" value="">
+    <input type="hidden" name="dcc_recaptcha" value="">
+
+    <div class="dcc-alt" aria-hidden="true">
+      <label for="dcc-fixture-code">Code</label>
+      <input type="text" id="dcc-fixture-code" name="dcc_contact_code" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="dcc-fields">
+      <div class="dcc-field dcc-field--name dcc-w-100" data-field="f1">
+        <label class="dcc-label" for="dcc-fixture-f1-first">Name <span class="dcc-req" aria-hidden="true">*</span></label>
+        <div class="dcc-name">
+          <span class="dcc-subfield">
+            <label class="dcc-sublabel dcc-sr-only" for="dcc-fixture-f1-first">First</label>
+            <input type="text" class="dcc-input" id="dcc-fixture-f1-first" name="dcc_field[f1][first]"
+                   autocomplete="given-name" placeholder="First" maxlength="200"
+                   aria-required="true" aria-describedby="dcc-fixture-err-f1">
+          </span>
+          <span class="dcc-subfield">
+            <label class="dcc-sublabel dcc-sr-only" for="dcc-fixture-f1-last">Last</label>
+            <input type="text" class="dcc-input" id="dcc-fixture-f1-last" name="dcc_field[f1][last]"
+                   autocomplete="family-name" placeholder="Last" maxlength="200"
+                   aria-required="true" aria-describedby="dcc-fixture-err-f1">
+          </span>
+        </div>
+        <span class="dcc-error" id="dcc-fixture-err-f1"></span>
+      </div>
+
+      <div class="dcc-field dcc-field--email dcc-w-50" data-field="f2">
+        <label class="dcc-label" for="dcc-fixture-f2">Email Address <span class="dcc-req" aria-hidden="true">*</span></label>
+        <input type="email" class="dcc-input" id="dcc-fixture-f2" name="dcc_field[f2]"
+               autocomplete="email" maxlength="200" placeholder="Email Address"
+               aria-required="true" aria-describedby="dcc-fixture-err-f2">
+        <span class="dcc-error" id="dcc-fixture-err-f2"></span>
+      </div>
+
+      <div class="dcc-field dcc-field--tel dcc-w-50" data-field="f3">
+        <label class="dcc-label" for="dcc-fixture-f3">Phone</label>
+        <input type="tel" class="dcc-input" id="dcc-fixture-f3" name="dcc_field[f3]"
+               autocomplete="tel" inputmode="tel" maxlength="200" placeholder="Phone"
+               aria-describedby="dcc-fixture-err-f3">
+        <span class="dcc-error" id="dcc-fixture-err-f3"></span>
+      </div>
+
+      <div class="dcc-field dcc-field--textarea dcc-w-100" data-field="f4">
+        <label class="dcc-label" for="dcc-fixture-f4">Message <span class="dcc-req" aria-hidden="true">*</span></label>
+        <textarea class="dcc-textarea" id="dcc-fixture-f4" name="dcc_field[f4]" rows="5"
+                  placeholder="Message" maxlength="5000"
+                  aria-required="true" aria-describedby="dcc-fixture-err-f4"></textarea>
+        <span class="dcc-error" id="dcc-fixture-err-f4"></span>
+      </div>
+    </div>
+
+    <div class="dcc-copy">
+      <label class="dcc-copy-label" for="dcc-fixture-copy">
+        <input type="checkbox" class="dcc-checkbox" id="dcc-fixture-copy" name="dcc_copy" value="1">
+        <span>Send me a copy of this message</span>
+      </label>
+    </div>
+
+    <div class="dcc-form-error" role="alert" aria-live="assertive"></div>
+
+    <div class="dcc-actions">
+      <button type="submit" class="dcc-submit"
+              data-label="Send Message"
+              data-processing="Sending...">Send Message</button>
+    </div>
+  </form>
+
+  <div class="dcc-form-confirmation" hidden></div>
+</div>
+
+<script>
+  /* Record submissions instead of performing them, so a tap on the button
+     exercises the real code path without a network call. */
+  window.__dccFetches = [];
+  window.fetch = function (url, opts) {
+      window.__dccFetches.push({
+          url: url,
+          token: (opts && opts.body && opts.body.get) ? opts.body.get('dcc_recaptcha') : null,
+          ts: (opts && opts.body && opts.body.get) ? opts.body.get('dcc_ts') : null
+      });
+      return Promise.resolve({
+          json: function () {
+              return Promise.resolve({ success: true, data: { confirmation: '<p>Thank you.</p>' } });
+          }
+      });
+  };
+</script>
+<script src="/assets/js/widget.js"></script>
+</body>
+</html>
