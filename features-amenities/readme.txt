@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.11.1
+Stable tag: 1.11.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,11 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.11.2 =
+* Supersedes 1.11.1, which should not be installed. The 1.11.1 button fix covered only :focus-visible, but the theme kit's rule targets :focus — and a tap sets :focus without setting :focus-visible, so the coral background still appeared after tapping. Both buttons now carry an explicit :focus rule. Found by an automated touch test, not by inspection.
+* The search clear button's enlarged tap area no longer reaches over the search field's text. The field's right padding now matches the 44px tap area, so the enlarged area only ever covers reserved, empty space. The button paints nothing and its icon is unchanged at 14px, so nothing looks different.
+* Added browser-based touch tests covering the tap behaviour and the tap-area geometry, and extended the mutation run to twelve cases.
 
 = 1.11.1 =
 * The packaged default list no longer bans pets. A newly added widget would have contradicted the live cottage policy, which now points guests travelling with a small dog to Cottage 34. The Rules row still bans smoking and still says no children. Content already on your pages is untouched.

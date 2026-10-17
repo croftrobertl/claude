@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F&amp;A touch fixture</title>
+
+<!--
+  Reproduces the live conditions the audit flagged:
+   - the real plugin stylesheet, unmodified, loaded from ../../assets/css
+   - the Bravada kit rule that paints buttons coral on hover/focus
+   - the widget markup Widget::render() emits, inside .elementor-kit-331
+  The clear button carries .is-active because that is the only state in which
+  it is tappable (pointer-events: auto).
+-->
+
+<!-- Site kit rule, copied verbatim from the audit. Loaded BEFORE the plugin
+     sheet, exactly as SpeedyCache's combined CSS would order it. -->
+<style>
+  .elementor-kit-331 button:hover,
+  .elementor-kit-331 button:focus { background-color: #F08080; }
+  body { margin: 0; font-family: sans-serif; background: #fff; }
+  #harness { width: 390px; padding: 20px; }  /* iPhone-ish width */
+</style>
+
+<link rel="stylesheet" href="../../assets/css/widget.css">
+</head>
+<body class="elementor-kit-331">
+
+<div id="harness">
+  <div class="fal-container">
+
+    <div class="fal-search-wrap">
+      <i class="fas fa-search fal-search-icon" aria-hidden="true"></i>
+      <input type="text" class="fal-search-input" placeholder="Search amenities..."
+             aria-label="Search amenities..." value="wifi">
+      <button class="fal-search-clear is-active" type="button" aria-label="Clear search">
+        <svg class="fal-search-clear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="fal-search-status" aria-live="polite"></div>
+
+    <!-- is-open: Read More sits inside section content, which is collapsed by
+         default on phones. Opened here so the button is reachable. -->
+    <div class="fal-section is-open">
+      <div class="fal-section-header">
+        <span class="fal-section-icon"></span>
+        <span class="fal-section-title">Comfort &amp; Entertainment</span>
+      </div>
+      <div class="fal-section-content"><div class="fal-amenities">
+        <div class="fal-amenity">
+          <div class="fal-amenity-icon-wrap"><span class="fal-amenity-icon"></span></div>
+          <div class="fal-amenity-content">
+            <div class="fal-amenity-title">Internet</div>
+            <div class="fal-amenity-desc-wrap fal-collapsible">
+              <div class="fal-amenity-desc">
+                <p>Free high-speed WiFi across the property, in every cottage and across
+                the shared outdoor areas including the sun deck and the picnic area.</p>
+              </div>
+            </div>
+            <button class="fal-read-more" type="button">Read More</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

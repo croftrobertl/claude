@@ -67,6 +67,30 @@ MUTATIONS = [
         "padding: 8px; min-width: 32px; min-height: 32px;",
     ),
     (
+        "tap standard: input reserve back to 40px (area covers input text)",
+        "assets/css/widget.css",
+        "width: 100%; padding: 12px 44px 12px 40px;",
+        "width: 100%; padding: 12px 40px;",
+    ),
+    (
+        "fix 4: :focus rule dropped from clear button (kit coral returns)",
+        "assets/css/widget.css",
+        ".fal-container .fal-search-clear:focus { background: transparent; }\n",
+        "",
+    ),
+    (
+        "fix 4: :focus rule dropped from Read More (kit coral returns)",
+        "assets/css/widget.css",
+        ".fal-container .fal-read-more:focus { background: transparent; }\n",
+        "",
+    ),
+    (
+        "editor preview: asset registration moved behind is_admin()",
+        "includes/class-plugin.php",
+        "\t\tadd_action( 'elementor/frontend/after_register_scripts', [ $this, 'register_assets' ] );",
+        "",
+    ),
+    (
         "fix 5: editor title label reverted",
         "includes/class-widget.php",
         "'Short label (e.g. Dining Area)'",
@@ -75,10 +99,18 @@ MUTATIONS = [
 ]
 
 
+BROWSER = os.path.join(ROOT, "tests", "browser", "touch.test.mjs")
+
+
 def run_suite():
-    return subprocess.run(
-        ["php", RUNNER], capture_output=True, text=True, cwd=ROOT
-    ).returncode
+    """Red if EITHER suite fails. The browser run is skipped (exit 2) when no
+    engine is available; a skip must not be read as a pass, so a mutation that
+    only the browser run would catch is reported as SURVIVED in that case."""
+    rc = subprocess.run(["php", RUNNER], capture_output=True, text=True, cwd=ROOT).returncode
+    if rc != 0:
+        return rc
+    b = subprocess.run(["node", BROWSER], capture_output=True, text=True, cwd=ROOT).returncode
+    return 0 if b in (0, 2) else b
 
 
 def main():

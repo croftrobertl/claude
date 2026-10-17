@@ -281,6 +281,51 @@ ok(
 	preg_match( '/\.fal-search-clear-icon \{[^}]*transform: *scale\(/s', $css ) === 1
 );
 
+echo "\n[12] Assets are reachable in the Elementor editor preview\n";
+// The editor preview renders through Elementor's frontend, so registration
+// must not be gated behind an is_admin() check. Only the settings page is.
+preg_match( '/public function boot\(\): void \{(.*?)\n\t\}/s', $plugin, $bm );
+$boot = $bm[1] ?? '';
+ok( 'boot() was parsed', $boot !== '' );
+preg_match( '/if \( is_admin\(\) \) \{(.*?)\}/s', $boot, $am );
+$admin_only = $am[1] ?? '';
+ok(
+	'asset registration is NOT inside the is_admin() branch',
+	strpos( $admin_only, 'register_assets' ) === false
+);
+ok(
+	'only the settings page is admin-gated',
+	strpos( $admin_only, 'Settings' ) !== false
+);
+ok(
+	'registration hooks fire for frontend and preview alike',
+	substr_count( $boot, "[ \$this, 'register_assets' ]" ) === 3
+);
+
+echo "\n[13] The kit rule's :focus half is covered, not just :focus-visible\n";
+// A tap sets :focus WITHOUT :focus-visible. Covering only :focus-visible left
+// the kit's `button:focus{background-color:#F08080}` winning — caught by the
+// browser run, guarded here so it cannot come back.
+foreach ( [ 'fal-search-clear', 'fal-read-more' ] as $btn ) {
+	ok(
+		"$btn has an explicit :focus background rule",
+		preg_match(
+			'/\.fal-container \.' . preg_quote( $btn, '/' ) . ':focus(?!-visible)[^{]*\{[^}]*background: *transparent/s',
+			$css
+		) === 1,
+		'without this a tap leaves the coral kit background'
+	);
+}
+
+echo "\n[14] The input reserves space for the enlarged tap area\n";
+preg_match( '/\.fal-search-input \{(.*?)\}/s', $css, $im );
+$inp = $im[1] ?? '';
+ok(
+	'padding-right is at least the 44px tap width',
+	preg_match( '/padding: *\d+px +(\d+)px/', $inp, $pm ) === 1 && (int) $pm[1] >= 44,
+	'a smaller reserve puts the tap area over the input text'
+);
+
 echo "\n[11] Editor guidance steers facts into the description\n";
 ok( 'title label names a short label', strpos( $widget, 'Short label (e.g. Dining Area)' ) !== false );
 ok( 'description label is "The details"', strpos( $widget, "'The details'" ) !== false );

@@ -32,12 +32,18 @@
 
 .fal-search-wrap { position: relative; margin-bottom: 25px; }
 .fal-search-input {
-	width: 100%; padding: 12px 40px; border-radius: 8px;
+	/* Right padding matches the clear button's 44px tap area so the enlarged
+	   area only ever covers reserved, text-free space. Left stays 40px for the
+	   search icon. */
+	width: 100%; padding: 12px 44px 12px 40px; border-radius: 8px;
 	border: 1px solid var(--fal-border); background: var(--fal-bg);
 	color: inherit; font-size: 1em; text-align: center;
 }
 .fal-search-icon  { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--fal-primary); opacity: 0.7; }
 .fal-container .fal-search-clear {
+	/* 44px tap area via a transparent box, per the DCC tap-area standard: the
+	   button paints nothing, so only the 14px icon is ever visible and the
+	   visible size is unchanged from 1.11.0. */
 	position: absolute; right: 0; top: 50%;
 	transform: translateY(-50%);
 	background: transparent; border: none; color: inherit; cursor: pointer;
@@ -55,6 +61,7 @@
 	transform: scale(0.85); transition: transform 0.18s ease;
 }
 .fal-container .fal-search-clear.is-active .fal-search-clear-icon { transform: scale(1); }
+.fal-container .fal-search-clear:focus { background: transparent; }
 .fal-container .fal-search-clear:focus-visible { opacity: 1; background: transparent; }
 @media (hover: hover) and (pointer: fine) {
 	.fal-container .fal-search-clear:hover { opacity: 1; background: transparent; }
@@ -120,6 +127,7 @@
 	background: transparent; border: none; color: var(--fal-primary-text);
 	font-weight: bold; cursor: pointer; padding: 5px 0; margin-top: 5px; font-size: 0.9em;
 }
+.fal-container .fal-read-more:focus { background: transparent; }
 .fal-container .fal-read-more:focus-visible {
 	background: transparent;
 	outline: 2px solid var(--fal-primary); outline-offset: 2px;
