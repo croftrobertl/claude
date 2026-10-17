@@ -2046,7 +2046,16 @@ yours to improvise.
   + 1 SURVIVED: `ua-any-post-type`, masked because every "not a booking" case
   ALSO named a different booking, so the booking check refused it first — the
   real case, a row on a non-booking post with NO booking named, is now
-  constructed. At v0.34.1, 374
+  constructed. **The full run then found a second, more interesting
+  survivor: `pet-present-active`, which had killed at 0.34.1 and stopped
+  killing because of 0.34.2's OWN fix.** Every "a wrong pet service is
+  refused" case in `tests/petpolicy` carried the dog's details, so once a
+  filled dog field with no pet service became a violation in its own right,
+  the mutant reached the same verdict by the other road and the assertion
+  could no longer fail. The case that separates them — a wrong service with
+  NO dog details — is now constructed in both modes. **A new rule can make
+  an old test vacuous without touching it**, and only a full re-run says so;
+  a targeted run of the new mutations would never have looked. At v0.34.1, 374
   mutations, 374 killed, 0 of everything else (with the
   dropdown list: twenty-two suites — `selectlist` added — run in TWO HALVES
   of 187 because one full run now outlasts the session's 2-hour background

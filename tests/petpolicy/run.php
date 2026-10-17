@@ -232,9 +232,17 @@ check('flat mode: a dog booking carrying 19692 is accepted (2, 8 and 35 nights)'
 check('flat mode: an old tier instead is refused (a stale page)', [submit([17712], 2, $DOG), submit([17711], 8, $DOG), submit([14926], 35, $DOG)], ['pet', 'pet', 'pet']);
 check('flat mode: the flat fee PLUS an old tier is refused', submit([19692, 17712], 2, $DOG), 'pet');
 check('flat mode: no pet service is a no-dog booking — nothing about the dog is required', submit([], 2, []), null);
+/* The wrong service must be refused on its OWN account, with no dog details
+   to refuse it instead. Since 0.34.2 a filled dog field with no pet service
+   is a violation too, so every case above carrying $DOG would also be refused
+   by that rule — and would say nothing about which services are recognised.
+   This is the case that separates the two. */
+check('flat mode: an old tier with NO dog details is still refused (a recognised pet service is a pet booking)',
+    submit([17712], 2, []), 'pet');
 settings_set(['pet_fee_mode' => 'tiers']);
 check('tiers mode: the bucket for the stay is accepted', [submit([17712], 2, $DOG), submit([17711], 8, $DOG), submit([14926], 35, $DOG)], [null, null, null]);
 check('tiers mode: the flat service, or the wrong bucket, is refused', [submit([19692], 2, $DOG), submit([17711], 2, $DOG)], ['pet', 'pet']);
+check('tiers mode: and with no dog details either', [submit([19692], 2, []), submit([17711], 2, [])], ['pet', 'pet']);
 
 /* ===================================================================== *
  * A3 — DOG SIZES
