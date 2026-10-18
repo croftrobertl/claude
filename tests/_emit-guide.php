@@ -41,6 +41,89 @@ function dccgg_live_items(): array {
     return $out;
 }
 
+/**
+ * v0.24.4: every feature that puts a <button> on the page, at once.
+ *
+ * The focus audit must not work from a list someone remembered to update, so
+ * it renders THIS and enumerates what is actually in the DOM. Any button added
+ * later shows up in the audit the moment its feature is switched on here.
+ */
+function dccgg_all_on(): array {
+    $sections = dccgg_live_sections(true);
+    foreach ($sections as &$sec) {
+        // Checkout carries the review prompt; its two buttons hang off the role.
+        if ($sec['section_key'] === 'checkout') {
+            $sec['section_role'] = 'checkout';
+            $sec['checklist_mode'] = 'yes';          // brings the Reset button
+        }
+        // The quick action hangs off the SECTION, not the item.
+        if ($sec['section_key'] === 'amenities') {
+            $sec['enable_quick_action'] = 'yes';
+            $sec['quick_action_type']   = 'copy';
+            $sec['quick_action_val']    = '4321';
+        }
+        if ($sec['section_key'] === 'clubhouse') {
+            $sec['enable_quick_action'] = 'yes';
+            $sec['quick_action_type']   = 'link';     // the <a> variant
+            $sec['quick_action_val']    = 'https://dccgg.test/clubhouse';
+        }
+    }
+    unset($sec);
+    $sections[] = ['_id' => 's_emergency', 'section_key' => 'emergency',
+        'section_title' => 'Emergency', 'section_audience' => 'guest',
+        'section_role' => 'emergency'];
+    $items = [
+        // Wi-Fi: the Show / Copy pair, masked.
+        ['_id' => 'w1', 'item_section' => 'internet', 'item_title' => 'Wi-Fi password',
+         'item_content' => '<p>Join the network.</p>', 'item_copy' => 'yes',
+         'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes',
+         'item_wifi_mode' => 'yes', 'wifi_ssid' => 'topoftheworld'],
+        // A plain copy row: Copy without the mask, so .dccgg-copy appears alone.
+        ['_id' => 'w2', 'item_section' => 'internet', 'item_title' => 'Guest network',
+         'item_content' => '<p>No password.</p>', 'item_copy' => 'yes',
+         'item_copy_value' => 'dcc-guest'],
+        // Checkable, so the checklist and its Reset render.
+        ['_id' => 'c1', 'item_section' => 'checkout', 'item_title' => 'Strip the beds',
+         'item_content' => '<p>Leave them in the hamper.</p>', 'item_checkable' => 'yes'],
+        ['_id' => 'c2', 'item_section' => 'checkout', 'item_title' => 'Lock the door',
+         'item_content' => '<p>Twice.</p>', 'item_checkable' => 'yes'],
+        // Long enough to collapse, so Read more renders.
+        ['_id' => 'r1', 'item_section' => 'rules', 'item_title' => 'House rules',
+         'enable_read_more' => 'yes',
+         'item_content' => '<p>' . str_repeat('Quiet hours run from ten at night until eight in the morning. ', 24) . '</p>'],
+        // A quick action with a copyable value.
+        ['_id' => 'q1', 'item_section' => 'amenities', 'item_title' => 'Gate code',
+         'item_content' => '<p>At the north gate.</p>'],
+        // A gallery, for the thumbnails and the lightbox.
+        ['_id' => 'g1', 'item_section' => 'clubhouse', 'item_title' => 'Photos',
+         'item_content' => '<p>Have a look.</p>', 'media_type' => 'gallery',
+         'item_gallery' => [['id' => 0, 'url' => 'https://dccgg.test/a.jpg'],
+                            ['id' => 0, 'url' => 'https://dccgg.test/b.jpg']]],
+        // A video, for the poster button.
+        ['_id' => 'v1', 'item_section' => 'map', 'item_title' => 'Tour', 'media_type' => 'video',
+         'item_content' => '<p>Two minutes.</p>', 'item_video' => 'https://www.youtube.com/watch?v=aaaaaaaaaaa'],
+        ['_id' => 'e1', 'item_section' => 'emergency', 'item_title' => 'Front desk',
+         'item_content' => '<p>Call us.</p>'],
+    ];
+    return ['guide_mode' => 'full',
+        'guide_sections' => $sections, 'guide_items' => $items,
+        'enable_search' => 'yes', 'enable_ai_search' => 'yes',
+        'enable_print' => 'yes', 'enable_emergency_fab' => 'yes',
+        // enable_fab is deliberately OFF: it collapses the hub behind a
+        // launcher, so the sections cannot be opened. .dccgg-fab and
+        // .dccgg-fab-close are covered by the class sweep instead.
+        'enable_section_nav' => 'yes', 'enable_read_more' => 'yes',
+        'enable_quick_action' => 'yes', 'enable_map' => 'yes',
+        'enable_video_thumbnails' => 'yes', 'enable_conditions_extras' => 'yes',
+        'show_conditions_card' => 'yes', 'show_theme_toggle' => 'yes',
+        'enable_problem_report' => 'yes', 'enable_per_item_report' => 'yes',
+        'problem_report_recipients' => 'host@example.test',
+        'enable_checkout_review' => 'yes',
+        'enable_detail_more_menu' => 'yes', 'enable_popup_more_menu' => 'yes',
+        'more_menu_slot_1' => 'report', 'more_menu_slot_2' => 'print',
+        'more_menu_slot_3' => 'save_pdf'];
+}
+
 function dccgg_guide_case(string $case): array {
     $sections = [
         ['_id' => 's1', 'section_key' => 'pool', 'section_title' => 'Pool', 'section_audience' => 'both'],
@@ -104,6 +187,9 @@ function dccgg_guide_case(string $case): array {
         'guest-fd'        => ['guide_mode' => 'full', 'enable_detail_more_menu' => 'yes',
                               'enable_popup_more_menu' => 'yes', 'enable_problem_report' => 'yes',
                               'problem_report_recipients' => 'host@example.test'],
+        // v0.24.4: every feature that renders a <button>, so the focus audit
+        // can enumerate the real set instead of a hand-kept list.
+        'all-on'          => dccgg_all_on(),
     ];
     return ($cases[$case] ?? $cases['public-intro']) + ['guide_sections' => $sections, 'guide_items' => $items];
 }

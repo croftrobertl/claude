@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.3
+Stable tag: 0.24.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,25 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.4 =
+
+**Opening a section no longer lights up the Back button.** Since 0.24.3 the
+guide moved focus to Back when a section opened. Whether that showed Back's
+coral focus state depended on the browser, so on some phones a guest who
+tapped a tile was left looking at a coral, ringed button. Opening a section by
+tap or touch now puts focus on the section's own title instead: a screen
+reader reads the title first, and there is nothing to light up in any browser.
+Opening one with the keyboard still puts focus on Back, with its focus ring,
+as before.
+
+**The host theme can no longer paint a focused or tapped button coral.** Eight
+controls were still taking the theme's coral fill and white text on hover,
+focus and press: the items in the Front Desk menu, the emergency button, the
+three search controls, Read more, gallery thumbnails and video posters. Each
+now keeps its own look in all three states, and shows a focus ring for
+keyboard use. Their hover tints — the plugin's own, not the theme's coral —
+apply only where there is a real pointer to hover with.
 
 = 0.24.3 =
 

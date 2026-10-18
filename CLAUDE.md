@@ -262,6 +262,40 @@ do this (scoping to the open panel, and a getClientRects visibility test);
 either alone is enough, which is why the mutation runner lists them as
 equivalent rather than pretending to kill them.
 
+Where that focus LANDS depends on how the section was opened, and v0.24.4
+changed it: a pointer or touch open focuses the section's own `<h2>`, which
+carries `tabindex="-1"` — a focus target that is not a Tab stop, so a screen
+reader reads the title and nothing is painted. A keyboard open still focuses
+Back, with its ring. The two are told apart by ONE capture-phase document
+click listener (`wireOpenIntent`): `e.isTrusted && e.detail === 0` is a key,
+anything else is a finger. isTrusted is load-bearing — a scripted
+`element.click()` also reports detail 0, and that is why the 0.24.1 audit
+reported a ringed, coral Back button that a real finger never produces. Drive
+these cases with page.tap()/page.click()/keyboard, never an in-page .click().
+Because the heading is inside the stage but absent from the Tab trap's
+focusables list, the trap has an `onHeading` branch; without it Shift+Tab from
+the heading walked out of the modal, since the heading is the panel's first
+element.
+
+The host kit's `button:hover,:focus,:active{background-color:#F08080}` (0,2,1)
+reaches far fewer plugin buttons than it looks: the .dccgg-btn family is
+already (0,4,0) and the item-row controls were covered in v0.16.0. Measured by
+forcing each state on every button the guide really renders, exactly eight were
+still exposed and are fixed in v0.24.4: .dccgg-more-item, .dccgg-sos-fab,
+.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip,
+.dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster. Each is re-asserted
+STATELESS at (0,4,0), which retires all three kit states at once, with its own
+hover put back inside (hover:hover) and (pointer:fine). Two constraints shape
+those selectors: the audience split in build-min.sh moves any selector matching
+.dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel) to the guest bundle and
+counts `:is(a, b)` as ONE selector, so a guest-only class may never share an
+:is() with a public one and .dccgg-report-dialog may never host one; and
+`color` on the two image buttons is `inherit`, since their captions set their
+own. `tests/focus-colour.ui.js` enumerates the DOM rather than a kept list, and
+`tests/focus-colour.mutations.py` guards it. Review Us's sticker IS this same
+coral by Rob's palette — exclude stickers from any "nothing is coral" test
+rather than treating it as a defect.
+
 Remembered Wi-Fi reveals carry `t` (when they were kept) as well as `exp`, so
 SHORTENING reveal_memory_hours expires older copies on the next visit. A copy
 written before v0.24.3 has no `t` and its age is reconstructed from
@@ -293,7 +327,7 @@ admin-ajax, logins or previews, and turning the toggle off unregisters it.
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
 `php tests/stickers.test.php`, `node tests/phone-fixes.ui.js`, `php tests/report-hardening.test.php`,
-`node tests/audit-fixes.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

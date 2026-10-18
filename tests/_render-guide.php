@@ -103,6 +103,11 @@ namespace {
         'wp_kses' => fn($s, ...$a) => (string) $s,
         'esc_html_e' => function ($s, $d = null) { echo htmlspecialchars((string) $s, ENT_QUOTES); },
         'get_locale' => fn() => 'en_US', 'is_rtl' => fn() => false, 'wp_get_attachment_image_url' => fn(...$a) => '',
+        // v0.24.4: reached once a section carries an accent colour.
+        'sanitize_hex_color' => function ($c) {
+            $c = (string) $c;
+            return preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $c) ? $c : '';
+        },
     ];
     foreach ($stub as $name => $fn) {
         if (!function_exists($name)) {

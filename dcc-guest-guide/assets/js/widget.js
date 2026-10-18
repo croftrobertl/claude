@@ -269,6 +269,7 @@
         wireWizard(root);
         wireShrinkHeader(root);
         wireTileTap(root);
+        wireOpenIntent(root);
         wireMoreMenu(root, config);
         wireVideoPosters(root);
         wireChecklists(root);
@@ -1755,6 +1756,29 @@
     // that read as wrong, and a scroll never shows it at any point.
     const TAP_HOLD_MS = 220;    // long enough to register as the tap's answer
     const TAP_SLOP = 10;        // px of movement that means "this is a scroll"
+    /**
+     * v0.24.4: remember whether the last activation came from a key or a
+     * pointer, so showDetailModal() knows which kind of focus to put inside
+     * the sheet.
+     *
+     * ONE capture-phase listener instead of a parameter threaded through five
+     * openDetail() call sites (tile, prev/next, search result, "did you mean"
+     * chip, SOS button) — a new call site is covered by construction.
+     *
+     * A click carries detail > 0 when a pointer made it and 0 when Enter or
+     * Space on a focused control did. isTrusted is required as well: a
+     * scripted element.click() also reports detail 0, and treating that as a
+     * keyboard press is what made the 0.24.3 regression look worse than it is
+     * — the audit opened the section with a script click, which rang the
+     * button in a way a finger never does. A programmatic open is therefore
+     * quiet, which is also the right default for a deep link.
+     */
+    function wireOpenIntent(root) {
+        bindGlobal(root, document, 'click', (e) => {
+            root.__dccggOpenByKeyboard = !!(e && e.isTrusted && e.detail === 0);
+        }, true);
+    }
+
     function wireTileTap(root) {
         let tile = null, sx = 0, sy = 0, moved = false, timer = null;
         const clearAll = () => {
@@ -2336,20 +2360,49 @@
             // first, so a screen-reader user was never taken into the sheet.
             // Visibility is tested the way the Tab trap tests it.
             const visible = (el) => !!el && el.getClientRects().length > 0;
+            // v0.24.4: a POINTER open lands on the section's <h2>, which
+            // carries tabindex="-1" — a focus target that is not a Tab stop,
+            // so a screen reader announces the title and nothing lights up.
+            // Back is a filled blue pill whose :focus-visible look is the
+            // site's coral hover plus a ring, and landing there is what made
+            // every tap end with the Back button lit. A KEYBOARD open still
+            // goes to Back with the ring, which is the state a keyboard user
+            // is asking for.
+            const byKeyboard = !!root.__dccggOpenByKeyboard;
+            const quiet = (el) => {
+                if (byKeyboard) { el.removeAttribute('data-dccgg-quiet-focus'); return; }
+                // Chromium ignores focus({focusVisible}) and treats every
+                // programmatic focus as a keyboard focus, so the attribute is
+                // what actually decides; it is cleared on blur so the guest's
+                // next real keyboard focus rings normally.
+                el.setAttribute('data-dccgg-quiet-focus', '');
+                el.addEventListener('blur', function clear() {
+                    el.removeAttribute('data-dccgg-quiet-focus');
+                    el.removeEventListener('blur', clear);
+                });
+            };
             const focusIntoPanel = () => {
                 const openPanel = activeKey
                     ? state.stage.querySelector('.dccgg-detail[data-key="' + cssEsc(activeKey) + '"]:not([hidden])')
                     : null;
                 const scope = openPanel || state.stage;
-                let target = scope.querySelector('.dccgg-back');
+                let target = byKeyboard ? null : scope.querySelector('.dccgg-detail-title[tabindex]');
+                if (!visible(target)) { target = scope.querySelector('.dccgg-back'); }
                 if (!visible(target)) {
                     target = Array.from(scope.querySelectorAll(
                         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
                     )).find(visible) || null;
                 }
                 if (!target || typeof target.focus !== 'function') { return false; }
-                try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
-                return scope.contains(document.activeElement);
+                quiet(target);
+                try { target.focus({ preventScroll: true, focusVisible: byKeyboard }); }
+                catch (_) { try { target.focus(); } catch (__) {} }
+                const landed = scope.contains(document.activeElement);
+                // If it did not land, take the marker off again: left behind on
+                // an element that was never focused, it would swallow the ring
+                // the next time a keyboard user reached that control.
+                if (!landed) { target.removeAttribute('data-dccgg-quiet-focus'); }
+                return landed;
             };
             // The panel is revealed inside withViewTransition() and the stage is
             // only laid out once the modal is up, so on the first pass there is
@@ -2387,7 +2440,13 @@
                 const first = focusables[0];
                 const last  = focusables[focusables.length - 1];
                 const inside = state.stage.contains(document.activeElement);
-                if (e.shiftKey && (!inside || document.activeElement === first)) { e.preventDefault(); last.focus(); }
+                // v0.24.4: focus may be on the section's <h2>, which is a focus
+                // target but not a Tab stop, so it is inside the stage and yet
+                // absent from `focusables`. It is also the FIRST thing in the
+                // panel, so an unhandled Shift+Tab from it walked straight out
+                // of the modal. Treat it as the position before `first`.
+                const onHeading = inside && focusables.indexOf(document.activeElement) === -1;
+                if (e.shiftKey && (!inside || onHeading || document.activeElement === first)) { e.preventDefault(); last.focus(); }
                 else if (!e.shiftKey && (!inside || document.activeElement === last)) { e.preventDefault(); first.focus(); }
                 return;
             }

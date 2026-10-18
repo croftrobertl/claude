@@ -3961,7 +3961,13 @@ final class Widget extends Widget_Base
                         $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
                         <div class="dccgg-detail-header-titlebar">
                             <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
-                            <h2 class="dccgg-detail-title">
+                            <?php // v0.24.4: tabindex="-1" makes the title a focus
+                            // TARGET without making it a Tab stop, so a pointer open can
+                            // land here — VoiceOver reads the section title and there is
+                            // no button to light up. Tab from it goes to the next control
+                            // in source order: the Front Desk button when the pop-up
+                            // header shows one, otherwise Back. ?>
+                            <h2 class="dccgg-detail-title" tabindex="-1">
                                 <span class="dccgg-detail-title-icon"<?php echo self::sticker_style($sec); // phpcs:ignore WordPress.Security.EscapeOutput ?>>
                                     <?php self::render_section_icon($icon); ?>
                                 </span>

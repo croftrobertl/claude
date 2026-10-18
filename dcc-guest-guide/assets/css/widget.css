@@ -4726,3 +4726,194 @@ dialog.dccgg-wrapper::backdrop {
     background: color-mix(in srgb, var(--dccgg-primary) 55%, transparent);
     color: #fff;
 }
+
+/* ---- v0.24.4: the host kit may not paint a focused button ---------------
+   WHAT THE AUDIT GOT RIGHT, AND WHAT IT GOT WRONG. The kit really does carry
+       .elementor-kit-331 button:hover, :focus, :active { background-color:#F08080;
+                                                          color:#FFF; border-radius:30px }
+   at (0,2,1) with no !important, and it really does reach plugin buttons. But
+   it is NOT what turns Back coral when a section opens: .dccgg-back is a
+   .dccgg-btn, and that family's resting rule is already (0,4,0), so all three
+   kit states lose on it. Measured in Chromium at 390px with the kit present,
+   forcing :focus on Back leaves it #006BCF. Back's coral comes from this
+   plugin's OWN :focus-visible rule (search "the site's standard button hover"),
+   and the cure for that is below, under "opening a section lands on the TITLE".
+
+   What the kit DOES still reach, measured by forcing each of :focus, :hover and
+   :active on every button the guide actually renders (hub, all eight sections,
+   the ⋯ popover, the search drop-down, the report dialog) — eight controls,
+   all three states each:
+
+       .dccgg-more-item      (and --print / --report / --save-pdf)  hub + popup
+       .dccgg-sos-fab                                               hub
+       .dccgg-search-result                                         hub
+       .dccgg-search-still-stuck                                    hub
+       .dccgg-search-dym-chip                                       hub
+       .dccgg-btn-text       (and .dccgg-read-more)                 popup
+       .dccgg-gallery-thumb                                         popup
+       .dccgg-video-poster                                          popup
+
+   Everything else was already covered and is left alone: the .dccgg-btn family
+   (Back, Show, Copy, Print, Reset, Send, Cancel, the review pair, the wizard
+   pair) by its (0,4,0) resting rule, and the item-row controls (checkbox,
+   read-aloud, per-item report, prev/next) by the v0.16.0 block.
+   .dccgg-emergency-chip and the link form of .dccgg-quick-action are <a>, which
+   the kit's `button` selector never matches.
+
+   HOW: the resting look is re-asserted STATELESS at (0,4,0) rather than as a
+   :focus override, so one rule retires all three kit states at once — the same
+   shape the v0.16.0 block uses. Each control's own hover then goes back on
+   below, inside (hover: hover) and (pointer: fine), because those hovers were
+   written unprefixed at (0,1,1) and have been losing to the kit all along. The
+   kit's coral hover does NOT come back on a fine pointer: a coral wash over a
+   gallery photo or a search row is not a state this guide wants, and the
+   plugin's own tint says what the site means instead.
+
+   TWO THINGS THE SELECTORS ARE SHAPED BY, both easy to undo by accident:
+
+   1. The audience split in build-min.sh moves any selector matching
+      .dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel) into the
+      guest-only bundle, per selector, and :is(a, b) counts as ONE selector.
+      So .dccgg-more-item and .dccgg-sos-fab may never share an :is() with a
+      class the public guide needs, and the .dccgg-report-dialog host may never
+      prefix one — either would strip the public /explore/ page of its search
+      and media styling. Hence the two groups below, kept apart deliberately.
+   2. The two image buttons take `color: inherit`. They have no text of their
+      own — .dccgg-video-play and .dccgg-gallery-pin-badge both set their own
+      colour — so the declaration shows nothing either way; it is there so the
+      kit's white cannot reach a caption added later. The resting computed
+      colour therefore moves from the browser's button default to the sheet's
+      text colour, which nothing displays. */
+
+/* -- group A: guest-only controls. The report dialog is listed as a host for
+      these two because it is guest-only itself, so nothing is dragged with
+      them. Neither control renders in there today; a selector that matches
+      nothing costs nothing, and a control that moves hosts stays covered. -- */
+.dccgg-root.dccgg-root .dccgg-more-item.dccgg-more-item,
+.dccgg-stage.dccgg-stage .dccgg-more-item.dccgg-more-item,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-more-item.dccgg-more-item {
+    background-color: transparent;
+    color: var(--dccgg-text);
+    border-radius: 6px;
+}
+.dccgg-root.dccgg-root .dccgg-sos-fab.dccgg-sos-fab,
+.dccgg-stage.dccgg-stage .dccgg-sos-fab.dccgg-sos-fab,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-sos-fab.dccgg-sos-fab {
+    background-color: var(--dccgg-color-emergency);
+    color: #fff;
+    border-radius: 50%;
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-more-item.dccgg-more-item:hover,
+    .dccgg-stage.dccgg-stage .dccgg-more-item.dccgg-more-item:hover,
+    .dccgg-report-dialog.dccgg-report-dialog .dccgg-more-item.dccgg-more-item:hover {
+        background-color: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
+        color: var(--dccgg-primary);
+    }
+}
+.dccgg-root.dccgg-root .dccgg-more-item.dccgg-more-item:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-more-item.dccgg-more-item:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-more-item.dccgg-more-item:focus-visible,
+.dccgg-root.dccgg-root .dccgg-sos-fab.dccgg-sos-fab:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-sos-fab.dccgg-sos-fab:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-sos-fab.dccgg-sos-fab:focus-visible {
+    outline: 3px solid var(--dccgg-text, #111111);
+    outline-offset: 2px;
+}
+
+/* -- group B: controls the public guide renders too, so hosts root and stage
+      only and no guest-only class anywhere in the selector. -- */
+.dccgg-root.dccgg-root :is(.dccgg-search-result, .dccgg-search-still-stuck):is(.dccgg-search-result, .dccgg-search-still-stuck),
+.dccgg-stage.dccgg-stage :is(.dccgg-search-result, .dccgg-search-still-stuck):is(.dccgg-search-result, .dccgg-search-still-stuck) {
+    background-color: transparent;
+    color: var(--dccgg-text);
+    border-radius: 8px;
+}
+/* The "did you mean" chip keeps its own faint primary wash. */
+.dccgg-root.dccgg-root .dccgg-search-dym-chip.dccgg-search-dym-chip,
+.dccgg-stage.dccgg-stage .dccgg-search-dym-chip.dccgg-search-dym-chip {
+    background-color: color-mix(in srgb, var(--dccgg-primary) 8%, transparent);
+    color: var(--dccgg-text);
+}
+/* Read more / Read less is a bare text link, not a pill. */
+.dccgg-root.dccgg-root .dccgg-btn-text.dccgg-btn-text,
+.dccgg-stage.dccgg-stage .dccgg-btn-text.dccgg-btn-text {
+    background-color: transparent;
+    color: var(--dccgg-primary);
+    border-radius: 0;
+}
+/* The two image buttons: a photo as background-image over black, card radius. */
+.dccgg-root.dccgg-root .dccgg-gallery-thumb.dccgg-gallery-thumb,
+.dccgg-stage.dccgg-stage .dccgg-gallery-thumb.dccgg-gallery-thumb {
+    background-color: #000;
+    color: inherit;
+    border-radius: 10px;
+}
+.dccgg-root.dccgg-root .dccgg-video-poster.dccgg-video-poster,
+.dccgg-stage.dccgg-stage .dccgg-video-poster.dccgg-video-poster {
+    background-color: #000;
+    color: inherit;
+    border-radius: 12px;
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-search-result.dccgg-search-result:hover,
+    .dccgg-root.dccgg-root .dccgg-search-result.dccgg-search-result.is-active,
+    .dccgg-stage.dccgg-stage .dccgg-search-result.dccgg-search-result:hover,
+    .dccgg-stage.dccgg-stage .dccgg-search-result.dccgg-search-result.is-active {
+        background-color: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
+    }
+    .dccgg-root.dccgg-root .dccgg-search-still-stuck.dccgg-search-still-stuck:hover,
+    .dccgg-stage.dccgg-stage .dccgg-search-still-stuck.dccgg-search-still-stuck:hover {
+        background-color: color-mix(in srgb, var(--dccgg-muted) 8%, transparent);
+        border-color: var(--dccgg-primary);
+    }
+}
+/* A keyboard user still needs to see focus on these six, and the ring is the
+   only thing carrying it now the coral wash is gone. Outside the hover query,
+   because a keyboard can be plugged into a phone. */
+.dccgg-root.dccgg-root :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):focus-visible {
+    outline: 3px solid var(--dccgg-text, #111111);
+    outline-offset: 2px;
+}
+
+/* ---- v0.24.4: opening a section lands on the TITLE, quietly --------------
+   v0.24.3 moved focus to Back so a screen-reader user was taken into the
+   sheet. That worked, but Back is a filled blue pill whose :focus-visible look
+   is the site's coral hover plus a dark ring — so every open ended with the
+   Back button lit up, which is the thing the host rejected in 0.24.2.
+
+   So a POINTER open now focuses the section's own <h2> instead. It carries
+   tabindex="-1", so it is a focus target but never a Tab stop: VoiceOver reads
+   the section title first, which is what a guest wants to hear, and there is
+   nothing to paint. Tab from it goes to the next control in source order — the
+   Front Desk button when the pop-up header shows one, otherwise Back. A
+   KEYBOARD open still lands on Back with the ring, unchanged.
+
+   The heading must never ring: it is focused programmatically and the guest did
+   not ask for it. Plain :focus is cleared as well as :focus-visible, because a
+   UA stylesheet may ring the former. */
+.dccgg-root.dccgg-root .dccgg-detail-title:focus,
+.dccgg-root.dccgg-root .dccgg-detail-title:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-detail-title:focus,
+.dccgg-stage.dccgg-stage .dccgg-detail-title:focus-visible {
+    outline: none;
+}
+/* Belt and braces for the fallback path: focusIntoPanel() drops back to Back,
+   then to the first focusable control, for a guide saved before this release
+   whose heading is not focusable. On a pointer open the JS marks whatever it
+   focused with data-dccgg-quiet-focus — the mechanism v0.24.1 uses when the
+   report dialog hands focus back after a tap — and that marker takes the coral
+   and the ring off any button this plugin draws. */
+.dccgg-root.dccgg-root [data-dccgg-quiet-focus].dccgg-btn:focus-visible,
+.dccgg-root.dccgg-root [data-dccgg-quiet-focus].dccgg-checklist-reset:focus-visible,
+.dccgg-stage.dccgg-stage [data-dccgg-quiet-focus].dccgg-btn:focus-visible,
+.dccgg-stage.dccgg-stage [data-dccgg-quiet-focus].dccgg-checklist-reset:focus-visible {
+    background: var(--dccgg-btn-bg, #006bcf);
+    color: var(--dccgg-btn-txt, #ffffff);
+    outline: none;
+}
+.dccgg-root.dccgg-root [data-dccgg-quiet-focus]:focus-visible,
+.dccgg-stage.dccgg-stage [data-dccgg-quiet-focus]:focus-visible {
+    outline: none;
+}
