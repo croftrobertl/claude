@@ -1,0 +1,6 @@
+Reservation ID,Listing Number,Property Name,Created On,Email,Inquirer,Phone,Check-in,Check-out,Nights Stay,Adults,Children,Status,Source
+HA-AAA111,4047892,Cottage 22 The Boathouse,2/1/2025,dana.whitfield@example.com,Dana Whitfield,352-555-0101,7/1/2025,7/5/2025,4,2,1,Booked,Vrbo
+HA-BBB222,4365326,Cottage 34 Coconut Cottage,3/1/2025,jo.tran@example.com,Jo Tran,352-555-0102,8/1/2025,8/3/2025,2,2,0,Cancelled,Vrbo
+HA-CCC333,4396252,Cottage 35 Blue Heron Hideaway,4/1/2025,p.raman@example.com,Priya Raman,352-555-0103,9/1/2025,9/4/2025,3,2,0,Reservation Request Expired,Vrbo
+HA-DDD444,4356282,Crofty Bear RV Lot,4/15/2025,sam.delgado@example.com,Sam Delgado,865-555-0104,9/10/2025,9/13/2025,3,2,0,Booked,Vrbo
+HA-EEE555,4400665,Cottage 31 Hibiscus Hut,5/1/2025,lena.ortiz@example.com,Lena Ortiz,352-555-0105,10/1/2025,10/6/2025,5,4,0,Booked,Vrbo

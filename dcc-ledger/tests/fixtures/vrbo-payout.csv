@@ -1,0 +1,5 @@
+"Property ID","Unit ID","Address","Reservation ID","Traveler First Name","Traveler Last Name","Booking status","Check-in","Check-out","Nights","Payout date","Gross booking amount","Deductions","Payout","Lodging Tax Owner Remits","Tax Withheld","Payout currency"
+"4047892","1","1 Canal Rd, Tavares FL","HA-AAA111","Dana","Whitfield","Booked","Jul 1, 2025","Jul 5, 2025","4","Jul 10, 2025","900.00","45.00","855.00","0.00","0.00","USD"
+"4047892","1","1 Canal Rd, Tavares FL","HA-AAA111","Dana","Whitfield","Booked","Jul 1, 2025","Jul 5, 2025","4","Aug 2, 2025","-100.00","-5.00","-95.00","0.00","0.00","USD"
+"4400665","1","1 Canal Rd, Tavares FL","HA-EEE555","Lena","Ortiz","Booked","Oct 1, 2025","Oct 6, 2025","5","Oct 10, 2025","1000.00","50.00","950.00","0.00","0.00","USD"
+"4356282","1","9 Smoky Ridge, Gatlinburg TN","HA-DDD444","Sam","Delgado","Booked","Sep 10, 2025","Sep 13, 2025","3","Sep 18, 2025","300.00","15.00","285.00","0.00","0.00","USD"

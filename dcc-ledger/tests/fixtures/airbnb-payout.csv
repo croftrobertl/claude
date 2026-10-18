@@ -1,0 +1,14 @@
+Date,Arriving by date,Type,Confirmation code,Booking date,Start date,End date,Nights,Guest,Listing,Details,Reference code,Currency,Amount,Paid out,Service fee,Fast pay fee,Cleaning fee,Pet fee,Gross earnings,Airbnb remitted tax,Earnings year
+03/05/2025,03/05/2025,Payout,,,,,,,,Transfer to bank account,PAY-0001,USD,,1089.69,,,,,,,2025
+03/05/2025,,Reservation,HMAAAA0001,01/10/2025,03/07/2025,03/10/2025,3,Dana Whitfield,Cottage 22: The Boathouse | Dora Canal Court,3 nights,,USD,450.00,,15.00,,60.00,0.00,465.00,40.00,2025
+03/05/2025,,Reservation,HMAAAA0002,01/15/2025,03/12/2025,03/15/2025,3,Marco Pires,Dora Canal Court Cottage 31,3 nights,,USD,300.00,,10.00,,45.00,0.00,310.00,25.00,2025
+03/05/2025,,Reservation,HMMOVED001,02/01/2025,03/20/2025,03/23/2025,3,Renee O'Neal,Cottage 32: Flamingo Bungalow | Dora Canal Court,3 nights,,USD,339.69,,20.31,,50.00,0.00,360.00,0.00,2025
+04/02/2025,04/02/2025,Payout,,,,,,,,Transfer to bank account,PAY-0002,USD,,305.31,,,,,,,2025
+04/02/2025,,Reservation,HM2022OLD1,05/20/2022,06/01/2022,06/05/2022,4,Hal Brenner,Cottage 23: The Lighthouse | Dora Canal Court,4 nights,,USD,120.00,,10.00,,0.00,0.00,130.00,0.00,2025
+04/02/2025,,Resolution Adjustment,HMMOVED001,,03/20/2025,03/23/2025,3,Renee O'Neal,Cottage 32: Flamingo Bungalow | Dora Canal Court,Refund to guest,,USD,-339.69,,,,,,,,2025
+04/02/2025,,Cancellation Fee,HMCANCEL01,02/20/2025,05/10/2025,05/13/2025,3,Jo Tran,Cottage 34: Coconut Cottage | Dora Canal Court,Host cancellation,,USD,75.00,,,,,,,,2025
+04/02/2025,,Cancellation Fee Refund,HMCANCEL01,,05/10/2025,05/13/2025,3,Jo Tran,Cottage 34: Coconut Cottage | Dora Canal Court,Fee returned,,USD,-75.00,,,,,,,,2025
+04/02/2025,,Adjustment,HMAAAA0001,,03/07/2025,03/10/2025,3,Dana Whitfield,Cottage 22: The Boathouse | Dora Canal Court,Goodwill,,USD,25.00,,,,,,,,2025
+04/02/2025,,Reservation,HMBBBB0003,03/01/2025,05/01/2025,05/04/2025,3,Priya Raman,Cottage 35: Blue Heron Hideaway | Dora Canal Court,3 nights,,USD,500.00,,20.00,,70.00,0.00,520.00,30.00,2025
+05/06/2025,05/06/2025,Payout,,,,,,,,Transfer to bank account,PAY-0003,USD,,200.00,,,,,,,2025
+05/06/2025,,Reservation,HMCROFTY01,03/15/2025,05/20/2025,05/23/2025,3,Sam Delgado,Crofty Bear Retreat | Gatlinburg RV,3 nights,,USD,200.00,,8.00,,0.00,0.00,208.00,0.00,2025

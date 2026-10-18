@@ -1,0 +1,6 @@
+Reservation number,Invoice number,Booked on,Arrival,Departure,Booker name,Guest name,Rooms,Persons,Room nights,Commission %,Original amount,Final amount,Commission amount,Status,Guest request,Currency,Hotel id,Property name,City,Country
+5111111111,7001,2025-02-10T09:15:30,2025-03-01,2025-03-05,Pat O&#39;neal,Pat O&#39;neal,1,2,4,15,600.00,600.00,90.00,OK,Late arrival,USD,14033916,Cottage 22 The Boathouse,Tavares,us
+5222222222,7002,2025-11-28T19:01,2026-01-10,2026-01-13,Ann Beaulieu,Ann Beaulieu,1,2,3,15,450.00,450.00,67.50,OK,,USD,14571101,Cottage 33 Pineapple Place,Tavares,us
+5333333333,,2025-03-15T11:00:00,2025-04-02,2025-04-05,Greg Mellor,Greg Mellor,1,2,3,15,330.00,0.00,0.00,CANCELLED,,USD,14571231,Cottage 34 Coconut Cottage,Tavares,us
+5444444444,7004,2025-05-01T08:30:00,2025-06-01,2025-06-04,Dee Vance,Dee Vance,1,2,3,15,250.00,250.00,37.50,OK,,USD,14946642,Crofty Bear RV Lot,Gatlinburg,us
+5555555555,7003,2025-04-20T16:45:00,2025-06-10,2025-06-14,Tom Iwasaki,Tom Iwasaki,1,3,4,15,800.00,800.00,120.00,OK,,USD,14571448,Cottage 35 Blue Heron Hideaway,Tavares,us
