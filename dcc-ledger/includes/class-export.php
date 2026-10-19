@@ -12,16 +12,16 @@ if (!defined('ABSPATH')) {
 final class Export
 {
     /**
-     * @param array{from:string,to:string,basis:string,label:string} $period
+     * @param array{from:string,to:string,basis:string,label:string,view:string} $period
      * @return array<int,array<int,string|float|int>>
      */
     public static function rows(string $what, array $period): array
     {
         switch ($what) {
             case 'cottage':
-                return self::breakdown(Reports::summary($period['from'], $period['to'], $period['basis'])['by_cottage'], __('Cottage', 'dcc-ledger'));
+                return self::breakdown(Reports::summary($period['from'], $period['to'], $period['basis'], $period['view'] ?? 'ledger')['by_cottage'], __('Cottage', 'dcc-ledger'));
             case 'channel':
-                return self::breakdown(Reports::summary($period['from'], $period['to'], $period['basis'])['by_channel'], __('Channel', 'dcc-ledger'));
+                return self::breakdown(Reports::summary($period['from'], $period['to'], $period['basis'], $period['view'] ?? 'ledger')['by_channel'], __('Channel', 'dcc-ledger'));
             case 'cleanup':
                 return self::cleanup();
             case 'invoices':
@@ -174,12 +174,13 @@ final class Export
     /** @return array<int,array<int,string|float|int>> */
     private static function overview(array $period): array
     {
-        $summary = Reports::summary($period['from'], $period['to'], $period['basis']);
+        $summary = Reports::summary($period['from'], $period['to'], $period['basis'], $period['view'] ?? 'ledger');
         $t       = $summary['totals'];
 
         $rows = [
             [__('Figure', 'dcc-ledger'), __('Value', 'dcc-ledger'), __('Source', 'dcc-ledger')],
             [__('Period', 'dcc-ledger'), $period['from'] . ' to ' . $period['to'], $period['basis'] === 'payout' ? __('By payout date', 'dcc-ledger') : __('By stay dates', 'dcc-ledger')],
+            [__('Direct Bookings View', 'dcc-ledger'), (string) ($period['view'] ?? 'ledger'), __('Original is what MotoPress held; Ledger adds the corrections; Difference is the corrections alone', 'dcc-ledger')],
             [__('Nights', 'dcc-ledger'), (int) $t['nights'], __('Platform stays plus direct bookings, each copy once', 'dcc-ledger')],
             [__('Occupancy %', 'dcc-ledger'), (float) $t['occupancy_pct'], __('Nights divided by 8 cottages times days in period', 'dcc-ledger')],
             [__('Guest Total', 'dcc-ledger'), self::num($t['guest_total']), __('Platform exports', 'dcc-ledger')],
@@ -190,8 +191,10 @@ final class Export
             [__('Net Payout', 'dcc-ledger'), self::num($t['net_payout']), __('Payouts, refunds and adjustments', 'dcc-ledger')],
             [__('Average Nightly Rate', 'dcc-ledger'), self::num($t['adr']), __('Room revenue divided by platform nights', 'dcc-ledger')],
             [__('Direct Bookings Due', 'dcc-ledger'), self::num($t['direct_due']), __('MotoPress booking totals', 'dcc-ledger')],
-            [__('Direct Payments Recorded', 'dcc-ledger'), self::num($t['direct_recorded']), __('Completed MotoPress payments', 'dcc-ledger')],
-            [__('Direct Payments Assumed', 'dcc-ledger'), self::num($t['direct_assumed']), __('Added 2026-10-18 as assumed paid in full', 'dcc-ledger')],
+            [__('Direct Payments Recorded', 'dcc-ledger'), self::num($t['direct_recorded']), __('Completed MotoPress payments, as copied into the ledger', 'dcc-ledger')],
+            [__('Direct Payments Refunded', 'dcc-ledger'), self::num($t['direct_refunded']), __('Refunded payments, shown apart and never counted as paid', 'dcc-ledger')],
+            [__('Direct Payments Assumed', 'dcc-ledger'), self::num($t['direct_assumed']), __('Ledger adjustment: assumed paid in full, dated at check-in', 'dcc-ledger')],
+            [__('Direct Paid In This View', 'dcc-ledger'), self::num($t['direct_paid']), __('What the chosen view counts as received', 'dcc-ledger')],
             [__('Cancellations', 'dcc-ledger'), (int) $t['cancellations'], __('Platform stays cancelled', 'dcc-ledger')],
             [__('Cancellation Fees', 'dcc-ledger'), self::num($t['cancellation_fees']), __('Fees and fee refunds', 'dcc-ledger')],
             [__('Median Lead Time (Days)', 'dcc-ledger'), $t['lead_time_median'] ?? '', __('Booked on to check-in, platform stays only', 'dcc-ledger')],

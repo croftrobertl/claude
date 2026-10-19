@@ -10,14 +10,9 @@ use DCCL\Linker;
 T::group('Rendering');
 
 dccl_seed_mphb();
-foreach ([
-    'airbnb-payout.csv', 'airbnb-reservations.csv',
-    'bookingcom-reservations.csv', 'bookingcom-payout.csv',
-    'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
-] as $file) {
-    Importer::run(dccl_fixture($file), $file, false, 1);
-}
+dccl_import_all();
 Linker::run(1);
+DCCL\Snapshot::run(false, 1);
 
 $render = static function (string $tab): string {
     $_GET = [

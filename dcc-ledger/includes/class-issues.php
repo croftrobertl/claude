@@ -23,7 +23,11 @@ final class Issues
     {
         $items    = [];
         $stays    = self::stays_with_money();
+        // Structure (which bookings exist, and on what dates) is read live, so
+        // it is never stale. Money is read from the ledger's own frozen copy,
+        // so a figure never changes under Rob's feet.
         $bookings = Mphb_Reader::bookings();
+        $copied   = Originals::bookings_with_payments();
         $links    = self::links_by_stay();
         $by_book  = self::links_by_booking();
 
@@ -33,10 +37,12 @@ final class Issues
         self::payouts_without_reservation($items, $stays);
         self::cancelled_with_money($items, $stays);
         self::moved_cottage($items, $stays, $links, $bookings);
-        self::copies_with_payments($items, $links, $bookings);
-        self::clawed_back($items, $stays, $links, $bookings);
-        self::overpaid_bookings($items, $bookings);
-        self::unpaid_past_bookings($items, $bookings);
+        self::copies_with_payments($items, $links, $copied);
+        self::clawed_back($items, $stays, $links, $copied);
+        self::overpaid_bookings($items, $copied);
+        self::unpaid_past_bookings($items, $copied);
+        self::changed_since_copied($items);
+        self::not_yet_copied($items, $bookings, $copied);
         self::invoice_reconciliation($items);
 
         $reviews = Repo::reviews();
@@ -280,37 +286,32 @@ final class Issues
         }
     }
 
-    private static function copies_with_payments(array &$items, array $links, array $bookings): void
+    private static function copies_with_payments(array &$items, array $links, array $copied): void
     {
-        $by_id = [];
-        foreach ($bookings as $booking) {
-            $by_id[(int) $booking['id']] = $booking;
-        }
-
         foreach ($links as $stay_id => $stay_links) {
             foreach ($stay_links as $link) {
                 if ((string) $link['method'] !== 'copy') {
                     continue;
                 }
-                $booking = $by_id[(int) $link['mphb_booking_id']] ?? null;
-                if ($booking === null || (float) $booking['paid_recorded'] <= 0) {
+                $booking = $copied[(int) $link['mphb_booking_id']] ?? null;
+                if ($booking === null || (float) $booking['paid'] <= 0) {
                     continue;
                 }
                 $items[] = [
-                    'key'      => 'copy_payment:' . $link['mphb_booking_id'],
+                    'key'      => 'copy_payment:' . (int) $link['mphb_booking_id'],
                     'title'    => __('A Hand-Typed Copy That Carries A Payment', 'dcc-ledger'),
                     'facts'    => [
                         sprintf(
                             /* translators: 1: booking id, 2: payment amount */
                             __('MotoPress booking #%1$d is a copy of a platform stay and has %2$s in recorded payments.', 'dcc-ledger'),
-                            (int) $booking['id'],
-                            self::money((float) $booking['paid_recorded'])
+                            (int) $booking['mphb_id'],
+                            self::money((float) $booking['paid'])
                         ),
                         __('That money is shown on a copy, not counted, so it is in no report figure.', 'dcc-ledger'),
                     ],
                     'action'   => __('Decide whether this payment is real money Rob received on top of the platform payout, or a duplicate of it.', 'dcc-ledger'),
                     'severity' => 'bad',
-                    'booking_id' => (int) $booking['id'],
+                    'booking_id' => (int) $booking['mphb_id'],
                 ];
             }
         }
@@ -320,12 +321,8 @@ final class Issues
      * The stay happened, the platform took its money back, and nothing was
      * collected directly — Rob's case 17462.
      */
-    private static function clawed_back(array &$items, array $stays, array $links, array $bookings): void
+    private static function clawed_back(array &$items, array $stays, array $links, array $copied): void
     {
-        $by_id = [];
-        foreach ($bookings as $booking) {
-            $by_id[(int) $booking['id']] = $booking;
-        }
 
         foreach ($stays as $stay) {
             if ((string) $stay['status'] !== 'ok') {
@@ -343,9 +340,9 @@ final class Issues
 
             $collected = 0.0;
             foreach ($links[(int) $stay['id']] ?? [] as $link) {
-                $booking = $by_id[(int) $link['mphb_booking_id']] ?? null;
+                $booking = $copied[(int) $link['mphb_booking_id']] ?? null;
                 if ($booking !== null) {
-                    $collected += (float) $booking['paid_recorded'] + (float) $booking['paid_assumed'];
+                    $collected += (float) $booking['paid'];
                 }
             }
             if ($collected > 0.01) {
@@ -371,74 +368,180 @@ final class Issues
         }
     }
 
-    private static function overpaid_bookings(array &$items, array $bookings): void
+    private static function overpaid_bookings(array &$items, array $copied): void
     {
-        foreach ($bookings as $booking) {
-            if (!Linker::is_live($booking) || (float) $booking['total'] <= 0) {
+        foreach ($copied as $booking_id => $booking) {
+            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED || (float) $booking['total'] <= 0) {
                 continue;
             }
-            $paid = round((float) $booking['paid_recorded'] + (float) $booking['paid_assumed'], 2);
+            $paid = round((float) $booking['paid'], 2);
             $over = round($paid - (float) $booking['total'], 2);
             if ($over < 0.01) {
                 continue;
             }
             $items[] = [
-                'key'      => 'overpaid:' . $booking['id'],
+                'key'      => 'overpaid:' . $booking_id,
                 'title'    => __('A Booking Paid For More Than Its Total', 'dcc-ledger'),
                 'facts'    => [
                     sprintf(
                         /* translators: 1: booking id, 2: amount over the total, 3: total, 4: amount paid */
                         __('MotoPress booking #%1$d is overpaid by %2$s: the total is %3$s and completed payments come to %4$s.', 'dcc-ledger'),
-                        (int) $booking['id'],
+                        (int) $booking_id,
                         self::money($over),
                         self::money((float) $booking['total']),
                         self::money($paid)
                     ),
-                    __('The figures show it exactly as recorded. Nothing was capped or altered.', 'dcc-ledger'),
+                    __('The figures show it exactly as recorded. Nothing was capped or altered, and no assumed payment was added to it.', 'dcc-ledger'),
                 ],
                 'action'   => __('Check the card processor for a refund that MotoPress does not know about.', 'dcc-ledger'),
                 'severity' => 'warn',
-                'booking_id' => (int) $booking['id'],
+                'booking_id' => (int) $booking_id,
             ];
         }
     }
 
     /** Going forward: a past stay that is not fully paid. */
-    private static function unpaid_past_bookings(array &$items, array $bookings): void
+    private static function unpaid_past_bookings(array &$items, array $copied): void
     {
         $today  = Dates::today();
-        $copies = Reports::copy_booking_ids();
+        $copies = Reports::direct_copy_ids();
 
-        foreach ($bookings as $booking) {
-            if ($booking['is_imported'] || !Linker::is_live($booking)) {
+        foreach ($copied as $booking_id => $booking) {
+            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED) {
                 continue;
             }
-            if (isset($copies[(int) $booking['id']])) {
+            if (isset($copies[$booking_id])) {
                 continue;
             }
             if ($booking['check_out'] === null || $booking['check_out'] >= $today) {
                 continue;
             }
-            $paid  = round((float) $booking['paid_recorded'] + (float) $booking['paid_assumed'], 2);
+            $paid = round((float) $booking['paid'], 2);
+            foreach (Adjustments::for_booking($booking_id) as $adjustment) {
+                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                    $paid = round($paid + (float) $adjustment['amount'], 2);
+                }
+            }
             $short = round((float) $booking['total'] - $paid, 2);
             if ($short < 0.01) {
                 continue;
             }
             $items[] = [
-                'key'      => 'unpaid_past:' . $booking['id'],
+                'key'      => 'unpaid_past:' . $booking_id,
                 'title'    => __('A Past Direct Booking That Is Not Fully Paid', 'dcc-ledger'),
                 'facts'    => [
                     sprintf(
                         /* translators: 1: booking id, 2: check-out date, 3: shortfall, 4: total, 5: amount paid */
-                        __('MotoPress booking #%1$d checked out on %2$s and is %3$s short: the total is %4$s and completed payments come to %5$s.', 'dcc-ledger'),
-                        (int) $booking['id'],
+                        __('MotoPress booking #%1$d checked out on %2$s and is %3$s short: the total is %4$s, and completed payments plus any assumed adjustment come to %5$s.', 'dcc-ledger'),
+                        (int) $booking_id,
                         (string) $booking['check_out'],
                         self::money($short),
                         self::money((float) $booking['total']),
                         self::money($paid)
                     ),
                 ],
-                'action'   => __('Record the payment in MotoPress if it was received, so the ledger stays right from here on.', 'dcc-ledger'),
+                'action'   => __('Record the payment in MotoPress and take a fresh snapshot, or add an assumed adjustment in the ledger if the real figure is not known.', 'dcc-ledger'),
+                'severity' => 'warn',
+                'booking_id' => (int) $booking_id,
+            ];
+        }
+    }
+
+    /**
+     * MotoPress changed after the ledger copied it. The old copy is kept as it
+     * was, the new one sits beside it, and the difference is for Rob to see.
+     */
+    private static function changed_since_copied(array &$items): void
+    {
+        foreach (Originals::superseded() as $old) {
+            $current = Originals::current((string) $old['kind'], (int) $old['mphb_id']);
+            if ($current === null) {
+                continue;
+            }
+            $what = (string) $old['kind'] === Originals::KIND_PAYMENT
+                ? __('payment', 'dcc-ledger')
+                : __('booking', 'dcc-ledger');
+
+            $items[] = [
+                'key'      => 'mphb_changed:' . $old['kind'] . ':' . $old['mphb_id'] . ':' . $old['id'],
+                'title'    => __('MotoPress Changed After The Ledger Copied It', 'dcc-ledger'),
+                'facts'    => [
+                    sprintf(
+                        /* translators: 1: booking or payment, 2: MotoPress id, 3: date it was copied, 4: date it was superseded */
+                        __('The %1$s #%2$d in MotoPress is no longer what the ledger copied on %3$s. A new version was recorded on %4$s and the old one was kept exactly as it was.', 'dcc-ledger'),
+                        $what,
+                        (int) $old['mphb_id'],
+                        (string) $old['captured_at'],
+                        (string) $old['superseded_at']
+                    ),
+                    self::describe_change($old, $current),
+                ],
+                'action'   => __('Check the change was meant. The ledger\'s corrections were not touched by it, and the Original view still shows what was there before.', 'dcc-ledger'),
+                'severity' => 'info',
+                'booking_id' => (int) ($old['mphb_booking_id'] ?: $old['mphb_id']),
+            ];
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $old
+     * @param array<string,mixed> $new
+     */
+    private static function describe_change(array $old, array $new): string
+    {
+        $changes = [];
+        foreach (['cottage', 'check_in', 'check_out', 'booking_status', 'payment_status', 'total', 'amount'] as $field) {
+            $before = (string) ($old[$field] ?? '');
+            $after  = (string) ($new[$field] ?? '');
+            if ($before === $after) {
+                continue;
+            }
+            $changes[] = sprintf(
+                /* translators: 1: field name, 2: old value, 3: new value */
+                __('%1$s was %2$s, now %3$s', 'dcc-ledger'),
+                $field,
+                $before === '' ? __('empty', 'dcc-ledger') : $before,
+                $after === '' ? __('empty', 'dcc-ledger') : $after
+            );
+        }
+        return $changes === []
+            ? __('Nothing the ledger copies looks different; the change was elsewhere.', 'dcc-ledger')
+            : implode('; ', $changes) . '.';
+    }
+
+    /**
+     * A direct booking MotoPress has that the ledger has not copied yet, so
+     * none of its money is in any figure.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @param array<int,array<string,mixed>> $copied
+     */
+    private static function not_yet_copied(array &$items, array $bookings, array $copied): void
+    {
+        foreach ($bookings as $booking) {
+            if ($booking['is_imported'] || !Linker::is_live($booking)) {
+                continue;
+            }
+            if (!Cottages::is_cottage((string) $booking['cottage'])) {
+                continue;
+            }
+            if (isset($copied[(int) $booking['id']])) {
+                continue;
+            }
+            $items[] = [
+                'key'      => 'not_copied:' . $booking['id'],
+                'title'    => __('A Direct Booking The Ledger Has Not Copied Yet', 'dcc-ledger'),
+                'facts'    => [
+                    sprintf(
+                        /* translators: 1: booking id, 2: cottage, 3: check-in, 4: check-out */
+                        __('MotoPress booking #%1$d (cottage %2$s, %3$s to %4$s) has not been copied into the ledger, so none of its money is in any figure.', 'dcc-ledger'),
+                        (int) $booking['id'],
+                        (string) $booking['cottage'],
+                        (string) $booking['check_in'],
+                        (string) $booking['check_out']
+                    ),
+                ],
+                'action'   => __('Run Refresh From MotoPress on the Imports tab, or wp dcc-ledger snapshot.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'booking_id' => (int) $booking['id'],
             ];

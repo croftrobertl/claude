@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,8 @@ One permanent money history for the eight Dora Canal Court cottages, built from 
 Every OTA booking reaches the site as an iCal import with a $0 price and no payments, so MotoPress alone cannot say what a guest paid, what the platform took, what the taxes were, or what reached the bank. DCC Ledger keeps that money in its own tables, imported from the Airbnb, Booking.com and Vrbo exports, and links each reservation to its MotoPress booking so nothing is counted twice.
 
 **MotoPress is read-only to this plugin.** It never writes to a booking, a reserved room, a payment, a customer or their meta. An iCal sync can delete and recreate an imported booking at any time, which would erase anything written onto it.
+
+**The ledger works on a copy.** Direct bookings and their payments are copied into the ledger's own tables and frozen there. Every correction — an assumed payment, a hand-typed copy, a manual fix — is a separate labelled row sitting on top of that copy, never an edit to it. Reports show the Original, the Ledger (Original plus corrections), or the Difference between them, so a correction is always visible as a correction. If MotoPress changes, the change is recorded as a new version beside the old one and raised on the cleanup list.
 
 **No guest details are stored.** A ledger row is a channel, a confirmation code, a cottage and its dates. Names, emails, phones and addresses in the exports are never written anywhere — open the linked MotoPress booking when you need to know who it was.
 
@@ -48,6 +50,8 @@ Every import has a dry run that reports the counts and writes nothing. Every imp
 
 Over SSH:
 
+    wp dcc-ledger snapshot --dry-run
+    wp dcc-ledger snapshot
     wp dcc-ledger import /path/to/export.csv --dry-run
     wp dcc-ledger import /path/to/export.csv
     wp dcc-ledger link
@@ -56,6 +60,10 @@ Over SSH:
     wp dcc-ledger cleanup
 
 == Frequently Asked Questions ==
+
+= Does the ledger ever change my bookings? =
+
+No. MotoPress is only ever read. The ledger duplicates what it needs into its own tables and makes every change there, so the bookings Rob curated stay exactly as he left them.
 
 = Does deactivating lose the data? =
 
@@ -70,6 +78,15 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.1 =
+* The ledger now works on a copy: direct bookings and their payments are snapshotted into frozen Original rows, and every correction is a separate labelled adjustment on top.
+* Reports gain Original, Ledger and Difference views of the direct-booking figures.
+* A refresh records a changed MotoPress row as a new version beside the old one, raises it on the cleanup list, and never touches a correction.
+* Assumed payments are ledger adjustments rather than MotoPress payments. They skip hand-typed copies, overpaid bookings, cancelled bookings and anything outside the reconciled window.
+* Paid now means a completed payment only. A refunded payment keeps its amount in MotoPress, so it is reported on its own line and never counted as paid.
+* Corrected MotoPress keys against live: `_mphb_amount`, `_mphb_booking_id`, the `mphb-p-` status prefix, and the staff-only internal note.
+* A missing MotoPress key now shows a banner naming it instead of a figure of zero.
 
 = 0.1.0 =
 * First release: the seven importers, MotoPress linking, the cleanup list, and the Overview, By Cottage, By Channel, Stays, Cleanup, Imports and Settings tabs.

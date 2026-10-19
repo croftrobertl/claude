@@ -1,16 +1,32 @@
 # DCC Ledger — Rollback
 
+## First, the thing that cannot go wrong
+
+MotoPress is never written to. Bookings, reserved rooms, payments, customers
+and their meta are exactly as Rob left them, and no code path in this plugin
+can change that — the test suite asserts it on every import, snapshot, link,
+report and undo, and a mutation exists purely to prove the assertion bites.
+
+The ledger works on a copy. Its Originals table holds what MotoPress contained
+when it was copied, frozen; corrections are separate labelled rows on top. So
+there are two intact originals behind any mistake: MotoPress itself, and the
+ledger's copy of it.
+
 ## If a report looks wrong
 
-Nothing is lost. Undo the import that caused it:
+Nothing is lost. Undo the batch that caused it:
 
     wp dcc-ledger batches          # find the batch number
     wp dcc-ledger undo 7
 
-Undo removes exactly the rows that batch inserted and puts back exactly the
-fields it filled in on rows that already existed. A row that was there before
-the batch ran is never touched. It is tested both ways: the stays and lines
-tables come back byte for byte.
+Undo removes exactly the rows that batch inserted — stays, money lines, copied
+rows and corrections alike — and puts back exactly what it changed: a field it
+filled in on an existing stay, and a copied row it superseded becomes current
+again. A row that was there before the batch ran is never touched. It is tested
+both ways: the tables come back byte for byte.
+
+A snapshot is an ordinary batch, so undoing one removes its copies and the
+assumed payments it generated, and leaves every earlier correction alone.
 
 The same button is on the Imports tab.
 
@@ -40,8 +56,7 @@ To remove the data deliberately:
 
 ## What a rollback cannot undo
 
-Nothing done by this plugin is outside those tables, so there is nothing else to
-undo. The 38 assumed payments added to MotoPress on 2026-10-18 were added by the
-Website Director before this plugin existed; deactivating or deleting DCC Ledger
-does not touch them. They are identifiable by meta `_dcc_assumed_paid` and
-`_mphb_transaction_id` = `ASSUMED-PAID-20261018`.
+Nothing done by this plugin reaches outside its own tables, so there is nothing
+else to undo. Assumed payments are ledger adjustments, not MotoPress payments:
+undoing their batch removes them from the ledger and changes nothing in
+MotoPress, because nothing was ever put there.

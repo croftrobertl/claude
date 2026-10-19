@@ -14,19 +14,15 @@ global $wpdb;
 
 T::group('No guest details are persisted');
 
-dccl_seed_mphb();
 $files = [
     'airbnb-payout.csv', 'airbnb-reservations.csv',
     'bookingcom-reservations.csv', 'bookingcom-payout.csv',
     'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
 ];
-foreach ($files as $file) {
-    Importer::run(dccl_fixture($file), $file, false, 1);
-}
-Linker::run(1);
+dccl_full_setup();
 
 $dump = '';
-foreach (['stays', 'lines', 'links', 'batches', 'reviews'] as $name) {
+foreach (['stays', 'lines', 'links', 'batches', 'reviews', 'originals', 'adjustments'] as $name) {
     foreach ($wpdb->get_results('SELECT * FROM ' . Schema::table($name), ARRAY_A) as $row) {
         $dump .= (string) json_encode($row);
     }
@@ -59,6 +55,10 @@ T::same([], $wpdb->mphb_writes(), 'Building the reports writes nothing to posts 
 $wpdb->writes = [];
 Issues::all();
 T::same([], $wpdb->mphb_writes(), 'Building the cleanup list writes nothing to posts or postmeta');
+
+$wpdb->writes = [];
+DCCL\Snapshot::run(false, 1);
+T::same([], $wpdb->mphb_writes(), 'Taking a snapshot writes nothing to posts or postmeta');
 
 $wpdb->writes = [];
 DCCL\Batches::undo(1);

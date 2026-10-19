@@ -70,6 +70,56 @@ final class Cli
     }
 
     /**
+     * Copy MotoPress into the ledger, or refresh an earlier copy.
+     *
+     * Adds what is new, records what changed as a new version beside the old
+     * one, and never touches a correction the ledger already holds. MotoPress
+     * itself is only ever read.
+     *
+     * ## OPTIONS
+     *
+     * [--dry-run]
+     * : Report the counts and write nothing.
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public function snapshot(array $args, array $assoc): void
+    {
+        $dry    = isset($assoc['dry-run']);
+        $result = Snapshot::run($dry, get_current_user_id() ?: null);
+
+        if (!$result['ok']) {
+            \WP_CLI::error($result['message']);
+        }
+
+        $c = $result['counts'];
+        \WP_CLI::log(sprintf('Bookings read:        %d', $c['bookings_read']));
+        \WP_CLI::log(sprintf('Newly copied:         %d', $c['bookings_new']));
+        \WP_CLI::log(sprintf('Changed since copied: %d', $c['bookings_changed']));
+        \WP_CLI::log(sprintf('Unchanged:            %d', $c['bookings_unchanged']));
+        \WP_CLI::log(sprintf('Payments copied:      %d', $c['payments_new'] + $c['payments_changed']));
+        \WP_CLI::log('');
+        \WP_CLI::log(sprintf('Assumed payments:     %d bookings', $c['assumed_bookings']));
+        \WP_CLI::log(sprintf('Assumed total:        $%s', number_format((float) $c['assumed_total'], 2)));
+        \WP_CLI::log(sprintf('Skipped, a copy:      %d', $c['copies_skipped']));
+        \WP_CLI::log(sprintf('Skipped, overpaid:    %d', $c['overpaid_skipped']));
+        \WP_CLI::log(sprintf('Outside the window:   %d', $c['outside_window']));
+        \WP_CLI::log(sprintf('Already adjusted:     %d', $c['assumed_existing']));
+
+        foreach ($result['notes'] as $note) {
+            \WP_CLI::warning($note);
+        }
+
+        if ($result['dry_run']) {
+            \WP_CLI::success(__('Dry run complete. Nothing was written.', 'dcc-ledger'));
+            return;
+        }
+
+        \WP_CLI::success(sprintf('Snapshot taken as batch %d.', (int) $result['batch_id']));
+    }
+
+    /**
      * List import batches.
      *
      * @param array<int,string>    $args

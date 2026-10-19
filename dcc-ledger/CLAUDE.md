@@ -13,8 +13,14 @@ Calendar's working branch, so always name the base explicitly.
 ## What this plugin is
 
 A separate money ledger for the 8 cottages, built from the Airbnb, Booking.com
-and Vrbo exports. MotoPress supplies direct-booking money and the bookings the
-iCal feeds imported.
+and Vrbo exports.
+
+**The ledger works on a copy.** Rob hand-curated the website and its bookings
+over two years, and that is the untouched original. The snapshot duplicates his
+direct bookings and their payments into the ledger's own `originals` table and
+freezes them; every correction lives in `adjustments` as a separate labelled row
+on top. If a correction is wrong, the Original is still exactly what MotoPress
+held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 
 ## Invariants — do not "fix" these without asking Rob
 
@@ -28,8 +34,21 @@ iCal feeds imported.
   the row loop, or not read at all.
 - **Crofty Bear and Hipcamp are excluded everywhere**, on every channel, in every
   figure.
-- **Recorded and assumed payments are never blended without a label.** The 38
-  assumed payments added on 2026-10-18 carry meta `_dcc_assumed_paid`.
+- **An Original is never edited.** `Originals::update()` refuses every field
+  but `is_current` and `superseded_at`. A change in MotoPress becomes a new
+  version beside the old one, and the cleanup list says so.
+- **A refresh never touches an adjustment.** It adds and versions Originals,
+  nothing else.
+- **Recorded and assumed money are never blended without a label.** Assumed
+  payments are ledger adjustments, dated at check-in, labelled "assumed, actual
+  date unknown". There is nothing in MotoPress marking them — the 38
+  `_dcc_assumed_paid` payments were removed from live on 2026-10-19.
+- **Paid means `mphb-p-completed` only.** MotoPress keeps the amount on a
+  refunded payment, so counting one would overstate the money. Refunded
+  payments are reported on their own line.
+- **A missing MotoPress key is never a figure of zero.** `Health::check()` runs
+  on activation, before every snapshot and on every report load; a mismatch
+  shows a banner instead of figures.
 - **A hand-typed copy counts once**, on the platform stay. Copies are linked
   `method=copy` and excluded from the direct figures.
 - **Three separate tax buckets**, never summed: remitted by the platform,
@@ -57,19 +76,40 @@ iCal feeds imported.
   rewriting it.
 - A stay with any link, copies included, is not reported as "no MotoPress
   booking".
+- The snapshot detects a copy three ways before applying the assumed-paid rule
+  (an existing copy link, the same cottage and dates as an OTA stay, or an OTA
+  code in either note), so a copy is never topped up even if nobody has run the
+  matcher yet.
+- Structural questions on the cleanup list (which bookings exist, on what
+  dates) are read live from MotoPress so they are never stale; money questions
+  are read from the frozen copy so a figure never moves under Rob's feet.
+- A second assumed adjustment is never added to a booking that already has one.
+  If the gap has since changed, the snapshot raises a note instead of
+  rewriting it.
 
-## Unverified against live
+## MotoPress keys, counted on live 2026-10-19
 
-These MotoPress keys are MotoPress defaults that could not be checked from the
-build environment. They are constants at the top of `includes/class-mphb-reader.php`:
-`mphb_total_price`, `mphb_amount`, `mphb_note`, post type `mphb_payment`,
-payment status `completed`. Step 2 of `docs/STAGING-CHECKLIST.md` verifies them.
-A wrong key reports $0 silently rather than failing.
+Constants at the top of `includes/class-mphb-reader.php`. The underscores and
+the status prefix are not cosmetic — the other spellings return nothing at all.
+
+| Constant | Live value |
+| --- | --- |
+| `META_TOTAL` | `mphb_total_price` |
+| `META_PAYMENT_AMOUNT` | `_mphb_amount` (underscore) |
+| `META_PAYMENT_BOOKING` | `_mphb_booking_id` (underscore; NOT post_parent) |
+| `META_NOTE` | `mphb_note` |
+| `META_INTERNAL_NOTE` | `_mphb_booking_internal_notes` |
+| `PAYMENT_COMPLETED` | `mphb-p-completed` (prefixed) |
+| `PAYMENT_REFUNDED` | `mphb-p-refunded` |
+
+`tests/fixtures/mphb-dataset.php` writes these as **literals**, never as the
+plugin's constants. A fixture built from the constants follows the plugin into
+its own mistakes and proves nothing; three mutations exist to keep that honest.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 387 assertions
-    php dcc-ledger/tests/mutations.php            # 16 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 467 assertions
+    php dcc-ledger/tests/mutations.php            # 24 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -77,6 +117,10 @@ The suite runs without WordPress: `tests/bootstrap.php` stubs the core functions
 and `tests/lib/wpdb.php` is a SQLite-backed `$wpdb` that runs the plugin's real
 SQL. Keep the SQL portable (no `ON DUPLICATE KEY`, `DATE_FORMAT` or `YEAR()`) so
 it keeps doing so.
+
+A PHP warning fails the suite. An undefined index quietly becomes an empty
+figure, which is the exact kind of silent wrongness this plugin exists to
+prevent — so warnings are defects, not noise.
 
 ## Building the zip
 

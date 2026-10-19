@@ -13,9 +13,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$summary = Reports::summary($period['from'], $period['to'], $period['basis']);
+$summary = Reports::summary($period['from'], $period['to'], $period['basis'], $period['view']);
 $t       = $summary['totals'];
 $direct  = $summary['direct'];
+
+$view_sources = [
+    'original'   => __('Completed payments only, exactly as MotoPress held them', 'dcc-ledger'),
+    'ledger'     => __('Completed payments plus the ledger\'s corrections', 'dcc-ledger'),
+    'difference' => __('The ledger\'s corrections alone', 'dcc-ledger'),
+];
 ?>
 <h2 class="dccl-h2"><?php esc_html_e('Overview', 'dcc-ledger'); ?></h2>
 
@@ -88,19 +94,50 @@ $direct  = $summary['direct'];
 </div>
 
 <h3 class="dccl-h3"><?php esc_html_e('Direct Bookings', 'dcc-ledger'); ?></h3>
-<p class="dccl-note">
-    <?php esc_html_e('Read live from MotoPress. Recorded payments and assumed payments are shown apart and never blended.', 'dcc-ledger'); ?>
-</p>
+<?php if (!$summary['snapshot_taken']) : ?>
+    <div class="dccl-notice dccl-notice--error">
+        <p>
+            <strong><?php esc_html_e('No snapshot of MotoPress has been taken yet, so there are no direct-booking figures.', 'dcc-ledger'); ?></strong>
+            <?php esc_html_e('Run Refresh From MotoPress on the Imports tab.', 'dcc-ledger'); ?>
+        </p>
+    </div>
+<?php else : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: %s: when the ledger last copied MotoPress */
+            esc_html__('From the ledger\'s own copy of MotoPress, taken %s. MotoPress itself is never written to, and these Original figures are never edited — the ledger\'s corrections sit on top of them.', 'dcc-ledger'),
+            esc_html((string) $summary['snapshot_at'])
+        );
+        ?>
+    </p>
+<?php endif; ?>
 <div class="dccl-tiles">
     <?php
-    echo Ui::tile(__('Due', 'dcc-ledger'), Ui::money($t['direct_due']), __('MotoPress booking totals', 'dcc-ledger'));
-    echo Ui::tile(__('Recorded', 'dcc-ledger'), Ui::money($t['direct_recorded']), __('Payments Rob entered himself', 'dcc-ledger'));
+    echo Ui::tile(__('Due', 'dcc-ledger'), Ui::money($t['direct_due']), __('Booking totals, as copied', 'dcc-ledger'));
+    echo Ui::tile(__('Recorded', 'dcc-ledger'), Ui::money($t['direct_recorded']), __('Completed payments, as copied', 'dcc-ledger'));
     echo Ui::tile(
         __('Assumed', 'dcc-ledger'),
         Ui::money($t['direct_assumed']),
-        __('Added 2026-10-18 as paid in full, dated at check-in', 'dcc-ledger'),
+        $period['view'] === 'original'
+            ? __('Not counted in the Original view', 'dcc-ledger')
+            : __('Ledger adjustment, dated at check-in, actual date unknown', 'dcc-ledger'),
         'warn'
     );
+    echo Ui::tile(
+        __('Counted As Paid', 'dcc-ledger'),
+        Ui::money($t['direct_paid']),
+        $view_sources[$period['view']],
+        'good'
+    );
+    if ((float) $t['direct_refunded'] != 0.0) {
+        echo Ui::tile(
+            __('Refunded', 'dcc-ledger'),
+            Ui::money($t['direct_refunded']),
+            __('Refunded payments keep their amount in MotoPress; they are shown here and never counted as paid', 'dcc-ledger'),
+            'warn'
+        );
+    }
     ?>
 </div>
 

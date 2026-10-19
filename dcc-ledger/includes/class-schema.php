@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
  */
 final class Schema
 {
-    public const DB_VERSION     = '1';
+    public const DB_VERSION     = '2';
     public const VERSION_OPTION = 'dccl_db_version';
 
     public static function table(string $name): string
@@ -43,6 +43,16 @@ final class Schema
     public static function reviews(): string
     {
         return self::table('reviews');
+    }
+
+    public static function originals(): string
+    {
+        return self::table('originals');
+    }
+
+    public static function adjustments(): string
+    {
+        return self::table('adjustments');
     }
 
     public static function on_activate(): void
@@ -165,6 +175,67 @@ final class Schema
             UNIQUE KEY issue_key (issue_key)
         ) {$charset};";
 
+        // The ledger's own copy of what MotoPress held when it was taken.
+        // These rows are frozen: a change in MotoPress is recorded as a NEW
+        // version beside the old one, never written over it. Rob's original
+        // stays intact whatever the ledger goes on to say.
+        $originals = self::originals();
+        $sql[] = "CREATE TABLE {$originals} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            kind varchar(16) NOT NULL,
+            mphb_id bigint(20) unsigned NOT NULL,
+            mphb_booking_id bigint(20) unsigned DEFAULT NULL,
+            version smallint(5) NOT NULL DEFAULT 1,
+            is_current tinyint(1) NOT NULL DEFAULT 1,
+            channel varchar(20) NOT NULL DEFAULT 'direct',
+            cottage varchar(8) DEFAULT NULL,
+            check_in date DEFAULT NULL,
+            check_out date DEFAULT NULL,
+            booking_status varchar(32) DEFAULT NULL,
+            payment_status varchar(32) DEFAULT NULL,
+            total decimal(12,2) DEFAULT NULL,
+            amount decimal(12,2) DEFAULT NULL,
+            event_date date DEFAULT NULL,
+            codes longtext DEFAULT NULL,
+            content_hash char(40) NOT NULL,
+            source_batch bigint(20) unsigned DEFAULT NULL,
+            captured_at datetime NOT NULL,
+            superseded_at datetime DEFAULT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY original_version (kind,mphb_id,content_hash),
+            KEY original_current (kind,is_current),
+            KEY original_booking (mphb_booking_id),
+            KEY original_cottage_checkin (cottage,check_in),
+            KEY original_batch (source_batch)
+        ) {$charset};";
+
+        // Corrections, each one labelled and sitting ON TOP of an Original.
+        // Nothing here ever edits an Original, and a refresh never touches one
+        // of these.
+        $adjustments = self::adjustments();
+        $sql[] = "CREATE TABLE {$adjustments} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            type varchar(32) NOT NULL,
+            channel varchar(20) NOT NULL DEFAULT 'direct',
+            mphb_booking_id bigint(20) unsigned DEFAULT NULL,
+            stay_id bigint(20) unsigned DEFAULT NULL,
+            cottage varchar(8) DEFAULT NULL,
+            amount decimal(12,2) NOT NULL DEFAULT 0.00,
+            event_date date DEFAULT NULL,
+            label varchar(190) NOT NULL,
+            note text DEFAULT NULL,
+            hash char(40) NOT NULL,
+            source_batch bigint(20) unsigned DEFAULT NULL,
+            created_at datetime NOT NULL,
+            created_by bigint(20) unsigned DEFAULT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY adjustment_hash (hash),
+            KEY adjustment_booking (mphb_booking_id),
+            KEY adjustment_type (type),
+            KEY adjustment_event_date (event_date),
+            KEY adjustment_batch (source_batch)
+        ) {$charset};";
+
         foreach ($sql as $statement) {
             dbDelta($statement);
         }
@@ -179,7 +250,7 @@ final class Schema
     public static function drop_all(): void
     {
         global $wpdb;
-        foreach (['reviews', 'links', 'lines', 'stays', 'batches'] as $name) {
+        foreach (['reviews', 'adjustments', 'originals', 'links', 'lines', 'stays', 'batches'] as $name) {
             $table = self::table($name);
             // Table names cannot be parameterised; they are built from $wpdb->prefix.
             $wpdb->query("DROP TABLE IF EXISTS {$table}");

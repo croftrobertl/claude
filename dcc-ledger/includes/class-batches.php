@@ -27,19 +27,28 @@ final class Batches
     }
 
     /**
-     * @param array<string,int>   $counts
-     * @param array<int,array>    $undo  stay enrichments to reverse
+     * @param array<string,int> $counts
+     * @param array<int,array>  $undo        stay enrichments to reverse
+     * @param array<int,int>    $superseded  Original versions this batch replaced,
+     *                                       to be made current again on undo
      */
-    public static function finish(int $batch_id, array $counts, array $undo): void
+    public static function finish(int $batch_id, array $counts, array $undo, array $superseded = []): void
     {
         global $wpdb;
+        $data = [];
+        if ($undo !== []) {
+            $data['enriched'] = $undo;
+        }
+        if ($superseded !== []) {
+            $data['superseded'] = array_values(array_unique(array_map('intval', $superseded)));
+        }
         $wpdb->update(Schema::batches(), [
             'rows_read'      => (int) ($counts['read'] ?? 0),
             'rows_inserted'  => (int) ($counts['inserted'] ?? 0),
             'rows_unchanged' => (int) ($counts['unchanged'] ?? 0),
             'rows_skipped'   => (int) ($counts['skipped'] ?? 0),
             'rows_excluded'  => (int) ($counts['excluded'] ?? 0),
-            'undo_data'      => $undo === [] ? null : (string) wp_json_encode(['enriched' => $undo]),
+            'undo_data'      => $data === [] ? null : (string) wp_json_encode($data),
         ], ['id' => $batch_id]);
     }
 
@@ -69,8 +78,22 @@ final class Batches
         return is_array($data) && !empty($data['undone']);
     }
 
+    /** @return array<string,mixed> */
+    private static function refusal(string $message): array
+    {
+        return [
+            'ok'          => false,
+            'message'     => $message,
+            'stays'       => 0,
+            'lines'       => 0,
+            'originals'   => 0,
+            'adjustments' => 0,
+            'restored'    => 0,
+        ];
+    }
+
     /**
-     * @return array{ok:bool,message:string,stays:int,lines:int,restored:int}
+     * @return array{ok:bool,message:string,stays:int,lines:int,originals:int,adjustments:int,restored:int}
      */
     public static function undo(int $batch_id): array
     {
@@ -78,27 +101,38 @@ final class Batches
 
         $batch = self::get($batch_id);
         if ($batch === null) {
-            return [
-                'ok'       => false,
-                'message'  => __('That batch does not exist.', 'dcc-ledger'),
-                'stays'    => 0,
-                'lines'    => 0,
-                'restored' => 0,
-            ];
+            return self::refusal(__('That batch does not exist.', 'dcc-ledger'));
         }
         if (self::is_undone($batch)) {
-            return [
-                'ok'       => false,
-                'message'  => __('That batch has already been undone.', 'dcc-ledger'),
-                'stays'    => 0,
-                'lines'    => 0,
-                'restored' => 0,
-            ];
+            return self::refusal(__('That batch has already been undone.', 'dcc-ledger'));
         }
 
         $stays_t = Schema::stays();
         $lines_t = Schema::lines();
         $links_t = Schema::links();
+        $orig_t  = Schema::originals();
+        $adj_t   = Schema::adjustments();
+
+        $undo = json_decode((string) ($batch['undo_data'] ?? ''), true);
+        $undo = is_array($undo) ? $undo : [];
+
+        // Corrections this batch created. A refresh never removes an
+        // adjustment made by an earlier batch, and undo only takes back the
+        // ones its own batch added.
+        $adjustments = (int) $wpdb->query(
+            $wpdb->prepare("DELETE FROM {$adj_t} WHERE source_batch = %d", $batch_id)
+        );
+
+        // Copies of MotoPress rows this batch wrote, and the versions they
+        // replaced, which become current again.
+        $originals = (int) $wpdb->query(
+            $wpdb->prepare("DELETE FROM {$orig_t} WHERE source_batch = %d", $batch_id)
+        );
+        if (isset($undo['superseded']) && is_array($undo['superseded'])) {
+            foreach ($undo['superseded'] as $original_id) {
+                Originals::update((int) $original_id, ['is_current' => 1, 'superseded_at' => null]);
+            }
+        }
 
         // Lines this batch inserted.
         $lines = (int) $wpdb->query(
@@ -119,8 +153,7 @@ final class Batches
 
         // Fields this batch filled in on stays that already existed.
         $restored = 0;
-        $undo     = json_decode((string) ($batch['undo_data'] ?? ''), true);
-        if (is_array($undo) && isset($undo['enriched']) && is_array($undo['enriched'])) {
+        if (isset($undo['enriched']) && is_array($undo['enriched'])) {
             foreach ($undo['enriched'] as $entry) {
                 if (!isset($entry['id'], $entry['fields']) || !is_array($entry['fields'])) {
                     continue;
@@ -137,17 +170,21 @@ final class Batches
         Reports::flush_cache();
 
         return [
-            'ok'       => true,
-            'message'  => sprintf(
-                /* translators: 1: number of stays, 2: number of money lines, 3: number of restored stays */
-                __('Undone: %1$d stays and %2$d money lines removed, %3$d stays restored.', 'dcc-ledger'),
+            'ok'          => true,
+            'message'     => sprintf(
+                /* translators: 1: stays, 2: money lines, 3: copied rows, 4: corrections, 5: restored stays */
+                __('Undone: %1$d stays, %2$d money lines, %3$d copied rows and %4$d corrections removed, %5$d stays restored.', 'dcc-ledger'),
                 $stays,
                 $lines,
+                $originals,
+                $adjustments,
                 $restored
             ),
-            'stays'    => $stays,
-            'lines'    => $lines,
-            'restored' => $restored,
+            'stays'       => $stays,
+            'lines'       => $lines,
+            'originals'   => $originals,
+            'adjustments' => $adjustments,
+            'restored'    => $restored,
         ];
     }
 }

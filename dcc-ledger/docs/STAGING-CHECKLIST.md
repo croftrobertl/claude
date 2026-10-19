@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.0 — Staging Checklist
+# DCC Ledger 0.1.1 — Staging Checklist
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
@@ -23,28 +23,52 @@ on staging and said yes.
       `_reviews`.
 - [ ] DCC → Ledger loads, and every tab opens.
 
-## 2. Confirm the MotoPress meta keys (do this before trusting any money figure)
+## 2. Confirm MotoPress still looks as expected
 
-Four meta keys could not be verified from here and are the ones the direct-booking
-figures rest on. Check each against staging's real data:
+The plugin now checks this itself, on activation and on every report load: if a
+key or status is missing it shows a banner naming it **instead of figures**, so
+a wrong spelling can no longer read as $0. Confirm the banner is absent, and
+sanity-check the counts:
 
       wp db query "SELECT meta_key, COUNT(*) FROM portal_postmeta
-                   WHERE meta_key IN ('mphb_total_price','mphb_amount','mphb_note','_dcc_assumed_paid')
+                   WHERE meta_key IN ('mphb_total_price','_mphb_amount','_mphb_booking_id','mphb_note','_mphb_booking_internal_notes')
                    GROUP BY meta_key"
 
-      wp db query "SELECT post_type, post_status, COUNT(*) FROM portal_posts
-                   WHERE post_type = 'mphb_payment' GROUP BY post_type, post_status"
+      wp db query "SELECT post_status, COUNT(*) FROM portal_posts
+                   WHERE post_type = 'mphb_payment' GROUP BY post_status"
 
-- [ ] `mphb_total_price` returns a count close to the number of bookings.
-- [ ] `mphb_amount` returns a count close to the number of payments.
-- [ ] `mphb_payment` posts exist with status `completed`.
-- [ ] `_dcc_assumed_paid` returns 38 — the assumed payments added on 2026-10-18.
+- [ ] No red banner at the top of DCC → Ledger.
+- [ ] `mphb_total_price` ≈ 428 rows.
+- [ ] `_mphb_amount` and `_mphb_booking_id` ≈ 95 rows each.
+- [ ] Payment statuses come back prefixed (`mphb-p-completed`, `mphb-p-refunded`,
+      and so on), totalling 95.
+- [ ] `_dcc_assumed_paid` returns **nothing** — those 38 payments were removed
+      from live on 2026-10-19, and the ledger records assumed payments as its
+      own adjustments instead.
 
-If any of those is empty or named differently, STOP and tell me the real key.
-They are all constants at the top of `includes/class-mphb-reader.php`; the fix
-is one line each, but a wrong key silently reports $0 rather than failing.
+## 3. Snapshot MotoPress — dry run first
 
-## 3. Dry run every file, in this order
+This is the copy. MotoPress is only read; the ledger writes to its own tables.
+
+      wp dcc-ledger snapshot --dry-run
+
+- [ ] **Assumed payments: 38 bookings, $60,348.22.** These are the two numbers
+      to check. If either differs, STOP and send me the output — do not import
+      anything else first.
+- [ ] `Skipped, a copy` is 14 or close to it.
+- [ ] `Skipped, overpaid` is 3 — bookings 7983, 7989 and 10465, which are
+      recorded as paid more than their total and are never topped up.
+- [ ] Nothing is reported as changed, because nothing has been copied yet.
+
+Then take it for real:
+
+      wp dcc-ledger snapshot
+
+- [ ] The same figures come back, and it ends with `Snapshot taken as batch N`.
+- [ ] Run it a second time: every count must be 0. A repeat snapshot copies
+      nothing and adds no second assumed payment.
+
+## 4. Dry run every export, in this order
 
 Order matters only in that reservations files fill in what payout files leave
 blank. Either order works; this one produces the fewest cleanup items.
@@ -71,7 +95,7 @@ For each one, check:
 
 A dry run writes nothing at all — no stays, no lines, not even a batch row.
 
-## 4. Import for real
+## 5. Import the exports for real
 
       wp dcc-ledger import airbnb-reservations.csv
       …and so on, same order
@@ -80,7 +104,7 @@ A dry run writes nothing at all — no stays, no lines, not even a batch row.
 - [ ] Run each file a second time and confirm it reports `New stays: 0` and
       `New money lines: 0`. A re-import must change nothing.
 
-## 5. Match to MotoPress
+## 6. Match to MotoPress
 
       wp dcc-ledger link
 
@@ -95,7 +119,7 @@ Rob measured these shapes on live, so expect roughly:
 
 Matching writes only to the ledger's links table. It never writes to MotoPress.
 
-## 6. Work the cleanup list
+## 7. Work the cleanup list
 
       wp dcc-ledger cleanup
 
@@ -116,20 +140,38 @@ Confirm the moved-cottage copies with the "Link As A Copy" button, then
 re-check the figures: each confirmation should reduce the night count, because
 it stops the stay being counted twice.
 
-## 7. Check the figures against something Rob already knows
+## 8. Check the figures against something Rob already knows
 
 - [ ] Pick one month and read the Overview with **By Stay Dates**, then with
       **By Payout Date**. The two should differ, and the difference should be
       explainable by when the money moved.
 - [ ] Compare one month's Booking.com commission against that month's invoice.
 - [ ] Compare one Airbnb payout in the ledger against the bank statement line.
-- [ ] Check that the direct-booking totals split into Recorded and Assumed, and
-      that the assumed figure for the window is in the region of $60,348.22.
+- [ ] Check that the direct-booking figures split into Due, Recorded, Assumed
+      and Refunded, and that the assumed figure for the window comes to
+      $60,348.22.
+- [ ] Switch the Direct Bookings control through **Original**, **Ledger** and
+      **Difference**. Original must show only what MotoPress recorded; Ledger
+      must be Original plus the corrections; Difference must be the corrections
+      alone, and Original + Difference must equal Ledger.
 
-## 8. Only then, live
+## 9. Prove the original is safe
+
+The whole point of the copy is that Rob's data survives a mistake in the ledger.
+
+- [ ] Note a batch number from step 3 or 5, then `wp dcc-ledger undo N`, check
+      the figures move, and re-run the import or snapshot. Nothing in MotoPress
+      changes at any point.
+- [ ] Change a booking's total in MotoPress on staging, run
+      `wp dcc-ledger snapshot` again, and confirm it reports **1 changed**, the
+      cleanup list raises "MotoPress Changed After The Ledger Copied It", the
+      old version is still there under the Original view, and no correction was
+      touched.
+
+## 10. Only then, live
 
 - [ ] Back up live.
 - [ ] Install and activate the same zip.
-- [ ] Repeat steps 3 to 6 on live, dry run first.
+- [ ] Repeat steps 2 to 7 on live, dry run first.
 - [ ] Settings tab: leave "Delete all ledger data when the plugin is deleted"
       **off**.

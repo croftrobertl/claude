@@ -11,13 +11,7 @@ use DCCL\Repo;
 T::group('Cleanup list');
 
 dccl_seed_mphb();
-foreach ([
-    'airbnb-payout.csv', 'airbnb-reservations.csv',
-    'bookingcom-reservations.csv', 'bookingcom-payout.csv',
-    'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
-] as $file) {
-    Importer::run(dccl_fixture($file), $file, false, 1);
-}
+dccl_import_all();
 T::group('Before matching has been run');
 
 $unmatched = array_column(Issues::all(), 'key');
@@ -27,6 +21,7 @@ T::ok(in_array('ota_unlinked:bookingcom:5111111111', $unmatched, true), 'And eve
 T::group('Cleanup list after matching');
 
 Linker::run(1);
+DCCL\Snapshot::run(false, 1);
 
 $items = Issues::all();
 $keys  = array_column($items, 'key');
@@ -37,7 +32,12 @@ T::ok($has('payout_no_reservation:bookingcom:5722711078'), 'A payout with no res
 T::ok($has('imported_no_stay:9005'), 'An imported booking with no ledger stay is raised');
 T::ok($has('copy_payment:9006'), 'A hand-typed copy carrying a payment is raised');
 T::ok($has('overpaid:9009'), 'A booking paid for more than its total is raised');
-T::ok($has('unpaid_past:9012'), 'A past direct booking that is not fully paid is raised');
+// #9021 checked out after the reconciled window, so Rob's assumed-paid rule
+// does not reach it and the gap is still a gap.
+T::ok($has('unpaid_past:9021'), 'A past direct booking outside the window that is not fully paid is raised');
+// #9012 is inside the window, so the ledger's assumed adjustment covers it and
+// there is nothing left to chase.
+T::ok(!$has('unpaid_past:9012'), 'A past booking the assumed adjustment covers is not chased');
 T::ok($has('clawback:airbnb:HMMOVED001'), 'The stayed-but-clawed-back case is raised');
 T::ok($has('cancelled_money:bookingcom:5333333333'), 'A cancelled stay that still has money is raised');
 T::ok($has('invoice:7003'), 'The invoice that does not reconcile is raised');
@@ -108,8 +108,8 @@ foreach ($all as $item) {
         $found = $item;
     }
 }
-T::ok($found['reviewed'], 'It is still listed, marked reviewed');
-T::same('Checked Clover — a refund was issued.', $found['review_note'], 'With its note');
+T::ok($found !== null && $found['reviewed'], 'It is still listed, marked reviewed');
+T::same('Checked Clover — a refund was issued.', $found === null ? '' : $found['review_note'], 'With its note');
 
 Repo::unmark_reviewed('overpaid:9009');
 T::same($open_before, count(Issues::open()), 'And it can be put back on the list');

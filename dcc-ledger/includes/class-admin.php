@@ -72,7 +72,10 @@ final class Admin
 
     public static function register_actions(): void
     {
-        foreach (['import', 'link', 'manual_link', 'unlink', 'review', 'undo', 'settings', 'export'] as $action) {
+        foreach ([
+            'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
+            'settings', 'export', 'snapshot', 'adjust', 'unadjust',
+        ] as $action) {
             add_action('admin_post_dccl_' . $action, ['\\DCCL\\Admin', 'handle_' . $action]);
         }
     }
@@ -86,7 +89,7 @@ final class Admin
     }
 
     /**
-     * @return array{from:string,to:string,label:string,kind:string,basis:string}
+     * @return array{from:string,to:string,label:string,kind:string,basis:string,view:string}
      */
     public static function current_period(): array
     {
@@ -95,9 +98,11 @@ final class Admin
         $from  = isset($_GET['from']) ? sanitize_text_field(wp_unslash($_GET['from'])) : '';
         $to    = isset($_GET['to']) ? sanitize_text_field(wp_unslash($_GET['to'])) : '';
         $basis = (isset($_GET['basis']) && $_GET['basis'] === 'payout') ? 'payout' : 'stay';
+        $view  = isset($_GET['view']) ? sanitize_key(wp_unslash($_GET['view'])) : 'ledger';
 
         $period = Reports::period($kind, $value, $from, $to);
         $period['basis'] = $basis;
+        $period['view']  = in_array($view, Reports::VIEWS, true) ? $view : 'ledger';
         return $period;
     }
 
@@ -110,6 +115,8 @@ final class Admin
         $tab    = self::current_tab();
         $period = self::current_period();
         $notice = self::notice();
+        // A missing MotoPress key must never show up as a figure of zero.
+        $health = Health::banner();
 
         include DCCL_DIR . 'includes/admin/views/page.php';
     }
@@ -216,6 +223,79 @@ final class Admin
         );
 
         self::back('imports', $message);
+    }
+
+    /**
+     * Copy MotoPress into the ledger, or refresh an earlier copy.
+     *
+     * A refresh adds what is new, records what changed as a new version beside
+     * the old one, and never touches a correction the ledger already holds.
+     */
+    public static function handle_snapshot(): void
+    {
+        self::guard();
+
+        $dry    = !empty($_POST['dry_run']);
+        $result = Snapshot::run($dry, get_current_user_id());
+
+        if (!$result['ok']) {
+            self::back('imports', $result['message'], 'error');
+        }
+
+        $c = $result['counts'];
+        self::back('imports', sprintf(
+            /* translators: 1: dry run or snapshot, 2: bookings read, 3: new, 4: changed, 5: payments copied, 6: assumed count, 7: assumed total */
+            __('%1$s: %2$d bookings read, %3$d newly copied, %4$d changed since last time, %5$d payments copied, %6$d assumed payments totalling %7$s.', 'dcc-ledger'),
+            $result['dry_run'] ? __('Dry run', 'dcc-ledger') : __('Snapshot', 'dcc-ledger'),
+            (int) $c['bookings_read'],
+            (int) $c['bookings_new'],
+            (int) $c['bookings_changed'],
+            (int) ($c['payments_new'] + $c['payments_changed']),
+            (int) $c['assumed_bookings'],
+            '$' . number_format((float) $c['assumed_total'], 2)
+        ));
+    }
+
+    /** A correction by hand, on top of the Original, never instead of it. */
+    public static function handle_adjust(): void
+    {
+        self::guard();
+
+        $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
+        $amount     = isset($_POST['amount']) ? (float) $_POST['amount'] : 0.0;
+        $note       = isset($_POST['note']) ? sanitize_text_field(wp_unslash($_POST['note'])) : '';
+        $date       = isset($_POST['event_date']) ? sanitize_text_field(wp_unslash($_POST['event_date'])) : '';
+
+        if ($booking_id <= 0) {
+            self::back('cleanup', __('A booking id is needed.', 'dcc-ledger'), 'error');
+        }
+
+        $original = Originals::current(Originals::KIND_BOOKING, $booking_id);
+        if ($original === null) {
+            self::back('cleanup', __('That booking has not been copied into the ledger yet. Refresh from MotoPress first.', 'dcc-ledger'), 'error');
+        }
+
+        Adjustments::add([
+            'type'            => Adjustments::MANUAL,
+            'mphb_booking_id' => $booking_id,
+            'cottage'         => (string) $original['cottage'],
+            'amount'          => $amount,
+            'event_date'      => Dates::is_valid($date) ? $date : (string) $original['check_in'],
+            'label'           => Adjustments::label_for(Adjustments::MANUAL),
+            'note'            => $note,
+        ], null, get_current_user_id());
+
+        self::back('cleanup', __('Correction recorded on top of the original.', 'dcc-ledger'));
+    }
+
+    public static function handle_unadjust(): void
+    {
+        self::guard();
+        $id = isset($_POST['adjustment_id']) ? (int) $_POST['adjustment_id'] : 0;
+        if ($id <= 0 || !Adjustments::remove($id)) {
+            self::back('cleanup', __('That correction could not be removed.', 'dcc-ledger'), 'error');
+        }
+        self::back('cleanup', __('Correction removed. The original is untouched, as it always was.', 'dcc-ledger'));
     }
 
     public static function handle_link(): void

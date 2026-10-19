@@ -10,6 +10,7 @@
 use DCCL\Admin;
 use DCCL\Cottages;
 use DCCL\Mphb_Reader;
+use DCCL\Reports;
 use DCCL\Ui;
 
 if (!defined('ABSPATH')) {
@@ -21,6 +22,11 @@ if (!defined('ABSPATH')) {
     <p class="dccl-lede">
         <?php esc_html_e('One money history for the eight cottages: what guests paid, what the platforms took, what the taxes were, and what reached the bank.', 'dcc-ledger'); ?>
     </p>
+
+    <?php
+    // A missing MotoPress key is shown instead of figures, never as a zero.
+    echo $health;
+    ?>
 
     <?php if ($notice !== null) : ?>
         <div class="dccl-notice dccl-notice--<?php echo esc_attr($notice['type']); ?>">
@@ -38,6 +44,7 @@ if (!defined('ABSPATH')) {
                    'from'   => $period['from'],
                    'to'     => $period['to'],
                    'basis'  => $period['basis'],
+                   'view'   => $period['view'],
                ])); ?>"><?php echo esc_html($label); ?></a>
         <?php endforeach; ?>
     </nav>
@@ -108,6 +115,23 @@ if (!defined('ABSPATH')) {
                 </label>
             </fieldset>
 
+            <fieldset class="dccl-segmented">
+                <legend><?php esc_html_e('Direct Bookings', 'dcc-ledger'); ?></legend>
+                <?php
+                $views = [
+                    'original'   => __('Original', 'dcc-ledger'),
+                    'ledger'     => __('Ledger', 'dcc-ledger'),
+                    'difference' => __('Difference', 'dcc-ledger'),
+                ];
+                foreach ($views as $value => $label) :
+                    ?>
+                    <label>
+                        <input type="radio" name="view" value="<?php echo esc_attr($value); ?>" <?php checked($period['view'], $value); ?>>
+                        <span><?php echo esc_html($label); ?></span>
+                    </label>
+                <?php endforeach; ?>
+            </fieldset>
+
             <button type="submit" class="button button-primary"><?php esc_html_e('Show', 'dcc-ledger'); ?></button>
         </form>
 
@@ -126,6 +150,14 @@ if (!defined('ABSPATH')) {
                     ? __('By Payout Date', 'dcc-ledger')
                     : __('By Stay Dates', 'dcc-ledger')
             ); ?>
+            <?php
+            $view_chips = [
+                'original'   => __('Original Only', 'dcc-ledger'),
+                'ledger'     => __('Ledger: Original Plus Corrections', 'dcc-ledger'),
+                'difference' => __('The Corrections Alone', 'dcc-ledger'),
+            ];
+            echo Ui::chip($view_chips[$period['view']], $period['view'] === 'original' ? 'muted' : '');
+            ?>
             <?php echo Ui::chip(
                 sprintf(
                     /* translators: %s: the last date Rob reconciled against the platform exports */

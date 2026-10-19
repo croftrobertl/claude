@@ -64,8 +64,12 @@ $mutations = [
     [
         'name' => 'A hand-typed copy counted a second time',
         'file' => 'includes/class-reports.php',
-        'from' => '            if (isset($copies[(int) $booking[\'id\']])) {',
-        'to'   => '            if (false && isset($copies[(int) $booking[\'id\']])) {',
+        'from' => <<<'EOT'
+            if (isset($copies[$booking_id])) {
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+EOT,
     ],
     [
         'name' => 'A moved-cottage copy auto-linked without asking',
@@ -90,20 +94,29 @@ $mutations = [
     ],
     [
         'name' => 'An assumed payment reported as recorded',
-        'file' => 'includes/class-mphb-reader.php',
-        'from' => '            if ($assumed) {
-                $out[$id][\'assumed\'] += $amount;
-            } else {
-                $out[$id][\'recorded\'] += $amount;
-            }',
-        'to'   => '            $out[$id][\'recorded\'] += $amount;',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        if ($view === 'original') {
+            $out['paid']    = $out['recorded'];
+            $out['assumed'] = 0.0;
+EOT,
+        'to'   => <<<'EOT'
+        if ($view === 'original') {
+            $out['recorded'] = round($out['recorded'] + $out['assumed'], 2);
+            $out['paid']     = $out['recorded'];
+            $out['assumed']  = 0.0;
+EOT,
     ],
     [
         'name' => 'A payment on a copy counted as money received',
         'file' => 'includes/class-reports.php',
-        'from' => '                    $out[\'copy_payments\'] = round($out[\'copy_payments\'] + (float) $booking[\'paid_recorded\'], 2);',
-        'to'   => '                    $out[\'copy_payments\'] = round($out[\'copy_payments\'] + (float) $booking[\'paid_recorded\'], 2);
-                    $out[\'recorded\']      = round($out[\'recorded\'] + (float) $booking[\'paid_recorded\'], 2);',
+        'from' => <<<'EOT'
+                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
+EOT,
+        'to'   => <<<'EOT'
+                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
+                    $out['recorded']      = round($out['recorded'] + (float) $booking['paid'], 2);
+EOT,
     ],
     [
         'name' => 'Airbnb-remitted tax added to revenue',
@@ -140,6 +153,106 @@ $mutations = [
         'to'   => '        } finally {
             // mutation: the file is kept
         }',
+    ],
+    [
+        'name' => 'An Original overwritten on refresh',
+        'file' => 'includes/class-originals.php',
+        'from' => <<<'EOT'
+            $version    = (int) $current['version'] + 1;
+            $superseded = (int) $current['id'];
+EOT,
+        'to'   => <<<'EOT'
+            $version    = (int) $current['version'];
+            $superseded = null;
+            $wpdb->delete(self::table(), ['id' => (int) $current['id']]);
+EOT,
+    ],
+    [
+        'name' => 'An adjustment deleted by a refresh',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+        self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+EOT,
+        'to'   => <<<'EOT'
+        if (!$dry_run) {
+            global $wpdb;
+            $wpdb->query('DELETE FROM ' . Schema::adjustments());
+        }
+        self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+EOT,
+    ],
+    [
+        'name' => 'Assumed paid applied to a hand-typed copy',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+            if (isset($copies[(int) $booking['id']])) {
+                // Its money belongs to the OTA stay, once.
+                $counts['copies_skipped']++;
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                $counts['copies_skipped']++;
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'Assumed paid applied to an overpaid booking',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+            $gap = round((float) $booking['total'] - (float) $booking['paid_recorded'], 2);
+            if ($gap <= 0.0) {
+EOT,
+        'to'   => <<<'EOT'
+            $gap = abs(round((float) $booking['total'] - (float) $booking['paid_recorded'], 2));
+            if ($gap < 0.0) {
+EOT,
+    ],
+    [
+        'name' => 'A refunded payment counted as paid',
+        'file' => 'includes/class-originals.php',
+        'from' => <<<'EOT'
+            if ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_COMPLETED) {
+                $bookings[$booking_id]['paid'] = round($bookings[$booking_id]['paid'] + $amount, 2);
+            } elseif ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_REFUNDED) {
+EOT,
+        'to'   => <<<'EOT'
+            if (in_array((string) $payment['payment_status'], [Mphb_Reader::PAYMENT_COMPLETED, Mphb_Reader::PAYMENT_REFUNDED], true)) {
+                $bookings[$booking_id]['paid'] = round($bookings[$booking_id]['paid'] + $amount, 2);
+            } elseif (false) {
+EOT,
+    ],
+    [
+        'name' => 'The unprefixed "completed" payment status',
+        'file' => 'includes/class-mphb-reader.php',
+        'from' => <<<'EOT'
+    public const PAYMENT_COMPLETED = 'mphb-p-completed';
+EOT,
+        'to'   => <<<'EOT'
+    public const PAYMENT_COMPLETED = 'completed';
+EOT,
+    ],
+    [
+        'name' => 'mphb_amount instead of _mphb_amount',
+        'file' => 'includes/class-mphb-reader.php',
+        'from' => <<<'EOT'
+    public const META_PAYMENT_AMOUNT = '_mphb_amount';
+EOT,
+        'to'   => <<<'EOT'
+    public const META_PAYMENT_AMOUNT = 'mphb_amount';
+EOT,
+    ],
+    [
+        'name' => 'The payment-to-booking link read from the wrong meta',
+        'file' => 'includes/class-mphb-reader.php',
+        'from' => <<<'EOT'
+    public const META_PAYMENT_BOOKING = '_mphb_booking_id';
+EOT,
+        'to'   => <<<'EOT'
+    public const META_PAYMENT_BOOKING = '_mphb_parent_id';
+EOT,
     ],
     [
         'name' => 'A missing capability check',

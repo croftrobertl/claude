@@ -81,6 +81,7 @@ final class Ui
                 'from'   => $period['from'],
                 'to'     => $period['to'],
                 'basis'  => $period['basis'],
+                'view'   => $period['view'] ?? 'ledger',
             ], admin_url('admin-post.php')),
             Admin::NONCE
         );

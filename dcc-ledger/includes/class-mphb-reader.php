@@ -27,20 +27,37 @@ final class Mphb_Reader
     public const META_CHECK_OUT = 'mphb_check_out_date'; // verified
     public const META_ROOM_ID   = '_mphb_room_id';       // verified
 
-    public const META_TOTAL          = 'mphb_total_price';   // to confirm on staging
-    public const META_PAYMENT_AMOUNT = 'mphb_amount';        // to confirm on staging
-    public const META_NOTE           = 'mphb_note';          // to confirm on staging
+    // Counted on live on 2026-10-19. The underscores and the status prefix are
+    // not cosmetic: the unprefixed spellings return nothing at all, which would
+    // report $0 rather than fail. Health::check() guards against exactly that.
+    public const META_TOTAL          = 'mphb_total_price';
+    public const META_PAYMENT_AMOUNT = '_mphb_amount';
+    public const META_PAYMENT_BOOKING = '_mphb_booking_id';
+    public const META_NOTE           = 'mphb_note';
+    public const META_INTERNAL_NOTE  = '_mphb_booking_internal_notes';
 
     public const META_SYNC_ID        = '_mphb_sync_id';
     public const META_ICAL_PRODID    = 'mphb_ical_prodid';
     public const META_ICAL_SUMMARY   = 'mphb_ical_summary';
     public const META_ICAL_DESC      = 'mphb_ical_description';
-    public const META_ASSUMED_PAID   = '_dcc_assumed_paid';
 
     /** Statuses that mean the booking really happened. */
     public const LIVE_STATUSES = ['confirmed', 'pending', 'pending-payment'];
 
-    public const PAYMENT_COMPLETED = 'completed';
+    /** Only a completed payment is money received. */
+    public const PAYMENT_COMPLETED = 'mphb-p-completed';
+
+    /**
+     * MotoPress keeps the amount on a refunded payment, so a refund that is
+     * counted as paid would overstate the money by its full value. Refunded
+     * payments are reported on their own line instead.
+     */
+    public const PAYMENT_REFUNDED = 'mphb-p-refunded';
+
+    public const PAYMENT_STATUSES = [
+        'mphb-p-completed', 'mphb-p-refunded', 'mphb-p-cancelled',
+        'mphb-p-abandoned', 'mphb-p-failed',
+    ];
 
     /**
      * Every booking with its cottage, dates, channel, money and any OTA codes
@@ -99,6 +116,7 @@ final class Mphb_Reader
             self::META_ICAL_DESC,
             self::META_TOTAL,
             self::META_NOTE,
+            self::META_INTERNAL_NOTE,
         ]);
         $payments = self::payments_for($ids);
 
@@ -116,9 +134,13 @@ final class Mphb_Reader
             $codes = self::codes_in(
                 (string) ($m[self::META_ICAL_SUMMARY] ?? '') . ' ' . (string) ($m[self::META_ICAL_DESC] ?? '')
             );
-            $note_codes = self::codes_in((string) ($m[self::META_NOTE] ?? ''));
+            // Rob writes a platform id in either the customer note or the
+            // staff-only internal note. Both are read; neither is kept.
+            $note_codes = self::codes_in(
+                (string) ($m[self::META_NOTE] ?? '') . ' ' . (string) ($m[self::META_INTERNAL_NOTE] ?? '')
+            );
 
-            $pay = $payments[$id] ?? ['recorded' => 0.0, 'assumed' => 0.0, 'count' => 0, 'events' => []];
+            $pay = $payments[$id] ?? ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
 
             $out[] = [
                 'id'          => $id,
@@ -133,11 +155,13 @@ final class Mphb_Reader
                 'codes'       => $codes,
                 'note_codes'  => $note_codes,
                 'total'       => round((float) ($m[self::META_TOTAL] ?? 0), 2),
+                // Paid means completed only. A refunded payment keeps its
+                // amount in MotoPress, so it is reported apart, never added.
                 'paid_recorded' => $pay['recorded'],
-                'paid_assumed'  => $pay['assumed'],
+                'refunded'      => $pay['refunded'],
                 'payment_count' => $pay['count'],
-                // One entry per completed payment: date, amount, and whether it
-                // is one of the assumed top-ups. Reports date cash by these.
+                // One entry per payment, whatever its status: id, date, amount
+                // and status. The snapshot copies these verbatim.
                 'payments'      => $pay['events'],
             ];
         }
@@ -238,12 +262,13 @@ final class Mphb_Reader
     }
 
     /**
-     * Completed payments per booking, split into the ones Rob really recorded
-     * and the ones the Website Director added on 2026-10-18 as assumed. The two
-     * are never added together without a label.
+     * Every payment of these bookings, whatever its status.
+     *
+     * The payment is tied to its booking by the _mphb_booking_id meta, not by
+     * post_parent. Only mphb-p-completed counts as paid.
      *
      * @param int[] $ids
-     * @return array<int,array{recorded:float,assumed:float,count:int,events:array<int,array{date:string,amount:float,assumed:bool}>}>
+     * @return array<int,array{recorded:float,refunded:float,count:int,events:array<int,array<string,mixed>>}>
      */
     private static function payments_for(array $ids): array
     {
@@ -253,19 +278,20 @@ final class Mphb_Reader
         }
         $id_ph = implode(',', array_fill(0, count($ids), '%d'));
 
-        $sql = "SELECT p.post_parent AS booking_id,
+        $sql = "SELECT p.ID AS payment_id,
+                       bk.meta_value AS booking_id,
+                       p.post_status AS payment_status,
                        p.post_date AS paid_on,
-                       amt.meta_value AS amount,
-                       CASE WHEN asm.meta_id IS NULL THEN 0 ELSE 1 END AS assumed
+                       amt.meta_value AS amount
                   FROM {$wpdb->posts} p
                   INNER JOIN {$wpdb->postmeta} amt ON amt.post_id = p.ID AND amt.meta_key = %s
-                  LEFT  JOIN {$wpdb->postmeta} asm ON asm.post_id = p.ID AND asm.meta_key = %s
+                  INNER JOIN {$wpdb->postmeta} bk  ON bk.post_id = p.ID AND bk.meta_key = %s
                  WHERE p.post_type = %s
-                   AND p.post_status = %s
-                   AND p.post_parent IN ({$id_ph})";
+                   AND bk.meta_value IN ({$id_ph})
+                 ORDER BY p.ID";
 
         $args = array_merge(
-            [self::META_PAYMENT_AMOUNT, self::META_ASSUMED_PAID, self::POST_TYPE_PAYMENT, self::PAYMENT_COMPLETED],
+            [self::META_PAYMENT_AMOUNT, self::META_PAYMENT_BOOKING, self::POST_TYPE_PAYMENT],
             $ids
         );
 
@@ -279,24 +305,27 @@ final class Mphb_Reader
         $out = [];
         foreach ($rows as $row) {
             $id = (int) $row['booking_id'];
-            $out[$id] ??= ['recorded' => 0.0, 'assumed' => 0.0, 'count' => 0, 'events' => []];
-            $amount  = round((float) $row['amount'], 2);
-            $assumed = (int) $row['assumed'] === 1;
-            if ($assumed) {
-                $out[$id]['assumed'] += $amount;
-            } else {
+            $out[$id] ??= ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
+            $amount = round((float) $row['amount'], 2);
+            $status = (string) $row['payment_status'];
+
+            if ($status === self::PAYMENT_COMPLETED) {
                 $out[$id]['recorded'] += $amount;
+            } elseif ($status === self::PAYMENT_REFUNDED) {
+                $out[$id]['refunded'] += $amount;
             }
+
             $out[$id]['count']++;
             $out[$id]['events'][] = [
-                'date'    => substr((string) $row['paid_on'], 0, 10),
-                'amount'  => $amount,
-                'assumed' => $assumed,
+                'payment_id' => (int) $row['payment_id'],
+                'date'       => substr((string) $row['paid_on'], 0, 10),
+                'amount'     => $amount,
+                'status'     => $status,
             ];
         }
         foreach ($out as &$entry) {
             $entry['recorded'] = round($entry['recorded'], 2);
-            $entry['assumed']  = round($entry['assumed'], 2);
+            $entry['refunded'] = round($entry['refunded'], 2);
         }
         return $out;
     }

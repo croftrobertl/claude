@@ -103,17 +103,25 @@ final class Reports
     /**
      * @return array<string,mixed>
      */
-    public static function summary(string $from, string $to, string $basis = 'stay'): array
+    public const VIEWS = ['original', 'ledger', 'difference'];
+
+    /**
+     * @param string $view 'original'   — what MotoPress held, copied and frozen
+     *                     'ledger'     — the Original plus the ledger's corrections
+     *                     'difference' — the corrections alone
+     */
+    public static function summary(string $from, string $to, string $basis = 'stay', string $view = 'ledger'): array
     {
         $basis = $basis === 'payout' ? 'payout' : 'stay';
-        $key   = self::cache_key(['summary', $from, $to, $basis]);
+        $view  = in_array($view, self::VIEWS, true) ? $view : 'ledger';
+        $key   = self::cache_key(['summary', $from, $to, $basis, $view]);
         $hit   = self::cache_get($key);
         if ($hit !== null) {
             return $hit;
         }
 
         $ota    = self::ota_figures($from, $to, $basis);
-        $direct = self::direct_figures($from, $to, $basis);
+        $direct = self::direct_figures($from, $to, $basis, $view);
 
         $days      = Dates::days_inclusive($from, $to);
         $capacity  = $days * count(Cottages::COTTAGES);
@@ -129,6 +137,7 @@ final class Reports
             'from'   => $from,
             'to'     => $to,
             'basis'  => $basis,
+            'view'   => $view,
             'days'   => $days,
             'ota'    => $ota,
             'direct' => $direct,
@@ -147,12 +156,17 @@ final class Reports
                 'direct_due'        => $direct['due'],
                 'direct_recorded'   => $direct['recorded'],
                 'direct_assumed'    => $direct['assumed'],
+                'direct_refunded'   => $direct['refunded'],
+                // What this view counts as paid on direct bookings.
+                'direct_paid'       => $direct['paid'],
                 'cancellations'     => $ota['cancellations'],
                 'cancellation_fees' => $ota['cancellation_fees'],
                 'lead_time_median'  => $ota['lead_time_median'],
             ],
             'by_cottage'  => self::merge_breakdowns($ota['by_cottage'], $direct['by_cottage']),
             'by_channel'  => self::merge_breakdowns($ota['by_channel'], $direct['by_channel']),
+            'snapshot_taken'     => $direct['snapshot_taken'],
+            'snapshot_at'        => $direct['snapshot_at'],
             'reconciled_through' => Cottages::RECONCILED_THROUGH,
             'beyond_window'      => $to > Cottages::RECONCILED_THROUGH,
             'before_window'      => $from < Cottages::WINDOW_START,
@@ -413,43 +427,56 @@ final class Reports
     }
 
     /**
-     * Direct bookings, read live from MotoPress. A hand-typed copy of an OTA
-     * stay is linked with method=copy and is excluded here, so its nights and
-     * money are counted once, on the OTA stay.
+     * Direct bookings, read from the ledger's own copy of MotoPress.
+     *
+     * Nothing here reads MotoPress live. The figures come from the Originals
+     * the snapshot froze, plus the adjustments the ledger laid on top — which
+     * is the whole point: Rob's data is duplicated, and the ledger is modified
+     * from the duplicate.
+     *
+     * A hand-typed copy of an OTA stay is excluded, so its nights and money
+     * count once, on the OTA stay.
      *
      * @return array<string,mixed>
      */
-    public static function direct_figures(string $from, string $to, string $basis): array
+    public static function direct_figures(string $from, string $to, string $basis, string $view = 'ledger'): array
     {
-        $copies = self::copy_booking_ids();
+        $copies = self::direct_copy_ids();
 
         $out = [
             'nights'     => 0,
             'due'        => 0.0,
             'recorded'   => 0.0,
+            'refunded'   => 0.0,
             'assumed'    => 0.0,
+            'paid'       => 0.0,
             'bookings'   => 0,
             'by_cottage' => [],
             'by_channel' => [],
             'copies_excluded' => 0,
             'copy_payments'   => 0.0,
+            'snapshot_taken'  => Snapshot::taken(),
+            'snapshot_at'     => Originals::last_snapshot_at(),
         ];
 
-        foreach (Mphb_Reader::bookings() as $booking) {
-            if ($booking['is_imported'] || !Linker::is_live($booking)) {
-                continue;
-            }
-            if (!Cottages::is_cottage((string) $booking['cottage'])) {
+        $adjustments = self::adjustments_by_booking();
+
+        foreach (Originals::bookings_with_payments() as $booking_id => $booking) {
+            // A cancelled booking is copied, because the copy is of what is
+            // there — but it is never a stay and never carries money here.
+            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED) {
                 continue;
             }
 
-            if (isset($copies[(int) $booking['id']])) {
-                // Counted on the OTA stay. Any payment recorded on the copy is
-                // shown on the cleanup list, labelled, and never added here.
-                // Only copies that overlap this period are worth reporting.
+            $cottage = (string) $booking['cottage'];
+            if (!Cottages::is_cottage($cottage)) {
+                continue;
+            }
+
+            if (isset($copies[$booking_id])) {
                 if (Dates::nights_in_period($booking['check_in'], $booking['check_out'], $from, $to) > 0) {
                     $out['copies_excluded']++;
-                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid_recorded'], 2);
+                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
                 }
                 continue;
             }
@@ -459,36 +486,68 @@ final class Reports
 
             if ($nights > 0) {
                 $out['nights'] += $nights;
-                $out['by_cottage'][(string) $booking['cottage']] ??= self::blank_breakdown();
-                $out['by_cottage'][(string) $booking['cottage']]['nights'] += $nights;
+                $out['by_cottage'][$cottage] ??= self::blank_breakdown();
+                $out['by_cottage'][$cottage]['nights'] += $nights;
                 $out['by_channel']['direct'] ??= self::blank_breakdown();
                 $out['by_channel']['direct']['nights'] += $nights;
             }
 
+            $assumed = 0.0;
+            foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
+                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                    $assumed = round($assumed + (float) $adjustment['amount'], 2);
+                }
+            }
+
             if ($basis === 'stay') {
-                $share = $total > 0 ? $nights / $total : (($booking['check_in'] >= $from && $booking['check_in'] <= $to) ? 1.0 : 0.0);
+                $share = $total > 0
+                    ? $nights / $total
+                    : (($booking['check_in'] >= $from && $booking['check_in'] <= $to) ? 1.0 : 0.0);
                 if ($share > 0) {
                     $out['bookings'] += $nights > 0 ? 1 : 0;
                     $out['due']      = round($out['due'] + (float) $booking['total'] * $share, 2);
-                    $out['recorded'] = round($out['recorded'] + (float) $booking['paid_recorded'] * $share, 2);
-                    $out['assumed']  = round($out['assumed'] + (float) $booking['paid_assumed'] * $share, 2);
+                    $out['recorded'] = round($out['recorded'] + (float) $booking['paid'] * $share, 2);
+                    $out['refunded'] = round($out['refunded'] + (float) $booking['refunded'] * $share, 2);
+                    $out['assumed']  = round($out['assumed'] + $assumed * $share, 2);
                 }
                 continue;
             }
 
-            // Cash basis: each completed payment on its own date. The assumed
-            // top-ups are dated at check-in, which is why a 2024 check-in can
-            // place 2025 money in 2024 — the report says so in its footnotes.
+            // Cash basis: each payment on its own date, each adjustment on its
+            // own. An assumed adjustment is dated at check-in, which is why a
+            // stay that began in 2024 places its money in 2024 — the report
+            // footnotes say so.
             foreach ($booking['payments'] as $payment) {
-                if ($payment['date'] < $from || $payment['date'] > $to) {
+                $date = (string) $payment['event_date'];
+                if ($date < $from || $date > $to) {
                     continue;
                 }
-                if ($payment['assumed']) {
-                    $out['assumed'] = round($out['assumed'] + (float) $payment['amount'], 2);
-                } else {
-                    $out['recorded'] = round($out['recorded'] + (float) $payment['amount'], 2);
+                $amount = round((float) $payment['amount'], 2);
+                if ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_COMPLETED) {
+                    $out['recorded'] = round($out['recorded'] + $amount, 2);
+                } elseif ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_REFUNDED) {
+                    $out['refunded'] = round($out['refunded'] + $amount, 2);
                 }
             }
+            foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
+                $date = (string) $adjustment['event_date'];
+                if ($date < $from || $date > $to) {
+                    continue;
+                }
+                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                    $out['assumed'] = round($out['assumed'] + (float) $adjustment['amount'], 2);
+                }
+            }
+        }
+
+        // What this view counts as money received on direct bookings.
+        if ($view === 'original') {
+            $out['paid']    = $out['recorded'];
+            $out['assumed'] = 0.0;
+        } elseif ($view === 'difference') {
+            $out['paid'] = $out['assumed'];
+        } else {
+            $out['paid'] = round($out['recorded'] + $out['assumed'], 2);
         }
 
         foreach (array_keys($out['by_cottage']) as $cottage) {
@@ -499,6 +558,67 @@ final class Reports
         }
 
         return $out;
+    }
+
+    /**
+     * Adjustments grouped by the booking they sit on.
+     *
+     * @return array<int,array<int,array<string,mixed>>>
+     */
+    private static function adjustments_by_booking(): array
+    {
+        $out = [];
+        foreach (Adjustments::all() as $adjustment) {
+            $booking_id = (int) $adjustment['mphb_booking_id'];
+            if ($booking_id > 0) {
+                $out[$booking_id][] = $adjustment;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Which copied bookings are copies of an OTA stay, worked out entirely
+     * from the ledger's own tables: a copy link, the same cottage and dates as
+     * an OTA stay, or an OTA code the snapshot extracted from the booking.
+     *
+     * @return array<int,bool>
+     */
+    public static function direct_copy_ids(): array
+    {
+        global $wpdb;
+
+        $copies = self::copy_booking_ids();
+
+        $stays_t = Schema::stays();
+        $stays   = $wpdb->get_results("SELECT code, cottage, check_in, check_out FROM {$stays_t}", ARRAY_A) ?: [];
+
+        $by_key  = [];
+        $by_code = [];
+        foreach ($stays as $stay) {
+            $by_key[Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out'])] = true;
+            $by_code[strtoupper((string) $stay['code'])] = true;
+        }
+
+        foreach (Originals::all(Originals::KIND_BOOKING) as $booking) {
+            $id = (int) $booking['mphb_id'];
+            if (isset($copies[$id])) {
+                continue;
+            }
+            if (isset($by_key[Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out'])])) {
+                $copies[$id] = true;
+                continue;
+            }
+            foreach (Repo::decode_meta($booking['codes'] ?? null) as $entry) {
+                $code = is_array($entry) ? (string) ($entry['code'] ?? '') : (string) $entry;
+                if ($code !== '' && isset($by_code[strtoupper($code)])) {
+                    $copies[$id] = true;
+                    break;
+                }
+            }
+        }
+
+        return $copies;
     }
 
     /** @return array<int,bool> MPHB booking ids linked to an OTA stay as a copy */

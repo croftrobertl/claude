@@ -19,15 +19,7 @@ use DCCL\Reports;
 
 T::group('Report maths — March 2025, by stay dates');
 
-dccl_seed_mphb();
-foreach ([
-    'airbnb-payout.csv', 'airbnb-reservations.csv',
-    'bookingcom-reservations.csv', 'bookingcom-payout.csv',
-    'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
-] as $file) {
-    Importer::run(dccl_fixture($file), $file, false, 1);
-}
-Linker::run(1);
+dccl_full_setup();
 
 $s = Reports::summary('2025-03-01', '2025-03-31', 'stay');
 $t = $s['totals'];
@@ -46,6 +38,7 @@ T::same(248, $t['capacity_nights'], '31 days across 8 cottages');
 T::same(6.5, $t['occupancy_pct'], 'Occupancy');
 T::same(388.50, $t['direct_due'], 'Direct bookings due');
 T::same(0.00, $t['direct_recorded'], 'Nothing recorded against the direct booking');
+T::same(388.50, $t['direct_assumed'], 'So the ledger assumes the whole of it');
 
 T::group('Airbnb remitted tax is never revenue');
 
@@ -99,13 +92,15 @@ T::same(0.00, $june['totals']['direct_recorded'], 'But it is not counted as mone
 
 T::group('Recorded and assumed payments stay apart');
 
+// Booking #9008: 600.00 due, 250.00 recorded, so the ledger assumes 350.00.
 $may = Reports::summary('2025-05-01', '2025-05-31', 'stay');
-T::same(600.00, $may['totals']['direct_assumed'], 'The assumed top-up is reported as assumed');
-T::same(0.00, $may['totals']['direct_recorded'], 'And not as recorded');
+T::same(250.00, $may['totals']['direct_recorded'], 'What MotoPress recorded is reported as recorded');
+T::same(350.00, $may['totals']['direct_assumed'], 'The gap is reported as assumed, separately');
+T::same(600.00, $may['totals']['direct_paid'], 'The ledger view counts both');
 
 $april_direct = Reports::summary('2025-04-01', '2025-04-30', 'stay');
 T::same(500.00, $april_direct['totals']['direct_recorded'], 'A real payment is reported as recorded');
-T::same(0.00, $april_direct['totals']['direct_assumed'], 'And not as assumed');
+T::same(0.00, $april_direct['totals']['direct_assumed'], 'A booking paid in full needs no assumption');
 
 T::group('Cancellations and lead time');
 
@@ -129,7 +124,7 @@ T::group('Report cache');
 
 Reports::flush_cache();
 $first = Reports::summary('2025-03-01', '2025-03-31', 'stay');
-$key   = Reports::cache_key(['summary', '2025-03-01', '2025-03-31', 'stay']);
+$key   = Reports::cache_key(['summary', '2025-03-01', '2025-03-31', 'stay', 'ledger']);
 T::ok(Reports::cache_get($key) !== null, 'A summary is cached');
 Importer::run(dccl_fixture('airbnb-payout.csv'), 'airbnb-payout.csv', false, 1);
 T::same(null, Reports::cache_get($key), 'An import clears the cache');

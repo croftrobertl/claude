@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$summary = Reports::summary($period['from'], $period['to'], $period['basis']);
+$summary = Reports::summary($period['from'], $period['to'], $period['basis'], $period['view']);
 $days    = $summary['days'];
 ?>
 <h2 class="dccl-h2"><?php esc_html_e('By Cottage', 'dcc-ledger'); ?></h2>

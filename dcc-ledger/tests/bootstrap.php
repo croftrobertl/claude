@@ -297,6 +297,8 @@ final class T
     public static int $failed = 0;
     /** @var array<int,string> */
     public static array $failures = [];
+    /** @var array<int,string> PHP warnings and notices raised during the run */
+    public static array $warnings = [];
     public static string $group = '';
 
     public static function group(string $name): void
@@ -335,6 +337,14 @@ final class T
 
     public static function summary(): int
     {
+        // A warning is a defect: an undefined index silently becomes an empty
+        // figure, which is exactly the kind of quiet wrongness this plugin is
+        // supposed to make impossible.
+        foreach (self::$warnings as $warning) {
+            self::$failed++;
+            self::$failures[] = 'PHP warning: ' . $warning;
+        }
+
         echo "\n----------------------------------------\n";
         echo sprintf("%d passed, %d failed\n", self::$passed, self::$failed);
         foreach (self::$failures as $failure) {
@@ -343,6 +353,14 @@ final class T
         return self::$failed === 0 ? 0 : 1;
     }
 }
+
+set_error_handler(static function (int $number, string $message, string $file = '', int $line = 0): bool {
+    if ((error_reporting() & $number) === 0) {
+        return false;
+    }
+    T::$warnings[] = sprintf('%s in %s:%d', $message, basename($file), $line);
+    return true;
+});
 
 /** Fresh tables and a clean option store. */
 function dccl_reset_db(): void
@@ -404,6 +422,30 @@ function dccl_plugin_source(): string
         }
     }
     return $source;
+}
+
+/** Every platform export, in the order the staging checklist uses. */
+function dccl_import_all(): void
+{
+    foreach ([
+        'airbnb-payout.csv', 'airbnb-reservations.csv',
+        'bookingcom-reservations.csv', 'bookingcom-payout.csv',
+        'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
+    ] as $file) {
+        \DCCL\Importer::run(dccl_fixture($file), $file, false, 1);
+    }
+}
+
+/**
+ * The whole pipeline on fixtures: MotoPress seeded, exports imported, stays
+ * matched, and MotoPress copied into the ledger.
+ */
+function dccl_full_setup(): void
+{
+    dccl_seed_mphb();
+    dccl_import_all();
+    \DCCL\Linker::run(1);
+    \DCCL\Snapshot::run(false, 1);
 }
 
 function dccl_fixture(string $name): string

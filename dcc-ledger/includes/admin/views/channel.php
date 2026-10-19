@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$summary  = Reports::summary($period['from'], $period['to'], $period['basis']);
+$summary  = Reports::summary($period['from'], $period['to'], $period['basis'], $period['view']);
 $direct   = $summary['direct'];
 $untaxed  = $summary['ota']['tax_not_reported'];
 

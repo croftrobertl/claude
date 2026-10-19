@@ -6,8 +6,11 @@
  */
 
 use DCCL\Admin;
+use DCCL\Adjustments;
 use DCCL\Batches;
 use DCCL\Importer;
+use DCCL\Originals;
+use DCCL\Snapshot;
 use DCCL\Ui;
 
 if (!defined('ABSPATH')) {
@@ -17,6 +20,59 @@ if (!defined('ABSPATH')) {
 $batches = Batches::all();
 ?>
 <h2 class="dccl-h2"><?php esc_html_e('Imports', 'dcc-ledger'); ?></h2>
+
+<h3 class="dccl-h3"><?php esc_html_e('The Ledger\'s Copy Of MotoPress', 'dcc-ledger'); ?></h3>
+<p class="dccl-note">
+    <?php esc_html_e('MotoPress stays exactly as Rob curated it. The ledger copies the direct bookings and their payments into its own tables, freezes them, and records every correction as a separate row on top. A refresh adds what is new and records what changed as a new version beside the old one — it never overwrites a copy and never touches a correction.', 'dcc-ledger'); ?>
+</p>
+
+<div class="dccl-tiles">
+    <?php
+    echo Ui::tile(
+        __('Bookings Copied', 'dcc-ledger'),
+        Ui::number(Originals::count(Originals::KIND_BOOKING)),
+        Snapshot::taken()
+            ? sprintf(
+                /* translators: %s: date and time of the last snapshot */
+                __('Last copied %s', 'dcc-ledger'),
+                (string) Originals::last_snapshot_at()
+            )
+            : __('No snapshot taken yet', 'dcc-ledger'),
+        Snapshot::taken() ? '' : 'warn'
+    );
+    echo Ui::tile(
+        __('Payments Copied', 'dcc-ledger'),
+        Ui::number(Originals::count(Originals::KIND_PAYMENT)),
+        __('Every payment, whatever its status', 'dcc-ledger')
+    );
+    echo Ui::tile(
+        __('Assumed Payments', 'dcc-ledger'),
+        Ui::money(Adjustments::total(Adjustments::ASSUMED_PAID)),
+        sprintf(
+            /* translators: %d: number of bookings carrying an assumed payment */
+            __('Across %d bookings, as ledger adjustments', 'dcc-ledger'),
+            Adjustments::count(Adjustments::ASSUMED_PAID)
+        )
+    );
+    echo Ui::tile(
+        __('Corrections In All', 'dcc-ledger'),
+        Ui::number(Adjustments::count()),
+        __('Every one labelled, and none of them edits an original', 'dcc-ledger')
+    );
+    ?>
+</div>
+
+<form class="dccl-upload" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+    <?php wp_nonce_field(Admin::NONCE); ?>
+    <input type="hidden" name="action" value="dccl_snapshot">
+    <label class="dccl-inline">
+        <input type="checkbox" name="dry_run" value="1" checked>
+        <span><?php esc_html_e('Dry Run — Report The Counts And Write Nothing', 'dcc-ledger'); ?></span>
+    </label>
+    <button type="submit" class="button button-primary"><?php esc_html_e('Refresh From MotoPress', 'dcc-ledger'); ?></button>
+</form>
+
+<h3 class="dccl-h3"><?php esc_html_e('Platform Exports', 'dcc-ledger'); ?></h3>
 
 <p class="dccl-note">
     <?php esc_html_e('The file is read in memory and deleted before the page finishes, whether the import works or fails. It is never kept in the uploads folder, and no guest name, email, phone or address is stored from it.', 'dcc-ledger'); ?>
@@ -102,7 +158,10 @@ $batches = Batches::all();
 </div>
 
 <h3 class="dccl-h3"><?php esc_html_e('Over SSH', 'dcc-ledger'); ?></h3>
-<pre class="dccl-code-block">wp dcc-ledger import /path/to/export.csv --dry-run
+<pre class="dccl-code-block">wp dcc-ledger snapshot --dry-run
+wp dcc-ledger snapshot
+wp dcc-ledger import /path/to/export.csv --dry-run
 wp dcc-ledger import /path/to/export.csv
+wp dcc-ledger link
 wp dcc-ledger batches
 wp dcc-ledger undo 7</pre>

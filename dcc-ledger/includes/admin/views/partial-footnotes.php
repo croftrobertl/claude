@@ -31,10 +31,13 @@ if (!defined('ABSPATH')) {
             </li>
         <?php endif; ?>
         <li>
-            <?php esc_html_e('Direct-booking money comes from MotoPress: the booking total is what was due, and completed payments are what was paid. Payments added on 2026-10-18 as assumed are shown apart from recorded ones.', 'dcc-ledger'); ?>
+            <?php esc_html_e('MotoPress is never written to. The ledger works on its own copy: direct bookings and their payments are copied in as frozen Originals, and every correction sits on top as a separate, labelled row. If a correction is wrong, the Original is still exactly what MotoPress held.', 'dcc-ledger'); ?>
         </li>
         <li>
-            <?php esc_html_e('Assumed payments are dated at the booking\'s check-in, because the real payment date is not known. By payout date, a stay that began in 2024 therefore places its money in 2024.', 'dcc-ledger'); ?>
+            <?php esc_html_e('A direct booking is paid by its completed payments. A refunded payment keeps its amount in MotoPress, so it is reported on its own and never counted as paid.', 'dcc-ledger'); ?>
+        </li>
+        <li>
+            <?php esc_html_e('An assumed payment is a ledger adjustment for the gap between a past booking\'s total and what was recorded against it. It is dated at check-in because the real date is not known, so by payout date a stay that began in 2024 places its money in 2024.', 'dcc-ledger'); ?>
         </li>
         <li>
             <?php esc_html_e('Booking.com pays out the guest\'s gross including the taxes Rob remits, and invoices commission separately. The payout is never presented as revenue.', 'dcc-ledger'); ?>

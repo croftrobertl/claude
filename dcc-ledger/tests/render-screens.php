@@ -17,16 +17,7 @@ use DCCL\Importer;
 use DCCL\Linker;
 
 dccl_reset_db();
-dccl_seed_mphb();
-
-foreach ([
-    'airbnb-payout.csv', 'airbnb-reservations.csv',
-    'bookingcom-reservations.csv', 'bookingcom-payout.csv',
-    'vrbo-reservations.csv', 'vrbo-payout.csv', 'bookingcom-invoices.csv',
-] as $file) {
-    Importer::run(dccl_fixture($file), $file, false, 1);
-}
-Linker::run(1);
+dccl_full_setup();
 DCCL\Repo::mark_reviewed('overpaid:9009', 'Checked the card processor: a refund covers it.', 1);
 
 $out = __DIR__ . '/screens';
@@ -44,6 +35,7 @@ foreach (Admin::TABS as $tab) {
         'from'   => '2025-01-01',
         'to'     => '2026-09-30',
         'basis'  => 'stay',
+        'view'   => 'ledger',
     ];
 
     ob_start();
