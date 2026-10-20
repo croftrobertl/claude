@@ -1336,6 +1336,35 @@
 	min-height: 44px;
 }
 
+/* ---------------------------------------------------------------------------
+ * 1.43.0: THE GUIDE ENTRY IS AN <a> NOW, AND min-height DOES NOTHING TO AN
+ * INLINE BOX.
+ *
+ * "By Month" is a <button>, which is inline-block, so the 44px above has
+ * always applied to it. The prose fold was a <summary>, which gets its 44px
+ * from its own rule. The link that replaced the fold when the prose moved to
+ * /wildlife-guide/ is an <a> — display: inline by default — so it inherited a
+ * min-height that could not take effect, and ui-mobile.mjs caught it as a
+ * 23px tap target in the same run it was written.
+ *
+ * Another instance of the house pattern: the rule was there, it just was not
+ * in force. Scoped to the anchor ALONE on purpose — giving the <button> a new
+ * display value would disturb the line box 1.35.0 measured to 0.00px across
+ * five widths, and there is nothing wrong with the button.
+ * ------------------------------------------------------------------------- */
+.dccwl-footnotes a.dccwl-footnote-link.dccwl-footnote-link {
+	align-items: center;
+	display: inline-flex;
+	justify-content: center;
+	/* AND 44px IN BOTH DIRECTIONS. An inline-flex box shrinks to its label,
+	 * and "Guide" is the shortest label in the row — 40px wide in this
+	 * sandbox's fallback face, about 43.7px in Raleway by the Director's own
+	 * 1.41.0 measurement. Either way it is under the 44px minimum, which a
+	 * <summary> never was because a block fills the row. The label stays
+	 * centred, so the floor costs nothing visible. */
+	min-width: 44px;
+}
+
 .dccwl-footnotes .dccwl-fullguide-h:hover,
 .dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:hover,
 .dccwl-app .dccwl-footnote-link.dccwl-footnote-link:hover { color: var(--dccwl-primary); }

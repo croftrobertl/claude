@@ -1326,7 +1326,15 @@ async function foldSweep(page, where) {
   const hub = await widgetPage(browser, 'canal', { width: 390, height: 2000, sitekit: true, touch: true });
   await hub.page.waitForTimeout(700);
   const hubFolds = await foldSweep(hub.page, 'hub');
-  checkAtLeast(3, hubFolds.filter((f) => f.onScreen).length, 'the hub renders its folds');
+  /*
+   * TWO, NOT THREE, SINCE 1.43.0 — Credits and About. The prose guide was
+   * the third and is now /wildlife-guide/, reached by a link in the same row
+   * (asserted on its own terms further down). Pinned at the exact number, not
+   * relaxed, so a fold going missing is still a failure.
+   */
+  checkSame(2, hubFolds.filter((f) => f.onScreen).length,
+    'the hub renders its two folds — Credits and About',
+    hubFolds.map((f) => f.text).join(' · '));
   await hub.page.close();
 
   /* 2 — the standalone month widget. */
@@ -1422,7 +1430,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     const read = (node) => {
       const after = getComputedStyle(node, '::after');
       const own = getComputedStyle(node);
-      const host = node.closest('details') || node.closest('button');
+      const host = node.closest('details') || node.closest('button') || node.closest('a');
       const press = host && 'SUMMARY' === (host.querySelector('summary') || {}).tagName
         ? host.querySelector('summary') : host;
       return {
@@ -1435,6 +1443,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
         markColor: after.color,
         labelColor: own.color,
         isFold: !!node.closest('details'),
+        isLink: !!node.closest('a'),
         tap: press ? Math.round(press.getBoundingClientRect().height) : null,
         aria: press ? press.getAttribute('aria-expanded') : null,
         underline: own.textDecorationLine,
@@ -1448,7 +1457,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
       rows: tops.size,
       height: Math.round(el.getBoundingClientRect().height),
       names: items.map((n) => {
-        const host = n.closest('summary') || n.closest('button');
+        const host = n.closest('summary') || n.closest('button') || n.closest('a');
         return host ? (host.getAttribute('aria-label') || '') : '';
       }),
     };
@@ -1460,7 +1469,14 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const guide = row.items.find((i) => /^Guide/.test(i.label));
   check(!!guide, `${w}px: the first label reads "Guide"`, row.items.map((i) => i.label).join(' · '));
   const guideName = row.names[row.items.indexOf(guide)];
-  checkSame('Field Guide', guideName, `${w}px: its accessible name is still "Field Guide"`);
+  /*
+   * 1.43.0: the name gained a destination. The prose moved to
+   * /wildlife-guide/ and this entry became a LINK, so the name says where it
+   * goes — and it still OPENS with "Field Guide", which is the string Rob
+   * approved in 1.41.0 and the one the WCAG check below needs.
+   */
+  checkSame('Field Guide — every species, in words', guideName,
+    `${w}px: its accessible name names the destination and still opens "Field Guide"`);
   /* WCAG 2.5.3: the accessible name must CONTAIN the visible label, so a
    * guest who says "tap Guide" is understood. */
   check(guideName.toLowerCase().includes(guide.label.toLowerCase()),
@@ -1468,12 +1484,30 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     `${guideName} / ${guide.label}`);
 
   /* 2 — the marks. */
+  /*
+   * TWO FOLDS AND TWO LINKS SINCE 1.43.0, and the marks follow the BEHAVIOUR
+   * rather than the row position — which is the whole of Rob's 1.41.0 ruling.
+   *
+   * Credits and About still expand in place, so they keep `▾`. "By Month"
+   * opens another view inside the app and has always carried `›`. "Guide"
+   * used to expand in place and now opens another PAGE, so it moved from the
+   * caret to `›` with the behaviour it describes. A caret on it would now be
+   * a lie about what the tap does.
+   */
   const folds = row.items.filter((i) => i.isFold);
-  const button = row.items.find((i) => !i.isFold);
-  checkSame(3, folds.length, `${w}px: three folds in the row`);
+  const links = row.items.filter((i) => !i.isFold);
+  const button = links.find((i) => !i.isLink);
+  const guideLink = links.find((i) => i.isLink);
+  checkSame(2, folds.length, `${w}px: two folds in the row — Credits and About`,
+    folds.map((f) => f.label).join(' · '));
+  checkSame(2, links.length, `${w}px: and two that open something else`,
+    links.map((f) => f.label).join(' · '));
+  check(!!guideLink && /^Guide/.test(guideLink.label),
+    `${w}px: the one that is an <a> is Guide`, links.map((i) => `${i.label}:${i.isLink}`).join(' '));
   check(folds.every((f) => '▾' === f.mark), `${w}px: each fold carries ▾`,
     folds.map((f) => `${f.label}:${f.mark}`).join(' '));
   checkSame('›', button.mark, `${w}px: By Month carries ›, not a caret`);
+  checkSame('›', guideLink.mark, `${w}px: and so does Guide, now that it leaves the page`);
 
   /* 3 — pinned size and weight, so a fallback face cannot inflate them. */
   folds.forEach((f) => {
@@ -1482,9 +1516,11 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     checkSame(f.labelWeight, f.markWeight, `${w}px: and the label's own weight`);
     checkSame(f.labelColor, f.markColor, `${w}px: and its colour`);
   });
-  check(Math.abs(button.markPx - button.labelPx * 1.05) < 0.3,
-    `${w}px: By Month's mark is 1.05em of the label`, `${button.markPx} vs ${button.labelPx}`);
-  checkSame(button.labelWeight, button.markWeight, `${w}px: at the label's weight`);
+  links.forEach((i) => {
+    check(Math.abs(i.markPx - i.labelPx * 1.05) < 0.3,
+      `${w}px: ${i.label}'s mark is 1.05em of the label`, `${i.markPx} vs ${i.labelPx}`);
+    checkSame(i.labelWeight, i.markWeight, `${w}px: ${i.label}'s mark is at the label's weight`);
+  });
 
   /* 4 — the underline runs through, and the targets are still 44px. */
   check(row.items.every((i) => i.underline.includes('underline')),

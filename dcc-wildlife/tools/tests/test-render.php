@@ -210,10 +210,21 @@ check_matches(
 	'/<button type="button" class="dccwl-fullguide-close" data-dccwl-fullguide-close hidden>/',
 	'the close control is rendered hidden, for the script to unhide'
 );
+/*
+ * ONE, NOT TWO, SINCE 1.43.0. There were two folds on this page — the prose
+ * guide and the credits — and each got a close control at its foot. The prose
+ * moved to /wildlife-guide/, where it is a PAGE and not a fold, so it needs
+ * no close control at all and does not have one. The credits fold is still
+ * here and still long, so it keeps its own.
+ *
+ * Pinned at the new number rather than relaxed to ">= 1": the claim is still
+ * "every long fold on this page can be closed from its foot", and there is
+ * now exactly one long fold.
+ */
 check_same(
-	2,
+	1,
 	substr_count( $hub, 'data-dccwl-fullguide-close' ),
-	'one at the foot of the field guide and one at the foot of the credits'
+	'one at the foot of the credits — the only fold left on /explore/'
 );
 /* It has to be INSIDE the panel it closes, or the script cannot find the
  * <details> to close and the button does nothing. */

@@ -36,6 +36,7 @@ require_once DCC_WL_DIR . 'includes/class-water-rest.php';
 require_once DCC_WL_DIR . 'includes/class-water-render.php';
 require_once DCC_WL_DIR . 'includes/class-water-admin.php';
 require_once DCC_WL_DIR . 'includes/class-canal-render.php';
+require_once DCC_WL_DIR . 'includes/class-guide-page.php';
 require_once DCC_WL_DIR . 'includes/class-plugin.php';
 
 /*

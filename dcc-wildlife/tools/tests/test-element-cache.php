@@ -35,6 +35,25 @@ $widgets = [
 	'DCC_WL\Countdown_Widget' => [ 'dccwl_countdown', 'is a number of days from today' ],
 ];
 
+/*
+ * AND THE ONE WIDGET THAT IS DELIBERATELY CACHEABLE (1.43.0).
+ *
+ * Every widget above refuses caching because its output moves. The Wildlife
+ * Guide page's output does not move: the prose, the scientific names, the
+ * field marks and the credits are all month-independent and
+ * time-independent, which is the same property that allowed the prose to be
+ * server-rendered at all (1.16.0).
+ *
+ * This list exists so "cacheable" has to be a DECLARED decision with a
+ * reason, exactly as "dynamic" does. A widget in neither list still fails the
+ * completeness check at the bottom, so the gap cannot be used as a loophole —
+ * which is the whole reason this round added a second list instead of
+ * deleting an assertion.
+ */
+$cacheable = [
+	'DCC_WL\Guide_Page_Widget' => [ 'dccwl_guide_page', 'renders only month-independent, time-independent prose, so a cached copy is still correct' ],
+];
+
 dcc_section( 'every widget declares itself dynamic, and says why' );
 
 foreach ( $widgets as $class => [ $name, $why ] ) {
@@ -73,6 +92,29 @@ foreach ( $widgets as $class => [ $name, ] ) {
 	check_same( 'bool', $rt ? $rt->getName() : '', "$name returns bool, as Elementor declares" );
 }
 
+dcc_section( 'the cacheable widget is cacheable, on purpose' );
+
+foreach ( $cacheable as $class => [ $name, $why ] ) {
+	if ( ! class_exists( $class ) ) {
+		check( false, "$class exists" );
+		continue;
+	}
+	$w = new $class();
+	check_same( $name, $w->get_name(), "$class is the $name widget" );
+	/*
+	 * It must INHERIT the answer, not declare it. Declaring `return false`
+	 * would be a promise this plugin cannot keep if Elementor ever changes
+	 * what the default means; inheriting says "ordinary content, treat it as
+	 * you treat ordinary content". The inverse assertion to the one above,
+	 * and it is the reason both are worth making.
+	 */
+	$m = new \ReflectionMethod( $class, 'is_dynamic_content' );
+	check( 'Elementor\\Widget_Base' === $m->getDeclaringClass()->getName()
+		|| 'DCC_WL\\' !== substr( $m->getDeclaringClass()->getName(), 0, 7 ),
+		"$name inherits is_dynamic_content() rather than declaring it — it $why",
+		$m->getDeclaringClass()->getName() );
+}
+
 dcc_section( 'the list is complete — no widget escapes it' );
 
 /*
@@ -90,7 +132,7 @@ foreach ( get_declared_classes() as $c ) {
 	}
 }
 sort( $found );
-$expected = array_keys( $widgets );
+$expected = array_merge( array_keys( $widgets ), array_keys( $cacheable ) );
 sort( $expected );
 check_same( $expected, $found, 'the suite covers every Elementor widget the plugin declares' );
 check( count( $found ) > 0, 'and it found some, so the check is not vacuous' );

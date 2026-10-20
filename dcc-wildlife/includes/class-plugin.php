@@ -77,6 +77,14 @@ final class Plugin {
 		add_shortcode( 'dcc_wildlife', [ Render::class, 'shortcode' ] );
 		add_shortcode( 'dcc_water', [ Water_Render::class, 'shortcode' ] );
 		add_shortcode( 'dcc_canal', [ Canal_Render::class, 'shortcode' ] );
+		/*
+		 * THE WILDLIFE GUIDE PAGE (1.43.0). Rob's pick of 2026-10-19: the 402
+		 * descriptions moved off /explore/ to their own indexable URL rather
+		 * than being built on demand, which would have taken them out of the
+		 * HTML a crawler reads. Delivered as both a shortcode and an Elementor
+		 * widget because the Director places pages with Elementor.
+		 */
+		add_shortcode( 'dcc_wildlife_guide', [ Guide_Page::class, 'shortcode' ] );
 
 		// Season countdown, standalone (1.8.0, absorbed from the mu-plugin).
 		// While dcc-wildlife-countdown.php still exists it registered this tag
@@ -268,9 +276,11 @@ final class Plugin {
 		require_once DCC_WL_DIR . 'includes/class-water-widget.php';
 		require_once DCC_WL_DIR . 'includes/class-countdown-widget.php';
 		require_once DCC_WL_DIR . 'includes/class-canal-widget.php';
+		require_once DCC_WL_DIR . 'includes/class-guide-page-widget.php';
 		$widgets_manager->register( new Widget() );
 		$widgets_manager->register( new Water_Widget() );
 		$widgets_manager->register( new Countdown_Widget() );
 		$widgets_manager->register( new Canal_Widget() );
+		$widgets_manager->register( new Guide_Page_Widget() );
 	}
 }

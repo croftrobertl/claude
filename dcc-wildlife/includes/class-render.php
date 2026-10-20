@@ -756,6 +756,19 @@ final class Render {
 	 * <details> like the prose guide — crawlable, no JS. Printed by
 	 * render_guide_text() so it travels with the prose.
 	 */
+	/**
+	 * The credits panel, for the /wildlife-guide/ page (1.43.0).
+	 *
+	 * A thin public door onto the SAME renderer /explore/ uses, because the
+	 * credits are a licence obligation and must follow the photographs
+	 * wherever they are shown — four carry a real CC BY requirement, plus the
+	 * modification notice that covers all of them. Never a second copy of
+	 * that markup: a divergent credits panel is a breach waiting to happen.
+	 */
+	public static function photo_credits_for_guide_page( array $dataset ): void {
+		self::render_photo_credits( $dataset );
+	}
+
 	private static function render_photo_credits( array $dataset ): void {
 		$credits = Species::photo_credits();
 		$rows    = [];
@@ -858,6 +871,64 @@ final class Render {
 	 * static range like "Nov–Mar", never "this month"), so it is safe in
 	 * page-cached HTML — the same rule that keeps the spotlight client-side.
 	 */
+	/**
+	 * ONE SPECIES, AS PROSE. Extracted in 1.43.0 — not rewritten.
+	 *
+	 * Two surfaces render this now: the footnote fold on a standalone
+	 * [dcc_wildlife] placement, and the /wildlife-guide/ page that took the
+	 * prose off /explore/. They must stay character-identical, because this
+	 * text is the crawlable content and two slightly different copies of 402
+	 * entries is duplicated content with a drift problem attached.
+	 *
+	 * So it is ONE method with two callers — the composition rule this
+	 * repository has followed since 1.10.0 — rather than a second loop in
+	 * Guide_Page that would look the same on the day it was written.
+	 *
+	 * $anchor adds the species id as an `id` attribute. The guide page needs
+	 * it so other pages can link to /wildlife-guide/#alligator; the fold on
+	 * /explore/ does NOT, because two elements carrying one id on a page that
+	 * holds both would be invalid. The ids are the registry's own, never
+	 * invented (the Director's instruction).
+	 */
+	public static function species_prose( array $sp, bool $anchor = false ): void {
+		?>
+		<article class="dccwl-fg"<?php echo $anchor ? ' id="' . esc_attr( (string) $sp['id'] ) . '"' : ''; ?>>
+			<h4 class="dccwl-fg-name">
+				<?php echo esc_html( $sp['name'] ); ?>
+				<?php if ( '' !== $sp['sci'] ) : ?>
+					<i class="dccwl-fg-sci"><?php echo esc_html( $sp['sci'] ); ?></i>
+				<?php endif; ?>
+			</h4>
+			<?php if ( '' !== $sp['fact'] ) : ?>
+				<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
+			<?php endif; ?>
+			<?php if ( ! empty( $sp['flags'] ) ) : ?>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
+			<?php endif; ?>
+			<?php if ( '' !== $sp['safe'] ) : ?>
+				<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What to do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
+			<?php endif; ?>
+			<?php if ( '' !== $sp['where'] ) : ?>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where to look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
+			<?php endif; ?>
+			<?php if ( '' !== $sp['best'] || '' !== $sp['bestLabel'] ) : ?>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best time', 'dcc-wildlife' ); ?></span>
+					<?php
+					$when = array_values( array_filter( [ (string) $sp['best'], (string) $sp['bestLabel'] ] ) );
+					echo esc_html( implode( ' · ', $when ) );
+					?>
+				</p>
+			<?php endif; ?>
+			<?php if ( '' !== $sp['sound'] ) : ?>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen for', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
+			<?php endif; ?>
+			<?php if ( '' !== $sp['mark'] ) : ?>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell it apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
+			<?php endif; ?>
+		</article>
+		<?php
+	}
+
 	private static function render_guide_text(): void {
 		// Once per page, first caller wins — the same rule the countdown shell
 		// follows. A page carrying both the hub and a standalone [dcc_wildlife]
@@ -883,108 +954,40 @@ final class Render {
 		         It is hidden until canal.js wires it, because the panel it
 		         opens only exists inside the hub app. */ ?>
 		<div class="dccwl-footnotes">
-		<details class="dccwl-fullguide">
-			<?php
-			/*
-			 * THE ACCESSIBLE NAME IS "Field Guide" AND THE VISIBLE WORD IS
-			 * "Guide" (1.41.0, Rob's pick). WCAG 2.5.3 asks that a control's
-			 * accessible name CONTAIN its visible label, which "Field Guide"
-			 * does — so a guest saying "tap Guide" to a voice assistant is
-			 * understood. The old name, "The whole field guide", also
-			 * contained it, but naming the control what it is beats
-			 * describing it.
-			 *
-			 * An aria-label REPLACES the contents for a screen reader (the
-			 * 1.15.1 lesson), so the meta line underneath is not announced.
-			 * That was already true and is why the name has to carry the
-			 * meaning on its own.
-			 */
-			?>
-			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'Field Guide', 'dcc-wildlife' ); ?>">
-				<?php /* A real affordance (1.18.0): chevron that turns on open, a label
-				   that is the section's heading, and a meta line. Still a native
-				   <details>, still server-rendered — this is the crawlable prose. */ ?>
-				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-				<span class="dccwl-fullguide-text">
-					<?php
-					/*
-					 * "Guide", not "Field Guide" (1.41.0). Measured on live by
-					 * the Director with the real face, Raleway 15.6/600: the
-					 * row had 29px spare at 360px, and the three carets plus
-					 * By Month's mark cost 50.8px. Shortening this one label
-					 * gives back 40.6px, which is what keeps the row on one
-					 * line — about 19px spare at 360 and 49px at 390.
-					 *
-					 * THIS SPAN IS ALSO THE OPEN PANEL'S HEADING, so the
-					 * panel now reads "Guide" too. It is one element, not two;
-					 * that is reported rather than worked around, because
-					 * splitting it would put a second copy of the label in the
-					 * markup for a crawler to meet.
-					 */
-					?>
-					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Guide', 'dcc-wildlife' ); ?></span>
-					<span class="dccwl-fullguide-meta">
-						<?php
-						printf(
-							/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
-							esc_html__( '%d species, in words — tap to read', 'dcc-wildlife' ),
-							count( $dataset )
-						);
-						?>
-					</span>
-				</span>
-			</summary>
-			<div class="dccwl-fullguide-body">
-				<?php foreach ( Species::sections() as $slug => $label ) : ?>
-					<?php
-					// false: no dual membership in the PROSE. The alligator has
-					// two tiles on purpose; it must not have two write-ups.
-					$in_group = Species::section_members( $dataset, $slug, false );
-					if ( ! $in_group ) {
-						continue;
-					}
-					?>
-					<h3 class="dccwl-fg-group"><?php echo esc_html( $label ); ?></h3>
-					<?php foreach ( $in_group as $sp ) : ?>
-						<article class="dccwl-fg">
-							<h4 class="dccwl-fg-name">
-								<?php echo esc_html( $sp['name'] ); ?>
-								<?php if ( '' !== $sp['sci'] ) : ?>
-									<i class="dccwl-fg-sci"><?php echo esc_html( $sp['sci'] ); ?></i>
-								<?php endif; ?>
-							</h4>
-							<?php if ( '' !== $sp['fact'] ) : ?>
-								<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( ! empty( $sp['flags'] ) ) : ?>
-								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
-							<?php endif; ?>
-							<?php if ( '' !== $sp['safe'] ) : ?>
-								<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What to do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( '' !== $sp['where'] ) : ?>
-								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where to look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( '' !== $sp['best'] || '' !== $sp['bestLabel'] ) : ?>
-								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best time', 'dcc-wildlife' ); ?></span>
-									<?php
-									$when = array_values( array_filter( [ (string) $sp['best'], (string) $sp['bestLabel'] ] ) );
-									echo esc_html( implode( ' · ', $when ) );
-									?>
-								</p>
-							<?php endif; ?>
-							<?php if ( '' !== $sp['sound'] ) : ?>
-								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen for', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( '' !== $sp['mark'] ) : ?>
-								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell it apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
-							<?php endif; ?>
-						</article>
-					<?php endforeach; ?>
-				<?php endforeach; ?>
-				<?php self::fullguide_close(); ?>
-			</div>
-		</details>
+		<?php
+		/*
+		 * THE PROSE MOVED TO ITS OWN PAGE (1.43.0, Rob's pick of 2026-10-19).
+		 *
+		 * This was a <details> holding all 402 descriptions, ~853 KB of the
+		 * 910 KB of markup the Director measured on live at 1.41.0. It is now
+		 * /wildlife-guide/, server-rendered in full and indexable, and this
+		 * entry is a LINK to it.
+		 *
+		 * THE 1.16.0 RULE IS INTACT. That rule forbids HIDING crawlable
+		 * content — "if you ever find yourself hiding it with CSS or
+		 * `hidden`, stop". Nothing is hidden: every word is in another page's
+		 * HTML on arrival. The option that WOULD have broken it, building the
+		 * prose on demand, was put to Rob beside this one and lost for
+		 * exactly that reason.
+		 *
+		 * IT CARRIES `›`, NOT `▾`, AND THAT IS NOT COSMETIC. 1.41.0 settled
+		 * what the two marks mean: a caret that flips says *this expands
+		 * here*, and `›` says *this opens another view*. It now opens another
+		 * PAGE, so the caret would misdescribe it. The mark comes from
+		 * `.dccwl-footnote-link` in widget.css, the same class "By Month"
+		 * uses — not from a new rule.
+		 *
+		 * THE ACCESSIBLE NAME STAYS "Field Guide", which CONTAINS the visible
+		 * "Guide" (WCAG 2.5.3 label-in-name, the 1.41.0 reasoning unchanged),
+		 * and now says where it goes.
+		 */
+		?>
+		<a class="dccwl-footnote-link dccwl-footnote-guide" href="<?php echo esc_url( Guide_Page::url() ); ?>"
+			aria-label="<?php esc_attr_e( 'Field Guide — every species, in words', 'dcc-wildlife' ); ?>">
+			<span class="dccwl-fullguide-text">
+				<span class="dccwl-fullguide-h"><?php esc_html_e( 'Guide', 'dcc-wildlife' ); ?></span>
+			</span>
+		</a>
 		<?php
 		self::render_photo_credits( $dataset );
 		?>
