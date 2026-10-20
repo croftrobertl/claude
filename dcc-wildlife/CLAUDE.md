@@ -3445,3 +3445,205 @@ the footnote row is the precedent: it passed at 361px here and wrapped at
 393px on live. The defensible sentence is *"I found no defects in the narrow
 set of things measurable in this container"*, and a limitations note at the
 foot of a report does not repair a verdict at its head.
+
+### 33. 1.43.0 — the speed half of the Director's brief, and the page the prose moved to
+
+Rob's words on 1.41.0: *"/explore/ has so much lag, way more than any other page
+on the website with any of the other plugins."* The Director measured it on
+live (390px, logged out, 4× CPU): 1.40 MB of HTML, 910 KB of it markup, 10,356
+DOM nodes, 182 images fetched before any interaction, 8.4 s of total blocking
+time, and taps that took 2–4.5 s to paint.
+
+**THE BRIEF WAS ORDERED "speed first, then navigation and styling", AND IT WAS
+SPLIT ON THAT LINE.** PART A shipped as 1.43.0; PART B — the dropdown
+navigation, open-on-Water, the trimmed controls, the restyle — is 1.44.0, to be
+started only once 1.43.0 is verified live, so the two cannot overlap. That split
+was proposed with the numbers and approved on 2026-10-20.
+
+| | live 1.41.0 | 1.43.0 |
+|---|---|---|
+| /explore/ markup | 910 KB | **104,018 B** (20,884 gz) |
+| DOM nodes after load | 10,356 | **1,913** |
+| tiles server-rendered | 426 | **0** |
+| images before interaction | 182 (2.4 MB) | **0** |
+| tap: Wildlife | ~2,500 ms | **206 ms** |
+| tap: a section tab | ~2,200 ms | **251 ms** |
+| tap: Now | 4,514 ms | **46 ms** |
+
+#### The profiled cause, because it was not what it looked like
+
+The taps were not slow because of work the plugin did on the tap. A CPU profile
+at 4× throttling named it: **419 ms inside `centerMonth()` and 515 ms of
+browser style/layout on one tap.** `centerMonth` takes six layout reads
+(`scrollWidth`, `clientWidth`, two `getBoundingClientRect()`, `scrollLeft`,
+`offsetWidth`) interleaved with class writes across 409 tiles, so every read
+forced a synchronous layout of a 9,000-node tree. Node count did not change on
+the tap, which is what ruled out DOM building.
+
+**So the cost was not building the tiles, it was LIVING with them** — and
+PART B's Month ▾ chip retires `centerMonth`, `buildTimeline`, the arrows and
+the edge fades outright. The navigation redesign is itself the rest of this fix,
+which is why it is a release and not a footnote.
+
+#### /wildlife-guide/ — and the 1.16.0 rule moved house rather than weakening
+
+Three options went to Rob: build the prose on demand, move it to its own page,
+or leave a lightweight list behind. **He chose the page (pick B, 2026-10-19).**
+It is the only one that removes the weight AND keeps every word crawlable —
+building on demand would have taken 402 descriptions out of the HTML entirely,
+and the JSON-LD does not replace them because it deliberately carries no
+`description` (1.16.0).
+
+So the rule that forbids HIDING crawlable content is intact. Nothing on that
+page is hidden, folded, lazy-loaded or fetched. What changed is the URL.
+
+- `Guide_Page` renders it; `dccwl_guide_page` (Elementor) and
+  `[dcc_wildlife_guide]` are the two doors. **The widget is the recommended
+  placement** — it declares its own style dependency, so the editor preview
+  matches live.
+- **It loads NO JavaScript at all.** Styles only. 402 descriptions and two
+  links need none.
+- **`Render::species_prose()` is ONE copy, extracted and not rewritten.** Two
+  surfaces could render it and two slightly different renderings of 402 entries
+  is duplicated content with a drift problem attached.
+- **Anchors are the registry's own ids, verbatim** (`/wildlife-guide/#alligator`).
+  Nothing is slugged or indexed, so a renamed species cannot silently break an
+  inbound link.
+- **No JSON-LD there, and that is an answer rather than an omission.** The
+  ItemList stays on /explore/. The same ItemList at a second URL invites a
+  search engine to pick a canonical between two pages making one claim, and
+  this page's value is the prose, which is already text.
+- **The standalone `[dcc_wildlife]` widget lost its inline prose too**
+  (confirmed by the Director): one behaviour, one code path, and no second copy
+  of the guide at another URL.
+
+#### The tiles are built in the browser, and VISIBILITY is the trigger
+
+PHP ships the grids empty with `data-dccwl-lazy`; `widget.js` fills them from
+`CFG.order` — the ids in the order `Species::browse_order()` put them — plus the
+dataset it already holds. The ORDER ships because that function lives in PHP and
+a JS re-implementation would drift from the counts rendered beside the category
+pill.
+
+- **While the guide is hidden, nothing is built.** /explore/ opens on Water
+  (1.44.0) and already keeps the guide in a `display: none` panel, and a hidden
+  element has no `offsetParent` — which is also why an IntersectionObserver
+  alone could not start this. That is how the page meets its DOM budget.
+- On open, the first 24 go in synchronously; idle time finishes the rest.
+- **A search, a category or Peak Now forces completion first.** A half-built
+  grid would make those answers LIE — a guest searching "manatee" told it is
+  not there because its tile had not been built. That is the 1.28.0 defect (an
+  invisible filter putting seven winter species out of reach) in a new disguise.
+- **THERE IS NO SCROLL SENTINEL, and it is the one departure from the brief.**
+  A sentinel `<li>` is still a grid item: it occupies a track and leaves exactly
+  the empty cell Rob ruled out in 1.37.0 and again in 1.37.1. Outside the `<ul>`
+  it never enters the deck's own scroller. Idle completion does the same job in
+  a few frames and cannot leave a hole.
+- **`browse` joined `WIRE_INDEX`** so the category filter still has it with no
+  markup to read it from — one copy of the species data, about 5 KB raw against
+  299,662 bytes of tile markup removed.
+- **`Render::tile_media()` and `tile_srcset()` are DELETED.** No surface
+  server-renders a tile any more, and unreachable code is not kept here.
+  `TILE_SIZES` stays as the declared source of the `sizes` string, test-render
+  still lints the client against it, and ui-theme's three-DPR check of which
+  FILE is fetched is the stronger replacement for the markup assertions.
+
+#### MEASURE BEFORE MOVING: the two weight items were worth very different amounts
+
+With the prose and tiles gone, what was left split as credits panel **108,284
+bytes**, water section **9,673** (Fishing 8,854, Now 196), everything else
+94,088. So:
+
+- **The credits panel moved**, and as a LINK to `/wildlife-guide/#credits`
+  rather than a fetch — the stronger answer for a licence surface, because the
+  attributions now sit at a permanent crawlable URL instead of inside a fold
+  that only exists while a script is working. No new route, nothing to fail,
+  and a guest with no JavaScript reaches them as easily as one with it.
+  The Director's condition is met twice: "Credits" stays in /explore/'s
+  footnote row, and every species sheet gained a **"Photo Credits"** link
+  *under* its own per-photo credit line — in addition, never instead (1.24.0:
+  the sheet is where a photograph is shown at size).
+- **The water views did NOT move, on the measurement.** 9 KB of 212 KB, and
+  Fishing is static owner-edited data that would have to travel in the config
+  instead — the same bytes in a different place, for real regression risk in
+  the module with the strictest rules in the plugin. Reported with the numbers
+  rather than done mechanically, and accepted.
+
+#### Two defects of my own, both caught by the harness in the run they were written
+
+- **The idle chain started only from the observer**, and a `display: none`
+  element never intersects — 24 ui-deck assertions failed against empty grids.
+- **`buildTile()` was written for the spotlight, which never holds a hazard**,
+  so passing the month's value put a coral "Peak" flag on three venomous snakes
+  in a search. `refreshGuide()` is the one authority on a guide tile's label, as
+  it was for the server-rendered ones; tiles are built bare.
+- And one from the first increment: **the new Guide `<a>` inherited
+  `min-height: 44px` from a rule written for a `<button>` and a `<summary>`**,
+  and min-height does nothing to an inline box — a 23px tap target, then 40×44,
+  because an inline-flex box shrinks to its label and "Guide" is the shortest
+  label in the row. Fixed with a 44px floor in both directions, scoped to the
+  anchor alone so the button's line box (measured to 0.00px across five widths
+  in 1.35.0) is undisturbed. **The house pattern again: the rule was there, it
+  just was not in force.**
+
+#### Marks follow BEHAVIOUR, not row position
+
+1.41.0 settled that a caret means *this expands here* and `›` means *this opens
+another view*. Guide and Credits now open another PAGE, so both moved from `▾`
+to `›`. The footnote row is one fold (About) and three links. Their accessible
+names name the destination and still open with the approved string, so WCAG
+2.5.3 label-in-name holds.
+
+#### Harness: 30 suites, exit 0, nothing skipped
+
+- `test-guide-page.php` is new: every description present, every name, every
+  anchor equal to its registry id, none left on /explore/, the prose outside
+  any `<details>` and carrying no `hidden` ATTRIBUTE, no dangling jump-list
+  target, the credits and the modification notice present, and no
+  `dcc-wildlife` script enqueued.
+- **The photo-source-link assertion MOVED with the panel** rather than being
+  dropped. It is a licence surface, so the assertion follows the surface.
+- `test-element-cache.php` gained a second category for the one widget that is
+  deliberately **cacheable**, with its reason — so the completeness check still
+  catches a widget that declares nothing either way.
+- `lib.mjs` gained `settleGrids()`: a BOUNDED wait for the grids to converge
+  (a stall still fails every tile count) that treats a hidden guide as settled,
+  which is what kept a full run under ten minutes.
+- Mutations verified red: a description dropped from the guide page, anchors
+  prefixed so they stop matching ids, and the prose rendered back onto
+  /explore/.
+- Two test-only traps recorded: a boundary that cut inside the tag it was
+  looking for, and a `" hidden"` substring scan that matched the pine warbler's
+  *"spots on the hidden surface of the thigh"* — this repository's oldest trap,
+  a naive scan matching the content it exists to protect.
+
+### What 1.44.0 inherits, including the one conflict Rob resolved
+
+PART B is briefed and unstarted: the Cottage-Selector-style dropdown replacing
+the Back bar and the section title, opening straight into **Water › Map** with
+no hub and no hub tiles, the map loaded on scroll-into-view, Map · Now · Fishing
+as real tabs, the trimmed Wildlife control row (Month ▾ replacing the 12-month
+strip AND Peak Now, Show: All ▾, an ⓘ Badges popover, no Compact switch), plain
+centred footer links, centring everywhere except multi-sentence paragraphs,
+Title Case throughout, and every existing deep link still landing correctly.
+
+**ITEM 3 CONFLICTED WITH 1.35.0 AND ROB RESOLVED IT (2026-10-20).** The brief
+asked the Now place picker to show "level, clarity, oxygen, trophic state, rain,
+wind, forecast" for the chosen place. Checked against the feed: per PLACE the
+payload carries **level and clarity, and nothing else**. Wind and forecast are
+ONE National Weather Service reading for the property's grid square — 1.35.0,
+Rob's own option C, says nothing wind-related may be drawn on the water because
+a per-place wind value is the same number drawn six times. Rain is a
+calendar-day sum from named USGS gauges. Oxygen and trophic state would need new
+per-water Atlas fetches against the budgets that exist so a bigger chain warms
+progressively.
+
+His ruling: **the place picker shows level and clarity for the chosen place,
+with "No Recent Reading" where a lake has none. Wind, forecast and rain stay as
+ONE small row labelled as covering the whole chain** (e.g. "Whole Chain · NWS
+Forecast"), shown once beneath the place cards and never repeated per lake.
+1.35.0 stands, and **no new per-water Atlas fetches.**
+
+Also carried forward: the browse labels go Title Case with PART B 4, so the
+picker and this page's headings move together (`Insects & Small Things`,
+`Reptiles & Amphibians`).

@@ -190,6 +190,17 @@ switch ( $which ) {
 	case 'water':
 		$html = \DCC_WL\Water_Render::shortcode( [] );
 		break;
+	/*
+	 * 1.43.0: /wildlife-guide/. A separate mode because the page is a
+	 * different SURFACE, not a variant of the hub — no JavaScript, no panels,
+	 * every one of the 402 descriptions in normal flow. A screenshot or an
+	 * assertion aimed at it has to render the thing itself; falling through
+	 * to the month widget is how the first screenshot run produced four
+	 * images of the wrong page with "entries = 0" beside them.
+	 */
+	case 'guide':
+		$html = \DCC_WL\Guide_Page::shortcode( [] );
+		break;
 	default:
 		$html = \DCC_WL\Render::shortcode( [] );
 }

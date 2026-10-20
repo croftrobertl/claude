@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.42.0
+Stable tag: 1.43.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,22 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.43.0 =
+* **The wildlife page is far faster.** It was carrying every one of the 402
+  species descriptions and all 426 species tiles in the page itself, whether or
+  not anybody looked at them. The page's content is about a ninth of what it
+  was, and tapping between sections now responds in a fifth of a second instead
+  of seconds.
+* **A new "Wildlife Guide" page.** Every species description, in full, on its
+  own page — nothing hidden, and each species has its own web address so other
+  pages can link straight to an entry. Add it with the "DCC Wildlife Guide —
+  Full Page" widget.
+* **Photo credits moved to that page too**, with the "Credits" link on the
+  wildlife page and on every species card now opening the full list there. Each
+  photograph still shows its own credit beside it, as before.
+* The tiles are built as you open each section, so nothing is downloaded for a
+  part of the page you never visit.
 
 = 1.42.0 =
 * **Species photographs are sharper on high-resolution screens.** Each tile

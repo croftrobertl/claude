@@ -301,6 +301,15 @@ const ASSETS = {
     css: ['assets/css/app.css', 'assets/css/water.css'],
     js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'],
   },
+  /*
+   * /wildlife-guide/ (1.43.0) — styles only, and the EMPTY js list is the
+   * assertion. The page enqueues no script on the front end, so a harness
+   * that loaded one here would be testing a page the site does not serve.
+   */
+  guide: {
+    css: ['assets/css/app.css', 'assets/css/widget.css'],
+    js: [],
+  },
 };
 
 export async function widgetPage(browser, which = 'month', opts = {}, ...fixtureFlags) {

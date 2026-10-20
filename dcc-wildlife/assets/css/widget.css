@@ -1681,3 +1681,144 @@
 	font-weight: var(--dccwl-fw-label);
 }
 .dccwl-pick-opt-n { font-size: var(--dccwl-fs-xs); opacity: .85; }
+
+/* ======================================================================
+ * THE WILDLIFE GUIDE PAGE'S OWN CHROME (1.43.0).
+ *
+ * The 402 entries below already have their styling — `.dccwl-fg*` has
+ * dressed the prose since 1.16.0 and moving the prose to its own page did
+ * not change a line of it. What had NO rules was the chrome this release
+ * introduced around them: the intro, the two Back To Explore links and the
+ * jump list rendered as raw browser defaults, blue and underlined, which
+ * is what the first screenshot showed.
+ *
+ * It lives in widget.css because that is one of the two stylesheets the
+ * page enqueues (app.css is the other, via the dependency) and because
+ * `.dccwl-fg*` — the thing it sits around — is already here. The 1.40.1
+ * shared-layer rule does not apply: nothing else renders this chrome.
+ *
+ * ALIGNMENT FOLLOWS ROB'S 2026-10-19 RULING, which this page is the main
+ * consumer of: labels, headings and links centre; MULTI-SENTENCE
+ * PARAGRAPHS stay left-aligned for readability. So the intro centres and
+ * every species description does not — and `.dccwl-fg-fact` is left
+ * exactly as it was, deliberately.
+ * ====================================================================== */
+.dccwl-app .dccwl-guidepage {
+	margin: 0 auto;
+	max-width: 46rem;
+	padding: 0 var(--dccwl-pad);
+}
+
+.dccwl-app .dccwl-guidepage-intro {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-base);
+	font-weight: var(--dccwl-fw-body);
+	line-height: 1.55;
+	margin: 0 auto var(--dccwl-gap-lg);
+	max-width: 36rem;
+	text-align: center;
+	text-wrap: balance;
+}
+
+.dccwl-app .dccwl-guidepage-back {
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+.dccwl-app .dccwl-guidepage-back-foot {
+	border-top: 1px solid var(--dccwl-line);
+	margin-top: var(--dccwl-gap-lg);
+	padding-top: var(--dccwl-gap-lg);
+}
+
+/* A plain text link in the site blue, underlined only on hover or focus —
+ * the shape Rob chose for the footnote row, used here for the same reason:
+ * it is a link, not a button, and it should not pretend otherwise.
+ * 44px tall without changing the look, which is why it is inline-flex. */
+.dccwl-app .dccwl-guidepage-backlink {
+	align-items: center;
+	color: var(--dccwl-primary);
+	display: inline-flex;
+	font-size: var(--dccwl-fs-base);
+	font-weight: var(--dccwl-fw-label);
+	justify-content: center;
+	min-height: 44px;
+	min-width: 44px;
+	text-decoration: none;
+}
+.dccwl-app .dccwl-guidepage-backlink:hover,
+.dccwl-app .dccwl-guidepage-backlink:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.dccwl-app .dccwl-guidepage-toc {
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+.dccwl-app .dccwl-guidepage-toch {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-base);
+	font-weight: var(--dccwl-fw-strong);
+	letter-spacing: 0;
+	margin: 0 0 var(--dccwl-gap);
+	text-align: center;
+}
+
+/* The group list wraps as a row of quiet pills. No bullets: a bullet makes
+ * a navigation list read as prose, and this is a control. */
+.dccwl-app .dccwl-guidepage-toclist {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.dccwl-app .dccwl-guidepage-toclist > li { margin: 0; }
+.dccwl-app .dccwl-guidepage-toclist a {
+	align-items: center;
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 30px;
+	color: var(--dccwl-text);
+	display: inline-flex;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	gap: 6px;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0 16px;
+	text-decoration: none;
+}
+.dccwl-app .dccwl-guidepage-toclist a:hover,
+.dccwl-app .dccwl-guidepage-toclist a:focus-visible {
+	border-color: var(--dccwl-primary);
+	color: var(--dccwl-primary);
+}
+/* The count is secondary to the name it follows. */
+.dccwl-app .dccwl-guidepage-tocn {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-body);
+}
+
+.dccwl-app .dccwl-guidepage-section {
+	border-top: 1px solid var(--dccwl-line);
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: var(--dccwl-fw-strong);
+	letter-spacing: -0.01em;
+	margin: var(--dccwl-gap-lg) 0 var(--dccwl-gap);
+	padding-top: var(--dccwl-gap-lg);
+	text-align: center;
+	text-wrap: balance;
+}
+
+/* An anchored entry gets a scroll margin, or the sticky site header lands
+ * on top of the species a guest just followed a link to. */
+.dccwl-app .dccwl-guidepage article.dccwl-fg,
+.dccwl-app .dccwl-guidepage .dccwl-fg-group,
+.dccwl-app .dccwl-guidepage .dccwl-guidepage-section {
+	scroll-margin-top: calc(var(--dccwl-sticky-offset, 0px) + 16px);
+}
