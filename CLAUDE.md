@@ -227,7 +227,12 @@ Two naming rules, and they differ — the plugin zip is the exception:
 
 (Set 2026-09-13 by the owner, correcting a same-day instruction that had put
 the dash on the zips too. Deliveries earlier in the history carry whichever
-name was current then.)
+name was current then. Restated 2026-10-20 with the REASON, which is what
+makes it non-negotiable: Rob hands several plugins' files to the
+'DCC - Admin' session at once, and the prefix is how that session tells
+which file belongs to which plugin. A file delivered without it is not
+merely untidy — it is ambiguous to the session that receives it. The zips
+stay the exception because WordPress shows that name in the plugins list.)
 
 **Attach every new version in the chat** (Rob, 2026-10-10: "Always give me
 the new versions in this chat so that I can save them in Google Drive").
