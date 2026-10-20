@@ -91,7 +91,12 @@ const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dc
   const cs = getComputedStyle(b);
   return {
     label: b.textContent.trim(),
-    pressed: b.getAttribute('aria-pressed'),
+    /* THE SECTION TABS REPORT `aria-selected` SINCE 1.44.0 — they are a
+     * real tablist now, and `aria-pressed` is a toggle button's state. The
+     * water module's two bars are still `role="group"` toggles and keep
+     * `aria-pressed`, so this reads WHICHEVER the control actually sets;
+     * pinning one would quietly stop measuring the other bar. */
+    pressed: b.getAttribute('aria-selected') || b.getAttribute('aria-pressed'),
     bg: cs.backgroundColor,
     fg: cs.color,
     shadow: cs.boxShadow,
@@ -101,7 +106,12 @@ const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dc
   };
 }));
 note(tabs.map((t) => `${t.label}[${t.pressed}]`).join(' '));
-checkAtLeast(4, tabs.length, 'there are at least four section tabs');
+/* THREE SINCE 1.44.0, PINNED RATHER THAN LOOSENED. The row was Animals ·
+ * Plants · Safety · Peak Now; Peak Now moved into the Month menu as "This
+ * Month", where it reads as the month question it always was. Pinned at the
+ * exact number because the claim is that the row holds the three SECTIONS
+ * `Species::sections()` defines — `checkAtLeast` would pass on two. */
+checkSame(3, tabs.length, 'there are three section tabs');
 for (const t of tabs) {
   const chosen = 'true' === t.pressed;
   checkSame(chosen ? CORAL : BLUE, t.bg,
@@ -134,46 +144,27 @@ for (const t of off) {
  * and the loop would have to be loosened to include it. The pill and its
  * options are checked on their own terms below instead.
  */
-for (const [sel, what, rowSel] of [
-  ['.dccwl-month', 'month pill', '.dccwl-timeline'],
-]) {
-  const groups = await page.evaluate(([s, rs]) => {
-    const rows = Array.from(document.querySelectorAll(rs));
-    return rows.map((row) => ({
-      section: row.closest('[data-dccwl-subnav]')?.getAttribute('data-dccwl-subnav') || 'page',
-      chips: Array.from(row.querySelectorAll(s)).map((b) => {
-        const cs = getComputedStyle(b);
-        return {
-          label: b.textContent.trim(),
-          pressed: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('dccwl-month-on'),
-          bg: cs.backgroundColor, fg: cs.color, bc: cs.borderTopColor,
-        };
-      }),
-    })).filter((g) => g.chips.length > 0);
-  }, [sel, rowSel]);
-
-  checkAtLeast(1, groups.length, `${what} rows are present`);
-  for (const g of groups) {
-    const rows = g.chips;
-    checkAtLeast(2, rows.length, `${g.section}: ${what}s are present`);
-    check(rows.filter((r) => !r.pressed).every((r) => r.bg === BLUE),
-      `${g.section}: every unselected ${what} is solid #006BCF`);
-    check(rows.filter((r) => !r.pressed).every((r) => r.fg === WHITE),
-      `${g.section}: every unselected ${what} has white text`);
-    /* 1.36.0: the month pill is coral too. 1.34.0 left it blue because Rob's
-     * list did not name it; this time it does, so the exception is gone and
-     * every selected control on the page is the same colour. */
-    check(rows.filter((r) => r.pressed).every((r) => r.bg === CORAL),
-      `${g.section}: the selected ${what} is coral`);
-    check(rows.filter((r) => r.pressed).every((r) => r.fg === WHITE),
-      `${g.section}: with white text, matching hover`);
-    const sel_on = rows.filter((r) => r.pressed);
-    checkSame(1, sel_on.length, `${g.section}: exactly one ${what} is selected in this row`);
-    checkSame(GOLD, sel_on[0].bc, `${g.section}: the selected ${what} is marked in gold`);
-    check(rows.filter((r) => !r.pressed).every((r) => r.bc !== GOLD),
-      `${g.section}: no unselected ${what} is marked in gold`);
-  }
-}
+/*
+ * THE MONTH PILL LOOP IS GONE TOO (1.44.0), and the loop with it.
+ *
+ * It iterated one entry — ['.dccwl-month', 'month pill', '.dccwl-timeline'] —
+ * checking that every unselected pill in the twelve-month strip was solid
+ * #006BCF with white text and that the selected one was coral. The strip is
+ * a MENU now: its options are list rows under a chip, not pills on a ground,
+ * so the question "is every unselected pill solid blue" is not a question
+ * about them any more — exactly as the browse chips stopped being one in
+ * 1.38.0, for the same reason, one release earlier.
+ *
+ * WHAT REPLACED THE CLAIM RATHER THAN DROPPING IT: the chip itself is a
+ * control like the category pill and is checked by the pill's own section
+ * below (they share one set of rules in widget.css, which is the point of
+ * extending the selectors instead of writing a second block); and the
+ * CHOSEN option's coral is asserted where the chosen pick-option's is.
+ *
+ * Nothing is loosened here. A control that no longer exists cannot be
+ * measured, and inventing a lenient version of the old check to keep a
+ * green tick is this harness's oldest prohibition.
+ */
 
 /* ---- 2a2. the category picker speaks the same colour language ------- */
 section('the category picker: a blue pill, a coral choice');
@@ -212,8 +203,8 @@ if (pickColours) {
   check(pickColours.others.every((o) => o.h >= 44), 'every row is a 44px target');
 }
 
-/* ---- 2b. "Peak Now" stays on ONE LINE ------------------------------- */
-section('"Peak Now" is one line at every phone width, with the same words');
+/* ---- 2b. NO TAB LABEL WRAPS ----------------------------------------- */
+section('no section tab wraps at any phone width, whatever face the theme serves');
 
 /*
  * The owner's item 4b, and a regression that has now happened twice: once in
@@ -221,6 +212,13 @@ section('"Peak Now" is one line at every phone width, with the same words');
  * desktop `width: fit-content` rule leaked below the phone breakpoint and took
  * the space straight back. Measuring SPILL is not enough — the label wraps
  * long before it spills. This counts line boxes.
+ *
+ * "Peak Now" was the label that forced this, and it left the row in 1.44.0
+ * for the Month menu. THE CHECK IS KEPT AND IS NOT RELAXED: it was never
+ * about that one string. The labels come from Species::sections(), the row
+ * is three tabs today and was four until this release, and the next section
+ * name is not bounded by anything this file knows — so the assertion stays
+ * "no label wraps", at every width, under the inflated face.
  *
  * The font is inflated 21% to stand in for Raleway, which this sandbox does
  * not have and which measures about that much wider. Without the inflation
@@ -247,14 +245,14 @@ for (const width of [320, 360, 390]) {
   });
   const wrapped = lines.filter((l) => l.lines > 1).map((l) => l.label);
   note(`${width}px (Raleway stand-in): ${lines.map((l) => `${l.label}=${l.lines}`).join(' ')}`);
-  checkSame([], wrapped, `${width}px: no tab label wraps, "Peak Now" included`);
+  checkSame([], wrapped, `${width}px: no tab label wraps`);
   await p2.page.close();
 }
 
 /* ---- 3. hover is coral, on a button and on a toggle ------------------ */
 section('hover is coral with white text');
 
-for (const sel of ['.dccwl-tab:not([aria-pressed="true"])', '.dccwl-deck-btn:not([disabled])']) {
+for (const sel of ['.dccwl-tab:not([aria-selected="true"]):not([aria-pressed="true"])', '.dccwl-deck-btn:not([disabled])']) {
   const el = await page.$(sel);
   if (!el) { note(`(${sel} absent)`); continue; }
   await el.hover();
@@ -284,12 +282,18 @@ if (legend) { checkSame(INK, legend.color, 'a muted-role element is now black');
 
 await page.close();
 
-/* ---- 5. the footnote row: FOUR labels, one look ---------------------- */
+/* ---- 5. the footnote row: THREE labels, one look --------------------- */
 /* 1.34.0: "About" joined the row (item 4) — Rob asked for the water almanac
- * to open from here and to look and behave exactly like the other three. The
- * count is pinned at four rather than made ">= 3": the claim is that the row
- * holds exactly these labels, and a count that cannot fail is not a test. */
-section('Field Guide, Credits, By Month and About are one row, one look');
+ * to open from here and to look and behave exactly like the others. The count
+ * is PINNED rather than made ">= 2": the claim is that the row holds exactly
+ * these labels, and a count that cannot fail is not a test.
+ *
+ * IT WENT FROM FOUR TO THREE IN 1.44.0, and that is a consequence rather
+ * than a preference. "By Month" was a <button> that opened the month-picker
+ * PANEL, and it was the only door to it ("go('month') appears nowhere else",
+ * 1.27.0). Rob removed the hub and its panels, so the door led nowhere; the
+ * Month menu on the guide's own control row is what replaced the panel. */
+section('Guide, Credits and About are one row, one look');
 
 /*
  * AT 320, 390 AND 1280. The first version of this check asked at 390 only,
@@ -309,20 +313,25 @@ for (const w of [320, 390, 1280]) {
                color: cs.color, decoration: cs.textDecorationLine, fontFamily: cs.fontFamily };
     });
   });
-  check(!!rows && 4 === rows.length, `${w}px: all four labels are in the row`,
+  check(!!rows && 3 === rows.length, `${w}px: all three labels are in the row`,
     rows ? rows.map((r) => r.text).join(' | ') : 'row missing');
-  if (rows && 4 === rows.length) {
+  if (rows && 3 === rows.length) {
     /* "Guide", not "Field Guide", since 1.41.0: Rob shortened the first
      * label to buy back the width the row's new carets cost. The accessible
      * name is still "Field Guide" — ui-live.mjs asserts that, and that it
      * contains the visible word. Pinned, not loosened: the claim is that the
-     * row holds exactly these four labels in this order. */
-    checkSame(['Guide', 'Credits', 'By Month', 'About'], rows.map((r) => r.text),
+     * row holds exactly these labels in this order. */
+    checkSame(['Guide', 'Credits', 'About'], rows.map((r) => r.text),
       `${w}px: the labels are Title Case, in the order Rob listed them (item 17)`);
     note(`${w}px  ` + rows.map((r) => `${r.text}: ${r.fontSize}/${r.fontWeight} ${r.color} ${r.decoration}`).join('   '));
-    for (const key of ['fontSize', 'fontWeight', 'color', 'decoration', 'fontFamily']) {
+    /* `decoration` left this list in 1.44.0 with item 5: the resting state
+     * is NO underline and the underline is the hover/focus cue, so "all
+     * three share one decoration" is now trivially true of `none` and says
+     * nothing. ui-live.mjs asserts the absence AND drives a real hover,
+     * which is the stronger version of the same claim. */
+    for (const key of ['fontSize', 'fontWeight', 'color', 'fontFamily']) {
       const values = [...new Set(rows.map((r) => r[key]))];
-      checkSame(1, values.length, `${w}px: all four share one ${key}`, JSON.stringify(values));
+      checkSame(1, values.length, `${w}px: all three share one ${key}`, JSON.stringify(values));
     }
   }
   await h.page.close();
@@ -340,9 +349,11 @@ const links = await hub.page.evaluate(() => {
   };
   return Array.from(row.querySelectorAll('.dccwl-fullguide-h')).map(pick);
 });
-check(!!links && 4 === links.length, 'all four labels are in the row',
+/* THREE SINCE 1.44.0 — "By Month" left the row with the month-picker panel
+ * it was the only door to. Pinned, not loosened. */
+check(!!links && 3 === links.length, 'all three labels are in the row',
   links ? links.map((l) => l.text).join(' | ') : 'row missing');
-if (links && 4 === links.length) {
+if (links && 3 === links.length) {
   note(links.map((l) => `${l.text}: ${l.fontSize}/${l.fontWeight} ${l.color}`).join('   '));
   const ref = links[0];
   for (const l of links.slice(1)) {
@@ -350,7 +361,10 @@ if (links && 4 === links.length) {
     checkSame(ref.fontWeight, l.fontWeight, `"${l.text}" matches the weight`);
     checkSame(ref.fontFamily, l.fontFamily, `"${l.text}" matches the family`);
     checkSame(ref.color, l.color, `"${l.text}" matches the colour`);
-    checkSame(ref.decoration, l.decoration, `"${l.text}" matches the underline`);
+    /* Item 5: NONE of them is underlined at rest, so this asserts they
+     * agree on that — and ui-live.mjs drives a real hover to prove the
+     * underline arrives with it, which the resting value cannot show. */
+    checkSame(ref.decoration, l.decoration, `"${l.text}" matches the resting underline (none)`);
     checkSame(ref.letterSpacing, l.letterSpacing, `"${l.text}" matches the letter-spacing`);
     checkSame(ref.transform, l.transform, `"${l.text}" matches the text-transform`);
   }
@@ -473,10 +487,12 @@ const surfaces = await dis.page.evaluate(() => {
   return {
     'A .dccwl-tile-media': g('.dccwl-tile-media'),
     'B .dccwl-tabs': g('.dccwl-tabs'),
-    'C .dccwl-timeline': g('.dccwl-timeline'),
-    /* 'D .dccwl-subchips' retired in 1.38.0 with the chip row itself. There
-     * is no replacement entry: the picker is a pill on the page, not a
-     * ground, so there is no surface here to have turned white. */
+    /* 'C .dccwl-timeline' retired in 1.44.0 with the twelve-month strip, and
+     * 'D .dccwl-subchips' in 1.38.0 with the sideways category row. Neither
+     * has a replacement entry, for the same reason in both cases: a chip
+     * that opens a menu is a control ON the page, not a tinted GROUND under
+     * a row of pills, so there is no surface left here to have turned
+     * white. `.dccwl-tabs` is the last of the three grounds Rob named. */
   };
 });
 note(JSON.stringify(surfaces));

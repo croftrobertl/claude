@@ -60,369 +60,29 @@
 	.dccwl-panel:not([hidden]) { animation: none; }
 }
 
-.dccwl-canal .dccwl-panel-title {
-	color: var(--dccwl-text);
-	font-size: var(--dccwl-fs-lg);
-	font-weight: 700;
-	letter-spacing: -0.01em;
-	margin: 0 0 var(--dccwl-gap-lg);
-	text-align: center;
-}
+/*
+ * THE LEVEL BAR, THE CRUMBS, THE PANEL TITLE, THE HUB AND THE MONTH PICKER
+ * ALL WENT WITH THE HUB (1.44.0) — about 330 lines.
+ *
+ * Rob removed the hub, so there is no Back bar, no breadcrumb, no two big
+ * doors and no twelve-tile month screen. The view dropdown at the foot of
+ * this file is the whole of the navigation, and it carries the section's
+ * name itself, which is what the panel title used to do.
+ *
+ * THE CSS IS DELETED RATHER THAN LEFT UNREACHED, deliberately. The house
+ * rule in this repository is that a rule written for the wrong parent is
+ * invisible and the thing it was meant to govern goes on doing what it did
+ * (1.23.0, 1.39.0, 1.40.0, 1.40.1, 1.44.0's own guide-page selector) — and
+ * a stylesheet full of rules that match nothing is how that happens: the
+ * next reader cannot tell which rules are load-bearing. Everything here was
+ * checked against the markup first; nothing emits these classes.
+ *
+ * `--dccwl-sticky-offset` IS KEPT, and canal.js still computes it. It is a
+ * measurement of the THEME's sticky header, not of our bar, and the next
+ * sticky thing this app grows will want it.
+ */
 
-/* ---- the level bar (1.18.0) ---------------------------------------
- * Every panel below the hub opens with this: Back on the left, "where am
- * I" in the middle. It is the ONE surface that is allowed to look like a
- * control ground — a solid tinted band with a hairline, sticky so Back is
- * always reachable on a phone. Tiles are the only cards; nothing else may
- * share their treatment. Colours measured on this ground: primary text
- * 4.74:1, muted text 4.81:1. */
-.dccwl-canal .dccwl-levelbar {
-	/* Compact and centred on desktop (1.33.0): the "< Back | Wildlife" bar
-	 * stretched the whole 1280px column for the sake of one button and one
-	 * word. It still spans the full width on a phone, where the measure is
-	 * wider than the screen. */
-	margin-inline: auto;
-	max-width: var(--dccwl-measure);
-	align-items: center;
-	/* The tint over an opaque white, so scrolled content cannot show
-	 * through while the bar is stuck. */
-	background: linear-gradient(var(--dccwl-primary-soft), var(--dccwl-primary-soft)), #ffffff;
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius);
-	display: grid;
-	gap: var(--dccwl-gap);
-	grid-template-columns: 1fr auto 1fr;
-	/* ITEM 5: real space below the bar, so the controls under it are never
-	 * touched — and `margin-inline: auto` above is restated here, because
-	 * this shorthand would otherwise reset the centring it set. */
-	margin: 0 auto calc(var(--dccwl-pad) + var(--dccwl-gap));
-	min-height: 52px;
-	padding: 4px 6px;
-	position: sticky;
-	top: var(--dccwl-sticky-offset, 0px);
-	z-index: 3;
-}
-.dccwl-canal .dccwl-back.dccwl-back {
-	align-items: center;
-	background: transparent;
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-primary);
-	cursor: pointer;
-	display: inline-flex;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: 700;
-	gap: 4px;
-	justify-self: start;
-	min-height: 44px;
-	padding: 10px 14px 10px 8px;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
-	white-space: nowrap;   /* "All months" wrapped to two lines at 393px */
-}
-.dccwl-canal .dccwl-back.dccwl-back:hover { background: rgba(255, 255, 255, 0.7); }
-.dccwl-canal .dccwl-back.dccwl-back:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-/* The month chip left the navigation bar in 1.27.0; its rules went with it.
- * The month picker panel it opened is unchanged and is reached from the
- * footnote row (.dccwl-footnote-link). */
-
-/* At 320px the bar is Back + crumb + chip; the crumb is the one that can go,
- * because the chip says where you are more usefully than "Wildlife" does. */
-@media (max-width: 380px) {
-	.dccwl-canal .dccwl-panel-species .dccwl-crumbs { display: none; }
-	.dccwl-canal .dccwl-panel-species .dccwl-levelbar { grid-template-columns: auto 1fr; }
-}
-
-.dccwl-crumbs {
-	align-items: center;
-	color: var(--dccwl-text-muted);
-	display: flex;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: 600;
-	gap: 6px;
-	max-width: 100%;
-	min-width: 0;
-	overflow: hidden;
-	white-space: nowrap;
-}
-.dccwl-canal .dccwl-crumb { overflow: hidden; text-overflow: ellipsis; }
-.dccwl-canal .dccwl-crumb-here { color: var(--dccwl-text); font-weight: 700; }
-.dccwl-canal .dccwl-crumb-sep { color: var(--dccwl-text-muted); }
-/* The panel title under the bar is the level's real heading; the crumb
- * repeats it, so on the species screen the widget's own "September on the
- * canal" title is for the outline only — the sub line ("5 at peak") stays. */
-.dccwl-canal .dccwl-panel-species .dccwl-head .dccwl-title {
-	clip: rect(0 0 0 0);
-	clip-path: inset(50%);
-	height: 1px;
-	overflow: hidden;
-	position: absolute;
-	white-space: nowrap;
-	width: 1px;
-}
-.dccwl-canal .dccwl-panel-species .dccwl-head { margin-bottom: var(--dccwl-gap); text-align: center; }
-
-/* ---- the month picker's key (1.18.0) ------------------------------- */
-.dccwl-canal .dccwl-legend-swatch {
-	border-radius: 4px;
-	display: inline-block;
-	height: 14px;
-	margin-right: 6px;
-	vertical-align: -2px;
-	width: 14px;
-}
-.dccwl-canal .dccwl-legend-swatch-now {
-	background: var(--dccwl-tile-bg);
-	box-shadow: 0 0 0 2px var(--dccwl-accent);
-}
-
-
-/* Doubled class to beat Bravada's (0,3,1) button reset. */
-
-
-
-
-
-
-
-/* ---- L1: the hub ---------------------------------------------------- */
-
-.dccwl-hub-tiles {
-	display: grid;
-	gap: var(--dccwl-gap-lg);
-	/* auto-FIT with a max track: when the Water tile hides (its auto-hide
-	 * rule) the lone Wildlife tile stays a tile rather than stretching into
-	 * a slab the width of the page. */
-	grid-template-columns: repeat(auto-fit, minmax(240px, 300px));
-	justify-content: center;
-	list-style: none;
-	margin: 0 auto;
-	max-width: 620px;
-	padding: 0;
-}
-
-.dccwl-hub-tiles > li { margin: 0; }
-
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile {
-	align-items: center;
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius-lg);
-	box-shadow: var(--dccwl-shadow-tile);
-	color: var(--dccwl-text);
-	cursor: pointer;
-	display: flex;
-	flex-direction: column;
-	font: inherit;
-	gap: 6px;
-	justify-content: center;
-	/* More vertical presence: on a phone the hub is the whole first screen,
-	 * and short tiles left it reading as unfinished rather than as two
-	 * deliberate choices. */
-	min-height: 168px;
-	padding: calc(var(--dccwl-pad) * 1.8) var(--dccwl-pad);
-	text-align: center;
-	transition: transform var(--dccwl-t) var(--dccwl-ease),
-		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
-		border-color var(--dccwl-t-fast) var(--dccwl-ease-color);
-	width: 100%;
-}
-
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover {
-	border-color: var(--dccwl-line-strong);
-	box-shadow: var(--dccwl-shadow-raised);
-	transform: translateY(-2px);
-}
-
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:focus-visible {
-	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
-	outline: none;
-}
-
-.dccwl-hub-name {
-	/* 1.27.0: was a bare 1.5rem off the scale; same size, now a named role. */
-	font-size: var(--dccwl-fs-hub);
-	font-weight: 700;
-	letter-spacing: -0.01em;
-}
-
-/* Empty until the browser fills it — and legitimately empty when the water
- * module has nothing sourced to say, which is why it reserves no height. */
-.dccwl-hub-preview {
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-body);
-}
-
-/* Tile art: the species a Wildlife preview is counting, and the provenance
- * chips behind a Water reading. Both are filled client-side from data the
- * page already had. */
-.dccwl-hub-art {
-	align-items: center;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	justify-content: center;
-	margin-top: 2px;
-	min-height: 34px;
-}
-
-/* A photograph in the hub's art row sits in the same 32px slot a drawing
- * does, cropped to a circle so a 4:3 frame does not sit oddly beside the
- * round sprites. (1.33.0) */
-.dccwl-canal .dccwl-hub-sprite.dccwl-art-photo {
-	border-radius: 50%;
-	height: 32px;
-	object-fit: cover;
-	width: 32px;
-}
-
-.dccwl-hub-sprite {
-	fill: none;
-	height: 32px;
-	stroke-linecap: round;
-	width: 32px;
-}
-
-.dccwl-canal .dccwl-hub-chip {
-	font-size: 0.72rem;
-	max-width: 100%;
-	padding: 2px 9px;
-	font-weight: var(--dccwl-fw-label);
-}
-
-.dccwl-hub-chip-src {
-	display: inline-block;
-	max-width: 15ch;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	vertical-align: bottom;
-	white-space: nowrap;
-}
-
-/* ---- L2a: the month picker ------------------------------------------ */
-
-.dccwl-month-tiles {
-	display: grid;
-	gap: var(--dccwl-gap);
-	grid-template-columns: repeat(auto-fill, minmax(var(--dccwl-tile-min), 1fr));
-	list-style: none;
-	margin: 0 auto;
-	max-width: 720px;
-	padding: 0;
-}
-
-.dccwl-month-tiles > li { margin: 0; }
-
-.dccwl-canal .dccwl-month-tile.dccwl-month-tile {
-	align-items: center;
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius);
-	box-shadow: var(--dccwl-shadow-tile);
-	color: var(--dccwl-text);
-	cursor: pointer;
-	display: flex;
-	flex-direction: column;
-	font: inherit;
-	gap: 3px;
-	justify-content: center;
-	min-height: 88px;
-	padding: var(--dccwl-pad) 6px;
-	position: relative;
-	text-align: center;
-	transition: transform var(--dccwl-t) var(--dccwl-ease),
-		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
-		border-color var(--dccwl-t-fast) var(--dccwl-ease-color);
-	width: 100%;
-}
-
-.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover {
-	border-color: var(--dccwl-line-strong);
-	box-shadow: var(--dccwl-shadow-raised);
-	transform: translateY(-2px);
-}
-
-.dccwl-canal .dccwl-month-tile.dccwl-month-tile:focus-visible {
-	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
-	outline: none;
-}
-
-/* The month being viewed. */
-.dccwl-canal .dccwl-month-tile.dccwl-month-tile-on {
-	background: var(--dccwl-primary-soft);
-	border-color: var(--dccwl-primary);
-}
-
-/* The canal's ACTUAL month — a ring plus a "now" chip, so "just show me
- * today" is one tap from the picker. */
-.dccwl-canal .dccwl-month-tile.dccwl-month-tile-now {
-	box-shadow: var(--dccwl-shadow-tile), 0 0 0 2px var(--dccwl-accent);
-}
-
-.dccwl-month-name {
-	font-size: 1.0625rem;
-	font-weight: 700;
-	max-width: 100%;
-	overflow-wrap: anywhere;
-}
-
-.dccwl-month-preview {
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-xs);
-	max-width: 100%;
-	overflow-wrap: anywhere;
-	font-weight: var(--dccwl-fw-body);
-}
-
-/* "April and May are the canal's fullest months" — the planning line under the
- * year. Empty (and so invisible) until the JS fills it. */
-.dccwl-year-note {
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	margin: calc(var(--dccwl-gap-lg) * -0.5) auto var(--dccwl-gap-lg);
-	max-width: 44ch;
-	font-weight: var(--dccwl-fw-body);
-}
-
-.dccwl-year-note:empty { display: none; }
-
-/* The month's headline species — the year at a glance. The fill/stroke pair is
- * LOAD-BEARING: Sprites::symbol_sheet() strips them on output and they inherit
- * into the <use> shadow content (see the sprite note in widget.css). */
-.dccwl-month-art {
-	align-items: center;
-	display: flex;
-	gap: 3px;
-	justify-content: center;
-	margin-top: 3px;
-	min-height: 21px;
-}
-
-.dccwl-month-sprite {
-	fill: none;
-	height: 20px;
-	stroke-linecap: round;
-	width: 20px;
-}
-
-.dccwl-month-now {
-	background: var(--dccwl-accent);
-	border-radius: var(--dccwl-radius-pill);
-	/* Dark ink on the coral fill (1.16.1): 7.29:1. White on coral was 2.59:1
-	 * on a 10.6px badge — the worst reading in the plugin. The fill keeps the
-	 * brand; only the ink changed. */
-	color: var(--dccwl-text);
-	font-size: 0.66rem;
-	font-weight: 700;
-	letter-spacing: 0.04em;
-	padding: 2px 8px;
-	text-transform: uppercase;
-}
-
+/* ---- L2b: the water panel ------------------------------------------- */
 /* ---- centring the composed panels -----------------------------------
  * The species and water panels are the EXISTING renderers, unchanged. They
  * default to left-aligned prose; inside the hub they centre. */
@@ -452,8 +112,7 @@
 }
 
 .dccwl-canal .dccwl-water-linklist,
-.dccwl-canal .dccwl-tabs,
-.dccwl-canal .dccwl-hub-tiles { justify-content: center; }
+.dccwl-canal .dccwl-tabs { justify-content: center; }
 
 /* Card grids centre their tracks rather than filling from the left: a
  * section holding ONE card (an access note, a piece of general guidance)
@@ -464,7 +123,6 @@
 	justify-content: center;
 }
 
-.dccwl-canal .dccwl-timeline,
 .dccwl-canal .dccwl-spotlight-tiles { justify-content: flex-start; }
 
 /* Centre the strip's content when it is short enough not to scroll. */
@@ -482,134 +140,13 @@
 	text-align: left;
 }
 
-/* Touch devices keep :hover on the last thing tapped, and on the month
- * picker a hovered tile is a border away from looking SELECTED. Nothing
- * that indicates state may be left behind by a finger. */
-@media (hover: none) {
-	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover,
-	.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover {
-		border-color: var(--dccwl-line);
-		box-shadow: var(--dccwl-shadow-tile);
-		transform: none;
-	}
-
-	/* ...except the genuinely selected one, which keeps its own marking. */
-	.dccwl-canal .dccwl-month-tile.dccwl-month-tile-on:hover {
-		border-color: var(--dccwl-primary);
-	}
-
-	.dccwl-canal .dccwl-month-tile.dccwl-month-tile-now:hover {
-		box-shadow: var(--dccwl-shadow-tile), 0 0 0 2px var(--dccwl-accent);
-	}
-
-	.dccwl-canal .dccwl-back.dccwl-back:hover { background: var(--dccwl-tile-bg); }
-}
-
 @media (max-width: 600px) {
-	.dccwl-hub-tiles { grid-template-columns: 1fr; max-width: 340px; }
-	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { min-height: 152px; }
-	/* Three columns that SHRINK: `1fr` alone means minmax(auto, 1fr), so a
-	 * bold "September" set the column's floor and the third column ran off
-	 * the right edge of the phone (1.18.0 review). minmax(0, 1fr) plus a
-	 * viewport-scaled name keeps the grid inside the page at 320px. */
-	.dccwl-month-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-	.dccwl-month-tiles > li { min-width: 0; }
-	.dccwl-canal .dccwl-month-tile.dccwl-month-tile { min-width: 0; padding-left: 4px; padding-right: 4px; }
-	.dccwl-month-name { font-size: clamp(0.875rem, 4.2vw, 1.0625rem); font-weight: var(--dccwl-fw-body); }
 	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
 }
 
-/* ---- hub tiles are DOORS (1.18.0) ---------------------------------- */
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	grid-template-areas: "name go" "preview go" "art go";
-	align-items: center;
-	text-align: left;
-}
-.dccwl-canal .dccwl-hub-tile .dccwl-hub-name    { grid-area: name; }
-.dccwl-canal .dccwl-hub-tile .dccwl-hub-preview { grid-area: preview; }
-.dccwl-canal .dccwl-hub-tile .dccwl-hub-art     { grid-area: art; justify-content: flex-start; }
-/* A BUTTON LIKE EVERY OTHER (1.33.0, owner's decision): a solid #006BCF
- * disc with a white chevron, coral on hover. It was a light-blue well with a
- * blue chevron that only turned solid when the tile was hovered — a control
- * that looked like a control only once you were already on it. */
-.dccwl-canal .dccwl-hub-go {
-	align-items: center;
-	background: var(--dccwl-btn-bg);
-	border-radius: 50%;
-	color: var(--dccwl-btn-txt);
-	display: inline-flex;
-	grid-area: go;
-	height: 36px;
-	justify-content: center;
-	margin-left: var(--dccwl-gap-lg);
-	width: 36px;
-}
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover .dccwl-hub-go,
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:focus-visible .dccwl-hub-go {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-/* A door with nothing to preview (the water module before its first facts,
- * or with the live layer off) collapses to its name and its chevron rather
- * than holding empty rows open. */
-.dccwl-canal .dccwl-hub-preview:empty,
-.dccwl-canal .dccwl-hub-art:empty { display: none; }
-
-/* ===================================================================
- * 1.34.0 — Rob's /explore/ review. Every rule here is his decision.
- * =================================================================== */
-
-/* ITEM 2 (his pick: C) — the hub cards are the same size at every width.
- * Measured before the change: Water was 26px taller than Wildlife at 320,
- * 390, 768 and 1280, because it carries a row of source chips and Wildlife
- * does not. Two rules, no content added or removed:
- *   grid-auto-rows: 1fr   makes EVERY row as tall as the tallest card, which
- *                         is what a phone needs — there the cards are in
- *                         separate rows, so the grid's own stretch cannot help.
- *   height: 100%          makes the button fill the li. On desktop the li were
- *                         ALREADY equal (213/213) and only the button was
- *                         short (187) — this is the whole desktop fix.
- * Matching is now by rule, so a longer reading can never pull them apart. */
-.dccwl-hub-tiles { grid-auto-rows: 1fr; }
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { height: 100%; }
-
-/* ITEM 11 — the section title is centred across the WHOLE bar, not in the
- * space to the right of Back, and it shows on phones in both sections.
- * The bar is a flex row; absolute centring is the only way to ignore the
- * Back button's width, which differs between the two sections. */
-/*
- * ITEM 5 (1.36.0) — AND THE OVERLAP ROB PHOTOGRAPHED WAS THIS RULE.
- *
- * It used to read `.dccwl-canal .dccwl-levelbar { position: relative; }`,
- * declared here to give the absolutely-centred crumb a containing block. Same
- * specificity as the bar's own block, later in the file, so it REPLACED
- * `position: sticky` — and the bar kept `top: var(--dccwl-sticky-offset)`.
- * On a theme with a sticky header that token is 60-80px, and `top` on a
- * RELATIVE element shifts it down WITHOUT reserving the space, so the bar
- * landed on the months row and covered about half of it. Exactly what his
- * 1680px screenshot shows.
- *
- * A sticky element is already a containing block for its absolute children,
- * so the crumb never needed this. The position now lives in ONE place, up in
- * the bar's own block, and nothing here redeclares it.
- */
-.dccwl-canal .dccwl-levelbar .dccwl-crumbs {
-	left: 50%;
-	position: absolute;
-	transform: translateX(-50%);
-	text-align: center;
-	max-width: 60%;
-}
-@media (max-width: 480px) {
-	/* Was hidden at phone width, which is why "Wildlife" never appeared. */
-	.dccwl-canal .dccwl-levelbar .dccwl-crumbs { display: block; }
-}
-
 /* ITEM 17 — the bottom links are one row, one baseline, one type.
- * "By Month" is a <button> and the other three are <summary>; the two render
- * with different default line boxes, which is the couple of pixels Rob saw. */
+ * The links are <a> and About is a <summary>; the two render with different
+ * default line boxes, which is the couple of pixels Rob saw in 1.35.0. */
 .dccwl-footnotes .dccwl-fullguide-summary,
 .dccwl-footnotes .dccwl-footnote-link {
 	align-items: center;
@@ -675,31 +212,6 @@
 	min-height: 44px;
 }
 
-
-/* ======================================================================
- * THE HUB'S HOVER LIFT UNDER REDUCED MOTION (1.42.0).
- *
- * Killing the transition is only half the job, and doing only that makes
- * the hover WORSE: with nothing to carry it, the 2px lift becomes an
- * instant jump under the cursor. widget.css has said exactly that since
- * 1.21.0 and drops the lift as well — but its rule names .dccwl-tile,
- * and these are .dccwl-hub-tile / .dccwl-month-tile, so it never reached
- * them. The tile still reports hover through its border and shadow.
- *
- * Touch devices are already covered by the (hover: none) block above,
- * for a different reason (a finger must not leave a tile looking
- * selected). This is the pointer case.
- *
- * It lives at the END of this file on purpose: the lift is declared at
- * (0,4,0) on `.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover`, a
- * media query adds no specificity, and an equal-specificity rule only
- * wins when it comes later. The reduced-motion block near the top of
- * this file is BEFORE those declarations and would silently lose.
- * ====================================================================== */
-@media (prefers-reduced-motion: reduce) {
-	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover,
-	.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover { transform: none; }
-}
 
 /* ======================================================================
  * THE VIEW DROPDOWN (1.44.0) — "Water ▾" / "Wildlife ▾".

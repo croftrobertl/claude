@@ -135,7 +135,7 @@ dcc_section( 'the new guide inputs are escaped too' );
 // one is printed. Same test, new surface.
 dccwl_test_reset();
 $GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = [
-	'default_view'  => '"><script>alert(1)</script>',
+	'sticky_offset' => '"><script>alert(1)</script>',
 	'deck_rows'     => '"><img src=x onerror=alert(1)>',
 	'map_cache_ttl' => '3"><b>x</b>',
 ];

@@ -358,18 +358,13 @@
 			});
 	}
 
-	/* Toggle edge-fade cue classes on a horizontal scroller's wrapper. */
-	function attachEdgeFades(scroller, wrap) {
-		function update() {
-			var max = scroller.scrollWidth - scroller.clientWidth;
-			wrap.classList.toggle('dccwl-fade-l', scroller.scrollLeft > 4);
-			wrap.classList.toggle('dccwl-fade-r', max > 4 && scroller.scrollLeft < max - 4);
-		}
-		scroller.addEventListener('scroll', update, { passive: true });
-		window.addEventListener('resize', update);
-		update();
-		return update;
-	}
+	/*
+	 * `attachEdgeFades` IS GONE WITH THE TWELVE-MONTH STRIP (1.44.0). It
+	 * toggled the left/right "there is more this way" cues on a horizontal
+	 * scroller, and the month strip was its only caller — Month is a MENU
+	 * now, which does not scroll sideways. The `.dccwl-fade-*` rules went
+	 * with it.
+	 */
 
 	/* Per-root handles, so the canal hub can drive an existing widget
 	 * instance rather than duplicating its month logic. Keyed by the root
@@ -813,7 +808,6 @@
 
 		/* ---------- month timeline ---------- */
 
-		var monthButtons = [];
 
 		/*
 		 * `explicit` says a PERSON chose this month — a timeline button, an
@@ -825,98 +819,48 @@
 		 */
 		function setMonth(m, explicit) {
 			m = ((m % 12) + 12) % 12;
-			if (false !== explicit) { state.monthPicked = true; }
+			if (false !== explicit) {
+				state.monthPicked = true;
+				/* A DEEP LINK IS A CHOICE, SO IT MOVES THE CHIP. `#canal-month=4`
+				 * has landed on April since 1.23.0 and still does; what
+				 * changed is that the control showing it is the Month menu,
+				 * so the label and the filter are set by one call and cannot
+				 * disagree. The canal-time month the page opens on is NOT a
+				 * choice (1.28.0) and leaves the chip reading "Any Month". */
+				guide.month = m;
+			}
 			if (m === state.month) {
+				syncMonthChip();
 				refreshGuide();
 				return;
 			}
 			state.month = m;
-			monthButtons.forEach(function (b, i) {
-				b.setAttribute('aria-pressed', i === m ? 'true' : 'false');
-				b.classList.toggle('dccwl-month-on', i === m);
-			});
-			centerMonth();
+			syncMonthChip();
 			updateHead();
 			renderSpotlight();
 			annotateGuide();
 		}
 
-		/* A month label is either wholly visible or not shown at all.
+		/*
+		 * `centerMonth`, `trimPartialMonths`, `trimSoon` AND `buildTimeline`
+		 * ARE ALL DELETED (1.44.0), AND THAT IS THE RELEASE'S BIGGEST SINGLE
+		 * PERFORMANCE FIX RATHER THAN A TIDY-UP.
 		 *
-		 * A fade stops a sliced label reading as broken, but it cannot make
-		 * "ul" into a whole word — so any pill that does not fit entirely
-		 * inside the track is hidden outright. visibility (not display)
-		 * keeps it in the layout, so the scroll geometry and the arrows are
-		 * unaffected; it simply never renders half a month name.
+		 * The twelve-month strip kept its chosen pill centred, hid any pill
+		 * sliced by the track's edge, and re-did both after every scroll and
+		 * resize. Between them those three functions took six LAYOUT READS
+		 * — scrollWidth, clientWidth, two getBoundingClientRect(), scrollLeft,
+		 * offsetWidth — interleaved with class writes across 409 tiles, so
+		 * each read forced a synchronous layout of a 9,000-node tree. A CPU
+		 * profile at 4x throttling put 419 ms of ONE tap inside centerMonth
+		 * alone, with 515 ms of browser style and layout behind it. The node
+		 * count did not change on that tap, which is what ruled out DOM
+		 * building and named this.
 		 *
-		 * Recomputed after the strip settles rather than during a drag, so a
-		 * finger-scroll does not pop labels in and out mid-gesture; the edge
-		 * fade covers that moment. */
-		function trimPartialMonths() {
-			var track = root.querySelector('.dccwl-timeline-track');
-			if (!track) { return; }
-			var r = track.getBoundingClientRect();
-			monthButtons.forEach(function (btn) {
-				var b = btn.getBoundingClientRect();
-				var whole = b.left >= r.left - 0.5 && b.right <= r.right + 0.5;
-				btn.classList.toggle('dccwl-month-cut', !whole);
-			});
-		}
-
-		var trimTimer = null;
-		function trimSoon() {
-			window.clearTimeout(trimTimer);
-			trimTimer = window.setTimeout(trimPartialMonths, 140);
-		}
-
-		function centerMonth() {
-			var track = root.querySelector('.dccwl-timeline-track');
-			var btn = monthButtons[state.month];
-			if (!track || !btn || track.scrollWidth <= track.clientWidth) {
-				return;
-			}
-			// Measure the pill against the SCROLL CONTAINER, not against
-			// whatever happens to be its offsetParent. The track is
-			// position:static, so btn.offsetLeft carried the track's own
-			// offset within the page — a constant error that was invisible on
-			// a wide desktop strip and left the selected pill 6px from the
-			// edge on a 320px phone.
-			var left = btn.getBoundingClientRect().left
-				- track.getBoundingClientRect().left + track.scrollLeft;
-			track.scrollLeft = left - (track.clientWidth - btn.offsetWidth) / 2;
-			trimSoon();
-		}
-
-		function buildTimeline() {
-			var nav = root.querySelector('.dccwl-timeline');
-			if (!nav) {
-				return;
-			}
-			var track = nav.querySelector('.dccwl-timeline-track');
-			CFG.months.forEach(function (abbrev, m) {
-				var btn = el('button', 'dccwl-month' + (m === state.month ? ' dccwl-month-on' : ''), abbrev);
-				btn.type = 'button';
-				btn.setAttribute('aria-label', CFG.monthsFull[m] || abbrev);
-				btn.setAttribute('aria-pressed', m === state.month ? 'true' : 'false');
-				btn.addEventListener('click', function () {
-					setMonth(m, true);
-				});
-				track.appendChild(btn);
-				monthButtons.push(btn);
-			});
-			nav.querySelector('.dccwl-timeline-prev').addEventListener('click', function () {
-				setMonth(state.month - 1, true);
-			});
-			nav.querySelector('.dccwl-timeline-next').addEventListener('click', function () {
-				setMonth(state.month + 1, true);
-			});
-			attachEdgeFades(track, nav);
-			track.addEventListener('scroll', trimSoon, { passive: true });
-			window.addEventListener('resize', trimSoon);
-			nav.hidden = false;
-			centerMonth();
-			trimPartialMonths();
-		}
+		 * The Month menu has nothing to centre and nothing to slice, so the
+		 * reads do not exist to be forced. `recenter()` went with them, and
+		 * canal.js no longer calls it.
+		 */
 
 		/* ---------- field guide tabs ---------- */
 
@@ -946,15 +890,36 @@
 		 * As two tabs, Critters and Birds showed twenty-one of the same set
 		 * with no tap at all; merging them into Animals halved that.
 		 */
-		// Must match Render::PEAK_TAB. The tab row is server-rendered and this
-		// reads the slug back off it, so the two have to agree.
-		var PEAK_TAB = '__peak';
+		/*
+		 * `PEAK_TAB` IS GONE. "Peak Now" was a FOURTH TAB beside Animals,
+		 * Plants and Safety, and it never was a section: it cut across all
+		 * three and meant "at its best in the visitor's month" (1.27.0).
+		 * That is a MONTH question, so Rob moved it into the Month menu as
+		 * "This Month" (1.44.0), where it reads as what it is.
+		 *
+		 * WHAT THAT CHANGED, AND IT IS NOT NOTHING: the filter no longer
+		 * crosses sections. As a tab it showed two or three decks at once,
+		 * which is why there was a `peakRow`, a `dccwlPeakMode` and a
+		 * cross-deck `dccwlApplyView`. As a month it narrows whichever
+		 * section is open, like every other month does. All three of those
+		 * mechanisms are deleted rather than left inert.
+		 *
+		 * WHAT DID NOT CHANGE: it is computed in canal time in the browser,
+		 * so a cached page can never carry a stale month; hazards are still
+		 * excluded (1.33.0 — nobody goes looking for a cottonmouth); and the
+		 * Safety list is still never month-filtered (1.28.0), so choosing a
+		 * month while Safety is open shows the whole list.
+		 */
 		/* `pick` is the chosen CATEGORY, per section (1.38.0). It is a FILTER
 		 * now — the sub-chips only scrolled the deck — and it is remembered
 		 * per tab, so switching away and back does not lose it. A search sets
 		 * it aside without clearing it: C4 says clearing the search restores
 		 * what the guest had. */
-		var guide = { q: '', group: null, pick: {} };
+		/* `month` IS THE MONTH MENU'S CHOICE: null = Any Month (no filter),
+		 * 'now' = This Month (the old Peak Now), or 0-11 for a named month.
+		 * Separate from state.month, which is the month the HEADLINE and the
+		 * spotlight are about and is never null. */
+		var guide = { q: '', group: null, pick: {}, month: null };
 
 		/* Lowercased, accent-folded, and cached on the species row. */
 		function fold(v) {
@@ -1166,22 +1131,24 @@
 			if (!section) { return; }
 			var isCanal = !!root.closest('[data-dccwl-canal]');
 			var q = guide.q, searching = q.length > 0;
-			// Peak Now (1.27.0) is a filter, not a section: it cuts across
-			// Animals, Plants and Safety at once and keeps whatever is at its
-			// best in the month the VISITOR is in. state.month is canal time,
-			// computed in the browser, so this can never be baked into a
-			// cached page — which is why there is no server-rendered peak
-			// grid and no peak count in the HTML.
-			var peaking = guide.group === PEAK_TAB;
+			/* "This Month" (1.44.0, formerly the Peak Now tab): what is at its
+			 * best in the month the VISITOR is in. state.month is canal time,
+			 * computed in the browser, so this can never be baked into a
+			 * cached page — which is why no peak grid and no peak count is
+			 * ever server-rendered. */
+			var peaking = 'now' === guide.month;
+			/* A NAMED MONTH, which is what the twelve-month strip did. */
+			var monthPick = 'number' === typeof guide.month ? guide.month : null;
 
 			/* COMPLETE THE GRIDS BEFORE MEASURING ANYTHING. A search, a
 			 * category or Peak Now asks a question about the WHOLE list, and
 			 * a half-built grid would answer it wrongly and silently. Guarded
 			 * so the common case — a plain month change — does not force 409
 			 * tiles into existence before idle time gets to them. */
-			var needsAll = searching || peaking || Object.keys(guide.pick || {}).some(function (k) {
-				return !!guide.pick[k];
-			});
+			var needsAll = searching || peaking || null !== monthPick
+				|| Object.keys(guide.pick || {}).some(function (k) {
+					return !!guide.pick[k];
+				});
 
 			/*
 			 * VISIBILITY IS THE TRIGGER, AND THAT IS WHAT MEETS THE NODE
@@ -1214,9 +1181,11 @@
 			//    group), then the month, then the search.
 			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
 				var group = g.getAttribute('data-dccwl-group');
-				// Searching looks in every group: at 51 species the answer to
-				// "where is the coot?" must not depend on which tab is open.
-				var groupOn = searching || peaking || null === guide.group || group === guide.group;
+				/* Searching looks in every group: at 402 species the answer to
+				 * "where is the coot?" must not depend on which tab is open.
+				 * A MONTH DOES NOT cross sections — that was Peak Now's doing
+				 * as a tab, and it is a month now. */
+				var groupOn = searching || null === guide.group || group === guide.group;
 				g.querySelectorAll('.dccwl-tile').forEach(function (tile) {
 					var sp = speciesById[tile.getAttribute('data-dccwl-species')];
 					var old = tile.querySelector('.dccwl-tile-sub');
@@ -1225,9 +1194,9 @@
 					var keep = groupOn;
 					/* THE CATEGORY FILTER (1.38.0, Rob's C2). Set aside while
 					 * searching — a search covers everything, including the
-					 * separate Safety list — and meaningless on Peak Now,
-					 * which has no categories. */
-					if (keep && !searching && !peaking) {
+					 * separate Safety list. A month filter and a category
+					 * filter now compose, because both narrow one section. */
+					if (keep && !searching) {
 						var want = guide.pick[group] || '';
 						var own = tile.closest('li');
 						if (want && own && want !== (own.getAttribute('data-dccwl-browse') || '')) { keep = false; }
@@ -1244,16 +1213,16 @@
 							 * venomous snake at its most active should be
 							 * shown here rather than spared).
 							 *
-							 * Peak Now is a list of things worth going to
+							 * "This Month" is a list of things worth going to
 							 * look for. The Safety section, which a guest
 							 * chooses deliberately, is where the cottonmouth
-							 * belongs — and it still shows there whatever the
-							 * month. Same predicate as the counts, so the
-							 * header's number and the tiles under it match.
+							 * belongs — and the 1.28.0 rule that the Safety
+							 * grid is NEVER month-filtered is what keeps it
+							 * whole here, exactly as a named month does below.
 							 */
-							keep = isSpotting(sp)
-								&& !!(sp.months && (sp.months[state.month] || 0) >= PEAK_SCORE);
-						} else if (isCanal && sp.months && state.monthPicked) {
+							keep = 'safety' === group || (isSpotting(sp)
+								&& !!(sp.months && (sp.months[state.month] || 0) >= PEAK_SCORE));
+						} else if (sp.months && null !== monthPick && state.monthPicked) {
 							/*
 							 * ONLY WHEN A MONTH WAS EXPLICITLY CHOSEN (1.28.0).
 							 *
@@ -1267,11 +1236,33 @@
 							 * species. A guest could not find the manatee.
 							 *
 							 * So the default browse shows everything in the
-							 * section, and Peak Now — which says what it does
-							 * in its own name — is where seasonality lives.
-							 * Picking a month in the picker is still an
-							 * explicit request to see that month, and still
-							 * filters.
+							 * section, and the Month menu — which says what it
+							 * does in its own label, every time — is where
+							 * seasonality lives. Choosing a month there is an
+							 * explicit request to see that month, and filters.
+							 *
+							 * THE `isCanal` GATE IS GONE (1.44.0), AND THAT
+							 * IS A DELIBERATE CHANGE TO THE LEGACY WIDGET.
+							 *
+							 * Until this release the month filter ran in the
+							 * HUB only. That was coherent while the control
+							 * was the twelve-month strip, which on the
+							 * standalone widget drove the headline and the
+							 * spotlight band instead — it had visible work to
+							 * do there. The strip is a chip on the GUIDE's own
+							 * control row now, directly above the tiles it
+							 * governs, so a gate would leave it reading
+							 * "January" over a list of 308 animals that is
+							 * not filtered at all. A control that lies about
+							 * what it is doing is worse than one that is
+							 * absent: this is the 1.28.0 rule from the other
+							 * side, and the harness caught it on the
+							 * standalone fixture in the run it was written.
+							 *
+							 * `state.monthPicked` still gates it, so the
+							 * 1.28.0 defect itself cannot return: the page
+							 * opens on "Any Month" and nothing is filtered
+							 * until a guest chooses.
 							 */
 							keep = 'safety' === group || v >= SPOTLIGHT_MIN;
 						}
@@ -1295,42 +1286,28 @@
 				var g = r.grid.getAttribute('data-dccwl-group');
 				perGrid[g] = (perGrid[g] || 0) + (r.show ? 1 : 0);
 			});
-			/* Which section's toolbar row Peak Now borrows: the first one that
-			 * still has tiles on screen. Decided in this pass, because which
-			 * sections have anything at peak changes with the month. */
-			var peakRow = null;
+			/*
+			 * THE CHIP ROW IS ONE ROW, SHARED (1.44.0).
+			 *
+			 * It used to be three — one per section, each directly above its
+			 * own grid — with elaborate rules deciding which of the three was
+			 * on screen, a `peakRow` because Peak Now spanned sections, and a
+			 * cross-deck `dccwlApplyView` so one Compact switch could govern
+			 * three decks. Rob asked for ONE control row, so Month and the
+			 * badge key are rendered once and only the per-section category
+			 * pill is swapped: the one belonging to the open tab.
+			 *
+			 * DURING A SEARCH the current tab keeps its pill (1.38.0), reading
+			 * "Show: All" — which is true, because a search covers everything.
+			 */
 			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
 				var group = g.getAttribute('data-dccwl-group');
-				var groupOn = searching || peaking || null === guide.group || group === guide.group;
-				g.hidden = !groupOn || ((searching || peaking) && !perGrid[group]);
+				var groupOn = searching || null === guide.group || group === guide.group;
+				g.hidden = !groupOn || (searching && !perGrid[group]);
 
-				/*
-				 * ONE TOOLBAR ROW ON SCREEN, NEVER THREE.
-				 *
-				 * PEAK NOW HAS NO CATEGORIES, SO IT HAS NO PILL — AND THE
-				 * COMPACT SWITCH SITS ALONE ON THAT ROW, which is what Rob
-				 * asked for and what the comment here used to CLAIM while the
-				 * code hid the whole row (`sub.hidden = peaking || …`). Peak
-				 * Now spans every section, so the row shown is the one
-				 * belonging to the first section still on screen, and its
-				 * switch applies to every visible deck rather than to one.
-				 *
-				 * DURING A SEARCH the CURRENT tab keeps its row (1.38.0). The
-				 * chips used to go, because jumping to a sub-group of a list
-				 * that was not on screen made no sense; a pill that reads
-				 * "Show: All" is telling the guest something true — the search
-				 * is covering everything — and the Compact switch stays usable
-				 * with it. The other sections' rows stay hidden.
-				 */
 				var sub = section.querySelector('[data-dccwl-subnav="' + group + '"]');
 				if (sub) {
-					if (peaking) {
-						if (!peakRow && !g.hidden) { peakRow = group; }
-						sub.hidden = g.hidden || group !== peakRow;
-					} else {
-						sub.hidden = g.hidden || (searching && group !== guide.group);
-					}
-					if (sub.dccwlPeakMode) { sub.dccwlPeakMode(peaking); }
+					sub.hidden = group !== guide.group;
 					if (sub.dccwlSyncPick) { sub.dccwlSyncPick(); }
 				}
 			});
@@ -1357,12 +1334,19 @@
 					: 1 === eligible ? (CFG.i18n.searchOne || '1 species matches')
 						: fmt(CFG.i18n.searchCount || '%d species match', eligible);
 			}
+			/* A TABLIST, SO THE SELECTED TAB IS `aria-selected` (1.44.0).
+			 * It was `aria-pressed`, which is a toggle button's state and
+			 * says nothing about which panel is showing. `tabindex` follows
+			 * it so Tab lands on the selected tab and the arrow keys move
+			 * between them, which is what a tablist promises. */
 			section.querySelectorAll('.dccwl-tab').forEach(function (t) {
-				t.setAttribute('aria-pressed', !searching && t.getAttribute('data-dccwl-group') === guide.group ? 'true' : 'false');
+				var on = !searching && t.getAttribute('data-dccwl-group') === guide.group;
+				t.setAttribute('aria-selected', on ? 'true' : 'false');
+				t.setAttribute('tabindex', on ? '0' : '-1');
 			});
-			// Peak Now names no month in the markup, so say which one it means
-			// where a guest can read it, and say plainly when nothing is at its
-			// best rather than showing an empty page.
+			/* "This Month" names no month in the markup, so say which one it
+			 * means where a guest can read it, and say plainly when nothing
+			 * is at its best rather than showing an empty page. */
 			if (peaking && !searching) {
 				var pNote = section.querySelector('[data-dccwl-guide-empty]');
 				if (pNote && !kept.length) {
@@ -1404,18 +1388,6 @@
 				var slug = nav.getAttribute('data-dccwl-subnav');
 				var grid = section.querySelector('.dccwl-guide-grid[data-dccwl-group="' + slug + '"]');
 				if (!grid) { return; }
-
-				var tools = nav.querySelector('[data-dccwl-subtools]');
-				var toggle = nav.querySelector('[data-dccwl-view]');
-
-				/* The Compact switch ships HIDDEN and is unhidden here, by the
-				 * 1.33.0 rule that a control which cannot work is not offered:
-				 * with no JavaScript it would do nothing. Losing this one line
-				 * while the picker was written left the switch hidden at every
-				 * width, so the pill sat alone on its row — caught by the
-				 * live-conditions suite asking what shares the row, which is a
-				 * question about the rendered page rather than about CSS. */
-				if (tools) { tools.hidden = false; }
 
 				/* ==========================================================
 				 * THE CATEGORY PICKER (1.38.0 — Rob's C2/C3).
@@ -1516,72 +1488,184 @@
 						openPick(false);
 					});
 					nav.dccwlSyncPick = syncPick;
-					/* PEAK NOW BORROWS THIS ROW AND HIDES THE PILL. There are
-					 * no categories to offer across a filter that spans every
-					 * section, so what is left is the Compact switch, alone on
-					 * the row — Rob's words. The pill comes back the moment the
-					 * guest leaves that tab. */
-					nav.dccwlPeakMode = function (on) {
-						pick.hidden = !!on;
-						if (on) { openPick(false); }
-					};
 					syncPick();
 				}
 
-								function applyView(compact) {
-					if (toggle) {
-						toggle.setAttribute('data-dccwl-view', compact ? 'compact' : 'deck');
-						toggle.setAttribute('aria-pressed', compact ? 'true' : 'false');
-						toggle.textContent = compact
-							? (CFG.i18n.viewPhotos || 'Photos')
-							: (CFG.i18n.viewCompact || 'Compact');
-					}
-					grid.classList.toggle('dccwl-compact-list', compact);
-					/* The deck owns its own control row; this says which mode
-					 * it is in and lets refresh() decide, so the two cannot
-					 * end up disagreeing. Setting deckNav.hidden from here was
-					 * exactly that disagreement: the next scroll or resize ran
-					 * refresh(), which unhid the row again and left a stale
-					 * "1-6 of 38" under a vertical list. (1.33.0) */
-					if (compact) {
-						grid.setAttribute('data-dccwl-compact', '1');
-					} else {
-						grid.removeAttribute('data-dccwl-compact');
-					}
-					/* The picker rides with the deck it filters: a compact
-					 * list is one column of everything, so a category filter
-					 * still applies and the pill stays. (1.38.0) */
-					if (window.DCCWL_Deck) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
-				}
-
-				/* Published so the row Peak Now borrows can drive the OTHER
-				 * sections' decks as well as its own. */
-				nav.dccwlApplyView = applyView;
-
-				if (toggle) {
-					toggle.addEventListener('click', function () {
-						var compact = 'compact' !== toggle.getAttribute('data-dccwl-view');
-						applyView(compact);
-						/* PEAK NOW SHOWS TWO OR THREE DECKS AT ONCE, so the one
-						 * switch on screen has to mean what it says for all of
-						 * them. Switching it on a single deck would leave the
-						 * others in photo cards under a control reading
-						 * "Photos", which is a control disagreeing with itself.
-						 */
-						if (guide.group === PEAK_TAB) {
-							section.querySelectorAll('[data-dccwl-subnav]').forEach(function (other) {
-								if (other !== nav && other.dccwlApplyView) { other.dccwlApplyView(compact); }
-							});
-						}
-					});
-				}
-
-				// The owner's chosen opening view. Applied even when the toggle
-				// is switched off, so "open compact, no way back" is a coherent
-				// configuration rather than an accident.
-				var ownView = (instance && instance.set && instance.set.defaultView) || SET.defaultView;
-				if ('compact' === ownView) { applyView(true); }
+				/*
+				 * THE COMPACT SWITCH IS GONE (1.44.0, Rob's brief), AND SO IS
+				 * EVERYTHING IT NEEDED: `applyView`, the `data-dccwl-compact`
+				 * attribute, the `.dccwl-compact-list` class, the published
+				 * `dccwlApplyView` that let the one switch on screen govern
+				 * three decks at once, and the `defaultView` setting that
+				 * chose which view a guest landed in.
+				 *
+				 * Photo-first tiles have been the guide's face since 1.19.0;
+				 * the switch offered a second way to read the same list, and
+				 * the one control row Rob specified has no room for it. The
+				 * setting is retired in Guide_Data rather than deleted, so a
+				 * stored row is not changed.
+				 */
 			});
+		}
+
+		/* ---------- the Month menu (1.44.0) ---------- */
+
+		/*
+		 * ONE CHIP CARRYING WHAT THE TWELVE-MONTH STRIP AND PEAK NOW BOTH
+		 * CARRIED. "Any Month" is the default and shows the whole section —
+		 * the 1.28.0 rule that a category tab shows everything in it, which
+		 * exists because an invisible month filter once put seven winter
+		 * species out of reach. "This Month" is the old Peak Now. A named
+		 * month is the old strip.
+		 *
+		 * THE LABEL IS WHAT MAKES THE FILTER VISIBLE, and that is the whole
+		 * answer to the 1.28.0 defect: the chip reads the month it is
+		 * filtering by, at all times, on the same row as the tiles.
+		 */
+		function monthMenu() {
+			return root.querySelector('[data-dccwl-monthpick]');
+		}
+
+		function syncMonthChip() {
+			var pick = monthMenu();
+			if (!pick) { return; }
+			var label = pick.querySelector('[data-dccwl-monthlabel]');
+			var want = null === guide.month ? 'any'
+				: ('now' === guide.month ? 'now' : String(guide.month));
+			var opts = [].slice.call(pick.querySelectorAll('[data-dccwl-month]'));
+			opts.forEach(function (o) {
+				var on = o.getAttribute('data-dccwl-month') === want;
+				var li = o.closest('li');
+				if (li) { li.setAttribute('aria-selected', on ? 'true' : 'false'); }
+				if (on && label) { label.textContent = o.textContent; }
+			});
+		}
+
+		function initMonthMenu() {
+			var pick = monthMenu();
+			if (!pick) { return; }
+			var btn = pick.querySelector('[data-dccwl-monthbtn]');
+			var list = pick.querySelector('[data-dccwl-monthmenu]');
+			if (!btn || !list) { return; }
+			var opts = [].slice.call(list.querySelectorAll('[data-dccwl-month]'));
+
+			function open(on) {
+				list.hidden = !on;
+				btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+				pick.classList.toggle('dccwl-chipmenu-open', !!on);
+				if (on) {
+					var sel = opts.filter(function (o) {
+						var li = o.closest('li');
+						return li && 'true' === li.getAttribute('aria-selected');
+					})[0];
+					(sel || opts[0]).focus();
+				}
+			}
+
+			function choose(raw) {
+				var m = canalToday().getMonth();
+				if ('any' === raw) {
+					guide.month = null;
+					/* BACK TO "NO MONTH CHOSEN", not merely to this month.
+					 * `state.monthPicked` is what the month filter is gated on
+					 * (1.28.0), so clearing the chip has to clear it too, or
+					 * "Any Month" would go on filtering by whatever was last
+					 * picked — an invisible filter, which is the one thing
+					 * that rule forbids. The headline keeps the canal month. */
+					state.monthPicked = false;
+				} else if ('now' === raw) {
+					guide.month = 'now';
+					state.monthPicked = true;
+				} else {
+					m = ((parseInt(raw, 10) % 12) + 12) % 12;
+					guide.month = m;
+					state.monthPicked = true;
+				}
+				/* `false` because the chip ABOVE is the record of the choice:
+				 * passing `true` would have setMonth overwrite guide.month
+				 * with a bare number, turning "This Month" into October. */
+				setMonth(m, false);
+				open(false);
+				syncMonthChip();
+				refreshGuide();
+				resetDecks();
+				btn.focus();
+			}
+
+			btn.addEventListener('click', function (ev) {
+				ev.stopPropagation();
+				open(list.hidden);
+			});
+			opts.forEach(function (o) {
+				o.addEventListener('click', function () { choose(o.getAttribute('data-dccwl-month')); });
+			});
+			/* Keyboard: a listbox, like the category pill — arrows, Home, End,
+			 * Escape, and focus handed back to the chip. */
+			list.addEventListener('keydown', function (ev) {
+				var i = opts.indexOf(document.activeElement);
+				if ('Escape' === ev.key) {
+					ev.stopPropagation();
+					open(false);
+					btn.focus();
+				} else if ('ArrowDown' === ev.key || 'ArrowUp' === ev.key) {
+					ev.preventDefault();
+					var n = opts.length;
+					opts[(i < 0 ? 0 : (i + ('ArrowDown' === ev.key ? 1 : n - 1)) % n)].focus();
+				} else if ('Home' === ev.key || 'End' === ev.key) {
+					ev.preventDefault();
+					opts['Home' === ev.key ? 0 : opts.length - 1].focus();
+				}
+			});
+			document.addEventListener('click', function (ev) {
+				if (list.hidden || pick.contains(ev.target)) { return; }
+				open(false);
+			});
+			syncMonthChip();
+		}
+
+		/* A new filter is a new list: every visible deck starts at its first
+		 * page, as Rob asked in 1.38.0 for the category pill. A month is the
+		 * same kind of change, so it gets the same treatment. */
+		function resetDecks() {
+			if (!window.DCCWL_Deck) { return; }
+			root.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+				g.scrollLeft = 0;
+				window.DCCWL_Deck.refreshSoon(g, CFG.i18n);
+			});
+		}
+
+		/* ---------- the badge key popover (1.44.0) ----------
+		 *
+		 * The key was four always-on lines under the tabs. It is the same
+		 * SERVER-RENDERED markup, now behind an ⓘ chip on the control row —
+		 * so a guest without JavaScript still meets the whole key as ordinary
+		 * text rather than a button that does nothing, and the 1.18.0 rule
+		 * (a colour carrying meaning has a key beside where it is used) is
+		 * intact: it is one tap from every tile that carries a mark.
+		 */
+		function initBadgeKey(section) {
+			var btn = section.querySelector('[data-dccwl-badges]');
+			var key = section.querySelector('[data-dccwl-badgepop]');
+			if (!btn || !key) { return; }
+			function open(on) {
+				key.hidden = !on;
+				btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+			}
+			btn.addEventListener('click', function (ev) {
+				ev.stopPropagation();
+				open(key.hidden);
+			});
+			/* Escape and an outside tap close it, like every other popover
+			 * here. Inside a sheet this would have to claim `dccwl:escape`
+			 * (1.33.0) — it is not in one, so a plain keydown is correct. */
+			document.addEventListener('keydown', function (ev) {
+				if ('Escape' === ev.key && !key.hidden) { open(false); btn.focus(); }
+			});
+			document.addEventListener('click', function (ev) {
+				if (key.hidden || key.contains(ev.target) || btn.contains(ev.target)) { return; }
+				open(false);
+			});
+			open(false);
 		}
 
 		function initGuide() {
@@ -1601,6 +1685,8 @@
 			if (3 !== rows) { root.style.setProperty('--dccwl-deck-rows', String(rows)); }
 
 			initBrowseNav(section);
+			initMonthMenu();
+			initBadgeKey(section);
 			// One deck per group grid (1.23.0). Attaching per grid rather than
 			// once for the section means the visible group is the one being
 			// paged, and changing tab changes decks with it.
@@ -1610,7 +1696,7 @@
 				});
 			}
 			var tabs = section.querySelectorAll('.dccwl-tab');
-			var first = section.querySelector('.dccwl-tab[aria-pressed="true"]') || tabs[0];
+			var first = section.querySelector('.dccwl-tab[aria-selected="true"]') || tabs[0];
 			guide.group = first ? first.getAttribute('data-dccwl-group') : null;
 			var input = section.querySelector('[data-dccwl-search-input]');
 			var clear = section.querySelector('[data-dccwl-search-clear]');
@@ -1622,12 +1708,39 @@
 				refreshGuide();
 			}
 
-			tabs.forEach(function (tab) {
-				tab.addEventListener('click', function () {
-					guide.group = tab.getAttribute('data-dccwl-group');
-					// Picking a group is a way of saying "not that search any more".
-					if (input && input.value) { input.value = ''; }
-					setQuery('');
+			var tabList = [].slice.call(tabs);
+
+			function openTab(tab) {
+				guide.group = tab.getAttribute('data-dccwl-group');
+				// Picking a group is a way of saying "not that search any more".
+				if (input && input.value) { input.value = ''; }
+				setQuery('');
+				/* A new section is a new list, so its deck starts at page one
+				 * — the 1.38.0 rule, which the pill has always followed. */
+				resetDecks();
+			}
+
+			tabList.forEach(function (tab) {
+				tab.addEventListener('click', function () { openTab(tab); });
+				/*
+				 * A TABLIST MOVES WITH THE ARROW KEYS, AND THAT IS WHY IT IS
+				 * ONE (1.44.0). The row was three buttons with `aria-pressed`,
+				 * so a keyboard guest Tabbed through all three and nothing
+				 * said which panel they governed. As a tablist it is ONE Tab
+				 * stop and the arrows move between tabs, which is what the
+				 * role promises — and the promise has to be kept or the role
+				 * is worse than none.
+				 */
+				tab.addEventListener('keydown', function (ev) {
+					var i = tabList.indexOf(tab), n = tabList.length, next = -1;
+					if ('ArrowRight' === ev.key || 'ArrowDown' === ev.key) { next = (i + 1) % n; }
+					else if ('ArrowLeft' === ev.key || 'ArrowUp' === ev.key) { next = (i + n - 1) % n; }
+					else if ('Home' === ev.key) { next = 0; }
+					else if ('End' === ev.key) { next = n - 1; }
+					if (next < 0) { return; }
+					ev.preventDefault();
+					openTab(tabList[next]);
+					tabList[next].focus();
 				});
 			});
 
@@ -1689,17 +1802,13 @@
 
 		updateHead();
 		renderSpotlight();
-		if (instance.browser) {
-			buildTimeline();
-		}
-		initGuide();   // refreshes the guide itself
+		initGuide();   // refreshes the guide itself, and wires the Month menu
 
-		// Expose this instance so an outer shell can set the month and
-		// re-centre the strip after un-hiding a panel (offsetLeft is 0 while
-		// hidden, so the timeline cannot centre itself until it is visible).
+		/* Expose this instance so an outer shell can set the month. `recenter`
+		 * is GONE: it existed only to centre the month strip's chosen pill
+		 * after a hidden panel was shown, and a menu has nothing to centre. */
 		roots.set(root, {
 			setMonth: setMonth,
-			recenter: centerMonth,
 			month: function () { return state.month; }
 		});
 	}
@@ -1821,11 +1930,7 @@
 		},
 		setMonth: function (root, m, explicit) {
 			var h = roots.get(root);
-			if (h) { h.setMonth(m, explicit); h.recenter(); }
-		},
-		recenter: function (root) {
-			var h = roots.get(root);
-			if (h) { h.recenter(); }
+			if (h) { h.setMonth(m, explicit); }
 		},
 		month: function (root) {
 			var h = roots.get(root);

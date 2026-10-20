@@ -63,11 +63,25 @@ final class Guide_Data {
 			'show_spotlight' => 1,
 			'show_search'    => 1,
 			'show_subnav'    => 1,
-			/* RETIRED IN 1.38.0 with the control it gated. "Jump to a
-			 * species…" is gone; search reaches every species by common or
-			 * scientific name, which is what the list was for. The key is
-			 * left OUT of the schema below so a Save cannot write it back,
-			 * and the stored value is harmless: nothing reads it. */
+			/*
+			 * RETIRED, AND THE KEY STAYS BECAUSE DELETING IT WOULD CHANGE A
+			 * STORED ROW. Each is left OUT of the schema below so a Save
+			 * cannot write it back, and the stored value is harmless:
+			 * nothing reads it.
+			 *
+			 * NOTE ON THIS COMMENT, since it was wrong for five releases:
+			 * from 1.38.0 to 1.43.0 it described `show_jump` while sitting
+			 * above `show_compact`, which WAS still in the schema and still
+			 * gated a live control. `show_jump`'s key is not here at all —
+			 * it was deleted in 1.38.0 despite this comment claiming the
+			 * opposite. Only `show_compact` is retired-but-kept.
+			 *
+			 * `show_compact`, retired in 1.44.0: the "Compact" switch that
+			 * swapped the photo cards for short rows is gone from the one
+			 * control row Rob specified. Photo-first tiles have been the
+			 * guide's face since 1.19.0 and the alternative was a second
+			 * way to read the same list.
+			 */
 			'show_compact'   => 1,
 			// The water module's "Tonight on the canal" moon card. A display
 			// element with no data cost — pure client-side astronomy, no
@@ -78,6 +92,11 @@ final class Guide_Data {
 
 			/* ---- how the species list opens ---------------------------- */
 			// 'deck' is the paged carousel; 'compact' is the short-row list.
+			/*
+			 * RETIRED IN 1.44.0 with the Compact switch. There is one species
+			 * list now, the photo cards, so "which view it opens as" has one
+			 * answer. Out of the schema below; the stored value is harmless.
+			 */
 			'default_view'   => 'deck',
 
 			/* ---- thresholds -------------------------------------------- */
@@ -90,7 +109,15 @@ final class Guide_Data {
 			// needs a floor, or two letters match half the registry.
 			'search_squash_min' => 3,
 
-			/* ---- the hub ----------------------------------------------- */
+			/*
+			 * ---- the hub: ALL THREE RETIRED IN 1.44.0 ------------------
+			 *
+			 * Rob removed the hub. These sized the Wildlife tile's preview
+			 * line, the "right now" line and the sprite art on a month tile,
+			 * and none of those elements is rendered by any surface now —
+			 * canal.js no longer even reads them. Out of the schema below, so
+			 * a Save cannot write them back; the stored values are harmless.
+			 */
 			'hub_preview_max' => 5,
 			'now_names_max'   => 2,
 			'month_art_max'   => 3,
@@ -118,17 +145,12 @@ final class Guide_Data {
 			'show_spotlight'    => [ 'type' => 'bool' ],
 			'show_search'       => [ 'type' => 'bool' ],
 			'show_subnav'       => [ 'type' => 'bool' ],
-			'show_compact'      => [ 'type' => 'bool' ],
 			'show_moon'         => [ 'type' => 'bool' ],
 			'show_jsonld'       => [ 'type' => 'bool' ],
 			'map_warm'          => [ 'type' => 'bool' ],
-			'default_view'      => [ 'type' => 'enum', 'values' => [ 'deck', 'compact' ] ],
 			'spotlight_min'     => [ 'type' => 'int', 'min' => 1, 'max' => 3 ],
 			'peak_score'        => [ 'type' => 'int', 'min' => 1, 'max' => 3 ],
 			'search_squash_min' => [ 'type' => 'int', 'min' => 1, 'max' => 8 ],
-			'hub_preview_max'   => [ 'type' => 'int', 'min' => 0, 'max' => 12 ],
-			'now_names_max'     => [ 'type' => 'int', 'min' => 0, 'max' => 6 ],
-			'month_art_max'     => [ 'type' => 'int', 'min' => 0, 'max' => 6 ],
 			'deck_rows'         => [ 'type' => 'int', 'min' => 1, 'max' => 4 ],
 			'sticky_offset'     => [ 'type' => 'int', 'min' => 0, 'max' => 400 ],
 			'map_cache_ttl'     => [ 'type' => 'int', 'min' => 5, 'max' => 1440 ],
@@ -328,16 +350,26 @@ final class Guide_Data {
 		return $v;
 	}
 
-	/**
-	 * An enum override, checked against the schema's own value list.
+	/*
+	 * `resolve_enum()` IS DELETED (1.44.0), AND THE `enum` ARM OF
+	 * `sanitize()` IS NOT. That is not an inconsistency, so here is why.
 	 *
-	 * @param mixed $override
+	 * `default_view` was the only enum setting and it is retired with the
+	 * Compact switch, so nothing called this resolver and no suite could
+	 * exercise it without inventing a key — an unexercised public method is
+	 * exactly what this repository's harness doctrine distrusts, and
+	 * 1.43.0's rule is that unreachable code is not kept here.
+	 *
+	 * The `enum` arm of the sanitiser stays because it is an ARM OF A
+	 * DISPATCHER over `schema()`, which is the documented extension point:
+	 * "a new key cannot be added without saying what it is". Removing it
+	 * would make a future `'type' => 'enum'` key fall through the switch
+	 * silently — a defect that makes data ABSENT, which is the shape 1.33.0
+	 * taught us a shape-only suite cannot see.
+	 *
+	 * If an enum setting returns and needs a per-placement override, write
+	 * this back from `resolve_num()`, which it was modelled on.
 	 */
-	public static function resolve_enum( $override, string $key ): string {
-		$v      = is_scalar( $override ) ? (string) $override : '';
-		$values = (array) ( self::schema()[ $key ]['values'] ?? [] );
-		return in_array( $v, $values, true ) ? $v : (string) self::get( $key );
-	}
 
 	/**
 	 * Write the merged option back on upgrade, so the stored row DESCRIBES

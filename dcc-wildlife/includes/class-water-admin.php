@@ -875,29 +875,15 @@ final class Water_Admin {
 			 * this plugin refuses to keep — a setting that describes
 			 * behaviour it does not have. */
 			self::guide_check( 'show_subnav', __( 'Category picker', 'dcc-wildlife' ), __( 'The "Show: All" button over the tiles. Choosing a category shows that category and nothing else, with how many of each beside its name; the search still reaches every species.', 'dcc-wildlife' ) );
-			self::guide_check( 'show_compact', __( '"Compact" button', 'dcc-wildlife' ), __( 'Lets a guest swap the photo cards for short rows.', 'dcc-wildlife' ) );
 			self::guide_check( 'show_moon', __( '"Tonight on the canal" card', 'dcc-wildlife' ), __( 'The moon phase and golden hour, at the top of the water module. Worked out in the browser from the date — no network call, no API.', 'dcc-wildlife' ) );
 			?>
-			<tr>
-				<th scope="row"><label for="dccwl-g-view"><?php esc_html_e( 'The species list opens as', 'dcc-wildlife' ); ?></label></th>
-				<td>
-					<select id="dccwl-g-view" name="<?php echo esc_attr( Guide_Data::OPTION ); ?>[default_view]">
-						<option value="deck" <?php selected( (string) $o['default_view'], 'deck' ); ?>><?php esc_html_e( 'Photo cards', 'dcc-wildlife' ); ?></option>
-						<option value="compact" <?php selected( (string) $o['default_view'], 'compact' ); ?>><?php esc_html_e( 'Short rows', 'dcc-wildlife' ); ?></option>
-					</select>
-					<p class="description"><?php esc_html_e( 'Which view a guest lands on. They can still switch, as long as the Compact button above is on.', 'dcc-wildlife' ); ?></p>
-				</td>
-			</tr>
 		</table>
 
 		<h3><?php esc_html_e( 'How much it shows', 'dcc-wildlife' ); ?></h3>
 		<table class="form-table" role="presentation">
 			<?php
 			self::guide_number( 'spotlight_min', __( 'Spotlight threshold', 'dcc-wildlife' ), __( 'How likely a species must be, this month, to reach the spotlight. 1 includes the rare ones, 3 only those at their very best.', 'dcc-wildlife' ), __( '1 to 3', 'dcc-wildlife' ) );
-			self::guide_number( 'peak_score', __( 'Counts as "at peak"', 'dcc-wildlife' ), __( 'Drives the Peak badge, the "N at peak" counts, the Peak Now tab and the fullest-month line. Lowering it makes all of those say more.', 'dcc-wildlife' ), __( '1 to 3', 'dcc-wildlife' ) );
-			self::guide_number( 'hub_preview_max', __( 'Species named on the Wildlife tile', 'dcc-wildlife' ), __( 'The hub\'s preview line. 0 names none and shows the tile alone.', 'dcc-wildlife' ) );
-			self::guide_number( 'now_names_max', __( 'Species named in the "right now" line', 'dcc-wildlife' ), __( 'The one-line summary under the hub heading.', 'dcc-wildlife' ) );
-			self::guide_number( 'month_art_max', __( 'Species drawn on each month tile', 'dcc-wildlife' ), __( 'In the month picker. The count above the art carries the meaning, so 0 is a legitimate choice.', 'dcc-wildlife' ) );
+			self::guide_number( 'peak_score', __( 'Counts as "at peak"', 'dcc-wildlife' ), __( 'Drives the Peak badge, the "N at peak" counts and the Month menu\'s "This Month". Lowering it makes all of those say more.', 'dcc-wildlife' ), __( '1 to 3', 'dcc-wildlife' ) );
 			?>
 		</table>
 

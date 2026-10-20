@@ -65,11 +65,11 @@ final class Canal_Render {
 	 * @return array<string,int>
 	 */
 	private static function per_root( array $opts ): array {
+		/* One key left: the other three went with the hub in 1.44.0. The map
+		 * stays a map rather than collapsing into a single lookup, because
+		 * the next per-placement number goes in here. */
 		$map = [
-			'hub_preview_max' => 'hubPreviewMax',
-			'now_names_max'   => 'nowNamesMax',
-			'month_art_max'   => 'monthArtMax',
-			'sticky_offset'   => 'stickyOffset',
+			'sticky_offset' => 'stickyOffset',
 		];
 		$out = [];
 		foreach ( $map as $key => $js ) {
@@ -89,14 +89,9 @@ final class Canal_Render {
 				'title'           => '',
 				// Per-placement overrides; null means this placement said
 				// nothing and the site-wide setting stands.
-				'hub_preview_max' => null,
-				'now_names_max'   => null,
-				'month_art_max'   => null,
 				'sticky_offset'   => null,
 				'search'          => null,
 				'subnav'          => null,
-				'compact_btn'     => null,
-				'view'            => null,
 				'deck_rows'       => null,
 			]
 		);
@@ -138,8 +133,6 @@ final class Canal_Render {
 				 */
 				'search'        => Guide_Data::resolve( $opts['search'], 'show_search' ),
 				'subnav'        => $opts['subnav'],
-				'compact_btn'   => $opts['compact_btn'],
-				'view_override' => $opts['view'],
 				'rows_override' => $opts['deck_rows'],
 			]
 		);
@@ -304,69 +297,57 @@ final class Canal_Render {
 			'window.DCC_WL_CANAL = ' . wp_json_encode(
 				[
 					/*
-					 * The hub's own tunables (1.32.0). Kept here rather than in
-					 * the guide's config because these three only mean anything
-					 * on the hub: how many species the Wildlife tile names, how
-					 * many the "right now" line names, and how many are drawn
-					 * on a month tile.
+					 * ONE TUNABLE LEFT (1.44.0). The hub's three preview caps
+					 * went with the hub. `stickyOffset` belongs here and not
+					 * in the guide's config: canal.js is its only reader.
 					 */
 					'set'  => [
-						'hubPreviewMax' => Guide_Data::num( 'hub_preview_max' ),
-						'nowNamesMax'   => Guide_Data::num( 'now_names_max' ),
-						'monthArtMax'   => Guide_Data::num( 'month_art_max' ),
-						// The level bar's top offset. It belongs here, not in
-						// the guide's config: the bar is the hub's, and canal.js
-						// is the only reader.
-						'stickyOffset'  => Guide_Data::num( 'sticky_offset' ),
+						'stickyOffset' => Guide_Data::num( 'sticky_offset' ),
 					],
+					/*
+					 * AND THE STRING TABLE IS EMPTY NOW. Kept as a key rather
+					 * than dropped: canal.js reads `CFG.i18n || {}`, and the
+					 * next string this file needs goes here.
+					 */
 					'i18n' => [
-						'now'        => __( 'now', 'dcc-wildlife' ),
-
 						/*
-						 * How old a reading is, in the shortest words that
-						 * still read as English.
+						 * THE AGE WORDS ARE GONE (1.44.0), AND THE NOTE THAT
+						 * KEPT THEM IN THIS RELEASE'S FIRST INCREMENT WAS
+						 * WRONG — corrected after the suite failed on it.
 						 *
-						 * These lived ONLY in the water module's config, and
-						 * canal.js fell back to hardcoded 'today' / 'd' / 'mo'
-						 * / 'y' when it was absent. On a hub page with the
-						 * water section switched off — or auto-hidden because
-						 * nothing was gated through — that fallback is what
-						 * shipped, so the strings bypassed LocoTranslate
-						 * entirely and could not be translated at all. The hub
-						 * carries them itself now.
+						 * They were added to the HUB's table in 1.33.0 for a
+						 * good reason: canal.js formatted a reading's age for
+						 * the Water preview tile, those words lived ONLY in
+						 * the water module's config, and on a page where the
+						 * water section was off or auto-hidden canal.js fell
+						 * through to hardcoded 'today' / 'd' / 'mo' / 'y' —
+						 * strings LocoTranslate never sees and therefore
+						 * cannot translate at all.
+						 *
+						 * Rob removed the hub, so `ageWords()` went with the
+						 * preview it served and canal.js formats nothing. An
+						 * earlier comment here claimed the age words stay
+						 * "because the sheet's water cards still read them".
+						 * THEY DO NOT: water.js and water-map.js read
+						 * `DCC_WL_WATER.i18n`, which Water_Render emits and
+						 * which is untouched. These were a second copy with
+						 * exactly one reader, and that reader is gone.
 						 */
-						/* translators: shown instead of an age when a reading is from today. */
-						'ageToday'   => __( 'today', 'dcc-wildlife' ),
-						/* translators: days, appended to a number with no space, e.g. "12d". Keep it very short. */
-						'ageDays'    => __( 'd', 'dcc-wildlife' ),
-						/* translators: months, appended to a number with no space, e.g. "6mo". Keep it very short. */
-						'ageMonths'  => __( 'mo', 'dcc-wildlife' ),
-						/* translators: years, appended to a number with no space, e.g. "3y". Keep it very short. */
-						'ageYears'   => __( 'y', 'dcc-wildlife' ),
-						/* translators: %s: a month name. */
-						'monthAria'  => __( 'Wildlife in %s', 'dcc-wildlife' ),
-						/* translators: %d: number of species at peak. */
-						/* translators: %d: number of species at peak. Still used by
-						   the month picker's own tiles; the navigation-bar chip that
-						   also used it was removed in 1.27.0. */
-						'atPeak'     => __( '%d at peak', 'dcc-wildlife' ),
-						/* translators: 1: month name, 2: e.g. "15 at peak". */
-						'monthChipAria' => __( '%1$s, %2$s. Choose a different month.', 'dcc-wildlife' ),
-						/* translators: %d: number of species worth looking for. */
-						'toSpot'     => __( '%d to spot', 'dcc-wildlife' ),
-						'quiet'      => __( 'a quiet month', 'dcc-wildlife' ),
-						/* translators: %s: month name — the Wildlife tile's preview. */
-						/* hubMonth wrapped the wildlife preview in its month. Since
-						   1.29.0 subSpot names the month itself, so nothing reads
-						   this; kept out of the payload rather than left to be
-						   wired back in by accident. */
-						/* translators: joins the last two items of a list, e.g. "April and May". */
-						'and'        => __( 'and', 'dcc-wildlife' ),
-						/* translators: 1: a month name, 2: number of species at peak. */
-						'yearBestOne' => __( '%1$s is the canal’s fullest month — %2$d species at their peak.', 'dcc-wildlife' ),
-						/* translators: 1: a list of month names, 2: number of species at peak. */
-						'yearBest'   => __( '%1$s are the canal’s fullest months — %2$d species at their peak.', 'dcc-wildlife' ),
-
+						/*
+						 * THE MONTH-PICKER AND HUB-PREVIEW STRINGS ARE GONE
+						 * (1.44.0): `monthAria`, `atPeak`, `monthChipAria`,
+						 * `toSpot`, `quiet`, `and`, `yearBestOne`, `yearBest`
+						 * and `now`. Every one of them was composed by a
+						 * builder in canal.js that Rob's removal of the hub
+						 * left with nothing to build, and those builders are
+						 * deleted rather than left unreachable. Dropping the
+						 * strings with them is what stops a translator being
+						 * asked for a sentence nothing can ever print.
+						 *
+						 * The age words stay: the sheet's water cards still
+						 * read them, and the reason they live here rather
+						 * than only in the water module's config is above.
+						 */
 					],
 				]
 			) . ';',

@@ -32,41 +32,21 @@
 	'use strict';
 
 	var CFG = window.DCC_WL_CANAL || {};
-	var I18N = CFG.i18n || {};
 
-	/* Hub tunables (1.32.0). Every fallback is the number that was hard-coded
-	 * before, so a cached page served during an upgrade behaves as it did. A
-	 * cap of 0 is legitimate — "name none of them" is a real choice — so only a
-	 * missing or non-numeric value falls back. */
+	/*
+	 * THE HUB'S TUNABLES AND ITS DOM HELPERS ARE BOTH GONE (1.44.0).
+	 *
+	 * `monthArtMax`, `hubPreviewMax` and `nowNamesMax` sized the month
+	 * tiles' sprite art and the two hub preview lines; `el()` and `fmt()`
+	 * built them, and `cap()` read them. Rob removed the hub, so this file
+	 * builds no elements and composes no sentences — it switches two panels
+	 * and reads one deep link. The three caps are retired in Guide_Data
+	 * rather than left readable here: a cap with nothing to cap is a setting
+	 * that does nothing.
+	 *
+	 * `SET` stays, because `stickyOffset` is still a real setting.
+	 */
 	var SET = CFG.set || {};
-
-	function cap(key, fallback) {
-		var v = parseInt(SET[key], 10);
-		return isNaN(v) || v < 0 ? fallback : v;
-	}
-
-	/* Site-wide values. A single placement can override any of them on its own
-	 * root element, which initCanal reads below — the shared config cannot carry
-	 * a per-placement value because it is emitted once per page. */
-	var MONTH_ART_MAX_SITE = cap('monthArtMax', 3);
-	var HUB_PREVIEW_MAX_SITE = cap('hubPreviewMax', 5);
-	var NOW_NAMES_MAX_SITE = cap('nowNamesMax', 2);
-
-	function el(tag, cls, text) {
-		var n = document.createElement(tag);
-		if (cls) { n.className = cls; }
-		if (text !== undefined && text !== null) { n.textContent = text; }
-		return n;
-	}
-
-	function fmt(template) {
-		var args = Array.prototype.slice.call(arguments, 1);
-		var auto = 0;
-		return String(template).replace(/%(\d+\$)?[sd]/g, function (m, pos) {
-			var idx = pos ? parseInt(pos, 10) - 1 : auto++;
-			return String(args[idx]);
-		});
-	}
 
 	/* Canal time, not the visitor's — the same rule the countdown follows.
 	 * A guest in Berlin looking at a Florida canal wants Florida's month. */
@@ -82,57 +62,6 @@
 		}
 	}
 
-	/* Species counts for a month, straight from the bundled calendar. */
-	function monthCounts(m) {
-		var w = window.DCC_WL_CFG;
-		if (!w || !Array.isArray(w.species)) { return null; }
-
-		/* The thresholds come from the GUIDE's config, not the hub's, because
-		 * widget.js counts with the same two numbers and the hub's tile must
-		 * agree with the panel header it leads to. 1.32.0 hard-coded 2 and 3
-		 * here while widget.js read the settings, so changing either setting
-		 * would have made those two surfaces disagree on the same page. */
-		var set = w.set || {};
-		var spotMin = parseInt(set.spotlightMin, 10);
-		var peakMin = parseInt(set.peakScore, 10);
-		if (isNaN(spotMin) || spotMin < 1) { spotMin = 2; }
-		if (isNaN(peakMin) || peakMin < 1) { peakMin = 3; }
-
-		var peak = 0, spot = 0;
-		w.species.forEach(function (s) {
-			// A warning list, not a count (1.19.0) — and since 1.33.0 the
-			// question is `haz`, resolved server-side, not the group. The
-			// group test counted the alligator, so the hub's number could
-			// exceed the number of tiles Peak Now then showed.
-			if (s.haz) { return; }
-			var v = (s.months && s.months[m]) || 0;
-			if (v >= spotMin) { spot += 1; }
-			if (v >= peakMin) { peak += 1; }
-		});
-		return { peak: peak, spot: spot };
-	}
-
-	function monthPreview(m) {
-		var c = monthCounts(m);
-		if (!c) { return ''; }
-		if (c.peak > 0) { return fmt(I18N.atPeak || '%d at peak', c.peak); }
-		if (c.spot > 0) { return fmt(I18N.toSpot || '%d to spot', c.spot); }
-		return I18N.quiet || '';
-	}
-
-	/* The water module announces its facts once, whenever its existing
-	 * fetch resolves — which can land either side of a canal initialising.
-	 * So listen at module level, keep the last announcement, and replay it
-	 * to any canal that shows up afterwards. Order-independent by
-	 * construction rather than by luck. */
-	var lastWaterFacts = null;
-	var waterListeners = [];
-
-	document.addEventListener('dccwl:water-facts', function (e) {
-		lastWaterFacts = (e.detail && e.detail.facts) || [];
-		waterListeners.forEach(function (fn) { fn(lastWaterFacts); });
-	});
-
 	function initCanal(root) {
 		if (root.getAttribute('data-dccwl-canal-init')) { return; }
 		root.setAttribute('data-dccwl-canal-init', '1');
@@ -141,14 +70,6 @@
 		var own = {};
 		try { own = JSON.parse(root.getAttribute('data-dccwl-canal') || '{}') || {}; } catch (e) { own = {}; }
 
-		function ownCap(key, site) {
-			var v = parseInt(own[key], 10);
-			return isNaN(v) || v < 0 ? site : v;
-		}
-
-		var MONTH_ART_MAX = ownCap('monthArtMax', MONTH_ART_MAX_SITE);
-		var HUB_PREVIEW_MAX = ownCap('hubPreviewMax', HUB_PREVIEW_MAX_SITE);
-		var NOW_NAMES_MAX = ownCap('nowNamesMax', NOW_NAMES_MAX_SITE);
 
 		var panels = {};
 		root.querySelectorAll('[data-dccwl-panel]').forEach(function (p) {
@@ -186,11 +107,12 @@
 				}));
 			} catch (err) { /* very old browsers: the panel just keeps its tab */ }
 
-			// The timeline cannot centre itself while its panel is hidden
-			// (offsetLeft is 0), so nudge it once it is on screen.
-			if (level === 'species' && speciesRoot && window.DCCWL_Widget) {
-				window.DCCWL_Widget.recenter(speciesRoot);
-			}
+			/* THE RECENTRE NUDGE IS GONE WITH THE STRIP IT EXISTED FOR.
+			 * The twelve-month strip could not centre its chosen pill while
+			 * its panel was hidden (offsetLeft reads 0), so this called
+			 * recenter() on every show. Month is a MENU now — there is
+			 * nothing to centre, and `centerMonth` was also the single
+			 * biggest cost in a profiled tap (419 ms). See widget.js. */
 
 			if (focusIt !== false) {
 				// Focus the panel itself: a screen reader then reads its
@@ -220,245 +142,6 @@
 			show(level);
 			syncViewLabel();
 		}
-
-		/* ---------- the month picker ---------- */
-
-		var monthTiles = [];
-
-		/* `explicit` is threaded through to the widget: the month a visitor
-		 * PICKS filters the category tabs, the canal-time month the page opens
-		 * on does not (1.28.0). */
-		function setMonth(m, drive, explicit) {
-			state.month = m;
-			monthTiles.forEach(function (t, i) {
-				t.setAttribute('aria-pressed', i === m ? 'true' : 'false');
-				t.classList.toggle('dccwl-month-tile-on', i === m);
-			});
-			// The existing widget owns every month behaviour — headline,
-			// spotlight, timeline, guide chips. Drive it; never re-implement.
-			if (drive !== false && speciesRoot && window.DCCWL_Widget) {
-				window.DCCWL_Widget.setMonth(speciesRoot, m, explicit);
-			}
-		}
-
-		function buildMonths() {
-			var list = root.querySelector('[data-dccwl-month-tiles]');
-			if (!list || !Array.isArray(wCfg.monthsFull)) { return; }
-			var now = canalMonth();
-
-			wCfg.monthsFull.forEach(function (name, m) {
-				var li = el('li');
-				var t = el('button', 'dccwl-month-tile');
-				t.type = 'button';
-				t.setAttribute('aria-pressed', m === state.month ? 'true' : 'false');
-				/* The aria-label REPLACES the tile's text for a screen reader, so it
-				 * must carry the count too — labelling it "Wildlife in January" alone
-				 * hid the one thing the tile exists to say. */
-				var prevText = monthPreview(m);
-				t.setAttribute('aria-label',
-					fmt(I18N.monthAria || '%s', name) + (prevText ? ', ' + prevText : ''));
-				if (m === state.month) { t.classList.add('dccwl-month-tile-on'); }
-				if (m === now) {
-					t.classList.add('dccwl-month-tile-now');
-				}
-
-				t.appendChild(el('span', 'dccwl-month-name', name));
-				if (prevText) { t.appendChild(el('span', 'dccwl-month-preview', prevText)); }
-
-				/* The species that actually peak in this month, so the picker
-				 * reads as THE CANAL YEAR rather than twelve numbers — you can
-				 * see the rhythm and pick when to come. Decorative: the count
-				 * above carries the meaning, so the art is aria-hidden. Same
-				 * bundled calendar, same peakFor() the spotlight uses. */
-				if (window.DCCWL_Widget) {
-					var art = el('span', 'dccwl-month-art');
-					art.setAttribute('aria-hidden', 'true');
-					window.DCCWL_Widget.peakFor(m).slice(0, MONTH_ART_MAX).forEach(function (sp) {
-						if (!sp.sprite) { return; }
-						art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-month-sprite'));
-					});
-					if (art.childNodes.length) { t.appendChild(art); }
-				}
-
-				if (m === now) {
-					t.appendChild(el('span', 'dccwl-month-now', I18N.now || 'now'));
-				}
-
-				t.addEventListener('click', function () {
-					setMonth(m, undefined, true);
-					/* Step BACK out of the picker rather than forward into a
-					 * second species entry (1.23.0). The picker is a detour off
-					 * the species list: once a month is chosen it should not be
-					 * behind you, or Back from the list reopens the picker you
-					 * just finished with. Leaving by the same door you came in
-					 * keeps the stack [hub, species], so Back then goes home. */
-					back();
-				});
-				li.appendChild(t);
-				list.appendChild(li);
-				monthTiles.push(t);
-			});
-		}
-
-		/* "April and May are the canal's fullest months" — the one line that
-		 * turns twelve tiles into a plan. Computed here from the same bundled
-		 * calendar the tiles use (never server-rendered, so a cached page
-		 * cannot state a stale month), and it stays silent rather than saying
-		 * something useless when the year has no clear peak. */
-		function fillYearNote() {
-			var node = root.querySelector('[data-dccwl-year-note]');
-			if (!node || !Array.isArray(wCfg.monthsFull)) { return; }
-
-			var best = -1, months = [];
-			for (var m = 0; m < 12; m++) {
-				var c = monthCounts(m);
-				if (!c) { return; }
-				if (c.peak > best) { best = c.peak; months = [ m ]; }
-				else if (c.peak === best) { months.push(m); }
-			}
-			// No peaks at all, or so many months tie that "fullest" means
-			// nothing: say nothing.
-			if (best <= 0 || !months.length || months.length > 3) { return; }
-
-			var names = months.map(function (m) { return wCfg.monthsFull[m]; });
-			var list = names.length === 1
-				? names[0]
-				: names.slice(0, -1).join(', ') + ' ' + (I18N.and || 'and') + ' ' + names[names.length - 1];
-
-			node.textContent = fmt(
-				months.length === 1
-					? (I18N.yearBestOne || '%1$s is the fullest month — %2$d species at their peak.')
-					: (I18N.yearBest || '%1$s are the fullest months — %2$d species at their peak.'),
-				list, best
-			);
-		}
-
-		/* ---------- hub previews ---------- */
-
-		function fillWildlifePreview() {
-			var node = root.querySelector('[data-dccwl-preview="wildlife"]');
-			if (!node || !Array.isArray(wCfg.species)) { return; }
-			var m = canalMonth();
-			var c = monthCounts(m);
-			var i = wCfg.i18n || {};
-			// 1.27.0: no peak ranking in the subline. See widget.js.
-			// subSpot names the month itself since 1.29.0, so the hub card must
-			// NOT wrap it in the month again — that read "36 at their best in
-			// September in September".
-			node.textContent = fmt(i.subSpot, c.spot, (wCfg.monthsFull && wCfg.monthsFull[m]) || '');
-
-			// Show the species the line is counting. Decorative — the sentence
-			// above carries the meaning, so the art is aria-hidden — but it
-			// gives the tile something to look at besides a number.
-			var art = root.querySelector('[data-dccwl-hub-art="wildlife"]');
-			if (!art || !window.DCCWL_Widget) { return; }
-			art.textContent = '';
-			/* All three rungs, and no species skipped: this used to call
-			 * sprite() and drop anything without a drawing, so the art showed
-			 * a subset of what the line above it was counting. (1.33.0) */
-			var peak = window.DCCWL_Widget.peakFor(m).slice(0, HUB_PREVIEW_MAX);
-			peak.forEach(function (sp) {
-				art.appendChild(window.DCCWL_Widget.art
-					? window.DCCWL_Widget.art(sp, 'dccwl-hub-sprite')
-					: window.DCCWL_Widget.sprite(sp.id, 'dccwl-hub-sprite'));
-			});
-		}
-
-		/* The Water preview is built ONLY from facts the water module already
-		 * passed its own gate — label + value, nothing derived, nothing
-		 * invented. No facts (fetch failed, everything stale-gated, nothing
-		 * sourced) leaves the tile showing its name alone, which is the same
-		 * silence the module itself keeps. */
-		function fillWaterPreview(facts) {
-			var node = root.querySelector('[data-dccwl-preview="water"]');
-			var tile = root.querySelector('[data-dccwl-water-tile]');
-			if (!node) { return; }
-			/* "Checking the canal…" has served its purpose the moment an answer
-			 * arrives — including the answer "nothing". The attribute goes with
-			 * the text, because the CSS reserves the line's height from it and
-			 * a reserved line under real content is a gap. (1.33.0) */
-			node.removeAttribute('data-dccwl-loading');
-
-			var usable = (facts || []).filter(function (f) {
-				return f && f.label && f.value && f.sourceName && f.group !== 'chain';
-			});
-			if (!usable.length) {
-				node.textContent = '';
-				// A live-only water section that got nothing has no content to
-				// show, so the tile would be a dead end: drop it.
-				if (tile && panels.water && panels.water.querySelector('[data-dccwl-water-root]') &&
-					panels.water.querySelector('[data-dccwl-water-root]').hidden) {
-					var li = tile.parentNode;
-					if (li && li.parentNode) { li.parentNode.removeChild(li); }
-				}
-				return;
-			}
-			var shown = usable.slice(0, NOW_NAMES_MAX);
-			node.textContent = shown.map(function (f) { return f.value; }).join(' · ');
-
-			// Provenance at a glance, exactly as the water cards do it: the
-			// source name and how old the reading is. Nothing derived.
-			var art = root.querySelector('[data-dccwl-hub-art="water"]');
-			if (!art) { return; }
-			art.textContent = '';
-			shown.forEach(function (f) {
-				var chip = el('span', 'dccwl-metachip dccwl-hub-chip');
-				chip.appendChild(el('span', 'dccwl-hub-chip-src', f.sourceName));
-				var age = ageWords(f.date, f.datePrecision);
-				if (age) {
-					chip.appendChild(el('span', 'dccwl-card-dot', '·'));
-					chip.appendChild(el('span', 'dccwl-card-age', age));
-				}
-				art.appendChild(chip);
-			});
-		}
-
-		/* Age in chip-sized words, from the MEASUREMENT date the fact carried.
-		 * Mirrors water.js so the hub and the cards can never disagree; returns
-		 * '' when the date will not parse rather than guessing. */
-		function ageWords(iso, precision) {
-			if (!iso) { return ''; }
-			var bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso).trim());
-			var then = bare ? new Date(+bare[1], +bare[2] - 1, +bare[3]) : new Date(iso);
-			if (isNaN(then.getTime())) { return ''; }
-			var days = Math.floor((Date.now() - then.getTime()) / 86400000);
-			if (days < 0) { return ''; }
-			/* The hub's OWN table first. These words used to come only from
-			 * the water module's config, so on a page where the water section
-			 * is off or auto-hidden the code fell through to English literals
-			 * that LocoTranslate never sees. The water table is still read as
-			 * a second source so a translation already entered there keeps
-			 * working. */
-			var w = I18N;
-			var wtr = (window.DCC_WL_WATER && window.DCC_WL_WATER.i18n) || {};
-			function word(key, fallback) {
-				return w[key] || wtr[key] || fallback;
-			}
-			if (days === 0) { return word('ageToday', 'today'); }
-			if (days < 45) { return days + word('ageDays', 'd'); }
-			if (days < 730) { return Math.round(days / 30) + word('ageMonths', 'mo'); }
-			return Math.round(days / 365) + word('ageYears', 'y');
-		}
-
-		// water.js announces what its existing fetch returned; this file
-		// never calls the REST route itself.
-		waterListeners.push(fillWaterPreview);
-		if (lastWaterFacts) { fillWaterPreview(lastWaterFacts); }
-		/*
-		 * A PROMISE WITH A DEADLINE (1.33.0).
-		 *
-		 * "Checking the canal…" is only honest while something is actually
-		 * checking. The water module announces its facts whether the fetch
-		 * succeeds or fails, so the normal paths both clear it — but if the
-		 * module is switched off after this tile was cached, or its script
-		 * never loads at all, nothing would ever announce and the card would
-		 * promise a check that is not happening. Twelve seconds, then it says
-		 * what an empty answer says.
-		 */
-		setTimeout(function () {
-			var node = root.querySelector('[data-dccwl-preview="water"]');
-			if (node && node.getAttribute('data-dccwl-loading')) { fillWaterPreview([]); }
-		}, 12000);
 
 		/* ---------- wiring ---------- */
 
@@ -545,14 +228,12 @@
 			syncViewLabel();
 		}
 
-		root.querySelectorAll('[data-dccwl-go]').forEach(function (btn) {
-			btn.addEventListener('click', function () {
-				go(btn.getAttribute('data-dccwl-go'), btn);
-			});
-		});
-		root.querySelectorAll('[data-dccwl-back]').forEach(function (btn) {
-			btn.addEventListener('click', back);
-		});
+		/* `[data-dccwl-go]` and `[data-dccwl-back]` ARE GONE WITH THE HUB.
+		 * They drove the two hub doors and the Back bar. `back` itself was
+		 * deleted with the level machinery, so the second of these bound an
+		 * identifier that no longer existed — harmless only because the
+		 * selector matched nothing. The view dropdown above is the whole of
+		 * the navigation now. */
 
 		/* ---------- sticky offset (1.18.1) ----------
 		 * The level bar is position: sticky; top: var(--dccwl-sticky-offset).
@@ -632,17 +313,6 @@
 			queueSticky();
 		}
 
-		/* The month picker's entry point moved to the footnote row in 1.27.0,
-		 * beside the field guide and the photo credits. The chip that used to
-		 * open it is gone from the navigation bar, and this link is the ONLY
-		 * way into that panel — go('month') appears nowhere else. It ships
-		 * hidden because the panel lives in this hub app: a standalone
-		 * [dcc_wildlife] has nothing to open, so the control must not exist
-		 * there. Unhiding it here is what makes it real. */
-		root.querySelectorAll('[data-dccwl-monthlink]').forEach(function (link) {
-			link.hidden = false;
-		});
-
 		/* A month named in the URL still lands on that month (1.23.0).
 		 * READ ONLY, and read here rather than on the server: the page is
 		 * cached, so PHP must never see a month. Accepts a number (1-12) or a
@@ -671,13 +341,33 @@
 			return null;
 		}
 
-		buildMonths();
-		fillYearNote();
-		fillWildlifePreview();
-		// A month named in the URL IS an explicit choice; the default is not.
+		/* A month named in the URL IS an explicit choice, and it still lands
+		 * on that month — the Month ▾ chip in widget.js is what shows it now,
+		 * and widget.js syncs the chip's label from setMonth(), so one deep
+		 * link sets the filter and the label together. The default month is
+		 * not a choice and does not filter (1.28.0). */
+		/*
+		 * A MONTH IN THE URL OPENS WILDLIFE, NOT WATER.
+		 *
+		 * The default view is Water (1.44.0, Rob's pick). A link that names a
+		 * month is asking for the species list in that month, so it has to
+		 * override the default — otherwise `#canal-month=april` lands on the
+		 * chain map and the month it asked for is three taps away, filtered
+		 * but invisible. The Director's brief states this directly: "A link
+		 * to a month or a flag opens Wildlife with that filter applied."
+		 *
+		 * READ ONLY, and read HERE rather than on the server: the page is
+		 * cached, so PHP must never see a month (the oldest rule in this
+		 * plugin). Nothing writes it back — the view switch owns no history
+		 * now, and a second writer there fought the Back button in 1.23.0.
+		 */
 		var deep = monthFromUrl();
-		setMonth(null === deep ? state.month : deep, undefined, null !== deep);
-		show(DEFAULT_VIEW, false);
+		if (null !== deep && speciesRoot && window.DCCWL_Widget) {
+			state.month = deep;
+			window.DCCWL_Widget.setMonth(speciesRoot, deep, true);
+		}
+		show(null === deep ? DEFAULT_VIEW : 'species', false);
+		syncViewLabel();
 	}
 
 	function initAll() {

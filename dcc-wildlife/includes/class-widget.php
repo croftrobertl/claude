@@ -165,20 +165,9 @@ class Widget extends \Elementor\Widget_Base {
 			$this->add_control( $id, Guide_Data::three_way( $label ) );
 		}
 
-		$this->add_control(
-			'ov_view',
-			[
-				'label'   => __( 'Species list opens as', 'dcc-wildlife' ),
-				'type'    => \Elementor\Controls_Manager::SELECT,
-				'default' => '',
-				'options' => [
-					''        => __( 'Use the setting', 'dcc-wildlife' ),
-					'deck'    => __( 'Photo cards', 'dcc-wildlife' ),
-					'compact' => __( 'Short rows', 'dcc-wildlife' ),
-				],
-			]
-		);
-
+		/* 'ov_view' RETIRED IN 1.44.0 with the Compact switch: there is one
+		 * species list now, so "which view it opens as" has one answer. The
+		 * stored key is harmless — nothing reads it. */
 		$this->add_control(
 			'ov_deck_rows',
 			Guide_Data::number_control( __( 'Rows per page of cards, on a phone', 'dcc-wildlife' ), 'deck_rows' )
@@ -197,7 +186,6 @@ class Widget extends \Elementor\Widget_Base {
 			'ov_spotlight'   => __( "This month's spotlight", 'dcc-wildlife' ),
 			'ov_search'      => __( 'Search box', 'dcc-wildlife' ),
 			'ov_subnav'      => __( 'Category picker', 'dcc-wildlife' ),
-			'ov_compact_btn' => __( '"Compact" button', 'dcc-wildlife' ),
 		];
 	}
 
@@ -226,8 +214,6 @@ class Widget extends \Elementor\Widget_Base {
 				'spotlight'     => Guide_Data::resolve( $settings['ov_spotlight'] ?? '', 'show_spotlight' ),
 				'search'        => Guide_Data::resolve( $settings['ov_search'] ?? '', 'show_search' ),
 				'subnav'        => $settings['ov_subnav'] ?? null,
-				'compact_btn'   => $settings['ov_compact_btn'] ?? null,
-				'view_override' => $settings['ov_view'] ?? null,
 				'rows_override' => $settings['ov_deck_rows'] ?? null,
 			]
 		);

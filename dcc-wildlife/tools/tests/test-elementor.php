@@ -134,8 +134,8 @@ dcc_section( 'per-placement overrides (1.32.0)' );
  * a deliberate edit to this line, exactly as a new one must.
  */
 $expected_overrides = [
-	'dccwl_month'  => [ 'ov_spotlight', 'ov_search', 'ov_subnav', 'ov_compact_btn', 'ov_view', 'ov_deck_rows' ],
-	'dccwl_canal'  => [ 'ov_search', 'ov_subnav', 'ov_compact_btn', 'ov_view', 'ov_deck_rows', 'ov_hub_preview_max', 'ov_now_names_max', 'ov_month_art_max', 'ov_sticky_offset' ],
+	'dccwl_month'  => [ 'ov_spotlight', 'ov_search', 'ov_subnav', 'ov_deck_rows' ],
+	'dccwl_canal'  => [ 'ov_search', 'ov_subnav', 'ov_deck_rows', 'ov_sticky_offset' ],
 	'dccwl_water'  => [ 'ov_moon', 'ov_fishing', 'ov_map_button' ],
 ];
 
@@ -200,9 +200,6 @@ $schema = \DCC_WL\Guide_Data::schema();
 $pairs = [
 	'dccwl_month.ov_deck_rows'        => 'deck_rows',
 	'dccwl_canal.ov_deck_rows'        => 'deck_rows',
-	'dccwl_canal.ov_hub_preview_max'  => 'hub_preview_max',
-	'dccwl_canal.ov_now_names_max'    => 'now_names_max',
-	'dccwl_canal.ov_month_art_max'    => 'month_art_max',
 	'dccwl_canal.ov_sticky_offset'    => 'sticky_offset',
 ];
 foreach ( $pairs as $path => $key ) {

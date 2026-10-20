@@ -160,8 +160,12 @@ const pickInfo = await page.evaluate(() => {
   const opts = Array.from(nav.querySelectorAll('.dccwl-pick-opt'));
   return {
     hidden: nav.hidden,
-    toolsHidden: nav.querySelector('[data-dccwl-subtools]').hidden,
     listHidden: nav.querySelector('[data-dccwl-pick-list]').hidden,
+    /* THE PILL SHARES ONE ROW WITH MONTH AND THE BADGE KEY (1.44.0), so
+     * what used to be "did the script unhide the Compact switch" is now
+     * "is this pill inside the one chip row". A pill rendered outside it
+     * would read as a second control strip. */
+    inChipRow: !!nav.closest('[data-dccwl-chiprow]'),
     label: btn.textContent.replace(/\s+/g, ' ').trim(),
     labels: opts.map((o) => o.querySelector('.dccwl-pick-opt-name').textContent.trim()),
     slugs: opts.map((o) => o.getAttribute('data-dccwl-browse')),
@@ -173,7 +177,7 @@ const pickInfo = await page.evaluate(() => {
 
 check(!pickInfo.error, 'the Animals sub-nav is rendered', pickInfo.error || '');
 checkSame(false, pickInfo.hidden, 'it is visible with its tab');
-checkSame(false, pickInfo.toolsHidden, 'the script unhid the Compact switch');
+checkSame(true, pickInfo.inChipRow, 'and it sits inside the one chip row');
 checkSame(true, pickInfo.listHidden, 'and the list starts closed');
 check(/Show:\s*All/.test(pickInfo.label), 'the pill reads "Show: All"', pickInfo.label);
 note(`categories: ${pickInfo.labels.join(' | ')}`);
@@ -282,72 +286,137 @@ check(new RegExp(`of ${ANIMALS}$`).test(allState.status) || allState.status.incl
 checkAtMost(4, allState.scrollLeft, 'with the deck back at the start');
 check(/Show:\s*All/.test(allState.pill), 'and the pill reading All again', allState.pill);
 
-section('compact rows hold the same species, at the same reach');
+/* ======================================================================
+ * THE MONTH MENU (1.44.0), WHICH REPLACED BOTH THE COMPACT SWITCH'S SLOT
+ * ON THIS ROW AND THE PEAK NOW TAB.
+ *
+ * The section this replaces drove the Compact switch — that control is
+ * gone, and so is the compact list, so its assertions are RETIRED rather
+ * than inverted: there is no second view left to be wrong about. (The one
+ * claim worth keeping from it, that the pager's line reports what is
+ * actually shown rather than a window that is not there, is already
+ * asserted by the wrap-when-everything-fits section above.)
+ *
+ * What is asserted here is the contract the menu has to keep, and each of
+ * these is a rule from this file's history rather than a new idea:
+ *
+ *  - "Any Month" is the DEFAULT and filters nothing (1.28.0 — an invisible
+ *    month filter once put seven winter species out of reach);
+ *  - a named month filters, and SAFETY IS NEVER MONTH-FILTERED (same rule);
+ *  - "This Month" is what Peak Now did, and EXCLUDES HAZARDS (1.33.0);
+ *  - the label always reads the choice, which is what makes the filter
+ *    visible and is the whole answer to the 1.28.0 defect.
+ * ====================================================================== */
+section('the Month menu: Any Month filters nothing, a month filters, the label says which');
 
-await page.click('[data-dccwl-subnav="animals"] [data-dccwl-view]');
-await page.waitForTimeout(250);
-
-const compact = await page.evaluate(() => {
-  const grid = Array.from(document.querySelectorAll('.dccwl-guide-grid'))
-    .find((d) => d.offsetParent !== null || d.getClientRects().length);
-  const lis = Array.from(grid.children).filter((li) => !li.hidden);
-  const boxes = lis.map((li) => li.getBoundingClientRect());
-  const tiles = lis.map((li) => li.querySelector('.dccwl-tile').getBoundingClientRect());
-  const nav = grid.nextElementSibling;
-  const toggle = document.querySelector('[data-dccwl-view]');
+const monthStart = await page.evaluate(() => {
+  const pick = document.querySelector('[data-dccwl-monthpick]');
+  if (!pick) { return { error: 'no month menu' }; }
+  const grid = document.querySelector('.dccwl-guide-grid[data-dccwl-group="animals"]');
   return {
-    isCompact: grid.classList.contains('dccwl-compact-list'),
-    count: lis.length,
-    focusable: lis.filter((li) => li.querySelector('button')).length,
-    deckNavHidden: nav && nav.classList.contains('dccwl-deck-nav') ? nav.hidden : null,
-    pagerHidden: nav ? ['.dccwl-deck-prev', '.dccwl-deck-next']
-      .map((s) => { const b = nav.querySelector(s); return b ? b.hidden : null; }) : null,
-    status: nav ? (nav.querySelector('.dccwl-deck-status') || {}).textContent : null,
-    minTileHeight: Math.round(Math.min(...tiles.map((b) => b.height))),
-    columns: new Set(boxes.map((b) => Math.round(b.left))).size,
-    overflowX: grid.scrollWidth - grid.clientWidth,
-    toggleLabel: toggle.textContent.trim(),
-    togglePressed: toggle.getAttribute('aria-pressed'),
+    label: pick.querySelector('[data-dccwl-monthlabel]').textContent.trim(),
+    listHidden: pick.querySelector('[data-dccwl-monthmenu]').hidden,
+    options: Array.from(pick.querySelectorAll('[data-dccwl-month]'))
+      .map((o) => o.getAttribute('data-dccwl-month')),
+    selected: Array.from(pick.querySelectorAll('li[aria-selected="true"] [data-dccwl-month]'))
+      .map((o) => o.getAttribute('data-dccwl-month')),
+    shown: Array.from(grid.children).filter((li) => !li.hidden).length,
   };
 });
+check(!monthStart.error, 'the Month menu is rendered', monthStart.error || '');
+checkSame('Any Month', monthStart.label, 'it opens reading "Any Month"');
+checkSame(true, monthStart.listHidden, 'with its list closed');
+checkSame(14, monthStart.options.length, 'fourteen options: Any, This Month and twelve months');
+checkSame(['any'], monthStart.selected, 'and Any Month marked as the choice');
+checkSame(ANIMALS, monthStart.shown, 'Any Month shows every animal — it filters nothing');
 
-note(`compact: ${compact.count} rows in ${compact.columns} column(s), shortest card ${compact.minTileHeight}px, toggle now "${compact.toggleLabel}"`);
-check(compact.isCompact, 'the grid switches to the compact list');
-checkSame(ANIMALS, compact.count, 'every species is still there');
-checkSame(ANIMALS, compact.focusable, 'and every one is still a button');
-checkSame(1, compact.columns, 'they are laid out in a single column');
-/*
- * 1.33.0 changed this contract on the owner's instruction: the line must report
- * what is ACTUALLY SHOWN. There is no window in a vertical list, so "1-6 of 38"
- * was false twice — it named a six-tile window that does not exist and implied
- * the other 32 were elsewhere. The PAGING buttons go; the line stays and counts.
- */
-checkSame([true, true], compact.pagerHidden, 'the paging buttons are withdrawn, since there is no deck to page');
-checkSame(false, compact.deckNavHidden, 'but the status line stays, because it still has something true to say');
-checkSame(`${ANIMALS} species`, compact.status, 'and it counts rather than describing a window that is not there');
-check(!new RegExp(`of ${ANIMALS}`).test(String(compact.status)),
-  'no "N-M of N" in compact mode — the exact line the owner reported');
-checkAtLeast(44, compact.minTileHeight, 'every row is at least 44px tall');
-checkAtMost(1, compact.overflowX, 'the list does not scroll sideways');
-checkSame('Photos', compact.toggleLabel, 'the toggle now offers the way back');
-checkSame('true', compact.togglePressed, 'and reads as pressed');
-
-// And back again.
-await page.click('[data-dccwl-subnav="animals"] [data-dccwl-view]');
-await page.waitForTimeout(350);
-const restored = await page.evaluate(() => {
-  const grid = Array.from(document.querySelectorAll('.dccwl-guide-grid'))
-    .find((d) => d.offsetParent !== null || d.getClientRects().length);
-  const nav = grid.nextElementSibling;
+/* A REAL TAP, because the open state only exists after one (the harness
+ * doctrine's fourth rule, 1.38.0). */
+await page.click('[data-dccwl-monthbtn]');
+await page.waitForTimeout(120);
+const opened = await page.evaluate(() => {
+  const pick = document.querySelector('[data-dccwl-monthpick]');
+  const list = pick.querySelector('[data-dccwl-monthmenu]');
+  const rows = Array.from(list.querySelectorAll('[data-dccwl-month]'));
   return {
-    isCompact: grid.classList.contains('dccwl-compact-list'),
-    navHidden: nav.hidden,
-    label: document.querySelector('[data-dccwl-view]').textContent.trim(),
+    listHidden: list.hidden,
+    expanded: pick.querySelector('[data-dccwl-monthbtn]').getAttribute('aria-expanded'),
+    shortest: Math.round(Math.min(...rows.map((r) => r.getBoundingClientRect().height))),
+    focused: document.activeElement && document.activeElement.getAttribute('data-dccwl-month'),
   };
 });
-checkSame(false, restored.isCompact, 'toggling again restores the deck');
-checkSame(false, restored.navHidden, 'with its controls back');
-checkSame('Compact', restored.label, 'and the toggle offering compact again');
+checkSame(false, opened.listHidden, 'tapping the chip opens the list');
+checkSame('true', opened.expanded, 'and says so to a screen reader');
+checkSame('any', opened.focused, 'focus lands on the current choice, as the category pill does');
+checkAtLeast(44, opened.shortest, "every option is one of Rob's 44px targets");
+
+/* January, chosen by tap. The month is irrelevant to the contract — what
+ * matters is that FEWER animals show and that Safety keeps all of its. */
+await page.click('[data-dccwl-month="0"]');
+await page.waitForTimeout(400);
+const january = await page.evaluate(() => {
+  const animals = document.querySelector('.dccwl-guide-grid[data-dccwl-group="animals"]');
+  const safety = document.querySelector('.dccwl-guide-grid[data-dccwl-group="safety"]');
+  const pick = document.querySelector('[data-dccwl-monthpick]');
+  return {
+    label: pick.querySelector('[data-dccwl-monthlabel]').textContent.trim(),
+    listHidden: pick.querySelector('[data-dccwl-monthmenu]').hidden,
+    animals: Array.from(animals.children).filter((li) => !li.hidden).length,
+    safetyTotal: safety ? safety.children.length : 0,
+  };
+});
+note(`January: label "${january.label}", ${january.animals} of ${ANIMALS} animals shown`);
+checkSame('January', january.label, 'the chip reads the month it is filtering by');
+checkSame(true, january.listHidden, 'and the list closes behind the choice');
+check(january.animals < ANIMALS, 'a named month shows FEWER animals than Any Month',
+  `${january.animals} < ${ANIMALS}`);
+checkAtLeast(1, january.animals, 'but never none — a month a guest picked must still say something');
+
+/* "This Month" — the old Peak Now. Hazards must not be in it. */
+await page.click('[data-dccwl-monthbtn]');
+await page.waitForTimeout(120);
+await page.click('[data-dccwl-month="now"]');
+await page.waitForTimeout(400);
+const thisMonth = await page.evaluate(() => {
+  const pick = document.querySelector('[data-dccwl-monthpick]');
+  const animals = document.querySelector('.dccwl-guide-grid[data-dccwl-group="animals"]');
+  const lis = Array.from(animals.children).filter((li) => !li.hidden);
+  const ids = lis.map((li) => li.querySelector('.dccwl-tile').getAttribute('data-dccwl-species'));
+  const haz = (window.DCC_WL_CFG.species || []).filter((s) => s.haz).map((s) => s.id);
+  return {
+    label: pick.querySelector('[data-dccwl-monthlabel]').textContent.trim(),
+    shown: lis.length,
+    hazardsShown: ids.filter((id) => haz.includes(id)),
+    /* The ALLIGATOR is the case that matters: group `critters`, flagged
+     * `danger`, so it is in Animals AND in Safety, and a group test misses
+     * it. 1.33.0's double count was exactly this. */
+    gatorShown: ids.includes('alligator'),
+  };
+});
+note(`This Month: "${thisMonth.label}", ${thisMonth.shown} animals, hazards ${JSON.stringify(thisMonth.hazardsShown)}`);
+checkSame('This Month', thisMonth.label, 'the chip reads "This Month"');
+checkAtLeast(1, thisMonth.shown, 'it shows something at the default peak score');
+checkSame([], thisMonth.hazardsShown,
+  'NO HAZARD survives it (1.33.0: nobody goes looking for a cottonmouth)');
+checkSame(false, thisMonth.gatorShown, 'including the alligator, which a group test would miss');
+
+/* And back to Any Month, which must restore everything — not merely the
+ * current month. `state.monthPicked` has to clear with the label or the
+ * filter goes on running invisibly, which is the 1.28.0 defect verbatim. */
+await page.click('[data-dccwl-monthbtn]');
+await page.waitForTimeout(120);
+await page.click('[data-dccwl-month="any"]');
+await page.waitForTimeout(400);
+const backToAny = await page.evaluate(() => {
+  const animals = document.querySelector('.dccwl-guide-grid[data-dccwl-group="animals"]');
+  return {
+    label: document.querySelector('[data-dccwl-monthlabel]').textContent.trim(),
+    shown: Array.from(animals.children).filter((li) => !li.hidden).length,
+  };
+});
+checkSame('Any Month', backToAny.label, 'Any Month comes back');
+checkSame(ANIMALS, backToAny.shown,
+  'and the filter is genuinely OFF, not merely set to the current month');
 
 await page.close();
 await browser.close();

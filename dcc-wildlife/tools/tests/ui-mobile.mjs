@@ -21,7 +21,12 @@ let { page } = await widgetPage(browser, 'month', { width: 390, height: 844 });
 checkSame(0, await horizontalOverflow(page), 'the page does not scroll sideways at 390px');
 
 const tabs = await boxesOf(page, '.dccwl-tab');
-checkAtLeast(4, tabs.length, 'the four category tabs are present');
+/* THREE SINCE 1.44.0, PINNED RATHER THAN LOOSENED. The row was Animals ·
+ * Plants · Safety · Peak Now; Peak Now moved into the Month menu as "This
+ * Month", where it reads as the month question it always was. Pinned at the
+ * exact number because the claim is that the row holds the three SECTIONS
+ * `Species::sections()` defines — `checkAtLeast` would pass on two. */
+checkSame(3, tabs.length, 'the three section tabs are present');
 const shortTab = Math.min(...tabs.map((t) => t.h));
 checkAtLeast(44, shortTab, 'every tab meets the 44px touch minimum');
 
@@ -141,6 +146,13 @@ section('the tab labels cannot spill, whatever face the theme serves');
 // the site. "Peak Now" had 14% headroom inside its share of a 320px row
 // locally while live reported the row overflowing below about 335px.
 //
+// THE ROW HOLDS THREE TABS SINCE 1.44.0, not four: Peak Now moved into the
+// Month menu as "This Month". That is slack, not licence — this suite is
+// unchanged and must stay unchanged, because the longest label a tab can
+// carry is still derived from the registry ("Reptiles & Amphibians" is a
+// CATEGORY, but the section labels come from Species::sections() and a
+// future section name is not bounded by anything this file knows).
+//
 // So rather than assert it merely fits at the widths we can measure, the font
 // is inflated to stand in for a wider face, and the row must still hold.
 // Raleway measured about 21% wider than this sandbox's fallback face on the
@@ -210,10 +222,20 @@ async function peakCount(peakScore) {
   const extra = peakScore === null ? [] : [`guide:peak_score=${peakScore}`];
   const { page: pg } = await widgetPage(browser, 'month', { width: 390, height: 900 }, ...extra);
   const n = await pg.evaluate(() => {
-    // Open Peak Now and count what it shows.
-    const tab = Array.from(document.querySelectorAll('.dccwl-tab'))
-      .find((t) => t.getAttribute('data-dccwl-group') === '__peak');
-    tab.click();
+    /*
+     * CHOOSE "This Month" AND COUNT WHAT IT SHOWS.
+     *
+     * This read the fourth tab (`data-dccwl-group="__peak"`) until 1.44.0.
+     * Peak Now is an option in the Month menu now, so the control changed
+     * and the question did not: does the peak_score setting actually reach
+     * the filter, or is it merely carried in the config (1.32.1)?
+     *
+     * The menu is opened with a real click, because the option is inside a
+     * list that ships `hidden` — clicking an element in a hidden list is
+     * the kind of thing that "works" in a test and not in a browser.
+     */
+    document.querySelector('[data-dccwl-monthbtn]').click();
+    document.querySelector('[data-dccwl-month="now"]').click();
     return new Promise((resolve) => setTimeout(() => {
       const grids = Array.from(document.querySelectorAll('.dccwl-guide-grid'));
       let n = 0;
@@ -231,9 +253,9 @@ async function peakCount(peakScore) {
 const atThree = await peakCount(null);
 const atTwo = await peakCount(2);
 const atOne = await peakCount(1);
-note(`Peak Now tiles at threshold 3: ${atThree}, at 2: ${atTwo}, at 1: ${atOne}`);
+note(`"This Month" tiles at threshold 3: ${atThree}, at 2: ${atTwo}, at 1: ${atOne}`);
 
-checkAtLeast(1, atThree, 'Peak Now shows something at the default threshold');
+checkAtLeast(1, atThree, '"This Month" shows something at the default threshold');
 check(atTwo > atThree, 'lowering the threshold to 2 shows MORE species', `${atTwo} vs ${atThree}`);
 check(atOne >= atTwo, 'and lowering it to 1 shows at least as many again', `${atOne} vs ${atTwo}`);
 

@@ -26,12 +26,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Render {
 
-	/**
-	 * The tab slug of the Peak Now filter (1.27.0). Not a section: it cannot
-	 * collide with one because sections() is a fixed list and this is not in
-	 * it, and the leading underscores say so at a glance in the DOM.
+	/*
+	 * `PEAK_TAB` IS GONE (1.44.0). Peak Now was a fourth tab carrying the
+	 * slug `__peak`; it is "This Month" in the Month menu now, which needs
+	 * no slug because it is not a section and never was. Deleted rather
+	 * than kept as a retired constant: nothing stores it, so nothing breaks.
 	 */
-	public const PEAK_TAB = '__peak';
 
 	/**
 	 * The tile photo's `sizes`, derived from MEASURED tile widths (1.42.0).
@@ -293,11 +293,9 @@ final class Render {
 				 * widgets on one page. Null means "this placement said
 				 * nothing", and the script falls back to the site-wide value.
 				 */
-				'view_override' => null,
 				'rows_override' => null,
 				// The sub-navigation's three parts. null inherits the setting.
 				'subnav'        => null,
-				'compact_btn'   => null,
 			]
 		);
 
@@ -317,9 +315,6 @@ final class Render {
 		// Only what this placement actually overrode. An empty `set` keeps the
 		// attribute the same size it has always been on an untouched widget.
 		$per_root = [];
-		if ( null !== $opts['view_override'] && '' !== $opts['view_override'] ) {
-			$per_root['defaultView'] = Guide_Data::resolve_enum( $opts['view_override'], 'default_view' );
-		}
 		if ( null !== $opts['rows_override'] && '' !== $opts['rows_override'] ) {
 			$per_root['deckRows'] = Guide_Data::resolve_num( $opts['rows_override'], 'deck_rows' );
 		}
@@ -353,20 +348,6 @@ final class Render {
 				<p class="dccwl-sub" aria-live="polite"></p>
 			</header>
 
-			<?php if ( $show_browser ) : ?>
-				<?php /* Segmented timeline (1.9.0): a scrollable month strip with
-				         the canal's current month anchored. Same month logic as
-				         before — the control around it is what changed. */ ?>
-				<div class="dccwl-timeline" hidden>
-					<button type="button" class="dccwl-timeline-arrow dccwl-timeline-prev" aria-label="<?php esc_attr_e( 'Previous month', 'dcc-wildlife' ); ?>">
-						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-					<div class="dccwl-timeline-track" role="group" aria-label="<?php esc_attr_e( 'Browse wildlife by month', 'dcc-wildlife' ); ?>"></div>
-					<button type="button" class="dccwl-timeline-arrow dccwl-timeline-next" aria-label="<?php esc_attr_e( 'Next month', 'dcc-wildlife' ); ?>">
-						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-				</div>
-			<?php endif; ?>
 
 			<?php if ( $opts['spotlight'] ) : ?>
 				<?php /* Spotlight tiles — built client-side from the month the
@@ -383,24 +364,39 @@ final class Render {
 					<?php /* A segmented control (1.18.0): one bordered group, so the
 					         three categories read as a single switch, not as three
 					         more cards among the tiles. */ ?>
-					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide sections', 'dcc-wildlife' ); ?>">
+					<?php
+					/*
+					 * A REAL TABLIST (1.44.0). It was role="group" with
+					 * aria-pressed, which announces three independent toggles
+					 * rather than one switch with one choice. The Director
+					 * asked for the Availability Calendar's pattern —
+					 * role="tablist"/"tab", aria-selected, arrow keys — and
+					 * each grid below is the matching tabpanel, labelled by
+					 * its own tab.
+					 *
+					 * PEAK NOW IS NOT A TAB ANY MORE. It never was a section:
+					 * it cut across all three and meant "at its best in the
+					 * visitor's month" (1.27.0). That is a MONTH question, so
+					 * it moved into the Month menu as "This Month", where it
+					 * reads as what it is. Nothing about the filter changed —
+					 * widget.js still computes it in canal time, and a cached
+					 * page still cannot carry a stale month.
+					 */
+					?>
+					<div class="dccwl-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Field guide sections', 'dcc-wildlife' ); ?>">
 						<?php $first = true; ?>
 						<?php foreach ( Species::sections() as $slug => $label ) : ?>
-							<button type="button" class="dccwl-tab" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" aria-pressed="<?php echo $first ? 'true' : 'false'; ?>">
+							<button type="button" class="dccwl-tab" role="tab"
+								id="dccwl-tab-<?php echo esc_attr( $slug ); ?>"
+								aria-controls="dccwl-grid-<?php echo esc_attr( $slug ); ?>"
+								aria-selected="<?php echo $first ? 'true' : 'false'; ?>"
+								tabindex="<?php echo $first ? '0' : '-1'; ?>"
+								data-dccwl-group="<?php echo esc_attr( $slug ); ?>">
 								<?php echo esc_html( $label ); ?>
 							</button>
 							<?php $first = false; ?>
 						<?php endforeach; ?>
-						<?php /* Peak Now (1.27.0) is a FILTER, not a section: it cuts
-						         across all three, safety included, and shows everything
-						         at its best in the month the VISITOR is in. So it names
-						         no month and counts nothing here — widget.js fills it
-						         from canal time, exactly as the spotlight does, and a
-						         cached page can never carry a stale month. */ ?>
-						<button type="button" class="dccwl-tab dccwl-tab-peak" data-dccwl-group="<?php echo esc_attr( self::PEAK_TAB ); ?>" aria-pressed="false">
-							<?php esc_html_e( 'Peak Now', 'dcc-wildlife' ); ?>
-						</button>
-					</div>
+											</div>
 					<?php /* Search (1.21.0). At 51 species the tabs alone are not
 					         navigation. It filters the tiles already on the page — no
 					         request, nothing month-dependent, so it is safe in cached
@@ -425,17 +421,7 @@ final class Render {
 						<p class="dccwl-sr" role="status" aria-live="polite" data-dccwl-search-status></p>
 					</div>
 					<?php endif; ?>
-					<?php /* The one colour a tile can carry, explained where it is used
-					         (1.18.0). If a colour cannot earn a line here, it must not
-					         carry meaning. */ ?>
-					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
-						<?php /* The flag marks (1.19.0), explained beside the tiles that
-						         carry them. Only flags some species actually has. */ ?>
-						<?php foreach ( self::flags_in_use() as $flag => $def ) : ?>
-							<span class="dccwl-legend-item"><?php echo Sprites::mark_html( $flag, $def[0] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted markup. ?><span><b><?php echo esc_html( $def[0] ); ?></b> — <?php echo esc_html( $def[1] ); ?></span></span>
-						<?php endforeach; ?>
-					</p>
-					<?php self::render_guide_grids( [ 'subnav' => $opts['subnav'], 'compact_btn' => $opts['compact_btn'] ] ); ?>
+					<?php self::render_guide_grids( [ 'subnav' => $opts['subnav'], 'month' => $show_browser ] ); ?>
 					<?php /* Month-filtered on the hub (canal.js): a species not likely
 					         this month is hidden, and this line says so when a whole
 					         category goes quiet. Filled client-side; empty in the HTML. */ ?>
@@ -500,6 +486,22 @@ final class Render {
 	private static function render_guide_grids( array $gates = [] ): void {
 		$dataset = Species::dataset();
 		$first   = true;
+		/*
+		 * ONE ROW OF CHIPS (1.44.0, Rob's brief): Month, the category pill
+		 * and the badge key, side by side.
+		 *
+		 * The three category pills are per-SECTION — their counts are a
+		 * promise about what choosing them shows (1.38.1) and are rendered in
+		 * the HTML so a crawler and a guest without JavaScript both have them
+		 * — so all three are emitted and widget.js shows the one belonging to
+		 * the open tab, exactly as before. What changed is WHERE: they used
+		 * to sit directly above their own grid, which made the row they share
+		 * impossible. Buffered here and printed into the chip row, so only
+		 * one is ever visible and the row reads as one control strip.
+		 */
+		$navs  = [];
+		$grids = [];
+		$month = (bool) ( $gates['month'] ?? true );
 
 		foreach ( Species::sections() as $slug => $label ) {
 			$group_species = Species::section_members( $dataset, $slug );
@@ -510,9 +512,13 @@ final class Render {
 			// and for their position line to be true. Stable, so order within a
 			// run is registry order still.
 			$group_species = Species::browse_order( $group_species );
+			ob_start();
 			self::render_browse_nav( $slug, $group_species, $first, $gates );
+			$navs[] = (string) ob_get_clean();
 			?>
-			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" data-dccwl-lazy="1"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
+			<?php ob_start(); ?>
+			<ul class="dccwl-tiles dccwl-guide-grid" id="dccwl-grid-<?php echo esc_attr( $slug ); ?>" role="tabpanel"
+				aria-labelledby="dccwl-tab-<?php echo esc_attr( $slug ); ?>" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" data-dccwl-lazy="1"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php
 				/*
 				 * `data-dccwl-browse-first` MARKS EACH SUB-GROUP'S FIRST
@@ -560,8 +566,137 @@ final class Render {
 				?>
 			</ul>
 			<?php
-			$first = false;
+			$grids[] = (string) ob_get_clean();
+			$first   = false;
 		}
+
+		// The chip row, then the panels it governs.
+		self::render_chip_row( $navs, $month );
+		foreach ( $grids as $grid ) {
+			echo $grid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped at source.
+		}
+	}
+
+	/**
+	 * The badge key, as the chip row's popover.
+	 *
+	 * Server-rendered, so a guest with no JavaScript meets the whole key as
+	 * ordinary text under the row rather than a button that does nothing —
+	 * widget.js only shows and hides it. The 1.18.0 rule (a colour carrying
+	 * meaning has a key beside where it is used) is unchanged; what changed
+	 * is that the key no longer spends four lines of a phone screen on every
+	 * visit saying what it said last time.
+	 */
+	private static function render_badge_key(): void {
+		?>
+		<?php /* The one colour a tile can carry, explained where it is used
+		         (1.18.0). If a colour cannot earn a line here, it must not
+		         carry meaning. */ ?>
+		<p class="dccwl-legend" id="dccwl-badgekey" data-dccwl-badgepop hidden aria-label="<?php esc_attr_e( 'Badge key', 'dcc-wildlife' ); ?>">
+			<?php /* The flag marks (1.19.0), explained beside the tiles that
+			         carry them. Only flags some species actually has. */ ?>
+			<?php foreach ( self::flags_in_use() as $flag => $def ) : ?>
+				<span class="dccwl-legend-item"><?php echo Sprites::mark_html( $flag, $def[0] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted markup. ?><span><b><?php echo esc_html( $def[0] ); ?></b> — <?php echo esc_html( $def[1] ); ?></span></span>
+			<?php endforeach; ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * The one control row: Month, the category pill, and the badge key.
+	 *
+	 * ROOM IS LEFT FOR A CONTROL THAT IS NOT BUILT YET. Rob decided on
+	 * 2026-10-04 that Wildlife will later default to local species with a
+	 * two-way "Here | Wider Florida" switch. It is NOT part of this release
+	 * and nothing here implements it — but the row wraps rather than
+	 * scrolls, and a fourth chip goes at the END of this container, after
+	 * the badge key, where it inherits the same gap and the same 44px floor.
+	 * Written down because "leave room" is otherwise the kind of
+	 * instruction that is satisfied by accident and broken by the next edit.
+	 *
+	 * @param string[] $navs  Pre-rendered per-section category pills.
+	 * @param bool     $month Whether the Month chip is offered at all.
+	 */
+	private static function render_chip_row( array $navs, bool $month = true ): void {
+		?>
+		<div class="dccwl-chiprow" data-dccwl-chiprow>
+			<?php
+			if ( $month ) {
+				self::render_month_chip();
+			}
+			?>
+			<?php
+			foreach ( $navs as $nav ) {
+				echo $nav; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped at source.
+			}
+			?>
+			<?php
+			/*
+			 * THE BADGE KEY IS A POPOVER NOW, not four always-on lines.
+			 *
+			 * The 1.18.0 rule is that a colour carrying meaning has a key
+			 * beside it, and that rule is intact: the key is one tap from
+			 * every tile that carries a mark, on the same row, and it is
+			 * still SERVER-RENDERED so a guest without JavaScript meets the
+			 * whole key as ordinary text rather than a dead button. What
+			 * changed is that it no longer spends four lines of a phone
+			 * screen saying the same thing on every visit.
+			 */
+			?>
+			<button type="button" class="dccwl-chip dccwl-chip-badges" data-dccwl-badges
+				aria-expanded="false" aria-controls="dccwl-badgekey">
+				<span class="dccwl-chip-i" aria-hidden="true">&#9432;</span>
+				<?php esc_html_e( 'Badges', 'dcc-wildlife' ); ?>
+			</button>
+			<?php self::render_badge_key(); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * "Month: Any Month ▾" — the twelve-month strip and Peak Now, in one chip.
+	 *
+	 * WHAT IT REPLACES, AND WHY THAT IS ALSO A PERFORMANCE FIX. The strip was
+	 * twelve pills with arrows and edge fades, and `centerMonth()` kept the
+	 * chosen one in view by taking six layout reads interleaved with class
+	 * writes across 409 tiles. A CPU profile at 4x throttling put 419 ms of
+	 * one tap inside that function alone. A menu has nothing to centre.
+	 *
+	 * THE OPTIONS ARE RENDERED, THE CHOICE IS NOT. "Any Month" is the
+	 * default and is marked here; "This Month" is what Peak Now did and
+	 * resolves in CANAL TIME IN THE BROWSER, because PHP must never bake a
+	 * month into a cached page — the oldest rule in this file. So no option
+	 * is pre-selected on the strength of today's date, and the twelve month
+	 * names are static labels that are true in any month.
+	 */
+	private static function render_month_chip(): void {
+		$months = [];
+		for ( $m = 1; $m <= 12; $m++ ) {
+			$months[ $m - 1 ] = date_i18n( 'F', mktime( 0, 0, 0, $m, 1, 2026 ) );
+		}
+		?>
+		<div class="dccwl-monthpick" data-dccwl-monthpick>
+			<button type="button" class="dccwl-chip dccwl-chip-menu" data-dccwl-monthbtn
+				aria-haspopup="listbox" aria-expanded="false">
+				<span class="dccwl-chip-label" data-dccwl-monthlabel><?php esc_html_e( 'Any Month', 'dcc-wildlife' ); ?></span>
+				<span class="dccwl-caret" aria-hidden="true">&#9662;</span>
+			</button>
+			<ul class="dccwl-chipmenu" data-dccwl-monthmenu role="listbox"
+				aria-label="<?php esc_attr_e( 'Choose A Month', 'dcc-wildlife' ); ?>" hidden>
+				<li role="option" aria-selected="true">
+					<button type="button" class="dccwl-chipmenu-opt" data-dccwl-month="any"><?php esc_html_e( 'Any Month', 'dcc-wildlife' ); ?></button>
+				</li>
+				<li role="option" aria-selected="false">
+					<button type="button" class="dccwl-chipmenu-opt" data-dccwl-month="now"><?php esc_html_e( 'This Month', 'dcc-wildlife' ); ?></button>
+				</li>
+				<?php foreach ( $months as $i => $name ) : ?>
+					<li role="option" aria-selected="false">
+						<button type="button" class="dccwl-chipmenu-opt" data-dccwl-month="<?php echo esc_attr( (string) $i ); ?>"><?php echo esc_html( $name ); ?></button>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
+		<?php
 	}
 
 	/**
@@ -601,11 +736,11 @@ final class Render {
 		}
 
 		$chips   = Guide_Data::resolve( $gates['subnav'] ?? null, 'show_subnav' );
-		$compact = Guide_Data::resolve( $gates['compact_btn'] ?? null, 'show_compact' );
-		/* `show_jump` is gone (1.38.0): the control it gated no longer exists.
-		 * Both off means there is no sub-navigation to draw, and an empty
-		 * container would leave a margin on the page for nothing. */
-		if ( ! $chips && ! $compact ) {
+		/* `show_jump` went in 1.38.0 and `show_compact` in 1.44.0: the controls
+		 * they gated no longer exist. With the pill off there is no
+		 * sub-navigation to draw, and an empty container would leave a margin
+		 * on the page for nothing. */
+		if ( ! $chips ) {
 			return;
 		}
 
@@ -692,17 +827,6 @@ final class Render {
 			</div>
 			<?php endif; ?>
 
-			<?php if ( $compact ) : ?>
-			<?php /* C6: the pill and the Compact switch share one row. "Jump to
-			         a species…" was removed in 1.38.0 — search reaches every
-			         species by common or scientific name, which is what it was
-			         for. */ ?>
-			<div class="dccwl-subtools" data-dccwl-subtools hidden>
-				<button type="button" class="dccwl-viewtoggle" data-dccwl-view="deck" aria-pressed="false">
-					<?php esc_html_e( 'Compact', 'dcc-wildlife' ); ?>
-				</button>
-			</div>
-			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -940,8 +1064,8 @@ final class Render {
 		 * what the two marks mean: a caret that flips says *this expands
 		 * here*, and `›` says *this opens another view*. It now opens another
 		 * PAGE, so the caret would misdescribe it. The mark comes from
-		 * `.dccwl-footnote-link` in widget.css, the same class "By Month"
-		 * uses — not from a new rule.
+		 * `.dccwl-footnote-link` in widget.css, which both links in this row
+		 * share — not from a new rule.
 		 *
 		 * THE ACCESSIBLE NAME STAYS "Field Guide", which CONTAINS the visible
 		 * "Guide" (WCAG 2.5.3 label-in-name, the 1.41.0 reasoning unchanged),
@@ -985,30 +1109,25 @@ final class Render {
 				<span class="dccwl-fullguide-h"><?php esc_html_e( 'Credits', 'dcc-wildlife' ); ?></span>
 			</span>
 		</a>
-		<button type="button" class="dccwl-footnote-link" data-dccwl-go="month" data-dccwl-monthlink hidden
-			aria-label="<?php esc_attr_e( 'Browse the guide by month', 'dcc-wildlife' ); ?>">
-			<?php
-			/*
-			 * ITEM 17 — THE SAME LABEL ELEMENT AS THE OTHER THREE.
-			 *
-			 * This is a <button> and they are <summary>, which is the couple of
-			 * pixels Rob saw: their label is a .dccwl-fullguide-h inside a
-			 * .dccwl-fullguide-text and this one was a bare text node, so the
-			 * two line boxes resolved differently however the row was aligned.
-			 * Chasing it with alignment rules is what produced a worse bug —
-			 * a rule that re-showed the chevron this row deliberately hides.
-			 * Giving the label the same box in both places is the fix.
-			 */
-			?>
-			<span class="dccwl-fullguide-text">
-				<span class="dccwl-fullguide-h"><?php esc_html_e( 'By Month', 'dcc-wildlife' ); ?></span>
-			</span>
-		</button>
+		<?php
+		/*
+		 * "BY MONTH" IS GONE FROM THIS ROW (1.44.0), AND IT HAD TO BE.
+		 *
+		 * It was a <button> that opened the month-picker PANEL — twelve
+		 * tiles with peak counts and sprite art — and it was the only door
+		 * to it ("go('month') appears nowhere else", 1.27.0). Rob removed
+		 * the hub and its panels, so the door now leads nowhere; the Month
+		 * menu on the guide's control row is what replaced the panel, and it
+		 * sits beside the tiles it filters rather than three taps away.
+		 *
+		 * The row is Guide · Credits · About. Two links and one fold.
+		 */
+		?>
 		<?php
 		/*
 		 * ITEM 4 (1.34.0) — "About the water" used to be a TAB in the water
-		 * panel and is now the fourth link in this row, beside Field Guide,
-		 * Credits and By Month, which was Rob's instruction: it must look and
+		 * panel and is now the last item in this row, beside Guide and
+		 * Credits, which was Rob's instruction: it must look and
 		 * behave exactly like those three, so it IS one of them — the same
 		 * <details class="dccwl-fullguide">, rendered by the water module.
 		 *
@@ -1192,7 +1311,6 @@ final class Render {
 				'peakScore'    => Guide_Data::num( 'peak_score' ),
 				'searchSquash' => Guide_Data::num( 'search_squash_min' ),
 				'deckRows'     => Guide_Data::num( 'deck_rows' ),
-				'defaultView'  => (string) Guide_Data::get( 'default_view' ),
 			],
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
@@ -1263,14 +1381,12 @@ final class Render {
 				'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
 				/* translators: 1: a sub-group name like "Wading birds", 2: the page within it, 3: how many pages it has. */
 				'subPos'      => __( '%1$s · %2$d/%3$d', 'dcc-wildlife' ),
-				/* translators: %d: how many species are in the compact list. */
-				/* The compact list has no window to describe — every species
-				 * is on the page — so the line counts instead of paging. */
+				/* translators: %d: how many species are in the list. */
+				/* Used where the deck has nothing to page through — every
+				 * match is already on screen (1.37.2) — so the line counts
+				 * instead of paging. `viewCompact` and `viewPhotos` went with
+				 * the Compact switch in 1.44.0. */
 				'deckCount'   => __( '%d species', 'dcc-wildlife' ),
-				/* translators: button that switches the species list to short rows. */
-				'viewCompact' => __( 'Compact', 'dcc-wildlife' ),
-				/* translators: button that switches the species list back to photo cards. */
-				'viewPhotos'  => __( 'Photos', 'dcc-wildlife' ),
 				/* translators: %s: what the visitor typed. */
 				'searchNone'  => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
 				/* translators: %d: number of matching species. */

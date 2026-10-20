@@ -53,8 +53,20 @@ $m = dcc_render( 'month' );
 check( strlen( $m['html'] ) > 5000, 'it produces substantial markup', strlen( $m['html'] ) . ' bytes' );
 check_contains( $m['html'], 'dccwl-root', 'the root class is present' );
 check_contains( $m['html'], 'data-dccwl-group', 'the category tabs are server-rendered' );
-check_same( 7, substr_count( $m['html'], 'data-dccwl-group="' ), 'seven group-bearing nodes: four tabs and three grids' );
-check_contains( $m['html'], Render::PEAK_TAB, 'the Peak Now tab is present' );
+check_same( 6, substr_count( $m['html'], 'data-dccwl-group="' ), 'six group-bearing nodes: three tabs and three grids' );
+/*
+ * THE PEAK NOW TAB IS GONE (1.44.0) and so is `Render::PEAK_TAB`. It became
+ * "This Month" in the Month menu, so what used to be a fourth tab slug is
+ * now one option in a listbox — asserted here by its data attribute rather
+ * than by a constant, because there is no constant to agree with any more.
+ */
+check_contains( $m['html'], 'data-dccwl-month="now"', 'the Month menu offers "This Month" (what Peak Now became)' );
+check_contains( $m['html'], 'data-dccwl-month="any"', 'the Month menu offers "Any Month", the default' );
+check_same( 14, substr_count( $m['html'], 'data-dccwl-month="' ), 'fourteen options: Any, This Month and twelve months' );
+check_contains( $m['html'], 'role="tablist"', 'the section tabs are a real tablist' );
+check_same( 3, substr_count( $m['html'], 'role="tabpanel"' ), 'each grid is the tabpanel its tab controls' );
+check_contains( $m['html'], 'data-dccwl-badges', 'the badge key is behind the chip row\'s info chip' );
+check_contains( $m['html'], 'id="dccwl-badgekey"', 'and the key it controls is server-rendered, not built by script' );
 
 dcc_section( 'the canal hub renders and composes' );
 
@@ -138,18 +150,43 @@ if ( preg_match( '/DCC_WL_CANAL\s*=\s*(\{.*\})\s*;/s', $c['config'], $mm ) ) {
 	$hub = json_decode( $mm[1], true );
 }
 check( is_array( $hub ), 'the hub config parses' );
+
+/*
+ * THE AGE WORDS LEFT THE HUB'S TABLE IN 1.44.0, AND THIS IS ASSERTED AS AN
+ * ABSENCE RATHER THAN DELETED.
+ *
+ * 1.33.0 put them there because canal.js formatted a reading's age for the
+ * Water preview tile, the words lived ONLY in the water module's config, and
+ * on a page with the water section off or auto-hidden canal.js fell through
+ * to hardcoded 'today' / 'd' / 'mo' / 'y' — strings LocoTranslate never sees
+ * and so cannot translate at all.
+ *
+ * Rob removed the hub, so `ageWords()` went with the preview it served. The
+ * words are NOT a second copy waiting to be wired back in: water.js and
+ * water-map.js read `DCC_WL_WATER.i18n`, which Water_Render still emits and
+ * which this release did not touch. Asserting the absence is what keeps the
+ * two tables from quietly becoming two sources again — and the untranslated
+ * literal, which is the defect that mattered, is asserted directly below.
+ */
 foreach ( [ 'ageToday', 'ageDays', 'ageMonths', 'ageYears' ] as $k ) {
 	check(
-		isset( $hub['i18n'][ $k ] ) && '' !== trim( (string) $hub['i18n'][ $k ] ),
-		"the hub config carries i18n.$k, so it no longer depends on the water module"
+		! isset( $hub['i18n'][ $k ] ),
+		"the hub config no longer carries i18n.$k — canal.js formats no ages"
 	);
 }
 
-// And the script must not be reading them from the water config as its only
-// source any more.
 $canal_js = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/canal.js' );
-check_lacks( $canal_js, "w.ageToday || 'today'", 'canal.js no longer falls straight through to an English literal' );
-check_contains( $canal_js, "word('ageToday'", 'it resolves the word through its own table first' );
+check_lacks( $canal_js, "|| 'today'", 'and canal.js carries no English age literal of its own' );
+check_lacks( $canal_js, 'ageWords', 'the formatter itself is gone, not merely unused' );
+
+/* The water module keeps its own table, which is the single source now. */
+$water_i18n = '';
+foreach ( $GLOBALS['dccwl_test']['inline'] as [ $handle, $data ] ) {
+	if ( false !== strpos( (string) $data, 'DCC_WL_WATER' ) ) { $water_i18n .= (string) $data; }
+}
+if ( '' !== $water_i18n ) {
+	check_contains( $water_i18n, 'ageToday', 'the water module still ships the age words it reads' );
+}
 
 dcc_section( 'the credits panel is no longer on this page (1.43.0)' );
 

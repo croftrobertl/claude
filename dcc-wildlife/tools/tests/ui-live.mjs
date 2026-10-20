@@ -61,12 +61,15 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
    * panel and the tap waited 30s for something that is display:none. The
    * section is about the species tabs; say so in the selector.
    */
-  const tab = await page.$('[data-dccwl-panel="species"] .dccwl-tab:not([aria-pressed="true"])');
+  /* `aria-selected` since 1.44.0: the species tabs are a real tablist. The
+   * water bar in the same document is still `role="group"` and reports
+   * `aria-pressed`, which is why this stayed scoped to the species panel. */
+  const tab = await page.$('[data-dccwl-panel="species"] .dccwl-tab:not([aria-selected="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
 
   const after = await page.evaluate(() => {
-    const t = document.querySelector('[data-dccwl-panel="species"] .dccwl-tab[aria-pressed="true"]');
+    const t = document.querySelector('[data-dccwl-panel="species"] .dccwl-tab[aria-selected="true"]');
     const cs = getComputedStyle(t);
     return { label: t.textContent.trim(), bg: cs.backgroundColor, fg: cs.color,
              focused: document.activeElement === t };
@@ -75,37 +78,42 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   checkSame(CORAL, after.bg, `${w}px: the tapped tab is coral`);
   checkSame(WHITE, after.fg, `${w}px: and its label is WHITE immediately after the tap`);
 
-  // the month pills carry the same rule
-  const monthState = await page.evaluate(() => {
-    const m = document.querySelector('.dccwl-month-on');
-    if (!m) { return null; }
-    const cs = getComputedStyle(m);
-    return { bg: cs.backgroundColor, fg: cs.color };
-  });
-  if (monthState) {
-    checkSame(CORAL, monthState.bg, `${w}px: the current month pill is coral`);
-    checkSame(WHITE, monthState.fg, `${w}px: with white text`);
-  }
+  /*
+   * THE MONTH PILLS AND THE COMPACT SWITCH BOTH LEFT IN 1.44.0, so item 8 is
+   * asserted here on the controls that remain and on the one that replaced
+   * them. What the item claims is unchanged and is the reason for the tap:
+   * ON A PHONE A TAPPED BUTTON KEEPS :hover AND :focus until the guest
+   * touches something else, so a focus rule painting the label dark is
+   * invisible with a mouse and glaring on the phone Rob was holding.
+   *
+   * The Month chip's CHOSEN OPTION is the pill-option's own rule (they share
+   * one block in widget.css), tapped open below with the category pill.
+   */
 
-  /* Back to the first section, whose row carries both controls. */
-  await page.evaluate(() => { document.querySelectorAll('.dccwl-tab')[0].click(); });
+  /* Back to the first section, whose row carries the category pill. */
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-dccwl-panel="species"] .dccwl-tab')[0].click();
+  });
   await page.waitForTimeout(500);
 
-  /* The Compact switch is the same family of control and shares the rule. */
-  const compact = await visible(page, '[data-dccwl-subnav] [data-dccwl-view]');
-  if (compact) {
-    if (touch) { await compact.tap(); } else { await compact.click(); }
+  /* THE MONTH CHIP, tapped: its chosen option must be coral and white in the
+   * state a finger leaves it in — the same question the Compact switch used
+   * to answer on this row. */
+  const monthChip = await visible(page, '[data-dccwl-monthbtn]');
+  if (monthChip) {
+    if (touch) { await monthChip.tap(); } else { await monthChip.click(); }
     await page.waitForTimeout(250);
-    const cs = await page.evaluate(() => {
-      const b = document.querySelector('[data-dccwl-subnav]:not([hidden]) [data-dccwl-view]');
-      const s = getComputedStyle(b);
-      return { pressed: b.getAttribute('aria-pressed'), bg: s.backgroundColor, fg: s.color,
-               focused: document.activeElement === b };
+    const ms = await page.evaluate(() => {
+      const o = document.querySelector('li[aria-selected="true"] > [data-dccwl-month]');
+      const s = getComputedStyle(o);
+      return { month: o.getAttribute('data-dccwl-month'), bg: s.backgroundColor, fg: s.color };
     });
-    note(`${w}px compact ${JSON.stringify(cs)}`);
-    checkSame('true', cs.pressed, `${w}px: Compact switches on`);
-    checkSame(CORAL, cs.bg, `${w}px: the pressed Compact switch is coral`);
-    checkSame(WHITE, cs.fg, `${w}px: and WHITE straight after the tap`);
+    note(`${w}px month chip ${JSON.stringify(ms)}`);
+    checkSame('any', ms.month, `${w}px: the chip opens on Any Month, the default`);
+    checkSame(CORAL, ms.bg, `${w}px: and the chosen option is coral`);
+    checkSame(WHITE, ms.fg, `${w}px: with WHITE text straight after the tap`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
   }
 
   /* And the picker's chosen option, read while the list is open from a tap —
@@ -157,17 +165,32 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     const nav = document.querySelector('[data-dccwl-subnav]:not([hidden])');
     const btn = nav && nav.querySelector('[data-dccwl-pick-btn]');
     const list = nav && nav.querySelector('[data-dccwl-pick-list]');
-    const toggle = nav && nav.querySelector('[data-dccwl-view]');
     const r = btn && btn.getBoundingClientRect();
-    const tr = toggle && toggle.getBoundingClientRect();
+    /* C6 WAS "the pill and Compact share one row". The Compact switch is
+     * gone (1.44.0) and the row grew: Month ▾ and the ⓘ Badges chip share
+     * it now, which is Rob's one-control-row instruction. Measured against
+     * the MONTH CHIP, because that is the control it has to sit beside. */
+    const monthBtn = document.querySelector('[data-dccwl-monthbtn]');
+    const tr = monthBtn && monthBtn.getBoundingClientRect();
+    const badges = document.querySelector('[data-dccwl-badges]');
+    const br = badges && badges.getBoundingClientRect();
     return {
       hasPill: !!btn,
       label: btn ? btn.textContent.replace(/\s+/g, ' ').trim() : null,
       expanded: btn && btn.getAttribute('aria-expanded'),
       listHidden: list ? list.hidden : null,
       minHeight: r ? Math.round(r.height) : null,
-      // C6: the pill and Compact share one row
       sameRow: r && tr ? Math.abs(r.top - tr.top) < 12 : null,
+      badgesSameRow: r && br ? Math.abs(r.top - br.top) < 12 : null,
+      /* THE ROW WRAPS, IT DOES NOT SCROLL. "Leave room for the Here | Wider
+       * Florida switch" is only true if a fourth chip takes a second line
+       * instead of pushing the page wide — the 1.18.1 lesson about a flex
+       * item's floor, and the reason the sideways category bar went. */
+      rowOverflow: (() => {
+        const row = document.querySelector('[data-dccwl-chiprow]');
+        return row ? row.scrollWidth - row.clientWidth : null;
+      })(),
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       // the old controls are gone
       chips: document.querySelectorAll('.dccwl-subchip').length,
       arrows: document.querySelectorAll('.dccwl-subchip-prev, .dccwl-subchip-next').length,
@@ -179,7 +202,10 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   check(/Show:\s*All/.test(base.label || ''), `${w}px: it reads "Show: All"`, base.label);
   checkSame('false', base.expanded, `${w}px: closed to begin with`);
   checkAtLeast(44, base.minHeight, `${w}px: a 44px target`);
-  check(base.sameRow, `${w}px: the pill and Compact share one row`);
+  check(base.sameRow, `${w}px: the pill and Month ▾ share one row`);
+  check(base.badgesSameRow, `${w}px: and the ⓘ Badges chip is on it too`);
+  checkAtMost(1, base.rowOverflow, `${w}px: the chip row wraps rather than scrolling sideways`);
+  checkAtMost(1, base.pageOverflow, `${w}px: and nothing on it pushes the page wider`);
   checkSame(0, base.chips, `${w}px: the old category chips are gone`);
   checkSame(0, base.arrows, `${w}px: and their ‹ › arrows`);
   checkSame(0, base.jump, `${w}px: "Jump to a species…" is gone`);
@@ -304,25 +330,25 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
      * too, and since 1.44.0 Water is FIRST in the DOM, so an unscoped
      * query clicked a water tab and the species pill never reset. */
     const t = Array.from(document.querySelectorAll('[data-dccwl-panel="species"] .dccwl-tab'))
-      .filter((b) => 'true' !== b.getAttribute('aria-pressed'))[0];
+      .filter((b) => 'true' !== b.getAttribute('aria-selected'))[0];
     if (t) { t.click(); }
   });
   await page.waitForTimeout(500);
   const afterTab = await page.evaluate(() => {
     const btn = document.querySelector('[data-dccwl-subnav]:not([hidden]) [data-dccwl-pick-btn]');
-    return btn ? btn.textContent.replace(/\s+/g, ' ').trim() : 'no pill (Peak Now has no categories)';
+    return btn ? btn.textContent.replace(/\s+/g, ' ').trim() : 'no pill (this tab has no categories)';
   });
   check(/Show:\s*All/.test(afterTab) || /no pill/.test(afterTab),
     `${w}px: switching tab resets the pill to All`, afterTab);
   await page.close();
 }
 
-/* ======================= C: per tab, and Peak Now ======================= */
+/* ===================== C: per tab, and the chip row ===================== */
 /*
- * The categories Rob listed, per tab, in his order — and the row Peak Now
- * keeps. Asked on the rendered page at both widths, because this is a spec
- * with exact strings in it and "the code builds it from the registry" is not
- * evidence that the registry says what he asked for.
+ * The categories Rob listed, per tab, in his order. Asked on the rendered
+ * page at both widths, because this is a spec with exact strings in it and
+ * "the code builds it from the registry" is not evidence that the registry
+ * says what he asked for.
  */
 section('C2 — the categories each tab offers, in the order Rob set');
 
@@ -376,42 +402,92 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     checkSame(row.shown, row.counts[0], `${w}px ${tab}: "All" prints the tab's own total`);
   }
 
-  /* PEAK NOW: no pill, and the Compact switch alone on the row. */
-  await page.evaluate(() => {
-    const b = Array.from(document.querySelectorAll('.dccwl-tab')).find((x) => /Peak/.test(x.textContent));
-    if (b) { b.click(); }
-  });
-  await page.waitForTimeout(600);
-  const peak = await page.evaluate(() => {
-    const navs = Array.from(document.querySelectorAll('[data-dccwl-subnav]'));
-    const vis = navs.filter((n) => !n.hidden && n.getClientRects().length);
-    const n = vis[0];
-    const decks = Array.from(document.querySelectorAll('.dccwl-guide-grid')).filter((g) => !g.hidden);
+  /*
+   * THE CHIP ROW, WHICH REPLACED BOTH THINGS THIS BLOCK USED TO ASSERT.
+   *
+   * It checked that Peak Now showed exactly ONE toolbar row, with no pill
+   * (it had no categories) and the Compact switch alone on it — and that
+   * pressing that switch governed every deck Peak Now was showing at once.
+   * All three claims are retired with their subjects: Peak Now is an option
+   * in the Month menu, the Compact switch is gone, and a month filter
+   * narrows ONE section rather than crossing three, so there is no longer
+   * such a thing as "the row Peak Now borrows".
+   *
+   * What takes their place is the claim Rob's brief actually makes: there is
+   * ONE control row, and only the per-section category pill swaps inside it.
+   * That is the same question the old block was asking ("one toolbar row on
+   * screen, never three") against the control that now answers it.
+   */
+  const chipRow = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('[data-dccwl-chiprow]'))
+      .filter((r) => r.getClientRects().length);
+    const navs = Array.from(document.querySelectorAll('[data-dccwl-subnav]'))
+      .filter((n) => !n.hidden && n.getClientRects().length);
+    const open = document.querySelector(
+      '[data-dccwl-panel="species"] .dccwl-tab[aria-selected="true"]');
     return {
-      rows: vis.length,
-      pillShown: n ? !n.querySelector('[data-dccwl-pick]').hidden : null,
-      compactShown: n ? !n.querySelector('[data-dccwl-subtools]').hidden : null,
-      decks: decks.length,
-      compactText: n ? n.querySelector('[data-dccwl-view]').textContent.trim() : null,
+      rows: rows.length,
+      months: rows.length ? rows[0].querySelectorAll('[data-dccwl-monthpick]').length : 0,
+      badges: rows.length ? rows[0].querySelectorAll('[data-dccwl-badges]').length : 0,
+      pills: navs.length,
+      pillFor: navs.length ? navs[0].getAttribute('data-dccwl-subnav') : null,
+      openTab: open ? open.getAttribute('data-dccwl-group') : null,
     };
   });
-  note(`${w}px Peak Now ${JSON.stringify(peak)}`);
-  checkSame(1, peak.rows, `${w}px: Peak Now shows exactly one toolbar row`);
-  checkSame(false, peak.pillShown, `${w}px: with no pill — Peak Now has no categories`);
-  checkSame(true, peak.compactShown, `${w}px: and the Compact switch alone on it`);
+  note(`${w}px chip row ${JSON.stringify(chipRow)}`);
+  checkSame(1, chipRow.rows, `${w}px: exactly ONE chip row on screen, never three`);
+  checkSame(1, chipRow.months, `${w}px: holding exactly one Month menu`);
+  checkSame(1, chipRow.badges, `${w}px: and one badge key`);
+  checkAtMost(1, chipRow.pills, `${w}px: and at most one category pill visible`);
+  if (1 === chipRow.pills) {
+    checkSame(chipRow.openTab, chipRow.pillFor,
+      `${w}px: the pill on screen belongs to the OPEN tab, not to another section`);
+  }
 
-  /* And that switch has to mean what it says for every deck on screen. */
-  const peakToggle = await visible(page, '[data-dccwl-subnav] [data-dccwl-view]');
-  if (touch) { await peakToggle.tap(); } else { await peakToggle.click(); }
-  await page.waitForTimeout(400);
-  const across = await page.evaluate(() => {
-    const decks = Array.from(document.querySelectorAll('.dccwl-guide-grid')).filter((g) => !g.hidden);
-    return { decks: decks.length,
-             compact: decks.filter((g) => g.classList.contains('dccwl-compact-list')).length };
+  /*
+   * AND THE BADGE KEY IS ONE TAP FROM THE TILES THAT CARRY A MARK.
+   *
+   * The 1.18.0 rule is that a colour carrying meaning has a key beside where
+   * it is used. The key was four always-on lines; it is a popover now, so
+   * the rule has to be re-proved rather than assumed: it must be
+   * SERVER-RENDERED (a guest with no script meets it as text, not as a dead
+   * button) and it must actually open on a real tap.
+   */
+  const keyBefore = await page.evaluate(() => {
+    const key = document.querySelector('[data-dccwl-badgepop]');
+    return {
+      present: !!key,
+      hidden: key ? key.hidden : null,
+      items: key ? key.querySelectorAll('.dccwl-legend-item').length : 0,
+      expanded: document.querySelector('[data-dccwl-badges]').getAttribute('aria-expanded'),
+    };
   });
-  note(`${w}px Peak Now compact ${JSON.stringify(across)}`);
-  check(across.decks >= 1 && across.decks === across.compact,
-    `${w}px: pressing it switches EVERY deck Peak Now is showing`, JSON.stringify(across));
+  check(keyBefore.present, `${w}px: the badge key is in the HTML, not built by script`);
+  checkSame(true, keyBefore.hidden, `${w}px: and starts closed`);
+  checkAtLeast(2, keyBefore.items, `${w}px: with a line per flag in use`);
+  checkSame('false', keyBefore.expanded, `${w}px: the chip says so to a screen reader`);
+
+  const badgeBtn = await page.$('[data-dccwl-badges]');
+  if (touch) { await badgeBtn.tap(); } else { await badgeBtn.click(); }
+  await page.waitForTimeout(200);
+  const keyOpen = await page.evaluate(() => {
+    const key = document.querySelector('[data-dccwl-badgepop]');
+    const r = key.getBoundingClientRect();
+    const row = document.querySelector('[data-dccwl-chiprow]').getBoundingClientRect();
+    return {
+      hidden: key.hidden,
+      expanded: document.querySelector('[data-dccwl-badges]').getAttribute('aria-expanded'),
+      /* It must be ON the row, not somewhere else on the page: "beside where
+       * the colour is used" is a claim about position, which is why this
+       * measures rather than asking whether it is visible. */
+      insideRow: r.top >= row.top - 1 && r.bottom <= row.bottom + 1,
+      width: Math.round(r.width),
+    };
+  });
+  note(`${w}px badge key ${JSON.stringify(keyOpen)}`);
+  checkSame(false, keyOpen.hidden, `${w}px: a real tap opens the badge key`);
+  checkSame('true', keyOpen.expanded, `${w}px: and the chip reports it open`);
+  check(keyOpen.insideRow, `${w}px: it opens within the chip row, beside the marks it explains`);
 
   /* C4/C5 — the search reaches a species by its SCIENTIFIC name, as directly
    * as the removed Jump list reached it by common name. */
@@ -1435,10 +1511,25 @@ async function foldSweep(page, where) {
 
 /* ================= THE BOTTOM ROW'S CUE (1.41.0) ================= */
 /*
- * Rob's option B, chosen 2026-10-06: "Guide ▾ · Credits ▾ · By Month › ·
- * About ▾". Two marks because there are two behaviours — a caret that flips
- * means "this expands here", and By Month is a BUTTON that opens another
- * view, so its › never changes.
+ * ROB REVERSED THIS SIX DAYS LATER, AND THE SUITE FOLLOWS HIM (1.44.0).
+ *
+ * 1.41.0 gave the row a permanent cue: `▾` on a fold, `›` on anything that
+ * opens elsewhere, inside a permanent underline. Item 5 of the PART B brief
+ * is his: "Footer links (Rob's pick: plain text links) … centred, in the
+ * site blue, Raleway 600. No underline-and-arrow look; underline only on
+ * hover/focus. Tap targets at least 44px tall without changing the look."
+ *
+ * So the marks and the resting underline are GONE, and what this section
+ * asserts is his new spec instead. The 1.41.0 RULE about what each mark
+ * means is untouched and still governs every other control in the plugin;
+ * it is this row's permanent cue that he removed. The one-line question is
+ * still not settleable here — no Raleway in this sandbox — but removing the
+ * marks returns the +41.4px the Director measured them costing, so the row
+ * has more room than it did, not less.
+ *
+ * "By Month" also left the row in 1.44.0, with the month-picker PANEL it was
+ * the only door to ("go('month') appears nowhere else", 1.27.0). The Month ▾
+ * menu on the guide's own control row replaced that panel.
  *
  * THE ONE-LINE QUESTION CANNOT BE SETTLED HERE. This sandbox has no Raleway,
  * so its widths are not the site's; the Director measured the real face and
@@ -1447,7 +1538,7 @@ async function foldSweep(page, where) {
  * weight, the 44px targets, the accessible name, and that nothing regressed
  * in the sandbox's own geometry.
  */
-section('the bottom row: Guide ▾ · Credits ▾ · By Month › · About ▾');
+section('the bottom row: plain blue links, underlined only on hover (item 5)');
 
 for (const [w, touch] of [[390, true], [1280, false]]) {
   const h = await widgetPage(browser, 'canal', { width: w, height: 1600, sitekit: true, touch });
@@ -1465,7 +1556,14 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
         ? host.querySelector('summary') : host;
       return {
         label: node.textContent.trim(),
-        mark: (after.content || '').replace(/^"|"$/g, '').trim(),
+        /* `content` reads "none" when the element has no ::after at all,
+         * which is the state item 5 asks for — so "none" is normalised to
+         * empty here. Reading it raw is how the first run of this check
+         * "found" three marks that do not exist. */
+        mark: (() => {
+          const c = (after.content || '').replace(/^"|"$/g, '').trim();
+          return ('none' === c || 'normal' === c) ? '' : c;
+        })(),
         markPx: Math.round(parseFloat(after.fontSize) * 100) / 100,
         labelPx: Math.round(parseFloat(own.fontSize) * 100) / 100,
         markWeight: after.fontWeight,
@@ -1513,78 +1611,118 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     `${w}px: and contains the visible word (WCAG 2.5.3 label-in-name)`,
     `${guideName} / ${guide.label}`);
 
-  /* 2 — the marks. */
+  /* 2 — ONE FOLD AND TWO LINKS, AND NO MARK ON ANY OF THEM. */
   /*
-   * TWO FOLDS AND TWO LINKS SINCE 1.43.0, and the marks follow the BEHAVIOUR
-   * rather than the row position — which is the whole of Rob's 1.41.0 ruling.
+   * The prose went to /wildlife-guide/ in 1.43.0 and the credits panel
+   * followed it — 108,284 bytes, more than half what was left of the page's
+   * markup — so Guide and Credits are LINKS to that page. Only the water
+   * module's "About" still expands in place.
    *
-   * Credits and About still expand in place, so they keep `▾`. "By Month"
-   * opens another view inside the app and has always carried `›`. "Guide"
-   * used to expand in place and now opens another PAGE, so it moved from the
-   * caret to `›` with the behaviour it describes. A caret on it would now be
-   * a lie about what the tap does.
+   * EVERY LINK IS AN <a>, which is checkable as a rule rather than as an
+   * exception now: until 1.44.0 the row held one <button> among them, and
+   * that button's different default line box WAS the 0.9px baseline Rob
+   * measured in 1.35.0. One element type, one line box.
    */
   const folds = row.items.filter((i) => i.isFold);
   const links = row.items.filter((i) => !i.isFold);
-  const button = links.find((i) => !i.isLink);
   const guideLink = links.find((i) => i.isLink && /^Guide/.test(i.label));
-  /*
-   * ONE FOLD AND THREE LINKS SINCE 1.43.0. The prose went to
-   * /wildlife-guide/ in this release and the credits panel followed it —
-   * 108,284 bytes, more than half what was left of the page's markup. Guide
-   * and Credits are links to that page now; By Month still opens another
-   * view inside the app; only the water module's "About" still expands in
-   * place, so only it carries a caret.
-   */
   checkSame(1, folds.length, `${w}px: one fold in the row — About`,
     folds.map((f) => f.label).join(' · '));
-  checkSame(3, links.length, `${w}px: and three that open something else`,
+  checkSame(2, links.length, `${w}px: and two that leave the page`,
     links.map((f) => f.label).join(' · '));
-  check(!!guideLink && /^Guide/.test(guideLink.label),
-    `${w}px: the one that is an <a> is Guide`, links.map((i) => `${i.label}:${i.isLink}`).join(' '));
-  check(folds.every((f) => '▾' === f.mark), `${w}px: each fold carries ▾`,
-    folds.map((f) => `${f.label}:${f.mark}`).join(' '));
-  checkSame('›', button.mark, `${w}px: By Month carries ›, not a caret`);
-  checkSame('›', guideLink.mark, `${w}px: and so does Guide, now that it leaves the page`);
+  check(links.every((i) => i.isLink),
+    `${w}px: every one of them is an <a> — no <button> left to have its own line box`,
+    links.map((i) => `${i.label}:${i.isLink}`).join(' '));
+  check(!!guideLink, `${w}px: and Guide is one of them`,
+    links.map((i) => i.label).join(' · '));
+  /* THE MARKS ARE GONE. Asserted as an absence, because "no
+   * underline-and-arrow look" is the instruction and a mark creeping back in
+   * is exactly the kind of thing a positive-only suite never notices. */
+  checkSame([], row.items.filter((i) => i.mark).map((i) => `${i.label}:${i.mark}`),
+    `${w}px: no label carries ▾ or › any more (item 5)`);
 
-  /* 3 — pinned size and weight, so a fallback face cannot inflate them. */
-  folds.forEach((f) => {
-    check(Math.abs(f.markPx - f.labelPx * 0.95) < 0.3,
-      `${w}px: ${f.label}'s caret is .95em of the label`, `${f.markPx} vs ${f.labelPx}`);
-    checkSame(f.labelWeight, f.markWeight, `${w}px: and the label's own weight`);
-    checkSame(f.labelColor, f.markColor, `${w}px: and its colour`);
+  /* 3 — site blue, weight 600, no resting underline. */
+  const BLUE = 'rgb(0, 107, 207)';
+  row.items.forEach((i) => {
+    checkSame(BLUE, i.labelColor, `${w}px: ${i.label} is the site blue #006BCF`);
+    checkSame('600', i.labelWeight, `${w}px: ${i.label} is weight 600`);
+    check(!i.underline.includes('underline'),
+      `${w}px: ${i.label} carries NO resting underline`, i.underline);
   });
-  links.forEach((i) => {
-    check(Math.abs(i.markPx - i.labelPx * 1.05) < 0.3,
-      `${w}px: ${i.label}'s mark is 1.05em of the label`, `${i.markPx} vs ${i.labelPx}`);
-    checkSame(i.labelWeight, i.markWeight, `${w}px: ${i.label}'s mark is at the label's weight`);
-  });
-
-  /* 4 — the underline runs through, and the targets are still 44px. */
-  check(row.items.every((i) => i.underline.includes('underline')),
-    `${w}px: every label keeps its underline`);
-  row.items.forEach((i) => checkAtLeast(44, i.tap, `${w}px: ${i.label} keeps a 44px target`));
-
-  /* 5 — the caret flips with the fold, and By Month's mark does not. */
-  const flipped = await page.evaluate(async () => {
-    const d = document.querySelector('.dccwl-footnotes details.dccwl-fullguide');
-    d.open = true;
-    /* `toggle` fires in a later task, so aria-expanded is updated a tick
-     * after the property changes. Reading in the same turn measured the
-     * state BEFORE the event — a test timing artefact, not a defect. */
-    await new Promise((r) => setTimeout(r, 60));
-    const h = d.querySelector('.dccwl-fullguide-h');
-    const btn = document.querySelector('.dccwl-footnote-link .dccwl-fullguide-h');
+  /* ...and the row is centred, which is the other half of item 5. Measured
+   * against the row's own box rather than asserting a property, because
+   * `justify-content` on a wrapped flex row is not the same claim as the
+   * labels actually sitting on its centre line. */
+  const centred = await page.evaluate(() => {
+    const row2 = document.querySelector('.dccwl-footnotes');
+    const r = row2.getBoundingClientRect();
+    const items = Array.from(row2.children).filter((c) => c.getClientRects().length);
+    const first = items[0].getBoundingClientRect();
+    const last = items[items.length - 1].getBoundingClientRect();
     return {
-      open: (getComputedStyle(h, '::after').content || '').replace(/"/g, '').trim(),
-      aria: d.querySelector('summary').getAttribute('aria-expanded'),
-      button: btn ? (getComputedStyle(btn, '::after').content || '').replace(/"/g, '').trim() : null,
+      rowMid: Math.round(r.left + r.width / 2),
+      itemsMid: Math.round((first.left + last.right) / 2),
+      rows: new Set(items.map((c) => Math.round(c.getBoundingClientRect().top))).size,
     };
   });
-  note(`${w}px opened ${JSON.stringify(flipped)}`);
-  checkSame('▴', flipped.open, `${w}px: an open fold's caret points up`);
-  checkSame('›', flipped.button, `${w}px: and By Month's mark is unchanged by it`);
-  checkSame('true', flipped.aria, `${w}px: aria-expanded still tracks the fold`);
+  note(`${w}px centring ${JSON.stringify(centred)}`);
+  if (1 === centred.rows) {
+    checkAtMost(2, Math.abs(centred.rowMid - centred.itemsMid),
+      `${w}px: the links sit on the row's centre line`, JSON.stringify(centred));
+  }
+
+  /* THE UNDERLINE IS THE HOVER STATE. Driven with a real hover, because a
+   * `:hover` rule is exactly the kind of thing a computed-style read of an
+   * un-hovered element reports as working. */
+  const hoverTarget = await page.$('.dccwl-footnotes .dccwl-footnote-link');
+  if (hoverTarget && !touch) {
+    await hoverTarget.hover();
+    await page.waitForTimeout(120);
+    const hovered = await page.evaluate(() => {
+      const a = document.querySelector('.dccwl-footnotes .dccwl-footnote-link');
+      return { dec: getComputedStyle(a).textDecorationLine,
+               inner: getComputedStyle(a.querySelector('.dccwl-fullguide-h')).textDecorationLine };
+    });
+    note(`${w}px hovered ${JSON.stringify(hovered)}`);
+    check(hovered.dec.includes('underline') || hovered.inner.includes('underline'),
+      `${w}px: hovering underlines it, and nothing else changes`, JSON.stringify(hovered));
+  }
+
+  /* 4 — "Tap targets at least 44px tall without changing the look" (item 5). */
+  row.items.forEach((i) => checkAtLeast(44, i.tap, `${w}px: ${i.label} keeps a 44px target`));
+
+  /*
+   * 5 — THE FOLD STILL REPORTS ITS STATE, now that no mark shows it.
+   *
+   * The caret flip is gone with the caret, so what is left to assert is the
+   * thing that was always the real contract: `<details>`/`<summary>` reports
+   * open and closed to a screen reader, and `aria-expanded` is kept in step
+   * by sheet.js on `toggle` rather than written into the HTML (1.40.1 — a
+   * static `aria-expanded="false"` would CONTRADICT the native state the
+   * moment a guest opened it, and with no JavaScript could never be fixed).
+   *
+   * A guest with a pointer loses nothing by the marks going: the fold still
+   * opens in place, under its own label, which is its own cue.
+   */
+  const folded = await page.evaluate(async () => {
+    const d = document.querySelector('.dccwl-footnotes details.dccwl-fullguide');
+    d.open = true;
+    /* `toggle` fires in a later task, so aria-expanded updates a tick after
+     * the property changes. Reading in the same turn measured the state
+     * BEFORE the event — a test timing artefact, not a defect. */
+    await new Promise((r) => setTimeout(r, 60));
+    const h = d.querySelector('.dccwl-fullguide-h');
+    return {
+      aria: d.querySelector('summary').getAttribute('aria-expanded'),
+      mark: (getComputedStyle(h, '::after').content || '').replace(/"/g, '').trim(),
+      bodyShown: !!d.querySelector('.dccwl-fullguide-body'),
+    };
+  });
+  note(`${w}px opened ${JSON.stringify(folded)}`);
+  checkSame('true', folded.aria, `${w}px: aria-expanded tracks the fold`);
+  check('' === folded.mark || 'none' === folded.mark,
+    `${w}px: and an OPEN fold grows no mark either`, folded.mark);
+  check(folded.bodyShown, `${w}px: the fold still opens its body in place`);
 
   await page.close();
 }
@@ -1916,49 +2054,29 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     checkSame(17.5, pager.px, `${label}: the pager counter reads 17.5px`);
   }
 
-  /* --- the month bar keeps its arrows AND its edge fades (B, stated in the
-   *     brief). A fade means "there is more this way", so it is asked at both
-   *     ends rather than merely checked for existence. */
+  /*
+   * --- THE MONTH BAR, ITS ARROWS AND ITS EDGE FADES ARE ALL GONE (1.44.0),
+   *     SO THIS BLOCK IS RETIRED RATHER THAN RE-POINTED.
+   *
+   * It asserted two arrows and that a fade appeared only at an end with
+   * something behind it — "a fade means there is more this way", item 7 of
+   * the 1.37.0 list. A MENU has no edges to cue and no track to scroll, so
+   * neither claim has a subject. The twelve months are a listbox now, and
+   * what replaced this is the Month-menu section in ui-deck.mjs: the label
+   * reads the choice, Any Month filters nothing, a named month filters, and
+   * Safety is never month-filtered.
+   *
+   * ONE THING FROM IT IS WORTH KEEPING IN WORDS, because it is the reason
+   * the strip is gone at all: the settle loop below used to wait for the
+   * track to stop moving rather than guessing a duration, after a fixed
+   * 250ms read caught it mid-glide with BOTH edges correctly faded and
+   * called that a bug. Never time a scroll — wait for it to stop.
+   */
   await page.evaluate(() => {
     const i = document.querySelector('.dccwl-search-input');
     i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await page.waitForTimeout(400);
-  const months = await page.evaluate(async () => {
-    const nav = document.querySelector('.dccwl-timeline');
-    const track = nav.querySelector('.dccwl-timeline-track');
-    const arrows = nav.querySelectorAll('.dccwl-timeline-arrow');
-    /* WAIT FOR THE SCROLL TO SETTLE, DO NOT GUESS AT IT. The track snaps and
-     * glides, so for a few hundred milliseconds after an assignment it is
-     * somewhere in the middle — where BOTH edges are correctly faded. A fixed
-     * 250ms read that state and called it a bug. */
-    const settle = async (target) => {
-      track.scrollLeft = target;
-      let last = -1;
-      for (let i = 0; i < 40; i += 1) {
-        await new Promise((r) => setTimeout(r, 50));
-        const now = Math.round(track.scrollLeft);
-        if (now === last) { break; }
-        last = now;
-      }
-      return { l: nav.classList.contains('dccwl-fade-l'), r: nav.classList.contains('dccwl-fade-r'),
-               at: Math.round(track.scrollLeft) };
-    };
-    const atStart = await settle(0);
-    const atEnd = await settle(track.scrollWidth);
-    return { arrows: arrows.length, overflows: track.scrollWidth > track.clientWidth + 2, atStart, atEnd };
-  });
-  note(`${label} months ${JSON.stringify(months)}`);
-  checkSame(2, months.arrows, `${label}: the month bar keeps its ‹ › arrows`);
-  if (months.overflows) {
-    check(months.atStart.r && !months.atStart.l,
-      `${label}: at the start only the right edge is faded`, JSON.stringify(months.atStart));
-    check(months.atEnd.l && !months.atEnd.r,
-      `${label}: at the end only the left edge is`, JSON.stringify(months.atEnd));
-  } else {
-    check(!months.atStart.l && !months.atStart.r,
-      `${label}: nothing is faded when the whole year fits`);
-  }
 
   /* --- the species sheet: the × and the centred photo credit. */
   const tile = await page.$('.dccwl-guide-grid[data-dccwl-group="animals"] li:not([hidden]) .dccwl-tile');

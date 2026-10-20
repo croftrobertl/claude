@@ -108,26 +108,13 @@ class Canal_Widget extends \Elementor\Widget_Base {
 		/* 'ov_jump' RETIRED IN 1.38.0 with the "Jump to a species" list. A
 		 * placement saved with it keeps the stored key harmlessly; nothing
 		 * reads it, and the control is gone so nobody can set it again. */
-		$this->add_control( 'ov_compact_btn', Guide_Data::three_way( __( '"Compact" button', 'dcc-wildlife' ) ) );
 
-		$this->add_control(
-			'ov_view',
-			[
-				'label'   => __( 'Species list opens as', 'dcc-wildlife' ),
-				'type'    => 'select',
-				'default' => '',
-				'options' => [
-					''        => __( 'Use the setting', 'dcc-wildlife' ),
-					'deck'    => __( 'Photo cards', 'dcc-wildlife' ),
-					'compact' => __( 'Short rows', 'dcc-wildlife' ),
-				],
-			]
-		);
-
+		/* 'ov_view' RETIRED IN 1.44.0 with the Compact switch, and
+		 * 'ov_hub_preview_max' / 'ov_now_names_max' / 'ov_month_art_max'
+		 * with the hub. A placement saved with any of them keeps the stored
+		 * key harmlessly; nothing reads it, and the controls are gone so
+		 * nobody can set one again. */
 		$this->add_control( 'ov_deck_rows', Guide_Data::number_control( __( 'Rows per page of cards, on a phone', 'dcc-wildlife' ), 'deck_rows' ) );
-		$this->add_control( 'ov_hub_preview_max', Guide_Data::number_control( __( 'Species named on the Wildlife tile', 'dcc-wildlife' ), 'hub_preview_max' ) );
-		$this->add_control( 'ov_now_names_max', Guide_Data::number_control( __( 'Species named in the "right now" line', 'dcc-wildlife' ), 'now_names_max' ) );
-		$this->add_control( 'ov_month_art_max', Guide_Data::number_control( __( 'Species drawn on each month tile', 'dcc-wildlife' ), 'month_art_max' ) );
 		$this->add_control( 'ov_sticky_offset', Guide_Data::number_control( __( 'Sticky header height, in pixels', 'dcc-wildlife' ), 'sticky_offset' ) );
 
 		$this->end_controls_section();
@@ -144,12 +131,7 @@ class Canal_Widget extends \Elementor\Widget_Base {
 				'title'           => (string) ( $s['widget_title'] ?? '' ),
 				'search'          => $s['ov_search'] ?? null,
 				'subnav'          => $s['ov_subnav'] ?? null,
-				'compact_btn'     => $s['ov_compact_btn'] ?? null,
-				'view'            => $s['ov_view'] ?? null,
 				'deck_rows'       => $s['ov_deck_rows'] ?? null,
-				'hub_preview_max' => $s['ov_hub_preview_max'] ?? null,
-				'now_names_max'   => $s['ov_now_names_max'] ?? null,
-				'month_art_max'   => $s['ov_month_art_max'] ?? null,
 				'sticky_offset'   => $s['ov_sticky_offset'] ?? null,
 			]
 		);

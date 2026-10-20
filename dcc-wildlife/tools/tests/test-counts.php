@@ -80,7 +80,7 @@ foreach ( $hazards as $h ) {
 	);
 }
 
-dcc_section( 'Peak Now excludes hazards; Safety is where they are' );
+dcc_section( '"This Month" excludes hazards; Safety is where they are' );
 
 $peak_all      = at_least( $dataset, SEPT, PEAK, false );
 $peak_spotting = at_least( $dataset, SEPT, PEAK, true );
@@ -91,22 +91,27 @@ check(
 	sprintf( 'all=%d spotting=%d', count( $peak_all ), count( $peak_spotting ) )
 );
 foreach ( $peak_spotting as $sp ) {
-	check_same( 0, (int) $sp['haz'], sprintf( 'no hazard survives the Peak Now filter (%s)', $sp['name'] ) );
+	check_same( 0, (int) $sp['haz'], sprintf( 'no hazard survives the "This Month" filter (%s)', $sp['name'] ) );
 }
 
-dcc_section( '"at peak" is ONE number — the month strip and Peak Now must agree' );
-
 /*
- * The month strip's preview and the Peak Now tab both use the phrase. In
- * 1.32.1 the strip said 15 (safety group excluded, alligator counted) and the
- * tab showed 24 tile faces over 23 species. Both now read the same list.
+ * A CHECK THAT WAS A TAUTOLOGY FROM THE DAY IT WAS WRITTEN, REMOVED (1.44.0)
+ * RATHER THAN CARRIED FORWARD UNDER A NEW NAME.
+ *
+ * It read `$strip = at_least( $dataset, SEPT, PEAK, true )` and then asserted
+ * that `count( $strip ) === count( $peak_spotting )` — where $peak_spotting
+ * is `at_least( $dataset, SEPT, PEAK, true )`, the SAME CALL with the same
+ * arguments. It compared one list to itself and could not fail, whatever the
+ * code did. It has stood green since 1.33.0.
+ *
+ * The claim it was meant to make — "at peak" is ONE number on every surface
+ * that says it — is real and is still guarded, by the assertions above: the
+ * peak list is shorter once hazards come out, and no hazard survives it. The
+ * month strip that was its other half no longer exists.
+ *
+ * The lesson is this harness's own: a suite that asserts nothing fails, and
+ * a suite that asserts an identity is asserting nothing with extra steps.
  */
-$strip = at_least( $dataset, SEPT, PEAK, true );
-check_same(
-	count( $strip ),
-	count( $peak_spotting ),
-	'the strip\'s "N at peak" and the Peak Now tab count the same species'
-);
 
 dcc_section( 'the wider count is NOT called "at peak"' );
 
@@ -126,8 +131,20 @@ foreach ( $GLOBALS['dccwl_test']['inline'] as [ $handle, $data ] ) {
 }
 check_contains( $config, 'worth looking for', 'the wider count says "worth looking for"' );
 check_lacks( $config, 'at their best', '"at their best" is gone — it read as a synonym for "at peak"' );
-/* "at peak" belongs to the HUB's string table (Canal_Render), which is the
- * surface that says it — the month widget's own config never carried it. */
+/*
+ * "at peak" USED TO BELONG TO THE HUB'S STRING TABLE, and it does not any
+ * more (1.44.0). The month strip's "N at peak" preview and the month tiles
+ * that printed it went with the hub, so `atPeak` was deleted from
+ * Canal_Render's table rather than left for a translator to translate for
+ * nothing.
+ *
+ * THE PHRASE SURVIVES WHERE IT IS STILL SAID, and that is what is asserted
+ * instead: the GUIDE's own config carries it, because the tile flag ("Peak")
+ * and the empty-state line ("Nothing is at its peak in %s.") are both still
+ * rendered — the latter by the Month menu's "This Month". So the claim is
+ * unchanged in substance: one phrase, one number, and no surface left that
+ * says "at their best".
+ */
 dcc_reset_once_guards();
 $GLOBALS['dccwl_test']['inline'] = [];
 ob_start();
@@ -137,8 +154,9 @@ $hub = '';
 foreach ( $GLOBALS['dccwl_test']['inline'] as [ $handle, $data ] ) {
 	$hub .= (string) $data;
 }
-check_contains( $hub, 'at peak', 'and "at peak" is still the phrase the hub uses for the peak count' );
-check_lacks( $hub, 'at their best', 'the hub does not say "at their best" either' );
+check_lacks( $hub, 'at their best', 'the hub does not say "at their best"' );
+check_contains( $config, 'at its peak', 'the guide still says "at its peak" where it means it' );
+check_contains( $config, '"peakShort"', 'and the tile flag that marks one is still shipped' );
 
 dcc_section( 'the hazard flag actually reaches the client' );
 
@@ -197,8 +215,7 @@ dcc_section( 'the September figures, pinned' );
 
 $figures = [
 	'hub tile / guide subtitle (>= 2, no hazards)' => count( $spotting ),
-	'month strip "N at peak" (>= 3, no hazards)'   => count( $peak_spotting ),
-	'Peak Now tiles'                                => count( $peak_spotting ),
+	'Month menu "This Month" (>= 3, no hazards)'    => count( $peak_spotting ),
 	'Safety section'                                => count( $safety ),
 	'search placeholder'                            => count( $dataset ),
 ];

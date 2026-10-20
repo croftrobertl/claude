@@ -527,6 +527,11 @@
  * night motif. Left-aligned prose so it reads even inside the centred hub.
  * ================================================================== */
 
+/* The moon card is a FLEX ROW — a drawn disk beside its lines — so its own
+ * `text-align: left` governs the text column beside the disk, not a block of
+ * centred prose. Left alone under item 6: centring text in a column that
+ * sits against a 64px graphic reads as a mistake, and the card is not one of
+ * the things item 6 names. Listed in the notes. */
 .dccwl-moon {
 	align-items: center;
 	background: var(--dccwl-glass-bg);
@@ -589,12 +594,35 @@
  * FISHING ALMANAC (v1.11.0)
  * Static, FWC-sourced angling guidance in its own block, below the live
  * "Right now" strip. Season cards read as a calm grid; the keep-limits are a
- * simple two-column list; every part ends in a visible source line. Prose is
- * left-aligned for readability even inside the centred hub — text-align set
- * directly on the block wins over the hub's inherited centring.
+ * simple two-column list; every part ends in a visible source line.
+ *
+ * ITEM 6 (1.44.0) — THE BLOCK IS CENTRED NOW, WITH TWO NAMED EXCEPTIONS.
+ *
+ * Rob: "all text in the section is centred by default (cards, headings,
+ * notes, sources, empty states), unless a previous instruction from Rob said
+ * otherwise for a specific element." This block was `text-align: left`
+ * wholesale, on a session's judgement from 1.4.0 ("left-aligned for
+ * readability"), which is not one of his instructions — so headings, the
+ * season-card labels, the keep-limits list and every source line centre.
+ *
+ * WHAT STAYS LEFT, AND THE ONLY REASON EITHER DOES: his OWN alignment rule
+ * of 2026-10-19, "centre everything EXCEPT multi-sentence paragraphs". Two
+ * elements here are multi-sentence prose — the intro and the per-season
+ * advice line — and nothing else is. Both are held to a reading measure and
+ * centred AS BLOCKS, so the ragged edge is inside a centred column rather
+ * than against the left of the panel.
  * ================================================================== */
 
-.dccwl-fishing { text-align: left; }
+.dccwl-fishing { text-align: center; }
+
+/* The two multi-sentence paragraphs, per Rob's 2026-10-19 exception. */
+.dccwl-fishing-intro,
+.dccwl-fishing-line {
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 46ch;
+	text-align: left;
+}
 
 .dccwl-fishing-intro {
 	color: var(--dccwl-text);
@@ -884,6 +912,11 @@
 .dccwl-water .dccwl-water-tabs { margin-bottom: var(--dccwl-gap-lg); margin-top: var(--dccwl-gap-lg); }
 
 /* ITEM 6 — "Tonight on the Canal": everything centred, moon above the text. */
+/* The moon card is a FLEX ROW — a drawn disk beside its lines — so its own
+ * `text-align: left` governs the text column beside the disk, not a block of
+ * centred prose. Left alone under item 6: centring text in a column that
+ * sits against a 64px graphic reads as a mistake, and the card is not one of
+ * the things item 6 names. Listed in the notes. */
 .dccwl-moon {
 	display: flex;
 	flex-direction: column;

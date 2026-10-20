@@ -138,9 +138,10 @@
  *
  * Content is centred, and anything that does not need the full width is
  * held to --dccwl-measure and centred in it. At 1280px the month strip ran
- * the whole column with twelve pills adrift in it, the chip row and the
+ * the whole column with twelve pills adrift in it, the category row and the
  * jump select did the same, and the tabs sat hard left because `margin:
- * 0 auto` does nothing for an inline-flex box.
+ * 0 auto` does nothing for an inline-flex box. (The strip and the select
+ * are both gone; the cap is what their replacements inherit.)
  *
  * WHAT IS DELIBERATELY NOT LISTED: .dccwl-tiles and .dccwl-deck. The tile
  * grid is the one thing that wants the width.
@@ -161,8 +162,8 @@
  * rule about flex items is kept because it is about this list, not about
  * that row.)
  */
-.dccwl-root .dccwl-timeline,
 .dccwl-root .dccwl-legend,
+.dccwl-root .dccwl-chiprow,
 .dccwl-root .dccwl-subnav,
 .dccwl-root .dccwl-footnotes,
 .dccwl-root .dccwl-deck-nav {
@@ -179,10 +180,12 @@
 }
 /*
  * ABOVE THE PHONE BREAKPOINT ONLY. The 480px rule further up gives the row
- * `display: flex; width: 100%` so four tabs share the whole narrow screen —
- * which is what buys "Peak Now" its single line. Shrinking the row to its
- * content there takes that space straight back and the label wraps again.
- * This rule came later in the file and did exactly that until it was scoped.
+ * `display: flex; width: 100%` so the tabs share the whole narrow screen.
+ * Shrinking the row to its content there takes that space straight back and
+ * a label wraps again; this rule came later in the file and did exactly
+ * that until it was scoped. (It bought "Peak Now" its single line when the
+ * row held four tabs. It holds three now, which is slack, not licence —
+ * "Reptiles & Amphibians" is still the longest thing a label can become.)
  */
 @media (min-width: 481px) {
 	.dccwl-root .dccwl-tabs {
@@ -194,163 +197,21 @@
 }
 
 /* =====================================================================
- * MONTH TIMELINE — the segmented control
- * ================================================================== */
-
-/* The fade has to be wide enough to DISSOLVE a clipped month label rather
- * than clip it mid-word: a hard-cut "ul" or "No" reads as a rendering fault,
- * which is what 1.10.1 traded away when it removed the fade on phones. A
- * pill is ~54px, so ~40px of gradient turns the edge one into a fading hint
- * instead of broken text. The selected pill is never touched by it — with
- * centring fixed it sits ~67px clear even at 320px. */
-/* 1.18.0: the month strip sits on its own control ground — a tinted,
- * rounded band — so the pills read as a control, not as more tiles. Text on
- * this ground: muted 4.81:1, primary 4.74:1; the selected pill is solid
- * primary with white (5.30:1). */
-.dccwl-timeline {
-	/* WHITE (1.33.0, owner's decision). With every month pill solid blue the
-	 * tinted band underneath was doing no work. */
-	background: #ffffff;
-	border-radius: var(--dccwl-radius-pill);
-	padding: 4px;
-	--dccwl-strip-fade: 48px;
-	align-items: center;
-	display: flex;
-	gap: 6px;
-	position: relative;
-}
-
-.dccwl-timeline[hidden] { display: none; }
-
-.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow {
-	align-items: center;
-	background: var(--dccwl-btn-bg);
-	border: var(--dccwl-gold-w) solid transparent;
-	border-radius: var(--dccwl-radius-control);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	display: inline-flex;
-	flex: none;
-	height: 44px;
-	justify-content: center;
-	padding: 0;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
-	width: 44px;
-}
-
-.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:hover {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-
-.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-
-.dccwl-timeline-track {
-	-ms-overflow-style: none;
-	display: flex;
-	flex: 1 1 auto;
-	gap: 4px;
-	overflow-x: auto;
-	/* Inline padding keeps the active pill clear of the edge fade below —
-	 * on a 320px screen the centred pill otherwise sits flush against it
-	 * and reads as half-dimmed. */
-	padding: 3px 10px;
-	scroll-behavior: smooth;
-	scroll-snap-type: x proximity;
-	scrollbar-width: none;
-}
-
-.dccwl-timeline-track::-webkit-scrollbar { display: none; }
-
-.dccwl-root .dccwl-month.dccwl-month {
-	background: var(--dccwl-btn-bg);
-	border: var(--dccwl-gold-w) solid transparent;
-	border-radius: var(--dccwl-radius-control);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	flex: none;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: 600;
-	/* 44px, not 40: this is a thumb target on the species screen and the
-	 * audit measured it under the minimum at every width (1.10.1). */
-	min-height: 44px;
-	padding: 10px 15px;
-	scroll-snap-align: center;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
-		color var(--dccwl-t-fast) var(--dccwl-ease-color);
-}
-
-.dccwl-root .dccwl-month.dccwl-month:hover {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-
-/* The month in view: the anchor of the whole strip. */
-.dccwl-root .dccwl-month.dccwl-month-on {
-	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-gold);
-	color: var(--dccwl-btn-txt);
-}
-.dccwl-root .dccwl-month.dccwl-month-on:hover {
-	background: var(--dccwl-btn-bg-hover);
-	border-color: var(--dccwl-gold);
-	color: var(--dccwl-btn-txt-hover);
-}
-
-.dccwl-root .dccwl-month.dccwl-month:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-
-/* A tapped month pill must not keep looking chosen (touch :hover). */
-@media (hover: none) {
-	.dccwl-root .dccwl-month.dccwl-month:hover {
-		background: var(--dccwl-btn-bg);
-		color: var(--dccwl-btn-txt);
-	}
-
-	.dccwl-root .dccwl-month.dccwl-month-on:hover {
-		background: var(--dccwl-btn-bg);
-		color: var(--dccwl-btn-txt);
-	}
-}
-
-/* A month that does not fit the track entirely is not rendered at all — see
- * trimPartialMonths(). visibility, not display, so the strip's scroll
- * geometry and the arrows behave exactly as before. */
-.dccwl-root .dccwl-month.dccwl-month-cut {
-	pointer-events: none;
-	visibility: hidden;
-}
-
-/* Edge fades cue that the strip scrolls.
+ * THE MONTH TIMELINE SECTION IS DELETED (1.44.0) — about 200 lines.
  *
- * Masked rather than overlaid: a gradient fading to a page colour has to
- * guess what the page behind it is, and this widget sits on whatever the
- * theme provides. A mask fades the buttons themselves, whatever is behind. */
-.dccwl-timeline-track {
-	-webkit-mask-image: none;
-	mask-image: none;
-}
-
-.dccwl-timeline.dccwl-fade-l .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade));
-	mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade));
-}
-
-.dccwl-timeline.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to left, transparent, #000 var(--dccwl-strip-fade));
-	mask-image: linear-gradient(to left, transparent, #000 var(--dccwl-strip-fade));
-}
-
-.dccwl-timeline.dccwl-fade-l.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade), #000 calc(100% - var(--dccwl-strip-fade)), transparent);
-	mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade), #000 calc(100% - var(--dccwl-strip-fade)), transparent);
-}
+ * `.dccwl-timeline`, its track, its two arrows, the twelve `.dccwl-month`
+ * pills, the `-on` and `-cut` states and the `.dccwl-fade-*` edge cues all
+ * went with the strip. Month is a MENU now (see THE CHIP ROW below), which
+ * does not scroll sideways and so has no edge to cue, no pill to centre and
+ * no label to slice. The JavaScript that did those three things was the
+ * single biggest cost in a profiled tap — 419 ms — and the note in
+ * widget.js explains why.
+ *
+ * Deleted rather than left unmatched, for the reason given at the head of
+ * canal.css: this repository's recurring defect is a rule that matches
+ * nothing, and a file full of them is how the next reader loses track of
+ * which rules carry weight.
+ * ================================================================== */
 
 /* =====================================================================
  * TILES — the spotlight grid and the guide grids
@@ -1072,7 +933,6 @@
 	.dccwl-root *::after { animation: none !important; transition: none !important; }
 
 	.dccwl-tiles > li.dccwl-in { opacity: 1; transform: none; }
-	.dccwl-timeline-track { scroll-behavior: auto; }
 
 	/* With no transition to carry it, the hover lift becomes an instant
 	 * 2px jump under the cursor — worse than no lift at all. The tile still
@@ -1179,8 +1039,10 @@
  * plus the modification notice that CC BY 4.0 and CC BY-SA 4.0 require — is
  * untouched and still crawlable. Never "tidy" that content away. */
 .dccwl-footnotes {
-	/* center, not baseline: the month link is a 44px touch target and a
-	 * baseline row left it sitting 2px below its neighbours. */
+	/* center, not baseline: every item is a 44px touch target and a baseline
+	 * row left the tallest sitting 2px below its neighbours. (The 1.28.0
+	 * note named "the month link", which left this row in 1.44.0; the
+	 * reasoning is about the row, not that one item.) */
 	align-items: center;
 	border-top: 1px solid var(--dccwl-line);
 	display: flex;
@@ -1231,50 +1093,34 @@
 .dccwl-footnotes .dccwl-fullguide-chev { display: none; }
 
 /* ======================================================================
- * THE ROW'S OWN CUE (1.41.0 — Rob's option B, chosen 2026-10-06).
+ * ITEM 5 (1.44.0) — PLAIN TEXT LINKS, AND THAT RETIRES THE 1.41.0 MARKS.
  *
- * The circled chevron above is hidden here on purpose and stays hidden:
- * showing it wraps this row onto two lines at every phone width (measured
- * 50px to 99px at 320, 360 and 390 in 1.40.1). What the folds get instead is
- * a small caret inside the label's own underline — same colour, same
- * baseline, no extra box.
+ * Rob's words: "Footer links (Rob's pick: plain text links): … centred, in
+ * the site blue, Raleway 600. No underline-and-arrow look; underline only
+ * on hover/focus. Keep what each one opens. Tap targets at least 44px tall
+ * without changing the look."
  *
- * TWO MARKS, BECAUSE THERE ARE TWO BEHAVIOURS. A caret that flips means
- * "this expands here". "By Month" is a BUTTON that opens another view, so it
- * carries a fixed › — the same mark the hub's round go button uses — and it
- * never changes. Giving it a caret would misdescribe it.
+ * So the `▾ ▴ ›` marks this row gained in 1.41.0 are DELETED, together with
+ * the resting underline they sat inside. That is a reversal of a decision
+ * the Director made six days earlier, by the owner, stated plainly here so
+ * nobody restores the marks as a fix: 1.41.0's rule about what each mark
+ * MEANS is untouched and still governs every other control in the plugin —
+ * it is this row's permanent cue that Rob removed.
  *
- * SIZE AND WEIGHT ARE PINNED. Raleway may not carry ▾ ▴ ›, and a fallback
- * face must not render them bigger or bolder than what was approved. The
- * `em` size keeps them proportional to the label; `font-weight: inherit`
- * keeps them at the label's 600; `line-height: 1` stops a tall fallback
- * glyph from growing the row's height.
+ * WHAT CARRIES THE "these are links" SIGNAL NOW: the site blue, which
+ * nothing else in this row uses, plus the underline on hover and focus. The
+ * 1.40.1 measurement that forbids the circled chevron here is unaffected
+ * and the chevron stays hidden — it was 50px to 99px, two lines at 320,
+ * 360 and 390.
  *
- * THE BUDGET, measured on live by the Director (Raleway 15.6/600), not in
- * this sandbox, which has no Raleway:
- *   spare today        −11px @320   +29px @360   +59px @390
- *   three carets " ▾"  3 × 13.8 = +41.4
- *   one mark " ›"                  +9.4
- *   "Field Guide" → "Guide"        −40.6
- *   net                            +10.2
- *   spare after        −21px @320   +19px @360   +49px @390
- * 320 already wrapped and still does; 360 and 390 stay on one line.
+ * AND THE ROW GETS ITS WIDTH BACK. The Director's live budget for the marks
+ * was +41.4px for three carets and +9.4 for one `›` against +59px of spare
+ * at 390px and −11px at 320px. Removing them returns all of it, so 320px —
+ * which has wrapped since before 1.41.0 — has about 40px more room than it
+ * did. Not asserted as a fix: this sandbox has no Raleway, and the row's
+ * one-line question is the Director's to measure on live.
  * ====================================================================== */
-.dccwl-footnotes details.dccwl-fullguide > .dccwl-fullguide-summary .dccwl-fullguide-h::after {
-	content: " \25BE";
-	font-size: .95em;
-	font-weight: inherit;
-	line-height: 1;
-}
-.dccwl-footnotes details.dccwl-fullguide[open] > .dccwl-fullguide-summary .dccwl-fullguide-h::after {
-	content: " \25B4";
-}
-.dccwl-footnotes .dccwl-footnote-link .dccwl-fullguide-h::after {
-	content: " \203A";
-	font-size: 1.05em;
-	font-weight: inherit;
-	line-height: 1;
-}
+
 .dccwl-footnotes .dccwl-fullguide-text { display: inline; }
 
 /* A footnote link, not a heading: the same size and colour as the meta line
@@ -1311,7 +1157,16 @@
 	background: none;
 	border: 0;
 	box-shadow: none;
-	color: var(--dccwl-text-muted);
+	/* ITEM 5: "in the site blue". --dccwl-primary is #006bcf, measured from
+	 * /guest/ and the Cottage Selector — the same value the Director's own
+	 * item 0 gives for the site's primary buttons, so the row matches the
+	 * other plugins rather than approximating them. It replaces
+	 * --dccwl-text-muted (#546d85), which these labels carried from 1.28.0
+	 * while they were footnotes rather than links. Contrast: #006bcf on
+	 * white is 5.14:1, so it passes AA as small text — checked, because this
+	 * plugin measures a text colour on the surface it sits on before using
+	 * it, and the surface here is the page's own white. */
+	color: var(--dccwl-primary);
 	font-family: inherit;
 	font-style: normal;
 	line-height: inherit;
@@ -1320,12 +1175,20 @@
 	 * the owner measured. --fs-sm did not: two labels alone came to 398px
 	 * inside a 361px row and wrapped. */
 	font-size: var(--dccwl-fs-xs);
+	/* ITEM 5: "Raleway 600". --dccwl-fw-label IS 600, and it is named rather
+	 * than written as a number because that is this plugin's rule — a rule
+	 * answers "is this body or a label", not "is this 400 or 600". The
+	 * FAMILY is inherited, which is how Raleway arrives: this plugin loads
+	 * no fonts and must not start now. */
 	font-weight: var(--dccwl-fw-label);
 	letter-spacing: 0;
 	margin: 0;
 	padding: 0;
 	text-align: center;
-	text-decoration: underline;
+	/* ITEM 5: "No underline-and-arrow look; underline only on hover/focus."
+	 * `none` is declared rather than omitted because the host kit underlines
+	 * bare <a>s, and an omitted property is not an override. */
+	text-decoration: none;
 	text-transform: none;
 	text-underline-offset: 2px;
 }
@@ -1365,9 +1228,40 @@
 	min-width: 44px;
 }
 
+/*
+ * ITEM 5: THE UNDERLINE IS THE HOVER AND FOCUS STATE, and nothing else
+ * changes with it.
+ *
+ * It used to be the other way round — permanently underlined, and hover
+ * changed the COLOUR from muted to blue. The colour is the resting state
+ * now, so hover has the underline to itself.
+ *
+ * `:focus-visible` is listed beside `:hover` because a keyboard guest must
+ * get the same cue a pointer does; the gold ring stays as well, since it is
+ * the focus affordance the whole plugin uses and a text-decoration is not a
+ * substitute for it.
+ *
+ * NO `(hover: hover)` GUARD HERE, DELIBERATELY, and this is the one place in
+ * the release where that is the right answer. Item 0 requires the guard for
+ * the CORAL hover, because the site kit's coral sticking to a tapped button
+ * on iOS is the defect it exists to prevent (item 8, three releases
+ * running). An underline that stays on the last link a finger touched is not
+ * that defect: it reads as "this is a link", which is true, and removing a
+ * keyboard-reachable cue to tidy a touch artefact would cost more than it
+ * saves.
+ */
 .dccwl-footnotes .dccwl-fullguide-h:hover,
+.dccwl-footnotes .dccwl-fullguide-summary:hover .dccwl-fullguide-h,
+.dccwl-footnotes .dccwl-fullguide-summary:focus-visible .dccwl-fullguide-h,
 .dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:hover,
-.dccwl-app .dccwl-footnote-link.dccwl-footnote-link:hover { color: var(--dccwl-primary); }
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:hover .dccwl-fullguide-h,
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:focus-visible,
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:focus-visible .dccwl-fullguide-h,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link:hover,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link:focus-visible {
+	text-decoration: underline;
+}
+.dccwl-footnotes .dccwl-fullguide-summary:focus-visible,
 .dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:focus-visible,
 .dccwl-app .dccwl-footnote-link.dccwl-footnote-link:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
 
@@ -1419,86 +1313,14 @@
  * the white-card treatment, however card-like a chip may look elsewhere.
  * ================================================================== */
 
-/* --- the jump select and the view toggle --- */
-
-.dccwl-subtools {
-	display: flex;
-	gap: var(--dccwl-gap);
-	align-items: stretch;
-}
-
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle {
-	background: var(--dccwl-btn-bg);
-	border: var(--dccwl-gold-w) solid transparent;
-	border-radius: var(--dccwl-radius-control);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	flex: none;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-label);
-	min-height: 44px;
-	min-width: 44px;
-	padding: 10px 14px;
-	white-space: nowrap;
-}
-
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"] {
-	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-gold);
-	color: var(--dccwl-btn-txt);
-}
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle:hover {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"]:hover {
-	border-color: var(--dccwl-gold);
-}
-
-.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: 2px solid var(--dccwl-primary);
-	outline-offset: 1px;
-}
-
-/* --- compact rows -----------------------------------------------------
- * The same <li>s and the same buttons, relaid as a vertical list. No second
- * markup path: whatever is reachable in the deck is reachable here, which is
- * the same reason the deck itself adds no tiles. */
-.dccwl-app .dccwl-tiles.dccwl-compact-list.dccwl-compact-list {
-	display: block;
-	overflow: visible;
-	scroll-snap-type: none;
-}
-
-.dccwl-app .dccwl-tiles.dccwl-compact-list > li { margin: 0 0 2px; }
-
-.dccwl-app .dccwl-compact-list .dccwl-tile.dccwl-tile {
-	align-items: center;
-	display: flex;
-	flex-direction: row;
-	gap: var(--dccwl-gap-lg);
-	height: auto;
-	min-height: 56px;
-	text-align: start;
-}
-
-/* The 320px file again, at 56px — no new image, no second request. */
-.dccwl-app .dccwl-compact-list .dccwl-tile-media {
-	aspect-ratio: 1 / 1;
-	flex: none;
-	height: 56px;
-	width: 56px;
-}
-
-.dccwl-app .dccwl-compact-list .dccwl-tile-name {
-	display: block;
-	-webkit-line-clamp: none;
-	line-clamp: none;
-	min-height: 0;
-	overflow: visible;
-}
+/* --- THE COMPACT SWITCH AND ITS LIST ARE DELETED (1.44.0) ------------
+ * `.dccwl-subtools`, `.dccwl-viewtoggle` and every `.dccwl-compact-list`
+ * rule went with the switch Rob removed from the control row. Photo-first
+ * tiles have been the guide's face since 1.19.0; the list was a second way
+ * to read the same species in the same order, and the one row he specified
+ * has no room for it. `default_view` is retired in Guide_Data so a stored
+ * row is not changed.
+ */
 
 /* --- the jump's landing flash ----------------------------------------
  * A jump that lands with no visible change is indistinguishable from a control
@@ -1524,22 +1346,13 @@
  * 1.34.0 — Rob's /explore/ review.
  * =================================================================== */
 
-/* ITEM 14 (his pick: C) — the ‹ › arrows are near-black with a white
- * chevron, on BOTH the months bar and the new categories bar.
- *
- * WHY NOT CORAL: item 12 gives coral to the SELECTED button. A coral
- * arrow would sit beside a coral selected month on the same bar and the
- * two would read as the same thing. Near-black is the only treatment that
- * cannot be confused with a blue month button or a coral selection, and it
- * introduces no new colour — it is the palette's own text ink. */
-.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow {
-	background: var(--dccwl-text);
-	color: #ffffff;
-}
-.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:hover {
-	background: var(--dccwl-accent);
-	color: var(--dccwl-text);
-}
+/* ITEM 14 (1.34.0, his pick C) gave the ‹ › arrows a near-black ground and
+ * a white chevron, on both the months bar and the categories bar. BOTH BARS
+ * ARE GONE: the categories became one pill in 1.38.0 and the months became
+ * one menu in 1.44.0, so neither has an arrow to colour. His reasoning is
+ * worth keeping even though its subject is not — a coral arrow beside a
+ * coral selected button reads as the same thing, so a control that steps
+ * must not take the colour that means "chosen". */
 
 /* ITEM 16 — tapping the search drew a SECOND gold pill inside the bar.
  * The outer pill keeps a visible focus state for keyboard users; the inner
@@ -1562,26 +1375,39 @@
 .dccwl-root .dccwl-legend-item { vertical-align: top; }
 
 /* ======================================================================
- * THE CATEGORY PICKER (1.38.0 — Rob's C2/C3).
+ * THE CHIP ROW (1.44.0 — Rob's brief), AND THE CATEGORY PICKER IT ABSORBED
+ * (1.38.0 — his C2/C3).
  *
- * One pill that opens a list beneath it, modelled on the Layers ▾ control in
- * his own Croatia map. It replaces the sideways-scrolling chip bar, its ‹ ›
- * arrows and its edge fades — all of which are gone.
+ * ONE ROW: Month ▾ · Show: All ▾ · ⓘ Badges. Three controls of the same
+ * kind, so they take the same rules rather than a second set — the chip
+ * classes are added to the picker's own selectors throughout. Writing a
+ * parallel `.dccwl-chip` block that merely matched would be two
+ * descriptions of one control, which is how two controls on one row end up
+ * a pixel apart (the 1.35.0 baseline, found by diffing computed styles).
  *
- * The pill is a CONTROL, so it sits on the tinted ground with the tabs and
- * the Compact switch rather than reading as another card (the 1.18.0
- * hierarchy rule). Doubled classes throughout: Bravada's kit resets buttons
- * at (0,3,1) and a (0,2,0) rule here would lose its border and radius.
+ * The picker was modelled on the Layers ▾ control in Rob's own Croatia map;
+ * everything on this row now follows it.
+ *
+ * They are CONTROLS, so they sit with the tabs rather than reading as cards
+ * (the 1.18.0 hierarchy rule). Doubled and tripled classes throughout:
+ * Bravada's kit resets buttons at (0,3,1), and a (0,2,0) rule here would
+ * lose its border and its radius.
+ *
+ * ROOM IS LEFT FOR A FOURTH CHIP. Rob decided on 2026-10-04 that Wildlife
+ * will later default to local species with a "Here | Wider Florida" switch.
+ * Nothing here implements it. What "leave room" means in CSS: the row WRAPS
+ * rather than scrolls, so a fourth chip takes a second line instead of
+ * pushing the page wide — the 1.18.1 lesson about a flex item's floor, and
+ * the reason the sideways category bar was removed in the first place.
  * ====================================================================== */
-.dccwl-subnav {
+.dccwl-chiprow {
 	align-items: center;
 	display: flex;
-	/* EXPLICIT, AND THIS IS WHY (1.38.0). This row replaced one that was
-	 * `flex-direction: column`, and that old rule out-lived its markup: a
-	 * later rule of the same specificity only overrides the properties it
-	 * NAMES, so the pill and the Compact switch kept stacking vertically at
-	 * every width while every other declaration here applied. Same shape as
-	 * the live failures this release exists to fix — state the property. */
+	/* EXPLICIT, AND THIS IS WHY (1.38.0, inherited from .dccwl-subnav). The
+	 * row this replaced had an out-lived `flex-direction: column` rule
+	 * underneath it: a later rule of the same specificity overrides only the
+	 * properties it NAMES, so the controls kept stacking at every width while
+	 * every other declaration applied. State the property. */
 	flex-direction: row;
 	flex-wrap: wrap;
 	gap: var(--dccwl-gap);
@@ -1589,8 +1415,37 @@
 	margin: 0 auto var(--dccwl-gap);
 	max-width: var(--dccwl-measure);
 }
-.dccwl-pick { position: relative; }
 
+/* The per-section category pill is a plain wrapper inside the row now — one
+ * flex item, not a row of its own. Its own margins went with its row. */
+.dccwl-subnav {
+	display: flex;
+	margin: 0;
+}
+.dccwl-subnav[hidden] { display: none; }
+
+.dccwl-pick,
+.dccwl-monthpick { position: relative; }
+
+/* The badge key takes a LINE OF ITS OWN under the chips rather than sitting
+ * among them: it is a paragraph of four definitions, and as a flex item it
+ * would squeeze the three chips onto a second row whenever it was open.
+ * `flex-basis: 100%` is what makes it the row's own line. */
+.dccwl-chiprow > .dccwl-legend {
+	flex-basis: 100%;
+	/* `auto` on the sides, not 0: the centring cap further up this file holds
+	 * it to --dccwl-measure, and a capped block inside a 100%-wide flex line
+	 * sits hard left without it. */
+	margin: var(--dccwl-gap) auto 0;
+}
+.dccwl-chiprow > .dccwl-legend[hidden] { display: none; }
+
+/* The ⓘ, at the chip's own label size — never larger, because Raleway may
+ * not carry it and a fallback face must not render it bigger or bolder than
+ * what the row was approved at (the 1.41.0 rule for ▾ ▴ ›). */
+.dccwl-chip-i { font-size: 1.05em; line-height: 1; }
+
+.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip,
 .dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn {
 	align-items: center;
 	background: var(--dccwl-btn-bg);
@@ -1610,18 +1465,22 @@
 	text-transform: none;
 	white-space: nowrap;
 }
+.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip:hover,
 .dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:hover {
 	background: var(--dccwl-accent);
 	color: #ffffff;
 }
+.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip:focus-visible,
 .dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
-.dccwl-pick-chev { font-size: .8em; line-height: 1; }
+.dccwl-pick-chev,
+.dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }
 
 /* The list drops straight under the pill. Absolute, so it never pushes the
  * tiles down as it opens, and above them while it is open. */
+.dccwl-root .dccwl-chipmenu,
 .dccwl-root .dccwl-pick-list {
 	background: #ffffff;
 	border: 1px solid var(--dccwl-line-strong);
@@ -1639,8 +1498,13 @@
 	transform: translateX(-50%);
 	z-index: 20;
 }
+.dccwl-root .dccwl-chipmenu[hidden],
 .dccwl-root .dccwl-pick-list[hidden] { display: none; }
+/* The menu is a <ul>: the theme's own list styling must not reach it. */
+.dccwl-root .dccwl-chipmenu { list-style: none; }
+.dccwl-root .dccwl-chipmenu > li { margin: 0; }
 
+.dccwl-root .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt,
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt {
 	align-items: center;
 	background: transparent;
@@ -1658,19 +1522,34 @@
 	/* Rob's 44px, per option. */
 	min-height: 44px;
 	padding: 0 12px;
+	/* LEFT, AND ITEM 6 DOES NOT REACH IT. That item centres "cards,
+	 * headings, notes, sources, empty states" — the text of the section. A
+	 * listbox row is a CONTROL inside a popup, and its name and its count
+	 * sit at opposite ends of the row (justify-content: space-between), so
+	 * there is nothing to centre: centring the names alone would leave the
+	 * list with no scannable left edge, which is the one thing a list of
+	 * fourteen months needs. Listed in the notes as a deliberate
+	 * exception. */
 	text-align: left;
 	text-transform: none;
 	width: 100%;
 }
+.dccwl-root .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:hover,
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt:hover {
 	background: var(--dccwl-primary-soft);
 }
+.dccwl-root .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:focus-visible,
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
 /* The chosen option is marked like every other selected control: coral with
  * white text, at rest and in every state (item 8). */
+.dccwl-root li[aria-selected="true"] > .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt,
+.dccwl-root li[aria-selected="true"] > .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:hover,
+.dccwl-root li[aria-selected="true"] > .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:focus,
+.dccwl-root li[aria-selected="true"] > .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:focus-visible,
+.dccwl-root li[aria-selected="true"] > .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:active,
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"],
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:hover,
 .dccwl-root .dccwl-pick-opt.dccwl-pick-opt.dccwl-pick-opt[aria-selected="true"]:focus,
