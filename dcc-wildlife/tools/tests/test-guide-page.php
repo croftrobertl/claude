@@ -160,6 +160,20 @@ check(
 	'and the modification notice is with it'
 );
 
+dcc_section( 'every photo-source link says what it is a source for' );
+
+/*
+ * MOVED HERE WITH THE PANEL (1.43.0), from test-render.php. 28 links all
+ * reading "source" gave a screen-reader user 28 identical destinations with
+ * nothing to tell them apart, and that fix is a licence surface — so the
+ * assertion followed the surface rather than being dropped when the panel
+ * left /explore/.
+ */
+preg_match_all( '/<a\s[^>]*>source<\/a>/', $guide, $links );
+check( count( $links[0] ) > 20, 'the credits list has its per-photo source links', 'found ' . count( $links[0] ) );
+check( false !== strpos( $guide, 'dccwl-photo-credits-list' ), 'and the list itself is here' );
+check( false !== strpos( $guide, 'id="credits"' ), 'under the anchor /explore/ and the sheet link to' );
+
 dcc_section( 'the guide page loads no JavaScript' );
 
 /*

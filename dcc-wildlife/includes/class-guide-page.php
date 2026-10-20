@@ -69,6 +69,17 @@ class Guide_Page {
 		return (string) apply_filters( 'dcc_wl_guide_page_url', '/wildlife-guide/' );
 	}
 
+	/**
+	 * Where the credits live now: the guide page's own credits panel.
+	 *
+	 * /explore/ and the detail sheet both link here rather than each
+	 * carrying a copy. One rendering of a licence surface is also one place
+	 * for it to be correct.
+	 */
+	public static function credits_url(): string {
+		return self::url() . '#credits';
+	}
+
 	/** The anchor for one species — the registry's own id, never invented. */
 	public static function anchor( string $id ): string {
 		return self::url() . '#' . $id;

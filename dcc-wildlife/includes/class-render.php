@@ -747,7 +747,7 @@ final class Render {
 			return;
 		}
 		?>
-		<details class="dccwl-fullguide dccwl-photo-credits">
+		<details class="dccwl-fullguide dccwl-photo-credits" id="credits" open>
 			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'Photo credits', 'dcc-wildlife' ); ?>">
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
@@ -955,8 +955,36 @@ final class Render {
 			</span>
 		</a>
 		<?php
-		self::render_photo_credits( $dataset );
+		/*
+		 * THE CREDITS ARE A LINK HERE SINCE 1.43.0 — 108,284 BYTES, MEASURED.
+		 *
+		 * This fold held one row per photographed species: more than half of
+		 * what was left of /explore/'s markup once the prose and the tiles
+		 * had gone. The Director allowed it to render on demand provided the
+		 * Credits entry stays visible and one tap away, on /explore/ and on
+		 * every species sheet.
+		 *
+		 * IT IS A LINK RATHER THAN A FETCH, and that is the stronger answer
+		 * for a licence surface. /wildlife-guide/ already renders every
+		 * credit and the modification notice, server-side and permanently,
+		 * so the attributions now live at a stable, crawlable URL instead of
+		 * inside a fold that only exists while a script is working. No new
+		 * route, nothing to fail, and a guest with no JavaScript reaches
+		 * them exactly as easily as one with it.
+		 *
+		 * WHAT DID NOT MOVE: the per-photo credit line INSIDE the detail
+		 * sheet (1.24.0). That is where a photograph is displayed at size,
+		 * so that is where its own attribution has to be, and it is still
+		 * printed there with the photo. This link is the full list, not a
+		 * replacement for that.
+		 */
 		?>
+		<a class="dccwl-footnote-link dccwl-footnote-credits" href="<?php echo esc_url( Guide_Page::credits_url() ); ?>"
+			aria-label="<?php esc_attr_e( 'Photo credits — every photographer and licence', 'dcc-wildlife' ); ?>">
+			<span class="dccwl-fullguide-text">
+				<span class="dccwl-fullguide-h"><?php esc_html_e( 'Credits', 'dcc-wildlife' ); ?></span>
+			</span>
+		</a>
 		<button type="button" class="dccwl-footnote-link" data-dccwl-go="month" data-dccwl-monthlink hidden
 			aria-label="<?php esc_attr_e( 'Browse the guide by month', 'dcc-wildlife' ); ?>">
 			<?php
@@ -1288,6 +1316,8 @@ final class Render {
 				/* translators: %s: month name. Peak Now (1.27.0) with nothing in it. */
 				'peakNone'    => __( 'Nothing is at its peak in %s.', 'dcc-wildlife' ),
 				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
+				/* Title Case, like every other label (Rob, 2026-10-19). */
+				'allCredits'  => __( 'Photo Credits', 'dcc-wildlife' ),
 			],
 			/*
 			 * THE TILE ORDER, PER SECTION (1.43.0) — ids only.
@@ -1303,6 +1333,12 @@ final class Render {
 			 * against 299,662 bytes of tile markup removed.
 			 */
 			'order'       => self::tile_order(),
+			/*
+			 * Where the full credits list is, for the detail sheet's link
+			 * (1.43.0). One definition, in Guide_Page, so /explore/'s
+			 * footnote row and the sheet cannot point at different places.
+			 */
+			'creditsUrl'  => Guide_Page::credits_url(),
 		];
 
 		wp_add_inline_script(

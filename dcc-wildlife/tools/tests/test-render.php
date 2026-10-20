@@ -151,13 +151,23 @@ $canal_js = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/cana
 check_lacks( $canal_js, "w.ageToday || 'today'", 'canal.js no longer falls straight through to an English literal' );
 check_contains( $canal_js, "word('ageToday'", 'it resolves the word through its own table first' );
 
-dcc_section( 'every photo-source link says what it is a source for' );
+dcc_section( 'the credits panel is no longer on this page (1.43.0)' );
 
-// 28 links all reading "source" gave a screen-reader user 28 identical
-// destinations with nothing to tell them apart.
+/*
+ * It was 108,284 bytes — more than half of what was left of /explore/'s
+ * markup once the prose and the tiles had gone. The Director allowed it to
+ * move provided the Credits entry stays visible and one tap away here and on
+ * every species sheet, and it does: a link, in the footnote row, to the panel
+ * that /wildlife-guide/ renders permanently.
+ *
+ * THE PER-PHOTO SOURCE LINKS MOVED WITH IT and are asserted where they now
+ * live, in test-guide-page.php. They are a licence surface; the assertion
+ * followed the surface rather than being deleted with it.
+ */
+check_lacks( $m['html'], 'dccwl-photo-credits-list', 'the credits list is not inlined here' );
+check_matches( $m['html'], '/dccwl-footnote-credits/', 'but the Credits entry is still in the row' );
 preg_match_all( '/<a\s[^>]*>source<\/a>/', $m['html'], $links );
-$count = count( $links[0] );
-check( $count > 20, 'the credits list has its per-photo source links', "found $count" );
+check_same( 0, count( $links[0] ), 'and no per-photo source link is left behind' );
 $unlabelled = array_values( array_filter( $links[0], static fn( string $a ): bool => ! str_contains( $a, 'aria-label=' ) ) );
 check_same( [], $unlabelled, 'every one of them carries an aria-label', implode( ' | ', array_slice( $unlabelled, 0, 2 ) ) );
 
@@ -205,33 +215,19 @@ dcc_section( 'a long body can be closed from its foot (1.33.0, item 4f)' );
  * <summary>, so an always-visible button here would be a dead control — and
  * this prose exists precisely for the guest with no JavaScript and one bar.
  */
-check_matches(
-	$hub,
-	'/<button type="button" class="dccwl-fullguide-close" data-dccwl-fullguide-close hidden>/',
-	'the close control is rendered hidden, for the script to unhide'
-);
 /*
- * ONE, NOT TWO, SINCE 1.43.0. There were two folds on this page — the prose
- * guide and the credits — and each got a close control at its foot. The prose
- * moved to /wildlife-guide/, where it is a PAGE and not a fold, so it needs
- * no close control at all and does not have one. The credits fold is still
- * here and still long, so it keeps its own.
+ * NONE ON THIS PAGE SINCE 1.43.0. Both long folds have gone: the prose to
+ * /wildlife-guide/ and the credits panel with it. What remains in the row is
+ * three links and the water module's short "About" fold, which is not long
+ * enough to need a way out of its own foot.
  *
- * Pinned at the new number rather than relaxed to ">= 1": the claim is still
- * "every long fold on this page can be closed from its foot", and there is
- * now exactly one long fold.
+ * Pinned at zero rather than deleted: if a long fold ever returns to this
+ * page without a close control, this says so.
  */
 check_same(
-	1,
+	0,
 	substr_count( $hub, 'data-dccwl-fullguide-close' ),
-	'one at the foot of the credits — the only fold left on /explore/'
-);
-/* It has to be INSIDE the panel it closes, or the script cannot find the
- * <details> to close and the button does nothing. */
-check_matches(
-	$hub,
-	'/data-dccwl-fullguide-close.*?<\/button>\s*<\/div>\s*<\/details>/s',
-	'each one sits at the END of its panel body, inside the panel'
+	'no close control is needed — /explore/ has no long fold left'
 );
 
 dcc_section( 'the tile photo\'s srcset is the client\'s now (1.43.0)' );

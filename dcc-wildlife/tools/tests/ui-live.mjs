@@ -1332,8 +1332,8 @@ async function foldSweep(page, where) {
    * (asserted on its own terms further down). Pinned at the exact number, not
    * relaxed, so a fold going missing is still a failure.
    */
-  checkSame(2, hubFolds.filter((f) => f.onScreen).length,
-    'the hub renders its two folds — Credits and About',
+  checkSame(1, hubFolds.filter((f) => f.onScreen).length,
+    'the hub renders its one remaining fold — About',
     hubFolds.map((f) => f.text).join(' · '));
   await hub.page.close();
 
@@ -1497,10 +1497,18 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const folds = row.items.filter((i) => i.isFold);
   const links = row.items.filter((i) => !i.isFold);
   const button = links.find((i) => !i.isLink);
-  const guideLink = links.find((i) => i.isLink);
-  checkSame(2, folds.length, `${w}px: two folds in the row — Credits and About`,
+  const guideLink = links.find((i) => i.isLink && /^Guide/.test(i.label));
+  /*
+   * ONE FOLD AND THREE LINKS SINCE 1.43.0. The prose went to
+   * /wildlife-guide/ in this release and the credits panel followed it —
+   * 108,284 bytes, more than half what was left of the page's markup. Guide
+   * and Credits are links to that page now; By Month still opens another
+   * view inside the app; only the water module's "About" still expands in
+   * place, so only it carries a caret.
+   */
+  checkSame(1, folds.length, `${w}px: one fold in the row — About`,
     folds.map((f) => f.label).join(' · '));
-  checkSame(2, links.length, `${w}px: and two that open something else`,
+  checkSame(3, links.length, `${w}px: and three that open something else`,
     links.map((f) => f.label).join(' · '));
   check(!!guideLink && /^Guide/.test(guideLink.label),
     `${w}px: the one that is an <a> is Guide`, links.map((i) => `${i.label}:${i.isLink}`).join(' '));

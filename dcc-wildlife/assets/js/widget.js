@@ -515,6 +515,30 @@
 					credit.textContent = text;
 				}
 				body.appendChild(credit);
+
+				/*
+				 * AND THE FULL LIST, ONE TAP AWAY (1.43.0).
+				 *
+				 * The credits panel left /explore/ this release — 108,284
+				 * bytes of it — and lives on /wildlife-guide/. The
+				 * Director's condition for allowing that was that the
+				 * Credits entry stays visible and one tap away on /explore/
+				 * AND on every species sheet, so here it is.
+				 *
+				 * This is IN ADDITION to the line above, never instead of
+				 * it: the sheet is where a photograph is shown at size, so
+				 * its own attribution belongs beside it (1.24.0), and a
+				 * sheet printing the wrong credit is a licence breach rather
+				 * than a typo. The link is the rest of the list.
+				 */
+				if (CFG.creditsUrl) {
+					var all = el('p', 'dccwl-photo-credit dccwl-photo-credit-all');
+					var allLink = el('a', 'dccwl-photo-credit-link',
+						CFG.i18n.allCredits || 'Photo Credits');
+					allLink.href = CFG.creditsUrl;
+					all.appendChild(allLink);
+					body.appendChild(all);
+				}
 			}
 
 			// What this photograph's identification rests on, where that is
