@@ -151,7 +151,22 @@ A PHP warning fails the suite. An undefined index quietly becomes an empty
 figure, which is the exact kind of silent wrongness this plugin exists to
 prevent — so warnings are defects, not noise.
 
+## Deliverable file names
+
+Rob reads these on his phone, where the plugin folder's name is not visible.
+So every file handed to him is named for the plugin:
+
+- the zip is `Ledger <version>.zip`, e.g. `Ledger 0.1.2.zip`
+- every other file carries a `Ledger - ` prefix, e.g.
+  `Ledger - STAGING-CHECKLIST.md`
+
+The docs in `docs/` already carry that name, so the file in the repo and the
+file Rob receives are the same file.
+
 ## Building the zip
 
     cd $(git rev-parse --show-toplevel)
-    zip -rq dcc-ledger.zip dcc-ledger -x 'dcc-ledger/tests/*'
+    rm -f "Ledger "*.zip
+    zip -rq "Ledger 0.1.2.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+
+The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

@@ -26,7 +26,7 @@ on staging and said yes.
 
 ## 1. Install
 
-- [ ] Plugins → Add New → Upload Plugin → `dcc-ledger.zip` → Activate.
+- [ ] Plugins → Add New → Upload Plugin → `Ledger 0.1.2.zip` → Activate.
 - [ ] Check that five tables now exist:
 
       wp db query "SHOW TABLES LIKE '%dcc_ledger%'"
