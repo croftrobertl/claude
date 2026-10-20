@@ -964,6 +964,179 @@
 			return squashed.length >= SEARCH_SQUASH && sp.$squash.indexOf(squashed) !== -1;
 		}
 
+		/* ==============================================================
+		 * THE GUIDE GRIDS ARE FILLED IN THE BROWSER (1.43.0).
+		 *
+		 * PHP ships them empty. 409 tiles were 299,662 bytes of markup and
+		 * about 4,000 nodes on a page that opens on Water, where not one of
+		 * them is visible — and the CPU profile showed the cost was not
+		 * building them but LIVING with them: 419 ms in `centerMonth` and
+		 * 515 ms of browser layout on a single tap, because every forced
+		 * read walked the whole tree.
+		 *
+		 * HOW MUCH IS BUILT, AND WHEN. Two triggers:
+		 *
+		 *  1. An IntersectionObserver on each grid: nothing is built until
+		 *     the Wildlife view is actually on screen. FIRST_BATCH tiles go
+		 *     in immediately — one short task, not a 409-tile one.
+		 *  2. IDLE TIME FINISHES THE JOB, in NEXT_BATCH chunks, whether or
+		 *     not anybody scrolls.
+		 *
+		 * THE BRIEF ASKED FOR A SCROLL-DRIVEN SENTINEL AND THERE IS NONE, on
+		 * purpose, and this is the one place this release departs from it.
+		 * A sentinel <li> at the end of the list is still a grid item: it
+		 * occupies a track and leaves exactly the empty cell Rob ruled out in
+		 * 1.37.0 and again in 1.37.1 ("NO GAPS"). Putting it outside the <ul>
+		 * does not work either — the <ul> IS the deck's scroll container, so
+		 * a sibling after it never enters that scroller's viewport. Idle
+		 * completion does the same job in a few frames and cannot leave a
+		 * hole, so it replaces the sentinel rather than joining it.
+		 *
+		 * Idle completion is also the correctness rule, not belt-and-braces. A
+		 * partially built grid would make the search and the category counts
+		 * LIE — a guest searching "manatee" would be told it is not there
+		 * because its tile had not been built yet. That is exactly the 1.28.0
+		 * defect (an invisible filter put seven winter species out of reach)
+		 * in a new disguise, and it is why `ensureTiles(all)` below forces a
+		 * grid to completion the moment a filter, a category or a search
+		 * needs the whole list.
+		 *
+		 * So the DOM converges to complete within a few idle frames, and no
+		 * measurement — the deck's row count, the pager, a count beside a
+		 * category — is ever taken against a half-filled list.
+		 * ============================================================== */
+		var FIRST_BATCH = 24;
+		var NEXT_BATCH = 48;
+		var gridWatcher = null;
+
+		function orderFor(group) {
+			return (CFG.order && CFG.order[group]) || [];
+		}
+
+		/** How many tiles this grid already holds. */
+		function builtCount(grid) {
+			return grid.querySelectorAll('.dccwl-tile').length;
+		}
+
+		/**
+		 * Add up to `n` more tiles (null = all that remain).
+		 * Returns true once the grid holds its whole list.
+		 */
+		function buildInto(grid, n) {
+			var group = grid.getAttribute('data-dccwl-group');
+			var ids = orderFor(group);
+			var have = builtCount(grid);
+			if (have >= ids.length) { return true; }
+			var stop = null === n ? ids.length : Math.min(ids.length, have + n);
+			var frag = document.createDocumentFragment();
+			for (var i = have; i < stop; i++) {
+				var sp = speciesById[ids[i]];
+				if (!sp) { continue; }
+				/*
+				 * ZERO, NOT THE MONTH'S VALUE, AND IT MATTERS.
+				 *
+				 * `buildTile(sp, value)` adds the coral "Peak" flag when
+				 * value >= PEAK_SCORE. It was written for the spotlight
+				 * strip, which never contains a hazard, so it never had to
+				 * ask. PHP's server-rendered guide tile carried NO flag at
+				 * all — the month is cache-unsafe — and `refreshGuide()` has
+				 * always been the one function that decides a guide tile's
+				 * sub-label, hazards included (1.33.0: the safety list is a
+				 * warning list, not a spotting list).
+				 *
+				 * Passing the real value here put "Peak" on the three
+				 * venomous snakes in a search, which ui-chrome.mjs caught by
+				 * name. Build the tile bare and let the one authority label
+				 * it, exactly as it labelled the server-rendered ones.
+				 */
+				var li = buildTile(sp, 0);
+				/* The category filter reads this attribute off the <li>, as it
+				 * did when PHP wrote it — so the filter code is untouched.
+				 * `browse` rides the wire now (Species::WIRE_INDEX), which is
+				 * the one copy of that fact. */
+				if (sp.browse) { li.setAttribute('data-dccwl-browse', sp.browse); }
+				frag.appendChild(li);
+			}
+			grid.appendChild(frag);
+			return builtCount(grid) >= ids.length;
+		}
+
+		/** Build in idle time until every lazy grid is complete. */
+		function fillWhenIdle() {
+			var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 32); };
+			idle(function () {
+				var pending = false;
+				root.querySelectorAll('.dccwl-guide-grid[data-dccwl-lazy]').forEach(function (g) {
+					if (!buildInto(g, NEXT_BATCH)) { pending = true; }
+				});
+				if (pending) {
+					fillWhenIdle();
+				} else {
+					root.querySelectorAll('.dccwl-guide-grid[data-dccwl-lazy]').forEach(function (g) {
+						g.removeAttribute('data-dccwl-lazy');
+					});
+					if (gridWatcher) { gridWatcher.disconnect(); gridWatcher = null; }
+					refreshGuide();
+				}
+			});
+		}
+
+		/**
+		 * Make sure the grids hold what the caller is about to measure.
+		 * `all` forces completion — see the correctness note above.
+		 */
+		function ensureTiles(all) {
+			var grids = root.querySelectorAll('.dccwl-guide-grid[data-dccwl-lazy]');
+			if (!grids.length) { return false; }
+			var changed = false;
+			grids.forEach(function (g) {
+				if (buildInto(g, all ? null : FIRST_BATCH)) {
+					g.removeAttribute('data-dccwl-lazy');
+					changed = true;
+				} else if (all) {
+					changed = true;
+				}
+			});
+			return changed;
+		}
+
+		/** Arm the observers. Called once, from init. */
+		function watchGrids() {
+			var grids = root.querySelectorAll('.dccwl-guide-grid[data-dccwl-lazy]');
+			if (!grids.length) { return; }
+
+			/* NO IntersectionObserver — build everything now rather than
+			 * leave a guest with empty grids. An old browser gets the 1.42.0
+			 * behaviour, which is the one thing that must never regress. */
+			if (!('IntersectionObserver' in window)) {
+				root.querySelectorAll('.dccwl-guide-grid[data-dccwl-lazy]').forEach(function (g) {
+					buildInto(g, null);
+					g.removeAttribute('data-dccwl-lazy');
+				});
+				refreshGuide();
+				return;
+			}
+
+			gridWatcher = new IntersectionObserver(function (entries) {
+				var touched = false;
+				entries.forEach(function (e) {
+					if (!e.isIntersecting) { return; }
+					var grid = e.target.closest ? (e.target.closest('.dccwl-guide-grid') || e.target) : e.target;
+					if (!grid || !grid.getAttribute('data-dccwl-group')) { return; }
+					if (buildInto(grid, builtCount(grid) ? NEXT_BATCH : FIRST_BATCH)) {
+						grid.removeAttribute('data-dccwl-lazy');
+					}
+					touched = true;
+				});
+				if (touched) {
+					refreshGuide();
+					fillWhenIdle();
+				}
+			}, { rootMargin: '200px' });
+
+			grids.forEach(function (g) { gridWatcher.observe(g); });
+		}
+
 		function refreshGuide() {
 			var section = root.querySelector('.dccwl-guide');
 			if (!section) { return; }
@@ -976,6 +1149,41 @@
 			// cached page — which is why there is no server-rendered peak
 			// grid and no peak count in the HTML.
 			var peaking = guide.group === PEAK_TAB;
+
+			/* COMPLETE THE GRIDS BEFORE MEASURING ANYTHING. A search, a
+			 * category or Peak Now asks a question about the WHOLE list, and
+			 * a half-built grid would answer it wrongly and silently. Guarded
+			 * so the common case — a plain month change — does not force 409
+			 * tiles into existence before idle time gets to them. */
+			var needsAll = searching || peaking || Object.keys(guide.pick || {}).some(function (k) {
+				return !!guide.pick[k];
+			});
+
+			/*
+			 * VISIBILITY IS THE TRIGGER, AND THAT IS WHAT MEETS THE NODE
+			 * BUDGET.
+			 *
+			 * /explore/ opens on Water, so the guide lives inside a panel the
+			 * app keeps `display: none`. A hidden element has no offsetParent
+			 * — and never intersects anything, which is why an
+			 * IntersectionObserver alone could not start this. While it is
+			 * hidden NOTHING is built: that is how the page stays near its
+			 * DOM budget at load instead of carrying 409 tiles nobody can
+			 * see.
+			 *
+			 * The moment it IS visible, the first batch goes in synchronously
+			 * (so a guest never sees an empty grid) and idle time finishes
+			 * the rest. A filter, a category or a search forces completion
+			 * first, whatever the view's state — see the long note above.
+			 */
+			var shown = !!section.offsetParent;
+			if (needsAll) {
+				ensureTiles(true);
+			} else if (shown && root.querySelector('.dccwl-guide-grid[data-dccwl-lazy]')) {
+				ensureTiles(false);
+				fillWhenIdle();
+			}
+
 			var rows = [], i = 0;
 
 			// 1. Who is eligible: the open group (or, while searching, every
@@ -1441,6 +1649,11 @@
 				});
 			}
 			refreshGuide();
+			/* Arm the lazy fill LAST, so the first refresh has already set
+			 * the month, the open section and the pick state — the observer's
+			 * callback calls refreshGuide() again and must not be the thing
+			 * that initialises it. */
+			watchGrids();
 		}
 
 		/* ---------- boot this instance ---------- */

@@ -317,7 +317,57 @@ export async function widgetPage(browser, which = 'month', opts = {}, ...fixture
   }
   // The deck measures itself; give layout and its rAF a chance to settle.
   await page.waitForTimeout(250);
+
+  /*
+   * AND WAIT FOR THE GUIDE GRIDS TO FILL (1.43.0).
+   *
+   * PHP ships the grids empty and widget.js builds the 402 tiles in idle
+   * time, so every suite that COUNTS tiles is now measuring a DOM that
+   * converges a few frames after load. Without this, twenty assertions in
+   * ui-deck.mjs failed against grids that were simply not finished yet —
+   * which is a test timing artefact, not a defect.
+   *
+   * It is a bounded wait, not a sleep, and the bound is the point: if the
+   * grids do NOT converge the wait expires and every tile count fails, which
+   * is exactly what should happen. A suite that waited forever would turn a
+   * real stall into a hang, and one that slept a fixed 2s would be slow and
+   * still racy.
+   */
+  await settleGrids(page);
+
   return { page, fixture };
+}
+
+/**
+ * Wait until no guide grid is still marked lazy.
+ *
+ * Returns true if they converged, false if the wait expired — callers that
+ * care can assert on it; the default page build simply moves on, and the
+ * tile counts then fail on their own, which is the honest outcome.
+ */
+export async function settleGrids(page, timeout = 8000) {
+  try {
+    await page.waitForFunction(
+      () => {
+        const lazy = document.querySelector('.dccwl-guide-grid[data-dccwl-lazy]');
+        if (!lazy) { return true; }
+        /*
+         * A HIDDEN GUIDE IS A SETTLED GUIDE. Since 1.43.0 the tiles are
+         * built only once the guide is actually visible — that is what keeps
+         * /explore/, which opens on Water, near its DOM budget at load. So
+         * on every page where the guide is still behind a panel there is
+         * nothing to wait for, and waiting the full timeout on each of the
+         * harness's many page builds took the suite run past ten minutes.
+         */
+        const section = document.querySelector('.dccwl-guide');
+        return !section || !section.offsetParent;
+      },
+      { timeout }
+    );
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 /** Computed box for one selector, or null when the node is absent. */

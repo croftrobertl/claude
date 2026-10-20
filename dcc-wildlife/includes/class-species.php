@@ -8975,7 +8975,18 @@ final class Species {
 	 * riding along.
 	 */
 	public const WIRE_INDEX = [
-		'id', 'name', 'sci', 'mark', 'months', 'flags', 'haz', 'group', 'src', 'sprite',
+		/*
+		 * `browse` JOINED THE INDEX IN 1.43.0, and it is the one copy of that
+		 * fact. Until then the browse sub-group reached the client only as a
+		 * `data-dccwl-browse` attribute on each server-rendered <li>, so the
+		 * category filter read it out of markup. With the 409 tiles built in
+		 * the browser there is no markup to read it from, and the Director's
+		 * instruction was explicit: keep ONE copy of the species data, not
+		 * markup plus JSON. It costs about 5 KB raw across 402 species and
+		 * compresses to very little, against the 300 KB of tile markup it
+		 * replaces.
+		 */
+		'id', 'name', 'sci', 'mark', 'months', 'flags', 'haz', 'group', 'src', 'sprite', 'browse',
 	];
 
 	/** Fields that never reach the browser at all. */

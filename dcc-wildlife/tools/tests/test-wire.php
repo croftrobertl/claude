@@ -44,6 +44,13 @@ $needed_by_first_view = [
 	'group',   // the group-glyph fallback
 	'src',     // the tile face and the hub art
 	'sprite',  // the middle rung of the art fallback
+	/*
+	 * 1.43.0: the browse sub-group. The grids ship empty and widget.js
+	 * builds the tiles, so the category filter can no longer read this off a
+	 * server-rendered <li> — and the Director's instruction was one copy of
+	 * the species data, not markup plus JSON.
+	 */
+	'browse',
 ];
 sort( $needed_by_first_view );
 $declared = Species::WIRE_INDEX;

@@ -59,6 +59,15 @@ final class Render {
 	 * 600, which means rebuilding 402 photographs and a new photo pack —
 	 * the owner's call, not a session's.
 	 *
+	 * WHO READS THIS NOW. Nothing in PHP does. 1.42.0 built the tile face
+	 * server-side and this sized it; 1.43.0 ships the grids empty and
+	 * widget.js builds every tile, so `tileMedia()` is the only consumer and
+	 * `Render::tile_media()`/`tile_srcset()` were DELETED rather than left
+	 * as unreachable code. The constant stays because it is the declared
+	 * source of the string — test-render.php lints that the client's copy
+	 * equals it — and because the measurements below are the reasoning
+	 * behind the value, which belongs with the value.
+	 *
 	 * ONE VALUE SERVES TWO LAYOUTS, and it fits the hub. The standalone
 	 * [dcc_wildlife] widget caps its tiles at about 122 CSS px at every
 	 * width, so on a wide desktop this over-states that surface and it may
@@ -460,6 +469,34 @@ final class Render {
 	 * JS wires the tabs. Chips are inert buttons until JS attaches the
 	 * shared detail panel.
 	 */
+	/**
+	 * Species ids per section, in the order the tiles must be built.
+	 *
+	 * Exactly the order `render_guide_grids()` used to emit: section members
+	 * (with the dual membership a hazard has, so the alligator appears under
+	 * Animals AND Safety, as it has since 1.19.0), run through
+	 * `Species::browse_order()` so each sub-group is one contiguous run.
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	private static function tile_order(): array {
+		$dataset = Species::dataset();
+		$out     = [];
+		foreach ( array_keys( Species::sections() ) as $slug ) {
+			$members = Species::browse_order( Species::section_members( $dataset, $slug ) );
+			$out[ $slug ] = array_values(
+				array_map(
+					static function ( array $sp ): string {
+						return (string) $sp['id'];
+					},
+					$members
+				)
+			);
+		}
+
+		return $out;
+	}
+
 	private static function render_guide_grids( array $gates = [] ): void {
 		$dataset = Species::dataset();
 		$first   = true;
@@ -475,7 +512,7 @@ final class Render {
 			$group_species = Species::browse_order( $group_species );
 			self::render_browse_nav( $slug, $group_species, $first, $gates );
 			?>
-			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
+			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" data-dccwl-lazy="1"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php
 				/*
 				 * `data-dccwl-browse-first` MARKS EACH SUB-GROUP'S FIRST
@@ -494,21 +531,33 @@ final class Render {
 				 */
 				$seen_browse = [];
 				?>
-				<?php foreach ( $group_species as $sp ) : ?>
-					<?php
-					$browse = (string) ( $sp['browse'] ?? '' );
-					$starts = '' !== $browse && ! isset( $seen_browse[ $browse ] );
-					if ( '' !== $browse ) {
-						$seen_browse[ $browse ] = true;
-					}
-					?>
-					<li<?php echo '' !== $browse ? ' data-dccwl-browse="' . esc_attr( $browse ) . '"' : ''; ?><?php echo $starts ? ' data-dccwl-browse-first=""' : ''; ?>>
-						<button type="button" class="dccwl-tile" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
-							<?php echo self::tile_media( $sp ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside. ?>
-							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
-						</button>
-					</li>
-				<?php endforeach; ?>
+				<?php
+				/*
+				 * NO TILES HERE SINCE 1.43.0 — the grid ships EMPTY.
+				 *
+				 * 409 of these were server-rendered into /explore/: 299,662
+				 * bytes of markup and about 4,000 DOM nodes, measured. The
+				 * page now opens on Water (Rob's pick), so not one of them is
+				 * on screen at load — and the browser was still parsing all
+				 * of them, laying them out, and flushing that layout again on
+				 * every tap. The CPU profile named it: 419 ms in
+				 * `centerMonth` and 515 ms of browser style/layout work on
+				 * ONE tap, because each forced read walked the whole tree.
+				 *
+				 * widget.js fills this from `CFG.order` (the ids, in the
+				 * order `Species::browse_order()` put them) plus the dataset
+				 * it already holds. The ORDER is computed here because
+				 * `browse_order()` lives here; re-implementing it in JS is
+				 * the kind of second copy that drifts.
+				 *
+				 * WHAT STAYS SERVER-RENDERED, deliberately: this grid's
+				 * group, its accessible name, and the browse nav above it
+				 * with its counts. Those are small, they are crawlable, and
+				 * 1.38.0's rule stands — a count beside a category is a
+				 * promise about what choosing it shows, so it is in the HTML
+				 * rather than built by a script that may not run.
+				 */
+				?>
 			</ul>
 			<?php
 			$first = false;
@@ -657,89 +706,6 @@ final class Render {
 		</div>
 		<?php
 	}
-
-	/**
-	 * Photo-first tile face (1.19.0): the vetted photo's 4:3 thumbnail, else
-	 * the neutral GROUP glyph — never a drawing that could be the wrong
-	 * animal. Flag marks sit on the corner. The same face is built
-	 * client-side by widget.js for spotlight tiles; keep the two in step.
-	 */
-	/**
-	 * THE TILE'S OWN srcset (1.42.0, found by a self-audit).
-	 *
-	 * The tile face shipped one -320 file and no srcset, while the DETAIL
-	 * SHEET has built a correct one since 1.29.0 — so the smallest
-	 * rendition was serving every surface. Measured on the hub (the shape
-	 * /explore/ renders), at deviceScaleFactor 2, the tile is:
-	 *
-	 *   320px  133 CSS px -> 266 device px   (within the 320 file)
-	 *   390px  168        -> 336             upscaled 1.05x
-	 *   1280   190        -> 380             upscaled 1.19x
-	 *   1920   297        -> 594             upscaled 1.86x
-	 *   2560   404        -> 807             upscaled 2.52x
-	 *
-	 * On a DPR-3 phone the 390px case needs 504 device pixels from a
-	 * 320px file. (That last figure is arithmetic on a measured CSS
-	 * width, not a measured DPR-3 render — this harness runs at 2.)
-	 *
-	 * TWO RULES CARRIED OVER FROM THE SHEET, both load-bearing:
-	 *
-	 * 1. NOTHING COMPOSES A URL. Both are resolved attachments from
-	 *    Photo_Library, never a base plus "-600" — WordPress's filename
-	 *    dedupe is what made that unsafe (see the class header).
-	 * 2. EITHER MAY BE MISSING. assets/photos is excluded from the plugin
-	 *    zip, so on a fresh install the renditions arrive from the photo
-	 *    pack or the media import. A species with a thumb but no mid gets
-	 *    NO srcset and renders exactly as it did before.
-	 *
-	 * The descriptors come from Photo_Library::width() rather than
-	 * literals, which is the 1.33.0 PHOTO_W lesson: a width descriptor
-	 * that disagrees with the file makes a browser pick the wrong
-	 * rendition, silently.
-	 */
-	private static function tile_srcset( string $id, string $thumb ): string {
-		$mid = Photo_Library::url( $id, 'mid' );
-		if ( '' === $mid || $mid === $thumb ) {
-			return '';
-		}
-		$set = $thumb . ' ' . Photo_Library::width( $id, 'thumb' ) . 'w, '
-			. $mid . ' ' . Photo_Library::width( $id, 'mid' ) . 'w';
-
-		return ' srcset="' . esc_attr( $set ) . '" sizes="' . esc_attr( self::TILE_SIZES ) . '"';
-	}
-
-	private static function tile_media( array $sp ): string {
-		$out = '<span class="dccwl-tile-media">';
-		// 1.29.0: the URL comes from the media library, then from a bundled
-		// file if this release still ships one, and is '' when neither has it.
-		// An empty URL is not an error — it falls through to the drawing and
-		// then the glyph, the same landing a species with no photograph has
-		// always had. A missing attachment must never be a broken image.
-		$thumb = Photo_Library::url( (string) $sp['id'], 'thumb' );
-		if ( '' !== $thumb ) {
-			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( $thumb ) . '"'
-				. self::tile_srcset( (string) $sp['id'], $thumb )
-				. ' alt="" width="320" height="240" loading="lazy" decoding="async">';
-		} elseif ( Sprites::has( (string) $sp['id'] ) ) {
-			// 1.23.0: the species' own drawing before the group glyph. It is
-			// still not a photograph, but it is THIS animal rather than a
-			// feather standing in for every bird — and the drawings already
-			// exist, so seven tiles stopped being interchangeable for nothing.
-			$out .= Sprites::use_svg( (string) $sp['id'], 'dccwl-tile-sprite' );
-		} else {
-			$out .= Sprites::glyph_svg( (string) $sp['group'], 'dccwl-glyph dccwl-tile-glyph' );
-		}
-		if ( ! empty( $sp['flags'] ) ) {
-			$labels = Species::flags();
-			$out   .= '<span class="dccwl-tile-flags">';
-			foreach ( (array) $sp['flags'] as $flag ) {
-				$out .= Sprites::mark_html( (string) $flag, (string) ( $labels[ $flag ][0] ?? $flag ) );
-			}
-			$out .= '</span>';
-		}
-		return $out . '</span>';
-	}
-
 	/** The flags at least one species carries, in legend order. */
 	private static function flags_in_use(): array {
 		$used = [];
@@ -1323,6 +1289,20 @@ final class Render {
 				'peakNone'    => __( 'Nothing is at its peak in %s.', 'dcc-wildlife' ),
 				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
 			],
+			/*
+			 * THE TILE ORDER, PER SECTION (1.43.0) — ids only.
+			 *
+			 * The grids ship empty and widget.js builds them from this plus
+			 * the dataset it already has. It is not a second copy of the
+			 * species data: it is the ORDER, which `Species::browse_order()`
+			 * decides, and that function lives in PHP. Shipping the order is
+			 * what stops a JS re-implementation of it drifting from the
+			 * counts rendered beside the category pill.
+			 *
+			 * Measured at 402 species: about 5.8 KB raw, under 2 KB gzipped,
+			 * against 299,662 bytes of tile markup removed.
+			 */
+			'order'       => self::tile_order(),
 		];
 
 		wp_add_inline_script(

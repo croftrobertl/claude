@@ -206,11 +206,28 @@ const decks = await sh.page.evaluate(() => Array.from(document.querySelectorAll(
       wrapped: g.classList.contains('dccwl-deck-wrap'),
       overflows: g.scrollWidth > g.clientWidth + 4,
       navShown: nav && nav.classList.contains('dccwl-deck-nav') ? !nav.hidden : null,
-      names: vis.map((li) => (li.textContent || '').trim().split('\n')[0].trim()),
+      /*
+       * THE SPECIES NAME, from its own element — not the tile's whole
+       * textContent.
+       *
+       * Reading the whole tile also picked up the coral "Peak" flag that
+       * refreshGuide() adds for a species at its best this month, so the
+       * expected values here were a snapshot of the DOM taken BEFORE that
+       * refresh had run. Since 1.43.0 the tiles are built in the browser and
+       * the harness waits for them to converge, so the refresh has always
+       * happened by the time anything is read — and three snakes arrived as
+       * "Eastern Coral SnakePeak".
+       *
+       * The assertion is about ORDER. Reading the name element makes it
+       * about order and nothing else, so a future sub-label cannot break it
+       * and cannot hide inside it either.
+       */
+      names: vis.map((li) => ((li.querySelector('.dccwl-tile-name') || li).textContent || '').trim()),
       // what a guest reads: top to bottom, left to right within a row
       reading: vis.map((li) => {
         const r = li.getBoundingClientRect();
-        return { t: (li.textContent || '').trim().split('\n')[0].trim(), x: Math.round(r.left), y: Math.round(r.top) };
+        const t = ((li.querySelector('.dccwl-tile-name') || li).textContent || '').trim();
+        return { t, x: Math.round(r.left), y: Math.round(r.top) };
       }).sort((a, b) => a.y - b.y || a.x - b.x).map((o) => o.t),
     };
   })
