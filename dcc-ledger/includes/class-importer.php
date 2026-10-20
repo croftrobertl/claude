@@ -245,6 +245,9 @@ final class Importer
      */
     private static function would_enrich(array $existing, array $incoming): bool
     {
+        if (($incoming['guest_keys'] ?? []) !== [] && ($existing['guest_keys'] ?? null) === null) {
+            return true;
+        }
         foreach (['check_in', 'check_out', 'nights', 'booked_on', 'persons'] as $field) {
             $value = $incoming[$field] ?? null;
             if ($value !== null && $value !== '' && ($existing[$field] ?? null) === null) {

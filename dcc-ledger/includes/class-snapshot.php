@@ -69,24 +69,40 @@ final class Snapshot
             'overpaid_skipped'   => 0,
             'outside_window'     => 0,
             'assumed_withheld'   => 0,
-            // Broken out so a copy count can be reconciled against Rob's own
-            // list without guessing which signal found what.
+            // Counted over the SAME bookings as copies_skipped, each one once,
+            // by the first signal that caught it — so the parts add up to the
+            // total. They used to be counted over every copy detected, while
+            // the total counted only the ones that got as far as the
+            // assumed-paid rule, and the two never matched.
             'copies_by_link'     => 0,
             'copies_by_code'     => 0,
             'copies_by_dates'    => 0,
-            'copies_by_move'     => 0,
+            'copies_detected'    => 0,
+            'probable_moves'     => 0,
+            'moves_unnamed'      => 0,
+            // Booking ids only, for --verbose. Never a name, never a note.
+            'copy_ids'           => [],
+            'move_ids'           => [],
         ];
         $notes = [];
 
         $bookings = self::direct_bookings();
 
-        $detected = Copies::detect(Copies::from_live());
+        $live     = Copies::from_live();
+        $detected = Copies::detect($live);
         $copies   = Copies::ids($detected);
-        foreach ($detected as $match) {
-            $key = 'copies_by_' . $match['reason'];
-            if (isset($counts[$key])) {
-                $counts[$key]++;
+
+        $counts['copies_detected'] = count($detected);
+
+        // A probable move is a question, not a finding: the booking counts as
+        // the real stay Rob's rule says it is until he confirms otherwise.
+        $moves = Copies::probable_moves($live);
+        foreach ($moves as $booking_id => $move) {
+            $counts['probable_moves']++;
+            if (!$move['named']) {
+                $counts['moves_unnamed']++;
             }
+            $counts['move_ids'][] = (int) $booking_id;
         }
 
         $batch_id   = $dry_run ? 0 : Batches::create(self::KIND, __('MotoPress snapshot', 'dcc-ledger'), $user_id);
@@ -107,6 +123,8 @@ final class Snapshot
                 // Only the extracted codes travel into the ledger; the notes
                 // they came from are not stored anywhere.
                 'codes'          => array_merge($booking['codes'], $booking['note_codes']),
+                // Salted hashes of the surname, never the surname.
+                'guest_keys'     => $booking['guest_keys'] ?? [],
             ];
 
             if ($dry_run) {
@@ -165,7 +183,7 @@ final class Snapshot
         // written, is never silently removed. So the copy is made either way,
         // and the assumed payments wait.
         if (self::reservations_imported()) {
-            self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+            self::assume_paid($bookings, $detected, $counts, $notes, $dry_run, $batch_id, $user_id);
         } else {
             $counts['assumed_withheld'] = 1;
             $notes[] = __('No platform reservations have been imported yet, so no assumed payments were written. Without the platform stays there is nothing to recognise a hand-typed copy by, and every copy would be assumed paid — which cannot be undone quietly afterwards. Import the reservations exports first, then run this again.', 'dcc-ledger');
@@ -225,10 +243,10 @@ final class Snapshot
      * Never applied to a copy, to a booking already paid more than its total,
      * or to a cancelled booking.
      *
-     * @param array<int,array<string,mixed>> $bookings
-     * @param array<int,bool>                $copies
-     * @param array<string,int|float>        $counts
-     * @param array<int,string>              $notes
+     * @param array<int,array<string,mixed>>           $bookings
+     * @param array<int,array<string,mixed>>           $copies  detected copies, keyed by booking id
+     * @param array<string,int|float|array<int,int>>   $counts
+     * @param array<int,string>                        $notes
      */
     private static function assume_paid(
         array $bookings,
@@ -252,6 +270,11 @@ final class Snapshot
             if (isset($copies[(int) $booking['id']])) {
                 // Its money belongs to the OTA stay, once.
                 $counts['copies_skipped']++;
+                $counts['copy_ids'][] = (int) $booking['id'];
+                $reason = (string) $copies[(int) $booking['id']]['reason'];
+                if (in_array($reason, Copies::REASON_ORDER, true)) {
+                    $counts['copies_by_' . $reason]++;
+                }
                 continue;
             }
 

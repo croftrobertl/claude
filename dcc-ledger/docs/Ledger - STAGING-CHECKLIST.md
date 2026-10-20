@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.2 — Staging Checklist
+# DCC Ledger 0.1.3 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -9,8 +9,12 @@
 > order.
 >
 > **Upgrading the existing staging install (7 import batches, no snapshot):**
-> deactivate, upload 0.1.2, activate. The tables are unchanged. Go straight to
-> step 4, since the exports are already imported.
+> deactivate, upload 0.1.3, activate. Activation adds a `guest_keys` column to
+> two tables; nothing already stored is touched. Then re-run step 3's imports
+> in dry-run — they will report the stays as "filled in" as the surname hashes
+> are added — then for real, then step 5 and step 6. The exports must be
+> re-imported once, because the surname hashes a move match needs did not
+> exist before 0.1.3.
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
@@ -26,13 +30,14 @@ on staging and said yes.
 
 ## 1. Install
 
-- [ ] Plugins → Add New → Upload Plugin → `Ledger 0.1.2.zip` → Activate.
-- [ ] Check that five tables now exist:
+- [ ] Plugins → Add New → Upload Plugin → `Ledger 0.1.3.zip` → Activate.
+- [ ] Check that all seven tables now exist:
 
       wp db query "SHOW TABLES LIKE '%dcc_ledger%'"
 
-      Expect: `portal_dcc_ledger_stays`, `_lines`, `_links`, `_batches`,
-      `_reviews`.
+      Expect seven, with the site's own prefix: `dcc_ledger_stays`, `_lines`,
+      `_links`, `_batches`, `_reviews`, `_originals` and `_adjustments`.
+      (`_originals` and `_adjustments` arrived in 0.1.1.)
 - [ ] DCC → Ledger loads, and every tab opens.
 
 ## 2. Confirm MotoPress still looks as expected
@@ -42,12 +47,23 @@ key or status is missing it shows a banner naming it **instead of figures**, so
 a wrong spelling can no longer read as $0. Confirm the banner is absent, and
 sanity-check the counts:
 
-      wp db query "SELECT meta_key, COUNT(*) FROM portal_postmeta
+Use the site's own table prefix, not `portal_` — staging's is `wpstg0_`. Get it
+with `wp db prefix`, or let the shell fill it in:
+
+      P=$(wp db prefix)
+
+      wp db query "SELECT meta_key, COUNT(*) FROM ${P}postmeta
                    WHERE meta_key IN ('mphb_total_price','_mphb_amount','_mphb_booking_id','mphb_note','_mphb_booking_internal_notes')
                    GROUP BY meta_key"
 
-      wp db query "SELECT post_status, COUNT(*) FROM portal_posts
+      wp db query "SELECT post_status, COUNT(*) FROM ${P}posts
                    WHERE post_type = 'mphb_payment' GROUP BY post_status"
+
+And the guest-name fields a move match needs:
+
+      wp db query "SELECT meta_key, COUNT(*) FROM ${P}postmeta
+                   WHERE meta_key IN ('mphb_first_name','mphb_last_name','mphb_guest_name')
+                   GROUP BY meta_key"
 
 - [ ] No red banner at the top of DCC → Ledger.
 - [ ] `mphb_total_price` ≈ 428 rows.
@@ -57,6 +73,11 @@ sanity-check the counts:
 - [ ] `_dcc_assumed_paid` returns **nothing** — those 38 payments were removed
       from live on 2026-10-19, and the ledger records assumed payments as its
       own adjustments instead.
+- [ ] At least one of `mphb_first_name` / `mphb_last_name` / `mphb_guest_name`
+      comes back with a healthy count. These are what a moved-guest match is
+      made on. **If all three are empty, send me the real field names**: the
+      figures will still be right, but every probable move will be reported as
+      "no name to compare" instead of being matched.
 
 ## 3. Dry run every export, in this order
 
@@ -128,18 +149,34 @@ everything it needs.
 
 - [ ] **Assumed payments: 38 bookings, $60,348.22.** These are the two numbers
       to check. If either differs, STOP and send me the output.
-- [ ] `Skipped, a copy` is **15**, broken down on the next line by how each was
-      found. Expect roughly 10 by cottage and dates, 2 by a code in a note, and
-      3 as probable moves. (15 rather than 14 because 19667, the second
-      Boathouse week, is a copy whose stay checks out in October — outside the
-      window, so it has no assumed payment either way and cannot move the
-      total.)
+- [ ] `Skipped, a copy` and its breakdown — by an existing link, by a code in
+      a note, by cottage and dates — now **add up to the total**, because they
+      count the same bookings. A second line gives the number of copies
+      detected in all, which is larger: it includes copies outside the window
+      and copies on bookings that are not confirmed.
+- [ ] `Probable moves` is reported separately and is **not** part of the copy
+      count. These are questions, not findings: each one counts as a real stay
+      until you confirm it. Expect a small number — 4 or so, not 18. If it is
+      still large, the surname matching is not working; check step 2's name
+      fields.
+- [ ] The 4 moves Rob confirmed (7278, 12443, 12447, 17462) appear under
+      `by an existing link`, not as probable moves. They are linked in step 5
+      whether or not their names match, because Rob decided them himself.
+- [ ] 6273 is **assumed paid**, not called a copy. It shares its dates with a
+      stay in another cottage, but it is a different party.
 - [ ] `Skipped, overpaid` is 3 — bookings 7983, 7989 and 10465, which are
       recorded as paid more than their total and are never topped up.
 - [ ] 5584 is NOT among the copies. It carries the code of a cancelled Vrbo
       stay, and a cancelled stay never produced money through that channel, so
       5584 is a real stay and IS assumed paid.
 - [ ] Nothing is reported as changed, because nothing has been copied yet.
+
+Run it again with `--verbose` to see exactly which bookings were skipped as
+copies and which are offered as moves, as booking ids only:
+
+      wp dcc-ledger snapshot --dry-run --verbose
+
+- [ ] Check the copy ids against your own list. No guest data is printed.
 
 Then take it for real:
 
@@ -162,8 +199,12 @@ Expect to see, among others:
 - [ ] `Stayed, Platform Refunded, Nothing Collected` for the Airbnb stay behind
       17462.
 - [ ] Any `Probable Move Copy` items are worked through with Rob. Confirming
-      one links it; rejecting one records the decision, so it is never asked
-      about again and the booking counts on its own from then on.
+      one links it as a copy and raises its assumed payment for reversal;
+      rejecting one records the decision, so it is never asked about again and
+      the booking goes on counting as a real stay.
+- [ ] Any `Possible Move, No Name To Compare` items are checked by hand. These
+      are bookings that sit where a moved guest would sit, but MotoPress holds
+      no name to compare. They count as real stays until you say otherwise.
 - [ ] No `Assumed Payment On A Copy` items remain. If one appears, reverse it
       with the button: that records a second, labelled adjustment cancelling
       the first. Nothing is ever deleted.

@@ -49,6 +49,7 @@ final class Originals
             'amount'          => ($row['amount'] ?? null) === null ? '' : number_format((float) $row['amount'], 2, '.', ''),
             'event_date'      => (string) ($row['event_date'] ?? ''),
             'codes'           => (array) ($row['codes'] ?? []),
+            'guest_keys'      => (array) ($row['guest_keys'] ?? []),
         ];
         return sha1((string) wp_json_encode($parts));
     }
@@ -119,6 +120,7 @@ final class Originals
             'event_date'      => $row['event_date'] ?? null,
             // Only the extracted OTA codes, never the note they came from.
             'codes'           => ($row['codes'] ?? []) === [] ? null : (string) wp_json_encode($row['codes']),
+            'guest_keys'      => Names::encode($row['guest_keys'] ?? []),
             'content_hash'    => $hash,
             'source_batch'    => $batch_id,
             'captured_at'     => current_time('mysql'),

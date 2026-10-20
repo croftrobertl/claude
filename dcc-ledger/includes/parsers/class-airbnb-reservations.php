@@ -4,6 +4,7 @@ namespace DCCL\Parsers;
 use DCCL\Cottages;
 use DCCL\Csv;
 use DCCL\Dates;
+use DCCL\Names;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -82,7 +83,10 @@ final class Airbnb_Reservations extends Parser_Base
                 $check_out,
                 $nights,
                 $booked === null ? null : $booked . ' 00:00:00',
-                'ok'
+                'ok',
+                null,
+                [],
+                Names::keys((string) ($row['Guest'] ?? ''))
             ));
         }
 

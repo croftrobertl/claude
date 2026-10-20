@@ -98,12 +98,17 @@ final class Cli
      * [--dry-run]
      * : Report the counts and write nothing.
      *
+     * [--verbose]
+     * : Also list the MotoPress booking ids that were skipped as copies, and
+     *   the ones offered as probable moves. Ids only — no guest data.
+     *
      * @param array<int,string>    $args
      * @param array<string,string> $assoc
      */
     public function snapshot(array $args, array $assoc): void
     {
-        $dry    = isset($assoc['dry-run']);
+        $dry     = isset($assoc['dry-run']);
+        $verbose = isset($assoc['verbose']);
         $result = Snapshot::run($dry, get_current_user_id() ?: null);
 
         if (!$result['ok']) {
@@ -121,18 +126,39 @@ final class Cli
         \WP_CLI::log(sprintf('Assumed total:        $%s', number_format((float) $c['assumed_total'], 2)));
         \WP_CLI::log(sprintf('Skipped, a copy:      %d', $c['copies_skipped']));
         \WP_CLI::log(sprintf(
-            '  copies found: %d by an existing link, %d by a code in a note, %d by cottage and dates, %d as a probable move',
+            '  by an existing link: %d · by a code in a note: %d · by cottage and dates: %d',
             $c['copies_by_link'],
             $c['copies_by_code'],
-            $c['copies_by_dates'],
-            $c['copies_by_move']
+            $c['copies_by_dates']
         ));
+        \WP_CLI::log(sprintf(
+            '  (%d copies in all; the rest fall outside the window or are not confirmed bookings)',
+            $c['copies_detected']
+        ));
+        \WP_CLI::log(sprintf(
+            'Probable moves:       %d, of which %d have no name to compare',
+            $c['probable_moves'],
+            $c['moves_unnamed']
+        ));
+        \WP_CLI::log('  These count as real stays until confirmed on the Cleanup tab.');
         \WP_CLI::log(sprintf('Skipped, overpaid:    %d', $c['overpaid_skipped']));
         \WP_CLI::log(sprintf('Outside the window:   %d', $c['outside_window']));
         \WP_CLI::log(sprintf('Already adjusted:     %d', $c['assumed_existing']));
 
         foreach ($result['notes'] as $note) {
             \WP_CLI::warning($note);
+        }
+
+        if ($verbose) {
+            \WP_CLI::log('');
+            \WP_CLI::log(sprintf(
+                'Skipped as copies (booking ids): %s',
+                $c['copy_ids'] === [] ? 'none' : implode(', ', $c['copy_ids'])
+            ));
+            \WP_CLI::log(sprintf(
+                'Offered as probable moves (booking ids): %s',
+                $c['move_ids'] === [] ? 'none' : implode(', ', $c['move_ids'])
+            ));
         }
 
         if (($c['assumed_withheld'] ?? 0) > 0) {

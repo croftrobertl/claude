@@ -450,13 +450,14 @@ final class Issues
     }
 
     /**
-     * A direct booking that looks like the same stay moved to another cottage:
-     * the same dates, a different cottage, and nothing standing in the
-     * platform stay's own cottage.
+     * A direct booking that looks like the same guest moved to another
+     * cottage: the same dates, a different cottage, nothing standing in the
+     * platform stay's own cottage, and the same surname.
      *
-     * It is treated as a copy straight away — counting it twice is the worse
-     * mistake — but it is a guess until a person says otherwise, so it is
-     * raised here with both answers available.
+     * It is a question, not a finding. Rob's rule is that every confirmed
+     * booking really happened, so until he says otherwise the booking counts
+     * as the real stay it probably is — and is assumed paid if it qualifies.
+     * Calling it a copy on a guess would silently drop a real stay's money.
      *
      * @param array<int,array<string,mixed>> $stays
      */
@@ -467,41 +468,49 @@ final class Issues
             $by_stay[(int) $stay['id']] = $stay;
         }
 
+        $live   = Copies::from_live();
         $direct = [];
-        foreach (Copies::from_live() as $booking) {
+        foreach ($live as $booking) {
             $direct[(int) $booking['id']] = $booking;
         }
 
-        foreach (Copies::detect(Copies::from_live()) as $booking_id => $match) {
-            if ($match['reason'] !== Copies::REASON_MOVE || $match['stay_id'] === null) {
-                continue;
-            }
+        foreach (Copies::probable_moves($live) as $booking_id => $match) {
             $stay    = $by_stay[(int) $match['stay_id']] ?? null;
             $booking = $direct[(int) $booking_id] ?? null;
             if ($stay === null || $booking === null) {
                 continue;
             }
 
+            $named = (bool) $match['named'];
+
+            $facts = [
+                sprintf(
+                    /* translators: 1: booking id, 2: cottage, 3: check-in, 4: check-out */
+                    __('MotoPress booking #%1$d is a direct booking in cottage %2$s for %3$s to %4$s.', 'dcc-ledger'),
+                    (int) $booking_id,
+                    (string) $booking['cottage'],
+                    (string) $booking['check_in'],
+                    (string) $booking['check_out']
+                ),
+                self::stay_fact($stay),
+                $named
+                    ? __('Same dates, a different cottage, nothing booked in the platform stay\'s own cottage, and the same surname — so this looks like the same guest, moved.', 'dcc-ledger')
+                    : __('Same dates, a different cottage, and nothing booked in the platform stay\'s own cottage. MotoPress holds no name for this booking, so there is nothing to tell a moved guest from a different party on the same weekend.', 'dcc-ledger'),
+                __('It is being counted as a real stay, and assumed paid if it qualifies. Confirming the move links it to the platform stay and reverses any assumed payment.', 'dcc-ledger'),
+            ];
+
             $items[] = [
                 'key'      => 'move_copy:' . $booking_id . ':' . (int) $match['stay_id'],
-                'title'    => __('Probable Move Copy', 'dcc-ledger'),
-                'facts'    => [
-                    sprintf(
-                        /* translators: 1: booking id, 2: cottage on the booking, 3: check-in, 4: check-out */
-                        __('MotoPress booking #%1$d is a direct booking in cottage %2$s for %3$s to %4$s.', 'dcc-ledger'),
-                        (int) $booking_id,
-                        (string) $booking['cottage'],
-                        (string) $booking['check_in'],
-                        (string) $booking['check_out']
-                    ),
-                    self::stay_fact($stay),
-                    __('Same dates, a different cottage, and nothing is booked in the platform stay\'s own cottage — so this looks like the same guest, moved.', 'dcc-ledger'),
-                    __('It is being counted once, on the platform stay, and it is not assumed paid. Reject it and it becomes a separate direct booking again.', 'dcc-ledger'),
-                ],
-                'action'   => __('Confirm the move, or reject it if these really are two different stays.', 'dcc-ledger'),
-                'severity' => 'info',
-                'booking_id'  => (int) $booking_id,
-                'stay_id'     => (int) $match['stay_id'],
+                'title'    => $named
+                    ? __('Probable Move Copy', 'dcc-ledger')
+                    : __('Possible Move, No Name To Compare', 'dcc-ledger'),
+                'facts'    => $facts,
+                'action'   => $named
+                    ? __('Confirm the move, or reject it if these really are two different stays.', 'dcc-ledger')
+                    : __('Check who stayed. Confirm the move only if it was the same guest; otherwise reject it and it will not be raised again.', 'dcc-ledger'),
+                'severity' => $named ? 'info' : 'warn',
+                'booking_id'   => (int) $booking_id,
+                'stay_id'      => (int) $match['stay_id'],
                 'confirm_move' => (int) $booking_id,
             ];
         }

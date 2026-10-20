@@ -36,6 +36,18 @@ final class Mphb_Reader
     public const META_NOTE           = 'mphb_note';
     public const META_INTERNAL_NOTE  = '_mphb_booking_internal_notes';
 
+    /**
+     * The customer's name, read only to hash the surname and dropped at once.
+     *
+     * Some MotoPress customers have an empty last name with the whole name in
+     * the first-name field, so all three are read and the first one that
+     * yields a surname wins. Where none of them does, there is no name to
+     * compare and the move signal does not fire — see Copies.
+     */
+    public const META_LAST_NAME  = 'mphb_last_name';
+    public const META_FIRST_NAME = 'mphb_first_name';
+    public const META_GUEST_NAME = 'mphb_guest_name';
+
     public const META_SYNC_ID        = '_mphb_sync_id';
     public const META_ICAL_PRODID    = 'mphb_ical_prodid';
     public const META_ICAL_SUMMARY   = 'mphb_ical_summary';
@@ -117,6 +129,9 @@ final class Mphb_Reader
             self::META_TOTAL,
             self::META_NOTE,
             self::META_INTERNAL_NOTE,
+            self::META_LAST_NAME,
+            self::META_FIRST_NAME,
+            self::META_GUEST_NAME,
         ]);
         $payments = self::payments_for($ids);
 
@@ -142,6 +157,14 @@ final class Mphb_Reader
 
             $pay = $payments[$id] ?? ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
 
+            // Hashed here, inside the loop. The names themselves go no
+            // further than these three local variables.
+            $guest_keys = Names::keys_from_parts(
+                (string) ($m[self::META_FIRST_NAME] ?? ''),
+                (string) ($m[self::META_LAST_NAME] ?? ''),
+                (string) ($m[self::META_GUEST_NAME] ?? '')
+            );
+
             $out[] = [
                 'id'          => $id,
                 'status'      => (string) $row['status'],
@@ -154,6 +177,7 @@ final class Mphb_Reader
                 'prodid'      => $prodid,
                 'codes'       => $codes,
                 'note_codes'  => $note_codes,
+                'guest_keys'  => $guest_keys,
                 'total'       => round((float) ($m[self::META_TOTAL] ?? 0), 2),
                 // Paid means completed only. A refunded payment keeps its
                 // amount in MotoPress, so it is reported apart, never added.

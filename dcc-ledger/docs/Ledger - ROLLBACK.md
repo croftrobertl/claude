@@ -54,6 +54,17 @@ To remove the data deliberately:
 1. Settings tab → tick "Delete All Ledger Data When The Plugin Is Deleted" → Save.
 2. Plugins → Delete.
 
+## If the ledger calls a real stay a copy
+
+It should not, by design: a booking counts as a real stay until a person says
+otherwise, and only a confirmation code, the same cottage on the same dates, or
+somebody's own confirmation makes it a copy. A probable move is only ever a
+question.
+
+If one is wrong anyway, reject it on the Cleanup tab, or remove its copy link
+on the Stays tab. The booking counts on its own again at once. Nothing was
+deleted at any point; the platform stay and the booking were only ever linked.
+
 ## If a copy was judged wrongly
 
 Nothing needs rolling back. A probable move is a guess the ledger shows you:

@@ -102,6 +102,10 @@ final class Linker
      * Each is matched on its own dates against a platform stay in a different
      * cottage, so a booking id that means something else on another site can
      * never be linked to the wrong stay.
+     *
+     * No surname is required here. Rob looked at these four himself, and his
+     * decision outranks any signal — including a name that does not match, or
+     * a customer record with no name in it at all.
      */
     private static function link_confirmed_moves(?int $user_id): int
     {
@@ -112,15 +116,16 @@ final class Linker
             $by_id[(int) $booking['id']] = $booking;
         }
 
-        $detected = Copies::detect(Copies::from_live());
+        $live  = Copies::from_live();
+        $moves = Copies::move_candidates($live);
 
         foreach (Copies::CONFIRMED_MOVES as $booking_id) {
             $booking = $by_id[$booking_id] ?? null;
             if ($booking === null || $booking['is_imported'] || !self::is_live($booking)) {
                 continue;
             }
-            $match = $detected[$booking_id] ?? null;
-            if ($match === null || $match['stay_id'] === null || $match['reason'] !== Copies::REASON_MOVE) {
+            $match = $moves[$booking_id] ?? null;
+            if ($match === null) {
                 continue;
             }
             if (self::has_link((int) $match['stay_id'], $booking_id)) {

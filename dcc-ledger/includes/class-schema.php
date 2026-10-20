@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
  */
 final class Schema
 {
-    public const DB_VERSION     = '2';
+    public const DB_VERSION     = '3';
     public const VERSION_OPTION = 'dccl_db_version';
 
     public static function table(string $name): string
@@ -101,6 +101,10 @@ final class Schema
             status varchar(12) NOT NULL DEFAULT 'ok',
             persons smallint(5) DEFAULT NULL,
             source_batch bigint(20) unsigned DEFAULT NULL,
+            -- Salted hashes of the guest's surname, and nothing else about
+            -- them. Used only to tell whether a moved booking is the same
+            -- person; never displayed, never reversed.
+            guest_keys longtext DEFAULT NULL,
             meta longtext DEFAULT NULL,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
@@ -197,6 +201,7 @@ final class Schema
             amount decimal(12,2) DEFAULT NULL,
             event_date date DEFAULT NULL,
             codes longtext DEFAULT NULL,
+            guest_keys longtext DEFAULT NULL,
             content_hash char(40) NOT NULL,
             source_batch bigint(20) unsigned DEFAULT NULL,
             captured_at datetime NOT NULL,

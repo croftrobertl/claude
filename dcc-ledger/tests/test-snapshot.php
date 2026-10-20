@@ -15,7 +15,9 @@ use DCCL\Copies;
 use DCCL\Batches;
 use DCCL\Health;
 use DCCL\Mphb_Reader;
+use DCCL\Issues;
 use DCCL\Originals;
+use DCCL\Repo;
 use DCCL\Reports;
 use DCCL\Schema;
 use DCCL\Snapshot;
@@ -107,6 +109,15 @@ T::group("Rob's assumed-paid rule");
 //   #9019  300.00 due, payment failed→ 300.00
 //   #9022  416.25 due, nothing paid  → 416.25  (carries the code of a
 //          CANCELLED platform stay, so it is a real stay, not a copy)
+//   #9011  388.50 due, nothing paid  → 388.50  (a probable move, which is a
+//          question for Rob, not a finding — so it counts as the real stay it
+//          probably is until he says otherwise)
+//   #9023  525.00 due, nothing paid  → 525.00  (same dates as a platform stay
+//          in another cottage, but a different surname: a busy weekend)
+//   #9024  275.00 due, nothing paid  → 275.00  (looks like a move, but there
+//          is no name to compare)
+//   #9025  640.00 due, nothing paid  → 640.00  (a probable move; the whole
+//          name sits in the first-name field)
 $assumed = [];
 foreach (Adjustments::all() as $adjustment) {
     if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
@@ -116,12 +127,16 @@ foreach (Adjustments::all() as $adjustment) {
 ksort($assumed);
 
 T::same(
-    [9008 => 350.00, 9012 => 400.00, 9017 => 450.00, 9018 => 200.00, 9019 => 300.00, 9022 => 416.25],
+    [
+        9008 => 350.00, 9011 => 388.50, 9012 => 400.00, 9017 => 450.00,
+        9018 => 200.00, 9019 => 300.00, 9022 => 416.25, 9023 => 525.00,
+        9024 => 275.00, 9025 => 640.00,
+    ],
     $assumed,
     'Each qualifying booking gets the gap, and only the gap'
 );
-T::same(6, Adjustments::count(Adjustments::ASSUMED_PAID), 'Six bookings qualify');
-T::same(2116.25, Adjustments::total(Adjustments::ASSUMED_PAID), 'Totalling 2,116.25');
+T::same(10, Adjustments::count(Adjustments::ASSUMED_PAID), 'Ten bookings qualify');
+T::same(3944.75, Adjustments::total(Adjustments::ASSUMED_PAID), 'Totalling 3,944.75');
 
 T::group('What the assumed-paid rule must never touch');
 
@@ -133,9 +148,9 @@ T::ok(!isset($assumed[9010]), 'Not a cancelled dock block');
 T::ok(!isset($assumed[9001]), 'Not an iCal-imported booking');
 T::ok(!isset($assumed[9020]), 'Not a booking that checks out after the reconciled window');
 T::ok(!isset($assumed[9007]), 'Not a booking that was paid in full');
-T::ok(!isset($assumed[9011]), 'And not a probable move copy — its money came through the platform');
-T::ok(!isset($assumed[9023]), 'Nor the move the ledger spotted on its own');
-T::ok(isset($assumed[9022]), 'But a booking carrying the code of a CANCELLED stay IS assumed paid: that stay never happened, so this one is real');
+T::ok(isset($assumed[9022]), 'A booking carrying the code of a CANCELLED stay IS assumed paid: that stay never happened, so this one is real');
+T::ok(isset($assumed[9011]), 'An unconfirmed probable move IS assumed paid: Rob\'s rule makes a confirmed booking real until he says otherwise');
+T::ok(isset($assumed[9023]), 'And so is a booking that merely shares a weekend with another cottage\'s stay');
 
 $run2 = Snapshot::run(true, 1);
 T::ok($run2['counts']['copies_skipped'] >= 3, 'The copies are reported as skipped');
@@ -208,22 +223,24 @@ T::ok(str_contains((string) $row['note'], 'actual date unknown'), 'And says the 
 
 T::group('The three views add up');
 
-// May 2025 holds direct booking #9008: 600.00 due, 250.00 recorded, so the
-// ledger assumes the remaining 350.00.
+// April 2025 holds one direct booking, #9007: 500.00 due and 500.00 recorded,
+// so nothing is assumed. June holds #9006, a copy. May holds #9008 (600.00
+// due, 250.00 recorded → 350.00 assumed) and #9023 (525.00 due, nothing
+// recorded → 525.00 assumed).
 $original_view = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'original');
 $ledger_view   = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'ledger');
 $difference    = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'difference');
 
 T::same(250.00, $original_view['totals']['direct_paid'], 'Original: what MotoPress actually recorded');
-T::same(600.00, $ledger_view['totals']['direct_paid'], 'Ledger: the original plus the correction');
-T::same(350.00, $difference['totals']['direct_paid'], 'Difference: the correction alone');
+T::same(1125.00, $ledger_view['totals']['direct_paid'], 'Ledger: the original plus the corrections');
+T::same(875.00, $difference['totals']['direct_paid'], 'Difference: the corrections alone');
 T::same(
     round($original_view['totals']['direct_paid'] + $difference['totals']['direct_paid'], 2),
     $ledger_view['totals']['direct_paid'],
     'Original plus difference equals ledger'
 );
 T::same(0.00, $original_view['totals']['direct_assumed'], 'The Original view shows no assumed money at all');
-T::same(350.00, $ledger_view['totals']['direct_assumed'], 'The Ledger view shows the correction as assumed');
+T::same(875.00, $ledger_view['totals']['direct_assumed'], 'The Ledger view shows the corrections as assumed');
 T::same($original_view['totals']['nights'], $ledger_view['totals']['nights'], 'Nights do not move between views');
 
 T::group('Undoing a snapshot');
@@ -271,12 +288,14 @@ T::same(null, $current_after['superseded_at'], 'And no longer marked superseded'
 T::group('The copy count is broken down by how each was found');
 
 $breakdown = Snapshot::run(true, 1)['counts'];
-$total = $breakdown['copies_by_link'] + $breakdown['copies_by_code']
-       + $breakdown['copies_by_dates'] + $breakdown['copies_by_move'];
+$parts = $breakdown['copies_by_link'] + $breakdown['copies_by_code'] + $breakdown['copies_by_dates'];
 
-T::same(count(Copies::detect(Copies::from_live())), $total, 'Every copy is accounted for by one signal');
-T::ok($breakdown['copies_by_move'] >= 1, 'At least one was found as a probable move');
-T::ok($breakdown['copies_by_code'] >= 1, 'At least one by a code in a note');
+T::same((int) $breakdown['copies_skipped'], $parts, 'The parts of the breakdown add up to the total');
+T::ok((int) $breakdown['copies_detected'] >= (int) $breakdown['copies_skipped'], 'Copies detected is never fewer than copies skipped');
+T::same(count(Copies::detect(Copies::from_live())), (int) $breakdown['copies_detected'], 'And it matches what detection found');
+T::ok((int) $breakdown['probable_moves'] >= 1, 'Probable moves are reported on their own, not as copies');
+T::same(count($breakdown['copy_ids']), (int) $breakdown['copies_skipped'], 'The verbose id list matches the count');
+T::ok(!in_array(9011, $breakdown['copy_ids'], true), 'An unconfirmed move is not among the copies');
 
 T::group('A missing MotoPress key is never a figure of zero');
 
@@ -314,50 +333,77 @@ $expired = DCCL\Repo::find_stay('vrbo', 'HA-CCC333');
 T::same('expired', (string) $expired['status'], 'The expired request is stored as expired');
 T::same([], DCCL\Repo::links_for_stay((int) $expired['id']), 'And nothing is a copy of it');
 
-T::group('A moved-cottage copy is spotted, and is a guess until confirmed');
+T::group('A move needs the same guest, not just the same dates');
 
-// #9023 sits on the Airbnb stay HMBBBB0003's dates (1-4 May) in another
-// cottage, with nothing booked in cottage 35 on those dates.
-$move = $detected[9023] ?? null;
-T::ok($move !== null, 'The move is detected');
-T::same(DCCL\Copies::REASON_MOVE, $move === null ? '' : $move['reason'], 'And is recognised as a move');
-T::ok($move !== null && !$move['confirmed'], 'It is marked as a guess, not a certainty');
+$live  = Copies::from_live();
+$moves = Copies::probable_moves($live);
 
-$stay_id = $move === null ? 0 : (int) $move['stay_id'];
-T::same(DCCL\Repo::stay_id('airbnb', 'HMBBBB0003'), $stay_id, 'Matched to the right platform stay');
+// #9011 sits on the Airbnb stay HMMOVED001's dates in another cottage, and
+// carries the same surname.
+T::ok(isset($moves[9011]), 'The same guest on the same dates is offered as a move');
+T::ok(($moves[9011]['named'] ?? false), 'Matched on the surname');
+T::same(Repo::stay_id('airbnb', 'HMMOVED001'), (int) ($moves[9011]['stay_id'] ?? 0), 'And to the right stay');
+
+// #9023 sits on the Airbnb stay HMBBBB0003's dates in another cottage, with a
+// different surname. This is Rob's 6273: an ordinary busy weekend.
+T::ok(!isset($moves[9023]), 'A different party on the same weekend is NOT offered as a move');
+T::ok(isset(Copies::move_candidates($live)[9023]), 'Even though the dates and cottages line up exactly');
+T::ok(!isset(Copies::detect($live)[9023]), 'And it is certainly not treated as a copy');
+
+T::group('Where there is no name, nothing is guessed');
+
+T::ok(isset($moves[9024]), '#9024 is raised');
+T::ok(!($moves[9024]['named'] ?? true), 'But marked as having no name to compare');
+
+$unnamed_item = null;
+foreach (Issues::all() as $item) {
+    if ($item['key'] === 'move_copy:9024:' . (int) $moves[9024]['stay_id']) {
+        $unnamed_item = $item;
+    }
+}
+T::ok($unnamed_item !== null, 'It reaches the cleanup list');
+T::same('Possible Move, No Name To Compare', $unnamed_item === null ? '' : $unnamed_item['title'], 'Under its own title');
+
+T::group('An empty last name falls back to the rest of the record');
+
+// #9025 has no last name; the whole name is in the first-name field.
+T::ok(isset($moves[9025]), 'It is still matched');
+T::ok(($moves[9025]['named'] ?? false), 'On a name, not on a guess');
+
+T::group('A probable move counts as a real stay until it is confirmed');
 
 $auto_linked = false;
-foreach (DCCL\Repo::links_for_stay($stay_id) as $link) {
-    $auto_linked = $auto_linked || (int) $link['mphb_booking_id'] === 9023;
+foreach (Repo::links_for_stay((int) $moves[9011]['stay_id']) as $link) {
+    $auto_linked = $auto_linked || (int) $link['mphb_booking_id'] === 9011;
 }
-T::ok(!$auto_linked, 'A probable move is never linked without a person');
+T::ok(!$auto_linked, 'It is never linked without a person');
+T::ok(!isset(Copies::detect($live)[9011]), 'And is not counted as a copy');
 
-$keys = array_column(DCCL\Issues::all(), 'key');
-T::ok(in_array('move_copy:9023:' . $stay_id, $keys, true), 'It is raised on the cleanup list for Rob to decide');
+$keys = array_column(Issues::all(), 'key');
+T::ok(in_array('move_copy:9011:' . (int) $moves[9011]['stay_id'], $keys, true), 'It is raised for Rob to decide');
 
-T::group('Rejecting a move makes it a separate stay again');
+T::group('Rejecting a move stops it being asked about');
 
-DCCL\Decisions::reject_move(9023, $stay_id, 'Two different guests, same week.', 1);
-$after = DCCL\Copies::detect(DCCL\Copies::from_live());
-T::ok(!isset($after[9023]), 'Once rejected, it is no longer a copy');
+$move_stay = (int) $moves[9011]['stay_id'];
+DCCL\Decisions::reject_move(9011, $move_stay, 'Two different guests.', 1);
+T::ok(!isset(Copies::probable_moves(Copies::from_live())[9011]), 'Once rejected, it is no longer offered');
+T::ok(!in_array('move_copy:9011:' . $move_stay, array_column(Issues::all(), 'key'), true), 'And it leaves the cleanup list');
 
-$keys_after = array_column(DCCL\Issues::all(), 'key');
-T::ok(!in_array('move_copy:9023:' . $stay_id, $keys_after, true), 'And it stops being asked about');
-
-DCCL\Decisions::clear_move_rejection(9023, $stay_id);
-T::ok(isset(DCCL\Copies::detect(DCCL\Copies::from_live())[9023]), 'Clearing the decision brings the guess back');
+DCCL\Decisions::clear_move_rejection(9011, $move_stay);
+T::ok(isset(Copies::probable_moves(Copies::from_live())[9011]), 'Clearing the decision brings the question back');
 
 T::group('A move that is already explained in its own cottage is not a move');
 
 // Booking #9006 is a same-cottage copy of Booking.com 5555555555 (cottage 35,
 // 10-14 June). A booking on those dates in another cottage is therefore not
 // where that guest went.
-$decoy = DCCL\Copies::detect(array_merge(DCCL\Copies::from_live(), [[
-    'id'        => 9999,
-    'cottage'   => '31',
-    'check_in'  => '2025-06-10',
-    'check_out' => '2025-06-14',
-    'codes'     => [],
+$decoy = Copies::move_candidates(array_merge(Copies::from_live(), [[
+    'id'         => 9999,
+    'cottage'    => '31',
+    'check_in'   => '2025-06-10',
+    'check_out'  => '2025-06-14',
+    'codes'      => [],
+    'guest_keys' => [],
 ]]));
 T::ok(!isset($decoy[9999]), 'With the stay already claimed in its own cottage, nothing else is read as the move');
 

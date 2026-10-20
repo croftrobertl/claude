@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,14 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.3 =
+* A moved guest now has to be the same guest: a move match needs the surname as well as the dates. Two parties booking the same weekend in different cottages is no longer read as a move.
+* A probable move is a question, not a finding. It counts as a real stay, and is assumed paid like any other, until it is confirmed on the Cleanup tab. Rob's rule is that every confirmed booking really happened.
+* Where MotoPress holds no name to compare, the booking is reported as "Possible Move, No Name To Compare" and is never guessed at.
+* Surnames are matched as salted hashes computed inside the row loop. No name is stored, logged or displayed anywhere.
+* The copy breakdown counts the same bookings as the copy total, each once, by the first signal that caught it, so the parts add up.
+* `wp dcc-ledger snapshot --verbose` lists the booking ids skipped as copies and offered as moves. Ids only.
 
 = 0.1.2 =
 * A cancelled or expired platform stay is no longer treated as the original of a hand-typed copy. The money never came through that channel, so a direct booking on those dates is a real, separate stay.

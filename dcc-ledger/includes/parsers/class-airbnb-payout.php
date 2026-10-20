@@ -4,6 +4,7 @@ namespace DCCL\Parsers;
 use DCCL\Cottages;
 use DCCL\Csv;
 use DCCL\Dates;
+use DCCL\Names;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -114,7 +115,11 @@ final class Airbnb_Payout extends Parser_Base
                     Dates::us($row['Booking date'] ?? '') === null
                         ? null
                         : Dates::us($row['Booking date'] ?? '') . ' 00:00:00',
-                    'ok'
+                    'ok',
+                    null,
+                    [],
+                    // Hashed here and dropped: the name goes no further.
+                    Names::keys((string) ($row['Guest'] ?? ''))
                 ));
 
                 $gross     = $this->money($row['Gross earnings'] ?? '');
@@ -177,7 +182,10 @@ final class Airbnb_Payout extends Parser_Base
                     Dates::us($row['Booking date'] ?? '') === null
                         ? null
                         : Dates::us($row['Booking date'] ?? '') . ' 00:00:00',
-                    'cancelled'
+                    'cancelled',
+                    null,
+                    [],
+                    Names::keys((string) ($row['Guest'] ?? ''))
                 ));
             }
 

@@ -47,8 +47,19 @@ $mutations = [
     [
         'name' => 'A guest name stored on the stay',
         'file' => 'includes/parsers/class-airbnb-payout.php',
-        'from' => "                    'ok'\n                ));",
-        'to'   => "                    'ok',\n                    null,\n                    ['guest' => (string) (\$row['Guest'] ?? '')]\n                ));",
+        'from' => <<<'EOT'
+                    'ok',
+                    null,
+                    [],
+                    // Hashed here and dropped: the name goes no further.
+                    Names::keys((string) ($row['Guest'] ?? ''))
+EOT,
+        'to'   => <<<'EOT'
+                    'ok',
+                    null,
+                    ['guest' => (string) ($row['Guest'] ?? '')],
+                    Names::keys((string) ($row['Guest'] ?? ''))
+EOT,
     ],
     [
         'name' => 'A Crofty Bear row included',
@@ -156,14 +167,14 @@ EOT,
         'name' => 'An adjustment deleted by a refresh',
         'file' => 'includes/class-snapshot.php',
         'from' => <<<'EOT'
-        self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+            self::assume_paid($bookings, $detected, $counts, $notes, $dry_run, $batch_id, $user_id);
 EOT,
         'to'   => <<<'EOT'
-        if (!$dry_run) {
-            global $wpdb;
-            $wpdb->query('DELETE FROM ' . Schema::adjustments());
-        }
-        self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+            if (!$dry_run) {
+                global $wpdb;
+                $wpdb->query('DELETE FROM ' . Schema::adjustments());
+            }
+            self::assume_paid($bookings, $detected, $counts, $notes, $dry_run, $batch_id, $user_id);
 EOT,
     ],
     [
@@ -173,14 +184,10 @@ EOT,
             if (isset($copies[(int) $booking['id']])) {
                 // Its money belongs to the OTA stay, once.
                 $counts['copies_skipped']++;
-                continue;
-            }
 EOT,
         'to'   => <<<'EOT'
             if (false) {
                 $counts['copies_skipped']++;
-                continue;
-            }
 EOT,
     ],
     [
@@ -243,38 +250,47 @@ EOT,
         'name' => 'A cancelled platform stay treated as the original of a copy',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
-            if ((string) $stay['status'] !== 'ok') {
-                continue;
-            }
+        return array_values(array_filter(
+            self::stays(),
+            static fn ($stay) => (string) $stay['status'] === 'ok'
+        ));
 EOT,
         'to'   => <<<'EOT'
-            if (false) {
-                continue;
-            }
+        return self::stays();
 EOT,
     ],
     [
         'name' => 'A moved-cottage copy no longer recognised',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
-                $matched = self::move_candidate($booking, $by_dates, $direct_keys);
-                $reason  = self::REASON_MOVE;
+            $stay = self::move_candidate($booking, $by_dates, $direct_keys);
+            if ($stay !== null) {
+                $out[(int) $booking['id']] = $stay;
+            }
 EOT,
         'to'   => <<<'EOT'
-                $matched = null;
-                $reason  = self::REASON_MOVE;
+            $stay = null;
+            if ($stay !== null) {
+                $out[(int) $booking['id']] = $stay;
+            }
 EOT,
     ],
     [
         'name' => 'A move auto-linked without anyone confirming it',
         'file' => 'includes/class-linker.php',
         'from' => <<<'EOT'
-            if (!in_array($match['reason'], [Copies::REASON_CODE, Copies::REASON_DATES], true)) {
+        foreach (Copies::detect(Copies::from_live()) as $booking_id => $match) {
+            if ($match['stay_id'] === null) {
                 continue;
             }
 EOT,
         'to'   => <<<'EOT'
-            if (false) {
+        $auto = Copies::detect(Copies::from_live());
+        foreach (Copies::probable_moves(Copies::from_live()) as $move_id => $move) {
+            $auto[$move_id] = ['reason' => Copies::REASON_DATES, 'stay_id' => $move['stay_id'], 'stay_code' => '', 'confirmed' => true];
+        }
+        foreach ($auto as $booking_id => $match) {
+            if ($match['stay_id'] === null) {
                 continue;
             }
 EOT,
@@ -307,14 +323,89 @@ EOT,
         'name' => 'A rejected move quietly coming back as a copy',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
-            if ($reason === self::REASON_MOVE
-                && $linked === null
-                && Decisions::move_rejected($id, (int) $matched['id'])) {
+            if (Decisions::move_rejected($id, (int) $stay['id'])) {
+                continue;
+            }
 EOT,
         'to'   => <<<'EOT'
-            if (false
-                && $linked === null
-                && Decisions::move_rejected($id, (int) $matched['id'])) {
+            if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A move called on dates alone, with a different surname',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if (!Names::match($booking_keys, $stay_keys)) {
+                // A different party, on the same busy weekend.
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A move guessed where there is no name to compare',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if ($booking_keys === [] || $stay_keys === []) {
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+EOT,
+    ],
+    [
+        'name' => 'An unconfirmed move treated as a copy, dropping a real stay',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+        $moves = Copies::probable_moves($live);
+        foreach ($moves as $booking_id => $move) {
+EOT,
+        'to'   => <<<'EOT'
+        $moves = Copies::probable_moves($live);
+        foreach ($moves as $booking_id => $move) {
+            $detected[(int) $booking_id] = ['reason' => 'dates', 'stay_id' => $move['stay_id'], 'stay_code' => '', 'confirmed' => false];
+EOT,
+    ],
+    [
+        'name' => 'A surname stored beside its hash',
+        'file' => 'includes/class-names.php',
+        'from' => <<<'EOT'
+        foreach ($candidates as $candidate) {
+            $out[] = hash_hmac('sha256', $candidate, $salt);
+        }
+EOT,
+        'to'   => <<<'EOT'
+        foreach ($candidates as $candidate) {
+            $out[] = $candidate;
+        }
+EOT,
+    ],
+    [
+        'name' => 'An unsalted surname hash, open to a dictionary',
+        'file' => 'includes/class-names.php',
+        'from' => <<<'EOT'
+            $out[] = hash_hmac('sha256', $candidate, $salt);
+EOT,
+        'to'   => <<<'EOT'
+            $out[] = hash('sha256', $candidate);
+EOT,
+    ],
+    [
+        'name' => 'The copy breakdown counting a different population again',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+                $reason = (string) $copies[(int) $booking['id']]['reason'];
+                if (in_array($reason, Copies::REASON_ORDER, true)) {
+                    $counts['copies_by_' . $reason]++;
+                }
+EOT,
+        'to'   => <<<'EOT'
+                $counts['copies_by_dates'] += 2;
 EOT,
     ],
     [

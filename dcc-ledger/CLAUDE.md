@@ -55,6 +55,18 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 - **A cancelled or expired platform stay is never the original of a copy.** The
   money never came through that channel, so a direct booking on those dates is
   a real, separate stay. This is Rob's 5584.
+- **A booking is a real stay until a person says it is a copy.** Rob's rule is
+  that every confirmed booking happened, except dock blocks and moves. So a
+  probable move is a QUESTION, never a finding: it counts as a real stay and is
+  assumed paid like any other, and only confirming it makes it a copy. Calling
+  one a copy on a guess silently drops a real stay's money, which is the worse
+  mistake of the two — it is how 6273 went missing in 0.1.2.
+- **A move needs the same guest, not just the same dates.** Two parties booking
+  the same Friday to Sunday in different cottages is an ordinary busy weekend.
+  The surname must match too.
+- **A surname is never stored, logged or shown.** It is turned into salted
+  hashes inside the row loop and dropped. The salt is per-site, made once, and
+  never remade — remaking it would void every stored key.
 - **Assumed payments are never written before the platform exports are in.**
   Without the stays, nothing can recognise a copy, and every copy would be
   assumed paid — which is never removed quietly afterwards.
@@ -90,10 +102,13 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   rewriting it.
 - A stay with any link, copies included, is not reported as "no MotoPress
   booking".
-- Copy detection reports the signal that FOUND a copy, not the link it has
-  since been given, so a copy count can be reconciled against how each one was
-  recognised. A link only shows as the reason when no signal explains it any
-  more.
+- Copy signals are tried in a fixed order — existing link, note code, cottage
+  and dates — and the first one wins. The breakdown counts the SAME bookings as
+  the copy total, each once, so the parts add up. (In 0.1.2 they counted every
+  copy detected while the total counted only those reaching the assumed-paid
+  rule, and the two never matched.)
+- `copies_detected` is reported beside the skipped total, because they are
+  different populations and hiding that was the bug.
 - A confirmed link outranks an earlier rejection: somebody said yes after
   somebody said no.
 - A probable move needs the platform stay's own cottage to be empty on those
@@ -122,6 +137,14 @@ the status prefix are not cosmetic — the other spellings return nothing at all
 | `META_INTERNAL_NOTE` | `_mphb_booking_internal_notes` |
 | `PAYMENT_COMPLETED` | `mphb-p-completed` (prefixed) |
 | `PAYMENT_REFUNDED` | `mphb-p-refunded` |
+| `META_LAST_NAME` | `mphb_last_name` — **unconfirmed on live** |
+| `META_FIRST_NAME` | `mphb_first_name` — **unconfirmed on live** |
+| `META_GUEST_NAME` | `mphb_guest_name` — **unconfirmed on live** |
+
+The three name fields are the only keys still unconfirmed. They are used for
+nothing but surname matching, and `Health::name_source_present()` reports when
+none of them exists. Without them the figures stay right; every probable move
+is simply reported as "no name to compare".
 
 `tests/fixtures/mphb-dataset.php` writes these as **literals**, never as the
 plugin's constants. A fixture built from the constants follows the plugin into
@@ -137,8 +160,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 518 assertions
-    php dcc-ledger/tests/mutations.php            # 29 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 556 assertions
+    php dcc-ledger/tests/mutations.php            # 35 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -167,6 +190,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.2.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.3.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

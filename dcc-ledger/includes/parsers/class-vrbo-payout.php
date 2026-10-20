@@ -4,6 +4,7 @@ namespace DCCL\Parsers;
 use DCCL\Cottages;
 use DCCL\Csv;
 use DCCL\Dates;
+use DCCL\Names;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,7 +21,8 @@ if (!defined('ABSPATH')) {
  * Both tax columns are 0 in every row Rob has. They are stored anyway, and the
  * reports say "not reported by Vrbo" rather than "$0 tax".
  *
- * Traveler First Name / Traveler Last Name are never read.
+ * The traveller's name is read only to hash the surname inside the row loop,
+ * and is dropped there.
  */
 final class Vrbo_Payout extends Parser_Base
 {
@@ -84,7 +86,11 @@ final class Vrbo_Payout extends Parser_Base
                 null,
                 str_contains($status, 'cancel') ? 'cancelled' : 'ok',
                 null,
-                ['listing_number' => $listing]
+                ['listing_number' => $listing],
+                Names::keys_from_parts(
+                    (string) ($row['Traveler First Name'] ?? ''),
+                    (string) ($row['Traveler Last Name'] ?? '')
+                )
             ));
 
             $gross      = $this->money($row['Gross booking amount'] ?? '');

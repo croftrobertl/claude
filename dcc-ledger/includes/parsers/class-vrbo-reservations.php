@@ -4,6 +4,7 @@ namespace DCCL\Parsers;
 use DCCL\Cottages;
 use DCCL\Csv;
 use DCCL\Dates;
+use DCCL\Names;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,8 +13,8 @@ if (!defined('ABSPATH')) {
 /**
  * Vrbo reservations CSV. Carries no money.
  *
- * Email, Inquirer and Phone are never read out of the row — they are not copied
- * into any variable, array or log.
+ * Email and Phone are never read out of the row at all. Inquirer is read only
+ * to hash the surname inside the row loop, and is dropped there.
  */
 final class Vrbo_Reservations extends Parser_Base
 {
@@ -88,7 +89,8 @@ final class Vrbo_Reservations extends Parser_Base
                     : Dates::us($row['Created On'] ?? '') . ' 00:00:00',
                 $status,
                 $persons,
-                ['listing_number' => $listing, 'source' => trim((string) ($row['Source'] ?? ''))]
+                ['listing_number' => $listing, 'source' => trim((string) ($row['Source'] ?? ''))],
+                Names::keys((string) ($row['Inquirer'] ?? ''))
             ));
         }
 

@@ -8,9 +8,10 @@
  *   HMMOVED001  cottage 32  20–23 Mar  3 nights  gross 360.00  fee 20.31  tax  0.00  payout 339.69  resolution −339.69
  *   5111111111  cottage 22  01–05 Mar  4 nights  room sales 600.00  commission 90.00  payout 672.00  tax in payout 72.00
  *
- * Direct booking #9011 sits on the same dates as HMMOVED001 in another cottage,
- * with nothing in HMMOVED001's own cottage — so it is a probable move copy, and
- * its nights and money belong to the platform stay, counted once.
+ * Direct booking #9011 sits on the same dates as HMMOVED001 in another cottage
+ * and carries the same surname, so it is offered as a probable move. Until Rob
+ * confirms it, Rob's own rule applies: a confirmed booking really happened. It
+ * counts as a real stay here, with its 3 nights and its 388.50.
  */
 
 declare(strict_types=1);
@@ -28,8 +29,8 @@ $s = Reports::summary('2025-03-01', '2025-03-31', 'stay');
 $t = $s['totals'];
 
 T::same(13, $s['ota']['nights'], 'Platform nights in March');
-T::same(0, $s['direct']['nights'], 'The move copy adds no nights of its own');
-T::same(13, $t['nights'], 'Total nights in March');
+T::same(3, $s['direct']['nights'], 'The unconfirmed move counts its own nights');
+T::same(16, $t['nights'], 'Total nights in March');
 T::same(1807.00, $t['guest_total'], 'Guest total');
 T::same(135.31, $t['platform_fees'], 'Commission plus service fees');
 T::same(65.00, $t['tax_platform_remitted'], 'Tax Airbnb remitted itself');
@@ -38,10 +39,10 @@ T::same(1447.00, $t['net_payout'], 'Net payout, after the resolution clawback an
 T::same(1670.00, $t['room_revenue'], 'Room revenue is the guest total less both taxes');
 T::same(128.46, $t['adr'], 'Average nightly rate is room revenue over platform nights');
 T::same(248, $t['capacity_nights'], '31 days across 8 cottages');
-T::same(5.2, $t['occupancy_pct'], 'Occupancy');
-T::same(0.00, $t['direct_due'], 'The move copy brings no direct money either');
-T::same(0.00, $t['direct_recorded'], 'Nothing recorded against it');
-T::same(0.00, $t['direct_assumed'], 'And it is never assumed paid, because its money came through the platform');
+T::same(6.5, $t['occupancy_pct'], 'Occupancy');
+T::same(388.50, $t['direct_due'], 'And its money');
+T::same(0.00, $t['direct_recorded'], 'Nothing was recorded against it');
+T::same(388.50, $t['direct_assumed'], 'So the ledger assumes it, as it would for any other real stay');
 
 T::group('Airbnb remitted tax is never revenue');
 
@@ -67,7 +68,7 @@ T::group('Report maths — March 2025, by payout date');
 $cash = Reports::summary('2025-03-01', '2025-03-31', 'payout');
 $c    = $cash['totals'];
 
-T::same(13, $c['nights'], 'Nights do not move with the cash basis');
+T::same(16, $c['nights'], 'Nights do not move with the cash basis');
 T::same(1761.69, $c['net_payout'], 'Cash in March: the 5 March Airbnb payout and the 10 March Booking.com payout');
 T::same(1807.00, $c['guest_total'], 'Guest totals dated by their payout');
 T::same(72.00, $c['tax_in_payout'], 'The derived tax is dated by the payout');
@@ -95,11 +96,12 @@ T::same(0.00, $june['totals']['direct_recorded'], 'But it is not counted as mone
 
 T::group('Recorded and assumed payments stay apart');
 
-// Booking #9008: 600.00 due, 250.00 recorded, so the ledger assumes 350.00.
+// May holds #9008 (600.00 due, 250.00 recorded → 350.00 assumed) and #9023
+// (525.00 due, nothing recorded → 525.00 assumed).
 $may = Reports::summary('2025-05-01', '2025-05-31', 'stay');
 T::same(250.00, $may['totals']['direct_recorded'], 'What MotoPress recorded is reported as recorded');
-T::same(350.00, $may['totals']['direct_assumed'], 'The gap is reported as assumed, separately');
-T::same(600.00, $may['totals']['direct_paid'], 'The ledger view counts both');
+T::same(875.00, $may['totals']['direct_assumed'], 'The gaps are reported as assumed, separately');
+T::same(1125.00, $may['totals']['direct_paid'], 'The ledger view counts both');
 
 $april_direct = Reports::summary('2025-04-01', '2025-04-30', 'stay');
 T::same(500.00, $april_direct['totals']['direct_recorded'], 'A real payment is reported as recorded');

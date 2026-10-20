@@ -4,6 +4,7 @@ namespace DCCL\Parsers;
 use DCCL\Cottages;
 use DCCL\Csv;
 use DCCL\Dates;
+use DCCL\Names;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -17,7 +18,9 @@ if (!defined('ABSPATH')) {
  * channel comes from the payout file, not from here. Commission is dated by
  * Departure because Booking.com invoices by departure month.
  *
- * Booker name / Guest name are never read.
+ * Booker name and Guest name are read only to hash the surname inside the row
+ * loop — that is what tells a moved booking apart from a different party on
+ * the same dates. Neither name is kept.
  */
 final class Bookingcom_Reservations extends Parser_Base
 {
@@ -85,7 +88,12 @@ final class Bookingcom_Reservations extends Parser_Base
                 Dates::iso_datetime($row['Booked on'] ?? ''),
                 $status,
                 $this->int_or_null($row['Persons'] ?? ''),
-                ['hotel_id' => $hotel_id, 'invoice_number' => trim($row['Invoice number'] ?? '')]
+                ['hotel_id' => $hotel_id, 'invoice_number' => trim($row['Invoice number'] ?? '')],
+                Names::keys(
+                    trim((string) ($row['Guest name'] ?? '')) !== ''
+                        ? (string) $row['Guest name']
+                        : (string) ($row['Booker name'] ?? '')
+                )
             ));
 
             $final      = $this->money($row['Final amount'] ?? '');

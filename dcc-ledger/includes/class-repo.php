@@ -93,6 +93,7 @@ final class Repo
                 'status'       => (string) $stay['status'],
                 'persons'      => $stay['persons'],
                 'source_batch' => $batch_id,
+                'guest_keys'   => Names::encode($stay['guest_keys'] ?? []),
                 'meta'         => self::encode_meta($stay['meta'] ?? []),
                 'created_at'   => $now,
                 'updated_at'   => $now,
@@ -102,6 +103,14 @@ final class Repo
 
         $fill = [];
         $undo = [];
+
+        // A later file may know the guest's name when the first one did not.
+        $incoming_keys = Names::encode($stay['guest_keys'] ?? []);
+        if ($incoming_keys !== null && ($existing['guest_keys'] ?? null) === null) {
+            $fill['guest_keys'] = $incoming_keys;
+            $undo['guest_keys'] = null;
+        }
+
         foreach (['check_in', 'check_out', 'nights', 'booked_on', 'persons'] as $field) {
             $value = $stay[$field] ?? null;
             if ($value !== null && $value !== '' && ($existing[$field] ?? null) === null) {

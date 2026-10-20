@@ -12,9 +12,14 @@ if (!defined('ABSPATH')) {
  * One parser per export format.
  *
  * A parser turns a file into normalised stay and line records. It never touches
- * the database, never looks at MotoPress, and never keeps a guest's name, email,
- * phone or address — guest columns are not read at all, or are read and dropped
- * inside the row loop.
+ * the database and never looks at MotoPress.
+ *
+ * A guest's name is read for one purpose only: it is turned into salted hashes
+ * of the surname inside the row loop, so that a booking moved to another
+ * cottage can be recognised as the same person. The name itself is dropped
+ * there and then, and never reaches a variable that outlives the row, a stored
+ * column, a log or the screen. Emails, phones and addresses are not read at
+ * all.
  *
  * Sign conventions for line amounts:
  *   guest_total, room_sales, payout            positive (money in / money the guest paid)
@@ -122,7 +127,8 @@ abstract class Parser_Base
         ?string $booked_on = null,
         string $status = 'ok',
         ?int $persons = null,
-        array $extra = []
+        array $extra = [],
+        array $guest_keys = []
     ): array {
         return [
             'channel'   => static::CHANNEL,
@@ -134,6 +140,7 @@ abstract class Parser_Base
             'booked_on' => $booked_on,
             'status'    => $status,
             'persons'   => $persons,
+            'guest_keys' => $guest_keys,
             'meta'      => $extra,
         ];
     }
@@ -180,6 +187,12 @@ abstract class Parser_Base
         foreach ($stay as $field => $value) {
             if ($field === 'meta') {
                 $stays[$key]['meta'] = array_merge($stays[$key]['meta'], $value);
+                continue;
+            }
+            if ($field === 'guest_keys') {
+                if ($value !== [] && ($stays[$key]['guest_keys'] ?? []) === []) {
+                    $stays[$key]['guest_keys'] = $value;
+                }
                 continue;
             }
             if ($value !== null && $value !== '' && ($stays[$key][$field] ?? null) === null) {

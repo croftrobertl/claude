@@ -12,27 +12,44 @@ if (!defined('ABSPATH')) {
  * import failed, or because he moved the guest to another cottage. The stay
  * then exists twice, and counting both would double its nights and its money.
  *
- * Four signals, in order of how certain they are:
+ * Three signals make a copy, taken in this order, first one wins:
  *
  *   link   an existing copy link; somebody already decided this
  *   code   the stay's confirmation code appears in one of the booking's notes
  *   dates  same cottage and same dates as the stay
- *   move   same dates, a different cottage, and nothing else claims that stay
+ *
+ * A fourth, the moved-cottage case, is only ever a SUGGESTION. Rob's rule is
+ * that every confirmed booking really happened, so a booking is a real stay
+ * until a person says it is a copy. Calling one a copy on a guess would
+ * silently drop a real stay's money, which is the worse mistake of the two.
+ * probable_moves() returns those suggestions for the cleanup list.
+ *
+ * A move needs the same guest, not merely the same dates: two parties booking
+ * the same Friday to Sunday in different cottages is an ordinary busy weekend.
+ * So the surname must match too, compared as salted hashes.
  *
  * A cancelled or expired platform stay is never the original of a copy. The
  * money never came through that channel, so a direct booking on those dates is
  * a real, separate stay — Rob's 5584 is exactly that case.
  *
- * This is the single place the question is answered. It used to be answered
- * twice, once against live MotoPress and once against the ledger's copy, and
- * the two drifted.
+ * This is the single place the question is answered. It used to be answered in
+ * three, and they drifted.
  */
 final class Copies
 {
     public const REASON_LINK  = 'link';
     public const REASON_CODE  = 'code';
     public const REASON_DATES = 'dates';
-    public const REASON_MOVE  = 'move';
+
+    /**
+     * The order the signals are tried in, and reported in. First one wins, so
+     * each copy is counted exactly once and the parts of a breakdown add up to
+     * the total.
+     *
+     * There is no 'move' here on purpose: a move is a suggestion, not a
+     * signal that makes something a copy. See probable_moves().
+     */
+    public const REASON_ORDER = [self::REASON_LINK, self::REASON_CODE, self::REASON_DATES];
 
     /**
      * Moves Rob confirmed by hand on 2026-10-18, before the move signal
@@ -42,31 +59,158 @@ final class Copies
     public const CONFIRMED_MOVES = [7278, 12443, 12447, 17462];
 
     /**
-     * Detect copies among a set of direct bookings.
+     * The copies: bookings whose money came through a platform, so counting
+     * them again would double it.
      *
-     * @param array<int,array{id:int,cottage:string,check_in:?string,check_out:?string,codes:array<int,string>}> $bookings
+     * A probable move is NOT here. It is a suggestion, not a finding.
+     *
+     * @param array<int,array{id:int,cottage:string,check_in:?string,check_out:?string,codes:array<int,string>,guest_keys:array<int,string>}> $bookings
      * @return array<int,array{reason:string,stay_id:int|null,stay_code:string,confirmed:bool}>
      */
     public static function detect(array $bookings): array
     {
-        $stays = self::stays();
+        $stays = self::live_stays();
         $links = self::copy_links();
 
         $by_code = [];
         $by_key  = [];
-        $by_dates = [];
         foreach ($stays as $stay) {
-            // Only a stay that actually happened can be the original of a copy.
-            if ((string) $stay['status'] !== 'ok') {
-                continue;
-            }
             $by_code[strtoupper((string) $stay['code'])] = $stay;
             $by_key[Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out'])] = $stay;
+        }
+
+        $out = [];
+
+        foreach ($bookings as $booking) {
+            $id = (int) $booking['id'];
+
+            // 1. An existing link. Somebody already decided this one, and
+            //    their decision outranks every guess below it.
+            if (isset($links[$id])) {
+                $out[$id] = [
+                    'reason'    => self::REASON_LINK,
+                    'stay_id'   => $links[$id],
+                    'stay_code' => '',
+                    'confirmed' => true,
+                ];
+                continue;
+            }
+
+            // 2. A confirmation code written into one of the booking's notes.
+            $matched = null;
+            $reason  = '';
+            foreach ($booking['codes'] as $code) {
+                $code = strtoupper((string) $code);
+                if ($code !== '' && isset($by_code[$code])) {
+                    $matched = $by_code[$code];
+                    $reason  = self::REASON_CODE;
+                    break;
+                }
+            }
+
+            // 3. The same cottage on the same dates. Nothing else can be
+            //    standing there, so it is the same stay.
+            if ($matched === null) {
+                $key = Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out']);
+                if (isset($by_key[$key])) {
+                    $matched = $by_key[$key];
+                    $reason  = self::REASON_DATES;
+                }
+            }
+
+            if ($matched === null) {
+                continue;
+            }
+
+            $out[$id] = [
+                'reason'    => $reason,
+                'stay_id'   => (int) $matched['id'],
+                'stay_code' => (string) $matched['code'],
+                'confirmed' => true,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Bookings that look like the same guest moved to another cottage.
+     *
+     * Same dates, a different cottage, nothing standing in the platform
+     * stay's own cottage, and the same surname. Each one is a question for
+     * the cleanup list, never an answer: until it is confirmed the booking
+     * counts as the real stay it probably is.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @return array<int,array{stay_id:int,stay_code:string,named:bool}>
+     */
+    public static function probable_moves(array $bookings): array
+    {
+        $copies = self::detect($bookings);
+        $out    = [];
+
+        foreach (self::move_candidates($bookings) as $id => $stay) {
+            if (isset($copies[$id])) {
+                continue; // Already settled by a surer signal.
+            }
+            if (Decisions::move_rejected($id, (int) $stay['id'])) {
+                continue;
+            }
+
+            $booking = null;
+            foreach ($bookings as $candidate) {
+                if ((int) $candidate['id'] === $id) {
+                    $booking = $candidate;
+                    break;
+                }
+            }
+            if ($booking === null) {
+                continue;
+            }
+
+            $booking_keys = $booking['guest_keys'] ?? [];
+            $stay_keys    = Names::decode($stay['guest_keys'] ?? null);
+
+            if ($booking_keys === [] || $stay_keys === []) {
+                // Nothing to compare. Reported as such; never guessed at.
+                $out[$id] = [
+                    'stay_id'   => (int) $stay['id'],
+                    'stay_code' => (string) $stay['code'],
+                    'named'     => false,
+                ];
+                continue;
+            }
+
+            if (!Names::match($booking_keys, $stay_keys)) {
+                // A different party, on the same busy weekend.
+                continue;
+            }
+
+            $out[$id] = [
+                'stay_id'   => (int) $stay['id'],
+                'stay_code' => (string) $stay['code'],
+                'named'     => true,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Every booking that sits where a moved guest would sit: the same dates,
+     * another cottage, and nothing standing in the platform stay's own
+     * cottage. Geometry only — no surname is considered here.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @return array<int,array<string,mixed>> booking id => stay
+     */
+    public static function move_candidates(array $bookings): array
+    {
+        $by_dates = [];
+        foreach (self::live_stays() as $stay) {
             $by_dates[self::date_key($stay['check_in'], $stay['check_out'])][] = $stay;
         }
 
-        // Which cottage-and-dates slots a direct booking already occupies. A
-        // move is only a move when nothing sits in the stay's own cottage.
         $direct_keys = [];
         foreach ($bookings as $booking) {
             $direct_keys[Linker::key(
@@ -77,77 +221,19 @@ final class Copies
         }
 
         $out = [];
-
         foreach ($bookings as $booking) {
-            $id     = (int) $booking['id'];
-            $linked = $links[$id] ?? null;
-
-            $matched = null;
-            $reason  = '';
-
-            foreach ($booking['codes'] as $code) {
-                $code = strtoupper((string) $code);
-                if ($code !== '' && isset($by_code[$code])) {
-                    $matched = $by_code[$code];
-                    $reason  = self::REASON_CODE;
-                    break;
-                }
+            $stay = self::move_candidate($booking, $by_dates, $direct_keys);
+            if ($stay !== null) {
+                $out[(int) $booking['id']] = $stay;
             }
-
-            if ($matched === null) {
-                $key = Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out']);
-                if (isset($by_key[$key])) {
-                    $matched = $by_key[$key];
-                    $reason  = self::REASON_DATES;
-                }
-            }
-
-            if ($matched === null) {
-                $matched = self::move_candidate($booking, $by_dates, $direct_keys);
-                $reason  = self::REASON_MOVE;
-            }
-
-            if ($matched === null) {
-                // Nothing explains it now, but somebody linked it before.
-                // Their decision stands.
-                if ($linked !== null) {
-                    $out[$id] = [
-                        'reason'    => self::REASON_LINK,
-                        'stay_id'   => $linked,
-                        'stay_code' => '',
-                        'confirmed' => true,
-                    ];
-                }
-                continue;
-            }
-
-            // A confirmed link outranks a rejection: somebody said yes after
-            // somebody said no.
-            if ($reason === self::REASON_MOVE
-                && $linked === null
-                && Decisions::move_rejected($id, (int) $matched['id'])) {
-                continue;
-            }
-
-            $out[$id] = [
-                // The signal that found it, not the link it has since been
-                // given — otherwise a copy count can never be reconciled
-                // against how each one was recognised.
-                'reason'    => $reason,
-                'stay_id'   => $linked ?? (int) $matched['id'],
-                'stay_code' => (string) $matched['code'],
-                // A move is a guess until a person says otherwise; a code or
-                // an exact cottage-and-dates match is not.
-                'confirmed' => $reason !== self::REASON_MOVE || $linked !== null,
-            ];
         }
 
         return $out;
     }
 
     /**
-     * A platform stay on exactly these dates in another cottage, with nothing
-     * of its own in its own cottage.
+     * A platform stay that happened, on exactly these dates, in another
+     * cottage, with nothing standing in its own cottage.
      *
      * @param array<string,mixed>                     $booking
      * @param array<string,array<int,array>>          $by_dates
@@ -195,11 +281,12 @@ final class Copies
                 $codes[] = (string) $entry['code'];
             }
             $out[] = [
-                'id'        => (int) $booking['id'],
-                'cottage'   => (string) $booking['cottage'],
-                'check_in'  => $booking['check_in'],
-                'check_out' => $booking['check_out'],
-                'codes'     => $codes,
+                'id'         => (int) $booking['id'],
+                'cottage'    => (string) $booking['cottage'],
+                'check_in'   => $booking['check_in'],
+                'check_out'  => $booking['check_out'],
+                'codes'      => $codes,
+                'guest_keys' => $booking['guest_keys'] ?? [],
             ];
         }
         return $out;
@@ -219,11 +306,12 @@ final class Copies
                 $codes[] = is_array($entry) ? (string) ($entry['code'] ?? '') : (string) $entry;
             }
             $out[] = [
-                'id'        => (int) $booking['mphb_id'],
-                'cottage'   => (string) $booking['cottage'],
-                'check_in'  => $booking['check_in'],
-                'check_out' => $booking['check_out'],
-                'codes'     => $codes,
+                'id'         => (int) $booking['mphb_id'],
+                'cottage'    => (string) $booking['cottage'],
+                'check_in'   => $booking['check_in'],
+                'check_out'  => $booking['check_out'],
+                'codes'      => $codes,
+                'guest_keys' => Names::decode($booking['guest_keys'] ?? null),
             ];
         }
         return $out;
@@ -250,9 +338,24 @@ final class Copies
         global $wpdb;
         $table = Schema::stays();
         return $wpdb->get_results(
-            "SELECT id, code, channel, cottage, check_in, check_out, status FROM {$table}",
+            "SELECT id, code, channel, cottage, check_in, check_out, status, guest_keys FROM {$table}",
             ARRAY_A
         ) ?: [];
+    }
+
+    /**
+     * Only stays that actually happened. A cancelled or expired reservation
+     * never produced money through that channel, so nothing can be a copy of
+     * one.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function live_stays(): array
+    {
+        return array_values(array_filter(
+            self::stays(),
+            static fn ($stay) => (string) $stay['status'] === 'ok'
+        ));
     }
 
     /** @return array<int,int> booking id => stay id */

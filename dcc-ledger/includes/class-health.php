@@ -80,6 +80,34 @@ final class Health
     }
 
     /**
+     * Is there anywhere to read a guest's surname from?
+     *
+     * This is a soft check. Without it the figures are still right; only the
+     * move signal cannot run, and every probable move is reported as "no name
+     * to compare" instead of being guessed at.
+     */
+    public static function name_source_present(): bool
+    {
+        global $wpdb;
+
+        $keys = [
+            Mphb_Reader::META_LAST_NAME,
+            Mphb_Reader::META_FIRST_NAME,
+            Mphb_Reader::META_GUEST_NAME,
+        ];
+        $placeholders = implode(',', array_fill(0, count($keys), '%s'));
+
+        try {
+            return (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key IN ({$placeholders}) LIMIT 1",
+                ...$keys
+            )) > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
      * @return array{ok:bool,missing:array<int,array{what:string,why:string}>}
      */
     public static function check(): array
