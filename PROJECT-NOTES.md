@@ -3796,3 +3796,10 @@ browser/staff-photo-0475-test.js (fails on 0.47.4: the extra SPAN, the text,
 the ~24px gap, the string, the CSS rule); live-defaults' staff-strings diff
 lists photoNote as gone. Two mutation needles that ended at the old rule's
 selector now end at the next comment.
+
+## Convention (Rob/WD, 2026-10-20): file names for everything handed over
+
+Every file given to the WD — screenshots, checklists, notes, anything — is
+named "Availability Calendar - <name>", e.g. "Availability Calendar -
+checklist-0.47.5.md". The one exception is the plugin zip itself, which stays
+"Availability Calendar <version>.zip".
