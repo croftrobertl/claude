@@ -17,41 +17,42 @@
  *    24px at the foot, the Availability Calendar's 1.25em/1.5em.
  */
 import {
-  launch, widgetPage, check, checkSame, checkAtLeast, section, note, done, skipSuite,
+  openWildlife, launch, widgetPage, check, checkSame, checkAtLeast, section, note, done, skipSuite,
 } from './lib.mjs';
 
 const browser = await launch();
 if (!browser) { skipSuite('no chromium'); }
 
 /* ---- 1. the level bar ------------------------------------------------- */
-section('the level bar is sticky and keeps its distance, at every width');
+section('the level bar is gone, and the dropdown stands where it stood (1.44.0)');
 
+/*
+ * RETIRED WITH THE BAR. 1.36.0 pinned `position: sticky` here after a
+ * 1.34.0 regression made the bar overlap the months row, and the test set a
+ * non-zero --dccwl-sticky-offset because with the token at 0 the bug was
+ * invisible. Rob removed the Back bar and the section title in 1.44.0 — one
+ * dropdown does both jobs — so there is no bar to be sticky.
+ *
+ * What replaces the claim: the dropdown exists, it is the only thing above
+ * the stage, and it is centred. The sticky-offset lesson is not lost; it
+ * belongs to whatever becomes sticky next, and nothing is today.
+ */
 for (const w of [320, 390, 768, 1280, 1680]) {
-  const h = await widgetPage(browser, 'canal', { width: w, height: 1000, sitekit: true });
-  // A theme with a sticky header: the case that made the bug visible.
-  await h.page.evaluate(() => document.documentElement.style.setProperty('--dccwl-sticky-offset', '72px'));
-  await h.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
-  await h.page.waitForTimeout(700);
-
+  const h = await widgetPage(browser, 'canal', { width: w, height: 900, sitekit: true, touch: w < 700 });
   const m = await h.page.evaluate(() => {
-    const bar = Array.from(document.querySelectorAll('.dccwl-canal .dccwl-levelbar'))
-      .filter((n) => n.offsetParent !== null && n.getBoundingClientRect().width > 0)[0];
+    const bar = document.querySelector('[data-dccwl-viewselect]');
     if (!bar) { return null; }
-    const next = bar.nextElementSibling;
-    const br = bar.getBoundingClientRect();
-    const nr = next ? next.getBoundingClientRect() : null;
+    const r = bar.getBoundingClientRect();
     return {
-      position: getComputedStyle(bar).position,
-      gap: nr ? +(nr.top - br.bottom).toFixed(1) : null,
-      offCentre: +((br.left + br.right) / 2 - window.innerWidth / 2).toFixed(1),
-      width: Math.round(br.width),
+      offCentre: +((r.left + r.right) / 2 - window.innerWidth / 2).toFixed(1),
+      width: Math.round(r.width),
+      levelBars: document.querySelectorAll('.dccwl-levelbar').length,
     };
   });
-  check(!!m, `${w}px: the species panel's level bar is on screen`);
+  check(!!m, `${w}px: the view dropdown is on screen`);
   if (m) {
-    note(`${w}px ${JSON.stringify(m)}`);
-    checkSame('sticky', m.position, `${w}px: it is STILL position: sticky — nothing redeclared it`);
-    checkAtLeast(8, m.gap, `${w}px: real space below it, never an overlap`);
+    note(`${w}px dropdown: width ${m.width}, off-centre ${m.offCentre}`);
+    checkSame(0, m.levelBars, `${w}px: no level bar remains`);
     check(Math.abs(m.offCentre) <= 1, `${w}px: and it is centred`, String(m.offCentre));
   }
   await h.page.close();
@@ -176,7 +177,7 @@ section('a search leaves no deck with an empty column — "snake" at 390px');
  * swipe deck produced.
  */
 const sh = await widgetPage(browser, 'canal', { width: 390, height: 844, sitekit: true });
-await sh.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+await openWildlife(sh.page);
 await sh.page.waitForTimeout(800);
 await sh.page.evaluate(() => {
   const i = document.querySelector('.dccwl-search-input');

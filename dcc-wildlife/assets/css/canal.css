@@ -700,3 +700,142 @@
 	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover,
 	.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover { transform: none; }
 }
+
+/* ======================================================================
+ * THE VIEW DROPDOWN (1.44.0) — "Water ▾" / "Wildlife ▾".
+ *
+ * THE VALUES ARE THE DIRECTOR'S LIVE MEASUREMENTS, NOT THE SELECTOR
+ * PLUGIN'S SOURCE DEFAULTS, and the difference is deliberate. He
+ * re-measured `.dccs-modeselect-trigger` on live with nothing focused
+ * (activeElement body, :focus false): 1px solid #F4DA62, radius 25px,
+ * 52px tall, #002E7A, white Raleway 20/700. The Cottage Selector's own
+ * stylesheet declares radius 30px and a grey --dccs-border; a site-level
+ * or Elementor setting overrides both there. We match WHAT ROB SEES and
+ * bake it in, so this control cannot change because another plugin's
+ * widget settings did.
+ *
+ * Literal hex rather than this plugin's tokens for the same reason: these
+ * are another plugin's colours, matched on purpose. A token would invite
+ * the palette to drift away from the thing it is supposed to match.
+ *
+ * The doubled class is the Bravada rule (the kit resets every <button> at
+ * (0,3,1)); `.dccwl-canal .dccwl-viewselect-trigger.dccwl-viewselect-trigger`
+ * reaches (0,3,0) plus the element, which clears it without !important.
+ * ====================================================================== */
+.dccwl-viewbar {
+	display: flex;
+	justify-content: center;
+	margin: 0 0 var(--dccwl-gap-lg);
+}
+
+.dccwl-canal .dccwl-viewselect {
+	margin: 0 auto;
+	max-width: 340px;
+	position: relative;
+	width: 100%;
+}
+
+.dccwl-canal .dccwl-viewselect-trigger.dccwl-viewselect-trigger {
+	align-items: center;
+	background: #002E7A;
+	border: 1px solid #F4DA62;
+	border-radius: 25px;
+	color: #FFFFFF;
+	cursor: pointer;
+	display: flex;
+	font-family: inherit;
+	font-size: 20px;
+	font-weight: 700;
+	gap: 8px;
+	justify-content: center;
+	letter-spacing: 0;
+	/* Rob's measured height. Not min-height: the Selector's is a fixed box
+	 * and a taller label must not grow it out of step with his. */
+	height: 52px;
+	padding: 0 24px;
+	text-transform: none;
+	width: 100%;
+}
+.dccwl-canal .dccwl-viewselect-label { white-space: nowrap; }
+.dccwl-canal .dccwl-viewselect-trigger .dccwl-caret {
+	color: inherit;
+	font-size: 0.8em;
+	line-height: 1;
+}
+
+/*
+ * CORAL HOVER ONLY WHERE A POINTER REALLY HOVERS. The site kit's own
+ * button:hover coral STICKS on iOS after a tap — a tapped control keeps
+ * :hover until the guest touches something else (the 1.38.0 item-8
+ * lesson). Both queries together are what keeps it off a phone.
+ */
+@media (hover: hover) and (pointer: fine) {
+	.dccwl-canal .dccwl-viewselect-trigger.dccwl-viewselect-trigger:hover {
+		background: #F08080;
+		color: #FFFFFF;
+	}
+}
+.dccwl-canal .dccwl-viewselect-trigger.dccwl-viewselect-trigger:focus-visible {
+	outline: 3px solid #F4DA62;
+	outline-offset: 2px;
+}
+
+/* The menu: white with the gold edge, flush under the trigger so opening
+ * it overlays what is below and moves nothing. */
+.dccwl-canal .dccwl-viewselect-list {
+	background: #FFFFFF;
+	border: 1px solid #F4DA62;
+	border-radius: 14px;
+	box-shadow: 0 12px 30px rgba(20, 28, 40, 0.18);
+	left: 0;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	position: absolute;
+	right: 0;
+	top: 100%;
+	/* 20 competes in the PAGE's context, where a sticky Elementor header
+	 * (99) still wins — the Selector's own reasoning, kept. */
+	z-index: 20;
+}
+.dccwl-canal .dccwl-viewselect-list > li { margin: 0; }
+
+.dccwl-canal .dccwl-viewselect-item.dccwl-viewselect-item {
+	background: #FFFFFF;
+	border: 0;
+	border-radius: 14px;
+	color: #002E7A;
+	cursor: pointer;
+	display: block;
+	font-family: inherit;
+	font-size: 20px;
+	font-weight: 700;
+	letter-spacing: 0;
+	/* 44px floor, and the row fills the menu so the whole width is the
+	 * target rather than the label. */
+	min-height: 44px;
+	padding: 10px 24px;
+	text-align: center;
+	text-transform: none;
+	width: 100%;
+}
+@media (hover: hover) and (pointer: fine) {
+	.dccwl-canal .dccwl-viewselect-item.dccwl-viewselect-item:hover {
+		background: rgba(0, 46, 122, 0.08);
+	}
+}
+.dccwl-canal .dccwl-viewselect-item.dccwl-viewselect-item:focus-visible {
+	outline: 3px solid #002E7A;
+	outline-offset: -3px;
+}
+
+/* With only one view there is no control, just a heading (1.31.0: a
+ * control that cannot work is not offered). */
+.dccwl-canal .dccwl-viewselect-solo {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: var(--dccwl-fw-strong);
+	margin: 0;
+	text-align: center;
+	text-wrap: balance;
+}

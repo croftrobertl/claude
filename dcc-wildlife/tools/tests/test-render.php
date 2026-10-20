@@ -182,31 +182,27 @@ check_same( [], $GLOBALS['dccwl_test']['enqueued'], 'nothing is enqueued before 
 dcc_render( 'month' );
 check( in_array( 'dcc-wildlife', $GLOBALS['dccwl_test']['enqueued'], true ), 'rendering enqueues the widget bundle' );
 
-dcc_section( 'the hub says it is working while it waits (1.33.0, item 3)' );
+dcc_section( 'the hub preview cards are gone with the hub (1.44.0)' );
 
 /*
- * "Checking the canal…" is SERVER-RENDERED, on purpose: the readings come from
- * a fetch, and a card that shows its name over an empty line until that lands
- * reads as a card with nothing in it rather than one still thinking. If this
- * moved into JavaScript it would appear a frame late, which is the moment it
- * exists to cover.
+ * RETIRED WITH THE THING THEY GUARDED. 1.33.0 item 3 made the hub's Water
+ * door say "Checking the canal…" server-side, so a card waiting on a fetch
+ * read as thinking rather than as empty. Rob removed the hub in 1.44.0:
+ * /explore/ opens straight into Water, so there is no door, no preview line
+ * and nothing to wait behind.
+ *
+ * Pinned as a NEGATIVE rather than deleted, because this also closes a nit
+ * reported during the 1.42.0 audit and left alone then: with no JavaScript,
+ * "Checking the canal…" never resolved. It cannot now, because it is not
+ * rendered at all.
  */
 dccwl_test_reset();
 dcc_reset_once_guards();
 $hub = dcc_render( 'canal' )['html'];
-check_contains( $hub, 'Checking the canal', 'the water card says it is checking, before any script runs' );
-check_matches(
-	$hub,
-	'/data-dccwl-preview="water" data-dccwl-loading="1"/',
-	'and carries the marker the script clears and the CSS reads'
-);
-/* The Wildlife card is filled from data already on the page, so it has nothing
- * to wait for and must not claim to be waiting. */
-check_matches(
-	$hub,
-	'/data-dccwl-preview="wildlife"><\/span>/',
-	'the wildlife card, which waits for nothing, carries no loading line'
-);
+check_lacks( $hub, 'Checking the canal', 'no hub preview line is rendered' );
+check_lacks( $hub, 'data-dccwl-preview', 'and no preview slot is left behind' );
+check_lacks( $hub, 'dccwl-levelbar', 'nor the level bar the dropdown replaced' );
+check_matches( $hub, '/data-dccwl-viewselect/', 'the view dropdown is what titles the section now' );
 
 dcc_section( 'a long body can be closed from its foot (1.33.0, item 4f)' );
 

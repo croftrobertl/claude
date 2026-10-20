@@ -83,42 +83,31 @@ for (const [which, scope] of [['canal', '.dccwl-canal'], ['month', '.dccwl-root'
 
 /* ------------------------------------------------------------------ */
 
-section('the hub tiles drop the lift as well as the transition');
-
-const hub = await widgetPage(browser, 'canal', {
-  width: 1280, height: 1000, sitekit: true, touch: false, reducedMotion: 'reduce',
-});
-const lift = await hub.page.evaluate(() => {
-  const out = {};
-  for (const sel of ['.dccwl-hub-tile', '.dccwl-month-tile']) {
-    const n = document.querySelector(sel);
-    if (!n) { out[sel] = 'absent'; continue; }
-    // :hover cannot be forced from script, so read what the stylesheet
-    // declares for it rather than what is computed on a resting element.
-    let found = null;
-    for (const sheet of document.styleSheets) {
-      let rules;
-      try { rules = sheet.cssRules; } catch (e) { continue; }
-      const walk = (list, inRM) => {
-        for (const r of list) {
-          if (r.media) { walk(r.cssRules, inRM || /prefers-reduced-motion/.test(r.conditionText || r.media.mediaText)); continue; }
-          if (!inRM || !r.selectorText) { continue; }
-          if (r.selectorText.includes(sel) && r.selectorText.includes(':hover')
-              && r.style && r.style.transform) {
-            found = r.style.transform;
-          }
-        }
-      };
-      walk(rules, false);
-    }
-    out[sel] = found;
-  }
-  return out;
-});
-note(JSON.stringify(lift));
-checkSame('none', lift['.dccwl-hub-tile'], 'the hub door drops its hover lift');
-checkSame('none', lift['.dccwl-month-tile'], 'the month tile drops its hover lift');
-await hub.page.close();
+/* ==================================================================
+ * THE HUB-TILE AND MONTH-TILE LIFT ASSERTIONS ARE RETIRED (1.44.0),
+ * AND RETIRED IS NOT THE SAME AS DELETED.
+ *
+ * 1.42.0 found that killing the transition without also dropping the
+ * hover lift makes the hover WORSE — a 2px jump under the cursor —
+ * and pinned `transform: none` on `.dccwl-hub-tile` and
+ * `.dccwl-month-tile`. Rob removed the hub and the month picker in
+ * 1.44.0, so neither element renders anywhere any more, and an
+ * assertion about a selector that matches nothing is the vacuous kind
+ * this harness refuses (a suite that asserts nothing FAILS).
+ *
+ * The RULE is unchanged and is still enforced, by the three surface
+ * sweeps above: every element inside .dccwl-canal, .dccwl-root and
+ * .dccwl-water is measured with the OS setting off and then on, each
+ * with its own negative control. Any control that gains a hover lift —
+ * including whatever replaces these — is covered by those, because they
+ * ask the computed question rather than naming a class.
+ *
+ * What is NOT yet cleaned up, and is listed here so it cannot be
+ * forgotten: the `.dccwl-hub-tile` / `.dccwl-month-tile` rules in
+ * canal.css and the month-tile and hub-preview builders in canal.js are
+ * now unreachable. They are left for the step that builds the Month
+ * menu, which is where it will be clear what, if anything, it reuses.
+ * ================================================================== */
 
 await browser.close();
 done();

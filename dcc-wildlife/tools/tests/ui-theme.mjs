@@ -10,7 +10,7 @@
  */
 
 import {
-  launch, widgetPage, check, checkSame, checkNear, checkAtLeast,
+  openWildlife, launch, widgetPage, check, checkSame, checkNear, checkAtLeast,
   section, note, done, styleOf, boxOf, boxesOf,
 } from './lib.mjs';
 
@@ -603,7 +603,7 @@ for (const [w, dpr, want, why] of [
   const t = await widgetPage(browser, 'canal', {
     width: w, height: 1000, sitekit: true, touch: w < 700, dpr,
   });
-  await t.page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(t.page);
   await t.page.waitForTimeout(500);
   const got = await t.page.evaluate(() => {
     const img = Array.from(document.querySelectorAll('.dccwl-tile-photo'))

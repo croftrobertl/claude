@@ -7,16 +7,26 @@
  * the water module's existing /conditions call returned under its own
  * truth gate. This file fetches nothing.
  *
- * HISTORY IS STATE-DRIVEN, NOT "GO UP ON ANY POP".
- * assets/js/sheet.js pushes its own entry when a sheet opens and pops it on
- * close, and it must not be touched. So this file pushes {dccwlNav: level}
- * per drill-down and, on popstate, sets the level FROM the state it landed
- * on rather than stepping. That composes correctly in every order:
- *   - back with a sheet open → lands on the sheet's underlying nav state,
- *     so the level does not move and the sheet's own handler closes it;
- *   - Escape closes the sheet, which calls history.back() itself → the same
- *     nav state → again no level change (the bug a "step up" design has);
- *   - back with no sheet → lands on the parent level, which is where we go.
+ * THIS FILE TOUCHES HISTORY NO LONGER (1.44.0), AND THAT IS A CHANGE WORTH
+ * READING BEFORE EDITING IT.
+ *
+ * From 1.10.0 to 1.43.0 the app was four stacked LEVELS and this file
+ * pushed {dccwlNav: level} per drill-down, reading the level back out of
+ * popstate rather than stepping — which is what made Back, Escape and a
+ * sheet compose correctly in every order.
+ *
+ * Rob removed the hub and the Back bar (1.44.0). Water and Wildlife are
+ * SIBLINGS now, switched by one dropdown, and a tab does not push history.
+ * So the push, the popstate handler and parentOf() are all gone, and Back
+ * leaves /explore/ rather than walking up to a hub that no longer exists.
+ *
+ * WHAT THAT DID NOT CHANGE: sheet.js still pushes its own entry on open and
+ * pops it on close, and it must still not be touched. The sheet contract was
+ * never part of the level machinery — which is why Escape, the scrim, the
+ * back affordance and the Android back button all still close a sheet and
+ * leave the view exactly where it was. If levels ever return, restore the
+ * state-driven reader above rather than a "step up on any pop" design: that
+ * passes the first case and fails the second.
  */
 (function () {
 	'use strict';
@@ -144,16 +154,21 @@
 		root.querySelectorAll('[data-dccwl-panel]').forEach(function (p) {
 			panels[p.getAttribute('data-dccwl-panel')] = p;
 		});
-		if (!panels.hub) { return; }
+		if (!panels.species) { return; }
+		/* The view a fresh load opens on: the first panel PHP did not hide.
+		 * Water when the module renders, Wildlife when it does not — nothing
+		 * names a default, which is the same mechanism the water tab bar uses
+		 * for Map. */
+		var DEFAULT_VIEW = panels.water ? 'water' : 'species';
 
 		var speciesRoot = panels.species ? panels.species.querySelector('.dccwl-root') : null;
 		var wCfg = window.DCC_WL_CFG || {};
-		var state = { level: 'hub', month: canalMonth(), opener: null };
+		var state = { level: DEFAULT_VIEW, month: canalMonth(), opener: null };
 
 		/* ---------- level switching ---------- */
 
 		function show(level, focusIt) {
-			if (!panels[level]) { level = 'hub'; }
+			if (!panels[level]) { level = DEFAULT_VIEW; }
 			Object.keys(panels).forEach(function (k) {
 				panels[k].hidden = k !== level;
 			});
@@ -184,53 +199,27 @@
 			}
 		}
 
+		/*
+		 * SWITCHING VIEWS PUSHES NO HISTORY, AND THAT IS THE POINT.
+		 *
+		 * Through 1.43.0 these were LEVELS: every drill-down pushed an entry
+		 * and a Back bar walked up. Rob removed the Back bar and the hub, so
+		 * Water and Wildlife are siblings — tabs — and a tab does not add a
+		 * history entry. Back therefore leaves /explore/ instead of walking
+		 * up to a hub that no longer exists.
+		 *
+		 * `parentOf()` and the nav popstate handler are DELETED rather than
+		 * left inert: there is no parent to compute. sheet.js's own contract
+		 * (push on open, pop on close) is untouched — it was never part of
+		 * the level machinery, which is why Escape and the Android back
+		 * button still close a sheet and leave the view alone.
+		 */
 		function go(level, opener) {
 			if (level === state.level) { return; }
-			if (level !== 'hub') { state.opener = opener || document.activeElement; }
-			try {
-				window.history.pushState({ dccwlNav: level }, '');
-			} catch (err) { /* file:// and the like */ }
+			state.opener = opener || document.activeElement;
 			show(level);
+			syncViewLabel();
 		}
-
-		function back() {
-			// Let the browser drive, so our state and its stack cannot drift.
-			try {
-				window.history.back();
-			} catch (err) {
-				show(parentOf(state.level));
-			}
-		}
-
-		/* 1.23.0: the month step is gone from the path. The Wildlife door opens
-		 * the species list directly, and the picker is a detour from it — so
-		 * "back" from species goes home, and back from the picker returns to
-		 * the list it was opened from. */
-		function parentOf(level) {
-			return level === 'month' ? 'species' : 'hub';
-		}
-
-		window.addEventListener('popstate', function (e) {
-			var st = e.state;
-
-			// A sheet entry sits ABOVE a nav entry; sheet.js owns it. Do not
-			// move the level for it in either direction.
-			if (st && st.dccwlSheet !== undefined) { return; }
-
-			var level = st && st.dccwlNav ? st.dccwlNav : 'hub';
-
-			var returning = level !== state.level;
-			show(level, false);
-
-			// Coming back up, focus belongs on whatever opened the level we
-			// just left; otherwise on the panel.
-			if (returning && state.opener && document.contains(state.opener)) {
-				state.opener.focus();
-				state.opener = null;
-			} else if (returning) {
-				panels[level].focus();
-			}
-		});
 
 		/* ---------- the month picker ---------- */
 
@@ -473,6 +462,89 @@
 
 		/* ---------- wiring ---------- */
 
+		/* ---------- the view dropdown (1.44.0) ---------- */
+
+		var vSel = root.querySelector('[data-dccwl-viewselect]');
+		var vTrigger = vSel ? vSel.querySelector('[data-dccwl-viewtrigger]') : null;
+		var vList = vSel ? vSel.querySelector('[data-dccwl-viewlist]') : null;
+		var vLabel = vSel ? vSel.querySelector('[data-dccwl-viewlabel]') : null;
+
+		/** The trigger always reads the view you are LOOKING AT. */
+		function syncViewLabel() {
+			if (!vLabel || !vList) { return; }
+			var want = state.level === 'species' ? 'species' : 'water';
+			var item = vList.querySelector('[data-dccwl-view="' + want + '"]')
+				|| vList.querySelector('[data-dccwl-view="wildlife"]');
+			if (item) { vLabel.textContent = item.textContent; }
+		}
+
+		function closeViewMenu(focusTrigger) {
+			if (!vList || vList.hidden) { return; }
+			vList.hidden = true;
+			if (vTrigger) { vTrigger.setAttribute('aria-expanded', 'false'); }
+			if (focusTrigger && vTrigger) { vTrigger.focus(); }
+		}
+
+		function openViewMenu() {
+			if (!vList || !vList.hidden) { return; }
+			vList.hidden = false;
+			if (vTrigger) { vTrigger.setAttribute('aria-expanded', 'true'); }
+			var first = vList.querySelector('[data-dccwl-view]');
+			if (first) { first.focus(); }
+		}
+
+		if (vTrigger && vList) {
+			vTrigger.addEventListener('click', function () {
+				if (vList.hidden) { openViewMenu(); } else { closeViewMenu(true); }
+			});
+
+			/* Down or Enter from the trigger opens and lands on the first row,
+			 * which is what a menu button does. */
+			vTrigger.addEventListener('keydown', function (e) {
+				if ('ArrowDown' === e.key || 'Down' === e.key) { e.preventDefault(); openViewMenu(); }
+			});
+
+			vList.addEventListener('click', function (e) {
+				var item = e.target.closest ? e.target.closest('[data-dccwl-view]') : null;
+				if (!item) { return; }
+				var want = item.getAttribute('data-dccwl-view');
+				closeViewMenu(false);
+				go('wildlife' === want ? 'species' : want, vTrigger);
+			});
+
+			vList.addEventListener('keydown', function (e) {
+				var items = Array.prototype.slice.call(vList.querySelectorAll('[data-dccwl-view]'));
+				var i = items.indexOf(document.activeElement);
+				if ('Escape' === e.key || 'Esc' === e.key) {
+					e.preventDefault();
+					closeViewMenu(true);
+					return;
+				}
+				if ('ArrowDown' === e.key || 'Down' === e.key) {
+					e.preventDefault();
+					items[(i + 1) % items.length].focus();
+				} else if ('ArrowUp' === e.key || 'Up' === e.key) {
+					e.preventDefault();
+					items[(i - 1 + items.length) % items.length].focus();
+				} else if ('Home' === e.key) {
+					e.preventDefault();
+					items[0].focus();
+				} else if ('End' === e.key) {
+					e.preventDefault();
+					items[items.length - 1].focus();
+				}
+			});
+
+			/* An outside tap closes it. Listened on the document because the
+			 * tap that closes may land anywhere, and removed never — one
+			 * dropdown per root, bound once, like the map button's guard. */
+			document.addEventListener('click', function (e) {
+				if (!vSel.contains(e.target)) { closeViewMenu(false); }
+			});
+
+			syncViewLabel();
+		}
+
 		root.querySelectorAll('[data-dccwl-go]').forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				go(btn.getAttribute('data-dccwl-go'), btn);
@@ -605,7 +677,7 @@
 		// A month named in the URL IS an explicit choice; the default is not.
 		var deep = monthFromUrl();
 		setMonth(null === deep ? state.month : deep, undefined, null !== deep);
-		show('hub', false);
+		show(DEFAULT_VIEW, false);
 	}
 
 	function initAll() {

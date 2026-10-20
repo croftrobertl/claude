@@ -162,10 +162,40 @@ final class Water_Render {
 			'fishing' => __( 'Fishing', 'dcc-wildlife' ),
 		];
 
+		/*
+		 * Is this renderer COMPOSING inside the canal app, or standing alone?
+		 * The hub already says so — `about_fold => false` is that signal and
+		 * has been since 1.34.0 — so read it rather than adding a second flag
+		 * that could disagree with the first.
+		 */
+		$in_canal = ( false === ( $opts['about_fold'] ?? true ) );
+
 		ob_start();
 		?>
 		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
-			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
+			<?php
+			/*
+			 * VISUALLY HIDDEN INSIDE THE CANAL APP (1.44.0), NEVER REMOVED.
+			 *
+			 * Rob's instruction: the dropdown IS the title, and the separate
+			 * "Fishing & Water Conditions" heading goes. But the <section>
+			 * is `aria-labelledby` this element, and the heading owns this
+			 * module's place in the document outline — deleting it would
+			 * leave a labelled region pointing at nothing and take a landmark
+			 * off a screen reader.
+			 *
+			 * So it keeps its text and loses only its box, by the same
+			 * `.dccwl-sr` class the hub's own heading used for exactly this
+			 * reason since 1.18.0. On the STANDALONE water widget there is no
+			 * dropdown, so the heading stays visible and nothing changes.
+			 *
+			 * This is not the hidden-text problem the 1.16.0 rule names: that
+			 * is about hiding CONTENT a page is claiming to offer. A heading
+			 * whose job has been taken over by a visible control two lines
+			 * above it is a labelling decision, and the label is still read.
+			 */
+			?>
+			<h2 class="dccwl-water-title<?php echo $in_canal ? ' dccwl-sr' : ''; ?>" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
 
 			<?php if ( count( array_filter( $tabs ) ) > 1 ) : ?>
 				<div class="dccwl-tabs dccwl-water-tabs" role="group" aria-label="<?php esc_attr_e( 'What to show', 'dcc-wildlife' ); ?>" data-dccwl-water-tabs hidden>

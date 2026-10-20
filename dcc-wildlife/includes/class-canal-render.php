@@ -155,115 +155,50 @@ final class Canal_Render {
 			echo esc_attr( (string) wp_json_encode( (object) self::per_root( $opts ) ) );
 		?>">
 
+			<?php
+			/* ==============================================================
+			 * ONE DROPDOWN, TWO SIBLING VIEWS (1.44.0, Rob's pick).
+			 *
+			 * THE HUB IS GONE. From 1.10.0 this was four stacked LEVELS —
+			 * hub, month, species, water — with a Back bar on each and a
+			 * history entry per drill-down. Rob's instruction is that
+			 * /explore/ opens straight into Water, that the two big hub
+			 * tiles go, and that one Cottage-Selector-style dropdown both
+			 * titles the section and switches between Water and Wildlife in
+			 * a single tap.
+			 *
+			 * So they are SIBLINGS now, not levels, and that has a
+			 * consequence worth stating plainly: switching views pushes no
+			 * history entry, exactly as a tab does not. Back leaves
+			 * /explore/ rather than walking up a level, because there is no
+			 * level to walk up to. The sheet's own history contract
+			 * (sheet.js pushes on open, pops on close) is untouched — it was
+			 * never part of the level machinery.
+			 *
+			 * THE MONTH PANEL WENT WITH THE HUB. Its twelve tiles are
+			 * replaced by the Month menu in the Wildlife control row, so the
+			 * picker is a menu on the screen it belongs to rather than a
+			 * destination two taps away.
+			 * ============================================================== */
+			?>
+			<div class="dccwl-viewbar">
+				<?php self::view_select( $has_water ); ?>
+			</div>
+
 			<div class="dccwl-stage" data-dccwl-stage>
 
-				<?php /* ---------- L1: the hub ---------- */ ?>
-				<section class="dccwl-panel dccwl-panel-hub" data-dccwl-panel="hub" tabindex="-1">
-					<?php /* The hub's heading is for the outline and screen readers only
-					         (1.18.0). The heritage hero that used to sit here — title,
-					         Grantland Rice quote, attribution — and the "right now on the
-					         canal" line were removed at the owner's request; the hub's one
-					         job is now: what is coming, and where to go. */ ?>
-					<h2 class="dccwl-panel-title dccwl-sr"><?php echo esc_html( '' !== $title ? $title : __( 'On the canal', 'dcc-wildlife' ) ); ?></h2>
-
-					<?php
-					/* The season countdown: the hub's one living element. Still exactly
-					   one shell per page (the 1.8.1 first-caller-wins guard is untouched)
-					   and still an empty div the browser fills in canal time. */
-					echo Render::countdown_shell_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
-					?>
-					<noscript>
-						<?php /* The two tiles below are buttons the hub script drives; without
-						   it they are inert. Say so, and point at the prose guide, which
-						   is right here on the page and needs nothing (1.17.0). */ ?>
-						<p class="dccwl-noscript"><?php esc_html_e( 'The guided view needs JavaScript. The whole field guide is just below, in words.', 'dcc-wildlife' ); ?></p>
-					</noscript>
-					<ul class="dccwl-hub-tiles">
-						<li>
-							<button type="button" class="dccwl-hub-tile" data-dccwl-go="species">
-								<span class="dccwl-hub-name"><?php esc_html_e( 'Wildlife', 'dcc-wildlife' ); ?></span>
-								<?php /* Filled client-side from the bundled species
-								         calendar — always available, never cached. */ ?>
-								<span class="dccwl-hub-preview" data-dccwl-preview="wildlife"></span>
-								<?php /* Species art for the month, added client-side.
-								         Decorative: the preview line above says what
-								         it means. */ ?>
-								<span class="dccwl-hub-art" data-dccwl-hub-art="wildlife" aria-hidden="true"></span>
-								<?php self::door_chevron(); ?>
-							</button>
-						</li>
-						<?php if ( $has_water ) : ?>
-							<li>
-								<button type="button" class="dccwl-hub-tile" data-dccwl-go="water" data-dccwl-water-tile>
-									<span class="dccwl-hub-name"><?php esc_html_e( 'Water', 'dcc-wildlife' ); ?></span>
-									<?php /* Filled ONLY from sourced facts the existing
-									         /conditions route returns. No facts, a failed
-									         fetch or a stale-gated reading leaves this
-									         empty and the tile shows its name alone —
-									         the same rule the module itself follows. */ ?>
-									<?php
-									/*
-									 * 1.33.0, owner's request: the card SAYS it is
-									 * working. The readings come from a fetch, so
-									 * until it lands this tile used to show its name
-									 * over an empty line, which reads as a card with
-									 * nothing in it rather than one still thinking.
-									 *
-									 * Server-rendered, so it is there before any
-									 * script runs. `data-dccwl-loading` is what
-									 * canal.js clears — the SAME attribute tells the
-									 * CSS to hold the line's height, so the readings
-									 * replacing it does not move the tile.
-									 */
-									?>
-									<span class="dccwl-hub-preview" data-dccwl-preview="water" data-dccwl-loading="1"><?php esc_html_e( 'Checking the canal…', 'dcc-wildlife' ); ?></span>
-									<?php /* Source + age chips for the very facts above —
-									         the same provenance the cards carry. */ ?>
-									<span class="dccwl-hub-art" data-dccwl-hub-art="water"></span>
-									<?php self::door_chevron(); ?>
-								</button>
-							</li>
-						<?php endif; ?>
-					</ul>
-				</section>
-
-				<?php /* ---------- L2a: the month picker, reached from the species chip ---------- */ ?>
-				<section class="dccwl-panel dccwl-panel-month" data-dccwl-panel="month" tabindex="-1" hidden>
-					<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ) ] ); ?>
-					<h2 class="dccwl-panel-title"><?php esc_html_e( 'The canal year', 'dcc-wildlife' ); ?></h2>
-					<?php /* "The fullest months are…" — computed client-side from the
-					         same bundled calendar the tiles use, so a cached page can
-					         never state a stale one. Empty until the JS fills it. */ ?>
-					<p class="dccwl-year-note" data-dccwl-year-note></p>
-					<?php /* Twelve tiles, built client-side: the labels are
-					         month-independent but the highlight and the preview
-					         lines are not, and mixing the two server-side is how
-					         a cached page starts lying about the date. */ ?>
-					<ul class="dccwl-month-tiles" data-dccwl-month-tiles></ul>
-					<?php /* The one colour the picker carries, explained where it is used. */ ?>
-					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
-						<span class="dccwl-legend-item"><span class="dccwl-legend-swatch dccwl-legend-swatch-now" aria-hidden="true"></span><?php esc_html_e( 'this month', 'dcc-wildlife' ); ?></span>
-					</p>
-				</section>
-
-				<?php /* ---------- L3a: species for the chosen month ---------- */ ?>
-				<section class="dccwl-panel dccwl-panel-species" data-dccwl-panel="species" tabindex="-1" hidden>
-					<?php /* 1.23.0: this is where the Wildlife door now lands — on what is
-					         out THIS month, with no step to get past first. The month
-					         chip in the bar opens the picker for anyone who wants a
-					         different one, and it is filled client-side: a cached page
-					         must never name a month or count its species. */ ?>
-					<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ) ], '', true ); ?>
-					<?php echo $species_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Render::render() escapes its own output. ?>
-				</section>
-
 				<?php if ( $has_water ) : ?>
-					<?php /* ---------- L2b: the whole water module ---------- */ ?>
-					<section class="dccwl-panel dccwl-panel-water" data-dccwl-panel="water" tabindex="-1" hidden>
-						<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Water', 'dcc-wildlife' ) ] ); ?>
+					<?php /* THE DEFAULT VIEW. It is first in the DOM and it is the
+					         one not hidden, so nothing has to name a default — the
+					         same mechanism the water tab bar uses for Map. */ ?>
+					<section class="dccwl-panel dccwl-panel-water" data-dccwl-panel="water" tabindex="-1">
 						<?php echo $water_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Water_Render::render() escapes its own output. ?>
 					</section>
 				<?php endif; ?>
+
+				<section class="dccwl-panel dccwl-panel-species" data-dccwl-panel="species" tabindex="-1"<?php echo $has_water ? ' hidden' : ''; ?>>
+					<?php echo $species_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Render::render() escapes its own output. ?>
+				</section>
 
 			</div>
 
@@ -281,39 +216,72 @@ final class Canal_Render {
 		return (string) ob_get_clean();
 	}
 
-	/** The centred back control every non-hub level carries. */
 	/**
-	 * The level bar (1.18.0): a sticky, tinted band at the top of every panel
-	 * below the hub — Back on the left, a breadcrumb in the middle — so depth
-	 * is visible: where am I, what is this a child of, how do I get back.
-	 * Nothing else may share this surface treatment; tiles are the only cards.
+	 * THE VIEW DROPDOWN (1.44.0) — "Water ▾" / "Wildlife ▾".
 	 *
-	 * @param string   $back    Back button label.
-	 * @param string[] $crumbs  Breadcrumb segments; an empty string is a
-	 *                          client-filled slot (the month name).
-	 * @param string   $fill    data-dccwl-crumb key for the client-filled slot.
-	 * @param bool     $chip    Retained for call-site compatibility and ignored
-	 *                          since 1.27.0, when the month chip left the
-	 *                          navigation bar. The month picker is reached from
-	 *                          the footnote row now; the panel is unchanged.
+	 * It is the section's TITLE and its switch at once, which is what Rob
+	 * asked for: the light-blue "‹ Back / Water" bar and the separate
+	 * "Fishing & Water Conditions" heading are both gone, and this says
+	 * where you are and takes you to the other place in one tap.
+	 *
+	 * MODELLED ON THE COTTAGE SELECTOR'S MODE DROPDOWN, deliberately — the
+	 * Director's instruction was to match what Rob already sees on the
+	 * site rather than invent a third pattern. The values are the ones he
+	 * re-measured on live with nothing focused, which differ from that
+	 * plugin's source defaults because a site-level setting overrides them
+	 * there; ours are BAKED IN so they cannot depend on another plugin's
+	 * widget settings. They live in canal.css beside this.
+	 *
+	 * A REAL MENU BUTTON, not a <select> and not a div: `aria-haspopup`,
+	 * `aria-expanded`, arrow/Home/End keys, Escape, an outside tap, and
+	 * focus returning to the trigger. Each row is a 44px target. The whole
+	 * thing is rendered OPEN-able without JavaScript in the sense that
+	 * matters — with no script the list stays closed and both views are
+	 * still present in the page, which is the no-JS fallback this app has
+	 * always had.
+	 *
+	 * @param bool $has_water False when the water module emits nothing; the
+	 *                        dropdown then has one destination and renders
+	 *                        as a plain heading instead of a dead control
+	 *                        (the 1.31.0 rule: a control that cannot work is
+	 *                        not offered).
 	 */
-	private static function level_bar( string $back, array $crumbs, string $fill = '', bool $chip = false ): void {
+	private static function view_select( bool $has_water ): void {
+		$views = [];
+		if ( $has_water ) {
+			$views['water'] = __( 'Water', 'dcc-wildlife' );
+		}
+		$views['wildlife'] = __( 'Wildlife', 'dcc-wildlife' );
+
+		$first       = (string) array_key_first( $views );
+		$first_label = (string) $views[ $first ];
+
+		if ( count( $views ) < 2 ) {
+			printf(
+				'<h2 class="dccwl-viewselect-solo">%s</h2>',
+				esc_html( $first_label )
+			);
+			return;
+		}
 		?>
-		<div class="dccwl-levelbar">
-			<button type="button" class="dccwl-back" data-dccwl-back>
-				<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span><?php echo esc_html( $back ); ?></span>
+		<div class="dccwl-viewselect" data-dccwl-viewselect>
+			<button type="button" class="dccwl-viewselect-trigger" data-dccwl-viewtrigger
+				aria-haspopup="true" aria-expanded="false">
+				<span class="dccwl-viewselect-label" data-dccwl-viewlabel><?php echo esc_html( $first_label ); ?></span>
+				<span class="dccwl-caret" aria-hidden="true">&#9662;</span>
 			</button>
-			<nav class="dccwl-crumbs" aria-label="<?php esc_attr_e( 'You are here', 'dcc-wildlife' ); ?>">
-				<?php $last = count( $crumbs ) - 1; ?>
-				<?php foreach ( $crumbs as $i => $crumb ) : ?>
-					<?php if ( $i > 0 ) : ?><span class="dccwl-crumb-sep" aria-hidden="true">›</span><?php endif; ?>
-					<span class="dccwl-crumb<?php echo $i === $last ? ' dccwl-crumb-here' : ''; ?>"<?php echo $i === $last ? ' aria-current="location"' : ''; ?><?php echo ( '' === $crumb && '' !== $fill ) ? ' data-dccwl-crumb="' . esc_attr( $fill ) . '"' : ''; ?>><?php echo esc_html( $crumb ); ?></span>
+			<ul class="dccwl-viewselect-list" data-dccwl-viewlist role="menu" hidden>
+				<?php foreach ( $views as $slug => $label ) : ?>
+					<li role="none">
+						<button type="button" class="dccwl-viewselect-item" role="menuitem"
+							data-dccwl-view="<?php echo esc_attr( $slug ); ?>"><?php echo esc_html( $label ); ?></button>
+					</li>
 				<?php endforeach; ?>
-			</nav>
+			</ul>
 		</div>
 		<?php
 	}
+
 
 	/** The right-edge chevron that marks a hub tile as a door, not a card. */
 	private static function door_chevron(): void {

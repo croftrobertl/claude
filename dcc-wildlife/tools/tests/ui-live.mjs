@@ -20,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  launch, widgetPage, buildPage, rendered, asset,
+  launch, widgetPage, buildPage, rendered, asset, openWildlife,
   check, checkSame, checkAtLeast, checkAtMost, section, note, done, skipSuite,
 } from './lib.mjs';
 
@@ -51,16 +51,22 @@ section('A8 — a selected control is WHITE after a real tap, not just at rest')
 for (const [w, touch] of [[390, true], [1280, false]]) {
   const h = await widgetPage(browser, 'canal', { width: w, height: 900, sitekit: true, touch });
   const page = h.page;
-  await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(page);
   await page.waitForTimeout(700);
 
-  // Tap/click a tab, then read it WITHOUT moving the pointer away.
-  const tab = await page.$('.dccwl-tab:not([aria-pressed="true"])');
+  /*
+   * SCOPED TO THE SPECIES PANEL SINCE 1.44.0. The water panel's Map/Now/
+   * Fishing bar uses `.dccwl-tab` too, and with the hub gone Water is FIRST
+   * in the DOM — so an unscoped query returned a tab inside the hidden water
+   * panel and the tap waited 30s for something that is display:none. The
+   * section is about the species tabs; say so in the selector.
+   */
+  const tab = await page.$('[data-dccwl-panel="species"] .dccwl-tab:not([aria-pressed="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
 
   const after = await page.evaluate(() => {
-    const t = document.querySelector('.dccwl-tab[aria-pressed="true"]');
+    const t = document.querySelector('[data-dccwl-panel="species"] .dccwl-tab[aria-pressed="true"]');
     const cs = getComputedStyle(t);
     return { label: t.textContent.trim(), bg: cs.backgroundColor, fg: cs.color,
              focused: document.activeElement === t };
@@ -108,7 +114,20 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   if (pill) {
     if (touch) { await pill.tap(); } else { await pill.click(); }
     await page.waitForTimeout(200);
-    const opt = await page.$('.dccwl-pick-opt[data-dccwl-browse="birds"]');
+    /*
+     * A VISIBLE OPTION, NOT A NAMED ONE. This hard-coded
+     * `[data-dccwl-browse="birds"]`, which is only in the Animals picker —
+     * and the step above deliberately taps the first UNPRESSED tab, so the
+     * open tab here is Plants or Safety and the birds row is hidden. The tap
+     * then waited 30s for an element that is display:none.
+     *
+     * The claim is about the CHOSEN option's colours after real taps, not
+     * about which category it is, so take whichever row this tab actually
+     * offers. ui-deck.mjs is where per-category membership is asserted.
+     */
+    const opt = await visible(page, '.dccwl-pick-opt[data-dccwl-browse]:not([aria-selected="true"])');
+    check(!!opt, `${w}px: the open picker offers a category to choose`);
+    if (!opt) { await page.close(); continue; }
     if (touch) { await opt.tap(); } else { await opt.click(); }
     await page.waitForTimeout(400);
     if (touch) { await pill.tap(); } else { await pill.click(); }
@@ -131,7 +150,7 @@ section('C — one pill, "Show: All ▾", that filters the deck');
 for (const [w, touch] of [[390, true], [1280, false]]) {
   const h = await widgetPage(browser, 'canal', { width: w, height: 1000, sitekit: true, touch });
   const page = h.page;
-  await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(page);
   await page.waitForTimeout(800);
 
   const base = await page.evaluate(() => {
@@ -281,7 +300,10 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
 
   // switching tab resets the pill (C2)
   await page.evaluate(() => {
-    const t = Array.from(document.querySelectorAll('.dccwl-tab'))
+    /* Scoped to the species panel: the water tab bar uses `.dccwl-tab`
+     * too, and since 1.44.0 Water is FIRST in the DOM, so an unscoped
+     * query clicked a water tab and the species pill never reset. */
+    const t = Array.from(document.querySelectorAll('[data-dccwl-panel="species"] .dccwl-tab'))
       .filter((b) => 'true' !== b.getAttribute('aria-pressed'))[0];
     if (t) { t.click(); }
   });
@@ -322,7 +344,7 @@ const TABS = {
 for (const [w, touch] of [[390, true], [1280, false]]) {
   const h = await widgetPage(browser, 'canal', { width: w, height: 1100, sitekit: true, touch });
   const page = h.page;
-  await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(page);
   await page.waitForTimeout(800);
 
   for (const [tab, want] of Object.entries(TABS)) {
@@ -439,7 +461,7 @@ section('B9 — no empty column, and no blank area, in any tab × category');
 {
   const h = await widgetPage(browser, 'canal', { width: 390, height: 900, sitekit: true, touch: true });
   const page = h.page;
-  await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(page);
   await page.waitForTimeout(800);
 
   let states = 0;
@@ -1812,7 +1834,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   const h = await widgetPage(browser, 'canal', { width: w, height: 1000, sitekit: true, touch });
   const page = h.page;
   const label = `${w}px ${touch ? 'touch' : 'mouse'}`;
-  await page.evaluate(() => { const g = document.querySelector('.dccwl-hub-tile'); if (g) { g.click(); } });
+  await openWildlife(page);
   await page.waitForTimeout(800);
 
   /* --- the tab labels are semibold (weight only; the size is Rob's "stays

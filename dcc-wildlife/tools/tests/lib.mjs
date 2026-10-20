@@ -379,6 +379,38 @@ export async function settleGrids(page, timeout = 8000) {
   }
 }
 
+/**
+ * Switch the canal app to its Wildlife view.
+ *
+ * ONE HELPER BECAUSE THE WAY IN CHANGED (1.44.0). Every suite used to click
+ * `.dccwl-hub-tile` — the hub's Wildlife door. Rob removed the hub, so the
+ * door is now a row in the view dropdown, and ten call sites across four
+ * suites would otherwise each have learned the new markup separately.
+ *
+ * It opens the menu and presses the Wildlife row, which is exactly what a
+ * guest does — not a direct call into canal.js. A test that reached past the
+ * control would stop proving the control works, which is the whole point of
+ * the 1.38.0 rule about testing a state with a real tap.
+ *
+ * Returns true if it switched, false if there was nothing to switch (a
+ * placement with no water module opens on Wildlife already).
+ */
+export async function openWildlife(page) {
+  const did = await page.evaluate(() => {
+    const sel = document.querySelector('[data-dccwl-viewselect]');
+    if (!sel) { return false; }
+    const trigger = sel.querySelector('[data-dccwl-viewtrigger]');
+    if (trigger) { trigger.click(); }
+    const row = sel.querySelector('[data-dccwl-view="wildlife"]');
+    if (!row) { return false; }
+    row.click();
+    return true;
+  });
+  await page.waitForTimeout(350);
+  await settleGrids(page);
+  return did;
+}
+
 /** Computed box for one selector, or null when the node is absent. */
 export async function boxOf(page, selector) {
   return page.evaluate((sel) => {
