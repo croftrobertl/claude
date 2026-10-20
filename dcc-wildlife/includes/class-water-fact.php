@@ -73,7 +73,25 @@ final class Water_Fact {
 		 * renders — the tile falls back to `value`.
 		 */
 		private string $short = '',
-		private string $detail = ''
+		private string $detail = '',
+		/*
+		 * 1.44.0 — WHICH PLACE THIS READING IS ABOUT, as the waterbody id.
+		 *
+		 * The Now tab's place picker (Rob's pick A) shows one place at a
+		 * time, and the client has to know which of the chain's readings
+		 * belongs to the place a guest just chose. Matching on the water's
+		 * NAME would work today — both sides read it from
+		 * Water_Data::chain_waters() — but a name is a label, and matching
+		 * on a label is the mistake `key` exists to prevent (1.34.0). An id
+		 * cannot be renamed out from under the match.
+		 *
+		 * Presentation metadata, exactly like `key`, `short` and `detail`:
+		 * optional, never a gate, and unable to admit an unsourced fact. A
+		 * Fact with no place is as valid as one with it — the primary
+		 * water's own readings carry none, because "the place the section is
+		 * about" is what an untagged reading already means.
+		 */
+		private string $place = ''
 	) {}
 
 	/**
@@ -82,7 +100,7 @@ final class Water_Fact {
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
 	 * Optional: source_url, note, date_label, group, date_precision, key,
-	 * short, detail.
+	 * short, detail, place.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
@@ -119,6 +137,10 @@ final class Water_Fact {
 		 */
 		$key    = strtolower( trim( (string) ( $raw['key'] ?? '' ) ) );
 		$key    = (string) preg_replace( '/[^a-z_]/', '', $key );
+		/* A waterbody id is digits in every source this module reads, and
+		 * narrowing it here is the same discipline `key` gets: whatever
+		 * arrives, what travels is a shape this codebase chose. */
+		$place  = (string) preg_replace( '/\D/', '', (string) ( $raw['place'] ?? '' ) );
 		$short  = trim( (string) ( $raw['short'] ?? '' ) );
 		$detail = trim( (string) ( $raw['detail'] ?? '' ) );
 		$dprec  = trim( (string) ( $raw['date_precision'] ?? '' ) );
@@ -147,7 +169,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key, $short, $detail );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key, $short, $detail, $place );
 	}
 
 	/**
@@ -192,6 +214,7 @@ final class Water_Fact {
 			'key'        => $this->key,
 			'short'      => $this->short,
 			'detail'     => $this->detail,
+			'place'      => $this->place,
 			/*
 			 * THE DATE AS A GUEST READS IT (1.40.0). Computed once, here, so
 			 * every surface in the water module shows the same format and

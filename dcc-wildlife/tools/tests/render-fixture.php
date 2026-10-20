@@ -165,6 +165,42 @@ if ( 'facts' === $which ) {
 			'source_name' => 'Water Atlas', 'date' => '2026-08-01',
 			'date_label' => 'sampled', 'date_precision' => 'day', 'group' => 'primary',
 		],
+		/*
+		 * THE WHOLE-CHAIN READINGS (1.44.0). Rain and the forecast join wind
+		 * in the one row beneath the place cards, and all three are matched
+		 * BY KEY — so a fixture missing the keys would test the fallback
+		 * rather than the rule.
+		 */
+		[
+			'label' => 'Recent rain', 'key' => 'rain',
+			'value' => '0.42 in. over the two most recent reporting days',
+			'tier' => \DCC_WL\Water_Fact::TIER_LIVE,
+			'source_name' => 'USGS rain gauge (site 02237293)', 'date' => '2026-07-27',
+			'date_label' => 'through', 'date_precision' => 'day', 'group' => 'primary',
+		],
+		[
+			'label' => 'Forecast — This Afternoon', 'key' => 'forecast',
+			'value' => 'Scattered showers, 88 °F',
+			'tier' => \DCC_WL\Water_Fact::TIER_LIVE,
+			'source_name' => 'National Weather Service forecast',
+			'date' => '2026-07-27T04:00:00.0000000Z',
+			'date_label' => 'issued', 'date_precision' => 'minute', 'group' => 'primary',
+		],
+		/*
+		 * ONE OTHER PLACE WITH A READING, AND THE REST WITH NONE — which is
+		 * the asymmetry the place picker exists to handle honestly. Lake
+		 * Eustis (7985) carries clarity; every other chain water carries
+		 * nothing, so choosing one must render "No Recent Reading" on BOTH
+		 * cards rather than an empty pane. A fixture in which every lake had
+		 * a reading could only confirm the happy path.
+		 */
+		[
+			'label' => 'Lake Eustis', 'place' => '7985', 'group' => 'chain',
+			'value' => '4.27 ft — clearer than usual for this water (its median is 2.30 ft)',
+			'tier' => \DCC_WL\Water_Fact::TIER_PUBLISHED,
+			'source_name' => 'Lake County Water Atlas', 'date' => '2026-08-01',
+			'date_label' => 'sampled', 'date_precision' => 'day',
+		],
 		/* The gate accepts this date (it is a valid shape) and the formatter
 		 * refuses it, which is the pair worth testing: the card renders, with
 		 * NO date line, rather than printing the string. */

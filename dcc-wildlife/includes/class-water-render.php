@@ -220,51 +220,131 @@ final class Water_Render {
 				<div class="dccwl-water-live" data-dccwl-water-live hidden>
 					<?php
 					/*
-					 * ITEM 3 (pick B) — the card list folds behind "All
-					 * readings". A native <details>, like the field guide and
-					 * the credits: it needs no JavaScript, and the tier key
-					 * above the cards sits INSIDE the fold, because a key
-					 * belongs beside the colour it decodes.
-					 */
-					?>
-					<details class="dccwl-fullguide dccwl-water-allreadings">
-					<?php
-					/*
-					 * THE SAME CHEVRON AS EVERY OTHER FOLD (1.40.1 — the
-					 * Director's finding). This summary had no chevron of its
-					 * own, and 1.39.0 had hidden the browser's triangle for
-					 * every fold in the plugin — correctly, since the others
-					 * draw their own. Between the two, this one lost its only
-					 * open/close cue and read as a plain heading.
+					 * ITEM 3 (1.44.0, Rob's pick A) — "PICK A PLACE".
 					 *
-					 * Markup copied from the About fold rather than invented:
-					 * same chevron, same rotation, same text wrapper, so the
-					 * four folds a guest meets are one component.
+					 * WHAT THIS REPLACES, AND WHY THE TWO HAD TO GO TOGETHER.
+					 * The Now tab held "All readings" (a fold over the canal's
+					 * own cards) and "Across the Harris Chain" (a second list
+					 * of every other water's clarity). Rob: "they overlap".
+					 * They did — Lake Dora appeared in both, and a guest had
+					 * to read two lists to answer one question. One chip
+					 * answers it instead: choose a place, see that place.
+					 *
+					 * THE OPTIONS ARE SERVER-RENDERED AND THE READINGS ARE
+					 * NOT, which is this module's oldest division. A water's
+					 * NAME is an owner-edited setting and cache-safe; a
+					 * reading is time-sensitive and must never be baked into
+					 * SpeedyCache-served HTML. So the whole menu is in the
+					 * page for a crawler and for a guest whose JavaScript has
+					 * not arrived, and water.js fills the cards from the
+					 * /conditions facts it already holds.
+					 *
+					 * WHAT EACH PLACE CAN SHOW, which is Rob's ruling of
+					 * 2026-10-20 after the brief asked for more than the feed
+					 * carries. Per PLACE the payload has LEVEL and CLARITY and
+					 * nothing else. Oxygen and trophic state would need new
+					 * per-water Atlas fetches against the budgets that let a
+					 * bigger chain warm progressively — he ruled no. Wind, the
+					 * forecast and rain are ONE reading for the property's
+					 * grid square or a named gauge, so they cover the whole
+					 * chain and sit in one row beneath the cards, never
+					 * repeated per lake. That is 1.35.0's rule — his own
+					 * option C — holding: nothing that does not vary across
+					 * the water may be drawn as though it does.
+					 *
+					 * A PLACE WITH NO READING SAYS SO. "No Recent Reading" is
+					 * a real answer and the only honest one; a blank card
+					 * would read as a fetch that failed and a zero would be a
+					 * false reading. It is the module's silence rule said out
+					 * loud, because here the guest ASKED about this water.
 					 */
+					$places = Water_Data::chain_waters();
+					$primary = Water_Data::primary_water();
+					$first_place = null;
+					foreach ( $places as $pl ) {
+						if ( $pl['id'] === $primary ) {
+							$first_place = $pl;
+							break;
+						}
+					}
+					// No primary row in the chain list: the first water stands
+					// in rather than the control rendering with no choice in
+					// it. A picker whose label is empty is worse than none.
+					if ( null === $first_place && $places ) {
+						$first_place = $places[0];
+					}
 					?>
-					<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'All readings, with their sources', 'dcc-wildlife' ); ?>">
-						<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-						<span class="dccwl-fullguide-text">
-							<span class="dccwl-fullguide-h"><?php esc_html_e( 'All readings', 'dcc-wildlife' ); ?></span>
-						</span>
-					</summary>
-					<div class="dccwl-fullguide-body">
-					<?php /* ITEM 8 (pick B) — the tier colour is now a full border on
+					<?php if ( $first_place ) : ?>
+					<div class="dccwl-chiprow dccwl-water-placerow">
+						<div class="dccwl-monthpick dccwl-placepick" data-dccwl-placepick>
+							<button type="button" class="dccwl-chip dccwl-chip-menu" data-dccwl-placebtn
+								aria-haspopup="listbox" aria-expanded="false">
+								<span class="dccwl-chip-label" data-dccwl-placelabel><?php
+									printf(
+										/* translators: %s: the property's own water, e.g. "Lake Dora". */
+										esc_html__( 'Our Canal · %s', 'dcc-wildlife' ),
+										esc_html( $first_place['name'] )
+									);
+								?></span>
+								<span class="dccwl-caret" aria-hidden="true">&#9662;</span>
+							</button>
+							<ul class="dccwl-chipmenu" data-dccwl-placemenu role="listbox"
+								aria-label="<?php esc_attr_e( 'Choose A Place', 'dcc-wildlife' ); ?>" hidden>
+								<?php foreach ( $places as $pl ) : ?>
+									<?php $is_first = $pl['id'] === $first_place['id']; ?>
+									<li role="option" aria-selected="<?php echo $is_first ? 'true' : 'false'; ?>">
+										<button type="button" class="dccwl-chipmenu-opt"
+											data-dccwl-place="<?php echo esc_attr( $pl['id'] ); ?>"
+											data-dccwl-place-name="<?php echo esc_attr( $pl['name'] ); ?>"><?php
+											if ( $is_first ) {
+												printf(
+													/* translators: %s: the property's own water. */
+													esc_html__( 'Our Canal · %s', 'dcc-wildlife' ),
+													esc_html( $pl['name'] )
+												);
+											} else {
+												echo esc_html( $pl['name'] );
+											}
+										?></button>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						</div>
+					</div>
+					<?php endif; ?>
+
+					<?php /* ITEM 8 (1.34.0, pick B) — the tier colour is a full border on
 					         all four sides, and this one line is what makes the colour
-					         mean anything. Without it the border is decoration. */ ?>
+					         mean anything. Without it the border is decoration.
+
+					         It sat INSIDE the "All readings" fold, beside the cards it
+					         decoded. The fold is gone, so it sits directly above them —
+					         which is the same rule, not a relaxation of it. */ ?>
 					<p class="dccwl-water-tierkey"><?php esc_html_e( 'Green = measured today · Blue = latest published sample · Amber = general guidance', 'dcc-wildlife' ); ?></p>
+
 					<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-facts></ul>
 
-					<?php /* Each water against its OWN long-run median — the
-					         comparison a visiting angler can act on without any
-					         local knowledge. Filled client-side with the rest. */ ?>
-					<div class="dccwl-chain" data-dccwl-chain hidden>
-						<h3 class="dccwl-water-sub"><?php esc_html_e( 'Across the Harris Chain', 'dcc-wildlife' ); ?></h3>
-						<p class="dccwl-chain-note"><?php esc_html_e( 'Clarity now against each water’s own long-run median — clearest relative to its own normal first.', 'dcc-wildlife' ); ?></p>
-						<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-chain></ul>
+					<?php
+					/*
+					 * ONE ROW FOR THE WHOLE CHAIN, LABELLED AS SUCH.
+					 *
+					 * Rob's words: wind, forecast and rain "stay as ONE small
+					 * row labelled as covering the whole chain, shown once
+					 * beneath the place cards and never repeated per lake".
+					 * The heading is that label, and it is the honest one: a
+					 * single NWS forecast for one grid square and a daily sum
+					 * from a named USGS gauge are facts about the area, not
+					 * about whichever lake a guest just chose.
+					 *
+					 * Hidden until it has something in it, like every other
+					 * section here — an empty heading promising conditions is
+					 * the defect the auto-hide rule exists to prevent.
+					 */
+					?>
+					<div class="dccwl-water-whole" data-dccwl-water-whole-wrap hidden>
+						<h3 class="dccwl-water-sub"><?php esc_html_e( 'Whole Chain · NWS Forecast', 'dcc-wildlife' ); ?></h3>
+						<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-whole></ul>
 					</div>
-					</div>
-					</details>
 				</div>
 			<?php endif; ?>
 			</div><?php /* /now */ ?>
@@ -913,7 +993,38 @@ final class Water_Render {
 						'closed'      => __( 'CLOSED', 'dcc-wildlife' ),
 						'milesAway'   => __( 'mi from the cottages, straight line', 'dcc-wildlife' ),
 						'depthMap'    => __( 'Depth map (PDF)', 'dcc-wildlife' ),
+						/*
+						 * LOWERCASE ON PURPOSE, AND NOT THE PLACE PICKER'S
+						 * STRING. This one is read by water-map.js inside a
+						 * popup line, mid-sentence, where Title Case would be
+						 * wrong. Item 7's Title Case rule is about labels,
+						 * buttons, tabs, chips and headings.
+						 *
+						 * The Now tab's card needs its own, Title Case, as a
+						 * card's value rather than part of a sentence — so it
+						 * is `placeNone` below rather than this string reused
+						 * at a second register. Two uses, two strings, both
+						 * translatable on their own terms.
+						 */
 						'noReading'   => __( 'no recent reading', 'dcc-wildlife' ),
+						/*
+						 * ITEM 3 (1.44.0) — the place picker's three strings.
+						 *
+						 * `placeNone` is Rob's own wording: "A place without a
+						 * reading shows 'No Recent Reading' on that card,
+						 * never a blank or a false zero."
+						 *
+						 * The two LABELS are short forms of the cards' own
+						 * server-rendered labels ("Water level", "Water
+						 * clarity (Secchi depth)"), because a card that says
+						 * nothing is known does not get to name a measurement
+						 * method it has not got. They are translated here
+						 * rather than derived in the browser from a label the
+						 * client never receives for a water with no reading.
+						 */
+						'placeNone'   => __( 'No Recent Reading', 'dcc-wildlife' ),
+						'levelLabel'  => __( 'Water Level', 'dcc-wildlife' ),
+						'clarityLabel' => __( 'Water Clarity', 'dcc-wildlife' ),
 						'staleLevel'  => __( 'level reading is old', 'dcc-wildlife' ),
 						'median'      => __( 'median', 'dcc-wildlife' ),
 						/* 1.39.0: capitalised, because it begins a label —

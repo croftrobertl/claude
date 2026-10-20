@@ -283,49 +283,188 @@
 		if (shown > 0) { wrap.hidden = false; }
 	}
 
+	/*
+	 * THE THREE READINGS THAT COVER THE WHOLE CHAIN, BY KEY, NOT BY LABEL.
+	 *
+	 * Rob's ruling of 2026-10-20: wind, the forecast and rain "stay as ONE
+	 * small row labelled as covering the whole chain, shown once beneath the
+	 * place cards and never repeated per lake". One NWS forecast for the
+	 * property's grid square and a daily sum from a named USGS gauge are
+	 * facts about the area, so drawing them per place would be the same
+	 * number six times — which is exactly what 1.35.0 refused to do on the
+	 * map, his own option C.
+	 *
+	 * Read by `key`, which is why those keys were added to the builders in
+	 * this release: matching a TRANSLATED label is the mistake `key` exists
+	 * to prevent (1.34.0).
+	 */
+	var WHOLE_CHAIN_KEYS = { wind: 1, forecast: 1, rain: 1 };
+
+	/*
+	 * "No Recent Reading" — A REAL ANSWER, AND THE ONLY HONEST ONE.
+	 *
+	 * Rob: "A place without a reading shows 'No Recent Reading' on that card,
+	 * never a blank or a false zero." A blank card reads as a fetch that
+	 * failed and a zero is a reading that is wrong in the direction that
+	 * matters. This is the module's silence rule said OUT LOUD, which is the
+	 * one case where saying something beats saying nothing: the guest asked
+	 * about this water by name, so an absent card would answer a different
+	 * question.
+	 *
+	 * It carries NO source and NO date, because there is nothing to
+	 * attribute — which is also why it is built here rather than passed
+	 * through Water_Fact. A Fact is a claim about a measurement; this is a
+	 * statement that no measurement exists, and running it through the gate
+	 * would mean inventing a source name to satisfy the gate. The gate stays
+	 * exactly as strict as it was.
+	 */
+	function buildEmptyCard(label) {
+		var li = el('li', 'dccwl-card dccwl-water-fact dccwl-water-fact-none');
+		/* The same head/value structure a real card has, so one card in a row
+		 * of two cannot be a different shape — but with no source chip,
+		 * because there is nothing to attribute. */
+		var head = el('div', 'dccwl-card-head');
+		head.appendChild(el('span', 'dccwl-card-label', label));
+		li.appendChild(head);
+		li.appendChild(el('p', 'dccwl-card-value',
+			(CFG.i18n && CFG.i18n.placeNone) || 'No Recent Reading'));
+		return li;
+	}
+
+	/* The place the picker is on, per root. '' until the markup says. */
+	function currentPlace(root) {
+		var pick = root.querySelector('[data-dccwl-placepick]');
+		if (!pick) { return null; }
+		var sel = pick.querySelector('li[aria-selected="true"] > [data-dccwl-place]');
+		return sel || pick.querySelector('[data-dccwl-place]');
+	}
+
 	function fill(root, facts) {
 		var list = root.querySelector('[data-dccwl-water-facts]');
 		if (!list) { return; }
 		list.textContent = '';
 
-		// Chain comparison rows render in their own list beneath the primary
-		// water's conditions — same gate, different section.
-		var chainList = root.querySelector('[data-dccwl-water-chain]');
-		var chainWrap = root.querySelector('[data-dccwl-chain]');
-		if (chainList) { chainList.textContent = ''; }
+		var wholeList = root.querySelector('[data-dccwl-water-whole]');
+		var wholeWrap = root.querySelector('[data-dccwl-water-whole-wrap]');
+		if (wholeList) { wholeList.textContent = ''; }
+
+		var opt = currentPlace(root);
+		var placeId = opt ? (opt.getAttribute('data-dccwl-place') || '') : '';
+		var firstOpt = root.querySelector('[data-dccwl-place]');
+		var primaryId = firstOpt ? (firstOpt.getAttribute('data-dccwl-place') || '') : '';
+		var isPrimary = !opt || placeId === primaryId;
 
 		var shown = 0;
-		var chainShown = 0;
+		var wholeShown = 0;
+		var placeHas = {};
+
 		facts.forEach(function (f) {
+			var key = f.key || '';
+			/* The whole-chain row first, whichever place is chosen: these
+			 * three are not about a place at all. */
+			if (WHOLE_CHAIN_KEYS[key]) {
+				if (!wholeList) { return; }
+				var wrow = buildCard(f);
+				if (!wrow) { return; }
+				wholeList.appendChild(wrow);
+				wholeShown += 1;
+				return;
+			}
+
+			/*
+			 * WHICH READINGS BELONG TO THE CHOSEN PLACE.
+			 *
+			 * The primary water — the canal — owns every reading that is not
+			 * tagged with a place and not in the chain list: its level, its
+			 * clarity, and the oxygen and trophic-state readings the Atlas
+			 * happens to publish for it. That is "whatever that place has",
+			 * which is what the brief asked for; the feed simply has more for
+			 * this water than for the others.
+			 *
+			 * Another water owns the chain rows carrying its own id. Those are
+			 * clarity and nothing else, because clarity is all the feed
+			 * carries per water and Rob ruled against new per-water Atlas
+			 * fetches to go looking for more.
+			 */
+			var belongs = isPrimary
+				? ('chain' !== f.group)
+				: (placeId !== '' && f.place === placeId);
+			if (!belongs) { return; }
+
 			var row = buildCard(f);
 			if (!row) { return; }
-			if (f.group === 'chain' && chainList) {
-				chainList.appendChild(row);
-				chainShown += 1;
-			} else {
-				list.appendChild(row);
-				shown += 1;
-			}
+			list.appendChild(row);
+			shown += 1;
+			if (key) { placeHas[key] = 1; }
+			/* A chain row is a clarity reading. It carries no `key`, because
+			 * `key` names the Map tab's stat tiles and those read the canal's
+			 * own; so the group is what says what this card is. */
+			if ('chain' === f.group) { placeHas.clarity = 1; }
 		});
-		if (chainWrap && chainShown > 0) { chainWrap.hidden = false; }
+
+		/*
+		 * THE TWO CARDS ROB NAMED ALWAYS APPEAR FOR A CHOSEN LAKE, said or
+		 * unsaid — AND NOT FOR OUR OWN CANAL. That asymmetry is deliberate
+		 * and it is the narrower reading of his instruction, which is the
+		 * one worth taking here.
+		 *
+		 * His words: "level and clarity for the chosen place, with 'No Recent
+		 * Reading' where a lake has none", in a sentence about the OTHER
+		 * chain lakes. Choosing one of those IS an explicit question about
+		 * that water, so an absent card would answer a different question
+		 * and a blank would read as a failed fetch.
+		 *
+		 * Our own canal is the pane a guest lands on without asking anything,
+		 * and this module's oldest rule governs it: "an unknown field is
+		 * omitted, never rendered as 'unknown'. An empty almanac renders as
+		 * an absent section." Forcing two cards there would print "No Recent
+		 * Reading" on the default view of every site whose Atlas happens not
+		 * to publish one of the two — which is exactly the noise that rule
+		 * exists to prevent, and it is not what he asked for.
+		 *
+		 * FLAGGED IN THE NOTES rather than decided silently, because the
+		 * brief's own wording ("the cards show the chosen place's readings")
+		 * could be read either way.
+		 *
+		 * Only these two in any case: a lake has no oxygen card to be
+		 * missing, because the feed never offers one per water.
+		 */
+		if (!isPrimary) {
+			[
+				[ 'level', (CFG.i18n && CFG.i18n.levelLabel) || 'Water Level' ],
+				[ 'clarity', (CFG.i18n && CFG.i18n.clarityLabel) || 'Water Clarity' ]
+			].forEach(function (pair) {
+				if (placeHas[pair[0]]) { return; }
+				list.appendChild(buildEmptyCard(pair[1]));
+				shown += 1;
+			});
+		}
+
+		if (wholeWrap) { wholeWrap.hidden = wholeShown < 1; }
 		fillStats(root.closest('[data-dccwl-water-root]') || document, facts);
-		shown += chainShown;
 
 		/* The same deck the species tiles use (1.23.0), on the lists that just
 		 * received cards. Attached after filling, because a deck measures what
 		 * is in it; refreshed as well as attached, since a later /conditions
-		 * refresh replaces these cards wholesale. */
+		 * refresh — or a change of place — replaces these cards wholesale. */
 		if (window.DCCWL_Deck) {
-			[ [ list, shown - chainShown ], [ chainList, chainShown ] ].forEach(function (pair) {
+			[ [ list, shown ], [ wholeList, wholeShown ] ].forEach(function (pair) {
 				if (!pair[0] || pair[1] < 1) { return; }
 				window.DCCWL_Deck.attach(pair[0], CFG.i18n || {});
 				window.DCCWL_Deck.refresh(pair[0], CFG.i18n || {});
 			});
 		}
 
-		// Nothing usable: leave the strip hidden rather than showing an
-		// empty box or an error. The almanac below stands on its own.
-		if (shown > 0) {
+		/*
+		 * Nothing usable: leave the strip hidden rather than showing an empty
+		 * box or an error. The almanac below stands on its own.
+		 *
+		 * `shown` can be non-zero on nothing but the two "No Recent Reading"
+		 * cards, so the test is whether any FACT arrived, not whether any
+		 * card did. Counting cards would reveal the strip on a failed fetch,
+		 * showing two absences as though they were an answer.
+		 */
+		if (facts && facts.length) {
 			root.hidden = false;
 			// When the module has no static content it was emitted hidden
 			// entirely, so a failed fetch leaves the page clean. Real
@@ -333,6 +472,84 @@
 			var section = root.closest('[data-dccwl-water-root]');
 			if (section) { section.hidden = false; }
 		}
+	}
+
+	/*
+	 * THE PLACE PICKER'S WIRING. One chip, one listbox, the same component
+	 * the guide's Month ▾ and Show: All ▾ chips use — opened, closed and
+	 * keyboarded the same way, because three controls that look identical
+	 * must behave identically.
+	 *
+	 * Choosing a place re-renders the cards from the facts ALREADY HELD. It
+	 * fetches nothing: Rob ruled out new per-water Atlas calls, and the
+	 * /conditions payload already carries every water's clarity.
+	 */
+	function initPlacePicker(root, replay) {
+		var pick = root.querySelector('[data-dccwl-placepick]');
+		if (!pick || pick.getAttribute('data-dccwl-place-init')) { return; }
+		pick.setAttribute('data-dccwl-place-init', '1');
+		var btn = pick.querySelector('[data-dccwl-placebtn]');
+		var list = pick.querySelector('[data-dccwl-placemenu]');
+		var label = pick.querySelector('[data-dccwl-placelabel]');
+		if (!btn || !list) { return; }
+		var opts = [].slice.call(list.querySelectorAll('[data-dccwl-place]'));
+
+		function open(on) {
+			list.hidden = !on;
+			btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+			pick.classList.toggle('dccwl-chipmenu-open', !!on);
+			if (on) {
+				var sel = opts.filter(function (o) {
+					var li = o.closest('li');
+					return li && 'true' === li.getAttribute('aria-selected');
+				})[0];
+				(sel || opts[0]).focus();
+			}
+		}
+
+		function choose(o) {
+			opts.forEach(function (x) {
+				var li = x.closest('li');
+				if (li) { li.setAttribute('aria-selected', x === o ? 'true' : 'false'); }
+			});
+			/* The chip reads the chosen place, which is what makes the filter
+			 * visible — the same rule the Month chip follows. The FIRST
+			 * option keeps its "Our Canal · " prefix, so its own text is
+			 * copied rather than the bare name rebuilt here. */
+			if (label) { label.textContent = o.textContent.trim(); }
+            open(false);
+			replay();
+			btn.focus();
+		}
+
+		btn.addEventListener('click', function (ev) {
+			ev.stopPropagation();
+			open(list.hidden);
+		});
+		opts.forEach(function (o) {
+			o.addEventListener('click', function () { choose(o); });
+		});
+		list.addEventListener('keydown', function (ev) {
+			var i = opts.indexOf(document.activeElement);
+			if ('Escape' === ev.key) {
+				/* Inside a sheet this would have to CLAIM the key (1.33.0);
+				 * the Now tab is not in one, so stopping it here is right. */
+				ev.stopPropagation();
+				open(false);
+				btn.focus();
+			} else if ('ArrowDown' === ev.key || 'ArrowUp' === ev.key) {
+				ev.preventDefault();
+				var n = opts.length;
+				opts[(i < 0 ? 0 : (i + ('ArrowDown' === ev.key ? 1 : n - 1)) % n)].focus();
+			} else if ('Home' === ev.key || 'End' === ev.key) {
+				ev.preventDefault();
+				opts['Home' === ev.key ? 0 : opts.length - 1].focus();
+			}
+		});
+		document.addEventListener('click', function (ev) {
+			if (list.hidden || pick.contains(ev.target)) { return; }
+			open(false);
+		});
 	}
 
 	/* Tell anything listening what the conditions call returned. Detail is
@@ -367,7 +584,22 @@
 				// order to stay silent.
 				announce(facts);
 				if (!facts.length) { return; }
-				roots.forEach(function (root) { fill(root, facts); foldSources(root); });
+				roots.forEach(function (root) {
+					/*
+					 * THE PICKER IS WIRED BEFORE THE FIRST FILL, and it is
+					 * handed a replay function rather than the facts: a later
+					 * /conditions refresh replaces them, and a picker holding
+					 * a closed-over copy would go on re-rendering the readings
+					 * it was built with. One source of facts, read at the
+					 * moment a place is chosen.
+					 */
+					initPlacePicker(root, function () {
+						fill(root, facts);
+						foldSources(root);
+					});
+					fill(root, facts);
+					foldSources(root);
+				});
 			})
 			.catch(function () {
 				announce([]);   // guests see the almanac; never an error

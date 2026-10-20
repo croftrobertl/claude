@@ -376,6 +376,9 @@ final class Water_Live {
 				'date_precision' => 'day',
 				'note'        => '',
 				'group'       => 'chain',
+				/* 1.44.0: which place this reading is about, so the Now tab's
+				 * place picker can match on an id rather than on a name. */
+				'place'       => $w['id'],
 				'_ratio'      => $ratio,
 			];
 		}
@@ -1862,6 +1865,22 @@ final class Water_Live {
 		return [
 			[
 				'label'       => __( 'Recent rain', 'dcc-wildlife' ),
+				/*
+				 * 1.44.0: the machine name the Now tab's place picker reads.
+				 *
+				 * Rob's ruling of 2026-10-20 is that rain, wind and the
+				 * forecast cover the WHOLE CHAIN and are shown once beneath
+				 * the place cards rather than repeated per lake. The client
+				 * has to tell those three apart from the chosen place's own
+				 * readings, and it must not do it by matching a TRANSLATED
+				 * label — the reason `key` exists at all (1.34.0).
+				 *
+				 * `key` is presentation metadata and never a gate: a Fact
+				 * without one is as valid as a Fact with one, and a key can
+				 * neither admit an unsourced fact nor change how one renders.
+				 * The gate — tier, source name, parseable date — is untouched.
+				 */
+				'key'         => 'rain',
 				'value'       => sprintf(
 					/* translators: %s: rainfall total in inches. */
 					__( '%s in. over the two most recent reporting days', 'dcc-wildlife' ),
@@ -2061,6 +2080,10 @@ final class Water_Live {
 					/* translators: %s: NWS forecast period name, e.g. "This Afternoon". */
 					? sprintf( __( 'Forecast — %s', 'dcc-wildlife' ), $name )
 					: __( 'Forecast', 'dcc-wildlife' ),
+				/* 1.44.0: see the note on 'rain' above. One NWS forecast for
+				 * the property's grid square covers the whole chain — the
+				 * same fact 1.35.0 refused to draw per-lake on the map. */
+				'key'         => 'forecast',
 				'value'       => is_numeric( $temp ) && '' !== $tunit
 					? sprintf( '%s, %s °%s', $short, (string) $temp, $tunit )
 					: $short,

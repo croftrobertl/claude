@@ -168,6 +168,24 @@ export async function buildPage(browser, opts = {}) {
      * DPR-3 screen has to be measured on one.
      */
     dpr = 2,
+    /*
+     * A REAL URL, WITH A REAL HASH OR QUERY (1.44.0).
+     *
+     * Every page here is built with `setContent`, which lands on
+     * about:blank — where there is no hash to read and `history.replaceState`
+     * is not reliably allowed. So a deep link could not be tested at all,
+     * and #canal-month= has been a documented feature since 1.23.0 with no
+     * suite behind it. 1.44.0 makes it decide which VIEW opens, which is far
+     * too much to leave untested.
+     *
+     * When `url` is given the page is SERVED over a routed https URL and
+     * navigated to, so location.hash and location.search are the real
+     * thing and the scripts run in the real DOMContentLoaded order. Opt-in:
+     * without it the setContent path is byte-for-byte what it always was,
+     * because changing how thirty suites load their page to serve one is
+     * the kind of trade this harness does not make.
+     */
+    url = '',
   } = opts;
 
   const page = await browser.newPage({
@@ -244,14 +262,32 @@ export async function buildPage(browser, opts = {}) {
         .join('\n')}</script>`
     : '';
 
-  await page.setContent(
+  const html =
     `<!doctype html><html><head><meta charset="utf-8">` +
       `<meta name="viewport" content="width=device-width, initial-scale=1">` +
       `${hostileCss}${sitekitCss}${styles}${head}</head><body>` +
       (sitekit ? `<div class="site"><div class="entry-content">${body}</div></div>` : body) +
-      `${globalScript}</body></html>`,
-    { waitUntil: 'load' }
-  );
+      `${globalScript}</body></html>`;
+
+  if (url) {
+    /*
+     * MATCHED BY PREDICATE, NOT BY GLOB. A glob is compared against the
+     * WHOLE url, so a pattern built from the path alone missed every
+     * variant carrying a query — `?canal-month=april` went unrouted and the
+     * navigation failed on DNS. Comparing the path is the question actually
+     * being asked: serve this document whatever hash or query is on it.
+     */
+    const bare = url.split('#')[0].split('?')[0];
+    await page.route(
+      (u) => u.href.split('#')[0].split('?')[0] === bare,
+      async (route) => {
+        await route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
+      }
+    );
+    await page.goto(url, { waitUntil: 'load' });
+  } else {
+    await page.setContent(html, { waitUntil: 'load' });
+  }
 
   // Scripts go in after the globals so an IIFE reading window.DCC_WL_* sees them.
   for (const f of js) {
