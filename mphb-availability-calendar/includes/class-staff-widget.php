@@ -151,7 +151,6 @@ final class Staff_Widget
                 'secCustomer'  => __('Customer Information', 'mphb-availability-calendar'),
                 'secNotes'     => __('Notes', 'mphb-availability-calendar'),
                 'viewPhoto'    => __('View Photo ID', 'mphb-availability-calendar'),
-                'photoNote'    => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
                 // ---- 0.44.0 / 0.44.1 ----
                 'srcDirect'    => __('Direct', 'mphb-availability-calendar'),

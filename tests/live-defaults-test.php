@@ -269,12 +269,13 @@ foreach ($cases as $case => $w) {
         $a = staff_config($expect)['strings'] ?? [];
         $b = staff_config($nowHtml)['strings'] ?? [];
         $gone = ['stTipOnce', 'stTipNightOnce', 'stBySourceOnce', 'stWeekdaysSame', 'stTipDock', 'stBookedDock', 'stTurnoversOnce', 'stLeadAfter', 'stTipVsPrev', 'stVsPrevSr',
-            'updated'];                                       // 0.47.1: "Updated hh:mm" removed (Rob)
+            'updated',                                        // 0.47.1: "Updated hh:mm" removed (Rob)
+            'photoNote'];                                     // 0.47.5: the line under View Photo ID removed (Rob)
         $new = ['lyTag', 'lyName', 'lyDates', 'lyHead', 'stVsDatesSr', 'stColCottage', 'stColNights', 'stColOcc', 'stColVs', 'stTipVsOcc'];
         $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat'];
         $same = static function (array $x, array $y): bool { sort($x); sort($y); return $x === $y; };
         $changed = array_keys(array_filter($b, static fn($v, $k) => array_key_exists($k, $a) && $a[$k] !== $v, ARRAY_FILTER_USE_BOTH));
-        check("$label strings: 0.47.0 removes the eight counting-rule lines and the previous-timeframe pair, adds last year's and the table's, renames the seven sections — and (0.47.1) drops the Updated {time} line — nothing else",
+        check("$label strings: 0.47.0 removes the eight counting-rule lines and the previous-timeframe pair, adds last year's and the table's, renames the seven sections — and drops the Updated {time} line (0.47.1) and the Photo ID note (0.47.5) — nothing else",
             $same(array_diff(array_keys($a), array_keys($b)), $gone) && $same(array_diff(array_keys($b), array_keys($a)), $new) && $same($changed, $renamed),
             ['gone' => array_values(array_diff(array_keys($a), array_keys($b))), 'new' => array_values(array_diff(array_keys($b), array_keys($a))), 'changed' => $changed]);
         $cut = static fn($h) => preg_replace(['/data-staff-config="[^"]*"/', '/\s*<div class="mphbac-staff-under">.*?(?=<details class="mphbac-staff-stats">)/s'], ['', ''], $h);

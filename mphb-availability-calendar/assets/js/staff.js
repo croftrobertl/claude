@@ -1174,10 +1174,8 @@
             a.rel = 'noopener noreferrer nofollow';
             a.textContent = S.viewPhoto || 'View Photo ID';
             dd.appendChild(a);
-            var note = document.createElement('span');
-            note.className = 'mphbac-staff-photo-note';
-            note.textContent = S.photoNote || '';
-            dd.appendChild(note);
+            // No line under the link (0.47.5, Rob): the "Opens the guest's
+            // uploaded ID. Do not share or download." note is gone.
             dd.className = 'mphbac-staff-photo';
             dl.appendChild(dt); dl.appendChild(dd);
         }

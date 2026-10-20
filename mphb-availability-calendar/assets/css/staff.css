@@ -1220,12 +1220,6 @@ span.mphbac-staff-ico::before {
     text-decoration: none;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo-note {
-    display: block;
-    margin-top: 6px;
-    color: #5b6470;
-    font-size: 0.85em;
-}
 
 /* Lock page scroll while the dialog is open so touch scrolling lands in the
    dialog body rather than chaining into the page behind it. */

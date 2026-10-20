@@ -3779,3 +3779,20 @@ routes the page's admin-ajax.php to it); rules-0474-test.php,
 browser/rules-0474-test.js, browser/pixels-0474-test.js (0.47.3 from git vs
 this, live rules, 64 pairs), browser/shots-0474.js. Chromium with touch
 emulation: Playwright WebKit cannot be installed here.
+
+## 0.47.5 — no line under "View Photo ID" (Rob, 2026-10-20)
+
+The staff sheet's Photo ID row no longer carries "Opens the guest's uploaded
+ID. Do not share or download.": the `photoNote` string is gone from
+Staff_Widget's strings, photoRow() in staff.js no longer builds the
+.mphbac-staff-photo-note span, and its staff.css rule (display:block,
+margin-top 6px) is removed, so nothing is left under the link — below it only
+the pill's 2px margin, the dd's own 6px padding and its 1px rule. The link is
+unchanged: the gated proxy (action mphbac_staff_photo + nonce + booking +
+field), target _blank, rel noopener noreferrer nofollow, "View Photo ID", the
+44px pill. The WD had blanked photoNote on live and staging by hand
+(backups in ~/mu-backups); this zip makes it real. Test:
+browser/staff-photo-0475-test.js (fails on 0.47.4: the extra SPAN, the text,
+the ~24px gap, the string, the CSS rule); live-defaults' staff-strings diff
+lists photoNote as gone. Two mutation needles that ended at the old rule's
+selector now end at the next comment.
