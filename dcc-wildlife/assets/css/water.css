@@ -1153,6 +1153,19 @@
 .dccwl-map-canvas.dccwl-popup-open + .dccwl-map-bar,
 .dccwl-sheet-body-map.dccwl-popup-open .dccwl-map-bar,
 /*
+ * AND THE SHELL IS THE INLINE HOST NOW, AS WELL AS THE SHEET BODY (1.44.0).
+ *
+ * water-map.js marks `shell` — whatever it is handed — and from Rob's item 2
+ * that is `.dccwl-map-inline` on /explore/ and still
+ * `.dccwl-sheet-body-map` for a map opened in a sheet. Both are listed,
+ * because this is the FIFTH time in this repository a rule has been written
+ * for the parent an element used to have; the correct answer is to name
+ * every parent the element can actually have, not the one it had last.
+ * ui-live.mjs caught it in the run the inline map was written, which is why
+ * it probes with elementFromPoint rather than reading z-index.
+ */
+.dccwl-map-inline.dccwl-popup-open .dccwl-map-bar,
+/*
  * THE WIND BADGE IS A CHILD OF THE SHEET BODY, NOT OF THE CANVAS (1.40.0).
  *
  * It was listed here under `.dccwl-map-canvas.dccwl-popup-open` from 1.38.0,
@@ -1169,7 +1182,8 @@
  * doing what it always did. When a rule covers chrome, check which element
  * each piece is actually appended to.
  */
-.dccwl-sheet-body-map.dccwl-popup-open .dccwl-wind-badge {
+.dccwl-sheet-body-map.dccwl-popup-open .dccwl-wind-badge,
+.dccwl-map-inline.dccwl-popup-open .dccwl-wind-badge {
 	z-index: 1;
 }
 /* The bar is a SIBLING of the canvas, so the canvas's own class cannot reach
@@ -1387,4 +1401,114 @@
 .dccwl-card.dccwl-water-fact-none .dccwl-card-value {
 	color: var(--dccwl-text-muted);
 	font-weight: var(--dccwl-fw-body);
+}
+
+
+/* ======================================================================
+ * ITEM 2 (1.44.0) — THE INLINE MAP.
+ *
+ * ITS HEIGHT IS THE ONE DESIGN CHOICE IN THIS ITEM AND IT IS PUT TO ROB.
+ * The standing rule is that a size this document does not settle is not a
+ * session's to pick, so the value lives in ONE custom property and the three
+ * rendered options differ only in that property. What ships until he answers
+ * is the option that is not a new number at all: `min(60vh, 520px)`, where
+ * 60vh is the cap the species photo has carried since 1.36.0 for exactly the
+ * same reason — a tall thing must not push the text off a phone — and 520px
+ * is where 60vh stops growing on a desktop, so a 1680px window does not get
+ * a map two thirds of its height.
+ *
+ * `dvh` IS NOT USED HERE, DELIBERATELY, AND THE SHEET'S CANVAS DOES USE IT
+ * (`min(240px, 40dvh)`, 1.31.0). In a sheet the canvas is racing the mobile
+ * browser's collapsing toolbar and `dvh` is what keeps it inside the visible
+ * area. Inline it is in ordinary page flow, where `dvh` makes the map resize
+ * as the toolbar hides and shows — a map that changes height while a guest
+ * scrolls past it. `vh` is stable, which is what this one wants.
+ * ====================================================================== */
+
+.dccwl-map-inline {
+	--dccwl-map-h: min(60vh, 520px);
+	margin: var(--dccwl-gap-lg) auto 0;
+	/*
+	 * THE HOST RESERVES ITS OWN HEIGHT BEFORE THE MAP ARRIVES, for two
+	 * reasons and the second is the one that cost a cycle.
+	 *
+	 * The obvious one: an empty box that grows to 520px when Leaflet lands
+	 * shoves everything below it down the page, which is the layout shift
+	 * the lazy loading is otherwise an improvement on.
+	 *
+	 * The one that actually broke it: water.js will not load the map unless
+	 * the host is LAID OUT, and a `width: 100%` div with no content has a
+	 * height of zero. With no floor the visibility check answered "not on
+	 * screen" for an element sitting in the middle of the viewport, and the
+	 * map never loaded at all. A height here is what makes the element real
+	 * enough to be seen.
+	 */
+	position: relative;
+	width: 100%;
+}
+
+/*
+ * THE FLOOR IS ON THE EMPTY HOST, NOT ON THE HOST — and that distinction is
+ * the whole of a defect caught by the geometry suite in the run this was
+ * written.
+ *
+ * The first version put `min-height` and `overflow: hidden` on the host
+ * itself, which reserved the space correctly and then CLIPPED the control
+ * bar and the legend: both are siblings of the canvas inside this element,
+ * and the canvas alone already fills the floor. In the sliding sheet that
+ * could not happen because the sheet body scrolled (1.31.0); inline there is
+ * nothing to scroll, so clipped means gone.
+ *
+ * So the host grows to its content — canvas plus bar plus legend — and only
+ * an EMPTY host holds the space open. `overflow: hidden` lives on the canvas,
+ * which is the element with the corners to round.
+ */
+.dccwl-map-inline:empty { min-height: var(--dccwl-map-h); }
+
+/*
+ * THE CANVAS FILLS THE HOST, and the floor is the sheet's own 240px — the
+ * number 1.31.0 settled as the least a map can be and still be a map. The
+ * doubled class is the Leaflet override this file has needed since then:
+ * `.leaflet-touch .leaflet-bar a` is (0,2,1) and leaflet.css is injected
+ * into <head> AFTER water.css, so an equal-specificity rule loses on source
+ * order.
+ */
+.dccwl-map-inline .dccwl-map-canvas.dccwl-map-canvas {
+	border-radius: var(--dccwl-radius);
+	height: var(--dccwl-map-h);
+	min-height: 240px;
+	overflow: hidden;
+	width: 100%;
+}
+
+/* Waiting, failed, or no JavaScript: a line of text where the map will be,
+ * centred like the rest of the section (item 6). Never an empty box — at
+ * 240px tall that reads as broken rather than as pending. */
+.dccwl-map-inline > .dccwl-map-intro {
+	margin: 0;
+	padding: var(--dccwl-gap-lg) var(--dccwl-pad);
+	text-align: center;
+}
+
+/*
+ * THE LAYER CHIPS, below the map. They take the place picker's chip rules
+ * above — same component, same 44px floor, same coral-with-a-real-pointer
+ * hover — and the only difference is the SELECTED look: these are toggles,
+ * several of which are on at once, so an unpressed one must read as "off"
+ * rather than as "not chosen". Unpressed is the quiet outline; pressed is the
+ * solid button every other selected control in the plugin is.
+ */
+.dccwl-map-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--dccwl-gap);
+	justify-content: center;
+	margin: var(--dccwl-gap) auto 0;
+}
+.dccwl-map-chips[hidden] { display: none; }
+
+.dccwl-water .dccwl-chip.dccwl-map-chip.dccwl-map-chip[aria-pressed="false"] {
+	background: #ffffff;
+	border-color: var(--dccwl-line-strong);
+	color: var(--dccwl-text);
 }

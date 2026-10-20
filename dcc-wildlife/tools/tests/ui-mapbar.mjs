@@ -21,6 +21,8 @@
  */
 
 import {
+  checkAtLeast,
+  openInlineMap,
   launch, buildPage, rendered, asset,
   check, checkSame, section, note, done, skipSuite,
 } from './lib.mjs';
@@ -61,12 +63,12 @@ async function openMap(width, height) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(150);
-  /* 1.34.0: the map is its own tab and the panel opens on it, so the open
-   * button is reachable without pressing anything first. */
-  const btn = await page.$('[data-dccwl-map-open]');
-  if (!btn) { return { page, opened: false }; }
-  await btn.click();
-  await page.waitForTimeout(900);
+  /* 1.34.0: the map is its own tab and the panel opens on it. 1.44.0: there
+   * is no button at all — the map loads when its host comes into view, which
+   * `openInlineMap` drives the way a guest would. */
+  const host = await page.$('[data-dccwl-map-host]');
+  if (!host) { return { page, opened: false }; }
+  await openInlineMap(page);
 
   // Raleway stand-in, then force a re-measure with the real widths.
   await page.evaluate((mul) => {
@@ -254,19 +256,35 @@ section('both menus work by keyboard, and say what they are to a reader');
       return {
         expanded: btn.getAttribute('aria-expanded'),
         focused: document.activeElement === btn,
-        sheetStillOpen: !!document.querySelector('.dccwl-map-bar'),
+        mapStillThere: !!document.querySelector('.dccwl-map-bar'),
       };
     });
     checkSame('false', escaped.expanded, 'Escape closes the menu');
     checkSame(true, escaped.focused, 'and focus lands back on the button that opened it');
-    checkSame(true, escaped.sheetStillOpen,
-      'and it does NOT tear down the whole map sheet behind it');
+    checkSame(true, escaped.mapStillThere,
+      'and it does NOT tear down the map behind it');
 
-    // A second Escape, with nothing open to claim it, closes the sheet.
+    /*
+     * A SECOND ESCAPE NOW DOES NOTHING, AND THAT IS THE POINT (1.44.0).
+     *
+     * This used to assert that a second Escape closed the map SHEET — the
+     * other half of the 1.33.0 contract, where the sheet closed only if
+     * nothing inside it claimed the key. The map is inline since Rob's item
+     * 2, so there is no sheet behind the menu and nothing for a second
+     * Escape to close.
+     *
+     * Asserted rather than deleted, because the failure mode is real: if
+     * some future layer starts listening at the document for Escape, the
+     * symptom would be a map that vanishes when a guest presses it twice.
+     * The contract is simpler now, and this is what keeps it simple.
+     *
+     * sheet.js's own contract is untouched — the species sheet still closes
+     * on Escape, and ui-chrome.mjs still asserts that.
+     */
     await page.keyboard.press('Escape');
     await page.waitForTimeout(250);
-    checkSame(false, await page.evaluate(() => !!document.querySelector('.dccwl-map-bar')),
-      'a second Escape, with no menu open, closes the sheet as it always did');
+    checkSame(true, await page.evaluate(() => !!document.querySelector('.dccwl-map-bar')),
+      'a second Escape leaves the inline map alone — there is no sheet to close');
 
     await page.close();
   } else {
@@ -378,6 +396,151 @@ section('one piece of state, whichever shape is showing');
   } else {
     check(false, 'the map opens for the state test');
   }
+}
+
+
+
+/* ------------------------------------------------------------------------ */
+/*
+ * THE LAYER CHIPS UNDER THE INLINE MAP (1.44.0 — Rob's item 2).
+ *
+ * "Below the map, chips filter its layers (e.g. Ramps · Lakes · Stations; use
+ * the layers the map really has)."
+ *
+ * TWO CONTROLS, ONE PIECE OF STATE — the 1.33.0 pattern the Director
+ * approved for "Colour by", applied again because the Layers menu has shown
+ * the same overlays as checkboxes since 1.7.1. `setOverlay()` is the only
+ * path that adds or removes a layer and it updates both, so the chip and the
+ * checkbox can never show different answers. That is what this section
+ * exists to prove: not that each control works, but that they agree.
+ *
+ * AND THE CHIPS ARE THE LAYERS THE MAP REALLY HAS, which is why they are
+ * built beside the layer groups rather than rendered by PHP. A chip that
+ * toggles a layer the map does not draw would look perfectly fine.
+ */
+section('the layer chips, and the Layers menu that must agree with them');
+{
+  const { page, opened } = await openMap(390, 900);
+  if (!opened) {
+    check(false, 'the map opened for the chip check');
+  } else {
+    const chips = await page.evaluate(() => {
+      const host = document.querySelector('[data-dccwl-map-chips]');
+      if (!host) { return { error: 'no chip host' }; }
+      const list = Array.from(host.querySelectorAll('[data-dccwl-layer]'));
+      return {
+        hidden: host.hidden,
+        keys: list.map((c) => c.getAttribute('data-dccwl-layer')),
+        labels: list.map((c) => c.textContent.trim()),
+        pressed: list.map((c) => c.getAttribute('aria-pressed')),
+        heights: list.map((c) => Math.round(c.getBoundingClientRect().height)),
+        /* Below the map, not above it: the brief says where. */
+        belowCanvas: (() => {
+          const canvas = document.querySelector('.dccwl-map-canvas');
+          return !!canvas &&
+            host.getBoundingClientRect().top >= canvas.getBoundingClientRect().bottom - 2;
+        })(),
+      };
+    });
+    check(!chips.error, 'the chips are built under the map', chips.error || '');
+    checkSame(false, chips.hidden, 'and shown');
+    note(`chips: ${chips.labels.join(' | ')} (${chips.keys.join(',')})`);
+    checkAtLeast(3, chips.keys.length, 'one per overlay the map draws');
+    check(chips.belowCanvas, 'they sit BELOW the canvas, as the brief asks');
+    checkAtLeast(44, Math.min(...chips.heights), "every chip is one of Rob's 44px targets");
+    /* ITEM 7: Title Case on every chip. */
+    check(chips.labels.every((l) => /^[A-Z]/.test(l) && !/\b[a-z]+\s[a-z]/.test(l)),
+      'each label is Title Case (item 7)', chips.labels.join(' | '));
+    /* A TOGGLE REPORTS `aria-pressed`, not `aria-selected`: several of these
+     * are on at once, which is the distinction. */
+    check(chips.pressed.every((p) => 'true' === p || 'false' === p),
+      'each is a toggle, reporting aria-pressed', chips.pressed.join(','));
+
+    /*
+     * TURN OFF A LAYER THE FIXTURE ACTUALLY DRAWS.
+     *
+     * The first version toggled `chips.keys[0]` — Boat Ramps — and this
+     * fixture's payload has no ramps in it, so the marker count went 3 → 3
+     * and the assertion failed on a control that was working perfectly. A
+     * test that happens to pick an empty layer measures nothing: the chip
+     * and the checkbox both changed, and the map had nothing to lose.
+     *
+     * So the layer under test is chosen by what is ON THE MAP, with the
+     * waters as the preference because every payload this module builds has
+     * them. The count is what proves the layer left; the chip and the
+     * checkbox prove the two controls agree.
+     */
+    const key = chips.keys.includes('waters') ? 'waters' : chips.keys[0];
+    const keyIndex = chips.keys.indexOf(key);
+    /* Counted off the CANVAS, not off a Leaflet instance: this suite does
+     * not wrap `L.map`, and reaching for a handle another suite happens to
+     * publish is how a test starts depending on its neighbours. */
+    const before = await page.evaluate((k) => ({
+      marks: document.querySelectorAll('.dccwl-map-canvas .leaflet-interactive').length,
+      k,
+    }), key);
+    await page.click(`[data-dccwl-layer="${key}"]`);
+    await page.waitForTimeout(300);
+    const off = await page.evaluate((k) => {
+      const chip = document.querySelector('[data-dccwl-layer="' + k + '"]');
+      const boxes = Array.from(document.querySelectorAll('.dccwl-drop-panel .dccwl-drop-row input[type="checkbox"]'));
+      return {
+        pressed: chip.getAttribute('aria-pressed'),
+        marks: document.querySelectorAll('.dccwl-map-canvas .leaflet-interactive').length,
+        anyUnchecked: boxes.filter((b) => !b.checked).length,
+        boxes: boxes.length,
+      };
+    }, key);
+    note(`${key} off: pressed=${off.pressed}, markers ${before.marks} -> ${off.marks}, ` +
+      `${off.anyUnchecked} of ${off.boxes} checkboxes unchecked`);
+    checkSame('false', off.pressed, `tapping the ${key} chip turns it off`);
+    check(off.marks < before.marks, `and the ${key} layer really leaves the map`,
+      `${before.marks} -> ${off.marks}`);
+    /* ONE STATE: the menu's checkbox must have followed. One was already
+     * unchecked at the start (Monitoring Stations is off by default), so
+     * this asks for TWO. */
+    checkAtLeast(2, off.anyUnchecked,
+      "and the Layers menu's checkbox followed it — one state, two shapes");
+
+    /* And back on. */
+    await page.click(`[data-dccwl-layer="${key}"]`);
+    await page.waitForTimeout(300);
+    const on = await page.evaluate((k) => {
+      const chip = document.querySelector('[data-dccwl-layer="' + k + '"]');
+      return {
+        pressed: chip.getAttribute('aria-pressed'),
+        marks: document.querySelectorAll('.dccwl-map-canvas .leaflet-interactive').length,
+      };
+    }, key);
+    checkSame('true', on.pressed, 'tapping it again turns it back on');
+    checkSame(before.marks, on.marks, 'and the layer comes back whole');
+
+    /* THE OTHER DIRECTION, which is the half a one-way test would miss:
+     * change it from the MENU and the chip must follow. */
+    await page.evaluate(() => {
+      const t = document.querySelector('.dccwl-drop-btn[aria-haspopup="true"]');
+      if (t) { t.click(); }
+    });
+    await page.waitForTimeout(150);
+    const fromMenu = await page.evaluate((arg) => {
+      const boxes = Array.from(document.querySelectorAll('.dccwl-drop-panel .dccwl-drop-row input[type="checkbox"]'));
+      /* The rows are in the OVERLAYS order, which is the chips' order, so
+       * the chip's index is the checkbox's index. Matched by position rather
+       * than by label, because a label is translated. */
+      const box = boxes[arg.i];
+      if (!box) { return { error: 'no checkbox row at ' + arg.i }; }
+      box.click();
+      const chip = document.querySelector('[data-dccwl-layer="' + arg.k + '"]');
+      return { checked: box.checked, pressed: chip.getAttribute('aria-pressed') };
+    }, { k: key, i: keyIndex });
+    note(`from the menu: checked=${fromMenu.checked}, chip pressed=${fromMenu.pressed}`);
+    check(!fromMenu.error, 'the Layers menu has its checkbox rows', fromMenu.error || '');
+    if (!fromMenu.error) {
+      checkSame(String(fromMenu.checked), fromMenu.pressed,
+        'unchecking it in the menu turns the chip off too — the same one state');
+    }
+  }
+  await page.close();
 }
 
 await browser.close();

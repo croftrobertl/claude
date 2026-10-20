@@ -713,7 +713,8 @@
 		}
 		recolour('clarity');
 
-		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base, cfg && cfg.colour));
+		var bar = buildBar(map, groups, recolour, shell, i18n, base, cfg && cfg.colour);
+		shell.appendChild(bar);
 		shell.appendChild(legend.node);
 
 		// The wind badge, when the conditions call returned one (1.35.0).
@@ -722,6 +723,24 @@
 
 		// Everything is in the DOM; now wait for it to have a size and fit.
 		fitWhenLaid();
+
+		/*
+		 * THE HANDLE (1.44.0). The map used to be built once inside a sheet
+		 * that was thrown away on close, so nothing outside it ever needed to
+		 * speak to it: a stat tile passed `cfg.colour` and the sheet opened
+		 * already coloured. An INLINE map is long-lived, and the tiles have
+		 * to re-colour the map that is already on screen.
+		 *
+		 * `map` is published too, because the suites need Leaflet's own
+		 * events (moveend, popupopen) to wait on rather than a guessed delay
+		 * — the 1.40.0 lesson about timing a pan.
+		 */
+		return {
+			map: map,
+			setColour: bar.dccwlSetColour,
+			setOverlay: bar.dccwlSetOverlay,
+			fit: bar.dccwlFit
+		};
 	}
 
 	/* ---- base layers -------------------------------------------------
@@ -954,23 +973,83 @@
 			});
 			panel.appendChild(el('hr', 'dccwl-drop-sep'));
 		}
-		[
-			['ramps', i18n.lyrRamps || 'Boat ramps', true],
-			['waters', i18n.lyrWaters || 'Chain waters', true],
-			['stations', i18n.lyrStations || 'Monitoring stations', false],
-			['property', i18n.lyrProperty || 'The cottages', true]
-		].forEach(function (row) {
+		/*
+		 * THE OVERLAYS, AND SINCE 1.44.0 THEY HAVE TWO CONTROLS.
+		 *
+		 * The brief asks for chips under the inline map — "Ramps · Lakes ·
+		 * Stations; use the layers the map really has" — and the Layers menu
+		 * has shown the same four as checkboxes since 1.7.1. So this is the
+		 * 1.33.0 pattern again, the one the Director approved for "Colour
+		 * by": ONE piece of state, two shapes. `setOverlay()` is the only
+		 * path that adds or removes a layer, and it updates the checkbox and
+		 * the chip together, so the two can never show different answers.
+		 *
+		 * The list lives HERE, beside the groups themselves, and the chips
+		 * are built from it — a chip that toggles a layer the map does not
+		 * draw is the defect that avoids.
+		 */
+		var OVERLAYS = [
+			['ramps', i18n.lyrRamps || 'Boat Ramps', true],
+			['waters', i18n.lyrWaters || 'Chain Waters', true],
+			['stations', i18n.lyrStations || 'Monitoring Stations', false],
+			['property', i18n.lyrProperty || 'The Cottages', true]
+		];
+		var overlayBoxes = {};
+		var overlayChips = {};
+		var overlayOn = {};
+
+		function setOverlay(key, on) {
+			if (!groups[key]) { return; }
+			overlayOn[key] = !!on;
+			if (on) { groups[key].addTo(map); } else { map.removeLayer(groups[key]); }
+			if (overlayBoxes[key]) { overlayBoxes[key].checked = !!on; }
+			if (overlayChips[key]) {
+				overlayChips[key].setAttribute('aria-pressed', on ? 'true' : 'false');
+			}
+		}
+
+		OVERLAYS.forEach(function (row) {
 			var lab = el('label', 'dccwl-drop-row');
 			var cb = document.createElement('input');
 			cb.type = 'checkbox';
 			cb.checked = row[2];
-			cb.addEventListener('change', function () {
-				if (cb.checked) { groups[row[0]].addTo(map); } else { map.removeLayer(groups[row[0]]); }
-			});
+			overlayBoxes[row[0]] = cb;
+			overlayOn[row[0]] = row[2];
+			cb.addEventListener('change', function () { setOverlay(row[0], cb.checked); });
 			lab.appendChild(cb);
 			lab.appendChild(document.createTextNode(' ' + row[1]));
 			panel.appendChild(lab);
 		});
+
+		/*
+		 * THE CHIPS, into the host the renderer left for them.
+		 *
+		 * They are built only where that host exists, which is the INLINE
+		 * map: a map in a sliding sheet has no room beneath it for a second
+		 * control row, and its Layers menu is one tap away. So the sheet is
+		 * unaffected by this and keeps exactly the controls it had.
+		 */
+		var chipHost = document.querySelector('[data-dccwl-map-chips]');
+		if (chipHost && !chipHost.getAttribute('data-dccwl-chips-built')) {
+			chipHost.setAttribute('data-dccwl-chips-built', '1');
+			chipHost.textContent = '';
+			OVERLAYS.forEach(function (row) {
+				if (!groups[row[0]]) { return; }
+				var chip = el('button', 'dccwl-chip dccwl-map-chip', row[1]);
+				chip.type = 'button';
+				/* A TOGGLE, SO `aria-pressed` — not `aria-selected`, which
+				 * belongs to an option in a list. Several of these can be on
+				 * at once, which is the distinction. */
+				chip.setAttribute('aria-pressed', row[2] ? 'true' : 'false');
+				chip.setAttribute('data-dccwl-layer', row[0]);
+				chip.addEventListener('click', function () {
+					setOverlay(row[0], 'true' !== chip.getAttribute('aria-pressed'));
+				});
+				overlayChips[row[0]] = chip;
+				chipHost.appendChild(chip);
+			});
+			chipHost.hidden = !chipHost.firstChild;
+		}
 		drop.appendChild(toggle);
 		drop.appendChild(panel);
 		bar.appendChild(drop);
@@ -1125,6 +1204,11 @@
 		}
 
 		bar.dccwlFit = fit;   // the suites drive this directly
+		/* Published on the node so init() can hand them to the page's own
+		 * controls — the Map tab's stat tiles colour an inline map now
+		 * rather than opening a sheet already coloured. */
+		bar.dccwlSetColour = setColour;
+		bar.dccwlSetOverlay = setOverlay;
 		return bar;
 	}
 

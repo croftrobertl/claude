@@ -501,3 +501,57 @@ export async function styleOf(page, selector, props) {
 export async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
+
+
+/**
+ * WAIT FOR THE INLINE CHAIN MAP (1.44.0).
+ *
+ * Until this release every map suite began `await page.click(
+ * '[data-dccwl-map-open]')` and then waited for a sheet. Rob removed the
+ * button: the map is in the Map pane and loads when the host comes into
+ * view. So the suites need a different first line, and it must drive the
+ * REAL path rather than reaching past it — the 1.33.1 rule that a suite
+ * must exercise the path production takes.
+ *
+ * What this does, in order: select the Map pane if a tab bar is present
+ * (the pane is `hidden` otherwise, and a hidden host never intersects —
+ * the 1.43.0 trap), scroll the host into view so the observer fires, and
+ * then WAIT FOR THE CANVAS, bounded. It never clicks anything the plugin
+ * does not give a guest.
+ *
+ * Returns the canvas handle, or throws with what it found instead — a
+ * timeout that says "no canvas" and nothing else is the kind of failure
+ * that costs an hour.
+ */
+export async function openInlineMap(page, timeout = 15000) {
+  await page.evaluate(() => {
+    const b = document.querySelector('[data-dccwl-water-tab-btn="map"]');
+    if (b) { b.click(); }
+  });
+  await page.waitForTimeout(120);
+  await page.evaluate(() => {
+    const h = document.querySelector('[data-dccwl-map-host]');
+    if (h) { h.scrollIntoView({ block: 'center' }); }
+  });
+  try {
+    await page.waitForSelector('[data-dccwl-map-host] .dccwl-map-canvas', {
+      state: 'attached', timeout,
+    });
+  } catch (err) {
+    const why = await page.evaluate(() => {
+      const h = document.querySelector('[data-dccwl-map-host]');
+      return {
+        host: !!h,
+        text: h ? h.textContent.replace(/\s+/g, ' ').trim().slice(0, 120) : null,
+        paneHidden: h ? !!h.closest('[data-dccwl-water-tab][hidden]') : null,
+        leaflet: !!window.L,
+        api: !!window.DCCWL_Map,
+      };
+    });
+    throw new Error('inline map never built: ' + JSON.stringify(why));
+  }
+  /* Leaflet fits the view once the canvas has a size (1.31.0's fitWhenLaid),
+   * so give that a frame before anything measures the map. */
+  await page.waitForTimeout(400);
+  return page.$('[data-dccwl-map-host] .dccwl-map-canvas');
+}

@@ -23,6 +23,7 @@
  *    is a claim about the canvas.
  */
 import {
+  openInlineMap,
   launch, buildPage, rendered, asset,
   check, checkSame, checkAtLeast, section, note, done, skipSuite,
 } from './lib.mjs';
@@ -74,8 +75,12 @@ async function openMap(width, wind) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(350);
-  await page.click('[data-dccwl-map-open]');
-  await page.waitForTimeout(1100);
+  /* 1.44.0: the map is inline and lazy, so there is no button to press.
+   * The badge is still pinned to the CANVAS's corner, which is the claim
+   * this suite exists for — see the 1.40.0 note about the wind badge rule
+   * that was written for the wrong parent and matched nothing. */
+  await openInlineMap(page);
+  await page.waitForTimeout(400);
   return page;
 }
 

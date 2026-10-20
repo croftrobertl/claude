@@ -641,93 +641,106 @@
 		});
 	}
 
+	/*
+	 * THE MAP IS INLINE AND LAZY (1.44.0 — Rob's item 2).
+	 *
+	 * WHAT CHANGED, AND WHAT DID NOT. From 1.7.0 the map was a BUTTON that
+	 * opened a sliding sheet; Rob's instruction is that the section "opens on
+	 * Water › Map, with the map already showing (no 'Open the chain map'
+	 * button), loaded when the section scrolls into view". So the trigger
+	 * moved from a tap to a viewport intersection and the host moved from a
+	 * sheet to the pane itself.
+	 *
+	 * THE 1.31.0 RULE IS RE-POINTED, NOT WEAKENED: "the map loads NOTHING
+	 * external until opened — no Leaflet, no tiles, no data". Leaflet, its
+	 * stylesheet, water-map.js, the tiles and the payload are still all
+	 * fetched on demand, and still in that order with the payload last. A
+	 * guest who never scrolls to the water section pays nothing for it.
+	 *
+	 * AND IT IS VISIBILITY-GATED AS WELL AS INTERSECTION-GATED, which is the
+	 * trap worth stating. A `display: none` element never intersects
+	 * anything — exactly what left 409 guide tiles unbuilt in 1.43.0 — and
+	 * the Map pane is hidden whenever Now or Fishing is selected. An
+	 * observer alone would therefore never fire for a guest who looked at
+	 * Now first. So: observe the host, AND re-check whenever a tab or a
+	 * panel becomes visible.
+	 */
 	function initMap() {
-		var wrap = document.querySelector('[data-dccwl-map-wrap]');
+		var host = document.querySelector('[data-dccwl-map-host]');
 		var cfg = CFG.map;
-		if (!wrap || !cfg) { return; }
+		if (!host || !cfg) { return; }
+		if (host.getAttribute('data-dccwl-map-init')) { return; }
+		host.setAttribute('data-dccwl-map-init', '1');
 
-		var btn = wrap.querySelector('[data-dccwl-map-open]');
-		if (!btn) { return; }
-		/* One listener per button, ever. initMap() queries the whole document,
-		 * so an Elementor re-render of ONE widget would otherwise re-bind the
-		 * map buttons of every other widget on the page — two listeners, two
-		 * sheets, two REST calls. (1.33.0) */
-		if (btn.getAttribute('data-dccwl-map-init')) { return; }
-		btn.setAttribute('data-dccwl-map-init', '1');
-
-		// A live-only section is emitted hidden and normally revealed when
-		// readings arrive — but the map is served independently of the
-		// conditions strip (cached ramps and readings can be available while
-		// the strip is empty), so a section that offers a map must not stay
-		// unreachable behind an empty strip.
-		var section = wrap.closest('[data-dccwl-water-root]');
+		/*
+		 * A live-only section is emitted hidden and normally revealed when
+		 * readings arrive — but the map is served independently of the
+		 * conditions strip (cached ramps and readings can be available while
+		 * the strip is empty), so a section that offers a map must not stay
+		 * unreachable behind an empty strip.
+		 */
+		var section = host.closest('[data-dccwl-water-root]');
 		if (section) { section.hidden = false; }
 
-		// Fetched once and kept: reopening the sheet must not re-hit the
-		// REST route, and through it the upstream APIs.
+		var handle = null;      // the live map, once built
+		var loading = false;    // one load, ever
 		var mapData = null;
-		var label = btn.textContent;
-		/* Which colouring the map should open on. A stat tile sets it before
-		 * it presses this button; the button on its own leaves it empty and
-		 * the map keeps its own default. One variable, read at open time, so
-		 * the map never holds a stale request. */
-		var wantColour = '';
 
-		function openSheet() {
-			window.DCCWL_Sheet.open({
-				title: (CFG.i18n && CFG.i18n.mapTitle) || label,
-				appClasses: (CFG.appClasses || 'dccwl-app'),
-				closeLabel: (CFG.i18n && CFG.i18n.mapClose) || 'Close',
-				closeAllLabel: (CFG.i18n && CFG.i18n.closeAll) || 'Close',
-				opener: btn,
-				tall: true,
-				build: function (body) {
-					// The map wants the whole sheet: no padding, no scroll of
-					// its own — Leaflet handles panning inside the canvas.
-					body.classList.add('dccwl-sheet-body-map');
-					var mapCfg = cfg;
-					if (wantColour || windParts) {
-						mapCfg = {};
-						Object.keys(cfg).forEach(function (k) { mapCfg[k] = cfg[k]; });
-						if (wantColour) { mapCfg.colour = wantColour; }
-						if (windParts) { mapCfg.wind = windParts; }
-					}
-					window.DCCWL_Map.init(body, mapData, mapCfg, (CFG.i18n || {}));
-				},
-				onClose: function () {
-					btn.textContent = label;
-				}
-			});
+		/*
+		 * Is the host actually on screen — laid out, not merely present?
+		 *
+		 * WIDTH, NOT HEIGHT. An element inside a `display: none` pane has no
+		 * offsetParent and a zero rect, which is the case this has to catch.
+		 * But the host's own height comes from a CSS floor, and asking for a
+		 * non-zero height as well made this answer "no" for a host sitting
+		 * in the middle of the viewport if that floor ever went missing —
+		 * a check that fails closed on a styling change, which is worse than
+		 * one that fails open. Width is enough to know the element is laid
+		 * out; the pane test above is what answers "is it displayed".
+		 */
+		function visible() {
+			if (!host.offsetParent && 'fixed' !== getComputedStyle(host).position) { return false; }
+			var r = host.getBoundingClientRect();
+			if (r.width < 1) { return false; }
+			var vh = window.innerHeight || document.documentElement.clientHeight;
+			/* 200px of lead, so the map is ready as it arrives rather than
+			 * starting to load once it is already being looked at. */
+			return r.top < vh + 200 && r.bottom > -200;
 		}
 
-		/* The stat tiles are the other way in. Each asks for the map coloured
-		 * by its own reading where the map has that colouring (Level,
-		 * Clarity); Wind has none, so its tile opens the map plain rather
-		 * than inventing a colouring the data cannot support. */
-		var statWrap = (section || document).querySelector('[data-dccwl-water-stats]');
-		if (statWrap && !statWrap.getAttribute('data-dccwl-stats-init')) {
-			statWrap.setAttribute('data-dccwl-stats-init', '1');
-			statWrap.addEventListener('click', function (ev) {
-				var t = ev.target.closest ? ev.target.closest('[data-dccwl-stat-colour]') : null;
-				if (!t) { return; }
-				wantColour = t.getAttribute('data-dccwl-stat-colour') || '';
-				btn.click();
-			});
+		function fail() {
+			loading = false;
+			host.textContent = '';
+			var p = el('p', 'dccwl-map-intro');
+			p.textContent = (CFG.i18n && CFG.i18n.mapFailed) || 'Map unavailable';
+			host.appendChild(p);
 		}
 
-		btn.addEventListener('click', function (ev) {
-			if (!window.DCCWL_Sheet) { return; }
-			// A press of the button ITSELF asks for no particular colouring;
-			// only a stat tile's synthetic press carries one.
-			if (ev && ev.isTrusted) { wantColour = ''; }
-			if (mapData) {
-				// Already loaded once — straight back to the sheet.
-				openSheet();
-				return;
+		function build() {
+			var mapCfg = cfg;
+			if (windParts) {
+				mapCfg = {};
+				Object.keys(cfg).forEach(function (k) { mapCfg[k] = cfg[k]; });
+				mapCfg.wind = windParts;
 			}
+			handle = window.DCCWL_Map.init(host, mapData, mapCfg, (CFG.i18n || {}));
+			/* Published for the stat tiles below and for the suites, which
+			 * need Leaflet's own events to wait on rather than a delay. */
+			host.dccwlMap = handle;
+		}
 
-			btn.disabled = true;
-			btn.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading…';
+		function ensure() {
+			if (handle || loading || !visible()) { return; }
+			loading = true;
+
+			/* A WORD WHILE IT ARRIVES, in the host rather than on a button.
+			 * The 1.33.0 rule that a BUSY control stays visible applies to
+			 * the thing a guest is waiting for: an empty box for two seconds
+			 * reads as broken, and there is no button left to re-label. */
+			host.textContent = '';
+			var wait = el('p', 'dccwl-map-intro');
+			wait.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading the map…';
+			host.appendChild(wait);
 
 			loadCss(cfg.leafletCss)
 				.then(function () {
@@ -744,15 +757,52 @@
 				.then(function (data) {
 					if (!data || !data.enabled) { throw new Error('map disabled'); }
 					mapData = data;
-					btn.disabled = false;
-					btn.textContent = label;
-					openSheet();
+					build();
 				})
-				.catch(function () {
-					btn.disabled = false;
-					btn.textContent = (CFG.i18n && CFG.i18n.mapFailed) || 'Map unavailable';
-				});
-		});
+				.catch(fail);
+		}
+
+		if (typeof IntersectionObserver === 'function') {
+			var io = new IntersectionObserver(function (entries) {
+				if (entries.some(function (e) { return e.isIntersecting; })) { ensure(); }
+			}, { rootMargin: '200px' });
+			io.observe(host);
+		} else {
+			/* No observer: load on the first scroll or tab change instead of
+			 * at page load. Older browsers get a later map, never a heavier
+			 * page — which is the right way round. */
+			window.addEventListener('scroll', ensure, { passive: true });
+		}
+
+		/* The visibility half. Both events are dispatched by this plugin: the
+		 * water tab bar fires one when a pane is selected, canal.js fires
+		 * `dccwl:panel-shown` when a view is. */
+		document.addEventListener('dccwl:water-pane-shown', ensure);
+		document.addEventListener('dccwl:panel-shown', ensure);
+		window.addEventListener('resize', ensure);
+		ensure();
+
+		/*
+		 * THE STAT TILES COLOUR THE MAP THAT IS ALREADY THERE (item 3, pick
+		 * B, 1.34.0 — unchanged in intent). Level and Clarity are the two
+		 * colourings the map has; Wind has none, so its tile scrolls to the
+		 * map rather than inventing a colouring the data cannot support —
+		 * which is the same refusal 1.35.0 made about drawing wind on water.
+		 */
+		var statWrap = (section || document).querySelector('[data-dccwl-water-stats]');
+		if (statWrap && !statWrap.getAttribute('data-dccwl-stats-init')) {
+			statWrap.setAttribute('data-dccwl-stats-init', '1');
+			statWrap.addEventListener('click', function (ev) {
+				var t = ev.target.closest ? ev.target.closest('[data-dccwl-stat-colour]') : null;
+				if (!t) { return; }
+				var want = t.getAttribute('data-dccwl-stat-colour') || '';
+				ensure();
+				if (want && handle && handle.setColour) { handle.setColour(want); }
+				try {
+					host.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				} catch (e) { host.scrollIntoView(); }
+			});
+		}
 	}
 
 	/* ------------------------------------------------------------------
@@ -957,6 +1007,22 @@
 						});
 					});
 				}
+				/*
+				 * SAY THAT A PANE IS NOW ON SCREEN (1.44.0).
+				 *
+				 * The inline map cannot be loaded by an IntersectionObserver
+				 * alone: a `display: none` pane never intersects anything,
+				 * which is the trap that left 409 guide tiles unbuilt in
+				 * 1.43.0. Dispatched rather than called, so this function
+				 * does not have to know what the map does with it and a pane
+				 * that does nothing with it costs nothing — the same shape
+				 * as canal.js's `dccwl:panel-shown` (1.33.0).
+				 */
+				try {
+					document.dispatchEvent(new CustomEvent('dccwl:water-pane-shown', {
+						detail: { pane: slug }
+					}));
+				} catch (err) { /* very old browsers: the observer still fires */ }
 			}
 
 			if (bar.getAttribute('data-dccwl-tabs-init')) { return; }

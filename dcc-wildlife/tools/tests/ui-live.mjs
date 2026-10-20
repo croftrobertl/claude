@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  openInlineMap,
   launch, widgetPage, buildPage, rendered, asset, openWildlife,
   check, checkSame, checkAtLeast, checkAtMost, section, note, done, skipSuite,
 } from './lib.mjs';
@@ -751,28 +752,37 @@ for (const [w, touch, cols] of [[390, true, 1], [767, true, 1], [768, false, 3],
   checkSame(13, tiles.detail.px, `${w}px: the qualifier reads at 13px`);
   checkSame('400', tiles.detail.w, `${w}px: at body weight`);
 
-  /* ITEM 2 — the intro line and the button centre on the tiles. */
+  /*
+   * ITEM 2 — the intro line centres, and the MAP HOST is where the button
+   * was. The button is gone (1.44.0), so what used to be "the button sits on
+   * the tiles' centre line" is now "the host does, and it reserves its space
+   * before the map arrives". The second half is the one that matters: a host
+   * with no height would let everything below it jump when Leaflet lands,
+   * and would also never be seen as on-screen by the loader.
+   */
   const centred = await page.evaluate(() => {
     const wrap = document.querySelector('.dccwl-water-stats');
     const intro = document.querySelector('.dccwl-map-intro');
-    const btn = document.querySelector('[data-dccwl-map-open]');
+    const host = document.querySelector('[data-dccwl-map-host]');
     const mid = (el) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
     return {
       introAlign: getComputedStyle(intro).textAlign,
       tilesMid: Math.round(mid(wrap)),
       introMid: Math.round(mid(intro)),
-      btnMid: Math.round(mid(btn)),
-      btnWidth: Math.round(btn.getBoundingClientRect().width),
+      hostMid: Math.round(mid(host)),
+      hostH: Math.round(host.getBoundingClientRect().height),
+      noButton: !document.querySelector('[data-dccwl-map-open]'),
       wrapWidth: Math.round(wrap.getBoundingClientRect().width),
     };
   });
   note(`${w}px centring ${JSON.stringify(centred)}`);
   checkSame('center', centred.introAlign, `${w}px: the intro line is centred`);
-  check(Math.abs(centred.btnMid - centred.tilesMid) <= 2,
-    `${w}px: and "Open the chain map" sits on the tiles' centre line`,
-    `${centred.btnMid} against ${centred.tilesMid}`);
-  check(centred.btnWidth < centred.wrapWidth,
-    `${w}px: the button is centred, not stretched`, `${centred.btnWidth} of ${centred.wrapWidth}`);
+  checkSame(true, centred.noButton, `${w}px: and there is no "Open the chain map" button`);
+  check(Math.abs(centred.hostMid - centred.tilesMid) <= 2,
+    `${w}px: the map host sits on the tiles' centre line`,
+    `${centred.hostMid} against ${centred.tilesMid}`);
+  checkAtLeast(240, centred.hostH,
+    `${w}px: and reserves its height before the map loads, so nothing jumps`);
 
   /* THE DIRECTOR'S BUG — one disclosure marker, not two. Asked on the
    * STANDALONE water widget, which loads app.css and water.css and NOT
@@ -903,9 +913,10 @@ async function openChainMap(width, height, touch, payload) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(200);
-  const btn = await page.$('[data-dccwl-map-open]');
-  if (touch) { await btn.tap(); } else { await btn.click(); }
-  await page.waitForTimeout(1100);
+  /* 1.44.0: inline and lazy, so there is no button. `openInlineMap` selects
+   * the pane, scrolls the host into view and waits for the canvas — the path
+   * a guest takes, rather than reaching past it. */
+  await openInlineMap(page);
   return page;
 }
 
@@ -956,7 +967,9 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
       /* The chrome we own is standing down while this is open — asked as the
        * class the stylesheet keys on, not as a number. */
       canvasFlag: canvas.classList.contains('dccwl-popup-open'),
-      bodyFlag: !!document.querySelector('.dccwl-sheet-body-map.dccwl-popup-open'),
+      bodyFlag: !!document.querySelector(
+        '.dccwl-sheet-body-map.dccwl-popup-open, .dccwl-map-inline.dccwl-popup-open'
+      ),
     };
   });
   note(`${label} ${JSON.stringify(probe)}`);
@@ -971,8 +984,17 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
   checkSame('auto', probe.overflowY, `${label}: the content scrolls inside the popup`);
   check(probe.maxH > 0 && probe.maxH <= probe.canvasH - 24,
     `${label}: and is capped to the map minus its margins`, `${probe.maxH} of ${probe.canvasH}`);
+  /*
+   * THE SHELL, WHICHEVER SHELL IT IS (1.44.0). water-map.js marks the
+   * element it was handed — `.dccwl-map-inline` for the inline map Rob
+   * asked for, `.dccwl-sheet-body-map` for one opened in a sheet. Asking
+   * only about the sheet body was how this check went from passing to
+   * failing on a map that was working correctly, which is the same mistake
+   * in a suite that the CSS itself made in 1.40.0.
+   */
   check(probe.canvasFlag && probe.bodyFlag,
-    `${label}: our own chrome stands down while the popup is open`);
+    `${label}: our own chrome stands down while the popup is open`,
+    `canvas ${probe.canvasFlag}, shell ${probe.bodyFlag}`);
 
   /* ITEM 1 (1.39.0) — the popup reads in FEET, with the median named. */
   const feet = await page.evaluate(() => {
@@ -1193,7 +1215,9 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
 
     return {
       how, hit, over,
-      shellFlag: !!document.querySelector('.dccwl-sheet-body-map.dccwl-popup-open'),
+      shellFlag: !!document.querySelector(
+        '.dccwl-sheet-body-map.dccwl-popup-open, .dccwl-map-inline.dccwl-popup-open'
+      ),
     };
   });
   note(`${label} after the pan ${JSON.stringify(panned)}`);
@@ -1202,7 +1226,7 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
     ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].forEach((k) => {
       checkSame('popup', panned.hit[k], `${label}: ${k} corner belongs to the popup`);
     });
-    check(panned.shellFlag, `${label}: and the sheet body is still marked popup-open`);
+    check(panned.shellFlag, `${label}: and the map's shell is still marked popup-open`);
 
     /* Each piece of chrome: where it overlaps, the popup owns the overlap;
      * everywhere it is lowered while the popup is open. The z-index check is
@@ -1247,7 +1271,9 @@ for (const [w, h, touch] of [[390, 844, true], [1280, 900, false]]) {
   const after = await page.evaluate(() => ({
     popup: !!document.querySelector('.leaflet-popup'),
     canvasFlag: !!document.querySelector('.dccwl-map-canvas.dccwl-popup-open'),
-    bodyFlag: !!document.querySelector('.dccwl-sheet-body-map.dccwl-popup-open'),
+    bodyFlag: !!document.querySelector(
+        '.dccwl-sheet-body-map.dccwl-popup-open, .dccwl-map-inline.dccwl-popup-open'
+      ),
     // The controls are back: a tap on the credit button hits the credit button.
     creditOwned: (() => {
       const b = document.querySelector('.dccwl-map-credit-btn');

@@ -416,12 +416,61 @@ final class Water_Render {
 							</li>
 						<?php endforeach; ?>
 					</ul>
-					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from. The map loads only when you open it.', 'dcc-wildlife' ); ?></p>
-					<p>
-						<button type="button" class="dccwl-btn dccwl-map-open" data-dccwl-map-open>
-							<?php esc_html_e( 'Open the chain map', 'dcc-wildlife' ); ?>
-						</button>
-					</p>
+					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from.', 'dcc-wildlife' ); ?></p>
+					<?php
+					/*
+					 * ITEM 2 (1.44.0) — THE MAP IS INLINE, AND THE BUTTON IS
+					 * GONE.
+					 *
+					 * Rob: the section "opens on Water › Map, with the map
+					 * already showing (no 'Open the chain map' button), loaded
+					 * when the section scrolls into view". So this is an empty
+					 * host, and water.js fills it the first time it is both on
+					 * screen and visible.
+					 *
+					 * THE 1.31.0 RULE IS NOT WEAKENED, IT IS RE-POINTED.
+					 * "The map loads NOTHING external until opened — no
+					 * Leaflet, no tiles, no data." The trigger changed from a
+					 * tap to a viewport intersection; the fetch is still the
+					 * last thing that happens, not the first. A guest who
+					 * never scrolls to the water section still pays nothing,
+					 * and the suite still asserts zero map requests before
+					 * the host is in view.
+					 *
+					 * IT MUST ALSO BE VISIBILITY-GATED, not intersection-only.
+					 * A hidden element never intersects anything — the exact
+					 * trap that left 409 guide tiles unbuilt in 1.43.0 — and
+					 * the Map pane is `hidden` whenever Now or Fishing is
+					 * selected. water.js therefore watches the host AND
+					 * listens for the tab becoming visible.
+					 */
+					?>
+					<div class="dccwl-map-inline" data-dccwl-map-host></div>
+					<?php
+					/*
+					 * THE LAYER CHIPS, below the map, as the brief asks:
+					 * "chips filter its layers (e.g. Ramps · Lakes · Stations;
+					 * use the layers the map really has)".
+					 *
+					 * Built by water-map.js rather than rendered here, because
+					 * the layers are the map's own: the chips must be exactly
+					 * the overlays it draws, and the only place that list
+					 * exists is beside the groups themselves. Rendering a
+					 * guess here is how a chip ends up toggling a layer that
+					 * no longer exists.
+					 *
+					 * ONE PIECE OF STATE, TWO SHAPES — the 1.33.0 pattern the
+					 * Director approved for "Colour by". The chips and the
+					 * Layers menu's checkboxes are two views of one toggle, so
+					 * they cannot show different answers. Flagged in the notes
+					 * all the same: whether the menu rows should now go, and
+					 * leave the chips as the only control, is his call.
+					 */
+					?>
+					<div class="dccwl-map-chips" data-dccwl-map-chips hidden></div>
+					<noscript>
+						<p class="dccwl-map-intro"><?php esc_html_e( 'The chain map needs JavaScript. Every reading it draws is also listed, with its source, under “Now”.', 'dcc-wildlife' ); ?></p>
+					</noscript>
 				</div>
 			<?php endif; ?>
 			</div><?php /* /map */ ?>
@@ -956,8 +1005,21 @@ final class Water_Render {
 							/* translators: 1: phase name (lowercase), 2: illumination percent. */
 							'lineGeneric' => __( 'A %1$s tonight, %2$d% lit.', 'dcc-wildlife' ),
 						],
-						'mapTitle'    => __( 'Chain map', 'dcc-wildlife' ),
-						'mapClose'    => __( 'Close the map', 'dcc-wildlife' ),
+						/*
+						 * `mapTitle` AND `mapClose` RETIRED IN 1.44.0 with
+						 * the sheet they titled. The map is inline — Rob's
+						 * item 2 — so nothing opens a sheet for it, and a
+						 * sheet's title and close label have no sheet. They
+						 * are dropped rather than kept so a translator is
+						 * not asked for strings nothing can print; if a map
+						 * sheet ever returns, so do they.
+						 *
+						 * `mapLoading` and `mapFailed` STAY and are both
+						 * still read: the host shows the first while Leaflet
+						 * arrives and the second if it does not, which is
+						 * the 1.33.0 rule that a BUSY thing says so rather
+						 * than sitting empty.
+						 */
 						/* The ⓘ that opens the map's credits (1.37.0). */
 						'creditLabel' => __( 'Map credits', 'dcc-wildlife' ),
 						/* The × at the top right of the sheet (1.36.0). */
@@ -977,10 +1039,18 @@ final class Water_Render {
 						'byLevel'     => __( 'Level', 'dcc-wildlife' ),
 						'byFresh'     => __( 'Data age', 'dcc-wildlife' ),
 						'layers'      => __( 'Layers', 'dcc-wildlife' ),
-						'lyrRamps'    => __( 'Boat ramps', 'dcc-wildlife' ),
-						'lyrWaters'   => __( 'Chain waters', 'dcc-wildlife' ),
-						'lyrStations' => __( 'Monitoring stations', 'dcc-wildlife' ),
-						'lyrProperty' => __( 'The cottages', 'dcc-wildlife' ),
+						/*
+						 * TITLE CASE SINCE 1.44.0 (item 7). These four are
+						 * LABELS — on a chip under the map and on a row in
+						 * the Layers menu — so Rob's rule covers them:
+						 * "Title Case for every label, button, tab, chip and
+						 * heading". They were sentence case from 1.7.1, when
+						 * they existed only as menu rows.
+						 */
+						'lyrRamps'    => __( 'Boat Ramps', 'dcc-wildlife' ),
+						'lyrWaters'   => __( 'Chain Waters', 'dcc-wildlife' ),
+						'lyrStations' => __( 'Monitoring Stations', 'dcc-wildlife' ),
+						'lyrProperty' => __( 'The Cottages', 'dcc-wildlife' ),
 						'fullscreen'  => __( 'Fullscreen', 'dcc-wildlife' ),
 						'baseMap'     => __( 'Base map', 'dcc-wildlife' ),
 						'satellite'   => __( 'Satellite', 'dcc-wildlife' ),
