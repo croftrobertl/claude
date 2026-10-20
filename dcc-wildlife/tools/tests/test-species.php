@@ -331,7 +331,7 @@ check_same(
 /*
  * A LABEL IS A CLAIM — the rule survives the rename (1.33.0).
  *
- * The owner chose "Reptiles & amphibians". The guide's older rule is that a
+ * The owner chose "Reptiles & Amphibians". The guide's older rule is that a
  * chip may not offer what the registry does not hold. Both hold at once
  * because the label is DERIVED: has_amphibian() decides it. So this suite does
  * not assert one string or the other — it asserts that the label and the
@@ -341,7 +341,11 @@ check_same(
 $has_amph = Species::has_amphibian();
 check_same(
 	$has_amph,
-	false !== strpos( $browse['reptiles'], 'amphibian' ),
+	/* stripos, not strpos: the label went Title Case in 1.44.0 ("Reptiles &
+	 * Amphibians") and the CLAIM here is that it mentions amphibians, not
+	 * that it spells them in lower case. Pinned to the rule, not to the
+	 * casing the rule happened to have. */
+	false !== stripos( $browse['reptiles'], 'amphibian' ),
 	'the reptiles chip mentions amphibians exactly when there are some'
 );
 check_lacks( implode( ' | ', $browse ), 'Wading birds', 'the retired bird chips are gone' );

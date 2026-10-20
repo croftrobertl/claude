@@ -185,7 +185,10 @@ checkSame(['All'], pickInfo.selected, 'All is chosen to begin with');
  * agree rather than pinning either string. */
 const reptileOpt = pickInfo.labels.find((l) => l.startsWith('Reptiles'));
 check(!!reptileOpt, 'there is a reptiles category', pickInfo.labels.join(' | '));
-if (reptileOpt.includes('amphibian')) {
+/* Case-insensitive since 1.44.0: the labels went Title Case on Rob's
+ * instruction ("Reptiles & Amphibians"), and the claim this guards is that
+ * the label TRACKS THE CONTENT, not how it is capitalised. */
+if (/amphibian/i.test(reptileOpt)) {
   note('the registry now holds an amphibian, so the option says so');
 } else {
   checkSame('Reptiles', reptileOpt, 'with no amphibians yet, the option does not offer any');

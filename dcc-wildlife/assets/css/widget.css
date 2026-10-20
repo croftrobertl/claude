@@ -1703,9 +1703,33 @@
  * every species description does not — and `.dccwl-fg-fact` is left
  * exactly as it was, deliberately.
  * ====================================================================== */
-.dccwl-app .dccwl-guidepage {
+/* ----------------------------------------------------------------------
+ * THE CONTAINER SELECTOR WAS WRONG IN 1.43.0, AND THE DIRECTOR MEASURED IT.
+ *
+ * He reported prose running about 1,950px per line on a wide screen. The
+ * cause was not the value, it was the selector: the page's container is
+ * `<div class="dccwl-guidepage dccwl-app dccwl-density-cozy">` — ONE
+ * element carrying both classes — and `.dccwl-app .dccwl-guidepage` is a
+ * DESCENDANT selector, which asks for a .dccwl-guidepage inside a
+ * .dccwl-app. Nothing matched, so the max-width never applied. The child
+ * rules below it worked all along, because those elements really are
+ * descendants, which is why the intro centred in the screenshot and the
+ * column did not narrow.
+ *
+ * Fifth instance of this repository's oldest shape — a rule written for
+ * the wrong parent is invisible, and the thing it was meant to govern
+ * keeps doing what it always did (1.23.0, 1.39.0, 1.40.0, 1.40.1).
+ *
+ * AND THE MEASURE IS IN `ch`, NOT `rem`. 46rem was ALSO wrong for the
+ * deployment root: the site serves html{font-size:20px}, so 46rem is 920px
+ * there, not the ~736px it reads as. `ch` is the width of the "0" glyph in
+ * the font actually rendering, so 70ch IS the 68–72 character measure the
+ * Director asked for, in Raleway or in a fallback face, and it keeps the
+ * "sizes stay relative" rule rather than pinning a pixel width.
+ * -------------------------------------------------------------------- */
+.dccwl-app.dccwl-guidepage {
 	margin: 0 auto;
-	max-width: 46rem;
+	max-width: 70ch;
 	padding: 0 var(--dccwl-pad);
 }
 
@@ -1817,8 +1841,42 @@
 
 /* An anchored entry gets a scroll margin, or the sticky site header lands
  * on top of the species a guest just followed a link to. */
-.dccwl-app .dccwl-guidepage article.dccwl-fg,
-.dccwl-app .dccwl-guidepage .dccwl-fg-group,
-.dccwl-app .dccwl-guidepage .dccwl-guidepage-section {
+.dccwl-guidepage article.dccwl-fg,
+.dccwl-guidepage .dccwl-fg-group,
+.dccwl-guidepage .dccwl-guidepage-section {
 	scroll-margin-top: calc(var(--dccwl-sticky-offset, 0px) + 16px);
+}
+
+/* ======================================================================
+ * THE GUIDE PAGE'S ALIGNMENT (1.44.0) — Rob's ruling of 2026-10-19,
+ * applied to the surface it was mainly written for.
+ *
+ * His rule: everything centres EXCEPT multi-sentence paragraphs, which
+ * stay left-aligned for readability. The Director named the split for this
+ * page: the species name and its scientific name centre; the opening
+ * paragraph and every labelled line — Where To Look, Best Time, Listen
+ * For, Tell It Apart, Take Care, What To Do — stay left.
+ *
+ * The scientific name sits INSIDE the <h4>, so one rule centres the pair
+ * and they cannot drift apart.
+ *
+ * SCOPED TO THE GUIDE PAGE, not to `.dccwl-fg-*` globally. The 1.27.0
+ * rule — alignment is by ROLE, body text starts — still governs every
+ * other surface, and the detail sheet already centres its own title by its
+ * own rule. Widening this would be a change nobody asked for on a surface
+ * nobody was looking at.
+ * ====================================================================== */
+.dccwl-guidepage .dccwl-fg-name {
+	text-align: center;
+	text-wrap: balance;
+}
+.dccwl-guidepage .dccwl-fg-sci { display: block; }
+
+/* Said explicitly rather than left to inheritance: the centring above sits
+ * on their parent <article>'s sibling, and a future rule that centres the
+ * article would silently take these with it. These are the lines Rob's
+ * ruling protects. */
+.dccwl-guidepage .dccwl-fg-fact,
+.dccwl-guidepage .dccwl-fg-line {
+	text-align: left;
 }

@@ -139,14 +139,14 @@ final class Species {
 			// first amphibian entry lands, the chip renames itself, and until
 			// then it does not offer frogs the guide has not got.
 			'reptiles' => self::has_amphibian()
-				? __( 'Reptiles & amphibians', 'dcc-wildlife' )
+				? __( 'Reptiles & Amphibians', 'dcc-wildlife' )
 				: __( 'Reptiles', 'dcc-wildlife' ),
 			'birds'    => __( 'Birds', 'dcc-wildlife' ),
 			'mammals'  => __( 'Mammals', 'dcc-wildlife' ),
 			'fish'     => __( 'Fish', 'dcc-wildlife' ),
 			// Snails live here, by the owner's decision. "Fish & snails" was a
 			// pairing of convenience and nothing else.
-			'insects'  => __( 'Insects & small things', 'dcc-wildlife' ),
+			'insects'  => __( 'Insects & Small Things', 'dcc-wildlife' ),
 
 			// ---- Plants (new in 1.33.0) ----------------------------------
 			// The same three groups the owner's own master list is organised
@@ -162,8 +162,8 @@ final class Species {
 			// reach for. Ball moss goes here too when it lands. The chip is a
 			// place to look, not a botanical rank.
 			'trees'       => __( 'Trees', 'dcc-wildlife' ),
-			'wildflowers' => __( 'Wildflowers & shrubs', 'dcc-wildlife' ),
-			'waterplants' => __( 'Water plants', 'dcc-wildlife' ),
+			'wildflowers' => __( 'Wildflowers & Shrubs', 'dcc-wildlife' ),
+			'waterplants' => __( 'Water Plants', 'dcc-wildlife' ),
 		];
 	}
 

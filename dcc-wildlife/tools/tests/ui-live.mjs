@@ -195,7 +195,7 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   checkSame('listbox', open.role, `${w}px: and it is a listbox`);
   check(open.below, `${w}px: the list drops directly under the pill`);
   checkAtLeast(44, open.minOpt, `${w}px: every option is a 44px target`);
-  checkSame(['All', 'Reptiles & amphibians', 'Birds', 'Mammals', 'Fish', 'Insects & small things'],
+  checkSame(['All', 'Reptiles & Amphibians', 'Birds', 'Mammals', 'Fish', 'Insects & Small Things'],
     open.names, `${w}px: Animals' categories, in today's order`);
   check(open.counts.every((c) => /^\d+$/.test(c)), `${w}px: each option carries its count`, open.counts.join('/'));
   checkSame(CORAL, open.selBg, `${w}px: the chosen option is coral`);
@@ -305,10 +305,18 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
 section('C2 — the categories each tab offers, in the order Rob set');
 
 const TABS = {
-  Animals: ['All', 'Reptiles & amphibians', 'Birds', 'Mammals', 'Fish', 'Insects & small things'],
-  Plants: ['All', 'Trees', 'Wildflowers & shrubs', 'Water plants'],
-  Safety: ['All', 'Reptiles & amphibians', 'Mammals', 'Insects & small things',
-           'Wildflowers & shrubs', 'Water plants'],
+  /*
+   * TITLE CASE SINCE 1.44.0 — Rob's instruction of 2026-10-19, confirmed by
+   * the Director on 2026-10-20: the category picker and the guide page's
+   * group headings move TOGETHER, because they are the same labels read in
+   * two places. Pinned at the new strings rather than relaxed to a
+   * case-insensitive compare: the claim is still that the row holds exactly
+   * these, in this order.
+   */
+  Animals: ['All', 'Reptiles & Amphibians', 'Birds', 'Mammals', 'Fish', 'Insects & Small Things'],
+  Plants: ['All', 'Trees', 'Wildflowers & Shrubs', 'Water Plants'],
+  Safety: ['All', 'Reptiles & Amphibians', 'Mammals', 'Insects & Small Things',
+           'Wildflowers & Shrubs', 'Water Plants'],
 };
 
 for (const [w, touch] of [[390, true], [1280, false]]) {

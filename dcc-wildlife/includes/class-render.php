@@ -869,16 +869,16 @@ final class Render {
 				<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( ! empty( $sp['flags'] ) ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take Care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['safe'] ) : ?>
-				<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What to do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
+				<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What To Do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['where'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where to look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where To Look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['best'] || '' !== $sp['bestLabel'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best time', 'dcc-wildlife' ); ?></span>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best Time', 'dcc-wildlife' ); ?></span>
 					<?php
 					$when = array_values( array_filter( [ (string) $sp['best'], (string) $sp['bestLabel'] ] ) );
 					echo esc_html( implode( ' · ', $when ) );
@@ -886,10 +886,10 @@ final class Render {
 				</p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['sound'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen for', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen For', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['mark'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell it apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
+				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell It Apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
 			<?php endif; ?>
 		</article>
 		<?php
@@ -1255,7 +1255,7 @@ final class Render {
 				 * 'daytrip' ("A day trip away"), and the `place` field already
 				 * says that in its own "Where to go" section.
 				 */
-				'safe'        => __( 'What to do', 'dcc-wildlife' ),
+				'safe'        => __( 'What To Do', 'dcc-wildlife' ),
 				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
 				'deckPrev'    => __( 'Previous species', 'dcc-wildlife' ),
 				'deckNext'    => __( 'Next species', 'dcc-wildlife' ),
@@ -1280,12 +1280,12 @@ final class Render {
 				'place'       => __( 'Where to go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.
-				'where'       => __( 'Where to look', 'dcc-wildlife' ),
-				'listen'      => __( 'Listen for', 'dcc-wildlife' ),
-				'confused'    => __( 'Easily confused with', 'dcc-wildlife' ),
+				'where'       => __( 'Where To Look', 'dcc-wildlife' ),
+				'listen'      => __( 'Listen For', 'dcc-wildlife' ),
+				'confused'    => __( 'Easily Confused With', 'dcc-wildlife' ),
 				/* translators: %s: a field mark, e.g. "its bright golden-yellow feet". */
 				'tellBy'      => __( 'Tell this one by %s.', 'dcc-wildlife' ),
-				'bestTime'    => __( 'Best time', 'dcc-wildlife' ),
+				'bestTime'    => __( 'Best Time', 'dcc-wildlife' ),
 				/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
 				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
@@ -1299,7 +1299,7 @@ final class Render {
 				// The 12-month likelihood strip in the detail drawer. The
 				// bars are decoration; these words are what a screen reader
 				// actually reads, one per month.
-				'likelihood'  => __( 'Through the year', 'dcc-wildlife' ),
+				'likelihood'  => __( 'Through The Year', 'dcc-wildlife' ),
 				'likeRare'    => __( 'rarely seen', 'dcc-wildlife' ),
 				'likePossible'=> __( 'possible', 'dcc-wildlife' ),
 				'likeGood'    => __( 'good chance', 'dcc-wildlife' ),
