@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.43.0
+Stable tag: 1.44.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,35 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.0 =
+* **One dropdown instead of a back button.** The wildlife section now opens
+  straight onto the chain map, and a single "Water ▾ / Wildlife ▾" menu at the
+  top both names what you are looking at and switches between the two in one
+  tap. The old "‹ Back" bar, the two big tiles and the separate month screen
+  are gone — there is nothing to drill down into any more.
+* **The chain map is simply there.** No "Open the chain map" button: the map
+  draws itself as you scroll to it, with chips underneath for the boat ramps,
+  the lakes, the monitoring stations and the cottages. Nothing about the map
+  is downloaded until you reach it, exactly as before.
+* **"Pick A Place" on the Now tab.** One menu listing our canal and every lake
+  in the chain, with that place's own level and clarity beneath it. A lake with
+  no recent sample says "No Recent Reading" rather than showing a blank. Wind,
+  rain and the forecast now sit in one row labelled for the whole chain,
+  because that is what they cover.
+* **One row of controls for the field guide.** "Month ▾" replaces both the
+  twelve-month strip and the "Peak Now" tab — choose "This Month" for what is
+  at its best right now, or any month of the year. The category picker is
+  beside it, and the colour key is behind a small "ⓘ Badges" button instead of
+  four permanent lines. The "Compact" switch has gone; there is one tile view.
+* **Faster taps.** Removing the twelve-month strip removed the single slowest
+  thing on the page: keeping the chosen month centred was measured at 419ms of
+  work on one tap.
+* **Smarter links.** A link that names a month — `#canal-month=april` — now
+  opens the field guide on that month rather than the map.
+* **Tidier type.** Labels, buttons and headings are in Title Case throughout,
+  the footer links are plain blue text that underlines when you hover, and
+  everything in the section is centred apart from multi-sentence paragraphs.
 
 = 1.43.0 =
 * **The wildlife page is far faster.** It was carrying every one of the 402

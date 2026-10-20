@@ -1424,8 +1424,28 @@
 }
 .dccwl-subnav[hidden] { display: none; }
 
-.dccwl-pick,
-.dccwl-monthpick { position: relative; }
+/*
+ * THE MENUS ARE POSITIONED AGAINST THE ROW, NOT AGAINST THEIR OWN CHIP.
+ *
+ * Caught in the first 390px screenshot of this release: both menus are
+ * `left: 50%; transform: translateX(-50%)`, and with the chip as the
+ * containing block that centres the menu on the CHIP. The Month chip is the
+ * leftmost thing on the row, so half of a 320px menu hung off the left edge
+ * of the phone — about 110px of it, unreachable.
+ *
+ * Anchoring to the chip's left edge instead just moves the problem: at 390px
+ * the "Show: All" chip starts around x=285, so a 320px menu would run off the
+ * RIGHT. Centring on the ROW is the only one of the three that holds at every
+ * width, and it costs no JavaScript — which matters here, because this
+ * release exists partly to delete layout-reading code.
+ *
+ * The row is already capped to the measure and centred in the page, so a menu
+ * centred on it is centred in the page. `.dccwl-pick` and `.dccwl-monthpick`
+ * keep no positioning of their own; the suite's "the list drops directly
+ * under the pill" check is unaffected, because only the horizontal anchor
+ * moved.
+ */
+.dccwl-chiprow { position: relative; }
 
 /* The badge key takes a LINE OF ITS OWN under the chips rather than sitting
  * among them: it is a paragraph of four definitions, and as a flex item it

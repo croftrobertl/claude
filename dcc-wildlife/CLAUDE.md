@@ -3647,3 +3647,304 @@ Forecast"), shown once beneath the place cards and never repeated per lake.
 Also carried forward: the browse labels go Title Case with PART B 4, so the
 picker and this page's headings move together (`Insects & Small Things`,
 `Reptiles & Amphibians`).
+
+### 34. 1.44.0 — PART B: the hub is gone, and what replaced each piece of it
+
+Rob's navigation and styling brief, built on top of 1.43.0's speed work. Every
+item here is his decision or the Director's; the two places a choice was left
+open are named as questions, not answered.
+
+**THE SHAPE OF THE APP CHANGED, SO READ THIS BEFORE EDITING `canal.js`.** From
+1.10.0 the front end was four stacked LEVELS — hub → month → species, and hub →
+water — each with a Back bar and a history entry per drill-down. It is now TWO
+SIBLING VIEWS switched by one dropdown, and **a tab does not push history**. So
+`go()` pushes nothing, `parentOf()` and the popstate nav handler are DELETED
+rather than left inert, and Back leaves /explore/ instead of walking up to a hub
+that does not exist. The Director signed that off: "it follows from Rob's 'no
+hub' pick."
+
+**sheet.js's own contract is untouched** — push on open, pop on close — which is
+why Escape, the scrim, the back affordance and the Android back button all still
+close a sheet and leave the view where it was. If levels ever return, restore the
+state-driven popstate READER (1.10.0), not a "step up on any pop" design: that
+passes the first case and fails the second.
+
+#### The Month menu retired the single slowest thing on the page
+
+`centerMonth()`, `trimPartialMonths()`, `trimSoon()` and `buildTimeline()` are
+all deleted, and that is the release's largest performance fix rather than a
+tidy-up. Between them they took **six layout reads** — `scrollWidth`,
+`clientWidth`, two `getBoundingClientRect()`, `scrollLeft`, `offsetWidth` —
+interleaved with class writes across 409 tiles, so every read forced a
+synchronous layout of a 9,000-node tree. A CPU profile at 4× throttling put
+**419 ms of one tap inside `centerMonth` alone**. A menu has nothing to centre
+and no edge to cue, so the reads do not exist to be forced. `attachEdgeFades()`
+and `recenter()` went with them.
+
+**Peak Now was never a section.** It cut across all three and meant "at its best
+in the visitor's month", which is a MONTH question — so it is "This Month" in the
+Month menu. What that changed, and it is not nothing: **the filter no longer
+crosses sections**, so `peakRow`, `dccwlPeakMode` and the cross-deck
+`dccwlApplyView` are deleted. What did NOT change: canal time in the browser,
+hazards excluded (1.33.0 — nobody goes looking for a cottonmouth), and the
+Safety list never month-filtered (1.28.0).
+
+**The `isCanal` gate on the month filter is GONE, and that is a deliberate
+change to the legacy widget.** The filter used to run in the hub only, which was
+coherent while the control was a strip that drove the standalone widget's
+headline and spotlight instead. A chip directly above the tiles it governs
+cannot read "January" over 308 unfiltered animals: **a control that lies about
+what it is doing is worse than an absent one.** `state.monthPicked` still gates
+it, so the 1.28.0 defect cannot return — the page opens on "Any Month" and
+nothing filters until a guest chooses. The harness caught the need for this on
+the standalone fixture.
+
+#### Four settings retired, each with its control
+
+`show_compact` (the Compact switch and its whole compact-list stylesheet),
+`default_view` (one list, one answer), and `hub_preview_max` / `now_names_max` /
+`month_art_max` (they sized the hub tile's preview line, the "right now" line
+and a month tile's sprite art). Keys stay in the defaults so **no stored row
+changes**; all are out of the schema so a Save cannot write them back, out of the
+admin page, and out of both widgets' override lists.
+
+`resolve_enum()` went with `default_view` — nothing called it and no suite could
+exercise it without inventing a key. **The `enum` ARM of `sanitize()` stayed**,
+and the distinction matters: it is an arm of a dispatcher over `schema()`, which
+is the documented extension point, and removing it would make a future
+`'type' => 'enum'` key fall through the switch silently.
+
+#### Dead code is DELETED, not shipped — and the answer was delete, not reuse
+
+The Director's explicit ask. The month-tile builder drew twelve tiles with peak
+counts and three sprites each; the hub-preview builders composed two sentences
+and two chip rows. A dropdown of month NAMES needs none of it, and reusing them
+would put sprite art inside a listbox row. So `buildMonths()`, `fillYearNote()`,
+`fillWildlifePreview()`, `fillWaterPreview()`, `ageWords()`, the water-facts
+buffer, `cap()`, `el()` and `fmt()` are gone from canal.js (**707 → 382 lines**),
+with about **530 lines of CSS**: the level bar, the crumbs, the panel title, the
+hub doors, the month tiles, the year note, the legend swatches, the twelve-month
+strip, its arrows, its edge fades, the view toggle and the compact list.
+
+**Deleted rather than left unmatched, for the reason this repository has learned
+five times: a rule that matches nothing is invisible, and a file full of them is
+how the next reader loses track of which rules carry weight.**
+
+**The hub's i18n strings went with the builders that composed them** —
+`monthAria`, `atPeak`, `monthChipAria`, `toSpot`, `quiet`, `and`, `yearBestOne`,
+`yearBest`, `now`, and the four age words. A comment added earlier in this
+release claimed the age words had to stay "because the sheet's water cards still
+read them"; **that was wrong** — water.js and water-map.js read
+`DCC_WL_WATER.i18n`, which Water_Render emits and this release did not touch.
+Corrected after the suite failed on it. Dropping a string with its only reader is
+what stops a translator being asked for a sentence nothing can print.
+
+#### THE SHARED-CLASS TRAP, caught before it shipped
+
+`.dccwl-tab` is shared with the water module's two bars. Those are `role="group"`
+holding toggle buttons and correctly report **`aria-pressed`**; the wildlife tabs
+became a real tablist and report **`aria-selected`**. app.css's coral
+selected-state rules keyed on `aria-pressed` alone, so converting the tabs would
+have silently stopped painting one of the two bars. **Both attributes are
+listed, and each bar reports the state its role actually has.**
+
+**The full list of classes the water and wildlife panels share** (the Director's
+ask, so his live checks can scope correctly): `.dccwl-app`, `.dccwl-tab`,
+`.dccwl-tabs`, `.dccwl-metachip`, and the eight fold classes —
+`.dccwl-fullguide`, `-summary`, `-h`, `-text`, `-body`, `-meta`, `-chev`. Scope
+any `.dccwl-tab` selector to `[data-dccwl-panel="species"]` or to
+`.dccwl-water-tabs` / `.dccwl-fish-seasons`; **Water is FIRST in the DOM now**,
+so an unscoped query returns a water tab.
+
+#### Item 5 — plain text footer links, which REVERSES 1.41.0's marks
+
+Rob's words: "plain text links … centred, in the site blue, Raleway 600. No
+underline-and-arrow look; underline only on hover/focus." So the `▾ ▴ ›` marks
+and the permanent underline are gone. **1.41.0's rule about what each mark MEANS
+is untouched** and still governs every other control; it is this row's permanent
+cue he removed. It also returns the +41.4px the Director measured the carets
+costing at 320px.
+
+**"By Month" left the row, and this one needs a ruling.** It was a `<button>`
+opening the month-picker PANEL and the only door to it ("`go('month')` appears
+nowhere else", 1.27.0). The hub and its panels are gone, so it led nowhere, and
+Month ▾ beside the tiles replaced it. Item 5 lists it and says "keep what each
+one opens" — but item 2 removes the hub, and the deep-link rule says a month link
+opens WILDLIFE with the filter applied, which only works if a month is a filter
+rather than a view. **Implemented that way and raised rather than resolved
+silently.** The row is Guide · Credits · About: two links and one fold, and with
+the `<button>` gone there is one element type and one line box, which was the
+0.9px baseline Rob measured in 1.35.0.
+
+#### Items 6 and 7 — centring, and what is deliberately NOT centred
+
+The fishing block is centred now, where it was left-aligned wholesale on a
+session's judgement from 1.4.0. **What stays left, and why, each noted in place:**
+
+- the fishing intro and each season's advice line — multi-sentence prose, which
+  is Rob's own 2026-10-19 exception; both held to 46ch and centred as BLOCKS;
+- `.dccwl-water-attr`, the citation stack — the 1.10.0 exception, never
+  overruled: centred, its ragged edges read as unrelated fragments;
+- the moon card's text column — a flex row beside a drawn disk, not a block of
+  prose;
+- listbox option rows (`.dccwl-pick-opt`, `.dccwl-chipmenu-opt`,
+  `.dccwl-drop-action`) — controls in a popup, with the name and the count at
+  opposite ends; a list of fourteen months needs a scannable left edge;
+- the About fold's body, and the /wildlife-guide/ prose lines — Rob's own rule
+  for that page.
+
+`text-wrap: balance` is on every heading, in the app.css **floor**. Safe there
+where `text-align` is not, and the note says why: alignment is part of a
+heading's role and the floor would out-specify the rule that sets it, but no
+heading in this plugin wants its lines unbalanced.
+
+#### Item 3 — "Pick A Place", and Rob's ruling about what the feed actually has
+
+The Now tab held "All readings" and "Across the Harris Chain". Rob: "they
+overlap". They did — Lake Dora was in both. One chip answers it.
+
+**The brief asked for more than the feed carries**, and he ruled on it
+(2026-10-20): per PLACE the payload has **level and clarity and nothing else**.
+Oxygen and trophic state would need new per-water Atlas fetches against the
+budgets that let a bigger chain warm progressively — no. Wind, rain and the
+forecast cover the whole chain and sit in ONE row headed "Whole Chain · NWS
+Forecast", never repeated per lake. **That is 1.35.0 holding: nothing that does
+not vary across the water may be drawn as though it does.**
+
+- **The options are server-rendered and the readings are not.** A water's name is
+  an owner-edited setting and cache-safe; a reading is time-sensitive and must
+  never reach SpeedyCache-served HTML. ui-place.mjs proves both halves — it loads
+  the page with NO scripts and requires all ten waters as readable text, and
+  requires that not one reading is in the markup beside them.
+- **`key` gained `rain` and `forecast`; `Water_Fact` gained `place`.** All
+  presentation metadata, never a gate: the gate (tier, source name, parseable
+  date) is untouched, and a Fact without any of them is as valid as one with
+  them. `place` is the waterbody id, because **matching on a name is what `key`
+  exists to prevent** — a name can be renamed out from under the match.
+- **"No Recent Reading" is built in the client, not passed through
+  `Water_Fact`.** A Fact is a claim about a measurement; this is a statement that
+  no measurement exists, and running it through the gate would mean inventing a
+  source name to satisfy the gate.
+- **It appears for a chosen LAKE and not for our own canal.** His words are
+  "where a lake has none", in a sentence about the other chain lakes. Our canal
+  is the pane a guest lands on without asking, and this module's oldest rule
+  governs it: an unknown field is omitted, never rendered as "unknown". **The
+  harness found this** — ui-water-tabs' fixture has a level reading with no
+  `key`, so the broad version printed an absence over a reading that was there.
+  Flagged for the Director, because the brief could be read either way.
+- **Changing place costs ZERO fetches.** The picker is handed a REPLAY function
+  rather than the facts, so a later /conditions refresh cannot leave it
+  re-rendering the readings it was built with.
+
+#### Item 2 — the map is inline, and the 1.31.0 rule finally has its test
+
+Rob: the section "opens on Water › Map, with the map already showing (no 'Open
+the chain map' button), loaded when the section scrolls into view".
+
+**CLAUDE.md has claimed since 1.31.0 that "a test asserts zero external requests
+before the click". THERE WAS NO SUCH TEST.** There is now: ui-map.mjs builds the
+page with a 2,400px spacer above the host, counts requests with
+`page.on('request')`, and requires not one of Leaflet, its stylesheet,
+water-map.js or the /map payload before the host is scrolled to — then requires
+them after, **in that order**, because the payload must still come last.
+
+- **Visibility-gated as well as intersection-gated.** A `display: none` element
+  never intersects anything — the 1.43.0 trap — and the Map pane is hidden
+  whenever Now or Fishing is selected. So the host is observed AND the water tab
+  bar dispatches `dccwl:water-pane-shown`.
+- **Two defects of mine, both caught by the suites in the run they were
+  written.** (1) The host clipped its own control bar and legend: `min-height`
+  plus `overflow: hidden` on the host reserved the space and then hid two
+  siblings of the canvas. In the sheet that could not happen because the body
+  scrolled; inline, clipped means gone. The host grows to its content and only an
+  EMPTY host holds the space open. (2) The loader would not load: it needs the
+  host LAID OUT, and a `width: 100%` div with no content has zero height, so the
+  check said "not on screen" for an element in the middle of the viewport. It
+  asks about WIDTH now — **a check that fails closed on a styling change is
+  worse than one that fails open.**
+- **And a rule written for the wrong parent, for the FIFTH time.**
+  `.dccwl-sheet-body-map.dccwl-popup-open` lowers our chrome while a Leaflet
+  popup is open (1.38.0 — raising the popup cannot work, its pane is inside a
+  stacking context at 400). The shell is `.dccwl-map-inline` now, so the rule
+  stopped matching. Both parents are listed. **The same mistake was in the
+  SUITE**, which asked only about the sheet body — a working map reported broken.
+- **The layer chips are the 1.33.0 pattern again:** one piece of state, two
+  shapes. `setOverlay()` is the only path that adds or removes a layer and it
+  updates the chip and the Layers menu's checkbox together. Built beside the
+  layer groups, never rendered by PHP — **a chip that toggles a layer the map
+  does not draw would look perfectly fine.** Whether the menu rows should now go
+  is flagged for the Director.
+- **A second Escape now does nothing, and that is asserted rather than
+  deleted.** There is no sheet behind the menu. If some future layer starts
+  listening at the document, the symptom would be a map that vanishes on a double
+  press.
+- **The map's HEIGHT is the one design choice here and it is not a session's to
+  make.** It lives in `--dccwl-map-h`; three options were rendered at 390 and
+  1280 for Rob. Shipping until he answers: `min(60vh, 520px)`, where 60vh is the
+  cap the species photo has carried since 1.36.0 for the same reason. **`dvh` is
+  deliberately NOT used**, unlike the sheet canvas: in a sheet it keeps the
+  canvas inside a collapsing mobile toolbar, but in page flow it makes the map
+  resize as that toolbar hides and shows.
+
+#### Deep links, and a feature the brief named that does not exist
+
+`#canal-month=` and `?canal-month=` now open **WILDLIFE**, not the default Water
+view, and still never write back. ui-deeplink.mjs is new: the hash form, the
+query form, a month NAME, a three-letter abbreviation, four unusable values that
+must leave the default alone, and the 1.23.0 read-never-write rule.
+
+**It needed one change to lib.mjs to be testable at all.** Every page here is
+built with `setContent`, which lands on about:blank — no hash to read, and
+`history.replaceState` not reliably allowed. `buildPage({ url })` serves the
+fixture over a routed https URL and navigates to it. **Opt-in**, because
+changing how thirty suites load their page to serve one is not a trade this
+harness makes. One trap recorded with it: a route pattern is a glob matched
+against the WHOLE url, so a pattern built from the path missed every variant
+carrying a query and the navigation failed on DNS — it matches by predicate now.
+
+**`#dccwl-fl-danger` AND ITS THREE SIBLINGS ARE NOT DEEP LINKS.** The brief
+lists them among the links that must keep working. They are SVG `<symbol>` ids
+in the sprite sheet — the targets of the `<use>` elements that draw a tile's flag
+mark. A `<symbol>` is never rendered and has no layout, so the fragment scrolls
+nowhere; **there is no flag FILTER in the plugin for one to apply.** Reported
+rather than invented, and asserted as what they actually are so the next reader
+of the brief does not go looking.
+
+#### Two assertions that could not fail, removed
+
+`test-counts.php` compared `at_least($dataset, SEPT, PEAK, true)` to the same
+call with the same arguments — **one list against itself, green since 1.33.0.**
+And a comment in `class-guide-data.php` described `show_jump`'s retirement while
+sitting above `show_compact`, which was still in the schema and still gated a
+live control. **A suite that asserts an identity is asserting nothing with extra
+steps**, which is this harness's oldest prohibition in a new disguise.
+
+#### Measured, at 390px with the CPU throttled 4×
+
+| | 1.43.0 (live) | 1.44.0 |
+|---|---|---|
+| DOM nodes at load, Water showing | 2,162 | **848** |
+| Images before interaction | 9 | **6** |
+| Longest task when the map loads | 100–370 ms | **none** |
+| Tap Wildlife | 86 ms | 134 ms worst task |
+| Tap a section tab | — | 111 ms worst task |
+| Month → This Month | — | 131 ms worst task |
+| Tap Water · Tap Now | 117 / 101 ms | **no long task** |
+| Pick another place | — | 74 ms worst task |
+| Nodes after every view visited | — | 3,455 |
+
+**The Director's exit test for item 2 — "after Water opens, no task over 200 ms
+apart from the map's own tile downloads" — is met with no long task at all when
+the map loads.** The sandbox has no Raleway, no SpeedyCache and no live egress,
+so these are sandbox figures: evidence, not proof, which is why he re-measures on
+live.
+
+#### Harness: 33 suites
+
+New: `ui-place.mjs` (76), `ui-deeplink.mjs` (27), `ui-guidepage.mjs` (10).
+`ui-map`, `ui-mapbar`, `ui-wind` and `ui-live` all opened the map by its button
+and now drive the real path through one helper, `openInlineMap`, **which presses
+nothing a guest cannot**. Mutations verified red: a deep link landing on Water,
+a fourth Peak Now tab, the tab row losing `role="tablist"`, the whole-chain keys
+emptied so wind repeats per lake, and the guide column's dead selector restored.
+Every run is AFTER the restores, never before.

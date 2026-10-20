@@ -1285,7 +1285,10 @@
 
 .dccwl-water-placerow { margin-bottom: var(--dccwl-gap-lg); }
 
-.dccwl-placepick { position: relative; }
+/* Positioned against the ROW, for the reason written out in widget.css: a
+ * menu centred on its own chip hangs off the edge of a phone when that chip
+ * is not itself centred. */
+.dccwl-water-placerow { position: relative; }
 
 .dccwl-water .dccwl-chip.dccwl-chip.dccwl-chip {
 	align-items: center;
