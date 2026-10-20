@@ -225,8 +225,17 @@ yours to improvise.
   - **Plugin zips take NO dash**: `Custom Checkout <version>.zip` (e.g.
     `Custom Checkout 0.34.0.zip`), matching the version in the plugin header.
   - **Everything else takes the dash**: `Custom Checkout - <name>.<ext>` —
-    images, markdown, JS, reports, audits, exports, anything that is not the
-    plugin zip.
+    images, markdown, JS, reports, audits, exports, logs, anything that is not
+    the plugin zip. **EVERY file handed over, with no exceptions**, however
+    obvious its contents look from the name.
+
+  **WHY, and this is the part not to tidy away** (owner, 2026-10-20): the
+  owner passes these files on to the **DCC - Admin** session, often several at
+  once from different plugins, and the prefix is how that session tells which
+  plugin each one belongs to. A name like `Check List 0.34.2.md` or
+  `screenshot.png` is not merely untidy there — it is unattributable, and the
+  wrong plugin's instructions can be read against it. The zip is the one
+  exception because its own name already carries the plugin.
 
   The folder *inside* the zip stays `dcc-custom-checkout/` — that is the
   WordPress plugin slug and must not change.
