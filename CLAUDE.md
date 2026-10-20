@@ -91,6 +91,13 @@ Contact Form - <name>
 e.g. `Contact Form - Spam Report.md`, `Contact Form - hover-states.png`,
 `Contact Form - widget.js`.
 
+The prefix is not decoration. Rob hands these files on to the "DCC - Admin"
+session, often several plugins' worth at once, and the prefix is how that
+session tells which plugin a file belongs to. A report, screenshot or snippet
+delivered without it is ambiguous the moment it leaves this conversation, so
+the rule covers EVERY file except the plugin zips — reports, images, exports,
+loose source files, anything.
+
 The prefix REPLACES any earlier one rather than stacking: never
 `Contact Form - Contact Form 1.6.0.zip`.
 
