@@ -54,6 +54,7 @@ final class Airbnb_Payout extends Parser_Base
             $type = trim($row['Type'] ?? '');
             if ($type === '' && Csv::is_blank($row)) {
                 $result['counts']['skipped']++;
+                $result['counts']['skipped_blank']++;
                 continue;
             }
 

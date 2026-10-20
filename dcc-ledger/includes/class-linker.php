@@ -56,6 +56,7 @@ final class Linker
         // Hand-typed copies. Run after the import links so a direct booking is
         // never mistaken for the imported one.
         $counts['copy'] = self::link_copies($stays, $bookings, $user_id);
+        $counts['copy'] += self::link_confirmed_moves($user_id);
 
         Reports::flush_cache();
 
@@ -65,54 +66,74 @@ final class Linker
     /**
      * Hand-typed copies of a platform stay, which must never be counted twice.
      *
-     * Auto-linked when the direct booking has the same cottage and dates as an
-     * OTA stay, or when its customer note carries that stay's confirmation
-     * code. A moved-cottage copy is only ever suggested — see Issues.
-     *
-     * @param array<int,array<string,mixed>> $stays
-     * @param array<int,array<string,mixed>> $bookings
+     * The rules live in Copies, which is also what the snapshot and the
+     * reports ask. Only the certain signals are linked automatically — a
+     * confirmation code, or the same cottage and dates. A probable move is
+     * treated as a copy in the figures but is never linked without a person:
+     * linking it would make rejecting it harder than confirming it.
      */
     private static function link_copies(array $stays, array $bookings, ?int $user_id): int
     {
-        $by_key  = [];
-        $by_code = [];
-        foreach ($stays as $stay) {
-            $by_key[self::key((string) $stay['cottage'], (string) $stay['check_in'], (string) $stay['check_out'])][] = $stay;
-            $by_code[strtoupper((string) $stay['channel'] . ':' . $stay['code'])] = $stay;
+        $linked = 0;
+
+        foreach (Copies::detect(Copies::from_live()) as $booking_id => $match) {
+            if ($match['stay_id'] === null) {
+                continue;
+            }
+            if (!in_array($match['reason'], [Copies::REASON_CODE, Copies::REASON_DATES], true)) {
+                continue;
+            }
+            if (self::has_link((int) $match['stay_id'], (int) $booking_id)) {
+                continue;
+            }
+            if (Repo::link((int) $match['stay_id'], (int) $booking_id, 'copy', $user_id)) {
+                $linked++;
+            }
         }
 
+        return $linked;
+    }
+
+    /**
+     * The moved-cottage copies Rob confirmed by hand on 2026-10-18, before the
+     * ledger could recognise a move on its own. They are recorded as copy
+     * links so nobody is asked to confirm them twice.
+     *
+     * Each is matched on its own dates against a platform stay in a different
+     * cottage, so a booking id that means something else on another site can
+     * never be linked to the wrong stay.
+     */
+    private static function link_confirmed_moves(?int $user_id): int
+    {
         $linked = 0;
-        foreach ($bookings as $booking) {
-            if ($booking['is_imported'] || !self::is_live($booking)) {
+
+        $by_id = [];
+        foreach (Mphb_Reader::bookings() as $booking) {
+            $by_id[(int) $booking['id']] = $booking;
+        }
+
+        $detected = Copies::detect(Copies::from_live());
+
+        foreach (Copies::CONFIRMED_MOVES as $booking_id) {
+            $booking = $by_id[$booking_id] ?? null;
+            if ($booking === null || $booking['is_imported'] || !self::is_live($booking)) {
                 continue;
             }
-
-            $target = null;
-
-            foreach ($booking['note_codes'] as $entry) {
-                $key = strtoupper($entry['channel'] . ':' . $entry['code']);
-                if (isset($by_code[$key])) {
-                    $target = $by_code[$key];
-                    break;
-                }
-            }
-
-            if ($target === null) {
-                $key   = self::key((string) $booking['cottage'], (string) $booking['check_in'], (string) $booking['check_out']);
-                $exact = $by_key[$key] ?? [];
-                if (count($exact) === 1) {
-                    $target = $exact[0];
-                }
-            }
-
-            if ($target === null) {
+            $match = $detected[$booking_id] ?? null;
+            if ($match === null || $match['stay_id'] === null || $match['reason'] !== Copies::REASON_MOVE) {
                 continue;
             }
-            if (self::has_link((int) $target['id'], (int) $booking['id'])) {
+            if (self::has_link((int) $match['stay_id'], $booking_id)) {
                 continue;
             }
-            if (Repo::link((int) $target['id'], (int) $booking['id'], 'copy', $user_id)) {
+            if (Repo::link((int) $match['stay_id'], $booking_id, 'copy', $user_id)) {
                 $linked++;
+                // Recorded as already reviewed: Rob decided this one.
+                Repo::mark_reviewed(
+                    'move_copy:' . $booking_id . ':' . (int) $match['stay_id'],
+                    __('Confirmed by Rob on 2026-10-18.', 'dcc-ledger'),
+                    $user_id
+                );
             }
         }
 

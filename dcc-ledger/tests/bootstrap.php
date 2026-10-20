@@ -368,6 +368,10 @@ function dccl_reset_db(): void
     global $wpdb;
     $wpdb = new Test_WPDB();
     $GLOBALS['dccl_options'] = [];
+    // Decisions caches the reviews table for the length of a request; the
+    // suites share one PHP process, so a decision made in one must not survive
+    // into the next.
+    \DCCL\Decisions::flush();
     \DCCL\Schema::install();
     dccl_install_mphb_tables();
 }

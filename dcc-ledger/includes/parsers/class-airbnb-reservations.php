@@ -11,8 +11,12 @@ if (!defined('ABSPATH')) {
 
 /**
  * Airbnb reservations CSV. It carries no money at all — it confirms stays and
- * supplies the booking date (lead time). Interleaved "Payout,,,,,,," rows are
- * skipped.
+ * supplies the booking date (lead time).
+ *
+ * Two kinds of row are skipped, and they are counted apart so an import report
+ * can say which: the "Payout,,,,,,," separator rows Airbnb interleaves between
+ * payout groups, and rows with no confirmation code at all — an enquiry or a
+ * request that was never accepted, which never became a stay.
  */
 final class Airbnb_Reservations extends Parser_Base
 {
@@ -39,8 +43,15 @@ final class Airbnb_Reservations extends Parser_Base
             $type = trim($row['Type'] ?? '');
             $code = trim($row['Confirmation code'] ?? '');
 
-            if (strcasecmp($type, 'Payout') === 0 || $code === '') {
+            if (strcasecmp($type, 'Payout') === 0) {
                 $result['counts']['skipped']++;
+                $result['counts']['skipped_payout_rows']++;
+                continue;
+            }
+
+            if ($code === '') {
+                $result['counts']['skipped']++;
+                $result['counts']['skipped_no_code']++;
                 continue;
             }
 

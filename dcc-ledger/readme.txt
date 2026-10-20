@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,10 @@ Over SSH:
 
 == Frequently Asked Questions ==
 
+= What happens if the ledger guesses wrong about a moved guest? =
+
+It shows you the guess rather than burying it. A probable move is counted once, listed on the Cleanup tab, and settled with one click either way. Rejecting it is remembered, so you are not asked again.
+
 = Does the ledger ever change my bookings? =
 
 No. MotoPress is only ever read. The ledger duplicates what it needs into its own tables and makes every change there, so the bookings Rob curated stay exactly as he left them.
@@ -78,6 +82,14 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.2 =
+* A cancelled or expired platform stay is no longer treated as the original of a hand-typed copy. The money never came through that channel, so a direct booking on those dates is a real, separate stay.
+* Moved-cottage copies are recognised: the same dates in a different cottage, where nothing is booked in the platform stay's own cottage. They are counted once, raised as "Probable Move Copy", and confirmed or rejected with one click.
+* The snapshot refuses to write assumed payments until at least one platform reservations export has been imported, because until then nothing can tell a copy from a real booking.
+* An assumed payment that turns out to sit on a copy is raised on the cleanup list and reversed with a second, labelled adjustment. It is never deleted.
+* Copy detection lives in one place now, instead of three that had drifted apart.
+* Import reports say what was skipped: payout separator rows, or rows with no confirmation code.
 
 = 0.1.1 =
 * The ledger now works on a copy: direct bookings and their payments are snapshotted into frozen Original rows, and every correction is a separate labelled adjustment on top.

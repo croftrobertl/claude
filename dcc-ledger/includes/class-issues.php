@@ -43,6 +43,8 @@ final class Issues
         self::unpaid_past_bookings($items, $copied);
         self::changed_since_copied($items);
         self::not_yet_copied($items, $bookings, $copied);
+        self::probable_move_copies($items, $stays);
+        self::assumed_on_a_copy($items);
         self::invoice_reconciliation($items);
 
         $reviews = Repo::reviews();
@@ -443,6 +445,108 @@ final class Issues
                 'action'   => __('Record the payment in MotoPress and take a fresh snapshot, or add an assumed adjustment in the ledger if the real figure is not known.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'booking_id' => (int) $booking_id,
+            ];
+        }
+    }
+
+    /**
+     * A direct booking that looks like the same stay moved to another cottage:
+     * the same dates, a different cottage, and nothing standing in the
+     * platform stay's own cottage.
+     *
+     * It is treated as a copy straight away — counting it twice is the worse
+     * mistake — but it is a guess until a person says otherwise, so it is
+     * raised here with both answers available.
+     *
+     * @param array<int,array<string,mixed>> $stays
+     */
+    private static function probable_move_copies(array &$items, array $stays): void
+    {
+        $by_stay = [];
+        foreach ($stays as $stay) {
+            $by_stay[(int) $stay['id']] = $stay;
+        }
+
+        $direct = [];
+        foreach (Copies::from_live() as $booking) {
+            $direct[(int) $booking['id']] = $booking;
+        }
+
+        foreach (Copies::detect(Copies::from_live()) as $booking_id => $match) {
+            if ($match['reason'] !== Copies::REASON_MOVE || $match['stay_id'] === null) {
+                continue;
+            }
+            $stay    = $by_stay[(int) $match['stay_id']] ?? null;
+            $booking = $direct[(int) $booking_id] ?? null;
+            if ($stay === null || $booking === null) {
+                continue;
+            }
+
+            $items[] = [
+                'key'      => 'move_copy:' . $booking_id . ':' . (int) $match['stay_id'],
+                'title'    => __('Probable Move Copy', 'dcc-ledger'),
+                'facts'    => [
+                    sprintf(
+                        /* translators: 1: booking id, 2: cottage on the booking, 3: check-in, 4: check-out */
+                        __('MotoPress booking #%1$d is a direct booking in cottage %2$s for %3$s to %4$s.', 'dcc-ledger'),
+                        (int) $booking_id,
+                        (string) $booking['cottage'],
+                        (string) $booking['check_in'],
+                        (string) $booking['check_out']
+                    ),
+                    self::stay_fact($stay),
+                    __('Same dates, a different cottage, and nothing is booked in the platform stay\'s own cottage — so this looks like the same guest, moved.', 'dcc-ledger'),
+                    __('It is being counted once, on the platform stay, and it is not assumed paid. Reject it and it becomes a separate direct booking again.', 'dcc-ledger'),
+                ],
+                'action'   => __('Confirm the move, or reject it if these really are two different stays.', 'dcc-ledger'),
+                'severity' => 'info',
+                'booking_id'  => (int) $booking_id,
+                'stay_id'     => (int) $match['stay_id'],
+                'confirm_move' => (int) $booking_id,
+            ];
+        }
+    }
+
+    /**
+     * An assumed payment that now sits on a booking the ledger has since come
+     * to see as a copy.
+     *
+     * It is never deleted quietly. A reversal is a second, labelled adjustment
+     * that cancels it, so the record shows both what was assumed and that it
+     * was taken back.
+     */
+    private static function assumed_on_a_copy(array &$items): void
+    {
+        $copies = Reports::direct_copy_ids();
+
+        foreach (Adjustments::all() as $adjustment) {
+            if ((string) $adjustment['type'] !== Adjustments::ASSUMED_PAID) {
+                continue;
+            }
+            $booking_id = (int) $adjustment['mphb_booking_id'];
+            if (!isset($copies[$booking_id])) {
+                continue;
+            }
+            if (Adjustments::assumed_for($booking_id) === null) {
+                continue; // already reversed
+            }
+
+            $items[] = [
+                'key'      => 'assumed_on_copy:' . $booking_id,
+                'title'    => __('Assumed Payment On A Copy', 'dcc-ledger'),
+                'facts'    => [
+                    sprintf(
+                        /* translators: 1: booking id, 2: the assumed amount */
+                        __('Booking #%1$d carries an assumed payment of %2$s, but it is now recognised as a hand-typed copy of a platform stay.', 'dcc-ledger'),
+                        $booking_id,
+                        self::money((float) $adjustment['amount'])
+                    ),
+                    __('Its money came through the platform, so the assumption should not stand. Nothing has been deleted: the figures already count this stay once, on the platform stay.', 'dcc-ledger'),
+                ],
+                'action'   => __('Reverse the assumed payment. That records a second, labelled adjustment cancelling it, leaving both halves on the record.', 'dcc-ledger'),
+                'severity' => 'bad',
+                'booking_id'     => $booking_id,
+                'reverse_assumed' => $booking_id,
             ];
         }
     }

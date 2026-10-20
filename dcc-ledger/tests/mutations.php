@@ -72,21 +72,6 @@ EOT,
 EOT,
     ],
     [
-        'name' => 'A moved-cottage copy auto-linked without asking',
-        'file' => 'includes/class-linker.php',
-        'from' => '                $key   = self::key((string) $booking[\'cottage\'], (string) $booking[\'check_in\'], (string) $booking[\'check_out\']);
-                $exact = $by_key[$key] ?? [];',
-        'to'   => '                $exact = [];
-                foreach ($by_key as $k => $candidates) {
-                    [$c, $in, $out] = explode(\'|\', $k);
-                    if ($in === (string) $booking[\'check_in\'] && $out === (string) $booking[\'check_out\']) {
-                        foreach ($candidates as $candidate) {
-                            $exact[] = $candidate;
-                        }
-                    }
-                }',
-    ],
-    [
         'name' => 'A same-cottage copy no longer raised on the cleanup list',
         'file' => 'includes/class-issues.php',
         'from' => '        self::handtyped_matches($items, $stays, $links, $bookings);',
@@ -252,6 +237,84 @@ EOT,
 EOT,
         'to'   => <<<'EOT'
     public const META_PAYMENT_BOOKING = '_mphb_parent_id';
+EOT,
+    ],
+    [
+        'name' => 'A cancelled platform stay treated as the original of a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if ((string) $stay['status'] !== 'ok') {
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A moved-cottage copy no longer recognised',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+                $matched = self::move_candidate($booking, $by_dates, $direct_keys);
+                $reason  = self::REASON_MOVE;
+EOT,
+        'to'   => <<<'EOT'
+                $matched = null;
+                $reason  = self::REASON_MOVE;
+EOT,
+    ],
+    [
+        'name' => 'A move auto-linked without anyone confirming it',
+        'file' => 'includes/class-linker.php',
+        'from' => <<<'EOT'
+            if (!in_array($match['reason'], [Copies::REASON_CODE, Copies::REASON_DATES], true)) {
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'Assumed payments written before the exports are imported',
+        'file' => 'includes/class-snapshot.php',
+        'from' => <<<'EOT'
+        if (self::reservations_imported()) {
+EOT,
+        'to'   => <<<'EOT'
+        if (true) {
+EOT,
+    ],
+    [
+        'name' => 'An assumed payment on a copy deleted instead of reversed',
+        'file' => 'includes/class-adjustments.php',
+        'from' => <<<'EOT'
+            if ((string) $adjustment['type'] === self::ASSUMED_REVERSAL) {
+                $reversed = true;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                $reversed = true;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A rejected move quietly coming back as a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if ($reason === self::REASON_MOVE
+                && $linked === null
+                && Decisions::move_rejected($id, (int) $matched['id'])) {
+EOT,
+        'to'   => <<<'EOT'
+            if (false
+                && $linked === null
+                && Decisions::move_rejected($id, (int) $matched['id'])) {
 EOT,
     ],
     [

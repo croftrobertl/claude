@@ -54,6 +54,19 @@ To remove the data deliberately:
 1. Settings tab → tick "Delete All Ledger Data When The Plugin Is Deleted" → Save.
 2. Plugins → Delete.
 
+## If a copy was judged wrongly
+
+Nothing needs rolling back. A probable move is a guess the ledger shows you:
+confirm it, and it is linked; reject it, and the decision is recorded and the
+booking counts on its own again. Either answer can be changed later — a
+confirmed link outranks an earlier rejection, and removing the link brings the
+guess back.
+
+If an assumed payment turns out to sit on a copy, the Cleanup tab reverses it:
+that writes a second, labelled adjustment cancelling the first. The assumption
+is never deleted, so the record always shows both what was assumed and that it
+was taken back.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

@@ -494,7 +494,7 @@ final class Reports
 
             $assumed = 0.0;
             foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
-                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                if (in_array((string) $adjustment['type'], Adjustments::ASSUMED_TYPES, true)) {
                     $assumed = round($assumed + (float) $adjustment['amount'], 2);
                 }
             }
@@ -534,7 +534,7 @@ final class Reports
                 if ($date < $from || $date > $to) {
                     continue;
                 }
-                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                if (in_array((string) $adjustment['type'], Adjustments::ASSUMED_TYPES, true)) {
                     $out['assumed'] = round($out['assumed'] + (float) $adjustment['amount'], 2);
                 }
             }
@@ -579,46 +579,14 @@ final class Reports
 
     /**
      * Which copied bookings are copies of an OTA stay, worked out entirely
-     * from the ledger's own tables: a copy link, the same cottage and dates as
-     * an OTA stay, or an OTA code the snapshot extracted from the booking.
+     * from the ledger's own tables — the Originals the snapshot froze, the
+     * stays the imports created, and the links a person confirmed.
      *
      * @return array<int,bool>
      */
     public static function direct_copy_ids(): array
     {
-        global $wpdb;
-
-        $copies = self::copy_booking_ids();
-
-        $stays_t = Schema::stays();
-        $stays   = $wpdb->get_results("SELECT code, cottage, check_in, check_out FROM {$stays_t}", ARRAY_A) ?: [];
-
-        $by_key  = [];
-        $by_code = [];
-        foreach ($stays as $stay) {
-            $by_key[Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out'])] = true;
-            $by_code[strtoupper((string) $stay['code'])] = true;
-        }
-
-        foreach (Originals::all(Originals::KIND_BOOKING) as $booking) {
-            $id = (int) $booking['mphb_id'];
-            if (isset($copies[$id])) {
-                continue;
-            }
-            if (isset($by_key[Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out'])])) {
-                $copies[$id] = true;
-                continue;
-            }
-            foreach (Repo::decode_meta($booking['codes'] ?? null) as $entry) {
-                $code = is_array($entry) ? (string) ($entry['code'] ?? '') : (string) $entry;
-                if ($code !== '' && isset($by_code[strtoupper($code)])) {
-                    $copies[$id] = true;
-                    break;
-                }
-            }
-        }
-
-        return $copies;
+        return Copies::ids(Copies::detect(Copies::from_originals()));
     }
 
     /** @return array<int,bool> MPHB booking ids linked to an OTA stay as a copy */

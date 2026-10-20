@@ -15,14 +15,23 @@ if (!defined('ABSPATH')) {
  */
 final class Adjustments
 {
-    public const ASSUMED_PAID    = 'assumed_paid';
+    public const ASSUMED_PAID     = 'assumed_paid';
+    public const ASSUMED_REVERSAL = 'assumed_paid_reversal';
     public const COPY_NOT_COUNTED = 'copy_not_counted';
-    public const MANUAL          = 'manual';
+    public const MANUAL           = 'manual';
+
+    /**
+     * Types that make up the assumed-payment figure. A reversal is negative,
+     * so the two cancel out: if a booking ever stops being seen as a copy, no
+     * assumed money reappears from under it.
+     */
+    public const ASSUMED_TYPES = [self::ASSUMED_PAID, self::ASSUMED_REVERSAL];
 
     public static function label_for(string $type): string
     {
         $labels = [
             self::ASSUMED_PAID     => __('Assumed Paid In Full', 'dcc-ledger'),
+            self::ASSUMED_REVERSAL => __('Assumed Payment Reversed: It Sits On A Copy', 'dcc-ledger'),
             self::COPY_NOT_COUNTED => __('Copy Of An OTA Stay, Not Counted', 'dcc-ledger'),
             self::MANUAL           => __('Manual Correction', 'dcc-ledger'),
         ];
@@ -116,6 +125,22 @@ final class Adjustments
             $wpdb->prepare("SELECT * FROM {$table} WHERE mphb_booking_id = %d ORDER BY id", $booking_id),
             ARRAY_A
         ) ?: [];
+    }
+
+    /** The assumed payment on a booking, if it still has one standing. */
+    public static function assumed_for(int $booking_id): ?array
+    {
+        $assumed  = null;
+        $reversed = false;
+        foreach (self::for_booking($booking_id) as $adjustment) {
+            if ((string) $adjustment['type'] === self::ASSUMED_PAID) {
+                $assumed = $adjustment;
+            }
+            if ((string) $adjustment['type'] === self::ASSUMED_REVERSAL) {
+                $reversed = true;
+            }
+        }
+        return $reversed ? null : $assumed;
     }
 
     public static function count(?string $type = null): int

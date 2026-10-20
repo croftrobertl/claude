@@ -213,6 +213,21 @@ function dccl_seed_mphb(): void
         LIVE_TOTAL => '700.00',
     ]);
 
+    // Rob's 5584: a direct booking carrying the code of a CANCELLED platform
+    // stay. The money never came through that channel, so this is a real,
+    // separate stay and must never be treated as a copy.
+    $booking(9022, 'confirmed', 1614, '2025-08-01', '2025-08-03', [
+        LIVE_TOTAL         => '416.25',
+        LIVE_INTERNAL_NOTE => 'Guest rebooked direct after cancelling VRBO ID: HA-BBB222',
+    ]);
+
+    // A move the ledger should spot on its own: same dates as the Airbnb stay
+    // HMBBBB0003 (cottage 35, 1-4 May), in a different cottage, with nothing
+    // booked in cottage 35 on those dates.
+    $booking(9023, 'confirmed', 1613, '2025-05-01', '2025-05-04', [
+        LIVE_TOTAL => '525.00',
+    ]);
+
     // Going forward: checked out after the window closed and still unpaid.
     // Rob's assumed-paid rule does not reach it, so the cleanup list must.
     $booking(9021, 'confirmed', 1806, '2026-10-01', '2026-10-05', [

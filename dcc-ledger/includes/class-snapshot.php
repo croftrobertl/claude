@@ -68,11 +68,26 @@ final class Snapshot
             'copies_skipped'     => 0,
             'overpaid_skipped'   => 0,
             'outside_window'     => 0,
+            'assumed_withheld'   => 0,
+            // Broken out so a copy count can be reconciled against Rob's own
+            // list without guessing which signal found what.
+            'copies_by_link'     => 0,
+            'copies_by_code'     => 0,
+            'copies_by_dates'    => 0,
+            'copies_by_move'     => 0,
         ];
         $notes = [];
 
         $bookings = self::direct_bookings();
-        $copies   = self::copy_booking_ids($bookings);
+
+        $detected = Copies::detect(Copies::from_live());
+        $copies   = Copies::ids($detected);
+        foreach ($detected as $match) {
+            $key = 'copies_by_' . $match['reason'];
+            if (isset($counts[$key])) {
+                $counts[$key]++;
+            }
+        }
 
         $batch_id   = $dry_run ? 0 : Batches::create(self::KIND, __('MotoPress snapshot', 'dcc-ledger'), $user_id);
         $superseded = [];
@@ -144,7 +159,17 @@ final class Snapshot
             }
         }
 
-        self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+        // The order trap. A snapshot taken before the platform exports are in
+        // cannot tell a hand-typed copy from a real direct booking, because
+        // there are no stays to compare against — and an assumed payment, once
+        // written, is never silently removed. So the copy is made either way,
+        // and the assumed payments wait.
+        if (self::reservations_imported()) {
+            self::assume_paid($bookings, $copies, $counts, $notes, $dry_run, $batch_id, $user_id);
+        } else {
+            $counts['assumed_withheld'] = 1;
+            $notes[] = __('No platform reservations have been imported yet, so no assumed payments were written. Without the platform stays there is nothing to recognise a hand-typed copy by, and every copy would be assumed paid — which cannot be undone quietly afterwards. Import the reservations exports first, then run this again.', 'dcc-ledger');
+        }
 
         if ($dry_run) {
             return [
@@ -310,46 +335,36 @@ final class Snapshot
     }
 
     /**
-     * Which direct bookings are copies of an OTA stay.
+     * Which direct bookings are copies of an OTA stay, read from MotoPress as
+     * it stands now — the snapshot has to know before it copies anything.
      *
-     * Three signals, so a copy is caught even before anyone has run the
-     * matcher: an existing copy link, the same cottage and dates as an OTA
-     * stay, or an OTA code found in one of the booking's notes.
-     *
-     * @param array<int,array<string,mixed>> $bookings
      * @return array<int,bool>
      */
-    public static function copy_booking_ids(array $bookings): array
+    public static function copy_booking_ids(array $bookings = []): array
     {
-        $copies = Reports::copy_booking_ids();
+        return Copies::ids(Copies::detect(Copies::from_live()));
+    }
 
-        $stays   = Linker::stays();
-        $by_key  = [];
-        $by_code = [];
-        foreach ($stays as $stay) {
-            $by_key[Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out'])] = true;
-            $by_code[strtoupper((string) $stay['code'])] = true;
-        }
-
-        foreach ($bookings as $booking) {
-            $id = (int) $booking['id'];
-            if (isset($copies[$id])) {
+    /**
+     * Has at least one platform reservations export been imported and kept?
+     *
+     * Payout files alone are not enough: they carry money, but the stays they
+     * create are thin, and copy detection leans on the reservations.
+     */
+    public static function reservations_imported(): bool
+    {
+        foreach (Batches::all(500) as $batch) {
+            if (!str_ends_with((string) $batch['kind'], '_reservations')) {
                 continue;
             }
-            $key = Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out']);
-            if (isset($by_key[$key])) {
-                $copies[$id] = true;
+            if (Batches::is_undone($batch)) {
                 continue;
             }
-            foreach ($booking['note_codes'] as $entry) {
-                if (isset($by_code[strtoupper((string) $entry['code'])])) {
-                    $copies[$id] = true;
-                    break;
-                }
+            if ((int) $batch['rows_inserted'] > 0 || (int) $batch['rows_unchanged'] > 0) {
+                return true;
             }
         }
-
-        return $copies;
+        return false;
     }
 
     public static function taken(): bool

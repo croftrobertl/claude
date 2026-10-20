@@ -49,13 +49,27 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 - **A missing MotoPress key is never a figure of zero.** `Health::check()` runs
   on activation, before every snapshot and on every report load; a mismatch
   shows a banner instead of figures.
-- **A hand-typed copy counts once**, on the platform stay. Copies are linked
-  `method=copy` and excluded from the direct figures.
+- **A hand-typed copy counts once**, on the platform stay. All four signals
+  live in `Copies::detect()` — the only place the question is answered. It was
+  answered in three places once, and they drifted.
+- **A cancelled or expired platform stay is never the original of a copy.** The
+  money never came through that channel, so a direct booking on those dates is
+  a real, separate stay. This is Rob's 5584.
+- **Assumed payments are never written before the platform exports are in.**
+  Without the stays, nothing can recognise a copy, and every copy would be
+  assumed paid — which is never removed quietly afterwards.
+- **An assumed payment is reversed, never deleted.** A reversal is a second,
+  labelled adjustment that cancels the first, so both halves stay on the
+  record and the pair nets to zero if the booking ever stops looking like a
+  copy.
 - **Three separate tax buckets**, never summed: remitted by the platform,
   collected inside a payout, and not reported at all. Vrbo reports no tax —
   that is "not reported", never "$0".
-- **An overlap, a cross-channel match or a moved cottage is never auto-linked.**
-  They go on the cleanup list with candidates.
+- **An overlap or a cross-channel match is never auto-linked.** Nor is a
+  probable move: it is treated as a copy in the figures, but linking it would
+  make rejecting it harder than confirming it, so it waits for a person. The
+  four moves Rob confirmed on 2026-10-18 (`Copies::CONFIRMED_MOVES`) are
+  seeded as links and marked reviewed.
 - **Uploaded files are parsed from a private temp file and deleted before the
   request ends**, success or failure. Never written to uploads/.
 - **Nothing runs on plugin load.** Tables are created on activation and on a DB
@@ -76,10 +90,17 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   rewriting it.
 - A stay with any link, copies included, is not reported as "no MotoPress
   booking".
-- The snapshot detects a copy three ways before applying the assumed-paid rule
-  (an existing copy link, the same cottage and dates as an OTA stay, or an OTA
-  code in either note), so a copy is never topped up even if nobody has run the
-  matcher yet.
+- Copy detection reports the signal that FOUND a copy, not the link it has
+  since been given, so a copy count can be reconciled against how each one was
+  recognised. A link only shows as the reason when no signal explains it any
+  more.
+- A confirmed link outranks an earlier rejection: somebody said yes after
+  somebody said no.
+- A probable move needs the platform stay's own cottage to be empty on those
+  dates. If something is already standing there, this booking is not where that
+  guest went.
+- Two platform stays on the same dates in different cottages are not guessed
+  between; neither becomes a move.
 - Structural questions on the cleanup list (which bookings exist, on what
   dates) are read live from MotoPress so they are never stale; money questions
   are read from the frozen copy so a figure never moves under Rob's feet.
@@ -106,10 +127,18 @@ the status prefix are not cosmetic — the other spellings return nothing at all
 plugin's constants. A fixture built from the constants follows the plugin into
 its own mistakes and proves nothing; three mutations exist to keep that honest.
 
+## Decisions a person made
+
+`Decisions` stores the one answer the ledger must not forget: "that is not a
+move". It lives in the reviews table under a `decision:` key, so a rejected
+guess stays rejected instead of being re-offered on every page load. It caches
+the table for the length of a request; anything that writes a decision flushes
+it, and so does the test harness between suites.
+
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 467 assertions
-    php dcc-ledger/tests/mutations.php            # 24 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 518 assertions
+    php dcc-ledger/tests/mutations.php            # 29 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 

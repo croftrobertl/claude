@@ -14,6 +14,7 @@ $suites = [
     'parsers'   => __DIR__ . '/test-parsers.php',
     'import'    => __DIR__ . '/test-import.php',
     'snapshot'  => __DIR__ . '/test-snapshot.php',
+    'order'     => __DIR__ . '/test-order.php',
     'linking'   => __DIR__ . '/test-linking.php',
     'reports'   => __DIR__ . '/test-reports.php',
     'issues'    => __DIR__ . '/test-issues.php',

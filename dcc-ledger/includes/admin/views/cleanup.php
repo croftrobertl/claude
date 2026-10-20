@@ -74,6 +74,32 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
         <?php endif; ?>
 
         <div class="dccl-issue__controls">
+            <?php if (!empty($item['confirm_move']) && !empty($item['stay_id'])) : ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_confirm_move">
+                    <input type="hidden" name="booking_id" value="<?php echo (int) $item['booking_id']; ?>">
+                    <input type="hidden" name="stay_id" value="<?php echo (int) $item['stay_id']; ?>">
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Confirm The Move', 'dcc-ledger'); ?></button>
+                </form>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_reject_move">
+                    <input type="hidden" name="booking_id" value="<?php echo (int) $item['booking_id']; ?>">
+                    <input type="hidden" name="stay_id" value="<?php echo (int) $item['stay_id']; ?>">
+                    <button type="submit" class="button"><?php esc_html_e('Not A Move — Two Separate Stays', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
+            <?php if (!empty($item['reverse_assumed'])) : ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_reverse_assumed">
+                    <input type="hidden" name="booking_id" value="<?php echo (int) $item['reverse_assumed']; ?>">
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Reverse The Assumed Payment', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
             <?php if (!empty($item['suggest_copy']) && !empty($item['stay_id'])) : ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <?php wp_nonce_field(Admin::NONCE); ?>

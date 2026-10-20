@@ -75,6 +75,7 @@ final class Admin
         foreach ([
             'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
             'settings', 'export', 'snapshot', 'adjust', 'unadjust',
+            'confirm_move', 'reject_move', 'reverse_assumed',
         ] as $action) {
             add_action('admin_post_dccl_' . $action, ['\\DCCL\\Admin', 'handle_' . $action]);
         }
@@ -210,6 +211,23 @@ final class Admin
         }
 
         $counts = $result['counts'];
+
+        $skipped_detail = [];
+        if (($counts['skipped_payout_rows'] ?? 0) > 0) {
+            $skipped_detail[] = sprintf(
+                /* translators: %d: number of payout separator rows */
+                __('%d payout separator rows, which are not reservations', 'dcc-ledger'),
+                (int) $counts['skipped_payout_rows']
+            );
+        }
+        if (($counts['skipped_no_code'] ?? 0) > 0) {
+            $skipped_detail[] = sprintf(
+                /* translators: %d: number of rows with no confirmation code */
+                __('%d rows with no confirmation code, which never became a stay', 'dcc-ledger'),
+                (int) $counts['skipped_no_code']
+            );
+        }
+
         $message = sprintf(
             /* translators: 1: dry run or import, 2: rows read, 3: new stays, 4: new money lines, 5: unchanged, 6: excluded, 7: skipped */
             __('%1$s: %2$d rows read, %3$d new stays, %4$d new money lines, %5$d already there, %6$d Crofty Bear rows excluded, %7$d skipped.', 'dcc-ledger'),
@@ -221,6 +239,14 @@ final class Admin
             $counts['excluded'],
             $counts['skipped'] + $counts['malformed'] + $counts['unknown_cottage']
         );
+
+        if ($skipped_detail !== []) {
+            $message .= ' ' . sprintf(
+                /* translators: %s: a list describing what was skipped */
+                __('Of the skipped rows: %s.', 'dcc-ledger'),
+                implode('; ', $skipped_detail)
+            );
+        }
 
         self::back('imports', $message);
     }
@@ -296,6 +322,76 @@ final class Admin
             self::back('cleanup', __('That correction could not be removed.', 'dcc-ledger'), 'error');
         }
         self::back('cleanup', __('Correction removed. The original is untouched, as it always was.', 'dcc-ledger'));
+    }
+
+    /** Rob agrees: the guest was moved, and this is the same stay. */
+    public static function handle_confirm_move(): void
+    {
+        self::guard();
+
+        $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
+        $stay_id    = isset($_POST['stay_id']) ? (int) $_POST['stay_id'] : 0;
+
+        if ($booking_id <= 0 || $stay_id <= 0) {
+            self::back('cleanup', __('A booking and a stay are both needed.', 'dcc-ledger'), 'error');
+        }
+
+        Repo::link($stay_id, $booking_id, 'copy', get_current_user_id());
+        Repo::mark_reviewed(
+            'move_copy:' . $booking_id . ':' . $stay_id,
+            __('Confirmed as a move.', 'dcc-ledger'),
+            get_current_user_id()
+        );
+
+        self::back('cleanup', __('Move confirmed. The stay is counted once, on the platform stay.', 'dcc-ledger'));
+    }
+
+    /** Rob disagrees: these are two different stays. */
+    public static function handle_reject_move(): void
+    {
+        self::guard();
+
+        $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
+        $stay_id    = isset($_POST['stay_id']) ? (int) $_POST['stay_id'] : 0;
+        $note       = isset($_POST['note']) ? sanitize_text_field(wp_unslash($_POST['note'])) : '';
+
+        if ($booking_id <= 0 || $stay_id <= 0) {
+            self::back('cleanup', __('A booking and a stay are both needed.', 'dcc-ledger'), 'error');
+        }
+
+        Decisions::reject_move($booking_id, $stay_id, $note, get_current_user_id());
+
+        self::back('cleanup', __('Recorded as a separate stay. It will be counted on its own from now on, and it will not be asked about again.', 'dcc-ledger'));
+    }
+
+    /**
+     * Cancel an assumed payment that turned out to sit on a copy.
+     *
+     * The assumption is never deleted: a second, labelled adjustment reverses
+     * it, so the record keeps both halves.
+     */
+    public static function handle_reverse_assumed(): void
+    {
+        self::guard();
+
+        $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
+        $assumed    = $booking_id > 0 ? Adjustments::assumed_for($booking_id) : null;
+
+        if ($assumed === null) {
+            self::back('cleanup', __('That booking has no assumed payment standing against it.', 'dcc-ledger'), 'error');
+        }
+
+        Adjustments::add([
+            'type'            => Adjustments::ASSUMED_REVERSAL,
+            'mphb_booking_id' => $booking_id,
+            'cottage'         => (string) $assumed['cottage'],
+            'amount'          => -1 * (float) $assumed['amount'],
+            'event_date'      => (string) $assumed['event_date'],
+            'label'           => Adjustments::label_for(Adjustments::ASSUMED_REVERSAL),
+            'note'            => __('This booking is a hand-typed copy of a platform stay, so its money came through the platform. The assumed payment above is cancelled, not removed.', 'dcc-ledger'),
+        ], null, get_current_user_id());
+
+        self::back('cleanup', __('Assumed payment reversed. Both the assumption and its reversal stay on the record.', 'dcc-ledger'));
     }
 
     public static function handle_link(): void

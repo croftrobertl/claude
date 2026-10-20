@@ -68,6 +68,11 @@ abstract class Parser_Base
                 'unknown_cottage' => 0,
                 'malformed'       => 0,
                 'skipped'         => 0,
+                // What the skipped rows were, so "skipped: 39" is never an
+                // unexplained number on an import report.
+                'skipped_payout_rows' => 0,
+                'skipped_no_code'     => 0,
+                'skipped_blank'       => 0,
             ],
             'notes'  => [],
         ];

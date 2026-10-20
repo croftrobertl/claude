@@ -57,6 +57,23 @@ final class Cli
         \WP_CLI::log(sprintf('Malformed:       %d', $c['malformed']));
         \WP_CLI::log(sprintf('Skipped:         %d', $c['skipped']));
 
+        // "Skipped" on its own says nothing useful, so it is broken out.
+        if (($c['skipped_payout_rows'] ?? 0) > 0) {
+            \WP_CLI::log(sprintf(
+                '  of which payout separator rows: %d  (Airbnb interleaves these between payout groups; they are not reservations)',
+                $c['skipped_payout_rows']
+            ));
+        }
+        if (($c['skipped_no_code'] ?? 0) > 0) {
+            \WP_CLI::log(sprintf(
+                '  of which rows with no confirmation code: %d  (an enquiry or a request never accepted; no stay to record)',
+                $c['skipped_no_code']
+            ));
+        }
+        if (($c['skipped_blank'] ?? 0) > 0) {
+            \WP_CLI::log(sprintf('  of which blank rows: %d', $c['skipped_blank']));
+        }
+
         foreach ($result['notes'] as $note) {
             \WP_CLI::warning($note);
         }
@@ -103,12 +120,23 @@ final class Cli
         \WP_CLI::log(sprintf('Assumed payments:     %d bookings', $c['assumed_bookings']));
         \WP_CLI::log(sprintf('Assumed total:        $%s', number_format((float) $c['assumed_total'], 2)));
         \WP_CLI::log(sprintf('Skipped, a copy:      %d', $c['copies_skipped']));
+        \WP_CLI::log(sprintf(
+            '  copies found: %d by an existing link, %d by a code in a note, %d by cottage and dates, %d as a probable move',
+            $c['copies_by_link'],
+            $c['copies_by_code'],
+            $c['copies_by_dates'],
+            $c['copies_by_move']
+        ));
         \WP_CLI::log(sprintf('Skipped, overpaid:    %d', $c['overpaid_skipped']));
         \WP_CLI::log(sprintf('Outside the window:   %d', $c['outside_window']));
         \WP_CLI::log(sprintf('Already adjusted:     %d', $c['assumed_existing']));
 
         foreach ($result['notes'] as $note) {
             \WP_CLI::warning($note);
+        }
+
+        if (($c['assumed_withheld'] ?? 0) > 0) {
+            \WP_CLI::warning(__('No assumed payments were written. Import the platform reservations exports first.', 'dcc-ledger'));
         }
 
         if ($result['dry_run']) {
