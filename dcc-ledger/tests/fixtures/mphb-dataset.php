@@ -268,6 +268,45 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => '',
     ]);
 
+    // Rob's four confirmed moves, by the booking ids the plugin carries in
+    // Copies::CONFIRMED_MOVES. Each sits on a platform stay's dates in a
+    // DIFFERENT cottage, and each is given a surname that does NOT match —
+    // the seeding must link them on Rob's say-so alone.
+    //
+    // 7278: the Airbnb stay HM2022OLD1 is in cottage 23, 1-5 June 2022.
+    $booking(7278, 'confirmed', 1066, '2022-06-01', '2022-06-05', [
+        LIVE_TOTAL      => '480.00',
+        LIVE_FIRST_NAME => 'Gregor',
+        LIVE_LAST_NAME  => 'Lindqvist',
+    ]);
+    // 12443: the Booking.com stay 5111111111 is in cottage 22, 1-5 March 2025.
+    $booking(12443, 'confirmed', 1614, '2025-03-01', '2025-03-05', [
+        LIVE_TOTAL      => '529.50',
+        LIVE_FIRST_NAME => 'Marta',
+        LIVE_LAST_NAME  => 'Quintero',
+    ]);
+    // 12447: the Airbnb stay HMAAAA0002 is in cottage 31, 12-15 March 2025.
+    $booking(12447, 'confirmed', 1614, '2025-03-12', '2025-03-15', [
+        LIVE_TOTAL      => '529.50',
+        LIVE_FIRST_NAME => 'Ola',
+        LIVE_LAST_NAME  => 'Fjeldstad',
+    ]);
+    // 17462: the Booking.com stay 5222222222 is in cottage 33, 10-13 Jan 2026.
+    $booking(17462, 'confirmed', 1072, '2026-01-10', '2026-01-13', [
+        LIVE_TOTAL      => '444.00',
+        LIVE_FIRST_NAME => 'Yusuf',
+        LIVE_LAST_NAME  => 'Demirci',
+    ]);
+
+    // A CANCELLED booking sitting exactly where a moved guest would sit, with
+    // a matching surname. A dock block is not a stay, so it is not a move, a
+    // copy, or a question for Rob.
+    $booking(7078, 'cancelled', 1613, '2025-07-01', '2025-07-05', [
+        LIVE_TOTAL      => '0.00',
+        LIVE_FIRST_NAME => 'Dana',
+        LIVE_LAST_NAME  => 'Whitfield',
+    ]);
+
     // Going forward: checked out after the window closed and still unpaid.
     // Rob's assumed-paid rule does not reach it, so the cleanup list must.
     $booking(9021, 'confirmed', 1806, '2026-10-01', '2026-10-05', [

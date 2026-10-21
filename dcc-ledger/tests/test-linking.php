@@ -28,7 +28,7 @@ $counts = Linker::run(1);
 
 T::same(1, $counts['code'], 'One Airbnb stay links by the code in its iCal summary');
 T::same(3, $counts['exact'], 'Three stays link on an exact cottage and dates match');
-T::same(3, $counts['copy'], 'Three hand-typed copies are linked');
+T::same(7, $counts['copy'], 'Three hand-typed copies, plus Rob\'s four confirmed moves, are linked');
 
 $link = Repo::import_link(Repo::stay_id('airbnb', 'HMAAAA0001'));
 T::same('code', $link['method'], 'HMAAAA0001 links by code');
@@ -97,7 +97,11 @@ foreach (Repo::all_links() as $l) {
     }
 }
 sort($copy_ids);
-T::same([9006, 9013, 9014], $copy_ids, 'Copies are found by matching dates and by the code in the note');
+T::same(
+    [7278, 9006, 9013, 9014, 12443, 12447, 17462],
+    $copy_ids,
+    'Copies are found by matching dates, by a code in a note, and by Rob\'s own confirmation'
+);
 
 $by_code = Repo::links_for_stay(Repo::stay_id('bookingcom', '5222222222'));
 T::same(9013, (int) $by_code[0]['mphb_booking_id'], 'A copy with different dates is found by "Booking.com ID:" in its note');

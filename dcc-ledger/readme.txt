@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,12 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.4 =
+* Fixed an upgrade that silently failed: an SQL comment inside a CREATE TABLE broke dbDelta's column diff, so an existing stays table never gained the guest_keys column while a fresh install was perfect. The table definitions are data now, so a comment cannot get into the SQL at all.
+* A missing column in the ledger's own tables is reported with a banner naming it, instead of reading as an empty figure.
+* A cancelled booking is never offered as a probable move. A dock block is not a stay.
+* Fixed the seeding of the four confirmed moves, which read the wrong key. On a fresh install it would have linked none of them and assumed payment on all four.
 
 = 0.1.3 =
 * A moved guest now has to be the same guest: a move match needs the surname as well as the dates. Two parties booking the same weekend in different cottages is no longer read as a move.

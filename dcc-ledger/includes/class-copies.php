@@ -267,6 +267,10 @@ final class Copies
     /**
      * Every direct booking as MotoPress holds it now.
      *
+     * Confirmed ones only. A cancelled booking is a dock block or a scrapped
+     * reservation — never a stay, so never a copy, a move, or a question to
+     * put in front of Rob.
+     *
      * @return array<int,array<string,mixed>>
      */
     public static function from_live(): array
@@ -274,6 +278,9 @@ final class Copies
         $out = [];
         foreach (Mphb_Reader::bookings() as $booking) {
             if ($booking['is_imported'] || !Cottages::is_cottage((string) $booking['cottage'])) {
+                continue;
+            }
+            if ((string) $booking['status'] !== Snapshot::CONFIRMED) {
                 continue;
             }
             $codes = [];
@@ -293,7 +300,8 @@ final class Copies
     }
 
     /**
-     * Every direct booking as the ledger copied it.
+     * Every direct booking as the ledger copied it. Confirmed ones only, for
+     * the same reason as from_live().
      *
      * @return array<int,array<string,mixed>>
      */
@@ -301,6 +309,9 @@ final class Copies
     {
         $out = [];
         foreach (Originals::all(Originals::KIND_BOOKING) as $booking) {
+            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED) {
+                continue;
+            }
             $codes = [];
             foreach (Repo::decode_meta($booking['codes'] ?? null) as $entry) {
                 $codes[] = is_array($entry) ? (string) ($entry['code'] ?? '') : (string) $entry;

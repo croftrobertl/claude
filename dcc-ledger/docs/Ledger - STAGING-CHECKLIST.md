@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.3 — Staging Checklist
+# DCC Ledger 0.1.4 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -8,13 +8,24 @@
 > safe rather than silently wrong — but the right order is still the right
 > order.
 >
-> **Upgrading the existing staging install (7 import batches, no snapshot):**
-> deactivate, upload 0.1.3, activate. Activation adds a `guest_keys` column to
-> two tables; nothing already stored is touched. Then re-run step 3's imports
-> in dry-run — they will report the stays as "filled in" as the surname hashes
-> are added — then for real, then step 5 and step 6. The exports must be
-> re-imported once, because the surname hashes a move match needs did not
-> exist before 0.1.3.
+> **Upgrading the existing staging install (14 import batches, links in
+> place, no snapshot):** deactivate, upload 0.1.4, activate. Then, before
+> anything else, confirm the upgrade finished:
+>
+>     P=$(wp db prefix)
+>     wp db query "SHOW COLUMNS FROM ${P}dcc_ledger_stays LIKE 'guest_keys'"
+>     wp db query "SHOW COLUMNS FROM ${P}dcc_ledger_originals LIKE 'guest_keys'"
+>
+> Both must return a row. 0.1.3's upgrade failed to add `guest_keys` to
+> `stays` — an SQL comment inside the CREATE TABLE broke dbDelta's column
+> diff — and that is the blocker 0.1.4 fixes. If either comes back empty the
+> plugin now says so itself, with a red banner naming `stays.guest_keys` in
+> place of figures; deactivating and reactivating runs the upgrade again.
+>
+> The exports are already imported on staging and the keys already filled in,
+> so there is no need to re-import. Re-run step 5 (the matcher), then step 6.
+> The column added by hand during the 0.1.3 testing is exactly what the
+> upgrade now adds, so leave it as it is.
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
@@ -133,9 +144,11 @@ Rob measured these shapes on live, so expect roughly:
       cottage and dates). The four moves Rob already confirmed — 7278, 12443,
       12447 and 17462 — are linked automatically and marked reviewed, because
       he decided them on 2026-10-18.
-- [ ] Any other probable move is NOT linked. It is counted as a copy in the
-      figures and offered on the Cleanup tab with both answers: confirm it, or
-      say the two really are separate stays.
+- [ ] Any other probable move is NOT linked, and is NOT counted as a copy. It
+      counts as a real stay — Rob's rule is that every confirmed booking
+      really happened — and is offered on the Cleanup tab with both answers.
+      Confirming the move links it as a copy and raises its assumed payment
+      for reversal; rejecting it leaves the booking counting on its own.
 
 Matching writes only to the ledger's links table. It never writes to MotoPress.
 
@@ -156,12 +169,17 @@ everything it needs.
       and copies on bookings that are not confirmed.
 - [ ] `Probable moves` is reported separately and is **not** part of the copy
       count. These are questions, not findings: each one counts as a real stay
-      until you confirm it. Expect a small number — 4 or so, not 18. If it is
-      still large, the surname matching is not working; check step 2's name
-      fields.
+      until you confirm it. **Expect 0 on staging.** 0.1.3 offered three —
+      7078, 7155 and 11528 — but all three are cancelled in MotoPress, and a
+      cancelled booking is a dock block, not a stay. If any other number comes
+      back, send me the ids.
 - [ ] The 4 moves Rob confirmed (7278, 12443, 12447, 17462) appear under
       `by an existing link`, not as probable moves. They are linked in step 5
       whether or not their names match, because Rob decided them himself.
+      **This matters more on live than on staging**, where they were already
+      linked: if the seeding fails on a fresh install, all four are assumed
+      paid and the total comes out at 41 bookings and $61,851.22 instead of
+      38 and $60,348.22. If you see that, stop and tell me.
 - [ ] 6273 is **assumed paid**, not called a copy. It shares its dates with a
       stay in another cottage, but it is a different party.
 - [ ] `Skipped, overpaid` is 3 — bookings 7983, 7989 and 10465, which are

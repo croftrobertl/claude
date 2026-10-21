@@ -409,6 +409,59 @@ EOT,
 EOT,
     ],
     [
+        'name' => 'An SQL comment back inside a CREATE TABLE',
+        'file' => 'includes/class-schema.php',
+        'from' => <<<'EOT'
+        $lines = [];
+        foreach ($definition['columns'] as $column => $type) {
+            $lines[] = $column . ' ' . $type;
+        }
+EOT,
+        'to'   => <<<'EOT'
+        $lines = [];
+        foreach ($definition['columns'] as $column => $type) {
+            if ($column === 'guest_keys') {
+                $lines[] = "-- Salted hashes of the guest's surname";
+            }
+            $lines[] = $column . ' ' . $type;
+        }
+EOT,
+    ],
+    [
+        'name' => 'A cancelled booking offered as a probable move',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if ((string) $booking['status'] !== Snapshot::CONFIRMED) {
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => "The confirmed-move seeding reading the wrong key again",
+        'file' => 'includes/class-linker.php',
+        'from' => <<<'EOT'
+            $stay_id = (int) ($moves[$booking_id]['id'] ?? 0);
+EOT,
+        'to'   => <<<'EOT'
+            $stay_id = (int) ($moves[$booking_id]['stay_id'] ?? 0);
+EOT,
+    ],
+    [
+        'name' => 'A link created pointing at no stay at all',
+        'file' => 'includes/class-linker.php',
+        'from' => <<<'EOT'
+            if ($stay_id <= 0) {
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+EOT,
+    ],
+    [
         'name' => 'A missing capability check',
         'file' => 'includes/class-admin.php',
         'from' => '        if (!current_user_can(self::CAP)) {

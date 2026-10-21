@@ -54,6 +54,16 @@ To remove the data deliberately:
 1. Settings tab → tick "Delete All Ledger Data When The Plugin Is Deleted" → Save.
 2. Plugins → Delete.
 
+## If an upgrade did not finish
+
+The plugin checks its own tables against the definitions they were built from,
+on activation and on every report load. If a column is missing it shows a red
+banner naming it — `stays.guest_keys`, say — instead of figures, so a
+half-finished upgrade can never read as an empty number.
+
+Deactivating and reactivating runs the upgrade again. Nothing stored is
+touched by it: an upgrade only ever adds columns.
+
 ## If the ledger calls a real stay a copy
 
 It should not, by design: a booking counts as a real stay until a person says

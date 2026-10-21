@@ -48,7 +48,15 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   payments are reported on their own line.
 - **A missing MotoPress key is never a figure of zero.** `Health::check()` runs
   on activation, before every snapshot and on every report load; a mismatch
-  shows a banner instead of figures.
+  shows a banner instead of figures. It checks the ledger's own columns too,
+  because an upgrade that half-finished is the same kind of silent wrongness.
+- **No SQL comment ever goes inside a CREATE TABLE.** dbDelta reads one line
+  by line and takes a `--` line for a column, which breaks the diff: the
+  upgrade then fails to add a column while a fresh install works perfectly.
+  `Schema::definitions()` keeps the tables as data so a comment cannot get
+  in, and `Schema::expected_columns()` is read from the same source.
+- **Only a confirmed booking can be a copy, a move or a question.** A
+  cancelled booking is a dock block or a scrapped reservation, never a stay.
 - **A hand-typed copy counts once**, on the platform stay. All four signals
   live in `Copies::detect()` — the only place the question is answered. It was
   answered in three places once, and they drifted.
@@ -160,8 +168,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 556 assertions
-    php dcc-ledger/tests/mutations.php            # 35 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 723 assertions
+    php dcc-ledger/tests/mutations.php            # 39 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -169,6 +177,12 @@ The suite runs without WordPress: `tests/bootstrap.php` stubs the core functions
 and `tests/lib/wpdb.php` is a SQLite-backed `$wpdb` that runs the plugin's real
 SQL. Keep the SQL portable (no `ON DUPLICATE KEY`, `DATE_FORMAT` or `YEAR()`) so
 it keeps doing so.
+
+The harness's `dbDelta` upgrades as well as creates: given an existing table
+it diffs the columns and ALTERs in what is missing, and it gives up on a
+statement it cannot read line by line, the way the real one does. Without that
+no test could tell a fresh install from an upgrade, and 0.1.3's blocker went
+out undetected.
 
 A PHP warning fails the suite. An undefined index quietly becomes an empty
 figure, which is the exact kind of silent wrongness this plugin exists to
@@ -190,6 +204,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.3.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.4.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

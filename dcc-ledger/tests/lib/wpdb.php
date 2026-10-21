@@ -76,6 +76,16 @@ final class Test_WPDB
     /** @return array<int,array<string,mixed>> */
     public function get_results(string $sql, string $output = 'OBJECT'): array
     {
+        // The plugin asks MySQL for a table's columns with SHOW COLUMNS;
+        // SQLite answers the same question with a pragma.
+        if (preg_match('/^\s*SHOW COLUMNS FROM\s+(\S+)/i', $sql, $m) === 1) {
+            $out = [];
+            foreach ($this->select(sprintf('PRAGMA table_info(%s)', trim($m[1], '`;'))) as $row) {
+                $out[] = ['Field' => (string) ($row['name'] ?? '')];
+            }
+            return $out;
+        }
+
         return $this->select($sql);
     }
 
@@ -213,8 +223,21 @@ final class Test_WPDB
 }
 
 /**
- * dbDelta, for SQLite. Translates the plugin's MySQL CREATE TABLE statements
- * well enough that the real schema is what the tests run against.
+ * dbDelta, for SQLite.
+ *
+ * It models the two things about the real one that matter here:
+ *
+ *  - It UPGRADES. Given a table that already exists, it compares the columns
+ *    in the statement against the columns in the table and adds the missing
+ *    ones. The first version of this helper only ever created tables, which
+ *    is why an upgrade bug could not be caught by any test.
+ *
+ *  - It reads the statement line by line, as the real dbDelta does. A line
+ *    that is not a column or key definition — an SQL comment, say — is not
+ *    something it can diff against, so it gives up on that table rather than
+ *    guessing. That is the failure 0.1.3 shipped: a `--` comment inside a
+ *    CREATE TABLE left the column diff broken, so an existing table never
+ *    gained its new column, while a fresh install worked perfectly.
  */
 function dbDelta(string $sql): void
 {
@@ -226,34 +249,29 @@ function dbDelta(string $sql): void
     $table = $m[1];
     $body  = $m[2];
 
-    $columns = [];
+    $wanted  = [];   // column name => definition
     $indexes = [];
-    $depth   = 0;
-    $current = '';
-    foreach (str_split($body) as $char) {
-        if ($char === '(') {
-            $depth++;
-        }
-        if ($char === ')') {
-            $depth--;
-        }
-        if ($char === ',' && $depth === 0) {
-            $columns[] = trim($current);
-            $current   = '';
+    $broken  = false;
+
+    foreach (explode("\n", $body) as $line) {
+        $line = trim($line);
+        $line = rtrim($line, ',');
+        if ($line === '') {
             continue;
         }
-        $current .= $char;
-    }
-    if (trim($current) !== '') {
-        $columns[] = trim($current);
-    }
 
-    $definitions = [];
-    foreach ($columns as $definition) {
-        if (preg_match('/^PRIMARY KEY\s+\((.+)\)$/i', $definition, $pk) === 1) {
+        if (str_starts_with($line, '--') || str_starts_with($line, '#')) {
+            // The real dbDelta takes this for a field definition and the
+            // diff it builds is wrong from here on.
+            $broken = true;
+            continue;
+        }
+
+        if (preg_match('/^PRIMARY KEY\s+\((.+)\)$/i', $line) === 1) {
             continue; // handled on the AUTO_INCREMENT column
         }
-        if (preg_match('/^(UNIQUE\s+)?KEY\s+(\S+)\s+\((.+)\)$/i', $definition, $k) === 1) {
+
+        if (preg_match('/^(UNIQUE\s+)?KEY\s+(\S+)\s+\((.+)\)$/i', $line, $k) === 1) {
             $indexes[] = sprintf(
                 'CREATE %sINDEX IF NOT EXISTS %s_%s ON %s (%s)',
                 strtoupper(trim($k[1])) === 'UNIQUE' ? 'UNIQUE ' : '',
@@ -264,13 +282,73 @@ function dbDelta(string $sql): void
             );
             continue;
         }
-        $definitions[] = translate_column($definition);
+
+        $name = strtok($line, ' ');
+        if ($name === false || preg_match('/^[a-z_][a-z0-9_]*$/i', $name) !== 1) {
+            $broken = true;
+            continue;
+        }
+        $wanted[$name] = $line;
     }
 
-    $wpdb->exec_raw(sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $table, implode(', ', $definitions)));
+    $existing = table_columns($table);
+
+    if ($existing === []) {
+        $definitions = [];
+        foreach ($wanted as $line) {
+            $definitions[] = translate_column($line);
+        }
+        if ($definitions === []) {
+            return;
+        }
+        $wpdb->exec_raw(sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $table, implode(', ', $definitions)));
+        foreach ($indexes as $index) {
+            $wpdb->exec_raw($index);
+        }
+        return;
+    }
+
+    if ($broken) {
+        // The statement could not be read as a set of columns, so the diff
+        // cannot be trusted. Nothing is altered — exactly the silent failure
+        // this models.
+        return;
+    }
+
+    foreach ($wanted as $name => $line) {
+        if (in_array($name, $existing, true)) {
+            continue;
+        }
+        $wpdb->exec_raw(sprintf('ALTER TABLE %s ADD COLUMN %s', $table, translate_column($line)));
+    }
+
     foreach ($indexes as $index) {
         $wpdb->exec_raw($index);
     }
+}
+
+/**
+ * The columns a table has now, or [] when it does not exist.
+ *
+ * @return array<int,string>
+ */
+function table_columns(string $table): array
+{
+    global $wpdb;
+
+    try {
+        $rows = $wpdb->get_results(sprintf('PRAGMA table_info(%s)', $table));
+    } catch (\Throwable $e) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        if (isset($row['name'])) {
+            $out[] = (string) $row['name'];
+        }
+    }
+    return $out;
 }
 
 function translate_column(string $definition): string

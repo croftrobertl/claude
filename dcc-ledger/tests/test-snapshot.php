@@ -350,6 +350,25 @@ T::ok(!isset($moves[9023]), 'A different party on the same weekend is NOT offere
 T::ok(isset(Copies::move_candidates($live)[9023]), 'Even though the dates and cottages line up exactly');
 T::ok(!isset(Copies::detect($live)[9023]), 'And it is certainly not treated as a copy');
 
+T::group('A cancelled booking is never a move, a copy or a question');
+
+// #7078 is a cancelled dock block sitting exactly where a moved guest would
+// sit, with a matching surname. It is not a stay, so it is none of those.
+T::ok(!isset($moves[7078]), 'It is not offered as a probable move');
+T::ok(!isset(Copies::detect($live)[7078]), 'It is not treated as a copy');
+T::ok(!isset(Copies::move_candidates($live)[7078]), 'It is not even a candidate');
+
+$cancelled_in_source = false;
+foreach ($live as $candidate) {
+    $cancelled_in_source = $cancelled_in_source || (int) $candidate['id'] === 7078;
+}
+T::ok(!$cancelled_in_source, 'A cancelled booking does not reach copy detection at all');
+
+T::ok(
+    !in_array('move_copy:7078:' . (int) (Copies::move_candidates(Copies::from_live())[7078]['id'] ?? 0), array_column(Issues::all(), 'key'), true),
+    'And it puts no question in front of Rob'
+);
+
 T::group('Where there is no name, nothing is guessed');
 
 T::ok(isset($moves[9024]), '#9024 is raised');

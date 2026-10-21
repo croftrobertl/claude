@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 final class Health
 {
     /**
-     * Each required key, and what breaks without it.
+     * Each required MotoPress key, and what breaks without it.
      *
      * @return array<int,array{what:string,kind:string,value:string,why:string}>
      */
@@ -108,6 +108,51 @@ final class Health
     }
 
     /**
+     * Columns the code needs that the tables do not have.
+     *
+     * An upgrade can leave a table behind — dbDelta is fussy about the shape
+     * of a CREATE TABLE statement, and a column it fails to add is missed
+     * silently, because a fresh install is perfectly fine. So the tables are
+     * checked against the definitions they were built from, and a mismatch
+     * is shown rather than left to surface as an empty figure.
+     *
+     * @return array<int,array{table:string,column:string}>
+     */
+    public static function missing_columns(): array
+    {
+        global $wpdb;
+
+        $missing = [];
+
+        foreach (Schema::expected_columns() as $name => $columns) {
+            $table = Schema::table($name);
+
+            try {
+                $rows = $wpdb->get_results("SHOW COLUMNS FROM {$table}", ARRAY_A);
+            } catch (\Throwable $e) {
+                continue; // The table itself is missing; reported separately.
+            }
+
+            if (!is_array($rows) || $rows === []) {
+                continue;
+            }
+
+            $have = [];
+            foreach ($rows as $row) {
+                $have[] = (string) ($row['Field'] ?? '');
+            }
+
+            foreach ($columns as $column) {
+                if (!in_array($column, $have, true)) {
+                    $missing[] = ['table' => $name, 'column' => $column];
+                }
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
      * @return array{ok:bool,missing:array<int,array{what:string,why:string}>}
      */
     public static function check(): array
@@ -146,6 +191,13 @@ final class Health
             }
         }
 
+        foreach (self::missing_columns() as $gap) {
+            $missing[] = [
+                'what' => $gap['table'] . '.' . $gap['column'],
+                'why'  => __('A column the ledger writes to is missing from its own table, so an upgrade did not finish.', 'dcc-ledger'),
+            ];
+        }
+
         return ['ok' => $missing === [], 'missing' => $missing];
     }
 
@@ -167,7 +219,7 @@ final class Health
             $html .= '<li><code>' . esc_html($item['what']) . '</code> — ' . esc_html($item['why']) . '</li>';
         }
         $html .= '</ul>';
-        $html .= '<p>' . esc_html__('MotoPress may have been updated, or this site may spell them differently. Send the list above to whoever maintains this plugin; the spellings are constants at the top of class-mphb-reader.php.', 'dcc-ledger') . '</p>';
+        $html .= '<p>' . esc_html__('MotoPress may have been updated, or this site may spell these differently. An entry of the form table.column means the ledger\'s own upgrade did not finish, and deactivating and reactivating the plugin will run it again. Send the list above to whoever maintains this plugin.', 'dcc-ledger') . '</p>';
         $html .= '</div>';
 
         return $html;

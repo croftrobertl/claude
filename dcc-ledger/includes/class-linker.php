@@ -124,18 +124,21 @@ final class Linker
             if ($booking === null || $booking['is_imported'] || !self::is_live($booking)) {
                 continue;
             }
-            $match = $moves[$booking_id] ?? null;
-            if ($match === null) {
+            // move_candidates() gives the stay itself, so the id is 'id'.
+            $stay_id = (int) ($moves[$booking_id]['id'] ?? 0);
+            if ($stay_id <= 0) {
+                // No stay to link it to on this site. Nothing to do, and
+                // nothing to guess at.
                 continue;
             }
-            if (self::has_link((int) $match['stay_id'], $booking_id)) {
+            if (self::has_link($stay_id, $booking_id)) {
                 continue;
             }
-            if (Repo::link((int) $match['stay_id'], $booking_id, 'copy', $user_id)) {
+            if (Repo::link($stay_id, $booking_id, 'copy', $user_id)) {
                 $linked++;
                 // Recorded as already reviewed: Rob decided this one.
                 Repo::mark_reviewed(
-                    'move_copy:' . $booking_id . ':' . (int) $match['stay_id'],
+                    'move_copy:' . $booking_id . ':' . $stay_id,
                     __('Confirmed by Rob on 2026-10-18.', 'dcc-ledger'),
                     $user_id
                 );
