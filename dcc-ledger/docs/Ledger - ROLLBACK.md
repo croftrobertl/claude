@@ -76,6 +76,17 @@ Rob's confirmed moves. That removal is a recorded batch like any other:
 Undoing it puts every removed row back exactly as it was, bad stay id and all.
 Undo restores the prior state; it does not improve on it.
 
+## If a hand-typed copy was linked wrongly
+
+A copy link can be removed on the Stays tab. The booking counts on its own
+again straight away, and nothing was deleted — the platform stay and the
+booking were only ever linked.
+
+Version 0.1.6 links two kinds it used to leave alone: a hand-typed booking
+whose platform stay was never imported, and one whose platform stay the
+channel marks cancelled but paid out for anyway. If either turns out to be a
+real, separate stay, remove the link.
+
 ## If the ledger calls a real stay a copy
 
 It should not, by design: a booking counts as a real stay until a person says

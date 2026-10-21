@@ -247,19 +247,6 @@ EOT,
 EOT,
     ],
     [
-        'name' => 'A cancelled platform stay treated as the original of a copy',
-        'file' => 'includes/class-copies.php',
-        'from' => <<<'EOT'
-        return array_values(array_filter(
-            self::stays(),
-            static fn ($stay) => (string) $stay['status'] === 'ok'
-        ));
-EOT,
-        'to'   => <<<'EOT'
-        return self::stays();
-EOT,
-    ],
-    [
         'name' => 'A moved-cottage copy no longer recognised',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
@@ -533,6 +520,60 @@ EOT,
 EOT,
         'to'   => <<<'EOT'
               WHERE s.id IS NULL OR s.id IS NOT NULL
+EOT,
+    ],
+    [
+        'name' => 'A paid-out cancelled stay refused as the original of a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+        return abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
+EOT,
+        'to'   => <<<'EOT'
+        return false;
+EOT,
+    ],
+    [
+        'name' => 'An unpaid cancelled stay allowed to originate a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+        if ((string) $stay['status'] === 'ok') {
+            return true;
+        }
+EOT,
+        'to'   => <<<'EOT'
+        return true;
+EOT,
+    ],
+    [
+        'name' => 'A cancellation fee counted as money for the stay',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout')
+                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+EOT,
+        'to'   => <<<'EOT'
+                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout','cancellation_fee')
+                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+EOT,
+    ],
+    [
+        'name' => 'The cleanup list promising a link the matcher will not make',
+        'file' => 'includes/class-issues.php',
+        'from' => <<<'EOT'
+            if (!isset($copyable[(int) $stay['id']])) {
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+EOT,
+    ],
+    [
+        'name' => 'Nights that nobody counts, passed over in silence',
+        'file' => 'includes/class-issues.php',
+        'from' => <<<'EOT'
+        self::cancelled_stay_with_a_copy($items, $stays);
+EOT,
+        'to'   => <<<'EOT'
 EOT,
     ],
     [

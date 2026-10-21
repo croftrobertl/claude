@@ -46,6 +46,7 @@ final class Issues
         self::probable_move_copies($items, $stays);
         self::assumed_on_a_copy($items);
         self::confirmed_moves_without_a_stay($items, $bookings);
+        self::cancelled_stay_with_a_copy($items, $stays);
         self::links_to_nowhere($items);
         self::invoice_reconciliation($items);
 
@@ -131,7 +132,18 @@ final class Issues
             $direct[Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out'])][] = $booking;
         }
 
+        // The same rule the matcher uses, so this never promises a link that
+        // will not be made. A stay that cannot be the original of a copy is
+        // not one a hand-typed booking can be a copy of either.
+        $copyable = [];
+        foreach (Copies::live_stays() as $stay) {
+            $copyable[(int) $stay['id']] = true;
+        }
+
         foreach ($stays as $stay) {
+            if (!isset($copyable[(int) $stay['id']])) {
+                continue;
+            }
             $key  = Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out']);
             $hits = $direct[$key] ?? [];
             foreach ($hits as $booking) {
@@ -558,6 +570,66 @@ final class Issues
                 'severity' => 'bad',
                 'booking_id'     => $booking_id,
                 'reverse_assumed' => $booking_id,
+            ];
+        }
+    }
+
+    /**
+     * A cancelled platform stay that was paid out and has a hand-typed copy
+     * linked to it.
+     *
+     * Its money is counted once, on the stay — but its NIGHTS are counted
+     * nowhere, because a cancelled stay contributes none and the copy is
+     * excluded as a copy. Somebody has to decide what that stay really was,
+     * and until they do the occupancy figure is short by its nights. Said out
+     * loud rather than quietly absorbed.
+     */
+    private static function cancelled_stay_with_a_copy(array &$items, array $stays): void
+    {
+        $links = self::links_by_stay();
+
+        foreach ($stays as $stay) {
+            if ((string) $stay['status'] === 'ok') {
+                continue;
+            }
+            if (($links[(int) $stay['id']] ?? []) === []) {
+                continue;
+            }
+
+            $money = round(
+                (float) $stay['guest_total'] + (float) $stay['room_sales'] + (float) $stay['payout'],
+                2
+            );
+            if (abs($money) < 0.01) {
+                continue;
+            }
+
+            $nights = (int) ($stay['nights'] ?? 0);
+
+            $items[] = [
+                'key'      => 'cancelled_with_copy:' . $stay['channel'] . ':' . $stay['code'],
+                'title'    => __('A Cancelled Stay That Was Paid Out And Typed In By Hand', 'dcc-ledger'),
+                'facts'    => [
+                    self::stay_fact($stay),
+                    sprintf(
+                        /* translators: 1: the money on the stay, 2: number of nights */
+                        __('The platform marks it cancelled, but paid out %1$s for it, and it was typed into MotoPress by hand — so it looks like the guest stayed. Its money is counted once, on the stay.', 'dcc-ledger'),
+                        self::money($money)
+                    ),
+                    sprintf(
+                        /* translators: %d: number of nights */
+                        _n(
+                            'Its %d night is counted nowhere, though: a cancelled stay contributes none, and the hand-typed booking is excluded as a copy. Occupancy is short by that much.',
+                            'Its %d nights are counted nowhere, though: a cancelled stay contributes none, and the hand-typed booking is excluded as a copy. Occupancy is short by that much.',
+                            $nights,
+                            'dcc-ledger'
+                        ),
+                        $nights
+                    ),
+                ],
+                'action'   => __('Decide what this stay was. If the guest really stayed, the platform\'s cancelled status is wrong and the nights belong in the figures; tell me and I will add a way to record that.', 'dcc-ledger'),
+                'severity' => 'warn',
+                'stay_id'  => (int) $stay['id'],
             ];
         }
     }

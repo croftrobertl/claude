@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.5 — Staging Checklist
+# DCC Ledger 0.1.6 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -9,7 +9,8 @@
 > order.
 >
 > **Upgrading the existing staging install (14 import batches, links in
-> place, no snapshot):** deactivate, upload 0.1.5, activate. Then, before
+> place, no snapshot):** deactivate, upload the latest Ledger zip, activate.
+> Then, before
 > anything else, confirm the upgrade finished:
 >
 >     P=$(wp db prefix)
@@ -60,7 +61,7 @@ on staging and said yes.
 
 ## 1. Install
 
-- [ ] Plugins → Add New → Upload Plugin → `Ledger 0.1.3.zip` → Activate.
+- [ ] Plugins → Add New → Upload Plugin → the latest `Ledger <version>.zip` → Activate.
 - [ ] Check that all seven tables now exist:
 
       wp db query "SHOW TABLES LIKE '%dcc_ledger%'"
@@ -192,12 +193,24 @@ everything it needs.
       7078, 7155 and 11528 — but all three are cancelled in MotoPress, and a
       cancelled booking is a dock block, not a stay. If any other number comes
       back, send me the ids.
-- [ ] **`Skipped, a copy` is 14, and 7278 is among them** — run with
-      `--verbose` and check. Until 0.1.5 the seed looked for the platform stay
-      by its dates alone, and 7278's original cottage held two stays on those
-      nights (an Airbnb one and a Vrbo one, the double booking that caused the
-      move), so it found two candidates and linked nothing. The seed now looks
-      by the channel and cottage Rob's ruling names.
+- [ ] **`Skipped, a copy` is 16, with 7278, 8415 and 9136 among them** —
+      run with `--verbose` and check. 8415 and 9136 are hand-typed copies
+      whose Booking.com stay was never imported; until 0.1.6 the matcher held
+      them back because their stay is marked cancelled, even though
+      Booking.com paid out for it. Their $1,171.05 is no longer counted as
+      direct revenue on top of those payouts. 7278 is among them because the
+      seed looks for its platform stay by the channel and cottage Rob's ruling
+      names, not by its dates alone: its original cottage held two stays on
+      those nights — an Airbnb one and a Vrbo one, the double booking that
+      caused the move — so a dates-only lookup found two candidates and
+      linked nothing.
+- [ ] `A Hand-Typed Copy That Carries A Payment` is raised for 8415 and 9136,
+      so Rob confirms what that money was.
+- [ ] `A Cancelled Stay That Was Paid Out And Typed In By Hand` is raised for
+      any of those stays. Their money counts once, on the stay — but their
+      NIGHTS are counted nowhere, because a cancelled stay contributes none
+      and the hand-typed booking is excluded as a copy. Tell me the stay
+      codes and I will add a way to record that they really were stayed.
 - [ ] 7278 is linked to the **Airbnb** stay in Cottage 32, never to the Vrbo
       one. The Vrbo stay keeps its own link to its own imported booking:
 

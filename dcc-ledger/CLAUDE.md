@@ -69,9 +69,16 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 - **A hand-typed copy counts once**, on the platform stay. All four signals
   live in `Copies::detect()` — the only place the question is answered. It was
   answered in three places once, and they drifted.
-- **A cancelled or expired platform stay is never the original of a copy.** The
-  money never came through that channel, so a direct booking on those dates is
-  a real, separate stay. This is Rob's 5584.
+- **A cancelled or expired platform stay is the original of a copy only if the
+  channel paid out for it** (`Copies::can_originate_copy()`). Normally the
+  money never came through that channel, so a direct booking on those nights
+  is a real, separate stay — Rob's 5584. But a cancelled reservation carrying
+  a guest total, room sales or a payout did take the guest's money through
+  that channel whatever its status says. A cancellation fee is not money for a
+  stay: nobody stayed.
+- **The cleanup list uses the same rule the matcher does.** It offered
+  "A Platform Stay Also Typed Into MotoPress By Hand" for stays the matcher
+  would never link, which is how two copies sat unlinked while being flagged.
 - **A booking is a real stay until a person says it is a copy.** Rob's rule is
   that every confirmed booking happened, except dock blocks and moves. So a
   probable move is a QUESTION, never a finding: it counts as a real stay and is
@@ -167,6 +174,15 @@ is simply reported as "no name to compare".
 plugin's constants. A fixture built from the constants follows the plugin into
 its own mistakes and proves nothing; three mutations exist to keep that honest.
 
+## Known gap, not yet decided
+
+A cancelled stay that was paid out and typed in by hand has its money counted
+once, on the stay — but its NIGHTS are counted nowhere: a cancelled stay
+contributes none, and the hand-typed booking is excluded as a copy. The
+cleanup list raises it rather than absorbing it quietly. If Rob confirms those
+stays happened, the fix is a way to record that a cancelled stay was really
+stayed.
+
 ## Decisions a person made
 
 `Decisions` stores the one answer the ledger must not forget: "that is not a
@@ -177,8 +193,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 762 assertions
-    php dcc-ledger/tests/mutations.php            # 45 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 787 assertions
+    php dcc-ledger/tests/mutations.php            # 49 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -213,6 +229,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.5.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.6.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

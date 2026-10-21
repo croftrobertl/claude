@@ -28,9 +28,17 @@ if (!defined('ABSPATH')) {
  * the same Friday to Sunday in different cottages is an ordinary busy weekend.
  * So the surname must match too, compared as salted hashes.
  *
- * A cancelled or expired platform stay is never the original of a copy. The
- * money never came through that channel, so a direct booking on those dates is
- * a real, separate stay — Rob's 5584 is exactly that case.
+ * A cancelled or expired platform stay is normally not the original of a copy:
+ * the money never came through that channel, so a direct booking on those
+ * nights is a real, separate stay. Rob's 5584 is exactly that — a guest who
+ * cancelled a Vrbo booking and rebooked direct.
+ *
+ * Unless the platform paid out for it anyway. A cancelled reservation that
+ * still carries a guest total, room sales or a payout did take the guest's
+ * money through that channel, whatever its status says, so a hand-typed
+ * booking on the same cottage and nights is a copy of it after all. Status
+ * alone was deciding this, which left two stays flagged on the cleanup list
+ * as hand-typed copies that the matcher would never link.
  *
  * This is the single place the question is answered. It used to be answered in
  * three, and they drifted.
@@ -388,30 +396,58 @@ final class Copies
         return $out;
     }
 
-    /** @return array<int,array<string,mixed>> */
+    /**
+     * Every stay, with the money that belongs to the stay itself.
+     *
+     * A cancellation fee is not money for a stay — nobody stayed — so it is
+     * not counted here.
+     *
+     * @return array<int,array<string,mixed>>
+     */
     public static function stays(): array
     {
         global $wpdb;
-        $table = Schema::stays();
+        $stays = Schema::stays();
+        $lines = Schema::lines();
+
         return $wpdb->get_results(
-            "SELECT id, code, channel, cottage, check_in, check_out, status, guest_keys FROM {$table}",
+            "SELECT s.id, s.code, s.channel, s.cottage, s.check_in, s.check_out,
+                    s.status, s.guest_keys,
+                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout')
+                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+               FROM {$stays} s
+               LEFT JOIN {$lines} l ON l.stay_id = s.id
+              GROUP BY s.id, s.code, s.channel, s.cottage, s.check_in, s.check_out,
+                       s.status, s.guest_keys",
             ARRAY_A
         ) ?: [];
     }
 
     /**
-     * Only stays that actually happened. A cancelled or expired reservation
-     * never produced money through that channel, so nothing can be a copy of
-     * one.
+     * Can this stay be the original of a copy?
+     *
+     * Either it happened, or the platform paid out for it anyway — in which
+     * case the guest's money went through that channel whatever the status
+     * says, and a hand-typed booking on the same nights is a copy of it.
+     *
+     * @param array<string,mixed> $stay
+     */
+    public static function can_originate_copy(array $stay): bool
+    {
+        if ((string) $stay['status'] === 'ok') {
+            return true;
+        }
+        return abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
+    }
+
+    /**
+     * The stays a copy can be a copy OF.
      *
      * @return array<int,array<string,mixed>>
      */
     public static function live_stays(): array
     {
-        return array_values(array_filter(
-            self::stays(),
-            static fn ($stay) => (string) $stay['status'] === 'ok'
-        ));
+        return array_values(array_filter(self::stays(), [self::class, 'can_originate_copy']));
     }
 
     /** @return array<int,int> booking id => stay id */

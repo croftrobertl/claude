@@ -186,3 +186,95 @@ T::same(Schema::DB_VERSION, get_option(Schema::VERSION_OPTION), 'And brought the
 $batches = Batches::all();
 $kinds   = array_map(static fn ($b) => (string) $b['kind'], $batches);
 T::ok(in_array(Repair::KIND, $kinds, true), 'As a recorded batch, not a silent delete');
+
+T::group('A hand-typed copy whose platform stay was never imported');
+
+dccl_reset_db();
+dccl_seed_mphb();
+dccl_import_all();
+
+// Before the matcher runs, both are flagged as typed in by hand.
+$before = array_column(Issues::all(), 'key');
+T::ok(in_array('handtyped:bookingcom:5430432780:8415', $before, true), 'The OK stay is flagged');
+T::ok(in_array('handtyped:bookingcom:5965741003:9136', $before, true), 'And so is the cancelled, paid-out one');
+
+Linker::run(1);
+
+$copies = Copies::detect(Copies::from_live());
+
+T::ok(isset($copies[8415]), '#8415 is linked, though its stay has no imported booking of its own');
+T::same(Repo::stay_id('bookingcom', '5430432780'), (int) $copies[8415]['stay_id'], 'To its own platform stay');
+
+T::ok(isset($copies[9136]), '#9136 is linked too, though its stay is marked cancelled');
+T::same(Repo::stay_id('bookingcom', '5965741003'), (int) $copies[9136]['stay_id'], 'To its own platform stay');
+
+$after = array_column(Issues::all(), 'key');
+T::ok(!in_array('handtyped:bookingcom:5430432780:8415', $after, true), 'The flag clears once linked');
+T::ok(!in_array('handtyped:bookingcom:5965741003:9136', $after, true), 'For both of them');
+
+T::group('Their money is shown, and counted once');
+
+// The payment items read the ledger's copy of MotoPress, so they appear once
+// the snapshot has been taken.
+Snapshot::run(false, 1);
+
+$with_money = array_column(Issues::all(), 'key');
+T::ok(in_array('copy_payment:8415', $with_money, true), 'The payment on #8415 is raised for Rob to confirm');
+T::ok(in_array('copy_payment:9136', $with_money, true), 'And the payment on #9136');
+
+// 31 Jan - 7 Feb and 27 Feb - 1 Mar. Neither booking's money may count as
+// direct money any more.
+$feb = DCCL\Reports::summary('2026-01-01', '2026-03-31', 'stay', 'ledger');
+T::same(0.00, $feb['totals']['direct_recorded'], 'Neither payment counts as direct revenue');
+// Four copies fall in this window; the other two carry no payment.
+T::same(4, $feb['direct']['copies_excluded'], 'Both are excluded as copies');
+T::same(1171.05, $feb['direct']['copy_payments'], 'Their $1,171.05 is shown on the copies, not counted');
+
+T::group('A cancelled stay is only the original of a copy if it was paid out');
+
+// Rob's 5584: a cancelled Vrbo stay with no money at all. A direct booking on
+// those nights is a real, separate stay, and must stay that way.
+$cancelled_unpaid = Repo::find_stay('vrbo', 'HA-BBB222');
+$unpaid = null;
+foreach (Copies::stays() as $stay) {
+    if ((int) $stay['id'] === (int) $cancelled_unpaid['id']) {
+        $unpaid = $stay;
+    }
+}
+T::ok($unpaid !== null, 'The cancelled, unpaid stay is there');
+T::ok(!Copies::can_originate_copy($unpaid), 'And cannot be the original of a copy');
+T::ok(!isset($copies[9022]), 'So the booking that names its code is still a real stay');
+
+$paid = null;
+foreach (Copies::stays() as $stay) {
+    if ((string) $stay['code'] === '5965741003') {
+        $paid = $stay;
+    }
+}
+T::ok($paid !== null && Copies::can_originate_copy($paid), 'A cancelled stay that WAS paid out can be');
+T::same('cancelled', $paid === null ? '' : (string) $paid['status'], 'Even though its status says cancelled');
+
+// A cancellation fee is not money for a stay: nobody stayed. HMCANCEL01 has
+// a fee and its refund, and nothing else.
+$fee_only = null;
+foreach (Copies::stays() as $stay) {
+    if ((string) $stay['code'] === 'HMCANCEL01') {
+        $fee_only = $stay;
+    }
+}
+T::ok($fee_only !== null, 'The fee-only cancelled stay is there');
+T::same(0.0, round((float) ($fee_only['stay_money'] ?? 0), 2), 'It carries no money for the stay itself');
+T::ok(!Copies::can_originate_copy($fee_only), 'So a cancellation fee alone cannot make it the original of a copy');
+
+// And the cleanup list must not offer a link the matcher will never make.
+T::ok(
+    !in_array('handtyped:vrbo:HA-BBB222:9022', array_column(Issues::all(), 'key'), true),
+    'A stay that cannot originate a copy is not flagged as having a hand-typed one'
+);
+
+T::group('And the nights nobody counts are said out loud');
+
+T::ok(
+    in_array('cancelled_with_copy:bookingcom:5965741003', array_column(Issues::all(), 'key'), true),
+    'A cancelled stay that was paid out and typed in by hand is raised'
+);

@@ -87,7 +87,7 @@ T::same('2025-04-01 00:00:00', $parsed['stays']['airbnb:HMNOPAY0001']['booked_on
 T::group('Booking.com reservations parser');
 
 $parsed = (new Bookingcom_Reservations())->parse(dccl_fixture('bookingcom-reservations.csv'));
-T::same(6, count($parsed['stays']), 'Six stays, the Crofty hotel id excluded');
+T::same(8, count($parsed['stays']), 'Eight stays, the Crofty hotel id excluded');
 T::same('2025-02-10 09:15:30', $parsed['stays']['bookingcom:5111111111']['booked_on'], 'A full ISO timestamp is read');
 T::same('2025-11-28 19:01:00', $parsed['stays']['bookingcom:5222222222']['booked_on'], 'An ISO timestamp with no seconds is read');
 T::same('cancelled', $parsed['stays']['bookingcom:5333333333']['status'], 'CANCELLED becomes cancelled');
@@ -101,7 +101,7 @@ T::ok(!str_contains((string) json_encode($parsed), 'O&#39;neal'), 'An HTML-entit
 T::group('Booking.com payout parser');
 
 $parsed = (new Bookingcom_Payout())->parse(dccl_fixture('bookingcom-payout.csv'));
-T::same(5, count($parsed['stays']), 'Five payout reservations, Crofty excluded');
+T::same(6, count($parsed['stays']), 'Six payout reservations, Crofty excluded');
 T::ok(isset($parsed['stays']['bookingcom:5722711078']), 'A payout with no reservation row still creates a stay');
 T::same(null, $parsed['stays']['bookingcom:5722711078']['check_out'], 'That stay has no check-out, so nights stay unknown');
 

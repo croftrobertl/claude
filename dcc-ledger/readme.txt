@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,12 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.6 =
+* A platform stay the channel paid out for can be the original of a hand-typed copy even when the channel marks it cancelled. Two hand-typed copies were being flagged on the cleanup list but never linked, so their money counted as direct revenue on top of the platform payout for the same nights.
+* A cancellation fee alone is still not money for a stay, so a cancelled reservation that was never paid out still cannot be the original of a copy.
+* The cleanup list now uses the same rule the matcher does, so it never offers a link that will not be made.
+* A cancelled stay that was paid out and typed in by hand is raised on the cleanup list, because its nights end up counted nowhere.
 
 = 0.1.5 =
 * A confirmed move is now found by the channel and cottage it was moved from, not by its dates alone. One of the four sat on nights its original cottage held two platform stays on — a double booking, which is what caused the move — so the old seed found two candidates and silently linked nothing, leaving that stay's money counted twice.

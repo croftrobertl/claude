@@ -315,6 +315,28 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => 'Demirci',
     ]);
 
+    // Two hand-typed copies whose platform stay was never imported, so
+    // nothing but the cottage and dates can recognise them. Each carries a
+    // completed payment equal to its total: unlinked, that money would count
+    // as direct revenue on top of the Booking.com payout for the same nights.
+    //
+    // 8415's stay is OK. 9136's stay is CANCELLED, and Booking.com paid out
+    // for it anyway — which is what makes it the original of a copy, and what
+    // 0.1.5 could not see.
+    $booking(8415, 'confirmed', 1613, '2026-01-31', '2026-02-07', [
+        LIVE_TOTAL      => '893.55',
+        LIVE_FIRST_NAME => 'Esme',
+        LIVE_LAST_NAME  => 'Thorsby',
+    ]);
+    $payment(84151, 8415, 893.55, '2026-01-31');
+
+    $booking(9136, 'confirmed', 1613, '2026-02-27', '2026-03-01', [
+        LIVE_TOTAL      => '277.50',
+        LIVE_FIRST_NAME => 'Lars',
+        LIVE_LAST_NAME  => 'Ottoway',
+    ]);
+    $payment(91361, 9136, 277.50, '2026-02-27');
+
     // A CANCELLED booking sitting exactly where a moved guest would sit, with
     // a matching surname. A dock block is not a stay, so it is not a move, a
     // copy, or a question for Rob.
