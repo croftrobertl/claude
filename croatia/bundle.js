@@ -894,7 +894,7 @@
     DATA.days.forEach(d => d.places.forEach(p => { if (p.lat != null) pts.push({ f: foldStr(p.name), lat: p.lat, lng: p.lng }); }));
     const centroid = tok => { const f = foldStr(tok), m = pts.filter(p => p.f.includes(f)); return m.length ? [m.reduce((s, p) => s + p.lat, 0) / m.length, m.reduce((s, p) => s + p.lng, 0) / m.length] : null; };
     const derived = [
-      ['Old City (Stari Grad), Dubrovnik', 'Old City · Stari Grad', 'area', 12],
+      ['Old City (Stari grad), Dubrovnik', 'Old City · Stari grad', 'area', 12],
       ['Lapad', 'Lapad', 'area', 12], ['Gruž', 'Gruž', 'area', 13], ['Pile', 'Pile', 'area', 13],
       ['Ploče', 'Ploče', 'area', 13], ['Montovjerna', 'Montovjerna', 'area', 14],
       ['Cavtat', 'Cavtat', 'town', 11],
