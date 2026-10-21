@@ -87,7 +87,7 @@ T::same('2025-04-01 00:00:00', $parsed['stays']['airbnb:HMNOPAY0001']['booked_on
 T::group('Booking.com reservations parser');
 
 $parsed = (new Bookingcom_Reservations())->parse(dccl_fixture('bookingcom-reservations.csv'));
-T::same(8, count($parsed['stays']), 'Eight stays, the Crofty hotel id excluded');
+T::same(9, count($parsed['stays']), 'Nine stays, the Crofty hotel id excluded');
 T::same('2025-02-10 09:15:30', $parsed['stays']['bookingcom:5111111111']['booked_on'], 'A full ISO timestamp is read');
 T::same('2025-11-28 19:01:00', $parsed['stays']['bookingcom:5222222222']['booked_on'], 'An ISO timestamp with no seconds is read');
 T::same('cancelled', $parsed['stays']['bookingcom:5333333333']['status'], 'CANCELLED becomes cancelled');

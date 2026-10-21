@@ -315,14 +315,11 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => 'Demirci',
     ]);
 
-    // Two hand-typed copies whose platform stay was never imported, so
-    // nothing but the cottage and dates can recognise them. Each carries a
-    // completed payment equal to its total: unlinked, that money would count
-    // as direct revenue on top of the Booking.com payout for the same nights.
-    //
-    // 8415's stay is OK. 9136's stay is CANCELLED, and Booking.com paid out
-    // for it anyway — which is what makes it the original of a copy, and what
-    // 0.1.5 could not see.
+    // Rob's 5584 shape, as it really appears on live: the guest cancelled on
+    // Booking.com and booked and paid Rob directly. The platform stay exists
+    // but is CANCELLED with nothing on it, so no money came through that
+    // channel. These are real stays and real direct revenue, and must never
+    // be linked as copies or flagged as hand-typed ones.
     $booking(8415, 'confirmed', 1613, '2026-01-31', '2026-02-07', [
         LIVE_TOTAL      => '893.55',
         LIVE_FIRST_NAME => 'Esme',
@@ -336,6 +333,17 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => 'Ottoway',
     ]);
     $payment(91361, 9136, 277.50, '2026-02-27');
+
+    // The genuine oddity: a Booking.com reservation marked cancelled that the
+    // channel paid out for anyway, with a hand-typed booking on its nights.
+    // Nobody can tell from here which of the two the money belongs to, so it
+    // is a question for Rob, not something to decide automatically.
+    $booking(8899, 'confirmed', 1807, '2025-09-10', '2025-09-13', [
+        LIVE_TOTAL      => '420.00',
+        LIVE_FIRST_NAME => 'Bryn',
+        LIVE_LAST_NAME  => 'Castellow',
+    ]);
+    $payment(88991, 8899, 420.00, '2025-09-10');
 
     // A CANCELLED booking sitting exactly where a moved guest would sit, with
     // a matching surname. A dock block is not a stay, so it is not a move, a

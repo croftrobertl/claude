@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.6
+Stable tag: 0.1.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,11 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.7 =
+* Took back 0.1.6's rule that a cancelled platform stay the channel paid out for can be the original of a hand-typed copy. It was built on a premise that proved wrong, and it is the wrong default: calling a real stay a copy drops its money silently, while counting one twice shows up on the cleanup list.
+* A cancelled stay that does carry money and has a booking on the same nights is raised as a question instead. Nothing is linked or reclassified for it, and the booking goes on counting as a real stay.
+* The importer says so if an export ever states a nights count its own dates do not give.
 
 = 0.1.6 =
 * A platform stay the channel paid out for can be the original of a hand-typed copy even when the channel marks it cancelled. Two hand-typed copies were being flagged on the cleanup list but never linked, so their money counted as direct revenue on top of the platform payout for the same nights.

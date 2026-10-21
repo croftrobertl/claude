@@ -118,6 +118,29 @@ final class Importer
         ];
         $notes = $parsed['notes'];
 
+        // Nights are check-out minus check-in. The files state their own
+        // count and the parsers take it, which is fine while the two agree —
+        // but a disagreement would skew how a stay's money is split across a
+        // period boundary, because the split uses the stated nights as its
+        // denominator and the dates as its numerator. Never seen in Rob's
+        // exports; said out loud if it ever happens.
+        foreach ($parsed['stays'] as $stay) {
+            if ($stay['check_in'] === null || $stay['check_out'] === null || $stay['nights'] === null) {
+                continue;
+            }
+            $computed = Dates::nights($stay['check_in'], $stay['check_out']);
+            if ($computed === null || $computed === (int) $stay['nights']) {
+                continue;
+            }
+            $notes[] = sprintf(
+                /* translators: 1: reservation code, 2: nights stated in the file, 3: nights the dates give */
+                __('Reservation %1$s states %2$d nights, but its dates give %3$d. The stated figure was kept; check the export.', 'dcc-ledger'),
+                (string) $stay['code'],
+                (int) $stay['nights'],
+                $computed
+            );
+        }
+
         $hashed = self::hash_lines($parsed['lines']);
 
         if ($dry_run) {

@@ -523,28 +523,6 @@ EOT,
 EOT,
     ],
     [
-        'name' => 'A paid-out cancelled stay refused as the original of a copy',
-        'file' => 'includes/class-copies.php',
-        'from' => <<<'EOT'
-        return abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
-EOT,
-        'to'   => <<<'EOT'
-        return false;
-EOT,
-    ],
-    [
-        'name' => 'An unpaid cancelled stay allowed to originate a copy',
-        'file' => 'includes/class-copies.php',
-        'from' => <<<'EOT'
-        if ((string) $stay['status'] === 'ok') {
-            return true;
-        }
-EOT,
-        'to'   => <<<'EOT'
-        return true;
-EOT,
-    ],
-    [
         'name' => 'A cancellation fee counted as money for the stay',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
@@ -574,6 +552,52 @@ EOT,
         self::cancelled_stay_with_a_copy($items, $stays);
 EOT,
         'to'   => <<<'EOT'
+EOT,
+    ],
+    [
+        'name' => 'A cancelled platform stay allowed to originate a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+        return (string) $stay['status'] === 'ok';
+EOT,
+        'to'   => <<<'EOT'
+        return true;
+EOT,
+    ],
+    [
+        'name' => 'A cancelled stay with money quietly making a copy',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+    public static function can_originate_copy(array $stay): bool
+    {
+        return (string) $stay['status'] === 'ok';
+    }
+EOT,
+        'to'   => <<<'EOT'
+    public static function can_originate_copy(array $stay): bool
+    {
+        return (string) $stay['status'] === 'ok'
+            || abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
+    }
+EOT,
+    ],
+    [
+        'name' => 'A cancelled stay with money and a twin passed over in silence',
+        'file' => 'includes/class-issues.php',
+        'from' => <<<'EOT'
+        self::cancelled_with_money_and_a_twin($items, $stays);
+EOT,
+        'to'   => <<<'EOT'
+EOT,
+    ],
+    [
+        'name' => 'Nights taken from the file instead of the dates',
+        'file' => 'includes/class-dates.php',
+        'from' => <<<'EOT'
+        $days = (int) $in->diff($out)->format('%r%a');
+EOT,
+        'to'   => <<<'EOT'
+        $days = (int) $in->diff($out)->format('%r%a') + 1;
 EOT,
     ],
     [

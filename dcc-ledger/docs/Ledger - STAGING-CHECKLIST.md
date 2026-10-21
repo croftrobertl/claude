@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.6 — Staging Checklist
+# DCC Ledger 0.1.7 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -193,24 +193,26 @@ everything it needs.
       7078, 7155 and 11528 — but all three are cancelled in MotoPress, and a
       cancelled booking is a dock block, not a stay. If any other number comes
       back, send me the ids.
-- [ ] **`Skipped, a copy` is 16, with 7278, 8415 and 9136 among them** —
-      run with `--verbose` and check. 8415 and 9136 are hand-typed copies
-      whose Booking.com stay was never imported; until 0.1.6 the matcher held
-      them back because their stay is marked cancelled, even though
-      Booking.com paid out for it. Their $1,171.05 is no longer counted as
-      direct revenue on top of those payouts. 7278 is among them because the
-      seed looks for its platform stay by the channel and cottage Rob's ruling
-      names, not by its dates alone: its original cottage held two stays on
-      those nights — an Airbnb one and a Vrbo one, the double booking that
-      caused the move — so a dates-only lookup found two candidates and
-      linked nothing.
-- [ ] `A Hand-Typed Copy That Carries A Payment` is raised for 8415 and 9136,
-      so Rob confirms what that money was.
-- [ ] `A Cancelled Stay That Was Paid Out And Typed In By Hand` is raised for
-      any of those stays. Their money counts once, on the stay — but their
-      NIGHTS are counted nowhere, because a cancelled stay contributes none
-      and the hand-typed booking is excluded as a copy. Tell me the stay
-      codes and I will add a way to record that they really were stayed.
+- [ ] **`Skipped, a copy` is 14, with 7278 among them** — run with
+      `--verbose` and check. 7278 is among them because the seed looks for its
+      platform stay by the channel and cottage Rob's ruling names, not by its
+      dates alone: its original cottage held two stays on those nights — an
+      Airbnb one and a Vrbo one, the double booking that caused the move — so
+      a dates-only lookup found two candidates and linked nothing.
+- [ ] **8415 and 9136 are NOT among the copies, and should not be.** Both are
+      real direct stays. Their Booking.com reservations (5430432780 and
+      5965741003) are CANCELLED with a Final amount of $0 and no commission,
+      and neither appears in the payout export — so no money came through
+      Booking.com. Those guests cancelled on the platform and booked and paid
+      Rob directly, which is Rob's 5584 rule. Their $893.55 and $277.50 are
+      direct revenue, and the ledger counts them as such.
+- [ ] `A Cancelled Stay That Was Paid Out And Typed In By Hand` does **not**
+      appear on the real data, and neither does `A Cancelled Stay With Money,
+      And A Booking On The Same Nights`. Both need a cancelled reservation
+      that the channel paid out for anyway, which Rob's exports do not
+      contain. If one ever does appear, it is a genuine oddity worth reading:
+      nothing is linked or reclassified by it, and the booking goes on
+      counting as a real stay until somebody decides.
 - [ ] 7278 is linked to the **Airbnb** stay in Cottage 32, never to the Vrbo
       one. The Vrbo stay keeps its own link to its own imported booking:
 
@@ -310,10 +312,26 @@ The whole point of the copy is that Rob's data survives a mistake in the ledger.
       old version is still there under the Original view, and no correction was
       touched.
 
-## 10. Only then, live
+## 10. Only then, live — done on 2026-10-21
 
-- [ ] Back up live.
-- [ ] Install and activate the same zip.
-- [ ] Repeat steps 2 to 8 on live, in that order, dry run first.
-- [ ] Settings tab: leave "Delete all ledger data when the plugin is deleted"
+Done on 2026-10-21, from 0.1.6, after it passed on staging. For the record:
+
+- [x] Live backed up first: `live-db-pre-ledger-20261021-1427.sql.gz`.
+- [x] Seven tables created. MotoPress unchanged before and after: 428
+      bookings, 95 payments, no `_dcc_assumed_paid`.
+- [x] All seven exports imported as batches 1–7, with Unknown cottage 0 and
+      Malformed 0. A repeat dry run showed 0 new stays and 0 new lines.
+- [x] Matcher: 29 by code, 91 by exact dates, 14 hand-typed copies. On a fresh
+      install the four confirmed moves linked correctly — 7278→31, 12443→129,
+      12447→130, 17462→1.
+- [x] Snapshot taken as batch 8: **38 bookings, $60,348.22**, 14 copies,
+      0 probable moves, 3 overpaid. A repeat assumed 0, reporting
+      "Already adjusted: 38".
+- [x] 39 Booking.com invoices reconciling to $4,034.05. 0 bad links.
+- [x] 48 cleanup items for Rob. Uploaded exports deleted from the server.
+- [x] Settings tab: "Delete all ledger data when the plugin is deleted" left
       **off**.
+
+Upgrading live from here is deactivate, upload the latest zip, activate. The
+ledger holds live data from batch 1 onwards, and an upgrade only ever adds
+columns — see the note at the top of this file for what to check afterwards.

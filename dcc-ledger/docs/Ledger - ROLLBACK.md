@@ -82,10 +82,10 @@ A copy link can be removed on the Stays tab. The booking counts on its own
 again straight away, and nothing was deleted — the platform stay and the
 booking were only ever linked.
 
-Version 0.1.6 links two kinds it used to leave alone: a hand-typed booking
-whose platform stay was never imported, and one whose platform stay the
-channel marks cancelled but paid out for anyway. If either turns out to be a
-real, separate stay, remove the link.
+A booking whose platform stay is cancelled is never linked automatically,
+whatever money that stay carries. If the guest cancelled on the platform and
+booked direct, the booking is a real stay and its money is real direct
+revenue — that is Rob's 5584 rule, and 8415 and 9136 on live.
 
 ## If the ledger calls a real stay a copy
 

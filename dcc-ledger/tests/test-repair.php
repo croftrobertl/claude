@@ -187,48 +187,97 @@ $batches = Batches::all();
 $kinds   = array_map(static fn ($b) => (string) $b['kind'], $batches);
 T::ok(in_array(Repair::KIND, $kinds, true), 'As a recorded batch, not a silent delete');
 
-T::group('A hand-typed copy whose platform stay was never imported');
+T::group("A guest who cancelled on the platform and booked direct");
 
 dccl_reset_db();
 dccl_seed_mphb();
 dccl_import_all();
 
-// Before the matcher runs, both are flagged as typed in by hand.
-$before = array_column(Issues::all(), 'key');
-T::ok(in_array('handtyped:bookingcom:5430432780:8415', $before, true), 'The OK stay is flagged');
-T::ok(in_array('handtyped:bookingcom:5965741003:9136', $before, true), 'And so is the cancelled, paid-out one');
+// Rob's 5584 rule, as it really appears on live. The Booking.com reservation
+// exists but is cancelled with nothing on it, and the guest paid Rob direct.
+foreach (['5430432780' => 8415, '5965741003' => 9136] as $code => $booking_id) {
+    // PHP turns a numeric array key into an int.
+    $code = (string) $code;
+    $stay = Repo::find_stay('bookingcom', $code);
+
+    T::ok($stay !== null, 'Stay ' . $code . ' was imported');
+    T::same('cancelled', $stay === null ? '' : (string) $stay['status'], 'Marked cancelled by the platform');
+
+    $money = null;
+    foreach (Copies::stays() as $row) {
+        if ((string) $row['code'] === $code) {
+            $money = Copies::stay_money($row);
+        }
+    }
+    T::same(0.0, $money, 'With no money on it at all');
+    T::ok($money !== null && !Copies::can_originate_copy(['status' => 'cancelled', 'stay_money' => $money]), 'So it cannot be the original of a copy');
+}
 
 Linker::run(1);
-
 $copies = Copies::detect(Copies::from_live());
 
-T::ok(isset($copies[8415]), '#8415 is linked, though its stay has no imported booking of its own');
-T::same(Repo::stay_id('bookingcom', '5430432780'), (int) $copies[8415]['stay_id'], 'To its own platform stay');
+T::ok(!isset($copies[8415]), '#8415 is NOT linked as a copy');
+T::ok(!isset($copies[9136]), '#9136 is NOT linked as a copy');
 
-T::ok(isset($copies[9136]), '#9136 is linked too, though its stay is marked cancelled');
-T::same(Repo::stay_id('bookingcom', '5965741003'), (int) $copies[9136]['stay_id'], 'To its own platform stay');
+$keys = array_column(Issues::all(), 'key');
+T::ok(!in_array('handtyped:bookingcom:5430432780:8415', $keys, true), 'And it raises no hand-typed-copy item');
+T::ok(!in_array('handtyped:bookingcom:5965741003:9136', $keys, true), 'For either of them');
+T::ok(!in_array('cancelled_money_twin:bookingcom:5430432780:8415', $keys, true), 'Nor any other question about them');
 
-$after = array_column(Issues::all(), 'key');
-T::ok(!in_array('handtyped:bookingcom:5430432780:8415', $after, true), 'The flag clears once linked');
-T::ok(!in_array('handtyped:bookingcom:5965741003:9136', $after, true), 'For both of them');
+T::group('Their money is real direct revenue');
 
-T::group('Their money is shown, and counted once');
-
-// The payment items read the ledger's copy of MotoPress, so they appear once
-// the snapshot has been taken.
 Snapshot::run(false, 1);
 
-$with_money = array_column(Issues::all(), 'key');
-T::ok(in_array('copy_payment:8415', $with_money, true), 'The payment on #8415 is raised for Rob to confirm');
-T::ok(in_array('copy_payment:9136', $with_money, true), 'And the payment on #9136');
+$period = DCCL\Reports::summary('2026-01-01', '2026-03-31', 'stay', 'ledger');
+T::same(1171.05, $period['totals']['direct_recorded'], 'Both payments count as direct revenue');
+T::same(0.00, $period['direct']['copy_payments'], 'Neither is shown as money sitting on a copy');
 
-// 31 Jan - 7 Feb and 27 Feb - 1 Mar. Neither booking's money may count as
-// direct money any more.
-$feb = DCCL\Reports::summary('2026-01-01', '2026-03-31', 'stay', 'ledger');
-T::same(0.00, $feb['totals']['direct_recorded'], 'Neither payment counts as direct revenue');
-// Four copies fall in this window; the other two carry no payment.
-T::same(4, $feb['direct']['copies_excluded'], 'Both are excluded as copies');
-T::same(1171.05, $feb['direct']['copy_payments'], 'Their $1,171.05 is shown on the copies, not counted');
+$assumed = [];
+foreach (Adjustments::all() as $adjustment) {
+    if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+        $assumed[] = (int) $adjustment['mphb_booking_id'];
+    }
+}
+T::ok(!in_array(8415, $assumed, true), 'Paid in full, so nothing is assumed for #8415');
+T::ok(!in_array(9136, $assumed, true), 'Nor for #9136');
+
+T::group('A cancelled stay WITH money and a booking on its nights is a question');
+
+// Nothing here can tell whether the guest rebooked direct or the platform
+// paid for the stay that happened, so nothing is decided.
+$odd = Repo::find_stay('bookingcom', '5888888888');
+T::ok($odd !== null, 'The paid-out cancelled stay is there');
+
+$keys = array_column(Issues::all(), 'key');
+T::ok(
+    in_array('cancelled_money_twin:bookingcom:5888888888:8899', $keys, true),
+    'It is raised as a question against the booking on its nights'
+);
+T::ok(!isset(Copies::detect(Copies::from_live())[8899]), 'The booking is not reclassified as a copy');
+T::same([], Repo::links_for_stay((int) $odd['id']), 'And nothing is linked for it');
+
+$september = DCCL\Reports::summary('2025-09-01', '2025-09-30', 'stay', 'ledger');
+T::same(420.00, $september['totals']['direct_recorded'], 'Its booking goes on counting as a real stay');
+
+T::group('Nights are check-out minus check-in, everywhere');
+
+T::same(7, DCCL\Dates::nights('2026-01-31', '2026-02-07'), 'A stay across a month boundary');
+T::same(2, DCCL\Dates::nights('2026-02-27', '2026-03-01'), 'And across a shorter month');
+T::same(2, DCCL\Dates::nights('2024-02-28', '2024-03-01'), 'And across a leap day');
+T::same(2, DCCL\Dates::nights('2025-03-08', '2025-03-10'), 'The spring clock change does not lose one');
+T::same(2, DCCL\Dates::nights('2025-11-01', '2025-11-03'), 'Nor does the autumn one add one');
+T::same(0, DCCL\Dates::nights('2025-05-01', '2025-05-01'), 'Arriving and leaving the same day is no nights');
+
+$mismatched = 0;
+foreach ($wpdb->get_results('SELECT code, check_in, check_out, nights FROM ' . Schema::stays(), ARRAY_A) as $stay) {
+    if ($stay['check_out'] === null || $stay['nights'] === null) {
+        continue;
+    }
+    if ((int) $stay['nights'] !== (int) DCCL\Dates::nights((string) $stay['check_in'], (string) $stay['check_out'])) {
+        $mismatched++;
+    }
+}
+T::same(0, $mismatched, 'Every imported stay stores exactly check-out minus check-in');
 
 T::group('A cancelled stay is only the original of a copy if it was paid out');
 
@@ -247,12 +296,13 @@ T::ok(!isset($copies[9022]), 'So the booking that names its code is still a real
 
 $paid = null;
 foreach (Copies::stays() as $stay) {
-    if ((string) $stay['code'] === '5965741003') {
+    if ((string) $stay['code'] === '5888888888') {
         $paid = $stay;
     }
 }
-T::ok($paid !== null && Copies::can_originate_copy($paid), 'A cancelled stay that WAS paid out can be');
-T::same('cancelled', $paid === null ? '' : (string) $paid['status'], 'Even though its status says cancelled');
+T::ok($paid !== null, 'A cancelled stay that WAS paid out is there');
+T::ok($paid !== null && !Copies::can_originate_copy($paid), 'It cannot originate a copy either: being cancelled is enough');
+T::ok($paid !== null && abs(Copies::stay_money($paid)) >= 0.01, 'But it carries money, which is what makes it a question');
 
 // A cancellation fee is not money for a stay: nobody stayed. HMCANCEL01 has
 // a fee and its refund, and nothing else.
@@ -272,9 +322,25 @@ T::ok(
     'A stay that cannot originate a copy is not flagged as having a hand-typed one'
 );
 
-T::group('And the nights nobody counts are said out loud');
+T::group('If Rob answers that question with a copy, the lost nights are said out loud');
 
+// He decides the platform did pay for the stay that happened, and links the
+// booking to it. Its money is then counted once, on the stay — but a
+// cancelled stay contributes no nights, and the copy is excluded, so its
+// nights are counted nowhere. That is raised rather than absorbed.
+$odd_stay = (int) Repo::find_stay('bookingcom', '5888888888')['id'];
+Repo::link($odd_stay, 8899, 'copy', 1);
+
+$after_answer = array_column(Issues::all(), 'key');
 T::ok(
-    in_array('cancelled_with_copy:bookingcom:5965741003', array_column(Issues::all(), 'key'), true),
-    'A cancelled stay that was paid out and typed in by hand is raised'
+    in_array('cancelled_with_copy:bookingcom:5888888888', $after_answer, true),
+    'The nights nobody counts are raised'
 );
+T::ok(
+    !in_array('cancelled_money_twin:bookingcom:5888888888:8899', $after_answer, true),
+    'And the question itself is settled'
+);
+
+$september_after = DCCL\Reports::summary('2025-09-01', '2025-09-30', 'stay', 'ledger');
+T::same(0.00, $september_after['totals']['direct_recorded'], 'Its money is no longer counted as direct');
+T::same(420.00, $september_after['direct']['copy_payments'], 'It is shown on the copy instead');

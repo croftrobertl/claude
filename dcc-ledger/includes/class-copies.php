@@ -28,17 +28,19 @@ if (!defined('ABSPATH')) {
  * the same Friday to Sunday in different cottages is an ordinary busy weekend.
  * So the surname must match too, compared as salted hashes.
  *
- * A cancelled or expired platform stay is normally not the original of a copy:
- * the money never came through that channel, so a direct booking on those
+ * A cancelled or expired platform stay is never the original of a copy. The
+ * money did not come through that channel, so a direct booking on those
  * nights is a real, separate stay. Rob's 5584 is exactly that — a guest who
- * cancelled a Vrbo booking and rebooked direct.
+ * cancelled a Vrbo booking and rebooked direct — and so are 8415 and 9136.
  *
- * Unless the platform paid out for it anyway. A cancelled reservation that
- * still carries a guest total, room sales or a payout did take the guest's
- * money through that channel, whatever its status says, so a hand-typed
- * booking on the same cottage and nights is a copy of it after all. Status
- * alone was deciding this, which left two stays flagged on the cleanup list
- * as hand-typed copies that the matcher would never link.
+ * 0.1.6 let a cancelled stay originate a copy when it carried money. That was
+ * built on a premise that turned out to be wrong, and on its own merits it is
+ * the wrong default: calling a real stay a copy drops its money silently,
+ * while counting one twice shows up on the cleanup list. Rob's rule is that a
+ * confirmed booking really happened, so the ledger does not reclassify one on
+ * a guess. A cancelled stay that DOES carry money and has a hand-typed
+ * booking on its nights is a genuine oddity, so it is raised as a question
+ * instead — see Issues::cancelled_with_money_and_a_twin().
  *
  * This is the single place the question is answered. It used to be answered in
  * three, and they drifted.
@@ -424,20 +426,24 @@ final class Copies
     }
 
     /**
-     * Can this stay be the original of a copy?
-     *
-     * Either it happened, or the platform paid out for it anyway — in which
-     * case the guest's money went through that channel whatever the status
-     * says, and a hand-typed booking on the same nights is a copy of it.
+     * Can this stay be the original of a copy? Only if it happened.
      *
      * @param array<string,mixed> $stay
      */
     public static function can_originate_copy(array $stay): bool
     {
-        if ((string) $stay['status'] === 'ok') {
-            return true;
-        }
-        return abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
+        return (string) $stay['status'] === 'ok';
+    }
+
+    /**
+     * Money that belongs to the stay itself, as opposed to a cancellation
+     * fee, which is not money for a stay because nobody stayed.
+     *
+     * @param array<string,mixed> $stay
+     */
+    public static function stay_money(array $stay): float
+    {
+        return round((float) ($stay['stay_money'] ?? 0), 2);
     }
 
     /**

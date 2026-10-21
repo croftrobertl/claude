@@ -47,6 +47,7 @@ final class Issues
         self::assumed_on_a_copy($items);
         self::confirmed_moves_without_a_stay($items, $bookings);
         self::cancelled_stay_with_a_copy($items, $stays);
+        self::cancelled_with_money_and_a_twin($items, $stays);
         self::links_to_nowhere($items);
         self::invoice_reconciliation($items);
 
@@ -571,6 +572,71 @@ final class Issues
                 'booking_id'     => $booking_id,
                 'reverse_assumed' => $booking_id,
             ];
+        }
+    }
+
+    /**
+     * A cancelled platform stay the channel paid out for, with a direct
+     * booking on the same cottage and nights.
+     *
+     * Normally a cancelled stay means the money did not come through that
+     * channel, so the direct booking is a real, separate stay — the guest
+     * cancelled and rebooked direct. But if the channel paid out for it
+     * anyway, one of the two is counting money the other already has, and
+     * nothing here can tell which. So it is a question rather than a
+     * decision: nothing is linked, nothing is reclassified, and the booking
+     * goes on counting as the real stay Rob's rule says it is.
+     *
+     * @param array<int,array<string,mixed>> $stays
+     */
+    private static function cancelled_with_money_and_a_twin(array &$items, array $stays): void
+    {
+        $links = self::links_by_stay();
+
+        $direct = [];
+        foreach (Copies::from_live() as $booking) {
+            $direct[Linker::key((string) $booking['cottage'], $booking['check_in'], $booking['check_out'])][] = $booking;
+        }
+
+        foreach ($stays as $stay) {
+            if ((string) $stay['status'] === 'ok') {
+                continue;
+            }
+            if (($links[(int) $stay['id']] ?? []) !== []) {
+                continue; // Somebody has already decided this one.
+            }
+
+            $money = round(
+                (float) $stay['guest_total'] + (float) $stay['room_sales'] + (float) $stay['payout'],
+                2
+            );
+            if (abs($money) < 0.01) {
+                continue; // The ordinary case: cancelled, and no money with it.
+            }
+
+            $key = Linker::key((string) $stay['cottage'], $stay['check_in'], $stay['check_out']);
+            foreach ($direct[$key] ?? [] as $booking) {
+                $items[] = [
+                    'key'      => 'cancelled_money_twin:' . $stay['channel'] . ':' . $stay['code'] . ':' . $booking['id'],
+                    'title'    => __('A Cancelled Stay With Money, And A Booking On The Same Nights', 'dcc-ledger'),
+                    'facts'    => [
+                        self::stay_fact($stay),
+                        sprintf(
+                            /* translators: 1: the money on the stay, 2: booking id */
+                            __('The platform marks it cancelled but has %1$s on it, and MotoPress booking #%2$d covers the same cottage and the same nights.', 'dcc-ledger'),
+                            self::money($money),
+                            (int) $booking['id']
+                        ),
+                        __('If the guest cancelled and rebooked direct, the booking is a real stay and this is just a cancelled reservation with money still attached. If the platform paid for the stay that happened, the booking is a hand-typed copy and its money is counted twice. Nothing here can tell which.', 'dcc-ledger'),
+                        __('Nothing has been linked or reclassified. The booking counts as a real stay until you say otherwise.', 'dcc-ledger'),
+                    ],
+                    'action'   => __('Decide which it is. Link the booking to this stay as a copy if the money came through the platform; otherwise mark this reviewed.', 'dcc-ledger'),
+                    'severity' => 'warn',
+                    'stay_id'    => (int) $stay['id'],
+                    'booking_id' => (int) $booking['id'],
+                    'suggest_copy' => (int) $booking['id'],
+                ];
+            }
         }
     }
 

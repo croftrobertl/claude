@@ -3,6 +3,12 @@
 Scoped to `dcc-ledger/`. The repo root's `CLAUDE.md` belongs to the Availability
 Calendar; this file governs this folder.
 
+## Live since 2026-10-21
+
+Installed on doracanalcourt.com from 0.1.6: batches 1–7 are the platform
+exports, batch 8 the MotoPress snapshot. 38 bookings assumed paid,
+$60,348.22. Any release from here is an upgrade over live data.
+
 ## Branch rule
 
 Work on a `claude/…` branch created from `origin/main`. Never commit to `main`
@@ -69,13 +75,15 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 - **A hand-typed copy counts once**, on the platform stay. All four signals
   live in `Copies::detect()` — the only place the question is answered. It was
   answered in three places once, and they drifted.
-- **A cancelled or expired platform stay is the original of a copy only if the
-  channel paid out for it** (`Copies::can_originate_copy()`). Normally the
-  money never came through that channel, so a direct booking on those nights
-  is a real, separate stay — Rob's 5584. But a cancelled reservation carrying
-  a guest total, room sales or a payout did take the guest's money through
-  that channel whatever its status says. A cancellation fee is not money for a
-  stay: nobody stayed.
+- **A cancelled or expired platform stay is never the original of a copy**
+  (`Copies::can_originate_copy()`). The money did not come through that
+  channel, so a direct booking on those nights is a real, separate stay —
+  Rob's 5584, and 8415 and 9136 on live. 0.1.6 let a paid-out cancelled stay
+  originate one; 0.1.7 took that back. On its own merits it is the wrong
+  default: calling a real stay a copy drops its money silently, while
+  counting one twice shows on the cleanup list, and only the first is
+  invisible. A cancelled stay that DOES carry money and has a booking on its
+  nights is raised as a question instead, and nothing is decided for it.
 - **The cleanup list uses the same rule the matcher does.** It offered
   "A Platform Stay Also Typed Into MotoPress By Hand" for stays the matcher
   would never link, which is how two copies sat unlinked while being flagged.
@@ -176,12 +184,21 @@ its own mistakes and proves nothing; three mutations exist to keep that honest.
 
 ## Known gap, not yet decided
 
-A cancelled stay that was paid out and typed in by hand has its money counted
-once, on the stay — but its NIGHTS are counted nowhere: a cancelled stay
-contributes none, and the hand-typed booking is excluded as a copy. The
-cleanup list raises it rather than absorbing it quietly. If Rob confirms those
-stays happened, the fix is a way to record that a cancelled stay was really
-stayed.
+If somebody links a hand-typed booking to a cancelled stay as a copy, that
+stay's money is counted once, on the stay — but its NIGHTS are counted
+nowhere: a cancelled stay contributes none, and the copy is excluded. The
+cleanup list raises it rather than absorbing it quietly. If Rob confirms such
+a stay happened, the fix is a way to record that a cancelled stay was really
+stayed. Nothing on live reaches this today.
+
+## Nights
+
+Nights are always check-out minus check-in (`Dates::nights()`), which holds
+across month ends, leap days and both clock changes. The parsers take the
+count the export states, which has always agreed with the dates; the importer
+raises a note if one ever does not, because the split of a stay's money across
+a period boundary uses the stated nights as its denominator and the dates as
+its numerator.
 
 ## Decisions a person made
 
@@ -193,8 +210,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 787 assertions
-    php dcc-ledger/tests/mutations.php            # 49 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 807 assertions
+    php dcc-ledger/tests/mutations.php            # 51 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -229,6 +246,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.6.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.7.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

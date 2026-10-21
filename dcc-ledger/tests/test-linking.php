@@ -28,7 +28,7 @@ $counts = Linker::run(1);
 
 T::same(1, $counts['code'], 'One Airbnb stay links by the code in its iCal summary');
 T::same(4, $counts['exact'], 'Four stays link on an exact cottage and dates match');
-T::same(9, $counts['copy'], 'Five hand-typed copies, plus Rob\'s four confirmed moves, are linked');
+T::same(7, $counts['copy'], 'Three hand-typed copies, plus Rob\'s four confirmed moves, are linked');
 
 $link = Repo::import_link(Repo::stay_id('airbnb', 'HMAAAA0001'));
 T::same('code', $link['method'], 'HMAAAA0001 links by code');
@@ -98,10 +98,15 @@ foreach (Repo::all_links() as $l) {
 }
 sort($copy_ids);
 T::same(
-    [7278, 8415, 9006, 9013, 9014, 9136, 12443, 12447, 17462],
+    [7278, 9006, 9013, 9014, 12443, 12447, 17462],
     $copy_ids,
     'Copies are found by matching dates, by a code in a note, and by Rob\'s own confirmation'
 );
+
+// 8415 and 9136 are NOT among them: their platform stay is cancelled with
+// nothing on it, so the guest cancelled and paid Rob direct.
+T::ok(!in_array(8415, $copy_ids, true), 'A booking whose platform stay was cancelled and unpaid is not a copy');
+T::ok(!in_array(9136, $copy_ids, true), 'Nor the second one');
 
 $by_code = Repo::links_for_stay(Repo::stay_id('bookingcom', '5222222222'));
 T::same(9013, (int) $by_code[0]['mphb_booking_id'], 'A copy with different dates is found by "Booking.com ID:" in its note');
