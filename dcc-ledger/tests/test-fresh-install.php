@@ -39,7 +39,7 @@ $counts = Linker::run(1);
 
 T::group("Rob's confirmed moves are linked on a fresh install");
 
-foreach (Copies::CONFIRMED_MOVES as $booking_id) {
+foreach (array_keys(Copies::CONFIRMED_MOVES) as $booking_id) {
     $linked = null;
     foreach (Repo::all_links() as $link) {
         if ((int) $link['mphb_booking_id'] === $booking_id) {
@@ -73,7 +73,7 @@ foreach (Adjustments::all() as $adjustment) {
     }
 }
 
-foreach (Copies::CONFIRMED_MOVES as $booking_id) {
+foreach (array_keys(Copies::CONFIRMED_MOVES) as $booking_id) {
     T::ok(!in_array($booking_id, $assumed, true), 'Booking #' . $booking_id . ' is not assumed paid');
 }
 

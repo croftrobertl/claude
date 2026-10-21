@@ -26,6 +26,8 @@ if (!defined('ABSPATH')) {
     <?php
     // A missing MotoPress key is shown instead of figures, never as a zero.
     echo $health;
+    // A stale link changes no figure, so it is shown beside them, not instead.
+    echo DCCL\Health::bad_links_notice();
     ?>
 
     <?php if ($notice !== null) : ?>

@@ -202,6 +202,59 @@ final class Health
     }
 
     /**
+     * Links pointing at a stay that does not exist.
+     *
+     * Listed here because this is where someone looks when something seems
+     * off, but reported separately from check(): a stale link does not make a
+     * figure wrong — nothing joins to a stay that is not there — so it must
+     * not replace the figures with a banner. It gets a notice and a button.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function bad_links(): array
+    {
+        return Repair::bad_links();
+    }
+
+    /**
+     * The notice for those links: shown beside the figures, not instead of
+     * them.
+     */
+    public static function bad_links_notice(): string
+    {
+        $bad = self::bad_links();
+        if ($bad === []) {
+            return '';
+        }
+
+        $ids = [];
+        foreach ($bad as $link) {
+            $ids[] = (int) $link['id'];
+        }
+
+        $html  = '<div class="dccl-notice dccl-health-warn">';
+        $html .= '<p><strong>' . esc_html(sprintf(
+            /* translators: %d: number of links */
+            _n(
+                '%d link points at a stay that no longer exists.',
+                '%d links point at a stay that no longer exists.',
+                count($bad),
+                'dcc-ledger'
+            ),
+            count($bad)
+        )) . '</strong></p>';
+        $html .= '<p>' . esc_html(sprintf(
+            /* translators: %s: comma-separated link ids */
+            __('Link ids: %s. Version 0.1.3 could write these when it failed to find the stay for one of Rob\'s confirmed moves. They change no figure, because nothing joins to a stay that is not there, but they are not decisions anybody made.', 'dcc-ledger'),
+            implode(', ', $ids)
+        )) . '</p>';
+        $html .= '<p>' . esc_html__('Removing them is recorded as a batch on the Imports tab, and can be undone there like any import.', 'dcc-ledger') . '</p>';
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
      * The banner shown in place of figures. Returns '' when everything is there.
      */
     public static function banner(): string

@@ -268,31 +268,48 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => '',
     ]);
 
-    // Rob's four confirmed moves, by the booking ids the plugin carries in
-    // Copies::CONFIRMED_MOVES. Each sits on a platform stay's dates in a
-    // DIFFERENT cottage, and each is given a surname that does NOT match —
-    // the seeding must link them on Rob's say-so alone.
+    // Rob's four confirmed moves, by the booking ids and the channel and
+    // cottage the plugin carries in Copies::CONFIRMED_MOVES. Each sits on its
+    // platform stay's nights in a DIFFERENT cottage, and each is given a
+    // surname that does NOT match — the seeding must link them on Rob's
+    // say-so alone.
     //
-    // 7278: the Airbnb stay HM2022OLD1 is in cottage 23, 1-5 June 2022.
-    $booking(7278, 'confirmed', 1066, '2022-06-01', '2022-06-05', [
-        LIVE_TOTAL      => '480.00',
+    // 7278 is shaped like the real one: the Airbnb stay it was moved from
+    // (cottage 32, 24-26 Oct) shares those nights with a Vrbo stay in the
+    // same cottage — the double booking that caused the move. It also carries
+    // a recorded payment equal to its total, so its gap is 0 and no assumed
+    // payment hides a missing link. Unlinked, its $388.50 would count as
+    // direct revenue on top of the Airbnb payout for the same stay.
+    $booking(7278, 'confirmed', 1070, '2025-10-24', '2025-10-26', [
+        LIVE_TOTAL      => '388.50',
         LIVE_FIRST_NAME => 'Gregor',
         LIVE_LAST_NAME  => 'Lindqvist',
     ]);
-    // 12443: the Booking.com stay 5111111111 is in cottage 22, 1-5 March 2025.
-    $booking(12443, 'confirmed', 1614, '2025-03-01', '2025-03-05', [
+    $payment(72781, 7278, 388.50, '2025-10-24');
+
+    // The Vrbo half of that double booking, imported as it would really be.
+    // Its own stay links to it on exact dates, as normal; 7278 must never be
+    // linked to it.
+    $booking(9040, 'confirmed', 1066, '2025-10-24', '2025-10-26', [
+        LIVE_SYNC_ID     => 'sync-9040',
+        LIVE_ICAL_PRODID => '-//HomeAway.com, Inc.//EN',
+        LIVE_TOTAL       => '0.00',
+    ]);
+
+    // 12443: the Booking.com stay 5666666666 is in cottage 34, 10-13 Nov 2025.
+    $booking(12443, 'confirmed', 1806, '2025-11-10', '2025-11-13', [
         LIVE_TOTAL      => '529.50',
         LIVE_FIRST_NAME => 'Marta',
         LIVE_LAST_NAME  => 'Quintero',
     ]);
-    // 12447: the Airbnb stay HMAAAA0002 is in cottage 31, 12-15 March 2025.
-    $booking(12447, 'confirmed', 1614, '2025-03-12', '2025-03-15', [
+    // 12447: the Booking.com stay 5777777777 is in cottage 34, 20-23 Nov 2025.
+    $booking(12447, 'confirmed', 1807, '2025-11-20', '2025-11-23', [
         LIVE_TOTAL      => '529.50',
         LIVE_FIRST_NAME => 'Ola',
         LIVE_LAST_NAME  => 'Fjeldstad',
     ]);
-    // 17462: the Booking.com stay 5222222222 is in cottage 33, 10-13 Jan 2026.
-    $booking(17462, 'confirmed', 1072, '2026-01-10', '2026-01-13', [
+    // 17462: the Airbnb stay HM17462AA1 is in cottage 32, 1-4 Feb 2026.
+    $booking(17462, 'confirmed', 1072, '2026-02-01', '2026-02-04', [
         LIVE_TOTAL      => '444.00',
         LIVE_FIRST_NAME => 'Yusuf',
         LIVE_LAST_NAME  => 'Demirci',

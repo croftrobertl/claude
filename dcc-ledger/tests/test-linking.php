@@ -27,7 +27,7 @@ foreach ([
 $counts = Linker::run(1);
 
 T::same(1, $counts['code'], 'One Airbnb stay links by the code in its iCal summary');
-T::same(3, $counts['exact'], 'Three stays link on an exact cottage and dates match');
+T::same(4, $counts['exact'], 'Four stays link on an exact cottage and dates match');
 T::same(7, $counts['copy'], 'Three hand-typed copies, plus Rob\'s four confirmed moves, are linked');
 
 $link = Repo::import_link(Repo::stay_id('airbnb', 'HMAAAA0001'));

@@ -55,8 +55,53 @@ final class Copies
      * Moves Rob confirmed by hand on 2026-10-18, before the move signal
      * existed. They are recorded as copy links so they never need confirming
      * again.
+     *
+     * Each one names the platform stay's channel and cottage, because its
+     * dates alone are not enough to find it. 7278's original cottage held two
+     * platform stays on the same nights — an Airbnb reservation and a Vrbo
+     * one, which is the double booking that caused the move in the first
+     * place — and a seed that only knew the dates found two candidates, gave
+     * up, and linked nothing at all. Rob's ruling names the platform, so the
+     * seed does too.
      */
-    public const CONFIRMED_MOVES = [7278, 12443, 12447, 17462];
+    public const CONFIRMED_MOVES = [
+        7278  => ['channel' => 'airbnb',     'cottage' => '32'],
+        12443 => ['channel' => 'bookingcom', 'cottage' => '34'],
+        12447 => ['channel' => 'bookingcom', 'cottage' => '34'],
+        17462 => ['channel' => 'airbnb',     'cottage' => '32'],
+    ];
+
+    /**
+     * The platform stay a confirmed move belongs to: the one in the channel
+     * and cottage Rob named, on the booking's own nights.
+     *
+     * @param array{channel:string,cottage:string} $spec
+     * @return array<string,mixed>|null
+     */
+    public static function confirmed_move_stay(array $spec, ?string $check_in, ?string $check_out): ?array
+    {
+        if ($check_in === null || $check_out === null) {
+            return null;
+        }
+
+        $found = [];
+        foreach (self::live_stays() as $stay) {
+            if ((string) $stay['channel'] !== $spec['channel']) {
+                continue;
+            }
+            if ((string) $stay['cottage'] !== $spec['cottage']) {
+                continue;
+            }
+            if ((string) $stay['check_in'] !== $check_in || (string) $stay['check_out'] !== $check_out) {
+                continue;
+            }
+            $found[] = $stay;
+        }
+
+        // Still ambiguous even within one channel and cottage: that is not
+        // something to guess at either.
+        return count($found) === 1 ? $found[0] : null;
+    }
 
     /**
      * The copies: bookings whose money came through a platform, so counting

@@ -442,23 +442,97 @@ EOT,
 EOT,
     ],
     [
-        'name' => "The confirmed-move seeding reading the wrong key again",
-        'file' => 'includes/class-linker.php',
+        'name' => 'A link created pointing at no stay at all',
+        'file' => 'includes/class-repo.php',
         'from' => <<<'EOT'
-            $stay_id = (int) ($moves[$booking_id]['id'] ?? 0);
+        if ($stay_id <= 0 || $booking_id <= 0) {
+            return false;
+        }
 EOT,
         'to'   => <<<'EOT'
-            $stay_id = (int) ($moves[$booking_id]['stay_id'] ?? 0);
 EOT,
     ],
     [
-        'name' => 'A link created pointing at no stay at all',
-        'file' => 'includes/class-linker.php',
+        'name' => 'A confirmed move seeded by its dates alone',
+        'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
-            if ($stay_id <= 0) {
+            if ((string) $stay['channel'] !== $spec['channel']) {
+                continue;
+            }
+            if ((string) $stay['cottage'] !== $spec['cottage']) {
+                continue;
+            }
 EOT,
         'to'   => <<<'EOT'
             if (false) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A confirmed move seeded to the wrong channel',
+        'file' => 'includes/class-copies.php',
+        'from' => <<<'EOT'
+            if ((string) $stay['channel'] !== $spec['channel']) {
+                continue;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            if ((string) $stay['channel'] === $spec['channel']) {
+                continue;
+            }
+EOT,
+    ],
+    [
+        'name' => 'A confirmed move with no stay passed over in silence',
+        'file' => 'includes/class-issues.php',
+        'from' => <<<'EOT'
+        self::confirmed_moves_without_a_stay($items, $bookings);
+EOT,
+        'to'   => <<<'EOT'
+EOT,
+    ],
+    [
+        'name' => 'Bad links deleted silently, with no batch to undo',
+        'file' => 'includes/class-repair.php',
+        'from' => <<<'EOT'
+        $batch_id = Batches::create(
+            self::KIND,
+            __('Removed links pointing at a stay that does not exist', 'dcc-ledger'),
+            $user_id
+        );
+EOT,
+        'to'   => <<<'EOT'
+        $batch_id = 0;
+EOT,
+    ],
+    [
+        'name' => 'Undo failing to put a removed link back',
+        'file' => 'includes/class-batches.php',
+        'from' => <<<'EOT'
+        if (isset($undo['deleted_links']) && is_array($undo['deleted_links'])) {
+EOT,
+        'to'   => <<<'EOT'
+        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'The upgrade leaving bad links where they are',
+        'file' => 'includes/class-plugin.php',
+        'from' => <<<'EOT'
+        Repair::on_upgrade(get_current_user_id());
+EOT,
+        'to'   => <<<'EOT'
+EOT,
+    ],
+    [
+        'name' => 'A good link removed as if it were bad',
+        'file' => 'includes/class-repair.php',
+        'from' => <<<'EOT'
+              WHERE s.id IS NULL
+EOT,
+        'to'   => <<<'EOT'
+              WHERE s.id IS NULL OR s.id IS NOT NULL
 EOT,
     ],
     [

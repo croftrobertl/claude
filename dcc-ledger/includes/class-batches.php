@@ -31,9 +31,16 @@ final class Batches
      * @param array<int,array>  $undo        stay enrichments to reverse
      * @param array<int,int>    $superseded  Original versions this batch replaced,
      *                                       to be made current again on undo
+     * @param array<int,array>  $deleted_links rows this batch removed, to be
+     *                                         put back on undo
      */
-    public static function finish(int $batch_id, array $counts, array $undo, array $superseded = []): void
-    {
+    public static function finish(
+        int $batch_id,
+        array $counts,
+        array $undo,
+        array $superseded = [],
+        array $deleted_links = []
+    ): void {
         global $wpdb;
         $data = [];
         if ($undo !== []) {
@@ -41,6 +48,9 @@ final class Batches
         }
         if ($superseded !== []) {
             $data['superseded'] = array_values(array_unique(array_map('intval', $superseded)));
+        }
+        if ($deleted_links !== []) {
+            $data['deleted_links'] = array_values($deleted_links);
         }
         $wpdb->update(Schema::batches(), [
             'rows_read'      => (int) ($counts['read'] ?? 0),
@@ -89,11 +99,12 @@ final class Batches
             'originals'   => 0,
             'adjustments' => 0,
             'restored'    => 0,
+            'restored_links' => 0,
         ];
     }
 
     /**
-     * @return array{ok:bool,message:string,stays:int,lines:int,originals:int,adjustments:int,restored:int}
+     * @return array{ok:bool,message:string,stays:int,lines:int,originals:int,adjustments:int,restored:int,restored_links:int}
      */
     public static function undo(int $batch_id): array
     {
@@ -151,6 +162,27 @@ final class Batches
             $stays += (int) $wpdb->query($wpdb->prepare("DELETE FROM {$stays_t} WHERE id = %d", $stay_id));
         }
 
+        // Links this batch removed. Undo puts them back exactly as they were,
+        // bad stay id and all: undo restores the prior state, it does not
+        // improve on it.
+        $restored_links = 0;
+        if (isset($undo['deleted_links']) && is_array($undo['deleted_links'])) {
+            foreach ($undo['deleted_links'] as $link) {
+                if (!is_array($link) || !isset($link['id'])) {
+                    continue;
+                }
+                $wpdb->insert($links_t, [
+                    'id'              => (int) $link['id'],
+                    'stay_id'         => (int) $link['stay_id'],
+                    'mphb_booking_id' => (int) $link['mphb_booking_id'],
+                    'method'          => (string) $link['method'],
+                    'linked_at'       => (string) $link['linked_at'],
+                    'linked_by'       => $link['linked_by'] === null ? null : (int) $link['linked_by'],
+                ]);
+                $restored_links++;
+            }
+        }
+
         // Fields this batch filled in on stays that already existed.
         $restored = 0;
         if (isset($undo['enriched']) && is_array($undo['enriched'])) {
@@ -185,6 +217,7 @@ final class Batches
             'originals'   => $originals,
             'adjustments' => $adjustments,
             'restored'    => $restored,
+            'restored_links' => $restored_links,
         ];
     }
 }

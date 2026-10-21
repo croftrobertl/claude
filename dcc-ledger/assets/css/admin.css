@@ -59,6 +59,12 @@
     border-left-color: var(--dccl-bad);
 }
 
+/* Shown beside the figures, not instead of them. */
+.dccl-health-warn {
+    border-left-color: var(--dccl-warn);
+    background: #fdf4e3;
+}
+
 /* Tabs ------------------------------------------------------------------ */
 
 .dccl-tabs {

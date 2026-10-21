@@ -95,17 +95,22 @@ final class Linker
     }
 
     /**
-     * The moved-cottage copies Rob confirmed by hand on 2026-10-18, before the
-     * ledger could recognise a move on its own. They are recorded as copy
+     * The moved-cottage copies Rob confirmed by hand on 2026-10-18, before
+     * the ledger could recognise a move on its own. They are recorded as copy
      * links so nobody is asked to confirm them twice.
      *
-     * Each is matched on its own dates against a platform stay in a different
-     * cottage, so a booking id that means something else on another site can
-     * never be linked to the wrong stay.
+     * Each is found by the channel and cottage Rob's ruling names, plus the
+     * booking's own dates — not by the shape of the booking alone. The dates
+     * are not enough: 7278's original cottage held two platform stays on the
+     * same nights, and a seed that went on dates alone found two candidates
+     * and linked nothing.
      *
      * No surname is required here. Rob looked at these four himself, and his
      * decision outranks any signal — including a name that does not match, or
      * a customer record with no name in it at all.
+     *
+     * A move whose stay cannot be found is not skipped quietly: Issues raises
+     * it as "Confirmed Move With No Platform Stay".
      */
     private static function link_confirmed_moves(?int $user_id): int
     {
@@ -116,25 +121,22 @@ final class Linker
             $by_id[(int) $booking['id']] = $booking;
         }
 
-        $live  = Copies::from_live();
-        $moves = Copies::move_candidates($live);
-
-        foreach (Copies::CONFIRMED_MOVES as $booking_id) {
-            $booking = $by_id[$booking_id] ?? null;
+        foreach (Copies::CONFIRMED_MOVES as $booking_id => $spec) {
+            $booking = $by_id[(int) $booking_id] ?? null;
             if ($booking === null || $booking['is_imported'] || !self::is_live($booking)) {
                 continue;
             }
-            // move_candidates() gives the stay itself, so the id is 'id'.
-            $stay_id = (int) ($moves[$booking_id]['id'] ?? 0);
-            if ($stay_id <= 0) {
-                // No stay to link it to on this site. Nothing to do, and
-                // nothing to guess at.
+
+            $stay = Copies::confirmed_move_stay($spec, $booking['check_in'], $booking['check_out']);
+            if ($stay === null) {
+                continue; // Raised on the cleanup list, never passed over.
+            }
+
+            $stay_id = (int) $stay['id'];
+            if (self::has_link($stay_id, (int) $booking_id)) {
                 continue;
             }
-            if (self::has_link($stay_id, $booking_id)) {
-                continue;
-            }
-            if (Repo::link($stay_id, $booking_id, 'copy', $user_id)) {
+            if (Repo::link($stay_id, (int) $booking_id, 'copy', $user_id)) {
                 $linked++;
                 // Recorded as already reviewed: Rob decided this one.
                 Repo::mark_reviewed(

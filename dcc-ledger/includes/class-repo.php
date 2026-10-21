@@ -240,6 +240,11 @@ final class Repo
         if (!in_array($method, ['code', 'exact', 'manual', 'copy'], true)) {
             return false;
         }
+        // A link to a stay that does not exist is worse than no link: it
+        // looks like a decision somebody made. 0.1.3 wrote three of them.
+        if ($stay_id <= 0 || $booking_id <= 0) {
+            return false;
+        }
         if ($method !== 'copy' && self::import_link($stay_id) !== null) {
             return false;
         }

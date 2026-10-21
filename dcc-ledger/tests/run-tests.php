@@ -17,6 +17,7 @@ $suites = [
     'snapshot'  => __DIR__ . '/test-snapshot.php',
     'order'     => __DIR__ . '/test-order.php',
     'fresh'     => __DIR__ . '/test-fresh-install.php',
+    'repair'    => __DIR__ . '/test-repair.php',
     'linking'   => __DIR__ . '/test-linking.php',
     'reports'   => __DIR__ . '/test-reports.php',
     'issues'    => __DIR__ . '/test-issues.php',

@@ -39,7 +39,7 @@ $before = Repo::find_stay('airbnb', 'HMBBBB0003');
 $result = Importer::run(dccl_fixture('airbnb-reservations.csv'), 'airbnb-reservations.csv', false, 1);
 $after  = Repo::find_stay('airbnb', 'HMBBBB0003');
 T::same($before['check_in'], $after['check_in'], 'An existing check-in is not overwritten');
-T::same(1, $result['counts']['stays_new'], 'Only the reservation missing from the payout file is new');
+T::same(3, $result['counts']['stays_new'], 'Only the reservations missing from the payout file are new');
 T::ok($result['counts']['stays_unchanged'] + $result['counts']['stays_enriched'] === 4, 'The rest were already there');
 
 T::group('Crofty Bear and Hipcamp');
@@ -93,11 +93,11 @@ $lines_before = $wpdb->get_results('SELECT * FROM ' . Schema::lines() . ' ORDER 
 
 $result = Importer::run(dccl_fixture('vrbo-reservations.csv'), 'vrbo-reservations.csv', false, 1);
 $batch  = (int) $result['batch_id'];
-T::same(4, $result['counts']['stays_new'], 'The Vrbo import adds four stays');
+T::same(5, $result['counts']['stays_new'], 'The Vrbo import adds five stays');
 
 $undo = Batches::undo($batch);
 T::ok($undo['ok'], 'Undo succeeds');
-T::same(4, $undo['stays'], 'Undo removed exactly the four stays it added');
+T::same(5, $undo['stays'], 'Undo removed exactly the five stays it added');
 
 $stays_after = $wpdb->get_results('SELECT * FROM ' . Schema::stays() . ' ORDER BY id', ARRAY_A);
 $lines_after = $wpdb->get_results('SELECT * FROM ' . Schema::lines() . ' ORDER BY id', ARRAY_A);

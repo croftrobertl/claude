@@ -45,6 +45,8 @@ final class Issues
         self::not_yet_copied($items, $bookings, $copied);
         self::probable_move_copies($items, $stays);
         self::assumed_on_a_copy($items);
+        self::confirmed_moves_without_a_stay($items, $bookings);
+        self::links_to_nowhere($items);
         self::invoice_reconciliation($items);
 
         $reviews = Repo::reviews();
@@ -558,6 +560,99 @@ final class Issues
                 'reverse_assumed' => $booking_id,
             ];
         }
+    }
+
+    /**
+     * One of Rob's confirmed moves whose platform stay cannot be found.
+     *
+     * The seeding links these on Rob's say-so, by the channel and cottage his
+     * ruling names. If the stay is not there — not imported yet, or imported
+     * under other dates — the booking is left counting on its own, and its
+     * money counts on top of the platform payout for the same stay. That is
+     * never passed over quietly.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     */
+    private static function confirmed_moves_without_a_stay(array &$items, array $bookings): void
+    {
+        $by_id = [];
+        foreach ($bookings as $booking) {
+            $by_id[(int) $booking['id']] = $booking;
+        }
+
+        foreach (Copies::CONFIRMED_MOVES as $booking_id => $spec) {
+            $booking = $by_id[(int) $booking_id] ?? null;
+            if ($booking === null || $booking['is_imported'] || !Linker::is_live($booking)) {
+                continue;
+            }
+            $linked = false;
+            foreach (Repo::all_links() as $link) {
+                if ((int) $link['mphb_booking_id'] === (int) $booking_id) {
+                    $linked = true;
+                    break;
+                }
+            }
+            if ($linked) {
+                continue;
+            }
+
+            if (Copies::confirmed_move_stay($spec, $booking['check_in'], $booking['check_out']) !== null) {
+                continue; // It can be found; the matcher will link it.
+            }
+
+            $items[] = [
+                'key'      => 'confirmed_move_no_stay:' . $booking_id,
+                'title'    => __('Confirmed Move With No Platform Stay', 'dcc-ledger'),
+                'facts'    => [
+                    sprintf(
+                        /* translators: 1: booking id, 2: channel, 3: cottage, 4: check-in, 5: check-out */
+                        __('MotoPress booking #%1$d is one of the moves Rob confirmed on 2026-10-18, but no %2$s stay can be found in cottage %3$s for %4$s to %5$s to link it to.', 'dcc-ledger'),
+                        (int) $booking_id,
+                        Cottages::channel_label($spec['channel']),
+                        $spec['cottage'],
+                        (string) $booking['check_in'],
+                        (string) $booking['check_out']
+                    ),
+                    __('Until it is linked, this booking counts as a stay of its own, and any money on it counts on top of the platform payout for the same nights.', 'dcc-ledger'),
+                ],
+                'action'   => __('Import that channel\'s reservations for these dates, then run Match Stays To MotoPress again. If the platform stay really is under other dates, link it by hand.', 'dcc-ledger'),
+                'severity' => 'bad',
+                'booking_id' => (int) $booking_id,
+            ];
+        }
+    }
+
+    /**
+     * Links pointing at a stay that does not exist, left behind by 0.1.3.
+     */
+    private static function links_to_nowhere(array &$items): void
+    {
+        $bad = Repair::bad_links();
+        if ($bad === []) {
+            return;
+        }
+
+        $ids = [];
+        foreach ($bad as $link) {
+            $ids[] = (int) $link['id'];
+        }
+
+        $items[] = [
+            'key'      => 'bad_links:' . implode('-', $ids),
+            'title'    => __('Links Pointing At A Stay That Does Not Exist', 'dcc-ledger'),
+            'facts'    => [
+                sprintf(
+                    /* translators: 1: number of links, 2: comma-separated link ids */
+                    __('%1$d link rows point at a stay that is not there. Link ids: %2$s.', 'dcc-ledger'),
+                    count($bad),
+                    implode(', ', $ids)
+                ),
+                __('Version 0.1.3 could write these when it failed to find the stay for one of Rob\'s confirmed moves. They change no figure, because nothing joins to a stay that is not there.', 'dcc-ledger'),
+            ],
+            'action'   => __('Remove them. It is recorded as a batch on the Imports tab and can be undone there.', 'dcc-ledger'),
+            'severity' => 'warn',
+            'remove_bad_links' => count($bad),
+        ];
     }
 
     /**

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,12 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.5 =
+* A confirmed move is now found by the channel and cottage it was moved from, not by its dates alone. One of the four sat on nights its original cottage held two platform stays on — a double booking, which is what caused the move — so the old seed found two candidates and silently linked nothing, leaving that stay's money counted twice.
+* A confirmed move whose platform stay cannot be found is raised on the cleanup list instead of being passed over.
+* Link rows pointing at a stay that does not exist, which version 0.1.3 could write, are listed by the health check and removed on upgrade as a recorded, undoable batch. There is also a button for them on the Cleanup tab. Nothing is deleted silently.
+* A link to a stay that does not exist is now refused outright.
 
 = 0.1.4 =
 * Fixed an upgrade that silently failed: an SQL comment inside a CREATE TABLE broke dbDelta's column diff, so an existing stays table never gained the guest_keys column while a fresh install was perfect. The table definitions are data now, so a comment cannot get into the SQL at all.

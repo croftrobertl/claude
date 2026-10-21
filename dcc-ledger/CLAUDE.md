@@ -57,6 +57,15 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   in, and `Schema::expected_columns()` is read from the same source.
 - **Only a confirmed booking can be a copy, a move or a question.** A
   cancelled booking is a dock block or a scrapped reservation, never a stay.
+- **A confirmed move is seeded by channel and cottage, never by dates alone.**
+  `Copies::CONFIRMED_MOVES` names the platform and cottage each of Rob's four
+  was moved from, because a cottage can hold two platform stays on the same
+  nights — 7278's did, which is what caused the move — and a dates-only lookup
+  finds two candidates and links nothing.
+- **A link never points at a stay that does not exist.** `Repo::link()`
+  refuses a non-positive stay or booking id, and anything older that got
+  through is removed on upgrade as a recorded, undoable batch.
+- **Nothing is deleted silently**, including the ledger's own past mistakes.
 - **A hand-typed copy counts once**, on the platform stay. All four signals
   live in `Copies::detect()` — the only place the question is answered. It was
   answered in three places once, and they drifted.
@@ -168,8 +177,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 723 assertions
-    php dcc-ledger/tests/mutations.php            # 39 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 762 assertions
+    php dcc-ledger/tests/mutations.php            # 45 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -204,6 +213,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.4.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.5.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

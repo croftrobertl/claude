@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.4 — Staging Checklist
+# DCC Ledger 0.1.5 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -9,7 +9,7 @@
 > order.
 >
 > **Upgrading the existing staging install (14 import batches, links in
-> place, no snapshot):** deactivate, upload 0.1.4, activate. Then, before
+> place, no snapshot):** deactivate, upload 0.1.5, activate. Then, before
 > anything else, confirm the upgrade finished:
 >
 >     P=$(wp db prefix)
@@ -26,6 +26,25 @@
 > so there is no need to re-import. Re-run step 5 (the matcher), then step 6.
 > The column added by hand during the 0.1.3 testing is exactly what the
 > upgrade now adds, so leave it as it is.
+>
+> **0.1.5 also tidies up after 0.1.3.** Activating removes any link row
+> pointing at a stay that does not exist — staging has three, ids 138, 139 and
+> 140 — as a recorded batch on the Imports tab, which can be undone there like
+> any import. Nothing is deleted silently. Check it happened:
+>
+>     wp dcc-ledger batches
+>
+> - [ ] A batch of kind `repair_bad_links` is listed, having read 3 rows.
+> - [ ] The links table now holds the 4 correct move links and no bad ones:
+>
+>           P=$(wp db prefix)
+>           wp db query "SELECT l.id, l.stay_id, l.mphb_booking_id, l.method
+>                          FROM ${P}dcc_ledger_links l
+>                          LEFT JOIN ${P}dcc_ledger_stays s ON s.id = l.stay_id
+>                         WHERE s.id IS NULL"
+>
+>       This must return nothing. If it returns rows, the Cleanup tab has a
+>       button for them.
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
@@ -173,9 +192,24 @@ everything it needs.
       7078, 7155 and 11528 — but all three are cancelled in MotoPress, and a
       cancelled booking is a dock block, not a stay. If any other number comes
       back, send me the ids.
+- [ ] **`Skipped, a copy` is 14, and 7278 is among them** — run with
+      `--verbose` and check. Until 0.1.5 the seed looked for the platform stay
+      by its dates alone, and 7278's original cottage held two stays on those
+      nights (an Airbnb one and a Vrbo one, the double booking that caused the
+      move), so it found two candidates and linked nothing. The seed now looks
+      by the channel and cottage Rob's ruling names.
+- [ ] 7278 is linked to the **Airbnb** stay in Cottage 32, never to the Vrbo
+      one. The Vrbo stay keeps its own link to its own imported booking:
+
+          P=$(wp db prefix)
+          wp db query "SELECT stay_id, method FROM ${P}dcc_ledger_links WHERE mphb_booking_id = 7278"
+
 - [ ] The 4 moves Rob confirmed (7278, 12443, 12447, 17462) appear under
       `by an existing link`, not as probable moves. They are linked in step 5
       whether or not their names match, because Rob decided them himself.
+- [ ] No `Confirmed Move With No Platform Stay` items on the Cleanup tab. One
+      of those means a confirmed move could not be linked, and its money is
+      counting on top of the platform payout for the same nights.
       **This matters more on live than on staging**, where they were already
       linked: if the seeding fails on a fresh install, all four are assumed
       paid and the total comes out at 41 bookings and $61,851.22 instead of

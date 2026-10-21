@@ -64,6 +64,18 @@ half-finished upgrade can never read as an empty number.
 Deactivating and reactivating runs the upgrade again. Nothing stored is
 touched by it: an upgrade only ever adds columns.
 
+## If the upgrade removed a link you wanted
+
+Activating 0.1.5 removes link rows that point at a stay which does not exist —
+rows version 0.1.3 could write when it failed to find the stay for one of
+Rob's confirmed moves. That removal is a recorded batch like any other:
+
+    wp dcc-ledger batches          # look for repair_bad_links
+    wp dcc-ledger undo <id>
+
+Undoing it puts every removed row back exactly as it was, bad stay id and all.
+Undo restores the prior state; it does not improve on it.
+
 ## If the ledger calls a real stay a copy
 
 It should not, by design: a booking counts as a real stay until a person says

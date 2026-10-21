@@ -75,7 +75,7 @@ final class Admin
         foreach ([
             'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
             'settings', 'export', 'snapshot', 'adjust', 'unadjust',
-            'confirm_move', 'reject_move', 'reverse_assumed',
+            'confirm_move', 'reject_move', 'reverse_assumed', 'remove_bad_links',
         ] as $action) {
             add_action('admin_post_dccl_' . $action, ['\\DCCL\\Admin', 'handle_' . $action]);
         }
@@ -392,6 +392,28 @@ final class Admin
         ], null, get_current_user_id());
 
         self::back('cleanup', __('Assumed payment reversed. Both the assumption and its reversal stay on the record.', 'dcc-ledger'));
+    }
+
+    /**
+     * Remove links pointing at a stay that does not exist, as a recorded,
+     * undoable batch. Never a silent delete.
+     */
+    public static function handle_remove_bad_links(): void
+    {
+        self::guard();
+
+        $result = Repair::remove_bad_links(get_current_user_id());
+
+        if ($result['removed'] === 0) {
+            self::back('cleanup', __('There were none to remove.', 'dcc-ledger'), 'error');
+        }
+
+        self::back('cleanup', sprintf(
+            /* translators: 1: number of links removed, 2: batch id */
+            __('Removed %1$d link rows that pointed at no stay, as batch %2$d. Undo it on the Imports tab if that was wrong.', 'dcc-ledger'),
+            (int) $result['removed'],
+            (int) $result['batch_id']
+        ));
     }
 
     public static function handle_link(): void

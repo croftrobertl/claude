@@ -91,6 +91,16 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
                 </form>
             <?php endif; ?>
 
+            <?php if (!empty($item['remove_bad_links'])) : ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_remove_bad_links">
+                    <button type="submit" class="button button-primary">
+                        <?php esc_html_e('Remove Them, As An Undoable Batch', 'dcc-ledger'); ?>
+                    </button>
+                </form>
+            <?php endif; ?>
+
             <?php if (!empty($item['reverse_assumed'])) : ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <?php wp_nonce_field(Admin::NONCE); ?>

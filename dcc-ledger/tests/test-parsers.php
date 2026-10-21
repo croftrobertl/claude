@@ -78,7 +78,7 @@ T::ok(!str_contains((string) json_encode($parsed), 'Whitfield'), 'No guest name 
 T::group('Airbnb reservations parser');
 
 $parsed = (new Airbnb_Reservations())->parse(dccl_fixture('airbnb-reservations.csv'));
-T::same(5, count($parsed['stays']), 'Five stays, Crofty excluded, payout rows skipped');
+T::same(7, count($parsed['stays']), 'Seven stays, Crofty excluded, payout rows skipped');
 T::same(2, $parsed['counts']['skipped'], 'Both interleaved payout rows are skipped');
 T::same(1, $parsed['counts']['excluded'], 'The Crofty listing is excluded');
 T::same([], $parsed['lines'], 'The reservations file carries no money');
@@ -87,7 +87,7 @@ T::same('2025-04-01 00:00:00', $parsed['stays']['airbnb:HMNOPAY0001']['booked_on
 T::group('Booking.com reservations parser');
 
 $parsed = (new Bookingcom_Reservations())->parse(dccl_fixture('bookingcom-reservations.csv'));
-T::same(4, count($parsed['stays']), 'Four stays, the Crofty hotel id excluded');
+T::same(6, count($parsed['stays']), 'Six stays, the Crofty hotel id excluded');
 T::same('2025-02-10 09:15:30', $parsed['stays']['bookingcom:5111111111']['booked_on'], 'A full ISO timestamp is read');
 T::same('2025-11-28 19:01:00', $parsed['stays']['bookingcom:5222222222']['booked_on'], 'An ISO timestamp with no seconds is read');
 T::same('cancelled', $parsed['stays']['bookingcom:5333333333']['status'], 'CANCELLED becomes cancelled');
@@ -114,7 +114,7 @@ T::same(672.00, $payouts[0]['amount'], 'The payout is the gross including tax');
 T::group('Vrbo reservations parser');
 
 $parsed = (new Vrbo_Reservations())->parse(dccl_fixture('vrbo-reservations.csv'));
-T::same(4, count($parsed['stays']), 'Four stays, the Crofty listing excluded');
+T::same(5, count($parsed['stays']), 'Five stays, the Crofty listing excluded');
 T::same('ok', $parsed['stays']['vrbo:HA-AAA111']['status'], 'Booked becomes ok');
 T::same('cancelled', $parsed['stays']['vrbo:HA-BBB222']['status'], 'Cancelled becomes cancelled');
 T::same('expired', $parsed['stays']['vrbo:HA-CCC333']['status'], 'A request that expired is stored as expired');
