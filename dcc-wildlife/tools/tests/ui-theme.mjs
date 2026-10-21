@@ -85,7 +85,26 @@ check(icon && pill && icon.x > pill.x && icon.x + icon.w < pill.x + pill.w,
  * plugins disagreeing about a pressed button is worse, to him, than the
  * number. The suite pins HIS answer, not the guideline — and if the contrast
  * is ever raised it happens site-wide, not here. The gold ring still stays. */
-section('every unselected toggle is blue; the selected one is coral, white and gold');
+/*
+ * ITEM 5 (1.44.2) — THE SEGMENTED SWITCH IS THE AVAILABILITY CALENDAR'S NOW,
+ * SO WHAT THIS SECTION PINS IS REVERSED.
+ *
+ * It pinned Rob's 1.34.0/1.36.0 answer: every segment solid #006BCF, the
+ * selected one coral with white text and a gold inset mark. The Director sent
+ * the Calendar's own source (`staff.css` on the Calendar's branch) and asked
+ * for it copied exactly, so:
+ *
+ *   - an UNSELECTED segment is TRANSPARENT over the group's white ground,
+ *     with #0A50B2 text;
+ *   - the SELECTED one is solid #0A50B2 with white text;
+ *   - the group carries a 2px #0A50B2 outline and a 999px radius, and a 2px
+ *     rule divides the segments;
+ *   - coral is HOVER ONLY, inside (hover:hover) and (pointer:fine).
+ *
+ * Expected values updated, never loosened — and the gold-mark assertions are
+ * REPLACED by the divider and outline that do that job now, not dropped.
+ */
+section('the segmented switch is the Calendar\'s: blue on white, solid when chosen');
 
 const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.dccwl-tab')).map((b) => {
   const cs = getComputedStyle(b);
@@ -112,23 +131,57 @@ note(tabs.map((t) => `${t.label}[${t.pressed}]`).join(' '));
  * exact number because the claim is that the row holds the three SECTIONS
  * `Species::sections()` defines — `checkAtLeast` would pass on two. */
 checkSame(3, tabs.length, 'there are three section tabs');
+const HEADER = 'rgb(10, 80, 178)';          // --staff-header on the Calendar
+const CLEAR = 'rgba(0, 0, 0, 0)';
 for (const t of tabs) {
   const chosen = 'true' === t.pressed;
-  checkSame(chosen ? CORAL : BLUE, t.bg,
-    `${t.label}: ${chosen ? 'coral while selected' : 'solid #006BCF at rest'}`);
-  checkSame(WHITE, t.fg,
-    `${t.label}: white text, selected or not (1.36.0)`);
-  checkSame('30px', t.radius, `${t.label}: the site kit radius`);
+  checkSame(chosen ? HEADER : CLEAR, t.bg,
+    `${t.label}: ${chosen ? 'solid #0A50B2 while selected' : 'transparent at rest'}`);
+  checkSame(chosen ? WHITE : HEADER, t.fg,
+    `${t.label}: ${chosen ? 'white text' : '#0A50B2 text'}`);
 }
 const on = tabs.filter((t) => 'true' === t.pressed);
 const off = tabs.filter((t) => 'true' !== t.pressed);
 checkSame(1, on.length, 'exactly one tab is selected');
-check(on[0].shadow.includes('244, 218, 98'),
-  'the selected tab carries the gold mark', on[0].shadow);
-for (const t of off) {
-  check(!t.shadow.includes('244, 218, 98'),
-    `${t.label}: an unselected tab carries no gold mark`, t.shadow);
-}
+/* THE GOLD MARK IS GONE WITH THE CORAL — the Calendar separates the states
+ * by FILL, not by an added mark. What replaces those two assertions is the
+ * construction that does that job: the group's own 2px outline, and the 2px
+ * rule between segments. Asserted on the GROUP and on the segments rather
+ * than dropped. */
+const group = await page.evaluate(() => {
+  const g = document.querySelector('.dccwl-tabs');
+  if (!g) { return null; }
+  const cs = getComputedStyle(g);
+  const af = getComputedStyle(g, '::after');
+  const segs = Array.from(g.querySelectorAll('.dccwl-tab'));
+  return {
+    radius: cs.borderTopLeftRadius,
+    h: Math.round(g.getBoundingClientRect().height),
+    outline: af.borderTopWidth + ' ' + af.borderTopStyle + ' ' + af.borderTopColor,
+    firstRadius: segs[0] ? getComputedStyle(segs[0]).borderTopLeftRadius : null,
+    lastRadius: segs.length ? getComputedStyle(segs[segs.length - 1]).borderTopRightRadius : null,
+    dividers: segs.slice(1).map((b) => getComputedStyle(b).boxShadow),
+    size: segs[0] ? getComputedStyle(segs[0]).fontSize : null,
+    weight: segs[0] ? getComputedStyle(segs[0]).fontWeight : null,
+    line: segs[0] ? getComputedStyle(segs[0]).lineHeight : null,
+    segH: segs[0] ? Math.round(segs[0].getBoundingClientRect().height) : null,
+  };
+});
+note(`switch ${JSON.stringify(group)}`);
+checkSame('999px', group.radius, 'the group is a 999px pill');
+checkSame(44, group.h, 'and 44px tall');
+checkSame(`2px solid ${HEADER}`, group.outline,
+  "its ::after draws the Calendar's 2px #0A50B2 outline");
+checkSame('999px', group.firstRadius, 'the first segment rounds on the left');
+checkSame('999px', group.lastRadius, 'the last rounds on the right');
+check(group.dividers.every((d) => d.includes('10, 80, 178') && d.includes('inset')),
+  'every segment after the first draws the 2px inset rule', group.dividers.join(' | '));
+/* 0.7rem of the kit's 20px root IS the Calendar's 14px; the rem keeps a
+ * visitor's own text-size setting working, which a literal 14px would not. */
+checkSame('14px', group.size, "the segment type is 14px on the kit's root");
+checkSame('600', group.weight, 'at weight 600');
+checkSame('14px', group.line, 'with line-height 1');
+checkSame(44, group.segH, 'and every segment is 44px tall');
 
 /* The month pills and the browse chips use a border rather than a shadow —
  * they have the room — but the colour rule is the same.
@@ -248,11 +301,39 @@ section('no section tab wraps at any phone width, whatever face the theme serves
  * not have and which measures about that much wider. Without the inflation
  * the sandbox says "fine" and live wraps, which is what happened in 1.32.1.
  */
-for (const width of [320, 360, 390]) {
-  const p2 = await widgetPage(browser, 'month', {
+/*
+ * TWO BARS SINCE 1.44.2, AND THE INFLATED TOKEN CHANGED WITH THE RULE.
+ *
+ * The segmented switch takes the Calendar's size from `--dccwl-fs-seg`
+ * (0.7rem = its 14px on the kit's root), so inflating `--dccwl-fs-xs` no
+ * longer reaches a tab at all — this check would have gone on passing while
+ * measuring nothing, which is this harness's oldest prohibition.
+ *
+ * And the WATER bar is measured beside the species bar, because "Fishing" is
+ * the label the Director asked about by name: if 14px with 12px of padding
+ * does not fit at 360px, that has to come back as a measurement rather than
+ * as a silently changed value.
+ */
+for (const [which, width] of [
+  ['month', 320], ['month', 360], ['month', 390],
+  ['water', 320], ['water', 360], ['water', 390],
+]) {
+  const p2 = await widgetPage(browser, which, {
     width, height: 2400, sitekit: true,
-    head: '<style>.dccwl-root{--dccwl-fs-xs:0.9438rem}</style>',   // 0.78 x 1.21
+    // 0.7 x 1.21, the same Raleway stand-in the row has used since 1.32.1.
+    head: '<style>.dccwl-app{--dccwl-fs-seg:0.847rem}</style>',
   });
+  /* The water bar ships HIDDEN and water.js reveals it (1.34.0, so a guest
+   * with no JavaScript reads every season rather than meeting dead buttons).
+   * No script is added here, so without this the segments measure 0px wide
+   * and every assertion below passes against nothing — which is why the
+   * zero-width guard is there as well. */
+  await p2.page.evaluate(() => {
+    document.querySelectorAll('[data-dccwl-water-tabs], .dccwl-fish-seasons')
+      .forEach((el) => { el.hidden = false; });
+  });
+  await p2.page.waitForTimeout(150);
+
   const lines = await p2.page.evaluate(() => {
     const out = [];
     document.querySelectorAll('.dccwl-tab').forEach((b) => {
@@ -263,30 +344,73 @@ for (const width of [320, 360, 390]) {
         r.selectNodeContents(t);
         n = new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size || 1;
       }
-      out.push({ label: b.textContent.trim(), lines: n });
+      let wText = 0;
+      if (t) {
+        const r2 = document.createRange();
+        r2.selectNodeContents(t);
+        wText = Math.round(r2.getBoundingClientRect().width);
+      }
+      out.push({ label: b.textContent.trim(), lines: n, w: wText,
+                 box: Math.round(b.getBoundingClientRect().width) });
     });
     return out;
   });
   const wrapped = lines.filter((l) => l.lines > 1).map((l) => l.label);
-  note(`${width}px (Raleway stand-in): ${lines.map((l) => `${l.label}=${l.lines}`).join(' ')}`);
-  checkSame([], wrapped, `${width}px: no tab label wraps`);
+  note(`${which} ${width}px (Raleway stand-in): ` +
+    lines.map((l) => `${l.label}=${l.lines}line/${l.w}px in ${l.box}px`).join(' '));
+  checkSame([], wrapped, `${which} ${width}px: no tab label wraps`);
+  /* SPILL, separately from wrapping: a nowrap label that does not fit simply
+   * overflows its segment, which counts one line and looks fine to the check
+   * above. The Calendar's segments are nowrap, so this is the question that
+   * actually answers "does Fishing fit at 360". */
+  const spilled = lines.filter((l) => l.w > l.box + 1).map((l) => `${l.label} ${l.w}>${l.box}`);
+  checkSame([], spilled, `${which} ${width}px: no label is wider than its segment`);
+  /* A SEGMENT WITH NO WIDTH IS NOT A PASS. */
+  checkAtLeast(1, lines.length, `${which} ${width}px: the bar rendered its segments`);
+  checkSame([], lines.filter((l) => l.box < 20).map((l) => l.label),
+    `${which} ${width}px: and every segment has a real width`);
   await p2.page.close();
 }
 
 /* ---- 3. hover is coral, on a button and on a toggle ------------------ */
-section('hover is coral with white text');
+/*
+ * ON A MOUSE PAGE SINCE 1.44.2, AND THAT IS THE POINT OF THE SECTION NOW.
+ *
+ * The segment's coral moved inside `@media (hover: hover) and (pointer:
+ * fine)` with the Calendar's own hover rule (item 5), so on this file's
+ * default TOUCH page it correctly does not apply — and the check read the
+ * resting colour and called the rule broken. The guard is deliberate (1.38.0:
+ * a tapped control keeps :hover on a phone until something else is touched),
+ * so the honest test is to hover with a real pointer, and ALSO to assert that
+ * a touch page does not get it.
+ */
+section('hover is coral with white text — with a pointer, and not without one');
+
+const hoverPage = (await widgetPage(browser, 'month',
+  { width: 1280, height: 2400, sitekit: true, touch: false })).page;
+await hoverPage.waitForTimeout(400);
 
 for (const sel of ['.dccwl-tab:not([aria-selected="true"]):not([aria-pressed="true"])', '.dccwl-deck-btn:not([disabled])']) {
-  const el = await page.$(sel);
+  const el = await hoverPage.$(sel);
   if (!el) { note(`(${sel} absent)`); continue; }
   await el.hover();
-  await page.waitForTimeout(200);
-  const cs = await styleOf(page, sel, ['backgroundColor', 'color']);
+  await hoverPage.waitForTimeout(200);
+  const cs = await styleOf(hoverPage, sel, ['backgroundColor', 'color']);
   checkSame(CORAL, cs.backgroundColor, `${sel} goes coral on hover`);
   checkSame(WHITE, cs.color, `${sel} keeps white text on hover`);
-  await page.mouse.move(0, 0);
-  await page.waitForTimeout(120);
+  await hoverPage.mouse.move(0, 0);
+  await hoverPage.waitForTimeout(120);
 }
+
+/* THE NEGATIVE HALF: a phone must NOT keep the coral on the last segment a
+ * finger touched. Asked of the media query itself, because a hover cannot be
+ * simulated on a touch page — which is exactly why the guard exists. */
+const touchHover = await page.evaluate(() => ({
+  fine: window.matchMedia('(hover: hover) and (pointer: fine)').matches,
+}));
+checkSame(false, touchHover.fine,
+  'the touch page does not match (hover: hover) and (pointer: fine)');
+await hoverPage.close();
 
 /* ---- 4. body text is black ------------------------------------------- */
 section('text is #111, not the old grey');

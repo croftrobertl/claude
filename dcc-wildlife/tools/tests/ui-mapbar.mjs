@@ -199,6 +199,58 @@ section('the switch is a measurement, not a width');
 }
 
 /* ---------------------------------------------------------------------- */
+/*
+ * ITEM 4 (1.44.2) — THE MENU BUTTONS' WEIGHT, ASSERTED ON THE LABEL.
+ *
+ * The Director measured "Colour by: Clarity ▾" and "Base Map ▾" at 400 on
+ * live while every other control on that row is 600 or 700. The cause was
+ * specificity, not a missing declaration: water.css set `font-weight: 600`
+ * at `.dccwl-drop-btn.dccwl-drop-btn`, which is (0,2,0), under a comment
+ * claiming it beat the kit's (0,3,1) button reset. Two classes do not beat
+ * three classes and an element, so the rule had never applied anywhere.
+ *
+ * The weight is now 500 — `--dccs-btn-weight` on the Cottage Selector's
+ * branch, which is the site button spec its own buttons use — and the label
+ * is its own span so this can read what he asked it to read.
+ *
+ * ASKED ON THE SITE KIT. On a bare fixture the kit's reset is not there and
+ * the old rule would have looked fine; `sitekit: true` is what makes this a
+ * measurement of the defect rather than of our own stylesheet.
+ */
+section('item 4 — the menu buttons carry a weight, and the LABEL carries it too');
+
+{
+  const { page, opened } = await openMap(390, 900);
+  if (!opened) {
+    check(false, 'the map opened for the weight check');
+  } else {
+    const weights = await page.evaluate(() => {
+      const bar = document.querySelector('.dccwl-map-bar');
+      const btns = Array.from(bar.querySelectorAll('.dccwl-drop-btn'))
+        .filter((b) => !b.hidden && b.getBoundingClientRect().width > 0);
+      return btns.map((b) => {
+        const span = b.querySelector('.dccwl-drop-label');
+        return {
+          text: b.textContent.replace(/\s+/g, ' ').trim().slice(0, 24),
+          hasLabel: !!span,
+          button: getComputedStyle(b).fontWeight,
+          label: span ? getComputedStyle(span).fontWeight : null,
+        };
+      });
+    });
+    note(`drop buttons ${JSON.stringify(weights)}`);
+    checkAtLeast(2, weights.length, 'both menu buttons are on the compact bar');
+    for (const b of weights) {
+      checkSame(true, b.hasLabel, `"${b.text}" wraps its text in a label span`);
+      /* 500 is the Selector's own button weight, read from its branch. */
+      checkSame('500', b.button, `"${b.text}" computes 500 on the kit`);
+      checkSame('500', b.label, `"${b.text}" — and SO DOES ITS LABEL SPAN`);
+    }
+    await page.close();
+  }
+}
+
+/* ---------------------------------------------------------------------- */
 section('both menus work by keyboard, and say what they are to a reader');
 
 {

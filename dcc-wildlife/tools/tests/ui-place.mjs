@@ -131,6 +131,42 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   check(!labels.some((l) => start.whole.cards.includes(l)),
     `${w}px: and NONE of the three is repeated in the place cards (1.35.0)`);
 
+  /*
+   * 3b — THE DIRECTOR'S CONFIRMATION (1.44.2): the place chip and its menu
+   * got the Cottage Selector's chip treatment with everything else in 1.44.1.
+   *
+   * He asked for it confirmed rather than assumed, so it is measured: the
+   * chip component moved to app.css that release and the water section
+   * carries `.dccwl-app`, which is the whole reason it reaches this chip —
+   * but "the rule exists" has been wrong here often enough that the reading
+   * is what counts. The menu rows keep their own treatment (they are listbox
+   * options, not chips), so what is asserted of them is the 44px target and
+   * the chosen row's coral, below.
+   */
+  const placeSkin = await page.evaluate(() => {
+    const b = document.querySelector('[data-dccwl-placebtn]');
+    const cs = getComputedStyle(b);
+    const span = b.querySelector('.dccwl-chip-label');
+    return {
+      bg: cs.backgroundColor,
+      fg: cs.color,
+      border: cs.borderTopWidth + ' ' + cs.borderTopColor,
+      radius: cs.borderTopLeftRadius,
+      weight: cs.fontWeight,
+      labelWeight: span ? getComputedStyle(span).fontWeight : null,
+      h: Math.round(b.getBoundingClientRect().height),
+    };
+  });
+  note(`${w}px place chip ${JSON.stringify(placeSkin)}`);
+  checkSame('rgb(255, 255, 255)', placeSkin.bg, `${w}px: the place chip is the Selector's white`);
+  checkSame('rgb(0, 0, 0)', placeSkin.fg, `${w}px: with its black ink`);
+  checkSame('1px rgb(244, 218, 98)', placeSkin.border, `${w}px: its 1px gold edge`);
+  checkSame('30px', placeSkin.radius, `${w}px: its 30px radius`);
+  checkSame('600', placeSkin.weight, `${w}px: and weight 600`);
+  checkSame('600', placeSkin.labelWeight,
+    `${w}px: the LABEL SPAN carries that weight too (item 8, 1.44.1)`);
+  checkAtLeast(44, placeSkin.h, `${w}px: still a 44px target`);
+
   /* 4 — a REAL TAP opens the menu; the open state only exists after one. */
   const btn = await page.$('[data-dccwl-placebtn]');
   if (touch) { await btn.tap(); } else { await btn.click(); }

@@ -56,6 +56,24 @@ async function animating(page, scope) {
 
 /* ------------------------------------------------------------------ */
 
+/*
+ * THE NEGATIVE CONTROL IS PER SURFACE SINCE 1.44.2, with the measured number
+ * beside each one. It was a flat `>= 10` for every scope, and the segmented
+ * switch taking the Availability Calendar's `transition: none` (item 5) took
+ * the hub and the water section under it: the tabs were most of what animated
+ * on those two surfaces.
+ *
+ * The control still does its job — if a scope drops to zero the measurement
+ * below means nothing and this fails — and the figures are written down so a
+ * future drop is a visible decision rather than a threshold quietly met. They
+ * were measured at 1280px on this fixture, in the run that re-based them.
+ */
+const CONTROL = {
+  '.dccwl-canal': 2,   // the open panel and one svg; the hub's own chrome is gone (1.44.0)
+  '.dccwl-root': 1499, // the species tiles, which still lift on hover
+  '.dccwl-water': 7,   // the moon card's svg and the link list
+};
+
 for (const [which, scope] of [['canal', '.dccwl-canal'], ['month', '.dccwl-root'], ['water', '.dccwl-water']]) {
   section(`${which}: motion stops when the OS asks (scope ${scope})`);
 
@@ -64,7 +82,8 @@ for (const [which, scope] of [['canal', '.dccwl-canal'], ['month', '.dccwl-root'
   check(before.found, 'the surface rendered', scope);
   // The negative control: if this is near zero the measurement below is
   // meaningless, whatever it says.
-  checkAtLeast(10, before.count, 'something animates with the setting OFF');
+  checkAtLeast(CONTROL[scope], before.count,
+    `something animates with the setting OFF (${scope} measured ${CONTROL[scope]})`);
   note(`animating normally: ${before.count} — e.g. ${before.sample.join(', ')}`);
   await warm.page.close();
 

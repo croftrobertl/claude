@@ -4136,3 +4136,142 @@ assertion rather than being swallowed by the row-count tolerance.
   back at 400; the Selector's 24px padding; the Layers checkboxes back; a
   blue-filled chip; the fit widened to every marker; a legend string reverted;
   and a forced mid-word break.
+
+### 36. 1.44.2 — the Calendar's segmented switch, and two rules that never applied
+
+Rob's two answers and three things the Director found on live after 1.44.1.
+**The Base Map ▾ menu stays as 1.44.1 built it** (satellite/streets plus
+phone Fullscreen) — his answer to the question that release raised.
+
+**THE SEGMENTED SWITCH IS THE AVAILABILITY CALENDAR'S, COPIED FROM ITS OWN
+SOURCE.** 1.44.1 reported that "exactly the Calendar's selected segment"
+could not be verified here; the Director sent the file instead of a
+description — `mphb-availability-calendar/assets/css/staff.css` on branch
+`origin/claude/review-shared-chat-bExtl`, lines ~1874–1933 and ~2361, which
+is what live serves. So the whole switch is built from it: a 999px white
+group 44px tall with a 2px #0A50B2 outline drawn by `::after`, transparent
+segments with #0A50B2 text at 600, a 2px inset rule between them, the first
+and last rounded on their outer edges, and the selected one solid #0A50B2
+with white text.
+
+**THIS REVERSES THE CORAL SELECTED STATE** (1.34.0 item 12, white ink in
+1.36.0), which this file has carried in capitals for four releases. Said
+outright so nobody restores it as a fix. Coral is now **hover only**, inside
+`(hover: hover) and (pointer: fine)` — which is the Calendar's own guard and
+also 1.38.0's: on a phone a tapped control keeps `:hover` until something
+else is touched. 1.33.0's reason for the coral is untouched; what changed is
+which state wears it.
+
+**SEMANTICS STAY OURS.** The Calendar uses `role="radio"`/`aria-checked`;
+the wildlife tabs are a real tablist with `aria-selected` (Rob's ask, 1.44.0)
+and the water bars are `role="group"` toggles with `aria-pressed`. Every
+state rule lists both attributes — matching one silently stops painting the
+other bar, this file's oldest defect.
+
+**THE SIZE IS A TOKEN, NOT THE CALENDAR'S LITERAL 14px.** `--dccwl-fs-seg:
+0.7rem` IS 14px on the 20px deployment root, so live renders the Calendar's
+exact size while a visitor who scales their text still gets a switch that
+scales — this plugin's oldest typography rule, which a px value would break
+and which `test-1270.php` lints for. It is a token rather than a literal in
+the rule for a second reason: **the harness stands in for Raleway by
+inflating a size token**, and a literal would have left that check measuring
+the sandbox's narrower fallback face and passing while live wrapped. That is
+the 1.32.1 defect exactly.
+
+**"Does Fishing fit at 360px?" — measured, with the stand-in** (0.7rem × 1.21,
+on the site kit, with the bar un-hidden because it ships hidden for the
+no-JavaScript reader): **"Fishing" is 60px of a 172px segment at 360px**, and
+60 of 152 at 320px. The tightest label in either bar is **"Summer" at 68px of
+76px at 320px**, 89% of its segment. 14px with 12px of padding fits
+everywhere, so no value was changed. The suite now measures SPILL as well as
+wrapping — a nowrap label that does not fit overflows its segment and still
+counts as one line — and fails on a segment narrower than 20px, because the
+water bar measured 0px wide on the first run and every assertion passed
+against nothing.
+
+### Two rules that had never applied to anything
+
+**`margin-inline: auto` ON A FLEX ITEM, which is why Month and Show sat at
+opposite edges.** The Director measured the live container at 334px, not the
+374px the harness had assumed, and found the two menu chips pushed apart with
+the ⓘ on a second line. The cause was not width: `.dccwl-subnav` was in a
+list of BLOCKS that centre themselves in the page, and it stopped being one
+in 1.38.0 when the category pill moved into the chip row. **An auto margin on
+a flex item absorbs its line's entire slack** — measured at 51.72px on each
+side of the pill — and that is also what forced the wrap. Same family as the
+`.dccwl-subnav { flex-direction: column }` leftover deleted in 1.38.0: a rule
+written for a row that no longer exists, still in force.
+
+**AND THE CHECK THAT SHOULD HAVE CAUGHT IT COULD NOT.** "Each line of the
+group is centred" passes with auto margins, because the line still spans the
+row and its midpoint is still the row's. The assertion that catches it looks
+BETWEEN the chips: every neighbouring pair must sit exactly the row's own
+`column-gap` apart. Verified red at `[32,32]`, `[17,17]` and `[245,245]`.
+
+**THE MAP BAR'S DOUBLED CLASSES WERE NEVER ENOUGH.** The Director measured
+"Colour by: Clarity ▾" and "Base Map ▾" at font-weight 400 while every
+neighbour is 600 or 700. water.css declared `font-weight: 600` under a
+comment reading *"Doubled classes to beat Bravada's (0,3,1) button reset"* —
+and `.dccwl-drop-btn.dccwl-drop-btn` is **(0,2,0)**, which does not beat three
+classes and an element. **The declaration had never applied, on any surface,
+since it was written**, and nor had the bar's hover, its focus ring or the
+colour control's PRESSED state: four rules, one wrong specificity. The bar's
+coral hover on live was the KIT's, by coincidence.
+
+Tripled with the section's own class they reach (0,4,0), which is what every
+other control here uses. **The weight is 500**, read from
+`--dccs-btn-weight` on the Cottage Selector's branch — the site button spec
+it measured from "Send Message" on /contact/. Its answer CHIPS are 600, but
+that is recorded there as a deliberate exception Rob asked for, and these are
+buttons wearing the action-button look. Both numbers went to him in the
+release notes.
+
+**A MENU BUTTON'S LABEL IS ITS OWN SPAN NOW**, because the Director asked for
+the weight asserted on the label and there was no label to assert on — the
+text was a bare node. `dropLabel()` in water-map.js owns it, and water.css
+gives it `font-weight: inherit`: app.css's type floor sets `.dccwl-app span`
+to 400 and NAMES the element, so a new span would have rendered lighter than
+its own button. That is the 1.44.1 defect, in a new place, by the same
+mechanism — and it is why the span is `inherit` rather than a number.
+
+### "Badges" is a round ⓘ, and that is what makes the row fit
+
+Rob: "the same chip (white, 1px #F4DA62), a 44px circle, `aria-label="Badges"`
+and the same popover". `.dccwl-chip-round` is the one difference — a fixed
+44×44 with no padding and `flex: none`, because the base chip sizes to its
+label and a one-glyph label would make a narrow oval.
+
+**THE NAME MOVES TO `aria-label`, and that is the part to get right.** An
+aria-label REPLACES a control's text for a screen reader (1.15.1), so with the
+word gone it has to be the label or the button is announced as nothing. The
+ⓘ is `aria-hidden`: it is the picture of the name, not the name. WCAG 2.5.3
+label-in-name does not apply, because there is no visible text for the
+accessible name to contain.
+
+With it the three chips measure **270px of chips plus 10px of gaps in a 334px
+container** at 390px, and the same in 304px at 360px — one centred line at
+both, where the Director measured 328px of chips that could not share a line.
+The harness now squeezes the row's parent to his figures rather than the
+viewport's, and at the 25% Raleway stand-in it lands within a pixel of his
+live widths (118/108/104 here against his 118/107/103).
+
+### Harness: 33 suites, and three assertions that had stopped meaning anything
+
+- **ui-motion's negative control was a flat `>= 10` for every surface** and
+  the Calendar's `transition: none` took the hub to 2 and the water section
+  to 7 — the tabs were most of what animated there. It is per-surface now,
+  with the measured number and the reason beside each one, so a drop to zero
+  still fails and the figures are a visible decision rather than a threshold
+  quietly met.
+- **ui-theme's hover check ran on a TOUCH page**, where the Calendar's
+  `(hover: hover)` guard correctly does not apply — it read the resting
+  colour and called the rule broken. It hovers on a mouse page now, and
+  asserts the negative half too: the touch page must not match the query.
+- **The Raleway stand-in inflated `--dccwl-fs-xs`**, which the new switch does
+  not use. Re-pointed at `--dccwl-fs-seg`, and extended to the water bar
+  because "Fishing" is the label that was asked about.
+- Five mutations verified red, restored with `cp`/`mv`, whole harness re-run
+  after: the selected segment coral at rest; the Colour by label at 400; a
+  Badges chip with its word back; the same with the round class removed, so
+  the row wraps at a 334px container; and `margin-inline: auto` back on the
+  pill.

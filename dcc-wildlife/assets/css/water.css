@@ -357,9 +357,36 @@
 	margin-right: 2px;
 }
 
-/* Doubled classes to beat Bravada's (0,3,1) button reset. */
-.dccwl-seg-btn.dccwl-seg-btn,
-.dccwl-drop-btn.dccwl-drop-btn {
+/*
+ * ITEM 4 (1.44.2) — THE DOUBLING WAS NOT ENOUGH, AND IT NEVER HAD BEEN.
+ *
+ * The Director measured "Colour by: Clarity ▾" and "Base Map ▾" at
+ * font-weight 400 on live while every other control on that row is 600 or
+ * 700. The comment here said "Doubled classes to beat Bravada's (0,3,1)
+ * button reset" — and `.dccwl-seg-btn.dccwl-seg-btn` is (0,2,0), which does
+ * NOT beat (0,3,1). Two classes do not beat three classes and an element.
+ * So the kit's own button rule won and this block's `font-weight: 600` had
+ * never applied to anything, on any surface, since it was written.
+ *
+ * Tripled with the section's own class it reaches (0,4,0), which is what
+ * every other control in this plugin uses and what the Bravada note has
+ * always prescribed. The map bar is inside the water section, which carries
+ * `.dccwl-app` from `Render::app_classes()`.
+ *
+ * THE WEIGHT IS 500, read from the Cottage Selector's branch rather than
+ * chosen: `.dccs-root.dccs-root button { font-weight: var(--dccs-btn-weight) }`
+ * and `--dccs-btn-weight: 500` — the site button spec it measured from "Send
+ * Message" on /contact/. Its answer CHIPS are 600, but that is recorded there
+ * as a deliberate exception Rob asked for, and these are buttons wearing the
+ * action-button look (a solid blue pill), not chips. Both numbers are in the
+ * release notes so he can say otherwise in one line.
+ *
+ * The colour segmented control takes the same rule because it shares the
+ * block; the Director named only the two menu buttons, and a bar whose two
+ * halves disagreed about weight would be the defect in a smaller font.
+ */
+.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn,
+.dccwl-app .dccwl-drop-btn.dccwl-drop-btn.dccwl-drop-btn {
 	background: var(--dccwl-btn-bg);
 	border: var(--dccwl-gold-w) solid transparent;
 	border-radius: var(--dccwl-radius-control);
@@ -367,30 +394,47 @@
 	cursor: pointer;
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
-	font-weight: 600;
+	font-weight: 500;
 	/* 44px: the map's own controls are thumb targets too (1.10.1). */
 	min-height: 44px;
 	padding: 11px 14px;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
-.dccwl-seg-btn.dccwl-seg-btn:hover,
-.dccwl-drop-btn.dccwl-drop-btn:hover {
+/*
+ * AND THE LABEL CARRIES THE BUTTON'S WEIGHT (item 4). water-map.js wraps each
+ * menu button's text in `.dccwl-drop-label` so there is something to assert
+ * on; app.css's type floor sets `.dccwl-app span` to 400 and names the
+ * element, so without this the span would render lighter than the button
+ * around it — the 1.44.1 defect, in a new place, by the same mechanism.
+ */
+.dccwl-app .dccwl-drop-label { font-weight: inherit; }
+
+/*
+ * EVERY STATE IS TRIPLED TOO (item 4, 1.44.2). They were (0,2,0) and (0,2,1)
+ * like the base rule above, so the kit's `button:hover` at (0,3,2) and its
+ * button reset at (0,3,1) won: the bar's hover was the KIT's coral rather
+ * than ours by coincidence, and the segmented control's PRESSED state — its
+ * gold border and its own fill — never painted at all on the live kit. One
+ * wrong specificity, four rules.
+ */
+.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn:hover,
+.dccwl-app .dccwl-drop-btn.dccwl-drop-btn.dccwl-drop-btn:hover {
 	background: var(--dccwl-btn-bg-hover);
 	color: var(--dccwl-btn-txt-hover);
 }
 
-.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
+.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
 	background: var(--dccwl-btn-bg);
 	border-color: var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
 }
-.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"]:hover {
+.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"]:hover {
 	border-color: var(--dccwl-gold);
 }
 
-.dccwl-seg-btn.dccwl-seg-btn:focus-visible,
-.dccwl-drop-btn.dccwl-drop-btn:focus-visible {
+.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn:focus-visible,
+.dccwl-app .dccwl-drop-btn.dccwl-drop-btn.dccwl-drop-btn:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
@@ -479,8 +523,8 @@
  * decision itself is measured, never a breakpoint. */
 @media (max-width: 380px) {
 	.dccwl-map-bar { gap: 6px; padding: 8px 6px; }
-	.dccwl-seg-btn.dccwl-seg-btn,
-	.dccwl-drop-btn.dccwl-drop-btn { padding: 11px 10px; }
+	.dccwl-app .dccwl-seg-btn.dccwl-seg-btn.dccwl-seg-btn,
+	.dccwl-app .dccwl-drop-btn.dccwl-drop-btn.dccwl-drop-btn { padding: 11px 10px; }
 	.dccwl-drop-panel { min-width: 180px; }
 }
 
@@ -851,9 +895,11 @@
  * NOW / FISHING / ABOUT (1.33.0, owner's decision)
  *
  * The control reuses .dccwl-tabs, so it IS the same segmented control the
- * species guide uses — same colours, same gold mark on the chosen one, same
- * coral hover. One idea of "a chosen control" across the plugin was the whole
- * point of the theme round; a second, water-only design would undo it.
+ * species guide uses. One idea of "a chosen control" across the plugin was
+ * the whole point of the theme round; a second, water-only design would undo
+ * it. Since 1.44.2 that one idea is the Availability Calendar's switch —
+ * blue on white, solid when chosen, coral on hover only — copied from its own
+ * source; see the note in app.css. What is set HERE is layout only.
  * ================================================================== */
 .dccwl-water-tabs[hidden] { display: none; }
 .dccwl-water .dccwl-tabs.dccwl-water-tabs {

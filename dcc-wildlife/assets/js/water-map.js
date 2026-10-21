@@ -61,6 +61,32 @@
 		return n;
 	}
 
+	/*
+	 * ITEM 4 (1.44.2) — A MENU BUTTON'S LABEL IS ITS OWN ELEMENT.
+	 *
+	 * The Director measured "Colour by: Clarity ▾" and "Base Map ▾" at
+	 * font-weight 400 while every other control on that row is 600 or 700,
+	 * and asked for the weight to be asserted ON THE LABEL rather than on the
+	 * button. Their text was a bare TEXT NODE, so there was no label to
+	 * assert on; this wraps it in one.
+	 *
+	 * The span is also what makes the weight safe to set: app.css's type
+	 * floor sets `.dccwl-app span` to 400 (0,1,1) and NAMES the element, so
+	 * it beats anything the button passes down — which is exactly the 1.44.1
+	 * defect on `.dccwl-viewselect-label`. water.css gives this one
+	 * `font-weight: inherit` for the same reason.
+	 */
+	function dropLabel(btn, text) {
+		var span = btn.querySelector('.dccwl-drop-label');
+		if (!span) {
+			span = el('span', 'dccwl-drop-label');
+			btn.textContent = '';
+			btn.appendChild(span);
+		}
+		span.textContent = text;
+		return span;
+	}
+
 	/* ==================================================================
 	 * THE WIND BADGE (1.35.0, Rob's option C)
 	 *
@@ -924,7 +950,8 @@
 		/* ---- compact shape: a Colour menu ------------------------------- */
 
 		var colourDrop = el('div', 'dccwl-drop');
-		var colourBtn = el('button', 'dccwl-drop-btn', '');
+		var colourBtn = el('button', 'dccwl-drop-btn');
+		dropLabel(colourBtn, '');
 		colourBtn.type = 'button';
 		colourBtn.setAttribute('aria-expanded', 'false');
 		colourBtn.setAttribute('aria-haspopup', 'true');
@@ -963,7 +990,7 @@
 				if (pair[0] === key) {
 					/* translators are served by i18n.colorBy; this is a
 					 * composition of two already-translated strings. */
-					colourBtn.textContent = colourWord + ': ' + pair[1] + ' ▾';
+					dropLabel(colourBtn, colourWord + ': ' + pair[1] + ' ▾');
 					colourBtn.setAttribute('aria-label', colourWord + ': ' + pair[1]);
 				}
 			});
@@ -1000,7 +1027,8 @@
 
 		var baseWord = i18n.baseMap || 'Base Map';
 		var drop = el('div', 'dccwl-drop');
-		var toggle = el('button', 'dccwl-drop-btn', baseWord + ' ▾');
+		var toggle = el('button', 'dccwl-drop-btn');
+		dropLabel(toggle, baseWord + ' ▾');
 		toggle.type = 'button';
 		toggle.setAttribute('aria-expanded', 'false');
 		toggle.setAttribute('aria-haspopup', 'true');
@@ -1119,7 +1147,8 @@
 		var fsRow = null;
 		if (typeof shell.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
 			var fsText = i18n.fullscreen || 'Fullscreen';
-			fsBtn = el('button', 'dccwl-drop-btn dccwl-bar-action', fsText);
+			fsBtn = el('button', 'dccwl-drop-btn dccwl-bar-action');
+			dropLabel(fsBtn, fsText);
 			fsBtn.type = 'button';
 			fsBtn.addEventListener('click', toggleFullscreen);
 			bar.appendChild(fsBtn);

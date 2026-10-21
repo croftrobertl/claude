@@ -32,6 +32,9 @@ if (!browser) { skipSuite('no chromium'); }
 
 const WHITE = 'rgb(255, 255, 255)';
 const CORAL = 'rgb(240, 128, 128)';
+/* `--staff-header` on the Availability Calendar's branch: the blue its
+ * segmented switch is built from, and ours since item 5 of 1.44.2. */
+const HEADER = 'rgb(10, 80, 178)';
 
 /*
  * The first VISIBLE match, not the first match. A hidden ancestor does not
@@ -95,7 +98,21 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
              focused: document.activeElement === t };
   });
   note(`${w}px ${touch ? 'touch' : 'mouse'} ${JSON.stringify(after)}`);
-  checkSame(CORAL, after.bg, `${w}px: the tapped tab is coral`);
+  /* ITEM 5 (1.44.2): the segmented switch is the Availability Calendar's, so
+   * a chosen segment is SOLID #0A50B2 with white text. Coral is hover only
+   * now, and the item-8 claim this section exists for is unchanged and still
+   * the reason for the real tap: a tapped segment must not be repainted by a
+   * :hover or :focus rule that outlives the finger. */
+  /*
+   * AND THE EXPECTED FILL DEPENDS ON THE POINTER, WHICH IS NOT A HEDGE.
+   * On the touch page the finger has gone and the resting selected fill is
+   * what must show — that is item 8's whole claim. On the mouse page the
+   * pointer is genuinely still over the segment after `click()`, so the
+   * Calendar's `(hover: hover)` rule applies and coral is CORRECT there.
+   * Asserting one value for both would have to be wrong on one of them.
+   */
+  checkSame(touch ? HEADER : CORAL, after.bg,
+    `${w}px: the tapped tab is ${touch ? 'solid #0A50B2' : 'coral under the pointer'}`);
   checkSame(WHITE, after.fg, `${w}px: and its label is WHITE immediately after the tap`);
 
   /*
@@ -111,11 +128,15 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   for (const bar of Object.keys(restingTab)) {
     const r = restingTab[bar];
     checkSame(false, r.focused, `${w}px: the ${bar} bar's selected tab is untouched`);
-    checkSame(CORAL, r.bg, `${w}px: and coral at rest (${bar})`);
-    check(/inset/.test(r.shadow || ''),
-      `${w}px: with its 2px inset gold edge (${bar})`, r.shadow || '');
+    checkSame(HEADER, r.bg, `${w}px: and solid #0A50B2 at rest (${bar})`);
+    /* The gold inset mark went with the coral (item 5): the Calendar
+     * separates the states by FILL. What must still not be on a resting
+     * segment is the FOCUS RING, which is the 1.44.1 defect this check was
+     * written for and the reason it stays. */
     check(!/rgba\(0, 107, 207/.test(r.shadow || ''),
       `${w}px: and NOT the focus ring — nothing left on it (${bar})`, r.shadow || '');
+    check(!/244, 218, 98/.test(r.shadow || ''),
+      `${w}px: and no gold mark — the fill is the state now (${bar})`, r.shadow || '');
   }
 
   /*
@@ -262,7 +283,92 @@ for (const [w, touch] of [[390, true], [360, true], [1280, false]]) {
       `button ${row.button}, span ${row.span}, "${row.text}"`);
   }
 
+  /*
+   * ---- item 2: Badges is a round, icon-only chip ----------------------
+   *
+   * Rob: "'Badges' becomes a round ⓘ-only chip. It's the same chip (white,
+   * 1px #F4DA62), a 44px circle, aria-label="Badges" and the same popover."
+   * All four halves are asked: the geometry, the shared chip skin, the
+   * accessible NAME (an aria-label replaces a control's text, so a missing
+   * one leaves the button announced as nothing — the 1.15.1 lesson), and
+   * that the popover it opens is the same one.
+   */
+  const badge = await page.evaluate(() => {
+    const b = document.querySelector('[data-dccwl-badges]');
+    if (!b) { return { error: 'no badges chip' }; }
+    const cs = getComputedStyle(b);
+    const r = b.getBoundingClientRect();
+    return {
+      w: Math.round(r.width), h: Math.round(r.height),
+      radius: cs.borderTopLeftRadius,
+      bg: cs.backgroundColor,
+      border: cs.borderTopWidth + ' ' + cs.borderTopColor,
+      label: b.getAttribute('aria-label'),
+      text: b.textContent.replace(/\s+/g, ' ').trim(),
+      controls: b.getAttribute('aria-controls'),
+      expanded: b.getAttribute('aria-expanded'),
+      glyphHidden: !!b.querySelector('.dccwl-chip-i[aria-hidden="true"]'),
+    };
+  });
+  note(`${w}px badges ${JSON.stringify(badge)}`);
+  check(!badge.error, `${w}px: the Badges chip is on the row`, badge.error || '');
+  checkSame(44, badge.w, `${w}px: it is 44px wide`);
+  checkSame(44, badge.h, `${w}px: and 44px tall`);
+  checkSame('50%', badge.radius, `${w}px: a circle, not a pill`);
+  checkSame('rgb(255, 255, 255)', badge.bg, `${w}px: still the Selector's white chip`);
+  checkSame('1px rgb(244, 218, 98)', badge.border, `${w}px: with its gold edge`);
+  checkSame('Badges', badge.label, `${w}px: and its name in aria-label`);
+  check(!/Badges/.test(badge.text),
+    `${w}px: the word itself is gone from the button`, badge.text);
+  checkSame(true, badge.glyphHidden,
+    `${w}px: the ⓘ is aria-hidden — it is the picture of the name, not the name`);
+  checkSame('dccwl-badgekey', badge.controls, `${w}px: it still owns the badge key`);
+
+  /* The same popover, opened by a real tap. */
+  const bEl = await page.$('[data-dccwl-badges]');
+  await page.evaluate(() => {
+    document.querySelector('[data-dccwl-badges]').scrollIntoView({ block: 'center' });
+  });
+  if (touch) { await bEl.tap(); } else { await bEl.click(); }
+  await page.waitForTimeout(250);
+  const opened = await page.evaluate(() => {
+    const key = document.getElementById('dccwl-badgekey');
+    return {
+      shown: !!key && !key.hidden && key.getClientRects().length > 0,
+      expanded: document.querySelector('[data-dccwl-badges]').getAttribute('aria-expanded'),
+      items: key ? key.querySelectorAll('.dccwl-legend-item').length : 0,
+    };
+  });
+  note(`${w}px badge key ${JSON.stringify(opened)}`);
+  checkSame(true, opened.shown, `${w}px: the badge key opens from the round chip`);
+  checkSame('true', opened.expanded, `${w}px: and the chip says so`);
+  checkAtLeast(4, opened.items, `${w}px: with every flag still explained`);
+  if (touch) { await bEl.tap(); } else { await bEl.click(); }
+  await page.waitForTimeout(200);
+
   /* ---- item 9: the row, with the font inflated to stand in for Raleway -- */
+  /*
+   * AND IN THE LIVE CONTAINER'S WIDTH, NOT THE VIEWPORT'S (item 3, 1.44.2).
+   *
+   * The Director: "the chip row's container is 334px wide, not 374px (the
+   * Elementor column's padding)". So the row's parent is squeezed to what he
+   * measured before anything is read — 334px at 390 and 304px at 360.
+   *
+   * Together with the 25% inflation this is very close to the real thing: his
+   * live Raleway widths are Month 118, Show 107, Badges 103, and this fixture
+   * at 125% measures 118, 108 and 104. The stand-in is a stand-in, but it is
+   * landing within a pixel of the face it stands in for.
+   */
+  const CONTAINER = { 390: 334, 360: 304, 1280: 760 };
+  await page.evaluate((px) => {
+    const rowEl = document.querySelector('.dccwl-chiprow');
+    if (!rowEl) { return; }
+    rowEl.parentElement.style.maxWidth = px + 'px';
+    rowEl.parentElement.style.marginLeft = 'auto';
+    rowEl.parentElement.style.marginRight = 'auto';
+  }, CONTAINER[w]);
+  await page.waitForTimeout(250);
+
   const row = await page.evaluate(() => {
     const rowEl = document.querySelector('.dccwl-chiprow');
     if (!rowEl) { return { error: 'no chip row' }; }
@@ -305,6 +411,18 @@ for (const [w, touch] of [[390, true], [360, true], [1280, false]]) {
     });
     const rr = rowEl.getBoundingClientRect();
     const rowMid = rr.left + rr.width / 2;
+    /* THE GAPS BETWEEN NEIGHBOURS, against the row's own column-gap. "Centred
+     * as one group" is not the same claim as "the line is centred": an auto
+     * margin on a flex item absorbs the whole line's slack and pushes its
+     * neighbours to the two edges, and the LINE still measures centred. That
+     * is exactly what `margin-inline: auto` on `.dccwl-subnav` was doing, so
+     * the check that catches it has to look between the chips. */
+    const sorted = boxes.slice().sort((a, b) => a.left - b.left);
+    const gaps = [];
+    for (let i = 1; i < sorted.length; i += 1) {
+      if (Math.abs(sorted[i].top - sorted[i - 1].top) > 2) { continue; }
+      gaps.push(Math.round((sorted[i].left - sorted[i - 1].right) * 10) / 10);
+    }
     const out = {
       chips: boxes.length,
       widths: boxes.map((b) => `${b.label}=${b.w}x${b.h}@${b.exact}`),
@@ -314,6 +432,8 @@ for (const [w, touch] of [[390, true], [360, true], [1280, false]]) {
       lineCount: Object.keys(lines).length,
       lineOffsets: Object.keys(lines).map((k) => Math.round(
         ((lines[k].left + lines[k].right) / 2) - rowMid)),
+      gaps,
+      declaredGap: Math.round(parseFloat(getComputedStyle(rowEl).columnGap) * 10) / 10,
       pageW: document.documentElement.scrollWidth,
       viewport: document.documentElement.clientWidth,
       rowW: Math.round(rr.width),
@@ -343,12 +463,24 @@ for (const [w, touch] of [[390, true], [360, true], [1280, false]]) {
    * the "centred group" half of the item. */
   check((row.lineOffsets || []).every((o) => Math.abs(o) <= 2),
     `${w}px: each line of the group is centred`, JSON.stringify(row.lineOffsets));
+  checkSame(CONTAINER[w], row.rowW,
+    `${w}px: measured in the live container's width, not the viewport's`);
+  /* ITEM 3: THE THREE SIT TOGETHER. The Director found Month and Show at
+   * opposite edges of line one. Every neighbouring pair must be exactly the
+   * row's own gap apart — nothing may absorb the slack between them. */
+  check((row.gaps || []).length > 0, `${w}px: the chips have neighbours to measure`);
+  check((row.gaps || []).every((g) => Math.abs(g - row.declaredGap) <= 1),
+    `${w}px: every pair sits the row's own ${row.declaredGap}px apart — they are a group`,
+    JSON.stringify(row.gaps));
   if (390 <= w) {
     checkSame(1, row.lineCount,
-      `${w}px: all three sit on ONE row, with Raleway's metrics stood in for`,
+      `${w}px: all three sit on ONE row in a ${CONTAINER[w]}px container`,
       JSON.stringify(row.widths));
   } else {
-    /* 360px: wrapping is allowed and centring is not. */
+    /* 360px: Rob allows the group to wrap here, and it must still centre.
+     * It happens to fit on one line with the round ⓘ chip, which is better
+     * than asked for — so this asserts what he required (no spill, centred)
+     * rather than pinning a line count he left open. */
     checkAtLeast(1, row.lineCount, `${w}px: the row wraps rather than spilling`);
   }
 
@@ -1056,7 +1188,9 @@ for (const [w, touch] of [[390, true], [767, true], [768, false], [1280, false]]
     `${w}px: Map · Now · Fishing are semibold (item 1)`, waterW.join('/'));
   note(`${w}px water tab ${JSON.stringify(tabState)}`);
   checkSame('true', tabState.pressed, `${w}px: the water tab takes the tap`);
-  checkSame('rgb(240, 128, 128)', tabState.bg, `${w}px: and is coral`);
+  /* Same pointer distinction as the species bar above (item 5, 1.44.2). */
+  checkSame(touch ? 'rgb(10, 80, 178)' : 'rgb(240, 128, 128)', tabState.bg,
+    `${w}px: and is ${touch ? 'solid #0A50B2' : 'coral under the pointer'}`);
   checkSame('rgb(255, 255, 255)', tabState.fg, `${w}px: with WHITE text right after it`);
   await page.close();
 }

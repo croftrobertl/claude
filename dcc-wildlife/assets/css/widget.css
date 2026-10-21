@@ -161,9 +161,24 @@
  * rule about flex items is kept because it is about this list, not about
  * that row.)
  */
+/*
+ * ITEM 3 (1.44.2) — `.dccwl-subnav` IS OUT OF THIS LIST, AND THAT IS THE
+ * WHOLE OF THE DIRECTOR'S "Month and Show sit at opposite edges".
+ *
+ * These are BLOCKS that centre themselves in the page. `.dccwl-subnav` was
+ * one until 1.38.0, when the category pill moved into the chip row and it
+ * became a FLEX ITEM — and `margin-inline: auto` on a flex item absorbs all
+ * the free space on its line. Measured on a 334px row: Month sat at 0 and
+ * Show at 175 with 51.72px of auto margin on each side of the pill, which is
+ * the row's entire slack. It also forced the wrap: with the slack eaten there
+ * was nothing left for the third chip.
+ *
+ * Same family as the `.dccwl-subnav { flex-direction: column }` leftover
+ * deleted in 1.38.0 — a rule written for a row that no longer exists, still
+ * in force, doing something nobody asked for.
+ */
 .dccwl-root .dccwl-legend,
 .dccwl-root .dccwl-chiprow,
-.dccwl-root .dccwl-subnav,
 .dccwl-root .dccwl-footnotes,
 .dccwl-root .dccwl-deck-nav {
 	margin-inline: auto;

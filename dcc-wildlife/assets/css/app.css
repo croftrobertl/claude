@@ -163,6 +163,19 @@
 	--dccwl-fs-base: 1.0625rem;          /* older clientele: 17px floor */
 	--dccwl-fs-sm: 0.875rem;
 	--dccwl-fs-xs: 0.78rem;
+	/*
+	 * THE SEGMENTED SWITCH'S OWN SIZE (item 5, 1.44.2). 0.7rem IS the
+	 * Availability Calendar's literal 14px on the 20px deployment root, and
+	 * a rem keeps a visitor's own text-size setting working where the
+	 * Calendar's px would not — this plugin's oldest typography rule.
+	 *
+	 * It is a TOKEN rather than a literal in the rule for one reason beyond
+	 * tidiness: the harness stands in for Raleway by inflating a size token,
+	 * and a literal in the rule would leave that check measuring the sandbox's
+	 * narrower fallback face and passing while live wrapped. That is the
+	 * 1.32.1 defect exactly.
+	 */
+	--dccwl-fs-seg: 0.7rem;
 	--dccwl-fs-lg: 1.25rem;
 	--dccwl-fs-hero: clamp(1.75rem, 1.1rem + 2.1vw, 2.5rem);
 	/* Two sizes used to sit off the scale as bare rem values. They are named
@@ -997,238 +1010,178 @@
  * only reason that was invisible is that the kit's blue happens to be the
  * blue the owner chose.
  * ================================================================== */
-/* 1.18.0: a segmented control — ONE bordered group on the same tinted
- * ground as the month strip, so the three categories are visibly a single
- * switch rather than three more cards among the tiles. */
+/* ======================================================================
+ * THE SEGMENTED SWITCH — THE AVAILABILITY CALENDAR'S, COPIED (item 5, 1.44.2)
+ * ======================================================================
+ * The Director sent the source rather than a description, and this is built
+ * from it: `mphb-availability-calendar/assets/css/staff.css` on branch
+ * `origin/claude/review-shared-chat-bExtl`, lines ~1874–1933 and ~2361, which
+ * is the same file live serves. `--staff-header` there is #0A50B2.
+ *
+ * Applies to every segmented switch in the plugin, because they are all
+ * `.dccwl-tab` inside `.dccwl-tabs`: Map · Now · Fishing, Animals · Plants ·
+ * Safety, and the fishing season bar.
+ *
+ * THIS REVERSES THE CORAL SELECTED STATE (1.34.0 item 12, white ink in
+ * 1.36.0). Said plainly because this file has carried that decision in
+ * capitals for four releases: the SELECTED segment is now solid #0A50B2 with
+ * white text, and an unselected one is WHITE WITH BLUE TEXT rather than a
+ * solid blue pill. Coral is now hover ONLY, which is exactly what the
+ * Calendar does — and 1.33.0's reason for the coral is unchanged and is why
+ * it stays on hover: three plugins on one site should not disagree about what
+ * a control does under a finger. What changed is which state wears it, on the
+ * Director's instruction and against the Calendar's own source.
+ *
+ * SEMANTICS ARE OURS, NOT THE CALENDAR'S. It uses `role="radio"` and
+ * `aria-checked`; our wildlife tabs are a real tablist with `aria-selected`
+ * (Rob's ask, 1.44.0) and the water bars are `role="group"` toggles with
+ * `aria-pressed`. Both attributes are listed on every state rule here —
+ * matching one of them silently stops painting the other bar, which is this
+ * file's oldest defect.
+ *
+ * THE SIZE IS 0.7rem, NOT 14px, AND THAT IS DELIBERATE. The Calendar's
+ * literal `font-size: 14px` would break this plugin's oldest typography rule
+ * (`--dccwl-fs-*` are rem so a visitor's own text-size setting works; the
+ * lint in test-1270.php fails any px font-size but the search field's 16px).
+ * On the deployment root of 20px, 0.7rem IS 14px, so live renders the
+ * Calendar's exact size — and a guest who scales their text still gets a
+ * switch that scales. Flagged rather than silently converted.
+ * ====================================================================== */
 .dccwl-app .dccwl-tabs.dccwl-tabs {
-	/* WHITE (1.33.0, owner's decision). */
+	/* The 2px outline is drawn by ::after, inset, so it sits OVER the
+	 * segments' own fill and cannot be covered by a selected segment running
+	 * to the group's edge. That is the Calendar's own construction. */
 	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-pill);
+	border: 0;
+	border-radius: 999px;
 	display: inline-flex;
-	gap: 2px;
+	gap: 0;
+	height: 44px;
 	margin: 0 auto var(--dccwl-gap);
 	max-width: 100%;
-	padding: 3px;
+	padding: 0;
+	position: relative;
+}
+.dccwl-app .dccwl-tabs.dccwl-tabs::after {
+	border: 2px solid #0a50b2;
+	border-radius: inherit;
+	content: "";
+	inset: 0;
+	pointer-events: none;
+	position: absolute;
+	z-index: 1;
 }
 
-/* ======================================================================
- * TOGGLE STATES (1.33.0, owner's decision — every toggle, same rules)
- *
- * Applies to the section tabs, the month pills, the browse chips and the
- * Compact toggle. Every one of them is solid #006BCF with white text at rest;
- * the SELECTED one is marked with a 2px #F4DA62 gold border, drawn inside the
- * 2px transparent border every state already carries so nothing moves when the
- * selection changes; hover and focus are coral with white text.
- *
- * Before this, an unselected toggle was transparent with muted text and only
- * the selected one was blue. The owner's objection: three plugins on one site,
- * three different ideas of what a chosen control looks like.
- * ================================================================== */
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
-	background: var(--dccwl-btn-bg);
-	/* NO BORDER HERE, deliberately (1.33.0) — the gold mark is an inset
-	 * shadow instead, and it looks identical. A 2px border on each side of
-	 * four tabs costs 16px of a 320px row, and "Peak Now" had exactly 0%
-	 * headroom in its share of that row: it wrapped to two lines on live,
-	 * where Raleway measures about 21% wider than this sandbox's fallback
-	 * face. The other toggles keep their borders; they have the room. */
+	align-items: center;
+	background: transparent;
 	border: 0;
-	border-radius: var(--dccwl-radius-control);
-	flex: 1 1 0;
-	white-space: nowrap;
-	color: var(--dccwl-btn-txt);
+	border-radius: 0;
+	box-shadow: none;
+	color: #0a50b2;
 	cursor: pointer;
+	display: inline-flex;
+	flex: 1 1 0;
 	font: inherit;
-	font-size: var(--dccwl-fs-sm);
+	/* 14px on the 20px deployment root; see the token's note. */
+	font-size: var(--dccwl-fs-seg);
+	font-style: normal;
 	font-weight: 600;
+	height: 44px;
+	justify-content: center;
+	letter-spacing: normal;
+	line-height: 1;
+	margin: 0;
 	min-height: 44px;
-	padding: 10px 14px;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
-		color var(--dccwl-t-fast) var(--dccwl-ease-color);
+	min-width: 0;
+	padding: 0 12px;
+	position: relative;
+	text-decoration: none;
+	text-transform: none;
+	transition: none;
+	white-space: nowrap;
 }
-/* Four segments since 1.19.0 ("Before you go" joined the three groups):
- * on a phone they share the row at a smaller size rather than overflow. */
+/* The 2px rule between two segments — drawn over the segment's own fill. */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab + .dccwl-tab {
+	box-shadow: inset 2px 0 0 #0a50b2;
+}
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:first-child { border-radius: 999px 0 0 999px; }
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:last-child { border-radius: 0 999px 999px 0; }
+
+/* Under 390px the SIDES tighten, never the type — the Calendar's own
+ * `@media (max-width: 389px)` block. */
+@media (max-width: 389px) {
+	.dccwl-app .dccwl-tabs.dccwl-tabs { display: flex; width: 100%; }
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab { padding: 0 8px; }
+}
+/* At 390px and up on a phone the group still fills the row rather than
+ * shrinking to its labels; the Calendar's bar sits in a wider field. */
 @media (max-width: 480px) {
 	.dccwl-app .dccwl-tabs.dccwl-tabs { display: flex; width: 100%; }
-	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
-		font-size: var(--dccwl-fs-xs);
-		padding: 10px 6px;
-		/* ITEM 1 (1.37.0): SEMIBOLD. Rob asked for weight only — the size is
-		 * untouched, and it is declared here because the site serves
-		 * html{font-weight:700} and an undeclared weight inherits that. */
-		font-weight: var(--dccwl-fw-label);
-		/* The base rule sets nowrap, which on a narrow phone does not shrink
-		 * the label — it spills it silently, with no ellipsis to show for it.
-		 * Measured here, "Peak Now" has 14% headroom inside its share of a
-		 * 320px row; Raleway runs about 21% wider than the face this sandbox
-		 * falls back to, which is exactly why live reports the row overflowing
-		 * below about 335px while it looks fine locally. Same lesson as the
-		 * 1.28.0 footnote row.
-		 *
-		 * So below 480px the label may wrap. A two-line "Peak Now" on a 320px
-		 * phone is a far smaller price than a row that spills off the screen,
-		 * and it cannot overflow however wide the real font turns out to be. */
-		white-space: normal;
-		hyphens: none;
-		line-height: 1.2;
-	}
 }
 
-/* Tighter still where every pixel counts, to put off wrapping as long as
- * possible before it is needed. */
-/*
- * Below 400px the row is genuinely tight: four tabs share 320px, which is
- * 76.5px each. MEASURED, with the font inflated 21% to stand in for Raleway:
- * "Peak Now" needs 54.6px of a 70.5px text box here — 29% headroom, where it
- * had none at all in 1.32.1. The label keeps its words and its single line at
- * both 320px and 390px, which is what the owner asked for.
- *
- * `white-space: normal` above stays as the last resort: a longer translation
- * must still wrap rather than spill off the screen.
- */
-@media (max-width: 400px) {
-	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
-		font-size: 0.66rem;
-		padding: 10px 3px;
-	}
-}
-
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:hover {
-	background: var(--dccwl-btn-bg-hover);
-	color: var(--dccwl-btn-txt-hover);
-}
-
+/* SELECTED: solid, in the same blue as the outline and the divider. */
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"] {
-	background: var(--dccwl-btn-bg);
-	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
-	color: var(--dccwl-btn-txt);
+	background: #0a50b2;
+	color: #ffffff;
 }
-/* The chosen tab stays chosen under the pointer: without this the gold mark
- * is the only difference between hover and selected, and hover repaints the
- * ground coral, which reads as "you have just changed section".
+/* A selected segment at the group's edge fills into the rounded corner. The
+ * divider rule above still draws the 2px rule on its left. */
+
+/*
+ * CORAL ON HOVER ONLY, AND ONLY WITH A REAL POINTER.
  *
- * ITEM 10 (1.44.1) — THE PSEUDO-CLASS IS ON BOTH SELECTORS NOW. It was on
- * the second one only, so the bare `[aria-selected="true"]` in this list and
- * in the focus-visible block below applied AT REST. That made every selected
- * species tab carry the 3px blue focus ring permanently, which is what the
- * Director saw and called "a hover state left on" — it was a FOCUS state
- * left on. The water bar was unaffected, because its tabs report
- * `aria-pressed` and that is the selector the pseudo-class was attached to.
+ * The Calendar guards its hover rules with this query for the reason this
+ * plugin learned in 1.38.0: on a phone a tapped control keeps :hover until
+ * the guest touches something else, so an ungated hover leaves the last tab
+ * tapped painted coral over its own selected blue.
  *
- * A comma-separated list does not share a trailing pseudo-class. Measured
- * before and after: species tab at rest went from
- * `inset gold 2px, rgba(0,107,207,.38) 0 0 0 3px` to `inset gold 2px`, which
- * is exactly what the water bar has always had. */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:hover,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover {
-	background: var(--dccwl-btn-bg-hover);
-	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
-	color: var(--dccwl-btn-txt-hover);
+ * `:focus-visible` is deliberately OUTSIDE the query — keyboard users need it
+ * on every device, which is the note the Calendar's own file carries.
+ */
+@media (hover: hover) and (pointer: fine) {
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:hover:not(:disabled) {
+		background: var(--dccwl-accent);
+		color: #ffffff;
+	}
+	/* A selected segment hovers coral like any other: that is what the
+	 * Calendar does, and it is the one place the two states meet. */
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:hover,
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover {
+		background: var(--dccwl-accent);
+		color: #ffffff;
+	}
 }
 
+/* Keyboard focus keeps the ring, and `z-index: 2` is the Calendar's own line:
+ * a focused segment's ring must draw over its neighbour's divider and over
+ * the group's ::after outline. */
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
+	z-index: 2;
 }
-/* box-shadow is one property, so the focus ring would otherwise wipe out the
- * selected tab's gold mark. Both, in one declaration — and both selectors
- * carry `:focus-visible` (item 10; see the note above). */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus-visible,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible {
-	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold), var(--dccwl-ring);
+/* box-shadow is one property, so a focused segment that also carries the
+ * divider must state both. Both attributes carry the pseudo-class (the 1.44.1
+ * lesson: a comma list does not share a trailing pseudo-class). */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab + .dccwl-tab:focus-visible {
+	box-shadow: inset 2px 0 0 #0a50b2, var(--dccwl-ring);
 }
 
-/* ===================================================================
- * 1.34.0 — ITEM 12: the SELECTED button is coral, so a guest can see
- * what is showing. Applies to the Animals / Plants / Safety / Peak Now
- * tabs, the category chips and the Water tabs, which are all .dccwl-tab.
- *
- * THE INK IS WHITE (1.36.0, REVERSING 1.34.0's dark ink). Rob chose white
- * on the CURRENT coral so the selected state matches the hover state
- * exactly, and he chose it KNOWING the measurement: white on #F08080 is
- * 2.59:1, below AA at every size. He also ruled that the coral must NOT be
- * deepened to rescue the ratio.
- *
- * This is the same decision he made for coral hover in 1.33.0 answer 2 and
- * for the same reason: three plugins on one site disagreeing about what a
- * pressed button looks like is worse, to him, than the number. IF CONTRAST
- * IS EVER RAISED IT CHANGES SITE-WIDE, in one place, never in Wildlife
- * alone. Do not "fix" this here, and do not restore the dark ink.
- *
- * The gold ring stays: it is the focus affordance, not the selected one.
- *
- * SPECIFICITY, and it cost a cycle: the browse chip and the view toggle each
- * defined their OWN selected rule in widget.css at (0,3,0) — identical to the
- * first draft of this block, and later in source order, so widget.css won and
- * only the category tabs turned coral. Tripling the classes reaches (0,4,0),
- * the same answer the Bravada button rules reached for the same reason.
- *
- * AND THE TAB NOW ANSWERS TO TWO ATTRIBUTES, WHICH IS NOT A HEDGE.
- * `.dccwl-tab` is shared: the WILDLIFE section tabs became a real tablist in
- * 1.44.0 and report `aria-selected`, while the water module's two bars
- * (`.dccwl-water-tabs`, `.dccwl-fish-seasons`) are `role="group"` holding
- * toggle buttons and correctly keep `aria-pressed`. Matching only one of them
- * would have left one of the two bars with no coral at all — this file's
- * oldest defect, a rule that silently stops matching. Both are listed, and
- * the state each bar reports is the state its role actually has.
- * =================================================================== */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"] {
-	background: var(--dccwl-accent);
-	color: #ffffff;
-}
-/* 1.36.0 added the month pill and the Compact switch here. Both are gone
- * (1.44.0): the month pills WERE the twelve-month strip and the switch was
- * the view toggle. Rob's list — "Animals/Plants/Safety/Peak Now, the
- * category chips, the month pills, the Water tabs" — now resolves to the
- * section tabs and the water tabs here, plus the chip row's chosen menu
- * option, which takes the same coral from the (0,4,0) rule it SHARES with
- * the category picker in widget.css. Stated here rather than selected here,
- * so one rule marks a chosen menu option and two cannot drift apart. */
-
 /*
- * ITEM 8 (1.37.0) — THE WHOLE SELECTED STATE IS WHITE, not just its resting
- * one. On a phone the button keeps :focus after a tap, and a focus rule was
- * winning and painting the label dark until the guest touched something else:
- * selected and unselected were briefly indistinguishable. Every state a
- * pressed control can be in is listed here — hover, focus, focus-visible and
- * active — for touch, mouse and keyboard alike.
+ * THE CHOSEN MENU OPTION KEEPS THE CORAL. It is not a segment — it is a row
+ * in an open listbox (the Month menu, the place menu), and Rob's 1.36.0
+ * decision about a chosen option is untouched by the Calendar's switch. Every
+ * state is listed for the 1.38.0 reason: a tapped row keeps :hover and :focus
+ * on a phone until something else is touched.
  */
-/*
- * ITEM 10 (1.44.1): each pseudo-class is on BOTH attributes now. The list
- * read `[aria-selected="true"], [aria-pressed="true"]:hover, ...`, which is
- * four copies of the bare selected selector and only the pressed one in each
- * state — the same slip that left a focus ring on every selected species tab
- * further up this file. Here the declarations match the resting state, so the
- * effect was invisible; the shape was not.
- */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:hover,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus-visible,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:active,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:active,
+.dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:hover,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:focus,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:focus-visible,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:active {
 	background: var(--dccwl-accent);
-	/*
-	 * WHITE (1.38.0). THIS LINE IS WHY ITEM 8 FAILED ON LIVE while the suite
-	 * passed. 1.36.0 turned the selected state white and changed the RESTING
-	 * rule; this one, which covers hover, focus, focus-visible and active,
-	 * kept --dccwl-text. With a mouse nobody sees it — the pointer leaves and
-	 * the dark ink goes with it. ON A PHONE A TAPPED BUTTON KEEPS :hover AND
-	 * :focus, so the label a guest just chose turns dark and stays dark until
-	 * they tap something else.
-	 *
-	 * The lesson for the suites, not just the rule: a state that only exists
-	 * after a real tap has to be tested with a real tap.
-	 */
 	color: #ffffff;
 }
 
@@ -1455,9 +1408,32 @@
 	outline: none;
 }
 
+/*
+ * THE ROUND, ICON-ONLY CHIP (item 2, 1.44.2) — Rob's "Badges" button.
+ *
+ * The SAME chip: white ground, 1px #F4DA62, weight 600, every state above.
+ * What differs is that it has no word, so it is a 44px circle rather than a
+ * pill with padding. Fixed width AND height, because the base chip sizes to
+ * its label and a one-glyph label would make a narrow oval; `flex: none` so
+ * the chip row cannot stretch or squeeze it.
+ *
+ * Its name lives in `aria-label` — see the note in class-render.php.
+ */
+.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip.dccwl-chip-round {
+	border-radius: 50%;
+	flex: none;
+	height: 44px;
+	justify-content: center;
+	padding: 0;
+	width: 44px;
+}
+
 /* The ⓘ and the carets, at the chip's own label size — never larger, because
  * Raleway may not carry them and a fallback face must not render them bigger
- * or bolder than what the row was approved at (the 1.41.0 rule for ▾ ▴ ›). */
+ * or bolder than what the row was approved at (the 1.41.0 rule for ▾ ▴ ›).
+ * On the round chip the glyph IS the control, so it takes the room the word
+ * used to: 1.4em of the chip's own size, still relative to it. */
 .dccwl-app .dccwl-chip-i { font-size: 1.05em; line-height: 1; }
+.dccwl-app .dccwl-chip-round .dccwl-chip-i { font-size: 1.4em; }
 .dccwl-app .dccwl-pick-chev,
 .dccwl-app .dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }

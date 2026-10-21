@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.1
+Stable tag: 1.44.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,21 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.2 =
+* **The Map · Now · Fishing and Animals · Plants · Safety switches now look
+  exactly like the one on the availability calendar** — white with blue
+  lettering, the chosen one filled solid blue, a thin blue outline round the
+  group and a divider between the segments. Coral is what you get when a mouse
+  hovers over one, and nothing else.
+* **"Badges" is a round ⓘ button.** Same white chip with the gold edge, just
+  the circle and the symbol; it opens the same key. With it, "Any Month",
+  "Show: All" and the ⓘ sit together on one line on a phone — they were
+  pushed to opposite edges with the ⓘ dropped onto a second line.
+* **"Colour by" and "Base Map" on the map's own bar read in the site's button
+  weight.** They had been rendering lighter than everything around them.
+* The map's "Base Map" menu keeps satellite, streets and — on a phone —
+  Fullscreen, as it did in 1.44.1.
 
 = 1.44.1 =
 * **The map is the first thing on Water.** It sat about 585px down a phone

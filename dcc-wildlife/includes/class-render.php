@@ -643,10 +643,35 @@ final class Render {
 			 * screen saying the same thing on every visit.
 			 */
 			?>
-			<button type="button" class="dccwl-chip dccwl-chip-badges" data-dccwl-badges
-				aria-expanded="false" aria-controls="dccwl-badgekey">
+			<?php
+			/*
+			 * ITEM 2 (1.44.2) — IT IS A ROUND ⓘ NOW, AND NOTHING ELSE
+			 * CHANGED ABOUT IT.
+			 *
+			 * Rob: "'Badges' becomes a round ⓘ-only chip. It's the same chip
+			 * (white, 1px #F4DA62), a 44px circle, aria-label="Badges" and
+			 * the same popover."
+			 *
+			 * THE NAME MOVES FROM THE TEXT TO `aria-label`, which is the one
+			 * thing to get right here: an aria-label REPLACES a control's
+			 * text for a screen reader (the 1.15.1 lesson), so with the word
+			 * gone from the button it has to be the label or the control is
+			 * announced as nothing at all. The ⓘ is `aria-hidden` because it
+			 * is the picture of the name, not the name.
+			 *
+			 * WCAG 2.5.3 label-in-name does not apply: there is no visible
+			 * text for the accessible name to have to contain.
+			 *
+			 * It is also what makes the row fit. At 390px the live container
+			 * is 334px, and Month (118) + Show (107) + Badges (103) with its
+			 * word could not share a line; a 44px circle takes the three to
+			 * 285px including gaps. The measurement is the Director's.
+			 */
+			?>
+			<button type="button" class="dccwl-chip dccwl-chip-round dccwl-chip-badges"
+				data-dccwl-badges aria-expanded="false" aria-controls="dccwl-badgekey"
+				aria-label="<?php esc_attr_e( 'Badges', 'dcc-wildlife' ); ?>">
 				<span class="dccwl-chip-i" aria-hidden="true">&#9432;</span>
-				<?php esc_html_e( 'Badges', 'dcc-wildlife' ); ?>
 			</button>
 			<?php self::render_badge_key(); ?>
 		</div>
