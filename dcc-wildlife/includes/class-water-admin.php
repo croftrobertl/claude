@@ -545,7 +545,7 @@ final class Water_Admin {
 								<span id="dccwl-clarity-status" style="margin-left:8px"></span>
 							</p>
 							<div id="dccwl-clarity-results"></div>
-							<p class="description"><?php esc_html_e( 'Save first — the test runs against the saved values and lists every reading it recognised.', 'dcc-wildlife' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Save first — the test runs against the saved values and lists every reading it recognized.', 'dcc-wildlife' ); ?></p>
 						</td>
 					</tr>
 				</table>
@@ -558,7 +558,7 @@ final class Water_Admin {
 
 				<h2><?php esc_html_e( 'Map', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
-					<?php esc_html_e( 'Nothing external — no Leaflet, no tiles, no map data — loads until a guest presses the Open button. Satellite and street layers are both available, each carrying its provider’s required attribution. If tiles ever fail to load the map falls back to the other layer, and then to markers on a plain background rather than a grid of grey squares.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Nothing external — no Leaflet, no tiles, no map data — loads until a guest presses the Open button. Satellite and street layers are both available, each carrying its provider’s required attribution. If tiles ever fail to load the map falls back to the other layer, and then to markers on a plain background rather than a grid of gray squares.', 'dcc-wildlife' ); ?>
 				</p>
 				<table class="form-table" role="presentation">
 					<tr>
@@ -577,7 +577,7 @@ final class Water_Admin {
 								<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[map_ramps]" value="1" <?php checked( (int) $o['map_ramps'], 1 ); ?> />
 								<?php esc_html_e( 'Include FWC’s Lake County ramp inventory', 'dcc-wildlife' ); ?>
 							</label>
-							<p class="description"><?php esc_html_e( 'Closed ramps are shown greyed and marked CLOSED rather than hidden — a guest towing a boat needs to know.', 'dcc-wildlife' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Closed ramps are shown grayed and marked CLOSED rather than hidden — a guest towing a boat needs to know.', 'dcc-wildlife' ); ?></p>
 						</td>
 					</tr>
 					<tr>

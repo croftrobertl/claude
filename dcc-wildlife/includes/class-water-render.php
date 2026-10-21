@@ -366,11 +366,11 @@ final class Water_Render {
 			 * folds out of its own chip.
 			 */
 			?>
-			<?php self::render_links( __( 'Local reports & charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
+			<?php self::render_links( __( 'Local Reports & Charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
 
 			<?php if ( $links || $reports ) : ?>
 				<p class="dccwl-water-disclaimer">
-					<?php esc_html_e( 'Licences, seasons and limits change — check the FWC before you fish.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Licenses, seasons and limits change — check the FWC before you fish.', 'dcc-wildlife' ); ?>
 				</p>
 			<?php endif; ?>
 			</div><?php /* /fishing */ ?>
@@ -589,7 +589,7 @@ final class Water_Render {
 				 * Fishing, so nothing is lost by it being here.
 				 */
 				?>
-				<?php self::render_links( __( 'Official information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
+				<?php self::render_links( __( 'Official Information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
 			</div>
 		</details>
 		<?php
@@ -718,7 +718,16 @@ final class Water_Render {
 				         as its own thing and not as more fishing advice. */ ?>
 				<hr class="dccwl-fish-rule">
 				<div class="dccwl-fishing-regs">
-					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licences &amp; Keep-Limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
+					<?php /* A PLAIN AMPERSAND, because esc_html_e() escapes it.
+					 * This shipped as `&amp;` from 1.44.0 and rendered the
+					 * entity literally on live — "Licences &amp; Keep-
+					 * Limits" — for four releases, invisible in the source
+					 * because an entity in an HTML file looks right. Rob's
+					 * own instruction writes it with one character
+					 * ("'Licences & Keep-Limits' → 'Licenses &
+					 * Keep-Limits'"), and a translator must be handed the
+					 * text, never markup. */ ?>
+					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licenses & Keep-Limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
 					<ul class="dccwl-fishing-reglist">
 						<?php foreach ( $regs as $r ) : ?>
 							<?php if ( is_array( $r ) && isset( $r[0], $r[1] ) ) : ?>
@@ -743,7 +752,7 @@ final class Water_Render {
 						<p class="dccwl-fishing-note dccwl-fishing-license">
 							<?php echo esc_html( (string) $f['license'] ); ?>
 							<?php if ( ! empty( $f['license_url'] ) ) : ?>
-								<a href="<?php echo esc_url( (string) $f['license_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php esc_html_e( 'FWC licences', 'dcc-wildlife' ); ?></a>
+								<a href="<?php echo esc_url( (string) $f['license_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php esc_html_e( 'FWC Licenses', 'dcc-wildlife' ); ?></a>
 							<?php endif; ?>
 						</p>
 					<?php endif; ?>
@@ -967,14 +976,14 @@ final class Water_Render {
 							'label' => __( 'Tonight on the Canal', 'dcc-wildlife' ),
 							/* translators: 1: sunrise time, 2: sunset time. */
 							'light' => __( 'First light %1$s · last light %2$s', 'dcc-wildlife' ),
-							'new' => __( 'New moon', 'dcc-wildlife' ),
-							'waxingCrescent' => __( 'Waxing crescent', 'dcc-wildlife' ),
-							'firstQuarter' => __( 'First quarter', 'dcc-wildlife' ),
-							'waxingGibbous' => __( 'Waxing gibbous', 'dcc-wildlife' ),
-							'full' => __( 'Full moon', 'dcc-wildlife' ),
-							'waningGibbous' => __( 'Waning gibbous', 'dcc-wildlife' ),
-							'lastQuarter' => __( 'Last quarter', 'dcc-wildlife' ),
-							'waningCrescent' => __( 'Waning crescent', 'dcc-wildlife' ),
+							'new' => __( 'New Moon', 'dcc-wildlife' ),
+							'waxingCrescent' => __( 'Waxing Crescent', 'dcc-wildlife' ),
+							'firstQuarter' => __( 'First Quarter', 'dcc-wildlife' ),
+							'waxingGibbous' => __( 'Waxing Gibbous', 'dcc-wildlife' ),
+							'full' => __( 'Full Moon', 'dcc-wildlife' ),
+							'waningGibbous' => __( 'Waning Gibbous', 'dcc-wildlife' ),
+							'lastQuarter' => __( 'Last Quarter', 'dcc-wildlife' ),
+							'waningCrescent' => __( 'Waning Crescent', 'dcc-wildlife' ),
 							'night' => __( 'night', 'dcc-wildlife' ),
 							'nights' => __( 'nights', 'dcc-wildlife' ),
 							'lineFull' => __( 'The full moon is up — prime for bedding bream and staging specks, and the gators bellow into the bright night.', 'dcc-wildlife' ),
@@ -1008,7 +1017,7 @@ final class Water_Render {
 						'ageToday'    => __( 'today', 'dcc-wildlife' ),
 						'mapLoading'  => __( 'Loading the map…', 'dcc-wildlife' ),
 						'mapFailed'   => __( 'The map could not be loaded.', 'dcc-wildlife' ),
-						'colorBy'     => __( 'Colour by:', 'dcc-wildlife' ),
+						'colorBy'     => __( 'Color By:', 'dcc-wildlife' ),
 						/* The wind badge (1.35.0). The compass sector and the
 						 * speed are the forecast's own words and are never
 						 * translated here; only the dial's N and the
@@ -1017,27 +1026,32 @@ final class Water_Render {
 						/* translators: 1: compass direction the wind comes from, e.g. "NE". 2: wind speed as the forecast words it, e.g. "5 to 10 mph". 3: the full source name. */
 						'windAria'    => __( 'Wind %1$s at %2$s — %3$s', 'dcc-wildlife' ),
 						/*
-						 * ITEM 2 (1.44.3) — THE MAP BAR'S LABELS, SWEPT.
+						 * THE MAP BAR'S LABELS, SWEPT (1.44.3, item 2) —
+						 * AND ROB OVERRULED THE ONE EXEMPTION (1.44.4).
 						 *
-						 * "Data age" was the one that needed changing. The
-						 * others on that bar were already Title Case and are
-						 * listed here so the sweep is a record rather than a
-						 * claim: Clarity, Level, Base Map, Fullscreen,
-						 * Satellite and Streets (below), and the four legend
-						 * rows Title Cased in 1.44.1.
+						 * "Data age" was 1.44.3's change. The others on that
+						 * bar were already Title Case and are listed here so
+						 * the sweep is a record rather than a claim: Clarity,
+						 * Level, Base Map, Fullscreen, Satellite and Streets
+						 * (below), and the four legend rows Title Cased in
+						 * 1.44.1.
 						 *
-						 * `colorBy` is DELIBERATELY LEFT as "Colour by:" and
-						 * flagged rather than changed. It is the label that
-						 * introduces the segmented control and is composed
-						 * into the menu button's own text ("Colour by:
-						 * Clarity ▾"), and the Director has written it that
-						 * way in three briefs including the one asking for
-						 * this sweep. One line from him changes it.
+						 * 1.44.3 LEFT `colorBy` as "Colour by:" and flagged
+						 * it, on the reasoning that it introduces the
+						 * segmented control and is composed into the menu
+						 * button's own text. ROB'S RULING (2026-10-21) IS
+						 * THE OPPOSITE, and it is his to make: "'Colour by:'
+						 * becomes 'Color By:', with American spelling (the
+						 * site is American) and Title Case. So the button
+						 * reads 'Color By: Clarity ▾'." Being composed into
+						 * a button's label is what makes it a BUTTON's
+						 * label, which is exactly what his Title Case rule
+						 * covers — the 1.44.3 exemption had it backwards.
 						 *
-						 * Two labels on OTHER surfaces are still sentence
-						 * case and are reported, not changed, because the ask
-						 * was the bar: "Station page" and "Depth map (PDF)",
-						 * both in map popups.
+						 * The two popup labels reported alongside it are
+						 * Title Case with the same ruling: `stationPage`
+						 * ("Station Page") and `depthMap` ("Depth Map
+						 * (PDF)"), both links a guest taps in a map popup.
 						 */
 						'byClarity'   => __( 'Clarity', 'dcc-wildlife' ),
 						'byLevel'     => __( 'Level', 'dcc-wildlife' ),
@@ -1068,11 +1082,11 @@ final class Water_Render {
 						'noImagery'   => __( 'Map imagery is unavailable right now — the markers below are still accurate.', 'dcc-wildlife' ),
 						/* translators: %s: station identifier. */
 						'stationTitle' => __( 'Station %s', 'dcc-wildlife' ),
-						'stationPage'  => __( 'Station page', 'dcc-wildlife' ),
+						'stationPage'  => __( 'Station Page', 'dcc-wildlife' ),
 						'stationNone'  => __( 'No current reading from this station.', 'dcc-wildlife' ),
 						'closed'      => __( 'CLOSED', 'dcc-wildlife' ),
 						'milesAway'   => __( 'mi from the cottages, straight line', 'dcc-wildlife' ),
-						'depthMap'    => __( 'Depth map (PDF)', 'dcc-wildlife' ),
+						'depthMap'    => __( 'Depth Map (PDF)', 'dcc-wildlife' ),
 						/*
 						 * LOWERCASE ON PURPOSE, AND NOT THE PLACE PICKER'S
 						 * STRING. This one is read by water-map.js inside a
@@ -1127,7 +1141,7 @@ final class Water_Render {
 						'lblStatus'   => __( 'Status:', 'dcc-wildlife' ),
 						'lblDistance' => __( 'Distance:', 'dcc-wildlife' ),
 						'station'     => __( 'Station', 'dcc-wildlife' ),
-						'rampName'    => __( 'Boat ramp', 'dcc-wildlife' ),
+						'rampName'    => __( 'Boat Ramp', 'dcc-wildlife' ),
 						'fwcSource'   => __( 'Source: FWC boat ramp inventory', 'dcc-wildlife' ),
 						/* translators: %s: whole inches. */
 						'levelAbove'  => __( '%s in above its monthly norm', 'dcc-wildlife' ),

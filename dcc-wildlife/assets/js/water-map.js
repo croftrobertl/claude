@@ -359,7 +359,7 @@
 		}
 
 		if (w.depthMap && w.depthMap.url) {
-			var a = el('a', 'dccwl-pop-link', i18n.depthMap || 'Depth map (PDF)');
+			var a = el('a', 'dccwl-pop-link', i18n.depthMap || 'Depth Map (PDF)');
 			a.href = w.depthMap.url;
 			a.target = '_blank';
 			a.rel = 'noopener nofollow';
@@ -408,7 +408,7 @@
 			line(box, i18n.lblDistance || 'Distance:', s.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
 		}
 		if (s.url) {
-			var a = el('a', 'dccwl-pop-link', i18n.stationPage || 'Station page');
+			var a = el('a', 'dccwl-pop-link', i18n.stationPage || 'Station Page');
 			a.href = s.url;
 			a.target = '_blank';
 			a.rel = 'noopener nofollow';
@@ -420,7 +420,7 @@
 
 	function rampPopup(r, i18n) {
 		var box = el('div', 'dccwl-pop');
-		box.appendChild(el('h4', 'dccwl-pop-title', r.name || i18n.rampName || 'Boat ramp'));
+		box.appendChild(el('h4', 'dccwl-pop-title', r.name || i18n.rampName || 'Boat Ramp'));
 
 		// Status is honoured loudly: a guest towing a boat to a closed ramp
 		// is exactly the error this module exists to prevent.
@@ -918,7 +918,7 @@
 			['level', i18n.byLevel || 'Level'],
 			['fresh', i18n.byFresh || 'Data Age']
 		];
-		var colourLabel = i18n.colorBy || 'Colour by:';
+		var colourLabel = i18n.colorBy || 'Color By:';
 		// The menu button says which colouring is on. The label above ends in
 		// a colon because it introduces the buttons beside it; on the button
 		// it would read "Colour by:: Clarity", so strip it.

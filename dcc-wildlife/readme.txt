@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.3
+Stable tag: 1.44.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,25 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.4 =
+* **American spelling throughout.** Every word a guest reads is now in
+  American English: "color" rather than "colour", "license" rather than
+  "licence", "gray" rather than "grey", and so on through 162 strings. The
+  fishing block is headed **"Licenses & Keep-Limits"**, and two species are
+  named as the field guides publish them — **Eastern Gray Squirrel** and
+  **Gray Fox**. Published names that really are spelled the British way are
+  left alone: the Cloudless Sulphur keeps its name.
+* **The map's colour control reads "Color By: Clarity".** Its two popup links
+  are Title Case with it — **"Station Page"** and **"Depth Map (PDF)"**.
+* Thirteen more labels and headings went to Title Case: the month heading's
+  default **"On The Canal"**, the sheet's **"Peak Season"** badge, the water
+  module's **"Local Reports & Charters"**, **"Official Information"** and
+  **"FWC Licenses"**, and the eight moon-phase names on the Tonight card
+  ("Waxing Crescent", "Full Moon", and the rest).
+* A site that had ever pressed Save on the water settings kept the old
+  spelling in two stored lines; those are repaired on upgrade, and any
+  wording the owner typed himself is left exactly as he typed it.
 
 = 1.44.3 =
 * **Each segment of the Map · Now · Fishing and Animals · Plants · Safety

@@ -344,6 +344,40 @@ final class Water_Data {
 			$changed                    = true;
 		}
 
+		/*
+		 * 1.44.4: the two seeded strings that said "licence" now say
+		 * "license" (the site is American). Both live INSIDE array-typed
+		 * defaults, which wp_parse_args shadows at key level — so a site
+		 * that ever pressed Save on the settings form would keep the
+		 * British spelling for ever without this step (the 1.8.0
+		 * settings-merge rule).
+		 *
+		 * EXACT MATCH ONLY, as the 1.32.1 tile repair and the 1.37.0 Esri
+		 * credit both do: an owner who retyped either line keeps their own
+		 * wording, and anything we do not recognise is LEFT ALONE.
+		 */
+		$old_link_label = 'Florida FWC — fishing licences & regulations';
+		if ( isset( $stored['links'] ) && is_array( $stored['links'] ) ) {
+			$link_defaults = self::default_links();
+			$new_label     = (string) ( $link_defaults[0]['label'] ?? '' );
+			foreach ( $stored['links'] as $i => $row ) {
+				if ( is_array( $row ) && isset( $row['label'] )
+					&& $old_link_label === trim( (string) $row['label'] )
+					&& '' !== $new_label ) {
+					$stored['links'][ $i ]['label'] = $new_label;
+					$changed                        = true;
+				}
+			}
+		}
+
+		$old_license = 'Anglers 16 and older need a Florida freshwater fishing licence (some exemptions — under-16, resident seniors 65+, free-fishing days).';
+		if ( isset( $stored['fishing']['license'] )
+			&& $old_license === trim( (string) $stored['fishing']['license'] ) ) {
+			$fish_defaults              = self::default_fishing();
+			$stored['fishing']['license'] = (string) ( $fish_defaults['license'] ?? $stored['fishing']['license'] );
+			$changed                      = true;
+		}
+
 		if ( $changed ) {
 			update_option( self::OPTION, $stored );
 		}
@@ -414,7 +448,7 @@ final class Water_Data {
 	public static function default_links(): array {
 		return [
 			[
-				'label' => __( 'Florida FWC — fishing licences & regulations', 'dcc-wildlife' ),
+				'label' => __( 'Florida FWC — fishing licenses & regulations', 'dcc-wildlife' ),
 				'url'   => 'https://myfwc.com/',
 			],
 			[
@@ -535,7 +569,7 @@ final class Water_Data {
 			'regs_verified'    => '2026-08-27',
 			'regs_url'         => 'https://myfwc.com/fishing/freshwater/regulations/general/',
 			'regs_label'       => __( 'FWC — statewide bag & length limits', 'dcc-wildlife' ),
-			'license'          => __( 'Anglers 16 and older need a Florida freshwater fishing licence (some exemptions — under-16, resident seniors 65+, free-fishing days).', 'dcc-wildlife' ),
+			'license'          => __( 'Anglers 16 and older need a Florida freshwater fishing license (some exemptions — under-16, resident seniors 65+, free-fishing days).', 'dcc-wildlife' ),
 			'license_url'      => 'https://myfwc.com/license/recreational/do-i-need-one/',
 
 			'forecast_url'     => 'https://myfwc.com/fishing/freshwater/sites-forecasts/ne/lake-harris/',

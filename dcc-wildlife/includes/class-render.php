@@ -344,7 +344,7 @@ final class Render {
 			?>
 
 			<header class="dccwl-head">
-				<h2 class="dccwl-title"><?php echo esc_html( '' !== $title ? $title : __( 'On the canal', 'dcc-wildlife' ) ); ?></h2>
+				<h2 class="dccwl-title"><?php echo esc_html( '' !== $title ? $title : __( 'On The Canal', 'dcc-wildlife' ) ); ?></h2>
 				<p class="dccwl-sub" aria-live="polite"></p>
 			</header>
 
@@ -1129,7 +1129,7 @@ final class Render {
 		 */
 		?>
 		<a class="dccwl-footnote-link dccwl-footnote-credits" href="<?php echo esc_url( Guide_Page::credits_url() ); ?>"
-			aria-label="<?php esc_attr_e( 'Photo credits — every photographer and licence', 'dcc-wildlife' ); ?>">
+			aria-label="<?php esc_attr_e( 'Photo credits — every photographer and license', 'dcc-wildlife' ); ?>">
 			<span class="dccwl-fullguide-text">
 				<span class="dccwl-fullguide-h"><?php esc_html_e( 'Credits', 'dcc-wildlife' ); ?></span>
 			</span>
@@ -1396,7 +1396,7 @@ final class Render {
 				/* translators: 1: month name, 2: species-count phrase. */
 				/* monthSub wrapped the subline in "September: …". Since 1.29.0
 				   subSpot names the month itself, so nothing reads this. */
-				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
+				'peak'        => __( 'Peak Season', 'dcc-wildlife' ),
 				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
 				// 1.19.0 data model: flag names for the tile marks and sheet
 				// badges, the odds labels, the what-to-do heading.

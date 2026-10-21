@@ -4336,3 +4336,112 @@ both in map popups.
 Mutations verified red, restored with `cp`/`mv`, harness re-run after:
 `flex: 1 1 0` back (3px of padding on "Animals", 10.5px on "Plants" — both
 halves of the check firing), and "Data age" back.
+
+### 38. 1.44.4 — American English, and Title Case where Rob's rule reaches
+
+Rob's two rulings of 2026-10-21, then generalised on his instruction: **the
+site is American, so every guest-facing string is American**, and the Title
+Case sweep carries on past the map bar. 177 translatable strings changed.
+
+**HE OVERRULED 1.44.3'S ONE EXEMPTION, AND HIS READING IS THE BETTER ONE.**
+That release left `colorBy` as "Colour by:" and flagged it, arguing that it
+introduces the segmented control and is composed into the menu button's own
+text. His answer: *"'Colour by:' becomes 'Color By:', with American spelling
+(the site is American) and Title Case. So the button reads 'Color By: Clarity
+▾'."* Being composed into a button's label is what makes it **a button's
+label** — exactly what his standing Title Case rule covers. The comment block
+recording the exemption was rewritten rather than deleted, so the next reader
+meets the ruling and not the superseded reasoning.
+
+**THE TWO SEEDED STRINGS NEEDED AN `upgrade()` STEP, AND THAT IS THE 1.8.0
+RULE, NOT AN EXTRA.** `default_links()`'s FWC label and the `fishing` block's
+`license` sentence live INSIDE array-typed defaults, which `wp_parse_args`
+shadows at key level — so on any site that has ever pressed Save, changing the
+default does nothing for ever. `Water_Data::upgrade()` repairs both by
+**exact match only**, on the 1.32.1 tile-template and 1.37.0 Esri-credit
+precedent: an owner who retyped either line keeps their own wording, and
+anything unrecognised is LEFT ALONE. The suite drives the real upgrade over a
+stored row carrying all three cases — two seeded, one owner-typed — and
+asserts the third is untouched.
+
+**TWO SPECIES WERE RENAMED, AND ONE WAS DELIBERATELY NOT.** *Sciurus
+carolinensis* and *Urocyon cinereoargenteus* are published as **Eastern Gray
+Squirrel** and **Gray Fox** in American field guides, so they moved. The
+**Cloudless Sulphur** did not: "Sulphur" is NABA's own published common name
+for the *Phoebis* and *Colias* sulphurs, and a guide that "corrects" a
+published common name is wrong in a way no spelling rule fixes. It is the
+single row in the suite's allowlist, which is EXACT-MATCH on the whole literal
+so an allowlisted name cannot excuse a British spelling elsewhere in the same
+sentence. Same gate as the four scientific names decided from evidence in
+batch 20 — never settle one of these by policy.
+
+### `tools/tests/test-spelling.php`, and why it is tokenised
+
+It reads the **first string argument of every i18n call**, through PHP's own
+lexer, plus every `i18n.key || 'literal'` fallback in `assets/js/`. Nothing
+else qualifies: a British spelling in a code comment, a variable name
+(`$colourBtn`, `setColour`), a CSS class or an internal array key is invisible
+to a guest, and a regex over whole files would flag all of them and bury the
+real finding. Three things keep it honest:
+
+- **Its first assertions are about the probe.** A sweep that finds nothing
+  reports no problem — the 1.33.1 parser that returned an empty require list,
+  and this harness's oldest prohibition. It pins the file count, the literal
+  count, and that `class-water-render.php`'s own comments still quote "Colour
+  by:" **while the extractor does not see it**. That last pair is also this
+  repository's oldest trap in its newest form: the release record of a string
+  is the thing most likely to match a naive scan for it.
+- **The word list is explicit, never a suffix rule.** `\w+is(e|ed|ing)` looks
+  like it covers -ise/-ize in one line and then fires on "wise", "promise",
+  "rise" and "precise"; `\w*metre` fires on "parameter". A probe that fires on
+  correct text teaches a reader to ignore it.
+- **The Title Case half is scoped to the guest-facing renderers; the spelling
+  half is not.** The admin page's `<h2>`s are the owner's editor screen, and
+  one of them names the same block the front end heads — reported, not
+  re-cased. Spelling has no such exemption.
+
+**AND IT CAUGHT SIX THE REWRITER MISSED, IN THE RUN IT WAS WRITTEN.** The
+americanise pass carried a 36-word map and changed 152 species strings; the
+suite then found **moults, moulted, realise, specialises and kerbs ×2**, and
+after `centimetre`/`millimetre` were added to the list, six more. A hand-built
+word map can only catch the words its author thought of, which is the 1.39.1
+lesson about fixtures wearing a different hat.
+
+### The `&amp;` that rendered as `&amp;` on live for four releases
+
+The fishing block's heading shipped from 1.44.0 as
+`esc_html_e( 'Licences &amp; Keep-Limits — Florida FWC' )`. `esc_html_e()`
+escapes the ampersand **again**, so live printed the entity itself. It was
+invisible in the source because an entity inside an HTML file looks right,
+and invisible to every suite because none of them read that string.
+
+**It was found by looking at a screenshot.** Rob's own instruction writes the
+name with one character — *"'Licences & Keep-Limits' → 'Licenses &
+Keep-Limits'"* — which is the fix: a translatable string is TEXT, and the
+escaper is what turns it into markup. `test-spelling.php` now fails on any
+HTML entity in any translatable string.
+
+### What was deliberately NOT changed, and reported instead
+
+- **Accessible names.** An `aria-label` is spoken, never shown, and Title
+  Casing a spoken phrase changes nothing for anyone who hears it. "Canal field
+  guide", "Field guide sections", "Search the field guide", "Clear search",
+  "Badge key", "Photo credits", "Close details", "Species details", "Previous
+  species"/"Next species" and "What to show" all stay.
+- **The screen-reader likelihood words** ("rarely seen", "possible", "good
+  chance", "peak season"), which are read one per month inside a strip.
+- **The lowercase date prefixes in the attribution stack** — "sampled
+  07/27/2026", "reading", "surveyed". They are prose, not a label row, and the
+  map popup's capitalised "Sampled:" is a different register documented since
+  1.39.0. The two sitting on one page is a wording question for Rob.
+- **Every Elementor PANEL label.** Only the owner sees those, in the editor.
+- **The admin page's own headings**, for the same reason.
+- **`i18n.median` has no reader at all** — `water-map.js` prints `usual:` and
+  `water.js` never asks for it. By this plugin's own rule a string with no
+  reader goes with its reader, but deleting one was outside "change nothing
+  else"; flagged for the next round.
+
+Mutations verified red, each restored with `cp`/`mv` and the whole harness
+re-run AFTER the restores: "Colour by:" back, "Station page" back in both the
+PHP and its JS fallback, "Eastern Grey Squirrel" back, and the `upgrade()`
+repair step deleted.
