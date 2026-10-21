@@ -205,22 +205,22 @@
 
 	var LEGEND = {
 		clarity: [
-			['clear', 'legClearer', 'Clearer than its own median'],
-			['usual', 'legUsual', 'Near its median'],
-			['murky', 'legMurkier', 'Murkier than its median'],
-			['stale', 'legStale', 'No current reading']
+			['clear', 'legClearer', 'Clearer Than Usual'],
+			['usual', 'legUsual', 'Near Usual'],
+			['murky', 'legMurkier', 'Murkier Than Usual'],
+			['stale', 'legStale', 'No Current Reading']
 		],
 		level: [
-			['high', 'legAbove', 'Above its monthly norm'],
-			['near', 'legNear', 'Near its norm'],
-			['low', 'legBelow', 'Below its norm'],
-			['stale', 'legStale', 'No current reading']
+			['high', 'legAbove', 'Above Its Monthly Norm'],
+			['near', 'legNear', 'Near Its Norm'],
+			['low', 'legBelow', 'Below Its Norm'],
+			['stale', 'legStale', 'No Current Reading']
 		],
 		fresh: [
-			['fresh', 'legFresh', 'Reading under 45 days old'],
-			['months', 'legMonths', 'Months old'],
-			['years', 'legYears', 'Years old'],
-			['stale', 'legStale', 'No current reading']
+			['fresh', 'legFresh', 'Reading Under 45 Days Old'],
+			['months', 'legMonths', 'Months Old'],
+			['years', 'legYears', 'Years Old'],
+			['stale', 'legStale', 'No Current Reading']
 		]
 	};
 
@@ -593,6 +593,27 @@
 			ramps: L.layerGroup(),
 			property: L.layerGroup()
 		};
+		/*
+		 * ITEM 7 (1.44.1) — WHAT THE INITIAL VIEW IS FITTED TO.
+		 *
+		 * The Director on live: "The map opens zoomed out to the whole
+		 * county... Fit the initial view to the chain waters the plugin
+		 * already lists (the place menu's list), with the cottages in view.
+		 * Use your own data; don't add waters."
+		 *
+		 * So the fit reads the CHAIN WATERS and the PROPERTY, and nothing
+		 * else. Through 1.44.0 every marker went into the box — the
+		 * monitoring stations and the boat ramps too — and those are the two
+		 * sets that reach furthest out: a USGS gauge on a river leg and a
+		 * public ramp can each sit well beyond the chain, so the box they
+		 * made was the county.
+		 *
+		 * The waters are the same list the place menu shows, which is the
+		 * owner's own stored rows (`chain_waters()`), so nothing is added and
+		 * nothing is guessed. The markers for stations and ramps are
+		 * unchanged and still drawn; only what is MEASURED changed, and a
+		 * guest can still pan or zoom out to them.
+		 */
 		var bounds = [];
 		var waterMarkers = [];
 
@@ -623,7 +644,8 @@
 			});
 			sm.bindPopup(stationPopup(s, i18n), POPUP_OPTS);
 			sm.addTo(groups.stations);
-			bounds.push([s.lat, s.lon]);
+			// NOT in `bounds` (item 7): a gauge can sit a long way down a
+			// river leg, and the stations layer is off by default anyway.
 		});
 
 		(data.ramps || []).forEach(function (r) {
@@ -634,7 +656,8 @@
 			});
 			m.bindPopup(rampPopup(r, i18n), POPUP_OPTS);
 			m.addTo(groups.ramps);
-			bounds.push([r.lat, r.lon]);
+			// NOT in `bounds` (item 7): a public ramp may be on a water the
+			// chain list does not hold.
 		});
 
 		if (data.property) {
@@ -673,8 +696,15 @@
 
 			map.invalidateSize();
 			if (bounds.length) {
-				map.fitBounds(bounds, { padding: [30, 30] });
+				/* The chain waters plus the cottages, padded so the outermost
+				 * dot is not against the edge. `maxZoom` matters for the
+				 * degenerate case: one water and a property a few hundred
+				 * yards apart would otherwise fit at street level. */
+				map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
 			} else {
+				/* No waters AND no property: the owner's rows are never
+				 * empty, so this is the shape that cannot happen rather than
+				 * one that does. The chain's own centre, unchanged. */
 				map.setView([28.8045, -81.7450], 11);
 			}
 			fitted = true;
@@ -940,20 +970,47 @@
 			recolour(key);
 		}
 
-		/* ---- Layers menu: in both shapes, built once -------------------- */
+		/* ---- "Base Map ▾": what is LEFT of the Layers menu (item 3) ------
+		 *
+		 * ROB, 2026-10-20: "chips only. Remove the 'Layers ▾' menu; the chips
+		 * are the one control. 'Colour by ▾' stays."
+		 *
+		 * The overlay checkboxes are gone, so the chips under the map are now
+		 * the ONE control for the layers, which is exactly what he asked for.
+		 *
+		 * BUT THE MENU ALSO HELD TWO THINGS THAT ARE NOT LAYERS, AND BOTH ARE
+		 * EARLIER DECISIONS OF HIS — so neither was deleted on a session's
+		 * judgement, and this is flagged in the notes rather than settled
+		 * here:
+		 *
+		 *   - the BASE MAP radios. Two base layers with satellite as the
+		 *     default is his own choice (1.7.1), and the radios are the only
+		 *     way to reach streets;
+		 *   - FULLSCREEN, which lived in this menu in the COMPACT shape (it is
+		 *     a bar button in the full one), and only where the browser can
+		 *     actually do it (1.31.0).
+		 *
+		 * So the menu keeps those two and nothing else, under the heading it
+		 * already showed above the radios. No new marking style, no new
+		 * component: it is the same `dccwl-drop` with the layer checkboxes
+		 * taken out. If the base map offers no choice AND fullscreen is
+		 * unavailable, the menu is never put on the bar at all — a control
+		 * that cannot do anything is not offered (1.31.0).
+		 */
 
+		var baseWord = i18n.baseMap || 'Base Map';
 		var drop = el('div', 'dccwl-drop');
-		var toggle = el('button', 'dccwl-drop-btn', (i18n.layers || 'Layers') + ' ▾');
+		var toggle = el('button', 'dccwl-drop-btn', baseWord + ' ▾');
 		toggle.type = 'button';
 		toggle.setAttribute('aria-expanded', 'false');
 		toggle.setAttribute('aria-haspopup', 'true');
 		var panel = el('div', 'dccwl-drop-panel');
 		panel.hidden = true;
-		panel.setAttribute('aria-label', i18n.layers || 'Layers');
+		panel.setAttribute('aria-label', baseWord);
 
-		// Base map first — satellite is one tap from streets and vice versa.
+		// Satellite is one tap from streets and vice versa.
 		if (base && base.names.length > 1) {
-			panel.appendChild(el('p', 'dccwl-drop-head', i18n.baseMap || 'Base map'));
+			panel.appendChild(el('p', 'dccwl-drop-head', baseWord));
 			var radios = {};
 			base.names.forEach(function (nm) {
 				var lab = el('label', 'dccwl-drop-row');
@@ -971,18 +1028,16 @@
 			base.onChange(function (nm) {
 				Object.keys(radios).forEach(function (k) { radios[k].checked = (k === nm); });
 			});
-			panel.appendChild(el('hr', 'dccwl-drop-sep'));
 		}
 		/*
-		 * THE OVERLAYS, AND SINCE 1.44.0 THEY HAVE TWO CONTROLS.
+		 * THE OVERLAYS, AND SINCE 1.44.1 THE CHIPS ARE THEIR ONLY CONTROL.
 		 *
-		 * The brief asks for chips under the inline map — "Ramps · Lakes ·
-		 * Stations; use the layers the map really has" — and the Layers menu
-		 * has shown the same four as checkboxes since 1.7.1. So this is the
-		 * 1.33.0 pattern again, the one the Director approved for "Colour
-		 * by": ONE piece of state, two shapes. `setOverlay()` is the only
-		 * path that adds or removes a layer, and it updates the checkbox and
-		 * the chip together, so the two can never show different answers.
+		 * 1.44.0 had two: the chips under the map and the Layers menu's
+		 * checkboxes, kept in step as one piece of state (the 1.33.0
+		 * pattern). Rob's answer to the question that raised was to drop the
+		 * menu, so `setOverlay()` is now the one path to one control. It is
+		 * still the only path that adds or removes a layer — `overlayBoxes`
+		 * is gone with the checkboxes and nothing else sets a group.
 		 *
 		 * The list lives HERE, beside the groups themselves, and the chips
 		 * are built from it — a chip that toggles a layer the map does not
@@ -994,7 +1049,6 @@
 			['stations', i18n.lyrStations || 'Monitoring Stations', false],
 			['property', i18n.lyrProperty || 'The Cottages', true]
 		];
-		var overlayBoxes = {};
 		var overlayChips = {};
 		var overlayOn = {};
 
@@ -1002,32 +1056,25 @@
 			if (!groups[key]) { return; }
 			overlayOn[key] = !!on;
 			if (on) { groups[key].addTo(map); } else { map.removeLayer(groups[key]); }
-			if (overlayBoxes[key]) { overlayBoxes[key].checked = !!on; }
 			if (overlayChips[key]) {
 				overlayChips[key].setAttribute('aria-pressed', on ? 'true' : 'false');
 			}
 		}
 
-		OVERLAYS.forEach(function (row) {
-			var lab = el('label', 'dccwl-drop-row');
-			var cb = document.createElement('input');
-			cb.type = 'checkbox';
-			cb.checked = row[2];
-			overlayBoxes[row[0]] = cb;
-			overlayOn[row[0]] = row[2];
-			cb.addEventListener('change', function () { setOverlay(row[0], cb.checked); });
-			lab.appendChild(cb);
-			lab.appendChild(document.createTextNode(' ' + row[1]));
-			panel.appendChild(lab);
-		});
+		/* The defaults still have to be recorded even with no checkbox to
+		 * carry them: `build()` adds each group to the map itself, and this
+		 * is what the chips' initial pressed state is read from. */
+		OVERLAYS.forEach(function (row) { overlayOn[row[0]] = row[2]; });
 
 		/*
-		 * THE CHIPS, into the host the renderer left for them.
+		 * THE CHIPS, into the host the renderer left for them — and since
+		 * item 3 they are the layers' ONLY control.
 		 *
-		 * They are built only where that host exists, which is the INLINE
-		 * map: a map in a sliding sheet has no room beneath it for a second
-		 * control row, and its Layers menu is one tap away. So the sheet is
-		 * unaffected by this and keeps exactly the controls it had.
+		 * They are built only where that host exists, which is the inline
+		 * map. That is every map a guest can now reach: the sheet map has had
+		 * no door since 1.44.0 made the map inline, and nothing opens one.
+		 * A future sheet map would need a host of its own, or it would have
+		 * no layer control at all.
 		 */
 		var chipHost = document.querySelector('[data-dccwl-map-chips]');
 		if (chipHost && !chipHost.getAttribute('data-dccwl-chips-built')) {
@@ -1052,7 +1099,8 @@
 		}
 		drop.appendChild(toggle);
 		drop.appendChild(panel);
-		bar.appendChild(drop);
+		/* Appended below, once fullscreen has had its chance to add a row:
+		 * an empty menu is not offered. */
 
 		/* ---- Fullscreen, but ONLY where it can actually happen -----------
 		 *
@@ -1063,8 +1111,10 @@
 		 * offered: feature-detect on the element we would actually ask.
 		 *
 		 * Where it IS offered it exists twice — as a bar button in the full
-		 * shape, as a row inside the Layers menu in the compact one — and both
-		 * call the same handler. */
+		 * shape, as a row inside the menu in the compact one — and both call
+		 * the same handler. Since item 3 that menu is "Base Map ▾"; the row
+		 * moved with the menu rather than being dropped, because the compact
+		 * shape is the phone and that is where it is reachable. */
 		var fsBtn = null;
 		var fsRow = null;
 		if (typeof shell.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
@@ -1082,6 +1132,11 @@
 			panel.appendChild(fsLink);
 			fsRow = [fsRow, fsLink];
 		}
+		/* THE MENU GOES ON THE BAR ONLY IF IT HOLDS SOMETHING. With one base
+		 * layer and no fullscreen there is nothing left in it, and a button
+		 * opening an empty panel is worse than no button (1.31.0). */
+		if (panel.firstChild) { bar.appendChild(drop); }
+
 		function toggleFullscreen() {
 			if (document.fullscreenElement) {
 				document.exitFullscreen();

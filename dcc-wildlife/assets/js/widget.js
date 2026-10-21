@@ -585,7 +585,7 @@
 			}
 			// A day-trip species names its place (1.19.0; empty for the canal).
 			if (sp.place) {
-				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.place || 'Where to go'));
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.place || 'Where To Go'));
 				body.appendChild(el('p', 'dccwl-detail-p', sp.place));
 			}
 			// The canal is as much a sound as a sight. Only species with a
@@ -609,7 +609,7 @@
 			// used to render only in the prose guide, so the sheet was silent
 			// about the one thing that identifies it.
 			if (!others.length && sp.mark) {
-				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.tellApart || 'Tell it apart'));
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.tellApart || 'Tell It Apart'));
 				body.appendChild(el('p', 'dccwl-detail-p dccwl-mark-self',
 					fmt(CFG.i18n.tellBy || 'Tell this one by %s.', sp.mark)));
 			}

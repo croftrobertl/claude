@@ -381,68 +381,49 @@ final class Water_Render {
 				<div class="dccwl-map-wrap" data-dccwl-map-wrap>
 					<?php
 					/*
-					 * THE STAT TILES DOUBLE AS "COLOUR BY" (item 3, pick B).
+					 * THE MAP IS THE FIRST THING UNDER THE SWITCH (1.44.1).
 					 *
-					 * Shell only, hidden, filled by water.js from the SAME
-					 * /conditions facts the Now tab renders — a number here is
-					 * never one this codebase chose, and never baked into
-					 * cached HTML. Each tile is a button: Level and Clarity
-					 * open the map already coloured by that reading, which are
-					 * the two colourings the map has. Wind has none, so it
-					 * opens the map as the button does rather than inventing a
-					 * colouring the data cannot support.
-					 */
-					?>
-					<ul class="dccwl-water-stats" data-dccwl-water-stats hidden>
-						<?php
-						$stats = [
-							'level'   => [ __( 'Level', 'dcc-wildlife' ), 'level' ],
-							'clarity' => [ __( 'Clarity', 'dcc-wildlife' ), 'clarity' ],
-							'wind'    => [ __( 'Wind', 'dcc-wildlife' ), '' ],
-						];
-						?>
-						<?php foreach ( $stats as $skey => $stat ) : ?>
-							<li class="dccwl-water-stat" data-dccwl-stat="<?php echo esc_attr( $skey ); ?>" hidden>
-								<button type="button" class="dccwl-water-stat-btn" data-dccwl-stat-colour="<?php echo esc_attr( $stat[1] ); ?>">
-									<span class="dccwl-water-stat-label"><?php echo esc_html( $stat[0] ); ?></span>
-									<span class="dccwl-water-stat-value" data-dccwl-stat-value></span>
-									<?php /* 1.39.0: the qualifier, small, under the reading —
-									         "for September", "clearer than usual here". Empty
-									         for a reading that has none, and `:empty` keeps it
-									         from holding a line open. */ ?>
-									<span class="dccwl-water-stat-detail" data-dccwl-stat-detail></span>
-									<span class="dccwl-water-stat-sub" data-dccwl-stat-sub></span>
-								</button>
-							</li>
-						<?php endforeach; ?>
-					</ul>
-					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from.', 'dcc-wildlife' ); ?></p>
-					<?php
-					/*
-					 * ITEM 2 (1.44.0) — THE MAP IS INLINE, AND THE BUTTON IS
-					 * GONE.
+					 * Rob's instruction for PART B was that the map is what
+					 * you see when Water opens. On live it was not: the Level,
+					 * Clarity and Wind stat tiles and an intro line rendered
+					 * ABOVE it, so on a 390x844 screen the map began about
+					 * 585px down and only half of it was visible. Nothing is
+					 * above the host now.
 					 *
-					 * Rob: the section "opens on Water › Map, with the map
-					 * already showing (no 'Open the chain map' button), loaded
-					 * when the section scrolls into view". So this is an empty
-					 * host, and water.js fills it the first time it is both on
-					 * screen and visible.
+					 * THE THREE STAT TILES ARE REMOVED, NOT MOVED, and this is
+					 * the one place in this release where a 2026-10-01
+					 * decision of Rob's is reversed — so it is written down
+					 * rather than left to be noticed.
 					 *
-					 * THE 1.31.0 RULE IS NOT WEAKENED, IT IS RE-POINTED.
-					 * "The map loads NOTHING external until opened — no
-					 * Leaflet, no tiles, no data." The trigger changed from a
-					 * tap to a viewport intersection; the fetch is still the
-					 * last thing that happens, not the first. A guest who
-					 * never scrolls to the water section still pays nothing,
-					 * and the suite still asserts zero map requests before
-					 * the host is in view.
+					 * They were his item 3 pick B in 1.34.0, and they did two
+					 * jobs: show the headline reading, and open the map
+					 * coloured by it. BOTH jobs now belong elsewhere, and
+					 * putting the tiles in Now — the Director's suggestion —
+					 * would duplicate rather than relocate:
 					 *
-					 * IT MUST ALSO BE VISIBILITY-GATED, not intersection-only.
-					 * A hidden element never intersects anything — the exact
-					 * trap that left 409 guide tiles unbuilt in 1.43.0 — and
-					 * the Map pane is `hidden` whenever Now or Fishing is
-					 * selected. water.js therefore watches the host AND
-					 * listens for the tab becoming visible.
+					 *   - the READING is already a full card in Now, for the
+					 *     place the guest chose, with its source and date; a
+					 *     tile beside it would be the same number twice, and
+					 *     for the canal only, whichever place was picked;
+					 *   - the COLOURING is already "Colour by ▾" on the map's
+					 *     own control bar, which is where a map control
+					 *     belongs and which works on the map you are looking
+					 *     at rather than on one you are about to open;
+					 *   - and WIND had no colouring at all (1.34.0 says so),
+					 *     so its tile was never more than a reading.
+					 *
+					 * The intro line goes with them: it described a map you
+					 * could not see yet, and the map is now in front of it.
+					 *
+					 * WIND, COUNTED: Rob's 2026-10-20 ruling is that wind
+					 * appears ONCE, as the Whole Chain row. With the tile gone
+					 * it does. The map's corner BADGE stays and does not break
+					 * that rule — 1.35.0 is his own option C, and its words
+					 * are that nothing wind-related may be drawn ON THE WATER
+					 * because one forecast does not vary across it. A badge
+					 * pinned to the canvas corner is what he chose INSTEAD of
+					 * drawing on the water; the suite asserts there are no
+					 * wind marks among the map's layers, and still does.
 					 */
 					?>
 					<div class="dccwl-map-inline" data-dccwl-map-host></div>
@@ -510,7 +491,7 @@ final class Water_Render {
 				<?php if ( $general ) : ?>
 					<div class="dccwl-water-general">
 						<p class="dccwl-water-general-head">
-							<?php esc_html_e( 'General guidance — not measured on this water', 'dcc-wildlife' ); ?>
+							<?php esc_html_e( 'General Guidance — Not Measured on This Water', 'dcc-wildlife' ); ?>
 						</p>
 						<ul class="dccwl-cards dccwl-water-facts">
 							<?php foreach ( $general as $fact ) : ?>
@@ -590,7 +571,7 @@ final class Water_Render {
 					         conditions, and never enough on their own to make this
 					         fold appear. */ ?>
 					<div class="dccwl-water-about">
-						<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></h3>
+						<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the Water', 'dcc-wildlife' ); ?></h3>
 						<?php foreach ( $about as $facts ) : ?>
 							<ul class="dccwl-cards dccwl-water-facts">
 								<?php foreach ( $facts as $fact ) : ?>
@@ -737,7 +718,7 @@ final class Water_Render {
 				         as its own thing and not as more fishing advice. */ ?>
 				<hr class="dccwl-fish-rule">
 				<div class="dccwl-fishing-regs">
-					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licences &amp; keep-limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
+					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licences &amp; Keep-Limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
 					<ul class="dccwl-fishing-reglist">
 						<?php foreach ( $regs as $r ) : ?>
 							<?php if ( is_array( $r ) && isset( $r[0], $r[1] ) ) : ?>
@@ -1038,21 +1019,27 @@ final class Water_Render {
 						'byClarity'   => __( 'Clarity', 'dcc-wildlife' ),
 						'byLevel'     => __( 'Level', 'dcc-wildlife' ),
 						'byFresh'     => __( 'Data age', 'dcc-wildlife' ),
-						'layers'      => __( 'Layers', 'dcc-wildlife' ),
 						/*
+						 * `layers` IS DROPPED WITH ITS MENU (item 3, 1.44.1).
+						 * Rob: "chips only. Remove the 'Layers ▾' menu; the
+						 * chips are the one control." A string with no reader
+						 * is a sentence a translator is asked for and nothing
+						 * can print, so it goes with the control.
+						 *
 						 * TITLE CASE SINCE 1.44.0 (item 7). These four are
-						 * LABELS — on a chip under the map and on a row in
-						 * the Layers menu — so Rob's rule covers them:
-						 * "Title Case for every label, button, tab, chip and
-						 * heading". They were sentence case from 1.7.1, when
-						 * they existed only as menu rows.
+						 * LABELS — on the chips under the map — so Rob's rule
+						 * covers them: "Title Case for every label, button,
+						 * tab, chip and heading". They were sentence case
+						 * from 1.7.1, when they existed only as menu rows.
 						 */
 						'lyrRamps'    => __( 'Boat Ramps', 'dcc-wildlife' ),
 						'lyrWaters'   => __( 'Chain Waters', 'dcc-wildlife' ),
 						'lyrStations' => __( 'Monitoring Stations', 'dcc-wildlife' ),
 						'lyrProperty' => __( 'The Cottages', 'dcc-wildlife' ),
 						'fullscreen'  => __( 'Fullscreen', 'dcc-wildlife' ),
-						'baseMap'     => __( 'Base map', 'dcc-wildlife' ),
+						/* Title Case (item 4): it is the menu's own button
+						 * label now, not only a heading inside it. */
+						'baseMap'     => __( 'Base Map', 'dcc-wildlife' ),
 						'satellite'   => __( 'Satellite', 'dcc-wildlife' ),
 						'streets'     => __( 'Streets', 'dcc-wildlife' ),
 						'noImagery'   => __( 'Map imagery is unavailable right now — the markers below are still accurate.', 'dcc-wildlife' ),
@@ -1128,17 +1115,41 @@ final class Water_Render {
 						'ageMonths'   => _x( 'mo', 'compact age unit: months', 'dcc-wildlife' ),
 						'ageYears'    => _x( 'y', 'compact age unit: years', 'dcc-wildlife' ),
 
-						// Colour-by legend (1.8.0, finding 3).
-						'legClearer'  => __( 'Clearer than its own median', 'dcc-wildlife' ),
-						'legUsual'    => __( 'Near its median', 'dcc-wildlife' ),
-						'legMurkier'  => __( 'Murkier than its median', 'dcc-wildlife' ),
-						'legAbove'    => __( 'Above its monthly norm', 'dcc-wildlife' ),
-						'legNear'     => __( 'Near its norm', 'dcc-wildlife' ),
-						'legBelow'    => __( 'Below its norm', 'dcc-wildlife' ),
-						'legFresh'    => __( 'Reading under 45 days old', 'dcc-wildlife' ),
-						'legMonths'   => __( 'Months old', 'dcc-wildlife' ),
-						'legYears'    => __( 'Years old', 'dcc-wildlife' ),
-						'legStale'    => __( 'No current reading', 'dcc-wildlife' ),
+						/*
+						 * Colour-by legend (1.8.0, finding 3).
+						 *
+						 * ITEM 12 (1.44.1) — TITLE CASE, AND THE CLARITY ROWS
+						 * SAY "USUAL" RATHER THAN "MEDIAN".
+						 *
+						 * The Director gave the four clarity rows verbatim:
+						 * "Clearer Than Usual", "Near Usual", "Murkier Than
+						 * Usual" and "No Current Reading". The first three
+						 * also bring the legend into line with what the map
+						 * POPUPS have said since 1.39.0, where the median is
+						 * named ("usual: 3.3 ft") rather than labelled with
+						 * the statistic's name — one word for one idea, on
+						 * two surfaces a guest sees together.
+						 *
+						 * The level and freshness rows are Title Cased with
+						 * them. He named only the clarity four, but a legend
+						 * row is a LABEL and Rob's standing rule (1.44.0,
+						 * item 7) is Title Case for every label — and three
+						 * legends on one control, one of them cased
+						 * differently, would read as a mistake. Their
+						 * WORDING is untouched: "its monthly norm" is the
+						 * statistic the level deviation is actually computed
+						 * against, which is not the same claim as "usual".
+						 */
+						'legClearer'  => __( 'Clearer Than Usual', 'dcc-wildlife' ),
+						'legUsual'    => __( 'Near Usual', 'dcc-wildlife' ),
+						'legMurkier'  => __( 'Murkier Than Usual', 'dcc-wildlife' ),
+						'legAbove'    => __( 'Above Its Monthly Norm', 'dcc-wildlife' ),
+						'legNear'     => __( 'Near Its Norm', 'dcc-wildlife' ),
+						'legBelow'    => __( 'Below Its Norm', 'dcc-wildlife' ),
+						'legFresh'    => __( 'Reading Under 45 Days Old', 'dcc-wildlife' ),
+						'legMonths'   => __( 'Months Old', 'dcc-wildlife' ),
+						'legYears'    => __( 'Years Old', 'dcc-wildlife' ),
+						'legStale'    => __( 'No Current Reading', 'dcc-wildlife' ),
 					],
 				]
 			) . ';',

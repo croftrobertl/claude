@@ -3948,3 +3948,191 @@ nothing a guest cannot**. Mutations verified red: a deep link landing on Water,
 a fourth Peak Now tab, the tab row losing `role="tablist"`, the whole-chain keys
 emptied so wind repeats per lake, and the guide column's dead selector restored.
 Every run is AFTER the restores, never before.
+
+### 35. 1.44.1 — the Director's live pass on 1.44.0, and two defects it exposed
+
+Ten items from Rob's answers and his Website Director's own check of /explore/
+on live (390px, logged out, real Raleway). Everything here is their decision;
+where two items of the brief could not both be satisfied, the measurement
+decided and the conflict is in the release notes rather than settled quietly.
+
+**THE MAP IS THE FIRST THING UNDER THE Map · Now · Fishing SWITCH.** He
+measured it starting about 585px down a 390px screen with only half of it
+visible, because the three stat tiles (Level · Clarity · Wind) and an intro
+line sat above it. **The tiles are REMOVED, NOT MOVED**, and his own
+suggestion — put them in Now — is what proves it: the READING is already a
+full card there for the place a guest chose, with its source and date, so a
+tile beside it would be the same number twice; the COLOURING is already
+"Colour by ▾" on the map's control bar, which acts on the map in front of you
+rather than one you are about to open; and **wind never had a colouring at
+all** (1.34.0 said so), so its tile was only ever a reading.
+
+- **Wind, counted.** Rob's ruling is that wind appears ONCE, as the Whole
+  Chain row. With the tile gone it does, and `ui-live.mjs` counts it on the
+  whole panel rather than reading one element — the duplication was the point.
+  **The map's corner BADGE stays and does not break that rule**: 1.35.0 is his
+  own option C, and what it forbids is drawing wind ON THE WATER, because one
+  forecast for one grid square does not vary across it. The badge is what he
+  chose instead, and the suite still asserts no wind marks among the layers.
+- `fillStats()`, `STAT_KEYS`, the tile markup and about 100 lines of CSS went
+  with them, including one of the uppercase rules item 4 would have had to
+  unpick.
+
+**THE OPENING VIEW IS FITTED TO THE CHAIN WATERS AND THE COTTAGES — NOTHING
+ELSE.** It opened on the whole county because every marker went into the box,
+and the two sets that reach furthest are the ones that are not the chain: a
+USGS gauge down a river leg and a public ramp on another lake. Both are still
+drawn and still reachable by panning; only what is MEASURED changed. The
+waters are the same list the place menu shows, which is the owner's own stored
+rows, so nothing was added and nothing guessed.
+
+**AND THE FIXTURE COULD NOT SHOW THE DEFECT UNTIL IT WAS MADE TO.** Every
+station and ramp in `ui-map.mjs` sat inside the waters' own box, so fitting to
+"every marker" and fitting to "the chain" gave the same view in the harness
+while live opened on the county — *a hand-written fixture can only confirm
+what its author already believed* (1.39.1), in its purest form. Two outliers
+were added, one north and one south, and the assertions are now a PAIR, asked
+of Leaflet itself with `getBoundsZoom` and the real padding: the zoom is
+exactly what the chain box allows, AND it is tighter than every-marker would
+give. Without the second, a change that quietly widened the box again would
+still pass the first.
+
+**THE CHIPS ARE THE LAYERS' ONLY CONTROL, and the menu that is left is "Base
+Map ▾".** Rob: "chips only. Remove the 'Layers ▾' menu; the chips are the one
+control. 'Colour by ▾' stays." So the checkboxes and `overlayBoxes` are gone
+and `setOverlay()` is one path to one control. **But the menu also held two
+things that are not layers, and both are earlier decisions of his**, so
+neither was deleted on a session's judgement and both are flagged in the
+notes: the base-map radios (two base layers, satellite default — 1.7.1) and
+Fullscreen, which lives in that menu in the compact shape and only where the
+browser can actually do it (1.31.0). The menu is not put on the bar at all if
+it would be empty. The sheet map, which had the menu as its only layer
+control, has had no door since 1.44.0 made the map inline.
+
+**`text-transform: uppercase` NO LONGER APPEARS ANYWHERE IN THIS PLUGIN** (11
+declarations, 8 in water.css and 3 in widget.css; the full list is at the head
+of water.css). The Director: "drop the text-transform. Rob's rule is Title
+Case everywhere, so the screen should show what the source says." **The
+letter-spacing stays** — it predates the transform and does the same job on
+mixed case. The strings behind them were Title Cased to match. **What was
+deliberately not re-cased, each for the same reason — the text is not ours:**
+an owner-edited almanac label, fishing season name or fishing species name;
+the seeded "Surface area" row, which is one of those and would need a
+`Water_Data::upgrade()` step to reach a site that has saved the form (1.8.0);
+and the ramp marker's "CLOSED", which is a warning rather than a heading, is
+capitals in the SOURCE, and is described that way on the admin page. Reported,
+not changed.
+
+**"October On The Canal"**, from his own example — note that this capitalises
+"On The" where the water module's "Tonight on the canal" card does not.
+That is his wording for this heading quoted exactly, and the moon card is a
+string already approved on live; neither was changed to match the other.
+
+### The chip is one component now, and it is the Cottage Selector's
+
+`.dccwl-chip` lived TWICE — in widget.css for the guide's chips and in
+water.css for the place chip and the map's layer chips. 1.44.0 flagged that
+and left it. Item 10 forced it: "bring ALL of them to the Selector's chip"
+cannot mean two descriptions of one control. It is declared once in **app.css**,
+the layer both stylesheets depend on — the 1.40.1 rule in its fifth
+application — and both copies are gone, keeping only their menu positioning.
+
+The values are read from `.dccs-chip` on branch
+`origin/claude/dora-canal-cottage-selector-qy12qf`, not from a screenshot:
+white ground, 1px #F4DA62, radius 30px, black ink, weight 600; `is-active` is
+#002E7A on white text with a #0f6dbf edge. Literal hex, like the view
+dropdown's, because these are another plugin's colours matched on purpose and
+a token would invite drift.
+
+**WHAT IS NOT TAKEN FROM THE SELECTOR, AND IT IS A REPORTED CONFLICT: its
+20px type and 24px side padding.** Item 9 of the same brief requires the three
+guide chips on ONE row at 390px with real Raleway metrics. Measured in the
+harness with the row's font inflated 25% to stand in for Raleway, which runs
+about 21% wider than the face this sandbox falls back to:
+
+| | three chips | + gaps | row at 390px |
+|---|---|---|---|
+| as shipped (fs-xs, 12px padding) | 330px | 340px | 374px — fits |
+| Selector's 24px padding, our type | 402px | 412px | 374px — **two lines** |
+| Selector's 24px padding and 20px type (extrapolated) | ~474px | ~484px | 374px |
+
+So the chip takes the Selector's LOOK and keeps a size that fits the row. The
+24px variant is one of the verified mutations, so the table above is a
+measurement rather than an argument.
+
+**ON/OFF IS THE SELECTOR'S SELECTED STATE, and only for things that are on or
+off.** `aria-pressed` is the map's layer chips; `aria-expanded` without
+`aria-haspopup` is the Badges chip, whose key is showing or not. The menu
+chips (Month, Show, Pick A Place) never take it — what they say is their own
+label.
+
+### Two defects that were invisible because they looked almost right
+
+**A LABEL SPAN INSIDE A 600 BUTTON WAS RENDERING AT 400.** The Director
+measured `.dccwl-viewselect-trigger` at 700 and its `.dccwl-viewselect-label`
+at 400. The cause is `.dccwl-app span` in app.css's type floor (0,1,1), which
+has set 400 since 1.27.0 to stop a 700 root making the whole guide bold — it
+NAMES the element, so it beats anything the button merely passes down. Which
+is why the Badges chip looked right all along: **its label is a bare text node
+with no span to catch.** Every label span is `font-weight: inherit` now, not a
+number, so a change to a control's own weight cannot leave its label behind —
+and the suite reads the SPAN. *A test that read the button passed throughout.*
+
+**EVERY SELECTED SPECIES TAB CARRIED A FOCUS RING AT REST.** Measured on a tab
+nobody had touched: `inset gold 2px, rgba(0,107,207,.38) 0 0 0 3px`. Three
+blocks in app.css were written as
+
+    A[aria-selected="true"],
+    A[aria-pressed="true"]:hover { … }
+
+and **a comma-separated list does not share a trailing pseudo-class**, so the
+bare selected selector applied unconditionally. The water bar was unaffected
+because its tabs report `aria-pressed`, which is the selector the pseudo-class
+happened to be attached to. This is what the Director suspected when he asked
+us to confirm the selected segment was "not a hover state left on" — it was a
+FOCUS state left on. Both bars now read `inset gold 2px` and nothing else.
+
+**"Exactly the Calendar's selected segment" could NOT be verified here**, and
+is reported rather than claimed: this repo's `mphb-availability-calendar` has
+no segmented switch, and the W1 switch the brief refers to is not in any
+branch in this container. What is verified is that Map and Animals are now
+identical to each other, and the exact values are in the notes for comparison
+on live.
+
+### A 1.16px misalignment, found the 1.35.0 way
+
+Two of the three chips sit inside a wrapper div carrying their menu's
+`position: relative`. As BLOCKS containing an inline-flex button those
+wrappers built a line box — about 46.3px around a 44px chip — so the row
+centred the WRAPPER and dropped those two 1.16px below the Badges chip, which
+has no wrapper (`.dccwl-subnav`, the category pill's, has been flex since
+1.38.0, which is why only two of three were out). `display: flex` on
+`.dccwl-monthpick` and `.dccwl-pick` builds no line box and all three share a
+top. **Measured, not reasoned about: 245.94 against 244.78 at 390px** — the
+same method that found the 0.9px baseline in 1.35.0, and it has its own
+assertion rather than being swallowed by the row-count tolerance.
+
+### Harness: still 33 suites, and one probe that was measuring the wrong thing
+
+- **The mid-word-break probe counted RECTS, not LINES.** Chromium returns
+  several client rects for a Range inside a flex item even when the word sits
+  on one line, so re-pointing it at the reading cards reported every word in
+  the source line as broken. It groups by rounded `top` now, and a forced
+  `word-break: break-all` proves it still catches a real split — a probe that
+  can only pass is the oldest prohibition in this harness.
+- **Two assertions that encoded a superseded look were updated, never
+  loosened:** ui-theme's "the pill is solid #006BCF" is now the Selector's
+  white chip with its gold edge, radius and weight; ui-mapbar's "two controls,
+  one state" section is replaced by the absence it became — no checkbox
+  anywhere in the bar — plus what still has to be true, that a chip really
+  adds and removes a layer.
+- **A note that asserted nothing was replaced by an assertion.** The dates
+  section read `.dccwl-water-stat-sub` — a deleted element — and printed it.
+  It reads the cards' source lines now and requires none of them to carry a
+  machine date, which is what the "a source name may carry a MONTH" exception
+  actually needs.
+- Eight mutations verified red, each restored with `cp`/`mv` and the whole
+  harness re-run AFTER the restores: a line above the map host; the label span
+  back at 400; the Selector's 24px padding; the Layers checkboxes back; a
+  blue-filled chip; the fit widened to every marker; a legend string reverted;
+  and a forced mid-word break.

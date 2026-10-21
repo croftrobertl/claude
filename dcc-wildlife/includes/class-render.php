@@ -1318,8 +1318,25 @@ final class Render {
 			// mu-plugin's behaviour; only the DAY COUNT is computed client-side.
 			'countdown'  => self::countdown_possible(),
 			'i18n'       => [
-				/* translators: %s: month name, e.g. "August". */
-				'headline'    => __( '%s on the canal', 'dcc-wildlife' ),
+				/*
+				 * ITEM 11 (1.44.1) — "October On The Canal".
+				 *
+				 * The Director's instruction, with his own example: "'October
+				 * on the canal' → 'October On The Canal', and the same for
+				 * each month's heading". One string serves all twelve months
+				 * — widget.js substitutes the month name — so there is one
+				 * edit here and no month can be cased differently from
+				 * another.
+				 *
+				 * Note that this capitalises "On The", where the water
+				 * module's "Tonight on the canal" card does not. That is his
+				 * wording for this heading, quoted exactly, and the moon card
+				 * is a string he has already approved on live; neither was
+				 * changed to match the other without asking.
+				 *
+				 * translators: %s: month name, e.g. "August".
+				 */
+				'headline'    => __( '%s On The Canal', 'dcc-wildlife' ),
 				/* translators: %d: number of species (2 or more). */
 				/*
 				 * 1.27.0: "%d species at their peak" is gone from the subline
@@ -1374,7 +1391,7 @@ final class Render {
 				 * says that in its own "Where to go" section.
 				 */
 				'safe'        => __( 'What To Do', 'dcc-wildlife' ),
-				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
+				'tellApart'   => __( 'Tell It Apart', 'dcc-wildlife' ),
 				'deckPrev'    => __( 'Previous species', 'dcc-wildlife' ),
 				'deckNext'    => __( 'Next species', 'dcc-wildlife' ),
 				/* translators: 1: first item shown, 2: last item shown, 3: total. */
@@ -1393,7 +1410,7 @@ final class Render {
 				'searchCount' => __( '%d species match', 'dcc-wildlife' ),
 				'searchOne'   => __( '1 species matches', 'dcc-wildlife' ),
 				/* translators: %d: total number of species in this view. */
-				'place'       => __( 'Where to go', 'dcc-wildlife' ),
+				'place'       => __( 'Where To Go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.
 				'where'       => __( 'Where To Look', 'dcc-wildlife' ),

@@ -9,6 +9,48 @@
  * gate is upstream of all of it. This file is chrome.
  */
 
+/* ======================================================================
+ * ITEM 4 (1.44.1) — NO ELEMENT IN THIS PLUGIN SETS `text-transform:
+ * uppercase` ANY MORE.
+ *
+ * The Director's ruling: "drop the text-transform. Rob's rule is Title Case
+ * everywhere ('Level', 'Clarity', 'Wind', 'Whole Chain · NWS Forecast'), so
+ * the screen should show what the source says."
+ *
+ * Eight declarations went from this file and three from widget.css:
+ *   water.css   .dccwl-water-sub, .dccwl-card-label,
+ *               .dccwl-water-general-head, .dccwl-drop-head,
+ *               .dccwl-moon-label, .dccwl-fishing-season-name,
+ *               .dccwl-fishing-h, .dccwl-fish-species h4
+ *   widget.css  .dccwl-hero-label, .dccwl-sheet .dccwl-detail-h,
+ *               .dccwl-fg-group
+ *
+ * THE LETTER-SPACING STAYS. It was there before the transform (1.9.0) and
+ * does the same job on mixed case: it is what separates a small muted label
+ * from the body text under it. Only the casing was ever the complaint.
+ *
+ * THE STRINGS BEHIND THEM WERE TITLE CASED TO MATCH, because a source that
+ * reads "Water level" now renders that way: "Water Level", "Water Clarity
+ * (Secchi Depth)", "Dissolved Oxygen", "Depth Map", "Recent Rain" in
+ * class-water-live.php; "About the Water", "General Guidance — Not Measured
+ * on This Water" and "Licences & Keep-Limits — Florida FWC" in
+ * class-water-render.php; "Tell It Apart" and "Where To Go" in
+ * class-render.php.
+ *
+ * WHAT WAS DELIBERATELY NOT RE-CASED, and it is the same reason in each
+ * case — the text is not ours to re-case:
+ *   - an owner-edited almanac row's label, a fishing season's name and a
+ *     fishing species' name. Those come from the settings form, and "show
+ *     what the source says" means the owner's own words;
+ *   - the seeded "Surface area" almanac row, which is one of those rows: it
+ *     is stored, so changing it would need a `Water_Data::upgrade()` step to
+ *     reach a site that has ever saved the form (1.8.0), and it would
+ *     overwrite a label the owner may have edited;
+ *   - the ramp marker's "CLOSED", which is a warning rather than a heading,
+ *     is all caps in the SOURCE string, and is described that way on the
+ *     admin page. Reported rather than changed.
+ * ====================================================================== */
+
 .dccwl-water {
 	font-family: var(--dccwl-font);
 	margin: 0 auto;
@@ -35,7 +77,6 @@
 	letter-spacing: 0.06em;
 	margin: 0 0 var(--dccwl-gap);
 	text-align: center;
-	text-transform: uppercase;
 }
 
 /* =====================================================================
@@ -80,7 +121,6 @@
 	font-size: var(--dccwl-fs-xs);
 	font-weight: 700;
 	letter-spacing: 0.05em;
-	text-transform: uppercase;
 }
 
 /* The source + age chip. The source name can be long ("USGS rain gauge
@@ -174,7 +214,6 @@
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	margin: 0 0 var(--dccwl-gap);
-	text-transform: uppercase;
 }
 
 .dccwl-water .dccwl-water-linklist {
@@ -379,7 +418,6 @@
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	margin: 0 0 6px;
-	text-transform: uppercase;
 }
 
 .dccwl-drop-row {
@@ -455,6 +493,12 @@
 
 /* --- the colour-by legend (1.8.0) --- */
 
+/* ITEM 12 (1.44.1) — THE ROWS CENTRE AS A GROUP. The Director found them
+ * left-aligned under the map on live, which is the one block in the Map pane
+ * that was not centred with the rest of the section (1.44.0, items 6 and 7).
+ * `justify-content` centres each LINE of the wrap, so at 390px — where four
+ * rows become two lines — both lines sit on the map's centre line rather
+ * than the second one trailing off to the left. */
 .dccwl-map-legend {
 	align-items: center;
 	background: var(--dccwl-detail-bg);
@@ -463,6 +507,7 @@
 	flex: none;
 	flex-wrap: wrap;
 	gap: 6px 16px;
+	justify-content: center;
 	padding: 7px 10px;
 }
 
@@ -562,7 +607,6 @@
 	font-weight: 700;
 	letter-spacing: 0.06em;
 	margin: 0;
-	text-transform: uppercase;
 }
 
 .dccwl-moon-phase {
@@ -654,7 +698,6 @@
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	margin: 0 0 6px;
-	text-transform: uppercase;
 }
 
 .dccwl-fishing-line {
@@ -698,7 +741,6 @@
 	font-weight: 700;
 	letter-spacing: 0.06em;
 	margin: 0 0 6px;
-	text-transform: uppercase;
 }
 
 .dccwl-fishing-reglist {
@@ -958,108 +1000,25 @@
 	font-size: var(--dccwl-fs-sm);
 	letter-spacing: .03em;
 	margin: 0 0 .15em;
-	text-transform: uppercase;
 }
 .dccwl-fish-rule { background: var(--dccwl-line); border: 0; height: 1px; margin: var(--dccwl-gap-lg) 0; }
 
-/* ==================================================================
- * ITEM 3 (1.34.0, Rob's pick B) — the Map tab's stat tiles.
+/* ITEM 6 (1.44.1) — THE MAP TAB'S THREE STAT TILES ARE DELETED, AND SO IS
+ * ALL OF THEIR CSS (about 100 lines of it, including the uppercase label rule
+ * item 4 would otherwise have had to unpick).
  *
- * Three big-number tiles under the Map tab's intro, which double as the
- * map's "Colour by" control: pressing Level or Clarity opens the map already
- * coloured by that reading. They are TILES in the 1.18.0 sense (white ground,
- * hairline, shadow) because each one is a piece of content, not a toggle on a
- * tinted band — and they are buttons, so app.css's button reset applies.
+ * The Director found the map starting about 585px down a 390px screen, with
+ * only half of it visible, because the tiles and an intro line sat above it.
+ * His instruction: "Put the map directly under the Map · Now · Fishing
+ * switch. If those cards belong anywhere, they belong in Now, not above the
+ * map."
  *
- * A tile with no reading is hidden by water.js, so the row is as wide as the
- * facts that arrived; `auto-fit` lets one or two tiles fill the row rather
- * than leaving a hole where the third would have been.
+ * They are REMOVED, NOT MOVED, and class-water-render.php carries the reason:
+ * every reading a tile showed is already a full card under Now, with its
+ * source and date, and the colouring the tiles doubled as is already the
+ * map bar's own "Colour by ▾". Moving them would print each reading twice on
+ * one screen. Wind never had a colouring at all (1.35.0).
  * ================================================================== */
-.dccwl-water .dccwl-water-stats {
-	display: grid;
-	gap: var(--dccwl-gap);
-	/* ITEM 2 (1.37.0, LOST, RE-APPLIED 1.38.0) — ONE TILE PER ROW ON A PHONE,
-	 * three across from 768px. auto-fit squeezed three readings into a 390px
-	 * row at 108px each, which is where "September" was breaking mid-word.
-	 * This line and the value's size below were written in 1.37.0 and never
-	 * reached the file: the script that made all three edits asserted on the
-	 * third, aborted before writing, and only the failed one was re-run. */
-	grid-template-columns: 1fr;
-	list-style: none;
-	margin: 0 0 var(--dccwl-gap-lg);
-	padding: 0;
-}
-.dccwl-water .dccwl-water-stat-btn.dccwl-water-stat-btn {
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius-lg);
-	box-shadow: var(--dccwl-shadow-tile);
-	cursor: pointer;
-	display: block;
-	min-height: 44px;
-	padding: var(--dccwl-gap) calc(var(--dccwl-gap) / 2);
-	text-align: center;
-	width: 100%;
-}
-.dccwl-water .dccwl-water-stat-label {
-	color: var(--dccwl-text-muted);
-	display: block;
-	font-size: var(--dccwl-fs-xs);
-	font-weight: var(--dccwl-fw-label);
-	letter-spacing: .04em;
-	text-transform: uppercase;
-}
-.dccwl-water .dccwl-water-stat-value {
-	color: var(--dccwl-text);
-	display: block;
-	/* ITEM 2: the reading reads at the species-tile size and weight, not at
-	 * the 27px/700 it had. Also lost in 1.37.0; see the note above. */
-	font-size: var(--dccwl-fs-base);
-	font-weight: var(--dccwl-fw-label);
-	line-height: 1.25;
-}
-/* ITEM 3 (1.39.0) — the qualifier, small, between the reading and its source.
- * Same size and weight as the source line, so the tile reads as one large
- * number over two quiet lines. `:empty` matters: a reading with no qualifier
- * (the wind forecast has none) must not hold a blank line open. */
-.dccwl-water .dccwl-water-stat-detail {
-	color: var(--dccwl-text-muted);
-	display: block;
-	font-size: 0.65rem;
-	font-weight: var(--dccwl-fw-body);
-	line-height: 1.3;
-}
-.dccwl-water .dccwl-water-stat-detail:empty { display: none; }
-
-.dccwl-water .dccwl-water-stat-sub {
-	color: var(--dccwl-text-muted);
-	display: block;
-	/* ITEM 2: the source sits under the reading in small text. 0.65rem is
-	 * 13px on the deployment root, which is the size Rob asked for; the rem
-	 * keeps a visitor's own text-size setting working. */
-	font-size: 0.65rem;
-	font-weight: var(--dccwl-fw-body);
-}
-
-/*
- * ITEM 2 — NOTHING BREAKS MID-WORD. "September" split as "Septem/ber" on his
- * phone, because three readings were squeezed into a 390px row. A tile is one
- * reading and one source: if a word will not fit it wraps at a space, never
- * inside a word.
- */
-.dccwl-water .dccwl-water-stat-label,
-.dccwl-water .dccwl-water-stat-value,
-.dccwl-water .dccwl-water-stat-detail,
-.dccwl-water .dccwl-water-stat-sub {
-	hyphens: none;
-	overflow-wrap: normal;
-	word-break: normal;
-}
-
-/* Three across once there is room for them — at 768px, the width Rob named. */
-@media (min-width: 768px) {
-	.dccwl-water .dccwl-water-stats { grid-template-columns: repeat(3, 1fr); }
-}
 
 /* The readings fold (item 3, pick B). It is the shared fullguide component, so
  * it already matches Field Guide and Credits; only its width is set here, and
@@ -1253,15 +1212,17 @@
 /* ======================================================================
  * ITEM 2 (1.39.0) — THE MAP TAB CENTRES.
  *
- * The three stat tiles above these are centred, so a left-aligned sentence
- * and a left-aligned button underneath read as a different column. Rob asked
- * for the intro line and the "Open the chain map" button to line up with the
- * tiles. The button is centred by its PARAGRAPH's text-align rather than by
- * margins: it is an inline-flex box, and `margin: 0 auto` does nothing for
- * one — the 1.36.0 lesson about the season bar, in its smaller form.
+ * `.dccwl-map-intro + p` went with the stat tiles in 1.44.1: it centred the
+ * "Open the chain map" button's paragraph, and the map is inline now, so that
+ * selector matched nothing. Deleted rather than left, for the reason this
+ * repository has learned six times over — a rule that matches nothing is
+ * invisible, and a file of them hides which rules carry weight.
+ *
+ * What remains is the one surviving intro paragraph: the `<noscript>` line
+ * that stands where the map would be. It centres like the rest of the
+ * section.
  * ====================================================================== */
-.dccwl-water .dccwl-map-intro,
-.dccwl-water .dccwl-map-intro + p {
+.dccwl-water .dccwl-map-intro {
 	text-align: center;
 }
 
@@ -1269,18 +1230,14 @@
 /* ======================================================================
  * ITEM 3 (1.44.0) — THE PLACE PICKER AND THE WHOLE-CHAIN ROW.
  *
- * The chip itself takes the guide's own chip rules: water.css loads app.css
- * but NOT widget.css, where `.dccwl-chip` lives, so the shape is declared
- * here for the water module's own surfaces. That is the 1.40.1 rule in its
- * awkward case — a shared component belongs in the shared layer — and the
- * honest reading of it is that `.dccwl-chip` SHOULD move to app.css the next
- * time either stylesheet is opened. It is not moved in this release because
- * moving a component between layers changes what wins against what, and this
- * release has already reordered the DOM; flagged rather than done quietly.
- *
- * Until then these rules are deliberately a COPY WITH ONE SOURCE: every
- * value is a token, so the two cannot drift on a colour, a radius or the
- * 44px floor. If you change one, change both — and better, move it.
+ * THE CHIP MOVED TO app.css IN 1.44.1, which is what the note here asked
+ * for: 1.44.0 declared the shape twice, once in widget.css for the guide's
+ * chips and once here, and flagged that a shared component belongs in the
+ * shared layer. Item 10 forced the issue — "bring ALL of them to the
+ * Selector's chip" cannot mean two descriptions of one control — so the
+ * component is declared once, in the layer both stylesheets depend on, and
+ * both copies are gone. What is left here is the water module's own LAYOUT
+ * and its menu positioning.
  * ====================================================================== */
 
 .dccwl-water-placerow { margin-bottom: var(--dccwl-gap-lg); }
@@ -1290,38 +1247,6 @@
  * is not itself centred. */
 .dccwl-water-placerow { position: relative; }
 
-.dccwl-water .dccwl-chip.dccwl-chip.dccwl-chip {
-	align-items: center;
-	background: var(--dccwl-btn-bg);
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	display: inline-flex;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-label);
-	gap: 6px;
-	letter-spacing: 0;
-	min-height: 44px;
-	padding: 0 14px;
-	text-transform: none;
-	white-space: nowrap;
-}
-/* CORAL HOVER ONLY WITH A REAL POINTER (item 0). On a phone the kit's coral
- * sticks to the last thing a finger touched, which is the defect item 8 has
- * chased for three releases. */
-@media (hover: hover) and (pointer: fine) {
-	.dccwl-water .dccwl-chip.dccwl-chip.dccwl-chip:hover {
-		background: var(--dccwl-accent);
-		color: #ffffff;
-	}
-}
-.dccwl-water .dccwl-chip.dccwl-chip.dccwl-chip:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-.dccwl-water .dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }
 
 .dccwl-water .dccwl-chipmenu {
 	background: #ffffff;
@@ -1494,12 +1419,17 @@
 }
 
 /*
- * THE LAYER CHIPS, below the map. They take the place picker's chip rules
- * above — same component, same 44px floor, same coral-with-a-real-pointer
- * hover — and the only difference is the SELECTED look: these are toggles,
- * several of which are on at once, so an unpressed one must read as "off"
- * rather than as "not chosen". Unpressed is the quiet outline; pressed is the
- * solid button every other selected control in the plugin is.
+ * THE LAYER CHIPS, below the map. They are the shared chip from app.css —
+ * same component, same 44px floor, same coral-with-a-real-pointer hover —
+ * and since item 10 (1.44.1) their OFF and ON looks are the Cottage
+ * Selector's own two states: white with the gold edge when off, #002E7A with
+ * white text when on. Several can be on at once, which is what makes them
+ * toggles and why they report `aria-pressed`; the shared rule paints the ON
+ * state from that attribute, so nothing is declared here for it.
+ *
+ * `[aria-pressed="false"]` needed its own override while the chip's resting
+ * look was the blue pill. It no longer does — the resting look IS the off
+ * look — so the rule went with the old component.
  */
 .dccwl-map-chips {
 	display: flex;
@@ -1510,8 +1440,3 @@
 }
 .dccwl-map-chips[hidden] { display: none; }
 
-.dccwl-water .dccwl-chip.dccwl-map-chip.dccwl-map-chip[aria-pressed="false"] {
-	background: #ffffff;
-	border-color: var(--dccwl-line-strong);
-	color: var(--dccwl-text);
-}

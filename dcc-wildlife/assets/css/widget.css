@@ -65,7 +65,6 @@
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	margin: 0;
-	text-transform: uppercase;
 }
 
 .dccwl-hero-value {
@@ -704,7 +703,13 @@
 	text-align: center;
 }
 
-/* 1.27.0, at the owner's request. This WAS a small uppercase muted label
+/* ITEM 4 (1.44.1): the `text-transform: uppercase` is gone from here and
+ * from two more rules in this file — see the note at the head of water.css
+ * for the ruling and the full list. The letter-spacing stays; only the
+ * casing was the complaint, and the heading strings are Title Case at
+ * source.
+ *
+ * 1.27.0, at the owner's request. This WAS a small uppercase muted label
  * above larger body text — a standard pattern, and deliberate. He wants the
  * section title to read as the larger of the two, so the sizes swap. Both
  * declare a size now: leaving the content sizeless is what let the host
@@ -717,7 +722,6 @@
 	letter-spacing: 0.06em;
 	margin: var(--dccwl-gap-lg) 0 4px;
 	text-align: center;
-	text-transform: uppercase;
 }
 
 .dccwl-sheet .dccwl-detail-p {
@@ -974,7 +978,6 @@
 	margin: var(--dccwl-gap-lg) auto var(--dccwl-gap);
 	padding-top: var(--dccwl-gap-lg);
 	text-align: center;
-	text-transform: uppercase;
 }
 .dccwl-fg-group:first-child { border-top: 0; padding-top: 0; }
 
@@ -1447,6 +1450,26 @@
  */
 .dccwl-chiprow { position: relative; }
 
+/*
+ * THE CHIPS' WRAPPERS ARE FLEX, AND THAT IS A SUB-PIXEL FIX (1.44.1).
+ *
+ * `.dccwl-monthpick` and `.dccwl-pick` are the divs that carry each menu's
+ * `position: relative`. As BLOCKS containing an inline-flex button they built
+ * a line box, so each measured about 46.3px around a 44px chip — and the row
+ * centres the WRAPPER, which put those two chips 1.16px lower than the
+ * Badges chip, which is a direct flex item with no wrapper. (`.dccwl-subnav`,
+ * the category pill's own wrapper, has been flex since 1.38.0 — which is why
+ * only two of the three were out.)
+ *
+ * Measured, not guessed: 245.94 against 244.78 at 390px. A flex container
+ * builds no line box, so all three are now 44px and share one top. Exactly
+ * the 1.35.0 lesson in a new place — the wrapper's line box, not the label,
+ * is what positions the control — and the method was the same: diff the
+ * computed geometry of the two things that disagree.
+ */
+.dccwl-monthpick,
+.dccwl-pick { display: flex; }
+
 /* The badge key takes a LINE OF ITS OWN under the chips rather than sitting
  * among them: it is a paragraph of four definitions, and as a flex item it
  * would squeeze the three chips onto a second row whenever it was open.
@@ -1460,43 +1483,14 @@
 }
 .dccwl-chiprow > .dccwl-legend[hidden] { display: none; }
 
-/* The ⓘ, at the chip's own label size — never larger, because Raleway may
- * not carry it and a fallback face must not render it bigger or bolder than
- * what the row was approved at (the 1.41.0 rule for ▾ ▴ ›). */
-.dccwl-chip-i { font-size: 1.05em; line-height: 1; }
-
-.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip,
-.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn {
-	align-items: center;
-	background: var(--dccwl-btn-bg);
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-btn-txt);
-	cursor: pointer;
-	display: inline-flex;
-	font: inherit;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-label);
-	gap: 6px;
-	letter-spacing: 0;
-	/* The 44px touch target the whole plugin keeps for its older clientele. */
-	min-height: 44px;
-	padding: 0 14px;
-	text-transform: none;
-	white-space: nowrap;
-}
-.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip:hover,
-.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:hover {
-	background: var(--dccwl-accent);
-	color: #ffffff;
-}
-.dccwl-root .dccwl-chip.dccwl-chip.dccwl-chip:focus-visible,
-.dccwl-root .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-.dccwl-pick-chev,
-.dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }
+/*
+ * THE CHIP ITSELF MOVED TO app.css (items 8 and 10, 1.44.1), with the ⓘ and
+ * caret sizes that went with it. It is rendered by the guide AND by the water
+ * module, so neither widget's stylesheet may own it — the 1.40.1 rule, in its
+ * fourth application. The copy that lived here set the old blue-pill look;
+ * the shared one is the Cottage Selector's chip, which is what Rob's Director
+ * asked for. What stays below is this row's LAYOUT, which is the guide's own.
+ */
 
 /* The list drops straight under the pill. Absolute, so it never pushes the
  * tiles down as it opens, and above them while it is open. */

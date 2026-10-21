@@ -65,6 +65,25 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   /* `aria-selected` since 1.44.0: the species tabs are a real tablist. The
    * water bar in the same document is still `role="group"` and reports
    * `aria-pressed`, which is why this stayed scoped to the species panel. */
+  /*
+   * READ THE RESTING SELECTED TAB BEFORE ANYTHING IS TAPPED. After a tap the
+   * tapped tab is focused, so :focus-visible may legitimately be in play and
+   * the reading would not answer item 10's question. The species panel's
+   * first tab is selected by the renderer and nobody has touched it.
+   */
+  const restingTab = await page.evaluate(() => {
+    const out = {};
+    [['species', '[data-dccwl-panel="species"] .dccwl-tab[aria-selected="true"]'],
+     ['water', '.dccwl-water-tabs .dccwl-tab[aria-pressed="true"]']].forEach((row) => {
+      const t = document.querySelector(row[1]);
+      if (!t) { return; }
+      const cs = getComputedStyle(t);
+      out[row[0]] = { bg: cs.backgroundColor, shadow: cs.boxShadow, focused: document.activeElement === t };
+    });
+    return out;
+  });
+  note(`${w}px resting selected tabs ${JSON.stringify(restingTab)}`);
+
   const tab = await page.$('[data-dccwl-panel="species"] .dccwl-tab:not([aria-selected="true"])');
   if (touch) { await tab.tap(); } else { await tab.click(); }
   await page.waitForTimeout(250);
@@ -78,6 +97,26 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   note(`${w}px ${touch ? 'touch' : 'mouse'} ${JSON.stringify(after)}`);
   checkSame(CORAL, after.bg, `${w}px: the tapped tab is coral`);
   checkSame(WHITE, after.fg, `${w}px: and its label is WHITE immediately after the tap`);
+
+  /*
+   * ITEM 10 (1.44.1) — THE SELECTED SEGMENT IS A RESTING STATE, AND NOTHING
+   * ELSE IS LEFT ON IT.
+   *
+   * The Director asked us to "confirm that the selected segment (Map,
+   * Animals: coral fill, gold edge) is exactly the Calendar's selected
+   * segment, not a hover state left on". Read on a tab NOBODY has touched,
+   * so neither :hover nor :focus-visible can be in play: it must carry the
+   * coral fill and the 2px inset gold edge, and NOT the focus ring.
+   */
+  for (const bar of Object.keys(restingTab)) {
+    const r = restingTab[bar];
+    checkSame(false, r.focused, `${w}px: the ${bar} bar's selected tab is untouched`);
+    checkSame(CORAL, r.bg, `${w}px: and coral at rest (${bar})`);
+    check(/inset/.test(r.shadow || ''),
+      `${w}px: with its 2px inset gold edge (${bar})`, r.shadow || '');
+    check(!/rgba\(0, 107, 207/.test(r.shadow || ''),
+      `${w}px: and NOT the focus ring — nothing left on it (${bar})`, r.shadow || '');
+  }
 
   /*
    * THE MONTH PILLS AND THE COMPACT SWITCH BOTH LEFT IN 1.44.0, so item 8 is
@@ -150,6 +189,169 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
     checkSame(CORAL, chosen.bg, `${w}px: the chosen category is coral in the open list`);
     checkSame(WHITE, chosen.fg, `${w}px: with white text, after real taps`);
   }
+  await page.close();
+}
+
+/* ====================== ITEMS 8 AND 9: THE CHIP ROW ====================== */
+/*
+ * ITEM 8 — THE WEIGHT IS ASSERTED ON THE LABEL SPAN, NOT ON THE BUTTON.
+ *
+ * The Director: "`.dccwl-viewselect-trigger` computes 700, but its
+ * `.dccwl-viewselect-label` span computes 400... Find the rule that sets the
+ * span to 400, beat it with your prefix, and assert the computed weight on
+ * the LABEL SPAN, not the button."
+ *
+ * The rule was `.dccwl-app span` in app.css's type floor (0,1,1), which has
+ * set 400 since 1.27.0 — the layer that stopped the whole guide rendering
+ * bold on a 700 root. It reaches a chip's inner span directly, and
+ * inheritance from the button loses to it. Which is why the Badges chip
+ * looked right all along: its label is a bare TEXT NODE with no span to
+ * catch.
+ *
+ * So every label span now declares `font-weight: inherit`, and this section
+ * reads the SPAN. A test that read the button passed throughout.
+ *
+ * ITEM 9 — AND THE ROW HAS TO FIT, IN RALEWAY.
+ *
+ * "The chip row doesn't fit at 390px with Raleway... Make the three sit
+ * together, centred, on one row at 390px, and wrap as a centred group at
+ * 360px. Test with the real font metrics (load Raleway in the harness, or
+ * assert widths with a wider fallback)."
+ *
+ * There is no Raleway in this container and no network to fetch one, so this
+ * takes the second option, which is the trick the tab-row and map-bar suites
+ * already use: INFLATE THE ROW'S FONT BY 25% and require it to fit anyway.
+ * Raleway runs about 21% wider than the face this sandbox falls back to, so
+ * 25% covers it with a little over. That is a stand-in, not the site — said
+ * plainly because the footnote row passed here at 361px and wrapped at 393px
+ * on live, and that is the whole reason this method exists.
+ */
+section('items 8 and 9 — the chip labels declare a weight, and the row fits');
+
+for (const [w, touch] of [[390, true], [360, true], [1280, false]]) {
+  const h = await widgetPage(browser, 'canal', { width: w, height: 1000, sitekit: true, touch });
+  const page = h.page;
+  await openWildlife(page);
+  await page.waitForTimeout(800);
+
+  /* ---- item 8: every label span, against its own button --------------- */
+  const weights = await page.evaluate(() => {
+    const out = [];
+    const add = (name, btnSel, spanSel) => {
+      const btn = document.querySelector(btnSel);
+      if (!btn || !btn.getClientRects().length) { return; }
+      const span = spanSel ? btn.querySelector(spanSel) : null;
+      out.push({
+        name,
+        button: getComputedStyle(btn).fontWeight,
+        span: span ? getComputedStyle(span).fontWeight : null,
+        text: (span || btn).textContent.replace(/\s+/g, ' ').trim(),
+      });
+    };
+    add('month chip', '[data-dccwl-monthbtn]', '.dccwl-chip-label');
+    add('show pill', '[data-dccwl-pick-btn]', '.dccwl-pick-label');
+    add('show value', '[data-dccwl-pick-btn]', '.dccwl-pick-value');
+    add('view dropdown', '[data-dccwl-viewtrigger]', '.dccwl-viewselect-label');
+    return out;
+  });
+  note(`${w}px weights ${JSON.stringify(weights)}`);
+  checkAtLeast(3, weights.length, `${w}px: the labelled controls are on the page`);
+  for (const row of weights) {
+    checkSame(row.button, row.span,
+      `${w}px: the ${row.name}'s label span carries the button's own weight`,
+      `button ${row.button}, span ${row.span}, "${row.text}"`);
+  }
+
+  /* ---- item 9: the row, with the font inflated to stand in for Raleway -- */
+  const row = await page.evaluate(() => {
+    const rowEl = document.querySelector('.dccwl-chiprow');
+    if (!rowEl) { return { error: 'no chip row' }; }
+    /* 125% of whatever the row inherits. Set on the ROW so every chip, its
+     * label and its caret grow together — a chip sized from a token would
+     * otherwise keep its own size and the measurement would prove nothing. */
+    const prev = rowEl.style.fontSize;
+    rowEl.style.fontSize = '125%';
+    /* Read after a layout, and read the CONTROLS rather than the row: the
+     * row is a wrapping flex container and its own height says nothing
+     * about how many lines its items took. */
+    /* VISIBLE ONLY. There is one category pill per SECTION and the two that
+     * are not showing are still in the row's subtree at zero width — the
+     * first run of this check reported five chips on three lines because of
+     * them, which is the same mistake `visible()` exists for at the top of
+     * this file. */
+    const items = Array.from(rowEl.querySelectorAll(
+      '[data-dccwl-monthbtn], [data-dccwl-pick-btn], [data-dccwl-badges]'
+    )).filter((el) => el.getClientRects().length > 0);
+    const boxes = items.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { top: Math.round(r.top), left: Math.round(r.left),
+               right: Math.round(r.right), w: Math.round(r.width),
+               h: Math.round(r.height * 100) / 100,
+               exact: Math.round(r.top * 100) / 100,
+               label: el.textContent.replace(/\s+/g, ' ').trim().slice(0, 14) };
+    });
+    /* Grouped with a 2px tolerance, so a half-pixel cannot be reported as a
+     * second row — the vertical alignment has its own assertion below, and
+     * conflating the two produced a failure message about wrapping for what
+     * was really a 1.16px offset. */
+    const lines = {};
+    boxes.forEach((b) => {
+      const key = Object.keys(lines).find((k) => Math.abs(Number(k) - b.top) <= 2);
+      const k = undefined === key ? String(b.top) : key;
+      lines[k] = lines[k] || { left: Infinity, right: -Infinity, n: 0 };
+      lines[k].left = Math.min(lines[k].left, b.left);
+      lines[k].right = Math.max(lines[k].right, b.right);
+      lines[k].n += 1;
+    });
+    const rr = rowEl.getBoundingClientRect();
+    const rowMid = rr.left + rr.width / 2;
+    const out = {
+      chips: boxes.length,
+      widths: boxes.map((b) => `${b.label}=${b.w}x${b.h}@${b.exact}`),
+      /* The sub-pixel question, separately: do all three share a top? */
+      topSpread: Math.round((Math.max(...boxes.map((b) => b.exact)) -
+        Math.min(...boxes.map((b) => b.exact))) * 100) / 100,
+      lineCount: Object.keys(lines).length,
+      lineOffsets: Object.keys(lines).map((k) => Math.round(
+        ((lines[k].left + lines[k].right) / 2) - rowMid)),
+      pageW: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+      rowW: Math.round(rr.width),
+      needed: boxes.reduce((a, b) => a + b.w, 0),
+    };
+    rowEl.style.fontSize = prev;
+    return out;
+  });
+  note(`${w}px row ${JSON.stringify(row)}`);
+  check(!row.error, `${w}px: the chip row is on the page`, row.error || '');
+  checkSame(3, row.chips, `${w}px: three chips — Month, Show and Badges`);
+  /*
+   * ALL THREE ON ONE BASELINE, TO THE HALF PIXEL. Two of them sit inside a
+   * wrapper div that carries their menu's `position: relative`, and as
+   * BLOCKS those wrappers built a line box around a 44px chip — about
+   * 46.3px — so the row centred the wrapper and dropped those two 1.16px
+   * below the Badges chip, which has no wrapper. Rob measures this kind of
+   * thing (the 1.35.0 baseline was 0.9px), so it has its own check rather
+   * than being swallowed by the row-count tolerance.
+   */
+  checkAtMost(0.5, row.topSpread,
+    `${w}px: and all three sit on one line, to the half pixel`,
+    `${row.topSpread}px between the highest and the lowest`);
+  checkAtMost(row.viewport, row.pageW,
+    `${w}px: and no horizontal overflow at 125% of the face`);
+  /* Every line of the group is centred on the row, at every width — that is
+   * the "centred group" half of the item. */
+  check((row.lineOffsets || []).every((o) => Math.abs(o) <= 2),
+    `${w}px: each line of the group is centred`, JSON.stringify(row.lineOffsets));
+  if (390 <= w) {
+    checkSame(1, row.lineCount,
+      `${w}px: all three sit on ONE row, with Raleway's metrics stood in for`,
+      JSON.stringify(row.widths));
+  } else {
+    /* 360px: wrapping is allowed and centring is not. */
+    checkAtLeast(1, row.lineCount, `${w}px: the row wraps rather than spilling`);
+  }
+
   await page.close();
 }
 
@@ -608,15 +810,22 @@ section('B9 — no empty column, and no blank area, in any tab × category');
 
 /* ============================ A2 ============================ */
 /*
- * The Map tab's three stat tiles, measured on the rendered panel with the
- * host kit's 20px/700 root — which is where the live sizes come from.
+ * ITEM 6 (1.44.1) — THE MAP IS THE FIRST THING UNDER THE SWITCH.
  *
- * This section used to be a page that was built, driven and then asserted
- * NOTHING, with a note pointing at a suite that does not exist in this
- * directory. That is the failure this release is about, committed inside the
- * file written to prevent it; it is a measurement now.
+ * The Director measured live at 390px: "the map starts about 585px down, so
+ * only about half of it is visible". Three stat tiles and an intro line sat
+ * between the Map · Now · Fishing switch and the canvas. Both are deleted —
+ * see class-water-render.php for why they were REMOVED and not moved to Now.
+ *
+ * So this section no longer measures tiles; it measures that they are gone,
+ * that the host is the first thing in the pane, and — the second half of the
+ * item — that WIND appears exactly ONCE on the whole panel, as the Whole
+ * Chain row, and nowhere on the water (1.35.0, Rob's own option C).
+ *
+ * It is still measured on the rendered panel under the host kit's 20px/700
+ * root, which is where the live sizes come from.
  */
-section('A2 — the Map stat tiles, under the host kit');
+section('A2 — the map leads the Map pane, and wind appears once');
 
 const CONDITIONS = {
   enabled: true,
@@ -665,12 +874,16 @@ async function waterPanel(width, touch) {
  * single line, and two once the browser has broken it — which is exactly what
  * "Septem/ber" was. Reading `word-break` back would only tell us our own
  * declaration is present, which it was in 1.37.0 while live still broke it.
+ *
+ * The stat tiles it used to probe are gone (item 6), so it probes what is
+ * narrow NOW: every reading card on the panel, the Whole Chain row included.
+ * A card at 390px is the narrowest column a reading is printed in.
  */
 const SPLIT_PROBE = () => {
   const out = [];
-  document.querySelectorAll('.dccwl-water-stats [data-dccwl-stat]:not([hidden])')
+  document.querySelectorAll('.dccwl-water .dccwl-card:not([hidden])')
     .forEach((li) => {
-      li.querySelectorAll('.dccwl-water-stat-label, .dccwl-water-stat-value, .dccwl-water-stat-sub')
+      li.querySelectorAll('.dccwl-card-label, .dccwl-card-value, .dccwl-card-srcname')
         .forEach((el) => {
           const node = el.firstChild;
           if (!node || 3 !== node.nodeType) { return; }
@@ -681,108 +894,123 @@ const SPLIT_PROBE = () => {
             const r = document.createRange();
             r.setStart(node, m.index);
             r.setEnd(node, m.index + m[0].length);
-            if (r.getClientRects().length > 1) { out.push(m[0]); }
+            /* MORE THAN ONE LINE, not more than one rect. Chromium hands
+             * back several rects for a range inside a flex item even when
+             * the word sits on one line, so a bare count reported every
+             * word in the card's source line as broken. A word that really
+             * is split occupies two different line tops. */
+            const tops = {};
+            Array.from(r.getClientRects())
+              .filter((rect) => rect.width > 0 && rect.height > 0)
+              .forEach((rect) => { tops[Math.round(rect.top)] = 1; });
+            if (Object.keys(tops).length > 1) { out.push(m[0]); }
           }
         });
     });
   return out;
 };
 
-for (const [w, touch, cols] of [[390, true, 1], [767, true, 1], [768, false, 3], [1280, false, 3]]) {
+for (const [w, touch] of [[390, true], [767, true], [768, false], [1280, false]]) {
   const page = await waterPanel(w, touch);
 
-  const tiles = await page.evaluate(() => {
-    const wrap = document.querySelector('.dccwl-water-stats');
-    const vis = Array.from(wrap.querySelectorAll('[data-dccwl-stat]')).filter((li) => !li.hidden);
-    const lefts = {};
-    vis.forEach((li) => { lefts[Math.round(li.getBoundingClientRect().left)] = 1; });
-    const read = (sel) => {
-      const el = vis[0].querySelector(sel);
-      const cs = getComputedStyle(el);
-      return { px: Math.round(parseFloat(cs.fontSize) * 100) / 100, w: cs.fontWeight,
-               text: el.textContent.trim() };
-    };
+  /*
+   * THE PANE'S OWN ORDER. Asked of the DOM and of the geometry together: a
+   * host that is first in the markup but pushed down by something absolutely
+   * positioned would still fail the guest. `firstMeaningful` walks the pane's
+   * children and names the first one that occupies space.
+   */
+  const pane = await page.evaluate(() => {
+    const host = document.querySelector('[data-dccwl-map-host]');
+    const paneEl = host.closest('[data-dccwl-water-tab="map"]');
+    const vis = (el) => el.getClientRects().length > 0;
+    /* Skip the host's own ancestors (.dccwl-map-wrap): they occupy space
+     * BECAUSE the host does. The first occupant that is not one of them is
+     * what a guest meets under the switch. */
+    const kids = Array.from(paneEl.querySelectorAll('*'))
+      .filter(vis)
+      .filter((el) => el === host || !el.contains(host));
+    const first = kids[0] || null;
+    const bar = document.querySelector('[data-dccwl-water-tab-btn="map"]');
+    const barBottom = bar.getBoundingClientRect().bottom;
+    const hostTop = host.getBoundingClientRect().top;
     return {
-      hidden: wrap.hidden,
-      shown: vis.length,
-      columns: Object.keys(lefts).length,
-      label: read('.dccwl-water-stat-label'),
-      value: read('.dccwl-water-stat-value'),
-      detail: read('.dccwl-water-stat-detail'),
-      sub: read('.dccwl-water-stat-sub'),
-      // every tile's three lines, in order, so the split can be read at once
-      lines: vis.map((li) => ({
-        key: li.getAttribute('data-dccwl-stat'),
-        value: li.querySelector('.dccwl-water-stat-value').textContent.trim(),
-        detail: li.querySelector('.dccwl-water-stat-detail').textContent.trim(),
-        detailShown: li.querySelector('.dccwl-water-stat-detail').getClientRects().length > 0,
-        sub: li.querySelector('.dccwl-water-stat-sub').textContent.trim(),
-      })),
+      firstClass: first ? first.className : null,
+      firstIsHost: first === host,
+      tiles: document.querySelectorAll('.dccwl-water-stats, [data-dccwl-stat]').length,
+      intros: Array.from(document.querySelectorAll('.dccwl-map-intro'))
+        .filter(vis).length,
+      noButton: !document.querySelector('[data-dccwl-map-open]'),
+      gapUnderSwitch: Math.round(hostTop - barBottom),
+      hostH: Math.round(host.getBoundingClientRect().height),
+      hostMid: Math.round((() => {
+        const r = host.getBoundingClientRect();
+        return r.left + r.width / 2;
+      })()),
+      paneMid: Math.round((() => {
+        const r = paneEl.getBoundingClientRect();
+        return r.left + r.width / 2;
+      })()),
       pageW: document.documentElement.scrollWidth,
     };
   });
-  note(`${w}px ${JSON.stringify(tiles)}`);
+  note(`${w}px pane ${JSON.stringify(pane)}`);
 
-  checkSame(false, tiles.hidden, `${w}px: the stat row is revealed by the script`);
-  checkSame(3, tiles.shown, `${w}px: all three readings render as tiles`);
-  checkSame(cols, tiles.columns, `${w}px: ${cols} tile${1 === cols ? '' : 's'} across`);
-  // 20px root: fs-base 1.0625rem = 21.25, fs-xs .78rem = 15.6, the source .65rem = 13.
-  checkSame(21.25, tiles.value.px, `${w}px: the reading is 21.25px on the deployment root`);
-  checkSame('600', tiles.value.w, `${w}px: and semibold — not the 27px/700 it was`);
-  checkSame(15.6, tiles.label.px, `${w}px: the tile name is 15.6px`);
-  checkSame('600', tiles.label.w, `${w}px: semibold`);
-  checkSame(13, tiles.sub.px, `${w}px: the source line is 13px`);
-  checkSame('400', tiles.sub.w, `${w}px: at body weight, against a 700 root`);
-  checkAtLeast(w, tiles.pageW <= w ? w : 0, `${w}px: no horizontal overflow`);
-
-  /* ITEM 3 (1.39.0) — the short reading large, its qualifier small beneath. */
-  const byKey = {};
-  tiles.lines.forEach((l) => { byKey[l.key] = l; });
-  checkSame('3 in. below normal', byKey.level.value, `${w}px: the level tile reads the short reading`);
-  checkSame('for September', byKey.level.detail, `${w}px: with its qualifier on the small line`);
-  checkSame('2.95 ft', byKey.clarity.value, `${w}px: the clarity tile reads the measure alone`);
-  checkSame('clearer than usual here', byKey.clarity.detail, `${w}px: with the comparison beneath`);
-  checkSame('ESE 0 to 5 mph', byKey.wind.value, `${w}px: the wind tile reads the forecast whole`);
-  checkSame('', byKey.wind.detail, `${w}px: and carries no qualifier`);
-  checkSame(false, byKey.wind.detailShown,
-    `${w}px: so its empty line holds no space open`);
-  check(tiles.lines.every((l) => l.sub.length > 0),
-    `${w}px: every tile still names its source underneath`);
-  checkSame(21.25, tiles.value.px, `${w}px: the big line is still 21.25px`);
-  checkSame(13, tiles.detail.px, `${w}px: the qualifier reads at 13px`);
-  checkSame('400', tiles.detail.w, `${w}px: at body weight`);
+  checkSame(0, pane.tiles, `${w}px: the three stat tiles are GONE from the markup`);
+  checkSame(0, pane.intros, `${w}px: and no intro line stands above the map`);
+  checkSame(true, pane.firstIsHost,
+    `${w}px: the map host is the first thing in the Map pane`, pane.firstClass);
+  checkSame(true, pane.noButton, `${w}px: there is no "Open the chain map" button`);
+  /* The Director's number. The switch is immediately above it, so what is
+   * left between them is the pane's own padding, not content. */
+  check(pane.gapUnderSwitch >= 0 && pane.gapUnderSwitch <= 40,
+    `${w}px: the map starts within 40px of the switch, not 585px down`,
+    `${pane.gapUnderSwitch}px`);
+  checkAtLeast(240, pane.hostH,
+    `${w}px: and reserves its height before the map loads, so nothing jumps`);
+  check(Math.abs(pane.hostMid - pane.paneMid) <= 2,
+    `${w}px: the host sits on the pane's centre line`,
+    `${pane.hostMid} against ${pane.paneMid}`);
+  checkAtLeast(w, pane.pageW <= w ? w : 0, `${w}px: no horizontal overflow`);
 
   /*
-   * ITEM 2 — the intro line centres, and the MAP HOST is where the button
-   * was. The button is gone (1.44.0), so what used to be "the button sits on
-   * the tiles' centre line" is now "the host does, and it reserves its space
-   * before the map arrives". The second half is the one that matters: a host
-   * with no height would let everything below it jump when Leaflet lands,
-   * and would also never be seen as on-screen by the loader.
+   * WIND, COUNTED — the second half of item 6, and the reason it is counted
+   * on the PANEL rather than read out of one element: the tile and the Whole
+   * Chain row would both have printed it, which is the duplication Rob's
+   * ruling forbids. One card, in the row headed for the whole chain.
    */
-  const centred = await page.evaluate(() => {
-    const wrap = document.querySelector('.dccwl-water-stats');
-    const intro = document.querySelector('.dccwl-map-intro');
-    const host = document.querySelector('[data-dccwl-map-host]');
-    const mid = (el) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
+  await page.evaluate(() => {
+    document.querySelector('[data-dccwl-water-tab-btn="now"]').click();
+  });
+  await page.waitForTimeout(300);
+  const wind = await page.evaluate(() => {
+    const vis = (el) => el.getClientRects().length > 0;
+    const labels = Array.from(document.querySelectorAll('.dccwl-water .dccwl-card'))
+      .filter(vis)
+      .map((c) => {
+        const l = c.querySelector('.dccwl-card-label');
+        return {
+          label: l ? l.textContent.trim() : '',
+          inWhole: !!c.closest('[data-dccwl-water-whole]'),
+        };
+      });
+    const whole = document.querySelector('[data-dccwl-water-whole-wrap]');
     return {
-      introAlign: getComputedStyle(intro).textAlign,
-      tilesMid: Math.round(mid(wrap)),
-      introMid: Math.round(mid(intro)),
-      hostMid: Math.round(mid(host)),
-      hostH: Math.round(host.getBoundingClientRect().height),
-      noButton: !document.querySelector('[data-dccwl-map-open]'),
-      wrapWidth: Math.round(wrap.getBoundingClientRect().width),
+      windCards: labels.filter((x) => /wind/i.test(x.label)),
+      wholeShown: !!whole && vis(whole),
+      wholeHead: whole ? whole.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) : '',
     };
   });
-  note(`${w}px centring ${JSON.stringify(centred)}`);
-  checkSame('center', centred.introAlign, `${w}px: the intro line is centred`);
-  checkSame(true, centred.noButton, `${w}px: and there is no "Open the chain map" button`);
-  check(Math.abs(centred.hostMid - centred.tilesMid) <= 2,
-    `${w}px: the map host sits on the tiles' centre line`,
-    `${centred.hostMid} against ${centred.tilesMid}`);
-  checkAtLeast(240, centred.hostH,
-    `${w}px: and reserves its height before the map loads, so nothing jumps`);
+  note(`${w}px wind ${JSON.stringify(wind)}`);
+  checkSame(1, wind.windCards.length,
+    `${w}px: wind is printed exactly once on the whole panel`);
+  checkSame(true, wind.windCards[0] ? wind.windCards[0].inWhole : false,
+    `${w}px: and that one card is inside the Whole Chain row`);
+  checkSame(true, wind.wholeShown, `${w}px: which is on screen`);
+  check(/Whole Chain/i.test(wind.wholeHead),
+    `${w}px: labelled as covering the whole chain`, wind.wholeHead);
+
+  const split = await page.evaluate(SPLIT_PROBE);
+  checkSame([], split, `${w}px: no word is broken mid-word`, split.join(', '));
 
   /* THE DIRECTOR'S BUG — one disclosure marker, not two. Asked on the
    * STANDALONE water widget, which loads app.css and water.css and NOT
@@ -810,9 +1038,6 @@ for (const [w, touch, cols] of [[390, true, 1], [767, true, 1], [768, false, 3],
     `${w}px: and its ::marker draws nothing`, JSON.stringify(fold.all.map((f) => f.markerContent)));
   check(!!fold.about, `${w}px: the About fold is on the page`);
   checkSame(1, fold.about.chevrons, `${w}px: with exactly one chevron — ours, and no browser triangle`);
-
-  const split = await page.evaluate(SPLIT_PROBE);
-  checkSame([], split, `${w}px: no word is broken mid-word`, split.join(', '));
 
   /* ITEM 8 AGAIN, on the water tab bar: a tapped tab keeps :hover and :focus
    * on a phone, and this is the bar Rob photographed. */
@@ -1726,13 +1951,19 @@ section('the Now tab reads every date as 07/27/2026');
   check(!/Jul 27, 2026|Aug 1, 2026/.test(cards.page),
     'and none of the old locale wording survives');
 
-  /* The tiles keep their own wording, which is a MONTH, not a date — Rob
-   * said so explicitly, so it is pinned rather than left to drift. */
-  const tileSource = await page.evaluate(() => {
-    const el = document.querySelector('.dccwl-water-stat-sub');
-    return el ? el.textContent.trim() : '';
-  });
-  note(`tile source line: ${tileSource}`);
+  /* A SOURCE NAME MAY CARRY A MONTH, AND IT IS NOT A DATE LINE. The stat
+   * tiles this used to read are gone (item 6, 1.44.1), so it asks the card
+   * that carries the same string: "sampled September 2026" is a MONTH, which
+   * Rob pinned explicitly, and the US-date rule above must not rewrite it.
+   * The old version of this check read the deleted tile and asserted
+   * nothing — a note is not an assertion. */
+  const srcNames = await page.evaluate(() => Array.from(
+    document.querySelectorAll('.dccwl-water .dccwl-card-srcname')
+  ).map((el) => el.textContent.replace(/\s+/g, ' ').trim()));
+  note(`card source lines: ${JSON.stringify(srcNames)}`);
+  checkAtLeast(1, srcNames.length, 'every reading still names its source on its card');
+  check(srcNames.every((x) => !/\d{4}-\d{2}-\d{2}/.test(x)),
+    'and no source line carries a machine date', srcNames.join(' | '));
 
   await page.close();
 }

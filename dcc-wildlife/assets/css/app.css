@@ -1107,8 +1107,21 @@
 }
 /* The chosen tab stays chosen under the pointer: without this the gold mark
  * is the only difference between hover and selected, and hover repaints the
- * ground coral, which reads as "you have just changed section". */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+ * ground coral, which reads as "you have just changed section".
+ *
+ * ITEM 10 (1.44.1) — THE PSEUDO-CLASS IS ON BOTH SELECTORS NOW. It was on
+ * the second one only, so the bare `[aria-selected="true"]` in this list and
+ * in the focus-visible block below applied AT REST. That made every selected
+ * species tab carry the 3px blue focus ring permanently, which is what the
+ * Director saw and called "a hover state left on" — it was a FOCUS state
+ * left on. The water bar was unaffected, because its tabs report
+ * `aria-pressed` and that is the selector the pseudo-class was attached to.
+ *
+ * A comma-separated list does not share a trailing pseudo-class. Measured
+ * before and after: species tab at rest went from
+ * `inset gold 2px, rgba(0,107,207,.38) 0 0 0 3px` to `inset gold 2px`, which
+ * is exactly what the water bar has always had. */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:hover,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover {
 	background: var(--dccwl-btn-bg-hover);
 	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
@@ -1120,8 +1133,9 @@
 	outline: none;
 }
 /* box-shadow is one property, so the focus ring would otherwise wipe out the
- * selected tab's gold mark. Both, in one declaration. */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+ * selected tab's gold mark. Both, in one declaration — and both selectors
+ * carry `:focus-visible` (item 10; see the note above). */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus-visible,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible {
 	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold), var(--dccwl-ring);
 }
@@ -1182,13 +1196,21 @@
  * pressed control can be in is listed here — hover, focus, focus-visible and
  * active — for touch, mouse and keyboard alike.
  */
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+/*
+ * ITEM 10 (1.44.1): each pseudo-class is on BOTH attributes now. The list
+ * read `[aria-selected="true"], [aria-pressed="true"]:hover, ...`, which is
+ * four copies of the bare selected selector and only the pressed one in each
+ * state — the same slip that left a focus ring on every selected species tab
+ * further up this file. Here the declarations match the resting state, so the
+ * effect was invisible; the shape was not.
+ */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:hover,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:focus-visible,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible,
-.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"],
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-selected="true"]:active,
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:active,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:hover,
 .dccwl-app li[aria-selected="true"] > .dccwl-chipmenu-opt:focus,
@@ -1308,3 +1330,134 @@
 	.dccwl-app *::before,
 	.dccwl-app *::after { animation: none !important; transition: none !important; }
 }
+
+/* ======================================================================
+ * THE CHIP — ONE COMPONENT, IN THE SHARED LAYER (items 8 and 10, 1.44.1)
+ * ======================================================================
+ * ITEM 10, ROB'S DIRECTOR: "Chips don't match the Selector... Bring all of
+ * them to the Selector's chip. For on/off, use the Selector's own selected
+ * state, read from its branch."
+ *
+ * The Selector's values, read from `.dccs-chip` on branch
+ * `origin/claude/dora-canal-cottage-selector-qy12qf` — not from a
+ * screenshot, and not from memory:
+ *
+ *     .dccs-chip            white ground, 1px solid #F4DA62 (the live
+ *                           value; the branch's own token is #dfe5ec),
+ *                           radius 30px, black text, weight 600
+ *     .dccs-chip.is-active  background #002E7A, text #FFFFFF,
+ *                           border-color #0f6dbf
+ *
+ * LITERAL HEX, NOT TOKENS, for the same reason the view dropdown uses them
+ * (1.44.0): these are another plugin's colours, matched on purpose, and a
+ * token would invite the palette to drift away from the thing it is supposed
+ * to match.
+ *
+ * WHAT IS **NOT** TAKEN FROM THE SELECTOR, AND IT IS FLAGGED IN THE NOTES
+ * RATHER THAN DECIDED HERE: its 20px type and 24px side padding. Item 9 of
+ * the same brief requires the three guide chips to sit on ONE ROW at 390px
+ * with real Raleway metrics, and at 20px/24px they measure far past that —
+ * the figures are in the release notes. So the chip takes the Selector's
+ * LOOK (ground, edge, radius, weight, ink and selected state) and keeps a
+ * size that fits the row. Where the two items could not both be satisfied,
+ * the measurement decided and the conflict is reported.
+ *
+ * ONE COPY, IN THE SHARED LAYER. This lived twice — in widget.css for the
+ * guide's chips and in water.css for the place chip and the map's layer
+ * chips — and neither widget's stylesheet may own a component both render
+ * (the 1.40.1 rule, after the disclosure marker and the fold). Both copies
+ * are deleted; only their menu positioning stays with them.
+ *
+ * ITEM 8 — THE LABEL SPANS DECLARE A WEIGHT. `.dccwl-app span` (0,1,1) sets
+ * 400 in the type floor above, so a chip's inner `<span>` rendered at 400
+ * inside a 600 button: the Director measured exactly that on
+ * `.dccwl-viewselect-label`. Every one of these spans is `inherit`, not a
+ * number, so a future change to the chip's own weight cannot leave the
+ * label behind. `.dccwl-app .dccwl-chip-label` is (0,2,0) and beats the
+ * floor's (0,1,1).
+ * ====================================================================== */
+.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip,
+.dccwl-app .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #f4da62;
+	border-radius: 30px;
+	color: #000000;
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 600;
+	gap: 5px;
+	letter-spacing: 0;
+	/* The 44px touch target the whole plugin keeps for its older clientele. */
+	min-height: 44px;
+	padding: 0 12px;
+	text-transform: none;
+	white-space: nowrap;
+}
+
+/* ITEM 8: the label, the value, the ⓘ and the caret all take the button's
+ * own weight. */
+.dccwl-app .dccwl-chip-label,
+.dccwl-app .dccwl-chip-i,
+.dccwl-app .dccwl-caret,
+.dccwl-app .dccwl-pick-label,
+.dccwl-app .dccwl-pick-value,
+.dccwl-app .dccwl-pick-chev {
+	font-weight: inherit;
+}
+
+/*
+ * ON/OFF — THE SELECTOR'S OWN SELECTED STATE.
+ *
+ * `aria-pressed` is the layer chips under the map: several can be on at
+ * once, which is what makes them toggles. `aria-expanded` is the Badges
+ * chip, whose key is either showing or not — also an on/off, and included
+ * for that reason rather than because an open menu is "selected". The menu
+ * chips (Month, Show, Pick A Place) report `aria-haspopup` and never take
+ * this state: what they SAY is their own label.
+ */
+.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip[aria-pressed="true"],
+.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip[aria-expanded="true"]:not([aria-haspopup]) {
+	background: #002e7a;
+	border-color: #0f6dbf;
+	color: #ffffff;
+}
+
+/*
+ * CORAL HOVER, AND ONLY WITH A REAL POINTER. The coral is Rob's site-wide
+ * hover and is not Wildlife's to change (1.33.0 answer 2 — he chose it
+ * knowing white on #F08080 is 2.59:1, and ruled that if it is ever raised it
+ * happens site-wide). The media query is the 1.38.0 item-8 lesson: on a
+ * phone a tapped control keeps :hover until the guest touches something
+ * else, so an ungated hover paints the last chip touched.
+ */
+@media (hover: hover) and (pointer: fine) {
+	.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip:hover,
+	.dccwl-app .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:hover {
+		background: var(--dccwl-accent);
+		border-color: var(--dccwl-accent);
+		color: #ffffff;
+	}
+	/* An ON chip stays on under the pointer: its own state outranks a hover,
+	 * the same rule the selected tab keeps. */
+	.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip[aria-pressed="true"]:hover {
+		background: #002e7a;
+		border-color: #0f6dbf;
+		color: #ffffff;
+	}
+}
+
+.dccwl-app .dccwl-chip.dccwl-chip.dccwl-chip:focus-visible,
+.dccwl-app .dccwl-pick-btn.dccwl-pick-btn.dccwl-pick-btn:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+/* The ⓘ and the carets, at the chip's own label size — never larger, because
+ * Raleway may not carry them and a fallback face must not render them bigger
+ * or bolder than what the row was approved at (the 1.41.0 rule for ▾ ▴ ›). */
+.dccwl-app .dccwl-chip-i { font-size: 1.05em; line-height: 1; }
+.dccwl-app .dccwl-pick-chev,
+.dccwl-app .dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.0
+Stable tag: 1.44.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,35 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.1 =
+* **The map is the first thing on Water.** It sat about 585px down a phone
+  screen, below three reading tiles and a line of text, so only half of it was
+  visible. Those tiles are gone — every reading they showed is already a full
+  card under "Now", with its source and date, and the map's own "Colour by ▾"
+  already does the colouring they doubled as.
+* **The map opens on the chain, not the county.** The opening view is fitted to
+  the lakes the plugin lists and the cottages. A monitoring gauge far down a
+  river leg, or a boat ramp on another lake, no longer pulls the view out to
+  take in the whole of Lake County. Both are still drawn, and still there when
+  you pan.
+* **One control for the map's layers.** The chips under the map are it; the
+  "Layers ▾" menu has gone. The menu that is left offers the base map —
+  satellite or streets — and, on a phone, Fullscreen.
+* **The map key reads in plain words**, centred under the map: "Clearer Than
+  Usual", "Near Usual", "Murkier Than Usual", "No Current Reading".
+* **Nothing is shouted in capitals any more.** Every heading and label shows
+  the words as written — "Water Level", "Licences & Keep-Limits", "Tell It
+  Apart" — instead of being forced into capitals by the stylesheet. The month
+  heading reads "October On The Canal".
+* **The chips match the Cottage Selector**: white, a gold edge, rounded, in the
+  same weight, and the deep blue when one is switched on. The three above the
+  field guide now fit on one line on a phone and sit on exactly the same line
+  as each other, which two of them were a pixel out of.
+* **Two small things that were wrong without looking wrong.** The label inside
+  the "Wildlife ▾" button was rendering lighter than the button around it, and
+  every selected section tab was carrying a faint blue focus halo even when
+  nothing was focused.
 
 = 1.44.0 =
 * **One dropdown instead of a back button.** The wildlife section now opens

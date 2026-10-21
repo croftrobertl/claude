@@ -1215,7 +1215,7 @@ final class Water_Live {
 
 		return [
 			[
-				'label'       => __( 'Water level', 'dcc-wildlife' ),
+				'label'       => __( 'Water Level', 'dcc-wildlife' ),
 				/* 1.34.0: the machine name the Map tab's stat tiles read. */
 				'key'         => 'level',
 				'short'       => $short,
@@ -1544,7 +1544,7 @@ final class Water_Live {
 
 		return [
 			[
-				'label'       => __( 'Water clarity (Secchi depth)', 'dcc-wildlife' ),
+				'label'       => __( 'Water Clarity (Secchi Depth)', 'dcc-wildlife' ),
 				/* 1.34.0: the machine name the Map tab's stat tiles read. */
 				'key'         => 'clarity',
 				'short'       => $short,
@@ -1587,7 +1587,7 @@ final class Water_Live {
 
 		return [
 			[
-				'label'       => __( 'Dissolved oxygen', 'dcc-wildlife' ),
+				'label'       => __( 'Dissolved Oxygen', 'dcc-wildlife' ),
 				'value'       => self::fmt_measure( $c['value'], $c['precision'] ?? null, self::comp_str( $c, 'units' ) ),
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
@@ -1750,7 +1750,7 @@ final class Water_Live {
 
 		return [
 			[
-				'label'          => __( 'Depth map', 'dcc-wildlife' ),
+				'label'          => __( 'Depth Map', 'dcc-wildlife' ),
 				'value'          => $value,
 				'tier'           => Water_Fact::TIER_PUBLISHED,
 				'source_name'    => sprintf(
@@ -1864,7 +1864,7 @@ final class Water_Live {
 
 		return [
 			[
-				'label'       => __( 'Recent rain', 'dcc-wildlife' ),
+				'label'       => __( 'Recent Rain', 'dcc-wildlife' ),
 				/*
 				 * 1.44.0: the machine name the Now tab's place picker reads.
 				 *

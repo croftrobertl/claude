@@ -245,43 +245,13 @@
 		});
 	}
 
-	/* ITEM 3 (1.34.0, pick B) — the Map tab's three stat tiles.
-	 *
-	 * Filled from the SAME gated facts the Now tab renders: a tile can only
-	 * ever show a number a source returned, with that source named under it.
-	 * A tile with no fact stays hidden, which is the same rule the whole
-	 * module follows — an absent reading is absent, never "unknown". */
-	var STAT_KEYS = { level: 1, clarity: 1, wind: 1 };
-
-	function fillStats(section, facts) {
-		var wrap = section && section.querySelector('[data-dccwl-water-stats]');
-		if (!wrap) { return; }
-		var shown = 0;
-		facts.forEach(function (f) {
-			if (!f || !f.key || !STAT_KEYS[f.key] || !f.value || !f.sourceName) { return; }
-			if (f.group === 'chain') { return; }
-			var li = wrap.querySelector('[data-dccwl-stat="' + f.key + '"]');
-			if (!li) { return; }
-			var v = li.querySelector('[data-dccwl-stat-value]');
-			var det = li.querySelector('[data-dccwl-stat-detail]');
-			var sub = li.querySelector('[data-dccwl-stat-sub]');
-			/*
-			 * THE SHORT READING LARGE, ITS QUALIFIER SMALL (1.39.0).
-			 *
-			 * Both parts come from the Fact, stated by the builder that
-			 * composed the sentence — this client never splits one. A fact
-			 * with no `short` (an owner-entered almanac row, or a payload
-			 * cached before 1.39.0) falls back to the whole value, which is
-			 * what the tile has always shown.
-			 */
-			if (v) { v.textContent = f.short || f.value; }
-			if (det) { det.textContent = (f.short && f.detail) ? f.detail : ''; }
-			if (sub) { sub.textContent = f.sourceName; }
-			li.hidden = false;
-			shown += 1;
-		});
-		if (shown > 0) { wrap.hidden = false; }
-	}
+	/*
+	 * `fillStats()` AND `STAT_KEYS` ARE DELETED (1.44.1), with the three stat
+	 * tiles they filled. See class-water-render.php for why the tiles were
+	 * removed rather than moved: the reading is already a full card in Now,
+	 * the colouring is already "Colour by ▾" on the map's own bar, and wind
+	 * never had a colouring to offer.
+	 */
 
 	/*
 	 * THE THREE READINGS THAT COVER THE WHOLE CHAIN, BY KEY, NOT BY LABEL.
@@ -441,7 +411,6 @@
 		}
 
 		if (wholeWrap) { wholeWrap.hidden = wholeShown < 1; }
-		fillStats(root.closest('[data-dccwl-water-root]') || document, facts);
 
 		/* The same deck the species tiles use (1.23.0), on the lists that just
 		 * received cards. Attached after filling, because a deck measures what
@@ -783,26 +752,11 @@
 		ensure();
 
 		/*
-		 * THE STAT TILES COLOUR THE MAP THAT IS ALREADY THERE (item 3, pick
-		 * B, 1.34.0 — unchanged in intent). Level and Clarity are the two
-		 * colourings the map has; Wind has none, so its tile scrolls to the
-		 * map rather than inventing a colouring the data cannot support —
-		 * which is the same refusal 1.35.0 made about drawing wind on water.
+		 * THE STAT TILES' CLICK WIRING IS DELETED WITH THEM (1.44.1). A guest
+		 * colours the map from "Colour by ▾" on its own control bar, which is
+		 * the control that acts on the map in front of them rather than on
+		 * one they are about to open.
 		 */
-		var statWrap = (section || document).querySelector('[data-dccwl-water-stats]');
-		if (statWrap && !statWrap.getAttribute('data-dccwl-stats-init')) {
-			statWrap.setAttribute('data-dccwl-stats-init', '1');
-			statWrap.addEventListener('click', function (ev) {
-				var t = ev.target.closest ? ev.target.closest('[data-dccwl-stat-colour]') : null;
-				if (!t) { return; }
-				var want = t.getAttribute('data-dccwl-stat-colour') || '';
-				ensure();
-				if (want && handle && handle.setColour) { handle.setColour(want); }
-				try {
-					host.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-				} catch (e) { host.scrollIntoView(); }
-			});
-		}
 	}
 
 	/* ------------------------------------------------------------------

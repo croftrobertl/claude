@@ -268,7 +268,20 @@
 	text-transform: none;
 	width: 100%;
 }
-.dccwl-canal .dccwl-viewselect-label { white-space: nowrap; }
+/* ITEM 8 (1.44.1) — THE LABEL DECLARES A WEIGHT, AND IT IS THE BUTTON'S.
+ *
+ * The Director measured the trigger at 700 and this span at 400. The cause is
+ * `.dccwl-app span` in app.css's type floor (0,1,1), which has set 400 since
+ * 1.27.0 to stop the theme's 700 root making the whole guide bold — and it
+ * names the element, so it beats anything the button merely passes down.
+ * `.dccwl-canal .dccwl-viewselect-label` is (0,2,0) and outranks it.
+ *
+ * `inherit`, not 700: the trigger's own weight is declared a few rules up,
+ * and a number here could be left behind by a change to it. */
+.dccwl-canal .dccwl-viewselect-label {
+	font-weight: inherit;
+	white-space: nowrap;
+}
 .dccwl-canal .dccwl-viewselect-trigger .dccwl-caret {
 	color: inherit;
 	font-size: 0.8em;

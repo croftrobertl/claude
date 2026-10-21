@@ -167,7 +167,21 @@ for (const t of off) {
  */
 
 /* ---- 2a2. the category picker speaks the same colour language ------- */
-section('the category picker: a blue pill, a coral choice');
+/*
+ * ITEM 10 (1.44.1) — THE CHIP IS THE COTTAGE SELECTOR'S NOW, SO WHAT THIS
+ * SECTION PINS CHANGED WITH IT.
+ *
+ * It asserted the blue pill the chips wore from 1.38.0: solid #006BCF with
+ * white text. Rob's Director: "Chips don't match the Selector... Bring all of
+ * them to the Selector's chip." So the CLOSED pill is the Selector's resting
+ * chip — white, 1px #F4DA62, radius 30px, black ink, weight 600 — and the
+ * expected values are updated rather than loosened, which is this harness's
+ * standing rule when a suite encodes a look that has been superseded.
+ *
+ * The OPEN list is untouched and still coral-and-white for the chosen row:
+ * those are menu options, not chips, and item 10 did not reach them.
+ */
+section('the category picker: the Selector\'s chip, a coral choice');
 
 const pickColours = await page.evaluate(async () => {
   const nav = document.querySelector('[data-dccwl-subnav]:not([hidden])');
@@ -178,7 +192,12 @@ const pickColours = await page.evaluate(async () => {
     return { bg: cs.backgroundColor, fg: cs.color, weight: cs.fontWeight,
              h: Math.round(el.getBoundingClientRect().height) };
   };
-  const closed = read(btn);
+  const closedCs = getComputedStyle(btn);
+  const closed = Object.assign(read(btn), {
+    border: closedCs.borderTopColor,
+    borderW: closedCs.borderTopWidth,
+    radius: closedCs.borderTopLeftRadius,
+  });
   btn.click();
   await new Promise((r) => setTimeout(r, 150));
   const opts = Array.from(nav.querySelectorAll('.dccwl-pick-opt'));
@@ -191,8 +210,13 @@ const pickColours = await page.evaluate(async () => {
 
 if (pickColours) {
   note(JSON.stringify(pickColours.closed) + ' chosen ' + JSON.stringify(pickColours.chosen));
-  checkSame(BLUE, pickColours.closed.bg, 'the pill is solid #006BCF, like every other control');
-  checkSame(WHITE, pickColours.closed.fg, 'with white text');
+  checkSame('rgb(255, 255, 255)', pickColours.closed.bg,
+    "the pill is the Selector's white chip");
+  checkSame('rgb(0, 0, 0)', pickColours.closed.fg, 'with its black ink');
+  checkSame('rgb(244, 218, 98)', pickColours.closed.border, 'and its gold edge');
+  checkSame('1px', pickColours.closed.borderW, 'one pixel of it');
+  checkSame('30px', pickColours.closed.radius, "the Selector's 30px radius");
+  checkSame('600', pickColours.closed.weight, 'and its weight 600');
   checkAtLeast(44, pickColours.closed.h, 'and the 44px target this plugin keeps');
   checkSame(CORAL, pickColours.chosen.bg, 'the chosen category is coral');
   checkSame(WHITE, pickColours.chosen.fg, 'with white text, as every selected control is since 1.36.0');

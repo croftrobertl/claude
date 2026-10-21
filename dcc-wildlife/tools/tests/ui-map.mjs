@@ -38,16 +38,45 @@ const MAP_DATA = {
   stations: [
     { id: 'S1', name: 'Dora station', lat: 28.7992, lon: -81.6689, reading: '1.1 m', url: '' },
     { id: 'S2', name: 'Griffin station', lat: 28.8801, lon: -81.8822, reading: null, url: '' },
+    /*
+     * ITEM 7 (1.44.1) — AN OUTLIER, BECAUSE THE FIXTURE COULD NOT SHOW THE
+     * DEFECT WITHOUT ONE.
+     *
+     * Every station and ramp above sits inside the chain waters' own box, so
+     * fitting to "every marker" and fitting to "the chain waters and the
+     * cottages" gave the SAME view here while live opened on the whole
+     * county. That is this repository's oldest trap in its purest form: a
+     * hand-written fixture can only confirm what its author already believed.
+     *
+     * The real payload reaches much further. USGS keeps gauges well down the
+     * Ocklawaha leg, north of the chain, and `discover_gauges()` sweeps from
+     * a bounding box — so this row stands for one of those.
+     */
+    { id: 'S3', name: 'Ocklawaha leg gauge', lat: 29.1800, lon: -81.9000, reading: null, url: '' },
   ],
   ramps: [
     { name: 'Gilbert Park Ramp', lat: 28.8047, lon: -81.6425 },
     { name: 'Venetian Gardens', lat: 28.8556, lon: -81.7269 },
     { name: 'Herlong Park', lat: 28.7431, lon: -81.7914 },
+    /* The same point, from the other direction: a public ramp on a water the
+     * chain list does not hold (Lake Apopka, south of the chain). */
+    { name: 'Apopka ramp', lat: 28.6000, lon: -81.6100 },
   ],
   property: { lat: 28.8045, lon: -81.745 },
 };
 
-/** All coordinates the map is meant to have in view. */
+/**
+ * WHAT THE OPENING VIEW MUST HOLD (item 7, Rob's Director): "the chain waters
+ * the plugin already lists (the place menu's list), with the cottages in
+ * view". Stations and ramps are drawn, and reachable by panning, but they do
+ * not decide the view.
+ */
+const FIT_POINTS = [
+  ...MAP_DATA.waters.map((w) => [w.lat, w.lon]),
+  [MAP_DATA.property.lat, MAP_DATA.property.lon],
+];
+
+/** Every coordinate in the payload, including the two outliers. */
 const ALL_POINTS = [
   ...MAP_DATA.waters.map((w) => [w.lat, w.lon]),
   ...MAP_DATA.stations.map((s) => [s.lat, s.lon]),
@@ -158,13 +187,13 @@ if (!opened) {
   done();
 }
 
-const state = await page.evaluate((points) => {
+const state = await page.evaluate((arg) => {
   const m = (window.__maps || [])[0];
   if (!m) return { error: 'no map instance' };
   const c = m.getContainer();
   const cr = c.getBoundingClientRect();
   const b = m.getBounds();
-  const inView = points.filter((p) => b.contains(p)).length;
+  const inView = arg.fit.filter((p) => b.contains(p)).length;
 
   // Where each marker actually sits, relative to the canvas.
   const markers = Array.from(c.querySelectorAll('.leaflet-marker-icon, path.leaflet-interactive'));
@@ -176,12 +205,30 @@ const state = await page.evaluate((points) => {
     if (cx >= cr.x && cx <= cr.x + cr.width && cy >= cr.y && cy <= cr.y + cr.height) visible += 1;
   }
 
+  /*
+   * THE TWO ZOOMS, ASKED OF LEAFLET ITSELF. `getBoundsZoom` is the exact
+   * answer to "what zoom would fit this box in this canvas", so comparing
+   * the real zoom against both boxes is a measurement rather than a
+   * threshold someone guessed. Fitting to every marker is a LOWER zoom
+   * number (further out) than fitting to the chain.
+   */
+  const box = (pts) => pts.reduce((acc, p) => acc.extend(p), window.L.latLngBounds(pts[0], pts[0]));
+  /* WITH THE SAME PADDING THE CODE USES. Asked without it, both boxes
+   * rounded to zoom 10 on a 374x506 canvas and the comparison could not
+   * tell them apart — the padding is 60px of the 374, which is a whole
+   * zoom step here. */
+  const PAD = window.L.point(30, 30);
+  const zoomFor = (pts) => m.getBoundsZoom(box(pts), false, PAD);
+
   return {
     zoom: m.getZoom(),
+    zoomForChain: zoomFor(arg.fit),
+    zoomForEverything: zoomFor(arg.all),
+    outliersInView: arg.out.filter((p) => b.contains(p)).length,
     canvas: { w: Math.round(cr.width), h: Math.round(cr.height) },
     centre: { lat: +m.getCenter().lat.toFixed(4), lon: +m.getCenter().lng.toFixed(4) },
     pointsInView: inView,
-    pointsTotal: points.length,
+    pointsTotal: arg.fit.length,
     markers: markers.length,
     markersVisible: visible,
     tileZooms: Array.from(new Set((window.__tiles || []).map((u) => {
@@ -189,10 +236,16 @@ const state = await page.evaluate((points) => {
       return mm ? +mm[1] : null;
     }).filter((z) => z !== null))),
   };
-}, ALL_POINTS);
+}, {
+  fit: FIT_POINTS,
+  all: ALL_POINTS,
+  out: [[29.18, -81.9], [28.6, -81.61]],
+});
 
 note(`canvas ${state.canvas?.w}x${state.canvas?.h}  zoom ${state.zoom}  centre ${state.centre?.lat},${state.centre?.lon}`);
-note(`markers ${state.markersVisible}/${state.markers} visible; ${state.pointsInView}/${state.pointsTotal} coordinates in bounds`);
+note(`markers ${state.markersVisible}/${state.markers} visible; ${state.pointsInView}/${state.pointsTotal} chain coordinates in bounds`);
+note(`zoom ${state.zoom}; chain box would be ${state.zoomForChain}, every marker ${state.zoomForEverything}; ` +
+  `${state.outliersInView} of 2 outliers in view`);
 note(`tile zooms requested: ${JSON.stringify(state.tileZooms)}`);
 
 check(!state.error, 'a Leaflet map was created', state.error || '');
@@ -218,13 +271,30 @@ check(
   JSON.stringify(state.centre)
 );
 
-checkSame(state.pointsTotal, state.pointsInView, 'every water, station, ramp and the cottages are inside the visible bounds');
-// Secondary guards. Note that BOTH of these also passed while the bug was
+checkSame(state.pointsTotal, state.pointsInView,
+  'every chain water and the cottages are inside the visible bounds');
+
+/*
+ * ITEM 7 — AND IT IS THE CHAIN'S BOX, NOT THE COUNTY'S.
+ *
+ * Through 1.44.0 every marker went into the fit, so one gauge down the
+ * Ocklawaha and one ramp on Lake Apopka opened the map on the county. These
+ * two assertions are the pair: the zoom is the one Leaflet would choose for
+ * the chain box, and it is TIGHTER than the one it would choose for every
+ * marker. Without the second, a change that quietly widened the box again
+ * would still pass the first.
+ */
+checkSame(state.zoomForChain, state.zoom ?? 0,
+  'the zoom is exactly what the chain box and its padding allow',
+  `zoom ${state.zoom}, chain box ${state.zoomForChain}`);
+check((state.zoom ?? 0) > state.zoomForEverything,
+  'and tighter than fitting every marker would give — the county view is gone',
+  `zoom ${state.zoom} against ${state.zoomForEverything}`);
+
+// Secondary guard. Note that this also passed while the 0x0-canvas bug was
 // live — Leaflet only renders markers near the viewport, so counting visible
-// ones cannot see the failure. The zoom and the bounds above are the proof;
-// these two only catch a marker that is drawn and then positioned off canvas.
+// ones cannot see that failure. The zoom and the bounds above are the proof.
 checkAtLeast(11, state.markers ?? 0, 'a marker is drawn for every water, ramp and the cottages');
-checkSame(state.markers, state.markersVisible, 'no drawn marker sits outside the canvas');
 
 await page.close();
 
@@ -311,6 +381,47 @@ for (const [w, h] of [[320, 568], [390, 844], [390, 500]]) {
 
   // A map squeezed to nothing is not a fix.
   checkAtLeast(120, fit.canvasH, `${w}x${h}: the map canvas stays usable`);
+
+  /*
+   * ITEM 12 (1.44.1) — THE LEGEND'S WORDING AND ITS ALIGNMENT.
+   *
+   * The Director gave the four clarity rows verbatim and found them
+   * left-aligned on live. Both halves are asked here: the exact strings, and
+   * that each wrapped LINE of them is centred on the map — which is a
+   * geometry question, not a `justify-content` read, because the rows are
+   * flex items and only their boxes say where they ended up.
+   */
+  const leg = await page.evaluate(() => {
+    const box = document.querySelector('.dccwl-map-legend');
+    if (!box) { return { error: 'no legend' }; }
+    const items = Array.from(box.querySelectorAll('.dccwl-leg-item'));
+    const br = box.getBoundingClientRect();
+    /* Group the items into the lines the wrap produced, then compare each
+     * line's own centre with the legend's. */
+    const lines = {};
+    items.forEach((it) => {
+      const r = it.getBoundingClientRect();
+      const key = Math.round(r.top);
+      lines[key] = lines[key] || { left: Infinity, right: -Infinity };
+      lines[key].left = Math.min(lines[key].left, r.left);
+      lines[key].right = Math.max(lines[key].right, r.right);
+    });
+    const boxMid = br.left + br.width / 2;
+    return {
+      labels: items.map((it) => it.textContent.replace(/\s+/g, ' ').trim()),
+      offsets: Object.keys(lines).map((k) => Math.round(
+        ((lines[k].left + lines[k].right) / 2) - boxMid)),
+    };
+  });
+  note(`${w}x${h}: legend ${JSON.stringify(leg.labels)} line offsets ${JSON.stringify(leg.offsets)}`);
+  check(!leg.error, `${w}x${h}: the legend has its rows`, leg.error || '');
+  checkSame(
+    ['Clearer Than Usual', 'Near Usual', 'Murkier Than Usual', 'No Current Reading'],
+    leg.labels,
+    `${w}x${h}: the clarity legend reads the Director's own four strings`);
+  check((leg.offsets || []).every((o) => Math.abs(o) <= 2),
+    `${w}x${h}: every line of it is centred on the map, not left-aligned`,
+    JSON.stringify(leg.offsets));
 
   await page.close();
 }
