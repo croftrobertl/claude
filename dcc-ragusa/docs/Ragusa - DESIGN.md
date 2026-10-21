@@ -1,8 +1,9 @@
 # Ragusa — Design
 
-> Status: **design for review, nothing built.** Written 2026-10-21 for the
-> Website Director, from the brief relayed by Rob. Version 0.1.0 will be the
-> first build, once this is approved.
+> Status: **approved 2026-10-21 with the corrections in section 11**, and
+> 0.1.0 is built to it. Written 2026-10-21 for the Website Director, from the
+> brief relayed by Rob. Where section 11 changes an earlier section, section
+> 11 wins; the A1 rule below is already corrected in place.
 >
 > The Croatian names are used on screen exactly as Rob wants them: Minčeta,
 > Bokar, Revelin, Lovrijenac, Sveti Ivan. The ASCII slugs in code are
@@ -86,7 +87,7 @@ one person who owns it and does not code, and one director with SSH.
 
 | # | Threat | Why it is likely here | Fortress |
 | --- | --- | --- | --- |
-| T1 | A vulnerable plugin is exploited: a web shell lands in `uploads/`, a backdoor is appended to a plugin or theme file, a rogue administrator is created, `siteurl` or `admin_email` is changed, registration is opened with a privileged default role. | 33 plugins, several large (Elementor, Essential Addons, AIOSEO, WPForms, Jetpack), an experimental AI stack and MCP Adapter 0.5.0. The DB already carries the scar of `apikey/apikey.php.suspected`. | Minčeta (files, options), Bokar (users), Lovrijenac (the warning before it happens) |
+| T1 | A vulnerable plugin is exploited: a web shell lands in `uploads/`, a backdoor is appended to a plugin or theme file, a rogue administrator is created, `siteurl` or `admin_email` is changed, registration is opened with a privileged default role. | 33 plugins, several large (Elementor, Essential Addons, AIOSEO, WPForms, Jetpack), plus Angie (Elementor's AI agent). The DB already carries the scar of `apikey/apikey.php.suspected`. | Minčeta (files, options), Bokar (users), Lovrijenac (the warning before it happens) |
 | T2 | A good-faith update breaks booking **without** a PHP fatal: a template change, a JavaScript error, a MotoPress API change, an empty iCal export. | Auto-updates are on for every plugin. Core's rollback only catches fatals, and only on cron auto-updates. | Sveti Ivan, Revelin |
 | T3 | Credential compromise: a weak `/staff/` password, no 2FA, salts never rotated, an application password minted quietly, HostGator staff SSO. | Your 2026-10-13 audit found all three open items. | Bokar (records and reports), standing advice on the page |
 | T4 | Host-level decay: disk quota full, `error_log` growth, short outages. | 82% of quota; the host has hiccups and the SSH drops. | Minčeta (disk), Sveti Ivan (no false rollbacks) |
@@ -184,16 +185,25 @@ These are named so nobody assumes Ragusa holds them.
 Rob allowed four autonomous actions. Each has one precise trigger. Anything
 that does not meet the letter of a trigger is an alert.
 
-**A1 · Quarantine a file.** All of these must hold:
+**A1 · Quarantine a file.** (Corrected 2026-10-21: the uploads folder
+holds 19 `.htaccess` files and some of them are protection.) All of these
+must hold:
 
 1. The file is under `wp-content/uploads/` (any depth), or under
-   `wp-content/upgrade/` older than 24 hours.
-2. Its name ends in an executable extension: `php`, `php3`, `php4`, `php5`,
-   `php7`, `php8`, `phtml`, `phar`, `pht`, `phps`, `shtml`, `cgi`, `pl`,
-   `py`, `sh`; or it has a double extension whose last part is one of those
-   (`photo.jpg.php`); or its name is `.htaccess` or `.user.ini` inside
-   `uploads/` (an `.htaccess` that re-enables PHP for images is the other
-   classic).
+   `wp-content/upgrade/` older than 24 hours. Ragusa's own vault, including
+   its uploads fallback location, is excluded from the walk.
+2. **Either** its name ends in an executable extension: `php`, `php3`,
+   `php4`, `php5`, `php7`, `php8`, `phtml`, `phar`, `pht`, `phps`, `shtml`,
+   `cgi`, `pl`, `py`, `sh`; or it has a double extension whose last part is
+   one of those (`photo.jpg.php`). **Or** it is a `.htaccess` or `.user.ini`
+   that is new or changed since the baseline **and re-enables execution**:
+   `AddHandler`, `SetHandler` or `AddType` mapping to PHP or CGI,
+   `php_flag engine on`, `php_admin_flag engine on`, `Options +ExecCGI`, or
+   a `<FilesMatch>`/`<Files>` block that allows PHP. The meaning is judged,
+   not the keyword: `php_flag engine off` is protection, and so is `Deny
+   from all`. Every `.htaccess` and `.user.ini` present under uploads on
+   first run is baselined (path and SHA-256) and is never quarantined; a
+   change to one of them that does not re-enable execution is an alert.
 3. It is not on the allowlist of the eight stubs, matched by exact relative
    path **and** byte size:
    `wp-staging/index.php` (679), `wp-staging/cache/index.php` (679),
@@ -208,7 +218,13 @@ that does not meet the letter of a trigger is an alert.
 
 If 1–4 hold, the file is quarantined (moved, never deleted), and Rob gets
 one email. Nothing in `uploads/` is ever hashed or opened beyond the first
-128 bytes of a PHP-named file.
+4 kB of a PHP-named, `.htaccess` or `.user.ini` file.
+
+Two of those `.htaccess` files are guards in Rob's sense and join Revelin's
+sealed set: `uploads/.htaccess` (the 2026-10-13 rule denying `.php`,
+`.phtml`, `.phar` and `.pht` in all of uploads) and
+`uploads/mphb_protected_uploads/.htaccess` (`Deny from all`, protecting
+guests' uploaded ID photos). A2 restores them if they change or disappear.
 
 **A2 · Restore a guarded file from its sealed copy.** All of these must hold:
 
@@ -1026,3 +1042,97 @@ including dying at each state and resuming, a transient failure that must
 not roll back, the mutation run, screenshots at 390 and 1280, and the
 staging checklist and rollback note under `docs/` with the `Ragusa - `
 names.
+
+---
+
+## 11. Decisions of 2026-10-21 (the Director's answers, checked on live)
+
+Approved as written: sections 2 (with the A1 correction now in place), 4.1,
+4.2, 6 and all ten points of section 8.
+
+**The 10-minute knock is installed**, without touching `DISABLE_WP_CRON`:
+
+```
+*/10 * * * * /usr/bin/curl -s -o /dev/null --max-time 60 "https://doracanalcourt.com/wp-cron.php?doing_wp_cron" >/dev/null 2>&1
+```
+
+So the healthchecks.io settings for Rob are **Period 1 hour, Grace 1 hour**.
+
+**The sentinel is Zelenci**, the two bronze bell-ringers who strike the
+hours on the City Bell Tower. File `mu-plugins/dcc-ragusa-zelenci.php`,
+card "Zelenci · Rings If Ragusa Falls". It is installed with
+`wp ragusa zelenci install` (or copied by hand from `dcc-ragusa/mu/`), and
+sealed like the other guards.
+
+**A forced install over an existing slug is an update.**
+`wp plugin install <zip> --force` is how every DCC release goes on. Revelin
+seals the existing folder from `upgrader_source_selection` (which fires
+after the package is unpacked and before the old folder is cleared, so the
+slug is known for both routes), and A4 applies to it. Only a brand-new slug
+is an "install".
+
+**mu-plugins rules.**
+
+- HostGator's and WP Staging's own files (`endurance-page-cache.php`,
+  `sso.php`, `wp-staging-optimizer.php`) change as info.
+- A new, unknown file in `mu-plugins/` is Breached: alert, never quarantine.
+- A change to a `dcc-*` mu-plugin outside the guard set is Needs A Look,
+  with the seal command in the email.
+
+**Threat model corrections.** MCP Adapter is no longer installed and of the
+AI stack only Angie is active. The plaintext keys are still in options:
+`connectors_ai_openai_api_key`, `connectors_ai_anthropic_api_key`,
+`connectors_ai_google_api_key` and `dccgg_gemini_key`. The standing advice
+names them by option only, never by value.
+
+**Housekeeping, info only, never acted on:**
+`uploads/wp-file-manager-pro/fm_backup/` is an empty leftover with a
+malformed `.htaccess` (`<FilesMatch>` closed by `</Files>`, so the folder
+answers 500), and the leftover log folders of removed plugins (`wc-logs`,
+`woocommerce_*`, `evf-logs`, `astra-sites`, `wpsc`).
+
+**MotoPress iCal, in-process.** `( new \MPHB\iCal\Exporter() )->export( $room_id )`
+echoes the `.ics` and calls `header()`; capture with `ob_start()`, swallow
+only the "headers already sent" and "Cannot modify header" warnings with a
+scoped `set_error_handler`, and require at least one `BEGIN:VEVENT` per
+room (1066, 1068, 1070, 1072, 1613, 1614, 1806, 1807). No loopback. This is
+what the live Sync Watchdog does and it has run for weeks.
+
+**error_log.** `ABSPATH . 'error_log'` (about 580 kB today); the health
+mu-plugin also watches `dirname(ABSPATH)/error_log` and
+`WP_CONTENT_DIR/debug.log`. It rotates daily by `rename()` then
+`file_put_contents($path, '')`, so the inode changes and the size drops,
+and both rotation tests apply. Ragusa reads all three paths.
+
+**Markers, verified in live HTML, logged out:**
+
+| Page | Markers (all must be present) |
+| --- | --- |
+| `/` | `<title>Dora Canal Court` |
+| `/accommodation/cottage-34/` | `name="mphbac_sheet_checkin"` and `id="mphb-js"` |
+| `/contact/` | `dcc-contact-form` |
+| `/submit-booking/` | `mphb_sc_checkout-wrapper` |
+| `/explore/` | `data-dccwl-viewtrigger` |
+
+Three of these belong to DCC plugins the Director updates, so a release
+that renamed one would make Sveti Ivan roll back his own install. The CLI
+output and the alert name the missing marker, and `wp ragusa markers`
+lists them, `wp ragusa markers set <path> <marker>[,<marker>]` changes one
+when a rename is intentional, and `wp ragusa markers reset` restores the
+baked defaults.
+
+**The DCC Security block is at line 1 of `.htaccess`.** A3 writes it there
+when the markers are missing.
+
+**Wordfence terms, read by the Director (version of 26 January 2026):**
+"Wordfence Intelligence is offered at no fee"; the licence is perpetual,
+worldwide, royalty-free and non-exclusive, including reproduce and
+distribute provided the copyright designation is reproduced; the key is
+confidential; they may rate-limit, throttle or revoke; there is no
+non-commercial restriction. Wordfence v3 scanner is the primary feed, the
+wordpress.org signals are the fallback, and each record's MITRE copyright
+notice is shown on the card and in the alert. Rob creates the account and
+the key himself after install.
+
+**Added to the mutation run:** "an existing uploads `.htaccess` gets
+quarantined" must be caught by the tests.

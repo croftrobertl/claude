@@ -1,0 +1,264 @@
+<?php
+namespace DCCR;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * The messenger. One email per distinct finding per 24 hours, a daily
+ * digest for info, and an "All Clear" when a finding resolves. Staging
+ * sends nothing unless a command asks explicitly.
+ */
+final class Alerts
+{
+    public const OPTION    = 'dcc_ragusa_alerts';
+    public const MAX       = 200;
+    public const REPEAT    = 86400;
+
+    private static ?array $data = null;
+    private static bool   $force = false;
+
+    /** Allow an email from staging for this request (wp ragusa mail test). */
+    public static function force(bool $on): void
+    {
+        self::$force = $on;
+    }
+
+    private static function load(): array
+    {
+        if (self::$data === null) {
+            $raw        = get_option(self::OPTION, []);
+            self::$data = is_array($raw) ? $raw : ['active' => [], 'digest' => []];
+            self::$data += ['active' => [], 'digest' => []];
+        }
+        return self::$data;
+    }
+
+    private static function save(): void
+    {
+        if (self::$data === null) {
+            return;
+        }
+        // Bounded: keep the newest 200 active fingerprints and 100 digest lines.
+        if (count(self::$data['active']) > self::MAX) {
+            uasort(self::$data['active'], static fn($a, $b) => ($b['last_seen'] ?? 0) <=> ($a['last_seen'] ?? 0));
+            self::$data['active'] = array_slice(self::$data['active'], 0, self::MAX, true);
+        }
+        if (count(self::$data['digest']) > 100) {
+            self::$data['digest'] = array_slice(self::$data['digest'], -100);
+        }
+        if (get_option(self::OPTION, null) === null) {
+            add_option(self::OPTION, self::$data, '', 'no');
+        } else {
+            update_option(self::OPTION, self::$data, 'no');
+        }
+    }
+
+    /**
+     * A finding: fortress, severity, kind, target, title, what, did, todo.
+     * Returns true when an email was sent now.
+     */
+    public static function raise(array $f): bool
+    {
+        $fortress = (string) $f['fortress'];
+        $severity = (string) ($f['severity'] ?? Events::NEEDS_LOOK);
+        $kind     = (string) $f['kind'];
+        $target   = (string) ($f['target'] ?? '');
+        $fp       = Events::fingerprint($fortress, $kind, $target);
+        $title    = Text::title_case((string) $f['title']);
+        $data     = self::load();
+        $now      = time();
+        $entry    = $data['active'][$fp] ?? null;
+
+        $sent = false;
+        if ($severity === Events::INFO) {
+            if ($entry === null) {
+                self::$data['digest'][] = ['fortress' => $fortress, 'title' => $title, 'what' => (string) ($f['what'] ?? ''), 'ts' => $now];
+            }
+        } elseif ($entry === null || ($now - (int) ($entry['last_sent'] ?? 0)) >= self::REPEAT) {
+            $sent = self::send($fortress, $title, self::body($f));
+        }
+
+        self::$data['active'][$fp] = [
+            'fortress'   => $fortress,
+            'severity'   => $severity,
+            'kind'       => $kind,
+            'target'     => $target,
+            'title'      => $title,
+            'first_seen' => (int) ($entry['first_seen'] ?? $now),
+            'last_seen'  => $now,
+            'last_sent'  => $sent ? $now : (int) ($entry['last_sent'] ?? 0),
+        ];
+        self::save();
+        return $sent;
+    }
+
+    /** The three sentences plus the plain link. */
+    public static function body(array $f): string
+    {
+        $lines = [];
+        foreach (['what', 'did', 'todo'] as $k) {
+            $s = trim((string) ($f[$k] ?? ''));
+            if ($s !== '') {
+                $lines[] = $s;
+            }
+        }
+        if (empty($f['todo'])) {
+            $lines[] = __('Nothing to do.', 'dcc-ragusa');
+        }
+        if (!empty($f['notice'])) {
+            $lines[] = (string) $f['notice'];
+        }
+        $lines[] = 'Ragusa: ' . Site::admin_page_url();
+        return Text::scrub(implode("\n\n", $lines));
+    }
+
+    /**
+     * Findings of these kinds that are no longer present are resolved with
+     * one "All Clear" each.
+     *
+     * @param string[] $kinds
+     * @param string[] $present_fingerprints
+     */
+    public static function resolve_missing(string $fortress, array $kinds, array $present_fingerprints): void
+    {
+        $data = self::load();
+        foreach ($data['active'] as $fp => $a) {
+            if (($a['fortress'] ?? '') !== $fortress || !in_array($a['kind'] ?? '', $kinds, true)) {
+                continue;
+            }
+            if (in_array($fp, $present_fingerprints, true)) {
+                continue;
+            }
+            self::resolve($fp);
+        }
+    }
+
+    public static function resolve(string $fp): void
+    {
+        $data = self::load();
+        $a    = $data['active'][$fp] ?? null;
+        if ($a === null) {
+            return;
+        }
+        unset(self::$data['active'][$fp]);
+        self::save();
+        if (($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0) {
+            self::send(
+                (string) $a['fortress'],
+                /* translators: %s: the finding's title */
+                sprintf(__('All Clear: %s', 'dcc-ragusa'), (string) $a['title']),
+                /* translators: %s: the finding's title */
+                sprintf(__('The finding "%s" is no longer present.', 'dcc-ragusa'), (string) $a['title']) . "\n\n"
+                . __('Ragusa did nothing new: the check that raised it now passes.', 'dcc-ragusa') . "\n\n"
+                . __('Nothing to do.', 'dcc-ragusa') . "\n\n"
+                . 'Ragusa: ' . Site::admin_page_url()
+            );
+        }
+        Events::record((string) $a['fortress'], Events::INFO, 'all-clear', (string) ($a['target'] ?? ''), (string) $a['title']);
+    }
+
+    /** @return array<string,array> fingerprint => finding */
+    public static function active(?string $fortress = null): array
+    {
+        $data = self::load();
+        if ($fortress === null) {
+            return $data['active'];
+        }
+        return array_filter($data['active'], static fn($a) => ($a['fortress'] ?? '') === $fortress);
+    }
+
+    public static function worst(string $fortress): string
+    {
+        $worst = Fortress::HOLDING;
+        foreach (self::active($fortress) as $a) {
+            if (($a['severity'] ?? '') === Events::BREACHED) {
+                return Fortress::BREACHED;
+            }
+            if (($a['severity'] ?? '') === Events::NEEDS_LOOK) {
+                $worst = Fortress::NEEDS_LOOK;
+            }
+        }
+        return $worst;
+    }
+
+    // --------------------------------------------------------------- email
+
+    public static function subject(string $fortress, string $title): string
+    {
+        return 'Ragusa · ' . Fortress::name($fortress) . ' · ' . Text::title_case($title);
+    }
+
+    /** Plain text, UTF-8 subject, no nonce links. */
+    public static function send(string $fortress, string $title, string $body): bool
+    {
+        if (!Site::is_live() && !self::$force) {
+            Events::record($fortress, Events::INFO, 'mail-suppressed', $title, __('An email was not sent because this is not the live site.', 'dcc-ragusa'));
+            return false;
+        }
+        $to = Settings::alert_email();
+        if ($to === '') {
+            return false;
+        }
+        $headers = ['Content-Type: text/plain; charset=UTF-8'];
+        $ok      = (bool) wp_mail($to, self::subject($fortress, $title), Text::scrub($body), $headers);
+        State::set('last_mail', ['ts' => time(), 'ok' => $ok, 'subject' => self::subject($fortress, $title)]);
+        if (!$ok) {
+            Events::record($fortress, Events::NEEDS_LOOK, 'mail-failed', $title, __('wp_mail reported a failure; the heartbeat will carry the reason instead.', 'dcc-ragusa'));
+        }
+        return $ok;
+    }
+
+    // -------------------------------------------------------------- digest
+
+    public static function digest_due(): bool
+    {
+        $data = self::load();
+        if ($data['digest'] === []) {
+            return false;
+        }
+        $now  = Site::now();
+        $last = (int) State::get('last_digest', 0);
+        $sent_today = $last > 0 && (new \DateTimeImmutable('@' . $last))->setTimezone(Site::tz())->format('Y-m-d') === $now->format('Y-m-d');
+        return !$sent_today && (int) $now->format('G') >= 7 && ((int) $now->format('G') > 7 || (int) $now->format('i') >= 40);
+    }
+
+    public static function send_digest(): void
+    {
+        $data = self::load();
+        if ($data['digest'] === []) {
+            return;
+        }
+        $lines = [];
+        foreach ($data['digest'] as $d) {
+            $lines[] = '• ' . Fortress::name((string) $d['fortress']) . ' · ' . $d['title'] . ($d['what'] !== '' ? ': ' . $d['what'] : '');
+        }
+        $n    = count($lines);
+        $body = implode("\n", $lines) . "\n\n" . __('Nothing to do: these are small things Ragusa noted and did not act on.', 'dcc-ragusa') . "\n\n" . 'Ragusa: ' . Site::admin_page_url();
+        /* translators: %d: number of items */
+        $sent = self::send_as('Ragusa · ' . sprintf(_n('Daily · %d Small Thing', 'Daily · %d Small Things', $n, 'dcc-ragusa'), $n), $body);
+        if ($sent || !Site::is_live()) {
+            self::$data['digest'] = [];
+            self::save();
+            State::set('last_digest', time());
+        }
+    }
+
+    private static function send_as(string $subject, string $body): bool
+    {
+        if (!Site::is_live() && !self::$force) {
+            return false;
+        }
+        $to = Settings::alert_email();
+        if ($to === '') {
+            return false;
+        }
+        return (bool) wp_mail($to, $subject, Text::scrub($body), ['Content-Type: text/plain; charset=UTF-8']);
+    }
+
+    public static function reset_cache(): void
+    {
+        self::$data = null;
+    }
+}
