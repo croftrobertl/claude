@@ -113,12 +113,12 @@ final class Restore_Guard extends Base
                 'kind'     => 'guard-restored',
                 'target'   => $rel,
                 'title'    => __('Guarded File Restored', 'dcc-ragusa'),
-                'what'     => $before['exists']
+                'what'     => !empty($before['exists'])
                     /* translators: %s: path */
                     ? sprintf(__('The file %s no longer matched its sealed copy.', 'dcc-ragusa'), $rel)
                     /* translators: %s: path */
                     : sprintf(__('The file %s was missing.', 'dcc-ragusa'), $rel),
-                'did'      => $before['exists']
+                'did'      => !empty($before['exists'])
                     /* translators: %d: journal id */
                     ? sprintf(__('Ragusa put the sealed copy back, checked that the site still loads, and kept the changed file in quarantine as journal entry %d.', 'dcc-ragusa'), $id)
                     : __('Ragusa put the sealed copy back and checked that the site still loads.', 'dcc-ragusa'),

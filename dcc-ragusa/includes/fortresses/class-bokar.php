@@ -208,7 +208,7 @@ final class Bokar
                 }
             }
             $known = isset($logins[$id][$hash]);
-            $first = $logins[$id] === [] || !isset($logins[$id]);
+            $first = empty($logins[$id]);
             $logins[$id][$hash] = ['first' => $known ? (int) $logins[$id][$hash]['first'] : $now, 'last' => $now, 'disp' => self::display_ip($ip)];
             if (count($logins[$id]) > self::MAX_IPS) {
                 uasort($logins[$id], static fn($a, $b) => ($b['last'] ?? 0) <=> ($a['last'] ?? 0));

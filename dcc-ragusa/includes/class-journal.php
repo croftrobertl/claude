@@ -36,6 +36,12 @@ final class Journal
         return self::$token;
     }
 
+    /** Start a new run token (a new request, in effect). */
+    public static function new_run(): void
+    {
+        self::$token = null;
+    }
+
     public static function create(string $action, string $target, array $before = [], string $note = '', bool $reversible = true): int
     {
         global $wpdb;

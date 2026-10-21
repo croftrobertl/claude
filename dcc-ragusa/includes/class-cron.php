@@ -51,6 +51,9 @@ final class Cron
         try {
             State::set('last_tick', time());
             State::set('vault_in_web_root', Vault::in_web_root());
+            if (Fortress::status(Fortress::SVETI_IVAN)['state'] === Fortress::UNKNOWN) {
+                Fortress::set_status(Fortress::SVETI_IVAN, Fortress::HOLDING, __('No Update Since Ragusa Was Installed', 'dcc-ragusa'));
+            }
 
             // 1. Finish or reverse what a dead run left behind.
             foreach (Actions::recover() as $line) {

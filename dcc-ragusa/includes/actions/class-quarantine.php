@@ -131,7 +131,16 @@ final class Quarantine extends Base
         if (!empty($row['before']['mode'])) {
             @chmod($path, (int) $row['before']['mode']);
         }
-        Journal::set_state($id, Journal::REVERSED, ['note' => 'restored from quarantine on request']);
+        // Put back on request means it belongs there: allowlist this path at this size.
+        $b = get_option('dcc_ragusa_baselines', []);
+        $b = is_array($b) ? $b : [];
+        $b['uploads_allow'][$rel] = (int) filesize($path);
+        if (get_option('dcc_ragusa_baselines', null) === null) {
+            add_option('dcc_ragusa_baselines', $b, '', 'no');
+        } else {
+            update_option('dcc_ragusa_baselines', $b, 'no');
+        }
+        Journal::set_state($id, Journal::REVERSED, ['note' => 'restored from quarantine on request; allowlisted at this size']);
         Events::record(Fortress::MINCETA, Events::INFO, 'quarantine-reversed', $rel, __('A quarantined file was put back on request.', 'dcc-ragusa'), [], $id);
         Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'quarantined', $rel));
         return [true, sprintf(__('Put %s back.', 'dcc-ragusa'), $rel)];

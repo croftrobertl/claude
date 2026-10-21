@@ -38,7 +38,7 @@ final class Htaccess
         $end   = $start === false ? false : strpos($content, self::END, $start);
         if ($start === false || $end === false) {
             $rest = ltrim($content, "\r\n");
-            return $rest === '' ? $block : $block . "\n" . $rest;
+            return $rest === '' ? $block : $block . $rest;
         }
         $end_len = $end + strlen(self::END);
         // Swallow one trailing newline of the old block so we do not add blank lines.

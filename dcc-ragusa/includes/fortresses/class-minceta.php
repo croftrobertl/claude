@@ -659,6 +659,10 @@ final class Minceta
         if (isset(self::STUB_ALLOWLIST[$rel]) && self::STUB_ALLOWLIST[$rel] === $size) {
             return;
         }
+        $allow = (array) (self::baselines()['uploads_allow'] ?? []);
+        if (isset($allow[Site::rel($abs)]) && (int) $allow[Site::rel($abs)] === $size) {
+            return; // put back on request earlier
+        }
         $head = $size <= 128 ? trim((string) @file_get_contents($abs, false, null, 0, 128)) : '';
         if ($head !== '' && in_array($head, self::BENIGN_STUBS, true)) {
             Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::INFO, 'kind' => 'stub', 'target' => 'uploads/' . $rel, 'title' => __('New Index Stub In Uploads', 'dcc-ragusa'), 'what' => sprintf(
@@ -675,13 +679,13 @@ final class Minceta
     private static function uploads_control_file(string $rel, string $abs, string $base, array &$p): void
     {
         $b       = self::baselines();
-        $seen    = $b['uploads_ht'] ?? [];
-        $first   = ($b['uploads_ht'] ?? null) === null;
+        $seen    = (array) ($b['uploads_ht'] ?? []);
+        // Every control file present on the first pass is the baseline.
+        $first   = !(bool) State::get('uploads_ht_baselined', false);
         $content = (string) @file_get_contents($abs, false, null, 0, 4096);
         $hash    = hash('sha256', $content);
-        if ($first || !isset($b['uploads_ht'])) {
+        if (!isset($b['uploads_ht'])) {
             $b['uploads_ht'] = [];
-            $seen            = [];
         }
         if (($seen[$rel] ?? null) === $hash) {
             return;
@@ -773,6 +777,7 @@ final class Minceta
         $total = count(self::$index ?? []);
         State::set('minceta.files', $total);
         State::set('last_full_pass', time());
+        State::set('uploads_ht_baselined', true);
         if ($p['full']) {
             State::set('last_rehash', time());
         }

@@ -124,6 +124,11 @@ final class Lovrijenac
         if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $raw)) {
             return $fail('control characters in the payload');
         }
+        $trim = trim($raw);
+        if ($trim === '' || $trim[0] !== '{' || !str_ends_with($trim, '}') || !str_contains($raw, '"software"')) {
+            return $fail('not a vulnerability feed (no JSON object with software records)');
+        }
+        unset($trim);
         $installed = self::installed();
         $hits      = [];
         foreach (array_keys($installed['plugins']) as $slug) {

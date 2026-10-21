@@ -194,7 +194,11 @@ final class Alerts
     public static function send(string $fortress, string $title, string $body): bool
     {
         if (!Site::is_live() && !self::$force) {
-            Events::record($fortress, Events::INFO, 'mail-suppressed', $title, __('An email was not sent because this is not the live site.', 'dcc-ragusa'));
+            // The page's amber notice already says staging sends nothing; one event a day is enough.
+            if ((int) State::get('mail_suppressed_noted', 0) < time() - 86400) {
+                State::set('mail_suppressed_noted', time());
+                Events::record($fortress, Events::INFO, 'mail-suppressed', $title, __('Emails are not sent from this site; only the live site sends them.', 'dcc-ragusa'));
+            }
             return false;
         }
         $to = Settings::alert_email();
