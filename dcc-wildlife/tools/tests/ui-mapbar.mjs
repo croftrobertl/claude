@@ -240,6 +240,40 @@ section('item 4 — the menu buttons carry a weight, and the LABEL carries it to
     });
     note(`drop buttons ${JSON.stringify(weights)}`);
     checkAtLeast(2, weights.length, 'both menu buttons are on the compact bar');
+
+    /*
+     * ITEM 2 (1.44.3) — THE BAR'S LABELS ARE TITLE CASE. "Data age" was the
+     * one that needed changing; the rest are asserted with it so the sweep
+     * is a record rather than a claim. `colorBy` ("Colour by:") is
+     * deliberately exempt and named here — see the note in
+     * class-water-render.php.
+     */
+    const barLabels = await page.evaluate(() => {
+      const bar = document.querySelector('.dccwl-map-bar');
+      const vis = (el) => el.getClientRects().length > 0;
+      /* The full shape's segmented control carries the colour names; the
+       * compact shape's menu carries them as radio rows. Open everything so
+       * the sweep sees every label the bar can show. */
+      bar.querySelectorAll('.dccwl-drop-btn[aria-haspopup="true"]').forEach((b) => {
+        b.setAttribute('aria-expanded', 'true');
+        if (b.nextElementSibling) { b.nextElementSibling.hidden = false; }
+      });
+      const out = [];
+      bar.querySelectorAll('.dccwl-seg-btn, .dccwl-drop-row, .dccwl-drop-head, .dccwl-drop-action')
+        .forEach((el) => { if (vis(el)) { out.push(el.textContent.replace(/\s+/g, ' ').trim()); } });
+      return out;
+    });
+    note(`bar labels: ${JSON.stringify(barLabels)}`);
+    checkAtLeast(4, barLabels.length, 'the bar offers its labels to sweep');
+    check(barLabels.includes('Data Age'),
+      'the freshness colouring reads "Data Age", not "Data age"', barLabels.join(' | '));
+    /* Every label starts capitalised and carries no lower-case second word —
+     * the same shape of check the layer chips take. "Colour by" is the one
+     * exemption, by the Director's own repeated wording. */
+    const sentence = barLabels
+      .filter((l) => !/^Colour by/i.test(l))
+      .filter((l) => !/^[A-Z0-9]/.test(l) || /\b[a-z]+\s[a-z]/.test(l));
+    checkSame([], sentence, 'and every other bar label is Title Case', sentence.join(' | '));
     for (const b of weights) {
       checkSame(true, b.hasLabel, `"${b.text}" wraps its text in a label span`);
       /* 500 is the Selector's own button weight, read from its branch. */

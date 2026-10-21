@@ -1016,9 +1016,32 @@ final class Water_Render {
 						'windNorth'   => _x( 'N', 'compass north on the wind dial', 'dcc-wildlife' ),
 						/* translators: 1: compass direction the wind comes from, e.g. "NE". 2: wind speed as the forecast words it, e.g. "5 to 10 mph". 3: the full source name. */
 						'windAria'    => __( 'Wind %1$s at %2$s — %3$s', 'dcc-wildlife' ),
+						/*
+						 * ITEM 2 (1.44.3) — THE MAP BAR'S LABELS, SWEPT.
+						 *
+						 * "Data age" was the one that needed changing. The
+						 * others on that bar were already Title Case and are
+						 * listed here so the sweep is a record rather than a
+						 * claim: Clarity, Level, Base Map, Fullscreen,
+						 * Satellite and Streets (below), and the four legend
+						 * rows Title Cased in 1.44.1.
+						 *
+						 * `colorBy` is DELIBERATELY LEFT as "Colour by:" and
+						 * flagged rather than changed. It is the label that
+						 * introduces the segmented control and is composed
+						 * into the menu button's own text ("Colour by:
+						 * Clarity ▾"), and the Director has written it that
+						 * way in three briefs including the one asking for
+						 * this sweep. One line from him changes it.
+						 *
+						 * Two labels on OTHER surfaces are still sentence
+						 * case and are reported, not changed, because the ask
+						 * was the bar: "Station page" and "Depth map (PDF)",
+						 * both in map popups.
+						 */
 						'byClarity'   => __( 'Clarity', 'dcc-wildlife' ),
 						'byLevel'     => __( 'Level', 'dcc-wildlife' ),
-						'byFresh'     => __( 'Data age', 'dcc-wildlife' ),
+						'byFresh'     => __( 'Data Age', 'dcc-wildlife' ),
 						/*
 						 * `layers` IS DROPPED WITH ITS MENU (item 3, 1.44.1).
 						 * Rob: "chips only. Remove the 'Layers ▾' menu; the

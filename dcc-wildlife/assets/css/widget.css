@@ -201,13 +201,11 @@
  * row held four tabs. It holds three now, which is slack, not licence —
  * "Reptiles & Amphibians" is still the longest thing a label can become.)
  */
-@media (min-width: 481px) {
-	.dccwl-root .dccwl-tabs {
-		display: flex;
-		justify-content: center;
-		max-width: var(--dccwl-measure);
-		width: fit-content;
-	}
+/* ITEM 1 (1.44.3): app.css makes the group content-sized at every width, so
+ * what was a 481px-and-up exception is now simply true. Kept as the one place
+ * that caps it to the reading measure. */
+.dccwl-root .dccwl-tabs {
+	max-width: min(100%, var(--dccwl-measure));
 }
 
 /* =====================================================================

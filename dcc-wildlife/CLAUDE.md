@@ -4275,3 +4275,64 @@ live widths (118/108/104 here against his 118/107/103).
   Badges chip with its word back; the same with the round class removed, so
   the row wraps at a 334px container; and `margin-inline: auto` back on the
   pill.
+
+### 37. 1.44.3 — a segment is as wide as its label, and a probe that measured in whole pixels
+
+Two small things from the Director's live pass on 1.44.2.
+
+**EACH SEGMENT IS SIZED TO ITS OWN LABEL, which is the Calendar's
+`width: auto`.** 1.44.2 copied the Calendar's look but kept `flex: 1 1 0` on
+the segment, so every segment was an equal share of the row and **the longest
+label got the least room on either side of it**: at 1280px he measured 59px
+segments giving "Fishing" 6px of padding where "Map" and "Now" had 15.
+Measured here before the change, at the Raleway stand-in: "Fishing" 7px
+against "Now" 17px, "Animals" 7.9px against "Plants" 14.1px, and the season
+bar stretched to **1264px** with 130px of padding around "Summer".
+
+- `flex: 0 1 auto` and the group at `width: fit-content` with auto side
+  margins. It may still SHRINK if a group ever outgrows its line — that is
+  what `min-width: 0` is for (1.18.1) — but it never grows past its content.
+- **`display: flex`, not `inline-flex`.** An inline box centres only if its
+  parent says so, and these parents compute `text-align: left`; a block-level
+  flex with `width: fit-content` and `margin-inline: auto` centres whatever
+  the parent does. That is the 1.36.0 lesson, which cost a 490px offset once.
+- **The `width: 100%` phone rules are gone from all three stylesheets** —
+  app.css's two media blocks, water.css's tab bar and its 481px twin, and
+  widget.css's 481px rule. One answer in one place; a narrow phone tightens
+  the padding (the Calendar's own `0 8px` under 390px) instead of stretching
+  the segments.
+
+After: **exactly 12px each side at 390px and wider, 8px under 390px, on every
+segment of every bar**, and the season bar is 264px instead of 1264.
+
+**THE PADDING IS ASSERTED FROM THE TEXT, NOT FROM `padding-left`.** The
+declaration is not the question — where the glyphs land is. The sweep also
+asserts the other half, that no segment is WIDER than its label needs, which
+is what would catch the equal-width layout coming back. **1280px is in the
+sweep now**: the defect was invisible at phone widths, where every segment
+had room to spare, and a phone-only check could never have seen it.
+
+**AND A PROBE THAT MEASURED IN WHOLE PIXELS REPORTED A SPILL THAT DID NOT
+EXIST.** `ui-mobile.mjs` compared a fractional text width against
+`el.clientWidth`, which is an INTEGER: a 78.3px segment reports 78, so a
+54.5px label inside 12px padding "spilled" 0.5px. It never showed while every
+segment was far wider than its text, and it failed the moment they were sized
+to their labels. Both sides are fractional now — `getBoundingClientRect()`
+minus the computed padding and borders. **A measurement that rounds one side
+of a comparison is not a measurement**, and the failure it produced looked
+exactly like a real clip.
+
+**"Data Age" (item 2), and the sweep is a record rather than a claim.** The
+other labels on that bar were already Title Case and are now asserted with it
+— Clarity, Level, Base Map, Satellite, Streets, Fullscreen — by opening both
+menus so the check sees every label the bar can show. **`colorBy` ("Colour
+by:") is deliberately exempt**: it introduces the segmented control and is
+composed into the menu button's own text, and the Director has written it
+that way in three briefs including the one asking for the sweep. Two labels
+on OTHER surfaces are still sentence case and were reported rather than
+changed, because the ask was the bar: **"Station page" and "Depth map (PDF)"**,
+both in map popups.
+
+Mutations verified red, restored with `cp`/`mv`, harness re-run after:
+`flex: 1 1 0` back (3px of padding on "Animals", 10.5px on "Plants" — both
+halves of the check firing), and "Data age" back.

@@ -186,7 +186,19 @@ for (const [w, inflate, required] of TAB_CASES) {
       // exactly what has to fit.
       const textW = r.getBoundingClientRect().width;
       const cs = getComputedStyle(el);
-      const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      /*
+       * THE CONTENT BOX, FRACTIONALLY (1.44.3). This read `el.clientWidth`,
+       * which is an INTEGER, against a fractional text width — so it
+       * manufactured up to a pixel of phantom spill the moment a segment was
+       * sized to its own label (item 1): a 78.3px box reports 78, and a
+       * 54.5px label inside 12px padding "spilled" 0.5px that does not
+       * exist. It never showed before because every segment used to be far
+       * wider than its text. Both sides are fractional now.
+       */
+      const box = el.getBoundingClientRect().width;
+      const inner = box
+        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+        - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
       const s = textW - inner;
       if (s > spill) { spill = s; which = (el.textContent || '').trim(); }
       minH = Math.min(minH, Math.round(el.getBoundingClientRect().height));

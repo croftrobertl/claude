@@ -1050,17 +1050,30 @@
 .dccwl-app .dccwl-tabs.dccwl-tabs {
 	/* The 2px outline is drawn by ::after, inset, so it sits OVER the
 	 * segments' own fill and cannot be covered by a selected segment running
-	 * to the group's edge. That is the Calendar's own construction. */
+	 * to the group's edge. That is the Calendar's own construction.
+	 *
+	 * ITEM 1 (1.44.3) — THE GROUP HUGS ITS LABELS AND CENTRES. It was
+	 * `width: 100%` on a phone with `flex: 1 1 0` segments, so every segment
+	 * came out the same width whatever its label: at 1280px "Fishing" had
+	 * 7px of padding where "Now" had 17, and the season bar stretched to
+	 * 1264px. The Calendar sizes each segment to its own label, so the group
+	 * is as wide as its contents and no wider.
+	 *
+	 * `display: flex` (block-level) with `width: fit-content` and auto side
+	 * margins, NOT `inline-flex`: an inline box centres only if its parent
+	 * says so, and these parents compute `text-align: left` — the 1.36.0
+	 * lesson, which cost a 490px offset once already. */
 	background: #ffffff;
 	border: 0;
 	border-radius: 999px;
-	display: inline-flex;
+	display: flex;
 	gap: 0;
 	height: 44px;
 	margin: 0 auto var(--dccwl-gap);
 	max-width: 100%;
 	padding: 0;
 	position: relative;
+	width: fit-content;
 }
 .dccwl-app .dccwl-tabs.dccwl-tabs::after {
 	border: 2px solid #0a50b2;
@@ -1081,7 +1094,13 @@
 	color: #0a50b2;
 	cursor: pointer;
 	display: inline-flex;
-	flex: 1 1 0;
+	/* SIZED TO ITS OWN LABEL (item 1, 1.44.3), which is the Calendar's
+	 * `width: auto`. `1 1 0` made every segment an equal share of the row and
+	 * gave the longest label the least room on either side of it. It may
+	 * still SHRINK if a group ever outgrows its line — `min-width: 0` below
+	 * is what lets that happen without pushing the page wide (1.18.1) — but
+	 * it never grows past its content. */
+	flex: 0 1 auto;
 	font: inherit;
 	/* 14px on the 20px deployment root; see the token's note. */
 	font-size: var(--dccwl-fs-seg);
@@ -1109,15 +1128,12 @@
 .dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:last-child { border-radius: 0 999px 999px 0; }
 
 /* Under 390px the SIDES tighten, never the type — the Calendar's own
- * `@media (max-width: 389px)` block. */
+ * `@media (max-width: 389px)` block. The `width: 100%` that used to sit here
+ * and in a 480px twin went with item 1 (1.44.3): the group is content-sized
+ * at every width now, so a narrow phone tightens the padding instead of
+ * stretching the segments. */
 @media (max-width: 389px) {
-	.dccwl-app .dccwl-tabs.dccwl-tabs { display: flex; width: 100%; }
 	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab { padding: 0 8px; }
-}
-/* At 390px and up on a phone the group still fills the row rather than
- * shrinking to its labels; the Calendar's bar sits in a wider field. */
-@media (max-width: 480px) {
-	.dccwl-app .dccwl-tabs.dccwl-tabs { display: flex; width: 100%; }
 }
 
 /* SELECTED: solid, in the same blue as the outline and the divider. */

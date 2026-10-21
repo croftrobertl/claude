@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.2
+Stable tag: 1.44.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,15 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.3 =
+* **Each segment of the Map · Now · Fishing and Animals · Plants · Safety
+  switches is now as wide as its own label**, with the same breathing room on
+  every one. They used to share the row equally, so the longest word got the
+  least space — "Fishing" had its letters almost touching the divider while
+  "Map" sat in the middle of its segment. The season bar no longer stretches
+  across a desktop screen either.
+* The map's colour control reads **"Data Age"**.
 
 = 1.44.2 =
 * **The Map · Now · Fishing and Animals · Plants · Safety switches now look

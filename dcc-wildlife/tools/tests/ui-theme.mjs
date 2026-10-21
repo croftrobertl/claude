@@ -315,9 +315,12 @@ section('no section tab wraps at any phone width, whatever face the theme serves
  * as a silently changed value.
  */
 for (const [which, width] of [
-  ['month', 320], ['month', 360], ['month', 390],
-  ['water', 320], ['water', 360], ['water', 390],
+  ['month', 320], ['month', 360], ['month', 390], ['month', 1280],
+  ['water', 320], ['water', 360], ['water', 390], ['water', 1280],
 ]) {
+  /* 1280 IS IN THIS LIST BECAUSE THAT IS WHERE THE DEFECT WAS VISIBLE (item
+   * 1, 1.44.3): the equal-width segments gave "Fishing" 6px of padding where
+   * "Map" and "Now" had 15. A phone-only sweep could not have seen it. */
   const p2 = await widgetPage(browser, which, {
     width, height: 2400, sitekit: true,
     // 0.7 x 1.21, the same Raleway stand-in the row has used since 1.32.1.
@@ -350,14 +353,50 @@ for (const [which, width] of [
         r2.selectNodeContents(t);
         wText = Math.round(r2.getBoundingClientRect().width);
       }
+      const br = b.getBoundingClientRect();
+      let tl = 0;
+      if (t) {
+        const r3 = document.createRange();
+        r3.selectNodeContents(t);
+        tl = r3.getBoundingClientRect().left;
+      }
       out.push({ label: b.textContent.trim(), lines: n, w: wText,
-                 box: Math.round(b.getBoundingClientRect().width) });
+                 box: Math.round(br.width),
+                 padL: Math.round((tl - br.left) * 10) / 10,
+                 padR: Math.round((br.right - (tl + wText)) * 10) / 10 });
     });
     return out;
   });
+  /*
+   * ITEM 1 (1.44.3) — NO SEGMENT'S TEXT SITS CLOSER TO ITS EDGE THAN THE
+   * CALENDAR'S OWN PADDING: 12px at 390px and wider, 8px under 390px.
+   *
+   * The Director measured 59px fixed segments at 1280px, which left
+   * "Fishing" 6px each side where "Map" and "Now" had 15 — the longest label
+   * getting the least room, because `flex: 1 1 0` made every segment an
+   * equal share of the row. The segments are sized to their own labels now.
+   *
+   * Measured from the TEXT to the segment's box, not read off
+   * `padding-left`: the declaration is not the question, where the glyphs
+   * actually land is.
+   */
+  const PAD = width < 390 ? 8 : 12;
+  const tight = lines
+    .filter((l) => Math.min(l.padL, l.padR) < PAD - 0.5)
+    .map((l) => `${l.label} ${l.padL}/${l.padR}`);
+  checkSame([], tight,
+    `${which} ${width}px: every segment keeps ${PAD}px between its text and its edges`);
+  /* And no more than its padding either: a segment wider than its label is
+   * the equal-width layout coming back. One pixel of slack for rounding. */
+  const loose = lines
+    .filter((l) => Math.max(l.padL, l.padR) > PAD + 1)
+    .map((l) => `${l.label} ${l.padL}/${l.padR}`);
+  checkSame([], loose,
+    `${which} ${width}px: and is no wider than its label needs`, loose.join(' | '));
+
   const wrapped = lines.filter((l) => l.lines > 1).map((l) => l.label);
   note(`${which} ${width}px (Raleway stand-in): ` +
-    lines.map((l) => `${l.label}=${l.lines}line/${l.w}px in ${l.box}px`).join(' '));
+    lines.map((l) => `${l.label}=${l.lines}line/${l.w}px in ${l.box}px pad ${l.padL}/${l.padR}`).join(' '));
   checkSame([], wrapped, `${which} ${width}px: no tab label wraps`);
   /* SPILL, separately from wrapping: a nowrap label that does not fit simply
    * overflows its segment, which counts one line and looks fine to the check

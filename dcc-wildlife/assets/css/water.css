@@ -902,17 +902,15 @@
  * source; see the note in app.css. What is set HERE is layout only.
  * ================================================================== */
 .dccwl-water-tabs[hidden] { display: none; }
+/* ITEM 1 (1.44.3): content-sized at EVERY width, like the Calendar's bar and
+ * like the group rule in app.css. The `width: 100%` here and the 481px twin
+ * that undid it are both gone — one answer at one place. */
 .dccwl-water .dccwl-tabs.dccwl-water-tabs {
 	display: flex;
 	margin-bottom: var(--dccwl-gap-lg);
-	width: 100%;
-}
-@media (min-width: 481px) {
-	.dccwl-water .dccwl-tabs.dccwl-water-tabs {
-		margin-inline: auto;
-		max-width: var(--dccwl-measure);
-		width: fit-content;
-	}
+	margin-inline: auto;
+	max-width: 100%;
+	width: fit-content;
 }
 .dccwl-water-tab[hidden] { display: none; }
 /* The first block inside a pane should not carry the margin it had when it
@@ -1033,11 +1031,16 @@
  * centre). A block-level flex that centres its own children does not care
  * what the parent's text-align is, at any width.
  */
+/* The season bar, same answer (item 1, 1.44.3): it stretched to 1264px at
+ * 1280 and gave "Summer" 130px of padding on each side. `justify-content`
+ * has nothing left to do once the box is the width of its segments, but the
+ * BLOCK-level flex and the auto margins are what centre it — see the 1.36.0
+ * note above, which is why this rule exists at all. */
 .dccwl-water .dccwl-tabs.dccwl-tabs.dccwl-fish-seasons {
 	display: flex;
-	justify-content: center;
 	margin: 0 auto var(--dccwl-gap-lg);
-	width: 100%;
+	max-width: 100%;
+	width: fit-content;
 }
 .dccwl-fish-season[hidden] { display: none; }
 .dccwl-fish-species { margin: 0 0 var(--dccwl-gap); }

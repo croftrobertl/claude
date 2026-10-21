@@ -916,7 +916,7 @@
 		var COLOURS = [
 			['clarity', i18n.byClarity || 'Clarity'],
 			['level', i18n.byLevel || 'Level'],
-			['fresh', i18n.byFresh || 'Data age']
+			['fresh', i18n.byFresh || 'Data Age']
 		];
 		var colourLabel = i18n.colorBy || 'Colour by:';
 		// The menu button says which colouring is on. The label above ends in
