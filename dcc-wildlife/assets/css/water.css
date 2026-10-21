@@ -61,7 +61,7 @@
 
 .dccwl-water > * + * { margin-top: var(--dccwl-gap-lg); }
 
-.dccwl-water .dccwl-water-title {
+.dccwl-water-scope .dccwl-water-title {
 	color: var(--dccwl-text);
 	font-size: var(--dccwl-fs-lg);
 	font-weight: var(--dccwl-fw-strong);
@@ -70,7 +70,7 @@
 	text-align: center;
 }
 
-.dccwl-water .dccwl-water-sub {
+.dccwl-water-scope .dccwl-water-sub {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	font-weight: var(--dccwl-fw-strong);
@@ -80,6 +80,30 @@
 }
 
 /* =====================================================================
+ * THE SCOPE CLASS, AND WHY IT IS NOT `.dccwl-water` (1.44.5)
+ *
+ * Every component rule below used to be scoped to `.dccwl-water`, the
+ * module's own <section>. But `Water_Render::about_fold()` is called from
+ * `Render`'s FOOTNOTE ROW (1.34.0, Rob's item 4) — outside that section
+ * entirely — so on /explore/ the About fold rendered the same cards, the
+ * same headings and the same link lists with NONE of these rules in force:
+ * no grid, no card ground, no source-name cap. Measured at 390px, its
+ * content box was 583px wide and clipped on both sides.
+ *
+ * That is the SIXTH defect of one shape in this repository — a rule written
+ * for the wrong parent is invisible, and the thing it was meant to govern
+ * keeps doing what it always did (1.23.0's deck layout on `.dccwl-tiles`,
+ * 1.39.0's disclosure marker, 1.40.1's fold component, 1.40.0's wind badge,
+ * 1.44.0's inline map shell).
+ *
+ * So the scope is a class BOTH renderers put on: the section carries
+ * `dccwl-water dccwl-water-scope`, and the About fold's <details> carries
+ * `dccwl-water-scope` as well. `.dccwl-water` keeps only the three rules
+ * that are genuinely about the section — its font, its centring and its
+ * `> * + *` spacing — because those describe a block in page flow and a
+ * <details> is not one.
+ *
+ * =====================================================================
  * DATA CARDS
  * One reading per card: the label and its provenance chip on top, the
  * value large, the full attribution beneath. The chip summarises that
@@ -87,16 +111,47 @@
  * measurement date are the point of this module.
  * ================================================================== */
 
-.dccwl-water .dccwl-cards {
+.dccwl-water-scope .dccwl-cards {
 	display: grid;
 	gap: var(--dccwl-gap);
-	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	/* `min(230px, 100%)`, not a bare 230px: a bare track floor is a MINIMUM
+	 * the grid must honour, so in any container narrower than that — the
+	 * About fold inside a phone-width column, an Elementor column a third
+	 * of a page wide — the row grew past its parent instead of shrinking.
+	 * With `min()` the floor collapses to the container and the grid is a
+	 * single column, which is what the ≤600px rule says explicitly and what
+	 * every narrow container now gets without a breakpoint. */
+	grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr));
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.dccwl-water .dccwl-card {
+/*
+ * NOTHING IN A CARD MAY BE WIDER THAN THE CARD (1.44.5).
+ *
+ * The scope fix above is the cause; this is the floor under it. A source
+ * name, a URL in an attribution line or an owner-typed almanac value is text
+ * this plugin did not write, and a single unbroken run of it would push its
+ * box past the container again with no breakpoint able to help. `anywhere`
+ * rather than `break-word` because only `anywhere` also shrinks the box's
+ * min-content width, which is what a grid or flex track actually measures.
+ *
+ * The source-name CHIP is deliberately excluded: it truncates with an
+ * ellipsis and carries the whole name in its `title`, and wrapping a
+ * sixty-character name inside a 44px chip is not the same control.
+ */
+.dccwl-water-scope .dccwl-card-value,
+.dccwl-water-scope .dccwl-card-label,
+.dccwl-water-scope .dccwl-water-attr,
+.dccwl-water-scope .dccwl-water-note,
+.dccwl-water-scope .dccwl-water-links a,
+.dccwl-water-scope .dccwl-water-reports a {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.dccwl-water-scope .dccwl-card {
 	background: var(--dccwl-glass-bg);
 	border: 1px solid var(--dccwl-glass-border);
 	border-radius: var(--dccwl-radius);
@@ -108,7 +163,7 @@
 	padding: var(--dccwl-pad);
 }
 
-.dccwl-water .dccwl-card-head {
+.dccwl-water-scope .dccwl-card-head {
 	align-items: center;
 	display: flex;
 	flex-wrap: wrap;
@@ -116,7 +171,7 @@
 	justify-content: space-between;
 }
 
-.dccwl-water .dccwl-card-label {
+.dccwl-water-scope .dccwl-card-label {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	font-weight: 700;
@@ -126,12 +181,12 @@
 /* The source + age chip. The source name can be long ("USGS rain gauge
  * (site 02237700)"), so it truncates visually — the untruncated name is
  * still printed in the attribution line below, so nothing is lost. */
-.dccwl-water .dccwl-card-src {
+.dccwl-water-scope .dccwl-card-src {
 	max-width: 100%;
 	min-width: 0;
 }
 
-.dccwl-water .dccwl-card-srcname {
+.dccwl-water-scope .dccwl-card-srcname {
 	display: inline-block;
 	max-width: 13ch;
 	overflow: hidden;
@@ -140,14 +195,14 @@
 	white-space: nowrap;
 }
 
-.dccwl-water .dccwl-card-dot { color: var(--dccwl-text-faint); }
+.dccwl-water-scope .dccwl-card-dot { color: var(--dccwl-text-faint); }
 
-.dccwl-water .dccwl-card-age {
+.dccwl-water-scope .dccwl-card-age {
 	color: var(--dccwl-text);
 	font-weight: 700;
 }
 
-.dccwl-water .dccwl-card-value {
+.dccwl-water-scope .dccwl-card-value {
 	color: var(--dccwl-text);
 	/* 1.27.0: was a bare 1.35rem off the scale. Same rendered value, now the
 	 * named "big value" role, so a reading and a hub tile name stay in step. */
@@ -157,7 +212,7 @@
 	margin: 0;
 }
 
-.dccwl-water .dccwl-water-attr {
+.dccwl-water-scope .dccwl-water-attr {
 	/* WCAG: the faint token measures 2.7:1 on these white cards, which fails AA.
 	 * This is the module's attribution — its entire integrity claim — so it is
 	 * the last text on the page that should be hard to read. */
@@ -170,43 +225,43 @@
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-water .dccwl-water-attr a {
+.dccwl-water-scope .dccwl-water-attr a {
 	color: var(--dccwl-text-muted);
 	text-decoration: underline;
 }
 
 /* Hover is still a state a guest reads in; AA applies to it too. */
-.dccwl-water .dccwl-water-attr a:hover { color: var(--dccwl-accent-text); }
+.dccwl-water-scope .dccwl-water-attr a:hover { color: var(--dccwl-accent-text); }
 
-.dccwl-water .dccwl-water-note { font-style: italic; font-weight: var(--dccwl-fw-body); }
+.dccwl-water-scope .dccwl-water-note { font-style: italic; font-weight: var(--dccwl-fw-body); }
 
 /* Tier is a quiet left edge, not a shout: live readings read as current,
  * general guidance reads as advice. */
-.dccwl-water .dccwl-water-tier-live { border-left: 3px solid var(--dccwl-ok); }
-.dccwl-water .dccwl-water-tier-published { border-left: 3px solid var(--dccwl-primary); }
-.dccwl-water .dccwl-water-tier-general { border-left: 3px solid var(--dccwl-warn); }
+.dccwl-water-scope .dccwl-water-tier-live { border-left: 3px solid var(--dccwl-ok); }
+.dccwl-water-scope .dccwl-water-tier-published { border-left: 3px solid var(--dccwl-primary); }
+.dccwl-water-scope .dccwl-water-tier-general { border-left: 3px solid var(--dccwl-warn); }
 
 /* =====================================================================
  * SECTIONS
  * ================================================================== */
 
-.dccwl-water .dccwl-chain[hidden] { display: none; }
+.dccwl-water-scope .dccwl-chain[hidden] { display: none; }
 
-.dccwl-water .dccwl-chain-note {
+.dccwl-water-scope .dccwl-chain-note {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	margin: 0 0 var(--dccwl-gap);
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-water .dccwl-water-general {
+.dccwl-water-scope .dccwl-water-general {
 	border: 1px dashed var(--dccwl-line-strong);
 	border-radius: var(--dccwl-radius);
 	margin-top: var(--dccwl-gap);
 	padding: var(--dccwl-pad);
 }
 
-.dccwl-water .dccwl-water-general-head {
+.dccwl-water-scope .dccwl-water-general-head {
 	/* 0.78rem bold = small text, needs 4.5:1; the warn fill token is 3.60:1.
 	 * warn-text (1.16.2) is 4.63:1 on the blue tile this can sit on. */
 	color: var(--dccwl-warn-text);
@@ -216,7 +271,7 @@
 	margin: 0 0 var(--dccwl-gap);
 }
 
-.dccwl-water .dccwl-water-linklist {
+.dccwl-water-scope .dccwl-water-linklist {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
@@ -225,9 +280,9 @@
 	padding: 0;
 }
 
-.dccwl-water .dccwl-water-linklist li { margin: 0; }
+.dccwl-water-scope .dccwl-water-linklist li { margin: 0; }
 
-.dccwl-water .dccwl-water-linklist a {
+.dccwl-water-scope .dccwl-water-linklist a {
 	align-items: center;
 	border: 1px solid var(--dccwl-line);
 	display: inline-flex;
@@ -242,21 +297,21 @@
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-water .dccwl-water-linklist a:hover,
-.dccwl-water .dccwl-water-linklist a:focus-visible {
+.dccwl-water-scope .dccwl-water-linklist a:hover,
+.dccwl-water-scope .dccwl-water-linklist a:focus-visible {
 	background: var(--dccwl-btn-bg-hover);
 	border-color: transparent;
 	color: var(--dccwl-btn-txt-hover);
 }
 
-.dccwl-water .dccwl-water-disclaimer {
+.dccwl-water-scope .dccwl-water-disclaimer {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	margin: var(--dccwl-gap) 0 0;
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-water .dccwl-map-intro {
+.dccwl-water-scope .dccwl-map-intro {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	margin: 0 0 var(--dccwl-gap);
@@ -825,8 +880,8 @@
 .dccwl-fishing-src-links { display: inline-block; margin-top: 4px; }
 
 @media (max-width: 600px) {
-	.dccwl-water .dccwl-cards { grid-template-columns: 1fr; }
-	.dccwl-water .dccwl-card-srcname { max-width: 20ch; }
+	.dccwl-water-scope .dccwl-cards { grid-template-columns: 1fr; }
+	.dccwl-water-scope .dccwl-card-srcname { max-width: 20ch; }
 	.dccwl-fishing-seasons { grid-template-columns: 1fr; }
 }
 
@@ -905,7 +960,7 @@
 /* ITEM 1 (1.44.3): content-sized at EVERY width, like the Calendar's bar and
  * like the group rule in app.css. The `width: 100%` here and the 481px twin
  * that undid it are both gone — one answer at one place. */
-.dccwl-water .dccwl-tabs.dccwl-water-tabs {
+.dccwl-water-scope .dccwl-tabs.dccwl-water-tabs {
 	display: flex;
 	margin-bottom: var(--dccwl-gap-lg);
 	margin-inline: auto;
@@ -978,10 +1033,10 @@
 /* ITEM 8 (his pick: B) — the source tier is a FULL border, all four sides,
  * so the cards separate; and a one-line key says what the colours mean.
  * The colour was decoration until the key existed. */
-.dccwl-water .dccwl-water-tier-live { border: 2px solid var(--dccwl-ok); }
-.dccwl-water .dccwl-water-tier-published { border: 2px solid var(--dccwl-primary); }
-.dccwl-water .dccwl-water-tier-general { border: 2px solid var(--dccwl-warn); }
-.dccwl-water .dccwl-water-fact { border-radius: var(--dccwl-radius-lg); }
+.dccwl-water-scope .dccwl-water-tier-live { border: 2px solid var(--dccwl-ok); }
+.dccwl-water-scope .dccwl-water-tier-published { border: 2px solid var(--dccwl-primary); }
+.dccwl-water-scope .dccwl-water-tier-general { border: 2px solid var(--dccwl-warn); }
+.dccwl-water-scope .dccwl-water-fact { border-radius: var(--dccwl-radius-lg); }
 .dccwl-water-tierkey {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
@@ -995,7 +1050,7 @@
  * below: --dccwl-gap-lg, which is 10px x density. At the shipped density of
  * 1 that is 10px on each side, where the bar previously sat tight against
  * the title above it and the content below. */
-.dccwl-water .dccwl-water-tabs { margin-bottom: var(--dccwl-gap-lg); margin-top: var(--dccwl-gap-lg); }
+.dccwl-water-scope .dccwl-water-tabs { margin-bottom: var(--dccwl-gap-lg); margin-top: var(--dccwl-gap-lg); }
 
 /* ITEM 6 — "Tonight on the Canal": everything centred, moon above the text. */
 /* The moon card is a FLEX ROW — a drawn disk beside its lines — so its own
@@ -1013,10 +1068,10 @@
 
 /* ITEM 9 — the Fishing tab is centre-aligned by default, including the text
  * inside each card. */
-.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"],
-.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] p,
-.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] li,
-.dccwl-water .dccwl-water-tab[data-dccwl-water-tab="fishing"] .dccwl-card { text-align: center; }
+.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"],
+.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] p,
+.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] li,
+.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] .dccwl-card { text-align: center; }
 
 /* ITEM 10 (his pick: A) — season picker, then a labelled block per species,
  * with ruled breaks between the seasons, the map/ramps, the licences and the
@@ -1036,7 +1091,7 @@
  * has nothing left to do once the box is the width of its segments, but the
  * BLOCK-level flex and the auto margins are what centre it — see the 1.36.0
  * note above, which is why this rule exists at all. */
-.dccwl-water .dccwl-tabs.dccwl-tabs.dccwl-fish-seasons {
+.dccwl-water-scope .dccwl-tabs.dccwl-tabs.dccwl-fish-seasons {
 	display: flex;
 	margin: 0 auto var(--dccwl-gap-lg);
 	max-width: 100%;
@@ -1072,7 +1127,7 @@
 /* The readings fold (item 3, pick B). It is the shared fullguide component, so
  * it already matches Field Guide and Credits; only its width is set here, and
  * the tier key sits centred above the cards it decodes. */
-.dccwl-water .dccwl-water-allreadings {
+.dccwl-water-scope .dccwl-water-allreadings {
 	margin-inline: auto;
 }
 
@@ -1271,7 +1326,7 @@
  * that stands where the map would be. It centres like the rest of the
  * section.
  * ====================================================================== */
-.dccwl-water .dccwl-map-intro {
+.dccwl-water-scope .dccwl-map-intro {
 	text-align: center;
 }
 
@@ -1297,7 +1352,7 @@
 .dccwl-water-placerow { position: relative; }
 
 
-.dccwl-water .dccwl-chipmenu {
+.dccwl-water-scope .dccwl-chipmenu {
 	background: #ffffff;
 	border: 1px solid var(--dccwl-line-strong);
 	border-radius: var(--dccwl-radius);
@@ -1315,10 +1370,10 @@
 	transform: translateX(-50%);
 	z-index: 20;
 }
-.dccwl-water .dccwl-chipmenu[hidden] { display: none; }
-.dccwl-water .dccwl-chipmenu > li { margin: 0; }
+.dccwl-water-scope .dccwl-chipmenu[hidden] { display: none; }
+.dccwl-water-scope .dccwl-chipmenu > li { margin: 0; }
 
-.dccwl-water .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt {
+.dccwl-water-scope .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt {
 	align-items: center;
 	background: transparent;
 	border: 0;
@@ -1340,10 +1395,10 @@
 	text-transform: none;
 	width: 100%;
 }
-.dccwl-water .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:hover {
+.dccwl-water-scope .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:hover {
 	background: var(--dccwl-primary-soft);
 }
-.dccwl-water .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:focus-visible {
+.dccwl-water-scope .dccwl-chipmenu-opt.dccwl-chipmenu-opt.dccwl-chipmenu-opt:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }

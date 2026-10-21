@@ -4445,3 +4445,173 @@ Mutations verified red, each restored with `cp`/`mv` and the whole harness
 re-run AFTER the restores: "Colour by:" back, "Station page" back in both the
 PHP and its JS fallback, "Eastern Grey Squirrel" back, and the `upgrade()`
 repair step deleted.
+
+### 39. 1.44.5 — the About panel was 583px inside a 390px phone, and the rule has a name for the sixth time
+
+**THE CAUSE IS THE SAME ONE THIS FILE HAS RECORDED FIVE TIMES: A RULE
+WRITTEN FOR THE WRONG PARENT IS INVISIBLE.** Every component rule in
+water.css — the cards grid, the card ground, the label, the value, the source
+chip's width cap, the headings, the link lists, the tier left-rules — was
+scoped to `.dccwl-water`, the module's own `<section>`. But
+`Water_Render::about_fold()` is called from `Render`'s FOOTNOTE ROW (1.34.0,
+Rob's item 4), **outside that section**, so on /explore/ the About panel
+rendered all of that markup with none of those rules in force. Measured here
+at 390px: a content box from x = −96.5 to 486.5, **583px wide, clipped on
+both sides**. The Director measured 520px on live at the same width. Same
+defect, different metrics — this sandbox has no Raleway.
+
+The same fold rendered INSIDE the standalone water widget is styled
+correctly, which is why it never looked broken anywhere a session happened to
+check.
+
+**THE SCOPE IS A CLASS BOTH RENDERERS PUT ON.** The section carries
+`dccwl-water dccwl-water-scope`; the About fold's `<details>` carries
+`dccwl-water-scope`. All fifty descendant rules moved to it. `.dccwl-water`
+keeps exactly the three rules that are genuinely about the section — its
+font, its centring and its `> * + *` spacing — because those describe a block
+in page flow and a `<details>` is not one; putting the section class on the
+fold would have given its summary and body a `gap-lg` they never had.
+
+**AND A FLOOR UNDER THE FIX, because the scope is the cause and not the
+guarantee.** `minmax(min(230px, 100%), 1fr)` on the cards grid — a bare
+`230px` track floor is a MINIMUM the grid must honour, so in any container
+narrower than that the row grows past its parent rather than shrinking, with
+no breakpoint able to help. And `overflow-wrap: anywhere` on the value, the
+label, the attribution and the link lists: a source name, a URL or an
+owner-typed almanac value is text this plugin did not write. `anywhere`
+rather than `break-word` because only `anywhere` also shrinks the box's
+min-content width, which is what a grid or flex track actually measures.
+
+The source-name CHIP is deliberately excluded from that: it truncates with an
+ellipsis and now carries the whole name in a `title` (the Director's own ask
+— the full attribution was always printed in the stack below, so nothing was
+lost, but a truncated name a pointer cannot resolve is needless). Wrapping a
+sixty-character name inside a 44px chip is a different control.
+
+### `tools/tests/ui-overflow.mjs`, and the check that could not have caught this
+
+**A `scrollWidth` CHECK CANNOT SEE CLIPPED CONTENT.** Every suite here has
+asked `scrollWidth - clientWidth` since 1.18.1 and it passed throughout: the
+panel was clipped, so the document never grew and nothing could scroll to it.
+*"The page does not scroll sideways"* and *"everything is on the screen"* are
+two different claims, and only the second is the one a guest cares about.
+
+So the new suite asks **each box**, not the document: every rendered element
+with text of its own, measured against the viewport, at 360, 390 and 1280 —
+across the Water views (Map, Now with every place chosen in turn, Fishing
+with every season), the About fold open, every Wildlife section, a search,
+a sample of species sheets, and /wildlife-guide/ with its credits panel open.
+384 assertions.
+
+**A HORIZONTAL SCROLLER IS ALLOWED TO HOLD CONTENT OFF SCREEN, AND THE FIRST
+VERSION OF THE PROBE DID NOT KNOW THAT.** It reported 88 deck tiles as
+defects — "Eastern Tiger Swallowtail" at x = 1285 in a 1280px window is the
+deck's second page, reachable by swiping. A probe that fires on correct
+behaviour teaches a reader to ignore it, which is the same prohibition the
+spelling suite's explicit word list exists for. So inside a scroller the
+question becomes *can the scroller reach it* — the box must lie within that
+scroller's own scrollable extent — and the scrollers themselves are measured
+against the viewport separately, because a deck may hold content past its own
+right edge but may not itself hang off the screen.
+
+Two guards keep it from passing on nothing: a sweep that inspects fewer boxes
+than a floor fails, and a state it was told to reach but did not open fails.
+
+**The sheet sample is BOUNDED and says so.** The Director wrote "each species
+sheet"; there are 402, and three widths of 402 sheets is not a run anybody
+waits for. The sample is chosen **from the live dataset, not named in the
+file** — the longest common name, the longest scientific name, the longest
+field mark — plus a hazard, whose sheet carries the extra "What To Do" panel.
+A batch adding a longer name changes what the sweep opens with no edit here.
+A sheet that overflows for a reason none of those capture would be missed;
+the suite prints which it opened so the gap is visible rather than implied.
+
+### The footer row reads the same open or shut (the Director's item 2)
+
+His ruling is a claim about LAYOUT as well as wording, and three separate
+things had to change for it to be true. Only the first was the one he
+described; the other two were found by measuring the row he pointed at.
+
+**1. "About" LEFT THE ROW WHENEVER IT OPENED.** `.dccwl-footnotes >
+.dccwl-fullguide[open]` read `flex: 1 0 100%`, so the open `<details>` took
+the whole row and its label dropped onto a line of its own beneath Guide ·
+Credits. `display: contents` is what makes one `<details>` do both jobs: the
+details' own box goes away, so its SUMMARY becomes a flex item of the row
+beside the two links and its BODY becomes another with `flex: 1 0 100%`,
+which in a wrapping flex container starts a new line. The panel is still full
+width, which is what the old rule was for. It applies only while `[open]`, so
+the closed row is the layout it has always had, and **the disclosure
+semantics do not ride on the details' box**: the summary is still the click
+and keyboard target, and sheet.js has set `aria-expanded` on it explicitly
+since 1.40.1 — which exists precisely so the state is never inferred from
+something a stylesheet can remove. Toggling by tap and by Enter is measured
+at all three widths.
+
+**2. "About" WAS PERMANENTLY UNDERLINED AND ITS NEIGHBOURS WERE NOT.** Rob's
+item 5 of 1.44.0 — "no underline-and-arrow look; underline only on
+hover/focus" — reached the two anchors through a (0,4,0) rule added when
+1.43.0 made them links, and stopped at the `<summary>`, which kept
+canal.css's (0,2,0) `text-decoration: underline`. The house pattern again:
+the ruling was applied, just not everywhere it had to be.
+
+**3. AND A 1px PANEL-BAR BORDER WAS COSTING HALF A PIXEL OF ALIGNMENT.**
+app.css's `.dccwl-fullguide[open] > .dccwl-fullguide-summary` draws the rule
+under a PANEL's title bar. There is no title bar in this row, and with
+`box-sizing: border-box` and `min-height: 44px` that pixel came out of the
+content box — so the label sat at 2130.55 where its neighbours sat at
+2131.05. **The 1.35.0 family, found the 1.35.0 way**: diff the computed
+styles of the two things that disagree rather than reasoning about which
+property it ought to be. Four properties were ruled out by measurement
+(font-size, line-height, padding, alignment) and the fifth was a border
+nobody had thought to read. After: 0.00px across all three labels.
+
+**One difference was measured and deliberately NOT changed.** The two
+wrapper font-sizes in this row still differ — 15.6px on the anchors, 17.5px
+on the summary — and it is INERT, because canal.css pins
+`.dccwl-fullguide-text` and `-h` to `--dccwl-fs-xs` at (0,3,0) in both
+places, which is 1.35.0's own fix still doing its job. A rule equalising it
+was written, measured to change nothing, and deleted: **a rule that changes
+nothing measurable is a rule the next reader has to re-derive.** It is
+recorded in widget.css beside the two that did matter.
+
+
+
+Opening the About fold revealed a second underlined line beneath the row —
+"the water, and where these readings come from" — and then the panel said it
+again as "About the Water". His ruling: the row is **Guide · Credits ·
+About** in every state, and the panel says what it is once, as a heading.
+
+The meta span is gone from that summary, and the two `.dccwl-footnotes`
+rules that revealed it went with it — **deleted, not left unmatched**, since
+that fold was the only `<details>` left in the row after 1.43.0 turned Guide
+and Credits into links. The sentence is not lost: it is still the summary's
+`aria-label`, which is what a screen reader announces.
+`.dccwl-fullguide-meta` itself stays in app.css — the photo-credits panel on
+/wildlife-guide/ still uses it, inside a panel rather than a row.
+
+### The Director's three rulings on 1.44.4's open items
+
+- **aria-labels stay** (spoken, not shown), and so do the likelihood words
+  and the lowercase `sampled` / `reading` / `surveyed` prefixes in the Now
+  attribution — those are prose. The map popup's `Sampled:` keeps its Title
+  Case because it is a label. **Two registers for two kinds of text is fine**,
+  and that settles a question 1.44.4 raised.
+- **The admin headings go Title Case.** His words: "Rob sees the admin too,
+  and his rule is Title Case everywhere." He named one; all seven that were
+  sentence case moved, because eight headings beside one is how a rule reads
+  as a mistake — the same argument that Title Cased the map legend's level
+  and freshness rows in 1.44.1.
+- **`i18n.median` is deleted.** Nothing read it: the map popups print
+  `usual:` (1.39.0, where the statistic was renamed in plain words) and
+  water.js never asked for it. A string with no reader is a sentence a
+  translator is asked for and nothing can print.
+
+Mutations verified red AGAINST THE FINAL TREE, each restored with `cp`/`mv`
+and the whole harness re-run after: the About fold's scope class removed
+(589px in 360px — the live defect exactly), the source name back to `nowrap`
+with no cap and no wrap, `flex: 1 0 100%` back on the open fold (labels at
+`[942, 942, 991]` — About off the line), the panel-bar border back under the
+open summary, and the meta line back in the row. **Re-running them after the
+later edits mattered:** the first three were first verified against an
+earlier state of this release, and a mutation that was red an hour ago is
+evidence about that hour, not about what ships.

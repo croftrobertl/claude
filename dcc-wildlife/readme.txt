@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.4
+Stable tag: 1.44.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,21 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.44.5 =
+* **The "About" panel fits the phone.** Opened on a 390px screen it was
+  rendering about 520px wide and clipped on both sides, so "About the Water",
+  "Official Information", the surface-area figure and every official link ran
+  off the edges with no way to scroll to them. The page itself never scrolled
+  sideways, which is why it went unnoticed.
+* The footer row now reads **Guide · Credits · About** whether the About panel
+  is open or shut. Opening it used to drop "About" onto a line of its own and
+  add a second underlined line saying what the panel's own heading already
+  says. "About" also now looks like its two neighbours — no permanent
+  underline, no rule drawn beneath it, and all three labels on one line.
+* Long source names no longer push a card wider than its screen, and a
+  shortened one carries the full name on hover.
+* The DCC → Wildlife settings headings are Title Case, matching the site.
 
 = 1.44.4 =
 * **American spelling throughout.** Every word a guest reads is now in

@@ -466,12 +466,12 @@ final class Water_Admin {
 				 * what he chose rather than start from a guess.
 				 */
 				?>
-				<h2><?php esc_html_e( 'Season countdown', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Season Countdown', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Retired. The countdown card, its Elementor widget and the [dcc_wildlife_countdown] shortcode all render nothing, so an existing placement is harmless and can be deleted from the page whenever it suits you. Your old on/off preference is still stored, untouched, in case the card ever comes back.', 'dcc-wildlife' ); ?>
 				</p>
 
-				<h2><?php esc_html_e( 'Live conditions (optional)', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Live Conditions (Optional)', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Off by default. When on, the site fetches public USGS gauge readings and the National Weather Service forecast server-side (no API keys, no accounts). Every reading is shown with its own source and measurement time. If a source is unreachable, the strip is simply absent — guests never see an error.', 'dcc-wildlife' ); ?>
 				</p>
@@ -550,7 +550,7 @@ final class Water_Admin {
 					</tr>
 				</table>
 
-				<h2><?php esc_html_e( 'Harris Chain waters', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Harris Chain Waters', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Ids were resolved live from the Water Atlas. Each water is compared against its OWN long-run median and its own monthly norm — a chain-wide average would be meaningless when the medians range from 1.21 to 2.80 ft. Coordinates are optional: without them a water still appears in the comparison, it is just not drawn on the map.', 'dcc-wildlife' ); ?>
 				</p>
@@ -632,16 +632,16 @@ final class Water_Admin {
 					</tr>
 				</table>
 
-				<h2><?php esc_html_e( 'Almanac facts', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Almanac Facts', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Depths, clarity readings, species notes, ramps, seasons. Every row needs a confidence tier, a source name and a date, or it will not save. This table ships empty on purpose: nothing was pre-filled because none of it could be verified against USGS, FWC or the Water Atlas at build time.', 'dcc-wildlife' ); ?>
 				</p>
 				<?php self::render_almanac_table( $name, (array) $o['almanac'] ); ?>
 
-				<h2><?php esc_html_e( 'Official information links', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Official Information Links', 'dcc-wildlife' ); ?></h2>
 				<?php self::render_link_table( $name, 'links', (array) $o['links'] ); ?>
 
-				<h2><?php esc_html_e( 'Local reports & charters', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Local Reports & Charters', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Outbound links only. Their content is copyrighted and their reports describe one person\'s afternoon, so nothing from them is ever copied onto your page as fact — but linking the ones you trust is genuinely useful to guests.', 'dcc-wildlife' ); ?>
 				</p>
@@ -858,7 +858,7 @@ final class Water_Admin {
 	private static function render_guide_settings(): void {
 		$o = Guide_Data::all();
 		?>
-		<h2><?php esc_html_e( 'The wildlife guide', 'dcc-wildlife' ); ?></h2>
+		<h2><?php esc_html_e( 'The Wildlife Guide', 'dcc-wildlife' ); ?></h2>
 		<p class="description" style="max-width:46em">
 			<?php esc_html_e( 'These change the guide for every placement. A single widget can override any of them from the Elementor panel, which is the way to try something on one page before committing to it everywhere.', 'dcc-wildlife' ); ?>
 		</p>

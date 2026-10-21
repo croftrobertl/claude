@@ -142,7 +142,11 @@
 		// Source + age chip.
 		var age = ageWords(f.date, f.datePrecision, i18n);
 		var chip = el('span', 'dccwl-metachip dccwl-card-src');
-		chip.appendChild(el('span', 'dccwl-card-srcname', f.sourceName));
+		var srcName = el('span', 'dccwl-card-srcname', f.sourceName);
+		/* The chip truncates; the title carries the whole name, as the
+		 * server-rendered card does. */
+		if (f.sourceName) { srcName.title = f.sourceName; }
+		chip.appendChild(srcName);
 		if (age) {
 			chip.appendChild(el('span', 'dccwl-card-dot', '·'));
 			chip.appendChild(el('span', 'dccwl-card-age', age));

@@ -172,7 +172,7 @@ final class Water_Render {
 
 		ob_start();
 		?>
-		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
+		<section class="dccwl-water dccwl-water-scope <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<?php
 			/*
 			 * VISUALLY HIDDEN INSIDE THE CANAL APP (1.44.0), NEVER REMOVED.
@@ -541,7 +541,13 @@ final class Water_Render {
 		}
 		self::$about_printed = true;
 		?>
-		<details class="dccwl-fullguide dccwl-water-aboutfold">
+		<?php /* `dccwl-water-scope` IS LOAD-BEARING (1.44.5). This fold is
+		 * emitted from Render's footnote row, OUTSIDE the water <section>,
+		 * so without it every card, heading and link list below renders with
+		 * none of water.css's component rules — which is how its content box
+		 * measured 583px inside a 390px phone. The section carries the same
+		 * class; see the note at the head of water.css. */ ?>
+		<details class="dccwl-fullguide dccwl-water-scope dccwl-water-aboutfold">
 			<?php
 			/*
 			 * STRUCTURALLY IDENTICAL TO Field Guide AND Credits, not merely
@@ -559,9 +565,25 @@ final class Water_Render {
 			?>
 			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'About the water and where these readings come from', 'dcc-wildlife' ); ?>">
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+				<?php
+				/*
+				 * NO META LINE (1.44.5, the Director's item 2). Opening this
+				 * fold used to reveal a second underlined line beneath the
+				 * row — "the water, and where these readings come from" —
+				 * which made the footer read Guide · Credits · About in one
+				 * state and something taller in the other, and then said the
+				 * same thing again as the panel's own heading. His ruling:
+				 * the row is Guide · Credits · About in EVERY state, and the
+				 * panel says what it is once, as a heading.
+				 *
+				 * The sentence is not lost: it is still the summary's
+				 * `aria-label` above, which is what a screen reader
+				 * announces, and the panel heads its own blocks ("About the
+				 * Water", "Official Information").
+				 */
+				?>
 				<span class="dccwl-fullguide-text">
 					<span class="dccwl-fullguide-h"><?php esc_html_e( 'About', 'dcc-wildlife' ); ?></span>
-					<span class="dccwl-fullguide-meta"><?php esc_html_e( 'the water, and where these readings come from', 'dcc-wildlife' ); ?></span>
 				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">
@@ -805,7 +827,12 @@ final class Water_Render {
 				         summarises the attribution line below, never replaces
 				         it — the full source and measurement date still print. */ ?>
 				<span class="dccwl-metachip dccwl-card-src">
-					<span class="dccwl-card-srcname"><?php echo esc_html( $f['sourceName'] ); ?></span>
+					<?php /* The chip truncates a long source name with an ellipsis; the
+					 * `title` carries the whole of it (the Director's own ask,
+					 * 2026-10-21). Nothing is lost without it either — the full
+					 * attribution is printed in the stack below this card — but a
+					 * truncated name a pointer cannot resolve is needless. */ ?>
+					<span class="dccwl-card-srcname" title="<?php echo esc_attr( $f['sourceName'] ); ?>"><?php echo esc_html( $f['sourceName'] ); ?></span>
 					<?php if ( '' !== $age ) : ?>
 						<span class="dccwl-card-dot">·</span>
 						<span class="dccwl-card-age"><?php echo esc_html( $age ); ?></span>
@@ -1120,7 +1147,13 @@ final class Water_Render {
 						'levelLabel'  => __( 'Water Level', 'dcc-wildlife' ),
 						'clarityLabel' => __( 'Water Clarity', 'dcc-wildlife' ),
 						'staleLevel'  => __( 'level reading is old', 'dcc-wildlife' ),
-						'median'      => __( 'median', 'dcc-wildlife' ),
+						/* `median` IS DELETED (1.44.5). Nothing read it: the map
+						 * popups print `usual:` beside a reading (1.39.0, where the
+						 * statistic was renamed in plain words) and water.js never
+						 * asked for it at all. A string with no reader is a sentence
+						 * a translator is asked for and nothing can print, so it goes
+						 * with its reader — the same call as the hub's i18n in
+						 * 1.44.0. The Director's ruling, 2026-10-21. */
 						/* 1.39.0: capitalised, because it begins a label —
 						 * "Sampled: 2026-08-01", like every other row. */
 						'sampled'     => __( 'Sampled', 'dcc-wildlife' ),
