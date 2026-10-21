@@ -26,9 +26,13 @@ final class Cli
         Schema::ensure();
         \WP_CLI::log(Fortress::overall());
         foreach (Fortress::all() as $slug) {
-            $s = Fortress::status($slug);
-            \WP_CLI::log(sprintf('  %-11s %-13s %s (%s)', Fortress::name($slug), Fortress::state_label($s['state']), $s['line'], Site::ago($s['checked_at'])));
+            $s    = Fortress::status($slug);
+            $line = $slug === Fortress::SVETI_IVAN ? Fortress\Sveti_Ivan::status_line() : $s['line'];
+            \WP_CLI::log(sprintf('  %-11s %-13s %s (%s)', Fortress::name($slug), Fortress::state_label($s['state']), $line, Site::ago($s['checked_at'])));
         }
+        \WP_CLI::log('  tick: ' . (Cron::is_scheduled() ? 'scheduled, next ' . Site::ago((int) wp_next_scheduled(Plugin::TICK_HOOK)) . ' (negative = future)' : 'NOT SCHEDULED') . ', last ran ' . Site::ago((int) State::get('last_tick', 0)));
+        $snap = Fortress\Bokar::snapshot();
+        \WP_CLI::log(sprintf('  bokar: %d privileged of %d users, roles read from %s', count($snap['users']), $snap['total'], Fortress\Bokar::$roles_source ?: 'nothing'));
         \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));
         $hb = Heartbeat::last();
         \WP_CLI::log('  heartbeat: ' . (Heartbeat::configured() ? 'set' : 'not set') . (($hb['ts'] ?? 0) > 0 ? sprintf(', last %s %s', (string) ($hb['result'] ?? ''), Site::ago((int) $hb['ts'])) : ''));
@@ -252,5 +256,26 @@ final class Cli
         foreach (Cron::tick(new Budget(20.0)) as $line) {
             \WP_CLI::log($line);
         }
+    }
+
+    /**
+     * The zero-weight proof: load WordPress as a visitor request in a
+     * fresh PHP process, with Ragusa active and with it skipped, and print
+     * the included-file and query counts side by side.
+     */
+    public function proof(array $args = [], array $assoc = []): void
+    {
+        $with    = Proof::run(false);
+        $without = Proof::run(true);
+        if ($with === null || $without === null) {
+            \WP_CLI::error('Could not run the front-end subprocess (no php binary through proc_open?).');
+        }
+        $rows = [];
+        foreach (['files' => 'PHP files included', 'queries' => 'database queries', 'ragusa_files' => 'files from dcc-ragusa', 'ragusa_classes' => 'DCCR classes loaded', 'hooks' => 'hooks registered by dcc-ragusa', 'enqueued' => 'dccr assets enqueued'] as $k => $label) {
+            $rows[] = ['measure' => $label, 'with ragusa' => (string) ($with[$k] ?? '?'), 'without' => (string) ($without[$k] ?? '?')];
+        }
+        \WP_CLI\Utils\format_items('table', $rows, ['measure', 'with ragusa', 'without']);
+        $ok = ((int) $with['queries'] === (int) $without['queries']) && ((int) $with['files'] - (int) $without['files'] === 1) && (int) $with['ragusa_classes'] === 0 && (int) $with['hooks'] === 0;
+        $ok ? \WP_CLI::success('Zero weight: one file included, no query, no hook, no class.') : \WP_CLI::warning('The front end carries something of Ragusa; see the table.');
     }
 }

@@ -262,9 +262,12 @@ final class Sveti_Ivan
         $checks  = [];
         $host_up = true;
 
+        $override = State::get('markers_override');
+        $pages    = is_array($override) && $override !== [] ? $override : Markers::all();
         if (Loopback::available()) {
             $answered = 0;
-            foreach (Markers::all() as $path => $markers) {
+            $gated    = 0;
+            foreach ($pages as $path => $markers) {
                 $r = Loopback::get($path);
                 if ($r['code'] > 0) {
                     $answered++;
@@ -283,6 +286,12 @@ final class Sveti_Ivan
                         $missing[] = $m;
                     }
                 }
+                if ($missing !== [] && self::looks_like_login($r['body'])) {
+                    // A staging gate answered instead of the page: not a failure, not a pass.
+                    $gated++;
+                    $checks['page ' . $path] = ['ok' => null, 'detail' => __('behind the staging login: not checked', 'dcc-ragusa')];
+                    continue;
+                }
                 $checks['page ' . $path] = $missing === []
                     /* translators: %d: milliseconds */
                     ? ['ok' => true, 'detail' => sprintf(__('200 with its markers (%d ms)', 'dcc-ragusa'), $r['ms'])]
@@ -290,6 +299,11 @@ final class Sveti_Ivan
                     : ['ok' => false, 'detail' => sprintf(__('200 but marker missing: %s', 'dcc-ragusa'), implode(', ', $missing))];
             }
             $host_up = $answered > 0;
+            if ($gated > 0 && $gated === count($pages)) {
+                State::set('pages_gated', time());
+            } else {
+                State::delete('pages_gated');
+            }
         } else {
             $checks['pages'] = ['ok' => null, 'detail' => __('loopbacks do not work on this host; pages not checked', 'dcc-ragusa')];
         }
@@ -314,6 +328,24 @@ final class Sveti_Ivan
             $host_up = true;
         }
         return ['checks' => $checks, 'failed' => $failed, 'host_up' => $host_up];
+    }
+
+    /** The drill's probe stands in for the five pages while it runs. */
+    public static function override_markers(?array $pages): void
+    {
+        if ($pages === null) {
+            State::delete('markers_override');
+        } else {
+            State::set('markers_override', $pages);
+        }
+        State::flush();
+    }
+
+    /** A 200 that is really a login form (WP Staging's gate, HTTP auth pages). */
+    public static function looks_like_login(string $body): bool
+    {
+        return (bool) preg_match('/<input[^>]+type=["\']?password["\']?/i', $body)
+            && (bool) preg_match('/<form\b/i', $body);
     }
 
     public static function format_check(string $name, array $c): string
@@ -516,6 +548,12 @@ final class Sveti_Ivan
 
     public static function status_line(): string
     {
-        return Fortress::status(Fortress::SVETI_IVAN)['line'];
+        $line = Fortress::status(Fortress::SVETI_IVAN)['line'];
+        if ((int) State::get('pages_gated', 0) > 0) {
+            $line .= ' · ' . __('Pages Are Behind The Staging Login: Not Checked', 'dcc-ragusa');
+        } elseif (!Loopback::available()) {
+            $line .= ' · ' . __('Loopbacks Do Not Work On This Host: Pages Not Checked', 'dcc-ragusa');
+        }
+        return $line;
     }
 }

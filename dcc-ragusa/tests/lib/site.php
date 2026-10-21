@@ -33,6 +33,7 @@ final class Test_Site
             ['ID' => 90, 'login' => 'guest-x', 'roles' => ['mphb_customer']],
         ];
         $GLOBALS['dccr_app_passwords']   = [];
+        self::usermeta($GLOBALS['table_prefix']);
         $GLOBALS['dccr_jetpack_modules'] = ['waf' => true, 'protect' => true, 'monitor' => true];
         $GLOBALS['dccr_core_updates']    = [];
         $GLOBALS['dccr_http_handler']    = [self::class, 'http'];
@@ -51,6 +52,22 @@ final class Test_Site
         DCCR\Alerts::reset_cache();
         DCCR\Fortress\Minceta::reset_cache();
         DCCR\Schema::ensure();
+    }
+
+    /** The capabilities meta for every test user, under $key_prefix (the WP prefix, or a clone's old one). */
+    public static function usermeta(string $key_prefix, bool $also_in_meta_api = true): void
+    {
+        global $wpdb;
+        $wpdb->query("DROP TABLE IF EXISTS {$wpdb->usermeta}");
+        $wpdb->query("CREATE TABLE {$wpdb->usermeta} (umeta_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, meta_key TEXT, meta_value TEXT)");
+        $GLOBALS['dccr_usermeta'] = [];
+        foreach ($GLOBALS['dccr_users'] as $u) {
+            $caps = serialize(array_fill_keys($u['roles'], true));
+            $wpdb->insert($wpdb->usermeta, ['user_id' => $u['ID'], 'meta_key' => $key_prefix . 'capabilities', 'meta_value' => $caps]);
+            if ($also_in_meta_api) {
+                $GLOBALS['dccr_usermeta'][$u['ID']][$key_prefix . 'capabilities'] = array_fill_keys($u['roles'], true);
+            }
+        }
     }
 
     public static function write(string $rel, string $content): string

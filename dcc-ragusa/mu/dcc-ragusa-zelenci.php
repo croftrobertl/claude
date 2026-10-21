@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zelenci · Rings If Ragusa Falls
  * Description: The two bronze bell-ringers on the City Bell Tower. If DCC Ragusa is switched off or removed for more than ten minutes, Zelenci sends one email a day and one failure ping to the heartbeat. It does nothing else. Installed by `wp ragusa zelenci install`.
- * Version: 0.1.0
+ * Version: 0.1.1
  *
  * Standalone on purpose: it must work when Ragusa is gone. It reads
  * Ragusa's encrypted secrets with the same vault key, from the same vault
@@ -40,9 +40,22 @@ if (!function_exists('dccr_zelenci_boot')) {
             $present  = is_file(WP_PLUGIN_DIR . '/dcc-ragusa/dcc-ragusa.php');
             $standing = $present && in_array('dcc-ragusa/dcc-ragusa.php', $active, true);
             if ($standing) {
-                $state['missing_since'] = 0;
-                dccr_zelenci_save($state);
-                return;
+                // Installed and active, but is it ticking? Its state says when it last ran.
+                $rs   = get_option('dcc_ragusa_state', []);
+                $last = is_array($rs) ? (int) ($rs['last_tick'] ?? 0) : 0;
+                $act  = is_array($rs) ? (int) ($rs['activated_at'] ?? 0) : 0;
+                if ($last === 0 && $act === 0) {
+                    $state['missing_since'] = 0;
+                    dccr_zelenci_save($state);
+                    return;
+                }
+                $silent = $now - max($last, $act) > 3 * 3600;
+                if (!$silent) {
+                    $state['missing_since'] = 0;
+                    dccr_zelenci_save($state);
+                    return;
+                }
+                $present_why = 'DCC Ragusa is active but has not ticked for more than three hours. Its cron event may be missing: open DCC → Ragusa once (that reschedules it), or run wp ragusa tick.';
             }
             if (empty($state['missing_since'])) {
                 $state['missing_since'] = $now;
@@ -62,7 +75,7 @@ if (!function_exists('dccr_zelenci_boot')) {
             if (!dccr_zelenci_is_live()) {
                 return;
             }
-            $why  = $present ? 'DCC Ragusa is installed but not active.' : 'The DCC Ragusa plugin folder is gone.';
+            $why  = $present_why ?? ($present ? 'DCC Ragusa is installed but not active.' : 'The DCC Ragusa plugin folder is gone.');
             $body = $why . "\n\n"
                 . "Zelenci did nothing else: it only rings.\n\n"
                 . "Open Plugins and activate Ragusa. If you did not switch it off, change the administrator passwords and tell the site director.\n\n"

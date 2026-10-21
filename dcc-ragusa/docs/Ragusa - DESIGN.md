@@ -1136,3 +1136,20 @@ the key himself after install.
 
 **Added to the mutation run:** "an existing uploads `.htaccess` gets
 quarantined" must be caught by the tests.
+
+**0.1.1 (after the first staging run, 2026-10-21).** Four blockers found on
+staging and fixed: the 10-minute schedule is registered at file load (an
+activation hook runs after `plugins_loaded`, so a filter added in `boot()`
+did not exist yet and the tick was never scheduled; it now also self-heals
+on every watched boot, and Zelenci rings if Ragusa is active but silent for
+three hours); the first complete pass is the baseline however many ticks it
+takes (0.1.0 treated only the first chunk as such and flagged every later
+file as new; an upgrade withdraws those findings quietly); the quota is read
+for the filesystem that holds the home directory, found with `df -P ~`, or
+the fullest one with a note; Bokar reads roles from the capabilities meta
+with a fallback for a clone whose meta keys kept the old prefix. Also: a
+staging login page answering instead of a page is "not checked", never a
+failure, and the rollback drill uses its own probe answered on
+`plugins_loaded` before any gate; the headline leads with "Something Needs A
+Look"; `wp ragusa proof` measures the front end in a fresh PHP process with
+and without Ragusa.

@@ -94,7 +94,7 @@ final class Drill
         $lines = [];
         $entry = Vault::latest('htaccess-block', '.htaccess');
         if ($entry === null) {
-            return ['No sealed .htaccess block on this site; nothing to drill.'];
+            return ['The DCC Security block is not present in this site\'s .htaccess, so there is nothing sealed and nothing to drill. (Live has it; staging does not.)'];
         }
         if (!Loopback::available(true)) {
             return ['Loopbacks do not work on this host, so A3 is alert-only here; nothing to drill.'];
@@ -134,7 +134,7 @@ final class Drill
         $dir  = Site::plugins_dir() . '/' . $slug;
         $file = $dir . '/' . $slug . '.php';
         @mkdir($dir, 0755, true);
-        file_put_contents($file, "<?php\n/**\n * Plugin Name: Ragusa Drill Plugin\n * Version: 1.0.0\n */\n");
+        file_put_contents($file, self::drill_plugin('1.0.0'));
         if (!function_exists('activate_plugin')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
@@ -142,18 +142,30 @@ final class Drill
         activate_plugin($slug . '/' . $slug . '.php');
         $lines[] = 'Installed and activated ' . $slug . ' 1.0.0';
 
+        // The drill's checks use the plugin's own probe, answered on
+        // plugins_loaded before any staging login gate, instead of the pages.
+        Fortress\Sveti_Ivan::override_markers(['/?ragusa_drill_probe=1' => ['RAGUSA-DRILL-OK']]);
+        $probe = Loopback::get('/?ragusa_drill_probe=1');
+        $lines[] = 'Probe at 1.0.0: HTTP ' . $probe['code'] . ($probe['ok'] && str_contains($probe['body'], 'RAGUSA-DRILL-OK') ? ' with RAGUSA-DRILL-OK' : ' WITHOUT the marker');
+        if (!$probe['ok'] || !str_contains($probe['body'], 'RAGUSA-DRILL-OK')) {
+            Fortress\Sveti_Ivan::override_markers(null);
+            self::remove_plugin($slug);
+            return array_merge($lines, ['The probe does not answer, so the drill cannot see a broken version; aborted and cleaned up. Is the plugin loaded on the front end?']);
+        }
+
         $entry = Fortress\Revelin::seal_plugin($slug);
         $lines[] = $entry === null ? 'Seal FAILED' : 'Sealed 1.0.0 as ' . $entry['id'];
 
-        // The "update": 1.0.1 answers 500 to Ragusa's check requests.
-        file_put_contents($file, "<?php\n/**\n * Plugin Name: Ragusa Drill Plugin\n * Version: 1.0.1\n */\nadd_action('template_redirect', function () { if (isset(\$_GET['ragusa_check'])) { status_header(500); echo 'drill'; exit; } });\n");
+        // The "update": 1.0.1 answers the probe with 500.
+        file_put_contents($file, self::drill_plugin('1.0.1'));
         wp_clean_plugins_cache(false);
-        $lines[] = 'Updated to 1.0.1, which breaks every page check';
+        $lines[] = 'Updated to 1.0.1, which answers the probe with 500';
 
         Fortress\Sveti_Ivan::on_pre_install(true, ['type' => 'plugin', 'action' => 'update', 'plugin' => $slug . '/' . $slug . '.php']);
         Fortress\Sveti_Ivan::on_process_complete(null, ['type' => 'plugin', 'action' => 'update', 'plugin' => $slug . '/' . $slug . '.php']);
         $row = Journal::latest('update-check', $slug);
         if ($row === null) {
+            Fortress\Sveti_Ivan::override_markers(null);
             self::remove_plugin($slug);
             return array_merge($lines, ['No update-check row was created; aborted and cleaned up.']);
         }
@@ -180,12 +192,22 @@ final class Drill
         $lines[] = 'Reverse: ' . $msg . ' · ' . self::states((int) $rb['id']);
         wp_clean_plugins_cache(false);
         $lines[] = 'Version in place after reverse: ' . Fortress\Revelin::plugin_version($slug) . ' (expected 1.0.1)';
+        Fortress\Sveti_Ivan::override_markers(null);
         self::remove_plugin($slug);
         if ($entry !== null) {
             Vault::remove($entry['id']);
         }
-        $lines[] = 'Test plugin removed and its sealed copy dropped.';
+        $lines[] = 'Test plugin removed, its sealed copy dropped, the page markers back in use.';
         return $lines;
+    }
+
+    /** The drill plugin: answers its probe on plugins_loaded, before any gate. */
+    public static function drill_plugin(string $version): string
+    {
+        $answer = $version === '1.0.0'
+            ? "header('Content-Type: text/plain'); echo 'RAGUSA-DRILL-OK'; exit;"
+            : "http_response_code(500); header('Content-Type: text/plain'); echo 'RAGUSA-DRILL-BROKEN'; exit;";
+        return "<?php\n/**\n * Plugin Name: Ragusa Drill Plugin\n * Version: {$version}\n */\nadd_action('plugins_loaded', function () { if (isset(\$_GET['ragusa_drill_probe'])) { {$answer} } }, 0);\n";
     }
 
     private static function remove_plugin(string $slug): void

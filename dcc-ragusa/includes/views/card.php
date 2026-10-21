@@ -32,7 +32,7 @@ $tone = match ($state) {
     </p>
     <h2 class="dccr-card__name" id="dccr-card-<?php echo esc_attr($slug); ?>"><?php echo esc_html(Fortress::name($slug)); ?></h2>
     <p class="dccr-card__sub"><?php echo esc_html(Fortress::subtitle($slug)); ?></p>
-    <p class="dccr-card__line"><?php echo esc_html($status['line']); ?></p>
+    <p class="dccr-card__line"><?php echo esc_html($slug === Fortress::SVETI_IVAN ? DCCR\Fortress\Sveti_Ivan::status_line() : $status['line']); ?></p>
     <p class="dccr-card__when">
         <?php
         /* translators: %s: relative time */

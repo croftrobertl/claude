@@ -24,8 +24,25 @@ final class Cron
     public static function schedule(): void
     {
         if (!wp_next_scheduled(Plugin::TICK_HOOK)) {
-            wp_schedule_event(time() + 60, self::SCHEDULE, Plugin::TICK_HOOK);
+            $r = wp_schedule_event(time() + 60, self::SCHEDULE, Plugin::TICK_HOOK);
+            if ($r !== true && function_exists('wp_get_schedules') && !isset(wp_get_schedules()[self::SCHEDULE])) {
+                // The recurrence is somehow unknown: never leave the walls unwatched.
+                wp_schedule_event(time() + 60, 'hourly', Plugin::TICK_HOOK);
+            }
         }
+    }
+
+    /** Called on every watched boot: schedule the tick if it is missing. */
+    public static function ensure(): void
+    {
+        if (!wp_next_scheduled(Plugin::TICK_HOOK)) {
+            self::schedule();
+        }
+    }
+
+    public static function is_scheduled(): bool
+    {
+        return wp_next_scheduled(Plugin::TICK_HOOK) !== false;
     }
 
     public static function unschedule(): void

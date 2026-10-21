@@ -19,8 +19,7 @@ final class Plugin
     {
         load_plugin_textdomain('dcc-ragusa', false, dirname(DCCR_BASENAME) . '/languages');
 
-        // Cron.
-        add_filter('cron_schedules', [Cron::class, 'schedules']);
+        // Cron. The schedule itself is registered in the main file at load.
         add_action(self::TICK_HOOK, [Cron::class, 'tick']);
         add_action(self::CHECK_HOOK, [Fortress\Sveti_Ivan::class, 'scheduled_check']);
         add_action(self::DIGEST_HOOK, [Alerts::class, 'send_digest']);
@@ -41,6 +40,49 @@ final class Plugin
 
         if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
             \WP_CLI::add_command('ragusa', Cli::class);
+        }
+
+        // Self-heal: the tick must exist, whatever happened at activation.
+        // wp_next_scheduled() reads the autoloaded cron option: no extra query.
+        Cron::ensure();
+        self::maybe_upgrade();
+    }
+
+    /** One-time steps when a new version runs for the first time. */
+    public static function maybe_upgrade(): void
+    {
+        $seen = (string) get_option('dcc_ragusa_version', '');
+        if ($seen === DCCR_VERSION) {
+            return;
+        }
+        try {
+            Schema::ensure();
+            if ($seen === '' || version_compare($seen, '0.1.1', '<')) {
+                // 0.1.0 treated only the first chunk of the first pass as the
+                // baseline and flagged the rest as new. An existing index is
+                // the baseline; the findings it raised are withdrawn quietly.
+                if (Fortress\Minceta::index() !== []) {
+                    State::set('minceta.baselined', true);
+                    State::set('uploads_ht_baselined', true);
+                }
+                Alerts::withdraw(Fortress::MINCETA, ['file-new', 'file-changed', 'file-missing']);
+            }
+            if (get_option('dcc_ragusa_version', null) === null) {
+                add_option('dcc_ragusa_version', DCCR_VERSION, '', 'no');
+            } else {
+                update_option('dcc_ragusa_version', DCCR_VERSION, 'no');
+            }
+            if ($seen !== '') {
+                Events::record(Fortress::REVELIN, Events::INFO, 'upgraded', 'dcc-ragusa', sprintf(
+                    /* translators: 1: old, 2: new */
+                    __('Ragusa upgraded from %1$s to %2$s.', 'dcc-ragusa'),
+                    $seen,
+                    DCCR_VERSION
+                ));
+            }
+            State::flush();
+        } catch (\Throwable $e) {
+            // An upgrade step must never take the admin down.
         }
     }
 

@@ -170,7 +170,8 @@ function wp_get_theme() { return new class { public function get_stylesheet(): s
 // ------------------------------------------------------------------ cron
 
 function wp_schedule_single_event(int $ts, string $hook, array $args = []): bool { $GLOBALS['dccr_cron'][] = ['ts' => $ts, 'hook' => $hook, 'args' => $args]; return true; }
-function wp_schedule_event(int $ts, string $rec, string $hook, array $args = []): bool { $GLOBALS['dccr_cron'][] = ['ts' => $ts, 'hook' => $hook, 'args' => $args, 'recurrence' => $rec]; return true; }
+function wp_get_schedules(): array { return apply_filters('cron_schedules', ['hourly' => ['interval' => 3600], 'daily' => ['interval' => 86400]]); }
+function wp_schedule_event(int $ts, string $rec, string $hook, array $args = []) { if (!isset(wp_get_schedules()[$rec])) { return new WP_Error('invalid_schedule', 'Event schedule does not exist.'); } $GLOBALS['dccr_cron'][] = ['ts' => $ts, 'hook' => $hook, 'args' => $args, 'recurrence' => $rec]; return true; }
 function wp_next_scheduled(string $hook, array $args = []) { foreach ($GLOBALS['dccr_cron'] as $e) { if ($e['hook'] === $hook) { return $e['ts']; } } return false; }
 function wp_unschedule_hook(string $hook): int { $n = 0; foreach ($GLOBALS['dccr_cron'] as $i => $e) { if ($e['hook'] === $hook) { unset($GLOBALS['dccr_cron'][$i]); $n++; } } return $n; }
 
@@ -261,6 +262,8 @@ function get_users(array $args = []): array
     return $out;
 }
 function count_users(): array { return ['total_users' => count($GLOBALS['dccr_users'])]; }
+function get_user_meta(int $id, string $key = '', bool $single = false) { $v = $GLOBALS['dccr_usermeta'][$id][$key] ?? ''; return $single ? $v : ($v === '' ? [] : [$v]); }
+function maybe_unserialize($v) { if (is_string($v) && preg_match('/^[aOs]:/', $v)) { $u = @unserialize($v); return $u === false ? $v : $u; } return $v; }
 class WP_Application_Passwords
 {
     public static function get_user_application_passwords(int $id): array { return $GLOBALS['dccr_app_passwords'][$id] ?? []; }

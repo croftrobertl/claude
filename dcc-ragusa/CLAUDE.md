@@ -70,6 +70,18 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   that cannot fit is simply not sealed, with an alert saying so.
 - **Core and wordpress.org plugin files are alert-only.** Ragusa restores
   only from its own sealed copies.
+- **The cron schedule is registered in the main file, at load.** Activation
+  runs after `plugins_loaded`, so anything registered in `boot()` does not
+  exist yet when `Cron::schedule()` runs. `Cron::ensure()` on every watched
+  boot is the belt to that brace.
+- **The first complete pass is the baseline**, flagged by
+  `minceta.baselined` only when a pass finishes; never judge "first" from
+  an empty index, which the first chunk fills.
+- **Bokar never trusts `WP_User::$roles` alone.** Roles come from the
+  `{prefix}capabilities` meta, then any `*capabilities` key (a clone whose
+  prefix changed), then the object.
+- **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
+  the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
 ## Facts baked in (from the Director's live checks, 2026-10-21)
 
@@ -86,8 +98,8 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 
 ## Running the tests
 
-    php tests/run-tests.php            # ~330 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 17 deliberate breakages, each must be caught
+    php tests/run-tests.php            # ~385 assertions, synthetic site in /tmp
+    php tests/mutations.php            # 22 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -105,6 +117,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.0.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md'
+    zip -rq "Ragusa 0.1.1.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

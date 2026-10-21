@@ -1,4 +1,13 @@
-# Ragusa 0.1.0 — Staging Checklist
+# Ragusa 0.1.1 — Staging Checklist
+
+> **Upgrading the 0.1.0 install already on staging:** `wp plugin install
+> "Ragusa 0.1.1.zip" --force` (0.1.0's own Sveti Ivan will treat it as a
+> self-update and schedule a check), then `wp ragusa status`. Expect:
+> `tick: scheduled` (0.1.1 reschedules it on its first boot; the hand-made
+> event from the 0.1.0 session can stay or go), Minčeta Holding with the
+> existing index as the baseline and the 1,999 false "new file" findings
+> withdrawn without an All Clear, and the 0.1.0 → 0.1.1 event in Recent
+> Events. Then continue from step 2 for the items marked **0.1.1**.
 
 Run every step on staging (`/staging/`, prefix `wpstg0_`). Nothing goes to
 live until every box is ticked and Rob has read the page on his phone.
@@ -32,7 +41,10 @@ from there, and only when you run them.
       wp db query "SELECT option_name, autoload FROM ${P}options WHERE option_name LIKE 'dcc_ragusa_%'"
 
       Only `dcc_ragusa_settings` may say `yes` (or `on`). Everything else `no`.
-- [ ] The cron event is scheduled: `wp cron event list | grep dccr_tick`.
+- [ ] The cron event is scheduled: `wp cron event list | grep dccr_tick`
+      shows `dccr_10min`. **0.1.1:** `wp ragusa status` also prints
+      `tick: scheduled, next …`. If you ever see `NOT SCHEDULED`, any admin
+      page load, cron tick or `wp ragusa` command reschedules it.
 - [ ] DCC → Ragusa loads. The sentence at the top says the walls are not yet
       checked, and the amber notice says this is the staging site.
 
@@ -43,7 +55,16 @@ from there, and only when you run them.
       the DCC Security block), Ragusa's own files sealed, critical options
       baselined, the walk started.
 - [ ] `wp ragusa scan` runs the walk to completion and prints the file count.
-      Write down the count and how long it took.
+      Write down the count and how long it took. **0.1.1:** however many
+      ticks the first pass takes, it ends with Minčeta saying "All N Files
+      Match" and a single "First pass: N files baselined" event, and no
+      "A new file appeared" events at all.
+- [ ] **0.1.1:** `wp ragusa status` shows `bokar: 2 privileged of 15 users,
+      roles read from wpstg0_capabilities` (or `… (fallback)` naming the
+      key it found). On live expect 2 administrators and 15 users.
+- [ ] **0.1.1:** Minčeta's card shows the disk as about 8.3 GB of 10 GB on
+      `/dev/sdd`, not 4 kB. If it says "(Fullest Filesystem)", `df -P ~`
+      did not name the device; tell me what `df -P ~` prints.
 - [ ] `wp ragusa status`: every fortress is Holding (Lovrijenac says
       "No Feed Key Yet"). Loopbacks: note whether it says they work.
 - [ ] `wp ragusa vault list`: the manifest verifies and every entry is intact.
@@ -54,6 +75,12 @@ from there, and only when you run them.
       is comfortably tappable.
 
 ## 3. Zero weight for guests (the proof)
+
+- [ ] **0.1.1:** `wp ragusa proof`. It loads WordPress as a visitor request
+      in a fresh PHP process twice, with Ragusa active and with it skipped,
+      and prints both columns. Expect: database queries equal, PHP files
+      included one more with Ragusa (`dcc-ragusa.php` itself), 0 DCCR
+      classes, 0 hooks, 0 enqueued assets. Record the two columns.
 
 - [ ] With Query Monitor, load `/` and `/accommodation/cottage-34/` logged
       in, as in "Before you start". Database Queries must be unchanged.
@@ -116,13 +143,22 @@ cleans up. Each prints every journal state transition.
       sealed copy, the reverse puts the altered copy back, and the original
       content is written back at the end. Check the guard afterwards:
       `wp ragusa status` is Holding on the next tick.
-- [ ] `wp ragusa drill htaccess` (only if loopbacks work): one line inside
+- [ ] `wp ragusa drill htaccess`: on staging it reports that the DCC Security
+      block is not present in this site's .htaccess and does nothing; on live
+      (where the block is at line 1) one line inside
       the DCC block is altered, the block is rewritten, the SpeedyCache and
       Newfold blocks are untouched, and the file ends as it began.
-- [ ] `wp ragusa drill rollback` (only if loopbacks work): the test plugin is
-      installed at 1.0.0, sealed, "updated" to a 1.0.1 that answers 500 to
-      Ragusa's checks, fails once, fails again, is rolled back to 1.0.0, is
-      verified, the reverse brings 1.0.1 back, and the test plugin is removed.
+- [ ] `wp ragusa drill rollback` (loopbacks work here): **0.1.1** uses the
+      test plugin's own probe (`/?ragusa_drill_probe=1`, answered on
+      `plugins_loaded` before WP Staging's login gate), so the staging gate
+      no longer makes both versions fail. Expect: 1.0.0 installed and sealed,
+      "Probe at 1.0.0: HTTP 200 with RAGUSA-DRILL-OK", 1.0.1 fails once,
+      fails again, rollback to 1.0.0, verification committed, the reverse
+      brings 1.0.1 back, the test plugin removed and the page markers back
+      in use.
+- [ ] **0.1.1:** Sveti Ivan's card on staging reads "… · Pages Are Behind The
+      Staging Login: Not Checked" after any update check, and no update is
+      ever failed for the login page. On live that suffix must not appear.
 - [ ] `wp ragusa journal` shows all of it, newest first. DCC → Ragusa →
       Recent Events shows the same with Undo buttons on the committed rows
       (the drill already undid them, so they say Undone).

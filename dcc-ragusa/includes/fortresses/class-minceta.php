@@ -354,7 +354,9 @@ final class Minceta
             State::set('minceta.pass_no', $p['pass']);
         }
         $index = self::index();
-        $first = $index === [];
+        // The FIRST COMPLETE PASS is the baseline, however many ticks it
+        // takes: the flag is set only when a pass finishes.
+        $first = !(bool) State::get('minceta.baselined', false);
         $n     = 0;
         $root  = Site::abspath();
         $stop  = false;
@@ -778,6 +780,7 @@ final class Minceta
         State::set('minceta.files', $total);
         State::set('last_full_pass', time());
         State::set('uploads_ht_baselined', true);
+        State::set('minceta.baselined', true);
         if ($p['full']) {
             State::set('last_rehash', time());
         }
@@ -839,10 +842,11 @@ final class Minceta
         }
         $q = self::quota();
         if ($q !== null) {
-            $pct = $q['limit'] > 0 ? round($q['used'] / $q['limit'] * 100, 1) : null;
-            State::set('disk', ['checked_at' => time(), 'used' => $q['used'], 'limit' => $q['limit'], 'pct' => $pct, 'method' => 'quota']);
-            self::disk_alert($pct, $q['used'], $q['limit'], 'quota');
-            return sprintf('Disk %s of %s (%s%%)', Text::bytes($q['used']), Text::bytes($q['limit']), (string) $pct);
+            $pct    = $q['limit'] > 0 ? round($q['used'] / $q['limit'] * 100, 1) : null;
+            $method = $q['guessed'] ? 'quota-largest' : 'quota';
+            State::set('disk', ['checked_at' => time(), 'used' => $q['used'], 'limit' => $q['limit'], 'pct' => $pct, 'method' => $method, 'device' => $q['device']]);
+            self::disk_alert($pct, $q['used'], $q['limit'], $method);
+            return sprintf('Disk %s of %s (%s%%) on %s%s', Text::bytes($q['used']), Text::bytes($q['limit']), (string) $pct, $q['device'], $q['guessed'] ? ', the fullest filesystem (home device unknown)' : '');
         }
         // No quota command: a weekly chunked walk of the home directory, an approximation.
         $home = Site::home_dir();
@@ -898,8 +902,7 @@ final class Minceta
         }
     }
 
-    /** @return array{used:int,limit:int}|null bytes, from the quota command */
-    public static function quota(): ?array
+    private static function run(array $cmd, int $timeout = 3): ?string
     {
         if (!function_exists('proc_open')) {
             return null;
@@ -908,19 +911,52 @@ final class Minceta
         if (in_array('proc_open', $disabled, true)) {
             return null;
         }
-        foreach ([['quota', '-u', '-w'], ['quota', '-u']] as $cmd) {
-            $spec = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-            $proc = @proc_open($cmd, $spec, $pipes);
-            if (!is_resource($proc)) {
+        $spec = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        $proc = @proc_open($cmd, $spec, $pipes);
+        if (!is_resource($proc)) {
+            return null;
+        }
+        fclose($pipes[0]);
+        stream_set_timeout($pipes[1], $timeout);
+        $out = (string) stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($proc);
+        return $out;
+    }
+
+    /** The device that holds the home directory, from `df -P ~`, or null. */
+    public static function home_device(): ?string
+    {
+        $home = Site::home_dir();
+        if ($home === null) {
+            return null;
+        }
+        $out = self::run(['df', '-P', $home]);
+        if ($out === null) {
+            return null;
+        }
+        $lines = preg_split('/\r?\n/', trim($out)) ?: [];
+        if (count($lines) < 2) {
+            return null;
+        }
+        $first = preg_split('/\s+/', trim($lines[1])) ?: [];
+        return isset($first[0]) && $first[0] !== '' ? $first[0] : null;
+    }
+
+    /**
+     * @return array{used:int,limit:int,device:string,guessed:bool}|null bytes, from the quota command,
+     *         for the filesystem that holds the home directory
+     */
+    public static function quota(): ?array
+    {
+        $device = self::home_device();
+        foreach ([['quota', '-u', '-w'], ['quota', '-u'], ['quota', '-u', '-s']] as $cmd) {
+            $out = self::run($cmd);
+            if ($out === null) {
                 return null;
             }
-            fclose($pipes[0]);
-            stream_set_timeout($pipes[1], 3);
-            $out = (string) stream_get_contents($pipes[1]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            proc_close($proc);
-            $parsed = self::parse_quota($out);
+            $parsed = self::parse_quota($out, $device);
             if ($parsed !== null) {
                 return $parsed;
             }
@@ -928,21 +964,73 @@ final class Minceta
         return null;
     }
 
-    /** @return array{used:int,limit:int}|null */
-    public static function parse_quota(string $out): ?array
+    /** "8454M", "4K", "10240" (1K blocks) → bytes. */
+    private static function quota_bytes(string $v): int
     {
+        $v = rtrim($v, '*');
+        if (!preg_match('/^(\d+(?:\.\d+)?)([KMGT]?)$/i', $v, $m)) {
+            return 0;
+        }
+        $n = (float) $m[1];
+        return (int) match (strtoupper($m[2])) {
+            'K'     => $n * 1024,
+            'M'     => $n * 1024 ** 2,
+            'G'     => $n * 1024 ** 3,
+            'T'     => $n * 1024 ** 4,
+            default => $n * 1024, // plain numbers are 1K blocks
+        };
+    }
+
+    /**
+     * Parse `quota` output, which may list several filesystems and may be
+     * wrapped onto two lines. With a device, that filesystem; without one,
+     * the fullest, flagged as guessed.
+     *
+     * @return array{used:int,limit:int,device:string,guessed:bool}|null
+     */
+    public static function parse_quota(string $out, ?string $device = null): ?array
+    {
+        $rows    = [];
+        $pending = null;
         foreach (preg_split('/\r?\n/', $out) ?: [] as $line) {
-            if (preg_match('#^\s*/\S*\s+(\d+)\*?\s+(\d+)\s+(\d+)#', $line, $m)) {
-                $limit = (int) $m[3] > 0 ? (int) $m[3] : (int) $m[2];
-                return ['used' => (int) $m[1] * 1024, 'limit' => $limit * 1024];
+            $t = trim($line);
+            if ($t === '' || preg_match('/^(Disk quotas|Filesystem)/i', $t)) {
+                continue;
+            }
+            $parts = preg_split('/\s+/', $t) ?: [];
+            if (str_starts_with($t, '/')) {
+                if (count($parts) >= 4 && preg_match('/^\d/', $parts[1])) {
+                    $rows[$parts[0]] = [$parts[1], $parts[2], $parts[3]];
+                } else {
+                    $pending = $parts[0]; // wrapped: numbers on the next line
+                }
+                continue;
+            }
+            if ($pending !== null && count($parts) >= 3 && preg_match('/^\d/', $parts[0])) {
+                $rows[$pending] = [$parts[0], $parts[1], $parts[2]];
+                $pending        = null;
             }
         }
-        // Two-line form: device on one line, numbers on the next.
-        if (preg_match('#\n\s+(\d+)\*?\s+(\d+)\s+(\d+)#', $out, $m)) {
-            $limit = (int) $m[3] > 0 ? (int) $m[3] : (int) $m[2];
-            return ['used' => (int) $m[1] * 1024, 'limit' => $limit * 1024];
+        if ($rows === []) {
+            return null;
         }
-        return null;
+        $pick = null;
+        if ($device !== null && isset($rows[$device])) {
+            $pick = $device;
+        }
+        if ($pick === null) {
+            $max = -1;
+            foreach ($rows as $dev => $r) {
+                $used = self::quota_bytes($r[0]);
+                if ($used > $max) {
+                    $max  = $used;
+                    $pick = $dev;
+                }
+            }
+        }
+        [$used, $soft, $hard] = $rows[$pick];
+        $limit = self::quota_bytes($hard) > 0 ? self::quota_bytes($hard) : self::quota_bytes($soft);
+        return ['used' => self::quota_bytes($used), 'limit' => $limit, 'device' => (string) $pick, 'guessed' => $device === null || !isset($rows[$device])];
     }
 
     // ------------------------------------------------------------- status
@@ -965,10 +1053,17 @@ final class Minceta
         }
         if (isset($disk['pct']) && $disk['pct'] !== null) {
             $line .= ' · ' . sprintf(
-                /* translators: %s: percent */
-                __('Disk %s%%', 'dcc-ragusa'),
+                /* translators: 1: used, 2: limit, 3: percent */
+                __('Disk %1$s Of %2$s (%3$s%%)', 'dcc-ragusa'),
+                Text::bytes((int) ($disk['used'] ?? 0)),
+                Text::bytes((int) ($disk['limit'] ?? 0)),
                 (string) $disk['pct']
             );
+            if (($disk['method'] ?? '') === 'quota-largest') {
+                $line .= ' ' . __('(Fullest Filesystem)', 'dcc-ragusa');
+            } elseif (($disk['method'] ?? '') === 'walk') {
+                $line .= ' ' . __('(Counted By Ragusa)', 'dcc-ragusa');
+            }
         } elseif (($disk['method'] ?? '') === 'none') {
             $line .= ' · ' . __('Disk Quota Unreadable', 'dcc-ragusa');
         }

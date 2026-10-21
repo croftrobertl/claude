@@ -6,6 +6,7 @@
 final class Test_WPDB
 {
     public string $prefix = 'wpstg0_';
+    public string $usermeta = 'wpstg0_usermeta';
     public int $insert_id = 0;
     public string $last_error = '';
     public array $queries = [];
@@ -14,9 +15,15 @@ final class Test_WPDB
 
     public function __construct(string $prefix = 'wpstg0_')
     {
-        $this->prefix = $prefix;
-        $this->pdo    = new \PDO('sqlite::memory:');
+        $this->prefix   = $prefix;
+        $this->usermeta = $prefix . 'usermeta';
+        $this->pdo      = new \PDO('sqlite::memory:');
         $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+    }
+
+    public function esc_like(string $s): string
+    {
+        return addcslashes($s, '_%\\');
     }
 
     public function get_charset_collate(): string

@@ -760,6 +760,7 @@ suite('Bokar: baseline, new administrator named, editor by id only, application 
     tick();
     eq(2, count(events_of('user-new')), 'reported once, then accepted');
     $GLOBALS['dccr_users'][0]['roles'] = ['subscriber'];
+    Test_Site::usermeta('wpstg0_');
     $GLOBALS['dccr_app_passwords'][2] = [['name' => 'app']];
     tick();
     eq(1, count(events_of('user-gone')), 'a demoted administrator is reported');
@@ -1078,6 +1079,166 @@ suite('source rules: no eval, no public endpoint, no MotoPress write, no guest d
     ok(!preg_match('/file_get_contents\(\s*[\'"]https?:/', $src), 'no raw remote fetch');
     $all = json_encode($GLOBALS['dccr_autoload']);
     ok(!str_contains($all, '"dcc_ragusa_state":"yes"') && !str_contains($all, '"dcc_ragusa_alerts":"yes"'), 'state and alerts never autoload');
+});
+
+// ------------------------------------------------------------- 0.1.1 blockers
+suite('0.1.1 blocker 1: the tick is scheduled at activation and self-heals when missing', function () {
+    $hooks = array_map(static fn($h) => is_array($h[0]) ? implode('::', $h[0]) : 'closure', $GLOBALS['dccr_hooks']['cron_schedules'] ?? []);
+    ok(in_array('DCCR\\Cron::schedules', $hooks, true), 'the 10-minute schedule is registered at file load, before boot');
+    $GLOBALS['dccr_cron'] = [];
+    // Activation the way WP-CLI and the Plugins screen do it: after plugins_loaded, boot() never ran.
+    do_action('activate');
+    $ev = array_values(array_filter($GLOBALS['dccr_cron'], static fn($e) => $e['hook'] === 'dccr_tick'));
+    eq(1, count($ev), 'dccr_tick is scheduled by activation');
+    eq('dccr_10min', $ev[0]['recurrence'] ?? '', 'with the 10-minute recurrence');
+    ok(Cron::is_scheduled(), 'is_scheduled sees it');
+    // Self-heal: someone cleared the cron array.
+    $GLOBALS['dccr_cron'] = [];
+    Cron::ensure();
+    ok(Cron::is_scheduled(), 'ensure() puts the tick back');
+    Cron::ensure();
+    eq(1, count(array_filter($GLOBALS['dccr_cron'], static fn($e) => $e['hook'] === 'dccr_tick')), 'and never doubles it');
+    // Zelenci rings when Ragusa is active but silent.
+    dccr_test_site('live');
+    $GLOBALS['pagenow'] = 'plugins.php';
+    require_once dirname(__DIR__) . '/mu/dcc-ragusa-zelenci.php';
+    update_option('dcc_ragusa_state', ['last_tick' => time() - 4 * 3600, 'activated_at' => time() - 5 * 3600], 'no');
+    update_option('dcc_ragusa_zelenci', ['last_check' => 0, 'missing_since' => time() - 700, 'last_alert' => 0], 'no');
+    // The stub plugin dir must look installed.
+    @mkdir(WP_PLUGIN_DIR . '/dcc-ragusa', 0755, true);
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-ragusa/dcc-ragusa.php', '<?php');
+    dccr_zelenci_check();
+    $z = mails_with('Not Standing');
+    eq(1, count($z), 'Zelenci emails when Ragusa has not ticked for hours');
+    ok(str_contains($z[0]['body'], 'has not ticked'), 'and says why');
+    update_option('dcc_ragusa_state', ['last_tick' => time() - 60, 'activated_at' => time() - 5 * 3600], 'no');
+    update_option('dcc_ragusa_zelenci', ['last_check' => 0, 'missing_since' => time() - 700, 'last_alert' => 0], 'no');
+    dccr_zelenci_check();
+    eq(1, count(mails_with('Not Standing')), 'a recent tick means no bell');
+    $GLOBALS['pagenow'] = 'index.php';
+    dccr_test_site('staging');
+});
+
+suite('0.1.1 blocker 2: the first complete pass is the baseline even across many ticks', function () {
+    $ticks  = 0;
+    $phases = [];
+    for ($i = 0; $i < 300; $i++) {
+        Cron::tick(new Budget(0.0001), true);
+        $ticks++;
+        $p = (array) State::get('minceta.pass', []);
+        $phases[] = $p['phase'] ?? 'idle';
+        if (($p['phase'] ?? 'idle') === 'idle' && (int) State::get('last_full_pass', 0) > 0) {
+            break;
+        }
+    }
+    ok($ticks >= 3, 'the first pass spanned at least three ticks: ' . $ticks);
+    ok(count(array_unique($phases)) >= 2, 'it crossed phases: ' . implode(',', array_unique($phases)));
+    eq(0, count(events_of('file-new')), 'no file was flagged as new during the first pass');
+    eq(0, count(events_of('file-changed')), 'nor as changed');
+    eq(1, count(array_filter(events_of('baselined'), static fn($e) => $e['target'] === 'walk')), 'one info event says the baseline was taken');
+    ok(str_contains(Fortress::status(Fortress::MINCETA)['line'], 'Files Match'), 'the card says all files match: ' . Fortress::status(Fortress::MINCETA)['line']);
+    eq(0, count(Alerts::active(Fortress::MINCETA)), 'no Minčeta finding after the first pass');
+    // And a file added afterwards is found.
+    Test_Site::write('wp-admin/late.php', "<?php\n");
+    State::set('last_full_pass', 0);
+    for ($i = 0; $i < 300; $i++) {
+        Cron::tick(new Budget(0.0001), true);
+        $p = (array) State::get('minceta.pass', []);
+        if (($p['phase'] ?? 'idle') === 'idle' && $i > 0) {
+            break;
+        }
+    }
+    eq(1, count(events_of('file-new')), 'a file added after the baseline is reported');
+
+    // Upgrading from 0.1.0 treats the existing index as the baseline and withdraws its false findings.
+    State::delete('minceta.baselined');
+    Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-new', 'target' => 'wp-content/themes/bravada/style.css', 'title' => 'New File', 'what' => 'w']);
+    update_option('dcc_ragusa_version', '0.1.0', 'no');
+    DCCR\Plugin::maybe_upgrade();
+    ok((bool) State::get('minceta.baselined'), 'upgrade marks the existing index as the baseline');
+    eq(0, count(array_filter(Alerts::active(Fortress::MINCETA), static fn($a) => $a['kind'] === 'file-new')), 'the false file-new findings are withdrawn');
+    eq(DCCR_VERSION, get_option('dcc_ragusa_version'), 'version recorded');
+    eq(0, count(mails_with('All Clear')), 'withdrawn quietly, no All Clear storm');
+});
+
+suite('0.1.1 blocker 3: the quota is read for the filesystem that holds the home directory', function () {
+    $out = "Disk quotas for user doracurt (uid 1234):\n     Filesystem   space   quota   limit   grace   files   quota   limit   grace\n      /dev/sda1      4K  10240M  10240M            1234       0       0\n      /dev/sda3   3744K  10240M  10240M            5678       0       0\n       /dev/sdd   8454M  10240M  10240M          133000       0       0\n";
+    $q = Minceta::parse_quota($out, '/dev/sdd');
+    eq(8454 * 1024 * 1024, $q['used'], 'used from the home device');
+    eq(10240 * 1024 * 1024, $q['limit'], 'limit from the home device');
+    eq('/dev/sdd', $q['device'], 'device named');
+    ok(!$q['guessed'], 'not guessed when the device is known');
+    $q = Minceta::parse_quota($out, '/dev/nope');
+    eq('/dev/sdd', $q['device'], 'unknown device: the fullest filesystem');
+    ok($q['guessed'], 'and it says so');
+    $q = Minceta::parse_quota($out, null);
+    eq(8454 * 1024 * 1024, $q['used'], 'no device at all: still the fullest');
+    $plain = "Disk quotas for user x (uid 1):\n     Filesystem  blocks   quota   limit   grace   files   quota   limit   grace\n      /dev/sda1       4 10485760 10485760              12       0       0\n      /dev/sdd  8821344* 10485760 10485760           91234       0       0\n";
+    $q = Minceta::parse_quota($plain, '/dev/sdd');
+    eq(8821344 * 1024, $q['used'], 'plain 1K blocks with a grace star');
+    $wrapped = "Disk quotas for user x (uid 1):\n     Filesystem  blocks   quota   limit   grace   files   quota   limit   grace\n/dev/mapper/vg-home-very-long-name\n                  8821344 10485760 10485760           91234       0       0\n";
+    $q = Minceta::parse_quota($wrapped, '/dev/mapper/vg-home-very-long-name');
+    eq(8821344 * 1024, $q['used'], 'a wrapped two-line device row');
+    ok(Minceta::parse_quota("quota: not found") === null, 'nothing parseable is null, never a guess');
+});
+
+suite('0.1.1 blocker 4: Bokar reads roles from the capabilities meta and survives a clone\'s prefix mismatch', function () {
+    $snap = Bokar::snapshot();
+    eq(2, count(array_filter($snap['users'], static fn($u) => $u['role'] === 'administrator')), 'two administrators on the normal site');
+    eq(4, $snap['total'], 'four users in total');
+    eq('wpstg0_capabilities', Bokar::$roles_source, 'read from the prefixed meta key');
+    // A clone where the meta keys kept the old prefix and WP_User::$roles comes back empty.
+    Test_Site::usermeta('portal_', false);
+    foreach ($GLOBALS['dccr_users'] as &$u) {
+        $u['roles'] = [];
+    }
+    unset($u);
+    $snap = Bokar::snapshot();
+    eq(2, count(array_filter($snap['users'], static fn($u) => $u['role'] === 'administrator')), 'still two administrators via the fallback');
+    ok(str_contains(Bokar::$roles_source, 'portal_capabilities'), 'the diagnostic names the fallback key: ' . Bokar::$roles_source);
+    tick();
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], '2 Administrators'), 'the card says 2 administrators');
+});
+
+suite('0.1.1 item 5: a staging login page is "not checked", never a failure, and the drill probe replaces the pages', function () {
+    tick();
+    $GLOBALS['dccr_site_handler'] = static function (string $url, array $args) {
+        if (str_ends_with((string) parse_url($url, PHP_URL_PATH), 'wp-cron.php')) {
+            return dccr_http_ok('');
+        }
+        return dccr_http_ok('<html><body><form method="post"><input type="password" name="wpstg-password"><button>Log in</button></form></body></html>');
+    };
+    $r = Sveti_Ivan::run_checks(['errlog' => Error_Log::snapshot()], true);
+    eq([], $r['failed'], 'no page failed');
+    ok($r['host_up'], 'the host answered');
+    foreach (Markers::all() as $path => $m) {
+        ok(array_key_exists('page ' . $path, $r['checks']) && $r['checks']['page ' . $path]['ok'] === null, 'page ' . $path . ' is skipped, not failed');
+    }
+    ok(str_contains(Sveti_Ivan::status_line(), 'Behind The Staging Login'), 'the card says the pages are behind the login');
+    // A real marker failure on a normal page is still a failure.
+    $GLOBALS['dccr_site_handler'] = static fn(string $url, array $args) => str_contains($url, 'contact') ? dccr_http_ok('<html>no form here</html>') : Test_Site::site_page($url);
+    $r = Sveti_Ivan::run_checks(['errlog' => Error_Log::snapshot()], true);
+    eq(['page /contact/'], $r['failed'], 'a missing marker without a login form still fails');
+    ok(!str_contains(Sveti_Ivan::status_line(), 'Behind The Staging Login'), 'gate notice cleared');
+    // The drill's probe stands in for the pages.
+    $GLOBALS['dccr_site_handler'] = static fn(string $url, array $args) => str_contains($url, 'ragusa_drill_probe') ? dccr_http_ok('RAGUSA-DRILL-OK') : dccr_http_ok('<form><input type="password"></form>');
+    Sveti_Ivan::override_markers(['/?ragusa_drill_probe=1' => ['RAGUSA-DRILL-OK']]);
+    $r = Sveti_Ivan::run_checks(['errlog' => Error_Log::snapshot()], true);
+    eq(['page /?ragusa_drill_probe=1', 'error_log'], array_keys($r['checks']), 'only the probe and the error log are checked');
+    eq(true, $r['checks']['page /?ragusa_drill_probe=1']['ok'], 'the probe passes at 1.0.0');
+    $GLOBALS['dccr_site_handler'] = static fn(string $url, array $args) => str_contains($url, 'ragusa_drill_probe') ? dccr_http_ok('RAGUSA-DRILL-BROKEN', 500) : dccr_http_ok('<form><input type="password"></form>');
+    $r = Sveti_Ivan::run_checks(['errlog' => Error_Log::snapshot()], true);
+    eq(['page /?ragusa_drill_probe=1'], $r['failed'], 'the probe fails at 1.0.1');
+    Sveti_Ivan::override_markers(null);
+    ok(State::get('markers_override') === null, 'override cleared');
+    ok(str_contains(DCCR\Drill::drill_plugin('1.0.0'), "plugins_loaded") && str_contains(DCCR\Drill::drill_plugin('1.0.1'), '500'), 'the drill plugin answers its probe on plugins_loaded');
+    $GLOBALS['dccr_site_handler'] = null;
+    // Item 6: the headline leads with what needs a look.
+    Fortress::set_status(Fortress::LOVRIJENAC, Fortress::NEEDS_LOOK, 'x');
+    ok(str_starts_with(Fortress::overall(), 'Something Needs A Look'), 'headline: ' . Fortress::overall());
+    // Item 7: the proof script skips Ragusa through a pre-initialised filter.
+    ok(str_contains(DCCR\Proof::script(true), 'option_active_plugins') && !str_contains(DCCR\Proof::script(false), 'option_active_plugins'), 'proof script with and without the skip filter');
+    ok(str_contains(DCCR\Proof::script(false), 'wp-load.php') && str_contains(DCCR\Proof::script(false), 'num_queries'), 'the proof loads wp-load and counts queries');
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

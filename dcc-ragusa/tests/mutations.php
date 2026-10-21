@@ -120,7 +120,38 @@ $mutations = [
         'from' => "            && (time() - (int) (\$before['started'] ?? 0)) <= self::WINDOW;",
         'to'   => '            && true;',
     ],
+    [
+        'name' => '0.1.1 blocker 1: the 10-minute schedule is registered only in boot(), so activation cannot use it',
+        'file' => 'dcc-ragusa.php',
+        'from' => "add_filter('cron_schedules', ['DCCR\\\\Cron', 'schedules']);",
+        'to'   => '',
+    ],
+    [
+        'name' => '0.1.1 blocker 2: only the first chunk of the first pass is the baseline',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        \$first = !(bool) State::get('minceta.baselined', false);",
+        'to'   => '        $first = self::index() === [];',
+    ],
+    [
+        'name' => '0.1.1 blocker 3: the quota parser takes the first filesystem',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (\$device !== null && isset(\$rows[\$device])) {\n            \$pick = \$device;\n        }",
+        'to'   => '        $pick = array_key_first($rows);',
+    ],
+    [
+        'name' => '0.1.1 blocker 4: roles are trusted from WP_User instead of the capabilities meta',
+        'file' => 'includes/fortresses/class-bokar.php',
+        'from' => "            \$roles = self::roles_of((int) \$u->ID, (array) (\$u->roles ?? []));",
+        'to'   => '            $roles = (array) ($u->roles ?? []);',
+    ],
+    [
+        'name' => '0.1.1 item 5: a staging login page counts as a failed page check',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "                if (\$missing !== [] && self::looks_like_login(\$r['body'])) {",
+        'to'   => '                if (false) {',
+    ],
 ];
+
 
 if (is_dir($work)) {
     DCCR_rm($work);

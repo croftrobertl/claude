@@ -25,22 +25,66 @@ final class Bokar
     public const KEEP_DAYS     = 90;
     public const MAX_IPS       = 50;
 
+    /** The meta key the last snapshot read roles from (a diagnostic for `wp ragusa status`). */
+    public static string $roles_source = '';
+
+    /**
+     * A user's roles, read from the capabilities meta rather than trusting
+     * the WP_User object: on a cloned site the prefix of the meta key and
+     * the table prefix can disagree, and then `role__in` finds nobody.
+     *
+     * @return string[]
+     */
+    public static function roles_of(int $id, array $fallback = []): array
+    {
+        global $wpdb;
+        $key  = $wpdb->prefix . 'capabilities';
+        $caps = function_exists('get_user_meta') ? get_user_meta($id, $key, true) : '';
+        if (is_array($caps) && $caps !== []) {
+            self::$roles_source = $key;
+            return array_keys(array_filter($caps));
+        }
+        // Any *_capabilities key on this user (a clone whose prefix changed).
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT meta_key, meta_value FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key LIKE %s",
+            $id,
+            '%' . $wpdb->esc_like('capabilities')
+        ), ARRAY_A) ?: [];
+        foreach ($rows as $row) {
+            $v = maybe_unserialize((string) $row['meta_value']);
+            if (is_array($v) && $v !== []) {
+                self::$roles_source = (string) $row['meta_key'] . ' (fallback)';
+                return array_keys(array_filter($v));
+            }
+        }
+        if ($fallback !== []) {
+            self::$roles_source = 'WP_User::$roles';
+        }
+        return $fallback;
+    }
+
     /** @return array{users:array<int,array{role:string,login:string,app:int}>,total:int} */
     public static function snapshot(): array
     {
         $users = [];
-        foreach (get_users(['role__in' => self::WATCHED_ROLES, 'fields' => 'all', 'number' => 200]) as $u) {
-            $roles = (array) ($u->roles ?? []);
-            $role  = in_array('administrator', $roles, true) ? 'administrator' : 'editor';
-            $app   = 0;
+        $all   = get_users(['fields' => 'all', 'number' => 500]);
+        foreach ($all as $u) {
+            $roles = self::roles_of((int) $u->ID, (array) ($u->roles ?? []));
+            $watched = array_values(array_intersect(self::WATCHED_ROLES, $roles));
+            if ($watched === []) {
+                continue;
+            }
+            $role = in_array('administrator', $roles, true) ? 'administrator' : 'editor';
+            $app  = 0;
             if (class_exists('WP_Application_Passwords')) {
                 $app = count((array) \WP_Application_Passwords::get_user_application_passwords((int) $u->ID));
             }
             $users[(int) $u->ID] = ['role' => $role, 'login' => $role === 'administrator' ? (string) $u->user_login : '', 'app' => $app];
         }
         ksort($users);
-        $counts = function_exists('count_users') ? count_users() : ['total_users' => count($users)];
-        return ['users' => $users, 'total' => (int) ($counts['total_users'] ?? 0)];
+        $counts = function_exists('count_users') ? count_users() : ['total_users' => count($all)];
+        $total  = (int) ($counts['total_users'] ?? 0);
+        return ['users' => $users, 'total' => $total > 0 ? $total : count($all)];
     }
 
     private static function describe(int $id, array $u): string

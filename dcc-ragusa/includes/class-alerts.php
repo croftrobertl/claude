@@ -159,6 +159,23 @@ final class Alerts
         Events::record((string) $a['fortress'], Events::INFO, 'all-clear', (string) ($a['target'] ?? ''), (string) $a['title']);
     }
 
+    /** Drop findings of these kinds without an All Clear (an upgrade correcting itself). */
+    public static function withdraw(string $fortress, array $kinds): int
+    {
+        $data = self::load();
+        $n    = 0;
+        foreach ($data['active'] as $fp => $a) {
+            if (($a['fortress'] ?? '') === $fortress && in_array($a['kind'] ?? '', $kinds, true)) {
+                unset(self::$data['active'][$fp]);
+                $n++;
+            }
+        }
+        if ($n > 0) {
+            self::save();
+        }
+        return $n;
+    }
+
     /** @return array<string,array> fingerprint => finding */
     public static function active(?string $fortress = null): array
     {

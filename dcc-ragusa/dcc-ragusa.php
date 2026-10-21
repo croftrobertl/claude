@@ -3,7 +3,7 @@
  * Plugin Name: DCC Ragusa
  * Plugin URI:  https://doracanalcourt.com/
  * Description: The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
- * Version:     0.1.0
+ * Version:     0.1.1
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author:      Dora Canal Court
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCCR_VERSION', '0.1.0');
+define('DCCR_VERSION', '0.1.1');
 define('DCCR_FILE', __FILE__);
 define('DCCR_DIR', __DIR__ . '/');
 
@@ -73,5 +73,12 @@ spl_autoload_register(static function (string $class): void {
 
 register_activation_hook(__FILE__, ['DCCR\\Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['DCCR\\Plugin', 'deactivate']);
+
+/*
+ * The 10-minute schedule is registered here, at file load, not in boot():
+ * activation runs after plugins_loaded, so a filter added in boot() would
+ * not exist yet and WordPress would refuse the unknown recurrence silently.
+ */
+add_filter('cron_schedules', ['DCCR\\Cron', 'schedules']);
 
 add_action('plugins_loaded', ['DCCR\\Plugin', 'boot'], 20);
