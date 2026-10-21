@@ -70,13 +70,24 @@ final class Admin
         wp_enqueue_script('dccl-admin', DCCL_URL . 'assets/js/admin.js', [], DCCL_VERSION, true);
     }
 
+    /**
+     * Every POST this plugin accepts.
+     *
+     * Kept as one list so the test suite can walk it: each one must have a
+     * handler, and each handler must refuse both a visitor without
+     * manage_options and a bad nonce. Adding an action without its guards is
+     * then a failing test rather than a hole.
+     */
+    public const ACTIONS = [
+        'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
+        'settings', 'export', 'snapshot', 'adjust', 'unadjust',
+        'confirm_move', 'reject_move', 'reverse_assumed', 'remove_bad_links',
+        'record_refund',
+    ];
+
     public static function register_actions(): void
     {
-        foreach ([
-            'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
-            'settings', 'export', 'snapshot', 'adjust', 'unadjust',
-            'confirm_move', 'reject_move', 'reverse_assumed', 'remove_bad_links',
-        ] as $action) {
+        foreach (self::ACTIONS as $action) {
             add_action('admin_post_dccl_' . $action, ['\\DCCL\\Admin', 'handle_' . $action]);
         }
     }
@@ -388,10 +399,55 @@ final class Admin
             'amount'          => -1 * (float) $assumed['amount'],
             'event_date'      => (string) $assumed['event_date'],
             'label'           => Adjustments::label_for(Adjustments::ASSUMED_REVERSAL),
-            'note'            => __('This booking is a hand-typed copy of a platform stay, so its money came through the platform. The assumed payment above is cancelled, not removed.', 'dcc-ledger'),
+            'note'            => (string) $assumed['type'] === Adjustments::ASSUMED_PRE_EXPORTS
+                ? __('The assumption that this booking was paid before the exports begin is cancelled, not removed. Both halves stay on the record.', 'dcc-ledger')
+                : __('The assumed payment above is cancelled, not removed. Both halves stay on the record, so the pair nets to nothing.', 'dcc-ledger'),
         ], null, get_current_user_id());
 
         self::back('cleanup', __('Assumed payment reversed. Both the assumption and its reversal stay on the record.', 'dcc-ledger'));
+    }
+
+    /**
+     * Record a refund MotoPress never saw.
+     *
+     * The card processor refunded the guest and nobody told MotoPress, so
+     * the booking reads as overpaid. The refund is a labelled adjustment on
+     * top of the frozen Original, like every other correction — the payment
+     * in MotoPress is not touched, and neither is the Original.
+     */
+    public static function handle_record_refund(): void
+    {
+        self::guard();
+
+        $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
+        $amount     = isset($_POST['amount']) ? round((float) $_POST['amount'], 2) : 0.0;
+
+        if ($booking_id <= 0 || $amount <= 0) {
+            self::back('cleanup', __('A booking and an amount above zero are both needed.', 'dcc-ledger'), 'error');
+        }
+        if (Adjustments::refund_for($booking_id) !== null) {
+            self::back('cleanup', __('That booking already has a refund recorded against it.', 'dcc-ledger'), 'error');
+        }
+
+        $booking = Originals::current(Originals::KIND_BOOKING, $booking_id);
+        if ($booking === null) {
+            self::back('cleanup', __('That booking has not been copied into the ledger yet. Refresh from MotoPress first.', 'dcc-ledger'), 'error');
+        }
+
+        Adjustments::add([
+            'type'            => Adjustments::REFUND_UNRECORDED,
+            'channel'         => 'direct',
+            'mphb_booking_id' => $booking_id,
+            'cottage'         => (string) ($booking['cottage'] ?? ''),
+            'amount'          => -1 * $amount,
+            'event_date'      => (string) ($booking['check_out'] ?: $booking['check_in']),
+            'label'           => Adjustments::label_for(Adjustments::REFUND_UNRECORDED),
+            'note'            => __('Recorded by hand: the card processor refunded this and MotoPress was never told. Dated at check-out.', 'dcc-ledger'),
+        ], null, get_current_user_id());
+
+        Reports::flush_cache();
+
+        self::back('cleanup', __('Refund recorded. MotoPress is unchanged; the ledger carries the correction.', 'dcc-ledger'));
     }
 
     /**
@@ -430,19 +486,51 @@ final class Admin
         ));
     }
 
+    /**
+     * Link a stay to a booking somebody typed the number of.
+     *
+     * A number typed by hand is the one place a wrong link can be made in a
+     * single keystroke, so every check is made before the link is written:
+     * the booking has to exist, be confirmed, and be in the same cottage as
+     * the stay. A link to the wrong cottage would move a stay's money onto
+     * somebody else's nights and nothing afterwards would notice.
+     */
     public static function handle_manual_link(): void
     {
         self::guard();
         $stay_id = isset($_POST['stay_id']) ? (int) $_POST['stay_id'] : 0;
         $booking = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
         $method  = (isset($_POST['method']) && $_POST['method'] === 'copy') ? 'copy' : 'manual';
+        $key     = isset($_POST['issue_key']) ? sanitize_text_field(wp_unslash($_POST['issue_key'])) : '';
 
         if ($stay_id <= 0 || $booking <= 0) {
             self::back('cleanup', __('A stay and a booking id are both needed.', 'dcc-ledger'), 'error');
         }
+
+        $problem = Linker::why_not_linkable($stay_id, $booking);
+        if ($problem !== null) {
+            self::back('cleanup', $problem, 'error');
+        }
+
         if (!Repo::link($stay_id, $booking, $method, get_current_user_id())) {
             self::back('cleanup', __('That link could not be made — the stay may already have one.', 'dcc-ledger'), 'error');
         }
+
+        // The person answered the question by linking it, so the item it was
+        // asked on comes off the list with them.
+        if ($key !== '') {
+            Repo::mark_reviewed(
+                $key,
+                sprintf(
+                    /* translators: 1: booking id, 2: how it was linked */
+                    __('Linked by hand to MotoPress booking #%1$d (%2$s).', 'dcc-ledger'),
+                    $booking,
+                    $method === 'copy' ? __('as a copy', 'dcc-ledger') : __('as its imported booking', 'dcc-ledger')
+                ),
+                get_current_user_id()
+            );
+        }
+
         self::back('cleanup', __('Linked.', 'dcc-ledger'));
     }
 

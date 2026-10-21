@@ -98,3 +98,48 @@ foreach (Schema::table_names() as $name) {
     T::ok(!str_contains($statement, '#'), $name . ' has no # comment in its SQL');
     T::ok(!str_contains($statement, '/*'), $name . ' has no block comment in its SQL');
 }
+
+T::group('An upgrade leaves the decisions a person already made alone');
+
+// What live carries on 2026-10-21: links somebody made or confirmed, and
+// cleanup items somebody marked reviewed. An upgrade changes the shape of the
+// tables; it must not touch a single row of either.
+$wpdb = new Test_WPDB();
+$GLOBALS['dccl_options'] = [];
+dccl_reset_db();
+Schema::install();
+
+$stay_id = (int) DCCL\Repo::upsert_stay([
+    'channel'   => 'airbnb',
+    'code'      => 'HMUPGRADE1',
+    'cottage'   => '32',
+    'check_in'  => '2026-03-01',
+    'check_out' => '2026-03-04',
+    'nights'    => 3,
+    'status'    => 'ok',
+    'booked_on' => '2026-01-05',
+    'persons'   => 2,
+], 1)['id'];
+
+T::ok(DCCL\Repo::link($stay_id, 7278, 'copy', 1), 'A link is made before the upgrade');
+DCCL\Repo::mark_reviewed('moved:airbnb:HMUPGRADE1', 'Rob confirmed this on 2026-10-21', 1);
+
+$links_before   = $wpdb->get_results('SELECT * FROM ' . Schema::links() . ' ORDER BY id', ARRAY_A);
+$reviews_before = $wpdb->get_results('SELECT * FROM ' . Schema::reviews() . ' ORDER BY id', ARRAY_A);
+
+// Force the upgrade path: the stored version is behind, so Plugin::maybe_upgrade()
+// reinstalls the schema and runs the repair pass over the existing rows.
+update_option(Schema::VERSION_OPTION, '1');
+DCCL\Plugin::instance()->maybe_upgrade();
+
+T::same(Schema::DB_VERSION, get_option(Schema::VERSION_OPTION), 'The upgrade ran');
+T::same(
+    $links_before,
+    $wpdb->get_results('SELECT * FROM ' . Schema::links() . ' ORDER BY id', ARRAY_A),
+    'Every link is exactly as it was'
+);
+T::same(
+    $reviews_before,
+    $wpdb->get_results('SELECT * FROM ' . Schema::reviews() . ' ORDER BY id', ARRAY_A),
+    'And so is every review'
+);

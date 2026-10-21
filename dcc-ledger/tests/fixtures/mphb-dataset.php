@@ -149,6 +149,60 @@ function dccl_seed_mphb(): void
         LIVE_TOTAL       => '0.00',
     ]);
 
+    // Hand-typed, in the same cottage and starting the same day as the
+    // Booking.com payout whose reservation row has not arrived. Probably the
+    // same stay; nothing links it, because the check-out is unknown.
+    $booking(9052, 'confirmed', 1072, '2026-09-28', '2026-10-01', [
+        LIVE_TOTAL      => '1120.00',
+        LIVE_FIRST_NAME => 'Nadia',
+        LIVE_LAST_NAME  => 'Oyelaran',
+    ]);
+
+    // Booking 1152 is on Rob's pre-2025 list AND is a hand-typed copy of
+    // Booking.com 5666666666. The ruling must pass it over: assuming it paid
+    // would count that stay's money twice.
+    $booking(1152, 'confirmed', 1614, '2025-11-10', '2025-11-13', [
+        LIVE_TOTAL      => '540.00',
+        LIVE_NOTE       => 'Walk-in, booking.com 5666666666',
+        LIVE_FIRST_NAME => 'Ines',
+        LIVE_LAST_NAME  => 'Olofsdottir',
+    ]);
+
+    // Booking 1599 is on the same list and is nothing of the kind: a plain
+    // direct stay before the exports begin, with no payment recorded.
+    $booking(1599, 'confirmed', 1066, '2024-11-04', '2024-11-08', [
+        LIVE_TOTAL      => '640.00',
+        LIVE_FIRST_NAME => 'Leonie',
+        LIVE_LAST_NAME  => 'Brightwater',
+    ]);
+
+    // Booking 7983 is on Rob's refund list: MotoPress records more paid than
+    // the booking is worth, because the refund never reached it.
+    $booking(7983, 'confirmed', 1807, '2025-01-20', '2025-01-24', [
+        LIVE_TOTAL      => '500.00',
+        LIVE_FIRST_NAME => 'Olu',
+        LIVE_LAST_NAME  => 'Adeyemi',
+    ]);
+    $payment(79831, 7983, 716.45, '2025-01-20');
+
+    // A calendar block, not a booking: Airbnb's own wording for dates the
+    // host closed. Live booking 6313 is this shape exactly.
+    $booking(9050, 'confirmed', 1068, '2025-02-14', '2025-02-17', [
+        LIVE_SYNC_ID      => 'sync-9050',
+        LIVE_ICAL_PRODID  => '-//Airbnb Inc//Hosting Calendar 1.0//EN',
+        LIVE_ICAL_SUMMARY => 'Airbnb (Not available)',
+        LIVE_TOTAL        => '0.00',
+    ]);
+
+    // An imported booking that starts after the exports end. The platform
+    // has not reported its money yet; nothing is missing.
+    $booking(9051, 'confirmed', 1070, '2026-11-10', '2026-11-14', [
+        LIVE_SYNC_ID      => 'sync-9051',
+        LIVE_ICAL_PRODID  => '-//Airbnb Inc//Hosting Calendar 1.0//EN',
+        LIVE_ICAL_SUMMARY => 'Reserved - HMFUTURE01',
+        LIVE_TOTAL        => '0.00',
+    ]);
+
     // Hand-typed copy of Booking.com 5555555555: same cottage, same dates,
     // and it carries a recorded payment that must never be counted.
     $booking(9006, 'confirmed', 1806, '2025-06-10', '2025-06-14', [

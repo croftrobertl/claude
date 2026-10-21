@@ -157,6 +157,8 @@ final class Reports
                 'direct_recorded'   => $direct['recorded'],
                 'direct_assumed'    => $direct['assumed'],
                 'direct_refunded'   => $direct['refunded'],
+                'direct_assumed_pre_exports' => $direct['assumed_pre_exports'],
+                'direct_refunds'    => $direct['refunds'],
                 // What this view counts as paid on direct bookings.
                 'direct_paid'       => $direct['paid'],
                 'cancellations'     => $ota['cancellations'],
@@ -449,6 +451,11 @@ final class Reports
             'recorded'   => 0.0,
             'refunded'   => 0.0,
             'assumed'    => 0.0,
+            // Rob's ruling on the stays that predate the exports, kept apart
+            // from the window rule so the two are never read as one figure.
+            'assumed_pre_exports' => 0.0,
+            // Refunds he knows about that never reached MotoPress.
+            'refunds'    => 0.0,
             'paid'       => 0.0,
             'bookings'   => 0,
             'by_cottage' => [],
@@ -492,10 +499,19 @@ final class Reports
                 $out['by_channel']['direct']['nights'] += $nights;
             }
 
-            $assumed = 0.0;
+            // A booking carries at most one kind of assumption, so its net
+            // belongs wholly to that bucket.
+            $assumed     = 0.0;
+            $refunds     = 0.0;
+            $pre_exports = false;
             foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
-                if (in_array((string) $adjustment['type'], Adjustments::ASSUMED_TYPES, true)) {
+                $type = (string) $adjustment['type'];
+                if (in_array($type, Adjustments::ASSUMED_TYPES, true)) {
                     $assumed = round($assumed + (float) $adjustment['amount'], 2);
+                    $pre_exports = $pre_exports || $type === Adjustments::ASSUMED_PRE_EXPORTS;
+                }
+                if ($type === Adjustments::REFUND_UNRECORDED) {
+                    $refunds = round($refunds + (float) $adjustment['amount'], 2);
                 }
             }
 
@@ -508,7 +524,12 @@ final class Reports
                     $out['due']      = round($out['due'] + (float) $booking['total'] * $share, 2);
                     $out['recorded'] = round($out['recorded'] + (float) $booking['paid'] * $share, 2);
                     $out['refunded'] = round($out['refunded'] + (float) $booking['refunded'] * $share, 2);
-                    $out['assumed']  = round($out['assumed'] + $assumed * $share, 2);
+                    $out['refunds']  = round($out['refunds'] + $refunds * $share, 2);
+                    if ($pre_exports) {
+                        $out['assumed_pre_exports'] = round($out['assumed_pre_exports'] + $assumed * $share, 2);
+                    } else {
+                        $out['assumed'] = round($out['assumed'] + $assumed * $share, 2);
+                    }
                 }
                 continue;
             }
@@ -534,20 +555,29 @@ final class Reports
                 if ($date < $from || $date > $to) {
                     continue;
                 }
-                if (in_array((string) $adjustment['type'], Adjustments::ASSUMED_TYPES, true)) {
+                $type = (string) $adjustment['type'];
+                if ($type === Adjustments::ASSUMED_PRE_EXPORTS) {
+                    $out['assumed_pre_exports'] = round($out['assumed_pre_exports'] + (float) $adjustment['amount'], 2);
+                } elseif (in_array($type, Adjustments::ASSUMED_TYPES, true)) {
                     $out['assumed'] = round($out['assumed'] + (float) $adjustment['amount'], 2);
+                } elseif ($type === Adjustments::REFUND_UNRECORDED) {
+                    $out['refunds'] = round($out['refunds'] + (float) $adjustment['amount'], 2);
                 }
             }
         }
 
         // What this view counts as money received on direct bookings.
+        $corrections = round($out['assumed'] + $out['assumed_pre_exports'] + $out['refunds'], 2);
+
         if ($view === 'original') {
-            $out['paid']    = $out['recorded'];
-            $out['assumed'] = 0.0;
+            $out['paid']                = $out['recorded'];
+            $out['assumed']             = 0.0;
+            $out['assumed_pre_exports'] = 0.0;
+            $out['refunds']             = 0.0;
         } elseif ($view === 'difference') {
-            $out['paid'] = $out['assumed'];
+            $out['paid'] = $corrections;
         } else {
-            $out['paid'] = round($out['recorded'] + $out['assumed'], 2);
+            $out['paid'] = round($out['recorded'] + $corrections, 2);
         }
 
         foreach (array_keys($out['by_cottage']) as $cottage) {

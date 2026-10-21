@@ -156,6 +156,88 @@ $run2 = Snapshot::run(true, 1);
 T::ok($run2['counts']['copies_skipped'] >= 3, 'The copies are reported as skipped');
 T::ok($run2['counts']['overpaid_skipped'] >= 1, 'So is the overpaid booking');
 
+T::group("Rob's ruling on the stays that predate the exports");
+
+// There are no platform exports before 2025, so nothing in that period can be
+// checked against a platform stay. Rob named the bookings himself; the ledger
+// applies the ruling to those ids and to nothing else.
+$pre = [];
+foreach (Adjustments::all() as $adjustment) {
+    if ((string) $adjustment['type'] === Adjustments::ASSUMED_PRE_EXPORTS) {
+        $pre[(int) $adjustment['mphb_booking_id']] = round((float) $adjustment['amount'], 2);
+    }
+}
+ksort($pre);
+
+T::same([1599 => 640.00], $pre, 'The named booking gets its gap, dated at check-in');
+T::ok(!isset($pre[1152]), 'A booking on the list that turns out to be a hand-typed copy is passed over');
+T::ok(
+    Adjustments::assumed_for(1152) === null,
+    'And it gets no assumption of any kind, so the platform stay\'s money is counted once'
+);
+
+$pre_adjustment = null;
+foreach (Adjustments::for_booking(1599) as $adjustment) {
+    if ((string) $adjustment['type'] === Adjustments::ASSUMED_PRE_EXPORTS) {
+        $pre_adjustment = $adjustment;
+    }
+}
+T::same('2024-11-04', (string) $pre_adjustment['event_date'], 'Dated at check-in, the real date being unknown');
+T::same(
+    'Assumed Paid (Before The Exports)',
+    (string) $pre_adjustment['label'],
+    'And labelled apart from the window rule, so the two figures never merge'
+);
+T::ok(
+    Adjustments::total(Adjustments::ASSUMED_PAID) !== Adjustments::total(Adjustments::ASSUMED_PRE_EXPORTS),
+    'The two assumptions are counted separately'
+);
+
+T::group("Rob's ruling on the refunds MotoPress never saw");
+
+$refund = Adjustments::refund_for(7983);
+T::ok($refund !== null, 'The named booking gets a refund correction');
+T::same(-216.45, round((float) $refund['amount'], 2), 'For exactly what it was overpaid by');
+T::same('2025-01-24', (string) $refund['event_date'], 'Dated at check-out');
+T::same(
+    'Refund Not Recorded In MotoPress',
+    (string) $refund['label'],
+    'And labelled as what it is'
+);
+T::ok(Adjustments::refund_for(9009) === null, 'An overpaid booking Rob did not name is left alone');
+
+$issue_keys = array_column(Issues::all(), 'key');
+T::ok(!in_array('overpaid:7983', $issue_keys, true), 'With the refund recorded, the overpaid item resolves');
+T::ok(in_array('overpaid:9009', $issue_keys, true), 'The one he did not rule on stays on the list');
+
+T::group('A booking number typed in by hand is checked before it is linked');
+
+$some_stay = Copies::stays()[0];
+$wrong_cottage = null;
+foreach (Mphb_Reader::bookings() as $booking) {
+    if (DCCL\Linker::is_live($booking) && (string) $booking['cottage'] !== (string) $some_stay['cottage']) {
+        $wrong_cottage = $booking;
+        break;
+    }
+}
+T::ok($wrong_cottage !== null, 'There is a confirmed booking in another cottage');
+T::ok(
+    DCCL\Linker::why_not_linkable((int) $some_stay['id'], (int) $wrong_cottage['id']) !== null,
+    'Linking a stay to a booking in another cottage is refused'
+);
+T::ok(
+    DCCL\Linker::why_not_linkable((int) $some_stay['id'], 999999) !== null,
+    'So is a booking number that does not exist'
+);
+T::ok(
+    DCCL\Linker::why_not_linkable(999999, 9007) !== null,
+    'And a stay that does not exist'
+);
+T::ok(
+    DCCL\Linker::why_not_linkable((int) $some_stay['id'], 9010) !== null,
+    'A cancelled booking is refused too: it is a dock block, not a stay'
+);
+
 T::group('An Original is never edited');
 
 $original = Originals::current(Originals::KIND_BOOKING, 9007);

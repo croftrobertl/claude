@@ -34,7 +34,7 @@ final class Issues
         self::unlinked_stays($items, $stays, $links, $bookings);
         self::handtyped_matches($items, $stays, $links, $bookings);
         self::imported_without_stay($items, $bookings, $by_book);
-        self::payouts_without_reservation($items, $stays);
+        self::payouts_without_reservation($items, $stays, $bookings, $by_book);
         self::cancelled_with_money($items, $stays);
         self::moved_cottage($items, $stays, $links, $bookings);
         self::copies_with_payments($items, $links, $copied);
@@ -110,6 +110,10 @@ final class Issues
                     : __('Review the possible matches and link the right one by hand.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'stay_id'  => (int) $stay['id'],
+                // Nothing here may match on its own, and Rob may know the
+                // booking number from MotoPress. Typing it is checked before
+                // it is written — see Linker::why_not_linkable().
+                'link_by_number' => true,
                 'candidates' => array_map(
                     static fn ($c) => ['id' => (int) $c['booking']['id'], 'method' => $c['method']],
                     $candidates
@@ -176,11 +180,68 @@ final class Issues
 
     private static function imported_without_stay(array &$items, array $bookings, array $by_booking): void
     {
+        $latest_export = self::latest_export_date();
+
         foreach ($bookings as $booking) {
             if (!$booking['is_imported'] || !Linker::is_live($booking)) {
                 continue;
             }
             if (isset($by_booking[(int) $booking['id']])) {
+                continue;
+            }
+            if (!empty($booking['is_block'])) {
+                // A block is the host closing dates, not a stay anyone paid
+                // for. There is no money to find, so it is said once and
+                // never chased.
+                $items[] = [
+                    'key'      => 'imported_block:' . $booking['id'],
+                    'title'    => __('An Imported Calendar Block', 'dcc-ledger'),
+                    'facts'    => [
+                        sprintf(
+                            /* translators: 1: booking id, 2: channel, 3: cottage, 4: check-in, 5: check-out */
+                            __('MotoPress booking #%1$d came in from %2$s for cottage %3$s, %4$s to %5$s, and the feed marks it unavailable with no money on it.', 'dcc-ledger'),
+                            (int) $booking['id'],
+                            Cottages::channel_label((string) $booking['channel']),
+                            (string) $booking['cottage'],
+                            (string) $booking['check_in'],
+                            (string) $booking['check_out']
+                        ),
+                        __('Nobody stayed and nothing was paid, so there is no stay to find and no money missing.', 'dcc-ledger'),
+                    ],
+                    'action'   => __('Nothing to do.', 'dcc-ledger'),
+                    'severity' => 'info',
+                    'booking_id' => (int) $booking['id'],
+                ];
+                continue;
+            }
+            if ($latest_export !== null
+                && (string) ($booking['check_in'] ?? '') > $latest_export
+            ) {
+                // The exports stop before this stay starts, so the platform
+                // has not reported it yet. Not a gap — just the future.
+                $items[] = [
+                    'key'      => 'after_exports:' . $booking['id'],
+                    'title'    => __('After The Latest Export', 'dcc-ledger'),
+                    'facts'    => [
+                        sprintf(
+                            /* translators: 1: booking id, 2: channel, 3: cottage, 4: check-in, 5: check-out */
+                            __('MotoPress booking #%1$d came in from %2$s for cottage %3$s, %4$s to %5$s.', 'dcc-ledger'),
+                            (int) $booking['id'],
+                            Cottages::channel_label((string) $booking['channel']),
+                            (string) $booking['cottage'],
+                            (string) $booking['check_in'],
+                            (string) $booking['check_out']
+                        ),
+                        sprintf(
+                            /* translators: %s: the last check-in date any import covers */
+                            __('It checks in after the latest reservations export, which reaches %s. The platform has not reported the money yet.', 'dcc-ledger'),
+                            $latest_export
+                        ),
+                    ],
+                    'action'   => __('Nothing to do. It will match itself on the next import.', 'dcc-ledger'),
+                    'severity' => 'info',
+                    'booking_id' => (int) $booking['id'],
+                ];
                 continue;
             }
             $items[] = [
@@ -205,13 +266,64 @@ final class Issues
         }
     }
 
-    private static function payouts_without_reservation(array &$items, array $stays): void
+    /**
+     * The last check-in any imported platform stay covers.
+     *
+     * It is the edge of what the exports know, not a date anyone typed, so
+     * it moves on its own as imports come in. Read fresh rather than cached
+     * in a static: a stale one here would call a stay the future.
+     */
+    private static function latest_export_date(): ?string
     {
+        global $wpdb;
+        $stays = Schema::stays();
+        $value = $wpdb->get_var("SELECT MAX(check_in) FROM {$stays}");
+
+        return ($value === null || $value === '') ? null : (string) $value;
+    }
+
+    /**
+     * A payout whose reservation row has not arrived yet.
+     *
+     * The check-out is unknown until it does, so the matcher cannot touch
+     * it: an exact-dates match needs both ends. But a booking Rob typed
+     * himself, in the same cottage, starting the same day, is very probably
+     * the same stay — live 19667 and Booking.com 5722711078 are exactly
+     * that. Probably is not certainly, so it is offered as a question with
+     * the button beside it, and nothing is linked until somebody presses it.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @param array<int,array<int,array>>    $by_booking links keyed by booking id
+     */
+    private static function payouts_without_reservation(
+        array &$items,
+        array $stays,
+        array $bookings,
+        array $by_booking
+    ): void {
         foreach ($stays as $stay) {
             $meta = Repo::decode_meta($stay['meta'] ?? null);
             if (empty($meta['from_payout']) || $stay['check_out'] !== null) {
                 continue;
             }
+
+            $probable = [];
+            foreach ($bookings as $booking) {
+                if ($booking['is_imported'] || !Linker::is_live($booking)) {
+                    continue;
+                }
+                if (isset($by_booking[(int) $booking['id']])) {
+                    continue;
+                }
+                if ((string) $booking['cottage'] !== (string) $stay['cottage']) {
+                    continue;
+                }
+                if ((string) $booking['check_in'] !== (string) $stay['check_in']) {
+                    continue;
+                }
+                $probable[] = $booking;
+            }
+
             $items[] = [
                 'key'      => 'payout_no_reservation:' . $stay['channel'] . ':' . $stay['code'],
                 'title'    => __('A Payout With No Reservation Row', 'dcc-ledger'),
@@ -229,10 +341,24 @@ final class Issues
                         __('Payout recorded: %s.', 'dcc-ledger'),
                         self::money((float) $stay['payout'])
                     ),
-                ],
-                'action'   => __('Import the next reservations export for that channel; the stay will fill itself in.', 'dcc-ledger'),
+                ] + ($probable === [] ? [] : [
+                    sprintf(
+                        /* translators: %s: a comma-separated list of booking numbers */
+                        __('Probably the same stay as hand-typed MotoPress booking %s, which starts the same day in the same cottage. Nothing has been linked — the check-out is still unknown, so this is a guess rather than a match.', 'dcc-ledger'),
+                        implode(
+                            __(', ', 'dcc-ledger'),
+                            array_map(static fn ($b) => '#' . (int) $b['id'], $probable)
+                        )
+                    ),
+                ]),
+                'action'   => __('Import the next reservations export for that channel; the stay will fill itself in, or link the booking by number if you know it.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'stay_id'  => (int) $stay['id'],
+                'link_by_number' => true,
+                'candidates' => array_map(
+                    static fn ($b) => ['id' => (int) $b['id'], 'method' => 'copy'],
+                    $probable
+                ),
             ];
         }
     }
@@ -244,10 +370,7 @@ final class Issues
                 continue;
             }
             $fees  = round((float) $stay['cancellation_fee'] + (float) $stay['cancellation_fee_refund'], 2);
-            $other = round(
-                (float) $stay['payout'] + (float) $stay['guest_total'] + (float) $stay['room_sales'] + (float) $stay['refund'],
-                2
-            );
+            $other = Copies::stay_money($stay);
             if (abs($other) < 0.01) {
                 continue;
             }
@@ -391,8 +514,12 @@ final class Issues
             if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED || (float) $booking['total'] <= 0) {
                 continue;
             }
-            $paid = round((float) $booking['paid'], 2);
-            $over = round($paid - (float) $booking['total'], 2);
+            // A refund Rob recorded here is money that left again, so it
+            // comes off before the booking is called overpaid. Without this
+            // the item would stay on the list after it had been answered.
+            $refund = Adjustments::refund_for((int) $booking_id);
+            $paid   = round((float) $booking['paid'] + (float) ($refund['amount'] ?? 0), 2);
+            $over   = round($paid - (float) $booking['total'], 2);
             if ($over < 0.01) {
                 continue;
             }
@@ -410,9 +537,12 @@ final class Issues
                     ),
                     __('The figures show it exactly as recorded. Nothing was capped or altered, and no assumed payment was added to it.', 'dcc-ledger'),
                 ],
-                'action'   => __('Check the card processor for a refund that MotoPress does not know about.', 'dcc-ledger'),
+                'action'   => __('Check the card processor for a refund that MotoPress does not know about, then record it here.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'booking_id' => (int) $booking_id,
+                // Prefilled with the overpayment, which is what a refund has
+                // to be for the booking to come back to exactly its total.
+                'record_refund' => ['booking_id' => (int) $booking_id, 'amount' => $over],
             ];
         }
     }
@@ -606,10 +736,7 @@ final class Issues
                 continue; // Somebody has already decided this one.
             }
 
-            $money = round(
-                (float) $stay['guest_total'] + (float) $stay['room_sales'] + (float) $stay['payout'],
-                2
-            );
+            $money = Copies::stay_money($stay);
             if (abs($money) < 0.01) {
                 continue; // The ordinary case: cancelled, and no money with it.
             }
@@ -662,10 +789,7 @@ final class Issues
                 continue;
             }
 
-            $money = round(
-                (float) $stay['guest_total'] + (float) $stay['room_sales'] + (float) $stay['payout'],
-                2
-            );
+            $money = Copies::stay_money($stay);
             if (abs($money) < 0.01) {
                 continue;
             }
@@ -1014,6 +1138,9 @@ final class Issues
         foreach (Reports::MONEY_TYPES as $type) {
             $sums[] = sprintf("SUM(CASE WHEN l.type = '%s' THEN l.amount ELSE 0 END) AS %s", $type, $type);
         }
+        // Copies::stay_money() needs to know whether a payout row exists at
+        // all, which a sum of zero cannot tell it.
+        $sums[] = "SUM(CASE WHEN l.type = 'payout' THEN 1 ELSE 0 END) AS payout_rows";
         $sum_sql = implode(",\n                    ", $sums);
 
         return $wpdb->get_results(

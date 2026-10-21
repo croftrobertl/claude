@@ -52,6 +52,19 @@ final class Repo
         return $row ?: null;
     }
 
+    /** One stay by its own id, or null. */
+    public static function stay_by_id(int $stay_id): ?array
+    {
+        global $wpdb;
+        $table = Schema::stays();
+        $row   = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $stay_id),
+            ARRAY_A
+        );
+
+        return $row ?: null;
+    }
+
     public static function stay_id(string $channel, string $code): ?int
     {
         global $wpdb;

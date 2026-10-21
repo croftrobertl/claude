@@ -24,14 +24,14 @@ $_REQUEST['_wpnonce'] = 'test';
 $_POST = ['_wpnonce' => 'test'];
 
 $denied(static fn () => Admin::render(), 'The ledger screen refuses a user without manage_options');
-$denied(static fn () => Admin::handle_import(), 'Import refuses a user without manage_options');
-$denied(static fn () => Admin::handle_link(), 'Matching refuses a user without manage_options');
-$denied(static fn () => Admin::handle_manual_link(), 'Manual linking refuses a user without manage_options');
-$denied(static fn () => Admin::handle_unlink(), 'Unlinking refuses a user without manage_options');
-$denied(static fn () => Admin::handle_review(), 'Reviewing refuses a user without manage_options');
-$denied(static fn () => Admin::handle_undo(), 'Undo refuses a user without manage_options');
-$denied(static fn () => Admin::handle_settings(), 'Saving settings refuses a user without manage_options');
-$denied(static fn () => Admin::handle_export(), 'Export refuses a user without manage_options');
+// Walked from Admin::ACTIONS, so a new action cannot be added without its
+// capability check: the list is the plugin's own, not a copy of it.
+foreach (Admin::ACTIONS as $action) {
+    $denied(
+        static fn () => Admin::{'handle_' . $action}(),
+        'dccl_' . $action . ' refuses a user without manage_options'
+    );
+}
 
 T::group('Nonce checks');
 
@@ -47,18 +47,16 @@ $no_nonce = static function (callable $fn, string $what): void {
     }
 };
 
-$no_nonce(static fn () => Admin::handle_import(), 'Import refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_link(), 'Matching refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_manual_link(), 'Manual linking refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_unlink(), 'Unlinking refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_review(), 'Reviewing refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_undo(), 'Undo refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_settings(), 'Saving settings refuses a bad nonce');
-$no_nonce(static fn () => Admin::handle_export(), 'Export refuses a bad nonce');
+foreach (Admin::ACTIONS as $action) {
+    $no_nonce(
+        static fn () => Admin::{'handle_' . $action}(),
+        'dccl_' . $action . ' refuses a bad nonce'
+    );
+}
 
 T::group('Every admin action is registered behind a handler');
 
-foreach (['import', 'link', 'manual_link', 'unlink', 'review', 'undo', 'settings', 'export'] as $action) {
+foreach (Admin::ACTIONS as $action) {
     T::ok(method_exists(Admin::class, 'handle_' . $action), 'dccl_' . $action . ' has a handler');
 }
 

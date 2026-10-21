@@ -28,8 +28,65 @@ $keys  = array_column($items, 'key');
 
 $has = static fn (string $key): bool => in_array($key, $keys, true);
 
+/** One field of one item, or null if the item is not on the list. */
+function dccl_issue_field(array $items, string $key, string $field)
+{
+    foreach ($items as $item) {
+        if ($item['key'] === $key) {
+            return $item[$field] ?? null;
+        }
+    }
+
+    return null;
+}
+
+/** The severity of one item, or '' if it is not on the list at all. */
+function dccl_issue_severity(array $items, string $key): string
+{
+    foreach ($items as $item) {
+        if ($item['key'] === $key) {
+            return (string) $item['severity'];
+        }
+    }
+
+    return '';
+}
+
 T::ok($has('payout_no_reservation:bookingcom:5722711078'), 'A payout with no reservation row is raised');
+// 9052 starts the same day in the same cottage. It is offered, not taken.
+T::same(
+    [['id' => 9052, 'method' => 'copy']],
+    dccl_issue_field($items, 'payout_no_reservation:bookingcom:5722711078', 'candidates'),
+    'The hand-typed booking starting the same day is offered as a probable copy'
+);
+T::same(
+    [],
+    DCCL\Repo::links_for_stay((int) dccl_issue_field($items, 'payout_no_reservation:bookingcom:5722711078', 'stay_id')),
+    'But nothing is linked until somebody presses the button'
+);
+T::ok(
+    (bool) dccl_issue_field($items, 'payout_no_reservation:bookingcom:5722711078', 'link_by_number'),
+    'And a booking number can be typed in instead'
+);
+$unlinked_item = null;
+foreach ($items as $candidate_item) {
+    if (strpos((string) $candidate_item['key'], 'ota_unlinked:') === 0) {
+        $unlinked_item = $candidate_item;
+        break;
+    }
+}
+T::ok($unlinked_item !== null && !empty($unlinked_item['link_by_number']), 'An unlinked platform stay takes a booking number too');
 T::ok($has('imported_no_stay:9005'), 'An imported booking with no ledger stay is raised');
+// A block is the host closing dates. There is no money to find, so it is
+// reported as information and never as a gap.
+T::ok($has('imported_block:9050'), 'An imported calendar block is reported as information');
+T::ok(!$has('imported_no_stay:9050'), 'And never as a booking whose money is missing');
+T::same('info', dccl_issue_severity($items, 'imported_block:9050'), 'The block carries no warning');
+// 9051 checks in after the last export, so the platform simply has not
+// reported it yet.
+T::ok($has('after_exports:9051'), 'A stay starting after the latest export is reported as information');
+T::ok(!$has('imported_no_stay:9051'), 'And not chased as missing money');
+T::same('info', dccl_issue_severity($items, 'after_exports:9051'), 'It carries no warning either');
 T::ok($has('copy_payment:9006'), 'A hand-typed copy carrying a payment is raised');
 T::ok($has('overpaid:9009'), 'A booking paid for more than its total is raised');
 // #9021 checked out after the reconciled window, so Rob's assumed-paid rule
@@ -40,6 +97,14 @@ T::ok($has('unpaid_past:9021'), 'A past direct booking outside the window that i
 T::ok(!$has('unpaid_past:9012'), 'A past booking the assumed adjustment covers is not chased');
 T::ok($has('clawback:airbnb:HMMOVED001'), 'The stayed-but-clawed-back case is raised');
 T::ok($has('cancelled_money:bookingcom:5333333333'), 'A cancelled stay that still has money is raised');
+// HMCANCEL02 holds nothing but a cancellation fee, which is what a
+// cancellation is supposed to leave behind. Nobody stayed, so it is not money
+// for a stay and there is nothing to chase.
+T::ok(!$has('cancelled_money:airbnb:HMCANCEL02'), 'A cancelled stay holding only its cancellation fee is not raised');
+// 5344444444 is the shape of live's 6486225525: paid out, then refunded in
+// full. Netted it is nothing, and raising it sends somebody chasing $0.
+T::ok(!$has('cancelled_money:bookingcom:5344444444'), 'A cancelled stay whose payout was refunded in full is not raised');
+T::ok(!$has('cancelled_money_twin:bookingcom:5344444444:9006'), 'Nor is it offered as a twin of a direct booking');
 T::ok($has('invoice:7003'), 'The invoice that does not reconcile is raised');
 T::ok(!$has('invoice:7001'), 'An invoice that reconciles is not raised');
 T::ok(!$has('invoice:7004'), 'The Crofty Bear invoice was never imported, so it cannot be raised');

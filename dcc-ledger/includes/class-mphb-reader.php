@@ -155,6 +155,13 @@ final class Mphb_Reader
                 (string) ($m[self::META_NOTE] ?? '') . ' ' . (string) ($m[self::META_INTERNAL_NOTE] ?? '')
             );
 
+            // A calendar block, not a stay. The summary text is read here and
+            // dropped; only the yes/no travels on.
+            $is_block = $is_imported && self::is_block_summary(
+                (string) ($m[self::META_ICAL_SUMMARY] ?? ''),
+                (float) ($m[self::META_TOTAL] ?? 0)
+            );
+
             $pay = $payments[$id] ?? ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
 
             // Hashed here, inside the loop. The names themselves go no
@@ -173,6 +180,7 @@ final class Mphb_Reader
                 'room_id'     => (int) $row['room_id'],
                 'cottage'     => $cottage,
                 'is_imported' => $is_imported,
+                'is_block'    => $is_block,
                 'channel'     => $is_imported ? self::channel_from_prodid($prodid) : 'direct',
                 'prodid'      => $prodid,
                 'codes'       => $codes,
@@ -191,6 +199,41 @@ final class Mphb_Reader
         }
 
         return $out;
+    }
+
+    /**
+     * Words an OTA writes into an iCal event that is a block rather than a
+     * booking — the host closed the dates, or the platform did.
+     *
+     * Airbnb's wording is the one counted on live: booking 6313 carries
+     * "Airbnb (Not available)" with a total of 0. The others are the
+     * spellings this plugin recognises if they appear; nobody has shown me a
+     * real Vrbo or Booking.com block, so treat them as patterns we accept,
+     * not as facts about those feeds. Getting one wrong costs nothing: an
+     * unrecognised block is simply raised as a question, the way it was
+     * before.
+     */
+    public const BLOCK_WORDS = ['not available', 'unavailable', 'blocked', 'closed'];
+
+    /**
+     * Is this imported event a block?
+     *
+     * Both halves must hold. The wording alone is not enough — a guest can
+     * put any word in a booking — so a block must also carry no money. That
+     * way a real reservation is never quietly demoted to a calendar note.
+     */
+    public static function is_block_summary(string $summary, float $total): bool
+    {
+        if (abs($total) >= 0.01 || $summary === '') {
+            return false;
+        }
+        $haystack = strtolower($summary);
+        foreach (self::BLOCK_WORDS as $word) {
+            if (strpos($haystack, $word) !== false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -415,8 +415,13 @@ final class Copies
         return $wpdb->get_results(
             "SELECT s.id, s.code, s.channel, s.cottage, s.check_in, s.check_out,
                     s.status, s.guest_keys,
-                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout')
-                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+                    COALESCE(SUM(CASE WHEN l.type = 'guest_total' THEN l.amount ELSE 0 END), 0) AS guest_total,
+                    COALESCE(SUM(CASE WHEN l.type = 'room_sales' THEN l.amount ELSE 0 END), 0) AS room_sales,
+                    COALESCE(SUM(CASE WHEN l.type = 'payout' THEN l.amount ELSE 0 END), 0) AS payout,
+                    COALESCE(SUM(CASE WHEN l.type = 'refund' THEN l.amount ELSE 0 END), 0) AS refund,
+                    COALESCE(SUM(CASE WHEN l.type = 'adjustment' THEN l.amount ELSE 0 END), 0) AS adjustment,
+                    COALESCE(SUM(CASE WHEN l.type = 'resolution' THEN l.amount ELSE 0 END), 0) AS resolution,
+                    COALESCE(SUM(CASE WHEN l.type = 'payout' THEN 1 ELSE 0 END), 0) AS payout_rows
                FROM {$stays} s
                LEFT JOIN {$lines} l ON l.stay_id = s.id
               GROUP BY s.id, s.code, s.channel, s.cottage, s.check_in, s.check_out,
@@ -436,14 +441,50 @@ final class Copies
     }
 
     /**
-     * Money that belongs to the stay itself, as opposed to a cancellation
-     * fee, which is not money for a stay because nobody stayed.
+     * Money types that say what actually moved for a stay.
      *
-     * @param array<string,mixed> $stay
+     * A cancellation fee is not among them: nobody stayed, so it is not
+     * money for a stay.
+     */
+    public const STAY_CASH_TYPES = ['payout', 'refund', 'adjustment', 'resolution'];
+
+    /** What the guest was billed, for a stay with no payout row to go on. */
+    public const STAY_BILLED_TYPES = ['guest_total', 'room_sales'];
+
+    /**
+     * Money that belongs to the stay itself.
+     *
+     * Summing every money type double-counts: for Booking.com the payout and
+     * the guest total are the same money seen twice. So where a payout row
+     * exists it is the measure, with refunds, adjustments and resolutions
+     * netted off it; where none exists — the stay is in an export but the
+     * money has not come through yet — what the guest was billed stands in.
+     *
+     * Netting matters: Booking.com 6486225525 is a cancelled stay with a
+     * $292.16 payout and a $292.16 refund against it, which is nothing at
+     * all, and was raised as a cancelled stay still holding money until the
+     * refund was netted.
+     *
+     * The one definition lives here because it was written twice once and
+     * the two drifted.
+     *
+     * @param array<string,mixed> $stay A row from Copies::stays() or
+     *                                  Issues::stays_with_money().
      */
     public static function stay_money(array $stay): float
     {
-        return round((float) ($stay['stay_money'] ?? 0), 2);
+        $cash = 0.0;
+        foreach (self::STAY_CASH_TYPES as $type) {
+            $cash = round($cash + (float) ($stay[$type] ?? 0), 2);
+        }
+        if ((int) ($stay['payout_rows'] ?? 0) > 0) {
+            return $cash;
+        }
+        $billed = 0.0;
+        foreach (self::STAY_BILLED_TYPES as $type) {
+            $billed = round($billed + (float) ($stay[$type] ?? 0), 2);
+        }
+        return round($billed + $cash, 2);
     }
 
     /**

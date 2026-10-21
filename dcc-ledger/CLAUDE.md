@@ -102,6 +102,35 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
 - **Assumed payments are never written before the platform exports are in.**
   Without the stays, nothing can recognise a copy, and every copy would be
   assumed paid — which is never removed quietly afterwards.
+- **Rob's rulings live in `Rulings`, as lists of booking ids.** The fifteen
+  pre-export assumptions and the three unrecorded refunds are his decisions of
+  2026-10-21, not rules the plugin works out. A refund's AMOUNT is not stored:
+  it is the overpayment as it stands when the ruling runs, so the booking
+  always lands on exactly its total rather than on a figure typed once and
+  left behind.
+- **The two assumptions are never added together.** "Assumed Paid In Full"
+  comes from the window rule; "Assumed Paid (Before The Exports)" comes from
+  Rob's list. They are separate types, separate counts and separate tiles,
+  because no platform export covers the earlier period and nothing there
+  could be checked against a platform stay. Saying so is the point.
+- **A stay's money has one definition**, `Copies::stay_money()`. Summing every
+  money type double-counts, because for Booking.com the payout and the guest
+  total are the same money seen twice; and ignoring refunds raises a question
+  about a stay that nets to nothing, as 6486225525 did. Where a payout row
+  exists it is the measure, with refunds, adjustments and resolutions netted
+  off; where none exists, what the guest was billed stands in. Two copies of
+  this rule drifted once already.
+- **A booking number typed by hand is checked before it is written.**
+  `Linker::why_not_linkable()` requires the booking to exist, be confirmed and
+  be in the same cottage. A link to the wrong cottage moves a stay's money
+  onto somebody else's nights and nothing downstream notices.
+- **An iCal block is information, never a gap.** A block is recognised only
+  when the feed's wording says unavailable AND the booking carries no money,
+  so a real reservation is never quietly demoted. Airbnb's "Airbnb (Not
+  available)" is the one spelling counted on live (booking 6313); the other
+  words in `Mphb_Reader::BLOCK_WORDS` are patterns accepted if they appear —
+  nobody has shown me a real Vrbo or Booking.com block. Getting one wrong
+  costs nothing: an unrecognised block is raised as a question, as before.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -210,8 +239,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 807 assertions
-    php dcc-ledger/tests/mutations.php            # 51 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 867 assertions
+    php dcc-ledger/tests/mutations.php            # 55 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -246,6 +275,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.7.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.8.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

@@ -14,14 +14,14 @@ global $wpdb;
 
 $result = Importer::run(dccl_fixture('airbnb-payout.csv'), 'airbnb-payout.csv', true, 1);
 T::ok($result['ok'], 'A dry run succeeds');
-T::same(6, $result['counts']['stays_new'], 'The dry run reports the stays it would add');
+T::same(7, $result['counts']['stays_new'], 'The dry run reports the stays it would add');
 T::same(0, (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::stays()), 'A dry run writes no stays');
 T::same(0, (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::lines()), 'A dry run writes no money lines');
 T::same(0, (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::batches()), 'A dry run writes no batch');
 
 $result = Importer::run(dccl_fixture('airbnb-payout.csv'), 'airbnb-payout.csv', false, 1);
 T::ok($result['ok'], 'The real import succeeds');
-T::same(6, (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::stays()), 'Six stays were written');
+T::same(7, (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::stays()), 'Seven stays were written');
 $lines_after_first = (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::lines());
 T::ok($lines_after_first > 0, 'Money lines were written');
 

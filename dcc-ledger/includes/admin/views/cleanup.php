@@ -114,6 +114,7 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <?php wp_nonce_field(Admin::NONCE); ?>
                     <input type="hidden" name="action" value="dccl_manual_link">
+                    <input type="hidden" name="issue_key" value="<?php echo esc_attr($item['key']); ?>">
                     <input type="hidden" name="stay_id" value="<?php echo (int) $item['stay_id']; ?>">
                     <input type="hidden" name="booking_id" value="<?php echo (int) $item['suggest_copy']; ?>">
                     <input type="hidden" name="method" value="copy">
@@ -129,10 +130,50 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
                 </form>
             <?php endif; ?>
 
+            <?php if (!empty($item['record_refund'])) : ?>
+                <?php $refund_id = 'refund-' . md5($item['key']); ?>
+                <form class="dccl-record-refund" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_record_refund">
+                    <input type="hidden" name="booking_id" value="<?php echo (int) $item['record_refund']['booking_id']; ?>">
+                    <label for="<?php echo esc_attr($refund_id); ?>">
+                        <?php esc_html_e('Record A Refund', 'dcc-ledger'); ?>
+                    </label>
+                    <input type="number" step="0.01" min="0.01" id="<?php echo esc_attr($refund_id); ?>"
+                           name="amount" class="small-text"
+                           value="<?php echo esc_attr(number_format((float) $item['record_refund']['amount'], 2, '.', '')); ?>">
+                    <button type="submit" class="button"><?php esc_html_e('Record It', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
+            <?php if (!empty($item['link_by_number']) && !empty($item['stay_id'])) : ?>
+                <?php $field_id = 'booking-' . md5($item['key']); ?>
+                <form class="dccl-link-by-number" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_manual_link">
+                    <input type="hidden" name="issue_key" value="<?php echo esc_attr($item['key']); ?>">
+                    <input type="hidden" name="stay_id" value="<?php echo (int) $item['stay_id']; ?>">
+                    <label for="<?php echo esc_attr($field_id); ?>">
+                        <?php esc_html_e('Link A Booking By Number', 'dcc-ledger'); ?>
+                    </label>
+                    <input type="number" min="1" step="1" id="<?php echo esc_attr($field_id); ?>"
+                           name="booking_id" class="small-text" inputmode="numeric">
+                    <label class="screen-reader-text" for="<?php echo esc_attr($field_id); ?>-how">
+                        <?php esc_html_e('How to link it', 'dcc-ledger'); ?>
+                    </label>
+                    <select id="<?php echo esc_attr($field_id); ?>-how" name="method">
+                        <option value="manual"><?php esc_html_e('as its imported booking', 'dcc-ledger'); ?></option>
+                        <option value="copy"><?php esc_html_e('as a copy', 'dcc-ledger'); ?></option>
+                    </select>
+                    <button type="submit" class="button"><?php esc_html_e('Link It', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
             <?php foreach ($item['candidates'] ?? [] as $candidate) : ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <?php wp_nonce_field(Admin::NONCE); ?>
                     <input type="hidden" name="action" value="dccl_manual_link">
+                    <input type="hidden" name="issue_key" value="<?php echo esc_attr($item['key']); ?>">
                     <input type="hidden" name="stay_id" value="<?php echo (int) $item['stay_id']; ?>">
                     <input type="hidden" name="booking_id" value="<?php echo (int) $candidate['id']; ?>">
                     <input type="hidden" name="method" value="<?php echo esc_attr($candidate['method']); ?>">

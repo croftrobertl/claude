@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.7
+Stable tag: 0.1.8
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,18 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.8 =
+* Rob's rulings of 2026-10-21, each written as a recorded, undoable batch and none of them touching MotoPress.
+* Fifteen bookings that checked in before the platform exports begin are assumed paid, dated at check-in and labelled "Assumed Paid (Before The Exports)". They are counted and reported apart from the window rule, because no export covers that period and nothing there can be checked against a platform stay.
+* Three bookings recorded as paid for more than their total are given a refund correction, dated at check-out, bringing each to exactly its total. The overpaid item then resolves.
+* Every assumed payment standing against a booking is listed on the Imports tab with a Reverse This Assumption button. Reversing adds a second labelled correction; nothing is ever deleted.
+* A Record A Refund button on an overpaid booking, with the overpayment filled in.
+* A Link A Booking By Number field where a platform stay has no MotoPress booking, or a payout has no reservation row. The number is checked before anything is written: the booking must exist, be confirmed, and be in the same cottage.
+* A hand-typed booking starting the same day in the same cottage as a payout whose reservation row has not arrived is offered as a probable copy. It is never linked on its own.
+* A cancelled stay whose payout was refunded in full is no longer raised as still holding money. Refunds are netted first, and the one definition of a stay's money now lives in one place.
+* An imported iCal block — the feed's own "not available", with no money on it — is reported as information rather than as a booking whose money is missing.
+* An imported booking that starts after the latest export is reported as information too. It will match itself on the next import.
 
 = 0.1.7 =
 * Took back 0.1.6's rule that a cancelled platform stay the channel paid out for can be the original of a hand-typed copy. It was built on a premise that proved wrong, and it is the wrong default: calling a real stay a copy drops its money silently, while counting one twice shows up on the cleanup list.

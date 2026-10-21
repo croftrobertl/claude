@@ -15,23 +15,34 @@ if (!defined('ABSPATH')) {
  */
 final class Adjustments
 {
-    public const ASSUMED_PAID     = 'assumed_paid';
-    public const ASSUMED_REVERSAL = 'assumed_paid_reversal';
-    public const COPY_NOT_COUNTED = 'copy_not_counted';
-    public const MANUAL           = 'manual';
+    public const ASSUMED_PAID        = 'assumed_paid';
+    public const ASSUMED_PRE_EXPORTS = 'assumed_paid_pre_exports';
+    public const ASSUMED_REVERSAL    = 'assumed_paid_reversal';
+    public const REFUND_UNRECORDED   = 'refund_not_recorded';
+    public const COPY_NOT_COUNTED    = 'copy_not_counted';
+    public const MANUAL              = 'manual';
 
     /**
      * Types that make up the assumed-payment figure. A reversal is negative,
      * so the two cancel out: if a booking ever stops being seen as a copy, no
      * assumed money reappears from under it.
      */
-    public const ASSUMED_TYPES = [self::ASSUMED_PAID, self::ASSUMED_REVERSAL];
+    public const ASSUMED_TYPES = [
+        self::ASSUMED_PAID,
+        self::ASSUMED_PRE_EXPORTS,
+        self::ASSUMED_REVERSAL,
+    ];
+
+    /** The assumptions a reversal can take back. */
+    public const ASSUMED_POSITIVE = [self::ASSUMED_PAID, self::ASSUMED_PRE_EXPORTS];
 
     public static function label_for(string $type): string
     {
         $labels = [
-            self::ASSUMED_PAID     => __('Assumed Paid In Full', 'dcc-ledger'),
-            self::ASSUMED_REVERSAL => __('Assumed Payment Reversed: It Sits On A Copy', 'dcc-ledger'),
+            self::ASSUMED_PAID        => __('Assumed Paid In Full', 'dcc-ledger'),
+            self::ASSUMED_PRE_EXPORTS => __('Assumed Paid (Before The Exports)', 'dcc-ledger'),
+            self::ASSUMED_REVERSAL    => __('Assumed Payment Reversed', 'dcc-ledger'),
+            self::REFUND_UNRECORDED   => __('Refund Not Recorded In MotoPress', 'dcc-ledger'),
             self::COPY_NOT_COUNTED => __('Copy Of An OTA Stay, Not Counted', 'dcc-ledger'),
             self::MANUAL           => __('Manual Correction', 'dcc-ledger'),
         ];
@@ -133,7 +144,7 @@ final class Adjustments
         $assumed  = null;
         $reversed = false;
         foreach (self::for_booking($booking_id) as $adjustment) {
-            if ((string) $adjustment['type'] === self::ASSUMED_PAID) {
+            if (in_array((string) $adjustment['type'], self::ASSUMED_POSITIVE, true)) {
                 $assumed = $adjustment;
             }
             if ((string) $adjustment['type'] === self::ASSUMED_REVERSAL) {
@@ -141,6 +152,46 @@ final class Adjustments
             }
         }
         return $reversed ? null : $assumed;
+    }
+
+    /**
+     * Every assumption still standing, newest first, for the list that offers
+     * to reverse them.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function standing_assumptions(): array
+    {
+        $reversed = [];
+        $assumed  = [];
+
+        foreach (self::all() as $adjustment) {
+            $booking_id = (int) $adjustment['mphb_booking_id'];
+            if ((string) $adjustment['type'] === self::ASSUMED_REVERSAL) {
+                $reversed[$booking_id] = true;
+                continue;
+            }
+            if (in_array((string) $adjustment['type'], self::ASSUMED_POSITIVE, true)) {
+                $assumed[$booking_id] = $adjustment;
+            }
+        }
+
+        foreach (array_keys($reversed) as $booking_id) {
+            unset($assumed[$booking_id]);
+        }
+
+        return array_values($assumed);
+    }
+
+    /** The refund standing against a booking, if it has one. */
+    public static function refund_for(int $booking_id): ?array
+    {
+        foreach (self::for_booking($booking_id) as $adjustment) {
+            if ((string) $adjustment['type'] === self::REFUND_UNRECORDED) {
+                return $adjustment;
+            }
+        }
+        return null;
     }
 
     public static function count(?string $type = null): int

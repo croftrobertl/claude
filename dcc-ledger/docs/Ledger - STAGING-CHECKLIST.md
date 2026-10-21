@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.7 — Staging Checklist
+# DCC Ledger 0.1.8 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -49,6 +49,34 @@
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
+
+> **Upgrading live from 0.1.7 to 0.1.8.** Live holds batches 1–8 plus the
+> links and reviews from 2026-10-21. An upgrade adds columns and never
+> rewrites a row: every link you made and every item you marked reviewed is
+> left exactly as it is, and the test suite asserts that. Deactivate, upload
+> `Ledger 0.1.8.zip`, activate, then check the count has not moved:
+>
+>     P=$(wp db prefix)
+>     wp db query "SELECT COUNT(*) FROM ${P}dcc_ledger_links"
+>     wp db query "SELECT COUNT(*) FROM ${P}dcc_ledger_reviews"
+>
+> Nothing in 0.1.8 writes by itself. Rob's two rulings are applied by the next
+> snapshot, as one recorded batch that can be undone from the Imports tab:
+>
+>     wp dcc-ledger snapshot --dry-run
+>
+> - [ ] It reports **15 assumed before the exports, $35,333.00**, and
+>       **3 refunds, −$860.25**.
+> - [ ] Then run it for real and confirm the same figures, as a new batch.
+>
+> **There are no platform exports before 2025.** Airbnb, Booking.com and Vrbo
+> all start on 01/01/2025, so for anything earlier there is no platform stay
+> to check a booking against — nothing there can be recognised as a
+> hand-typed copy, and nothing can be reconciled to a payout. That is why the
+> fifteen pre-2025 bookings are a list Rob named, not a rule the plugin works
+> out, and why their money is counted and reported apart from the window
+> rule's "Assumed Paid In Full" under its own label, "Assumed Paid (Before
+> The Exports)". Treat the two figures as two figures.
 
 ## Before you start
 
@@ -335,3 +363,39 @@ Done on 2026-10-21, from 0.1.6, after it passed on staging. For the record:
 Upgrading live from here is deactivate, upload the latest zip, activate. The
 ledger holds live data from batch 1 onwards, and an upgrade only ever adds
 columns — see the note at the top of this file for what to check afterwards.
+
+## 11. The 0.1.8 upgrade on live — Rob's rulings of 2026-10-21
+
+Do this after the upgrade check at the top of this file.
+
+- [ ] Back up live first, as always.
+- [ ] `wp dcc-ledger snapshot --dry-run` reports 15 assumed before the
+      exports totalling $35,333.00, and 3 refunds totalling −$860.25. It
+      should report 0 new bookings and 0 new payments — nothing in MotoPress
+      has changed.
+- [ ] Run it for real. The Imports tab shows a new batch; undoing it removes
+      exactly those 18 corrections and nothing else.
+- [ ] The Imports tab now shows four figures side by side: Assumed Payments
+      ($60,348.22), Assumed Before The Exports ($35,333.00), Refunds Not In
+      MotoPress (−$860.25), and Corrections In All. The first two are never
+      added together on screen, and should not be in a report either.
+- [ ] Each of the three refunded bookings — 7983, 7989, 10465 — now nets to
+      exactly its total, and its "A Booking Paid For More Than Its Total"
+      item has gone from the cleanup list.
+- [ ] "Assumed Payments Standing" on the Imports tab lists every assumption
+      with a **Reverse This Assumption** button. Reverse one, check the pair
+      nets to zero and both halves are still listed, then press the button
+      again on the reversal's booking — it refuses, because nothing is
+      standing against it any more.
+- [ ] On "A Payout With No Reservation Row" for 5722711078, type **19667**
+      into **Link A Booking By Number**, choose *as a copy*, and press Link
+      It. Three items should clear at once: the payout item, the unlinked
+      platform stay, and "unpaid_past:19667".
+- [ ] Try the same field with a booking number in another cottage. It is
+      refused, by name, and nothing is written.
+- [ ] The cleanup list is down to roughly nothing needing a person, plus two
+      quiet information groups: the imported iCal blocks, and
+      **After The Latest Export** — 12 bookings that check in from
+      2026-10-22 onwards and will match themselves on the next import.
+- [ ] MotoPress is still **428 bookings and 95 payments**, with no
+      `_dcc_assumed_paid` anywhere.

@@ -69,6 +69,10 @@ final class Snapshot
             'overpaid_skipped'   => 0,
             'outside_window'     => 0,
             'assumed_withheld'   => 0,
+            'assumed_pre_exports'       => 0,
+            'assumed_pre_exports_total' => 0.0,
+            'refunds_recorded'          => 0,
+            'refunds_total'             => 0.0,
             // Counted over the SAME bookings as copies_skipped, each one once,
             // by the first signal that caught it — so the parts add up to the
             // total. They used to be counted over every copy detected, while
@@ -184,10 +188,16 @@ final class Snapshot
         // and the assumed payments wait.
         if (self::reservations_imported()) {
             self::assume_paid($bookings, $detected, $counts, $notes, $dry_run, $batch_id, $user_id);
+            self::apply_pre_export_ruling($bookings, $detected, $counts, $dry_run, $batch_id, $user_id);
         } else {
             $counts['assumed_withheld'] = 1;
             $notes[] = __('No platform reservations have been imported yet, so no assumed payments were written. Without the platform stays there is nothing to recognise a hand-typed copy by, and every copy would be assumed paid — which cannot be undone quietly afterwards. Import the reservations exports first, then run this again.', 'dcc-ledger');
         }
+
+        // Refunds Rob knows about that never reached MotoPress. Not gated on
+        // the exports: they are a ruling about three named bookings, and the
+        // amount is worked out from the booking itself.
+        self::apply_refund_ruling($bookings, $counts, $dry_run, $batch_id, $user_id);
 
         if ($dry_run) {
             return [
@@ -319,6 +329,130 @@ final class Snapshot
                 'event_date'      => $booking['check_in'],
                 'label'           => Adjustments::label_for(Adjustments::ASSUMED_PAID),
                 'note'            => __('Assumed, actual date unknown. Dated at check-in.', 'dcc-ledger'),
+            ], $batch_id, $user_id);
+        }
+    }
+
+    /**
+     * Rob's ruling of 2026-10-21 on the fifteen stays that predate the
+     * exports. They are named one by one, not swept in by a widened window:
+     * there are no platform exports before 2025, so nothing there can be
+     * checked against a platform stay, and copy detection cannot run at all.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @param array<int,array<string,mixed>> $copies
+     * @param array<string,int|float|array> $counts
+     */
+    private static function apply_pre_export_ruling(
+        array $bookings,
+        array $copies,
+        array &$counts,
+        bool $dry_run,
+        int $batch_id,
+        ?int $user_id
+    ): void {
+        $by_id = [];
+        foreach ($bookings as $booking) {
+            $by_id[(int) $booking['id']] = $booking;
+        }
+
+        foreach (Rulings::ASSUMED_BEFORE_EXPORTS as $booking_id) {
+            $booking = $by_id[$booking_id] ?? null;
+            if ($booking === null || (string) $booking['status'] !== self::CONFIRMED) {
+                continue;
+            }
+            // Cannot happen before 2025 — there are no platform stays to be a
+            // copy of — but the check costs nothing and keeps the rule honest.
+            if (isset($copies[$booking_id])) {
+                continue;
+            }
+            if (Adjustments::assumed_for($booking_id) !== null) {
+                $counts['assumed_existing']++;
+                continue;
+            }
+
+            $gap = round((float) $booking['total'] - (float) $booking['paid_recorded'], 2);
+            if ($gap <= 0.0) {
+                continue;
+            }
+
+            $counts['assumed_pre_exports']++;
+            $counts['assumed_pre_exports_total'] = round(
+                ((float) $counts['assumed_pre_exports_total']) + $gap,
+                2
+            );
+
+            if ($dry_run) {
+                continue;
+            }
+
+            Adjustments::add([
+                'type'            => Adjustments::ASSUMED_PRE_EXPORTS,
+                'channel'         => 'direct',
+                'mphb_booking_id' => $booking_id,
+                'cottage'         => (string) $booking['cottage'],
+                'amount'          => $gap,
+                'event_date'      => $booking['check_in'],
+                'label'           => Adjustments::label_for(Adjustments::ASSUMED_PRE_EXPORTS),
+                'note'            => __('Rob\'s ruling of 2026-10-21. Assumed, actual date unknown; dated at check-in. No platform exports cover this period, so nothing here could be checked against a platform stay.', 'dcc-ledger'),
+            ], $batch_id, $user_id);
+        }
+    }
+
+    /**
+     * Rob's ruling of 2026-10-21 on the three bookings recorded as paid for
+     * more than their total: each was refunded, and the refund never reached
+     * MotoPress.
+     *
+     * The amount is the overpayment as it stands when the ruling is applied,
+     * so the booking lands on exactly its total rather than on a figure typed
+     * in once and left behind.
+     *
+     * @param array<int,array<string,mixed>> $bookings
+     * @param array<string,int|float|array> $counts
+     */
+    private static function apply_refund_ruling(
+        array $bookings,
+        array &$counts,
+        bool $dry_run,
+        int $batch_id,
+        ?int $user_id
+    ): void {
+        $by_id = [];
+        foreach ($bookings as $booking) {
+            $by_id[(int) $booking['id']] = $booking;
+        }
+
+        foreach (Rulings::UNRECORDED_REFUNDS as $booking_id) {
+            $booking = $by_id[$booking_id] ?? null;
+            if ($booking === null || (string) $booking['status'] !== self::CONFIRMED) {
+                continue;
+            }
+            if (Adjustments::refund_for($booking_id) !== null) {
+                continue;
+            }
+
+            $over = round((float) $booking['paid_recorded'] - (float) $booking['total'], 2);
+            if ($over <= 0.0) {
+                continue;
+            }
+
+            $counts['refunds_recorded']++;
+            $counts['refunds_total'] = round(((float) $counts['refunds_total']) - $over, 2);
+
+            if ($dry_run) {
+                continue;
+            }
+
+            Adjustments::add([
+                'type'            => Adjustments::REFUND_UNRECORDED,
+                'channel'         => 'direct',
+                'mphb_booking_id' => $booking_id,
+                'cottage'         => (string) $booking['cottage'],
+                'amount'          => -1 * $over,
+                'event_date'      => $booking['check_out'] ?? $booking['check_in'],
+                'label'           => Adjustments::label_for(Adjustments::REFUND_UNRECORDED),
+                'note'            => __('Rob\'s ruling of 2026-10-21: refunded, and the refund never reached MotoPress. Dated at check-out.', 'dcc-ledger'),
             ], $batch_id, $user_id);
         }
     }

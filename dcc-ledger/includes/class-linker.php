@@ -250,6 +250,59 @@ final class Linker
     }
 
     /**
+     * Why this stay and this booking must not be linked, or null if they may
+     * be.
+     *
+     * Used where a person types a booking number: there is no matching to
+     * vouch for the pair, so the pair is checked instead. The cottage test
+     * is the important one — a link to the wrong cottage puts a stay's money
+     * on somebody else's nights, and nothing downstream would catch it.
+     */
+    public static function why_not_linkable(int $stay_id, int $booking_id): ?string
+    {
+        $stay = Repo::stay_by_id($stay_id);
+        if ($stay === null) {
+            return __('That stay no longer exists.', 'dcc-ledger');
+        }
+
+        $booking = null;
+        foreach (Mphb_Reader::bookings() as $candidate) {
+            if ((int) $candidate['id'] === $booking_id) {
+                $booking = $candidate;
+                break;
+            }
+        }
+        if ($booking === null) {
+            return sprintf(
+                /* translators: %d: the booking number typed in */
+                __('There is no MotoPress booking #%d.', 'dcc-ledger'),
+                $booking_id
+            );
+        }
+        if (!self::is_live($booking)) {
+            return sprintf(
+                /* translators: %d: booking id */
+                __('MotoPress booking #%d is not confirmed, so it is not a stay.', 'dcc-ledger'),
+                $booking_id
+            );
+        }
+
+        $stay_cottage    = (string) ($stay['cottage'] ?? '');
+        $booking_cottage = (string) ($booking['cottage'] ?? '');
+        if ($stay_cottage !== '' && $booking_cottage !== '' && $stay_cottage !== $booking_cottage) {
+            return sprintf(
+                /* translators: 1: booking id, 2: the booking's cottage, 3: the stay's cottage */
+                __('MotoPress booking #%1$d is in cottage %2$s, but this stay is in cottage %3$s.', 'dcc-ledger'),
+                $booking_id,
+                $booking_cottage,
+                $stay_cottage
+            );
+        }
+
+        return null;
+    }
+
+    /**
      * @param array<string,mixed> $stay
      * @param array<string,mixed> $booking
      */

@@ -93,14 +93,14 @@ EOT,
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
         if ($view === 'original') {
-            $out['paid']    = $out['recorded'];
-            $out['assumed'] = 0.0;
+            $out['paid']                = $out['recorded'];
+            $out['assumed']             = 0.0;
 EOT,
         'to'   => <<<'EOT'
         if ($view === 'original') {
-            $out['recorded'] = round($out['recorded'] + $out['assumed'], 2);
-            $out['paid']     = $out['recorded'];
-            $out['assumed']  = 0.0;
+            $out['recorded']            = round($out['recorded'] + $out['assumed'], 2);
+            $out['paid']                = $out['recorded'];
+            $out['assumed']             = 0.0;
 EOT,
     ],
     [
@@ -526,12 +526,10 @@ EOT,
         'name' => 'A cancellation fee counted as money for the stay',
         'file' => 'includes/class-copies.php',
         'from' => <<<'EOT'
-                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout')
-                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+    public const STAY_BILLED_TYPES = ['guest_total', 'room_sales'];
 EOT,
         'to'   => <<<'EOT'
-                    COALESCE(SUM(CASE WHEN l.type IN ('guest_total','room_sales','payout','cancellation_fee')
-                                      THEN l.amount ELSE 0 END), 0) AS stay_money
+    public const STAY_BILLED_TYPES = ['guest_total', 'room_sales', 'cancellation_fee'];
 EOT,
     ],
     [
@@ -577,7 +575,7 @@ EOT,
     public static function can_originate_copy(array $stay): bool
     {
         return (string) $stay['status'] === 'ok'
-            || abs(round((float) ($stay['stay_money'] ?? 0), 2)) >= 0.01;
+            || abs(self::stay_money($stay)) >= 0.01;
     }
 EOT,
     ],
@@ -610,6 +608,37 @@ EOT,
     }',
         'to'   => '        check_admin_referer(self::NONCE);
     }',
+    ],
+    [
+        'name' => 'A refund line ignored when a stay is weighed for money',
+        'file' => 'includes/class-copies.php',
+        'from' => "    public const STAY_CASH_TYPES = ['payout', 'refund', 'adjustment', 'resolution'];",
+        'to'   => "    public const STAY_CASH_TYPES = ['payout', 'adjustment', 'resolution'];",
+    ],
+    [
+        'name' => 'An iCal block raised as a booking whose money is missing',
+        'file' => 'includes/class-mphb-reader.php',
+        'from' => '        if (abs($total) >= 0.01 || $summary === \'\') {
+            return false;
+        }',
+        'to'   => '        return false;',
+    ],
+    [
+        'name' => 'The pre-2025 assumption applied to a hand-typed copy',
+        'file' => 'includes/class-snapshot.php',
+        'from' => '            // Cannot happen before 2025 — there are no platform stays to be a
+            // copy of — but the check costs nothing and keeps the rule honest.
+            if (isset($copies[$booking_id])) {
+                continue;
+            }
+',
+        'to'   => '',
+    ],
+    [
+        'name' => 'A by-number link to the wrong cottage accepted',
+        'file' => 'includes/class-linker.php',
+        'from' => '        if ($stay_cottage !== \'\' && $booking_cottage !== \'\' && $stay_cottage !== $booking_cottage) {',
+        'to'   => '        if (false) {',
     ],
 ];
 

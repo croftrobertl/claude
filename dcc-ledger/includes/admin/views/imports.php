@@ -55,6 +55,24 @@ $batches = Batches::all();
         )
     );
     echo Ui::tile(
+        __('Assumed Before The Exports', 'dcc-ledger'),
+        Ui::money(Adjustments::total(Adjustments::ASSUMED_PRE_EXPORTS)),
+        sprintf(
+            /* translators: %d: number of bookings */
+            __('Across %d bookings that checked in before any platform export begins', 'dcc-ledger'),
+            Adjustments::count(Adjustments::ASSUMED_PRE_EXPORTS)
+        )
+    );
+    echo Ui::tile(
+        __('Refunds Not In MotoPress', 'dcc-ledger'),
+        Ui::money(Adjustments::total(Adjustments::REFUND_UNRECORDED)),
+        sprintf(
+            /* translators: %d: number of bookings */
+            __('Across %d bookings, each brought back to exactly its total', 'dcc-ledger'),
+            Adjustments::count(Adjustments::REFUND_UNRECORDED)
+        )
+    );
+    echo Ui::tile(
         __('Corrections In All', 'dcc-ledger'),
         Ui::number(Adjustments::count()),
         __('Every one labelled, and none of them edits an original', 'dcc-ledger')
@@ -71,6 +89,53 @@ $batches = Batches::all();
     </label>
     <button type="submit" class="button button-primary"><?php esc_html_e('Refresh From MotoPress', 'dcc-ledger'); ?></button>
 </form>
+
+<h3 class="dccl-h3"><?php esc_html_e('Assumed Payments Standing', 'dcc-ledger'); ?></h3>
+
+<p class="dccl-note">
+    <?php esc_html_e('Each of these is the ledger assuming a booking was paid, because MotoPress holds no payment for it. None of them is a payment anyone recorded. An assumption is never deleted — reversing one adds a second, labelled correction that cancels it, so both halves stay on the record.', 'dcc-ledger'); ?>
+</p>
+
+<?php $standing = Adjustments::standing_assumptions(); ?>
+<?php if ($standing === []) : ?>
+    <p class="dccl-note"><?php esc_html_e('None standing.', 'dcc-ledger'); ?></p>
+<?php else : ?>
+    <div class="dccl-table-wrap">
+    <table class="dccl-table">
+        <thead>
+            <tr>
+                <th scope="col"><?php esc_html_e('Booking', 'dcc-ledger'); ?></th>
+                <th scope="col"><?php esc_html_e('Cottage', 'dcc-ledger'); ?></th>
+                <th scope="col"><?php esc_html_e('Dated', 'dcc-ledger'); ?></th>
+                <th scope="col"><?php esc_html_e('Why', 'dcc-ledger'); ?></th>
+                <th scope="col" class="dccl-right"><?php esc_html_e('Amount', 'dcc-ledger'); ?></th>
+                <th scope="col"><?php esc_html_e('Reverse', 'dcc-ledger'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($standing as $assumed) : ?>
+            <tr>
+                <td><?php echo Ui::booking_link((int) $assumed['mphb_booking_id']); ?></td>
+                <td><?php echo esc_html((string) $assumed['cottage']); ?></td>
+                <td><?php echo esc_html((string) $assumed['event_date']); ?></td>
+                <td><?php echo esc_html(Adjustments::label_for((string) $assumed['type'])); ?></td>
+                <td class="dccl-right"><?php echo esc_html(Ui::money((float) $assumed['amount'])); ?></td>
+                <td>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <?php wp_nonce_field(Admin::NONCE); ?>
+                        <input type="hidden" name="action" value="dccl_reverse_assumed">
+                        <input type="hidden" name="booking_id" value="<?php echo (int) $assumed['mphb_booking_id']; ?>">
+                        <button type="submit" class="button">
+                            <?php esc_html_e('Reverse This Assumption', 'dcc-ledger'); ?>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+<?php endif; ?>
 
 <h3 class="dccl-h3"><?php esc_html_e('Platform Exports', 'dcc-ledger'); ?></h3>
 

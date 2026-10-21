@@ -111,6 +111,33 @@ that writes a second, labelled adjustment cancelling the first. The assumption
 is never deleted, so the record always shows both what was assumed and that it
 was taken back.
 
+## If one of Rob's rulings was wrong
+
+The fifteen pre-export assumptions and the three refunds of 2026-10-21 are
+written by the snapshot as one recorded batch, so there are two ways back and
+neither deletes anything.
+
+To take back the whole set, undo that batch on the Imports tab, or:
+
+    wp dcc-ledger batches
+    wp dcc-ledger undo N
+
+To take back one assumption, use **Reverse This Assumption** beside it in
+"Assumed Payments Standing" on the Imports tab. That writes a second, labelled
+adjustment cancelling the first; the pair nets to zero and both halves stay on
+the record. There is no way to delete an assumption, by design.
+
+A refund recorded by hand is an adjustment like any other: remove it from the
+Stays tab if it was wrong, and the booking goes back to reading as overpaid,
+which puts its cleanup item back on the list.
+
+## If a booking was linked to the wrong one by number
+
+Remove the link on the Stays tab. The platform stay and the booking count on
+their own again at once; nothing was copied or deleted, only linked. The
+cleanup item the link cleared comes back, because it is worked out fresh each
+time the list is drawn.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing
