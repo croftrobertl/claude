@@ -112,6 +112,14 @@ function pageWithForm(stay) {
     <p><label><input type="checkbox" name="mphb_accept_terms" value="1"> I accept</label></p>
     <p><label><input type="checkbox" class="mphb_sc_checkout-service"
          name="mphb_room_details[0][services][0][id]" value="19692"> Pet fee</label></p>
+    <!-- THE TWO MONEY GUARDS ARE SEPARATE, so each needs a control only it
+         catches. Mutation res-service-stored removed the NAME test and
+         survived, because the row above carries the class as well: an
+         equivalent mutant made by a fixture that never separates them. -->
+    <p><label><input type="checkbox"
+         name="mphb_room_details[0][services][1][id]" value="17712"> A service with no class</label></p>
+    <p><label><input type="checkbox" class="mphb_sc_checkout-service"
+         name="dcc_service_oddly_named" value="x"> A service-classed control with another name</label></p>
     <p><button type="submit" id="go">Book Now</button></p>
   </form>
 </div>
@@ -227,6 +235,12 @@ const TYPED = {
         keys.some((k) => /accept_terms/.test(k)), false);
     check('… and neither is the service checkbox that carries money',
         keys.some((k) => /\[services\]/.test(k)), false);
+    /* Each money guard on its own: a [services] name with no class, and the
+       service class on a control named something else. */
+    check('… a [services] control is skipped by its NAME, class or no class',
+        keys.some((k) => /services\]\[1\]/.test(k)), false);
+    check('… and a service-classed control is skipped by its CLASS, name or no name',
+        keys.indexOf('dcc_service_oddly_named'), -1);
     check('… nor MotoPress\'s nonce',
         keys.some((k) => /nonce/i.test(k)), false);
     check('nothing is written to localStorage or a cookie',
@@ -333,6 +347,36 @@ const TYPED = {
             sessionStorage.getItem('dcc_checkout_stay_v1'),
         ]), [null, null]);
 
+    /* THE SUBMIT EVENT ALONE, with no click. The two listeners exist for
+       different reasons (0.15.0: MotoPress submits over REST, so a submit
+       event is not guaranteed) and each must be sufficient by itself —
+       mutation res-submit-keeps survived a click-driven test, because the
+       click listener covered for it. */
+    await page.setContent(pageWithForm(STAY));
+    await page.fill('[name="mphb_first_name"]', 'Ada');
+    await page.evaluate(() => {
+        var f = document.querySelector('form');
+        f.addEventListener('submit', (e) => e.preventDefault());
+        f.requestSubmit();
+    });
+    check('a submit event with no click empties the store',
+        await page.evaluate(() => sessionStorage.getItem('dcc_checkout_answers_v1')), null);
+
+    /* And the click on a submit control alone, with the submit event never
+       fired — which is the REST case the second listener is there for. */
+    await page.setContent(pageWithForm(STAY));
+    await page.fill('[name="mphb_first_name"]', 'Ada');
+    await page.evaluate(() => {
+        /* Swallow the submit entirely, so only the click can clear. */
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }, true);
+        document.querySelector('#go').click();
+    });
+    check('a submit-control press with no submit event empties the store too',
+        await page.evaluate(() => sessionStorage.getItem('dcc_checkout_answers_v1')), null);
+
     await page.setContent(pageWithForm(STAY));
     await page.fill('[name="mphb_first_name"]', 'Ada');
     await page.setContent(pageWithForm(STAY));
@@ -436,6 +480,36 @@ const TYPED = {
         restart.heading, 'Pick Your Dates Again');
     check('… and links to /cottages/ rather than posting a stay it does not have',
         [restart.href, restart.noForm], ['https://example.test/cottages/', true]);
+
+    /* A HALF-WRITTEN STAY IS NOT A STAY. PHP never hands over one (its own
+       suite constructs that), but storage is the one input here that does not
+       come from PHP: a corrupted entry, or one left by a future shape, could
+       carry a room type and no dates. Offering "Continue" then would post an
+       empty check-in — mutation res-restart-posts-nothing survived a test
+       that only ever had nothing stored at all. */
+    for (const partial of [
+        { roomTypeId: '1607' },
+        { roomTypeId: '1607', checkIn: '2026-11-16' },
+        { checkIn: '2026-11-16', checkOut: '2026-11-19' },
+        { roomTypeId: '1607', checkIn: '', checkOut: '' },
+    ]) {
+        await page.goto('https://example.test/submit-booking/');
+        await page.evaluate((p) => {
+            sessionStorage.clear();
+            sessionStorage.setItem('dcc_checkout_stay_v1', JSON.stringify(p));
+        }, partial);
+        await page.setContent(pageWithoutForm());
+        const half = await page.evaluate(() => {
+            const c = document.querySelector('.dcc_checkout-continue');
+            return {
+                heading: c && (c.querySelector('h2') || {}).textContent,
+                posts: !!(c && c.querySelector('form')),
+            };
+        });
+        check('a half-written stored stay asks for the dates again rather than posting one'
+            + ' (' + Object.keys(partial).join('+') + ')',
+            [half.heading, half.posts], ['Pick Your Dates Again', false]);
+    }
 
     /* ===================================================================== *
      * 7. The card is a real tap target, and reads as a button

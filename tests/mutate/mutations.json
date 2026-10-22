@@ -4902,5 +4902,27 @@
   "find": "        if (!Assets::is_checkout_page()) {\n            return;\n        }\n\n        wp_enqueue_script(",
   "replace": "        if (false) {\n            return;\n        }\n\n        wp_enqueue_script(",
   "count": 1
+ },
+ {
+  "id": "res-service-class-ignored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: a service-classed control is skipped whatever it is named",
+  "find": "        if (el.classList && el.classList.contains('mphb_sc_checkout-service')) { return true; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-click-keeps",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: a submit-control press empties the store even with no submit event (0.15.0)",
+  "find": "            if (t.closest('[type=\"submit\"], button:not([type=\"button\"])')) { clearAll(); }",
+  "replace": "",
+  "count": 1
  }
 ]

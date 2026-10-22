@@ -123,6 +123,24 @@ foreach (['config', 'layout', 'checkout-request', 'assets', 'hero', 'restore'] a
 
 use DCC_Checkout\Restore;
 
+/**
+ * `Restore::stay()`, with a throw turned into a value.
+ *
+ * A mutation that lets the method run on a half-read stay makes it call
+ * gmdate() with null, which PHP 8 throws on — and the suite CRASHED rather
+ * than failed, so the runner reported HARNESS and the mutation was no
+ * evidence either way (res-half-stay-offered). A harness that cannot tell a
+ * broken claim from a broken harness is the thing tests/mutate exists to stop,
+ * so the throw is caught here and reported as what it is.
+ */
+function stay_of(): array {
+    try {
+        return Restore::stay();
+    } catch (\Throwable $e) {
+        return ['threw' => get_class($e) . ': ' . $e->getMessage()];
+    }
+}
+
 function with_post(array $post): void {
     $_POST = $post;
     $_GET = [];
@@ -169,6 +187,31 @@ with_post([
 check('with no rooms_details posted, the one pair the cottage page sends is used',
     Restore::stay()['roomsDetails'], ['1607' => '1']);
 
+/* THE PASS-THROUGH IS ONLY OBSERVABLE WHEN THE POSTED ARRAY DIFFERS from
+   what the fallback would build. With `['1607' => '1']` posted — the ordinary
+   case — a mutation that drops the pass-through entirely produces the same
+   answer, and both res-rooms-details-guessed and res-reads-room-details
+   survived on exactly that. */
+with_post([
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2026-11-16',
+    'mphb_check_out_date' => '2026-11-19',
+    'mphb_rooms_details'  => ['1607' => '2', '1742' => '1'],
+]);
+check('a posted rooms_details that differs from the fallback is passed through, not rebuilt',
+    Restore::stay()['roomsDetails'], ['1607' => '2', '1742' => '1']);
+
+/* It is replayed into a form, so keys and values are sanitised and anything
+   that is not a scalar is dropped rather than coerced. */
+with_post([
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2026-11-16',
+    'mphb_check_out_date' => '2026-11-19',
+    'mphb_rooms_details'  => ['1607' => '<b>1</b>', '1742' => ['nested'], '' => '1'],
+]);
+check('… sanitised, with non-scalars and empty keys dropped',
+    Restore::stay()['roomsDetails'], ['1607' => '1']);
+
 /* THE TWO MOTOPRESS FIELDS ARE NOT THE SAME FIELD. `room_details` is what the
    checkout FORM submits; reading it here would post the wrong thing. */
 with_post([
@@ -176,9 +219,12 @@ with_post([
     'mphb_check_in_date'  => '2026-11-16',
     'mphb_check_out_date' => '2026-11-19',
     'mphb_room_details'   => [['room_type_id' => '1607', 'adults' => '2']],
+    // Posted alongside, and DIFFERENT, so reading the wrong field is visible
+    // in the answer rather than hidden behind the fallback.
+    'mphb_rooms_details'  => ['1607' => '3'],
 ]);
 check('mphb_room_details is NOT mistaken for mphb_rooms_details',
-    Restore::stay()['roomsDetails'], ['1607' => '1']);
+    Restore::stay()['roomsDetails'], ['1607' => '3']);
 
 /* A stay that cannot be read offers nothing at all. */
 foreach ([
@@ -190,7 +236,7 @@ foreach ([
 ] as $label => $post) {
     with_post($post);
     check("$label: no stay is handed over, so the card asks for the dates again",
-        Restore::stay(), []);
+        stay_of(), []);
 }
 
 /* A cottage with no featured image still gets a card — without a photo. */
