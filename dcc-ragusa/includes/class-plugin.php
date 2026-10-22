@@ -78,6 +78,9 @@ final class Plugin
                 Alerts::withdraw(Fortress::BOKAR, ['role-changed', 'user-new', 'user-gone']);
                 Alerts::withdraw(Fortress::MINCETA, ['option-changed']);
             }
+            if ($seen === '' || version_compare($seen, '0.1.3', '<')) {
+                self::upgrade_0_1_3();
+            }
             if (get_option('dcc_ragusa_version', null) === null) {
                 add_option('dcc_ragusa_version', DCCR_VERSION, '', 'no');
             } else {
@@ -110,6 +113,72 @@ final class Plugin
             __('Ragusa %s activated.', 'dcc-ragusa'),
             DCCR_VERSION
         ));
+    }
+
+    /**
+     * 0.1.3: practice is labelled as practice, findings settle. Earlier
+     * drills left real-looking events, journal rows and findings; a
+     * rollback finding raised late by a journal that finished on upgrade
+     * stayed breached though a newer version had passed; withdrawn role
+     * changes still counted as changes.
+     */
+    public static function upgrade_0_1_3(): void
+    {
+        // Everything named after the drill's own plugin or folder.
+        foreach ([Drill::TEST_PLUGIN, Drill::UPLOAD_DIR] as $needle) {
+            Events::tag_where_target_like($needle, Events::TAG_DRILL);
+            Journal::tag_rows(Journal::ids_where_target_like($needle), Events::TAG_DRILL);
+        }
+        // A guard restore that was a drill: reversed within minutes, and the
+        // kept copy carries the drill's own marker line.
+        $drill_rows = [];
+        foreach (Journal::recent(200, null, 'restore-guard') as $row) {
+            if ($row['state'] !== Journal::REVERSED || (int) $row['updated_at'] - (int) $row['created_at'] > 600) {
+                continue;
+            }
+            $kept = (string) ($row['before']['kept'] ?? '');
+            if ($kept !== '' && is_file($kept) && str_contains((string) file_get_contents($kept), 'ragusa drill')) {
+                $drill_rows[] = (int) $row['id'];
+                foreach (Fortress\Revelin::RESTORE_KINDS as $kind) {
+                    Alerts::tag(Events::fingerprint(Fortress::REVELIN, $kind, (string) $row['target']), Events::TAG_DRILL);
+                }
+            }
+        }
+        if ($drill_rows !== []) {
+            Journal::tag_rows($drill_rows, Events::TAG_DRILL);
+            Events::tag_rows(Events::ids_for_journal($drill_rows), Events::TAG_DRILL);
+        }
+        foreach (Alerts::active() as $fp => $a) {
+            if (str_contains((string) ($a['target'] ?? ''), Drill::TEST_PLUGIN) || str_contains((string) ($a['target'] ?? ''), Drill::UPLOAD_DIR)) {
+                Alerts::tag($fp, Events::TAG_DRILL);
+            }
+        }
+        // A rollback finding whose plugin has moved on, and one raised with no
+        // version to compare (0.1.2 kept none): resolved quietly when newer.
+        foreach (Alerts::open(Fortress::SVETI_IVAN) as $fp => $a) {
+            if (($a['kind'] ?? '') !== 'update-rolled-back') {
+                continue;
+            }
+            $slug = (string) ($a['target'] ?? '');
+            $row  = Journal::latest('rollback', $slug);
+            $rolled = (string) ($a['data']['rolled_back'] ?? ($row['before']['new_version'] ?? ''));
+            $installed = Fortress\Revelin::plugin_version($slug);
+            if ($rolled !== '' && $installed !== '' && version_compare($installed, $rolled, '>')) {
+                Alerts::resolve($fp, true);
+            } elseif ($rolled !== '') {
+                Alerts::set_data($fp, 'rolled_back', $rolled);
+            }
+        }
+        // Withdrawn findings' events no longer count as changes.
+        global $wpdb;
+        $table = Schema::events();
+        $open  = array_keys(Alerts::open(Fortress::BOKAR));
+        $rows  = $wpdb->get_col("SELECT DISTINCT fingerprint FROM {$table} WHERE fortress = 'bokar' AND kind IN ('role-changed','user-new','user-gone') AND tag = ''") ?: [];
+        $stale = array_values(array_diff(array_map('strval', $rows), $open));
+        if ($stale !== []) {
+            Events::tag_fingerprints($stale, Events::TAG_WITHDRAWN);
+        }
+        Fortress::settle();
     }
 
     public static function deactivate(): void

@@ -19,6 +19,11 @@ final class Test_Site
         $GLOBALS['dccr_home_url']   = 'https://doracanalcourt.com/staging/';
         $GLOBALS['dccr_site_handler'] = null;
         $GLOBALS['dccr_is_admin']   = false;
+        $GLOBALS['dccr_caps']       = true;
+        $GLOBALS['dccr_nonce_ok']   = true;
+        $GLOBALS['dccr_display_name'] = 'Rob';
+        DCCR\Drill::$active        = false;
+        DCCR\Fortress\Sveti_Ivan::$followup_runner = null;
         $GLOBALS['wpdb']            = new Test_WPDB($GLOBALS['table_prefix']);
         $GLOBALS['dccr_options']    = [];
         $GLOBALS['dccr_autoload']   = [];

@@ -90,6 +90,19 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 - **Record the verification id on the rollback row before running the
   follow-up.** In WP-CLI the follow-up is a subprocess that may commit the
   row before the parent writes again (`Rollback::verify_now()`).
+- **A finding has a life: open, resolved, seen or practice.** Only open,
+  real findings colour a card or the headline (`Alerts::open()`,
+  `Alerts::worst()`, `Fortress::settle()`). `Alerts::resolve()` keeps the
+  finding on the card for a week; `Alerts::active()` is for display only.
+  Never delete a finding to make a card calm.
+- **Everything a drill does is practice.** `Drill::tag()` is read by
+  `Events::record`, `Journal::create` and `Alerts::raise`; `Fortress::note()`
+  is silent during a drill; the walk skips `Drill::owns_path()`. A drill's
+  subprocess reads `State drill.active`.
+- **Findings settle on their own rules**: Sveti Ivan (a newer version
+  passes, or the rollback is undone; a late journal raises nothing), Revelin
+  (a day of matching), Bokar (the role is as it was). Everything else has
+  Mark As Seen, which needs the capability and a nonce and records who.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -108,8 +121,8 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 
 ## Running the tests
 
-    php tests/run-tests.php            # ~427 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 27 deliberate breakages, each must be caught
+    php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
+    php tests/mutations.php            # 34 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -127,6 +140,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.2.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.1.3.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

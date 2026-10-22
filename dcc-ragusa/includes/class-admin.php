@@ -21,7 +21,7 @@ final class Admin
     {
         add_action('admin_menu', [self::class, 'register_menu']);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue']);
-        foreach (['save_settings', 'seal', 'restore', 'update_now', 'check_now', 'dismiss'] as $action) {
+        foreach (['save_settings', 'seal', 'restore', 'update_now', 'check_now', 'seen'] as $action) {
             add_action('admin_post_dccr_' . $action, [self::class, 'handle_' . $action]);
         }
     }
@@ -70,6 +70,8 @@ final class Admin
             wp_die(esc_html__('You do not have permission to see this page.', 'dcc-ragusa'));
         }
         Schema::ensure();
+        Fortress::settle();
+        State::flush();
         $confirm = isset($_GET['confirm']) ? sanitize_key(wp_unslash((string) $_GET['confirm'])) : '';
         $notice  = isset($_GET['dccr_notice']) ? sanitize_text_field(wp_unslash((string) $_GET['dccr_notice'])) : '';
         $kind    = isset($_GET['dccr_kind']) ? sanitize_key(wp_unslash((string) $_GET['dccr_kind'])) : 'info';
@@ -204,15 +206,24 @@ final class Admin
         self::back(__('Checked now.', 'dcc-ragusa') . ' ' . implode(' ', array_slice($report, -2)), 'good');
     }
 
-    public static function handle_dismiss(): void
+    /**
+     * Mark As Seen: a logged-in administrator, a nonce, and a record of who
+     * and when. Never one click from an email: the email links to the page.
+     */
+    public static function handle_seen(): void
     {
         self::guard();
         $fp = self::post('target');
-        if (preg_match('/^[a-f0-9]{40}$/', $fp)) {
-            Alerts::resolve($fp);
-            self::back(__('Dismissed. It comes back if the next check finds it again.', 'dcc-ragusa'), 'good');
+        if (!preg_match('/^[a-f0-9]{40}$/', $fp)) {
+            self::back(__('Nothing marked.', 'dcc-ragusa'), 'warn');
         }
-        self::back(__('Nothing dismissed.', 'dcc-ragusa'), 'warn');
+        $user = function_exists('wp_get_current_user') ? wp_get_current_user() : null;
+        $name = is_object($user) && !empty($user->display_name) ? (string) $user->display_name : __('an administrator', 'dcc-ragusa');
+        if (Alerts::mark_seen($fp, $name)) {
+            Fortress::settle();
+            self::back(__('Marked as seen. It stays on the card in a calm colour for a week.', 'dcc-ragusa'), 'good');
+        }
+        self::back(__('That finding is not open, so there is nothing to mark.', 'dcc-ragusa'), 'warn');
     }
 
     // --------------------------------------------------------- view data

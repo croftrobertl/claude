@@ -217,6 +217,36 @@
 .dccr-finding--breached { border-left-color: var(--dccr-bad); }
 .dccr-finding--info { border-left-color: var(--dccr-muted); }
 
+/* Settled findings: calm, never a card's colour. */
+.dccr-finding--resolved,
+.dccr-finding--seen {
+    border-left-color: #9fc5e8;
+    background: #f3f8fc;
+    color: var(--dccr-muted);
+}
+
+.dccr-finding--practice,
+.dccr-event--practice {
+    border-left-color: #c3c4c7;
+    background: #f6f7f7;
+    color: var(--dccr-muted);
+}
+
+.dccr-event--practice { border-left-style: dashed; }
+
+.dccr-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: #e0e2e5;
+    color: var(--dccr-muted);
+    margin-right: 0.3rem;
+    vertical-align: middle;
+}
+
 .dccr-finding__title {
     margin: 0 0 0.15rem;
     font-weight: 600;

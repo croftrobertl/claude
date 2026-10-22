@@ -184,7 +184,7 @@ final class Revelin
                 'did'      => __('Ragusa stopped restoring anything from the vault until this is looked at.', 'dcc-ragusa'),
                 'todo'     => __('Ask the site director to inspect ~/ragusa-vault and reseal the guards with wp ragusa seal.', 'dcc-ragusa'),
             ]);
-            Fortress::set_status(Fortress::REVELIN, Fortress::BREACHED, __('Manifest Does Not Verify', 'dcc-ragusa'));
+            Fortress::note(Fortress::REVELIN, __('Manifest Does Not Verify', 'dcc-ragusa'));
             return [__('Vault manifest does not verify; guard checks skipped.', 'dcc-ragusa')];
         }
         $lines   = array_merge($lines, self::first_run());
@@ -197,8 +197,10 @@ final class Revelin
             }
             clearstatcache(true, $path);
             if (is_file($path) && hash_file('sha256', $path) === $entry['sha256']) {
+                self::matched(Site::rel($path));
                 continue;
             }
+            self::mismatched(Site::rel($path));
             $r       = Restore_Guard::run(['label' => $label, 'path' => $path, 'entry' => $entry]);
             $lines[] = $r['message'];
         }
@@ -209,8 +211,10 @@ final class Revelin
                 $abs = DCCR_DIR . $rel;
                 clearstatcache(true, $abs);
                 if (is_file($abs) && hash_file('sha256', $abs) === $entry['sha256']) {
+                    self::matched(Site::rel($abs));
                     continue;
                 }
+                self::mismatched(Site::rel($abs));
                 $r       = Restore_Guard::run(['label' => (string) $entry['label'], 'path' => $abs, 'entry' => $entry]);
                 $lines[] = $r['message'];
             }
@@ -219,6 +223,37 @@ final class Revelin
         $lines = array_merge($lines, self::check_htaccess_block());
         self::update_status();
         return $lines;
+    }
+
+    public const RESTORE_KINDS = ['guard-restored', 'guard-keeps-changing', 'restore-reversed'];
+    public const SETTLE_AFTER  = 86400;
+
+    /** The file has matched its sealed copy: after a full day of that, its restore finding resolves. */
+    private static function matched(string $rel): void
+    {
+        foreach (self::RESTORE_KINDS as $kind) {
+            $fp = Events::fingerprint(Fortress::REVELIN, $kind, $rel);
+            $a  = Alerts::get($fp);
+            if ($a === null || Alerts::state($a) !== 'open') {
+                continue;
+            }
+            $since = (int) ($a['data']['matched_since'] ?? 0);
+            if ($since === 0) {
+                Alerts::set_data($fp, 'matched_since', time());
+            } elseif (time() - $since >= self::SETTLE_AFTER) {
+                Alerts::resolve($fp);
+            }
+        }
+    }
+
+    private static function mismatched(string $rel): void
+    {
+        foreach (self::RESTORE_KINDS as $kind) {
+            $fp = Events::fingerprint(Fortress::REVELIN, $kind, $rel);
+            if (Alerts::get($fp) !== null) {
+                Alerts::set_data($fp, 'matched_since', 0);
+            }
+        }
     }
 
     /** @return string[] */

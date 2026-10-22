@@ -117,6 +117,7 @@ final class Bokar
             self::update_status($now, 0);
             return __('Bokar baselined the users.', 'dcc-ragusa');
         }
+        self::settle($now);
         $changes = 0;
         foreach ($now['users'] as $id => $u) {
             $old = $seen['users'][$id] ?? null;
@@ -131,16 +132,33 @@ final class Bokar
                     sprintf(__('A new %s appeared.', 'dcc-ragusa'), self::describe($id, $u)),
                     $u['role'] === 'administrator'
                         ? __('If you did not create this account, remove it now from Users and change every administrator password.', 'dcc-ragusa')
-                        : __('If you did not create this account, remove it from Users.', 'dcc-ragusa')
+                        : __('If you did not create this account, remove it from Users.', 'dcc-ragusa'),
+                    ['role' => $u['role']]
                 );
                 continue;
             }
             if ($old['role'] !== $u['role']) {
+                // Back to what it was before an earlier change: that change resolves, nothing new is raised.
+                $fp   = Events::fingerprint(Fortress::BOKAR, 'role-changed', (string) $id);
+                $prev = Alerts::get($fp);
+                if ($prev !== null && (string) ($prev['data']['from'] ?? '') === $u['role']) {
+                    if (Alerts::state($prev) === 'open') {
+                        Alerts::resolve($fp);
+                    }
+                    Events::record(Fortress::BOKAR, Events::INFO, 'role-back', (string) $id, sprintf(
+                        /* translators: 1: user, 2: role */
+                        __('%1$s is %2$s again, as before.', 'dcc-ragusa'),
+                        self::describe($id, $u),
+                        $u['role']
+                    ));
+                    continue;
+                }
                 $changes++;
                 self::alert(Events::BREACHED, 'role-changed', (string) $id, __('Role Changed', 'dcc-ragusa'),
                     /* translators: 1: user, 2: old role, 3: new role */
                     sprintf(__('%1$s changed from %2$s to %3$s.', 'dcc-ragusa'), self::describe($id, $u), $old['role'], $u['role']),
-                    __('If you did not change this role, set it back from Users and change the administrator passwords.', 'dcc-ragusa'));
+                    __('If you did not change this role, set it back from Users and change the administrator passwords.', 'dcc-ragusa'),
+                    ['from' => $old['role'], 'to' => $u['role']]);
             }
             if ((int) $u['app'] > (int) $old['app']) {
                 $changes++;
@@ -167,7 +185,7 @@ final class Bokar
         return $changes === 0 ? __('Bokar: no change.', 'dcc-ragusa') : sprintf(_n('Bokar: %d change.', 'Bokar: %d changes.', $changes, 'dcc-ragusa'), $changes);
     }
 
-    private static function alert(string $severity, string $kind, string $target, string $title, string $what, string $todo): void
+    private static function alert(string $severity, string $kind, string $target, string $title, string $what, string $todo, array $data = []): void
     {
         Events::record(Fortress::BOKAR, $severity, $kind, $target, $what);
         Alerts::raise([
@@ -179,7 +197,29 @@ final class Bokar
             'what'     => $what,
             'did'      => __('Ragusa recorded it and changed nothing: accounts are never edited on its own.', 'dcc-ragusa'),
             'todo'     => $todo,
+            'data'     => $data,
         ]);
+    }
+
+    /**
+     * A role change resolves when the role matches what it was before; a
+     * new privileged account when it is privileged no more; a removed one
+     * when it is back.
+     */
+    public static function settle(array $now): void
+    {
+        foreach (Alerts::open(Fortress::BOKAR) as $fp => $a) {
+            $kind = (string) ($a['kind'] ?? '');
+            $id   = (int) ($a['target'] ?? 0);
+            $cur  = $now['users'][$id]['role'] ?? null;
+            if ($kind === 'role-changed' && $cur !== null && $cur === (string) ($a['data']['from'] ?? '-')) {
+                Alerts::resolve($fp);
+            } elseif ($kind === 'user-new' && $cur === null) {
+                Alerts::resolve($fp);
+            } elseif ($kind === 'user-gone' && $cur !== null) {
+                Alerts::resolve($fp);
+            }
+        }
     }
 
     private static function save(array $b): void

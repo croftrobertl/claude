@@ -58,6 +58,22 @@ Alerts::raise([
     'did' => 'Ragusa installed nothing.', 'todo' => 'Open Ragusa and tap Update Now.',
 ]);
 Fortress::set_status(Fortress::LOVRIJENAC, Fortress::NEEDS_LOOK, '1 Plugin Has A Known Weakness · Feed Read 6 Hours Ago');
+
+// 0.1.3: a practice finding (a drill), a resolved one, and one marked as seen.
+DCCR\Drill::$active = true;
+Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::BREACHED, 'kind' => 'quarantined', 'target' => 'wp-content/uploads/ragusa-drill/evil.php', 'title' => 'File Quarantined', 'what' => 'A drill.', 'did' => 'Practice.', 'todo' => 'Nothing.']);
+Events::record(Fortress::MINCETA, Events::BREACHED, 'quarantined', 'wp-content/uploads/ragusa-drill/evil.php', 'Quarantined wp-content/uploads/ragusa-drill/evil.php (drill: an executable file inside the uploads folder).');
+DCCR\Drill::$active = false;
+Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::BREACHED, 'kind' => 'update-rolled-back', 'target' => 'dcc-wildlife', 'title' => 'Update Rolled Back', 'what' => 'w', 'did' => 'd', 'todo' => 't', 'data' => ['rolled_back' => '1.44.5']]);
+Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', 'dcc-wildlife'), true);
+$GLOBALS['dccr_alerts_backdate'] = true;
+Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::NEEDS_LOOK, 'kind' => 'fatal-elsewhere', 'target' => 'dcc-ledger@1a2b3c4d', 'title' => 'A New Fatal Elsewhere After This Update', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+Alerts::mark_seen(Events::fingerprint(Fortress::SVETI_IVAN, 'fatal-elsewhere', 'dcc-ledger@1a2b3c4d'), 'Rob');
+$opt = get_option(Alerts::OPTION);
+$opt['active'][Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', 'dcc-wildlife')]['resolved_at'] = time() - 3 * 86400;
+update_option(Alerts::OPTION, $opt, 'no');
+Alerts::reset_cache();
+Fortress::settle();
 State::set('heartbeat', ['ts' => time() - 240, 'ok' => true, 'result' => 'sent', 'code' => 200]);
 State::flush();
 

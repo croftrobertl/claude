@@ -1,4 +1,11 @@
-# Ragusa 0.1.2 — Staging Checklist
+# Ragusa 0.1.3 — Staging Checklist
+
+> **Upgrading the 0.1.2 install on staging:** `wp plugin install
+> "Ragusa 0.1.3.zip" --force`, then open DCC → Ragusa. Expect the headline
+> back on "The Walls Are Holding": the drills' events (5658, 5757, 5765 and
+> their journal rows) re-tagged as Practice and grey, yesterday's late
+> rollback findings (5746, 5747) shown as "Resolved", Bokar on "No Changes",
+> and Revelin and Sveti Ivan Holding. Then the items marked **0.1.3**.
 
 > **Upgrading the 0.1.1 install on staging:** `wp plugin install
 > "Ragusa 0.1.2.zip" --force`, then `wp ragusa status`. Expect the 0.1.1 →
@@ -141,6 +148,13 @@ Record the before and after numbers in the handover.
 
 ## 7. The drills (the real actions and their reverses)
 
+- [ ] **0.1.3:** after any drill, the headline is still "The Walls Are
+      Holding", the drill's events show grey with a "Practice" tag, the
+      card's findings list shows the drill's finding as Practice, no card
+      changed state, and `wp ragusa journal` shows the rows with tag `drill`.
+      A day later the practice events are gone from the page and still in
+      `wp ragusa journal`.
+
 Each drill stages a harmless case, runs the real action, reverses it, and
 cleans up. Each prints every journal state transition.
 
@@ -201,7 +215,16 @@ cleans up. Each prints every journal state transition.
       `wp ragusa markers set /explore/ "<the new marker>"` and confirm the
       next check passes; `wp ragusa markers reset` afterwards.
 
-## 9. Seal and Restore from the page
+## 9. Seal, Restore and Mark As Seen from the page
+
+- [ ] **0.1.3:** open a finding's card, press Mark As Seen. The confirmation
+      is immediate (no second screen); the finding reads "Seen By <your
+      name>, Today" in the calm colour, and the headline calms if nothing
+      else is open. `wp ragusa journal` is unchanged; Recent Events carries
+      a line saying who marked it.
+- [ ] **0.1.3:** a finding that resolves on its own (reinstall a newer
+      version after a rollback, or put a role back) reads "Resolved Just
+      Now" and stays on the card for a week.
 
 - [ ] Append a comment to `mu-plugins/dcc-ical-privacy.php` over SSH. On the
       next tick Ragusa restores it (Recent Events shows it, with Undo).

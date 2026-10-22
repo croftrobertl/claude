@@ -1168,3 +1168,22 @@ call as its verification (the WP-CLI follow-up runs in a subprocess, so the
 verification id is recorded before it runs); the drills fail loudly; the
 upgrade retakes Bokar's baseline quietly; a reordered plugin list is not a
 change; `wp ragusa proof` names a login gate and sets WP Staging aside.
+
+**0.1.3 (Rob's picks of 2026-10-22; the go-live gate).** Findings that
+never settled kept staging's headline on "Breached". Now a finding has a
+life: open, resolved, seen or practice. Everything a drill does carries a
+`drill` tag (events, journal rows, findings, vault copies), shows grey as
+Practice, never colours a card, never emails, leaves the page after a day,
+and the walk never looks at the drill's own paths; an upgrade re-tags what
+earlier drills left, including a guard restore whose kept copy carries the
+drill's marker. Findings clear themselves: Sveti Ivan's rollback finding
+when a newer version passes or the rollback is undone (and a journal that
+finishes late for a version no longer installed raises nothing); Revelin's
+restore after the file has matched its sealed copy for a full day; Bokar's
+role change when the role is as it was (withdrawn events never count).
+Resolved and seen findings stay on the card in a calm colour for a week.
+Mark As Seen, for the rest, needs a logged-in administrator and a nonce,
+records who and when, and is never a link in an email. The headline
+returns to "The Walls Are Holding" once every finding is resolved, seen or
+practice. A real rollback, restore or quarantine is still breached and
+still emails.

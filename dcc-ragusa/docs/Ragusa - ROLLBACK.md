@@ -44,6 +44,15 @@ fail because a marker was renamed on purpose:
     wp ragusa markers set /explore/ "new-marker"
     wp ragusa markers reset         # back to the baked defaults
 
+## If a finding stays on the page after the problem is gone
+
+Nothing is stuck. A finding resolves itself when its condition goes away
+(a newer version passes after a rollback, a guard has matched its sealed
+copy for a day, a role is as it was), and then reads "Resolved" in a calm
+colour for a week. Anything else gets Mark As Seen on its card: open DCC →
+Ragusa and press it; it records who and when. Practice (a drill) is grey,
+never counted, and leaves the page after a day.
+
 ## If an email says "A New Fatal Elsewhere After This Update"
 
 Nothing was rolled back. A PHP fatal appeared in the error log after an

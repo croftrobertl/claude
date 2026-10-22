@@ -391,7 +391,7 @@ suite('A2 restore guard: a changed guard is put back, the edit is kept, seal sto
     ok($ok, 'seal: ' . $msg);
     tick();
     ok(str_contains((string) file_get_contents($guard), 'tampered'), 'after seal, the edited version is the good copy and is not restored');
-    eq(0, count(Alerts::active(Fortress::REVELIN)), 'the finding resolved on seal');
+    eq(0, count(Alerts::open(Fortress::REVELIN)), 'the finding resolved on seal');
 
     // A missing guard is restored too.
     unlink($guard);
@@ -834,7 +834,8 @@ suite('Lovrijenac: the feed is validated, reduced and matched; bad payloads keep
     // The finding resolves once the plugin is updated.
     plugin_file('wporg-plugin', '1.5.0');
     Lovrijenac::evaluate();
-    eq(0, count(array_filter(Alerts::active(Fortress::LOVRIJENAC), static fn($a) => $a['kind'] === 'vuln')), 'vulnerability resolved after the update');
+    eq(0, count(array_filter(Alerts::open(Fortress::LOVRIJENAC), static fn($a) => $a['kind'] === 'vuln')), 'vulnerability resolved after the update');
+    eq('resolved', Alerts::state(reset($v)['kind'] === 'vuln' ? Alerts::get(array_key_first($v)) : []), 'and it stays on the card as resolved');
     unset($GLOBALS['dccr_feed_response']);
 
     // Closed plugin signal from wordpress.org.
@@ -946,7 +947,7 @@ suite('Minčeta: core, wordpress.org plugin, mu-plugins, drop-ins, options and J
     Revelin::seal('wp-content/mu-plugins/dcc-other-helper.php');
     file_put_contents(ABSPATH . 'wp-includes/functions.php', "<?php\n// functions\n");
     tick();
-    $active = Alerts::active(Fortress::MINCETA);
+    $active = Alerts::open(Fortress::MINCETA);
     ok(!isset($active[Events::fingerprint(Fortress::MINCETA, 'file-changed', 'wp-content/mu-plugins/dcc-other-helper.php')]), 'sealed finding resolved');
     ok(!isset($active[Events::fingerprint(Fortress::MINCETA, 'core-modified', 'wp-includes/functions.php')]), 'restored core file resolves with an all clear');
 
@@ -960,7 +961,7 @@ suite('Minčeta: core, wordpress.org plugin, mu-plugins, drop-ins, options and J
     eq(Fortress::BREACHED, Fortress::status(Fortress::MINCETA)['state'], 'card breached');
     $GLOBALS['dccr_jetpack_modules']['waf'] = true;
     tick();
-    ok(!isset(Alerts::active(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'jetpack-module-off', 'waf')]), 'resolves when the module is back');
+    ok(!isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'jetpack-module-off', 'waf')]), 'resolves when the module is back');
     file_put_contents(WP_CONTENT_DIR . '/jetpack-waf/rules/rules.php', "<?php\n");
     tick();
     ok(isset(Alerts::active(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'jetpack-rules-empty', 'rules.php')]), 'an emptied rules.php is a finding');
@@ -1395,6 +1396,259 @@ suite('0.1.2 item 7: the disk figure reaches the card on every reading; the tick
     ok(!preg_match('#/\*\* [^\n]*\*/\s*\n\s*public function#', $src), 'no one-line docblock on a command');
     preg_match_all('#/\*\*\n\s+\* ([^\n]+)\n#', $src, $m);
     ok(count($m[1]) >= 14, 'every command carries a summary line: ' . count($m[1]));
+});
+
+// ------------------------------------------------------------- 0.1.3: practice, settling, seen
+suite('0.1.3 A: everything a drill does is practice: grey, uncounted, unmailed, and gone from the page after a day', function () {
+    dccr_test_site('staging');
+    tick();
+    eq(Fortress::HOLDING, Fortress::status(Fortress::MINCETA)['state'], 'Minčeta holding before the drill');
+    $lines = DCCR\Drill::run('quarantine');
+    ok(!DCCR\Drill::failed($lines), 'the quarantine drill passes: ' . implode(' | ', $lines));
+    $ev = events_of('quarantined');
+    eq(1, count($ev), 'the drill\'s quarantine is journaled');
+    eq(Events::TAG_DRILL, $ev[0]['tag'], 'and tagged as practice');
+    $row = Journal::latest('quarantine', 'wp-content/uploads/ragusa-drill/evil.php');
+    eq(Events::TAG_DRILL, $row['tag'], 'the journal row is tagged too');
+    $f = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'quarantined', 'wp-content/uploads/ragusa-drill/evil.php'));
+    ok($f !== null && Alerts::state($f) === 'practice', 'the finding is practice');
+    eq(Fortress::HOLDING, Fortress::status(Fortress::MINCETA)['state'], 'the card stays holding');
+    ok(str_starts_with(Fortress::overall(), 'The Walls Are Holding'), 'the headline stays holding: ' . Fortress::overall());
+    eq(0, count(Alerts::open(Fortress::MINCETA)), 'no open finding');
+    // A restore-guard drill on the live site would email a real restore; practice never does.
+    dccr_test_site('live');
+    $before = count($GLOBALS['dccr_mail']);
+    $GLOBALS['dccr_home_url'] = 'https://doracanalcourt.com/staging/';
+    $lines = DCCR\Drill::run('restore-guard');
+    eq($before, count($GLOBALS['dccr_mail']), 'the restore-guard drill sends no email');
+    ok(!DCCR\Drill::failed($lines), 'restore-guard drill passes: ' . implode(' | ', $lines));
+    eq(Fortress::HOLDING, Fortress::status(Fortress::REVELIN)['state'], 'Revelin stays holding');
+    dccr_test_site('staging');
+    // Practice events show for a day, then leave the page but not the table.
+    $page = Events::recent(50, 0, true);
+    ok(count(array_filter($page, static fn($e) => $e['tag'] === Events::TAG_DRILL)) > 0, 'practice events are on the page today');
+    global $wpdb;
+    $wpdb->query("UPDATE " . DCCR\Schema::events() . " SET ts = ts - 90000 WHERE tag = 'drill'");
+    $page = Events::recent(50, 0, true);
+    eq(0, count(array_filter($page, static fn($e) => $e['tag'] === Events::TAG_DRILL)), 'a day later they leave the page');
+    ok(count(array_filter(Events::recent(50), static fn($e) => $e['tag'] === Events::TAG_DRILL)) > 0, 'but stay in the table');
+    // The walk never sees the drill's paths, during or after.
+    Test_Site::write('wp-content/uploads/ragusa-drill/evil.php', '<?php');
+    @mkdir(WP_PLUGIN_DIR . '/ragusa-drill-plugin', 0755, true);
+    file_put_contents(WP_PLUGIN_DIR . '/ragusa-drill-plugin/ragusa-drill-plugin.php', "<?php\n/**\n * Plugin Name: Ragusa Drill Plugin\n * Version: 1.0.0\n */\n");
+    State::set('last_full_pass', 0);
+    tick();
+    eq(0, count(array_filter(events_of('file-new'), static fn($e) => str_contains($e['target'], 'ragusa-drill'))), 'a drill plugin file is not "new"');
+    ok(is_file(WP_CONTENT_DIR . '/uploads/ragusa-drill/evil.php'), 'the drill\'s upload is not quarantined by the walk');
+    DCCR\Vault::rm_rf(WP_PLUGIN_DIR . '/ragusa-drill-plugin');
+    State::set('last_full_pass', 0);
+    tick();
+    eq(0, count(array_filter(events_of('file-missing'), static fn($e) => str_contains($e['target'], 'ragusa-drill'))), 'a removed drill plugin is not "gone"');
+});
+
+suite('0.1.3 B: a rollback finding resolves when a newer version passes, or the rollback is undone; late journals raise nothing', function () {
+    tick();
+    break_cottage_when('1.5.0');
+    $id = simulate_update('wporg-plugin', '1.5.0');
+    Sveti_Ivan::scheduled_check($id);
+    Sveti_Ivan::scheduled_check($id);
+    $rb = Journal::latest('rollback', 'wporg-plugin');
+    Sveti_Ivan::scheduled_check((int) Journal::latest('update-check', 'wporg-plugin')['id']);
+    $fp = Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', 'wporg-plugin');
+    eq('open', Alerts::state(Alerts::get($fp)), 'the rollback finding is open');
+    eq(Fortress::BREACHED, Fortress::status(Fortress::SVETI_IVAN)['state'], 'and the card is breached: a real rollback still is');
+    eq('1.5.0', Alerts::get($fp)['data']['rolled_back'], 'it remembers the rolled-back version');
+    $GLOBALS['dccr_site_handler'] = null;
+    // A newer version passes its checks.
+    $id2 = simulate_update('wporg-plugin', '1.5.1');
+    Sveti_Ivan::scheduled_check($id2);
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'the finding resolved when 1.5.1 passed');
+    eq(Fortress::HOLDING, Fortress::status(Fortress::SVETI_IVAN)['state'], 'the card is holding again');
+    ok(str_starts_with(Fortress::overall(), 'The Walls Are Holding'), 'headline holding: ' . Fortress::overall());
+    // A journal that finishes late, for a version no longer installed, raises nothing.
+    $late = Journal::create('update-check', 'wporg-plugin', ['slug' => 'wporg-plugin', 'kind' => 'update', 'new_version' => '1.5.0', 'old_version' => '1.4.0', 'started' => time() - 60, 'errlog' => Error_Log::snapshot(), 'entry' => $rb['before']['entry']], 'late', false);
+    Journal::set_state($late, Journal::VERIFYING, ['verify' => ['first_fail' => ['ts' => time() - 600, 'failed' => ['page /accommodation/cottage-34/']], 'attempts' => 1]]);
+    break_cottage_when('1.5.1'); // everything fails now, yet nothing may happen
+    Sveti_Ivan::scheduled_check($late);
+    eq(Journal::ABANDONED, Journal::get($late)['state'], 'the late row is set aside');
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'no fresh breach');
+    eq(1, count(Journal::recent(10, null, 'rollback')), 'no second rollback');
+    $GLOBALS['dccr_site_handler'] = null;
+    // Undoing a rollback resolves its finding too.
+    break_cottage_when('1.6.0');
+    $id3 = simulate_update('wporg-plugin', '1.6.0');
+    Sveti_Ivan::scheduled_check($id3);
+    Sveti_Ivan::scheduled_check($id3);
+    $rb2 = Journal::latest('rollback', 'wporg-plugin');
+    Sveti_Ivan::scheduled_check((int) Journal::latest('update-check', 'wporg-plugin')['id']);
+    eq('open', Alerts::state(Alerts::get($fp)), 'a second real rollback reopens the finding');
+    $GLOBALS['dccr_site_handler'] = null;
+    Actions::reverse((int) $rb2['id']);
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'undoing the rollback resolves it');
+    eq(Fortress::HOLDING, Fortress::status(Fortress::SVETI_IVAN)['state'], 'card holding after the undo');
+});
+
+suite('0.1.3 B: a restore resolves after a day of matching; a role change resolves when the role is back; withdrawn events never count', function () {
+    tick();
+    $guard = WPMU_PLUGIN_DIR . '/dcc-postpass-guard.php';
+    file_put_contents($guard, "<?php\n// tampered\n");
+    tick();
+    $fp = Events::fingerprint(Fortress::REVELIN, 'guard-restored', 'wp-content/mu-plugins/dcc-postpass-guard.php');
+    eq('open', Alerts::state(Alerts::get($fp)), 'restore finding open');
+    tick();
+    eq('open', Alerts::state(Alerts::get($fp)), 'still open an hour later');
+    ok((int) Alerts::get($fp)['data']['matched_since'] > 0, 'the match is being timed');
+    Alerts::set_data($fp, 'matched_since', time() - 90000);
+    tick();
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved after a full day of matching');
+    ok(str_contains(json_encode(array_column($GLOBALS['dccr_mail'], 'subject')), '') , 'noop');
+    // Bokar.
+    $GLOBALS['dccr_users'][0]['roles'] = ['editor'];
+    Test_Site::usermeta('wpstg0_');
+    tick();
+    $rc = Events::fingerprint(Fortress::BOKAR, 'role-changed', '1');
+    eq('open', Alerts::state(Alerts::get($rc)), 'role change open');
+    eq('administrator', Alerts::get($rc)['data']['from'], 'it remembers the role before');
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], '1 Change In 7 Days'), 'counted as a change: ' . Fortress::status(Fortress::BOKAR)['line']);
+    $GLOBALS['dccr_users'][0]['roles'] = ['administrator'];
+    Test_Site::usermeta('wpstg0_');
+    tick();
+    eq('resolved', Alerts::state(Alerts::get($rc)), 'resolved when the role is back');
+    // Withdrawn: the events no longer count as changes.
+    $GLOBALS['dccr_users'][1]['roles'] = ['editor'];
+    Test_Site::usermeta('wpstg0_');
+    tick();
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], 'Changes In 7 Days') || str_contains(Fortress::status(Fortress::BOKAR)['line'], 'Change In 7 Days'), 'two changes counted');
+    Alerts::withdraw(Fortress::BOKAR, ['role-changed']);
+    tick();
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], 'No Changes'), 'withdrawn changes do not count: ' . Fortress::status(Fortress::BOKAR)['line']);
+    $w = array_filter(Events::recent(100), static fn($e) => $e['kind'] === 'role-changed');
+    foreach ($w as $e) {
+        eq(Events::TAG_WITHDRAWN, $e['tag'], 'the role-changed events are tagged withdrawn');
+    }
+});
+
+suite('0.1.3 C: Mark As Seen needs a capability and a nonce, records who and when, and calms the headline', function () {
+    tick();
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::NEEDS_LOOK, 'kind' => 'fatal-elsewhere', 'target' => 'wporg-plugin@abcd1234', 'title' => 'A New Fatal Elsewhere After This Update', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::BREACHED, 'kind' => 'core-modified', 'target' => 'wp-includes/x.php', 'title' => 'Core File Modified', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    Fortress::settle();
+    ok(str_starts_with(Fortress::overall(), 'A Wall Was Breached'), 'headline breached with an open breached finding');
+    $fp1 = Events::fingerprint(Fortress::SVETI_IVAN, 'fatal-elsewhere', 'wporg-plugin@abcd1234');
+    $fp2 = Events::fingerprint(Fortress::MINCETA, 'core-modified', 'wp-includes/x.php');
+    $GLOBALS['dccr_is_admin'] = true;
+    // Without the capability.
+    $GLOBALS['dccr_caps'] = false;
+    $_POST = ['target' => $fp1];
+    try {
+        Admin::handle_seen();
+        ok(false, 'should have died');
+    } catch (RuntimeException $e) {
+        ok(str_starts_with($e->getMessage(), 'wp_die'), 'no capability: refused');
+    }
+    eq('open', Alerts::state(Alerts::get($fp1)), 'still open');
+    // Without a nonce.
+    $GLOBALS['dccr_caps'] = true;
+    $GLOBALS['dccr_nonce_ok'] = false;
+    try {
+        Admin::handle_seen();
+        ok(false, 'should have died');
+    } catch (RuntimeException $e) {
+        ok(str_contains($e->getMessage(), 'nonce'), 'no nonce: refused');
+    }
+    eq('open', Alerts::state(Alerts::get($fp1)), 'still open');
+    // With both.
+    $GLOBALS['dccr_nonce_ok'] = true;
+    $GLOBALS['dccr_display_name'] = 'Rob';
+    try {
+        Admin::handle_seen();
+    } catch (RuntimeException $e) {
+        ok(str_starts_with($e->getMessage(), 'redirect:'), 'redirects back to the page');
+    }
+    $a = Alerts::get($fp1);
+    eq('seen', Alerts::state($a), 'marked as seen');
+    eq('Rob', $a['seen_by'], 'who');
+    ok((int) $a['seen_at'] > time() - 60, 'when');
+    eq(1, count(array_filter(events_of('seen'), static fn($e) => str_contains($e['message'], 'Rob'))), 'the event names who');
+    ok(str_starts_with(Fortress::overall(), 'A Wall Was Breached'), 'still breached: the core finding is open');
+    $_POST = ['target' => $fp2];
+    try {
+        Admin::handle_seen();
+    } catch (RuntimeException $e) {
+    }
+    ok(str_starts_with(Fortress::overall(), 'The Walls Are Holding'), 'holding once every finding is seen: ' . Fortress::overall());
+    // Only practice and seen findings: holding.
+    DCCR\Drill::$active = true;
+    Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::BREACHED, 'kind' => 'quarantined', 'target' => 'wp-content/uploads/ragusa-drill/x.php', 'title' => 'File Quarantined', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    DCCR\Drill::$active = false;
+    Fortress::settle();
+    ok(str_starts_with(Fortress::overall(), 'The Walls Are Holding'), 'practice plus seen: holding');
+    // The email never carries a one-click link; the page carries the form with a nonce.
+    $body = Alerts::body(['what' => 'w', 'did' => 'd', 'todo' => 't']);
+    ok(!str_contains($body, 'dccr_seen') && !str_contains($body, '_dccr_nonce'), 'no seen link in an email');
+    Alerts::raise(['fortress' => Fortress::BOKAR, 'severity' => Events::NEEDS_LOOK, 'kind' => 'app-password', 'target' => '2@1', 'title' => 'Application Password Created', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    $_GET = [];
+    ob_start();
+    Admin::render();
+    $html = (string) ob_get_clean();
+    ok(str_contains($html, 'Seen By Rob'), 'the card shows who saw it');
+    ok(str_contains($html, 'value="dccr_seen"') && str_contains($html, 'name="_dccr_nonce"'), 'the Mark As Seen form carries the nonce');
+    ok(str_contains($html, 'Practice'), 'practice is labelled');
+    $_POST = [];
+    $GLOBALS['dccr_is_admin'] = false;
+});
+
+suite('0.1.3 upgrade: earlier drills are re-tagged, late rollbacks settled, old role changes withdrawn, the tag column added', function () {
+    // A 0.1.2 database: tables without the tag column.
+    global $wpdb;
+    foreach (DCCR\Schema::definitions() as $table => $sql) {
+        $wpdb->query("DROP TABLE IF EXISTS {$table}");
+        $wpdb->db_delta(str_replace("tag varchar(16) NOT NULL DEFAULT '',\n", '', $sql));
+    }
+    update_option(DCCR\Schema::OPTION, 1, 'no');
+    DCCR\Schema::ensure();
+    $cols = array_column($wpdb->get_results("PRAGMA table_info(" . DCCR\Schema::events() . ")", ARRAY_A), 'name');
+    ok(in_array('tag', $cols, true), 'the tag column is added to an existing table');
+    tick();
+    // What 0.1.2's drills left behind.
+    $e1 = Events::record(Fortress::SVETI_IVAN, Events::BREACHED, 'update-rolled-back', 'ragusa-drill-plugin', 'drill rollback', [], null, '');
+    $e2 = Events::record(Fortress::MINCETA, Events::NEEDS_LOOK, 'file-missing', 'wp-content/plugins/ragusa-drill-plugin/ragusa-drill-plugin.php', 'gone', [], null, '');
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::BREACHED, 'kind' => 'update-rolled-back', 'target' => 'ragusa-drill-plugin', 'title' => 'Update Rolled Back', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    $guard = 'wp-content/mu-plugins/dcc-postpass-guard.php';
+    $rg = Journal::create('restore-guard', $guard, ['label' => 'x']);
+    $kept = Vault::quarantine_dir($rg) . '/' . $guard;
+    @mkdir(dirname($kept), 0700, true);
+    file_put_contents($kept, "<?php\n// guard\n# ragusa drill 1\n");
+    Journal::set_state($rg, Journal::BEFORE, ['before' => ['kept' => $kept]]);
+    Journal::set_state($rg, Journal::REVERSED);
+    $e3 = Events::record(Fortress::REVELIN, Events::BREACHED, 'guard-restored', $guard, 'restored', [], $rg, '');
+    Alerts::raise(['fortress' => Fortress::REVELIN, 'severity' => Events::BREACHED, 'kind' => 'guard-restored', 'target' => $guard, 'title' => 'Guarded File Restored', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    // Yesterday's false rollbacks, raised late, for plugins that have moved on.
+    $rb = Journal::create('rollback', 'wporg-plugin', ['slug' => 'wporg-plugin', 'new_version' => '1.3.0', 'old_version' => '1.2.0']);
+    Journal::set_state($rb, Journal::COMMITTED);
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::BREACHED, 'kind' => 'update-rolled-back', 'target' => 'wporg-plugin', 'title' => 'Update Rolled Back', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    // 0.1.0's role changes, already withdrawn by 0.1.2, but their events still counted.
+    Events::record(Fortress::BOKAR, Events::BREACHED, 'role-changed', '7', 'changed from editor to administrator', [], null, '');
+    Fortress::settle();
+    ok(str_starts_with(Fortress::overall(), 'A Wall Was Breached'), 'before the upgrade: breached');
+    update_option('dcc_ragusa_version', '0.1.2', 'no');
+    DCCR\Plugin::maybe_upgrade();
+    $byid = [];
+    foreach (Events::recent(100) as $e) {
+        $byid[(int) $e['id']] = $e;
+    }
+    eq(Events::TAG_DRILL, $byid[$e1]['tag'], 'the drill rollback event is practice');
+    eq(Events::TAG_DRILL, $byid[$e2]['tag'], 'the drill file-missing event is practice');
+    eq(Events::TAG_DRILL, $byid[$e3]['tag'], 'the drill\'s guard restore is practice (its kept copy carries the drill marker)');
+    eq(Events::TAG_DRILL, Journal::get($rg)['tag'], 'its journal row too');
+    eq('practice', Alerts::state(Alerts::get(Events::fingerprint(Fortress::REVELIN, 'guard-restored', $guard))), 'Revelin\'s finding is practice');
+    eq('practice', Alerts::state(Alerts::get(Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', 'ragusa-drill-plugin'))), 'the drill rollback finding is practice');
+    eq('resolved', Alerts::state(Alerts::get(Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', 'wporg-plugin'))), 'the late rollback finding is resolved: 1.4.0 is newer than 1.3.0');
+    $rc = array_values(array_filter(Events::recent(100), static fn($e) => $e['kind'] === 'role-changed'));
+    eq(Events::TAG_WITHDRAWN, $rc[0]['tag'], 'old role-changed events are withdrawn');
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], 'No Changes') || !str_contains(Fortress::status(Fortress::BOKAR)['line'], 'Change'), 'Bokar counts no change');
+    ok(str_starts_with(Fortress::overall(), 'The Walls Are Holding'), 'after the upgrade: holding: ' . Fortress::overall());
+    eq(0, count(mails_with('All Clear')), 'settled quietly');
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

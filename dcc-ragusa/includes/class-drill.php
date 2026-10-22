@@ -12,6 +12,28 @@ if (!defined('ABSPATH')) {
 final class Drill
 {
     public const TEST_PLUGIN = 'ragusa-drill-plugin';
+    public const UPLOAD_DIR  = 'ragusa-drill';
+
+    /** True while a drill runs in this process (and, for its subprocesses, for half an hour after it began). */
+    public static bool $active = false;
+
+    /** The tag every event, journal row and finding carries while a drill runs. */
+    public static function tag(): string
+    {
+        if (self::$active) {
+            return Events::TAG_DRILL;
+        }
+        $since = (int) State::get('drill.active', 0);
+        return $since > 0 && time() - $since < 1800 ? Events::TAG_DRILL : '';
+    }
+
+    /** The paths a drill creates: the walk never looks at them, during or after. */
+    public static function owns_path(string $rel): bool
+    {
+        return str_contains($rel, '/' . self::UPLOAD_DIR . '/') || str_starts_with($rel, self::UPLOAD_DIR . '/')
+            || str_contains($rel, '/' . self::TEST_PLUGIN . '/') || str_starts_with($rel, self::TEST_PLUGIN . '/')
+            || basename($rel) === self::UPLOAD_DIR || basename($rel) === self::TEST_PLUGIN;
+    }
 
     /** @return string[] */
     public static function run(string $what): array
@@ -19,13 +41,25 @@ final class Drill
         if (Site::is_live()) {
             return ['Refused: this is the live site.'];
         }
-        return match ($what) {
-            'quarantine'    => self::quarantine(),
-            'restore-guard' => self::restore_guard(),
-            'htaccess'      => self::htaccess(),
-            'rollback'      => self::rollback(),
-            default         => ['Unknown drill: ' . $what . ' (quarantine | restore-guard | htaccess | rollback)'],
-        };
+        self::$active = true;
+        State::set('drill.active', time());
+        State::flush();
+        try {
+            $lines = match ($what) {
+                'quarantine'    => self::quarantine(),
+                'restore-guard' => self::restore_guard(),
+                'htaccess'      => self::htaccess(),
+                'rollback'      => self::rollback(),
+                default         => ['Unknown drill: ' . $what . ' (quarantine | restore-guard | htaccess | rollback)'],
+            };
+        } finally {
+            self::$active = false;
+            State::delete('drill.active');
+            Fortress::settle();
+            State::flush();
+        }
+        $lines[] = 'Everything above is tagged as practice: grey on the page, never emailed, never a card\'s state.';
+        return $lines;
     }
 
     /** A loud comparison: the line starts with FAILED when it does not match. */
@@ -53,7 +87,7 @@ final class Drill
     private static function quarantine(): array
     {
         $lines = [];
-        $dir   = Site::uploads_dir() . '/ragusa-drill';
+        $dir   = Site::uploads_dir() . '/' . self::UPLOAD_DIR;
         @mkdir($dir, 0755, true);
         $file  = $dir . '/evil.php';
         file_put_contents($file, "<?php echo 1;\n");

@@ -116,6 +116,7 @@ final class Cron
             if (Alerts::digest_due()) {
                 Alerts::send_digest();
             }
+            Fortress::settle();
 
             // 10. The heartbeat.
             $breached = [];

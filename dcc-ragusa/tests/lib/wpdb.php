@@ -152,6 +152,21 @@ final class Test_WPDB
             $line = preg_replace('/\b(varchar|char)\(\d+\)/i', 'TEXT', $line);
             $cols[] = $line;
         }
-        $this->query(sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $table, implode(', ', $cols)));
+        $exists = $this->get_var("SELECT name FROM sqlite_master WHERE type='table' AND name = " . $this->pdo->quote($table));
+        if ($exists !== $table) {
+            $this->query(sprintf('CREATE TABLE %s (%s)', $table, implode(', ', $cols)));
+            return;
+        }
+        // An existing table: add the columns it lacks, as the real dbDelta does.
+        $have = [];
+        foreach ($this->pdo->query("PRAGMA table_info({$table})")->fetchAll(\PDO::FETCH_ASSOC) as $c) {
+            $have[] = $c['name'];
+        }
+        foreach ($cols as $col) {
+            $name = preg_split('/\s+/', $col)[0] ?? '';
+            if ($name !== '' && !in_array($name, $have, true)) {
+                $this->query(sprintf('ALTER TABLE %s ADD COLUMN %s', $table, $col));
+            }
+        }
     }
 }

@@ -19,9 +19,13 @@ final class Events
         return sha1($fortress . '|' . $kind . '|' . $target);
     }
 
-    public static function record(string $fortress, string $severity, string $kind, string $target, string $message, array $data = [], ?int $journal_id = null): int
+    public const TAG_DRILL     = 'drill';
+    public const TAG_WITHDRAWN = 'withdrawn';
+
+    public static function record(string $fortress, string $severity, string $kind, string $target, string $message, array $data = [], ?int $journal_id = null, ?string $tag = null): int
     {
         global $wpdb;
+        $tag     = $tag ?? Drill::tag();
         $message = Text::scrub($message);
         $json    = (string) wp_json_encode(self::scrub_data($data));
         if (strlen($json) > 4000) {
@@ -37,7 +41,8 @@ final class Events
             'message'     => $message,
             'data'        => $json,
             'journal_id'  => $journal_id,
-        ], ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d']);
+            'tag'         => substr($tag, 0, 16),
+        ], ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s']);
         $id = $ok ? (int) $wpdb->insert_id : 0;
         self::trim();
         return $id;
@@ -72,13 +77,19 @@ final class Events
         }
     }
 
-    /** @return array<int,array<string,mixed>> newest first */
-    public static function recent(int $limit = 20, int $offset = 0): array
+    /**
+     * Newest first. For the page, practice events older than a day are
+     * left out (they stay in the table).
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function recent(int $limit = 20, int $offset = 0, bool $for_page = false): array
     {
         global $wpdb;
         $table = Schema::events();
+        $where = $for_page ? $wpdb->prepare("WHERE NOT (tag = %s AND ts < %d)", self::TAG_DRILL, time() - 86400) : '';
         $rows  = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} ORDER BY id DESC LIMIT %d OFFSET %d",
+            "SELECT * FROM {$table} {$where} ORDER BY id DESC LIMIT %d OFFSET %d",
             $limit,
             $offset
         ), ARRAY_A) ?: [];
@@ -95,22 +106,65 @@ final class Events
         return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
     }
 
+    /** Practice and withdrawn events never count. */
     public static function count_since(string $fortress, int $since, ?string $severity = null): int
     {
         global $wpdb;
         $table = Schema::events();
         if ($severity === null) {
             return (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$table} WHERE fortress = %s AND ts >= %d",
+                "SELECT COUNT(*) FROM {$table} WHERE fortress = %s AND ts >= %d AND tag = ''",
                 $fortress,
                 $since
             ));
         }
         return (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$table} WHERE fortress = %s AND ts >= %d AND severity = %s",
+            "SELECT COUNT(*) FROM {$table} WHERE fortress = %s AND ts >= %d AND severity = %s AND tag = ''",
             $fortress,
             $since,
             $severity
         ));
+    }
+
+    /** Tag every event of these fingerprints (withdrawn, or practice re-tagged on upgrade). */
+    public static function tag_fingerprints(array $fingerprints, string $tag): int
+    {
+        global $wpdb;
+        $fps = array_values(array_filter(array_map('strval', $fingerprints), static fn($f) => preg_match('/^[a-f0-9]{40}$/', $f) === 1));
+        if ($fps === []) {
+            return 0;
+        }
+        $table = Schema::events();
+        $list  = "'" . implode("','", $fps) . "'";
+        return (int) $wpdb->query($wpdb->prepare("UPDATE {$table} SET tag = %s WHERE fingerprint IN ({$list})", $tag));
+    }
+
+    public static function tag_rows(array $ids, string $tag): int
+    {
+        global $wpdb;
+        $ids = array_values(array_filter(array_map('intval', $ids), static fn($i) => $i > 0));
+        if ($ids === []) {
+            return 0;
+        }
+        $table = Schema::events();
+        return (int) $wpdb->query($wpdb->prepare("UPDATE {$table} SET tag = %s WHERE id IN (" . implode(',', $ids) . ')', $tag));
+    }
+
+    public static function tag_where_target_like(string $needle, string $tag): int
+    {
+        global $wpdb;
+        $table = Schema::events();
+        return (int) $wpdb->query($wpdb->prepare("UPDATE {$table} SET tag = %s WHERE target LIKE %s AND tag = ''", $tag, '%' . $wpdb->esc_like($needle) . '%'));
+    }
+
+    public static function ids_for_journal(array $journal_ids): array
+    {
+        global $wpdb;
+        $ids = array_values(array_filter(array_map('intval', $journal_ids), static fn($i) => $i > 0));
+        if ($ids === []) {
+            return [];
+        }
+        $table = Schema::events();
+        return array_map('intval', $wpdb->get_col("SELECT id FROM {$table} WHERE journal_id IN (" . implode(',', $ids) . ')') ?: []);
     }
 }

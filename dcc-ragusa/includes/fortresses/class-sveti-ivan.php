@@ -216,6 +216,7 @@ final class Sveti_Ivan
     public static function due(): array
     {
         $lines = [];
+        self::settle();
         foreach (Journal::recent(30, Journal::VERIFYING) as $row) {
             if (!in_array($row['action'], ['update-check', 'core-check', 'self-update'], true)) {
                 continue;
@@ -414,6 +415,24 @@ final class Sveti_Ivan
         $id      = (int) $row['id'];
         $before  = $row['before'];
         $slug    = (string) $row['target'];
+
+        // A check that finishes late, for a version no longer installed, is
+        // no evidence about anything: the plugin has moved on.
+        if ($row['action'] === 'update-check' && empty($before['rollback_of']) && !empty($before['new_version'])) {
+            $installed = Revelin::plugin_version($slug);
+            if ($installed !== '' && $installed !== (string) $before['new_version']) {
+                Journal::set_state($id, Journal::ABANDONED, ['note' => 'finished late; the installed version moved on to ' . $installed]);
+                Events::record(Fortress::SVETI_IVAN, Events::INFO, 'check-moved-on', $slug, sprintf(
+                    /* translators: 1: slug, 2: checked version, 3: installed version */
+                    __('The check of %1$s %2$s finished late; %3$s is installed now, so it was set aside.', 'dcc-ragusa'),
+                    $slug,
+                    (string) $before['new_version'],
+                    $installed
+                ), [], $id);
+                return;
+            }
+        }
+
         $results = self::run_checks($before, false);
         $attempt = (int) ($row['verify']['attempts'] ?? 0) + 1;
         $failed  = $results['failed'];
@@ -450,7 +469,7 @@ final class Sveti_Ivan
                 'did'      => __('Ragusa did not roll anything back, because a site that does not answer at all is a host problem, not evidence about the update.', 'dcc-ragusa'),
                 'todo'     => __('Open the site. If it loads and books, nothing to do. If not, ask the site director.', 'dcc-ragusa'),
             ]);
-            Fortress::set_status(Fortress::SVETI_IVAN, Fortress::NEEDS_LOOK, __('Last Update Could Not Be Verified', 'dcc-ragusa'));
+            Fortress::note(Fortress::SVETI_IVAN, __('Last Update Could Not Be Verified', 'dcc-ragusa'));
             return;
         }
 
@@ -521,7 +540,7 @@ final class Sveti_Ivan
             'todo'     => __('Ask the site director to look at the site and, if needed, reinstall the previous version of the plugin.', 'dcc-ragusa'),
         ]);
         /* translators: %s: slug */
-        Fortress::set_status(Fortress::SVETI_IVAN, Fortress::BREACHED, sprintf(__('%s Failed Its Checks', 'dcc-ragusa'), $slug));
+        Fortress::note(Fortress::SVETI_IVAN, sprintf(__('%s Failed Its Checks', 'dcc-ragusa'), $slug));
     }
 
     private static function pass(array $row, array $patch): void
@@ -555,8 +574,33 @@ final class Sveti_Ivan
         }
         Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', $slug));
         Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-unverified', $slug));
+        self::settle();
         /* translators: %d: number of checks */
-        Fortress::set_status(Fortress::SVETI_IVAN, Alerts::worst(Fortress::SVETI_IVAN), sprintf(__('Last Update Passed All %d Checks', 'dcc-ragusa'), $n));
+        Fortress::note(Fortress::SVETI_IVAN, sprintf(__('Last Update Passed All %d Checks', 'dcc-ragusa'), $n));
+    }
+
+    /**
+     * A rollback finding resolves when a version newer than the rolled-back
+     * one is installed (it passed its checks, or Sveti Ivan would have
+     * said so), or when the rollback was reversed. Run after every pass
+     * and on every tick, so a journal that finished late settles too.
+     */
+    public static function settle(bool $quiet = false): void
+    {
+        foreach (Alerts::open(Fortress::SVETI_IVAN) as $fp => $a) {
+            if (($a['kind'] ?? '') !== 'update-rolled-back') {
+                continue;
+            }
+            $slug   = (string) ($a['target'] ?? '');
+            $rolled = (string) ($a['data']['rolled_back'] ?? '');
+            if ($slug === '' || $rolled === '') {
+                continue;
+            }
+            $installed = Revelin::plugin_version($slug);
+            if ($installed !== '' && version_compare($installed, $rolled, '>')) {
+                Alerts::resolve($fp, $quiet);
+            }
+        }
     }
 
     // ------------------------------------------------------------- WP-CLI

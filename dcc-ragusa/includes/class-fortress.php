@@ -84,11 +84,38 @@ final class Fortress
         ]);
     }
 
+    /**
+     * A fortress reports what it did: the line is kept, the state comes from
+     * its open findings. A drill's report never reaches the card.
+     */
+    public static function note(string $slug, string $line): void
+    {
+        if (Drill::tag() === Events::TAG_DRILL) {
+            return;
+        }
+        self::set_status($slug, Alerts::worst($slug), $line);
+    }
+
     /** Keep the line and time, change only the state (e.g. when an alert resolves). */
     public static function set_state(string $slug, string $state): void
     {
         $s = self::status($slug);
         self::set_status($slug, $state, $s['line'], $s['checked_at'] ?: time());
+    }
+
+    /**
+     * Every card's state from its open, real findings. Practice, resolved
+     * and seen findings do not colour a card. Run at the end of a tick and
+     * when the page renders, so Mark As Seen calms the headline at once.
+     */
+    public static function settle(): void
+    {
+        foreach (self::all() as $slug) {
+            if (self::status($slug)['state'] === self::UNKNOWN) {
+                continue;
+            }
+            self::set_state($slug, Alerts::worst($slug));
+        }
     }
 
     /** The one sentence at the top of the page. */

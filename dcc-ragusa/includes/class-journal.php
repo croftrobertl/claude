@@ -59,7 +59,8 @@ final class Journal
             'reversible'  => $reversible ? 1 : 0,
             'reversed_by' => null,
             'note'        => Text::scrub($note),
-        ], ['%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s']);
+            'tag'         => Drill::tag(),
+        ], ['%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s']);
         $id = (int) $wpdb->insert_id;
         self::trim();
         return $id;
@@ -119,6 +120,7 @@ final class Journal
         $row['updated_at']  = (int) $row['updated_at'];
         $row['reversible']  = (bool) $row['reversible'];
         $row['reversed_by'] = $row['reversed_by'] === null ? null : (int) $row['reversed_by'];
+        $row['tag']         = (string) ($row['tag'] ?? '');
         $row['before']      = json_decode((string) $row['before_json'], true) ?: [];
         $row['after']       = json_decode((string) $row['after_json'], true) ?: [];
         $row['verify']      = json_decode((string) $row['verify_json'], true) ?: [];
@@ -202,6 +204,25 @@ final class Journal
             $list = implode(',', array_map('intval', $ids));
             $wpdb->query("DELETE FROM {$table} WHERE id IN ({$list})");
         }
+    }
+
+    public static function tag_rows(array $ids, string $tag): int
+    {
+        global $wpdb;
+        $ids = array_values(array_filter(array_map('intval', $ids), static fn($i) => $i > 0));
+        if ($ids === []) {
+            return 0;
+        }
+        $table = Schema::journal();
+        return (int) $wpdb->query($wpdb->prepare("UPDATE {$table} SET tag = %s WHERE id IN (" . implode(',', $ids) . ')', $tag));
+    }
+
+    /** @return int[] ids of rows whose target contains the needle */
+    public static function ids_where_target_like(string $needle): array
+    {
+        global $wpdb;
+        $table = Schema::journal();
+        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE target LIKE %s", '%' . $wpdb->esc_like($needle) . '%')) ?: []);
     }
 
     public static function state_label(string $state): string

@@ -180,6 +180,48 @@ $mutations = [
         'from' => "        \$check = Sveti_Ivan::after_rollback(\$id, \$slug);\n        Journal::set_state(\$id, Journal::VERIFYING, ['verify' => ['check_id' => \$check]]);\n        Sveti_Ivan::run_followup(\$check);",
         'to'   => "        \$check = Sveti_Ivan::after_rollback(\$id, \$slug);\n        Sveti_Ivan::run_followup(\$check);\n        Journal::set_state(\$id, Journal::VERIFYING, ['verify' => ['check_id' => \$check]]);",
     ],
+    [
+        'name' => '0.1.3 A: a drill event colours a card (practice counted as real)',
+        'file' => 'includes/class-alerts.php',
+        'from' => "        return array_filter(self::active(\$fortress), static fn(\$a) => self::state(\$a) === 'open');",
+        'to'   => "        return array_filter(self::active(\$fortress), static fn(\$a) => in_array(self::state(\$a), ['open', 'practice'], true));",
+    ],
+    [
+        'name' => '0.1.3 A: the walk looks at the drill\'s own files',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (\\DCCR\\Drill::owns_path(\$rel)) {\n            return true; // practice leaves no trace in the walk\n        }",
+        'to'   => '',
+    ],
+    [
+        'name' => '0.1.3 B: a rollback finding stays breached after a newer version passes',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$installed !== '' && version_compare(\$installed, \$rolled, '>')) {\n                Alerts::resolve(\$fp, \$quiet);\n            }",
+        'to'   => '',
+    ],
+    [
+        'name' => '0.1.3 B: a journal that finishes late raises a fresh breach',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$installed !== '' && \$installed !== (string) \$before['new_version']) {",
+        'to'   => '            if (false) {',
+    ],
+    [
+        'name' => '0.1.3 B: withdrawn events count as changes',
+        'file' => 'includes/class-events.php',
+        'from' => "                \"SELECT COUNT(*) FROM {\$table} WHERE fortress = %s AND ts >= %d AND tag = ''\",",
+        'to'   => "                \"SELECT COUNT(*) FROM {\$table} WHERE fortress = %s AND ts >= %d\",",
+    ],
+    [
+        'name' => '0.1.3 C: Mark As Seen without a nonce or the capability',
+        'file' => 'includes/class-admin.php',
+        'from' => "    public static function handle_seen(): void\n    {\n        self::guard();",
+        'to'   => "    public static function handle_seen(): void\n    {",
+    ],
+    [
+        'name' => '0.1.3 C: the headline stays breached with only practice and seen findings',
+        'file' => 'includes/class-alerts.php',
+        'from' => "        if ((int) (\$a['seen_at'] ?? 0) > 0) {\n            return 'seen';\n        }\n        return 'open';",
+        'to'   => "        return 'open';",
+    ],
 ];
 
 

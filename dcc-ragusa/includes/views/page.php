@@ -95,7 +95,7 @@ $alerts  = Alerts::active();
     </div>
 
     <h2 class="dccr-h2"><?php esc_html_e('Recent Events', 'dcc-ragusa'); ?></h2>
-    <?php $events = Events::recent(20); ?>
+    <?php $events = Events::recent(20, 0, true); ?>
     <?php if ($events === []) : ?>
         <p class="dccr-empty"><?php esc_html_e('Nothing has happened yet. The first cron tick takes the baselines.', 'dcc-ragusa'); ?></p>
     <?php else : ?>
@@ -105,8 +105,13 @@ $alerts  = Alerts::active();
                 $row  = !empty($ev['journal_id']) ? Journal::get((int) $ev['journal_id']) : null;
                 $undo = $row !== null && isset(Actions::MAP[$row['action']]) && $row['state'] === Journal::COMMITTED && $row['reversible'];
                 ?>
-                <li class="dccr-event dccr-event--<?php echo esc_attr((string) $ev['severity']); ?>">
-                    <p class="dccr-event__meta"><?php echo esc_html(Site::when((int) $ev['ts'])); ?> · <?php echo esc_html(Fortress::name((string) $ev['fortress'])); ?></p>
+                <?php $practice = ($ev['tag'] ?? '') === Events::TAG_DRILL; ?>
+                <li class="dccr-event dccr-event--<?php echo esc_attr($practice ? 'practice' : (string) $ev['severity']); ?>">
+                    <p class="dccr-event__meta">
+                        <?php if ($practice) : ?><span class="dccr-tag"><?php esc_html_e('Practice', 'dcc-ragusa'); ?></span> <?php endif; ?>
+                        <?php echo esc_html(Site::when((int) $ev['ts'])); ?> · <?php echo esc_html(Fortress::name((string) $ev['fortress'])); ?>
+                        <?php if (($ev['tag'] ?? '') === Events::TAG_WITHDRAWN) : ?> · <?php esc_html_e('Withdrawn', 'dcc-ragusa'); ?><?php endif; ?>
+                    </p>
                     <p class="dccr-event__text"><?php echo esc_html((string) $ev['message']); ?></p>
                     <p class="dccr-event__undo">
                         <?php if ($undo) : ?>

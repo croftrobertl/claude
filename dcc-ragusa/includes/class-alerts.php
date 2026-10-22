@@ -6,17 +6,29 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * The messenger. One email per distinct finding per 24 hours, a daily
- * digest for info, and an "All Clear" when a finding resolves. Staging
- * sends nothing unless a command asks explicitly.
+ * The messenger, and the life of a finding.
+ *
+ * A finding is open until it is resolved (its condition went away: one
+ * "All Clear" if it was emailed), seen (an administrator pressed Mark As
+ * Seen on the page) or practice (raised by a drill: grey, never emailed,
+ * never counted). Only open, real findings colour a card or the headline.
+ * Resolved and seen findings stay on the card in a calm colour for seven
+ * days; practice findings for one day; then only the history keeps them.
+ *
+ * One email per distinct finding per 24 hours, a daily digest for info,
+ * nothing from staging unless a command asks explicitly.
  */
 final class Alerts
 {
-    public const OPTION    = 'dcc_ragusa_alerts';
-    public const MAX       = 200;
-    public const REPEAT    = 86400;
+    public const OPTION = 'dcc_ragusa_alerts';
+    public const MAX    = 200;
+    public const REPEAT = 86400;
 
-    private static ?array $data = null;
+    public const KEEP_RESOLVED = 7 * 86400;
+    public const KEEP_SEEN     = 7 * 86400;
+    public const KEEP_DRILL    = 86400;
+
+    private static ?array $data  = null;
     private static bool   $force = false;
 
     /** Allow an email from staging for this request (wp ragusa mail test). */
@@ -40,7 +52,7 @@ final class Alerts
         if (self::$data === null) {
             return;
         }
-        // Bounded: keep the newest 200 active fingerprints and 100 digest lines.
+        self::purge();
         if (count(self::$data['active']) > self::MAX) {
             uasort(self::$data['active'], static fn($a, $b) => ($b['last_seen'] ?? 0) <=> ($a['last_seen'] ?? 0));
             self::$data['active'] = array_slice(self::$data['active'], 0, self::MAX, true);
@@ -55,9 +67,41 @@ final class Alerts
         }
     }
 
+    /** Settled findings leave the page after their time; the events table keeps the history. */
+    private static function purge(): void
+    {
+        $now = time();
+        foreach (self::$data['active'] as $fp => $a) {
+            $tag = (string) ($a['tag'] ?? '');
+            if ($tag === Events::TAG_DRILL && $now - (int) ($a['last_seen'] ?? 0) > self::KEEP_DRILL) {
+                unset(self::$data['active'][$fp]);
+            } elseif ((int) ($a['resolved_at'] ?? 0) > 0 && $now - (int) $a['resolved_at'] > self::KEEP_RESOLVED) {
+                unset(self::$data['active'][$fp]);
+            } elseif ((int) ($a['seen_at'] ?? 0) > 0 && $now - (int) $a['seen_at'] > self::KEEP_SEEN) {
+                unset(self::$data['active'][$fp]);
+            }
+        }
+    }
+
+    /** open | resolved | seen | practice */
+    public static function state(array $a): string
+    {
+        if (($a['tag'] ?? '') === Events::TAG_DRILL) {
+            return 'practice';
+        }
+        if ((int) ($a['resolved_at'] ?? 0) > 0) {
+            return 'resolved';
+        }
+        if ((int) ($a['seen_at'] ?? 0) > 0) {
+            return 'seen';
+        }
+        return 'open';
+    }
+
     /**
-     * A finding: fortress, severity, kind, target, title, what, did, todo.
-     * Returns true when an email was sent now.
+     * A finding: fortress, severity, kind, target, title, what, did, todo,
+     * optional data (kept for the resolution rules). Returns true when an
+     * email was sent now. A practice finding is stored grey and never sent.
      */
     public static function raise(array $f): bool
     {
@@ -67,31 +111,58 @@ final class Alerts
         $target   = (string) ($f['target'] ?? '');
         $fp       = Events::fingerprint($fortress, $kind, $target);
         $title    = Text::title_case((string) $f['title']);
+        $tag      = Drill::tag();
         $data     = self::load();
         $now      = time();
         $entry    = $data['active'][$fp] ?? null;
 
+        // A finding raised again after it was resolved or seen is open again.
+        $was_settled = $entry !== null && self::state($entry) !== 'open';
+
         $sent = false;
-        if ($severity === Events::INFO) {
+        if ($tag === Events::TAG_DRILL) {
+            $sent = false;
+        } elseif ($severity === Events::INFO) {
             if ($entry === null) {
                 self::$data['digest'][] = ['fortress' => $fortress, 'title' => $title, 'what' => (string) ($f['what'] ?? ''), 'ts' => $now];
             }
-        } elseif ($entry === null || ($now - (int) ($entry['last_sent'] ?? 0)) >= self::REPEAT) {
+        } elseif ($entry === null || $was_settled || ($now - (int) ($entry['last_sent'] ?? 0)) >= self::REPEAT) {
             $sent = self::send($fortress, $title, self::body($f));
         }
 
         self::$data['active'][$fp] = [
-            'fortress'   => $fortress,
-            'severity'   => $severity,
-            'kind'       => $kind,
-            'target'     => $target,
-            'title'      => $title,
-            'first_seen' => (int) ($entry['first_seen'] ?? $now),
-            'last_seen'  => $now,
-            'last_sent'  => $sent ? $now : (int) ($entry['last_sent'] ?? 0),
+            'fortress'    => $fortress,
+            'severity'    => $severity,
+            'kind'        => $kind,
+            'target'      => $target,
+            'title'       => $title,
+            'first_seen'  => $was_settled ? $now : (int) ($entry['first_seen'] ?? $now),
+            'last_seen'   => $now,
+            'last_sent'   => $sent ? $now : (int) ($entry['last_sent'] ?? 0),
+            'tag'         => $tag,
+            'resolved_at' => 0,
+            'seen_at'     => 0,
+            'seen_by'     => '',
+            'data'        => is_array($f['data'] ?? null) ? array_merge((array) ($entry['data'] ?? []), $f['data']) : (array) ($entry['data'] ?? []),
         ];
         self::save();
         return $sent;
+    }
+
+    /** Keep a value on a finding between ticks (the resolution rules). */
+    public static function set_data(string $fp, string $key, mixed $value): void
+    {
+        $data = self::load();
+        if (!isset($data['active'][$fp])) {
+            return;
+        }
+        self::$data['active'][$fp]['data'][$key] = $value;
+        self::save();
+    }
+
+    public static function get(string $fp): ?array
+    {
+        return self::load()['active'][$fp] ?? null;
     }
 
     /** The three sentences plus the plain link. */
@@ -115,8 +186,7 @@ final class Alerts
     }
 
     /**
-     * Findings of these kinds that are no longer present are resolved with
-     * one "All Clear" each.
+     * Findings of these kinds that are no longer present are resolved.
      *
      * @param string[] $kinds
      * @param string[] $present_fingerprints
@@ -128,23 +198,28 @@ final class Alerts
             if (($a['fortress'] ?? '') !== $fortress || !in_array($a['kind'] ?? '', $kinds, true)) {
                 continue;
             }
-            if (in_array($fp, $present_fingerprints, true)) {
+            if (self::state($a) !== 'open' || in_array($fp, $present_fingerprints, true)) {
                 continue;
             }
             self::resolve($fp);
         }
     }
 
-    public static function resolve(string $fp): void
+    /**
+     * The condition went away: the finding stays on the card as resolved
+     * for seven days, and one All Clear goes out if it was ever emailed.
+     * Quiet resolves (an upgrade correcting itself) send nothing.
+     */
+    public static function resolve(string $fp, bool $quiet = false): void
     {
         $data = self::load();
         $a    = $data['active'][$fp] ?? null;
-        if ($a === null) {
+        if ($a === null || self::state($a) !== 'open') {
             return;
         }
-        unset(self::$data['active'][$fp]);
+        self::$data['active'][$fp]['resolved_at'] = time();
         self::save();
-        if (($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0) {
+        if (!$quiet && ($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0) {
             self::send(
                 (string) $a['fortress'],
                 /* translators: %s: the finding's title */
@@ -156,27 +231,58 @@ final class Alerts
                 . 'Ragusa: ' . Site::admin_page_url()
             );
         }
-        Events::record((string) $a['fortress'], Events::INFO, 'all-clear', (string) ($a['target'] ?? ''), (string) $a['title']);
+        Events::record((string) $a['fortress'], Events::INFO, 'all-clear', (string) ($a['target'] ?? ''), (string) $a['title'], [], null, (string) ($a['tag'] ?? ''));
     }
 
-    /** Drop findings of these kinds without an All Clear (an upgrade correcting itself). */
+    /** An administrator read it on the page. Records who and when. */
+    public static function mark_seen(string $fp, string $by): bool
+    {
+        $data = self::load();
+        $a    = $data['active'][$fp] ?? null;
+        if ($a === null || self::state($a) !== 'open') {
+            return false;
+        }
+        self::$data['active'][$fp]['seen_at'] = time();
+        self::$data['active'][$fp]['seen_by'] = mb_substr(Text::scrub($by), 0, 60);
+        self::save();
+        Events::record((string) $a['fortress'], Events::INFO, 'seen', (string) ($a['target'] ?? ''), sprintf(
+            /* translators: 1: title, 2: name */
+            __('"%1$s" was marked as seen by %2$s.', 'dcc-ragusa'),
+            (string) $a['title'],
+            $by
+        ));
+        return true;
+    }
+
+    /** Drop findings of these kinds without a trace on the card; their events are tagged withdrawn. */
     public static function withdraw(string $fortress, array $kinds): int
     {
         $data = self::load();
-        $n    = 0;
+        $fps  = [];
         foreach ($data['active'] as $fp => $a) {
             if (($a['fortress'] ?? '') === $fortress && in_array($a['kind'] ?? '', $kinds, true)) {
                 unset(self::$data['active'][$fp]);
-                $n++;
+                $fps[] = $fp;
             }
         }
-        if ($n > 0) {
+        if ($fps !== []) {
             self::save();
+            Events::tag_fingerprints($fps, Events::TAG_WITHDRAWN);
         }
-        return $n;
+        return count($fps);
     }
 
-    /** @return array<string,array> fingerprint => finding */
+    /** Re-tag findings as practice (an upgrade correcting earlier drills). */
+    public static function tag(string $fp, string $tag): void
+    {
+        $data = self::load();
+        if (isset($data['active'][$fp])) {
+            self::$data['active'][$fp]['tag'] = $tag;
+            self::save();
+        }
+    }
+
+    /** @return array<string,array> fingerprint => finding, every state, for the page */
     public static function active(?string $fortress = null): array
     {
         $data = self::load();
@@ -186,10 +292,16 @@ final class Alerts
         return array_filter($data['active'], static fn($a) => ($a['fortress'] ?? '') === $fortress);
     }
 
+    /** @return array<string,array> only open, real findings: what colours a card */
+    public static function open(?string $fortress = null): array
+    {
+        return array_filter(self::active($fortress), static fn($a) => self::state($a) === 'open');
+    }
+
     public static function worst(string $fortress): string
     {
         $worst = Fortress::HOLDING;
-        foreach (self::active($fortress) as $a) {
+        foreach (self::open($fortress) as $a) {
             if (($a['severity'] ?? '') === Events::BREACHED) {
                 return Fortress::BREACHED;
             }
@@ -207,9 +319,12 @@ final class Alerts
         return 'Ragusa · ' . Fortress::name($fortress) . ' · ' . Text::title_case($title);
     }
 
-    /** Plain text, UTF-8 subject, no nonce links. */
+    /** Plain text, UTF-8 subject, no nonce links. Never during a drill. */
     public static function send(string $fortress, string $title, string $body): bool
     {
+        if (Drill::tag() === Events::TAG_DRILL && !self::$force) {
+            return false;
+        }
         if (!Site::is_live() && !self::$force) {
             // The page's amber notice already says staging sends nothing; one event a day is enough.
             if ((int) State::get('mail_suppressed_noted', 0) < time() - 86400) {

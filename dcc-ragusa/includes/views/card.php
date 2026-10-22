@@ -40,23 +40,57 @@ $tone = match ($state) {
         ?>
     </p>
     <?php if ($findings !== []) : ?>
-        <details class="dccr-card__details">
+        <?php
+        $open_count = count(array_filter($findings, static fn($f) => DCCR\Alerts::state($f) === 'open'));
+        $calm_count = count($findings) - $open_count;
+        ?>
+        <details class="dccr-card__details"<?php echo $open_count > 0 ? ' open' : ''; ?>>
             <summary>
                 <?php
-                /* translators: %d: number of findings */
-                echo esc_html(sprintf(_n('%d Finding', '%d Findings', count($findings), 'dcc-ragusa'), count($findings)));
+                if ($open_count > 0) {
+                    /* translators: %d: number of findings */
+                    echo esc_html(sprintf(_n('%d Finding', '%d Findings', $open_count, 'dcc-ragusa'), $open_count));
+                    if ($calm_count > 0) {
+                        /* translators: %d: number of settled findings */
+                        echo esc_html(' · ' . sprintf(_n('%d Settled', '%d Settled', $calm_count, 'dcc-ragusa'), $calm_count));
+                    }
+                } else {
+                    /* translators: %d: number of settled findings */
+                    echo esc_html(sprintf(_n('%d Settled Finding', '%d Settled Findings', $calm_count, 'dcc-ragusa'), $calm_count));
+                }
                 ?>
             </summary>
             <ul class="dccr-findings">
                 <?php foreach ($findings as $fp => $f) : ?>
-                    <li class="dccr-finding dccr-finding--<?php echo esc_attr((string) $f['severity']); ?>">
-                        <p class="dccr-finding__title"><?php echo esc_html((string) $f['title']); ?></p>
+                    <?php $fstate = DCCR\Alerts::state($f); ?>
+                    <li class="dccr-finding dccr-finding--<?php echo esc_attr($fstate === 'open' ? (string) $f['severity'] : $fstate); ?>">
+                        <p class="dccr-finding__title">
+                            <?php if ($fstate === 'practice') : ?>
+                                <span class="dccr-tag"><?php esc_html_e('Practice', 'dcc-ragusa'); ?></span>
+                            <?php endif; ?>
+                            <?php echo esc_html((string) $f['title']); ?>
+                        </p>
                         <p class="dccr-finding__meta">
                             <?php
-                            /* translators: 1: first seen, 2: last seen */
-                            echo esc_html(sprintf(__('First seen %1$s · last seen %2$s', 'dcc-ragusa'), Site::when((int) $f['first_seen']), Site::ago((int) $f['last_seen'])));
+                            if ($fstate === 'resolved') {
+                                /* translators: %s: relative time */
+                                echo esc_html(sprintf(__('Resolved %s', 'dcc-ragusa'), Site::ago((int) $f['resolved_at'])));
+                            } elseif ($fstate === 'seen') {
+                                /* translators: 1: name, 2: when */
+                                echo esc_html(sprintf(__('Seen By %1$s, %2$s', 'dcc-ragusa'), (string) $f['seen_by'], Site::when((int) $f['seen_at'])));
+                            } elseif ($fstate === 'practice') {
+                                /* translators: %s: when */
+                                echo esc_html(sprintf(__('A drill, %s. Not counted, not emailed.', 'dcc-ragusa'), Site::when((int) $f['last_seen'])));
+                            } else {
+                                /* translators: 1: first seen, 2: last seen */
+                                echo esc_html(sprintf(__('First seen %1$s · last seen %2$s', 'dcc-ragusa'), Site::when((int) $f['first_seen']), Site::ago((int) $f['last_seen'])));
+                            }
                             ?>
                         </p>
+                        <?php if ($fstate !== 'open') : ?>
+                    </li>
+                    <?php continue; ?>
+                        <?php endif; ?>
                         <div class="dccr-finding__actions">
                             <?php
                             $kind   = (string) $f['kind'];
@@ -71,9 +105,7 @@ $tone = match ($state) {
                                 $plugin_slug = (string) strtok($target, '@');
                                 echo Admin::form('update_now', ['target' => $plugin_slug], __('Update Now', 'dcc-ragusa'), 'button button-primary dccr-button');
                             }
-                            if ($f['severity'] !== Events::BREACHED) {
-                                echo Admin::form('dismiss', ['target' => $fp], __('Dismiss', 'dcc-ragusa'), 'button-link dccr-link');
-                            }
+                            echo Admin::form('seen', ['target' => $fp], __('Mark As Seen', 'dcc-ragusa'), 'button dccr-button');
                             ?>
                         </div>
                     </li>

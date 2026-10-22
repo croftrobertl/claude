@@ -183,8 +183,9 @@ final class Rollback extends Base
                 /* translators: 1: old version, 2: journal id */
                 'did'      => sprintf(__('Ragusa put version %1$s back from its sealed copy, purged the caches, checked the site again, kept the broken copy in quarantine as journal entry %2$d, and switched automatic updates off for this one plugin.', 'dcc-ragusa'), (string) ($row['before']['old_version'] ?? ''), $id),
                 'todo'     => __('Nothing urgent: the site books again. When the plugin\'s next version is out, update it from the Plugins screen and Ragusa will check it. Ask the site director before turning its automatic updates back on.', 'dcc-ragusa'),
+                'data'     => ['rolled_back' => (string) ($row['before']['new_version'] ?? ''), 'restored' => (string) ($row['before']['old_version'] ?? '')],
             ]);
-            Fortress::set_status(Fortress::SVETI_IVAN, Fortress::BREACHED, sprintf(
+            Fortress::note(Fortress::SVETI_IVAN, sprintf(
                 /* translators: 1: slug, 2: old version */
                 __('%1$s Rolled Back To %2$s', 'dcc-ragusa'),
                 $slug,
@@ -208,7 +209,7 @@ final class Rollback extends Base
                 : __('Ragusa could not put the new version back; the previous version is in place.', 'dcc-ragusa'),
             'todo'     => __('Ask the site director to look at the site: something other than this plugin is broken.', 'dcc-ragusa'),
         ]);
-        Fortress::set_status(Fortress::SVETI_IVAN, Fortress::BREACHED, __('A Check Fails With Either Version', 'dcc-ragusa'));
+        Fortress::note(Fortress::SVETI_IVAN, __('A Check Fails With Either Version', 'dcc-ragusa'));
     }
 
     /** Swap the folders back: the new version returns, the old one goes to quarantine. */
@@ -311,6 +312,12 @@ final class Rollback extends Base
         }
         Journal::set_state((int) $row['id'], Journal::REVERSED, ['note' => 'rollback undone on request: the new version is back']);
         Events::record(Fortress::SVETI_IVAN, Events::INFO, 'rollback-undone', (string) $row['target'], __('A rollback was undone on request; the newer version is back in place.', 'dcc-ragusa'), [], (int) $row['id']);
+        Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', (string) $row['target']), true);
+        Fortress::note(Fortress::SVETI_IVAN, sprintf(
+            /* translators: %s: slug */
+            __('%s Rollback Undone On Request', 'dcc-ragusa'),
+            (string) $row['target']
+        ));
         return [true, __('The newer version is back in place and automatic updates are on again for it.', 'dcc-ragusa')];
     }
 }

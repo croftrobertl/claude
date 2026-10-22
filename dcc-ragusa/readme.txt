@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,11 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.1.3 =
+* Practice is labelled as practice: everything a drill does carries a "drill" tag; it shows grey on its card as Practice, never colours a card or the headline, never emails, leaves the page after a day (the table keeps it), and the walk never looks at the drill's own paths. An upgrade re-tags what earlier drills left.
+* Findings clear themselves when the problem is gone: a rollback finding resolves when a newer version passes its checks or the rollback is undone; a restore finding after the file has matched its sealed copy for a full day; a role change when the role is as it was. A resolved finding stays on its card as "Resolved 3 Days Ago" for a week in a calm colour. A journal that finishes late, for a version no longer installed, raises nothing. Withdrawn events never count as changes.
+* Mark As Seen on every open finding: a logged-in administrator and a nonce, recording who and when ("Seen By Rob, Today"). Never a link in an email. The headline returns to "The Walls Are Holding" once every finding is resolved, seen or practice. A real rollback, restore or quarantine is still breached and still emails.
 
 = 0.1.2 =
 * Only this site's error logs are read: a parent directory that is itself a WordPress root (live, seen from staging) is never read, and a fatal raised by WP-CLI (a phar location or eval()'d code) is never evidence. A fatal outside the updated plugin's own files is now an alert, "A New Fatal Elsewhere After This Update", not grounds for a rollback.

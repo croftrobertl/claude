@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zelenci · Rings If Ragusa Falls
  * Description: The two bronze bell-ringers on the City Bell Tower. If DCC Ragusa is switched off or removed for more than ten minutes, Zelenci sends one email a day and one failure ping to the heartbeat. It does nothing else. Installed by `wp ragusa zelenci install`.
- * Version: 0.1.2
+ * Version: 0.1.3
  *
  * Standalone on purpose: it must work when Ragusa is gone. It reads
  * Ragusa's encrypted secrets with the same vault key, from the same vault

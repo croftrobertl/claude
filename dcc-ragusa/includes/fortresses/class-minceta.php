@@ -322,6 +322,9 @@ final class Minceta
     public static function skip(string $rel, bool $is_dir): bool
     {
         $base = basename($rel);
+        if (\DCCR\Drill::owns_path($rel)) {
+            return true; // practice leaves no trace in the walk
+        }
         if ($is_dir) {
             if (in_array($rel, self::SKIP_DIRS, true)) {
                 return true;
@@ -434,6 +437,9 @@ final class Minceta
             default:
                 return [Site::uploads_dir(), 'wp-content/uploads', static function (string $rel, bool $is_dir): bool {
                     $base = basename($rel);
+                    if (\DCCR\Drill::owns_path($rel)) {
+                        return true;
+                    }
                     return $is_dir && (str_starts_with($base, 'ragusa-vault') || Vault::owns(Site::uploads_dir() . '/' . $rel));
                 }];
         }
@@ -525,6 +531,9 @@ final class Minceta
     private static function location(string $rel): array
     {
         $base = basename($rel);
+        if ($rel === 'wp-content/advanced-cache.php') {
+            return [Events::INFO, 'churn']; // SpeedyCache rewrites it
+        }
         if (str_starts_with($rel, 'wp-content/mu-plugins/')) {
             if (in_array($base, self::MU_VENDOR, true)) {
                 return [Events::INFO, 'mu-vendor'];
@@ -617,6 +626,11 @@ final class Minceta
     {
         [$severity, $where] = self::location($rel);
         if ($where === 'guard' || $where === 'self') {
+            return;
+        }
+        if ($where === 'churn') {
+            /* translators: %s: path */
+            Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::INFO, 'kind' => 'churn', 'target' => $rel, 'title' => __('Cache Drop-In Rewritten', 'dcc-ragusa'), 'what' => sprintf(__('%s changed; SpeedyCache rewrites it.', 'dcc-ragusa'), $rel)]);
             return;
         }
         $kind = 'file-changed';
@@ -744,7 +758,9 @@ final class Minceta
         $missing = [];
         foreach ($index as $rel => $e) {
             if ((int) ($e['p'] ?? 0) !== $p['pass']) {
-                if (str_starts_with($rel, 'wp-content/uploads/')) {
+                if (str_starts_with($rel, 'wp-content/uploads/') || \DCCR\Drill::owns_path($rel)) {
+                    unset(self::$index[$rel]);
+                    self::$index_dirty = true;
                     continue;
                 }
                 $missing[] = $rel;
@@ -1067,7 +1083,7 @@ final class Minceta
             /* translators: %s: number of files */
             $line = sprintf(__('All %s Files Match', 'dcc-ragusa'), number_format($files));
         } else {
-            $n = count(Alerts::active(Fortress::MINCETA));
+            $n = count(Alerts::open(Fortress::MINCETA));
             /* translators: 1: files, 2: findings */
             $line = sprintf(_n('%1$s Files, %2$d Finding', '%1$s Files, %2$d Findings', $n, 'dcc-ragusa'), number_format($files), $n);
         }

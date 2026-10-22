@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 /** The two tables: the event ring buffer and the journal. */
 final class Schema
 {
-    public const DB_VERSION = 1;
+    public const DB_VERSION = 2;
     public const OPTION     = 'dcc_ragusa_db_version';
 
     public static function events(): string
@@ -40,6 +40,7 @@ fingerprint char(40) NOT NULL DEFAULT '',
 message text NOT NULL,
 data text NOT NULL,
 journal_id bigint(20) unsigned NULL,
+tag varchar(16) NOT NULL DEFAULT '',
 PRIMARY KEY  (id),
 KEY ts (ts),
 KEY fingerprint (fingerprint)
@@ -58,6 +59,7 @@ verify_json text NOT NULL,
 reversible tinyint(1) NOT NULL DEFAULT 0,
 reversed_by bigint(20) unsigned NULL,
 note text NOT NULL,
+tag varchar(16) NOT NULL DEFAULT '',
 PRIMARY KEY  (id),
 KEY state (state),
 KEY created_at (created_at)
