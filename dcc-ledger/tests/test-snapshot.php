@@ -238,6 +238,20 @@ T::ok(
     'A cancelled booking is refused too: it is a dock block, not a stay'
 );
 
+// 9006 is already the hand-typed copy of Booking.com 5555555555. Linking it
+// again would count the same nights against two reservations.
+$already = DCCL\Linker::why_not_linkable((int) $some_stay['id'], 9006);
+T::ok($already !== null, 'A booking already linked to another stay is refused');
+T::ok(
+    $already !== null && str_contains($already, '5555555555'),
+    'And the refusal names the stay it is already linked to'
+);
+T::same(
+    false,
+    Repo::link((int) $some_stay['id'], 9006, 'copy', 1),
+    'The link itself refuses it too, not just the check in front of it'
+);
+
 T::group('An Original is never edited');
 
 $original = Originals::current(Originals::KIND_BOOKING, 9007);

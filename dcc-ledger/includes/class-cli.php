@@ -124,6 +124,18 @@ final class Cli
         \WP_CLI::log('');
         \WP_CLI::log(sprintf('Assumed payments:     %d bookings', $c['assumed_bookings']));
         \WP_CLI::log(sprintf('Assumed total:        $%s', number_format((float) $c['assumed_total'], 2)));
+        // Rob's two rulings, printed apart from the window rule's figures
+        // because they are a list he named, not a rule worked out here.
+        \WP_CLI::log(sprintf(
+            'Assumed pre-exports:  %d bookings, $%s',
+            $c['assumed_pre_exports'],
+            number_format((float) $c['assumed_pre_exports_total'], 2)
+        ));
+        \WP_CLI::log(sprintf(
+            'Refunds recorded:     %d bookings, $%s',
+            $c['refunds_recorded'],
+            number_format((float) $c['refunds_total'], 2)
+        ));
         \WP_CLI::log(sprintf('Skipped, a copy:      %d', $c['copies_skipped']));
         \WP_CLI::log(sprintf(
             '  by an existing link: %d · by a code in a note: %d · by cottage and dates: %d',
@@ -250,20 +262,62 @@ final class Cli
      */
     public function cleanup(array $args, array $assoc): void
     {
-        $items = Issues::open();
-        if ($items === []) {
-            \WP_CLI::success(__('Nothing needs a person right now.', 'dcc-ledger'));
-            return;
+        // Information items are not work. Counting them among the rest said
+        // "28 items need a person" on live when 13 of them needed nobody.
+        $needs_a_person = [];
+        $information    = [];
+        foreach (Issues::open() as $item) {
+            if ((string) ($item['severity'] ?? '') === 'info') {
+                $information[] = $item;
+            } else {
+                $needs_a_person[] = $item;
+            }
         }
-        foreach ($items as $item) {
+
+        $print = static function (array $item): void {
             \WP_CLI::log('');
             \WP_CLI::log($item['title'] . '  [' . $item['key'] . ']');
             foreach ($item['facts'] as $fact) {
                 \WP_CLI::log('  - ' . $fact);
             }
             \WP_CLI::log('  → ' . $item['action']);
+        };
+
+        foreach ($needs_a_person as $item) {
+            $print($item);
         }
+
+        if ($information !== []) {
+            \WP_CLI::log('');
+            \WP_CLI::log(sprintf('For information only (%d) — nothing to do:', count($information)));
+            foreach (self::group_by_title($information) as $title => $count) {
+                \WP_CLI::log(sprintf('  %s (%d)', $title, $count));
+            }
+        }
+
         \WP_CLI::log('');
-        \WP_CLI::warning(sprintf('%d items need a person.', count($items)));
+        if ($needs_a_person === []) {
+            \WP_CLI::success(__('Nothing needs a person right now.', 'dcc-ledger'));
+            return;
+        }
+        \WP_CLI::warning(sprintf('%d items need a person.', count($needs_a_person)));
+    }
+
+    /**
+     * Information items, counted under their own headings.
+     *
+     * @param array<int,array<string,mixed>> $items
+     * @return array<string,int>
+     */
+    private static function group_by_title(array $items): array
+    {
+        $groups = [];
+        foreach ($items as $item) {
+            $title = (string) $item['title'];
+            $groups[$title] = ($groups[$title] ?? 0) + 1;
+        }
+        ksort($groups);
+
+        return $groups;
     }
 }

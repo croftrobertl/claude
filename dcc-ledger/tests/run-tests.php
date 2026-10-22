@@ -24,6 +24,7 @@ $suites = [
     'privacy'   => __DIR__ . '/test-privacy.php',
     'security'  => __DIR__ . '/test-security.php',
     'render'    => __DIR__ . '/test-render.php',
+    'cli'       => __DIR__ . '/test-cli.php',
 ];
 
 foreach ($suites as $name => $file) {

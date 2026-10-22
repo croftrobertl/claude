@@ -563,13 +563,15 @@ final class Issues
             if ($booking['check_out'] === null || $booking['check_out'] >= $today) {
                 continue;
             }
-            $paid = round((float) $booking['paid'], 2);
-            foreach (Adjustments::for_booking($booking_id) as $adjustment) {
-                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
-                    $paid = round($paid + (float) $adjustment['amount'], 2);
-                }
-            }
-            $short = round((float) $booking['total'] - $paid, 2);
+            // Whatever assumption stands against the booking counts, not
+            // just the window rule's. Reading only ASSUMED_PAID left all
+            // fifteen of Rob's pre-export bookings on the list as unpaid
+            // while the ledger was already treating them as settled.
+            // assumed_for() covers both kinds and returns nothing once an
+            // assumption has been reversed, which puts the item back.
+            $assumed = Adjustments::assumed_for((int) $booking_id);
+            $paid    = round((float) $booking['paid'] + (float) ($assumed['amount'] ?? 0), 2);
+            $short   = round((float) $booking['total'] - $paid, 2);
             if ($short < 0.01) {
                 continue;
             }

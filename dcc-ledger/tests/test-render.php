@@ -47,6 +47,14 @@ T::ok(str_contains($screens['overview'], 'Recorded'), 'Recorded payments are lab
 T::ok(str_contains($screens['overview'], 'never added to revenue'), 'The overview says the platform-remitted tax is not revenue');
 T::ok(str_contains($screens['overview'], 'each copy once'), 'The overview says a copy is counted once');
 T::ok(str_contains($screens['imports'], 'deleted before the page finishes'), 'The imports screen says the file is deleted');
+T::ok(str_contains($screens['imports'], 'Assumed Payments Standing'), 'The imports screen lists the assumptions standing');
+T::ok(str_contains($screens['imports'], 'Reverse This Assumption'), 'Each with a way to reverse it');
+// The tile counted information items as work, the same bug the CLI had.
+T::ok(str_contains($screens['cleanup'], 'For Information'), 'The cleanup screen counts information items apart from the work');
+T::ok(
+    str_contains($screens['cleanup'], 'for information only, and need nothing doing about them'),
+    'And says so in words before listing them'
+);
 T::ok(str_contains($screens['settings'], 'Crofty Bear'), 'The settings screen shows the excluded listing');
 T::ok(str_contains($screens['stays'], 'No guest names are held'), 'The stays screen says no names are held');
 

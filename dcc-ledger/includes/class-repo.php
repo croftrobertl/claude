@@ -242,6 +242,31 @@ final class Repo
     }
 
     /**
+     * The link a booking already carries, or null.
+     *
+     * A MotoPress booking is one stay. It can be the imported booking of a
+     * platform stay, or a hand-typed copy of one, but never both and never
+     * two of either — linking it twice would have the same nights counted
+     * against two reservations.
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function link_for_booking(int $booking_id): ?array
+    {
+        global $wpdb;
+        $table = Schema::links();
+        $row   = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$table} WHERE mphb_booking_id = %d ORDER BY id LIMIT 1",
+                $booking_id
+            ),
+            ARRAY_A
+        );
+
+        return $row ?: null;
+    }
+
+    /**
      * A stay has at most one import link (code | exact | manual) and any number
      * of 'copy' links to hand-typed direct bookings.
      *
@@ -261,10 +286,10 @@ final class Repo
         if ($method !== 'copy' && self::import_link($stay_id) !== null) {
             return false;
         }
-        foreach (self::links_for_stay($stay_id) as $existing) {
-            if ((int) $existing['mphb_booking_id'] === $booking_id) {
-                return false; // already linked, whatever the method
-            }
+        // One booking, one stay. Already linked anywhere — to this stay or
+        // another — and it is not linked again.
+        if (self::link_for_booking($booking_id) !== null) {
+            return false;
         }
         $table = Schema::links();
         $wpdb->insert($table, [

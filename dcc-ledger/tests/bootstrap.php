@@ -279,6 +279,59 @@ function is_admin(): bool
     return true;
 }
 
+// ------------------------------------------------------------------ WP-CLI
+
+/**
+ * Enough of WP_CLI to run the commands and read what they printed.
+ *
+ * The CLI is how the checklist is worked, so what it prints is part of the
+ * deliverable: live's snapshot run said nothing about Rob's two rulings, and
+ * `cleanup` counted thirteen information items among the things needing a
+ * person. Both were invisible to a suite that never ran the commands.
+ */
+final class WP_CLI
+{
+    /** @var array<int,string> */
+    public static array $lines = [];
+
+    public static function reset(): void
+    {
+        self::$lines = [];
+    }
+
+    /** Everything printed, as one string. */
+    public static function output(): string
+    {
+        return implode("\n", self::$lines);
+    }
+
+    public static function log(string $message): void
+    {
+        self::$lines[] = $message;
+    }
+
+    public static function success(string $message): void
+    {
+        self::$lines[] = 'Success: ' . $message;
+    }
+
+    public static function warning(string $message): void
+    {
+        self::$lines[] = 'Warning: ' . $message;
+    }
+
+    public static function error(string $message): void
+    {
+        self::$lines[] = 'Error: ' . $message;
+        throw new RuntimeException('WP_CLI::error ' . $message);
+    }
+
+    /** @param mixed $callable */
+    public static function add_command(string $name, $callable): void
+    {
+    }
+}
+
 // -------------------------------------------------------------- the plugin
 
 define('DCCL_VERSION', '0.1.0');

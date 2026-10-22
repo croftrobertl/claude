@@ -640,6 +640,64 @@ EOT,
         'from' => '        if ($stay_cottage !== \'\' && $booking_cottage !== \'\' && $stay_cottage !== $booking_cottage) {',
         'to'   => '        if (false) {',
     ],
+    [
+        'name' => 'Only the window rule counted when chasing an unpaid booking',
+        'file' => 'includes/class-issues.php',
+        'from' => <<<'EOT'
+            $assumed = Adjustments::assumed_for((int) $booking_id);
+            $paid    = round((float) $booking['paid'] + (float) ($assumed['amount'] ?? 0), 2);
+EOT,
+        'to'   => <<<'EOT'
+            $paid = round((float) $booking['paid'], 2);
+            foreach (Adjustments::for_booking($booking_id) as $adjustment) {
+                if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
+                    $paid = round($paid + (float) $adjustment['amount'], 2);
+                }
+            }
+EOT,
+    ],
+    [
+        'name' => "Rob's rulings left out of the snapshot's own report",
+        'file' => 'includes/class-cli.php',
+        'from' => <<<'EOT'
+        \WP_CLI::log(sprintf(
+            'Refunds recorded:     %d bookings, $%s',
+            $c['refunds_recorded'],
+            number_format((float) $c['refunds_total'], 2)
+        ));
+EOT,
+        'to'   => '',
+    ],
+    [
+        'name' => 'Information items counted among the things needing a person',
+        'file' => 'includes/class-cli.php',
+        'from' => <<<'EOT'
+            if ((string) ($item['severity'] ?? '') === 'info') {
+                $information[] = $item;
+            } else {
+                $needs_a_person[] = $item;
+            }
+EOT,
+        'to'   => <<<'EOT'
+            $needs_a_person[] = $item;
+EOT,
+    ],
+    [
+        'name' => 'A booking linked to a second stay',
+        'file' => 'includes/class-repo.php',
+        'from' => <<<'EOT'
+        if (self::link_for_booking($booking_id) !== null) {
+            return false;
+        }
+EOT,
+        'to'   => <<<'EOT'
+        foreach (self::links_for_stay($stay_id) as $existing) {
+            if ((int) $existing['mphb_booking_id'] === $booking_id) {
+                return false;
+            }
+        }
+EOT,
+    ],
 ];
 
 $caught = 0;

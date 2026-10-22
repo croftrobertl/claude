@@ -187,3 +187,25 @@ $keys_after = array_column(Issues::all(), 'key');
 T::ok(!in_array('ota_unlinked:airbnb:HMMOVED001', $keys_after, true), 'The unlinked item goes once the copy is confirmed');
 T::ok(in_array('moved:airbnb:HMMOVED001:9011', $keys_after, true), 'And is replaced by the record of the move');
 T::ok(!in_array('unpaid_past:9011', $keys_after, true), 'The copy stops being chased for payment');
+
+T::group('A booking the ledger already treats as settled is not chased');
+
+// Live had all fifteen of Rob's pre-export bookings on the list as unpaid
+// while the ledger was counting them as paid: the item read only the window
+// rule's adjustment type and ignored the pre-export one entirely.
+$settled = array_column(Issues::all(), 'key');
+T::ok(!in_array('unpaid_past:1599', $settled, true), 'A booking assumed paid before the exports is not chased for payment');
+
+DCCL\Adjustments::add([
+    'type'            => DCCL\Adjustments::ASSUMED_REVERSAL,
+    'channel'         => 'direct',
+    'mphb_booking_id' => 1599,
+    'cottage'         => '32',
+    'amount'          => -640.00,
+    'event_date'      => '2024-11-04',
+    'label'           => DCCL\Adjustments::label_for(DCCL\Adjustments::ASSUMED_REVERSAL),
+], null, 1);
+DCCL\Reports::flush_cache();
+
+$after_reversal = array_column(Issues::all(), 'key');
+T::ok(in_array('unpaid_past:1599', $after_reversal, true), 'Reversing the assumption puts it back on the list');

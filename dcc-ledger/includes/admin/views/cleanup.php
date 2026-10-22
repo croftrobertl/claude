@@ -14,8 +14,24 @@ if (!defined('ABSPATH')) {
 }
 
 $items     = Issues::all();
-$open      = array_values(array_filter($items, static fn ($i) => !$i['reviewed']));
+// An information item needs nobody — an iCal block, a stay the exports have
+// not reached yet. Counting them under "Needs A Person" made thirteen pieces
+// of nothing look like work.
+$open      = array_values(array_filter(
+    $items,
+    static fn ($i) => !$i['reviewed'] && (string) $i['severity'] !== 'info'
+));
+$info      = array_values(array_filter(
+    $items,
+    static fn ($i) => !$i['reviewed'] && (string) $i['severity'] === 'info'
+));
 $reviewed  = array_values(array_filter($items, static fn ($i) => $i['reviewed']));
+
+$info_groups = [];
+foreach ($info as $i) {
+    $info_groups[(string) $i['title']] = ($info_groups[(string) $i['title']] ?? 0) + 1;
+}
+ksort($info_groups);
 $invoices  = Issues::invoices();
 $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
 ?>
@@ -27,6 +43,11 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
 <div class="dccl-tiles">
     <?php
     echo Ui::tile(__('Needs A Person', 'dcc-ledger'), Ui::number(count($open)), __('Open cleanup items', 'dcc-ledger'), count($open) > 0 ? 'warn' : 'good');
+    echo Ui::tile(
+        __('For Information', 'dcc-ledger'),
+        Ui::number(count($info)),
+        __('Nothing to do about these', 'dcc-ledger')
+    );
     echo Ui::tile(__('Reviewed', 'dcc-ledger'), Ui::number(count($reviewed)), __('Marked done, with a note', 'dcc-ledger'));
     echo Ui::tile(
         __('Invoices', 'dcc-ledger'),
@@ -52,7 +73,22 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
     <p class="dccl-empty"><?php esc_html_e('Nothing needs a person right now.', 'dcc-ledger'); ?></p>
 <?php endif; ?>
 
-<?php foreach (array_merge($open, $reviewed) as $item) : ?>
+<?php if ($info !== []) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: %d: how many information items there are */
+            esc_html__('%d items below are for information only, and need nothing doing about them:', 'dcc-ledger'),
+            count($info)
+        );
+        ?>
+        <?php foreach ($info_groups as $info_title => $info_count) : ?>
+            <?php echo Ui::chip(sprintf('%s (%d)', $info_title, $info_count)); ?>
+        <?php endforeach; ?>
+    </p>
+<?php endif; ?>
+
+<?php foreach (array_merge($open, $info, $reviewed) as $item) : ?>
     <article class="dccl-issue dccl-issue--<?php echo esc_attr($item['severity']); ?><?php echo $item['reviewed'] ? ' is-reviewed' : ''; ?>">
         <h3 class="dccl-issue__title">
             <?php echo esc_html($item['title']); ?>

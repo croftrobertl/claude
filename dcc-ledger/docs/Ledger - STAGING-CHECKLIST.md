@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.8 — Staging Checklist
+# DCC Ledger 0.1.9 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -49,6 +49,30 @@
 
 Run every step on staging. Nothing goes to live until Rob has read the reports
 on staging and said yes.
+
+> **Upgrading live from 0.1.8 to 0.1.9.** This one fixes four things and
+> writes nothing of its own. Deactivate, upload `Ledger 0.1.9.zip`, activate,
+> and check nothing moved:
+>
+>     P=$(wp db prefix)
+>     wp db query "SELECT COUNT(*) FROM ${P}dcc_ledger_links"      # 136
+>     wp db query "SELECT COUNT(*) FROM ${P}dcc_ledger_reviews"    # 15
+>     wp db query "SELECT type, COUNT(*), SUM(amount) FROM ${P}dcc_ledger_adjustments GROUP BY type"
+>
+> The three adjustment types should read 38 / $60,348.22, 15 / $35,333.00 and
+> 3 / −$860.25, exactly as 0.1.8 left them. Then:
+>
+> - [ ] `wp dcc-ledger cleanup` ends with **0 items need a person**, and
+>       prints "For information only (13)" with the blocks and
+>       After The Latest Export grouped under it.
+> - [ ] The Cleanup tab agrees: Needs A Person 0, For Information 13.
+> - [ ] None of the fifteen pre-export bookings is listed as unpaid any more.
+> - [ ] `wp dcc-ledger snapshot --dry-run` now prints **Assumed
+>       pre-exports** and **Refunds recorded** among its figures, and
+>       reports 0 new and 0 changed bookings.
+> - [ ] On any by-number field, type a booking that is already linked — say
+>       19664. It is refused by name: "already linked to Booking.com
+>       6254502394". Nothing is written.
 
 > **Upgrading live from 0.1.7 to 0.1.8.** Live holds batches 1–8 plus the
 > links and reviews from 2026-10-21. An upgrade adds columns and never
@@ -366,13 +390,21 @@ columns — see the note at the top of this file for what to check afterwards.
 
 ## 11. The 0.1.8 upgrade on live — Rob's rulings of 2026-10-21
 
-Do this after the upgrade check at the top of this file.
+Done on 2026-10-21, after staging. Links 136 and reviews 15 before and after,
+unchanged. The rulings went in as **batch 9**: 15 bookings assumed before the
+exports totalling $35,333.00, and 3 refunds totalling −$860.25, with 0 new and
+0 changed bookings. MotoPress still 428 bookings and 95 payments, no
+`_dcc_assumed_paid`. 19667 was linked to Booking.com 5722711078 as a copy and
+all three of its items cleared. Validation refused 7983 (wrong cottage) and
+999999 (no such booking). For the record, what was checked:
 
-- [ ] Back up live first, as always.
-- [ ] `wp dcc-ledger snapshot --dry-run` reports 15 assumed before the
+- [x] Back up live first, as always.
+- [x] `wp dcc-ledger snapshot --dry-run` reports 15 assumed before the
       exports totalling $35,333.00, and 3 refunds totalling −$860.25. It
       should report 0 new bookings and 0 new payments — nothing in MotoPress
-      has changed.
+      has changed. **In 0.1.8 the command worked these out and did not print
+      them**, so on the day they were read from `Snapshot::run(true)`
+      directly; 0.1.9 prints both lines.
 - [ ] Run it for real. The Imports tab shows a new batch; undoing it removes
       exactly those 18 corrections and nothing else.
 - [ ] The Imports tab now shows four figures side by side: Assumed Payments
@@ -399,3 +431,17 @@ Do this after the upgrade check at the top of this file.
       2026-10-22 onwards and will match themselves on the next import.
 - [ ] MotoPress is still **428 bookings and 95 payments**, with no
       `_dcc_assumed_paid` anywhere.
+
+## 12. The 0.1.9 upgrade on live — four fixes, nothing written
+
+0.1.9 adds no rows of its own. Everything to check is at the top of this file,
+under "Upgrading live from 0.1.8 to 0.1.9". For the record, what changed:
+
+- The fifteen pre-export bookings are no longer chased as unpaid. If you ever
+  reverse one of those assumptions, its item comes back — that is deliberate.
+- `wp dcc-ledger snapshot` prints the two rulings it applied. Step 11's
+  figures can now be read straight off the command, as that step always said.
+- `wp dcc-ledger cleanup` and the Cleanup tab both count only what needs a
+  person. Information items are grouped under their own heading.
+- A booking already linked to a stay cannot be linked to a second one, by
+  number or by any other path.

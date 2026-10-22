@@ -5,9 +5,12 @@ Calendar; this file governs this folder.
 
 ## Live since 2026-10-21
 
-Installed on doracanalcourt.com from 0.1.6: batches 1–7 are the platform
-exports, batch 8 the MotoPress snapshot. 38 bookings assumed paid,
-$60,348.22. Any release from here is an upgrade over live data.
+Installed on doracanalcourt.com from 0.1.6 and upgraded to 0.1.8 the same
+day: batches 1–7 are the platform exports, batch 8 the MotoPress snapshot,
+batch 9 Rob's rulings. The adjustments table reads assumed_paid 38 /
+$60,348.22, assumed_paid_pre_exports 15 / $35,333.00, refund_not_recorded
+3 / −$860.25. 136 links, 15 reviews, and MotoPress still at 428 bookings and
+95 payments. Any release from here is an upgrade over live data.
 
 ## Branch rule
 
@@ -131,6 +134,25 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   words in `Mphb_Reader::BLOCK_WORDS` are patterns accepted if they appear —
   nobody has shown me a real Vrbo or Booking.com block. Getting one wrong
   costs nothing: an unrecognised block is raised as a question, as before.
+- **One booking carries one link.** A MotoPress booking is one stay: it can
+  be a platform stay's imported booking, or a hand-typed copy of one, never
+  both and never two of either. `Repo::link()` refuses a booking that already
+  has a link anywhere, and `Linker::why_not_linkable()` names the stay it is
+  already linked to. Before 0.1.9 only the same pair was refused, so a
+  by-number link could count one booking's nights against two reservations.
+- **An information item is not work.** A block, or a stay the exports have
+  not reached yet, needs nobody. Both the Cleanup tab and
+  `wp dcc-ledger cleanup` count them apart and list them under their own
+  heading; live read "28 items need a person" when 13 of them needed none.
+- **Whatever assumption stands counts as paid.** `unpaid_past` reads
+  `Adjustments::assumed_for()`, which covers both positive assumption types
+  and returns nothing once one has been reversed. Reading a single type left
+  all fifteen pre-export bookings on the list as unpaid while the ledger was
+  already treating them as settled.
+- **What the CLI prints is a deliverable.** The checklist is worked from
+  these commands, so a figure the snapshot computes and does not print is a
+  defect; `tests/test-cli.php` runs the commands against a stubbed `WP_CLI`
+  and reads the output.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -239,8 +261,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 867 assertions
-    php dcc-ledger/tests/mutations.php            # 55 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 889 assertions
+    php dcc-ledger/tests/mutations.php            # 59 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
 
@@ -275,6 +297,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.8.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.1.9.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

@@ -138,6 +138,14 @@ their own again at once; nothing was copied or deleted, only linked. The
 cleanup item the link cleared comes back, because it is worked out fresh each
 time the list is drawn.
 
+## If a booking should be linked somewhere else
+
+A booking carries one link, so the ledger refuses a second one rather than
+choosing between them. To move a link, remove the existing one on the Stays
+tab first, then make the new one. Nothing is lost in between: both the
+platform stay and the booking simply count on their own until the new link is
+made, and any cleanup item that the old link cleared comes back while they do.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

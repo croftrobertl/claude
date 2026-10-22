@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.8
+Stable tag: 0.1.9
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,13 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.1.9 =
+* The fifteen bookings assumed paid before the exports were still being chased as unpaid. The cleanup item counted only the window rule's adjustment; it now counts whatever assumption stands against the booking, and puts the item back if that assumption is reversed.
+* `wp dcc-ledger snapshot` prints the two rulings it applied — the pre-export assumptions and the refunds — instead of working them out silently.
+* `wp dcc-ledger cleanup` counts only what needs a person. Information items are listed under their own heading with their own count.
+* The Cleanup tab had the same fault: its "Needs A Person" tile counted the information items too. They now have a tile and a heading of their own.
+* A MotoPress booking can carry one link, not two. Linking a booking that already answers for another stay is refused by name, and the link itself refuses it as well as the check in front of it.
 
 = 0.1.8 =
 * Rob's rulings of 2026-10-21, each written as a recorded, undoable batch and none of them touching MotoPress.

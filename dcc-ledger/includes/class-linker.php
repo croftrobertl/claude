@@ -287,6 +287,35 @@ final class Linker
             );
         }
 
+        // A booking is one stay. If it already answers for another, linking
+        // it here would count the same nights against two reservations —
+        // and would quietly make whichever is wrong invisible.
+        $existing = Repo::link_for_booking($booking_id);
+        if ($existing !== null) {
+            $other = Repo::stay_by_id((int) $existing['stay_id']);
+            if ((int) $existing['stay_id'] === $stay_id) {
+                return sprintf(
+                    /* translators: %d: booking id */
+                    __('MotoPress booking #%d is already linked to this stay.', 'dcc-ledger'),
+                    $booking_id
+                );
+            }
+
+            return $other === null
+                ? sprintf(
+                    /* translators: %d: booking id */
+                    __('MotoPress booking #%d is already linked to another stay.', 'dcc-ledger'),
+                    $booking_id
+                )
+                : sprintf(
+                    /* translators: 1: booking id, 2: channel, 3: reservation code */
+                    __('MotoPress booking #%1$d is already linked to %2$s %3$s.', 'dcc-ledger'),
+                    $booking_id,
+                    Cottages::channel_label((string) $other['channel']),
+                    (string) $other['code']
+                );
+        }
+
         $stay_cottage    = (string) ($stay['cottage'] ?? '');
         $booking_cottage = (string) ($booking['cottage'] ?? '');
         if ($stay_cottage !== '' && $booking_cottage !== '' && $stay_cottage !== $booking_cottage) {
