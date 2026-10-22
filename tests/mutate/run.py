@@ -81,6 +81,8 @@ SUITES = {
     'audit':        ('php',  'tests/audit/run.php'),
     'minify':       ('php',  'tests/minify/run.php'),
     'layout':       ('php',  'tests/layout/run.php'),
+    'hero':         ('php',  'tests/hero/run.php'),
+    'hero-browser': ('node', 'tests/hero/browser.js'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

@@ -256,6 +256,52 @@ final class Checkout_Request
     }
 
     /**
+     * The stay's check-in and check-out as timestamps, or null (v0.35.0, for
+     * the hero's dates pill and the Continue card). Public because the
+     * layout needs the same two values the backstops already read.
+     *
+     * @return array{0:?int,1:?int}
+     */
+    public static function stay_dates(): array
+    {
+        return [
+            self::posted_date(['check_in_date', 'mphb_check_in_date']),
+            self::posted_date(['check_out_date', 'mphb_check_out_date']),
+        ];
+    }
+
+    /**
+     * The accommodation this checkout is FOR, as the cottage page sends it
+     * (v0.35.0).
+     *
+     * `room_type_ids()` walks the room DETAILS, which is what a submitted
+     * booking carries. The request that RENDERS /submit-booking/ carries the
+     * five fields the cottage page posts, and the accommodation is a
+     * top-level `mphb_room_type_id` there — so the hero and the Continue card
+     * would read nothing from room_type_ids() alone. Both are tried, the
+     * top-level first, because that is the one the render path has.
+     */
+    public static function posted_room_type_id(): int
+    {
+        foreach (['room_type_id', 'mphb_room_type_id'] as $key) {
+            if (self::$payload !== null) {
+                $value = self::$payload[$key] ?? '';
+            } else {
+                $value = isset($_POST[$key]) ? wp_unslash($_POST[$key]) : ''; // phpcs:ignore WordPress.Security
+            }
+            if (is_scalar($value) && (int) $value > 0) {
+                return (int) $value;
+            }
+        }
+        foreach (self::room_type_ids() as $id) {
+            if ((int) $id > 0) {
+                return (int) $id;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Parse a Y-m-d date field (first matching key) into a UTC timestamp.
      *
      * @param string[] $keys

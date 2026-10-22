@@ -15,6 +15,12 @@ final class Assets
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
 
+        // v0.35.0 — the new layout's own marker class. EVERY selector in
+        // checkout-layout.css is written under `.dcc_layout`, so the class and
+        // the stylesheet are switched by the same gate and neither can style a
+        // guest who is still on today's checkout.
+        add_filter('body_class', [$this, 'body_class']);
+
         // 2026-08-30 polish, item 1: MotoPress's "Accommodation Type:" label
         // (rendered on the checkout as the accommodation row heading) becomes
         // "Accommodation:". Filtered on the msgid, so the site's Loco Translate
@@ -289,6 +295,20 @@ final class Assets
         return DCC_CHECKOUT_URL . $relative;
     }
 
+    /**
+     * `dcc_layout` on <body>, on the checkout, for the new layout only.
+     *
+     * @param mixed $classes
+     * @return mixed
+     */
+    public function body_class($classes)
+    {
+        if (is_array($classes) && self::is_checkout_page() && Layout::active()) {
+            $classes[] = 'dcc_layout';
+        }
+        return $classes;
+    }
+
     public function enqueue(): void
     {
         if (!self::is_checkout_page()) {
@@ -301,6 +321,18 @@ final class Assets
             [],
             DCC_CHECKOUT_VERSION
         );
+
+        // v0.35.0 — the new layout, for whoever this request is for. AFTER
+        // checkout.css, which still owns the fields, the buttons and the
+        // breakdown; this adds what is new.
+        if (Layout::active()) {
+            wp_enqueue_style(
+                'dcc-checkout-layout',
+                self::asset_url('assets/checkout-layout.css'),
+                ['dcc-checkout'],
+                DCC_CHECKOUT_VERSION
+            );
+        }
 
         // v0.34.1 — the guest-count script (the price questions and the
         // chooser's message) is shared with Add New Booking; it must run

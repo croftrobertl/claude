@@ -44,6 +44,11 @@ final class Plugin
         // Front-end: conditional CSS/JS on the checkout page only.
         (new Assets())->register();
 
+        // v0.35.0 — the cottage photo at the top of the checkout, in place of
+        // the theme's canal banner. New layout only; it decides for itself on
+        // `wp`, once the page and the gate are both known.
+        (new Hero())->register();
+
         // Server-side backstops (cannot be bypassed by editing the DOM).
         (new Guest_Fields())->register();
         (new Pet_Service())->register();

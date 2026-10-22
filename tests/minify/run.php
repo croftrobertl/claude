@@ -43,7 +43,7 @@ function run(array $cmd, &$code = null): string {
 }
 
 /** The guest-facing assets, and what the builder is expected to cover. */
-const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'guest-count.js', 'select-list.js'];
+const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'checkout-layout.css', 'guest-count.js', 'select-list.js'];
 
 /* --- Build from the CURRENT sources, into a directory of our own. The
    structural checks below read THAT, not the shipped files: they are
@@ -142,24 +142,28 @@ $urls = static function (int $debug, int $missing = 0, int $force = 0) use ($roo
 check('with SCRIPT_DEBUG off, every guest asset is the built one', $urls(0), [
     'assets/checkout.js'     => 'checkout.min.js',
     'assets/checkout.css'    => 'checkout.min.css',
+    'assets/checkout-layout.css' => 'checkout-layout.min.css',
     'assets/guest-count.js'  => 'guest-count.min.js',
     'assets/select-list.js'  => 'select-list.min.js',
 ]);
 check('with SCRIPT_DEBUG on, every guest asset is the source', $urls(1), [
     'assets/checkout.js'     => 'checkout.js',
     'assets/checkout.css'    => 'checkout.css',
+    'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
 ]);
 check('a plugin folder with no built files serves the sources, not a 404', $urls(0, 1), [
     'assets/checkout.js'     => 'checkout.js',
     'assets/checkout.css'    => 'checkout.css',
+    'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
 ]);
 check('and a site can insist on the sources through the filter', $urls(0, 0, 1), [
     'assets/checkout.js'     => 'checkout.js',
     'assets/checkout.css'    => 'checkout.css',
+    'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
 ]);

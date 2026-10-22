@@ -4493,5 +4493,183 @@
   "find": "            return bin2hex(random_bytes(16));",
   "replace": "            return str_repeat('ab', 16);",
   "count": 1
+ },
+ {
+  "id": "hero-always-on",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: the cottage photo replaces the banner ONLY for the new layout",
+  "find": "        if (!Layout::active() || !Assets::is_checkout_page()) {",
+  "replace": "        if (!Assets::is_checkout_page()) {",
+  "count": 1
+ },
+ {
+  "id": "hero-any-page",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: only the checkout page's header image is replaced",
+  "find": "        if (!Layout::active() || !Assets::is_checkout_page()) {",
+  "replace": "        if (!Layout::active()) {",
+  "count": 1
+ },
+ {
+  "id": "hero-full-original",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: never the megabyte original when a registered size exists",
+  "find": "    private const CANDIDATES = ['large', '1536x1536', 'medium_large', 'full'];",
+  "replace": "    private const CANDIDATES = ['full'];",
+  "count": 1
+ },
+ {
+  "id": "hero-widest-chosen",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: the NARROWEST size at or above the floor, not the widest",
+  "find": "                && ($best === null || $candidate['width'] < $best['width'])) {",
+  "replace": "                && ($best === null || $candidate['width'] > $best['width'])) {",
+  "count": 1
+ },
+ {
+  "id": "hero-no-small-fallback",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: a cottage whose original is under 1024 wide still gets its photo",
+  "find": "        return $best ?? $widest ?? $none;",
+  "replace": "        return $best ?? $none;",
+  "count": 1
+ },
+ {
+  "id": "hero-no-preload",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: the photo is asked for early (a CSS background cannot carry fetchpriority)",
+  "find": "        add_action('wp_head', [$this, 'print_preload'], 2);",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "hero-subtitle-invented",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: nothing is put on the photo that the cottage's own data did not say",
+  "find": "        if ($label !== '') {\n            printf('<p class=\"dcc_hero-overlay__label\">%s</p>', esc_html($label));",
+  "replace": "        if (true) {\n            printf('<p class=\"dcc_hero-overlay__label\">%s</p>', esc_html($label . ' · Studio · 1 Queen'));",
+  "count": 1
+ },
+ {
+  "id": "hero-body-class-ungated",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: today's checkout is never marked with the new layout's class",
+  "find": "        if (is_array($classes) && self::is_checkout_page() && Layout::active()) {",
+  "replace": "        if (is_array($classes) && self::is_checkout_page()) {",
+  "count": 1
+ },
+ {
+  "id": "css-lip-outside-header",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero",
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the lip is drawn INSIDE the header photo, where no ancestor clips it",
+  "find": ".dcc_layout #header-image-main-inside::after {",
+  "replace": ".dcc_layout article.hentry::before {",
+  "count": 1
+ },
+ {
+  "id": "css-lip-height",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero",
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the lip is 24px tall",
+  "find": "    --dcc-lip-height: 24px;",
+  "replace": "    --dcc-lip-height: 0px;",
+  "count": 1
+ },
+ {
+  "id": "css-lip-square",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the lip is the sheet's ROUNDED top",
+  "find": "    border-top-left-radius: var(--dcc-lip-radius);",
+  "replace": "    border-top-left-radius: 0;",
+  "count": 1
+ },
+ {
+  "id": "css-overlay-fills",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the overlay is a scrim; the mu-plugin's height:100% must not paint over the photo",
+  "find": "    background-image: linear-gradient(\n        to bottom,\n        rgba(0, 0, 0, 0) 45%,\n        rgba(0, 0, 0, 0.55) 100%\n    );",
+  "replace": "    background-color: #fff;",
+  "count": 1
+ },
+ {
+  "id": "css-overlay-eats-taps",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the full-height overlay never takes a tap from the page",
+  "find": "    );\n    pointer-events: none;\n}\n\n.dcc_layout .dcc_hero-overlay__inner {",
+  "replace": "    );\n}\n\n.dcc_layout .dcc_hero-overlay__inner {",
+  "count": 1
+ },
+ {
+  "id": "css-overlay-over-lip",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0: the cottage name is not cut by the lip's white strip",
+  "find": "    padding: 0 20px calc(var(--dcc-lip-height) + 20px);",
+  "replace": "    padding: 0 20px 0;",
+  "count": 1
+ },
+ {
+  "id": "hero-style-ungated",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.35.0: the new layout's stylesheet reaches nobody while the layout is off",
+  "find": "        if (Layout::active()) {\n            wp_enqueue_style(\n                'dcc-checkout-layout',",
+  "replace": "        if (true) {\n            wp_enqueue_style(\n                'dcc-checkout-layout',",
+  "count": 1
+ },
+ {
+  "id": "hero-style-before-checkout",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.35.0: the layout stylesheet loads AFTER checkout.css, which still owns the fields",
+  "find": "                self::asset_url('assets/checkout-layout.css'),\n                ['dcc-checkout'],",
+  "replace": "                self::asset_url('assets/checkout-layout.css'),\n                [],",
+  "count": 1
  }
 ]

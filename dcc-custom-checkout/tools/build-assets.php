@@ -46,6 +46,7 @@ foreach ($argv as $arg) {
 $targets = [
     'assets/checkout.js',
     'assets/checkout.css',
+    'assets/checkout-layout.css',
     'assets/guest-count.js',
     'assets/select-list.js',
 ];

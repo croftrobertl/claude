@@ -30,7 +30,7 @@ function wp_enqueue_script($h, $src = '', $deps = [], $ver = false, $footer = fa
     $GLOBALS['scripts'][$h] = ['src' => $src, 'deps' => $deps, 'footer' => $footer];
 }
 function wp_enqueue_style($h = '', $src = '', $deps = [], $ver = false, $media = 'all') {
-    $GLOBALS['styles'][$h] = ['src' => $src];
+    $GLOBALS['styles'][$h] = ['src' => $src, 'deps' => $deps];
 }
 function wp_localize_script($h, $name, $data) { $GLOBALS['localized'][$h] = [$name, $data]; return true; }
 function wp_script_is($h, $list = 'enqueued') { return isset($GLOBALS['scripts'][$h]); }
@@ -47,6 +47,9 @@ if (!defined('DCC_CHECKOUT_VERSION')) { define('DCC_CHECKOUT_VERSION', 'test'); 
 
 // Assets carries asset_url(), which Guest_Count_Script calls (v0.34.2). In
 // WordPress the autoloader resolves that; here the order is explicit.
+// v0.35.0 — Assets::enqueue() asks Layout whether this request gets the new
+// layout's stylesheet, so the gate has to be loadable here too.
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-guest-count-script.php';
 
@@ -113,6 +116,9 @@ $GLOBALS['scripts'] = []; $GLOBALS['localized'] = []; $_GET = [];
 $GLOBALS['is_admin'] = false;
 $GLOBALS['can'] = false;   // a guest
 $GLOBALS['filters']['dcc_checkout_is_checkout_page'] = true;
+// v0.35.0 — Assets::enqueue() asks Layout whether this request gets the new
+// layout's stylesheet, so the gate has to be loadable here too.
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 (new \DCC_Checkout\Assets())->enqueue();
 check('The checkout: checkout.js loads (guard)', isset($GLOBALS['scripts']['dcc-checkout']), true);
@@ -130,6 +136,22 @@ check('The checkout: select-list.js (0.34.1, the site\'s own dropdown list) in t
      $GLOBALS['scripts']['dcc-checkout-select-list']['deps'] ?? null], [true, true, ['dcc-checkout']]);
 check('The checkout: a guest is not told it is an administrator',
     $GLOBALS['localized'][H][1]['isAdmin'] ?? null, '');
+
+// v0.35.0 — THE NEW LAYOUT'S STYLESHEET FOLLOWS THE GATE. With the switch off
+// and no preview cookie, a guest downloads exactly what 0.34.2 served.
+check('The checkout: the new layout\'s stylesheet is NOT served while the layout is off',
+    isset($GLOBALS['styles']['dcc-checkout-layout']), false);
+
+// And with the switch on, it is — after checkout.css, built like the rest.
+$GLOBALS['styles'] = [];
+$GLOBALS['opt']['dcc_checkout_settings']['layout_enabled'] = 1;
+\DCC_Checkout\Config::flush_cache();
+\DCC_Checkout\Layout::flush();
+(new \DCC_Checkout\Assets())->enqueue();
+check('The checkout: with the layout on, its stylesheet loads after checkout.css, built',
+    [basename($GLOBALS['styles']['dcc-checkout-layout']['src'] ?? ''),
+     $GLOBALS['styles']['dcc-checkout-layout']['deps'] ?? null],
+    ['checkout-layout.min.css', ['dcc-checkout']]);
 
 echo $fail ? "\n$fail failing\n" : "\nall passing ($pass)\n";
 exit($fail ? 1 : 0);

@@ -1,0 +1,154 @@
+/**
+ * v0.35.0 — THE NEW /submit-booking/ LAYOUT. Loaded only when Layout::active()
+ * says this request gets it, so today's checkout stays byte-identical for every
+ * other guest. checkout.css loads first and still owns the fields, the buttons
+ * and the breakdown; this file adds what is new and overrides nothing it does
+ * not have to.
+ *
+ * -----------------------------------------------------------------------------
+ * ITEM 1 — THE COTTAGE PHOTO AND THE LIP (pictures 6 and 7)
+ * -----------------------------------------------------------------------------
+ *
+ * The photo itself is not styled here. class-hero.php filters the THEME's own
+ * `bravada_header_image_url`, so Bravada paints the cottage in the box it
+ * already owns — one photo, nothing stacked, no `!important` background
+ * override of the kind /explore/ uses.
+ *
+ * THE BOX IS THE DIRECTOR'S, NOT OURS. The mu-plugin `dcc-hero-frame.php`
+ * sizes `#header-image-main` / `#header-image-main-inside` to
+ * `clamp(420px, 29vw, 720px)` and forces every child div of the inside box to
+ * `height: 100% !important`. This file works WITH those rules rather than
+ * against them:
+ *
+ *   - The overlay IS such a child div, so it is going to be full height
+ *     whatever it asks for. It therefore says `inset: 0` and lays its content
+ *     out with flexbox, which means the mu-plugin's height and this file agree
+ *     instead of fighting.
+ *
+ *   - THE LIP IS A PSEUDO-ELEMENT, AND THAT IS NOT A STYLE CHOICE. A <div>
+ *     lip directly inside that box would be stretched to `height: 100%` and
+ *     paint the whole photo white. `::after` is not a child div, so the rule
+ *     does not reach it, and the same mu-plugin already gives the box
+ *     `position: relative; overflow: hidden` — exactly what an ::after needs.
+ *     Drawn OUTSIDE the header it would be clipped by `overflow: hidden` on
+ *     `main.main` and `div.one-column` and never seen at all. There is a test
+ *     for its height; keep it.
+ */
+
+.dcc_layout {
+    /* The lip's height is read by the test and by the sheet's top offset, so
+       it is declared once, here, and never retyped. */
+    --dcc-lip-height: 24px;
+    --dcc-lip-radius: 24px;
+}
+
+/* --------------------------------------------------------------------------
+ * The lip: the sheet's rounded top, drawn inside the bottom of the photo.
+ * -------------------------------------------------------------------------- */
+
+.dcc_layout #header-image-main-inside::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--dcc-lip-height);
+    /* The page's own ground, so the lip and the sheet below it are one
+       surface with no seam. */
+    background-color: #fff;
+    border-top-left-radius: var(--dcc-lip-radius);
+    border-top-right-radius: var(--dcc-lip-radius);
+    /* Above the photo and the theme's #header-overlay, below nothing. */
+    z-index: 3;
+    /* The grab line (picture 7): a 40x4 rounded bar, centred. An inline SVG
+       rather than a gradient because a gradient cannot have round ends. */
+    background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="4"%3E%3Crect width="40" height="4" rx="2" fill="%23d4d8dd"/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: 50% 10px;
+    pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * The overlay: cottage name, cottage number, dates pill. Nothing else goes
+ * on the photo (Rob, 2026-10-22) — no animation, no drawn decoration.
+ * -------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    /* Clear of the lip, so no text is cut by its white strip. */
+    padding: 0 20px calc(var(--dcc-lip-height) + 20px);
+    z-index: 2;
+    /* Legibility, not decoration: the cottage photos are bright and the name
+       has to be readable on all eight of them without touching the picture
+       itself. */
+    background-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 45%,
+        rgba(0, 0, 0, 0.55) 100%
+    );
+    pointer-events: none;
+}
+
+.dcc_layout .dcc_hero-overlay__inner {
+    max-width: 44rem;
+}
+
+.dcc_layout .dcc_hero-overlay p {
+    margin: 0;
+    color: #fff;
+    /* The site face, not the theme's header face. */
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.dcc_layout .dcc_hero-overlay__name {
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.dcc_layout .dcc_hero-overlay__label {
+    margin-top: 4px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+}
+
+/* The frosted pill with the dates and the night count. */
+.dcc_layout .dcc_hero-overlay__dates {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 14px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    /* A progressive nicety: where it is unsupported the pill is simply a
+       translucent panel, which is already legible over the scrim. */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 900px) {
+    .dcc_layout .dcc_hero-overlay {
+        padding: 0 40px calc(var(--dcc-lip-height) + 32px);
+    }
+    .dcc_layout .dcc_hero-overlay__inner {
+        margin: 0 auto;
+        width: 100%;
+        max-width: 1100px;
+    }
+    .dcc_layout .dcc_hero-overlay__name {
+        font-size: 38px;
+    }
+}
+
+/* The theme's 0px-tall <img class="header-image"> stays as the theme draws it;
+   it is the preload's companion request and must not be given a size here. */

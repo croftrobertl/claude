@@ -72,6 +72,7 @@ class WP_Error {
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 
 use DCC_Checkout\Assets;
