@@ -52,7 +52,17 @@ function check(name, actual, expected) {
 
 /* The theme's header, the mu-plugin's rules, and the page's clipping. */
 const page_html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>checkout</title>
+<html><head><meta charset="utf-8">
+<!-- THE VIEWPORT META IS LOAD-BEARING IN THIS FIXTURE, not boilerplate.
+     Without it, Chromium in mobile emulation lays the page out at 980px and
+     scales it down, so '@media (min-width: 900px)' matches AT 360 AND 390 and
+     every "phone" measurement is really the desktop branch. This fixture had
+     no meta at first and the 360/390 columns were silently duplicating 1280 —
+     caught by mutation css-overlay-over-lip, which changed the phone padding
+     and nothing noticed. The live page carries this meta (the theme prints
+     it), so this is also what a guest gets. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>checkout</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Raleway, sans-serif; background: #fff; }
@@ -206,6 +216,11 @@ ${CSS}
             m.innerLeft >= 0, true);
 
         /* No horizontal overflow at any width. */
+        /* THE GUARD ON THE MEASUREMENTS ABOVE: this really is a phone-width
+           layout, not a 980px one scaled down. */
+        check(at('the layout width is the viewport width (the viewport meta is in force)'),
+            m.boxWidth, width);
+
         check(at('the page does not scroll sideways'),
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
             true);
