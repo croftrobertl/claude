@@ -45,6 +45,20 @@ final class Hero
     public const PRINT_HOOK = 'cryout_headerimage_hook';
 
     /**
+     * The theme's own page title, which is also on that hook — at priority
+     * 100 (Director, `core.php:210`, read on the server 2026-10-22).
+     *
+     * On /submit-booking/ it prints `#header-page-title` reading "Submit
+     * Booking" OVER the photo, which would sit on top of the cottage name and
+     * the dates pill. Rob's picked design shows the cottage name and nothing
+     * else, so with the new layout active the ACTION IS REMOVED rather than
+     * the box hidden in CSS: a hidden heading is still a heading to a screen
+     * reader, and this one would be the wrong one.
+     */
+    public const THEME_TITLE = 'bravada_header_title';
+    public const THEME_TITLE_PRIORITY = 100;
+
+    /**
      * Registered sizes to choose between, widest-useful first.
      *
      * The filter returns ONE url into a CSS background, so there is no srcset
@@ -73,8 +87,16 @@ final class Hero
         add_filter(self::URL_FILTER, [$this, 'filter_header_image_url'], 20);
         add_action('wp_head', [$this, 'print_preload'], 2);
         // After the theme's own 99, so this lands as the last child of
-        // #header-image-main-inside rather than before the photo.
+        // #header-image-main-inside rather than before the photo. CONFIRMED on
+        // the server: header.php:85-89 calls cryout_headerimage_hook() inside
+        // that div, and bravada_header_image is at 99 (Director, 2026-10-22).
         add_action(self::PRINT_HOOK, [$this, 'print_overlay'], 100);
+
+        // AND THE THEME'S "Submit Booking" TITLE GOES. It is on the same hook
+        // at the same priority, and would print over the cottage name. The
+        // overlay's name becomes the page's single <h1> in its place, so the
+        // page is not left with no main heading.
+        remove_action(self::PRINT_HOOK, self::THEME_TITLE, self::THEME_TITLE_PRIORITY);
     }
 
     /**
@@ -121,7 +143,11 @@ final class Hero
 
         echo '<div class="dcc_hero-overlay"><div class="dcc_hero-overlay__inner">';
         if ($name !== '') {
-            printf('<p class="dcc_hero-overlay__name">%s</p>', esc_html($name));
+            /* AN <h1>, AND THE PAGE'S ONLY ONE. The theme's own title has been
+               removed above, so without this the page would have no main
+               heading at all — which is what a screen reader navigates by.
+               Centred, per Rob's standing rule for titles. */
+            printf('<h1 class="dcc_hero-overlay__name">%s</h1>', esc_html($name));
         }
         if ($label !== '') {
             printf('<p class="dcc_hero-overlay__label">%s</p>', esc_html($label));
@@ -207,7 +233,62 @@ final class Hero
             }
         }
 
-        return $best ?? $widest ?? $none;
+        $chosen = $best ?? $widest ?? $none;
+        if ($chosen['url'] !== '') {
+            $chosen['url'] = self::prefer_webp($attachment, $chosen['url']);
+        }
+        return $chosen;
+    }
+
+    /**
+     * THE WEBP TWIN, WHEN THERE IS ONE (Director, live, 2026-10-22).
+     *
+     * Every sized file on this site has a `.webp` beside it with the extension
+     * SWAPPED — `…-1024x768.jpg` next to `…-1024x768.webp` — and that URL is
+     * served as `200 image/webp`. The `…jpg.webp` form 404s, which is why this
+     * swaps rather than appends.
+     *
+     * WHY THIS PLUGIN HAS TO DO IT: the chosen URL goes into a CSS background
+     * and a preload link, and SpeedyCache's rewriting only touches `<img>`
+     * elements — so nothing else on the page would ever serve the twin here.
+     * It is the difference between 128 KB and 53 KB on Cottage 34, and between
+     * 236 KB and 86 KB on portrait Cottage 36, on the one request that blocks
+     * the top of the page.
+     *
+     * The file is checked on DISK, not guessed from the name: a twin that does
+     * not exist would be a broken header, and the JPEG always does.
+     */
+    public static function prefer_webp(int $attachment, string $url): string
+    {
+        if ($url === '' || $attachment <= 0) {
+            return $url;
+        }
+        if (!preg_match('/\.(jpe?g|png)$/i', $url)) {
+            return $url; // already a webp, or something this does not know
+        }
+        if (!function_exists('get_attached_file')) {
+            return $url;
+        }
+
+        $original = get_attached_file($attachment);
+        if (!is_string($original) || $original === '') {
+            return $url;
+        }
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $file = basename($path);
+        if ($file === '') {
+            return $url;
+        }
+        $twin = (string) preg_replace('/\.(jpe?g|png)$/i', '.webp', $file);
+        if ($twin === '' || $twin === $file) {
+            return $url;
+        }
+        /* The sized files sit beside the original, which is the only path
+           WordPress will tell us without guessing at the uploads layout. */
+        if (!file_exists(dirname($original) . '/' . $twin)) {
+            return $url;
+        }
+        return (string) preg_replace('/\.(jpe?g|png)$/i', '.webp', $url);
     }
 
     /**

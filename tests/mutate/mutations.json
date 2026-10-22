@@ -5598,5 +5598,129 @@
   "find": "            'field'  => Id_Files::META_KEY,",
   "replace": "            'field'  => 'mphb_photo_id',",
   "count": 1
+ },
+ {
+  "id": "hero-theme-title-kept",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero",
+   "hero-browser"
+  ],
+  "claim": "0.35.0 item 1: the theme's \"Submit Booking\" title is removed, not left over the photo",
+  "find": "        remove_action(self::PRINT_HOOK, self::THEME_TITLE, self::THEME_TITLE_PRIORITY);",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "hero-title-removed-always",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0 item 1: the theme keeps its title when the new layout is off",
+  "find": "        if (!Layout::active() || !Assets::is_checkout_page()) {\n            return;\n        }\n        if ($this->photo_url() === '') {",
+  "replace": "        if (!Assets::is_checkout_page()) {\n            remove_action(self::PRINT_HOOK, self::THEME_TITLE, self::THEME_TITLE_PRIORITY);\n            return;\n        }\n        if ($this->photo_url() === '') {",
+  "count": 1
+ },
+ {
+  "id": "hero-name-not-h1",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero",
+   "hero-browser"
+  ],
+  "claim": "0.35.0 item 1: the cottage name is the page's single <h1>",
+  "find": "            printf('<h1 class=\"dcc_hero-overlay__name\">%s</h1>', esc_html($name));",
+  "replace": "            printf('<p class=\"dcc_hero-overlay__name\">%s</p>', esc_html($name));",
+  "count": 1
+ },
+ {
+  "id": "hero-two-h1s",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero",
+   "hero-browser"
+  ],
+  "claim": "0.35.0 item 1: there is exactly ONE h1 on the page",
+  "find": "            printf('<p class=\"dcc_hero-overlay__label\">%s</p>', esc_html($label));",
+  "replace": "            printf('<h1 class=\"dcc_hero-overlay__label\">%s</h1>', esc_html($label));",
+  "count": 1
+ },
+ {
+  "id": "hero-no-webp",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0 item 1: the WebP twin is served when it exists (128 KB -> 53 KB on Cottage 34)",
+  "find": "        if ($chosen['url'] !== '') {\n            $chosen['url'] = self::prefer_webp($attachment, $chosen['url']);\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "hero-webp-appended",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0 item 1: the extension is SWAPPED, never appended (the .jpg.webp form 404s)",
+  "find": "        return (string) preg_replace('/\\\\.(jpe?g|png)$/i', '.webp', $url);",
+  "replace": "        return $url . '.webp';",
+  "count": 1
+ },
+ {
+  "id": "hero-webp-unchecked",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0 item 1: the twin is checked on disk, so a missing one is not a broken header",
+  "find": "        if (!file_exists(dirname($original) . '/' . $twin)) {\n            return $url;\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "css-hero-h1-black",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0 item 1: every line on the photo is white, the <h1> included",
+  "find": ".dcc_layout .dcc_hero-overlay p,\n.dcc_layout .dcc_hero-overlay h1 {",
+  "replace": ".dcc_layout .dcc_hero-overlay p {",
+  "count": 1
+ },
+ {
+  "id": "css-hero-not-centred",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero-browser"
+  ],
+  "claim": "0.35.0 item 1: the title is centred, per Rob's standing rule",
+  "find": "    justify-content: center;\n    text-align: center;",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-dead-end-selector-guessed",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0 item 10: the dead-end message is found by the selector live really serves",
+  "find": "            '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');",
+  "replace": "            '.mphb-errors-wrapper, .mphb-error, .mphb-errors');",
+  "count": 1
+ },
+ {
+  "id": "res-host-selector-list",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0 item 10: the card's container is chosen in PREFERENCE order, not document order",
+  "find": "    function firstOf(selectors) {\n        for (var i = 0; i < selectors.length; i++) {\n            var hit = document.querySelector(selectors[i]);\n            if (hit) { return hit; }\n        }\n        return null;\n    }",
+  "replace": "    function firstOf(selectors) {\n        return document.querySelector(selectors.join(', '));\n    }",
+  "count": 1
  }
 ]

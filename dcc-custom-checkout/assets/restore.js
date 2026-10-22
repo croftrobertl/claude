@@ -285,10 +285,38 @@
             card.appendChild(restartCard());
         }
 
-        var host = document.querySelector('.mphb_sc_checkout, .entry-content, main, body');
+        var host = firstOf([
+            /* The wrapper MotoPress really renders on this path (Director,
+               live 2026-10-22): the card goes inside it, above the message, so
+               the two are one block. */
+            '.mphb_sc_checkout-wrapper',
+            '.mphb_sc_checkout',
+            '.entry-content',
+            'main',
+            'body',
+        ]);
         if (!host) { return; }
         host.insertBefore(card, host.firstChild);
         hideDeadEnd();
+    }
+
+    /**
+     * The first of these selectors that matches ANYTHING — tried in order.
+     *
+     * NOT `querySelector('a, b, c')`. A selector list returns the first match
+     * in DOCUMENT ORDER, not in the order the selectors are written, so
+     * `<body>` wins any list it is in: it is an ancestor of everything else on
+     * the page. The original list here read as a preference order and was not
+     * one — the card went into <body> every time, with MotoPress's wrapper and
+     * the dead-end message left as a sibling below it. Found by asserting
+     * which element the card's parent actually was.
+     */
+    function firstOf(selectors) {
+        for (var i = 0; i < selectors.length; i++) {
+            var hit = document.querySelector(selectors[i]);
+            if (hit) { return hit; }
+        }
+        return null;
     }
 
     function heading(level, text) {
@@ -383,15 +411,27 @@
      * Hide MotoPress's "Check-in date is not valid." dead end, once the card
      * is in front of it.
      *
-     * Display-based, as everywhere else on this checkout, and conservative:
-     * `.mphb-errors-wrapper` is the one selector READ from MotoPress's source
-     * (checkout-view.php, via the Director). The other two are INFERRED and
-     * may match nothing, which costs the guest nothing — the card is already
-     * above the message. Nothing of WordPress's own notices is touched.
+     * THE SELECTOR IS THE ONE THE DIRECTOR READ OFF THE LIVE SERVER
+     * (2026-10-22). A fresh GET with no POST is served exactly:
+     *
+     *     <div class="mphb_sc_checkout-wrapper">
+     *       <p class="mphb-data-incorrect"> <br/>Check-in date is not valid.…
+     *
+     * so it is `p.mphb-data-incorrect` inside `.mphb_sc_checkout-wrapper`, and
+     * there is NO `.mphb-errors-wrapper` on this path at all — which is what
+     * the first version of this guessed at, alongside two selectors invented
+     * from the shape of that name. All three are gone: a guessed selector that
+     * matches nothing is not a fallback, it is a line that looks like one.
+     *
+     * Pinned to the child of that wrapper, so a `.mphb-data-incorrect`
+     * MotoPress might print somewhere else on some other page is not this
+     * plugin's business. Display-based, as everywhere else on this checkout,
+     * and only ever called once the card is actually in front of it. Nothing
+     * of WordPress's own notices is touched.
      */
     function hideDeadEnd() {
-        var sel = '.mphb-errors-wrapper, .mphb-error, .mphb-errors';
-        var dead = document.querySelectorAll(sel);
+        var dead = document.querySelectorAll(
+            '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');
         for (var i = 0; i < dead.length; i++) {
             if (dead[i].closest('.dcc_checkout-continue')) { continue; }
             if (!dead[i].classList.contains('dcc_checkout-hidden')) {

@@ -23,6 +23,8 @@ position: absolute;
 inset: 0;
 display: flex;
 align-items: flex-end;
+justify-content: center;
+text-align: center;
 padding: 0 20px calc(var(--dcc-lip-height) + 20px);
 z-index: 2;
 background-image: linear-gradient(
@@ -35,13 +37,16 @@ pointer-events: none;
 .dcc_layout .dcc_hero-overlay__inner {
 max-width: 44rem;
 }
-.dcc_layout .dcc_hero-overlay p {
+.dcc_layout .dcc_hero-overlay p,
+.dcc_layout .dcc_hero-overlay h1 {
 margin: 0;
 color: #fff;
 font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
-.dcc_layout .dcc_hero-overlay__name {
+.dcc_layout h1.dcc_hero-overlay__name {
+margin: 0;
+padding: 0;
 font-size: 28px;
 line-height: 1.15;
 font-weight: 700;
@@ -76,7 +81,7 @@ margin: 0 auto;
 width: 100%;
 max-width: 1100px;
 }
-.dcc_layout .dcc_hero-overlay__name {
+.dcc_layout h1.dcc_hero-overlay__name {
 font-size: 38px;
 }
 }

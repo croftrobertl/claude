@@ -108,7 +108,7 @@ ${CSS}
       <div class="header-image"></div>
       <img class="header-image" alt="DORA CANAL COURT" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
       <div class="dcc_hero-overlay"><div class="dcc_hero-overlay__inner">
-        <p class="dcc_hero-overlay__name">Test Cottage</p>
+        <h1 class="dcc_hero-overlay__name">Test Cottage</h1>
         <p class="dcc_hero-overlay__label">Cottage 34</p>
         <p class="dcc_hero-overlay__dates">Mon, Nov 16 → Thu, Nov 19 · 3 Nights</p>
       </div></div>
@@ -208,6 +208,29 @@ ${CSS}
             [m.overlaySolid, m.overlayHasGradient], ['rgba(0, 0, 0, 0)', true]);
         check(at('the overlay never eats a tap'), m.overlayPointerEvents, 'none');
         check(at('the cottage name is white on the photo'), m.nameColor, 'rgb(255, 255, 255)');
+
+        /* THE PAGE'S SINGLE <h1>. PHP removes the theme's own "Submit Booking"
+           title (it is on the same hook at the same priority and would print
+           over the photo), so without this the page would have no main
+           heading — which is what a screen reader navigates by. The fixture
+           therefore carries no theme title, as the served page will not. */
+        const headings = await page.evaluate(() => {
+            const h1s = Array.prototype.map.call(document.querySelectorAll('h1'),
+                (h) => h.className + '|' + h.textContent.trim());
+            const name = document.querySelector('h1.dcc_hero-overlay__name');
+            return {
+                h1s: h1s,
+                align: name ? getComputedStyle(name).textAlign : null,
+                /* The theme's title box is not on the page at all. */
+                themeTitle: !!document.getElementById('header-page-title'),
+            };
+        });
+        check(at('the page has exactly one <h1>, and it is the cottage name'),
+            headings.h1s, ['dcc_hero-overlay__name|Test Cottage']);
+        check(at('… centred, per Rob\'s standing rule for titles'),
+            headings.align, 'center');
+        check(at('… and the theme\'s own page title is not on the page'),
+            headings.themeTitle, false);
 
         /* The text clears the lip: nothing is cut by the white strip. */
         check(at('the overlay\'s text sits clear of the lip'),

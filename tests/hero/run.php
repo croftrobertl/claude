@@ -65,12 +65,25 @@ $GLOBALS['state'] = [
     'sizes'     => [],   // attachment id => [w, h] of the FULL file
     'titles'    => [],
     'post'      => [],   // the checkout submission
+    'files'     => [],   // attachment id => the original's path on disk
+    'on_disk'   => [],   // the paths file_exists() should say yes to
+    'removed'   => [],   // what remove_action() was asked to remove
 ];
 
 function add_filter($hook, $cb, $priority = 10, $args = 1) {
     $GLOBALS['state']['filters'][$hook][] = [$cb, $priority];
     return true;
 }
+function remove_action($hook, $cb, $priority = 10) {
+    $GLOBALS['state']['removed'][] = [$hook, $cb, $priority];
+    foreach ($GLOBALS['state']['filters'][$hook] ?? [] as $i => $row) {
+        if ($row[0] === $cb && (int) $row[1] === (int) $priority) {
+            unset($GLOBALS['state']['filters'][$hook][$i]);
+        }
+    }
+    return true;
+}
+function get_attached_file($id) { return $GLOBALS['state']['files'][(int) $id] ?? ''; }
 function add_action($hook, $cb, $priority = 10, $args = 1) {
     return add_filter($hook, $cb, $priority, $args);
 }
@@ -159,6 +172,10 @@ class MPHB_Stub {
 }
 function MPHB() { return new MPHB_Stub(); }
 
+/* The namespaced file_exists() stand-in — see tests/hero/shim.php for why it
+   is a file of its own. */
+require __DIR__ . '/shim.php';
+
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
 foreach (['config', 'layout', 'checkout-request', 'assets', 'hero'] as $file) {
     require $plugin . '/includes/class-' . $file . '.php';
@@ -203,6 +220,7 @@ foreach (COTTAGES as $type => [$att, $w, $h, $label]) {
     $GLOBALS['state']['thumbs'][$type] = $att;
     $GLOBALS['state']['sizes'][$att]   = [$w, $h];
     $GLOBALS['state']['titles'][$type] = $label . ': Test Cottage';
+    $GLOBALS['state']['files'][$att]   = "/uploads/2026/01/$att-full.jpg";
 }
 
 /** A checkout submission for one cottage. */
@@ -237,6 +255,7 @@ $expected = [
     'Cottage 36' => ['size' => '1536x1536', 'width' => 1152],
 ];
 
+$GLOBALS['state']['on_disk'] = []; // no twins yet: the chooser alone
 foreach (COTTAGES as $type => [$att, $w, $h, $label]) {
     $chosen = Hero::photo($type);
     check("$label ({$w}x{$h}) is served the right size",
@@ -250,6 +269,62 @@ check('a cottage with no featured image yields nothing',
     Hero::photo(9999), ['url' => '', 'width' => 0, 'height' => 0, 'size' => '']);
 check('and so does a room type id of 0',
     Hero::photo(0)['url'], '');
+
+/* ========================================================================== *
+ * 1b. THE WEBP TWIN (Director, live 2026-10-22)
+ *
+ * Every sized file on this site has a `.webp` beside it with the extension
+ * SWAPPED, served as 200 image/webp; the `…jpg.webp` form 404s. The chosen URL
+ * goes into a CSS background and a preload link, and SpeedyCache's rewriting
+ * only touches <img>, so nothing else on the page would ever serve the twin
+ * here. It is 128 KB → 53 KB on Cottage 34 and 236 KB → 86 KB on portrait 36,
+ * on the one request that blocks the top of the page.
+ * ========================================================================== */
+
+echo "\n--- the WebP twin ---\n";
+
+/* Cottage 34's chosen file is 2206-1024x768.jpg; put its twin on disk. */
+$jpeg = Hero::photo(1607)['url'];
+check('without a twin on disk, the JPEG is served (the guard)',
+    substr($jpeg, -4), '.jpg');
+
+$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
+check('with the twin on disk, the WebP is served instead',
+    Hero::photo(1607)['url'], 'https://example.test/u/2206-1024x768.webp');
+check('… the extension is SWAPPED, never appended (the .jpg.webp form 404s)',
+    strpos(Hero::photo(1607)['url'], '.jpg') === false, true);
+
+/* And the preload asks for the file that is actually served. */
+reset_state(['post' => submission(1607)]);
+$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
+$hero = new Hero();
+$hero->maybe_hook();
+ob_start();
+do_action('wp_head');
+$head = (string) ob_get_clean();
+check('the preload asks for the WebP, not the JPEG',
+    strpos($head, '2206-1024x768.webp') !== false && strpos($head, '.jpg') === false, true);
+
+/* A cottage whose twin is missing keeps its JPEG — one missing file must not
+   make a broken header. */
+$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
+check('a cottage with no twin on disk keeps its JPEG',
+    substr(Hero::photo(1742)['url'], -4), '.jpg');
+check('… while the one that has a twin still gets it',
+    substr(Hero::photo(1607)['url'], -5), '.webp');
+
+/* The twin is only ever swapped for a file this knows how to swap. */
+check('a URL that is already a webp is left alone',
+    Hero::prefer_webp(2206, 'https://example.test/u/2206-1024x768.webp'),
+    'https://example.test/u/2206-1024x768.webp');
+check('an unknown extension is left alone',
+    Hero::prefer_webp(2206, 'https://example.test/u/2206.svg'),
+    'https://example.test/u/2206.svg');
+check('an attachment whose original path cannot be read is left alone',
+    Hero::prefer_webp(9999, 'https://example.test/u/x-1024x768.jpg'),
+    'https://example.test/u/x-1024x768.jpg');
+
+$GLOBALS['state']['on_disk'] = [];
 
 /* ========================================================================== *
  * 2. The gate: who gets the cottage photo
@@ -274,6 +349,13 @@ reset_state(['post' => submission(1607), 'settings' => ['layout_enabled' => 0]])
 (new Hero())->maybe_hook();
 check('the layout OFF: nothing is hooked, the canal banner stays',
     $hook_state(), ['url' => false, 'preload' => false, 'overlay' => false]);
+
+$GLOBALS['state']['removed'] = [];
+reset_state(['post' => submission(1607), 'settings' => ['layout_enabled' => 0]]);
+$GLOBALS['state']['removed'] = [];
+(new Hero())->maybe_hook();
+check('with the layout OFF, the theme keeps its own page title',
+    $GLOBALS['state']['removed'], []);
 
 reset_state(['post' => submission(1607), 'is_page' => false]);
 (new Hero())->maybe_hook();
@@ -323,6 +405,23 @@ check('the cottage number is printed',
     strpos($overlay, '>Cottage 34<') !== false, true);
 check('the dates and the night count are printed',
     strpos($overlay, 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights') !== false, true);
+/* THE THEME'S OWN TITLE IS REMOVED, not hidden (Director, live: it is on the
+   same hook at the same priority and prints "Submit Booking" over the photo).
+   Removing the action is what makes the page have ONE heading rather than a
+   hidden wrong one, which is still a heading to a screen reader. */
+check('the theme\'s page title is removed from the hook',
+    in_array([Hero::PRINT_HOOK, Hero::THEME_TITLE, Hero::THEME_TITLE_PRIORITY],
+        $GLOBALS['state']['removed'], true), true);
+
+/* AND THE COTTAGE NAME IS THE PAGE'S SINGLE <h1>. With the theme's title gone
+   the page would otherwise have no main heading at all. */
+check('the cottage name is an <h1>',
+    (bool) preg_match('/<h1 class="dcc_hero-overlay__name">Test Cottage<\/h1>/', $overlay), true);
+check('… and the overlay contains exactly one of them',
+    preg_match_all('/<h1[\s>]/', $overlay), 1);
+check('… and nothing else in the overlay is a heading',
+    (bool) preg_match('/<h[2-6][\s>]/', $overlay), false);
+
 check('NOTHING ELSE is put on the photo — no invented "Studio · 1 Queen"',
     (bool) preg_match('/Studio|Queen|guest|sleeps/i', $overlay), false);
 check('and nothing animated or drawn is added (Rob, 2026-10-22)',

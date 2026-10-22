@@ -178,7 +178,14 @@ final class Restore
             return '';
         }
         $src = wp_get_attachment_image_src($attachment, self::CARD_SIZE);
-        return is_array($src) && !empty($src[0]) ? (string) $src[0] : '';
+        if (!is_array($src) || empty($src[0])) {
+            return '';
+        }
+        /* The WebP twin here too, through the same helper, so the card and the
+           header cannot disagree about which file this site serves. This one
+           IS an <img>, so SpeedyCache might have rewritten it anyway — doing
+           it here means the answer does not depend on that. */
+        return Hero::prefer_webp($attachment, (string) $src[0]);
     }
 
     /** "Mon, Nov 16 → Thu, Nov 19 · 3 Nights". */

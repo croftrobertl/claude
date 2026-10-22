@@ -78,6 +78,9 @@
     inset: 0;
     display: flex;
     align-items: flex-end;
+    /* Centred, per Rob's standing rule for titles. */
+    justify-content: center;
+    text-align: center;
     /* Clear of the lip, so no text is cut by its white strip. */
     padding: 0 20px calc(var(--dcc-lip-height) + 20px);
     z-index: 2;
@@ -96,7 +99,11 @@
     max-width: 44rem;
 }
 
-.dcc_layout .dcc_hero-overlay p {
+/* EVERY line on the photo, not just the paragraphs. The cottage name became
+   an <h1> when the theme's own title was removed, and a `p`-only rule left it
+   BLACK ON THE PHOTO — caught by the suite, invisible in the stylesheet. */
+.dcc_layout .dcc_hero-overlay p,
+.dcc_layout .dcc_hero-overlay h1 {
     margin: 0;
     color: #fff;
     /* The site face, not the theme's header face. */
@@ -104,7 +111,11 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-.dcc_layout .dcc_hero-overlay__name {
+/* The page's single <h1>. Sized here rather than inheriting the theme's
+   heading scale, which is built for a title bar and not for a photo. */
+.dcc_layout h1.dcc_hero-overlay__name {
+    margin: 0;
+    padding: 0;
     font-size: 28px;
     line-height: 1.15;
     font-weight: 700;
@@ -145,7 +156,7 @@
         width: 100%;
         max-width: 1100px;
     }
-    .dcc_layout .dcc_hero-overlay__name {
+    .dcc_layout h1.dcc_hero-overlay__name {
         font-size: 38px;
     }
 }

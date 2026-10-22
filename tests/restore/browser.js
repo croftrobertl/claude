@@ -134,8 +134,14 @@ function pageWithoutForm() {
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>checkout</title><style>${CSS}</style></head>
-<body><div class="mphb_sc_checkout">
-  <p class="mphb-errors-wrapper">Check-in date is not valid. Check-out date is not valid.</p>
+<body>
+<!-- EXACTLY WHAT LIVE SERVES a fresh GET with no POST (Director, 2026-10-22):
+     the wrapper, and p.mphb-data-incorrect inside it. There is no
+     .mphb-errors-wrapper on this path - the first version of this fixture
+     invented one, which is the v0.9.0 trap: a plausible fixture agreeing with
+     a plausible selector. -->
+<div class="mphb_sc_checkout-wrapper">
+  <p class="mphb-data-incorrect"> <br/>Check-in date is not valid.<br/>Check-out date is not valid.</p>
 </div>
 <script>window.DCC_RESTORE = ${cfg(null)};</script>
 <script>${JS}</script>
@@ -424,7 +430,10 @@ const TYPED = {
             method: (c.querySelector('form') || {}).method,
             inputs: inputs,
             first: host.firstElementChild === c,
-            deadEndHidden: getComputedStyle(document.querySelector('.mphb-errors-wrapper')).display,
+            deadEndHidden: getComputedStyle(document.querySelector('.mphb-data-incorrect')).display,
+            /* The card is INSIDE the wrapper MotoPress rendered, above the
+               message, so the two read as one block. */
+            hostClass: host.className,
         };
     });
 
@@ -437,6 +446,8 @@ const TYPED = {
     check('it shows the cottage\'s photo, with its name as the alt text',
         [card.photo, card.alt], [true, 'Test Cottage']);
     check('MotoPress\'s dead-end message is hidden behind it', card.deadEndHidden, 'none');
+    check('… and the card is inside the wrapper MotoPress rendered',
+        card.hostClass, 'mphb_sc_checkout-wrapper');
 
     /* THE FIVE FIELDS, AND THE DATES. One of the twelve required mutations is
        "Continue Your Booking posting different dates from those saved". */
@@ -460,6 +471,30 @@ const TYPED = {
         request.postData(),
         'mphb_room_type_id=1607&mphb_check_in_date=2026-11-16&mphb_check_out_date=2026-11-19'
         + '&mphb_rooms_details%5B1607%5D=1&mphb_is_direct_booking=1');
+
+    /* THE FALLBACK ORDER IS REAL, not decorative. A selector LIST would have
+       returned <body> for every one of these, because body is an ancestor of
+       them all and querySelector answers in document order — which is exactly
+       what the original did. Each container is constructed on its own. */
+    for (const [label, host, expect] of [
+        ['MotoPress\'s own wrapper', '<div class="mphb_sc_checkout-wrapper"><p class="mphb-data-incorrect">x</p></div>', 'mphb_sc_checkout-wrapper'],
+        ['the checkout block', '<div class="mphb_sc_checkout"><p>x</p></div>', 'mphb_sc_checkout'],
+        ['the entry content', '<div class="entry-content"><p>x</p></div>', 'entry-content'],
+        ['the main element', '<main><p>x</p></main>', ''],
+    ]) {
+        const p2 = await ctx.newPage();
+        await p2.setContent(pageWithoutForm().replace(
+            /<div class="mphb_sc_checkout-wrapper">[\s\S]*?<\/div>/, host));
+        const got = await p2.evaluate(() => {
+            const c = document.querySelector('.dcc_checkout-continue');
+            return c ? { parent: c.parentElement.className, tag: c.parentElement.tagName } : null;
+        });
+        await p2.close();
+        check('the card lands in ' + label, got && got.parent, expect);
+        if (expect === '') {
+            check('… which is <main>, not <body>', got && got.tag, 'MAIN');
+        }
+    }
 
     /* ===================================================================== *
      * 6. Nothing stored: ask for the dates again
