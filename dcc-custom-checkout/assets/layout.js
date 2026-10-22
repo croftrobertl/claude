@@ -197,15 +197,176 @@
     }
 
     /* --------------------------------------------------------------------- *
+     * Item 2 — the follow-ups sit under the answer that reveals them
+     * (picture 1)
+     *
+     * THE DOG HALF IS ALREADY RIGHT. checkout.js puts "Traveling with a dog?"
+     * at the top of the Pet Information section and Dog Type / Size / Hair
+     * below it, and folds the lot away on "No" — question above its
+     * follow-ups, in one section, which is what Rob asked for. Nothing here
+     * touches it.
+     *
+     * THE GUEST HALF IS NOT. checkout.js builds one section per extra guest
+     * and stacks them after `.mphb-customer-details` — the customer block —
+     * while the control that reveals them is the guest chooser, further up in
+     * the accommodation block. So a guest picks 3 and the panel that appears
+     * is somewhere else on the page. The sections are MOVED, whole, to sit
+     * directly under the chooser's own row.
+     *
+     * MOVED, NOT REBUILT, and that is the rule Rob stated: each guest's
+     * section element travels intact, never its inputs one by one. The rows
+     * inside were themselves moved there by checkout.js from MotoPress's own
+     * markup, so the inputs keep their names, their values and their
+     * identity, and mphb-checkout-fields' own show/hide still has the same
+     * nodes to work on. Nothing is cloned; nothing is created.
+     *
+     * AND IT MUST NOT FEED ITSELF. v0.32.1's iPhone bug — a select that
+     * flashed open and shut — was exactly this shape on the admin side: a
+     * mover that re-appended whenever a row was not last, a MutationObserver
+     * that saw the move, and a loop that detached the focused control every
+     * 200ms. So: nothing is written when the sections are already in place and
+     * in order, and nothing is moved while focus is inside one of them.
+     * --------------------------------------------------------------------- */
+
+    /**
+     * The guest-count chooser(s). The first four of the lookups guest-count.js
+     * uses, and deliberately NOT its widest `select[name*="adults"]`: that one
+     * also matches a service's own "for N" count and Add New's search step.
+     *
+     * THE TWO EXCLUSIONS BELOW ARE BELTS, AND SAYING SO IS THE POINT. On
+     * today's markup neither can change the answer: the only other `[adults]`
+     * select on the checkout belongs to a service, the services section comes
+     * AFTER the room details, and the first match is the one used — so a
+     * mutation removing them cannot be killed without a fixture that puts the
+     * services first, which is not what MotoPress renders. They are kept
+     * because the rule they encode (a service's own count is not the guest
+     * count) is the one `admin-booking.js` learned the hard way in 0.28.0, and
+     * they are NOT claimed to be under test.
+     */
+    function adultsSelects(root) {
+        var out = [];
+        var all = root.querySelectorAll('select[name]');
+        for (var i = 0; i < all.length; i++) {
+            var name = all[i].name || '';
+            if (name.indexOf('[services]') !== -1) { continue; }
+            if (name.indexOf('dcc_') === 0) { continue; }
+            if (!/\[adults\]$/.test(name)) { continue; }
+            out.push(all[i]);
+        }
+        return out;
+    }
+
+    /** The row the chooser lives in — what the panels go after. */
+    function anchorFor(select) {
+        return select.closest('p, li, div.mphb-room-details, div') || select.parentNode;
+    }
+
+    /**
+     * The per-guest sections, IN GUEST ORDER — 2, then 3, then 4.
+     *
+     * Not DOM order. checkout.js builds them in guest order, so on today's
+     * page the two agree and reading the DOM would look right; but anything
+     * that reorders them (a MotoPress re-render, a future change to how they
+     * are built) would then put Guest 3's panel above Guest 2's, and the page
+     * would still pass a test that asked only "are they under the chooser".
+     * The guest number is in the section's own class, which is the one place
+     * it is stated. A section with no number keeps its relative DOM order,
+     * after the numbered ones, rather than being dropped.
+     */
+    function guestSections(root) {
+        var found = Array.prototype.slice.call(
+            root.querySelectorAll('.dcc_checkout-guest-section')
+        );
+        return found.map(function (el, i) {
+            var m = /dcc_checkout-guest(\d+)-section/.exec(el.className || '');
+            return { el: el, n: m ? parseInt(m[1], 10) : 1e6, i: i };
+        }).sort(function (a, b) {
+            return a.n === b.n ? a.i - b.i : a.n - b.n;
+        }).map(function (r) { return r.el; });
+    }
+
+    /** Is focus inside any of these nodes? Then nothing moves yet. */
+    function holdsFocus(nodes) {
+        var active = document.activeElement;
+        if (!active) { return false; }
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i] === active || nodes[i].contains(active)) { return true; }
+        }
+        return false;
+    }
+
+    /**
+     * Are the sections already immediately after the anchor, in order?
+     *
+     * This is the whole defence against the 0.32.1 loop: asking "is it already
+     * right" before writing, rather than "is it last" — which is false as soon
+     * as there are two of them and makes every run a move.
+     */
+    function inPlace(anchor, sections) {
+        var at = anchor;
+        for (var i = 0; i < sections.length; i++) {
+            if (at.nextElementSibling !== sections[i]) { return false; }
+            at = sections[i];
+        }
+        return true;
+    }
+
+    function place(root) {
+        var selects = adultsSelects(root);
+        if (!selects.length) { return; }
+        var sections = guestSections(root);
+        if (!sections.length) { return; }
+
+        var anchor = anchorFor(selects[0]);
+        if (!anchor || !anchor.parentNode || !root.contains(anchor)) { return; }
+        /* An anchor inside one of the sections would make this move a node
+           into its own descendant. It cannot happen with today's markup, but
+           it is the one input that would throw rather than misbehave. */
+        for (var i = 0; i < sections.length; i++) {
+            if (sections[i].contains(anchor)) { return; }
+        }
+
+        if (inPlace(anchor, sections)) { return; }
+        if (holdsFocus(sections)) {
+            /* Wait for the guest to leave the field. Moving a focused input
+               detaches it, and on iOS that closes the keyboard mid-answer. */
+            root.addEventListener('focusout', function once() {
+                root.removeEventListener('focusout', once);
+                place(root);
+            });
+            return;
+        }
+
+        var at = anchor;
+        sections.forEach(function (section) {
+            at.parentNode.insertBefore(section, at.nextSibling);
+            at = section;
+        });
+
+        /* MOVING CHANGES DOCUMENT ORDER, AND THE KEY HINTS ARE DOCUMENT ORDER.
+           Without this, a move that happened after the hints were written left
+           the wrong field saying "done" — which is exactly what a deferred
+           move does: the hints run on `change`, the move waits for focusout,
+           and the two never meet. Found by the suite, not by reading. */
+        hints(root);
+    }
+
+    /* --------------------------------------------------------------------- *
      * Go
      * --------------------------------------------------------------------- */
 
     function init() {
         var root = form();
         if (!root) { return; }  /* the formless checkout is item 10's */
+        place(root);
         autofill(root);
         hints(root);
         armEnter(root);
+        /* A MotoPress re-render rebuilds the sections, so the placement is
+           re-asserted on the same event the hints are. No observer and no
+           timer of our own: checkout.js already owns that watch, and a second
+           one is how the 0.32.1 loop started. */
+        root.addEventListener('change', function () { place(root); });
     }
 
     if (document.readyState === 'loading') {

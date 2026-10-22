@@ -68,6 +68,20 @@ const page_html = `<!doctype html>
 <title>checkout</title><style>${CSS}</style></head>
 <body><div class="mphb_sc_checkout">
   <form class="mphb_sc_checkout-form" method="post" action="/submit-booking/">
+    <!-- The accommodation block, with the guest chooser: the control that
+         reveals the guest panels. On the real checkout it is ABOVE the
+         customer details, which is the whole reason item 2 has anything to
+         do — checkout.js stacks the panels after the customer block, so they
+         appear a long way from the answer that revealed them. -->
+    <div class="mphb-room-details">
+      <p class="mphb-adults-wrapper"><label>Number of Guests
+        <select name="mphb_room_details[0][adults]">
+          <option value="">— Select —</option>
+          <option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option>
+        </select></label></p>
+    </div>
+    <div class="mphb-customer-details" id="customer">
     <p><input type="text" name="mphb_first_name"></p>
     <p><input type="text" name="mphb_last_name"></p>
     <p><input type="tel" name="mphb_phone"></p>
@@ -80,15 +94,34 @@ const page_html = `<!doctype html>
     <p><input type="text" name="mphb_zip"></p>
     <p><select name="mphb_country"><option value="">—</option><option value="US">US</option></select></p>
 
-    <!-- A folded panel, hidden exactly as the real checkout hides one. -->
-    <div class="dcc_checkout-section dcc_checkout-guest2-section dcc_checkout-section-hidden" id="g2">
+    </div><!-- /.mphb-customer-details -->
+
+    <!-- The per-guest panels AS checkout.js LEAVES THEM: built sections,
+         carrying the rows it moved in from MotoPress's own markup, stacked
+         after the customer block and hidden by its own hide class. This is a
+         stand-in for checkout.js's output, not a capture of /submit-booking/
+         (which needs a live reservation); the ordering assertion below loads
+         nothing of checkout.js, so what it proves is this placement, given
+         that shape. -->
+    <section class="mphb-checkout-section dcc_checkout-section dcc_checkout-guest-section dcc_checkout-guest2-section dcc_checkout-section-hidden" id="g2">
+      <h3 class="dcc_checkout-section-title">Guest #2 Information</h3>
       <p><input type="text" name="mphb_guest2_first_name"></p>
       <p><input type="text" name="mphb_guest2_last_name"></p>
       <p><input type="tel" name="mphb_guest2_phone"></p>
-    </div>
-    <div class="dcc_checkout-section dcc_checkout-section-hidden" id="dog">
-      <p><input type="text" name="mphb_dog_type"></p>
-    </div>
+    </section>
+    <section class="mphb-checkout-section dcc_checkout-section dcc_checkout-guest-section dcc_checkout-guest3-section dcc_checkout-section-hidden" id="g3">
+      <h3 class="dcc_checkout-section-title">Guest #3 Information</h3>
+      <p><input type="text" name="mphb_guest3_first_name"></p>
+      <p><input type="text" name="mphb_guest3_last_name"></p>
+    </section>
+    <!-- Pet Information, as checkout.js leaves it: the question FIRST, its
+         follow-ups under it, the whole section folded away until "Yes".
+         Nothing in item 2 moves this — it is already what Rob asked for. -->
+    <section class="mphb-checkout-section dcc_checkout-section dcc_checkout-pet-section" id="pet">
+      <h3 class="dcc_checkout-section-title">Pet Information</h3>
+      <div class="dcc_checkout-pet" id="petq">Traveling with a dog?</div>
+      <p class="dcc_checkout-section-hidden"><input type="text" name="mphb_dog_type"></p>
+    </section>
 
     <p><textarea name="mphb_note"></textarea></p>
     <p><input type="file" name="mphb_upload_id"></p>
@@ -192,47 +225,155 @@ const page_html = `<!doctype html>
         afterLast.active, 'BODY');
 
     /* ===================================================================== *
-     * The panel opens: the chain and the "done" field follow it
+     * ITEM 2 — the panels sit under the answer that reveals them (picture 1)
      * ===================================================================== */
-    await page.evaluate(() => {
-        document.getElementById('g2').classList.remove('dcc_checkout-section-hidden');
-        /* The hints are refreshed off `change`, which is the event checkout.js
-           itself reacts to — so the page is told the same way it would be. */
-        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+    const placed = await page.evaluate(() => {
+        const row = document.querySelector('p.mphb-adults-wrapper');
+        const order = [];
+        let at = row;
+        while (at && at.nextElementSibling) { at = at.nextElementSibling; order.push(at.id); }
+        const g2 = document.getElementById('g2');
+        return {
+            /* The panels are the chooser's own next siblings, in guest order. */
+            after: order,
+            /* Still inside the accommodation block, with the chooser. */
+            parent: g2.parentElement.className,
+            /* MOVED, NOT REBUILT: the inputs are the same nodes, with their
+               names and the heading checkout.js gave them. */
+            inputs: Array.prototype.map.call(
+                g2.querySelectorAll('input'), (i) => i.name),
+            heading: g2.querySelector('h3').textContent,
+            /* Never duplicated: one node per name in the whole form. */
+            dupes: ['mphb_guest2_first_name', 'mphb_guest3_first_name', 'mphb_dog_type']
+                .map((n) => document.querySelectorAll('[name="' + n + '"]').length),
+            /* And still folded away — moving them reveals nothing. */
+            hidden: [
+                getComputedStyle(g2).display,
+                getComputedStyle(document.getElementById('g3')).display,
+            ],
+        };
     });
 
-    const reKeys = await page.evaluate(() => ({
+    check('each guest panel is moved directly under the guest chooser, in order',
+        placed.after, ['g2', 'g3']);
+    check('… into the accommodation block, where the chooser is',
+        placed.parent, 'mphb-room-details');
+    check('… whole: the same inputs and the heading checkout.js built',
+        [placed.inputs, placed.heading],
+        [['mphb_guest2_first_name', 'mphb_guest2_last_name', 'mphb_guest2_phone'],
+         'Guest #2 Information']);
+    check('… and no input is duplicated anywhere in the form', placed.dupes, [1, 1, 1]);
+    check('… and the panels are still folded away', placed.hidden, ['none', 'none']);
+
+    /* The dog half needs no move: checkout.js already puts the question above
+       its follow-ups inside one section. Asserted so a later change that
+       "tidies" it is caught. */
+    const petOrder = await page.evaluate(() => {
+        const pet = document.getElementById('pet');
+        return {
+            question: pet.children[1].id,
+            followUp: pet.children[2].querySelector('input').name,
+            /* The pet section is NOT moved under the chooser. */
+            parentIsCustomerBlock: pet.parentElement.className.indexOf('mphb-room-details') === -1,
+        };
+    });
+    check('the dog question stays above its own follow-ups, and is not moved',
+        petOrder, { question: 'petq', followUp: 'mphb_dog_type', parentIsCustomerBlock: true });
+
+    /* RUNNING AGAIN MUST WRITE NOTHING. This is the 0.32.1 shape: a mover that
+       re-appends whenever a node is not last loops forever once anything else
+       touches the DOM, and detaches the focused control every time round. */
+    const again = await page.evaluate(() => {
+        let records = 0;
+        const obs = new MutationObserver((rs) => { records += rs.length; });
+        obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+        /* A stray DOM change of the kind WordPress's own scripts make, then
+           the event the placement listens on. */
+        document.body.appendChild(document.createElement('span'));
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        return new Promise((resolve) => setTimeout(() => {
+            obs.disconnect();
+            /* The stray append is one record; anything more came from us. */
+            resolve(records - 1);
+        }, 600));
+    });
+    check('a re-run with the panels already in place writes NOTHING (0.32.1)', again, 0);
+
+    /* A FOCUSED PANEL IS NEVER DETACHED. Out of place and focused, the move
+       waits for the guest to leave the field — detaching a focused input
+       closes the keyboard on iOS mid-answer. */
+    const focusHeld = await page.evaluate(() => {
+        const g2 = document.getElementById('g2');
+        const field = g2.querySelector('input');
+        g2.classList.remove('dcc_checkout-section-hidden');
+        /* Put it out of place, then focus it. */
+        document.querySelector('form').appendChild(g2);
+        field.focus();
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        return new Promise((resolve) => setTimeout(() => resolve({
+            stillFocused: document.activeElement === field,
+            stillConnected: field.isConnected,
+            movedBack: document.querySelector('p.mphb-adults-wrapper').nextElementSibling === g2,
+        }), 400));
+    });
+    check('a focused panel is not moved while it holds focus',
+        [focusHeld.stillFocused, focusHeld.stillConnected, focusHeld.movedBack],
+        [true, true, false]);
+
+    /* … and it is moved the moment focus leaves. */
+    const afterBlur = await page.evaluate(() => {
+        document.activeElement.blur();
+        return new Promise((resolve) => setTimeout(() => {
+            var at = document.querySelector('p.mphb-adults-wrapper');
+            var ids = [];
+            while (at.nextElementSibling) { at = at.nextElementSibling; ids.push(at.id); }
+            resolve(ids);
+        }, 300));
+    });
+    /* AND IN GUEST ORDER, not the order it found them in. The focus case above
+       appended Guest 2's panel to the END of the form, so DOM order is now
+       [g3, g2]; a placement that trusted the DOM would put Guest 3's panel
+       above Guest 2's. */
+    check('… moved as soon as focus leaves it, and back into GUEST order',
+        afterBlur, ['g2', 'g3']);
+
+    /* ===================================================================== *
+     * 3b again, now that the panels sit above the address block: the chain
+     * follows DOCUMENT order, which is what "the next visible field" means.
+     * ===================================================================== */
+    const openKeys = await page.evaluate(() => ({
         zip: document.querySelector('[name="mphb_zip"]').getAttribute('enterkeyhint'),
         g2phone: document.querySelector('[name="mphb_guest2_phone"]').getAttribute('enterkeyhint'),
     }));
-    check('opening a panel moves "done" to its last field', reKeys.g2phone, 'done');
-    check('… and the field that used to say "done" says "next" again', reKeys.zip, 'next');
+    check('with Guest 2 open, "done" is still the last field on the page, not the panel\'s',
+        [openKeys.g2phone, openKeys.zip], ['next', 'done']);
 
-    /* THE REQUIRED MUTATION: Next skipping a revealed Guest 2 field. */
-    await page.focus('[name="mphb_zip"]');
+    await page.focus('[name="mphb_guest2_phone"]');
     await page.keyboard.press('Enter');
-    check('Next from the last address field now reaches the revealed Guest 2 field',
-        await page.evaluate(() => document.activeElement.name), 'mphb_guest2_first_name');
+    check('Next walks out of the revealed panel into the address block',
+        await page.evaluate(() => document.activeElement.name), 'mphb_first_name');
 
     await page.focus('[name="mphb_guest2_first_name"]');
     await page.keyboard.press('Enter');
-    check('… and walks through the panel in order',
+    check('… and through the panel in order first',
         await page.evaluate(() => document.activeElement.name), 'mphb_guest2_last_name');
 
-    /* The dog panel is still folded, so the chain stops at Guest 2's phone. */
-    await page.focus('[name="mphb_guest2_phone"]');
+    /* The dog follow-up is the last thing on the page and still folded, so the
+       chain ends at the zip. */
+    await page.focus('[name="mphb_zip"]');
     await page.keyboard.press('Enter');
     check('the still-folded dog field is never focused',
         await page.evaluate(() => document.activeElement.name || document.activeElement.tagName), 'BODY');
     check('nothing has been submitted at any point',
         await page.evaluate(() => window.__submits), 0);
 
-    /* And once the dog panel opens, it joins the chain. */
+    /* Reveal it: being last in document order, it becomes the "done" field. */
     await page.evaluate(() => {
-        document.getElementById('dog').classList.remove('dcc_checkout-section-hidden');
+        document.querySelector('[name="mphb_dog_type"]').closest('p')
+            .classList.remove('dcc_checkout-section-hidden');
         document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await page.focus('[name="mphb_guest2_phone"]');
+    await page.focus('[name="mphb_zip"]');
     await page.keyboard.press('Enter');
     check('a revealed dog field joins the chain',
         await page.evaluate(() => document.activeElement.name), 'mphb_dog_type');

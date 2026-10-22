@@ -5080,5 +5080,82 @@
   "find": "    var TYPED = ['text', 'email', 'tel', 'number', 'url', 'search', 'password'];",
   "replace": "    var TYPED = ['text', 'email', 'tel', 'number', 'url', 'search', 'password', 'textarea'];",
   "count": 1
+ },
+ {
+  "id": "lf-panels-not-moved",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: each guest panel sits directly under the guest chooser",
+  "find": "        place(root);\n        autofill(root);",
+  "replace": "        autofill(root);",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-dom-order",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: the panels are ordered by GUEST NUMBER, not by where they were found",
+  "find": "        }).sort(function (a, b) {\n            return a.n === b.n ? a.i - b.i : a.n - b.n;\n        }).map(function (r) { return r.el; });",
+  "replace": "        }).map(function (r) { return r.el; });",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-loop",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: a re-run with the panels in place writes nothing (the 0.32.1 loop)",
+  "find": "        if (inPlace(anchor, sections)) { return; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-last-not-inplace",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: \"already in place\" is in ORDER after the anchor, not merely last",
+  "find": "    function inPlace(anchor, sections) {\n        var at = anchor;\n        for (var i = 0; i < sections.length; i++) {\n            if (at.nextElementSibling !== sections[i]) { return false; }\n            at = sections[i];\n        }\n        return true;\n    }",
+  "replace": "    function inPlace(anchor, sections) {\n        var last = sections[sections.length - 1];\n        return !!last && !last.nextElementSibling;\n    }",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-move-focused",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: a focused panel is never detached (iOS closes the keyboard)",
+  "find": "        if (holdsFocus(sections)) {",
+  "replace": "        if (false) {",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-hints-stale",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: moving a panel refreshes the key hints, which are document order",
+  "find": "        hints(root);\n    }\n\n    /* --------------------------------------------------------------------- *\n     * Go",
+  "replace": "    }\n\n    /* --------------------------------------------------------------------- *\n     * Go",
+  "count": 1
+ },
+ {
+  "id": "lf-panels-reveal",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 2: moving a panel does not reveal it",
+  "find": "        var at = anchor;\n        sections.forEach(function (section) {\n            at.parentNode.insertBefore(section, at.nextSibling);\n            at = section;\n        });",
+  "replace": "        var at = anchor;\n        sections.forEach(function (section) {\n            section.classList.remove('dcc_checkout-section-hidden');\n            at.parentNode.insertBefore(section, at.nextSibling);\n            at = section;\n        });",
+  "count": 1
  }
 ]
