@@ -183,8 +183,13 @@
  * stylesheet, and the suite is what found it. So: the form class, the class
  * DOUBLED, and `!important` on every line, mirroring
  * `select.dcc_checkout-select-native.dcc_checkout-select-native` in
- * checkout.css. Change one, look at the other. */
-.mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
+ * checkout.css. Change one, look at the other.
+ *
+ * The `.dcc_layout` marker stays on the front of it like every other rule in
+ * this file — tests/hero asserts that no rule here can match a page that is
+ * not the new layout, and that assertion is worth keeping strict. It only adds
+ * specificity, so it costs the fight nothing. */
+.dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;

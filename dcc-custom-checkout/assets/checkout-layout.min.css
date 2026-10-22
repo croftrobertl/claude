@@ -80,7 +80,7 @@ max-width: 1100px;
 font-size: 38px;
 }
 }
-.mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
+.dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
 position: absolute !important;
 width: 1px !important;
 height: 1px !important;

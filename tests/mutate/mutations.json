@@ -5397,7 +5397,7 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0 item 3: the native-select hide must outrank the field standard's !important sizing",
-  "find": ".mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {",
+  "find": ".dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {",
   "replace": ".dcc_layout .dcc_layout-segment__native {",
   "count": 1
  }
