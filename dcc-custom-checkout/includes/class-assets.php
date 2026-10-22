@@ -352,10 +352,22 @@ final class Assets
         // v0.34.1 — the site's own dropdown list (Rob's pick): every visible
         // <select> opens a centred list drawn by the page. After checkout.js,
         // whose preflight state it reads; the select stays the source of truth.
+        // v0.35.0 — WHEN THE NEW LAYOUT IS ON, layout.js MUST RUN FIRST. It
+        // turns the short dropdowns into segmented buttons and marks each
+        // select `data-dcc-segmented`; select-list.js skips a marked select,
+        // so two controls never stack on one field. A dependency, not an
+        // enqueue order, because only a dependency is a guarantee — and it is
+        // declared here even though Layout_Script enqueues that handle later,
+        // since WordPress resolves the graph at print time.
+        $list_deps = ['dcc-checkout'];
+        if (Layout::active()) {
+            $list_deps[] = Layout_Script::HANDLE;
+        }
+
         wp_enqueue_script(
             'dcc-checkout-select-list',
             self::asset_url('assets/select-list.js'),
-            ['dcc-checkout'],
+            $list_deps,
             DCC_CHECKOUT_VERSION,
             true
         );

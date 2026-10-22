@@ -50,6 +50,9 @@ if (!defined('DCC_CHECKOUT_VERSION')) { define('DCC_CHECKOUT_VERSION', 'test'); 
 // v0.35.0 — Assets::enqueue() asks Layout whether this request gets the new
 // layout's stylesheet, so the gate has to be loadable here too.
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
+// v0.35.0 — Assets names the layout script as the dropdown list's
+// dependency when the layout is on, so that class is loadable here too.
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout-script.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-guest-count-script.php';
 
@@ -119,6 +122,9 @@ $GLOBALS['filters']['dcc_checkout_is_checkout_page'] = true;
 // v0.35.0 — Assets::enqueue() asks Layout whether this request gets the new
 // layout's stylesheet, so the gate has to be loadable here too.
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
+// v0.35.0 — Assets names the layout script as the dropdown list's
+// dependency when the layout is on, so that class is loadable here too.
+require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-layout-script.php';
 require_once __DIR__ . '/../../dcc-custom-checkout/includes/class-assets.php';
 (new \DCC_Checkout\Assets())->enqueue();
 check('The checkout: checkout.js loads (guard)', isset($GLOBALS['scripts']['dcc-checkout']), true);
@@ -152,6 +158,23 @@ check('The checkout: with the layout on, its stylesheet loads after checkout.css
     [basename($GLOBALS['styles']['dcc-checkout-layout']['src'] ?? ''),
      $GLOBALS['styles']['dcc-checkout-layout']['deps'] ?? null],
     ['checkout-layout.min.css', ['dcc-checkout']]);
+
+// v0.35.0 item 3 — THE SCRIPT ORDER IS A DEPENDENCY, NOT A COINCIDENCE.
+// layout.js marks the short dropdowns `data-dcc-segmented` and select-list.js
+// skips a marked select; if the list ran first there would be two controls on
+// one field. With the layout ON the dependency is declared, and with it OFF it
+// is not — nothing of today's checkout changes.
+check('with the layout on, the dropdown list depends on the layout script (so it runs after)',
+    $GLOBALS['scripts']['dcc-checkout-select-list']['deps'] ?? null,
+    ['dcc-checkout', \DCC_Checkout\Layout_Script::HANDLE]);
+
+$GLOBALS['scripts'] = [];
+$GLOBALS['opt']['dcc_checkout_settings']['layout_enabled'] = 0;
+\DCC_Checkout\Config::flush_cache();
+\DCC_Checkout\Layout::flush();
+(new \DCC_Checkout\Assets())->enqueue();
+check('with the layout off, the dropdown list depends only on checkout.js, as in 0.34.2',
+    $GLOBALS['scripts']['dcc-checkout-select-list']['deps'] ?? null, ['dcc-checkout']);
 
 echo $fail ? "\n$fail failing\n" : "\nall passing ($pass)\n";
 exit($fail ? 1 : 0);

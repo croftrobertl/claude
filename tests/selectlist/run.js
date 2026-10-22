@@ -467,6 +467,43 @@ async function tapOrClick(pg, selector, touch) {
             await pg.evaluate(b => document.activeElement === document.querySelector(b), btnOf(FIELD.guests)), true);
         check('the services\' own "for N" select (never shown; checkout.js sets it) is left as it is',
             await pg.$eval('select[name="mphb_room_details[0][services][1][adults]"]', s => [s.classList.contains('dcc_checkout-select-native'), !!s.dccList]), [false, false]);
+        /* v0.35.0 item 3 — A SELECT THE NEW LAYOUT HAS TURNED INTO SEGMENTED
+           BUTTONS IS LEFT ALONE. layout.js marks it `data-dcc-segmented` and
+           runs first (Assets makes this script depend on it when the layout is
+           active); without the skip there would be two controls for one field,
+           a drawn list and a row of buttons.
+           THE DECISION IS MADE FOR REAL: a marked select is INSERTED, so this
+           script's own MutationObserver runs `enhance` on it. The first
+           version of this case cleared the enhancement and called a
+           re-enhance hook that does not exist, so nothing ran and the
+           assertion could not fail. */
+        const segDecision = await pg.evaluate(() => {
+            const fresh = document.createElement('select');
+            fresh.name = 'dcc_segmented_probe';
+            fresh.setAttribute('data-dcc-segmented', '1');
+            ['', 'a', 'b'].forEach((v) => {
+                const o = document.createElement('option');
+                o.value = v; o.textContent = v || '—';
+                fresh.appendChild(o);
+            });
+            /* And an identical one WITHOUT the marker, as the control: if the
+               observer never fires, neither is enhanced and the case proves
+               nothing. */
+            const plain = fresh.cloneNode(true);
+            plain.name = 'dcc_plain_probe';
+            plain.removeAttribute('data-dcc-segmented');
+            const host = document.querySelector('form') || document.body;
+            host.appendChild(fresh);
+            host.appendChild(plain);
+            return new Promise((resolve) => setTimeout(() => resolve({
+                marked: fresh.classList.contains('dcc_checkout-select-native') || !!fresh.dccList,
+                plain: plain.classList.contains('dcc_checkout-select-native') || !!plain.dccList,
+            }), 400));
+        });
+        check('an unmarked select added to the page IS enhanced (the guard on the next check)',
+            segDecision.plain, true);
+        check('a select the new layout has segmented is left alone (v0.35.0)',
+            segDecision.marked, false);
         await ctx.close();
     }
 

@@ -87,7 +87,9 @@ class MPHB_Stub { public function settings() { return new MPHB_Settings_Stub(); 
 function MPHB() { return new MPHB_Stub(); }
 
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
-foreach (['config', 'layout', 'checkout-request', 'assets', 'layout-script'] as $f) {
+// boat-field is loaded because Layout_Script reads its NAME constant: the
+// segmented set's boat field is the one that plugin owns, never retyped here.
+foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'layout-script'] as $f) {
     require $plugin . '/includes/class-' . $f . '.php';
 }
 
@@ -270,6 +272,45 @@ $GLOBALS['state']['is_page'] = false;
 $GLOBALS['scripts'] = [];
 (new Layout_Script())->enqueue();
 check('no other page gets it', isset($GLOBALS['scripts'][Layout_Script::HANDLE]), false);
+
+/* ========================================================================== *
+ * 5. Which dropdowns become segmented sets (item 3)
+ * ========================================================================== */
+
+echo "\n--- the segmented set (item 3) ---\n";
+
+reset_state();
+$seg = Layout_Script::segmented();
+
+check('three fields, in the order the guest meets them',
+    array_column($seg, 'name'), ['[adults]', 'mphb_dog_hair', 'mphb_boat']);
+check('the guest chooser is matched by SUFFIX — MotoPress numbers it per room',
+    array_column($seg, 'match'), ['suffix', 'exact', 'exact']);
+
+/* THE NAMES ARE NOT RETYPED. The coat field's name comes from Config (the
+   same one the pet backstop and the gating read) and the boat field's from
+   the Boat field's own contract, so a rename moves the match with it. */
+$GLOBALS['state']['filters']['dcc_checkout_dog_field_names'][] = static function (array $n): array {
+    $n['hair'] = 'mphb_dog_coat_renamed';
+    return $n;
+};
+check('a renamed coat field moves the match with it',
+    array_column(Layout_Script::segmented(), 'name'),
+    ['[adults]', 'mphb_dog_coat_renamed', 'mphb_boat']);
+$GLOBALS['state']['filters']['dcc_checkout_dog_field_names'] = [];
+
+check('the boat field is the one Boat_Field owns',
+    in_array('mphb_' . \DCC_Checkout\Boat_Field::NAME, array_column($seg, 'name'), true), true);
+
+/* THE DOG QUESTION IS NOT IN THE LIST. checkout.js already builds it as a
+   real fieldset of Yes/No radios — the control that applies the pet fee — so
+   item 3 styles it and never rebuilds it. */
+check('the dog Yes/No is NOT segmented from here',
+    in_array('dcc_checkout_dog', array_column($seg, 'name'), true), false);
+/* And nor is Dog Size: Rob's picture 10 makes it a single promise tick box. */
+$dog = Config::dog_field_names();
+check('Dog Size is not segmented either — it is the promise tick box',
+    in_array($dog['size'], array_column($seg, 'name'), true), false);
 
 /* 0.29.0: nothing localized at the top level may be a boolean. */
 reset_state();

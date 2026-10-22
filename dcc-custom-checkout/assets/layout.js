@@ -352,12 +352,233 @@
     }
 
     /* --------------------------------------------------------------------- *
+     * Item 3 — SEGMENTED BUTTONS (picture 1, the G mockups)
+     *
+     * Guests, coat and boat become a row of buttons instead of a dropdown.
+     * THE DOG QUESTION IS NOT HERE: checkout.js already builds it as a real
+     * <fieldset> of Yes/No radios, so it is styled by checkout-layout.css and
+     * never rebuilt — rebuilding it would take over the control that applies
+     * the pet fee.
+     *
+     * THE SELECT REMAINS THE SOURCE OF TRUTH, exactly as select-list.js
+     * (0.34.1) established for the dropdown list. The buttons set the select's
+     * value and fire its real `input` and `change`, so MotoPress's own
+     * re-price over admin-ajax happens precisely as it does today, and the
+     * submitted data is the select's — not the buttons'.
+     *
+     * WHY THIS RUNS BEFORE select-list.js, AND WHY THAT IS A DEPENDENCY AND
+     * NOT A COINCIDENCE: select-list.js turns EVERY visible select into a
+     * button and a drawn list. Two controls for one field would be the result,
+     * so each select this segments is marked `data-dcc-segmented`, which
+     * select-list.js skips — and the marking has to happen first. Assets
+     * declares `dcc-checkout-layout` as a dependency of the dropdown list when
+     * the layout is active, so WordPress prints this script first and its
+     * DOMContentLoaded handler runs first. The suite asserts the marker, and
+     * select-list's own suite asserts it is honoured.
+     *
+     * A ROW OF BUTTONS IS ONLY WORTH IT FOR A SHORT LIST. Country has ~200
+     * options and stays a drawn list; these three have 2-4. The cap is
+     * explicit below, so a cottage with a large capacity cannot turn the guest
+     * chooser into forty buttons.
+     * --------------------------------------------------------------------- */
+
+    /* Above this many choices, a dropdown is the better control and the
+       select is left to select-list.js. */
+    var SEGMENT_MAX = 6;
+
+    function segmentSpecs() {
+        var list = CFG.segmented;
+        return Object.prototype.toString.call(list) === '[object Array]' ? list : [];
+    }
+
+    /** Does this select match one of the specs? Returns the spec or null. */
+    function specFor(select) {
+        var name = String(select.name || '');
+        var specs = segmentSpecs();
+        for (var i = 0; i < specs.length; i++) {
+            var spec = specs[i];
+            var want = String(spec.name || '');
+            if (!want) { continue; }
+            if (spec.match === 'suffix') {
+                if (name.length > want.length && name.slice(-want.length) === want) { return spec; }
+            } else if (name === want) {
+                return spec;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The options a guest may choose, as the select has them NOW.
+     *
+     * MIRRORS select-list.js's shownOptions(): checkout.js caps the guest
+     * chooser above the offered count with `hidden` + a class + `disabled`
+     * (0.25.2), and a capped option must not come back as a button. The two
+     * rules have to agree, so the pair is named here and a mutation holds
+     * each half.
+     */
+    function choosable(select) {
+        return Array.prototype.filter.call(select.options, function (o) {
+            if (o.hidden || o.classList.contains('dcc_checkout-option-hidden')) { return false; }
+            /* The leading "— Select —" is not a choice; it is the absence of
+               one, and item 10/0.34.0 both depend on an unchosen count staying
+               unchosen. A segmented set simply shows nothing selected. */
+            return String(o.value) !== '';
+        });
+    }
+
+    /**
+     * Turn one select into a labelled radio group.
+     *
+     * A real <fieldset>/<legend> with real radios, for the same reason
+     * checkout.js's pet toggle is one: a span and a div did not read as a
+     * group to assistive tech. Native radios also bring arrow-key movement,
+     * roving focus and the focus ring for free.
+     */
+    function segment(select) {
+        if (select.multiple || select.size > 1) { return false; }
+        if (select.hasAttribute('data-dcc-segmented')) { return false; }
+        var spec = specFor(select);
+        if (!spec) { return false; }
+        var options = choosable(select);
+        if (options.length < 2 || options.length > SEGMENT_MAX) { return false; }
+
+        var group = document.createElement('fieldset');
+        group.className = 'dcc_layout-segment';
+        group.setAttribute('data-dcc-injected', '1');
+
+        var legend = document.createElement('legend');
+        legend.className = 'dcc_layout-segment__legend';
+        /* The field's own label if it has one, so a translated site keeps its
+           words; the spec's label only when there is nothing on the page. */
+        legend.appendChild(document.createTextNode(labelText(select) || spec.label || ''));
+        group.appendChild(legend);
+
+        /* THE OPTIONS GET THEIR OWN FLEX BOX, and the fieldset does not become
+           one. A <legend> inside a `display: flex` fieldset is not a flex item
+           and every engine lays it out specially, which is a class of quirk
+           worth not standing on.
+           WHAT THIS DID NOT DO, stated because the first version of this
+           comment claimed it: it did not fix an overlap of the Submit button.
+           Playwright refused to click that button while the fieldset was the
+           flex container, and the obvious reading was that the option labels
+           were covering it — but measuring the rectangles, before and after,
+           shows no overlap in either shape. The refusal was the harness's own
+           hit-testing on a very tall emulated page. The structure is kept on
+           its own merits; the button's clear space is now asserted directly
+           instead of being inferred from a harness error. */
+        var options_box = document.createElement('div');
+        options_box.className = 'dcc_layout-segment__options';
+        group.appendChild(options_box);
+
+        var name = 'dcc_seg_' + (select.name || 'field').replace(/[^A-Za-z0-9_]+/g, '_');
+        var radios = [];
+        options.forEach(function (option) {
+            var label = document.createElement('label');
+            label.className = 'dcc_layout-segment__option';
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = name;
+            radio.value = option.value;
+            radio.className = 'dcc_layout-segment__radio';
+            if (option.disabled) { radio.disabled = true; }
+            if (select.value === option.value) { radio.checked = true; }
+            var text = document.createElement('span');
+            text.className = 'dcc_layout-segment__text';
+            text.appendChild(document.createTextNode(option.textContent || option.value));
+            label.appendChild(radio);
+            label.appendChild(text);
+            options_box.appendChild(label);
+            radios.push(radio);
+        });
+
+        /* THE BUTTONS DRIVE THE SELECT, and the select tells MotoPress. */
+        group.addEventListener('change', function (e) {
+            var hit = e.target;
+            if (!hit || hit.type !== 'radio' || !hit.checked) { return; }
+            if (select.value === hit.value) { return; }
+            select.value = hit.value;
+            select.dispatchEvent(new Event('input', { bubbles: true }));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        /* AND THE SELECT DRIVES THEM BACK, because other code sets it: item
+           10's restore, checkout.js's own capping, and MotoPress's re-render
+           presets. A one-way binding would show the guest a stale answer. */
+        select.addEventListener('change', function () {
+            radios.forEach(function (radio) {
+                var want = radio.value === select.value;
+                if (radio.checked !== want) { radio.checked = want; }
+            });
+        });
+
+        /* The select stays in the form, and stays the thing that submits. It
+           is hidden VISUALLY only — never `disabled`, never removed — which is
+           the same rule 0.22.0 set for anything that carries money and
+           0.34.1 set for the dropdown list. */
+        select.setAttribute('data-dcc-segmented', '1');
+        addClass(select, 'dcc_layout-segment__native');
+        select.setAttribute('tabindex', '-1');
+        select.setAttribute('aria-hidden', 'true');
+
+        /* AFTER THE LABEL, NOT AFTER THE SELECT, when the label WRAPS it.
+           MotoPress writes `<label>Coat <select>…</select></label>`, so
+           inserting beside the select would put a <fieldset> inside a
+           <label>, which the HTML spec does not allow, and would make the
+           whole group part of the label's own activation area.
+           MEASURED, SO THE CLAIM IS NOT OVERSTATED: with the group nested
+           that way a tap on an option still set the select correctly. This is
+           a validity and containment fix, not a repair of an observed
+           breakage — the clipped select has `pointer-events: none`, which is
+           what keeps the nested case harmless. */
+        var ref = select;
+        var wrapping = select.closest('label');
+        if (wrapping && wrapping.contains(select) && wrapping !== select) {
+            ref = wrapping;
+        }
+        ref.parentNode.insertBefore(group, ref.nextSibling);
+        return true;
+    }
+
+    /** The field's visible label text, if the page has one. */
+    function labelText(select) {
+        var label = null;
+        if (select.id) {
+            try { label = document.querySelector('label[for="' + cssEscape(select.id) + '"]'); } catch (e) { label = null; }
+        }
+        if (!label) { label = select.closest('label'); }
+        if (!label) { return ''; }
+        /* The label may WRAP the control, so its textContent would include the
+           options. Only the text nodes outside any control are the label. */
+        var out = '';
+        Array.prototype.forEach.call(label.childNodes, function (node) {
+            if (node.nodeType === 3) { out += node.textContent; }
+            else if (node.nodeType === 1 && !/^(SELECT|INPUT|TEXTAREA|BUTTON)$/.test(node.tagName)) {
+                out += node.textContent;
+            }
+        });
+        return out.replace(/\s+/g, ' ').trim();
+    }
+
+    function addClass(el, name) {
+        if (!el.classList.contains(name)) { el.classList.add(name); }
+    }
+
+    function segments(root) {
+        var all = root.querySelectorAll('select[name]');
+        for (var i = 0; i < all.length; i++) { segment(all[i]); }
+    }
+
+    /* --------------------------------------------------------------------- *
      * Go
      * --------------------------------------------------------------------- */
 
     function init() {
         var root = form();
         if (!root) { return; }  /* the formless checkout is item 10's */
+        /* BEFORE anything else, and before select-list.js runs: the marker it
+           reads has to be on the select by the time it looks. */
+        segments(root);
         place(root);
         autofill(root);
         hints(root);

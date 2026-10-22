@@ -75,7 +75,14 @@
     function wanted(sel) {
         var n = String(sel.name || '');
         return sel.tagName === 'SELECT' && !sel.multiple && !(sel.size > 1) &&
-            n.indexOf('[services]') === -1 && !sel.hasAttribute('data-dcc-native');
+            n.indexOf('[services]') === -1 && !sel.hasAttribute('data-dcc-native') &&
+            /* v0.35.0 — the new layout turns a short dropdown (guests, coat,
+               boat) into a row of segmented buttons, which drive this same
+               select. Two controls for one field is the failure to avoid, so
+               a select layout.js has taken is left alone here. It marks them
+               before this runs: Assets makes this script depend on
+               dcc-checkout-layout when the layout is active. */
+            !sel.hasAttribute('data-dcc-segmented');
     }
 
     // The options a guest can choose, as the select has them NOW. A hidden

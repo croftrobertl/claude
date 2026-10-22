@@ -5157,5 +5157,237 @@
   "find": "        var at = anchor;\n        sections.forEach(function (section) {\n            at.parentNode.insertBefore(section, at.nextSibling);\n            at = section;\n        });",
   "replace": "        var at = anchor;\n        sections.forEach(function (section) {\n            section.classList.remove('dcc_checkout-section-hidden');\n            at.parentNode.insertBefore(section, at.nextSibling);\n            at = section;\n        });",
   "count": 1
+ },
+ {
+  "id": "seg-not-built",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the short dropdowns become segmented buttons",
+  "find": "        segments(root);\n        place(root);",
+  "replace": "        place(root);",
+  "count": 1
+ },
+ {
+  "id": "seg-select-not-driven",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a button sets the real select, which is what MotoPress reads",
+  "find": "            select.value = hit.value;\n            select.dispatchEvent(new Event('input', { bubbles: true }));\n            select.dispatchEvent(new Event('change', { bubbles: true }));",
+  "replace": "            select.value = hit.value;",
+  "count": 1
+ },
+ {
+  "id": "seg-no-input-event",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: both input and change are fired, as the dropdown list does",
+  "find": "            select.dispatchEvent(new Event('input', { bubbles: true }));\n            select.dispatchEvent(new Event('change', { bubbles: true }));",
+  "replace": "            select.dispatchEvent(new Event('change', { bubbles: true }));",
+  "count": 1
+ },
+ {
+  "id": "seg-one-way",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: setting the select moves the chosen button back (restore, capping, presets)",
+  "find": "        select.addEventListener('change', function () {\n            radios.forEach(function (radio) {",
+  "replace": "        select.addEventListener('dcc-never', function () {\n            radios.forEach(function (radio) {",
+  "count": 1
+ },
+ {
+  "id": "seg-placeholder-offered",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the \"— Select —\" placeholder is not offered as a button",
+  "find": "            return String(o.value) !== '';",
+  "replace": "            return true;",
+  "count": 1
+ },
+ {
+  "id": "seg-capped-offered",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a capped guest count gets no button (mirrors select-list's shownOptions)",
+  "find": "            if (o.hidden || o.classList.contains('dcc_checkout-option-hidden')) { return false; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "seg-no-max",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a long dropdown (Country) stays a dropdown",
+  "find": "        if (options.length < 2 || options.length > SEGMENT_MAX) { return false; }",
+  "replace": "        if (options.length < 2) { return false; }",
+  "count": 1
+ },
+ {
+  "id": "seg-no-min",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: one choice is not a choice — such a select stays a dropdown",
+  "find": "        if (options.length < 2 || options.length > SEGMENT_MAX) { return false; }",
+  "replace": "        if (options.length < 1 || options.length > SEGMENT_MAX) { return false; }",
+  "count": 1
+ },
+ {
+  "id": "seg-marker-missing",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser",
+   "selectlist"
+  ],
+  "claim": "0.35.0 item 3: a segmented select is marked, so the dropdown list skips it",
+  "find": "        select.setAttribute('data-dcc-segmented', '1');",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "seg-select-disabled",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the native select is hidden visually only — it still submits",
+  "find": "        select.setAttribute('tabindex', '-1');",
+  "replace": "        select.disabled = true;\n        select.setAttribute('tabindex', '-1');",
+  "count": 1
+ },
+ {
+  "id": "seg-nested-in-label",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a group is never nested inside the field's wrapping <label>",
+  "find": "        var ref = select;\n        var wrapping = select.closest('label');",
+  "replace": "        var ref = select;\n        var wrapping = null;",
+  "count": 1
+ },
+ {
+  "id": "seg-label-text-ignored",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the group is labelled with the page's own words where it has them",
+  "find": "        legend.appendChild(document.createTextNode(labelText(select) || spec.label || ''));",
+  "replace": "        legend.appendChild(document.createTextNode(spec.label || ''));",
+  "count": 1
+ },
+ {
+  "id": "seg-dog-rebuilt",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0 item 3: the dog Yes/No is checkout.js's fieldset and is never segmented from here",
+  "find": "            [\n                'match' => 'suffix',\n                'name'  => '[adults]',",
+  "replace": "            [\n                'match' => 'exact',\n                'name'  => 'dcc_checkout_dog',\n            ],\n            [\n                'match' => 'suffix',\n                'name'  => '[adults]',",
+  "count": 1
+ },
+ {
+  "id": "seg-coat-name-retyped",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0 item 3: the coat field's name comes from Config, so a rename moves the match",
+  "find": "                'name'  => (string) ($dog['hair'] ?? 'mphb_dog_hair'),",
+  "replace": "                'name'  => 'mphb_dog_hair',",
+  "count": 1
+ },
+ {
+  "id": "seg-adults-exact",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0 item 3: the guest chooser is matched by suffix — MotoPress numbers it per room",
+  "find": "                'match' => 'suffix',\n                'name'  => '[adults]',",
+  "replace": "                'match' => 'exact',\n                'name'  => '[adults]',",
+  "count": 1
+ },
+ {
+  "id": "seg-list-dep-missing",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.35.0 item 3: the dropdown list depends on the layout script, so layout.js marks first",
+  "find": "        if (Layout::active()) {\n            $list_deps[] = Layout_Script::HANDLE;\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "seg-list-dep-always",
+  "file": "dcc-custom-checkout/includes/class-assets.php",
+  "suites": [
+   "recalc"
+  ],
+  "claim": "0.35.0 item 3: that dependency is only added when the layout is active",
+  "find": "        if (Layout::active()) {\n            $list_deps[] = Layout_Script::HANDLE;",
+  "replace": "        if (true) {\n            $list_deps[] = Layout_Script::HANDLE;",
+  "count": 1
+ },
+ {
+  "id": "seg-list-ignores-marker",
+  "file": "dcc-custom-checkout/assets/select-list.js",
+  "suites": [
+   "selectlist"
+  ],
+  "claim": "0.35.0 item 3: the dropdown list honours the segmented marker",
+  "find": "            !sel.hasAttribute('data-dcc-segmented');",
+  "replace": "            true;",
+  "count": 1
+ },
+ {
+  "id": "css-seg-target",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a segmented option is at least a 44px tap target",
+  "find": "    min-width: 64px;\n    min-height: 44px;",
+  "replace": "    min-width: 40px;\n    min-height: 30px;",
+  "count": 1
+ },
+ {
+  "id": "css-seg-focus",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: a focused option shows an outline, which is the whole focus treatment",
+  "find": ".dcc_layout .dcc_layout-segment__option:focus-within,\n.dcc_layout .dcc_checkout-pet__toggle label:focus-within {\n    outline: 3px solid var(--dcc-blue, #006bcf);",
+  "replace": ".dcc_layout .dcc_layout-segment__option:focus-within,\n.dcc_layout .dcc_checkout-pet__toggle label:focus-within {\n    outline: 0;",
+  "count": 1
+ },
+ {
+  "id": "css-seg-native-visible",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the replaced select is hidden, so the guest sees one control",
+  "find": "    clip: rect(0 0 0 0);\n    clip-path: inset(50%);\n    border: 0;\n    opacity: 0;\n    pointer-events: none;",
+  "replace": "    border: 0;",
+  "count": 1
  }
 ]

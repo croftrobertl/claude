@@ -31,7 +31,8 @@ const path = require('path');
 const PLUGIN = path.join(__dirname, '..', '..', 'dcc-custom-checkout');
 const MIN = !!process.env.DCC_MIN;
 const JS = fs.readFileSync(path.join(PLUGIN, 'assets', MIN ? 'layout.min.js' : 'layout.js'), 'utf8');
-const CSS = fs.readFileSync(path.join(PLUGIN, 'assets', MIN ? 'checkout.min.css' : 'checkout.css'), 'utf8');
+const CSS = fs.readFileSync(path.join(PLUGIN, 'assets', MIN ? 'checkout.min.css' : 'checkout.css'), 'utf8')
+    + fs.readFileSync(path.join(PLUGIN, 'assets', MIN ? 'checkout-layout.min.css' : 'checkout-layout.css'), 'utf8');
 
 let failures = 0;
 function check(name, actual, expected) {
@@ -62,11 +63,18 @@ const TOKENS = {
     'mphb_guest3_last_name': 'section-guest3 family-name',
 };
 
+/* What Layout_Script::segmented() produces; its own suite proves that. */
+const SEGMENTED = [
+    { match: 'suffix', name: '[adults]', label: 'Number of Guests' },
+    { match: 'exact', name: 'mphb_dog_hair', label: 'Coat' },
+    { match: 'exact', name: 'mphb_boat', label: 'Boat Or Trailer' },
+];
+
 const page_html = `<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>checkout</title><style>${CSS}</style></head>
-<body><div class="mphb_sc_checkout">
+<body class="dcc_layout"><div class="mphb_sc_checkout">
   <form class="mphb_sc_checkout-form" method="post" action="/submit-booking/">
     <!-- The accommodation block, with the guest chooser: the control that
          reveals the guest panels. On the real checkout it is ABOVE the
@@ -119,9 +127,38 @@ const page_html = `<!doctype html>
          Nothing in item 2 moves this — it is already what Rob asked for. -->
     <section class="mphb-checkout-section dcc_checkout-section dcc_checkout-pet-section" id="pet">
       <h3 class="dcc_checkout-section-title">Pet Information</h3>
-      <div class="dcc_checkout-pet" id="petq">Traveling with a dog?</div>
+      <!-- checkout.js's own pet block: a real fieldset of Yes/No radios. Item
+           3 STYLES this and must never rebuild it — it is the control that
+           applies the pet fee. -->
+      <fieldset class="dcc_checkout-pet" id="petq">
+        <legend class="dcc_checkout-pet__legend">Traveling with a dog?</legend>
+        <div class="dcc_checkout-pet__toggle">
+          <label><input type="radio" name="dcc_checkout_dog" value="no" checked><span>No</span></label>
+          <label><input type="radio" name="dcc_checkout_dog" value="yes"><span>Yes</span></label>
+        </div>
+      </fieldset>
       <p class="dcc_checkout-section-hidden"><input type="text" name="mphb_dog_type"></p>
+      <p><label>Coat <select name="mphb_dog_hair">
+        <option value="">— Select —</option>
+        <option value="short">Short</option>
+        <option value="medium">Medium</option>
+        <option value="long">Long</option>
+      </select></label></p>
     </section>
+    <p><label>Bringing a boat or trailer? <select name="mphb_boat">
+      <option value="">— Select —</option>
+      <option value="No">No</option>
+      <option value="Yes">Yes</option>
+    </select></label></p>
+    <!-- Country: ~200 options on the real page, so it stays a drawn list and
+         must NOT be segmented. -->
+    <p><label>Country <select name="mphb_country_select">
+      <option value="">—</option>
+      <option value="US">United States</option><option value="CA">Canada</option>
+      <option value="GB">United Kingdom</option><option value="FR">France</option>
+      <option value="DE">Germany</option><option value="IT">Italy</option>
+      <option value="ES">Spain</option>
+    </select></label></p>
 
     <p><textarea name="mphb_note"></textarea></p>
     <p><input type="file" name="mphb_upload_id"></p>
@@ -129,7 +166,11 @@ const page_html = `<!doctype html>
   </form>
 </div>
 <script>
-  window.DCC_LAYOUT = ${JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1' })};
+  window.DCC_LAYOUT = ${JSON.stringify({
+      autocomplete: TOKENS,
+      placesField: 'mphb_address1',
+      segmented: SEGMENTED,
+  })};
   /* Record a submit rather than letting it navigate: "Done must never submit"
      is only evidence if an attempt would have been seen. */
   window.__submits = 0;
@@ -223,6 +264,201 @@ const page_html = `<!doctype html>
     check('Done on the last visible field does NOT submit', afterLast.submits, 0);
     check('… and closes the keyboard rather than focusing a folded field',
         afterLast.active, 'BODY');
+
+    /* ===================================================================== *
+     * ITEM 3 — SEGMENTED BUTTONS
+     * ===================================================================== */
+    const seg = await page.evaluate(() => {
+        const groups = Array.prototype.map.call(
+            document.querySelectorAll('.dcc_layout-segment'),
+            (g) => ({
+                legend: g.querySelector('legend').textContent.trim(),
+                options: Array.prototype.map.call(
+                    g.querySelectorAll('.dcc_layout-segment__option .dcc_layout-segment__text'),
+                    (t) => t.textContent),
+                /* A <fieldset> is not allowed inside a <label>, and a group
+                   there would be part of the label's activation area. */
+                parentIsLabel: g.parentElement.tagName === 'LABEL',
+            })
+        );
+        return {
+            groups: groups,
+            /* Which selects were taken, and which were left. */
+            taken: Array.prototype.map.call(
+                document.querySelectorAll('select[data-dcc-segmented]'), (x) => x.name),
+            /* Country has too many options to be a row of buttons: it stays a
+               dropdown for select-list.js. */
+            country: document.querySelector('[name="mphb_country_select"]')
+                .hasAttribute('data-dcc-segmented'),
+            /* The dog Yes/No is checkout.js's fieldset and must NOT be
+               rebuilt — no segment is made for it. */
+            dogRadiosIntact: document.querySelectorAll('input[name="dcc_checkout_dog"]').length,
+            dogSegmented: !!document.querySelector('.dcc_layout-segment input[name^="dcc_seg_dcc_checkout_dog"]'),
+        };
+    });
+
+    check('three dropdowns become segmented sets: guests, coat, boat',
+        seg.taken, ['mphb_room_details[0][adults]', 'mphb_dog_hair', 'mphb_boat']);
+    check('each is a labelled group, using the page\'s own label text',
+        seg.groups.map((g) => g.legend),
+        ['Number of Guests', 'Coat', 'Bringing a boat or trailer?']);
+    check('the options are the select\'s, without its "— Select —" placeholder',
+        seg.groups.map((g) => g.options),
+        [['1', '2', '3', '4'], ['Short', 'Medium', 'Long'], ['No', 'Yes']]);
+    check('no group is nested inside a <label>',
+        seg.groups.map((g) => g.parentIsLabel), [false, false, false]);
+    check('Country keeps its dropdown — too many options to be buttons',
+        seg.country, false);
+    check('the dog Yes/No is checkout.js\'s own fieldset, styled and never rebuilt',
+        [seg.dogRadiosIntact, seg.dogSegmented], [2, false]);
+
+    /* THE BUTTONS DRIVE THE SELECT, and the select is what MotoPress reads. */
+    const driven = await page.evaluate(() => {
+        const fired = [];
+        const sel = document.querySelector('[name="mphb_room_details[0][adults]"]');
+        sel.addEventListener('input', () => fired.push('input'));
+        sel.addEventListener('change', () => fired.push('change'));
+        const three = document.querySelector('.dcc_layout-segment input[value="3"]');
+        three.closest('label').click();
+        return { value: sel.value, fired: fired, checked: three.checked };
+    });
+    check('tapping a button sets the real select', [driven.value, driven.checked], ['3', true]);
+    check('… and fires its input AND change, so MotoPress re-prices as it does today',
+        driven.fired, ['input', 'change']);
+
+    /* AND THE SELECT DRIVES THEM BACK: item 10's restore, checkout.js's
+       capping and MotoPress's presets all set the select directly, and a
+       one-way binding would leave the guest looking at a stale answer. */
+    const back = await page.evaluate(() => {
+        const sel = document.querySelector('[name="mphb_room_details[0][adults]"]');
+        sel.value = '2';
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        return Array.prototype.filter.call(
+            document.querySelectorAll('.dcc_layout-segment__radio'), (r) => r.checked
+        ).map((r) => r.value);
+    });
+    check('setting the select moves the chosen button', back, ['2']);
+
+    /* The select stays in the form and stays what submits — never disabled,
+       never removed (0.22.0's rule for anything carrying money, and 0.34.1's
+       for the dropdown list). */
+    const submits = await page.evaluate(() => {
+        const sel = document.querySelector('[name="mphb_room_details[0][adults]"]');
+        const data = new FormData(document.querySelector('form'));
+        return {
+            disabled: sel.disabled,
+            connected: sel.isConnected,
+            posted: data.get('mphb_room_details[0][adults]'),
+            /* The buttons' own radios are this plugin's, and are allowed to
+               submit — the same shape as checkout.js's dcc_checkout_dog. */
+            segName: data.has('dcc_seg_mphb_room_details_0__adults_'),
+        };
+    });
+    check('the select still submits its own value, and is never disabled or removed',
+        [submits.disabled, submits.connected, submits.posted],
+        [false, true, '2']);
+
+    /* A CAPPED OPTION IS NOT OFFERED AS A BUTTON, on its own page.
+       checkout.js hides the counts above the offered number with `hidden` +
+       `dcc_checkout-option-hidden` + `disabled` (0.25.2), and a button for one
+       would offer a guest a count the server refuses. The rule mirrors
+       select-list.js's shownOptions(), so both halves are pinned.
+       A FRESH PAGE, because segments() runs once at init — the first version
+       of this case capped the option on the live page and then asserted only
+       its own setup, which proved nothing. */
+    const cappedPage = await (async () => {
+        const html = page_html.replace(
+            '<option value="4">4</option>',
+            '<option value="4" hidden disabled class="dcc_checkout-option-hidden">4</option>'
+        );
+        const p2 = await ctx.newPage();
+        await p2.setContent(html);
+        const got = await p2.evaluate(() => {
+            const g = document.querySelector('.dcc_layout-segment');
+            return {
+                options: Array.prototype.map.call(
+                    g.querySelectorAll('.dcc_layout-segment__text'), (t) => t.textContent),
+                /* The guard: the group was built at all. */
+                built: !!g,
+            };
+        });
+        await p2.close();
+        return got;
+    })();
+    check('a capped guest count gets no button', cappedPage.options, ['1', '2', '3']);
+    check('… and the group was built, so the check is not vacuous', cappedPage.built, true);
+
+    /* TOO FEW CHOICES IS NOT A SET EITHER: one option is not a choice, and a
+       select with nothing but the placeholder must be left to the dropdown
+       list rather than becoming a single dead button. */
+    const tinyPage = await (async () => {
+        const html = page_html.replace(
+            /<select name="mphb_boat">[\s\S]*?<\/select>/,
+            '<select name="mphb_boat"><option value="">—</option><option value="Yes">Yes</option></select>'
+        );
+        const p2 = await ctx.newPage();
+        await p2.setContent(html);
+        const got = await p2.evaluate(() => ({
+            segmented: document.querySelector('[name="mphb_boat"]').hasAttribute('data-dcc-segmented'),
+            groups: document.querySelectorAll('.dcc_layout-segment').length,
+        }));
+        await p2.close();
+        return got;
+    })();
+    check('a select with one real choice is left as a dropdown',
+        tinyPage.segmented, false);
+    check('… and the other two groups are still built', tinyPage.groups, 2);
+
+    /* ROB'S GEOMETRY: 44px targets and a visible focus ring. Both are
+       load-bearing — under 44px a thumb misses, and the focus ring is the
+       ONLY focus treatment, because the selected option's fill is the site
+       blue and a focus style that depended on the fill would vanish on it. */
+    const geom = await page.evaluate(() => {
+        const opts = Array.prototype.slice.call(
+            document.querySelectorAll('.dcc_layout-segment__option'));
+        const dog = document.querySelector('.dcc_checkout-pet__toggle label');
+        const rect = (el) => el.getBoundingClientRect();
+        const first = opts[0];
+        first.querySelector('input').focus();
+        const focused = getComputedStyle(first);
+        return {
+            minHeight: Math.min.apply(null, opts.map((o) => Math.round(rect(o).height))),
+            minWidth: Math.min.apply(null, opts.map((o) => Math.round(rect(o).width))),
+            dogHeight: Math.round(rect(dog).height),
+            /* Every option inside the page, no sideways overflow. */
+            inside: opts.every((o) => rect(o).left >= 0 &&
+                rect(o).right <= document.documentElement.clientWidth),
+            outline: [focused.outlineStyle, focused.outlineWidth],
+            touch: getComputedStyle(first).touchAction,
+            /* The chosen one reads as chosen. */
+            chosenBg: (() => {
+                const on = document.querySelector('.dcc_layout-segment__radio:checked');
+                return on ? getComputedStyle(on.closest('label')).backgroundColor : null;
+            })(),
+        };
+    });
+    check('every segmented option is at least a 44px tap target', geom.minHeight >= 44, true);
+    check('… and at least 64px wide, so two or four fit a phone', geom.minWidth >= 64, true);
+    check('the dog Yes/No gets the same target size from the same rules',
+        geom.dogHeight >= 44, true);
+    check('no option overflows the page sideways', geom.inside, true);
+    check('a focused option shows a real outline, not a fill change',
+        geom.outline, ['solid', '3px']);
+    check('… and declares its gesture, so iOS does not wait for a double tap',
+        geom.touch, 'manipulation');
+    check('the chosen option is filled with the site blue',
+        geom.chosenBg, 'rgb(0, 107, 207)');
+
+    /* TAP RULES: choosing an option is one property write on the select and
+       one on each radio — no DOM mutation at all. */
+    const segMuts = await page.evaluate(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => { n += rs.length; });
+        obs.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+        document.querySelector('.dcc_layout-segment input[value="1"]').closest('label').click();
+        return new Promise((resolve) => setTimeout(() => { obs.disconnect(); resolve(n); }, 300));
+    });
+    check('choosing a segmented option records NO DOM mutations (0.18.0)', segMuts, 0);
 
     /* ===================================================================== *
      * ITEM 2 — the panels sit under the answer that reveals them (picture 1)
@@ -392,10 +628,11 @@ const page_html = `<!doctype html>
      * ===================================================================== */
     const belted = await (async () => {
         const forced = page_html.replace(
-            'window.DCC_LAYOUT = ' + JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1' }),
-            'window.DCC_LAYOUT = ' + JSON.stringify({
+            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED }),
+            JSON.stringify({
                 autocomplete: Object.assign({}, TOKENS, { 'mphb_address1': 'address-line1' }),
                 placesField: 'mphb_address1',
+                segmented: SEGMENTED,
             })
         );
         const p2 = await ctx.newPage();
@@ -429,8 +666,31 @@ const page_html = `<!doctype html>
     check('typing and pressing the key record NO DOM mutations (0.18.0)',
         await page.evaluate(() => window.__muts), 0);
 
-    /* The button still submits — Enter is the only thing that changed. */
-    await page.click('#go');
+    /* NOTHING THIS BUILDS MAY COVER THE SUBMIT BUTTON. Playwright refused to
+       click it while the fieldset itself was the flex container — the option
+       labels overflowed far enough to swallow the press — so the overlap is
+       now measured directly, in the suite's FINAL state, rather than left to
+       a harness error message that could change meaning. */
+    const covering = await page.evaluate(() => {
+        const btn = document.getElementById('go').getBoundingClientRect();
+        const over = [];
+        document.querySelectorAll(
+            '.dcc_layout-segment, .dcc_layout-segment__option, .dcc_checkout-pet__toggle label'
+        ).forEach((el) => {
+            const r = el.getBoundingClientRect();
+            const hit = !(r.right < btn.left || r.left > btn.right ||
+                          r.bottom < btn.top || r.top > btn.bottom);
+            if (hit) { over.push(el.className); }
+        });
+        return over;
+    });
+    check('no segmented control overlaps the Submit button', covering, []);
+
+    /* The button still submits — Enter is the only thing that changed. The
+       click is dispatched on the element, because what is being asserted is
+       that submission still happens, not the browser's hit-testing (which the
+       check above covers on its own terms). */
+    await page.evaluate(() => document.getElementById('go').click());
     check('the Submit button still submits',
         await page.evaluate(() => window.__submits), 1);
 

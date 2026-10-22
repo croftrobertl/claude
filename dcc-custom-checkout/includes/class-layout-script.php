@@ -77,6 +77,52 @@ final class Layout_Script
         return [
             'autocomplete' => self::autocomplete_map(),
             'placesField'  => self::PLACES_FIELD,
+            'segmented'    => self::segmented(),
+        ];
+    }
+
+    /**
+     * WHICH DROPDOWNS BECOME SEGMENTED BUTTONS (item 3).
+     *
+     * Rob named four: guests, dog, coat, boat. The DOG question is already a
+     * real <fieldset> of Yes/No radios (checkout.js's buildPetBlock), so it is
+     * styled, never rebuilt — it is not in this list. That leaves the three
+     * that are <select> elements today.
+     *
+     * The guest chooser has no fixed name — MotoPress numbers it per room
+     * (`mphb_room_details[0][adults]`) — so it is matched by a SUFFIX, the
+     * same `[adults]$` test guest-count.js uses. The other two are named
+     * fields, and their names come from Config and from the Boat field's own
+     * contract, never retyped here.
+     *
+     * DOG SIZE IS DELIBERATELY ABSENT. Rob's picture 10 makes it a single
+     * promise tick box ("My dog is 20 lbs or less."), not a segmented set, and
+     * that is its own item.
+     *
+     * @return array<int,array<string,string>>
+     */
+    public static function segmented(): array
+    {
+        $dog = Config::dog_field_names();
+
+        return [
+            [
+                'match' => 'suffix',
+                'name'  => '[adults]',
+                'label' => __('Number of Guests', 'dcc-checkout'),
+            ],
+            [
+                'match' => 'exact',
+                'name'  => (string) ($dog['hair'] ?? 'mphb_dog_hair'),
+                'label' => __('Coat', 'dcc-checkout'),
+            ],
+            [
+                'match' => 'exact',
+                // The Boat field's contract (v0.31.0): mphb_cf_name `boat`,
+                // which MotoPress renders and stores as `mphb_boat`.
+                'name'  => 'mphb_' . Boat_Field::NAME,
+                'label' => __('Boat Or Trailer', 'dcc-checkout'),
+            ],
         ];
     }
 

@@ -152,3 +152,157 @@
 
 /* The theme's 0px-tall <img class="header-image"> stays as the theme draws it;
    it is the preload's companion request and must not be given a size here. */
+
+/* ---------------------------------------------------------------------------
+ * ITEM 3 — SEGMENTED BUTTONS (guests, coat, boat) and the dog question.
+ *
+ * The dog Yes/No is checkout.js's own <fieldset> of radios (buildPetBlock), so
+ * it is STYLED here and never rebuilt — rebuilding it would take over the
+ * control that applies the pet fee. The other three are built by layout.js
+ * from their <select>, which stays in the form and stays what submits.
+ *
+ * 44px targets and a visible focus ring are Rob's, and both are load-bearing:
+ * under 44px a thumb misses, and the focus ring is the ONLY focus treatment —
+ * the selected fill is #006BCF and white on it is the same pair the site
+ * button spec uses, so a focus style that depended on the fill would vanish on
+ * the selected option.
+ * ------------------------------------------------------------------------- */
+
+/* The native select stays in the form, hidden VISUALLY only: never disabled,
+   never removed, so it still submits. Clipped rather than `display: none`
+   because a `display: none` control cannot be focused for a browser's own
+   validation message, which is how select-list.js (0.34.1) hides its selects
+   and why checkout.js's readers were taught to measure the shown field. */
+.dcc_layout .dcc_layout-segment__native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dcc_layout .dcc_layout-segment {
+    display: block;
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+    /* A fieldset is a block with its own intrinsic sizing; min-width:0 is what
+       stops it refusing to shrink inside a flex or grid parent. */
+    min-width: 0;
+}
+
+/* THE OPTIONS, NOT THE FIELDSET, ARE THE FLEX BOX. A <legend> inside a
+   `display: flex` fieldset is not a flex item and every engine lays it out
+   specially, so the group's own box is not a thing to stand on. It does NOT
+   fix an overlap of the Submit button: that was measured, before and after,
+   and there is none in either shape — see the note in layout.js. */
+.dcc_layout .dcc_layout-segment__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dcc_layout .dcc_layout-segment__legend {
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--dcc-ink, #111);
+}
+
+.dcc_layout .dcc_layout-segment__option,
+.dcc_layout .dcc_checkout-pet__toggle label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 44px, Rob's floor, and a 12px side padding so two or four fit a 360px
+       screen without wrapping mid-word. */
+    min-width: 64px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--dcc-field-border, #f4da62);
+    border-radius: 22px;
+    background-color: #fff;
+    color: var(--dcc-ink, #111);
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    /* 0.15.0 item 6 — a declared gesture, so iOS does not hold the tap back to
+       see whether it is a double-tap-to-zoom. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* The radio itself is invisible but still the control: it keeps the keyboard
+   behaviour, the focus and the form semantics. Not `display: none`, which
+   would take it out of the tab order and out of arrow-key grouping. */
+.dcc_layout .dcc_layout-segment__radio,
+.dcc_layout .dcc_checkout-pet__toggle input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Chosen. */
+.dcc_layout .dcc_layout-segment__radio:checked + .dcc_layout-segment__text,
+.dcc_layout .dcc_layout-segment__option:has(.dcc_layout-segment__radio:checked),
+.dcc_layout .dcc_checkout-pet__toggle label:has(input[type="radio"]:checked) {
+    background-color: var(--dcc-blue, #006bcf);
+    border-color: var(--dcc-blue, #006bcf);
+    color: #fff;
+}
+
+/* `:has()` is not everywhere, so the chosen state is also carried on the text
+   span, which every browser can select. Both rules say the same thing; the
+   span version wins nothing it should not, because it is the inner element. */
+.dcc_layout .dcc_layout-segment__radio:checked + .dcc_layout-segment__text {
+    display: block;
+    width: 100%;
+    border-radius: 20px;
+    padding: 10px 0;
+    margin: -10px -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* THE FOCUS RING IS THE WHOLE FOCUS TREATMENT, and it is outside the hover
+   query on purpose (0.11.0): focus must work on a touch screen. */
+.dcc_layout .dcc_layout-segment__option:focus-within,
+.dcc_layout .dcc_checkout-pet__toggle label:focus-within {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+/* Hover, gated — on iOS the first tap applies :hover and it sticks until the
+   next tap elsewhere, so a hover-styled control eats a tap (v0.11.0). The
+   selector is the resting one with :hover appended, so it cannot lose to its
+   own resting rule. */
+@media (hover: hover) and (pointer: fine) {
+    .dcc_layout .dcc_layout-segment__option:hover,
+    .dcc_layout .dcc_checkout-pet__toggle label:hover {
+        border-color: var(--dcc-blue, #006bcf);
+    }
+}
+
+/* A choice the page has disabled — checkout.js caps the guest count above the
+   offered number (0.25.2). Shown, so the guest can see the ceiling exists,
+   and not choosable. */
+.dcc_layout .dcc_layout-segment__option:has(.dcc_layout-segment__radio:disabled) {
+    opacity: 0.45;
+    cursor: default;
+}
