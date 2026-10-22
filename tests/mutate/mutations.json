@@ -4671,5 +4671,236 @@
   "find": "                self::asset_url('assets/checkout-layout.css'),\n                ['dcc-checkout'],",
   "replace": "                self::asset_url('assets/checkout-layout.css'),\n                [],",
   "count": 1
+ },
+ {
+  "id": "res-id-stored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0 (required): the photo ID is NEVER written to storage",
+  "find": "        if (type === 'file') { return true; }",
+  "replace": "        if (type === 'file') { return false; }",
+  "count": 1
+ },
+ {
+  "id": "res-continue-other-dates",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0 (required): Continue Your Booking posts the dates that were SAVED",
+  "find": "        hidden(form, 'mphb_check_in_date', stay.checkIn);\n        hidden(form, 'mphb_check_out_date', stay.checkOut);",
+  "replace": "        hidden(form, 'mphb_check_in_date', new Date().toISOString().slice(0, 10));\n        hidden(form, 'mphb_check_out_date', stay.checkOut);",
+  "count": 1
+ },
+ {
+  "id": "res-coupon-stored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: the coupon code is never stored or restored",
+  "find": "        if (/coupon/i.test(name)) { return true; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-terms-stored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: the acceptance tick is never stored or restored",
+  "find": "        if (/accept_terms|accept-terms/i.test(name)) { return true; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-hidden-replayed",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: MotoPress's hidden plumbing — nonces, ids — is never stored",
+  "find": "        if (type === 'hidden' || type === 'password' || type === 'submit' || type === 'button') { return true; }",
+  "replace": "        if (type === 'password' || type === 'submit' || type === 'button') { return true; }",
+  "count": 1
+ },
+ {
+  "id": "res-service-stored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: nothing that carries money is restored (0.22.0's rule)",
+  "find": "        if (/\\[services\\]/.test(name)) { return true; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-no-events",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: a restored answer fires input+change, so the sections and the price follow",
+  "find": "    function fire(el) {\n        el.dispatchEvent(new Event('input', { bubbles: true }));\n        el.dispatchEvent(new Event('change', { bubbles: true }));\n    }",
+  "replace": "    function fire(el) {\n        void el;\n    }",
+  "count": 1
+ },
+ {
+  "id": "res-key-ignored",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: answers typed against one stay are never offered against another",
+  "find": "        if (!stay || !held || held.key !== stay.key || !held.data) {",
+  "replace": "        if (!stay || !held || !held.data) {",
+  "count": 1
+ },
+ {
+  "id": "res-key-dates-dropped",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: the stay key names BOTH dates, not just the room type",
+  "find": "            'key'          => $type . '|' . gmdate('Y-m-d', $in) . '|' . gmdate('Y-m-d', $out),",
+  "replace": "            'key'          => (string) $type,",
+  "count": 1
+ },
+ {
+  "id": "res-submit-keeps",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: submitting empties the store",
+  "find": "        form.addEventListener('submit', clearAll);",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-startover-keeps",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: Start Over empties the store",
+  "find": "        over.addEventListener('click', function () {\n            clearAll();",
+  "replace": "        over.addEventListener('click', function () {",
+  "count": 1
+ },
+ {
+  "id": "res-card-not-first",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: the card is drawn ABOVE MotoPress's dead-end message",
+  "find": "        host.insertBefore(card, host.firstChild);",
+  "replace": "        host.appendChild(card);",
+  "count": 1
+ },
+ {
+  "id": "res-dead-end-shown",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: the dead-end message is hidden once the card replaces it",
+  "find": "        hideDeadEnd();",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-no-card-without-form",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: a formless checkout gets the card, not nothing",
+  "find": "        } else {\n            withoutForm();\n        }",
+  "replace": "        }",
+  "count": 1
+ },
+ {
+  "id": "res-restart-posts-nothing",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "0.35.0: with no stored stay the guest is sent to pick dates, never offered a stay",
+  "find": "        if (held && held.roomTypeId && held.checkIn && held.checkOut) {",
+  "replace": "        if (held) {",
+  "count": 1
+ },
+ {
+  "id": "res-rooms-details-guessed",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: mphb_rooms_details is passed through as posted, not rebuilt over it",
+  "find": "        $posted = Checkout_Request::posted_rooms_details();\n        if ($posted !== []) {\n            return $posted;\n        }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "res-reads-room-details",
+  "file": "dcc-custom-checkout/includes/class-checkout-request.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: rooms_details and room_details are different MotoPress fields",
+  "find": "            $raw = isset($_POST['mphb_rooms_details']) ? wp_unslash($_POST['mphb_rooms_details']) : null;",
+  "replace": "            $raw = isset($_POST['mphb_room_details']) ? wp_unslash($_POST['mphb_room_details']) : null;",
+  "count": 1
+ },
+ {
+  "id": "res-half-stay-offered",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: a stay that cannot be read offers nothing, never half of one",
+  "find": "        if ($type <= 0 || $in === null || $out === null) {\n            return [];\n        }",
+  "replace": "        if ($type <= 0) {\n            return [];\n        }",
+  "count": 1
+ },
+ {
+  "id": "res-card-photo-original",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: the card's thumbnail is a small registered size, never the original",
+  "find": "    private const CARD_SIZE = 'medium';",
+  "replace": "    private const CARD_SIZE = 'full';",
+  "count": 1
+ },
+ {
+  "id": "res-gated-by-layout",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: item 10 reaches EVERY guest — the dead end is one today",
+  "find": "        if (!Assets::is_checkout_page()) {\n            return;\n        }",
+  "replace": "        if (!Assets::is_checkout_page() || !Layout::active()) {\n            return;\n        }",
+  "count": 1
+ },
+ {
+  "id": "res-everywhere",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "0.35.0: only the checkout page gets it",
+  "find": "        if (!Assets::is_checkout_page()) {\n            return;\n        }\n\n        wp_enqueue_script(",
+  "replace": "        if (false) {\n            return;\n        }\n\n        wp_enqueue_script(",
+  "count": 1
  }
 ]

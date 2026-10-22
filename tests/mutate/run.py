@@ -83,6 +83,10 @@ SUITES = {
     'layout':       ('php',  'tests/layout/run.php'),
     'hero':         ('php',  'tests/hero/run.php'),
     'hero-browser': ('node', 'tests/hero/browser.js'),
+    'restore':      ('php',  'tests/restore/run.php'),
+    'restore-browser': ('node', 'tests/restore/browser.js'),
+    # The same item-10 suite against the BUILT bundle a guest downloads.
+    'restore-min':  ('node', 'tests/restore/browser.js', {'DCC_MIN': '1'}),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

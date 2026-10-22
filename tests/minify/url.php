@@ -39,7 +39,7 @@ require dirname(__DIR__, 2) . '/dcc-custom-checkout/includes/class-layout.php';
 require dirname(__DIR__, 2) . '/dcc-custom-checkout/includes/class-assets.php';
 
 $out = [];
-foreach (['assets/checkout.js', 'assets/checkout.css', 'assets/checkout-layout.css', 'assets/guest-count.js', 'assets/select-list.js'] as $rel) {
+foreach (['assets/checkout.js', 'assets/checkout.css', 'assets/checkout-layout.css', 'assets/guest-count.js', 'assets/select-list.js', 'assets/restore.js'] as $rel) {
     $out[$rel] = basename(\DCC_Checkout\Assets::asset_url($rel));
 }
 echo json_encode($out);

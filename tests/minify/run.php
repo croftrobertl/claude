@@ -43,7 +43,7 @@ function run(array $cmd, &$code = null): string {
 }
 
 /** The guest-facing assets, and what the builder is expected to cover. */
-const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'checkout-layout.css', 'guest-count.js', 'select-list.js'];
+const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'checkout-layout.css', 'guest-count.js', 'select-list.js', 'restore.js'];
 
 /* --- Build from the CURRENT sources, into a directory of our own. The
    structural checks below read THAT, not the shipped files: they are
@@ -145,6 +145,7 @@ check('with SCRIPT_DEBUG off, every guest asset is the built one', $urls(0), [
     'assets/checkout-layout.css' => 'checkout-layout.min.css',
     'assets/guest-count.js'  => 'guest-count.min.js',
     'assets/select-list.js'  => 'select-list.min.js',
+    'assets/restore.js'      => 'restore.min.js',
 ]);
 check('with SCRIPT_DEBUG on, every guest asset is the source', $urls(1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -152,6 +153,7 @@ check('with SCRIPT_DEBUG on, every guest asset is the source', $urls(1), [
     'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
+    'assets/restore.js'      => 'restore.js',
 ]);
 check('a plugin folder with no built files serves the sources, not a 404', $urls(0, 1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -159,6 +161,7 @@ check('a plugin folder with no built files serves the sources, not a 404', $urls
     'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
+    'assets/restore.js'      => 'restore.js',
 ]);
 check('and a site can insist on the sources through the filter', $urls(0, 0, 1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -166,6 +169,7 @@ check('and a site can insist on the sources through the filter', $urls(0, 0, 1),
     'assets/checkout-layout.css' => 'checkout-layout.css',
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
+    'assets/restore.js'      => 'restore.js',
 ]);
 
 /* --- Nothing guest-facing is enqueued around asset_url(). -----------------
@@ -173,7 +177,8 @@ check('and a site can insist on the sources through the filter', $urls(0, 0, 1),
    unminified and nothing says so. Admin assets and the flag-gated tap
    diagnostic are the named exceptions. ----------------------------------- */
 $direct = [];
-foreach (['includes/class-assets.php', 'includes/class-guest-count-script.php'] as $rel) {
+foreach (['includes/class-assets.php', 'includes/class-guest-count-script.php',
+          'includes/class-restore.php'] as $rel) {
     $code_text = (string) file_get_contents($plugin . '/' . $rel);
     if (preg_match_all('/DCC_CHECKOUT_URL\s*\.\s*\'(assets\/[^\']+)\'/', $code_text, $m)) {
         foreach ($m[1] as $hit) {

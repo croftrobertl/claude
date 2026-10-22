@@ -49,6 +49,7 @@ $targets = [
     'assets/checkout-layout.css',
     'assets/guest-count.js',
     'assets/select-list.js',
+    'assets/restore.js',
 ];
 
 $fail = 0;

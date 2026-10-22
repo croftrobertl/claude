@@ -49,6 +49,12 @@ final class Plugin
         // `wp`, once the page and the gate are both known.
         (new Hero())->register();
 
+        // v0.35.0 — item 10: the guest's answers kept across a reload, and
+        // "Continue Your Booking" when MotoPress renders no form. NOT behind
+        // the preview gate (Rob): the error page is a dead end today, so this
+        // half reaches every guest as soon as 0.35.0 installs.
+        (new Restore())->register();
+
         // Server-side backstops (cannot be bypassed by editing the DOM).
         (new Guest_Fields())->register();
         (new Pet_Service())->register();

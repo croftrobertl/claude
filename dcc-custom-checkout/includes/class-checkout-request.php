@@ -302,6 +302,44 @@ final class Checkout_Request
     }
 
     /**
+     * `mphb_rooms_details` as posted — the cottage page's own array (v0.35.0).
+     *
+     * NOT `room_details`. These are two different MotoPress fields: the
+     * cottage page posts `mphb_rooms_details[<room type>] = 1` to OPEN a
+     * checkout, while `mphb_room_details[i][…]` is the per-room detail the
+     * checkout FORM submits. The Continue card re-posts the first, so it is
+     * read and passed through rather than rebuilt.
+     *
+     * Scalars only, keys and values sanitised: it is replayed into a form.
+     *
+     * @return array<string,string>
+     */
+    public static function posted_rooms_details(): array
+    {
+        if (self::$payload !== null) {
+            $raw = self::$payload['rooms_details'] ?? (self::$payload['mphb_rooms_details'] ?? null);
+        } else {
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            $raw = isset($_POST['mphb_rooms_details']) ? wp_unslash($_POST['mphb_rooms_details']) : null;
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $key => $value) {
+            if (!is_scalar($value)) {
+                continue;
+            }
+            $k = sanitize_text_field((string) $key);
+            if ($k === '') {
+                continue;
+            }
+            $out[$k] = sanitize_text_field((string) $value);
+        }
+        return $out;
+    }
+
+    /**
      * Parse a Y-m-d date field (first matching key) into a UTC timestamp.
      *
      * @param string[] $keys
