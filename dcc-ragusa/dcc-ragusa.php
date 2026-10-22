@@ -3,7 +3,7 @@
  * Plugin Name: DCC Ragusa
  * Plugin URI:  https://doracanalcourt.com/
  * Description: The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
- * Version:     0.1.1
+ * Version:     0.1.2
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author:      Dora Canal Court
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCCR_VERSION', '0.1.1');
+define('DCCR_VERSION', '0.1.2');
 define('DCCR_FILE', __FILE__);
 define('DCCR_DIR', __DIR__ . '/');
 

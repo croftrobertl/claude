@@ -1153,3 +1153,18 @@ failure, and the rollback drill uses its own probe answered on
 `plugins_loaded` before any gate; the headline leads with "Something Needs A
 Look"; `wp ragusa proof` measures the front end in a fresh PHP process with
 and without Ragusa.
+
+**0.1.2 (after the second staging run, 2026-10-22).** A false rollback of two
+good releases: staging read live's `error_log` (its parent directory) and
+found the Director's own `wp eval` typo. Now only this site's logs are read
+(never a parent that is itself a WordPress root), WP-CLI's own lines are
+ignored, and a fatal outside the updated plugin's own folder is an alert,
+"A New Fatal Elsewhere After This Update", never grounds for a rollback: the
+page and iCal checks are the evidence about the money path, and the
+remaining fatals are too often someone else's. Also: a recorded plugin
+update re-baselines its own files silently with one info line; a lost
+self-update check is recovered; the rollback row is committed in the same
+call as its verification (the WP-CLI follow-up runs in a subprocess, so the
+verification id is recorded before it runs); the drills fail loudly; the
+upgrade retakes Bokar's baseline quietly; a reordered plugin list is not a
+change; `wp ragusa proof` names a login gate and sets WP Staging aside.

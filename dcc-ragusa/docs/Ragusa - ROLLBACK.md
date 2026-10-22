@@ -44,6 +44,14 @@ fail because a marker was renamed on purpose:
     wp ragusa markers set /explore/ "new-marker"
     wp ragusa markers reset         # back to the baked defaults
 
+## If an email says "A New Fatal Elsewhere After This Update"
+
+Nothing was rolled back. A PHP fatal appeared in the error log after an
+update, in a file that is not the updated plugin's. Read the line in the
+email: a `wp eval` of yours, another plugin you updated by hand, or a cron
+job. Only a fatal inside the updated plugin's own folder, or a failed page
+or iCal check, can roll an update back.
+
 ## If a check keeps failing and it is not the update
 
 The email says "Site Check Failing, Not The Update": Ragusa tried the

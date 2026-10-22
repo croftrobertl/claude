@@ -1,4 +1,10 @@
-# Ragusa 0.1.1 — Staging Checklist
+# Ragusa 0.1.2 — Staging Checklist
+
+> **Upgrading the 0.1.1 install on staging:** `wp plugin install
+> "Ragusa 0.1.2.zip" --force`, then `wp ragusa status`. Expect the 0.1.1 →
+> 0.1.2 event, Bokar's baseline retaken on the next tick (one info event,
+> no role changes), and the two false "role changed" findings gone. Then
+> the items marked **0.1.2**.
 
 > **Upgrading the 0.1.0 install already on staging:** `wp plugin install
 > "Ragusa 0.1.1.zip" --force` (0.1.0's own Sveti Ivan will treat it as a
@@ -76,6 +82,9 @@ from there, and only when you run them.
 
 ## 3. Zero weight for guests (the proof)
 
+- [ ] **0.1.2:** `wp ragusa proof` on staging prints "Set aside in both
+      columns: wp-staging" and then the table; if a login gate still
+      answers, it says so instead of blaming the PHP binary.
 - [ ] **0.1.1:** `wp ragusa proof`. It loads WordPress as a visitor request
       in a fresh PHP process twice, with Ragusa active and with it skipped,
       and prints both columns. Expect: database queries equal, PHP files
@@ -148,6 +157,10 @@ cleans up. Each prints every journal state transition.
       (where the block is at line 1) one line inside
       the DCC block is altered, the block is rewritten, the SpeedyCache and
       Newfold blocks are untouched, and the file ends as it began.
+- [ ] **0.1.2:** every drill ends with "Success: Drill finished." only when
+      every `ok` line matched; a `FAILED` line makes the command exit with an
+      error. The rollback drill's "rollback row state: committed" and both
+      version lines must read `ok`.
 - [ ] `wp ragusa drill rollback` (loopbacks work here): **0.1.1** uses the
       test plugin's own probe (`/?ragusa_drill_probe=1`, answered on
       `plugins_loaded` before WP Staging's login gate), so the staging gate
@@ -164,6 +177,19 @@ cleans up. Each prints every journal state transition.
       (the drill already undid them, so they say Undone).
 
 ## 8. A real forced install (your route)
+
+- [ ] **0.1.2:** `wp ragusa status` before and after shows no new Minčeta
+      finding for the updated plugin; Recent Events carries one info line
+      "<slug> <version>: N files updated and accepted as the baseline".
+- [ ] **0.1.2:** With staging's `error_log` empty, type a deliberate
+      `wp eval 'nope();'` on STAGING during an update's check window. The
+      check must say "no new fatal" (WP-CLI's own line is ignored). Then
+      append a fake fatal naming another plugin's file to staging's
+      `error_log` during a check: the update passes, and one Needs A Look
+      "A New Fatal Elsewhere After This Update" appears, no rollback.
+- [ ] **0.1.2:** Live's `~/public_html/error_log` is never read from
+      staging: `wp eval 'var_dump(DCCR\Error_Log::paths());'` on staging
+      lists only staging's own paths.
 
 - [ ] `wp plugin install "Ledger <version>.zip" --force` (any DCC zip you
       have). In the output, Sveti Ivan prints each check as it runs, and the

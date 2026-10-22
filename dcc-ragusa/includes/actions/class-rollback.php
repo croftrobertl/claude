@@ -99,9 +99,21 @@ final class Rollback extends Base
 
         // Verifying: a fresh check in a fresh request.
         Journal::set_state($id, Journal::VERIFYING, ['after' => ['step' => 5]]);
+        self::verify_now($id, $slug);
+        return ['ok' => true, 'id' => $id, 'message' => sprintf('rolled %s back to %s; verifying', $slug, (string) ($plan['old_version'] ?? ''))];
+    }
+
+    /**
+     * Create the verification row, record its id on this row, and only
+     * THEN run the follow-up: in WP-CLI that follow-up is a subprocess that
+     * may commit this row before we return, and a write after it would put
+     * the row back to Verifying.
+     */
+    private static function verify_now(int $id, string $slug): void
+    {
         $check = Sveti_Ivan::after_rollback($id, $slug);
         Journal::set_state($id, Journal::VERIFYING, ['verify' => ['check_id' => $check]]);
-        return ['ok' => true, 'id' => $id, 'message' => sprintf('rolled %s back to %s; verifying', $slug, (string) ($plan['old_version'] ?? ''))];
+        Sveti_Ivan::run_followup($check);
     }
 
     private static function after_swap(int $id, array $before): void
@@ -252,8 +264,7 @@ final class Rollback extends Base
                     }
                     self::after_swap($id, $row['before']);
                     Journal::set_state($id, Journal::VERIFYING);
-                    $check = Sveti_Ivan::after_rollback($id, $slug);
-                    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['check_id' => $check]]);
+                    self::verify_now($id, $slug);
                     return 'Journal ' . $id . ' recovered: swap finished, verifying';
                 }
                 if (!$has_dir && !$has_stage && $has_quar) {
@@ -269,8 +280,7 @@ final class Rollback extends Base
                     // Swap done, died before caches/flag.
                     self::after_swap($id, $row['before']);
                     Journal::set_state($id, Journal::VERIFYING);
-                    $check = Sveti_Ivan::after_rollback($id, $slug);
-                    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['check_id' => $check]]);
+                    self::verify_now($id, $slug);
                     return 'Journal ' . $id . ' recovered: finishing after the swap';
                 }
                 return self::abandon($id, 'nothing to recover');
@@ -278,8 +288,7 @@ final class Rollback extends Base
                 $check_id = (int) ($row['verify']['check_id'] ?? 0);
                 $check    = $check_id > 0 ? Journal::get($check_id) : null;
                 if ($check === null) {
-                    $check_id = Sveti_Ivan::after_rollback($id, $slug);
-                    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['check_id' => $check_id]]);
+                    self::verify_now($id, $slug);
                     return 'Journal ' . $id . ': verification scheduled again';
                 }
                 if (in_array($check['state'], Journal::TERMINAL, true)) {

@@ -28,6 +28,22 @@ final class Drill
         };
     }
 
+    /** A loud comparison: the line starts with FAILED when it does not match. */
+    private static function expect(string $what, string $actual, string $expected): string
+    {
+        return ($actual === $expected ? 'ok      ' : 'FAILED  ') . $what . ': ' . $actual . ' (expected ' . $expected . ')';
+    }
+
+    public static function failed(array $lines): bool
+    {
+        foreach ($lines as $l) {
+            if (str_starts_with($l, 'FAILED')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static function states(int $id): string
     {
         $row = Journal::get($id);
@@ -44,10 +60,10 @@ final class Drill
         $lines[] = 'Staged ' . Site::rel($file);
         $r = Action\Quarantine::run(['path' => $file, 'reason' => 'drill: an executable file inside the uploads folder']);
         $lines[] = 'Action: ' . $r['message'] . ' · ' . self::states($r['id']);
-        $lines[] = 'File gone from uploads: ' . (file_exists($file) ? 'NO' : 'yes');
+        $lines[] = self::expect('file gone from uploads', file_exists($file) ? 'no' : 'yes', 'yes');
         [$ok, $msg] = Actions::reverse($r['id']);
-        $lines[] = 'Reverse: ' . $msg . ' · ' . self::states($r['id']);
-        $lines[] = 'File back in uploads: ' . (file_exists($file) ? 'yes' : 'NO');
+        $lines[] = ($ok ? 'ok      ' : 'FAILED  ') . 'reverse: ' . $msg . ' · ' . self::states($r['id']);
+        $lines[] = self::expect('file back in uploads', file_exists($file) ? 'yes' : 'no', 'yes');
         @unlink($file);
         @rmdir($dir);
         $lines[] = 'Cleaned up.';
@@ -80,10 +96,10 @@ final class Drill
             return array_merge($lines, ['No restore happened; the alteration was undone by the drill.']);
         }
         $lines[] = self::states((int) $row['id']);
-        $lines[] = 'File equals the sealed copy: ' . (file_get_contents($path) === $original ? 'yes' : 'NO');
+        $lines[] = self::expect('file equals the sealed copy', file_get_contents($path) === $original ? 'yes' : 'no', 'yes');
         [$ok, $msg] = Actions::reverse((int) $row['id']);
-        $lines[] = 'Reverse: ' . $msg . ' · ' . self::states((int) $row['id']);
-        $lines[] = 'File is the altered one again: ' . (str_contains((string) file_get_contents($path), 'ragusa drill') ? 'yes' : 'NO');
+        $lines[] = ($ok ? 'ok      ' : 'FAILED  ') . 'reverse: ' . $msg . ' · ' . self::states((int) $row['id']);
+        $lines[] = self::expect('file is the altered one again', str_contains((string) file_get_contents($path), 'ragusa drill') ? 'yes' : 'no', 'yes');
         file_put_contents($path, $original);
         $lines[] = 'Original content written back; nothing left to seal.';
         return $lines;
@@ -116,9 +132,9 @@ final class Drill
             return array_merge($lines, ['No rewrite happened; the alteration was undone by the drill.']);
         }
         $lines[] = self::states((int) $row['id']);
-        $lines[] = 'Block equals the sealed copy: ' . (rtrim((string) Htaccess::extract_block((string) file_get_contents($path))) === rtrim($block) ? 'yes' : 'NO');
+        $lines[] = self::expect('block equals the sealed copy', rtrim((string) Htaccess::extract_block((string) file_get_contents($path))) === rtrim($block) ? 'yes' : 'no', 'yes');
         [$ok, $msg] = Actions::reverse((int) $row['id']);
-        $lines[] = 'Reverse: ' . $msg . ' · ' . self::states((int) $row['id']);
+        $lines[] = ($ok ? 'ok      ' : 'FAILED  ') . 'reverse: ' . $msg . ' · ' . self::states((int) $row['id']);
         Vault::write_atomic($path, $original);
         $lines[] = 'Original .htaccess written back.';
         return $lines;
@@ -186,12 +202,14 @@ final class Drill
             Fortress\Sveti_Ivan::scheduled_check((int) $verify['id']);
             $lines[] = 'Verification after rollback: ' . self::states((int) $verify['id']);
         }
+        $rb = Journal::get((int) $rb['id']);
         $lines[] = 'Rollback now: ' . self::states((int) $rb['id']);
-        $lines[] = 'Version in place: ' . Fortress\Revelin::plugin_version($slug) . ' (expected 1.0.0)';
+        $lines[] = self::expect('rollback row state', (string) $rb['state'], Journal::COMMITTED);
+        $lines[] = self::expect('version in place after the rollback', Fortress\Revelin::plugin_version($slug), '1.0.0');
         [$ok, $msg] = Actions::reverse((int) $rb['id']);
-        $lines[] = 'Reverse: ' . $msg . ' · ' . self::states((int) $rb['id']);
+        $lines[] = ($ok ? 'ok      ' : 'FAILED  ') . 'reverse: ' . $msg . ' · ' . self::states((int) $rb['id']);
         wp_clean_plugins_cache(false);
-        $lines[] = 'Version in place after reverse: ' . Fortress\Revelin::plugin_version($slug) . ' (expected 1.0.1)';
+        $lines[] = self::expect('version in place after the reverse', Fortress\Revelin::plugin_version($slug), '1.0.1');
         Fortress\Sveti_Ivan::override_markers(null);
         self::remove_plugin($slug);
         if ($entry !== null) {

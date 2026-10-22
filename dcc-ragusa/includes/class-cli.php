@@ -6,10 +6,14 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * wp ragusa status | scan | seal <path> | vault list | restore <id> |
- *    heartbeat test | mail test | journal | check --after=<id> |
- *    markers [set <path> <markers>|reset|remove <path>] |
- *    zelenci install | drill <action> (staging only)
+ * The walls of doracanalcourt.com: status, scans, seals, the vault, the journal and the drills.
+ *
+ * ## EXAMPLES
+ *
+ *     wp ragusa status
+ *     wp ragusa seal wp-content/mu-plugins/dcc-postpass-guard.php
+ *     wp ragusa restore 142
+ *     wp ragusa drill rollback
  */
 final class Cli
 {
@@ -20,7 +24,13 @@ final class Cli
         };
     }
 
-    /** One line per fortress, the top sentence, the heartbeat state (masked). */
+    /**
+     * One line per fortress, the headline, the tick, the heartbeat (masked) and Bokar's source.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa status
+     */
     public function status(array $args = [], array $assoc = []): void
     {
         Schema::ensure();
@@ -30,10 +40,10 @@ final class Cli
             $line = $slug === Fortress::SVETI_IVAN ? Fortress\Sveti_Ivan::status_line() : $s['line'];
             \WP_CLI::log(sprintf('  %-11s %-13s %s (%s)', Fortress::name($slug), Fortress::state_label($s['state']), $line, Site::ago($s['checked_at'])));
         }
-        \WP_CLI::log('  tick: ' . (Cron::is_scheduled() ? 'scheduled, next ' . Site::ago((int) wp_next_scheduled(Plugin::TICK_HOOK)) . ' (negative = future)' : 'NOT SCHEDULED') . ', last ran ' . Site::ago((int) State::get('last_tick', 0)));
+        \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));
+        \WP_CLI::log('  tick: ' . self::tick_line());
         $snap = Fortress\Bokar::snapshot();
         \WP_CLI::log(sprintf('  bokar: %d privileged of %d users, roles read from %s', count($snap['users']), $snap['total'], Fortress\Bokar::$roles_source ?: 'nothing'));
-        \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));
         $hb = Heartbeat::last();
         \WP_CLI::log('  heartbeat: ' . (Heartbeat::configured() ? 'set' : 'not set') . (($hb['ts'] ?? 0) > 0 ? sprintf(', last %s %s', (string) ($hb['result'] ?? ''), Site::ago((int) $hb['ts'])) : ''));
         \WP_CLI::log('  feed key: ' . (Settings::secret('feed_key') !== '' ? 'set' : 'not set'));
@@ -43,10 +53,55 @@ final class Cli
         State::flush();
     }
 
+    /** "scheduled, next in 4 minutes", "Overdue By 5 Hours", "WP-Cron Is Off Here". */
+    public static function tick_line(): string
+    {
+        $parts = [];
+        if (!Cron::is_scheduled()) {
+            $parts[] = 'NOT SCHEDULED';
+        } else {
+            $next = (int) wp_next_scheduled(Plugin::TICK_HOOK);
+            $diff = $next - time();
+            if ($diff >= 0) {
+                $parts[] = sprintf('scheduled, next in %d min', (int) ceil($diff / 60));
+            } else {
+                $parts[] = 'scheduled, Overdue By ' . self::span(-$diff);
+            }
+        }
+        if (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) {
+            $parts[] = 'WP-Cron Is Off Here (DISABLE_WP_CRON): a system cron or wp ragusa tick must run it';
+        }
+        $last = (int) State::get('last_tick', 0);
+        $parts[] = 'last ran ' . Site::ago($last);
+        return implode('; ', $parts);
+    }
+
+    private static function span(int $seconds): string
+    {
+        if ($seconds < 3600) {
+            $n = max(1, (int) round($seconds / 60));
+            return sprintf(_n('%d Minute', '%d Minutes', $n, 'dcc-ragusa'), $n);
+        }
+        if ($seconds < 86400) {
+            $n = (int) round($seconds / 3600);
+            return sprintf(_n('%d Hour', '%d Hours', $n, 'dcc-ragusa'), $n);
+        }
+        $n = (int) round($seconds / 86400);
+        return sprintf(_n('%d Day', '%d Days', $n, 'dcc-ragusa'), $n);
+    }
+
     /**
-     * Run a tick now; with --full, a full rehash. Loops ticks until the walk completes.
+     * Runs ticks until the file walk completes.
+     *
+     * ## OPTIONS
      *
      * [--full]
+     * : Rehash every file instead of trusting unchanged sizes and times.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa scan
+     *     wp ragusa scan --full
      */
     public function scan(array $args = [], array $assoc = []): void
     {
@@ -69,19 +124,39 @@ final class Cli
         \WP_CLI::success('Scan complete.');
     }
 
-    /** <path> : accept the current file as the good copy. */
+    /**
+     * Accepts the current file as the good copy (a guard, the .htaccess block, or a watched file).
+     *
+     * ## OPTIONS
+     *
+     * <path>
+     * : The file, relative to the WordPress root or absolute.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa seal wp-content/mu-plugins/dcc-ical-privacy.php
+     *     wp ragusa seal .htaccess
+     */
     public function seal(array $args = [], array $assoc = []): void
     {
-        if (empty($args[0])) {
-            \WP_CLI::error('Usage: wp ragusa seal <path>');
-        }
         Schema::ensure();
         [$ok, $msg] = Fortress\Revelin::seal((string) $args[0]);
         State::flush();
         $ok ? \WP_CLI::success($msg) : \WP_CLI::error($msg);
     }
 
-    /** list : every sealed copy. */
+    /**
+     * Lists every sealed copy in the vault.
+     *
+     * ## OPTIONS
+     *
+     * [<subcommand>]
+     * : Only "list" exists.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa vault list
+     */
     public function vault(array $args = [], array $assoc = []): void
     {
         $sub = $args[0] ?? 'list';
@@ -100,12 +175,21 @@ final class Cli
         \WP_CLI\Utils\format_items('table', $rows, ['id', 'kind', 'label', 'version', 'size', 'sealed', 'intact']);
     }
 
-    /** <id> : undo a journal entry, or put a sealed copy back. */
+    /**
+     * Undoes a journal entry, or puts a sealed copy back.
+     *
+     * ## OPTIONS
+     *
+     * <id>
+     * : A journal number (from the email, the page or `wp ragusa journal`) or a vault entry id (from `wp ragusa vault list`).
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa restore 142
+     *     wp ragusa restore plugin-wporg-plugin-20261021-120000-ab12
+     */
     public function restore(array $args = [], array $assoc = []): void
     {
-        if (empty($args[0])) {
-            \WP_CLI::error('Usage: wp ragusa restore <journal id | vault entry id>');
-        }
         Schema::ensure();
         $this->printer();
         [$ok, $msg] = Admin::restore((string) $args[0]);
@@ -113,7 +197,18 @@ final class Cli
         $ok ? \WP_CLI::success($msg) : \WP_CLI::error($msg);
     }
 
-    /** test : send one success ping (allowed on staging; explicit). */
+    /**
+     * Sends one success ping to the heartbeat (allowed on staging; explicit).
+     *
+     * ## OPTIONS
+     *
+     * <test>
+     * : The word "test".
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa heartbeat test
+     */
     public function heartbeat(array $args = [], array $assoc = []): void
     {
         if (($args[0] ?? '') !== 'test') {
@@ -123,13 +218,24 @@ final class Cli
             \WP_CLI::error('No heartbeat URL is set.');
         }
         Heartbeat::force(true);
-        $r = Heartbeat::ping(true);
+        $r  = Heartbeat::ping(true);
         $hb = Heartbeat::last();
         State::flush();
         $r === 'sent' ? \WP_CLI::success('Ping sent, HTTP ' . (int) ($hb['code'] ?? 0)) : \WP_CLI::error('Ping ' . $r . ', HTTP ' . (int) ($hb['code'] ?? 0));
     }
 
-    /** test : send one email to the alert address (allowed on staging; explicit). */
+    /**
+     * Sends one test email to the alert address (allowed on staging; explicit).
+     *
+     * ## OPTIONS
+     *
+     * <test>
+     * : The word "test".
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa mail test
+     */
     public function mail(array $args = [], array $assoc = []): void
     {
         if (($args[0] ?? '') !== 'test') {
@@ -146,14 +252,25 @@ final class Cli
     }
 
     /**
-     * The journal, newest first.
+     * Shows the journal of autonomous actions and update checks, newest first.
      *
-     * [--state=<state>] [--limit=<n>]
+     * ## OPTIONS
+     *
+     * [--state=<state>]
+     * : Only rows in this state (planned, before-recorded, acting, verifying, committed, reversed, abandoned, failed).
+     *
+     * [--limit=<n>]
+     * : How many rows. Default 30.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa journal
+     *     wp ragusa journal --state=verifying
      */
     public function journal(array $args = [], array $assoc = []): void
     {
         Schema::ensure();
-        $rows = [];
+        $rows  = [];
         $limit = (int) ($assoc['limit'] ?? 30);
         foreach (Journal::recent(max(1, $limit), $assoc['state'] ?? null) as $r) {
             $rows[] = ['id' => $r['id'], 'when' => gmdate('Y-m-d H:i', (int) $r['created_at']), 'action' => $r['action'], 'target' => $r['target'], 'state' => $r['state'], 'reversible' => $r['reversible'] ? 'yes' : 'no', 'note' => mb_substr((string) $r['note'], 0, 60)];
@@ -166,9 +283,16 @@ final class Cli
     }
 
     /**
-     * Run the post-update checks for a journal row (what the subprocess runs).
+     * Runs the post-update checks for a journal row now (what the follow-up subprocess runs).
+     *
+     * ## OPTIONS
      *
      * --after=<id>
+     * : The update-check journal number.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa check --after=17
      */
     public function check(array $args = [], array $assoc = []): void
     {
@@ -183,7 +307,26 @@ final class Cli
         \WP_CLI::log(sprintf('Journal %d is now %s.', $id, $row['state'] ?? 'missing'));
     }
 
-    /** [set <path> <marker[,marker]> | remove <path> | reset] */
+    /**
+     * Lists, sets, removes or resets the page markers Sveti Ivan looks for after an update.
+     *
+     * ## OPTIONS
+     *
+     * [<subcommand>]
+     * : list (default), set, remove or reset.
+     *
+     * [<path>]
+     * : The page path for set or remove, e.g. /explore/.
+     *
+     * [<markers>]
+     * : For set: one or more marker strings, comma-separated, all of which must be present.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa markers
+     *     wp ragusa markers set /explore/ 'data-dccwl-viewtrigger'
+     *     wp ragusa markers reset
+     */
     public function markers(array $args = [], array $assoc = []): void
     {
         $sub = $args[0] ?? 'list';
@@ -209,7 +352,18 @@ final class Cli
         \WP_CLI\Utils\format_items('table', $rows, ['page', 'markers']);
     }
 
-    /** install | status : the sentinel mu-plugin. */
+    /**
+     * Installs or reports the Zelenci sentinel mu-plugin.
+     *
+     * ## OPTIONS
+     *
+     * [<subcommand>]
+     * : install, or status (default).
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa zelenci install
+     */
     public function zelenci(array $args = [], array $assoc = []): void
     {
         $sub = $args[0] ?? 'status';
@@ -231,25 +385,41 @@ final class Cli
         \WP_CLI::log(is_file($dst) ? 'Zelenci is installed.' : 'Zelenci is not installed: wp ragusa zelenci install');
     }
 
-    /** <quarantine|restore-guard|htaccess|rollback> : staging only. */
+    /**
+     * Stages a harmless case, runs the real action and its reverse, and reports every step. Staging only.
+     *
+     * ## OPTIONS
+     *
+     * <action>
+     * : quarantine, restore-guard, htaccess or rollback.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa drill quarantine
+     *     wp ragusa drill rollback
+     */
     public function drill(array $args = [], array $assoc = []): void
     {
-        if (empty($args[0])) {
-            \WP_CLI::error('Usage: wp ragusa drill <quarantine|restore-guard|htaccess|rollback>');
-        }
         if (Site::is_live()) {
             \WP_CLI::error('Drills run on staging only. This is the live site (' . Site::id() . ').');
         }
         Schema::ensure();
         $this->printer();
-        foreach (Drill::run((string) $args[0]) as $line) {
+        $lines = Drill::run((string) $args[0]);
+        foreach ($lines as $line) {
             \WP_CLI::log($line);
         }
         State::flush();
-        \WP_CLI::success('Drill finished.');
+        Drill::failed($lines) ? \WP_CLI::error('Drill FAILED: a step above did not match.') : \WP_CLI::success('Drill finished.');
     }
 
-    /** Run one cron tick now (what WP-Cron runs). */
+    /**
+     * Runs one cron tick now (what WP-Cron runs every 10 minutes).
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa tick
+     */
     public function tick(array $args = [], array $assoc = []): void
     {
         $this->printer();
@@ -259,23 +429,33 @@ final class Cli
     }
 
     /**
-     * The zero-weight proof: load WordPress as a visitor request in a
-     * fresh PHP process, with Ragusa active and with it skipped, and print
-     * the included-file and query counts side by side.
+     * The zero-weight proof: loads WordPress as a visitor request in a fresh PHP process, with Ragusa and with it skipped.
+     *
+     * On staging, WP Staging is set aside in both columns, because its login gate exits inside wp-load.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa proof
      */
     public function proof(array $args = [], array $assoc = []): void
     {
         $with    = Proof::run(false);
         $without = Proof::run(true);
-        if ($with === null || $without === null) {
-            \WP_CLI::error('Could not run the front-end subprocess (no php binary through proc_open?).');
+        if (!$with['ok'] || !$without['ok']) {
+            \WP_CLI::error('Could not measure: ' . ($with['ok'] ? $without['error'] : $with['error']));
+        }
+        $aside = Proof::set_aside();
+        if ($aside !== []) {
+            \WP_CLI::log('Set aside in both columns: ' . implode(', ', $aside));
         }
         $rows = [];
         foreach (['files' => 'PHP files included', 'queries' => 'database queries', 'ragusa_files' => 'files from dcc-ragusa', 'ragusa_classes' => 'DCCR classes loaded', 'hooks' => 'hooks registered by dcc-ragusa', 'enqueued' => 'dccr assets enqueued'] as $k => $label) {
-            $rows[] = ['measure' => $label, 'with ragusa' => (string) ($with[$k] ?? '?'), 'without' => (string) ($without[$k] ?? '?')];
+            $rows[] = ['measure' => $label, 'with ragusa' => (string) ($with['data'][$k] ?? '?'), 'without' => (string) ($without['data'][$k] ?? '?')];
         }
         \WP_CLI\Utils\format_items('table', $rows, ['measure', 'with ragusa', 'without']);
-        $ok = ((int) $with['queries'] === (int) $without['queries']) && ((int) $with['files'] - (int) $without['files'] === 1) && (int) $with['ragusa_classes'] === 0 && (int) $with['hooks'] === 0;
+        $w  = $with['data'];
+        $wo = $without['data'];
+        $ok = ((int) $w['queries'] === (int) $wo['queries']) && ((int) $w['files'] - (int) $wo['files'] === 1) && (int) $w['ragusa_classes'] === 0 && (int) $w['hooks'] === 0 && (int) $w['enqueued'] === 0;
         $ok ? \WP_CLI::success('Zero weight: one file included, no query, no hook, no class.') : \WP_CLI::warning('The front end carries something of Ragusa; see the table.');
     }
 }

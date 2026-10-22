@@ -1237,8 +1237,164 @@ suite('0.1.1 item 5: a staging login page is "not checked", never a failure, and
     Fortress::set_status(Fortress::LOVRIJENAC, Fortress::NEEDS_LOOK, 'x');
     ok(str_starts_with(Fortress::overall(), 'Something Needs A Look'), 'headline: ' . Fortress::overall());
     // Item 7: the proof script skips Ragusa through a pre-initialised filter.
-    ok(str_contains(DCCR\Proof::script(true), 'option_active_plugins') && !str_contains(DCCR\Proof::script(false), 'option_active_plugins'), 'proof script with and without the skip filter');
+    ok(str_contains(DCCR\Proof::script(true), "'dcc-ragusa'") && !str_contains(DCCR\Proof::script(false), "'dcc-ragusa'"), 'proof script drops Ragusa only in the skipped column');
+    ok(str_contains(DCCR\Proof::script(false), "'wp-staging'") && str_contains(DCCR\Proof::script(true), "'wp-staging'"), 'on staging, WP Staging is set aside in both columns');
+    dccr_test_site('live');
+    ok(!str_contains(DCCR\Proof::script(false), 'option_active_plugins'), 'on live nothing is set aside');
+    dccr_test_site('staging');
+    $r = DCCR\Proof::interpret('<html><form><input type="password" name="wpstg"></form></html>', '', 0, 'php');
+    ok(!$r['ok'] && str_contains($r['error'], 'login page'), 'a login page is named as the reason: ' . $r['error']);
+    $r = DCCR\Proof::interpret('', '', 255, '/usr/bin/php');
+    ok(!$r['ok'] && str_contains($r['error'], 'printed nothing'), 'an empty answer names the binary and the exit code');
+    $r = DCCR\Proof::interpret('noise {"files":10,"queries":2,"ragusa_files":1,"ragusa_classes":0,"hooks":0,"enqueued":0}', '', 0, 'php');
+    ok($r['ok'] && $r['data']['files'] === 10, 'the JSON is read from the end of the output');
     ok(str_contains(DCCR\Proof::script(false), 'wp-load.php') && str_contains(DCCR\Proof::script(false), 'num_queries'), 'the proof loads wp-load and counts queries');
+});
+
+// ------------------------------------------------------------- 0.1.2 items
+suite('0.1.2 blocker 1a: only this site\'s logs are read; a parent that is a WordPress root is another site', function () {
+    $parent = dirname(Site::abspath());
+    ok(in_array($parent . '/error_log', Error_Log::paths(), true), 'a parent that is not a WordPress root is read (live: ~/error_log)');
+    file_put_contents($parent . '/wp-load.php', '<?php');
+    ok(!in_array($parent . '/error_log', Error_Log::paths(), true), 'a parent holding wp-load.php is another site: not read');
+    ok(in_array(Site::abspath() . '/error_log', Error_Log::paths(), true), 'this site\'s own log is read');
+    ok(in_array(Site::content_dir() . '/debug.log', Error_Log::paths(), true), 'and its debug.log');
+    // The live typo, written to the parent log, is invisible to staging.
+    file_put_contents($parent . '/error_log', '');
+    $snap = Error_Log::snapshot();
+    file_put_contents($parent . '/error_log', "[22-Oct-2026 01:36:20 UTC] PHP Fatal error: Uncaught Error: Class \"DCCWL\\Water_Data\" not found in /home/x/public_html/wp-content/plugins/other/file.php:1\n", FILE_APPEND);
+    eq([], Error_Log::new_fatals($snap), 'a fatal in the parent site\'s log is not this site\'s');
+    unlink($parent . '/wp-load.php');
+    unlink($parent . '/error_log');
+});
+
+suite('0.1.2 blocker 1b: a WP-CLI fatal is never evidence; a fatal elsewhere alerts instead of rolling back', function () {
+    tick();
+    $log = Site::abspath() . '/error_log';
+    file_put_contents($log, '');
+    $snap = Error_Log::snapshot();
+    file_put_contents($log, "[22-Oct-2026 01:36:20 UTC] PHP Fatal error: Uncaught Error: Class \"DCCWL\\Water_Data\" not found in phar:///usr/local/bin/wp/vendor/wp-cli/eval-command/src/Eval_Command.php(39) : eval()'d code:1\n", FILE_APPEND);
+    eq([], Error_Log::new_fatals($snap), 'the wp eval typo is ignored');
+    ok(Error_Log::is_cli_line("PHP Fatal error: x in phar:///usr/local/bin/wp/php/boot-fs.php:12"), 'a .phar location is WP-CLI');
+    ok(!Error_Log::is_cli_line("PHP Fatal error: x in /home/x/public_html/wp-content/plugins/wporg-plugin/a.php:12"), 'a plugin file is not');
+
+    // A real fatal in another plugin after this update: alert, no rollback.
+    $id = simulate_update('wporg-plugin', '1.5.0');
+    file_put_contents($log, "[22-Oct-2026 01:40:00 UTC] PHP Fatal error: Uncaught Error: Call to undefined function in " . WP_PLUGIN_DIR . "/dcc-demo/dcc-demo.php:3\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    Sveti_Ivan::scheduled_check($id);
+    eq(Journal::COMMITTED, Journal::get($id)['state'], 'the update passes');
+    eq(0, count(Journal::recent(5, null, 'rollback')), 'no rollback for someone else\'s fatal');
+    eq('1.5.0', Revelin::plugin_version('wporg-plugin'), 'the new version stays');
+    $fe = array_filter(Alerts::active(Fortress::SVETI_IVAN), static fn($a) => $a['kind'] === 'fatal-elsewhere');
+    eq(1, count($fe), 'one "fatal elsewhere" finding');
+    ok(str_contains(reset($fe)['title'], 'A New Fatal Elsewhere After This Update'), 'with the agreed title');
+
+    // A fatal in the updated plugin's own files still rolls back.
+    file_put_contents($log, '');
+    break_cottage_when('9.9.9'); // pages fine; only the log fails
+    $id = simulate_update('wporg-plugin', '1.6.0');
+    file_put_contents($log, "[22-Oct-2026 01:50:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    Sveti_Ivan::scheduled_check($id);
+    eq(1, count(Journal::recent(5, null, 'rollback')), 'a fatal in the plugin itself rolls back');
+    $GLOBALS['dccr_site_handler'] = null;
+    unlink($log);
+});
+
+suite('0.1.2 item 2: a recorded plugin update re-baselines its own files silently', function () {
+    tick();
+    Test_Site::write('wp-content/plugins/wporg-plugin/includes/new-file.php', "<?php\n// new in 1.5.0\n");
+    file_put_contents(WP_PLUGIN_DIR . '/wporg-plugin/includes/a.php', "<?php\n// changed in 1.5.0\n");
+    Test_Site::$plugin_checksums['wporg-plugin/1.5.0'] = [];
+    foreach (['wporg-plugin.php', 'includes/a.php', 'includes/new-file.php', 'readme.txt'] as $rel) {
+        $c = (string) file_get_contents(WP_PLUGIN_DIR . '/wporg-plugin/' . ($rel === 'wporg-plugin.php' ? $rel : $rel));
+    }
+    $id = simulate_update('wporg-plugin', '1.5.0');
+    foreach (['wporg-plugin.php', 'includes/a.php', 'includes/new-file.php', 'readme.txt'] as $rel) {
+        $c = (string) file_get_contents(WP_PLUGIN_DIR . '/wporg-plugin/' . $rel);
+        Test_Site::$plugin_checksums['wporg-plugin/1.5.0'][$rel] = ['md5' => md5($c), 'sha256' => hash('sha256', $c)];
+    }
+    $ev = array_values(array_filter(events_of('plugin-rebaselined'), static fn($e) => $e['target'] === 'wporg-plugin'));
+    eq(1, count($ev), 'one info line about the re-baseline');
+    ok(str_contains($ev[0]['message'], 'wporg-plugin 1.5.0: 3 files updated'), 'naming the version and the count: ' . $ev[0]['message']);
+    State::set('last_full_pass', 0);
+    tick();
+    $m = array_filter(Alerts::active(Fortress::MINCETA), static fn($a) => in_array($a['kind'], ['file-new', 'file-changed', 'plugin-modified'], true));
+    eq(0, count($m), 'the walk raises nothing for the updated plugin\'s files');
+    eq(0, count(array_filter(events_of('file-changed'), static fn($e) => str_contains($e['target'], 'wporg-plugin'))), 'no file-changed events either');
+});
+
+suite('0.1.2 item 3: a self-update row is recovered, not abandoned', function () {
+    tick();
+    $id = Journal::create('self-update', 'dcc-ragusa', ['slug' => 'dcc-ragusa', 'is_self' => true, 'errlog' => Error_Log::snapshot(), 'started' => time()], 'x', false);
+    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['next_at' => time() - 600]]);
+    age_row($id, 300);
+    Journal::new_run();
+    Actions::recover();
+    $row = Journal::get($id);
+    ok($row['state'] !== Journal::ABANDONED, 'not abandoned: ' . $row['state']);
+    eq(Journal::COMMITTED, $row['state'], 'the lost self-update check was run and passed');
+});
+
+suite('0.1.2 item 4: the rollback row is committed in the same call as its verification, even when the follow-up runs at once', function () {
+    tick();
+    // The follow-up runs synchronously, as the WP-CLI subprocess does on the real host.
+    Sveti_Ivan::$followup_runner = static function (int $id): void {
+        Sveti_Ivan::scheduled_check($id);
+    };
+    break_cottage_when('1.5.0');
+    $id = simulate_update('wporg-plugin', '1.5.0');
+    Sveti_Ivan::scheduled_check($id);
+    Sveti_Ivan::scheduled_check($id);
+    $rb = Journal::latest('rollback', 'wporg-plugin');
+    eq(Journal::COMMITTED, $rb['state'], 'the rollback row is committed when Rollback::run returns');
+    eq('1.4.0', Revelin::plugin_version('wporg-plugin'), 'previous version in place');
+    [$ok, $msg] = Actions::reverse((int) $rb['id']);
+    ok($ok, 'the reverse is accepted at once: ' . $msg);
+    eq('1.5.0', Revelin::plugin_version('wporg-plugin'), 'and the new version is back');
+    Sveti_Ivan::$followup_runner = null;
+    $GLOBALS['dccr_site_handler'] = null;
+    // The drill is loud.
+    ok(DCCR\Drill::failed(['ok      x', 'FAILED  version in place: 1.0.0 (expected 1.0.1)']), 'a FAILED line fails the drill');
+    ok(!DCCR\Drill::failed(['ok      x', 'Cleaned up.']), 'no FAILED line, no failure');
+});
+
+suite('0.1.2 item 5: upgrading from 0.1.1 retakes Bokar\'s baseline quietly; a reordered plugin list is not a change', function () {
+    tick();
+    Alerts::raise(['fortress' => Fortress::BOKAR, 'severity' => Events::BREACHED, 'kind' => 'role-changed', 'target' => '5', 'title' => 'Role Changed', 'what' => 'w']);
+    update_option('dcc_ragusa_version', '0.1.1', 'no');
+    DCCR\Plugin::maybe_upgrade();
+    eq(0, count(array_filter(Alerts::active(Fortress::BOKAR), static fn($a) => $a['kind'] === 'role-changed')), 'the false role changes are withdrawn');
+    $b = get_option('dcc_ragusa_baselines');
+    ok(!isset($b['users']), 'the user baseline is dropped so the next tick retakes it');
+    tick();
+    eq(0, count(events_of('role-changed')), 'retaking the baseline raises no change');
+    ok(str_contains(Fortress::status(Fortress::BOKAR)['line'], '2 Administrators'), 'two administrators again');
+    // A --force reinstall reorders active_plugins: same set, nothing to say.
+    $before = count(events_of('option-changed'));
+    update_option('active_plugins', array_reverse((array) get_option('active_plugins')));
+    tick();
+    eq($before, count(events_of('option-changed')), 'a reorder raises nothing');
+    update_option('active_plugins', array_merge((array) get_option('active_plugins'), ['brand-new/brand-new.php']));
+    tick();
+    eq($before + 1, count(events_of('option-changed')), 'an added plugin still does');
+});
+
+suite('0.1.2 item 7: the disk figure reaches the card on every reading; the tick line reads plainly', function () {
+    tick();
+    State::set('disk', ['checked_at' => time(), 'used' => 8300 * 1024 * 1024, 'limit' => 10240 * 1024 * 1024, 'pct' => 82.7, 'method' => 'quota', 'device' => '/dev/sdd']);
+    Minceta::update_status();
+    ok(str_contains(Fortress::status(Fortress::MINCETA)['line'], '8.1 GB Of 10.0 GB (82.7%)'), 'the card shows the figure: ' . Fortress::status(Fortress::MINCETA)['line']);
+    $GLOBALS['dccr_cron'] = [['ts' => time() - 5 * 3600, 'hook' => 'dccr_tick', 'args' => [], 'recurrence' => 'dccr_10min']];
+    ok(str_contains(DCCR\Cli::tick_line(), 'Overdue By 5 Hours'), 'overdue reads plainly: ' . DCCR\Cli::tick_line());
+    $GLOBALS['dccr_cron'] = [['ts' => time() + 240, 'hook' => 'dccr_tick', 'args' => [], 'recurrence' => 'dccr_10min']];
+    ok(str_contains(DCCR\Cli::tick_line(), 'next in 4 min'), 'a future tick reads plainly: ' . DCCR\Cli::tick_line());
+    // WP-CLI docblocks: every command has a one-line summary and no raw one-line docblock.
+    $src = (string) file_get_contents(dirname(__DIR__) . '/includes/class-cli.php');
+    ok(!preg_match('#/\*\* [^\n]*\*/\s*\n\s*public function#', $src), 'no one-line docblock on a command');
+    preg_match_all('#/\*\*\n\s+\* ([^\n]+)\n#', $src, $m);
+    ok(count($m[1]) >= 14, 'every command carries a summary line: ' . count($m[1]));
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

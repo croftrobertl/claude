@@ -145,6 +145,13 @@ final class Minceta
             if (($seen[$name] ?? null) === $value) {
                 continue;
             }
+            if ($name === 'active_plugins') {
+                $old_set = (array) get_option('dcc_ragusa_active_plugins_seen', []);
+                $cur_set = (array) get_option('active_plugins', []);
+                if ($old_set !== [] && array_diff($cur_set, $old_set) === [] && array_diff($old_set, $cur_set) === []) {
+                    continue; // a reorder or a --force reinstall: the same plugins, nothing to say
+                }
+            }
             $severity = $name === 'active_plugins' ? Events::NEEDS_LOOK : Events::BREACHED;
             $what     = $name === 'active_plugins'
                 ? __('The list of active plugins changed.', 'dcc-ragusa')
@@ -793,9 +800,14 @@ final class Minceta
         self::update_status();
     }
 
-    /** Accept a file or folder as it is now (after an update passes, or `wp ragusa seal`). */
-    public static function rebaseline(string $abs): void
+    /**
+     * Accept a file or folder as it is now (a recorded plugin update, a
+     * rollback, or `wp ragusa seal`). Returns how many files were new or
+     * different from the index.
+     */
+    public static function rebaseline(string $abs): int
     {
+        $changed = 0;
         $abs   = rtrim($abs, '/');
         $index = self::index();
         $rels  = [];
@@ -813,9 +825,14 @@ final class Minceta
             $rels[Site::rel($abs)] = $abs;
         }
         $pass = (int) State::get('minceta.pass_no', 0);
+        self::$plugin_maps = [];
         foreach ($rels as $rel => $file) {
-            $exp = self::expectation($rel);
-            self::$index[$rel] = ['s' => (int) filesize($file), 'm' => (int) filemtime($file), 'h' => self::hash($file, $exp['algo']), 'x' => $exp['src'], 'p' => $pass];
+            $exp  = self::expectation($rel);
+            $hash = self::hash($file, $exp['algo']);
+            if (($index[$rel]['h'] ?? null) !== $hash) {
+                $changed++;
+            }
+            self::$index[$rel] = ['s' => (int) filesize($file), 'm' => (int) filemtime($file), 'h' => $hash, 'x' => $exp['src'], 'p' => $pass];
             foreach (['file-new', 'file-changed', 'file-missing', 'plugin-modified', 'core-modified'] as $kind) {
                 Alerts::resolve(Events::fingerprint(Fortress::MINCETA, $kind, $rel));
             }
@@ -823,6 +840,7 @@ final class Minceta
         self::$index_dirty = true;
         self::save_index();
         self::$plugin_maps = [];
+        return $changed;
     }
 
     // --------------------------------------------------------------- disk
@@ -846,6 +864,7 @@ final class Minceta
             $method = $q['guessed'] ? 'quota-largest' : 'quota';
             State::set('disk', ['checked_at' => time(), 'used' => $q['used'], 'limit' => $q['limit'], 'pct' => $pct, 'method' => $method, 'device' => $q['device']]);
             self::disk_alert($pct, $q['used'], $q['limit'], $method);
+            self::update_status();
             return sprintf('Disk %s of %s (%s%%) on %s%s', Text::bytes($q['used']), Text::bytes($q['limit']), (string) $pct, $q['device'], $q['guessed'] ? ', the fullest filesystem (home device unknown)' : '');
         }
         // No quota command: a weekly chunked walk of the home directory, an approximation.
@@ -878,6 +897,7 @@ final class Minceta
         $pct = round($sum / self::QUOTA_BYTES * 100, 1);
         State::set('disk', ['checked_at' => time(), 'walked_at' => time(), 'used' => $sum, 'limit' => self::QUOTA_BYTES, 'pct' => $pct, 'method' => 'walk', 'walk' => []]);
         self::disk_alert($pct, $sum, self::QUOTA_BYTES, 'walk');
+        self::update_status();
         return sprintf('Disk about %s of %s (%s%%, counted by Ragusa)', Text::bytes($sum), Text::bytes(self::QUOTA_BYTES), (string) $pct);
     }
 

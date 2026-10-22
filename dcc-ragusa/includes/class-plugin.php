@@ -67,6 +67,17 @@ final class Plugin
                 }
                 Alerts::withdraw(Fortress::MINCETA, ['file-new', 'file-changed', 'file-missing']);
             }
+            if ($seen === '' || version_compare($seen, '0.1.2', '<')) {
+                // 0.1.0 read every privileged user as an editor; its baseline is
+                // retaken on the next tick and the role "changes" it raised withdrawn.
+                $b = get_option('dcc_ragusa_baselines', []);
+                if (is_array($b) && isset($b['users'])) {
+                    unset($b['users']);
+                    update_option('dcc_ragusa_baselines', $b, 'no');
+                }
+                Alerts::withdraw(Fortress::BOKAR, ['role-changed', 'user-new', 'user-gone']);
+                Alerts::withdraw(Fortress::MINCETA, ['option-changed']);
+            }
             if (get_option('dcc_ragusa_version', null) === null) {
                 add_option('dcc_ragusa_version', DCCR_VERSION, '', 'no');
             } else {

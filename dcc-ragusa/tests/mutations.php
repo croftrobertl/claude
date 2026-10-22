@@ -150,6 +150,36 @@ $mutations = [
         'from' => "                if (\$missing !== [] && self::looks_like_login(\$r['body'])) {",
         'to'   => '                if (false) {',
     ],
+    [
+        'name' => '0.1.2 blocker 1a: a parent directory that is another WordPress site is read as this site\'s log',
+        'file' => 'includes/class-error-log.php',
+        'from' => "        if (\$parent !== \$root && !self::is_wordpress_root(\$parent)) {",
+        'to'   => '        if ($parent !== $root) {',
+    ],
+    [
+        'name' => '0.1.2 blocker 1b: a WP-CLI fatal counts as evidence against an update',
+        'file' => 'includes/class-error-log.php',
+        'from' => "                if (self::is_cli_line(\$line)) {\n                    continue;\n                }",
+        'to'   => '',
+    ],
+    [
+        'name' => '0.1.2 item 2: an updated plugin\'s own files are raised as findings',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        \$n = Minceta::rebaseline(Site::plugins_dir() . '/' . \$slug);",
+        'to'   => '        $n = 0;',
+    ],
+    [
+        'name' => '0.1.2 item 3: a lost self-update check is abandoned',
+        'file' => 'includes/class-actions.php',
+        'from' => "                } elseif (in_array(\$action, ['update-check', 'core-check', 'self-update'], true)) {",
+        'to'   => "                } elseif (in_array(\$action, ['update-check', 'core-check'], true)) {",
+    ],
+    [
+        'name' => '0.1.2 item 4: the rollback row is written after its follow-up may have committed it',
+        'file' => 'includes/actions/class-rollback.php',
+        'from' => "        \$check = Sveti_Ivan::after_rollback(\$id, \$slug);\n        Journal::set_state(\$id, Journal::VERIFYING, ['verify' => ['check_id' => \$check]]);\n        Sveti_Ivan::run_followup(\$check);",
+        'to'   => "        \$check = Sveti_Ivan::after_rollback(\$id, \$slug);\n        Sveti_Ivan::run_followup(\$check);\n        Journal::set_state(\$id, Journal::VERIFYING, ['verify' => ['check_id' => \$check]]);",
+    ],
 ];
 
 

@@ -80,6 +80,16 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 - **Bokar never trusts `WP_User::$roles` alone.** Roles come from the
   `{prefix}capabilities` meta, then any `*capabilities` key (a clone whose
   prefix changed), then the object.
+- **Only this site's error logs.** `Error_Log::paths()` never reads a parent
+  directory that is itself a WordPress root (staging sits inside live's web
+  root), and skips lines from WP-CLI (`phar://`, `eval()'d code`). A fatal
+  outside the updated plugin's own folder is an alert, never a rollback: the
+  page and iCal checks are the evidence about the money path.
+- **A recorded plugin update re-baselines its own files at once**, silently,
+  with one info event; otherwise every update would email a Needs A Look per file.
+- **Record the verification id on the rollback row before running the
+  follow-up.** In WP-CLI the follow-up is a subprocess that may commit the
+  row before the parent writes again (`Rollback::verify_now()`).
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -98,8 +108,8 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 
 ## Running the tests
 
-    php tests/run-tests.php            # ~385 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 22 deliberate breakages, each must be caught
+    php tests/run-tests.php            # ~427 assertions, synthetic site in /tmp
+    php tests/mutations.php            # 27 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -117,6 +127,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.1.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.1.2.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

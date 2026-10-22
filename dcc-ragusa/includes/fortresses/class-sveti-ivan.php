@@ -159,6 +159,16 @@ final class Sveti_Ivan
             /* translators: %s: check names */
             self::say(sprintf(__('Ragusa · Sveti Ivan: %s failed; a repeat check decides, nothing is rolled back from one failure.', 'dcc-ragusa'), implode(', ', $results['failed'])));
         }
+        // The plugin's own files are the new baseline now, not a finding; a
+        // rollback re-baselines again.
+        $n = Minceta::rebaseline(Site::plugins_dir() . '/' . $slug);
+        Events::record(Fortress::MINCETA, Events::INFO, 'plugin-rebaselined', $slug, sprintf(
+            /* translators: 1: slug, 2: version, 3: files */
+            __('%1$s %2$s: %3$d files updated and accepted as the baseline.', 'dcc-ragusa'),
+            $slug,
+            $before['new_version'] !== '' ? $before['new_version'] : '?',
+            $n
+        ), [], $id);
         self::schedule($id, self::FOLLOWUP);
         if (self::source() === 'cli') {
             if (!self::cli_subprocess($id)) {
@@ -233,7 +243,13 @@ final class Sveti_Ivan
         return sprintf('Journal %d: check still pending', $row['id']);
     }
 
-    /** After a rollback: a fresh check row that reports back to the rollback. */
+    /**
+     * After a rollback: a fresh check row that reports back to the rollback.
+     * It only creates and schedules; the caller records the id on the
+     * rollback row FIRST and then calls run_followup(), because in WP-CLI
+     * the follow-up runs in a subprocess and may commit the rollback row
+     * before this request writes to it again.
+     */
     public static function after_rollback(int $rollback_id, string $slug): int
     {
         $before = [
@@ -246,10 +262,22 @@ final class Sveti_Ivan
         ];
         $id = Journal::create('update-check', $slug, $before, 'verifying a rollback', false);
         self::schedule($id, self::FOLLOWUP);
+        return $id;
+    }
+
+    /** @var callable|null tests replace the subprocess with an in-process runner */
+    public static $followup_runner = null;
+
+    /** Run a scheduled check now where that is possible (WP-CLI subprocess). */
+    public static function run_followup(int $id): void
+    {
+        if (is_callable(self::$followup_runner)) {
+            (self::$followup_runner)($id);
+            return;
+        }
         if (self::source() === 'cli') {
             self::cli_subprocess($id);
         }
-        return $id;
     }
 
     // -------------------------------------------------------------- checks
@@ -309,9 +337,35 @@ final class Sveti_Ivan
         }
 
         $fatals = Error_Log::new_fatals((array) ($before['errlog'] ?? []));
-        $checks['error_log'] = $fatals === []
-            ? ['ok' => true, 'detail' => __('no new fatal', 'dcc-ragusa')]
-            : ['ok' => false, 'detail' => __('new fatal: ', 'dcc-ragusa') . $fatals[0]];
+        $slug   = (string) ($before['slug'] ?? '');
+        $own    = [];
+        $else   = [];
+        foreach ($fatals as $line) {
+            if ($slug === 'core' || Error_Log::in_plugin($line, $slug)) {
+                $own[] = $line;
+            } else {
+                $else[] = $line;
+            }
+        }
+        if ($own !== []) {
+            $checks['error_log'] = ['ok' => false, 'detail' => __('new fatal in this plugin: ', 'dcc-ragusa') . $own[0]];
+        } elseif ($else !== []) {
+            // Someone else's fatal is not evidence against this update: an alert, not a rollback.
+            $checks['error_log'] = ['ok' => null, 'detail' => __('a new fatal elsewhere, not in this plugin (alerted, not counted): ', 'dcc-ragusa') . $else[0]];
+            Alerts::raise([
+                'fortress' => Fortress::SVETI_IVAN,
+                'severity' => Events::NEEDS_LOOK,
+                'kind'     => 'fatal-elsewhere',
+                'target'   => $slug . '@' . substr(sha1($else[0]), 0, 8),
+                'title'    => __('A New Fatal Elsewhere After This Update', 'dcc-ragusa'),
+                /* translators: 1: slug, 2: the log line */
+                'what'     => sprintf(__('After the update of %1$s, a PHP fatal appeared in the error log that is not in that plugin\'s files: %2$s', 'dcc-ragusa'), $slug, $else[0]),
+                'did'      => __('Ragusa did not roll the update back for it: a fatal outside the updated plugin is not evidence against the update, and the page and booking checks decide.', 'dcc-ragusa'),
+                'todo'     => __('Read the line. If it names a plugin you updated by hand, or your own command, nothing to do. Otherwise ask the site director.', 'dcc-ragusa'),
+            ]);
+        } else {
+            $checks['error_log'] = ['ok' => true, 'detail' => __('no new fatal', 'dcc-ragusa')];
+        }
 
         if (!$inline) {
             $ical = Ical::check();
@@ -498,8 +552,6 @@ final class Sveti_Ivan
             Revelin::seal_self();
             State::delete('self_update_pending');
             Minceta::rebaseline(rtrim(DCCR_DIR, '/'));
-        } elseif ($row['action'] === 'update-check') {
-            Minceta::rebaseline(Site::plugins_dir() . '/' . $slug);
         }
         Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', $slug));
         Alerts::resolve(Events::fingerprint(Fortress::SVETI_IVAN, 'update-unverified', $slug));

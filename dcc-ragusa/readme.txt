@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,15 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.1.2 =
+* Only this site's error logs are read: a parent directory that is itself a WordPress root (live, seen from staging) is never read, and a fatal raised by WP-CLI (a phar location or eval()'d code) is never evidence. A fatal outside the updated plugin's own files is now an alert, "A New Fatal Elsewhere After This Update", not grounds for a rollback.
+* A recorded plugin update re-baselines its own files silently, with one info line ("dcc-ledger 0.1.8: 17 files updated"); a rollback re-baselines again.
+* A lost self-update check is recovered, not abandoned.
+* The rollback row is committed in the same call as its verification, also when the follow-up subprocess runs at once; every drill fails loudly when a step does not match.
+* Upgrading retakes Bokar's baseline quietly and withdraws 0.1.0's false role changes; a reordered plugin list (a --force reinstall) is not a change.
+* `wp ragusa proof` names a login page that answered inside wp-load, and on staging sets WP Staging aside in both columns.
+* The disk figure reaches the card on every reading; `wp ragusa status` reads "Overdue By 5 Hours" and "WP-Cron Is Off Here" when that constant is set; `wp help ragusa` reads cleanly.
 
 = 0.1.1 =
 * The 10-minute cron schedule is registered at file load, so activation can use it; the tick self-heals on every admin and cron boot, and Zelenci rings if Ragusa is active but silent for three hours.
