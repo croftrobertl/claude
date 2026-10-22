@@ -89,7 +89,9 @@ function MPHB() { return new MPHB_Stub(); }
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
 // boat-field is loaded because Layout_Script reads its NAME constant: the
 // segmented set's boat field is the one that plugin owns, never retyped here.
-foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'layout-script'] as $f) {
+// id-files is loaded because Layout_Script reads its META_KEY: the photo-ID
+// preview names the same input the protected store does, never a retyped one.
+foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'id-files', 'layout-script'] as $f) {
     require $plugin . '/includes/class-' . $f . '.php';
 }
 
@@ -311,6 +313,27 @@ check('the dog Yes/No is NOT segmented from here',
 $dog = Config::dog_field_names();
 check('Dog Size is not segmented either — it is the promise tick box',
     in_array($dog['size'], array_column($seg, 'name'), true), false);
+
+/* ========================================================================== *
+ * 6. Items 4 and 5 — the coupon and the photo-ID preview
+ * ========================================================================== */
+
+echo "\n--- the coupon and the photo ID ---\n";
+
+reset_state();
+$cp = Layout_Script::coupon();
+check('the coupon field is MotoPress\'s own name', $cp['field'], 'mphb_coupon_code');
+check('and the link says Rob\'s words', $cp['reveal'], 'Have A Coupon Code?');
+
+$up = Layout_Script::upload();
+/* THE FIELD NAME IS Id_Files', NOT RETYPED: the preview and the protected
+   store must never disagree about which input holds the photo. */
+check('the photo-ID field is the one Id_Files owns',
+    $up['field'], \DCC_Checkout\Id_Files::META_KEY);
+check('the card\'s words are translatable, and there is a word for a file that cannot be drawn',
+    [$up['ready'], $up['change'], $up['document']], ['Ready', 'Change', 'Document']);
+check('the size units are the site\'s own words, so a translation can change them',
+    $up['units'], ['bytes', 'KB', 'MB']);
 
 /* 0.29.0: nothing localized at the top level may be a boolean. */
 reset_state();

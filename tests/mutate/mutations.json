@@ -5400,5 +5400,203 @@
   "find": ".dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {",
   "replace": ".dcc_layout .dcc_layout-segment__native {",
   "count": 1
+ },
+ {
+  "id": "cp-no-link",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: a link offers the coupon field",
+  "find": "        coupon(root);\n        upload(root);",
+  "replace": "        upload(root);",
+  "count": 1
+ },
+ {
+  "id": "cp-starts-open",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: the coupon field starts folded away",
+  "find": "        var open = String(field.value || '') !== '' ||",
+  "replace": "        var open = true || String(field.value || '') !== '' ||",
+  "count": 1
+ },
+ {
+  "id": "cp-value-ignored",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: a coupon already entered keeps the row open",
+  "find": "        var open = String(field.value || '') !== '' ||\n            root.getAttribute('data-dcc-coupon-open') === '1' ||\n            hasMessage(row);",
+  "replace": "        var open = root.getAttribute('data-dcc-coupon-open') === '1';",
+  "count": 1
+ },
+ {
+  "id": "cp-message-ignored",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: a message in the coupon row keeps it open",
+  "find": "            hasMessage(row);",
+  "replace": "            false;",
+  "count": 1
+ },
+ {
+  "id": "cp-not-remembered",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: an opened coupon row is remembered, so a re-render cannot fold it away",
+  "find": "            var mark = want ? '1' : '0';\n            if (root.getAttribute('data-dcc-coupon-open') !== mark) {\n                root.setAttribute('data-dcc-coupon-open', mark);\n            }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "cp-anchor-not-button",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: the reveal is a real <button> (0.17.0: an anchor lost 15 of 18 taps)",
+  "find": "        var link = document.createElement('button');\n        link.type = 'button';",
+  "replace": "        var link = document.createElement('a');\n        link.href = '#';",
+  "count": 1
+ },
+ {
+  "id": "cp-no-bare-class",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: the reveal carries the bare-control class, so the button spec leaves it alone",
+  "find": "        link.className = 'dcc_layout-coupon__reveal dcc_checkout-bare-button';",
+  "replace": "        link.className = 'dcc_layout-coupon__reveal';",
+  "count": 1
+ },
+ {
+  "id": "css-cp-not-folded",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 4: the folded coupon row really is out of sight",
+  "find": ".dcc_layout .dcc_layout-coupon {\n    display: none;\n}",
+  "replace": ".dcc_layout .dcc_layout-coupon {\n    display: block;\n}",
+  "count": 1
+ },
+ {
+  "id": "cp-field-name-retyped",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0 item 4: the coupon field is MotoPress's own name",
+  "find": "            'field'  => 'mphb_coupon_code',",
+  "replace": "            'field'  => 'dcc_coupon',",
+  "count": 1
+ },
+ {
+  "id": "id-no-preview",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: choosing a file shows the card",
+  "find": "        coupon(root);\n        upload(root);",
+  "replace": "        coupon(root);",
+  "count": 1
+ },
+ {
+  "id": "id-not-revoked",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: the previous object URL is revoked on every change",
+  "find": "            if (lastObjectUrl) {\n                URL.revokeObjectURL(lastObjectUrl);\n                lastObjectUrl = null;\n            }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "id-no-doc-fallback",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: a file the browser cannot draw gets a document icon, not a broken image",
+  "find": "            img.addEventListener('error', function () {\n                thumb.appendChild(documentIcon(cfg.document || ''));\n            });",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "id-doc-by-name",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: drawability is decided by trying, not by sniffing the file name",
+  "find": "            img.addEventListener('load', function () {\n                thumb.appendChild(img);\n            });",
+  "replace": "            img.addEventListener('load', function () {\n                if (/\\\\.(png|jpe?g|gif|webp)$/i.test(file.name || '')) { thumb.appendChild(img); }\n            });",
+  "count": 1
+ },
+ {
+  "id": "id-sync-decode",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: the thumbnail is decoded off the main thread, at the size it is shown",
+  "find": "            img.decoding = 'async';",
+  "replace": "            img.decoding = 'sync';",
+  "count": 1
+ },
+ {
+  "id": "id-full-size-thumb",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: the thumbnail is drawn at thumbnail size",
+  "find": "            img.width = 64;\n            img.height = 64;",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "id-card-shown-empty",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: nothing is shown until a file is chosen",
+  "find": "        box.hidden = true;\n        var row = input.closest",
+  "replace": "        var row = input.closest",
+  "count": 1
+ },
+ {
+  "id": "id-input-disabled",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 5: MotoPress's own file input is untouched, so the upload still happens on submit",
+  "find": "        input.addEventListener('change', function () {\n            show(input.files && input.files[0] ? input.files[0] : null);\n        });",
+  "replace": "        input.addEventListener('change', function () {\n            show(input.files && input.files[0] ? input.files[0] : null);\n            input.disabled = true;\n        });",
+  "count": 1
+ },
+ {
+  "id": "id-field-retyped",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0 item 5: the preview names the same input the protected store does",
+  "find": "            'field'  => Id_Files::META_KEY,",
+  "replace": "            'field'  => 'mphb_photo_id',",
+  "count": 1
  }
 ]

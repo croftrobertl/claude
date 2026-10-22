@@ -78,6 +78,59 @@ final class Layout_Script
             'autocomplete' => self::autocomplete_map(),
             'placesField'  => self::PLACES_FIELD,
             'segmented'    => self::segmented(),
+            'coupon'       => self::coupon(),
+            'upload'       => self::upload(),
+        ];
+    }
+
+    /**
+     * ITEM 4 — "Have A Coupon Code?" (Rob: a link revealing the field).
+     *
+     * EVERYTHING ELSE IN ITEM 4 IS ALREADY MOTOPRESS'S OWN. checkout.js
+     * reshapes the price breakdown without doing any arithmetic — every figure
+     * it shows is one MotoPress rendered, moved or copied verbatim, and a row
+     * is only ever removed when its amount string is identical to the row that
+     * supersedes it. The per-night expander is MotoPress's own control (a real
+     * <button> since 0.17.0) and the "Taxes ✱" footnote is v0.14.0's. So the
+     * only new thing item 4 needs is the coupon disclosure.
+     *
+     * @return array<string,string>
+     */
+    public static function coupon(): array
+    {
+        return [
+            // MotoPress's own field name on the checkout.
+            'field'  => 'mphb_coupon_code',
+            'reveal' => __('Have A Coupon Code?', 'dcc-checkout'),
+        ];
+    }
+
+    /**
+     * ITEM 5 — what the photo-ID preview needs (picture 2).
+     *
+     * The field is MotoPress's own file input, named from Id_Files so the
+     * preview and the store can never disagree about which input holds the
+     * photo. NOTHING IS UPLOADED HERE: the preview is drawn from the File the
+     * browser already has, and the input is left exactly as MotoPress rendered
+     * it, so the upload still happens on submit and the protected store is
+     * still the only place the image lands.
+     *
+     * @return array<string,mixed>
+     */
+    public static function upload(): array
+    {
+        return [
+            'field'  => Id_Files::META_KEY,
+            'ready'  => __('Ready', 'dcc-checkout'),
+            'change' => __('Change', 'dcc-checkout'),
+            /* translators: a file that cannot be drawn as a picture (a PDF, or
+               a HEIC outside Safari). Shown beside a document icon. */
+            'document' => __('Document', 'dcc-checkout'),
+            'units'  => [
+                __('bytes', 'dcc-checkout'),
+                __('KB', 'dcc-checkout'),
+                __('MB', 'dcc-checkout'),
+            ],
         ];
     }
 

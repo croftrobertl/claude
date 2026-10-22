@@ -180,3 +180,96 @@ border-color: var(--dcc-blue, #006bcf);
 opacity: 0.45;
 cursor: default;
 }
+.dcc_layout .dcc_layout-coupon__reveal.dcc_layout-coupon__reveal {
+display: inline-block;
+margin: 0 0 10px;
+padding: 0;
+color: var(--dcc-blue, #006bcf);
+font-size: 16px;
+text-decoration: underline;
+cursor: pointer;
+touch-action: manipulation;
+}
+.dcc_layout .dcc_layout-coupon__reveal:focus-visible {
+outline: 3px solid var(--dcc-blue, #006bcf);
+outline-offset: 2px;
+}
+.dcc_layout .dcc_layout-coupon {
+display: none;
+}
+.dcc_layout .dcc_layout-coupon.dcc_layout-coupon--open {
+display: block;
+}
+.dcc_layout .dcc_layout-id {
+display: flex;
+align-items: center;
+gap: 12px;
+margin: 10px 0 18px;
+padding: 12px;
+border: 2px solid var(--dcc-field-border, #f4da62);
+border-radius: 16px;
+background: #fffdf5;
+}
+.dcc_layout .dcc_layout-id__thumb {
+flex: 0 0 auto;
+width: 64px;
+height: 64px;
+display: flex;
+align-items: center;
+justify-content: center;
+overflow: hidden;
+border-radius: 12px;
+background: #fff;
+color: var(--dcc-blue, #006bcf);
+}
+.dcc_layout .dcc_layout-id__image {
+width: 64px;
+height: 64px;
+object-fit: cover;
+display: block;
+}
+.dcc_layout .dcc_layout-id__meta {
+flex: 1 1 auto;
+min-width: 0;
+}
+.dcc_layout .dcc_layout-id__meta p {
+margin: 0;
+font-size: 14px;
+line-height: 1.35;
+}
+.dcc_layout .dcc_layout-id__name {
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+font-weight: 700;
+}
+.dcc_layout .dcc_layout-id__ready {
+color: #0a7d32;
+font-weight: 700;
+}
+.dcc_layout .dcc_layout-id__change.dcc_layout-id__change {
+flex: 0 0 auto;
+min-height: 44px;
+padding: 0 16px;
+border: 2px solid var(--dcc-blue, #006bcf);
+border-radius: 22px;
+background: #fff;
+color: var(--dcc-blue, #006bcf);
+font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+font-size: 16px;
+font-weight: 500;
+text-transform: none;
+cursor: pointer;
+touch-action: manipulation;
+}
+.dcc_layout .dcc_layout-id__change:focus-visible {
+outline: 3px solid var(--dcc-blue, #006bcf);
+outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+.dcc_layout .dcc_layout-id__change:hover {
+background-color: #f08080;
+border-color: #f08080;
+color: #fff;
+}
+}

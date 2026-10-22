@@ -570,6 +570,217 @@
     }
 
     /* --------------------------------------------------------------------- *
+     * Item 4 — "Have A Coupon Code?" (picture G, the price card)
+     *
+     * The field is MotoPress's own and stays exactly where MotoPress put it;
+     * it is folded behind a link until the guest wants it. Everything else in
+     * item 4 is already MotoPress's: checkout.js reshapes the breakdown
+     * without doing arithmetic, the per-night expander is MotoPress's own
+     * control and the "Taxes ✱" footnote is v0.14.0's.
+     *
+     * IT STAYS OPEN ONCE IT MATTERS. A coupon that has been applied must not
+     * disappear behind a link — so the row is open if the field has a value,
+     * if anything inside the row is showing a message, or if the guest opened
+     * it in this page view. The LAST of those is why the flag is kept on the
+     * form rather than in a closure: MotoPress re-renders this area whenever
+     * the price changes, and a guest who had opened the row would otherwise
+     * watch it fold itself away mid-typing.
+     * --------------------------------------------------------------------- */
+
+    function couponField(root) {
+        var cfg = CFG.coupon || {};
+        var name = cfg.field || 'mphb_coupon_code';
+        return root.querySelector('[name="' + cssEscape(name) + '"]');
+    }
+
+    function coupon(root) {
+        var field = couponField(root);
+        if (!field) { return; }
+        var row = field.closest('p, li, div') || field.parentNode;
+        if (!row || row === root) { return; }
+        if (row.querySelector('.dcc_layout-coupon__reveal')) { return; }
+
+        var open = String(field.value || '') !== '' ||
+            root.getAttribute('data-dcc-coupon-open') === '1' ||
+            hasMessage(row);
+
+        var link = document.createElement('button');
+        link.type = 'button';
+        /* A real button, not an <a>: 0.17.0 measured an anchor losing 15 of 18
+           clean taps on the owner's iPhone where a button lost none. The bare
+           class is what keeps the site button spec off it (0.17.0). */
+        link.className = 'dcc_layout-coupon__reveal dcc_checkout-bare-button';
+        link.setAttribute('data-dcc-injected', '1');
+        link.setAttribute('aria-expanded', open ? 'true' : 'false');
+        link.appendChild(document.createTextNode((CFG.coupon || {}).reveal || ''));
+        link.addEventListener('click', function () {
+            var nowOpen = row.classList.contains('dcc_layout-coupon--open');
+            setOpen(!nowOpen);
+            if (!nowOpen) { field.focus(); }
+        });
+
+        function setOpen(want) {
+            if (row.classList.contains('dcc_layout-coupon--open') !== want) {
+                row.classList.toggle('dcc_layout-coupon--open', want);
+            }
+            if (link.getAttribute('aria-expanded') !== (want ? 'true' : 'false')) {
+                link.setAttribute('aria-expanded', want ? 'true' : 'false');
+            }
+            /* Remembered on the FORM, so a MotoPress re-render cannot fold an
+               open row away under the guest. */
+            var mark = want ? '1' : '0';
+            if (root.getAttribute('data-dcc-coupon-open') !== mark) {
+                root.setAttribute('data-dcc-coupon-open', mark);
+            }
+        }
+
+        addClass(row, 'dcc_layout-coupon');
+        row.parentNode.insertBefore(link, row);
+        setOpen(open);
+    }
+
+    /** Is anything inside this row showing a message to the guest? */
+    function hasMessage(row) {
+        var notes = row.querySelectorAll('[class*="error"], [class*="notice"], [class*="message"]');
+        for (var i = 0; i < notes.length; i++) {
+            if (String(notes[i].textContent || '').trim() !== '' && notes[i].offsetParent) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Item 5 — THE PHOTO ID, AFTER CHOOSING A FILE (picture 2)
+     *
+     * NOTHING IS UPLOADED HERE. The preview is drawn from the File the browser
+     * already holds; MotoPress's own input is left exactly as rendered, so the
+     * upload still happens on submit and the protected store is still the only
+     * place the image lands. Item 10 never writes the file to storage either.
+     *
+     * THE OBJECT URL IS REVOKED ON EVERY CHANGE. Each createObjectURL pins the
+     * whole file in memory until it is revoked, and a guest who picks three
+     * photos on a phone would otherwise hold three of them — on the device
+     * with the least memory to spare, in the middle of paying.
+     *
+     * A PDF, OR AN IMAGE THE BROWSER CANNOT DRAW (a HEIC outside Safari, which
+     * is the common case straight off an iPhone), gets a document icon instead.
+     * That is decided by the image failing to load, not by sniffing the name:
+     * the only reliable answer to "can this browser draw this" is to try.
+     * --------------------------------------------------------------------- */
+
+    var lastObjectUrl = null;
+
+    function uploadField(root) {
+        var cfg = CFG.upload || {};
+        var name = cfg.field || 'mphb_upload_id';
+        var el = root.querySelector('input[type="file"][name="' + cssEscape(name) + '"]');
+        return el || root.querySelector('input[type="file"]');
+    }
+
+    function upload(root) {
+        var input = uploadField(root);
+        if (!input) { return; }
+        var cfg = CFG.upload || {};
+
+        var box = document.createElement('div');
+        box.className = 'dcc_layout-id';
+        box.setAttribute('data-dcc-injected', '1');
+        box.hidden = true;
+        var row = input.closest('p, li, div') || input.parentNode;
+        row.parentNode.insertBefore(box, row.nextSibling);
+
+        input.addEventListener('change', function () {
+            show(input.files && input.files[0] ? input.files[0] : null);
+        });
+
+        function show(file) {
+            /* Always let the previous file go, whatever happens next. */
+            if (lastObjectUrl) {
+                URL.revokeObjectURL(lastObjectUrl);
+                lastObjectUrl = null;
+            }
+            while (box.firstChild) { box.removeChild(box.firstChild); }
+            if (!file) {
+                if (!box.hidden) { box.hidden = true; }
+                return;
+            }
+
+            var thumb = document.createElement('div');
+            thumb.className = 'dcc_layout-id__thumb';
+            box.appendChild(thumb);
+
+            var meta = document.createElement('div');
+            meta.className = 'dcc_layout-id__meta';
+            var nameLine = document.createElement('p');
+            nameLine.className = 'dcc_layout-id__name';
+            nameLine.appendChild(document.createTextNode(file.name || ''));
+            var sizeLine = document.createElement('p');
+            sizeLine.className = 'dcc_layout-id__size';
+            sizeLine.appendChild(document.createTextNode(fileSize(file.size)));
+            var ready = document.createElement('p');
+            ready.className = 'dcc_layout-id__ready';
+            ready.appendChild(document.createTextNode('\u2713 ' + (cfg.ready || '')));
+            meta.appendChild(nameLine);
+            meta.appendChild(sizeLine);
+            meta.appendChild(ready);
+            box.appendChild(meta);
+
+            var change = document.createElement('button');
+            change.type = 'button';
+            change.className = 'dcc_layout-id__change';
+            change.appendChild(document.createTextNode(cfg.change || ''));
+            change.addEventListener('click', function () { input.click(); });
+            box.appendChild(change);
+
+            box.hidden = false;
+
+            /* TRY TO DRAW IT. An <img> that fails is the only reliable test of
+               whether this browser can render this file. */
+            var url = URL.createObjectURL(file);
+            lastObjectUrl = url;
+            var img = document.createElement('img');
+            img.className = 'dcc_layout-id__image';
+            /* Decoded off the main thread, at the size it is shown, so a 12MP
+               photo does not block the page while the guest is typing. */
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.alt = '';
+            img.width = 64;
+            img.height = 64;
+            img.addEventListener('load', function () {
+                thumb.appendChild(img);
+            });
+            img.addEventListener('error', function () {
+                thumb.appendChild(documentIcon(cfg.document || ''));
+            });
+            img.src = url;
+        }
+    }
+
+    /** A document icon for a file the browser cannot draw. */
+    function documentIcon(text) {
+        var wrap = document.createElement('span');
+        wrap.className = 'dcc_layout-id__doc';
+        wrap.setAttribute('role', 'img');
+        wrap.setAttribute('aria-label', text);
+        /* Inline, because the one thing this page must not do for a decoration
+           is make another request. */
+        wrap.innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+            '<path fill="currentColor" d="M6 2h7l5 5v15H6V2zm7 1.5V8h4.5L13 3.5z"/></svg>';
+        return wrap;
+    }
+
+    /** "1.2 MB", in the site's own words. */
+    function fileSize(bytes) {
+        var units = (CFG.upload || {}).units || ['bytes', 'KB', 'MB'];
+        var n = Number(bytes) || 0;
+        if (n < 1024) { return n + ' ' + units[0]; }
+        if (n < 1024 * 1024) { return Math.round(n / 1024) + ' ' + units[1]; }
+        return (Math.round(n / (1024 * 1024) * 10) / 10) + ' ' + units[2];
+    }
+
+    /* --------------------------------------------------------------------- *
      * Go
      * --------------------------------------------------------------------- */
 
@@ -580,6 +791,8 @@
            reads has to be on the select by the time it looks. */
         segments(root);
         place(root);
+        coupon(root);
+        upload(root);
         autofill(root);
         hints(root);
         armEnter(root);

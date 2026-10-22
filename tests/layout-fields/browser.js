@@ -70,6 +70,15 @@ const SEGMENTED = [
     { match: 'exact', name: 'mphb_boat', label: 'Boat Or Trailer' },
 ];
 
+const COUPON = { field: 'mphb_coupon_code', reveal: 'Have A Coupon Code?' };
+const UPLOAD = {
+    field: 'mphb_upload_id',
+    ready: 'Ready',
+    change: 'Change',
+    document: 'Document',
+    units: ['bytes', 'KB', 'MB'],
+};
+
 const page_html = `<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -162,6 +171,12 @@ const page_html = `<!doctype html>
 
     <p><textarea name="mphb_note"></textarea></p>
     <p><input type="file" name="mphb_upload_id"></p>
+    <!-- MotoPress's own coupon field, where MotoPress puts it. Item 4 folds
+         it behind a link and moves nothing. The message span is where an
+         "applied"/"invalid" note would land. -->
+    <p class="mphb-coupon-wrapper"><label>Coupon
+      <input type="text" name="mphb_coupon_code" value=""></label>
+      <span class="mphb-coupon-message"></span></p>
     <p><button type="submit" id="go">Book Now</button></p>
   </form>
 </div>
@@ -170,6 +185,8 @@ const page_html = `<!doctype html>
       autocomplete: TOKENS,
       placesField: 'mphb_address1',
       segmented: SEGMENTED,
+      coupon: COUPON,
+      upload: UPLOAD,
   })};
   /* Record a submit rather than letting it navigate: "Done must never submit"
      is only evidence if an attempt would have been seen. */
@@ -695,6 +712,201 @@ const page_html = `<!doctype html>
         await page.evaluate(() => document.querySelector('[name="mphb_dog_type"]').getAttribute('enterkeyhint')), 'done');
 
     /* ===================================================================== *
+     * ITEM 4 — the coupon, folded behind a link
+     * ===================================================================== */
+    const cp = await page.evaluate(() => {
+        const field = document.querySelector('[name="mphb_coupon_code"]');
+        const row = field.closest('p');
+        const link = document.querySelector('.dcc_layout-coupon__reveal');
+        return {
+            link: link ? link.textContent : null,
+            isButton: link ? link.tagName : null,
+            /* 0.17.0: an anchor lost 15 of 18 clean taps on the owner's
+               iPhone where a <button> lost none. */
+            bare: link ? link.classList.contains('dcc_checkout-bare-button') : null,
+            expanded: link ? link.getAttribute('aria-expanded') : null,
+            rowHidden: getComputedStyle(row).display,
+            /* The field is MotoPress's and stays where MotoPress put it. */
+            stillInRow: row.contains(field),
+            /* And still submits — it is simply empty while folded. */
+            inForm: field.isConnected && !field.disabled,
+            beforeRow: link && link.nextElementSibling === row,
+        };
+    });
+    check('a link offers the coupon field, and it is a real button', 
+        [cp.link, cp.isButton, cp.bare], ['Have A Coupon Code?', 'BUTTON', true]);
+    check('the field is folded away to start with',
+        [cp.rowHidden, cp.expanded], ['none', 'false']);
+    check('… the field is MotoPress\'s own, left in its row and still submitting',
+        [cp.stillInRow, cp.inForm], [true, true]);
+    check('… and the link sits directly above it', cp.beforeRow, true);
+
+    const opened = await page.evaluate(() => {
+        const link = document.querySelector('.dcc_layout-coupon__reveal');
+        link.click();
+        const row = document.querySelector('[name="mphb_coupon_code"]').closest('p');
+        return {
+            display: getComputedStyle(row).display,
+            expanded: link.getAttribute('aria-expanded'),
+            focused: document.activeElement.name,
+            /* Remembered on the FORM, so a re-render cannot fold it away. */
+            remembered: document.querySelector('form').getAttribute('data-dcc-coupon-open'),
+        };
+    });
+    check('tapping the link reveals the field and puts the cursor in it',
+        [opened.display, opened.expanded, opened.focused], ['block', 'true', 'mphb_coupon_code']);
+    check('… and the page remembers it is open, so a re-render cannot fold it away',
+        opened.remembered, '1');
+
+    const closed = await page.evaluate(() => {
+        document.querySelector('.dcc_layout-coupon__reveal').click();
+        return getComputedStyle(document.querySelector('[name="mphb_coupon_code"]').closest('p')).display;
+    });
+    check('tapping again folds it back', closed, 'none');
+
+    /* A COUPON THAT HAS BEEN APPLIED MUST NOT HIDE. Two separate reasons to
+       start open, each on its own page: the field carries a value, and the row
+       is showing a message. */
+    for (const [label, mutate] of [
+        ['the field already has a code', (h) => h.replace(
+            '<input type="text" name="mphb_coupon_code" value="">',
+            '<input type="text" name="mphb_coupon_code" value="SPRING">')],
+        ['the row is showing a message', (h) => h.replace(
+            '<span class="mphb-coupon-message"></span>',
+            '<span class="mphb-coupon-message">Coupon applied.</span>')],
+    ]) {
+        const p2 = await ctx.newPage();
+        await p2.setContent(mutate(page_html));
+        const state = await p2.evaluate(() => ({
+            display: getComputedStyle(
+                document.querySelector('[name="mphb_coupon_code"]').closest('p')).display,
+            expanded: document.querySelector('.dcc_layout-coupon__reveal').getAttribute('aria-expanded'),
+        }));
+        await p2.close();
+        check('the coupon starts OPEN when ' + label, [state.display, state.expanded], ['block', 'true']);
+    }
+
+    /* ===================================================================== *
+     * ITEM 5 — the photo ID after choosing a file (picture 2)
+     * ===================================================================== */
+
+    /* Nothing is shown until a file is chosen. */
+    check('no ID card is shown before a file is chosen',
+        await page.evaluate(() => document.querySelector('.dcc_layout-id').hidden), true);
+
+    /* A real image, through the real file input: Playwright hands the browser
+       an actual File, so createObjectURL and the <img> are exercised rather
+       than modelled. */
+    const PNG = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/0EB/wAAAABJRU5ErkJggg==',
+        'base64');
+    await page.setInputFiles('input[type="file"]', {
+        name: 'passport.png', mimeType: 'image/png', buffer: PNG,
+    });
+    /* The thumbnail appears on the image's own `load`, so it is waited for
+       rather than assumed — and the wait is what would fail if the preview
+       were never drawn. */
+    await page.waitForFunction(
+        () => !!document.querySelector('.dcc_layout-id__image, .dcc_layout-id__doc'),
+        null, { timeout: 4000 });
+    const shown = await page.evaluate(() => {
+        const box = document.querySelector('.dcc_layout-id');
+        const img = box.querySelector('.dcc_layout-id__image');
+        return {
+            hidden: box.hidden,
+            name: (box.querySelector('.dcc_layout-id__name') || {}).textContent,
+            size: (box.querySelector('.dcc_layout-id__size') || {}).textContent,
+            ready: (box.querySelector('.dcc_layout-id__ready') || {}).textContent,
+            change: (box.querySelector('.dcc_layout-id__change') || {}).textContent,
+            img: img ? { blob: img.src.indexOf('blob:') === 0, decoding: img.decoding,
+                         w: img.width, h: img.height } : null,
+            doc: !!box.querySelector('.dcc_layout-id__doc'),
+            /* MotoPress's input is untouched: still there, still a file
+               input, still carrying the file. */
+            input: (() => {
+                const i = document.querySelector('input[type="file"]');
+                return [i.isConnected, i.disabled, i.files.length];
+            })(),
+        };
+    });
+    check('choosing a file shows the card, with the name, the size and Ready',
+        [shown.hidden, shown.name, shown.size, shown.ready, shown.change],
+        [false, 'passport.png', PNG.length + ' bytes', '✓ Ready', 'Change']);
+    check('a drawable image is previewed from the file itself, decoded async at thumbnail size',
+        shown.img, { blob: true, decoding: 'async', w: 64, h: 64 });
+    check('… and no document icon is shown for it', shown.doc, false);
+    check('MotoPress\'s own file input is untouched and still holds the file',
+        shown.input, [true, false, 1]);
+
+    /* THE OBJECT URL IS REVOKED ON EVERY CHANGE, and that is a memory claim,
+       so it is constructed rather than asserted in prose: each
+       createObjectURL pins the whole file until it is revoked, and a guest who
+       picks three photos on a phone would otherwise hold three of them, on the
+       device with the least memory to spare, while paying.
+       URL.revokeObjectURL is resolved at call time, so wrapping it here
+       records what the script really does next. */
+    await page.evaluate(() => {
+        window.__revoked = [];
+        const real = URL.revokeObjectURL.bind(URL);
+        URL.revokeObjectURL = function (u) { window.__revoked.push(u); return real(u); };
+        window.__firstUrl = document.querySelector('.dcc_layout-id__image').src;
+    });
+    await page.setInputFiles('input[type="file"]', {
+        name: 'second.png', mimeType: 'image/png', buffer: PNG,
+    });
+    await page.waitForFunction(
+        () => !!document.querySelector('.dcc_layout-id__image, .dcc_layout-id__doc'),
+        null, { timeout: 4000 });
+    const revoked = await page.evaluate(() => ({
+        revoked: window.__revoked,
+        first: window.__firstUrl,
+        nowShowing: document.querySelector('.dcc_layout-id__name').textContent,
+        /* The new preview is a DIFFERENT blob, so the first really was let go
+           rather than reused. */
+        newUrl: document.querySelector('.dcc_layout-id__image').src,
+    }));
+    check('choosing another file revokes the previous object URL',
+        revoked.revoked, [revoked.first]);
+    check('… and shows the new one instead',
+        [revoked.nowShowing, revoked.newUrl !== revoked.first], ['second.png', true]);
+
+    /* Clearing the selection hides the card and lets the last file go too. */
+    const cleared = await page.evaluate(() => {
+        const input = document.querySelector('input[type="file"]');
+        const before = window.__revoked.length;
+        input.value = '';
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        return { hidden: document.querySelector('.dcc_layout-id').hidden,
+                 revokedMore: window.__revoked.length > before };
+    });
+    check('clearing the file hides the card and revokes the last URL',
+        [cleared.hidden, cleared.revokedMore], [true, true]);
+
+    /* A PDF — or any file the browser cannot draw — gets the document icon.
+       Decided by the image FAILING, not by sniffing the name. */
+    const PDF = Buffer.from('%PDF-1.4 not really');
+    await page.setInputFiles('input[type="file"]', {
+        name: 'scan.pdf', mimeType: 'application/pdf', buffer: PDF,
+    });
+    await page.waitForFunction(() => !!document.querySelector('.dcc_layout-id__doc'), null, { timeout: 4000 })
+        .catch(() => {});
+    const asDoc = await page.evaluate(() => {
+        const box = document.querySelector('.dcc_layout-id');
+        return {
+            doc: !!box.querySelector('.dcc_layout-id__doc'),
+            img: !!box.querySelector('.dcc_layout-id__image'),
+            label: (box.querySelector('.dcc_layout-id__doc') || {}).getAttribute
+                ? box.querySelector('.dcc_layout-id__doc').getAttribute('aria-label') : null,
+            name: (box.querySelector('.dcc_layout-id__name') || {}).textContent,
+            size: (box.querySelector('.dcc_layout-id__size') || {}).textContent,
+        };
+    });
+    check('a file the browser cannot draw gets a document icon, not a broken image',
+        [asDoc.doc, asDoc.img], [true, false]);
+    check('… labelled for a screen reader, with the file still named and sized',
+        [asDoc.label, asDoc.name, asDoc.size], ['Document', 'scan.pdf', PDF.length + ' bytes']);
+
+    /* ===================================================================== *
      * THE BROWSER'S OWN REFUSAL TO TOKEN THE PLACES FIELD.
      *
      * PHP removes that field from the map, so on a real page the browser half
@@ -706,11 +918,13 @@ const page_html = `<!doctype html>
      * ===================================================================== */
     const belted = await (async () => {
         const forced = page_html.replace(
-            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED }),
+            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED, coupon: COUPON, upload: UPLOAD }),
             JSON.stringify({
                 autocomplete: Object.assign({}, TOKENS, { 'mphb_address1': 'address-line1' }),
                 placesField: 'mphb_address1',
                 segmented: SEGMENTED,
+                coupon: COUPON,
+                upload: UPLOAD,
             })
         );
         const p2 = await ctx.newPage();
