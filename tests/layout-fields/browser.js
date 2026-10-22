@@ -190,6 +190,26 @@ const page_html = `<!doctype html>
     await page.setContent(page_html);
 
     /* ===================================================================== *
+     * ITEM 2's PLACEMENT IS READ FIRST, BEFORE ANYTHING FIRES A `change`.
+     *
+     * init() both places the panels AND listens on `change` to re-place them.
+     * Item 3's assertions tap a segmented button, which fires `change` on the
+     * select — so by the time item 2's block ran, the listener had already
+     * done the placing and mutation lf-panels-not-moved (which deletes the
+     * call in init) SURVIVED. The snapshot is taken here, at load, where only
+     * the init call can have produced it.
+     * ===================================================================== */
+    const placedAtLoad = await page.evaluate(() => {
+        const row = document.querySelector('p.mphb-adults-wrapper');
+        const ids = [];
+        let at = row;
+        while (at && at.nextElementSibling) { at = at.nextElementSibling; ids.push(at.id); }
+        return ids;
+    });
+    check('the panels are under the chooser from the moment the page loads',
+        placedAtLoad, ['g2', 'g3']);
+
+    /* ===================================================================== *
      * 3a — the tokens
      * ===================================================================== */
     const tokens = await page.evaluate(() => {
@@ -358,6 +378,33 @@ const page_html = `<!doctype html>
         [submits.disabled, submits.connected, submits.posted],
         [false, true, '2']);
 
+    /* AND THE GUEST SEES ONE CONTROL, NOT TWO. The select stays in the form,
+       so it has to be imperceptible AND out of the way of a finger: a 1px
+       control that still accepted a tap would steal presses at that point.
+       `pointer-events: none` is the load-bearing half — mutation
+       css-seg-native-visible removed the clip, the opacity and that, and
+       survived a suite which asserted none of them. */
+    const nativeHidden = await page.evaluate(() => {
+        const sel = document.querySelector('[name="mphb_room_details[0][adults]"]');
+        const r = sel.getBoundingClientRect();
+        const cs = getComputedStyle(sel);
+        return {
+            small: r.width <= 1 && r.height <= 1,
+            opacity: cs.opacity,
+            pointer: cs.pointerEvents,
+            /* Not display:none and not visibility:hidden — a select hidden
+               that way cannot be focused for the browser's own validation
+               message, which is why 0.34.1 clips its selects instead. */
+            display: cs.display,
+            visibility: cs.visibility,
+        };
+    });
+    check('the replaced select is imperceptible and cannot take a tap',
+        [nativeHidden.small, nativeHidden.opacity, nativeHidden.pointer],
+        [true, '0', 'none']);
+    check('… but is not display:none or visibility:hidden, so it can still be focused',
+        [nativeHidden.display !== 'none', nativeHidden.visibility], [true, 'visible']);
+
     /* A CAPPED OPTION IS NOT OFFERED AS A BUTTON, on its own page.
        checkout.js hides the counts above the offered number with `hidden` +
        `dcc_checkout-option-hidden` + `disabled` (0.25.2), and a button for one
@@ -387,6 +434,37 @@ const page_html = `<!doctype html>
     })();
     check('a capped guest count gets no button', cappedPage.options, ['1', '2', '3']);
     check('… and the group was built, so the check is not vacuous', cappedPage.built, true);
+
+    /* THE UPPER BOUND, on a cottage with a large capacity. MotoPress renders
+       one option per guest the accommodation sleeps, so the bound is what
+       stops a big cottage turning the chooser into a wall of buttons. It was
+       written as a belt and mutation seg-no-max SURVIVED, because every field
+       in the list has four options or fewer — the only long dropdown on the
+       page, Country, is not in the list at all, so the bound could never
+       decide anything. A capacity-8 cottage is the case that reaches it. */
+    const bigPage = await (async () => {
+        const html = page_html.replace(
+            '<option value="3">3</option><option value="4">4</option>',
+            '<option value="3">3</option><option value="4">4</option>' +
+            '<option value="5">5</option><option value="6">6</option>' +
+            '<option value="7">7</option><option value="8">8</option>'
+        );
+        const p2 = await ctx.newPage();
+        await p2.setContent(html);
+        const got = await p2.evaluate(() => ({
+            segmented: document.querySelector('[name="mphb_room_details[0][adults]"]')
+                .hasAttribute('data-dcc-segmented'),
+            /* The guard: the other two sets were still built, so this is the
+               bound deciding and not the script failing. */
+            groups: document.querySelectorAll('.dcc_layout-segment').length,
+        }));
+        await p2.close();
+        return got;
+    })();
+    check('a guest chooser with eight counts stays a dropdown, not eight buttons',
+        bigPage.segmented, false);
+    check('… and the coat and boat sets are still built (the guard)',
+        bigPage.groups, 2);
 
     /* TOO FEW CHOICES IS NOT A SET EITHER: one option is not a choice, and a
        select with nothing but the placeholder must be left to the dropdown

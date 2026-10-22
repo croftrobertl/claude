@@ -5143,8 +5143,8 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0: moving a panel refreshes the key hints, which are document order",
-  "find": "        hints(root);\n    }\n\n    /* --------------------------------------------------------------------- *\n     * Go",
-  "replace": "    }\n\n    /* --------------------------------------------------------------------- *\n     * Go",
+  "find": "        /* MOVING CHANGES DOCUMENT ORDER, AND THE KEY HINTS ARE DOCUMENT ORDER.",
+  "replace": "        if (false) { hints(root); }\n        /* MOVING CHANGES DOCUMENT ORDER, AND THE KEY HINTS ARE DOCUMENT ORDER.",
   "count": 1
  },
  {
@@ -5386,8 +5386,19 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0 item 3: the replaced select is hidden, so the guest sees one control",
-  "find": "    clip: rect(0 0 0 0);\n    clip-path: inset(50%);\n    border: 0;\n    opacity: 0;\n    pointer-events: none;",
-  "replace": "    border: 0;",
+  "find": "    opacity: 0 !important;\n    pointer-events: none !important;\n    overflow: hidden !important;\n    clip: rect(0 0 0 0) !important;\n    clip-path: inset(50%) !important;\n    white-space: nowrap !important;\n}\n\n.dcc_layout .dcc_layout-segment {",
+  "replace": "}\n\n.dcc_layout .dcc_layout-segment {",
+  "count": 1
+ },
+ {
+  "id": "css-seg-native-weak",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 3: the native-select hide must outrank the field standard's !important sizing",
+  "find": ".mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {",
+  "replace": ".dcc_layout .dcc_layout-segment__native {",
   "count": 1
  }
 ]

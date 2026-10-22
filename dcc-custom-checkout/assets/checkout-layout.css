@@ -172,19 +172,34 @@
    never removed, so it still submits. Clipped rather than `display: none`
    because a `display: none` control cannot be focused for a browser's own
    validation message, which is how select-list.js (0.34.1) hides its selects
-   and why checkout.js's readers were taught to measure the shown field. */
-.dcc_layout .dcc_layout-segment__native {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    border: 0;
-    opacity: 0;
-    pointer-events: none;
+   and why checkout.js's readers were taught to measure the shown field.
+ *
+ * THIS IS THE SAME FIGHT select-list.js ALREADY WON, AND IT IS WON THE SAME
+ * WAY — deliberately, line for line. The field standard sizes every select on
+ * this checkout with `!important` (width: 100%, min-height: 44px, display:
+ * block), so a plain (0,2,0) rule loses: the first version of this was exactly
+ * that, and the select kept a full-width 44px box. Clipped out of sight but
+ * still taking a row of space above every segmented set — invisible in the
+ * stylesheet, and the suite is what found it. So: the form class, the class
+ * DOUBLED, and `!important` on every line, mirroring
+ * `select.dcc_checkout-select-native.dcc_checkout-select-native` in
+ * checkout.css. Change one, look at the other. */
+.mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    max-width: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
 }
 
 .dcc_layout .dcc_layout-segment {
