@@ -59,7 +59,25 @@
 
 .dccwl-water[hidden] { display: none; }
 
-.dccwl-water > * + * { margin-top: var(--dccwl-gap-lg); }
+/*
+ * THE SECTION'S RHYTHM, AND THE FOLD'S (1.44.6).
+ *
+ * This stayed on `.dccwl-water` when 1.44.5 moved the other fifty rules to
+ * `.dccwl-water-scope`, on the reasoning that it describes a BLOCK IN PAGE
+ * FLOW and a <details> is not one. That was right about the <details> and
+ * wrong about its BODY: the fold's body is exactly such a block, holding the
+ * same almanac, About-the-Water and links children the section holds. So
+ * "About the Water" and "Official Information" sat 0px apart inside the fold
+ * while the section spaced them by `--dccwl-gap-lg` — measured at both 390px
+ * and 1280px, and the Director measured the same on live.
+ *
+ * Naming the fold's BODY rather than putting the scope class on the
+ * <details> keeps the distinction that 1.44.5 drew: the summary and the body
+ * are not siblings in a rhythm, and a scope on the <details> would have put
+ * a gap-lg between them.
+ */
+.dccwl-water > * + *,
+.dccwl-water-aboutfold > .dccwl-fullguide-body > * + * { margin-top: var(--dccwl-gap-lg); }
 
 .dccwl-water-scope .dccwl-water-title {
 	color: var(--dccwl-text);

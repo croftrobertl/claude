@@ -4574,9 +4574,8 @@ was written, measured to change nothing, and deleted: **a rule that changes
 nothing measurable is a rule the next reader has to re-derive.** It is
 recorded in widget.css beside the two that did matter.
 
-
-
-Opening the About fold revealed a second underlined line beneath the row —
+**4. AND THE META LINE HE DESCRIBED.** Opening the About fold revealed a
+second underlined line beneath the row —
 "the water, and where these readings come from" — and then the panel said it
 again as "About the Water". His ruling: the row is **Guide · Credits ·
 About** in every state, and the panel says what it is once, as a heading.
@@ -4615,3 +4614,80 @@ open summary, and the meta line back in the row. **Re-running them after the
 later edits mattered:** the first three were first verified against an
 earlier state of this release, and a mutation that was red an hour ago is
 evidence about that hour, not about what ships.
+
+### 40. 1.44.6 — the last sentence-case card label, and a rhythm 1.44.5 left behind
+
+Two things the Director measured in the open About panel on live.
+
+**"Surface area" WAS THE LAST SENTENCE-CASE CARD LABEL IN THE PLUGIN, AND IT
+SURVIVED TWO SWEEPS BECAUSE IT IS DATA.** The nine live labels went Title
+Case in 1.44.1 — Water Level, Water Clarity (Secchi Depth), Dissolved Oxygen,
+Trophic State Index (TSI), Depth Map, Recent Rain, Wind and the two Forecast
+forms. This one is a seeded row in `Water_Data::default_almanac()`, so a
+reader sweeping the RENDERERS never meets it, and 1.44.1 explicitly set it
+aside as "an owner-edited label" — which it is not: it is **our** default,
+and the owner's own rows are the ones beside it.
+
+It also needed an `upgrade()` step (the 1.8.0 rule, for the fourth time in
+this release series), and that step matches on **the label AND the waterbody
+together**. A label is not unique: "Surface area" for Lake Harris is somebody
+else's row, and the suite proves the repair leaves it alone.
+
+**TWO SUITES NOW ASSERT THE RULE RATHER THAN THE STRING**, so a tenth builder
+or a second seeded row cannot be missed the same way:
+
+- `test-spelling.php` walks `default_almanac()` and requires every word of
+  every card label to start upper case, small words excepted.
+- `test-water-parts.php` does the same over the facts the REAL builders
+  produce — the 1.33.1 rule that a suite must exercise the path production
+  takes. Two exemptions, both because the text is not ours: everything after
+  an em dash (NWS supplies "This Afternoon"; the owner supplies a waterbody
+  name), and the small words. It also counts what it inspected, because a
+  sweep that saw nothing reports no problem.
+
+### The `> * + *` rhythm was right about the `<details>` and wrong about its body
+
+1.44.5 moved fifty rules from `.dccwl-water` to `.dccwl-water-scope` and
+deliberately left three behind, this among them, on the reasoning that they
+"describe a block in page flow and a `<details>` is not one". **That was
+right about the `<details>` and wrong about its BODY**, which is exactly such
+a block and holds the same almanac / About-the-Water / links children the
+section holds. So "Official Information" sat **0px** below the Surface Area
+card inside the fold while the section spaced the same blocks by
+`--dccwl-gap-lg`. Measured at 390px and 1280px here; the Director measured it
+on live at 1280px.
+
+The rule now names both — the section and
+`.dccwl-water-aboutfold > .dccwl-fullguide-body` — rather than putting the
+scope class on the `<details>`, which would have given its summary and body a
+gap they have never had. That distinction is the one 1.44.5 drew, kept.
+
+**THE GUARD READS THE REQUIRED GAP FROM THE SECTION, NOT FROM A LITERAL.**
+The claim is "the same spacing as the section", so a release that changes the
+token has to move both or fail; a typed `10` would make it a check on a
+number nobody chose twice.
+
+**AND RESOLVING THAT TOKEN IS NOT PARSING IT.** `--dccwl-gap-lg` computes to
+the string `calc(10px * 1)`, and `parseFloat` of that is `NaN` — which the
+first version turned into `0` and then cheerfully asserted that every gap was
+"at least 0px apart". **The `want > 0` guard caught it in the run it was
+written**, which is the only reason it is not still there. The browser
+resolves the token on a throwaway element now: a measurement, not a reading
+of its text. Same family as every other probe-first assertion in this
+harness.
+
+One more fixture lesson, from the same run: `test-spelling.php`'s idempotency
+check compared the option against a snapshot taken **before** the new almanac
+step wrote to it, and failed. It reads its own baseline now. *A fixture that
+compares against something captured before the state it is testing is not
+comparing anything.*
+
+**Live, reported and not changed:** the Director counted five Official
+Information links where the defaults seed six. Rob's stored option has no
+Haynes Creek row, so that is his setting and not a regression — and the
+1.8.0 merge rule is why it stays his.
+
+Mutations verified red against the final tree, each restored with `cp`/`mv`
+and the whole harness re-run after: the old label back, the almanac repair
+step deleted, and the fold's spacing removed (`[{"gap":0}]` at all three
+widths).

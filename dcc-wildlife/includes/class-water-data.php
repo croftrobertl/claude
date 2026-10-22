@@ -378,6 +378,33 @@ final class Water_Data {
 			$changed                      = true;
 		}
 
+		/*
+		 * 1.44.6: the seeded almanac row's label went Title Case ("Surface
+		 * area" -> "Surface Area"), and the stored row on any site that has
+		 * pressed Save still holds the old one — the 1.8.0 settings-merge
+		 * rule, the same reason the two licence strings needed a step above.
+		 *
+		 * EXACT MATCH ONLY, as everywhere else in this method: a row the
+		 * owner relabelled himself keeps his wording, and the match is on
+		 * BOTH the label and the waterbody so a row that merely happens to
+		 * be called "Surface area" for a different water is left alone.
+		 */
+		if ( isset( $stored['almanac'] ) && is_array( $stored['almanac'] ) ) {
+			$seed = self::default_almanac()[0] ?? [];
+			$want = (string) ( $seed['label'] ?? '' );
+			$body = (string) ( $seed['waterbody'] ?? '' );
+			foreach ( $stored['almanac'] as $i => $row ) {
+				if ( ! is_array( $row ) || '' === $want ) {
+					continue;
+				}
+				if ( 'Surface area' === trim( (string) ( $row['label'] ?? '' ) )
+					&& $body === trim( (string) ( $row['waterbody'] ?? '' ) ) ) {
+					$stored['almanac'][ $i ]['label'] = $want;
+					$changed                          = true;
+				}
+			}
+		}
+
 		if ( $changed ) {
 			update_option( self::OPTION, $stored );
 		}
@@ -412,7 +439,16 @@ final class Water_Data {
 		return [
 			[
 				'waterbody'   => __( 'Lake Dora', 'dcc-wildlife' ),
-				'label'       => __( 'Surface area', 'dcc-wildlife' ),
+				/* Title Case, like every other card label (1.44.6). This was
+				 * the last sentence-case one in the plugin: the live layer's
+				 * nine — Water Level, Water Clarity (Secchi Depth), Dissolved
+				 * Oxygen, Trophic State Index (TSI), Depth Map, Recent Rain,
+				 * Wind and the two Forecast forms — went Title Case in 1.44.1,
+				 * and this seeded row was missed because it is DATA rather
+				 * than a string in a renderer. test-water-parts.php asserts
+				 * the live ones and test-spelling.php this one, so the next
+				 * seeded row cannot be missed the same way. */
+				'label'       => __( 'Surface Area', 'dcc-wildlife' ),
 				'value'       => __( '4,385 acres', 'dcc-wildlife' ),
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => __( 'Lake County Water Atlas — Lake Dora (WBID 2831B), retrieved', 'dcc-wildlife' ),

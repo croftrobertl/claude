@@ -429,6 +429,44 @@ foreach ( $strings as [ $text, $file, $line ] ) {
 check( [] === $entity, 'no translatable string carries an HTML entity', implode( "\n    ", $entity ) );
 check( in_array( 'Licenses & Keep-Limits — Florida FWC', $guest, true ), 'the fishing heading is one plain ampersand' );
 
+dcc_section( 'every DEFAULT card label is Title Case (1.44.6)' );
+
+/*
+ * A CARD LABEL IS A LABEL, so Rob's Title Case rule covers it — and the
+ * seeded almanac row was the last sentence-case one in the plugin ("Surface
+ * area"). It survived 1.44.1's sweep because it is DATA in a defaults array
+ * rather than a string in a renderer, which is exactly the kind of place a
+ * reader of the renderers never looks.
+ *
+ * Checked here as a RULE rather than as one string: every word of every
+ * default card label must start upper case, except the small words Title
+ * Case itself leaves alone and anything parenthesised or unit-like. A new
+ * seeded row cannot be missed the way this one was.
+ */
+$small = [ 'a', 'an', 'the', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'at', 'by', 'with', 'from', '&' ];
+$bad_labels = [];
+foreach ( DCC_WL\Water_Data::default_almanac() as $row ) {
+	$label = trim( (string) ( $row['label'] ?? '' ) );
+	if ( '' === $label ) {
+		continue;
+	}
+	foreach ( preg_split( '/\s+/', $label ) as $i => $word ) {
+		$w = trim( $word, "(),:;—·…\"'" );
+		if ( '' === $w || ! preg_match( '/^[a-z]/', $w ) ) {
+			continue;
+		}
+		if ( $i > 0 && in_array( strtolower( $w ), $small, true ) ) {
+			continue;
+		}
+		$bad_labels[] = "\"$label\" — \"$w\"";
+	}
+}
+check( [] === $bad_labels, 'every default almanac card label is Title Case', implode( '; ', $bad_labels ) );
+check(
+	in_array( 'Surface Area', array_column( DCC_WL\Water_Data::default_almanac(), 'label' ), true ),
+	'the seeded row reads "Surface Area"'
+);
+
 dcc_section( 'the two seeded settings strings, and their upgrade step' );
 
 /*
@@ -451,8 +489,42 @@ check_contains( (string) $after['links'][0]['label'], 'licenses', 'the seeded FW
 check_contains( (string) $after['fishing']['license'], 'license (some exemptions', 'the seeded licence sentence is repaired' );
 check_contains( (string) $after['links'][1]['label'], 'licences', "and the owner's own wording is LEFT ALONE — exact match only" );
 
-/* Idempotent: a second pass must not touch a row it already repaired. */
-$twice = $after;
+/*
+ * AND THE SEEDED LABEL (1.44.6), by the same exact-match rule. The third row
+ * is the owner's own: same label, DIFFERENT waterbody, so the match must
+ * leave it alone — a label is not unique on its own and "Surface area" for
+ * another lake is somebody else's row.
+ */
+dccwl_test_reset();
+$stored2 = DCC_WL\Water_Data::defaults();
+$stored2['almanac'][0]['label'] = 'Surface area';
+$stored2['almanac'][] = [
+	'waterbody'   => 'Lake Harris',
+	'label'       => 'Surface area',
+	'value'       => '13,788 acres',
+	'tier'        => DCC_WL\Water_Fact::TIER_PUBLISHED,
+	'source_name' => 'Owner',
+	'source_url'  => '',
+	'date'        => '2026-01-01',
+	'note'        => '',
+	'section'     => 'about',
+];
+update_option( DCC_WL\Water_Data::OPTION, $stored2 );
+DCC_WL\Water_Data::upgrade();
+$after2 = get_option( DCC_WL\Water_Data::OPTION );
+check_same( 'Surface Area', $after2['almanac'][0]['label'], 'the seeded almanac label is repaired' );
+check_same( 'Surface area', $after2['almanac'][1]['label'], "and a row for another waterbody is LEFT ALONE" );
+
+/*
+ * Idempotent: a second pass must not touch a row it already repaired.
+ *
+ * The baseline is read HERE, not carried from the first block — the
+ * almanac block above writes the option between them, and the first
+ * version of this check compared a stale snapshot and failed in the run
+ * the almanac step was added. A fixture that compares against something
+ * written before the state it is testing is not comparing anything.
+ */
+$twice = get_option( DCC_WL\Water_Data::OPTION );
 DCC_WL\Water_Data::upgrade();
 check_same( $twice, get_option( DCC_WL\Water_Data::OPTION ), 'running the upgrade twice changes nothing further' );
 

@@ -312,6 +312,63 @@ for (const w of WIDTHS) {
     document.querySelector('.dccwl-footnotes details.dccwl-fullguide').open = true;
   });
 
+  /*
+   * ---- the fold's blocks keep the section's own rhythm (1.44.6) ----
+   *
+   * "Official Information" sat 0px below the bottom of the Surface Area card
+   * because `> * + *` stayed on `.dccwl-water` when 1.44.5 moved the rest of
+   * water.css to the shared scope, and the fold is not that section.
+   *
+   * THE REQUIRED GAP IS READ FROM THE SECTION, NOT TYPED HERE. The claim is
+   * "the same spacing as the section", so a release that changes
+   * `--dccwl-gap-lg` must move both together or fail — a literal 10px would
+   * turn this into a check on a number nobody chose twice.
+   */
+  const rhythm = await page.evaluate(() => {
+    const d = Array.from(document.querySelectorAll('details.dccwl-fullguide'))
+      .find((x) => /About/i.test(x.textContent));
+    d.open = true;
+    const sec = document.querySelector('.dccwl-water');
+    /*
+     * RESOLVE THE TOKEN, DO NOT PARSE IT. `--dccwl-gap-lg` computes to the
+     * string "calc(10px * 1)", and `parseFloat` of that is NaN — which the
+     * first version of this check turned into 0 and then happily asserted
+     * that every gap was "at least 0px apart". The guard below caught it in
+     * the run it was written, which is the only reason it is not still
+     * there. So the browser resolves it, on a throwaway element: a
+     * measurement of the token rather than a reading of its text.
+     */
+    const probe = document.createElement('div');
+    probe.style.marginTop = 'var(--dccwl-gap-lg)';
+    sec.appendChild(probe);
+    const want = parseFloat(getComputedStyle(probe).marginTop) || 0;
+    probe.remove();
+    const body = d.querySelector('.dccwl-fullguide-body');
+    const kids = Array.from(body.children).filter((c) => c.getClientRects().length);
+    const gaps = [];
+    for (let i = 1; i < kids.length; i += 1) {
+      const prev = kids[i - 1].getBoundingClientRect();
+      const cur = kids[i].getBoundingClientRect();
+      gaps.push({
+        after: String(kids[i - 1].className).slice(0, 24),
+        before: String(kids[i].className).slice(0, 24),
+        gap: Math.round((cur.top - prev.bottom) * 10) / 10,
+      });
+    }
+    return { want, blocks: kids.length, gaps };
+  });
+  /* A fold with one block has no adjacent pair, and an assertion over an
+   * empty list is an assertion about nothing — this harness's oldest
+   * prohibition. The fixture ships two (About the Water, Official
+   * Information), so one is a broken fixture rather than a tidy edge case. */
+  checkAtLeast(2, rhythm.blocks, `${w}: the About fold has blocks to space`,
+    JSON.stringify(rhythm.gaps));
+  check(rhythm.want > 0, `${w}: the section's own rhythm token resolves`, String(rhythm.want));
+  const tight = rhythm.gaps.filter((g) => g.gap < rhythm.want - 0.5);
+  check(0 === tight.length,
+    `${w}: every pair of blocks in the fold is at least the section's ${rhythm.want}px apart`,
+    JSON.stringify(tight));
+
   /* ---- Water: Map, then Now with every place, then Fishing ---- */
   await openInlineMap(page).catch((e) => note(`${w}: map — ${e.message}`));
   await sweep(page, `${w} Water › Map`, 10);

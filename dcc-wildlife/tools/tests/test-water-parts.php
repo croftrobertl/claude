@@ -418,4 +418,53 @@ foreach ( $rows as $f ) {
 }
 check( $has_raw_date, 'and the raw date field is untouched, as the age chip needs' );
 
+dcc_section( 'every LIVE card label a builder writes is Title Case (1.44.6)' );
+
+/*
+ * The companion to test-spelling.php's check on the SEEDED label. Nine live
+ * labels went Title Case in 1.44.1 — Water Level, Water Clarity (Secchi
+ * Depth), Dissolved Oxygen, Trophic State Index (TSI), Depth Map, Recent
+ * Rain, Wind and the two Forecast forms — and nothing asserted it, so a
+ * tenth builder could arrive sentence case and nobody would know until Rob
+ * read it on his phone.
+ *
+ * It runs over the facts the REAL builders just produced, not over a list of
+ * literals, which is the 1.33.1 rule: a suite must exercise the path
+ * production takes. Two exemptions, both because the text is not ours:
+ *
+ *   - a label composed around a NAME the source supplies — "Forecast — This
+ *     Afternoon" takes NWS's own period name, and a waterbody label takes
+ *     the owner's stored name. Only the part before the em dash is ours.
+ *   - the small words Title Case itself leaves alone.
+ */
+$small_live = [ 'a', 'an', 'the', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'at', 'by', 'with', 'from', '&' ];
+$bad_live   = [];
+$seen_live  = 0;
+foreach ( $rows as $f ) {
+	$row   = $f instanceof Water_Fact ? $f->to_array() : (array) $f;
+	$label = trim( (string) ( $row['label'] ?? '' ) );
+	if ( '' === $label ) {
+		continue;
+	}
+	/* Everything up to an em dash is this codebase's own wording. */
+	$ours = trim( explode( '—', $label )[0] );
+	if ( '' === $ours ) {
+		continue;
+	}
+	$seen_live++;
+	foreach ( preg_split( '/\s+/', $ours ) as $i => $word ) {
+		$w = trim( $word, "(),:;·…\"'" );
+		if ( '' === $w || ! preg_match( '/^[a-z]/', $w ) ) {
+			continue;
+		}
+		if ( $i > 0 && in_array( strtolower( $w ), $small_live, true ) ) {
+			continue;
+		}
+		$bad_live[] = "\"$label\" — \"$w\"";
+	}
+}
+/* A sweep that inspected nothing reports no problem. */
+check( $seen_live >= 4, 'the sweep saw several live labels', (string) $seen_live );
+check( [] === $bad_live, 'every live card label is Title Case', implode( '; ', $bad_live ) );
+
 dcc_done();
