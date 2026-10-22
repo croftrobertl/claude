@@ -4383,5 +4383,115 @@
   "find": "        if ($min !== $relative && is_readable(DCC_CHECKOUT_DIR . $min)) {",
   "replace": "        if ($min !== $relative) {",
   "count": 1
+ },
+ {
+  "id": "lay-always-on",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: the new layout is off until the switch or a valid key",
+  "find": "        self::$decided = self::enabled_for_everyone() || self::previewing();",
+  "replace": "        self::$decided = true;",
+  "count": 1
+ },
+ {
+  "id": "lay-switch-ignored",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: the owner's switch turns it on for everyone",
+  "find": "        return !empty($settings[self::SWITCH_SETTING]);",
+  "replace": "        return false;",
+  "count": 1
+ },
+ {
+  "id": "lay-any-key-accepted",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: a wrong key is no key",
+  "find": "        return hash_equals($stored, $given);",
+  "replace": "        return true;",
+  "count": 1
+ },
+ {
+  "id": "lay-prefix-key-accepted",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: a near-miss key is refused",
+  "find": "        return hash_equals($stored, $given);",
+  "replace": "        return strncmp($stored, $given, 8) === 0;",
+  "count": 1
+ },
+ {
+  "id": "lay-empty-stored-matches",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: an unset key matches nothing, not everything",
+  "find": "        if (!self::is_well_formed($stored)) {\n            return false;\n        }",
+  "replace": "        if (false) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "lay-cookie-persists",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: the preview cookie dies with the browser",
+  "find": "        self::set_cookie($given, 0); // 0 = a session cookie: it dies with the browser.",
+  "replace": "        self::set_cookie($given, time() + YEAR_IN_SECONDS);",
+  "count": 1
+ },
+ {
+  "id": "lay-off-kills-switch",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: a URL cannot overrule the owner's switch",
+  "find": "        if ($given === self::OFF) {\n            self::$decided = null;",
+  "replace": "        if ($given === self::OFF) {\n            self::$decided = false;\n            return;\n            self::$decided = null;",
+  "count": 1
+ },
+ {
+  "id": "lay-key-not-carried",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: saving the settings never wipes the preview key",
+  "find": "        if (preg_match('/\\A[0-9a-f]{32}\\z/', $existing)) {\n            $out[Layout::KEY_SETTING] = $existing;\n        }",
+  "replace": "        if (false) {\n            $out[Layout::KEY_SETTING] = $existing;\n        }",
+  "count": 1
+ },
+ {
+  "id": "lay-key-from-post",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: a key posted in the form is never accepted",
+  "find": "        $saved = get_option(Config::OPTION, []);\n        $existing = is_array($saved) && isset($saved[Layout::KEY_SETTING])\n            ? (string) $saved[Layout::KEY_SETTING] : '';",
+  "replace": "        $existing = isset($input[Layout::KEY_SETTING]) ? (string) $input[Layout::KEY_SETTING] : '';",
+  "count": 1
+ },
+ {
+  "id": "lay-key-not-random",
+  "file": "dcc-custom-checkout/includes/class-layout.php",
+  "suites": [
+   "layout"
+  ],
+  "claim": "0.35.0: two sites do not get the same preview key",
+  "find": "            return bin2hex(random_bytes(16));",
+  "replace": "            return str_repeat('ab', 16);",
+  "count": 1
  }
 ]

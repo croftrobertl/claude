@@ -80,6 +80,7 @@ SUITES = {
     'upload-access': ('php',  'tests/upload-access/run.php'),
     'audit':        ('php',  'tests/audit/run.php'),
     'minify':       ('php',  'tests/minify/run.php'),
+    'layout':       ('php',  'tests/layout/run.php'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

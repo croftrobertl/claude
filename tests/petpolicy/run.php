@@ -102,7 +102,7 @@ function MPHB() {
     };
 }
 
-foreach (['config', 'checkout-request', 'rest-guard', 'pet-service', 'dog-sizes', 'guest-fields', 'extra-guest-service', 'settings'] as $c) {
+foreach (['config', 'checkout-request', 'rest-guard', 'pet-service', 'dog-sizes', 'guest-fields', 'extra-guest-service', 'layout', 'settings'] as $c) {
     require __DIR__ . '/../../dcc-custom-checkout/includes/class-' . $c . '.php';
 }
 }

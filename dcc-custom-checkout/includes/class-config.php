@@ -47,6 +47,10 @@ final class Config
     public static function defaults(): array
     {
         return [
+            // v0.35.0 — the new checkout layout. OFF until Rob switches it
+            // on; the preview key is generated on first read (Layout).
+            'layout_enabled'     => 0,
+            'layout_preview_key' => '',
             'pet_fee_enabled'   => 1,
             'pet_accommodations' => [1607],           // Cottage 34 — Coconut Cottage
             // v0.34.0 — Rob's pet policy of 11 October: ONE flat per-night

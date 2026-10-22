@@ -144,6 +144,22 @@ final class Settings
 
         $out['pet_fee_enabled'] = empty($input['pet_fee_enabled']) ? 0 : 1;
 
+        // v0.35.0 — the new layout's switch, and its preview key.
+        $out['layout_enabled'] = empty($input['layout_enabled']) ? 0 : 1;
+
+        // THE KEY IS CARRIED THROUGH, NEVER TAKEN FROM THE POST. This
+        // sanitiser builds $out from scratch, so a key left out here would be
+        // WIPED on every Save Changes — ending the Director's preview link
+        // mid-test with nothing to explain it. It is also not an editable
+        // field: accepting it from the form would let anyone who can reach
+        // the settings page set a key they already knew.
+        $saved = get_option(Config::OPTION, []);
+        $existing = is_array($saved) && isset($saved[Layout::KEY_SETTING])
+            ? (string) $saved[Layout::KEY_SETTING] : '';
+        if (preg_match('/\A[0-9a-f]{32}\z/', $existing)) {
+            $out[Layout::KEY_SETTING] = $existing;
+        }
+
         $acc = $input['pet_accommodations'] ?? [];
         if (!is_array($acc)) {
             $acc = [];

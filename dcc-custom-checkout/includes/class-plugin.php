@@ -34,6 +34,10 @@ final class Plugin
             return;
         }
 
+        // v0.35.0 — who sees the new checkout layout. FIRST, because the
+        // preview cookie has to be decided before anything is enqueued.
+        (new Layout())->register();
+
         // Admin settings page (pet-fee on/off + which accommodations).
         (new Settings())->register();
 

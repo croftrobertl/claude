@@ -52,6 +52,8 @@ function checked($a, $b = true, $echo = true) {
 }
 
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
+// v0.35.0: Settings::sanitize() carries the preview key through (Layout).
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-layout.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-settings.php';
 
 use DCC_Checkout\Config;
