@@ -104,7 +104,13 @@
         var all = root.querySelectorAll('input[name], textarea[name]');
         for (var i = 0; i < all.length; i++) {
             var el = all[i];
-            if (el.tagName === 'TEXTAREA') { continue; }
+            /* A <textarea> is excluded by the type test alone — its `type` is
+               always "textarea", which is not in TYPED. There WAS a separate
+               `tagName === 'TEXTAREA'` line here; mutation lf-textarea-managed
+               removed it and nothing failed, because it could never be the
+               thing doing the work. Dead code that reads as a guard is worse
+               than no guard, so it is gone and mutation lf-textarea-typed
+               tests the test that really holds the line. */
             if (TYPED.indexOf((el.type || '').toLowerCase()) === -1) { continue; }
             if (el.disabled || el.readOnly) { continue; }
             out.push(el);

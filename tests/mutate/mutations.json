@@ -5004,17 +5004,6 @@
   "count": 1
  },
  {
-  "id": "lf-textarea-managed",
-  "file": "dcc-custom-checkout/assets/layout.js",
-  "suites": [
-   "layout-fields-browser"
-  ],
-  "claim": "0.35.0: Enter in the note is a new line, so a textarea is not in the chain",
-  "find": "            if (el.tagName === 'TEXTAREA') { continue; }",
-  "replace": "",
-  "count": 1
- },
- {
   "id": "lf-no-tokens",
   "file": "dcc-custom-checkout/assets/layout.js",
   "suites": [
@@ -5049,17 +5038,6 @@
   "count": 1
  },
  {
-  "id": "lf-unknown-role-guessed",
-  "file": "dcc-custom-checkout/includes/class-layout-script.php",
-  "suites": [
-   "layout-fields"
-  ],
-  "claim": "0.35.0: a role this does not know gets NO token rather than a wrong one",
-  "find": "            default:\n                /* A role this does not know gets NO token rather than a\n                   guessed one: an unrecognised token is ignored by the\n                   browser, but a WRONG one offers the guest somebody\n                   else's data. */\n                return '';",
-  "replace": "            default:\n                return 'name';",
-  "count": 1
- },
- {
   "id": "lf-guest34-ignored",
   "file": "dcc-custom-checkout/includes/class-layout-script.php",
   "suites": [
@@ -5090,6 +5068,17 @@
   "claim": "0.35.0: only the checkout page gets the layout script",
   "find": "        if (!Assets::is_checkout_page() || !Layout::active()) {\n            return;\n        }\n\n        wp_enqueue_script(",
   "replace": "        if (!Layout::active()) {\n            return;\n        }\n\n        wp_enqueue_script(",
+  "count": 1
+ },
+ {
+  "id": "lf-textarea-typed",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: a textarea is not in the Next chain — Enter in the note is a new line",
+  "find": "    var TYPED = ['text', 'email', 'tel', 'number', 'url', 'search', 'password'];",
+  "replace": "    var TYPED = ['text', 'email', 'tel', 'number', 'url', 'search', 'password', 'textarea'];",
   "count": 1
  }
 ]

@@ -240,6 +240,40 @@ const page_html = `<!doctype html>
         await page.evaluate(() => document.querySelector('[name="mphb_dog_type"]').getAttribute('enterkeyhint')), 'done');
 
     /* ===================================================================== *
+     * THE BROWSER'S OWN REFUSAL TO TOKEN THE PLACES FIELD.
+     *
+     * PHP removes that field from the map, so on a real page the browser half
+     * never sees it and mutation lf-places-not-skipped-in-js SURVIVED: an
+     * equivalent mutant, because the only input it guards against could not
+     * arrive. The belt exists for the day the map DOES carry it — a future
+     * change to the map, or a filter on the localized data — so the config is
+     * handed that field here deliberately.
+     * ===================================================================== */
+    const belted = await (async () => {
+        const forced = page_html.replace(
+            'window.DCC_LAYOUT = ' + JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1' }),
+            'window.DCC_LAYOUT = ' + JSON.stringify({
+                autocomplete: Object.assign({}, TOKENS, { 'mphb_address1': 'address-line1' }),
+                placesField: 'mphb_address1',
+            })
+        );
+        const p2 = await ctx.newPage();
+        await p2.setContent(forced);
+        const got = await p2.evaluate(() => ({
+            places: document.querySelector('[name="mphb_address1"]').getAttribute('autocomplete'),
+            /* The guard on this case: the rest of the map still applied, so a
+               page that simply failed to run would not pass. */
+            first: document.querySelector('[name="mphb_first_name"]').getAttribute('autocomplete'),
+        }));
+        await p2.close();
+        return got;
+    })();
+    check('even a map that CARRIES mphb_address1 leaves it autocomplete="off"',
+        belted.places, 'off');
+    check('… and the rest of the map still applied (the guard on that)',
+        belted.first, 'given-name');
+
+    /* ===================================================================== *
      * Tap rules: typing and pressing keys write nothing
      * ===================================================================== */
     await page.evaluate(() => {

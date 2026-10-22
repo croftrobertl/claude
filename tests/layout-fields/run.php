@@ -221,15 +221,27 @@ check('a filter pointing a guest field at mphb_address1 still leaves it untokene
 check('… and the other guest fields are unaffected',
     $filtered['mphb_guest2_last_name'] ?? null, 'section-guest2 family-name');
 
-/* An unknown role gets no token rather than a guessed one. */
+/* AN UNKNOWN ROLE CANNOT REACH THE MAP AT ALL, and the first version of this
+   test did not know that: it filtered a 'nickname' role in and asserted it got
+   no token, which held with role_token()'s default deleted — mutation
+   lf-unknown-role-guessed SURVIVED on it. The reason is that
+   Config::guestN_field_names() REBUILDS its array from the known roles only,
+   so a filter cannot introduce one. role_token()'s default is therefore a
+   defensive fallback on an unreachable path, kept because '' is the right
+   direction to fail in, and no longer pretended to be under test.
+   What IS true, and worth pinning, is the normalisation itself. */
 reset_state();
 $GLOBALS['state']['filters']['dcc_checkout_guest3_field_names'][] = static function () {
     return ['first_name' => 'mphb_guest3_first_name', 'last_name' => 'mphb_guest3_last_name',
             'nickname' => 'mphb_guest3_nickname'];
 };
 $odd = Layout_Script::autocomplete_map();
-check('a role this does not know gets NO token rather than a wrong one',
-    isset($odd['mphb_guest3_nickname']), false);
+$guest3 = array_keys(array_filter($odd, static function (string $token): bool {
+    return strpos($token, 'section-guest3') === 0;
+}));
+sort($guest3);
+check('Config normalises a guest\'s field names, so only known roles reach the map',
+    $guest3, ['mphb_guest3_first_name', 'mphb_guest3_last_name']);
 
 /* ========================================================================== *
  * 4. Who gets the script
