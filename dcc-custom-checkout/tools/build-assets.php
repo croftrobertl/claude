@@ -50,6 +50,7 @@ $targets = [
     'assets/guest-count.js',
     'assets/select-list.js',
     'assets/restore.js',
+    'assets/layout.js',
 ];
 
 $fail = 0;

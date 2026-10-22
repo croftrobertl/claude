@@ -43,7 +43,7 @@ function run(array $cmd, &$code = null): string {
 }
 
 /** The guest-facing assets, and what the builder is expected to cover. */
-const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'checkout-layout.css', 'guest-count.js', 'select-list.js', 'restore.js'];
+const GUEST_ASSETS = ['checkout.js', 'checkout.css', 'checkout-layout.css', 'guest-count.js', 'select-list.js', 'restore.js', 'layout.js'];
 
 /* --- Build from the CURRENT sources, into a directory of our own. The
    structural checks below read THAT, not the shipped files: they are
@@ -112,7 +112,12 @@ foreach (GUEST_ASSETS as $name) {
         preg_match_all('/function\\s+([A-Za-z_$][\\w$]*)\\s*\\(/', $min, $b);
         sort($a[1]); sort($b[1]);
         check("$name: every function it declares survives the build", $b[1], $a[1]);
-        check("$name: ... and there are some to count", count($a[1]) > 10, true);
+        /* The guard on the comparison above: an extraction that silently
+           found nothing would make two empty lists compare equal. The floor
+           was 10 while every guest script was large; assets/layout.js
+           (v0.35.0) declares 9, so it is now the smallest number that still
+           cannot be reached by a broken regex. */
+        check("$name: ... and there are some to count", count($a[1]) >= 3, true);
     } else {
         check("$name: every rule block survives",
             [substr_count($min, '{'), substr_count($min, '}')],
@@ -146,6 +151,7 @@ check('with SCRIPT_DEBUG off, every guest asset is the built one', $urls(0), [
     'assets/guest-count.js'  => 'guest-count.min.js',
     'assets/select-list.js'  => 'select-list.min.js',
     'assets/restore.js'      => 'restore.min.js',
+    'assets/layout.js'       => 'layout.min.js',
 ]);
 check('with SCRIPT_DEBUG on, every guest asset is the source', $urls(1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -154,6 +160,7 @@ check('with SCRIPT_DEBUG on, every guest asset is the source', $urls(1), [
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
     'assets/restore.js'      => 'restore.js',
+    'assets/layout.js'       => 'layout.js',
 ]);
 check('a plugin folder with no built files serves the sources, not a 404', $urls(0, 1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -162,6 +169,7 @@ check('a plugin folder with no built files serves the sources, not a 404', $urls
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
     'assets/restore.js'      => 'restore.js',
+    'assets/layout.js'       => 'layout.js',
 ]);
 check('and a site can insist on the sources through the filter', $urls(0, 0, 1), [
     'assets/checkout.js'     => 'checkout.js',
@@ -170,6 +178,7 @@ check('and a site can insist on the sources through the filter', $urls(0, 0, 1),
     'assets/guest-count.js'  => 'guest-count.js',
     'assets/select-list.js'  => 'select-list.js',
     'assets/restore.js'      => 'restore.js',
+    'assets/layout.js'       => 'layout.js',
 ]);
 
 /* --- Nothing guest-facing is enqueued around asset_url(). -----------------
@@ -178,7 +187,7 @@ check('and a site can insist on the sources through the filter', $urls(0, 0, 1),
    diagnostic are the named exceptions. ----------------------------------- */
 $direct = [];
 foreach (['includes/class-assets.php', 'includes/class-guest-count-script.php',
-          'includes/class-restore.php'] as $rel) {
+          'includes/class-restore.php', 'includes/class-layout-script.php'] as $rel) {
     $code_text = (string) file_get_contents($plugin . '/' . $rel);
     if (preg_match_all('/DCC_CHECKOUT_URL\s*\.\s*\'(assets\/[^\']+)\'/', $code_text, $m)) {
         foreach ($m[1] as $hit) {

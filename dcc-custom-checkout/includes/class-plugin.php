@@ -55,6 +55,10 @@ final class Plugin
         // half reaches every guest as soon as 0.35.0 installs.
         (new Restore())->register();
 
+        // v0.35.0 — the new layout's own script (items 3a/3b so far): the
+        // autofill tokens and the Next/Done key. Behind the preview gate.
+        (new Layout_Script())->register();
+
         // Server-side backstops (cannot be bypassed by editing the DOM).
         (new Guest_Fields())->register();
         (new Pet_Service())->register();

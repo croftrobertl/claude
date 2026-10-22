@@ -87,6 +87,9 @@ SUITES = {
     'restore-browser': ('node', 'tests/restore/browser.js'),
     # The same item-10 suite against the BUILT bundle a guest downloads.
     'restore-min':  ('node', 'tests/restore/browser.js', {'DCC_MIN': '1'}),
+    'layout-fields': ('php',  'tests/layout-fields/run.php'),
+    'layout-fields-browser': ('node', 'tests/layout-fields/browser.js'),
+    'layout-fields-min': ('node', 'tests/layout-fields/browser.js', {'DCC_MIN': '1'}),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

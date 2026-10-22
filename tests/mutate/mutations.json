@@ -4924,5 +4924,172 @@
   "find": "            if (t.closest('[type=\"submit\"], button:not([type=\"button\"])')) { clearAll(); }",
   "replace": "",
   "count": 1
+ },
+ {
+  "id": "lf-places-tokened",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields",
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 (required): mphb_address1 is never given an autocomplete token",
+  "find": "        unset($map[self::PLACES_FIELD]);",
+  "replace": "        $map[self::PLACES_FIELD] = 'address-line1';",
+  "count": 1
+ },
+ {
+  "id": "lf-places-not-skipped-in-js",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: the browser half also refuses to token the Places field",
+  "find": "            if (name === PLACES) { return; }  /* belt; PHP removes it too */",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "lf-done-submits",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 (required): the return key never submits the form",
+  "find": "            e.preventDefault();\n\n            var open = chain(root);",
+  "replace": "            var open = chain(root);",
+  "count": 1
+ },
+ {
+  "id": "lf-next-ignores-visibility",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 (required): Next moves to the next VISIBLE field, and a revealed one joins the chain",
+  "find": "    function chain(root) {\n        return managed(root).filter(onPage);\n    }",
+  "replace": "    function chain(root) {\n        return managed(root);\n    }",
+  "count": 1
+ },
+ {
+  "id": "lf-chain-cached",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: the chain is recomputed on every press, so a panel that just opened is in it",
+  "find": "            var open = chain(root);\n            var at = open.indexOf(el);",
+  "replace": "            var open = window.__dccChain || (window.__dccChain = chain(root));\n            var at = open.indexOf(el);",
+  "count": 1
+ },
+ {
+  "id": "lf-done-never-moves",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: which field says \"done\" follows what is visible",
+  "find": "        root.addEventListener('change', function () { hints(root); });",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "lf-no-done",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: the last visible typed field says \"done\", the rest say \"next\"",
+  "find": "            var want = el === last ? 'done' : 'next';",
+  "replace": "            var want = 'next';",
+  "count": 1
+ },
+ {
+  "id": "lf-textarea-managed",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: Enter in the note is a new line, so a textarea is not in the chain",
+  "find": "            if (el.tagName === 'TEXTAREA') { continue; }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "lf-no-tokens",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: the tokens are actually written onto the fields",
+  "find": "                if (fields[i].getAttribute('autocomplete') !== token) {\n                    fields[i].setAttribute('autocomplete', token);\n                }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "lf-guest-section-dropped",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields",
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0: an extra guest is described as a DIFFERENT person, not the account holder again",
+  "find": "            $section = 'section-guest' . $min . ' ';",
+  "replace": "            $section = '';",
+  "count": 1
+ },
+ {
+  "id": "lf-guest-roles-positional",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0: a per-guest token follows the field's ROLE, never its position in a list",
+  "find": "            foreach ($by_role[$min] as $role => $name) {",
+  "replace": "            foreach (array_values($by_role[$min]) as $role => $name) {",
+  "count": 1
+ },
+ {
+  "id": "lf-unknown-role-guessed",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0: a role this does not know gets NO token rather than a wrong one",
+  "find": "            default:\n                /* A role this does not know gets NO token rather than a\n                   guessed one: an unrecognised token is ignored by the\n                   browser, but a WRONG one offers the guest somebody\n                   else's data. */\n                return '';",
+  "replace": "            default:\n                return 'name';",
+  "count": 1
+ },
+ {
+  "id": "lf-guest34-ignored",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0: the Guest 3/4 switch reaches the autofill map",
+  "find": "        foreach (Config::collected_guest_field_groups() as $group) {",
+  "replace": "        foreach (Config::guest_field_groups() as $group) {",
+  "count": 1
+ },
+ {
+  "id": "lf-ungated",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0: item 3 is behind the preview gate",
+  "find": "        if (!Assets::is_checkout_page() || !Layout::active()) {",
+  "replace": "        if (!Assets::is_checkout_page()) {",
+  "count": 1
+ },
+ {
+  "id": "lf-any-page",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "0.35.0: only the checkout page gets the layout script",
+  "find": "        if (!Assets::is_checkout_page() || !Layout::active()) {\n            return;\n        }\n\n        wp_enqueue_script(",
+  "replace": "        if (!Layout::active()) {\n            return;\n        }\n\n        wp_enqueue_script(",
+  "count": 1
  }
 ]
