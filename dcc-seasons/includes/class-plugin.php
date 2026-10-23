@@ -104,6 +104,19 @@ final class Plugin {
                 $rows = Schedule::migrate($rows, Themes::legacy_default_schedule());
             }
             $rows = Schedule::apply_new_themes($rows, $seen, DCC_SEASONS_VERSION);
+            /* 4.13.0: Rob re-cut the calendar, so a stored schedule comes
+             * with it — but ONLY where the row still carries the old
+             * default's rules. A row he edited is left alone and reported,
+             * because a calendar that quietly disagrees with the person who
+             * set it is worse than one that is out of date. */
+            $kept = [];
+            $rows = Schedule::apply_calendar($rows, $seen, DCC_SEASONS_VERSION, $kept);
+            foreach ($kept as $k) {
+                error_log(sprintf(
+                    'DCC Seasons: the calendar changed in this release, but your "%s" row is not the one it replaced, so it was left exactly as you set it.',
+                    (string) ($k['theme'] ?? '?')
+                ));
+            }
             if ($rows !== $stored['schedule']) {
                 $stored['schedule'] = $rows;
                 update_option(Settings::OPTION, $stored);

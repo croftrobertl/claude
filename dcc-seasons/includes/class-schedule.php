@@ -348,11 +348,11 @@ class Schedule {
         return [
             // Winter → spring
             self::row(self::fx(12, 26),          self::fx(1, 3),                 'new_years',    __('New Year\'s', 'dcc-seasons')),
-            self::row(self::fx(1, 4),            self::fx(1, 31),                'snowbird',     __('Snowbird Season', 'dcc-seasons')),
+            self::row(self::fx(1, 4),            self::fx(2, 14),                'snowbird',     __('Snowbird Season', 'dcc-seasons')),
             self::row(self::at('mlk'),           self::at('mlk'),                'mlk',          __('MLK Day', 'dcc-seasons')),
-            self::row(self::fx(2, 1),            self::fx(3, 1),                 'strawberry',   __('Strawberry Season', 'dcc-seasons')),
+            self::row(self::fx(2, 15),           self::fx(3, 1),                 'strawberry',   __('Strawberry Season', 'dcc-seasons')),
             self::row(self::at('mardi_gras', -8), self::at('mardi_gras'),        'mardi_gras',   __('Mardi Gras', 'dcc-seasons')),
-            self::row(self::fx(2, 10),           self::at('valentines'),         'valentines',   __('Valentine\'s', 'dcc-seasons')),
+            self::row(self::at('valentines'),    self::at('valentines'),         'valentines',   __('Valentine\'s', 'dcc-seasons')),
             self::row(self::at('presidents'),    self::at('presidents'),         'presidents',   __('Presidents Day', 'dcc-seasons')),
             self::row(self::fx(3, 2),            self::at('st_patricks'),        'st_patricks',  __('St. Patrick\'s', 'dcc-seasons')),
             /* Ends 30 April, not memorial_day-3, so May falls through to the
@@ -361,22 +361,27 @@ class Schedule {
             self::row(self::at('easter', -10),   self::at('easter', 1),          'easter',       __('Easter', 'dcc-seasons')),
             self::row(self::at('april_fools'),   self::at('april_fools'),        'april_fools',  __('April Fool\'s', 'dcc-seasons')),
             self::row(self::at('four_twenty'),   self::at('four_twenty'),        'four_twenty',  __('4/20', 'dcc-seasons')),
-            self::row(self::fx(4, 21),           self::at('earth_day'),          'earth_day',    __('Earth Day', 'dcc-seasons')),
-            self::row(self::at('mothers_day', -2), self::at('mothers_day'),      'mothers_day',  __('Mother\'s Day', 'dcc-seasons')),
+            self::row(self::at('earth_day'),     self::at('earth_day'),          'earth_day',    __('Earth Day', 'dcc-seasons')),
+            self::row(self::at('mothers_day'),   self::at('mothers_day'),        'mothers_day',  __('Mother\'s Day', 'dcc-seasons')),
             // Summer
             self::row(self::at('memorial_day', -2), self::at('memorial_day'),    'memorial_day', __('Memorial Day', 'dcc-seasons')),
             /* Ends 31 July, not labor_day-3, so August falls through to the
              * year-round base. See the note on base_row() below. */
             self::row(self::at('memorial_day', 1), self::fx(7, 31),             'summer_canal', __('Summer on the Canal', 'dcc-seasons')),
-            self::row(self::at('fathers_day', -2), self::at('fathers_day'),      'fathers_day',  __('Father\'s Day', 'dcc-seasons')),
+            self::row(self::at('fathers_day'),   self::at('fathers_day'),        'fathers_day',  __('Father\'s Day', 'dcc-seasons')),
             self::row(self::fx(7, 1),            self::fx(7, 5),                 'july4',        __('Independence Day', 'dcc-seasons')),
             // Fall
             self::row(self::at('labor_day', -2), self::at('labor_day'),          'labor_day',    __('Labor Day', 'dcc-seasons')),
             self::row(self::at('labor_day', 1),  self::fx(9, 30),                'fall_fishing', __('Fall Fishing', 'dcc-seasons')),
-            self::row(self::fx(9, 8),            self::at('patriot_day'),        'patriot_day',  __('Patriot Day', 'dcc-seasons')),
+            /* Patriot Day is NOT scheduled (4.13.0, Rob: "it isn't a
+             * celebration"). Sep 7-11 falls through to Fall Fishing, which
+             * already spans it. The theme stays in the library, unscheduled,
+             * so it can still be previewed and re-added by hand. */
             self::row(self::fx(10, 1),           self::at('halloween'),          'halloween',    __('Halloween', 'dcc-seasons')),
             self::row(self::fx(11, 1),           self::at('thanksgiving'),       'thanksgiving', __('Thanksgiving', 'dcc-seasons')),
-            self::row(self::fx(11, 10),          self::at('veterans_day'),       'veterans_day', __('Veterans Day', 'dcc-seasons')),
+            /* Veterans Day is NOT scheduled (4.13.0, Rob). Nov 11 becomes
+             * the Anniversary theme in 4.13.1; until that ships, Thanksgiving
+             * runs unbroken through it. The theme stays in the library. */
             self::row(self::at('thanksgiving', 1), self::at('christmas'),        'christmas',    __('Christmas', 'dcc-seasons')),
             // Year-round base, LAST on purpose. A full-year range is the
             // widest possible, and active() takes the narrowest containing
@@ -492,6 +497,116 @@ class Schedule {
             }
         }
         return $rows;
+    }
+
+    /**
+     * CALENDAR CHANGES a release makes to the DEFAULT schedule.
+     *
+     * Rob re-cut the calendar for 4.13.0, and a stored schedule has to come
+     * with it — but only where the owner never touched the row. Each entry
+     * names the theme, the row the old default had, and the row the new
+     * default has ('new' => null means the theme leaves the schedule and
+     * its days fall through to whatever else covers them).
+     *
+     * Comparison is on the START AND END RULES ONLY. A label or a year the
+     * owner edited is still their edit, but it is not what decides which
+     * days a theme wins, and rewriting the dates under an edited label
+     * would be the overwrite this exists to prevent — so a row whose rules
+     * match the old default is retuned and keeps its own label.
+     *
+     * @return array<string, array<int, array{theme:string,old:array,new:?array}>>
+     */
+    public static function calendar_changes(): array {
+        return [
+            /* 4.13.0 (Rob, 2026-10-22). February is peak snowbird month, so
+             * Snowbird runs to Valentine's; Strawberry Season becomes the
+             * run-up to the Plant City festival; the one-day holidays stop
+             * borrowing the days before them; and two themes Rob does not
+             * want on the calendar come off it. */
+            '4.13.0' => [
+                ['theme' => 'snowbird',     'old' => [self::fx(1, 4), self::fx(1, 31)],                       'new' => [self::fx(1, 4), self::fx(2, 14)]],
+                ['theme' => 'strawberry',   'old' => [self::fx(2, 1), self::fx(3, 1)],                        'new' => [self::fx(2, 15), self::fx(3, 1)]],
+                ['theme' => 'valentines',   'old' => [self::fx(2, 10), self::at('valentines')],               'new' => [self::at('valentines'), self::at('valentines')]],
+                ['theme' => 'earth_day',    'old' => [self::fx(4, 21), self::at('earth_day')],                'new' => [self::at('earth_day'), self::at('earth_day')]],
+                ['theme' => 'mothers_day',  'old' => [self::at('mothers_day', -2), self::at('mothers_day')],  'new' => [self::at('mothers_day'), self::at('mothers_day')]],
+                ['theme' => 'fathers_day',  'old' => [self::at('fathers_day', -2), self::at('fathers_day')],  'new' => [self::at('fathers_day'), self::at('fathers_day')]],
+                ['theme' => 'patriot_day',  'old' => [self::fx(9, 8), self::at('patriot_day')],               'new' => null],
+                ['theme' => 'veterans_day', 'old' => [self::fx(11, 10), self::at('veterans_day')],            'new' => null],
+            ],
+        ];
+    }
+
+    /**
+     * Bring a STORED schedule onto a release's new default calendar.
+     *
+     * Only a row that still carries the OLD default's rules is rewritten.
+     * A row the owner changed is left exactly as it is and named in
+     * $untouched, so the upgrade can report it rather than silently
+     * disagreeing with them.
+     *
+     * Idempotent twice over: a rewritten row no longer matches the old
+     * default, so a second pass does nothing, and the version gate means a
+     * second pass does not happen anyway. Scoped BY VERSION in the same way
+     * apply_new_themes() is, and for the same reason — a release the site
+     * has already been through must not be re-applied.
+     *
+     * @param array       $rows      Stored rows.
+     * @param string|bool $from      Version upgrading FROM (false = fresh).
+     * @param string      $to        Version upgrading TO.
+     * @param array       $untouched Filled with ['theme' => …, 'why' => …].
+     * @return array
+     */
+    public static function apply_calendar(array $rows, $from, string $to, array &$untouched = []): array {
+        $untouched = [];
+        foreach (self::calendar_changes() as $version => $changes) {
+            if ($from !== false && $from !== '' && version_compare((string) $from, (string) $version, '>=')) {
+                continue; // the site has already been through this release
+            }
+            if (version_compare($to, (string) $version, '<')) {
+                continue; // not there yet
+            }
+            foreach ($changes as $change) {
+                $out = [];
+                foreach ($rows as $row) {
+                    if (!is_array($row) || ($row['theme'] ?? null) !== $change['theme']) {
+                        $out[] = $row;
+                        continue;
+                    }
+                    if ($change['new'] !== null && self::rules_match($row, $change['new'])) {
+                        /* already on the new calendar — nothing to do, and
+                         * NOT the owner's edit, so it must not be reported
+                         * as one. Without this a site that had already been
+                         * moved by hand would be told it had edited a row
+                         * it merely agreed with. */
+                        $out[] = $row;
+                        continue;
+                    }
+                    if (!self::rules_match($row, $change['old'])) {
+                        /* the owner's own row: leave it, and say so */
+                        $untouched[] = ['theme' => $change['theme'], 'row' => $row];
+                        $out[]       = $row;
+                        continue;
+                    }
+                    if ($change['new'] === null) {
+                        continue; // off the calendar
+                    }
+                    $row['start'] = $change['new'][0];
+                    $row['end']   = $change['new'][1];
+                    $out[]        = $row;
+                }
+                $rows = $out;
+            }
+        }
+        return array_values($rows);
+    }
+
+    /** True when a row's start and end rules are exactly these two rules. */
+    private static function rules_match($row, array $rules): bool {
+        return is_array($row)
+            && isset($row['start'], $row['end'])
+            && is_array($row['start']) && is_array($row['end'])
+            && $row['start'] == $rules[0]
+            && $row['end'] == $rules[1];
     }
 
     /** True when a row is in the pre-3.7.0 shape (start/end are Y-m-d strings). */

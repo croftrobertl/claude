@@ -171,6 +171,20 @@ final class Theme_Guide {
         return [
             'sprites' => [
                 'acorn' => __('Acorn', 'dcc-seasons'), 'balloon' => __('Balloon', 'dcc-seasons'),
+                /* 4.13.0 — Thanksgiving's leaves and harvest pieces. The four
+                 * leaves are named for their species, because that is the
+                 * point of them: they are the trees that actually grow on
+                 * the canal, not generic fall leaves. */
+                'leafo' => __('Live oak leaf', 'dcc-seasons'),
+                'leafc' => __('Bald cypress leaf', 'dcc-seasons'),
+                'leafm' => __('Red maple leaf', 'dcc-seasons'),
+                'leafm2' => __('Red maple leaf, turning', 'dcc-seasons'),
+                'leafs' => __('Sweetgum leaf', 'dcc-seasons'),
+                'gourd1' => __('Ribbed gourd', 'dcc-seasons'),
+                'gourd2' => __('Crookneck gourd', 'dcc-seasons'),
+                'gourd3' => __('Acorn squash', 'dcc-seasons'),
+                'corn' => __('Indian corn', 'dcc-seasons'),
+                'cranberry' => __('Cranberry sprig', 'dcc-seasons'),
                 'banana' => __('Banana', 'dcc-seasons'), 'bass' => __('Largemouth bass', 'dcc-seasons'),
                 'bat' => __('Bat', 'dcc-seasons'), 'beads' => __('Mardi Gras beads', 'dcc-seasons'),
                 'berry' => __('Strawberry', 'dcc-seasons'), 'blossom' => __('Strawberry blossom', 'dcc-seasons'),
@@ -232,6 +246,7 @@ final class Theme_Guide {
                 'dragonlands' => __('A dragonfly lands', 'dcc-seasons'),
                 'dragonlotus' => __('A dragonfly lands on a lily pad', 'dcc-seasons'),
                 'witchmoon' => __('The witch crosses the moon', 'dcc-seasons'),
+            'cranemoon'    => __('Cranes across a harvest moon', 'dcc-seasons'),
                 'gatorglide' => __('A gator glides by and sinks', 'dcc-seasons'),
                 'floatdrift' => __('A flamingo pool float drifts by with a lost flip-flop', 'dcc-seasons'),
                 'mulletskip' => __('A mullet skips three times, another answers', 'dcc-seasons'),

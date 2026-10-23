@@ -112,11 +112,18 @@
 		chick: '20 20|<circle cx="10" cy="12" r="7" fill="%k"/><circle cx="7" cy="6" r="4" fill="#FFE066"/><circle cx="6" cy="5" r=".9" fill="#111"/><path d="M3 6 .4 7l2 1Z" fill="%w"/><path d="M14 12q4-1 4 2-3 2-5 0Z" fill="#FAB005"/><line x1="8" y1="19" x2="8" y2="20" stroke="%w" stroke-width="1"/><line x1="12" y1="19" x2="12" y2="20" stroke="%w" stroke-width="1"/>',
 		bunny: '32 30|<g fill="%q" stroke="#7A8290" stroke-width="1.8" stroke-linejoin="round"><path d="M9.6 13C7 7.4 8.4 2.6 11 3 13 3.4 14 8.4 12 14Z"/><path d="M14 13C13 6.8 16 3 18 4.4 20 5.8 19 10 17 13Z"/><path d="M23 26C27 26 29 22 28 18 27 14 23 11 18 11 14 11 11 12 9.4 14 7.2 13 5.2 14 4.6 16 4 19 5.4 20 7.6 21 7.4 23 9.6 26 13 26Z"/></g><circle cx="7.6" cy="17.4" r="1.4" fill="%g"/><path d="M5 19Q3.2 20 5 21" fill="none" stroke="#7A8290" stroke-width="1"/><path d="M28 20Q31 19 31 22 30 25 27 24" fill="%q" stroke="#7A8290" stroke-width="1.6"/>',
 		bunnycarry: '32 32|<ellipse cx="11" cy="7" rx="2.6" ry="6" fill="%q" stroke="%t" stroke-width="1.6"/><ellipse cx="17" cy="6.4" rx="2.6" ry="6" fill="%q" stroke="%t" stroke-width="1.6"/><ellipse cx="18" cy="20" rx="11" ry="8" fill="%q" stroke="%t" stroke-width="1.6"/><circle cx="28.4" cy="18.4" r="2.8" fill="%q" stroke="%t" stroke-width="1.4"/><circle cx="10.4" cy="15.6" r="6" fill="%q" stroke="%t" stroke-width="1.6"/><circle cx="7.8" cy="14.6" r="1.1" fill="#212529"/><ellipse cx="15.4" cy="27" rx="4.2" ry="4.8" fill="%l"/><path d="M11.4 26 h8 M11.6 28.6 h7.6" stroke="%q" stroke-width="1.3"/><path d="M11.4 21.6 Q12.8 25.6 15.8 26.4" stroke="%t" stroke-width="2" fill="none" stroke-linecap="round"/>',
-		/* — fall leaves: maple, oak, cypress, sweetgum — */
-		leafm: '26 30|<path d="M13 2 L16 8 L21 5 L19 11 L25 10 L20 15 L24 18 L17 19 L15 22 L11 22 L9 19 L2 18 L6 15 L1 10 L7 11 L5 5 L10 8 Z" fill="%r"/><path d="M13 29 L13 20" stroke="#8B4513" stroke-width="1.6" fill="none"/><path d="M13 21 L13 6 M13 12 L19 8 M13 12 L7 8 M13 17 L20 15 M13 17 L6 15" stroke="#C44D0B" stroke-width="1" fill="none"/>',
-		leafo: '22 30|<path d="M11 1 Q14 3 13.6 5.4 Q17 5 17.6 7.6 Q20 9 18.6 11.4 Q21 13 19 15.4 Q21 17.6 18.6 19.4 Q19.6 22.4 16.6 23 Q15.6 26 12.6 25.6 L11.6 29 L10.4 29 L9.4 25.6 Q6.4 26 5.4 23 Q2.4 22.4 3.4 19.4 Q1 17.6 3 15.4 Q1 13 3.4 11.4 Q2 9 4.4 7.6 Q5 5 8.4 5.4 Q8 3 11 1 Z" fill="#A0622D"/><path d="M11 4 L11 27" stroke="#6F4E37" stroke-width="1.2" fill="none"/><path d="M11 9 L6 7 M11 9 L16 7 M11 14 L5 12 M11 14 L17 12 M11 19 L6 18 M11 19 L16 18" stroke="#6F4E37" stroke-width="0.9" fill="none"/>',
-		leafc: '20 30|<path d="M10 29 L10 3" stroke="#8B4513" stroke-width="1.6" fill="none"/><g fill="#C97B3D"><ellipse cx="10" cy="4" rx="2.6" ry="3.4"/><ellipse cx="5" cy="8" rx="4.4" ry="2.4" transform="rotate(-24 5 8)"/><ellipse cx="15" cy="8" rx="4.4" ry="2.4" transform="rotate(24 15 8)"/><ellipse cx="4" cy="14" rx="5" ry="2.6" transform="rotate(-20 4 14)"/><ellipse cx="16" cy="14" rx="5" ry="2.6" transform="rotate(20 16 14)"/><ellipse cx="5" cy="20" rx="4.4" ry="2.4" transform="rotate(-16 5 20)"/><ellipse cx="15" cy="20" rx="4.4" ry="2.4" transform="rotate(16 15 20)"/></g>',
-		leafs: '26 28|<path d="M13 1 L17 4 L16 6 L20 7 L18 10 L22 11 L20 14 L23 16 L19 18 L21 21 L16 21 L15 24 L13 22 L11 24 L10 21 L5 21 L7 18 L3 16 L6 14 L4 11 L8 10 L6 7 L10 6 L9 4 Z" fill="#B23A48"/><path d="M13 27 L13 22" stroke="#8B4513" stroke-width="1.6" fill="none"/><path d="M13 22 L13 3 M13 8 L18 7 M13 8 L8 7 M13 13 L20 12 M13 13 L6 12 M13 18 L19 17 M13 18 L7 17" stroke="#8C2B37" stroke-width="1" fill="none"/>',
+		/* — fall leaves, 4.13.0: the four Rob picked, all Central Florida.
+		 * leafo is a LIVE oak (small, oval, entire margin) — not the lobed
+		 * northern oak it used to be; leafc draws the cypress's needles as
+		 * needles; leafm/leafm2 are Acer rubrum full red and mid-turn, two
+		 * variations of one kind; leafs is a real sweetgum star, which
+		 * replaced a chevron that read as a little pine tree. Kept RED: a
+		 * burgundy sweetgum vanished against the navy footer. — */
+		leafm: '24 24|<path d="M12 2.4 Q13.4 5 14.2 7.4 Q15 6.6 15.6 7.4 Q16 6.4 16.8 7.2 L18.6 5.6 Q18.4 7.4 19.6 7.8 L17.6 9.8 Q19.4 10 20.4 11 L16.6 12.6 Q17.4 13.6 17 14.6 L13.8 13.8 Q13.4 16.4 13 18.6 L12.6 18.2 L11.4 18.2 L11 18.6 Q10.6 16.4 10.2 13.8 L7 14.6 Q6.6 13.6 7.4 12.6 L3.6 11 Q4.6 10 6.4 9.8 L4.4 7.8 Q5.6 7.4 5.4 5.6 L7.2 7.2 Q8 6.4 8.4 7.4 Q9 6.6 9.8 7.4 Q10.6 5 12 2.4 Z" fill="#C62828"/><path d="M12 23 L12 18.2" stroke="#A3312B" stroke-width="1.5" fill="none"/><path d="M12 18 L12 4.5 M12 10.5 L16.6 8.6 M12 10.5 L7.4 8.6 M12 14 L15.4 12.8 M12 14 L8.6 12.8" stroke="#8E1F1F" stroke-width="0.85" fill="none"/>',
+		leafm2: '24 24|<path d="M12 2.4 Q13.4 5 14.2 7.4 Q15 6.6 15.6 7.4 Q16 6.4 16.8 7.2 L18.6 5.6 Q18.4 7.4 19.6 7.8 L17.6 9.8 Q19.4 10 20.4 11 L16.6 12.6 Q17.4 13.6 17 14.6 L13.8 13.8 Q13.4 16.4 13 18.6 L12.6 18.2 L11.4 18.2 L11 18.6 Q10.6 16.4 10.2 13.8 L7 14.6 Q6.6 13.6 7.4 12.6 L3.6 11 Q4.6 10 6.4 9.8 L4.4 7.8 Q5.6 7.4 5.4 5.6 L7.2 7.2 Q8 6.4 8.4 7.4 Q9 6.6 9.8 7.4 Q10.6 5 12 2.4 Z" fill="#B5342A"/><path d="M12 4 Q13.4 7.4 13.4 10.6 Q14.8 10 16 9.6 Q14.4 11.6 13.2 13.4 Q12.8 15.6 12.4 17.6 L11.6 17.6 Q11.2 15.6 10.8 13.4 Q9.6 11.6 8 9.6 Q9.2 10 10.6 10.6 Q10.6 7.4 12 4 Z" fill="#E8A33D"/><path d="M12 23 L12 18.2" stroke="#A3312B" stroke-width="1.5" fill="none"/><path d="M12 18 L12 4.5 M12 10.5 L16.6 8.6 M12 10.5 L7.4 8.6" stroke="#8E1F1F" stroke-width="0.85" fill="none"/>',
+		leafo: '18 28|<path d="M9 2 Q14 7 14 15 Q14 22 9 25 Q4 22 4 15 Q4 7 9 2 Z" fill="#A0622D"/><path d="M9 27.5 L9 24.5" stroke="#6F4E37" stroke-width="1.3" fill="none"/><path d="M9 24.5 L9 3" stroke="#6F4E37" stroke-width="1.1" fill="none"/><path d="M9 8 Q12 9 12.6 11 M9 8 Q6 9 5.4 11 M9 13 Q12.6 14 13.4 16 M9 13 Q5.4 14 4.6 16 M9 18 Q12 19 12.4 20.6 M9 18 Q6 19 5.6 20.6" stroke="#6F4E37" stroke-width="0.8" fill="none"/><path d="M9 2 Q14 7 14 15 Q14 22 9 25 Q4 22 4 15 Q4 7 9 2 Z" fill="none" stroke="#8A5024" stroke-width="0.7"/>',
+		leafc: '20 30|<path d="M10 29 L10 2" stroke="#8B4513" stroke-width="1.5" fill="none"/><g stroke="#C97B3D" stroke-width="2.1" stroke-linecap="round"><path d="M10 5 L6 2.6M10 5 L14 2.6M10 8.5 L4.6 5.6M10 8.5 L15.4 5.6M10 12 L3.6 9M10 12 L16.4 9M10 15.5 L3.4 13M10 15.5 L16.6 13M10 19 L4 17M10 19 L16 17M10 22.5 L5 21M10 22.5 L15 21"/></g>',
+		leafs: '26 26|<path d="M13 1.5 L15.4 8.2 L21.4 5.6 L18.2 11.8 L24.6 13.4 L18.4 16.2 L21.8 22 L15.2 19.6 L13 26.2 L10.8 19.6 L4.2 22 L7.6 16.2 L1.4 13.4 L7.8 11.8 L4.6 5.6 L10.6 8.2 Z" fill="#B5342A"/><path d="M13 24 L13 4 M13 12 L18.6 8.4 M13 12 L7.4 8.4 M13 17.4 L18 19.4 M13 17.4 L8 19.4" stroke="#8C2B37" stroke-width="0.9" fill="none"/>',
 		/* — halloween — */
 		jack1: function () { return jackSvg('#FF7A00', '<path d="M8 12l5 3H6Zm14 0-5 3h7Z" fill="#111"/><path d="M8 21q7 5 14 0-2 4-7 4t-7-4Z" fill="#111"/>'); },
 		jack2: function () { return jackSvg('#FF922B', '<circle cx="10" cy="13" r="3" fill="#111"/><circle cx="20" cy="13" r="3" fill="#111"/><path d="M13 17l2-3 2 3Z" fill="#111"/><path d="M8 21h14l-2 3-2-2-2 2-2-2-2 2Z" fill="#111"/>'); },
@@ -136,6 +143,16 @@
 		acorn: '22 28|<path d="M4 12h14c0 8-4 13-7 15-3-2-7-7-7-15Z" fill="#B08552"/><path d="M2 12c0-5 4-8 9-8s9 3 9 8Z" fill="%i"/><line x1="11" y1="4" x2="11" y2="0" stroke="%i" stroke-width="2"/>',
 		pie: '32 22|<path d="M3 11h26l-2.4 8q-.6 2-3 2H8q-2.4 0-3-2Z" fill="%o"/><path d="M1 11q3-8 15-8T31 11Z" fill="#E8B04B"/><g stroke="#B5772E" stroke-width="1" fill="none"><path d="M8 6 5 11m6-8L10 11M16 3.2V11m5-8L22 11m1.2-5L27 11"/></g>',
 		cornucopia: '48 32|<path d="M31 5 Q15 4 9 14 Q4 22 10 28 Q16 33 21 28 Q13 26 12 20 Q11 13 21 10 Q26 8 31 8 Z" fill="#A05A2C"/><path d="M12 20 Q18 17 24 18 M11 25 Q16 23 21 24" stroke="#7A421F" stroke-width="1" fill="none"/><ellipse cx="31" cy="12" rx="6" ry="8" fill="#7A421F"/><ellipse cx="31" cy="12" rx="6" ry="8" fill="none" stroke="#C98A4B" stroke-width="1.6"/><circle cx="38" cy="10" r="4.4" fill="%e"/><path d="M38 6 Q39 3 41 3" stroke="%c" stroke-width="1.4" fill="none"/><circle cx="44" cy="16" r="3.6" fill="%w"/><ellipse cx="36" cy="21" rx="5" ry="4" fill="%r"/><path d="M36 17 L36 19" stroke="%c" stroke-width="1.4"/><circle cx="43" cy="24" r="2.2" fill="%l"/><circle cx="46" cy="27" r="2" fill="%l"/><circle cx="41" cy="28" r="2" fill="%l"/>',
+		/* — 4.13.0, Rob's picks for Thanksgiving — */
+		/* The gourds are ONE kind with three variations, the way the jack
+		 * faces are: three different plants, not three colours of one. */
+		gourd1: '26 26|<ellipse cx="13" cy="16" rx="10" ry="9" fill="%w"/><path d="M13 7q-4 4-4 9t4 9q4-4 4-9t-4-9Z" fill="#C9742A" opacity=".55"/><path d="M5 13q4 3 8 3t8-3" stroke="#B5651F" stroke-width="1" fill="none"/><path d="M13 7q0-4-3-5" stroke="%c" stroke-width="2" fill="none"/><path d="M10 2q-3 0-4 2" stroke="%c" stroke-width="1.6" fill="none"/>',
+		gourd2: '24 30|<ellipse cx="11" cy="22" rx="7" ry="7" fill="#E8B04B"/><path d="M11 15q-1-4 1-7t3-4" stroke="#C9A227" stroke-width="4.6" fill="none" stroke-linecap="round"/><path d="M11 15q-1-4 1-7t3-4" stroke="#DCC06A" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M15 4q2-2 4-1" stroke="%c" stroke-width="1.6" fill="none"/><path d="M5 22q6 3 12 0" stroke="#C9A227" stroke-width="0.9" fill="none"/>',
+		gourd3: '26 24|<path d="M13 4q9 0 9 8t-9 10Q4 20 4 12t9-8Z" fill="#2F6B3C"/><g stroke="#DDE8CF" stroke-width="1.6" fill="none"><path d="M13 5v16M7 7.5q2 7 0 11M19 7.5q-2 7 0 11"/></g><path d="M13 4q0-3-2-3" stroke="#6F4E37" stroke-width="2.2" fill="none"/>',
+		/* Indian corn with the silk showing (Rob's pick B). */
+		corn: '26 32|<path d="M13 6q5 3 5 11t-5 13q-5-5-5-13T13 6Z" fill="%k"/><g fill="#C9742A" opacity=".85"><circle cx="11" cy="12" r="1.1"/><circle cx="15" cy="15" r="1.1"/><circle cx="11" cy="19" r="1.1"/><circle cx="15" cy="23" r="1.1"/></g><g fill="#8E3B2F" opacity=".8"><circle cx="15" cy="11" r="1.1"/><circle cx="11" cy="15" r="1.1"/><circle cx="15" cy="19" r="1.1"/><circle cx="11" cy="23" r="1.1"/></g><path d="M13 6Q6 9 3 20q4-1 6-6" fill="#7FA650"/><path d="M13 6q7 3 10 14-4-1-6-6" fill="#9CBF63"/><g stroke="#E8C46B" stroke-width="1" fill="none"><path d="M13 6q-3-4-5-5M13 6q1-4 3-5M13 6q4-3 6-3"/></g>',
+		/* A cranberry sprig: three berries and two leaves (Rob's pick A). */
+		cranberry: '24 26|<path d="M12 25 Q11 16 13 8" stroke="#5B7A3A" stroke-width="1.6" fill="none"/><path d="M12 19 Q7 17 5 13 Q10 13 12 17Z" fill="#4E7A33"/><path d="M12.6 14 Q18 12 20 8 Q14 8 12.4 12Z" fill="#5E8C3E"/><circle cx="8" cy="8" r="3.6" fill="#B3121C"/><circle cx="15" cy="5" r="3.2" fill="#C8202A"/><circle cx="12" cy="11" r="2.8" fill="#9E0F18"/><circle cx="7" cy="7" r="1" fill="#E07A7A" opacity=".8"/><circle cx="14" cy="4" r="0.9" fill="#E07A7A" opacity=".8"/>',
 		/* — christmas — */
 		holly: '34 22|<path d="M15 10C11 2 4 2 1 6c4 1 4 5 8 7Z" fill="%c"/><path d="M19 10c4-8 11-8 14-4-4 1-4 5-8 7Z" fill="%j"/><circle cx="14" cy="14" r="4" fill="%e"/><circle cx="21" cy="14" r="4" fill="%n"/><circle cx="18" cy="18" r="4" fill="%e"/>',
 		ornament: '24 30|<rect x="9" y="2" width="5" height="5" rx="1" fill="%f"/><circle cx="12" cy="8" r="2" fill="none" stroke="%f" stroke-width="2"/><circle cx="12" cy="19" r="10" fill="%n"/><path d="M3 16a10 10 0 0 1 19 0" fill="%e"/><path d="M2 19q10-4 20 0" stroke="%a" stroke-width="2" fill="none"/><ellipse cx="9" cy="14" rx="3" ry="4" fill="#FFF5F5" opacity=".55"/>',
@@ -570,6 +587,7 @@
 		mlk: ['doveflight'],
 		fall_fishing: ['fullcast', 'dragonlands'],
 		halloween: ['witchmoon'],
+		thanksgiving: ['cranemoon'],
 		christmas: ['giftdrop'],
 		new_years: ['corkpop'],
 		snowbird: ['arrival'],
@@ -641,7 +659,7 @@
 	var HERO_GLYPHS = { rainbow: '☘' };
 	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
 	var SCENE_ART = {
-		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch',
+		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch', cranemoon: 'crane',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
 		ospreycatch: 'ospreyup', cranes: 'cranedance', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
@@ -1140,6 +1158,99 @@
 	 * the engine simulates live (gravity, air drag), so they trail behind
 	 * her through the dive and the swoop. WITCH_CAPE / WITCH_HAIR are their anchors. */
 	var WITCH_CAPE = [[-3, -22], [2.5, -17.5]], WITCH_CAPE_K = 4, WITCH_HAIR = [[-1.5, -29], [0.2, -27], [-0.8, -25]];
+		/* ---- 4.13.0: the Thanksgiving cranes and their harvest moon ----
+	 *
+	 * Built to witchmoon's standard and sharing its machinery: one
+	 * phone-based size factor, every frame pre-drawn once at idle, the
+	 * header's letters cut out of what it draws, and the birds going
+	 * DARK as they cross the disc, which is the whole picture.
+	 *
+	 * A sandhill crane is drawn from the field marks that identify one:
+	 * the neck straight OUT rather than tucked (that is what tells it
+	 * from a heron at a glance), legs trailing well past the tail, long
+	 * wings with a wrist and splayed primaries, a red crown. Rob picked
+	 * the darker wing tips and a V of five.
+	 */
+	var CR_FR = 12;                 /* beat frames, as the witch has 12 */
+	var CR_BOX = [-0.70, -0.52, 0.70, 0.36];   /* the bird's extent, in L */
+	function crPaint(g, L, w, dark) {
+		var up = sin(w * TAU);
+		var body = dark ? '#241A12' : '#9BA3A8';
+		var dk   = dark ? '#1B130D' : '#6E767C';
+		g.lineJoin = 'round'; g.lineCap = 'round';
+		/* legs, trailing and slightly below — they must stay clear of the
+		 * wing at the level part of the beat, which is why they sit lower
+		 * than the first drawing had them (Rob) */
+		g.strokeStyle = dark ? '#1B130D' : '#4A4F53'; g.lineWidth = L * 0.022;
+		for (var s0 = 0; s0 < 2; s0++) {
+			g.beginPath();
+			g.moveTo(-L * 0.16, L * 0.055 + s0 * L * 0.010);
+			g.quadraticCurveTo(-L * 0.38, L * 0.082 + s0 * L * 0.012, -L * 0.58, L * 0.100 + s0 * L * 0.014);
+			g.stroke();
+		}
+		g.lineWidth = L * 0.016;
+		g.beginPath();
+		g.moveTo(-L * 0.58, L * 0.100); g.lineTo(-L * 0.645, L * 0.112);
+		g.moveTo(-L * 0.58, L * 0.114); g.lineTo(-L * 0.645, L * 0.126);
+		g.stroke();
+		function wing(side, back) {
+			/* the wing sweeps BACK from the shoulder: wrist forward of the
+			 * tip, primaries trailing. Drawn the other way it reads as a
+			 * hand, or as a bird flying backwards. */
+			var lift = up * L * 0.34, sp = L * 0.62;
+			var wrX = side * sp * 0.50 - L * 0.05, wrY = -lift * 0.74 - L * 0.03;
+			var tpX = side * sp * 0.96 - L * 0.20, tpY = -lift - up * L * 0.08;
+			g.beginPath();
+			g.moveTo(L * 0.03, -L * 0.045);
+			g.quadraticCurveTo(side * sp * 0.26 + L * 0.02, wrY - L * 0.055, wrX, wrY);
+			g.quadraticCurveTo(side * sp * 0.78 - L * 0.06, tpY - L * 0.045, tpX, tpY);
+			g.quadraticCurveTo(side * sp * 0.56 - L * 0.16, tpY + L * 0.125, wrX - L * 0.10, wrY + L * 0.120);
+			g.quadraticCurveTo(side * sp * 0.18 - L * 0.12, wrY + L * 0.150, -L * 0.07, L * 0.050);
+			g.closePath();
+			g.fillStyle = back ? dk : body;
+			g.fill();
+			/* Rob's pick: the primaries picked out, darker */
+			g.strokeStyle = dark ? dk : '#5A6268'; g.lineWidth = L * 0.020;
+			for (var f = 0; f < 4; f++) {
+				var t0 = 0.86 - f * 0.05;
+				g.beginPath();
+				g.moveTo(tpX * t0, tpY + L * (0.015 + f * 0.020));
+				g.quadraticCurveTo(tpX * (1.02 - f * 0.01) - side * L * 0.04, tpY + L * (0.05 + f * 0.035),
+					tpX * (1.00 - f * 0.05) - side * L * 0.10, tpY + L * (0.10 + f * 0.055));
+				g.stroke();
+			}
+		}
+		wing(1, true);
+		g.fillStyle = body;
+		g.beginPath();
+		g.moveTo(L * 0.20, -L * 0.012);
+		g.quadraticCurveTo(L * 0.10, -L * 0.090, -L * 0.02, -L * 0.082);
+		g.quadraticCurveTo(-L * 0.16, -L * 0.070, -L * 0.26, -L * 0.020);
+		g.quadraticCurveTo(-L * 0.16, L * 0.070, -L * 0.02, L * 0.080);
+		g.quadraticCurveTo(L * 0.11, L * 0.078, L * 0.20, -L * 0.012);
+		g.closePath(); g.fill();
+		g.fillStyle = dk;              /* the drooping tertials over the tail */
+		g.beginPath();
+		g.moveTo(-L * 0.17, -L * 0.048);
+		g.quadraticCurveTo(-L * 0.29, -L * 0.022, -L * 0.31, L * 0.030);
+		g.quadraticCurveTo(-L * 0.23, L * 0.028, -L * 0.15, L * 0.050);
+		g.closePath(); g.fill();
+		g.strokeStyle = body; g.lineWidth = L * 0.052;
+		g.beginPath();
+		g.moveTo(L * 0.15, -L * 0.025);
+		g.quadraticCurveTo(L * 0.30, -L * 0.050, L * 0.405, -L * 0.062);
+		g.stroke();
+		g.fillStyle = body;
+		g.beginPath(); g.ellipse(L * 0.435, -L * 0.066, L * 0.044, L * 0.036, -0.1, 0, TAU); g.fill();
+		g.strokeStyle = dark ? '#1B130D' : '#3F4448'; g.lineWidth = L * 0.019;
+		g.beginPath(); g.moveTo(L * 0.470, -L * 0.062); g.lineTo(L * 0.585, -L * 0.048); g.stroke();
+		if (!dark) {
+			g.fillStyle = '#C62828';
+			g.beginPath(); g.ellipse(L * 0.442, -L * 0.092, L * 0.030, L * 0.017, -0.15, 0, TAU); g.fill();
+		}
+		wing(-1, false);
+	}
+
 	var WITCH_BOX = [-56, -56, 58, 17];
 	var WC = { ink: '#16131D', dress: '#1E1928', dress2: '#2A2236', purple: '#9C36B5', purple2: '#6E2A86', skin: '#E2CDB6', skin2: '#C4AA90',
 		hat: '#17141E', band: '#9C36B5', gold: '#E2B23E', wood: '#6B4A2E', wood2: '#4A321F', twine: '#B89A62', straw: ['#C9A55A', '#B38F48', '#D8B96E', '#A07E3E'],
@@ -1367,6 +1478,15 @@
 	/* Art drawn in code for the admin Theme guide: fn(g, width, height)
 	 * paints it into that box (HERO_ART / SCENE_ART name the key). */
 	var ART_DRAW = {
+		/* 4.13.0: the Theme guide paints the REAL crane, the same painter the
+		 * scene uses, so the picture can never drift from what guests see. */
+		crane: function (g, w, h) {
+			var b = CR_BOX, L = mn(w / (b[2] - b[0] + 0.3), h / (b[3] - b[1] + 0.3));
+			g.save();
+			g.translate(w / 2 - (b[0] + b[2]) / 2 * L, h / 2 - (b[1] + b[3]) / 2 * L);
+			crPaint(g, L, 0.22, false);
+			g.restore();
+		},
 		heron: function (g, w, h) {
 			var b = hnBounds('g6'), s = mn(w / (b[2] - b[0] + 26), h / (b[3] - b[1]));
 			g.save();
@@ -2584,9 +2704,13 @@
 		 * getters keep the canvas and its size live across resizes. */
 		var SUBTLE = subtleKit({ get cx() { return cx; }, get vw() { return vw; }, get vh() { return vh; } });
 
+		/* Mirrors Themes::subtle_defaults() for configs cached before a key
+		 * changed; keep the two in step. '' means NO background layer —
+		 * classic has always meant it that way, and since 4.13.0 Thanksgiving
+		 * does too, because it drops real drawn leaves in front instead. */
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
-			halloween: 'embers', thanksgiving: 'leaves', christmas: 'bokeh',
+			halloween: 'embers', thanksgiving: '', christmas: 'bokeh',
 			new_years: 'confetti', snowbird: 'sunglow', mlk: 'goldlight',
 			mardi_gras: 'mardiconfetti', valentines: 'hearts', presidents: 'orangeblossom',
 			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
@@ -3906,7 +4030,7 @@
 		 * While a sky actor runs, inSky() points the drawing state (cv, cx,
 		 * vw, vh, waterY, ground, lastDpr) at the sky canvas, so every scene
 		 * and flyer works in the picture's own coordinates unchanged. --- */
-		var SKY_VIG = { witchmoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1 };
+		var SKY_VIG = { witchmoon: 1, cranemoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1 };
 		/* the flyers that cross the sky; the bass and the manatee are on the
 		 * water, the rainbow in a corner */
 		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
@@ -4680,6 +4804,58 @@
 		 * a resize changes its radius. */
 		var moonC = null, wcFrames = [], wcPts = null, wcScr = null, wcStats = { frames: 0, ms: 0, bytes: 0 };
 		function moonR() { return MT.round(41 * witchK()); }
+		/* The crane's caches and sizes live in start(), because they read
+		 * the viewport; the painter itself is at module scope beside the
+		 * witch's, so the Theme guide's ART_DRAW can call it. */
+		var crCache = {}, crStats = { ms: 0, bytes: 0 };
+		function craneK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.45, (vh - 24) / 150)); }
+		function craneL() { return MT.round(34 * craneK()); }
+		/* Every beat, lit and dark, pre-drawn once. Two sets rather than the
+		 * witch's live silhouette pass: a crane is small, so caching both is
+		 * cheaper than putting a scratch canvas in the frame loop, and it is
+		 * the same answer to the same question. */
+		function crGet(i, dark) {
+			var L = craneL(), key = (dark ? 'd' : 'l') + i + '@' + L;
+			if (crCache[key]) { return crCache[key]; }
+			var t0 = nowMs(), dp = mn(W.devicePixelRatio || 1, 2), b = CR_BOX;
+			var c = D.createElement('canvas');
+			c.width = MT.ceil((b[2] - b[0]) * L * dp); c.height = MT.ceil((b[3] - b[1]) * L * dp);
+			var g = c.getContext('2d');
+			if (g) { g.setTransform(dp, 0, 0, dp, -b[0] * L * dp, -b[1] * L * dp); crPaint(g, L, i / CR_FR, dark); }
+			crStats.ms += nowMs() - t0; crStats.bytes += c.width * c.height * 4;
+			return (crCache[key] = { c: c, ox: b[0] * L, oy: b[1] * L, w: (b[2] - b[0]) * L, h: (b[3] - b[1]) * L });
+		}
+		function crBuild() { for (var i = 0; i < CR_FR; i++) { crGet(i, false); crGet(i, true); } }
+		/* The harvest moon: the engine's OWN painter with a warm grade over
+		 * it, never a second moon. A harvest moon is low, large and orange
+		 * because its light comes through a lot of atmosphere, so the grade
+		 * is a multiply over moonPaint and the maria stay exactly where it
+		 * puts them. Rob picked the deep burnt orange. */
+		var hmC = null;
+		function harvestR() { return MT.round(58 * craneK()); }
+		function harvestGet() {
+			var r = harvestR();
+			if (hmC && hmC.r === r) { return hmC; }
+			var t0 = nowMs(), dc = mn(W.devicePixelRatio || 1, 2), half = MT.ceil(r * 1.3);
+			var c = D.createElement('canvas');
+			c.width = c.height = MT.ceil(2 * half * dc);
+			var g = c.getContext('2d');
+			if (g) {
+				g.scale(dc, dc); g.translate(half, half);
+				moonPaint(g, r);
+				g.globalCompositeOperation = 'source-atop';
+				var gr = g.createRadialGradient(0, 0, r * 0.1, 0, 0, r);
+				gr.addColorStop(0, 'rgba(255,146,54,0.72)');
+				gr.addColorStop(0.7, 'rgba(232,105,20,0.78)');
+				gr.addColorStop(1, 'rgba(190,74,16,0.86)');
+				g.fillStyle = gr;
+				g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+				g.globalCompositeOperation = 'source-over';
+			}
+			crStats.ms += nowMs() - t0; crStats.bytes += c.width * c.height * 4;
+			return (hmC = { c: c, r: r, half: half });
+		}
+
 		function moonGet() {
 			var r = moonR();
 			if (moonC && moonC.r === r) { return moonC; }
@@ -5749,6 +5925,94 @@
 				st.moonA = a;
 				return st.t2 > gone + 0.8;
 			} },
+			/* 4.13.0 — Thanksgiving's signature scene: a V of five sandhill
+			 * cranes crosses a low harvest moon. Rob picked the moon, the
+			 * bird, the five. It is the scene ONLY: there is no crane flyer,
+			 * because a theme's signature character appears once. */
+			cranemoon: { actors: 2, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.dir = sgn();
+					st.L = craneL(); st.MR = harvestR();
+					var edge = st.MR + st.L;
+					/* OFF CENTRE, and on the side the skein is heading for, so
+					 * the birds fly INTO it — and so the moon stays clear of
+					 * the page title, which is centred in the header picture,
+					 * and of the Sun-on-the-Canal dial in the top right. The
+					 * header's letters are cut out of it either way, but a
+					 * moon sitting behind the title is not what Rob asked to
+					 * see at 1280. */
+					var band = st.dir > 0 ? rnd(0.60, 0.76) : rnd(0.24, 0.40);
+					st.mx = clamp(vw * band, edge, mx2(edge, vw - edge));
+					/* LOW in the sky, as a harvest moon is */
+					st.my = clamp(vh * 0.68, st.MR + 6, vh - st.MR * 0.35);
+					st.n = 5;
+					st.T = clamp(vw / (st.L * 7.0), 3.4, 7.2);   /* the crossing */
+					st.in = 0.45;                                 /* the moon is up first */
+					hdr = null;                                   /* re-measure the header's letters */
+				}
+				st.t2 += dt;
+				var tc = st.t2 - st.in, gone = st.in + st.T;
+				var a = st.t2 < 0.5 ? st.t2 / 0.5 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 0.8, 0, 1) : 1);
+				var mo = harvestGet(), dp = mn(W.devicePixelRatio || 1, 2);
+				cx.save();
+				cx.globalAlpha = clamp(a, 0, 1);
+				/* the glow, then the disc on WHOLE device pixels — at a
+				 * fractional position the browser resamples every pixel of it
+				 * every frame */
+				var gl = cx.createRadialGradient(st.mx, st.my, st.MR * 0.95, st.mx, st.my, st.MR * 1.5);
+				gl.addColorStop(0, 'rgba(255,150,60,0.30)'); gl.addColorStop(1, 'rgba(255,150,60,0)');
+				cx.fillStyle = gl;
+				cx.beginPath(); cx.arc(st.mx, st.my, st.MR * 1.5, 0, TAU); cx.fill();
+				cx.drawImage(mo.c, MT.round((st.mx - mo.half) * dp) / dp, MT.round((st.my - mo.half) * dp) / dp, mo.half * 2, mo.half * 2);
+				cx.restore();
+				var cut = [[st.mx - mo.half, st.my - mo.half, mo.half * 2, mo.half * 2]];
+				if (tc > 0 && tc < st.T) {
+					var u = tc / st.T, L = st.L;
+					var x0 = st.dir > 0 ? -L : vw + L, x1 = st.dir > 0 ? vw + L : -L;
+					var cxp = x0 + (x1 - x0) * u;
+					var cyp = st.my - st.MR * 0.25 - sin(u * MT.PI) * st.MR * 0.12;
+					var bank = (u - 0.5) * 0.22 * st.dir;
+					var half = (st.n - 1) / 2, gapX = L * 0.80, gapY = L * 0.30;
+					var ca = MT.cos(bank), sa = sin(bank);
+					var minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+					for (var i = 0; i < st.n; i++) {
+						var k = i - half, sgY = k < 0 ? -1 : 1, d = MT.abs(k);
+						var ph = (u * 6.0 + d * 0.17) % 1;
+						var bob = sin(ph * TAU) * L * 0.05;
+						/* the V opens AWAY from the way it flies */
+						var lx = -d * gapX * st.dir, ly = sgY * d * gapY + bob;
+						var bx = cxp + lx * ca - ly * sa, by = cyp + lx * sa + ly * ca;
+						/* dark over the disc, with a short crossfade at the rim
+						 * so a bird never blinks from grey to black */
+						var dd = MT.sqrt((bx - st.mx) * (bx - st.mx) + (by - st.my) * (by - st.my));
+						var dark = clamp((st.MR + L * 0.12 - dd) / (L * 0.5), 0, 1);
+						var fr = (MT.floor(ph * CR_FR) % CR_FR + CR_FR) % CR_FR;
+						cx.save();
+						cx.translate(bx, by); cx.rotate(bank);
+						if (st.dir < 0) { cx.scale(-1, 1); }   /* facing the way it flies */
+						if (dark < 1) {
+							var li = crGet(fr, false);
+							cx.globalAlpha = 1 - dark;
+							cx.drawImage(li.c, li.ox, li.oy, li.w, li.h);
+						}
+						if (dark > 0) {
+							var dk = crGet(fr, true);
+							cx.globalAlpha = dark;
+							cx.drawImage(dk.c, dk.ox, dk.oy, dk.w, dk.h);
+						}
+						cx.restore();
+						if (bx < minx) { minx = bx; } if (bx > maxx) { maxx = bx; }
+						if (by < miny) { miny = by; } if (by > maxy) { maxy = by; }
+					}
+					cut.push([minx - L, miny - L, (maxx - minx) + 2 * L, (maxy - miny) + 2 * L]);
+				}
+				/* behind the header's text — the menu row sits inside the
+				 * picture on a computer, and the cranes must pass behind it */
+				hdrCut(cut, st.t2);
+				st.fgB = cut;      /* and behind the header picture's foreground */
+				st.moonA = a;
+				return st.t2 > gone + 0.8;
+			} },
 			/* ---- 4.2.0: Summer on the Canal and Florida Keys scenes. Each
 			 * picked by Rob from rendered frame strips; the approved art and
 			 * story, at the sizes he saw. Everything on the water is clipped
@@ -6335,6 +6599,29 @@
 			var wcLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			wcLater(wcIdle);
 		}
+		/* The cranes and their harvest moon, the same way (4.13.0): every
+		 * beat lit AND dark, plus the moon, pre-drawn in idle time at the
+		 * header picture's size, so a crossing is one drawImage per bird per
+		 * frame and nothing is painted during the scene. */
+		if (vigList.indexOf('cranemoon') >= 0) {
+			var crTodo = [-1], crI;
+			for (crI = 0; crI < CR_FR; crI++) { crTodo.push(crI); }
+			var crIdle = function (dl) {
+				var t0 = nowMs();
+				if (!skyPic) { return; }
+				if (!vw) { crLater(crIdle); return; }   /* not sized yet */
+				inSky(function () {
+					do {
+						var k = crTodo.shift();
+						if (k === -1) { harvestGet(); }
+						else if (k != null) { crGet(k, false); crGet(k, true); }
+					} while (crTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+				});
+				if (crTodo.length) { crLater(crIdle); }
+			};
+			var crLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
+			crLater(crIdle);
+		}
 		/* The first scene: 6-10 s in, on every page. A theme with no scenes
 		 * (or none at this hour) gives that slot to its hero on a later page,
 		 * where the 3-5 s first-page flyer does not apply. None of this runs
@@ -6819,6 +7106,7 @@
 				 * it against Chromium's own getScreenCTM) */
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
+				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: harvestR() }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },

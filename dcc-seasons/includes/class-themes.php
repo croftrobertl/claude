@@ -75,9 +75,15 @@ class Themes {
      */
     public static function themes(): array {
         $katakana = self::katakana();
-        // The four real leaf species on the canal (maple, oak, cypress,
-        // sweetgum) — shared by the fall themes.
-        $leaves = ['leafm', 'leafo', 'leafc', 'leafs'];
+        /* The leaves Thanksgiving drops, all four Central Florida species
+         * Rob picked in 4.13.0: live oak, bald cypress, red maple (full red
+         * and mid-turn, two variations of the one kind) and sweetgum. Until
+         * 4.13.0 this variable was assigned and never read, under a comment
+         * claiming the fall themes shared it — they did not, and the leaves
+         * guests saw were the subtle layer's plain ovals. It is now used, in
+         * the one place that uses it. */
+        $maple  = ['leafm', 'leafm2'];
+        $leaves = ['leafo', 'leafc', 'leafs'];
 
         $themes = [
             'labor_day' => [
@@ -145,7 +151,14 @@ class Themes {
 
             'halloween' => [
                 'ambient' => [
-                    'hero'      => 'witch',
+                    /* NO hero (4.13.0, Rob): a theme's signature character
+                     * appears ONCE, as its scene. The witchmoon scene is the
+                     * witch; a second small witch used to cross the header as
+                     * a sky flyer, over the menu text, and Rob had it removed
+                     * on live by a mu-plugin filtering this key out. Deleting
+                     * it here is what lets that mu-plugin go. The same rule
+                     * governs the Thanksgiving cranes and the Christmas
+                     * Santa: scene only, never also a flyer. */
                     'particles' => [
                         ['s' => ['jack1', 'jack2', 'jack3'], 'b' => 'fall', 'glow' => 1, 'w' => 3],
                         ['s' => 'ghost', 'b' => 'wobble', 'w' => 2],
@@ -166,7 +179,22 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        // No leaf sprites (4.2.0): the subtle layer drifts the leaves.
+                        /* 4.13.0: real drawn leaves fall in front, and the
+                         * subtle layer's plain ovals are gone from this
+                         * theme (subtle_defaults, below). One entry per
+                         * species, and the maple is one kind with two
+                         * variations — full red and mid-turn — exactly as
+                         * the gourds are one kind with three. */
+                        ['s' => $leaves[0], 'b' => 'fall', 'w' => 2],
+                        ['s' => $leaves[1], 'b' => 'fall', 'w' => 2],
+                        ['s' => $maple, 'b' => 'fall', 'w' => 2],
+                        ['s' => $leaves[2], 'b' => 'fall', 'w' => 2],
+                        /* Thanksgiving's variety set, like Halloween's three
+                         * jack faces: three different plants mixed as they
+                         * fall, never three colours of one. */
+                        ['s' => ['gourd1', 'gourd2', 'gourd3'], 'b' => 'fall'],
+                        ['s' => 'corn', 'b' => 'fall'],
+                        ['s' => 'cranberry', 'b' => 'fall'],
                         ['s' => 'acorn', 'b' => 'fall', 'w' => 2],
                         ['s' => 'pie', 'b' => 'fall', 'fx' => 'smoke'],
                         // Turkey 2.0 leads two chicks along the bottom.
@@ -690,7 +718,13 @@ class Themes {
             // Fall
             'patriot_day'  => 'leaves',
             'fall_fishing' => 'leaves',
-            'thanksgiving' => 'leaves',
+            /* 4.13.0 (Rob): Thanksgiving drops REAL drawn leaves now, so the
+             * background layer's plain ovals would be a second, worse set of
+             * leaves behind them. REMOVED, not swapped for another effect —
+             * '' is the engine's own idiom for no background layer, as
+             * classic uses. Only this theme's mapping changes; Fall Fishing,
+             * Patriot Day and Veterans Day keep the leaves effect. */
+            'thanksgiving' => '',
             'veterans_day' => 'leaves',
             // Winter — no snow anywhere (4.2.0). Each is Rob's pick.
             'snowbird'     => 'sunglow',

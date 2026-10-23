@@ -69,12 +69,17 @@ ok(strpos($engine, 'snowCols') === false && strpos($engine, 'drawSnow') === fals
 ok(strpos($engine, "'snow'") === false || preg_match("/\\('snow' before 4\\.2\\.0\\)/", $engine) === 1, 'the engine names snow only in the note explaining the fallback');
 
 echo "\n=== heroes ===\n";
+/* Walk the THEME LIBRARY, not the scheduled days. Rob's rule is about
+ * which themes own the eagle, and since 4.13.0 Patriot Day is deliberately
+ * unscheduled while the theme itself stays — so a walk of the calendar no
+ * longer sees it, and reading that as "the eagle moved" would be wrong. */
 $eagle = [];
-foreach ($seen as $t => $dates) {
-    if (($themes[$t]['ambient']['hero'] ?? '') === 'eagle') { $eagle[] = $t; }
+foreach ($themes as $t => $def) {
+    if (($def['ambient']['hero'] ?? '') === 'eagle') { $eagle[] = $t; }
 }
 sort($eagle);
-ok($eagle === ['july4', 'patriot_day'], 'the eagle hero appears only on July 4 and Patriot Day', implode(',', $eagle));
+ok($eagle === ['july4', 'patriot_day'], 'the eagle hero belongs to July 4 and Patriot Day, and to nothing else', implode(',', $eagle));
+ok(!isset($seen['patriot_day']), 'and Patriot Day wins no days, because Rob took it off the calendar', implode(',', array_slice(array_keys($seen['patriot_day'] ?? []), 0, 3)));
 foreach (['memorial_day', 'veterans_day'] as $t) {
     ok(empty($themes[$t]['ambient']['hero']), "$t has the heron only");
 }
@@ -98,7 +103,11 @@ $drops = [
     'valentines'   => ['prim:heart:orbit'],
     'new_years'    => ['prim:confetti:tumble'],
     'fall_fishing' => ['leafm', 'leafo', 'leafc', 'leafs'],
-    'thanksgiving' => ['leafm', 'leafo', 'leafc', 'leafs'],
+    /* Thanksgiving is NO LONGER in this list (4.13.0, Rob): it is the one
+     * theme where the sprite version won and the subtle layer went. Its own
+     * rule is asserted below instead — it must have all four drawn leaves
+     * AND no background leaf effect, which is the opposite of the rule that
+     * used to sit here. */
     'summer_canal' => ['dragonfly'],
     'florida_keys' => ['dragonfly'],
     'mothers_day'  => ['petal'],
@@ -109,6 +118,26 @@ foreach ($drops as $t => $gone) {
     $left = array_values(array_intersect($gone, $keys));
     ok(!$left, "$t: no " . implode('/', array_unique(array_map(fn($k) => preg_replace('/^prim:|:.*$/', '', $k), $gone))) . ' sprite', implode(',', $left));
 }
+/* 4.13.0: Thanksgiving's leaves are drawn sprites, and the background
+ * layer's plain ovals are gone — the reverse of the 4.2.0 rule, decided by
+ * Rob on 2026-10-23 after he saw both. Both halves are asserted, because
+ * either one alone would let the other regress silently: drawn leaves with
+ * the ovals still behind them is two sets of leaves, and no ovals with no
+ * sprites is a theme that drops nothing. */
+$tg = sprite_keys($themes['thanksgiving']);
+foreach (['leafo', 'leafc', 'leafm', 'leafm2', 'leafs'] as $leaf) {
+    ok(in_array($leaf, $tg, true), "thanksgiving: the drawn '$leaf' falls", implode(',', $tg));
+}
+$sub = \DCC_Seasons\Themes::subtle_defaults();
+ok(($sub['thanksgiving'] ?? null) === '', 'thanksgiving: no background leaf layer under the drawn ones', var_export($sub['thanksgiving'] ?? null, true));
+ok(($sub['fall_fishing'] ?? null) === 'leaves' && ($sub['veterans_day'] ?? null) === 'leaves',
+    'and only Thanksgiving changed: Fall Fishing and Veterans Day keep the effect',
+    ($sub['fall_fishing'] ?? '?') . ',' . ($sub['veterans_day'] ?? '?'));
+/* One witch, not two (4.13.0, Rob): a theme's signature character appears
+ * once, as its scene. Halloween's hero is gone and witchmoon stays. */
+ok(!isset($themes['halloween']['ambient']['hero']), 'halloween: no hero flyer — the witch is the scene', (string) ($themes['halloween']['ambient']['hero'] ?? ''));
+ok(!isset($themes['thanksgiving']['ambient']['hero']), 'thanksgiving: no crane flyer either — the cranes are the scene', (string) ($themes['thanksgiving']['ambient']['hero'] ?? ''));
+
 $straw = array_filter($themes['strawberry']['ambient']['particles'], fn($p) => ($p['s'] ?? '') === 'blossom');
 $bs = array_values(array_map(fn($p) => $p['b'], $straw));
 ok($bs === ['berrycycle'], 'strawberry: the drifting blossom sprite is gone, the bloom-to-berry one stays', implode(',', $bs));

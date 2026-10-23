@@ -115,7 +115,19 @@ function phpDays() {
     const own = JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);function __($s,$d=null){return $s;}
       require '${ROOT}/dcc-seasons/includes/class-schedule.php';
       $o=[];for($y=${Y0};$y<=${Y1};$y++)foreach(\\DCC_Seasons\\Schedule::HOLIDAY_ANCHOR as $t=>$a)$o[]=[$t,\\DCC_Seasons\\Schedule::own_day($t,$y)];echo json_encode($o);`], { encoding: 'utf8' }));
-    const missing = own.filter(([t, d]) => php[d] !== t && !(t === 'april_fools' && d === '2029-04-01'));
+    /* "A holiday never loses its own day" applies only to holidays that
+     * ARE on the calendar. Since 4.13.0 Patriot Day and Veterans Day are
+     * deliberately unscheduled (Rob: Patriot Day "isn't a celebration";
+     * Nov 11 becomes the Anniversary in 4.13.1), so their own days
+     * correctly belong to whatever covers them — Fall Fishing and
+     * Thanksgiving. Read the scheduled set from the real defaults rather
+     * than listing it here, or this check goes stale the next time Rob
+     * re-cuts the calendar. */
+    const scheduled = new Set(JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);function __($s,$d=null){return $s;}
+      function esc_html__($s,$d=null){return $s;} function apply_filters($t,$v){return $v;}
+      require '${ROOT}/dcc-seasons/includes/class-schedule.php';
+      echo json_encode(array_values(array_unique(array_column(\\DCC_Seasons\\Schedule::defaults(), 'theme'))));`], { encoding: 'utf8' })));
+    const missing = own.filter(([t, d]) => scheduled.has(t) && php[d] !== t && !(t === 'april_fools' && d === '2029-04-01'));
     console.log(`  holidays missing their own day: ${missing.length}${missing.length ? ' -> ' + missing.slice(0, 6).map(x => x.join(' ')).join('; ') : ''}`);
     const ONE_DAY = ['mlk', 'presidents', 'april_fools', 'four_twenty'];
     const lengthened = [];
