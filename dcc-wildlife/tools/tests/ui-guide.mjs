@@ -104,10 +104,10 @@ section('the switch: Seen Here 395, Wider Florida 402');
   checkSame(['4px solid rgb(191, 64, 64)'], chips.stripeWidths,
     'a 4px SOLID bar in the flag key\'s danger colour — shape and position, never colour alone');
   checkSame(28, chips.srKeepAway, 'and every striped row\'s accessible name gains ", Keep Away"');
-  checkSame(12, chips.protected, '"Protected" is on exactly twelve');
-  checkSame('blackskimmer,eagle,gophertortoise,indigosnake,kestrel,littleblue,manatee,sandhill,sandskink,scrubjay,tricolored,woodstork',
+  checkSame(13, chips.protected, '"Protected" is on exactly thirteen (1.46.2: the red-cockaded woodpecker joined)');
+  checkSame('blackskimmer,eagle,gophertortoise,indigosnake,kestrel,littleblue,manatee,redcockaded,sandhill,sandskink,scrubjay,tricolored,woodstork',
     chips.protectedKeys.sort().join(','),
-    'and they are the twelve on the official lists, by key');
+    'and they are the thirteen on the official lists, by key');
   checkSame({ chip: 'Lake County', stripe: true }, chips.caneToad,
     'the cane toad keeps "Lake County" AND wears the stripe — the slot is free now');
   checkSame({ chip: '', stripe: true }, chips.alligator,

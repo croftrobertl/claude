@@ -195,22 +195,46 @@ foreach ( $non as $id ) {
 /*
  * "PROTECTED" FOLLOWS THE OFFICIAL LIST (Rob's pick): Florida's Endangered
  * and Threatened Species List, Fla. Admin. Code R. 68A-27.003, effective
- * 2025-04-03, plus the eagle under its own federal Act. Twelve keys,
- * written out, never derived from the registry's `protected` flag.
+ * 2025-04-03, plus the eagle under its own federal Act. Thirteen keys,
+ * written out, never derived from the registry's `protected` flag. Twelve
+ * in 1.46.1; the red-cockaded woodpecker was the Director's own omission
+ * (1.46.2) — federally Threatened since the 2024 downlisting, and on the
+ * rule's federally-designated list.
  */
-check_same( 12, count( $chips['protected'] ), '"Protected" is exactly twelve species' );
+check_same( 13, count( $chips['protected'] ), '"Protected" is exactly thirteen species' );
 check_same(
-	[ 'blackskimmer', 'eagle', 'gophertortoise', 'indigosnake', 'kestrel', 'littleblue', 'manatee', 'sandhill', 'sandskink', 'scrubjay', 'tricolored', 'woodstork' ],
+	[ 'blackskimmer', 'eagle', 'gophertortoise', 'indigosnake', 'kestrel', 'littleblue', 'manatee', 'redcockaded', 'sandhill', 'sandskink', 'scrubjay', 'tricolored', 'woodstork' ],
 	( static function ( array $k ): array { sort( $k ); return $k; } )( $chips['protected'] ),
-	'and they are the twelve the Director listed, by key'
+	'and they are the thirteen the Director listed, by key'
 );
 check_same( array_keys( Guide_Page::PROTECTED ), Guide_Page::PROTECTED_KEYS, 'the two spellings of the list agree' );
 check_same( '2025-04-03', Guide_Page::PROTECTED_SOURCE['effective'], 'the source carries its effective date' );
 check_same( 'Fla. Admin. Code R. 68A-27.003', Guide_Page::PROTECTED_SOURCE['rule'], 'and the rule it is' );
 check( ! isset( Guide_Page::PROTECTED['alligator'] ), 'THE ALLIGATOR IS NOT ON IT — listed only for similarity of appearance to the crocodile' );
-check( ! isset( Guide_Page::PROTECTED['redcockaded'] ), 'nor the red-cockaded woodpecker, which carries the flag and is reported rather than added' );
-check_same( 12, substr_count( $guide, 'class="dccwl-fg-line dccwl-gp-protected"' ), 'each of the twelve carries one sourced line under Take Care' );
-check_same( 12, substr_count( $guide, 'Fla. Admin. Code R. 68A-27.003' ), 'citing the rule, with a link' );
+check_same( 'federal', Guide_Page::PROTECTED['redcockaded'] ?? '', 'the red-cockaded woodpecker IS on it (1.46.2), as federally designated' );
+check_same( 13, substr_count( $guide, 'class="dccwl-fg-line dccwl-gp-protected"' ), 'each of the thirteen carries one sourced line under Take Care' );
+check_same( 13, substr_count( $guide, 'Fla. Admin. Code R. 68A-27.003' ), 'citing the rule, with a link' );
+check_contains( Guide_Page::protected_line( 'redcockaded' ), 'Federally Threatened (Florida', 'the woodpecker\'s line is the federal wording, Threatened not Endangered' );
+
+/*
+ * THE REGISTRY FLAG AND THE LIST ARE ONE SET (1.46.2). 1.46.1 wrote the
+ * list by hand and left the registry's `protected` flag where it had been,
+ * and the audit found three disagreements: the woodpecker flagged but not
+ * listed, the sand skink and the black skimmer listed but not flagged.
+ * /explore/'s sheet badges read the flag; the guide's chips read the list.
+ * Equal, with NO deliberate differences, so a drift fails here by key.
+ */
+$flagged = [];
+foreach ( $dataset as $sp ) {
+	if ( in_array( 'protected', (array) ( $sp['flags'] ?? [] ), true ) ) {
+		$flagged[] = (string) $sp['id'];
+	}
+}
+sort( $flagged );
+$listed = array_keys( Guide_Page::PROTECTED );
+sort( $listed );
+check_same( $listed, $flagged, 'the registry `protected` flag set equals Guide_Page::PROTECTED — no deliberate differences' );
+check_same( 13, count( $flagged ), 'and that set is thirteen' );
 check_contains( $guide, 'The Southeastern American kestrel that nests here is State-designated Threatened', 'the kestrel line names the resident subspecies' );
 check_contains( $guide, 'winter visitors from the north are not.', 'and says the winter birds are not' );
 check_contains( $guide, 'Not on Florida&#039;s Threatened list since 2007, but protected by the federal Bald and Golden Eagle Protection Act', 'the eagle has its own Act, not the list' );
@@ -228,8 +252,9 @@ check_same( 'near', Guide_Page::chip_of( $toad )[0] ?? '', 'the cane toad\'s chi
 check( Species::is_hazard( $toad ), 'and it is a hazard, so it is striped as well' );
 
 /*
- * "Lake County" IS ON EVERY NEAR SPECIES THAT IS NOT ALSO PROTECTED — 46
- * of the 49; the gopher tortoise, the indigo snake and the sand skink take
+ * "Lake County" IS ON EVERY NEAR SPECIES THAT IS NOT ALSO PROTECTED — 45
+ * of the 49 (46 under 1.46.1); the gopher tortoise, the indigo snake, the
+ * sand skink and, since 1.46.2, the red-cockaded woodpecker take
  * "Protected", which outranks it. COUNTED, with the arithmetic stated: the
  * 1.46.0 version of this section gathered the near chips and never
  * asserted them, and a mutation walked straight through.
@@ -244,7 +269,7 @@ foreach ( $dataset as $sp ) {
 check_same( 49, $near_total, 'there are 49 NEAR species' );
 check_same( $near_total - $near_prot, count( $chips['near'] ), 'every one carries Lake County unless Protected outranks it',
 	count( $chips['near'] ) . ' chips for ' . $near_total . ' NEAR minus ' . $near_prot . ' protected' );
-check_same( 46, count( $chips['near'] ), 'which is 46' );
+check_same( 45, count( $chips['near'] ), 'which is 45' );
 
 dcc_section( 'the pills, and the rows they count' );
 

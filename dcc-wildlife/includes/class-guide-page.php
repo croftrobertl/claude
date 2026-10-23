@@ -151,7 +151,10 @@ class Guide_Page {
 	 * the authority for a legal claim. It is now the official list, and the
 	 * source travels with it so the sheet can cite what it is asserting.
 	 *
-	 * Twelve keys, each with the status that actually applies:
+	 * Thirteen keys, each with the status that actually applies (twelve in
+	 * 1.46.1; the red-cockaded woodpecker, federally Threatened since the
+	 * 2024 downlisting and on the rule's federally-designated list, was the
+	 * Director's own omission, added 1.46.2):
 	 *
 	 *   'federal' — listed Threatened under the federal Endangered Species
 	 *               Act. Five: the indigo snake, the sand skink, the scrub
@@ -180,6 +183,7 @@ class Guide_Page {
 		'indigosnake'    => 'federal',
 		'sandskink'      => 'federal',
 		'scrubjay'       => 'federal',
+		'redcockaded'    => 'federal',
 		'woodstork'      => 'federal',
 		'manatee'        => 'federal',
 		'gophertortoise' => 'state',
@@ -192,7 +196,7 @@ class Guide_Page {
 	];
 
 	/**
-	 * The list the twelve come from, stored rather than written into a
+	 * The list the thirteen come from, stored rather than written into a
 	 * sentence: a citation is data, and this one has a date that will move.
 	 */
 	public const PROTECTED_SOURCE = [
@@ -202,11 +206,12 @@ class Guide_Page {
 		'url'       => 'https://www.law.cornell.edu/regulations/florida/Fla-Admin-Code-Ann-R-68A-27.003',
 	];
 
-	/** Kept as the old name so nothing that read it breaks; same twelve. */
+	/** Kept as the old name so nothing that read it breaks; same thirteen. */
 	public const PROTECTED_KEYS = [
 		'indigosnake',
 		'sandskink',
 		'scrubjay',
+		'redcockaded',
 		'woodstork',
 		'manatee',
 		'gophertortoise',
@@ -617,7 +622,7 @@ class Guide_Page {
 	 * It cites the list and its date, and links to the rule — because the
 	 * chip above it makes a LEGAL claim about a species, and a claim a guest
 	 * cannot check is the kind this module exists not to make. Printed only
-	 * for the twelve; every other species says nothing, which is what the
+	 * for the thirteen; every other species says nothing, which is what the
 	 * absence of a chip already says.
 	 */
 	private static function protected_note( string $id ): void {

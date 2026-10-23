@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.46.1
+Stable tag: 1.46.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,17 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.46.2 =
+* **The Red-cockaded Woodpecker is "Protected"** — the thirteenth species
+  on the list, which 1.46.1 left off by oversight. It is on Florida's
+  Endangered and Threatened Species List as a federally designated species,
+  Threatened since the 2024 downlisting, and its line under Take Care now
+  links to the rule like the other twelve.
+* **The explore widget's badges agree with the guide's chips.** The sand
+  skink and the black skimmer carry the Protected flag in the species
+  registry as well as on the official list, and a test now holds the two
+  sets equal so they cannot drift apart again.
 
 = 1.46.1 =
 * **"Keep Away" is a red stripe down the row's edge, not a badge** (Rob's

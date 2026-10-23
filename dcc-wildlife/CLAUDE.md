@@ -5160,3 +5160,46 @@ saying: a closed `<details>`' content is already not rendered. The rows'
 live is now the theme's to account for — re-measure after install; if it is
 still over 2.5 s, the top three long tasks in that trace will belong to the
 theme's CSS, fonts and scripts, which is the next conversation.
+
+### 44. 1.46.2 — the thirteenth Protected species, and the two lists made one
+
+The Director's answer to the 1.46.1 audit question: the red-cockaded
+woodpecker's absence from `Guide_Page::PROTECTED` was his omission, not a
+decision. The rule's list carries the federally designated species, and the
+woodpecker has been federally Threatened since the October 2024 downlisting
+(effective 25 November 2024). So:
+
+- **`redcockaded => 'federal'`** in `PROTECTED` and `PROTECTED_KEYS` — thirteen
+  keys. Its existing Take Care line already read "Federally threatened since
+  2024…"; `protected_note()` now gives it the same sourced line and rule link
+  as the other twelve, in the generic federal wording ("Federally Threatened
+  (Florida's Endangered and Threatened Species List, April 2025)"). It is a
+  NEAR species, so the "Lake County" chip count falls from 46 to 45 — Protected
+  outranks it, as it does for the tortoise, the indigo snake and the skink.
+- **The registry's `protected` flag and the list are ONE SET.** 1.46.1 wrote
+  the list by hand and left the flag where it had been, and the audit found
+  three disagreements: the woodpecker flagged but not listed; the sand skink
+  and the black skimmer listed but not flagged. /explore/'s sheet badges read
+  the flag; the guide's chips read the list. `sandskink` and `blackskimmer`
+  now carry the flag, and `test-1460.php` holds
+  `array_keys( Guide_Page::PROTECTED )` equal to the flagged ids with NO
+  deliberate differences — a drift fails by key. Four mutations (drop the
+  woodpecker from either spelling of the list; drop either flag) each go red.
+
+**The gate the brief set, and how it was met.** The Director asked that the
+woodpecker be confirmed in the rule text at the stored `PROTECTED_SOURCE`
+URL before it was added. The build container's network policy refused every
+route to that page (CONNECT 403 to law.cornell.edu, flrules.org and
+myfwc.com alike), so the release was built and held, unpushed, until the
+Director had read the page himself. The supporting evidence available from
+here was second-hand: web-search summaries of that same page placing the
+species under the federally-designated subsection (still carrying the rule's
+older "E" code), and FWC's own profile calling it Federally-designated
+Threatened under the rule. The lesson for the file: a source stored as data
+is only as good as someone's last reading of it, and this plugin cannot read
+it from here.
+
+**Noted for the Director, not changed:** the FL Rules gateway lists a later
+amendment of 68A-27.003 than the `2025-04-03` date stored in
+`PROTECTED_SOURCE['effective']`. "Change nothing else" held; the date is the
+next question, not this release's.
