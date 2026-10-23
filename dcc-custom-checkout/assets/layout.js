@@ -1050,6 +1050,127 @@
     }
 
     /* --------------------------------------------------------------------- *
+     * ITEM 8 — THE SUMMARY CARD, AND THE DESKTOP TWO-COLUMN LAYOUT
+     *
+     * STICKY DOES NOT WORK ON THIS PAGE, AND THAT WAS MEASURED, NOT ASSUMED.
+     * `main.main` and `div.one-column` are both `overflow: hidden`, which
+     * makes each a scroll container; a sticky card inside them has its own
+     * box as its scrollport, and that box never scrolls because the PAGE
+     * does. Measured in Chromium at 1280: scrolled 1200px, a sticky card ends
+     * at `top: -1180px` — it scrolls clean away. With only that clipping
+     * removed it holds at `top: 20px`. Bravada's matrix3d transform on
+     * article.hentry is NOT the cause: sticky worked with the transform still
+     * in place. (The transform does break `position: fixed`, which is why the
+     * pinned bar lives on <body>; the two problems are different.)
+     *
+     * THE CONTAINED ALTERNATIVE IS TO UNCLIP THOSE TWO BOXES, FOR THIS PAGE
+     * AND THIS WIDTH ONLY — never site-wide (Rob). The rule is gated three
+     * times over: the `.dcc_layout` marker (which only the new layout puts on
+     * the body), the checkout page (which is the only place the stylesheet
+     * loads at all), and `min-width: 900px`. Below 900px the theme's clipping
+     * is untouched, so nothing about the phone layout changes. Chosen over the
+     * alternatives because it needs no JavaScript at all: translating the card
+     * on scroll would mean writing layout on every scroll frame, which is the
+     * opposite of what v0.18.0 and v0.13.0 established for this checkout.
+     *
+     * THE CARD IS INSIDE THE FORM, AND THAT IS LOAD-BEARING. It holds the
+     * acceptance tick, and a tick outside the form would not submit —
+     * `mphb_accept_terms` is what 0.30.0's acceptance record reads from the
+     * request. So the form becomes the two-column grid: everything it already
+     * had goes into a sheet on the left, the card on the right, and every
+     * moved node stays a form control of the same form.
+     *
+     * ON A PHONE the card is simply the last block, which is Rob's own
+     * section order: Your Stay, About You, Price.
+     * --------------------------------------------------------------------- */
+
+    function summaryCard(root) {
+        if (root.querySelector('.dcc_layout-summary')) { return null; }
+        var T = CFG.summary || {};
+
+        /* Everything the form already had moves into the sheet, in order and
+           as the same nodes — so every input keeps its name, its value, its
+           listeners and its form. Nothing is cloned or rebuilt. */
+        var sheet = document.createElement('div');
+        sheet.className = 'dcc_layout-sheet';
+        sheet.setAttribute('data-dcc-injected', '1');
+        while (root.firstChild) { sheet.appendChild(root.firstChild); }
+        root.appendChild(sheet);
+
+        var card = document.createElement('aside');
+        card.className = 'dcc_layout-summary';
+        card.setAttribute('data-dcc-injected', '1');
+
+        if (T.title) {
+            var h = document.createElement('h2');
+            h.className = 'dcc_layout-summary__title';
+            h.appendChild(document.createTextNode(T.title));
+            card.appendChild(h);
+        }
+        if (T.dates) {
+            var d = document.createElement('p');
+            d.className = 'dcc_layout-summary__dates';
+            d.appendChild(document.createTextNode(T.dates));
+            card.appendChild(d);
+        }
+        root.appendChild(card);
+
+        /* MotoPress's own price breakdown, the coupon link and its field, and
+           the acceptance tick — MOVED, whole, in that order. Each is found by
+           what it is, and anything missing is simply not moved. */
+        [
+            sheet.querySelector('table.dcc_checkout-breakdown'),
+            sheet.querySelector('.dcc_layout-coupon__reveal'),
+            sheet.querySelector('.dcc_layout-coupon'),
+            termsRow(sheet),
+        ].forEach(function (node) {
+            if (node && !card.contains(node)) { card.appendChild(node); }
+        });
+
+        return card;
+    }
+
+    /** The acceptance tick's row — the input's row, never the input alone. */
+    function termsRow(scope) {
+        var tick = scope.querySelector('[name*="accept_terms"]');
+        if (!tick) { return null; }
+        var row = tick.closest('p, li, div');
+        /* Never something that holds the whole form: 0.15.0's ceiling, in
+           miniature. A row that contains the breakdown or the customer
+           details is not a row. */
+        if (!row || row === scope || row.querySelector('table.dcc_checkout-breakdown') ||
+            row.querySelector('.mphb-customer-details')) {
+            return tick.closest('label') || tick;
+        }
+        return row;
+    }
+
+    /**
+     * The bar belongs to the card on a desktop and to <body> on a phone.
+     *
+     * Moved only when the width really crosses 900px — never on a height-only
+     * resize, which on iOS is the URL bar collapsing during an ordinary
+     * scroll (v0.13.0's defect, and the one place a layout write is most
+     * likely to land under a finger).
+     */
+    function homeTheBar(bar, card) {
+        var wide = function () {
+            return window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
+        };
+        var place = function () {
+            var want = wide() && card ? card : document.body;
+            if (bar.parentElement !== want) { want.appendChild(bar); }
+        };
+        place();
+        var lastWidth = window.innerWidth;
+        window.addEventListener('resize', function () {
+            if (window.innerWidth === lastWidth) { return; }
+            lastWidth = window.innerWidth;
+            place();
+        });
+    }
+
+    /* --------------------------------------------------------------------- *
      * The touch gate (v0.18.0's rule, applied to this file's own writes)
      * --------------------------------------------------------------------- */
 
@@ -1260,7 +1381,11 @@
         hints(root);
         armEnter(root);
         armTouchGate();
+        /* BEFORE the bar, so the card exists to put it in — and before
+           anything measures the page, so nothing is measured twice. */
+        var card = summaryCard(root);
         var bar = pinnedBar(root);
+        homeTheBar(bar.el, card);
         var reEvaluate = armHiding(bar.el, bar.render);
         watchRecalc(bar.render);
         document.addEventListener('click', reEvaluate);

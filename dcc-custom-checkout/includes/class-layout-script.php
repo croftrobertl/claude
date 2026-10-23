@@ -81,6 +81,24 @@ final class Layout_Script
             'coupon'       => self::coupon(),
             'upload'       => self::upload(),
             'bar'          => self::bar(),
+            'summary'      => self::summary(),
+        ];
+    }
+
+    /**
+     * ITEM 8 — the desktop summary card (the G desktop mockup).
+     *
+     * The dates come from Hero's own shared reader, so the card and the pill
+     * over the photo cannot word the same stay differently — on a desktop the
+     * guest reads both at once.
+     *
+     * @return array<string,string>
+     */
+    public static function summary(): array
+    {
+        return [
+            'title' => __('Your Stay', 'dcc-checkout'),
+            'dates' => Hero::stay_dates_text(),
         ];
     }
 

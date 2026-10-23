@@ -91,7 +91,10 @@ $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
 // segmented set's boat field is the one that plugin owns, never retyped here.
 // id-files is loaded because Layout_Script reads its META_KEY: the photo-ID
 // preview names the same input the protected store does, never a retyped one.
-foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'id-files', 'layout-script'] as $f) {
+// hero is loaded because Layout_Script's summary card reads Hero's own
+// shared dates text: the card and the pill over the photo must word the same
+// stay identically, so there is one reader and not two.
+foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'id-files', 'hero', 'layout-script'] as $f) {
     require $plugin . '/includes/class-' . $f . '.php';
 }
 

@@ -194,12 +194,27 @@ ${CSS}
            boxes. A lip drawn there instead would not be seen at all. */
         check(at('the header box is not clipped by an ancestor'),
             m.clippedByAncestor, false);
-        check(at('the form\'s own ancestors DO clip — which is why the lip is not drawn there'),
-            await page.evaluate(() => {
-                const el = document.querySelector('article.hentry');
-                return [getComputedStyle(el.parentElement).overflow,
-                        getComputedStyle(el.parentElement.parentElement).overflow];
-            }), ['hidden', 'hidden']);
+        /* THE FORM'S ANCESTORS CLIP — AT PHONE WIDTH. That is why the lip is
+           drawn inside the header and not above the form.
+           AT DESKTOP WIDTH THEY NO LONGER DO, and that is item 8's own doing:
+           the summary card needs `position: sticky`, which an overflow:hidden
+           ancestor defeats (measured: a sticky card 1200px down sat at
+           top:-1180px), so the clipping is removed for this page at ≥900px.
+           The lip's placement is unaffected either way — it belongs in the
+           header on its own terms — but the justification differs by width,
+           and asserting one at both widths was simply wrong. */
+        const clipping = await page.evaluate(() => {
+            const el = document.querySelector('article.hentry');
+            return [getComputedStyle(el.parentElement).overflow,
+                    getComputedStyle(el.parentElement.parentElement).overflow];
+        });
+        if (width < 900) {
+            check(at('the form\'s own ancestors DO clip — which is why the lip is not drawn there'),
+                clipping, ['hidden', 'hidden']);
+        } else {
+            check(at('item 8 unclips those ancestors so the summary card can stick'),
+                clipping, ['visible', 'visible']);
+        }
 
         /* --- The overlay ------------------------------------------------ */
         check(at('the overlay fills the header box, as the mu-plugin insists'),

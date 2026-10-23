@@ -5909,5 +5909,137 @@
   "find": "        var all = root.querySelectorAll('.dcc_checkout-invalid, [aria-invalid=\"true\"]');",
   "replace": "        var all = root.querySelectorAll('[required]');",
   "count": 1
+ },
+ {
+  "id": "sum-no-card",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the summary card is built",
+  "find": "        var card = summaryCard(root);",
+  "replace": "        var card = null;",
+  "count": 1
+ },
+ {
+  "id": "sum-card-outside-form",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the card is inside the form, so the acceptance tick still submits",
+  "find": "        root.appendChild(card);",
+  "replace": "        document.body.appendChild(card);",
+  "count": 1
+ },
+ {
+  "id": "sum-tick-not-moved",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the card holds the acceptance tick",
+  "find": "            termsRow(sheet),",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sum-tick-input-only",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the tick's ROW is moved, never the bare input out of its label",
+  "find": "        var row = tick.closest('p, li, div');",
+  "replace": "        var row = tick;",
+  "count": 1
+ },
+ {
+  "id": "sum-breakdown-not-moved",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: MotoPress's own breakdown is moved into the card",
+  "find": "            sheet.querySelector('table.dcc_checkout-breakdown'),",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "sum-bar-not-homed",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: there is no pinned bar on desktop — it goes into the card",
+  "find": "            var want = wide() && card ? card : document.body;",
+  "replace": "            var want = document.body;",
+  "count": 1
+ },
+ {
+  "id": "sum-bar-always-in-card",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: on a phone the bar is pinned to body, not put in the card",
+  "find": "            var want = wide() && card ? card : document.body;",
+  "replace": "            var want = card || document.body;",
+  "count": 1
+ },
+ {
+  "id": "sum-sheet-not-wrapped",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the form's own content moves into the sheet, so the grid has two columns",
+  "find": "        while (root.firstChild) { sheet.appendChild(root.firstChild); }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "css-sum-no-unclip",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the clipping is removed at desktop width, which is what lets sticky work",
+  "find": "    body.dcc_layout main.main,\n    body.dcc_layout div.one-column {\n        overflow: visible;\n    }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "css-sum-unclip-everywhere",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the phone's clipping is untouched — the unclipping is gated on width",
+  "find": "@media (min-width: 900px) {\n    body.dcc_layout main.main,\n    body.dcc_layout div.one-column {\n        overflow: visible;\n    }",
+  "replace": "@media (min-width: 1px) {\n    body.dcc_layout main.main,\n    body.dcc_layout div.one-column {\n        overflow: visible;\n    }",
+  "count": 1
+ },
+ {
+  "id": "css-sum-not-sticky",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the card stays in view as the page scrolls",
+  "find": "    .dcc_layout .dcc_layout-summary {\n        position: sticky;\n        top: 24px;",
+  "replace": "    .dcc_layout .dcc_layout-summary {\n        position: static;\n        top: 24px;",
+  "count": 1
+ },
+ {
+  "id": "css-sum-one-column",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 8: the desktop form is two columns",
+  "find": "        grid-template-columns: minmax(0, 1fr) 340px;",
+  "replace": "        grid-template-columns: minmax(0, 1fr);",
+  "count": 1
  }
 ]

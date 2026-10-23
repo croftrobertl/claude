@@ -342,6 +342,19 @@ final class Hero
     /** "Mon, Nov 16 → Thu, Nov 19 · 3 Nights", or '' when the dates are not readable. */
     public function dates_pill(): string
     {
+        return self::stay_dates_text();
+    }
+
+    /**
+     * The stay as one line, for the hero's pill AND the desktop summary card
+     * (item 8).
+     *
+     * Static and shared so the two cannot word the same stay differently —
+     * the card sits beside the photo on a desktop and the guest reads both at
+     * once.
+     */
+    public static function stay_dates_text(): string
+    {
         [$in, $out] = Checkout_Request::stay_dates();
         if ($in === null || $out === null) {
             return '';

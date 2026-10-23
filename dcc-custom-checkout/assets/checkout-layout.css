@@ -623,3 +623,79 @@ body.dcc_layout {
         width: 100%;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * ITEM 8 — DESKTOP: the form sheet left, the summary card right.
+ *
+ * STICKY DOES NOT WORK HERE WITHOUT UNCLIPPING, AND THAT WAS MEASURED.
+ * `main.main` and `div.one-column` are both `overflow: hidden`, which makes
+ * each a scroll container; a sticky card inside them takes its own box as its
+ * scrollport, and that box never scrolls because the PAGE does. Measured in
+ * Chromium at 1280: scrolled 1200px, a sticky card ended at `top: -1180px`.
+ * With only that clipping removed it held at `top: 20px`. Bravada's matrix3d
+ * transform is NOT the cause — sticky worked with it still in place.
+ *
+ * SO THE CLIPPING IS REMOVED FOR THIS PAGE AND THIS WIDTH ONLY, never
+ * site-wide (Rob). Gated three times: the `.dcc_layout` marker, which only
+ * the new layout puts on the body; the checkout page, the only place this
+ * stylesheet loads; and `min-width: 900px`, so a phone's layout is untouched.
+ * Preferred over translating the card on scroll, which would mean writing
+ * layout on every scroll frame — the opposite of what v0.13.0 and v0.18.0
+ * established for this checkout.
+ * ------------------------------------------------------------------------- */
+
+@media (min-width: 900px) {
+    body.dcc_layout main.main,
+    body.dcc_layout div.one-column {
+        overflow: visible;
+    }
+
+    .dcc_layout .mphb_sc_checkout-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        grid-gap: 32px;
+        align-items: start;
+    }
+
+    .dcc_layout .dcc_layout-sheet {
+        min-width: 0;
+    }
+
+    .dcc_layout .dcc_layout-summary {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+    }
+}
+
+/* The card itself, at every width. On a phone it is simply the last block,
+   which is Rob's own section order: Your Stay, About You, Price. */
+.dcc_layout .dcc_layout-summary {
+    box-sizing: border-box;
+    margin: 24px 0 0;
+    padding: 18px;
+    border: 1px solid var(--dcc-field-border, #f4da62);
+    border-radius: 18px;
+    background: #fffdf5;
+}
+
+.dcc_layout .dcc_layout-summary__title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.dcc_layout .dcc_layout-summary__dates {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+/* The breakdown fills the card rather than keeping its own narrow intrinsic
+   width (v0.14.0: the container is content-sized, which is why the tax
+   footnote needed `width: 0; min-width: 100%`). */
+.dcc_layout .dcc_layout-summary table.dcc_checkout-breakdown {
+    width: 100%;
+    margin: 0 0 10px;
+}

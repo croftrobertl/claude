@@ -89,10 +89,25 @@ const BAR = {
     total: 'Total',
 };
 
+const SUMMARY = { title: 'Your Stay', dates: 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights' };
+
 const page_html = `<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>checkout</title><style>${CSS}</style></head>
+<title>checkout</title>
+<style>
+  /* THE THEME'S OWN RULES, which the plugin's stylesheets do not carry and
+     this fixture did not either — so the "the clipping is removed" and "the
+     phone's clipping is untouched" assertions were both vacuous until these
+     were added: main.main simply had no overflow rule and read visible at
+     every width. Bravada's clipping (Director: both boxes are overflow:
+     hidden) and the matrix3d transform on the article. Loaded BEFORE the
+     plugin's CSS, as on the real page. */
+  main.main { overflow: hidden; }
+  div.one-column { overflow: hidden; }
+  article.hentry { transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1); }
+</style>
+<style>${CSS}</style></head>
 <body class="dcc_layout">
 <!-- The page's real shape around the form (Director's measurements): the
      article carries Bravada's matrix3d transform, which makes it the
@@ -190,6 +205,9 @@ const page_html = `<!doctype html>
     <!-- MotoPress's own coupon field, where MotoPress puts it. Item 4 folds
          it behind a link and moves nothing. The message span is where an
          "applied"/"invalid" note would land. -->
+    <p class="mphb-terms-wrapper"><label>
+      <input type="checkbox" name="mphb_accept_terms" value="1" required>
+      I've read and accept the Terms &amp; Conditions.</label></p>
     <p class="mphb-coupon-wrapper"><label>Coupon
       <input type="text" name="mphb_coupon_code" value=""></label>
       <span class="mphb-coupon-message"></span></p>
@@ -212,6 +230,7 @@ const page_html = `<!doctype html>
       coupon: COUPON,
       upload: UPLOAD,
       bar: BAR,
+      summary: SUMMARY,
   })};
   /* Record a submit rather than letting it navigate: "Done must never submit"
      is only evidence if an attempt would have been seen. */
@@ -229,6 +248,14 @@ const page_html = `<!doctype html>
         isMobile: true,
     });
     const page = await ctx.newPage();
+    /* A REAL ORIGIN, because the bar's "Updating…" case opens a real
+       XMLHttpRequest at MotoPress's own admin-ajax path — a setContent page
+       has no base URL, so a relative URL there is a SyntaxError rather than a
+       request. The route answers it without a server. */
+    await page.route('**/*', (route) => {
+        route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' });
+    });
+    await page.goto('https://example.test/submit-booking/');
     await page.setContent(page_html);
 
     /* ===================================================================== *
@@ -943,7 +970,7 @@ const page_html = `<!doctype html>
      * ===================================================================== */
     const belted = await (async () => {
         const forced = page_html.replace(
-            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED, coupon: COUPON, upload: UPLOAD, bar: BAR }),
+            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED, coupon: COUPON, upload: UPLOAD, bar: BAR, summary: SUMMARY }),
             JSON.stringify({
                 autocomplete: Object.assign({}, TOKENS, { 'mphb_address1': 'address-line1' }),
                 placesField: 'mphb_address1',
@@ -951,6 +978,7 @@ const page_html = `<!doctype html>
                 coupon: COUPON,
                 upload: UPLOAD,
                 bar: BAR,
+                summary: SUMMARY,
             })
         );
         const p2 = await ctx.newPage();
@@ -968,6 +996,340 @@ const page_html = `<!doctype html>
         belted.places, 'off');
     check('… and the rest of the map still applied (the guard on that)',
         belted.first, 'given-name');
+
+    /* ===================================================================== *
+     * ITEM 6 — THE PINNED BAR
+     * ===================================================================== */
+    const bar = await page.evaluate(() => {
+        const b = document.querySelector('.dcc_layout-bar');
+        if (!b) { return null; }
+        const cs = getComputedStyle(b);
+        return {
+            /* THE INVARIANT: whenever it is pinned, its parent is <body>.
+               Bravada's matrix3d transform on article.hentry would otherwise
+               become its containing block — a fixed box inside that article
+               was measured 2,156px off-screen. */
+            position: cs.position,
+            parent: b.parentElement.tagName,
+            insideArticle: !!b.closest('article.hentry'),
+            /* Copied from MotoPress's own total cell, never computed. */
+            amount: b.querySelector('.dcc_layout-bar__amount').textContent,
+            label: b.querySelector('.dcc_layout-bar__label').textContent,
+            action: b.querySelector('.dcc_layout-bar__action').textContent,
+            pagePad: getComputedStyle(document.body).paddingBottom,
+            height: Math.round(b.getBoundingClientRect().height),
+            atBottom: Math.round(b.getBoundingClientRect().bottom) ===
+                Math.round(window.innerHeight),
+        };
+    });
+    check('the bar is pinned, on <body>, outside article.hentry',
+        [bar.position, bar.parent, bar.insideArticle], ['fixed', 'BODY', false]);
+    check('it sits on the bottom edge', bar.atBottom, true);
+    check('the total is COPIED from MotoPress\'s own total cell',
+        [bar.label, bar.amount], ['Total', '$649.50']);
+    check('the page is padded by the bar\'s measured height',
+        bar.pagePad, bar.height + 'px');
+    check('the button names the next empty required field',
+        bar.action, 'Next: First Name \u2193');
+
+    const jumped = await page.evaluate(() => {
+        document.querySelector('.dcc_layout-bar__action').click();
+        return document.activeElement.name;
+    });
+    check('pressing it goes to that field', jumped, 'mphb_first_name');
+
+    await page.fill('[name="mphb_first_name"]', 'Ada');
+    check('once filled, the button names the NEXT one',
+        await page.evaluate(() => document.querySelector('.dcc_layout-bar__action').textContent),
+        'Next: Phone \u2193');
+
+    /* A required field inside a FOLDED panel is never offered: focusing
+       inside display:none does nothing on iOS and the page would not move. */
+    const folded = await page.evaluate(() => {
+        const first = document.getElementById('g3').querySelector('input');
+        first.required = true;
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        return document.querySelector('.dcc_layout-bar__action').textContent;
+    });
+    check('a required field in a folded panel is not offered', folded, 'Next: Phone \u2193');
+
+    const revealed = await page.evaluate(() => {
+        document.getElementById('g3').classList.remove('dcc_checkout-section-hidden');
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        return document.querySelector('.dcc_layout-bar__action').textContent;
+    });
+    check('… and IS offered once the panel opens',
+        revealed.indexOf('Guest') !== -1 || revealed.indexOf('mphb_guest3') !== -1, true);
+
+    await page.evaluate(() => {
+        const g3 = document.getElementById('g3');
+        g3.querySelector('input').required = false;
+        g3.classList.add('dcc_checkout-section-hidden');
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    /* "Updating…" WHILE MOTOPRESS IS RE-PRICING, and never a stale number. */
+    const updating = await page.evaluate(() => new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '/wp-admin/admin-ajax.php?action=mphb_update_checkout_info');
+        xhr.addEventListener('loadend', () => {
+            setTimeout(() => resolve({
+                during: window.__during,
+                after: document.querySelector('.dcc_layout-bar__amount').textContent,
+            }), 30);
+        });
+        xhr.send();
+        window.__during = document.querySelector('.dcc_layout-bar__amount').textContent;
+    }));
+    check('the bar says "Updating…" while MotoPress is re-pricing',
+        updating.during, 'Updating\u2026');
+    check('… and goes back to MotoPress\'s figure afterwards',
+        updating.after, '$649.50');
+
+    /* OUT OF THE WAY WHILE THE KEYBOARD IS UP, and while Google Places is
+       showing suggestions — the site's Customizer CSS puts .pac-container at
+       z-index 99999, so the bar would be UNDER the list the guest is tapping.
+       No polling (Rob): focusin/focusout plus visualViewport's resize. */
+    const away = await page.evaluate(() => {
+        const b = document.querySelector('.dcc_layout-bar');
+        const field = document.querySelector('[name="mphb_first_name"]');
+        field.focus();
+        const typing = getComputedStyle(b).display;
+        field.blur();
+        return new Promise((resolve) => setTimeout(() => {
+            const back = getComputedStyle(b).display;
+            const pac = document.createElement('div');
+            pac.className = 'pac-container';
+            pac.style.cssText = 'position:absolute;top:0;left:0;width:200px;height:120px;';
+            document.body.appendChild(pac);
+            document.dispatchEvent(new Event('focusin'));
+            const withPac = getComputedStyle(b).display;
+            pac.remove();
+            document.dispatchEvent(new Event('focusin'));
+            resolve({ typing, back, withPac, afterPac: getComputedStyle(b).display });
+        }, 30));
+    });
+    check('the bar gets out of the way while a text field has focus', away.typing, 'none');
+    check('… and comes back when it does not', away.back, 'flex');
+    check('… and hides while the address suggestions are showing', away.withPac, 'none');
+    check('… and comes back when they close', away.afterPac, 'flex');
+
+    /* ALL FILLED: Submit, in site blue, with "All Set". The acceptance tick is
+       `required` on the real page too, so it is part of "everything filled" —
+       and it exercises the checkbox path of the bar's required-field reader,
+       which no text field can. */
+    await page.fill('[name="mphb_phone"]', '555 0100');
+    check('an unticked required checkbox is offered next',
+        (await page.evaluate(() => document.querySelector('.dcc_layout-bar__action').textContent))
+            .indexOf('Terms') !== -1, true);
+    await page.evaluate(() => {
+        const t = document.querySelector('[name="mphb_accept_terms"]');
+        t.checked = true;
+        t.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const ready = await page.evaluate(() => ({
+        action: document.querySelector('.dcc_layout-bar__action').textContent,
+        note: document.querySelector('.dcc_layout-bar__note').textContent,
+        blue: getComputedStyle(document.querySelector('.dcc_layout-bar__action')).backgroundColor,
+    }));
+    check('with everything filled the bar offers Submit, in site blue, with "All Set"',
+        [ready.action, ready.note, ready.blue],
+        ['\u2713 Submit Booking', 'All Set', 'rgb(0, 107, 207)']);
+
+    /* NEVER AN ERROR BEFORE SUBMIT (Rob's standing rule). */
+    const beforeSubmit = await page.evaluate(() => {
+        const f = document.querySelector('[name="mphb_phone"]');
+        f.classList.add('dcc_checkout-invalid');
+        f.setAttribute('aria-invalid', 'true');
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        return {
+            action: document.querySelector('.dcc_layout-bar__action').textContent,
+            attention: document.querySelector('.dcc_layout-bar')
+                .classList.contains('dcc_layout-bar--attention'),
+        };
+    });
+    check('a flagged field says NOTHING before a submit attempt (Rob\'s rule)',
+        [beforeSubmit.action, beforeSubmit.attention], ['\u2713 Submit Booking', false]);
+
+    /* ===================================================================== *
+     * ITEM 7 — "Show Me" AFTER a failed submit
+     * ===================================================================== */
+    const attention = await page.evaluate(() => {
+        /* The attempt is what checkout.js's own preflight records, and the
+           flags are already on the fields. Nothing here re-validates. */
+        document.querySelector('form').classList.remove('dcc_checkout-preflight');
+        document.querySelector('[name="mphb_first_name"]').classList.add('dcc_checkout-invalid');
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        const b = document.querySelector('.dcc_layout-bar');
+        return {
+            note: b.querySelector('.dcc_layout-bar__note').textContent,
+            action: b.querySelector('.dcc_layout-bar__action').textContent,
+            outlined: getComputedStyle(b.querySelector('.dcc_layout-bar__action')).backgroundColor,
+        };
+    });
+    check('after a failed submit the bar counts what needs attention',
+        attention.note, '2 Need Attention');
+    check('… and offers Show Me, outlined rather than filled',
+        [attention.action, attention.outlined], ['Show Me \u2191 1 Of 2', 'rgb(255, 255, 255)']);
+
+    const walk = [];
+    for (let i = 0; i < 3; i++) {
+        walk.push(await page.evaluate(() => {
+            document.querySelector('.dcc_layout-bar__action').click();
+            return [document.activeElement.name,
+                    document.querySelector('.dcc_layout-bar__action').textContent];
+        }));
+    }
+    check('each tap jumps to the next flagged field, and wraps round',
+        walk, [['mphb_first_name', 'Show Me \u2191 2 Of 2'],
+               ['mphb_phone', 'Show Me \u2191 1 Of 2'],
+               ['mphb_first_name', 'Show Me \u2191 2 Of 2']]);
+
+    const fixedUp = await page.evaluate(() => {
+        document.querySelectorAll('.dcc_checkout-invalid').forEach((el) => {
+            el.classList.remove('dcc_checkout-invalid');
+            el.removeAttribute('aria-invalid');
+        });
+        document.querySelector('form').dispatchEvent(new Event('change', { bubbles: true }));
+        const b = document.querySelector('.dcc_layout-bar');
+        return [b.querySelector('.dcc_layout-bar__action').textContent,
+                b.classList.contains('dcc_layout-bar--attention')];
+    });
+    check('once they are fixed the bar goes back to Submit',
+        fixedUp, ['\u2713 Submit Booking', false]);
+
+    /* ===================================================================== *
+     * ITEM 8 — THE SUMMARY CARD, AND DESKTOP
+     * ===================================================================== */
+    const cardPhone = await page.evaluate(() => {
+        const c = document.querySelector('.dcc_layout-summary');
+        if (!c) { return null; }
+        const form = document.querySelector('form');
+        return {
+            /* INSIDE THE FORM, which is load-bearing: it holds the acceptance
+               tick, and a tick outside the form would not submit — which is
+               what 0.30.0's acceptance record reads from the request. */
+            inForm: form.contains(c),
+            tickInForm: (() => {
+                const t = document.querySelector('[name="mphb_accept_terms"]');
+                return !!(t.form && t.form === form && c.contains(t));
+            })(),
+            /* What it holds: the dates, MotoPress's own breakdown, the coupon
+               link and its field, and the tick. */
+            title: (c.querySelector('.dcc_layout-summary__title') || {}).textContent,
+            dates: (c.querySelector('.dcc_layout-summary__dates') || {}).textContent,
+            breakdown: !!c.querySelector('table.dcc_checkout-breakdown'),
+            couponLink: !!c.querySelector('.dcc_layout-coupon__reveal'),
+            couponField: !!c.querySelector('[name="mphb_coupon_code"]'),
+            tick: !!c.querySelector('[name="mphb_accept_terms"]'),
+            /* Everything else is in the sheet, and the sheet is the form's
+               first child. */
+            sheetFirst: form.firstElementChild.className === 'dcc_layout-sheet',
+            firstNameInSheet: !!document.querySelector('.dcc_layout-sheet [name="mphb_first_name"]'),
+            /* On a phone the card is simply the last block, which is Rob's own
+               section order: Your Stay, About You, Price. */
+            lastOnPhone: form.lastElementChild === c,
+            /* And the bar is still pinned to <body> here. */
+            barParent: document.querySelector('.dcc_layout-bar').parentElement.tagName,
+            /* The breakdown table is only one node — it was MOVED, not copied. */
+            breakdowns: document.querySelectorAll('table.dcc_checkout-breakdown').length,
+            ticks: document.querySelectorAll('[name="mphb_accept_terms"]').length,
+        };
+    });
+    check('the card is inside the form, and so is the acceptance tick it holds',
+        [cardPhone.inForm, cardPhone.tickInForm], [true, true]);
+    check('it holds the dates, the price, the coupon link and its field, and the tick',
+        [cardPhone.title, cardPhone.dates, cardPhone.breakdown,
+         cardPhone.couponLink, cardPhone.couponField, cardPhone.tick],
+        ['Your Stay', 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights', true, true, true, true]);
+    check('everything else is in the sheet, which is the form\'s first child',
+        [cardPhone.sheetFirst, cardPhone.firstNameInSheet], [true, true]);
+    check('nothing was copied — one breakdown, one tick',
+        [cardPhone.breakdowns, cardPhone.ticks], [1, 1]);
+    check('on a phone the card is the last block, and the bar stays pinned to <body>',
+        [cardPhone.lastOnPhone, cardPhone.barParent], [true, 'BODY']);
+
+    /* AND THE PHONE'S CLIPPING IS UNTOUCHED: the unclipping is gated on
+       min-width 900, so nothing about the phone layout changes. */
+    check('at phone width the theme\'s overflow is still hidden',
+        await page.evaluate(() => [
+            getComputedStyle(document.querySelector('main.main')).overflow,
+            getComputedStyle(document.querySelector('div.one-column')).overflow,
+        ]), ['hidden', 'hidden']);
+
+    /* ---- Desktop, in its own context ---------------------------------- */
+    const deskCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const desk = await deskCtx.newPage();
+    await desk.route('**/*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
+    await desk.goto('https://example.test/submit-booking/');
+    await desk.setContent(page_html);
+
+    const deskLayout = await desk.evaluate(() => {
+        const form = document.querySelector('form');
+        const sheet = document.querySelector('.dcc_layout-sheet');
+        const card = document.querySelector('.dcc_layout-summary');
+        const bar = document.querySelector('.dcc_layout-bar');
+        const sr = sheet.getBoundingClientRect();
+        const cr = card.getBoundingClientRect();
+        return {
+            grid: getComputedStyle(form).display,
+            /* The sheet left, the card right, side by side. */
+            sideBySide: sr.right <= cr.left + 1 && Math.abs(sr.top - cr.top) < 40,
+            /* NO PINNED BAR ON DESKTOP (Rob): it is in the card, in the flow. */
+            barPosition: getComputedStyle(bar).position,
+            barInCard: card.contains(bar),
+            pagePad: getComputedStyle(document.body).paddingBottom,
+            /* The clipping is removed HERE, which is what lets sticky work. */
+            overflow: [getComputedStyle(document.querySelector('main.main')).overflow,
+                       getComputedStyle(document.querySelector('div.one-column')).overflow],
+            sticky: getComputedStyle(card).position,
+            cardTop: Math.round(cr.top),
+            noSideScroll: document.documentElement.scrollWidth <= window.innerWidth,
+        };
+    });
+    check('the form becomes two columns, sheet left and card right',
+        [deskLayout.grid, deskLayout.sideBySide], ['grid', true]);
+    check('there is NO pinned bar on desktop — it is in the card, in the flow',
+        [deskLayout.barPosition, deskLayout.barInCard, deskLayout.pagePad],
+        ['static', true, '0px']);
+    check('the clipping is removed at this width, which is what lets sticky work',
+        deskLayout.overflow, ['visible', 'visible']);
+    check('… and no sideways scroll comes of removing it', deskLayout.noSideScroll, true);
+
+    /* THE MEASUREMENT THAT MATTERS: the card stays in view when the page
+       scrolls. Measured, because with the theme's clipping in place a sticky
+       card scrolls clean away — 1200px down it was at top:-1180px. */
+    const stayed = await desk.evaluate(() => {
+        const card = document.querySelector('.dcc_layout-summary');
+        const before = Math.round(card.getBoundingClientRect().top);
+        window.scrollTo(0, 1200);
+        return new Promise((resolve) => setTimeout(() => resolve({
+            before: before,
+            after: Math.round(card.getBoundingClientRect().top),
+            scrolled: window.scrollY,
+            position: getComputedStyle(card).position,
+        }), 60));
+    });
+    check('the page really scrolled (the guard: otherwise nothing is proven)',
+        stayed.scrolled >= 600, true);
+    check('the summary card stays in view as the page scrolls',
+        [stayed.position, stayed.after >= 0 && stayed.after < 200], ['sticky', true]);
+
+    /* And with the theme's clipping put back, it does NOT — which is what
+       makes the unclipping the thing doing the work, rather than a tidy-up. */
+    const clippedAgain = await desk.evaluate(() => {
+        document.querySelector('main.main').style.setProperty('overflow', 'hidden', 'important');
+        document.querySelector('div.one-column').style.setProperty('overflow', 'hidden', 'important');
+        window.scrollTo(0, 0);
+        window.scrollTo(0, 1200);
+        return new Promise((resolve) => setTimeout(() => resolve(
+            Math.round(document.querySelector('.dcc_layout-summary').getBoundingClientRect().top)
+        ), 60));
+    });
+    check('with the clipping back, the same card scrolls away (so the unclipping is the fix)',
+        clippedAgain < -500, true);
+
+    await deskCtx.close();
 
     /* ===================================================================== *
      * TAP RULES (v0.18.0), AND WHAT THEY ACTUALLY REQUIRE NOW.
