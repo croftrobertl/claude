@@ -4545,8 +4545,8 @@
    "hero"
   ],
   "claim": "0.35.0: a cottage whose original is under 1024 wide still gets its photo",
-  "find": "        $chosen = $best ?? $widest ?? $none;",
-  "replace": "        $chosen = $best ?? $none;",
+  "find": "        $chosen = $best ?? $widest;",
+  "replace": "        $chosen = $best;",
   "count": 1
  },
  {
@@ -4811,7 +4811,7 @@
    "restore-browser"
   ],
   "claim": "0.35.0: the dead-end message is hidden once the card replaces it",
-  "find": "        hideDeadEnd();",
+  "find": "        hideDeadEnd(host);",
   "replace": "",
   "count": 1
  },
@@ -4833,8 +4833,8 @@
    "restore-browser"
   ],
   "claim": "0.35.0: with no stored stay the guest is sent to pick dates, never offered a stay",
-  "find": "        if (held && held.roomTypeId && held.checkIn && held.checkOut) {",
-  "replace": "        if (held) {",
+  "find": "        } else if (complete(held)) {",
+  "replace": "        } else if (held) {",
   "count": 1
  },
  {
@@ -5642,8 +5642,8 @@
    "hero"
   ],
   "claim": "0.35.0 item 1: the WebP twin is served when it exists (128 KB -> 53 KB on Cottage 34)",
-  "find": "        if ($chosen['url'] !== '') {\n            $chosen['url'] = self::prefer_webp($attachment, $chosen['url']);\n        }",
-  "replace": "",
+  "find": "            $twin = self::webp_twin($path, $url);",
+  "replace": "            $twin = $url;",
   "count": 1
  },
  {
@@ -5653,8 +5653,8 @@
    "hero"
   ],
   "claim": "0.35.0 item 1: the extension is SWAPPED, never appended (the .jpg.webp form 404s)",
-  "find": "        return (string) preg_replace('/\\.(jpe?g|png)$/i', '.webp', $url);",
-  "replace": "        return $url . '.webp';",
+  "find": "        $swapped = (string) preg_replace('/\\.(jpe?g|png)$/i', '.webp', $parts[0]);",
+  "replace": "        $swapped = $parts[0] . '.webp';",
   "count": 1
  },
  {
@@ -5664,8 +5664,8 @@
    "hero"
   ],
   "claim": "0.35.0 item 1: the twin is checked on disk, so a missing one is not a broken header",
-  "find": "        if (!file_exists(dirname($original) . '/' . $twin)) {\n            return $url;\n        }",
-  "replace": "",
+  "find": "        if ($twin === '' || $twin === $path || !file_exists($twin)) {",
+  "replace": "        if ($twin === '' || $twin === $path) {",
   "count": 1
  },
  {
@@ -5688,17 +5688,6 @@
   "claim": "0.35.0 item 1: the title is centred, per Rob's standing rule",
   "find": "    justify-content: center;\n    text-align: center;",
   "replace": "",
-  "count": 1
- },
- {
-  "id": "res-dead-end-selector-guessed",
-  "file": "dcc-custom-checkout/assets/restore.js",
-  "suites": [
-   "restore-browser"
-  ],
-  "claim": "0.35.0 item 10: the dead-end message is found by the selector live really serves",
-  "find": "            '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');",
-  "replace": "            '.mphb-errors-wrapper, .mphb-error, .mphb-errors');",
   "count": 1
  },
  {
@@ -6181,8 +6170,8 @@
    "restore-browser"
   ],
   "claim": "v0.35.1 item 2 - MotoPress's own line goes out of view whatever shape it is in",
-  "find": "        if (wrapper) {\n            var kids = host.children;\n            for (var k = 0; k < kids.length; k++) { conceal(kids[k]); }\n            return;\n        }",
-  "replace": "        if (wrapper && false) {\n            return;\n        }",
+  "find": "        if (wrapper) {\n            /* A SNAPSHOT, because wrapping replaces nodes as we go and\n               `childNodes` is live. */\n            var kids = Array.prototype.slice.call(host.childNodes);\n            for (var k = 0; k < kids.length; k++) {\n                if (kids[k].nodeType === 1) { conceal(kids[k]); }\n                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }\n            }\n            return;\n        }",
+  "replace": "        if (wrapper) {\n            return;\n        }",
   "count": 1
  },
  {

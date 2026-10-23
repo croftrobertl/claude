@@ -2091,6 +2091,19 @@ yours to improvise.
     and Rob says yes. He will then compare checkout-to-booking completion in
     Google Analytics for two weeks either side. **Nothing for this repo to
     build** — do not invent an analytics hook for it.
+  - **THE FULL RUN AT 0.35.2: 286 + 286, and the second half earned its
+    keep.** The first half was 286/286. The second was 278 killed, 1 SURVIVED
+    and 7 STALE — the survivor being the unreachable-branch finding and the
+    stale ones being 0.35.x's own rewrites. Both halves left the tree clean.
+    **The targeted run of 0.35.2's eight was 7 killed + 1 SURVIVED**, and that
+    survivor was a test of mine that could not fail: `js-bare-text-retyped`
+    swaps the text node's move for `innerHTML = node.nodeValue`, and on plain
+    prose that produces an identical single text node, so reading the span's
+    text and its child's node type could not tell the two apart. The condition
+    the claim names is text HTML would RE-PARSE, so the fixture's text node now
+    carries `&` and angle brackets — realistic, since MotoPress's strings hold
+    ampersands and its translations hold entities. **Rule, again: a claim about
+    a MECHANISM needs an input on which the two mechanisms differ.**
   - **A RUN STOPPED MID-MUTATION LEAVES THAT FILE MUTATED, AND IT HAPPENED
     AGAIN.** 0.35.1's first full half was started with `nohup … &`, was killed
     at mutation 77 of 282 when the session's background slot ended, and left
@@ -2345,8 +2358,35 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 396
-  mutations, 396 killed, 0 of everything else (v0.34.2, twenty-six suites —
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **571
+  mutations, 571 killed, 0 of everything else** (v0.35.2, thirty-two suites —
+  `layout`, `hero`, `hero-browser`, `restore`, `restore-browser`,
+  `restore-min`, `layout-fields`, `layout-fields-browser` and
+  `layout-fields-min` added across 0.35.x; run in two halves of 286). That is
+  after resolving the full run's **1 SURVIVED and 7 STALE**, all of them
+  consequences of 0.35.x's own rewrites:
+  - the seven STALE were anchored on lines 0.35.1/0.35.2 replaced — the photo
+    chooser's fallback, the twin lookup (three), `hideDeadEnd`'s call and its
+    wrapper branch, and the stored-stay completeness test. Re-anchored with
+    their intent unchanged and re-run.
+  - **`res-dead-end-selector-guessed` SURVIVED because 0.35.2's structural
+    sweep made the pinned selector unreachable**, and that is a finding about
+    the CODE, not the mutation. `withoutForm()` picks its host from a
+    preference list with `.mphb_sc_checkout-wrapper` FIRST, so if a wrapper
+    exists anywhere it IS the host and `hideDeadEnd`'s `if (wrapper)` branch
+    runs; the `else` branch then queries
+    `.mphb_sc_checkout-wrapper > .mphb-data-incorrect` on a document that has
+    no wrapper, and can never match. The only thing it could ever have covered
+    is a page with TWO wrappers, which is not proven to exist. The mutation is
+    retired as an equivalent mutant. **The branch is unreachable code and
+    should go** — `restore.js`'s own comment says "a guessed selector that
+    matches nothing is not a fallback, it is a line that looks like one", and
+    a pinned one that cannot match is the same line. It was NOT removed in
+    0.35.2: the change is a strict no-op and the 0.35.2 zip was already handed
+    over, so re-cutting an artifact with the same version and a different md5
+    would have been the bigger hazard. Remove it in the next release that
+    touches the file.
+  Earlier: 396 mutations, 396 killed (v0.34.2, twenty-six suites —
   `upload-access`, `audit`, `minify` and `selectlist-min` added; run in two
   halves, as below). Its targeted run of the 22 new mutations was 21 killed
   + 1 SURVIVED: `ua-any-post-type`, masked because every "not a booking" case
