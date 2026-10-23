@@ -157,6 +157,34 @@ def run_suite(name):
     return PASS, f'{passes} passing'
 
 
+def stale_anchors():
+    """Every mutation whose find-string no longer matches its file.
+
+    CHECKED BEFORE ANY SUITE RUNS, because it costs milliseconds and a stale
+    anchor otherwise surfaces only when the run REACHES that mutation -- up to
+    two hours into a full run, and only for the mutations it happens to reach.
+    0.35.3 removed four lines of restore.js and left FOUR anchors stale; a
+    targeted run included two of them and reported "2 STALE", which read like
+    the whole answer. STALE IS NOT A PASS, so it must not be found late or in
+    part.
+
+    Separate from preflight() and reachable as `--anchors` so it can be driven
+    on its own -- a check only callable behind thirty-six suites is a check
+    nobody can prove fires.
+    """
+    out = []
+    for m in json.load(open(os.path.join(ROOT, 'tests/mutate/mutations.json'))):
+        path = os.path.join(ROOT, m['file'])
+        if not os.path.isfile(path):
+            out.append((m['id'], f"{m['file']} is not on disk"))
+            continue
+        want = m.get('count', 1)
+        got = open(path, encoding='utf-8').read().count(m['find'])
+        if got != want:
+            out.append((m['id'], f'pattern found {got}x, declared {want}x'))
+    return out
+
+
 def preflight():
     """Every suite green, unmutated, before anything is touched."""
     print('Suite files on disk:')
@@ -174,6 +202,14 @@ def preflight():
     for s in missing:
         print(f'  {s:34s} *** WIRED UP BUT NOT ON DISK ***')
 
+    stale = stale_anchors()
+    print(f'\nAnchors: {"all live" if not stale else str(len(stale)) + " STALE"}')
+    for ident, why in stale:
+        print(f'  *** STALE *** {ident:42s} {why}')
+    if stale:
+        print('\nA stale anchor proves nothing. Re-anchor these with their '
+              'intent unchanged before running.')
+
     print('\nBaseline (unmutated):')
     bad = []
     for name in SUITES:
@@ -184,15 +220,22 @@ def preflight():
     if bad:
         print(f'\nBASELINE NOT GREEN: {", ".join(bad)}')
         print('Every mutation would look killed. Fix the harness first.')
-    return not bad
+    return not bad and not stale
 
 
 def main():
     args = [a for a in sys.argv[1:]]
     only = None
     for a in args:
-        if a != '--preflight':
+        if a not in ('--preflight', '--anchors'):
             only = a
+
+    if '--anchors' in args:
+        stale = stale_anchors()
+        print(f'Anchors: {"all live" if not stale else str(len(stale)) + " STALE"}')
+        for ident, why in stale:
+            print(f'  *** STALE *** {ident:42s} {why}')
+        return 1 if stale else 0
 
     if not preflight():
         return 2

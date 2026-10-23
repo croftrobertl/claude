@@ -2208,6 +2208,22 @@ yours to improvise.
     which is what let a cookieless GET cache the dead-end page and the pre-gzip
     rule then serve that dead end to a GET carrying MotoPress's date cookies.
     Keeping that rule correct is a requirement, not a nicety.
+  - **REMOVING FOUR LINES LEFT FOUR ANCHORS STALE, AND THE RUNNER COULD ONLY
+    FIND THEM LATE AND IN PART.** Dedenting `hideDeadEnd()`'s body broke the
+    find-strings of `js-sweep-unconfined`, `js-booked-line-shown`,
+    `js-bare-text-elements-only` and `js-bare-text-left`. The targeted run
+    happened to include two of them and reported "2 STALE", **which read like
+    the whole answer**; a full run would have discovered the others up to two
+    hours in, one at a time, and only those it reached.
+    **So the preflight now checks every anchor before any suite runs**
+    (`stale_anchors()`), which costs milliseconds against 576 string counts,
+    and it is reachable on its own as `python3 tests/mutate/run.py --anchors`
+    — **a check only callable behind thirty-six suites is a check nobody can
+    prove fires.** It was proved to FAIL on all three stale shapes (a find
+    that cannot match, a declared count that cannot hold, a file not on disk),
+    exits non-zero, and the baseline is not green while any anchor is stale.
+    **Run `--anchors` after any edit that moves code**, which is cheaper than
+    learning it from a run.
   - **THE UNREACHABLE PINNED-SELECTOR BRANCH IS REMOVED** (queued at 0.35.2,
     done here as the Director asked). `hideDeadEnd()` now returns unless the
     host IS MotoPress's wrapper. The live markup it used to query
@@ -2460,8 +2476,9 @@ yours to improvise.
   at 50/50 only after re-targeting that one mutation
   (`js-form-ceiling-none`, which kills honestly). Say it that way round.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
-  `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
-  alone. It applies one textual mutation, runs the suites that claim to cover it,
+  `python3 tests/mutate/run.py [suite|id]`, `--preflight` for the baseline
+  alone, or **`--anchors` for the find-strings alone** (milliseconds; run it
+  after any edit that moves code — see 0.35.3). It applies one textual mutation, runs the suites that claim to cover it,
   and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **576
   mutations, every one of them killed** (v0.35.3, **36 suites** — `layout`,
   `hero`, `hero-browser`, `restore`, `restore-browser`, `restore-min`,

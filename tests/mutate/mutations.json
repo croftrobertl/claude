@@ -6170,8 +6170,8 @@
    "restore-browser"
   ],
   "claim": "v0.35.1 item 2 - MotoPress's own line goes out of view whatever shape it is in",
-  "find": "        if (wrapper) {\n            /* A SNAPSHOT, because wrapping replaces nodes as we go and\n               `childNodes` is live. */\n            var kids = Array.prototype.slice.call(host.childNodes);\n            for (var k = 0; k < kids.length; k++) {\n                if (kids[k].nodeType === 1) { conceal(kids[k]); }\n                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }\n            }\n            return;\n        }",
-  "replace": "        if (wrapper) {\n            return;\n        }",
+  "find": "        var kids = Array.prototype.slice.call(host.childNodes);\n        for (var k = 0; k < kids.length; k++) {\n            if (kids[k].nodeType === 1) { conceal(kids[k]); }\n            else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }\n        }",
+  "replace": "        return;",
   "count": 1
  },
  {
@@ -6181,8 +6181,8 @@
    "restore-browser"
   ],
   "claim": "v0.35.1 item 2 - the structural sweep never runs outside MotoPress's own wrapper, or it would blank the page",
-  "find": "        var wrapper = host && host.classList\n            && host.classList.contains('mphb_sc_checkout-wrapper');",
-  "replace": "        var wrapper = !!host;",
+  "find": "        if (!host || !host.classList\n            || !host.classList.contains('mphb_sc_checkout-wrapper')) {\n            return;\n        }",
+  "replace": "        if (!host) {\n            return;\n        }",
   "count": 1
  },
  {
@@ -6259,8 +6259,8 @@
    "restore-browser"
   ],
   "claim": "v0.35.2 - a bare text node in MotoPress's wrapper is wrapped and hidden; an element sweep cannot class it",
-  "find": "                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }",
-  "replace": "                else if (false) { concealText(host, kids[k]); }",
+  "find": "            else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }",
+  "replace": "            else if (false) { concealText(host, kids[k]); }",
   "count": 1
  },
  {
@@ -6270,8 +6270,8 @@
    "restore-browser"
   ],
   "claim": "v0.35.2 - the sweep walks childNodes, not children: 0.35.1 saw elements only",
-  "find": "            var kids = Array.prototype.slice.call(host.childNodes);",
-  "replace": "            var kids = Array.prototype.slice.call(host.children);",
+  "find": "        var kids = Array.prototype.slice.call(host.childNodes);",
+  "replace": "        var kids = Array.prototype.slice.call(host.children);",
   "count": 1
  },
  {
