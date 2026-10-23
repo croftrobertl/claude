@@ -117,14 +117,14 @@ function crane(g, L, w, style, dark) {
   g.strokeStyle = leg; g.lineWidth = L * 0.022;
   for (var s0 = 0; s0 < 2; s0++) {
     g.beginPath();
-    g.moveTo(-L * 0.16, L * 0.030 + s0 * L * 0.010);
-    g.quadraticCurveTo(-L * 0.38, L * 0.050 + s0 * L * 0.012, -L * 0.58, L * 0.062 + s0 * L * 0.014);
+    g.moveTo(-L * 0.16, L * 0.055 + s0 * L * 0.010);
+    g.quadraticCurveTo(-L * 0.38, L * 0.082 + s0 * L * 0.012, -L * 0.58, L * 0.100 + s0 * L * 0.014);
     g.stroke();
   }
   g.lineWidth = L * 0.016;
   g.beginPath();
-  g.moveTo(-L * 0.58, L * 0.062); g.lineTo(-L * 0.645, L * 0.072);
-  g.moveTo(-L * 0.58, L * 0.076); g.lineTo(-L * 0.645, L * 0.086);
+  g.moveTo(-L * 0.58, L * 0.100); g.lineTo(-L * 0.645, L * 0.112);
+  g.moveTo(-L * 0.58, L * 0.114); g.lineTo(-L * 0.645, L * 0.126);
   g.stroke();
 
   /* --- the far wing first, so the body overlaps it --- */
@@ -313,10 +313,14 @@ const PIECES = [
     }).join('');
     await page.setContent(`<!doctype html><meta charset="utf-8"><style>
       body{margin:0;background:#FBF6EC;font:13px/1.5 system-ui,sans-serif;color:#2b2b2b;padding:18px 20px}
-      h1{font-size:19px;margin:0 0 2px} .sub{color:#6b6b6b;margin:0 0 16px}
+      /* Rob's standing rule: every title and heading is CENTERED; only a
+         multi-sentence paragraph is left-aligned. */
+      h1{font-size:19px;margin:0 0 2px;text-align:center}
+      .sub{color:#6b6b6b;margin:0 auto 16px;max-width:900px}
       section{border-top:1px solid #E3D9C6;padding:12px 0 6px}
-      h2{font-size:15px;margin:0 0 2px} .note{margin:0 0 8px;color:#6b6b6b;max-width:860px}
-      .opts{display:flex;gap:26px;flex-wrap:wrap}
+      h2{font-size:15px;margin:0 0 2px;text-align:center}
+      .note{margin:0 auto 8px;color:#6b6b6b;max-width:860px}
+      .opts{display:flex;gap:26px;flex-wrap:wrap;justify-content:center}
       .opt{text-align:center} .opt p{margin:6px 0 0;font-weight:600;max-width:200px}
       .big{height:160px;display:flex;align-items:flex-end;justify-content:center}
       .row{display:flex;gap:8px;justify-content:center;margin-top:8px}
@@ -340,9 +344,11 @@ const PIECES = [
     page.on('console', m => { if (m.type() === 'error') { console.error('  console:', m.text()); } });
     await page.setContent(`<!doctype html><meta charset="utf-8"><style>
       body{margin:0;background:#FBF6EC;font:13px/1.5 system-ui,sans-serif;color:#2b2b2b;padding:18px 20px}
-      h1{font-size:19px;margin:0 0 2px} .sub{color:#6b6b6b;margin:0 0 14px;max-width:1000px}
-      h2{font-size:15px;margin:14px 0 6px;border-top:1px solid #E3D9C6;padding-top:12px}
-      .strip{display:flex;gap:12px} figure{margin:0} figcaption{margin-top:5px;color:#6b6b6b}
+      h1{font-size:19px;margin:0 0 2px;text-align:center}
+      .sub{color:#6b6b6b;margin:0 auto 14px;max-width:1000px}
+      h2{font-size:15px;margin:14px 0 6px;border-top:1px solid #E3D9C6;padding-top:12px;text-align:center}
+      .strip{display:flex;gap:12px;justify-content:center} figure{margin:0}
+      figcaption{margin-top:5px;color:#6b6b6b;text-align:center}
       canvas{display:block;border:1px solid #D9CDB6;border-radius:3px}
       </style>
       <h1>Seasons 4.13.0 — Thanksgiving, step 1: cranes across a harvest moon</h1>
@@ -369,10 +375,20 @@ const PIECES = [
         var c = document.createElement('canvas');
         c.width = W; c.height = H; c.style.width = W + 'px'; c.style.height = H + 'px';
         var g = c.getContext('2d');
-        /* a stand-in for the header photograph: dusk over the canal */
+        /* A STAND-IN FOR THE COTTAGE PHOTOGRAPH, and nothing more. The
+         * scene itself paints NO sky: there is no full-canvas fill
+         * anywhere in the engine, and witchmoon draws the moon and the
+         * witch straight onto a transparent canvas over the picture. This
+         * plate exists only so the stills are not drawn on white. */
         var sky = g.createLinearGradient(0, 0, 0, H);
         sky.addColorStop(0, '#20344B'); sky.addColorStop(0.55, '#4A5A63'); sky.addColorStop(1, '#6E6A55');
         g.fillStyle = sky; g.fillRect(0, 0, W, H);
+        /* a hint of the cottage roofline, so it is obvious what is photo */
+        g.fillStyle = 'rgba(28,36,30,0.55)';
+        g.beginPath(); g.moveTo(0, H); g.lineTo(0, H * 0.82); g.lineTo(W * 0.20, H * 0.72);
+        g.lineTo(W * 0.40, H * 0.82); g.lineTo(W * 0.40, H); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(W * 0.62, H); g.lineTo(W * 0.62, H * 0.86); g.lineTo(W * 0.80, H * 0.77);
+        g.lineTo(W, H * 0.86); g.lineTo(W, H); g.closePath(); g.fill();
         /* one phone-based size factor, as witchK does */
         var k = Math.min(Math.max(W / 390, 0.82), 1.3);
         var MR = Math.round(58 * k);                 /* a LOW, LARGE moon */
