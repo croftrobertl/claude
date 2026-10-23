@@ -115,33 +115,26 @@ class Guide_Page {
 	}
 
 	/**
-	 * THE ONE CHIP A ROW MAY CARRY, by the Director's exact rules.
+	 * THE ONE CHIP A ROW MAY CARRY — and since 1.46.1 "Keep Away" is NOT
+	 * one of them.
 	 *
-	 * "Keep Away": the 21 species in the Safety GROUP. Not `is_hazard()`,
-	 * which also returns the alligator, the cane toad, the Cuban treefrog
-	 * and the two flagged plants — those are animals and plants that happen
-	 * to be dangerous, and they carry their warning in their own entry.
+	 * Rob's decision of 2026-10-23: a hazard gets a RED EDGE STRIPE down the
+	 * row instead of a chip, and the stripe covers all 28 species
+	 * `is_hazard()` flags rather than the 21 in the Safety group. 1.46.0
+	 * followed the rule as the Director first wrote it, which left the
+	 * alligator — the hazard on this canal — with no mark at all, and he
+	 * saw it in the screenshot. Taking it out of the chip slot is what lets
+	 * the cane toad keep "Lake County" while still being marked dangerous:
+	 * the two facts are no longer competing for one place.
 	 *
-	 * "Protected": exactly six keys, listed here and NOWHERE DERIVED. The
-	 * `protected` flag is close to this set but not equal to it, and the
-	 * brief is explicit — "never infer any other status". A badge that
-	 * over-claims teaches a guest to ignore badges (the 1.33.0 kestrel
-	 * lesson), and this one names federal and state law.
-	 *
-	 * "Lake County": a NEAR species, from the local-first pull.
-	 *
-	 * AT MOST ONE, in that order. A safety species that is also NEAR — the
-	 * diamondback is both — shows "Keep Away", because the ranking is what
-	 * the guest needs first, not what is most interesting.
+	 * So the chip is now: "Protected" (the official lists, below), then
+	 * "Lake County" (a NEAR species). At most one, in that order.
 	 *
 	 * @return array{0:string,1:string}|null [ slug, label ]
 	 */
 	public static function chip_of( array $sp ): ?array {
 		$id = (string) ( $sp['id'] ?? '' );
-		if ( 'safety' === (string) ( $sp['group'] ?? '' ) ) {
-			return [ 'danger', __( 'Keep Away', 'dcc-wildlife' ) ];
-		}
-		if ( in_array( $id, self::PROTECTED_KEYS, true ) ) {
+		if ( isset( self::PROTECTED[ $id ] ) ) {
 			return [ 'protected', __( 'Protected', 'dcc-wildlife' ) ];
 		}
 		if ( 'NEAR' === Local::class_of( $id ) ) {
@@ -151,10 +144,130 @@ class Guide_Page {
 	}
 
 	/**
-	 * The six, by key. Written out because the Director wrote them out: the
-	 * species whose own safety text names federal or state protection.
+	 * WHAT "PROTECTED" MEANS, AND WHERE IT COMES FROM (1.46.1, Rob's pick).
+	 *
+	 * Through 1.46.0 the chip sat on six species "whose own safety text
+	 * names federal or state protection" — which made the GUIDE'S OWN PROSE
+	 * the authority for a legal claim. It is now the official list, and the
+	 * source travels with it so the sheet can cite what it is asserting.
+	 *
+	 * Twelve keys, each with the status that actually applies:
+	 *
+	 *   'federal' — listed Threatened under the federal Endangered Species
+	 *               Act. Five: the indigo snake, the sand skink, the scrub
+	 *               jay, the wood stork and the manatee (which is also
+	 *               covered by the Marine Mammal Protection Act and the
+	 *               Florida Manatee Sanctuary Act).
+	 *   'state'   — State-designated Threatened on Florida's list. Six.
+	 *   'eagle'   — the bald eagle, which came OFF that list in 2007 and is
+	 *               protected by the federal Bald and Golden Eagle
+	 *               Protection Act and FWC rule 68A-16.002 instead. Its own
+	 *               status rather than a footnote to somebody else's.
+	 *
+	 * THE ALLIGATOR IS DELIBERATELY ABSENT. It appears on the federal list
+	 * only "due to similarity of appearance" to the American crocodile — a
+	 * listing about enforcement, not about the alligator's own standing —
+	 * so a Protected chip would mislead. Its Keep Away stripe is the mark
+	 * that matters on a canal.
+	 *
+	 * NOTHING HERE IS DERIVED. The `protected` FLAG in the registry is close
+	 * to this set and not equal to it; a badge that over-claims teaches a
+	 * guest to ignore badges, which is the 1.33.0 kestrel lesson — and the
+	 * kestrel is in this list for exactly that reason, with a line of its
+	 * own saying which kestrel.
 	 */
-	public const PROTECTED_KEYS = [ 'manatee', 'eagle', 'kestrel', 'littleblue', 'tricolored', 'woodstork' ];
+	public const PROTECTED = [
+		'indigosnake'    => 'federal',
+		'sandskink'      => 'federal',
+		'scrubjay'       => 'federal',
+		'woodstork'      => 'federal',
+		'manatee'        => 'federal',
+		'gophertortoise' => 'state',
+		'sandhill'       => 'state',
+		'blackskimmer'   => 'state',
+		'littleblue'     => 'state',
+		'tricolored'     => 'state',
+		'kestrel'        => 'state',
+		'eagle'          => 'eagle',
+	];
+
+	/**
+	 * The list the twelve come from, stored rather than written into a
+	 * sentence: a citation is data, and this one has a date that will move.
+	 */
+	public const PROTECTED_SOURCE = [
+		'name'      => 'Florida\'s Endangered and Threatened Species List',
+		'rule'      => 'Fla. Admin. Code R. 68A-27.003',
+		'effective' => '2025-04-03',
+		'url'       => 'https://www.law.cornell.edu/regulations/florida/Fla-Admin-Code-Ann-R-68A-27.003',
+	];
+
+	/** Kept as the old name so nothing that read it breaks; same twelve. */
+	public const PROTECTED_KEYS = [
+		'indigosnake',
+		'sandskink',
+		'scrubjay',
+		'woodstork',
+		'manatee',
+		'gophertortoise',
+		'sandhill',
+		'blackskimmer',
+		'littleblue',
+		'tricolored',
+		'kestrel',
+		'eagle',
+	];
+
+	/**
+	 * The one sourced line a protected species carries under Take Care.
+	 *
+	 * WORDED PER STATUS, because the three are not the same claim and a
+	 * guest who looks one up must find the guide supported rather than
+	 * contradicted (the 1.33.0 scrub-jay rule, applied to law instead of
+	 * ecology).
+	 */
+	public static function protected_line( string $id ): string {
+		$status = self::PROTECTED[ $id ] ?? '';
+		if ( '' === $status ) {
+			return '';
+		}
+		$when = __( 'April 2025', 'dcc-wildlife' );
+
+		if ( 'kestrel' === $id ) {
+			/*
+			 * THE KESTREL TRUTH, which the Director asked for by name. Only
+			 * the RESIDENT subspecies is listed; the birds wintering here
+			 * from the north are not, and they are the ones most guests see.
+			 */
+			return sprintf(
+				/* translators: %s: the month and year the list took effect. */
+				__( 'The Southeastern American kestrel that nests here is State-designated Threatened (Florida\'s Endangered and Threatened Species List, %s); winter visitors from the north are not.', 'dcc-wildlife' ),
+				$when
+			);
+		}
+		if ( 'eagle' === $id ) {
+			return __( 'Not on Florida\'s Threatened list since 2007, but protected by the federal Bald and Golden Eagle Protection Act and FWC rule 68A-16.002.', 'dcc-wildlife' );
+		}
+		if ( 'manatee' === $id ) {
+			return sprintf(
+				/* translators: %s: the month and year the list took effect. */
+				__( 'Federally Threatened (Florida\'s Endangered and Threatened Species List, %s), and also covered by the Marine Mammal Protection Act and the Florida Manatee Sanctuary Act.', 'dcc-wildlife' ),
+				$when
+			);
+		}
+		if ( 'federal' === $status ) {
+			return sprintf(
+				/* translators: %s: the month and year the list took effect. */
+				__( 'Federally Threatened (Florida\'s Endangered and Threatened Species List, %s).', 'dcc-wildlife' ),
+				$when
+			);
+		}
+		return sprintf(
+			/* translators: %s: the month and year the list took effect. */
+			__( 'State-designated Threatened (Florida\'s Endangered and Threatened Species List, %s).', 'dcc-wildlife' ),
+			$when
+		);
+	}
 
 	/** `[dcc_wildlife_guide]` */
 	public static function shortcode( array $atts = [] ): string {
@@ -365,9 +478,15 @@ class Guide_Page {
 	 * @param array<string,mixed> $sp
 	 */
 	private static function row( array $sp ): void {
-		$id    = (string) $sp['id'];
-		$chip  = self::chip_of( $sp );
-		$local = Local::row( $id );
+		$id     = (string) $sp['id'];
+		$chip   = self::chip_of( $sp );
+		$local  = Local::row( $id );
+		/*
+		 * 1.46.1: the hazard mark is a STRIPE on the row, not a chip, and it
+		 * follows `is_hazard()` — the one definition (the Safety group, plus
+		 * anything flagged `danger` wherever it is filed). All 28.
+		 */
+		$hazard = Species::is_hazard( $sp );
 		$src   = is_array( $sp['src'] ?? null ) ? $sp['src'] : [];
 		$thumb = (string) ( $src['thumb'] ?? '' );
 		/*
@@ -392,11 +511,27 @@ class Guide_Page {
 		 */
 		$credit = Species::photo_credit_line( $id );
 		?>
-		<li class="dccwl-gp-item" id="<?php echo esc_attr( self::ANCHOR_PREFIX . $id ); ?>"
+		<?php
+		/*
+		 * THE DEFAULT VIEW IS SERVER-RENDERED (1.46.1, speed).
+		 *
+		 * The page opens on "Seen Here", so the seven Wider Florida rows
+		 * ship with `hidden` already on them. Nothing about which view is
+		 * the default depends on the date or the visitor, so this is
+		 * cache-safe — and it means guide.js has NO DOM WRITES to make on
+		 * load for the view every guest arrives at. 1.46.0's init set
+		 * `.hidden` on all 402 rows (395 of them to the value they already
+		 * had) and that was most of a 479 ms task on a 4x-throttled CPU.
+		 */
+		$seen = Local::seen_here( $id );
+		?>
+		<li class="dccwl-gp-item<?php echo $hazard ? ' dccwl-gp-item-hazard' : ''; ?>" id="<?php echo esc_attr( self::ANCHOR_PREFIX . $id ); ?>"
+			<?php echo $seen ? '' : 'hidden'; ?>
+			<?php echo $hazard ? 'data-hazard="1"' : ''; ?>
 			data-dccwl-gp-item
 			data-key="<?php echo esc_attr( $id ); ?>"
 			data-group="<?php echo esc_attr( self::pill_of( $sp ) ); ?>"
-			data-scope="<?php echo esc_attr( Local::seen_here( $id ) ? 'here' : 'wider' ); ?>"
+			data-scope="<?php echo esc_attr( $seen ? 'here' : 'wider' ); ?>"
 			data-name="<?php echo esc_attr( (string) $sp['name'] ); ?>"
 			data-sci="<?php echo esc_attr( (string) $sp['sci'] ); ?>"
 			<?php if ( '' !== $photo ) : ?> data-photo="<?php echo esc_url( $photo ); ?>"<?php endif; ?>
@@ -414,9 +549,36 @@ class Guide_Page {
 					<?php else : ?>
 						<span class="dccwl-gp-thumb dccwl-gp-thumb-none" aria-hidden="true"></span>
 					<?php endif; ?>
-					<span class="dccwl-gp-text">
+					<?php
+					/*
+					 * NO TEXT WRAPPER AND NO CHEVRON ELEMENT (1.46.1, speed).
+					 * The summary is a grid now — thumb | name / where | arrow
+					 * — so the name and the where-line are laid out as its own
+					 * children, and the chevron is the summary's ::after. Two
+					 * elements fewer per row is 804 fewer nodes for the parser
+					 * and the style engine to visit on a page whose first
+					 * paint is bounded by exactly that work.
+					 */
+					?>
 						<span class="dccwl-gp-name">
 							<?php echo esc_html( (string) $sp['name'] ); ?>
+							<?php if ( $hazard ) : ?>
+								<?php
+								/*
+								 * THE STRIPE IS SILENT, SO THE NAME SAYS IT.
+								 *
+								 * A coloured edge is nothing to a screen
+								 * reader, so the row's accessible name gains
+								 * ", Keep Away" — the Director's own wording.
+								 * It is the FIRST thing after the name rather
+								 * than the last, because a guest listening to
+								 * a list of 402 should hear the warning with
+								 * the species, not after everything else
+								 * about it.
+								 */
+								?>
+								<span class="dccwl-sr"><?php echo esc_html( __( ', Keep Away', 'dcc-wildlife' ) ); ?></span>
+							<?php endif; ?>
 							<?php if ( $chip ) : ?>
 								<span class="dccwl-gp-chip dccwl-gp-chip-<?php echo esc_attr( $chip[0] ); ?>"><?php echo esc_html( $chip[1] ); ?></span>
 							<?php endif; ?>
@@ -424,26 +586,52 @@ class Guide_Page {
 						<?php if ( '' !== (string) $sp['where'] ) : ?>
 							<span class="dccwl-gp-where"><?php echo esc_html( (string) $sp['where'] ); ?></span>
 						<?php endif; ?>
-					</span>
-					<?php
-					/*
-					 * THE CHEVRON IS DRAWN IN CSS, not shipped per row.
-					 *
-					 * As an inline SVG it was about 200 bytes 402 times — 80
-					 * KB of this page to draw one arrow four hundred times.
-					 * A page whose size is its whole cost should not spend it
-					 * on decoration, and this one is `aria-hidden` anyway:
-					 * nothing is lost but the bytes.
-					 */
-					?>
-					<span class="dccwl-gp-go" aria-hidden="true"></span>
 				</summary>
 				<div class="dccwl-gp-entry" data-dccwl-gp-entry>
+					<?php if ( $hazard ) : ?>
+						<?php
+						/*
+						 * "Keep Away" IN THE SHEET TOO (1.46.1). Rendered
+						 * into the ENTRY rather than built by the script, so
+						 * one piece of markup serves all three readers: the
+						 * sheet (which clones this), the no-JavaScript fold,
+						 * and a crawler. The entry's own "Take Care" line
+						 * below still names the flags — danger, invasive,
+						 * nuisance — which is a different and longer answer.
+						 */
+						?>
+						<p class="dccwl-gp-keepaway" data-k="keepaway"><?php esc_html_e( 'Keep Away', 'dcc-wildlife' ); ?></p>
+					<?php endif; ?>
 					<?php Render::species_prose( $sp, false ); ?>
+					<?php self::protected_note( $id ); ?>
 					<?php self::local_line( $id, $local ); ?>
 				</div>
 			</details>
 		</li>
+		<?php
+	}
+
+	/**
+	 * The sourced status line, under the entry's own Take Care (1.46.1).
+	 *
+	 * It cites the list and its date, and links to the rule — because the
+	 * chip above it makes a LEGAL claim about a species, and a claim a guest
+	 * cannot check is the kind this module exists not to make. Printed only
+	 * for the twelve; every other species says nothing, which is what the
+	 * absence of a chip already says.
+	 */
+	private static function protected_note( string $id ): void {
+		$line = self::protected_line( $id );
+		if ( '' === $line ) {
+			return;
+		}
+		?>
+		<p class="dccwl-fg-line dccwl-gp-protected" data-k="protected">
+			<span class="dccwl-fg-k"><?php esc_html_e( 'Protected', 'dcc-wildlife' ); ?></span>
+			<?php echo esc_html( $line ); ?>
+			<a class="dccwl-gp-locallink" href="<?php echo esc_url( (string) self::PROTECTED_SOURCE['url'] ); ?>"
+				rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) self::PROTECTED_SOURCE['rule'] ); ?></a>
+		</p>
 		<?php
 	}
 

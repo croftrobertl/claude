@@ -166,6 +166,13 @@ check( [] === $too_small, 'no declaration states a font-size below 12px at a 16p
  *
  * It is listed as an exact string: the day the token's value changes, this
  * exemption stops applying and the gate speaks up again.
+ *
+ * THE DIRECTOR'S RULING (2026-10-23): keep the exemption. THIS EXEMPTION
+ * RELIES ON THE SITE'S 20px ROOT — `html { font-size: 20px }` in the
+ * deployment theme is what makes 0.7rem render at 14px, above the floor
+ * and equal to the Calendar. On a 16px root it would be 11.2px and this
+ * exemption would be excusing a real violation. If the theme's root ever
+ * changes, this entry is the first thing to revisit.
  */
 const TOKEN_EXEMPT = [ '--dccwl-fs-seg: 0.7rem' ];
 

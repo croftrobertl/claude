@@ -5056,3 +5056,107 @@ have proved nothing.
 - **Scope a sweep to what it is about.** The "every iNaturalist link is from
   the pull" assertion first ran over the whole page and failed on the photo
   CREDITS, several of which are sourced from iNaturalist observations.
+
+### 43. 1.46.1 — the stripe, the official list, and what actually held the first paint
+
+Rob's three answers of 2026-10-23, plus the Director's live measurement of the
+guide page. 1.46.0 was verified live first (402 anchors, 403 `<details>`, the
+chips at 46/6/21, 224 KB on the wire as SpeedyCache's .gz).
+
+#### "KEEP AWAY" IS A STRIPE, NOT A CHIP
+
+1.46.0 followed the chip rule as written — the 21 species in the Safety
+GROUP — and that left the alligator, the hazard on this canal, with no mark
+at all. Rob's answer: a red stripe down the row's left edge, on all 28
+species `is_hazard()` flags, and the chip slot freed for what else is true of
+the species (the cane toad keeps "Lake County").
+
+- **Every row reserves the stripe's 4px** (`border-left: 4px solid
+  transparent`); a hazard row colours it. A border added only to the 28 would
+  indent those rows and read as ragged rather than marked.
+- **Never colour alone.** Three carriers: a 4px solid bar at a fixed place,
+  `, Keep Away` inside the row's accessible name (a `.dccwl-sr` span directly
+  after the name, so a listener hears the warning with the species), and a
+  "Keep Away" paragraph at the head of the entry — which the sheet clones,
+  the no-JS fold shows and a crawler reads.
+- The desktop chosen-row marker lost its 3px inset bar: it sat exactly where
+  the stripe now does.
+
+#### "PROTECTED" FOLLOWS THE OFFICIAL LIST, NOT THE GUIDE'S OWN PROSE
+
+`Guide_Page::PROTECTED` is twelve keys with the status that actually applies
+(`federal` / `state` / `eagle`), and `PROTECTED_SOURCE` carries the list,
+the rule, its effective date and its URL — **a citation is data**. Each of
+the twelve carries one sourced line under Take Care, worded per status and
+linking to the rule. The eagle has its own Act (off the Florida list since
+2007). **The kestrel's line says which kestrel**: the resident Southeastern
+American kestrel is listed; winter visitors are not.
+
+**The alligator is deliberately absent**: listed only "due to similarity of
+appearance" to the American crocodile — a listing about enforcement, not
+standing — so a chip would mislead.
+
+**The unlisted-text audit (reported, not rewritten):**
+
+- `redcockaded` carries the `protected` FLAG and its care line reads
+  "Federally threatened since 2024, when it was downlisted from endangered"
+  — true, and not in the Director's twelve. The one genuine tension.
+- `sandskink` and `blackskimmer` are in the twelve and do NOT carry the
+  flag, so /explore/'s sheet shows them no Protected badge while the guide
+  page chips them.
+- No contradiction: lantana / cogongrass / primrose-willow ("a listed
+  invasive"), American lotus ("protected shallows" — geography), black bear
+  ("came off the state threatened list in 2012"), apple snail ("the
+  endangered snail kite" — another species). Fox squirrel, gopher frog and
+  limpkin carry none of the words.
+
+#### SPEED — WHAT HELD THE FIRST PAINT, MEASURED
+
+The Director's DevTools on live (390×844, DPR 3, 4× CPU, Fast 4G): LCP 6,753
+ms, 6,674 of it render delay, with the header image downloaded at 79 ms. Three
+layouts of ~4,600 nodes, four style recalcs, a forced reflow flagged.
+
+Reproduced here on the same profile with a header image standing in for the
+theme's, five runs, medians (`/tmp/claude-0/perf47.mjs`, kept out of the repo):
+
+| | 1.46.0 | 1.46.1 |
+|---|---|---|
+| FCP / LCP | 360 ms | **344 ms** |
+| long-task total | 473 ms | **378 ms** |
+| long tasks before first paint | one, 63 ms (the parse) | one, 99 ms |
+| DOM elements | 10,893 | **10,166** |
+
+**This container cannot reproduce 6.7 s** — no theme, no Elementor CSS, no
+fonts, a fast core even at 4×. What it can isolate is the plugin's share:
+the script alone cost ~120 ms of long tasks and ~320 ms of first-paint delay
+(FCP 680 → 360 ms with it removed), and **that is the share these changes
+take off the critical path.** The floor — parse plus the first style and
+layout of the document, ~350 ms here with no script at all — is the page's
+own and scales with the device.
+
+What changed, each a named cause from the trace:
+
+- **`defer` on guide.js** (`strategy => defer`, WP 6.3+; the site is 6.9). A
+  footer script still blocks the parser when reached; a deferred one never
+  stands between the HTML and its paint.
+- **The forced reflow was `measureTop()`** reading `getBoundingClientRect()`
+  in init: a synchronous layout of 4,600 nodes before anything had painted.
+  It runs two frames after first paint now, and only at ≥900px, where the
+  pane that reads the token exists.
+- **Two of the three layouts and most of the recalcs were `refresh()` and
+  `counts()` on load**, setting `.hidden` on 402 rows to the value 395 of
+  them already had. **The default view is server-rendered now** — the seven
+  Wider Florida rows ship `hidden`, the counts ship filled — so init makes
+  NO DOM writes, and `refresh()` writes only what changes.
+- **Two elements fewer per row** (804 nodes): the summary is a grid and the
+  chevron is `::after`.
+
+**`content-visibility` on the `<details>` bodies is a no-op**, and worth
+saying: a closed `<details>`' content is already not rendered. The rows'
+`content-visibility: auto` is what skips the summaries, verified in 1.46.0 by
+`contentvisibilityautostatechange`.
+
+**Nothing here splits the page or drops a word**, and the remaining ~4.7 s on
+live is now the theme's to account for — re-measure after install; if it is
+still over 2.5 s, the top three long tasks in that trace will belong to the
+theme's CSS, fonts and scripts, which is the next conversation.

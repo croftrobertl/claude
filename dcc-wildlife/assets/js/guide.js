@@ -105,7 +105,10 @@
 					: 'here' === it.getAttribute('data-scope'))
 				&& ('all' === state.group || state.group === it.getAttribute('data-group'))
 				&& matches(it, words);
-			it.hidden = !ok;
+			/* WRITE ONLY WHAT CHANGES. Setting `.hidden` to the value it
+			 * already has still invalidates the row's style, and 402 of
+			 * those was most of a 479 ms task on a throttled phone. */
+			if (it.hidden === ok) { it.hidden = !ok; }
 			if (ok) { shown += 1; }
 		}
 		counts();
@@ -354,15 +357,33 @@
 	 * ------------------------------------------------------------------ */
 	function measureTop() {
 		if (!top) { return; }
+		/* The pane is the ONLY reader of this token, and it exists only at
+		 * 900px and up. On a phone the measurement is a forced layout of
+		 * the whole list for a value nothing uses. */
+		if (!(wide && wide.matches)) { return; }
 		var h = Math.round(top.getBoundingClientRect().height);
 		root.style.setProperty('--dccwl-gp-top-h', h + 'px');
 	}
-	measureTop();
-	if (window.ResizeObserver && top) {
-		new window.ResizeObserver(measureTop).observe(top);
-	} else {
-		window.addEventListener('resize', measureTop);
+	/*
+	 * NEVER BEFORE FIRST PAINT. getBoundingClientRect() here was the forced
+	 * reflow DevTools flagged on live: it made the browser lay out 4,600
+	 * nodes synchronously, inside the script, before anything had been
+	 * painted. Two animation frames from now the first frame has shipped
+	 * and the browser has already done this layout for its own reasons,
+	 * so the read is free.
+	 */
+	function afterPaint(fn) {
+		if (!window.requestAnimationFrame) { setTimeout(fn, 0); return; }
+		window.requestAnimationFrame(function () { window.requestAnimationFrame(fn); });
 	}
+	afterPaint(function () {
+		measureTop();
+		if (window.ResizeObserver && top) {
+			new window.ResizeObserver(measureTop).observe(top);
+		} else {
+			window.addEventListener('resize', measureTop);
+		}
+	});
 
 	/* A narrow window that becomes wide (or the other way) moves the open
 	 * species between the sheet and the pane rather than leaving it in a
@@ -426,8 +447,21 @@
 		return true;
 	}
 
-	refresh();
-	openFromHash(window.location.hash, false);
+	/*
+	 * NO refresh() ON LOAD (1.46.1). The server rendered the default view —
+	 * the seven Wider Florida rows arrive `hidden`, the pill counts arrive
+	 * filled, the placeholder arrives worded — so there is nothing for the
+	 * first pass to change, and a pass that changes nothing still costs a
+	 * style recalculation over 402 rows. The first refresh() runs on the
+	 * first tap, when there is a change to make.
+	 *
+	 * The deep link runs after the first frame: it is a scroll and a sheet,
+	 * both of which can wait the ~16 ms it takes for the page to be on
+	 * screen, and neither should stand between the HTML and its paint.
+	 */
+	afterPaint(function () {
+		openFromHash(window.location.hash, false);
+	});
 	window.addEventListener('hashchange', function () {
 		openFromHash(window.location.hash, true);
 	});

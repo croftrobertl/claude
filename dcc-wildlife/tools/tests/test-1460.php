@@ -153,7 +153,7 @@ check_same( [], array_diff( array_unique( $links[1] ), $known ), 'and every one 
 /* ================================================================= B ====
  * THE ROW RULES.
  * ======================================================================= */
-dcc_section( 'at most one chip per row, by the Director\'s exact rules' );
+dcc_section( 'the row marks (1.46.1): a stripe for hazards, a chip for the official lists' );
 
 $dataset = Species::dataset();
 $chips   = [ 'danger' => [], 'protected' => [], 'near' => [], 'none' => 0 ];
@@ -165,86 +165,86 @@ foreach ( $dataset as $sp ) {
 	}
 	$chips[ $chip[0] ][] = (string) $sp['id'];
 }
-check_same( 21, count( $chips['danger'] ), '"Keep Away" is the 21 species in the Safety group' );
-check_same( 6, count( $chips['protected'] ), '"Protected" is exactly six species' );
-check_same(
-	[ 'eagle', 'kestrel', 'littleblue', 'manatee', 'tricolored', 'woodstork' ],
-	( static function ( array $k ): array { sort( $k ); return $k; } )( $chips['protected'] ),
-	'and they are the six the Director listed, by key'
-);
-check_same( Guide_Page::PROTECTED_KEYS, [ 'manatee', 'eagle', 'kestrel', 'littleblue', 'tricolored', 'woodstork' ], 'the list is written out, not derived from a flag' );
+/*
+ * "KEEP AWAY" IS A STRIPE, NOT A CHIP (Rob's pick, 2026-10-23). 1.46.0 put
+ * it in the chip slot on the 21 Safety-group species and that left the
+ * alligator unmarked; the stripe follows is_hazard() and covers all 28,
+ * and the chip slot is free for what else is true of the species.
+ */
+check_same( [], $chips['danger'], 'no row carries a Keep Away CHIP any more' );
+$striped = [];
+foreach ( $dataset as $sp ) {
+	if ( Species::is_hazard( $sp ) ) {
+		$striped[] = (string) $sp['id'];
+	}
+}
+check_same( 28, count( $striped ), 'is_hazard() names 28 species' );
+check_same( 28, substr_count( $guide, 'dccwl-gp-item-hazard' ), 'and the stripe is on exactly those 28 rows' );
+check_same( 28, substr_count( $guide, ', Keep Away</span>' ), 'each with ", Keep Away" in its accessible name' );
+check_same( 28, substr_count( $guide, 'class="dccwl-gp-keepaway"' ), 'and "Keep Away" at the head of its entry, for the sheet' );
+foreach ( [ 'alligator', 'canetoad', 'cottonmouth' ] as $id ) {
+	preg_match( '#<li class="dccwl-gp-item[^"]*" id="dccwl-fl-' . $id . '"#', $guide, $m );
+	check( isset( $m[0] ) && false !== strpos( $m[0], 'dccwl-gp-item-hazard' ), "the $id row is striped" );
+}
+$non = [ 'heron', 'manatee', 'bluegill' ];
+foreach ( $non as $id ) {
+	preg_match( '#<li class="dccwl-gp-item[^"]*" id="dccwl-fl-' . $id . '"#', $guide, $m );
+	check( isset( $m[0] ) && false === strpos( $m[0], 'dccwl-gp-item-hazard' ), "and the $id row is not" );
+}
 
 /*
- * "Lake County" IS ON EVERY NEAR SPECIES THAT DOES NOT ALREADY WEAR A
- * HIGHER CHIP — 46 of the 49, the other three being Safety-group snakes and
- * a caterpillar, which show "Keep Away".
- *
- * COUNTED, AND THE ARITHMETIC IS STATED, because the first version of this
- * section collected the near chips and never asserted them: the mutation
- * "a NEAR species shown without its chip" passed against it. A list this
- * suite gathers and does not check is a hole with a variable name on it.
+ * "PROTECTED" FOLLOWS THE OFFICIAL LIST (Rob's pick): Florida's Endangered
+ * and Threatened Species List, Fla. Admin. Code R. 68A-27.003, effective
+ * 2025-04-03, plus the eagle under its own federal Act. Twelve keys,
+ * written out, never derived from the registry's `protected` flag.
  */
-$near_total  = 0;
-$near_safety = 0;
+check_same( 12, count( $chips['protected'] ), '"Protected" is exactly twelve species' );
+check_same(
+	[ 'blackskimmer', 'eagle', 'gophertortoise', 'indigosnake', 'kestrel', 'littleblue', 'manatee', 'sandhill', 'sandskink', 'scrubjay', 'tricolored', 'woodstork' ],
+	( static function ( array $k ): array { sort( $k ); return $k; } )( $chips['protected'] ),
+	'and they are the twelve the Director listed, by key'
+);
+check_same( array_keys( Guide_Page::PROTECTED ), Guide_Page::PROTECTED_KEYS, 'the two spellings of the list agree' );
+check_same( '2025-04-03', Guide_Page::PROTECTED_SOURCE['effective'], 'the source carries its effective date' );
+check_same( 'Fla. Admin. Code R. 68A-27.003', Guide_Page::PROTECTED_SOURCE['rule'], 'and the rule it is' );
+check( ! isset( Guide_Page::PROTECTED['alligator'] ), 'THE ALLIGATOR IS NOT ON IT — listed only for similarity of appearance to the crocodile' );
+check( ! isset( Guide_Page::PROTECTED['redcockaded'] ), 'nor the red-cockaded woodpecker, which carries the flag and is reported rather than added' );
+check_same( 12, substr_count( $guide, 'class="dccwl-fg-line dccwl-gp-protected"' ), 'each of the twelve carries one sourced line under Take Care' );
+check_same( 12, substr_count( $guide, 'Fla. Admin. Code R. 68A-27.003' ), 'citing the rule, with a link' );
+check_contains( $guide, 'The Southeastern American kestrel that nests here is State-designated Threatened', 'the kestrel line names the resident subspecies' );
+check_contains( $guide, 'winter visitors from the north are not.', 'and says the winter birds are not' );
+check_contains( $guide, 'Not on Florida&#039;s Threatened list since 2007, but protected by the federal Bald and Golden Eagle Protection Act', 'the eagle has its own Act, not the list' );
+
+/*
+ * THE CANE TOAD IS THE PROOF THE SLOT IS FREE: a hazard AND a NEAR species.
+ * Under 1.46.0 it wore "Keep Away" and lost "Lake County"; now it wears the
+ * stripe and keeps the chip — the Director's own done-means line.
+ */
+$toad = null;
 foreach ( $dataset as $sp ) {
-	if ( 'NEAR' !== Local::class_of( (string) $sp['id'] ) ) {
-		continue;
-	}
+	if ( 'canetoad' === $sp['id'] ) { $toad = $sp; }
+}
+check_same( 'near', Guide_Page::chip_of( $toad )[0] ?? '', 'the cane toad\'s chip is Lake County' );
+check( Species::is_hazard( $toad ), 'and it is a hazard, so it is striped as well' );
+
+/*
+ * "Lake County" IS ON EVERY NEAR SPECIES THAT IS NOT ALSO PROTECTED — 46
+ * of the 49; the gopher tortoise, the indigo snake and the sand skink take
+ * "Protected", which outranks it. COUNTED, with the arithmetic stated: the
+ * 1.46.0 version of this section gathered the near chips and never
+ * asserted them, and a mutation walked straight through.
+ */
+$near_total = 0;
+$near_prot  = 0;
+foreach ( $dataset as $sp ) {
+	if ( 'NEAR' !== Local::class_of( (string) $sp['id'] ) ) { continue; }
 	$near_total++;
-	if ( 'safety' === $sp['group'] ) {
-		$near_safety++;
-	}
+	if ( isset( Guide_Page::PROTECTED[ (string) $sp['id'] ] ) ) { $near_prot++; }
 }
 check_same( 49, $near_total, 'there are 49 NEAR species' );
-check_same(
-	$near_total - $near_safety,
-	count( $chips['near'] ),
-	'and every one of them carries the Lake County chip unless Keep Away outranks it',
-	count( $chips['near'] ) . ' chips for ' . $near_total . ' NEAR minus ' . $near_safety . ' in Safety'
-);
+check_same( $near_total - $near_prot, count( $chips['near'] ), 'every one carries Lake County unless Protected outranks it',
+	count( $chips['near'] ) . ' chips for ' . $near_total . ' NEAR minus ' . $near_prot . ' protected' );
 check_same( 46, count( $chips['near'] ), 'which is 46' );
-
-/*
- * THE PRECEDENCE IS SAFETY FIRST, and the diamondback is the species that
- * proves it: it is in the Safety group AND classified NEAR, so it could
- * take either chip. "Keep Away" is the one a guest needs first.
- */
-$dia = null;
-foreach ( $dataset as $sp ) {
-	if ( 'diamondback' === $sp['id'] ) { $dia = $sp; }
-}
-check( null !== $dia, 'the diamondback is in the dataset' );
-check_same( 'NEAR', Local::class_of( 'diamondback' ), 'and it is classified NEAR' );
-check_same( 'danger', Guide_Page::chip_of( $dia )[0] ?? '', 'yet its chip is Keep Away, not Lake County' );
-
-/*
- * A HAZARD OUTSIDE THE SAFETY GROUP GETS NO "Keep Away" CHIP, and this is
- * REPORTED rather than quietly decided: seven species carry the `danger`
- * flag while living under Animals or Plants — the alligator among them —
- * and the Director's rule names the Safety GROUP and its count of 21. The
- * warning is not lost: every one of them still prints its own "Take Care"
- * and "What To Do" lines in its entry, which this asserts.
- */
-$hazard_outside = [];
-foreach ( $dataset as $sp ) {
-	if ( in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true ) && 'safety' !== $sp['group'] ) {
-		$hazard_outside[] = (string) $sp['id'];
-	}
-}
-sort( $hazard_outside );
-check_same(
-	[ 'alligator', 'canetoad', 'cubantreefrog', 'pricklypear', 'rhesus', 'sawgrass', 'walkingstick' ],
-	$hazard_outside,
-	'the seven hazards that live outside the Safety group are known by name'
-);
-$no_warning = [];
-foreach ( $hazard_outside as $id ) {
-	if ( preg_match( '#id="dccwl-fl-' . preg_quote( $id, '#' ) . '".*?</li>#s', $guide, $m )
-		&& false === strpos( $m[0], 'Take Care' ) ) {
-		$no_warning[] = $id;
-	}
-}
-check_same( [], $no_warning, 'and every one of them still carries its Take Care line', implode( ', ', $no_warning ) );
 
 dcc_section( 'the pills, and the rows they count' );
 

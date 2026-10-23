@@ -239,7 +239,20 @@ final class Plugin {
 			DCC_WL_URL . 'assets/js/guide.js',
 			[ 'dcc-wildlife-sheet' ],
 			DCC_WL_VERSION,
-			true
+			/*
+			 * `defer` (WordPress 6.3+; the site is on 6.9), NOT merely
+			 * in-footer. The Director measured 6.7 s of RENDER DELAY on a
+			 * throttled phone: the header image had arrived in 79 ms and
+			 * waited on the main thread. A classic footer script still
+			 * blocks the parser when it is reached; a deferred one runs
+			 * after the document is parsed and does not stand between the
+			 * HTML and its first paint. Every word is already in that HTML,
+			 * so nothing a guest reads waits on the script.
+			 */
+			[
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			]
 		);
 
 		wp_register_style(

@@ -187,27 +187,72 @@
 
 .dccwl-gp .dccwl-gp-item {
 	border-bottom: 1px solid var(--dccwl-line);
+	/*
+	 * EVERY ROW RESERVES THE STRIPE'S 4px, hazard or not (1.46.1).
+	 *
+	 * A border added only to the 28 would indent those rows by 4px and
+	 * leave the other 374 aligned differently — the list would read as
+	 * ragged rather than marked. Reserving it everywhere means the mark is
+	 * the PRESENCE of the bar, at a fixed place, which is also what makes
+	 * it legible to someone who cannot see the colour.
+	 */
+	border-left: 4px solid transparent;
 	contain-intrinsic-size: auto 88px;
 	content-visibility: auto;
 	margin: 0;
 	padding: 0;
 }
 
+/*
+ * THE KEEP AWAY STRIPE (1.46.1, Rob's pick), on all 28 species
+ * `is_hazard()` flags — the Safety group plus anything flagged `danger`
+ * wherever it is filed, which is what puts the alligator back on the list.
+ *
+ * NEVER COLOUR ALONE. Three things carry it: a 4px solid bar in a fixed
+ * place (shape and position, not hue), ", Keep Away" inside the row's
+ * accessible name, and "Keep Away" at the head of the entry itself. Any one
+ * of the three would do on its own; a guest who is colour-blind, listening,
+ * or printing the page gets at least one.
+ *
+ * It is the flag key's own danger colour, so a stripe here and a danger
+ * mark on a tile in /explore/ cannot come to mean different things.
+ */
+.dccwl-gp .dccwl-gp-item-hazard {
+	border-left-color: var(--dccwl-flag-danger);
+}
+
 /* ---- the row itself -------------------------------------------------- */
 .dccwl-gp .dccwl-gp-details { margin: 0; }
 
+/*
+ * THE ROW IS A GRID (1.46.1): thumb | name / where | chevron. It was a flex
+ * row with a wrapper span holding the two text lines and a span for the
+ * chevron; the grid places the lines itself and the chevron is ::after, so
+ * each row is two elements lighter. Same picture, 804 fewer nodes.
+ */
 .dccwl-gp .dccwl-gp-row {
 	align-items: center;
+	column-gap: 12px;
 	cursor: pointer;
-	display: flex;
-	gap: 12px;
+	display: grid;
+	grid-template-columns: 56px minmax(0, 1fr) 20px;
+	grid-template-rows: auto auto;
 	/* Rob's 44px floor, with room for a 56px thumbnail. */
 	min-height: 72px;
 	padding: 8px 4px;
 	/* The UA marker would sit before the photograph. The chevron at the end
 	 * is this row's affordance. */
 	list-style: none;
+	/* A list row is a row (Rob's alignment rule names this exception): the
+	 * text beside a thumbnail reads from the start, while every heading on
+	 * the page is centred. */
+	text-align: start;
 }
+.dccwl-gp .dccwl-gp-thumb { grid-column: 1; grid-row: 1 / span 2; }
+.dccwl-gp .dccwl-gp-name { grid-column: 2; grid-row: 1; align-self: end; }
+.dccwl-gp .dccwl-gp-where { grid-column: 2; grid-row: 2; align-self: start; }
+/* A row with no where-line: the name takes both rows and centres. */
+.dccwl-gp .dccwl-gp-name:last-child { grid-row: 1 / span 2; align-self: center; }
 .dccwl-gp .dccwl-gp-row::-webkit-details-marker { display: none; }
 .dccwl-gp .dccwl-gp-row::marker { content: ''; }
 
@@ -219,9 +264,14 @@
 
 /* The chosen row on a desktop, where the species opens beside the list
  * rather than over it: it has to stay visible and say which one is showing. */
+/*
+ * The chosen row on a desktop is a TINT ONLY since 1.46.1: its 3px inset
+ * bar sat exactly where the hazard stripe now does, so a dangerous species
+ * that was also the open one showed two bars in two colours at the same
+ * edge. The pane beside it already says which species is showing.
+ */
 .dccwl-gp .dccwl-gp-item-on .dccwl-gp-row {
 	background: var(--dccwl-primary-soft);
-	box-shadow: inset 3px 0 0 var(--dccwl-primary);
 }
 
 .dccwl-gp .dccwl-gp-thumb {
@@ -233,17 +283,6 @@
 	width: 56px;
 }
 .dccwl-gp .dccwl-gp-thumb-none { background: var(--dccwl-primary-soft); }
-
-.dccwl-gp .dccwl-gp-text {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 0;
-	/* A list row is a row (Rob's alignment rule names this exception): the
-	 * text beside a thumbnail reads from the start, while every heading on
-	 * the page is centred. */
-	text-align: start;
-}
 
 .dccwl-gp .dccwl-gp-name {
 	align-items: center;
@@ -268,13 +307,15 @@
 	white-space: nowrap;
 }
 
-/* The chevron, drawn rather than shipped 402 times. */
-.dccwl-gp .dccwl-gp-go {
+/* The chevron: a pseudo-element, so it costs the parser nothing at all. */
+.dccwl-gp .dccwl-gp-row::after {
 	border-right: 2px solid var(--dccwl-primary);
 	border-top: 2px solid var(--dccwl-primary);
-	flex: 0 0 auto;
+	content: '';
+	grid-column: 3;
+	grid-row: 1 / span 2;
 	height: 9px;
-	margin-left: auto;
+	justify-self: end;
 	margin-right: 6px;
 	transform: rotate(45deg);
 	width: 9px;
@@ -303,6 +344,35 @@
 /* ---- the entry: the crawlable prose, and the no-JS fold --------------- */
 .dccwl-gp .dccwl-gp-entry {
 	padding: 0 4px var(--dccwl-gap);
+}
+
+/*
+ * "Keep Away" at the head of an entry (1.46.1) — in the sheet, in the fold
+ * and in the HTML. Small, red on its own wash, and NOT a chip: the chip
+ * slot belongs to Protected and Lake County now, which is the point of
+ * moving this out of it.
+ */
+.dccwl-gp-keepaway {
+	background: #fdebeb;
+	border-radius: var(--dccwl-radius);
+	color: var(--dccwl-accent-text);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	letter-spacing: 0.04em;
+	margin: 0 0 var(--dccwl-gap);
+	padding: 8px 12px;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+/* The sourced status line under Take Care. Quiet: it is a citation, and the
+ * chip above it is what a guest reads first. */
+.dccwl-gp .dccwl-gp-protected,
+.dccwl-sheet .dccwl-gp-protected,
+.dccwl-gp-pane .dccwl-gp-protected {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* Where a species has actually been recorded (Part C). A citation line:

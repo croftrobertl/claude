@@ -62,9 +62,15 @@ section('the switch: Seen Here 395, Wider Florida 402');
    * THE CHIP RULES, counted over the whole list. At most one per row, and
    * each by its own rule — "never infer any other status".
    */
+  /*
+   * 1.46.1: "Keep Away" is a STRIPE, not a chip (Rob's pick), on all 28
+   * species is_hazard() flags; "Protected" follows the official list, 12
+   * keys. Both measured on the rendered rows, not read from PHP.
+   */
   const chips = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('[data-dccwl-gp-item]')];
-    const out = { danger: 0, protected: 0, near: 0, two: 0, protectedKeys: [] };
+    const out = { danger: 0, protected: 0, near: 0, two: 0, protectedKeys: [], stripes: 0, stripeKeys: [],
+      stripeWidths: new Set(), srKeepAway: 0, caneToad: null, alligator: null };
     rows.forEach((r) => {
       const found = r.querySelectorAll('.dccwl-gp-chip');
       if (found.length > 1) { out.two += 1; }
@@ -76,16 +82,36 @@ section('the switch: Seen Here 395, Wider Florida 402');
         }
         if (c.classList.contains('dccwl-gp-chip-near')) { out.near += 1; }
       });
+      const cs = getComputedStyle(r);
+      if (r.classList.contains('dccwl-gp-item-hazard')) {
+        out.stripes += 1;
+        out.stripeKeys.push(r.getAttribute('data-key'));
+        out.stripeWidths.add(cs.borderLeftWidth + ' ' + cs.borderLeftStyle + ' ' + cs.borderLeftColor);
+        if (/, Keep Away/.test(r.querySelector('.dccwl-gp-row').textContent)) { out.srKeepAway += 1; }
+      }
+      const key = r.getAttribute('data-key');
+      const chipText = [...found].map((c) => c.textContent.trim()).join('|');
+      if ('canetoad' === key) { out.caneToad = { chip: chipText, stripe: r.classList.contains('dccwl-gp-item-hazard') }; }
+      if ('alligator' === key) { out.alligator = { chip: chipText, stripe: r.classList.contains('dccwl-gp-item-hazard') }; }
     });
+    out.stripeWidths = [...out.stripeWidths];
     return out;
   });
-  note(`chips ${JSON.stringify(chips)}`);
+  note(`chips ${JSON.stringify({ ...chips, stripeKeys: chips.stripeKeys.length + ' keys', protectedKeys: chips.protectedKeys.sort().join(',') })}`);
   checkSame(0, chips.two, 'no row carries two chips');
-  checkSame(21, chips.danger, '"Keep Away" is on the 21 species in the Safety group');
-  checkSame(6, chips.protected, '"Protected" is on exactly six');
-  checkSame('eagle,kestrel,littleblue,manatee,tricolored,woodstork',
+  checkSame(0, chips.danger, '"Keep Away" is no longer a chip at all');
+  checkSame(28, chips.stripes, 'the red edge stripe is on the 28 species is_hazard() flags');
+  checkSame(['4px solid rgb(191, 64, 64)'], chips.stripeWidths,
+    'a 4px SOLID bar in the flag key\'s danger colour — shape and position, never colour alone');
+  checkSame(28, chips.srKeepAway, 'and every striped row\'s accessible name gains ", Keep Away"');
+  checkSame(12, chips.protected, '"Protected" is on exactly twelve');
+  checkSame('blackskimmer,eagle,gophertortoise,indigosnake,kestrel,littleblue,manatee,sandhill,sandskink,scrubjay,tricolored,woodstork',
     chips.protectedKeys.sort().join(','),
-    'and they are the six the Director named, by key');
+    'and they are the twelve on the official lists, by key');
+  checkSame({ chip: 'Lake County', stripe: true }, chips.caneToad,
+    'the cane toad keeps "Lake County" AND wears the stripe — the slot is free now');
+  checkSame({ chip: '', stripe: true }, chips.alligator,
+    'the alligator is striped and UNCHIPPED — listed only for similarity to the crocodile');
 
   /* The switch itself. */
   await page.click('[data-dccwl-gp-scope="wider"]');
@@ -262,6 +288,7 @@ section('tapping a row, and the deep link');
   check(/state reptile|bellow/i.test(sheet.text), 'the entry itself is in it', sheet.text.slice(0, 160));
   checkSame(false, sheet.foldOpen,
     'while the row\'s own <details> stays CLOSED — the content is shown once, in the sheet');
+  check(/Keep Away/.test(sheet.text), 'and "Keep Away" is in the sheet (1.46.1)', sheet.text.slice(0, 80));
 
   /* The list keeps its place: nothing above the tapped row moved. */
   const kept = await page.evaluate(() => {
@@ -347,6 +374,19 @@ section('tapping a row, and the deep link');
   await page.close();
 }
 
+{
+  /* THE KESTREL TRUTH (1.46.1): the sheet says WHICH kestrel is listed. */
+  const page = await guide(390);
+  await page.evaluate(() => { window.location.hash = '#dccwl-fl-kestrel'; });
+  await page.waitForTimeout(700);
+  const k = await page.evaluate(() => (document.querySelector('.dccwl-sheet-body') || {}).textContent?.replace(/\s+/g, ' ') || '');
+  check(/Southeastern American kestrel that nests here is State-designated Threatened/.test(k),
+    'the kestrel\'s line names the resident subspecies as the listed one', k.slice(0, 120));
+  check(/winter visitors from the north are not/.test(k), 'and says the winter birds are not');
+  check(/68A-27\.003/.test(k), 'and cites the rule');
+  await page.close();
+}
+
 /* ====================================================================== */
 section('desktop: the list on the left, the species on the right');
 
@@ -411,7 +451,7 @@ section("Rob's alignment rule, measured on the rendered page");
       /* The one that must NOT be centred: the multi-sentence paragraph. */
       fact: read('.dccwl-sheet-body .dccwl-fg-fact'),
       /* A list row is a row — the exception Rob named himself. */
-      rowText: read('.dccwl-gp-text'),
+      rowText: read('.dccwl-gp-row'),
     };
   });
   note(`alignment ${JSON.stringify(align)}`);

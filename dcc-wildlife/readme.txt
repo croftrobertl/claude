@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.46.0
+Stable tag: 1.46.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,26 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.46.1 =
+* **"Keep Away" is a red stripe down the row's edge, not a badge** (Rob's
+  pick), on all 28 species the guide treats as hazards — the alligator
+  included, which 1.46.0 left unmarked. The badge slot it used to take is
+  free, so the cane toad now shows "Lake County" as well as its stripe.
+  The stripe is a solid 4px bar, never colour alone; screen readers hear
+  ", Keep Away" with the name; and "Keep Away" heads the species sheet.
+* **"Protected" follows the official lists** (Rob's pick), not the guide's
+  own wording: Florida's Endangered and Threatened Species List (Fla.
+  Admin. Code R. 68A-27.003, effective April 2025), plus the bald eagle
+  under its own federal Act. Twelve species carry it, each with one sourced
+  line under Take Care linking to the rule. The alligator does not: it is
+  listed only for its resemblance to the American crocodile. The kestrel's
+  line says which kestrel — the resident Southeastern American kestrel is
+  listed; winter visitors from the north are not.
+* **The guide page paints sooner.** Its script is deferred past the first
+  paint, no longer touches every row on load or forces a layout before
+  anything is drawn, and the default view ships finished from the server.
+  Each row is two elements lighter.
 
 = 1.46.0 =
 * **The wildlife guide is a list you can actually use.** /wildlife-guide/
