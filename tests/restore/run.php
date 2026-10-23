@@ -117,7 +117,7 @@ class MPHB_Stub { public function settings() { return new MPHB_Settings_Stub(); 
 function MPHB() { return new MPHB_Stub(); }
 
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
-foreach (['config', 'layout', 'checkout-request', 'assets', 'hero', 'restore'] as $f) {
+foreach (['config', 'layout', 'checkout-request', 'rendered-stay', 'assets', 'hero', 'restore'] as $f) {
     require $plugin . '/includes/class-' . $f . '.php';
 }
 
@@ -282,6 +282,127 @@ foreach ($cfg as $k => $v) {
     if (is_bool($v)) { $bools[] = $k; }
 }
 check('no top-level value is a boolean (0.29.0)', $bools, []);
+
+/* ========================================================================== *
+ * 2b. "THOSE DATES ARE TAKEN" IS NOT "WE LOST YOUR DATES" (v0.35.1, item 2)
+ *
+ * Cottage 36, Jan 11-14 2027 is booked. MotoPress declines to draw a form and
+ * prints "Accommodation is already booked."; 0.35.0's card said "We do not
+ * have your dates any more." We have the dates. They are taken.
+ *
+ * PHP decides which card the REQUEST has earned, because PHP is the half
+ * holding the submission. The browser knows the one thing PHP cannot — whether
+ * MotoPress drew a form — and that half is in restore/browser.js.
+ *
+ * Never MotoPress's words: they are translated on this site, and matching text
+ * that can change is how features here have quietly died before.
+ * ========================================================================== */
+
+echo "\n--- taken, or lost (item 2) ---\n";
+
+/** A stay posted for a cottage, relative to today in US/Eastern. */
+function stay_post(int $days_ahead, int $nights = 3, int $type = 1742): array {
+    /* `sprintf('%+d')`, NOT "+$n": PHP reads `modify('+-5 day')` as PLUS five
+       days, so the first draft of this helper produced a FUTURE stay for every
+       "in the past" case and three assertions passed by not being tested.
+       Measured before fixing. */
+    $tz = new DateTimeZone('America/New_York');
+    $base = (new DateTimeImmutable('now', $tz))->modify(sprintf('%+d day', $days_ahead));
+    return [
+        'mphb_room_type_id'   => (string) $type,
+        'mphb_check_in_date'  => $base->format('Y-m-d'),
+        'mphb_check_out_date' => $base->modify(sprintf('%+d day', $nights))->format('Y-m-d'),
+    ];
+}
+
+with_post(stay_post(30));
+check('a complete stay for future dates: the dates are TAKEN, not lost',
+    Restore::offer(), 'taken');
+check('… and the config carries that word, not a boolean',
+    [Restore::config()['offer'], is_string(Restore::config()['offer'])], ['taken', true]);
+check('… and the stay is still handed over, so the cottage can be named',
+    Restore::stay()['name'], 'Cottage 36');
+
+with_post([]);
+check('nothing posted at all: the reloaded-tab dead end, which is LOST',
+    Restore::offer(), 'lost');
+
+with_post(['mphb_room_type_id' => '1742']);
+check('a room type with no dates is LOST — there is nothing to say is taken',
+    Restore::offer(), 'lost');
+
+$half = stay_post(30);
+unset($half['mphb_check_out_date']);
+with_post($half);
+check('half a stay is LOST', Restore::offer(), 'lost');
+
+/* "SOMEONE JUST BOOKED IT" IS A CLAIM, and it must not be made about a stay
+   MotoPress may have refused for an entirely different reason. */
+with_post(stay_post(-5));
+check('a check-in already in the past is LOST, never "taken"',
+    Restore::offer(), 'lost');
+with_post(stay_post(30, 0));
+check('a zero-night stay is LOST', Restore::offer(), 'lost');
+with_post(stay_post(30, -2));
+check('dates the wrong way round are LOST', Restore::offer(), 'lost');
+
+/* THE BOUNDARY, IN US/EASTERN LIKE EVERY OTHER "TODAY" HERE. The cottages are
+   in Florida: a guest in Sydney must not be told their dates are in the past
+   because it is already tomorrow where they are. */
+with_post(stay_post(0));
+check('a check-in TODAY (Florida time) is still takeable',
+    Restore::offer(), 'taken');
+with_post(stay_post(-1));
+check('… and yesterday is not', Restore::offer(), 'lost');
+
+/* ========================================================================== *
+ * 2c. THE WORDS (v0.35.1, item 6, and Rob's alignment rule)
+ * ========================================================================== */
+
+echo "\n--- the words ---\n";
+
+with_post(stay_post(30));
+$i18n = Restore::config()['i18n'];
+
+check('the taken card\'s title is a title, in Title Case',
+    $i18n['takenTitle'], 'Those Dates Are Taken');
+check('the taken card names the cottage, through a %s rather than concatenation',
+    [strpos($i18n['takenLead'], '%s') !== false,
+     strpos($i18n['takenLead'], 'Choose new dates') !== false],
+    [true, true]);
+check('… and there is a nameless wording, so no sentence has a hole in it',
+    [strpos($i18n['takenLeadPlain'], '%s'), strpos($i18n['takenLeadPlain'], 'Choose new dates') !== false],
+    [false, true]);
+check('the one action is forward, never a re-POST of a refused stay',
+    $i18n['takenButton'], 'Pick New Dates');
+
+/* ITEM 6. Rob's rule: Title Case is for titles and labels; sentences stay
+   sentence case. 0.35.0 shipped this one as "Welcome Back. We Kept Your
+   Answers." */
+check('the welcome line is three SENTENCES, so sentence case',
+    $i18n['welcome'], 'Welcome back. We kept your answers. Please add your photo ID again.');
+
+/* Every lead on the card is prose, and prose is left-aligned (Rob's standing
+   rule) — the titles and fragments around it stay centred. The leads are the
+   multi-sentence ones, and the test is that they really are: a one-sentence
+   lead would not earn the class the stylesheet keys on. */
+foreach (['takenLead', 'takenLeadPlain', 'restartLead', 'continueLead'] as $key) {
+    check("$key is multi-sentence, which is what makes it left-aligned",
+        preg_match_all('/[.!?](\s|$)/', $i18n[$key]) >= 2, true);
+}
+foreach (['takenTitle', 'restartTitle', 'continueTitle', 'takenButton', 'restartButton',
+          'continueButton', 'startOver'] as $key) {
+    check("$key is a title or a label, so it is ONE phrase",
+        preg_match_all('/[.!?](\s|$)/', $i18n[$key]), 0);
+}
+
+/* The stylesheet's half of the rule, read from the file. */
+$css = (string) file_get_contents($plugin . '/assets/checkout.css');
+check('the card is centred and only its lead opts out (Rob\'s alignment rule)',
+    [(bool) preg_match('/\.dcc_checkout-continue\s*\{[^}]*text-align:\s*center/s', $css),
+     (bool) preg_match('/\.dcc_checkout-continue__lead\s*\{[^}]*text-align:\s*left/s', $css),
+     (bool) preg_match('/\.dcc_checkout-welcome\s*\{[^}]*text-align:\s*left/s', $css)],
+    [true, true, true]);
 
 /* ========================================================================== *
  * 3. Who gets the script

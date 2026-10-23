@@ -1816,6 +1816,205 @@ yours to improvise.
     readable".
   - **NOT DONE, and not ours**: IDs kept on cancelled bookings (13 of 27) is
     Rob's call, and the existing button already deletes them.
+- **0.35.0 — ROB'S NEW LAYOUT FOR /submit-booking/, BEHIND A PREVIEW LINK**
+  (his 11 items, 2026-10-22; LIVE 2026-10-23 with the switch OFF; `Layout`,
+  `Hero`, `Layout_Script`, `Restore`, `assets/layout.js`,
+  `assets/checkout-layout.css`, `assets/restore.js`; suites `tests/layout/`,
+  `tests/hero/`, `tests/restore/`, `tests/layout-fields/`).
+  - **THE SWITCH IS THE WHOLE SAFETY OF IT.** `Layout::active()` is the one
+    gate every part reads: the owner's `layout_enabled` (off by default), or a
+    SESSION cookie set by `/submit-booking/?dcc_layout=<key>` against
+    `layout_preview_key`, compared with `hash_equals`. `?dcc_layout=off` ends a
+    preview; it cannot turn the layout off for a site whose switch is on. The
+    key is never printed, logged or redirected into a Referer. **Fails closed
+    everywhere** — the cost of a wrong `false` is today's checkout, which
+    works; the cost of a wrong `true` is a guest mid-booking on an unreviewed
+    page.
+  - **ITEM 10 IS DELIBERATELY NOT GATED** (Rob: "this card shows for everyone,
+    even before the layout is switched on, because the error page is a dead end
+    today"). `restore.js` keeps the guest's answers in **sessionStorage only —
+    never localStorage, never a cookie** (it holds a name, a phone and an
+    address, so it must die with the tab), and offers "Continue Your Booking"
+    where MotoPress drew no form. **Never stored: the photo ID, the coupon, the
+    acceptance tick** — the first because it is identity documents, the other
+    two because a decision restored without the guest making it again is a
+    decision nobody made.
+  - **ONE PHOTO, NOT TWO.** The cottage's photo REPLACES the canal banner
+    through Bravada's own `bravada_header_image_url`, rather than being stacked
+    under it. The lip is `#header-image-main-inside::after` and must stay a
+    pseudo-element: the Director's mu-plugin `dcc-hero-frame.php` forces every
+    child div of that box to `height: 100% !important`, so a `<div>` lip would
+    paint the whole photo white. **NOTHING ELSE GOES ON THE PHOTO** (Rob): the
+    cottage name, the dates pill and the lip, and no more.
+  - **The size is chosen by MEASURED WIDTH, never by name**: `large` is a
+    1024x1024 BOUNDING BOX, so portrait Cottage 36 comes back 768 wide from it
+    and needs `1536x1536`. Narrowest candidate at or above 1024, else the
+    widest there is (Cottage 22's original is 960).
+  - Four code defects in the build, **none found by reading**: the segmented
+    select's full-width box (the field standard's `!important` outranked the
+    hide), the `<h1>` rendering black (the overlay colour rule was `p`-only),
+    **every new border absent** (`--dcc-field-border` is a WIDTH token and was
+    used as a colour, so `border: 2px solid 2px` — invalid, no border at all;
+    found by looking at a screenshot), and locking the submit controls on
+    `click` **cancelling its own submit** (it has to be deferred by a task).
+  - **The viewport meta is load-bearing in every browser fixture.** Without
+    it Chromium in mobile emulation lays out at 980px, so `@media (min-width:
+    900px)` matches at 360 and 390 and every "phone" measurement is really the
+    desktop branch. `tests/hero/`, `tests/button/` and `tests/footnote/` all
+    lacked it.
+  - **Confirmed by the Director on live (2026-10-23)**: with the switch off a
+    Cottage 34 render is identical to 0.34.2's but for the version string and
+    the new `DCC_RESTORE` block; through the preview link at 390 and 1280 on
+    Cottages 22, 34 and 36 — photo, lip, centred `<h1>`, dates pill, bar
+    outside `article.hentry`, "Next: Number of Guests ↓", the bar total equal
+    to MotoPress's ($499.50 for 34, Jan 11-14), the desktop card sticky at
+    x=676/w=340, no Seasons or Hero Life assets, no new PHP warnings.
+    **AutoFill is not checked** — it needs a real iPhone.
+  - **Two decisions confirmed rather than assumed**: Enter never submits (the
+    Submit control is the only way to send), and selects stay out of the Next
+    chain until the segmented buttons land.
+- **0.35.1 — THE DIRECTOR'S READ OF LIVE 0.35.0: SIX FIXES** (2026-10-23;
+  `Rendered_Stay` is new, plus `Hero`, `Restore`, `restore.js`,
+  `Layout_Script`, `checkout.css`). Every one of them was found ON LIVE, and
+  four were green in the suite the whole time.
+  - **1. A RELOAD LOST THE HERO, because "what was posted" is not "what this
+    page is rendering".** A plain GET after a POST still shows a working
+    checkout — MotoPress rebuilds the form from its own `mphb_check_in_date` /
+    `mphb_check_out_date` cookies (step.php's fallback, Director) — but nothing
+    was posted, so the hero stood down and the page came back with the canal
+    banner and "Submit Booking" over it, bar and sheet and all.
+    **`Rendered_Stay` IS A SEPARATE CLASS AND THAT IS THE POINT.**
+    `Checkout_Request` is what every server-side backstop reads to decide
+    whether to REFUSE a booking, and **a cookie is not a submission**: letting
+    one supply the dates for a submission that posted none would widen what
+    those guards evaluate, on the one path where being wrong charges or refuses
+    a real guest. The fallback is read only by display code, and the boundary
+    is structural rather than a comment. Mutation
+    `cr-cookie-widens-backstops`.
+    **THE ROOM TYPE'S COOKIE NAME IS NOT PROVEN AND THE CODE DOES NOT DEPEND
+    ON ONE.** The Director's answer named the two date cookies and said "room
+    type plus the cookie dates"; the room cookie itself was not read. So any
+    `mphb…room…` cookie is scanned, every 3-or-more-digit run is pulled out of
+    its value **as TEXT — never `unserialize()`, which on an attacker-
+    controlled cookie is object injection** — and a candidate is accepted only
+    once WordPress confirms a **published `mphb_room_type`. **Two distinct
+    cottages named means NO hero**: a hero for the wrong cottage is worse than
+    the banner, because it looks deliberate. Date cookies are excluded by name
+    so a four-digit year cannot be read as a post id. **Asked of the Director
+    rather than guessed; until he answers, a canal banner on reload means the
+    room type is not in a "room"-named cookie.**
+  - **2. "ALREADY BOOKED" IS NOT "WE LOST YOUR DATES".** Cottage 36, Jan 11-14
+    2027 is booked; MotoPress printed "Accommodation is already booked." and
+    0.35.0's card said "We do not have your dates any more." Now
+    `Restore::offer()` returns a WORD — `taken` when THIS REQUEST posted a
+    complete stay that is still bookable in principle (check-out after
+    check-in, check-in today or later **in US/Eastern**, like every other
+    "today" here), else `lost` — and the browser supplies the half PHP cannot:
+    MotoPress drew no form. **Never MotoPress's words**, which are translated
+    on this site. Rob's copy: "Those Dates Are Taken" / "Someone just booked %s
+    for those nights. Choose new dates and we'll bring you straight back." /
+    "Pick New Dates", a LINK and never a re-POST of a stay just refused.
+    **Stated rather than hidden: any other refusal of a complete, future-dated
+    stay lands here too** (a minimum-nights rule, say); availability is the
+    only cause seen, and the recovery offered is right for every member of that
+    set even where the sentence is not. Narrowing further would mean matching
+    MotoPress's message.
+    **AND THE HIDE IS STRUCTURAL, BECAUSE THAT MESSAGE'S MARKUP HAS NOT BEEN
+    READ.** The Director quoted the sentence, not the element. So when the
+    card's host is MotoPress's **own** `.mphb_sc_checkout-wrapper`, every
+    direct child of it that is not ours goes out of view — which covers the
+    pinned `p.mphb-data-incorrect` dead end as well. **It is confined to that
+    wrapper and must stay so**: the host list also holds `.entry-content`,
+    `main` and `body`, and sweeping one of those would blank the page.
+    Mutation `js-sweep-unconfined`.
+  - **3. THE CANAL BANNER WAS STILL BEING FETCHED TWICE** — SpeedyCache Pro
+    preloads the PAGE'S FEATURED IMAGE at high priority (227 KB) and the theme
+    prints the article's featured `<picture>`, hidden, through i0.wp.com. 0.35.0
+    replaced the HEADER IMAGE's url, which is a different thing. Now the
+    checkout page has **no featured image for that request**
+    (`_thumbnail_id` absent, `has_post_thumbnail` false), so neither has
+    anything to emit. Not CSS — **a hidden download is a download.**
+    **SCOPED TO THE CHECKOUT PAGE'S OWN ID**, through the extracted
+    `Assets::checkout_page_id()` (ONE resolution, filter and all, shared with
+    the gate): the hero and the Continue card read `_thumbnail_id` on the ROOM
+    TYPE, and an unscoped filter would blank the cottage photo and leave the
+    page with no picture at all. Inside the no-photo gate too, because without
+    a cottage photo the banner IS the header and its heading is the page's only
+    one.
+    **AND THE SHAPE OF A META FILTER'S ANSWER MATTERS**: core does
+    `if ($single && is_array($check)) return $check[0];`, and
+    `get_post_thumbnail_id()` asks with `$single = true` — so returning `[]`
+    is an undefined-offset WARNING on every checkout render. It returns `''`
+    for a single read and `[]` for a list. Found by reading core, not by a
+    test; `tests/hero/` now models core's indexing step and turns PHP notices
+    into failures (mutation `hero-thumb-list-shape`).
+  - **4. THE WEBP TWIN LOOKUP WAS DEAD CODE ON LIVE, AND THE FIXTURE IS WHY IT
+    LOOKED ALIVE.** Jetpack's Site Accelerator filters `image_downsize`, so
+    `wp_get_attachment_image_src()` returns
+    `https://i0.wp.com/…/Cottage-34-Photos-17.jpg?fit=1024,768` — the ORIGINAL
+    file's name, on another host, with the size in a QUERY STRING — and
+    `/\.(jpe?g|png)$/` cannot match that. 0.35.0's fixture returned a tidy
+    local `-1024x768.jpg`, so every twin assertion passed while Photon served
+    its own re-encode (76 KB against the twin's 53 KB; Cottage 36 124 against
+    86). **The v0.9.0 rule in a new shape: a plausible fixture is missing
+    exactly what nobody thought to put in it** — the fixture now returns the
+    i0.wp.com URL live returns.
+    `Hero::local_sized()` builds the URL from the attachment's **own
+    metadata** — `sizes[<size>]['file']` for the real sized filename and its
+    real pixel dimensions, the uploads base URL plus the original's
+    subdirectory for the rest — so nothing passes through `image_downsize` and
+    **there is nothing for Photon to rewrite and nothing to opt out of**. Two
+    deliberate behaviours: **a missing twin falls back to whatever the site
+    normally serves**, because Photon's re-encode is smaller than the local
+    JPEG and returning the JPEG would be a step backwards; and **a size the
+    metadata says does not exist returns null rather than reaching that
+    fallback** (WordPress never generated a `large` for 960-wide Cottage 22, and
+    letting that reach the fallback would hand it a Photon URL and lose its
+    40 KB twin). The dimensions are always the metadata's true pixels, which is
+    what the width floor needs.
+  - **5. ONE `<h1>` IN THE HTML, NOT ONE VISIBLE.** 0.35.0 removed the
+    HEADER-IMAGE title; the article's own
+    `<h1 class="entry-title singular-title">Submit Booking</h1>` is a different
+    heading in a different place and was merely hidden by CSS. **A hidden
+    heading is still a heading** — the page had two h1s, the wrong one first.
+    Removed using core's own rule: `the_title($before, $after)` returns BEFORE
+    printing anything when the title is empty, so emptying the title takes the
+    whole element. **Scoped three ways** because `the_title` is the most-read
+    filter in WordPress: that page's id, `in_the_loop()` (the document
+    `<title>`, menus and breadcrumbs are all outside it), and never in admin or
+    a feed.
+    **KNOWN LIMIT, ASSERTED RATHER THAN ASSUMED:** a template that writes the
+    tags by hand keeps an EMPTY `<h1>`, which this cannot remove. Both shapes
+    are in `tests/hero/`, so which one live is in is a reading; the Director
+    was asked for the file and line if the empty one appears.
+    **And 0.35.0's fixture carried NEITHER heading, "as the served page will
+    not" — a statement of intent, not a reading, and both were on the live
+    page.** The fixture is now parameterised and asserts both directions, so
+    "exactly one `<h1>`" is a measurement rather than a property of the
+    fixture. It does NOT assert that the theme title and the overlay collide:
+    that needs Bravada's own CSS, which is not on this machine, and a first
+    draft asserted an overlap and measured none.
+  - **6. ROB'S CASING RULE, TWICE.** "Show Me ↑ 1 **of** 2" — a preposition
+    stays down inside Title Case — and "Welcome **back. We kept your
+    answers.** Please add your photo ID again.", three sentences, so sentence
+    case. **Both old checks were substrings that survived either casing**
+    (`photo ID again`), which is how 0.35.0 shipped them green; they are
+    exact-sentence assertions now. The browser fixture's copy of the bar's
+    strings is compared against the PHP that really sends them, in
+    `tests/layout-fields/run.php`, so the two cannot drift again.
+    **ALIGNMENT (Rob's standing rule): titles centred, only multi-sentence
+    paragraphs left-aligned.** Applied to the Continue / Taken / Restart card
+    (centred, with `.dcc_checkout-continue__lead` the one opt-out) and the
+    welcome note. Measured in Chromium, not read off the stylesheet.
+  - **A TEST BUG WORTH REMEMBERING: PHP reads `modify('+-5 day')` as PLUS five
+    days.** The first draft of the "in the past" helper built
+    `"+$days_ahead day"`, so every past-date case was a FUTURE stay and three
+    assertions passed by not being tested. `sprintf('%+d day', …)`.
+  - **A suite listed on a mutation must be able to KILL it.** The `-min`
+    suites read the BUILT bundle, which the runner does not rebuild, so they
+    can never see a source mutation; and a browser fixture carries its own
+    copy of the localized strings, so it cannot see a PHP string change
+    either. Listing one is apparent coverage.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).

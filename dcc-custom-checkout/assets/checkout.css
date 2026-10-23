@@ -1313,8 +1313,13 @@ ul.dcc_checkout-select-list.dcc_checkout-select-list > li.dcc_checkout-select-li
     display: none !important;
 }
 
-/* "Welcome Back. We Kept Your Answers…" above the form. */
+/* "Welcome back. We kept your answers…" above the form.
+   THREE SENTENCES, SO LEFT-ALIGNED (Rob's standing rule: titles are centred,
+   and only a multi-sentence paragraph is left-aligned). Declared rather than
+   inherited, because this note can render on a page where none of the form's
+   own rules are in play. */
 .dcc_checkout-welcome {
+    text-align: left;
     margin: 0 0 18px;
     padding: 14px 16px;
     border: 2px solid #f4da62;
@@ -1334,8 +1339,12 @@ ul.dcc_checkout-select-list.dcc_checkout-select-list > li.dcc_checkout-select-li
     cursor: pointer;
 }
 
-/* The card that replaces the dead end. */
+/* The card that replaces the dead end.
+   CENTRED BY DEFAULT (Rob's standing rule): the heading, the cottage name, the
+   dates and the one action are each a title or a fragment. The lead paragraph
+   opts out below — it is the only multi-sentence text in here. */
 .dcc_checkout-continue {
+    text-align: center;
     margin: 0 0 24px;
     padding: 18px;
     border: 1px solid var(--dcc-gold, #f4da62);
@@ -1353,6 +1362,13 @@ ul.dcc_checkout-select-list.dcc_checkout-select-list > li.dcc_checkout-select-li
     margin: 0 0 8px;
     font-size: 16px;
     line-height: 1.45;
+}
+
+/* The one multi-sentence paragraph on the card: "Someone just booked … Choose
+   new dates and we'll bring you straight back." Left, per Rob's rule, while
+   everything around it stays centred. */
+.dcc_checkout-continue__lead {
+    text-align: left;
 }
 
 .dcc_checkout-continue__photo {

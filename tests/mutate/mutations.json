@@ -6030,5 +6030,214 @@
   "find": "        grid-template-columns: minmax(0, 1fr) 340px;",
   "replace": "        grid-template-columns: minmax(0, 1fr);",
   "count": 1
+ },
+ {
+  "id": "rs-get-ignores-cookies",
+  "file": "dcc-custom-checkout/includes/class-rendered-stay.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 1 - a plain GET after a POST still shows the cottage hero",
+  "find": "        return self::from_cookies()['type'];",
+  "replace": "        return 0;",
+  "count": 1
+ },
+ {
+  "id": "rs-cookie-dates-ignored",
+  "file": "dcc-custom-checkout/includes/class-rendered-stay.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 1 - the dates pill reads the stay MotoPress rendered from its cookies",
+  "find": "        $cookies = self::from_cookies();\n        return [$in ?? $cookies['in'], $out ?? $cookies['out']];",
+  "replace": "        return [$in, $out];",
+  "count": 1
+ },
+ {
+  "id": "rs-ambiguous-takes-first",
+  "file": "dcc-custom-checkout/includes/class-rendered-stay.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 - two cottages in the cookies means no hero, never a guess between them",
+  "find": "        return count($found) === 1 ? (int) array_key_first($found) : 0;",
+  "replace": "        return $found === [] ? 0 : (int) array_key_first($found);",
+  "count": 1
+ },
+ {
+  "id": "rs-validates-nothing",
+  "file": "dcc-custom-checkout/includes/class-rendered-stay.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 - a number out of a cookie is only used once WordPress says it is a published room type",
+  "find": "        if (get_post_type($id) !== self::ROOM_TYPE_POST_TYPE) {\n            return false;\n        }",
+  "replace": "        if (false) {\n            return false;\n        }",
+  "count": 1
+ },
+ {
+  "id": "cr-cookie-widens-backstops",
+  "file": "dcc-custom-checkout/includes/class-checkout-request.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 - a cookie is not a submission: the backstops read only what was POSTed",
+  "find": "        foreach (self::room_type_ids() as $id) {\n            if ((int) $id > 0) {\n                return (int) $id;\n            }\n        }\n        return 0;",
+  "replace": "        foreach (self::room_type_ids() as $id) {\n            if ((int) $id > 0) {\n                return (int) $id;\n            }\n        }\n        foreach ((array) $_COOKIE as $cn => $cv) {\n            if (is_string($cn) && strpos($cn, 'room') !== false\n                && is_scalar($cv) && preg_match('/\\d{3,}/', (string) $cv, $cm)) {\n                return (int) $cm[0];\n            }\n        }\n        return 0;",
+  "count": 1
+ },
+ {
+  "id": "hero-twin-on-photon-url",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 4 - the chosen photo is the WebP twin FILE, built from metadata, not Photon's re-encode",
+  "find": "        if (is_array($meta) && is_array($uploads) && is_string($original) && $original !== ''",
+  "replace": "        if (false && is_array($uploads) && is_string($original) && $original !== ''",
+  "count": 1
+ },
+ {
+  "id": "hero-twin-query-string",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 4 - a '?fit=1024,768' query string is not read as the file's extension",
+  "find": "        $parts = explode('?', $url, 2);\n        $swapped = (string) preg_replace('/\\.(jpe?g|png)$/i', '.webp', $parts[0]);",
+  "replace": "        $parts = [$url];\n        $swapped = (string) preg_replace('/\\.(jpe?g|png)$/i', '.webp', $parts[0]);",
+  "count": 1
+ },
+ {
+  "id": "hero-featured-not-suppressed",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 3 - the checkout page has no featured image in layout mode, so nothing preloads the canal banner",
+  "find": "        add_filter('get_post_metadata', [$this, 'filter_thumbnail_meta'], 10, 4);\n        add_filter('has_post_thumbnail', [$this, 'filter_has_thumbnail'], 10, 2);",
+  "replace": "        return;",
+  "count": 1
+ },
+ {
+  "id": "hero-featured-unscoped",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 3 - the suppression is scoped to the checkout page, never the cottage whose photo this is",
+  "find": "        if ((int) $object_id !== self::checkout_page_id()) {\n            return $value;\n        }",
+  "replace": "        if (false) {\n            return $value;\n        }",
+  "count": 1
+ },
+ {
+  "id": "hero-entry-title-kept",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 5 - the article's own 'Submit Booking' heading leaves the HTML, not merely the screen",
+  "find": "        if (!function_exists('in_the_loop') || !in_the_loop()) {\n            return $title;\n        }\n        return '';",
+  "replace": "        if (!function_exists('in_the_loop') || !in_the_loop()) {\n            return $title;\n        }\n        return $title;",
+  "count": 1
+ },
+ {
+  "id": "hero-title-unscoped",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 5 - the_title is only emptied inside the loop, never for the document title or a menu",
+  "find": "        if (!function_exists('in_the_loop') || !in_the_loop()) {\n            return $title;\n        }",
+  "replace": "        if (false) {\n            return $title;\n        }",
+  "count": 1
+ },
+ {
+  "id": "res-booked-reads-lost",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "v0.35.1 item 2 - taken dates are not lost dates",
+  "find": "        return self::bookable_in_principle() ? 'taken' : 'lost';",
+  "replace": "        return 'lost';",
+  "count": 1
+ },
+ {
+  "id": "res-taken-ignores-past",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "v0.35.1 item 2 - 'someone just booked it' is never said about a stay that could not be booked anyway",
+  "find": "        return $in >= $floor->getTimestamp();",
+  "replace": "        return true;",
+  "count": 1
+ },
+ {
+  "id": "js-booked-line-shown",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.1 item 2 - MotoPress's own line goes out of view whatever shape it is in",
+  "find": "        if (wrapper) {\n            var kids = host.children;\n            for (var k = 0; k < kids.length; k++) { conceal(kids[k]); }\n            return;\n        }",
+  "replace": "        if (wrapper && false) {\n            return;\n        }",
+  "count": 1
+ },
+ {
+  "id": "js-sweep-unconfined",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.1 item 2 - the structural sweep never runs outside MotoPress's own wrapper, or it would blank the page",
+  "find": "        var wrapper = host && host.classList\n            && host.classList.contains('mphb_sc_checkout-wrapper');",
+  "replace": "        var wrapper = !!host;",
+  "count": 1
+ },
+ {
+  "id": "js-taken-ignores-php",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.1 item 2 - the browser never decides 'taken' on its own; PHP's word and a complete stay are both required",
+  "find": "        if (CFG.offer === 'taken' && complete(STAY)) {",
+  "replace": "        if (complete(STAY)) {",
+  "count": 1
+ },
+ {
+  "id": "php-showme-titlecase",
+  "file": "dcc-custom-checkout/includes/class-layout-script.php",
+  "suites": [
+   "layout-fields"
+  ],
+  "claim": "v0.35.1 item 6 - 'Show Me ↑ 1 of 2': a preposition stays lower case inside Title Case",
+  "find": "            'showMe'    => __('Show Me ↑ %1$s of %2$s', 'dcc-checkout'),",
+  "replace": "            'showMe'    => __('Show Me ↑ %1$s Of %2$s', 'dcc-checkout'),",
+  "count": 1
+ },
+ {
+  "id": "php-welcome-titlecase",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "v0.35.1 item 6 - the welcome line is three sentences, so sentence case",
+  "find": "            'welcome'        => __('Welcome back. We kept your answers. Please add your photo ID again.', 'dcc-checkout'),",
+  "replace": "            'welcome'        => __('Welcome Back. We Kept Your Answers. Please add your photo ID again.', 'dcc-checkout'),",
+  "count": 1
+ },
+ {
+  "id": "hero-thumb-list-shape",
+  "file": "dcc-custom-checkout/includes/class-hero.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.1 item 3 - a single meta read is answered with '', not an empty array core would index into",
+  "find": "        return $single ? '' : [];",
+  "replace": "        return [];",
+  "count": 1
  }
 ]

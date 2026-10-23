@@ -68,6 +68,12 @@ $GLOBALS['state'] = [
     'files'     => [],   // attachment id => the original's path on disk
     'on_disk'   => [],   // the paths file_exists() should say yes to
     'removed'   => [],   // what remove_action() was asked to remove
+    'post_type'   => [], // post id => post type, for the cookie validator
+    'post_status' => [], // post id => status
+    'in_loop'     => false,
+    'is_feed'     => false,
+    'no_meta'     => [], // attachment id => true to model a missing metadata row
+    'uploads'     => ['basedir' => '/uploads', 'baseurl' => 'https://example.test/u'],
 ];
 
 function add_filter($hook, $cb, $priority = 10, $args = 1) {
@@ -125,35 +131,103 @@ function get_the_title($id) { return $GLOBALS['state']['titles'][(int) $id] ?? '
 function get_post_thumbnail_id($id) { return $GLOBALS['state']['thumbs'][(int) $id] ?? 0; }
 function get_post_meta($id, $key, $single = false) { return $single ? '' : []; }
 function wp_json_encode($v, $f = 0) { return json_encode($v, $f); }
+function get_post_type($id) { return $GLOBALS['state']['post_type'][(int) $id] ?? false; }
+function get_post_status($id) { return $GLOBALS['state']['post_status'][(int) $id] ?? false; }
+function in_the_loop() { return (bool) ($GLOBALS['state']['in_loop'] ?? false); }
+function is_feed() { return (bool) ($GLOBALS['state']['is_feed'] ?? false); }
+function wp_get_upload_dir() { return $GLOBALS['state']['uploads']; }
 
 /**
- * WordPress's rule, modelled: a registered size is a bounding box, and an
- * image smaller than the box is served whole.
+ * THE ATTACHMENT'S OWN METADATA, MODELLED FROM WORDPRESS'S RULE — and this is
+ * the row v0.35.1 reads instead of `wp_get_attachment_image_src()`.
+ *
+ * Two behaviours matter and both are WordPress's own:
+ *   - a sized file is named `<stem>-<w>x<h>.<ext>` beside the original;
+ *   - a size whose BOX is not smaller than the original is never generated, so
+ *     its key is simply absent from `sizes` (which is how Cottage 22, whose
+ *     original is 960 wide, has no `large`).
  */
-function wp_get_attachment_image_src($attachment, $size = 'thumbnail') {
-    $full = $GLOBALS['state']['sizes'][(int) $attachment] ?? null;
-    if ($full === null) {
+function wp_get_attachment_metadata($id, $unfiltered = false) {
+    $id = (int) $id;
+    if (!empty($GLOBALS['state']['no_meta'][$id])) {
+        return false;
+    }
+    $full = $GLOBALS['state']['sizes'][$id] ?? null;
+    $path = $GLOBALS['state']['files'][$id] ?? '';
+    if ($full === null || $path === '') {
         return false;
     }
     [$fw, $fh] = $full;
-    $boxes = [
+    $name = basename($path);
+    $stem = (string) preg_replace('/\.jpg$/', '', $name);
+    $sizes = [];
+    foreach (test_size_boxes() as $size => [$bw, $bh]) {
+        $ratio = $bh > 0 ? min($bw / $fw, $bh / $fh) : $bw / $fw;
+        if ($ratio >= 1) {
+            continue; // WordPress does not upscale, so this size does not exist
+        }
+        $w = (int) round($fw * $ratio);
+        $h = (int) round($fh * $ratio);
+        $sizes[$size] = ['file' => "$stem-{$w}x{$h}.jpg", 'width' => $w, 'height' => $h];
+    }
+    return [
+        'width'  => $fw,
+        'height' => $fh,
+        'file'   => '2026/01/' . $name,
+        'sizes'  => $sizes,
+    ];
+}
+
+function test_size_boxes(): array {
+    return [
+        'medium'       => [300, 300],
         'medium_large' => [768, 0],      // width only, no height constraint
         'large'        => [1024, 1024],
         '1536x1536'    => [1536, 1536],
         '2048x2048'    => [2048, 2048],
     ];
+}
+
+/**
+ * `wp_get_attachment_image_src()` AS THIS SITE REALLY ANSWERS IT — WHICH IS
+ * NOT WHAT WORDPRESS WOULD (Director's live measurement, 2026-10-23).
+ *
+ * Jetpack's Site Accelerator filters `image_downsize`, so what comes back is
+ * the ORIGINAL file's name on another host with the size in a QUERY STRING:
+ *
+ *     https://i0.wp.com/example.test/u/2026/01/Cottage-34-Photos.jpg?fit=1024,768
+ *
+ * THE 0.35.0 FIXTURE RETURNED A LOCAL `…-1024x768.jpg` INSTEAD, and that is
+ * why the whole twin lookup was green while being dead code on live:
+ * `/\.(jpe?g|png)$/` cannot match a URL ending `?fit=1024,768`, and Photon's
+ * own re-encode (76 KB) was being served where the twin is 53 KB. The v0.9.0
+ * rule again — a plausible fixture is missing exactly what nobody thought to
+ * put in it.
+ *
+ * The bounding-box rule still decides the DIMENSIONS, because Photon's
+ * `?fit=` carries them.
+ */
+function wp_get_attachment_image_src($attachment, $size = 'thumbnail') {
+    $full = $GLOBALS['state']['sizes'][(int) $attachment] ?? null;
+    $path = $GLOBALS['state']['files'][(int) $attachment] ?? '';
+    if ($full === null || $path === '') {
+        return false;
+    }
+    [$fw, $fh] = $full;
+    $photon = 'https://i0.wp.com/example.test/u/2026/01/' . basename($path);
+    $boxes = test_size_boxes();
     if ($size === 'full' || !isset($boxes[$size])) {
-        return ["https://example.test/u/$attachment-full.jpg", $fw, $fh];
+        return ["$photon?fit=$fw,$fh", $fw, $fh];
     }
     [$bw, $bh] = $boxes[$size];
     $ratio = $bh > 0 ? min($bw / $fw, $bh / $fh) : $bw / $fw;
     if ($ratio >= 1) {
         // Too small for this size: WordPress serves the full file.
-        return ["https://example.test/u/$attachment-full.jpg", $fw, $fh];
+        return ["$photon?fit=$fw,$fh", $fw, $fh];
     }
     $w = (int) round($fw * $ratio);
     $h = (int) round($fh * $ratio);
-    return ["https://example.test/u/$attachment-{$w}x{$h}.jpg", $w, $h];
+    return ["$photon?fit=$w,$h", $w, $h];
 }
 
 /**
@@ -177,14 +251,16 @@ function MPHB() { return new MPHB_Stub(); }
 require __DIR__ . '/shim.php';
 
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
-foreach (['config', 'layout', 'checkout-request', 'assets', 'hero'] as $file) {
+foreach (['config', 'layout', 'checkout-request', 'rendered-stay', 'assets', 'hero'] as $file) {
     require $plugin . '/includes/class-' . $file . '.php';
 }
 
 use DCC_Checkout\Assets;
 use DCC_Checkout\Config;
+use DCC_Checkout\Checkout_Request;
 use DCC_Checkout\Hero;
 use DCC_Checkout\Layout;
+use DCC_Checkout\Rendered_Stay;
 
 /** Reset the world between cases. */
 function reset_state(array $over = []): void {
@@ -201,6 +277,13 @@ function reset_state(array $over = []): void {
     $_COOKIE = [];
     Config::flush_cache();
     Layout::flush();
+    Rendered_Stay::flush();
+    /* `removed` accumulates, so it is cleared with everything else — a case
+       that asserts "nothing was removed" would otherwise be reading the
+       previous case's answer. */
+    $GLOBALS['state']['removed'] = [];
+    $GLOBALS['state']['in_loop'] = false;
+    $GLOBALS['state']['is_feed'] = false;
 }
 
 /** The eight cottages' featured images, as the Director read them. */
@@ -220,7 +303,24 @@ foreach (COTTAGES as $type => [$att, $w, $h, $label]) {
     $GLOBALS['state']['thumbs'][$type] = $att;
     $GLOBALS['state']['sizes'][$att]   = [$w, $h];
     $GLOBALS['state']['titles'][$type] = $label . ': Test Cottage';
-    $GLOBALS['state']['files'][$att]   = "/uploads/2026/01/$att-full.jpg";
+    /* THE FILE NAMES ARE THE SHAPE THE DIRECTOR QUOTED off live —
+       `Cottage-34-Photos-17.jpg`, with `Cottage-34-Photos-17-1024x768.webp`
+       beside it. The old `2206-full.jpg` was a stand-in that happened to end
+       in `.jpg`, which is all the dead twin lookup needed to look alive. */
+    $n = (int) preg_replace('/\D/', '', $label);
+    $GLOBALS['state']['files'][$att]   = "/uploads/2026/01/Cottage-$n-Photos.jpg";
+    /* And the room type is really a room type, which is what the cookie
+       fallback validates every candidate against. */
+    $GLOBALS['state']['post_type'][$type]   = 'mphb_room_type';
+    $GLOBALS['state']['post_status'][$type] = 'publish';
+}
+
+/** The local URL of one cottage's sized file, built the way the plugin does. */
+function sized_url(int $n, int $w, int $h, string $ext = 'jpg'): string {
+    return "https://example.test/u/2026/01/Cottage-$n-Photos-{$w}x{$h}.$ext";
+}
+function sized_path(int $n, int $w, int $h, string $ext = 'jpg'): string {
+    return "/uploads/2026/01/Cottage-$n-Photos-{$w}x{$h}.$ext";
 }
 
 /** A checkout submission for one cottage. */
@@ -243,7 +343,12 @@ echo "--- which file each cottage is served ---\n";
 $expected = [
     // The narrowest registered size at least 1024 wide — or, for Cottage 22
     // whose original is only 960 wide, the widest there is.
-    'Cottage 22' => ['size' => 'large',     'width' => 960],   // full, 960x720
+    /* WordPress never GENERATED a `large` for a 960-wide original, so the
+       metadata row has no such key and the chooser falls to the widest there
+       is: the original itself. 0.35.0's model answered "large" for it because
+       `wp_get_attachment_image_src()` hands back the full file for a size an
+       image is too small for — the same answer by a different road. */
+    'Cottage 22' => ['size' => 'full',      'width' => 960],   // 960x720
     'Cottage 23' => ['size' => 'large',     'width' => 1024],
     'Cottage 31' => ['size' => 'large',     'width' => 1024],
     'Cottage 32' => ['size' => 'large',     'width' => 1024],
@@ -271,58 +376,104 @@ check('and so does a room type id of 0',
     Hero::photo(0)['url'], '');
 
 /* ========================================================================== *
- * 1b. THE WEBP TWIN (Director, live 2026-10-22)
+ * 1b. THE WEBP TWIN, AND THE PHOTON URL THAT HID IT FOR A RELEASE
+ *     (Director, live 2026-10-22; the defect measured 2026-10-23)
  *
  * Every sized file on this site has a `.webp` beside it with the extension
  * SWAPPED, served as 200 image/webp; the `…jpg.webp` form 404s. The chosen URL
- * goes into a CSS background and a preload link, and SpeedyCache's rewriting
- * only touches <img>, so nothing else on the page would ever serve the twin
- * here. It is 128 KB → 53 KB on Cottage 34 and 236 KB → 86 KB on portrait 36,
- * on the one request that blocks the top of the page.
+ * goes into a CSS background and a preload link — SpeedyCache only rewrites
+ * `<img>` and Photon only rewrites `image_downsize` — so nothing else on the
+ * page would ever serve the twin here. It is 76 KB → 53 KB on Cottage 34 and
+ * 124 KB → 86 KB on portrait 36, on the one request that blocks the top of the
+ * page.
+ *
+ * THE GUARD THAT MAKES THESE HONEST is in the fixture, not here: the stand-in
+ * `wp_get_attachment_image_src()` now returns the i0.wp.com URL this site
+ * really returns. Against it, 0.35.0's code serves Photon every time.
  * ========================================================================== */
 
 echo "\n--- the WebP twin ---\n";
 
-/* Cottage 34's chosen file is 2206-1024x768.jpg; put its twin on disk. */
-$jpeg = Hero::photo(1607)['url'];
-check('without a twin on disk, the JPEG is served (the guard)',
-    substr($jpeg, -4), '.jpg');
+/* Cottage 34's chosen file is Cottage-34-Photos-1024x768.jpg. */
+$GLOBALS['state']['on_disk'] = [];
+$served = Hero::photo(1607)['url'];
+check('with no twin on disk, the site\'s own URL is served (the guard)',
+    $served, 'https://i0.wp.com/example.test/u/2026/01/Cottage-34-Photos.jpg?fit=1024,768');
+check('… which is PHOTON\'s, so a local JPEG is never a step backwards',
+    strpos($served, 'i0.wp.com') !== false, true);
 
-$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
-check('with the twin on disk, the WebP is served instead',
-    Hero::photo(1607)['url'], 'https://example.test/u/2206-1024x768.webp');
+$GLOBALS['state']['on_disk'] = [sized_path(34, 1024, 768, 'webp')];
+check('with the twin on disk, the local WebP is served instead',
+    Hero::photo(1607)['url'], sized_url(34, 1024, 768, 'webp'));
 check('… the extension is SWAPPED, never appended (the .jpg.webp form 404s)',
     strpos(Hero::photo(1607)['url'], '.jpg') === false, true);
+check('… and it is NOT a Photon URL, so nothing can re-encode it',
+    strpos(Hero::photo(1607)['url'], 'i0.wp.com'), false);
+check('… and the dimensions are still the metadata\'s true pixels',
+    [Hero::photo(1607)['width'], Hero::photo(1607)['height']], [1024, 768]);
 
-/* And the preload asks for the file that is actually served. */
+/* THE 0.35.0 DEFECT, CONSTRUCTED. The twin lookup used to run on the URL, and
+   the URL this site hands back ends in a query string, so the pattern it
+   matched on could never fire. Asserting the chosen URL is local is what
+   catches that; asserting "it ends .webp" would not, because Photon serves
+   WebP too — under a .jpg URL. */
+check('the chosen URL names the twin FILE, not a re-encode of the original',
+    substr(Hero::photo(1607)['url'], -strlen('-1024x768.webp')), '-1024x768.webp');
+
+/* And the preload asks for the file that is actually painted. */
 reset_state(['post' => submission(1607)]);
-$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
+$GLOBALS['state']['on_disk'] = [sized_path(34, 1024, 768, 'webp')];
 $hero = new Hero();
 $hero->maybe_hook();
 ob_start();
 do_action('wp_head');
 $head = (string) ob_get_clean();
-check('the preload asks for the WebP, not the JPEG',
-    strpos($head, '2206-1024x768.webp') !== false && strpos($head, '.jpg') === false, true);
+check('the preload asks for the WebP twin',
+    strpos($head, sized_url(34, 1024, 768, 'webp')) !== false, true);
+check('… and the preload URL EQUALS the URL the header paints',
+    preg_match('/href="([^"]+)"/', $head, $m) ? $m[1] : '',
+    apply_filters(Hero::URL_FILTER, 'https://example.test/u/canal.webp'));
 
-/* A cottage whose twin is missing keeps its JPEG — one missing file must not
-   make a broken header. */
-$GLOBALS['state']['on_disk'] = ['/uploads/2026/01/2206-1024x768.webp'];
-check('a cottage with no twin on disk keeps its JPEG',
-    substr(Hero::photo(1742)['url'], -4), '.jpg');
+/* A cottage whose twin is missing keeps what the site serves — one missing
+   file must not make a broken header. */
+check('a cottage with no twin on disk is unaffected',
+    strpos(Hero::photo(1742)['url'], 'i0.wp.com') !== false, true);
 check('… while the one that has a twin still gets it',
     substr(Hero::photo(1607)['url'], -5), '.webp');
 
+/* Portrait Cottage 36 chooses 1536x1536 → 1152x1536, so ITS twin is that
+   file, not the 1024 one. A twin lookup keyed on the wrong size would miss. */
+$GLOBALS['state']['on_disk'] = [sized_path(36, 1152, 1536, 'webp')];
+check('the portrait cottage gets the twin of the size IT chose',
+    Hero::photo(1742)['url'], sized_url(36, 1152, 1536, 'webp'));
+
 /* The twin is only ever swapped for a file this knows how to swap. */
+$GLOBALS['state']['on_disk'] = [];
 check('a URL that is already a webp is left alone',
-    Hero::prefer_webp(2206, 'https://example.test/u/2206-1024x768.webp'),
-    'https://example.test/u/2206-1024x768.webp');
+    Hero::prefer_webp(2206, sized_url(34, 1024, 768, 'webp')),
+    sized_url(34, 1024, 768, 'webp'));
 check('an unknown extension is left alone',
-    Hero::prefer_webp(2206, 'https://example.test/u/2206.svg'),
-    'https://example.test/u/2206.svg');
+    Hero::prefer_webp(2206, 'https://example.test/u/2026/01/Cottage-34-Photos.svg'),
+    'https://example.test/u/2026/01/Cottage-34-Photos.svg');
 check('an attachment whose original path cannot be read is left alone',
-    Hero::prefer_webp(9999, 'https://example.test/u/x-1024x768.jpg'),
-    'https://example.test/u/x-1024x768.jpg');
+    Hero::prefer_webp(9999, sized_url(34, 1024, 768)),
+    sized_url(34, 1024, 768));
+
+/* prefer_webp() IS THE PATH THE CONTINUE CARD USES, and it holds a URL rather
+   than a path — including, on this site, a Photon one with a query string.
+   The query string must not be read as the extension, and must survive. */
+$GLOBALS['state']['on_disk'] = [sized_path(34, 1024, 768, 'webp')];
+check('a query string is not mistaken for the extension',
+    Hero::prefer_webp(2206, sized_url(34, 1024, 768) . '?fit=1024,768'),
+    sized_url(34, 1024, 768, 'webp') . '?fit=1024,768');
+
+/* A missing metadata row falls back to whatever the site serves, rather than
+   leaving the header with no picture. */
+$GLOBALS['state']['no_meta'][2206] = true;
+$GLOBALS['state']['on_disk'] = [sized_path(34, 1024, 768, 'webp')];
+check('an attachment with no metadata row still yields a photo',
+    strpos(Hero::photo(1607)['url'], 'i0.wp.com') !== false, true);
+unset($GLOBALS['state']['no_meta'][2206]);
 
 $GLOBALS['state']['on_disk'] = [];
 
@@ -452,6 +603,291 @@ $overlay = (string) ob_get_clean();
 check('… and the name is still shown', strpos($overlay, '>Test Cottage<') !== false, true);
 check('… with no empty pill element',
     strpos($overlay, 'dcc_hero-overlay__dates') !== false, false);
+
+/* ========================================================================== *
+ * 3b. A RELOAD KEEPS THE HERO (v0.35.1, item 1)
+ *
+ * A plain GET of /submit-booking/ after a POST still shows a working checkout:
+ * MotoPress re-renders the form from its own `mphb_check_in_date` /
+ * `mphb_check_out_date` cookies. Nothing is posted, so 0.35.0 read nothing,
+ * the hero stood down, and the page came back with the canal banner and the
+ * theme's "Submit Booking" over it — bar, sheet and all around it.
+ *
+ * THE ROOM TYPE'S COOKIE NAME IS NOT PROVEN, and these cases are deliberately
+ * written so that the plugin does not depend on one: the cookies that ARE
+ * there are read, every candidate is validated against WordPress, and anything
+ * ambiguous or unverifiable yields no hero at all.
+ * ========================================================================== */
+
+echo "\n--- GET after POST (item 1) ---\n";
+
+/** A plain GET, with the cookies MotoPress itself fell back to. */
+function reload(array $cookies): void {
+    reset_state(['post' => []]);
+    $_COOKIE = $cookies;
+    Rendered_Stay::flush();
+}
+
+$mp = [
+    'mphb_check_in_date'  => '2026-11-16',
+    'mphb_check_out_date' => '2026-11-19',
+    'mphb_rooms_details'  => 'a:1:{i:1607;s:1:"1";}',
+];
+
+reload($mp);
+check('GET after POST shows the same cottage hero',
+    Hero::room_type_id(), 1607);
+$GLOBALS['state']['on_disk'] = [sized_path(34, 1024, 768, 'webp')];
+check('… and the same photo it would have shown on the POST',
+    Hero::photo(Hero::room_type_id())['url'], sized_url(34, 1024, 768, 'webp'));
+$hero = new Hero();
+$hero->maybe_hook();
+check('… the header image is filtered, the overlay printed, the theme title removed',
+    [has_our_hook(Hero::URL_FILTER), has_our_hook(Hero::PRINT_HOOK),
+     in_array([Hero::PRINT_HOOK, Hero::THEME_TITLE, Hero::THEME_TITLE_PRIORITY],
+        $GLOBALS['state']['removed'], true)],
+    [true, true, true]);
+check('… and the dates pill reads the cookie stay',
+    $hero->dates_pill(), 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights');
+
+/* THE BOUNDARY THAT MATTERS MOST. The server-side backstops read
+   Checkout_Request to decide whether to REFUSE a booking. A cookie is not a
+   submission, and if a cookie could supply the dates for a submission that
+   posted none, those guards would start evaluating a stay nobody sent. */
+check('the backstops still see NOTHING posted (a cookie is not a submission)',
+    [Checkout_Request::posted_room_type_id(), Checkout_Request::stay_dates(),
+     Checkout_Request::nights()],
+    [0, [null, null], 0]);
+
+reload([]);
+check('no cookies at all: no hero, and the canal banner stays',
+    Hero::room_type_id(), 0);
+(new Hero())->maybe_hook();
+check('… so nothing is hooked and nothing is removed',
+    [has_our_hook(Hero::URL_FILTER), $GLOBALS['state']['removed']], [false, []]);
+
+reload(['mphb_check_in_date' => '2026-11-16', 'mphb_check_out_date' => '2026-11-19']);
+check('the dates alone, with no room cookie: no hero rather than a guess',
+    Hero::room_type_id(), 0);
+
+/* AMBIGUITY IS AN ANSWER OF ITS OWN. Two cottages named means we do not know
+   which one this page is for, and a hero for the wrong cottage is worse than
+   none: it looks deliberate. */
+reload($mp + ['mphb_rooms_other' => '1065']);
+check('two different cottages in the cookies: no hero',
+    Hero::room_type_id(), 0);
+reload($mp + ['mphb_rooms_again' => '1607']);
+check('the SAME cottage twice is not ambiguous',
+    Hero::room_type_id(), 1607);
+
+/* Every candidate is validated by WordPress, so a tampered cookie cannot
+   name anything that is not one of this site's own published cottages. */
+$GLOBALS['state']['post_type'][7777] = 'page';
+$GLOBALS['state']['post_status'][7777] = 'publish';
+reload(['mphb_rooms_details' => '7777']);
+check('a post that is not a room type is refused', Hero::room_type_id(), 0);
+
+$GLOBALS['state']['post_type'][7778] = 'mphb_room_type';
+$GLOBALS['state']['post_status'][7778] = 'draft';
+reload(['mphb_rooms_details' => '7778']);
+check('an unpublished room type is refused', Hero::room_type_id(), 0);
+
+reload(['mphb_rooms_details' => 'a:1:{i:999999;s:1:"1";}']);
+check('an id that is no post at all is refused', Hero::room_type_id(), 0);
+
+/* NEVER unserialize() A COOKIE. The value is treated as text and only digit
+   runs are taken out of it, so a crafted payload is inert — there is nothing
+   here that could instantiate anything. */
+reload(['mphb_rooms_details' => 'O:8:"stdClass":1:{s:4:"x";i:1607;}']);
+check('a serialised OBJECT is read as text, not unserialised',
+    Hero::room_type_id(), 1607);
+check('… and nothing was instantiated to get there',
+    class_exists('DCC_Checkout\\Rendered_Stay', false), true);
+
+/* A cookie name that has nothing to do with rooms is not scanned, so a date's
+   own four-digit year can never be mistaken for a post id. */
+$GLOBALS['state']['post_type'][2026] = 'mphb_room_type';
+$GLOBALS['state']['post_status'][2026] = 'publish';
+reload(['mphb_check_in_date' => '2026-11-16', 'mphb_rooms_details' => '1607']);
+check('a year in a date cookie is not read as a room type',
+    Hero::room_type_id(), 1607);
+unset($GLOBALS['state']['post_type'][2026], $GLOBALS['state']['post_status'][2026]);
+
+/* A quantity or an index is not a candidate: ids on this site are four digits
+   and the floor is three. */
+reload(['mphb_rooms_details' => 'a:1:{i:0;s:1:"1";}']);
+check('a quantity of 1 is not a candidate id', Hero::room_type_id(), 0);
+
+/* AND THE SUBMISSION STILL WINS. A POST that names a cottage is never
+   overruled by a stale cookie for another one. */
+reset_state(['post' => submission(1742)]);
+$_COOKIE = $mp;
+Rendered_Stay::flush();
+check('a real submission beats the cookies',
+    Hero::room_type_id(), 1742);
+
+/* ========================================================================== *
+ * 3c. THE CANAL BANNER STOPS BEING FETCHED (v0.35.1, item 3)
+ *
+ * Two things were still downloading it alongside the cottage photo, and both
+ * read the PAGE'S FEATURED IMAGE rather than the header: SpeedyCache Pro
+ * preloads it at high priority (227 KB), and the theme prints the article's
+ * featured <picture>, hidden, through i0.wp.com. 0.35.0 replaced the header
+ * image's URL, which is a different thing.
+ * ========================================================================== */
+
+echo "\n--- the page's own featured image (item 3) ---\n";
+
+/**
+ * WHAT `get_post_meta()` REALLY DOES WITH A FILTER'S ANSWER — core's own
+ * lines, because the SHAPE of the answer matters and getting it wrong is a
+ * PHP warning rather than a wrong value:
+ *
+ *     $check = apply_filters("get_{$meta_type}_metadata", null, …);
+ *     if (null !== $check) {
+ *         if ($single && is_array($check)) { return $check[0]; }
+ *         return $check;
+ *     }
+ *
+ * `get_post_thumbnail_id()` asks with `$single = true`, so a filter returning
+ * `[]` sends core to `$check[0]` of an empty array: an undefined-offset
+ * warning on every checkout render. The Director's "no new PHP warnings" is
+ * exactly that check, and modelling the indexing step is the only way this
+ * suite can see it.
+ */
+function core_get_post_meta(int $post_id, string $key, bool $single) {
+    $check = apply_filters('get_post_metadata', null, $post_id, $key, $single, 'post');
+    if ($check !== null) {
+        if ($single && is_array($check)) {
+            return $check[0];   // core's own line — warns on an empty array
+        }
+        return $check;
+    }
+    return $single ? '' : [];   // no filter spoke: the real row, modelled empty
+}
+
+/** Run something with every PHP notice turned into a failure. */
+function without_warnings(string $name, callable $fn) {
+    $seen = [];
+    set_error_handler(static function ($no, $str) use (&$seen) {
+        $seen[] = $str;
+        return true;
+    });
+    try {
+        $value = $fn();
+    } finally {
+        restore_error_handler();
+    }
+    check($name, $seen, []);
+    return $value;
+}
+
+/** `_thumbnail_id` as a single read, which is what the thumbnail API does. */
+function thumb_meta(int $post_id) {
+    return core_get_post_meta($post_id, '_thumbnail_id', true);
+}
+
+reset_state(['post' => submission(1607)]);
+(new Hero())->maybe_hook();
+$single = without_warnings(
+    'reading the checkout page\'s featured image raises NO PHP warning',
+    static function () { return thumb_meta(1399); });
+check('the checkout page has NO featured image for this request',
+    $single, '');
+check('… which is falsy, so get_post_thumbnail_id() returns false',
+    (bool) $single, false);
+check('… and a LIST read gets the empty list, the shape core expects there',
+    core_get_post_meta(1399, '_thumbnail_id', false), []);
+check('… and has_post_thumbnail() says so too',
+    apply_filters('has_post_thumbnail', true, 1399), false);
+/* THE SCOPE IS THE WHOLE SAFETY OF THIS. The hero and the Continue card read
+   `_thumbnail_id` on the ROOM TYPE; an unscoped filter would blank the cottage
+   photo and leave the page with no picture at all. */
+check('the COTTAGE\'s own featured image is untouched',
+    apply_filters('get_post_metadata', null, 1607, '_thumbnail_id', true, 'post'), null);
+check('… and so is every other post',
+    apply_filters('get_post_metadata', null, 2515, '_thumbnail_id', true, 'post'), null);
+check('… and no other meta key is affected',
+    apply_filters('get_post_metadata', null, 1399, 'mphb_services', true, 'post'), null);
+check('the cottage photo still resolves, so the header is not left empty',
+    Hero::photo(Hero::room_type_id())['width'] > 0, true);
+
+reset_state(['post' => submission(1607), 'settings' => ['layout_enabled' => 0]]);
+(new Hero())->maybe_hook();
+check('with the layout OFF the page keeps its featured image',
+    [apply_filters('get_post_metadata', null, 1399, '_thumbnail_id', true, 'post'),
+     apply_filters('has_post_thumbnail', true, 1399)], [null, true]);
+
+/* No cottage photo means the canal banner IS the header and its heading is the
+   page's only one, so neither may be taken away. */
+reset_state(['post' => submission(9999)]);
+(new Hero())->maybe_hook();
+check('with no cottage photo the banner is left alone',
+    [apply_filters('get_post_metadata', null, 1399, '_thumbnail_id', true, 'post'),
+     apply_filters('has_post_thumbnail', true, 1399)], [null, true]);
+
+/* ========================================================================== *
+ * 3d. ONE <h1> IN THE HTML, NOT ONE VISIBLE (v0.35.1, item 5)
+ *
+ * The theme's HEADER-IMAGE title went in 0.35.0. The ARTICLE's own
+ * `<h1 class="entry-title singular-title">Submit Booking</h1>` is a different
+ * heading in a different place and was still in the page, hidden by CSS. A
+ * hidden heading is still a heading: the page had two h1s, the wrong one
+ * first.
+ * ========================================================================== */
+
+echo "\n--- the article's own heading (item 5) ---\n";
+
+reset_state(['post' => submission(1607)]);
+(new Hero())->maybe_hook();
+
+$GLOBALS['state']['in_loop'] = true;
+check('inside the loop, the checkout page\'s title is emptied',
+    apply_filters('the_title', 'Submit Booking', 1399), '');
+
+/* SCOPED THREE WAYS, because `the_title` is the most-read filter in
+   WordPress. Any of these going wrong renames things all over the site. */
+$GLOBALS['state']['in_loop'] = false;
+check('outside the loop it is untouched — the document <title>, menus, breadcrumbs',
+    apply_filters('the_title', 'Submit Booking', 1399), 'Submit Booking');
+$GLOBALS['state']['in_loop'] = true;
+check('another post\'s title is untouched',
+    apply_filters('the_title', 'Cottage 34: Test Cottage', 1607), 'Cottage 34: Test Cottage');
+check('a title with no post id is untouched',
+    apply_filters('the_title', 'Submit Booking'), 'Submit Booking');
+$GLOBALS['state']['is_feed'] = true;
+check('a feed is untouched', apply_filters('the_title', 'Submit Booking', 1399), 'Submit Booking');
+$GLOBALS['state']['is_feed'] = false;
+
+/* AND THE CONSEQUENCE, BOTH WAYS ROUND, modelling core's own rule:
+   `the_title( $before, $after )` returns BEFORE printing anything when the
+   title is empty (wp-includes/post-template.php), so a theme that wraps the
+   title the usual way prints no element at all. A theme that writes the tags
+   by hand keeps an EMPTY one — which this cannot remove, and says so rather
+   than assuming live is the kind shape. */
+function core_the_title(string $before, string $after, $id) {
+    $title = apply_filters('the_title', get_the_title($id) ?: 'Submit Booking', $id);
+    if (strlen((string) $title) === 0) {
+        return '';           // core's early return — the tags never print
+    }
+    return $before . $title . $after;
+}
+check('a theme using the_title($before,$after) prints no heading at all',
+    core_the_title('<h1 class="entry-title singular-title">', '</h1>', 1399), '');
+check('… and the same template on another page is unaffected',
+    core_the_title('<h1 class="entry-title singular-title">', '</h1>', 1607),
+    '<h1 class="entry-title singular-title">Cottage 34: Test Cottage</h1>');
+$hand_written = '<h1 class="entry-title singular-title">'
+    . apply_filters('the_title', 'Submit Booking', 1399) . '</h1>';
+check('KNOWN LIMIT: a hand-wrapped <h1> is left empty, not removed',
+    $hand_written, '<h1 class="entry-title singular-title"></h1>');
+
+reset_state(['post' => submission(1607), 'settings' => ['layout_enabled' => 0]]);
+(new Hero())->maybe_hook();
+$GLOBALS['state']['in_loop'] = true;
+check('with the layout OFF the article keeps its heading',
+    apply_filters('the_title', 'Submit Booking', 1399), 'Submit Booking');
+$GLOBALS['state']['in_loop'] = false;
 
 /* ========================================================================== *
  * 4. The marker class and the stylesheet follow the same gate

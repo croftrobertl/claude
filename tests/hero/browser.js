@@ -50,8 +50,31 @@ function check(name, actual, expected) {
     }
 }
 
+/**
+ * THE TWO HEADINGS LIVE SERVES, AND THEY ARE BOTH IN THIS FIXTURE NOW
+ * (v0.35.1, items 1 and 5).
+ *
+ * 0.35.0's fixture carried NEITHER, "as the served page will not" — which was
+ * a statement of intent, not a reading, and both turned out to be on the live
+ * page:
+ *
+ *   - `#header-page-title` ("Submit Booking") over the photo, which the theme
+ *     prints on the same hook at priority 100. 0.35.0 removes that action, and
+ *     the Director confirmed it gone — so the interesting case is the one
+ *     where it is still there, to prove this suite can SEE it.
+ *   - `<h1 class="entry-title singular-title">Submit Booking</h1>` in the
+ *     article, which 0.35.0 only HID. That is item 5, and it is why the
+ *     "exactly one <h1>" assertion was green on a page with two.
+ *
+ * So the markup is a parameter, and the suite asserts both directions.
+ */
+const THEME_TITLE_HTML =
+    '<div id="header-page-title"><h1 class="entry-title">Submit Booking</h1></div>';
+const ARTICLE_TITLE_HTML =
+    '<header class="entry-header"><h1 class="entry-title singular-title">Submit Booking</h1></header>';
+
 /* The theme's header, the mu-plugin's rules, and the page's clipping. */
-const page_html = `<!doctype html>
+const page_template = `<!doctype html>
 <html><head><meta charset="utf-8">
 <!-- THE VIEWPORT META IS LOAD-BEARING IN THIS FIXTURE, not boilerplate.
      Without it, Chromium in mobile emulation lays the page out at 980px and
@@ -112,12 +135,30 @@ ${CSS}
         <p class="dcc_hero-overlay__label">Cottage 34</p>
         <p class="dcc_hero-overlay__dates">Mon, Nov 16 → Thu, Nov 19 · 3 Nights</p>
       </div></div>
+      <!--THEME-TITLE-->
     </div></div>
   </header>
   <main class="main"><div class="one-column"><article class="hentry">
+    <!--ARTICLE-TITLE-->
     <div class="sheet"><p>the form</p></div>
   </article></div></main>
 </body></html>`;
+
+/**
+ * The page, with or without each of the two headings the theme can print.
+ *
+ * `{}` — the default — is 0.35.1: both removed server-side.
+ *
+ * NAMED `pageHtml`, not `page`: the Playwright page is called `page` in the
+ * loop below and shadowed this, which the first draft found by crashing.
+ */
+function pageHtml(opts) {
+    const o = opts || {};
+    return page_template
+        .replace('<!--THEME-TITLE-->', o.themeTitle ? THEME_TITLE_HTML : '')
+        .replace('<!--ARTICLE-TITLE-->', o.articleTitle ? ARTICLE_TITLE_HTML : '');
+}
+const page_html = pageHtml();
 
 (async () => {
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -262,6 +303,55 @@ ${CSS}
         check(at('the page does not scroll sideways'),
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
             true);
+
+        /* ----------------------------------------------------------------- *
+         * THE TWO HEADINGS, BOTH DIRECTIONS (v0.35.1, items 1 and 5)
+         *
+         * The assertions above are about the page as 0.35.1 serves it. These
+         * are about the pages that produced the defects, and they exist so
+         * that "exactly one <h1>" is a measurement rather than a property of
+         * the fixture — 0.35.0's fixture had neither heading in it and the
+         * live page had both.
+         * ----------------------------------------------------------------- */
+        const countH1 = () => page.evaluate(() => Array.prototype.map.call(
+            document.querySelectorAll('h1'), (h) => h.className + '|' + h.textContent.trim()));
+
+        /* ITEM 5's defect, reproduced: the article's heading is still there,
+           and hiding it would not have helped — a hidden heading is still a
+           heading. */
+        await page.setContent(pageHtml({ articleTitle: true }));
+        check(at('WITH the article heading there are TWO <h1>s, the wrong one included'),
+            await countH1(),
+            ['dcc_hero-overlay__name|Test Cottage', 'entry-title singular-title|Submit Booking']);
+        const stillThere = await page.evaluate(() => {
+            const h = document.querySelector('h1.entry-title.singular-title');
+            return h ? getComputedStyle(h).display !== 'none' : 'missing';
+        });
+        check(at('… and the stylesheet does not hide it, because 0.35.1 removes it'),
+            stillThere, true);
+
+        /* ITEM 1's answer, reproduced: the theme title shown WITH the overlay.
+           PHP removes that action, so what this proves is that the suite can
+           SEE the title when it is not removed — 0.35.0's fixture could not,
+           because it had no theme title in it at all, and "exactly one <h1>"
+           was therefore a property of the fixture.
+
+           IT DOES NOT ASSERT THAT THE TWO COLLIDE. The theme positions
+           `#header-page-title` over the photo and that rule is Bravada's own
+           CSS, which is not on this machine; a first draft asserted an overlap
+           and measured none, because the fixture stacks the box below the
+           header instead. The collision is the Director's reading of the live
+           page, and it is recorded as that in class-hero.php rather than
+           pretended to here. */
+        await page.setContent(pageHtml({ themeTitle: true }));
+        check(at('the theme title shown WITH the overlay is a second <h1> this suite sees'),
+            await countH1(),
+            ['dcc_hero-overlay__name|Test Cottage', 'entry-title|Submit Booking']);
+
+        /* And the page 0.35.1 actually serves, once more, for the contrast. */
+        await page.setContent(pageHtml());
+        check(at('with both removed, one <h1> and it is the cottage name'),
+            await countH1(), ['dcc_hero-overlay__name|Test Cottage']);
 
         await ctx.close();
     }

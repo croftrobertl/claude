@@ -85,7 +85,7 @@ const BAR = {
     allSet: 'All Set',
     updating: 'Updating…',
     attention: '%s Need Attention',
-    showMe: 'Show Me ↑ %1$s Of %2$s',
+    showMe: 'Show Me ↑ %1$s of %2$s',
     total: 'Total',
 };
 
@@ -1242,7 +1242,7 @@ const page_html = `<!doctype html>
     check('after a failed submit the bar counts what needs attention',
         attention.note, '2 Need Attention');
     check('… and offers Show Me, outlined rather than filled',
-        [attention.action, attention.outlined], ['Show Me \u2191 1 Of 2', 'rgb(255, 255, 255)']);
+        [attention.action, attention.outlined], ['Show Me \u2191 1 of 2', 'rgb(255, 255, 255)']);
 
     const walk = [];
     for (let i = 0; i < 3; i++) {
@@ -1253,9 +1253,9 @@ const page_html = `<!doctype html>
         }));
     }
     check('each tap jumps to the next flagged field, and wraps round',
-        walk, [['mphb_first_name', 'Show Me \u2191 2 Of 2'],
-               ['mphb_phone', 'Show Me \u2191 1 Of 2'],
-               ['mphb_first_name', 'Show Me \u2191 2 Of 2']]);
+        walk, [['mphb_first_name', 'Show Me \u2191 2 of 2'],
+               ['mphb_phone', 'Show Me \u2191 1 of 2'],
+               ['mphb_first_name', 'Show Me \u2191 2 of 2']]);
 
     const fixedUp = await page.evaluate(() => {
         document.querySelectorAll('.dcc_checkout-invalid').forEach((el) => {

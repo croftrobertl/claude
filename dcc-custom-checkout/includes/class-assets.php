@@ -256,6 +256,25 @@ final class Assets
             return false;
         }
 
+        $checkout_id = self::checkout_page_id();
+
+        $is_checkout = $checkout_id > 0 && is_page($checkout_id);
+
+        return (bool) apply_filters('dcc_checkout_is_checkout_page', $is_checkout);
+    }
+
+    /**
+     * The checkout page's post id, or 0 when it cannot be established.
+     *
+     * Extracted from `is_checkout_page()` in v0.35.1 because the hero now
+     * needs the same id to take the page's own featured image and heading out
+     * of this one request (items 3 and 5). ONE resolution, honouring the same
+     * `dcc_checkout_page_id` filter, so the gate and the suppression can never
+     * disagree about which page they are on — two copies of this would be two
+     * answers, and the suppression's wrong answer blanks a cottage photo.
+     */
+    public static function checkout_page_id(): int
+    {
         $checkout_id = 0;
         if (function_exists('MPHB')) {
             try {
@@ -264,11 +283,7 @@ final class Assets
                 $checkout_id = 0;
             }
         }
-        $checkout_id = (int) apply_filters('dcc_checkout_page_id', $checkout_id);
-
-        $is_checkout = $checkout_id > 0 && is_page($checkout_id);
-
-        return (bool) apply_filters('dcc_checkout_is_checkout_page', $is_checkout);
+        return (int) apply_filters('dcc_checkout_page_id', $checkout_id);
     }
 
     /**

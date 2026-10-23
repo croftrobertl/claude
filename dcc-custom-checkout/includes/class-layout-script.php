@@ -118,7 +118,10 @@ final class Layout_Script
             /* translators: %s: how many fields need attention. */
             'attention' => __('%s Need Attention', 'dcc-checkout'),
             /* translators: 1: which flagged field the guest is on, 2: how many there are. */
-            'showMe'    => __('Show Me ↑ %1$s Of %2$s', 'dcc-checkout'),
+            /* v0.35.1, item 6 — "of" is lower case even in Title Case.
+               Rob's rule: Title Case is for titles and labels, and a
+               preposition inside one still stays down. */
+            'showMe'    => __('Show Me ↑ %1$s of %2$s', 'dcc-checkout'),
             'total'     => __('Total', 'dcc-checkout'),
         ];
     }

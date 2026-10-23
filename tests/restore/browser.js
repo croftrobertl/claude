@@ -70,13 +70,24 @@ const I18N = {
     restartTitle: 'Pick Your Dates Again',
     restartLead: 'We do not have your dates any more.',
     restartButton: 'Pick Your Dates Again',
-    welcome: 'Welcome Back. We Kept Your Answers. Please add your photo ID again.',
+    // v0.35.1, item 2 - the dates are known and taken, which is not lost.
+    takenTitle: 'Those Dates Are Taken',
+    takenLead: "Someone just booked %s for those nights. Choose new dates and we'll bring you straight back.",
+    takenLeadPlain: "Someone just booked those nights. Choose new dates and we'll bring you straight back.",
+    takenButton: 'Pick New Dates',
+    // v0.35.1, item 6 - three sentences, so sentence case.
+    welcome: 'Welcome back. We kept your answers. Please add your photo ID again.',
     startOver: 'Start Over',
 };
 
-function cfg(stay) {
+/**
+ * PHP's half of the state decision (Restore::offer()) is a WORD, so the
+ * fixture sends one. 'lost' is what a request carrying no stay gets.
+ */
+function cfg(stay, offer) {
     return JSON.stringify({
         stay: stay || {},
+        offer: offer || 'lost',
         checkout: 'https://example.test/submit-booking/',
         cottages: 'https://example.test/cottages/',
         i18n: I18N,
@@ -144,6 +155,34 @@ function pageWithoutForm() {
   <p class="mphb-data-incorrect"> <br/>Check-in date is not valid.<br/>Check-out date is not valid.</p>
 </div>
 <script>window.DCC_RESTORE = ${cfg(null)};</script>
+<script>${JS}</script>
+</body></html>`;
+}
+
+/**
+ * THE BOOKED PAGE (v0.35.1, item 2). MotoPress drew no form and printed
+ * "Accommodation is already booked." — and this request DID carry a complete
+ * stay, which is what tells "taken" from "lost".
+ *
+ * ITS MARKUP HAS NOT BEEN READ. The Director quoted the sentence, not the
+ * element, so the fixture deliberately uses shapes the pinned
+ * `p.mphb-data-incorrect` selector does NOT match: a classless `<p>`, and a
+ * nested block. That is the honest worst case and it is the case 0.35.0
+ * failed — its message stayed visible under the card. The structural sweep is
+ * what has to cover it.
+ *
+ * @param {string} inner  what MotoPress put in its wrapper
+ */
+function pageBooked(inner) {
+    return `<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>checkout</title><style>${CSS}</style></head>
+<body>
+<div class="mphb_sc_checkout-wrapper">
+  ${inner || '<p>Accommodation is already booked.</p>'}
+</div>
+<script>window.DCC_RESTORE = ${cfg(STAY, 'taken')};</script>
 <script>${JS}</script>
 </body></html>`;
 }
@@ -288,6 +327,12 @@ const TYPED = {
     check('the photo ID is empty, as it must be', back.file, '');
     check('the guest is told, and told to add the ID again',
         back.welcome.indexOf('photo ID again') !== -1, true);
+    /* ITEM 6, MEASURED ON THE RENDERED NOTE. The substring above survives both
+       casings, so on its own it could not see 0.35.0's "Welcome Back. We Kept
+       Your Answers." The whole sentence is the assertion. */
+    check('… in sentence case, as Rob asked',
+        back.welcome.replace(/\s*Start Over\s*$/, '').trim(),
+        'Welcome back. We kept your answers. Please add your photo ID again.');
     check('… with a Start Over next to it', back.startOver, true);
 
     /* THE EVENTS. A filled form that nothing reacted to would have the right
@@ -494,6 +539,119 @@ const TYPED = {
         if (expect === '') {
             check('… which is <main>, not <body>', got && got.tag, 'MAIN');
         }
+    }
+
+    /* ===================================================================== *
+     * 5b. "THOSE DATES ARE TAKEN" (v0.35.1, item 2)
+     *
+     * No form, and a complete still-bookable stay in THIS request: the dates
+     * are not lost, they are taken. The one action is forward.
+     * ===================================================================== */
+    for (const [label, inner] of [
+        ['a classless <p>', '<p>Accommodation is already booked.</p>'],
+        ['a nested block', '<div class="mphb_sc_checkout"><p>Accommodation is already booked.</p></div>'],
+        ['the pinned dead-end element', '<p class="mphb-data-incorrect">Accommodation is already booked.</p>'],
+    ]) {
+        await page.goto('https://example.test/submit-booking/');
+        /* A STORED STAY IS PRESENT ON PURPOSE. "Taken" has to beat it: a guest
+           whose answers are still in the tab must not be offered Continue for
+           a stay MotoPress has just refused, which would walk them into the
+           same wall. */
+        await page.evaluate((st) => {
+            sessionStorage.clear();
+            sessionStorage.setItem('dcc_checkout_stay_v1', JSON.stringify(st));
+        }, STAY);
+        await page.setContent(pageBooked(inner));
+
+        const taken = await page.evaluate(() => {
+            const c = document.querySelector('.dcc_checkout-continue');
+            if (!c) { return null; }
+            const a = c.querySelector('a.dcc_checkout-continue__button');
+            const lead = c.querySelector('.dcc_checkout-continue__lead');
+            const wrapper = document.querySelector('.mphb_sc_checkout-wrapper');
+            /* Every one of MotoPress's own children, whatever its shape. */
+            const theirs = Array.prototype.slice.call(wrapper.children)
+                .filter((el) => !el.classList.contains('dcc_checkout-continue'));
+            return {
+                heading: (c.querySelector('h2') || {}).textContent,
+                lead: lead && lead.textContent,
+                leadAlign: lead && getComputedStyle(lead).textAlign,
+                headAlign: getComputedStyle(c.querySelector('h2')).textAlign,
+                href: a && a.getAttribute('href'),
+                posts: !!c.querySelector('form'),
+                cardVisible: getComputedStyle(c).display !== 'none',
+                theirsShown: theirs.map((el) => getComputedStyle(el).display),
+                theirCount: theirs.length,
+                dates: c.textContent.indexOf('Nov 16') !== -1,
+            };
+        });
+
+        check('the booked page gets the taken card (' + label + ')',
+            taken && taken.heading, 'Those Dates Are Taken');
+        check('… it names the cottage in the lead (' + label + ')',
+            taken.lead, "Someone just booked Test Cottage for those nights."
+                + " Choose new dates and we'll bring you straight back.");
+        check('… it links forward to /cottages/ and never re-POSTs the refused stay ('
+            + label + ')',
+            [taken.href, taken.posts], ['https://example.test/cottages/', false]);
+        check('… it still shows the dates, because we have them (' + label + ')',
+            taken.dates, true);
+        check('… MotoPress\'s own line is out of view (' + label + ')',
+            [taken.theirCount > 0, taken.theirsShown.every((d) => d === 'none')],
+            [true, true]);
+        check('… and the card itself is not (' + label + ')', taken.cardVisible, true);
+        /* Rob's alignment rule, measured rather than read off the stylesheet. */
+        check('… the title is centred and the two-sentence lead is not ('
+            + label + ')',
+            [taken.headAlign, taken.leadAlign], ['center', 'left']);
+    }
+
+    /* WITHOUT PHP'S WORD, NOTHING CHANGES. The browser never decides this on
+       its own — it does not read MotoPress's message, and a page whose request
+       carried no stay is still the dead end it was. */
+    await page.goto('https://example.test/submit-booking/');
+    await page.evaluate(() => sessionStorage.clear());
+    await page.setContent(pageBooked().replace("'offer':'taken'", "'offer':'lost'")
+        .replace('"offer":"taken"', '"offer":"lost"'));
+    const notTaken = await page.evaluate(() => {
+        const c = document.querySelector('.dcc_checkout-continue');
+        return c && (c.querySelector('h2') || {}).textContent;
+    });
+    check('with PHP saying "lost", the taken card is not drawn', notTaken, 'Pick Your Dates Again');
+
+    /* AND A STAY PHP HANDED OVER HALF-WRITTEN IS NOT ENOUGH EITHER. */
+    await page.setContent(pageBooked().replace(
+        '"checkOut":"2026-11-19"', '"checkOut":""'));
+    const halfTaken = await page.evaluate(() => {
+        const c = document.querySelector('.dcc_checkout-continue');
+        return c && (c.querySelector('h2') || {}).textContent;
+    });
+    check('a half-written stay is not "taken" even when PHP says so', halfTaken,
+        'Pick Your Dates Again');
+
+    /* THE STRUCTURAL SWEEP IS CONFINED TO MOTOPRESS'S OWN WRAPPER AND MUST
+       STAY SO. The host list also holds .entry-content, main and body; hiding
+       every child of one of those would blank the page. */
+    for (const [label, host] of [
+        ['the checkout block', '<div class="mphb_sc_checkout"><p id="keep">Accommodation is already booked.</p></div>'],
+        ['the entry content', '<div class="entry-content"><p id="keep">Accommodation is already booked.</p></div>'],
+        ['the main element', '<main><p id="keep">Accommodation is already booked.</p></main>'],
+    ]) {
+        const p3 = await ctx.newPage();
+        await p3.setContent(pageBooked().replace(
+            /<div class="mphb_sc_checkout-wrapper">[\s\S]*?<\/div>\n*(?=<script)/, host));
+        const kept = await p3.evaluate(() => {
+            const el = document.getElementById('keep');
+            const c = document.querySelector('.dcc_checkout-continue');
+            return {
+                card: !!c && (c.querySelector('h2') || {}).textContent,
+                shown: el ? getComputedStyle(el).display : 'missing',
+                siblings: document.body.children.length,
+            };
+        });
+        await p3.close();
+        check('outside MotoPress\'s wrapper nothing is swept (' + label + ')',
+            [kept.card, kept.shown], ['Those Dates Are Taken', 'block']);
     }
 
     /* ===================================================================== *

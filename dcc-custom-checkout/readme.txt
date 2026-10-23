@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.35.0
+Stable tag: 0.35.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,26 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.35.1 =
+Six fixes from the Website Director's read of live 0.35.0, all of them in the new layout except the "Those Dates Are Taken" card, which every guest sees.
+
+* Fixed: reloading /submit-booking/ lost the cottage photo. The page still worked — MotoPress rebuilds the form from its own date cookies — but the header fell back to the canal banner with "Submit Booking" over it. The header now reads the same stay the rest of the page is for. The backstops that can refuse a booking still read only what was submitted; a cookie is not a submission.
+* Fixed: when the dates have just been booked by someone else, the page said "We do not have your dates any more." It now says "Those Dates Are Taken", names the cottage, keeps the dates in front of the guest and offers "Pick New Dates". MotoPress's own message is kept out of view behind the card, as the dead end already was.
+* Faster: the canal banner is no longer downloaded on the new layout. Two things were still fetching it alongside the cottage photo — the cache plugin's high-priority preload and a hidden copy in the page — because both read the page's featured image rather than the header. Unchanged with the layout off, and unchanged on a cottage with no photo of its own.
+* Faster: the cottage photo is now the WebP file beside it on the server rather than a re-encode fetched through the image service — 53 KB instead of 76 KB on Cottage 34, 86 KB instead of 124 KB on Cottage 36. The preloaded file and the painted file are the same one.
+* Fixed: the page had two main headings, one of them hidden. The article's own "Submit Booking" heading is now removed rather than hidden, leaving the cottage's name as the page's only one. The browser tab's title, the menus and the breadcrumb are untouched.
+* Wording: "Show Me ↑ 1 of 2" in the pinned bar, and "Welcome back. We kept your answers. Please add your photo ID again." above a restored form.
+
+Nothing is written on install, activation or upgrade, and no setting, stored value or database shape changed. The new layout is still off until it is switched on.
+
+= 0.35.0 =
+Rob's new layout for the checkout, shipped switched OFF behind a preview link so guests keep today's checkout until he turns it on.
+
+* New: the booked cottage's own photo at the top of the checkout, with its name and the stay's dates over it, in place of the canal banner.
+* New: a pinned bar at the foot of the page naming the next thing to fill in, the running total, and the one Submit control.
+* New: the questions are grouped into sections, with the long dropdowns replaced by buttons, a coupon field that stays out of the way until it is wanted, and a summary of the stay beside the form on a desktop.
+* New, and for every guest whatever the switch says: a reloaded or interrupted checkout is no longer a dead end. The answers already typed are kept for the rest of the visit and put back, and where MotoPress draws no form at all the page offers "Continue Your Booking" for the same dates. The photo ID, the coupon and the terms tick are never kept.
 
 = 0.34.2 =
 The Website Director's read-only audit of live 0.34.1. Nothing critical was found; these are the five fixes from it.

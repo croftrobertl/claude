@@ -279,7 +279,17 @@
         card.className = 'dcc_checkout-continue';
         card.setAttribute('data-dcc-injected', '1');
 
-        if (held && held.roomTypeId && held.checkIn && held.checkOut) {
+        /* THREE STATES, AND THE FIRST ONE IS NEW IN v0.35.1 (item 2).
+           PHP decides which of them the REQUEST has earned (Restore::offer()),
+           because PHP is the half holding the submission; this half knows the
+           one thing PHP cannot — whether MotoPress drew a form. Together:
+           no form AND a complete, still-bookable stay in this very request
+           means the dates are not lost, they are taken.
+
+           Never read as MotoPress's words. See Restore::offer(). */
+        if (CFG.offer === 'taken' && complete(STAY)) {
+            card.appendChild(takenCard(STAY));
+        } else if (complete(held)) {
             card.appendChild(continueCard(held));
         } else {
             card.appendChild(restartCard());
@@ -297,7 +307,12 @@
         ]);
         if (!host) { return; }
         host.insertBefore(card, host.firstChild);
-        hideDeadEnd();
+        hideDeadEnd(host);
+    }
+
+    /** A stay is usable only with all three of the fields we would re-post. */
+    function complete(stay) {
+        return !!(stay && stay.roomTypeId && stay.checkIn && stay.checkOut);
     }
 
     /**
@@ -353,7 +368,9 @@
             d.className = 'dcc_checkout-continue__dates';
             frag.appendChild(d);
         }
-        frag.appendChild(para(I18N.continueLead));
+        var lead = para(I18N.continueLead);
+        lead.className = 'dcc_checkout-continue__lead';
+        frag.appendChild(lead);
 
         /* A REAL POST OF THE SAME FIVE FIELDS THE COTTAGE PAGE SENDS, with
            the dates EXACTLY as they were stored. Nothing is recomputed from
@@ -387,10 +404,56 @@
         return frag;
     }
 
+    /**
+     * v0.35.1, item 2 — the dates are known, and someone else has them.
+     *
+     * No form and no POST back: offering to re-submit a stay MotoPress has
+     * just refused would walk the guest into the same wall. The one action is
+     * forward, to pick again.
+     */
+    function takenCard(stay) {
+        var frag = document.createDocumentFragment();
+
+        frag.appendChild(heading('h2', I18N.takenTitle));
+
+        /* The cottage's name goes IN the sentence when it is known, and the
+           nameless wording is a separate string rather than this one with a
+           hole in it. */
+        var lead = stay.name
+            ? fill(I18N.takenLead, stay.name)
+            : (I18N.takenLeadPlain || '');
+        var p = para(lead);
+        /* Two sentences, so left-aligned — Rob's rule. The title above it and
+           the dates below stay centred. */
+        p.className = 'dcc_checkout-continue__lead';
+        frag.appendChild(p);
+
+        if (stay.dates) {
+            var d = para(stay.dates);
+            d.className = 'dcc_checkout-continue__dates';
+            frag.appendChild(d);
+        }
+
+        var a = document.createElement('a');
+        a.className = 'dcc_checkout-continue__button';
+        a.href = CFG.cottages || '/';
+        a.appendChild(document.createTextNode(I18N.takenButton || ''));
+        frag.appendChild(a);
+        return frag;
+    }
+
+    /** One `%s` filled in. Text only: this never builds markup. */
+    function fill(template, value) {
+        var text = template == null ? '' : String(template);
+        return text.replace('%s', value == null ? '' : String(value));
+    }
+
     function restartCard() {
         var frag = document.createDocumentFragment();
         frag.appendChild(heading('h2', I18N.restartTitle));
-        frag.appendChild(para(I18N.restartLead));
+        var lead = para(I18N.restartLead);
+        lead.className = 'dcc_checkout-continue__lead';
+        frag.appendChild(lead);
         var a = document.createElement('a');
         a.className = 'dcc_checkout-continue__button';
         a.href = CFG.cottages || '/';
@@ -408,11 +471,11 @@
     }
 
     /**
-     * Hide MotoPress's "Check-in date is not valid." dead end, once the card
-     * is in front of it.
+     * Put MotoPress's own message out of view, once the card is in front of
+     * it.
      *
-     * THE SELECTOR IS THE ONE THE DIRECTOR READ OFF THE LIVE SERVER
-     * (2026-10-22). A fresh GET with no POST is served exactly:
+     * THE ONE SELECTOR THE DIRECTOR READ OFF THE LIVE SERVER (2026-10-22). A
+     * fresh GET with no POST is served exactly:
      *
      *     <div class="mphb_sc_checkout-wrapper">
      *       <p class="mphb-data-incorrect"> <br/>Check-in date is not valid.…
@@ -423,20 +486,47 @@
      * from the shape of that name. All three are gone: a guessed selector that
      * matches nothing is not a fallback, it is a line that looks like one.
      *
-     * Pinned to the child of that wrapper, so a `.mphb-data-incorrect`
-     * MotoPress might print somewhere else on some other page is not this
-     * plugin's business. Display-based, as everywhere else on this checkout,
-     * and only ever called once the card is actually in front of it. Nothing
+     * AND IN v0.35.1 IT IS NOT THE ONLY MESSAGE (item 2). The booked page
+     * prints "Accommodation is already booked." in that wrapper and 0.35.0
+     * left it showing UNDER the card, because it is not that element. Its
+     * markup has not been read, so rather than guess a second class this works
+     * STRUCTURALLY: when the card's host is MotoPress's own checkout wrapper,
+     * every direct child of that wrapper which is not ours goes out of view.
+     * The wrapper holds the checkout and nothing else, and this only ever runs
+     * on the path where MotoPress drew no form — so there is nothing in there
+     * for a guest to act on, whatever it says, and the card has replaced it.
+     *
+     * THE GENERALISATION IS CONFINED TO THAT WRAPPER AND MUST STAY SO. The
+     * host list also contains `.entry-content`, `main` and `body`; hiding
+     * every child of one of those would blank the page. So the structural
+     * sweep is gated on the host being the wrapper, and the pinned selector
+     * above is what runs otherwise.
+     *
+     * Display-based, as everywhere else on this checkout; idempotent; nothing
      * of WordPress's own notices is touched.
      */
-    function hideDeadEnd() {
+    function hideDeadEnd(host) {
+        var wrapper = host && host.classList
+            && host.classList.contains('mphb_sc_checkout-wrapper');
+
+        if (wrapper) {
+            var kids = host.children;
+            for (var k = 0; k < kids.length; k++) { conceal(kids[k]); }
+            return;
+        }
+
         var dead = document.querySelectorAll(
             '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');
-        for (var i = 0; i < dead.length; i++) {
-            if (dead[i].closest('.dcc_checkout-continue')) { continue; }
-            if (!dead[i].classList.contains('dcc_checkout-hidden')) {
-                dead[i].classList.add('dcc_checkout-hidden');
-            }
+        for (var i = 0; i < dead.length; i++) { conceal(dead[i]); }
+    }
+
+    /** Hide one element, unless it is the card or inside it. */
+    function conceal(el) {
+        if (!el || !el.classList) { return; }
+        if (el.classList.contains('dcc_checkout-continue')) { return; }
+        if (el.closest && el.closest('.dcc_checkout-continue')) { return; }
+        if (!el.classList.contains('dcc_checkout-hidden')) {
+            el.classList.add('dcc_checkout-hidden');
         }
     }
 

@@ -94,7 +94,7 @@ $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
 // hero is loaded because Layout_Script's summary card reads Hero's own
 // shared dates text: the card and the pill over the photo must word the same
 // stay identically, so there is one reader and not two.
-foreach (['config', 'layout', 'checkout-request', 'assets', 'boat-field', 'id-files', 'hero', 'layout-script'] as $f) {
+foreach (['config', 'layout', 'checkout-request', 'rendered-stay', 'assets', 'boat-field', 'id-files', 'hero', 'layout-script'] as $f) {
     require $plugin . '/includes/class-' . $f . '.php';
 }
 
@@ -253,6 +253,39 @@ check('Config normalises a guest\'s field names, so only known roles reach the m
 /* ========================================================================== *
  * 4. Who gets the script
  * ========================================================================== */
+
+/* ========================================================================== *
+ * THE BAR'S WORDS, AND ROB'S CASING RULE (v0.35.1, item 6)
+ *
+ * Title Case is for titles and labels; sentences stay sentence case — and a
+ * preposition inside a title stays down. 0.35.0 shipped "Show Me ↑ 1 Of 2".
+ *
+ * THE BROWSER SUITE HOLDS ITS OWN COPY of these strings, because it has to
+ * print a config the way `wp_localize_script` does. A copy is a second
+ * implementation, so the two are compared here rather than trusted: this is
+ * the only thing standing between a PHP string change and a browser fixture
+ * that goes on asserting the old words.
+ * ========================================================================== */
+
+echo "\n--- the bar's words ---\n";
+
+$bar = Layout_Script::bar();
+check('"of" is lower case inside the Title Case label',
+    $bar['showMe'], 'Show Me ↑ %1$s of %2$s');
+check('… and no label in the bar Title-Cases a preposition',
+    array_values(array_filter($bar, static function ($v) {
+        return is_string($v) && preg_match('/\b(Of|And|For|To|The|A|In|On)\b/', $v);
+    })), []);
+
+$fixture = (string) file_get_contents(__DIR__ . '/browser.js');
+foreach ($bar as $key => $value) {
+    if (!is_string($value) || $value === '') { continue; }
+    /* The fixture writes the arrow as a \u escape, which is the same
+       character; everything else is compared literally. */
+    $js = str_replace('↑', '↑', $value);
+    check("the browser fixture's $key is the string PHP really sends",
+        strpos($fixture, "'" . $js . "'") !== false, true);
+}
 
 echo "\n--- who gets it ---\n";
 

@@ -696,6 +696,7 @@ background: #e7eef7;
 display: none !important;
 }
 .dcc_checkout-welcome {
+text-align: left;
 margin: 0 0 18px;
 padding: 14px 16px;
 border: 2px solid #f4da62;
@@ -711,6 +712,7 @@ color: var(--dcc-blue, #006bcf);
 cursor: pointer;
 }
 .dcc_checkout-continue {
+text-align: center;
 margin: 0 0 24px;
 padding: 18px;
 border: 1px solid var(--dcc-gold, #f4da62);
@@ -726,6 +728,9 @@ line-height: 1.2;
 margin: 0 0 8px;
 font-size: 16px;
 line-height: 1.45;
+}
+.dcc_checkout-continue__lead {
+text-align: left;
 }
 .dcc_checkout-continue__photo {
 display: block;

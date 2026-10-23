@@ -93,6 +93,10 @@ final class Restore
     {
         return [
             'stay'     => self::stay(),
+            // A WORD, never a boolean (0.29.0): `wp_localize_script` casts
+            // top-level scalars with `(string)`, and a three-state sent as
+            // `true/false/null` arrives as "1"/""/null.
+            'offer'    => self::offer(),
             'checkout' => self::checkout_url(),
             'cottages' => self::cottages_url(),
             'i18n'     => self::strings(),
@@ -140,6 +144,85 @@ final class Restore
             // the previous stay's answers.
             'key'          => $type . '|' . gmdate('Y-m-d', $in) . '|' . gmdate('Y-m-d', $out),
         ];
+    }
+
+    /**
+     * v0.35.1 — WHICH CARD THIS REQUEST HAS EARNED (item 2, the Director's
+     * live finding 2026-10-23).
+     *
+     * THE DEFECT. Cottage 36, Jan 11-14 2027 is booked. A guest who presses
+     * Book Now for it is sent to /submit-booking/, MotoPress declines to draw
+     * a form and prints "Accommodation is already booked." — and 0.35.0's card
+     * said "We do not have your dates any more." We have the dates. They are
+     * taken, which is a different thing to say, and a different thing to do
+     * about it.
+     *
+     * HOW THE TWO ARE TOLD APART, WITHOUT READING MOTOPRESS'S WORDS. The
+     * states differ in what the REQUEST carried, which is a fact this plugin
+     * holds:
+     *
+     *   - "taken": this request POSTED a complete stay — a room type and both
+     *     dates — and (the browser's half) MotoPress drew no form for it. The
+     *     dates are known, so they can be named and the guest sent back for
+     *     new ones.
+     *   - "lost": no stay in this request at all, which is the reloaded-tab
+     *     dead end item 10 was built for.
+     *
+     * Never the error's text. The words are MotoPress's, they are translated
+     * on this site, and matching text that can change is how features here
+     * have quietly died before.
+     *
+     * AND THE STAY MUST STILL BE BOOKABLE IN PRINCIPLE, or this says nothing
+     * about it. "Someone just booked it" is a claim, and it must not be made
+     * about a stay MotoPress may have refused for an entirely different
+     * reason: a check-in already in the past, or dates the wrong way round.
+     * Those fall through to the honest "pick again" card.
+     *
+     * KNOWN LIMIT, STATED RATHER THAN HIDDEN: any OTHER refusal of a
+     * complete, future-dated stay also lands here — a minimum-nights rule,
+     * say. Availability is the overwhelmingly common one and the only one the
+     * Director has seen, and the recovery offered (choose new dates) is right
+     * for every member of that set even where the sentence is not. Narrowing
+     * it further would mean reading MotoPress's message, which is the thing
+     * this must not do.
+     *
+     * @return string 'taken' | 'lost'
+     */
+    public static function offer(): string
+    {
+        $stay = self::stay();
+        if ($stay === []) {
+            return 'lost';
+        }
+        return self::bookable_in_principle() ? 'taken' : 'lost';
+    }
+
+    /**
+     * Could this stay still be booked by anyone? (Not: is it available.)
+     *
+     * US/EASTERN, like every other "today" in this project. The cottages are
+     * in Florida and a cutoff has to match the property clock, not the
+     * visitor's: a guest in Sydney must not be told their dates are in the
+     * past because it is already tomorrow where they are.
+     */
+    private static function bookable_in_principle(): bool
+    {
+        [$in, $out] = Checkout_Request::stay_dates();
+        if ($in === null || $out === null || $out <= $in) {
+            return false;
+        }
+        try {
+            $today = new \DateTimeImmutable('now', new \DateTimeZone('America/New_York'));
+            $floor = new \DateTimeImmutable(
+                $today->format('Y-m-d') . ' 00:00:00',
+                new \DateTimeZone('UTC')
+            );
+        } catch (\Throwable $e) {
+            // An unreadable clock must not turn a real refusal into a lie, so
+            // the claim is simply not made.
+            return false;
+        }
+        return $in >= $floor->getTimestamp();
     }
 
     /**
@@ -247,7 +330,18 @@ final class Restore
             'restartTitle'   => __('Pick Your Dates Again', 'dcc-checkout'),
             'restartLead'    => __('We do not have your dates any more. Choose them again and we will take you straight to checkout.', 'dcc-checkout'),
             'restartButton'  => __('Pick Your Dates Again', 'dcc-checkout'),
-            'welcome'        => __('Welcome Back. We Kept Your Answers. Please add your photo ID again.', 'dcc-checkout'),
+            /* v0.35.1, item 2 — the dates are known and taken, which is not
+               the same as lost. Two leads: the cottage's name is worth saying
+               when it is known, and a title with an empty name in it is worse
+               than one without. */
+            'takenTitle'     => __('Those Dates Are Taken', 'dcc-checkout'),
+            /* translators: %s: the cottage's name, e.g. "Coconut Cottage". */
+            'takenLead'      => __('Someone just booked %s for those nights. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
+            'takenLeadPlain' => __('Someone just booked those nights. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
+            'takenButton'    => __('Pick New Dates', 'dcc-checkout'),
+            /* v0.35.1, item 6 — sentence case. Rob's rule: Title Case is for
+               titles and labels, and this is three sentences. */
+            'welcome'        => __('Welcome back. We kept your answers. Please add your photo ID again.', 'dcc-checkout'),
             'startOver'      => __('Start Over', 'dcc-checkout'),
         ];
     }
