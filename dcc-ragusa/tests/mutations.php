@@ -240,6 +240,12 @@ $mutations = [
         'from' => "    public const PREGZ_BEGIN  = '# BEGIN DCC Pre-gzipped Cache';",
         'to'   => "    public const PREGZ_BEGIN  = '# BEGIN DCC Pregzipped Cache';",
     ],
+    [
+        'name' => '0.1.5: an .htaccess with neither block (staging) raises a finding',
+        'file' => 'includes/class-htaccess.php',
+        'from' => "        if (\$speedy === false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
+        'to'   => "        if (false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
+    ],
 ];
 
 

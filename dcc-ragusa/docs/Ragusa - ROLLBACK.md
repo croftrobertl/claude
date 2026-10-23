@@ -62,7 +62,9 @@ above `# BEGIN DCC Pre-gzipped Cache`, and its rule ends in `[L]`, so the
 pre-gzipped files are never served. Move the DCC Pre-gzipped Cache block
 above `# BEGIN speedycache` (keep a copy first: `cp .htaccess ~/htaccess.bak-$(date +%s)`).
 The finding resolves on the next tick. The same email, with its own title,
-comes when either block is missing.
+comes when SpeedyCache's block is there and the DCC one is missing. Without
+a `# BEGIN speedycache` block (staging) there is nothing to order and
+nothing is raised: one info line in Recent Events says so.
 
 ## If a finding stays on the page after the problem is gone
 

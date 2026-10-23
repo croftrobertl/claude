@@ -516,8 +516,8 @@ suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that
     eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n" . Test_Site::SPEEDY_BLOCK), 'pre-gzipped above speedycache is fine');
     eq(Htaccess::ORDER_WRONG, Htaccess::order_problem(Test_Site::SPEEDY_BLOCK . "\n" . Test_Site::PREGZ_BLOCK), 'speedycache above pre-gzipped is the wrong order');
     eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem(Test_Site::SPEEDY_BLOCK), 'no pre-gzipped block');
-    eq(Htaccess::ORDER_SPEEDY_MISSING, Htaccess::order_problem(Test_Site::PREGZ_BLOCK), 'no speedycache block');
-    eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem(''), 'an empty file');
+    eq(Htaccess::ORDER_NO_SPEEDY, Htaccess::order_problem(Test_Site::PREGZ_BLOCK), 'no speedycache block: nothing to order');
+    eq(Htaccess::ORDER_NO_SPEEDY, Htaccess::order_problem(''), 'neither block (staging): nothing to order');
     eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n# BEGIN SpeedyCache\n# END SpeedyCache\n"), 'the speedycache marker is matched whatever its case');
     eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem("# BEGIN DCC Pre-gzip Cache\n# END DCC Pre-gzip Cache\n" . Test_Site::SPEEDY_BLOCK), 'a near-miss name is not the block');
 
@@ -534,7 +534,7 @@ suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that
     $swapped = str_replace(['@@S@@', '@@P@@'], [Test_Site::SPEEDY_BLOCK, Test_Site::PREGZ_BLOCK], $swapped);
     ok($swapped !== $orig && Htaccess::order_problem($swapped) === Htaccess::ORDER_WRONG, 'fixture swapped');
     file_put_contents($path, $swapped);
-    $mails = count($GLOBALS['dccr_mail']);
+    $mails = count(mails_with('Pre-gzipped'));
     $rows  = count(Journal::recent(50, null, 'htaccess-block'));
     tick();
     $a = Alerts::get($fp);
@@ -543,8 +543,8 @@ suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that
     eq('The Pre-gzipped Cache Block Is Below SpeedyCache', $a['title'], 'title');
     eq($swapped, file_get_contents($path), '.htaccess untouched: an alert, never a rewrite');
     eq($rows, count(Journal::recent(50, null, 'htaccess-block')), 'no journal row');
-    eq(1, count($GLOBALS['dccr_mail']) - $mails, 'one email');
-    $mail = end($GLOBALS['dccr_mail']);
+    eq(1, count(mails_with('Pre-gzipped')) - $mails, 'one email from Revelin (Minčeta\'s own "File Changed: .htaccess" is its business)');
+    $mail = mails_with('Below SpeedyCache')[0];
     ok(str_contains($mail['body'], 'Move the DCC Pre-gzipped Cache block above # BEGIN speedycache.'), 'the email names the fix');
     eq(1, count(events_of('htaccess-order')), 'one event');
     tick();
@@ -557,19 +557,37 @@ suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that
     eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved once the order is right');
     ok(count(mails_with('All Clear: The Pre-gzipped Cache Block Is Below SpeedyCache')) === 1, 'one All Clear, since it was emailed');
 
-    // Either block missing is a finding too, each with its own title.
+    // The DCC block missing below a present speedycache block is a finding with its own title.
     file_put_contents($path, str_replace(Test_Site::PREGZ_BLOCK, '', $orig));
     tick();
     eq('The Pre-gzipped Cache Block Is Missing', Alerts::get($fp)['title'], 'pre-gzipped block missing');
     eq('open', Alerts::state(Alerts::get($fp)), 'open again');
     ok(str_contains(Alerts::body(Alerts::get($fp) + ['todo' => 'Put the DCC Pre-gzipped Cache block back, above # BEGIN speedycache.']), 'above # BEGIN speedycache'), 'the fix names the order');
-    eq(2, count(events_of('htaccess-order')), 'a different problem is a new event');
+    eq(2, count(array_filter(events_of('htaccess-order'), static fn($e) => $e['severity'] === Events::NEEDS_LOOK)), 'a different problem is a new event');
+
+    // 0.1.5: no speedycache block (staging has none) is nothing to order: quiet, one info line, and it clears an open finding.
     file_put_contents($path, str_replace(Test_Site::SPEEDY_BLOCK, '', $orig));
     tick();
-    eq('The SpeedyCache Block Is Missing', Alerts::get($fp)['title'], 'speedycache block missing');
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'without a speedycache block the open finding resolves');
+    $infos = array_filter(events_of('htaccess-order'), static fn($e) => $e['severity'] === Events::INFO);
+    eq(1, count($infos), 'one info line');
+    ok(str_contains(reset($infos)['message'], 'SpeedyCache has no rewrite block here'), 'saying SpeedyCache has no rewrite block here');
+    tick();
+    eq(1, count(array_filter(events_of('htaccess-order'), static fn($e) => $e['severity'] === Events::INFO)), 'and not again on the next tick');
+    file_put_contents($path, str_replace([Test_Site::PREGZ_BLOCK, Test_Site::SPEEDY_BLOCK], '', $orig)); // the DCC Security block alone, like staging
+    $mails = count(mails_with('Pre-gzipped')) + count(mails_with('SpeedyCache'));
+    tick();
+    ok(Alerts::state(Alerts::get($fp)) !== 'open', 'neither block: no finding');
+    eq($mails, count(mails_with('Pre-gzipped')) + count(mails_with('SpeedyCache')), 'and no email about it');
+    eq(Fortress::HOLDING, Alerts::worst(Fortress::REVELIN), 'Revelin holds with neither block');
     file_put_contents($path, $orig);
     tick();
-    eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved again');
+    ok(Alerts::state(Alerts::get($fp)) !== 'open', 'both back in order: still nothing open');
+    file_put_contents($path, str_replace(Test_Site::SPEEDY_BLOCK, '', $orig));
+    tick();
+    eq(2, count(array_filter(events_of('htaccess-order'), static fn($e) => $e['severity'] === Events::INFO)), 'the info line returns once the block was there and is gone again');
+    file_put_contents($path, $orig);
+    tick();
     Alerts::force(false);
 });
 

@@ -256,12 +256,25 @@ final class Revelin
     /**
      * The DCC Pre-gzipped Cache block must sit above SpeedyCache's. An
      * alert only, never a rewrite: the fix is named and left to the Director.
+     * Without a SpeedyCache block (staging) there is nothing to order: one
+     * info line when that is first seen, and no finding, ever.
      */
     public static function check_htaccess_order(): void
     {
         $content = is_file(Htaccess::path()) ? (string) file_get_contents(Htaccess::path()) : '';
         $problem = Htaccess::order_problem($content);
         $fp      = Events::fingerprint(Fortress::REVELIN, 'htaccess-order', '.htaccess');
+        if ($problem === Htaccess::ORDER_NO_SPEEDY) {
+            Alerts::resolve($fp);
+            if (!(bool) State::get('htaccess.no_speedycache', false)) {
+                State::set('htaccess.no_speedycache', true);
+                Events::record(Fortress::REVELIN, Events::INFO, 'htaccess-order', '.htaccess', __('SpeedyCache has no rewrite block here; there is no block order to keep.', 'dcc-ragusa'));
+            }
+            return;
+        }
+        if ((bool) State::get('htaccess.no_speedycache', false)) {
+            State::delete('htaccess.no_speedycache');
+        }
         if ($problem === Htaccess::ORDER_OK) {
             Alerts::resolve($fp);
             return;
@@ -269,13 +282,8 @@ final class Revelin
         [$title, $what, $todo] = match ($problem) {
             Htaccess::ORDER_PREGZ_MISSING => [
                 __('The Pre-gzipped Cache Block Is Missing', 'dcc-ragusa'),
-                __('There is no "# BEGIN DCC Pre-gzipped Cache" block in .htaccess, so every page goes out uncompressed.', 'dcc-ragusa'),
+                __('SpeedyCache has its "# BEGIN speedycache" block in .htaccess, but there is no "# BEGIN DCC Pre-gzipped Cache" block above it, so every page goes out uncompressed.', 'dcc-ragusa'),
                 __('Put the DCC Pre-gzipped Cache block back, above # BEGIN speedycache.', 'dcc-ragusa'),
-            ],
-            Htaccess::ORDER_SPEEDY_MISSING => [
-                __('The SpeedyCache Block Is Missing', 'dcc-ragusa'),
-                __('There is no "# BEGIN speedycache" block in .htaccess; the DCC Pre-gzipped Cache block is there, but SpeedyCache\'s own rules are not.', 'dcc-ragusa'),
-                __('Check SpeedyCache is active and let it write its block; the DCC Pre-gzipped Cache block must stay above # BEGIN speedycache.', 'dcc-ragusa'),
             ],
             default => [
                 __('The Pre-gzipped Cache Block Is Below SpeedyCache', 'dcc-ragusa'),

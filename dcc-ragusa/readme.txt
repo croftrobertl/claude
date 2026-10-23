@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,9 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.1.5 =
+* Without a `# BEGIN speedycache` block there is nothing to order: Revelin stays quiet, with one info line ("SpeedyCache has no rewrite block here; there is no block order to keep.") the first time it sees that, and never a finding. Staging has no SpeedyCache rewrite block, so 0.1.4's "The Pre-gzipped Cache Block Is Missing" stood there for good. The Needs A Look now comes only when the speedycache block is present and the DCC Pre-gzipped Cache block is missing or below it.
 
 = 0.1.4 =
 * `wp ragusa seal <path>` (and Seal on the page) accepts a path with no file at it: the file is dropped from Minčeta's baseline and whatever its absence raised is settled quietly ("Removed wp-content/… from the baseline."), so a deliberate deletion is never reported as missing. A guard is never dropped this way. A "File Missing" finding now stays open until the file is back or the path is sealed; it no longer resolved itself on the next pass.

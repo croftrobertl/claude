@@ -16,8 +16,8 @@ final class Htaccess
     public const SPEEDY_BEGIN = '# BEGIN speedycache';
 
     public const ORDER_OK            = '';
+    public const ORDER_NO_SPEEDY     = 'no-speedycache';
     public const ORDER_PREGZ_MISSING = 'pregz-missing';
-    public const ORDER_SPEEDY_MISSING = 'speedy-missing';
     public const ORDER_WRONG         = 'wrong-order';
 
     public static function path(): string
@@ -43,18 +43,20 @@ final class Htaccess
      * Is the DCC Pre-gzipped Cache block above SpeedyCache's? SpeedyCache's
      * rewrite rule ends in [L], so a pre-gzipped block below it never runs
      * and every page goes out uncompressed. Judged by position only; the
-     * SpeedyCache marker is matched whatever its case. Returns one of the
-     * ORDER_* constants, ORDER_OK (an empty string) when all is well.
+     * SpeedyCache marker is matched whatever its case. Without a SpeedyCache
+     * block there is nothing to order (staging has none): ORDER_NO_SPEEDY,
+     * which is never a finding. Returns one of the ORDER_* constants,
+     * ORDER_OK (an empty string) when all is well.
      */
     public static function order_problem(string $content): string
     {
-        $pregz  = strpos($content, self::PREGZ_BEGIN);
         $speedy = stripos($content, self::SPEEDY_BEGIN);
+        if ($speedy === false) {
+            return self::ORDER_NO_SPEEDY;
+        }
+        $pregz = strpos($content, self::PREGZ_BEGIN);
         if ($pregz === false) {
             return self::ORDER_PREGZ_MISSING;
-        }
-        if ($speedy === false) {
-            return self::ORDER_SPEEDY_MISSING;
         }
         return $pregz < $speedy ? self::ORDER_OK : self::ORDER_WRONG;
     }

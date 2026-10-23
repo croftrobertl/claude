@@ -1202,3 +1202,16 @@ Wildlife guide at 520 KB instead of 224 KB). Revelin checks the order every
 tick and raises a Needs A Look naming the fix ("Move the DCC Pre-gzipped
 Cache block above # BEGIN speedycache."), for the wrong order or either
 block missing; never an auto-fix, and it resolves once the order is right.
+
+**0.1.5 (the Director's staging report on 0.1.4, 2026-10-23).** Staging's
+`.htaccess` has neither block, because staging has no SpeedyCache rewrite
+block at all, so 0.1.4's "The Pre-gzipped Cache Block Is Missing" stood
+there permanently: a finding that can never clear teaches Rob to ignore the
+page. Now: if `# BEGIN speedycache` is absent there is nothing to order, and
+Revelin stays quiet with one info line ("SpeedyCache has no rewrite block
+here"); the Needs A Look comes only when the speedycache block is present
+and the DCC block is missing or below it. For the record, not code: live
+has an nginx proxy cache in front (`x-proxy-cache`, cleared by
+`do_action('epc_purge')`), and SpeedyCache's "contain" exclusions must be
+written without slashes, because it trims the URI's slashes before
+comparing.

@@ -1,4 +1,11 @@
-# Ragusa 0.1.4 — Staging Checklist
+# Ragusa 0.1.5 — Staging Checklist
+
+> **Upgrading the 0.1.4 install on staging:** `wp plugin install
+> "Ragusa 0.1.5.zip" --force`, then `wp ragusa tick` and open DCC → Ragusa.
+> Expect Revelin back on Holding: "The Pre-gzipped Cache Block Is Missing"
+> reads Resolved, and Recent Events carries one info line, "SpeedyCache has
+> no rewrite block here; there is no block order to keep." Nothing else
+> changes. Rollback: `wp plugin install "Ragusa 0.1.4.zip" --force`.
 
 > **Upgrading the 0.1.3 install on staging (or a live 0.1.3, as a normal
 > update):** `wp plugin install "Ragusa 0.1.4.zip" --force`, then
@@ -245,6 +252,9 @@ cleans up. Each prints every journal state transition.
       `.htaccess` is byte-for-byte what you wrote (no rewrite, no journal
       row). Put the backup back, `wp ragusa tick`: the finding reads Resolved.
       (Staging sends no email; the live one carries the same sentence.)
+      **0.1.5:** staging has no speedycache block, so this drill needs both
+      blocks pasted in from live's `.htaccess` first; with neither block
+      present, a tick raises nothing.
 
 - [ ] Append a comment to `mu-plugins/dcc-ical-privacy.php` over SSH. On the
       next tick Ragusa restores it (Recent Events shows it, with Undo).

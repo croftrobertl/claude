@@ -109,6 +109,9 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   wants `# BEGIN DCC Pre-gzipped Cache` above `# BEGIN speedycache` (whose
   rule ends in `[L]`); Revelin raises `htaccess-order` naming the fix and
   never rewrites that block. Only the DCC Security block is ever rewritten.
+  No speedycache block (staging has none) is `ORDER_NO_SPEEDY`: nothing to
+  order, one info line, never a finding. A finding that can never clear
+  teaches Rob to ignore the page.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -124,11 +127,17 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 - Vendor mu-plugins that change as info: `Minceta::MU_VENDOR`.
 - Healthchecks: Period 1 hour, Grace 1 hour (the cPanel knock runs every 10 minutes).
 - Wordfence v3 scanner feed, Bearer key, once a day at 03:40 ET.
+- Live has a second cache in front: an nginx proxy cache (`x-proxy-cache:
+  HIT/MISS`, `x-server-cache: true`), cleared by `do_action('epc_purge')`.
+  Ragusa does not watch it (the Director's note of 2026-10-23).
+- SpeedyCache "contain" exclusions written with slashes (`/submit-booking/`)
+  never match: SpeedyCache trims the URI's slashes before comparing. The
+  trap if cache configuration is ever watched. Not watched now.
 
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 37 deliberate breakages, each must be caught
+    php tests/mutations.php            # 38 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -146,6 +155,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.4.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.1.5.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.
