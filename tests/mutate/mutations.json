@@ -6317,5 +6317,60 @@
   "find": "        $raw = $_COOKIE[self::ROOM_COOKIE] ?? null;",
   "replace": "        $raw = is_array($_COOKIE) ? array_values($_COOKIE) : null;",
   "count": 1
+ },
+ {
+  "id": "pc-not-defined",
+  "file": "dcc-custom-checkout/includes/class-page-cache.php",
+  "suites": [
+   "pagecache"
+  ],
+  "claim": "v0.35.3 - DONOTCACHEPAGE is defined on the checkout, so SpeedyCache writes no cache file for it",
+  "find": "        define(self::CONSTANT, true);",
+  "replace": "        return;",
+  "count": 1
+ },
+ {
+  "id": "pc-unscoped",
+  "file": "dcc-custom-checkout/includes/class-page-cache.php",
+  "suites": [
+   "pagecache"
+  ],
+  "claim": "v0.35.3 - only the checkout page gets it; nothing else on the site is affected",
+  "find": "        if (!Assets::is_checkout_page()) {\n            return;\n        }",
+  "replace": "        if (false) {\n            return;\n        }",
+  "count": 1
+ },
+ {
+  "id": "pc-no-defined-guard",
+  "file": "dcc-custom-checkout/includes/class-page-cache.php",
+  "suites": [
+   "pagecache"
+  ],
+  "claim": "v0.35.3 - define() can never redefine the constant: a second render must not warn on a guest's checkout",
+  "find": "        if (defined(self::CONSTANT)) {\n            return;\n        }",
+  "replace": "        if (false) {\n            return;\n        }",
+  "count": 1
+ },
+ {
+  "id": "pc-defined-false",
+  "file": "dcc-custom-checkout/includes/class-page-cache.php",
+  "suites": [
+   "pagecache"
+  ],
+  "claim": "v0.35.3 - the constant is TRUE; SpeedyCache tests its value, not its existence",
+  "find": "        define(self::CONSTANT, true);",
+  "replace": "        define(self::CONSTANT, false);",
+  "count": 1
+ },
+ {
+  "id": "pc-wrong-hook",
+  "file": "dcc-custom-checkout/includes/class-page-cache.php",
+  "suites": [
+   "pagecache"
+  ],
+  "claim": "v0.35.3 - it runs on template_redirect: after the main query the gate needs, before output ends",
+  "find": "        add_action('template_redirect', [$this, 'maybe_block_cache'], 1);",
+  "replace": "        add_action('init', [$this, 'maybe_block_cache'], 1);",
+  "count": 1
  }
 ]

@@ -81,6 +81,7 @@ SUITES = {
     'audit':        ('php',  'tests/audit/run.php'),
     'minify':       ('php',  'tests/minify/run.php'),
     'layout':       ('php',  'tests/layout/run.php'),
+    'pagecache':    ('php',  'tests/pagecache/run.php'),
     'hero':         ('php',  'tests/hero/run.php'),
     'hero-browser': ('node', 'tests/hero/browser.js'),
     'restore':      ('php',  'tests/restore/run.php'),

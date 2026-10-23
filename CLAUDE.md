@@ -2154,6 +2154,67 @@ yours to improvise.
     Restored from git. **Start a full run as a tracked background command with
     an explicit timeout, not `nohup`, and `git status` after any run that does
     not print its own tally.**
+- **0.35.3 — THE CHECKOUT PAGE IS NEVER PAGE-CACHED, AND THE UNREACHABLE
+  BRANCH IS GONE** (Director's instruction after verifying the stack on live,
+  2026-10-23; `Page_Cache` is new, plus `restore.js`, `Plugin::boot()`; suite
+  `tests/pagecache/`).
+  - **WHAT THE STACK HONOURS — PROVEN, WHICH IS WHY THIS CONSTANT AND NOT
+    ANOTHER** (Director, live 2026-10-23). `DONOTCACHEPAGE` is read by
+    SpeedyCache at **`speedycache/main/cache.php:190`** —
+    `if(defined('DONOTCACHEPAGE') && DONOTCACHEPAGE) return false;` — inside
+    the output-buffer callback that decides whether to WRITE the cache file,
+    after the page is built, so defining it anywhere in the request works
+    provided it is before output ends. The host's **nginx proxy cache stores no
+    response that sets a cookie**, and MotoPress sets `WP_SESSION_COOKIE` and
+    its `mphb_*` cookies on every checkout response: two consecutive plain GETs
+    both came back `x-proxy-cache: MISS`, and the only HIT ever seen there was
+    nginx serving SpeedyCache's static `.gz`, which no written file removes.
+    **`Cache-Control: no-store` IS NOT SHIPPED** — neither layer was shown to
+    honour it, and an unverified header presented as the safeguard is the kind
+    of line that looks like a fallback and is not. I had proposed it as one of
+    two options and asked rather than guessing; that is why only one shipped.
+  - **THE GATE IS `Assets::is_checkout_page()`, NOT `Layout::active()`, and
+    that is the whole point.** `restore.js` is not behind the preview gate
+    (0.35.0, Rob's instruction) and its `stay` / `offer` are per-request, so a
+    cached checkout is wrong for every guest whether the layout is on or off —
+    a belt gated on the layout would have left live-today exactly as exposed.
+    Asserted with the switch OFF.
+  - **THERE IS DELIBERATELY NO FILTER.** A page whose HTML carries per-request
+    values cannot be safely page-cached, so "cache the checkout anyway" is not
+    a preference to offer; a filter here would be a switch for re-opening the
+    defect.
+  - `template_redirect` at priority 1: the earliest point at which the main
+    query is resolved (the gate calls `is_page()`), and long before output
+    ends. Mutation `pc-wrong-hook` moves it to `init`, where the gate cannot
+    answer.
+  - **THE `defined()` GUARD IS NOT TIDINESS.** `define()` cannot redefine a
+    constant — it raises a PHP **warning** and returns false — so without the
+    guard a second render in one process, or another plugin having defined it,
+    would put a warning on a guest's checkout. Every case in
+    `tests/pagecache/` runs with notices turned into failures, and mutation
+    `pc-no-defined-guard` removes the guard and must go red. **The suite's
+    cases are ORDERED because a constant cannot be undefined**: every
+    must-not-define case runs first, behind a guard asserting the constant
+    really is absent, or they would pass by having nothing to say.
+  - **TWO LIMITS, STATED RATHER THAN IMPLIED.** (1) This stops a file being
+    WRITTEN; it does not delete one already on disk, and
+    `advanced-cache.php` can serve such a file before WordPress loads — so a
+    stale copy still has to be purged, which the Director has done. (2) If
+    anything else has already defined `DONOTCACHEPAGE` as FALSE, the guard
+    leaves it false; nothing on this site is known to set it.
+  - **THE CORRECTED SPEEDYCACHE EXCLUSION STAYS THE FIRST LINE OF DEFENCE**
+    (Director). The rule must read `submit-booking` — **SpeedyCache compares
+    the URI with its slashes trimmed**, so `/submit-booking/` never matched,
+    which is what let a cookieless GET cache the dead-end page and the pre-gzip
+    rule then serve that dead end to a GET carrying MotoPress's date cookies.
+    Keeping that rule correct is a requirement, not a nicety.
+  - **THE UNREACHABLE PINNED-SELECTOR BRANCH IS REMOVED** (queued at 0.35.2,
+    done here as the Director asked). `hideDeadEnd()` now returns unless the
+    host IS MotoPress's wrapper. The live markup it used to query
+    (`p.mphb-data-incorrect` inside `.mphb_sc_checkout-wrapper`) is kept in the
+    comment, as the record of what live serves — only the dead query went. A
+    strict no-op: the mutation runner is what found it, and
+    `res-dead-end-selector-guessed` was retired with it.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).
@@ -2401,11 +2462,11 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **571
-  mutations, every one of them killed** (v0.35.2, **35 suites** — `layout`,
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **576
+  mutations, every one of them killed** (v0.35.3, **36 suites** — `layout`,
   `hero`, `hero-browser`, `restore`, `restore-browser`, `restore-min`,
-  `layout-fields`, `layout-fields-browser` and `layout-fields-min` added
-  across 0.35.x).
+  `layout-fields`, `layout-fields-browser`, `layout-fields-min` and
+  `pagecache` added across 0.35.x).
   **SAY THAT ARITHMETIC THE EXACT WAY ROUND, because it is not one run's
   tally.** The full run was over a 572-mutation set, in two halves of 286:
   286 killed, then 278 killed + 1 SURVIVED + 7 STALE. The survivor was

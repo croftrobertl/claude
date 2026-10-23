@@ -55,6 +55,15 @@ final class Plugin
         // half reaches every guest as soon as 0.35.0 installs.
         (new Restore())->register();
 
+        // v0.35.3 — the checkout page is never page-cached. Everything this
+        // plugin puts in that page's HTML is per-request (the stay, whether it
+        // is available, the cottage photo, the preview gate's own body class),
+        // so a cached copy serves the first visitor's answer to everyone. The
+        // corrected SpeedyCache exclusion is the first line of defence; this
+        // is the second. See class-page-cache.php for what the stack was
+        // PROVEN to honour.
+        (new Page_Cache())->register();
+
         // v0.35.0 — the new layout's own script (items 3a/3b so far): the
         // autofill tokens and the Next/Done key. Behind the preview gate.
         (new Layout_Script())->register();

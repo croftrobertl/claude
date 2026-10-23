@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.35.2
+Stable tag: 0.35.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,14 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.35.3 =
+One safeguard and one tidy-up, after the Website Director found that the checkout page had been getting page-cached.
+
+* The checkout page now tells the cache plugin not to store it. Everything this plugin writes into that page is particular to the visitor looking at it — their cottage, their dates, whether those dates are still available — so a stored copy would show the first visitor's booking to everyone who came after. The cache plugin's own exclusion for that page remains the first line of defence; this is the second.
+* Removed a line in the restore script that could no longer do anything: a fallback for hiding MotoPress's message in a case that cannot occur. Nothing changes on the page.
+
+Nothing is written on install, activation or upgrade, and no setting or stored value changed.
 
 = 0.35.2 =
 Two changes after the Website Director's check of live 0.35.1.

@@ -485,8 +485,8 @@
      * Put MotoPress's own message out of view, once the card is in front of
      * it.
      *
-     * THE ONE SELECTOR THE DIRECTOR READ OFF THE LIVE SERVER (2026-10-22). A
-     * fresh GET with no POST is served exactly:
+     * WHAT LIVE SERVES, for the record (Director, 2026-10-22). A fresh GET
+     * with no POST is served exactly:
      *
      *     <div class="mphb_sc_checkout-wrapper">
      *       <p class="mphb-data-incorrect"> <br/>Check-in date is not valid.…
@@ -496,6 +496,16 @@
      * the first version of this guessed at, alongside two selectors invented
      * from the shape of that name. All three are gone: a guessed selector that
      * matches nothing is not a fallback, it is a line that looks like one.
+     *
+     * **AND SO IS THE PINNED ONE, SINCE v0.35.3.** Until then this fell back
+     * to querying that selector when the host was NOT the wrapper — and the
+     * mutation runner showed the fallback had become UNREACHABLE: the host
+     * preference list in `withoutForm()` tries `.mphb_sc_checkout-wrapper`
+     * FIRST, so if a wrapper exists anywhere it IS the host and the sweep
+     * below runs; reaching the fallback meant no wrapper existed, and the
+     * query could never match. The only thing it could have covered is a page
+     * with TWO wrappers, which is not proven to exist. A pinned selector that
+     * cannot match is the same line this comment warns about, so it went.
      *
      * AND IN v0.35.1 IT IS NOT THE ONLY MESSAGE (item 2). The booked page
      * prints "Accommodation is already booked." in that wrapper and 0.35.0
@@ -532,23 +542,17 @@
      * the 0.18.0 rules are untouched.
      */
     function hideDeadEnd(host) {
-        var wrapper = host && host.classList
-            && host.classList.contains('mphb_sc_checkout-wrapper');
-
-        if (wrapper) {
-            /* A SNAPSHOT, because wrapping replaces nodes as we go and
-               `childNodes` is live. */
-            var kids = Array.prototype.slice.call(host.childNodes);
-            for (var k = 0; k < kids.length; k++) {
-                if (kids[k].nodeType === 1) { conceal(kids[k]); }
-                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }
-            }
+        if (!host || !host.classList
+            || !host.classList.contains('mphb_sc_checkout-wrapper')) {
             return;
         }
-
-        var dead = document.querySelectorAll(
-            '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');
-        for (var i = 0; i < dead.length; i++) { conceal(dead[i]); }
+        /* A SNAPSHOT, because wrapping replaces nodes as we go and
+           `childNodes` is live. */
+        var kids = Array.prototype.slice.call(host.childNodes);
+        for (var k = 0; k < kids.length; k++) {
+            if (kids[k].nodeType === 1) { conceal(kids[k]); }
+            else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }
+        }
     }
 
     /**
