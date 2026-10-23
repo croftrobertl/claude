@@ -540,7 +540,14 @@
         return true;
     }
 
-    /** The field's visible label text, if the page has one. */
+    /**
+     * A control's visible label text, if the page has one.
+     *
+     * Named for the select it was written for, but used for any control (the
+     * bar's "Next: Phone" asks the same question of a text field). It reads
+     * only the text OUTSIDE any form control, because a label may WRAP its
+     * field and its textContent would then include the options.
+     */
     function labelText(select) {
         var label = null;
         if (select.id) {
@@ -781,6 +788,462 @@
     }
 
     /* --------------------------------------------------------------------- *
+     * ITEMS 6 and 7 — THE PINNED BAR (pictures 3 and 4)
+     *
+     * IT IS ATTACHED TO document.body, OUTSIDE article.hentry, AND THAT IS
+     * NOT A PREFERENCE. Bravada puts a `matrix3d(…)` transform on
+     * article.hentry, and a transformed ancestor becomes the containing block
+     * for `position: fixed` — the Director measured a fixed box inside that
+     * article drifting 2,156px off-screen. The suite asserts the parent, not
+     * the intention.
+     *
+     * THE TOTAL IS COPIED FROM MOTOPRESS'S OWN CELL, NEVER COMPUTED. Rob's
+     * rule, and the same rule checkout.js's breakdown already follows: every
+     * figure shown is one MotoPress rendered. The bar reads the last cell of
+     * the breakdown's total row as a STRING and puts that string on screen; it
+     * does no arithmetic, parses no currency and knows nothing about tax.
+     * While MotoPress is re-pricing it says "Updating…" rather than a stale
+     * number.
+     *
+     * IT NEVER SHOWS AN ERROR BEFORE SUBMIT (Rob's standing rule, and 0.15.0's
+     * mechanism): the "N Need Attention" state reads the flags the EXISTING
+     * preflight sets — `.dcc_checkout-invalid`, which checkout.js's own submit
+     * validator applies — and the form carries `.dcc_checkout-preflight` until
+     * the first submit attempt. There is no second validator here, and
+     * nothing in this file decides whether a field is valid.
+     * --------------------------------------------------------------------- */
+
+    var BAR_CLASS = 'dcc_layout-bar';
+
+    function barText() { return CFG.bar || {}; }
+
+    /** MotoPress's own total, as a string, or '' when there is not one yet. */
+    function motopressTotal(root) {
+        var row = root.querySelector('.dcc_checkout-breakdown-total');
+        if (!row) { return ''; }
+        var cells = row.querySelectorAll('td, th');
+        if (!cells.length) { return ''; }
+        /* The LAST cell is the amount; the first is its label. Read as text,
+           never parsed — this file must not be able to produce a number. */
+        return String(cells[cells.length - 1].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    /**
+     * The required fields a guest still has to fill, in document order.
+     *
+     * `required` is MotoPress's own attribute plus whatever checkout.js has
+     * set for the sections it reveals (setRequired), so this reads the page's
+     * own idea of what is needed and invents none of its own. Hidden fields
+     * are skipped: a folded Guest 3 panel is not something to send anyone to.
+     */
+    function emptyRequired(root) {
+        var out = [];
+        var all = root.querySelectorAll('[required]');
+        for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            if (el.disabled || !onPage(el) && !shownFor(el)) { continue; }
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                if (!checkedInGroup(root, el)) { out.push(el); }
+                continue;
+            }
+            if (String(el.value || '').trim() === '') { out.push(el); }
+        }
+        return out;
+    }
+
+    /**
+     * Is this control on the page as far as the guest is concerned?
+     *
+     * A select this file has segmented, or select-list.js has replaced, is
+     * clipped to 1px with opacity 0 — `offsetParent` is still set, so onPage()
+     * says yes, which is right: the guest can see and use its stand-in. What
+     * must NOT happen is sending the guest to a control inside a folded panel,
+     * and that is what onPage() answers. This helper exists so the intent is
+     * stated rather than implied.
+     */
+    function shownFor(el) {
+        return !!el.offsetParent;
+    }
+
+    function checkedInGroup(root, el) {
+        if (el.type === 'checkbox') { return el.checked; }
+        var mates = root.querySelectorAll('input[type="radio"][name="' + cssEscape(el.name || '') + '"]');
+        for (var i = 0; i < mates.length; i++) {
+            if (mates[i].checked) { return true; }
+        }
+        return false;
+    }
+
+    /** The flagged fields, from the EXISTING preflight. Never re-validated. */
+    function flagged(root) {
+        var out = [];
+        var all = root.querySelectorAll('.dcc_checkout-invalid, [aria-invalid="true"]');
+        for (var i = 0; i < all.length; i++) {
+            if (out.indexOf(all[i]) === -1) { out.push(all[i]); }
+        }
+        return out;
+    }
+
+    /** A field's own label text, for "Next: Phone". */
+    function fieldName(el) {
+        var text = labelText(el);
+        if (text !== '') { return text.replace(/\s*\*\s*$/, '').replace(/:$/, ''); }
+        return el.getAttribute('placeholder') || el.name || '';
+    }
+
+    function buildBar(root) {
+        var bar = document.createElement('div');
+        bar.className = BAR_CLASS;
+        bar.setAttribute('data-dcc-injected', '1');
+        /* Announced when it changes, but never stealing focus. */
+        bar.setAttribute('role', 'region');
+        bar.setAttribute('aria-live', 'polite');
+
+        var left = document.createElement('div');
+        left.className = 'dcc_layout-bar__total';
+        var label = document.createElement('span');
+        label.className = 'dcc_layout-bar__label';
+        var amount = document.createElement('span');
+        amount.className = 'dcc_layout-bar__amount';
+        var note = document.createElement('span');
+        note.className = 'dcc_layout-bar__note';
+        left.appendChild(label);
+        left.appendChild(amount);
+        left.appendChild(note);
+
+        var action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'dcc_layout-bar__action';
+
+        bar.appendChild(left);
+        bar.appendChild(action);
+
+        /* OUTSIDE article.hentry — see the note above. Appended to <body>, so
+           no transformed ancestor can become its containing block. */
+        document.body.appendChild(bar);
+        return { el: bar, label: label, amount: amount, note: note, action: action };
+    }
+
+    function pinnedBar(root) {
+        var T = barText();
+        var ui = buildBar(root);
+        var state = { mode: '', at: 0 };
+        var submitting = false;
+
+        function nativeSubmits() {
+            return root.querySelectorAll(
+                '[type="submit"], button:not([type="button"]):not(.' + BAR_CLASS + '__action)');
+        }
+
+        function render() {
+            var attempted = !root.classList.contains('dcc_checkout-preflight');
+            var bad = attempted ? flagged(root) : [];
+            var empty = emptyRequired(root);
+
+            /* The total, copied. */
+            setBarText(ui.label, T.total || '');
+            setBarText(ui.amount, updating ? (T.updating || '') : motopressTotal(root));
+            setClass(ui.el, 'dcc_layout-bar--updating', updating);
+
+            if (bad.length) {
+                /* ITEM 7 — only ever after a submit attempt. */
+                state.mode = 'attention';
+                if (state.at >= bad.length) { state.at = 0; }
+                setBarText(ui.note, fmt(T.attention || '', [bad.length]));
+                setBarText(ui.action, fmt(T.showMe || '', [state.at + 1, bad.length]));
+                setClass(ui.el, 'dcc_layout-bar--attention', true);
+                setClass(ui.el, 'dcc_layout-bar--ready', false);
+                return;
+            }
+
+            setClass(ui.el, 'dcc_layout-bar--attention', false);
+
+            if (empty.length) {
+                state.mode = 'next';
+                setBarText(ui.note, '');
+                setBarText(ui.action, fmt(T.next || '', [fieldName(empty[0])]) + ' \u2193');
+                setClass(ui.el, 'dcc_layout-bar--ready', false);
+                return;
+            }
+
+            state.mode = 'submit';
+            setBarText(ui.note, T.allSet || '');
+            setBarText(ui.action, '\u2713 ' + (T.submit || ''));
+            setClass(ui.el, 'dcc_layout-bar--ready', true);
+        }
+
+        function requestRender() { defer(render); }
+
+        ui.action.addEventListener('click', function () {
+            if (state.mode === 'attention') {
+                var bad = flagged(root);
+                if (!bad.length) { render(); return; }
+                goTo(bad[state.at % bad.length]);
+                state.at = (state.at + 1) % bad.length;
+                render();
+                return;
+            }
+            if (state.mode === 'next') {
+                var empty = emptyRequired(root);
+                if (empty.length) { goTo(empty[0]); }
+                return;
+            }
+            /* THE REAL FORM IS SUBMITTED — the bar is not a second form, and
+               it carries no fields of its own. */
+            if (submitting) { return; }
+            lockSubmits();
+            if (typeof root.requestSubmit === 'function') {
+                root.requestSubmit();
+            } else {
+                var native = nativeSubmits();
+                if (native.length) { native[0].click(); } else { root.submit(); }
+            }
+        });
+
+        /**
+         * BOTH SUBMIT BUTTONS LOCK AFTER THE FIRST PRESS (Rob). A double
+         * submit on a booking form is a double booking, and the guest cannot
+         * tell they have pressed twice when the page does not move.
+         */
+        function lockSubmits() {
+            submitting = true;
+            setAttr(ui.action, 'disabled', '');
+            setClass(ui.el, 'dcc_layout-bar--sent', true);
+            var native = nativeSubmits();
+            for (var i = 0; i < native.length; i++) {
+                setAttr(native[i], 'disabled', '');
+            }
+        }
+        root.addEventListener('submit', lockSubmits);
+        root.addEventListener('click', function (e) {
+            var hit = e.target;
+            if (!hit || !hit.closest || !hit.closest('[type="submit"]')) { return; }
+            /* AFTER THE PRESS HAS BEEN LET THROUGH, never during it.
+               Disabling a submit button inside its own click event cancels the
+               submission the browser was about to make — so locking on the
+               spot would stop the FIRST press, which is the one that must
+               work. Measured: the suite's "the Submit button still submits"
+               went red the moment this ran synchronously. A task deferral is
+               enough: the browser has dispatched the submit by then, and a
+               second press cannot arrive inside the same task. */
+            setTimeout(lockSubmits, 0);
+        });
+
+        /* Re-read on anything that can change the answer. The breakdown is
+           re-rendered by MotoPress, so checkout.js's own observer is not the
+           only source — but no observer is installed here: `input` and
+           `change` cover typing and choosing, and the AJAX hooks below cover
+           the price. */
+        /* THE BAR'S WRITES ARE REAL WRITES, AND THEY ARE GATED ON TOUCH.
+           Its words genuinely change as the guest fills the form — that is the
+           feature, not a no-op — but v0.18.0 closed the three-tap bug by
+           making sure nothing on this checkout changes content around a tap:
+           iOS decides click-vs-hover by watching for exactly that. So a change
+           asked for while a finger is down is remembered and written once the
+           tap has had its time, and every write is still idempotent. */
+        root.addEventListener('input', requestRender);
+        root.addEventListener('change', requestRender);
+
+        padPage(ui.el);
+        render();
+        return { render: requestRender, el: ui.el };
+    }
+
+    /* --------------------------------------------------------------------- *
+     * The touch gate (v0.18.0's rule, applied to this file's own writes)
+     * --------------------------------------------------------------------- */
+
+    var fingerDown = false;
+    var pending = [];
+
+    function armTouchGate() {
+        if (!('ontouchstart' in window) && !window.PointerEvent) { return; }
+        document.addEventListener('touchstart', function () {
+            fingerDown = true;
+        }, { passive: true });
+        var up = function () {
+            fingerDown = false;
+            if (!pending.length) { return; }
+            var run = pending;
+            pending = [];
+            /* 450ms, the same settle v0.18.0 uses: long enough for the tap to
+               have resolved into a click before anything on the page moves. */
+            setTimeout(function () {
+                run.forEach(function (fn) { fn(); });
+            }, 450);
+        };
+        document.addEventListener('touchend', up, { passive: true });
+        document.addEventListener('touchcancel', up, { passive: true });
+    }
+
+    /** Write now, or once the finger is up. */
+    function defer(fn) {
+        if (!fingerDown) { fn(); return; }
+        if (pending.indexOf(fn) === -1) { pending.push(fn); }
+    }
+
+    /**
+     * "Updating…" WHILE MOTOPRESS IS RE-PRICING.
+     *
+     * Watched by wrapping XMLHttpRequest, the same seam guest-count.js uses
+     * for the recalc request (0.34.1) and for the same reason: it needs only
+     * what the page does, not how MotoPress's server parses anything. A
+     * request this does not recognise is ignored.
+     */
+    var updating = false;
+    function watchRecalc(onChange) {
+        if (!window.XMLHttpRequest) { return; }
+        var Open = XMLHttpRequest.prototype.open;
+        var Send = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this.__dccRecalc = typeof url === 'string' &&
+                url.indexOf('mphb_update_checkout_info') !== -1;
+            return Open.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function () {
+            var xhr = this;
+            if (xhr.__dccRecalc) {
+                updating = true;
+                onChange();
+                xhr.addEventListener('loadend', function () {
+                    updating = false;
+                    onChange();
+                });
+            }
+            return Send.apply(this, arguments);
+        };
+    }
+
+    /** Scroll to a field and focus it, respecting reduced motion. */
+    function goTo(el) {
+        var reduced = window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try {
+            el.scrollIntoView({
+                behavior: reduced ? 'auto' : 'smooth',
+                block: 'center',
+            });
+        } catch (e) {
+            el.scrollIntoView();
+        }
+        /* The stand-in for a segmented or listed select is what the guest can
+           actually focus; the clipped select would take the focus nowhere. */
+        var target = standInFor(el) || el;
+        try { target.focus({ preventScroll: true }); } catch (e2) { target.focus(); }
+    }
+
+    /** The visible control standing in for a clipped select, if there is one. */
+    function standInFor(el) {
+        if (el.tagName !== 'SELECT') { return null; }
+        if (el.hasAttribute('data-dcc-segmented')) {
+            var group = el.parentNode.querySelector('.dcc_layout-segment__radio:checked') ||
+                el.parentNode.querySelector('.dcc_layout-segment__radio');
+            return group || null;
+        }
+        /* select-list.js's own button, if it took this select. */
+        return (el.dccList && el.dccList.field) || null;
+    }
+
+    /**
+     * THE PAGE IS PADDED BY THE BAR'S HEIGHT, so the last field and the
+     * Submit button are not stuck underneath it. Measured, not assumed: the
+     * bar's height depends on the words in it, which are translatable.
+     */
+    function padPage(bar) {
+        var apply = function () {
+            if (getComputedStyle(bar).position !== 'fixed') {
+                if (document.body.style.getPropertyValue('--dcc-bar-height') !== '') {
+                    document.body.style.removeProperty('--dcc-bar-height');
+                }
+                return;
+            }
+            var h = Math.ceil(bar.getBoundingClientRect().height);
+            var want = h + 'px';
+            if (document.body.style.getPropertyValue('--dcc-bar-height') !== want) {
+                document.body.style.setProperty('--dcc-bar-height', want);
+            }
+        };
+        apply();
+        /* A width change can move the bar between pinned and not, and change
+           its height. HEIGHT-ONLY resizes are ignored: on iOS `resize` fires
+           when the URL bar collapses during ordinary scrolling, and writing
+           layout then is the defect v0.13.0 fixed in matchFileFieldWidth(). */
+        var lastWidth = window.innerWidth;
+        window.addEventListener('resize', function () {
+            if (window.innerWidth === lastWidth) { return; }
+            lastWidth = window.innerWidth;
+            apply();
+        });
+    }
+
+    /**
+     * HIDE WHILE THE KEYBOARD IS UP, OR WHILE THE ADDRESS LIST IS SHOWING.
+     *
+     * The keyboard: `visualViewport`'s resize, plus focusin/focusout — NO
+     * POLLING (Rob). On iOS the keyboard does not change `window.innerHeight`
+     * but does shrink the visual viewport, so the two signals together are
+     * what answers it.
+     *
+     * The address list: Google Places draws `.pac-container` at `z-index:
+     * 99999` (the site's own Customizer CSS), so it would be over the bar and
+     * the bar would be under the suggestions the guest is trying to tap.
+     */
+    function armHiding(bar, onChange) {
+        var hidden = false;
+        function set(want) {
+            if (hidden === want) { return; }
+            hidden = want;
+            setClass(bar, 'dcc_layout-bar--away', want);
+            onChange();
+        }
+        function typing() {
+            var el = document.activeElement;
+            if (!el) { return false; }
+            var tag = el.tagName;
+            if (tag === 'TEXTAREA') { return true; }
+            if (tag !== 'INPUT') { return false; }
+            return TYPED.indexOf((el.type || '').toLowerCase()) !== -1;
+        }
+        function placesOpen() {
+            var list = document.querySelectorAll('.pac-container');
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].offsetParent && list[i].getBoundingClientRect().height > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        function evaluate() { set(typing() || placesOpen()); }
+
+        document.addEventListener('focusin', evaluate);
+        document.addEventListener('focusout', function () {
+            /* After the blur has landed, so the next focus is already in. */
+            setTimeout(evaluate, 0);
+        });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', evaluate);
+        }
+        return evaluate;
+    }
+
+    function setBarText(el, text) {
+        var want = String(text == null ? '' : text);
+        if (el.textContent !== want) { el.textContent = want; }
+    }
+    function setClass(el, name, on) {
+        if (el.classList.contains(name) !== !!on) { el.classList.toggle(name, !!on); }
+    }
+    function setAttr(el, name, value) {
+        if (el.getAttribute(name) !== value) { el.setAttribute(name, value); }
+    }
+    /** sprintf for the two placeholders these strings use. */
+    function fmt(template, args) {
+        var out = String(template);
+        out = out.replace(/%1\$s/g, String(args[0])).replace(/%2\$s/g, String(args[1]));
+        return out.replace(/%s/g, String(args[0]));
+    }
+
+    /* --------------------------------------------------------------------- *
      * Go
      * --------------------------------------------------------------------- */
 
@@ -796,6 +1259,11 @@
         autofill(root);
         hints(root);
         armEnter(root);
+        armTouchGate();
+        var bar = pinnedBar(root);
+        var reEvaluate = armHiding(bar.el, bar.render);
+        watchRecalc(bar.render);
+        document.addEventListener('click', reEvaluate);
         /* A MotoPress re-render rebuilds the sections, so the placement is
            re-asserted on the same event the hints are. No observer and no
            timer of our own: checkout.js already owns that watch, and a second

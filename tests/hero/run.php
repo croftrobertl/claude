@@ -479,8 +479,25 @@ $css = (string) file_get_contents($plugin . '/assets/checkout-layout.css');
 check('the lip is a pseudo-element, never a child div (the mu-plugin would stretch one to full height)',
     strpos($css, '#header-image-main-inside::after') !== false, true);
 check('the lip is 24px tall', (bool) preg_match('/--dcc-lip-height:\s*24px/', $css), true);
-check('every rule is under the marker class, so today\'s checkout cannot be touched',
-    (bool) preg_match('/^(?!\s|\/|\*|\}|@|-)(?!\.dcc_layout)\S.*\{/m', $css), false);
+/* EVERY RULE IS KEYED ON THE MARKER CLASS, so no rule in this stylesheet can
+   match a page that is not the new layout. The test is that the class APPEARS
+   in the selector, not that the selector starts with it: `body.dcc_layout`
+   carries the same class on the marked element itself, which is the only way
+   to write a rule FOR the body (the bar's page padding needs one). A regex
+   anchored on `.dcc_layout` at the start rejected that, which is how this
+   check first read a correct rule as a violation. */
+$selectors = [];
+foreach (preg_split('/\R/', $css) as $line) {
+    if (preg_match('/^(?![\s\/*}@\-])(\S.*?)\s*\{\s*$/', $line, $m)) {
+        $selectors[] = $m[1];
+    }
+}
+check('the stylesheet really has rules to check (the guard)', count($selectors) > 20, true);
+$unmarked = array_values(array_filter($selectors, static function (string $sel): bool {
+    return strpos($sel, '.dcc_layout') === false;
+}));
+check('every rule is keyed on the marker class, so today\'s checkout cannot be touched',
+    $unmarked, []);
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

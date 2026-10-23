@@ -79,12 +79,28 @@ const UPLOAD = {
     units: ['bytes', 'KB', 'MB'],
 };
 
+const BAR = {
+    next: 'Next: %s',
+    submit: 'Submit Booking',
+    allSet: 'All Set',
+    updating: 'Updating…',
+    attention: '%s Need Attention',
+    showMe: 'Show Me ↑ %1$s Of %2$s',
+    total: 'Total',
+};
+
 const page_html = `<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>checkout</title><style>${CSS}</style></head>
-<body class="dcc_layout"><div class="mphb_sc_checkout">
-  <form class="mphb_sc_checkout-form" method="post" action="/submit-booking/">
+<body class="dcc_layout">
+<!-- The page's real shape around the form (Director's measurements): the
+     article carries Bravada's matrix3d transform, which makes it the
+     containing block for any position:fixed inside it - a fixed box there
+     was measured 2,156px off-screen — and both ancestors clip overflow. -->
+<main class="main"><div class="one-column"><article class="hentry">
+<div class="mphb_sc_checkout">
+  <form class="mphb_sc_checkout-form dcc_checkout-preflight" method="post" action="/submit-booking/">
     <!-- The accommodation block, with the guest chooser: the control that
          reveals the guest panels. On the real checkout it is ABOVE the
          customer details, which is the whole reason item 2 has anything to
@@ -99,9 +115,9 @@ const page_html = `<!doctype html>
         </select></label></p>
     </div>
     <div class="mphb-customer-details" id="customer">
-    <p><input type="text" name="mphb_first_name"></p>
+    <p><label>First Name <input type="text" name="mphb_first_name" required></label></p>
     <p><input type="text" name="mphb_last_name"></p>
-    <p><input type="tel" name="mphb_phone"></p>
+    <p><label>Phone <input type="tel" name="mphb_phone" required></label></p>
     <p><input type="email" name="mphb_email"></p>
     <!-- Google Places owns this one: it must stay autocomplete="off". -->
     <p><input type="text" name="mphb_address1" autocomplete="off"></p>
@@ -177,9 +193,17 @@ const page_html = `<!doctype html>
     <p class="mphb-coupon-wrapper"><label>Coupon
       <input type="text" name="mphb_coupon_code" value=""></label>
       <span class="mphb-coupon-message"></span></p>
+    <!-- MotoPress's price breakdown, as checkout.js leaves it: the last row
+         is the total, and its last cell is the amount. The bar COPIES that
+         string; it never computes one. -->
+    <table class="dcc_checkout-breakdown">
+      <tr><td>Cottage</td><td>$499.50</td></tr>
+      <tr class="dcc_checkout-breakdown-total"><td>Total</td><td>$649.50</td></tr>
+    </table>
     <p><button type="submit" id="go">Book Now</button></p>
   </form>
 </div>
+</article></div></main>
 <script>
   window.DCC_LAYOUT = ${JSON.stringify({
       autocomplete: TOKENS,
@@ -187,6 +211,7 @@ const page_html = `<!doctype html>
       segmented: SEGMENTED,
       coupon: COUPON,
       upload: UPLOAD,
+      bar: BAR,
   })};
   /* Record a submit rather than letting it navigate: "Done must never submit"
      is only evidence if an attempt would have been seen. */
@@ -918,13 +943,14 @@ const page_html = `<!doctype html>
      * ===================================================================== */
     const belted = await (async () => {
         const forced = page_html.replace(
-            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED, coupon: COUPON, upload: UPLOAD }),
+            JSON.stringify({ autocomplete: TOKENS, placesField: 'mphb_address1', segmented: SEGMENTED, coupon: COUPON, upload: UPLOAD, bar: BAR }),
             JSON.stringify({
                 autocomplete: Object.assign({}, TOKENS, { 'mphb_address1': 'address-line1' }),
                 placesField: 'mphb_address1',
                 segmented: SEGMENTED,
                 coupon: COUPON,
                 upload: UPLOAD,
+                bar: BAR,
             })
         );
         const p2 = await ctx.newPage();
@@ -944,19 +970,57 @@ const page_html = `<!doctype html>
         belted.first, 'given-name');
 
     /* ===================================================================== *
-     * Tap rules: typing and pressing keys write nothing
+     * TAP RULES (v0.18.0), AND WHAT THEY ACTUALLY REQUIRE NOW.
+     *
+     * The bar's words genuinely change as the guest fills the form — that IS
+     * the feature, so "zero mutations while typing" is the wrong rule and this
+     * assertion used to encode it. What v0.18.0 established is narrower and
+     * sharper: nothing on this checkout may change content AROUND A TAP,
+     * because iOS decides click-vs-hover by watching for exactly that. So:
+     * typing may write, and only inside the bar; a TOUCH writes nothing.
      * ===================================================================== */
-    await page.evaluate(() => {
-        window.__muts = 0;
-        new MutationObserver((rs) => { window.__muts += rs.length; })
-            .observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+    const typingWrites = await page.evaluate(() => {
+        const seen = [];
+        const obs = new MutationObserver((rs) => rs.forEach((r) => {
+            const node = r.target.nodeType === 3 ? r.target.parentElement : r.target;
+            seen.push(node && node.closest('.dcc_layout-bar') ? 'bar' : 'OUTSIDE');
+        }));
+        obs.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+        const f = document.querySelector('[name="mphb_first_name"]');
+        f.value = '';
+        f.dispatchEvent(new Event('input', { bubbles: true }));
+        f.value = 'Ada';
+        f.dispatchEvent(new Event('input', { bubbles: true }));
+        return new Promise((resolve) => setTimeout(() => {
+            obs.disconnect();
+            resolve({ outside: seen.filter((x) => x === 'OUTSIDE').length, total: seen.length });
+        }, 200));
     });
+    check('typing writes ONLY inside the bar, nowhere else on the page',
+        typingWrites.outside, 0);
+    check('… and it really did write there (the guard: otherwise this proves nothing)',
+        typingWrites.total > 0, true);
+
+    /* A TOUCH WRITES NOTHING, even though the same event would. */
+    const touchWrites = await page.evaluate(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => { n += rs.length; });
+        obs.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+        document.dispatchEvent(new TouchEvent('touchstart', { bubbles: true }));
+        const f = document.querySelector('[name="mphb_first_name"]');
+        f.value = '';
+        f.dispatchEvent(new Event('input', { bubbles: true }));
+        return new Promise((resolve) => setTimeout(() => {
+            const during = n;
+            document.dispatchEvent(new TouchEvent('touchend', { bubbles: true }));
+            setTimeout(() => { obs.disconnect(); resolve({ during: during, after: n }); }, 700);
+        }, 150));
+    });
+    check('a change asked for while a finger is down writes NOTHING then (0.18.0)',
+        touchWrites.during, 0);
+    check('… and is written once the tap has had its time',
+        touchWrites.after > 0, true);
     await page.fill('[name="mphb_first_name"]', 'Ada');
-    await page.focus('[name="mphb_first_name"]');
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Enter');
-    check('typing and pressing the key record NO DOM mutations (0.18.0)',
-        await page.evaluate(() => window.__muts), 0);
 
     /* NOTHING THIS BUILDS MAY COVER THE SUBMIT BUTTON. Playwright refused to
        click it while the fieldset itself was the flex container — the option
@@ -981,10 +1045,63 @@ const page_html = `<!doctype html>
     /* The button still submits — Enter is the only thing that changed. The
        click is dispatched on the element, because what is being asserted is
        that submission still happens, not the browser's hit-testing (which the
-       check above covers on its own terms). */
+       check above covers on its own terms).
+       THE REQUIRED FIELDS ARE FILLED FIRST, because the browser's own
+       validation refuses to submit a form with an empty required field — and
+       that refusal is correct, so the test has to meet it rather than route
+       around it with novalidate. */
+    await page.evaluate(() => {
+        document.querySelector('[name="mphb_first_name"]').value = 'Ada';
+        document.querySelector('[name="mphb_phone"]').value = '555 0100';
+    });
     await page.evaluate(() => document.getElementById('go').click());
     check('the Submit button still submits',
         await page.evaluate(() => window.__submits), 1);
+
+    /* AND BOTH SUBMIT CONTROLS LOCK AFTER THAT FIRST PRESS (Rob): a double
+       submit on a booking form is a double booking, and a guest cannot tell
+       they pressed twice when the page does not move. The lock is DEFERRED by
+       a task — disabling a submit button inside its own click event cancels
+       the submission the browser was about to make, so locking on the spot
+       would stop the first press, which is the one that must work. */
+    const locked = await page.evaluate(() => new Promise((resolve) => setTimeout(() => resolve({
+        native: document.getElementById('go').disabled,
+        bar: document.querySelector('.dcc_layout-bar__action').disabled,
+    }), 50)));
+    check('both Submit controls are locked after the first press',
+        [locked.native, locked.bar], [true, true]);
+
+    const twice = await page.evaluate(() => {
+        document.getElementById('go').click();
+        document.querySelector('.dcc_layout-bar__action').click();
+        return window.__submits;
+    });
+    check('… so a second press sends nothing', twice, 1);
+
+    /* REDUCED MOTION IS RESPECTED (Rob). A guest who has asked their phone to
+       stop animating must not be given a smooth scroll. Measured in a context
+       that really reports the preference, with scrollIntoView's own argument
+       recorded — the only place the choice is visible. */
+    for (const [pref, want] of [['reduce', 'auto'], ['no-preference', 'smooth']]) {
+        const rctx = await browser.newContext({
+            viewport: { width: 390, height: 844 },
+            hasTouch: true, isMobile: true, reducedMotion: pref,
+        });
+        const rp = await rctx.newPage();
+        await rp.setContent(page_html.replace(
+            '<script>\n  window.DCC_LAYOUT',
+            '<script>\n  window.__behaviors = [];\n'
+            + '  Element.prototype.scrollIntoView = function (opts) {\n'
+            + '    window.__behaviors.push(opts && opts.behavior);\n'
+            + '  };\n</script>\n<script>\n  window.DCC_LAYOUT'
+        ));
+        const got = await rp.evaluate(() => {
+            document.querySelector('.dcc_layout-bar__action').click();
+            return window.__behaviors;
+        });
+        await rctx.close();
+        check('with prefers-reduced-motion: ' + pref + ', the jump is ' + want, got, [want]);
+    }
 
     await ctx.close();
     await browser.close();

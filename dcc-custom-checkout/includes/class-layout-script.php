@@ -80,6 +80,28 @@ final class Layout_Script
             'segmented'    => self::segmented(),
             'coupon'       => self::coupon(),
             'upload'       => self::upload(),
+            'bar'          => self::bar(),
+        ];
+    }
+
+    /**
+     * ITEMS 6 and 7 — the pinned bar's words (pictures 3 and 4).
+     *
+     * @return array<string,mixed>
+     */
+    public static function bar(): array
+    {
+        return [
+            /* translators: %s: the name of the next empty required field, e.g. "Phone". */
+            'next'      => __('Next: %s', 'dcc-checkout'),
+            'submit'    => __('Submit Booking', 'dcc-checkout'),
+            'allSet'    => __('All Set', 'dcc-checkout'),
+            'updating'  => __('Updating…', 'dcc-checkout'),
+            /* translators: %s: how many fields need attention. */
+            'attention' => __('%s Need Attention', 'dcc-checkout'),
+            /* translators: 1: which flagged field the guest is on, 2: how many there are. */
+            'showMe'    => __('Show Me ↑ %1$s Of %2$s', 'dcc-checkout'),
+            'total'     => __('Total', 'dcc-checkout'),
         ];
     }
 

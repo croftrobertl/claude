@@ -5722,5 +5722,192 @@
   "find": "    function firstOf(selectors) {\n        for (var i = 0; i < selectors.length; i++) {\n            var hit = document.querySelector(selectors[i]);\n            if (hit) { return hit; }\n        }\n        return null;\n    }",
   "replace": "    function firstOf(selectors) {\n        return document.querySelector(selectors.join(', '));\n    }",
   "count": 1
+ },
+ {
+  "id": "css-unmarked-rule",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "hero"
+  ],
+  "claim": "0.35.0: every rule in checkout-layout.css is keyed on the layout marker",
+  "find": ".dcc_layout .dcc_layout-bar__label {",
+  "replace": ".dcc_layout-bar__label {",
+  "count": 1
+ },
+ {
+  "id": "bar-inside-article",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6 (required): the bar is attached to body, outside article.hentry",
+  "find": "        document.body.appendChild(bar);",
+  "replace": "        root.appendChild(bar);",
+  "count": 1
+ },
+ {
+  "id": "bar-total-computed",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6 (required): the total is COPIED from MotoPress's cell, never computed",
+  "find": "        return String(cells[cells.length - 1].textContent || '').replace(/\\s+/g, ' ').trim();",
+  "replace": "        var n = 0;\n        root.querySelectorAll('.dcc_checkout-breakdown td').forEach(function (c) {\n            var m = /([0-9.]+)/.exec(c.textContent || '');\n            if (m) { n += parseFloat(m[1]); }\n        });\n        return '$' + n.toFixed(2);",
+  "count": 1
+ },
+ {
+  "id": "bar-no-updating",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: the bar says Updating… rather than a stale number while MotoPress re-prices",
+  "find": "        setBarText(ui.amount, updating ? (T.updating || '') : motopressTotal(root));",
+  "replace": "        setBarText(ui.amount, motopressTotal(root));",
+  "count": 1
+ },
+ {
+  "id": "bar-next-ignores-folded",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6 (required): Next never offers a field inside a folded panel",
+  "find": "            if (el.disabled || !onPage(el) && !shownFor(el)) { continue; }",
+  "replace": "            if (el.disabled) { continue; }",
+  "count": 1
+ },
+ {
+  "id": "bar-error-before-submit",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6 (required): no error is shown before a submit attempt",
+  "find": "            var bad = attempted ? flagged(root) : [];",
+  "replace": "            var bad = flagged(root);",
+  "count": 1
+ },
+ {
+  "id": "bar-double-submit",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6 (required): a second press sends nothing",
+  "find": "            if (submitting) { return; }\n            lockSubmits();",
+  "replace": "            lockSubmits();",
+  "count": 1
+ },
+ {
+  "id": "bar-lock-cancels-submit",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: the lock is deferred, so it cannot cancel the first press",
+  "find": "            setTimeout(lockSubmits, 0);",
+  "replace": "            lockSubmits();",
+  "count": 1
+ },
+ {
+  "id": "bar-no-native-lock",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: MotoPress's own Submit button locks too, not just the bar's",
+  "find": "            var native = nativeSubmits();\n            for (var i = 0; i < native.length; i++) {\n                setAttr(native[i], 'disabled', '');\n            }",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "bar-no-touch-gate",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: nothing is written while a finger is down (v0.18.0)",
+  "find": "    function defer(fn) {\n        if (!fingerDown) { fn(); return; }",
+  "replace": "    function defer(fn) {\n        if (true) { fn(); return; }",
+  "count": 1
+ },
+ {
+  "id": "bar-no-hide-on-keyboard",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: the bar gets out of the way while a text field has focus",
+  "find": "        function evaluate() { set(typing() || placesOpen()); }",
+  "replace": "        function evaluate() { set(placesOpen()); }",
+  "count": 1
+ },
+ {
+  "id": "bar-no-hide-on-places",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: the bar hides while Google Places is showing suggestions",
+  "find": "        function evaluate() { set(typing() || placesOpen()); }",
+  "replace": "        function evaluate() { set(typing()); }",
+  "count": 1
+ },
+ {
+  "id": "bar-no-page-padding",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: the page is padded by the bar's measured height",
+  "find": "            var h = Math.ceil(bar.getBoundingClientRect().height);",
+  "replace": "            var h = 0;",
+  "count": 1
+ },
+ {
+  "id": "bar-motion-ignored",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 6: reduced motion is respected when jumping to a field",
+  "find": "                behavior: reduced ? 'auto' : 'smooth',",
+  "replace": "                behavior: 'smooth',",
+  "count": 1
+ },
+ {
+  "id": "bar-showme-filled",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 7: Show Me is outlined, not filled — it is a way back, not the way forward",
+  "find": ".dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__action.dcc_layout-bar__action {\n    background-color: #fff;",
+  "replace": ".dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__action.dcc_layout-bar__action {\n    background-color: var(--dcc-blue, #006bcf);",
+  "count": 1
+ },
+ {
+  "id": "bar-showme-no-walk",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 7: each tap jumps to the NEXT flagged field, and wraps round",
+  "find": "                state.at = (state.at + 1) % bad.length;",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "bar-revalidates",
+  "file": "dcc-custom-checkout/assets/layout.js",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.35.0 item 7: the flags come from the EXISTING preflight — nothing here re-validates",
+  "find": "        var all = root.querySelectorAll('.dcc_checkout-invalid, [aria-invalid=\"true\"]');",
+  "replace": "        var all = root.querySelectorAll('[required]');",
+  "count": 1
  }
 ]

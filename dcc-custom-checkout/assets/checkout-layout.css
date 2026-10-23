@@ -462,3 +462,164 @@
         color: #fff;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * ITEMS 6 and 7 — THE PINNED BAR.
+ *
+ * Pinned to the bottom on phones and clear of the iOS home bar. The element
+ * lives on <body>, outside article.hentry, because Bravada puts a `matrix3d`
+ * transform on that article and a transformed ancestor becomes the containing
+ * block for `position: fixed` — a fixed box inside it was measured 2,156px
+ * off-screen. NO pinned bar on desktop (Rob): at ≥900px it is moved into the
+ * summary card and laid out in the flow.
+ *
+ * NO TRANSITION, deliberately. WebKit's content observation watches what a
+ * page does around a tap — including transitions started during it — and
+ * v0.18.0 closed the three-tap bug by making this checkout's writes
+ * uneventful. A slide-in on the one element that sits under the guest's thumb
+ * is not worth reopening that.
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_layout-bar,
+body.dcc_layout > .dcc_layout-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    /* Clear of the iOS home bar. The fallback keeps the padding sane where
+       env() is unknown. */
+    padding-bottom: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid var(--dcc-field-border, #f4da62);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Out of the way while the keyboard is up, or while Google Places is showing
+   its suggestions (the site's Customizer CSS puts .pac-container at z-index
+   99999, so the bar would be under the list the guest is trying to tap). */
+body.dcc_layout > .dcc_layout-bar.dcc_layout-bar--away {
+    display: none;
+}
+
+/* The page is padded by the bar's own measured height, so the last field and
+   MotoPress's own Submit button are not stuck underneath it. */
+body.dcc_layout {
+    padding-bottom: var(--dcc-bar-height, 0px);
+}
+
+.dcc_layout .dcc_layout-bar__total {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.dcc_layout .dcc_layout-bar__label {
+    font-size: 13px;
+    color: #555;
+}
+
+.dcc_layout .dcc_layout-bar__amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--dcc-ink, #111);
+}
+
+.dcc_layout .dcc_layout-bar__note {
+    font-size: 13px;
+    color: #555;
+}
+
+.dcc_layout .dcc_layout-bar--ready .dcc_layout-bar__note {
+    color: #0a7d32;
+    font-weight: 700;
+}
+
+.dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__note {
+    /* ONE ERROR INK (0.21.0): --dcc-required is DEFINED as --dcc-error, so the
+       bar, the banner and MotoPress's own messages cannot drift apart. */
+    color: var(--dcc-error, #c62828);
+    font-weight: 700;
+}
+
+.dcc_layout .dcc_layout-bar__amount:empty::before {
+    /* An em dash rather than an empty box while MotoPress has not priced
+       anything yet. Never a zero: this file must not be able to state a
+       number. */
+    content: "\2014";
+    color: #555;
+}
+
+/* The action. The site button spec (v0.8.0), declared rather than inherited. */
+.dcc_layout .dcc_layout-bar__action.dcc_layout-bar__action {
+    flex: 0 0 auto;
+    min-height: 50px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 30px;
+    background-color: var(--dcc-blue, #006bcf);
+    color: #fff;
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 50px;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* "Show Me" is outlined, not filled (picture 3): it is a way back to a
+   problem, not the way forward. */
+.dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__action.dcc_layout-bar__action {
+    background-color: #fff;
+    border: 2px solid var(--dcc-error, #c62828);
+    color: var(--dcc-error, #c62828);
+}
+
+.dcc_layout .dcc_layout-bar__action:focus-visible {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .dcc_layout .dcc_layout-bar__action:hover {
+        background-color: #f08080;
+        color: #fff;
+    }
+}
+
+/* Pressed once, and done. */
+.dcc_layout .dcc_layout-bar__action[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* NO PINNED BAR ON DESKTOP (Rob). It is moved into the summary card and laid
+   out in the flow there. */
+@media (min-width: 900px) {
+    .dcc_layout .dcc_layout-bar {
+        position: static;
+        box-shadow: none;
+        border-top: 0;
+        padding: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    body.dcc_layout {
+        padding-bottom: 0;
+    }
+    .dcc_layout .dcc_layout-bar__action.dcc_layout-bar__action {
+        width: 100%;
+    }
+}
