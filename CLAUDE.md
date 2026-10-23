@@ -413,6 +413,9 @@ mode). The manifest and service worker are served from the site ROOT via
 `/?dccgg_sw=1` so the worker can claim a scope like `/guest/`; one served from
 the plugin directory could not. The worker never caches wp-admin, wp-json,
 admin-ajax, logins or previews, and turning the toggle off unregisters it.
+As of 2026-10-23 it is OFF on page 4645 (`enable_offline` empty), so the
+precache list — which v0.25.0 grew from two files to six — is not in play on
+live today. Worth re-checking before leaning on it.
 
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
@@ -553,6 +556,20 @@ This container cannot reach doracanalcourt.com (the egress proxy 403s it). So
 a wire measurement is not something this session can produce: ASK for it, or
 hand over a snippet that produces it, and never present a local computation as
 a served figure.
+
+CALIBRATION, for when an estimate is all that is available: on this host the
+wire figure for JS runs about **1.4x a local `gzip -9`**. The compressor is a
+weak one. Two independent measurements, and they agree:
+
+    2026-09-19  one file            26.5 KB local  ->  36.1 KB wire   (1.36x)
+    2026-10-23  v0.25.0 core        17,823 local   ->  25,104 wire    (1.41x)
+                v0.25.0 guest        4,889 local   ->   5,792 wire    (1.18x)
+
+So a local gzip UNDERSTATES what a guest downloads and flatters any saving
+computed from it — v0.25.0 was estimated at -7,447 on /explore/ and came in at
+-10,521. Multiply by ~1.4 when estimating, say that is what you did, and still
+ask for the real number. HTML pages no longer go through that compressor
+(SpeedyCache serves a pre-built .gz), but JS and CSS do.
 
 ### Report the commit SHA that git actually printed
 
