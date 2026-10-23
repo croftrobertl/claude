@@ -199,7 +199,18 @@
  * The `.dcc_layout` marker stays on the front of it like every other rule in
  * this file — tests/hero asserts that no rule here can match a page that is
  * not the new layout, and that assertion is worth keeping strict. It only adds
- * specificity, so it costs the fight nothing. */
+ * specificity, so it costs the fight nothing.
+ *
+ * THE DOUBLED CLASS IS A BELT, MEASURED AND SAID SO. With the marker and a
+ * SINGLE class — `.dcc_layout .dcc_layout-segment__native` — the select still
+ * measures 1x1 with opacity 0 and no pointer events, because `!important` on
+ * every line already beats the field standard at that specificity. So the
+ * doubling changes nothing observable here, and the mutation that removed it
+ * was retired rather than left as a survivor. It is kept because it mirrors
+ * `select.dcc_checkout-select-native.dcc_checkout-select-native` in
+ * checkout.css line for line, and two rules fighting the same battle in the
+ * same shape are easier to keep in step than two that differ for no reason —
+ * but nobody should read it as load-bearing. */
 .dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
     position: absolute !important;
     width: 1px !important;
