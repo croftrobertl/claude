@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.35.1
+Stable tag: 0.35.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,14 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.35.2 =
+Two changes after the Website Director's check of live 0.35.1.
+
+* Wording: when the dates cannot be booked, the card now says "Those Dates Aren't Available" and "[Cottage] isn't available for those nights." It used to say someone had just booked them, which is not true of every case that reaches it — this site has a two-night minimum, so a one-night request is refused without anyone having booked anything.
+* Fixed: on a page where MotoPress writes its message as plain text rather than inside an element, that message stayed visible under the card. It is now kept out of view like the rest, still only inside MotoPress's own checkout block.
+
+Also: the cookie the header reads the cottage from is now pinned by name, and the card can no longer be drawn twice if the script is ever loaded twice. Nothing is written on install, activation or upgrade, and no setting or stored value changed.
 
 = 0.35.1 =
 Six fixes from the Website Director's read of live 0.35.0, all of them in the new layout except the "Those Dates Are Taken" card, which every guest sees.

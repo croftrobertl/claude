@@ -6239,5 +6239,94 @@
   "find": "        return $single ? '' : [];",
   "replace": "        return [];",
   "count": 1
+ },
+ {
+  "id": "res-taken-says-booked",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore"
+  ],
+  "claim": "v0.35.2 - the card never claims a booking happened; the site's 2-night minimum reaches this state with nobody having booked",
+  "find": "            'takenLead'      => __('%s isn\\'t available for those nights. Choose new dates and we\\'ll bring you straight back.', 'dcc-checkout'),",
+  "replace": "            'takenLead'      => __('Someone just booked %s for those nights. Choose new dates and we\\'ll bring you straight back.', 'dcc-checkout'),",
+  "count": 1
+ },
+ {
+  "id": "res-taken-title-old",
+  "file": "dcc-custom-checkout/includes/class-restore.php",
+  "suites": [
+   "restore",
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - the title reads 'Those Dates Aren't Available'",
+  "find": "            'takenTitle'     => __('Those Dates Aren\\'t Available', 'dcc-checkout'),",
+  "replace": "            'takenTitle'     => __('Those Dates Are Taken', 'dcc-checkout'),",
+  "count": 1
+ },
+ {
+  "id": "js-bare-text-left",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - a bare text node in MotoPress's wrapper is wrapped and hidden; an element sweep cannot class it",
+  "find": "                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }",
+  "replace": "                else if (false) { concealText(host, kids[k]); }",
+  "count": 1
+ },
+ {
+  "id": "js-bare-text-elements-only",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - the sweep walks childNodes, not children: 0.35.1 saw elements only",
+  "find": "            var kids = Array.prototype.slice.call(host.childNodes);",
+  "replace": "            var kids = Array.prototype.slice.call(host.children);",
+  "count": 1
+ },
+ {
+  "id": "js-bare-text-retyped",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - the sentence is MOVED into the span, never re-typed as markup",
+  "find": "        host.replaceChild(span, node);\n        span.appendChild(node);",
+  "replace": "        span.innerHTML = node.nodeValue;\n        host.replaceChild(span, node);",
+  "count": 1
+ },
+ {
+  "id": "js-bare-text-whitespace",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - whitespace-only text nodes are left alone rather than littered with spans",
+  "find": "        if (!node || !node.nodeValue || !node.nodeValue.trim()) { return; }",
+  "replace": "        if (!node || !node.nodeValue) { return; }",
+  "count": 1
+ },
+ {
+  "id": "js-second-card-drawn",
+  "file": "dcc-custom-checkout/assets/restore.js",
+  "suites": [
+   "restore-browser"
+  ],
+  "claim": "v0.35.2 - one card ever, even if the script is evaluated twice (SpeedyCache concatenates assets on this site)",
+  "find": "        if (document.querySelector('.dcc_checkout-continue')) { return; }",
+  "replace": "        if (false) { return; }",
+  "count": 1
+ },
+ {
+  "id": "rs-room-cookie-unpinned",
+  "file": "dcc-custom-checkout/includes/class-rendered-stay.php",
+  "suites": [
+   "hero"
+  ],
+  "claim": "v0.35.2 - the room type comes from mphb_rooms_details BY NAME; a scan could read an id out of a cookie about something else",
+  "find": "        $raw = $_COOKIE[self::ROOM_COOKIE] ?? null;",
+  "replace": "        $raw = is_array($_COOKIE) ? array_values($_COOKIE) : null;",
+  "count": 1
  }
 ]

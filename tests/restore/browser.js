@@ -70,10 +70,13 @@ const I18N = {
     restartTitle: 'Pick Your Dates Again',
     restartLead: 'We do not have your dates any more.',
     restartButton: 'Pick Your Dates Again',
-    // v0.35.1, item 2 - the dates are known and taken, which is not lost.
-    takenTitle: 'Those Dates Are Taken',
-    takenLead: "Someone just booked %s for those nights. Choose new dates and we'll bring you straight back.",
-    takenLeadPlain: "Someone just booked those nights. Choose new dates and we'll bring you straight back.",
+    // v0.35.1 item 2, reworded in v0.35.2: the dates are known and not
+    // available, which is neither "lost" nor "someone just booked it" - the
+    // site's two-night minimum refuses a one-night stay with no form and no
+    // booking having happened.
+    takenTitle: "Those Dates Aren't Available",
+    takenLead: "%s isn't available for those nights. Choose new dates and we'll bring you straight back.",
+    takenLeadPlain: "Those nights aren't available. Choose new dates and we'll bring you straight back.",
     takenButton: 'Pick New Dates',
     // v0.35.1, item 6 - three sentences, so sentence case.
     welcome: 'Welcome back. We kept your answers. Please add your photo ID again.',
@@ -179,9 +182,13 @@ function pageBooked(inner) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>checkout</title><style>${CSS}</style></head>
 <body>
-<div class="mphb_sc_checkout-wrapper">
-  ${inner || '<p>Accommodation is already booked.</p>'}
-</div>
+<!-- TIGHT, as live serves it: the Director read the wrapper's children as
+     [SECTION.dcc_checkout-continue, TEXT "Accommodation is already booked."] -
+     one text node holding the sentence and nothing else. Padding the inner
+     onto its own line would have made the text node "\n  Accommodation…\n",
+     which is not what live sends and would have made the "moved character for
+     character" assertion pass for the wrong reason. -->
+<div class="mphb_sc_checkout-wrapper">${inner || '<p>Accommodation is already booked.</p>'}</div>
 <script>window.DCC_RESTORE = ${cfg(STAY, 'taken')};</script>
 <script>${JS}</script>
 </body></html>`;
@@ -548,6 +555,12 @@ const TYPED = {
      * are not lost, they are taken. The one action is forward.
      * ===================================================================== */
     for (const [label, inner] of [
+        /* THE ONE LIVE SERVES (Director, 2026-10-23, Cottage 36 Jan 11-14
+           2027): a BARE TEXT NODE directly inside the wrapper. 0.35.1's sweep
+           walked `host.children` — elements only — so there was nothing to put
+           a class on and the sentence stayed under the card. It is first in
+           this list because it is the real one. */
+        ['the bare text node live serves', 'Accommodation is already booked.'],
         ['a classless <p>', '<p>Accommodation is already booked.</p>'],
         ['a nested block', '<div class="mphb_sc_checkout"><p>Accommodation is already booked.</p></div>'],
         ['the pinned dead-end element', '<p class="mphb-data-incorrect">Accommodation is already booked.</p>'],
@@ -586,10 +599,10 @@ const TYPED = {
             };
         });
 
-        check('the booked page gets the taken card (' + label + ')',
-            taken && taken.heading, 'Those Dates Are Taken');
+        check('the unavailable page gets the taken card (' + label + ')',
+            taken && taken.heading, "Those Dates Aren't Available");
         check('… it names the cottage in the lead (' + label + ')',
-            taken.lead, "Someone just booked Test Cottage for those nights."
+            taken.lead, "Test Cottage isn't available for those nights."
                 + " Choose new dates and we'll bring you straight back.");
         check('… it links forward to /cottages/ and never re-POSTs the refused stay ('
             + label + ')',
@@ -605,6 +618,104 @@ const TYPED = {
             + label + ')',
             [taken.headAlign, taken.leadAlign], ['center', 'left']);
     }
+
+    /* ===================================================================== *
+     * 5c. THE BARE TEXT NODE, IN DETAIL (v0.35.2)
+     *
+     * A text node cannot carry a class, so it is wrapped in a hidden span.
+     * That is DOM surgery, so the mechanics are asserted rather than assumed:
+     * the text is MOVED not retyped, whitespace is left alone, and a second
+     * pass finds an element it has already hidden rather than text to wrap
+     * again.
+     * ===================================================================== */
+    await page.goto('https://example.test/submit-booking/');
+    await page.evaluate((st) => {
+        sessionStorage.clear();
+        sessionStorage.setItem('dcc_checkout_stay_v1', JSON.stringify(st));
+    }, STAY);
+    await page.setContent(pageBooked('Accommodation is already booked.'));
+
+    const bare = await page.evaluate(() => {
+        const w = document.querySelector('.mphb_sc_checkout-wrapper');
+        const spans = w.querySelectorAll('span.dcc_checkout-hidden');
+        /* Every direct child, in order, as live reports them. */
+        const kids = Array.prototype.map.call(w.childNodes, (n) => {
+            if (n.nodeType === 1) { return n.tagName + (n.className ? '.' + n.className : ''); }
+            return 'TEXT ' + JSON.stringify(n.nodeValue);
+        });
+        return {
+            kids: kids,
+            spanCount: spans.length,
+            spanText: spans.length ? spans[0].textContent : null,
+            spanShown: spans.length ? getComputedStyle(spans[0]).display : null,
+            /* The moved node is still a text node, and the only child. */
+            spanChildren: spans.length
+                ? Array.prototype.map.call(spans[0].childNodes, (n) => n.nodeType) : null,
+            nested: w.querySelectorAll('span.dcc_checkout-hidden span').length,
+            /* Nothing of MotoPress's sentence survives as visible text. */
+            visibleText: Array.prototype.filter.call(w.childNodes, (n) =>
+                n.nodeType === 3 && n.nodeValue.trim()).length,
+        };
+    });
+
+    check('the bare text node is wrapped in exactly one hidden span',
+        [bare.spanCount, bare.nested], [1, 0]);
+    check('… the sentence is MOVED into it, character for character',
+        bare.spanText, 'Accommodation is already booked.');
+    check('… it is still a text node inside, not re-typed markup',
+        bare.spanChildren, [3]);
+    check('… and the span computes to display:none',
+        bare.spanShown, 'none');
+    check('no visible bare text is left directly in the wrapper',
+        bare.visibleText, 0);
+    check('the wrapper holds the card and the hidden span, and nothing else',
+        bare.kids, ['SECTION.dcc_checkout-continue', 'SPAN.dcc_checkout-hidden']);
+
+    /* WHITESPACE IS LEFT ALONE — there is nothing to see in it and wrapping it
+       would litter the markup. The live wrapper is tight, so this needs its
+       own page: an element with real indentation and newlines around it, plus
+       a sentence of bare text. */
+    await page.setContent(pageBooked(
+        '\n  <p class="mphb-data-incorrect">Check-in date is not valid.</p>\n  '
+        + 'Accommodation is already booked.\n'));
+    const mixed = await page.evaluate(() => {
+        const w = document.querySelector('.mphb_sc_checkout-wrapper');
+        return {
+            kids: Array.prototype.map.call(w.childNodes, (n) => n.nodeType === 1
+                ? n.tagName + (n.className ? '.' + n.className : '')
+                : 'TEXT ' + JSON.stringify(n.nodeValue)),
+            hiddenSentence: !!Array.prototype.find.call(
+                w.querySelectorAll('span.dcc_checkout-hidden'),
+                (sp) => sp.textContent.indexOf('already booked') !== -1),
+        };
+    });
+    check('whitespace-only text nodes survive unwrapped, beside the wrapped sentence',
+        mixed.kids.filter((k) => k.startsWith('TEXT ')).every((k) => !/\S/.test(
+            JSON.parse(k.slice(5)))), true);
+    check('… there is still whitespace there to have been left alone (the guard)',
+        mixed.kids.filter((k) => k.startsWith('TEXT ')).length > 0, true);
+    check('… and the sentence itself is wrapped and hidden',
+        mixed.hiddenSentence, true);
+    check('… with MotoPress\'s own element hidden too',
+        mixed.kids.indexOf('P.mphb-data-incorrect dcc_checkout-hidden') !== -1, true);
+
+    await page.setContent(pageBooked('Accommodation is already booked.'));
+
+    /* A SECOND RUN FINDS NOTHING TO DO. `hideDeadEnd` is called once at init,
+       but a text node wrapped twice would nest spans and re-moving it would be
+       a DOM write nobody asked for, so the idempotence is asserted by running
+       the whole script again over the finished page. */
+    await page.addScriptTag({ content: JS });
+    const again = await page.evaluate(() => {
+        const w = document.querySelector('.mphb_sc_checkout-wrapper');
+        return {
+            spans: w.querySelectorAll('span.dcc_checkout-hidden').length,
+            nested: w.querySelectorAll('span.dcc_checkout-hidden span').length,
+            cards: w.querySelectorAll('.dcc_checkout-continue').length,
+        };
+    });
+    check('running the script again wraps nothing twice and adds no second card',
+        again, { spans: 1, nested: 0, cards: 1 });
 
     /* WITHOUT PHP'S WORD, NOTHING CHANGES. The browser never decides this on
        its own — it does not read MotoPress's message, and a page whose request
@@ -651,7 +762,7 @@ const TYPED = {
         });
         await p3.close();
         check('outside MotoPress\'s wrapper nothing is swept (' + label + ')',
-            [kept.card, kept.shown], ['Those Dates Are Taken', 'block']);
+            [kept.card, kept.shown], ["Those Dates Aren't Available", 'block']);
     }
 
     /* ===================================================================== *

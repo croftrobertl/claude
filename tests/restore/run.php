@@ -364,15 +364,27 @@ echo "\n--- the words ---\n";
 with_post(stay_post(30));
 $i18n = Restore::config()['i18n'];
 
+/* v0.35.2 — THE WORDS ARE TRUE OF EVERY REFUSAL THAT REACHES THIS STATE
+   (Rob's pick). This site has a TWO-NIGHT MINIMUM (`mphb_min_stay_length` = 2),
+   so a one-night request is refused with no form and nobody has booked
+   anything; 0.35.1 told that guest "Someone just booked …", which was false.
+   Pinned as whole sentences, because that is the only kind of assertion that
+   could have caught it. */
 check('the taken card\'s title is a title, in Title Case',
-    $i18n['takenTitle'], 'Those Dates Are Taken');
-check('the taken card names the cottage, through a %s rather than concatenation',
-    [strpos($i18n['takenLead'], '%s') !== false,
-     strpos($i18n['takenLead'], 'Choose new dates') !== false],
-    [true, true]);
+    $i18n['takenTitle'], 'Those Dates Aren\'t Available');
+check('the lead claims unavailability, never that a booking happened',
+    $i18n['takenLead'],
+    '%s isn\'t available for those nights. Choose new dates and we\'ll bring you straight back.');
 check('… and there is a nameless wording, so no sentence has a hole in it',
-    [strpos($i18n['takenLeadPlain'], '%s'), strpos($i18n['takenLeadPlain'], 'Choose new dates') !== false],
-    [false, true]);
+    $i18n['takenLeadPlain'],
+    'Those nights aren\'t available. Choose new dates and we\'ll bring you straight back.');
+check('NOTHING anywhere in the strings says a booking has just happened',
+    array_values(array_filter($i18n, static function ($v) {
+        return is_string($v) && preg_match('/just booked|someone/i', $v);
+    })), []);
+check('… and the cottage is named through a %s rather than concatenation',
+    [strpos($i18n['takenLead'], '%s') !== false,
+     strpos($i18n['takenLeadPlain'], '%s')], [true, false]);
 check('the one action is forward, never a re-POST of a refused stay',
     $i18n['takenButton'], 'Pick New Dates');
 

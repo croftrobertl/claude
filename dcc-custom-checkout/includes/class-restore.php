@@ -164,7 +164,9 @@ final class Restore
      *   - "taken": this request POSTED a complete stay — a room type and both
      *     dates — and (the browser's half) MotoPress drew no form for it. The
      *     dates are known, so they can be named and the guest sent back for
-     *     new ones.
+     *     new ones. **The words say "isn't available", not "someone just
+     *     booked it"** — see the strings, and the note below on what else
+     *     lands here.
      *   - "lost": no stay in this request at all, which is the reloaded-tab
      *     dead end item 10 was built for.
      *
@@ -178,13 +180,16 @@ final class Restore
      * reason: a check-in already in the past, or dates the wrong way round.
      * Those fall through to the honest "pick again" card.
      *
-     * KNOWN LIMIT, STATED RATHER THAN HIDDEN: any OTHER refusal of a
-     * complete, future-dated stay also lands here — a minimum-nights rule,
-     * say. Availability is the overwhelmingly common one and the only one the
-     * Director has seen, and the recovery offered (choose new dates) is right
-     * for every member of that set even where the sentence is not. Narrowing
-     * it further would mean reading MotoPress's message, which is the thing
-     * this must not do.
+     * ANY OTHER REFUSAL OF A COMPLETE, FUTURE-DATED STAY ALSO LANDS HERE, and
+     * since v0.35.2 that is no longer a limit — it is why the words are what
+     * they are. The clearest case is real: this site sets a TWO-NIGHT MINIMUM
+     * (`mphb_min_stay_length` = 2), so a one-night request is refused with no
+     * form and nobody has booked anything. "Isn't available for those nights"
+     * is true of that, of a taken cottage, and of a minimum-nights rule
+     * nobody has thought of yet; "someone just booked it" was true of only
+     * one of them. Narrowing the STATE further would mean reading MotoPress's
+     * message, which is the thing this must not do — so the sentence is what
+     * was made honest instead.
      *
      * @return string 'taken' | 'lost'
      */
@@ -334,10 +339,17 @@ final class Restore
                the same as lost. Two leads: the cottage's name is worth saying
                when it is known, and a title with an empty name in it is worse
                than one without. */
-            'takenTitle'     => __('Those Dates Are Taken', 'dcc-checkout'),
+            /* v0.35.2 — WORDS THAT ARE TRUE IN EVERY CASE THAT REACHES HERE
+               (Rob's pick, 2026-10-23). 0.35.1 said "Someone just booked %s
+               for those nights.", and this state is reached by ANY refusal of
+               a complete, future-dated stay — the site has a 2-night minimum
+               (`mphb_min_stay_length` = 2), so a one-night request would have
+               been told a booking had happened that had not. The recovery
+               offered was right; the sentence was not. */
+            'takenTitle'     => __('Those Dates Aren\'t Available', 'dcc-checkout'),
             /* translators: %s: the cottage's name, e.g. "Coconut Cottage". */
-            'takenLead'      => __('Someone just booked %s for those nights. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
-            'takenLeadPlain' => __('Someone just booked those nights. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
+            'takenLead'      => __('%s isn\'t available for those nights. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
+            'takenLeadPlain' => __('Those nights aren\'t available. Choose new dates and we\'ll bring you straight back.', 'dcc-checkout'),
             'takenButton'    => __('Pick New Dates', 'dcc-checkout'),
             /* v0.35.1, item 6 — sentence case. Rob's rule: Title Case is for
                titles and labels, and this is three sentences. */

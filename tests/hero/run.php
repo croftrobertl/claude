@@ -613,10 +613,11 @@ check('… with no empty pill element',
  * the hero stood down, and the page came back with the canal banner and the
  * theme's "Submit Booking" over it — bar, sheet and all around it.
  *
- * THE ROOM TYPE'S COOKIE NAME IS NOT PROVEN, and these cases are deliberately
- * written so that the plugin does not depend on one: the cookies that ARE
- * there are read, every candidate is validated against WordPress, and anything
- * ambiguous or unverifiable yields no hero at all.
+ * THE ROOM COOKIE IS `mphb_rooms_details`, PINNED BY NAME in v0.35.2 (the
+ * Director read live's three cookies on 2026-10-23). 0.35.1 scanned any
+ * `mphb…room…` cookie because the name had not been read; the scan is gone,
+ * and these cases assert that it is — a scan could take a room type id out of
+ * a cookie that is about something else.
  * ========================================================================== */
 
 echo "\n--- GET after POST (item 1) ---\n";
@@ -672,13 +673,30 @@ check('the dates alone, with no room cookie: no hero rather than a guess',
 
 /* AMBIGUITY IS AN ANSWER OF ITS OWN. Two cottages named means we do not know
    which one this page is for, and a hero for the wrong cottage is worse than
-   none: it looks deliberate. */
-reload($mp + ['mphb_rooms_other' => '1065']);
-check('two different cottages in the cookies: no hero',
+   none: it looks deliberate. A real multi-cottage stay lands here too, and
+   correctly — there is one photo at the top of the page. */
+reload(['mphb_rooms_details' => 'a:2:{i:1607;s:1:"1";i:1065;s:1:"1";}']);
+check('two different cottages in the cookie: no hero',
     Hero::room_type_id(), 0);
-reload($mp + ['mphb_rooms_again' => '1607']);
-check('the SAME cottage twice is not ambiguous',
+reload(['mphb_rooms_details' => 'a:1:{i:1607;s:1:"2";}']);
+check('the SAME cottage with a quantity is not ambiguous',
     Hero::room_type_id(), 1607);
+
+/* THE COOKIE IS PINNED BY NAME (v0.35.2), so a cottage named in some OTHER
+   cookie is not read. The guard that makes this observable: post 2026 is a
+   published room type here, so a scan of every cookie WOULD find the year in
+   `mphb_check_in_date` beside the real 1607, read two cottages, and show no
+   hero at all. 0.35.1 needed an exclusion list to avoid exactly that. */
+$GLOBALS['state']['post_type'][2026] = 'mphb_room_type';
+$GLOBALS['state']['post_status'][2026] = 'publish';
+reload($mp);
+check('only mphb_rooms_details is read, so a year in a date cookie is not a cottage',
+    Hero::room_type_id(), 1607);
+reload(['mphb_check_in_date' => '2026-11-16', 'mphb_check_out_date' => '2026-11-19',
+        'mphb_rooms_other' => '1065']);
+check('a cottage named in any other cookie is not read at all',
+    Hero::room_type_id(), 0);
+unset($GLOBALS['state']['post_type'][2026], $GLOBALS['state']['post_status'][2026]);
 
 /* Every candidate is validated by WordPress, so a tampered cookie cannot
    name anything that is not one of this site's own published cottages. */
@@ -703,15 +721,6 @@ check('a serialised OBJECT is read as text, not unserialised',
     Hero::room_type_id(), 1607);
 check('… and nothing was instantiated to get there',
     class_exists('DCC_Checkout\\Rendered_Stay', false), true);
-
-/* A cookie name that has nothing to do with rooms is not scanned, so a date's
-   own four-digit year can never be mistaken for a post id. */
-$GLOBALS['state']['post_type'][2026] = 'mphb_room_type';
-$GLOBALS['state']['post_status'][2026] = 'publish';
-reload(['mphb_check_in_date' => '2026-11-16', 'mphb_rooms_details' => '1607']);
-check('a year in a date cookie is not read as a room type',
-    Hero::room_type_id(), 1607);
-unset($GLOBALS['state']['post_type'][2026], $GLOBALS['state']['post_status'][2026]);
 
 /* A quantity or an index is not a candidate: ids on this site are four digits
    and the floor is three. */

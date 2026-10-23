@@ -2015,6 +2015,89 @@ yours to improvise.
     can never see a source mutation; and a browser fixture carries its own
     copy of the localized strings, so it cannot see a PHP string change
     either. Listing one is apparent coverage.
+- **0.35.2 — TWO CHANGES AFTER THE DIRECTOR'S CHECK OF LIVE 0.35.1**
+  (2026-10-23; `Restore`, `restore.js`, `Rendered_Stay`). 0.35.1 went live the
+  same day, switch still OFF, verified at 375px: the reload keeps the hero, no
+  canal request and no i0.wp.com copy, the local twin
+  `Cottage-34-Photos-17-1024x768.webp` preloaded and painted at one URL and the
+  only image downloaded, one `<h1>` with nothing empty left behind, the plain
+  dead end still correct. **The 227 KB preload had a SECOND source** — a
+  site-wide SpeedyCache "Preload Resource" entry, which Rob has deleted; the
+  featured-image suppression stays, because it is what removed the hidden theme
+  `<picture>`.
+  - **1. THE CARD'S WORDS ARE NOW TRUE OF EVERY CASE THAT REACHES IT** (Rob's
+    pick). 0.35.1 shipped "Someone just booked %s for those nights." and this
+    file recorded, as a known limit, that ANY refusal of a complete
+    future-dated stay lands in that state. **The Director then named a real
+    one: this site sets a TWO-NIGHT MINIMUM** (`mphb_min_stay_length` = 2), so
+    a one-night request is refused with no form and nobody has booked
+    anything — and that guest was being told a booking had happened. Now:
+    "Those Dates Aren't Available" / "%s isn't available for those nights.
+    Choose new dates and we'll bring you straight back." / "Pick New Dates"
+    unchanged. **The STATE was not narrowed — the sentence was made honest**,
+    because narrowing it would mean reading MotoPress's message. Mutations
+    `res-taken-says-booked`, `res-taken-title-old`, and an assertion that no
+    string anywhere matches `/just booked|someone/i`.
+    **A limit recorded in prose is a defect waiting for someone to name a
+    case.** It was written down honestly in 0.35.1 and shipped anyway; the fix
+    was one sentence. When a "known limit" says the words may be false, change
+    the words.
+  - **2. MOTOPRESS'S MESSAGE IS A BARE TEXT NODE** (Director, live, Cottage 36
+    Jan 11-14 2027). The wrapper's children are
+    `[SECTION.dcc_checkout-continue, TEXT "Accommodation is already booked."]`
+    — **a text node directly inside `.mphb_sc_checkout-wrapper`**. 0.35.1's
+    structural sweep walked `host.children`, which is elements only, so there
+    was nothing to put a class on and the sentence stayed under the card. A
+    text node cannot carry a class, so each non-empty one is **wrapped in
+    `<span class="dcc_checkout-hidden" data-dcc-injected="1">`** — the only way
+    to hide one by stylesheet. The text is MOVED into the span, never re-typed
+    (`innerHTML` would re-parse MotoPress's words); whitespace-only nodes are
+    left alone; `childNodes` is snapshotted because wrapping replaces nodes as
+    it goes. Still confined to MotoPress's own wrapper, still once at init,
+    never from an observer and never in a touch path. Mutations
+    `js-bare-text-left`, `js-bare-text-elements-only`, `js-bare-text-retyped`,
+    `js-bare-text-whitespace`.
+    **The lesson is the sweep's shape, not the class name.** "Every direct
+    child that is not ours" sounded exhaustive and was not — `children` and
+    `childNodes` differ by exactly the thing that was left visible. A sweep
+    described as structural must say which node types it covers.
+  - **THE ROOM COOKIE IS PINNED BY NAME**: `mphb_rooms_details` (the
+    Director's read of live's three cookies), keeping the published-room-type
+    check, the 3-digit floor, the text-only digit extraction and the ambiguity
+    rule. The `mphb…room…` scan is gone, and with it the need to exclude the
+    date cookies by name — a scan could read a four-digit year as a post id.
+    The test that pins this makes post **2026 a published room type**, so a
+    scan WOULD find it beside the real 1607 and show no hero; mutation
+    `rs-room-cookie-unpinned`. A renamed cookie now means no hero, which is
+    0.35.0's behaviour and harms nothing.
+  - **ONE CARD, EVER** (found by the suite, not by live). Running the whole
+    script twice over a finished page drew a SECOND card: `withoutForm()` had
+    no guard. It cannot happen from this plugin's own flow — it runs once at
+    init — but **SpeedyCache rewrites and concatenates assets on this site and
+    has served a doubled or stale bundle before**, and two cards would be this
+    plugin's bug however it happened. `withoutForm()` now returns if a
+    `.dcc_checkout-continue` is already on the page. Mutation
+    `js-second-card-drawn`.
+  - **A fixture detail that mattered**: the booked wrapper is emitted TIGHT in
+    `tests/restore/browser.js`, because live's text node is the sentence and
+    nothing else. Padding the inner onto its own indented line made it
+    `"\n  Accommodation…\n"`, and the "moved character for character"
+    assertion would have passed for the wrong reason. The whitespace case is a
+    page of its own.
+  - **Rob's answer on `og:image`: leave it blank** — the checkout is not
+    shared. Nothing to do; recorded so it is not re-raised.
+  - **SWITCH-ON CRITERIA** (Director, for the record): 0.35.2 verified on live,
+    Rob has tried the preview on his phone (AutoFill, and the photo's tint),
+    and Rob says yes. He will then compare checkout-to-booking completion in
+    Google Analytics for two weeks either side. **Nothing for this repo to
+    build** — do not invent an analytics hook for it.
+  - **A RUN STOPPED MID-MUTATION LEAVES THAT FILE MUTATED, AND IT HAPPENED
+    AGAIN.** 0.35.1's first full half was started with `nohup … &`, was killed
+    at mutation 77 of 282 when the session's background slot ended, and left
+    `checkout.js` one line short (`uncheckGuestServices(root)` deleted).
+    Restored from git. **Start a full run as a tracked background command with
+    an explicit timeout, not `nohup`, and `git status` after any run that does
+    not print its own tally.**
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).

@@ -47,19 +47,22 @@ final class Rendered_Stay
     ];
 
     /**
-     * Which cookies may carry the room type.
+     * The cookie that carries the room type — PINNED BY NAME in v0.35.2.
      *
-     * THE NAME IS NOT PROVEN AND THIS DELIBERATELY DOES NOT DEPEND ON ONE.
-     * The Director's answer gave the two date cookies by name and said "room
-     * type plus the cookie dates"; the room type's own cookie was not read.
-     * Rather than invent a name, this looks at the cookies that ARE there:
-     * any `mphb…room…` cookie, which is where a room type id would live.
+     * 0.35.1 scanned any `mphb…room…` cookie, because the name had not been
+     * read and inventing one would have been a guess. The Director then read
+     * live (2026-10-23): the cookies are `mphb_check_in_date`,
+     * `mphb_check_out_date` and `mphb_rooms_details`, and his instruction is
+     * to pin the third by name and keep the published-room-type check.
      *
-     * The date cookies are excluded by name because their VALUE contains
-     * digit runs ("2027-01-11" → 2027) and a four-digit year could collide
-     * with a post id.
+     * PINNING IS NARROWER, WHICH IS THE POINT. A scan could read a room type
+     * id out of a cookie that is about something else — a four-digit year in
+     * a date ("2027-01-11" → 2027) could collide with a post id — and the
+     * only protection against that was excluding the date cookies by name.
+     * One named cookie needs no exclusions. A renamed cookie means no hero,
+     * which is 0.35.0's behaviour and harms nothing.
      */
-    private const ROOM_COOKIE_PATTERN = '/^mphb.*room/i';
+    public const ROOM_COOKIE = 'mphb_rooms_details';
 
     /** MotoPress's room-type post type — the validation every candidate passes. */
     public const ROOM_TYPE_POST_TYPE = 'mphb_room_type';
@@ -155,25 +158,22 @@ final class Rendered_Stay
      * pulled out and offered to the validator, and only a real room type
      * survives. Extracting digits cannot execute anything.
      *
-     * AMBIGUITY IS AN ANSWER OF ITS OWN. If the cookies name more than one
+     * AMBIGUITY IS AN ANSWER OF ITS OWN. If the cookie names more than one
      * distinct room type, this returns 0 — a hero for the wrong cottage is
      * worse than no hero, and "pick the first" would be exactly how that
-     * happens.
+     * happens. A genuine multi-cottage stay lands there too, and correctly:
+     * there is one photo at the top of the page and no honest way to choose
+     * which cottage it is of.
      */
     private static function room_type_from_cookies(): int
     {
         // phpcs:ignore WordPress.Security.NonceVerification
-        $cookies = is_array($_COOKIE) ? $_COOKIE : [];
+        $raw = $_COOKIE[self::ROOM_COOKIE] ?? null;
         $found = [];
 
-        foreach ($cookies as $name => $value) {
-            if (!is_string($name) || !preg_match(self::ROOM_COOKIE_PATTERN, $name)) {
-                continue;
-            }
-            foreach (self::candidate_ids($value) as $id) {
-                if (self::is_room_type($id)) {
-                    $found[$id] = true;
-                }
+        foreach (self::candidate_ids($raw) as $id) {
+            if (self::is_room_type($id)) {
+                $found[$id] = true;
             }
         }
 

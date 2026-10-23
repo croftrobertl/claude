@@ -274,6 +274,17 @@
      * it says.
      */
     function withoutForm() {
+        /* ONE CARD, EVER (v0.35.2). This runs once at init, so a second card
+           cannot arise from this plugin's own flow — but the script being
+           evaluated twice on one page is not far-fetched here: SpeedyCache
+           rewrites and concatenates assets on this site, and it has served a
+           stale or doubled bundle before. Two "Those Dates Aren't Available"
+           cards would be this plugin's bug however it happened. Found by
+           running the whole script twice over a finished page in
+           tests/restore/browser.js, which is also what pins the text-node
+           wrapping as idempotent. */
+        if (document.querySelector('.dcc_checkout-continue')) { return; }
+
         var held = read(STAY_KEY);
         var card = document.createElement('section');
         card.className = 'dcc_checkout-continue';
@@ -496,28 +507,66 @@
      * on the path where MotoPress drew no form — so there is nothing in there
      * for a guest to act on, whatever it says, and the card has replaced it.
      *
+     * AND SOME OF IT IS NOT AN ELEMENT AT ALL (v0.35.2). The Director read the
+     * booked page on live (Cottage 36, Jan 11-14 2027): the wrapper's children
+     * are
+     *
+     *     [SECTION.dcc_checkout-continue, TEXT "Accommodation is already booked."]
+     *
+     * — a BARE TEXT NODE directly inside the wrapper. 0.35.1's sweep walked
+     * `host.children`, which is elements only, so there was nothing to put a
+     * class on and the sentence stayed under the card. A text node cannot
+     * carry a class, so each non-empty one is WRAPPED in a hidden `<span>`.
+     * That is the whole reason this does DOM surgery rather than classing: it
+     * is the only way to hide a bare text node by stylesheet.
+     *
      * THE GENERALISATION IS CONFINED TO THAT WRAPPER AND MUST STAY SO. The
      * host list also contains `.entry-content`, `main` and `body`; hiding
-     * every child of one of those would blank the page. So the structural
-     * sweep is gated on the host being the wrapper, and the pinned selector
-     * above is what runs otherwise.
+     * every child — let alone wrapping their text — of one of those would
+     * blank the page. So the structural sweep is gated on the host being the
+     * wrapper, and the pinned selector above is what runs otherwise.
      *
      * Display-based, as everywhere else on this checkout; idempotent; nothing
-     * of WordPress's own notices is touched.
+     * of WordPress's own notices is touched. It runs ONCE, at init, from
+     * `withoutForm()` — never from an observer and never in a touch path, so
+     * the 0.18.0 rules are untouched.
      */
     function hideDeadEnd(host) {
         var wrapper = host && host.classList
             && host.classList.contains('mphb_sc_checkout-wrapper');
 
         if (wrapper) {
-            var kids = host.children;
-            for (var k = 0; k < kids.length; k++) { conceal(kids[k]); }
+            /* A SNAPSHOT, because wrapping replaces nodes as we go and
+               `childNodes` is live. */
+            var kids = Array.prototype.slice.call(host.childNodes);
+            for (var k = 0; k < kids.length; k++) {
+                if (kids[k].nodeType === 1) { conceal(kids[k]); }
+                else if (kids[k].nodeType === 3) { concealText(host, kids[k]); }
+            }
             return;
         }
 
         var dead = document.querySelectorAll(
             '.mphb_sc_checkout-wrapper > .mphb-data-incorrect');
         for (var i = 0; i < dead.length; i++) { conceal(dead[i]); }
+    }
+
+    /**
+     * Put one bare text node out of view by giving it something to be hidden.
+     *
+     * Whitespace between elements is left alone — there is nothing to see and
+     * wrapping it would litter the markup. The text itself is MOVED into the
+     * span rather than re-typed, so nothing here can alter what MotoPress
+     * wrote; and the span carries `data-dcc-injected`, so the next pass sees
+     * an element it has already hidden rather than a text node to wrap again.
+     */
+    function concealText(host, node) {
+        if (!node || !node.nodeValue || !node.nodeValue.trim()) { return; }
+        var span = document.createElement('span');
+        span.className = 'dcc_checkout-hidden';
+        span.setAttribute('data-dcc-injected', '1');
+        host.replaceChild(span, node);
+        span.appendChild(node);
     }
 
     /** Hide one element, unless it is the card or inside it. */
