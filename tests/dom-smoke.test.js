@@ -1808,6 +1808,21 @@ defer(async function () {
     !bookedShown.length || !!bookedShown[0].querySelector('.dccs-avail-link[href="/availability/"]'));
 });
 
+// ---- 60b. 0.54.0: the swipe row follows availability too — free first, booked after, none dropped ----
+defer(async function () {
+  const URL60 = 'https://example.com/?in=2026-09-10&out=2026-09-13';
+  const freeDom = freshDom(URL60); stubAvail(freeDom, { booked: [] });
+  const freeRoot = mountSelector(freeDom, availConfig()); await flush(); await flush();
+  const rowOf = (r) => Array.prototype.map.call(r.querySelectorAll('.dccs-swipe-track .dccs-mcard'), m => m.dataset.id);
+  const lead = rowOf(freeRoot).slice(0, 2);
+  const w = freshDom(URL60); stubAvail(w, { booked: lead });   // the two leaders are taken
+  const root = mountSelector(w, availConfig()); await flush(); await flush();
+  const row = rowOf(root);
+  ok('60b: the row still holds every cottage', row.slice().sort().join() === rowOf(freeRoot).slice().sort().join() && row.length === 8);
+  ok('60b: the booked leaders move behind every free match (control: they led before)',
+    lead.length === 2 && lead.every(id => row.indexOf(id) >= row.length - 2) && rowOf(freeRoot).indexOf(lead[0]) === 0);
+});
+
 // ---- 61. (a) with no dates, results look exactly as before ----
 defer(async function () {
   const w = freshDom();
@@ -3699,6 +3714,10 @@ defer(async function () {
   ok('104: the two-sentence capacity note is marked multi-sentence', !!cap && cap.classList.contains('dccs-multi'));
   const one = (() => { const q = mountSelector(freshDom()); enter(q, 'compare'); return q.querySelector('.dccs-compare .dccs-hint'); })();
   ok('104: a one-sentence paragraph is not (control)', !!one && !one.classList.contains('dccs-multi'));
+  // The classing reads the TEXT, not which string it is: give the same one-line
+  // hint a second sentence and it becomes a left-aligned paragraph.
+  const two = (() => { const c = JSON.parse(CONFIG); c.strings.compare_prompt = 'Pick two or more. Then tap Compare.'; const q = mountSelector(freshDom(), JSON.stringify(c)); enter(q, 'compare'); return q.querySelector('.dccs-compare .dccs-hint'); })();
+  ok('104: the same paragraph with two sentences is marked multi-sentence', !!two && two.classList.contains('dccs-multi'));
 })();
 function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
 

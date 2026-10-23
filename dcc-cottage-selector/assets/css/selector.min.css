@@ -557,8 +557,8 @@
   background: var(--dccs-item-bg, var(--dccs-surface, #FFFFFF)); color: var(--dccs-item-text, var(--dccs-text));
   border: 1px solid var(--dccs-border); border-radius: 14px; overflow: hidden;
 }
-.dccs-root.dccs-root .dccs-mcard-photo { position: relative; display: block; aspect-ratio: 4 / 3; background: #EEF2F7; }
-.dccs-root.dccs-root .dccs-mcard-img { display: block; width: 100%; height: 100%; object-fit: cover; margin: 0; }
+.dccs-root.dccs-root .dccs-mcard-photo { position: relative; display: block; flex: 0 0 auto; aspect-ratio: 4 / 3; overflow: hidden; background: #EEF2F7; }
+.dccs-root.dccs-root .dccs-mcard-img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; margin: 0; }
 .dccs-root.dccs-root .dccs-mcard-noimg {
   display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: var(--dccs-unsel-text);
 }
@@ -577,7 +577,10 @@
 .dccs-root.dccs-root .dccs-mcard.is-other .dccs-mcard-photo { opacity: 0.45; }
 .dccs-root.dccs-root .dccs-mcard.is-other .dccs-mcard-body { background: #F7F8FA; }
 .dccs-root.dccs-root .dccs-mcard.is-highlight .dccs-mcard-body { border-color: var(--dccs-accent); }
-.dccs-root.dccs-root .dccs-mcard.is-select { cursor: pointer; }
+.dccs-root.dccs-root .dccs-mcard.is-select {
+  cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
 .dccs-root.dccs-root .dccs-mcard.is-select .dccs-mcard-input {
   position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none;
 }
@@ -598,6 +601,7 @@
 .dccs-root.dccs-root .dccs-swipe-track {
   display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 8px;
+  scroll-padding: 0 2px;
 }
 .dccs-root.dccs-root .dccs-swipe-track::-webkit-scrollbar { display: none; }
 .dccs-root.dccs-root .dccs-swipe-item { display: flex; flex: 0 0 72%; scroll-snap-align: center; }

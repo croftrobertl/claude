@@ -991,8 +991,10 @@
   background: var(--dccs-item-bg, var(--dccs-surface, #FFFFFF)); color: var(--dccs-item-text, var(--dccs-text));
   border: 1px solid var(--dccs-border); border-radius: 14px; overflow: hidden;
 }
-.dccs-root.dccs-root .dccs-mcard-photo { position: relative; display: block; aspect-ratio: 4 / 3; background: #EEF2F7; }
-.dccs-root.dccs-root .dccs-mcard-img { display: block; width: 100%; height: 100%; object-fit: cover; margin: 0; }
+.dccs-root.dccs-root .dccs-mcard-photo { position: relative; display: block; flex: 0 0 auto; aspect-ratio: 4 / 3; overflow: hidden; background: #EEF2F7; }
+/* Absolutely filled, so a portrait photo cannot stretch its frame (and with it
+   every card in the row): the frame is always 4:3 and the photo is cropped to it. */
+.dccs-root.dccs-root .dccs-mcard-img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; margin: 0; }
 .dccs-root.dccs-root .dccs-mcard-noimg {
   display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: var(--dccs-unsel-text);
 }
@@ -1017,7 +1019,12 @@
 /* Compare Mode: the card IS the label. The real checkbox stays in the page —
    focusable, announced — but invisible; the card shows its state. (0,5,0) beats
    the Elementor kit's input resets at (0,3,1). */
-.dccs-root.dccs-root .dccs-mcard.is-select { cursor: pointer; }
+.dccs-root.dccs-root .dccs-mcard.is-select {
+  cursor: pointer;
+  /* A tap toggles the card; it must not also select its text or flash the
+     browser's tap highlight, which on a phone reads like a selected card. */
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
 .dccs-root.dccs-root .dccs-mcard.is-select .dccs-mcard-input {
   position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none;
 }
@@ -1043,6 +1050,8 @@
 .dccs-root.dccs-root .dccs-swipe-track {
   display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 8px;
+  /* Snap to the padding edge, so the first card rests at scrollLeft 0 and ‹ starts disabled. */
+  scroll-padding: 0 2px;
 }
 .dccs-root.dccs-root .dccs-swipe-track::-webkit-scrollbar { display: none; }
 .dccs-root.dccs-root .dccs-swipe-item { display: flex; flex: 0 0 72%; scroll-snap-align: center; }
