@@ -882,9 +882,15 @@ const page_html = `<!doctype html>
      * ITEM 5 — the photo ID after choosing a file (picture 2)
      * ===================================================================== */
 
-    /* Nothing is shown until a file is chosen. */
+    /* Nothing is shown until a file is chosen — and a card that was never
+       built is a FAILURE here, not a crash. Reading `.hidden` off a null is
+       how mutations that delete the preview produced HARNESS instead of a
+       verdict; `missing` says which of the two happened. */
     check('no ID card is shown before a file is chosen',
-        await page.evaluate(() => document.querySelector('.dcc_layout-id').hidden), true);
+        await page.evaluate(() => {
+            const box = document.querySelector('.dcc_layout-id');
+            return box ? box.hidden : 'missing';
+        }), true);
 
     /* A real image, through the real file input: Playwright hands the browser
        an actual File, so createObjectURL and the <img> are exercised rather
@@ -898,9 +904,15 @@ const page_html = `<!doctype html>
     /* The thumbnail appears on the image's own `load`, so it is waited for
        rather than assumed — and the wait is what would fail if the preview
        were never drawn. */
-    await page.waitForFunction(
+    /* A WAIT THAT TIMES OUT IS A FAILURE, NOT A CRASH. Left to throw, it made
+       the runner report HARNESS — no evidence either way — for mutations that
+       delete the preview outright. The catch turns "it never appeared" into
+       something the assertions below can state. */
+    const previewAppeared = await page.waitForFunction(
         () => !!document.querySelector('.dcc_layout-id__image, .dcc_layout-id__doc'),
-        null, { timeout: 4000 });
+        null, { timeout: 4000 }).then(() => true).catch(() => false);
+    check('a thumbnail or a document icon appears after choosing a file',
+        previewAppeared, true);
     const shown = await page.evaluate(() => {
         const box = document.querySelector('.dcc_layout-id');
         /* A MISSING CARD IS A FAILURE, NOT A CRASH. Mutations that delete the
@@ -959,9 +971,15 @@ const page_html = `<!doctype html>
     await page.setInputFiles('input[type="file"]', {
         name: 'second.png', mimeType: 'image/png', buffer: PNG,
     });
-    await page.waitForFunction(
+    /* A WAIT THAT TIMES OUT IS A FAILURE, NOT A CRASH. Left to throw, it made
+       the runner report HARNESS — no evidence either way — for mutations that
+       delete the preview outright. The catch turns "it never appeared" into
+       something the assertions below can state. */
+    const secondPreviewAppeared = await page.waitForFunction(
         () => !!document.querySelector('.dcc_layout-id__image, .dcc_layout-id__doc'),
-        null, { timeout: 4000 });
+        null, { timeout: 4000 }).then(() => true).catch(() => false);
+    check('a thumbnail appears for the second file too',
+        secondPreviewAppeared, true);
     const revoked = await page.evaluate(() => ({
         revoked: window.__revoked,
         first: window.__firstUrl,
