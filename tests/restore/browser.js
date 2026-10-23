@@ -699,12 +699,39 @@ const TYPED = {
     check('… with MotoPress\'s own element hidden too',
         mixed.kids.indexOf('P.mphb-data-incorrect dcc_checkout-hidden') !== -1, true);
 
-    await page.setContent(pageBooked('Accommodation is already booked.'));
+    /* MOVED, NOT RE-TYPED — AND THIS NEEDS A SENTENCE THAT CAN TELL THE
+       DIFFERENCE. The assertions above cannot: `innerHTML = node.nodeValue`
+       on plain prose produces an identical single text node, so mutation
+       `js-bare-text-retyped` SURVIVED them. The condition the claim names is
+       text that HTML would re-parse, and MotoPress's strings really can carry
+       it — an ampersand in a cottage name, an escaped entity in a
+       translation. So the text node here holds `&` and angle brackets, as
+       text. Re-typed through innerHTML, `<today>` becomes an element and the
+       brackets vanish from the text; moved, the node arrives intact. */
+    await page.setContent(pageBooked(
+        'Accommodation &amp; cottage 36 are already booked &lt;today&gt;.'));
+    const moved = await page.evaluate(() => {
+        const w = document.querySelector('.mphb_sc_checkout-wrapper');
+        const sp = w.querySelector('span.dcc_checkout-hidden');
+        if (!sp) { return null; }
+        return {
+            text: sp.textContent,
+            types: Array.prototype.map.call(sp.childNodes, (n) => n.nodeType),
+            tags: Array.prototype.map.call(sp.childNodes,
+                (n) => n.nodeType === 1 ? n.tagName : null).filter(Boolean),
+        };
+    });
+    check('the text node is MOVED, so markup-looking text survives verbatim',
+        moved && moved.text,
+        'Accommodation & cottage 36 are already booked <today>.');
+    check('… as ONE text node, with nothing re-parsed into an element',
+        [moved.types, moved.tags], [[3], []]);
 
     /* A SECOND RUN FINDS NOTHING TO DO. `hideDeadEnd` is called once at init,
        but a text node wrapped twice would nest spans and re-moving it would be
        a DOM write nobody asked for, so the idempotence is asserted by running
        the whole script again over the finished page. */
+    await page.setContent(pageBooked('Accommodation is already booked.'));
     await page.addScriptTag({ content: JS });
     const again = await page.evaluate(() => {
         const w = document.querySelector('.mphb_sc_checkout-wrapper');
