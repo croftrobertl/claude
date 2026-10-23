@@ -540,7 +540,11 @@ echo "\nQ. Shipped defaults (v0.18.0)\n";
 // default is written are asserted against the source. Both must say "Select",
 // and neither may quietly revert to reusing the label string.
 $widgetSrc = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-widget.php');
-$jsSrc     = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/js/widget.js');
+// v0.25.0: the front-end JS is three files now — core, the guest-only bundle
+// and the editor bundle. These checks are about what the CODE does, not which
+// file it sits in, so they read the two a visitor can run, concatenated.
+$jsSrc     = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/js/widget.js')
+           . (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/js/widget-guest.js');
 
 check('the category placeholder is a control of its own',
     strpos($widgetSrc, "'str_report_category_placeholder'") !== false);

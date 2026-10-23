@@ -331,6 +331,55 @@ would win and drop it out of the field. `tests/site-blue.test.php`,
 `tests/front-desk-form.ui.js` and `tests/site-blue.mutations.py` guard all of
 the above.
 
+The front end is FOUR kinds of file since v0.25.0, and a test harness that
+inlines only `widget.js` gets a guide whose Front Desk button does nothing —
+which looks exactly like a regression and is not one. `tests/_bundles.js` is
+the one place that knows the layout; browser suites go through it.
+
+  `widget.js`          core, always.
+  `widget-guest.js`    the Front Desk form, the review prompt, the voice
+                       concierge and the AI answer — the four things
+                       apply_public_mode() switches off, so only the FULL
+                       guide loads it. Enqueued on the NOT-public branch of
+                       render(), beside enqueue_guest_css().
+  `widget-editor.js`   editor only (v0.24.5).
+  `widget-<name>.js`   conditions / gallery / wizard / video, fetched by core
+                       at init and ONLY when the page holds the element in
+                       `CHUNKS`. Not registered with WordPress at all — no
+                       enqueue hook can see markup that does not exist yet —
+                       so the server only localizes `dccggChunks` with the
+                       base URL.
+
+`enqueue_guest_js()` deliberately does NOT consult `split_guest_css`. That
+setting chooses one stylesheet or two, and with it off `widget.css` still
+contains every guest rule, so nothing is lost. The script split is structural:
+the code physically left `widget.js`, and a full guide that skipped the file
+would render a dead Front Desk button.
+
+THE CONTRACT, and it is the only way across: core publishes `window.DCCGG_CORE`
+(eight helpers for the guest bundle, four more for the chunks) and the guest
+bundle publishes `window.DCCGG_GUEST` with exactly five entry points, each
+called behind a `window.DCCGG_GUEST &&` test. Neither file may reach the other
+by name; `tests/bundle-split.test.php` fails if one does. Load order is NOT
+assumable — SpeedyCache combines and defers scripts on this host — so the guest
+bundle boots immediately when core is already there and otherwise leaves
+`window.__dccggGuestBoot` for core to call. `applyGuest()` refuses a root it
+has wired, because wiring twice makes one press send two reports.
+
+Chunks load at INIT, never on a tap. v0.9.7 fetched on first use and the host
+had to tap three times before anything happened — the first tap started the
+download and was swallowed. `applyChunks()` also uses a chunk that is already
+registered rather than fetching it, since a combiner may have folded them in.
+The service worker precaches the guest script and all four chunks: it cannot
+know which a guide needs, and an offline guest would otherwise find the Front
+Desk form, the gallery and the video inert.
+
+Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
+left-aligned) is implemented the way the Cottage Selector implements it —
+`isMulti()` tests the paragraph's own TEXT and adds a class, so a host who
+rewrites a note gets the right alignment without anyone editing CSS. See
+`dcc-cottage-selector/assets/js/selector.js` (0.54.0) for the original.
+
 Every string the form shows is an Elementor control with a `'default'`, which
 Elementor writes into `_elementor_data` the moment a page is saved. So changing
 a packaged default does NOT change a page that already exists — page 4645
@@ -369,7 +418,8 @@ Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
 `php tests/stickers.test.php`, `node tests/phone-fixes.ui.js`, `php tests/report-hardening.test.php`,
 `node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js`,
-`php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js`,
+`php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

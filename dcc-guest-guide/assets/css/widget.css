@@ -4850,6 +4850,25 @@ dialog.dccgg-wrapper::backdrop {
     background-color: color-mix(in srgb, var(--dccgg-primary) 8%, transparent);
     color: var(--dccgg-text);
 }
+/* v0.25.0: the wizard's dot track. It was in the v0.24.4 survey as exposed but
+   went unfixed because no test case rendered a wizard — the sweep enumerates
+   the DOM, so a control that never renders is a control it cannot see. The
+   all-on case grows a wizard in v0.25.0 and the sweep found it immediately.
+   A 10px dot: the kit's 30px radius does nothing to a circle, but its coral
+   fill replaces the track colour and its white text is invisible anyway. */
+.dccgg-root.dccgg-root .dccgg-wizard-dot.dccgg-wizard-dot,
+.dccgg-stage.dccgg-stage .dccgg-wizard-dot.dccgg-wizard-dot {
+    background-color: var(--dccgg-tile-border);
+    color: inherit;
+    border-radius: 50%;
+}
+/* The active dot keeps the primary, as it always has. Listed after, so it
+   wins over the resting rule above at equal specificity. */
+.dccgg-root.dccgg-root .dccgg-wizard-dot.dccgg-wizard-dot.is-active,
+.dccgg-stage.dccgg-stage .dccgg-wizard-dot.dccgg-wizard-dot.is-active {
+    background-color: var(--dccgg-primary);
+}
+
 /* Read more / Read less is a bare text link, not a pill. */
 .dccgg-root.dccgg-root .dccgg-btn-text.dccgg-btn-text,
 .dccgg-stage.dccgg-stage .dccgg-btn-text.dccgg-btn-text {
@@ -4886,8 +4905,8 @@ dialog.dccgg-wrapper::backdrop {
 /* A keyboard user still needs to see focus on these six, and the ring is the
    only thing carrying it now the coral wash is gone. Outside the hover query,
    because a keyboard can be plugged into a phone. */
-.dccgg-root.dccgg-root :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):focus-visible,
-.dccgg-stage.dccgg-stage :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster):focus-visible {
+.dccgg-root.dccgg-root :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster, .dccgg-wizard-dot):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster, .dccgg-wizard-dot):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster, .dccgg-wizard-dot):is(.dccgg-search-result, .dccgg-search-still-stuck, .dccgg-search-dym-chip, .dccgg-btn-text, .dccgg-gallery-thumb, .dccgg-video-poster, .dccgg-wizard-dot):focus-visible {
     outline: 3px solid var(--dccgg-text, #111111);
     outline-offset: 2px;
 }
@@ -4923,6 +4942,12 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-head h3:focus-visible {
     outline: none;
 }
+/* v0.25.0: Rob's alignment rule, carried over from the Cottage Selector, which
+   classes the same way (.dccs-multi). Titles are centred; a paragraph is
+   left-aligned only when it holds more than one sentence, and widget.js decides
+   that from the paragraph's own text. Doubled host class so the kit cannot
+   outrank it, and placed after the centring rule it overrides. */
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-multi { text-align: left; }
 /* Belt and braces for the fallback path: focusIntoPanel() drops back to Back,
    then to the first focusable control, for a guide saved before this release
    whose heading is not focusable. On a pointer open the JS marks whatever it

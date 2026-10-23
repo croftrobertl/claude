@@ -1181,6 +1181,10 @@ final class Plugin
             if ((string) ($settings['guide_mode'] ?? 'full') !== 'public') {
                 Widget::register_assets();
                 Widget::enqueue_guest_css();
+                // v0.25.0: and the guest SCRIPT. render() asks for it too, but
+                // enqueuing here means it is in the footer queue alongside the
+                // core bundle rather than appended during the render pass.
+                Widget::enqueue_guest_js();
                 return;
             }
         }
@@ -1775,7 +1779,28 @@ final class Plugin
         $js  = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js')  . '?ver=' . $ver;
         $guest = (Settings::get('split_guest_css') && file_exists(DCCGG_DIR . 'assets/css/widget-guest.min.css'))
             ? DCCGG_URL . 'assets/css/widget-guest.min.css?ver=' . $ver : '';
-        return array_values(array_filter([$start, $css, $js, $guest]));
+        // v0.25.0: the guest SCRIPT bundle as well. Offline support is only
+        // ever on for the full guide, and without this an offline guest got a
+        // Front Desk button, a review prompt and a mic that did nothing —
+        // the code for all three now lives in a second file.
+        $gjs = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/js/widget-guest.min.js')
+            ? 'assets/js/widget-guest.min.js' : 'assets/js/widget-guest.js') . '?ver=' . $ver;
+        // v0.25.0: and the four per-element chunks. The worker cannot know
+        // which of them a given guide needs — core decides that from the
+        // rendered markup — so an offline guide precaches all four. Together
+        // they are smaller than one photo, and the alternative is a gallery,
+        // a video or the conditions card that silently does nothing the first
+        // time a guest opens the guide without a signal.
+        $chunks = [];
+        foreach (['conditions', 'gallery', 'wizard', 'video'] as $name) {
+            $min = 'assets/js/widget-' . $name . '.min.js';
+            $raw = 'assets/js/widget-' . $name . '.js';
+            $rel = file_exists(DCCGG_DIR . $min) ? $min : $raw;
+            if (file_exists(DCCGG_DIR . $rel)) {
+                $chunks[] = DCCGG_URL . $rel . '?ver=' . $ver;
+            }
+        }
+        return array_values(array_filter(array_merge([$start, $css, $js, $guest, $gjs], $chunks)));
     }
 
     private function serve_service_worker(): void

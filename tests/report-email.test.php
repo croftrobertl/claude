@@ -313,9 +313,26 @@ $setSettings(['split_guest_css' => true]);
 $on  = \DCCGG\Plugin::instance()->sw_precache_list('https://x/guest/');
 $setSettings(['split_guest_css' => false]);
 $off = \DCCGG\Plugin::instance()->sw_precache_list('https://x/guest/');
-$has = static fn(array $l) => (bool) array_filter($l, static fn($u) => strpos($u, 'widget-guest.min.css') !== false);
-check('#6 split on: widget-guest.min.css is precached', $has($on) && count($on) === 4, implode(' ', $on));
-check('#6 split off: it is not', !$has($off) && count($off) === 3);
+$has = static fn(array $l, string $needle) => (bool) array_filter($l, static fn($u) => strpos($u, $needle) !== false);
+// The guest STYLESHEET follows the split_guest_css setting, as it always has.
+check('#6 split on: widget-guest.min.css is precached', $has($on, 'widget-guest.min.css'), implode(' ', $on));
+check('#6 split off: it is not', !$has($off, 'widget-guest.min.css'));
+// v0.25.0: the guest SCRIPT and the four per-element chunks are precached
+// either way. Unlike the stylesheet they are not a preference — the code
+// physically left widget.js, and an offline guest whose worker had not cached
+// them would find the Front Desk button, the gallery and the video inert.
+foreach ([$on, $off] as $i => $list) {
+    $label = $i === 0 ? 'split on' : 'split off';
+    check("#6 $label: the guest script is precached", $has($list, 'widget-guest.min.js'), implode(' ', $list));
+    foreach (['conditions', 'gallery', 'wizard', 'video'] as $chunk) {
+        check("#6 $label: the $chunk chunk is precached", $has($list, 'widget-' . $chunk . '.min.js'));
+    }
+}
+// Exact counts, so a file added to the list without thought shows up here.
+check('#6 split on: nine entries (page, css, js, guest css, guest js, 4 chunks)',
+    count($on) === 9, (string) count($on));
+check('#6 split off: eight, the guest stylesheet being the only one dropped',
+    count($off) === 8, (string) count($off));
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

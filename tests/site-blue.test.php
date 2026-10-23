@@ -40,7 +40,10 @@ function check(string $name, bool $cond, string $detail = ''): void
 }
 
 $css       = plugin_file('assets/css/widget.css');
-$js        = plugin_file('assets/js/widget.js');
+// v0.25.0: core plus the guest-only bundle. The Front Desk form moved into
+// the latter, and these checks are about the form's behaviour, not its file.
+$js        = plugin_file('assets/js/widget.js') . plugin_file('assets/js/widget-guest.js');
+$jsCore    = plugin_file('assets/js/widget.js');
 $jsEd      = plugin_file('assets/js/widget-editor.js');
 $widget    = plugin_file('includes/class-widget.php');
 $pluginPhp = plugin_file('includes/class-plugin.php');
@@ -127,14 +130,14 @@ check('widget-editor.js exists', $jsEd !== '');
 foreach (['wireWelcomePackEditor', 'exportGuide', 'importGuide', 'insertWelcomePack',
           'welcomePackPayload', 'editorPostId'] as $fn) {
     check("$fn lives in the editor bundle", strpos($jsEd, "function $fn(") !== false);
-    check("…and no longer in core", strpos($js, "function $fn(") === false);
+    check("…and no longer in core", strpos($jsCore, "function $fn(") === false);
 }
 check('the real toast moved to the editor bundle',
     strpos($jsEd, 'function editorPreviewToast(') !== false);
 // The forwarding STATEMENT, not a mention of the name: the comment above it
 // names the hook too, so a substring test passed even with the line gutted.
 check('core keeps a forwarding stub, so its call sites are unchanged',
-    strpos($js, 'function editorPreviewToast(') !== false
+    strpos($jsCore, 'function editorPreviewToast(') !== false
     && preg_match('/const fn\s*=\s*window\.__dccggEditorToast\s*;/', $js) === 1
     && preg_match('/if\s*\(typeof fn !== .function.\)\s*return;/', $js) === 1
     && preg_match('/fn\(title,\s*detail\)/', $js) === 1);
@@ -144,11 +147,11 @@ check('the editor bundle installs the real one on that hook',
 // portaled fixed modal is invisible, so the guide falls back to an inline
 // reveal (v0.9.7.24). Moving it out would reintroduce that bug.
 check('core still owns isElementorEditorPreview, which it needs itself',
-    strpos($js, 'function isElementorEditorPreview(') !== false);
+    strpos($jsCore, 'function isElementorEditorPreview(') !== false);
 check('and still calls it from shouldUseDetailModal',
-    preg_match('/function shouldUseDetailModal\(root\)\s*\{.*?isElementorEditorPreview\(\)/s', $js) === 1);
+    preg_match('/function shouldUseDetailModal\(root\)\s*\{.*?isElementorEditorPreview\(\)/s', $jsCore) === 1);
 check('core no longer registers the editor click listener at boot',
-    strpos($js, 'wireWelcomePackEditor();') === false);
+    strpos($jsCore, 'wireWelcomePackEditor();') === false);
 check('the editor bundle registers it instead',
     strpos($jsEd, 'wireWelcomePackEditor();') !== false);
 

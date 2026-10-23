@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.5
+Stable tag: 0.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,29 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.25.0 =
+
+**The public guide stops downloading the guest guide.** The Front Desk form,
+the review prompt, the voice concierge and the AI answer are four things
+/explore/ never shows — public mode switches all of them off — yet every
+prospect was downloading the code for them. They now load only where the full
+guide renders, decided by the server, in the same place the stylesheet split is
+decided.
+
+**Four extras load only on the pages that have them.** The live conditions
+card, the gallery and image lightbox, the step wizard and the click-to-play
+video posters each sit in their own small file, fetched when the page actually
+contains one — and fetched as the page loads, never when a finger lands, so
+nothing ever needs a second press.
+
+**The Front Desk note is left-aligned when it runs to more than one sentence**,
+and centred when it is a single line, the same rule the Cottage Selector uses.
+Titles stay centred either way.
+
+For an offline guide, the installed app now keeps all of the above as well, so
+a guest with no signal still gets the Front Desk form, the gallery and the
+video.
 
 = 0.24.5 =
 

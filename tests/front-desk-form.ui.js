@@ -32,7 +32,10 @@ const A = PLUGIN + '/assets/';
 const SRC = process.env.DCCGG_UI_SOURCE === '1';
 const CSS = SRC ? fs.readFileSync(A + 'css/widget.css', 'utf8')
     : fs.readFileSync(A + 'css/widget.min.css', 'utf8') + fs.readFileSync(A + 'css/widget-guest.min.css', 'utf8');
-const JS = fs.readFileSync(A + (SRC ? 'js/widget.js' : 'js/widget.min.js'), 'utf8');
+const { frontEndJs, chunkBootTag, routeChunks } = require('./_bundles');
+// v0.25.0: core AND the guest-only bundle — a visitor on the full guide
+// runs both, and the Front Desk form now lives in the second one.
+const JS = frontEndJs(A, SRC);
 const emit = (c) => execFileSync('php', [path.join(TESTS, '_emit-guide.php'), c],
     { encoding: 'utf8', env: Object.assign({}, process.env, { DCCGG_PLUGIN_DIR: PLUGIN }) });
 
@@ -52,7 +55,7 @@ const pageFor = (markup) => `<!DOCTYPE html><html lang="en-US"><head><meta chars
 ${markup}</div></div></div>
 <script>window.SpeechRecognition = window.SpeechRecognition || function () {
   this.start = function () {}; this.stop = function () {}; };</script>
-<script>${JS}</script></body></html>`;
+${chunkBootTag(SRC)}<script>${JS}</script></body></html>`;
 
 const OLD_BLUE = ['rgb(15, 109, 191)', '#0f6dbf'];
 let pass = 0, fail = 0; const failures = [];
@@ -68,6 +71,7 @@ const check = (name, cond, detail) => {
         const ctx = await browser.newContext({ viewport: { width: w, height: 844 }, isMobile: true, hasTouch: true });
         const page = await ctx.newPage();
         page.on('pageerror', (e) => errors.push(String(e)));
+        await routeChunks(page, A, SRC);
         await page.route('**/admin-ajax.php', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }));
         await page.route('https://dccgg.test/g/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(emit('all-on')) }));
         await page.goto('https://dccgg.test/g/', { waitUntil: 'load' });

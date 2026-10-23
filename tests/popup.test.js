@@ -23,7 +23,11 @@ const { chromium } = require('playwright-core');
 
 const ROOT = path.resolve(__dirname, '..');
 const CSS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.css'), 'utf8');
-const JS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/widget.js'), 'utf8');
+// v0.25.0: a visitor on the full guide runs core AND the guest bundle; the
+// report dialog, the review prompt and the AI answer moved into the second.
+const JS = ['widget', 'widget-guest', 'widget-conditions', 'widget-gallery', 'widget-wizard', 'widget-video']
+    .map((n) => fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/' + n + '.js'), 'utf8'))
+    .join('\n;\n');
 
 const PHONE = { width: 390, height: 844 };   // iPhone 14-ish
 const DESKTOP = { width: 1280, height: 800 };
@@ -3173,7 +3177,9 @@ async function run() {
         const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
         const MIN_CORE = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
         const MIN_GUEST = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
-        const MIN_JS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/widget.min.js'), 'utf8');
+        const MIN_JS = ['widget', 'widget-guest', 'widget-conditions', 'widget-gallery', 'widget-wizard', 'widget-video']
+            .map((n) => fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/' + n + '.min.js'), 'utf8'))
+            .join('\n;\n');
         const pageFor = (markup, css) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style>
             <style>html{font-weight:700}body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;margin:0;padding:0 16px}</style>
@@ -3283,7 +3289,9 @@ async function run() {
         const emit = (c) => execFileSync('php', [path.join(ROOT, 'tests/_emit-guide.php'), c], { encoding: 'utf8' });
         const MIN_CORE = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
         const MIN_GUEST = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
-        const MIN_JS = fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/widget.min.js'), 'utf8');
+        const MIN_JS = ['widget', 'widget-guest', 'widget-conditions', 'widget-gallery', 'widget-wizard', 'widget-video']
+            .map((n) => fs.readFileSync(path.join(ROOT, 'dcc-guest-guide/assets/js/' + n + '.min.js'), 'utf8'))
+            .join('\n;\n');
         const KIT = `html{font-weight:700}
             body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0;padding:0 16px}
             .elementor-kit-331 button{font-family:Pavanam,sans-serif;font-size:18px;font-weight:900;letter-spacing:1.5px;

@@ -67,6 +67,11 @@ function dccgg_all_on(): array {
             $sec['quick_action_type']   = 'link';     // the <a> variant
             $sec['quick_action_val']    = 'https://dccgg.test/clubhouse';
         }
+        // v0.25.0: both of these are SECTION keys, not widget keys, and both
+        // drive a per-element chunk — without them the conditions card and the
+        // wizard never render and their chunks go unmeasured.
+        if ($sec['section_key'] === 'canal')  { $sec['show_conditions_card'] = 'yes'; }
+        if ($sec['section_key'] === 'rules')  { $sec['wizard_mode'] = 'yes'; }
     }
     unset($sec);
     $sections[] = ['_id' => 's_emergency', 'section_key' => 'emergency',
@@ -106,6 +111,7 @@ function dccgg_all_on(): array {
          'item_content' => '<p>Call us.</p>'],
     ];
     return ['guide_mode' => 'full',
+        'cottage_latitude' => 28.8028, 'cottage_longitude' => -81.6448,
         'guide_sections' => $sections, 'guide_items' => $items,
         'enable_search' => 'yes', 'enable_ai_search' => 'yes',
         'enable_print' => 'yes', 'enable_emergency_fab' => 'yes',

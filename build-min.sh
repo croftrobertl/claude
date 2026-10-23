@@ -23,8 +23,16 @@ OUT_CSS_GUEST="dcc-guest-guide/assets/css/widget-guest.min.css"
 # bundle that only Widget::enqueue_for_editor() / enqueue_for_preview() load.
 SRC_JS_ED="dcc-guest-guide/assets/js/widget-editor.js"
 OUT_JS_ED="dcc-guest-guide/assets/js/widget-editor.min.js"
+# v0.25.0: the guest-only script bundle — the Front Desk form, the review
+# prompt, the voice concierge and the AI answer. Only the FULL guide loads it;
+# /explore/ renders none of those features.
+SRC_JS_G="dcc-guest-guide/assets/js/widget-guest.js"
+OUT_JS_G="dcc-guest-guide/assets/js/widget-guest.min.js"
+# v0.25.0: the four per-element chunks. Core fetches one only when the page
+# contains the element it drives, so most guides download none of them.
+CHUNKS="conditions gallery wizard video"
 
-if [ ! -f "$SRC_JS" ] || [ ! -f "$SRC_CSS" ] || [ ! -f "$SRC_JS_ED" ]; then
+if [ ! -f "$SRC_JS" ] || [ ! -f "$SRC_CSS" ] || [ ! -f "$SRC_JS_ED" ] || [ ! -f "$SRC_JS_G" ]; then
     echo "build-min.sh: source files missing" >&2
     exit 1
 fi
@@ -40,6 +48,20 @@ npx --yes terser "$SRC_JS_ED" \
     --compress "passes=2,drop_console=false" \
     --mangle \
     --output "$OUT_JS_ED" 2>&1 | grep -v "^npm " || true
+
+echo "Minifying $SRC_JS_G ..."
+npx --yes terser "$SRC_JS_G" \
+    --compress "passes=2,drop_console=false" \
+    --mangle \
+    --output "$OUT_JS_G" 2>&1 | grep -v "^npm " || true
+
+for c in $CHUNKS; do
+    echo "Minifying dcc-guest-guide/assets/js/widget-$c.js ..."
+    npx --yes terser "dcc-guest-guide/assets/js/widget-$c.js" \
+        --compress "passes=2,drop_console=false" \
+        --mangle \
+        --output "dcc-guest-guide/assets/js/widget-$c.min.js" 2>&1 | grep -v "^npm " || true
+done
 
 echo "Minifying $SRC_CSS ..."
 python3 - "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST" <<'PY'
@@ -172,4 +194,4 @@ open(sys.argv[3], 'w').write(minify(guest_src))
 PY
 
 echo "Sizes:"
-ls -la "$SRC_JS" "$OUT_JS" "$SRC_JS_ED" "$OUT_JS_ED" "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST"
+ls -la "$SRC_JS" "$OUT_JS" "$SRC_JS_ED" "$OUT_JS_ED" "$SRC_JS_G" "$OUT_JS_G" dcc-guest-guide/assets/js/widget-{conditions,gallery,wizard,video}.min.js "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST"

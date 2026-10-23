@@ -154,6 +154,49 @@
         wireGlobalCmdK();
         wireGlobalArrowKeys();
     }
+
+    /**
+     * v0.25.0: the half of the guest contract that core owns.
+     *
+     * widget-guest.js is a separate IIFE and cannot see anything in this one,
+     * so the helpers it needs are handed over explicitly. This list is the
+     * whole of it — nothing else in core is reachable from there, and it must
+     * stay that way, or the split stops being a boundary and becomes a habit.
+     *
+     * applyGuestToAll() is the other direction: the bundle calls it when it
+     * loads, in case core had already wired these roots.
+     */
+    window.DCCGG_CORE = {
+        bindGlobal,
+        copyText,
+        dccggFetch,
+        escAttr,
+        escHtml,
+        getWidgetId,
+        showToast,
+        stayKey,
+        // v0.25.0, for the chunks rather than the guest bundle: the GET fetch
+        // the conditions card uses, the two feedback effects the wizard fires,
+        // and the motion preference they both read.
+        dccggFetchGet,
+        hapticPulse,
+        spawnConfetti,
+        REDUCED_MOTION,
+        applyGuestToAll() {
+            liveRoots.forEach((root) => {
+                const cfg = root.__dccgg && root.__dccgg.config;
+                if (cfg) applyGuest(root, cfg);
+            });
+        },
+    };
+    // The guest bundle may have run FIRST — SpeedyCache reorders scripts — in
+    // which case it left its boot() here rather than giving up. Start it now
+    // that the helpers it needs exist.
+    if (typeof window.__dccggGuestBoot === 'function') {
+        const boot = window.__dccggGuestBoot;
+        window.__dccggGuestBoot = null;
+        try { boot(window.DCCGG_CORE); } catch (_) { /* never break a page over it */ }
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initAll, { once: true });
     } else {
@@ -236,27 +279,110 @@
         wireClickFeedback(root, config);
         wireEntryAnimation(root);
         wireUrlAnchor(root, config);
-        wireLightbox(root);
         wirePeek(root);
         wireSheetDrag(root);
         wireDetailScrollbar(root);
         wireSectionNav(root, config);
-        wireWizard(root);
         wireShrinkHeader(root);
         wireTileTap(root);
         wireOpenIntent(root);
         wireMoreMenu(root, config);
-        wireVideoPosters(root);
         wireChecklists(root);
         wireParallax(root);
-        wireConditions(root, config);
-        wireGalleryStrip(root);
         wireAiSearch(root, config);
         wireSavePdf(root, config);
-        wireReportProblem(root, config);
-        wireVoiceConcierge(root, config);
         wireEmergency(root, config);
-        wireReview(root, config);
+        // v0.25.0: the Front Desk form, the voice concierge and the review
+        // prompt live in widget-guest.js, which only the FULL guide loads.
+        // On the public page window.DCCGG_GUEST is undefined and these three
+        // simply do not happen — apply_public_mode() has already switched all
+        // three features off, so there was nothing for them to wire anyway.
+        applyGuest(root, config);
+        applyChunks(root, config);
+    }
+
+    /**
+     * v0.25.0: four features that most guides do not have, each in its own file
+     * and fetched only when THIS page contains the element it drives.
+     *
+     * The selector is the whole gate. It is evaluated at init, against markup
+     * the server has already rendered — detail panels are in the DOM from the
+     * first paint, just hidden — so a guide with no gallery, no video, no
+     * wizard and no conditions card asks for none of these.
+     *
+     * NEVER on a tap. v0.9.7 shipped a version that fetched on first use and
+     * the host reported having to tap three times before anything happened:
+     * the first tap started the download and was swallowed. Everything here is
+     * in place before a guest can reach it, or it does not happen at all.
+     */
+    const CHUNKS = {
+        conditions: '.dccgg-conditions',
+        // Two triggers, one file: the strip, and a plain content image that
+        // opens in the same lightbox dialog.
+        gallery:    '.dccgg-gallery-thumb, img.dccgg-media',
+        wizard:     '.dccgg-wizard',
+        video:      '.dccgg-video-poster',
+    };
+    const _chunkLoads = {};
+    function loadChunk(name) {
+        if (_chunkLoads[name]) return _chunkLoads[name];
+        const cfg = window.dccggChunks;
+        if (!cfg || !cfg.base) {
+            return (_chunkLoads[name] = Promise.reject(new Error('DCCGG: no chunk base URL')));
+        }
+        _chunkLoads[name] = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = cfg.base + 'widget-' + name + (cfg.min ? '.min' : '') + '.js?ver=' + cfg.ver;
+            // Not async: these are small and order against each other does not
+            // matter, but a predictable queue is easier to reason about when
+            // several land at once.
+            s.async = false;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('DCCGG: chunk failed to load: ' + name));
+            document.head.appendChild(s);
+        });
+        return _chunkLoads[name];
+    }
+    function applyChunks(root, config) {
+        const done = root.__dccggChunks || (root.__dccggChunks = {});
+        Object.keys(CHUNKS).forEach((name) => {
+            if (done[name] || !root.querySelector(CHUNKS[name])) return;
+            done[name] = true;
+            // Already here? Then use it and ask for nothing. A combiner — and
+            // SpeedyCache is one — may have folded the chunks into the page's
+            // single script, and fetching a file whose code is already running
+            // would be a request for nothing.
+            const here = window.DCCGG_CHUNK && window.DCCGG_CHUNK[name];
+            if (typeof here === 'function') { here(root, config); return; }
+            loadChunk(name).then(() => {
+                const wire = window.DCCGG_CHUNK && window.DCCGG_CHUNK[name];
+                if (typeof wire === 'function') wire(root, config);
+            }).catch((err) => {
+                // A chunk that never arrives leaves its feature inert rather
+                // than breaking the rest of the guide. Say so once, where a
+                // host looking for the reason will find it.
+                done[name] = false;
+                if (window.console) console.warn(String(err && err.message || err));
+            });
+        });
+    }
+
+    /**
+     * Wire whatever the guest bundle provides, once per root.
+     *
+     * Called from init() and again from the bundle itself when it arrives
+     * after core has already run — SpeedyCache combines and defers scripts on
+     * this host, so neither order can be assumed. The flag is the thing that
+     * makes both paths safe: these wirers add delegated listeners, and running
+     * them twice would double every Front Desk submission.
+     */
+    function applyGuest(root, config) {
+        const G = window.DCCGG_GUEST;
+        if (!G || root.__dccggGuestWired) return;
+        root.__dccggGuestWired = true;
+        G.wireReportProblem(root, config);
+        G.wireVoiceConcierge(root, config);
+        G.wireReview(root, config);
     }
 
     // -- Save as PDF (v0.8) -----------------------------------------------
@@ -360,410 +486,9 @@
         setTimeout(() => t.remove(), 4500);
     }
 
-    // -- Report a problem (v0.8) ------------------------------------------
-    function wireReportProblem(root, config) {
-        if (!config.report || !config.report.enabled) return;
-        const STR = config.report.strings || {};
-        const CATS = Array.isArray(config.report.categories) ? config.report.categories : [];
-
-        // v0.9.7.9: document delegation + stage back-pointer so both the popup
-        // ⋯ menu's Report item AND per-item Report buttons fire after
-        // .dccgg-stage is portaled to <body>.
-        const stage = root.querySelector('.dccgg-stage');
-        if (stage) stage.__dccggRoot = root;
-        const ownsTarget = (el) => {
-            if (root.contains(el)) return true;
-            const s = el.closest && el.closest('.dccgg-stage');
-            return !!(s && s.__dccggRoot === root);
-        };
-
-        let dialog = null;
-        const ensureDialog = () => {
-            if (dialog) return dialog;
-            dialog = document.createElement('dialog');
-            dialog.className = 'dccgg-report-dialog';
-            // v0.24.3: a modal with no name is announced as just "dialog".
-            // Point it at its own heading, which already says what this is.
-            const headId = 'dccgg-report-title-' + Math.random().toString(36).slice(2, 8);
-            dialog.setAttribute('aria-labelledby', headId);
-            // v0.24.5: the heading is the dialog's own landing place, the same
-            // way a section pop-up lands on its <h2> since v0.24.4. tabindex
-            // makes it a focus TARGET without making it a Tab stop.
-            const headAttrs = ` id="${headId}" tabindex="-1"`;
-            // v0.9.7.1: leading blank option, selected + disabled by default,
-            // so the guest must pick a category. Combined with `required`,
-            // the form blocks submission until something is chosen.
-            // v0.18.0: every label's own text sits in a span. The site's kit
-            // underlines `label` at (0,1,1) — deliberately, it is the site's
-            // form-label convention — and text decoration propagates from an
-            // ancestor box to its in-flow descendants, which a descendant
-            // CANNOT switch off. Since this dialog nests each field inside its
-            // label, that underline was landing on the guest's typed value in
-            // every browser. Moving the underline onto the span keeps the
-            // convention and takes the field out from under it.
-            const labelText = (text) => `<span class="dccgg-report-label">${escHtml(text)}</span>`;
-            // The placeholder is its own string now; it used to repeat the
-            // label verbatim, and the caret clipped it.
-            const catField = CATS.length
-                ? `<label>${labelText(STR.category || 'Category')}<select class="dccgg-report-cat" required><option value="" selected disabled>${escHtml(STR.categoryPlaceholder || 'Select')}</option>${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
-                : '';
-            dialog.innerHTML = `
-                <div class="dccgg-report-head">
-                    <h3${headAttrs}>${escHtml(STR.title || 'Report a problem')}</h3>
-                    <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">
-                        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false"
-                             fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
-                            <path d="M6 6L18 18M18 6L6 18"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="dccgg-report-body">
-                    ${catField}
-                    <label>
-                        ${labelText(STR.name || 'Your Name (Optional)')}
-                        <input type="text" class="dccgg-report-name" maxlength="100" autocomplete="name">
-                    </label>
-                    <label>
-                        ${labelText(STR.cottage || 'Which Cottage Are You Staying In?')}
-                        <input type="text" class="dccgg-report-cottage" maxlength="100" autocomplete="off">
-                    </label>
-                    <label>
-                        ${labelText(STR.phone || 'Phone (Optional)')}
-                        <input type="tel" class="dccgg-report-phone" maxlength="40" inputmode="tel" autocomplete="tel">
-                    </label>
-                    <label>
-                        ${labelText(STR.contact || 'Email to Reach You Back (Optional)')}
-                        <input type="email" class="dccgg-report-contact" autocomplete="email">
-                    </label>
-                    <label>
-                        ${labelText(STR.desc || 'Describe the Problem')}
-                        <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
-                    </label>
-                    <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
-                    ${'' /* v0.24.3 spam trap: off-screen, not tabbable, not announced.
-                           A guest never sees it; a script that fills every input does. */}
-                    <div class="dccgg-report-trap" aria-hidden="true">
-                        <label>Website<input type="text" class="dccgg-report-hp" name="dccgg_hp"
-                               tabindex="-1" autocomplete="off" value=""></label>
-                    </div>
-                </div>
-                <p class="dccgg-report-error" role="alert" aria-live="polite" hidden></p>
-                <div class="dccgg-report-foot">
-                    <button type="button" class="dccgg-btn-cancel">${escHtml(STR.cancel || 'Cancel')}</button>
-                    <button type="button" class="dccgg-btn-send">${escHtml(STR.send || 'Send report')}</button>
-                </div>
-            `;
-            document.body.appendChild(dialog);
-            // v0.24.1: focus goes back to the opener, but the RING only comes
-            // back if the guest was using the keyboard. A phone guest who taps
-            // the close button should not be left looking at a filled, ringed
-            // circle they never asked for. A click carries detail > 0 when a
-            // pointer made it and 0 when Enter or Space on a focused button
-            // did, and Escape fires `cancel` — so each path says which it was.
-            const closeBy = (keyboard) => { dialog.__dccggCloseKeyboard = !!keyboard; dialog.close(); };
-            const byEvent = (e) => closeBy(!e || e.detail === 0);
-            dialog.addEventListener('cancel', () => { dialog.__dccggCloseKeyboard = true; });
-            dialog.addEventListener('close', () => {
-                const opener = dialog.__dccggOpener;
-                const keyboard = dialog.__dccggCloseKeyboard !== false;
-                dialog.__dccggOpener = null;
-                dialog.__dccggCloseKeyboard = undefined;
-                if (opener && typeof opener.focus === 'function' && opener.isConnected) {
-                    // Two mechanisms, because one is not enough. focus({focusVisible})
-                    // is the standard way to ask for a quiet focus, but Chromium
-                    // ignores the option outright AND treats every programmatic
-                    // focus() as keyboard focus — so on a phone, putting focus
-                    // back after a TAP would light up the ring and the coral
-                    // circle. The attribute below is what actually decides: CSS
-                    // drops both while it is set, and it is cleared on blur so
-                    // the next real keyboard focus rings normally.
-                    if (!keyboard) {
-                        opener.setAttribute('data-dccgg-quiet-focus', '');
-                        opener.addEventListener('blur', function clear() {
-                            opener.removeAttribute('data-dccgg-quiet-focus');
-                            opener.removeEventListener('blur', clear);
-                        });
-                    } else {
-                        opener.removeAttribute('data-dccgg-quiet-focus');
-                    }
-                    try { opener.focus({ focusVisible: keyboard }); }
-                    catch (_) { try { opener.focus(); } catch (__) {} }
-                }
-            });
-            dialog.addEventListener('click', (e) => { if (e.target === dialog) byEvent(e); });
-            dialog.querySelector('.dccgg-report-close').addEventListener('click', byEvent);
-            dialog.querySelector('.dccgg-btn-cancel').addEventListener('click', byEvent);
-            dialog.querySelector('.dccgg-btn-send').addEventListener('click', (e) => {
-                dialog.__dccggCloseKeyboard = e.detail === 0;
-                sendReport(dialog, root, config);
-            });
-            return dialog;
-        };
-
-        const open = (section, itemTitle, opener) => {
-            const d = ensureDialog();
-            // v0.24.0: remember the control that opened the dialog, and put
-            // focus back on it when the dialog closes. <dialog> restores focus
-            // by itself, but only to whatever held it at showModal() time — and
-            // a tap does not focus a button on every platform (Safari), which
-            // would drop a keyboard user back at the top of the page. Passing
-            // the element in makes it the opener either way.
-            d.__dccggOpener = opener || document.activeElement;
-            // v0.24.3: when this dialog opened, so the server can refuse a
-            // send that arrives faster than anyone could have typed it.
-            d.__dccggOpenedAt = Date.now();
-            const hp = d.querySelector('.dccgg-report-hp');
-            if (hp) hp.value = '';
-            d.dataset.section = section || '';
-            d.dataset.item    = itemTitle || '';
-            const desc = d.querySelector('.dccgg-report-desc');
-            desc.value = itemTitle ? `[${itemTitle}] ` : '';
-            d.querySelector('.dccgg-report-contact').value = '';
-            const nameEl = d.querySelector('.dccgg-report-name');
-            const cottageEl = d.querySelector('.dccgg-report-cottage');
-            const phoneEl = d.querySelector('.dccgg-report-phone');
-            if (nameEl) nameEl.value = '';
-            if (cottageEl) cottageEl.value = '';
-            if (phoneEl) phoneEl.value = '';
-            const sendBtn = d.querySelector('.dccgg-btn-send');
-            sendBtn.disabled = false;
-            sendBtn.textContent = STR.send || 'Send report';
-            const errEl = d.querySelector('.dccgg-report-error');
-            if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
-            if (typeof d.showModal === 'function') d.showModal();
-            else d.setAttribute('open', '');
-            // v0.24.5: land on the dialog's own heading, not on a field.
-            //
-            // It used to focus the Name input, which did two things wrong: it
-            // skipped straight past the first question (the category select),
-            // and on an iPhone focusing a text input opens the keyboard, which
-            // covered the form the guest had just asked to see. A heading takes
-            // focus without a keyboard and without a caret, a screen reader
-            // reads what the dialog is, and Tab from there goes to the first
-            // question in source order.
-            const head = d.querySelector('.dccgg-report-head h3');
-            setTimeout(() => {
-                const target = head || desc;
-                try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
-            }, 50);
-        };
-
-        // v0.9.7.21: expose `open` so the search empty-state's tier-3
-        // "Still stuck? Tell us" CTA can pre-fill the dialog from the
-        // failed query. Keyed on root so multi-widget pages don't cross.
-        root.__dccggOpenReport = open;
-
-        // More-menu "Report a problem" → context is the current section title.
-        bindGlobal(root, document, 'click', (e) => {
-            const m = e.target.closest('.dccgg-more-report');
-            if (!m || !ownsTarget(m)) return;
-            // Close the parent <details> popover so it doesn't sit open behind the dialog.
-            const details = m.closest('details');
-            if (details) details.open = false;
-            open(m.dataset.reportSection || '', '', m);
-        });
-
-        // Per-item Report button.
-        bindGlobal(root, document, 'click', (e) => {
-            const b = e.target.closest('.dccgg-item-report');
-            if (!b || !ownsTarget(b)) return;
-            open(b.dataset.reportSection || '', b.dataset.reportItem || '', b);
-        });
-    }
-    function sendReport(dialog, root, config) {
-        const STR  = (config.report && config.report.strings) || {};
-        // v0.9.7.10: inline error region inside the <dialog>. Body-level
-        // toasts (showPdfTip) paint behind the dialog's top-layer in
-        // Chrome, so the user never saw the failure message. Render the
-        // error inside the dialog instead so it actually shows up.
-        const setError = (msg) => {
-            const el = dialog.querySelector('.dccgg-report-error');
-            if (!el) return;
-            el.textContent = msg || '';
-            el.hidden = !msg;
-        };
-        const catEl    = dialog.querySelector('.dccgg-report-cat');
-        // v0.9.7.1: when a category dropdown exists, the guest must pick
-        // one before sending. The dropdown is `required` + starts on a
-        // blank/disabled placeholder, so reporting `validity.valueMissing`
-        // is enough; reportValidity surfaces the browser's native bubble.
-        if (catEl && !catEl.value) {
-            catEl.focus();
-            if (typeof catEl.reportValidity === 'function') catEl.reportValidity();
-            return;
-        }
-        const desc = dialog.querySelector('.dccgg-report-desc').value.trim();
-        if (!desc) { dialog.querySelector('.dccgg-report-desc').focus(); return; }
-        const contact  = dialog.querySelector('.dccgg-report-contact').value.trim();
-        const nameEl   = dialog.querySelector('.dccgg-report-name');
-        const cottEl   = dialog.querySelector('.dccgg-report-cottage');
-        const phoneEl  = dialog.querySelector('.dccgg-report-phone');
-        const send     = dialog.querySelector('.dccgg-btn-send');
-        send.disabled = true;
-        send.textContent = '…';
-        const body = new URLSearchParams();
-        body.set('action',           'dccgg_report_problem');
-        body.set('category',         catEl ? catEl.value : '');
-        body.set('description',      desc);
-        body.set('contact',          contact);
-        body.set('reporter_name',    nameEl ? nameEl.value.trim() : '');
-        body.set('reporter_cottage', cottEl ? cottEl.value.trim() : '');
-        body.set('reporter_phone',   phoneEl ? phoneEl.value.trim() : '');
-        body.set('section',          dialog.dataset.section || '');
-        body.set('item',             dialog.dataset.item || '');
-        body.set('stay',             stayKey());
-        body.set('page_url',         window.location.href);
-        body.set('elapsed_ms',       String(Math.max(0, Date.now() - (dialog.__dccggOpenedAt || 0))));
-        const hpEl = dialog.querySelector('.dccgg-report-hp');
-        body.set('dccgg_hp',         hpEl ? hpEl.value : '');
-        // v0.9.7.14: recipient list, From identity, subject/body templates and
-        // include-UA flag now resolved server-side from the widget's saved
-        // Elementor settings (keyed by post_id + widget_id). They never leave
-        // wp_options / postmeta, so they no longer appear in page source.
-        body.set('post_id',          String(config.postId || 0));
-        body.set('widget_id',        String(config.widgetId || ''));
-        setError('');
-        dccggFetch(config, body).then(r => {
-            // v0.9.7.10: capture HTTP-error status so it doesn't disappear
-            // into the catch as a generic "Could not send." The user sees
-            // "HTTP 403" / "HTTP 0" right in the dialog and can DM us the
-            // exact failure mode.
-            if (!r.ok) {
-                return r.text().then(txt => {
-                    const e = new Error('HTTP ' + r.status + (r.statusText ? ' ' + r.statusText : ''));
-                    e.responseText = txt;
-                    e.status = r.status;
-                    throw e;
-                });
-            }
-            return r.json();
-        }).then(json => {
-            if (json && json.success) {
-                dialog.close();   // __dccggCloseKeyboard set by the Send click
-                showToast(STR.thankYou || 'Thanks!');
-            } else {
-                send.disabled = false;
-                send.textContent = STR.send || 'Send report';
-                const serverMsg = json && json.data && json.data.message;
-                console.error('[DCCGG report] server returned non-success:', json);
-                setError(serverMsg || STR.error || 'Could not send the report. Please try again.');
-            }
-        }).catch((err) => {
-            send.disabled = false;
-            send.textContent = STR.send || 'Send report';
-            console.error('[DCCGG report] fetch failed:', err, err && err.responseText ? '\n--- response body ---\n' + err.responseText.slice(0, 500) : '');
-            const detail = err && err.message ? err.message : 'Network error';
-            setError((STR.error || 'Could not send the report.') + ' (' + detail + ')');
-        });
-    }
     function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
 
-    // -- Voice-first concierge (v0.8) -------------------------------------
-    // Adds a mic button next to the existing "Ask anything" AI button.
-    // Tap → speech-recognize → fill question → askAi() → answer is spoken.
-    function wireVoiceConcierge(root, config) {
-        if (!config.aiSearch || !config.aiSearch.enabled) return;
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const synth = window.speechSynthesis;
-        if (!SR && !synth) return;
-
-        // Inject the mic + transcript into the AI prompt the moment it appears.
-        const results = root.querySelector('.dccgg-search-results');
-        if (!results) return;
-        const decorate = (wrap) => {
-            if (!wrap || wrap.dataset.voiceWired === '1') return;
-            wrap.dataset.voiceWired = '1';
-            const btn = wrap.querySelector('.dccgg-ai-button');
-            if (!btn) return;
-            // Wrap the existing button + new mic in a row.
-            const row = document.createElement('div');
-            row.className = 'dccgg-ai-actions';
-            btn.parentNode.insertBefore(row, btn);
-            row.appendChild(btn);
-            if (SR) {
-                const mic = document.createElement('button');
-                mic.type = 'button';
-                mic.className = 'dccgg-ai-mic';
-                mic.setAttribute('aria-label', config.aiSearch.voiceLabel || 'Ask by voice');
-                mic.innerHTML = '<i class="fas fa-microphone" aria-hidden="true"></i>';
-                row.appendChild(mic);
-                const transcript = document.createElement('div');
-                transcript.className = 'dccgg-ai-transcript';
-                row.parentNode.insertBefore(transcript, row.nextSibling);
-                mic.addEventListener('click', () => {
-                    recordOnce(SR,
-                        (interim) => { transcript.textContent = interim; },
-                        (final) => {
-                            transcript.textContent = final;
-                            mic.classList.remove('is-listening');
-                            if (final) askAi(root, config, final, wrap, /*onAnswer*/ (answer) => {
-                                if (synth && answer) speak(synth, answer, wrap);
-                            });
-                        },
-                        () => { mic.classList.add('is-listening'); },
-                        () => { mic.classList.remove('is-listening'); }
-                    );
-                });
-            }
-        };
-
-        const obs = new MutationObserver(() => {
-            const wrap = results.querySelector('.dccgg-ai-prompt');
-            if (wrap) decorate(wrap);
-        });
-        obs.observe(results, { childList: true, subtree: true });
-        root.__dccggDisposers.push(() => obs.disconnect());
-    }
-    function recordOnce(SR, onInterim, onFinal, onStart, onStop) {
-        const r = new SR();
-        r.interimResults = true;
-        r.continuous = false;
-        r.lang = (navigator.language || 'en-US');
-        let finalText = '';
-        r.onresult = (ev) => {
-            let interim = '';
-            for (let i = ev.resultIndex; i < ev.results.length; i++) {
-                const res = ev.results[i];
-                if (res.isFinal) { finalText += res[0].transcript; }
-                else             { interim   += res[0].transcript; }
-            }
-            if (interim) onInterim(interim);
-        };
-        r.onend   = () => { onStop && onStop(); onFinal((finalText || '').trim()); };
-        r.onerror = () => { onStop && onStop(); };
-        try {
-            r.start();
-            onStart && onStart();
-        } catch (_) { onStop && onStop(); }
-        return r;
-    }
-    function speak(synth, text, wrap) {
-        try { synth.cancel(); } catch (_) {}
-        const u = new SpeechSynthesisUtterance(text);
-        const voices = synth.getVoices ? synth.getVoices() : [];
-        if (voices && voices.length) {
-            const lang = (navigator.language || 'en-US').split('-')[0];
-            const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(lang));
-            if (match) u.voice = match;
-        }
-        u.rate = 1.0;
-        u.pitch = 1.0;
-        // Add a small pause button next to the answer.
-        const answer = wrap && wrap.querySelector('.dccgg-ai-answer');
-        let pauseBtn = null;
-        if (answer) {
-            pauseBtn = document.createElement('button');
-            pauseBtn.type = 'button';
-            pauseBtn.className = 'dccgg-ai-speak';
-            pauseBtn.innerHTML = '<i class="fas fa-volume-up" aria-hidden="true"></i>';
-            pauseBtn.title = 'Stop reading';
-            pauseBtn.addEventListener('click', () => { try { synth.cancel(); } catch (_) {} pauseBtn.remove(); });
-            answer.appendChild(pauseBtn);
-        }
-        u.onend = () => { if (pauseBtn) pauseBtn.remove(); };
-        synth.speak(u);
-    }
 
     // -- Emergency mode (v0.9) --------------------------------------------
     // SOS floating button → openDetail(emergencyKey). NOAA banner fetches
@@ -813,153 +538,11 @@
         }
     }
 
-    // -- Checkout review prompt (v0.9) ------------------------------------
-    function reviewStorageKey(widgetId) { return 'dccgg:review:' + widgetId + ':' + stayKey(); }
-    function wireReview(root, config) {
-        const rv = config.review || {};
-        if (!rv.enabled) return;
-
-        // Optional reset hook for testing.
-        if (/[?&]dccgg-reset-review=1/.test(window.location.search)) {
-            try { localStorage.removeItem(reviewStorageKey(getWidgetId(root))); } catch (_) {}
-        }
-
-        const STR = rv.strings || {};
-        const URLS    = rv.urls   || {};
-        const EXTRAS  = Array.isArray(rv.extras) ? rv.extras : [];
-        const COPY_EX = STR.copyExtra || 'Copy & open';
-        const platforms = [
-            { key: 'airbnb', url: URLS.airbnb, label: STR.copyAirbnb || 'Copy & open Airbnb' },
-            { key: 'vrbo',   url: URLS.vrbo,   label: STR.copyVrbo   || 'Copy & open Vrbo' },
-            { key: 'google', url: URLS.google, label: STR.copyGoogle || 'Copy & open Google' },
-            ...EXTRAS.map((e, i) => ({
-                key:   'extra-' + i,
-                url:   e.url,
-                label: COPY_EX + ' ' + (e.label || 'review'),
-                icon:  e.icon || null,
-            })),
-        ].filter(p => p.url);
-
-        const prompts = root.querySelectorAll('.dccgg-review-prompt');
-        prompts.forEach(prompt => {
-            const choice = prompt.querySelector('.dccgg-review-choice');
-            const panel  = prompt.querySelector('.dccgg-review-panel');
-            const thanks = prompt.querySelector('.dccgg-review-thanks');
-            if (!choice || !panel || !thanks) return;
-
-            // Collapsed state when the guest has already responded.
-            let acted = false;
-            try { acted = localStorage.getItem(reviewStorageKey(getWidgetId(root))) === '1'; } catch (_) {}
-            if (acted) {
-                choice.hidden = true;
-                thanks.hidden = false;
-                thanks.textContent = STR.thanks || 'Thanks for the feedback!';
-                return;
-            }
-
-            const markActed = () => {
-                try { localStorage.setItem(reviewStorageKey(getWidgetId(root)), '1'); } catch (_) {}
-            };
-
-            const yes = prompt.querySelector('.dccgg-review-yes');
-            const no  = prompt.querySelector('.dccgg-review-no');
-
-            yes.addEventListener('click', () => {
-                choice.hidden = true;
-                panel.hidden = false;
-                // Build panel content if not already there.
-                if (!panel.dataset.built) {
-                    panel.dataset.built = '1';
-                    const help = document.createElement('p');
-                    help.className = 'dccgg-review-help';
-                    help.textContent = STR.help || '';
-                    if (STR.help) panel.appendChild(help);
-
-                    const ta = document.createElement('textarea');
-                    ta.className = 'dccgg-review-textarea';
-                    ta.rows = 6;
-                    ta.value = interpolateReview(rv.template || '');
-                    panel.appendChild(ta);
-
-                    const row = document.createElement('div');
-                    row.className = 'dccgg-review-platforms';
-                    platforms.forEach(p => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'dccgg-review-platform dccgg-review-platform--' + p.key;
-                        if (p.icon && p.icon.value) {
-                            const ic = document.createElement('i');
-                            ic.className = p.icon.value + ' dccgg-review-platform-ico';
-                            ic.setAttribute('aria-hidden', 'true');
-                            btn.appendChild(ic);
-                            btn.appendChild(document.createTextNode(' ' + p.label));
-                        } else {
-                            btn.textContent = p.label;
-                        }
-                        btn.addEventListener('click', () => {
-                            copyText(ta.value).then(() => {
-                                showToast(STR.copied || 'Copied!');
-                                window.open(p.url, '_blank', 'noopener');
-                                markActed();
-                            }).catch(() => {
-                                // Still open the URL even if clipboard failed.
-                                window.open(p.url, '_blank', 'noopener');
-                                markActed();
-                            });
-                        });
-                        row.appendChild(btn);
-                    });
-                    if (!platforms.length) {
-                        const empty = document.createElement('p');
-                        empty.className = 'dccgg-review-help';
-                        empty.textContent = '(No review platforms configured.)';
-                        panel.appendChild(empty);
-                    } else {
-                        panel.appendChild(row);
-                    }
-                }
-            });
-
-            no.addEventListener('click', () => {
-                markActed();
-                choice.hidden = true;
-                thanks.hidden = false;
-                thanks.textContent = STR.thanks || 'Thanks for the feedback!';
-                // Route into the report dialog if available; otherwise just collapse.
-                const sectionTitle = prompt.dataset.reviewSection || '';
-                if (config.report && config.report.enabled) {
-                    // Inject a transient button that piggybacks on the
-                    // wireReportProblem click delegate — saves us from
-                    // exposing its open() function publicly.
-                    const tmp = document.createElement('button');
-                    tmp.className = 'dccgg-more-report';
-                    tmp.style.display = 'none';
-                    tmp.dataset.reportSection = '[checkout feedback] ' + sectionTitle;
-                    root.appendChild(tmp);
-                    tmp.click();
-                    setTimeout(() => tmp.remove(), 0);
-                }
-            });
-        });
-    }
     function getWidgetId(root) {
         // Each Elementor widget gets a data-id attribute on the enclosing
         // .elementor-widget element; fall back to the root's class hash.
         const wrap = root.closest('[data-id]');
         return (wrap && wrap.dataset.id) || 'w';
-    }
-    function interpolateReview(template) {
-        if (!template) return '';
-        let guestName = '';
-        const stay = stayKey();
-        if (stay && stay !== 'default') {
-            // Heuristic: ?stay=jane-2026-06 → "Jane".
-            const m = stay.match(/^([a-z]+)/i);
-            if (m) guestName = m[1].charAt(0).toUpperCase() + m[1].slice(1);
-        }
-        return template
-            .replace(/\{guest_name\}/g, guestName)
-            .replace(/\{stay_key\}/g, stay);
     }
 
     // -- Checklist (v0.7) -------------------------------------------------
@@ -1079,440 +662,7 @@
         update();
     }
 
-    // -- Conditions side-card weather (v0.7, extended v0.9.7.12) ----------
-    // v0.9.7.12 adds (when config.conditionsExtras): NWS alert banner,
-    // pressure trend, wind + leeward-shore tip, UV, heat-index, and
-    // (via a USGS proxy) lake water level + surface temp. Every new row
-    // hides itself if its data source returns nothing.
-    //
-    // v0.9.7.13: ?dccgg-debug-conditions=1 in the URL surfaces each
-    // upstream payload to the console and (via wireConditionsDebug) into
-    // a <pre> beneath the card so the host can paste the raw shapes back
-    // for targeted follow-ups.
-    function wireConditions(root, config) {
-        const cards = root.querySelectorAll('.dccgg-conditions');
-        if (!cards.length) return;
-        // v0.9.7.14: stash the translated strings dict on each card so the
-        // per-row renderers can read takeaways / band labels / shore tips
-        // without threading the config through every call.
-        const condStrings = config.conditionsStrings || {};
-        cards.forEach(c => { c.__dccggCondStrings = condStrings; });
-        const lat = config.cottageLat;
-        const lng = config.cottageLng;
-        if (!lat || !lng || !config.ajaxUrl) return;
-        const extras = !!config.conditionsExtras;
-        const debug = /[?&]dccgg-debug-conditions=1/.test(window.location.search);
-        const logIfDebug = (label, payload) => {
-            if (debug) console.log('[DCCGG conditions] ' + label, payload);
-        };
-        const surfaceDebug = (label, payload) => {
-            if (!debug) return;
-            cards.forEach(card => attachDebugBlock(card, label, payload));
-        };
-        const wxParams = { lat: String(lat), lng: String(lng) };
-        if (debug) wxParams.debug = '1';
-        dccggFetchGet(config, 'dccgg_weather', wxParams)
-            .then(r => {
-                if (!r.ok) console.warn('[DCCGG conditions] weather HTTP ' + r.status);
-                return r.json();
-            })
-            .then(json => {
-                logIfDebug('weather', json);
-                surfaceDebug('weather', json);
-                if (!json.success) return;
-                const d = json.data;
-                if (!d || !d.current || !d.daily) return;
-                const code = d.current.weather_code;
-                const emoji = weatherEmoji(code, d.current.is_day);
-                const temp  = Math.round(d.current.temperature_2m);
-                cards.forEach(card => {
-                    const wxRow = card.querySelector('.dccgg-cond-weather');
-                    if (wxRow) {
-                        wxRow.querySelector('.dccgg-cond-ico').textContent = emoji;
-                        wxRow.querySelector('.dccgg-cond-v').textContent  = temp + '°F · ' + weatherText(code, card.__dccggCondStrings);
-                    }
-                    const fcRow = card.querySelector('.dccgg-cond-forecast');
-                    if (fcRow && d.daily.temperature_2m_max && d.daily.temperature_2m_max.length > 1) {
-                        const hi   = Math.round(d.daily.temperature_2m_max[1]);
-                        const lo   = Math.round(d.daily.temperature_2m_min[1]);
-                        const pop  = d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[1] : 0;
-                        const fcc  = d.daily.weather_code ? d.daily.weather_code[1] : 0;
-                        fcRow.hidden = false;
-                        fcRow.querySelector('.dccgg-cond-ico').textContent = weatherEmoji(fcc, 1);
-                        fcRow.querySelector('.dccgg-cond-v').textContent  = hi + '° / ' + lo + '° · ' + pop + '% rain';
-                    }
-                    if (extras) {
-                        renderPressureRow(card, d);
-                        renderWindRow(card, d);
-                        renderUvRow(card, d);
-                        renderHeatRow(card, d);
-                    }
-                });
-            })
-            .catch((err) => { console.warn('[DCCGG conditions] weather fetch failed', err); });
 
-        if (extras) {
-            // Card 1: NWS alert banner — uses the existing alerts endpoint.
-            const alertParams = { lat: String(lat), lng: String(lng) };
-            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) alertParams.fake = '1';
-            if (debug) alertParams.debug = '1';
-            dccggFetchGet(config, 'dccgg_noaa_alerts', alertParams)
-                .then(r => {
-                    if (!r.ok) console.warn('[DCCGG conditions] noaa HTTP ' + r.status);
-                    return r.json();
-                })
-                .then(json => {
-                    logIfDebug('noaa', json);
-                    surfaceDebug('noaa', json);
-                    if (!json || !json.success) return;
-                    const alerts = (json.data && json.data.alerts) || [];
-                    if (!alerts.length) return;
-                    const top = alerts[0];
-                    cards.forEach(card => {
-                        const banner = card.querySelector('.dccgg-cond-alert');
-                        if (!banner) return;
-                        const text = banner.querySelector('.dccgg-cond-alert-text');
-                        const link = banner.querySelector('.dccgg-cond-alert-link');
-                        if (text) text.textContent = top.headline || top.event || '';
-                        if (link && top.url) { link.href = top.url; link.hidden = false; }
-                        banner.hidden = false;
-                    });
-                })
-                .catch((err) => { console.warn('[DCCGG conditions] noaa fetch failed', err); });
-
-            // Card 2: USGS lake water level + surface temp.
-            const usgsParams = { lat: String(lat), lng: String(lng) };
-            if (debug) usgsParams.debug = '1';
-            dccggFetchGet(config, 'dccgg_usgs', usgsParams)
-                .then(r => {
-                    if (!r.ok) console.warn('[DCCGG conditions] usgs HTTP ' + r.status);
-                    return r.json();
-                })
-                .then(json => {
-                    logIfDebug('usgs', json);
-                    surfaceDebug('usgs', json);
-                    if (!json || !json.success || !json.data || !json.data.available) return;
-                    cards.forEach(card => renderLakeRow(card, json.data));
-                })
-                .catch((err) => { console.warn('[DCCGG conditions] usgs fetch failed', err); });
-        }
-    }
-
-    function attachDebugBlock(card, label, payload) {
-        let pre = card.querySelector('.dccgg-debug-conditions');
-        if (!pre) {
-            pre = document.createElement('pre');
-            pre.className = 'dccgg-debug-conditions';
-            pre.textContent = '';
-            card.appendChild(pre);
-        }
-        pre.textContent += '--- ' + label + ' ---\n' + JSON.stringify(payload, null, 2) + '\n\n';
-    }
-
-    // Card 3: barometric pressure + 3-hour trend. Open-Meteo returns
-    // surface_pressure in hPa (v0.9.7.13: we dropped `pressure_unit=inhg`
-    // because Open-Meteo doesn't support it as a unit) so we convert to
-    // inHg client-side: 1 hPa = 0.02953 inHg.
-    const HPA_TO_INHG = 0.02953;
-    function renderPressureRow(card, d) {
-        const row = card.querySelector('.dccgg-cond-pressure');
-        if (!row) return;
-        const curHpa = d.current && typeof d.current.surface_pressure === 'number' ? d.current.surface_pressure : null;
-        if (curHpa == null) return;
-        const cur = curHpa * HPA_TO_INHG;
-        // Hourly surface_pressure comes from past_days=1, so the array spans
-        // ~yesterday + today's forecast. Pick the entry nearest (now - 3h).
-        let past = null;
-        if (d.current && d.current.time && d.hourly && Array.isArray(d.hourly.surface_pressure) && Array.isArray(d.hourly.time)) {
-            const target = Date.parse(d.current.time) - 3 * 3600 * 1000;
-            let bestIdx = -1;
-            let bestDelta = Infinity;
-            for (let i = 0; i < d.hourly.time.length; i++) {
-                const dt = Math.abs(Date.parse(d.hourly.time[i]) - target);
-                if (dt < bestDelta) { bestDelta = dt; bestIdx = i; }
-            }
-            if (bestIdx >= 0 && typeof d.hourly.surface_pressure[bestIdx] === 'number') {
-                past = d.hourly.surface_pressure[bestIdx] * HPA_TO_INHG;
-            }
-        }
-        // When hourly history is missing entirely, fall back to "steady"
-        // instead of computing against zero (which v0.9.7.12 mis-tagged as
-        // "rising — bass more active" for everyone).
-        const CS = (card.__dccggCondStrings || {});
-        const PS = CS.pressure || {};
-        let arrow = '→', takeaway = PS.steady || 'steady pressure — bite predictable';
-        if (past != null) {
-            const delta = cur - past;
-            if (delta >= 0.04)       { arrow = '↑'; takeaway = PS.rising  || 'bass more active'; }
-            else if (delta <= -0.04) { arrow = '↓'; takeaway = PS.falling || 'bite often slow, then picks up before storms'; }
-        }
-        row.querySelector('.dccgg-cond-v').textContent = cur.toFixed(2) + ' in ' + arrow;
-        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
-        row.hidden = false;
-    }
-
-    // Card 4: wind + leeward-shore tip on Lake Dora.
-    function renderWindRow(card, d) {
-        const row = card.querySelector('.dccgg-cond-wind');
-        if (!row) return;
-        const spd  = d.current && typeof d.current.wind_speed_10m  === 'number' ? d.current.wind_speed_10m  : null;
-        const dirN = d.current && typeof d.current.wind_direction_10m === 'number' ? d.current.wind_direction_10m : null;
-        const gst  = d.current && typeof d.current.wind_gusts_10m === 'number' ? d.current.wind_gusts_10m : null;
-        if (spd == null || dirN == null) return;
-        const dirLabel = compassFromDegrees(dirN);
-        const W = ((card.__dccggCondStrings || {}).wind) || {};
-        let display = (W.label || 'Wind') + ' ' + dirLabel + ' ' + Math.round(spd) + ' mph';
-        if (gst != null && gst > spd + 5) display += ', ' + (W.gusts || 'gusts') + ' ' + Math.round(gst);
-        row.querySelector('.dccgg-cond-v').textContent = display;
-        row.querySelector('.dccgg-cond-takeaway').textContent = leewardTipForLakeDora(dirLabel, spd, W);
-        row.hidden = false;
-    }
-    function compassFromDegrees(deg) {
-        const names = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-        return names[Math.round(((deg % 360) / 22.5)) % 16];
-    }
-    function leewardTipForLakeDora(dir, spd, W) {
-        W = W || {};
-        if (spd < 5) return W.flat || 'flat on the Dora Canal — pick any shore';
-        const south = W.south_shore || 'south shore of Lake Dora will be the calm side';
-        const sw    = W.sw_shore    || 'southwest shore of Lake Dora — try the cove off Lake Dora Pkwy';
-        const west  = W.west_shore  || 'west shore of Lake Dora — try the cove off Lake Dora Pkwy';
-        const nw    = W.nw_shore    || 'northwest shore of Lake Dora — sheltered along the Tavares side';
-        const north = W.north_shore || 'north shore of Lake Dora — try the lily-pad line off Wooton Park';
-        const ne    = W.ne_shore    || 'northeast shore of Lake Dora near the canal mouth';
-        const east  = W.east_shore  || 'east shore of Lake Dora — Dora Canal entrance is sheltered';
-        const se    = W.se_shore    || 'southeast shore of Lake Dora will be the calm side';
-        const tips = {
-            N: south, NNE: south, NNW: south,
-            NE: sw,
-            ENE: west, E: west,
-            ESE: nw, SE: nw,
-            SSE: north, S: north, SSW: north,
-            SW: ne,
-            WSW: east, W: east, WNW: east,
-            NW: se,
-        };
-        return tips[dir] || '';
-    }
-
-    // Card 5: UV index + reapply window.
-    function renderUvRow(card, d) {
-        const row = card.querySelector('.dccgg-cond-uv');
-        if (!row) return;
-        const uv = d.daily && Array.isArray(d.daily.uv_index_max) && typeof d.daily.uv_index_max[0] === 'number'
-            ? d.daily.uv_index_max[0] : null;
-        if (uv == null) return;
-        const isDay = d.current && d.current.is_day;
-        if (!isDay) return;
-        const U = ((card.__dccggCondStrings || {}).uv) || {};
-        let band = '';
-        if      (uv >= 11) band = U.extreme   || 'extreme';
-        else if (uv >= 8)  band = U.very_high || 'very high';
-        else if (uv >= 6)  band = U.high      || 'high';
-        else if (uv >= 3)  band = U.moderate  || 'moderate';
-        else               band = U.low       || 'low';
-        row.querySelector('.dccgg-cond-v').textContent = 'UV ' + Math.round(uv) + ' · ' + band;
-        let takeaway = '';
-        if (uv >= 6) {
-            const reapply = new Date(Date.now() + 2 * 3600 * 1000);
-            const tpl = U.reapply_by || 'reapply sunscreen by %s';
-            takeaway = tpl.replace('%s', formatClock(reapply));
-        } else if (uv >= 3) {
-            takeaway = U.sunscreen || 'sunscreen recommended';
-        }
-        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
-        row.hidden = false;
-    }
-    function formatClock(d) {
-        let h = d.getHours();
-        const m = d.getMinutes().toString().padStart(2, '0');
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12; if (h === 0) h = 12;
-        return h + ':' + m + ' ' + ampm;
-    }
-
-    // Card 6: heat-index / feels-like + hydration nudge.
-    function renderHeatRow(card, d) {
-        const row = card.querySelector('.dccgg-cond-heat');
-        if (!row) return;
-        const feels = d.current && typeof d.current.apparent_temperature === 'number' ? d.current.apparent_temperature : null;
-        if (feels == null || feels < 90) return;
-        row.classList.remove('dccgg-cond-heat--red');
-        if (feels >= 103) row.classList.add('dccgg-cond-heat--red');
-        const H = ((card.__dccggCondStrings || {}).heat) || {};
-        row.querySelector('.dccgg-cond-v').textContent = Math.round(feels) + '°F';
-        row.querySelector('.dccgg-cond-takeaway').textContent = feels >= 103
-            ? (H.danger || 'dangerous heat — limit time outdoors, drink water every 20 min')
-            : (H.warn   || 'drink water every 30 min');
-        row.hidden = false;
-    }
-
-    // Card 2: lake water level + surface temp from USGS.
-    function renderLakeRow(card, info) {
-        const row = card.querySelector('.dccgg-cond-lake');
-        if (!row) return;
-        const L = ((card.__dccggCondStrings || {}).lake) || {};
-        const lake = info.lake_name || L.fallback_name || 'Lake';
-        const parts = [];
-        if (typeof info.gauge_ft === 'number')  parts.push(info.gauge_ft.toFixed(1) + '′');
-        if (typeof info.surface_f === 'number') parts.push((L.surface || 'surface') + ' ' + info.surface_f + '°F');
-        if (!parts.length) return;
-        row.querySelector('.dccgg-cond-v').textContent = lake + ' · ' + parts.join(' · ');
-        let takeaway = '';
-        const temp = info.surface_f;
-        if (typeof temp === 'number') {
-            if (temp < 60)       takeaway = L.cold  || 'cold water — bass deep and slow';
-            else if (temp < 70)  takeaway = L.cool  || 'cool water — bass moving up to feed';
-            else if (temp < 80)  takeaway = L.prime || 'prime water temp — bass active shallow';
-            else if (temp < 87)  takeaway = L.warm  || 'warm water — bass early and late, shaded mid-day';
-            else                 takeaway = L.hot   || 'hot water — bass deep, focus on dawn and dusk';
-        }
-        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
-        row.hidden = false;
-    }
-    function weatherEmoji(code, isDay) {
-        if (code === 0)            return isDay ? '☀️' : '🌙';
-        if (code <= 2)             return isDay ? '⛅' : '☁️';
-        if (code === 3)            return '☁️';
-        if (code >= 45 && code <= 48) return '🌫️';
-        if (code >= 51 && code <= 67) return '🌦️';
-        if (code >= 71 && code <= 77) return '❄️';
-        if (code >= 80 && code <= 82) return '🌧️';
-        if (code >= 95)            return '⛈️';
-        return '☁️';
-    }
-    function weatherText(code, condStrings) {
-        const W = (condStrings && condStrings.weather) || {};
-        const map = {
-            0:  W.clear            || 'Clear',
-            1:  W.mostly_clear     || 'Mostly clear',
-            2:  W.partly_cloudy    || 'Partly cloudy',
-            3:  W.overcast         || 'Overcast',
-            45: W.fog              || 'Fog',
-            48: W.fog              || 'Fog',
-            51: W.light_drizzle    || 'Light drizzle',
-            53: W.drizzle          || 'Drizzle',
-            55: W.heavy_drizzle    || 'Heavy drizzle',
-            61: W.light_rain       || 'Light rain',
-            63: W.rain             || 'Rain',
-            65: W.heavy_rain       || 'Heavy rain',
-            71: W.light_snow       || 'Light snow',
-            73: W.snow             || 'Snow',
-            75: W.heavy_snow       || 'Heavy snow',
-            80: W.showers          || 'Showers',
-            81: W.heavy_showers    || 'Heavy showers',
-            82: W.violent_showers  || 'Violent showers',
-            95: W.thunderstorm     || 'Thunderstorm',
-            96: W.thunderstorm_hail|| 'Thunderstorm + hail',
-            99: W.severe_thunder   || 'Severe thunderstorm',
-        };
-        return map[code] || W.mixed || 'Mixed';
-    }
-
-    // -- Gallery strip click → lightbox with hotspots (v0.7) --------------
-    // v0.9.7.20: delegate from `document` with a stage back-pointer so the
-    // handler still fires after `.dccgg-stage` is portaled to <body> by
-    // showDetailModal() — same fix pattern v0.9.7.5 applied to wireChecklists
-    // and wireSectionNav. Without this the click bubble path bypasses `root`
-    // once any detail has been opened and gallery thumbs silently no-op.
-    function wireGalleryStrip(root) {
-        const stage = root.querySelector('.dccgg-stage');
-        if (stage) stage.__dccggRoot = root;
-        const ownsTarget = (el) => {
-            if (root.contains(el)) return true;
-            const s = el.closest && el.closest('.dccgg-stage');
-            return !!(s && s.__dccggRoot === root);
-        };
-        bindGlobal(root, document, 'click', (e) => {
-            const thumb = e.target.closest('.dccgg-gallery-thumb');
-            if (!thumb || !ownsTarget(thumb)) return;
-            e.preventDefault();
-            const strip = thumb.parentNode;
-            const thumbs = Array.from(strip.querySelectorAll('.dccgg-gallery-thumb'));
-            const idx = thumbs.indexOf(thumb);
-            const images = thumbs.map(t => {
-                const bg = t.style.backgroundImage || '';
-                const url = bg.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
-                let hotspots = [];
-                try { hotspots = JSON.parse(t.dataset.hotspots || '[]'); } catch (_) {}
-                return { url, hotspots, alt: t.getAttribute('aria-label') || '' };
-            });
-            openGalleryLightbox(images, idx, (root.__dccgg && root.__dccgg.config && root.__dccgg.config.strings) || {});
-        });
-    }
-    function openGalleryLightbox(images, startIdx, labels) {
-        if (!images.length) return;
-        const L = labels || {};
-        let dialog = document.querySelector('.dccgg-gallery-lightbox');
-        if (!dialog) {
-            dialog = document.createElement('dialog');
-            dialog.className = 'dccgg-lightbox dccgg-gallery-lightbox';
-            dialog.innerHTML = `
-                <button type="button" class="dccgg-lightbox-close" aria-label="${escAttr(L.lightboxClose || 'Close')}">×</button>
-                <button type="button" class="dccgg-lightbox-prev" aria-label="${escAttr(L.lightboxPrev || 'Previous')}">‹</button>
-                <button type="button" class="dccgg-lightbox-next" aria-label="${escAttr(L.lightboxNext || 'Next')}">›</button>
-                <div class="dccgg-lightbox-stage"></div>
-                <div class="dccgg-lightbox-counter"></div>
-            `;
-            document.body.appendChild(dialog);
-            dialog.addEventListener('click', (e) => {
-                if (e.target === dialog) dialog.close();
-            });
-            dialog.querySelector('.dccgg-lightbox-close').addEventListener('click', () => dialog.close());
-        }
-        let i = startIdx;
-        const stage   = dialog.querySelector('.dccgg-lightbox-stage');
-        const counter = dialog.querySelector('.dccgg-lightbox-counter');
-        const render = () => {
-            const img = images[i];
-            stage.innerHTML = `<img src="${img.url.replace(/"/g, '&quot;')}" alt="${(img.alt || '').replace(/"/g, '&quot;')}">`;
-            const stageImg = stage.querySelector('img');
-            // Wait for image dims so pin placement is correct.
-            const placePins = () => {
-                (img.hotspots || []).forEach((h, hi) => {
-                    const pin = document.createElement('button');
-                    pin.type = 'button';
-                    pin.className = 'dccgg-hotspot-pin';
-                    pin.textContent = String(hi + 1);
-                    pin.style.left = h.x + '%';
-                    pin.style.top  = h.y + '%';
-                    pin.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        stage.querySelectorAll('.dccgg-hotspot-tip').forEach(t => t.remove());
-                        const tip = document.createElement('div');
-                        tip.className = 'dccgg-hotspot-tip';
-                        tip.style.left = h.x + '%';
-                        tip.style.top  = h.y + '%';
-                        tip.innerHTML = '<span class="dccgg-hotspot-tip-label"></span><span class="dccgg-hotspot-tip-desc"></span>';
-                        tip.querySelector('.dccgg-hotspot-tip-label').textContent = h.label || '';
-                        tip.querySelector('.dccgg-hotspot-tip-desc').textContent  = h.desc  || '';
-                        stage.appendChild(tip);
-                        setTimeout(() => {
-                            const onAway = (ev) => { if (!tip.contains(ev.target)) { tip.remove(); document.removeEventListener('click', onAway); } };
-                            document.addEventListener('click', onAway);
-                        }, 0);
-                    });
-                    stage.appendChild(pin);
-                });
-            };
-            if (stageImg.complete) placePins();
-            else stageImg.addEventListener('load', placePins, { once: true });
-            counter.textContent = (i + 1) + ' / ' + images.length;
-        };
-        const goPrev = () => { i = (i - 1 + images.length) % images.length; render(); };
-        const goNext = () => { i = (i + 1) % images.length; render(); };
-        dialog.querySelector('.dccgg-lightbox-prev').onclick = goPrev;
-        dialog.querySelector('.dccgg-lightbox-next').onclick = goNext;
-        const onKey = (e) => {
-            if (e.key === 'ArrowLeft')  goPrev();
-            if (e.key === 'ArrowRight') goNext();
-        };
-        dialog.addEventListener('close', () => document.removeEventListener('keydown', onKey), { once: true });
-        document.addEventListener('keydown', onKey);
-        render();
-        if (typeof dialog.showModal === 'function') dialog.showModal();
-        else dialog.setAttribute('open', '');
-    }
 
     // -- AI fallback search (v0.7, rebuilt as 3-tier empty state in v0.9.7.21) -
     // wireAiSearch is now a no-op stub: the 3-tier empty state is rendered
@@ -1550,7 +700,9 @@
             }
         }
 
-        reportSearchMiss(root, config, query);
+        // v0.25.0: guest-only. The public guide has no AI search and no miss
+        // reporting, so this is absent there by construction.
+        if (window.DCCGG_GUEST) window.DCCGG_GUEST.reportSearchMiss(root, config, query);
 
         const parts = [];
         parts.push('<p class="dccgg-search-no-results">' + escHtml(noResultsTxt) + '</p>');
@@ -1625,7 +777,7 @@
             if (aiBtn) {
                 aiBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    askAi(root, config, query, wrap);
+                    if (window.DCCGG_GUEST) window.DCCGG_GUEST.askAi(root, config, query, wrap);
                 });
             }
         }
@@ -1640,69 +792,6 @@
                 });
             }
         }
-    }
-    function askAi(root, config, question, wrap, onAnswer) {
-        const btn    = wrap.querySelector('.dccgg-ai-button');
-        const answer = wrap.querySelector('.dccgg-ai-answer');
-        btn.disabled = true;
-        answer.hidden = false;
-        answer.dataset.state = 'loading';
-        // v0.12.2: the guide itself works offline; this one feature cannot.
-        // Say so immediately instead of firing a request that will hang.
-        if (navigator.onLine === false) {
-            answer.hidden = false;
-            answer.textContent = config.aiSearch.offline
-                || 'Ask anything needs a connection. The rest of the guide works offline.';
-            btn.disabled = false;
-            return;
-        }
-        answer.textContent = config.aiSearch.thinking;
-        // v0.23.5: no guide text leaves the page. The server builds the
-        // context from this widget's saved settings; it ignores any sent.
-        const body = new URLSearchParams();
-        body.set('action', 'dccgg_ai_query');
-        body.set('question', question);
-        body.set('post_id', String(config.postId || 0));
-        body.set('widget_id', String(config.widgetId || ''));
-        dccggFetch(config, body).then(r => r.json()).then(json => {
-            delete answer.dataset.state;
-            btn.disabled = false;
-            if (json && json.success && json.data && json.data.answer) {
-                answer.textContent = json.data.answer;
-                if (typeof onAnswer === 'function') onAnswer(json.data.answer);
-            } else {
-                answer.textContent = (json && json.data && json.data.message) || config.aiSearch.error;
-            }
-        }).catch(() => {
-            delete answer.dataset.state;
-            btn.disabled = false;
-            answer.textContent = config.aiSearch.error;
-        });
-    }
-    // -- Click-to-play video posters (v0.6) -------------------------------
-    function wireVideoPosters(root) {
-        root.querySelectorAll('.dccgg-video-poster').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const embed = btn.dataset.embed;
-                if (!embed) return;
-                const iframe = document.createElement('iframe');
-                iframe.className = 'dccgg-media';
-                // v0.20.0: the poster carries the item's shape; the iframe that
-                // replaces it has to carry the same one, or the box resizes the
-                // instant the guest presses play.
-                const ratio = btn.dataset.ratio
-                    || btn.style.getPropertyValue('--dccgg-video-ratio').trim();
-                if (ratio) { iframe.style.setProperty('--dccgg-video-ratio', ratio); }
-                iframe.src = embed + (embed.indexOf('?') > -1 ? '&' : '?') + 'autoplay=1';
-                iframe.loading = 'lazy';
-                iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-                iframe.setAttribute('allowfullscreen', '');
-                iframe.setAttribute('frameborder', '0');
-                iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-                btn.replaceWith(iframe);
-            });
-        });
     }
 
     // -- Sticky shrinking detail header (v0.5) ----------------------------
@@ -3474,27 +2563,6 @@
         });
     }
 
-    // v0.12.2: tell the host what guests searched for and did not find. Sends
-    // the query and nothing else — no identifier, no page, no user agent. Fired
-    // at most once per distinct query per page view, and only for queries long
-    // enough to mean something, so a half-typed word is not logged on its way
-    // to a real one.
-    const _missSent = new Set();
-    function reportSearchMiss(root, config, q) {
-        const query = String(q || '').trim();
-        if (query.length < 3 || query.length > 80) return;
-        const key = query.toLowerCase();
-        if (_missSent.has(key)) return;
-        _missSent.add(key);
-        if (!config || !config.ajaxUrl || !config.nonce) return;
-        if (config.logMisses === false) return;   // v0.23.0: switched off by the host
-        try {
-            const body = new URLSearchParams();
-            body.set('action', 'dccgg_search_miss');
-            body.set('q', query);
-            dccggFetch(config, body).catch(() => {});
-        } catch (_) {}
-    }
 
     // -- Tap-to-reveal values (Wi-Fi passwords) ---------------------------
     // The value itself is never in the text layer: CSS paints either dots or
@@ -4030,38 +3098,6 @@
 
     // -- Image lightbox (single global <dialog>, shared across widgets) ---
     let _lightbox = null;
-    function ensureLightbox(closeLabel) {
-        // v0.5: only set the aria-label on first creation. v0.4 reset it on
-        // every wireLightbox call, which was harmless but pointless.
-        if (_lightbox) return _lightbox;
-        _lightbox = document.createElement('dialog');
-        _lightbox.className = 'dccgg-lightbox';
-        const label = closeLabel || 'Close';
-        _lightbox.innerHTML = '<div class="dccgg-lightbox-content"><img alt=""></div>' +
-                              '<button type="button" class="dccgg-lightbox-close" aria-label="' +
-                              label.replace(/"/g, '&quot;') +
-                              '">&times;</button>';
-        document.body.appendChild(_lightbox);
-        _lightbox.querySelector('.dccgg-lightbox-close').addEventListener('click', () => _lightbox.close());
-        _lightbox.addEventListener('click', (e) => {
-            if (e.target === _lightbox) _lightbox.close();
-        });
-        return _lightbox;
-    }
-    function wireLightbox(root) {
-        const imgs = root.querySelectorAll('img.dccgg-media');
-        if (!imgs.length) return;
-        const closeLabel = (root.__dccgg && root.__dccgg.config && root.__dccgg.config.strings && root.__dccgg.config.strings.lightboxClose) || 'Close';
-        imgs.forEach(img => {
-            img.setAttribute('data-lightbox-clickable', '1');
-            img.addEventListener('click', () => {
-                const d = ensureLightbox(closeLabel);
-                if (typeof d.showModal !== 'function') return;
-                d.querySelector('img').src = img.currentSrc || img.src;
-                d.showModal();
-            });
-        });
-    }
 
     // -- Long-press peek tooltip -----------------------------------------
     function wirePeek(root) {
@@ -4362,66 +3398,5 @@
         if (root) root.dataset.dccggArrows = '1';
     }
 
-    // -- Wizard mode (v0.3) ------------------------------------------------
-    function wireWizard(root) {
-        root.querySelectorAll('.dccgg-wizard').forEach(wiz => {
-            const steps   = wiz.querySelectorAll('.dccgg-wizard-step');
-            const dots    = wiz.querySelectorAll('.dccgg-wizard-dot');
-            const back    = wiz.querySelector('.dccgg-wizard-back');
-            const next    = wiz.querySelector('.dccgg-wizard-next');
-            const total   = steps.length;
-            if (!total) return;
-
-            const labelNext = next ? (next.dataset.labelNext || 'Next') : 'Next';
-            const labelDone = next ? (next.dataset.labelDone || 'Done') : 'Done';
-
-            const setStep = (idx) => {
-                idx = Math.max(0, Math.min(total - 1, idx));
-                wiz.dataset.step = String(idx);
-                steps.forEach((s, i) => {
-                    s.hidden = (i !== idx);
-                    s.classList.toggle('is-active', i === idx);
-                });
-                dots.forEach((d, i) => {
-                    d.classList.toggle('is-active', i === idx);
-                    d.classList.toggle('is-visited', i < idx);
-                    d.setAttribute('aria-selected', String(i === idx));
-                });
-                if (back) back.disabled = (idx === 0);
-                if (next) {
-                    // On the last step, the Next button becomes Done and
-                    // collapses the wizard back to step 0 (treat it as a
-                    // "reset" — easy to retry).
-                    const isLast = idx === total - 1;
-                    const label  = isLast ? labelDone : labelNext;
-                    next.innerHTML = label + ' <i class="fas fa-' + (isLast ? 'check' : 'arrow-right') + '" aria-hidden="true"></i>';
-                }
-                hapticPulse(root, 15);
-            };
-
-            if (back) back.addEventListener('click', (e) => {
-                e.stopPropagation();
-                setStep((parseInt(wiz.dataset.step || '0', 10)) - 1);
-            });
-            if (next) next.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const cur = parseInt(wiz.dataset.step || '0', 10);
-                if (cur === total - 1) {
-                    // Done → confetti, reset to 0
-                    spawnConfetti(next);
-                    setStep(0);
-                } else {
-                    setStep(cur + 1);
-                }
-            });
-            dots.forEach((d) => {
-                d.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const t = parseInt(d.dataset.wizardGoto || '0', 10);
-                    setStep(t);
-                });
-            });
-        });
-    }
 
 })();

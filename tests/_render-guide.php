@@ -103,6 +103,8 @@ namespace {
         'wp_kses' => fn($s, ...$a) => (string) $s,
         'esc_html_e' => function ($s, $d = null) { echo htmlspecialchars((string) $s, ENT_QUOTES); },
         'get_locale' => fn() => 'en_US', 'is_rtl' => fn() => false, 'wp_get_attachment_image_url' => fn(...$a) => '',
+        // v0.25.0: the conditions card asks WordPress for the site timezone.
+        'wp_timezone_string' => fn() => 'America/New_York',
         // v0.24.4: reached once a section carries an accent colour.
         'sanitize_hex_color' => function ($c) {
             $c = (string) $c;

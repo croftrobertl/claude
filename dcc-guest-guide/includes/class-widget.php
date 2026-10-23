@@ -47,6 +47,27 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * The guest-only SCRIPT bundle: the Front Desk form, the review prompt,
+     * the voice concierge and the AI answer.
+     *
+     * Deliberately NOT gated on split_guest_css, and the difference matters.
+     * That setting chooses between one stylesheet and two, and when it is off
+     * widget.css still CONTAINS every guest rule — nothing is lost. The script
+     * split is not like that: the code physically left widget.js, so a full
+     * guide that did not load this file would render a Front Desk button that
+     * does nothing. The split is structural, not a preference.
+     *
+     * Called from the one place that already knows the audience: the else
+     * branch of render()'s public-mode test, where enqueue_guest_css() is.
+     */
+    public static function enqueue_guest_js(): void
+    {
+        if (wp_script_is('dccgg-widget-guest', 'registered')) {
+            wp_enqueue_script('dccgg-widget-guest');
+        }
+    }
+
+    /**
      * The plugin-level settings the front end needs, as data-config keys.
      * One place, so a setting cannot be exposed on the admin page and never
      * reach the code that should read it — which is exactly what v0.21.0
@@ -142,6 +163,23 @@ final class Widget extends Widget_Base
         $ed_min  = file_exists(DCCGG_DIR . 'assets/js/widget-editor.min.js');
         $ed_path = $ed_min ? 'assets/js/widget-editor.min.js' : 'assets/js/widget-editor.js';
         wp_register_script('dccgg-widget-editor', DCCGG_URL . $ed_path, ['dccgg-widget'], DCCGG_VERSION, true);
+        // v0.25.0: the guest-only SCRIPT bundle, the JS counterpart of
+        // widget-guest.min.css. Registered here, enqueued only where the FULL
+        // guide renders — see enqueue_guest_js().
+        $g_min  = file_exists(DCCGG_DIR . 'assets/js/widget-guest.min.js');
+        $g_path = $g_min ? 'assets/js/widget-guest.min.js' : 'assets/js/widget-guest.js';
+        wp_register_script('dccgg-widget-guest', DCCGG_URL . $g_path, ['dccgg-widget'], DCCGG_VERSION, true);
+
+        // v0.25.0: the four per-element chunks are NOT registered with
+        // WordPress. Core fetches one only when the rendered page contains the
+        // element it drives, which is a decision no enqueue hook can make —
+        // the markup does not exist yet when wp_enqueue_scripts runs. All the
+        // server owes them is where to look.
+        wp_localize_script('dccgg-widget', 'dccggChunks', [
+            'base' => DCCGG_URL . 'assets/js/',
+            'ver'  => DCCGG_VERSION,
+            'min'  => file_exists(DCCGG_DIR . 'assets/js/widget-conditions.min.js'),
+        ]);
     }
 
     /** Set at registration: true when a .min bundle was missing and the full source is being served. */
@@ -179,8 +217,10 @@ final class Widget extends Widget_Base
         // meant to appear, so it loads the editor bundle as well.
         wp_enqueue_script('dccgg-widget-editor');
         // v0.23.0: the editor previews the FULL guide, whose dialogs and
-        // popovers are styled by the guest-only bundle.
+        // popovers are styled by the guest-only bundle — and v0.25.0, whose
+        // Front Desk form and review prompt are wired by its script.
         self::enqueue_guest_css();
+        self::enqueue_guest_js();
     }
 
     /**
@@ -3187,6 +3227,7 @@ final class Widget extends Widget_Base
             self::apply_public_mode($s);
         } else {
             self::enqueue_guest_css();
+            self::enqueue_guest_js();
         }
 
         $sections  = (array) ($s['guide_sections'] ?? []);
