@@ -493,8 +493,12 @@ foreach (preg_split('/\R/', $css) as $line) {
     }
 }
 check('the stylesheet really has rules to check (the guard)', count($selectors) > 20, true);
+/* THE CLASS, NOT THE SUBSTRING. `.dcc_layout-bar__label` CONTAINS the text
+   ".dcc_layout", so a substring test reported an unmarked rule as marked —
+   mutation css-unmarked-rule stripped the marker from exactly such a selector
+   and SURVIVED. The class has to end where a class name ends. */
 $unmarked = array_values(array_filter($selectors, static function (string $sel): bool {
-    return strpos($sel, '.dcc_layout') === false;
+    return !preg_match('/\.dcc_layout(?![\w-])/', $sel);
 }));
 check('every rule is keyed on the marker class, so today\'s checkout cannot be touched',
     $unmarked, []);

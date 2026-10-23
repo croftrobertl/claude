@@ -4016,8 +4016,8 @@
    "selectlist"
   ],
   "claim": "0.34.1: the services' own 'for N' select is left alone",
-  "find": "            n.indexOf('[services]') === -1 && !sel.hasAttribute('data-dcc-native');",
-  "replace": "            !sel.hasAttribute('data-dcc-native');",
+  "find": "            n.indexOf('[services]') === -1 && !sel.hasAttribute('data-dcc-native') &&",
+  "replace": "            !sel.hasAttribute('data-dcc-native') &&",
   "count": 1
  },
  {
@@ -4545,8 +4545,8 @@
    "hero"
   ],
   "claim": "0.35.0: a cottage whose original is under 1024 wide still gets its photo",
-  "find": "        return $best ?? $widest ?? $none;",
-  "replace": "        return $best ?? $none;",
+  "find": "        $chosen = $best ?? $widest ?? $none;",
+  "replace": "        $chosen = $best ?? $none;",
   "count": 1
  },
  {
@@ -5088,8 +5088,8 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0 item 2: each guest panel sits directly under the guest chooser",
-  "find": "        place(root);\n        autofill(root);",
-  "replace": "        autofill(root);",
+  "find": "        segments(root);\n        place(root);",
+  "replace": "        segments(root);",
   "count": 1
  },
  {
@@ -5143,8 +5143,8 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0: moving a panel refreshes the key hints, which are document order",
-  "find": "        /* MOVING CHANGES DOCUMENT ORDER, AND THE KEY HINTS ARE DOCUMENT ORDER.",
-  "replace": "        if (false) { hints(root); }\n        /* MOVING CHANGES DOCUMENT ORDER, AND THE KEY HINTS ARE DOCUMENT ORDER.",
+  "find": "        hints(root);\n    }\n\n    /* ------",
+  "replace": "    }\n\n    /* ------",
   "count": 1
  },
  {
@@ -5287,7 +5287,7 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0 item 3: the group is labelled with the page's own words where it has them",
-  "find": "        legend.appendChild(document.createTextNode(labelText(select) || spec.label || ''));",
+  "find": "        legend.appendChild(document.createTextNode(fromPage || spec.label || ''));",
   "replace": "        legend.appendChild(document.createTextNode(spec.label || ''));",
   "count": 1
  },
@@ -5664,7 +5664,7 @@
    "hero"
   ],
   "claim": "0.35.0 item 1: the extension is SWAPPED, never appended (the .jpg.webp form 404s)",
-  "find": "        return (string) preg_replace('/\\\\.(jpe?g|png)$/i', '.webp', $url);",
+  "find": "        return (string) preg_replace('/\\.(jpe?g|png)$/i', '.webp', $url);",
   "replace": "        return $url . '.webp';",
   "count": 1
  },
@@ -5741,8 +5741,8 @@
    "layout-fields-browser"
   ],
   "claim": "0.35.0 item 6 (required): the bar is attached to body, outside article.hentry",
-  "find": "        document.body.appendChild(bar);",
-  "replace": "        root.appendChild(bar);",
+  "find": "            var want = wide() && card ? card : document.body;",
+  "replace": "            var want = wide() && card ? card : (document.querySelector('article.hentry') || document.body);",
   "count": 1
  },
  {
@@ -5795,9 +5795,9 @@
   "suites": [
    "layout-fields-browser"
   ],
-  "claim": "0.35.0 item 6 (required): a second press sends nothing",
-  "find": "            if (submitting) { return; }\n            lockSubmits();",
-  "replace": "            lockSubmits();",
+  "claim": "0.35.0 item 6 (required): a double Submit never gets through — the flag AND the disabling together",
+  "find": "        function lockSubmits() {\n            submitting = true;",
+  "replace": "        function lockSubmits() {\n            if (true) { return; }\n            submitting = true;",
   "count": 1
  },
  {

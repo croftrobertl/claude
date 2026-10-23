@@ -903,6 +903,11 @@ const page_html = `<!doctype html>
         null, { timeout: 4000 });
     const shown = await page.evaluate(() => {
         const box = document.querySelector('.dcc_layout-id');
+        /* A MISSING CARD IS A FAILURE, NOT A CRASH. Mutations that delete the
+           preview made this evaluate throw on a null, and the runner reported
+           HARNESS — no evidence either way, which is the one outcome a suite
+           must never produce for a real defect. */
+        if (!box) { return { missing: true }; }
         const img = box.querySelector('.dcc_layout-id__image');
         return {
             hidden: box.hidden,
@@ -910,8 +915,14 @@ const page_html = `<!doctype html>
             size: (box.querySelector('.dcc_layout-id__size') || {}).textContent,
             ready: (box.querySelector('.dcc_layout-id__ready') || {}).textContent,
             change: (box.querySelector('.dcc_layout-id__change') || {}).textContent,
+            /* THE ATTRIBUTES, not img.width/.height: those fall back to the
+               RENDERED size when no attribute is set, and the CSS sizes the
+               thumbnail to 64px anyway — so reading them reported a size the
+               markup had not asked for, and mutation id-full-size-thumb
+               (which deletes the attributes) SURVIVED. The attributes are
+               what tell the browser to decode at thumbnail size. */
             img: img ? { blob: img.src.indexOf('blob:') === 0, decoding: img.decoding,
-                         w: img.width, h: img.height } : null,
+                         w: img.getAttribute('width'), h: img.getAttribute('height') } : null,
             doc: !!box.querySelector('.dcc_layout-id__doc'),
             /* MotoPress's input is untouched: still there, still a file
                input, still carrying the file. */
@@ -921,11 +932,13 @@ const page_html = `<!doctype html>
             })(),
         };
     });
+    check('an ID card is built at all (the guard: every check below reads it)',
+        !shown.missing, true);
     check('choosing a file shows the card, with the name, the size and Ready',
         [shown.hidden, shown.name, shown.size, shown.ready, shown.change],
         [false, 'passport.png', PNG.length + ' bytes', '✓ Ready', 'Change']);
     check('a drawable image is previewed from the file itself, decoded async at thumbnail size',
-        shown.img, { blob: true, decoding: 'async', w: 64, h: 64 });
+        shown.img, { blob: true, decoding: 'async', w: '64', h: '64' });
     check('… and no document icon is shown for it', shown.doc, false);
     check('MotoPress\'s own file input is untouched and still holds the file',
         shown.input, [true, false, 1]);
@@ -984,6 +997,7 @@ const page_html = `<!doctype html>
         .catch(() => {});
     const asDoc = await page.evaluate(() => {
         const box = document.querySelector('.dcc_layout-id');
+        if (!box) { return { missing: true }; }
         return {
             doc: !!box.querySelector('.dcc_layout-id__doc'),
             img: !!box.querySelector('.dcc_layout-id__image'),
@@ -1243,7 +1257,7 @@ const page_html = `<!doctype html>
      * ===================================================================== */
     const cardPhone = await page.evaluate(() => {
         const c = document.querySelector('.dcc_layout-summary');
-        if (!c) { return null; }
+        if (!c) { return { missing: true }; }
         const form = document.querySelector('form');
         return {
             /* INSIDE THE FORM, which is load-bearing: it holds the acceptance
@@ -1276,6 +1290,8 @@ const page_html = `<!doctype html>
             ticks: document.querySelectorAll('[name="mphb_accept_terms"]').length,
         };
     });
+    check('a summary card is built at all (the guard: every check below reads it)',
+        !cardPhone.missing, true);
     check('the card is inside the form, and so is the acceptance tick it holds',
         [cardPhone.inForm, cardPhone.tickInForm], [true, true]);
     check('it holds the dates, the price, the coupon link and its field, and the tick',
@@ -1479,6 +1495,40 @@ const page_html = `<!doctype html>
         return window.__submits;
     });
     check('… so a second press sends nothing', twice, 1);
+
+    /* AND TWO PRESSES INSIDE ONE TASK, which is the case the `submitting`
+       flag exists for: the lock is DEFERRED by a task (locking inside the
+       click cancels the submit), so between the first press and the lock
+       landing there is a window in which the button is still enabled. A
+       double-tap, or a stuck finger, lands there. Without the flag the second
+       press submits again — mutation bar-double-submit SURVIVED a test that
+       only pressed after the lock. */
+    const rapid = await (async () => {
+        const p2 = await ctx.newPage();
+        await p2.route('**/*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
+        await p2.goto('https://example.test/submit-booking/');
+        await p2.setContent(page_html);
+        const got = await p2.evaluate(() => {
+            document.querySelector('[name="mphb_first_name"]').value = 'Ada';
+            document.querySelector('[name="mphb_phone"]').value = '555 0100';
+            const t = document.querySelector('[name="mphb_accept_terms"]');
+            t.checked = true;
+            t.dispatchEvent(new Event('change', { bubbles: true }));
+            const action = document.querySelector('.dcc_layout-bar__action');
+            /* Both presses in the SAME task, before any deferred lock runs. */
+            action.click();
+            action.click();
+            return { submits: window.__submits, disabled: action.disabled };
+        });
+        await p2.close();
+        return got;
+    })();
+    check('two presses in the same task send ONE booking', rapid.submits, 1);
+    /* TWO GUARDS HOLD THIS, EACH SUFFICIENT ON ITS OWN: the `submitting`
+       flag, and disabling the button. That is why removing either ALONE
+       survives — the required mutation removes BOTH, which is what "a double
+       Submit getting through" actually means. */
+    check('… and the button is disabled after the first press', rapid.disabled, true);
 
     /* REDUCED MOTION IS RESPECTED (Rob). A guest who has asked their phone to
        stop animating must not be given a smooth scroll. Measured in a context
