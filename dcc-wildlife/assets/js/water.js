@@ -103,20 +103,112 @@
 	 * value cannot slip a day. Returns '' when the date will not parse —
 	 * the card then shows its attribution line without an age claim rather
 	 * than guessing one. */
-	function ageWords(iso, precision, i18n) {
-		if (!iso) { return ''; }
+	/* The MEASUREMENT instant, read in the source's own frame, or null.
+	 *
+	 * Split out of ageWords() in 1.45.0 because the freshness line needs the
+	 * same number and two implementations of "how old is this" would drift
+	 * apart on exactly the cases this module cares about — a date-only value
+	 * that must not slip a day, and a midnight instant that is really a
+	 * date. One reader, three callers. */
+	function measuredAt(iso, precision) {
+		if (!iso) { return null; }
 		var then;
 		if (!hasRealTime(iso, precision)) {
 			var parts = dateOnlyParts(iso);
-			if (!parts) { return ''; }
+			if (!parts) { return null; }
 			then = new Date(parts[0], parts[1] - 1, parts[2]);
 		} else {
 			then = new Date(iso);
 		}
-		if (isNaN(then.getTime())) { return ''; }
+		return isNaN(then.getTime()) ? null : then;
+	}
 
+	function ageDaysOf(iso, precision) {
+		var then = measuredAt(iso, precision);
+		if (!then) { return null; }
 		var days = Math.floor((Date.now() - then.getTime()) / 86400000);
-		if (days < 0) { return ''; }          // clock skew: say nothing
+		/* Clock skew: a reading from the future is not a negative age, it is
+		 * a question we decline to answer. Every caller treats null as "say
+		 * nothing about age", which is what 1.9.0's chip already did. */
+		return days < 0 ? null : days;
+	}
+
+	/*
+	 * ITEM 2 (1.45.0) — HOW OLD THIS KIND OF READING MAY BE, IN DAYS.
+	 *
+	 * Keyed on the fact's machine name, never its label, which is
+	 * translated. A chain row carries no key because `key` names the canal's
+	 * own readings, so its GROUP answers instead: every chain row is a
+	 * clarity sample, which is the one thing the feed carries per water.
+	 *
+	 * 0 means "no limit for this kind", and that is the honest default for
+	 * anything the Director did not name — the trophic index, the rain
+	 * total, the forecast and the wind all have their own freshness rules in
+	 * Water_Live, and inventing a fourth limit here would be this file
+	 * deciding something it has no measurement for.
+	 */
+	function ageLimitFor(f) {
+		var max = CFG.ageMax || {};
+		var key = f.key || ('chain' === f.group ? 'clarity' : '');
+		var lim = key ? max[key] : 0;
+		return lim > 0 ? lim : 0;
+	}
+
+	/*
+	 * THE FRESHNESS LINE, AND THE SWITCH OF TENSE THAT IS THE POINT OF IT.
+	 *
+	 * Inside the limit it states an age in the present ("Measured 2 Days
+	 * Ago"). Past the limit it names the month instead ("Last Measured In
+	 * April"), with the year when that is not this year, because a bare
+	 * month seven months old reads as this April. The reading, its source
+	 * and its exact date are all still on the card either way — nothing is
+	 * hidden, the CLAIM is what changes.
+	 */
+	function freshLine(f, i18n) {
+		var days = ageDaysOf(f.date, f.datePrecision);
+		if (null === days) { return { text: '', stale: false }; }
+		var limit = ageLimitFor(f);
+		var stale = limit > 0 && days > limit;
+
+		if (!stale) {
+			if (0 === days) { return { text: i18n.freshToday || 'Measured Today', stale: false }; }
+			if (1 === days) { return { text: i18n.freshYesterday || 'Measured Yesterday', stale: false }; }
+			if (days < 45) { return { text: fmt(i18n.freshDays || 'Measured %d Days Ago', days), stale: false }; }
+			if (days < 730) {
+				return { text: fmt(i18n.freshMonths || 'Measured %d Months Ago', Math.round(days / 30)), stale: false };
+			}
+			return { text: fmt(i18n.freshYears || 'Measured %d Years Ago', Math.round(days / 365)), stale: false };
+		}
+
+		var then = measuredAt(f.date, f.datePrecision);
+		var names = i18n.months || [];
+		var month = then ? (names[then.getMonth()] || '') : '';
+		if (!month) {
+			/* No month name to print: the card keeps its source line and its
+			 * date and simply says nothing about freshness. An empty line is
+			 * better than a half-built sentence. */
+			return { text: '', stale: true };
+		}
+		if (then.getFullYear() !== (new Date()).getFullYear()) {
+			return {
+				text: (i18n.lastInYear || 'Last Measured In %1$s %2$s')
+					.replace('%1$s', month).replace('%2$s', String(then.getFullYear())),
+				stale: true
+			};
+		}
+		return { text: fmt(i18n.lastIn || 'Last Measured In %s', month), stale: true };
+	}
+
+	/* The one substitution these strings need. Both the %d and the %s forms,
+	 * because a translator writes whichever the sentence calls for. */
+	function fmt(tpl, v) {
+		return String(tpl).replace(/%d|%s/, String(v));
+	}
+
+	function ageWords(iso, precision, i18n) {
+		if (!iso) { return ''; }
+		var days = ageDaysOf(iso, precision);
+		if (null === days) { return ''; }
 		if (days === 0) { return i18n.ageToday || 'today'; }
 		if (days < 45) { return days + (i18n.ageDays || 'd'); }
 		if (days < 730) { return Math.round(days / 30) + (i18n.ageMonths || 'mo'); }
@@ -154,7 +246,32 @@
 		head.appendChild(chip);
 		li.appendChild(head);
 
-		li.appendChild(el('p', 'dccwl-card-value', f.value));
+		/*
+		 * ITEM 2 (1.45.0) — THE BIG NUMBER, THEN THE FRESHNESS LINE UNDER IT.
+		 *
+		 * PAST ITS LIMIT THE PRESENT-TENSE SENTENCE IS NOT PRINTED AT ALL.
+		 * The Water Level card read "About 3 inches below normal for
+		 * September" from a 22 September reading, which is a claim about now
+		 * built out of a month-old measurement — the Director measured
+		 * exactly that on live, alongside a dissolved-oxygen figure from 14
+		 * April. So on a stale card the freshness line IS the value line:
+		 * "Last Measured In September", grayed, with the source and the
+		 * measurement date still underneath. The number is not rewritten
+		 * into the past tense, because the past-tense wording would be this
+		 * file inventing a sentence; it is withheld, which is this module's
+		 * oldest answer to not knowing something.
+		 */
+		var fresh = freshLine(f, i18n);
+		if (fresh.stale) {
+			li.className += ' dccwl-card-stale';
+			li.appendChild(el('p', 'dccwl-card-value dccwl-card-value-stale',
+				fresh.text || f.label));
+		} else {
+			li.appendChild(el('p', 'dccwl-card-value', f.value));
+			if (fresh.text) {
+				li.appendChild(el('p', 'dccwl-card-fresh', fresh.text));
+			}
+		}
 
 		// Full attribution: the source (linked where there is a URL) and the
 		// measurement time, worded by the fact itself.
@@ -303,6 +420,119 @@
 		li.appendChild(el('p', 'dccwl-card-value',
 			(CFG.i18n && CFG.i18n.placeNone) || 'No Recent Reading'));
 		return li;
+	}
+
+	/* ==================================================================
+	 * ITEM 1 (1.45.0) — THE SHIMMER SKELETON, IN THE CARDS' EXACT SHAPES.
+	 *
+	 * Rob's pick for the blank Now tab. The blank had two causes and this is
+	 * the second one: even when the readings DO arrive, they arrive after a
+	 * network round trip, and until 1.44.6 the strip was simply absent for
+	 * that whole time — on a cold cache behind three cache layers that is
+	 * long enough to read as "there is nothing here" and scroll past.
+	 *
+	 * BUILT IN JAVASCRIPT, NOT IN PHP, and that is not a preference. The
+	 * page is served by SpeedyCache; a skeleton in the HTML would be a
+	 * shimmer that never resolves for a guest whose JavaScript never arrives,
+	 * which is the one thing worse than an absent strip. The script that
+	 * draws it is the script that replaces it.
+	 *
+	 * The SHAPES are the real card's: the same <li class="dccwl-card">, the
+	 * same head/value/attr children, so the strip does not reflow when the
+	 * readings land — only the greys turn into words. Nothing inside carries
+	 * text, and the whole list is aria-hidden, because a skeleton is not
+	 * content: what a screen reader gets instead is the polite "Loading the
+	 * latest readings" below.
+	 *
+	 * FOUR CARDS, which is a count and therefore Rob's to settle — it is the
+	 * number the canal's own strip usually holds (level, clarity, oxygen and
+	 * the trophic index) and it fills one page of the deck on a phone. It is
+	 * in the 1.45.0 report for him.
+	 * ================================================================== */
+	var SKELETON_CARDS = 4;
+
+	function buildSkeletonCard() {
+		var li = el('li', 'dccwl-card dccwl-water-fact dccwl-card-skel');
+		var head = el('div', 'dccwl-card-head');
+		head.appendChild(el('span', 'dccwl-skel dccwl-skel-label'));
+		head.appendChild(el('span', 'dccwl-skel dccwl-skel-chip'));
+		li.appendChild(head);
+		li.appendChild(el('p', 'dccwl-card-value', ''))
+			.appendChild(el('span', 'dccwl-skel dccwl-skel-value'));
+		li.appendChild(el('p', 'dccwl-water-attr', ''))
+			.appendChild(el('span', 'dccwl-skel dccwl-skel-attr'));
+		return li;
+	}
+
+	function showSkeleton(root) {
+		var list = root.querySelector('[data-dccwl-water-facts]');
+		if (!list || list.firstChild) { return; }
+		list.setAttribute('data-dccwl-skel', '1');
+		list.setAttribute('aria-hidden', 'true');
+		for (var i = 0; i < SKELETON_CARDS; i++) {
+			list.appendChild(buildSkeletonCard());
+		}
+		root.hidden = false;
+		var section = root.closest('[data-dccwl-water-root]');
+		if (section) { section.hidden = false; }
+		say('srLoading');
+	}
+
+	function clearSkeleton(root) {
+		var list = root.querySelector('[data-dccwl-water-facts]');
+		if (!list || !list.getAttribute('data-dccwl-skel')) { return; }
+		list.removeAttribute('data-dccwl-skel');
+		list.removeAttribute('aria-hidden');
+		list.textContent = '';
+		/* Back to hidden unless real readings reveal it: `fill()` owns that
+		 * decision and makes it on whether any FACT arrived, which is the
+		 * 1.34.0 rule. A skeleton must not be able to leave an empty strip
+		 * on screen. */
+		root.hidden = true;
+	}
+
+	/* ==================================================================
+	 * ITEM 8 (1.45.0) — WHAT A SCREEN READER IS TOLD, POLITELY.
+	 *
+	 * class-water-render.php had no `aria-live` and no `role="status"`
+	 * anywhere, so every change this script makes — the tab switching, the
+	 * readings landing, a place being chosen — happened in silence for
+	 * anyone not looking at the screen.
+	 *
+	 * ONE region per page, at the end of the body, written through this one
+	 * function. Live regions are announced when their CONTENTS change, so a
+	 * second region would mean two announcements racing; and `polite` means
+	 * none of this interrupts whatever the guest is reading.
+	 * ================================================================== */
+	var srNode = null;
+
+	function srRegion() {
+		if (srNode && srNode.parentNode) { return srNode; }
+		srNode = document.querySelector('[data-dccwl-water-status]');
+		if (!srNode) {
+			srNode = el('p', 'dccwl-sr');
+			srNode.setAttribute('role', 'status');
+			srNode.setAttribute('aria-live', 'polite');
+			srNode.setAttribute('data-dccwl-water-status', '1');
+			document.body.appendChild(srNode);
+		}
+		return srNode;
+	}
+
+	/* `key` names a string; `arg` fills its one placeholder. Takes a key
+	 * rather than a sentence so nothing in this file can announce text that
+	 * was never translated. */
+	function say(key, arg) {
+		var i18n = CFG.i18n || {};
+		var tpl = i18n[key];
+		if (!tpl) { return; }
+		var text = undefined === arg ? tpl : fmt(tpl, arg);
+		var node = srRegion();
+		/* Same text twice is not announced by most screen readers, so the
+		 * region is cleared first — a refresh that happens to return the
+		 * same state is still a thing the guest asked for. */
+		if (node.textContent === text) { node.textContent = ''; }
+		node.textContent = text;
 	}
 
 	/* The place the picker is on, per root. '' until the markup says. */
@@ -544,6 +774,9 @@
 		var roots = document.querySelectorAll('[data-dccwl-water-live]');
 		if (!roots.length) { return; }
 
+		/* ITEM 1: the shapes first, the readings when they land. */
+		roots.forEach(showSkeleton);
+
 		window.fetch(CFG.endpoint, { credentials: 'same-origin' })
 			.then(function (r) { return r.json(); })
 			.then(function (data) {
@@ -556,7 +789,27 @@
 				// when empty: "nothing sourced" is the signal the hub needs in
 				// order to stay silent.
 				announce(facts);
-				if (!facts.length) { return; }
+				roots.forEach(clearSkeleton);
+				if (!facts.length) {
+					/*
+					 * 1.45.0: SAID, not shown. The strip stays absent — the
+					 * module's oldest rule, and a guest sees the almanac
+					 * rather than an error — but a screen reader is told
+					 * what it would otherwise have no way of knowing, having
+					 * just been told something was loading.
+					 */
+					say('srNone');
+					return;
+				}
+				/*
+				 * ITEM 1 + ITEM 8: which KIND of answer this is. `stale` is
+				 * the server saying it served the last good copy because a
+				 * refresh or a failure window was in progress; every reading
+				 * in it still carries its own measurement date and is
+				 * labelled by that, so the difference a guest is told about
+				 * here is the FETCH, never the claim.
+				 */
+				say(data && data.stale ? 'srStale' : 'srReady');
 				roots.forEach(function (root) {
 					/*
 					 * THE PICKER IS WIRED BEFORE THE FIRST FILL, and it is
@@ -575,7 +828,9 @@
 				});
 			})
 			.catch(function () {
+				roots.forEach(clearSkeleton);
 				announce([]);   // guests see the almanac; never an error
+				say('srNone');
 			});
 	}
 
@@ -981,6 +1236,8 @@
 						detail: { pane: slug }
 					}));
 				} catch (err) { /* very old browsers: the observer still fires */ }
+
+
 			}
 
 			if (bar.getAttribute('data-dccwl-tabs-init')) { return; }
@@ -989,6 +1246,20 @@
 			btns.forEach(function (b) {
 				b.addEventListener('click', function () {
 					select(b.getAttribute('data-dccwl-water-tab-btn'));
+					/*
+					 * ITEM 8 (1.45.0): say which pane is now on screen —
+					 * and say it HERE, on the tap, not inside select().
+					 *
+					 * `aria-pressed` tells a guest which button is chosen
+					 * while focus is on it; nothing told them the content
+					 * under the bar had been swapped. select() also runs on
+					 * load and every time the hub reveals the panel, so
+					 * announcing from inside it would narrate arrivals
+					 * nobody asked about. The name is the button's own
+					 * visible label, so the announcement cannot drift from
+					 * the screen or lose its translation.
+					 */
+					say('srTab', (b.textContent || '').trim());
 				});
 			});
 			/* The FIRST tab in the bar, never a named one. 1.34.0 made Map

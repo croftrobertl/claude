@@ -437,7 +437,6 @@
 	font-weight: var(--dccwl-fw-body);
 	min-height: 44px;
 	min-width: 0;
-	outline: none;
 	/* Equal on both sides (item 6): the icon sits in the left 40px and the
 	 * clear button in the right 40px, so the text box stays symmetrical and
 	 * its centre is the bar's centre. */
@@ -653,10 +652,22 @@
 	width: 100%;
 }
 
+/* ITEM 4 (1.45.0) — THE SAME dvh PATTERN water.css HAS USED SINCE 1.31.0.
+ * iOS counts the browser chrome in `vh`, so 70vh is taller than what a guest
+ * can actually see and the bottom of a tall photograph sits under the
+ * toolbar. `dvh` is the viewport as it stands, and the @supports wrapper is
+ * what keeps the `vh` value as the fallback for a browser without it rather
+ * than replacing it. Same numbers, so nothing changes on a desktop. */
+@supports (height: 70dvh) {
+	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { max-height: 70dvh; }
+	.dccwl-sheet .dccwl-medallion-photo .dccwl-photo { max-height: 70dvh; }
+}
+
 .dccwl-sheet .dccwl-photo-credit {
 	/* muted, not faint — a required credit is text, and faint fails AA. */
 	color: var(--dccwl-text-muted);
-	font-size: 0.72rem;
+	/* 0.75rem = the 12px floor on a default root (1.45.0); was 0.72rem. */
+	font-size: 0.75rem;
 	letter-spacing: 0.02em;
 	margin: 0 0 var(--dccwl-gap);
 	/* ITEM 10 (1.37.0): centred under the photograph. The sheet has been
@@ -690,6 +701,9 @@
 @media (max-width: 600px) {
 	/* ITEM 7: the phone case keeps its own cap, not its own crop. */
 	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: auto; max-height: 60vh; }
+	@supports (height: 60dvh) {
+		.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { max-height: 60dvh; }
+	}
 }
 
 /* ======================================================================
@@ -746,6 +760,41 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 0;
 	text-align: center;
+}
+
+/* ======================================================================
+ * ITEM 11 (1.45.0) — "See The Full Entry →", at the foot of every sheet.
+ *
+ * CENTRED, which is Rob's standing rule for anything title-like, and the
+ * sheet has been centred throughout since 1.33.0 anyway. A LINK rather than
+ * a button: it navigates to another page, and the one affordance in this
+ * plugin that looks like a button and leaves the page would be the one
+ * nobody expects.
+ *
+ * It takes the primary colour and an underline — never colour alone, the
+ * 1.15.1 rule — and the arrow sits in its own span with a hair of margin so
+ * the underline does not run under the glyph.
+ * ====================================================================== */
+.dccwl-sheet .dccwl-detail-more {
+	margin: var(--dccwl-gap-lg) 0 0;
+	text-align: center;
+}
+
+.dccwl-sheet .dccwl-detail-more .dccwl-detail-more-link.dccwl-detail-more-link {
+	color: var(--dccwl-primary);
+	display: inline-block;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	/* A 44px tap target (Rob's floor) without a box: the padding is the
+	 * target, the text is the label. */
+	padding: 11px 8px;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.dccwl-sheet .dccwl-detail-more-arrow {
+	margin-left: 6px;
+	text-decoration: none;
 }
 
 .dccwl-sheet .dccwl-detail-chips {
@@ -860,7 +909,15 @@
 	/* These month labels are how a sighted guest reads the chart; screen
 	 * readers get the .dccwl-sr text. faint fails AA, so use muted. */
 	color: var(--dccwl-text-muted);
-	font-size: 0.62rem;
+	/*
+	 * 0.75rem, NOT 0.62rem (1.45.0). The old value is 12.4px on the
+	 * deployment root and 9.92px on a DEFAULT 16px one — and a guest who has
+	 * set their browser's text size smaller, which the "older clientele"
+	 * rule exists to respect, got less again. 0.75rem is exactly 12px at the
+	 * default root and 15px at the site's, so the floor holds on every root
+	 * without abandoning rem.
+	 */
+	font-size: 0.75rem;
 	letter-spacing: -0.01em;
 	font-weight: var(--dccwl-fw-body);
 }
@@ -1588,7 +1645,10 @@
 	box-shadow: var(--dccwl-shadow-raised);
 	left: 50%;
 	margin-top: 6px;
+	/* 1.45.0: dvh where the browser has it (an open menu must not run under
+	   the iOS toolbar), with the vh value left as the fallback. */
 	max-height: min(60vh, 420px);
+	max-height: min(60dvh, 420px);
 	max-width: min(92vw, 320px);
 	min-width: 220px;
 	overflow-y: auto;

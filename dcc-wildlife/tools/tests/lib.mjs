@@ -443,8 +443,48 @@ export async function openWildlife(page) {
     return true;
   });
   await page.waitForTimeout(350);
+  /*
+   * WAIT FOR THE INDEX, WHICH MAY NOT BE IN THE PAGE AT ALL (1.45.0, item 3).
+   *
+   * On a canal placement with a water panel the species index is deferred:
+   * it is fetched from /species when this panel is shown, which is the tap
+   * above. Every suite that reads `DCC_WL_CFG.species` after opening
+   * Wildlife would otherwise race that fetch — and the first one to do so
+   * reported "the sheet sample was chosen from the dataset" as a failure of
+   * the PAGE rather than of its own timing.
+   *
+   * Waits only where something is actually coming: a placement that inlined
+   * its index satisfies this on the first poll.
+   */
+  await waitForIndex(page);
   await settleGrids(page);
   return did;
+}
+
+/**
+ * Wait until the species index is actually in the page.
+ *
+ * Exported because not every suite reaches Wildlife through openWildlife():
+ * ui-overflow.mjs clicks the view rows itself, and it was the suite that
+ * found this — it read `DCC_WL_CFG.species` 400 ms after the switch and
+ * reported an empty dataset as a defect in the page rather than in its own
+ * timing. Fetching the index takes as long as the route takes, which in
+ * this harness means rendering 402 species out of PHP.
+ *
+ * Returns immediately where nothing is coming: a placement that inlined its
+ * index satisfies the condition on the first poll, and so does a page with
+ * no config at all.
+ */
+export async function waitForIndex(page) {
+  await page.waitForFunction(
+    () => {
+      const cfg = window.DCC_WL_CFG;
+      if (!cfg) { return true; }
+      return !cfg.indexDeferred || (Array.isArray(cfg.species) && cfg.species.length > 0);
+    },
+    null,
+    { timeout: 15000 }
+  ).catch(() => {});
 }
 
 /** Computed box for one selector, or null when the node is absent. */

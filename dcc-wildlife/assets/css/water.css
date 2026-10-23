@@ -230,6 +230,111 @@
 	margin: 0;
 }
 
+/* ======================================================================
+ * ITEM 2 (1.45.0) — THE FRESHNESS LINE, AND A STALE CARD.
+ *
+ * The line under the number ("Measured 2 Days Ago") is small, so it takes
+ * the FAINT token, which 1.45.0 remeasured to AA: 4.80:1 on the card
+ * surface these sit on. Measured on that surface, not on white — the 1.16.1
+ * rule, which is how the tinted-tile failures were missed the first time.
+ *
+ * A STALE CARD IS GREY GROUND AND FAINT INK, NOT OPACITY. `opacity` would
+ * scale the contrast of everything inside it by the same factor, including
+ * the source attribution, which is this module's integrity claim and the
+ * last text on the page allowed to become hard to read. The ground is the
+ * page background (#f4f7fa), where faint still measures 4.50:1. The card
+ * keeps its border and its shape, so it reads as a card with nothing
+ * current to say rather than as something broken.
+ * ====================================================================== */
+.dccwl-water-scope .dccwl-card-fresh {
+	color: var(--dccwl-text-faint);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-body);
+	line-height: 1.3;
+	margin: 2px 0 0;
+}
+
+.dccwl-water-scope .dccwl-card-stale {
+	background: var(--dccwl-page-bg);
+}
+
+/*
+ * AND IT DROPS ITS TIER COLOUR, which is the half of this that only a
+ * screenshot showed.
+ *
+ * The 1.34.0 tier border is a KEYED colour: the line above the cards reads
+ * "Green = measured today · Blue = latest published sample · Amber =
+ * general guidance". A card saying "Last Measured In April" inside a green
+ * ring says both things at once, and the ring is the one a guest reads
+ * first. Tripled class to out-rank `.dccwl-water-scope .dccwl-water-tier-*`
+ * (0,2,0) wherever it falls in the file.
+ *
+ * Grey, not a fourth meaning-colour: there is no key entry for "stale", and
+ * the 1.18.0 rule is that a colour carrying meaning has a key beside it.
+ * The card's own words carry this one.
+ */
+.dccwl-water-scope .dccwl-card-stale.dccwl-card-stale.dccwl-card-stale {
+	border-color: var(--dccwl-line-strong);
+}
+
+.dccwl-water-scope .dccwl-card-stale .dccwl-card-value-stale,
+.dccwl-water-scope .dccwl-card-stale .dccwl-card-label {
+	color: var(--dccwl-text-faint);
+}
+
+/* The sentence that REPLACES the reading when it is past its limit. It
+ * keeps the value slot's weight and line-height so the row does not change
+ * height, and drops a step in size because it is words rather than a
+ * number — "Last Measured In September" at the full value size shouts. */
+.dccwl-water-scope .dccwl-card-value-stale {
+	font-size: var(--dccwl-fs-sm);
+}
+
+/* ======================================================================
+ * ITEM 1 (1.45.0) — THE LOADING SKELETON (Rob's pick).
+ *
+ * The real card's shapes in grey, so the strip does not reflow when the
+ * readings arrive — only the greys turn into words. The shimmer is a
+ * background sweep rather than a pulsing opacity, which keeps the card's
+ * own edges steady while it runs.
+ *
+ * REDUCED MOTION STOPS THE SWEEP, NOT THE SKELETON. The shapes still hold
+ * the space and still say "something is coming"; what goes is the travel.
+ * That is the same decision the sheet makes under that setting (1.9.0) and
+ * the deck makes (1.23.0): the affordance stays, the movement does not.
+ * ====================================================================== */
+.dccwl-water-scope .dccwl-skel {
+	background: linear-gradient(
+		90deg,
+		rgba(0, 107, 207, 0.07) 25%,
+		rgba(0, 107, 207, 0.14) 37%,
+		rgba(0, 107, 207, 0.07) 63%
+	);
+	background-size: 400% 100%;
+	border-radius: 4px;
+	display: block;
+	animation: dccwl-skel-sweep 1.4s ease-in-out infinite;
+}
+
+/* Narrow enough that the head does not WRAP at 390px, which a real card's
+ * label and chip do not: the head is `flex-wrap: wrap`, so a skeleton wider
+ * than the card turns one row into two and the shape stops matching. */
+.dccwl-water-scope .dccwl-skel-label { height: 1em; width: 7em; }
+.dccwl-water-scope .dccwl-skel-chip { height: 1em; width: 4.5em; }
+/* The value slot's own height, so a skeleton card and a real card measure
+ * the same: the line-height of --dccwl-fs-value at 1.25. */
+.dccwl-water-scope .dccwl-skel-value { height: 1.25em; margin: 4px 0; width: 70%; }
+.dccwl-water-scope .dccwl-skel-attr { height: 1em; width: 60%; }
+
+@keyframes dccwl-skel-sweep {
+	0%   { background-position: 100% 0; }
+	100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-water-scope .dccwl-skel { animation: none; }
+}
+
 .dccwl-water-scope .dccwl-water-attr {
 	/* WCAG: the faint token measures 2.7:1 on these white cards, which fails AA.
 	 * This is the module's attribution — its entire integrity claim — so it is
@@ -1182,7 +1287,10 @@
 .dccwl-wind-dial { fill: #ffffff; stroke: var(--dccwl-line-strong); stroke-width: 1.5; }
 .dccwl-wind-n {
 	fill: var(--dccwl-text-muted);
-	font-size: 9px;
+	/* 0.75rem = 12px on a default root (1.45.0). It was a literal 9px, which
+	 * is under the floor on every root there is; SVG text scales with rem
+	 * exactly as HTML text does, so nothing here needed a px value. */
+	font-size: 0.75rem;
 	font-weight: var(--dccwl-fw-label);
 }
 /* The arrow is drawn, not written: stroke only, round caps, no fill — the
@@ -1294,7 +1402,12 @@
 	color: var(--dccwl-primary);
 	cursor: pointer;
 	display: inline-flex;
-	font-family: Georgia, "Times New Roman", serif;
+	/* The site's own face (Raleway on live), never one this plugin names:
+	   --dccwl-font is `inherit`. Through 1.44.6 this one glyph asked for
+	   Georgia, the only font-family in the plugin that was not inherited,
+	   so the credit button was the single control on the page in a serif.
+	   The italic stays -- it is what makes the glyph read as the (i) mark. */
+	font-family: var(--dccwl-font);
 	font-size: 15px;
 	font-style: italic;
 	font-weight: 700;
@@ -1321,7 +1434,11 @@
 	background: rgba(255, 255, 255, 0.96);
 	border-radius: var(--dccwl-radius);
 	display: block;
-	font-size: 11px;
+	/* 0.75rem, up from a literal 11px (1.45.0). This is a LICENCE surface —
+	 * each provider's required credit — so it is the last text on the page
+	 * that should be hard to read. Leaflet writes the markup; only the size
+	 * is ours. */
+	font-size: 0.75rem;
 	line-height: 1.35;
 	margin: 0 44px 8px 8px;
 	max-width: calc(100% - 60px);

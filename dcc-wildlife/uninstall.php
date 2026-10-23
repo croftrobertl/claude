@@ -40,6 +40,9 @@ if ( ! is_array( $settings ) || empty( $settings['delete_on_uninstall'] ) ) {
 }
 
 delete_option( 'dcc_wl_water' );
+// The last-good conditions payload (1.45.0): cached readings, not a setting,
+// so it goes with the settings rather than being kept for the next install.
+delete_option( 'dcc_wl_water_cond_last' );
 delete_option( 'dcc_wl_guide' );    // Guide display settings (1.32.0).
 delete_option( 'dcc_wl_settings' ); // Orphan from the sightings feature removed in 1.2.0.
 

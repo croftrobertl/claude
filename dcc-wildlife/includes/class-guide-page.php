@@ -181,6 +181,26 @@ class Guide_Page {
 			         not a tidy-up. Printed by Render so there is one copy. */ ?>
 			<?php Render::photo_credits_for_guide_page( $dataset ); ?>
 
+			<?php
+			/*
+			 * ITEM 3 (1.45.0) — THE SPECIES JSON-LD LIVES HERE NOW.
+			 *
+			 * It used to ride every /explore/ page: 53 KB of ItemList at 402
+			 * species, on the page whose prose moved HERE in 1.43.0. This is
+			 * the canonical page for the entities — the one carrying every
+			 * entry in words — so this is where the machine-readable copy
+			 * belongs, and one canonical page per entity is also what the
+			 * structured-data guidance asks for.
+			 *
+			 * Gated by the same `show_jsonld` setting and printed through
+			 * Render's same once-per-page guard, so a page holding the guide
+			 * AND a widget still emits exactly one block.
+			 */
+			if ( 1 === (int) Guide_Data::all()['show_jsonld'] ) {
+				Render::render_species_jsonld();
+			}
+			?>
+
 			<p class="dccwl-guidepage-back dccwl-guidepage-back-foot">
 				<a class="dccwl-guidepage-backlink" href="<?php echo esc_url( self::explore_url() ); ?>">
 					<?php esc_html_e( 'Back To Explore', 'dcc-wildlife' ); ?>

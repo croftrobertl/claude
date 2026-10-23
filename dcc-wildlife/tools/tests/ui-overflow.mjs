@@ -39,7 +39,7 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  launch, buildPage, widgetPage, asset, rendered, openInlineMap, settleGrids,
+  launch, buildPage, widgetPage, asset, rendered, openInlineMap, settleGrids, waitForIndex,
   check, checkAtLeast, section, note, done, skipSuite,
 } from './lib.mjs';
 
@@ -168,13 +168,27 @@ async function explore(w) {
   const fx = rendered('canal', '--enable');
   const MAP = rendered('map');
   const FACTS = rendered('facts');
+  /*
+   * AND THE SPECIES ROUTE (1.45.0, item 3).
+   *
+   * This suite replaces `window.fetch` wholesale, and until now everything
+   * that was not /map got the water facts — including the species call,
+   * which at the time only carried the sheet-only half and failed
+   * invisibly. With the index deferred the same stub left the guide with no
+   * species at all, and the suite reported that as a defect in the page.
+   * A stub that answers a question with another question's answer is the
+   * 1.32.1 lesson in its purest form.
+   */
+  const DETAIL = rendered('detail');
   const page = await buildPage(browser, {
     width: w, height: 900, touch: w < 1024, sitekit: true,
     css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/canal.css', 'assets/css/water.css'],
     body:
       `<script>window.__m=${JSON.stringify(MAP)};window.__f=${JSON.stringify(FACTS)};` +
-      `window.fetch=function(u){return Promise.resolve({ok:true,status:200,` +
-      `json:function(){return Promise.resolve(String(u).indexOf('/map')>=0?window.__m:window.__f);}});};` +
+      `window.__s=${JSON.stringify(DETAIL)};` +
+      `window.fetch=function(u){var p=String(u);return Promise.resolve({ok:true,status:200,` +
+      `json:function(){return Promise.resolve(` +
+      `p.indexOf('/map')>=0?window.__m:(p.indexOf('/species')>=0?window.__s:window.__f));}});};` +
       `</script>` + fx.html + `<script>${fx.config}</script>`,
   });
   await page.route('**/*.png', (r) => r.fulfill({
@@ -430,6 +444,9 @@ for (const w of WIDTHS) {
     document.querySelector('[data-dccwl-viewtrigger]').click();
     document.querySelector('[data-dccwl-view="wildlife"]').click();
   });
+  /* The index is fetched when this panel is shown (1.45.0, item 3), so the
+   * tiles do not exist until it lands. A fixed timeout raced it. */
+  await waitForIndex(page);
   await settleGrids(page).catch(() => {});
   await page.waitForTimeout(400);
 

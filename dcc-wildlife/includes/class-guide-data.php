@@ -122,6 +122,34 @@ final class Guide_Data {
 			'now_names_max'   => 2,
 			'month_art_max'   => 3,
 
+			/*
+			 * ---- HOW OLD A READING MAY BE AND STILL READ AS NOW (1.45.0)
+			 *
+			 * In DAYS, one per kind of measurement, because the kinds are not
+			 * comparable: a continuous level gauge should report near-daily,
+			 * while Secchi depth and dissolved oxygen are LAB SAMPLES taken
+			 * monthly to quarterly, and holding them to a gauge's clock would
+			 * delete most of what the Atlas publishes.
+			 *
+			 * WHAT PASSING THE LIMIT DOES, and what it does not. The card
+			 * stays, carrying its source and its measurement date as it
+			 * always has; it is grayed and its freshness line stops using the
+			 * present tense ("Last Measured In April" rather than "Measured 2
+			 * Days Ago"). Nothing is deleted and no number is changed — a
+			 * guest who wants the April figure can still read it, which is
+			 * the point. Water_Live's own hard cut-offs are unchanged and sit
+			 * further out (45 days for a level deviation, a year for a lab
+			 * sample); past those the reading never becomes a Fact at all.
+			 *
+			 * These are the Director's suggested values, 2026-10-22, and they
+			 * are SETTINGS because he asked for them to be editable — the one
+			 * exception in this release to "bake every choice into the
+			 * defaults".
+			 */
+			'age_max_level'   => 14,
+			'age_max_clarity' => 120,
+			'age_max_oxygen'  => 120,
+
 			/* ---- advanced ---------------------------------------------- */
 			'deck_rows'      => 3,
 			// 0 means "work it out from the page", which canal.js does by
@@ -154,6 +182,17 @@ final class Guide_Data {
 			'deck_rows'         => [ 'type' => 'int', 'min' => 1, 'max' => 4 ],
 			'sticky_offset'     => [ 'type' => 'int', 'min' => 0, 'max' => 400 ],
 			'map_cache_ttl'     => [ 'type' => 'int', 'min' => 5, 'max' => 1440 ],
+			/*
+			 * 1.45.0. Minimum 1 day, because 0 would mean "every reading is
+			 * stale the moment it is taken" -- a setting that turns the whole
+			 * strip gray is not a choice worth offering. The ceiling is ten
+			 * years: past that the limit cannot fire before Water_Live's own
+			 * one-year cut-off drops the reading anyway, so a larger number
+			 * would only look like it did something.
+			 */
+			'age_max_level'     => [ 'type' => 'int', 'min' => 1, 'max' => 3650 ],
+			'age_max_clarity'   => [ 'type' => 'int', 'min' => 1, 'max' => 3650 ],
+			'age_max_oxygen'    => [ 'type' => 'int', 'min' => 1, 'max' => 3650 ],
 		];
 	}
 

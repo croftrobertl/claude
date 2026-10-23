@@ -103,7 +103,27 @@
 	/* DECORATION ONLY — never for text. Measured 2.7:1 on the white card
 	 * surfaces this plugin uses, which fails WCAG AA at every size here. Use
 	 * --dccwl-text-muted (≥4.68:1 everywhere) for any text a guest is meant to read. */
-	--dccwl-text-faint: #8ba0b3;                      /* derived from muted */
+	/*
+	 * 1.45.0 — FAINT IS AA NOW, AND IT IS STILL NOT MUTED.
+	 *
+	 * #8ba0b3 measured 2.70:1 on white, which is why 1.15.1 ruled it
+	 * DECORATION ONLY and left it on one glyph: the `·` separator in
+	 * `.dccwl-card-dot`. The Director's audit asked for 4.5:1, and the
+	 * surfaces that glyph can sit on decided the value — the 1.16.1 rule,
+	 * measure on the surface the text actually sits on, not on white:
+	 *
+	 *   #64798c  white 4.51  card 4.48  page-bg 4.20   <- fails the card
+	 *   #5f7488  white 4.84  card 4.80  page-bg 4.50   <- passes all three
+	 *   #546d85  white 5.38  card 5.34  page-bg 5.00   <- IS --dccwl-text-muted
+	 *
+	 * So #5f7488: the lightest value that meets AA everywhere the glyph
+	 * appears. Darkening all the way to AA on EVERY surface in the plugin
+	 * (including the coral wash) lands exactly on muted — and a token that
+	 * has to equal another token is not a token. The role it keeps is
+	 * "faintest thing a guest can still read", which is a real role; what it
+	 * loses is the decoration-only caveat, because it no longer needs one.
+	 */
+	--dccwl-text-faint: #5f7488;                      /* AA on white, card and page-bg */
 	--dccwl-line: rgba(0, 107, 207, 0.15);            /* --dccgg-tile-border */
 	--dccwl-line-strong: rgba(0, 107, 207, 0.32);     /* derived */
 
@@ -175,6 +195,15 @@
 	 * narrower fallback face and passing while live wrapped. That is the
 	 * 1.32.1 defect exactly.
 	 */
+	/* 0.7rem, AND IT IS THE ONE SIZE THE 1.45.0 FLOOR DOES NOT TOUCH.
+	   It renders 14px on the deployment root (html{font-size:20px}) because
+	   that is the Availability Calendar's measured segment type, which Rob
+	   asked this switch to match exactly in 1.44.2 — ui-theme.mjs pins the
+	   14px. On a DEFAULT 16px root the same token is 11.2px, which the 12px
+	   floor would forbid, and no value satisfies both: 0.75rem clears the
+	   floor and renders 15px live, breaking the match by a pixel. Two of
+	   Rob's own decisions collide here, so neither was quietly overruled —
+	   the collision is in the 1.45.0 report for him to settle. */
 	--dccwl-fs-seg: 0.7rem;
 	--dccwl-fs-lg: 1.25rem;
 	--dccwl-fs-hero: clamp(1.75rem, 1.1rem + 2.1vw, 2.5rem);
@@ -797,6 +826,31 @@
 /* A map wants the room; a species detail does not. */
 .dccwl-sheet.dccwl-sheet-tall { height: 88vh; max-width: 980px; }
 
+/*
+ * iPHONE: `vh` COUNTS THE TOOLBAR'S ROOM AND SAFARI DOES NOT GIVE IT TO YOU
+ * (1.45.0).
+ *
+ * `100vh` on iOS Safari is the LARGE viewport — the height the page has only
+ * once the toolbar has scrolled away. A sheet sized at 88 of those is taller
+ * than the visible area while the toolbar is up, so its bottom, and the Close
+ * button in it, sit underneath the toolbar with no way to reach them. `dvh`
+ * is the DYNAMIC viewport and tracks the bar as it hides and shows.
+ *
+ * This is the same `@supports` pattern water.css has used for the map canvas
+ * since 1.31.0 (`min(240px, 40dvh)`), and the guard is what keeps a browser
+ * without `dvh` on the `vh` value it has always had rather than on nothing.
+ * Written as a SEPARATE block after the base rules, not as an edit to them,
+ * for exactly that reason.
+ *
+ * NOT the inline map (1.44.0): in ordinary page flow `dvh` makes an element
+ * resize as the toolbar moves, which is motion nobody asked for. A sheet is
+ * pinned to the viewport, so it wants to track it; a block in flow does not.
+ */
+@supports (height: 88dvh) {
+	.dccwl-sheet { max-height: 88dvh; }
+	.dccwl-sheet.dccwl-sheet-tall { height: 88dvh; }
+}
+
 .dccwl-sheet-head {
 	align-items: center;
 	border-bottom: 1px solid var(--dccwl-line);
@@ -888,6 +942,15 @@
 	.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet { transform: translateY(-50%); }
 	.dccwl-sheet.dccwl-sheet-tall { height: 84vh; }
 	.dccwl-sheet-grip { display: none; }
+
+	/* The desktop pair of the dvh block above. A tablet in landscape with a
+	 * collapsing toolbar is past this breakpoint too, so it needs the same
+	 * treatment; `@supports` nests inside the media query so neither guard
+	 * is lost. */
+	@supports (height: 84dvh) {
+		.dccwl-sheet { max-height: 84dvh; }
+		.dccwl-sheet.dccwl-sheet-tall { height: 84dvh; }
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

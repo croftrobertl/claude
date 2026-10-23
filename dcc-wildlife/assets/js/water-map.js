@@ -1110,6 +1110,29 @@
 			chipHost.textContent = '';
 			OVERLAYS.forEach(function (row) {
 				if (!groups[row[0]]) { return; }
+				/*
+				 * ITEM 7 (1.45.0) — A LAYER WITH NOTHING IN IT GETS NO CHIP.
+				 *
+				 * The group always EXISTS: build() creates all four as empty
+				 * L.layerGroups and fills them from the payload, so the old
+				 * `if (!groups[key])` guard could never be false and every
+				 * chip was always drawn. On live, /map answers
+				 * `stations: 0` — the Atlas publishes no monitoring station
+				 * for these waters — so "Monitoring Stations" sat in the row
+				 * and toggled an empty group: pressing it changed nothing,
+				 * twice, and a guest's reasonable conclusion is that the map
+				 * is broken. That is the 1.31.0 rule, which retired the
+				 * iPhone Fullscreen button for exactly this reason: a control
+				 * that cannot do anything is not offered.
+				 *
+				 * Counted from the group, not from the payload, so the test
+				 * is what the map actually HOLDS — a station the parser
+				 * dropped is absent here as well, which is the honest answer.
+				 * Nothing is hidden permanently: the chips are rebuilt on
+				 * every map build, so the day the Atlas publishes a station
+				 * the chip returns on its own.
+				 */
+				if (!groups[row[0]].getLayers || !groups[row[0]].getLayers().length) { return; }
 				var chip = el('button', 'dccwl-chip dccwl-map-chip', row[1]);
 				chip.type = 'button';
 				/* A TOGGLE, SO `aria-pressed` — not `aria-selected`, which

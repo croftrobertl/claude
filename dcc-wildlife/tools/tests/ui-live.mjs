@@ -2340,5 +2340,255 @@ for (const [w, touch] of [[390, true], [1280, false]]) {
   await page.close();
 }
 
+/* ======================================================================
+ * 1.45.0 — THE NOW TAB: LOADING, FRESHNESS, AND WHAT IS ANNOUNCED.
+ *
+ * Items 1, 2 and 8 of the Director's 2026-10-22 audit. Every one of them is
+ * about a STATE rather than a value, which is why none of the existing
+ * assertions in this file could see them: the panel mid-fetch, a reading
+ * past its age limit, and what a screen reader is told when either changes.
+ *
+ * The dates below are built RELATIVE TO NOW, on purpose. A fixed date in a
+ * fixture ages a day every day, so "Measured 3 Days Ago" would be true the
+ * morning it was written and false for ever after — and the alternative,
+ * computing the expected words from the same rule the code uses, would be a
+ * test that mirrors the implementation instead of checking it.
+ * ====================================================================== */
+section('1.45.0 — the Now tab: the skeleton, the freshness line, the announcements');
+
+function daysAgoISO(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* The month name the stale card must print, from the browser's own list —
+ * the same twelve names PHP ships, in the same order. */
+function monthNameOf(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December'][m - 1];
+}
+
+const STALE_LEVEL_DATE = daysAgoISO(40);    // limit 14  -> stale
+const FRESH_CLARITY_DATE = daysAgoISO(3);   // limit 120 -> fresh, in days
+const FRESH_OXYGEN_DATE = daysAgoISO(0);    // today
+
+const AGED = {
+  enabled: true,
+  stale: false,
+  facts: [
+    { label: 'Water Level', key: 'level',
+      value: 'About 3 inches below normal for September',
+      short: '3 in. below normal', detail: 'for September', tier: 'live',
+      group: 'primary', sourceName: 'Lake County Water Atlas',
+      date: STALE_LEVEL_DATE, dateLabel: 'reading', datePrecision: 'day' },
+    { label: 'Water Clarity', key: 'clarity', value: '2.95 ft', short: '2.95 ft',
+      detail: '', tier: 'published', group: 'primary',
+      sourceName: 'Lake County Water Atlas',
+      date: FRESH_CLARITY_DATE, dateLabel: 'sampled', datePrecision: 'day' },
+    { label: 'Dissolved Oxygen', key: 'oxygen', value: '6.4 mg/L', short: '6.4 mg/L',
+      detail: '', tier: 'published', group: 'primary',
+      sourceName: 'Lake County Water Atlas',
+      date: FRESH_OXYGEN_DATE, dateLabel: 'sampled', datePrecision: 'day' },
+  ],
+  wind: null,
+};
+
+/*
+ * A page whose /conditions call is HELD OPEN until the test releases it.
+ * That is the only way to see the loading state at all: a stubbed promise
+ * that resolves immediately has already been replaced by the time any
+ * assertion runs, which is how "it renders nothing while loading" stayed
+ * invisible for seven releases.
+ */
+async function heldWaterPanel(width, payload) {
+  const fx = rendered('water', '--enable');
+  const page = await buildPage(browser, {
+    width, height: 1600, touch: width < 800, sitekit: true,
+    css: ['assets/css/app.css', 'assets/css/water.css'],
+    body:
+      /* EVERY held request is released, not just the last one. The first
+       * draft kept a single resolver and the map's own fetch overwrote the
+       * conditions one, so the panel stayed in its loading state for ever
+       * and four assertions failed against working code. */
+      `<script>window.__p=${JSON.stringify(payload)};` +
+      `window.__held=[];` +
+      `window.__release=function(){window.__held.splice(0).forEach(function(r){r();});};` +
+      `window.fetch=function(){return new Promise(function(res){` +
+      `window.__held.push(function(){res({ok:true,status:200,` +
+      `json:function(){return Promise.resolve(window.__p);}});});});};</script>` +
+      fx.html + `<script>${fx.config}</script>`,
+  });
+  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+    await page.addScriptTag({ content: asset(f) });
+  }
+  await page.waitForTimeout(300);
+  /*
+   * THE PANEL OPENS ON MAP (1.34.0), SO THE NOW PANE IS HIDDEN.
+   *
+   * Everything below is about the Now pane, and a hidden pane has no
+   * layout: the first draft measured a skeleton card at 0px high and read
+   * it as a defect in the skeleton. Choosing the tab the way a guest does
+   * is also what makes the heights real.
+   */
+  /* What the live region said while only the fetch had happened, kept
+   * before the tab tap overwrites it — the tap is itself announced (item 8),
+   * which is correct behaviour and would otherwise erase the evidence. */
+  await page.evaluate(() => {
+    const sr = document.querySelector('[data-dccwl-water-status]');
+    window.__srAtLoad = sr ? sr.textContent.trim() : null;
+  });
+  for (const b of await page.$$('[data-dccwl-water-tab-btn]')) {
+    if ('now' === await b.getAttribute('data-dccwl-water-tab-btn')) {
+      await b.click();
+      break;
+    }
+  }
+  await page.waitForTimeout(200);
+  return page;
+}
+
+{
+  const page = await heldWaterPanel(390, AGED);
+
+  /* ---- item 1: the skeleton, while the fetch is still in flight ---- */
+  const loading = await page.evaluate(() => {
+    const list = document.querySelector('[data-dccwl-water-facts]');
+    const skel = Array.from(document.querySelectorAll('.dccwl-card-skel'));
+    const bar = document.querySelector('.dccwl-skel');
+    const sr = document.querySelector('[data-dccwl-water-status]');
+    const strip = document.querySelector('[data-dccwl-water-live]');
+    return {
+      cards: skel.length,
+      isCard: skel.every((c) => c.classList.contains('dccwl-card')),
+      ariaHidden: list ? list.getAttribute('aria-hidden') : null,
+      stripShown: strip ? !strip.hidden : false,
+      noText: skel.every((c) => '' === c.textContent.trim()),
+      animated: bar ? getComputedStyle(bar).animationName : null,
+      sr: window.__srAtLoad,
+      srLive: sr ? sr.getAttribute('aria-live') : null,
+      srRole: sr ? sr.getAttribute('role') : null,
+      /* The shape that matters: the skeleton occupies real height, so the
+       * strip does not jump when the readings land. */
+      height: skel.length ? Math.round(skel[0].getBoundingClientRect().height) : 0,
+    };
+  });
+  note(`loading state ${JSON.stringify(loading)}`);
+  checkAtLeast(1, loading.cards, 'while the fetch is in flight, skeleton cards are on screen');
+  check(loading.isCard, 'and each one IS a card — the real shape, not a bar');
+  check(loading.stripShown, 'the strip is revealed for them');
+  checkSame('true', loading.ariaHidden, 'the list is aria-hidden: a skeleton is not content');
+  check(loading.noText, 'and carries no text at all');
+  checkSame('dccwl-skel-sweep', loading.animated, 'the shimmer is running');
+  checkAtLeast(40, loading.height, 'a skeleton card holds real height, so nothing jumps when the readings land');
+  checkSame('Loading the latest readings', loading.sr, 'and a screen reader is told, politely (item 8)');
+  checkSame('polite', loading.srLive, 'aria-live=polite');
+  checkSame('status', loading.srRole, 'role=status');
+
+  /* ---- item 2: the readings land, and each says how old it is ---- */
+  await page.evaluate(() => window.__release());
+  await page.waitForTimeout(600);
+
+  const landed = await page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll('[data-dccwl-water-facts] .dccwl-card'));
+    const sr = document.querySelector('[data-dccwl-water-status]');
+    return {
+      skeletons: document.querySelectorAll('.dccwl-card-skel').length,
+      sr: sr ? sr.textContent.trim() : null,
+      cards: cards.map((c) => {
+        const label = c.querySelector('.dccwl-card-label');
+        const value = c.querySelector('.dccwl-card-value');
+        const fresh = c.querySelector('.dccwl-card-fresh');
+        return {
+          label: label ? label.textContent.trim() : '',
+          value: value ? value.textContent.trim() : '',
+          fresh: fresh ? fresh.textContent.trim() : '',
+          stale: c.classList.contains('dccwl-card-stale'),
+          bg: getComputedStyle(c).backgroundColor,
+          /* The attribution survives on a stale card: it is this module's
+           * integrity claim and must never be what gets greyed away. */
+          attr: !!c.querySelector('.dccwl-water-attr'),
+        };
+      }),
+    };
+  });
+  note(`landed ${JSON.stringify(landed)}`);
+  checkSame(0, landed.skeletons, 'the skeleton is gone once the readings land');
+  checkSame('Readings updated', landed.sr, 'and the announcement says so (item 8)');
+
+  const byLabel = {};
+  landed.cards.forEach((c) => { byLabel[c.label] = c; });
+
+  const lvl = byLabel['Water Level'];
+  check(!!lvl, 'the level card rendered');
+  if (lvl) {
+    check(lvl.stale, 'a 40-day-old level is past its 14-day limit, so the card is marked stale');
+    checkSame(`Last Measured In ${monthNameOf(STALE_LEVEL_DATE)}`, lvl.value,
+      'and its sentence names the month, in the past tense');
+    check(!/below normal|above normal/.test(lvl.value),
+      'THE PRESENT-TENSE CLAIM IS GONE — "About 3 inches below normal" is not printed from a month-old reading');
+    check(lvl.attr, 'while the source and the measurement date stay on the card');
+    check(lvl.bg !== 'rgb(255, 255, 255)' && lvl.bg !== 'rgba(0, 0, 0, 0)',
+      'and it is greyed by a ground of its own', lvl.bg);
+  }
+
+  const clar = byLabel['Water Clarity'];
+  check(!!clar, 'the clarity card rendered');
+  if (clar) {
+    check(!clar.stale, 'a 3-day-old clarity sample is well inside its 120-day limit');
+    checkSame('2.95 ft', clar.value, 'so the reading itself is what the card shows');
+    checkSame('Measured 3 Days Ago', clar.fresh, 'with its age under it, in words');
+  }
+
+  const oxy = byLabel['Dissolved Oxygen'];
+  if (oxy) {
+    checkSame('Measured Today', oxy.fresh, "today's sample says today, not \"0 days ago\"");
+  }
+
+  /* ---- item 8: switching tab is announced ---- */
+  const tabs = await page.$$('[data-dccwl-water-tab-btn]');
+  if (tabs.length > 1) {
+    const name = (await tabs[1].textContent()).trim();
+    await tabs[1].tap();
+    await page.waitForTimeout(200);
+    const said = await page.evaluate(() => {
+      const sr = document.querySelector('[data-dccwl-water-status]');
+      return sr ? sr.textContent.trim() : null;
+    });
+    note(`tab announcement: ${said}`);
+    checkSame(`${name} shown`, said, 'choosing a tab is announced by its own visible name');
+  } else {
+    check(false, 'the water panel offered more than one tab to switch between');
+  }
+
+  await page.close();
+}
+
+/*
+ * AND THE NEGATIVE CONTROL FOR THE SKELETON, which matters as much as the
+ * positive one: a page that never loads anything must not be left shimmering.
+ */
+{
+  const page = await heldWaterPanel(390, { enabled: true, facts: [], wind: null });
+  await page.evaluate(() => window.__release());
+  await page.waitForTimeout(600);
+  const after = await page.evaluate(() => {
+    const strip = document.querySelector('[data-dccwl-water-live]');
+    const sr = document.querySelector('[data-dccwl-water-status]');
+    return {
+      skeletons: document.querySelectorAll('.dccwl-card-skel').length,
+      stripHidden: strip ? strip.hidden : 'no strip',
+      sr: sr ? sr.textContent.trim() : null,
+    };
+  });
+  note(`empty answer ${JSON.stringify(after)}`);
+  checkSame(0, after.skeletons, 'an empty answer clears the skeleton');
+  checkSame(true, after.stripHidden, 'and leaves the strip hidden — a guest sees the almanac, never an error');
+  checkSame('No readings are available right now', after.sr,
+    'while a screen reader, which was told something was loading, is told how it ended');
+  await page.close();
+}
+
 await browser.close();
 done();

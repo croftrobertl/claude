@@ -65,6 +65,14 @@ if ( 'detail' === $which ) {
 		[
 			'version' => DCC_WL_VERSION,
 			'species' => \DCC_WL\Species::wire_detail(),
+			/*
+			 * AND THE INDEX, exactly as the route serves it since 1.45.0
+			 * (item 3). A fixture that carried only the detail half would
+			 * leave every deferred-index suite testing an empty guide and
+			 * reporting it as working — the route sends both, so this sends
+			 * both.
+			 */
+			'index'   => \DCC_WL\Species::wire_index(),
 		]
 	);
 	exit;

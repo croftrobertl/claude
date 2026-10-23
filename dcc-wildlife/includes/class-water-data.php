@@ -33,6 +33,19 @@ final class Water_Data {
 
 	public const OPTION = 'dcc_wl_water';
 
+	/**
+	 * The version of the BUNDLED Leaflet, for its asset URL's ?ver.
+	 *
+	 * NOT DCC_WL_VERSION, which is what it was through 1.44.6 — so a guest's
+	 * browser was told the library was "1.21.0", a version of Leaflet that
+	 * does not exist, and the file was re-downloaded on every plugin release
+	 * although its bytes had not changed since 1.17.0. A cache buster should
+	 * name the thing it busts. Bump this ONLY when the files in
+	 * assets/vendor/leaflet/ are actually replaced; `upgrade()` repairs the
+	 * stored URLs to match.
+	 */
+	public const LEAFLET_VER = '1.9.4';
+
 	/** Weather/gauge cache TTLs, in seconds. */
 	public const TTL_USGS = 900;   // 15 min — matches USGS instantaneous-values cadence.
 	public const TTL_NWS  = 1800;  // 30 min.
@@ -91,8 +104,8 @@ final class Water_Data {
 			// promise the moment a guest opened the map, and handed guest IPs
 			// to a third party. Now it is a plugin asset like any other; the
 			// tile layers are the only external requests a map makes.
-			'map_leaflet_js'    => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.js?ver=' . DCC_WL_VERSION,
-			'map_leaflet_css'   => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.css?ver=' . DCC_WL_VERSION,
+			'map_leaflet_js'    => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.js?ver=' . self::LEAFLET_VER,
+			'map_leaflet_css'   => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.css?ver=' . self::LEAFLET_VER,
 			// TWO base layers, both verified working 2026-08-27.
 			//
 			// MIND THE COORDINATE ORDER. Esri's template is {z}/{y}/{x} and
@@ -405,9 +418,52 @@ final class Water_Data {
 			}
 		}
 
+		/*
+		 * 1.45.0: the bundled Leaflet's ?ver names LEAFLET's version, not the
+		 * plugin's. A site that has pressed Save holds the plugin-version
+		 * form of the URL, and wp_parse_args keeps it over the new default
+		 * for ever (the 1.8.0 settings-merge rule), so the repair happens
+		 * here.
+		 *
+		 * NARROW BY CONSTRUCTION, like every step above. Only a URL that is
+		 * OUR OWN bundled path is touched, and only its query is replaced —
+		 * a URL pointing anywhere else is somebody's deliberate choice and is
+		 * LEFT ALONE, even if it ends in leaflet.js.
+		 */
+		foreach ( [ 'map_leaflet_js' => 'leaflet.js', 'map_leaflet_css' => 'leaflet.css' ] as $key => $file ) {
+			$v = trim( (string) ( $stored[ $key ] ?? '' ) );
+			if ( '' === $v ) {
+				continue;
+			}
+			$ours = DCC_WL_URL . 'assets/vendor/leaflet/' . $file;
+			if ( strtok( $v, '?' ) !== $ours ) {
+				continue;
+			}
+			$want = $ours . '?ver=' . self::LEAFLET_VER;
+			if ( $v !== $want ) {
+				$stored[ $key ] = $want;
+				$changed        = true;
+			}
+		}
+
 		if ( $changed ) {
 			update_option( self::OPTION, $stored );
 		}
+
+		/*
+		 * 1.45.0: delete `dcc_wl_water_bak_20260903`, a one-off safety copy
+		 * of the settings row taken by hand on the live site on 3 September
+		 * 2026. Nothing in this plugin has ever written or read it; it is a
+		 * full duplicate of the option sitting in wp_options, loaded with the
+		 * autoloaded set on every request. The settings it held have been
+		 * live and correct for seven releases, so the copy is now only
+		 * weight.
+		 *
+		 * Deliberately outside the `$changed` block and keyed on nothing:
+		 * delete_option() on an absent name is a no-op, and this must run on
+		 * a site whose settings need no other repair.
+		 */
+		delete_option( 'dcc_wl_water_bak_20260903' );
 	}
 
 	/** The water whose detailed conditions head the module. */

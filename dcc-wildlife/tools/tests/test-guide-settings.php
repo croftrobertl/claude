@@ -22,6 +22,7 @@ dcc_boot_plugin();
 use DCC_WL\Guide_Data;
 use DCC_WL\Water_Data;
 use DCC_WL\Render;
+use DCC_WL\Guide_Page;
 use DCC_WL\Canal_Render;
 use DCC_WL\Water_Render;
 use DCC_WL\Plugin;
@@ -66,11 +67,42 @@ foreach (
 		 * asserted in the display-gates section below. */
 		'the badge key'            => 'data-dccwl-badges',
 		'the month menu'           => 'data-dccwl-monthpick',
-		'the structured-data block' => 'application/ld+json',
+		/*
+		 * 'the structured-data block' => 'application/ld+json' MOVED, not
+		 * dropped (1.45.0, item 3). It is the GUIDE PAGE's now — 53 KB of
+		 * ItemList that rode every /explore/ page view, on the page whose
+		 * prose moved to /wildlife-guide/ in 1.43.0. The pair of assertions
+		 * below says where it is and where it is not, which is a stronger
+		 * statement than its old presence here was.
+		 */
 	] as $what => $needle
 ) {
 	check_contains( $base['html'], $needle, "with nothing stored, $what still renders" );
 }
+
+/*
+ * WHERE THE STRUCTURED DATA LIVES (1.45.0, item 3). Both halves, because
+ * either one alone passes against a block that was simply deleted.
+ */
+check_lacks( $base['html'], 'application/ld+json',
+	'the species JSON-LD is NOT on a widget page any more' );
+
+dccwl_test_reset();
+dcc_reset_once_guards();
+$guide_page = Guide_Page::shortcode( [] );
+check_contains( $guide_page, 'application/ld+json',
+	'and IS on the guide page, which is the canonical page for these entities' );
+check_contains( $guide_page, '"@type":"Taxon"',
+	'as the same ItemList of Taxon nodes, not a new shape' );
+
+/* The setting still governs it, where it now renders. */
+dccwl_test_reset();
+$GLOBALS['dccwl_test']['options'][ Guide_Data::OPTION ] = [ 'show_jsonld' => 0 ];
+dcc_reset_once_guards();
+check_lacks( Guide_Page::shortcode( [] ), 'application/ld+json',
+	'switching show_jsonld off removes it from the guide page too' );
+dccwl_test_reset();
+dcc_reset_once_guards();
 
 // And the numbers the scripts read are the ones that used to be hard-coded.
 preg_match( '/"set":\{(.*?)\}/', $base['config'], $m );
@@ -105,7 +137,12 @@ $gates = [
 	'show_spotlight' => 'dccwl-spotlight-tiles',
 	'show_search'    => 'data-dccwl-search ',
 	'show_subnav'    => 'data-dccwl-pick',
-	'show_jsonld'    => 'application/ld+json',
+	/*
+	 * `show_jsonld` left this table in 1.45.0: it no longer gates anything
+	 * Render::render() emits, so asserting it here would be asserting that
+	 * removing a block that is not there removes nothing. It is checked
+	 * above, on the page that does emit it.
+	 */
 ];
 foreach ( $gates as $key => $needle ) {
 	$off = dcc_month( [], [ $key => 0 ] );

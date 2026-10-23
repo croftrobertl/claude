@@ -90,6 +90,23 @@ function dcc_requires_in( string $file ): array {
 			 * at all is treated as a hole.
 			 */
 			continue;
+		} elseif ( 'DCC_WL_DIR . $map [ $class ]' === $expr ) {
+			/*
+			 * THE AUTOLOADER'S OWN REQUIRE (1.45.0). Classified, not followed,
+			 * for a reason this suite CHECKS rather than assumes: its target is
+			 * never a literal path, it is whatever $map holds -- and that map is
+			 * parsed out of the same plugin file in its own section below, where
+			 * every entry is proved to exist, to live in includes/, and to really
+			 * define the class it claims. So the files this line can reach are
+			 * already on the loaded list by a STRONGER route than following a
+			 * string would give.
+			 *
+			 * MATCHED EXACTLY, never by a pattern over variable requires.
+			 * `DCC_WL_DIR . $anything` in general is a hole of precisely the
+			 * shape 1.33.0's fatal came through, and must keep failing; only
+			 * this one line, whose map is independently verified, is recognised.
+			 */
+			continue;
 		} else {
 			$unresolved[] = $expr;
 		}
@@ -141,6 +158,53 @@ function dcc_static_calls( string $file ): array {
 	return array_keys( $out );
 }
 
+dcc_section( 'the autoload map resolves, and it is read from the plugin (1.45.0)' );
+
+/*
+ * 1.45.0 MOVED ONE FILE OFF THE REQUIRE GRAPH AND ONTO AN AUTOLOADER:
+ * class-species.php is 559 KB and was parsed on every request, including
+ * admin screens, cron and wp-login, none of which read a species.
+ *
+ * This suite failed the moment that landed — correctly, and that is the
+ * point of it. The rule it enforces has not changed (a class the plugin
+ * CALLS must be loadable when WordPress runs it); only the mechanism has.
+ * So the map is READ FROM THE PLUGIN FILE, as text, exactly as the requires
+ * are, and each entry is proved three ways: the file exists, it is in
+ * includes/, and it really defines the class the map claims.
+ *
+ * DO NOT "simplify" this by calling class_exists() or by registering the
+ * autoloader here. That is the blind spot test-bootstrap.php exists to
+ * close — a suite that loads a class by its own route can never see that
+ * production could not.
+ */
+$entry_txt = (string) file_get_contents( $plugin_dir . '/' . $entry );
+$autoload  = [];
+if ( preg_match( '/spl_autoload_register\s*\(.*?\);/s', $entry_txt, $block ) ) {
+	if ( preg_match_all( "/'([A-Za-z_\\\\]+)'\s*=>\s*'([^']+\.php)'/", $block[0], $m, PREG_SET_ORDER ) ) {
+		foreach ( $m as $row ) {
+			$autoload[ $row[1] ] = $row[2];
+		}
+	}
+}
+check( count( $autoload ) > 0, 'the plugin registers an autoload map and it parses', json_encode( $autoload ) );
+
+$auto_files = [];
+foreach ( $autoload as $fqcn => $rel ) {
+	$abs = $plugin_dir . '/' . $rel;
+	check( is_file( $abs ), "the autoloaded file exists: $rel" );
+	check( 0 === strpos( $rel, 'includes/' ), "and it lives in includes/: $rel" );
+	$short = substr( (string) strrchr( str_replace( '\\\\', '\\', $fqcn ), '\\' ), 1 );
+	if ( '' === $short ) {
+		$short = $fqcn;
+	}
+	$txt = is_file( $abs ) ? (string) file_get_contents( $abs ) : '';
+	check(
+		(bool) preg_match( '/^\s*(?:final\s+|abstract\s+)?class\s+' . preg_quote( $short, '/' ) . '\b/mi', $txt ),
+		"and it really defines class $short"
+	);
+	$auto_files[] = $rel;
+}
+
 dcc_section( 'the plugin file loads every file in includes/' );
 
 $on_disk = [];
@@ -181,6 +245,14 @@ check_same(
 );
 
 $loaded  = array_values( array_filter( array_keys( $seen ), static fn( string $f ): bool => str_starts_with( $f, 'includes/' ) ) );
+/*
+ * An AUTOLOADED file is loadable too (1.45.0) — WordPress reaches it the
+ * moment the class is named — so it belongs on this list beside the
+ * required ones. It is added from the map parsed out of the plugin file
+ * above, never from a guess about what might be autoloadable: a file nobody
+ * requires AND nobody maps is still an orphan and still fails.
+ */
+$loaded  = array_values( array_unique( array_merge( $loaded, $auto_files ) ) );
 sort( $loaded );
 $orphans = array_values( array_diff( $on_disk, $loaded ) );
 $ghosts  = array_values( array_diff( $loaded, $on_disk ) );

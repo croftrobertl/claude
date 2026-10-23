@@ -283,7 +283,23 @@ final class Render {
 				'spotlight'    => 1 === (int) $g['show_spotlight'],
 				// 1.32.0: the rest of the guide's furniture, each a setting.
 				'search'       => 1 === (int) $g['show_search'],
-				'jsonld'       => 1 === (int) $g['show_jsonld'],
+				/*
+				 * ITEM 3 (1.45.0) — THE JSON-LD IS THE GUIDE PAGE'S NOW, AND
+				 * ONLY THE GUIDE PAGE'S. Default FALSE here.
+				 *
+				 * At 402 species the ItemList is 53 KB of every /explore/
+				 * page, repeating names that page does not otherwise carry
+				 * since the prose moved to /wildlife-guide/ in 1.43.0. One
+				 * canonical page per entity is also what the structured-data
+				 * guidance asks for: the same ItemList on two URLs does not
+				 * say it twice as loudly.
+				 *
+				 * Guide_Page::render() emits it, gated by the same
+				 * `show_jsonld` setting, through the same once-per-page
+				 * guard — so a page carrying both still prints exactly one.
+				 * The flag survives so a placement can ask for it back.
+				 */
+				'jsonld'       => false,
 				/*
 				 * Per-placement values that reach the CLIENT.
 				 *
@@ -296,6 +312,24 @@ final class Render {
 				'rows_override' => null,
 				// The sub-navigation's three parts. null inherits the setting.
 				'subnav'        => null,
+				/*
+				 * ITEM 3 (1.45.0) — WHETHER THE SPECIES INDEX IS INLINED.
+				 *
+				 * True where this placement renders the species panel HIDDEN
+				 * behind a view switch, which on /explore/ is every page
+				 * view: the panel opens on Water, and the 233 KB index (36 KB
+				 * gzipped at 402 species) was being inlined for a guest who
+				 * might never choose Wildlife at all. Deferred, it rides the
+				 * /species route that the sheet detail already uses, fetched
+				 * when the panel is shown.
+				 *
+				 * ONLY THE CALLER KNOWS. Render cannot tell whether its
+				 * output lands in a visible page or inside a hidden panel —
+				 * Canal_Render does, so Canal_Render says. Default false, so
+				 * a standalone placement is unchanged and nothing it shows
+				 * waits on a network.
+				 */
+				'defer_index'   => false,
 			]
 		);
 
@@ -305,7 +339,7 @@ final class Render {
 
 		$title = sanitize_text_field( (string) $opts['title'] );
 
-		self::enqueue_assets();
+		self::enqueue_assets( (bool) $opts['defer_index'] );
 
 		$instance = [
 			'browser'     => $show_browser,
@@ -1212,7 +1246,7 @@ final class Render {
 	 * Emitted separately from AIOSEO's graph (WebPage/Organization/
 	 * LocalBusiness), which it neither touches nor duplicates.
 	 */
-	private static function render_species_jsonld(): void {
+	public static function render_species_jsonld(): void {
 		if ( self::$jsonld_printed ) {
 			return;
 		}
@@ -1276,7 +1310,7 @@ final class Render {
 	 * once. Called at render time so assets only load on pages that
 	 * actually use the widget/shortcode.
 	 */
-	private static function enqueue_assets(): void {
+	private static function enqueue_assets( bool $defer_index = false ): void {
 		wp_enqueue_style( 'dcc-wildlife' );
 		wp_enqueue_script( 'dcc-wildlife' );
 
@@ -1295,15 +1329,31 @@ final class Render {
 		 * Species with a bespoke drawing get flagged here; speciesArt() reads
 		 * it as the middle rung between the photograph and the group glyph.
 		 */
-		$species = [];
-		foreach ( Species::dataset() as $sp ) {
-			$sp['sprite'] = Sprites::has( (string) $sp['id'] );
-			[ $index ]    = Species::wire_split( $sp );
-			$species[]    = $index;
-		}
+		/*
+		 * ITEM 3 (1.45.0): inlined, or fetched with the detail half.
+		 *
+		 * `wire_index()` is the same split this loop used to do inline, now
+		 * named once in Species so the inline copy and the copy /species
+		 * serves cannot describe different species.
+		 *
+		 * WHEN IT IS DEFERRED, `species` IS AN EMPTY ARRAY RATHER THAN
+		 * ABSENT. widget.js's first guard is `Array.isArray(CFG.species)`
+		 * and it returns outright if that fails — an absent key would stop
+		 * the script before it ever reached the code that fetches the index,
+		 * which is a failure that looks exactly like a working deferral
+		 * until a guest taps Wildlife.
+		 */
+		$species = $defer_index ? [] : Species::wire_index();
 
 		$config = [
 			'species'    => $species,
+			/*
+			 * Whether the client has to go and get the index. Stated rather
+			 * than inferred from an empty list: a registry that is genuinely
+			 * empty (every species filtered out by `dcc_wl_species`) must
+			 * not send the browser after a payload that will also be empty.
+			 */
+			'indexDeferred' => $defer_index,
 			/*
 			 * Where the rest of each species lives. Version-stamped, so the
 			 * browser may cache it for a year and a release still reaches
@@ -1476,6 +1526,8 @@ final class Render {
 				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
 				/* Title Case, like every other label (Rob, 2026-10-19). */
 				'allCredits'  => __( 'Photo Credits', 'dcc-wildlife' ),
+				/* ITEM 11 (1.45.0): the sheet's link into the prose guide. */
+				'fullEntry'   => __( 'See The Full Entry', 'dcc-wildlife' ),
 			],
 			/*
 			 * THE TILE ORDER, PER SECTION (1.43.0) — ids only.
@@ -1497,6 +1549,13 @@ final class Render {
 			 * footnote row and the sheet cannot point at different places.
 			 */
 			'creditsUrl'  => Guide_Page::credits_url(),
+			/*
+			 * Where the prose guide is, for the sheet's "See The Full Entry"
+			 * link (1.45.0, item 11). Same single definition as creditsUrl
+			 * above, for the same reason: /explore/'s footnote row and the
+			 * sheet must not be able to point at different pages.
+			 */
+			'guideUrl'    => Guide_Page::url(),
 		];
 
 		wp_add_inline_script(

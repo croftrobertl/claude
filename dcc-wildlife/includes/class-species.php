@@ -685,8 +685,29 @@ final class Species {
 				'browse' => 'mammals',
 				'odds'  => 'rare',
 				'flags' => [ 'protected' ],
-				'safe'  => __( 'Protected under federal law: never touch, feed, chase or crowd one, and keep the boat at idle when one is near.', 'dcc-wildlife' ),
-				'fact'  => __( 'The first manatee ever recorded in Lake County arrived in 2015, and was named Leesburg for the city where she was first seen. She had a calf in the summer of 2017 — Sunset. In December 2019 a boat struck her, and she died of the injuries on 9 January 2020, carrying a near-full-term calf. A few have wandered up the chain since, most often in the warm months. They are kin to elephants, not to seals.', 'dcc-wildlife' ),
+				/*
+				 * THE CARE NOTE CARRIES WHAT HAPPENED TO LEESBURG (1.45.0,
+				 * Rob's instruction of 2026-10-04). It was the middle of the
+				 * entry's own story; here it is the reason the rule exists,
+				 * which is where a boat strike belongs.
+				 */
+				'safe'  => __( 'Protected under federal law: never touch, feed, chase or crowd one, and keep the boat at idle when one is near. Leesburg was struck by a boat in December 2019 and died of her injuries on 9 January 2020, carrying a near-full-term calf.', 'dcc-wildlife' ),
+				/*
+				 * SIGHTINGS FIRST, HISTORY AFTER (1.45.0, Rob's instruction).
+				 *
+				 * The entry used to open on a 2015 arrival and a 2020 death,
+				 * so the first thing a guest read about the manatee was an
+				 * obituary. It opens on what they might actually see, and the
+				 * sighting is the OWNERS' -- Rob, Erica and Rick have watched
+				 * them in the canal and on the Chain, mostly in warm months.
+				 *
+				 * The history sentence is the Director's sourced wording,
+				 * verbatim: Lake County Water Atlas, 2020-10-16 and
+				 * 2018-04-23 (both recorded in WATER-SOURCES.md). It says
+				 * documented in the HARRIS CHAIN and NOT sighted at Leesburg
+				 * -- the name is hers, not a place she was seen.
+				 */
+				'fact'  => __( 'You may see one here: your hosts have watched manatees in the canal itself and out on the Chain, most often in the warm months. Manatees were first documented in the Harris Chain in 2015; one, nicknamed Leesburg, became a local regular. They are kin to elephants rather than seals, and they surface quietly — a swirl and a round snout, gone again.', 'dcc-wildlife' ),
 				'best'  => __( 'calm, sunny days', 'dcc-wildlife' ),
 				'where' => __( 'slow water mid-canal — watch for a swirl and a round snout surfacing', 'dcc-wildlife' ),
 			],
@@ -3860,7 +3881,11 @@ final class Species {
 			'floridagar'         => [
 				'emoji' => '🐟',
 				'name'  => __( 'Florida Gar', 'dcc-wildlife' ),
-				'sci'   => 'Lepisosteus platyrhinus',
+				/* 1.45.0: was 'platyrhinus'. The accepted epithet is platyrhincus,
+				   with the c -- caught by the Director's iNaturalist pull of
+				   2026-10-22. A misspelt binomial is the one kind of name error
+				   that is simply wrong rather than a taxonomy disagreement. */
+				'sci'   => 'Lepisosteus platyrhincus',
 				'group' => 'critters',
 				'browse' => 'fish',
 				'idgroup' => 'longfish',
@@ -8525,37 +8550,37 @@ final class Species {
 		'spottedsandpiper' => 'Photographed on Sanibel Island in WINTER plumage, which has no spots — and that is deliberate. September to May this is how the bird looks here; the spots it is named for belong to the breeding season further north. The constant teetering, not the spots, is what names it on this canal.',
 		'forsterstern' => 'Photographed at Daytona Beach in NON-BREEDING plumage, again on purpose: the black bandit mask through the eye is the winter head, and the black cap most tern pictures show is what these birds wear somewhere else. This is the one you will see over the lakes.',
 		'harrier' => 'A female in flight from below, photographed at Gainesville. The white rump patch that identifies a harrier gliding away over a marsh is on the UPPER side and is not visible in this view — what this frame shows instead is the owl-like face and the barred underwing.',
-		'herringgull' => 'Photographed in Wakulla County — the only research-grade adult available; most open-licence Florida images are brown juveniles. Its legs are under water, so the pink-legs-versus-yellow-legs test against the ring-billed gull has to be taken from the text rather than from this frame.',
+		'herringgull' => 'Photographed in Wakulla County — the only research-grade adult available; most open-license Florida images are brown juveniles. Its legs are under water, so the pink-legs-versus-yellow-legs test against the ring-billed gull has to be taken from the text rather than from this frame.',
 		'ringneckedduck' => 'A drake at Boyd Hill, St Petersburg. The chestnut neck ring the bird is named for is barely visible on a living bird and is not the mark to use; the white ring round the bill, which is plain in this frame, is.',
-		'mallard' => 'A drake, photographed outside Florida — the photographer is based in Ontario and the file states no location. A drake was chosen deliberately: the only open-licence Florida images were hens, and a hen mallard against a mottled duck is precisely the confusion this entry exists to settle.',
-		'screechowl' => 'A GREY-morph bird in Hillsborough County. Both the grey and the rust-red morph occur here, sometimes in the same brood, so colour is not the identification — the size and the ear tufts are.',
+		'mallard' => 'A drake, photographed outside Florida — the photographer is based in Ontario and the file states no location. A drake was chosen deliberately: the only open-license Florida images were hens, and a hen mallard against a mottled duck is precisely the confusion this entry exists to settle.',
+		'screechowl' => 'A GRAY-morph bird in Hillsborough County. Both the gray and the rust-red morph occur here, sometimes in the same brood, so color is not the identification — the size and the ear tufts are.',
 		// Batches 12 and 13 (1.33.0). THREE notes out of sixty photographs, and
 		// the drop from eight in the last batch is the point: these are perched
 		// songbirds photographed showing their marks, where batches 10 and 11 were
 		// distant birds in flight. All three here are the same failure — the frame
 		// shows a bird in a plumage or a sex that does not match the name.
 		'goldfinch' => 'WINTER plumage, photographed in Jacksonville: olive-tan with black wings, and not a trace of the canary yellow the name promises. This is the only plumage the bird wears in Florida, so the picture is right and the expectation is wrong — the conical bill and the notched tail are what name it here.',
-		'kinglet' => 'The ruby crown is RAISED in this frame, which is unusual: the male shows it only when excited or cross, and it is hidden under grey feathers the rest of the time. Do not expect to see it. The broken white eye ring and the constant wing-flicking are the marks that work.',
+		'kinglet' => 'The ruby crown is RAISED in this frame, which is unusual: the male shows it only when excited or cross, and it is hidden under gray feathers the rest of the time. Do not expect to see it. The broken white eye ring and the constant wing-flicking are the marks that work.',
 		'hummingbird' => 'A FEMALE hovering at Fort Myers, and her throat is plain white. Only the male carries the ruby gorget the bird is named for, so this is what a guest is most likely to be looking at — and why the entry says so rather than leading on the throat.',
 		// Batch 9 (1.33.0). Four photographs are the right species photographed
 		// outside Florida, which the rule says to declare. Two of the four are
 		// invasives shown in their NATIVE range, which is worth saying plainly
 		// rather than leaving a reader to wonder why a Cuban treefrog was
 		// photographed in the Bahamas.
-		'greentreefrog' => 'Photographed in Virginia, not Florida. The same species, chosen for the clearest view of the white side-stripe that names it — the Florida images available were either a blue colour variant or a frog behind mesh.',
+		'greentreefrog' => 'Photographed in Virginia, not Florida. The same species, chosen for the clearest view of the white side-stripe that names it — the Florida images available were either a blue color variant or a frog behind mesh.',
 		'leopardfrog' => 'Photographed in Virginia, not Florida. The same species; the Florida images available were frogs in birdbaths and fountains rather than at a wild water’s edge.',
 		'cubantreefrog' => 'Photographed in the Bahamas, inside this frog’s NATIVE range — it is an invader here, not there. Chosen for the close view of the oversized toe pads and warty skin; the Florida images available were night shots on walls.',
 		'greenhousefrog' => 'Photographed in its native Caribbean range rather than Florida, where it is an introduction. It is in leaf litter, which is the habit that matters: this frog has no tadpole stage and is found well away from water.',
 		// Batch 7 (1.33.0).
-		'pusscaterpillar' => 'Photographed in Virginia, not Florida — most open-licence images of this species show the adult moth or the cocoon, and the caterpillar is the stage that stings. The same species lives here.',
-		'paperwasps' => 'A Guinea paper wasp on its nest, photographed in Virginia. The species occurs in Florida, and the open umbrella of comb covered in wasps is the thing to recognise whichever Polistes built it.',
+		'pusscaterpillar' => 'Photographed in Virginia, not Florida — most open-license images of this species show the adult moth or the cocoon, and the caterpillar is the stage that stings. The same species lives here.',
+		'paperwasps' => 'A Guinea paper wasp on its nest, photographed in Virginia. The species occurs in Florida, and the open umbrella of comb covered in wasps is the thing to recognize whichever Polistes built it.',
 		'chiggers' => 'An adult trombiculid mite, photographed in Oklahoma. The stage that bites is the larva, which is a fraction of this size and effectively invisible — there is no photograph that would help you spot one, which is rather the point of the entry.',
 		// Batch 6 (1.33.0). The only open-licence photograph of this species
 		// that could be found anywhere — iNaturalist holds three in total and
 		// Commons a smaller copy of this same one. It is a head-in-shell frame,
 		// so the two marks the entry names (no shell stripes, no face stripes)
 		// are only half visible in it, and saying so is the rule.
-		'floridamudturtle' => 'The only open-licence photograph of a Florida mud turtle that could be found. It is a close-up with the head drawn in, so the plainness that identifies this turtle — an unmarked shell and an unstriped face — is easier to check against the striped mud turtle’s photograph than in this frame alone.',
+		'floridamudturtle' => 'The only open-license photograph of a Florida mud turtle that could be found. It is a close-up with the head drawn in, so the plainness that identifies this turtle — an unmarked shell and an unstriped face — is easier to check against the striped mud turtle’s photograph than in this frame alone.',
 		// Batch 8 (1.33.0). The photographer's own source page is a U.S. Army
 		// Fort Stewart page in GEORGIA, and no location is stated on the file.
 		// The guide's rule is that a photograph identified by what is ABSENT
@@ -9012,6 +9037,26 @@ final class Species {
 			}
 		}
 		return [ $index, $detail ];
+	}
+
+	/**
+	 * The index half of every species, in registry order (1.45.0).
+	 *
+	 * The same list `Render::enqueue_assets()` inlines, built by the same
+	 * split, so the inline copy and the fetched copy cannot describe
+	 * different species — which is the whole reason this is a function here
+	 * rather than a second loop in Guide_Rest.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function wire_index(): array {
+		$out = [];
+		foreach ( self::dataset() as $sp ) {
+			$sp['sprite'] = Sprites::has( (string) $sp['id'] );
+			[ $index ]    = self::wire_split( $sp );
+			$out[]        = $index;
+		}
+		return $out;
 	}
 
 	/**

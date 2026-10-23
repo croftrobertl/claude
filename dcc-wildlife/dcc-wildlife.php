@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Wildlife
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       "On the Canal This Month" wildlife guide, plus a fishing & water-conditions module for Dora Canal Court. The wildlife guide and the water almanac are 100% WordPress-native — no external services. An optional, off-by-default live layer fetches public USGS and NWS data server-side; no API keys, no accounts, no CDN scripts.
- * Version:           1.44.6
+ * Version:           1.45.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -18,12 +18,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DCC_WL_VERSION', '1.44.6' );
+define( 'DCC_WL_VERSION', '1.45.0' );
 define( 'DCC_WL_FILE', __FILE__ );
 define( 'DCC_WL_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DCC_WL_URL', plugin_dir_url( __FILE__ ) );
 
-require_once DCC_WL_DIR . 'includes/class-species.php';
+/*
+ * THE REGISTRY IS AUTOLOADED, NOT REQUIRED (1.45.0).
+ *
+ * class-species.php is 572 KB — the 402-entry registry, the calendar, the
+ * photo map and the credits — and it was parsed on EVERY WordPress request,
+ * including admin screens, cron, REST calls to other plugins and wp-login.
+ * Nothing on those paths reads a species. The Director measured it; this is
+ * the one file in the plugin big enough for the parse to be worth avoiding.
+ *
+ * ONE class, ONE file, mapped explicitly rather than by a name-to-path rule:
+ * a convention that guesses a filename is how a typo becomes a fatal, and
+ * the rest of this plugin loads eagerly on purpose — the classes below are
+ * small and every request that renders anything needs them.
+ *
+ * `test-bootstrap.php` knows about this map and still proves the class is
+ * reachable: an autoloaded file is on the require graph, and a class the
+ * autoloader cannot resolve to a real file fails the suite exactly as a
+ * missing `require_once` does. That suite exists because 1.33.0 fataled on
+ * activation with every other suite green; it is not routed around here.
+ */
+spl_autoload_register(
+	static function ( string $class ): void {
+		$map = [
+			'DCC_WL\\Species' => 'includes/class-species.php',
+		];
+		if ( isset( $map[ $class ] ) ) {
+			require_once DCC_WL_DIR . $map[ $class ];
+		}
+	}
+);
+
 require_once DCC_WL_DIR . 'includes/class-sprites.php';
 require_once DCC_WL_DIR . 'includes/class-photo-library.php';
 require_once DCC_WL_DIR . 'includes/class-guide-data.php';

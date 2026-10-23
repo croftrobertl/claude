@@ -51,9 +51,13 @@
 	var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	var speciesById = {};
-	CFG.species.forEach(function (s) {
-		speciesById[s.id] = s;
-	});
+	function indexSpecies() {
+		speciesById = {};
+		CFG.species.forEach(function (s) {
+			speciesById[s.id] = s;
+		});
+	}
+	indexSpecies();
 
 	/* ------------------------------------------------------------------
 	 * THE SHEET-ONLY HALF, FETCHED ONCE (1.33.0)
@@ -97,6 +101,17 @@
 			.then(function (r) { return r.json(); })
 			.then(function (data) {
 				if (!data || !data.species) { throw new Error('no species'); }
+				/*
+				 * ITEM 3 (1.45.0): the INDEX arrives here too on a page that
+				 * deferred it, and it has to be taken first — mergeDetail()
+				 * writes into the rows `speciesById` holds, so merging the
+				 * detail half into an empty index would silently drop every
+				 * field of it.
+				 */
+				if (CFG.indexDeferred && Array.isArray(data.index) && data.index.length) {
+					CFG.species = data.index;
+					indexSpecies();
+				}
 				mergeDetail(data.species);
 				detail.state = 'ready';
 				return true;
@@ -650,6 +665,44 @@
 			}
 
 			body.appendChild(likelihoodStrip(sp));
+
+			/*
+			 * ITEM 11 (1.45.0) — THE WAY OUT OF THE SHEET AND INTO THE GUIDE.
+			 *
+			 * The sheet holds the species as a card; /wildlife-guide/ holds
+			 * it as prose, with everything the card trims. Until now the two
+			 * were joined in one direction only — the guide links back to
+			 * /explore/ — so a guest who wanted the longer entry had to find
+			 * the Guide link in the footnote row and then find the species
+			 * again in a page of 402.
+			 *
+			 * THE ANCHOR IS THE SPECIES' OWN ID, which is what the guide
+			 * page actually renders (`<article class="dccwl-fg" id="…">`).
+			 * The brief asked for `#dccwl-fl-<key>`; that prefix belongs to
+			 * the flag SPRITES today and to Part B's row anchors tomorrow,
+			 * and a deep link to an id that does not exist lands at the top
+			 * of the page and looks like a dud. So this points at the live
+			 * anchor and the report says so. Nothing is composed by hand:
+			 * `guideUrl` comes from Guide_Page, the one definition of where
+			 * that page is, so this link and the footnote row cannot
+			 * disagree.
+			 *
+			 * CENTRED, per Rob's standing alignment rule — it is a title-like
+			 * affordance, not a paragraph. The arrow is a separate
+			 * aria-hidden span so no translator has to carry a glyph and no
+			 * screen reader reads one.
+			 */
+			if (CFG.guideUrl && sp.id) {
+				var more = el('p', 'dccwl-detail-more');
+				var moreLink = el('a', 'dccwl-detail-more-link',
+					CFG.i18n.fullEntry || 'See The Full Entry');
+				moreLink.href = CFG.guideUrl + '#' + encodeURIComponent(sp.id);
+				var arrow = el('span', 'dccwl-detail-more-arrow', '\u2192');
+				arrow.setAttribute('aria-hidden', 'true');
+				moreLink.appendChild(arrow);
+				more.appendChild(moreLink);
+				body.appendChild(more);
+			}
 		}
 
 		function allTiles() {
@@ -1811,6 +1864,26 @@
 			setMonth: setMonth,
 			month: function () { return state.month; }
 		});
+
+		/*
+		 * ITEM 3 (1.45.0): a month asked for before this root existed.
+		 *
+		 * canal.js reads `#canal-month=` and calls DCCWL_Widget.setMonth()
+		 * while the species panel is still hidden and, with the index
+		 * deferred, before this function has ever run. That call stashed the
+		 * month on the element; this applies it, after the handle is
+		 * registered so nothing re-enters, and clears it so a later
+		 * re-initialisation cannot resurrect a month the guest has since
+		 * changed.
+		 */
+		var pending = root.getAttribute('data-dccwl-pending-month');
+		if (null !== pending && '' !== pending) {
+			var pm = parseInt(pending, 10);
+			root.removeAttribute('data-dccwl-pending-month');
+			var pex = '1' === root.getAttribute('data-dccwl-pending-explicit');
+			root.removeAttribute('data-dccwl-pending-explicit');
+			if (pm >= 0 && pm <= 11) { setMonth(pm, pex); }
+		}
 	}
 
 	/* ------------------------------------------------------------------
@@ -1930,7 +2003,26 @@
 		},
 		setMonth: function (root, m, explicit) {
 			var h = roots.get(root);
-			if (h) { h.setMonth(m, explicit); }
+			if (h) { h.setMonth(m, explicit); return; }
+			/*
+			 * ITEM 3 (1.45.0): THE ROOT MAY NOT EXIST YET.
+			 *
+			 * With the index deferred, a root inside the hidden species
+			 * panel is not initialised until that panel is shown — and
+			 * canal.js's deep-link path calls this BEFORE it shows the
+			 * panel, because `#canal-month=april` has to open Wildlife
+			 * already filtered. Dropping the call on the floor (which is
+			 * what the old `if (h)` did) would land the guest on an unfiltered
+			 * list and lose the month they asked for.
+			 *
+			 * So it is stashed on the element and initRoot() applies it as
+			 * its first act. An attribute rather than a property: it is
+			 * visible in the DOM when something goes wrong, and it is the
+			 * same channel initRoot already reads its per-placement options
+			 * from.
+			 */
+			root.setAttribute('data-dccwl-pending-month', String(m));
+			if (explicit) { root.setAttribute('data-dccwl-pending-explicit', '1'); }
 		},
 		month: function (root) {
 			var h = roots.get(root);
@@ -1966,8 +2058,52 @@
 		});
 	}
 
+	/* ==================================================================
+	 * ITEM 3 (1.45.0) — A ROOT THAT HAS NO INDEX YET WAITS FOR ONE.
+	 *
+	 * On /explore/ the species panel is hidden behind the view switch and
+	 * the index is not in the page at all (Render::enqueue_assets). Three
+	 * cases, and the third is the one that matters:
+	 *
+	 *   - nothing deferred: initialise now, exactly as before;
+	 *   - deferred but this root is VISIBLE (a standalone [dcc_wildlife] on
+	 *     a page that also carries the canal, which prints the shared config
+	 *     first and therefore decided the deferral): fetch immediately, so
+	 *     the one placement a guest can actually see is never left empty;
+	 *   - deferred and hidden: wait for `dccwl:panel-shown`, which canal.js
+	 *     fires on the panel it reveals. That is the whole saving — the
+	 *     bytes are fetched when a guest asks for Wildlife and never for a
+	 *     guest who stays on Water.
+	 *
+	 * The fetch is ensureDetail(), not a second call: /species carries both
+	 * halves, so a guest who opens the panel has the sheet data already and
+	 * the first species they tap opens with no wait at all.
+	 * ================================================================== */
+	function initDeferredRoot(root) {
+		var panel = root.closest('[data-dccwl-panel]');
+		var hidden = !!(panel && panel.hidden);
+		var start = function () {
+			ensureDetail().then(function () {
+				/* Initialise even when the fetch FAILED. The page still has
+				 * its server-rendered furniture and the guide degrades to
+				 * what is in the markup — the 1.33.0 rule for the detail
+				 * half, applied to the index: what is missing is missing,
+				 * and nothing renders an error where a species should be. */
+				initRoot(root);
+			});
+		};
+		if (!hidden) { start(); return; }
+		panel.addEventListener('dccwl:panel-shown', start, { once: true });
+	}
+
 	function initAll() {
-		document.querySelectorAll('.dccwl-root').forEach(initRoot);
+		document.querySelectorAll('.dccwl-root').forEach(function (root) {
+			if (CFG.indexDeferred && !CFG.species.length) {
+				initDeferredRoot(root);
+			} else {
+				initRoot(root);
+			}
+		});
 		initFullguideClose(document);
 		initCountdown();
 		/* The other routes in: a tab, a chip, the search box, a month. Any of

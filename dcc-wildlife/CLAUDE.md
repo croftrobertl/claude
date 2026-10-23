@@ -4691,3 +4691,212 @@ Mutations verified red against the final tree, each restored with `cp`/`mv`
 and the whole harness re-run after: the old label back, the almanac repair
 step deleted, and the fold's spacing removed (`[{"gap":0}]` at all three
 widths).
+
+### 41. 1.45.0 — the Director's audit of 2026-10-22, Part A
+
+Eleven findings, every one measured on live. Three of them are the same
+shape and that shape is worth naming first: **a defect in what happens when
+there is NO value — missing, stale, or not yet fetched — is invisible to a
+suite that only ever asks whether a value renders correctly.** The Now tab
+coming up blank, a September reading read as today's, and 233 KB of species
+index inlined into a page that never shows it were all live for releases
+while 35 green suites measured the happy path beside them.
+
+**Parts B and C of the brief are NOT in this release.** The three guide
+mockups, the switch-placement image, `Wildlife local-first
+classification.csv` (402 rows of iNaturalist records) and
+`Wildlife local-first summary.md` did not arrive in the container —
+`/mnt/user-data/uploads` and `/mnt/attach` are both empty and a filesystem
+search found none of them. The classification is record counts, dates and
+observation URLs per species: inventing any of it would break the module's
+founding rule, and Part B's pinned switch, its "Lake County" chip, its
+search placeholder and its pill counts all depend on it.
+
+#### THE NOW TAB CAME UP BLANK, AND THE BLANK WAS CACHED (item 1)
+
+`Water_Live::conditions()` returned an empty set whenever the 15-minute
+transient had expired AND either the 30-second refresh lock or the 5-minute
+failure marker was set — then `Water_Rest` sent that emptiness with
+`Cache-Control: public, max-age=120`. **The one guest who hit the race was
+the one guaranteed to keep seeing nothing**, for two minutes, behind three
+cache layers. Three changes, and all three are needed:
+
+- **A last-good copy, in an OPTION and not a transient** (`LAST_OPTION`,
+  autoload false). A transient is what just expired; on this site one can be
+  evicted at any moment. It is written only when a fetch actually produced
+  gated facts, so a bad pass can never overwrite a good copy.
+- **The cache header follows the answer**: two minutes for fresh readings,
+  thirty seconds for the last-good copy, `no-store` for nothing at all. *An
+  absence is never worth remembering.*
+- **The hourly warm job takes the conditions too.** It existed to keep a
+  guest off the map's fourteen-call cold path and warmed only the map, while
+  the transient every Now tab reads was left to whichever guest arrived
+  after it expired — the guest who then met the lock.
+
+**The gate is untouched.** Every fact in the copy went through
+`Water_Fact::make()` when it was fetched and carries its own MEASUREMENT
+date, so a reading served from there is labelled with its real age by the
+same code that labels a fresh one. **What is served stale is the FETCH,
+never the claim.**
+
+#### AN OLD READING MAY NOT SPEAK IN THE PRESENT TENSE (item 2)
+
+Live showed "About 3 inches below normal for September" from a 22 September
+reading, dissolved oxygen from 14 April, and lake clarity from March and
+May. Each card now carries its age in words, and past a limit of its own the
+card is greyed and **the sentence is replaced** by "Last Measured In
+April" — the source and the measurement date stay exactly where they were.
+
+- **The age is computed in the BROWSER, from the measurement date.** It has
+  to be: the payload is cached by a transient, by SpeedyCache and by the
+  browser, so an age worked out when the HTML was built is wrong by however
+  long the page sat in a cache. PHP owns the limits and the words.
+- **The present-tense sentence is WITHHELD, not rewritten.** A past-tense
+  version would be this codebase inventing wording, which is a design choice
+  and Rob's to make. Withholding is what this module already does when it
+  does not know something. *Flagged in the report: a stale clarity card no
+  longer shows its figure at all, and he may prefer the number kept with the
+  past-tense line under it.*
+- **Three settings, not one**, because the kinds are not comparable: a
+  continuous gauge should report near-daily (14 days) while Secchi and
+  dissolved oxygen are lab samples taken monthly to quarterly (120). They
+  live in `Guide_Data`, which validates by schema, and they are the one
+  exception in this release to "bake every choice into the defaults" —
+  the Director asked for them to be editable.
+- `Water_Live`'s own hard cut-offs are unchanged and sit further out (45
+  days for a level deviation, a year for a lab sample). Past those a reading
+  never becomes a Fact at all.
+- The dissolved-oxygen fact gained `key => 'oxygen'` so its limit can find
+  it **without matching a translated label** — the same reason `key` was
+  added in 1.34.0, and it is still metadata that can admit nothing.
+
+#### /explore/ WAS CARRYING A LIST NOTHING ON IT SHOWED (item 3)
+
+That page opens on Water; the species panel is hidden behind the view
+switch. It was inlining the whole 402-species index anyway — and a 53 KB
+`ItemList` of structured data, on the page whose prose moved to
+/wildlife-guide/ in 1.43.0.
+
+| | raw | gzip |
+|---|---|---|
+| /explore/ HTML + inline config, 1.44.6 | 361,671 | 59,647 |
+| the same page, 1.45.0 | **64,740** | **16,067** |
+
+- **`Render::render()` takes `defer_index`, and only the CALLER can set it.**
+  Render cannot tell whether its output lands in a visible page or inside a
+  hidden panel; `Canal_Render` can, and passes **the same expression that
+  hides the panel** (`$has_water`). If those two ever disagreed, a visible
+  panel would be waiting on a fetch for its first paint.
+- **The index rides the EXISTING `/species` route**, beside the detail half,
+  so a guest who opens Wildlife makes one request and the first species they
+  tap opens with no wait. `Species::wire_index()` is the one builder, so the
+  inline copy and the fetched copy cannot describe different species —
+  asserted as an identity, not by spot-checking fields.
+- **`species` is an empty ARRAY when deferred, never absent.** widget.js's
+  first guard is `Array.isArray(CFG.species)` and it returns outright if
+  that fails — an absent key would stop the script before it reached the
+  code that fetches, a failure that looks exactly like a working deferral
+  until somebody taps Wildlife.
+- **A month in the URL is stashed, not dropped.** canal.js reads
+  `#canal-month=` and calls `DCCWL_Widget.setMonth()` *before* it shows the
+  panel — i.e. before the root exists. The old `if (h)` silently discarded
+  it; it is now written to `data-dccwl-pending-month` and applied by
+  `initRoot()` as its first act.
+- The JSON-LD is emitted by `Guide_Page` now, through Render's same
+  once-per-page guard and gated by the same `show_jsonld` setting.
+
+#### THE SMALLER ONES, AND THE TWO THAT ARE NOT WHAT THEY LOOKED LIKE
+
+- **iPhone sheets (item 4):** the `@supports (height: Ndvh)` pattern
+  water.css has used since 1.31.0, applied to app.css's 88vh/84vh sheet
+  rules and widget.css's 70vh/60vh photo hero.
+- **Tiny text (item 5):** 0.62rem, a literal 9px and a literal 11px all went
+  to 0.75rem — **12px on a DEFAULT 16px root**, which is the hostile case.
+  The deployment root is 20px, which is why four sub-floor sizes survived a
+  dozen releases of reading the live page.
+- **`--dccwl-text-faint` is AA now (item 6):** #8ba0b3 (2.70:1) → #5f7488,
+  measured on every surface the `·` glyph sits on, not on white — white
+  4.84, card 4.80, page-bg 4.50. #64798c fails the card at 4.48; darkening
+  to AA on *every* surface lands exactly on `--dccwl-text-muted`, and a
+  token that has to equal another token is not a token.
+- **An empty layer gets no chip (item 7).** `/map` answers `stations: 0`,
+  and the guard was `if (!groups[key])` — but `build()` creates all four
+  groups as empty `L.layerGroup`s, so that condition could never be false.
+  The question is now what the group HOLDS. The positive control is not
+  optional: a second payload with one station must bring the chip back,
+  because "no stations chip" is also what a broken chip builder produces.
+- **Screen readers (item 8):** one `role="status" aria-live="polite"` region
+  per page, written through one function that takes a STRING KEY rather than
+  a sentence, so nothing can announce untranslated text. The tab
+  announcement fires **on the tap, not inside `select()`** — select() also
+  runs on load and whenever the hub reveals the panel, and announcing from
+  there would narrate arrivals nobody asked about.
+- **Ten British spellings in the photo notes (item 9)**, and the spelling
+  suite extended to sweep **every species string**, not only the
+  translatable ones: `PHOTO_NOTES` and `PHOTO_SOURCES` are bare literals,
+  which is exactly why 1.44.4's i18n extractor missed them. The gate then
+  caught a British "greyed" in this release's own admin help text.
+- **Item 11's anchor is `#<id>`, not the brief's `#dccwl-fl-<key>`.** That
+  prefix belongs to the flag SPRITES today and to Part B's row anchors
+  tomorrow; a deep link to an id that does not exist lands at the top of the
+  page and looks like a dud. Flagged for the Director.
+
+#### `test-css.php` — THE STYLESHEET SOURCE LINT, AND ITS ONE EXEMPTION
+
+Four of the eleven findings were single declarations sitting in plain sight.
+A source lint is what catches a number that **cannot be checked by looking at
+the live page**, which is the whole story of the 12px floor on a 20px root.
+It gates: the floor (declarations AND tokens), every `outline: none` being a
+`:focus` rule that draws the ring, a `vh` height having a `dvh` counterpart,
+no stylesheet naming a typeface, and no `prefers-color-scheme`.
+
+**It strips comments first**, because the rules are documented beside the
+declarations they govern and those comments quote the forbidden values
+verbatim — a lint that reads its own documentation fails on a correctly
+fixed file. Same trap as the contrast grep in this file.
+
+**Every exemption names an exact string and has its justification CHECKED.**
+The search input's `outline: none` is allowed because
+`.dccwl-search-field:focus-within` draws the ring one level out — and the
+suite asserts that rule exists. The hub's `.dccwl-panel` is allowed because
+it is `tabindex="-1"` and therefore unreachable by key — and the suite reads
+that tabindex out of the renderer. *An allowlist whose justification is not
+itself checked is a hole with a comment on it.*
+
+**THE ONE SIZE THE FLOOR DID NOT TOUCH, AND IT IS A COLLISION OF ROB'S OWN
+DECISIONS.** `--dccwl-fs-seg` is 0.7rem = 14px on the deployment root, which
+is the Availability Calendar's measured segment type that he asked this
+switch to match exactly (1.44.2); ui-theme.mjs pins that 14px. On a default
+16px root it is 11.2px, which the floor forbids. **No value satisfies both**
+— 0.75rem clears the floor and renders 15px, breaking the match. Raising it
+would have overruled one of his decisions with another, so it is exempted,
+named in the lint, and put to him in the report.
+
+#### What else the harness learned this round
+
+- **`test-bootstrap.php` failed the moment the autoloader landed, and that
+  was the suite doing its job.** It was taught the map rather than weakened:
+  the map is parsed out of the plugin file and every entry proved three ways
+  (the file exists, it lives in includes/, it really defines that class).
+  The autoloader's own `require DCC_WL_DIR . $map[$class]` is then matched
+  **as an exact string**, never by a pattern over variable requires —
+  `DCC_WL_DIR . $anything` in general is a hole of precisely the shape
+  1.33.0's fatal came through and must keep failing.
+- **Two suites had encoded the pre-1.45.0 world and were updated, not
+  loosened.** test-guide-settings.php asserted the JSON-LD renders from
+  `Render::render()`; it now asserts where it IS and where it is NOT, which
+  is a stronger statement than its old presence was. test-species.php's
+  "still renders the whole page" floor came down from 100,000 characters to
+  40,000, because 53 KB of ItemList and the inline index left on purpose.
+- **A held-open fetch is the only way to see a loading state.** A stubbed
+  promise that resolves immediately has already been replaced by the time
+  any assertion runs. The first draft of that helper kept ONE resolver and
+  the map's own fetch overwrote the conditions one, so the panel never left
+  its loading state and four assertions failed against working code.
+- **The water panel opens on Map, so the Now pane is hidden and has no
+  layout.** The same draft measured a skeleton card at 0px high and read it
+  as a defect in the skeleton.
+- **Dates in a fixture must be relative to now.** "Measured 3 Days Ago" from
+  a fixed date is true the morning it is written and false for ever after;
+  computing the expected words from the same rule the code uses would be a
+  test that mirrors its implementation.

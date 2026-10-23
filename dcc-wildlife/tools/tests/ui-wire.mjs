@@ -53,6 +53,49 @@ check(full.headings.includes('Where To Look'), 'so is where to look');
 check(full.headings.includes('Best Time'), 'and the best time');
 checkAtLeast(3, full.lookalikes, 'and the look-alikes, which need idgroup from the detail');
 check(full.text.includes('venomous'), 'the fact itself is rendered', full.text.slice(0, 80));
+
+/*
+ * ITEM 11 (1.45.0) — THE WAY OUT OF THE SHEET AND INTO THE PROSE GUIDE.
+ *
+ * Checked on the RENDERED link rather than on the config, because two
+ * halves have to agree for it to work: the href the sheet builds and the
+ * anchor the guide page renders. test-1450.php pins the second half from
+ * PHP; this is the first.
+ */
+const more = await page.evaluate(() => {
+  const p = document.querySelector('.dccwl-sheet-body .dccwl-detail-more');
+  const a = p && p.querySelector('a');
+  if (!a) { return null; }
+  const cs = getComputedStyle(p);
+  const as = getComputedStyle(a);
+  const r = a.getBoundingClientRect();
+  return {
+    text: a.textContent.replace(/\s+/g, ' ').trim(),
+    href: a.getAttribute('href'),
+    align: cs.textAlign,
+    underline: as.textDecorationLine,
+    height: Math.round(r.height),
+    /* The arrow must be hidden from a screen reader: it is punctuation. */
+    arrowHidden: (() => {
+      const g = a.querySelector('.dccwl-detail-more-arrow');
+      return !!g && 'true' === g.getAttribute('aria-hidden');
+    })(),
+    /* Last thing in the sheet: it is the way out, not an interruption. */
+    isLast: p === p.parentNode.lastElementChild,
+  };
+});
+note(`full-entry link ${JSON.stringify(more)}`);
+check(!!more, 'the sheet carries a link to the full entry');
+if (more) {
+  check(/^See The Full Entry/.test(more.text), 'in Rob\'s Title Case', more.text);
+  checkSame('/wildlife-guide/#cottonmouth', more.href,
+    'pointing at THIS species\' anchor on the guide page');
+  checkSame('center', more.align, 'centred, per the standing alignment rule');
+  check(/underline/.test(more.underline), 'and marked as a link by more than colour');
+  checkAtLeast(44, more.height, "with Rob's 44px tap target");
+  check(more.arrowHidden, 'the arrow is aria-hidden — punctuation, not a word');
+  check(more.isLast, 'and it sits at the foot of the sheet');
+}
 await page.close();
 
 /* ---- 2. with the fetch failing: still a sheet, never an error --------- */

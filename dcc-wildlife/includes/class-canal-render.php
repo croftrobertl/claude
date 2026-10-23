@@ -134,6 +134,19 @@ final class Canal_Render {
 				'search'        => Guide_Data::resolve( $opts['search'], 'show_search' ),
 				'subnav'        => $opts['subnav'],
 				'rows_override' => $opts['deck_rows'],
+				/*
+				 * ITEM 3 (1.45.0) — DEFER THE SPECIES INDEX WHEN THIS PANEL
+				 * STARTS HIDDEN, which is exactly when the water module
+				 * rendered something and took the opening view.
+				 *
+				 * The condition is the SAME EXPRESSION that hides the panel
+				 * below (`$has_water ? ' hidden' : ''`), deliberately: if the
+				 * two ever disagreed, a visible panel would be waiting on a
+				 * fetch for its first paint, which is the one outcome this
+				 * must not produce. With no water module the species panel is
+				 * the page, so the index is inlined exactly as before.
+				 */
+				'defer_index'   => $has_water,
 			]
 		);
 

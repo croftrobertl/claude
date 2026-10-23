@@ -482,7 +482,23 @@ ob_start();
 $html = \DCC_WL\Canal_Render::shortcode( [] );
 $pre  = ob_get_clean();
 check_same( 1, $builds, 'one hub render builds the registry exactly once' );
-check( strlen( $pre . $html ) > 100000, 'and still renders the whole page', (string) strlen( $pre . $html ) );
+/*
+ * THE FLOOR CAME DOWN IN 1.45.0, AND THE REASON IS A DELIBERATE REMOVAL.
+ *
+ * It was 100,000 characters, and this render now measures about 48,900. Two
+ * of item 3's changes account for all of it and both are intended: the 53 KB
+ * species ItemList moved to /wildlife-guide/, and the inline index is
+ * deferred on any placement whose species panel starts hidden. Nothing a
+ * guest reads was removed — the 402 server-rendered tiles, the chip row, the
+ * footnote row and the water panel are all still here, which is what the
+ * dozens of structural assertions above actually check.
+ *
+ * It is kept as a floor rather than deleted, because its job is to catch a
+ * memoisation bug that renders ONE species and reports a happy cache. 40,000
+ * is far below the real figure and far above anything a broken registry
+ * could produce.
+ */
+check( strlen( $pre . $html ) > 40000, 'and still renders the whole page', (string) strlen( $pre . $html ) );
 
 /* It can also cache too well. A filter registered after the cache is warm
  * must reach the data once the request boundary passes — which in this

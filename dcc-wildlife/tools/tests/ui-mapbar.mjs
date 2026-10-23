@@ -38,13 +38,21 @@ const MAP_DATA = {
     { id: '1', name: 'Lake Dora', lat: 28.8003, lon: -81.6706, clarity: { value: 1.1, units: 'm', median: 1.0, ratio: 1.1, date: '2026-08-01', age: 20, station: 'A', url: '' }, level: null, depthMap: null, ageDays: 20 },
     { id: '2', name: 'Lake Harris', lat: 28.7419, lon: -81.8069, clarity: null, level: { value: 62.5, units: 'ft', norm: 62.0, inches: 6, datum: 'NAVD88' }, depthMap: null, ageDays: 40 },
   ],
-  stations: [], ramps: [],
+  /* ITEM 7 (1.45.0): stations EMPTY and ramps NOT. Live answers
+   * `stations: 0` -- the Atlas publishes none for these waters -- and a chip
+   * that toggles an empty layer did nothing when pressed, twice. The layer
+   * mix here is what makes that testable: three overlays with something in
+   * them, one with nothing. */
+  stations: [],
+  ramps: [
+    { lat: 28.7991, lon: -81.6512, name: 'Gilbert Park Ramp', url: '' },
+  ],
   property: { lat: 28.7936, lon: -81.6431, name: 'Dora Canal Court' },
 };
 
 const FONT_INFLATE = 1.21;
 
-async function openMap(width, height) {
+async function openMap(width, height, data) {
   const fixture = rendered('water', '--enable');
   const page = await buildPage(browser, {
     width, height,
@@ -60,7 +68,7 @@ async function openMap(width, height) {
   await page.addScriptTag({ content: asset('assets/js/water-map.js') });
   await page.evaluate((data) => {
     window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
-  }, MAP_DATA);
+  }, data || MAP_DATA);
   for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
@@ -540,8 +548,49 @@ section('the layer chips are the one control for the layers');
     check(!chips.error, 'the chips are built under the map', chips.error || '');
     checkSame(false, chips.hidden, 'and shown');
     note(`chips: ${chips.labels.join(' | ')} (${chips.keys.join(',')})`);
-    checkAtLeast(3, chips.keys.length, 'one per overlay the map draws');
+    /*
+     * ONE CHIP PER OVERLAY THAT HAS SOMETHING IN IT (1.45.0, item 7).
+     *
+     * This assertion used to read `at least 3`, which passed while all four
+     * chips were drawn unconditionally -- including Monitoring Stations,
+     * which on live toggles a layer the Atlas publishes nothing for. The
+     * payload above carries waters, ramps and the property and NO station,
+     * so the keys are now named exactly rather than counted: a count cannot
+     * tell "the empty one is gone" from "a real one is missing".
+     */
+    checkSame('ramps,waters,property', chips.keys.join(','),
+      'one chip per overlay that has something in it, in the declared order');
+    checkSame(false, chips.keys.includes('stations'),
+      'and NO chip for the empty stations layer');
     check(chips.belowCanvas, 'they sit BELOW the canvas, as the brief asks');
+
+    /*
+     * THE POSITIVE CONTROL FOR ITEM 7, AND IT IS NOT OPTIONAL.
+     *
+     * "No stations chip" is also what a broken chip builder produces, and a
+     * suite that only ever sees the empty payload cannot tell the two apart
+     * -- the oldest prohibition in this harness is a probe that can only
+     * pass. So the same page is built again with ONE station in the payload
+     * and the chip has to come back. Nothing is hidden permanently: the
+     * chips are rebuilt on every map build, which is exactly what this
+     * proves.
+     */
+    const withStation = await openMap(390, 900, Object.assign({}, MAP_DATA, {
+      stations: [
+        { lat: 28.7955, lon: -81.6488, name: 'Dora Canal Station', url: '', clarity: null },
+      ],
+    }));
+    if (!withStation.opened) {
+      check(false, 'the map opened for the station control');
+    } else {
+      const back = await withStation.page.evaluate(() => Array.from(
+        document.querySelectorAll('[data-dccwl-map-chips] [data-dccwl-layer]')
+      ).map((c) => c.getAttribute('data-dccwl-layer')));
+      note(`chips with a station in the payload: ${back.join(',')}`);
+      check(back.includes('stations'),
+        'and the stations chip RETURNS the moment the payload carries one');
+      await withStation.page.close();
+    }
     checkAtLeast(44, Math.min(...chips.heights), "every chip is one of Rob's 44px targets");
     /* ITEM 7: Title Case on every chip. */
     check(chips.labels.every((l) => /^[A-Z]/.test(l) && !/\b[a-z]+\s[a-z]/.test(l)),

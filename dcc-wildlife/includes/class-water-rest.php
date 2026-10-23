@@ -82,19 +82,54 @@ final class Water_Rest {
 
 	public static function conditions(): \WP_REST_Response {
 		$payload = Water_Live::conditions();
+		$facts   = $payload['facts'];
+		$stale   = ! empty( $payload['stale'] );
 
 		$response = new \WP_REST_Response(
 			[
 				'enabled' => Water_Data::live_enabled(),
-				'facts'   => $payload['facts'],
+				'facts'   => $facts,
 				// The parts behind the Wind reading, for the map badge (1.35.0).
 				'wind'    => $payload['wind'] ?? null,
+				/*
+				 * 1.45.0: these two say WHAT KIND of answer this is, so the
+				 * client never has to guess from an empty array. `stale` is
+				 * the last-good copy being served while a refresh or a
+				 * failure window passes; `fetched` is when the readings in it
+				 * were collected, which the strip labels itself with.
+				 */
+				'stale'   => $stale,
+				'fetched' => (string) ( $payload['fetched'] ?? '' ),
 			]
 		);
 
-		// This endpoint is itself cacheable for a short window, but never
-		// longer than the underlying transient.
-		$response->header( 'Cache-Control', 'public, max-age=120' );
+		/*
+		 * THE CACHE HEADER IS A CLAIM ABOUT THE ANSWER, SO IT FOLLOWS THE
+		 * ANSWER (1.45.0).
+		 *
+		 * Through 1.44.6 this was an unconditional `max-age=120`, including
+		 * on the empty response the old `conditions()` returned while the
+		 * refresh lock was held. A guest who arrived in that window had the
+		 * blank panel CACHED for two minutes by their browser and by
+		 * whatever sits in front of it, so the one visitor who hit the race
+		 * was the one guaranteed to keep seeing nothing. Three cache layers
+		 * on this site make that worse, not better.
+		 *
+		 *   - real readings, freshly fetched: the old two minutes, which is
+		 *     well inside the 15-minute transient behind it;
+		 *   - the last-good copy: 30 seconds, long enough to spare the
+		 *     source a stampede, short enough that the guest's next
+		 *     interaction can pick up the fresh set;
+		 *   - nothing at all: `no-store`. An absence is never worth
+		 *     remembering.
+		 */
+		if ( ! $facts ) {
+			$response->header( 'Cache-Control', 'no-store, max-age=0' );
+		} elseif ( $stale ) {
+			$response->header( 'Cache-Control', 'public, max-age=30' );
+		} else {
+			$response->header( 'Cache-Control', 'public, max-age=120' );
+		}
 		return $response;
 	}
 

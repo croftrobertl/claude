@@ -299,6 +299,75 @@ foreach ( [ [ $strings, 'PHP' ], [ $js, 'JS fallback' ] ] as [ $set, $kind ] ) {
 }
 check( [] === $found, 'every guest-facing string is American', implode( "\n    ", $found ) );
 
+dcc_section( 'every SPECIES string, not only the translatable ones (1.45.0)' );
+
+/*
+ * THE EXTRACTOR ABOVE READS i18n CALLS, AND THAT IS HOW FIFTEEN BRITISH
+ * SPELLINGS SURVIVED 1.44.4 IN PLAIN SIGHT.
+ *
+ * `Species::PHOTO_NOTES` and `PHOTO_SOURCES` are bare `'...'` literals, not
+ * `__()` calls — so the tokenised sweep could not see them, and the
+ * Director's audit found `colour`, `grey` ×3, `licence` ×4 and `recognise`
+ * in the notes a guest reads under a photograph in the detail sheet. They
+ * reach the browser through `/species`, which is as guest-facing as text
+ * gets.
+ *
+ * So this half asks the DATASET rather than the source: every string field
+ * of every species row, which is the shape the client actually receives —
+ * the 1.33.1 rule that a suite must exercise the path production takes. It
+ * catches a note, a credit, a fact, a mark and a safety line alike, and a
+ * future field is swept the day it is added rather than the day somebody
+ * remembers to list it.
+ *
+ * NOT a replacement for the i18n sweep: that one covers every renderer and
+ * every string outside this registry. The two halves overlap on purpose.
+ */
+DCC_WL\Species::flush_cache();
+$rows = DCC_WL\Species::dataset();
+check( count( $rows ) > 100, 'the dataset built for the sweep', (string) count( $rows ) );
+
+/* Fields that are an identifier or a machine value, not prose a guest reads. */
+$NOT_PROSE = [ 'id', 'group', 'browse', 'idgroup', 'odds', 'photo', 'thumb', 'emoji', 'sci', 'creditUrl' ];
+$species_bad  = [];
+$species_seen = 0;
+foreach ( $rows as $sid => $row ) {
+	foreach ( (array) $row as $field => $val ) {
+		if ( ! is_string( $val ) || '' === $val || in_array( $field, $NOT_PROSE, true ) ) {
+			continue;
+		}
+		if ( isset( SPELLING_ALLOW[ trim( $val ) ] ) ) {
+			continue;
+		}
+		$species_seen++;
+		foreach ( $patterns as $bad => $re ) {
+			if ( preg_match( $re, $val, $m ) ) {
+				$species_bad[] = sprintf(
+					'%s [%s] — "%s" (use "%s"): %s',
+					$sid, $field, $m[0], BRITISH[ $bad ], mb_strimwidth( $val, 0, 70, '…' )
+				);
+			}
+		}
+	}
+}
+/* A sweep that inspected nothing reports no problem. */
+check( $species_seen > 1500, 'the species sweep had strings to read', (string) $species_seen );
+check( [] === $species_bad, 'every species string a guest reads is American',
+	implode( "\n    ", array_slice( $species_bad, 0, 12 ) ) );
+
+/*
+ * And `photoNote` BY NAME, because it is the field the audit found and the
+ * one a future photo batch is most likely to write in a hurry. Named
+ * separately so that if the loop above is ever narrowed, this does not go
+ * quietly with it.
+ */
+$notes = 0;
+foreach ( $rows as $row ) {
+	if ( '' !== (string) ( $row['photoNote'] ?? '' ) ) {
+		$notes++;
+	}
+}
+check( $notes > 5, 'photo notes are present in the dataset and were swept', (string) $notes );
+
 dcc_section( 'the allowlist is exact, and it is still needed' );
 
 /*

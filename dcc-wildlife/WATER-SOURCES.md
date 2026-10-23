@@ -613,7 +613,7 @@ Cornell = Cornell Lab of Ornithology (All About Birds / Birds of the World).
 | Mosquitoes & No-see-ums | *Culicoides* are 1–3 mm and pass through standard 18×16 window mesh; dawn and dusk, April to November | UF/IFAS EENY-349 / IN626; Clemson Extension (20×20 mesh to exclude) |
 | Lovebugs | two flights, four to five weeks from late April and from late August; *Plecia nearctica*, a march fly; larvae decompose plant litter; body fluids acidic, worse after bacterial action over days; no bite, no sting | UF/IFAS EDIS MG068 |
 | Alligator | state reptile; bellow carries infrasound; Faraday waves throw water off the back in a spray; courtship April–May; hatchlings chirp from inside the egg to be dug out | Published fluid-dynamics work on the alligator "water dance"; standard *A. mississippiensis* accounts |
-| Manatee | first record in Lake County 2015, a female locally named Leesburg; calf "Sunset" 2017; killed by a boat 2020; kin to elephants | Mid-Florida Newspapers (Triangle News Leader) account of the Harris Chain manatees |
+| Manatee | **rewritten in 1.45.0** — sightings first: the owners' own, in the canal and on the Chain, warm months; then "first documented in the Harris Chain in 2015; one, nicknamed Leesburg, became a local regular"; kin to elephants. The boat strike and death moved to the care note. | owner observation (Rob, Erica, Rick) for the sighting; Lake County Water Atlas 2020-10-16 and 2018-04-23 for the history; CMARI for the strike and the date of death |
 | River Otter | up to eight minutes submerged; latrine sites as scent-marking noticeboards conveying identity and status | Sacramento Zoo; Humboldt State latrine-site thesis; *Animal Behaviour* scent-marking study |
 | Turtles | cooters and sliders share basking logs; Florida softshell is flat and leathery, buries in mud, breathes at the surface | Florida Museum herpetology accounts (unchanged from the 1.11.0 pass) |
 | Florida Banded Watersnake | crossbands, eye-to-jaw line; round pupil, narrow head, no facial pit; harmless | Florida Museum, Southern Watersnake |
@@ -708,6 +708,53 @@ is in the text too. It is verified, and it is the single fact that makes "keep
 the boat at idle when one is near" mean something rather than read as boilerplate.
 It is also the bleakest sentence in the guide. One clause to cut if that is the
 wrong note for a holiday cottage — say the word.
+
+### The entry was re-ordered in 1.45.0, and one claim was re-worded
+
+Rob's instruction of 2026-10-04, relayed by the Director: **sightings first,
+history after.** The entry opened on a 2015 arrival and a 2020 death, so the
+first thing a guest read about the manatee was an obituary. It now opens on
+what they might actually see — and the sighting credited is **the owners'
+own**: Rob, Erica and Rick have watched manatees in the canal and on the
+Chain, most often in the warm months. That is an owner observation and is
+credited as one, never to a records database.
+
+The history sentence is the Director's sourced wording, used verbatim:
+
+> Manatees were first documented in the Harris Chain in 2015; one, nicknamed
+> Leesburg, became a local regular.
+
+Sources: Lake County Water Atlas, 2020-10-16
+(https://lake.wateratlas.usf.edu/news/details/19458/) and 2018-04-23
+(https://lake.wateratlas.usf.edu/news/details/17339/).
+
+**IT NO LONGER SAYS SHE WAS SIGHTED AT LEESBURG.** The 1.33.0 table above
+records "named Leesburg, for the city where she was first seen", which is how
+the Mid-Florida Newspapers account reads; the Water Atlas pieces do not
+support the place of the sighting, and the Director asked for the claim to be
+dropped rather than restated. **The table stays as written because it is the
+record of what that source said** — the entry is what changed.
+
+The boat strike and the 9 January 2020 death moved into the care-on-the-water
+note, where they are the reason the rule exists rather than the middle of the
+animal's story. The near-full-term calf is still in that sentence, on the same
+judgement as 1.33.0: it is what makes "keep the boat at idle" mean something.
+
+### The Florida gar's scientific name (1.45.0)
+
+`Lepisosteus platyrhinus` → **`Lepisosteus platyrhincus`**, with the c. Found
+in the Director's iNaturalist pull of 2026-10-22. Unlike the other
+iNat-vs-site naming differences in that pull — box turtle, Cooper's hawk, barn
+owl, the woodpeckers, red bay, camphor, sawgrass, black bear, herring gull —
+this one is not a taxonomy disagreement: it is a misspelling, and it is the
+only kind of name difference that is simply wrong.
+
+**FLAGGED, NOT CHANGED: the iris.** The site lists Blue Flag Iris
+(*Iris virginica*), which the pull shows with no records within 40 km, while
+Prairie Iris (*Iris savannarum*) has five within 15 km. The Director asked for
+it to be flagged so he can verify which iris is actually on the canal.
+Changing a species' identity on the strength of a record count would be the
+guide asserting something nobody has checked on the ground.
 
 ### Wood stork — the badge is right, but for a different reason than it was
 

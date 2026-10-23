@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.44.6
+Stable tag: 1.45.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,50 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.45.0 =
+* **The "Now" tab can no longer come up blank.** When the readings were
+  being refreshed, or a source had just failed, the panel served nothing at
+  all — and that emptiness was sent with a two-minute cache header, so the
+  one guest who hit that window kept seeing it. The last good set of
+  readings is now kept beside the short-lived cache and served in its place,
+  labelled with its real age; an empty answer is never cached; and the
+  hourly background job that keeps the chain map warm now keeps the
+  conditions warm too.
+* **A loading state, in the shape of the cards.** While the readings are on
+  their way the strip shows shimmering placeholders the same size as the
+  cards that replace them, so nothing jumps when they land.
+* **No old reading is presented as a current one.** Every reading now shows
+  how old it is — "Measured 2 Days Ago" — and once it passes a limit of its
+  own the card is greyed and reads "Last Measured In April" instead of a
+  present-tense sentence. The source and the measurement date stay on the
+  card either way. The three limits (water level 14 days, clarity and
+  dissolved oxygen 120 days) are editable under DCC → Wildlife.
+* **A much lighter /explore/.** The species list is no longer written into
+  every page: that page opens on Water, so the list is fetched when a guest
+  chooses Wildlife, alongside the species detail it already fetched. The
+  machine-readable species data moved to /wildlife-guide/, the page that
+  carries the written entries. Measured on the real 402-species registry,
+  the page drops from 361 KB to 65 KB (59.6 KB to 16.1 KB compressed).
+* **Every species sheet now links to its full written entry** on
+  /wildlife-guide/, centred at the foot of the sheet.
+* **iPhone sheets fit the screen.** The species sheet and its photograph
+  size themselves to the visible viewport, so their last rows no longer sit
+  under Safari's toolbar.
+* **Nothing is smaller than 12px** and the faintest text colour now meets
+  the WCAG AA contrast bar on every surface it appears on.
+* **A map layer with nothing in it gets no chip.** "Monitoring Stations"
+  toggled an empty layer on this chain and did nothing when pressed.
+* **Screen readers are told what changed** — the tab that is now showing,
+  and whether the readings are loading, updated, stale or unavailable.
+* Ten British spellings corrected in the photograph notes, and the spelling
+  check extended to cover every species string rather than only the
+  translatable ones.
+* Housekeeping: the species registry is loaded only when something needs it
+  rather than on every request; the bundled Leaflet is served under its own
+  version (1.9.4) instead of the plugin's; a hand-made backup of the
+  settings row from September is removed on upgrade; the map's credit button
+  uses the site's own typeface.
 
 = 1.44.6 =
 * The almanac card reads **"Surface Area"**, matching every other card label

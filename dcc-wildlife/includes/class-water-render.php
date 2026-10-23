@@ -982,8 +982,82 @@ final class Water_Render {
 					// told which app/theme classes to wear (1.9.0).
 					'appClasses' => Render::app_classes(),
 					'coords'     => Water_Data::coords(),
+					/*
+					 * ITEM 2 (1.45.0) — HOW OLD A READING MAY BE, IN DAYS.
+					 *
+					 * The limits are settings (Guide_Data) and the AGE is
+					 * computed in the browser, which is the only place it can
+					 * be computed honestly: this payload is cached — by the
+					 * transient, by SpeedyCache, by the browser — so an age
+					 * worked out when the HTML was built would be wrong by
+					 * however long the page sat in a cache. The measurement
+					 * DATE travels with each fact and is fixed; the duration
+					 * from then until now is read at render time, exactly as
+					 * the age chip has been since 1.9.0.
+					 */
+					'ageMax'     => [
+						'level'   => Guide_Data::num( 'age_max_level' ),
+						'clarity' => Guide_Data::num( 'age_max_clarity' ),
+						'oxygen'  => Guide_Data::num( 'age_max_oxygen' ),
+					],
 					'i18n'     => [
 						'asOf'        => __( 'reading', 'dcc-wildlife' ),
+						/*
+						 * ITEM 2 (1.45.0) — THE FRESHNESS LINE.
+						 *
+						 * Every one of these is a complete sentence about a
+						 * MEASUREMENT, in Title Case (Rob's rule). The first
+						 * five are present-tense statements of age; the last
+						 * two are what a reading past its limit says instead,
+						 * and they are the whole reason the set is split —
+						 * "Measured 7 Months Ago" reads as a current fact
+						 * with an unfortunate date on it, while "Last
+						 * Measured In April" does not claim to be now.
+						 */
+						'freshToday'  => __( 'Measured Today', 'dcc-wildlife' ),
+						'freshYesterday' => __( 'Measured Yesterday', 'dcc-wildlife' ),
+						/* translators: %d: whole days. */
+						'freshDays'   => __( 'Measured %d Days Ago', 'dcc-wildlife' ),
+						/* translators: %d: whole months. */
+						'freshMonths' => __( 'Measured %d Months Ago', 'dcc-wildlife' ),
+						/* translators: %d: whole years. */
+						'freshYears'  => __( 'Measured %d Years Ago', 'dcc-wildlife' ),
+						/* translators: %s: a month name, e.g. "April". */
+						'lastIn'      => __( 'Last Measured In %s', 'dcc-wildlife' ),
+						/* translators: 1: a month name, 2: a four-digit year. */
+						'lastInYear'  => __( 'Last Measured In %1$s %2$s', 'dcc-wildlife' ),
+						/*
+						 * The month names are translated HERE rather than
+						 * formatted in the browser: this module has had one
+						 * date format, computed in PHP in canal time, since
+						 * 1.40.0, precisely so a visitor's locale cannot
+						 * decide what the page says.
+						 */
+						'months'      => [
+							__( 'January', 'dcc-wildlife' ),
+							__( 'February', 'dcc-wildlife' ),
+							__( 'March', 'dcc-wildlife' ),
+							__( 'April', 'dcc-wildlife' ),
+							__( 'May', 'dcc-wildlife' ),
+							__( 'June', 'dcc-wildlife' ),
+							__( 'July', 'dcc-wildlife' ),
+							__( 'August', 'dcc-wildlife' ),
+							__( 'September', 'dcc-wildlife' ),
+							__( 'October', 'dcc-wildlife' ),
+							__( 'November', 'dcc-wildlife' ),
+							__( 'December', 'dcc-wildlife' ),
+						],
+						/*
+						 * ITEM 8 (1.45.0) — WHAT A SCREEN READER HEARS when
+						 * the panel changes under it. Spoken politely, so
+						 * none of it interrupts.
+						 */
+						'srLoading'   => __( 'Loading the latest readings', 'dcc-wildlife' ),
+						'srReady'     => __( 'Readings updated', 'dcc-wildlife' ),
+						'srStale'     => __( 'Showing the most recent readings we have', 'dcc-wildlife' ),
+						'srNone'      => __( 'No readings are available right now', 'dcc-wildlife' ),
+						/* translators: %s: the name of the tab now showing. */
+						'srTab'       => __( '%s shown', 'dcc-wildlife' ),
 						// The tile deck (1.23.0), shared with the species side.
 						'deckPrev'    => __( 'Previous readings', 'dcc-wildlife' ),
 						'deckNext'    => __( 'Next readings', 'dcc-wildlife' ),

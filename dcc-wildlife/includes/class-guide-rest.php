@@ -62,6 +62,30 @@ final class Guide_Rest {
 			[
 				'version' => DCC_WL_VERSION,
 				'species' => Species::wire_detail(),
+				/*
+				 * THE INDEX RIDES HERE TOO SINCE 1.45.0 (item 3).
+				 *
+				 * /explore/ opens on Water and the species panel is hidden
+				 * until a guest chooses Wildlife, yet the whole index — 233
+				 * KB raw, 36 KB gzipped at 402 species — was inlined into
+				 * every page view regardless. The Director measured it, and
+				 * the fix he asked for is this: inline only what the first
+				 * screen needs, which for that page is nothing, and fetch
+				 * the rest when Wildlife opens.
+				 *
+				 * ONE ROUTE, NOT TWO, and one fetch: a guest who opens the
+				 * species panel is overwhelmingly likely to open a sheet,
+				 * and two requests for two halves of one dataset would be
+				 * two round trips for no gain. The version-stamped URL and
+				 * the immutable year below already make it a single download
+				 * for the life of a release.
+				 *
+				 * A placement that renders the species panel VISIBLE still
+				 * gets the index inline, so nothing waits on a network for
+				 * its first paint; Render decides which, and the client
+				 * handles either.
+				 */
+				'index'   => Species::wire_index(),
 			]
 		);
 		/*

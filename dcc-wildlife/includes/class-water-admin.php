@@ -510,6 +510,18 @@ final class Water_Admin {
 					</tr>
 				</table>
 
+				<h2><?php esc_html_e( 'How Old A Reading May Be', 'dcc-wildlife' ); ?></h2>
+				<p class="description" style="max-width:46em">
+					<?php esc_html_e( 'Past its own limit a reading is still shown, with its source and its measurement date — but it is grayed and its line reads "Last Measured In April" instead of "Measured 2 Days Ago", so nothing on the page claims a stale number is current. A gauge reports near-daily; Secchi clarity and dissolved oxygen are lab samples taken monthly to quarterly, which is why the three are separate.', 'dcc-wildlife' ); ?>
+				</p>
+				<table class="form-table" role="presentation">
+					<?php
+					self::guide_number( 'age_max_level', __( 'Water level', 'dcc-wildlife' ), __( 'A continuous station should report within a fortnight. Longer than this and the station is more likely down than the lake unchanged.', 'dcc-wildlife' ), __( 'days', 'dcc-wildlife' ) );
+					self::guide_number( 'age_max_clarity', __( 'Water clarity (Secchi depth)', 'dcc-wildlife' ), __( 'A lab sample, taken monthly to quarterly. Four months allows for a skipped round without calling a real reading stale.', 'dcc-wildlife' ), __( 'days', 'dcc-wildlife' ) );
+					self::guide_number( 'age_max_oxygen', __( 'Dissolved oxygen', 'dcc-wildlife' ), __( 'Sampled on the same rounds as clarity, so it keeps the same allowance.', 'dcc-wildlife' ), __( 'days', 'dcc-wildlife' ) );
+					?>
+				</table>
+
 				<h2><?php esc_html_e( 'Lake County Water Atlas', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
 					<?php esc_html_e( 'Supplies water level (from an SJRWMD station on Lake Dora itself), Secchi clarity, dissolved oxygen, TSI and the bathymetric depth map. Each reading arrives with its own units, precision, sample date and station, and those are what get shown.', 'dcc-wildlife' ); ?>

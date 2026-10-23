@@ -41,6 +41,32 @@ final class Water_Live {
 	private const CACHE_KEY = 'dcc_wl_water_cond';
 	private const LOCK_KEY  = 'dcc_wl_water_lock';
 	private const FAIL_KEY  = 'dcc_wl_water_fail';
+
+	/**
+	 * THE LAST GOOD CONDITIONS PAYLOAD (1.45.0), AND WHY IT IS AN OPTION.
+	 *
+	 * The Now tab could come up EMPTY, and did on live. `conditions()`
+	 * returned no facts at all whenever the 15-minute transient had expired
+	 * and either the 30-second refresh lock or the 5-minute failure marker
+	 * was set — a window a guest lands in by arriving first after a cache
+	 * turnover, or at any time while a source is down. `Water_Rest` then sent
+	 * that empty set with `Cache-Control: max-age=120`, so the blank was
+	 * cached by the browser and by anything in front of it.
+	 *
+	 * This holds the last payload that DID carry readings, for as long as it
+	 * takes to get another one. An option, not a transient, for exactly the
+	 * reason it exists: a transient is what just expired, and on a site with
+	 * three cache layers a transient can be evicted at any moment. It is
+	 * registered with autoload FALSE so it costs nothing on a request that
+	 * never asks for it.
+	 *
+	 * It does not weaken the fact gate by one inch. Every fact in it went
+	 * through `Water_Fact::make()` when it was fetched, and each carries its
+	 * own MEASUREMENT date — so a reading served from here is labelled with
+	 * its real age by the same code that labels a fresh one. What is served
+	 * stale is the FETCH, never the claim.
+	 */
+	private const LAST_OPTION = 'dcc_wl_water_cond_last';
 	private const DV_KEY    = 'dcc_wl_water_dv_';
 
 	/**
@@ -171,15 +197,52 @@ final class Water_Live {
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
+		/*
+		 * 1.45.0: THE LAST GOOD COPY, NOT AN EMPTY SET.
+		 *
+		 * Both of these are "ask again shortly", not "there are no
+		 * readings": the lock means another request is fetching right now,
+		 * the failure marker means a source was down five minutes ago. The
+		 * old return of `$empty` turned either into a blank Now tab, which a
+		 * guest reads as "this site has nothing" rather than "come back in a
+		 * minute".
+		 */
 		if ( get_transient( self::FAIL_KEY ) || get_transient( self::LOCK_KEY ) ) {
-			return $empty;
+			return self::last_good( $empty );
 		}
 
 		set_transient( self::LOCK_KEY, 1, 30 );
 		$result = self::refresh();
 		delete_transient( self::LOCK_KEY );
 
+		/* A refresh that came back with nothing lands here too: the readings
+		 * we last had beat no readings at all. */
+		if ( ! $result['facts'] ) {
+			return self::last_good( $empty );
+		}
+
 		return $result;
+	}
+
+	/**
+	 * The stored last-good payload, marked as such, or the fallback.
+	 *
+	 * `stale` is the flag the REST layer reads to decide it must NOT send a
+	 * cache header, and the client reads to label the strip. `fetched` is
+	 * left exactly as it was when the payload was built, because that is
+	 * when these readings were actually collected -- rewriting it to now
+	 * would be the one lie this whole mechanism exists to avoid.
+	 *
+	 * @param array{facts:array<int,array<string,string>>,fetched:string} $fallback
+	 * @return array<string,mixed>
+	 */
+	private static function last_good( array $fallback ): array {
+		$last = get_option( self::LAST_OPTION, null );
+		if ( ! is_array( $last ) || empty( $last['facts'] ) || ! is_array( $last['facts'] ) ) {
+			return $fallback;
+		}
+		$last['stale'] = true;
+		return $last;
 	}
 
 	/**
@@ -214,6 +277,13 @@ final class Water_Live {
 
 		if ( $gated ) {
 			set_transient( self::CACHE_KEY, $payload, (int) min( Water_Data::TTL_USGS, Water_Data::TTL_NWS ) );
+			/*
+			 * 1.45.0: and keep it beyond the transient's life, as the copy
+			 * `conditions()` falls back to. Only ever written when the fetch
+			 * actually produced gated facts, so a bad pass can never
+			 * overwrite a good copy with an empty one.
+			 */
+			update_option( self::LAST_OPTION, $payload, false );
 		} else {
 			set_transient( self::FAIL_KEY, 1, Water_Data::TTL_FAIL );
 		}
@@ -449,6 +519,26 @@ final class Water_Live {
 	 * when the current copy is still valid.
 	 */
 	public static function warm_map(): void {
+		/*
+		 * 1.45.0: THE CONDITIONS ARE WARMED HERE TOO.
+		 *
+		 * This job existed to keep a guest off the map's fourteen-call cold
+		 * path, and it warmed ONLY the map -- while the conditions transient,
+		 * which every Now tab reads, was left to be rebuilt by whichever
+		 * guest happened to arrive after it expired. That guest is the one
+		 * who met the refresh lock and got a blank panel. Paying for it on
+		 * the hour instead means the transient is usually warm, and the
+		 * last-good copy is kept current for the windows when it is not.
+		 *
+		 * Before `map_possible()`, because the conditions do not need a map:
+		 * a site with the live layer on and the map off still has a Now tab.
+		 */
+		if ( Water_Data::live_enabled() ) {
+			delete_transient( self::LOCK_KEY );
+			delete_transient( self::FAIL_KEY );
+			self::refresh();
+		}
+
 		if ( ! Water_Data::map_possible() ) {
 			return;
 		}
@@ -1588,6 +1678,14 @@ final class Water_Live {
 		return [
 			[
 				'label'       => __( 'Dissolved Oxygen', 'dcc-wildlife' ),
+				/*
+				 * 1.45.0: the machine name, so the age limit for oxygen can
+				 * find this card without matching its TRANSLATED label — the
+				 * same reason `key` was added in 1.34.0. It is metadata and
+				 * never a gate: a fact without one is as valid as a fact with
+				 * one, and this one admits nothing.
+				 */
+				'key'         => 'oxygen',
 				'value'       => self::fmt_measure( $c['value'], $c['precision'] ?? null, self::comp_str( $c, 'units' ) ),
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
