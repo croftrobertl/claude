@@ -384,6 +384,7 @@ section('tapping a row, and the deep link');
     'the kestrel\'s line names the resident subspecies as the listed one', k.slice(0, 120));
   check(/winter visitors from the north are not/.test(k), 'and says the winter birds are not');
   check(/68A-27\.003/.test(k), 'and cites the rule');
+  check(/June 2026/.test(k), 'as the June 2026 text (1.46.2)');
   await page.close();
 }
 

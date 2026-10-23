@@ -5161,45 +5161,67 @@ live is now the theme's to account for — re-measure after install; if it is
 still over 2.5 s, the top three long tasks in that trace will belong to the
 theme's CSS, fonts and scripts, which is the next conversation.
 
-### 44. 1.46.2 — the thirteenth Protected species, and the two lists made one
+### 44. 1.46.2 — the thirteenth Protected species, the rule as it stands, and the manatee's own line
 
-The Director's answer to the 1.46.1 audit question: the red-cockaded
-woodpecker's absence from `Guide_Page::PROTECTED` was his omission, not a
-decision. The rule's list carries the federally designated species, and the
-woodpecker has been federally Threatened since the October 2024 downlisting
-(effective 25 November 2024). So:
+The Director's answer to the 1.46.1 audit question, then his reading of the
+rule itself (the .doc behind the FL Rules gateway's "readFile", rule
+68A-27.003). Both changed the release.
 
-- **`redcockaded => 'federal'`** in `PROTECTED` and `PROTECTED_KEYS` — thirteen
-  keys. Its existing Take Care line already read "Federally threatened since
-  2024…"; `protected_note()` now gives it the same sourced line and rule link
-  as the other twelve, in the generic federal wording ("Federally Threatened
-  (Florida's Endangered and Threatened Species List, April 2025)"). It is a
-  NEAR species, so the "Lake County" chip count falls from 46 to 45 — Protected
-  outranks it, as it does for the tortoise, the indigo snake and the skink.
-- **The registry's `protected` flag and the list are ONE SET.** 1.46.1 wrote
-  the list by hand and left the flag where it had been, and the audit found
-  three disagreements: the woodpecker flagged but not listed; the sand skink
-  and the black skimmer listed but not flagged. /explore/'s sheet badges read
-  the flag; the guide's chips read the list. `sandskink` and `blackskimmer`
-  now carry the flag, and `test-1460.php` holds
-  `array_keys( Guide_Page::PROTECTED )` equal to the flagged ids with NO
-  deliberate differences — a drift fails by key. Four mutations (drop the
-  woodpecker from either spelling of the list; drop either flag) each go red.
+#### THE WOODPECKER, AND THE GATE
 
-**The gate the brief set, and how it was met.** The Director asked that the
-woodpecker be confirmed in the rule text at the stored `PROTECTED_SOURCE`
-URL before it was added. The build container's network policy refused every
-route to that page (CONNECT 403 to law.cornell.edu, flrules.org and
-myfwc.com alike), so the release was built and held, unpushed, until the
-Director had read the page himself. The supporting evidence available from
-here was second-hand: web-search summaries of that same page placing the
-species under the federally-designated subsection (still carrying the rule's
-older "E" code), and FWC's own profile calling it Federally-designated
-Threatened under the rule. The lesson for the file: a source stored as data
-is only as good as someone's last reading of it, and this plugin cannot read
-it from here.
+The red-cockaded woodpecker's absence from `Guide_Page::PROTECTED` was the
+Director's omission, not a decision. The brief asked that it be confirmed in
+the rule text at the stored source URL before it was added. The build
+container's network policy refused every route to that page (CONNECT 403 to
+law.cornell.edu, flrules.org and myfwc.com alike), so the release was built,
+committed with the hold stated in its message (`a655b4a`) and NOT built as a
+zip until the Director had read the page. He had: the current text lists
+"Red-cockaded woodpecker (Picoides borealis)(T) (consistent with 89 Fed.
+Reg. 85294-85338)" under the federally designated birds.
 
-**Noted for the Director, not changed:** the FL Rules gateway lists a later
-amendment of 68A-27.003 than the `2025-04-03` date stored in
-`PROTECTED_SOURCE['effective']`. "Change nothing else" held; the date is the
-next question, not this release's.
+- **`redcockaded => 'federal'`** in `PROTECTED` and `PROTECTED_KEYS` —
+  thirteen keys. Its Take Care line was already right; `protected_note()`
+  gives it the sourced line and rule link. It is NEAR, so the "Lake County"
+  chip count is 45, not 46.
+- **The registry's `protected` flag and the list are ONE SET.** The audit had
+  found three disagreements (woodpecker flagged, not listed; sand skink and
+  black skimmer listed, not flagged). `sandskink` and `blackskimmer` now carry
+  the flag, and `test-1460.php` holds the flagged ids equal to
+  `array_keys( Guide_Page::PROTECTED )` with NO deliberate differences.
+
+#### THE RULE HAS MOVED, AND THE SOURCE FOLLOWS IT
+
+The Cornell copy stored in 1.46.1 was the **April 3, 2025** version. The
+current rule is effective **June 10, 2026** (history line "…4-3-25, 7-27-25,
+10-22-25, 6-10-26"). `PROTECTED_SOURCE` now says `2026-06-10` and links the
+official gateway, `https://www.flrules.org/gateway/RuleNo.asp?id=68A-27.003`;
+the lines say "June 2026". The Director confirmed every list-cited species in
+the current text: indigo snake, sand skink, scrub-jay, wood stork, woodpecker
+(all T), gopher tortoise, Florida sandhill crane, black skimmer, little blue
+heron, tricolored heron, Southeastern American kestrel. The kestrel wording
+holds. **Cornell lags the rule** — the lesson for any citation stored as data
+is that the official gateway is the only page worth linking.
+
+#### THE MANATEE IS NOT ON THE RULE
+
+In either version. Its federal mammal list runs from the Anastasia Island
+beach mouse to the Florida bonneted bat with no manatee, and 1.46.1's line
+cited the list anyway. Now, like the eagle, it has its own status: "Federally
+Threatened under the Endangered Species Act, and protected by the Marine
+Mammal Protection Act and the Florida Manatee Sanctuary Act." — and
+`cites_rule()` withholds the rule link from that one line. The chip stays; it
+is protected. Tests hold that the line never names the state list or the rule
+number, and that the rendered entry carries no link to the rule. Twelve of the
+thirteen lines link the rule; eleven carry the June 2026 date (the eagle and
+the manatee have Acts, not a list date).
+
+#### NOT TO CHIP
+
+The **Ceraunus Blue** appears in the rule only as T(S/A), similarity of
+appearance to the Miami blue — the alligator's reason — and is asserted absent
+beside it.
+
+Nine mutations across the two passes (drop the woodpecker from either
+spelling; drop either new flag; make the manatee line name the list; give it
+back the link; leave the date or the month at April 2025; chip the Ceraunus
+Blue) each go red by name. Rollback reinstalls 1.46.1.

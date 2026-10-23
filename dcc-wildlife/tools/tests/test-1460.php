@@ -195,7 +195,9 @@ foreach ( $non as $id ) {
 /*
  * "PROTECTED" FOLLOWS THE OFFICIAL LIST (Rob's pick): Florida's Endangered
  * and Threatened Species List, Fla. Admin. Code R. 68A-27.003, effective
- * 2025-04-03, plus the eagle under its own federal Act. Thirteen keys,
+ * 2026-06-10 (the Director read the current text on the FL Rules gateway;
+ * the Cornell copy stored in 1.46.1 was the April 2025 version), plus the
+ * eagle under its own federal Act. Thirteen keys,
  * written out, never derived from the registry's `protected` flag. Twelve
  * in 1.46.1; the red-cockaded woodpecker was the Director's own omission
  * (1.46.2) — federally Threatened since the 2024 downlisting, and on the
@@ -208,12 +210,37 @@ check_same(
 	'and they are the thirteen the Director listed, by key'
 );
 check_same( array_keys( Guide_Page::PROTECTED ), Guide_Page::PROTECTED_KEYS, 'the two spellings of the list agree' );
-check_same( '2025-04-03', Guide_Page::PROTECTED_SOURCE['effective'], 'the source carries its effective date' );
+check_same( '2026-06-10', Guide_Page::PROTECTED_SOURCE['effective'], 'the source carries its effective date — the June 2026 text' );
+check_same( 'https://www.flrules.org/gateway/RuleNo.asp?id=68A-27.003', Guide_Page::PROTECTED_SOURCE['url'], 'and points at the official gateway, not a copy that lags it' );
+check_same( 0, substr_count( $guide, 'April 2025' ), 'no line still says April 2025' );
+check_same( 11, substr_count( $guide, 'June 2026' ), 'the eleven list-cited lines say June 2026 (the eagle and the manatee have their own Acts and no list date)' );
 check_same( 'Fla. Admin. Code R. 68A-27.003', Guide_Page::PROTECTED_SOURCE['rule'], 'and the rule it is' );
 check( ! isset( Guide_Page::PROTECTED['alligator'] ), 'THE ALLIGATOR IS NOT ON IT — listed only for similarity of appearance to the crocodile' );
+check( ! isset( Guide_Page::PROTECTED['ceraunusblue'] ), 'nor the Ceraunus Blue — T(S/A) in the rule, similarity of appearance to the Miami blue (1.46.2)' );
+check( isset( Species::registry()['ceraunusblue'] ), 'which is a real registry key, so that assertion can fail' );
 check_same( 'federal', Guide_Page::PROTECTED['redcockaded'] ?? '', 'the red-cockaded woodpecker IS on it (1.46.2), as federally designated' );
 check_same( 13, substr_count( $guide, 'class="dccwl-fg-line dccwl-gp-protected"' ), 'each of the thirteen carries one sourced line under Take Care' );
-check_same( 13, substr_count( $guide, 'Fla. Admin. Code R. 68A-27.003' ), 'citing the rule, with a link' );
+check_same( 12, substr_count( $guide, 'Fla. Admin. Code R. 68A-27.003' ), 'twelve of them citing the rule, with a link — the manatee does not' );
+
+/*
+ * THE MANATEE IS NOT ON 68A-27.003 (the Director read both the April 2025
+ * and June 2026 texts; the rule's federal mammal list has no manatee).
+ * 1.46.1 cited the list anyway. Like the eagle, it has its own status:
+ * its line names only the Acts that protect it, and never the state list.
+ */
+$manatee_line = Guide_Page::protected_line( 'manatee' );
+check_contains( $manatee_line, 'Federally Threatened under the Endangered Species Act', 'the manatee line names the ESA' );
+check_contains( $manatee_line, 'Marine Mammal Protection Act and the Florida Manatee Sanctuary Act', 'and the two Acts that also cover it' );
+check( false === strpos( $manatee_line, 'Endangered and Threatened Species List' ), 'and NEVER names the state list it is not on' );
+check( false === strpos( $manatee_line, '68A-27' ), 'nor the rule by number' );
+check( ! Guide_Page::cites_rule( 'manatee' ), 'so its line carries no rule link' );
+check( Guide_Page::cites_rule( 'redcockaded' ) && Guide_Page::cites_rule( 'eagle' ), 'while the woodpecker and the eagle do' );
+if ( preg_match( '/id="dccwl-fl-manatee".*?<\/li>/s', $guide, $mm ) ) {
+	check_same( 0, substr_count( $mm[0], 'dccwl-gp-locallink" href="' . Guide_Page::PROTECTED_SOURCE['url'] ), 'and the rendered manatee entry has no link to the rule' );
+	check_contains( $mm[0], 'Endangered Species Act', 'but does carry its own line' );
+} else {
+	check( false, 'the manatee entry was found in the page' );
+}
 check_contains( Guide_Page::protected_line( 'redcockaded' ), 'Federally Threatened (Florida', 'the woodpecker\'s line is the federal wording, Threatened not Endangered' );
 
 /*

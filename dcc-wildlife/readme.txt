@@ -53,7 +53,14 @@ Developers can filter the species registry with `dcc_wl_species`, the monthly li
   on the list, which 1.46.1 left off by oversight. It is on Florida's
   Endangered and Threatened Species List as a federally designated species,
   Threatened since the 2024 downlisting, and its line under Take Care now
-  links to the rule like the other twelve.
+  links to the rule like the others.
+* **The source is the current rule.** The Protected lines cite the June 2026
+  text of Fla. Admin. Code R. 68A-27.003 and link to the official FL Rules
+  gateway rather than a copy that lagged it.
+* **The manatee's line names only what protects it** — the Endangered
+  Species Act, the Marine Mammal Protection Act and the Florida Manatee
+  Sanctuary Act. It is not on the state list the 1.46.1 line cited, so
+  that line no longer names the list or links the rule. It stays Protected.
 * **The explore widget's badges agree with the guide's chips.** The sand
   skink and the black skimmer carry the Protected flag in the species
   registry as well as on the official list, and a test now holds the two

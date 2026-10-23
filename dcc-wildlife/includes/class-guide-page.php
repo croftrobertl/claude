@@ -171,7 +171,14 @@ class Guide_Page {
 	 * only "due to similarity of appearance" to the American crocodile — a
 	 * listing about enforcement, not about the alligator's own standing —
 	 * so a Protected chip would mislead. Its Keep Away stripe is the mark
-	 * that matters on a canal.
+	 * that matters on a canal. THE CERAUNUS BLUE IS ABSENT FOR THE SAME
+	 * REASON (1.46.2): the rule carries it only as T(S/A), similarity of
+	 * appearance to the Miami blue.
+	 *
+	 * THE MANATEE IS ON NO LINE OF THIS RULE. The Director read both the
+	 * April 2025 and June 2026 texts; its line names only what protects it
+	 * (the Endangered Species Act, the Marine Mammal Protection Act, the
+	 * Florida Manatee Sanctuary Act) and carries no rule link.
 	 *
 	 * NOTHING HERE IS DERIVED. The `protected` FLAG in the registry is close
 	 * to this set and not equal to it; a badge that over-claims teaches a
@@ -202,8 +209,8 @@ class Guide_Page {
 	public const PROTECTED_SOURCE = [
 		'name'      => 'Florida\'s Endangered and Threatened Species List',
 		'rule'      => 'Fla. Admin. Code R. 68A-27.003',
-		'effective' => '2025-04-03',
-		'url'       => 'https://www.law.cornell.edu/regulations/florida/Fla-Admin-Code-Ann-R-68A-27.003',
+		'effective' => '2026-06-10',
+		'url'       => 'https://www.flrules.org/gateway/RuleNo.asp?id=68A-27.003',
 	];
 
 	/** Kept as the old name so nothing that read it breaks; same thirteen. */
@@ -236,7 +243,7 @@ class Guide_Page {
 		if ( '' === $status ) {
 			return '';
 		}
-		$when = __( 'April 2025', 'dcc-wildlife' );
+		$when = __( 'June 2026', 'dcc-wildlife' );
 
 		if ( 'kestrel' === $id ) {
 			/*
@@ -254,11 +261,13 @@ class Guide_Page {
 			return __( 'Not on Florida\'s Threatened list since 2007, but protected by the federal Bald and Golden Eagle Protection Act and FWC rule 68A-16.002.', 'dcc-wildlife' );
 		}
 		if ( 'manatee' === $id ) {
-			return sprintf(
-				/* translators: %s: the month and year the list took effect. */
-				__( 'Federally Threatened (Florida\'s Endangered and Threatened Species List, %s), and also covered by the Marine Mammal Protection Act and the Florida Manatee Sanctuary Act.', 'dcc-wildlife' ),
-				$when
-			);
+			/*
+			 * NOT ON 68A-27.003 AT ALL (the Director read the rule, 1.46.2): its
+			 * federal mammal list runs from the Anastasia Island beach mouse to
+			 * the Florida bonneted bat with no manatee. 1.46.1 cited the list
+			 * anyway. Like the eagle, its own status — and no rule link.
+			 */
+			return __( 'Federally Threatened under the Endangered Species Act, and protected by the Marine Mammal Protection Act and the Florida Manatee Sanctuary Act.', 'dcc-wildlife' );
 		}
 		if ( 'federal' === $status ) {
 			return sprintf(
@@ -272,6 +281,11 @@ class Guide_Page {
 			__( 'State-designated Threatened (Florida\'s Endangered and Threatened Species List, %s).', 'dcc-wildlife' ),
 			$when
 		);
+	}
+
+	/** Whether a protected species' line links the rule: all but the manatee, which the rule does not name. */
+	public static function cites_rule( string $id ): bool {
+		return isset( self::PROTECTED[ $id ] ) && 'manatee' !== $id;
 	}
 
 	/** `[dcc_wildlife_guide]` */
@@ -623,7 +637,8 @@ class Guide_Page {
 	 * chip above it makes a LEGAL claim about a species, and a claim a guest
 	 * cannot check is the kind this module exists not to make. Printed only
 	 * for the thirteen; every other species says nothing, which is what the
-	 * absence of a chip already says.
+	 * absence of a chip already says. The manatee's line links nothing: it
+	 * is not on the rule (see PROTECTED), and a link would say it was.
 	 */
 	private static function protected_note( string $id ): void {
 		$line = self::protected_line( $id );
@@ -634,8 +649,10 @@ class Guide_Page {
 		<p class="dccwl-fg-line dccwl-gp-protected" data-k="protected">
 			<span class="dccwl-fg-k"><?php esc_html_e( 'Protected', 'dcc-wildlife' ); ?></span>
 			<?php echo esc_html( $line ); ?>
+			<?php if ( self::cites_rule( $id ) ) : ?>
 			<a class="dccwl-gp-locallink" href="<?php echo esc_url( (string) self::PROTECTED_SOURCE['url'] ); ?>"
 				rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) self::PROTECTED_SOURCE['rule'] ); ?></a>
+			<?php endif; ?>
 		</p>
 		<?php
 	}
