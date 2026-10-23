@@ -1052,16 +1052,26 @@ final class Render {
 				<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( ! empty( $sp['flags'] ) ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take Care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
+				<p class="dccwl-fg-line" data-k="flags"><span class="dccwl-fg-k"><?php esc_html_e( 'Take Care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['safe'] ) : ?>
-				<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What To Do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
+				<p class="dccwl-fg-line dccwl-fg-safe" data-k="safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What To Do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
 			<?php endif; ?>
+			<?php
+			/*
+			 * `data-k` ON EVERY LINE (1.46.0) — a MACHINE NAME beside the
+			 * translated label, for exactly the reason `key` was added to a
+			 * water Fact in 1.34.0: the guide page's sheet lays "Where To
+			 * Look" and "Best Time" out as a pair of tiles and has to find
+			 * them without matching an English string. It is metadata and
+			 * changes nothing about what is rendered.
+			 */
+			?>
 			<?php if ( '' !== $sp['where'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where To Look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
+				<p class="dccwl-fg-line" data-k="where"><span class="dccwl-fg-k"><?php esc_html_e( 'Where To Look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['best'] || '' !== $sp['bestLabel'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best Time', 'dcc-wildlife' ); ?></span>
+				<p class="dccwl-fg-line" data-k="best"><span class="dccwl-fg-k"><?php esc_html_e( 'Best Time', 'dcc-wildlife' ); ?></span>
 					<?php
 					$when = array_values( array_filter( [ (string) $sp['best'], (string) $sp['bestLabel'] ] ) );
 					echo esc_html( implode( ' · ', $when ) );
@@ -1069,10 +1079,10 @@ final class Render {
 				</p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['sound'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen For', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
+				<p class="dccwl-fg-line" data-k="sound"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen For', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $sp['mark'] ) : ?>
-				<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell It Apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
+				<p class="dccwl-fg-line" data-k="mark"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell It Apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
 			<?php endif; ?>
 		</article>
 		<?php
@@ -1556,6 +1566,14 @@ final class Render {
 			 * sheet must not be able to point at different pages.
 			 */
 			'guideUrl'    => Guide_Page::url(),
+			/*
+			 * 1.46.0: the row-anchor prefix the guide page writes. 1.45.0's
+			 * link used the bare id because that was what the page carried;
+			 * now that the rows carry `#dccwl-fl-<key>` — the Director's own
+			 * scheme — the link follows, and it follows from Guide_Page's
+			 * constant rather than from a string repeated here.
+			 */
+			'guideAnchor' => Guide_Page::ANCHOR_PREFIX,
 		];
 
 		wp_add_inline_script(

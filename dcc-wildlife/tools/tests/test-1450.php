@@ -410,22 +410,20 @@ check_contains( $cfg, '\/wildlife-guide\/', 'which is the page the Director name
 check_contains( $cfg, 'See The Full Entry', 'and the words for the link, in Title Case' );
 
 /*
- * THE ANCHOR THE LINK WILL USE HAS TO EXIST ON THAT PAGE. The client builds
- * `guideUrl + '#' + id`; the guide page renders `id="<id>"` on each entry.
- * This is the pair that makes a deep link land — and the reason the brief's
- * `#dccwl-fl-<key>` was NOT used: that prefix belongs to the flag sprites
- * today, so a link to it would land at the top of the page and look broken.
+ * THE ANCHOR THE LINK USES HAS TO EXIST ON THAT PAGE — 1.46.0's half of a
+ * pair that only works if both ends agree. The client builds
+ * `guideUrl + guideAnchor + key`; the guide page writes
+ * `id="dccwl-fl-<key>"` on each ROW. 1.45.0 had the bare id at both ends
+ * and this suite asserted that; both moved together, so the assertion
+ * moved rather than being relaxed.
  */
 dccwl_test_reset();
 dcc_reset_once_guards();
 $guide_html = \DCC_WL\Guide_Page::shortcode( [] );
 $ids        = array_slice( array_keys( Species::registry() ), 0, 5 );
 foreach ( $ids as $id ) {
-	check_contains( $guide_html, 'id="' . $id . '"', "the guide page carries the anchor #$id" );
+	check_contains( $guide_html, 'id="dccwl-fl-' . $id . '"', "the guide page carries the anchor #dccwl-fl-$id" );
 }
-check(
-	false === strpos( $guide_html, 'id="dccwl-fl-' . $ids[0] . '"' ),
-	'and does not yet carry the dccwl-fl- form — Part B\'s scheme, flagged for the Director'
-);
+check_contains( $cfg, '"guideAnchor":"dccwl-fl-"', 'and the sheet is told that prefix, rather than repeating it' );
 
 dcc_done();

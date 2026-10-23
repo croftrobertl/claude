@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.45.0
+Stable tag: 1.46.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,35 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.46.0 =
+* **The wildlife guide is a list you can actually use.** /wildlife-guide/
+  was 402 descriptions one after another — about 359,000 pixels of scrolling
+  on a phone. It is now one row per species: a photograph, the name, where to
+  look, and at most one badge. Tapping a row opens that species over the
+  list; on a computer it opens beside it. Every word of every entry is still
+  in the page for search engines, and a browser that supports it now lays out
+  only the rows on screen.
+* **"Seen Here" and "Wider Florida".** A switch at the top, pinned with the
+  search and the group buttons while you scroll. "Seen Here" is the 395
+  species with a verified record on the Dora Canal or in Lake County —
+  the ones further out wear a small "Lake County" badge — and "Wider Florida"
+  is all 402. The classification comes from a research-grade iNaturalist pull
+  of 22 October 2026; the counts beside each group follow the switch.
+* **Where a species has actually been recorded** is now shown in its entry,
+  linked to the observation itself, so a guest can check it. The manatee is
+  credited to your own sightings on the canal and the Chain, not to a
+  database.
+* **Searching** matches common and scientific names as you type, inside
+  whichever group and whichever list you are looking at.
+* **A stale reading keeps its number** (Rob's decision of 22 October):
+  greyed, without its colour key, with "Last Measured In April" beneath it.
+  1.45.0 replaced the number with that line; now it keeps both.
+* **The loading placeholders match the real cards' layout**, two across on a
+  wide screen instead of four, so nothing moves when the readings land.
+* /explore/'s "See The Full Entry" link now opens the species on the guide
+  page rather than landing near it.
+* Florida Gar's scientific name corrected to *Lepisosteus platyrhincus*.
 
 = 1.45.0 =
 * **The "Now" tab can no longer come up blank.** When the readings were

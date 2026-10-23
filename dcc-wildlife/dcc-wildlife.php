@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Wildlife
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       "On the Canal This Month" wildlife guide, plus a fishing & water-conditions module for Dora Canal Court. The wildlife guide and the water almanac are 100% WordPress-native — no external services. An optional, off-by-default live layer fetches public USGS and NWS data server-side; no API keys, no accounts, no CDN scripts.
- * Version:           1.45.0
+ * Version:           1.46.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DCC_WL_VERSION', '1.45.0' );
+define( 'DCC_WL_VERSION', '1.46.0' );
 define( 'DCC_WL_FILE', __FILE__ );
 define( 'DCC_WL_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DCC_WL_URL', plugin_dir_url( __FILE__ ) );
@@ -47,6 +47,13 @@ spl_autoload_register(
 	static function ( string $class ): void {
 		$map = [
 			'DCC_WL\\Species' => 'includes/class-species.php',
+			/*
+			 * 1.46.0: the local-first table — 402 rows of iNaturalist record
+			 * counts, dates and observation URLs, 62 KB. Autoloaded for the
+			 * same reason the registry is: a page that never asks where a
+			 * species has been recorded should not pay to read the answer.
+			 */
+			'DCC_WL\\Local'   => 'includes/class-local.php',
 		];
 		if ( isset( $map[ $class ] ) ) {
 			require_once DCC_WL_DIR . $map[ $class ];

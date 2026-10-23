@@ -42,6 +42,14 @@ async function measure(w) {
     width: w, height: 900, sitekit: true, touch: w < 700,
   });
   const m = await page.evaluate(() => {
+    /*
+     * 1.46.0: THE ENTRY IS INSIDE A CLOSED <details> UNTIL SOMEBODY OPENS
+     * IT, so it has no box and no measure. Opening the first one is the
+     * no-JavaScript reading path — exactly what a visitor without the
+     * script gets — and it is the path this measure governs.
+     */
+    const fold = document.querySelector('[data-dccwl-gp-details]');
+    if (fold) { fold.open = true; }
     const para = document.querySelector('article.dccwl-fg .dccwl-fg-fact');
     const art = document.querySelector('article.dccwl-fg');
     if (!para || !art) { return null; }
@@ -78,14 +86,21 @@ section('the reading measure, in characters, on the rendered page');
 const at390 = await measure(390);
 const at1280 = await measure(1280);
 const at1920 = await measure(1920);
+/*
+ * 2400 IS THE NEGATIVE CONTROL'S NEW HOME (1.46.0). The page is two
+ * columns from 900px up, so the 70ch-per-column cap does not bind until
+ * about 1640px — below that the VIEWPORT is the limit and a pair of equal
+ * widths would prove nothing about the cap. Measured where it binds.
+ */
+const at2400 = await measure(2400);
 
-check(!!at390 && !!at1280 && !!at1920, 'the guide page rendered at all three widths');
-if (!at390 || !at1280 || !at1920) {
+check(!!at390 && !!at1280 && !!at1920 && !!at2400, 'the guide page rendered at all four widths');
+if (!at390 || !at1280 || !at1920 || !at2400) {
   await browser.close();
   done();
 }
 
-[[390, at390], [1280, at1280], [1920, at1920]].forEach(([w, m]) => {
+[[390, at390], [1280, at1280], [1920, at1920], [2400, at2400]].forEach(([w, m]) => {
   note(`${w}px -> ${m.chars} characters (${m.px}px), scroll-margin-top ${m.scrollMargin}px`);
 });
 
@@ -98,21 +113,32 @@ if (!at390 || !at1280 || !at1920) {
 checkAtLeast(20, at390.chars, '390px: the phone line is at least 20 characters');
 checkAtMost(45, at390.chars, '390px: and not more than 45 — the viewport is the limit here');
 
-/* THE TWO THAT MATTER. The Director asked for about 68-72. */
-checkAtLeast(60, at1280.chars, '1280px: at least 60 characters');
-checkAtMost(78, at1280.chars, '1280px: and at most 78 — a comfortable measure, not a full-width line');
-checkAtLeast(60, at1920.chars, '1920px: still at least 60');
-checkAtMost(78, at1920.chars, '1920px: and still at most 78');
+/*
+ * THE DESKTOP MEASURE, re-stated for a page that is TWO columns from 900px
+ * (1.46.0, Rob's pick: the list on the left, the species on the right).
+ *
+ * The Director's 68-72 characters was a target for a single column of
+ * prose and it still is — at 1920 and beyond, where the cap binds. At 1280
+ * each column gets about half of a 1280px viewport, so the honest floor
+ * there is "a readable column", not the full measure: a two-column layout
+ * cannot give both columns 70 characters on a 1280px screen, and the
+ * alternative — one column of prose beside nothing — is the page he
+ * replaced.
+ */
+checkAtLeast(45, at1280.chars, '1280px: each column is at least 45 characters');
+checkAtMost(78, at1280.chars, '1280px: and at most 78 — never a full-width line');
+checkAtLeast(60, at1920.chars, '1920px: the full measure, at least 60 characters');
+checkAtMost(78, at1920.chars, '1920px: and at most 78');
 
 /*
- * THE NEGATIVE CONTROL, and it is the assertion the dead selector failed.
- * With no cap in force the paragraph fills whatever it is given, so 1920
- * would be about 1.5x the 1280 line. Equal widths prove a cap is actually
- * holding rather than the viewport merely being generous.
+ * THE NEGATIVE CONTROL, and it is the assertion the dead selector failed
+ * in 1.44.0. With no cap in force the paragraph fills whatever it is
+ * given, so 2400 would be about 1.25x the 1920 line. Equal widths prove a
+ * cap is actually holding rather than the viewport merely being generous.
  */
-checkSame(at1280.px, at1920.px,
-  'the column STOPS GROWING between 1280 and 1920 — a cap is in force',
-  `${at1280.px}px vs ${at1920.px}px`);
+checkSame(at1920.px, at2400.px,
+  'the column STOPS GROWING between 1920 and 2400 — a cap is in force',
+  `${at1920.px}px vs ${at2400.px}px`);
 
 section('an anchored species heading clears a sticky header');
 

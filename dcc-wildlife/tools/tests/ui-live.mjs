@@ -2506,6 +2506,9 @@ async function heldWaterPanel(width, payload) {
           fresh: fresh ? fresh.textContent.trim() : '',
           stale: c.classList.contains('dccwl-card-stale'),
           bg: getComputedStyle(c).backgroundColor,
+          borderColor: getComputedStyle(c).borderTopColor,
+          valueColor: value ? getComputedStyle(value).color : '',
+          freshColor: fresh ? getComputedStyle(fresh).color : '',
           /* The attribution survives on a stale card: it is this module's
            * integrity claim and must never be what gets greyed away. */
           attr: !!c.querySelector('.dccwl-water-attr'),
@@ -2524,13 +2527,29 @@ async function heldWaterPanel(width, payload) {
   check(!!lvl, 'the level card rendered');
   if (lvl) {
     check(lvl.stale, 'a 40-day-old level is past its 14-day limit, so the card is marked stale');
-    checkSame(`Last Measured In ${monthNameOf(STALE_LEVEL_DATE)}`, lvl.value,
-      'and its sentence names the month, in the past tense');
-    check(!/below normal|above normal/.test(lvl.value),
-      'THE PRESENT-TENSE CLAIM IS GONE — "About 3 inches below normal" is not printed from a month-old reading');
+    /*
+     * ROB'S RULING OF 2026-10-22: "NUMBER, GRAYED, PAST TENSE."
+     *
+     * 1.45.0 shipped with the freshness sentence REPLACING the reading, and
+     * this suite asserted that. He asked for the reading back: greyed,
+     * stripped of its tier colour, with the past-tense line beneath it. The
+     * assertion is inverted rather than deleted, because "the number is
+     * kept" and "the number is gone" are both things a future change could
+     * do by accident.
+     */
+    checkSame('About 3 inches below normal for September', lvl.value,
+      'and it KEEPS its reading, verbatim — nothing is rewritten or dropped');
+    checkSame(`Last Measured In ${monthNameOf(STALE_LEVEL_DATE)}`, lvl.fresh,
+      'with the past-tense line underneath, naming the month');
     check(lvl.attr, 'while the source and the measurement date stay on the card');
     check(lvl.bg !== 'rgb(255, 255, 255)' && lvl.bg !== 'rgba(0, 0, 0, 0)',
       'and it is greyed by a ground of its own', lvl.bg);
+    check(lvl.valueColor === lvl.freshColor,
+      'the reading itself is greyed, not left black on a grey card',
+      `${lvl.valueColor} vs ${lvl.freshColor}`);
+    check(!/rgb\(7, 135, 50\)|rgb\(0, 107, 207\)/.test(lvl.borderColor),
+      'and the card drops its KEYED tier colour — the key says green means measured today',
+      lvl.borderColor);
   }
 
   const clar = byLabel['Water Clarity'];

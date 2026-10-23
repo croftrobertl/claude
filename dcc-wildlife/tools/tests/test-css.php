@@ -218,6 +218,14 @@ $ring_exempt = [
 	 * renderer, so this exemption cannot outlive its reason.
 	 */
 	'.dccwl-panel',
+	/*
+	 * The guide page's search input (1.46.0), for the same reason as
+	 * /explore/'s above and against the same shared rule: the PILL it sits
+	 * in is `.dccwl-search-field`, whose `:focus-within` ring is asserted
+	 * below. Two rings inside one pill was 1.34.0's item 16.
+	 */
+	'.dccwl-gp .dccwl-gp-searchinput:focus',
+	'.dccwl-gp .dccwl-gp-searchinput:focus-visible',
 ];
 
 $no_ring = [];
@@ -246,6 +254,16 @@ check( [] === $no_ring, 'every outline-removing rule is a :focus rule that draws
 check(
 	false !== strpos( $sources['widget.css'], '.dccwl-search-field:focus-within { box-shadow: var(--dccwl-ring); }' ),
 	'the search pill really does draw the ring the input defers to'
+);
+/*
+ * And that the guide page is inside that rule's reach: it is unscoped in
+ * widget.css, which guide.css depends on — so the guide's pill has to
+ * actually carry the class, not merely look like it does.
+ */
+check(
+	false !== strpos( $sources['guide.css'], '.dccwl-gp .dccwl-gp-search { width: 100%; }' )
+		&& false !== strpos( $sources['guide.css'], 'dccwl-gp-searchinput' ),
+	'and the guide page uses that same pill'
 );
 
 /*

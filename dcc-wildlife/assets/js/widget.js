@@ -676,16 +676,16 @@
 			 * the Guide link in the footnote row and then find the species
 			 * again in a page of 402.
 			 *
-			 * THE ANCHOR IS THE SPECIES' OWN ID, which is what the guide
-			 * page actually renders (`<article class="dccwl-fg" id="…">`).
-			 * The brief asked for `#dccwl-fl-<key>`; that prefix belongs to
-			 * the flag SPRITES today and to Part B's row anchors tomorrow,
-			 * and a deep link to an id that does not exist lands at the top
-			 * of the page and looks like a dud. So this points at the live
-			 * anchor and the report says so. Nothing is composed by hand:
-			 * `guideUrl` comes from Guide_Page, the one definition of where
-			 * that page is, so this link and the footnote row cannot
-			 * disagree.
+			 * THE ANCHOR IS `#dccwl-fl-<key>` SINCE 1.46.0, which is what
+			 * the rebuilt guide page writes on every row — and the rows
+			 * answer it by OPENING that species, not merely by being
+			 * scrolled to. 1.45.0 shipped the bare id because that was the
+			 * anchor the page carried then; both halves moved together.
+			 *
+			 * Neither half is composed by hand: `guideUrl` and
+			 * `guideAnchor` both come from Guide_Page, the one definition of
+			 * where that page is and what its rows are called, so this link
+			 * cannot drift from the ids on the other end.
 			 *
 			 * CENTRED, per Rob's standing alignment rule — it is a title-like
 			 * affordance, not a paragraph. The arrow is a separate
@@ -696,7 +696,7 @@
 				var more = el('p', 'dccwl-detail-more');
 				var moreLink = el('a', 'dccwl-detail-more-link',
 					CFG.i18n.fullEntry || 'See The Full Entry');
-				moreLink.href = CFG.guideUrl + '#' + encodeURIComponent(sp.id);
+				moreLink.href = CFG.guideUrl + '#' + (CFG.guideAnchor || '') + encodeURIComponent(sp.id);
 				var arrow = el('span', 'dccwl-detail-more-arrow', '\u2192');
 				arrow.setAttribute('aria-hidden', 'true');
 				moreLink.appendChild(arrow);

@@ -88,8 +88,16 @@ note(`full-entry link ${JSON.stringify(more)}`);
 check(!!more, 'the sheet carries a link to the full entry');
 if (more) {
   check(/^See The Full Entry/.test(more.text), 'in Rob\'s Title Case', more.text);
-  checkSame('/wildlife-guide/#cottonmouth', more.href,
-    'pointing at THIS species\' anchor on the guide page');
+  /*
+   * 1.46.0: `#dccwl-fl-<key>`, the Director's own scheme, now that the
+   * guide page's ROWS carry that id and answer it by opening the species.
+   * 1.45.0 used the bare id because that was the anchor the page had then;
+   * both ends moved in the same release, and test-1460.php pins the other
+   * one. The prefix is never typed in two places — it comes from
+   * Guide_Page::ANCHOR_PREFIX through the config.
+   */
+  checkSame('/wildlife-guide/#dccwl-fl-cottonmouth', more.href,
+    'pointing at THIS species\' row on the guide page');
   checkSame('center', more.align, 'centred, per the standing alignment rule');
   check(/underline/.test(more.underline), 'and marked as a link by more than colour');
   checkAtLeast(44, more.height, "with Rob's 44px tap target");

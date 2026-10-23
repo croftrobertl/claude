@@ -758,6 +758,9 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 # URLs point at it, so a zip without it ships a broken map.
 unzip -l "Wildlife $V.zip" | grep -E '\.md$'  && echo 'FAIL: a dev doc shipped'
 unzip -l "Wildlife $V.zip" | grep -E 'tools/' && echo 'FAIL: dev tools shipped'
+# 1.46.0: the local-first CSV lives in tools/data, so the line above covers it —
+# but the GENERATED table must ship, because the guide page reads it.
+unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/includes/class-local.php' || echo 'FAIL: class-local.php missing'
 unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
 for f in leaflet.js leaflet.css; do
   unzip -l "Wildlife $V.zip" | grep -q "dcc-wildlife/assets/vendor/leaflet/$f" || echo "FAIL: vendor/leaflet/$f missing"
@@ -4900,3 +4903,156 @@ named in the lint, and put to him in the report.
   a fixed date is true the morning it is written and false for ever after;
   computing the expected words from the same rule the code uses would be a
   test that mirrors its implementation.
+
+### 42. 1.46.0 — Parts B and C: the guide page became a list, and the guide learned where things have actually been seen
+
+The attachments arrived this time (they were missing on 2026-10-22 and both
+parts were held rather than invented). Six files: three mockups, the
+switch-placement image with Option 1 picked, the 402-row classification CSV
+and its summary.
+
+#### PART C — THE LOCAL-FIRST TABLE IS GENERATED, NEVER TYPED
+
+`includes/class-local.php` is written by `tools/import-local-first.php` from
+`tools/data/local-first-2026-10-22.csv`, which stays in the repository as the
+provenance record (tools/ is excluded from the zip). **402 rows of somebody
+else's evidence — record counts, dates and observation URLs — is exactly the
+kind of table that goes wrong silently in one row nobody re-reads.** The
+importer is a hard stop on a registry/CSV mismatch in either direction, on an
+unknown class, and on a URL that is not an iNaturalist observation; it
+normalises nothing.
+
+`test-1460.php` then reads **both** files and compares them field by field,
+rather than trusting the generator that wrote one from the other.
+
+- **HERE 346 · NEAR 49 · WIDER 7.** "Seen Here" is 395 (HERE + NEAR, Rob's
+  decision), "Wider Florida" is all 402.
+- **`n` IS A STRING, NOT AN INT.** The manatee's is `owner`, and casting it
+  would write 0 — "no records" for the one species Rob has seen himself.
+- **NEAR AND WIDER MEAN "NOT VERIFIED HERE", NEVER "ABSENT".** iNaturalist is
+  presence-only and Tavares is undersampled (the white-tailed deer: one usable
+  record within 15 km, 447 within 40). So a WIDER species' entry says NOTHING
+  about records — silence, not a claim — and `Local::seen_here()` returns true
+  for a species the pull never classified, because dropping an unclassified
+  species out of the guest's list is the worse failure.
+- **The manatee is HERE on the owners' own sighting** and is credited that
+  way: "Seen Here — By your hosts, in the canal and on the Chain." iNat holds
+  three records within 15 km but hides manatee coordinates, so they support
+  Rob, Erica and Rick without being able to stand on their own.
+- **Flagged, not changed: the iris.** The site's Blue Flag Iris
+  (*Iris virginica*) has no usable record within 40 km while Prairie Iris
+  (*Iris savannarum*) has five within 15. Recorded in WATER-SOURCES.md; the
+  Director is verifying which is on the canal. **Changing a species' identity
+  on a record count would be the guide asserting something nobody checked on
+  the ground.**
+
+#### PART B — THE PAGE IS A LIST, AND IT IS STILL THE CRAWLABLE COPY
+
+The hard part was Rob's own requirement: *keep every word for search engines
+AND be fast*. Three mechanisms, and the first is the one that makes the other
+two honest.
+
+- **EVERY ENTRY IS INSIDE A NATIVE `<details>` WHOSE `<summary>` IS THE ROW.**
+  All 402 are server-rendered in full, each with its `#dccwl-fl-<key>` anchor.
+  A visitor with no JavaScript opens any entry by tapping it, exactly as
+  before. With JavaScript the row opens the shared sheet instead and guide.js
+  STOPS the fold toggling, so the entry stays in a closed `<details>` and the
+  browser hides it natively. **There is deliberately no CSS rule of ours
+  setting `display: none` on an entry** — that is what the 1.16.0 note
+  forbids, whatever the script does, and test-guide-page.php now greps
+  guide.css for exactly that.
+- **`content-visibility: auto` with `contain-intrinsic-size: auto 88px`** per
+  row. Verified by `contentvisibilityautostatechange` — rows really are
+  skipped and unskipped as they leave and enter the viewport. A browser
+  without it draws everything, as the old page did.
+- **The sheet and the desktop pane CLONE the row's own entry.** Nothing is
+  rebuilt from data: the words in the sheet are the words a crawler read. Two
+  things are added from attributes, because the entry does not carry them —
+  the photograph, and its credit.
+
+**THE CREDIT COMES FROM `Species::photo_credit_line()`, NOT THE DATASET'S
+`credit` FIELD.** The dataset sends `credit` only where it differs from the
+default Adobe Stock line — transport economy, documented in 1.24.0 — so
+reading it here leaves most species with no credit under a full-size
+photograph. That is a licence breach, not a missing nicety.
+
+**The chips are the Director's rules, and one of them is reported rather than
+obeyed quietly.** "Keep Away" = the 21 species in the SAFETY GROUP; "Protected"
+= six keys written out (`Guide_Page::PROTECTED_KEYS`), never derived from the
+`protected` flag; "Lake County" = NEAR. At most one, in that order — the
+diamondback is both Safety and NEAR and shows "Keep Away". **Seven species
+carry the `danger` flag from outside the Safety group** — alligator, cane
+toad, Cuban treefrog, prickly pear, sawgrass, rhesus macaque, walkingstick —
+and under the rule as written they get no "Keep Away" chip. The rule names the
+group and the count 21, which is the group's exact size, so the rule was
+followed; the seven are pinned by name in test-1460.php, their "Take Care"
+lines are asserted to survive in their entries, and the question is in the
+1.46.0 report for Rob.
+
+**Measured, at 390 × 844 in this container (a desktop CPU, not a mid phone):**
+
+| | |
+|---|---|
+| elements in the first view | **117–124** (target < 1,000) |
+| LCP | **416 ms** at 390px, **360 ms** at 1280px (target < 2.5 s) |
+| row tap → open | **35 ms** at 390px, **22 ms** at 1280px (target < 100 ms) |
+| forced full layout | **19.3 ms** with content-visibility, **29.2 ms** without |
+| page HTML | **1.21 MB raw / 162 KB gzip** — large by design, as agreed |
+
+**`LayoutObjects` IS THE WRONG METRIC and it is worth saying so.** Chromium
+reports 4,748 with content-visibility and 9,344 without, but
+`content-visibility: hidden` — which definitely skips — reports *more* (5,121).
+It counts objects that EXIST, not work done. "Elements whose box intersects
+the first screen" is what "first view" means, and that is what is reported.
+Asking for a box inside a skipped subtree forces it to render, so that
+measurement is taken once, last, and nowhere else in the suite.
+
+#### THE READING MEASURE HAD TO MOVE WITH THE LAYOUT
+
+widget.css caps the page at `70ch` — right for one column of prose, and it
+gave each column 34 characters once the page was two. The cap doubles
+(`140ch + gap`) only inside the ≥900px split. The negative control moved with
+it: the cap does not bind until about 1640px, so ui-guidepage.mjs now measures
+1920 against **2400**. A pair of equal widths below the binding point would
+have proved nothing.
+
+#### THREE SMALLER THINGS THE DIRECTOR ASKED FOR
+
+- **"Number, grayed, past tense" (Rob, 2026-10-22).** 1.45.0 replaced a stale
+  reading with its freshness line; he wants the figure kept. The value is now
+  printed verbatim in both cases and only the line underneath differs — plus
+  the card drops its KEYED tier colour, which a screenshot caught: the key
+  says green means measured today, and a green ring around "Last Measured In
+  April" says both things at once.
+- **The skeleton draws in the real grid.** It takes the deck's own class
+  rather than a copy of its numbers, so it is two cards across where the
+  readings will be two across. Measured on a cold load: CLS **0.0000** at both
+  widths with and without it — because the strip is the last block in its pane,
+  so nothing sits below it to be pushed. The skeleton's measured effect is that
+  the pane holds 240px of card shapes instead of being empty.
+- **The guide link is `#dccwl-fl-<key>` now**, from `Guide_Page::ANCHOR_PREFIX`
+  at both ends, and the row ANSWERS it by opening that species — including
+  moving the switch when the link names a Wider Florida species, whose row is
+  hidden under the view the page opens on.
+
+#### WHAT THE HARNESS LEARNED
+
+- **A PROBE THAT COULD ONLY PASS, GREEN SINCE 1.43.0.** test-guide-page.php
+  asserted "no dcc-wildlife script is enqueued by the guide page" by reading
+  `$wp_scripts->queue` — which does not exist under these stubs. It compared
+  `[]` against `[]` and would have passed for a page that enqueued the whole
+  plugin. It reads the harness's own record now, and asserts an exact list
+  rather than emptiness: the point was never zero scripts, it was that nothing
+  arrives without a reason that can be named.
+- **Seventh instance of "a rule written for the wrong parent is invisible",
+  caught the same hour it was written.** widget.css centres the species name
+  scoped to `.dccwl-guidepage`; the sheet is body-level and outside it, so the
+  name computed to `start`. Found by ui-guide.mjs asking the rendered sheet
+  what `text-align` it had — not by reading CSS.
+- **A fixture stub answered one question with another's answer.**
+  ui-overflow.mjs replaced `window.fetch` wholesale and gave the species call
+  the water facts; harmless while /species carried only sheet detail, fatal
+  once the index moved there. Each route answers with its own fixture now.
+- **Scope a sweep to what it is about.** The "every iNaturalist link is from
+  the pull" assertion first ran over the whole page and failed on the photo
+  CREDITS, several of which are sourced from iNaturalist observations.

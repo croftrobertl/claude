@@ -277,17 +277,23 @@
 	border-color: var(--dccwl-line-strong);
 }
 
-.dccwl-water-scope .dccwl-card-stale .dccwl-card-value-stale,
+/*
+ * ROB'S RULING OF 2026-10-22: "NUMBER, GRAYED, PAST TENSE."
+ *
+ * 1.45.0 took the number away and put the freshness sentence in its slot.
+ * He wants the reading kept and greyed, so the value is styled rather than
+ * replaced — the label and the line under it grey with it, and the line is
+ * what says the reading is not current.
+ */
+.dccwl-water-scope .dccwl-card-stale .dccwl-card-value,
 .dccwl-water-scope .dccwl-card-stale .dccwl-card-label {
 	color: var(--dccwl-text-faint);
 }
 
-/* The sentence that REPLACES the reading when it is past its limit. It
- * keeps the value slot's weight and line-height so the row does not change
- * height, and drops a step in size because it is words rather than a
- * number — "Last Measured In September" at the full value size shouts. */
-.dccwl-water-scope .dccwl-card-value-stale {
-	font-size: var(--dccwl-fs-sm);
+/* The past-tense line carries a shade more weight than a fresh age line:
+ * it is the sentence that withdraws the claim, not a footnote to it. */
+.dccwl-water-scope .dccwl-card-fresh-stale {
+	font-weight: var(--dccwl-fw-label);
 }
 
 /* ======================================================================

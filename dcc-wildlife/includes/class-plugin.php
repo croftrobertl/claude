@@ -217,6 +217,31 @@ final class Plugin {
 		// The Canal hub (1.10.0). Its stylesheet builds on the app layer and
 		// its script drives the existing widget rather than replacing it, so
 		// both are dependencies rather than copies.
+		/*
+		 * THE GUIDE PAGE (1.46.0) — its own stylesheet and script.
+		 *
+		 * /wildlife-guide/ is an app-style list of 402 rows now, not a
+		 * stack of 402 descriptions, so it needs both; and it needs them
+		 * ONLY there, which is why they are their own handles rather than
+		 * rules bolted onto widget.css. The script depends on the shared
+		 * sheet: a species opens in the same drawer as everywhere else in
+		 * this plugin, with the same focus trap and the same Escape and
+		 * back-button contract.
+		 */
+		wp_register_style(
+			'dcc-wildlife-guide',
+			DCC_WL_URL . 'assets/css/guide.css',
+			[ 'dcc-wildlife' ],
+			DCC_WL_VERSION
+		);
+		wp_register_script(
+			'dcc-wildlife-guide',
+			DCC_WL_URL . 'assets/js/guide.js',
+			[ 'dcc-wildlife-sheet' ],
+			DCC_WL_VERSION,
+			true
+		);
+
 		wp_register_style(
 			'dcc-wildlife-canal',
 			DCC_WL_URL . 'assets/css/canal.css',

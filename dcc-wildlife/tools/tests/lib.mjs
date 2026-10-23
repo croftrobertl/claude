@@ -338,13 +338,17 @@ const ASSETS = {
     js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'],
   },
   /*
-   * /wildlife-guide/ (1.43.0) — styles only, and the EMPTY js list is the
-   * assertion. The page enqueues no script on the front end, so a harness
-   * that loaded one here would be testing a page the site does not serve.
+   * /wildlife-guide/ — rebuilt as an app-style list in 1.46.0, so it now
+   * has a stylesheet and a script of its own, and the shared sheet behind
+   * them. The 1.43.0 note here said the EMPTY js list was the assertion;
+   * that was true of the page that was 402 descriptions in normal flow and
+   * is not true of this one. The dependency chain mirrors
+   * Plugin::register_assets() exactly: guide.css after widget.css (which
+   * brings app.css), guide.js after sheet.js.
    */
   guide: {
-    css: ['assets/css/app.css', 'assets/css/widget.css'],
-    js: [],
+    css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/guide.css'],
+    js: ['assets/js/sheet.js', 'assets/js/guide.js'],
   },
 };
 

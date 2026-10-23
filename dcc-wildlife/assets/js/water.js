@@ -262,15 +262,27 @@
 		 * oldest answer to not knowing something.
 		 */
 		var fresh = freshLine(f, i18n);
-		if (fresh.stale) {
-			li.className += ' dccwl-card-stale';
-			li.appendChild(el('p', 'dccwl-card-value dccwl-card-value-stale',
-				fresh.text || f.label));
-		} else {
-			li.appendChild(el('p', 'dccwl-card-value', f.value));
-			if (fresh.text) {
-				li.appendChild(el('p', 'dccwl-card-fresh', fresh.text));
-			}
+		if (fresh.stale) { li.className += ' dccwl-card-stale'; }
+		/*
+		 * ROB'S ANSWER, 2026-10-22: "NUMBER, GRAYED, PAST TENSE."
+		 *
+		 * 1.45.0 replaced a stale card's value with its freshness line, so a
+		 * four-month-old oxygen reading showed no figure at all. He wants the
+		 * figure kept — greyed, stripped of its keyed tier colour, with "Last
+		 * Measured In April" underneath. The number is a measurement and a
+		 * measurement does not expire; what expires is the claim that it
+		 * describes now, and the line below is what withdraws that claim.
+		 *
+		 * SO THE ONLY DIFFERENCE BETWEEN THE TWO CASES IS THE WORDING OF THE
+		 * LINE UNDERNEATH, and `value` is printed verbatim either way.
+		 * Nothing on a stale card is composed, rewritten or dropped here:
+		 * this file does not get to decide what a reading says, and the
+		 * level card's sentence is Water_Live's, not ours.
+		 */
+		li.appendChild(el('p', 'dccwl-card-value', f.value));
+		if (fresh.text) {
+			li.appendChild(el('p', 'dccwl-card-fresh' + (fresh.stale ? ' dccwl-card-fresh-stale' : ''),
+				fresh.text));
 		}
 
 		// Full attribution: the source (linked where there is a URL) and the
@@ -469,6 +481,23 @@
 		if (!list || list.firstChild) { return; }
 		list.setAttribute('data-dccwl-skel', '1');
 		list.setAttribute('aria-hidden', 'true');
+		/*
+		 * THE SKELETON IS LAID OUT BY THE DECK'S OWN RULES (1.46.0).
+		 *
+		 * The Director measured it at 1280px: four skeleton cards in one row
+		 * where the real Now tab puts two. Without this class the list falls
+		 * back to `.dccwl-cards`'s auto-fill grid, which is a different
+		 * layout from the one the readings arrive into — so the strip
+		 * reflowed exactly when the skeleton existed to stop it reflowing.
+		 *
+		 * The CLASS, not a copy of its rules: `.dccwl-deck.dccwl-deck` and
+		 * `.dccwl-cards.dccwl-deck` already say 100% on a phone, two across
+		 * from 700px, two rows. A second set of numbers here would be two
+		 * descriptions of one layout, free to drift. The deck's SCRIPT is
+		 * deliberately not attached — it would add Previous/Next buttons for
+		 * a list with nothing to page through.
+		 */
+		list.classList.add('dccwl-deck');
 		for (var i = 0; i < SKELETON_CARDS; i++) {
 			list.appendChild(buildSkeletonCard());
 		}
@@ -484,6 +513,10 @@
 		list.removeAttribute('data-dccwl-skel');
 		list.removeAttribute('aria-hidden');
 		list.textContent = '';
+		/* The real fill re-adds it through DCCWL_Deck.attach(), which also
+		 * brings the controls. Leaving it on would be a deck with no script
+		 * behind it in the window between the two. */
+		list.classList.remove('dccwl-deck');
 		/* Back to hidden unless real readings reveal it: `fill()` owns that
 		 * decision and makes it on whether any FACT arrived, which is the
 		 * 1.34.0 rule. A skeleton must not be able to leave an empty strip
