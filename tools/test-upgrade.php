@@ -209,6 +209,65 @@ foreach ($map as $theme => $eff) {
 }
 ok($unknown === [], 'no theme maps to an effect the engine does not implement', implode(' ', $unknown));
 
+/* ---------------------------------------------------------------------
+ * 4.13.0: the calendar upgrade. Rob re-cut the calendar, and a stored
+ * schedule has to come with it — but a row HE changed must survive
+ * untouched and be reported, because a calendar that quietly disagrees
+ * with the person who set it is worse than one that is out of date.
+ * ------------------------------------------------------------------- */
+echo "\n=== the calendar upgrade (4.13.0) ===\n";
+$mref = function (string $n, ...$a) {
+    $r = new ReflectionMethod(\DCC_Seasons\Schedule::class, $n);
+    $r->setAccessible(true);
+    return $r->invoke(null, ...$a);
+};
+$fx = fn($m, $d) => $mref('fx', $m, $d);
+$at = fn($k, $o = 0) => $mref('at', $k, $o);
+
+/* a genuine pre-4.13.0 stored schedule: the new defaults, rolled back */
+$pre = \DCC_Seasons\Schedule::defaults();
+foreach ($pre as $i => $r) {
+    switch ($r['theme']) {
+        case 'snowbird':    $pre[$i]['end']   = $fx(1, 31); break;
+        case 'strawberry':  $pre[$i]['start'] = $fx(2, 1); break;
+        case 'valentines':  $pre[$i]['start'] = $fx(2, 10); break;
+        case 'earth_day':   $pre[$i]['start'] = $fx(4, 21); break;
+        case 'mothers_day': $pre[$i]['start'] = $at('mothers_day', -2); break;
+        case 'fathers_day': $pre[$i]['start'] = $at('fathers_day', -2); break;
+    }
+}
+$pre[] = ['start' => $fx(9, 8),  'end' => $at('patriot_day'),  'theme' => 'patriot_day',  'label' => 'Patriot Day',  'year' => 0];
+$pre[] = ['start' => $fx(11, 10), 'end' => $at('veterans_day'), 'theme' => 'veterans_day', 'label' => 'Veterans Day', 'year' => 0];
+
+$kept = [];
+$out  = \DCC_Seasons\Schedule::apply_calendar($pre, '4.12.2', '4.13.0', $kept);
+ok($out == \DCC_Seasons\Schedule::defaults(), 'an untouched schedule lands exactly on the new defaults', count($out) . ' rows');
+ok($kept === [], 'and nothing is reported as the owner\'s own', implode(',', array_column($kept, 'theme')));
+$themes = array_column($out, 'theme');
+ok(!in_array('patriot_day', $themes, true) && !in_array('veterans_day', $themes, true),
+    'the two themes Rob took off the calendar are gone from it', implode(',', $themes));
+
+/* the row the owner changed himself */
+$edited = $pre;
+foreach ($edited as $i => $r) { if ($r['theme'] === 'strawberry') { $edited[$i]['start'] = $fx(2, 3); } }
+$kept2 = [];
+$out2  = \DCC_Seasons\Schedule::apply_calendar($edited, '4.12.2', '4.13.0', $kept2);
+$straw = null;
+foreach ($out2 as $r) { if ($r['theme'] === 'strawberry') { $straw = $r; } }
+ok($straw !== null && $straw['start'] == $fx(2, 3), 'a row the owner changed is left EXACTLY as he set it', json_encode($straw['start'] ?? null));
+ok(array_column($kept2, 'theme') === ['strawberry'], 'and it is reported, so the upgrade can say so', implode(',', array_column($kept2, 'theme')));
+$sn2 = null;
+foreach ($out2 as $r) { if ($r['theme'] === 'snowbird') { $sn2 = $r; } }
+ok($sn2 !== null && $sn2['end'] == $fx(2, 14), 'while every row he did not touch still moves', json_encode($sn2['end'] ?? null));
+
+/* idempotent, and gated by version */
+$k3 = [];
+ok(\DCC_Seasons\Schedule::apply_calendar($out, '4.12.2', '4.13.0', $k3) == $out, 'running it twice changes nothing');
+ok($k3 === [], 'and a schedule already on the new calendar is not reported as edited', implode(',', array_column($k3, 'theme')));
+$k4 = [];
+ok(\DCC_Seasons\Schedule::apply_calendar($pre, '4.13.0', '4.13.0', $k4) == array_values($pre),
+    'a site already past 4.13.0 is left alone entirely', 'version gate');
+
 echo "\n$pass passed · $fail failed\n";
 if ($fail) {
     foreach ($problems as $p) { echo "  - $p\n"; }

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.12.2
+Stable tag: 4.13.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,34 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.13.0 =
+Thanksgiving, brought up to Halloween's standard: a signature scene, nine
+more kinds of falling piece, and Rob's re-cut calendar. Staging first; live
+after Rob signs off. Rollback: reinstall the 4.12.2 zip.
+
+* A V of five sandhill cranes crosses a low, deep-orange harvest moon, in
+  the header picture only. The moon is the plugin's own moon painter with a
+  warm grade over it, so its craters are the real ones; the birds go dark as
+  they cross its face. Every wingbeat is drawn once after the page has
+  loaded, so the crossing itself costs almost nothing.
+* Thanksgiving's falling pieces go from three kinds to ten: four real
+  Central Florida leaves (live oak, bald cypress, red maple in two
+  colourings, sweetgum), a gourd that comes three ways, Indian corn and a
+  cranberry sprig, alongside the acorn, the pie and the turkey. The number
+  of pieces on screen at once is unchanged.
+* The plain oval leaves that used to drift behind everything are gone from
+  Thanksgiving, so only the drawn leaves fall. No other theme changes.
+* One witch, not two: the small witch that used to cross the header on
+  Halloween is gone, and the witch-and-moon scene is the only one. A
+  theme's signature character now appears once, as its scene.
+* The calendar, as Rob re-cut it: Snowbird runs to Valentine's; Strawberry
+  Season becomes the run-up to the Plant City festival; Valentine's, Earth
+  Day, Mother's Day and Father's Day are their own day only; Patriot Day
+  and Veterans Day come off the calendar, with both themes kept in the
+  library. An upgrade step moves a stored schedule onto the new calendar,
+  but only where a row was never edited — a row you changed is left exactly
+  as you set it and reported in the log.
 
 = 4.12.2 =
 Rob's pick from the 4.12.1 side-by-side: the falling and drifting sprites
