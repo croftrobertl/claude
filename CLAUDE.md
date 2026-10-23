@@ -296,6 +296,47 @@ own. `tests/focus-colour.ui.js` enumerates the DOM rather than a kept list, and
 coral by Rob's palette — exclude stickers from any "nothing is coral" test
 rather than treating it as a defect.
 
+The guide's primary is the SITE's blue, `#006BCF`, since v0.24.5 — it used to
+be `#0f6dbf`, a shade apart from everything else on doracanalcourt.com. One
+token does not cover it: there are `var(--dccgg-primary, …)` fallbacks, a
+`@media print` block that no token reaches, the coastal preset in BOTH
+`widget.css` and `Widget::theme_presets()`, the manifest `theme_color` and the
+`<meta name="theme-color">` in `class-plugin.php`, and the confetti palette in
+`widget.js`. `tests/site-blue.test.php` checks every one of those by meaning
+rather than by line number. Three blues are deliberately NOT this one and must
+survive: the coral hover `#f08080`, dark mode's `#5fa8e8` and the minimal
+preset's `#0066ff`. No Elementor control defaults to a blue, so nothing is
+pinned into a page's own stylesheet — but a control the host SET still wins,
+which is a live question, not a packaged one.
+
+Editor-only code lives in `assets/js/widget-editor.js` since v0.24.5 (Welcome
+Pack, Export / Import, the editor toast), registered as `dccgg-widget-editor`
+and enqueued ONLY by `enqueue_for_editor()` and `enqueue_for_preview()`. Core
+keeps two things on purpose: `isElementorEditorPreview()`, because
+`shouldUseDetailModal()` needs it on the front end (v0.9.7.24 — a portaled
+fixed modal is invisible in the editor canvas, so the guide falls back to an
+inline reveal), and a no-op `editorPreviewToast()` that forwards to
+`window.__dccggEditorToast` once the editor bundle installs the real one. That
+hook is the whole contract between the two files; core must never reach into
+the editor bundle any other way.
+
+The Front Desk form lands on its own `<h3>` (tabindex="-1"), not on a field:
+focusing a text input opened the iPhone keyboard over the form and skipped the
+first question. Same shape as a section pop-up since v0.24.4. Tab from there
+goes to the Close button, then the first question — that is source order, not
+a bug. The Voice Search mic is in the v0.21.0 44x44 `::after` pass but
+deliberately NOT in its `position: relative` rule: the mic is already
+`position: absolute` inside the search bar at (0,1,0), and relative at (0,2,0)
+would win and drop it out of the field. `tests/site-blue.test.php`,
+`tests/front-desk-form.ui.js` and `tests/site-blue.mutations.py` guard all of
+the above.
+
+Every string the form shows is an Elementor control with a `'default'`, which
+Elementor writes into `_elementor_data` the moment a page is saved. So changing
+a packaged default does NOT change a page that already exists — page 4645
+carries its own stored copies. The same trap as `reveal_memory_hours`. Change
+the default AND tell the host which stored values to update.
+
 Remembered Wi-Fi reveals carry `t` (when they were kept) as well as `exp`, so
 SHORTENING reveal_memory_hours expires older copies on the next visit. A copy
 written before v0.24.3 has no `t` and its age is reconstructed from
@@ -327,7 +368,8 @@ admin-ajax, logins or previews, and turning the toggle off unregisters it.
 Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/ai-query.test.php`, `php tests/front-desk.test.php`,
 `php tests/stickers.test.php`, `node tests/phone-fixes.ui.js`, `php tests/report-hardening.test.php`,
-`node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js`,
+`php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

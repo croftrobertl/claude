@@ -1494,7 +1494,10 @@ async function run() {
                 m.summary.size === '16px' && m.summary.weight === '400'
                 && m.summary.ls === 'normal' && m.summary.radius === '6px'
                 && m.summary.padding === '6px 12px' && m.summary.border === '1px solid'
-                && m.summary.bg === 'rgb(15, 109, 191)' && m.summary.color === 'rgb(255, 255, 255)',
+                // v0.24.5 moved --dccgg-primary to the site's #006BCF. The
+                // summary still takes the primary, which is the point of this
+                // check — it must not have been swept onto the button spec.
+                && m.summary.bg === 'rgb(0, 107, 207)' && m.summary.color === 'rgb(255, 255, 255)',
                 JSON.stringify(m.summary));
             check(`${vpName}: the popover box is unchanged`,
                 m.popover.bg === 'rgb(255, 255, 255)' && m.popover.radius === '10px'

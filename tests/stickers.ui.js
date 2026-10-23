@@ -206,7 +206,9 @@ const check = (name, cond, detail) => {
         await page.$eval('.dccgg-tile-wrap[data-section-key="review"] .dccgg-tile', (e) => e.focus());
         await page.waitForTimeout(300);
         const foc = await read(sel);
-        check('keyboard focus adds a ring outside the white rim', /rgba?\(15, 109, 191[^)]*\) 0px 0px 0px (5\.9|6)/.test(foc), foc);
+        // v0.24.5 moved --dccgg-primary from #0f6dbf to the site's #006BCF;
+        // the ring is still the primary, it is just the right blue now.
+        check('keyboard focus adds a ring outside the white rim', /rgba?\(0, 107, 207[^)]*\) 0px 0px 0px (5\.9|6)/.test(foc), foc);
         await ctx.close();
     }
     {

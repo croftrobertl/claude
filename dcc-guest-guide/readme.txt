@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.4
+Stable tag: 0.24.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,26 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.24.5 =
+
+**One blue, the site's.** The guide was drawn in #0f6dbf while the rest of the
+site uses #006BCF — two blues a shade apart, on every link, focus ring, accent
+and tile border, in the print layout, in the installed app's title bar and even
+in the checkout confetti. All of it is now the site's blue. White text on it
+measures 5.24:1, which clears the AA standard. The coral hover, the dark-mode
+blue and the minimal theme's blue are unchanged.
+
+**Smaller download for every guest.** The Welcome Pack inserter and the
+Export / Import tools are only ever used inside the page editor, but every
+visitor was downloading them and the page was registering a click handler for
+buttons that were never there. They now load only in the editor.
+
+**The Front Desk form.** Its six labels are in Title Case. Opening it puts the
+cursor on the form's own title rather than in the Name box — on an iPhone that
+box opened the keyboard over the form, and it also skipped past the first
+question. The Voice Search button keeps the same icon but now accepts a tap
+anywhere in a 44-pixel square, the size a finger needs.
 
 = 0.24.4 =
 

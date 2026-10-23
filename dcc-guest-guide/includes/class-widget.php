@@ -134,6 +134,14 @@ final class Widget extends Widget_Base
         self::$serving_unminified = (!$css_min || !$js_min);
         wp_register_style('dccgg-widget', DCCGG_URL . $css_path, $style_deps, DCCGG_VERSION);
         wp_register_script('dccgg-widget', DCCGG_URL . $js_path, [], DCCGG_VERSION, true);
+        // v0.24.5: the Welcome Pack inserter, Export / Import and the editor
+        // toast are registered here but enqueued ONLY by enqueue_for_editor()
+        // and enqueue_for_preview(). They were part of widget.js, so every
+        // guest and every prospect downloaded them along with a delegated
+        // click listener for buttons that exist only in the editor panel.
+        $ed_min  = file_exists(DCCGG_DIR . 'assets/js/widget-editor.min.js');
+        $ed_path = $ed_min ? 'assets/js/widget-editor.min.js' : 'assets/js/widget-editor.js';
+        wp_register_script('dccgg-widget-editor', DCCGG_URL . $ed_path, ['dccgg-widget'], DCCGG_VERSION, true);
     }
 
     /** Set at registration: true when a .min bundle was missing and the full source is being served. */
@@ -167,6 +175,9 @@ final class Widget extends Widget_Base
         }
         wp_enqueue_style('dccgg-widget');
         wp_enqueue_script('dccgg-widget');
+        // v0.24.5: the preview iframe is exactly where the editor toast is
+        // meant to appear, so it loads the editor bundle as well.
+        wp_enqueue_script('dccgg-widget-editor');
         // v0.23.0: the editor previews the FULL guide, whose dialogs and
         // popovers are styled by the guest-only bundle.
         self::enqueue_guest_css();
@@ -181,6 +192,9 @@ final class Widget extends Widget_Base
     {
         self::register_assets();
         wp_enqueue_script('dccgg-widget');
+        // v0.24.5: the panel's Welcome Pack / Export / Import buttons are
+        // handled here now, not in the core bundle.
+        wp_enqueue_script('dccgg-widget-editor');
         // v0.24.1: the icon picker draws our eight glyphs from this stylesheet
         // (one masked data: URI per class). Editor only — the front end uses
         // the inline <symbol> sprite and loads nothing extra.
@@ -197,7 +211,7 @@ final class Widget extends Widget_Base
         } elseif (isset($_GET['post_id'])) {
             $post_id = (int) $_GET['post_id'];
         }
-        wp_localize_script('dccgg-widget', 'dccggEditor', [
+        wp_localize_script('dccgg-widget-editor', 'dccggEditor', [
             'ajaxUrl'     => admin_url('admin-ajax.php'),
             'exportNonce' => wp_create_nonce('dccgg_export'),
             'importNonce' => wp_create_nonce('dccgg_import'),
@@ -384,11 +398,11 @@ final class Widget extends Widget_Base
         return [
             'custom' => [],
             'coastal' => [
-                '--dccgg-primary'      => '#0f6dbf',
-                '--dccgg-btn-bg'       => '#0f6dbf',
+                '--dccgg-primary'      => '#006bcf',
+                '--dccgg-btn-bg'       => '#006bcf',
                 '--dccgg-btn-txt'      => '#ffffff',
                 '--dccgg-tile-bg'      => 'rgba(255,255,255,0.85)',
-                '--dccgg-tile-border'  => 'rgba(15,109,191,0.15)',
+                '--dccgg-tile-border'  => 'rgba(0,107,207,0.15)',
                 '--dccgg-detail-bg'    => '#ffffff',
                 '--dccgg-text'         => '#0a3a5c',
                 '--dccgg-muted'        => '#5d7891',
@@ -1632,18 +1646,18 @@ final class Widget extends Widget_Base
             'str_secret_offline'  => [__('Reveal-needs-connection toast', 'dcc-guest-guide'), __('Showing this needs a connection.', 'dcc-guest-guide')],
             // v0.23.1: Copy has its own wording — "Showing" is wrong on a Copy button.
             'str_secret_copy_offline' => [__('Copy-needs-connection toast', 'dcc-guest-guide'), __('Copying this needs a connection.', 'dcc-guest-guide')],
-            'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
+            'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the Issue?', 'dcc-guest-guide')],
             // v0.18.0: the category <option> used to reuse the LABEL string, so
             // whatever the host typed appeared twice — once as the label and
             // again as the placeholder, where the caret clipped it. Its own key,
             // with the right value already shipped: nobody should have to type
             // "Select" into a panel to make a fresh widget correct.
             'str_report_category_placeholder' => [__('Report dialog category placeholder', 'dcc-guest-guide'), __('Select', 'dcc-guest-guide')],
-            'str_report_desc'     => [__('Report dialog description label', 'dcc-guest-guide'),__('Describe the problem', 'dcc-guest-guide')],
-            'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to reach you back (optional)', 'dcc-guest-guide')],
-            'str_report_name'     => [__('Report dialog "Your name" label', 'dcc-guest-guide'),  __('Your name (optional)', 'dcc-guest-guide')],
-            'str_report_cottage'  => [__('Report dialog "Cottage" label', 'dcc-guest-guide'),    __('Which cottage are you staying in?', 'dcc-guest-guide')],
-            'str_report_phone'    => [__('Report dialog "Phone" label', 'dcc-guest-guide'),      __('Phone (optional)', 'dcc-guest-guide')],
+            'str_report_desc'     => [__('Report dialog description label', 'dcc-guest-guide'),__('Describe the Problem', 'dcc-guest-guide')],
+            'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to Reach You Back (Optional)', 'dcc-guest-guide')],
+            'str_report_name'     => [__('Report dialog "Your name" label', 'dcc-guest-guide'),  __('Your Name (Optional)', 'dcc-guest-guide')],
+            'str_report_cottage'  => [__('Report dialog "Cottage" label', 'dcc-guest-guide'),    __('Which Cottage Are You Staying In?', 'dcc-guest-guide')],
+            'str_report_phone'    => [__('Report dialog "Phone" label', 'dcc-guest-guide'),      __('Phone (Optional)', 'dcc-guest-guide')],
             'str_report_privacy'  => [__('Report dialog privacy note', 'dcc-guest-guide'),     __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')],
             'str_report_send'     => [__('Report dialog Send button', 'dcc-guest-guide'),      __('Send report', 'dcc-guest-guide')],
             'str_report_cancel'   => [__('Report dialog Cancel button', 'dcc-guest-guide'),    __('Cancel', 'dcc-guest-guide')],
@@ -3351,10 +3365,10 @@ final class Widget extends Widget_Base
                 'strings'    => [
                     'menuLabel'  => (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')),
                     'title'      => (string) ($s['str_report_title'] ?? __('Report a problem', 'dcc-guest-guide')),
-                    'category'   => (string) ($s['str_report_category'] ?? __('What\'s the issue?', 'dcc-guest-guide')),
+                    'category'   => (string) ($s['str_report_category'] ?? __('What\'s the Issue?', 'dcc-guest-guide')),
                     'categoryPlaceholder' => (string) ($s['str_report_category_placeholder'] ?? __('Select', 'dcc-guest-guide')),
-                    'desc'       => (string) ($s['str_report_desc'] ?? __('Describe the problem', 'dcc-guest-guide')),
-                    'contact'    => (string) ($s['str_report_contact'] ?? __('Email to reach you back (optional)', 'dcc-guest-guide')),
+                    'desc'       => (string) ($s['str_report_desc'] ?? __('Describe the Problem', 'dcc-guest-guide')),
+                    'contact'    => (string) ($s['str_report_contact'] ?? __('Email to Reach You Back (Optional)', 'dcc-guest-guide')),
                     'privacy'    => (string) ($s['str_report_privacy'] ?? __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')),
                     'send'       => (string) ($s['str_report_send'] ?? __('Send report', 'dcc-guest-guide')),
                     'cancel'     => (string) ($s['str_report_cancel'] ?? __('Cancel', 'dcc-guest-guide')),
@@ -3362,9 +3376,9 @@ final class Widget extends Widget_Base
                     'thankYou'   => (string) ($s['str_report_thank_you'] ?? __('Thanks! Your host has been notified.', 'dcc-guest-guide')),
                     'error'      => (string) ($s['str_report_error'] ?? __('Could not send. Please contact the host directly.', 'dcc-guest-guide')),
                     'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
-                    'name'       => (string) ($s['str_report_name']    ?? __('Your name (optional)', 'dcc-guest-guide')),
-                    'cottage'    => (string) ($s['str_report_cottage'] ?? __('Which cottage are you staying in?', 'dcc-guest-guide')),
-                    'phone'      => (string) ($s['str_report_phone']   ?? __('Phone (optional)', 'dcc-guest-guide')),
+                    'name'       => (string) ($s['str_report_name']    ?? __('Your Name (Optional)', 'dcc-guest-guide')),
+                    'cottage'    => (string) ($s['str_report_cottage'] ?? __('Which Cottage Are You Staying In?', 'dcc-guest-guide')),
+                    'phone'      => (string) ($s['str_report_phone']   ?? __('Phone (Optional)', 'dcc-guest-guide')),
                 ],
             ],
             'emergency'        => [

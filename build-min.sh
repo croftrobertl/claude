@@ -18,8 +18,13 @@ OUT_CSS="dcc-guest-guide/assets/css/widget.min.css"
 # switches all five off — so their CSS is split into a second bundle that only
 # the full guide loads. Authoring stays in ONE file; the split happens here.
 OUT_CSS_GUEST="dcc-guest-guide/assets/css/widget-guest.min.css"
+# v0.24.5: the Welcome Pack inserter, Export / Import and the editor toast were
+# in widget.js, so every visitor downloaded them. They now live in their own
+# bundle that only Widget::enqueue_for_editor() / enqueue_for_preview() load.
+SRC_JS_ED="dcc-guest-guide/assets/js/widget-editor.js"
+OUT_JS_ED="dcc-guest-guide/assets/js/widget-editor.min.js"
 
-if [ ! -f "$SRC_JS" ] || [ ! -f "$SRC_CSS" ]; then
+if [ ! -f "$SRC_JS" ] || [ ! -f "$SRC_CSS" ] || [ ! -f "$SRC_JS_ED" ]; then
     echo "build-min.sh: source files missing" >&2
     exit 1
 fi
@@ -29,6 +34,12 @@ npx --yes terser "$SRC_JS" \
     --compress "passes=2,drop_console=false" \
     --mangle \
     --output "$OUT_JS" 2>&1 | grep -v "^npm " || true
+
+echo "Minifying $SRC_JS_ED ..."
+npx --yes terser "$SRC_JS_ED" \
+    --compress "passes=2,drop_console=false" \
+    --mangle \
+    --output "$OUT_JS_ED" 2>&1 | grep -v "^npm " || true
 
 echo "Minifying $SRC_CSS ..."
 python3 - "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST" <<'PY'
@@ -161,4 +172,4 @@ open(sys.argv[3], 'w').write(minify(guest_src))
 PY
 
 echo "Sizes:"
-ls -la "$SRC_JS" "$OUT_JS" "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST"
+ls -la "$SRC_JS" "$OUT_JS" "$SRC_JS_ED" "$OUT_JS_ED" "$SRC_CSS" "$OUT_CSS" "$OUT_CSS_GUEST"

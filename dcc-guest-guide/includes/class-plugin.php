@@ -1747,7 +1747,7 @@ final class Plugin
             'scope'            => (string) (wp_parse_url($start, PHP_URL_PATH) ?: '/'),
             'display'          => 'standalone',
             'background_color' => '#ffffff',
-            'theme_color'      => '#0f6dbf',
+            'theme_color'      => '#006bcf',
         ];
         $icon = function_exists('get_site_icon_url') ? get_site_icon_url(512) : '';
         if ($icon) {
@@ -1893,7 +1893,7 @@ SWJS;
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="<?php echo esc_attr__('Guest Guide', 'dcc-guest-guide'); ?>">
-        <meta name="theme-color" content="#0f6dbf">
+        <meta name="theme-color" content="#006bcf">
         <?php $icon = function_exists('get_site_icon_url') ? get_site_icon_url(180) : ''; ?>
         <?php if ($icon) : ?><link rel="apple-touch-icon" href="<?php echo esc_url($icon); ?>"><?php endif; ?>
         <script>

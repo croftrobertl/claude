@@ -551,9 +551,12 @@ check('the config falls back to "Select" too, so a widget saved before this vers
 check('the <option> reads the placeholder string, not the label string',
     strpos($jsSrc, "escHtml(STR.categoryPlaceholder || 'Select')") !== false
     && strpos($jsSrc, "<option value=\"\" selected disabled>\${escHtml(STR.category ") === false);
-// The label keeps the host's own wording — the fix must not have touched it.
-check('the category LABEL default is untouched',
-    strpos($widgetSrc, "'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\\'s the issue?', 'dcc-guest-guide')]") !== false);
+// The label keeps its own wording — the v0.18.0 placeholder fix must not have
+// touched it. v0.24.5 Title Cased it on request, so the expected text moved
+// with that; what this still guards is that the LABEL and the PLACEHOLDER
+// remain two different strings.
+check('the category LABEL default is its own string, not the placeholder',
+    strpos($widgetSrc, "'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\\'s the Issue?', 'dcc-guest-guide')]") !== false);
 
 
 echo "\nR. No Elementor control emits a hover state (v0.19.0)\n";

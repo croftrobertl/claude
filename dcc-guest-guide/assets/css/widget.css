@@ -378,18 +378,20 @@
 
 .dccgg-root {
     /* Design tokens (also overridable by theme presets via JS) */
-    --dccgg-primary: #0f6dbf;
+    --dccgg-primary: #006bcf;
     --dccgg-text: #111111;
     --dccgg-muted: #5d7891;
     --dccgg-accent: #f08080;
 
     --dccgg-tile-bg: rgba(255, 255, 255, 0.92);
-    --dccgg-tile-border: rgba(15, 109, 191, 0.15);
+    --dccgg-tile-border: rgba(0, 107, 207, 0.15);
     --dccgg-detail-bg: #ffffff;
 
     /* v0.14.0: the site's reference button (Contact form "Send Message") is
-       #006BCF. Only the button fill moves — --dccgg-primary still drives
-       links, focus rings and accents. Theme presets below override both. */
+       #006BCF. v0.24.5 brought --dccgg-primary to that same value, so links,
+       focus rings, accents and the button fill are now ONE colour rather than
+       two blues a shade apart. Theme presets below override both. White on
+       #006BCF measures 5.24:1, which clears AA for body text. */
     --dccgg-btn-bg: #006bcf;
     --dccgg-btn-txt: #ffffff;
     /* v0.15.0: the site's standard button hover, applied to every button on
@@ -1728,11 +1730,11 @@ dialog.dccgg-wrapper::backdrop {
 
 /* ---- Static theme-preset palettes (replaces v0.1 JS injection) ---- */
 .dccgg-preset-coastal {
-    --dccgg-primary:      #0f6dbf;
-    --dccgg-btn-bg:       #0f6dbf;
+    --dccgg-primary:      #006bcf;
+    --dccgg-btn-bg:       #006bcf;
     --dccgg-btn-txt:      #ffffff;
     --dccgg-tile-bg:      rgba(255,255,255,0.85);
-    --dccgg-tile-border:  rgba(15,109,191,0.15);
+    --dccgg-tile-border:  rgba(0,107,207,0.15);
     --dccgg-detail-bg:    #ffffff;
     --dccgg-text:         #0a3a5c;
     --dccgg-muted:        #5d7891;
@@ -2283,6 +2285,11 @@ dialog.dccgg-wrapper::backdrop {
  *     item-report 466x23   item-tts 28x28   item-check 458x27
  *     secret-toggle 57x35  copy 54x35       checklist-reset 71x40
  *
+ * v0.24.5 adds the Voice Search mic, which this pass missed: measured 36x28
+ * here and 72x36 on live, under 44 tall either way. Its VISIBLE size does not
+ * change — it is absolutely positioned inside the 48px search bar, so growing
+ * it would push it out of the field — only the area a finger may land on.
+ *
  * The host chose 38px for the credential pair deliberately and that decision
  * stands, so nothing here resizes anything. Each control gets an invisible
  * ::after sized max(100%, 44px) on both axes and centred on the control: it
@@ -2292,6 +2299,12 @@ dialog.dccgg-wrapper::backdrop {
  *
  * Sized in the margin box, not with padding, precisely so layout does not
  * move — padding would have reflowed the item title row.
+ *
+ * The mic is deliberately ABSENT from the `position: relative` rule below and
+ * present only in the ::after one: it is already `position: absolute` inside
+ * the search bar at (0,1,0), and a `position: relative` at (0,2,0) would win
+ * and drop it out of the field. Being positioned at all is what the ::after
+ * needs; which kind does not matter.
  */
 .dccgg-root .dccgg-item-check,
 .dccgg-root .dccgg-item-tts,
@@ -2316,13 +2329,15 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root .dccgg-secret-toggle::after,
 .dccgg-root .dccgg-secret + .dccgg-copy::after,
 .dccgg-root .dccgg-copy--inline::after,
+.dccgg-root .dccgg-search-mic::after,
 .dccgg-stage .dccgg-item-check::after,
 .dccgg-stage .dccgg-item-tts::after,
 .dccgg-stage .dccgg-item-report::after,
 .dccgg-stage .dccgg-checklist-reset::after,
 .dccgg-stage .dccgg-secret-toggle::after,
 .dccgg-stage .dccgg-secret + .dccgg-copy::after,
-.dccgg-stage .dccgg-copy--inline::after {
+.dccgg-stage .dccgg-copy--inline::after,
+.dccgg-stage .dccgg-search-mic::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -3531,15 +3546,15 @@ dialog.dccgg-wrapper::backdrop {
    contrasting blue with a sane fallback so the button is always visible
    even if the theme's CSS vars haven't been applied. */
 .dccgg-report-foot .dccgg-btn-send {
-    background: var(--dccgg-primary, #0f6dbf);
+    background: var(--dccgg-primary, #006bcf);
     color: var(--dccgg-btn-txt, #ffffff);
-    border: 1px solid var(--dccgg-primary, #0f6dbf);
+    border: 1px solid var(--dccgg-primary, #006bcf);
     padding: 9px 18px;
     border-radius: 8px;
     font-weight: 600;
     font-size: 1em;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 107, 207, 0.25);
     transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 /* v0.9.7.34: Send's custom hover (darken + shadow lift) removed at the
@@ -3964,7 +3979,7 @@ dialog.dccgg-wrapper::backdrop {
     }
     .dccgg-root h1, .dccgg-root h2, .dccgg-root h3 {
         font-family: "Helvetica Neue", Arial, sans-serif !important;
-        color: #0f6dbf !important;
+        color: #006bcf !important;
         page-break-after: avoid;
         break-after: avoid;
     }
@@ -3983,7 +3998,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-detail-header { margin-bottom: 14pt; }
     .dccgg-root .dccgg-detail-title {
         font-size: 22pt !important;
-        border-bottom: 1pt solid #0f6dbf;
+        border-bottom: 1pt solid #006bcf;
         padding-bottom: 6pt;
     }
     .dccgg-root .dccgg-item {
@@ -4058,12 +4073,12 @@ dialog.dccgg-wrapper::backdrop {
         position: absolute;
         top: 0; left: -0.55in; right: -0.55in;
         height: 0.45in;
-        background: #0f6dbf;
+        background: #006bcf;
     }
     .dccgg-print-cover-title {
         font-family: "Helvetica Neue", Arial, sans-serif !important;
         font-size: 32pt !important;
-        color: #0f6dbf !important;
+        color: #006bcf !important;
         margin: 0.4in 0 0.15in;
     }
     .dccgg-print-cover-sub {
@@ -4089,7 +4104,7 @@ dialog.dccgg-wrapper::backdrop {
     }
     .dccgg-print-toc-title {
         font-size: 20pt !important;
-        color: #0f6dbf !important;
+        color: #006bcf !important;
         margin: 0 0 0.3in;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -4112,7 +4127,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-print-toc-list li::before {
         content: counter(dccgg-toc, decimal-leading-zero) ".";
         font-weight: 700;
-        color: #0f6dbf;
+        color: #006bcf;
         margin-right: 6pt;
         min-width: 26pt;
     }
@@ -4233,17 +4248,17 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-more-summary--text::-webkit-details-marker { display: none; }
 @media (hover: hover) and (pointer: fine) {
     .dccgg-more-summary--text:hover {
-        background: var(--dccgg-more-bg-hover, var(--dccgg-primary, #0f6dbf));
+        background: var(--dccgg-more-bg-hover, var(--dccgg-primary, #006bcf));
         color: var(--dccgg-more-txt-hover, #fff);
-        border-color: var(--dccgg-more-bg-hover, var(--dccgg-primary, #0f6dbf));
+        border-color: var(--dccgg-more-bg-hover, var(--dccgg-primary, #006bcf));
     }
 }
 /* The OPEN state is not a hover state — it must survive on touch, where the
    menu is opened by tapping. Outside the guard on purpose. */
 .dccgg-more[open] .dccgg-more-summary--text {
-    background: var(--dccgg-primary, #0f6dbf);
+    background: var(--dccgg-primary, #006bcf);
     color: #fff;
-    border-color: var(--dccgg-primary, #0f6dbf);
+    border-color: var(--dccgg-primary, #006bcf);
 }
 
 /* ---- v0.24.0: the Front Desk button -------------------------------------
@@ -4611,7 +4626,7 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-tile:focus-visible .dccgg-tile-icon,
 .dccgg-stage.dccgg-stage .dccgg-tile:focus-visible .dccgg-tile-icon {
     box-shadow: 0 0 0 2px rgba(0,0,0,.06), 0 5px 10px rgba(0,0,0,.18),
-                0 0 0 6px var(--dccgg-primary, #0f6dbf);
+                0 0 0 6px var(--dccgg-primary, #006bcf);
 }
 @media (prefers-reduced-motion: reduce) {
     .dccgg-root.dccgg-root .dccgg-tile-icon,
@@ -4673,8 +4688,8 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-debug-conditions {
     margin: 12px 0 0;
     padding: 8px 10px;
-    background: rgba(15, 109, 191, 0.06);
-    border: 1px dashed rgba(15, 109, 191, 0.35);
+    background: rgba(0, 107, 207, 0.06);
+    border: 1px dashed rgba(0, 107, 207, 0.35);
     border-radius: 6px;
     font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
     color: color-mix(in srgb, var(--dccgg-text, #111) 80%, transparent);
@@ -4897,6 +4912,15 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-detail-title:focus-visible,
 .dccgg-stage.dccgg-stage .dccgg-detail-title:focus,
 .dccgg-stage.dccgg-stage .dccgg-detail-title:focus-visible {
+    outline: none;
+}
+/* v0.24.5: the Front Desk form lands on its own heading for the same reason
+   a section pop-up does — and on a phone there is a second one. Focusing the
+   Name field opened the keyboard over the form the guest had just asked to
+   see, and skipped the first question on the way. Same treatment: a focus
+   target that is not a Tab stop, and no ring of its own. */
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-head h3:focus,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-head h3:focus-visible {
     outline: none;
 }
 /* Belt and braces for the fallback path: focusIntoPanel() drops back to Back,

@@ -95,40 +95,16 @@
         } catch (_) { /* cross-origin parent — fall through */ }
         return false;
     }
+
     function editorPreviewToast(title, detail) {
-        if (!isElementorEditorPreview()) return;
-        try {
-            let host = document.getElementById('dccgg-editor-toast');
-            if (!host) {
-                host = document.createElement('div');
-                host.id = 'dccgg-editor-toast';
-                // v0.9.7.18: in Elementor's mobile preview the top ~60-80 px
-                // is the device-frame chrome, so the toast was hidden. Pin
-                // to the bottom on narrow viewports; cap height so a long
-                // stack trace can scroll instead of exploding the iframe.
-                const narrow = (window.innerWidth || 9999) < 500;
-                const vertical = narrow ? 'bottom:12px;' : 'top:12px;';
-                host.style.cssText = 'position:fixed;' + vertical + 'left:50%;transform:translateX(-50%);z-index:2147483647;'
-                    + 'max-width:min(640px,90vw);max-height:60vh;overflow:auto;background:#fff3cd;color:#664d03;'
-                    + 'border:2px solid #ffc107;border-radius:8px;padding:14px 18px;'
-                    + 'font:13px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;'
-                    + 'box-shadow:0 8px 32px rgba(0,0,0,0.25);cursor:pointer;';
-                host.title = 'Click to copy';
-                document.body.appendChild(host);
-                host.addEventListener('click', () => {
-                    try { navigator.clipboard.writeText(host.dataset.copy || host.textContent || ''); } catch (_) {}
-                    host.style.background = '#d1e7dd';
-                    host.style.borderColor = '#198754';
-                });
-            }
-            const full = '[DCCGG editor] ' + title + '\n\n' + (detail || '');
-            host.dataset.copy = full;
-            host.innerHTML = '<strong>[DCCGG editor] ' + title.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</strong><br>'
-                + '<span style="opacity:0.85">' + String(detail || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</span><br>'
-                + '<small style="opacity:0.7">Click to copy. Auto-dismiss in 12 s.</small>';
-            clearTimeout(host.__dismiss);
-            host.__dismiss = setTimeout(() => { if (host && host.parentNode) host.parentNode.removeChild(host); }, 12000);
-        } catch (_) { /* never let toast plumbing crash the caller */ }
+        // v0.24.5: the real toast moved to widget-editor.js, which the editor
+        // and its preview load and no visitor does. Core still CALLS this from
+        // openDetail() and showDetailModal(), so the call sites are unchanged
+        // and simply do nothing on a live page. The editor bundle installs the
+        // real one on window.__dccggEditorToast when it runs.
+        const fn = window.__dccggEditorToast;
+        if (typeof fn !== 'function') return;
+        try { fn(title, detail); } catch (_) { /* never let the toast crash a caller */ }
     }
 
     // -- View Transitions wrapper -----------------------------------------
@@ -177,7 +153,6 @@
         document.querySelectorAll('.dccgg-root').forEach(init);
         wireGlobalCmdK();
         wireGlobalArrowKeys();
-        wireWelcomePackEditor();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initAll, { once: true });
@@ -411,6 +386,10 @@
             // Point it at its own heading, which already says what this is.
             const headId = 'dccgg-report-title-' + Math.random().toString(36).slice(2, 8);
             dialog.setAttribute('aria-labelledby', headId);
+            // v0.24.5: the heading is the dialog's own landing place, the same
+            // way a section pop-up lands on its <h2> since v0.24.4. tabindex
+            // makes it a focus TARGET without making it a Tab stop.
+            const headAttrs = ` id="${headId}" tabindex="-1"`;
             // v0.9.7.1: leading blank option, selected + disabled by default,
             // so the guest must pick a category. Combined with `required`,
             // the form blocks submission until something is chosen.
@@ -430,7 +409,7 @@
                 : '';
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
-                    <h3 id="${headId}">${escHtml(STR.title || 'Report a problem')}</h3>
+                    <h3${headAttrs}>${escHtml(STR.title || 'Report a problem')}</h3>
                     <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">
                         <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false"
                              fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
@@ -441,23 +420,23 @@
                 <div class="dccgg-report-body">
                     ${catField}
                     <label>
-                        ${labelText(STR.name || 'Your name (optional)')}
+                        ${labelText(STR.name || 'Your Name (Optional)')}
                         <input type="text" class="dccgg-report-name" maxlength="100" autocomplete="name">
                     </label>
                     <label>
-                        ${labelText(STR.cottage || 'Which cottage are you staying in?')}
+                        ${labelText(STR.cottage || 'Which Cottage Are You Staying In?')}
                         <input type="text" class="dccgg-report-cottage" maxlength="100" autocomplete="off">
                     </label>
                     <label>
-                        ${labelText(STR.phone || 'Phone (optional)')}
+                        ${labelText(STR.phone || 'Phone (Optional)')}
                         <input type="tel" class="dccgg-report-phone" maxlength="40" inputmode="tel" autocomplete="tel">
                     </label>
                     <label>
-                        ${labelText(STR.contact || 'Email to reach you back (optional)')}
+                        ${labelText(STR.contact || 'Email to Reach You Back (Optional)')}
                         <input type="email" class="dccgg-report-contact" autocomplete="email">
                     </label>
                     <label>
-                        ${labelText(STR.desc || 'Describe the problem')}
+                        ${labelText(STR.desc || 'Describe the Problem')}
                         <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
                     </label>
                     <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
@@ -553,9 +532,20 @@
             if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
             if (typeof d.showModal === 'function') d.showModal();
             else d.setAttribute('open', '');
-            // Focus name first if it exists — it's the friendliest field
-            // to land in. Falls back to desc if name was customized away.
-            setTimeout(() => (nameEl || desc).focus(), 50);
+            // v0.24.5: land on the dialog's own heading, not on a field.
+            //
+            // It used to focus the Name input, which did two things wrong: it
+            // skipped straight past the first question (the category select),
+            // and on an iPhone focusing a text input opens the keyboard, which
+            // covered the form the guest had just asked to see. A heading takes
+            // focus without a keyboard and without a caret, a screen reader
+            // reads what the dialog is, and Tab from there goes to the first
+            // question in source order.
+            const head = d.querySelector('.dccgg-report-head h3');
+            setTimeout(() => {
+                const target = head || desc;
+                try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
+            }, 50);
         };
 
         // v0.9.7.21: expose `open` so the search empty-state's tier-3
@@ -2980,7 +2970,7 @@
         const r = anchor.getBoundingClientRect();
         const cx = r.left + r.width / 2;
         const cy = r.top + r.height / 2;
-        const colors = ['#f4da62', '#7BDCB5', '#5fa8e8', '#f08080', '#a94c66', '#0f6dbf', '#c19a4b'];
+        const colors = ['#f4da62', '#7BDCB5', '#5fa8e8', '#f08080', '#a94c66', '#006bcf', '#c19a4b'];
         const N = 32;
         for (let i = 0; i < N; i++) {
             const p = document.createElement('span');
@@ -4259,160 +4249,7 @@
         stage.__dccggScrollUpdate = update;
     }
 
-    // -- Welcome Pack + Export/Import editor hooks (v0.6) ------------------
-    function wireWelcomePackEditor() {
-        // Single delegated listener for all editor-panel buttons.
-        document.addEventListener('click', (e) => {
-            const pack = e.target.closest('[data-dccgg-welcome-pack]');
-            if (pack) { e.preventDefault(); insertWelcomePack(pack); return; }
-            const exp = e.target.closest('[data-dccgg-export]');
-            if (exp)  { e.preventDefault(); exportGuide(exp); return; }
-            const imp = e.target.closest('[data-dccgg-import]');
-            if (imp)  { e.preventDefault(); importGuide(imp); return; }
-        });
-    }
 
-    /** v0.9.4: server-backed Export. The editor-panel JS API broke in
-     *  Elementor 4.x; we now POST the post ID to admin-ajax which reads
-     *  _elementor_data, locates the dccgg_guide widget, and returns the
-     *  scrubbed payload. JS turns it into a file download. */
-    function editorPostId() {
-        try {
-            const fromUrl = new URLSearchParams(window.location.search).get('post');
-            if (fromUrl) return parseInt(fromUrl, 10);
-        } catch (_) {}
-        return (window.dccggEditor && window.dccggEditor.postId) ? parseInt(window.dccggEditor.postId, 10) : 0;
-    }
-
-    function exportGuide(btn) {
-        const cfg = window.dccggEditor || {};
-        const postId = editorPostId();
-        if (!postId || !cfg.ajaxUrl || !cfg.exportNonce) {
-            window.alert('DCCGG: Export requires the Elementor editor (post ID + nonce missing).');
-            return;
-        }
-        const body = new FormData();
-        body.append('action',  'dccgg_export_guide');
-        body.append('nonce',   cfg.exportNonce);
-        body.append('post_id', String(postId));
-        const orig = btn.textContent;
-        btn.textContent = '…';
-        btn.disabled = true;
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body })
-            .then(r => r.json())
-            .then(res => {
-                if (!res || !res.success) {
-                    const msg = (res && res.data && res.data.message) ? res.data.message : 'Export failed.';
-                    window.alert('DCCGG: ' + msg);
-                    return;
-                }
-                const json = JSON.stringify(res.data, null, 2);
-                const blob = new Blob([json], { type: 'application/json' });
-                const url  = URL.createObjectURL(blob);
-                const a    = document.createElement('a');
-                a.href = url;
-                a.download = 'guest-guide-export.json';
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
-                btn.textContent = '✓ Downloaded';
-                setTimeout(() => { btn.textContent = orig; }, 1800);
-            })
-            .catch(err => {
-                console.warn('DCCGG: Export request failed', err);
-                window.alert('DCCGG: Export request failed — see browser console.');
-            })
-            .finally(() => { btn.disabled = false; setTimeout(() => { if (btn.textContent === '…') btn.textContent = orig; }, 100); });
-    }
-
-    function importGuide(btn) {
-        const cfg = window.dccggEditor || {};
-        const postId = editorPostId();
-        if (!postId || !cfg.ajaxUrl || !cfg.importNonce) {
-            window.alert('DCCGG: Import requires the Elementor editor (post ID + nonce missing).');
-            return;
-        }
-        const json = window.prompt('Paste Guide JSON (exported via the Export button on another widget):', '');
-        if (!json) return;
-        let parsed;
-        try { parsed = JSON.parse(json); } catch (_) {
-            window.alert('DCCGG: Invalid JSON — could not parse the paste.');
-            return;
-        }
-        if (!parsed || !Array.isArray(parsed.sections) || !Array.isArray(parsed.items)) {
-            window.alert('DCCGG: Unrecognized schema — expected { sections: [...], items: [...] }.');
-            return;
-        }
-        const replaceCheckbox = btn.parentNode && btn.parentNode.querySelector('[data-dccgg-import-replace]');
-        const replace = !!(replaceCheckbox && replaceCheckbox.checked);
-
-        const body = new FormData();
-        body.append('action',  'dccgg_import_guide');
-        body.append('nonce',   cfg.importNonce);
-        body.append('post_id', String(postId));
-        body.append('payload', JSON.stringify({ sections: parsed.sections, items: parsed.items }));
-        if (replace) body.append('replace', '1');
-        const orig = btn.textContent;
-        btn.textContent = '…';
-        btn.disabled = true;
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body })
-            .then(r => r.json())
-            .then(res => {
-                if (!res || !res.success) {
-                    const msg = (res && res.data && res.data.message) ? res.data.message : 'Import failed.';
-                    window.alert('DCCGG: ' + msg);
-                    btn.textContent = orig;
-                    return;
-                }
-                const d = res.data || {};
-                btn.textContent = '✓ Imported ' + (d.imported_sections || 0) + ' sections, ' + (d.imported_items || 0) + ' items';
-                window.alert('DCCGG: Imported ' + (d.imported_sections || 0) + ' sections and ' + (d.imported_items || 0) + ' items. Reload the editor to see the new content.');
-                setTimeout(() => { btn.textContent = orig; }, 2500);
-            })
-            .catch(err => {
-                console.warn('DCCGG: Import request failed', err);
-                window.alert('DCCGG: Import request failed — see browser console.');
-                btn.textContent = orig;
-            })
-            .finally(() => { btn.disabled = false; });
-    }
-    function insertWelcomePack(btn) {
-        const pack = welcomePackPayload();
-        // Try Elementor editor model API; falls back to a console warning.
-        try {
-            if (!window.elementor || !window.elementor.getPanelView) {
-                console.warn('DCCGG: Welcome Pack requires the Elementor editor; nothing inserted.');
-                return;
-            }
-            const panel = window.elementor.getPanelView();
-            const view  = panel && panel.getCurrentPageView && panel.getCurrentPageView();
-            const model = view && view.model && view.model.get && view.model.get('editedElementView') && view.model.get('editedElementView').getEditModel();
-            const elementModel = model || (window.elementor.selection && window.elementor.selection.getElements && window.elementor.selection.getElements()[0]);
-            if (!elementModel || !elementModel.get) {
-                console.warn('DCCGG: could not resolve the active widget model.');
-                return;
-            }
-            const settings = elementModel.get('settings');
-            if (!settings) { console.warn('DCCGG: no settings model.'); return; }
-            const existingSections = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
-            const existingItems    = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
-            // v0.3 fix: Elementor's repeater model identifies rows by _id;
-            // injecting plain objects without it can confuse the panel
-            // renderer (drag handles, delete buttons get stuck on the
-            // first row).
-            const rid = () => Math.random().toString(36).slice(2, 9);
-            const withId = (rows) => rows.map(r => Object.assign({ _id: rid() }, r));
-            settings.set('guide_sections', existingSections.concat(withId(pack.sections)));
-            settings.set('guide_items',    existingItems.concat(withId(pack.items)));
-            if (window.elementor.saver && window.elementor.saver.update) {
-                window.elementor.saver.update();
-            }
-            btn.textContent = '✓ Inserted — save the page to keep.';
-            btn.disabled = true;
-        } catch (err) {
-            console.error('DCCGG: Welcome Pack injection failed:', err);
-        }
-    }
     // -- Section prev/next nav (v0.3, single-listener in v0.4, swipe in v0.5)
     function wireSectionNav(root, config) {
         if (!config.enableSectionNav) return;
@@ -4585,32 +4422,6 @@
                 });
             });
         });
-    }
-
-    function welcomePackPayload() {
-        const sections = [
-            { section_key: 'wifi',      section_title: 'Wi-Fi',           section_desc: 'Network name & password.',             section_icon: { value: 'fas fa-wifi',             library: 'solid' } },
-            { section_key: 'hot-tub',   section_title: 'Hot Tub',         section_desc: 'How to use it & house rules.',         section_icon: { value: 'fas fa-hot-tub',          library: 'solid' } },
-            { section_key: 'trash',     section_title: 'Trash & Recycling', section_desc: 'Pickup days & sorting.',             section_icon: { value: 'fas fa-trash',            library: 'solid' } },
-            { section_key: 'checkout',  section_title: 'Checkout',        section_desc: 'Departure checklist & timing.',        section_icon: { value: 'fas fa-door-open',        library: 'solid' } },
-            { section_key: 'local',     section_title: 'Local Eats',      section_desc: 'Our favorite nearby spots.',           section_icon: { value: 'fas fa-utensils',         library: 'solid' } },
-            { section_key: 'emergency', section_title: 'Emergency',       section_desc: 'Numbers & nearest hospital.',          section_icon: { value: 'fas fa-phone-alt',        library: 'solid' } },
-        ];
-        const items = [
-            { item_section: 'wifi',     item_title: 'Network name',        item_icon: { value: 'fas fa-wifi', library: 'solid' }, content_source: 'wysiwyg', item_content: 'The Wi-Fi network is named below. Replace this with your SSID.', item_copy: 'yes', item_copy_value: 'CHANGE-ME-SSID' },
-            { item_section: 'wifi',     item_title: 'Password',            item_icon: { value: 'fas fa-key',  library: 'solid' }, content_source: 'wysiwyg', item_content: 'Tap Copy and paste it into your device.', item_copy: 'yes', item_copy_value: 'change-me-password' },
-            { item_section: 'hot-tub',  item_title: 'Before you get in',   item_icon: { value: 'fas fa-thermometer-half', library: 'solid' }, content_source: 'wysiwyg', item_content: 'Check the temperature reads about 100–102°F before stepping in.' },
-            { item_section: 'hot-tub',  item_title: 'House rules',         item_icon: { value: 'fas fa-list',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'No glass containers in the tub. Children under 12 must be supervised.' },
-            { item_section: 'trash',    item_title: 'Pickup days',         item_icon: { value: 'fas fa-calendar-day',      library: 'solid' }, content_source: 'wysiwyg', item_content: 'Tuesdays at 7am. Bins live in the side yard.' },
-            { item_section: 'checkout', item_title: 'Checkout time',       item_icon: { value: 'fas fa-clock',             library: 'solid' }, content_source: 'wysiwyg', item_content: 'Please be checked out by 11:00 AM so the cleaners can get in.' },
-            { item_section: 'checkout', item_title: 'Departure checklist', item_icon: { value: 'fas fa-clipboard-check',   library: 'solid' }, content_source: 'wysiwyg', item_content: 'Strip the beds, run the dishwasher, turn the AC up to 78°F, lock the doors.' },
-            { item_section: 'local',    item_title: 'Best breakfast',      item_icon: { value: 'fas fa-coffee',            library: 'solid' }, content_source: 'wysiwyg', item_content: 'The place down the street opens at 7am — try the pancakes.' },
-            { item_section: 'local',    item_title: 'Best seafood',        item_icon: { value: 'fas fa-fish',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'Quick drive away — reservations recommended on weekends.' },
-            { item_section: 'emergency',item_title: 'Owner contact',       item_icon: { value: 'fas fa-user',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'Call 555-123-4567 for any urgent issue.', item_copy: 'yes', item_copy_value: '555-123-4567' },
-            { item_section: 'emergency',item_title: 'Nearest hospital',    item_icon: { value: 'fas fa-hospital',          library: 'solid' }, content_source: 'wysiwyg', item_content: 'A short drive away. See map below.', enable_map: 'yes', map_url: { url: 'https://maps.google.com/?q=hospital+near+me', is_external: 'on' } },
-            { item_section: 'emergency',item_title: '911',                 item_icon: { value: 'fas fa-phone-alt',         library: 'solid' }, content_source: 'wysiwyg', item_content: 'For any life-threatening emergency, call 911.', item_copy: 'yes', item_copy_value: '911' },
-        ];
-        return { sections, items };
     }
 
 })();
