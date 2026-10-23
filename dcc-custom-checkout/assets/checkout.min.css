@@ -713,7 +713,7 @@ cursor: pointer;
 .dcc_checkout-continue {
 margin: 0 0 24px;
 padding: 18px;
-border: 1px solid var(--dcc-field-border, #f4da62);
+border: 1px solid var(--dcc-gold, #f4da62);
 border-radius: 18px;
 background: #fff;
 }

@@ -451,8 +451,22 @@
         legend.className = 'dcc_layout-segment__legend';
         /* The field's own label if it has one, so a translated site keeps its
            words; the spec's label only when there is nothing on the page. */
-        legend.appendChild(document.createTextNode(labelText(select) || spec.label || ''));
+        var own = ownLabel(select);
+        var fromPage = labelText(select);
+        legend.appendChild(document.createTextNode(fromPage || spec.label || ''));
         group.appendChild(legend);
+
+        /* AND THE ORIGINAL LABEL IS FOLDED AWAY WHEN THE LEGEND IS ITS WORDS.
+           It labels a control the guest can no longer see, and leaving it
+           showing printed the field's name TWICE — "Number of Guests" above
+           "Number of Guests", and the same for Coat and the boat question.
+           Found in a screenshot, not by a test: the suite read the legend and
+           never looked at what was above it. Hidden, never removed, so the
+           association with the clipped select survives for anything that
+           walks labels. */
+        if (own && fromPage !== '') {
+            addClass(own, 'dcc_layout-segment__oldlabel');
+        }
 
         /* THE OPTIONS GET THEIR OWN FLEX BOX, and the fieldset does not become
            one. A <legend> inside a `display: flex` fieldset is not a flex item
@@ -565,6 +579,17 @@
             }
         });
         return out.replace(/\s+/g, ' ').trim();
+    }
+
+    /** The label element that labels this control, if the page has one. */
+    function ownLabel(control) {
+        if (control.id) {
+            try {
+                var byFor = document.querySelector('label[for="' + cssEscape(control.id) + '"]');
+                if (byFor) { return byFor; }
+            } catch (e) { /* an id CSS cannot express */ }
+        }
+        return control.closest('label');
     }
 
     function addClass(el, name) {

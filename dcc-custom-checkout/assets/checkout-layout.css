@@ -260,7 +260,7 @@
     min-width: 64px;
     min-height: 44px;
     padding: 0 16px;
-    border: 2px solid var(--dcc-field-border, #f4da62);
+    border: 2px solid var(--dcc-gold, #f4da62);
     border-radius: 22px;
     background-color: #fff;
     color: var(--dcc-ink, #111);
@@ -381,7 +381,7 @@
     gap: 12px;
     margin: 10px 0 18px;
     padding: 12px;
-    border: 2px solid var(--dcc-field-border, #f4da62);
+    border: 2px solid var(--dcc-gold, #f4da62);
     border-radius: 16px;
     background: #fffdf5;
 }
@@ -497,7 +497,7 @@ body.dcc_layout > .dcc_layout-bar {
     padding-bottom: 12px;
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     background: #fff;
-    border-top: 1px solid var(--dcc-field-border, #f4da62);
+    border-top: 1px solid var(--dcc-gold, #f4da62);
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -674,7 +674,7 @@ body.dcc_layout {
     box-sizing: border-box;
     margin: 24px 0 0;
     padding: 18px;
-    border: 1px solid var(--dcc-field-border, #f4da62);
+    border: 1px solid var(--dcc-gold, #f4da62);
     border-radius: 18px;
     background: #fffdf5;
 }
@@ -698,4 +698,21 @@ body.dcc_layout {
 .dcc_layout .dcc_layout-summary table.dcc_checkout-breakdown {
     width: 100%;
     margin: 0 0 10px;
+}
+
+/* The field's original label, once its words have become the segmented
+   group's legend. Hidden, never removed: it still labels the clipped select,
+   which anything walking labels may rely on. Without this the field's name
+   printed twice — "Number of Guests" above "Number of Guests". */
+.dcc_layout .dcc_layout-segment__oldlabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }

@@ -396,6 +396,28 @@ const page_html = `<!doctype html>
         [['1', '2', '3', '4'], ['Short', 'Medium', 'Long'], ['No', 'Yes']]);
     check('no group is nested inside a <label>',
         seg.groups.map((g) => g.parentIsLabel), [false, false, false]);
+
+    /* THE FIELD'S NAME IS NOT PRINTED TWICE. The original label becomes the
+       legend's words, so leaving it showing put "Number of Guests" above
+       "Number of Guests" — and the same for Coat and the boat question. */
+    const dupes = await page.evaluate(() => {
+        const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+        const shown = [];
+        document.querySelectorAll('label').forEach((l) => {
+            if (!l.offsetParent) { return; }       /* in a folded panel */
+            /* A CLIPPED label still has an offsetParent — that is the whole
+               point of clipping rather than display:none, so a screen reader
+               keeps it. "Shown" has to mean it occupies real space. */
+            const r = l.getBoundingClientRect();
+            if (r.width <= 1 || r.height <= 1) { return; }
+            if (l.closest('.dcc_layout-segment')) { return; }  /* an option */
+            shown.push(text(l));
+        });
+        const legends = Array.prototype.map.call(
+            document.querySelectorAll('.dcc_layout-segment__legend'), text);
+        return legends.filter((g) => shown.some((s) => s.indexOf(g) === 0));
+    });
+    check('no segmented field prints its own name twice', dupes, []);
     check('Country keeps its dropdown — too many options to be buttons',
         seg.country, false);
     check('the dog Yes/No is checkout.js\'s own fieldset, styled and never rebuilt',
@@ -576,6 +598,16 @@ const page_html = `<!doctype html>
             inside: opts.every((o) => rect(o).left >= 0 &&
                 rect(o).right <= document.documentElement.clientWidth),
             outline: [focused.outlineStyle, focused.outlineWidth],
+            /* An UNCHOSEN option: the chosen one is filled with the site
+               blue and borders to match, which would hide a missing gold. */
+            borderWidth: (() => {
+                const off = opts.filter((o) => !o.querySelector('input').checked)[0];
+                return off ? getComputedStyle(off).borderTopWidth : null;
+            })(),
+            borderColor: (() => {
+                const off = opts.filter((o) => !o.querySelector('input').checked)[0];
+                return off ? getComputedStyle(off).borderTopColor : null;
+            })(),
             touch: getComputedStyle(first).touchAction,
             /* The chosen one reads as chosen. */
             chosenBg: (() => {
@@ -584,6 +616,14 @@ const page_html = `<!doctype html>
             })(),
         };
     });
+    /* THE BORDER IS ASSERTED, because it was silently absent and nothing
+       noticed: `--dcc-field-border` is a WIDTH token (2px), not a colour, so
+       `border: 2px solid var(--dcc-field-border, …)` was invalid at
+       computed-value time and produced NO BORDER AT ALL — on every segmented
+       pill, both cards and the bar. The suite read the height and the radius
+       and never the border, so it passed; a screenshot is what found it. */
+    check('a segmented option has a real border, in the site gold',
+        [geom.borderWidth, geom.borderColor], ['2px', 'rgb(244, 218, 98)']);
     check('every segmented option is at least a 44px tap target', geom.minHeight >= 44, true);
     check('… and at least 64px wide, so two or four fit a phone', geom.minWidth >= 64, true);
     check('the dog Yes/No gets the same target size from the same rules',
