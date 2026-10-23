@@ -77,4 +77,55 @@ final class Data
         }
         return null;
     }
+
+    /** @var array<int,array<string,mixed>>|null */
+    private static ?array $with_photos = null;
+
+    /**
+     * The dataset plus each cottage's PHOTO (0.54.0, Rob): the featured image of its
+     * MotoPress room type (`roomTypeId`), the photo the site already shows for it.
+     * Read-only, server-side, once per request. A cottage whose room type has no
+     * featured image simply carries no `photo`, and the card draws its number
+     * instead — nothing here may fail a render.
+     *
+     * Shape: photo = { src, w, h, srcset } — `medium_large` (768px wide), with the
+     * attachment's own srcset so a phone at 2x and a 4-across desktop row each pick
+     * a sensible size. No alt text: the card's visible name sits right under it.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function all_with_photos(): array
+    {
+        if (self::$with_photos !== null) {
+            return self::$with_photos;
+        }
+        $all = self::all();
+        if (!function_exists('get_post_thumbnail_id') || !function_exists('wp_get_attachment_image_src')) {
+            return self::$with_photos = $all;
+        }
+        $ids = array_values(array_filter(array_map(static fn($c) => (int) ($c['roomTypeId'] ?? 0), $all)));
+        // One query for the eight room types' meta instead of one each.
+        if ($ids && function_exists('update_meta_cache')) {
+            update_meta_cache('post', $ids);
+        }
+        foreach ($all as $i => $c) {
+            $rt = (int) ($c['roomTypeId'] ?? 0);
+            $aid = $rt > 0 ? (int) get_post_thumbnail_id($rt) : 0;
+            if ($aid <= 0) {
+                continue;
+            }
+            $img = wp_get_attachment_image_src($aid, 'medium_large');
+            if (!is_array($img) || empty($img[0])) {
+                continue;
+            }
+            $srcset = function_exists('wp_get_attachment_image_srcset') ? wp_get_attachment_image_srcset($aid, 'medium_large') : '';
+            $all[$i]['photo'] = [
+                'src'    => (string) $img[0],
+                'w'      => (int) ($img[1] ?? 0),
+                'h'      => (int) ($img[2] ?? 0),
+                'srcset' => is_string($srcset) ? $srcset : '',
+            ];
+        }
+        return self::$with_photos = $all;
+    }
 }

@@ -694,12 +694,10 @@ namespace {
     $pre51 = \DCCS\Preset_Defaults::map();
     ok('results heading default is Title Case', $str51['results_heading'] === 'Your Top Matches');
     ok('review heading default is Title Case',  $str51['review_heading'] === 'Review Your Answers');
-    // The preset seeds NEW widgets; it must agree with Config or a new widget
-    // would store the old wording.
-    ok('the preset seeds new widgets with the Title Case results heading',
-        ($pre51['str_results_heading'] ?? null) === 'Your Top Matches');
-    ok('the preset seeds new widgets with the Title Case review heading',
-        ($pre51['str_review_heading'] ?? null) === 'Review Your Answers');
+    // 0.54.0: the preset carries NO string at all — Config is the only copy, so a
+    // new widget shows these headings without storing them.
+    ok('0.54.0: the preset holds no str_ key (Config is the only copy of the wording)',
+        array_filter(array_keys($pre51), fn($k) => strncmp($k, 'str_', 4) === 0) === []);
     ok('pet note is the 0.53.3 wording (dog limits)',
         $str51['pet_note'] === 'One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required.');
     ok('and the new-tab notice exists as a translatable string', ($str51['opens_new_tab'] ?? '') !== '');
@@ -902,7 +900,9 @@ namespace {
     // OVERRIDES inline defaults by design — it must override them rather than defer.
     ok('preset is enabled by default', \DCCS\Preset_Defaults::enabled() === true);
     ok('apply() overrides an inline factory default',
-        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === 'Cottage Wizard');
+        \DCCS\Preset_Defaults::apply('color_accent', ['default' => 'Factory'])['default'] === '#002E7A');
+    ok('0.54.0: apply() never hands a str_ control a default',
+        !array_key_exists('default', \DCCS\Preset_Defaults::apply('str_heading', ['placeholder' => 'P'])));
     ok('apply() seeds a control that had no default',
         \DCCS\Preset_Defaults::apply('color_accent', [])['default'] === '#002E7A');
     ok('apply() leaves the rest of the control args intact',
@@ -914,10 +914,8 @@ namespace {
     ok('group_fields() is empty for an unknown group', \DCCS\Preset_Defaults::group_fields('nope') === []);
 
     $preset = \DCCS\Preset_Defaults::map();
-    ok('preset defines a non-trivial set of defaults', count($preset) > 50);
-    ok('preset carries the site heading + palette',
-        ($preset['str_heading'] ?? null) === 'Cottage Wizard' &&
-        ($preset['color_accent'] ?? null) === '#002E7A');
+    ok('preset defines a non-trivial set of defaults', count($preset) > 30);
+    ok('preset carries the site palette', ($preset['color_accent'] ?? null) === '#002E7A');
     ok('preset carries the enabled modes', ($preset['enabled_modes'] ?? null) === ['quick', 'compare']);
 
     // Instance-specific wiring must never be preset: design_name/share_design would make
@@ -953,7 +951,8 @@ namespace {
         $s531['intro'] === 'Answer a few questions to find your best match, or select cottages to compare side by side.');
     ok('0.53.1: the preset no longer pins the old intro or its navy colour',
         !array_key_exists('str_intro', $preset) && !array_key_exists('intro_color', $preset));
-    ok('0.53.1: str_intro\'s control defaults to the new line', ($reg['str_intro']['default'] ?? null) === $s531['intro']);
+    ok('0.53.1/0.54.0: str_intro\'s control shows the new line as its placeholder, with no default',
+        ($reg['str_intro']['placeholder'] ?? null) === $s531['intro'] && !array_key_exists('default', $reg['str_intro'] ?? []));
 
     // B6: icons are inline SVG for the three packaged values, Elementor for the rest.
     foreach (['fas fa-clipboard-check' => '0 0 384 512', 'fas fa-balance-scale' => '0 0 640 512', 'fas fa-hat-wizard' => '0 0 512 512'] as $v => $vb) {
@@ -1179,7 +1178,7 @@ namespace {
     ok('0.53.3: the check script flags the site row\'s stored pet link', preg_match('/== dccs_settings[^=]*MASKS \(read\)\s+pet_fee_url = ""/', $report) === 1);
     ok('0.53.3: ...and names the Primary registry\'s stale copies (fee_link among them)',
         preg_match('/"Primary" -> post 1005[\s\S]*stale copy\s+fee_link = "Fee details"/', $report) === 1);
-    ok('0.53.3: the total counts 20 widget keys + the site row', strpos($report, 'TOTAL keys that mask 0.53.3: 21') !== false);
+    ok('0.53.3: the total counts 20 widget keys + the site row', strpos($report, 'TOTAL keys that mask 0.54.0: 21') !== false);
     // A stored pet note in the OLD wording masks the new one and must be flagged.
     $withNote = $LIVE; foreach ($withNote['widgets'] as &$cw) { if ($cw['widget_id'] === 'd1ae1cf') { $cw['stored_settings']['str_pet_note'] = 'Pets are only allowed in Cottage 34 and must be pre-approved.'; } } unset($cw);
     ok('0.53.3: a widget storing the old pet note is flagged', (function ($r) { foreach (preg_split('/\n(?===)/', $r) as $c) {
@@ -1189,7 +1188,13 @@ namespace {
     ok('0.53.3: a widget\'s own pet link is flagged as masking', (function ($r) { foreach (preg_split('/\n(?===)/', $r) as $c) { if (strpos($c, 'dccs_selector 5be94a3') !== false) { return preg_match('/MASKS \(read\)\s+pet_fee_url = "\/pet-policy\/"/', $c) === 1; } } return false; })($runCheck($withUrl)));
     $cleared = $LIVE; foreach ($cleared['widgets'] as &$cw) { foreach ($partB as $k) { unset($cw['stored_settings'][$k]); } } unset($cw);
     $cleared['options']['dccs_settings']['pet_fee_url'] = '/accommodation/cottage-34/';
-    ok('0.53.3: after clearing the list and setting the site link, the check script reports nothing to clear', strpos($runCheck($cleared), 'TOTAL keys that mask 0.53.3: 0') !== false);
+    // 0.54.0: the str_* census. Before the Director's cleanup both Selectors stored dozens.
+    preg_match('/TOTAL str_\* keys stored on Selectors: (\d+)/', $report, $sm);
+    $fixtureStr = 0; foreach ($LIVE['widgets'] as $wd) { if ($wd['widget_type'] === 'dccs_selector') { $fixtureStr += count(array_filter(array_keys($wd['stored_settings']), fn($k) => strncmp($k, 'str_', 4) === 0)); } }
+    ok('0.54.0: the check script counts the str_* keys each Selector stores (the pre-cleanup export: ' . $fixtureStr . ')', $fixtureStr > 20 && (int) ($sm[1] ?? -1) === $fixtureStr);
+    $noStr = $LIVE; foreach ($noStr['widgets'] as &$cw) { if ($cw['widget_type'] === 'dccs_selector') { foreach (array_keys($cw['stored_settings']) as $k) { if (strncmp($k, 'str_', 4) === 0) { unset($cw['stored_settings'][$k]); } } } } unset($cw);
+    ok('0.54.0: ...and reports 0 once they are gone, as on live since 2026-10-22', strpos($runCheck($noStr), 'TOTAL str_* keys stored on Selectors: 0 ') !== false);
+    ok('0.53.3: after clearing the list and setting the site link, the check script reports nothing to clear', strpos($runCheck($cleared), 'TOTAL keys that mask 0.54.0: 0') !== false);
     $GLOBALS['__posts'] = [];
     $d531 = \DCCS\Settings::defaults();
     foreach ($LIVE['options']['dccs_settings'] as $k => $v) {
@@ -1275,8 +1280,8 @@ namespace {
     foreach (['str_q_layout', 'str_q_pullout', 'str_opt_either'] as $k) {
         ok("0.53.0: '$k' has no default (placeholder-only, Loco keeps working)", isset($reg[$k]) && !array_key_exists('default', $reg[$k]));
     }
-    ok('0.53.0: the mode-name control defaults to the new name',
-        ($reg['str_mode_compare']['default'] ?? null) === 'Compare Mode');
+    ok('0.53.0/0.54.0: the mode-name control shows the new name as its placeholder',
+        ($reg['str_mode_compare']['placeholder'] ?? null) === 'Compare Mode' && !array_key_exists('default', $reg['str_mode_compare'] ?? []));
 
     // THE CLEAR-LIST, as the plugin sees it. A live widget that still stores the
     // 0.52.0 wording keeps showing it (stored beats packaged) — the reason the
@@ -1321,12 +1326,19 @@ namespace {
     // would keep its default however the loop behaved and prove nothing. (The
     // first version of this control used str_results_heading and did exactly that
     // — a mutation making EVERY key a placeholder sailed through it.)
-    ok('the control used for the positive check is genuinely not preset-backed',
-        !array_key_exists('str_fee_link', $preset));
-    ok('a non-preset sibling in the same loop still carries its default',
-        array_key_exists('default', $reg['str_fee_link'] ?? []));
-    ok('and that default is the packaged string',
-        ($reg['str_fee_link']['default'] ?? null) === (\DCCS\Config::strings()['fee_link'] ?? null));
+    // 0.54.0: and so is EVERY other string control. The Website Director removed
+    // 31 (home) and 35 (/cottages/) stored str_* keys from live on 2026-10-22; a
+    // default on any string control would be written back by the next Update.
+    $strCtl = array_filter($reg, fn($a, $k) => strncmp($k, 'str_', 4) === 0, ARRAY_FILTER_USE_BOTH);
+    $withDefault = array_keys(array_filter($strCtl, fn($a) => array_key_exists('default', $a)));
+    $cfgStr = \DCCS\Config::strings();
+    $badPh = array_keys(array_filter($strCtl, fn($a, $k) => isset($cfgStr[substr($k, 4)]) && ($a['placeholder'] ?? null) !== $cfgStr[substr($k, 4)], ARRAY_FILTER_USE_BOTH));
+    ok('0.54.0: the panel registers many string controls (control for the next checks)', count($strCtl) > 20);
+    ok('0.54.0: NO string control carries a default Elementor could re-save' . ($withDefault ? ' [' . implode(', ', $withDefault) . ']' : ''), $withDefault === []);
+    ok('0.54.0: each shows its packaged text as the placeholder' . ($badPh ? ' [' . implode(', ', $badPh) . ']' : ''), $badPh === []);
+    // Positive control: the registry DOES record defaults — a non-string control
+    // in the same section still has one — so "no default" above is not a stub artefact.
+    ok('0.54.0: a non-string control still carries its default (control)', ($reg['show_compare_tip']['default'] ?? null) === 'inherit');
 
     // 0.26.0: the heading default is PLAIN, because the widget now draws the marks
     // either side of it (see Heading_Marks). The Mini Entry prompt deliberately
@@ -1347,7 +1359,7 @@ namespace {
     ok('a widget with no saved heading contributes no override',
         !array_key_exists('heading', Selector_Widget::design_snapshot([])['string_overrides']));
 
-    ok('map still holds the captured site wording', ($preset['str_q_desk'] ?? null) === 'Do you need a computer desk?');
+    ok('0.54.0: map holds no captured wording any more', !array_key_exists('str_q_desk', $preset));
     ok('map still holds the captured icons', is_array($preset['icon_submit'] ?? null));
 
     // Now that the preset is live, every value is handed to Elementor as a control
@@ -1405,6 +1417,37 @@ namespace {
     }
     ok('every preset SELECT value is one of that control\'s options'
         . ($badOption ? ' [' . implode(', ', $badOption) . ']' : ''), $badOption === []);
+
+    // ---- 0.54.0: photos from each cottage's MPHB room type featured image ----------
+    // Stubs that behave like core: the featured image is post meta on the room
+    // type; the attachment resolves to [url, w, h]. Room type 1607 (Cottage 34)
+    // has NO featured image, so its card must fall back without failing.
+    $GLOBALS['__thumb'] = [1071 => 501, 1069 => 502, 1067 => 503, 1065 => 504, 1604 => 505, 1740 => 507, 1742 => 508];
+    $GLOBALS['__metaPrimed'] = [];
+    if (!function_exists('get_post_thumbnail_id')) {
+        function get_post_thumbnail_id($id) { return $GLOBALS['__thumb'][(int) $id] ?? 0; }
+        function wp_get_attachment_image_src($aid, $size) { return [ 'https://site.test/wp-content/uploads/c' . $aid . '-768x512.jpg', 768, 512, true ]; }
+        function wp_get_attachment_image_srcset($aid, $size) { return 'https://site.test/c' . $aid . '-300x200.jpg 300w, https://site.test/c' . $aid . '-768x512.jpg 768w'; }
+        function update_meta_cache($type, $ids) { $GLOBALS['__metaPrimed'][] = [$type, $ids]; return true; }
+    }
+    $rp = new \ReflectionProperty(\DCCS\Data::class, 'with_photos'); $rp->setAccessible(true); $rp->setValue(null, null);
+    $withPhotos = \DCCS\Data::all_with_photos();
+    $byId = []; foreach ($withPhotos as $c) { $byId[(string) $c['id']] = $c; }
+    ok('0.54.0: a cottage with a featured image carries its photo (medium_large, sized, with srcset)',
+        ($byId['22']['photo']['src'] ?? '') === 'https://site.test/wp-content/uploads/c501-768x512.jpg'
+        && ($byId['22']['photo']['w'] ?? 0) === 768 && ($byId['22']['photo']['h'] ?? 0) === 512 && strpos($byId['22']['photo']['srcset'] ?? '', '300w') !== false);
+    ok('0.54.0: a room type with no featured image -> no photo key, nothing fails', !isset($byId['34']['photo']) && isset($byId['34']['name']));
+    ok('0.54.0: seven of eight have photos (control: the lookup is per cottage)', count(array_filter($withPhotos, fn($c) => isset($c['photo']))) === 7);
+    ok('0.54.0: the eight room types\' meta is primed in ONE call, not eight',
+        count($GLOBALS['__metaPrimed']) === 1 && $GLOBALS['__metaPrimed'][0][0] === 'post' && count($GLOBALS['__metaPrimed'][0][1]) === 8);
+    ok('0.54.0: ...and a second read in the same request reuses it', \DCCS\Data::all_with_photos() === $withPhotos && count($GLOBALS['__metaPrimed']) === 1);
+    ok('0.54.0: the plain dataset is untouched (cottages.json stays the single source)', !isset(\DCCS\Data::all()[0]['photo']));
+    ok('0.54.0: the config hands the photos to the page', isset(\DCCS\Config::build([], [])['cottages'][0]['photo']));
+
+    // ---- 0.54.0: strings ---------------------------------------------------------------
+    $s54 = \DCCS\Config::strings();
+    ok('0.54.0: the count strings are Title Case', $s54['match_count'] === '%d Cottages Match' && $s54['match_count_one'] === '%d Cottage Matches');
+    ok('0.54.0: the two new card strings exist', $s54['chip_sleeps'] === 'Sleeps %d' && $s54['see_all'] === 'See All');
 
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);

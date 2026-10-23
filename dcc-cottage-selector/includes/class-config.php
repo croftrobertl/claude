@@ -46,8 +46,8 @@ final class Config
                and contain the visible label (WCAG 2.5.3). %s: the current mode's name. */
             'mode_current'      => /* translators: %s: name of the mode in use, e.g. Matching Quiz */ __('Current mode: %s', 'dcc-cottage-selector'),
             'name_format'       => /* translators: %1$s: cottage number, %2$s: cottage name */ __('Cottage %1$s: %2$s', 'dcc-cottage-selector'),
-            'match_count'       => /* translators: %d: number of matching cottages (2+) */ __('%d cottages match', 'dcc-cottage-selector'),
-            'match_count_one'   => /* translators: %d: number of matching cottages (always 1) */ __('%d cottage matches', 'dcc-cottage-selector'),
+            'match_count'       => /* translators: %d: number of matching cottages (2+) */ __('%d Cottages Match', 'dcc-cottage-selector'),
+            'match_count_one'   => /* translators: %d: number of matching cottages (always 1) */ __('%d Cottage Matches', 'dcc-cottage-selector'),
             'count_zero_hint'   => __('Your closest matches are shown at the end.', 'dcc-cottage-selector'),
             'sr_top_match'      => /* translators: %s: cottage name */ __('Top match: %s', 'dcc-cottage-selector'),
             'loading'           => __('Loading…', 'dcc-cottage-selector'),
@@ -143,6 +143,10 @@ final class Config
             'compare_prompt'    => __('Pick 2+ cottages to compare their features side by side.', 'dcc-cottage-selector'),
             'compare_need_two'  => __('Tip: check at least 2 cottages, then tap “Compare”.', 'dcc-cottage-selector'),
             'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d-%2$d of %3$d', 'dcc-cottage-selector'),
+            // Compact cards (0.54.0): the guests chip, and the button that reveals
+            // the full cards below the swipe row.
+            'chip_sleeps'       => /* translators: %d: how many guests the cottage sleeps */ __('Sleeps %d', 'dcc-cottage-selector'),
+            'see_all'           => __('See All', 'dcc-cottage-selector'),
             'cmp_prev'          => __('Previous cottages', 'dcc-cottage-selector'),
             'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),
 
@@ -272,7 +276,8 @@ final class Config
         $st = Settings::get();
 
         $config = array_merge([
-            'cottages'     => Data::all(),
+            // With each cottage's MPHB featured image (0.54.0) for the cards.
+            'cottages'     => Data::all_with_photos(),
             'diffFields'   => Data::DIFF_FIELDS,
             'strings'      => $strings,
             // Site-wide 3-4 guest switch; false drops the party question entirely.

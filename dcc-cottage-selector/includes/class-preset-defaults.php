@@ -39,64 +39,14 @@ final class Preset_Defaults
             'enabled_modes' => ['quick', 'compare'],
 
             // ---- Text & labels ----
-            'str_compare_need_two' => 'Tip: check at least 2 cottages, then tap “Compare”.',
-            'str_count_zero_hint' => 'Your closest matches are shown at the end.',
-            'str_edit_answers' => 'Edit Answers',
-            // Plain text, because 0.26.0 draws the marks: the heading renders as
-            // [cottage] Cottage Wizard [heron in a wizard's hat], so emoji in the
-            // string would double them up. This is a control DEFAULT — Elementor
-            // merges saved settings over defaults, so a widget that already stores
-            // its own heading keeps it, emoji and all, until someone edits the panel.
-            'str_heading' => 'Cottage Wizard',
-            'str_lvl_high' => 'High',
-            'str_lvl_low' => 'Low',
-            'str_lvl_med' => 'Medium',
-            'str_mode_quick' => 'Matching Quiz',
-            'str_mode_weights' => 'Weigh Priorities',
-            'str_opt_no' => 'No',
-            'str_opt_onebed' => '1-Bedroom',
-            'str_opt_studio' => 'Studio',
-            'str_opt_yes' => 'Yes',
-            'str_q_desk' => 'Do you need a computer desk?',
-            'str_q_party' => 'How many guests will there be?',
-            'str_opt_party2' => '1-2',
-            'str_opt_party34' => '3-4',
-            'str_w_party' => 'Room for 3-4 Guests',
-            // NOTE (0.53.1): 'copy' (the Mini Entry label, with its two emojis),
-            // str_intro and intro_color were REMOVED. The label is now the packaged
-            // default "Cottage Wizard" with an inline hat-wizard icon, the intro line
-            // is Config's, and its type/colour live in selector.css (black, 22px, 400)
-            // — a navy intro_color here would emit at (0,4,0) and beat that.
-            // NOTE (0.53.0): str_mode_compare, str_opt_either, str_q_layout,
-            // str_q_pullout and str_compare_prompt were REMOVED, not edited. Rob's
-            // new wording is now the packaged Config::strings() default, and a preset
-            // copy would be the two-copies-must-agree hazard again. str_q_dining,
-            // str_opt_seats2/4 and str_compare_scroll_all went with the question and
-            // the sentence they labelled. modetab_bg / modetab_color (white / black)
-            // went too: the closed mode button is navy with white text now, set in
-            // selector.css, and these controls emit at (0,4,0) — a preset value here
-            // would pin every new widget back to the old colours.
-            // NOTE: str_capacity_note / str_pet_note are deliberately NOT preset.
-            // They were never captured from a live widget and only duplicated the
-            // Config::strings() defaults verbatim — creating a two-copies-must-agree
-            // drift hazard (bitten in 0.22.2) and bypassing Loco translation. New
-            // widgets pick up the translatable Config default instead (0.22.3).
-            'str_q_pet' => 'Do you need a pet-friendly cottage?',
-            'str_q_screenedporch' => 'Do you prefer a private, screened-in porch?',
-            'str_reset' => 'Restart',
-            'str_results_heading' => 'Your Top Matches',
-            'str_review_heading' => 'Review Your Answers',
-            'str_view_cottage' => 'View Cottage',
-            'str_w_dining' => '4+ Dining Comfort',
-            'str_w_fewerstairs' => 'No Stairway',
-            'str_w_moreroom' => 'More Room',
-            'str_w_onebed' => '1-Bedroom Separation',
-            'str_w_pet' => 'Pet-Friendly',
-            'str_w_pullout' => 'Pull-Out Couch Flexibility',
-            'str_w_question' => 'How much does %s matter?',
-            'str_w_screenedporch' => 'Private, Screened-In Porch',
-            'str_w_studio' => 'Studio Simplicity',
-            'str_w_workspace' => 'Deskspace',
+            // NONE since 0.54.0. Every str_ control is placeholder-only now (see
+            // register_strings_controls()): a preset value becomes a control DEFAULT,
+            // and Elementor writes defaults into the settings it saves, so the next
+            // Update would have re-stored all of these on the widget — exactly the
+            // 31/35 str_* keys the Website Director removed from live on 2026-10-22.
+            // The packaged Config::strings() text is the only copy; a field left
+            // empty falls through to it. (History: until 0.53.2 this block held 39
+            // captured strings, which had to equal Config word for word.)
 
             // ---- Icons ----
             'icon_back' => ['value' => 'fas fa-arrow-left', 'library' => 'fa-solid'],
@@ -118,9 +68,7 @@ final class Preset_Defaults
             'color_btn_bg_hover' => '#F08080',
             'color_diff' => '#F4DA62',
             'color_item_bg' => '#FFFFFF',
-            'color_item_bg_hover' => '#F08080',
             'color_item_text' => '#000000',
-            'color_item_text_hover' => '#FFFFFF',
             'color_muted' => '#000000',
             'color_text' => '#000000',
 
@@ -197,6 +145,11 @@ final class Preset_Defaults
         }
 
         $map = self::map();
+        // A string control never takes a default (0.54.0): it would be re-saved
+        // into the widget on the next Update. See map().
+        if (strncmp($id, 'str_', 4) === 0) {
+            return $args;
+        }
         if (array_key_exists($id, $map)) {
             $args['default'] = $map[$id];
         }

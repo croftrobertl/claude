@@ -1,15 +1,15 @@
 <?php
 /**
- * Cottage Selector 0.53.3 — READ-ONLY check of stored widget keys.
+ * Cottage Selector 0.54.0 — READ-ONLY check of stored widget keys.
  *
- * Run:   wp eval-file "Cottage Selector - 0.53.3 check-stored-keys.php"
+ * Run:   wp eval-file "Cottage Selector - 0.54.0 check-stored-keys.php"
  *
  * Writes NOTHING. Reads _elementor_data for every published, non-revision post that
  * holds a dccs_selector or dccs_mini_entry widget, plus the dccs_design_sources
  * option, and for each instance compares the watched stored keys with the 0.53.3
  * PACKAGED DEFAULT:
  *
- *   MASKS (read)        stored, differs from the 0.53.3 default, and the widget READS
+ *   MASKS (read)        stored, differs from the 0.54.0 default, and the widget READS
  *                       it — it hides a 0.53.1-0.53.3 change until cleared.
  *   unread (safe)       stored and differs, but a mirroring Mini Entry never reads its
  *                       own text keys (its pop-up uses the source's), so clearing it
@@ -23,6 +23,10 @@
  * pet link (dccs_settings), where a stored '' — unlike a widget's — does NOT fall
  * through but means "no link"; and the "Primary" registry entry, which mirroring
  * pop-ups read and which now refreshes ONLY when its page is Updated in Elementor.
+ *
+ * 0.54.0 adds: how many str_* keys each Selector STORES at all. The Website
+ * Director removed them all on 2026-10-22 and 0.54.0 gives no string control a
+ * default, so an Update must not bring any back: expect 0 on both.
  */
 
 global $wpdb;
@@ -65,8 +69,9 @@ $rows = $wpdb->get_results(
 
 $show = function ($v) { return is_scalar($v) ? json_encode((string) $v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : json_encode($v); };
 $total = 0;
+$strStored = 0;
 
-$walk = function ($els, $row) use (&$walk, &$total, $DEFAULTS, $MINI_OWN, $LEGACY, $show, $PET_URL) {
+$walk = function ($els, $row) use (&$walk, &$total, &$strStored, $DEFAULTS, $MINI_OWN, $LEGACY, $show, $PET_URL) {
     foreach ((array) $els as $e) {
         $type = $e['widgetType'] ?? '';
         if ($type === 'dccs_selector' || $type === 'dccs_mini_entry') {
@@ -81,7 +86,7 @@ $walk = function ($els, $row) use (&$walk, &$total, $DEFAULTS, $MINI_OWN, $LEGAC
             foreach ($watched as $k => $want) {
                 if (!array_key_exists($k, $s) || !is_scalar($s[$k]) || (string) $s[$k] === '' || (string) $s[$k] === $want) { continue; }
                 $readsIt = !$mirroring || isset($MINI_OWN[$k]);
-                if ($readsIt) { echo "  MASKS (read)    $k = " . $show($s[$k]) . "   (0.53.3 default: " . $show($want) . ")\n"; $mask++; }
+                if ($readsIt) { echo "  MASKS (read)    $k = " . $show($s[$k]) . "   (0.54.0 default: " . $show($want) . ")\n"; $mask++; }
                 else { echo "  unread (safe)   $k = " . $show($s[$k]) . "\n"; $unread++; }
             }
             // A widget's own pet link beats the site's (0.53.3). An empty one inherits.
@@ -94,8 +99,13 @@ $walk = function ($els, $row) use (&$walk, &$total, $DEFAULTS, $MINI_OWN, $LEGAC
                 echo "  note            str_intro is stored but NOT read: the line above the button reads entry_line (0.53.2)\n";
             }
             foreach ($LEGACY as $k) { if (array_key_exists($k, $s)) { $legacy++; } }
+            if (!$mini) {
+                $strKeys = array_values(array_filter(array_keys($s), static fn($k) => strncmp((string) $k, 'str_', 4) === 0));
+                echo "  str_* stored    " . count($strKeys) . ($strKeys ? '   (' . implode(', ', array_slice($strKeys, 0, 6)) . (count($strKeys) > 6 ? ', …' : '') . ')' : '   (none: every string is the packaged default)') . "\n";
+                $strStored += count($strKeys);
+            }
             echo "  legacy (safe)   $legacy key(s) whose control no longer exists\n";
-            echo "  " . ($mask ? "=> $mask key(s) to clear" : "=> nothing masks 0.53.3") . ($unread ? ", plus $unread unread copy(ies) safe to clear" : '') . "\n";
+            echo "  " . ($mask ? "=> $mask key(s) to clear" : "=> nothing masks 0.54.0") . ($unread ? ", plus $unread unread copy(ies) safe to clear" : '') . "\n";
             $total += $mask;
         }
         if (!empty($e['elements'])) { $walk($e['elements'], $row); }
@@ -106,7 +116,7 @@ foreach ($rows as $row) { $walk(json_decode($row->meta_value, true), $row); }
 echo "\n== dccs_settings (the DCC > Cottage Selector page)\n";
 $site = get_option('dccs_settings', []);
 if (is_array($site) && array_key_exists('pet_fee_url', $site) && (string) $site['pet_fee_url'] !== $PET_URL) {
-    echo "  MASKS (read)    pet_fee_url = " . $show($site['pet_fee_url']) . "   (0.53.3 default: " . $show($PET_URL) . ")\n";
+    echo "  MASKS (read)    pet_fee_url = " . $show($site['pet_fee_url']) . "   (0.54.0 default: " . $show($PET_URL) . ")\n";
     echo "                  A stored '' here means NO LINK; it does not fall through. Fix: type the URL into\n";
     echo "                  DCC > Cottage Selector > Pet note link and Save.\n";
     $total++;
@@ -132,4 +142,5 @@ foreach ((array) get_option('dccs_design_sources', []) as $name => $src) {
     }
     echo "    " . ($stale ? "=> $stale stale string(s): Update post $pid in Elementor AFTER clearing its keys" : "=> registry copy is current") . "\n";
 }
-echo "\nTOTAL keys that mask 0.53.3: $total\n";
+echo "\nTOTAL keys that mask 0.54.0: $total\n";
+echo "TOTAL str_* keys stored on Selectors: $strStored (expected 0 after the 2026-10-22 cleanup)\n";

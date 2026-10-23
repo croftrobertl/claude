@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.3
+Stable tag: 0.54.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.54.0 =
+* Matching Quiz results are a row of compact photo cards that snap as you swipe: each card shows the cottage's number and name (centred), up to three chips from the cottage data (Sleeps N; Ground Floor or Upstairs; Studio or 1-Bedroom; plus Pet-Friendly where pets are allowed) and a View Cottage link. Matches come first; every other cottage follows, faded, so all eight stay in reach. From 900px the row shows four across with 44px ‹ › buttons that page four at a time.
+* The photos are each cottage's MotoPress featured image (its room type's), read on the server at the 768px size. A cottage without one shows its number instead.
+* A navy "N Cottages Match" pill heads the results, with an "8 → N" ticker. It uses the same count as the quiz's pill, which now also reads in Title Case and plays the ticker when an answer narrows the field (no animation with reduced motion).
+* "See All" opens the previous full cards below the row.
+* Compare Mode is a grid of the same cards. Tap anywhere on a card to choose it (2px navy ring and a 28px ✓ badge); the real checkbox is still there for keyboards and screen readers. View Cottage opens the page without choosing the card.
+* The comparison table's ‹ › are 44px circles, and the Compare list's scroll thumb is at least 44px tall.
+* Titles and card titles are centred; only paragraphs of more than one sentence are left-aligned.
+* No text field in the widget panel has a default any more: each shows the packaged text as a placeholder, so pressing Update never writes the default wording back into the page.
+* Removed panel controls that styled the old Compare rows: Colors > Item background/text (hover) and Compare picker > Row padding. The remaining two Item colours now style the Compare cards.
+* New strings: "Sleeps %d", "See All". "%d cottages match" / "%d cottage matches" are now "%d Cottages Match" / "%d Cottage Matches".
 
 = 0.53.3 =
 * Pet note: "One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required." The Compare table's Pets row now reads "1 Dog ≤20 lb" for the pet-friendly cottage instead of "Yes".

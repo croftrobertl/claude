@@ -23,7 +23,10 @@ A single WordPress plugin — **DCC Cottage Selector** — a mobile-first decisi
 that helps guests choose among the eight Dora Canal Court cottages by focusing only
 on their real differences. It lives at `dcc-cottage-selector/` and provides two
 Elementor widgets (the full Selector and a compact Mini Entry) plus a
-`[dcc_selector_entry]` shortcode. Static data, fully client-rendered. There IS a
+`[dcc_selector_entry]` shortcode. Static data, fully client-rendered (since 0.54.0
+the config also carries each cottage's PHOTO URL — its MotoPress room type's
+featured image, read server-side by `Data::all_with_photos()` — so the browser now
+loads up to eight lazy `<img>`s; no XHR, no new endpoint). There IS a
 build step (since 0.45.0/0.46.0): `npm run build` regenerates the bundle, the
 minified bundle and the minified stylesheet, and `npm test` fails if any is stale.
 
@@ -184,6 +187,15 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the per-widget `str_` overrides that carried it are being removed from all three
   live instances, so editing either string sends new words straight to guests.
   Treat a change to them as a content decision with the owner, never a tidy-up.
+- **EVERY `str_` control is PLACEHOLDER-only since 0.54.0, and the preset holds no
+  `str_` key.** The Website Director removed all stored `str_*` keys from both live
+  Selectors on 2026-10-22 (31 on home d1ae1cf, 35 on /cottages/ 5be94a3 — each an
+  orphan or identical to the default); a default on any string control would be
+  written back by the next Update. `Preset_Defaults::apply()` refuses a default to
+  any `str_` id as a second lock, and a PHP test fails if any registered `str_`
+  control carries a default or a placeholder other than its Config text.
+  `tools/check-stored-keys.php` prints a per-Selector `str_*` census (expect 0).
+  The history below explains why the two notes were first:
 - **`str_capacity_note` and `str_pet_note` are PLACEHOLDER-only controls, and
   must stay that way.** Elementor materialises a control DEFAULT into the settings
   it saves, so a default on these would let the next Update in the editor
@@ -304,7 +316,10 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   **The heading renders as bare text** — the `.dccs-heading-t` / `.dccs-heading-w`
   wrappers existed only for the marks and the cast's word-bob and went with them.
   Verified byte-identical geometry at 375px and 1280px across the removal.
-- **Animations, if any are ever added back, are transform and opacity only.**
+- **Animations are transform and opacity only.** 0.54.0 added the one keyframe the
+  plugin has — `dccs-tick-in`, the match ticker's new number — and the foot of the
+  stylesheet removes every animation under `prefers-reduced-motion`. dom-smoke pins
+  exactly one keyframe touching only those two properties. History:
   0.32.0 widened this to "and a path's `d` recomputed per frame", purely so the
   cast's fishing line could be drawn, and recorded it as a deliberate carve-out
   rather than absorbing it. The cast moved to a site mu-plugin in 0.34.0 and the
@@ -525,9 +540,9 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   from the preset — the control default carries it, and a preset copy would be
   the two-copies-must-agree hazard.
 - **Every View link opens in a new tab, and says so only to assistive tech
-  (0.51.0, owner).** `buildCard()` is the ONE place a cottage link is rendered —
-  Matching Quiz, Weigh Priorities and the highlighted extra all go through it;
-  Compare renders no View link. It carries `target="_blank" rel="noopener"`, and
+  (0.51.0, owner).** `viewLink()` is the ONE place a cottage link is rendered
+  (0.54.0) — the big cards (`buildCard()`) and the compact cards (`miniCard()`, in
+  the results row and Compare Mode) both call it. It carries `target="_blank" rel="noopener"`, and
   `opens_new_tab` is appended INSIDE the `aria-label`. Not a visually hidden span:
   an explicit `aria-label` replaces the link's content as its accessible name, so
   a span inside the link would never be announced. No visible change.
@@ -562,10 +577,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   (underline), not coral. Its keyboard ring is GOLD #F4DA62 and INSET
   (`outline-offset: -5px`), 9.0:1 on navy (0.53.1; 0.53.0 used white).
   **Gold is allowed in exactly one place**: the `--dccs-ring-on-navy` token, consumed
-  only by the mode button's and a ticked row's checkbox `:focus-visible`. The test
+  only by the mode button's `:focus-visible` (the ticked row was its second
+  consumer until 0.54.0 removed the rows). The test
   that used to say "no gold anywhere" now checks exactly that — one literal, two
   consumers, and no checkbox `accent-color` ever gold — so the Elementor kit's gold
   checkbox focus is still blocked.
+- **Compare Mode is a grid of compact photo cards (0.54.0, Rob's pick 3).** Each
+  card is the `<label>` of a visually hidden REAL checkbox (opacity 0, not
+  display:none, so it keeps focus and its name, `aria-label` = the cottage name):
+  a tap anywhere toggles, the View Cottage link inside navigates without toggling
+  (a label never activates for a click on a link in it). Chosen = 2px navy ring +
+  a 28px navy badge with a white tick, keyed off `input:checked` in CSS so it is
+  right before any re-render. `rerender()` keeps the list's scroll position. The
+  0.53.1 rows below, and their navy/gold rules, are HISTORY:
 - **A ticked Compare row is navy with white text at rest, hover, tap and focus
   (0.53.1)** via an `is-checked` class (not `:has()`, for older browsers). Its
   checkbox is DRAWN (`appearance: none`): a white box with a navy tick, because a
@@ -625,7 +649,8 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the miss tags, Weigh Priorities, dates, availability and "Fee Details". Kept as
   they are: "Step x of y", "N cottages match", "Showing 1-3 of 8", "Current mode: …",
   "Previous/Next cottages", "Choose an answer to continue". dom-smoke 102 pins both
-  lists. Both live V1 widgets store ten lowercase copies (str_w_* and str_fee_link)
+  lists. (0.54.0, Rob: the match count moved to Title Case — "%d Cottages Match" /
+  "%d Cottage Matches" — with the navy results pill.) Both live V1 widgets store ten lowercase copies (str_w_* and str_fee_link)
   that mask the new labels until cleared; the PHP drift test pins exactly that set.
 - **Since 2026-10-14 only /cottages/ (1005/5be94a3) shares as "Primary"** (Rob). The
   homepage widget stores `share_design` "" and renders its own text; a PHP test
@@ -640,7 +665,22 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   regenerates that page's CSS.** Elementor caches per-post CSS built from control
   values INCLUDING defaults; the 0.53.1 checklist runs Elementor → Tools →
   Regenerate Files & Data after install.
-- **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).** An
+- **Quiz results are a swipe row of compact cards (0.54.0, Rob's pick 1).** EVERY
+  cottage is in the row: the matches first in rank order (availability: free, then
+  booked), then the rest, faded (`.is-other`, photo at 45%; text keeps its
+  contrast), so none is ever out of reach. Snaps as it swipes; from 900px four
+  across, with 44px ‹ › that page four at a time (trackpads still swipe). The old big
+  cards are the "See All" panel (a disclosure; `state.seeAll` survives re-renders).
+  **ONE count** — `matchN(res)`: the quiz pill, the results pill, its "8 → N" ticker
+  and the live region all read it; `resultsCount` only limits the See All cards.
+  dom-smoke 104 runs a 2-card / 8-match config to tell the two apart.
+- **Rob's alignment rule (0.54.0): every title, section heading and card title is
+  centred; only a MULTI-sentence paragraph is left-aligned.** `para()` / `isMulti()`
+  class a paragraph `.dccs-multi` from its TEXT; the CSS block "ROB'S ALIGNMENT
+  RULE" sets both. This supersedes "the page's text-align is not ours" for titles.
+- **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).**
+  0.54.0: the compare table's ‹ › are now VISIBLY 44px (Rob) — no extension — and
+  the Compare scroll thumb is at least 44px tall. An
   absolutely positioned `::before` on the control extends its hit area: answered
   step dots 19px above and below (48px at live's 10px bar, 44px at the 6px
   fallback; never sideways, so the 6px gaps keep dots apart), the compare ‹ › 6px
@@ -763,8 +803,9 @@ and bypass Loco, so **only add a key that was genuinely captured from a live wid
 duplicating a `Config::strings()` default there just creates a two-copies-must-agree
 drift hazard (it bit us in 0.22.2; the notes were removed from the preset in 0.22.3).
 
-**Since 0.53.1 every preset `str_` value equals its packaged `Config::strings()`
-text, and a PHP test fails if one drifts.** Twelve had diverged (the preset held
+**Since 0.54.0 the preset holds NO `str_` value at all** (see the placeholder-only
+invariant). Before that — **since 0.53.1 every preset `str_` value equalled its
+packaged `Config::strings()` text, and a PHP test failed if one drifted.** Twelve had diverged (the preset held
 live's words — "Cottage Wizard", "View Cottage", "Deskspace" — while Config held
 older ones). That mattered in three places the preset never reaches: the
 `[dcc_selector_entry]` shortcode, a blind install's placeholder-only fields, and any

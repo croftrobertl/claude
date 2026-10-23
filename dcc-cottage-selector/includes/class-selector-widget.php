@@ -506,20 +506,20 @@ class Selector_Widget extends Widget_Base
         // through to Config::strings() because Config::build() applies an override
         // only when it is a NON-EMPTY string. Same pattern, same reason, as the
         // questions/answers and badge controls below.
-        $placeholder_only = ['capacity_note' => true, 'pet_note' => true];
-
+        //
+        // 0.54.0: EVERY string control is placeholder-only, not just those two. The
+        // Website Director removed the 31 (home) and 35 (/cottages/) str_* keys that
+        // defaults had frozen into the live widgets (2026-10-22); with a default
+        // here, the next Update would have written them all back. The panel shows
+        // the packaged text as a grey placeholder, an empty field renders it, and
+        // typing still overrides.
         foreach ($editable as $key => $label) {
-            $args = [
+            $this->preset_control('str_' . $key, [
                 'label'       => $label,
                 'type'        => $key === 'intro' ? Controls_Manager::TEXTAREA : Controls_Manager::TEXT,
                 'label_block' => true,
-            ];
-            if (isset($placeholder_only[$key])) {
-                $args['placeholder'] = $defaults[$key] ?? '';
-            } else {
-                $args['default'] = $defaults[$key] ?? '';
-            }
-            $this->preset_control('str_' . $key, $args);
+                'placeholder' => $defaults[$key] ?? '',
+            ]);
         }
 
         // Optional per-widget links after the capacity / pet notes. EMPTY INHERITS
@@ -767,16 +767,16 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->var_color('color_btn_bg_hover', __('Button background (hover)', 'dcc-cottage-selector'), '--dccs-btn-bg-hover');
 
-        // The individual selectable items inside the two dropdown menus.
+        // The Compare Mode cards (the list rows until 0.54.0). Their HOVER pair went
+        // with the rows: a photo card does not change colour on hover, and a control
+        // that styles nothing is a trap in the panel. Stored hover values are inert.
         $this->preset_control('item_bg_heading', [
-            'label'     => __('Drop-down menu items', 'dcc-cottage-selector'),
+            'label'     => __('Compare Mode cards', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
         ]);
-        $this->var_color('color_item_bg', __('Item background', 'dcc-cottage-selector'), '--dccs-item-bg');
-        $this->var_color('color_item_text', __('Item text', 'dcc-cottage-selector'), '--dccs-item-text');
-        $this->var_color('color_item_bg_hover', __('Item background (hover)', 'dcc-cottage-selector'), '--dccs-item-bg-hover');
-        $this->var_color('color_item_text_hover', __('Item text (hover)', 'dcc-cottage-selector'), '--dccs-item-text-hover');
+        $this->var_color('color_item_bg', __('Card background', 'dcc-cottage-selector'), '--dccs-item-bg');
+        $this->var_color('color_item_text', __('Card text', 'dcc-cottage-selector'), '--dccs-item-text');
 
         $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'      => 'base_typography',
@@ -1357,12 +1357,12 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        // The compare picker is an always-visible checklist (no trigger). Row/option
-        // colors come from Colors → Drop-down menu items; the panel background from
-        // Colors → Buttons & menus. This section styles the checklist box + rows.
+        // The compare picker is an always-visible grid of cards (rows until 0.54.0).
+        // Card colours come from Colors → Compare Mode cards. This section styles the
+        // scrolling box, and its typography the card NAMES (the rows' text before).
         $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'cmpmenu_typography',
-            'selector' => self::SEL . '.dccs-cmp-option',
+            'selector' => self::SEL . '.dccs-cmp-list .dccs-mcard-name',
         ]);
         $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => 'cmpmenu_panel_border',
@@ -1375,12 +1375,8 @@ class Selector_Widget extends Widget_Base
             'range'      => ['px' => ['min' => 0, 'max' => 40], '%' => ['min' => 0, 'max' => 50]],
             'selectors'  => [self::SEL . '.dccs-cmp-list' => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->preset_responsive_control('cmpmenu_item_padding', [
-            'label'      => __('Row padding', 'dcc-cottage-selector'),
-            'type'       => Controls_Manager::DIMENSIONS,
-            'size_units' => ['px', 'em'],
-            'selectors'  => [self::SEL . '.dccs-cmp-option' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
-        ]);
+        // 'cmpmenu_item_padding' (Row padding) went with the rows in 0.54.0; nothing
+        // is left for it to pad, and a stored value is inert once unregistered.
         $this->preset_group_control(Group_Control_Box_Shadow::get_type(), [
             'name'     => 'cmpmenu_panel_shadow',
             'selector' => self::SEL . '.dccs-cmp-list',
@@ -1444,7 +1440,7 @@ class Selector_Widget extends Widget_Base
             'name'     => $prefix . '_panel_shadow',
             'selector' => $panel,
         ]);
-        // Item hover colors are set globally in Colors → Drop-down menu items.
+        // Its hover colours are the site button hover (selector.css).
         $this->preset_responsive_control($prefix . '_transition', [
             'label'      => __('Hover transition speed', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
@@ -1645,8 +1641,6 @@ class Selector_Widget extends Widget_Base
             'color_btn_bg_hover'  => '--dccs-btn-bg-hover',
             'color_item_bg'       => '--dccs-item-bg',
             'color_item_text'     => '--dccs-item-text',
-            'color_item_bg_hover' => '--dccs-item-bg-hover',
-            'color_item_text_hover' => '--dccs-item-text-hover',
         ];
         foreach ($colors as $key => $var) {
             $v = $settings[$key] ?? '';

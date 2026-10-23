@@ -325,6 +325,7 @@
 .dccs-root.dccs-root .dccs-reset,
 .dccs-root.dccs-root .dccs-open-compare,
 .dccs-root.dccs-root .dccs-landing-choice,
+.dccs-root.dccs-root .dccs-see-all,
 .dccs-root.dccs-root a.dccs-view {
   color: var(--dccs-btn-on-blue);
   background: var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue)));
@@ -345,7 +346,6 @@
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-modetab,
 .dccs-root.dccs-root .dccs-modeselect-trigger,
-.dccs-root.dccs-root .dccs-cmp-option,
 .dccs-root.dccs-root .dccs-view {
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -369,7 +369,10 @@
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible,
-.dccs-root.dccs-root .dccs-matrix-nav button:focus-visible {
+.dccs-root.dccs-root .dccs-matrix-nav button:focus-visible,
+.dccs-root.dccs-root .dccs-see-all:focus-visible,
+.dccs-root.dccs-root .dccs-swipe > button:focus-visible,
+.dccs-root.dccs-root .dccs-mcard-view:focus-visible {
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
 }
 /* The navy mode button gets a GOLD ring, drawn INSIDE its edge (0.53.1, Rob): a
@@ -543,33 +546,21 @@
   border-radius: 999px; background: var(--dccs-bg); border: 1px solid var(--dccs-border);
 }
 .dccs-root.dccs-root .dccs-cmp-bar-thumb {
-  position: absolute; left: 1px; right: 1px; top: 0; min-height: 34px;
+  position: absolute; left: 1px; right: 1px; top: 0; min-height: 44px; /* 44px since 0.54.0: guests drag it */
   border-radius: 999px; background: var(--dccs-accent); cursor: grab; touch-action: none;
 }
 .dccs-root.dccs-root .dccs-cmp-bar-thumb:active { cursor: grabbing; }
-.dccs-root.dccs-root .dccs-cmp-option {
-  display: flex; align-items: center; gap: 12px; padding: 12px 26px 12px 16px; min-height: 50px; cursor: pointer;
-  border-bottom: 1px solid var(--dccs-border); font-size: 0.98rem; text-transform: none;
-  overflow-wrap: anywhere;
-  background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
+/* Compare Mode cards (0.54.0, Rob's pick 3, Option 1). The cottages are a grid of
+   the compact photo cards inside the scrolling list; each WHOLE card is the <label>
+   of a visually hidden real checkbox, so a tap anywhere on it chooses it. The
+   selected look keys off input:checked, so it changes the instant the box does. */
+.dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  /* 26px on the right clears the custom scrollbar drawn over the list's edge. */
+  padding: 10px 26px 10px 10px; max-height: min(520px, 70vh);
 }
-.dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
-.dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
-/* A TICKED row is selected, so it is navy with white text (0.53.1, Rob) — at rest,
-   hovered, tapped and focused alike; no coral on a ticked row (white on coral was
-   2.6:1). (0,5,0) for the hover/focus-within forms beats the (0,4,0) row hover.
-   Its checkbox is drawn rather than native, so it stays legible on navy: a white
-   box with a navy tick (a native checked box is navy on navy). */
-.dccs-root.dccs-root .dccs-cmp-option.is-checked,
-.dccs-root.dccs-root .dccs-cmp-option.is-checked:hover,
-.dccs-root.dccs-root .dccs-cmp-option.is-checked:focus-within {
-  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
-}
-.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"] {
-  /* margin = the native checkbox's own (3px 3px 3px 4px), so ticking a row changes
-     neither its height nor where the box sits — the list must not jump. */
-  -webkit-appearance: none; appearance: none; margin: 3px 3px 3px 4px; border: 0; border-radius: 4px;
-  background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cpath d='M5 11.5l4 4 8-9' fill='none' stroke='%23002E7A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 22px 22px no-repeat;
+@media (min-width: 900px) {
+  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 /* Compare Mode's one-sentence intro is centred (0.53.0, Rob) — set here rather
    than inherited, because the page around the widget is not ours to align. */
@@ -586,11 +577,6 @@
      so focus is never signalled by this fill alone. */
   background: var(--dccs-btn-blue-hover); color: var(--dccs-btn-on-blue-hover);
   text-decoration: none;
-}
-.dccs-root.dccs-root .dccs-cmp-option:hover,
-.dccs-root.dccs-root .dccs-cmp-option:focus-within {
-  background: var(--dccs-item-bg-hover, var(--dccs-bg));
-  color: var(--dccs-item-text-hover, var(--dccs-item-text, var(--dccs-text)));
 }
 /* Keep the selected mode pill on its accent colour when hovered (unless overridden). */
 .dccs-root.dccs-root .dccs-modetab.is-active:hover,
@@ -626,6 +612,8 @@
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:hover,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible,
+.dccs-root.dccs-root .dccs-see-all:hover,
+.dccs-root.dccs-root .dccs-see-all:focus-visible,
 .dccs-root.dccs-root a.dccs-view:hover,
 .dccs-root.dccs-root a.dccs-view:focus-visible {
   background: var(--dccs-btn-bg-hover, var(--dccs-btn-blue-hover));
@@ -657,21 +645,14 @@
 /* Compare table — pinned attribute column + ‹ › paging */
 .dccs-root.dccs-root .dccs-matrix-nav { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; margin-bottom: 10px; }
 .dccs-root.dccs-root .dccs-matrix-nav button {
-  width: 32px; height: 32px; flex: 0 0 auto; padding: 0; border-radius: 999px; cursor: pointer;
+  width: 44px; height: 44px; min-height: 44px; flex: 0 0 auto; padding: 0; border-radius: 999px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid var(--dccs-accent); background: var(--dccs-accent); color: var(--dccs-accent-text);
-  /* Icon control, not a labelled button: it keeps its own 32px round geometry.
-     letter-spacing is reset because a trailing 0.5px on a single glyph pushes it
-     off-centre in a fixed-width circle. */
-  font-size: 18px; line-height: 1; letter-spacing: normal;
-}
-/* The circles stay 32px for looks; an invisible pseudo-element widens each one's
-   TAP area to 44 x 44 (6px each side), the same technique as the step dots. The
-   nav's 8px gap keeps the overlap clear of the other arrow, and it only reaches
-   into the static "1-2 of 3" label and the row's 10px bottom margin. */
-.dccs-root.dccs-root .dccs-matrix-nav button { position: relative; }
-.dccs-root.dccs-root .dccs-matrix-nav button::before {
-  content: ''; position: absolute; top: -6px; right: -6px; bottom: -6px; left: -6px;
+  /* Icon control, not a labelled button: its own round geometry, 44px since 0.54.0
+     (Rob, "Selector tap targets 1"): the circle IS the tap area, so no invisible
+     extension. letter-spacing is reset because a trailing 0.5px on a single glyph
+     pushes it off-centre in a fixed-width circle. */
+  font-size: 24px; line-height: 1; letter-spacing: normal;
 }
 .dccs-root.dccs-root .dccs-matrix-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
 .dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); white-space: nowrap; }
@@ -789,8 +770,6 @@
    depending on which stylesheet loaded last.
    :focus rather than :focus-visible for the colour, because the kit's rule is
    :focus and a mouse click must not show gold either. */
-.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus,
-.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,
 .dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus,
 .dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible {
   accent-color: var(--dccs-accent);
@@ -803,14 +782,9 @@
    rather than on the control, so it reads against the checked navy fill and the
    unchecked white one alike. Same 2px accent ring every other control in the
    widget uses. */
-.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,
 .dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible {
   outline: 2px solid var(--dccs-accent);
   outline-offset: 2px;
-}
-/* On a ticked (navy) row the navy ring would vanish: gold there (0.53.1). (0,6,1). */
-.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"]:focus-visible {
-  outline-color: var(--dccs-ring-on-navy);
 }
 
 .dccs-root.dccs-root .dccs-empty {
@@ -896,7 +870,10 @@
   background: var(--dccs-surface, #ffffff);
   border-bottom: 1px solid var(--dccs-border, #dfe5ec);
 }
+/* Centred (Rob's alignment rule, 0.54.0): it fills the row, and padding the size of
+   the close button plus the gap on its left keeps it centred on the box. */
 .dccs-modal-title {
+  flex: 1 1 auto; text-align: center; padding-left: calc(44px + 10px);
   margin: 0; font-size: 1.2rem; line-height: 1.2; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--dccs-text, #1a2330);
@@ -976,6 +953,118 @@
   .dccs-root.dccs-root .dccs-matrix td { padding: 6px 5px; font-size: 0.82rem; }
   .dccs-root.dccs-root .dccs-matrix thead th { font-size: 0.72rem; }
 }
+
+/* ==== 0.54.0: compact photo cards, the swipe row, the match pill ============== */
+
+/* ROB'S ALIGNMENT RULE (0.54.0): every title, section heading and card title is
+   centred; only a MULTI-sentence paragraph is left-aligned (JS classes those
+   .dccs-multi from their text). Set here, so it holds whatever the page around
+   the widget inherits. */
+.dccs-root.dccs-root .dccs-heading,
+.dccs-root.dccs-root .dccs-step-q,
+.dccs-root.dccs-root .dccs-results-h,
+.dccs-root.dccs-root .dccs-card-head,
+.dccs-root.dccs-root .dccs-card-head h4,
+.dccs-root.dccs-root .dccs-mcard-title { text-align: center; }
+.dccs-root.dccs-root .dccs-multi { text-align: left; }
+
+/* The match pill: "N Cottages Match", navy (the selected colour), from the SAME
+   count the quiz pill shows. The "8 → N" ticker beside it is aria-hidden. */
+.dccs-root.dccs-root .dccs-match-pill { margin: 0 0 12px; text-align: center; }
+.dccs-root.dccs-root .dccs-match-pill-n {
+  display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.95rem;
+  background: var(--dccs-sel-bg); color: var(--dccs-sel-text);
+}
+.dccs-root.dccs-root .dccs-tick { display: inline-block; margin-left: 8px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+.dccs-root.dccs-root .dccs-tick-to { display: inline-block; animation: dccs-tick-in 0.45s ease-out both; }
+/* Transform and opacity only (the standing animation rule); off with reduced
+   motion — the block at the foot of this file removes every animation. */
+@keyframes dccs-tick-in {
+  from { opacity: 0; transform: translateY(-0.6em); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The compact card. Same component in the swipe row and in Compare Mode. */
+.dccs-root.dccs-root .dccs-mcard { position: relative; display: block; margin: 0; color: var(--dccs-text); font-weight: 400; }
+.dccs-root.dccs-root .dccs-mcard-body {
+  display: flex; flex-direction: column; gap: 6px; height: 100%; box-sizing: border-box; padding-bottom: 4px;
+  background: var(--dccs-item-bg, var(--dccs-surface, #FFFFFF)); color: var(--dccs-item-text, var(--dccs-text));
+  border: 1px solid var(--dccs-border); border-radius: 14px; overflow: hidden;
+}
+.dccs-root.dccs-root .dccs-mcard-photo { position: relative; display: block; aspect-ratio: 4 / 3; background: #EEF2F7; }
+.dccs-root.dccs-root .dccs-mcard-img { display: block; width: 100%; height: 100%; object-fit: cover; margin: 0; }
+.dccs-root.dccs-root .dccs-mcard-noimg {
+  display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: var(--dccs-unsel-text);
+}
+.dccs-root.dccs-root .dccs-mcard-title { display: block; padding: 2px 8px 0; line-height: 1.2; }
+.dccs-root.dccs-root .dccs-mcard-num { display: block; font-size: 0.78rem; font-weight: 600; }
+.dccs-root.dccs-root .dccs-mcard-name { display: block; font-size: 1rem; font-weight: 800; overflow-wrap: anywhere; }
+.dccs-root.dccs-root .dccs-mcard-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 0 6px; }
+.dccs-root.dccs-root .dccs-mcard-chip {
+  font-size: 0.72rem; font-weight: 600; line-height: 1.3; padding: 2px 8px; border-radius: 999px;
+  background: rgba(0, 46, 122, 0.08); color: var(--dccs-unsel-text);
+}
+/* "View Cottage": a link, 44px tall to tap, centred under the chips. */
+.dccs-root.dccs-root .dccs-mcard-view {
+  align-self: center; margin-top: auto; min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px;
+  font-weight: 700; font-size: 0.9rem; color: var(--dccs-btn-blue, #006BCF); text-decoration: underline; text-underline-offset: 3px;
+}
+/* The rest, after the matches: still there, still readable — only the photo fades. */
+.dccs-root.dccs-root .dccs-mcard.is-other .dccs-mcard-photo { opacity: 0.45; }
+.dccs-root.dccs-root .dccs-mcard.is-other .dccs-mcard-body { background: #F7F8FA; }
+.dccs-root.dccs-root .dccs-mcard.is-highlight .dccs-mcard-body { border-color: var(--dccs-accent); }
+
+/* Compare Mode: the card IS the label. The real checkbox stays in the page —
+   focusable, announced — but invisible; the card shows its state. (0,5,0) beats
+   the Elementor kit's input resets at (0,3,1). */
+.dccs-root.dccs-root .dccs-mcard.is-select { cursor: pointer; }
+.dccs-root.dccs-root .dccs-mcard.is-select .dccs-mcard-input {
+  position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none;
+}
+.dccs-root.dccs-root .dccs-mcard-input:checked + .dccs-mcard-body {
+  border-color: var(--dccs-sel-bg); box-shadow: 0 0 0 2px var(--dccs-sel-bg);
+}
+.dccs-root.dccs-root .dccs-mcard-input:focus-visible + .dccs-mcard-body {
+  outline: 3px solid var(--dccs-btn-blue, #006BCF); outline-offset: 3px;
+}
+/* The 28px badge: an empty white circle until chosen, then navy with a white ✓. */
+.dccs-root.dccs-root .dccs-mcard-check {
+  position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; box-sizing: border-box;
+  border-radius: 999px; border: 2px solid var(--dccs-sel-bg); background: #FFFFFF;
+}
+.dccs-root.dccs-root .dccs-mcard-input:checked + .dccs-mcard-body .dccs-mcard-check {
+  background: var(--dccs-sel-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 20px 20px no-repeat;
+}
+
+/* The swipe row. Phones: one card and a peek of the next, snapping to centre.
+   From 900px (Rob's Option 1): four across, and ‹ › under the row page four at a
+   time; a trackpad still swipes. Every cottage is in the row. */
+.dccs-root.dccs-root .dccs-swipe { position: relative; margin: 0 0 12px; }
+.dccs-root.dccs-root .dccs-swipe-track {
+  display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 8px;
+}
+.dccs-root.dccs-root .dccs-swipe-track::-webkit-scrollbar { display: none; }
+.dccs-root.dccs-root .dccs-swipe-item { display: flex; flex: 0 0 72%; scroll-snap-align: center; }
+.dccs-root.dccs-root .dccs-swipe-item > .dccs-mcard { flex: 1 1 auto; }
+.dccs-root.dccs-root .dccs-swipe > .dccs-swipe-prev,
+.dccs-root.dccs-root .dccs-swipe > .dccs-swipe-next { display: none; }
+@media (min-width: 900px) {
+  .dccs-root.dccs-root .dccs-swipe { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; }
+  .dccs-root.dccs-root .dccs-swipe-track { flex: 0 0 100%; order: -1; min-width: 0; }
+  .dccs-root.dccs-root .dccs-swipe-item { flex-basis: calc((100% - 36px) / 4); scroll-snap-align: start; }
+  .dccs-root.dccs-root .dccs-swipe > .dccs-swipe-prev,
+  .dccs-root.dccs-root .dccs-swipe > .dccs-swipe-next {
+    display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 0;
+    border-radius: 999px; border: 1px solid var(--dccs-accent); background: var(--dccs-accent); color: var(--dccs-accent-text);
+    font-size: 24px; line-height: 1; letter-spacing: normal; cursor: pointer;
+  }
+  .dccs-root.dccs-root .dccs-swipe > button[disabled] { opacity: 0.4; cursor: not-allowed; }
+}
+
+/* "See All" reveals today's full cards under the row. */
+.dccs-root.dccs-root .dccs-see-all { display: flex; align-items: center; gap: 8px; margin: 0 auto 14px; cursor: pointer; }
+.dccs-root.dccs-root .dccs-see-all[aria-expanded="true"] .dccs-caret { transform: rotate(180deg); }
 
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }

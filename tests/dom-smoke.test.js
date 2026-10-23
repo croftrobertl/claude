@@ -133,7 +133,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 4 since 0.53.0)
   clickAnswer(root, 'yes'); // pet=yes -> only Coconut
-  ok('singular count reads "1 cottage matches"', /\b1 cottage matches\b/.test(root.querySelector('.dccs-count').textContent));
+  ok('singular count reads "1 Cottage Matches" (Title Case, 0.54.0)', /\b1 Cottage Matches(?![a-z])/.test(root.querySelector('.dccs-count').textContent));
 })();
 
 // ---- 2. Tapping an answer selects without advancing; Next advances ----
@@ -300,8 +300,8 @@ function enter(root, mode) {
   enter(root, 'quick');
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
   ok('compare shows an always-visible checklist (no dropdown trigger)',
-    !root.querySelector('.dccs-cmp-trigger') && !!root.querySelector('.dccs-cmp-list') && root.querySelectorAll('.dccs-cmp-option').length === 8);
-  ok('compare options use full names', /^Cottage \d+: /.test(root.querySelector('.dccs-cmp-option').textContent.trim()));
+    !root.querySelector('.dccs-cmp-trigger') && !!root.querySelector('.dccs-cmp-list') && root.querySelectorAll('.dccs-mcard.is-select').length === 8);
+  ok('compare options use full names (as each checkbox\'s accessible name)', /^Cottage \d+: /.test(root.querySelector('.dccs-mcard.is-select input').getAttribute('aria-label')));
   root.querySelector('.dccs-modetab[data-mode="weights"]').click();
   ok('weights mode is now a wizard', !!root.querySelector('.dccs-chips-wizard') && root.querySelector('.dccs-next').disabled === true);
   root.querySelector('.dccs-modetab[data-mode="quick"]').click();
@@ -317,13 +317,13 @@ function enter(root, mode) {
   ok('compare button is ABSENT with <2 ticked (0.53.0, Rob: hidden until 2+)', !root.querySelector('.dccs-open-compare'));
   // Tick every cottage in the dropdown; re-query after each (re-render detaches nodes).
   for (let i = 0; i < 8; i++) {
-    const cb = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
+    const cb = root.querySelectorAll('.dccs-mcard.is-select input[type="checkbox"][data-cmp]')[i];
     cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   }
   const checked = Array.prototype.filter.call(
-    root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked).length;
+    root.querySelectorAll('.dccs-mcard.is-select input[type="checkbox"][data-cmp]'), c => c.checked).length;
   ok('all 8 cottages can be selected for compare (no 4-cap)', checked === 8);
-  ok('no compare option is disabled', !root.querySelector('.dccs-cmp-option input[disabled]'));
+  ok('no compare option is disabled', !root.querySelector('.dccs-mcard.is-select input[disabled]'));
   const btn = root.querySelector('.dccs-open-compare');
   ok('compare button enabled once 2+ ticked', !!btn && btn.disabled === false);
   btn.click();
@@ -543,14 +543,14 @@ function enter(root, mode) {
   // The checklist and its options are on screen immediately — no tap-to-open step,
   // and the "Compare" button is present in the same view (never hidden by a panel).
   ok('checklist + options visible with no dropdown interaction',
-    root.querySelectorAll('.dccs-cmp-option').length === 8 && !root.querySelector('.dccs-cmp-trigger'));
+    root.querySelectorAll('.dccs-mcard.is-select').length === 8 && !root.querySelector('.dccs-cmp-trigger'));
   // The tip duplicates the subheader above the list, so it's opt-in since 0.21.0.
   ok('no "pick 2" tip by default (opt-in switch is off)', !root.querySelector('.dccs-compare-note'));
   ok('the Compare subheader still shows', !!root.querySelector('.dccs-hint'));
 
   // Tick two cottages, then leave and return to Compare — the picks must reset.
   function tick(i) {
-    var b = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
+    var b = root.querySelectorAll('.dccs-mcard.is-select input[type="checkbox"][data-cmp]')[i];
     b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
   }
   tick(0); tick(1);
@@ -558,7 +558,7 @@ function enter(root, mode) {
   root.querySelector('.dccs-modetab[data-mode="quick"]').click();
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
   const anyChecked = Array.prototype.some.call(
-    root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked);
+    root.querySelectorAll('.dccs-mcard.is-select input[type="checkbox"][data-cmp]'), c => c.checked);
   ok('compare selections reset after switching modes',
     !anyChecked && !root.querySelector('.dccs-open-compare'));
 })();
@@ -838,8 +838,8 @@ function configWith(overrides) {
     /\.dccs-card\s*\{[\s\S]*?var\(--dccs-results-bg,\s*var\(--dccs-surface\)\)/.test(css));
   ok('primary button reads --dccs-btn-bg, then the action control, then spec blue',
     /var\(--dccs-btn-bg,\s*var\(--dccs-action,\s*var\(--dccs-btn-blue\)\)\)/.test(css));
-  ok('dropdown items read --dccs-item-bg / --dccs-item-text',
-    /var\(--dccs-item-bg,\s*transparent\)/.test(css) && /var\(--dccs-item-text,\s*var\(--dccs-text\)\)/.test(css));
+  ok('Compare Mode cards read --dccs-item-bg / --dccs-item-text (the rows did until 0.54.0)',
+    /var\(--dccs-item-bg,\s*var\(--dccs-surface/.test(css) && /var\(--dccs-item-text,\s*var\(--dccs-text\)\)/.test(css));
   ok('button hover honours --dccs-btn-bg-hover', /var\(--dccs-btn-bg-hover,/.test(css));
 })();
 
@@ -1014,7 +1014,7 @@ function configWith(overrides) {
   const root = mountSelector(w);
   enter(root, 'compare');
   for (const i of [0, 1]) {
-    const cb = root.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    const cb = root.querySelectorAll('.dccs-mcard.is-select input[data-cmp]')[i];
     cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   }
   const inCompareMode = root.querySelector('.dccs-open-compare');
@@ -1104,7 +1104,7 @@ function configWith(overrides) {
   const live = () => root.querySelector('.dccs-sr-only[aria-live="polite"]').textContent;
   ok('under 2 ticked, live region carries the pick-2 prompt', live().length > 0 && /2/.test(live()));
   for (const i of [0, 1]) {
-    const cb = root.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    const cb = root.querySelectorAll('.dccs-mcard.is-select input[data-cmp]')[i];
     cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   }
   ok('with 2 ticked, live region announces "Compare 2 …"', /Compare 2/i.test(live()));
@@ -1120,7 +1120,7 @@ function configWith(overrides) {
   enter(root, 'compare');
   ok('missing showCompareTip key reads as off', !root.querySelector('.dccs-compare-note'));
   function tick(r, win, i) {
-    var b = r.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    var b = r.querySelectorAll('.dccs-mcard.is-select input[data-cmp]')[i];
     b.checked = true; b.dispatchEvent(new win.Event('change', { bubbles: true }));
   }
   tick(root, w, 0);
@@ -1218,9 +1218,9 @@ function configWith(overrides) {
   enter(root, 'compare');
   // Each tick re-renders the checklist, so re-query per id (stale handles no-op).
   const allIds = Array.prototype.map.call(
-    root.querySelectorAll('.dccs-cmp-option input[data-cmp]'), i => i.dataset.cmp);
+    root.querySelectorAll('.dccs-mcard.is-select input[data-cmp]'), i => i.dataset.cmp);
   allIds.forEach(id => {
-    const cb = root.querySelector('.dccs-cmp-option input[data-cmp="' + id + '"]');
+    const cb = root.querySelector('.dccs-mcard.is-select input[data-cmp="' + id + '"]');
     cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   });
   root.querySelector('.dccs-open-compare').click();
@@ -1678,14 +1678,14 @@ function configWith(overrides) {
   clickAnswer(root, '34');
   ok('setup: an answer narrows the count', /\b6\b/.test(countText(root)));
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
-  const cb = root.querySelector('.dccs-cmp-option input[data-cmp]');
+  const cb = root.querySelector('.dccs-mcard.is-select input[data-cmp]');
   cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   root.querySelector('.dccs-modetab[data-mode="quick"]').click();
   ok('back in the quiz: count is 8 again (answers cleared)', /\b8\b/.test(countText(root)));
   ok('back on step 1', /1\b.*\b7/.test(progress(root)));
   ok('nothing preselected', !activeChip(root));
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
-  ok('compare picks were cleared too', !root.querySelector('.dccs-cmp-option input[data-cmp]:checked'));
+  ok('compare picks were cleared too', !root.querySelector('.dccs-mcard.is-select input[data-cmp]:checked'));
 })();
 
 // ---- 58. Hardening: glyphs are escapes; dead config keys are gone ----
@@ -2312,7 +2312,11 @@ defer(async function () {
   // The narrow paint-only invariant is back: nothing animates at all now.
   ok('nothing writes path data or dash offsets any more',
     !/setAttribute\('d'|strokeDashoffset|stroke-dashoffset/.test(selSrc));
-  ok('no keyframes remain in the stylesheet', !/@keyframes/.test(cssCode));
+  // 0.54.0 brings ONE keyframe back — the match ticker — and it animates transform
+  // and opacity only, the standing rule.
+  const kfs = cssCode.match(/@keyframes\s+[\w-]+\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g) || [];
+  ok('exactly one keyframe in the stylesheet: the ticker', kfs.length === 1 && /@keyframes dccs-tick-in/.test(kfs[0]));
+  ok('...and it touches only transform and opacity', kfs.every(k => (k.match(/([\w-]+)\s*:/g) || []).every(p => /^(opacity|transform)\s*:$/.test(p))));
   // The heading is bare: no wrapper that could reserve space.
   ok('no heading wrapper classes remain anywhere',
     !/dccs-heading-[tw]/.test(cssCode) && !/dccs-heading-[tw]/.test(selSrc));
@@ -2321,7 +2325,7 @@ defer(async function () {
   // The kit ships input:focus at (0,4,1). Ties resolve on load order, which is not
   // ours to control, so these must WIN on specificity: two root classes + the
   // wrapper + the [type] attribute + :focus = (0,5,1).
-  ['dccs-cmp-option', 'dccs-cmp-toggle'].forEach(w => {
+  ['dccs-cmp-toggle'].forEach(w => {   // the Compare rows' checkboxes went in 0.54.0
     ok(w + ' has a :focus accent rule at (0,5,1)',
       new RegExp('\\.dccs-root\\.dccs-root \\.' + w +
         ' input\\[type="checkbox"\\]:focus[ ,]').test(cssCode));
@@ -2332,7 +2336,7 @@ defer(async function () {
   ok('the focus accent is the widget accent, never a literal',
     /input\[type="checkbox"\]:focus-visible \{\s*accent-color: var\(--dccs-accent\);/.test(cssCode));
   // C2: a real ring, not a background, and not left to the 1px browser default.
-  const ringRule = cssCode.slice(cssCode.indexOf('.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,\n.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible'));
+  const ringRule = cssCode.slice(cssCode.indexOf('.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible {\n  outline'));
   const ringBody = ringRule.slice(ringRule.indexOf('{'), ringRule.indexOf('}'));
   ok('the focus ring is an outline of at least 2px', /outline:\s*2px solid/.test(ringBody));
   ok('it is offset off the control, so it sits on the row',
@@ -2348,11 +2352,11 @@ defer(async function () {
   ok('and never in the controller', !/F4DA62/i.test(selSrc));
   const ringUsers = [];
   cssCode.replace(/([^{}]+)\{([^{}]*var\(--dccs-ring-on-navy\)[^{}]*)\}/g, (m, sel) => { ringUsers.push(sel.trim()); return m; });
+  // 0.54.0: the ticked navy ROW is gone (Compare Mode is cards), so one consumer left.
   const allowedRing = (sel) => sel.split(',').map(x => x.trim()).every(x =>
-    x === '.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible' ||
-    x === '.dccs-root.dccs-root .dccs-cmp-option.is-checked input[type="checkbox"]:focus-visible');
-  ok('the ring token is consumed (positive control)', ringUsers.length >= 2);
-  ok('only by the two focus-on-navy rules', ringUsers.every(allowedRing));
+    x === '.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible');
+  ok('the ring token is consumed (positive control)', ringUsers.length >= 1);
+  ok('only by the mode button\'s focus-on-navy rule', ringUsers.every(allowedRing));
   ok('no checkbox accent-color is ever gold or the ring token',
     !/accent-color:\s*(#F4DA62|var\(--dccs-ring-on-navy\))/i.test(cssCode));
 })();
@@ -3146,7 +3150,7 @@ defer(async function () {
   const ws = freshDom();
   ws.sessionStorage.setItem('dccs:cmp:i0', JSON.stringify(['22', '33']));   // the 0.52.0 key, verbatim
   const rs = mountSelector(ws, two); enter(rs, 'compare');
-  const picked = Array.prototype.filter.call(rs.querySelectorAll('.dccs-cmp-option input'), c => c.checked).map(c => c.dataset.cmp);
+  const picked = Array.prototype.filter.call(rs.querySelectorAll('.dccs-mcard.is-select input'), c => c.checked).map(c => c.dataset.cmp);
   ok('94: compare picks saved under the old storage key come back', String(picked) === '22,33');
 })();
 
@@ -3212,7 +3216,7 @@ defer(async function () {
   ok('96: no "scroll to see all" sentence anywhere', !/Scroll the list/.test(r.textContent) && !('compare_scroll_all' in S));
   const live = r.querySelector('.dccs-sr-only[aria-live="polite"]');
   const btn = () => r.querySelector('.dccs-compare .dccs-open-compare');
-  const tick = (i, on) => { const b = r.querySelectorAll('.dccs-cmp-option input')[i]; b.checked = on; b.dispatchEvent(new w.Event('change', { bubbles: true })); };
+  const tick = (i, on) => { const b = r.querySelectorAll('.dccs-mcard.is-select input')[i]; b.checked = on; b.dispatchEvent(new w.Event('change', { bubbles: true })); };
   ok('96: 0 ticked — no Compare button', !btn());
   tick(0, true);
   ok('96: 1 ticked — still none', !btn());
@@ -3418,23 +3422,21 @@ defer(async function () {
   ok('100: Mini Entry button hover = white on #F08080, no underline',
     /#F08080/i.test(ehov.background) && /#FFFFFF/i.test(ehov.color) && ehov['text-decoration'] === 'none');
 
-  // A2: a ticked Compare row is navy/white at rest, hovered and focused; its box is
-  // a white square with a NAVY tick; focus shows gold.
-  const T = '.dccs-root.dccs-root .dccs-cmp-option.is-checked';
-  const rowRule = rules.find(r => r.top && r.sel.indexOf(T) !== -1 && /background/.test(r.body));
-  ok('100: ticked row rule covers rest, hover and focus-within',
-    !!rowRule && rowRule.sel.indexOf(T + ':hover') !== -1 && rowRule.sel.indexOf(T + ':focus-within') !== -1);
-  const row = decls(T);
-  ok('100: ticked row = navy background, white text', /#002E7A/i.test(res(row.background)) && /#FFFFFF/i.test(res(row.color)));
-  const box = decls(T + ' input[type="checkbox"]');
-  ok('100: its checkbox is drawn (appearance none)', box.appearance === 'none');
-  ok('100: ...with the native box\'s margins, so ticking never changes the row\'s height (no list jump)', box.margin === '3px 3px 3px 4px');
-  ok('100: ...as a WHITE box', /^#FFFFFF\b/i.test(String(box.background)));
-  const tick = (String(box.background).match(/stroke='([^']+)'/) || [])[1];
-  ok('100: ...with a NAVY tick, never a white one', tick === '%23002E7A');
-  const tf = decls(T + ' input[type="checkbox"]:focus-visible');
-  ok('100: ...and keyboard focus on it shows the gold ring', /#F4DA62/i.test(res(tf['outline-color'])));
-  ok('100: the unticked row keeps its old hover (control: it is not navy)', !/#002E7A/i.test(res(decls('.dccs-root.dccs-root .dccs-cmp-option:hover').background || '')));
+  // 0.54.0 (pick 3): a chosen Compare CARD — keyed off the real checkbox's
+  // :checked, so it is right before any re-render — has a 2px navy ring and a 28px
+  // navy badge with a WHITE tick; an unchosen one shows an empty white badge.
+  const SEL = '.dccs-root.dccs-root .dccs-mcard-input:checked + .dccs-mcard-body';
+  const ring = decls(SEL);
+  ok('100: a chosen card has a 2px ring in the selected navy', /0 0 0 2px var\(--dccs-sel-bg\)/.test(ring['box-shadow'] || '') && /#002E7A/i.test(res('var(--dccs-sel-bg)')));
+  const badge = decls('.dccs-root.dccs-root .dccs-mcard-check');
+  ok('100: the badge is 28 x 28 and round', badge.width === '28px' && badge.height === '28px' && badge['border-radius'] === '999px');
+  ok('100: unchosen, it is an empty white circle with a navy edge', /^#FFFFFF$/i.test(badge.background) && /var\(--dccs-sel-bg\)/.test(badge.border));
+  const on = decls(SEL + ' .dccs-mcard-check');
+  ok('100: chosen, it is navy with a WHITE tick', /^var\(--dccs-sel-bg\)/.test(String(on.background)) && (String(on.background).match(/stroke='([^']+)'/) || [])[1] === '%23FFFFFF');
+  const inp = decls('.dccs-root.dccs-root .dccs-mcard.is-select .dccs-mcard-input');
+  ok('100: the real checkbox stays in the page, invisible (not display:none, so it keeps focus and its name)',
+    inp.opacity === '0' && !/none/.test(inp.display || '') && inp.position === 'absolute');
+  ok('100: keyboard focus on it rings the whole card', /3px solid/.test(decls('.dccs-root.dccs-root .dccs-mcard-input:focus-visible + .dccs-mcard-body').outline || ''));
 
   // A1: the navy button's focus ring is gold now.
   ok('100: mode button focus ring is gold #F4DA62', /#F4DA62/i.test(res(decls('.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible').outline)));
@@ -3451,13 +3453,13 @@ defer(async function () {
   ok('101: the landing shows the intro line', !!r.querySelector('.dccs-intro') && r.querySelector('.dccs-intro').textContent === S.intro &&
     S.intro === 'Answer a few questions to find your best match, or select cottages to compare side by side.');
   enter(r, 'compare');
-  const rows = () => Array.prototype.slice.call(r.querySelectorAll('.dccs-cmp-option'));
-  ok('101: no row is ticked at first (control)', rows().every(l => !l.classList.contains('is-checked')));
-  const b = r.querySelectorAll('.dccs-cmp-option input')[3]; b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
-  ok('101: ticking a row marks exactly that row is-checked',
-    rows().filter(l => l.classList.contains('is-checked')).length === 1 && rows()[3].classList.contains('is-checked'));
-  const b2 = r.querySelectorAll('.dccs-cmp-option input')[3]; b2.checked = false; b2.dispatchEvent(new w.Event('change', { bubbles: true }));
-  ok('101: unticking clears it', rows().every(l => !l.classList.contains('is-checked')));
+  const boxes = () => Array.prototype.slice.call(r.querySelectorAll('.dccs-mcard.is-select input[data-cmp]'));
+  ok('101: eight cards, none chosen at first (control)', boxes().length === 8 && boxes().every(x => !x.checked));
+  const b = boxes()[3]; b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok('101: choosing a card keeps exactly that one checked across the re-render',
+    boxes().filter(x => x.checked).length === 1 && boxes()[3].checked);
+  const b2 = boxes()[3]; b2.checked = false; b2.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok('101: unchoosing clears it', boxes().every(x => !x.checked));
   const q = mountSelector(freshDom()); enter(q, 'quick'); stepThrough(q, 'either'); seeMatches(q);
   ok('101: with every answer skipped, all 8 cottages are listed (live results_count 8)', cardNames(q).length === 8 && JSON.parse(CONFIG).resultsCount === 8);
   // (The two-mode default is asserted in the PHP suite on Config::build(): this
@@ -3512,9 +3514,11 @@ defer(async function () {
     w_moreroom: 'More Room', w_fewerstairs: 'No Stairway', w_studio: 'Studio Simplicity', w_onebed: '1-Bedroom Separation', w_dining: '4+ Dining Comfort',
     w_pullout: 'Pull-Out Couch Flexibility', w_screenedporch: 'Private, Screened-In Porch', w_party: 'Room for 3-4 Guests', w_pet: 'Pet-Friendly',
     dates_in: 'Check-In', dates_out: 'Check-Out', dates_skip: 'Not Sure Yet', dates_none: 'No Dates Yet',
-    avail_yes: 'Available for Your Dates', avail_no: 'Booked for Your Dates', avail_calendar: 'See Open Dates', fee_link: 'Fee Details' };
+    avail_yes: 'Available for Your Dates', avail_no: 'Booked for Your Dates', avail_calendar: 'See Open Dates', fee_link: 'Fee Details',
+    // 0.54.0 (Rob): the count moves to Title Case with the new navy pill.
+    match_count: '%d Cottages Match', match_count_one: '%d Cottage Matches' };
   Object.keys(WANT).forEach(k => ok('102: label ' + k + ' = "' + WANT[k] + '"', S[k] === WANT[k]));
-  const KEEP = { match_count: '%d cottages match', match_count_one: '%d cottage matches', wiz_progress: 'Step %1$d of %2$d',
+  const KEEP = { wiz_progress: 'Step %1$d of %2$d',
     cmp_range: 'Showing %1$d-%2$d of %3$d', mode_current: 'Current mode: %s', cmp_prev: 'Previous cottages', cmp_next: 'Next cottages',
     next_hint: 'Choose an answer to continue', entry_line: 'Use the Cottage Wizard below to compare cottages or find your best match.',
     intro: 'Answer a few questions to find your best match, or select cottages to compare side by side.' };
@@ -3566,18 +3570,137 @@ defer(async function () {
     const mm = r.body.match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*(-?[\\d.]+)(?:px)?\\s*(?:;|$)')); if (mm) { v = Number(mm[1]); } }); return v; };
   const R = '.dccs-root.dccs-root ';
   const aW = px(R + '.dccs-matrix-nav button', 'width'), aH = px(R + '.dccs-matrix-nav button', 'height');
-  const ab = R + '.dccs-matrix-nav button::before';
-  const ext = ['top', 'right', 'bottom', 'left'].map(k => px(ab, k));
-  ok('103: the ‹ › circles still LOOK 32px (unchanged)', aW === 32 && aH === 32);
-  ok('103: their tap area is at least 44 x 44', ext.every(v => v !== null) && aW - ext[1] - ext[3] >= 44 && aH - ext[0] - ext[2] >= 44);
-  const navGap = px(R + '.dccs-matrix-nav', 'gap');
-  ok('103: the sideways extension stays inside the nav gap', navGap !== null && -ext[1] < navGap && -ext[3] < navGap);
+  // 0.54.0 (Rob, "Selector tap targets 1"): the CIRCLE is 44 x 44 now, so the
+  // 0.53.3 invisible extension is gone — the visible control is the tap area.
+  ok('103/0.54.0: the ‹ › circles are 44 x 44 (visible = tap area)', aW === 44 && aH === 44 && px(R + '.dccs-matrix-nav button', 'min-height') === 44);
+  ok('103/0.54.0: ...with no invisible extension left over', !rules.some(r => r.sel.some(x => /dccs-matrix-nav button::(before|after)/.test(x))));
+  const sw = R + '.dccs-swipe > .dccs-swipe-prev';
+  const swRule = rules.filter(r => r.sel.indexOf(sw) !== -1 && /width/.test(r.body));
+  ok('103/0.54.0: the swipe row\'s desktop arrows are 44 x 44 too', swRule.length === 1 && /width:\s*44px/.test(swRule[0].body) && /height:\s*44px/.test(swRule[0].body));
+  ok('103/0.54.0: the Compare scrollbar thumb is at least 44px tall', px(R + '.dccs-cmp-bar-thumb', 'min-height') === 44);
   const db = R + 'button.dccs-step-dot::before';
   const dotH = Number((rules.find(r => r.sel.indexOf(R + '.dccs-step-dot') !== -1 && /--dccs-dot-h/.test(r.body)).body.match(/--dccs-dot-h,\s*([\d.]+)px/) || [])[1]);
   ok('103: an answered step dot taps at 44px+ even at the 6px fallback height (10px on live)',
     dotH === 6 && dotH - px(db, 'top') - px(db, 'bottom') >= 44);
   ok('103: ...and does not reach sideways into its neighbour', px(db, 'left') === 0 && px(db, 'right') === 0);
 })();
+
+// ==== 0.54.0 =======================================================================
+// ---- 104. Swipe cards, ONE match count, ticker, See All, tap-to-choose cards, alignment ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const ALL = JSON.parse(CONFIG).cottages.map(c => String(c.id)).sort();
+  const rowIds = (r) => Array.prototype.map.call(r.querySelectorAll('.dccs-swipe-track .dccs-mcard'), m => m.dataset.id);
+  const faded = (r) => Array.prototype.map.call(r.querySelectorAll('.dccs-swipe-track .dccs-mcard.is-other'), m => m.dataset.id);
+
+  // ONE count. Intercept score.run and keep the result the screen was built from.
+  const w = freshDom('https://example.com/?pet=true');
+  let last = null;
+  const run0 = w.DCCS.score.run;
+  w.DCCS.score.run = function (cs, crit) { const r = run0.apply(this, arguments); if (cs.length === ALL.length) { last = r; } return r; };
+  const r = mountSelector(w);
+  const n = last.empty ? 0 : last.results.length;
+  ok('104: the deep link narrows the field (control: N < 8)', n > 0 && n < ALL.length);
+  ok('104: the results pill reads the count from the SAME scoring run, in Title Case',
+    r.querySelector('.dccs-match-pill-n').textContent === (n === 1 ? S.match_count_one : S.match_count).replace('%d', n));
+  ok('104: every cottage is in the row — none out of reach', rowIds(r).slice().sort().join() === ALL.join());
+  ok('104: the matches come first, in rank order, unfaded', rowIds(r).slice(0, n).join() === last.results.map(c => String(c.id)).join()
+    && rowIds(r).slice(0, n).every(id => faded(r).indexOf(id) === -1));
+  ok('104: ...and the rest come after them, faded', faded(r).join() === rowIds(r).slice(n).join() && faded(r).length === ALL.length - n);
+  const tk = r.querySelector('.dccs-match-pill .dccs-tick');
+  ok('104: the ticker reads "8 -> N" from the same number, hidden from screen readers',
+    !!tk && tk.getAttribute('aria-hidden') === 'true' && tk.querySelector('.dccs-tick-from').textContent === String(ALL.length) && tk.querySelector('.dccs-tick-to').textContent === String(n));
+
+  // A results count that is NOT the number of cards shown: 2 cards listed, 8 match.
+  const r2 = mountSelector(freshDom(), configWith({ resultsCount: 2 })); enter(r2, 'quick'); stepThrough(r2, 'either'); seeMatches(r2);
+  ok('104: with 2 big cards listed and all 8 matching, the pill still says 8 (not the card count)',
+    r2.querySelectorAll('.dccs-all .dccs-card').length === 2 && r2.querySelector('.dccs-match-pill-n').textContent === S.match_count.replace('%d', ALL.length));
+  ok('104: ...and with nothing narrowed there is no ticker', !r2.querySelector('.dccs-match-pill .dccs-tick'));
+  ok('104: ...and all 8 are in the row, none faded', rowIds(r2).length === ALL.length && faded(r2).length === 0);
+
+  // The quiz pill and the results pill agree.
+  const w3 = freshDom(); const r3 = mountSelector(w3); enter(r3, 'quick');
+  for (let k = 0; k < 4; k++) { answerNext(r3, 'either'); }        // to the pet step
+  clickAnswer(r3, 'yes');
+  const quizPill = r3.querySelector('.dccs-count').firstChild.textContent;
+  const qt = r3.querySelector('.dccs-count .dccs-tick');
+  ok('104: answering that narrows the field plays the ticker in the quiz pill', !!qt && qt.querySelector('.dccs-tick-from').textContent === String(ALL.length));
+  r3.querySelector('.dccs-next').click();
+  ok('104: ...and the next step, which changed nothing, shows no ticker', !r3.querySelector('.dccs-count .dccs-tick'));
+  stepThrough(r3, 'either'); seeMatches(r3);
+  ok('104: the quiz pill and the results pill say the same thing', r3.querySelector('.dccs-match-pill-n').textContent === quizPill);
+
+  // Nothing matches: still every cottage, all faded, closest first.
+  const r4 = mountSelector(freshDom('https://example.com/?pet=true&porch=true'));
+  ok('104: no matches -> pill reads 0, every cottage still in the row, all faded',
+    r4.querySelector('.dccs-match-pill-n').textContent === S.match_count.replace('%d', 0) && rowIds(r4).slice().sort().join() === ALL.join() && faded(r4).length === ALL.length);
+
+  // The compact card: centred number + name, chips from data, View Cottage.
+  const card34 = r.querySelector('.dccs-swipe-track .dccs-mcard[data-id="34"]');
+  const c34 = JSON.parse(CONFIG).cottages.find(c => String(c.id) === '34');
+  const chips = Array.prototype.map.call(card34.querySelectorAll('.dccs-mcard-chip'), x => x.textContent);
+  ok('104: the card title is the number over the name', card34.querySelector('.dccs-mcard-num').textContent === 'Cottage 34' && card34.querySelector('.dccs-mcard-name').textContent === c34.name);
+  ok('104: chips come from the data, in the badge wording', chips[0] === S.chip_sleeps.replace('%d', c34.guests) && chips.indexOf(S.badge_pet) !== -1
+    && chips.indexOf(DCCS_isGround(c34) ? S.badge_ground : S.badge_upstairs) !== -1 && chips.indexOf(c34.layoutType === 'Studio' ? S.opt_studio : S.opt_onebed) !== -1);
+  const card22 = r.querySelector('.dccs-swipe-track .dccs-mcard[data-id="22"]');
+  ok('104: Pet-Friendly appears only where the data allows pets', Array.prototype.every.call(card22.querySelectorAll('.dccs-mcard-chip'), x => x.textContent !== S.badge_pet));
+  const v = card34.querySelector('a.dccs-mcard-view');
+  ok('104: "View Cottage" opens the cottage page in a new tab and says so to assistive tech',
+    !!v && v.textContent === S.view_cottage && v.getAttribute('href') === c34.pageUrl && v.target === '_blank' && v.getAttribute('aria-label').indexOf(S.opens_new_tab) !== -1);
+  ok('104: no photo in this config -> the card draws its number instead', !!card34.querySelector('.dccs-mcard-noimg') && !card34.querySelector('img'));
+  const withPhoto = JSON.parse(CONFIG); withPhoto.cottages.forEach(c => { c.photo = { src: '/p/' + c.id + '.jpg', w: 768, h: 512, srcset: '/p/' + c.id + '-300.jpg 300w, /p/' + c.id + '.jpg 768w' }; });
+  const r5 = mountSelector(freshDom(), JSON.stringify(withPhoto)); enter(r5, 'quick'); stepThrough(r5, 'either'); seeMatches(r5);
+  const img = r5.querySelector('.dccs-swipe-track .dccs-mcard[data-id="22"] img.dccs-mcard-img');
+  ok('104: with a photo, the card shows it: lazy, sized, decorative', !!img && img.getAttribute('src') === '/p/22.jpg' && img.getAttribute('loading') === 'lazy'
+    && img.getAttribute('alt') === '' && img.getAttribute('width') === '768' && /300w/.test(img.getAttribute('srcset')));
+
+  // Desktop arrows and See All are real buttons.
+  const prev = r.querySelector('.dccs-swipe-prev'), next = r.querySelector('.dccs-swipe-next');
+  ok('104: the row has real ‹ › buttons, named', prev.tagName === 'BUTTON' && prev.type === 'button' && prev.getAttribute('aria-label') === S.cmp_prev && next.getAttribute('aria-label') === S.cmp_next);
+  const sa = r.querySelector('.dccs-see-all'), panel = r.querySelector('.dccs-all');
+  ok('104: "See All" is a real button controlling a hidden panel of today\'s big cards',
+    sa.tagName === 'BUTTON' && sa.textContent.indexOf(S.see_all) === 0 && sa.getAttribute('aria-expanded') === 'false' && panel.hidden === true
+    && sa.getAttribute('aria-controls') === panel.id && panel.querySelectorAll('.dccs-card').length >= 1);
+  sa.click();
+  ok('104: tapping it opens the panel', r.querySelector('.dccs-all').hidden === false && r.querySelector('.dccs-see-all').getAttribute('aria-expanded') === 'true');
+  const big = r5.querySelector('.dccs-all');
+  r5.querySelector('.dccs-see-all').click();
+  const cb = r5.querySelector('.dccs-all input[data-cmp]'); cb.checked = true; cb.dispatchEvent(new r5.ownerDocument.defaultView.Event('change', { bubbles: true }));
+  ok('104: ...and it stays open through a re-render (ticking Compare on a big card)', r5.querySelector('.dccs-all').hidden === false && big !== r5.querySelector('.dccs-all'));
+
+  // Compare Mode: the whole card chooses; View Cottage does not.
+  const w6 = freshDom(); const r6 = mountSelector(w6); enter(r6, 'compare');
+  const card = r6.querySelector('.dccs-mcard.is-select[data-id="23"]');
+  ok('104: each Compare card is the <label> of its own checkbox', card.tagName === 'LABEL' && card.querySelector('input[type="checkbox"][data-cmp="23"]').closest('label') === card);
+  card.querySelector('.dccs-mcard-name').click();
+  ok('104: tapping the card (its name) chooses it', r6.querySelector('input[data-cmp="23"]').checked === true);
+  r6.querySelector('.dccs-mcard.is-select[data-id="23"] .dccs-mcard-photo').click();
+  ok('104: tapping its photo again unchooses it', r6.querySelector('input[data-cmp="23"]').checked === false);
+  const link = r6.querySelector('.dccs-mcard.is-select[data-id="23"] a.dccs-mcard-view');
+  link.addEventListener('click', e => e.preventDefault());   // jsdom cannot navigate
+  link.click();
+  ok('104: tapping View Cottage does NOT toggle the card', r6.querySelector('input[data-cmp="23"]').checked === false);
+  // Choosing a card re-renders; the list must not jump back to the top.
+  const list0 = r6.querySelector('.dccs-cmp-list'); list0.scrollTop = 137;
+  const box36 = r6.querySelector('input[data-cmp="36"]'); box36.checked = true; box36.dispatchEvent(new w6.Event('change', { bubbles: true }));
+  const list1 = r6.querySelector('.dccs-cmp-list');
+  ok('104: choosing a card keeps the list where it was scrolled (a NEW list, same offset)', list1 !== list0 && list1.scrollTop === 137);
+  ok('104: the checkbox is named by the cottage, not the whole card text', r6.querySelector('input[data-cmp="23"]').getAttribute('aria-label') === 'Cottage 23: ' + JSON.parse(CONFIG).cottages.find(c => String(c.id) === '23').name);
+
+  // Alignment (Rob's standing rule): titles centred, multi-sentence paragraphs left.
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; css.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+  const align = (sel) => { let v = null; rules.filter(q => q.sel.indexOf(sel) !== -1).forEach(q => { const m = q.body.match(/(?:^|;)\s*text-align\s*:\s*([^;]+)/); if (m) { v = m[1].trim(); } }); return v; };
+  ['.dccs-heading', '.dccs-step-q', '.dccs-results-h', '.dccs-card-head h4', '.dccs-mcard-title'].forEach(x =>
+    ok('104: ' + x + ' is centred', align('.dccs-root.dccs-root ' + x) === 'center'));
+  ok('104: the pop-up title is centred', align('.dccs-modal-title') === 'center');
+  ok('104: a multi-sentence paragraph is left-aligned', align('.dccs-root.dccs-root .dccs-multi') === 'left');
+  const cap = (() => { const q = mountSelector(freshDom(), configWith({ guest34: true })); enter(q, 'quick'); return q.querySelector('.dccs-q-note'); })();
+  ok('104: the two-sentence capacity note is marked multi-sentence', !!cap && cap.classList.contains('dccs-multi'));
+  const one = (() => { const q = mountSelector(freshDom()); enter(q, 'compare'); return q.querySelector('.dccs-compare .dccs-hint'); })();
+  ok('104: a one-sentence paragraph is not (control)', !!one && !one.classList.contains('dccs-multi'));
+})();
+function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
 
 (async function runDeferred() {
   for (const fn of deferred) {

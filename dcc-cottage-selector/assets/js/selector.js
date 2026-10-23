@@ -33,6 +33,16 @@
 
   /** "N cottage matches" (singular) / "N cottages match" (plural). */
   function matchCount(S, n) { return Number(n) === 1 ? fmt(S.match_count_one, n) : fmt(S.match_count, n); }
+  /** THE match count: how many cottages pass every hard filter. The quiz pill, the
+      results pill, its ticker and the live region all read THIS — never a second
+      count (0.54.0, Rob: "never build a second count"). */
+  function matchN(res) { return res.empty ? 0 : res.results.length; }
+  /** "8 -> 3", hidden from assistive tech (the pill already says it). The new number
+      animates in (transform/opacity only; reduced motion turns it off in CSS). */
+  function ticker(from, to) {
+    return '<span class="dccs-tick" aria-hidden="true"><span class="dccs-tick-from">' + esc(from) + '</span>' +
+      ' \u2192 <span class="dccs-tick-to">' + esc(to) + '</span></span>';
+  }
 
   /** Display name with its cottage number, e.g. "Cottage 32: Flamingo Bungalow". */
   function cname(config, c) {
@@ -517,6 +527,15 @@
     return parts.length === 2 ? [parts[0] + '.', parts[1]] : null;
   }
 
+  /** A paragraph of copy. Rob's alignment rule (0.54.0): titles centre, and only a
+      MULTI-sentence paragraph is left-aligned — so it is classed here, from its
+      text, rather than by which string it happens to be. */
+  function isMulti(text) { return /[.!?]["\u201D']?\s+\S/.test(String(text == null ? '' : text)); }
+  function para(cls, text) {
+    var c = (cls ? cls + ' ' : '') + (isMulti(text) ? 'dccs-multi' : '');
+    return '<p' + (c.trim() ? ' class="' + c.trim() + '"' : '') + '>' + esc(text) + '</p>';
+  }
+
   function questionNote(config, group) {
     var S = config.strings;
     var text = '', url = '';
@@ -527,7 +546,7 @@
     var two = noteSentences(text);
     if (two) {
       // The optional fee link stays with the closing sentence, where it was.
-      return '<p class="dccs-q-note">' +
+      return '<p class="dccs-q-note dccs-multi">' +
         '<span class="dccs-q-note-s">' + esc(two[0]) + '</span> ' +
         '<span class="dccs-q-note-s">' + esc(two[1]) + link + '</span>' +
         '</p>';
@@ -551,7 +570,11 @@
     var value = tr.get(q);
 
     var res = ctx && ctx.res ? ctx.res : DCCS.score.run(config.cottages, criteriaFromState(state));
-    var n = res.empty ? 0 : res.results.length;
+    var n = matchN(res);
+    // The ticker shows only when the last answer changed the count, so it plays as
+    // answers narrow the field and is gone on the next step.
+    var tick = (typeof state.lastN === 'number' && state.lastN !== n) ? ticker(state.lastN, n) : '';
+    state.lastN = n;
 
     // When nothing is selected yet, keep the first option keyboard-tabbable so the
     // radiogroup is reachable (ARIA roving-focus pattern needs one tabbable entry).
@@ -586,7 +609,7 @@
     var html = '<div class="dccs-wizard" data-stage="q">';
     html += '<div class="dccs-progress-row">';
     html += '<span class="dccs-progress-label">' + esc(fmt2(S.wiz_progress, i + 1, qs.length)) + '</span>';
-    html += '<span class="dccs-count">' + esc(matchCount(S, n)) + '</span></div>';
+    html += '<span class="dccs-count">' + esc(matchCount(S, n)) + tick + '</span></div>';
     // When the answers so far rule everything out, reassure that the closest options
     // still surface at the end (the results page falls back to near-matches).
     if (n === 0 && S.count_zero_hint) {
@@ -708,14 +731,11 @@
   function renderCompare(config, st) {
     var S = config.strings;
     var n = st.compareIds.length;
-    var list = config.cottages.map(function (c) {
-      var on = st.compareIds.indexOf(String(c.id)) !== -1;
-      // is-checked paints a ticked row navy with white text (0.53.1, Rob's
-      // selected = navy rule). A class, not :has(), so older browsers get it too.
-      return '<label class="dccs-cmp-option' + (on ? ' is-checked' : '') + '">' +
-        '<input type="checkbox" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') + '> ' +
-        esc(cname(config, c)) + '</label>';
-    }).join('');
+    // 0.54.0 (Rob, pick 3): each cottage is a compact photo card, and the WHOLE card
+    // is the label of its (visually hidden) checkbox — tap anywhere to choose it.
+    // The selected look (2px ring, ✓ badge) follows input:checked in CSS, so it is
+    // right the instant the box changes, before any re-render.
+    var list = config.cottages.map(function (c) { return miniCard(c, config, st, { select: true }); }).join('');
 
     // The "Compare N Cottages" button exists only once 2+ are ticked (0.53.0, Rob's
     // pick): a button that cannot do anything yet is noise. It sits BELOW the list,
@@ -741,7 +761,7 @@
     var scroller = '<div class="dccs-cmp-scroller">' +
       '<div class="dccs-cmp-list dccs-cmp-static" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div>' +
       '<div class="dccs-cmp-bar" aria-hidden="true"><div class="dccs-cmp-bar-thumb"></div></div></div>';
-    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
+    return '<div class="dccs-compare">' + para('dccs-hint', S.compare_prompt) +
       scroller + btn + '</div>';
   }
 
@@ -752,10 +772,110 @@
     return '<button type="button" class="dccs-open-compare">' + esc(fmt(config.strings.compare_btn, n)) + '</button>';
   }
 
+  /** "Cottage 22:" over "The Boathouse": the name format split at its first colon,
+      the same split the compare table's column headers use. */
+  function nameParts(config, c) {
+    var title = cname(config, c);
+    var ci = title.indexOf(':');
+    return ci === -1 ? ['', title] : [title.slice(0, ci), title.slice(ci + 1).trim()];
+  }
+
+  /** Chips on a compact card, from the cottage's own data in the badge wording:
+      Sleeps N; Ground Floor or Upstairs; Studio or 1-Bedroom; and Pet-Friendly on
+      the cottage that allows pets. */
+  function cardChips(c, S) {
+    var out = [];
+    if (c.guests) { out.push(fmt(S.chip_sleeps, c.guests)); }
+    out.push(DCCS.score.isGround(c) ? S.badge_ground : S.badge_upstairs);
+    out.push(c.layoutType === 'Studio' ? S.opt_studio : S.opt_onebed);
+    if (c.petAllowed) { out.push(S.badge_pet); }
+    return out.filter(Boolean);
+  }
+
+  /** The cottage's View link. Opens in a new tab and says so only to assistive tech
+      (0.51.0); used by the big cards AND the compact ones so the two cannot drift. */
+  function viewLink(c, config, cls, inner) {
+    var S = config.strings;
+    return '<a class="' + cls + '" href="' + esc(safeUrl(c.pageUrl)) + '" target="_blank" rel="noopener"' +
+      ' aria-label="' + esc(S.view_cottage + ': ' + cname(config, c) + ' ' + S.opens_new_tab) + '">' + inner + '</a>';
+  }
+
+  /**
+   * The compact photo card (0.54.0): photo, centred number and name, chips, View
+   * Cottage. `opt.select` makes the WHOLE card a <label> for a visually hidden real
+   * checkbox (Compare Mode): a tap anywhere on it toggles, and the View link — an
+   * interactive child — navigates without toggling (a label never activates its
+   * control for a click on a link inside it). `opt.other` fades a non-match.
+   */
+  function miniCard(c, config, st, opt) {
+    var S = config.strings;
+    opt = opt || {};
+    var np = nameParts(config, c);
+    var photo = c.photo && c.photo.src
+      ? '<img class="dccs-mcard-img" src="' + esc(c.photo.src) + '"' +
+        (c.photo.srcset ? ' srcset="' + esc(c.photo.srcset) + '" sizes="(min-width: 900px) 170px, 72vw"' : '') +
+        (c.photo.w && c.photo.h ? ' width="' + esc(c.photo.w) + '" height="' + esc(c.photo.h) + '"' : '') +
+        ' alt="" loading="lazy" decoding="async">'
+      : '<span class="dccs-mcard-img dccs-mcard-noimg" aria-hidden="true">' + esc(c.id) + '</span>';
+    var body = '<span class="dccs-mcard-photo">' + photo +
+        (opt.select ? '<span class="dccs-mcard-check" aria-hidden="true"></span>' : '') + '</span>' +
+      '<span class="dccs-mcard-title">' +
+        (np[0] ? '<span class="dccs-mcard-num">' + esc(np[0]) + '</span>' : '') +
+        '<span class="dccs-mcard-name">' + esc(np[1]) + '</span></span>' +
+      '<span class="dccs-mcard-chips">' + cardChips(c, S).map(function (t) {
+        return '<span class="dccs-mcard-chip">' + esc(t) + '</span>';
+      }).join('') + '</span>' +
+      viewLink(c, config, 'dccs-mcard-view', esc(S.view_cottage));
+    var cls = 'dccs-mcard' + (opt.other ? ' is-other' : '') + (opt.select ? ' is-select' : '') +
+      (st.highlight && String(st.highlight) === String(c.id) ? ' is-highlight' : '');
+    if (opt.select) {
+      var on = st.compareIds.indexOf(String(c.id)) !== -1;
+      return '<label class="' + cls + '" data-id="' + esc(c.id) + '">' +
+        '<input type="checkbox" class="dccs-mcard-input" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') +
+        ' aria-label="' + esc(cname(config, c)) + '">' +
+        '<span class="dccs-mcard-body">' + body + '</span></label>';
+    }
+    return '<div class="' + cls + '" data-id="' + esc(c.id) + '"><span class="dccs-mcard-body">' + body + '</span></div>';
+  }
+
+  /** The swipe row: every cottage, matches first in rank order, the rest after them
+      (faded), so no cottage is ever out of reach. Snaps as it scrolls; from 900px it
+      shows four and the 44px ‹ › page four at a time (trackpads still swipe). */
+  function swipeRow(config, st, first, firstAreMatches) {
+    var S = config.strings;
+    var seen = {};
+    var items = [];
+    first.forEach(function (c) { seen[c.id] = 1; items.push(miniCard(c, config, st, { other: !firstAreMatches })); });
+    config.cottages.forEach(function (c) { if (!seen[c.id]) { items.push(miniCard(c, config, st, { other: true })); } });
+    return '<div class="dccs-swipe">' +
+      '<button type="button" class="dccs-swipe-prev" aria-label="' + esc(S.cmp_prev) + '" disabled>‹</button>' +
+      '<div class="dccs-swipe-track" role="list">' +
+        items.map(function (h) { return '<div class="dccs-swipe-item" role="listitem">' + h + '</div>'; }).join('') +
+      '</div>' +
+      '<button type="button" class="dccs-swipe-next" aria-label="' + esc(S.cmp_next) + '">›</button></div>';
+  }
+
+  /** "N Cottages Match" (navy) + the "8 -> N" ticker, from the ONE count. */
+  function matchPill(config, n) {
+    var total = config.cottages.length;
+    return '<p class="dccs-match-pill"><span class="dccs-match-pill-n">' + esc(matchCount(config.strings, n)) + '</span>' +
+      (n < total ? ticker(total, n) : '') + '</p>';
+  }
+
+  /** "See All": today's full cards, below the row, behind a disclosure button. */
+  function seeAll(config, st, inner) {
+    var id = (st.uid || 'dccs') + '-all';
+    var open = !!st.seeAll;
+    return '<button type="button" class="dccs-see-all" aria-expanded="' + (open ? 'true' : 'false') + '" aria-controls="' + esc(id) + '">' +
+      esc(config.strings.see_all) + '<span class="dccs-caret" aria-hidden="true">▾</span></button>' +
+      '<div class="dccs-all" id="' + esc(id) + '"' + (open ? '' : ' hidden') + '>' + inner + '</div>';
+  }
+
   function renderResults(config, st, ctx) {
     var S = config.strings;
     var crit = ctx && ctx.crit ? ctx.crit : criteriaFromState(st);
     var res = ctx && ctx.res ? ctx.res : DCCS.score.run(config.cottages, crit);
+    var n = matchN(res);
     var html = '<div class="dccs-results">';
 
     if (res.empty) {
@@ -776,15 +896,20 @@
       }
       var fb = fallback ? DCCS.score.dedupe(fallback.results.slice(0, cfgNum(config, 'resultsCount', 3)), config.diffFields) : [];
       html += '<div class="dccs-empty"><h3 class="dccs-step-q" tabindex="-1">' + esc(S.empty_heading) + '</h3>' +
-        '<p>' + esc(fb.length === 1 ? S.empty_sub_one : S.empty_sub) + '</p></div>';
-      fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S), fb.length >= 2); });
+        para('', fb.length === 1 ? S.empty_sub_one : S.empty_sub) + '</div>';
+      html += matchPill(config, 0);
+      // Nothing matches, so every card is faded — the closest options lead.
+      html += swipeRow(config, st, fallback ? fallback.results : [], false);
+      var fbCards = '';
+      fb.forEach(function (c) { fbCards += buildCard(c, config, st, crit, '', missTags(c, crit, S), fb.length >= 2); });
+      html += seeAll(config, st, fbCards);
       html += wizardResultsTail(config, st, true);
       html += '</div>';
       return html;
     }
 
     var ranked = res.results;
-    var top;
+    var top, order;
     if (st.avail.status === 'ok') {
       // Availability re-orders but NEVER removes. Free matches fill the top three;
       // then any cottage that WOULD have made the top three on merit but is booked
@@ -799,11 +924,16 @@
         return isBooked(c) && free.indexOf(c) === -1;
       });
       top = free.concat(missed);
+      // The row: free matches first, booked ones after, nothing dropped.
+      order = ranked.filter(function (c) { return !isBooked(c); }).concat(ranked.filter(isBooked));
     } else {
       top = ranked.slice(0, cfgNum(config, 'resultsCount', 3));
+      order = ranked;
     }
     html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
+    html += matchPill(config, n);
     html += availNote(config, st, top);
+    html += swipeRow(config, st, order, true);
 
     // The extra highlighted card (mini-entry / deep link) counts toward the
     // page's card total, so resolve it BEFORE building any card: the compare
@@ -828,13 +958,16 @@
 
     var showCmp = (top.length + (extra ? 1 : 0)) >= 2;
 
-    top.forEach(function (c) { html += buildCard(c, config, st, crit, '', null, showCmp); });
+    var big = '';
+    top.forEach(function (c) { big += buildCard(c, config, st, crit, '', null, showCmp); });
 
     // Always surface the highlighted cottage even if it didn't make the top
     // three — showing its rank makes its positioning clear.
     if (extra) {
-      html += buildCard(extra.c, config, st, crit, fmt(S.rank_label, extra.rank), null, showCmp);
+      big += buildCard(extra.c, config, st, crit, fmt(S.rank_label, extra.rank), null, showCmp);
     }
+    // Today's big cards are the "See All" view (0.54.0, Rob).
+    html += seeAll(config, st, big);
 
     // The "Compare N cottages" button sits below the cards (where the old recap was),
     // above the edit/restart nav. Only appears once 2+ cards are ticked.
@@ -957,9 +1090,7 @@
       // Opens in a new tab (0.51.0) so the guest keeps their results. The notice
       // lives in the aria-label because an explicit aria-label replaces the link's
       // content as its accessible name; the visible label is unchanged.
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" target="_blank" rel="noopener"' +
-        ' aria-label="' + esc(S.view_cottage + ': ' + nameLabel + ' ' + S.opens_new_tab) + '">' +
-        withIcon(config, 'view', 'view', viewLabel(S)) + '</a>' +
+      viewLink(c, config, 'dccs-view', withIcon(config, 'view', 'view', viewLabel(S))) +
       cmpToggle +
       '</div></div>';
     return html;
@@ -969,7 +1100,7 @@
   function announce(live, config, state, res) {
     var S = config.strings;
     res = res || DCCS.score.run(config.cottages, criteriaFromState(state));
-    var n = res.empty ? 0 : res.results.length;
+    var n = matchN(res);
     if ((state.mode === 'quick' || state.mode === 'weights') && state.stage === 'q') {
       var tr = wizardTrack(state, S);
       var i = clamp(state.step | 0, 0, tr.questions.length - 1);
@@ -1097,6 +1228,7 @@
 
     var state = buildState(config, root);
     state.config = config;   // wizardTrack needs it to decide on the dates step
+    state.uid = root.dataset.dccsUid;   // ids for aria-controls
 
     // Persistent screen-reader live region — kept across re-renders (re-appended,
     // not recreated) so aria-live actually announces result changes.
@@ -1137,11 +1269,37 @@
       // Score once per render and reuse it for the body + the live region.
       var crit = criteriaFromState(state);
       var res = DCCS.score.run(config.cottages, crit);
+      // A re-render rebuilds the scrollers; keep where the guest had scrolled them
+      // (ticking a card in Compare Mode re-renders, and must not jump the list).
+      var keepScroll = ['.dccs-cmp-list', '.dccs-swipe-track'].map(function (sel) {
+        var sc = root.querySelector(sel); return sc ? [sel, sc.scrollTop, sc.scrollLeft] : null;
+      }).filter(Boolean);
       renderSelector(root, config, state, { crit: crit, res: res });
+      keepScroll.forEach(function (k) {
+        var sc = root.querySelector(k[0]); if (sc) { sc.scrollTop = k[1]; sc.scrollLeft = k[2]; }
+      });
       root.appendChild(live);
       announce(live, config, state, res);
       wireCmpScrollbar(root);
+      wireSwipe(root);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
+    }
+
+    // The swipe row's ‹ › (shown from 900px): enabled only when there is somewhere
+    // to go. Writes happen on scroll, never inside a touch, and only when the value
+    // actually changes (idempotent), so a re-render cannot fight a swipe.
+    function wireSwipe(r) {
+      var track = r.querySelector('.dccs-swipe-track');
+      if (!track) { return; }
+      var prev = r.querySelector('.dccs-swipe-prev'), next = r.querySelector('.dccs-swipe-next');
+      function sync() {
+        var max = track.scrollWidth - track.clientWidth;
+        var p = track.scrollLeft <= 1, q = track.scrollLeft >= max - 1;
+        if (prev && prev.disabled !== p) { prev.disabled = p; }
+        if (next && next.disabled !== q) { next.disabled = q; }
+      }
+      track.addEventListener('scroll', sync, { passive: true });
+      sync();
     }
 
     // Size + position the custom always-visible compare scrollbar to mirror the list's
@@ -1157,7 +1315,8 @@
         if (ratio >= 1) { bar.style.display = 'none'; return; }
         bar.style.display = 'block';
         var trackH = bar.clientHeight;
-        var th = Math.max(34, Math.round(trackH * ratio));
+        // 44px minimum (0.54.0): the thumb is something guests drag.
+        var th = Math.max(44, Math.round(trackH * ratio));
         var maxTop = trackH - th;
         var range = list.scrollHeight - list.clientHeight;
         thumb.style.height = th + 'px';
@@ -1206,6 +1365,7 @@
       st.quick = fresh.quick; st.weights = fresh.weights;
       st.dates = fresh.dates; st.avail = fresh.avail;
       st.compareIds = []; st.step = 0; st.stage = 'q'; st.editReturn = null;
+      st.seeAll = false; st.lastN = undefined;
       // NOTE: this deliberately does NOT touch the remembered picks. Its two
       // callers mean different things and only one of them is a mode SWITCH —
       // see the landing-choice and modetab handlers below.
@@ -1244,6 +1404,23 @@
         if (state.stage === 'review' || state.stage === 'results') { state.editReturn = state.stage; }
         state.stage = 'q'; state.step = clamp(Number(t.dataset.step) || 0, 0, trackLen() - 1);
         rerender(); focusStep(); return;
+      }
+      // --- swipe row paging (from 900px): four cards at a time ---
+      if (cl.contains('dccs-swipe-prev') || cl.contains('dccs-swipe-next')) {
+        var trk = root.querySelector('.dccs-swipe-track');
+        if (!trk || t.disabled) { return; }
+        var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var by = (cl.contains('dccs-swipe-next') ? 1 : -1) * trk.clientWidth;
+        if (trk.scrollBy) { trk.scrollBy({ left: by, behavior: still ? 'auto' : 'smooth' }); } else { trk.scrollLeft += by; }
+        return;
+      }
+      // --- "See All": today's big cards, as a disclosure (no re-render needed) ---
+      if (cl.contains('dccs-see-all')) {
+        state.seeAll = !state.seeAll;
+        var panel = root.querySelector('.dccs-all');
+        if (panel) { panel.hidden = !state.seeAll; }
+        t.setAttribute('aria-expanded', state.seeAll ? 'true' : 'false');
+        return;
       }
       if (cl.contains('dccs-see-matches')) {
         state.stage = 'results'; rerender(); focusStep(); return;
@@ -1286,6 +1463,7 @@
         // Restart clears the remembered picks too — otherwise "start over" would
         // quietly leave the ticks behind, to reappear on the next page.
         state = defaultState(config);
+        state.config = config; state.uid = root.dataset.dccsUid;
         cmpSave(root, []);
         rerender(); focusStep(); return;
       }
