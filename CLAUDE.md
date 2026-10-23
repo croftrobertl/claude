@@ -2104,6 +2104,49 @@ yours to improvise.
     carries `&` and angle brackets — realistic, since MotoPress's strings hold
     ampersands and its translations hold entities. **Rule, again: a claim about
     a MECHANISM needs an input on which the two mechanisms differ.**
+  - **0.35.2 VERIFIED ON LIVE** (Director, 2026-10-23, 375px, switch still
+    OFF): Cottage 36 Jan 11-14 2027 showed "Those Dates Aren't Available" /
+    "Sunshine Suite isn't available for those nights…" / "Pick New Dates" →
+    /cottages/, exactly ONE card; **a ONE-NIGHT request (Cottage 36, Mar 2-3
+    2027) showed the same card and wording with no form** — the case the
+    rewording exists for, now observed rather than reasoned; the wrapper's
+    children read `[SECTION.dcc_checkout-continue, SPAN.dcc_checkout-hidden]`
+    with the sentence inside the span and nowhere in the visible text; the
+    plain dead end still "Pick Your Dates Again" with
+    `p.mphb-data-incorrect` hidden; and the reload kept the hero, the pill and
+    one `<h1>` on Cottages 22, 34 and 36, no sideways scroll.
+  - **/submit-booking/ WAS BEING PAGE-CACHED, AND THAT IS WHY A RELOAD COULD
+    LOOK WRONG** (Director, found and fixed on live 2026-10-23; no code
+    change). SpeedyCache's exclusion was written `/submit-booking/`, but
+    **SpeedyCache compares against the URI with its slashes trimmed**, so the
+    rule never matched. Any cookieless GET cached the dead-end page, the
+    pre-gzip rule then served that cached dead end **even to a GET carrying
+    MotoPress's date cookies** — exactly the reload case — and a host nginx
+    proxy cache in front held a copy too. The rule now reads `submit-booking`,
+    the stale copies are deleted, both caches purged, and a GET with the date
+    cookies renders the form. **Discount any earlier odd reload result on
+    live.**
+    **THE LASTING RULE, which is this plugin's to know: EVERY PHP-SIDE VALUE
+    THIS PLUGIN PUTS IN THE CHECKOUT'S HTML IS PER-REQUEST, so a page cache
+    freezes the FIRST visitor's answer for everyone.** That is `DCC_RESTORE`'s
+    `stay` and `offer`, the hero's photo, name and dates pill, the featured-image
+    suppression and the `dcc_layout` body class. None of it is private — the
+    payload carries a room type, two dates, a cottage name, a photo URL and a
+    `roomsDetails` pair, and **the guest's own answers never enter the HTML at
+    all** (sessionStorage only, by design) — so a cached page is WRONG, not a
+    leak. Checked, not assumed.
+    **AND IT BEARS ON THE SWITCH.** `Layout::active()` reads a per-browser
+    preview cookie, so if /submit-booking/ is ever page-cached again without
+    the cache varying on that cookie, **a cached preview page could be served
+    to a real guest** — the one thing the preview gate exists to prevent — or a
+    cached today's-checkout could hide the layout from Rob. The gate fails
+    closed per request and cannot fail closed against a cache in front of it.
+    **Raised with the Director rather than coded around**: a belt
+    (`DONOTCACHEPAGE`, a `Cache-Control: no-store` on the checkout) is possible
+    but it is NOT PROVEN that SpeedyCache or the host's nginx honour either,
+    and shipping an unverified header as a safeguard is the kind of line that
+    looks like a fallback and is not. The exclusion is the fix; keeping it
+    correct is the requirement.
   - **A RUN STOPPED MID-MUTATION LEAVES THAT FILE MUTATED, AND IT HAPPENED
     AGAIN.** 0.35.1's first full half was started with `nohup … &`, was killed
     at mutation 77 of 282 when the session's background slot ended, and left
