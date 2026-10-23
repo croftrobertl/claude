@@ -392,9 +392,15 @@ yours to improvise.
   guard is what keeps it off Cottages 33 and 34.
   **v0.19.0 literal, pinned:** sha256
   `8a638fb2e266a645cbf93b300dec44113c0989a9531dbb5abb00bb55a420783f`, 138
-  bytes, asserted in `tests/copy/run.php` (`php tests/copy/run.php`). The
-  Cottage Selector pins the same hash. **Change one, change both, change both
-  pins.** The owner's line break between the two sentences is applied at
+  bytes, asserted in `tests/copy/run.php` (`php tests/copy/run.php`).
+  **THE SENTENCES ARE IDENTICAL AND THE SELECTOR'S PIN IS NOT A HASH** (verified
+  2026-10-23 on its 0.54.0, `a1cbe9d`): its `capacity_note` hashes to the same
+  sha256 at the same 138 bytes, but it is pinned as a LITERAL in
+  `tests/test-design-snapshot.php` (`$CAPACITY`), not by hash. The protection is
+  equivalent — a string comparison is as strong as a digest — but this file used
+  to say they pinned the hash, which is the kind of wrong mechanism the git
+  section above exists to warn about. **Change one, change both, change both
+  pins — ours the hash, theirs the literal.** The owner's line break between the two sentences is applied at
   render (`\n` after the first full stop + `white-space: pre-line`), never in
   the literal — the literal must hash identical.
 - **The upload hints share the tax footnote's rule** (v0.20.0). MotoPress's
@@ -579,11 +585,19 @@ yours to improvise.
     for an offering whose switch state cannot be read.
   - `Config::guest34_enabled()` is the whole implementation and is deliberately
     four lines, so the Selector's copy CAN match it character for character.
-    **IT DOES NOT, and this line used to say it did** (measured 2026-09-27 on the
-    Selector's branch at `a2ac0e6`, read-only). The Selector reads
-    `$v === null ? true : (bool) $v` and applies no filter, so `'no'`, `'off'`
+    **IT NOW DOES — VERIFIED 2026-10-23, read-only, on the Selector's branch at
+    `a1cbe9d` (its 0.54.0).** Both readers are
+    `($raw === null) || ($raw === '1') || ($raw === 1)` and neither carries a
+    filter. The Selector's own comment says it must agree with Checkout's
+    character for character and names 0.43.0-0.49.0's `(bool)` as the bug. Its
+    only extra is a `function_exists('get_option')` guard returning true, for
+    when WordPress is not loaded — unreachable in a request and harmless.
+    *The paragraph that follows is kept because it is why the check exists.*
+    **IT DID NOT, and this line used to say it did** (measured 2026-09-27 on the
+    Selector's branch at `a2ac0e6`, read-only). The Selector read
+    `$v === null ? true : (bool) $v` and applied no filter, so `'no'`, `'off'`
     and `'false'` read ON there and OFF here, and a `dcc_guest34_enabled` filter
-    reaches only this half. **Its CLAUDE.md also records the WRITER wrongly** —
+    reached only this half. **Its CLAUDE.md also records the WRITER wrongly** —
     "integer 1 or 0, like `guest_fee_enabled`" — and calls `''` out of contract,
     when `''` is exactly what `sanitize_guest34()` stores for OFF.
     **No live divergence**: the only values ever written, `'1'` and `''`, read
@@ -593,9 +607,10 @@ yours to improvise.
     the Selector (adopt the strict reader, correct its recorded writer). Until
     it lands, "change one, change both" is a goal, not a fact.
     **Owner's answer (2026-09-27): the Selector adopts THIS plugin's reading and
-    corrects its notes in its 0.50.0.** When that ships, compare the two readers
-    on its branch yourself (read-only fetch into a scratch ref, as before) —
-    "they said they would" is not "they match".
+    corrects its notes in its 0.50.0.** It shipped, and the comparison was made
+    rather than taken on trust (above). Re-run it the same way after any Selector
+    release that touches that file — "they said they would" is not "they match",
+    and neither is "they did once".
   - **NO FILTER ON THE SWITCH — DONE IN 0.26.0** (owner decision 2026-09-27,
     folded into the next release as he asked; confirmed for 0.26.0 by the
     courier on 2026-10-06, asked because that brief said "change nothing else"). `Config::guest34_enabled()`
