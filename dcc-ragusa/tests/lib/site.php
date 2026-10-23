@@ -7,6 +7,10 @@
  */
 final class Test_Site
 {
+    /** The two .htaccess blocks whose order matters: pre-gzipped above SpeedyCache, whose rule ends in [L]. */
+    public const PREGZ_BLOCK  = "# BEGIN DCC Pre-gzipped Cache\nRewriteEngine On\nRewriteCond %{HTTP:Accept-Encoding} gzip\nRewriteCond %{REQUEST_FILENAME}.gz -f\nRewriteRule ^(.*)$ $1.gz [L]\n# END DCC Pre-gzipped Cache\n";
+    public const SPEEDY_BLOCK = "# BEGIN speedycache\nRewriteEngine On\nRewriteRule ^(.*)$ wp-content/cache/speedycache/$1 [L]\n# END speedycache\n";
+
     public static function reset(): void
     {
         if (is_dir(DCCR_TEST_ROOT)) {
@@ -102,7 +106,7 @@ final class Test_Site
         }
         $GLOBALS['dccr_core_checksums'] = $map;
         self::write('wp-config.php', "<?php\ndefine('DB_NAME', 'test');\n");
-        self::write('.htaccess', "# BEGIN DCC Security\n<Files xmlrpc.php>\n# kept for Jetpack\n</Files>\n# END DCC Security\n\n# BEGIN SpeedyCache\nRewriteEngine On\n# END SpeedyCache\n");
+        self::write('.htaccess', "# BEGIN DCC Security\n<Files xmlrpc.php>\n# kept for Jetpack\n</Files>\n# END DCC Security\n\n" . self::PREGZ_BLOCK . "\n" . self::SPEEDY_BLOCK);
 
         // A wordpress.org plugin with published checksums.
         $wporg = [

@@ -32,6 +32,12 @@ switch ($confirm) {
                 Text::bytes((int) filesize($abs)),
                 Site::when((int) filemtime($abs))
             );
+        } elseif (!is_dir($abs) && \DCCR\Fortress\Revelin::guard_label($abs) === null && \DCCR\Fortress\Minceta::forget_would($abs)) {
+            $sentence = sprintf(
+                /* translators: %s: path */
+                __('Seal will remove %s from the baseline: Ragusa will stop reporting it as missing. Nothing on disk changes.', 'dcc-ragusa'),
+                Site::rel($abs)
+            );
         } else {
             $ok       = false;
             /* translators: %s: path */

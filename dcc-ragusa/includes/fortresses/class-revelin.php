@@ -134,8 +134,7 @@ final class Revelin
             return [true, __('Sealed the DCC Security block of .htaccess.', 'dcc-ragusa')];
         }
         if (!is_file($abs)) {
-            /* translators: %s: path */
-            return [false, sprintf(__('No file at %s.', 'dcc-ragusa'), Site::rel($abs))];
+            return self::seal_missing($abs);
         }
         $label = self::guard_label($abs);
         if ($label !== null) {
@@ -161,6 +160,34 @@ final class Revelin
         Minceta::rebaseline($abs);
         /* translators: %s: path */
         return [true, sprintf(__('Accepted %s into the baseline.', 'dcc-ragusa'), $rel)];
+    }
+
+    /**
+     * A file removed on purpose: drop it from Minčeta's baseline and settle
+     * what its absence raised, so the next pass reports nothing. A guard is
+     * never dropped this way: Ragusa would only put it back.
+     *
+     * @return array{0:bool,1:string}
+     */
+    private static function seal_missing(string $abs): array
+    {
+        $rel = Site::rel($abs);
+        if (self::guard_label($abs) !== null) {
+            /* translators: %s: path */
+            return [false, sprintf(__('No file at %s, and it is a guard: Ragusa restores it from the sealed copy.', 'dcc-ragusa'), $rel)];
+        }
+        if (is_dir($abs) || str_starts_with($abs, DCCR_DIR)) {
+            /* translators: %s: path */
+            return [false, sprintf(__('No file at %s.', 'dcc-ragusa'), $rel)];
+        }
+        $n = Minceta::forget($abs);
+        if ($n === 0) {
+            /* translators: %s: path */
+            return [false, sprintf(__('No file at %s, and nothing about it in the baseline.', 'dcc-ragusa'), $rel)];
+        }
+        Events::record(Fortress::MINCETA, Events::INFO, 'sealed', $rel, __('Removed from the baseline by request: it was deleted on purpose.', 'dcc-ragusa'));
+        /* translators: %s: path */
+        return [true, sprintf(__('Removed %s from the baseline.', 'dcc-ragusa'), $rel)];
     }
 
     // -------------------------------------------------------------- checks
@@ -221,8 +248,56 @@ final class Revelin
         }
 
         $lines = array_merge($lines, self::check_htaccess_block());
+        self::check_htaccess_order();
         self::update_status();
         return $lines;
+    }
+
+    /**
+     * The DCC Pre-gzipped Cache block must sit above SpeedyCache's. An
+     * alert only, never a rewrite: the fix is named and left to the Director.
+     */
+    public static function check_htaccess_order(): void
+    {
+        $content = is_file(Htaccess::path()) ? (string) file_get_contents(Htaccess::path()) : '';
+        $problem = Htaccess::order_problem($content);
+        $fp      = Events::fingerprint(Fortress::REVELIN, 'htaccess-order', '.htaccess');
+        if ($problem === Htaccess::ORDER_OK) {
+            Alerts::resolve($fp);
+            return;
+        }
+        [$title, $what, $todo] = match ($problem) {
+            Htaccess::ORDER_PREGZ_MISSING => [
+                __('The Pre-gzipped Cache Block Is Missing', 'dcc-ragusa'),
+                __('There is no "# BEGIN DCC Pre-gzipped Cache" block in .htaccess, so every page goes out uncompressed.', 'dcc-ragusa'),
+                __('Put the DCC Pre-gzipped Cache block back, above # BEGIN speedycache.', 'dcc-ragusa'),
+            ],
+            Htaccess::ORDER_SPEEDY_MISSING => [
+                __('The SpeedyCache Block Is Missing', 'dcc-ragusa'),
+                __('There is no "# BEGIN speedycache" block in .htaccess; the DCC Pre-gzipped Cache block is there, but SpeedyCache\'s own rules are not.', 'dcc-ragusa'),
+                __('Check SpeedyCache is active and let it write its block; the DCC Pre-gzipped Cache block must stay above # BEGIN speedycache.', 'dcc-ragusa'),
+            ],
+            default => [
+                __('The Pre-gzipped Cache Block Is Below SpeedyCache', 'dcc-ragusa'),
+                __('SpeedyCache wrote its block above the DCC Pre-gzipped Cache block. Its rule ends in [L], so the pre-gzipped files are never served and every page goes out uncompressed (the Wildlife guide at 520 KB instead of 224 KB).', 'dcc-ragusa'),
+                __('Move the DCC Pre-gzipped Cache block above # BEGIN speedycache.', 'dcc-ragusa'),
+            ],
+        };
+        $open = Alerts::get($fp);
+        if ($open === null || Alerts::state($open) !== 'open' || ($open['data']['problem'] ?? '') !== $problem) {
+            Events::record(Fortress::REVELIN, Events::NEEDS_LOOK, 'htaccess-order', '.htaccess', $title);
+        }
+        Alerts::raise([
+            'fortress' => Fortress::REVELIN,
+            'severity' => Events::NEEDS_LOOK,
+            'kind'     => 'htaccess-order',
+            'target'   => '.htaccess',
+            'title'    => $title,
+            'what'     => $what,
+            'did'      => __('Ragusa changed nothing: it rewrites only the DCC Security block, never this one.', 'dcc-ragusa'),
+            'todo'     => $todo,
+            'data'     => ['problem' => $problem],
+        ]);
     }
 
     public const RESTORE_KINDS = ['guard-restored', 'guard-keeps-changing', 'restore-reversed'];

@@ -488,10 +488,10 @@ suite('A3 .htaccess block: rewritten between its markers only, reversed if the s
     eq(Journal::COMMITTED, $row['state'], 'committed');
 
     // Markers removed entirely: the block goes back to line 1.
-    file_put_contents($path, "# BEGIN SpeedyCache\nRewriteEngine On\n# END SpeedyCache\n");
+    file_put_contents($path, Test_Site::PREGZ_BLOCK . "\n" . Test_Site::SPEEDY_BLOCK);
     tick();
     ok(str_starts_with((string) file_get_contents($path), '# BEGIN DCC Security'), 'block restored at line 1');
-    ok(str_contains((string) file_get_contents($path), '# BEGIN SpeedyCache'), 'the rest kept');
+    ok(str_contains((string) file_get_contents($path), '# BEGIN speedycache'), 'the rest kept');
 
     // The home page fails after the rewrite: reversed.
     file_put_contents($path, str_replace('# kept for Jetpack', '# tampered again', $orig));
@@ -509,6 +509,68 @@ suite('A3 .htaccess block: rewritten between its markers only, reversed if the s
     tick();
     eq($before, count(Journal::recent(50, null, 'htaccess-block')), 'no new action without loopbacks');
     ok(isset(Alerts::active(Fortress::REVELIN)[Events::fingerprint(Fortress::REVELIN, 'htaccess-block-changed', '.htaccess')]), 'alert raised instead');
+});
+
+suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that names the fix, never a rewrite', function () {
+    // The rule on its own.
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n" . Test_Site::SPEEDY_BLOCK), 'pre-gzipped above speedycache is fine');
+    eq(Htaccess::ORDER_WRONG, Htaccess::order_problem(Test_Site::SPEEDY_BLOCK . "\n" . Test_Site::PREGZ_BLOCK), 'speedycache above pre-gzipped is the wrong order');
+    eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem(Test_Site::SPEEDY_BLOCK), 'no pre-gzipped block');
+    eq(Htaccess::ORDER_SPEEDY_MISSING, Htaccess::order_problem(Test_Site::PREGZ_BLOCK), 'no speedycache block');
+    eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem(''), 'an empty file');
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n# BEGIN SpeedyCache\n# END SpeedyCache\n"), 'the speedycache marker is matched whatever its case');
+    eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem("# BEGIN DCC Pre-gzip Cache\n# END DCC Pre-gzip Cache\n" . Test_Site::SPEEDY_BLOCK), 'a near-miss name is not the block');
+
+    $path = Htaccess::path();
+    $orig = (string) file_get_contents($path);
+    $fp   = Events::fingerprint(Fortress::REVELIN, 'htaccess-order', '.htaccess');
+    State::set('loopback', ['ok' => true, 'checked_at' => time()]);
+    Alerts::force(true); // staging sends nothing; prove the live email here
+    tick();
+    ok(Alerts::get($fp) === null || Alerts::state(Alerts::get($fp)) !== 'open', 'the right order raises nothing');
+
+    // SpeedyCache rewrites its block above ours.
+    $swapped = str_replace([Test_Site::PREGZ_BLOCK, Test_Site::SPEEDY_BLOCK], ['@@S@@', '@@P@@'], $orig);
+    $swapped = str_replace(['@@S@@', '@@P@@'], [Test_Site::SPEEDY_BLOCK, Test_Site::PREGZ_BLOCK], $swapped);
+    ok($swapped !== $orig && Htaccess::order_problem($swapped) === Htaccess::ORDER_WRONG, 'fixture swapped');
+    file_put_contents($path, $swapped);
+    $mails = count($GLOBALS['dccr_mail']);
+    $rows  = count(Journal::recent(50, null, 'htaccess-block'));
+    tick();
+    $a = Alerts::get($fp);
+    ok($a !== null && Alerts::state($a) === 'open', 'the wrong order is an open finding');
+    eq(Events::NEEDS_LOOK, $a['severity'], 'needs a look, not breached');
+    eq('The Pre-gzipped Cache Block Is Below SpeedyCache', $a['title'], 'title');
+    eq($swapped, file_get_contents($path), '.htaccess untouched: an alert, never a rewrite');
+    eq($rows, count(Journal::recent(50, null, 'htaccess-block')), 'no journal row');
+    eq(1, count($GLOBALS['dccr_mail']) - $mails, 'one email');
+    $mail = end($GLOBALS['dccr_mail']);
+    ok(str_contains($mail['body'], 'Move the DCC Pre-gzipped Cache block above # BEGIN speedycache.'), 'the email names the fix');
+    eq(1, count(events_of('htaccess-order')), 'one event');
+    tick();
+    eq(1, count(events_of('htaccess-order')), 'a second tick adds no event while the problem is the same');
+    ok(str_contains(Fortress::status(Fortress::REVELIN)['state'] ?? '', 'needs') || Fortress::status(Fortress::REVELIN)['state'] === Fortress::NEEDS_LOOK, 'Revelin card needs a look');
+
+    // The Director moves it back.
+    file_put_contents($path, $orig);
+    tick();
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved once the order is right');
+    ok(count(mails_with('All Clear: The Pre-gzipped Cache Block Is Below SpeedyCache')) === 1, 'one All Clear, since it was emailed');
+
+    // Either block missing is a finding too, each with its own title.
+    file_put_contents($path, str_replace(Test_Site::PREGZ_BLOCK, '', $orig));
+    tick();
+    eq('The Pre-gzipped Cache Block Is Missing', Alerts::get($fp)['title'], 'pre-gzipped block missing');
+    eq('open', Alerts::state(Alerts::get($fp)), 'open again');
+    ok(str_contains(Alerts::body(Alerts::get($fp) + ['todo' => 'Put the DCC Pre-gzipped Cache block back, above # BEGIN speedycache.']), 'above # BEGIN speedycache'), 'the fix names the order');
+    eq(2, count(events_of('htaccess-order')), 'a different problem is a new event');
+    file_put_contents($path, str_replace(Test_Site::SPEEDY_BLOCK, '', $orig));
+    tick();
+    eq('The SpeedyCache Block Is Missing', Alerts::get($fp)['title'], 'speedycache block missing');
+    file_put_contents($path, $orig);
+    tick();
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved again');
+    Alerts::force(false);
 });
 
 suite('Sveti Ivan + A4: a repeated failure rolls the update back; the old version is verified; undo brings the new one back', function () {
@@ -951,6 +1013,58 @@ suite('Minčeta: core, wordpress.org plugin, mu-plugins, drop-ins, options and J
     ok(!isset($active[Events::fingerprint(Fortress::MINCETA, 'file-changed', 'wp-content/mu-plugins/dcc-other-helper.php')]), 'sealed finding resolved');
     ok(!isset($active[Events::fingerprint(Fortress::MINCETA, 'core-modified', 'wp-includes/functions.php')]), 'restored core file resolves with an all clear');
 
+    // 0.1.4: a file that stays gone stays a finding; seal of the deleted path settles it.
+    $gone = 'wp-content/plugins/dcc-demo/includes/class-demo.php';
+    ok(isset($active[Events::fingerprint(Fortress::MINCETA, 'file-missing', $gone)]), 'a file still gone is still an open finding after the next pass');
+    [$ok, $msg] = Revelin::seal($gone);
+    ok($ok, 'seal of a deleted path succeeds: ' . $msg);
+    eq('Removed ' . $gone . ' from the baseline.', $msg, 'worded like the seal message');
+    eq('resolved', Alerts::state(Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', $gone))), 'the missing finding resolved on seal');
+    eq(0, count(mails_with('All Clear: File Missing')), 'quietly, with no All Clear email');
+    ok(count(array_filter(events_of('sealed'), static fn($e) => $e['target'] === $gone)) === 1, 'one sealed event names the path');
+
+    // Deleted on purpose BEFORE the pass: seal first, and the pass reports nothing.
+    $retired = WPMU_PLUGIN_DIR . '/dcc-retired-helper.php';
+    file_put_contents($retired, "<?php\n// retired later\n");
+    tick();
+    ok(isset(Fortress\Minceta::index()['wp-content/mu-plugins/dcc-retired-helper.php']), 'the helper is in the baseline');
+    unlink($retired);
+    [$ok, $msg] = Revelin::seal('wp-content/mu-plugins/dcc-retired-helper.php');
+    ok($ok && $msg === 'Removed wp-content/mu-plugins/dcc-retired-helper.php from the baseline.', 'seal drops the deleted helper: ' . $msg);
+    ok(!isset(Fortress\Minceta::index()['wp-content/mu-plugins/dcc-retired-helper.php']), 'and it left the baseline');
+    $before = count(events_of('file-missing'));
+    tick();
+    eq($before, count(events_of('file-missing')), 'the next pass reports nothing missing');
+    ok(!isset(Alerts::active(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/mu-plugins/dcc-retired-helper.php')]), 'no finding for the retired helper');
+
+    // A guard is never dropped; a path the baseline never knew is refused.
+    [$ok, $msg] = Revelin::seal('wp-content/mu-plugins/dcc-never-existed.php');
+    ok(!$ok && str_contains($msg, 'nothing about it in the baseline'), 'an unknown deleted path is refused: ' . $msg);
+    $zel = WPMU_PLUGIN_DIR . '/dcc-ragusa-zelenci.php';
+    $had = is_file($zel);
+    [$ok, $msg] = Revelin::seal('wp-content/mu-plugins/dcc-user-enum-guard.php');
+    ok($ok, 'a present guard seals as before');
+    $g = WPMU_PLUGIN_DIR . '/dcc-user-enum-guard.php';
+    $keep = (string) file_get_contents($g);
+    unlink($g);
+    [$ok, $msg] = Revelin::seal('wp-content/mu-plugins/dcc-user-enum-guard.php');
+    ok(!$ok && str_contains($msg, 'it is a guard'), 'a missing guard is refused, not dropped: ' . $msg);
+    file_put_contents($g, $keep);
+    unset($had, $zel);
+
+    // A file that comes back is "new" again, and its missing finding resolves.
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/includes/class-demo.php', "<?php\n// back\n");
+    Revelin::seal('wp-content/mu-plugins/dcc-ical-privacy.php'); // unrelated: keep Revelin quiet
+    $gone2 = 'wp-content/plugins/dcc-demo/readme.txt';
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/readme.txt', "demo\n");
+    tick();
+    unlink(WP_PLUGIN_DIR . '/dcc-demo/readme.txt');
+    tick();
+    eq('open', Alerts::state(Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', $gone2))), 'readme gone is open');
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/readme.txt', "demo\n");
+    tick();
+    eq('resolved', Alerts::state(Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', $gone2))), 'a file that is back resolves its missing finding');
+
     // Options and Jetpack.
     update_option('admin_email', 'thief@example.test');
     update_option('users_can_register', '1');
@@ -1056,6 +1170,18 @@ suite('admin page: renders without a secret in the HTML, confirm screens say wha
     Admin::render();
     $html = (string) ob_get_clean();
     ok(str_contains($html, 'Seal will accept the current wp-content/mu-plugins/dcc-postpass-guard.php'), 'seal confirmation sentence');
+    Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-missing', 'target' => 'wp-content/mu-plugins/dcc-was-here.php', 'title' => 'File Missing: dcc-was-here.php', 'what' => 'gone', 'did' => '', 'todo' => 'x']);
+    $_GET = ['confirm' => 'seal', 'target' => 'wp-content/mu-plugins/dcc-was-here.php'];
+    ob_start();
+    Admin::render();
+    $html = (string) ob_get_clean();
+    ok(str_contains($html, 'Seal will remove wp-content/mu-plugins/dcc-was-here.php from the baseline'), '0.1.4: the confirmation for a deleted path says what Seal will do');
+    $_GET = ['confirm' => 'seal', 'target' => 'wp-content/mu-plugins/dcc-never.php'];
+    ob_start();
+    Admin::render();
+    $html = (string) ob_get_clean();
+    ok(str_contains($html, 'There is no file at wp-content/mu-plugins/dcc-never.php'), 'an unknown path still reads as no file');
+    Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/mu-plugins/dcc-was-here.php'), true);
     $row = Journal::create('quarantine', 'x', []);
     $_GET = ['confirm' => 'restore', 'target' => (string) $row];
     ob_start();

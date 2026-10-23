@@ -1,4 +1,10 @@
-# Ragusa 0.1.3 — Staging Checklist
+# Ragusa 0.1.4 — Staging Checklist
+
+> **Upgrading the 0.1.3 install on staging (or a live 0.1.3, as a normal
+> update):** `wp plugin install "Ragusa 0.1.4.zip" --force`, then
+> `wp ragusa status`. Expect the 0.1.3 → 0.1.4 event and nothing else new:
+> no upgrade step touches the data. Then the two items marked **0.1.4**
+> in step 9. Rollback: `wp plugin install "Ragusa 0.1.3.zip" --force`.
 
 > **Upgrading the 0.1.2 install on staging:** `wp plugin install
 > "Ragusa 0.1.3.zip" --force`, then open DCC → Ragusa. Expect the headline
@@ -225,6 +231,20 @@ cleans up. Each prints every journal state transition.
 - [ ] **0.1.3:** a finding that resolves on its own (reinstall a newer
       version after a rollback, or put a role back) reads "Resolved Just
       Now" and stays on the card for a week.
+
+- [ ] **0.1.4:** `wp ragusa seal wp-content/mu-plugins/dcc-seasons-no-witch-flyer.php`
+      and the same for `dcc-preload-scope.php` (both deleted on purpose):
+      each answers "Success: Removed wp-content/… from the baseline." If the
+      pass already raised File Missing for them, the cards read Resolved;
+      `wp ragusa scan` afterwards reports nothing missing.
+- [ ] **0.1.4:** `cp .htaccess ~/htaccess.bak-$(date +%s)-order-drill`, then
+      move the `# BEGIN speedycache … # END speedycache` block above the
+      `# BEGIN DCC Pre-gzipped Cache` block and `wp ragusa tick`. Revelin
+      reads Needs A Look, "The Pre-gzipped Cache Block Is Below SpeedyCache",
+      with "Move the DCC Pre-gzipped Cache block above # BEGIN speedycache."
+      `.htaccess` is byte-for-byte what you wrote (no rewrite, no journal
+      row). Put the backup back, `wp ragusa tick`: the finding reads Resolved.
+      (Staging sends no email; the live one carries the same sentence.)
 
 - [ ] Append a comment to `mu-plugins/dcc-ical-privacy.php` over SSH. On the
       next tick Ragusa restores it (Recent Events shows it, with Undo).

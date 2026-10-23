@@ -44,6 +44,26 @@ fail because a marker was renamed on purpose:
     wp ragusa markers set /explore/ "new-marker"
     wp ragusa markers reset         # back to the baked defaults
 
+## If you removed a file on purpose
+
+Seal the path before the next pass, or after it raised "File Missing":
+
+    wp ragusa seal wp-content/mu-plugins/dcc-retired-helper.php
+    # Success: Removed wp-content/mu-plugins/dcc-retired-helper.php from the baseline.
+
+Nothing on disk changes; the finding, if any, reads Resolved. A guard
+(`Revelin::MU_GUARDS`, the two uploads `.htaccess`) cannot be retired this
+way: Ragusa would only put it back from the sealed copy.
+
+## If an email says the Pre-gzipped Cache block is below SpeedyCache
+
+Nothing was changed. SpeedyCache rewrote its `# BEGIN speedycache` block
+above `# BEGIN DCC Pre-gzipped Cache`, and its rule ends in `[L]`, so the
+pre-gzipped files are never served. Move the DCC Pre-gzipped Cache block
+above `# BEGIN speedycache` (keep a copy first: `cp .htaccess ~/htaccess.bak-$(date +%s)`).
+The finding resolves on the next tick. The same email, with its own title,
+comes when either block is missing.
+
 ## If a finding stays on the page after the problem is gone
 
 Nothing is stuck. A finding resolves itself when its condition goes away

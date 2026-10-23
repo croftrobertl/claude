@@ -1187,3 +1187,18 @@ records who and when, and is never a link in an email. The headline
 returns to "The Walls Are Holding" once every finding is resolved, seen or
 practice. A real rollback, restore or quarantine is still breached and
 still emails.
+
+**0.1.4 (the Director's two small things, 2026-10-23).** A deliberate
+deletion can now be sealed: `wp ragusa seal <path>` with no file at the
+path drops it from Minčeta's baseline and settles what its absence raised,
+quietly, worded like the seal message ("Removed wp-content/… from the
+baseline."); a guard is never dropped this way, and a File Missing finding
+now stays open until the file is back or the path is sealed (it used to
+resolve itself on the next pass, with a false All Clear). And the .htaccess
+block order is guarded: the `# BEGIN DCC Pre-gzipped Cache` block must sit
+above `# BEGIN speedycache`, whose rule ends in `[L]`; SpeedyCache had
+rewritten its block above ours and every page went out uncompressed (the
+Wildlife guide at 520 KB instead of 224 KB). Revelin checks the order every
+tick and raises a Needs A Look naming the fix ("Move the DCC Pre-gzipped
+Cache block above # BEGIN speedycache."), for the wrong order or either
+block missing; never an auto-fix, and it resolves once the order is right.

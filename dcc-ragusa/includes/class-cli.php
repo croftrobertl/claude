@@ -125,17 +125,18 @@ final class Cli
     }
 
     /**
-     * Accepts the current file as the good copy (a guard, the .htaccess block, or a watched file).
+     * Accepts the current file as the good copy (a guard, the .htaccess block, or a watched file), or removes a deleted file from the baseline.
      *
      * ## OPTIONS
      *
      * <path>
-     * : The file, relative to the WordPress root or absolute.
+     * : The file, relative to the WordPress root or absolute. A path with no file at it is dropped from Minčeta's baseline, so a deliberate deletion is never reported as missing.
      *
      * ## EXAMPLES
      *
      *     wp ragusa seal wp-content/mu-plugins/dcc-ical-privacy.php
      *     wp ragusa seal .htaccess
+     *     wp ragusa seal wp-content/mu-plugins/dcc-retired-helper.php   # deleted on purpose
      */
     public function seal(array $args = [], array $assoc = []): void
     {

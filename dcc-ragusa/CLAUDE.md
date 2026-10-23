@@ -53,7 +53,9 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   every control file present on the first pass is baselined.
 - **Guards restore at most twice in 24 hours**, then alert. Seal
   (`wp ragusa seal <path>`) accepts the current file; the Director edits
-  mu-plugins on purpose.
+  mu-plugins on purpose. A path with no file at it is dropped from
+  Minčeta's baseline (`Minceta::forget()`), never a guard; a File Missing
+  finding stays open until the file is back or the path is sealed.
 - **A forced install over an existing slug is an update** (Revelin seals
   from `upgrader_source_selection`, which fires before the old folder is
   cleared). A brand-new slug is an install and never rolls back.
@@ -103,6 +105,10 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   passes, or the rollback is undone; a late journal raises nothing), Revelin
   (a day of matching), Bokar (the role is as it was). Everything else has
   Mark As Seen, which needs the capability and a nonce and records who.
+- **The .htaccess block order is alert-only.** `Htaccess::order_problem()`
+  wants `# BEGIN DCC Pre-gzipped Cache` above `# BEGIN speedycache` (whose
+  rule ends in `[L]`); Revelin raises `htaccess-order` naming the fix and
+  never rewrites that block. Only the DCC Security block is ever rewritten.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -122,7 +128,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 34 deliberate breakages, each must be caught
+    php tests/mutations.php            # 37 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -140,6 +146,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.3.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.1.4.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

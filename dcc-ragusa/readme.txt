@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,10 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.1.4 =
+* `wp ragusa seal <path>` (and Seal on the page) accepts a path with no file at it: the file is dropped from Minčeta's baseline and whatever its absence raised is settled quietly ("Removed wp-content/… from the baseline."), so a deliberate deletion is never reported as missing. A guard is never dropped this way. A "File Missing" finding now stays open until the file is back or the path is sealed; it no longer resolved itself on the next pass.
+* Revelin checks every tick that the `# BEGIN DCC Pre-gzipped Cache` block of .htaccess sits above `# BEGIN speedycache`, whose rule ends in [L]. The wrong order, or either block missing, is a Needs A Look that names the fix ("Move the DCC Pre-gzipped Cache block above # BEGIN speedycache.") and is never an auto-fix; it resolves once the order is right.
 
 = 0.1.3 =
 * Practice is labelled as practice: everything a drill does carries a "drill" tag; it shows grey on its card as Practice, never colours a card or the headline, never emails, leaves the page after a day (the table keeps it), and the walk never looks at the drill's own paths. An upgrade re-tags what earlier drills left.

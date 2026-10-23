@@ -602,6 +602,7 @@ final class Minceta
         $kind = 'file-new';
         $fp   = Events::fingerprint(Fortress::MINCETA, $kind, $rel);
         $p['fps'][] = $fp;
+        Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-missing', $rel)); // it is back
         /* translators: %s: path */
         $what = sprintf(__('A new file appeared: %s.', 'dcc-ragusa'), $rel);
         if ($where === 'mu') {
@@ -796,7 +797,9 @@ final class Minceta
                 'todo'     => $severity === Events::INFO ? '' : __('If the site director removed it, nothing to do. Otherwise ask them to look.', 'dcc-ragusa'),
             ]);
         }
-        $kinds = ['core-modified', 'plugin-modified', 'file-new', 'file-changed', 'file-missing', 'quarantined'];
+        // file-missing is not here: a file stays gone, so its finding stays
+        // until the file is back, or `wp ragusa seal <path>` drops it.
+        $kinds = ['core-modified', 'plugin-modified', 'file-new', 'file-changed', 'quarantined'];
         Alerts::resolve_missing(Fortress::MINCETA, $kinds, array_values(array_unique($p['fps'])));
 
         $total = count(self::$index ?? []);
@@ -857,6 +860,71 @@ final class Minceta
         self::save_index();
         self::$plugin_maps = [];
         return $changed;
+    }
+
+    /**
+     * A file (or folder) deleted on purpose: drop it from the baseline and
+     * resolve what its absence raised. Returns how many entries or findings
+     * were settled; zero means the baseline knew nothing about it.
+     */
+    /** Would forget() find anything for this path? (The confirmation screen asks before acting.) */
+    public static function forget_would(string $abs): bool
+    {
+        $rel = Site::rel(rtrim($abs, '/'));
+        foreach (array_keys(self::index()) as $k) {
+            if ($k === $rel || str_starts_with($k, $rel . '/')) {
+                return true;
+            }
+        }
+        foreach (Alerts::active(Fortress::MINCETA) as $a) {
+            $t = (string) ($a['target'] ?? '');
+            if ($t === $rel || str_starts_with($t, $rel . '/')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function forget(string $abs): int
+    {
+        $rel   = Site::rel(rtrim($abs, '/'));
+        $index = self::index();
+        $rels  = [];
+        foreach (array_keys($index) as $k) {
+            if ($k === $rel || str_starts_with($k, $rel . '/')) {
+                $rels[] = $k;
+            }
+        }
+        $kinds = ['file-missing', 'file-new', 'file-changed', 'plugin-modified', 'core-modified'];
+        $n     = 0;
+        foreach (Alerts::active(Fortress::MINCETA) as $a) {
+            $t = (string) ($a['target'] ?? '');
+            if (in_array($a['kind'] ?? '', $kinds, true) && ($t === $rel || str_starts_with($t, $rel . '/')) && !in_array($t, $rels, true)) {
+                $rels[] = $t;
+            }
+        }
+        foreach ($rels as $r) {
+            if (isset(self::$index[$r])) {
+                unset(self::$index[$r]);
+                self::$index_dirty = true;
+                $n++;
+            }
+            foreach ($kinds as $kind) {
+                $fp = Events::fingerprint(Fortress::MINCETA, $kind, $r);
+                $a  = Alerts::get($fp);
+                if ($a === null) {
+                    continue;
+                }
+                if (Alerts::state($a) === 'open') {
+                    Alerts::resolve($fp, true);
+                }
+                $n++; // seen or resolved already: the baseline knew it, and the seal still succeeds
+            }
+        }
+        if (self::$index_dirty) {
+            self::save_index();
+        }
+        return $n;
     }
 
     // --------------------------------------------------------------- disk

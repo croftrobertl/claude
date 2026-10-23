@@ -11,6 +11,15 @@ final class Htaccess
     public const BEGIN = '# BEGIN DCC Security';
     public const END   = '# END DCC Security';
 
+    /** The pre-gzipped cache block must sit above SpeedyCache's, whose rule ends in [L]. */
+    public const PREGZ_BEGIN  = '# BEGIN DCC Pre-gzipped Cache';
+    public const SPEEDY_BEGIN = '# BEGIN speedycache';
+
+    public const ORDER_OK            = '';
+    public const ORDER_PREGZ_MISSING = 'pregz-missing';
+    public const ORDER_SPEEDY_MISSING = 'speedy-missing';
+    public const ORDER_WRONG         = 'wrong-order';
+
     public static function path(): string
     {
         return Site::abspath() . '/.htaccess';
@@ -28,6 +37,26 @@ final class Htaccess
             return null;
         }
         return substr($content, $start, $end + strlen(self::END) - $start);
+    }
+
+    /**
+     * Is the DCC Pre-gzipped Cache block above SpeedyCache's? SpeedyCache's
+     * rewrite rule ends in [L], so a pre-gzipped block below it never runs
+     * and every page goes out uncompressed. Judged by position only; the
+     * SpeedyCache marker is matched whatever its case. Returns one of the
+     * ORDER_* constants, ORDER_OK (an empty string) when all is well.
+     */
+    public static function order_problem(string $content): string
+    {
+        $pregz  = strpos($content, self::PREGZ_BEGIN);
+        $speedy = stripos($content, self::SPEEDY_BEGIN);
+        if ($pregz === false) {
+            return self::ORDER_PREGZ_MISSING;
+        }
+        if ($speedy === false) {
+            return self::ORDER_SPEEDY_MISSING;
+        }
+        return $pregz < $speedy ? self::ORDER_OK : self::ORDER_WRONG;
     }
 
     /** Replace only the marked block; everything else byte for byte. Missing markers: the block goes at line 1. */

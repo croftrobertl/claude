@@ -222,6 +222,24 @@ $mutations = [
         'from' => "        if ((int) (\$a['seen_at'] ?? 0) > 0) {\n            return 'seen';\n        }\n        return 'open';",
         'to'   => "        return 'open';",
     ],
+    [
+        'name' => '0.1.4 1: seal refuses a deleted path',
+        'file' => 'includes/fortresses/class-revelin.php',
+        'from' => "            return self::seal_missing(\$abs);",
+        'to'   => "            return [false, sprintf(__('No file at %s.', 'dcc-ragusa'), Site::rel(\$abs))];",
+    ],
+    [
+        'name' => '0.1.4 1: a file-missing finding resolves itself on the next pass',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        \$kinds = ['core-modified', 'plugin-modified', 'file-new', 'file-changed', 'quarantined'];",
+        'to'   => "        \$kinds = ['core-modified', 'plugin-modified', 'file-new', 'file-changed', 'file-missing', 'quarantined'];",
+    ],
+    [
+        'name' => '0.1.4 2: the order check reads the wrong block name',
+        'file' => 'includes/class-htaccess.php',
+        'from' => "    public const PREGZ_BEGIN  = '# BEGIN DCC Pre-gzipped Cache';",
+        'to'   => "    public const PREGZ_BEGIN  = '# BEGIN DCC Pregzipped Cache';",
+    ],
 ];
 
 
