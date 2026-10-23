@@ -343,6 +343,11 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   bug. **No filter hook** on either side (owner's decision): a hook would let a
   third party make them disagree. A PHP test runs Checkout's own tests/guest34
   matrix against this reader.
+  **Live baseline, 2026-10-22: the offer is ON** (`guest34_enabled`), so the
+  party question and the two-sentence capacity note show on live. The fixtures
+  built from the 2026-10-14 export (`tests/fixtures/live-state-0.53.1.json`, and
+  harnesses that stub the option to `''`) record it OFF and are out of date on
+  that point; take a fresh export before the next release relies on it.
   When OFF the party question leaves the wizard ENTIRELY and the "Room for 3-4
   guests" priority leaves Weigh priorities (owner's decision, 0.43.0): a question
   whose only real answers are "2" and "No preference" asks nothing, and a priority
@@ -378,7 +383,14 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   that changes the SHAPE or the strings of `design_snapshot()` — or a cleared key on
   the source widget — reaches the pop-ups only after /cottages/ (1005) is Updated;
   a cache purge alone no longer heals it, and the checklist must say so.
-  `tools/check-stored-keys.php` lists the registry copy's stale strings. (History:
+  `tools/check-stored-keys.php` lists the registry copy's stale strings.
+  **When nobody can sign in to Elementor**, republish from WP-CLI instead of the
+  Update (Website Director, live, 2026-10-22):
+  `\DCCS\Plugin::instance()->republish_designs($doc, ['elements' => <page 1005's
+  _elementor_data, decoded>, 'settings' => ['post_status' => 'publish']])`, where
+  `$doc` is any object whose `get_main_id()` returns 1005. That is exactly what the
+  after_save hook receives; it writes only `dccs_design_sources` and never touches
+  the page. Run the check script after it: expect "registry copy is current". (History:
   a ≤0.47.0 registry entry carried every key and masked the page; 0.48.0–0.53.2
   healed that on the first uncached front-end view.) Considered and REJECTED in 0.50.0: an
   upgrade routine rebuilding the registry from `_elementor_data`. Raw stored
