@@ -2359,12 +2359,18 @@ yours to improvise.
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
   and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **571
-  mutations, 571 killed, 0 of everything else** (v0.35.2, thirty-two suites —
-  `layout`, `hero`, `hero-browser`, `restore`, `restore-browser`,
-  `restore-min`, `layout-fields`, `layout-fields-browser` and
-  `layout-fields-min` added across 0.35.x; run in two halves of 286). That is
-  after resolving the full run's **1 SURVIVED and 7 STALE**, all of them
-  consequences of 0.35.x's own rewrites:
+  mutations, every one of them killed** (v0.35.2, **35 suites** — `layout`,
+  `hero`, `hero-browser`, `restore`, `restore-browser`, `restore-min`,
+  `layout-fields`, `layout-fields-browser` and `layout-fields-min` added
+  across 0.35.x).
+  **SAY THAT ARITHMETIC THE EXACT WAY ROUND, because it is not one run's
+  tally.** The full run was over a 572-mutation set, in two halves of 286:
+  286 killed, then 278 killed + 1 SURVIVED + 7 STALE. The survivor was
+  retired (572 → 571) and the seven were re-anchored and killed on their own.
+  So it is **564 killed in the halves plus 7 killed individually**, which is
+  the whole of the present 571 — not 571 killed in one pass. Both halves left
+  the tree clean. The eight non-kills were all consequences of 0.35.x's own
+  rewrites:
   - the seven STALE were anchored on lines 0.35.1/0.35.2 replaced — the photo
     chooser's fallback, the twin lookup (three), `hideDeadEnd`'s call and its
     wrapper branch, and the stored-stay completeness test. Re-anchored with
