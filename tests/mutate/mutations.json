@@ -151,8 +151,8 @@
    "button"
   ],
   "claim": "the site button spec's 20px survives the theme and the Elementor kit",
-  "find": "    font-size: 20px;",
-  "replace": "    font-size: 18px;",
+  "find": "    font-family: \"Raleway\", -apple-system, \"system-ui\", \"Segoe UI\", Arial, sans-serif;\n    font-size: 20px;",
+  "replace": "    font-family: \"Raleway\", -apple-system, \"system-ui\", \"Segoe UI\", Arial, sans-serif;\n    font-size: 18px;",
   "count": 1
  },
  {
