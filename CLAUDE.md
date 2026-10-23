@@ -2480,17 +2480,19 @@ yours to improvise.
   alone, or **`--anchors` for the find-strings alone** (milliseconds; run it
   after any edit that moves code — see 0.35.3). It applies one textual mutation, runs the suites that claim to cover it,
   and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **576
-  mutations, every one of them killed** (v0.35.3, **36 suites** — `layout`,
-  `hero`, `hero-browser`, `restore`, `restore-browser`, `restore-min`,
-  `layout-fields`, `layout-fields-browser`, `layout-fields-min` and
-  `pagecache` added across 0.35.x).
-  **SAY THAT ARITHMETIC THE EXACT WAY ROUND, because it is not one run's
-  tally.** The full run was over a 572-mutation set, in two halves of 286:
-  286 killed, then 278 killed + 1 SURVIVED + 7 STALE. The survivor was
-  retired (572 → 571) and the seven were re-anchored and killed on their own.
-  So it is **564 killed in the halves plus 7 killed individually**, which is
-  the whole of the present 571 — not 571 killed in one pass. Both halves left
-  the tree clean. The eight non-kills were all consequences of 0.35.x's own
+  mutations, 576 killed in ONE pass** — two halves of 288, each 288/288, with
+  `Anchors: all live` ahead of both and the tree clean after both (v0.35.3,
+  **36 suites** — `layout`, `hero`, `hero-browser`, `restore`,
+  `restore-browser`, `restore-min`, `layout-fields`,
+  `layout-fields-browser`, `layout-fields-min` and `pagecache` added across
+  0.35.x). **That is a single-run tally and may be said as one.**
+  **AT 0.35.2 IT COULD NOT BE, and the distinction is the point** — a count in
+  prose is a claim that goes stale silently, including this one. That run was
+  over a 572-mutation set in halves of 286: 286 killed, then 278 killed +
+  1 SURVIVED + 7 STALE. The survivor was retired (572 → 571) and the seven
+  were re-anchored and killed on their own, so it was **564 killed in the
+  halves plus 7 killed individually** — the whole of the then-571, but not 571
+  in one pass. Its eight non-kills were all consequences of 0.35.x's own
   rewrites:
   - the seven STALE were anchored on lines 0.35.1/0.35.2 replaced — the photo
     chooser's fallback, the twin lookup (three), `hideDeadEnd`'s call and its
