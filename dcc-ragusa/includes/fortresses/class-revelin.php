@@ -249,8 +249,59 @@ final class Revelin
 
         $lines = array_merge($lines, self::check_htaccess_block());
         self::check_htaccess_order();
+        self::check_booking_cache();
         self::update_status();
         return $lines;
+    }
+
+    /**
+     * A booking page that SpeedyCache can cache: a dead "contain" rule (a
+     * slash in a page rule's text) or a cached folder already there. Read-only,
+     * no journal row; the two fixes are named and left to the Director.
+     */
+    public static function check_booking_cache(): void
+    {
+        $rules   = \DCCR\Speedycache::dead_booking_rules(get_option(\DCCR\Speedycache::OPTION, []));
+        $folders = \DCCR\Speedycache::cached_booking_folders();
+        $fp      = Events::fingerprint(Fortress::REVELIN, 'booking-cacheable', 'speedycache');
+        if ($rules === [] && $folders === []) {
+            Alerts::resolve($fp);
+            return;
+        }
+        $what = [];
+        $todo = [];
+        if ($rules !== []) {
+            $what[] = sprintf(
+                /* translators: %s: the rule texts, quoted */
+                _n('The SpeedyCache page rule %s carries a slash, and SpeedyCache compares its rules against the address with the slashes trimmed, so the rule never matches and the page is cached.', 'The SpeedyCache page rules %s carry slashes, and SpeedyCache compares its rules against the address with the slashes trimmed, so they never match and the pages are cached.', count($rules), 'dcc-ragusa'),
+                '"' . implode('", "', $rules) . '"'
+            );
+            $todo[] = __('Remove the slashes from the rule text.', 'dcc-ragusa');
+        }
+        if ($folders !== []) {
+            $what[] = sprintf(
+                /* translators: %s: folders */
+                _n('A cached copy of a booking page exists at %s; a guest carrying their dates can be served a stale page.', 'Cached copies of booking pages exist at %s; a guest carrying their dates can be served a stale page.', count($folders), 'dcc-ragusa'),
+                implode(', ', $folders)
+            );
+            $todo[] = __('Delete the folder, then purge SpeedyCache and the server cache.', 'dcc-ragusa');
+        }
+        $items = sha1(wp_json_encode([$rules, $folders]));
+        $open  = Alerts::get($fp);
+        if ($open === null || Alerts::state($open) !== 'open' || ($open['data']['items'] ?? '') !== $items) {
+            Events::record(Fortress::REVELIN, Events::NEEDS_LOOK, 'booking-cacheable', 'speedycache', __('A Booking Page Can Be Cached', 'dcc-ragusa') . ': ' . implode(' ', array_merge($rules, $folders)));
+        }
+        Alerts::raise([
+            'fortress' => Fortress::REVELIN,
+            'severity' => Events::NEEDS_LOOK,
+            'kind'     => 'booking-cacheable',
+            'target'   => 'speedycache',
+            'title'    => __('A Booking Page Can Be Cached', 'dcc-ragusa'),
+            'what'     => implode(' ', $what),
+            'did'      => __('Ragusa changed nothing: it never rewrites SpeedyCache\'s rules or touches its cache.', 'dcc-ragusa'),
+            'todo'     => implode(' ', $todo),
+            'data'     => ['items' => $items],
+        ]);
     }
 
     /**

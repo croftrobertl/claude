@@ -1215,3 +1215,17 @@ has an nginx proxy cache in front (`x-proxy-cache`, cleared by
 `do_action('epc_purge')`), and SpeedyCache's "contain" exclusions must be
 written without slashes, because it trims the URI's slashes before
 comparing.
+
+**0.1.6 (the SpeedyCache trap, 2026-10-24).** Five booking-page exclusions
+were dead because they were written with slashes (`/submit-booking/`) and
+SpeedyCache compares its "contain" rules against `trim(REQUEST_URI, '/')`;
+the checkout got cached and a guest carrying their dates was served a stale
+"Pick Your Dates Again". Revelin now reads `speedycache_exclude` every tick
+and raises "A Booking Page Can Be Cached" when a page rule for
+submit-booking, account, checkout, booking-confirmation or search-results
+carries a slash ("Remove the slashes from the rule text."), or when a cached
+folder for one of those pages exists under `wp-content/cache/speedycache/*/all/`
+("Delete the folder, then purge SpeedyCache and the server cache."). Read-only,
+one email, no journal row, resolved on the tick after the fix. Never JS or
+CSS rules (slashes are legitimate there), never the dead but harmless
+`/events/` rule, never `/guest/`, which Rob keeps cached on purpose.

@@ -39,6 +39,7 @@ use DCCR\Loopback;
 use DCCR\Markers;
 use DCCR\Settings;
 use DCCR\Site;
+use DCCR\Speedycache;
 use DCCR\State;
 use DCCR\Text;
 use DCCR\Vault;
@@ -589,6 +590,84 @@ suite('0.1.4 .htaccess block order: pre-gzipped above speedycache, an alert that
     file_put_contents($path, $orig);
     tick();
     Alerts::force(false);
+});
+
+suite('0.1.6 a booking page can be cached: dead SpeedyCache page rules with slashes, cached booking folders; read-only, email once, no journal row', function () {
+    // The rule reader, on the option's shapes.
+    $rules = [
+        ['type' => 'page', 'prefix' => 'contain', 'content' => '/submit-booking/'],
+        ['type' => 'page', 'prefix' => 'contain', 'content' => 'booking-confirmation'],
+        ['type' => 'page', 'prefix' => 'contain', 'content' => '/checkout'],
+        ['type' => 'js',   'prefix' => 'contain', 'content' => '/wp-content/plugins/dcc-custom-checkout/assets/checkout.js'],
+        ['type' => 'css',  'prefix' => 'contain', 'content' => '/account/style.css'],
+        ['type' => 'page', 'prefix' => 'contain', 'content' => '/events/'],
+        ['type' => 'page', 'prefix' => 'contain', 'content' => '/guest/'],
+        ['type' => 'page', 'prefix' => 'startwith', 'content' => 'search-results'],
+    ];
+    eq(['/submit-booking/', '/checkout'], Speedycache::dead_booking_rules($rules), 'only page rules naming a booking page and carrying a slash are dead');
+    eq(['/submit-booking/', '/checkout'], Speedycache::dead_booking_rules((string) json_encode($rules)), 'the same when the option is a JSON string');
+    eq([], Speedycache::dead_booking_rules([['type' => 'js', 'prefix' => 'contain', 'content' => '/submit-booking/x.js']]), 'a JS rule with a slash raises nothing');
+    eq([], Speedycache::dead_booking_rules([['type' => 'page', 'prefix' => 'contain', 'content' => 'submit-booking']]), 'a page rule without slashes raises nothing');
+    eq([], Speedycache::dead_booking_rules([['type' => 'page', 'prefix' => 'contain', 'content' => '/guest/']]), 'a /guest/ rule raises nothing: Rob keeps it cached');
+    eq([], Speedycache::dead_booking_rules([['type' => 'page', 'prefix' => 'contain', 'content' => '/events/']]), 'the dead /events/ rule is left alone');
+    eq([], Speedycache::dead_booking_rules('not json'), 'garbage is no rules');
+    eq([], Speedycache::dead_booking_rules(false), 'no option is no rules');
+
+    // The cache folders.
+    $cache = WP_CONTENT_DIR . '/cache/speedycache/doracanalcourt.com/all';
+    eq([], Speedycache::cached_booking_folders(), 'no cache folder, nothing');
+    mkdir($cache . '/guest', 0755, true);
+    file_put_contents($cache . '/guest/index.html', '<html>guest</html>');
+    mkdir($cache . '/explore', 0755, true);
+    eq([], Speedycache::cached_booking_folders(), '/guest/ cached raises nothing, nor does any other page');
+    mkdir($cache . '/submit-booking', 0755, true);
+    file_put_contents($cache . '/submit-booking/index.html', '<html>stale</html>');
+    eq(['wp-content/cache/speedycache/doracanalcourt.com/all/submit-booking/'], Speedycache::cached_booking_folders(), 'a cached submit-booking is found');
+
+    // The tick: one finding, the two fixes, an email once, no journal row, nothing rewritten.
+    $fp = Events::fingerprint(Fortress::REVELIN, 'booking-cacheable', 'speedycache');
+    update_option(Speedycache::OPTION, $rules);
+    $journal = count(Journal::recent(50));
+    Alerts::force(true);
+    $mails = count(mails_with('A Booking Page Can Be Cached'));
+    tick();
+    $a = Alerts::get($fp);
+    ok($a !== null && Alerts::state($a) === 'open', 'the finding is open');
+    eq('A Booking Page Can Be Cached', $a['title'], 'title');
+    eq(Events::NEEDS_LOOK, $a['severity'], 'needs a look');
+    eq(1, count(mails_with('A Booking Page Can Be Cached')) - $mails, 'one email');
+    $mail = mails_with('A Booking Page Can Be Cached')[0];
+    ok(str_contains($mail['body'], '"/submit-booking/", "/checkout"'), 'the email names the rules');
+    ok(str_contains($mail['body'], 'Remove the slashes from the rule text.'), 'and the rule fix');
+    ok(str_contains($mail['body'], 'wp-content/cache/speedycache/doracanalcourt.com/all/submit-booking/'), 'and the folder');
+    ok(str_contains($mail['body'], 'Delete the folder, then purge SpeedyCache and the server cache.'), 'and the folder fix');
+    ok(!str_contains($mail['body'], '/events/') && !str_contains($mail['body'], '/guest/'), 'neither /events/ nor /guest/ is named');
+    eq($journal, count(Journal::recent(50)), 'no journal row: nothing was changed');
+    eq($rules, get_option(Speedycache::OPTION), 'the option is untouched');
+    ok(is_file($cache . '/submit-booking/index.html'), 'the cache folder is untouched');
+    eq(1, count(events_of('booking-cacheable')), 'one event');
+    tick();
+    eq(1, count(events_of('booking-cacheable')), 'no new event while nothing changed');
+    eq(1, count(mails_with('A Booking Page Can Be Cached')) - $mails, 'no second email');
+
+    // The Director fixes the rules; the folder still stands: still open, with only the folder now.
+    $fixed = $rules;
+    $fixed[0]['content'] = 'submit-booking';
+    $fixed[2]['content'] = 'checkout';
+    update_option(Speedycache::OPTION, $fixed);
+    tick();
+    eq('open', Alerts::state(Alerts::get($fp)), 'still open while the folder stands');
+    eq(2, count(events_of('booking-cacheable')), 'the changed set is a new event');
+
+    // The folder goes: resolved on the next tick, with one All Clear.
+    unlink($cache . '/submit-booking/index.html');
+    rmdir($cache . '/submit-booking');
+    tick();
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'resolved once both are fixed');
+    eq(1, count(mails_with('All Clear: A Booking Page Can Be Cached')), 'one All Clear');
+    ok(is_dir($cache . '/guest'), '/guest/ stays cached');
+    Alerts::force(false);
+    delete_option(Speedycache::OPTION);
 });
 
 suite('Sveti Ivan + A4: a repeated failure rolls the update back; the old version is verified; undo brings the new one back', function () {

@@ -112,6 +112,14 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   No speedycache block (staging has none) is `ORDER_NO_SPEEDY`: nothing to
   order, one info line, never a finding. A finding that can never clear
   teaches Rob to ignore the page.
+- **The booking-cache check is read-only.** `Speedycache::dead_booking_rules()`
+  flags only `type: page` rules naming one of `Speedycache::BOOKING_PAGES`
+  whose text carries a slash (SpeedyCache compares against
+  `trim(REQUEST_URI, '/')`); `cached_booking_folders()` looks only for those
+  slugs under `wp-content/cache/speedycache/*/all/`. Never JS/CSS rules,
+  never `/events/`, never `/guest/` (Rob keeps it cached). Revelin raises
+  "A Booking Page Can Be Cached", writes no journal row, and never rewrites
+  the option or touches the cache.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -131,13 +139,15 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   HIT/MISS`, `x-server-cache: true`), cleared by `do_action('epc_purge')`.
   Ragusa does not watch it (the Director's note of 2026-10-23).
 - SpeedyCache "contain" exclusions written with slashes (`/submit-booking/`)
-  never match: SpeedyCache trims the URI's slashes before comparing. The
-  trap if cache configuration is ever watched. Not watched now.
+  never match: SpeedyCache trims the URI's slashes before comparing. Watched
+  since 0.1.6 (`class-speedycache.php`); the option is `speedycache_exclude`,
+  a list of rules with `type`, `prefix`, `content` (also accepted as JSON).
+  Custom Checkout 0.35.3 sets `DONOTCACHEPAGE` on the checkout as well.
 
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 38 deliberate breakages, each must be caught
+    php tests/mutations.php            # 42 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
 
@@ -155,6 +165,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.5.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.1.6.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

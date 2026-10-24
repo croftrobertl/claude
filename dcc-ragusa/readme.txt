@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,9 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.1.6 =
+* Revelin reads SpeedyCache's exclusion rules every tick. A page rule for submit-booking, account, checkout, booking-confirmation or search-results whose text carries a slash is dead (SpeedyCache compares its rules against the address with the slashes trimmed), and a cached folder for one of those pages under wp-content/cache/speedycache/ means a guest can be served a stale page. Either is a Needs A Look, "A Booking Page Can Be Cached", naming the rule or folder and the fix ("Remove the slashes from the rule text." / "Delete the folder, then purge SpeedyCache and the server cache."). Read-only: no journal row, one email, resolves on the tick after the fix. JS and CSS rules, the /events/ rule and /guest/ (cached on purpose) are never flagged.
 
 = 0.1.5 =
 * Without a `# BEGIN speedycache` block there is nothing to order: Revelin stays quiet, with one info line ("SpeedyCache has no rewrite block here; there is no block order to keep.") the first time it sees that, and never a finding. Staging has no SpeedyCache rewrite block, so 0.1.4's "The Pre-gzipped Cache Block Is Missing" stood there for good. The Needs A Look now comes only when the speedycache block is present and the DCC Pre-gzipped Cache block is missing or below it.

@@ -66,6 +66,17 @@ comes when SpeedyCache's block is there and the DCC one is missing. Without
 a `# BEGIN speedycache` block (staging) there is nothing to order and
 nothing is raised: one info line in Recent Events says so.
 
+## If an email says "A Booking Page Can Be Cached"
+
+Nothing was changed. Either a SpeedyCache page rule for a booking page is
+written with slashes (`/submit-booking/`), which SpeedyCache can never match
+because it trims the address's slashes before comparing, or a cached copy
+of a booking page already sits under `wp-content/cache/speedycache/`. The
+email names which, and the fix: remove the slashes from the rule text, or
+delete the folder and then purge SpeedyCache and the server cache. The
+finding resolves on the next tick. `/guest/` is cached on purpose and is
+never named.
+
 ## If a finding stays on the page after the problem is gone
 
 Nothing is stuck. A finding resolves itself when its condition goes away

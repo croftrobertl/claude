@@ -246,6 +246,30 @@ $mutations = [
         'from' => "        if (\$speedy === false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
         'to'   => "        if (false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
     ],
+    [
+        'name' => '0.1.6: a JS or CSS rule with a slash is flagged (the type filter is gone)',
+        'file' => 'includes/class-speedycache.php',
+        'from' => "            if (\$rule['type'] !== 'page') {\n                continue;\n            }",
+        'to'   => "            if (false) {\n                continue;\n            }",
+    ],
+    [
+        'name' => '0.1.6: a page rule without slashes is flagged',
+        'file' => 'includes/class-speedycache.php',
+        'from' => "            if (str_contains(\$rule['content'], '/')) {",
+        'to'   => "            if (true) {",
+    ],
+    [
+        'name' => '0.1.6: /guest/ cached is flagged (every cached folder counts)',
+        'file' => 'includes/class-speedycache.php',
+        'from' => "            foreach ((array) glob(\$base . '/*/all/' . \$slug, GLOB_ONLYDIR) as \$dir) {",
+        'to'   => "            foreach ((array) glob(\$base . '/*/all/*', GLOB_ONLYDIR) as \$dir) {",
+    ],
+    [
+        'name' => '0.1.6: the booking-cache finding never resolves',
+        'file' => 'includes/fortresses/class-revelin.php',
+        'from' => "        if (\$rules === [] && \$folders === []) {\n            Alerts::resolve(\$fp);\n            return;\n        }",
+        'to'   => "        if (\$rules === [] && \$folders === []) {\n            return;\n        }",
+    ],
 ];
 
 

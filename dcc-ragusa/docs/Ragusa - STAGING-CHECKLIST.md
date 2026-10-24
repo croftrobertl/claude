@@ -1,4 +1,11 @@
-# Ragusa 0.1.5 — Staging Checklist
+# Ragusa 0.1.6 — Staging Checklist
+
+> **Upgrading the 0.1.5 install on staging:** `wp plugin install
+> "Ragusa 0.1.6.zip" --force`, then `wp ragusa tick` and open DCC → Ragusa.
+> If staging's SpeedyCache rules carry the same slashes live had, Revelin
+> reads Needs A Look, "A Booking Page Can Be Cached", naming each rule and
+> "Remove the slashes from the rule text."; otherwise nothing new. Then the
+> item marked **0.1.6** in step 9. Rollback: `wp plugin install "Ragusa 0.1.5.zip" --force`.
 
 > **Upgrading the 0.1.4 install on staging:** `wp plugin install
 > "Ragusa 0.1.5.zip" --force`, then `wp ragusa tick` and open DCC → Ragusa.
@@ -255,6 +262,15 @@ cleans up. Each prints every journal state transition.
       **0.1.5:** staging has no speedycache block, so this drill needs both
       blocks pasted in from live's `.htaccess` first; with neither block
       present, a tick raises nothing.
+
+- [ ] **0.1.6:** `wp option get speedycache_exclude --format=json`, note it,
+      then add one page rule `/submit-booking/` in SpeedyCache's Exclude tab
+      (or `mkdir -p wp-content/cache/speedycache/<host>/all/submit-booking`)
+      and `wp ragusa tick`. Revelin reads "A Booking Page Can Be Cached" with
+      the rule (or folder) and its fix; `wp ragusa journal` has no new row;
+      the option is byte-for-byte what you set. Remove the rule (or folder),
+      `wp ragusa tick`: Resolved. Also confirm a JS rule with a slash and the
+      `/guest/` cache folder raise nothing.
 
 - [ ] Append a comment to `mu-plugins/dcc-ical-privacy.php` over SSH. On the
       next tick Ragusa restores it (Recent Events shows it, with Undo).
