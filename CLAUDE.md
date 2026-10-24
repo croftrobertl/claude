@@ -2222,7 +2222,7 @@ yours to improvise.
     the whole answer**; a full run would have discovered the others up to two
     hours in, one at a time, and only those it reached.
     **So the preflight now checks every anchor before any suite runs**
-    (`stale_anchors()`), which costs milliseconds against 576 string counts,
+    (`stale_anchors()`), which costs milliseconds against 612 string counts,
     and it is reachable on its own as `python3 tests/mutate/run.py --anchors`
     — **a check only callable behind thirty-six suites is a check nobody can
     prove fires.** It was proved to FAIL on all three stale shapes (a find
@@ -2631,13 +2631,27 @@ yours to improvise.
   `python3 tests/mutate/run.py [suite|id]`, `--preflight` for the baseline
   alone, or **`--anchors` for the find-strings alone** (milliseconds; run it
   after any edit that moves code — see 0.35.3). It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **576
-  mutations, 576 killed in ONE pass** — two halves of 288, each 288/288, with
-  `Anchors: all live` ahead of both and the tree clean after both (v0.35.3,
-  **36 suites** — `layout`, `hero`, `hero-browser`, `restore`,
-  `restore-browser`, `restore-min`, `layout-fields`,
-  `layout-fields-browser`, `layout-fields-min` and `pagecache` added across
-  0.35.x). **That is a single-run tally and may be said as one.**
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. **612
+  mutations, 612 killed in ONE pass** — two halves of 306, each 306/306, with
+  `Anchors: all live` ahead of both and the tree clean after both (v0.36.0,
+  **38 suites** — `cards` and `cards-min` added; `layout`, `hero`,
+  `hero-browser`, `restore`, `restore-browser`, `restore-min`,
+  `layout-fields`, `layout-fields-browser`, `layout-fields-min` and
+  `pagecache` across 0.35.x). **That is a single-run tally and may be said as
+  one.**
+  **0.36.0's targeted run of its own 36 was 33 killed + 3 SURVIVED, and all
+  three were gaps in the TEST**, closed before the full run: the slow-answer
+  case stopped waiting before the slow answer arrived, so a 60-second timeout
+  passed it; the `avail` gate had no case where a stay EXISTS but is not
+  bookable, which is the only state where the gate decides anything; and
+  nothing asserted that the summary card's photo is the hero's own file.
+  **That last one carried a second fault worth naming: the mutation listed a
+  suite that could not see the assertion.** A mutation pointed at the wrong
+  suite reports SURVIVED however good the test is — apparent coverage of a
+  kind `--anchors` cannot catch, because the anchor is live and the claim is
+  simply never evaluated. When a survivor makes no sense, check which suites
+  it names before rewriting the code.
+  At v0.35.3 it was 576 in two halves of 288.
   **AT 0.35.2 IT COULD NOT BE, and the distinction is the point** — a count in
   prose is a claim that goes stale silently, including this one. That run was
   over a 572-mutation set in halves of 286: 286 killed, then 278 killed +
