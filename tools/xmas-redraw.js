@@ -22,8 +22,8 @@
  *   node tools/xmas-redraw.js
  *
  * Writes, into build/:
- *   Seasons - 4.14.0 step 1 round 3 pieces.png
- *   Seasons - 4.14.0 step 1 round 3 santa scene.png
+ *   Seasons - 4.14.0 step 1 round 4 pieces.png
+ *   Seasons - 4.14.0 step 1 round 4 santa scene.png
  */
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +32,20 @@ const { playwright } = require('./harness');
 const ROOT = path.resolve(__dirname, '..');
 const ENGINE = path.join(ROOT, 'dcc-seasons', 'assets', 'js', 'engine.js');
 const OUT = path.join(ROOT, 'build');
+/* the reference photographs for the overlay rows: all public domain or
+ * CC0, fetched from Wikimedia Commons into the scratchpad (not tracked) */
+const REFDIR = process.env.DCC_REF || '/tmp/claude-0/-home-user-claude/3d01797e-7fb8-52f8-926f-a10d1a703217/scratchpad/ref';
+const REF = {};
+for (const [k, f] of [['horse', 'horse.jpg'], ['caribou', 'car3.jpg'], ['flamingo', 'fl3.jpg'], ['palm', 'palm2.jpg']]) {
+  const fp = path.join(REFDIR, f);
+  REF[k] = fs.existsSync(fp) ? 'data:image/jpeg;base64,' + fs.readFileSync(fp).toString('base64') : '';
+}
+const REF_CAP = {
+  horse: 'Eadweard Muybridge, "Sallie Gardner at a Gallop" (The Horse in Motion), 1878 — public domain (Library of Congress, via Wikimedia Commons)',
+  caribou: 'Caribou running, U.S. National Park Service photograph — public domain (via Wikimedia Commons: "Long legs and splayed hooves allow this caribou…")',
+  flamingo: '"American flamingo in Galápagos (Phoenicopterus ruber)", E. Bailey — CC0 (Wikimedia Commons)',
+  palm: '"SabalPalm.jpg", William Bumgarner — CC0 (Wikimedia Commons)',
+};
 
 function braceBlock(src, from) {
   const i = src.indexOf('{', from);
@@ -94,21 +108,24 @@ function keyAt(K, p) {
  * knee. */
 var FORE = [
   [0.00, [0.50, 0.45, 0.35, 0.25]],     /* touchdown, reaching */
-  [0.17, [0.08, 0.02, -0.02, -0.15]],   /* under the shoulder, nearly straight */
-  [0.35, [-0.45, -0.55, -0.65, -0.85]], /* lift-off, trailing */
-  [0.50, [-0.40, -0.95, -2.70, -2.90]], /* the knee folded, the hoof tucked up behind it */
-  [0.68, [0.20, -0.35, -1.90, -2.00]],  /* swinging forward, still folded */
-  [0.85, [0.60, 0.40, -0.45, -0.30]],   /* the reach, the hoof about to flip forward */
+  [0.12, [0.08, 0.02, -0.02, -0.15]],   /* under the shoulder, nearly straight */
+  [0.25, [-0.45, -0.55, -0.65, -0.85]], /* lift-off, trailing */
+  [0.42, [-0.40, -0.95, -2.70, -2.90]], /* the knee folded, the hoof tucked up behind it */
+  [0.62, [0.20, -0.35, -1.90, -2.00]],  /* swinging forward, still folded */
+  [0.84, [0.60, 0.40, -0.45, -0.30]],   /* the reach, the hoof about to flip forward */
 ];
 var HIND = [
   [0.00, [0.95, -0.10, 0.50, 0.40]],    /* touchdown well under the belly */
-  [0.17, [0.60, -0.50, 0.15, 0.05]],
-  [0.35, [-0.10, -1.00, -0.50, -0.70]], /* the push-off, extended back */
-  [0.50, [0.15, -1.35, -0.10, -0.30]],  /* the hock flexed, the hoof hanging */
-  [0.68, [0.60, -1.10, 0.30, 0.20]],    /* swinging forward */
-  [0.85, [1.00, -0.45, 0.30, 0.30]],    /* reaching */
+  [0.12, [0.60, -0.50, 0.15, 0.05]],
+  [0.25, [-0.10, -1.00, -0.50, -0.70]], /* the push-off, extended back */
+  [0.42, [0.15, -1.35, -0.10, -0.30]],  /* the hock flexed, the hoof hanging */
+  [0.62, [0.60, -1.10, 0.30, 0.20]],    /* swinging forward */
+  [0.84, [1.00, -0.45, 0.30, 0.30]],    /* reaching */
 ];
-var LEG_OFF = { lh: 0, rh: 0.10, lf: 0.28, rf: 0.40 };
+/* footfalls, from Muybridge's plate: left hind, right hind, then the
+ * fores only after both hinds have left the ground (frame 6), so the
+ * stride has a brief stretched moment and the long gathered suspension */
+var LEG_OFF = { lh: 0, rh: 0.10, lf: 0.45, rf: 0.56 };   /* each leg down 25% of the stride */
 /* A reindeer (Rangifer) in profile, facing +x, origin mid-body, the hooves
  * about 55 units below it at a stand. ph is the stride phase. dark draws
  * the whole animal as one silhouette. */
@@ -123,12 +140,12 @@ var RC = {
  * swelling below the stifle / elbow, then a slender cannon to the fetlock
  * and the hoof. No joint knobs: the taper carries the joints. */
 function deerLeg(g, x0, y0, K, p, near, dark, hind, far) {
-  var a = keyAt(K, p), len = hind ? [17, 20, 18, 5] : [13, 20, 18, 5];
+  var a = keyAt(K, p), len = hind ? [14, 17, 15, 4] : [11, 17, 15, 4];
   var J = [[x0, y0]], x = x0, y = y0, i;
   for (i = 0; i < 4; i++) { x += sin(a[i]) * len[i]; y += cos(a[i]) * len[i]; J.push([x, y]); }
   /* the centre line with its widths: root, (mid-thigh), stifle/elbow,
    * (the muscle), hock/knee, fetlock, the hoof top */
-  var W = hind ? [8.4, 7.4, 6.0, 5.2, 2.7, 2.2, 2.4] : [7.0, 6.0, 5.0, 4.4, 2.5, 2.1, 2.3];
+  var W = hind ? [7.6, 6.6, 5.2, 4.4, 2.3, 1.9, 2.1] : [6.2, 5.3, 4.4, 3.8, 2.2, 1.9, 2.0];
   var C = [J[0], mid(J[0], J[1], 0.5), J[1], mid(J[1], J[2], 0.42), J[2], J[3], J[4]];
   function mid(p1, p2, t) { return [lerp(p1[0], p2[0], t), lerp(p1[1], p2[1], t)]; }
   var L2 = [], R2 = [];
@@ -152,7 +169,7 @@ function deerLeg(g, x0, y0, K, p, near, dark, hind, far) {
   /* a broad cloven hoof, splayed with the pastern */
   g.save(); g.translate(J[4][0], J[4][1]); g.rotate(-a[3]);
   g.fillStyle = dark ? RC.dark : RC.hoof;
-  g.beginPath(); g.moveTo(-2.6, -1.2); g.lineTo(2.8, -1.2); g.lineTo(3.6, 3.2); g.quadraticCurveTo(0, 4.2, -3.2, 3.2); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-2.3, -1); g.lineTo(2.5, -1); g.lineTo(3.2, 2.8); g.quadraticCurveTo(0, 3.7, -2.8, 2.8); g.closePath(); g.fill();
   if (!dark) { g.strokeStyle = RC.pale2; g.lineWidth = 0.5; g.beginPath(); g.moveTo(0.3, -0.4); g.lineTo(0.4, 3.2); g.stroke(); }
   g.restore();
 }
@@ -170,83 +187,79 @@ function deer(g, L, ph, dark, far, nose) {
   g.lineCap = 'round'; g.lineJoin = 'round';
   var cBack = far ? RC.fback : RC.back, cBack2 = far ? RC.fback2 : RC.back2, cBelly = far ? RC.fbelly : RC.belly;
   /* far legs first */
-  deerLeg(g, -21, -4, HIND, ph - LEG_OFF.rh, false, dark, true, far);
-  deerLeg(g, 17, -1, FORE, ph - LEG_OFF.rf, false, dark, false, far);
+  deerLeg(g, -21, -1, HIND, ph - LEG_OFF.rh, false, dark, true, far);
+  deerLeg(g, 18, 1, FORE, ph - LEG_OFF.rf, false, dark, false, far);
   /* the head's place: the neck runs from the withers to it and pumps */
-  var hx = 50 + 2 * pump, hy = -38 + 16 * pump;      /* the head's base (where the neck meets the skull) */
-  /* ONE outline for the neck and body, so there is no seam: the top line
-   * runs from the rump over the hump and up the neck's crest to the head,
-   * the under line from the throat down the chest and along the belly */
-  var top = -20 - arch * 3, ty = -2 + arch * 2;
+  var hx = 43 + 2 * pump, hy = -25 + 12 * pump;
+  /* ONE outline for the neck and body (no seam). Proportions from the
+   * NPS caribou photograph on the sheet: the body about 0.4 as deep as it
+   * is long, the neck about 0.45 of the body, carried forward and up */
+  var top = -15 - arch * 2.5, ty = -1.5 + arch * 1.5;
   g.beginPath();
-  g.moveTo(-26, -17);                                            /* the rump top */
-  g.bezierCurveTo(-16, -17, -6, top + 2, 6, top);                /* the back */
-  g.bezierCurveTo(14, top - 2, 22, top - 1, 28, -13);            /* the hump, down to the crest root */
-  g.bezierCurveTo(34, -20, 42, -30, hx, hy - 4);                 /* the crest up to the head */
-  g.lineTo(hx + 3, hy + 4);                                      /* across the neck at the skull */
-  g.bezierCurveTo(44, -22, 36, -8, 31, 0);                       /* the throat down to the chest */
-  g.bezierCurveTo(32, 8, 29, 12, 22, 13);                        /* the deep chest */
-  g.bezierCurveTo(12, 15, 4, 9 + ty, -8, 6 + ty);                /* the belly to the waist */
-  g.bezierCurveTo(-16, 5 + ty, -24, 8, -31, 2);                  /* the flank to the rump */
-  g.bezierCurveTo(-35, -6, -33, -16, -26, -17);                  /* the rump */
+  g.moveTo(-26, -13);                                            /* the rump top */
+  g.bezierCurveTo(-16, -13.5, -6, top + 1.5, 6, top);            /* the back */
+  g.bezierCurveTo(14, top - 1.5, 22, top - 1, 27, -12);          /* the hump, into the crest */
+  g.bezierCurveTo(32, -16, 38, -22, hx, hy - 5);                 /* the crest up to the head */
+  g.lineTo(hx + 3, hy + 5);                                      /* across the neck at the skull */
+  g.bezierCurveTo(40, -12, 36, -2, 33, 3);                       /* the throat, thick, down to the chest */
+  g.bezierCurveTo(33, 7, 29, 9.5, 22, 10);                       /* the deep chest */
+  g.bezierCurveTo(12, 11.5, 4, 7 + ty, -8, 5 + ty);              /* the belly to the waist */
+  g.bezierCurveTo(-16, 4 + ty, -24, 6, -31, 1);                  /* the flank to the rump */
+  g.bezierCurveTo(-35, -5, -33, -12.5, -26, -13);                /* the rump */
   g.closePath();
   if (dark) { g.fillStyle = RC.dark; g.fill(); }
   else {
-    var gr = g.createLinearGradient(0, -26, 0, 14);
+    var gr = g.createLinearGradient(0, -20, 0, 11);
     gr.addColorStop(0, cBack); gr.addColorStop(0.6, cBack2); gr.addColorStop(1, cBelly);
     g.fillStyle = gr; g.fill();
-    /* the shoulder, wrapping the base of the neck */
     g.fillStyle = cBack2; g.globalAlpha = 0.5;
-    g.beginPath(); g.ellipse(23, -4, 9, 9, 0.3, 0, TAU); g.fill(); g.globalAlpha = 1;
-    /* the pale belly and the white rump patch */
+    g.beginPath(); g.ellipse(23, -3, 8, 7.5, 0.3, 0, TAU); g.fill(); g.globalAlpha = 1;
     g.fillStyle = far ? RC.fpale2 : RC.pale2;
-    g.beginPath(); g.moveTo(20, 12); g.bezierCurveTo(12, 14.5, 4, 8.5 + ty, -8, 5.5 + ty); g.bezierCurveTo(-14, 5 + ty, -20, 7, -26, 4);
-    g.bezierCurveTo(-18, 2, -10, 1 + ty, -4, 2 + ty); g.bezierCurveTo(6, 4, 14, 8, 20, 12); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(20, 9.5); g.bezierCurveTo(12, 11.5, 4, 7 + ty, -8, 4.8 + ty); g.bezierCurveTo(-14, 4 + ty, -20, 5.5, -26, 3.5);
+    g.bezierCurveTo(-18, 1.5, -10, 0.5 + ty, -4, 1.5 + ty); g.bezierCurveTo(6, 3, 14, 6.5, 20, 9.5); g.closePath(); g.fill();
     g.fillStyle = far ? RC.fpale : RC.pale;
-    g.beginPath(); g.moveTo(-31, 2); g.bezierCurveTo(-35, -6, -33, -14, -28, -16); g.bezierCurveTo(-30, -10, -29, -3, -26, 2); g.closePath(); g.fill();
-    /* the pale mane hanging under the throat, in soft locks */
+    g.beginPath(); g.moveTo(-31, 1); g.bezierCurveTo(-35, -5, -33, -11, -28, -12.5); g.bezierCurveTo(-30, -8, -29, -2, -26, 1.5); g.closePath(); g.fill();
     g.fillStyle = far ? RC.fpale : RC.mane;
-    g.beginPath(); g.moveTo(hx + 2, hy + 5);
-    for (var m = 0; m < 5; m++) { var mx = lerp(hx + 2, 31, (m + 1) / 5.2), my = lerp(hy + 5, 0, (m + 1) / 5.2); g.quadraticCurveTo(mx + 1.5, my + 4.2, mx - 1.5, my + 1.6); }
-    g.lineTo(31, 0); g.bezierCurveTo(36, -8, 44, -22, hx + 3, hy + 4); g.closePath(); g.fill();
-    /* the haunch */
+    g.beginPath(); g.moveTo(hx + 2, hy + 6);
+    for (var m = 0; m < 5; m++) { var mx = lerp(hx + 2, 33, (m + 1) / 5.2), my = lerp(hy + 6, 3, (m + 1) / 5.2); g.quadraticCurveTo(mx + 1.5, my + 3.6, mx - 1.5, my + 1.4); }
+    g.lineTo(33, 3); g.bezierCurveTo(36, -2, 40, -12, hx + 3, hy + 5); g.closePath(); g.fill();
     g.fillStyle = cBack2; g.globalAlpha = 0.6;
-    g.beginPath(); g.ellipse(-20, -3, 9, 7.5, -0.3, 0, TAU); g.fill(); g.globalAlpha = 1;
+    g.beginPath(); g.ellipse(-20, -2, 8.5, 6.5, -0.3, 0, TAU); g.fill(); g.globalAlpha = 1;
     g.strokeStyle = 'rgba(255,245,230,.16)'; g.lineWidth = 0.7;
-    for (var i = 0; i < 5; i++) { g.beginPath(); g.moveTo(10 + i * 3, -14 + i); g.lineTo(8 + i * 3, -7 + i); g.stroke(); }
+    for (var i = 0; i < 5; i++) { g.beginPath(); g.moveTo(10 + i * 3, -11 + i); g.lineTo(8 + i * 3, -5 + i); g.stroke(); }
   }
   /* the short tail, pale underneath */
   g.fillStyle = dark ? RC.dark : (far ? RC.fpale : RC.pale);
-  g.beginPath(); g.moveTo(-32, -14); g.quadraticCurveTo(-40, -18, -38, -10); g.quadraticCurveTo(-36, -8, -31, -6); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-32, -11); g.quadraticCurveTo(-39, -14.5, -37.5, -8); g.quadraticCurveTo(-36, -6, -31, -4.5); g.closePath(); g.fill();
   /* near legs */
-  deerLeg(g, -22, -3, HIND, ph - LEG_OFF.lh, true, dark, true, far);
-  deerLeg(g, 18, 0, FORE, ph - LEG_OFF.lf, true, dark, false, far);
+  deerLeg(g, -22, 0, HIND, ph - LEG_OFF.lh, true, dark, true, far);
+  deerLeg(g, 19, 2, FORE, ph - LEG_OFF.lf, true, dark, false, far);
   /* the head: a broad, blunt muzzle, the eye set high, short rounded ears
    * below the antler bases */
   g.save(); g.translate(hx, hy); g.rotate(-pump * 0.6);
   g.beginPath();
   g.moveTo(-2, -6);                                   /* the brow */
-  g.bezierCurveTo(4, -7, 10, -6, 14, -3.5);           /* the nose bridge, nearly straight */
-  g.bezierCurveTo(17, -2, 17, 3, 14.5, 4.5);          /* the blunt end of the muzzle */
-  g.bezierCurveTo(10, 6.5, 4, 6, 0, 5);               /* the jaw */
+  g.bezierCurveTo(4, -7, 11, -6, 15.5, -3.5);         /* the nose bridge, nearly straight */
+  g.bezierCurveTo(18.5, -2, 18.5, 3, 16, 4.5);        /* the blunt end of the muzzle */
+  g.bezierCurveTo(11, 6.5, 4, 6, 0, 5);               /* the jaw */
   g.bezierCurveTo(-3, 4, -4, 0, -2, -6);              /* the cheek back to the brow */
   g.closePath();
   if (dark) { g.fillStyle = RC.dark; g.fill(); }
   else {
     var hg = g.createLinearGradient(0, -7, 0, 6); hg.addColorStop(0, cBack); hg.addColorStop(1, cBack2);
     g.fillStyle = hg; g.fill();
-    g.fillStyle = far ? RC.fpale2 : RC.pale; g.beginPath(); g.moveTo(8, 1); g.bezierCurveTo(12, 0.5, 15.5, 1.5, 15.2, 3.4); g.bezierCurveTo(13, 5.8, 8, 5.4, 6, 4); g.closePath(); g.fill();
+    g.fillStyle = far ? RC.fpale2 : RC.pale; g.beginPath(); g.moveTo(9, 1); g.bezierCurveTo(13, 0.5, 17, 1.5, 16.7, 3.4); g.bezierCurveTo(14, 5.8, 9, 5.4, 7, 4); g.closePath(); g.fill();
     g.fillStyle = RC.eye; g.beginPath(); g.ellipse(3.6, -3.6, 1.5, 1.2, 0.15, 0, TAU); g.fill();
     g.fillStyle = '#FFF'; g.beginPath(); g.arc(3.1, -4, 0.45, 0, TAU); g.fill();
   }
   /* the nose pad — black, or Rob's red with its glow, which shows dark too */
   if (nose) {
     g.save(); g.globalAlpha = 0.55;
-    var ng = g.createRadialGradient(15.3, 0.8, 0.5, 15.3, 0.8, 7); ng.addColorStop(0, '#FF5A4A'); ng.addColorStop(1, 'rgba(255,90,74,0)');
-    g.fillStyle = ng; g.beginPath(); g.arc(15.3, 0.8, 7, 0, TAU); g.fill(); g.restore();
-    g.fillStyle = '#E8392B'; g.beginPath(); g.arc(15.3, 0.8, 2.4, 0, TAU); g.fill();
-    g.fillStyle = '#FFB3A8'; g.beginPath(); g.arc(14.6, 0, 0.7, 0, TAU); g.fill();
-  } else if (!dark) { g.fillStyle = RC.nose; g.beginPath(); g.ellipse(15.3, 0.8, 2.2, 1.8, 0.3, 0, TAU); g.fill(); }
+    var ng = g.createRadialGradient(16.8, 0.8, 0.5, 16.8, 0.8, 7); ng.addColorStop(0, '#FF5A4A'); ng.addColorStop(1, 'rgba(255,90,74,0)');
+    g.fillStyle = ng; g.beginPath(); g.arc(16.8, 0.8, 7, 0, TAU); g.fill(); g.restore();
+    g.fillStyle = '#E8392B'; g.beginPath(); g.arc(16.8, 0.8, 2.4, 0, TAU); g.fill();
+    g.fillStyle = '#FFB3A8'; g.beginPath(); g.arc(16.1, 0, 0.7, 0, TAU); g.fill();
+  } else if (!dark) { g.fillStyle = RC.nose; g.beginPath(); g.ellipse(16.8, 0.8, 2.2, 1.8, 0.3, 0, TAU); g.fill(); }
   /* the ears: short and rounded, below the antlers, one each side */
   g.fillStyle = dark ? RC.dark : cBack2;
   g.beginPath(); g.ellipse(-5, -5.5, 2.4, 4.2, 0.9, 0, TAU); g.fill();
@@ -501,7 +514,7 @@ function rig(g, x, y, L, u, t, moon, dir, n, flick, opt) {
   var P = [[hx, hy, 0]], s2 = dl / 60;
   for (var k = 0; k < parts.length; k += 2) {
     var p = parts[k];
-    P.push([p.x + 48 * s2, p.y - 36 * s2, 8 * s2 + k * s2]);
+    P.push([p.x + 44 * s2, p.y - 30 * s2, 8 * s2 + k * s2]);
   }
   g.strokeStyle = '#3E2A1C'; g.lineWidth = mx2(1, 1.4 * s);
   reinLine(g, P, flick, 10 * s);
@@ -550,7 +563,7 @@ const NEW = {
    * with the bent bill black at the tip, one long leg with its backward
    * ankle and the other folded, its lower part crossing the standing leg
    * at mid-leg (the "figure 4") — in a Santa hat and a scarf */
-  flamingo: '34 56|<defs><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA3C6"/><stop offset="1" stop-color="#E8609A"/></linearGradient><linearGradient id="wg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F783AC"/><stop offset="1" stop-color="#D64A86"/></linearGradient></defs><g transform="translate(0 2)"><path d="M8 30 C8 23 14 19 21 20 C27 21 31 26 30 31 C29 36 22 38 16 36 C11 35 8 33 8 30 Z" fill="url(#bd)"/><path d="M14 25 C18 21 26 22 29 27 C27 31 22 33 17 32 C13 31 12 28 14 25 Z" fill="url(#wg)"/><path d="M29 27 C28.4 30.2 25.6 32.4 21.5 33 C24.4 32.6 26.8 31.2 28.1 28.9 Z" fill="#2B2B2B" opacity=".85"/><path d="M13 26 C6 23 5.2 13 10.6 9.6" stroke="#F783AC" stroke-width="4.4" fill="none" stroke-linecap="round"/><path d="M7.4 20 C6.2 16 7.2 12.2 10 10" stroke="#FFB3D0" stroke-width="1.1" fill="none" opacity=".6"/><circle cx="11.8" cy="8.8" r="3.4" fill="#F783AC"/><path d="M10 7.2 C7.6 7.4 5.6 8.6 5.6 10.6 C5.6 11.4 6 12.2 6.2 13 L8.6 12.6 C8.4 11.6 8.4 10.8 9 10.2 C9.6 9.6 10.6 9.4 11.6 9.6 Z" fill="#F3E6EA"/><path d="M6.2 13 L6.6 16.4 C7.6 17.2 8.8 16.6 9 15.4 L8.6 12.6 Z" fill="#1A1A1A"/><circle cx="10.8" cy="7.8" r="1" fill="#1A1A1A"/><circle cx="10.5" cy="7.5" r=".35" fill="#FFF"/><path d="M14 35 L14 43.5 L13.4 53.5" stroke="#E64980" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="14" cy="43.6" r="1.4" fill="#D83A72"/><path d="M10 54 L13.4 53.5 L17 54" stroke="#E64980" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M20 35 L19 42.5 L10.4 43.2" stroke="#E64980" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="19" cy="42.6" r="1.4" fill="#D83A72"/><path d="M10.6 43 L7.2 45.6 L8.8 46 L10.2 45.2 L11.6 46.2 L12 44.6 Z" fill="#D83A72"/><path d="M8.4 21.4 C10.4 19 14.4 19.2 16.6 21.6 C14.6 24 10.4 24.2 8.4 21.4 Z" fill="#2F9E44"/><path d="M9.6 22.6 C7.4 25.2 7.2 28.4 9.2 31 C10.8 28.6 11 25.4 10.6 23 Z" fill="#2F9E44"/><path d="M9.2 21.2 C11 20 13.6 20 15.6 21.4" stroke="#E03131" stroke-width="1" fill="none" stroke-dasharray="1.8 1.4"/><path d="M8.6 26.2 C9.2 26 10 26 10.6 26.2 M8.4 28.4 C9 28.2 9.8 28.2 10.2 28.4" stroke="#E03131" stroke-width="1" fill="none"/><path d="M8.4 6.6 C8.8 2.2 12.6 0.4 15.6 1.8 C18.6 3.2 21.4 2.2 25.2 4.6 C22.2 4.2 19.8 5.4 16.8 6.4 L15.4 7 Z" fill="#E03131"/><path d="M15.6 1.8 C18.6 3.2 21.4 2.2 25.2 4.6 C21.8 5 18.4 6.6 16 6.4 Z" fill="#A61E1E" opacity=".55"/><path d="M8 7.2 C10.6 5.2 13.4 5.4 15.6 7.2" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="26" cy="5.2" r="2" fill="#FFFFFF"/></g>',
+  flamingo: '34 78|<defs><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA3C6"/><stop offset="1" stop-color="#E8609A"/></linearGradient><linearGradient id="wg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F783AC"/><stop offset="1" stop-color="#D64A86"/></linearGradient></defs><g transform="translate(0 3)"><path d="M11 28 C11 22 16 18 22 19 C28 20 32 24 31 29 C30 34 24 36 18 34.5 C14 33.5 11 31 11 28 Z" fill="url(#bd)"/><path d="M16 24 C20 20 28 21 31 26 C29 30 24 32 19 31 C15 30 14 27 16 24 Z" fill="url(#wg)"/><path d="M31 26 C30.4 29.2 27.6 31.4 23.5 32 C26.4 31.6 28.8 30.2 30.1 27.9 Z" fill="#2B2B2B" opacity=".85"/><path d="M14.5 24 C10 22 6.4 18 7.4 14.2 C7.8 12.4 8.8 11.6 9.8 11.4" stroke="#F783AC" stroke-width="3.8" fill="none" stroke-linecap="round"/><path d="M9.2 21 C8 18 8 15.6 9 13.6" stroke="#FFB3D0" stroke-width="1" fill="none" opacity=".6"/><circle cx="9.8" cy="11" r="3.1" fill="#F783AC"/><path d="M8 9.6 C5.4 10 3.8 11.6 3.8 13.8 C3.8 14.8 4.2 15.8 4.6 17 L7 16.4 C6.8 15.2 6.8 14 7.4 13 C8 12.2 9 11.8 10 11.8 Z" fill="#F3E6EA"/><path d="M4.6 17 L5.4 21 C6.4 21.8 7.6 21 7.8 19.8 L7 16.4 Z" fill="#1A1A1A"/><circle cx="9" cy="10.2" r=".95" fill="#1A1A1A"/><circle cx="8.7" cy="9.9" r=".32" fill="#FFF"/><path d="M17 34 L16.6 48 L16 73.5" stroke="#E64980" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="16.6" cy="48" r="1.3" fill="#D83A72"/><path d="M12.6 74 L16 73.5 L19.6 74" stroke="#E64980" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M22 33 L21.4 47 L12.4 47.6" stroke="#E64980" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="21.4" cy="47" r="1.3" fill="#D83A72"/><path d="M12.6 47.4 L9.2 50 L10.8 50.4 L12.2 49.6 L13.6 50.6 L14 49 Z" fill="#D83A72"/><path d="M10 22.4 C12 20 16 20.2 18 22.6 C16 25 12 25.2 10 22.4 Z" fill="#2F9E44"/><path d="M11 23.6 C9 26.2 8.8 29.4 10.8 32 C12.4 29.6 12.6 26.4 12.2 24 Z" fill="#2F9E44"/><path d="M10.8 22.2 C12.6 21 15.2 21 17.2 22.4" stroke="#E03131" stroke-width="1" fill="none" stroke-dasharray="1.8 1.4"/><path d="M10.2 27.2 C10.8 27 11.6 27 12.2 27.2 M10 29.4 C10.6 29.2 11.4 29.2 11.8 29.4" stroke="#E03131" stroke-width="1" fill="none"/><path d="M6.6 8.8 C7 4.6 10.8 2.8 13.8 4.2 C16.8 5.6 19.6 4.6 23.4 7 C20.4 6.6 18 7.8 15 8.8 L13.4 9.4 Z" fill="#E03131"/><path d="M13.8 4.2 C16.8 5.6 19.6 4.6 23.4 7 C20 7.4 16.6 9 14.2 8.8 Z" fill="#A61E1E" opacity=".55"/><path d="M6.2 9.4 C8.8 7.4 11.6 7.6 13.8 9.4" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="24.2" cy="7.6" r="1.9" fill="#FFFFFF"/></g>',
   /* the wreath (Rob's A): a ring of pine sprigs in two greens with their
    * needles, five berries clustered at the bottom, the red bow at the
    * bottom with its loops and BOTH tails drawn whole below the ring */
@@ -572,12 +585,12 @@ NEW.sabalpalm = (function () {
   var cx = 18, cy = 20, out = [];
   function frond(ang, len, half, col, droop) {
     /* a fan: the costa from the heart, leaflet tips round the far edge */
-    var a0 = ang * Math.PI / 180, pts = [], n = 9, k;
+    var a0 = ang * Math.PI / 180, pts = [], n = 11, k;
     for (k = 0; k <= n; k++) {
       var t = k / n, a = a0 + (t - 0.5) * half * 2 * Math.PI / 180;
-      var r = len * (0.78 + 0.22 * Math.abs(Math.cos((t - 0.5) * Math.PI)));
+      var r = len * (0.8 + 0.2 * Math.abs(Math.cos((t - 0.5) * Math.PI)));
       var x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r + droop * Math.pow(Math.abs(t - 0.5) * 2, 1.5) * len * 0.5;
-      var ix = cx + Math.cos(a + (k % 2 ? 0.02 : -0.02)) * r * 0.78, iy = cy + Math.sin(a + (k % 2 ? 0.02 : -0.02)) * r * 0.78 + droop * len * 0.2;
+      var ix = cx + Math.cos(a + (k % 2 ? 0.015 : -0.015)) * r * 0.62, iy = cy + Math.sin(a + (k % 2 ? 0.015 : -0.015)) * r * 0.62 + droop * len * 0.16;
       pts.push((k ? 'L' : '') + x.toFixed(1) + ' ' + y.toFixed(1));
       if (k < n) { pts.push('L' + ix.toFixed(1) + ' ' + iy.toFixed(1)); }
     }
@@ -590,14 +603,13 @@ NEW.sabalpalm = (function () {
     out.push('<path d="M15.3 ' + y + ' L18 ' + (y - 1.6) + ' L20.7 ' + y + ' L18 ' + (y + 0.9) + ' Z" fill="#4A2E18" opacity=".55"/>');
   }
   /* two old fronds drooping beside the trunk */
-  frond(118, 15, 14, '#6E8A3A', 0.5); frond(62, 15, 14, '#7A9440', 0.5);
-  /* the crown: behind, the sides, then the front */
-  [-140, -90, -40].forEach(function (a) { frond(a, 18, 24, '#1F7A36', 0); });
-  [-172, -8].forEach(function (a) { frond(a, 17, 20, '#2A8E42', 0.1); });
-  [-115, -65].forEach(function (a) { frond(a, 15.5, 22, '#39A651', 0); });
-  [150, 30].forEach(function (a) { frond(a, 14, 20, '#2F9E44', 0.3); });
-  [112, 68].forEach(function (a) { frond(a, 12.5, 24, '#4CB862', 0.25); });
-  frond(90, 11, 26, '#62C476', 0.2);
+  frond(122, 14, 13, '#6E8A3A', 0.6); frond(58, 14, 13, '#7A9440', 0.6);
+  /* the crown: SEPARATE fans with air between them — three behind, two
+   * to the sides, three facing the viewer over the heart */
+  [-128, -90, -52].forEach(function (a) { frond(a, 18, 17, '#1F7A36', 0); });
+  [-168, -12].forEach(function (a) { frond(a, 16.5, 15, '#2A8E42', 0.12); });
+  [146, 34].forEach(function (a) { frond(a, 13.5, 17, '#2F9E44', 0.32); });
+  frond(90, 11.5, 19, '#4CB862', 0.28);
   out.push('<circle cx="' + cx + '" cy="' + cy + '" r="2" fill="#2E7A3A"/>');
   return '36 42|<defs><linearGradient id="tr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9A6A3C"/><stop offset=".5" stop-color="#7A5230"/><stop offset="1" stop-color="#55381F"/></linearGradient></defs>' + out.join('');
 })();
@@ -675,6 +687,8 @@ const only = ONLY ? ONLY.slice(7) : '';
   /* ---------- sheet 1: the pieces ---------- */
   if (!only || only === 'pieces') {
     const page = await browser.newPage({ viewport: { width: 1240, height: 900 }, deviceScaleFactor: 3 });
+    page.on('pageerror', e => console.error('  page error:', e.message));
+    page.on('console', m => { if (m.type() === 'error') { console.error('  console:', m.text().slice(0, 200)); } });
     const approved = [['cane', 'candy cane'], ['gift', 'gift'], ['pine', 'pine (lights up)']].map(([k, n]) => opt([piece(NEW[k], 30)], n));
     const ornA = opt(['orn1', 'orn2', 'orn3'].map(k => piece(NEW[k], 28)), 'the three glass balls', null, true);
     const ws = svgData(NEW.wreath, PAL);
@@ -685,7 +699,7 @@ const only = ONLY ? ONLY.slice(7) : '';
     const palm = opt([piece(NEW.sabalpalm, 32)], 'the sabal palm — a real crown: fan fronds all round the heart, the front ones facing you, two old fronds drooping, boots on the trunk', piece(SVGS.sabalpalm, 30));
     const flam = opt([piece(NEW.flamingo, 42)], 'the flamingo — the real head and the thick beak bent sharply down, pale then black; the webbed foot on the folded leg; the hat\'s cone falling to one side to the pom; the flight feathers laid along the wing', piece(SVGS.flamingo, 36));
     await page.setContent(`<!doctype html><meta charset="utf-8"><style>${CSS}</style>
-      <h1>Seasons 4.14.0 — Christmas, Step 1, Third Round: The Pieces</h1>
+      <h1>Seasons 4.14.0 — Christmas, Step 1, Round 4: The Pieces</h1>
       <p class="sub">Rob's third look. Six pieces passed and are shown once more, unchanged, so the set is judged whole. The holly has his one fix; the sabal palm and the flamingo are redrawn to his notes. Each is shown large, then at guest size on cream and on the navy footer, with the 4.13.0 drawing at the right where one exists. Nothing here is in the plugin until he approves.</p>
       <section><h2>Approved — Unchanged</h2>
         <p class="note">The candy cane, the gift, the pine, the three ornaments and the wreath, exactly as he passed them.</p>
@@ -698,10 +712,33 @@ const only = ONLY ? ONLY.slice(7) : '';
         <div class="opts">${palm}</div></section>
       <section><h2>The Flamingo — Redrawn</h2>
         <p class="note">A small head with the real flamingo beak: thick, bent sharply down at the middle, pale at the base and black at the tip. The folded leg has its webbed foot. The Santa hat has the long cone falling to one side and ending in the pom. The black flight feathers lie along the folded wing as a dark edge instead of sticking out behind.</p>
-        <div class="opts">${flam}</div></section>`);
+        <div class="opts">${flam}</div></section>
+      <section><h2>Checked Against Real Animals — Overlays</h2>
+        <p class="note">The drawing laid at 55% opacity over a public-domain or CC0 photograph of the same pose, so the proportions were checked before Rob saw them. The source is named under each. The flamingo photograph stands on two legs; the folded leg is ours.</p>
+        <div class="strip" id="ov"></div></section>
+      <script>
+      var REF = ${JSON.stringify(REF)}, CAP = ${JSON.stringify(REF_CAP)};
+      function ov(key, crop, W, H, url, place, cap) {
+        var f = document.createElement('figure'), c = document.createElement('canvas'), dp = 2;
+        c.width = W * dp; c.height = H * dp; c.style.width = W + 'px'; c.style.height = H + 'px';
+        var g = c.getContext('2d'); g.scale(dp, dp);
+        var ph = new Image(); ph.onload = function () {
+          g.drawImage(ph, crop[0], crop[1], crop[2], crop[3], 0, 0, W, H);
+          var im = new Image(); im.onload = function () {
+            g.globalAlpha = 0.55; g.drawImage(im, place[0], place[1], place[2], place[2] * im.naturalHeight / im.naturalWidth); g.globalAlpha = 1;
+            window.__ovDone = (window.__ovDone || 0) + 1;
+          }; im.src = url;
+        }; ph.src = REF[key];
+        f.appendChild(c); var cp = document.createElement('figcaption'); cp.style.maxWidth = W + 'px'; cp.textContent = cap + ' — ' + CAP[key]; f.appendChild(cp);
+        document.getElementById('ov').appendChild(f);
+      }
+      ov('flamingo', [600, 150, 760, 1100], 207, 300, ${JSON.stringify(svgData(NEW.flamingo, PAL).url)}, [28, -40, 153], 'the flamingo over the photograph');
+      ov('palm', [120, 40, 1200, 980], 367, 300, ${JSON.stringify(svgData(NEW.sabalpalm, PAL).url)}, [22, -30, 306], 'the sabal palm crown over the photograph');
+      </script>`);
+    await page.waitForFunction(() => window.__ovDone >= 2, null, { timeout: 20000 });
     await page.waitForTimeout(600);
     await page.setViewportSize({ width: 1240, height: await page.evaluate(() => document.body.scrollHeight) });
-    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.14.0 step 1 round 3 pieces.png') });
+    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.14.0 step 1 round 4 pieces.png') });
     await page.close();
     console.log('pieces: ok');
   }
@@ -711,8 +748,8 @@ const only = ONLY ? ONLY.slice(7) : '';
     const page = await browser.newPage({ viewport: { width: 2000, height: 1000 }, deviceScaleFactor: 2 });
     page.on('pageerror', e => console.error('  page error:', e.message));
     await page.setContent(`<!doctype html><meta charset="utf-8"><style>${CSS}</style>
-      <h1>Seasons 4.14.0 — Christmas, Step 1, Third Round: Santa Across the Moon</h1>
-      <p class="sub">Rob's third look. Santa and the reindeer are redrawn to his notes (the hat, the blush, the hair, the sleeves; the legs, the head, the neck, the team staggered); the two A/B rows he asked for are at the end. Still key frames of the sleighmoon scene as it would play inside the header picture — in the daytime too — at 390px and at 1280px, then the gallop cycle, the rein flick, and the close-ups. The moon is the engine's own moon painter, ungraded. Only the reindeer go dark as they cross the face; Santa and the sleigh stay lit (Rob's pick). The frame behind them is a LABELED STAND-IN for the cottage photograph: the scene paints no sky and never will.</p>
+      <h1>Seasons 4.14.0 — Christmas, Step 1, Round 4: Santa Across the Moon</h1>
+      <p class="sub">Rob's third look. Santa and the reindeer are redrawn to his notes (the hat, the blush, the hair, the sleeves; the legs, the head, the neck, the team staggered); his two picks from the last round, the red nose and the cut at the moon\'s edge, are applied throughout and shown at the end; and every animal is checked against a real one in the overlay row. Still key frames of the sleighmoon scene as it would play inside the header picture — in the daytime too — at 390px and at 1280px, then the gallop cycle, the rein flick, and the close-ups. The moon is the engine's own moon painter, ungraded. Only the reindeer go dark as they cross the face; Santa and the sleigh stay lit (Rob's pick). The frame behind them is a LABELED STAND-IN for the cottage photograph: the scene paints no sky and never will.</p>
       <div id="out"></div>
       <script>
       ${MOON_SRC}
@@ -725,7 +762,7 @@ const only = ONLY ? ONLY.slice(7) : '';
         var s = document.createElement('div'); s.className = 'strip';
         nodes.forEach(function (n) {
           var f = document.createElement('figure'); f.appendChild(n.c);
-          var cap = document.createElement('figcaption'); cap.textContent = n.cap; f.appendChild(cap); s.appendChild(f);
+          var cap = document.createElement('figcaption'); cap.textContent = n.cap; cap.style.maxWidth = n.c.style.width; f.appendChild(cap); s.appendChild(f);
         });
         sec.appendChild(s); out.appendChild(sec);
       }
@@ -773,7 +810,7 @@ const only = ONLY ? ONLY.slice(7) : '';
         /* u = 'mid' puts the lead pair over the moon's centre */
         if (u === 'mid') { u = ((mx - dir * 2.0 * L) - x0) / (x1 - x0); }
         var x = x0 + (x1 - x0) * u, y = my + MR * 0.26 - sin(u * MT.PI) * MR * 0.12;
-        rig(g, x, y, L, u, u * 6, { x: mx, y: my, r: MR }, dir, 4, -1);
+        rig(g, x, y, L, u, u * 6, { x: mx, y: my, r: MR }, dir, 4, -1, { edge: 'clip', nose: true });
         return { c: p.c, cap: cap };
       }
       panel('At 390px — the Picture Is 420px Tall', 'Start, middle (the team across the face), end. The moon sits off center on the side the sleigh flies into.',
@@ -783,7 +820,7 @@ const only = ONLY ? ONLY.slice(7) : '';
       /* the gallop: six frames of the cycle, lit; the ground line shows the
        * footfalls and the moment all four are off it */
       var GAL = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6];
-      var galCap = ['left hind lands', 'both hinds down, fores swinging forward', 'left fore lands as the hinds push off', 'right fore lands, left fore under the shoulder', 'right fore alone on the ground, hinds folding forward', 'all four in the air — gathered'];
+      var galCap = ['left hind lands', 'both hinds down, fores swinging forward', 'hinds pushing off, all four about to leave — stretched', 'left fore lands, right fore reaching', 'right fore down, hinds folding forward', 'all four in the air — gathered'];
       function galFrame(ph, dark, i) {
         var o = cv(210, 200), g = o.g;
         g.fillStyle = dark ? '#2A3A4B' : '#E8CFA0'; g.fillRect(0, 0, 210, 200);
@@ -792,7 +829,7 @@ const only = ONLY ? ONLY.slice(7) : '';
         g.save(); g.translate(100, 112); deer(g, 76, ph, dark); g.restore();
         return { c: o.c, cap: dark ? galCap[i] : (i + 1) + ' — ' + galCap[i] };
       }
-      panel('The Gallop — Six Frames of One Stride', 'A transverse gallop from Muybridge\\'s plates: the feet land left hind, right hind, left fore, right fore, then all four leave the ground, gathered under the body. The spine arches when gathered and hollows when stretched; the head and neck pump against the stride. In the scene each animal is on its own point of the stride, offset down the team.',
+      panel('The Gallop — Six Frames of One Stride', 'A transverse gallop from Muybridge\\'s plates: the feet land left hind, right hind, then — after both hinds have left the ground, a brief stretched moment — left fore, right fore, then all four leave the ground, gathered under the body (each leg is down a quarter of the stride). The spine arches when gathered and hollows when stretched; the head and neck pump against the stride. In the scene each animal is on its own point of the stride, offset down the team.',
         GAL.map(function (ph, i) { return galFrame(ph, false, i); }));
       panel('The Same Six, Dark on the Moon', 'How a guest sees a reindeer as it crosses the face. Santa and the sleigh never go dark.',
         GAL.map(function (ph, i) { return galFrame(ph, true, i); }));
@@ -800,18 +837,39 @@ const only = ONLY ? ONLY.slice(7) : '';
       function flickFrame(fl, cap) {
         var o = cv(640, 270), g = o.g;
         g.fillStyle = '#E8CFA0'; g.fillRect(0, 0, 640, 270);
-        rig(g, 112, 180, 150, 0.31, 1.2, null, 1, 4, fl);
+        rig(g, 112, 180, 150, 0.31, 1.2, null, 1, 4, fl, { nose: true });
         return { c: o.c, cap: cap };
       }
       panel('Santa Flicks the Reins', 'Rob\\'s pick: his hands hold the reins; every so often he flicks them and the snap ripples down the line to the team. Three key frames: at rest, the flick (hands up, the snap leaving them), and the ripple arriving at the lead reindeer, whose head comes up. His body bobs and sways with the sleigh throughout.',
         [flickFrame(-1, 'at rest — the reins sag to each animal'), flickFrame(0.12, 'the flick — hands up, the snap leaving them'), flickFrame(0.9, 'the ripple arriving at the lead reindeer')]);
+      /* the overlays: the reindeer over Muybridge's gallop frames and over
+       * the NPS caribou; drawn once the photographs have decoded */
+      var REF = ${JSON.stringify(REF)}, CAP = ${JSON.stringify(REF_CAP)};
+      function ovDeer(key, crop, W, H, tx, ty, L, ph, cap, done) {
+        var o = cv(W, H), g = o.g, im = new Image();
+        im.onload = function () {
+          g.drawImage(im, crop[0], crop[1], crop[2], crop[3], 0, 0, W, H);
+          g.globalAlpha = 0.55; g.save(); g.translate(tx, ty); deer(g, L, ph, false, false, false); g.restore(); g.globalAlpha = 1;
+          done();
+        };
+        im.src = REF[key];
+        return { c: o.c, cap: cap + ' — ' + CAP[key] };
+      }
+      var ovLeft = 4;
+      function ovd() { if (!--ovLeft) { window.__ovDone = true; } }
+      panel('Checked Against Real Animals — Overlays', 'The reindeer drawing laid at 55% opacity over Muybridge\\'s gallop frames (a horse: the check is the gait — which feet are down, how the legs fold — not the body) and over a running caribou (the body: depth, leg length, neck, head). Sources named under each. The overlay row shows the check was done; it does not replace Rob\\'s look.', [
+        ovDeer('horse', [400, 30, 360, 220], 300, 183, 138, 124, 86, 0.92, 'gathered — Muybridge frame 2 over our stride at 0.92', ovd),
+        ovDeer('horse', [400, 280, 360, 220], 300, 183, 138, 124, 86, 0.40, 'hinds off, fores reaching — Muybridge frame 6 over our 0.40', ovd),
+        ovDeer('horse', [30, 520, 360, 220], 300, 183, 138, 124, 86, 0.02, 'hinds landing — Muybridge frame 9 over our 0.02', ovd),
+        ovDeer('caribou', [200, 380, 1100, 660], 420, 252, 212, 124, 185, 0.30, 'the body over a running caribou (its push-off, our 0.30)', ovd),
+      ]);
       /* the whole team at guest size (the 390 picture's sizes), three
        * points in time, so the stagger can be judged where it matters */
       var k390 = 1, L390 = MT.round(78 * k390);
       var tm = [0.2, 0.5, 0.8].map(function (u, i) {
         var o = cv(390, 120), g = o.g;
         g.fillStyle = '#BFD5E6'; g.fillRect(0, 0, 390, 120);
-        rig(g, 70, 70, L390, u, u * 6, null, 1, 4, -1);
+        rig(g, 70, 70, L390, u, u * 6, null, 1, 4, -1, { nose: true });
         return { c: o.c, cap: ['a moment', 'a moment later', 'later still'][i] + ' — guest size at 390' };
       });
       panel('The Team at Guest Size — Three Points in Time', 'Rob: "a sloppy mess of indistinguishable brown animal parts". Each animal is now on a clearly different point of the stride (a quarter apart), the pairs are spaced so no two bodies overlap, and the far animal of each pair is behind, above, 10% smaller and a shade darker. Four separate animals, at the size a guest sees them.', tm);
@@ -823,8 +881,8 @@ const only = ONLY ? ONLY.slice(7) : '';
         g.save(); g.translate(112, 150); deer(g, 90, 0.85, dark, false, nose); g.restore();
         return { c: o.c, cap: cap };
       }
-      panel('Row 1 — A Red Nose for the Lead Reindeer?', 'Rob asked whether the first reindeer will have a red nose like Rudolph. A: the lead animal has a red nose with a soft glow, and the glow still shows when the team goes dark on the moon. B: no red nose.',
-        [noseFrame(true, false, 'A — the red nose, lit'), noseFrame(true, true, 'A — dark on the moon, the glow still showing'), noseFrame(false, false, 'B — no red nose'), noseFrame(false, true, 'B — dark on the moon')]);
+      panel('Rob\\'s Pick, Applied — The Red Nose (A)', 'The lead reindeer has a red nose with a soft glow; the glow is drawn after the moon\\'s cut, so it shows when the animal is dark on the disc.',
+        [noseFrame(true, false, 'the red nose, lit'), noseFrame(true, true, 'dark on the moon, the glow still showing')]);
       /* ROW: the moon edge, at 390 where the overhang happens */
       function edgeFrame(edge, cap) {
         var p = plate(390, 420, false), g = p.g, MR = 54, m = moonC(MR), mx = 257, my = 112;
@@ -836,8 +894,8 @@ const only = ONLY ? ONLY.slice(7) : '';
         rig(g, x, y, L, u, u * 6, { x: mx, y: my, r: MR }, 1, 4, -1, { edge: edge });
         return { c: p.c, cap: cap };
       }
-      panel('Row 2 — The Moon\\'s Edge, at 390', 'A reindeer is nearly the moon\\'s size on a phone, so part of it hangs over the rim while it crosses. A: the silhouette is cut exactly at the disc — dark inside, lit outside, through the animal. B: the whole animal goes dark while its center is on the disc, as the cranes do.',
-        [edgeFrame('clip', 'A — cut exactly at the disc'), edgeFrame('whole', 'B — the whole animal, as the cranes')]);
+      panel('Rob\\'s Pick, Applied — The Moon\\'s Edge (A), at 390', 'The silhouette is cut exactly at the disc: dark inside, lit outside, through the animal. Shown with the lead pair crossing the rim, where it matters on a phone; the whole-animal version (B) is beside it only for the record.',
+        [edgeFrame('clip', 'A, as picked — cut exactly at the disc'), edgeFrame('whole', 'B, declined — the whole animal')]);
       /* close-ups */
       var sl = [0, 1].map(function (i) {
         var o = cv(360, 260), g = o.g;
@@ -857,10 +915,10 @@ const only = ONLY ? ONLY.slice(7) : '';
       panel('The Reindeer, Close Up', 'To Rob\\'s notes: the legs taper smoothly with the muscle of the forearm and gaskin and slender cannons to the hooves — no joint blocks; the head has a broad, blunt muzzle, the eye set high and short rounded ears below the antler bases; the neck and body are ONE outline, the shoulder wrapping the base of the neck, so there is no seam.', hd);
       window.__done = true;
       </script>`);
-    await page.waitForFunction(() => window.__done === true, null, { timeout: 20000 });
+    await page.waitForFunction(() => window.__done === true && window.__ovDone === true, null, { timeout: 30000 });
     await page.waitForTimeout(400);
     await page.setViewportSize({ width: 2000, height: await page.evaluate(() => document.body.scrollHeight) });
-    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.14.0 step 1 round 3 santa scene.png') });
+    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.14.0 step 1 round 4 santa scene.png') });
     await page.close();
     console.log('scene: ok');
   }
