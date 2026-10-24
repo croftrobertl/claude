@@ -2164,11 +2164,17 @@ yours to improvise.
     `if(defined('DONOTCACHEPAGE') && DONOTCACHEPAGE) return false;` — inside
     the output-buffer callback that decides whether to WRITE the cache file,
     after the page is built, so defining it anywhere in the request works
-    provided it is before output ends. The host's **nginx proxy cache stores no
-    response that sets a cookie**, and MotoPress sets `WP_SESSION_COOKIE` and
-    its `mphb_*` cookies on every checkout response: two consecutive plain GETs
-    both came back `x-proxy-cache: MISS`, and the only HIT ever seen there was
+    provided it is before output ends. **THE NGINX HALF IS AN OBSERVATION, NOT A
+    RULE** (the Director's correction, 2026-10-24): he wrote that the host's
+    nginx proxy cache "stores no response that sets a cookie" as though it were
+    nginx's behaviour, and what he had was two consecutive plain GETs both
+    coming back `x-proxy-cache: MISS`, with the only HIT ever seen there being
     nginx serving SpeedyCache's static `.gz`, which no written file removes.
+    MotoPress does set `WP_SESSION_COOKIE` and its `mphb_*` cookies on every
+    checkout response and that is the likely reason, but it was not
+    established. **The belt rests entirely on the SpeedyCache code read**, so
+    nothing changes — and the distinction is worth the words, because a rule
+    invites you to reason from it and an observation of two requests does not.
     **`Cache-Control: no-store` IS NOT SHIPPED** — neither layer was shown to
     honour it, and an unverified header presented as the safeguard is the kind
     of line that looks like a fallback and is not. I had proposed it as one of
@@ -2231,6 +2237,152 @@ yours to improvise.
     comment, as the record of what live serves — only the dead query went. A
     strict no-op: the mutation runner is what found it, and
     `res-dead-end-selector-guessed` was retired with it.
+- **0.36.0 — THE DESKTOP, AND A WAY FORWARD OUT OF BOTH DEAD ENDS** (Rob: the
+  checkout "looks terrible" on a desktop, and "the whole point of revamping the
+  Custom Checkout this time around was for it to be prettier and better UI";
+  the Director's measurements at 1440 and 390, 2026-10-24). **EVERY CHECK LIST
+  AND EVERY VERIFICATION FROM 0.35.0 TO 0.35.3 WAS AT 375px ONLY** — that is
+  the root cause of all of it, and from here every check list covers **390, 768
+  AND 1440**. Suites: `tests/cards/` (new), plus `tests/restore/`,
+  `tests/layout-fields/` and `tests/hero/`.
+  - **NOT THIS REPO'S, BUT LOAD-BEARING:** the checkout page (1399) carried an
+    Elementor page background of `#0A50B2`, which is what drew the two blue
+    132px bands down the sides at 1440. The Director removed it on staging and
+    live (backups `~/mu-backups/elementor-pagesettings-1399-*-pre-bg-*.json`);
+    the page now shows the theme's grey `rgb(206,206,206)`. **Do not style
+    around the blue; it is gone.**
+  - **THE TWO CARDS ARE ONE CENTRED COLUMN AT EVERY WIDTH, 560px AT MOST.**
+    They were a `240px 1fr` grid built for the Continue card's photo, so on the
+    two cards that have no photo the heading and the button were squeezed into
+    the 240px column — and this plugin's own 50px line box then wrapped "Pick
+    Your Dates Again" into a 240x100 pill — while the lead floated alone in the
+    690px column. The grid is gone; the phone's shape is now the desktop's.
+    The button is `white-space: nowrap` with real padding and a 1.2 line
+    height, so its width comes from its words.
+  - **THE CARD SITS ON THE HEADER PHOTO, IN THOSE TWO STATES ONLY.** At 1440 it
+    began at y=466 under a 420px band; it now lands at 260 at all three widths,
+    which is Rob's "at or above 300" with 40px of slack. **THE PULL IS
+    MEASURED, NOT A CONSTANT** (`fitCardToHero`): the distance to close
+    includes Bravada's own padding above the content, so a tuned negative
+    margin would be right at the two widths it was tuned at and wrong at the
+    third. Three things had to go with it, and each was found the hard way:
+    - **THE THEME'S CLIPPING HAD TO BE REMOVED or the pull is invisible.**
+      `main.main` and `div.one-column` are `overflow: hidden`, so the card
+      moves and is then cut off — and **every geometry assertion passes either
+      way**, because `getBoundingClientRect` reports the box, not the paint.
+      The test is a hit-test (`elementFromPoint` 10px inside the card's top);
+      mutation `css-card-clipped`. Removed for this page and these two states
+      only, at every width.
+    - **THE SOFTENING OVER THE PHOTO MUST CARRY NO `z-index`.** `article.hentry`
+      has a matrix3d transform, which makes a stacking context, so the card's
+      own `z-index: 3` is scoped inside it and cannot outrank a root-level one:
+      a `z-index: 2` on the scrim painted the wash OVER the card — heading,
+      lead and the top of the button all grey. **FOUND BY LOOKING AT THE
+      SCREENSHOT**, which is how 0.35.0's missing borders were found too.
+      Mutation `css-scrim-over-card`.
+    - **THE HERO OVERLAY IS REMOVED, NOT HIDDEN** (`dropHeroOverlay`). It is an
+      `<h1>`, the card supersedes it (the card names the cottage and the dates),
+      and the card is pulled up over where it sat. Safe because it is this
+      plugin's own element — Hero prints it and nothing reads it.
+  - **THE CARD'S HEADING IS AN `h1` WHEN THE PAGE HAS NO OTHER, AN `h2` WHEN IT
+    HAS**, and it is EXISTENCE that decides, not visibility. With the switch ON
+    there is no other h1 and the card's is the page's, visible. With the switch
+    OFF — live today — the theme's 0x0 "Submit Booking" title is still in the
+    HTML (Hero only empties it behind the switch), so the card's heading steps
+    down and that 0x0 title stays the page's only h1. Keying on visibility
+    would make two h1s in the HTML, which 0.35.1's item 5 forbids; deleting the
+    theme's heading was rejected because a 0x0 heading is still read aloud and
+    "invisible" is not "unwanted". Mutation `js-card-h1-by-visibility`. **The
+    styling is keyed on the CLASS** (`.dcc_checkout-continue__title`) — and so
+    are the tests, after four of them broke by reading `h2`; that is v0.22.0's
+    lesson in a third shape.
+  - **"THOSE DATES AREN'T AVAILABLE" OFFERS THE NEXT THREE OPEN STAYS**, from
+    the Availability Calendar's public `admin-ajax.php?action=mphbac_query`
+    (POST, no nonce — that plugin's own documented decision, because a nonce in
+    cached HTML expires; no guest data, writes nothing). **THE RESPONSE'S
+    CONTRACT WAS READ, NOT GUESSED**: the Calendar's own
+    `Booking_Rules::encode` on its branch `claude/review-shared-chat-bExtl`
+    (its 0.47.5) — `in`/`out` are one character a day aligned with `[from,to]`
+    (`'1'` allowed; `w` MotoPress allows no arrival/departure, `a` too soon,
+    `f` too far), `min`/`max` are ONE number when every day agrees and one per
+    day otherwise, `min` is ABSENT when MotoPress has no minimum-stay rule, and
+    `max` 0 means no limit. `rules` itself is optional — without it
+    availability alone decides, which is the Calendar's own documented
+    degradation.
+    - **A CHIP IS MOTOPRESS'S OWN BOOK NOW SUBMISSION AND BOOKS NOTHING**: a
+      POST of the five fields a cottage page sends (`mphb_room_type_id`,
+      `mphb_check_in_date`, `mphb_check_out_date`,
+      `mphb_rooms_details[<type>]`, `mphb_is_direct_booking`), which RENDERS
+      THE FORM for those dates. MotoPress re-checks availability and prices it;
+      the GUEST submits. That is the mechanism the Director asked me to name,
+      and it is the one `continueCard()` has used since 0.35.0 — now extracted
+      to `stayForm()` so there is one copy of the field list.
+    - Nights = what the guest asked for, raised to the minimum. The one-night
+      case is real: the site's two-night minimum is why that request got no
+      form at all, so offering more one-night stays would walk the guest into
+      the same wall. `Restore::min_nights()` (filterable, 2) is only the floor
+      used when `rules` is absent; `rules.min` is preferred because it is
+      MotoPress's own answer.
+    - Chips do not overlap — the scan jumps to each stay's check-out — so three
+      chips are three choices rather than the same week shifted by a day.
+    - **IT FAILS QUIETLY**: fails, times out at 3s, or finds nothing → the card
+      is exactly 0.35.2's, with no spinner and no error line. All four cases
+      are constructed in `tests/cards/`.
+    - **THE PERMISSIVE FIXTURE TESTED NONE OF THE RULES.** The first version
+      had `in`/`out` all `'1'` and a scalar `min`, so every rule branch agreed
+      with it by construction. There are now four constructed cases —
+      forbidden arrival/departure days, a per-day `min` ARRAY, a `max` shorter
+      than the request (nothing is offered), and no `rules` at all.
+  - **"PICK YOUR DATES AGAIN" SHOWS ALL EIGHT COTTAGES**, lazily, two rows of
+    four at 1440 and a sideways-scrolling row at 390 — the LIST scrolls, never
+    the page. No new uploads: each cottage's own featured image at the smallest
+    registered size, through Hero's WebP preference.
+  - **EACH HALF IS SENT ONLY TO THE STATE THAT CAN USE IT** (Rob's "zero new
+    requests on the normal form path"): `avail` only when `offer === 'taken'`,
+    `cottageList` only when `'lost'`. **AND THE STRIP IS CACHED FOR HALF A
+    DAY**, because a cookie-rebuilt checkout IS the lost state (0.35.1, item 1)
+    and renders a working form — without the transient that query would run on
+    a normal render. Constructed in `tests/restore/`: the taken config is
+    asserted to have made no query at all.
+  - **THE DESKTOP IS TWO PANES AT >=1000px**: the Your Stay card on the LEFT,
+    sticky, with the cottage photo in it; the form on the RIGHT in one
+    left-aligned 560px column with the fields filling it. **The panes are
+    assigned by `grid-column`, so the card paints left while staying second in
+    the DOM** — deliberately: it holds the acceptance tick, and the tab order
+    stays "fill the form, then accept". Page height at 1440: **3,202px →
+    1,603px**.
+    - **THE CARD'S PHOTO IS THE HERO'S OWN URL**, not a smaller size. The
+      header already paints that file as a CSS background and the preload has
+      asked for it, so the `<img>` is a cache hit; a smaller registered size
+      would be fewer bytes in the abstract and a whole second download in
+      practice. Its real pixels go with it so the card reserves the box.
+    - **THE 29-OF-30 CENTRED LABELS WERE THIS PLUGIN'S OWN.** `checkout.css`
+      centres `.mphb_sc_checkout-form label` and four siblings with
+      `!important` — the field standard's choice for the phone — and underlines
+      the section titles at 25px the same way. Inheritance cannot touch a
+      direct `!important` rule, so the desktop override names the same elements
+      at (0,3,1) and is `!important` itself. **The phone keeps both**; Rob
+      reviewed the phone and likes it.
+    - **THE SMART NEXT BAR HAS THREE HOMES NOW**: body (pinned) below 900, the
+      card at 900-999, and the SHEET at 1000+ — because the card has moved to
+      the left pane and the bar belongs under the form being filled, not under
+      the price. It is moved, never rebuilt.
+    - **TABLET, 768-999: one column, 640 at most, centred.** The bar's own band
+      stays 900, so at 768 it is still the phone's pinned bar. **The 360px
+      field cap is still in force there** — measured, and worth a decision if
+      Rob wants it wider: a 360px field in a 640px column is 56% of it.
+  - **THE SHEET'S ROUNDED TOP AND GRAB LINE ARE A PHONE'S.** At 1440 they
+    stretched the full 1425px and read as a panel somebody left there; there is
+    nothing to swipe on a desktop. The lip rule is wrapped in
+    `@media (max-width: 899px)`, and `tests/hero/browser.js` asserts it is
+    drawn below 900 and `content: none` at and above — at 360, 390, 768 and
+    1440, having run at 360/390/1280 before.
+  - **A FIXTURE HAD THE 360px FIELD CAP SWITCHED OFF WITHOUT ANYONE NOTICING.**
+    `tests/layout-fields/`'s field rows were bare `<p>`s, carrying neither
+    `.dcc_checkout-field-row` nor MotoPress's own `p.mphb-text-control`, so the
+    cap was never in force and "the fields fill the column" passed while
+    measuring nothing. They carry the real wrapper now and BOTH directions are
+    asserted: capped at 360 at 390 and 768, filling 560 in the pane.
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).

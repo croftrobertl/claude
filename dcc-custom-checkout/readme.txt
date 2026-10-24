@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.35.3
+Stable tag: 0.36.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,19 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.36.0 =
+The desktop checkout, rebuilt — and a way forward out of both dead ends.
+
+* The two cards a guest sees when their booking cannot be drawn — "Those Dates Aren't Available" and "Pick Your Dates Again" — are now one centred column at every screen size, with the heading, the message and one clearly labelled button, sitting on the cottage photo so the whole card is on the first screen. Before this they spread into two columns on a desktop and the button wrapped onto two lines.
+* "Those Dates Aren't Available" now offers the next three open stays for that cottage as buttons. Tapping one opens the checkout for those dates, which the guest then submits themselves. If the availability lookup fails, is slow or finds nothing, the card is exactly as it was before — no spinner, no error.
+* "Pick Your Dates Again" now shows all eight cottages underneath, each a photo linking to its page.
+* "We don't have your dates anymore. Pick them again and we'll bring you straight back to checkout."
+* On a desktop the checkout is two panes: Your Stay on the left, with the cottage photo in it, staying put as the page scrolls; the form on the right in one column with the fields filling it and the labels reading left. The page is now a little over half the height it was.
+* On a tablet the form is one column, centred, and no wider than is comfortable to read.
+* The rounded sheet top and its grab line are a phone's, where there is something to swipe; they are no longer drawn on a desktop.
+
+Nothing is written on install, activation or upgrade, and no setting or stored value changed.
 
 = 0.35.3 =
 One safeguard and one tidy-up, after the Website Director found that the checkout page had been getting page-cached.

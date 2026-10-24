@@ -96,10 +96,41 @@ final class Layout_Script
      */
     public static function summary(): array
     {
+        $type  = Hero::room_type_id();
+        /* 0.36.0 — THE COTTAGE PHOTO, INSIDE THE CARD (Rob's desktop pick).
+           THE SAME URL THE HERO ALREADY PAINTS, deliberately: the header
+           carries it as a CSS background and the preload has already asked for
+           it, so an <img> pointing at the same file is a cache hit and costs
+           the guest NOTHING on the wire. A smaller registered size would be
+           fewer bytes in the abstract and a whole second download in practice.
+           Its real pixels go with it so the card reserves the box rather than
+           reflowing when the picture lands. */
+        $photo = Hero::photo($type);
+
         return [
-            'title' => __('Your Stay', 'dcc-checkout'),
-            'dates' => Hero::stay_dates_text(),
+            'title'  => __('Your Stay', 'dcc-checkout'),
+            'dates'  => Hero::stay_dates_text(),
+            'name'   => self::cottage_name($type),
+            'photo'  => (string) $photo['url'],
+            /* Nested, so `wp_localize_script`'s top-level `(string)` cast does
+               not reach them (0.29.0) — these are read as numbers. */
+            'photoW' => (int) $photo['width'],
+            'photoH' => (int) $photo['height'],
         ];
+    }
+
+    /** "Cottage 34: Coconut Cottage" → "Coconut Cottage"; otherwise as titled. */
+    private static function cottage_name(int $type): string
+    {
+        if ($type <= 0) {
+            return '';
+        }
+        $title = trim(wp_strip_all_tags((string) get_the_title($type)));
+        if ($title === '') {
+            return '';
+        }
+        $parts = explode(':', $title, 2);
+        return count($parts) === 2 && trim($parts[1]) !== '' ? trim($parts[1]) : $title;
     }
 
     /**

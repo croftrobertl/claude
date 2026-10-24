@@ -23,6 +23,20 @@
     var CFG = window.DCC_RESTORE || {};
     var STAY = CFG.stay || {};
     var I18N = CFG.i18n || {};
+    /* 0.36.0. Each is sent only for the state that can use it, so on the
+       normal form path both are empty and neither path below runs. */
+    var AVAIL = CFG.avail || {};
+    var COTTAGES = CFG.cottageList || [];
+
+    /* 0.36.0 — WHERE THE CARD'S TOP EDGE SHOULD LAND when it sits on the
+       header photo. Rob's requirement is "at or above y=300 at both 390 and
+       1440"; this aims 40px higher so a font or image that measures a little
+       differently on a real phone cannot push it past the limit. */
+    var CARD_TOP_TARGET = 260;
+
+    /* ...and the least photo left showing above it, so the card overlaps the
+       picture rather than replacing it. */
+    var CARD_PHOTO_MIN = 80;
 
     /* The store. One version in the key: a shape change must not be read as
        the old shape, and a stale entry is simply never found. */
@@ -289,6 +303,29 @@
         var card = document.createElement('section');
         card.className = 'dcc_checkout-continue';
         card.setAttribute('data-dcc-injected', '1');
+        var state = CFG.offer === 'taken' && complete(STAY)
+            ? 'taken'
+            : (complete(held) ? 'continue' : 'lost');
+        /* THE STATE, ON THE CARD (0.36.0). The two cards Rob asked to sit on
+           the header photo are 'taken' and 'lost'; 'continue' keeps its own
+           shape, because it is the one card that carries a picture of its own
+           and it was not among the two he measured. A WORD in an attribute,
+           so the CSS can name a state without the class list growing one flag
+           per state. */
+        card.setAttribute('data-dcc-state', state);
+
+        /* ON THE PHOTO, FOR THESE TWO STATES ONLY (0.36.0, Rob: more than half
+           of the first screen was an empty dark photo). BEFORE the card is
+           built, because both of these change what the page's headings are and
+           cardHeading() reads that.
+
+           The body class is what the stylesheet keys the overlap and the
+           softening on, so a normal checkout — which never reaches this
+           function — cannot be moved by either. */
+        if (state === 'taken' || state === 'lost') {
+            addClass(document.body, 'dcc_checkout-cardover');
+            dropHeroOverlay();
+        }
 
         /* THREE STATES, AND THE FIRST ONE IS NEW IN v0.35.1 (item 2).
            PHP decides which of them the REQUEST has earned (Restore::offer()),
@@ -298,9 +335,9 @@
            means the dates are not lost, they are taken.
 
            Never read as MotoPress's words. See Restore::offer(). */
-        if (CFG.offer === 'taken' && complete(STAY)) {
+        if (state === 'taken') {
             card.appendChild(takenCard(STAY));
-        } else if (complete(held)) {
+        } else if (state === 'continue') {
             card.appendChild(continueCard(held));
         } else {
             card.appendChild(restartCard());
@@ -319,6 +356,11 @@
         if (!host) { return; }
         host.insertBefore(card, host.firstChild);
         hideDeadEnd(host);
+
+        if (state === 'taken' || state === 'lost') {
+            fitCardToHero(card);
+            if (state === 'taken') { offerOpenDates(card, STAY); }
+        }
     }
 
     /** A stay is usable only with all three of the fields we would re-post. */
@@ -351,6 +393,55 @@
         return h;
     }
 
+    /**
+     * THE CARD'S OWN HEADING — an `h1` when the page has no other, an `h2`
+     * when it has (0.36.0).
+     *
+     * Rob asked for the heading to be "the page's one visible h1", and on
+     * these pages it is the only heading a guest can see. Whether it can be an
+     * `h1` depends on what else is in the HTML, and the two switch states
+     * differ:
+     *
+     *   - SWITCH ON: Hero empties the theme's "Submit Booking" title (0.35.1,
+     *     item 5) and dropHeroOverlay() above has taken the hero's own name
+     *     away, so there is no other h1 and this one IS the page's h1, visible.
+     *   - SWITCH OFF — live today, and these cards are not behind the switch:
+     *     the theme's title is still in the HTML, rendered 0x0. So this heading
+     *     steps down to an `h2` and that 0x0 title stays the page's only h1,
+     *     exactly as it is today.
+     *
+     * IT IS THE EXISTENCE OF ANOTHER h1 THAT DECIDES, NOT ITS VISIBILITY, and
+     * that is deliberate. Keying on visibility would make this an h1 beside
+     * the theme's invisible one — two in the HTML — and 0.35.1's item 5 went to
+     * real trouble over "ONE h1 IN THE HTML, NOT ONE VISIBLE". The alternative
+     * was to delete the theme's heading from the DOM here, which was rejected:
+     * a 0x0 heading is still read aloud, "invisible" is not the same as
+     * "unwanted", and a visually-hidden heading is a deliberate pattern on
+     * other sites. Removing one would be this plugin reaching past its own
+     * markup to win a structural argument.
+     *
+     * The styling is keyed on the CLASS, so the two tags are indistinguishable
+     * on screen. Both branches are asserted at all three widths.
+     */
+    function cardHeading(text) {
+        var level = document.querySelector('h1') ? 'h2' : 'h1';
+        var h = heading(level, text);
+        h.className = 'dcc_checkout-continue__title';
+        return h;
+    }
+
+    /** Idempotent, per 0.18.0: a no-op classList.add still records a mutation. */
+    function addClass(el, name) {
+        if (!el || !el.classList) { return; }
+        if (!el.classList.contains(name)) { el.classList.add(name); }
+    }
+
+    /** Idempotent too — and a style write is as observable as a class one. */
+    function setStyle(el, prop, value) {
+        if (!el || !el.style) { return; }
+        if (el.style[prop] !== value) { el.style[prop] = value; }
+    }
+
     function para(text) {
         var p = document.createElement('p');
         p.appendChild(document.createTextNode(text || ''));
@@ -372,7 +463,7 @@
             frag.appendChild(img);
         }
 
-        frag.appendChild(heading('h2', I18N.continueTitle));
+        frag.appendChild(cardHeading(I18N.continueTitle));
         if (stay.name) { frag.appendChild(para(stay.name)); }
         if (stay.dates) {
             var d = para(stay.dates);
@@ -387,23 +478,7 @@
            the dates EXACTLY as they were stored. Nothing is recomputed from
            today's date, and no availability is asserted — MotoPress re-checks
            it, as it does for the cottage page. */
-        var form = document.createElement('form');
-        form.className = 'dcc_checkout-continue__form';
-        form.method = 'post';
-        form.action = CFG.checkout || '';
-        hidden(form, 'mphb_room_type_id', stay.roomTypeId);
-        hidden(form, 'mphb_check_in_date', stay.checkIn);
-        hidden(form, 'mphb_check_out_date', stay.checkOut);
-        var rooms = stay.roomsDetails && typeof stay.roomsDetails === 'object'
-            ? stay.roomsDetails : null;
-        if (rooms) {
-            Object.keys(rooms).forEach(function (id) {
-                hidden(form, 'mphb_rooms_details[' + id + ']', rooms[id]);
-            });
-        } else {
-            hidden(form, 'mphb_rooms_details[' + stay.roomTypeId + ']', '1');
-        }
-        hidden(form, 'mphb_is_direct_booking', '1');
+        var form = stayForm(stay, 'dcc_checkout-continue__form');
 
         var go = document.createElement('button');
         go.type = 'submit';
@@ -425,7 +500,7 @@
     function takenCard(stay) {
         var frag = document.createDocumentFragment();
 
-        frag.appendChild(heading('h2', I18N.takenTitle));
+        frag.appendChild(cardHeading(I18N.takenTitle));
 
         /* The cottage's name goes IN the sentence when it is known, and the
            nameless wording is a separate string rather than this one with a
@@ -461,7 +536,7 @@
 
     function restartCard() {
         var frag = document.createDocumentFragment();
-        frag.appendChild(heading('h2', I18N.restartTitle));
+        frag.appendChild(cardHeading(I18N.restartTitle));
         var lead = para(I18N.restartLead);
         lead.className = 'dcc_checkout-continue__lead';
         frag.appendChild(lead);
@@ -470,7 +545,463 @@
         a.href = CFG.cottages || '/';
         a.appendChild(document.createTextNode(I18N.restartButton || ''));
         frag.appendChild(a);
+        /* 0.36.0 — a way forward under the button, not just the button. */
+        var strip = cottageStrip();
+        if (strip) { frag.appendChild(strip); }
         return frag;
+    }
+
+    /**
+     * THE MECHANISM, IN ONE PLACE (extracted in 0.36.0).
+     *
+     * MotoPress's own Book Now submission: a POST of the five fields a cottage
+     * page sends — `mphb_room_type_id`, `mphb_check_in_date`,
+     * `mphb_check_out_date`, `mphb_rooms_details[<type>]`,
+     * `mphb_is_direct_booking` — at the checkout page. It RENDERS THE FORM for
+     * those dates and creates nothing: MotoPress re-checks availability and
+     * prices the stay itself, and the guest submits. The Continue card has
+     * used it since 0.35.0 and the open-date chips use it now, so there is one
+     * copy of the field list rather than two that can drift.
+     *
+     * No nonce field, by MotoPress's own design for this submission — the same
+     * note as the hidden form on every cottage page.
+     */
+    function stayForm(stay, className) {
+        var form = document.createElement('form');
+        form.className = className;
+        form.method = 'post';
+        form.action = CFG.checkout || '';
+        hidden(form, 'mphb_room_type_id', stay.roomTypeId);
+        hidden(form, 'mphb_check_in_date', stay.checkIn);
+        hidden(form, 'mphb_check_out_date', stay.checkOut);
+        var rooms = stay.roomsDetails && typeof stay.roomsDetails === 'object'
+            ? stay.roomsDetails : null;
+        if (rooms) {
+            Object.keys(rooms).forEach(function (id) {
+                hidden(form, 'mphb_rooms_details[' + id + ']', rooms[id]);
+            });
+        } else {
+            hidden(form, 'mphb_rooms_details[' + stay.roomTypeId + ']', '1');
+        }
+        hidden(form, 'mphb_is_direct_booking', '1');
+        return form;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * 0.36.0 — THE CARD SITS ON THE HEADER PHOTO
+     * --------------------------------------------------------------------- */
+
+    /**
+     * The hero's cottage name and dates pill go, in these two states.
+     *
+     * REMOVED, NOT HIDDEN, and that is the point: it is an `<h1>`, and this
+     * card's own heading has to be the page's heading. Hiding it would leave
+     * two h1s in the HTML — one of them invisible — which is exactly what
+     * 0.35.1's item 5 went to some trouble to stop.
+     *
+     * Safe to remove because it is THIS PLUGIN'S OWN element: Hero prints it
+     * (class-hero.php) and nothing reads it — layout.js never looks it up.
+     * The card carries the cottage name and the dates itself, so nothing is
+     * lost; and the card is pulled up over where it used to sit, so leaving it
+     * would be a collision as well as a duplicate.
+     *
+     * With the switch OFF — live today — there is no overlay at all and this
+     * does nothing. The theme's own 0x0 "Submit Booking" h1 is left exactly
+     * where it was: Hero only takes that away behind the switch (0.35.1), and
+     * cardHeading() answers it by stepping down to an h2.
+     */
+    function dropHeroOverlay() {
+        var over = document.querySelector('.dcc_hero-overlay');
+        if (over && over.parentNode) { over.parentNode.removeChild(over); }
+    }
+
+    /**
+     * Pull the card up over the bottom of the header photo.
+     *
+     * WHY MEASURED RATHER THAN A CONSTANT: the distance to close is the
+     * theme's own padding above the content plus however much of the photo the
+     * card should cover, and the first of those is Bravada's, not this
+     * plugin's. The Director measured the card's top at y=466 at 1440 and
+     * y=456 at 390 against a 420px header band — close, but not equal, and a
+     * tuned negative margin would be right at the two widths it was tuned at
+     * and wrong at the third. Measuring makes "top edge at or above 300"
+     * true by construction instead of by arithmetic.
+     *
+     * ONE STYLE WRITE, AT INIT, IDEMPOTENT. Not on scroll — this is static
+     * geometry, and writing layout on scroll is what v0.13.0 and v0.18.0
+     * established this checkout must never do. Not on a bare `resize` either:
+     * on iOS that fires when the URL bar collapses mid-scroll. A width change
+     * is a real relayout, so that one is answered.
+     */
+    function fitCardToHero(card) {
+        var hero = firstOf([
+            /* The theme's header band, innermost first — the box the photo is
+               painted in (Director's capture, 2026-10-22). */
+            '#header-image-main-inside',
+            '#header-image-main',
+            'header#masthead',
+        ]);
+        if (!hero || !hero.getBoundingClientRect || !card.getBoundingClientRect) { return; }
+
+        var band = hero.getBoundingClientRect();
+        /* No band, or one too short to sit on, and the card stays where the
+           document put it. Nothing breaks: that is 0.35.x's position. */
+        if (band.height <= CARD_PHOTO_MIN + 40) { return; }
+
+        setStyle(card, 'marginTop', '');
+        var top = card.getBoundingClientRect().top + window.pageYOffset;
+        var wanted = top - CARD_TOP_TARGET;
+        /* Leave the photo showing above the card, and never pull the card past
+           the top of the document. */
+        var ceiling = Math.min(band.height - CARD_PHOTO_MIN, top - 8);
+        var pull = Math.max(0, Math.min(wanted, ceiling));
+        if (pull > 0) { setStyle(card, 'marginTop', '-' + Math.round(pull) + 'px'); }
+
+        /* ONE LISTENER, EVER. The first version registered a resize handler
+           on every call AND called itself from that handler, so each resize
+           left another listener behind and the next one ran them all — a
+           handler count that doubles while the guest drags a window. Found by
+           re-reading this, not by a test; the flag is what the test now pins
+           (one listener, whatever the sequence of resizes). */
+        if (!watchingWidth) {
+            watchingWidth = true;
+            var width = window.innerWidth;
+            window.addEventListener('resize', function () {
+                /* HEIGHT-ONLY RESIZES ARE IGNORED. See matchFileFieldWidth()
+                   in checkout.js: the iOS URL bar collapsing during an
+                   ordinary scroll fires `resize`, and answering it writes
+                   layout under the guest's finger. */
+                if (window.innerWidth === width) { return; }
+                width = window.innerWidth;
+                fitCardToHero(card);
+            });
+        }
+    }
+
+    /** Whether fitCardToHero has already taken its one resize listener. */
+    var watchingWidth = false;
+
+    /* --------------------------------------------------------------------- *
+     * 0.36.0 — OPEN DATES FOR THIS COTTAGE
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Ask the Availability Calendar what else is open, and offer the first
+     * few stays as chips.
+     *
+     * READ ONLY, AND IT FAILS QUIETLY (Rob). The endpoint writes nothing and
+     * carries no guest data; if the request fails, is slow past
+     * `avail.timeoutMs`, or finds nothing, the card is left exactly as it was
+     * — no spinner, no error line, nothing added. So the worst outcome of this
+     * whole feature is 0.35.2's card.
+     *
+     * NOTHING IS BOOKED OR SUBMITTED HERE. A chip is a form POST of
+     * MotoPress's five Book Now fields; see stayForm().
+     */
+    function offerOpenDates(card, stay) {
+        if (!AVAIL.url || !AVAIL.action || !window.fetch || !window.AbortController) { return; }
+        watchTouches();
+        var want = nightsBetween(stay.checkIn, stay.checkOut);
+        if (want < 1) { return; }
+
+        var to = addDays(stay.checkIn, Math.max(1, AVAIL.windowDays || 94));
+        if (!to) { return; }
+
+        var ctrl = new window.AbortController();
+        var timer = window.setTimeout(function () { ctrl.abort(); }, AVAIL.timeoutMs || 3000);
+        var body = 'action=' + encodeURIComponent(AVAIL.action)
+            + '&room_type_ids%5B%5D=' + encodeURIComponent(stay.roomTypeId)
+            + '&from=' + encodeURIComponent(stay.checkIn)
+            + '&to=' + encodeURIComponent(to);
+
+        window.fetch(AVAIL.url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body,
+            signal: ctrl.signal
+        }).then(function (res) {
+            return res && res.ok ? res.json() : null;
+        }).then(function (json) {
+            window.clearTimeout(timer);
+            if (!json || !json.success || !json.data) { return; }
+            var stays = openStays(json.data, stay, want);
+            if (!stays.length) { return; }
+            /* NOT WHILE A FINGER IS DOWN (0.18.0). This lands up to three
+               seconds after load, which is exactly when a guest may be
+               reaching for "Pick New Dates" — and a DOM change around a tap is
+               how iOS swallows the click. */
+            afterTouch(function () { addChips(card, stay, stays); });
+        })['catch'](function () {
+            window.clearTimeout(timer);
+            /* Aborted, offline, blocked, not JSON — all the same answer. */
+        });
+    }
+
+    /**
+     * The stays worth offering, out of the Calendar's answer.
+     *
+     * THE RESPONSE'S CONTRACT, read from the Availability Calendar's own
+     * source (`Booking_Rules::encode`, its 0.47.4) rather than guessed:
+     *
+     *   availability[<type>][Y-m-d]  'available' | 'booked' | 'past'
+     *   rules[<type>].in             one character a DAY, aligned with
+     *                                [from, to]: '1' a stay may start, 'w'
+     *                                MotoPress allows no arrival, 'a' too
+     *                                soon, 'f' too far ahead
+     *   rules[<type>].out            '1' a stay may end that day, 'w' not
+     *   rules[<type>].min            fewest nights for a stay starting that
+     *                                day — ONE number when every day agrees,
+     *                                else one per day. ABSENT when MotoPress
+     *                                has no minimum-stay rule at all.
+     *   rules[<type>].max            most nights, 0 meaning no limit, same
+     *                                one-or-many shape.
+     *
+     * `rules` IS OPTIONAL — the Calendar leaves it out when MotoPress could
+     * not be read. Then availability alone decides, which is that plugin's own
+     * documented degradation, and the stay a chip offers is still re-checked
+     * by MotoPress when the guest opens it.
+     *
+     * NIGHTS: what the guest asked for, raised to the minimum — MotoPress's
+     * own per-day minimum when it is there, else the site floor PHP sent. The
+     * one-night case is real: this site has a two-night minimum, so a
+     * one-night request is refused with no form, and offering more one-night
+     * stays would walk the guest into the same wall.
+     */
+    function openStays(data, stay, want) {
+        var type = String(stay.roomTypeId);
+        var avail = data.availability && data.availability[type];
+        if (!avail || !data.from || !data.to) { return []; }
+        var rules = data.rules && data.rules[type] ? data.rules[type] : null;
+        var floor = Math.max(1, AVAIL.minNights || 1);
+        var limit = Math.max(1, AVAIL.chips || 3);
+
+        var dates = [];
+        for (var d = data.from; d && d <= data.to; d = addDays(d, 1)) {
+            dates.push(d);
+            if (dates.length > 400) { break; }   /* a malformed `to`, bounded */
+        }
+
+        var start = dates.indexOf(stay.checkIn);
+        if (start < 0) { start = 0; }
+
+        var out = [];
+        for (var i = start; i < dates.length && out.length < limit; i++) {
+            var nights = Math.max(want, floor, ruleAt(rules && rules.min, i, 0));
+            var most = ruleAt(rules && rules.max, i, 0);
+            if (most > 0 && nights > most) { continue; }
+            if (i + nights >= dates.length) { break; }
+            if (rules && charAt(rules['in'], i) !== '1') { continue; }
+            if (rules && charAt(rules.out, i + nights) !== '1') { continue; }
+            var free = true;
+            for (var n = 0; n < nights; n++) {
+                if (avail[dates[i + n]] !== 'available') { free = false; break; }
+            }
+            if (!free) { continue; }
+            /* The stay that was just refused is not an offer. A LONGER one
+               from the same day is. */
+            if (dates[i] === stay.checkIn && nights === want) { continue; }
+            out.push({ checkIn: dates[i], checkOut: dates[i + nights], nights: nights });
+            /* Non-overlapping, so three chips are three real choices rather
+               than the same week shifted by a day. */
+            i += nights - 1;
+        }
+        return out;
+    }
+
+    /** One number, one per day, or absent. See openStays(). */
+    function ruleAt(value, i, dflt) {
+        if (value == null) { return dflt; }
+        if (typeof value === 'number') { return value; }
+        if (Object.prototype.toString.call(value) === '[object Array]') {
+            return i < value.length ? (parseInt(value[i], 10) || 0) : dflt;
+        }
+        return dflt;
+    }
+
+    /** A day's character out of an `in`/`out` string, or '' past its end. */
+    function charAt(str, i) {
+        return typeof str === 'string' && i >= 0 && i < str.length ? str.charAt(i) : '';
+    }
+
+    /** The chips, each its own POST of MotoPress's five fields. */
+    function addChips(card, stay, stays) {
+        if (card.querySelector('.dcc_checkout-alts')) { return; }   /* once */
+        var box = document.createElement('div');
+        box.className = 'dcc_checkout-alts';
+        box.setAttribute('data-dcc-injected', '1');
+        box.appendChild(heading('h3', I18N.altTitle));
+
+        var list = document.createElement('ul');
+        list.className = 'dcc_checkout-alts__list';
+        stays.forEach(function (open) {
+            var li = document.createElement('li');
+            var form = stayForm({
+                roomTypeId: stay.roomTypeId,
+                checkIn: open.checkIn,
+                checkOut: open.checkOut,
+                roomsDetails: stay.roomsDetails
+            }, 'dcc_checkout-alts__form');
+            var btn = document.createElement('button');
+            btn.type = 'submit';
+            btn.className = 'dcc_checkout-chip';
+            btn.appendChild(document.createTextNode(chipText(open)));
+            form.appendChild(btn);
+            li.appendChild(form);
+            list.appendChild(li);
+        });
+        box.appendChild(list);
+        card.appendChild(box);
+    }
+
+    /** "Sat, Dec 5 → Tue, Dec 8 · Open". */
+    function chipText(open) {
+        return fillAll(I18N.chipLabel, [
+            dayText(open.checkIn),
+            dayText(open.checkOut),
+            I18N.chipOpen || ''
+        ]);
+    }
+
+    /**
+     * "Sat, Dec 5" in the visitor's own locale.
+     *
+     * BUILT FROM THE PARTS, never `new Date('2026-12-05')` — that string is
+     * parsed as UTC, so a visitor west of Greenwich would be shown the day
+     * before. From parts it is local midnight, and only the three fields asked
+     * for are rendered, so no timezone is applied to anything.
+     */
+    function dayText(ymd) {
+        var p = String(ymd || '').split('-');
+        if (p.length !== 3) { return String(ymd || ''); }
+        var dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        if (isNaN(dt.getTime())) { return String(ymd); }
+        try {
+            return dt.toLocaleDateString(undefined, {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+        } catch (e) {
+            return String(ymd);
+        }
+    }
+
+    /* --------------------------------------------------------------------- *
+     * 0.36.0 — AND THE COTTAGES, UNDER "PICK YOUR DATES AGAIN"
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Every cottage, as a picture and a name linking to its own page.
+     *
+     * PHP resolved these (Restore::cottage_list()) and sends them only in this
+     * state, so nothing is asked for and nothing is queried on a working
+     * checkout. The pictures are lazy and carry their real pixel size, so the
+     * row reserves its boxes instead of reflowing under a button the guest is
+     * about to press — and at 390, where the row scrolls sideways, the ones
+     * off screen are never fetched at all.
+     */
+    function cottageStrip() {
+        if (!COTTAGES.length) { return null; }
+        var box = document.createElement('div');
+        box.className = 'dcc_checkout-strip';
+        box.appendChild(heading('h3', I18N.stripTitle));
+
+        var list = document.createElement('ul');
+        list.className = 'dcc_checkout-strip__list';
+        COTTAGES.forEach(function (c) {
+            if (!c || !c.url) { return; }
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.className = 'dcc_checkout-strip__link';
+            a.href = c.url;
+            if (c.photo) {
+                var img = document.createElement('img');
+                img.className = 'dcc_checkout-strip__photo';
+                img.src = c.photo;
+                /* The link's own text names the cottage, so the picture is
+                   decorative and an alt repeating the name would be read
+                   twice. */
+                img.alt = '';
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                if (c.w) { img.width = c.w; }
+                if (c.h) { img.height = c.h; }
+                a.appendChild(img);
+            }
+            var name = document.createElement('span');
+            name.className = 'dcc_checkout-strip__name';
+            name.appendChild(document.createTextNode(c.name || ''));
+            a.appendChild(name);
+            li.appendChild(a);
+            list.appendChild(li);
+        });
+        box.appendChild(list);
+        return box;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Dates, and the touch gate
+     * --------------------------------------------------------------------- */
+
+    /** 'Y-m-d' plus n days, in no timezone at all — UTC arithmetic on a date. */
+    function addDays(ymd, n) {
+        var p = String(ymd || '').split('-');
+        if (p.length !== 3) { return null; }
+        var t = Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        if (isNaN(t)) { return null; }
+        var d = new Date(t + n * 86400000);
+        return d.getUTCFullYear() + '-'
+            + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-'
+            + ('0' + d.getUTCDate()).slice(-2);
+    }
+
+    function nightsBetween(from, to) {
+        var a = String(from || '').split('-');
+        var b = String(to || '').split('-');
+        if (a.length !== 3 || b.length !== 3) { return 0; }
+        var ta = Date.UTC(Number(a[0]), Number(a[1]) - 1, Number(a[2]));
+        var tb = Date.UTC(Number(b[0]), Number(b[1]) - 1, Number(b[2]));
+        if (isNaN(ta) || isNaN(tb)) { return 0; }
+        return Math.round((tb - ta) / 86400000);
+    }
+
+    /** Each `%1$s`, `%2$s`… filled in. Text only: this never builds markup. */
+    function fillAll(template, values) {
+        var text = template == null ? '' : String(template);
+        for (var i = 0; i < values.length; i++) {
+            text = text.split('%' + (i + 1) + '$s').join(String(values[i] == null ? '' : values[i]));
+        }
+        return text;
+    }
+
+    /**
+     * Run it now, or once the finger has lifted and the page has settled.
+     *
+     * The same shape as checkout.js's touch gate, and for the same measured
+     * reason (0.18.0): on iOS a DOM change around a tap is read as
+     * hover-revealed content and no click is synthesised. The listeners are
+     * passive and write nothing; the only timer is installed on touch-up,
+     * never during the touch.
+     */
+    var fingerDown = false;
+    var waiting = null;
+    function afterTouch(fn) {
+        if (!fingerDown) { fn(); return; }
+        waiting = fn;
+    }
+    function watchTouches() {
+        if (!document.addEventListener) { return; }
+        document.addEventListener('touchstart', function () {
+            fingerDown = true;
+        }, { passive: true, capture: true });
+        var up = function () {
+            fingerDown = false;
+            if (!waiting) { return; }
+            var fn = waiting;
+            waiting = null;
+            window.setTimeout(fn, 450);
+        };
+        document.addEventListener('touchend', up, { passive: true, capture: true });
+        document.addEventListener('touchcancel', up, { passive: true, capture: true });
     }
 
     function hidden(form, name, value) {

@@ -91,6 +91,9 @@ SUITES = {
     'layout-fields': ('php',  'tests/layout-fields/run.php'),
     'layout-fields-browser': ('node', 'tests/layout-fields/browser.js'),
     'layout-fields-min': ('node', 'tests/layout-fields/browser.js', {'DCC_MIN': '1'}),
+    # 0.36.0 -- the two no-form cards, measured at 390, 768 and 1440.
+    'cards':        ('node', 'tests/cards/browser.js'),
+    'cards-min':    ('node', 'tests/cards/browser.js', {'DCC_MIN': '1'}),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

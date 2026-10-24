@@ -57,6 +57,37 @@ final class Restore
     /** The thumbnail on the Continue card: small, and never the original. */
     private const CARD_SIZE = 'medium';
 
+    /** The cottage strip's pictures: the smallest registered size (0.36.0). */
+    private const STRIP_SIZE = 'thumbnail';
+
+    /** The strip is the same for every guest, so it is read once per half-day. */
+    private const STRIP_TRANSIENT = 'dcc_checkout_cottage_strip';
+
+    /** How many open stays "Those Dates Aren't Available" offers (Rob: three). */
+    private const CHIPS = 3;
+
+    /**
+     * THE AVAILABILITY CALENDAR'S PUBLIC READ-ONLY ENDPOINT (0.36.0).
+     *
+     * `admin-ajax.php?action=mphbac_query`, POST, NO NONCE — and the nonce's
+     * absence is that plugin's own documented decision, not an oversight:
+     * its handler says a nonce in cached HTML expires and leaves every cached
+     * pageload on "Loading availability...". It takes `room_type_ids[]`,
+     * `from` and `to`, holds no guest data, and writes nothing. Measured by
+     * the Director on live: 0.78s and 2.8 KB for one cottage over 95 days.
+     *
+     * NOTHING HERE MAY WRITE OR BOOK (Rob's instruction). This is a read, and
+     * the chips it produces lead to MotoPress's own checkout form, which the
+     * guest submits themselves.
+     */
+    private const AVAIL_ACTION = 'mphbac_query';
+
+    /** The endpoint caps the range at 95 days; ask for what it will answer. */
+    private const AVAIL_WINDOW_DAYS = 94;
+
+    /** Over this and the card simply shows what it showed before (Rob: 3s). */
+    private const AVAIL_TIMEOUT_MS = 3000;
+
     public function register(): void
     {
         // After Assets, whose checkout.js this depends on, so the restore
@@ -91,14 +122,24 @@ final class Restore
      */
     public static function config(): array
     {
+        // Once: offer() reads the stay, and so does the payload.
+        $offer = self::offer();
+
         return [
             'stay'     => self::stay(),
             // A WORD, never a boolean (0.29.0): `wp_localize_script` casts
             // top-level scalars with `(string)`, and a three-state sent as
             // `true/false/null` arrives as "1"/""/null.
-            'offer'    => self::offer(),
+            'offer'    => $offer,
             'checkout' => self::checkout_url(),
             'cottages' => self::cottages_url(),
+            /* 0.36.0 — THE WAY FORWARD OUT OF EACH CARD, and each half is
+               sent ONLY for the state that can use it, so the normal form
+               path carries neither and makes no extra request or query.
+                 - 'taken': what the browser needs to ASK for open stays.
+                 - 'lost':  the eight cottages, already resolved here. */
+            'avail'    => $offer === 'taken' ? self::avail_config() : [],
+            'cottageList' => $offer === 'lost' ? self::cottage_list() : [],
             'i18n'     => self::strings(),
         ];
     }
@@ -325,6 +366,155 @@ final class Restore
         return (string) apply_filters('dcc_checkout_cottages_url', home_url('/cottages/'));
     }
 
+    /* --------------------------------------------------------------------- *
+     * 0.36.0 — A WAY FORWARD OUT OF "THOSE DATES AREN'T AVAILABLE"
+     * --------------------------------------------------------------------- */
+
+    /**
+     * What the browser needs to ask the Availability Calendar for open stays.
+     *
+     * SENT ONLY IN THE 'taken' STATE, so the normal form path makes no extra
+     * request at all (Rob's performance rule). The request itself is made by
+     * the browser rather than here, for two reasons: PHP cannot know whether
+     * MotoPress drew a form, which is the half that decides the state; and a
+     * server-side call would put the Calendar's 0.78s on every checkout
+     * render of a posted stay, including the ones that work.
+     *
+     * THE CHIPS LEAD TO MOTOPRESS'S OWN CHECKOUT FORM, NOT TO A BOOKING.
+     * Each is a POST of the same five fields the cottage page's Book Now
+     * sends — `mphb_room_type_id`, `mphb_check_in_date`,
+     * `mphb_check_out_date`, `mphb_rooms_details[<type>]=1`,
+     * `mphb_is_direct_booking=1` — which is the mechanism this plugin's
+     * Continue card has used since 0.35.0 and the Availability Calendar's own
+     * Book Now uses. It renders the form for those dates and nothing else:
+     * MotoPress re-checks availability and prices it, and the GUEST submits.
+     * Nothing here, and nothing the browser does with it, writes anything.
+     *
+     * @return array<string,mixed>
+     */
+    private static function avail_config(): array
+    {
+        $stay = self::stay();
+        if ($stay === []) {
+            return [];
+        }
+        return [
+            // Strings and ints, nested in an array: `wp_localize_script` casts
+            // only TOP-LEVEL scalars (0.29.0), so these arrive as written.
+            'url'        => admin_url('admin-ajax.php'),
+            'action'     => self::AVAIL_ACTION,
+            'windowDays' => self::AVAIL_WINDOW_DAYS,
+            'timeoutMs'  => self::AVAIL_TIMEOUT_MS,
+            'chips'      => self::CHIPS,
+            'minNights'  => self::min_nights(),
+        ];
+    }
+
+    /**
+     * The fewest nights any stay here can be.
+     *
+     * 2 is `mphb_min_stay_length` on this site, as the Director read it. It is
+     * a FLOOR, used only when the Calendar's response carries no `rules` —
+     * when it does, `rules[<type>].min` is MotoPress's own answer for each
+     * day, through its documented availability facade, and the browser
+     * prefers it. Deliberately not re-derived here: MotoPress stores
+     * minimum-stay as a list of season rules, and reading those correctly
+     * would mean copying its season logic into this plugin to answer a
+     * question the Calendar already asks MotoPress itself.
+     */
+    private static function min_nights(): int
+    {
+        return max(1, (int) apply_filters('dcc_checkout_min_nights', 2));
+    }
+
+    /* --------------------------------------------------------------------- *
+     * 0.36.0 — AND OUT OF "PICK YOUR DATES AGAIN": the eight cottages
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Every published cottage, with its page and a small picture.
+     *
+     * SENT ONLY IN THE 'lost' STATE. A posted stay — which is every normal
+     * checkout render — gets an empty array and no query.
+     *
+     * CACHED FOR HALF A DAY, because a cookie-rebuilt checkout IS the 'lost'
+     * state (0.35.1, item 1): that path renders a working form, so without the
+     * transient this query would run on a normal checkout render. A stale
+     * cottage name or thumbnail for a few hours costs nothing; a query on
+     * every such render is the thing to avoid.
+     *
+     * NO NEW UPLOADS (Rob): the picture is each cottage's own featured image
+     * at the smallest registered size, through the same WebP preference the
+     * hero uses, so the strip serves what this site already serves.
+     *
+     * @return array<int,array<string,string|int>>
+     */
+    public static function cottage_list(): array
+    {
+        $cached = get_transient(self::STRIP_TRANSIENT);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $list = [];
+        $rooms = get_posts([
+            'post_type'        => 'mphb_room_type',
+            'post_status'      => 'publish',
+            'numberposts'      => -1,
+            'orderby'          => 'title',
+            'order'            => 'ASC',
+            'suppress_filters' => false,
+        ]);
+        foreach ($rooms as $room) {
+            $id  = (int) $room->ID;
+            $url = (string) get_permalink($id);
+            if ($url === '') {
+                continue;
+            }
+            $row = [
+                'name' => self::cottage_name($id),
+                'url'  => $url,
+            ];
+            $photo = self::strip_photo($id);
+            if ($photo !== []) {
+                $row += $photo;
+            }
+            $list[] = $row;
+        }
+
+        set_transient(self::STRIP_TRANSIENT, $list, 12 * HOUR_IN_SECONDS);
+        return $list;
+    }
+
+    /**
+     * One cottage's thumbnail, with its real pixel size.
+     *
+     * The dimensions are sent so the browser can reserve the box: a lazy image
+     * with no width and height is a reflow waiting for the network, and this
+     * strip sits under a button a guest is about to press.
+     *
+     * @return array<string,string|int> empty when there is no featured image
+     */
+    private static function strip_photo(int $type): array
+    {
+        if ($type <= 0 || !function_exists('get_post_thumbnail_id')) {
+            return [];
+        }
+        $attachment = (int) get_post_thumbnail_id($type);
+        if ($attachment <= 0) {
+            return [];
+        }
+        $src = wp_get_attachment_image_src($attachment, self::STRIP_SIZE);
+        if (!is_array($src) || empty($src[0])) {
+            return [];
+        }
+        return [
+            'photo' => Hero::prefer_webp($attachment, (string) $src[0]),
+            'w'     => (int) ($src[1] ?? 0),
+            'h'     => (int) ($src[2] ?? 0),
+        ];
+    }
+
     /** @return array<string,string> */
     private static function strings(): array
     {
@@ -333,7 +523,9 @@ final class Restore
             'continueLead'   => __('Your dates are still here. Pick up where you left off.', 'dcc-checkout'),
             'continueButton' => __('Continue Your Booking', 'dcc-checkout'),
             'restartTitle'   => __('Pick Your Dates Again', 'dcc-checkout'),
-            'restartLead'    => __('We do not have your dates any more. Choose them again and we will take you straight to checkout.', 'dcc-checkout'),
+            /* 0.36.0 — Rob's wording, and American "anymore", in the same
+               voice as the taken card. */
+            'restartLead'    => __('We don\'t have your dates anymore. Pick them again and we\'ll bring you straight back to checkout.', 'dcc-checkout'),
             'restartButton'  => __('Pick Your Dates Again', 'dcc-checkout'),
             /* v0.35.1, item 2 — the dates are known and taken, which is not
                the same as lost. Two leads: the cottage's name is worth saying
@@ -355,6 +547,15 @@ final class Restore
                titles and labels, and this is three sentences. */
             'welcome'        => __('Welcome back. We kept your answers. Please add your photo ID again.', 'dcc-checkout'),
             'startOver'      => __('Start Over', 'dcc-checkout'),
+            /* 0.36.0 — the open stays offered under "Those Dates Aren't
+               Available". The heading only renders when chips were found, so
+               it never promises something that is not there. */
+            'altTitle'       => __('Open Dates for This Cottage', 'dcc-checkout'),
+            /* translators: 1: check-in date, e.g. "Sat, Dec 5". 2: check-out date. 3: the word "Open". */
+            'chipLabel'      => _x('%1$s → %2$s · %3$s', 'checkout open-dates chip', 'dcc-checkout'),
+            'chipOpen'       => _x('Open', 'checkout open-dates chip', 'dcc-checkout'),
+            /* 0.36.0 — the cottages offered under "Pick Your Dates Again". */
+            'stripTitle'     => __('Or Browse the Cottages', 'dcc-checkout'),
         ];
     }
 }

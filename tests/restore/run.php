@@ -29,6 +29,7 @@ define('DCC_CHECKOUT_FILE', __FILE__);
 define('DCC_CHECKOUT_DIR', dirname(__DIR__, 2) . '/dcc-custom-checkout/');
 define('DCC_CHECKOUT_URL', 'https://example.test/wp-content/plugins/dcc-custom-checkout/');
 define('DAY_IN_SECONDS', 86400);
+define('HOUR_IN_SECONDS', 3600);
 define('YEAR_IN_SECONDS', 31536000);
 
 $failures = 0;
@@ -93,6 +94,20 @@ function wp_enqueue_style($h = '', $src = '', $deps = [], $ver = false, $m = 'al
     $GLOBALS['styles'][$h] = ['src' => $src, 'deps' => $deps];
 }
 function wp_localize_script($h, $name, $data) { $GLOBALS['localized'][$h] = $data; return true; }
+
+/* 0.36.0 — the open-dates endpoint, the cottage strip and its half-day cache. */
+function admin_url($p = '') { return 'https://example.test/wp-admin/' . $p; }
+function get_permalink($id) { return $GLOBALS['state']['links'][(int) $id] ?? ''; }
+function get_posts($args = []) { return $GLOBALS['state']['posts'] ?? []; }
+function get_transient($k) {
+    $GLOBALS['state']['transient_reads'][] = $k;
+    return $GLOBALS['state']['transient'][$k] ?? false;
+}
+function set_transient($k, $v, $ttl = 0) {
+    $GLOBALS['state']['transient'][$k] = $v;
+    $GLOBALS['state']['transient_ttl'][$k] = $ttl;
+    return true;
+}
 
 /** Sizes, so Hero::photo() and the card thumbnail resolve. */
 function wp_get_attachment_image_src($att, $size = 'thumbnail') {
@@ -408,6 +423,59 @@ foreach (['takenTitle', 'restartTitle', 'continueTitle', 'takenButton', 'restart
         preg_match_all('/[.!?](\s|$)/', $i18n[$key]), 0);
 }
 
+/* ---------------------------------------------------------------------- *
+ * 0.36.0 — THE DEAD END'S NEW SENTENCE, AND THE TAKEN CARD'S OLD ONES.
+ *
+ * EXACT SENTENCES, never substrings. 0.35.1 shipped two casing fixes green
+ * because both checks were substrings that survived either casing; an exact
+ * comparison is the only one that can fail for the reason it names.
+ * ---------------------------------------------------------------------- */
+check('the dead end is Rob\'s wording, with American "anymore"',
+    $i18n['restartLead'],
+    "We don't have your dates anymore. Pick them again and we'll bring you straight back to checkout.");
+check('… and nothing anywhere still says "any more"',
+    (bool) preg_match('/any more/i', implode(' ', $i18n)), false);
+
+/* PINNED, UNCHANGED FROM 0.35.2 (Rob: "Keep the taken card's three sentences
+   exactly"). These were made honest when the two-night minimum showed the
+   older wording could claim a booking that had not happened. */
+check('the taken card\'s title is exactly as 0.35.2 pinned it',
+    $i18n['takenTitle'], "Those Dates Aren't Available");
+check('… its named lead, exactly',
+    $i18n['takenLead'],
+    "%s isn't available for those nights. Choose new dates and we'll bring you straight back.");
+check('… its nameless lead, exactly',
+    $i18n['takenLeadPlain'],
+    "Those nights aren't available. Choose new dates and we'll bring you straight back.");
+check('… and its button, exactly', $i18n['takenButton'], 'Pick New Dates');
+
+/* Rob's casing rule: a preposition or an article stays down inside Title
+   Case ("Show Me ↑ 1 of 2", 0.35.1). */
+check('the two new titles keep prepositions and articles lower case',
+    [$i18n['altTitle'], $i18n['stripTitle']],
+    ['Open Dates for This Cottage', 'Or Browse the Cottages']);
+
+/* ---------------------------------------------------------------------- *
+ * AND THE BROWSER FIXTURE'S COPY IS THE SAME STRING.
+ *
+ * tests/cards/browser.js carries its own copy of these words, because a page
+ * fixture has to. That copy cannot see a change made here — which is exactly
+ * the apparent coverage 0.35.1 named — so it is compared against the PHP that
+ * really sends them.
+ * ---------------------------------------------------------------------- */
+$fixture = (string) file_get_contents(dirname(__DIR__) . '/cards/browser.js');
+check('the card fixture is on disk to read (the guard on the check below)',
+    $fixture !== '', true);
+foreach ($i18n as $key => $value) {
+    if (!is_string($value) || $value === '') { continue; }
+    /* Either quoting style, since an apostrophe decides which the fixture
+       uses; the STRING is what is being compared, not its delimiters. */
+    $found = strpos($fixture, "'" . $value . "'") !== false
+        || strpos($fixture, '"' . $value . '"') !== false
+        || strpos($fixture, '"' . str_replace("'", "\\'", $value) . '"') !== false;
+    check("the browser fixture's $key is the string PHP really sends", $found, true);
+}
+
 /* The stylesheet's half of the rule, read from the file. */
 $css = (string) file_get_contents($plugin . '/assets/checkout.css');
 check('the card is centred and only its lead opts out (Rob\'s alignment rule)',
@@ -415,6 +483,82 @@ check('the card is centred and only its lead opts out (Rob\'s alignment rule)',
      (bool) preg_match('/\.dcc_checkout-continue__lead\s*\{[^}]*text-align:\s*left/s', $css),
      (bool) preg_match('/\.dcc_checkout-welcome\s*\{[^}]*text-align:\s*left/s', $css)],
     [true, true, true]);
+
+/* ========================================================================== *
+ * 2b. 0.36.0 — THE WAY FORWARD OUT OF EACH CARD
+ *
+ * The performance rule first: Rob asked for ZERO new requests on the normal
+ * form path, so each half has to be sent ONLY for the state that can use it.
+ * A posted stay is what a working checkout carries, so that path must get no
+ * cottage query; and the open-dates endpoint must not be described to a page
+ * that will never ask it.
+ * ========================================================================== */
+
+echo "\n--- 0.36.0: open dates, and the cottages ---\n";
+
+$GLOBALS['state']['posts'] = [];
+$GLOBALS['state']['links'] = [];
+foreach ([1065, 1067, 1069, 1071, 1604, 1607, 1740, 1742] as $i => $id) {
+    $GLOBALS['state']['posts'][] = (object) ['ID' => $id];
+    $GLOBALS['state']['links'][$id] = 'https://example.test/accommodation/c' . $i . '/';
+    $GLOBALS['state']['titles'][$id] = 'Cottage ' . $id . ': Name ' . $i;
+}
+
+with_post([
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2126-01-11',
+    'mphb_check_out_date' => '2126-01-14',
+]);
+$GLOBALS['state']['transient'] = [];
+$taken = Restore::config();
+check('a posted stay is the "taken" state', $taken['offer'], 'taken');
+check('… so it is told how to ask for open dates',
+    [$taken['avail']['action'], $taken['avail']['chips'], $taken['avail']['minNights'],
+     $taken['avail']['timeoutMs'], $taken['avail']['windowDays']],
+    ['mphbac_query', 3, 2, 3000, 94]);
+check('… at admin-ajax, which is where that endpoint lives',
+    $taken['avail']['url'], 'https://example.test/wp-admin/admin-ajax.php');
+/* THE PERFORMANCE RULE, CONSTRUCTED: a working checkout posts a stay, so this
+   is also the normal form path, and it must not have queried the cottages. */
+check('THE NORMAL FORM PATH GETS NO COTTAGE STRIP, and makes no query for one',
+    [$taken['cottageList'], $GLOBALS['state']['transient']],
+    [[], []]);
+
+with_post([]);
+$GLOBALS['state']['transient'] = [];
+$lost = Restore::config();
+check('no stay at all is the "lost" state', $lost['offer'], 'lost');
+check('… so it gets every published cottage, with a page and a picture',
+    [count($lost['cottageList']), $lost['cottageList'][0]['name'],
+     $lost['cottageList'][0]['url']],
+    [8, 'Name 0', 'https://example.test/accommodation/c0/']);
+check('… and NOT the open-dates endpoint, which it has no stay to ask about',
+    $lost['cottageList'] === [] ? 'strip missing' : $lost['avail'], []);
+
+/* CACHED FOR HALF A DAY. A cookie-rebuilt checkout IS the lost state (0.35.1,
+   item 1) and renders a working form, so without this the query would run on
+   a normal render. Constructed by emptying the post list and asking again:
+   a second call that still answers is a call that did not query. */
+check('the strip is stored for half a day',
+    $GLOBALS['state']['transient_ttl']['dcc_checkout_cottage_strip'] ?? null, 12 * 3600);
+$GLOBALS['state']['posts'] = [];
+check('… and read from the store rather than queried again',
+    count(Restore::cottage_list()), 8);
+
+/* The floor under a chip's length. The site has a two-night minimum, which is
+   exactly why a one-night request is refused with no form in the first place:
+   offering more one-night stays would walk the guest into the same wall. */
+$GLOBALS['state']['filters']['dcc_checkout_min_nights'][] = static function () { return 3; };
+with_post([
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2126-01-11',
+    'mphb_check_out_date' => '2126-01-14',
+]);
+check('the minimum nights is filterable', Restore::config()['avail']['minNights'], 3);
+$GLOBALS['state']['filters']['dcc_checkout_min_nights'] = [static function () { return 0; }];
+check('… and can never be driven below one night',
+    Restore::config()['avail']['minNights'], 1);
+$GLOBALS['state']['filters']['dcc_checkout_min_nights'] = [];
 
 /* ========================================================================== *
  * 3. Who gets the script

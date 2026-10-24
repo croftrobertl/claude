@@ -40,11 +40,25 @@
        it is declared once, here, and never retyped. */
     --dcc-lip-height: 24px;
     --dcc-lip-radius: 24px;
+
+    /* 0.36.0 — THE DESKTOP'S TWO PANES, declared once. The Smart Next bar is
+       aligned to the form pane from these, and the suite reads them, so a
+       width that exists in three places cannot drift. */
+    --dcc-pane-card: 340px;
+    --dcc-pane-gap: 40px;
+    --dcc-pane-form: 560px;
 }
 
 /* --------------------------------------------------------------------------
  * The lip: the sheet's rounded top, drawn inside the bottom of the photo.
  * -------------------------------------------------------------------------- */
+
+/* PHONES ONLY, SINCE 0.36.0. At 1440 this rounded top and its grab line
+   stretched the full 1425px of the window, which reads as a panel somebody
+   left there rather than as a sheet that slid up — the Director measured it
+   and Rob saw it. Below 900px it is the shape the phone layout was designed
+   around and it stays exactly as it was. */
+@media (max-width: 899px) {
 
 .dcc_layout #header-image-main-inside::after {
     content: "";
@@ -67,6 +81,8 @@
     background-position: 50% 10px;
     pointer-events: none;
 }
+
+}   /* end: the lip, phones only */
 
 /* --------------------------------------------------------------------------
  * The overlay: cottage name, cottage number, dates pill. Nothing else goes
@@ -655,7 +671,40 @@ body.dcc_layout {
  * established for this checkout.
  * ------------------------------------------------------------------------- */
 
-@media (min-width: 900px) {
+/* ---------------------------------------------------------------------------
+ * 0.36.0 — AND REBUILT, AFTER ROB LOOKED AT IT ON A DESKTOP.
+ *
+ * WHAT HE SAW AT 1440 (the Director measured all of it): the form in one
+ * 768px column with its fields topping out at 360px, so half the column was
+ * empty; 29 of the first 30 labels and paragraphs centred, which reads as a
+ * poster rather than a form; the price card over on the right; and 3,202px of
+ * page. The two-column grid below is 0.35.0's, turned round and given a
+ * column width.
+ *
+ * THREE BANDS NOW, AND THEY DO NOT OVERLAP:
+ *   - below 900: the phone, untouched. Rob reviewed it and likes it.
+ *   - 768 to 999: one column, 640 at most, centred. A tablet is not a narrow
+ *     desktop; two panes at 999px would be two cramped ones.
+ *   - 1000 and up: two panes — the card on the left, sticky, and the form on
+ *     the right in ONE 560px column, left-aligned, fields full width.
+ *
+ * THE PANES ARE ASSIGNED BY grid-column, so the card paints left while
+ * staying second in the DOM. That is deliberate: the card holds the
+ * acceptance tick, and the tab order stays "fill the form, then accept",
+ * which is the order the guest acts in. Reversing the DOM instead would put
+ * the tick before the fields it certifies.
+ * ------------------------------------------------------------------------- */
+
+/* TABLET: one column, centred, with room to breathe. */
+@media (min-width: 768px) and (max-width: 999px) {
+    .dcc_layout .mphb_sc_checkout-form {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+@media (min-width: 1000px) {
     body.dcc_layout main.main,
     body.dcc_layout div.one-column {
         overflow: visible;
@@ -663,19 +712,94 @@ body.dcc_layout {
 
     .dcc_layout .mphb_sc_checkout-form {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 340px;
-        grid-gap: 32px;
+        grid-template-columns: var(--dcc-pane-card) minmax(0, var(--dcc-pane-form));
+        grid-gap: var(--dcc-pane-gap);
+        /* Centred as a pair, so the two panes sit together rather than being
+           pushed to the edges of a wide window. */
+        justify-content: center;
         align-items: start;
     }
 
-    .dcc_layout .dcc_layout-sheet {
-        min-width: 0;
-    }
-
     .dcc_layout .dcc_layout-summary {
+        grid-column: 1;
+        grid-row: 1;
         position: sticky;
         top: 24px;
         align-self: start;
+        margin-top: 0;
+    }
+
+    .dcc_layout .dcc_layout-sheet {
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+    }
+
+    /* LEFT-ALIGNED (Rob), AND THE RULE BEING OVERRIDDEN IS THIS PLUGIN'S OWN.
+       The 29-of-30 centred labels the Director measured are not the theme's:
+       `checkout.css` centres `.mphb_sc_checkout-form label` and its four
+       sibling selectors with `!important`, which is the field standard's
+       choice for the phone. Inheritance cannot touch a direct `!important`
+       rule, so these name the same elements at a higher specificity —
+       (0,3,1) against (0,2,0) — and are `!important` themselves. The phone
+       keeps the centring: Rob reviewed that and likes it.
+
+       The SECTION TITLES are deliberately not in this list. They stay
+       centred, because a title is centred under his standing rule. */
+    .dcc_layout .dcc_layout-sheet {
+        text-align: left;
+    }
+
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet label,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-room-number,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {
+        text-align: left !important;
+    }
+
+    /* The text INSIDE a field reads left too — `checkout.css` centres it to
+       match the centred labels, and a left label over a centred value is
+       worse than either on its own. */
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="text"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="tel"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="email"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet textarea {
+        text-align: left !important;
+    }
+
+    /* FIELDS FILL THE COLUMN. The 360px cap is the phone's proportion
+       (v0.14.0: 360 was chosen so the cap is inert at 390), and in a 560px
+       column it leaves a 200px dead strip beside every field. The token is
+       overridden rather than the two rules that read it, so the cap stays one
+       idea in one place. */
+    .dcc_layout .dcc_layout-sheet {
+        --dcc-field-max: 100%;
+    }
+
+    /* THE SECTION HEADINGS: centred, and NOT underlined. The underline is
+       this plugin's own too — `checkout.css` gives these four selectors
+       `text-decoration: underline !important` at 25px — so this names them at
+       a higher specificity with `!important`. A border is refused as well,
+       in case the site draws one: that costs nothing and covers the case this
+       machine cannot see. 20px rather than 25: in a 560px column beside a
+       card, 25px underlined headings are the loudest thing on the page. */
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-customer-details-title,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-price-breakdown-title,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .dcc_checkout-section-title {
+        text-align: center !important;
+        text-decoration: none !important;
+        border-bottom: 0;
+        padding-bottom: 0;
+        font-size: 20px !important;
+    }
+
+    /* THE SMART NEXT BAR BELONGS TO THE FORM PANE (Rob). homeTheBar() moves
+       it there at this width — into the sheet rather than into the card,
+       which is where it went while the card was the right-hand column — so it
+       is the pane's width by being in it, with nothing measured and nothing
+       to drift. */
+    .dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
+        margin-top: 10px;
     }
 }
 
@@ -688,6 +812,26 @@ body.dcc_layout {
     border: 1px solid var(--dcc-gold, #f4da62);
     border-radius: 18px;
     background: #fffdf5;
+}
+
+/* 0.36.0 — the cottage photo, framed, at the top of the card. */
+.dcc_layout .dcc_layout-summary__photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0 0 12px;
+    border-radius: 12px;
+    /* A frame rather than a bleed: the card is a card. */
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    object-fit: cover;
+    aspect-ratio: 4 / 3;
+}
+
+.dcc_layout .dcc_layout-summary__name {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.3;
 }
 
 .dcc_layout .dcc_layout-summary__title {

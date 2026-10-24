@@ -46,11 +46,17 @@ if (!defined('ABSPATH')) {
  *     the output-buffer callback that decides whether to WRITE the cache file,
  *     after the page is built — so defining it anywhere during the request
  *     works, provided it is before output ends.
- *   - The host's nginx proxy cache stores no response that sets a cookie, and
- *     MotoPress sets `WP_SESSION_COOKIE` and its `mphb_*` cookies on every
- *     checkout response; two consecutive plain GETs both came back
- *     `x-proxy-cache: MISS`. The only HIT ever seen there was nginx serving
- *     SpeedyCache's static `.gz`, and no written file means nothing to serve.
+ *   - The host's nginx proxy cache was OBSERVED not to store the checkout:
+ *     two consecutive plain GETs both came back `x-proxy-cache: MISS`, and the
+ *     only HIT ever seen there was nginx serving SpeedyCache's static `.gz`,
+ *     and no written file means nothing to serve. **That is an observation of
+ *     two requests, not a rule** (the Director's own correction, 2026-10-24:
+ *     his earlier note gave "nginx stores no response that sets a cookie" as
+ *     if it were nginx's documented behaviour, and it was a reading of what he
+ *     saw twice). MotoPress does set `WP_SESSION_COOKIE` and its `mphb_*`
+ *     cookies on every checkout response, which is the likely reason — likely,
+ *     not established. NOTHING HERE RESTS ON IT: this belt is the SpeedyCache
+ *     code read above, which is why that is the line to keep correct.
  *   - **`Cache-Control: no-store` IS NOT SHIPPED.** It was not proven that
  *     either layer honours it, and an unverified header presented as the
  *     safeguard is the kind of line that looks like a fallback and is not.

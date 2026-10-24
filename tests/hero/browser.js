@@ -163,7 +163,9 @@ const page_html = pageHtml();
 (async () => {
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
-    for (const width of [360, 390, 1280]) {
+    /* 1440 SINCE 0.36.0, not 1280: that is the width Rob looked at, and the
+       width every check list from here on covers. 768 is the tablet band. */
+    for (const width of [360, 390, 768, 1440]) {
         const ctx = await browser.newContext({
             viewport: { width, height: 800 },
             hasTouch: width < 900,
@@ -219,16 +221,30 @@ const page_html = pageHtml();
 
         const at = (s) => `${s} @${width}`;
 
-        /* --- The lip ---------------------------------------------------- */
-        check(at('the lip is 24px tall'), m.lipHeight, 24);
-        check(at('the lip is a real pseudo-element, not a missing one'),
-            m.lipContent !== 'none', true);
-        check(at('the lip is positioned on the bottom of the header box'),
-            [m.lipPosition, m.lipBottom, m.lipLeft], ['absolute', '0px', '0px']);
-        check(at('the lip is the page\'s own white, so the sheet below is one surface'),
-            m.lipBg, 'rgb(255, 255, 255)');
-        check(at('the lip is rounded at the TOP only'),
-            m.lipRadius, ['24px', '24px', '0px', '0px']);
+        /* --- The lip, WHICH IS A PHONE'S SINCE 0.36.0 ------------------- */
+        if (width < 900) {
+            check(at('the lip is 24px tall'), m.lipHeight, 24);
+            check(at('the lip is a real pseudo-element, not a missing one'),
+                m.lipContent !== 'none', true);
+            check(at('the lip is positioned on the bottom of the header box'),
+                [m.lipPosition, m.lipBottom, m.lipLeft], ['absolute', '0px', '0px']);
+            check(at('the lip is the page\'s own white, so the sheet below is one surface'),
+                m.lipBg, 'rgb(255, 255, 255)');
+            check(at('the lip is rounded at the TOP only'),
+                m.lipRadius, ['24px', '24px', '0px', '0px']);
+        } else {
+            /* ROB SAW IT AT 1440 AND IT WAS WRONG: a rounded sheet top and a
+               40x4 grab line stretched across 1425px reads as a panel
+               somebody left there, not as a sheet that slid up. There is
+               nothing to drag on a desktop. So above 900 the pseudo-element
+               is not drawn at all — `content: none`, which is what a media
+               query that never applies the rule leaves behind. */
+            check(at('the sheet\'s rounded top and grab line are NOT drawn'),
+                m.lipContent, 'none');
+            check(at('… so nothing of it is left behind either'),
+                [m.lipHeight, m.lipBg],
+                [null, 'rgba(0, 0, 0, 0)']);
+        }
 
         /* THE CLIPPING TRAP. The lip lives inside the header, which no
            ancestor clips; the form below sits inside two overflow:hidden
@@ -288,9 +304,15 @@ const page_html = pageHtml();
         check(at('… and the theme\'s own page title is not on the page'),
             headings.themeTitle, false);
 
-        /* The text clears the lip: nothing is cut by the white strip. */
+        /* The text clears the lip: nothing is cut by the white strip. Above
+           900 there IS no lip (0.36.0), so the clearance is zero and this
+           becomes "the text is inside the box" — which is still worth
+           asserting. `|| 0` rather than skipping the check: a null height
+           made this read `boxBottom - null`, which is NaN, and a NaN
+           comparison is false, so it failed for a reason that had nothing to
+           do with the overlay. */
         check(at('the overlay\'s text sits clear of the lip'),
-            m.innerBottom <= m.boxBottom - m.lipHeight, true);
+            m.innerBottom <= m.boxBottom - (m.lipHeight || 0), true);
         check(at('… and inside the box, not off its left edge'),
             m.innerLeft >= 0, true);
 

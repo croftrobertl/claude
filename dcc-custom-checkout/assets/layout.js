@@ -1126,11 +1126,33 @@
         card.className = 'dcc_layout-summary';
         card.setAttribute('data-dcc-injected', '1');
 
+        /* 0.36.0 — THE COTTAGE PHOTO, FRAMED, AT THE TOP OF THE CARD (Rob's
+           desktop pick). It is the same file the header is already painting,
+           so this is a cache hit rather than a second download; `eager`
+           because it is the card's subject and the preload has asked for it
+           anyway. The name is the card's own, so the picture is decorative and
+           an alt repeating it would be read twice. */
+        if (T.photo) {
+            var pic = document.createElement('img');
+            pic.className = 'dcc_layout-summary__photo';
+            pic.src = T.photo;
+            pic.alt = '';
+            pic.decoding = 'async';
+            if (T.photoW) { pic.width = T.photoW; }
+            if (T.photoH) { pic.height = T.photoH; }
+            card.appendChild(pic);
+        }
         if (T.title) {
             var h = document.createElement('h2');
             h.className = 'dcc_layout-summary__title';
             h.appendChild(document.createTextNode(T.title));
             card.appendChild(h);
+        }
+        if (T.name) {
+            var who = document.createElement('p');
+            who.className = 'dcc_layout-summary__name';
+            who.appendChild(document.createTextNode(T.name));
+            card.appendChild(who);
         }
         if (T.dates) {
             var d = document.createElement('p');
@@ -1179,11 +1201,25 @@
      * likely to land under a finger).
      */
     function homeTheBar(bar, card) {
-        var wide = function () {
-            return window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
+        var at = function (px) {
+            return window.matchMedia && window.matchMedia('(min-width: ' + px + 'px)').matches;
         };
+        /* THREE HOMES SINCE 0.36.0, one per band:
+             below 900  the body, pinned — the phone's bar, untouched;
+             900-999    the card, which is the last block of the one column;
+             1000 and up the SHEET, because the card has moved to the left
+                        pane and the bar belongs under the form the guest is
+                        filling, not under the price (Rob).
+           It is MOVED, never rebuilt: same node, same submit control, same
+           listeners. */
         var place = function () {
-            var want = wide() && card ? card : document.body;
+            var want = document.body;
+            if (at(1000)) {
+                var sheet = document.querySelector('.dcc_layout-sheet');
+                want = sheet || card || document.body;
+            } else if (at(900) && card) {
+                want = card;
+            }
             if (bar.parentElement !== want) { want.appendChild(bar); }
         };
         place();

@@ -1,7 +1,11 @@
 .dcc_layout {
 --dcc-lip-height: 24px;
 --dcc-lip-radius: 24px;
+--dcc-pane-card: 340px;
+--dcc-pane-gap: 40px;
+--dcc-pane-form: 560px;
 }
+@media (max-width: 899px) {
 .dcc_layout #header-image-main-inside::after {
 content: "";
 position: absolute;
@@ -17,6 +21,7 @@ background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/s
 background-repeat: no-repeat;
 background-position: 50% 10px;
 pointer-events: none;
+}
 }
 .dcc_layout .dcc_hero-overlay {
 position: absolute;
@@ -388,24 +393,67 @@ padding-bottom: 0;
 width: 100%;
 }
 }
-@media (min-width: 900px) {
+@media (min-width: 768px) and (max-width: 999px) {
+.dcc_layout .mphb_sc_checkout-form {
+max-width: 640px;
+margin-left: auto;
+margin-right: auto;
+}
+}
+@media (min-width: 1000px) {
 body.dcc_layout main.main,
 body.dcc_layout div.one-column {
 overflow: visible;
 }
 .dcc_layout .mphb_sc_checkout-form {
 display: grid;
-grid-template-columns: minmax(0, 1fr) 340px;
-grid-gap: 32px;
+grid-template-columns: var(--dcc-pane-card) minmax(0, var(--dcc-pane-form));
+grid-gap: var(--dcc-pane-gap);
+justify-content: center;
 align-items: start;
 }
-.dcc_layout .dcc_layout-sheet {
-min-width: 0;
-}
 .dcc_layout .dcc_layout-summary {
+grid-column: 1;
+grid-row: 1;
 position: sticky;
 top: 24px;
 align-self: start;
+margin-top: 0;
+}
+.dcc_layout .dcc_layout-sheet {
+grid-column: 2;
+grid-row: 1;
+min-width: 0;
+}
+.dcc_layout .dcc_layout-sheet {
+text-align: left;
+}
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet label,
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-room-number,
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {
+text-align: left !important;
+}
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="text"],
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="tel"],
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="email"],
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet textarea {
+text-align: left !important;
+}
+.dcc_layout .dcc_layout-sheet {
+--dcc-field-max: 100%;
+}
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-customer-details-title,
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-price-breakdown-title,
+.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .dcc_checkout-section-title {
+text-align: center !important;
+text-decoration: none !important;
+border-bottom: 0;
+padding-bottom: 0;
+font-size: 20px !important;
+}
+.dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
+margin-top: 10px;
 }
 }
 .dcc_layout .dcc_layout-summary {
@@ -415,6 +463,22 @@ padding: 18px;
 border: 1px solid var(--dcc-gold, #f4da62);
 border-radius: 18px;
 background: #fffdf5;
+}
+.dcc_layout .dcc_layout-summary__photo {
+display: block;
+width: 100%;
+height: auto;
+margin: 0 0 12px;
+border-radius: 12px;
+border: 1px solid rgba(0, 0, 0, 0.08);
+object-fit: cover;
+aspect-ratio: 4 / 3;
+}
+.dcc_layout .dcc_layout-summary__name {
+margin: 0 0 8px;
+font-size: 16px;
+font-weight: 400;
+line-height: 1.3;
 }
 .dcc_layout .dcc_layout-summary__title {
 margin: 0 0 6px;

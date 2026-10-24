@@ -474,7 +474,7 @@ const TYPED = {
         c.querySelectorAll('input[type="hidden"]').forEach((i) => { inputs[i.name] = i.value; });
         const host = c.parentElement;
         return {
-            heading: (c.querySelector('h2') || {}).textContent,
+            heading: (c.querySelector('.dcc_checkout-continue__title') || {}).textContent,
             text: c.textContent,
             photo: !!c.querySelector('.dcc_checkout-continue__photo'),
             alt: (c.querySelector('.dcc_checkout-continue__photo') || {}).alt,
@@ -489,6 +489,11 @@ const TYPED = {
         };
     });
 
+    /* THE HEADING IS READ BY ITS CLASS, NEVER ITS TAG (0.36.0). The tag is
+       an h1 or an h2 depending on what else the page holds — cardHeading() —
+       and a check keyed on `h2` stopped matching the day that changed. That
+       is v0.22.0's lesson in a third shape: the expander's hover rule was
+       keyed on `a` and died silently when it became a button. */
     check('a card is drawn where MotoPress drew no form', card !== null, true);
     check('it is the FIRST thing in the content, above the dead end', card.first, true);
     check('it says Continue Your Booking', card.heading, 'Continue Your Booking');
@@ -586,10 +591,10 @@ const TYPED = {
             const theirs = Array.prototype.slice.call(wrapper.children)
                 .filter((el) => !el.classList.contains('dcc_checkout-continue'));
             return {
-                heading: (c.querySelector('h2') || {}).textContent,
+                heading: (c.querySelector('.dcc_checkout-continue__title') || {}).textContent,
                 lead: lead && lead.textContent,
                 leadAlign: lead && getComputedStyle(lead).textAlign,
-                headAlign: getComputedStyle(c.querySelector('h2')).textAlign,
+                headAlign: getComputedStyle(c.querySelector('.dcc_checkout-continue__title')).textAlign,
                 href: a && a.getAttribute('href'),
                 posts: !!c.querySelector('form'),
                 cardVisible: getComputedStyle(c).display !== 'none',
@@ -753,7 +758,7 @@ const TYPED = {
         .replace('"offer":"taken"', '"offer":"lost"'));
     const notTaken = await page.evaluate(() => {
         const c = document.querySelector('.dcc_checkout-continue');
-        return c && (c.querySelector('h2') || {}).textContent;
+        return c && (c.querySelector('.dcc_checkout-continue__title') || {}).textContent;
     });
     check('with PHP saying "lost", the taken card is not drawn', notTaken, 'Pick Your Dates Again');
 
@@ -762,7 +767,7 @@ const TYPED = {
         '"checkOut":"2026-11-19"', '"checkOut":""'));
     const halfTaken = await page.evaluate(() => {
         const c = document.querySelector('.dcc_checkout-continue');
-        return c && (c.querySelector('h2') || {}).textContent;
+        return c && (c.querySelector('.dcc_checkout-continue__title') || {}).textContent;
     });
     check('a half-written stay is not "taken" even when PHP says so', halfTaken,
         'Pick Your Dates Again');
@@ -782,7 +787,7 @@ const TYPED = {
             const el = document.getElementById('keep');
             const c = document.querySelector('.dcc_checkout-continue');
             return {
-                card: !!c && (c.querySelector('h2') || {}).textContent,
+                card: !!c && (c.querySelector('.dcc_checkout-continue__title') || {}).textContent,
                 shown: el ? getComputedStyle(el).display : 'missing',
                 siblings: document.body.children.length,
             };
@@ -802,7 +807,7 @@ const TYPED = {
         const c = document.querySelector('.dcc_checkout-continue');
         const a = c && c.querySelector('a.dcc_checkout-continue__button');
         return {
-            heading: c && (c.querySelector('h2') || {}).textContent,
+            heading: c && (c.querySelector('.dcc_checkout-continue__title') || {}).textContent,
             href: a && a.getAttribute('href'),
             noForm: !!c && !c.querySelector('form'),
         };
@@ -833,7 +838,7 @@ const TYPED = {
         const half = await page.evaluate(() => {
             const c = document.querySelector('.dcc_checkout-continue');
             return {
-                heading: c && (c.querySelector('h2') || {}).textContent,
+                heading: c && (c.querySelector('.dcc_checkout-continue__title') || {}).textContent,
                 posts: !!(c && c.querySelector('form')),
             };
         });

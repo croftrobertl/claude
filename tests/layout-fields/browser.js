@@ -18,6 +18,13 @@
  *   - a folded field is never focused;
  *   - nothing records a DOM mutation while the guest types or presses keys.
  *
+ * THE FIELD ROWS CARRY `p.mphb-text-control`, which is MotoPress's own
+ * wrapper and the no-JS half of the 360px field cap (v0.14.0 — the cap is on
+ * the WRAPPER, never the field). Until 0.36.0 they were bare `<p>`s, so the
+ * cap was not in force in this fixture at all and "the fields fill the
+ * column" passed while measuring nothing. Both directions are asserted now:
+ * capped at 768, uncapped in the 1000+ pane.
+ *
  * THE FIXTURE IS THE CHECKOUT'S SHAPE, NOT A CAPTURE — /submit-booking/ needs
  * a live reservation. The field names are the ones PHP hands over, and the
  * folded panels use the plugin's own `display: none !important` hide classes,
@@ -89,7 +96,18 @@ const BAR = {
     total: 'Total',
 };
 
-const SUMMARY = { title: 'Your Stay', dates: 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights' };
+/* 0.36.0 — the card carries the cottage photo and the cottage's name. The URL
+   is the one the HERO is already painting, which is the whole point: the
+   header has it as a CSS background and the preload has asked for it, so the
+   card's <img> is a cache hit rather than a second download. */
+const SUMMARY = {
+    title: 'Your Stay',
+    dates: 'Mon, Nov 16 → Thu, Nov 19 · 3 Nights',
+    name: 'Coconut Cottage',
+    photo: 'https://example.test/wp-content/uploads/Cottage-34-Photos-17-1024x768.webp',
+    photoW: 1024,
+    photoH: 768,
+};
 
 const page_html = `<!doctype html>
 <html><head><meta charset="utf-8">
@@ -130,9 +148,9 @@ const page_html = `<!doctype html>
         </select></label></p>
     </div>
     <div class="mphb-customer-details" id="customer">
-    <p><label>First Name <input type="text" name="mphb_first_name" required></label></p>
+    <p class="mphb-text-control"><label>First Name <input type="text" name="mphb_first_name" required></label></p>
     <p><input type="text" name="mphb_last_name"></p>
-    <p><label>Phone <input type="tel" name="mphb_phone" required></label></p>
+    <p class="mphb-text-control"><label>Phone <input type="tel" name="mphb_phone" required></label></p>
     <p><input type="email" name="mphb_email"></p>
     <!-- Google Places owns this one: it must stay autocomplete="off". -->
     <p><input type="text" name="mphb_address1" autocomplete="off"></p>
@@ -1331,8 +1349,13 @@ const page_html = `<!doctype html>
             getComputedStyle(document.querySelector('div.one-column')).overflow,
         ]), ['hidden', 'hidden']);
 
-    /* ---- Desktop, in its own context ---------------------------------- */
-    const deskCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    /* ---- Desktop, in its own context ----------------------------------
+     *
+     * AT 1440 SINCE 0.36.0, which is the width Rob looked at and found the
+     * layout "terrible". 0.35.x measured 1280 only, and every check list was
+     * written at 375.
+     * ------------------------------------------------------------------- */
+    const deskCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const desk = await deskCtx.newPage();
     await desk.route('**/*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
     await desk.goto('https://example.test/submit-booking/');
@@ -1347,11 +1370,32 @@ const page_html = `<!doctype html>
         const cr = card.getBoundingClientRect();
         return {
             grid: getComputedStyle(form).display,
-            /* The sheet left, the card right, side by side. */
-            sideBySide: sr.right <= cr.left + 1 && Math.abs(sr.top - cr.top) < 40,
-            /* NO PINNED BAR ON DESKTOP (Rob): it is in the card, in the flow. */
+            /* 0.36.0 — THE CARD LEFT, THE FORM RIGHT (Rob's desktop pick).
+               0.35.0 had them the other way round. */
+            sideBySide: cr.right <= sr.left + 1 && Math.abs(sr.top - cr.top) < 40,
+            /* NO PINNED BAR ON DESKTOP (Rob): in the flow — and since 0.36.0
+               at the bottom of the FORM pane, not under the price. */
             barPosition: getComputedStyle(bar).position,
             barInCard: card.contains(bar),
+            barInSheet: sheet.contains(bar),
+            sheetWidth: Math.round(sr.width),
+            cardWidth: Math.round(cr.width),
+            /* Rob: the fields fill the column rather than stopping at 360. */
+            fieldWidth: (() => {
+                const f = sheet.querySelector('input[name="mphb_first_name"]');
+                return f ? Math.round(f.getBoundingClientRect().width) : 0;
+            })(),
+            /* And the labels read left, while a section title stays centred. */
+            labelAligns: Array.prototype.map.call(
+                sheet.querySelectorAll('label'), (l) => getComputedStyle(l).textAlign
+            ).filter((v, i, a) => a.indexOf(v) === i).sort(),
+            titleAlign: (() => {
+                const t = sheet.querySelector('.dcc_checkout-section-title');
+                return t ? [getComputedStyle(t).textAlign,
+                            getComputedStyle(t).textDecorationLine,
+                            getComputedStyle(t).borderBottomWidth] : null;
+            })(),
+            pageHeight: Math.round(document.documentElement.scrollHeight),
             pagePad: getComputedStyle(document.body).paddingBottom,
             /* The clipping is removed HERE, which is what lets sticky work. */
             overflow: [getComputedStyle(document.querySelector('main.main')).overflow,
@@ -1361,11 +1405,28 @@ const page_html = `<!doctype html>
             noSideScroll: document.documentElement.scrollWidth <= window.innerWidth,
         };
     });
-    check('the form becomes two columns, sheet left and card right',
+    check('the form becomes two panes, CARD LEFT and form right (0.36.0)',
         [deskLayout.grid, deskLayout.sideBySide], ['grid', true]);
-    check('there is NO pinned bar on desktop — it is in the card, in the flow',
-        [deskLayout.barPosition, deskLayout.barInCard, deskLayout.pagePad],
-        ['static', true, '0px']);
+    check('… the card is 340 and the form column 560, as the tokens say',
+        [deskLayout.cardWidth, deskLayout.sheetWidth], [340, 560]);
+    check('there is NO pinned bar on desktop — and it sits under the FORM, not the price',
+        [deskLayout.barPosition, deskLayout.barInSheet, deskLayout.barInCard, deskLayout.pagePad],
+        ['static', true, false, '0px']);
+    /* ROB'S COMPLAINT, MEASURED: a field that stopped at 360 inside a 768
+       column. It now fills the 560 column, less the sheet's own padding. */
+    check('the fields fill the column rather than stopping at 360',
+        deskLayout.fieldWidth >= 520, true, );
+    check('labels and help text read left', deskLayout.labelAligns, ['left']);
+    check('… while a section title stays centred, and is NOT underlined',
+        deskLayout.titleAlign, ['center', 'none', '0px']);
+    /* The lip is NOT measured here: this fixture has no header band, and a
+       check that quietly reads `null` off a missing element is the apparent
+       coverage this project keeps finding. It is measured where the header
+       exists — tests/hero/browser.js, at 390 and at 1440. */
+    /* Rob's target: the whole form in under 2,000px of page at 1440. It was
+       3,202. */
+    check('the whole form fits in under 2,000px of page at 1440',
+        deskLayout.pageHeight < 2000, true, );
     check('the clipping is removed at this width, which is what lets sticky work',
         deskLayout.overflow, ['visible', 'visible']);
     check('… and no sideways scroll comes of removing it', deskLayout.noSideScroll, true);
@@ -1574,6 +1635,104 @@ const page_html = `<!doctype html>
     }
 
     await ctx.close();
+    /* ===================================================================== *
+     * THE THREE WIDTHS, MEASURED AND (optionally) PHOTOGRAPHED.
+     *
+     * DCC_SHOTS=/some/dir writes one screenshot per width. Rob's check lists
+     * cover 390, 768 and 1440 from 0.36.0 on, because 0.35.x covered 375 and
+     * the desktop was never looked at.
+     * ===================================================================== */
+    const SHOTS = process.env.DCC_SHOTS || '';
+    for (const size of [{ w: 390, h: 844 }, { w: 768, h: 1024 }, { w: 1440, h: 900 }]) {
+        const c = await browser.newContext({ viewport: { width: size.w, height: size.h } });
+        const pg = await c.newPage();
+        await pg.route('**/*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
+        await pg.goto('https://example.test/submit-booking/');
+        await pg.setContent(page_html);
+        const m = await pg.evaluate(() => {
+            const form = document.querySelector('form');
+            const sheet = document.querySelector('.dcc_layout-sheet');
+            const card = document.querySelector('.dcc_layout-summary');
+            const bar = document.querySelector('.dcc_layout-bar');
+            const f = sheet && sheet.querySelector('input[name="mphb_first_name"]');
+            return {
+                display: getComputedStyle(form).display,
+                formWidth: Math.round(form.getBoundingClientRect().width),
+                sheetLeft: sheet ? Math.round(sheet.getBoundingClientRect().left) : null,
+                cardLeft: card ? Math.round(card.getBoundingClientRect().left) : null,
+                fieldWidth: f ? Math.round(f.getBoundingClientRect().width) : null,
+                photo: (() => {
+                    const i = card && card.querySelector('.dcc_layout-summary__photo');
+                    return {
+                        src: i ? i.getAttribute('src') : null,
+                        alt: i ? i.getAttribute('alt') : null,
+                        /* THE ATTRIBUTES, not `.width`: the property reports
+                           the LAID-OUT width, which is the card's, and would
+                           have made this check agree with itself whatever was
+                           in the markup. It is the attributes that reserve the
+                           box before the file lands. */
+                        w: i ? i.getAttribute('width') : null,
+                        h: i ? i.getAttribute('height') : null,
+                        inCard: !!i,
+                    };
+                })(),
+                barHome: bar && card && card.contains(bar) ? 'card'
+                    : (bar && sheet && sheet.contains(bar) ? 'sheet' : 'body'),
+                pageHeight: Math.round(document.documentElement.scrollHeight),
+                scrollWidth: document.documentElement.scrollWidth,
+                clientWidth: document.documentElement.clientWidth,
+            };
+        });
+        console.log('');
+        console.log('--- the form at ' + size.w + ' -------------------------------');
+        console.log('  display:      ' + m.display);
+        console.log('  form width:   ' + m.formWidth);
+        console.log('  card / sheet: ' + m.cardLeft + ' / ' + m.sheetLeft);
+        console.log('  field width:  ' + m.fieldWidth);
+        console.log('  bar lives in: ' + m.barHome);
+        console.log('  page height:  ' + m.pageHeight);
+        console.log('  scrollWidth:  ' + m.scrollWidth + ' / client ' + m.clientWidth);
+
+        check(size.w + ': no sideways page scroll', m.scrollWidth, m.clientWidth);
+        /* THE PHOTO IS THE SAME FILE THE HEADER PAINTS, at every width — the
+           claim that it costs no extra request is only true if the URL is
+           identical, so the URL is what is compared. */
+        check(size.w + ': the card shows the cottage, from the hero\'s own file',
+            [m.photo.src, m.photo.alt, m.photo.inCard],
+            ['https://example.test/wp-content/uploads/Cottage-34-Photos-17-1024x768.webp', '', true]);
+        check(size.w + ': … with its box reserved, so nothing reflows when it lands',
+            [m.photo.w, m.photo.h], ['1024', '768']);
+        if (size.w >= 1000) {
+            check(size.w + ': two panes, the card on the left', 
+                [m.display, m.cardLeft < m.sheetLeft], ['grid', true]);
+            check(size.w + ': the bar is under the form, not the price', m.barHome, 'sheet');
+        } else if (size.w >= 768) {
+            /* A TABLET IS NOT A NARROW DESKTOP: one column, 640 at most,
+               centred, and the bar stays with the card at the end of it. */
+            check(size.w + ': one column, 640 at most', 
+                [m.display !== 'grid', m.formWidth <= 640], [true, true]);
+            check(size.w + ': … and centred in the page',
+                Math.abs((size.w - m.formWidth) / 2 - m.sheetLeft) <= 40, true);
+            /* The bar's own band stays 900, so at 768 it is still the
+               phone's pinned bar at the foot of the window. */
+            check(size.w + ': the bar is still pinned, as on a phone', m.barHome, 'body');
+            check(size.w + ': and the 360px field cap is still in force',
+                m.fieldWidth <= 360, true);
+        } else {
+            check(size.w + ': the phone is untouched — one column, bar pinned to body',
+                [m.display !== 'grid', m.barHome], [true, 'body']);
+        }
+
+        if (SHOTS) {
+            fs.mkdirSync(SHOTS, { recursive: true });
+            await pg.screenshot({
+                path: path.join(SHOTS, 'Custom Checkout - Layout ' + size.w + '.png'),
+                fullPage: size.w >= 1000,
+            });
+        }
+        await c.close();
+    }
+
     await browser.close();
     console.log(failures ? `\n${failures} failing` : '\nall passing');
     process.exit(failures ? 1 : 0);
