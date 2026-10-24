@@ -306,6 +306,15 @@
         var state = CFG.offer === 'taken' && complete(STAY)
             ? 'taken'
             : (complete(held) ? 'continue' : 'lost');
+
+        /* THE AVAILABILITY REQUEST STARTS HERE, BEFORE THE CARD IS BUILT
+           (0.36.1, the Director's staging measurement). On staging the call
+           itself took 1,759ms and only STARTED at 1,088ms, so the chips landed
+           at about 2.85s against a 3s cutoff — a feature that worked on live
+           at 780ms and would have failed on a slower day. Nothing between
+           here and the card's insertion is waited on, so this is the earliest
+           point at which the stay is known. */
+        if (state === 'taken') { offerOpenDates(STAY); }
         /* THE STATE, ON THE CARD (0.36.0). The two cards Rob asked to sit on
            the header photo are 'taken' and 'lost'; 'continue' keeps its own
            shape, because it is the one card that carries a picture of its own
@@ -325,6 +334,7 @@
         if (state === 'taken' || state === 'lost') {
             addClass(document.body, 'dcc_checkout-cardover');
             dropHeroOverlay();
+            dropThemeTitle();
         }
 
         /* THREE STATES, AND THE FIRST ONE IS NEW IN v0.35.1 (item 2).
@@ -359,7 +369,6 @@
 
         if (state === 'taken' || state === 'lost') {
             fitCardToHero(card);
-            if (state === 'taken') { offerOpenDates(card, STAY); }
         }
     }
 
@@ -424,6 +433,9 @@
      * on screen. Both branches are asserted at all three widths.
      */
     function cardHeading(text) {
+        /* dropThemeTitle() has already removed any h1 a guest cannot see, so
+           anything still here is a real, visible heading of someone else's
+           and this one steps down beside it. */
         var level = document.querySelector('h1') ? 'h2' : 'h1';
         var h = heading(level, text);
         h.className = 'dcc_checkout-continue__title';
@@ -678,6 +690,52 @@
         }
     }
 
+    /**
+     * THE THEME'S OWN "Submit Booking" TITLE GOES, IN THESE TWO STATES
+     * (0.36.1, the Director's staging read).
+     *
+     * There are TWO of them and they are different elements, which is why
+     * 0.36.0 left one on screen:
+     *
+     *   - `#header-page-title` is a DIV, absolutely positioned across the
+     *     whole 420px header at z-index 11, and it is what a guest actually
+     *     SEES — "Submit Booking" drawn large over the cottage photo. It is
+     *     not a heading at all, so none of the h1 reasoning reached it.
+     *   - the article's `h1.entry-title` is the page's only real h1 and
+     *     renders 0x0. Hero empties it, but only behind the layout switch.
+     *
+     * Both are wrong here: this page is not a booking submission, it is a
+     * dead end, and the card's own heading is the page's subject. So in
+     * these two states both go and the card's heading becomes the one
+     * visible h1 — which is the rule the Director set.
+     *
+     * HIDDEN, NOT REMOVED, for the theme's own elements: they are Bravada's,
+     * not this plugin's, and a display-based hide is what the rest of this
+     * checkout does to markup it does not own. (The hero overlay IS this
+     * plugin's, so that one is removed — see dropHeroOverlay.)
+     */
+    function dropThemeTitle() {
+        /* The banner is a DIV, not a heading: hiding it is enough, and it is
+           the theme's markup, which this checkout hides rather than deletes. */
+        var banner = document.getElementById('header-page-title');
+        if (banner) { addClass(banner, 'dcc_checkout-hidden'); }
+
+        /* THE 0x0 h1 IS REMOVED, and only because leaving it breaks the other
+           rule. Hiding it would leave TWO h1s in the HTML — one invisible —
+           which is exactly what 0.35.1's item 5 went to some trouble to stop,
+           and the Director's rule here is that the card's heading is the one
+           visible h1. Removing is the only reading that satisfies both.
+           A VISIBLE h1 is left alone: it would be someone's real heading, and
+           cardHeading() steps down to an h2 beside it. Ours is not in the
+           document yet, so every h1 found here is another's. */
+        var all = document.querySelectorAll('h1');
+        for (var i = 0; i < all.length; i++) {
+            var h = all[i];
+            var shown = h.offsetWidth > 0 && h.offsetHeight > 0;
+            if (!shown && h.parentNode) { h.parentNode.removeChild(h); }
+        }
+    }
+
     /** Whether fitCardToHero has already taken its one resize listener. */
     var watchingWidth = false;
 
@@ -698,7 +756,7 @@
      * NOTHING IS BOOKED OR SUBMITTED HERE. A chip is a form POST of
      * MotoPress's five Book Now fields; see stayForm().
      */
-    function offerOpenDates(card, stay) {
+    function offerOpenDates(stay) {
         if (!AVAIL.url || !AVAIL.action || !window.fetch || !window.AbortController) { return; }
         watchTouches();
         var want = nightsBetween(stay.checkIn, stay.checkOut);
@@ -708,7 +766,7 @@
         if (!to) { return; }
 
         var ctrl = new window.AbortController();
-        var timer = window.setTimeout(function () { ctrl.abort(); }, AVAIL.timeoutMs || 3000);
+        var timer = window.setTimeout(function () { ctrl.abort(); }, AVAIL.timeoutMs || 5000);
         var body = 'action=' + encodeURIComponent(AVAIL.action)
             + '&room_type_ids%5B%5D=' + encodeURIComponent(stay.roomTypeId)
             + '&from=' + encodeURIComponent(stay.checkIn)
@@ -731,6 +789,12 @@
                seconds after load, which is exactly when a guest may be
                reaching for "Pick New Dates" — and a DOM change around a tap is
                how iOS swallows the click. */
+            /* The card is found NOW rather than captured when the request
+               went out, because the request now starts before the card
+               exists. No card (the state changed, or nothing was drawn) and
+               there is simply nothing to add. */
+            var card = document.querySelector('.dcc_checkout-continue');
+            if (!card) { return; }
             afterTouch(function () { addChips(card, stay, stays); });
         })['catch'](function () {
             window.clearTimeout(timer);

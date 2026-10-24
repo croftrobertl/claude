@@ -443,17 +443,27 @@ text-align: left !important;
 .dcc_layout .dcc_layout-sheet {
 --dcc-field-max: 100%;
 }
-.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-customer-details-title,
-.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-price-breakdown-title,
-.dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .dcc_checkout-section-title {
+.dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
+margin-top: 10px;
+}
+}
+.dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+.dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
 text-align: center !important;
 text-decoration: none !important;
 border-bottom: 0;
 padding-bottom: 0;
-font-size: 20px !important;
 }
-.dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
-margin-top: 10px;
+@media (min-width: 1000px) {
+.dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+.dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
+font-size: 20px !important;
 }
 }
 .dcc_layout .dcc_layout-summary {

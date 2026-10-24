@@ -2383,6 +2383,73 @@ yours to improvise.
     cap was never in force and "the fields fill the column" passed while
     measuring nothing. They carry the real wrapper now and BOTH directions are
     asserted: capped at 360 at 390 and 768, filling 560 in the pane.
+- **0.36.1 — IN PROGRESS. 0.36.0 IS STAGING-ONLY AND MUST NOT GO LIVE** (the
+  Director's staging measurement of 0.36.0 on the REAL theme, 2026-10-24).
+  **ON THE REAL THEME THE CARD'S TOP HALF IS PAINTED OVER BY THE HEADER**, at
+  390 and 1440, with the switch off and on: the heading, the lead sentence and
+  (on the dead end) the title are invisible, and the guest sees only the dates,
+  the button and the chips.
+  - **WHY, and it is a stacking context, not geometry.** `HEADER#masthead` is
+    `position: relative; z-index: 999` (two rules in the live stylesheet, 99
+    and 999), so the WHOLE header paints above the content; and inside it
+    `DIV#header-page-title` is `position: absolute; z-index: 11` across the
+    full 420px band. The card's `z-index: 3` lives inside `article.hentry`,
+    whose matrix3d transform scopes it, so it can never reach either.
+    `elementFromPoint` at the card's top+12, +80 and +150 all returned
+    `#header-page-title` on staging.
+  - **THE 0.36.0 FIXTURE HAD NO `#masthead` STACKING CONTEXT, WHICH IS WHY ITS
+    HIT-TEST PASSED.** That hit-test was added in 0.36.0 precisely because the
+    geometry assertions could not see a clipped card — and it then proved the
+    wrong thing, because the fixture reproduced the theme's CLIPPING and not
+    its STACKING. The fixture now carries both (from the Director's prose) and
+    goes red at all three depths; the real capture replaces it (below).
+    **A reproduction tests the rules you thought to reproduce.**
+  - **THE MENU IS THE CATCH, so the obvious fix is the wrong one.** This page
+    uses Bravada's fixed menu (`body.bravada-fixed-menu`): on scroll
+    `.site-header-bottom` gains `header-fixed` and stays on top of the window
+    INSIDE `#masthead`'s context. Lowering `#masthead`'s z-index, or lifting
+    the content above it, makes that bar and its dropdowns slide UNDER the card
+    while a guest scrolls. The Director's instruction is to move the card into
+    the header area (`#header-image-main`) instead, which leaves the menu's
+    stacking alone — and to prove it with a scroll test (600px, the bar's
+    centre must still hit the bar) and a dropdown test, at three widths, in
+    both switch states.
+  - **BLOCKED ON THE REAL CAPTURE, WHICH HAS NOT REACHED THIS SESSION.** The
+    Director's zip ("Custom Checkout 0.36.0 real theme.zip" — four real
+    rendered pages, two screenshots and `theme-css-all.css`, 813 KB) did not
+    arrive; `/root/.claude/uploads/` holds only an older Cottage Selector file.
+    The placement cannot be chosen honestly without it: whether
+    `#header-image-main` clips, what the fixed menu's own z-index is, and what
+    follows the header in the markup all decide it, and all three are in that
+    file. **Do not guess them** — this is the release whose whole lesson is
+    that a plausible reproduction passed.
+  - **DONE WITHOUT IT** (each from a measurement the Director stated, not from
+    the capture): the availability request now starts as early as the script
+    runs rather than after the card is drawn, and the cutoff is **5s, not 3s**
+    (staging: the call took 1,759ms and began at 1,088ms, so the chips landed
+    at 2.85s — inside a 3s cutoff by 150ms, on a feature that took 780ms on
+    live the day before); the section headings lose the underline **at every
+    width** inside `.dcc_layout`, covering the two the Director found still
+    underlined on staging (`.mphb-booking-details-title` "Reservation Details"
+    and `.mphb-room-number` "Accommodation Details") and centring them
+    consistently; and the theme's own **`#header-page-title` banner is hidden**
+    in the two card states, with any INVISIBLE h1 removed so the card's heading
+    is the page's one visible h1 — a visible h1 of someone else's is left
+    alone and the card steps down beside it.
+  - **STILL OPEN**: the stacking fix itself; the desktop height (staging
+    measured **3,240px**, not the 1,603 of the reproduction, against a 2,000
+    target — `.mphb-booking-details` is 590px of data the Your Stay card
+    already shows and `.mphb-customer-details` is 1,417px, and Rob is to choose
+    between leaving it and folding the duplicates into the card on desktop);
+    the real cottage names (staging has The Boathouse, The Lighthouse, Hibiscus
+    Hut — the reproduction's Papaya Place and Mango Cottage do not exist); and
+    `tests/real-theme/`, the standing dated fixture the Director asked for,
+    **to be refreshed after any Bravada or Elementor update**.
+  - **CONFIRMED WORKING ON STAGING**, so these need no further proof: the chips
+    (three correct ones, tapping opened the form for those dates, and no
+    booking was created — staging's newest booking was unchanged) and the
+    cottage strip (real photos at `?resize=150,150`, eight thumbnails
+    **43,132 bytes** at 390/DPR 3, under the 60 KB target).
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).

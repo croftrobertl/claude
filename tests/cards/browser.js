@@ -162,9 +162,30 @@ function page(state, opts) {
   /* Bravada's button rules, as reproduced in tests/button. */
   button { font-family: Pavanam, sans-serif; text-transform: uppercase; }
 
-  /* --- Bravada's header boxes, as the Director read them -------------- */
+  /* --- Bravada's header boxes, as the Director read them --------------
+   *
+   * THE STACKING IS THE PART 0.36.0's FIXTURE DID NOT HAVE, and it is what
+   * hid the card on the real theme (the Director's staging measurement,
+   * 2026-10-24). #masthead is a positioned element with z-index: 999, so
+   * the WHOLE header is a stacking context painting above the content —
+   * nothing inside article.hentry can ever come over it, whatever z-index
+   * it asks for, because hentry's own transform scopes it. And
+   * #header-page-title is absolutely positioned across the full band at
+   * z-index 11, drawing "Submit Booking" over the photo.
+   *
+   * Values from his read of theme-css-all.css: two #masthead rules, 99 and
+   * 999, and #header-page-title at 11. THIS IS STILL A REPRODUCTION — the
+   * real stylesheet has not reached this session; see tests/real-theme/. */
+  header#masthead { position: relative; z-index: 999; }
   #header-image-main { position: relative; }
   #header-image-main-inside { position: relative; overflow: hidden; }
+  #header-page-title {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 11;
+      display: flex; align-items: center; justify-content: center;
+  }
+  #header-page-title-inside { font-size: 40px; color: #fff; }
   #header-image-main-inside .header-image {
       background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
       background-size: cover;
@@ -197,6 +218,10 @@ ${CSS}
     <div class="header-image"></div>
     <div id="header-overlay"></div>
     <img class="header-image" alt="">
+    <!-- THE THEME'S PAGE TITLE: a DIV, visible, drawn large over the photo
+         (the Director, staging 0.36.0). It is not the page's h1 — the 0x0
+         entry-title below is — but it is what a guest SEES. -->
+    <div id="header-page-title"><div id="header-page-title-inside">Submit Booking</div></div>
     ${overlay}
   </div></div>
 </header>
@@ -205,6 +230,7 @@ ${CSS}
        only removed behind the layout switch (0.35.1), and these cards are not
        behind the switch, so with the switch off it is in the HTML. -->
   ${themeTitle}
+  ${o.visibleH1 ? '<h1 class="elementor-heading-title">A Real Heading</h1>' : ''}
   <div class="mphb_sc_checkout-wrapper">${
       state === 'taken'
           ? 'Accommodation is already booked.'
@@ -339,6 +365,13 @@ const MEASURE = `(() => {
             });
         })(),
         overlay: !!document.querySelector('.dcc_hero-overlay'),
+        /* The theme's own "Submit Booking", drawn large over the photo. It is
+           a DIV, not a heading, which is why 0.36.0's h1 reasoning never
+           reached it and a guest saw it on staging. */
+        themeTitleShown: (() => {
+            const t = document.getElementById('header-page-title');
+            return t ? getComputedStyle(t).display !== 'none' : null;
+        })(),
         bodyClass: document.body.className,
         /* IS THE PULLED-UP PART ACTUALLY ON SCREEN? main.main and
            div.one-column are overflow:hidden on this theme, so a card with a
@@ -352,8 +385,16 @@ const MEASURE = `(() => {
             const c = document.querySelector('.dcc_checkout-continue');
             if (!c) { return null; }
             const r = c.getBoundingClientRect();
-            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + 10);
-            return !!(hit && (hit === c || c.contains(hit)));
+            /* THREE DEPTHS, as the Director measured on staging: top+12, +80
+               and +150 all returned #header-page-title there. One point near
+               the edge was not enough — 0.36.0's single probe at +10 sat
+               above the theme's title box in the fixture and passed. */
+            return [12, 80, 150].map((dy) => {
+                const hit = document.elementFromPoint(r.left + r.width / 2, r.top + dy);
+                if (!hit) { return 'nothing'; }
+                if (hit === c || c.contains(hit)) { return 'card'; }
+                return (hit.id || hit.className || hit.tagName).toString().split(' ')[0];
+            });
         })(),
         /* THE SOFTENING MUST NOT TAKE A z-index. article.hentry carries a
            matrix3d transform, which makes a stacking context, so the card's
@@ -443,10 +484,15 @@ const MEASURE = `(() => {
                 m.deadEndVisible, false);
             check(tag + ': the body carries the overlap class',
                 m.bodyClass.indexOf('dcc_checkout-cardover') >= 0, true);
-            check(tag + ': the pulled-up top is really on screen, not clipped away',
-                m.topIsHittable, true);
+            check(tag + ': the card is on top at +12, +80 and +150, not under the header',
+                m.topIsHittable, ['card', 'card', 'card']);
             check(tag + ': the softening sits BEHIND the card, with no z-index',
                 m.scrimZ, 'auto');
+            check(tag + ': the theme\'s own "Submit Booking" is not shown',
+                m.themeTitleShown, false);
+            check(tag + ': … and the card\'s heading is the page\'s one visible h1',
+                [m.heading.tag, m.h1s.length, m.h1s[0] && m.h1s[0].visible],
+                ['h1', 1, true]);
 
             /* ALIGNMENT, Rob's standing rule: a title is centred, and only a
                paragraph of more than one sentence is left. */
@@ -738,6 +784,41 @@ const MEASURE = `(() => {
         /* The guard: it really did keep answering them. */
         check('… and the card is still on the photo at the last of them',
             after.top <= 300, true);
+        await ctx.close();
+    }
+
+    /* ===================================================================== *
+     * A VISIBLE h1 OF SOMEONE ELSE'S IS LEFT ALONE.
+     *
+     * dropThemeTitle() removes an h1 a guest cannot see, so the card's
+     * heading can be the page's one visible h1. It must NOT remove a real
+     * one: an Elementor heading on the page is somebody's content, and the
+     * card steps down to an h2 beside it. Without this case the rule is
+     * prose — every other fixture here has only the theme's 0x0 title.
+     * ===================================================================== */
+    {
+        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        const p = await ctx.newPage();
+        await p.route('**/admin-ajax.php', (route) => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify(availability('2027-01-11', 94, 5)),
+        }));
+        await p.route('**/*.webp', (route) => route.fulfill({
+            status: 200, contentType: 'image/webp',
+            body: Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQ////AA==', 'base64'),
+        }));
+        const html = page('lost', { visibleH1: true });
+        await p.route('https://example.test/submit-booking/', (route) => route.fulfill({
+            status: 200, contentType: 'text/html', body: html,
+        }));
+        await p.goto('https://example.test/submit-booking/');
+        const m = await p.evaluate(MEASURE);
+        check('a real, visible h1 of the page\'s own survives the card',
+            m.h1s.map((h) => h.text + '|' + h.visible), ['A Real Heading|true']);
+        check('… and the card steps down to an h2 beside it',
+            m.heading.tag, 'h2');
+        check('… while the theme\'s banner is still not shown',
+            m.themeTitleShown, false);
         await ctx.close();
     }
 

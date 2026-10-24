@@ -6523,7 +6523,7 @@
       "cards"
     ],
     "claim": "0.36.0 - the availability call is abandoned after its timeout; a slow answer must change nothing",
-    "find": "        var timer = window.setTimeout(function () { ctrl.abort(); }, AVAIL.timeoutMs || 3000);",
+    "find": "        var timer = window.setTimeout(function () { ctrl.abort(); }, AVAIL.timeoutMs || 5000);",
     "replace": "        var timer = window.setTimeout(function () { ctrl.abort(); }, 60000);",
     "count": 1
   },
@@ -6687,9 +6687,9 @@
     "suites": [
       "layout-fields-browser"
     ],
-    "claim": "0.36.0 - the section headings are not underlined on a desktop",
-    "find": "        text-align: center !important;\n        text-decoration: none !important;",
-    "replace": "        text-align: center !important;\n        text-decoration: underline !important;",
+    "claim": "0.36.1 - the section headings are not underlined AT ANY WIDTH (Rob: same fault); 0.36.0 gated it above 1000 and two headings on staging were missed",
+    "find": "    text-align: center !important;\n    text-decoration: none !important;\n    border-bottom: 0;",
+    "replace": "    text-align: center !important;\n    text-decoration: underline !important;\n    border-bottom: 0;",
     "count": 1
   },
   {
@@ -6767,6 +6767,50 @@
     "claim": "0.36.0 - ONE resize listener, ever: fitCardToHero answers a width change by running again, so registering inside it doubles the handler count on every resize",
     "find": "        if (!watchingWidth) {\n            watchingWidth = true;",
     "replace": "        if (true) {\n            watchingWidth = true;",
+    "count": 1
+  },
+  {
+    "id": "js-chips-start-late",
+    "file": "dcc-custom-checkout/assets/restore.js",
+    "suites": [
+      "cards"
+    ],
+    "claim": "0.36.1 - the availability request starts as early as the script runs, not after the card is drawn (staging: it began at 1,088ms and the chips landed at 2.85s)",
+    "find": "        if (state === 'taken') { offerOpenDates(STAY); }",
+    "replace": "        if (state === 'taken') { window.setTimeout(function () { offerOpenDates(STAY); }, 1200); }",
+    "count": 1
+  },
+  {
+    "id": "js-theme-title-shown",
+    "file": "dcc-custom-checkout/assets/restore.js",
+    "suites": [
+      "cards"
+    ],
+    "claim": "0.36.1 - the theme's own \"Submit Booking\" banner is not shown in the two card states (a DIV, so no h1 reasoning reached it)",
+    "find": "        if (banner) { addClass(banner, 'dcc_checkout-hidden'); }",
+    "replace": "        if (false && banner) { addClass(banner, 'dcc_checkout-hidden'); }",
+    "count": 1
+  },
+  {
+    "id": "js-theme-h1-kept",
+    "file": "dcc-custom-checkout/assets/restore.js",
+    "suites": [
+      "cards"
+    ],
+    "claim": "0.36.1 - the card's heading is the page's ONE visible h1: an invisible h1 of the theme's is removed, not left to make a second",
+    "find": "            if (!shown && h.parentNode) { h.parentNode.removeChild(h); }",
+    "replace": "            if (false && !shown && h.parentNode) { h.parentNode.removeChild(h); }",
+    "count": 1
+  },
+  {
+    "id": "js-visible-h1-removed",
+    "file": "dcc-custom-checkout/assets/restore.js",
+    "suites": [
+      "cards"
+    ],
+    "claim": "0.36.1 - a VISIBLE h1 of someone else's is left alone; only one a guest cannot see is removed",
+    "find": "            var shown = h.offsetWidth > 0 && h.offsetHeight > 0;",
+    "replace": "            var shown = false;",
     "count": 1
   }
 ]

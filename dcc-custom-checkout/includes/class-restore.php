@@ -85,8 +85,17 @@ final class Restore
     /** The endpoint caps the range at 95 days; ask for what it will answer. */
     private const AVAIL_WINDOW_DAYS = 94;
 
-    /** Over this and the card simply shows what it showed before (Rob: 3s). */
-    private const AVAIL_TIMEOUT_MS = 3000;
+    /**
+     * Over this and the card simply shows what it showed before.
+     *
+     * FIVE SECONDS SINCE 0.36.1, from a real measurement rather than a guess:
+     * on staging the Calendar's answer took 1,759ms and the request did not
+     * start until 1,088ms, so the chips arrived at about 2.85s — inside the
+     * old 3s cutoff by 150ms, on a feature that took 780ms on live the day
+     * before. The request now starts as early as the script runs, and the
+     * card is useful without chips, so a late chip is still worth having.
+     */
+    private const AVAIL_TIMEOUT_MS = 5000;
 
     public function register(): void
     {

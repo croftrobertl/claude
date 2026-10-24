@@ -515,7 +515,7 @@ check('a posted stay is the "taken" state', $taken['offer'], 'taken');
 check('… so it is told how to ask for open dates',
     [$taken['avail']['action'], $taken['avail']['chips'], $taken['avail']['minNights'],
      $taken['avail']['timeoutMs'], $taken['avail']['windowDays']],
-    ['mphbac_query', 3, 2, 3000, 94]);
+    ['mphbac_query', 3, 2, 5000, 94]);
 check('… at admin-ajax, which is where that endpoint lives',
     $taken['avail']['url'], 'https://example.test/wp-admin/admin-ajax.php');
 /* THE PERFORMANCE RULE, CONSTRUCTED: a working checkout posts a stay, so this

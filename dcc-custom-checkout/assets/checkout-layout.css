@@ -776,22 +776,6 @@ body.dcc_layout {
         --dcc-field-max: 100%;
     }
 
-    /* THE SECTION HEADINGS: centred, and NOT underlined. The underline is
-       this plugin's own too — `checkout.css` gives these four selectors
-       `text-decoration: underline !important` at 25px — so this names them at
-       a higher specificity with `!important`. A border is refused as well,
-       in case the site draws one: that costs nothing and covers the case this
-       machine cannot see. 20px rather than 25: in a 560px column beside a
-       card, 25px underlined headings are the loudest thing on the page. */
-    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-customer-details-title,
-    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-price-breakdown-title,
-    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .dcc_checkout-section-title {
-        text-align: center !important;
-        text-decoration: none !important;
-        border-bottom: 0;
-        padding-bottom: 0;
-        font-size: 20px !important;
-    }
 
     /* THE SMART NEXT BAR BELONGS TO THE FORM PANE (Rob). homeTheBar() moves
        it there at this width — into the sheet rather than into the card,
@@ -800,6 +784,54 @@ body.dcc_layout {
        to drift. */
     .dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
         margin-top: 10px;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * 0.36.1 — THE SECTION HEADINGS, AT EVERY WIDTH (Rob: "remove it at every
+ * width. It's the same fault.").
+ *
+ * 0.36.0 removed the underline above 1000px only, and the Director then
+ * measured TWO headings still underlined on the staging desktop that the
+ * narrower list had missed: H3 "Reservation Details"
+ * (`.mphb-booking-details-title`) and H3 "Accommodation Details"
+ * (`.mphb-room-number`). The same read found them INCONSISTENTLY aligned —
+ * one centred, one left — which is the other half of Rob's complaint.
+ *
+ * SO: every heading MotoPress draws inside this layout, centred and not
+ * underlined, at every width. The underline is this plugin's OWN rule in
+ * checkout.css (`text-decoration: underline !important` at 25px on four
+ * selectors), so an `!important` at higher specificity is what it takes.
+ *
+ * SCOPED TO `.dcc_layout`, which is this release's scope. Today's checkout —
+ * the switch off, which is live — carries the same underline and is NOT
+ * touched here: the Director's item 6 says every 0.35.x behaviour stays as it
+ * is, and with the switch off none of these rules apply at all. If Rob wants
+ * it gone from today's checkout too, that is a one-line move into
+ * checkout.css and a separate decision about a page every guest sees.
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+.dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
+    text-align: center !important;
+    text-decoration: none !important;
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* In a 560px column beside a card, 25px underlined headings are the loudest
+   thing on the page; 20px is the desktop's proportion. The phone keeps
+   MotoPress's size, which Rob approved. */
+@media (min-width: 1000px) {
+    .dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+    .dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
+        font-size: 20px !important;
     }
 }
 
