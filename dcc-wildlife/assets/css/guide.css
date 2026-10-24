@@ -441,11 +441,32 @@
 		 */
 		top: calc(var(--dccwl-sticky-offset, 0px) + var(--dccwl-gp-top-h, 0px) + var(--dccwl-gap));
 	}
+	/*
+	 * SOURCE ORDER IS PANE, THEN LIST (1.47.0) — for the keyboard, see
+	 * class-guide-page.php — and the grid puts them back where the eye
+	 * expects them: the list on the left, the pane on the right.
+	 */
+	.dccwl-gp .dccwl-gp-split > .dccwl-gp-list { grid-column: 1; grid-row: 1; }
+	.dccwl-gp .dccwl-gp-split > .dccwl-gp-pane { grid-column: 2; grid-row: 1; }
+
 	/* With the pane in use the list scrolls on its own, so the page does not
-	 * grow to 402 rows of height beside a short entry. */
+	 * grow to 402 rows of height beside a short entry. Since 1.47.0 that is
+	 * from the first paint, because the pane always holds something.
+	 *
+	 * ITS BOTTOM EDGE FADES to say it scrolls: the 34px mask /explore/'s
+	 * spotlight strip uses, turned to the vertical, and dropped by the same
+	 * `dccwl-at-end` class once there is nothing further down. No
+	 * overscroll-behavior on purpose: a wheel that reaches the end of the
+	 * box carries on into the page instead of being trapped in it. */
 	.dccwl-gp .dccwl-gp-list-split {
 		max-height: 70vh;
 		overflow-y: auto;
+		-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
+		mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
+	}
+	.dccwl-gp .dccwl-gp-list-split.dccwl-at-end {
+		-webkit-mask-image: none;
+		mask-image: none;
 	}
 	@supports (height: 70dvh) {
 		.dccwl-gp .dccwl-gp-list-split { max-height: 70dvh; }
@@ -564,3 +585,96 @@
  * would be exactly what the 1.16.0 note forbids, however the script
  * behaves, so the hiding is left to the element that owns it.
  */
+
+/* ======================================================================
+ * "MOST RECORDED HERE" (1.47.0, Rob's pick C) — the pane before a species
+ * is opened. Exactly the stills he chose from: a centred title, a centred
+ * subtitle, four photo cards two by two, the photo above the name. The
+ * pane exists only at 900px and up; below it is not displayed at all, so
+ * the phone page is the 1.46.2 page.
+ * ====================================================================== */
+@media (max-width: 899.98px) {
+	.dccwl-gp .dccwl-gp-pane.dccwl-gp-pane { display: none; }
+}
+.dccwl-gp .dccwl-gp-spot { margin: 0; }
+.dccwl-app .dccwl-gp-spot-h.dccwl-gp-spot-h {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	letter-spacing: 0;
+	line-height: 1.25;
+	margin: 0 0 2px;
+	padding: 0;
+	text-align: center;
+	text-transform: none;
+}
+.dccwl-gp .dccwl-gp-spot-sub {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-body);
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+.dccwl-gp .dccwl-gp-spot-grid {
+	display: grid;
+	gap: var(--dccwl-gap-lg);
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.dccwl-gp .dccwl-gp-spot-grid > li { margin: 0; padding: 0; }
+/* A two-line name must not leave a short card beside it: each card fills
+ * its grid row, so the pair ends level (the /explore/ tile rule). */
+.dccwl-app .dccwl-gp-spot-grid > li > .dccwl-gp-spot-card.dccwl-gp-spot-card { height: 100%; }
+.dccwl-app .dccwl-gp-spot-card.dccwl-gp-spot-card {
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-lg);
+	box-shadow: none;
+	color: var(--dccwl-text);
+	display: block;
+	overflow: hidden;
+	padding: 0;
+	text-align: center;
+	text-decoration: none;
+}
+.dccwl-app .dccwl-gp-spot-card.dccwl-gp-spot-card:hover {
+	background: #ffffff;
+	border-color: var(--dccwl-accent);
+	color: var(--dccwl-text);
+}
+.dccwl-app .dccwl-gp-spot-card.dccwl-gp-spot-card:focus-visible {
+	outline: 3px solid var(--dccwl-primary);
+	outline-offset: 2px;
+}
+/* The box is sized before the photograph arrives — the ratio, not the
+ * file, decides its height — so a card loading late moves nothing. */
+.dccwl-gp .dccwl-gp-spot-img {
+	aspect-ratio: 16 / 11;
+	display: block;
+	height: auto;
+	object-fit: cover;
+	width: 100%;
+}
+.dccwl-gp .dccwl-gp-spot-name {
+	color: var(--dccwl-text);
+	display: block;
+	font-size: var(--dccwl-fs-base);
+	font-weight: 700;
+	line-height: 1.2;
+	padding: 10px 10px 12px;
+}
+/* "· Keep Away" is part of the name line, at the name's weight — the site
+ * kit's span rule would otherwise thin it (seen at 1440). */
+.dccwl-app .dccwl-gp-spot-name.dccwl-gp-spot-name span { font-weight: inherit; }
+
+/* ======================================================================
+ * THE PHOTO CREDITS FOLD (1.47.0, Rob's pick Y): closed, under a centred
+ * "Photo Credits (N)" and its one line, as in the still. A summary is a
+ * title, so it centres (the alignment rule); the chevron stays beside it.
+ * ====================================================================== */
+.dccwl-gp .dccwl-photo-credits > .dccwl-fullguide-summary { justify-content: center; }
+.dccwl-gp .dccwl-photo-credits .dccwl-fullguide-text { align-items: center; }
+.dccwl-app .dccwl-photo-credits .dccwl-fullguide-h.dccwl-fullguide-h,
+.dccwl-gp .dccwl-photo-credits .dccwl-fullguide-meta { text-align: center; }

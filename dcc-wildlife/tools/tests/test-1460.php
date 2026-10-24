@@ -180,7 +180,12 @@ foreach ( $dataset as $sp ) {
 }
 check_same( 28, count( $striped ), 'is_hazard() names 28 species' );
 check_same( 28, substr_count( $guide, 'dccwl-gp-item-hazard' ), 'and the stripe is on exactly those 28 rows' );
-check_same( 28, substr_count( $guide, ', Keep Away</span>' ), 'each with ", Keep Away" in its accessible name' );
+/* Counted in the LIST: since 1.47.0 the "Most Recorded Here" alligator
+ * card carries one more, asserted in test-1470.php. */
+$gl_from    = (int) strpos( $guide, '<ol class="dccwl-gp-list' );
+$guide_list = (string) substr( $guide, $gl_from, (int) strpos( $guide, '</ol>', $gl_from ) - $gl_from );
+check( strlen( $guide_list ) > 100000, 'the list was found in the page, so the count below can fail', (string) strlen( $guide_list ) );
+check_same( 28, substr_count( $guide_list, ', Keep Away</span>' ), 'each with ", Keep Away" in its accessible name' );
 check_same( 28, substr_count( $guide, 'class="dccwl-gp-keepaway"' ), 'and "Keep Away" at the head of its entry, for the sheet' );
 foreach ( [ 'alligator', 'canetoad', 'cottonmouth' ] as $id ) {
 	preg_match( '#<li class="dccwl-gp-item[^"]*" id="dccwl-fl-' . $id . '"#', $guide, $m );

@@ -288,6 +288,104 @@ class Guide_Page {
 		return isset( self::PROTECTED[ $id ] ) && 'manatee' !== $id;
 	}
 
+	/** How many cards "Most Recorded Here" shows; the subtitle says "four". */
+	public const SPOTLIGHT_COUNT = 4;
+
+	/**
+	 * "MOST RECORDED HERE" (1.47.0, Rob's pick C): the species with the most
+	 * iNaturalist records within the pull's radius, COMPUTED from the `n`
+	 * column of the local-first table, never named here.
+	 *
+	 * Only HERE species with a numeric count are ranked — the manatee's
+	 * `n` is "owner" (the hosts' own sightings, not an iNaturalist count),
+	 * and NEAR / WIDER species have none. Only species with a photograph,
+	 * because each one is a photo card. Ties break on the registry key so
+	 * the four are the same on every render, which a cached page needs.
+	 *
+	 * @param array<int,array<string,mixed>> $rows The dataset.
+	 * @return array<int,array<string,mixed>>      The top `$k`, most first.
+	 */
+	public static function most_recorded( array $rows, int $k = self::SPOTLIGHT_COUNT ): array {
+		$ranked = [];
+		foreach ( $rows as $sp ) {
+			$id  = (string) ( $sp['id'] ?? '' );
+			$loc = Local::row( $id );
+			if ( ! $loc || 'HERE' !== ( $loc['class'] ?? '' ) ) {
+				continue;
+			}
+			$n = (string) ( $loc['n'] ?? '' );
+			if ( '' === $n || ! ctype_digit( $n ) ) {
+				continue;
+			}
+			$src = is_array( $sp['src'] ?? null ) ? $sp['src'] : [];
+			if ( '' === (string) ( $src['mid'] ?? ( $src['full'] ?? '' ) ) ) {
+				continue;
+			}
+			$ranked[] = [ (int) $n, $id, $sp ];
+		}
+		usort(
+			$ranked,
+			static fn( array $a, array $b ): int => ( $b[0] <=> $a[0] ) ?: strcmp( $a[1], $b[1] )
+		);
+		return array_map( static fn( array $r ): array => $r[2], array_slice( $ranked, 0, max( 0, $k ) ) );
+	}
+
+	/**
+	 * The "as of" month and year, FROM A DATE IN THE DATA.
+	 *
+	 * The cards carry no numbers because a count is a snapshot that goes
+	 * quietly stale (the Director's note); the subtitle carries the date
+	 * instead. It is the PULL date, `Local::PULLED`: each row's own `date`
+	 * is the newest OBSERVATION of that species (the CSV's `latest_date`),
+	 * not when the counts were taken. Never a literal.
+	 */
+	public static function as_of( string $ymd ): string {
+		$ts = strtotime( $ymd . ' 12:00:00' );
+		return false === $ts ? '' : (string) date_i18n( 'F Y', $ts );
+	}
+
+	/**
+	 * The spotlight itself: a centred title, a subtitle naming the source
+	 * and the date, and four photo cards. Each card is a REAL LINK to the
+	 * species' anchor — it works with no script, and guide.js upgrades it
+	 * to open the entry in this pane.
+	 *
+	 * @param array<int,array<string,mixed>> $spot The four.
+	 */
+	private static function spotlight( array $spot ): void {
+		?>
+		<section class="dccwl-gp-spot" data-dccwl-gp-spot>
+			<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h"><?php esc_html_e( 'Most Recorded Here', 'dcc-wildlife' ); ?></h2>
+			<p class="dccwl-gp-spot-sub" data-dccwl-gp-spot-asof>
+				<?php
+				printf(
+					/* translators: %s: a month and year, e.g. "October 2026". */
+					esc_html__( 'The four species recorded most on this canal on iNaturalist, as of %s', 'dcc-wildlife' ),
+					esc_html( self::as_of( Local::PULLED ) )
+				);
+				?>
+			</p>
+			<ul class="dccwl-gp-spot-grid">
+				<?php foreach ( $spot as $sp ) : ?>
+					<?php
+					$id    = (string) $sp['id'];
+					$src   = is_array( $sp['src'] ?? null ) ? $sp['src'] : [];
+					$photo = (string) ( $src['mid'] ?? ( $src['full'] ?? '' ) );
+					?>
+					<li>
+						<a class="dccwl-gp-spot-card" href="#<?php echo esc_attr( self::ANCHOR_PREFIX . $id ); ?>"
+							data-dccwl-gp-spot-key="<?php echo esc_attr( $id ); ?>">
+							<img class="dccwl-gp-spot-img" src="<?php echo esc_url( $photo ); ?>" alt=""
+								loading="lazy" decoding="async" />
+							<span class="dccwl-gp-spot-name"><?php echo esc_html( (string) $sp['name'] ); ?><?php if ( Species::is_hazard( $sp ) ) : ?><span aria-hidden="true"> · <?php esc_html_e( 'Keep Away', 'dcc-wildlife' ); ?></span><span class="dccwl-sr"><?php esc_html_e( ', Keep Away', 'dcc-wildlife' ); ?></span><?php endif; ?></span>
+						</a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</section>
+		<?php
+	}
+
 	/** `[dcc_wildlife_guide]` */
 	public static function shortcode( array $atts = [] ): string {
 		ob_start();
@@ -438,22 +536,44 @@ class Guide_Page {
 			         cached page carries no result count of its own. */ ?>
 			<p class="dccwl-gp-status" data-dccwl-gp-status role="status" aria-live="polite" hidden></p>
 
+			<?php
+			$spot = self::most_recorded( $rows );
+			$spot = self::SPOTLIGHT_COUNT === count( $spot ) ? $spot : [];
+			?>
 			<div class="dccwl-gp-split">
-				<ol class="dccwl-gp-list" data-dccwl-gp-list>
-					<?php foreach ( $rows as $sp ) { self::row( $sp ); } ?>
-				</ol>
-
 				<?php
 				/*
-				 * THE DESKTOP PANE (picture 3). Empty, and `hidden` until a
-				 * wide screen has something to put in it — guide.js fills it
-				 * from the row's own entry rather than from a second copy of
-				 * the data. On a phone it never appears and the sheet is
-				 * what opens.
+				 * THE DESKTOP PANE (picture 3), and since 1.47.0 it is never
+				 * empty on a wide screen: before a species is opened it holds
+				 * "Most Recorded Here" (Rob's pick, option C), SERVER-RENDERED
+				 * so the page caches whole. A row or a card replaces it with
+				 * that species' entry, cloned from the row as before.
+				 *
+				 * IT COMES BEFORE THE LIST IN THE SOURCE, and the grid puts it
+				 * back on the right. Two reasons, both keyboard: the four
+				 * cards are reached after the pinned controls rather than
+				 * after 395 rows, and Tab from the LAST row leaves the list
+				 * for "Back To Explore" and the credits, which is what the
+				 * Director's brief asks of the scroll box. Below 900px the
+				 * pane is not displayed at all, so the order changes nothing
+				 * there.
+				 *
+				 * With no spotlight (a data import that left fewer than four
+				 * rankable species) the pane is `hidden` exactly as 1.46.2
+				 * shipped it, and the list is not boxed.
 				 */
 				?>
-				<aside class="dccwl-gp-pane" data-dccwl-gp-pane hidden
-					aria-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"></aside>
+				<aside class="dccwl-gp-pane" data-dccwl-gp-pane<?php echo $spot ? '' : ' hidden'; ?>
+					data-dccwl-gp-pane-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"
+					<?php if ( $spot ) : ?>aria-labelledby="dccwl-gp-spot-h"<?php else : ?>aria-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"<?php endif; ?>><?php
+					if ( $spot ) {
+						self::spotlight( $spot );
+					}
+				?></aside>
+
+				<ol class="dccwl-gp-list<?php echo $spot ? ' dccwl-gp-list-split' : ''; ?>" data-dccwl-gp-list>
+					<?php foreach ( $rows as $sp ) { self::row( $sp ); } ?>
+				</ol>
 			</div>
 
 			<p class="dccwl-gp-empty" data-dccwl-gp-empty hidden></p>

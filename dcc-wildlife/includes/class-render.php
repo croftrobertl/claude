@@ -930,21 +930,32 @@ final class Render {
 			return;
 		}
 		?>
-		<details class="dccwl-fullguide dccwl-photo-credits" id="credits" open>
-			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'Photo credits', 'dcc-wildlife' ); ?>">
+		<?php
+		/*
+		 * SHIPS CLOSED (1.47.0, Rob's pick Y). Open, its 401 entries were
+		 * 26,495px at 1440 — 43% of the page. Closed, every credit is
+		 * still in the HTML (crawlable, and the licence terms are still
+		 * met: the attribution is on the page, one click away), and
+		 * guide.js opens it when the URL is `#credits` — the explore
+		 * widget's Photo Credits link and every sheet's — because a
+		 * browser does not open a closed <details> for a fragment that
+		 * names the <details> itself (measured).
+		 *
+		 * The label is the full "Photo Credits (N)" now, with N counted
+		 * from the rows below rather than written: the old "Credits" was
+		 * shortened in 1.28.0 to fit a 337px row beside two other folds,
+		 * and on the guide page it stands alone and centred.
+		 */
+		?>
+		<details class="dccwl-fullguide dccwl-photo-credits" id="credits">
+			<summary class="dccwl-fullguide-summary">
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
-					<?php /* "Credits" in the row, "Photo credits" to a screen reader
-					         (1.28.0). Measured on live at 393px, three full labels came
-					         to 350px in a 337px row and "By month" dropped to a second
-					         line; this label was the cheapest 55px. */ ?>
-					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Credits', 'dcc-wildlife' ); ?></span>
-					<span class="dccwl-fullguide-meta">
-						<?php
-						/* translators: %d: number of photographs. */
-						echo esc_html( sprintf( _n( '%d photograph, and who took it', '%d photographs, and who took them', count( $rows ), 'dcc-wildlife' ), count( $rows ) ) );
-						?>
-					</span>
+					<span class="dccwl-fullguide-h" data-dccwl-credits-count="<?php echo esc_attr( (string) count( $rows ) ); ?>"><?php
+						/* translators: %d: number of photographs credited. */
+						echo esc_html( sprintf( __( 'Photo Credits (%d)', 'dcc-wildlife' ), count( $rows ) ) );
+					?></span>
+					<span class="dccwl-fullguide-meta"><?php esc_html_e( 'Who took each photograph, and where it came from', 'dcc-wildlife' ); ?></span>
 				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">

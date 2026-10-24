@@ -5225,3 +5225,80 @@ Nine mutations across the two passes (drop the woodpecker from either
 spelling; drop either new flag; make the manatee line name the list; give it
 back the link; leave the date or the month at April 2025; chip the Ceraunus
 Blue) each go red by name. Rollback reinstalls 1.46.1.
+
+### 45. 1.47.0 — "Most Recorded Here" in the desktop pane, and the credits folded
+
+Rob picked from the desktop stills: **C** for the right pane before a species
+is opened, and **Y** for the photo credits. Nothing else changed, and nothing
+below 900px.
+
+#### THE PANE IS NEVER EMPTY ON A WIDE SCREEN
+
+- **`Guide_Page::most_recorded()`** ranks the dataset by the `n` column of
+  `class-local.php`: HERE rows with a numeric count and a photograph, most
+  first, ties on the key so a cached page is stable. Today: alligator 437,
+  anhinga 331, gallinule 257, great blue heron 256. Never written by name.
+  The manatee's `n` is "owner", not an iNaturalist count, and is never ranked.
+- **Server-rendered** into `<aside class="dccwl-gp-pane">`, so the page
+  caches whole. Below 900px the pane is `display: none` (it was `hidden`), so
+  phones fetch none of its lazy photos.
+- **No numbers on the cards.** A count is a snapshot. The subtitle carries the
+  date instead: "…as of October 2026", from **`Local::PULLED`** through
+  `Guide_Page::as_of()`. NOT from a row's `date`: that column is the CSV's
+  `latest_date`, the newest OBSERVATION of the species, which the brief took
+  for the pull date. Both read October 2026 today; only PULLED is right.
+- **The alligator card** reads "Alligator · Keep Away" on screen and
+  "Alligator, Keep Away" as its accessible name: the list's rule.
+- **Each card is a real link** to `#dccwl-fl-<key>`. guide.js upgrades it to
+  open the entry in the pane with no hash jump, then focuses the pane (the
+  card it was on is gone). Modifier-clicks stay links.
+- **The pane comes BEFORE the list in the source**, and the grid puts it back
+  on the right (`grid-column`/`grid-row`). That is the keyboard: the cards
+  are reached right after the pills, and Tab from the LAST row leaves the
+  list for "Back To Explore" and then the credits summary.
+- **The pane holds its height until the opened species' photo has loaded.**
+  That photo has no height until then. With the page now short, a guest
+  scrolled to the bottom was clamped up 23px as the pane briefly shrank
+  (measured at 1440). The raw shift INSIDE the pane as the photo arrives
+  (0.05 at 1440) is unchanged from 1.46.2 for every row. CLS excuses it
+  within 500ms of the tap, so measured CLS is 0. On a slow connection it
+  would count. The fix is each photo's height in the data, which is not
+  there; that is the next conversation, not this one.
+
+#### THE LIST'S SCROLL BOX, PROVED
+
+With the pane always in use, the list scrolls inside its 70vh box from the
+first paint (the class is server-rendered). `ui-1470.mjs` drives it:
+
+- The wheel over the list scrolls the list, and at either end it carries on
+  into the page. The box sets NO `overscroll-behavior`; adding `contain` is
+  the mutation, and it fails the suite.
+- Page Down and the arrows scroll the box that has focus, not the page.
+- The bottom edge fades: /explore/'s 34px mask, vertical, dropped by the same
+  `dccwl-at-end` class at the end or when a filter leaves the list short.
+- **Box height: 630px at 1440×900, 538px at 1024×768.** On arrival its bottom
+  edge sits 27px and 67px below the fold, so the fade is first seen after a
+  small page scroll. Reported to the Director, not changed: the box's size
+  is Rob's to pick.
+
+#### THE CREDITS SHIP CLOSED
+
+`<details id="credits">` has no `open`. Its summary is a centred "Photo
+Credits (N)", N counted from the rows, over "Who took each photograph, and
+where it came from". Every credit stays in the HTML. **A browser does not open
+a closed `<details>` for a fragment naming the details itself**, so guide.js's
+`openCredits()` opens it on arrival with `#credits` (the explore widget's link)
+and on `hashchange` (every sheet's link). Both paths are tested, each with its
+own mutation.
+
+#### MEASURED, AT THE FOUR WIDTHS (now standing for every release)
+
+| Width | 1.46.2 page | 1.47.0 page |
+|---|---|---|
+| 390 | 88,992px | 35,647px |
+| 768 | 62,027px | 35,119px |
+| 1024 | 61,817px | ~1,020px |
+| 1440 | 61,753px | ~1,110px |
+
+CLS 0 on load and on the first tap at all four. No sideways scroll. Exactly
+one visible h1. Ten mutations, each red by name, restored byte-identical.

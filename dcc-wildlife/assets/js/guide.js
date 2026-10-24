@@ -8,7 +8,8 @@
  *   2. opening a species — in the shared sheet on a phone, in the pane
  *      beside the list on a wide screen;
  *   3. the counts in the pills, which follow the switch;
- *   4. `#dccwl-fl-<key>` deep links, which open that species on arrival.
+ *   4. `#dccwl-fl-<key>` deep links, which open that species on arrival,
+ *      and `#credits`, which opens the folded photo credits (1.47.0).
  *
  * WHAT IT DOES NOT DO, AND WHY THAT IS THE DESIGN:
  *
@@ -44,6 +45,11 @@
 
 	var items = [].slice.call(list.querySelectorAll('[data-dccwl-gp-item]'));
 	if (!items.length) { return; }
+
+	/* "Most Recorded Here" (1.47.0): server-rendered into the pane. Held by
+	 * reference so it can be put back when the pane is emptied by a width
+	 * change; it is never rebuilt. */
+	var spot = pane ? pane.querySelector('[data-dccwl-gp-spot]') : null;
 
 	var state = { scope: 'here', group: 'all', q: '', openKey: null };
 
@@ -113,6 +119,7 @@
 		}
 		counts();
 		say(shown, words.length > 0);
+		atEnd();
 		return shown;
 	}
 
@@ -245,13 +252,65 @@
 
 	function openInPane(item) {
 		if (!pane) { return; }
+		/*
+		 * HOLD THE PANE'S HEIGHT UNTIL THE NEW PHOTOGRAPH ARRIVES (1.47.0).
+		 * The photo has no height until it loads, so for that moment the
+		 * pane was shorter than the list and the page lost height under
+		 * it: scrolled to the bottom, the page was clamped up (measured,
+		 * 23px at 1440). Holding the old height keeps the page still; it
+		 * is released when the photo has its own.
+		 */
+		var held = pane.hidden ? 0 : pane.offsetHeight;
+		if (held) { pane.style.minHeight = held + 'px'; }
 		pane.textContent = '';
 		pane.appendChild(contentFor(item));
+		var photo = pane.querySelector('img.dccwl-gp-photo');
+		var release = function () { pane.style.minHeight = ''; atEnd(); };
+		if (held && photo && !photo.complete) {
+			photo.addEventListener('load', release, { once: true });
+			photo.addEventListener('error', release, { once: true });
+		} else {
+			pane.style.minHeight = '';
+		}
 		pane.hidden = false;
+		/* The pane's name follows what it holds: the spotlight names itself
+		 * by its heading; a species is "the species you chose". */
+		pane.removeAttribute('aria-labelledby');
+		pane.setAttribute('aria-label', pane.getAttribute('data-dccwl-gp-pane-label') || '');
 		list.classList.add('dccwl-gp-list-split');
 		markOpen(item);
 		state.openKey = item.getAttribute('data-key');
+		atEnd();
 	}
+
+	/* Put "Most Recorded Here" back (a wide window with nothing open). */
+	function showSpotlight() {
+		if (!pane || !spot) { return; }
+		if (spot.parentNode !== pane) {
+			pane.textContent = '';
+			pane.appendChild(spot);
+		}
+		pane.removeAttribute('aria-label');
+		pane.setAttribute('aria-labelledby', 'dccwl-gp-spot-h');
+		pane.hidden = false;
+		list.classList.add('dccwl-gp-list-split');
+		atEnd();
+	}
+
+	/*
+	 * THE SCROLL BOX'S CUE (1.47.0). With the pane in use the list scrolls
+	 * inside its own box, and its bottom edge fades to say so — the same
+	 * 34px mask and the same `dccwl-at-end` switch as /explore/'s spotlight
+	 * strip. Scrolled to the end, or filtered short enough to fit, there is
+	 * nothing more to cue and the fade goes. Nothing here traps the wheel:
+	 * the box sets no overscroll-behavior, so a wheel that reaches its end
+	 * carries on into the page.
+	 */
+	function atEnd() {
+		var max = list.scrollHeight - list.clientHeight;
+		list.classList.toggle('dccwl-at-end', max <= 4 || list.scrollTop >= max - 4);
+	}
+	list.addEventListener('scroll', atEnd, { passive: true });
 
 	function openInSheet(item, opener) {
 		if (!window.DCCWL_Sheet) { return false; }
@@ -346,6 +405,33 @@
 		openSpecies(item, summary);
 	});
 
+	/*
+	 * THE FOUR CARDS (1.47.0). Each is a real link to the species' anchor —
+	 * with no script, or with a modifier key, it behaves as one. Otherwise
+	 * it opens the entry in the pane in place: no hash jump, so neither the
+	 * page nor the list moves under the guest. The card it was is replaced,
+	 * so focus goes to the pane rather than falling back to the page.
+	 */
+	if (pane) {
+		pane.addEventListener('click', function (ev) {
+			var card = ev.target && ev.target.closest
+				? ev.target.closest('[data-dccwl-gp-spot-key]')
+				: null;
+			if (!card) { return; }
+			if (ev.defaultPrevented || ev.button !== 0
+				|| ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) { return; }
+			var key = card.getAttribute('data-dccwl-gp-spot-key') || '';
+			var item = list.querySelector('[data-key="' + key.replace(/"/g, '') + '"]');
+			if (!item) { return; }
+			ev.preventDefault();
+			openSpecies(item, card);
+			if (wide && wide.matches) {
+				pane.setAttribute('tabindex', '-1');
+				try { pane.focus({ preventScroll: true }); } catch (e) { pane.focus(); }
+			}
+		});
+	}
+
 	/* Keyboard: a <summary> answers Enter and Space itself by toggling, and
 	 * the click handler above sees that as a click — so nothing extra is
 	 * needed, and adding a keydown handler would open twice. */
@@ -378,6 +464,7 @@
 	}
 	afterPaint(function () {
 		measureTop();
+		if (wide && wide.matches) { atEnd(); }
 		if (window.ResizeObserver && top) {
 			new window.ResizeObserver(measureTop).observe(top);
 		} else {
@@ -394,6 +481,7 @@
 				? list.querySelector('[data-key="' + state.openKey + '"]')
 				: null;
 			if (!openItem) {
+				if (spot) { showSpotlight(); return; }
 				if (pane) { pane.hidden = true; }
 				list.classList.remove('dccwl-gp-list-split');
 				return;
@@ -459,10 +547,26 @@
 	 * both of which can wait the ~16 ms it takes for the page to be on
 	 * screen, and neither should stand between the HTML and its paint.
 	 */
+	/*
+	 * `#credits` OPENS THE PHOTO CREDITS (1.47.0). They ship folded, and a
+	 * browser does not open a closed <details> for a fragment naming the
+	 * <details> itself — it scrolls to the summary and leaves it shut
+	 * (measured). The explore widget's "Photo Credits" link and every
+	 * sheet's arrive here with that hash, so it is opened for them. The
+	 * browser has already scrolled to it; opening expands it downwards, so
+	 * nothing above it moves.
+	 */
+	function openCredits(hash) {
+		if ('#credits' !== String(hash || '')) { return false; }
+		var d = document.getElementById('credits');
+		if (d && 'DETAILS' === d.tagName) { d.open = true; }
+		return true;
+	}
+
 	afterPaint(function () {
-		openFromHash(window.location.hash, false);
+		if (!openCredits(window.location.hash)) { openFromHash(window.location.hash, false); }
 	});
 	window.addEventListener('hashchange', function () {
-		openFromHash(window.location.hash, true);
+		if (!openCredits(window.location.hash)) { openFromHash(window.location.hash, true); }
 	});
 })();

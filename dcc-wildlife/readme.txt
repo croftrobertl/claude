@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.46.2
+Stable tag: 1.47.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,23 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.47.0 =
+* **The wide-screen guide opens on "Most Recorded Here"** (Rob's pick)
+  instead of a blank column: the four species recorded most on this canal
+  on iNaturalist, as photo cards, with the month of the count beside them.
+  The four are worked out from the data, never named by hand, and the
+  cards show no numbers, because a count is a snapshot. A card opens its
+  species in the same place, and the page does not move. Phones are
+  unchanged.
+* **The photo credits are folded** (Rob's pick) under "Photo Credits (401)".
+  Every credit is still on the page, and a link to #credits — the one in
+  /explore/ and in every species sheet — opens them.
+* **The page is a fraction of the length**: at 1440px wide it is about
+  1,100px tall instead of 61,700px, and on a phone about 35,600px instead
+  of 89,000px. The wide-screen list scrolls inside its own box, which fades
+  at the bottom to say so and hands the wheel back to the page at either
+  end.
 
 = 1.46.2 =
 * **The Red-cockaded Woodpecker is "Protected"** — the thirteenth species
