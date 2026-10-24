@@ -251,7 +251,13 @@ function MPHB() { return new MPHB_Stub(); }
 require __DIR__ . '/shim.php';
 
 $plugin = dirname(__DIR__, 2) . '/dcc-custom-checkout';
-foreach (['config', 'layout', 'checkout-request', 'rendered-stay', 'assets', 'hero'] as $file) {
+/* 0.36.0 adds layout-script, because the summary card's photo must be the
+   SAME FILE the hero paints — that is the whole reason it costs the guest
+   nothing — and this is the harness that has real attachments in it. The
+   browser fixture cannot check it: it carries its own copy of the localized
+   config, so a PHP change is invisible there. That is apparent coverage, and
+   mutation `ls-card-photo-not-heros` survived a whole run on it. */
+foreach (['config', 'layout', 'checkout-request', 'rendered-stay', 'assets', 'hero', 'layout-script'] as $file) {
     require $plugin . '/includes/class-' . $file . '.php';
 }
 
@@ -947,6 +953,42 @@ $unmarked = array_values(array_filter($selectors, static function (string $sel):
 }));
 check('every rule is keyed on the marker class, so today\'s checkout cannot be touched',
     $unmarked, []);
+
+/* ========================================================================== *
+ * 0.36.0 — THE SUMMARY CARD'S PHOTO IS THE HERO'S OWN FILE
+ *
+ * The claim is a performance one: the header already paints that file as a
+ * CSS background and the preload has already asked for it, so the card's
+ * <img> is a cache hit rather than a second download. That is only true if it
+ * is the SAME URL, so the URL is what is compared — against Hero's own
+ * answer, never against a literal, so the two cannot drift.
+ * ========================================================================== */
+
+echo "\n--- 0.36.0: the card's photo ---\n";
+
+/* Cottage 34, posted, which is the state the card renders in. */
+reset_state(['post' => [
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2126-11-16',
+    'mphb_check_out_date' => '2126-11-19',
+]]);
+
+$hero_photo = \DCC_Checkout\Hero::photo(\DCC_Checkout\Hero::room_type_id());
+$summary = \DCC_Checkout\Layout_Script::summary();
+
+check('the hero really resolved a photo here (the guard on the checks below)',
+    $hero_photo['url'] !== '' && $hero_photo['width'] > 0, true);
+check('the card\'s photo is the hero\'s own file, to the character',
+    $summary['photo'], $hero_photo['url']);
+check('… and its real pixels go with it, so the card reserves the box',
+    [$summary['photoW'], $summary['photoH']],
+    [$hero_photo['width'], $hero_photo['height']]);
+check('… and the card names the cottage, without the "Cottage 34:" prefix',
+    $summary['name'], 'Test Cottage');
+/* The dates still come from Hero's one shared reader (0.35.0's rule): the
+   card and the pill over the photo must word the same stay identically. */
+check('the card and the pill still read the same dates from one place',
+    $summary['dates'], \DCC_Checkout\Hero::stay_dates_text());
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

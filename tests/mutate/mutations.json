@@ -6751,9 +6751,9 @@
     "id": "ls-card-photo-not-heros",
     "file": "dcc-custom-checkout/includes/class-layout-script.php",
     "suites": [
-      "layout-fields"
+      "hero"
     ],
-    "claim": "0.36.0 - the card's photo is the HERO's own file, so it costs the guest no second download",
+    "claim": "0.36.0 - the card's photo is the HERO's own file, so it costs the guest no second download (asserted in tests/hero, which has real attachments; the browser fixture carries its own copy of the config and cannot see a PHP change)",
     "find": "        $photo = Hero::photo($type);",
     "replace": "        $photo = ['url' => '', 'width' => 0, 'height' => 0];",
     "count": 1

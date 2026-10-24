@@ -658,13 +658,20 @@ const MEASURE = `(() => {
         { name: 'the answer is not JSON', route: (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html>' }) },
         { name: 'the endpoint is not there at all', route: (route) => route.abort() },
         {
+            /* THE WAIT OUTLASTS THE ANSWER, AND THAT IS THE WHOLE POINT.
+               The first version waited 3.6s against a reply at 4s, so the
+               request was merely still in flight — a 60-second timeout would
+               have passed it just as well, and mutation `js-chips-no-timeout`
+               survived on exactly that. Waiting past the reply means the
+               chips are absent because the request was ABANDONED, which is
+               the claim. */
             name: 'it is slower than the three seconds allowed',
             route: async (route) => {
                 await new Promise((r) => setTimeout(r, 4000));
                 route.fulfill({ status: 200, contentType: 'application/json',
                     body: JSON.stringify(availability('2027-01-11', 94, 5)) });
             },
-            wait: 3600,
+            wait: 5200,
         },
     ];
 

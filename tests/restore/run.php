@@ -533,7 +533,24 @@ check('… so it gets every published cottage, with a page and a picture',
      $lost['cottageList'][0]['url']],
     [8, 'Name 0', 'https://example.test/accommodation/c0/']);
 check('… and NOT the open-dates endpoint, which it has no stay to ask about',
-    $lost['cottageList'] === [] ? 'strip missing' : $lost['avail'], []);
+    $lost['avail'], []);
+
+/* THE CASE THAT TELLS THE GATE FROM THE EMPTY STAY. The check above cannot:
+   with no stay posted, avail_config() returns [] of its own accord, so
+   removing the `$offer === 'taken'` gate changes nothing and the mutation
+   survived a whole run. A stay that EXISTS but is not bookable in principle —
+   a check-in already past — is 'lost' with a readable stay, and there the
+   gate is the only thing saying no. (A guest whose dates are behind them
+   should not set an availability lookup going either.) */
+with_post([
+    'mphb_room_type_id'   => '1607',
+    'mphb_check_in_date'  => '2020-01-11',
+    'mphb_check_out_date' => '2020-01-14',
+]);
+$past = Restore::config();
+check('a stay in the past is lost, and its stay is still readable (the guard)',
+    [$past['offer'], $past['stay']['roomTypeId'] ?? null], ['lost', '1607']);
+check('… and it is NOT told how to ask for open dates', $past['avail'], []);
 
 /* CACHED FOR HALF A DAY. A cookie-rebuilt checkout IS the lost state (0.35.1,
    item 1) and renders a working form, so without this the query would run on
