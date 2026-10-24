@@ -796,6 +796,71 @@ the stacking context, below our frontZ 9000).
   canvas (SwiftShader) the two builds read the same (scene 14-16 fps
   both, within noise).
 
+### Rob's picks (for 4.14.0, 2026-10-23/24): Christmas
+
+Four rounds of stills (`tools/xmas-redraw.js`, `tools/xmas-final.js`).
+Round 1's drawings were rejected as "dumpy", "tube-shaped", "like South
+Park kids walking"; the standard is the witch and the heron, and every
+animal is now laid at 50% over a public-domain or CC0 photograph BEFORE
+Rob sees it (the overlay rows; sources named on the sheets).
+
+- **The scene `sleighmoon`**, by day as well as by night (it moved from
+  `EVENING_VIGS`, now empty, into `VIGS.christmas`; `giftdrop` stays):
+  the engine's own moon, ungraded, then Santa's sleigh and FOUR reindeer
+  in two pairs. Painters at module scope (`rdPaint`/`rdLeg`/`rdPose`/
+  `rdGlow`, `snSanta`/`snSleigh`/`snSack`/`snReins`), approved as drawn:
+  - Reindeer: Rangifer from reference, body ~0.4 as deep as long, legs one
+    tapered shape each with no joint knobs, a broad blunt muzzle, the neck
+    and body ONE outline. A transverse gallop from Muybridge, keyframed
+    joint angles (Catmull-Rom), footfalls LH 0, RH .10, LF .45, RF .56,
+    each leg down a quarter stride. The team staggered a quarter stride
+    apart, the far animal of each pair behind, above, 90% and darker.
+  - The lead has the RED NOSE (Rob's A): `rdGlow`, drawn AFTER the moon's
+    cut so it glows while the animal is dark.
+  - The silhouette is CUT AT THE DISC (Rob's A): each reindeer pose is
+    pre-drawn lit, far-lit and dark (`sdGet`, 24 poses, min(DPR, 2)); per
+    frame the lit sprite, then the dark one clipped to the moon's circle.
+    Santa and the sleigh are NEVER dark (Rob).
+  - Santa: a two-lobe mustache over a full rounded beard, the blush on the
+    cheekbone, white hair in front of the ear into the beard, red sleeves
+    with fur cuffs, the classic hat as one shape. He flicks the reins every
+    2.4-3.8 s; the snap travels to the lead pair in 0.9 s.
+- **The moon keeps clear** of the page title (measured by its LETTERS, a
+  Range per text node) and of anything `[data-dcc-keep-clear]`, plus the
+  picture's top-right 230x190 from 768px up, where the dial sits
+  (`sledMoon`; config `clearSel`, filter `dcc_seasons_keep_clear`).
+- **Cost bars (the Director's): worst frame after warm-up < 8 ms** at 390,
+  DPR 3, 4x CPU over 10 s, measured on the SHIPPED build
+  (`tools/measure-sleigh.js`). The header's letters are measured in IDLE
+  time ahead of the scene and every sprite is warmed once: measuring them
+  in the scene's first frame cost ~11 ms and the first drawImage of each
+  sprite ~8 ms. The cranes' scene still measures its letters in-frame (it
+  reads ~22 ms at 4x CPU on that one frame) — unchanged, as Thanksgiving
+  is finished; tell the Director before touching it.
+- **The pieces**: the three glass balls as ONE kind (`ballred`/`ballgold`/
+  `ballblue`, Rob's A), `candycane` (Rob's B: green in the stripes, a
+  pattern painted on the stroke so it wraps the hook), `flamingoxmas`
+  (Rob's C, one leg folded across the other with its webbed foot, the S
+  neck dipping below the breast, the beak clear in front of it),
+  `palmxmas` (petioles first, fans opening along them, more up than down,
+  no symmetry), and holly (closed sprig), gift and pine redrawn. The Keys
+  `sabalpalm` and Snowbird `flamingo` are NOT changed. Cap 9 / phone 5
+  unchanged. Three of these are FUNCTIONS (`xBall`, `xPalm`, `xWreath`) so
+  the engine carries the geometry, not kilobytes of path data;
+  `tools/gen-xmas-art.js` mirrors the palm and flamingo for the labs.
+- **The wreath** is the corner accent, Rob's A, in the web's size class
+  (96px, .5, top right, 8px in). Its gradient ids are prefixed (`dccWr…`):
+  an accent is inlined into the page, where ids are global.
+- **No bokeh** (Rob's B), in `subtle_defaults()` and `SUBTLE_FALLBACK`.
+- **One Santa**: the static `sleigh` HERO is removed (`SKY_HERO`, the hero
+  code, `HERO_ART`). The `sleigh` SPRITE stays: `giftdrop` draws it.
+- `tools/test-christmas.js` pins all of it, checks the cut, the nose and
+  Santa on the canvas's pixels, the other 26 themes and the witch/crane/
+  gift scenes byte-identical to 4.13.0, reduced motion and
+  `/submit-booking/` (zero requests, via `scope-decide.php
+  --kind=submitbooking`). `tools/shots-christmas.js` is the THREE-WIDTH
+  check, a standing rule for every release (390, 768, 1440).
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -815,7 +880,7 @@ the stacking context, below our frontZ 9000).
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 181,684 raw / 64,661 gzipped (4.12.2, `gzip -c`; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 221,478 raw / 77,396 gzipped (4.14.0, `gzip -c`; the Christmas scene, its painters and the redrawn pieces are +31.5KB raw / +10.2KB gz over 4.13.0's 189,931 / 67,225, against the Director's ceiling of 82,225 gz. Earlier: 181,684 raw / 64,661 gzipped (4.12.2; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1167,7 +1232,7 @@ the stacking context, below our frontZ 9000).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-christmas.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

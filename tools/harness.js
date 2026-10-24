@@ -88,6 +88,15 @@ async function open(html, opts = {}) {
     return route.fulfill({ status: 404, body: '' });
   });
 
+  /* opts.init: a script run before any of the page's own (a measuring
+   * suite times the engine's frames by wrapping requestAnimationFrame);
+   * opts.throttle: a CPU slowdown applied from the first byte. */
+  if (opts.init) { await page.addInitScript(opts.init); }
+  if (opts.throttle) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: opts.throttle });
+  }
+
   const logs = [];
   page.on('console', m => logs.push(`${m.type()}: ${m.text()}`));
   page.on('pageerror', e => logs.push(`pageerror: ${e.message}`));

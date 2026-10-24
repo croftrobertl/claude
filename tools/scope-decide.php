@@ -8,7 +8,7 @@
  * proves nothing. This prints the plugin's own verdict, and the kinds of
  * page are the ones the matrix is written against.
  *
- *   php tools/scope-decide.php --scope=not_home --kind=front|page|cottage|post|archive|checkout
+ *   php tools/scope-decide.php --scope=not_home --kind=front|page|cottage|post|archive|checkout|submitbooking
  *
  * Prints "LOAD" or "SKIP". Exit code 0 either way; 2 on a bad argument.
  *
@@ -31,6 +31,8 @@ $KINDS = [
     'post'     => ['path' => '/2026/10/a-post/'],
     'archive'  => ['path' => '/?s=canal'],
     'checkout' => ['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'],
+    /* 4.14.0: the page the Book Now form posts to (MotoPress's checkout page, ID 1399) */
+    'submitbooking' => ['page' => true, 'id' => 1399, 'slug' => 'submit-booking', 'path' => '/submit-booking/'],
 ];
 $kind = (string) ($args['kind'] ?? '');
 if (!isset($KINDS[$kind])) {
