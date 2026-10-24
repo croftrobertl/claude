@@ -1,6 +1,6 @@
 'use strict';
 /**
- * DCC Seasons — 4.13.x, the ANNIVERSARY: step 1 stills for Rob.
+ * DCC Seasons — 4.13.1, the ANNIVERSARY: step 1 stills for Rob.
  *
  * A one-day theme for 11 November, every year. Nothing here is in the
  * plugin: these are options, and Rob picks.
@@ -14,8 +14,8 @@
  *   node tools/anniv-lab.js
  *
  * Writes, into build/:
- *   Seasons - 4.13.x anniversary pieces.png
- *   Seasons - 4.13.x anniversary cranes.png
+ *   Seasons - 4.13.1 anniversary pieces.png
+ *   Seasons - 4.13.1 anniversary cranes.png
  */
 const fs = require('fs');
 const path = require('path');
@@ -258,7 +258,7 @@ const ROWS = [
         </div></section>`);
     await page.waitForTimeout(500);
     await page.setViewportSize({ width: 1180, height: await page.evaluate(() => document.body.scrollHeight) });
-    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.13.x anniversary pieces.png') });
+    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.13.1 anniversary pieces.png') });
     await page.close();
     console.log('pieces: ok');
   }
@@ -349,7 +349,7 @@ const ROWS = [
     await page.waitForFunction(() => window.__done === true, null, { timeout: 20000 });
     await page.waitForTimeout(400);
     await page.setViewportSize({ width: 1240, height: await page.evaluate(() => document.body.scrollHeight) });
-    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.13.x anniversary cranes.png') });
+    await page.screenshot({ path: path.join(OUT, 'Seasons - 4.13.1 anniversary cranes.png') });
     await page.close();
     console.log('cranes: ok');
   }
