@@ -315,6 +315,21 @@
     studio: 'studio', onebed: 'onebed', dining: 'dining4', pullout: 'pullout', screenedporch: 'porch'
   };
 
+  /**
+   * The couch question is SETTLED by the party answer (0.55.0, Rob): the couch is
+   * the 3-4 guests' bed, so "1-2" makes it irrelevant and "3-4" makes it a yes.
+   * Returns 'yes', 'skip' or null (not settled — ask it). Only while the 3-4 offer
+   * is on: with it off the party question is never asked, so nothing is settled.
+   * In this data every 4-guest cottage has the couch and no 2-guest one does, so
+   * treating 3-4 as a couch "yes" changes no result, and labels.js already drops
+   * the couch reason whenever party carries it.
+   */
+  function couchSettled(state) {
+    if (!guest34On(state.config)) { return null; }
+    var p = String(state.quick.party);
+    return p === '34' ? 'yes' : p === '2' ? 'skip' : null;
+  }
+
   function criteriaFromState(state) {
     // With the switch off, party must not reach the engine by ANY route — not a
     // stale answer, not a shared ?party=34 / ?w_party=3 link, not state left over
@@ -347,9 +362,13 @@
     // ('') impose no constraint. The wX weights still rank the survivors.
     var q = state.quick;
     var hard = [];
+    // The couch answer the engine sees: the party answer's verdict when it settles
+    // the question, else the guest's own (a stale ?pullout= link included).
+    var settled = couchSettled(state);
+    var pullout = settled === 'yes' ? 'yes' : settled === 'skip' ? '' : q.pullout;
     if (on34 && String(q.party) === '34') { hard.push('party34'); }
     if (q.desk === 'yes') { hard.push('desk'); }
-    if (q.pullout === 'yes') { hard.push('pullout'); }
+    if (pullout === 'yes') { hard.push('pullout'); }
     if (q.layout === 'studio') { hard.push('studio'); }
     if (q.layout === 'onebed') { hard.push('onebed'); }
     // No dining filter (0.53.0): the question was removed, and any dining answer
@@ -361,7 +380,7 @@
     return {
       hard: hard, rotation: state.rotation,
       wDesk: q.desk === 'yes' ? 2 : 0,
-      wPullout: q.pullout === 'yes' ? 2 : 0,
+      wPullout: pullout === 'yes' ? 2 : 0,
       wStudio: q.layout === 'studio' ? 2 : 0,
       wOneBed: q.layout === 'onebed' ? 2 : 0,
       wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0,
@@ -457,6 +476,9 @@
       questions: WIZARD_QUESTIONS.filter(function (q) {
         if (q.kind === 'dates') { return availOn(state.config); }
         if (q.group === 'party') { return guest34On(state.config); }
+        // Settled by the party answer (see couchSettled): not asked, so the step
+        // counter counts only the questions really left and Back walks past it.
+        if (q.group === 'pullout') { return couchSettled(state) === null; }
         return true;
       }),
       get: function (q) { return q.kind === 'dates' ? state.dates : state.quick[q.group]; },
@@ -807,13 +829,21 @@
    * interactive child — navigates without toggling (a label never activates its
    * control for a click on a link inside it). `opt.other` fades a non-match.
    */
+  // The photo's rendered width in each layout, so a phone at 3x picks a source
+  // just big enough and no bigger (0.55.0). Measured on the live theme: the row's
+  // card is 58% of a phone viewport, 380px at 768-899, 160px four-across from 900;
+  // a Compare card is 36% of a phone viewport, ~45% at 768-1023 (two across) and
+  // at most 250px four-across from 1024. Keep in step with the grid in the CSS.
+  var SIZES_ROW = '(min-width: 900px) 160px, (min-width: 768px) 380px, 60vw';
+  var SIZES_COMPARE = '(min-width: 1024px) 250px, (min-width: 768px) 45vw, 38vw';
+
   function miniCard(c, config, st, opt) {
     var S = config.strings;
     opt = opt || {};
     var np = nameParts(config, c);
     var photo = c.photo && c.photo.src
       ? '<img class="dccs-mcard-img" src="' + esc(c.photo.src) + '"' +
-        (c.photo.srcset ? ' srcset="' + esc(c.photo.srcset) + '" sizes="(min-width: 900px) 170px, 72vw"' : '') +
+        (c.photo.srcset ? ' srcset="' + esc(c.photo.srcset) + '" sizes="' + (opt.select ? SIZES_COMPARE : SIZES_ROW) + '"' : '') +
         (c.photo.w && c.photo.h ? ' width="' + esc(c.photo.w) + '" height="' + esc(c.photo.h) + '"' : '') +
         ' alt="" loading="lazy" decoding="async">'
       : '<span class="dccs-mcard-img dccs-mcard-noimg" aria-hidden="true">' + esc(c.id) + '</span>';
@@ -1345,7 +1375,42 @@
     // After a wizard navigation, move focus to the new step/results heading.
     function focusStep() {
       var h = root.querySelector('.dccs-step-q, .dccs-results-h');
-      if (h && h.focus) { h.focus(); }
+      if (h && h.focus) { try { h.focus({ preventScroll: true }); } catch (e) { h.focus(); } }
+      bringIntoView();
+    }
+    /**
+     * Bring the widget's top into view when a mode opens and on every step (0.55.0,
+     * Rob): on a phone the quiz opened below the fold and every step needed a scroll
+     * before Next. From 1024px the theme pins a bar (.site-header-bottom-fixed),
+     * so the top is placed just under it; below 1024 nothing is pinned. A reader
+     * who already has the top in view is not moved. Smooth unless reduced motion.
+     */
+    function bringIntoView() {
+      if (!root.getBoundingClientRect) { return; }
+      var off = 0;
+      if (window.innerWidth >= 1024) {
+        // The bar is static at the top of the page and pins only once the page
+        // scrolls (measured on live), so reserve its HEIGHT whatever its position
+        // reads right now: by the time the scroll lands, it is pinned.
+        var bar = document.querySelector('.site-header-bottom-fixed');
+        var bh = bar ? bar.getBoundingClientRect().height : 0;
+        if (bh > 0 && bh < 120) { off = Math.round(bh); }
+      }
+      var top = root.getBoundingClientRect().top;
+      if (top >= off && top <= off + 8) { return; }
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // 'instant', not 'auto': the theme sets html { scroll-behavior: smooth },
+      // and 'auto' defers to it — so reduced motion would still glide.
+      var how = still ? 'instant' : 'smooth';
+      var scroller = root.closest && root.closest('.dccs-modal-content');
+      if (scroller) {
+        // In the Mini Entry pop-up the pop-up scrolls, not the page.
+        var y = scroller.scrollTop + top - scroller.getBoundingClientRect().top;
+        if (scroller.scrollTo) { scroller.scrollTo({ top: y, behavior: how }); } else { scroller.scrollTop = y; }
+        return;
+      }
+      var target = Math.max(0, (window.pageYOffset || 0) + top - off);
+      if (window.scrollTo) { try { window.scrollTo({ top: target, behavior: how }); } catch (e) { window.scrollTo(0, target); } }
     }
     function trackLen() { return wizardTrack(state, config.strings).questions.length; }
     function advance() {

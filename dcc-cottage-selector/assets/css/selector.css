@@ -559,9 +559,6 @@
   /* 26px on the right clears the custom scrollbar drawn over the list's edge. */
   padding: 10px 26px 10px 10px; max-height: min(520px, 70vh);
 }
-@media (min-width: 900px) {
-  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
 /* Compare Mode's one-sentence intro is centred (0.53.0, Rob) — set here rather
    than inherited, because the page around the widget is not ours to align. */
 .dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
@@ -1074,6 +1071,53 @@
 /* "See All" reveals today's full cards under the row. */
 .dccs-root.dccs-root .dccs-see-all { display: flex; align-items: center; gap: 8px; margin: 0 auto 14px; cursor: pointer; }
 .dccs-root.dccs-root .dccs-see-all[aria-expanded="true"] .dccs-caret { transform: rotate(180deg); }
+
+/* ==== 0.55.0 ================================================================ */
+
+/* NO UNDERLINES IN THE WIDGET (Rob). The Elementor kit underlines every <label>
+   (.elementor-kit-331 label, (0,1,1)), and a Compare card IS a label, so the line
+   was painted under every word on it — the number, the name, the chips — and
+   under the Compare toggle on the big cards. (0,2,1) beats it. The View Cottage
+   link drops its own underline too; its hover and keyboard focus stay visible
+   (a tint and the 2px ring, below). Links INSIDE a sentence — the pet note's Fee
+   Details, the booked card's calendar link — keep theirs: without it they are
+   told apart from the sentence by colour alone (WCAG 1.4.1). */
+.dccs-root.dccs-root label { text-decoration: none; }
+.dccs-root.dccs-root .dccs-mcard-view { text-decoration: none; border-radius: 999px; }
+.dccs-root.dccs-root .dccs-mcard-view:hover,
+.dccs-root.dccs-root .dccs-mcard-view:focus-visible { text-decoration: none; background: rgba(0, 107, 207, 0.1); }
+
+/* THE QUIZ'S BACK AND NEXT STAY ON SCREEN (Rob). On a phone a question, its
+   answers and Next do not always fit together, so the nav row of a QUESTION step
+   sticks to the bottom of the viewport while the quiz is on screen (sticky: it
+   does nothing when everything fits, and it never leaves the quiz). The results'
+   Edit/Restart row is not a step and stays where it is. */
+.dccs-root.dccs-root .dccs-wizard[data-stage="q"] > .dccs-wizard-nav {
+  position: sticky; bottom: 0; z-index: 3; background: var(--dccs-bg, #FFFFFF); padding-bottom: 10px;
+}
+
+/* FROM 768px THE WIDGET USES ITS COLUMN (Rob). The box was capped at 720px inside
+   a 1,000px column, and Compare Mode's eight cards sat in a 520px inner scroll
+   that cut the second row in half. Now the box takes the column; the quiz, the
+   landing and the mode bar keep the 676px reading measure (the same tokens, so
+   the Mini Entry line still equals the intro's width); Compare Mode lays the
+   cards out in FULL rows — two across to 1023px, four from 1024 — and the page
+   scrolls instead of the box. Nothing changes below 768. */
+@media (min-width: 768px) {
+  .dccs-root.dccs-root { max-width: none; }
+  .dccs-root.dccs-root > :not(.dccs-body),
+  .dccs-root.dccs-root .dccs-compare > .dccs-hint,
+  .dccs-root.dccs-root .dccs-compare > .dccs-compare-actions {
+    max-width: calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad)); margin-left: auto; margin-right: auto;
+  }
+  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; overflow: visible; padding: 10px;
+  }
+  .dccs-root.dccs-root .dccs-cmp-bar { display: none !important; }
+}
+@media (min-width: 1024px) {
+  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }

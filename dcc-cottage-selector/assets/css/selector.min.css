@@ -308,9 +308,6 @@
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
   padding: 10px 26px 10px 10px; max-height: min(520px, 70vh);
 }
-@media (min-width: 900px) {
-  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
 .dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-modetab:hover,
@@ -622,6 +619,28 @@
 }
 .dccs-root.dccs-root .dccs-see-all { display: flex; align-items: center; gap: 8px; margin: 0 auto 14px; cursor: pointer; }
 .dccs-root.dccs-root .dccs-see-all[aria-expanded="true"] .dccs-caret { transform: rotate(180deg); }
+.dccs-root.dccs-root label { text-decoration: none; }
+.dccs-root.dccs-root .dccs-mcard-view { text-decoration: none; border-radius: 999px; }
+.dccs-root.dccs-root .dccs-mcard-view:hover,
+.dccs-root.dccs-root .dccs-mcard-view:focus-visible { text-decoration: none; background: rgba(0, 107, 207, 0.1); }
+.dccs-root.dccs-root .dccs-wizard[data-stage="q"] > .dccs-wizard-nav {
+  position: sticky; bottom: 0; z-index: 3; background: var(--dccs-bg, #FFFFFF); padding-bottom: 10px;
+}
+@media (min-width: 768px) {
+  .dccs-root.dccs-root { max-width: none; }
+  .dccs-root.dccs-root > :not(.dccs-body),
+  .dccs-root.dccs-root .dccs-compare > .dccs-hint,
+  .dccs-root.dccs-root .dccs-compare > .dccs-compare-actions {
+    max-width: calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad)); margin-left: auto; margin-right: auto;
+  }
+  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; overflow: visible; padding: 10px;
+  }
+  .dccs-root.dccs-root .dccs-cmp-bar { display: none !important; }
+}
+@media (min-width: 1024px) {
+  .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }
 }

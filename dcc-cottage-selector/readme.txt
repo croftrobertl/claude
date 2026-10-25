@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.54.0
+Stable tag: 0.55.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,13 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.55.0 =
+* On phones the quiz now comes into view when it opens and on every step (from 1024px, just under the theme's pinned bar). A question step's Back and Next stay pinned to the bottom of the screen if the question and its answers do not fit. Instant with reduced motion.
+* No underlines in the widget: the theme underlined every label, which put a line under every word of a Compare card. The View Cottage link drops its underline and gets a tinted hover instead. Links inside a sentence (the pet note's Fee Details) keep theirs.
+* From 768px the widget uses its column's width, and Compare Mode lays the eight cards out in full rows (two across, four from 1024px) with no inner scroll box. Nothing changes below 768px.
+* Card photos declare the width they really get, so phones load a smaller file (8 photos at 390px, 3x: 794 KB down to 486 KB on live). Desktop is unchanged.
+* The pull-out couch question is no longer asked once the guest has answered 1-2 guests (it does not apply) or 3-4 (it is a yes). The step counter counts only the questions really asked.
 
 = 0.54.0 =
 * Matching Quiz results are a row of compact photo cards that snap as you swipe: each card shows the cottage's number and name (centred), up to three chips from the cottage data (Sleeps N; Ground Floor or Upstairs; Studio or 1-Bedroom; plus Pet-Friendly where pets are allowed) and a View Cottage link. Matches come first; every other cottage follows, faded, so all eight stay in reach. From 900px the row shows four across with 44px ‹ › buttons that page four at a time.

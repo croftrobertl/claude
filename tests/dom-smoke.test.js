@@ -143,10 +143,11 @@ function enter(root, mode) {
   enter(root, 'quick');
   clickAnswer(root, '34');
   ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === '34');
-  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
+  // "3-4" settles the couch question (0.55.0), so six steps remain, not seven.
+  ok('still on step 1 (no auto-advance)', /1\b.*\b6/.test(progress(root)));
   ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
   clickNext(root);
-  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
+  ok('Next advances to step 2', /2\b.*\b6/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
   ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
   ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
@@ -159,7 +160,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, '34');
   root.querySelector('.dccs-back').click();
-  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('Back returns to step 1', /1\b.*\b6/.test(progress(root)));
   ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === '34');
 })();
 
@@ -170,11 +171,11 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, '34');      // step 1 (party size)
   answerNext(root, 'no');      // step 2 (desk) -> now on step 3
-  ok('on step 3', /3\b.*\b7/.test(progress(root)));
+  ok('on step 3', /3\b.*\b6/.test(progress(root)));   // 3-4 settles the couch step (0.55.0)
   var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
   ok('answered steps are clickable dots', !!dot);
   dot.click();
-  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('stepper dot jumps to step 1', /1\b.*\b6/.test(progress(root)));
 })();
 
 // ---- 5. Review step + edit returns to where you came from ----
@@ -2969,7 +2970,8 @@ defer(async function () {
   // POSITIVE FIRST: the route exists and the detector can see review rows.
   const on = reviewRows(ON);
   ok('the shared link lands on results with a way back into the quiz', on.rows !== null);
-  ok('ON: the review of the in-progress quiz lists its questions', !!on.rows && on.rows.length === 7);
+  // 6, not 7, since 0.55.0: ?party=34 settles the couch question, so it is not asked.
+  ok('ON: the review of the in-progress quiz lists its questions', !!on.rows && on.rows.length === 6);
   ok('ON: including the party row the link answered', !!on.rows && on.rows.indexOf(S.party_short) !== -1);
 
   let threw = null, off = null;
@@ -3720,6 +3722,163 @@ defer(async function () {
   ok('104: the same paragraph with two sentences is marked multi-sentence', !!two && two.classList.contains('dccs-multi'));
 })();
 function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
+
+// ==== 0.55.0 =======================================================================
+// ---- 105. Into view, no underlines, full rows from 768, photo sizes, couch settled, names ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Top-level rules and @media blocks, kept apart.
+  const top = [], media = [];
+  (function parse() {
+    let i = 0;
+    while (i < css.length) {
+      const o = css.indexOf('{', i); if (o === -1) { break; }
+      const pre = css.slice(i, o).trim();
+      if (pre.startsWith('@')) {
+        let d = 1, j = o + 1; for (; j < css.length && d; j++) { if (css[j] === '{') d++; else if (css[j] === '}') d--; }
+        const inner = css.slice(o + 1, j - 1); const rules = [];
+        inner.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+        media.push({ q: pre, rules }); i = j;
+      } else { const c = css.indexOf('}', o); top.push({ sel: pre.split(',').map(x => x.trim()), body: css.slice(o + 1, c) }); i = c + 1; }
+    }
+  })();
+  const decl = (rules, sel, prop) => { let v = null; rules.filter(r => r.sel.indexOf(sel) !== -1).forEach(r => {
+    const m = r.body.match(new RegExp('(?:^|;)\\s*' + prop.replace(/-/g, '\\-') + '\\s*:\\s*([^;]+)')); if (m) { v = m[1].trim(); } }); return v; };
+  const R = '.dccs-root.dccs-root';
+
+  // ---- 1. bring the quiz into view (mode open + every step), pinned bar from 1024, reduced motion ----
+  const mountScrolling = (opts) => {
+    const w = freshDom(); const calls = [];
+    w.innerWidth = opts.width; let y = 1000;
+    Object.defineProperty(w, 'pageYOffset', { get: () => y, configurable: true });
+    w.scrollTo = (o) => { calls.push(o); y = o.top; };
+    w.matchMedia = (q) => ({ matches: !!opts.reduce && /reduce/.test(q), addListener() {}, removeListener() {} });
+    if (opts.bar) { const bar = w.document.createElement('div'); bar.className = 'site-header-bottom-fixed'; bar.getBoundingClientRect = () => ({ top: 0, bottom: opts.bar, height: opts.bar, left: 0, right: 0, width: 100 }); w.document.body.appendChild(bar); }
+    const root = mountSelector(w);
+    root.getBoundingClientRect = () => ({ top: opts.rootTop - (y - 1000), bottom: 0, left: 0, right: 0, width: 300, height: 600 });
+    return { w, root, calls };
+  };
+  {
+    const { root, calls } = mountScrolling({ width: 390, rootTop: 456 });
+    enter(root, 'quick');
+    ok('105/1: opening the quiz scrolls its top to the top of a phone screen (no pinned bar below 1024)',
+      calls.length === 1 && calls[0].top === 1000 + 456 && calls[0].behavior === 'smooth');
+    clickAnswer(root, 'either');
+    ok('105/1: choosing an answer does NOT scroll (control: only steps do)', calls.length === 1);
+    clickNext(root);
+    ok('105/1: ...the next step does not scroll again when the top is already there', calls.length === 1);
+  }
+  {
+    // The guest scrolled away mid-quiz: Next brings the top back.
+    const m = mountScrolling({ width: 390, rootTop: 456 }); enter(m.root, 'quick');
+    m.root.getBoundingClientRect = () => ({ top: -300, bottom: 0, left: 0, right: 0, width: 300, height: 600 });
+    answerNext(m.root, 'either');
+    ok('105/1: every step brings the top back into view', m.calls.length === 2 && m.calls[1].top === m.calls[0].top - 300);
+    m.root.getBoundingClientRect = () => ({ top: -120, bottom: 0, left: 0, right: 0, width: 300, height: 600 });
+    m.root.querySelector('.dccs-back').click();
+    ok('105/1: ...Back too', m.calls.length === 3);
+  }
+  {
+    const { root, calls } = mountScrolling({ width: 1440, rootTop: 456, bar: 55 });
+    enter(root, 'quick');
+    ok('105/1: from 1024px the top lands under the pinned bar (55px)', calls.length === 1 && calls[0].top === 1000 + 456 - 55);
+  }
+  {
+    const { root, calls } = mountScrolling({ width: 1023, rootTop: 456, bar: 55 });
+    enter(root, 'quick');
+    ok('105/1: below 1024 the bar is not pinned, so no offset (control)', calls.length === 1 && calls[0].top === 1000 + 456);
+  }
+  {
+    const { root, calls } = mountScrolling({ width: 390, rootTop: 456, reduce: true });
+    enter(root, 'quick');
+    ok('105/1: with reduced motion the jump is instant (not "auto": the theme sets smooth scrolling)', calls.length === 1 && calls[0].behavior === 'instant');
+  }
+  {
+    const nav = R + ' .dccs-wizard[data-stage="q"] > .dccs-wizard-nav';
+    ok('105/1: a question step\'s Back/Next row sticks to the bottom while the quiz is on screen',
+      decl(top, nav, 'position') === 'sticky' && decl(top, nav, 'bottom') === '0' && /var\(--dccs-bg/.test(decl(top, nav, 'background') || ''));
+    ok('105/1: ...and only a question step\'s (the results\' Edit/Restart row is not pinned)', decl(top, R + ' .dccs-wizard-nav', 'position') === null);
+  }
+
+  // ---- 2. no underlines ----
+  ok('105/2: every label in the widget drops the kit\'s underline, at (0,2,1) > the kit\'s (0,1,1)', decl(top, R + ' label', 'text-decoration') === 'none');
+  ok('105/2: the View Cottage link has no underline', decl(top, R + ' .dccs-mcard-view', 'text-decoration') === 'none');
+  const hov = R + ' .dccs-mcard-view:hover';
+  ok('105/2: ...but a visible hover and focus (a tint)', decl(top, hov, 'text-decoration') === 'none' && /rgba\(0, 107, 207/.test(decl(top, hov, 'background') || '')
+    && top.some(r => r.sel.indexOf(R + ' .dccs-mcard-view:focus-visible') !== -1 && /outline:\s*2px solid/.test(r.body)));
+  ok('105/2: a link INSIDE a sentence keeps its underline (WCAG 1.4.1) — nothing strips it',
+    !top.concat(...media.map(m => m.rules)).some(r => r.sel.some(x => /dccs-q-note-link|dccs-avail-link/.test(x)) && /text-decoration\s*:\s*none/.test(r.body)));
+
+  // ---- 3. full rows from 768, no inner scroll; nothing changes below ----
+  const m768 = media.find(m => /^@media\s*\(min-width:\s*768px\)$/.test(m.q) && m.rules.some(r => /max-height:\s*none/.test(r.body)));
+  const m1024 = media.find(m => /^@media\s*\(min-width:\s*1024px\)$/.test(m.q) && m.rules.some(r => /grid-template-columns/.test(r.body)));
+  const L = R + ' .dccs-cmp-list.dccs-cmp-static';
+  ok('105/3: the 768px block exists (control for the next checks)', !!m768 && !!m1024);
+  ok('105/3: from 768 the widget takes its column', decl(m768.rules, R, 'max-width') === 'none');
+  ok('105/3: ...while the quiz keeps the 676px measure (the Mini Entry line still matches it)',
+    decl(m768.rules, R + ' > :not(.dccs-body)', 'max-width') === 'calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad))');
+  ok('105/3: from 768 Compare Mode has no inner scroll: the page scrolls', decl(m768.rules, L, 'max-height') === 'none' && decl(m768.rules, L, 'overflow') === 'visible'
+    && /display:\s*none\s*!important/.test((m768.rules.find(r => r.sel.indexOf(R + ' .dccs-cmp-bar') !== -1) || {}).body || ''));
+  ok('105/3: two across from 768, four from 1024 — eight cards, full rows either way',
+    /repeat\(2,/.test(decl(m768.rules, L, 'grid-template-columns')) && /repeat\(4,/.test(decl(m1024.rules, L, 'grid-template-columns')) && 8 % 2 === 0 && 8 % 4 === 0);
+  ok('105/3: below 768 nothing changed: the boxed two-across list still scrolls inside',
+    decl(top, L, 'max-height') === 'min(520px, 70vh)' && /repeat\(2,/.test(decl(top, L, 'grid-template-columns')) && decl(top, R, 'max-width') === 'var(--dccs-shell-max)');
+
+  // ---- 4. photo sizes per layout ----
+  const photoCfg = JSON.parse(CONFIG); photoCfg.cottages.forEach(c => { c.photo = { src: '/p/' + c.id + '.jpg', w: 768, h: 576, srcset: '/p/' + c.id + '-300.jpg 300w, /p/' + c.id + '.jpg 768w' }; });
+  const rr = mountSelector(freshDom(), JSON.stringify(photoCfg)); enter(rr, 'quick'); stepThrough(rr, 'either'); seeMatches(rr);
+  const rowImg = rr.querySelector('.dccs-swipe-track img');
+  ok('105/4: a row photo declares the slot it really gets (60vw on a phone, not 72vw)', rowImg.getAttribute('sizes') === '(min-width: 900px) 160px, (min-width: 768px) 380px, 60vw');
+  const rc = mountSelector(freshDom(), JSON.stringify(photoCfg)); enter(rc, 'compare');
+  ok('105/4: a Compare photo declares its own, smaller slot', rc.querySelector('.dccs-cmp-list img').getAttribute('sizes') === '(min-width: 1024px) 250px, (min-width: 768px) 45vw, 38vw');
+
+  // ---- 5. the couch question is settled by the party answer ----
+  const ON = JSON.parse(CONFIG); ON.guest34 = true;
+  const crits = (w) => { const got = []; const run0 = w.DCCS.score.run; w.DCCS.score.run = function (cs, crit) { got.push(crit); return run0.apply(this, arguments); }; return got; };
+  const asked = (root) => root.querySelector('.dccs-step-q').textContent;
+  {
+    const w = freshDom(); const root = mountSelector(w, JSON.stringify(ON)); enter(root, 'quick');
+    ok('105/5: before a party answer the couch question is still on the track (7 steps)', /\b1\b.*\b7\b/.test(progress(root)));
+    clickAnswer(root, '2');
+    ok('105/5: "1-2" takes it off — the counter says so at once', /\b1\b.*\b6\b/.test(progress(root)));
+    clickNext(root); clickAnswer(root, 'either'); clickNext(root);
+    ok('105/5: ...and the step after the desk is not the couch', asked(root) !== S.q_pullout && /\b3\b.*\b6\b/.test(progress(root)));
+    root.querySelector('.dccs-back').click(); root.querySelector('.dccs-back').click();
+    ok('105/5: Back walks back to the party question', asked(root) === S.q_party);
+    clickAnswer(root, 'either');
+    ok('105/5: "No preference" puts the couch question back (control)', /\b1\b.*\b7\b/.test(progress(root)));
+  }
+  {
+    const w = freshDom('https://example.com/?party=34'); const got = crits(w); mountSelector(w, JSON.stringify(ON));
+    const c = got[got.length - 1];
+    ok('105/5: "3-4" counts as a couch YES at the engine', c.hard.indexOf('pullout') !== -1 && c.wPullout === 2 && c.hard.indexOf('party34') !== -1);
+  }
+  {
+    const w = freshDom('https://example.com/?party=2&pullout=yes'); const got = crits(w); mountSelector(w, JSON.stringify(ON));
+    const c = got[got.length - 1];
+    ok('105/5: "1-2" overrides a stale couch answer — no couch filter reaches the engine', c.hard.indexOf('pullout') === -1 && c.wPullout === 0);
+  }
+  {
+    const w = freshDom('https://example.com/?party=2&pullout=yes'); const got = crits(w); const OFF = JSON.parse(CONFIG); OFF.guest34 = false;
+    const root = mountSelector(w, JSON.stringify(OFF));
+    const c = got[got.length - 1];
+    ok('105/5: with the 3-4 offer OFF nothing is settled: the couch answer stands (control)', c.hard.indexOf('pullout') !== -1);
+  }
+  {
+    // Same RESULT either way: in this data the couch IS the 3-4 bed.
+    const w = freshDom(); const on = JSON.parse(CONFIG); on.guest34 = true;
+    const cs = on.cottages;
+    ok('105/5: the premise holds in the data (every 4-guest cottage has the couch, no 2-guest one does)', cs.every(c => (c.guests >= 3) === !!c.pulloutCouch));
+  }
+
+  // ---- 6. eight different View Cottage names; one link per card ----
+  const rv = mountSelector(freshDom()); enter(rv, 'compare');
+  const names = Array.prototype.map.call(rv.querySelectorAll('.dccs-mcard-view'), a => a.getAttribute('aria-label'));
+  ok('105/6: eight View Cottage links, eight different names, each naming its cottage',
+    names.length === 8 && new Set(names).size === 8 && JSON.parse(CONFIG).cottages.every((c, i) => names[i].indexOf(c.name) !== -1 && names[i].indexOf(S.view_cottage) === 0));
+  ok('105/6: one link per card (the photo and the name are not links)', Array.prototype.every.call(rv.querySelectorAll('.dccs-mcard'), m => m.querySelectorAll('a[href]').length === 1));
+})();
 
 (async function runDeferred() {
   for (const fn of deferred) {
