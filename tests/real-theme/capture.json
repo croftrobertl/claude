@@ -1,0 +1,293 @@
+{
+ "url": "https://doracanalcourt.com/",
+ "date": "2026-10-25",
+ "width": 1440,
+ "sheets": [
+  {
+   "href": "https://doracanalcourt.com/wp-content/cache/speedycache/doracanalcourt.com/assets/1c984f8e9c733740-1c984f8e9c733740-combined.css",
+   "bytes": 572644
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/vendors/kbwood/datepick/jquery.datepick.css?ver=6.4.0",
+   "bytes": 4220
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/assets/css/datepick-themes/mphb-datepicker-turquoise.css?ver=6.4.0",
+   "bytes": 9635
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/assets/css/mphb.min.css?ver=6.4.0",
+   "bytes": 18873
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/mphb-styles/assets/css/style.css?ver=1.1.5",
+   "bytes": 6891
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/stratum-menu/assets/css/style.min.css?ver=1.0.5",
+   "bytes": 13372
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/stratum/assets/css/style.min.css?ver=1.6.2",
+   "bytes": 110534
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/plugins/mphb-availability-calendar/assets/css/widget.min.css?ver=0.47.5",
+   "bytes": 38886
+  },
+  {
+   "href": "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/fontfaces.css?ver=1.2.0",
+   "bytes": 57173
+  },
+  {
+   "href": "https://fonts.googleapis.com/css?family=Raleway:|Raleway:100,200,300,400,500,600,700,800,900|Raleway:700|Raleway:400&ver=1.2.0&display=swap",
+   "bytes": 16533
+  }
+ ],
+ "dropped": [
+  "link",
+  "script",
+  "script",
+  "noscript",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "noscript",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "script",
+  "seasons:dcc-seasons-sky",
+  "seasons:dcc-seasons-canvas",
+  "seasons:dcc-seasons-accent"
+ ],
+ "kept": [
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/eicons/fonts/eicons.eot?5.54.0",
+   "/rt/114fc55ebf61.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/eicons/fonts/eicons.eot?5.54.0#iefix",
+   "/rt/8e3cc3456b8a.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/eicons/fonts/eicons.woff2?5.54.0",
+   "/rt/a33dd24df3c4.woff2"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/eicons/fonts/eicons.woff?5.54.0",
+   "/rt/e0f7bbaf6107.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/eicons/fonts/eicons.ttf?5.54.0",
+   "/rt/65fe4ceab3ad.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-brands-400.eot",
+   "/rt/5c21fc5ac0bf.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-brands-400.eot?#iefix",
+   "/rt/9c43ec21ec38.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-brands-400.woff2",
+   "/rt/fbe49b8cd1a0.woff2"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-brands-400.woff",
+   "/rt/af280c9934de.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-brands-400.ttf",
+   "/rt/0b7cbbbca977.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-solid-900.eot",
+   "/rt/96a3e038cf41.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-solid-900.eot?#iefix",
+   "/rt/b7e3c369a26a.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-solid-900.woff2",
+   "/rt/282088d89b6c.woff2"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-solid-900.woff",
+   "/rt/0fbbfee5ec57.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-solid-900.ttf",
+   "/rt/cbb0dca4a9bf.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-regular-400.eot",
+   "/rt/b0b5cda63506.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-regular-400.eot?#iefix",
+   "/rt/4df59fda1c9e.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-regular-400.woff2",
+   "/rt/ea77b5b5604e.woff2"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-regular-400.woff",
+   "/rt/d24a94845c1d.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/plugins/elementor/assets/lib/font-awesome/webfonts/fa-regular-400.ttf",
+   "/rt/bd71750a19b3.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/iconmeta.eot?9qd1ry",
+   "/rt/e62a5d024967.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/iconmeta.eot?9qd1ry#iefix",
+   "/rt/2eb06f3c09ab.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/iconmeta.ttf?9qd1ry",
+   "/rt/cb59d361eddf.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/iconmeta.woff?9qd1ry",
+   "/rt/23fe0a5f15dc.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/socials.eot",
+   "/rt/db05bd581168.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/socials.eot?#iefix",
+   "/rt/2b50cb4bac83.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/socials.woff",
+   "/rt/f5de9a1f3180.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/socials.ttf",
+   "/rt/c6ce779811b0.ttf"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/blocks.eot",
+   "/rt/6d8ac0bff7cf.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/blocks.eot?#iefix",
+   "/rt/b0b29e3b3df9.eot"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/blocks.woff",
+   "/rt/e55a348b1dc7.woff"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/themes/bravada/resources/fonts/blocks.ttf",
+   "/rt/98a76ddcd9ab.ttf"
+  ],
+  [
+   "https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyCAIT5lu.woff2",
+   "/rt/1e68cb856d4d.woff2"
+  ],
+  [
+   "https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyCkIT5lu.woff2",
+   "/rt/6472515528cf.woff2"
+  ],
+  [
+   "https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyCIIT5lu.woff2",
+   "/rt/82aad4a20e80.woff2"
+  ],
+  [
+   "https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyCMIT5lu.woff2",
+   "/rt/acd6231a25df.woff2"
+  ],
+  [
+   "https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyC0ITw.woff2",
+   "/rt/1a1333b5ed35.woff2"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/uploads/2026/09/dcc-explore-hero-phone.webp",
+   "/rt/a5f04c77f87e.webp"
+  ],
+  [
+   "https://doracanalcourt.com/wp-content/uploads/2026/09/DCC-Photos-Canal-3-graded-1080.webp",
+   "/rt/858760dd76a9.webp"
+  ],
+  [
+   "https://i0.wp.com/doracanalcourt.com/wp-content/uploads/2026/09/DCC-Photos-Canal-3-graded-1080.webp?fit=496%2C372&amp;ssl=1",
+   "/rt/289c917c7d6c.webp"
+  ]
+ ]
+}
