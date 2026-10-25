@@ -17,6 +17,8 @@
  */
 const { config, open } = require('./harness');
 const { page: fixture } = require('./fixture');
+const rt = require('./real-theme');
+const REAL = process.argv.includes('--real');   /* the real-theme fixture (tests/real-theme/) */
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? +a.split('=')[1] : d; };
 const W = arg('width', 390), DSF = arg('dsf', 3), THR = arg('throttle', 4), SEC = arg('seconds', 10), DEBUG = process.argv.includes('--debug');
 
@@ -27,15 +29,20 @@ const INIT = `(function () {
   var raf = window.requestAnimationFrame.bind(window), log = window.__frames = [], drew = false;
   var di = CanvasRenderingContext2D.prototype.drawImage;
   CanvasRenderingContext2D.prototype.drawImage = function () {
-    if (this.canvas && this.canvas.className === 'dcc-seasons-sky') { drew = true; if (!window.__t0) { window.__t0 = performance.now(); } }
-    return di.apply(this, arguments);
+    if (this.canvas && /dcc-seasons-(sky|canvas)/.test(this.canvas.className) && (this.canvas.className === 'dcc-seasons-sky' || (window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.vig))) { drew = true; if (!window.__t0) { window.__t0 = performance.now(); } }
+    var t0 = performance.now(), r = di.apply(this, arguments), dt = performance.now() - t0;
+    if (dt > 3) { var src = arguments[0]; window.__last += (src && src.src ? 'img ' + String(src.src).slice(0, 60) : (src && src.width ? 'canvas ' + src.width + 'x' + src.height : '?')) + ' ' + dt.toFixed(1) + 'ms; '; }
+    return r;
   };
   window.__t0 = 0;
   window.requestAnimationFrame = function (cb) {
     return raf(function (ts) {
       drew = false;
+      var E = window.DCCSeasonsEngine, st = E && E._state;
+      if (!window.__t0 && st && st.vig) { window.__t0 = performance.now(); }   /* a page-canvas scene: open on the scene's start (debug builds) */
       var a = performance.now(); cb(ts); var d = performance.now() - a;
-      if (window.__t0) { log.push([a - window.__t0, d, drew]); }
+      if (window.__t0) { log.push([a - window.__t0, d, drew, window.__last || '']); }
+      window.__last = '';
     });
   };
 })();`;;
@@ -45,8 +52,8 @@ const INIT = `(function () {
   if (DEBUG) { flags.push('--diag'); } else { flags.push('--min'); }
   const cfg = config(flags);
   if (DEBUG) { cfg.vigOnly = process.env.SCENE || 'sleighmoon'; cfg.vigFirst = 4000; cfg.vigGap = 200; cfg.heroFirst = [1e9, 1e9 + 1]; cfg.heroEvery = [1e9, 1e9 + 1]; }
-  const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), {
-    viewport: { width: W, height: W < 768 ? 844 : 900 }, dsf: DSF, init: INIT, throttle: THR,
+  const ses = await open(REAL ? rt.page({ config: cfg }) : fixture({ kind: 'bravada', config: cfg, banner: true }), {
+    viewport: { width: W, height: W < 768 ? 844 : 900 }, dsf: DSF, init: INIT, throttle: THR, extra: REAL ? rt.route : undefined,
   });
   const pg = ses.page;
   try {
@@ -63,6 +70,7 @@ const INIT = `(function () {
     console.log(`  frame time: median ${q(ds, 0.5).toFixed(2)} ms · p95 ${q(ds, 0.95).toFixed(2)} · p99 ${q(ds, 0.99).toFixed(2)} · worst ${worst[1].toFixed(2)} ms at ${(worst[0] / 1000).toFixed(2)} s`);
     console.log(`  after warm-up (from 0.5 s): median ${q(dw, 0.5).toFixed(2)} ms · worst ${dw[dw.length - 1].toFixed(2)} ms`);
     console.log(`  frames over 8 ms after warm-up: ${warm.filter(f => f[1] > 8).length}`);
+    fr.filter(f => f[1] > 8).forEach(f => console.log(`  SLOW ${f[1].toFixed(1)} ms at ${(f[0] / 1000).toFixed(2)} s — ${f[3] || '(no slow drawImage)'}`));
     const sc = fr.filter(f => f[2]).map(f => f[1]).sort((a, b) => a - b);
     if (sc.length) { console.log(`  the scene's own frames (${sc.length}, warm-up included): median ${q(sc, 0.5).toFixed(2)} ms · p95 ${q(sc, 0.95).toFixed(2)} · worst ${sc[sc.length - 1].toFixed(2)} ms`); }
   } finally { await ses.close(); }
