@@ -378,6 +378,10 @@
 
 .dccgg-root {
     /* Design tokens (also overridable by theme presets via JS) */
+    /* v0.25.1: the guide's body weight. 400 matches the Wildlife Guide's
+       --dccwl-fw-body, so the two read the same. Titles and labels declare
+       their own and are unaffected. */
+    --dccgg-fw-body: 400;
     --dccgg-primary: #006bcf;
     --dccgg-text: #111111;
     --dccgg-muted: #5d7891;
@@ -869,6 +873,26 @@ body.dccgg-detail-open {
 .dccgg-layout-grid .dccgg-menu {
     grid-template-columns: repeat(auto-fit, minmax(var(--dccgg-tile-min), 1fr));
 }
+/* v0.25.1: four columns from 600px up, so eight tiles make two full rows.
+   auto-fit divides the width by --dccgg-tile-min (200px) and gave a different
+   count at every size — measured with the live set of eight tiles: 2 columns
+   at 600 (4 rows), 3 at 768 (3,3,2 — the lonely row the host reported), 4 at
+   1024, and 5 at 1440 (5,3). A fixed four makes every width 4,4.
+
+   TWO MEASURED CONSEQUENCES, both deliberate and both reported to the host:
+   desktop drops from five tiles a row to four, so tiles grow 224px -> 285px at
+   1440; and at exactly 600px the tiles are 127px, where the longest label
+   ("Boating / Fishing") takes two lines. If that band ever looks cramped the
+   fix is to move this one breakpoint to 768px — nothing else depends on it.
+
+   minmax(0, 1fr) rather than minmax(--dccgg-tile-min, 1fr): a grid item's
+   automatic minimum is its content, so a 200px floor would push the row past
+   the container at 600px instead of letting the tiles shrink. */
+@media (min-width: 600px) {
+    .dccgg-layout-grid .dccgg-menu {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
 /* v0.9.9: phones in portrait follow the tile width by default, exactly as
    wider viewports do, instead of collapsing to one column. The old rule
    fell back to `repeat(1, …)` whenever the column-count var was unset —
@@ -879,7 +903,11 @@ body.dccgg-detail-open {
    choosing 1/2/3/4 in the panel sets it to a complete repeat() template and
    pins that count. Because both modes write the same property there is no
    second rule to lose a specificity fight. */
-@media (max-width: 600px) and (orientation: portrait) {
+/* v0.25.1: 599.98 rather than 600, so this and the four-column rule above do
+   not BOTH match at exactly 600px. They did, and being later in the file this
+   one won — which is why "four columns from 600px up" was still showing two at
+   600 the first time it was measured. */
+@media (max-width: 599.98px) and (orientation: portrait) {
     .dccgg-layout-grid .dccgg-menu {
         grid-template-columns: var(--dccgg-grid-cols-mobile-tpl,
             repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr)));
@@ -2182,8 +2210,21 @@ dialog.dccgg-wrapper::backdrop {
    passage carries style="font-weight:700" inline, and an inline style beats
    any author rule that is not important. Headings typed INTO an item content
    are excluded so they keep their own weight, per the host's instruction. */
+/* v0.25.1: THE STAGE HOST IS THE WHOLE POINT, and its absence is why this
+   rule has been silently inert in every pop-up since v0.21.0. .dccgg-stage is
+   moved to <body> when a section opens, so `.dccgg-root .dccgg-item-body`
+   stops matching the moment a guest taps a tile — the one place the body copy
+   is actually read. Measured under the site's ground: closed, the paragraph
+   computes 400; open, the same paragraph computes 700, inherited from the
+   theme's `html { font-weight: 700 }`.
+   The report dialog is portaled too and carries item text through the
+   per-item report flow, so it gets the same treatment. */
 .dccgg-root .dccgg-item-body,
-.dccgg-root .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+.dccgg-root .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.dccgg-stage.dccgg-stage .dccgg-item-body,
+.dccgg-stage.dccgg-stage .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
     /* v0.21.0: 400, not `inherit`. This site serves a font-weight of 700 on
        the html element, and nothing between it and .dccgg-item-body declares
        a weight — so `inherit` resolved to 700 and all body copy rendered bold.
@@ -2193,6 +2234,43 @@ dialog.dccgg-wrapper::backdrop {
        An explicit value is the only thing that does not depend on what the
        theme happens to set above us. */
     font-weight: 400 !important;
+}
+
+/* ---- v0.25.1: the whole checklist row is the tap target ------------------
+   The checkbox is a 24px square in a 50px row; widget.js now ticks the item
+   from anywhere in its title row, so the pointer target is the row. The cursor
+   has to say so, and only on a row that actually ticks. The controls that
+   share the row keep their own cursor — the JS lets their clicks through. */
+.dccgg-root .dccgg-item--checkable .dccgg-item-title,
+.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-title {
+    cursor: pointer;
+}
+.dccgg-root .dccgg-item--checkable .dccgg-item-title :is(a, button, input, select, textarea),
+.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-title :is(a, button, input, select, textarea) {
+    cursor: auto;
+}
+.dccgg-root .dccgg-item--checkable .dccgg-item-title :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report),
+.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-title :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report) {
+    cursor: pointer;
+}
+
+/* ---- v0.25.1: the guide's own body weight, on all three hosts -----------
+   The site serves `html { font-weight: 700 }`, and font-weight INHERITS — so
+   every element the plugin does not give a weight to renders bold. Specificity
+   is not what decides this: a rule matching the element at ANY specificity
+   beats an inherited value, which is why the Cottage Selector gets away with a
+   single `.dccwl-app` class. The reason the guide was bold is simply that
+   nothing in it declared a body weight at all.
+
+   400 is the Wildlife Guide's --dccwl-fw-body, so the three guides read the
+   same. Titles, labels and buttons keep their own weights — each declares one,
+   and a declaration beats inheritance from here just as it beat the theme's.
+
+   Stated on each host rather than on .dccgg-root alone, for the portal. */
+.dccgg-root.dccgg-root,
+.dccgg-stage.dccgg-stage,
+.dccgg-report-dialog.dccgg-report-dialog {
+    font-weight: var(--dccgg-fw-body, 400);
 }
 
 /* ---- v0.16.0: the two controls on a credential row are smaller ----------

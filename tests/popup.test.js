@@ -1191,9 +1191,15 @@ async function run() {
             root: getComputedStyle(document.querySelector('.dccgg-root')).fontWeight,
             para: getComputedStyle(document.querySelector('.dccgg-item-body p')).fontWeight,
         }));
+        // v0.25.1: the GROUND is still the site's 700 — that is what this
+        // guards, and it is why the v0.13.0 version of this test passed while
+        // live was bold. What changed is the guide's answer to it: .dccgg-root
+        // now declares its own 400 instead of inheriting, so the sheets are not
+        // bold either. Asserting root === 700 would now be asserting the bug.
         check('the fixture stands on the site\'s real 700 ground',
-            ground.html === '700' && ground.root === '700',
-            `html=${ground.html} root=${ground.root}`);
+            ground.html === '700', `html=${ground.html}`);
+        check('…and the guide answers it with a weight of its own',
+            ground.root === '400', `root=${ground.root}`);
         check('and body copy computes 400 underneath it',
             ground.para === '400', `paragraph=${ground.para}`);
         check('the body-copy weight is declared, not inherited',
@@ -1698,6 +1704,12 @@ async function run() {
                 const wrap = document.querySelector('.dccgg-menu');
                 const count = () => getComputedStyle(wrap).gridTemplateColumns.split(' ')
                     .map(parseFloat).filter((w) => w > 0).length;
+                // v0.25.1: set BOTH templates explicitly. This compares
+                // auto-fit against auto-fill, which is the question; it used to
+                // read auto-fit off the stylesheet, and the stylesheet stopped
+                // using it at this width when the menu went to a fixed four
+                // columns. The property under test is unchanged.
+                wrap.style.gridTemplateColumns = 'repeat(auto-fit, minmax(var(--dccgg-tile-min), 1fr))';
                 const fitFour = count();
                 wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr))';
                 const fillFour = count();
@@ -1708,6 +1720,7 @@ async function run() {
                     d.innerHTML = '<button class="dccgg-tile">x</button>';
                     wrap.appendChild(d);
                 }
+                wrap.style.gridTemplateColumns = 'repeat(auto-fit, minmax(var(--dccgg-tile-min), 1fr))';
                 const fitEight = count();
                 wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr))';
                 const fillEight = count();

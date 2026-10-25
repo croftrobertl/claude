@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.0
+Stable tag: 0.25.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,28 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.25.1 =
+
+**Ticking a checklist item is easier.** The whole row now ticks, not just the
+small square — tap the wording, the emoji or the box. The read-aloud buttons
+take a finger anywhere in a 44-pixel square, and each is now named after the
+item it reads, so a screen reader says "Read “Cleaning” aloud" instead of the
+same words seven times.
+
+**Body text in the section sheets is no longer bold.** The site sets every
+piece of text on the page to bold unless something says otherwise, and the
+guide only said otherwise outside the pop-ups — so the sentences a guest
+actually reads came out heavy. They now match the Wildlife Guide. Titles stay
+bold and centred.
+
+**The tiles make even rows on a tablet.** Eight tiles sat three-three-two at
+tablet width; they now sit four and four from 600 pixels up. Phones are
+unchanged at one column.
+
+**The ⌘K hint** is hidden on phones and tablets, where there is no key to
+press, and reads "Ctrl K" away from a Mac. (Both were already the case; they
+are now covered by tests.)
 
 = 0.25.0 =
 

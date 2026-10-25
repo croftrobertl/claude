@@ -585,11 +585,25 @@
         };
 
         // Click handler.
+        //
+        // v0.25.1: the WHOLE title row ticks the item, not just the 24px box.
+        // The box was a 24x24 square inside a 50px-tall row and the rest of the
+        // row did nothing, so a guest aiming at "Strip the beds" missed.
+        //
+        // Two things this must not do. It must not swallow the controls that
+        // share the row — read-aloud, the per-item report flag, and any link a
+        // host has put in a title — so anything interactive other than the
+        // checkbox itself bows out. And it must not make a NON-checkable item
+        // respond to a tap, so the checkable flag is tested on the item rather
+        // than assumed from the row.
         bindGlobal(root, document, 'click', (e) => {
-            const btn = e.target.closest('.dccgg-item-check');
-            if (!btn || !ownsTarget(btn)) return;
-            const item = btn.closest('.dccgg-item');
-            if (!item) return;
+            const hit = e.target.closest('.dccgg-item-check, .dccgg-item-title');
+            if (!hit || !ownsTarget(hit)) return;
+            if (e.target.closest('a, button:not(.dccgg-item-check), input, select, textarea, [role="button"]:not(.dccgg-item-check)')) return;
+            const item = hit.closest('.dccgg-item');
+            if (!item || item.dataset.checkable !== '1') return;
+            const btn = item.querySelector('.dccgg-item-check');
+            if (!btn) return;
             const key  = item.dataset.checkKey;
             const next = item.dataset.checked !== '1';
             item.dataset.checked = next ? '1' : '0';

@@ -1725,6 +1725,14 @@ final class Widget extends Widget_Base
             'str_secret_hide'    => [__('Re-hide value button', 'dcc-guest-guide'), __('Hide', 'dcc-guest-guide')],
             'str_tts_play'       => [__('Read-aloud button label', 'dcc-guest-guide'), __('Read this item aloud', 'dcc-guest-guide')],
             'str_tts_stop'       => [__('Read-aloud STOP button label', 'dcc-guest-guide'), __('Stop reading', 'dcc-guest-guide')],
+            // v0.25.1: every read-aloud button was named "Read this item aloud",
+            // so a screen-reader user heard the same name seven times over and
+            // could not tell which item they were on. These two carry the item's
+            // own title through %s. They are NEW keys on purpose: changing the
+            // default of str_tts_play would not reach page 4645, which stores
+            // its own copy of every string it has ever saved.
+            'str_tts_play_item'  => [__('Read-aloud button label, per item (%s = item title)', 'dcc-guest-guide'), __('Read “%s” aloud', 'dcc-guest-guide')],
+            'str_tts_stop_item'  => [__('Read-aloud STOP label, per item (%s = item title)', 'dcc-guest-guide'), __('Stop reading “%s”', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
             'str_lightbox_prev'  => [__('Lightbox previous-image aria-label', 'dcc-guest-guide'), __('Previous image', 'dcc-guest-guide')],
             'str_lightbox_next'  => [__('Lightbox next-image aria-label', 'dcc-guest-guide'), __('Next image', 'dcc-guest-guide')],
@@ -4233,6 +4241,22 @@ final class Widget extends Widget_Base
      * nonce-protected endpoint that re-checks the same access the page itself
      * requires (Plugin::handle_reveal_secret).
      */
+    /**
+     * A read-aloud button's name: the per-item format with the title in it,
+     * or the plain label when that is not possible.
+     *
+     * Falls back whenever the format carries no %s (a host may have cleared
+     * it) or the item has no title to name — never emits a literal "%s".
+     */
+    private static function tts_label(string $format, string $plain, string $title): string
+    {
+        $title = trim($title);
+        if ($title === '' || strpos($format, '%s') === false) {
+            return $plain;
+        }
+        return sprintf($format, $title);
+    }
+
     private static function secret_ref(array $item, string $section_key, int $item_idx): string
     {
         $row_id = trim((string) ($item['_id'] ?? ''));
@@ -4322,10 +4346,27 @@ final class Widget extends Widget_Base
                         <?php // v0.12.1: both labels ride on the button so the JS can swap
                         // them without a config lookup, and stay translatable. aria-pressed
                         // makes the play/stop state audible to screen readers. ?>
+                        <?php
+                        // v0.25.1: name the button after the item it reads. The
+                        // per-item format wins when it has a %s to put the title
+                        // in and the item has a title; otherwise the old plain
+                        // label is used unchanged, so a host who cleared the
+                        // placeholder gets sensible text rather than a stray %s.
+                        $tts_play = self::tts_label(
+                            (string) ($strings['str_tts_play_item'] ?? __('Read “%s” aloud', 'dcc-guest-guide')),
+                            (string) ($strings['str_tts_play'] ?? __('Read this item aloud', 'dcc-guest-guide')),
+                            $title
+                        );
+                        $tts_stop = self::tts_label(
+                            (string) ($strings['str_tts_stop_item'] ?? __('Stop reading “%s”', 'dcc-guest-guide')),
+                            (string) ($strings['str_tts_stop'] ?? __('Stop reading', 'dcc-guest-guide')),
+                            $title
+                        );
+                        ?>
                         <button type="button" class="dccgg-item-tts" aria-pressed="false"
-                                aria-label="<?php echo esc_attr($strings['str_tts_play'] ?? __('Read this item aloud', 'dcc-guest-guide')); ?>"
-                                data-label-play="<?php echo esc_attr($strings['str_tts_play'] ?? __('Read this item aloud', 'dcc-guest-guide')); ?>"
-                                data-label-stop="<?php echo esc_attr($strings['str_tts_stop'] ?? __('Stop reading', 'dcc-guest-guide')); ?>" hidden>
+                                aria-label="<?php echo esc_attr($tts_play); ?>"
+                                data-label-play="<?php echo esc_attr($tts_play); ?>"
+                                data-label-stop="<?php echo esc_attr($tts_stop); ?>" hidden>
                             <i class="fas fa-volume-up dccgg-tts-icon" aria-hidden="true"></i>
                         </button>
                     <?php endif; ?>

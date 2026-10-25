@@ -92,6 +92,12 @@ function dccgg_all_on(): array {
          'item_content' => '<p>Leave them in the hamper.</p>', 'item_checkable' => 'yes'],
         ['_id' => 'c2', 'item_section' => 'checkout', 'item_title' => 'Lock the door',
          'item_content' => '<p>Twice.</p>', 'item_checkable' => 'yes'],
+        // v0.25.1: pasted copy carries its own inline weight. An inline style
+        // beats any author rule that is not !important, so this is the only
+        // thing that exercises the !important on .dccgg-item-body — the host
+        // inheriting 400 from the root cannot reach it.
+        ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',
+         'item_content' => '<p style="font-weight:700">Someone pasted this in bold.</p>'],
         // Long enough to collapse, so Read more renders.
         ['_id' => 'r1', 'item_section' => 'rules', 'item_title' => 'House rules',
          'enable_read_more' => 'yes',

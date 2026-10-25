@@ -374,6 +374,59 @@ The service worker precaches the guest script and all four chunks: it cannot
 know which a guide needs, and an offline guest would otherwise find the Front
 Desk form, the gallery and the video inert.
 
+v0.25.1, and the lesson under all five of its items: MEASURE THE ELEMENT THE
+HOST MEASURED. Four of the five reported faults were not what they looked like.
+
+  The checkbox "24x29" and read-aloud "28x28" are the inner visual boxes —
+  .dccgg-item-check-box is 24px with 2px borders, and the read-aloud icon is
+  28px. Both buttons already had a 44x44 ::after from v0.21.0 and both pass a
+  hit-test 20px off centre. What v0.25.1 actually adds is the whole title ROW
+  as a tick target, and a per-item name on each read-aloud button.
+
+  The checklist memory was reported missing and was never missing. It writes
+  `dccgg:check:<widgetId>:<stayKey>` to localStorage and reads it back on
+  load — section B of `tests/sheet-polish.ui.js` ticks through the CHECKBOX
+  rather than the new row target precisely so it passes on 0.25.0 too, which
+  is what proves the point. It has no expiry; a 48-hour cap was discussed and
+  NOT added, because nothing was broken.
+
+  The "⌘K on every platform" was already platform-aware (widget.js swaps in
+  "Ctrl K" off a Mac) and already hidden under `@media (hover: none)`. Only
+  the tests were missing.
+
+  The bold body copy was real, and its cause is the PORTAL. The v0.21.0 rule
+  anchored on `.dccgg-root` alone, and `.dccgg-stage` is moved to <body> when
+  a section opens — so the rule was inert in the one place the copy is read.
+  Measured: closed 400, open 700. Fixed by adding the stage and dialog hosts
+  AND by declaring `--dccgg-fw-body: 400` on all three hosts, because
+  font-weight inherits and the theme sets `html { font-weight: 700 }`.
+  Specificity is NOT what decides this: a rule matching the element at any
+  specificity beats an inherited value, which is why one class is enough.
+  400 is the Wildlife Guide's `--dccwl-fw-body`, for consistency.
+
+Two things in the v0.25.1 row handler are worth not re-deriving. Read-aloud
+calls `e.stopPropagation()` in its own handler, so it never reaches the
+document-level row listener at all — the exclusion list is there for the
+PER-ITEM REPORT flag, which does not. And the `checkable !== '1'` test is
+redundant against the `!btn` guard below it; both are kept, and the mutation
+runner lists the pair as equivalent rather than pretending to kill them.
+
+The tile grid is `repeat(4, minmax(0, 1fr))` from 600px up since v0.25.1,
+replacing an auto-fit that gave a different count at every width (2 at 600,
+3 at 768 — the 3,3,2 the host reported — 4 at 1024, 5 at 1440). Two measured
+consequences, both accepted: desktop drops from five tiles a row to four, and
+at exactly 600px tiles are 127px with the longest label on two lines. The
+mobile portrait rule had to become `max-width: 599.98px`, because at exactly
+600 both rules matched and the later one won — "four columns from 600px up"
+silently showed two until that overlap was removed. `minmax(0, 1fr)`, not the
+tile-min: a grid item's automatic minimum is its content, so a 200px floor
+overflows the row instead of letting tiles shrink.
+
+`tests/sheet-polish.ui.js` and `tests/sheet-polish.mutations.py` guard all of
+the above. Its kit block includes a width for `.dccgg-item-report .fas`,
+because Font Awesome is absent here and without it that button measures 12x8
+and cannot be tapped — a property of the harness, not of the guide.
+
 Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
 left-aligned) is implemented the way the Cottage Selector implements it —
 `isMulti()` tests the paragraph's own TEXT and adds a class, so a host who
@@ -422,7 +475,8 @@ Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/stickers.test.php`, `node tests/phone-fixes.ui.js`, `php tests/report-hardening.test.php`,
 `node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js`,
 `php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js`,
-`php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js`,
+`node tests/sheet-polish.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 
