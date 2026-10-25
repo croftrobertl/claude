@@ -77,6 +77,29 @@ delete the folder and then purge SpeedyCache and the server cache. The
 finding resolves on the next tick. `/guest/` is cached on purpose and is
 never named.
 
+## If an email says PHP is behind, or a security fix is not applied
+
+Nothing was changed; PHP is the host's to update. The email names the
+running version as the web server reported it and the newest release of
+its branch. Check cPanel → MultiPHP (or ask HostGator), then confirm with
+`wp ragusa status`, which prints the web reading, not the command line's.
+If php.net could not be reached, the status says "php.net Not Reachable"
+and nothing is raised until it answers.
+
+## If an email says a PHP settings file changed
+
+`.user.ini` or `php.ini` changed; the email carries the diff (removed
+lines with "-", added with "+"). A line such as
+`session.upload_progress.enabled = 0 ; added by webhost (mitigation)` is
+the host protecting the account: nothing to do. Anything else: ask the
+site director. Ragusa never restores these files.
+
+## If you want a finding gone by hand
+
+    wp ragusa findings              # the unresolved ones, with a short id
+    wp ragusa resolve <id>          # resolved, recorded with your name
+    wp ragusa resolve <id> --seen   # seen, still counted as unresolved
+
 ## If a finding stays on the page after the problem is gone
 
 Nothing is stuck. A finding resolves itself when its condition goes away

@@ -270,6 +270,84 @@ $mutations = [
         'from' => "        if (\$rules === [] && \$folders === []) {\n            Alerts::resolve(\$fp);\n            return;\n        }",
         'to'   => "        if (\$rules === [] && \$folders === []) {\n            return;\n        }",
     ],
+    [
+        'name' => '0.2.0 1: the event ring cuts blindly at 2,000 (a breached row can be pushed out by noise)',
+        'file' => 'includes/class-events.php',
+        'from' => "        \$over -= self::delete_oldest(\$wpdb->prepare(\"severity = %s OR tag <> ''\", self::INFO), \$over);",
+        'to'   => "        \$over -= self::delete_oldest('1=1', \$over);",
+    ],
+    [
+        'name' => '0.2.0 2: resolved findings count as active',
+        'file' => 'includes/class-alerts.php',
+        'from' => "        return array_filter(\$data['active'], static fn(\$a) => (\$fortress === null || (\$a['fortress'] ?? '') === \$fortress) && in_array(self::state(\$a), ['open', 'seen'], true));",
+        'to'   => "        return array_filter(\$data['active'] + \$data['resolved'], static fn(\$a) => (\$fortress === null || (\$a['fortress'] ?? '') === \$fortress) && in_array(self::state(\$a), ['open', 'seen', 'resolved'], true));",
+    ],
+    [
+        'name' => '0.2.0 3: a file written in an update window is a finding (no attribution)',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (\$slug === '' || \$slug === 'dcc-ragusa') {\n            return false;\n        }",
+        'to'   => "        return false;",
+    ],
+    [
+        'name' => '0.2.0 3: any file in the window is attributed, even in another plugin\'s folder',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            if (\$mtime >= \$w['from'] && \$mtime <= \$w['to'] && self::belongs_to(\$rel, \$w['slug'])) {",
+        'to'   => "            if (\$mtime >= \$w['from'] && \$mtime <= \$w['to']) {",
+    ],
+    [
+        'name' => '0.2.0 3: a self-writer that gains PHP stays info',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (self::has_php(\$abs)) {\n            return false; // it gained PHP: the ordinary finding, with its severity\n        }",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.0 4: wp ragusa findings lists resolved findings by default',
+        'file' => 'includes/class-cli.php',
+        'from' => "        \$set  = \$all ? Alerts::active() + Alerts::history() : Alerts::unresolved();",
+        'to'   => "        \$set  = Alerts::active() + Alerts::history();",
+    ],
+    [
+        'name' => '0.2.0 4: resolving by hand records nobody',
+        'file' => 'includes/class-alerts.php',
+        'from' => "        self::resolve(\$fp, true);\n        Events::record((string) \$a['fortress'], Events::INFO, 'resolved-by-hand',",
+        'to'   => "        self::resolve(\$fp, true);\n        if (false) Events::record((string) \$a['fortress'], Events::INFO, 'resolved-by-hand',",
+    ],
+    [
+        'name' => '0.2.0 5: the clock drops the zone',
+        'file' => 'includes/class-site.php',
+        'from' => "        return \$date . ', ' . \$t->format('g:i A T');",
+        'to'   => "        return \$date . ', ' . \$t->format('g:i A');",
+    ],
+    [
+        'name' => '0.2.0 6: a security release is a breach from day one (no three-day grace)',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        if (\$latest['security'] && \$age > self::SECURITY_GRACE) {",
+        'to'   => "        if (\$latest['security']) {",
+    ],
+    [
+        'name' => '0.2.0 6: a branch missing from php.net is not end of life',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        \$latest = \$branches[\$branch] ?? null;\n        if (\$latest === null) {",
+        'to'   => "        \$latest = \$branches[\$branch] ?? null;\n        if (\$latest === null) {\n            return null;\n        }\n        if (false) {",
+    ],
+    [
+        'name' => '0.2.0 6: a changed PHP settings file raises nothing',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "            if (\$seen[\$abs] !== \$content) {\n                \$lines[] = self::changed(\$abs, (string) \$seen[\$abs], \$content, false);\n            }",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.0 6: a fresh executable under uploads waits for the next walk',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "                } elseif (\$fresh && self::is_executable_name(\$item)) {",
+        'to'   => "                } elseif (false) {",
+    ],
+    [
+        'name' => '0.2.0 7: the report always says the walls held',
+        'file' => 'includes/class-report.php',
+        'from' => "        \$subject = \$n_open === 0",
+        'to'   => "        \$subject = true",
+    ],
 ];
 
 

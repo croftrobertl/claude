@@ -24,9 +24,10 @@ final class Alerts
     public const MAX    = 200;
     public const REPEAT = 86400;
 
-    public const KEEP_RESOLVED = 7 * 86400;
+    public const KEEP_RESOLVED = 7 * 86400;   // on the card, in a calm colour
     public const KEEP_SEEN     = 7 * 86400;
     public const KEEP_DRILL    = 86400;
+    public const KEEP_HISTORY  = 30 * 86400;  // in the resolved history, for the findings command and the report
 
     private static ?array $data  = null;
     private static bool   $force = false;
@@ -41,8 +42,8 @@ final class Alerts
     {
         if (self::$data === null) {
             $raw        = get_option(self::OPTION, []);
-            self::$data = is_array($raw) ? $raw : ['active' => [], 'digest' => []];
-            self::$data += ['active' => [], 'digest' => []];
+            self::$data = is_array($raw) ? $raw : ['active' => [], 'resolved' => [], 'digest' => []];
+            self::$data += ['active' => [], 'resolved' => [], 'digest' => []];
         }
         return self::$data;
     }
@@ -53,9 +54,11 @@ final class Alerts
             return;
         }
         self::purge();
-        if (count(self::$data['active']) > self::MAX) {
-            uasort(self::$data['active'], static fn($a, $b) => ($b['last_seen'] ?? 0) <=> ($a['last_seen'] ?? 0));
-            self::$data['active'] = array_slice(self::$data['active'], 0, self::MAX, true);
+        foreach (['active', 'resolved'] as $bucket) {
+            if (count(self::$data[$bucket]) > self::MAX) {
+                uasort(self::$data[$bucket], static fn($a, $b) => ($b['last_seen'] ?? 0) <=> ($a['last_seen'] ?? 0));
+                self::$data[$bucket] = array_slice(self::$data[$bucket], 0, self::MAX, true);
+            }
         }
         if (count(self::$data['digest']) > 100) {
             self::$data['digest'] = array_slice(self::$data['digest'], -100);
@@ -67,20 +70,40 @@ final class Alerts
         }
     }
 
-    /** Settled findings leave the page after their time; the events table keeps the history. */
+    /**
+     * `active` holds only unresolved findings (open, seen, practice); a
+     * resolved finding moves to the `resolved` history, kept 30 days. Seen
+     * and practice findings leave after their time; the events table keeps
+     * everything.
+     */
     private static function purge(): void
     {
         $now = time();
         foreach (self::$data['active'] as $fp => $a) {
             $tag = (string) ($a['tag'] ?? '');
-            if ($tag === Events::TAG_DRILL && $now - (int) ($a['last_seen'] ?? 0) > self::KEEP_DRILL) {
+            if ((int) ($a['resolved_at'] ?? 0) > 0) {
+                self::$data['resolved'][$fp] = $a; // a row from before 0.2.0
                 unset(self::$data['active'][$fp]);
-            } elseif ((int) ($a['resolved_at'] ?? 0) > 0 && $now - (int) $a['resolved_at'] > self::KEEP_RESOLVED) {
+            } elseif ($tag === Events::TAG_DRILL && $now - (int) ($a['last_seen'] ?? 0) > self::KEEP_DRILL) {
                 unset(self::$data['active'][$fp]);
             } elseif ((int) ($a['seen_at'] ?? 0) > 0 && $now - (int) $a['seen_at'] > self::KEEP_SEEN) {
                 unset(self::$data['active'][$fp]);
             }
         }
+        foreach (self::$data['resolved'] as $fp => $a) {
+            if ($now - (int) ($a['resolved_at'] ?? 0) > self::KEEP_HISTORY) {
+                unset(self::$data['resolved'][$fp]);
+            }
+        }
+    }
+
+    /** 0.2.0: resolved rows leave `active` for the history. */
+    public static function migrate(): int
+    {
+        self::load();
+        $before = count(self::$data['active']);
+        self::save();
+        return $before - count(self::$data['active']);
     }
 
     /** open | resolved | seen | practice */
@@ -114,7 +137,8 @@ final class Alerts
         $tag      = Drill::tag();
         $data     = self::load();
         $now      = time();
-        $entry    = $data['active'][$fp] ?? null;
+        $entry    = $data['active'][$fp] ?? $data['resolved'][$fp] ?? null;
+        unset(self::$data['resolved'][$fp]);
 
         // A finding raised again after it was resolved or seen is open again.
         $was_settled = $entry !== null && self::state($entry) !== 'open';
@@ -153,6 +177,11 @@ final class Alerts
     public static function set_data(string $fp, string $key, mixed $value): void
     {
         $data = self::load();
+        if (isset($data['resolved'][$fp])) {
+            self::$data['resolved'][$fp]['data'][$key] = $value;
+            self::save();
+            return;
+        }
         if (!isset($data['active'][$fp])) {
             return;
         }
@@ -162,7 +191,8 @@ final class Alerts
 
     public static function get(string $fp): ?array
     {
-        return self::load()['active'][$fp] ?? null;
+        $data = self::load();
+        return $data['active'][$fp] ?? $data['resolved'][$fp] ?? null;
     }
 
     /** The three sentences plus the plain link. */
@@ -181,8 +211,14 @@ final class Alerts
         if (!empty($f['notice'])) {
             $lines[] = (string) $f['notice'];
         }
-        $lines[] = 'Ragusa: ' . Site::admin_page_url();
+        $lines[] = self::footer();
         return Text::scrub(implode("\n\n", $lines));
+    }
+
+    /** "Ragusa, Oct 24, 8:16 PM EDT: <page>". Every email ends with the property's clock. */
+    public static function footer(): string
+    {
+        return 'Ragusa, ' . Site::stamp(time()) . ': ' . Site::admin_page_url();
     }
 
     /**
@@ -217,7 +253,9 @@ final class Alerts
         if ($a === null || self::state($a) !== 'open') {
             return;
         }
-        self::$data['active'][$fp]['resolved_at'] = time();
+        $a['resolved_at']           = time();
+        self::$data['resolved'][$fp] = $a;
+        unset(self::$data['active'][$fp]);
         self::save();
         if (!$quiet && ($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0) {
             self::send(
@@ -228,7 +266,7 @@ final class Alerts
                 sprintf(__('The finding "%s" is no longer present.', 'dcc-ragusa'), (string) $a['title']) . "\n\n"
                 . __('Ragusa did nothing new: the check that raised it now passes.', 'dcc-ragusa') . "\n\n"
                 . __('Nothing to do.', 'dcc-ragusa') . "\n\n"
-                . 'Ragusa: ' . Site::admin_page_url()
+                . self::footer()
             );
         }
         Events::record((string) $a['fortress'], Events::INFO, 'all-clear', (string) ($a['target'] ?? ''), (string) $a['title'], [], null, (string) ($a['tag'] ?? ''));
@@ -259,10 +297,12 @@ final class Alerts
     {
         $data = self::load();
         $fps  = [];
-        foreach ($data['active'] as $fp => $a) {
-            if (($a['fortress'] ?? '') === $fortress && in_array($a['kind'] ?? '', $kinds, true)) {
-                unset(self::$data['active'][$fp]);
-                $fps[] = $fp;
+        foreach (['active', 'resolved'] as $bucket) {
+            foreach ($data[$bucket] as $fp => $a) {
+                if (($a['fortress'] ?? '') === $fortress && in_array($a['kind'] ?? '', $kinds, true)) {
+                    unset(self::$data[$bucket][$fp]);
+                    $fps[] = $fp;
+                }
             }
         }
         if ($fps !== []) {
@@ -276,20 +316,70 @@ final class Alerts
     public static function tag(string $fp, string $tag): void
     {
         $data = self::load();
-        if (isset($data['active'][$fp])) {
-            self::$data['active'][$fp]['tag'] = $tag;
-            self::save();
+        foreach (['active', 'resolved'] as $bucket) {
+            if (isset($data[$bucket][$fp])) {
+                self::$data[$bucket][$fp]['tag'] = $tag;
+                self::save();
+            }
         }
     }
 
-    /** @return array<string,array> fingerprint => finding, every state, for the page */
+    /**
+     * For the page: every unresolved finding plus those resolved in the
+     * last week (shown in a calm colour), fingerprint => finding.
+     *
+     * @return array<string,array>
+     */
     public static function active(?string $fortress = null): array
     {
         $data = self::load();
-        if ($fortress === null) {
-            return $data['active'];
+        $out  = $data['active'];
+        foreach ($data['resolved'] as $fp => $a) {
+            if (time() - (int) ($a['resolved_at'] ?? 0) <= self::KEEP_RESOLVED) {
+                $out[$fp] = $a;
+            }
         }
-        return array_filter($data['active'], static fn($a) => ($a['fortress'] ?? '') === $fortress);
+        if ($fortress === null) {
+            return $out;
+        }
+        return array_filter($out, static fn($a) => ($a['fortress'] ?? '') === $fortress);
+    }
+
+    /** What counts: open and seen findings, never practice, never resolved. */
+    public static function unresolved(?string $fortress = null): array
+    {
+        $data = self::load();
+        return array_filter($data['active'], static fn($a) => ($fortress === null || ($a['fortress'] ?? '') === $fortress) && in_array(self::state($a), ['open', 'seen'], true));
+    }
+
+    /** The resolved history, 30 days. */
+    public static function history(?string $fortress = null): array
+    {
+        $data = self::load();
+        return array_filter($data['resolved'], static fn($a) => $fortress === null || ($a['fortress'] ?? '') === $fortress);
+    }
+
+    /**
+     * Resolved or seen by hand (`wp ragusa resolve`), recorded with who.
+     * Returns false when the finding is not open.
+     */
+    public static function resolve_by_hand(string $fp, string $by, bool $as_seen = false): bool
+    {
+        $a = self::get($fp);
+        if ($a === null || self::state($a) !== 'open') {
+            return false;
+        }
+        if ($as_seen) {
+            return self::mark_seen($fp, $by);
+        }
+        self::resolve($fp, true);
+        Events::record((string) $a['fortress'], Events::INFO, 'resolved-by-hand', (string) ($a['target'] ?? ''), sprintf(
+            /* translators: 1: title, 2: name */
+            __('"%1$s" was resolved by hand by %2$s.', 'dcc-ragusa'),
+            (string) $a['title'],
+            mb_substr(Text::scrub($by), 0, 60)
+        ));
+        return true;
     }
 
     /** @return array<string,array> only open, real findings: what colours a card */
@@ -371,7 +461,7 @@ final class Alerts
             $lines[] = '• ' . Fortress::name((string) $d['fortress']) . ' · ' . $d['title'] . ($d['what'] !== '' ? ': ' . $d['what'] : '');
         }
         $n    = count($lines);
-        $body = implode("\n", $lines) . "\n\n" . __('Nothing to do: these are small things Ragusa noted and did not act on.', 'dcc-ragusa') . "\n\n" . 'Ragusa: ' . Site::admin_page_url();
+        $body = implode("\n", $lines) . "\n\n" . __('Nothing to do: these are small things Ragusa noted and did not act on.', 'dcc-ragusa') . "\n\n" . self::footer();
         /* translators: %d: number of items */
         $sent = self::send_as('Ragusa · ' . sprintf(_n('Daily · %d Small Thing', 'Daily · %d Small Things', $n, 'dcc-ragusa'), $n), $body);
         if ($sent || !Site::is_live()) {
@@ -381,9 +471,9 @@ final class Alerts
         }
     }
 
-    private static function send_as(string $subject, string $body): bool
+    public static function send_as(string $subject, string $body, bool $force = false): bool
     {
-        if (!Site::is_live() && !self::$force) {
+        if (!Site::is_live() && !self::$force && !$force) {
             return false;
         }
         $to = Settings::alert_email();

@@ -1229,3 +1229,24 @@ folder for one of those pages exists under `wp-content/cache/speedycache/*/all/`
 one email, no journal row, resolved on the tick after the fix. Never JS or
 CSS rules (slashes are legitimate there), never the dead but harmless
 `/events/` rule, never `/guest/`, which Rob keeps cached on purpose.
+
+**0.2.0 (the Director's audit of 2026-10-25; Rob approved).** The PHP flaw
+of Oct 21 (two unauthenticated remote-code-execution bugs fixed only by
+updating PHP itself) is now Ragusa's job: "PHP Is Patched" reads the web
+server's PHP, never WP-CLI's (from the tick when wp-cron.php served it,
+otherwise from a one-off cron event a loopback makes the web server run),
+fetches php.net's active-branch list once a day, and judges: behind the
+branch's latest is Needs A Look, a security release more than three days
+old not applied is Breached, a branch no longer active is Needs A Look;
+php.net unreachable means a status line and nothing raised. The PHP
+settings files the host writes its mitigations to are watched with a diff
+in the email; a fresh executable under uploads is found within a tick.
+Around it, six repairs: the event ring keeps the important history (noise
+goes first, a serious row only past 90 days with no open finding); the
+active count counts only unresolved findings, resolved ones in a 30-day
+history; a file written inside a plugin update's window, where that plugin
+writes, is tagged with the update and accepted (one info line), and known
+self-writers (llms.txt by AIOSEO) are info unless they gain PHP, with no
+ignore list; `wp ragusa findings` and `wp ragusa resolve <id>`; one clock,
+"Oct 24, 8:16 PM EDT", everywhere; and The Walls Report every Monday at
+7:00 AM Eastern, so that silence means something.

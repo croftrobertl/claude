@@ -42,8 +42,25 @@ final class Lovrijenac
             $lines[] = self::fetch_feed();
         }
         $lines = array_merge($lines, self::wporg_chunk($budget));
+        $lines = array_merge($lines, \DCCR\Php_Patch::check_settings());
+        if (self::php_due()) {
+            State::set('php_check_ts', time());
+            $lines = array_merge($lines, \DCCR\Php_Patch::due());
+        }
         self::evaluate();
         return $lines;
+    }
+
+    /** Once a day, in the first tick after 04:10 ET (after the feed). The tick holds the budget, so never twice a day. */
+    public static function php_due(): bool
+    {
+        $last = (int) State::get('php_check_ts', 0);
+        if ($last === 0) {
+            return true;
+        }
+        $now  = Site::now();
+        $same = (new \DateTimeImmutable('@' . $last))->setTimezone(Site::tz())->format('Y-m-d') === $now->format('Y-m-d');
+        return !$same && ((int) $now->format('G') > 4 || ((int) $now->format('G') === 4 && (int) $now->format('i') >= 10));
     }
 
     // ---------------------------------------------------------------- feed
@@ -461,10 +478,11 @@ final class Lovrijenac
                 break;
             }
         }
-        // PHP.
+        // PHP: the baked table is the fallback while php.net has never answered (Php_Patch judges otherwise).
         $php  = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
         $eol  = self::PHP_EOL[$php] ?? null;
-        if ($eol !== null && strtotime($eol) < time()) {
+        $feed = (array) State::get('php_feed', []);
+        if (empty($feed['branches']) && $eol !== null && strtotime($eol) < time()) {
             $fp        = Events::fingerprint(Fortress::LOVRIJENAC, 'php-eol', $php);
             $present[] = $fp;
             Alerts::raise(['fortress' => Fortress::LOVRIJENAC, 'severity' => Events::NEEDS_LOOK, 'kind' => 'php-eol', 'target' => $php,
@@ -492,14 +510,14 @@ final class Lovrijenac
             $feed_line = __('Feed Rejected, Last Good Copy In Use', 'dcc-ragusa');
         } else {
             /* translators: %s: relative time */
-            $feed_line = $when > 0 ? sprintf(__('Feed Read %s', 'dcc-ragusa'), Site::ago($when)) : __('Feed Not Read Yet', 'dcc-ragusa');
+            $feed_line = $when > 0 ? sprintf(__('Feed Read %s', 'dcc-ragusa'), Site::both($when)) : __('Feed Not Read Yet', 'dcc-ragusa');
         }
         $line = $vulns === 0
             /* translators: %d: plugins */
             ? sprintf(__('No Known Weakness In %d Plugins', 'dcc-ragusa'), $plugins)
             /* translators: %d: count */
             : sprintf(_n('%d Plugin Has A Known Weakness', '%d Plugins Have A Known Weakness', $vulns, 'dcc-ragusa'), $vulns);
-        Fortress::set_status(Fortress::LOVRIJENAC, Alerts::worst(Fortress::LOVRIJENAC), $line . ' · ' . $feed_line);
+        Fortress::set_status(Fortress::LOVRIJENAC, Alerts::worst(Fortress::LOVRIJENAC), $line . ' · ' . $feed_line . ' · ' . \DCCR\Php_Patch::line());
     }
 
     /**

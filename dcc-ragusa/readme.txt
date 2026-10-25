@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.6
+Stable tag: 0.2.0
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,15 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.0 =
+* The important history stays: the event ring prunes info, practice and withdrawn rows first, then breached or needs-look rows only when they are older than 90 days and their finding is not open. A serious row with an open finding is never discarded for noise.
+* The active list holds only unresolved findings; resolved ones move to a 30-day history. `wp ragusa status` counts only the unresolved.
+* Who changed it: a file written inside a recorded plugin update's window, in a place that belongs to that plugin (its folder, or a folder of its name under wp-content, uploads, cache or mu-plugins), is tagged with that update and accepted as the baseline, with one info line per update. Known self-writers (llms.txt by AIOSEO) are info unless the file gains PHP.
+* `wp ragusa findings` (unresolved; `--all`, `--format=json`) and `wp ragusa resolve <id>` (`--seen`), which records who did it.
+* One clock: every time reads in the property's zone with the zone named, "Oct 24, 8:16 PM EDT", in status, the journal, the page and the emails.
+* PHP Is Patched (Lovrijenac), once a day from cron: the running PHP is read from the web server (from the tick when wp-cron.php served it, otherwise from a one-off cron event that a loopback makes the web server run), php.net's active-branch list is fetched and cached for a day, and the site is judged: behind the branch's latest is Needs A Look; a security release more than three days old not applied is Breached; a branch no longer active is Needs A Look. php.net unreachable: the status says so and nothing is raised. The PHP settings files (.user.ini, php.ini, this root's and live's when staging sits inside it) are watched: any change is a finding with the diff. A fresh executable under uploads is found within one tick, quarantined and emailed at once, not only at the next walk.
+* The Walls Report: one email every Monday at 7:00 AM Eastern, "Ragusa: The Walls Held This Week" or "Ragusa: 2 Things Need A Look", a short paragraph and one line per fortress (opened and closed, updates checked, PHP, disk, vault, last full scan). `wp ragusa report --dry-run` prints it. Staging sends nothing.
 
 = 0.1.6 =
 * Revelin reads SpeedyCache's exclusion rules every tick. A page rule for submit-booking, account, checkout, booking-confirmation or search-results whose text carries a slash is dead (SpeedyCache compares its rules against the address with the slashes trimmed), and a cached folder for one of those pages under wp-content/cache/speedycache/ means a guest can be served a stale page. Either is a Needs A Look, "A Booking Page Can Be Cached", naming the rule or folder and the fix ("Remove the slashes from the rule text." / "Delete the folder, then purge SpeedyCache and the server cache."). Read-only: no journal row, one email, resolves on the tick after the fix. JS and CSS rules, the /events/ rule and /guest/ (cached on purpose) are never flagged.

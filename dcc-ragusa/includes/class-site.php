@@ -125,7 +125,30 @@ final class Site
         return new \DateTimeImmutable('now', self::tz());
     }
 
-    /** "3:12 AM today", "yesterday at 4:08 PM", "Oct 3 at 9:00 AM". */
+    /**
+     * One clock everywhere: the property's, with the zone named.
+     * "Oct 24, 8:16 PM EDT" (the year is added when it is not this year).
+     */
+    public static function stamp(int $ts): string
+    {
+        if ($ts <= 0) {
+            return __('Never', 'dcc-ragusa');
+        }
+        $t    = (new \DateTimeImmutable('@' . $ts))->setTimezone(self::tz());
+        $date = $t->format('Y') === self::now()->format('Y') ? $t->format('M j') : $t->format('M j, Y');
+        return $date . ', ' . $t->format('g:i A T');
+    }
+
+    /** "Oct 24, 8:16 PM EDT (18 Hours Ago)". */
+    public static function both(int $ts): string
+    {
+        if ($ts <= 0) {
+            return __('Never', 'dcc-ragusa');
+        }
+        return self::stamp($ts) . ' (' . self::ago($ts) . ')';
+    }
+
+    /** "8:16 PM EDT Today", "Yesterday At 8:16 PM EDT", "Oct 3, 9:00 AM EDT". */
     public static function when(int $ts): string
     {
         if ($ts <= 0) {
@@ -133,7 +156,7 @@ final class Site
         }
         $t     = (new \DateTimeImmutable('@' . $ts))->setTimezone(self::tz());
         $now   = self::now();
-        $time  = $t->format('g:i A');
+        $time  = $t->format('g:i A T');
         $today = $now->format('Y-m-d');
         $yday  = $now->modify('-1 day')->format('Y-m-d');
         if ($t->format('Y-m-d') === $today) {
@@ -144,8 +167,7 @@ final class Site
             /* translators: %s: time */
             return sprintf(__('Yesterday At %s', 'dcc-ragusa'), $time);
         }
-        /* translators: 1: date, 2: time */
-        return sprintf(__('%1$s At %2$s', 'dcc-ragusa'), $t->format('M j'), $time);
+        return self::stamp($ts);
     }
 
     /** "12 Minutes Ago", "2 Hours Ago", "3 Days Ago". */

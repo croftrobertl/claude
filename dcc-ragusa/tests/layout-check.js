@@ -1,9 +1,9 @@
 /**
  * Layout check and screenshots.
  *
- * Asserts that nothing scrolls sideways at 390px and 360px, that every
- * button is at least 44px tall, then captures each screen at 1280px and
- * 390px.
+ * Asserts that nothing scrolls sideways at 1440px, 768px, 390px and 360px,
+ * that every button is at least 44px tall, then captures each screen at
+ * 1440px, 768px and 390px.
  *
  *     php tests/render-screens.php && node tests/layout-check.js
  */
@@ -20,8 +20,8 @@ const shots = path.join(__dirname, 'screenshots');
   const files = fs.readdirSync(screens).filter((f) => f.endsWith('.html')).sort();
   let failed = 0;
 
-  for (const width of [1280, 390, 360]) {
-    const context = await browser.newContext({ viewport: { width, height: width >= 1280 ? 900 : 844 }, deviceScaleFactor: 1 });
+  for (const width of [1440, 768, 390, 360]) {
+    const context = await browser.newContext({ viewport: { width, height: width >= 1280 ? 900 : (width >= 768 ? 1024 : 844) }, deviceScaleFactor: 1 });
     for (const file of files) {
       const page = await context.newPage();
       await page.goto('file://' + path.join(screens, file));

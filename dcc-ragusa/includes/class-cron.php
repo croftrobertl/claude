@@ -50,6 +50,7 @@ final class Cron
         wp_unschedule_hook(Plugin::TICK_HOOK);
         wp_unschedule_hook(Plugin::CHECK_HOOK);
         wp_unschedule_hook(Plugin::DIGEST_HOOK);
+        wp_unschedule_hook(Php_Patch::PROBE_HOOK);
     }
 
     /**
@@ -68,6 +69,7 @@ final class Cron
         try {
             State::set('last_tick', time());
             State::set('vault_in_web_root', Vault::in_web_root());
+            Php_Patch::record_here();
             if (Fortress::status(Fortress::SVETI_IVAN)['state'] === Fortress::UNKNOWN) {
                 Fortress::set_status(Fortress::SVETI_IVAN, Fortress::HOLDING, __('No Update Since Ragusa Was Installed', 'dcc-ragusa'));
             }
@@ -116,6 +118,7 @@ final class Cron
             if (Alerts::digest_due()) {
                 Alerts::send_digest();
             }
+            Report::maybe_send();
             Fortress::settle();
 
             // 10. The heartbeat.

@@ -8,6 +8,7 @@ use DCCR\Checksums;
 use DCCR\Events;
 use DCCR\Fortress;
 use DCCR\Htaccess;
+use DCCR\Journal;
 use DCCR\Site;
 use DCCR\State;
 use DCCR\Text;
@@ -50,6 +51,12 @@ final class Minceta
     public const MU_VENDOR = ['endurance-page-cache.php', 'sso.php', 'wp-staging-optimizer.php'];
 
     public const CRITICAL_OPTIONS = ['siteurl', 'home', 'admin_email', 'users_can_register', 'default_role', 'active_plugins'];
+
+    /** Files their owner regenerates on a schedule: a change is info, unless the file gains PHP. */
+    public const SELF_WRITERS = ['llms.txt' => 'AIOSEO'];
+
+    /** A file written this long after a recorded plugin update belongs to that update. */
+    public const UPDATE_WINDOW = 1800;
 
     /** Directories (relative to ABSPATH) the walk never enters. */
     public const SKIP_DIRS = [
@@ -105,8 +112,64 @@ final class Minceta
     public static function quick(): array
     {
         $lines = Revelin::check_guards();
-        $lines = array_merge($lines, self::check_options(), self::check_jetpack(), self::check_sentinels());
+        $lines = array_merge($lines, self::check_options(), self::check_jetpack(), self::check_sentinels(), self::uploads_fresh());
         self::update_status();
+        return $lines;
+    }
+
+    /**
+     * Every tick, not only at the walk: an executable file that just landed
+     * under uploads is found within ten minutes. Only folders whose own
+     * time moved since the last look are read (a folder's mtime changes
+     * when a file is added or removed in it), so the sweep is cheap.
+     *
+     * @return string[]
+     */
+    public static function uploads_fresh(): array
+    {
+        $last = (int) State::get('uploads_fresh_ts', 0);
+        State::set('uploads_fresh_ts', time());
+        if ($last === 0) {
+            return []; // the first walk covers what is there
+        }
+        $root  = Site::uploads_dir();
+        if (!is_dir($root)) {
+            return [];
+        }
+        $since = $last - 60;
+        $found = [];
+        $p     = ['fps' => []];
+        $stack = [$root];
+        $n     = 0;
+        while ($stack !== [] && $n++ < 20000) {
+            $dir = array_pop($stack);
+            $rel = Site::rel($dir);
+            if (\DCCR\Drill::owns_path($rel) || Vault::owns($dir)) {
+                continue;
+            }
+            $items = @scandir($dir) ?: [];
+            $fresh = (int) @filemtime($dir) >= $since;
+            foreach ($items as $item) {
+                if ($item === '.' || $item === '..') {
+                    continue;
+                }
+                $abs = $dir . '/' . $item;
+                if (is_dir($abs)) {
+                    $stack[] = $abs;
+                } elseif ($fresh && self::is_executable_name($item)) {
+                    $found[] = $abs;
+                }
+            }
+        }
+        $lines = [];
+        foreach ($found as $abs) {
+            $before = count($p['fps']);
+            self::uploads_file(substr($abs, strlen($root) + 1), $abs, $p);
+            if (count($p['fps']) > $before) {
+                /* translators: %s: path */
+                $lines[] = sprintf(__('Fresh executable under uploads: %s.', 'dcc-ragusa'), Site::rel($abs));
+            }
+        }
         return $lines;
     }
 
@@ -518,11 +581,23 @@ final class Minceta
         } elseif ($known === null) {
             if (!$first) {
                 $p['new']++;
-                self::finding_new($site_rel, $exp['src'], $p);
+                $by = self::attribution($site_rel, $mtime);
+                if ($by !== null) {
+                    self::attributed($site_rel, $by, $p, 'file-new');
+                } else {
+                    self::finding_new($site_rel, $exp['src'], $p);
+                }
             }
         } elseif (($known['h'] ?? '') !== $hash) {
             $p['changed']++;
-            self::finding_changed($site_rel, $exp['src'], $p);
+            $by = self::attribution($site_rel, $mtime);
+            if ($by !== null) {
+                self::attributed($site_rel, $by, $p, 'file-changed');
+            } elseif (self::self_written($site_rel, $abs, $p)) {
+                // info only, recorded in self_written()
+            } else {
+                self::finding_changed($site_rel, $exp['src'], $p);
+            }
         }
         self::$index[$site_rel] = $entry;
         self::$index_dirty      = true;
@@ -591,6 +666,106 @@ final class Minceta
                 ? __('Ask the site director to run wp core verify-checksums and, if needed, wp core download --force --skip-content.', 'dcc-ragusa')
                 : __('Ask the site director to run wp plugin verify-checksums on it and reinstall the plugin if the change is not theirs.', 'dcc-ragusa'),
         ]);
+    }
+
+    /**
+     * Who changed it: a recorded plugin (or core) update whose window covers
+     * the file's time. The window runs from a minute before the update was
+     * noticed to UPDATE_WINDOW after, so files a plugin writes outside its
+     * own folder on its first run (wp-content/wp-staging/, uploads/<slug>/)
+     * belong to the update too. Core and Ragusa's own files never: those
+     * have their own rules.
+     *
+     * @return array{slug:string,version:string,id:int}|null
+     */
+    public static function attribution(string $rel, int $mtime): ?array
+    {
+        foreach (self::update_windows() as $w) {
+            if ($mtime >= $w['from'] && $mtime <= $w['to'] && self::belongs_to($rel, $w['slug'])) {
+                return $w;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Where an update of this slug may write: its own folder, a folder of
+     * its name under wp-content, uploads or cache, a must-use file of its
+     * name. Core: the core areas and the bundled plugins and themes. Never
+     * another plugin's folder, never a root file.
+     */
+    public static function belongs_to(string $rel, string $slug): bool
+    {
+        if ($slug === 'core') {
+            return str_starts_with($rel, 'wp-admin/') || str_starts_with($rel, 'wp-includes/')
+                || preg_match('#^(wp-[a-z-]+\.php|index\.php|license\.txt|readme\.html)$#', $rel) === 1
+                || str_starts_with($rel, 'wp-content/plugins/akismet/') || preg_match('#^wp-content/themes/twenty[a-z]+/#', $rel) === 1;
+        }
+        if ($slug === '' || $slug === 'dcc-ragusa') {
+            return false;
+        }
+        $q = preg_quote($slug, '#');
+        return preg_match('#^wp-content/plugins/' . $q . '/#', $rel) === 1                     // its own folder
+            || preg_match('#^wp-content/mu-plugins/' . $q . '[a-z0-9-]*\.php$#', $rel) === 1    // a must-use file of its name
+            || preg_match('#^wp-content/(uploads|cache)/' . $q . '(/|-[a-z0-9-]+/)#', $rel) === 1 // uploads/<slug>/, cache/<slug>-x/
+            || preg_match('#^wp-content/' . $q . '(/|-[a-z0-9-]+/)#', $rel) === 1;               // wp-content/<slug>/
+    }
+
+    /** @return array<int,array{slug:string,version:string,id:int,from:int,to:int}> newest first */
+    public static function update_windows(): array
+    {
+        $out = [];
+        foreach (Journal::recent(30) as $row) {
+            if (!in_array($row['action'], ['update-check', 'self-update', 'core-check'], true) || $row['created_at'] < time() - 86400) {
+                continue;
+            }
+            $before = (array) ($row['before'] ?? []);
+            $out[]  = [
+                'slug'    => (string) ($before['slug'] ?? $row['target']),
+                'version' => (string) ($before['new_version'] ?? $before['version'] ?? ''),
+                'id'      => (int) $row['id'],
+                'from'    => (int) ($before['started'] ?? $row['created_at']) - 60,
+                'to'      => (int) $row['created_at'] + self::UPDATE_WINDOW,
+            ];
+        }
+        return $out;
+    }
+
+    /** Accepted as the baseline, tagged with the update; one info event per update at the pass end. */
+    private static function attributed(string $rel, array $by, array &$p, string $kind): void
+    {
+        $p['attributed'][$by['slug'] . ' ' . $by['version']][] = $rel;
+        $p['attributed_ids'][$by['slug'] . ' ' . $by['version']] = $by['id'];
+        foreach (['file-new', 'file-changed', 'file-missing'] as $k) {
+            Alerts::resolve(Events::fingerprint(Fortress::MINCETA, $k, $rel), true);
+        }
+    }
+
+    /** A known self-writer regenerated its file, and it carries no PHP: info. */
+    private static function self_written(string $rel, string $abs, array &$p): bool
+    {
+        if (!isset(self::SELF_WRITERS[$rel])) {
+            return false;
+        }
+        if (self::has_php($abs)) {
+            return false; // it gained PHP: the ordinary finding, with its severity
+        }
+        $owner = self::SELF_WRITERS[$rel];
+        $fp    = Events::fingerprint(Fortress::MINCETA, 'self-written', $rel);
+        $p['fps'][] = $fp;
+        Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-changed', $rel), true);
+        Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::INFO, 'kind' => 'self-written', 'target' => $rel,
+            /* translators: 1: file, 2: owner */
+            'title' => sprintf(__('%1$s Regenerated By %2$s', 'dcc-ragusa'), basename($rel), $owner),
+            /* translators: 1: file, 2: owner */
+            'what'  => sprintf(__('%1$s changed; %2$s rewrites it on its own schedule and it carries no PHP.', 'dcc-ragusa'), $rel, $owner)]);
+        return true;
+    }
+
+    public static function has_php(string $abs): bool
+    {
+        $head = (string) @file_get_contents($abs, false, null, 0, 512 * 1024);
+        return preg_match('/<\?(php|=)|<script[^>]+language\s*=\s*["\']?php/i', $head) === 1;
     }
 
     private static function finding_new(string $rel, string $src, array &$p): void
@@ -687,7 +862,7 @@ final class Minceta
         if (isset($allow[Site::rel($abs)]) && (int) $allow[Site::rel($abs)] === $size) {
             return; // put back on request earlier
         }
-        $head = $size <= 128 ? trim((string) @file_get_contents($abs, false, null, 0, 128)) : '';
+        $head = $size <= 128 ? trim((string) preg_replace('/\s+/', ' ', (string) @file_get_contents($abs, false, null, 0, 128))) : '';
         if ($head !== '' && in_array($head, self::BENIGN_STUBS, true)) {
             Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::INFO, 'kind' => 'stub', 'target' => 'uploads/' . $rel, 'title' => __('New Index Stub In Uploads', 'dcc-ragusa'), 'what' => sprintf(
                 /* translators: %s: path */
@@ -767,11 +942,24 @@ final class Minceta
                 $missing[] = $rel;
             }
         }
+        $windows = self::update_windows();
         foreach ($missing as $rel) {
             unset(self::$index[$rel]);
             self::$index_dirty = true;
             [$severity, $where] = self::location($rel);
             if ($where === 'guard' || $where === 'self') {
+                continue;
+            }
+            // Gone during an update's window (the walk's own timing is the only clock a missing file has).
+            $by = null;
+            foreach ($windows as $w) {
+                if ($p['started'] <= $w['to'] && time() >= $w['from'] && self::attribution($rel, $w['from'] + 61) !== null) {
+                    $by = $w;
+                    break;
+                }
+            }
+            if ($by !== null) {
+                self::attributed($rel, $by, $p, 'file-missing');
                 continue;
             }
             if (($index[$rel]['x'] ?? '') === 'core') {
@@ -799,6 +987,16 @@ final class Minceta
         }
         // file-missing is not here: a file stays gone, so its finding stays
         // until the file is back, or `wp ragusa seal <path>` drops it.
+        foreach ((array) ($p['attributed'] ?? []) as $update => $rels) {
+            $rels = array_values(array_unique((array) $rels));
+            Events::record(Fortress::MINCETA, Events::INFO, 'update-written', $update, sprintf(
+                /* translators: 1: update, 2: count, 3: files */
+                _n('%1$s wrote %2$d file outside its own folder, accepted as the baseline: %3$s', '%1$s wrote %2$d files outside its own folder, accepted as the baseline: %3$s', count($rels), 'dcc-ragusa'),
+                $update,
+                count($rels),
+                implode(', ', array_slice($rels, 0, 12)) . (count($rels) > 12 ? ', …' : '')
+            ), ['files' => $rels], (int) ($p['attributed_ids'][$update] ?? 0) ?: null);
+        }
         $kinds = ['core-modified', 'plugin-modified', 'file-new', 'file-changed', 'quarantined'];
         Alerts::resolve_missing(Fortress::MINCETA, $kinds, array_values(array_unique($p['fps'])));
 

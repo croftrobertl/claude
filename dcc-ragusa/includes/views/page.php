@@ -64,7 +64,7 @@ $alerts  = Alerts::active();
                 esc_html_e('Heartbeat: not set', 'dcc-ragusa');
             } elseif (($hb['ts'] ?? 0) > 0) {
                 /* translators: 1: result, 2: relative time */
-                echo esc_html(sprintf(__('Heartbeat: %1$s %2$s', 'dcc-ragusa'), (string) ($hb['result'] ?? ''), Site::ago((int) $hb['ts'])));
+                echo esc_html(sprintf(__('Heartbeat: %1$s %2$s', 'dcc-ragusa'), (string) ($hb['result'] ?? ''), Site::both((int) $hb['ts'])));
             } else {
                 esc_html_e('Heartbeat: set, not yet sent', 'dcc-ragusa');
             }

@@ -120,6 +120,29 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   never `/events/`, never `/guest/` (Rob keeps it cached). Revelin raises
   "A Booking Page Can Be Cached", writes no journal row, and never rewrites
   the option or touches the cache.
+- **The event ring keeps the important history** (`Events::trim()`): info,
+  practice and withdrawn rows go first; a breached or needs-look row goes
+  only past 90 days with no open finding; the HARD_MAX valve at 10,000
+  rows is the only exception. Never a blind cut at 2,000.
+- **`Alerts` has two buckets.** `active` is unresolved only (open, seen,
+  practice); `resolved` is the 30-day history. `unresolved()` is what
+  counts; `active()` is for the page (plus a week of resolved);
+  `history()` for the findings command and the report.
+- **Who changed it** (`Minceta::attribution()`): a file written inside a
+  recorded update's window (`UPDATE_WINDOW` after the journal row, a
+  minute before it) in a place that `belongs_to()` the slug is accepted
+  as the baseline, with one `update-written` info event per update.
+  `SELF_WRITERS` (llms.txt by AIOSEO) are info unless `has_php()`.
+  Everything else stays a finding; there is no ignore list.
+- **One clock.** `Site::stamp()` is "Oct 24, 8:16 PM EDT"; `Site::both()`
+  adds the relative form. No `gmdate()` in anything a person reads.
+- **PHP Is Patched** (`Php_Patch`, not `Php_Check`, which is the `php -l`
+  helper): the reading is the web server's, never WP-CLI's; php.net is
+  cached a day; unreachable raises nothing. `judge()` is pure. The PHP
+  settings files are watched, never restored. A fresh executable under
+  uploads is swept every tick (`Minceta::uploads_fresh()`).
+- **The Walls Report** (`Report`): Monday 7:00 AM Eastern, once a week by
+  ISO week, suppressed on staging, `wp ragusa report --dry-run` anywhere.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
   the drill uses its own probe, answered on `plugins_loaded` before any gate.
 
@@ -135,6 +158,12 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 - Vendor mu-plugins that change as info: `Minceta::MU_VENDOR`.
 - Healthchecks: Period 1 hour, Grace 1 hour (the cPanel knock runs every 10 minutes).
 - Wordfence v3 scanner feed, Bearer key, once a day at 03:40 ET.
+- PHP flaw of 2026-10-21 (CVE-2026-109618/109619, unauthenticated RCE,
+  fixed only by updating PHP): live's web SAPI is LiteSpeed lsphp 8.3.36;
+  HostGator added `session.upload_progress.enabled = 0` to
+  `~/public_html/.user.ini` and `php.ini` as a mitigation. The feed is
+  `https://www.php.net/releases/active.php` (JSON per branch, `tags`,
+  `date`), reachable from the host.
 - Live has a second cache in front: an nginx proxy cache (`x-proxy-cache:
   HIT/MISS`, `x-server-cache: true`), cleared by `do_action('epc_purge')`.
   Ragusa does not watch it (the Director's note of 2026-10-23).
@@ -147,9 +176,9 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 42 deliberate breakages, each must be caught
+    php tests/mutations.php            # 55 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
-    node tests/layout-check.js         # no sideways scroll at 390 and 360, 44px buttons, screenshots
+    node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
 The suite runs without WordPress: `tests/bootstrap.php` stubs the core
 functions, `tests/lib/wpdb.php` is a SQLite-backed `$wpdb` that runs the
@@ -165,6 +194,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.1.6.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.0.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

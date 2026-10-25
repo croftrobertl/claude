@@ -36,7 +36,7 @@ $tone = match ($state) {
     <p class="dccr-card__when">
         <?php
         /* translators: %s: relative time */
-        echo esc_html($status['checked_at'] > 0 ? sprintf(__('Checked %s', 'dcc-ragusa'), Site::ago($status['checked_at'])) : __('Not Checked Yet', 'dcc-ragusa'));
+        echo esc_html($status['checked_at'] > 0 ? sprintf(__('Checked %s', 'dcc-ragusa'), Site::both((int) $status['checked_at'])) : __('Not Checked Yet', 'dcc-ragusa'));
         ?>
     </p>
     <?php if ($findings !== []) : ?>
@@ -74,7 +74,7 @@ $tone = match ($state) {
                             <?php
                             if ($fstate === 'resolved') {
                                 /* translators: %s: relative time */
-                                echo esc_html(sprintf(__('Resolved %s', 'dcc-ragusa'), Site::ago((int) $f['resolved_at'])));
+                                echo esc_html(sprintf(__('Resolved %s', 'dcc-ragusa'), Site::both((int) $f['resolved_at'])));
                             } elseif ($fstate === 'seen') {
                                 /* translators: 1: name, 2: when */
                                 echo esc_html(sprintf(__('Seen By %1$s, %2$s', 'dcc-ragusa'), (string) $f['seen_by'], Site::when((int) $f['seen_at'])));
@@ -83,7 +83,7 @@ $tone = match ($state) {
                                 echo esc_html(sprintf(__('A drill, %s. Not counted, not emailed.', 'dcc-ragusa'), Site::when((int) $f['last_seen'])));
                             } else {
                                 /* translators: 1: first seen, 2: last seen */
-                                echo esc_html(sprintf(__('First seen %1$s · last seen %2$s', 'dcc-ragusa'), Site::when((int) $f['first_seen']), Site::ago((int) $f['last_seen'])));
+                                echo esc_html(sprintf(__('First seen %1$s · last seen %2$s', 'dcc-ragusa'), Site::when((int) $f['first_seen']), Site::when((int) $f['last_seen'])));
                             }
                             ?>
                         </p>

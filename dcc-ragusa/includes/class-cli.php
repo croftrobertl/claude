@@ -38,18 +38,20 @@ final class Cli
         foreach (Fortress::all() as $slug) {
             $s    = Fortress::status($slug);
             $line = $slug === Fortress::SVETI_IVAN ? Fortress\Sveti_Ivan::status_line() : $s['line'];
-            \WP_CLI::log(sprintf('  %-11s %-13s %s (%s)', Fortress::name($slug), Fortress::state_label($s['state']), $line, Site::ago($s['checked_at'])));
+            \WP_CLI::log(sprintf('  %-11s %-13s %s (checked %s)', Fortress::name($slug), Fortress::state_label($s['state']), $line, Site::both((int) $s['checked_at'])));
         }
         \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));
         \WP_CLI::log('  tick: ' . self::tick_line());
         $snap = Fortress\Bokar::snapshot();
         \WP_CLI::log(sprintf('  bokar: %d privileged of %d users, roles read from %s', count($snap['users']), $snap['total'], Fortress\Bokar::$roles_source ?: 'nothing'));
         $hb = Heartbeat::last();
-        \WP_CLI::log('  heartbeat: ' . (Heartbeat::configured() ? 'set' : 'not set') . (($hb['ts'] ?? 0) > 0 ? sprintf(', last %s %s', (string) ($hb['result'] ?? ''), Site::ago((int) $hb['ts'])) : ''));
+        \WP_CLI::log('  heartbeat: ' . (Heartbeat::configured() ? 'set' : 'not set') . (($hb['ts'] ?? 0) > 0 ? sprintf(', last %s %s', (string) ($hb['result'] ?? ''), Site::both((int) $hb['ts'])) : ''));
         \WP_CLI::log('  feed key: ' . (Settings::secret('feed_key') !== '' ? 'set' : 'not set'));
         \WP_CLI::log('  site: ' . Site::role() . ' (' . Site::id() . '), vault ' . Vault::dir() . (Vault::in_web_root() ? ' [inside web root]' : '') . ', ' . Text::bytes(Vault::usage()) . ' of ' . Text::bytes(Vault::CAP));
         \WP_CLI::log('  loopbacks: ' . (Loopback::available() ? 'work' : 'do not work on this host'));
-        \WP_CLI::log('  active findings: ' . count(Alerts::active()));
+        $un   = Alerts::unresolved();
+        $seen = count(array_filter($un, static fn($a) => Alerts::state($a) === 'seen'));
+        \WP_CLI::log('  active findings: ' . count($un) . ($seen > 0 ? sprintf(' (%d seen)', $seen) : '') . ', resolved in the last 30 days: ' . count(Alerts::history()));
         State::flush();
     }
 
@@ -72,7 +74,7 @@ final class Cli
             $parts[] = 'WP-Cron Is Off Here (DISABLE_WP_CRON): a system cron or wp ragusa tick must run it';
         }
         $last = (int) State::get('last_tick', 0);
-        $parts[] = 'last ran ' . Site::ago($last);
+        $parts[] = 'last ran ' . Site::both($last);
         return implode('; ', $parts);
     }
 
@@ -167,7 +169,7 @@ final class Cli
         \WP_CLI::log(sprintf('Vault %s (%s), %s of %s, manifest %s', Vault::dir(), Vault::key_source(), Text::bytes(Vault::usage()), Text::bytes(Vault::CAP), Vault::verify_manifest() ? 'verifies' : 'DOES NOT VERIFY'));
         $rows = [];
         foreach (Fortress\Revelin::listing() as $id => $e) {
-            $rows[] = ['id' => $id, 'kind' => $e['kind'], 'label' => $e['label'], 'version' => $e['version'], 'size' => Text::bytes((int) $e['size']), 'sealed' => gmdate('Y-m-d H:i', (int) $e['sealed_at']), 'intact' => Vault::entry_intact($e) ? 'yes' : 'NO'];
+            $rows[] = ['id' => $id, 'kind' => $e['kind'], 'label' => $e['label'], 'version' => $e['version'], 'size' => Text::bytes((int) $e['size']), 'sealed' => Site::stamp((int) $e['sealed_at']), 'intact' => Vault::entry_intact($e) ? 'yes' : 'NO'];
         }
         if ($rows === []) {
             \WP_CLI::log('Nothing sealed yet.');
@@ -247,7 +249,7 @@ final class Cli
             __('This is a test from Ragusa, sent by wp ragusa mail test.', 'dcc-ragusa') . "\n\n"
             . __('Ragusa did nothing else.', 'dcc-ragusa') . "\n\n"
             . __('Nothing to do, except check that the č in Minčeta survived the subject line.', 'dcc-ragusa') . "\n\n"
-            . 'Ragusa: ' . Site::admin_page_url());
+            . Alerts::footer());
         State::flush();
         $ok ? \WP_CLI::success('Sent to ' . Settings::alert_email() . ' with subject "' . Alerts::subject(Fortress::MINCETA, 'Test Message') . '"') : \WP_CLI::error('wp_mail reported a failure.');
     }
@@ -274,13 +276,141 @@ final class Cli
         $rows  = [];
         $limit = (int) ($assoc['limit'] ?? 30);
         foreach (Journal::recent(max(1, $limit), $assoc['state'] ?? null) as $r) {
-            $rows[] = ['id' => $r['id'], 'when' => gmdate('Y-m-d H:i', (int) $r['created_at']), 'action' => $r['action'], 'target' => $r['target'], 'state' => $r['state'], 'reversible' => $r['reversible'] ? 'yes' : 'no', 'note' => mb_substr((string) $r['note'], 0, 60)];
+            $rows[] = ['id' => $r['id'], 'when' => Site::stamp((int) $r['created_at']), 'action' => $r['action'], 'target' => $r['target'], 'state' => $r['state'], 'reversible' => $r['reversible'] ? 'yes' : 'no', 'note' => mb_substr((string) $r['note'], 0, 60)];
         }
         if ($rows === []) {
             \WP_CLI::log('The journal is empty.');
             return;
         }
         \WP_CLI\Utils\format_items('table', $rows, ['id', 'when', 'action', 'target', 'state', 'reversible', 'note']);
+    }
+
+    /**
+     * Lists the findings: unresolved by default (open and seen), with a short id to use with `wp ragusa resolve`.
+     *
+     * ## OPTIONS
+     *
+     * [--all]
+     * : Also the resolved history (30 days) and practice findings.
+     *
+     * [--format=<format>]
+     * : table (default), json, csv, yaml, count.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa findings
+     *     wp ragusa findings --all --format=json
+     */
+    public function findings(array $args = [], array $assoc = []): void
+    {
+        Schema::ensure();
+        $all  = isset($assoc['all']);
+        $rows = [];
+        $set  = $all ? Alerts::active() + Alerts::history() : Alerts::unresolved();
+        uasort($set, static fn($a, $b) => ($b['first_seen'] ?? 0) <=> ($a['first_seen'] ?? 0));
+        foreach ($set as $fp => $a) {
+            $rows[] = self::finding_row((string) $fp, $a);
+        }
+        $format = (string) ($assoc['format'] ?? 'table');
+        if ($rows === [] && $format === 'table') {
+            \WP_CLI::log($all ? 'No findings at all.' : 'No unresolved findings.');
+            return;
+        }
+        \WP_CLI\Utils\format_items($format, $rows, ['id', 'fortress', 'severity', 'state', 'title', 'target', 'first_seen']);
+    }
+
+    /** The short id is the first eight characters of the fingerprint. */
+    public static function finding_row(string $fp, array $a): array
+    {
+        return [
+            'id'         => substr($fp, 0, 8),
+            'fortress'   => Fortress::name((string) ($a['fortress'] ?? '')),
+            'severity'   => (string) ($a['severity'] ?? ''),
+            'state'      => Alerts::state($a),
+            'title'      => (string) ($a['title'] ?? ''),
+            'target'     => (string) ($a['target'] ?? ''),
+            'first_seen' => Site::stamp((int) ($a['first_seen'] ?? 0)),
+        ];
+    }
+
+    /**
+     * Resolves a finding by hand (or marks it seen), recording who did it.
+     *
+     * ## OPTIONS
+     *
+     * <id>
+     * : The short id from `wp ragusa findings`.
+     *
+     * [--seen]
+     * : Mark it seen instead of resolved (it stays counted as unresolved).
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa resolve 3f2a9c1e
+     *     wp ragusa resolve 3f2a9c1e --seen
+     */
+    public function resolve(array $args = [], array $assoc = []): void
+    {
+        Schema::ensure();
+        $id    = strtolower(trim((string) ($args[0] ?? '')));
+        $match = [];
+        foreach (Alerts::unresolved() as $fp => $a) {
+            if (str_starts_with((string) $fp, $id) && $id !== '') {
+                $match[(string) $fp] = $a;
+            }
+        }
+        if (count($match) !== 1) {
+            \WP_CLI::error($match === [] ? 'No unresolved finding with that id (wp ragusa findings lists them).' : 'That id matches more than one finding; give more characters.');
+        }
+        $fp = (string) array_key_first($match);
+        $a  = $match[$fp];
+        if (Alerts::state($a) !== 'open') {
+            \WP_CLI::error('That finding is already ' . Alerts::state($a) . '.');
+        }
+        $ok = Alerts::resolve_by_hand($fp, self::operator(), isset($assoc['seen']));
+        State::flush();
+        if (!$ok) {
+            \WP_CLI::error('Could not change that finding.');
+        }
+        \WP_CLI::success(sprintf('%s "%s" (%s), by %s.', isset($assoc['seen']) ? 'Marked seen' : 'Resolved', (string) $a['title'], Fortress::name((string) $a['fortress']), self::operator()));
+    }
+
+    /** Who runs the command: the WordPress user when --user is given, else the shell account. */
+    public static function operator(): string
+    {
+        $u = function_exists('wp_get_current_user') ? wp_get_current_user() : null;
+        if (is_object($u) && (int) ($u->ID ?? 0) > 0 && (string) ($u->display_name ?? '') !== '') {
+            return (string) $u->display_name;
+        }
+        return (function_exists('get_current_user') ? get_current_user() : 'shell') . ' (shell)';
+    }
+
+    /**
+     * The Walls Report: the weekly email, printed or sent now.
+     *
+     * ## OPTIONS
+     *
+     * [--dry-run]
+     * : Print the subject and body instead of sending.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa report --dry-run
+     *     wp ragusa report
+     */
+    public function report(array $args = [], array $assoc = []): void
+    {
+        Schema::ensure();
+        $r = Report::build();
+        if (isset($assoc['dry-run'])) {
+            \WP_CLI::log('Subject: ' . $r['subject']);
+            \WP_CLI::log('');
+            \WP_CLI::log($r['body']);
+            return;
+        }
+        $sent = Report::send(true);
+        State::flush();
+        $sent ? \WP_CLI::success('Sent "' . $r['subject'] . '" to ' . Settings::alert_email() . '.') : \WP_CLI::error(Site::is_live() ? 'wp_mail reported a failure.' : 'Not sent: this is ' . Site::role() . ', which sends no email. Use --dry-run to read it.');
     }
 
     /**

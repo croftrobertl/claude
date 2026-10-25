@@ -140,9 +140,9 @@ final class Fortress
         }
         $when = $last > 0
             /* translators: %s: relative time */
-            ? sprintf(__('Last Full Check %s', 'dcc-ragusa'), Site::ago($last))
+            ? sprintf(__('Last Full Check %s', 'dcc-ragusa'), Site::both($last))
             /* translators: %s: relative time */
-            : sprintf(__('Last Tick %s', 'dcc-ragusa'), Site::ago($tick));
+            : sprintf(__('Last Tick %s', 'dcc-ragusa'), Site::both($tick));
         return match ($worst) {
             self::BREACHED   => __('A Wall Was Breached · Ragusa Acted And Needs You', 'dcc-ragusa') . ' · ' . $when,
             self::NEEDS_LOOK => __('Something Needs A Look', 'dcc-ragusa') . ' · ' . $when,

@@ -60,21 +60,58 @@ final class Events
         return $data;
     }
 
+    public const KEEP_SERIOUS = 90 * 86400;
+    public const HARD_MAX     = 10000;
+
+    /**
+     * Over the ring, the important history stays: an info, practice or
+     * withdrawn row goes first (oldest first); then a breached or needs-look
+     * row older than 90 days whose finding is not open. A serious row with
+     * an open finding, or younger than 90 days, is never discarded for
+     * noise. Only past HARD_MAX rows, as a safety against runaway growth,
+     * do the oldest needs-look rows go, and breached rows last of all.
+     */
     private static function trim(): void
     {
         global $wpdb;
         $table = Schema::events();
         $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
-        if ($count <= self::RING) {
+        $over  = $count - self::RING;
+        if ($over <= 0) {
             return;
         }
-        $cut = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$table} ORDER BY id DESC LIMIT 1 OFFSET %d",
-            self::RING - 1
-        ));
-        if ($cut > 0) {
-            $wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE id < %d", $cut));
+        // 1. Noise first.
+        $over -= self::delete_oldest($wpdb->prepare("severity = %s OR tag <> ''", self::INFO), $over);
+        if ($over <= 0) {
+            return;
         }
+        // 2. Serious rows past 90 days whose finding is not open.
+        $open = array_keys(Alerts::open());
+        $not  = $open === [] ? '' : " AND fingerprint NOT IN ('" . implode("','", array_filter($open, static fn($f) => preg_match('/^[a-f0-9]{40}$/', $f) === 1)) . "')";
+        $over -= self::delete_oldest($wpdb->prepare("ts < %d", time() - self::KEEP_SERIOUS) . $not, $over);
+        if ($over <= 0 || $count <= self::HARD_MAX) {
+            return;
+        }
+        // 3. The safety valve.
+        $over = $count - self::HARD_MAX;
+        $over -= self::delete_oldest($wpdb->prepare("severity = %s", self::NEEDS_LOOK), $over);
+        if ($over > 0) {
+            self::delete_oldest('1=1', $over);
+        }
+    }
+
+    private static function delete_oldest(string $where, int $n): int
+    {
+        global $wpdb;
+        if ($n <= 0) {
+            return 0;
+        }
+        $table = Schema::events();
+        $ids   = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE {$where} ORDER BY id ASC LIMIT %d", $n)) ?: []);
+        if ($ids === []) {
+            return 0;
+        }
+        return (int) $wpdb->query("DELETE FROM {$table} WHERE id IN (" . implode(',', $ids) . ')');
     }
 
     /**
@@ -124,6 +161,13 @@ final class Events
             $since,
             $severity
         ));
+    }
+
+    public static function count_kind_since(string $kind, int $since): int
+    {
+        global $wpdb;
+        $table = Schema::events();
+        return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE kind = %s AND ts >= %d AND tag = ''", $kind, $since));
     }
 
     /** Tag every event of these fingerprints (withdrawn, or practice re-tagged on upgrade). */

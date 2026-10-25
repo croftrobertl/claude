@@ -23,6 +23,7 @@ final class Plugin
         add_action(self::TICK_HOOK, [Cron::class, 'tick']);
         add_action(self::CHECK_HOOK, [Fortress\Sveti_Ivan::class, 'scheduled_check']);
         add_action(self::DIGEST_HOOK, [Alerts::class, 'send_digest']);
+        add_action(Php_Patch::PROBE_HOOK, [Php_Patch::class, 'record_here']);
 
         // The harbour: every install and update, from any route.
         add_filter('upgrader_pre_install', [Fortress\Sveti_Ivan::class, 'on_pre_install'], 10, 2);
@@ -80,6 +81,14 @@ final class Plugin
             }
             if ($seen === '' || version_compare($seen, '0.1.3', '<')) {
                 self::upgrade_0_1_3();
+            }
+            if ($seen !== '' && version_compare($seen, '0.2.0', '<')) {
+                // 0.2.0: resolved findings leave `active` for the 30-day history.
+                $moved = Alerts::migrate();
+                if ($moved > 0) {
+                    /* translators: %d: count */
+                    Events::record(Fortress::REVELIN, Events::INFO, 'upgraded', 'findings', sprintf(__('%d resolved findings moved out of the active list into the history.', 'dcc-ragusa'), $moved));
+                }
             }
             if (get_option('dcc_ragusa_version', null) === null) {
                 add_option('dcc_ragusa_version', DCCR_VERSION, '', 'no');
