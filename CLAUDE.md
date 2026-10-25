@@ -651,6 +651,41 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   hat-wizard SVGs, the right one mirrored (`.dccs-entry-ico-end`, `scaleX(-1)`), with
   only the button's 0.5em gap either side so the label is exactly centred
   (measured offset 0 at every width).
+- **From 768px the Selector takes its column (0.55.0, Rob).** `.dccs-root` drops
+  its 720px cap there; every direct child EXCEPT Compare Mode's `.dccs-body` keeps
+  the 676px measure (`max − 2 × pad`, same tokens), so the quiz, landing and mode
+  bar read as before and the Mini Entry line still equals the intro's width.
+  Compare Mode lays its 8 cards in FULL rows — 2 across 768–1023, 4 from 1024 —
+  with no inner scroll box (the page scrolls; the custom bar is hidden). Below 768
+  nothing changed: the boxed, scrolling two-across list. Measured on live's theme:
+  1,000px column at 1440, 796 at 1024, 540 at 768.
+- **Steps bring the widget into view (0.55.0, Rob).** `focusStep()` →
+  `bringIntoView()`: when a mode opens and on every step, the root's top is put at
+  the top of the viewport — under the theme's pinned bar (`.site-header-bottom-fixed`,
+  its HEIGHT, because it is static until the page scrolls) from 1024px, nothing
+  below. Not when the top is already there; not on an answer tap. `'instant'` under
+  reduced motion — `'auto'` would defer to the theme's `scroll-behavior: smooth`. In
+  the Mini Entry pop-up the pop-up scrolls instead. A QUESTION step's Back/Next row
+  is `position: sticky; bottom: 0`, so it stays on screen when a step does not fit.
+- **The couch question is settled by the party answer (0.55.0, Rob).**
+  `couchSettled()`: with the 3-4 offer ON, "1-2" removes the couch question (and
+  ignores a stale couch answer) and "3-4" counts as a couch yes at the engine; the
+  track — and so "Step x of y" and Back — just has one question fewer. With the
+  offer OFF nothing is settled. It changes no result: in this data every 4-guest
+  cottage has the couch and no 2-guest one does (a test pins that premise), and
+  labels.js already drops the couch reason when party carries it. Other pairs the
+  DATA settles (3-4 or couch → 1-bedroom; pet → only Cottage 34) were REPORTED, not
+  built: they are coincidences of today's cottages, not what the questions mean.
+- **No underlines in the widget (0.55.0, Rob).** The Elementor kit underlines every
+  `<label>` (`.elementor-kit-331 label`, (0,1,1)) and a Compare card is a label, so
+  every word on it was underlined. `.dccs-root.dccs-root label` (0,2,1) removes it;
+  View Cottage has no underline and a tinted hover. Links INSIDE a sentence (Fee
+  Details, the calendar link) keep theirs (WCAG 1.4.1) — reported to Rob.
+- **Photo `sizes` describe the real slot (0.55.0).** `SIZES_ROW` / `SIZES_COMPARE`
+  in selector.js; keep them in step with the grid. The 0.54.0 "soft photos" report
+  was a misreading: `naturalWidth` of a srcset image is in CSS px (1024 ÷ density),
+  and phones were loading 960-1152px files — too BIG. Live, 8 photos at 390/3x:
+  794,782 → 485,732 bytes; desktop unchanged.
 - **One source for the Selector's width (0.53.2).** `--dccs-shell-max` (720px) and
   `--dccs-shell-pad` (16px, 22px from 640px) are declared on BOTH `.dccs-root` and
   `.dccs-entry`. The root's box reads them, and the Mini Entry line is capped at
@@ -843,6 +878,12 @@ There is no WordPress in this environment, so the suites stub what they need:
 - A headless-Chromium accessibility/behaviour audit lives in the session scratchpad
   (not committed): overflow, 44px tap targets, WCAG contrast, focus management and
   nested-modal Escape at 320/360/768.
+- **The real theme is reachable** (0.55.0): Chromium can load live pages read-only
+  through the agent proxy (`proxy: { server: process.env.HTTPS_PROXY }`), with the
+  page's `dccs.min.js` answered from a local build by `context.route`. SpeedyCache
+  serves ONE combined stylesheet with the plugin CSS re-minified inside it, so the
+  harness APPENDS the new `selector.min.css` to that response (later rules win, as
+  they will once SpeedyCache rebuilds the file). The PHP/data-config stays live's.
 
 When a test asserts old behaviour that a deliberate change supersedes, update the
 assertion — but check first that the premise still holds; several briefs in this
