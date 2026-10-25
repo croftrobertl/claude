@@ -2414,7 +2414,28 @@ yours to improvise.
     stacking alone — and to prove it with a scroll test (600px, the bar's
     centre must still hit the bar) and a dropdown test, at three widths, in
     both switch states.
-  - **BLOCKED ON THE REAL CAPTURE, WHICH HAS NOT REACHED THIS SESSION.** The
+  - **THE 768 FACTS** (the Director's second note, 2026-10-25, from his README;
+    prose, not the capture): the card's top half is hidden at 768 too, in both
+    switch states; the preview form is **4,021px** tall there with all four H3s
+    still underlined; and the Browse Cottages dropdown **opens ON TOP of the
+    card today, all eight links hit-tested — that is the BASELINE the stacking
+    fix must keep**, not a nice-to-have. He could not reproduce the dead-end
+    trigger by date choice on staging, so the 390 dead-end HTML is the source
+    for that state.
+  - **THE MENU IS PINNED ONLY AT 1024 AND UP**, which changes what to prove
+    where. Bravada pins a SEPARATE COPY, `.site-header-bottom-fixed`: at 1440
+    it sits at top -8..55 after a 600px scroll; at 768 the band scrolls away to
+    top -665. So the fixed-menu test belongs at 1440 ONLY, and at 390 and 768
+    what must be proved instead is that the band scrolls away normally and
+    **nothing of ours is left stuck over the content**. All three proofs are
+    written and GREEN as the baseline (`tests/cards/`, the `menu@` block);
+    only the fixture source has to change when the capture lands.
+  - **BLOCKED ON THE REAL CAPTURE, WHICH HAS NOT REACHED THIS SESSION** — twice
+    now, the second time as a 1.6 MB zip with JPG screenshots. `/root/.claude/
+    uploads/` holds nothing newer than 23 October. **The two files that unblock
+    the most, if they come one at a time: `theme-css-all.css` (the stacking
+    rules, and whether `#header-image-main` clips) and the 768 "taken, dropdown
+    open" HTML (the header's DOM order and the dropdown in one file).** The
     Director's zip ("Custom Checkout 0.36.0 real theme.zip" — four real
     rendered pages, two screenshots and `theme-css-all.css`, 813 KB) did not
     arrive; `/root/.claude/uploads/` holds only an older Cottage Selector file.
