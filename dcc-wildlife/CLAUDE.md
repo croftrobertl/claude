@@ -5302,3 +5302,61 @@ own mutation.
 
 CLS 0 on load and on the first tap at all four. No sideways scroll. Exactly
 one visible h1. Ten mutations, each red by name, restored byte-identical.
+
+### 46. 1.47.1 — the Credits link lands on the credits
+
+1.47.0 went live on Oct 25 (Director-verified on staging on the real theme).
+One fault, measured on live by clicking /explore/'s real "Credits" link:
+
+- at 390 the credits opened but the summary ended **2,142px above** the
+  screen (11,456px below at 0.5s; the page then jumped past it to scrollY
+  36,078 by 1.5s);
+- at 1440 it landed at **1px, under the theme's pinned menu**
+  (`.site-header-bottom-fixed`, 0–55px), which hid "Photo Credits (401)".
+
+**Why opening was not enough.** The browser jumps to `#credits` against a
+layout that is still arriving: 395 rows at their estimated height, the
+theme's header photo, images. Then the page moves under it.
+
+**The fix, in guide.js `openCredits()`:** open, then `whenSettled()` (the
+`load` event plus two painted frames), then `placeCredits()`. That puts the
+summary at the top, measures the fixed or sticky bars covering the top edge
+by hit-testing (`barsBottom()`, the canal.js probe walking down through
+stacked bars), and sets the summary just below them. Then `settleCredits()`
+re-places it for up to 4s if the layout above moves it, and stops at the
+guest's first wheel, touch, pointer or key. Every move is an instant jump:
+`behavior: 'instant'` overrides a theme's `scroll-behavior: smooth`, and that
+is the reduced-motion answer too.
+
+**It is below BOTH bars, and that matters at 390 as well.** The guide's own
+pinned controls (`.dccwl-gp-top`) stay stuck at the top all the way down to
+the credits, because the credits are inside the same root. A summary placed
+at the very top sits behind the Seen Here switch, even on a phone with no
+theme menu (the "no bars" mutation proved it). In the harness both widths
+land at 166px.
+
+**Found, not changed:** on the guide page the pinned controls stick at
+`top: 0`. `--dccwl-sticky-offset` is written only by canal.js, which this page
+does not load. So at 1024 and up on live, the top ~55px of the pinned
+controls sit under the theme's fixed menu while scrolling. Reported to the
+Director for a decision.
+
+**Tested in `ui-1471.mjs`**, on two routed pages with the live conditions
+rebuilt: a real click on /explore/'s real link and a direct arrival with the
+hash, at 390 and 1440, a 55px fixed menu at 1440, a header that grows after
+load, a late non-guest jump past the target, `scroll-behavior: smooth`, and
+reduced motion. Four mutations each fail: the 1.47.0 code (reproduces the
+fault, −5,251px at 390), no bar measurement, no settle loop, and no stop on
+input.
+
+**Harness note:** this container's Chromium is at
+`/opt/pw-browsers/chromium` (a `chrome-linux64/` layout the finder does not
+list). Run the suites with `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium`.
+
+**One harness change, for the container rather than the plugin.** The
+reading-measure suite's negative control compared 1920 with 2400. In this
+container's Chromium (153) the cap begins to bind a few pixels above 1920:
+923px there against 926px from 2400 on, 69 characters both. So it failed
+identically on the committed 1.47.0 code. The control now compares 2400 with
+2880, both past the cap, and asserts 1920 is within 4px of it. With both caps
+removed it fails (1163px against 1403px), so it still proves a cap holds.

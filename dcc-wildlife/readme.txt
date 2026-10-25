@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.47.0
+Stable tag: 1.47.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,15 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.47.1 =
+* **The Credits link lands on the credits.** Following /explore/'s
+  "Credits" link — or any link to /wildlife-guide/#credits — now opens the
+  photo credits and, once the page has finished loading, puts "Photo
+  Credits (401)" at the top of the screen, below the site's pinned menu and
+  the guide's own pinned controls. Until now it could land thousands of
+  pixels past them on a phone, or hidden under the menu on a computer. The
+  move is instant, never animated, and it stops the moment you scroll.
 
 = 1.47.0 =
 * **The wide-screen guide opens on "Most Recorded Here"** (Rob's pick)

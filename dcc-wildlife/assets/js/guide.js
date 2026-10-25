@@ -559,8 +559,98 @@
 	function openCredits(hash) {
 		if ('#credits' !== String(hash || '')) { return false; }
 		var d = document.getElementById('credits');
-		if (d && 'DETAILS' === d.tagName) { d.open = true; }
+		if (d && 'DETAILS' === d.tagName) {
+			d.open = true;
+			whenSettled(function () { settleCredits(d); });
+		}
 		return true;
+	}
+
+	/*
+	 * AND THEN LAND ON IT (1.47.1).
+	 *
+	 * Opening was not enough. On live the browser's own jump to #credits is
+	 * taken against a layout that is still arriving — 395 rows at their
+	 * estimated height, the theme's header photo, images — and it ended
+	 * 2,142px PAST the summary at 390. At 1440 it landed at 1px, under the
+	 * theme's pinned menu. So once the page has loaded and painted, the
+	 * summary is put at the top of what the guest can actually see: below
+	 * every fixed or sticky bar covering the top edge (the theme's menu, the
+	 * guide's own pinned controls), MEASURED by hit-testing, never typed.
+	 *
+	 * For a few seconds afterwards it is put back if the layout above moves
+	 * it — and the watch ends the moment the guest scrolls, taps or types,
+	 * because a page that fights its reader is worse than one that missed.
+	 *
+	 * EVERY MOVE IS AN INSTANT JUMP, never an animation, whatever the theme's
+	 * `scroll-behavior` says: it is a correction, and an instant one is what
+	 * prefers-reduced-motion asks for.
+	 */
+	var creditsRun = 0;
+
+	function whenSettled(fn) {
+		var go = function () { afterPaint(fn); };
+		if ('complete' === document.readyState) { go(); return; }
+		window.addEventListener('load', go, { once: true });
+	}
+
+	function jumpTo(y) {
+		try {
+			window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+		} catch (e) {
+			window.scrollTo(0, y);
+		}
+	}
+
+	/* The bottom of the fixed or sticky bars stacked over the top edge at x,
+	 * or 0. The canal.js probe, walking down through bars that stack (a
+	 * theme menu over the guide's pinned controls). A box covering most of
+	 * the screen is an overlay, not a bar, and does not count. */
+	function barsBottom(x) {
+		var h = window.innerHeight || 0;
+		var y = 0;
+		for (var n = 0; n < 5; n++) {
+			var hit = document.elementFromPoint(x, y + 1);
+			var b = 0;
+			for (var e = hit; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+				var pos = getComputedStyle(e).position;
+				if ('fixed' !== pos && 'sticky' !== pos) { continue; }
+				var r = e.getBoundingClientRect();
+				if (r.top <= y + 1 && r.bottom > y + 1 && r.bottom < h * 0.75) { b = Math.ceil(r.bottom); }
+				break;
+			}
+			if (b <= y) { break; }
+			y = b;
+		}
+		return y;
+	}
+
+	/* Put the summary at the top of the visible page; returns where it sits. */
+	function placeCredits(d) {
+		var s = d.querySelector('summary') || d;
+		jumpTo(window.pageYOffset + s.getBoundingClientRect().top);
+		var r = s.getBoundingClientRect();
+		var below = barsBottom(Math.round(r.left + r.width / 2));
+		if (below) { jumpTo(window.pageYOffset + s.getBoundingClientRect().top - below); }
+		return Math.round(s.getBoundingClientRect().top);
+	}
+
+	function settleCredits(d) {
+		var run = ++creditsRun;
+		var stopped = false;
+		var until = Date.now() + 4000;
+		var stop = function () { stopped = true; };
+		['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) {
+			window.addEventListener(t, stop, { once: true, passive: true });
+		});
+		var want = placeCredits(d);
+		var tick = function () {
+			if (stopped || run !== creditsRun || !d.open || Date.now() > until) { return; }
+			var s = d.querySelector('summary') || d;
+			if (Math.abs(Math.round(s.getBoundingClientRect().top) - want) > 2) { want = placeCredits(d); }
+			setTimeout(tick, 120);
+		};
+		setTimeout(tick, 120);
 	}
 
 	afterPaint(function () {

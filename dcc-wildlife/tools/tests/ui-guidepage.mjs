@@ -93,14 +93,18 @@ const at1920 = await measure(1920);
  * widths would prove nothing about the cap. Measured where it binds.
  */
 const at2400 = await measure(2400);
+/* And one width further (1.47.1): in a newer Chromium the cap begins to
+ * bind a few pixels above 1920 (923px there, 926px from 2400 on), so the
+ * control compares two widths that are BOTH past it. */
+const at2880 = await measure(2880);
 
-check(!!at390 && !!at1280 && !!at1920 && !!at2400, 'the guide page rendered at all four widths');
-if (!at390 || !at1280 || !at1920 || !at2400) {
+check(!!at390 && !!at1280 && !!at1920 && !!at2400 && !!at2880, 'the guide page rendered at all five widths');
+if (!at390 || !at1280 || !at1920 || !at2400 || !at2880) {
   await browser.close();
   done();
 }
 
-[[390, at390], [1280, at1280], [1920, at1920], [2400, at2400]].forEach(([w, m]) => {
+[[390, at390], [1280, at1280], [1920, at1920], [2400, at2400], [2880, at2880]].forEach(([w, m]) => {
   note(`${w}px -> ${m.chars} characters (${m.px}px), scroll-margin-top ${m.scrollMargin}px`);
 });
 
@@ -136,9 +140,11 @@ checkAtMost(78, at1920.chars, '1920px: and at most 78');
  * given, so 2400 would be about 1.25x the 1920 line. Equal widths prove a
  * cap is actually holding rather than the viewport merely being generous.
  */
-checkSame(at1920.px, at2400.px,
-  'the column STOPS GROWING between 1920 and 2400 — a cap is in force',
-  `${at1920.px}px vs ${at2400.px}px`);
+checkSame(at2400.px, at2880.px,
+  'the column STOPS GROWING between 2400 and 2880 — a cap is in force',
+  `${at2400.px}px vs ${at2880.px}px`);
+checkAtMost(4, Math.abs(at2400.px - at1920.px),
+  'and 1920 is already within a few pixels of it (no cap would make 2400 about 1.25x 1920)');
 
 section('an anchored species heading clears a sticky header');
 
