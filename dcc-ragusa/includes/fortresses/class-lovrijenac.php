@@ -42,7 +42,7 @@ final class Lovrijenac
             $lines[] = self::fetch_feed();
         }
         $lines = array_merge($lines, self::wporg_chunk($budget));
-        $lines = array_merge($lines, \DCCR\Php_Patch::check_settings());
+        $lines = array_merge($lines, \DCCR\Php_Patch::check_settings(), \DCCR\Php_Patch::ensure_reading());
         if (self::php_due()) {
             State::set('php_check_ts', time());
             $lines = array_merge($lines, \DCCR\Php_Patch::due());

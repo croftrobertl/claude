@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,11 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.1 =
+* The PHP reading arrives. The probe's POST to wp-cron.php carried a `doing_wp_cron` value that wp-cron.php compares to a lock only spawn_cron() sets, so it returned before running the event; the POST now carries nothing. A second path was added, a GET of wp-login.php?ragusa_php=1 that the plugin's boot answers before any form or gate, and an admin page load refreshes a reading older than half a day. The probe is asked every tick while there is no reading, at most once per ten minutes, and `wp ragusa status` now says what happened: "php: not read from the web server yet; asked the web server at Oct 25, 9:31 PM EDT (wp-cron.php HTTP 200, wp-login.php HTTP 200, 3 attempts); no answer yet; probe event scheduled", then "php: 8.3.36 (litespeed), read from the tick under wp-cron.php at …" once it has, and a php.net line.
+* `wp ragusa resolve` records the real shell account (the effective user from posix), not the owner of the wp-cli script, which was root.
+* The staging checklist gains a scripted drill for the "who changed it" attribution on a real WP Staging version change.
 
 = 0.2.0 =
 * The important history stays: the event ring prunes info, practice and withdrawn rows first, then breached or needs-look rows only when they are older than 90 days and their finding is not open. A serious row with an open finding is never discarded for noise.

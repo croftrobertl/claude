@@ -1250,3 +1250,15 @@ self-writers (llms.txt by AIOSEO) are info unless they gain PHP, with no
 ignore list; `wp ragusa findings` and `wp ragusa resolve <id>`; one clock,
 "Oct 24, 8:16 PM EDT", everywhere; and The Walls Report every Monday at
 7:00 AM Eastern, so that silence means something.
+
+**0.2.1 (the Director's staging run of 0.2.0, 2026-10-26).** No PHP reading
+arrived: the probe's POST to wp-cron.php carried a `doing_wp_cron` value,
+which wp-cron.php compares to a lock transient that only `spawn_cron()`
+sets, and returns before running any event when they differ. The POST now
+carries nothing (like the server's own curl), a second path reads the
+version from a GET of wp-login.php that the plugin's boot answers on
+`plugins_loaded`, an admin page load refreshes a reading older than half a
+day, the probe repeats every tick while there is no reading, and status
+says what was asked and answered. The resolve record names the real shell
+account from posix, not the owner of the wp-cli script. The staging
+checklist scripts the "who changed it" drill on a real version change.

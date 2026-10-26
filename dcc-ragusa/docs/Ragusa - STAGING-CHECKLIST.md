@@ -1,4 +1,17 @@
-# Ragusa 0.2.0 — Staging Checklist
+# Ragusa 0.2.1 — Staging Checklist
+
+> **Upgrading the 0.2.0 install on staging:** `wp plugin install
+> "Ragusa 0.2.1.zip" --force`, then `wp ragusa tick` twice and
+> `wp ragusa status`. The first tick prints "PHP reading asked of the web
+> server: wp-cron.php HTTP 200, wp-login.php HTTP 200; the answer lands on
+> the next tick". After the second, status reads
+> "php: 8.3.36 (litespeed), read from the wp-login.php probe at …" (or
+> "the probe event under wp-cron.php"), and Lovrijenac's card ends in
+> "PHP 8.3.36 Current". If it still reads "not read from the web server
+> yet", the same status line now says what was asked, both answers, the
+> number of attempts and whether the probe event is in the cron list: send
+> me that line. Then step 12's items marked **0.2.1** and the three you
+> have not run. Rollback: `wp plugin install "Ragusa 0.2.0.zip" --force`.
 
 > **Upgrading the 0.1.6 install on staging:** `wp plugin install
 > "Ragusa 0.2.0.zip" --force`, then `wp ragusa tick` and `wp ragusa status`.
@@ -308,6 +321,15 @@ cleans up. Each prints every journal state transition.
       Events shows "resolved by hand by <you> (shell)".
 - [ ] **One clock:** `wp ragusa journal` and `wp ragusa status` read
       "Oct 24, 8:16 PM EDT (18 Hours Ago)" everywhere; no bare UTC.
+- [ ] **0.2.1: the probe, both paths.** `wp option delete dcc_ragusa_php_web`,
+      `wp eval 'DCCR\State::delete("php_probe"); DCCR\State::flush();'`,
+      then `wp ragusa tick`: the line "PHP reading asked of the web server:
+      wp-cron.php HTTP 200, wp-login.php HTTP 200". `wp cron event list`
+      shows `dccr_php_probe` once (until wp-cron.php runs it). A second
+      `wp ragusa tick` then `wp ragusa status`: "php: 8.3.36 (litespeed),
+      read from …" naming which path answered. On live, where the server's
+      curl runs the tick under wp-cron.php, the first status after the
+      first curl reads "read from the tick under wp-cron.php".
 - [ ] **A stubbed old PHP:** `wp option update dcc_ragusa_php_web '{"version":"8.3.30","sapi":"litespeed","ts":'$(date +%s)'}' --format=json`,
       then `wp eval 'DCCR\State::delete("php_check_ts"); DCCR\State::flush();'`
       and `wp ragusa tick`. Lovrijenac reads "PHP 8.3.30, 8.3.36 Is Out"
@@ -325,12 +347,32 @@ cleans up. Each prints every journal state transition.
       then `wp ragusa tick` (not scan): within that one tick the file is
       quarantined, the event is breached, and on live an email would have
       gone. `wp ragusa restore <id>` puts it back; delete it by hand.
-- [ ] **A WP Staging update:** force-reinstall WP Staging (or wait for its
-      next auto-update), then `wp ragusa scan`. The files it rewrites under
-      `wp-content/wp-staging/` raise nothing; Recent Events has one line,
-      "wp-staging 4.18.0 wrote N files outside its own folder, accepted as
-      the baseline: …". A file you touch yourself in another plugin's
-      folder in the same half hour is still a finding.
+- [ ] **0.2.1: who changed it, on a real version change.** A reinstall of
+      the same version does not rewrite WP Staging's `sse` files, so the
+      drill needs a real change. Scripted, from the staging root:
+
+          ts=$(date +%s); cur=$(wp plugin get wp-staging --field=version)
+          cp -a wp-content/wp-staging/sse ~/sse-before-$ts            # snapshot
+          wp ragusa findings                                            # expect none
+          wp plugin install https://downloads.wordpress.org/plugin/wp-staging.4.16.0.zip --force
+          wp ragusa tick                                                # Sveti Ivan: update-check wp-staging 4.16.0
+          wp plugin update wp-staging                                   # back up to $cur: a second real change
+          wp ragusa tick
+          # WP Staging rewrites its sse files on its first admin load after an update;
+          # load wp-admin once, or stand in for its write inside the window:
+          for f in wp-content/wp-staging/sse/*; do echo "# $(date)" >> "$f"; done
+          wp ragusa scan
+          wp ragusa findings                                            # expect none
+          wp ragusa journal --limit=3                                   # the two update-check rows
+
+      Recent Events carries one line per update: "wp-staging $cur wrote 4
+      files outside its own folder, accepted as the baseline: …". Then
+      the control: wait until the half-hour window has passed (or age the
+      row: `wp db query "UPDATE wpstg0_dcc_ragusa_journal SET created_at = created_at - 7200 WHERE target = 'wp-staging'"`),
+      append a line to one `sse` file again, `wp ragusa scan`: that one IS
+      a "File Changed" finding. Restore: `wp ragusa seal wp-content/wp-staging/sse/<file>`,
+      or `cp -a ~/sse-before-$ts/. wp-content/wp-staging/sse/` and seal
+      each; `wp plugin get wp-staging --field=version` must read $cur.
 - [ ] **llms.txt:** let AIOSEO regenerate it (or edit a word): no finding,
       one info line "llms.txt Regenerated By AIOSEO" in the daily digest
       list. Put `<?php` in it: a real "File Changed: llms.txt". Remove it,

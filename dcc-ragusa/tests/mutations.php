@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 $plugin = dirname(__DIR__);
 $work   = sys_get_temp_dir() . '/dccr-mutations';
+$only   = $argv[1] ?? ''; // php tests/mutations.php 0.2.1   runs only the mutations whose name contains it
 
 $mutations = [
     [
@@ -348,6 +349,30 @@ $mutations = [
         'from' => "        \$subject = \$n_open === 0",
         'to'   => "        \$subject = true",
     ],
+    [
+        'name' => '0.2.1 1: the probe passes doing_wp_cron again (wp-cron.php returns before running the event)',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        \$url  = site_url('wp-cron.php');",
+        'to'   => "        \$url  = site_url('wp-cron.php?doing_wp_cron=' . sprintf('%.22F', microtime(true)));",
+    ],
+    [
+        'name' => '0.2.1 1: the probe is asked once and never again',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        if (time() - (int) (\$probe['asked'] ?? 0) < self::PROBE_EVERY) {",
+        'to'   => "        if (!empty(\$probe['asked'])) {",
+    ],
+    [
+        'name' => '0.2.1 1: the login path records nothing',
+        'file' => 'includes/class-plugin.php',
+        'from' => "            if (isset(\$_GET['ragusa_php'])) {",
+        'to'   => "            if (false) {",
+    ],
+    [
+        'name' => '0.2.1 2: the record names the script owner, not the account',
+        'file' => 'includes/class-cli.php',
+        'from' => "        return self::account() . ' (shell)';",
+        'to'   => "        return get_current_user() . ' (shell)';",
+    ],
 ];
 
 
@@ -376,6 +401,9 @@ function DCCR_copy(string $from, string $to): void
 }
 
 $failed = 0;
+if ($only !== '') {
+    $mutations = array_values(array_filter($mutations, static fn($m) => str_contains($m['name'], $only)));
+}
 foreach ($mutations as $i => $m) {
     DCCR_rm($work);
     DCCR_copy($plugin, $work);

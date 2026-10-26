@@ -49,6 +49,9 @@ final class Cli
         \WP_CLI::log('  feed key: ' . (Settings::secret('feed_key') !== '' ? 'set' : 'not set'));
         \WP_CLI::log('  site: ' . Site::role() . ' (' . Site::id() . '), vault ' . Vault::dir() . (Vault::in_web_root() ? ' [inside web root]' : '') . ', ' . Text::bytes(Vault::usage()) . ' of ' . Text::bytes(Vault::CAP));
         \WP_CLI::log('  loopbacks: ' . (Loopback::available() ? 'work' : 'do not work on this host'));
+        foreach (Php_Patch::status_lines() as $line) {
+            \WP_CLI::log('  ' . $line);
+        }
         $un   = Alerts::unresolved();
         $seen = count(array_filter($un, static fn($a) => Alerts::state($a) === 'seen'));
         \WP_CLI::log('  active findings: ' . count($un) . ($seen > 0 ? sprintf(' (%d seen)', $seen) : '') . ', resolved in the last 30 days: ' . count(Alerts::history()));
@@ -382,7 +385,28 @@ final class Cli
         if (is_object($u) && (int) ($u->ID ?? 0) > 0 && (string) ($u->display_name ?? '') !== '') {
             return (string) $u->display_name;
         }
-        return (function_exists('get_current_user') ? get_current_user() : 'shell') . ' (shell)';
+        return self::account() . ' (shell)';
+    }
+
+    /**
+     * The real shell account: the effective user, from posix. PHP's
+     * get_current_user() names the OWNER of the running script (root, for
+     * a wp-cli.phar installed by root), which is not who ran it.
+     */
+    public static function account(): string
+    {
+        if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+            $pw = @posix_getpwuid(posix_geteuid());
+            if (is_array($pw) && !empty($pw['name'])) {
+                return (string) $pw['name'];
+            }
+        }
+        $env = (string) (getenv('USER') ?: getenv('LOGNAME') ?: '');
+        if ($env !== '') {
+            return $env;
+        }
+        $owner = function_exists('get_current_user') ? get_current_user() : '';
+        return $owner !== '' ? $owner : 'shell';
     }
 
     /**

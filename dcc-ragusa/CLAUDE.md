@@ -141,6 +141,14 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   cached a day; unreachable raises nothing. `judge()` is pure. The PHP
   settings files are watched, never restored. A fresh executable under
   uploads is swept every tick (`Minceta::uploads_fresh()`).
+- **The probe never passes `doing_wp_cron`.** wp-cron.php compares that
+  value to a lock transient only `spawn_cron()` sets and returns before
+  running anything when it differs (0.2.0's bug). The POST carries no
+  parameter and no body; the second path is `wp-login.php?ragusa_php=1`,
+  answered in `Plugin::boot()`; an admin page load (never AJAX) refreshes a
+  stale reading. `ensure_reading()` runs every tick, once per ten minutes.
+- **The shell account is `Cli::account()`** (posix effective user), never
+  `get_current_user()`, which names the script's owner (root for the phar).
 - **The Walls Report** (`Report`): Monday 7:00 AM Eastern, once a week by
   ISO week, suppressed on staging, `wp ragusa report --dry-run` anywhere.
 - **A 200 that is a login form is "not checked".** `Sveti_Ivan::looks_like_login()`;
@@ -176,7 +184,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 55 deliberate breakages, each must be caught
+    php tests/mutations.php            # 59 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -194,6 +202,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.0.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.1.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

@@ -2064,6 +2064,18 @@ suite('0.2.0 item 4: wp ragusa findings and wp ragusa resolve', function () {
     $ev = events_of('resolved-by-hand');
     eq(1, count($ev), 'one event records it');
     ok(str_contains($ev[0]['message'], 'resolved by hand by Rob'), 'naming who: ' . $ev[0]['message']);
+    $GLOBALS['dccr_display_name'] = '';
+    $posix = function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['name'] ?? '') : '';
+    ok($posix !== '' && Cli::account() === $posix, '0.2.1: the shell account is the effective user from posix (' . $posix . '), never the script owner (' . get_current_user() . ')');
+    eq($posix . ' (shell)', Cli::operator(), 'and without a WordPress user the operator is that account');
+    // The difference only shows when the script's owner is not the account: run from a script owned by nobody.
+    $owned = DCCR_TEST_ROOT . '/owner-probe.php';
+    file_put_contents($owned, '<?php require ' . var_export(__DIR__ . '/bootstrap.php', true) . '; $GLOBALS["dccr_display_name"] = ""; echo DCCR\\Cli::operator();');
+    if (@chown($owned, 'nobody')) {
+        $out = trim((string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($owned) . ' 2>&1'));
+        eq($posix . ' (shell)', $out, 'from a script owned by nobody the record still names the account, not the owner: ' . $out);
+    }
+    $GLOBALS['dccr_display_name'] = 'Rob';
     ok(str_contains(dccr_cli_text(), 'Resolved "Cli Test One" (Lovrijenac), by Rob.'), 'and says so');
     dccr_cli_reset();
     $cli->resolve([substr($fp('two'), 0, 8)], ['seen' => true]);
@@ -2140,12 +2152,64 @@ suite('0.2.0 item 6: PHP Is Patched: the web reading, the php.net feed, the thre
     $GLOBALS['dccr_cron'] = array_values(array_filter($GLOBALS['dccr_cron'], static fn($e) => $e['hook'] !== Php_Patch::PROBE_HOOK));
     $GLOBALS['dccr_http'] = [];
     $GLOBALS['dccr_http_handler'] = static fn(string $url, array $args) => str_contains($url, 'wp-cron.php') ? dccr_http_ok('') : null;
+    State::delete('php_probe');
     $line = Php_Patch::probe();
     ok(wp_next_scheduled(Php_Patch::PROBE_HOOK) !== false, 'the probe schedules a one-off cron event');
-    ok(count(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-cron.php') && ($r['args']['method'] ?? '') === 'POST')) === 1, 'and POSTs wp-cron.php so the web server runs it: ' . $line);
+    $posts = array_values(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-cron.php') && ($r['args']['method'] ?? '') === 'POST'));
+    eq(1, count($posts), 'and POSTs wp-cron.php so the web server runs it: ' . $line);
+    ok(!str_contains($posts[0]['url'], 'doing_wp_cron'), '0.2.1: with NO doing_wp_cron parameter (wp-cron.php returns early when it does not match the lock only spawn_cron sets)');
+    ok(empty($posts[0]['args']['body']), 'and an empty body (wp-cron.php dies on a POST body)');
+    $gets = array_values(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-login.php')));
+    eq(1, count($gets), '0.2.1: the second path, a GET of wp-login.php');
+    ok(str_contains($gets[0]['url'], 'ragusa_php=1') && str_contains($gets[0]['url'], 'ragusa_check='), 'carrying ragusa_php and a cache-buster');
+    $probe = Php_Patch::probe_state();
+    ok(($probe['attempts'] ?? 0) === 1 && $probe['event'] === true && $probe['cron'] === 'HTTP 200', 'the probe state records the attempt, the event and the answers');
+    ok(str_contains(implode("\n", Php_Patch::status_lines()), 'asked the web server at') && str_contains(implode("\n", Php_Patch::status_lines()), 'no answer yet'), 'status says it asked and heard nothing: ' . Php_Patch::status_lines()[0]);
+    ok(str_contains(implode("\n", Php_Patch::status_lines()), 'probe event scheduled'), 'and whether the event sits in the cron list');
+    // The hook: the probe event records with its source.
     DCCR\Plugin::boot();
-    $hooks = array_map(static fn($h) => is_array($h[0]) ? implode('::', $h[0]) : 'closure', $GLOBALS['dccr_hooks'][Php_Patch::PROBE_HOOK] ?? []);
-    ok(in_array('DCCR\\Php_Patch::record_here', $hooks, true), 'the probe hook records the reading');
+    ok(count($GLOBALS['dccr_hooks'][Php_Patch::PROBE_HOOK] ?? []) >= 1, 'the probe hook is registered');
+    // ensure_reading(): every tick while there is no reading, at most once per ten minutes.
+    $before = count($GLOBALS['dccr_http']);
+    eq([], Php_Patch::ensure_reading(), 'asked ten minutes ago: not asked again yet');
+    eq($before, count($GLOBALS['dccr_http']), 'no request');
+    State::set('php_probe', ['asked' => time() - 601, 'attempts' => 1, 'cron' => 'HTTP 200', 'login' => 'HTTP 200', 'event' => true]);
+    ok(Php_Patch::ensure_reading() !== [], 'after ten minutes it asks again');
+    eq(2, (int) Php_Patch::probe_state()['attempts'], 'counting the attempts');
+    // The web server answers (simulated): the reading is saved.
+    Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
+    $cb = $GLOBALS['dccr_hooks'][Php_Patch::PROBE_HOOK][0][0];
+    $cb();
+    eq('probe', Php_Patch::reading()['source'], 'the probe event records its source');
+    ok(str_contains(Php_Patch::status_lines()[0], '8.3.30 (litespeed), read from the probe event under wp-cron.php at'), 'status names the reading and how it came: ' . Php_Patch::status_lines()[0]);
+    eq([], Php_Patch::ensure_reading(), 'with a fresh reading nothing is asked');
+    // The login path and an admin page load record through boot.
+    delete_option(Php_Patch::READING_OPTION);
+    $GLOBALS['pagenow'] = 'wp-login.php';
+    $_GET = ['ragusa_php' => '1'];
+    DCCR\Plugin::boot();
+    eq('login', Php_Patch::reading()['source'] ?? null, 'wp-login.php?ragusa_php=1 records on boot');
+    delete_option(Php_Patch::READING_OPTION);
+    $_GET = [];
+    DCCR\Plugin::boot();
+    ok(Php_Patch::reading() === null, 'a plain login page load records nothing');
+    $GLOBALS['pagenow'] = 'index.php';
+    $GLOBALS['dccr_is_admin'] = true;
+    $was_cron = $GLOBALS['dccr_doing_cron'] ?? false;
+    $GLOBALS['dccr_doing_cron'] = false;
+    $GLOBALS['dccr_doing_ajax'] = true;
+    DCCR\Plugin::boot();
+    ok(Php_Patch::reading() === null, 'an admin-ajax request (guests use it) records nothing');
+    $GLOBALS['dccr_doing_ajax'] = false;
+    DCCR\Plugin::boot();
+    eq('admin', Php_Patch::reading()['source'] ?? null, 'an admin page load records the reading');
+    $ts = Php_Patch::reading()['ts'];
+    DCCR\Plugin::boot();
+    eq($ts, Php_Patch::reading()['ts'], 'and not again while it is fresh');
+    $GLOBALS['dccr_is_admin'] = false;
+    $GLOBALS['dccr_doing_cron'] = $was_cron;
+    Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
+    Php_Patch::record_here();
     // The web server answers (simulated): the reading is saved.
     Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
     Php_Patch::record_here();

@@ -157,8 +157,9 @@ function register_activation_hook(string $f, $cb): void { $GLOBALS['dccr_hooks']
 function register_deactivation_hook(string $f, $cb): void { $GLOBALS['dccr_hooks']['deactivate'][] = [$cb, 10]; }
 function is_admin(): bool { return (bool) ($GLOBALS['dccr_is_admin'] ?? false); }
 function wp_doing_cron(): bool { return (bool) ($GLOBALS['dccr_doing_cron'] ?? false); }
+function wp_doing_ajax(): bool { return (bool) ($GLOBALS['dccr_doing_ajax'] ?? false); }
 function current_user_can(string $c): bool { return $GLOBALS['dccr_caps'] ?? true; }
-function wp_get_current_user() { return (object) ['ID' => 1, 'display_name' => $GLOBALS['dccr_display_name'] ?? 'Rob']; }
+function wp_get_current_user() { $n = $GLOBALS['dccr_display_name'] ?? 'Rob'; return (object) ['ID' => $n === '' ? 0 : 1, 'display_name' => $n]; }
 function wp_cache_flush(): bool { $GLOBALS['dccr_cache_flushed'] = ($GLOBALS['dccr_cache_flushed'] ?? 0) + 1; return true; }
 function wp_nonce_field(...$a): string { return '<input type="hidden" name="_dccr_nonce" value="test">'; }
 function check_admin_referer(...$a): bool { if (($GLOBALS['dccr_nonce_ok'] ?? true) !== true) { throw new RuntimeException('wp_die:nonce'); } return true; }

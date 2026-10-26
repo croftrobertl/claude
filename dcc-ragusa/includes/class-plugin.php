@@ -23,16 +23,24 @@ final class Plugin
         add_action(self::TICK_HOOK, [Cron::class, 'tick']);
         add_action(self::CHECK_HOOK, [Fortress\Sveti_Ivan::class, 'scheduled_check']);
         add_action(self::DIGEST_HOOK, [Alerts::class, 'send_digest']);
-        add_action(Php_Patch::PROBE_HOOK, [Php_Patch::class, 'record_here']);
+        add_action(Php_Patch::PROBE_HOOK, static function (): void {
+            Php_Patch::record_here('probe');
+        });
 
         // The harbour: every install and update, from any route.
         add_filter('upgrader_pre_install', [Fortress\Sveti_Ivan::class, 'on_pre_install'], 10, 2);
         add_filter('upgrader_source_selection', [Fortress\Revelin::class, 'on_source_selection'], 10, 4);
         add_action('upgrader_process_complete', [Fortress\Sveti_Ivan::class, 'on_process_complete'], 10, 2);
 
-        // The gate: only on the login page.
+        // The gate: only on the login page. The PHP probe's second path
+        // lands here too, and an admin page load refreshes a stale reading.
         if (($GLOBALS['pagenow'] ?? '') === 'wp-login.php') {
             add_action('wp_login', [Fortress\Bokar::class, 'on_login'], 10, 2);
+            if (isset($_GET['ragusa_php'])) {
+                Php_Patch::record_if_stale('login');
+            }
+        } elseif (is_admin() && !wp_doing_ajax() && !wp_doing_cron()) {
+            Php_Patch::record_if_stale('admin');
         }
 
         if (is_admin()) {
