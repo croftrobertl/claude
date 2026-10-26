@@ -46,6 +46,33 @@
 	var items = [].slice.call(list.querySelectorAll('[data-dccwl-gp-item]'));
 	if (!items.length) { return; }
 
+	/*
+	 * LET THE PINNED CONTROLS PIN (1.47.2). Found on live with the live-swap
+	 * check: the theme wraps the page in three boxes with `overflow: hidden`
+	 * (main.main, .one-column and the div inside it). `hidden` makes a box a
+	 * SCROLL CONTAINER, and a sticky element sticks to its nearest scroll
+	 * container — which here never scrolls — so the guide's pinned controls
+	 * and the desktop pane have never stuck on live; they scrolled away.
+	 *
+	 * `overflow: clip` clips exactly as `hidden` does but is not a scroll
+	 * container, so sticky works again. `hidden` also made each box a block
+	 * formatting context, which `clip` does not, so a plain block gets
+	 * `display: flow-root` to keep it: nothing inside moves. Only boxes that
+	 * are `hidden` on BOTH axes, only up to <body> (never the viewport), only
+	 * on this page, and only where the browser knows `clip`; anywhere else
+	 * the page is exactly as before.
+	 */
+	(function unclipAncestors() {
+		if (!window.CSS || !CSS.supports || !CSS.supports('overflow', 'clip')) { return; }
+		for (var e = root.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+			var cs = getComputedStyle(e);
+			if ('hidden' !== cs.overflowX || 'hidden' !== cs.overflowY) { continue; }
+			if ('block' === cs.display) { e.style.display = 'flow-root'; }
+			e.style.overflow = 'clip';
+			e.setAttribute('data-dccwl-unclipped', '');
+		}
+	})();
+
 	/* "Most Recorded Here" (1.47.0): server-rendered into the pane. Held by
 	 * reference so it can be put back when the pane is emptied by a width
 	 * change; it is never rebuilt. */
@@ -462,8 +489,90 @@
 		if (!window.requestAnimationFrame) { setTimeout(fn, 0); return; }
 		window.requestAnimationFrame(function () { window.requestAnimationFrame(fn); });
 	}
+	/*
+	 * THE PINNED CONTROLS SIT UNDER THE THEME'S PINNED BAR (1.47.2, Rob's yes).
+	 *
+	 * From 1024px the theme's menu (`.site-header-bottom-fixed` on live) pins
+	 * itself to the top — but only once the page has scrolled past it: at the
+	 * top it is static, 10-72px down, and it turns `position: fixed` (0-63px)
+	 * in the theme's own scroll handler. So the offset is MEASURED, on load
+	 * and on every scroll (a frame at most), with the probe /explore/'s
+	 * canal.js uses: the fixed or sticky boxes over the top edge, OUTSIDE
+	 * this guide (its own pinned block must never push itself down).
+	 * `elementsFromPoint`, all of them, so a bar is found whichever of the two
+	 * is painted on top. Below 1024 the theme's menu scrolls away and the
+	 * offset is 0, as Rob asked.
+	 */
+	var themeWide = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
+	var stickyLast = -1;
+
+	function themeBarsBottom() {
+		var w = window.innerWidth || 0;
+		var h = window.innerHeight || 0;
+		if (!w || !h || !document.elementsFromPoint) { return 0; }
+		var best = 0;
+		[0.5, 0.08, 0.92].forEach(function (fx) {
+			var x = Math.round(w * fx);
+			var y = 0;
+			for (var n = 0; n < 4; n++) {
+				var b = 0;
+				var hits = document.elementsFromPoint(x, y + 1);
+				for (var i = 0; i < hits.length && !b; i++) {
+					for (var e = hits[i]; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+						if (root.contains(e)) { break; }
+						var pos = getComputedStyle(e).position;
+						if ('fixed' !== pos && 'sticky' !== pos) { continue; }
+						var r = e.getBoundingClientRect();
+						if (r.top <= y + 1 && r.bottom > y + 1 && r.bottom < h * 0.4) { b = Math.ceil(r.bottom); }
+						break;
+					}
+				}
+				if (b <= y) { break; }
+				y = b;
+			}
+			best = Math.max(best, y);
+		});
+		return best;
+	}
+
+	function applySticky() {
+		var px = (themeWide && themeWide.matches) ? themeBarsBottom() : 0;
+		if (px === stickyLast) { return; }
+		stickyLast = px;
+		root.style.setProperty('--dccwl-sticky-offset', px + 'px');
+	}
+
+	/*
+	 * FOLLOWED, NOT SAMPLED. On live the theme's bar is pinned in the
+	 * theme's own scroll handler and then ANIMATES into place — measured at
+	 * -13..50px while sliding, 0..63px at rest. A single reading at the
+	 * scroll event caught it mid-slide (or not yet fixed) and nothing read it
+	 * again. So after every scroll the offset follows it, frame by frame, for
+	 * 0.7s; and any CSS transition or animation ending on the page asks once
+	 * more. Below 1024 applySticky() returns 0 without probing, so a phone
+	 * pays nothing.
+	 */
+	var followUntil = 0;
+	var following = false;
+	var raf = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
+	function follow() {
+		applySticky();
+		if (Date.now() < followUntil) { raf(follow); } else { following = false; }
+	}
+	function queueSticky() {
+		followUntil = Date.now() + 700;
+		if (following) { return; }
+		following = true;
+		raf(follow);
+	}
+	document.addEventListener('transitionend', queueSticky, true);
+	document.addEventListener('animationend', queueSticky, true);
+
 	afterPaint(function () {
 		measureTop();
+		applySticky();
+		window.addEventListener('scroll', queueSticky, { passive: true });
+		window.addEventListener('resize', queueSticky);
 		if (wide && wide.matches) { atEnd(); }
 		if (window.ResizeObserver && top) {
 			new window.ResizeObserver(measureTop).observe(top);
@@ -625,14 +734,21 @@
 		return y;
 	}
 
-	/* Put the summary at the top of the visible page; returns where it sits. */
+	/* Where the summary's top should be right now: under every bar that
+	 * covers the top edge at its x. Measured fresh each time it is asked,
+	 * because the bars change WITH the scroll (1.47.2): the theme's menu is
+	 * static at the top of the page and only turns fixed in the theme's own
+	 * scroll handler, a frame after any jump. 1.47.1 measured before that
+	 * frame, saw no bar, and placed the summary under it on live. */
+	function creditsTarget(s) {
+		var r = s.getBoundingClientRect();
+		return barsBottom(Math.round(r.left + r.width / 2));
+	}
+
+	/* Put the summary where creditsTarget() says. */
 	function placeCredits(d) {
 		var s = d.querySelector('summary') || d;
-		jumpTo(window.pageYOffset + s.getBoundingClientRect().top);
-		var r = s.getBoundingClientRect();
-		var below = barsBottom(Math.round(r.left + r.width / 2));
-		if (below) { jumpTo(window.pageYOffset + s.getBoundingClientRect().top - below); }
-		return Math.round(s.getBoundingClientRect().top);
+		jumpTo(window.pageYOffset + s.getBoundingClientRect().top - creditsTarget(s));
 	}
 
 	function settleCredits(d) {
@@ -643,11 +759,14 @@
 		['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) {
 			window.addEventListener(t, stop, { once: true, passive: true });
 		});
-		var want = placeCredits(d);
+		placeCredits(d);
+		/* Every tick asks again where the summary SHOULD be — the bars may
+		 * have changed since the jump — and corrects only if it is not
+		 * there. Quiet once it is. */
 		var tick = function () {
 			if (stopped || run !== creditsRun || !d.open || Date.now() > until) { return; }
 			var s = d.querySelector('summary') || d;
-			if (Math.abs(Math.round(s.getBoundingClientRect().top) - want) > 2) { want = placeCredits(d); }
+			if (Math.abs(Math.round(s.getBoundingClientRect().top) - creditsTarget(s)) > 2) { placeCredits(d); }
 			setTimeout(tick, 120);
 		};
 		setTimeout(tick, 120);

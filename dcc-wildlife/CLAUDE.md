@@ -5360,3 +5360,70 @@ container's Chromium (153) the cap begins to bind a few pixels above 1920:
 identically on the committed 1.47.0 code. The control now compares 2400 with
 2880, both past the cap, and asserts 1920 is within 4px of it. With both caps
 removed it fails (1163px against 1403px), so it still proves a cap holds.
+
+### 47. 1.47.2 — the pinned controls pin on live, and the credits clear the real menu
+
+The Director held 1.47.1 on staging. At 1440 the credits summary sat at top 0
+under the theme's pinned bar for the whole 6s. Rob also said yes to the pinned
+controls sitting under that bar. Both are done, **proved on the real live
+page** with the live-swap method, now the standard (`tools/live/live-swap.mjs`).
+
+#### WHAT LIVE ACTUALLY DOES (measured, not guessed)
+
+- **The theme's menu bar (`.site-header-bottom-fixed`) is NOT fixed at the
+  top of the page.** It is static, 10–72px down. It turns `position: fixed`
+  (0–63px) in the theme's own scroll handler, a beat after a scroll, and then
+  slides into place: −13..50px mid-slide, 0..63 at rest. At 390 and 768 it
+  scrolls away. The Director's guess (the probe stopping at the static SPAN)
+  was checked and is not the cause: the probe walks up to the fixed ancestor
+  correctly. 1.47.1 measured right after its own jump, before the theme had
+  pinned the bar, saw no bar, and its settle loop corrected only drift.
+- **The pinned controls had never pinned on live.** The theme wraps the page
+  in three `overflow: hidden` boxes (`main.main`, `.one-column`, the div
+  inside it). `hidden` makes a box a scroll container. A sticky element
+  sticks to its nearest scroll container, and these never scroll. So
+  `.dccwl-gp-top` (and the desktop pane) scrolled away, at every width, since
+  1.46.0: 7,266px above the screen at 8,000px down on a phone. The offline
+  harness never wrapped its page in such boxes, so it never saw this.
+
+#### THE FIX (all in guide.js)
+
+- **`unclipAncestors()`**: each ancestor up to `<body>` that is `hidden` on
+  both axes becomes `overflow: clip`, plus `display: flow-root` where it was
+  a plain block. `clip` clips the same but is not a scroll container;
+  `flow-root` keeps the formatting context `hidden` made. Skipped where the
+  browser lacks `clip`. Marked `data-dccwl-unclipped`.
+- **`applySticky()` / `themeBarsBottom()`**: from 1024px, `--dccwl-sticky-offset`
+  is the bottom of the fixed or sticky boxes over the top edge, OUTSIDE the
+  guide (the canal.js probe, using `elementsFromPoint` so stacking order
+  cannot hide a bar). Below 1024 it is 0 (Rob). It is FOLLOWED, frame by
+  frame, for 0.7s after every scroll, and re-asked on any `transitionend` or
+  `animationend`. A single reading catches the bar mid-slide: the "one
+  reading" mutant left the controls at 51px on live.
+- **`creditsTarget()`**: the credits settle loop asks every tick where the
+  summary SHOULD be, with the bars as they are now, not only whether it
+  drifted.
+
+Live results: the summary lands at 166px below 1024 (under the pinned
+controls) and at 229px from 1024 (63px theme bar plus the controls). After a
+600px scroll at 1024 and 1440 the controls sit at exactly 63px. A hit-test 2px
+inside their top edge is the controls, and 2px above is the bar. At 390 and
+768 after 1,200px they sit at 0 (600px leaves them still travelling on a
+phone, where the header above them is taller).
+
+#### HOW IT WAS TESTED
+
+- **Live swap, four widths** (390, 768, 1024, 1440). Real pages through the
+  proxy, GET only. Every `dcc-wildlife/assets/js/*.js` request is answered
+  from this checkout, and this build's guide.css is appended after
+  SpeedyCache's combined stylesheet. Three checks per width: arriving with
+  `#credits`, clicking /explore/'s real Credits link (both sampled every
+  500ms from 2s to 6s), and the pinned controls after a scroll. 34 passed.
+  Four mutants each fail on live: 1.47.1's script (12), no unclip (8), one
+  offset reading (2), credits measured once (4).
+- **Offline, `ui-1471.mjs`** now rebuilds the theme as live behaves: the
+  static-then-fixed sliding bar from 1024, the three `overflow: hidden`
+  wrappers, smooth scrolling. It covers all four widths and the pinned
+  controls. 46 passed, and each mutant fails it. The offline twin of "one
+  reading" also removes the transition listeners, because the stand-in's
+  CSS slide ends in a `transitionend`.

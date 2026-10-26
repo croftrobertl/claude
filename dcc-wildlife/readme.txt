@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.47.1
+Stable tag: 1.47.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,19 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.47.2 =
+* **The guide's search and filters really stay pinned now.** On the live
+  theme they never did: the theme wraps the page in boxes that stop
+  anything sticking, so they scrolled away with the list. They now stay at
+  the top while you scroll — just under the site's own menu bar on a
+  computer, and at the very top on a phone or tablet, where that menu
+  scrolls away.
+* **The Credits link lands below the site's menu on a computer.** 1.47.1
+  put "Photo Credits (401)" at the top of the screen before the site's
+  menu bar had pinned itself there, so the bar then covered it. It now
+  waits for the bar and lands below it, and below the guide's pinned
+  controls, at every screen width.
 
 = 1.47.1 =
 * **The Credits link lands on the credits.** Following /explore/'s

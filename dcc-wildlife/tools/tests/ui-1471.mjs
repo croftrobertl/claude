@@ -46,11 +46,38 @@ function doc(which, { menu = false, late = false } = {}) {
   const f = rendered(which);
   const css = CSS[which].map((c) => `<style>${asset(c)}</style>`).join('');
   const js = JS[which].map((j) => `<script>${asset(j)}</script>`).join('');
-  /* The theme, as far as this fault is concerned. */
-  const theme = `<style>html{scroll-behavior:smooth}${kit}</style>` + (menu
-    ? `<div class="site-header-bottom-fixed" style="position:fixed;top:0;left:0;right:0;height:55px;z-index:1000;background:#fff;display:flex;gap:24px;align-items:center;padding:0 24px"><a href="/">Home</a><a href="/cottages/">Cottages</a><a href="/explore/">Explore</a></div>`
-    : '');
-  const header = '<div id="theme-header" style="height:120px;background:#ccd"></div>';
+  /*
+   * THE THEME, AS LIVE ACTUALLY BEHAVES (1.47.2, measured with the
+   * live-swap check — the 1.47.1 stand-in was a bar fixed from the start,
+   * and live's is not):
+   *   - the menu bar is STATIC in the header at the top of the page, and
+   *     only turns fixed (0-63px) in the theme's own scroll handler, a
+   *     beat after the scroll, and then SLIDES into place;
+   *   - it does that only from 1024px; on a narrower screen it scrolls away;
+   *   - the content sits inside three `overflow: hidden` boxes (main.main,
+   *     .one-column, and the div inside it), which stop position: sticky.
+   */
+  const theme = `<style>html{scroll-behavior:smooth}${kit}
+      #theme-header{position:relative;height:150px;background:#ccd}
+      .site-header-bottom-fixed{position:absolute;top:10px;left:0;right:0;height:63px;z-index:1000;background:#fff;display:flex;gap:24px;align-items:center;padding:0 24px}
+      .header-fixed .site-header-bottom-fixed{position:fixed;top:0;transform:translateY(-63px);transition:transform .35s}
+      .header-fixed.shown .site-header-bottom-fixed{transform:none}
+    </style>`;
+  const header = `<header id="theme-header"><div class="site-header-bottom">${menu
+    ? '<div class="site-header-bottom-fixed"><a href="/">Home</a><a href="/cottages/">Cottages</a><a href="/explore/">Explore</a></div>'
+    : ''}</div></header>`
+    + `<script>(function () {
+         var hb = document.querySelector('.site-header-bottom');
+         window.addEventListener('scroll', function () {
+           setTimeout(function () {
+             var on = window.innerWidth >= 1024 && window.scrollY > 150;
+             if (on && !hb.classList.contains('header-fixed')) {
+               hb.classList.add('header-fixed');
+               requestAnimationFrame(function () { requestAnimationFrame(function () { hb.classList.add('shown'); }); });
+             } else if (!on) { hb.classList.remove('header-fixed', 'shown'); }
+           }, 60);
+         }, { passive: true });
+       })();</script>`;
   const disturb = 'nudge' === late
     ? `<script>window.addEventListener('load', function () {
          setTimeout(function () { window.scrollBy(0, -300); }, 2200);
@@ -62,7 +89,7 @@ function doc(which, { menu = false, late = false } = {}) {
        });</script>`
     : '';
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${theme}${css}</head>`
-    + `<body>${menu ? '<div style="height:55px"></div>' : ''}${header}<div class="site"><div class="entry-content">${f.html}</div></div>`
+    + `<body>${header}<div class="wrap" style="overflow:hidden"><main class="main" style="overflow:hidden"><div class="one-column" style="overflow:hidden"><div class="site"><div class="entry-content">${f.html}</div></div></div></main></div>`
     + `<script>${f.config}</script>${js}${disturb}</body></html>`;
 }
 
@@ -122,7 +149,7 @@ const barsBottom = (page) => page.evaluate(() => {
   return y;
 });
 
-for (const [w, h, menu] of [[390, 844, false], [1440, 900, true]]) {
+for (const [w, h, menu] of [[390, 844, false], [768, 1024, false], [1024, 768, true], [1440, 900, true]]) {
   for (const how of ['click', 'arrive']) {
     section(`${w}: ${how === 'click' ? 'clicking /explore/\'s Credits link' : 'arriving with #credits'}`);
     const page = await site(w, h, { menu, late: true });
@@ -145,11 +172,45 @@ for (const [w, h, menu] of [[390, 844, false], [1440, 900, true]]) {
     checkSame(true, got.open, 'the credits are open');
     check(got.seen, 'and "Photo Credits (401)" is ON SCREEN and on top — the hit-test at the summary returns the summary', got.hit);
     check(got.top >= bars && got.top <= bars + 3, `its top is right under whatever covers the top edge (${bars}px)`, String(got.top));
-    if (menu) { check(got.top >= 55, 'below the theme\'s 55px pinned menu', String(got.top)); }
+    if (menu) { check(got.top >= 63, 'below the theme\'s 63px pinned menu', String(got.top)); }
     /* Opt-in stills for the release report; nothing is asserted on them. */
     if (process.env.DCC_SHOTS) { await page.screenshot({ path: `${process.env.DCC_SHOTS}/credits-${w}-${how}.png` }); }
     await page.close();
   }
+}
+
+/* ====================================================================== */
+for (const [w, h, menu, dy] of [[390, 844, false, 1200], [768, 1024, false, 1200], [1024, 768, true, 600], [1440, 900, true, 600]]) {
+  section(`${w}: the pinned controls after a ${dy}px scroll`);
+  const page = await site(w, h, { menu });
+  await page.goto(`${SITE}/wildlife-guide/`, { waitUntil: 'load' });
+  await page.waitForTimeout(800);
+  await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), dy);
+  await page.waitForTimeout(1200);
+  const pin = await page.evaluate(() => {
+    const top = document.querySelector('[data-dccwl-gp-top]');
+    const r = top.getBoundingClientRect();
+    const sw = top.querySelector('[data-dccwl-gp-scope="here"]').getBoundingClientRect();
+    const x = Math.round(sw.left + sw.width / 2);
+    const bar = document.querySelector('.site-header-bottom-fixed');
+    const br = bar ? bar.getBoundingClientRect() : null;
+    return {
+      top: Math.round(r.top), barBottom: br ? Math.round(br.bottom) : null,
+      barFixed: !!bar && getComputedStyle(bar).position === 'fixed',
+      edge: top.contains(document.elementFromPoint(x, Math.round(r.top) + 2)),
+      above: !!bar && bar.contains(document.elementFromPoint(x, Math.max(0, Math.round(r.top) - 2))),
+    };
+  });
+  note(`pinned ${JSON.stringify(pin)}`);
+  if (menu) {
+    check(pin.barFixed, 'the theme\'s bar has pinned itself (the condition under test)');
+    checkSame(pin.barBottom, pin.top, 'the controls stick just under it');
+    check(pin.edge && pin.above, 'the hit-test 2px inside their top edge is the controls, 2px above is the bar');
+  } else {
+    checkSame(0, pin.top, 'the controls stick at the top — the theme\'s menu has scrolled away');
+    check(pin.edge, 'and the hit-test 2px inside their top edge is the controls');
+  }
+  await page.close();
 }
 
 section('the theme asks for smooth scrolling; the guest asks for reduced motion');
