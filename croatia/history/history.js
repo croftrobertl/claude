@@ -492,10 +492,22 @@
         const key = z + '/' + x + '/' + y;
         want.add(key);
         if (tileImgs.has(key)) continue;
-        const im = new Image();
-        im._k = [z, x, y]; im.alt = ''; im.decoding = 'async'; im.draggable = false; im.className = 'bh-tile';
-        im.onload = () => { im.classList.add('bh-in'); tileFails = 0; sweep(); };
-        im.onerror = () => {
+        // satellite: the imagery plus Esri's road and place-name layers on top (as on the Map tab)
+        const pic = new Image(), im = sat ? document.createElement('div') : pic;
+        pic.alt = ''; pic.decoding = 'async'; pic.draggable = false;
+        im._k = [z, x, y]; im.className = 'bh-tile';
+        if (sat) {
+          im.appendChild(pic);
+          ['Reference/World_Transportation', 'Reference/World_Boundaries_and_Places'].forEach(l => {
+            const r = new Image(); r.alt = ''; r.decoding = 'async'; r.draggable = false; r.onerror = () => r.remove();
+            r.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/' + l + '/MapServer/tile/' + z + '/' + y + '/' + x;
+            im.appendChild(r);
+          });
+        }
+        im._done = false;
+        pic.onload = () => { im._done = true; im.classList.add('bh-in'); tileFails = 0; sweep(); };
+        pic.onerror = () => {
+          im._done = true;
           tileFails++; im.remove(); tileImgs.delete(key);
           if (tileFails >= 8) {   // no map underneath after all (offline or blocked): back out to where the era shapes still read
             root.classList.remove('bh-tiles-on');
@@ -503,7 +515,7 @@
           }
           sweep();
         };
-        im.src = sat ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + y + '/' + x
+        pic.src = sat ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + y + '/' + x
           : 'https://tile.openstreetmap.org/' + key + '.png';
         placeTile(im, w, h); tilesEl.appendChild(im); tileImgs.set(key, im);
       }
@@ -512,7 +524,7 @@
     }
     // tiles from the previous view stay under the new ones until those have loaded
     function sweep() {
-      const ready = [...tileWant].every(k => { const im = tileImgs.get(k); return !im || im.complete; });
+      const ready = [...tileWant].every(k => { const im = tileImgs.get(k); return !im || im._done; });
       tileImgs.forEach((im, k) => {
         if (tileWant.has(k)) { im.style.zIndex = 1; return; }
         if (ready || tileImgs.size > 200) { im.remove(); tileImgs.delete(k); } else im.style.zIndex = 0;

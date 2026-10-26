@@ -22,6 +22,22 @@ REL = {  # OSM relation ids
     'neum': 2528236, 'ravno': 2528257, 'trebinje': 2528277, 'slivno': 8796590, 'hercegnovi': 2187901,
     'sutorina': 4098902,  # boundary=historic: the 1699 Sutorina corridor
 }
+# Konavle's villages (OSM settlement boundaries), for the 1941 Italy–NDH line. The Rome Agreements
+# split Konavle along the Popovići–Lovorno line, on the cadastral boundary between Popovići (Italy)
+# and Komaji (NDH); in 1942 Italy also took Kuna and Pridvorje (Konavle museums, blog.migk.hr).
+# Villages are put on a side by where they lie relative to that line; Lovorno changed hands.
+KONAVLE = {
+    'Brotnice': 15909713, 'Cavtat': 15909658, 'Čilipi': 15909698, 'Drvenik': 15909763, 'Duba Konavoska': 15909764,
+    'Dunave': 15909805, 'Gabrili': 15909714, 'Gruda': 15909816, 'Jasenice': 15909666, 'Komaji': 15909796,
+    'Kuna Konavoska': 15909797, 'Lovorno': 15909801, 'Ljuta': 15909813, 'Mihanići': 15909762, 'Mikulići': 15909835,
+    'Močići': 15909693, 'Molunat': 15909849, 'Palje Brdo': 15909836, 'Pločice': 15909873, 'Poljice': 15909822,
+    'Popovići': 15909802, 'Pridvorje': 15909803, 'Radovčići': 15909812, 'Stravča': 15909724, 'Šilješki': 15909712,
+    'Uskoplje': 15909675, 'Vitaljina': 15909852, 'Vodovađa': 15909872, 'Zastolje': 15909871, 'Zvekovica': 15909691,
+}
+REL.update({'k:' + k: v for k, v in KONAVLE.items()})
+ITALY_1941 = ['Popovići', 'Radovčići', 'Gruda', 'Ljuta', 'Poljice', 'Dunave', 'Zastolje', 'Mikulići', 'Palje Brdo',
+              'Pločice', 'Vodovađa', 'Molunat', 'Vitaljina', 'Lovorno']
+ITALY_1942 = ['Kuna Konavoska', 'Pridvorje']
 STRADUN_WAY = 987089809
 # The walls of Ston, tower to tower. OpenStreetMap maps the towers (man_made=tower) but not the
 # wall itself in a form Nominatim serves, so the line joins the towers in order along the
@@ -35,6 +51,16 @@ STON_TOWERS = {  # name: (osm way/node, lat, lng)
     'Kula Dolina': ('w250734290', 42.8448068, 17.7018059), 'Koruna': ('w250734212', 42.8453501, 17.7034374),
     'Toljevac': ('w235921263', 42.8469313, 17.7048744),
 }
+# Dubrovnik's own walls, the same way: the towers and gates OpenStreetMap names on the land side,
+# then the sea walls, which stand on the shore, from today's coastline.
+DBK_WALL = [  # clockwise from Minčeta; (name, osm, lat, lng)
+    ('Minčeta', 'w172454061', 42.6429736, 18.1084349), ('Buža gate', 'w668417760', 42.6421059, 18.1102286),
+    ('Ploče gate', 'w290356997', 42.6420229, 18.1127296), ('Ponte gate', 'w1297393781', 42.6401916, 18.1109555),
+    ('St. John', 'n3040735714', 42.6398468, 18.112383),   # the Maritime Museum inside the fort
+    # … the sea walls along the shore …
+    ('Bokar', 'w172456340', 42.640938, 18.1061244), ('Puncjela', 'w1452945182', 42.6412819, 18.1065384),
+    ('Pile gate', 'w668283215', 42.6417295, 18.1068385), ('Gornji ugao', 'w1466480190', 42.6425951, 18.1079521),
+]
 STON_LINES = [
     ['Veliki Kaštio', 'Kula Nad vodom', 'Minčeta', 'Sokolić', 'Arcimun', 'Veliki Kaštio'],   # round the town
     ['Kula Nad vodom', 'Stoviš', 'Pozvizd', 'Kula Dobri', 'Kula Dolina', 'Koruna', 'Toljevac'],   # up the hill and on to Mali Ston
@@ -183,6 +209,29 @@ def build(d):
         'frontier': shared(d, rag, ['ravno', 'trebinje']),
         'neum': shared(d, rag, ['neum']) + shared(d, ['neum'], ['slivno']),
         'sutorina': shared(d, ['konavle'], ['hercegnovi']),
+    }
+    # the shore between St. John and Bokar, the short way round (the Old Town's south side)
+    ring = max((p[0] for p in polys(d, 'dubrovnik')), key=area)[:-1]
+    near = lambda la, lo: min(range(len(ring)), key=lambda i: math.hypot((ring[i][0] - lo) * COS, ring[i][1] - la))
+    a, b = near(42.6398468, 18.112383), near(42.640938, 18.1061244)
+    fwd = ring[a:b + 1] if a <= b else ring[a:] + ring[:b + 1]
+    back = (ring[b:a + 1] if b <= a else ring[b:] + ring[:a + 1])[::-1]
+    shore = dp(min(fwd, back, key=len), 0.00002)
+    pts = [[round(q[2], 6), round(q[3], 6)] for q in DBK_WALL]
+    out['dbkWalls'] = {
+        'line': pts[:5] + [[round(q[1], 6), round(q[0], 6)] for q in shore[1:-1]] + pts[5:] + [pts[0]],
+        'pts': [[q[0], round(q[2], 6), round(q[3], 6)] for q in DBK_WALL],
+    }
+    k = lambda l: ['k:' + n for n in l]
+    ndh41 = [n for n in KONAVLE if n not in ITALY_1941]
+    ndh42 = [n for n in ndh41 if n not in ITALY_1942]
+    out['konavle41'] = {
+        'italy41': out_polys(sum((polys(d, 'k:' + n) for n in ITALY_1941 if n != 'Lovorno'), []), 0.00006),
+        'lovorno': out_polys(polys(d, 'k:Lovorno'), 0.00006),
+        'italy42': out_polys(sum((polys(d, 'k:' + n) for n in ITALY_1942), []), 0.00006),
+        'line41': shared(d, k(ITALY_1941), k(ndh41)),
+        'line42': shared(d, k(ITALY_1941 + ITALY_1942), k(ndh42)),
+        'lab41': label_pt(sum((polys(d, 'k:' + n) for n in ITALY_1941), [])),
     }
     out['ston'] = {
         'towers': [[n, round(v[1], 6), round(v[2], 6)] for n, v in STON_TOWERS.items()],

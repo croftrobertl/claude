@@ -1677,3 +1677,10 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
 .dcc-hp-by-rome { background: #9b72c4 !important; } .dcc-hp-by-church { background: #8a64b5 !important; } .dcc-hp-by-cro { background: #e07d82 !important; }
 .dcc-hp-street { margin-top: 10px; }
 .dcc-tour-mm-map:not(.dcc-then-street) .dcc-then-tower { display: none; }
+/* era cross-fade */
+.leaflet-container .dcc-then-in { animation: dccThenIn .5s ease-out both; }
+.leaflet-container .dcc-then-out { animation: dccThenOut .5s ease-in both; pointer-events: none; }
+@keyframes dccThenIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dccThenOut { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .leaflet-container .dcc-then-in, .leaflet-container .dcc-then-out { animation: none; } }
+.dcc-then-plab-it b { color: #a3271b; }

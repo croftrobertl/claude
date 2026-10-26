@@ -2232,7 +2232,10 @@
     { ll: [42.625, 18.1213], from: 1023, by: 'church', t: 'Benedictine monastery, Lokrum', s: '1023', x: 'Benedictine monks are first recorded on Lokrum in 1023.' },
     { ll: [42.6408, 18.10423], from: 1301, by: 'rag', t: 'Fort Lovrijenac', s: 'recorded 1301', x: 'First recorded in 1301. Legend says Ragusa raised it in three months to beat Venice to the rock. Over its gate: “Freedom is not sold for all the gold in the world.”' },
     { ll: [42.64297, 18.10843], from: 1319, by: 'rag', t: 'Fort Minčeta', s: '1319 · round 1460s', x: 'Begun as a square tower in 1319; rebuilt as the great round tower in the 1460s, as Ottoman power closed in.' },
-    { ll: [42.63995, 18.11205], from: 1346, by: 'rag', t: 'Fort St. John', s: '1346', x: 'Its first tower, guarding the harbour mouth, dates from 1346.' },
+    { ll: [42.6398468, 18.112383], from: 1346, by: 'rag', t: 'Fort St. John', s: '1346', x: 'Its first tower, guarding the harbour mouth, dates from 1346.' },
+    { ll: [42.6417295, 18.1068385], from: 1460, by: 'rag', t: 'Pile Gate', s: '1460 · outer 1537', x: 'The inner gate dates from 1460, the outer Renaissance gate and its bridge from 1537. St. Blaise, patron saint of the Republic, watches over both.' },
+    { ll: [42.640938, 18.1061244], from: 1461, by: 'rag', t: 'Fort Bokar', s: '1461–1570', x: 'Begun in 1461 to designs by the Florentine Michelozzo to guard the Pile Gate from the sea, and finished in 1570.' },
+    { ll: [42.6420229, 18.1127296], from: 1628, by: 'rag', t: 'Ploče Gate', s: 'outer gate 1628', x: 'The eastern land gate, towards the Ottoman caravan road; its outer gate was built in 1628 by Mihajlo Hranjac.' },
     { ll: [42.83693, 17.69676], from: 1358, by: 'rag', t: 'Walls of Ston', s: 'begun 1358', x: 'Begun in 1358 to guard the peninsula Ragusa bought in 1333, and its salt pans.' },
     { ll: [42.641106, 18.110278], from: 1419, by: 'rag', t: 'Orlando’s Column', s: '1419', x: 'Set up in stone in 1419. The knight’s forearm is said to have fixed the Ragusan ell, the city’s measure of length.' },
     { ll: [42.64032, 18.11073], from: 1435, by: 'rag', t: 'Rector’s Palace', s: 'rebuilt 1435', x: 'Seat of the Rector and the Republic’s councils. Rebuilt after a gunpowder blast in 1435, and again after a second in 1463.' },
@@ -2251,7 +2254,7 @@
   ];
   const THEN_BY = { rome: 'Rome', church: 'the Church', rag: 'Ragusa', fra: 'France', aus: 'Austria', cro: 'Croatia' };
   let thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenWantLL = null, thenLoading = null;
-  let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false;
+  let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false, thenRW = null, thenRN = null;
   const thenRingsCache = new Map();
   const thenLL = (x, y) => [48.4 - y / 132.7, 12 + x / 100];   // the History map's own projection, inverted
   function thenRings(d) {
@@ -2330,7 +2333,7 @@
     thenWide = L.layerGroup().addTo(mmMap);
     thenNear = L.layerGroup().addTo(mmMap);
     thenTop = L.layerGroup().addTo(mmMap);
-    thenWide._r = L.svg({ pane: 'dccThenWide' }); thenNear._r = L.svg({ pane: 'dccThen' });
+    thenRW = L.svg({ pane: 'dccThenWide' }); thenRN = L.svg({ pane: 'dccThen' });
     const wrap = root._mapmode.querySelector('.dcc-tour-mm-wrap'), ui = wrap.querySelector('.dcc-then');
     const frames = thenData.frames, rng = ui.querySelector('.dcc-then-rng');
     rng.max = frames.length - 1;
@@ -2379,10 +2382,12 @@
     ui.querySelector('[data-a=prev]').disabled = i === 0;
     ui.querySelector('[data-a=next]').disabled = i === frames.length - 1;
     if (!changed && thenNear.getLayers().length) return;
-    thenWide.clearLayers(); thenNear.clearLayers();
+    // cross-fade: the new era is drawn into fresh groups that fade in while the old ones fade out
+    const oldW = thenWide, oldN = thenNear;
+    thenWide = L.layerGroup().addTo(mmMap); thenNear = L.layerGroup().addTo(mmMap);
     // zoomed out: the History map's empires
     f.feats.forEach(ft => {
-      thenWide.addLayer(L.polygon(thenRings(ft.d), { renderer: thenWide._r, pane: 'dccThenWide', interactive: false,
+      thenWide.addLayer(L.polygon(thenRings(ft.d), { renderer: thenRW, pane: 'dccThenWide', interactive: false,
         color: ft.chg ? '#d9a22b' : ft.c, weight: ft.chg ? 1.5 : 1, opacity: ft.chg ? 0.8 : 0.6, fillColor: ft.c, fillOpacity: 0.4,
         className: ft.chg ? 'dcc-then-chg' : '' }));
       if (ft.l && ft.n && ft.a > 1.5) thenWide.addLayer(L.marker(thenLL(ft.l[0], ft.l[1]), { pane: 'dccThenWide', interactive: false, keyboard: false,
@@ -2390,7 +2395,7 @@
     });
     // zoomed in: neighbours, then Ragusa's parts on today's outlines
     const S = thenStreet, inl = thenInland(f);
-    thenNear.addLayer(L.polygon(S.bih, { renderer: thenNear._r, pane: 'dccThen', interactive: false, stroke: false,
+    thenNear.addLayer(L.polygon(S.bih, { renderer: thenRN, pane: 'dccThen', interactive: false, stroke: false,
       fillColor: thenColor(f, inl), fillOpacity: 0.28, className: 'dcc-then-bih' }));
     THEN_ORDER.forEach(k => {
       if (k === 'city' && R.parts.indexOf('city') < 0) return;
@@ -2399,7 +2404,7 @@
       const was = prev && k !== 'city' ? thenPartStatus(k, prev).cls : null;
       const gained = st.cls === 'rag' && was && was !== 'rag', lost = was === 'rag' && st.cls !== 'rag';
       const rag = st.cls === 'rag';
-      thenNear.addLayer(L.polygon(polys, { renderer: thenNear._r, pane: 'dccThen', interactive: false,
+      thenNear.addLayer(L.polygon(polys, { renderer: thenRN, pane: 'dccThen', interactive: false,
         color: rag ? '#7d5411' : st.cls === 'war' ? '#c0392b' : '#3b3934', weight: rag || gained || lost ? 2 : 1, opacity: rag ? 0.9 : 0.5,
         dashArray: st.cls === 'out' || st.cls === 'ceded' || st.cls === 'split' || k === 'city' ? '5 5' : null,
         fillColor: st.c, fillOpacity: rag ? 0.45 : 0.3,
@@ -2414,8 +2419,8 @@
     ['frontier', 'neum', 'sutorina'].forEach(k => {
       const info = thenLineInfo(k, f), lines = S.lines[k];
       if (!info || !lines) return;
-      thenNear.addLayer(L.polyline(lines, { renderer: thenNear._r, pane: 'dccThen', color: '#fff', weight: 8, opacity: 0.55, interactive: false, lineCap: 'round' }));   // a halo so the line reads on satellite
-      const pl = L.polyline(lines, { renderer: thenNear._r, pane: 'dccThen', color: k === 'frontier' ? '#6b4508' : '#a3271b', weight: 4, opacity: 1,
+      thenNear.addLayer(L.polyline(lines, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 8, opacity: 0.55, interactive: false, lineCap: 'round' }));   // a halo so the line reads on satellite
+      const pl = L.polyline(lines, { renderer: thenRN, pane: 'dccThen', color: k === 'frontier' ? '#6b4508' : '#a3271b', weight: 4, opacity: 1,
         dashArray: k === 'frontier' ? '10 6' : '3 6', lineCap: 'round', className: 'dcc-then-line' });
       pl.bindTooltip('<b>' + escapeHtml(info.t) + '</b><br>' + escapeHtml(info.s), { sticky: true, className: 'dcc-then-tip' });
       thenNear.addLayer(pl);
@@ -2423,21 +2428,45 @@
       thenNear.addLayer(L.marker(mid, { pane: 'dccThenTop', interactive: false, keyboard: false,
         icon: L.divIcon({ className: 'dcc-then-llab' + (k === 'frontier' ? '' : ' dcc-then-llab-1699'), html: '<span>' + escapeHtml(k === 'frontier' ? (R.former ? 'old frontier' : 'frontier') : '1699 line') + '</span>', iconSize: null }) }));
     });
+    // 1941–43: the Italy–NDH line through Konavle, on today's village boundaries
+    const K41 = S.konavle41;
+    if (histSlugOf(f.label) === '1942' && K41) {
+      const it = thenColor(f, 'Italy'), tip = '<b>The 1941 line through Konavle</b><br>The Rome Agreements (May 1941) split Konavle along the Popovići–Lovorno line: east of it was annexed by Italy, the rest went to the Axis puppet Independent State of Croatia. In 1942 Italy also took Kuna and Pridvorje. Drawn on today’s village boundaries, so approximate.';
+      thenNear.addLayer(L.polygon(K41.italy41, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.5, fillColor: it, fillOpacity: 0.5 }));
+      thenNear.addLayer(L.polygon(K41.italy42, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.6, dashArray: '4 4', fillColor: it, fillOpacity: 0.35 }));
+      thenNear.addLayer(L.polygon(K41.lovorno, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.6, dashArray: '2 5', fillColor: it, fillOpacity: 0.2 }));
+      thenNear.addLayer(L.polyline(K41.line41, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 2.5, opacity: 0.9, dashArray: '6 5' }).bindTooltip(tip, { sticky: true, className: 'dcc-then-tip' }));
+      thenNear.addLayer(L.polyline(K41.line42, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.55, interactive: false }));
+      thenNear.addLayer(L.polyline(K41.line42, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 3.5, opacity: 1 }).bindTooltip(tip, { sticky: true, className: 'dcc-then-tip' }));
+      thenNear.addLayer(L.marker(K41.lab41, { pane: 'dccThenTop', interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-it', html: '<div><b>Annexed by Italy</b><span>1941–43 · line approximate</span></div>', iconSize: null }) }));
+    }
+    // Dubrovnik's walls: land towers and gates from OSM, the sea walls along today's shore
+    if (R.founded && f.year >= 1300 && S.dbkWalls) {
+      thenNear.addLayer(L.polyline(S.dbkWalls.line, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineJoin: 'round' }));
+      const dw = L.polyline(S.dbkWalls.line, { renderer: thenRN, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineJoin: 'round', className: 'dcc-then-wall' });
+      dw.bindTooltip('<b>The city walls</b><br>Built up from the 13th century and finished in the 1600s. Drawn between the towers and gates on today’s map, with the sea walls along the shore, so the line is approximate.', { sticky: true, className: 'dcc-then-tip' });
+      thenNear.addLayer(dw);
+    }
     // the walls of Ston, tower to tower (begun 1358, still standing)
     if (R.founded && f.year >= 1358 && S.ston) {
-      thenNear.addLayer(L.polyline(S.ston.lines, { renderer: thenNear._r, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineCap: 'round', lineJoin: 'round' }));
-      const sw = L.polyline(S.ston.lines, { renderer: thenNear._r, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'dcc-then-wall' });
+      thenNear.addLayer(L.polyline(S.ston.lines, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineCap: 'round', lineJoin: 'round' }));
+      const sw = L.polyline(S.ston.lines, { renderer: thenRN, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'dcc-then-wall' });
       sw.bindTooltip('<b>Walls of Ston, begun 1358</b><br>Drawn tower to tower, so the line is approximate: round the town, up to Pozvizd on the hill, and along the isthmus to Mali Ston.', { sticky: true, className: 'dcc-then-tip' });
       thenNear.addLayer(sw);
-      S.ston.towers.forEach(t => thenNear.addLayer(L.circleMarker([t[1], t[2]], { renderer: thenNear._r, pane: 'dccThen', radius: 4, color: '#fff', weight: 1.5, fillColor: '#7d5411', fillOpacity: 1, className: 'dcc-then-tower' })
+      S.ston.towers.forEach(t => thenNear.addLayer(L.circleMarker([t[1], t[2]], { renderer: thenRN, pane: 'dccThen', radius: 4, color: '#fff', weight: 1.5, fillColor: '#7d5411', fillOpacity: 1, className: 'dcc-then-tower' })
         .bindTooltip(escapeHtml(t[0]), { className: 'dcc-then-tip', direction: 'top' })));
     }
     // the Stradun: a sea channel by tradition until the town and the islet were joined
     if (R.founded && f.year <= 1100) {
-      const ch = L.polyline(S.stradun, { renderer: thenNear._r, pane: 'dccThen', color: '#2f7f9c', weight: 6, opacity: 0.8, dashArray: '2 8', lineCap: 'round' });
+      const ch = L.polyline(S.stradun, { renderer: thenRN, pane: 'dccThen', color: '#2f7f9c', weight: 6, opacity: 0.8, dashArray: '2 8', lineCap: 'round' });
       ch.bindTooltip('<b>The Stradun as a sea channel?</b><br>By tradition, water ran here between the islet of Laus and the mainland settlement until they were joined. Digs under the street have found a natural sandy shore instead.', { sticky: true, className: 'dcc-then-tip' });
       thenNear.addLayer(ch);
     }
+    const fade = (g, cls) => g.eachLayer(l => { const e = l._path || l._icon; if (e) e.classList.add(cls); });
+    const quick = reducedMotion() || !oldN.getLayers().length;
+    if (!quick) { fade(thenWide, 'dcc-then-in'); fade(thenNear, 'dcc-then-in'); fade(oldW, 'dcc-then-out'); fade(oldN, 'dcc-then-out'); }
+    setTimeout(() => { mmMap.removeLayer(oldW); mmMap.removeLayer(oldN); }, quick ? 0 : 520);
     thenDrawTop();
     thenHere();
     if (thenCmpOn) thenClip();
@@ -2466,10 +2495,14 @@
     const f = thenData.frames[thenIdx], c = mmMap.getCenter(), z = mmMap.getZoom();
     let txt = '';
     if (z >= 10) {
-      const S = thenStreet;
+      const S = thenStreet, K41 = S.konavle41;
       const k = f.ragusa.parts.indexOf('city') >= 0 && thenInPolys(c.lat, c.lng, S.parts.city) ? 'city'
         : THEN_ORDER.find(k => k !== 'city' && thenInPolys(c.lat, c.lng, S.parts[k] || []));
-      if (k) txt = '<b>' + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(thenPartStatus(k, f).t);
+      const ww2 = histSlugOf(f.label) === '1942' && k === 'konavle' && K41
+        ? thenInPolys(c.lat, c.lng, K41.lovorno) ? 'on the Italy–NDH line; Lovorno changed hands'
+        : thenInPolys(c.lat, c.lng, K41.italy41) ? 'Kingdom of Italy (annexed 1941)'
+        : thenInPolys(c.lat, c.lng, K41.italy42) ? 'Kingdom of Italy (taken in 1942)' : 'Independent State of Croatia (Axis)' : null;
+      if (k) txt = '<b>' + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(ww2 || thenPartStatus(k, f).t);
       else if (thenInPolys(c.lat, c.lng, S.bih)) { const n = thenInland(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
     }
     ui.innerHTML = txt ? '<span class="dcc-then-x" aria-hidden="true">+</span>' + txt : '';
