@@ -1,236 +1,1174 @@
 {
-  "updated": "2026-10-26",
-  "strands": [
+ "updated": "2026-10-26",
+ "strands": [
+  {
+   "id": "ragusa",
+   "name": "Ragusa · Dubrovnik",
+   "kicker": "The city-republic",
+   "intro": "A refugee town on a rock became a merchant republic that kept its freedom for more than four centuries between Venice, Hungary and the Ottomans — under one word: LIBERTAS.",
+   "events": [
     {
-      "id": "ragusa",
-      "name": "Ragusa · Dubrovnik",
-      "kicker": "The city-republic",
-      "intro": "A refugee town on a rock became a merchant republic that kept its freedom for more than four centuries between Venice, Hungary and the Ottomans — under one word: LIBERTAS.",
-      "events": [
-        { "y": "c. 614", "sort": 614, "tag": "tradition", "title": "Founded by refugees from Epidaurum",
-          "text": "Emperor Constantine VII's De Administrando Imperio (c. 950) says people fleeing the Avar and Slav destruction of Epidaurum (Cavtat) settled the rock of Laus, the start of Ragusa. Digs under the cathedral have found older churches, so how old the settlement really is is still argued.",
-          "src": [["Dubrovnik", "https://en.wikipedia.org/wiki/Dubrovnik"], ["Epidaurum", "https://en.wikipedia.org/wiki/Epidaurum"]] },
-        { "y": "866–867", "sort": 866, "title": "The Saracen siege",
-          "text": "Arab raiders besieged the town for about fifteen months. It held until a Byzantine fleet of some 100 ships under Niketas Ooryphas came to its relief, and Byzantium then reorganised the coast as the Theme of Dalmatia.",
-          "src": [["Siege of Ragusa (866–868)", "https://en.wikipedia.org/wiki/Siege_of_Ragusa_(866%E2%80%93868)"], ["Niketas Ooryphas", "https://en.wikipedia.org/wiki/Niketas_Ooryphas"]] },
-        { "y": "972", "sort": 972, "tag": "tradition", "title": "St. Blaise becomes the city's patron",
-          "text": "Tradition dates the Festivity of St. Blaise, held every 3 February, to 972; UNESCO's record traces it with certainty to 1190 and listed it as intangible heritage in 2009.",
-          "src": [["UNESCO: Festivity of Saint Blaise", "https://ich.unesco.org/en/RL/00232"]] },
-        { "y": "1205–1358", "sort": 1205, "title": "Under Venice",
-          "text": "After the Fourth Crusade, Venice took sovereignty and sent the city's count, but Ragusa kept its own councils, laws and trade.",
-          "src": [["Republic of Ragusa", "https://en.wikipedia.org/wiki/Republic_of_Ragusa"]] },
-        { "y": "1252", "sort": 1252, "title": "Lastovo joins",
-          "text": "The island of Lastovo placed itself under Ragusa of its own accord (some sources say 1272).",
-          "src": [["Dubrovačka biskupija: Sveti Vlaho", "https://db.hr/sveti-vlaho-zastitnik-biskupije/"]] },
-        { "y": "29 May 1272", "sort": 1272, "title": "The Statute of Dubrovnik",
-          "text": "The city's law code, in eight books (the seventh is maritime law), framed Ragusan law until the Republic ended in 1808.",
-          "src": [["Liber Statutorum Ragusii (Hrčak)", "https://hrcak.srce.hr/clanak/30920"], ["TZ Dubrovnik", "https://tzdubrovnik.hr/lang/en/get/vijesti/80164/the_statute_of_dubrovnik_of_1272.html"]] },
-        { "y": "1278", "sort": 1278, "title": "The notaries' books begin",
-          "text": "The city hired a public notary, Tomasino de Savere. From here on contracts, wills and court business were written into registers that still survive in the State Archives in Dubrovnik — the oldest place to look for Ragusan families.",
-          "src": [["JArchiveS: Diversa Notariae", "https://arhiv.jas-center.eu/index.php/diversa-notariae-various-documents-of-the-public-notary;isad?sf_culture=hr"], ["JArchiveS: Testamenta Notariae", "https://arhiv.jas-center.eu/index.php/testamenta-notariae-testamenta-de-notaria-wills-registered-at-the-public-notary"]] },
-        { "y": "1333", "sort": 1333, "title": "Ston and Pelješac bought",
-          "text": "Ragusa bought Ston and the Pelješac peninsula from the Serbian king Stefan Dušan and the Bosnian ban Stjepan Kotromanić, then walled Ston to guard its salt pans.",
-          "src": [["Dubrovačka Republika (hr)", "https://hr.wikipedia.org/wiki/Dubrova%C4%8Dka_Republika"]] },
-        { "y": "1345", "sort": 1345, "title": "Mljet",
-          "text": "The island of Mljet came fully under Ragusan rule.",
-          "src": [["Dubrovnik od XIII. do XV. stoljeća", "https://dubrovnikportal.com/kolumne/crtice-iz-povijesti-grada/dubrovnik-od-xiii-do-xv-stoljeca/"]] },
-        { "y": "1358", "sort": 1358, "title": "Free of Venice",
-          "text": "By the Treaty of Zadar Venice gave up Dalmatia. At Visegrád Ragusa accepted the Hungarian-Croatian king as distant overlord — and from then on governed itself as a republic.",
-          "src": [["Republic of Ragusa", "https://en.wikipedia.org/wiki/Republic_of_Ragusa"]] },
-        { "y": "27 July 1377", "sort": 1377, "title": "The world's first quarantine law",
-          "text": "The Great Council ordered arrivals from plague areas to wait a month apart before entering the city — the trentino, the forerunner of quarantine.",
-          "src": [["PubMed: Quarantine in Ragusa", "https://pubmed.ncbi.nlm.nih.gov/11624707/"], ["Lazzarettos of Dubrovnik", "https://en.wikipedia.org/wiki/Lazzarettos_of_Dubrovnik"]] },
-        { "y": "1399", "sort": 1399, "title": "The coast to Neum",
-          "text": "King Ostoja of Bosnia sold the coastland from Kuril to Ston (Primorje, the 'New Lands'), run from Slano.",
-          "src": [["Primorje (medieval župa)", "https://en.wikipedia.org/wiki/Primorje_(medieval_%C5%BEupa)"]] },
-        { "y": "27 Jan 1416", "sort": 1416, "title": "The slave trade banned",
-          "text": "The council forbade citizens and foreigners alike to buy, sell or broker slaves in Ragusa or on its ships.",
-          "src": [["Total Croatia News", "https://total-croatia-news.com/news/politics/dubrovnik-marks-601-years-since-abolishing-slavery/"], ["Human Progress", "https://humanprogress.org/centers-of-progress-pt-37-dubrovnik-public-health/"]] },
-        { "y": "1419–1426", "sort": 1419, "title": "Konavle bought",
-          "text": "The Republic bought Konavle in two halves — the story is told in the Konavle strand. It now reached from Neum to the Bay of Kotor.",
-          "src": [["Konavle", "https://en.wikipedia.org/wiki/Konavle"]] },
-        { "y": "1438–1444", "sort": 1438, "title": "Water and bells",
-          "text": "An aqueduct of about 12 km brought spring water from Šumet to Onofrio's fountains (1438–40); the bell tower on the Luža went up in 1444.",
-          "src": [["Dubrovnik Bell Tower", "https://en.wikipedia.org/wiki/Dubrovnik_Bell_Tower"], ["Onofrio's Fountains", "https://travelcurious.com/croatia/dubrovnik/attractions/onofrios-fountains-ARU5HJ"]] },
-        { "y": "1458", "sort": 1458, "title": "Tribute to the Sultan — and freedom kept",
-          "text": "Ragusa signed a treaty making it a tributary of the Ottoman Empire. The same year the Ragusan merchant Benedetto Cotrugli wrote the first known manual describing double-entry bookkeeping.",
-          "src": [["Republic of Ragusa", "https://en.wikipedia.org/wiki/Republic_of_Ragusa"], ["Benedetto Cotrugli", "https://en.wikipedia.org/wiki/Benedetto_Cotrugli"]] },
-        { "y": "1460s", "sort": 1461, "title": "The walls rise",
-          "text": "With the Ottomans at the door after 1453, Minčeta became a great round tower and Revelin was built to guard the land gate.",
-          "src": [["Walls of Dubrovnik", "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"]] },
-        { "y": "1551", "sort": 1551, "title": "Dundo Maroje",
-          "text": "Marin Držić's comedy was first staged in the hall of the Great Council — the Golden Age of Ragusan letters.",
-          "src": [["Marin Držić", "https://en.wikipedia.org/wiki/Marin_Dr%C5%BEi%C4%87"]] },
-        { "y": "6 April 1667", "sort": 1667, "title": "The Great Earthquake",
-          "text": "An earthquake and the fires after it destroyed much of the city and killed about 5,000 people. The cathedral and much of the Stradun were rebuilt afterwards, in the Baroque look you saw.",
-          "src": [["1667 Dubrovnik earthquake", "https://en.wikipedia.org/wiki/1667_Dubrovnik_earthquake"]] },
-        { "y": "1699", "sort": 1699, "title": "Buffers against Venice",
-          "text": "At Karlowitz Ragusa ceded Neum–Klek and Sutorina to the Ottomans so that Venetian land would never touch its own — which is why Bosnia still reaches the sea at Neum.",
-          "src": [["Neum", "https://en.wikipedia.org/wiki/Neum"]] },
-        { "y": "18 May 1711", "sort": 1711, "title": "Ruđer Bošković born",
-          "text": "The Ragusan Jesuit became one of Europe's great scientists — physicist, astronomer and founder of the Brera observatory in Milan. Dubrovnik's airport is named for him.",
-          "src": [["Ruđer Bošković Institute", "https://irb.hr/eng/Education/Ruder-Josip-Boskovic"]] },
-        { "y": "1806", "sort": 1806, "title": "The French arrive",
-          "text": "On 27 May French troops under Lauriston entered the city; Russian and Montenegrin forces besieged it until 1 October, burning the suburbs and summer villas.",
-          "src": [["Siege of Ragusa (1806)", "https://en.wikipedia.org/wiki/Siege_of_Ragusa_(1806)"], ["The fall of the Republic", "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"]] },
-        { "y": "31 Jan 1808", "sort": 1808, "title": "The Republic ends",
-          "text": "Marshal Marmont abolished the Republic of Ragusa. After Napoleon's fall the Congress of Vienna (1815) gave it to Austria, and it was never restored.",
-          "src": [["Walls of Dubrovnik", "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"], ["Republic of Ragusa", "https://en.wikipedia.org/wiki/Republic_of_Ragusa"]] },
-        { "y": "18 Oct 1944", "sort": 1944, "title": "The Partisans enter",
-          "text": "German troops left and Yugoslav Partisans took the city; in the days after, they executed 53 citizens without trial on the island of Daksa.",
-          "src": [["Daksa massacre", "https://en.wikipedia.org/wiki/Daksa_massacre"]] },
-        { "y": "1979", "sort": 1979, "era": "1960", "title": "World Heritage",
-          "text": "The Old City was added to UNESCO's World Heritage List.",
-          "src": [["EBSCO: Yugoslav Army shells Dubrovnik", "https://www.ebsco.com/research-starters/military-history-and-science/yugoslav-army-shells-dubrovnik/"]] },
-        { "y": "1991–1992", "sort": 1991, "title": "The siege",
-          "text": "The Yugoslav army surrounded Dubrovnik from 1 October 1991 to 31 May 1992. The worst shelling of the Old City came on 6 December 1991; Fort Imperial on Srđ held.",
-          "src": [["Siege of Dubrovnik", "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"]] },
-        { "y": "26 July 2022", "sort": 2022, "title": "The Pelješac Bridge",
-          "text": "The bridge joined the Dubrovnik area to the rest of Croatia by road without crossing Neum.",
-          "src": [["Pelješac Bridge", "https://en.wikipedia.org/wiki/Pelje%C5%A1ac_Bridge"]] }
+     "y": "c. 614",
+     "sort": 614,
+     "tag": "tradition",
+     "title": "Founded by refugees from Epidaurum",
+     "text": "Emperor Constantine VII's De Administrando Imperio (c. 950) says people fleeing the Avar and Slav destruction of Epidaurum (Cavtat) settled the rock of Laus, the start of Ragusa. Digs under the cathedral have found older churches, so how old the settlement really is is still argued.",
+     "src": [
+      [
+       "Dubrovnik",
+       "https://en.wikipedia.org/wiki/Dubrovnik"
+      ],
+      [
+       "Epidaurum",
+       "https://en.wikipedia.org/wiki/Epidaurum"
       ]
+     ],
+     "places": "^Stradun, |^Old City Port"
     },
     {
-      "id": "konavle",
-      "name": "Konavle",
-      "kicker": "Cavtat, Čilipi and the valley",
-      "intro": "The fertile valley south of Dubrovnik — older than the city itself, fought over by Serbian, Bosnian and Herzegovinian lords, then Ragusan farmland for almost 400 years.",
-      "events": [
-        { "y": "Before 228 BC", "sort": -500, "title": "Epidauros",
-          "text": "Cavtat began as Epidauros, a Greek–Illyrian settlement on the coast of the Illyrians.",
-          "src": [["Epidaurum", "https://en.wikipedia.org/wiki/Epidaurum"]] },
-        { "y": "Roman era", "sort": 14, "title": "Roman Epidaurum",
-          "text": "As the Roman colony of Epidaurum it prospered on the coast road. Traces of its field grid, villas, an aqueduct near Vodovađa and a Mithras relief at Močići still survive in Konavle.",
-          "src": [["Cavtat history", "https://www.kompas.hr/cavtat/guide/history"], ["Epidaurum", "https://en.wikipedia.org/wiki/Epidaurum"]] },
-        { "y": "530", "sort": 500, "title": "A bishop of Epidaurum",
-          "text": "Epidaurum's bishop attended the first Church council of Salona.",
-          "src": [["Cavtat history", "https://www.kompas.hr/cavtat/guide/history"]] },
-        { "y": "c. 615", "sort": 614, "tag": "tradition", "title": "Destroyed — and reborn as Ragusa",
-          "text": "Avars and Slavs destroyed Epidaurum; by tradition its people fled to found Ragusa. The town that grew again on the site was long called Ragusa Vecchia, 'Old Ragusa'.",
-          "src": [["Epidaurum", "https://en.wikipedia.org/wiki/Epidaurum"], ["Cavtat history", "https://www.kompas.hr/cavtat/guide/history"]] },
-        { "y": "c. 950", "sort": 900, "title": "Konavli in Travunia",
-          "text": "Constantine VII's De Administrando Imperio lists Konavli (Kanali) together with Travunia, a Slav principality between Ragusa and the Bay of Kotor.",
-          "src": [["Travunia", "https://wikipedia2007.classicistranieri.com/t/r/a/Travunia.html"]] },
-        { "y": "1166–1196", "sort": 1166, "title": "Under the Nemanjić",
-          "text": "Stefan Nemanja brought Travunia, and with it Konavle, under Serbian rule. It remained part of the Serbian realm until his dynasty died out in 1371.",
-          "src": [["Stefan Nemanja", "https://en.wikipedia.org/wiki/Stefan_Nemanja"], ["Nemanjić dynasty", "https://en.wikipedia.org/wiki/Nemanji%C4%87_dynasty"]] },
-        { "y": "1373–1377", "sort": 1373, "era": "1355", "title": "Lords come and go",
-          "text": "After the Serbian empire broke up, Konavle passed to Nikola Altomanović, then the Balšić lords of Zeta. In early 1377 King Tvrtko I took it for Bosnia, and the Sanković family held it for him. Sokol Grad, the fortress above Dunave, first appears in records in 1373.",
-          "src": [["Konavle (područje), bs", "https://bs.wikipedia.org/wiki/Konavle_(podru%C4%8Dje)"], ["Sokol (Konavle)", "https://en.wikipedia.org/wiki/Sokol_(Konavle)"]] },
-        { "y": "1391", "sort": 1391, "era": "1355", "title": "A sale blocked",
-          "text": "The Sanković brothers tried to sell Konavle to Ragusa. The Bosnian lords refused; Vlatko Vuković and Pavle Radinović seized Radič Sanković and split Konavle between themselves.",
-          "src": [["Radič Sanković", "https://en.wikipedia.org/wiki/Radi%C4%8D_Sankovi%C4%87"], ["Herzegovina", "https://en.wikipedia.org/wiki/Herzegovina"]] },
-        { "y": "1419", "sort": 1419, "title": "Upper Konavle bought",
-          "text": "Sandalj Hranić sold the eastern half to Ragusa for 12,000 ducats and a yearly 500 perpers.",
-          "src": [["Radoslav Pavlović", "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"], ["Konavle", "https://en.wikipedia.org/wiki/Konavle"]] },
-        { "y": "1426", "sort": 1426, "title": "Lower Konavle and Cavtat bought",
-          "text": "Radoslav Pavlović sold the western half, with Cavtat and Obod, for 18,000 perpers (the deed is dated 31 December 1426). From 1427 a Ragusan rector governed Konavle from his palace at Pridvorje until 1808.",
-          "src": [["Radoslav Pavlović", "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"], ["Konavle", "https://en.wikipedia.org/wiki/Konavle"]] },
-        { "y": "1430–1432", "sort": 1430, "title": "The Konavle War",
-          "text": "Radoslav Pavlović tried to take back what he had sold. The war ended in 1432 with Konavle staying Ragusan.",
-          "src": [["Radoslav Pavlović", "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"], ["Pavlovića Zemlja", "https://en.wikipedia.org/wiki/Pavlovi%C4%87a_Zemlja"]] },
-        { "y": "1451–1454", "sort": 1451, "title": "Herceg Stjepan's war",
-          "text": "Stjepan Vukčić Kosača, claiming his uncle Sandalj had been cheated, attacked Ragusa and ravaged its lands. The 1454 peace put everything back as it was.",
-          "src": [["Stjepan Vukčić Kosača", "https://en.wikipedia.org/wiki/Stjepan_Vuk%C4%8Di%C4%87_Kosa%C4%8Da"], ["Walls of Dubrovnik", "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"]] },
-        { "y": "1427–1672", "sort": 1453, "title": "Sokol Grad on guard",
-          "text": "The Republic kept a garrison in Sokol Grad under a noble castellan, under 25 and elected for six months at a time,, until the fort was abandoned in 1672.",
-          "src": [["Sokol (Konavle)", "https://en.wikipedia.org/wiki/Sokol_(Konavle)"], ["The Dubrovnik Times", "https://www.thedubrovniktimes.com/times-travel/item/16533-discover-the-hidden-fortress-of-konavle-sokol-grad"]] },
-        { "y": "1799–1800", "sort": 1799, "title": "The Konavle Revolt",
-          "text": "Rising dues, labour on noble estates and a 10 May 1799 order forcing everyone over 15 to buy state salt drove more than 800 Konavle householders to resist (\"Nećete pro Zvekovice\"). The revolt failed, but showed how weak the Republic had become.",
-          "src": [["Konavoska buna (Konavle museums)", "https://blog.migk.hr/2020/05/10/konavoska-buna-10-svibnja-1799/"], ["DubrovnikNet", "https://www.dubrovniknet.hr/niko-kapetanic-konavoska-buna-ili-necete-pro-zvekovice-1/"]] },
-        { "y": "1806", "sort": 1806, "title": "War reaches Cavtat",
-          "text": "When Russian and Montenegrin forces crossed the border, the French holding Konavle fell back; the first clash, on 30 May, was fought just south-east of Cavtat.",
-          "src": [["Balkan Wargamer (from Russian and Italian accounts)", "http://balkandave.blogspot.com/2023/08/war-around-ragusa-dubrovnik-in-1806.html"], ["The fall of the Republic", "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"]] },
-        { "y": "1834 · 1855", "sort": 1834, "era": "1832", "title": "Two sons of Cavtat",
-          "text": "The jurist Baltazar Bogišić (1834–1908) and the painter Vlaho Bukovac (1855–1922) were both born in Cavtat; Bukovac's birth house is now a museum.",
-          "src": [["Time Out: Cavtat", "https://timeout.com/croatia/things-to-do/the-best-things-to-do-in-cavtat"], ["Konavle museums blog", "https://blog.migk.hr/en/2023/08/16/the-role-of-vlaho-bukovac-in-the-creation-of-a-monument-to-baltazar-bogisic/"]] },
-        { "y": "1936 · 1962", "sort": 1936, "title": "From Gruda to Čilipi",
-          "text": "Flights began at an airfield at Gruda in 1936; the present airport at Čilipi opened in 1962.",
-          "src": [["Dubrovnik Airport", "https://en.wikipedia.org/wiki/Dubrovnik_Airport"], ["The Aviation Hub", "https://theaviationhub.co.uk/dubrovnik-airport-guide/"]] },
-        { "y": "1941–1943", "sort": 1941, "title": "Konavle cut in two",
-          "text": "In 1941 western Konavle, run from Cavtat, went to the Axis Independent State of Croatia; the east around Gruda was annexed by Italy, which took Kuna and Pridvorje too in 1942. When Italy surrendered, German troops entered Cavtat on 9 September 1943.",
-          "src": [["Konavle u Drugom svjetskom ratu (Konavle museums)", "https://blog.migk.hr/2024/05/07/konavle-u-drugom-svjetskom-ratu/"], ["Prevlaka", "https://en.wikipedia.org/wiki/Prevlaka"]] },
-        { "y": "Oct 1991", "sort": 1991, "title": "Occupied",
-          "text": "Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. The occupation lasted into 1992, and Konavle's villages were rebuilt over the years that followed.",
-          "src": [["tportal (indictment)", "https://www.tportal.hr/vijesti/clanak/palio-cilipe-stize-ga-pravda-20121206"], ["Dubrovnik Republic (1991–1992)", "https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)"]] },
-        { "y": "1992", "sort": 1992, "title": "Freed",
-          "text": "Under the September 1992 Tuđman–Ćosić agreement the Yugoslav army withdrew, and on 21 October 1992 the last occupied part of the Dubrovnik area was freed.",
-          "src": [["narod.hr", "https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske"], ["Operation Tiger (1992)", "https://en.wikipedia.org/wiki/Operation_Tiger_(1992)"]] },
-        { "y": "2026", "sort": 2026, "title": "Epidaurum still giving up secrets",
-          "text": "Konavle's museum archaeologists found a sealed, untouched late Roman stone sarcophagus (4th–6th century) in Epidaurum's cemetery in Cavtat.",
-          "src": [["Archaeology Magazine", "https://archaeologymag.com/2026/06/sealed-roman-sarcophagus-found-in-epidaurum/"], ["The Dubrovnik Times", "https://www.thedubrovniktimes.com/news/dubrovnik/item/19970-rare-late-roman-sarcophagus-discovered-in-cavtat"]] }
+     "y": "866–867",
+     "sort": 866,
+     "title": "The Saracen siege",
+     "text": "Arab raiders besieged the town for about fifteen months. It held until a Byzantine fleet of some 100 ships under Niketas Ooryphas came to its relief, and Byzantium then reorganised the coast as the Theme of Dalmatia.",
+     "src": [
+      [
+       "Siege of Ragusa (866–868)",
+       "https://en.wikipedia.org/wiki/Siege_of_Ragusa_(866%E2%80%93868)"
+      ],
+      [
+       "Niketas Ooryphas",
+       "https://en.wikipedia.org/wiki/Niketas_Ooryphas"
       ]
+     ]
     },
     {
-      "id": "dalmatia",
-      "name": "Dalmatia",
-      "kicker": "The coast around it",
-      "intro": "The long coast Ragusa belonged to and stood apart from: Illyrian, Greek, Roman, Byzantine, Croatian, Hungarian, Venetian, Austrian — and Croatian again.",
-      "events": [
-        { "y": "4th c. BC", "sort": -385, "title": "Illyrians and Greeks",
-          "text": "The coast is Illyrian land (the Delmatae tribe gave Dalmatia its name), with Greek colonies on islands such as Vis (Issa) and Hvar (Pharos).",
-          "src": [["History of Dalmatia", "https://en.wikipedia.org/wiki/History_of_Dalmatia"]] },
-        { "y": "229 BC", "sort": -229, "title": "Rome arrives",
-          "text": "Rome fought the Illyrian queen Teuta and began two centuries of conquest. It took Salona in 78 BC.",
-          "src": [["Salona", "https://en.wikipedia.org/wiki/Salona"], ["History of Dalmatia", "https://en.wikipedia.org/wiki/History_of_Dalmatia"]] },
-        { "y": "6–9 AD", "sort": 6, "title": "The Great Illyrian Revolt",
-          "text": "After crushing the revolt Rome organised the province of Dalmatia, with its capital at Salona near Split.",
-          "src": [["History of Dalmatia", "https://en.wikipedia.org/wiki/History_of_Dalmatia"], ["Salona", "https://en.wikipedia.org/wiki/Salona"]] },
-        { "y": "295–305", "sort": 295, "title": "Diocletian's palace",
-          "text": "The Dalmatian-born emperor built his retirement palace at Spalatum — the heart of today's Split.",
-          "src": [["History of Split", "https://en.wikipedia.org/wiki/History_of_Split"]] },
-        { "y": "480", "sort": 476, "title": "The last Western emperor",
-          "text": "Julius Nepos, who ruled from Dalmatia, was murdered in the palace in 480. The Ostrogoths took the province in 493; Justinian's armies won it back from 535.",
-          "src": [["Salona", "https://en.wikipedia.org/wiki/Salona"]] },
-        { "y": "7th c.", "sort": 614, "title": "Salona falls, Split is born",
-          "text": "Avar and Slav invasions ended Roman Salona; its people moved into Diocletian's palace. Byzantium kept only the islands and a few coast towns — Zadar, Split, Trogir and Ragusa among them.",
-          "src": [["History of Split", "https://en.wikipedia.org/wiki/History_of_Split"], ["Dalmatia (theme)", "https://en.wikipedia.org/wiki/Dalmatia_(theme)"]] },
-        { "y": "c. 870", "sort": 870, "title": "The Theme of Dalmatia",
-          "text": "Byzantium governed its Dalmatian towns as a province ruled from Zadar, until about 1060.",
-          "src": [["Dalmatia (theme)", "https://en.wikipedia.org/wiki/Dalmatia_(theme)"]] },
-        { "y": "925 · 1060s", "sort": 925, "title": "Kings of Croatia and Dalmatia",
-          "text": "Tomislav is recorded as king around 925; under Peter Krešimir IV the Dalmatian towns came to the crown and the realm took the title Kingdom of Croatia and Dalmatia.",
-          "src": [["Kingdom of Croatia (925–1102)", "https://en.wikipedia.org/wiki/Kingdom_of_Croatia_(925%E2%80%931102)"], ["Peter Krešimir IV", "https://en.wikipedia.org/wiki/Peter_Kre%C5%A1imir_IV"]] },
-        { "y": "1102", "sort": 1102, "tag": "debated", "title": "Union with Hungary",
-          "text": "Croatia and Dalmatia came under the Hungarian king. The famous Pacta conventa describing the deal is now thought to be a later copy or forgery.",
-          "src": [["Pacta conventa", "https://en.wikipedia.org/wiki/Pacta_conventa_(Croatia)"]] },
-        { "y": "1358", "sort": 1358, "title": "Venice out",
-          "text": "The Treaty of Zadar made Venice give up Dalmatia to Louis I of Hungary — the same deal that freed Ragusa.",
-          "src": [["Republic of Ragusa", "https://en.wikipedia.org/wiki/Republic_of_Ragusa"]] },
-        { "y": "1409–1420", "sort": 1409, "title": "Sold to Venice",
-          "text": "Ladislaus of Naples sold his claim to Dalmatia to Venice for 100,000 ducats; by 1420 Venice ruled the coast, which it kept until 1797. Ragusa stayed outside.",
-          "src": [["Dalmatia under Venetian rule", "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"]] },
-        { "y": "1797–1815", "sort": 1797, "title": "Venice falls",
-          "text": "Austria took Venetian Dalmatia in 1797; Napoleon's France had it from 1805/06 and folded it, with Ragusa, into the Illyrian Provinces; the Congress of Vienna returned it all to Austria.",
-          "src": [["Dalmatia under Venetian rule", "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"], ["Kingdom of Dalmatia", "https://en.wikipedia.org/wiki/Kingdom_of_Dalmatia"]] },
-        { "y": "1815–1918", "sort": 1815, "title": "The Kingdom of Dalmatia",
-          "text": "An Austrian crown land, then part of Austria-Hungary, with its capital at Zadar — Dubrovnik and Konavle included.",
-          "src": [["Kingdom of Dalmatia", "https://en.wikipedia.org/wiki/Kingdom_of_Dalmatia"]] },
-        { "y": "1918", "sort": 1918, "title": "Into Yugoslavia",
-          "text": "Dalmatia joined the Kingdom of Serbs, Croats and Slovenes (Yugoslavia from 1929); Zadar went to Italy in 1920.",
-          "src": [["History of Dalmatia", "https://en.wikipedia.org/wiki/History_of_Dalmatia"]] },
-        { "y": "1941–1943", "sort": 1941, "title": "Divided by the Axis",
-          "text": "The Treaties of Rome (18 May 1941) gave Italy much of the coast as the Governorate of Dalmatia; the rest went to the Independent State of Croatia. Italy's surrender in September 1943 ended the arrangement.",
-          "src": [["Treaties of Rome (1941)", "https://en.wikipedia.org/wiki/Treaties_of_Rome_(1941)"], ["Governorate of Dalmatia", "https://en.wikipedia.org/wiki/Governorate_of_Dalmatia"]] },
-        { "y": "1991", "sort": 1991, "title": "Croatia",
-          "text": "Dalmatia became part of independent Croatia, at the price of the war of 1991–95.",
-          "src": [["History of Dalmatia", "https://en.wikipedia.org/wiki/History_of_Dalmatia"]] }
+     "y": "972",
+     "sort": 972,
+     "tag": "tradition",
+     "title": "St. Blaise becomes the city's patron",
+     "text": "Tradition dates the Festivity of St. Blaise, held every 3 February, to 972; UNESCO's record traces it with certainty to 1190 and listed it as intangible heritage in 2009.",
+     "src": [
+      [
+       "UNESCO: Festivity of Saint Blaise",
+       "https://ich.unesco.org/en/RL/00232"
       ]
+     ],
+     "days": [
+      [
+       "02-03",
+       null,
+       "The Festivity of St. Blaise, Dubrovnik's patron"
+      ]
+     ],
+     "places": "^Church of St\\. Blaise|^Pile Gate"
+    },
+    {
+     "y": "1023",
+     "sort": 1023,
+     "title": "Lokrum's Benedictines",
+     "text": "Benedictine monks are first recorded on Lokrum, the island off the city, in 1023. From 1859 it belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out its gardens.",
+     "src": [
+      [
+       "Lokrum",
+       "https://en.wikipedia.org/wiki/Lokrum"
+      ],
+      [
+       "Lokrum: cultural heritage",
+       "https://www.lokrum.hr/en/cultural-heritage"
+      ]
+     ],
+     "places": "Lokrum \\(Otok Lokrum\\)$"
+    },
+    {
+     "y": "1205–1358",
+     "sort": 1205,
+     "title": "Under Venice",
+     "text": "After the Fourth Crusade, Venice took sovereignty and sent the city's count, but Ragusa kept its own councils, laws and trade.",
+     "src": [
+      [
+       "Republic of Ragusa",
+       "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ]
+     ]
+    },
+    {
+     "y": "1252",
+     "sort": 1252,
+     "title": "Lastovo joins",
+     "text": "The island of Lastovo placed itself under Ragusa of its own accord (some sources say 1272).",
+     "src": [
+      [
+       "Dubrovačka biskupija: Sveti Vlaho",
+       "https://db.hr/sveti-vlaho-zastitnik-biskupije/"
+      ]
+     ]
+    },
+    {
+     "y": "29 May 1272",
+     "sort": 1272,
+     "title": "The Statute of Dubrovnik",
+     "text": "The city's law code, in eight books (the seventh is maritime law), framed Ragusan law until the Republic ended in 1808.",
+     "src": [
+      [
+       "Liber Statutorum Ragusii (Hrčak)",
+       "https://hrcak.srce.hr/clanak/30920"
+      ],
+      [
+       "TZ Dubrovnik",
+       "https://tzdubrovnik.hr/lang/en/get/vijesti/80164/the_statute_of_dubrovnik_of_1272.html"
+      ]
+     ],
+     "days": [
+      [
+       "05-29",
+       1272,
+       "The Statute of Dubrovnik was promulgated"
+      ]
+     ]
+    },
+    {
+     "y": "1278",
+     "sort": 1278,
+     "title": "The notaries' books begin",
+     "text": "The city hired a public notary, Tomasino de Savere. From here on contracts, wills and court business were written into registers that still survive in the State Archives in Dubrovnik — the oldest place to look for Ragusan families.",
+     "src": [
+      [
+       "JArchiveS: Diversa Notariae",
+       "https://arhiv.jas-center.eu/index.php/diversa-notariae-various-documents-of-the-public-notary;isad?sf_culture=hr"
+      ],
+      [
+       "JArchiveS: Testamenta Notariae",
+       "https://arhiv.jas-center.eu/index.php/testamenta-notariae-testamenta-de-notaria-wills-registered-at-the-public-notary"
+      ]
+     ]
+    },
+    {
+     "y": "1333",
+     "sort": 1333,
+     "title": "Ston and Pelješac bought",
+     "text": "Ragusa bought Ston and the Pelješac peninsula from the Serbian king Stefan Dušan and the Bosnian ban Stjepan Kotromanić, then walled Ston to guard its salt pans.",
+     "src": [
+      [
+       "Dubrovačka Republika (hr)",
+       "https://hr.wikipedia.org/wiki/Dubrova%C4%8Dka_Republika"
+      ]
+     ]
+    },
+    {
+     "y": "1345",
+     "sort": 1345,
+     "title": "Mljet",
+     "text": "The island of Mljet came fully under Ragusan rule.",
+     "src": [
+      [
+       "Dubrovnik od XIII. do XV. stoljeća",
+       "https://dubrovnikportal.com/kolumne/crtice-iz-povijesti-grada/dubrovnik-od-xiii-do-xv-stoljeca/"
+      ]
+     ]
+    },
+    {
+     "y": "1358",
+     "sort": 1358,
+     "title": "Free of Venice",
+     "text": "By the Treaty of Zadar Venice gave up Dalmatia. At Visegrád Ragusa accepted the Hungarian-Croatian king as distant overlord — and from then on governed itself as a republic.",
+     "src": [
+      [
+       "Republic of Ragusa",
+       "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ]
+     ]
+    },
+    {
+     "y": "27 July 1377",
+     "sort": 1377,
+     "title": "The earliest known quarantine law",
+     "text": "The Great Council — merchants, not doctors — ordered travellers from plague areas to spend 30 days on the islets of Mrkan, Bobara and Supetar off Cavtat before entering the city. The wait was later raised to 40 days: quaranta, the root of 'quarantine'.",
+     "src": [
+      [
+       "PubMed: Quarantine in Ragusa",
+       "https://pubmed.ncbi.nlm.nih.gov/11624707/"
+      ],
+      [
+       "Karantena (hr)",
+       "https://hr.wikipedia.org/wiki/Karantena"
+      ],
+      [
+       "DuList",
+       "https://dulist.hr/na-danasnji-dan-1377-dubrovcani-pokrenuli-prvu-karantenu-u-svijetu/960242/"
+      ]
+     ],
+     "days": [
+      [
+       "07-27",
+       1377,
+       "Ragusa passed the earliest known quarantine law"
+      ]
+     ]
+    },
+    {
+     "y": "1399",
+     "sort": 1399,
+     "title": "The coast to Neum",
+     "text": "King Ostoja of Bosnia sold the coastland from Kuril to Ston (Primorje, the 'New Lands'), run from Slano.",
+     "src": [
+      [
+       "Primorje (medieval župa)",
+       "https://en.wikipedia.org/wiki/Primorje_(medieval_%C5%BEupa)"
+      ]
+     ]
+    },
+    {
+     "y": "27 Jan 1416",
+     "sort": 1416,
+     "title": "The slave trade banned",
+     "text": "The council forbade citizens and foreigners alike to buy, sell or broker slaves in Ragusa or on its ships.",
+     "src": [
+      [
+       "Total Croatia News",
+       "https://total-croatia-news.com/news/politics/dubrovnik-marks-601-years-since-abolishing-slavery/"
+      ],
+      [
+       "Human Progress",
+       "https://humanprogress.org/centers-of-progress-pt-37-dubrovnik-public-health/"
+      ]
+     ],
+     "days": [
+      [
+       "01-27",
+       1416,
+       "Ragusa banned the slave trade"
+      ]
+     ]
+    },
+    {
+     "y": "1419–1426",
+     "sort": 1419,
+     "title": "Konavle bought",
+     "text": "The Republic bought Konavle in two halves — the story is told in the Konavle strand. It now reached from Neum to the Bay of Kotor.",
+     "src": [
+      [
+       "Konavle",
+       "https://en.wikipedia.org/wiki/Konavle"
+      ]
+     ]
+    },
+    {
+     "y": "1438–1444",
+     "sort": 1438,
+     "title": "Water and bells",
+     "text": "An aqueduct of about 12 km brought spring water from Šumet to Onofrio's fountains (1438–40); the bell tower on the Luža went up in 1444.",
+     "src": [
+      [
+       "Dubrovnik Bell Tower",
+       "https://en.wikipedia.org/wiki/Dubrovnik_Bell_Tower"
+      ],
+      [
+       "Onofrio's Fountains",
+       "https://travelcurious.com/croatia/dubrovnik/attractions/onofrios-fountains-ARU5HJ"
+      ]
+     ],
+     "places": "^Onofrio's|^Dubrovnik Bell Tower"
+    },
+    {
+     "y": "1458",
+     "sort": 1458,
+     "title": "Tribute to the Sultan — and freedom kept",
+     "text": "Ragusa signed a treaty making it a tributary of the Ottoman Empire. The same year the Ragusan merchant Benedetto Cotrugli wrote the first known manual describing double-entry bookkeeping.",
+     "src": [
+      [
+       "Republic of Ragusa",
+       "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ],
+      [
+       "Benedetto Cotrugli",
+       "https://en.wikipedia.org/wiki/Benedetto_Cotrugli"
+      ]
+     ]
+    },
+    {
+     "y": "1460s",
+     "sort": 1461,
+     "title": "The walls rise",
+     "text": "With the Ottomans at the door after 1453, Minčeta became a great round tower and Revelin was built to guard the land gate.",
+     "src": [
+      [
+       "Walls of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
+      ]
+     ],
+     "places": "^Fort (Minčeta|Revelin|Bokar|St\\. John|St\\. Stephen)"
+    },
+    {
+     "y": "1551",
+     "sort": 1551,
+     "title": "Dundo Maroje",
+     "text": "Marin Držić's comedy was first staged in the hall of the Great Council — the Golden Age of Ragusan letters.",
+     "src": [
+      [
+       "Marin Držić",
+       "https://en.wikipedia.org/wiki/Marin_Dr%C5%BEi%C4%87"
+      ]
+     ]
+    },
+    {
+     "y": "6 April 1667",
+     "sort": 1667,
+     "title": "The Great Earthquake",
+     "text": "An earthquake and the fires after it destroyed much of the city and killed about 5,000 people. The cathedral and much of the Stradun were rebuilt afterwards, in the Baroque look you saw.",
+     "src": [
+      [
+       "1667 Dubrovnik earthquake",
+       "https://en.wikipedia.org/wiki/1667_Dubrovnik_earthquake"
+      ]
+     ],
+     "days": [
+      [
+       "04-06",
+       1667,
+       "The Great Earthquake struck Dubrovnik"
+      ]
+     ],
+     "places": "^Stradun, |^Cathedral of the Assumption"
+    },
+    {
+     "y": "1699",
+     "sort": 1699,
+     "title": "Buffers against Venice",
+     "text": "At Karlowitz Ragusa ceded Neum–Klek and Sutorina to the Ottomans so that Venetian land would never touch its own — which is why Bosnia still reaches the sea at Neum.",
+     "src": [
+      [
+       "Neum",
+       "https://en.wikipedia.org/wiki/Neum"
+      ]
+     ]
+    },
+    {
+     "y": "18 May 1711",
+     "sort": 1711,
+     "title": "Ruđer Bošković born",
+     "text": "The Ragusan Jesuit became one of Europe's great scientists — physicist, astronomer and founder of the Brera observatory in Milan. Dubrovnik's airport is named for him.",
+     "src": [
+      [
+       "Ruđer Bošković Institute",
+       "https://irb.hr/eng/Education/Ruder-Josip-Boskovic"
+      ]
+     ],
+     "days": [
+      [
+       "05-18",
+       1711,
+       "Ruđer Bošković was born in Dubrovnik"
+      ]
+     ],
+     "places": "Ruđer Bošković Airport"
+    },
+    {
+     "y": "1806",
+     "sort": 1806,
+     "title": "The French arrive",
+     "text": "On 27 May French troops under Lauriston entered the city; Russian and Montenegrin forces besieged it until 1 October, burning the suburbs and summer villas.",
+     "src": [
+      [
+       "Siege of Ragusa (1806)",
+       "https://en.wikipedia.org/wiki/Siege_of_Ragusa_(1806)"
+      ],
+      [
+       "The fall of the Republic",
+       "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"
+      ]
+     ],
+     "days": [
+      [
+       "05-27",
+       1806,
+       "French troops entered Dubrovnik"
+      ]
+     ],
+     "places": "^Fort Imperial"
+    },
+    {
+     "y": "31 Jan 1808",
+     "sort": 1808,
+     "title": "The Republic ends",
+     "text": "Marshal Marmont abolished the Republic of Ragusa. After Napoleon's fall the Congress of Vienna (1815) gave it to Austria, and it was never restored.",
+     "src": [
+      [
+       "Walls of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
+      ],
+      [
+       "Republic of Ragusa",
+       "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ]
+     ],
+     "days": [
+      [
+       "01-31",
+       1808,
+       "Marmont abolished the Republic of Ragusa"
+      ]
+     ]
+    },
+    {
+     "y": "18 Oct 1944",
+     "sort": 1944,
+     "title": "The Partisans enter",
+     "text": "German troops left and Yugoslav Partisans took the city; in the days after, they executed 53 citizens without trial on the island of Daksa.",
+     "src": [
+      [
+       "Daksa massacre",
+       "https://en.wikipedia.org/wiki/Daksa_massacre"
+      ]
+     ],
+     "days": [
+      [
+       "10-18",
+       1944,
+       "Yugoslav Partisans entered Dubrovnik"
+      ]
+     ]
+    },
+    {
+     "y": "1979",
+     "sort": 1979,
+     "era": "1960",
+     "title": "World Heritage",
+     "text": "The Old City was added to UNESCO's World Heritage List.",
+     "src": [
+      [
+       "EBSCO: Yugoslav Army shells Dubrovnik",
+       "https://www.ebsco.com/research-starters/military-history-and-science/yugoslav-army-shells-dubrovnik/"
+      ]
+     ]
+    },
+    {
+     "y": "1991–1992",
+     "sort": 1991,
+     "title": "The siege",
+     "text": "The Yugoslav army surrounded Dubrovnik from 1 October 1991 to 31 May 1992. The worst shelling of the Old City came on 6 December 1991; Fort Imperial on Srđ held.",
+     "src": [
+      [
+       "Siege of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
+      ]
+     ],
+     "days": [
+      [
+       "10-01",
+       1991,
+       "The siege of Dubrovnik began"
+      ],
+      [
+       "12-06",
+       1991,
+       "The worst shelling of the Old City"
+      ],
+      [
+       "05-31",
+       1992,
+       "The siege of Dubrovnik ended"
+      ]
+     ],
+     "places": "^Fort Imperial|^Mount Srđ Cross"
+    },
+    {
+     "y": "26 July 2022",
+     "sort": 2022,
+     "title": "The Pelješac Bridge",
+     "text": "The bridge joined the Dubrovnik area to the rest of Croatia by road without crossing Neum.",
+     "src": [
+      [
+       "Pelješac Bridge",
+       "https://en.wikipedia.org/wiki/Pelje%C5%A1ac_Bridge"
+      ]
+     ],
+     "days": [
+      [
+       "07-26",
+       2022,
+       "The Pelješac Bridge opened"
+      ]
+     ]
     }
-  ],
-  "records": {
-    "title": "Finding the family in the records",
-    "points": [
-      "Church birth (baptism) registers only became compulsory with the Council of Trent's decree of 11 November 1563. Croatia's oldest surviving parish register starts in Umag, Istria, in 1483; the Dubrovnik diocese's oldest is a 1580 death register from Suđurađ on Šipan.",
-      "For the 1400s, Ragusa's own government records are where families appear: the notarial and chancery books (Diversa Notariae, Diversa Cancellariae) and registered wills (Testamenta Notariae), kept from 1278–1282 onward in the State Archives in Dubrovnik, plus confraternity rolls such as the Antunini register.",
-      "Konavle became Ragusan in 1419–1426, so from then on Konavle families turn up in the Republic's land, tax and court records. Konavle's surviving parish registers mostly begin in the late 1700s (Veljaci's baptisms run from 1786).",
-      "Parish registers taken after 1945 were returned to the Dubrovnik diocese in 2022; FamilySearch also holds digitised Croatian church books."
-    ],
-    "src": [["Dubrovačka biskupija (registers returned)", "https://db.hr/dubrovackoj-biskupiji-vraceno-210-maticnih-knjige-oduzetih-nakon-drugog-svjetskog-rata/"],
-            ["Croatian church records (exyugenealogy)", "https://exyugenealogy.net/archives-church-records/"],
-            ["Testamenta Notariae (JArchiveS)", "https://arhiv.jas-center.eu/index.php/testamenta-notariae-testamenta-de-notaria-wills-registered-at-the-public-notary"],
-            ["Antunini of Dubrovnik (ResearchGate)", "https://www.researchgate.net/publication/267897109_U_predvorju_vlasti_Dubrovacki_antunini_u_kasnom_srednjem_vijeku_On_the_Threshold_of_Power_The_Antunini_of_Dubrovnik_in_the_Late_Middle_Ages"],
-            ["Veljaci baptisms 1786–1808", "https://www.researchgate.net/publication/318396344_Analiza_maticne_knjige_krstenih_danasnje_zupe_Veljaci_1786_-_1808"],
-            ["FamilySearch: Croatia church books", "https://www.familysearch.org/en/wiki/Croatia,_Church_Books_-_FamilySearch_Historical_Records"]]
+   ]
+  },
+  {
+   "id": "konavle",
+   "name": "Konavle",
+   "kicker": "Cavtat, Čilipi and the valley",
+   "intro": "The fertile valley south of Dubrovnik — older than the city itself, fought over by Serbian, Bosnian and Herzegovinian lords, then Ragusan farmland for almost 400 years.",
+   "events": [
+    {
+     "y": "Before Rome",
+     "sort": -500,
+     "title": "Epidauros",
+     "text": "Cavtat began as Epidauros, a settlement on the Illyrian coast. Some accounts call it a Greek colony; Croatian archaeologists note there isn't enough evidence to say so.",
+     "src": [
+      [
+       "Epigrafska baština rimskodobnog Epidaura (ResearchGate)",
+       "https://www.researchgate.net/publication/27220235_Epigrafska_bastina_rimskodobnog_Epidaura"
+      ],
+      [
+       "Epidaurum",
+       "https://en.wikipedia.org/wiki/Epidaurum"
+      ]
+     ]
+    },
+    {
+     "y": "1st c. BC",
+     "sort": -45,
+     "title": "Roman Epidaurum",
+     "text": "Epidaurum was made a Roman colony, by most accounts in Caesar's time, as a reward for backing the winning side in Rome's civil war. Traces of its field grid, villas, an aqueduct near Vodovađa and a Mithras relief at Močići survive in Konavle.",
+     "src": [
+      [
+       "Epigrafska baština rimskodobnog Epidaura (ResearchGate)",
+       "https://www.researchgate.net/publication/27220235_Epigrafska_bastina_rimskodobnog_Epidaura"
+      ],
+      [
+       "Cavtat history (kompas.hr)",
+       "https://www.kompas.hr/cavtat/guide/history"
+      ]
+     ],
+     "places": "(Luka Cavtat|Old City \\(Stari grad\\)), Cavtat$|Cavtat Harbor"
+    },
+    {
+     "y": "530s",
+     "sort": 500,
+     "title": "A bishop of Epidaurum",
+     "text": "Epidaurum had become a bishop's seat; its bishop took part in the Church councils held at Salona in the 530s.",
+     "src": [
+      [
+       "ToposText: Epidaurus",
+       "https://topostext.org/place/426182UEpi"
+      ],
+      [
+       "Akademija Art: Zapisi sa Cavtata",
+       "https://akademija-art.hr/2023/04/19/bozidar-prorocic-zapisi-sa-cavtata-i/"
+      ]
+     ]
+    },
+    {
+     "y": "c. 615",
+     "sort": 614,
+     "tag": "tradition",
+     "title": "Destroyed — and reborn as Ragusa",
+     "text": "Avars and Slavs destroyed Epidaurum; by tradition its people fled to found Ragusa. The town that grew again on the site was long called Ragusa Vecchia, 'Old Ragusa'.",
+     "src": [
+      [
+       "Epidaurum",
+       "https://en.wikipedia.org/wiki/Epidaurum"
+      ],
+      [
+       "Cavtat history",
+       "https://www.kompas.hr/cavtat/guide/history"
+      ]
+     ]
+    },
+    {
+     "y": "c. 950",
+     "sort": 900,
+     "title": "Konavli in Travunia",
+     "text": "Constantine VII's De Administrando Imperio has a chapter \"Of the Terbounians and Kanalites\": the Kanalites were the Slavs of Konavle, ruled together with Travunia between Ragusa and the Bay of Kotor.",
+     "src": [
+      [
+       "Kanalites",
+       "https://en.wikipedia.org/wiki/Kanalites"
+      ],
+      [
+       "Proleksis enciklopedija: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ]
+     ]
+    },
+    {
+     "y": "1166–1196",
+     "sort": 1166,
+     "title": "Under the Nemanjić",
+     "text": "Stefan Nemanja brought Travunia, and with it Konavle, under Serbian rule. It remained part of the Serbian realm until his dynasty died out in 1371.",
+     "src": [
+      [
+       "Stefan Nemanja",
+       "https://en.wikipedia.org/wiki/Stefan_Nemanja"
+      ],
+      [
+       "Nemanjić dynasty",
+       "https://en.wikipedia.org/wiki/Nemanji%C4%87_dynasty"
+      ]
+     ]
+    },
+    {
+     "y": "1373–1378",
+     "sort": 1373,
+     "era": "1355",
+     "title": "Lords come and go",
+     "text": "After the Serbian empire broke up, Konavle passed to Nikola Altomanović, then the Balšić lords of Zeta. In 1377–78 King Tvrtko I took it for Bosnia, and the Sanković family held it for him. Sokol Grad, the fortress above Dunave, first appears in records in 1373.",
+     "src": [
+      [
+       "Proleksis enciklopedija: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ],
+      [
+       "Konavle (područje), bs",
+       "https://bs.wikipedia.org/wiki/Konavle_(podru%C4%8Dje)"
+      ],
+      [
+       "Sokol (Konavle)",
+       "https://en.wikipedia.org/wiki/Sokol_(Konavle)"
+      ]
+     ]
+    },
+    {
+     "y": "1391",
+     "sort": 1391,
+     "era": "1355",
+     "title": "A sale blocked",
+     "text": "The Sanković brothers tried to sell Konavle to Ragusa. The Bosnian lords refused; Vlatko Vuković and Pavle Radinović seized Radič Sanković and split Konavle between themselves.",
+     "src": [
+      [
+       "Radič Sanković",
+       "https://en.wikipedia.org/wiki/Radi%C4%8D_Sankovi%C4%87"
+      ],
+      [
+       "Herzegovina",
+       "https://en.wikipedia.org/wiki/Herzegovina"
+      ]
+     ]
+    },
+    {
+     "y": "1419",
+     "sort": 1419,
+     "title": "Upper Konavle bought",
+     "text": "Sandalj Hranić sold the eastern half to Ragusa for 12,000 ducats and a yearly 500 perpers.",
+     "src": [
+      [
+       "Proleksis enciklopedija: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ],
+      [
+       "Radoslav Pavlović",
+       "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"
+      ],
+      [
+       "Konavle",
+       "https://en.wikipedia.org/wiki/Konavle"
+      ]
+     ]
+    },
+    {
+     "y": "1426",
+     "sort": 1426,
+     "title": "Lower Konavle and Cavtat bought",
+     "text": "Radoslav Pavlović sold the western half, with Cavtat and Obod, for 18,000 perpers (the deed is dated 31 December 1426). From 1427 a Ragusan rector governed Konavle from his palace at Pridvorje until 1808.",
+     "src": [
+      [
+       "Proleksis enciklopedija: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ],
+      [
+       "Radoslav Pavlović",
+       "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"
+      ],
+      [
+       "Konavle",
+       "https://en.wikipedia.org/wiki/Konavle"
+      ]
+     ],
+     "days": [
+      [
+       "12-31",
+       1426,
+       "Ragusa bought Lower Konavle and Cavtat"
+      ]
+     ],
+     "places": "^(?!Ludo More)(.*(Luka Cavtat|Žal|Tiha Bay \\(Uvala Tiha\\)|Old City \\(Stari grad\\)), Cavtat$|.*Cavtat Harbor)"
+    },
+    {
+     "y": "1430–1432",
+     "sort": 1430,
+     "title": "The Konavle War",
+     "text": "Radoslav Pavlović tried to take back what he had sold. The war ended in 1432 with Konavle staying Ragusan.",
+     "src": [
+      [
+       "Radoslav Pavlović",
+       "https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87"
+      ],
+      [
+       "Pavlovića Zemlja",
+       "https://en.wikipedia.org/wiki/Pavlovi%C4%87a_Zemlja"
+      ]
+     ]
+    },
+    {
+     "y": "1451–1454",
+     "sort": 1451,
+     "title": "Herceg Stjepan's war",
+     "text": "Stjepan Vukčić Kosača, claiming his uncle Sandalj had been cheated, attacked Ragusa and ravaged its lands. The 1454 peace put everything back as it was.",
+     "src": [
+      [
+       "Stjepan Vukčić Kosača",
+       "https://en.wikipedia.org/wiki/Stjepan_Vuk%C4%8Di%C4%87_Kosa%C4%8Da"
+      ],
+      [
+       "Walls of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
+      ]
+     ]
+    },
+    {
+     "y": "1427–1672",
+     "sort": 1453,
+     "title": "Sokol Grad on guard",
+     "text": "The Republic kept a garrison in Sokol Grad under a noble castellan, under 25 and elected for six months at a time,, until the fort was abandoned in 1672.",
+     "src": [
+      [
+       "Sokol (Konavle)",
+       "https://en.wikipedia.org/wiki/Sokol_(Konavle)"
+      ],
+      [
+       "The Dubrovnik Times",
+       "https://www.thedubrovniktimes.com/times-travel/item/16533-discover-the-hidden-fortress-of-konavle-sokol-grad"
+      ]
+     ]
+    },
+    {
+     "y": "1799–1800",
+     "sort": 1799,
+     "title": "The Konavle Revolt",
+     "text": "Rising dues, labour on noble estates and a 10 May 1799 order forcing everyone over 15 to buy state salt drove more than 800 Konavle householders to resist (\"Nećete pro Zvekovice\"). The revolt failed, but showed how weak the Republic had become.",
+     "src": [
+      [
+       "Konavoska buna (Konavle museums)",
+       "https://blog.migk.hr/2020/05/10/konavoska-buna-10-svibnja-1799/"
+      ],
+      [
+       "DubrovnikNet",
+       "https://www.dubrovniknet.hr/niko-kapetanic-konavoska-buna-ili-necete-pro-zvekovice-1/"
+      ]
+     ],
+     "days": [
+      [
+       "05-10",
+       1799,
+       "The salt order that sparked the Konavle Revolt"
+      ]
+     ]
+    },
+    {
+     "y": "1806",
+     "sort": 1806,
+     "title": "War reaches Cavtat",
+     "text": "When Russian and Montenegrin forces crossed the border, the French holding Konavle fell back; the first clash, on 30 May, was fought just south-east of Cavtat.",
+     "src": [
+      [
+       "Balkan Wargamer (from Russian and Italian accounts)",
+       "http://balkandave.blogspot.com/2023/08/war-around-ragusa-dubrovnik-in-1806.html"
+      ],
+      [
+       "The fall of the Republic",
+       "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"
+      ]
+     ],
+     "days": [
+      [
+       "05-30",
+       1806,
+       "The first clash of 1806, near Cavtat"
+      ]
+     ]
+    },
+    {
+     "y": "1834 · 1855",
+     "sort": 1834,
+     "era": "1832",
+     "title": "Two sons of Cavtat",
+     "text": "The jurist Baltazar Bogišić (1834–1908) and the painter Vlaho Bukovac (1855–1922) were both born in Cavtat; Bukovac's birth house is now a museum.",
+     "src": [
+      [
+       "Time Out: Cavtat",
+       "https://timeout.com/croatia/things-to-do/the-best-things-to-do-in-cavtat"
+      ],
+      [
+       "Konavle museums blog",
+       "https://blog.migk.hr/en/2023/08/16/the-role-of-vlaho-bukovac-in-the-creation-of-a-monument-to-baltazar-bogisic/"
+      ]
+     ]
+    },
+    {
+     "y": "1936 · 1962",
+     "sort": 1936,
+     "title": "From Gruda to Čilipi",
+     "text": "Flights began at an airfield at Gruda in 1936; the present airport at Čilipi opened in 1962.",
+     "src": [
+      [
+       "Dubrovnik Airport",
+       "https://en.wikipedia.org/wiki/Dubrovnik_Airport"
+      ],
+      [
+       "The Aviation Hub",
+       "https://theaviationhub.co.uk/dubrovnik-airport-guide/"
+      ]
+     ],
+     "places": "Čilipi$"
+    },
+    {
+     "y": "1941–1943",
+     "sort": 1941,
+     "title": "Konavle cut in two",
+     "text": "In 1941 western Konavle, run from Cavtat, went to the Axis Independent State of Croatia; the east around Gruda was annexed by Italy, which took Kuna and Pridvorje too in 1942. When Italy surrendered, German troops entered Cavtat on 9 September 1943.",
+     "src": [
+      [
+       "Konavle u Drugom svjetskom ratu (Konavle museums)",
+       "https://blog.migk.hr/2024/05/07/konavle-u-drugom-svjetskom-ratu/"
+      ],
+      [
+       "Prevlaka",
+       "https://en.wikipedia.org/wiki/Prevlaka"
+      ]
+     ],
+     "days": [
+      [
+       "09-09",
+       1943,
+       "German troops entered Cavtat"
+      ]
+     ]
+    },
+    {
+     "y": "Oct 1991",
+     "sort": 1991,
+     "title": "Occupied",
+     "text": "Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. The occupation lasted into 1992, and Konavle's villages were rebuilt over the years that followed.",
+     "src": [
+      [
+       "tportal (indictment)",
+       "https://www.tportal.hr/vijesti/clanak/palio-cilipe-stize-ga-pravda-20121206"
+      ],
+      [
+       "Dubrovnik Republic (1991–1992)",
+       "https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)"
+      ]
+     ],
+     "days": [
+      [
+       "10-05",
+       1991,
+       "Yugoslav army units began burning Čilipi"
+      ],
+      [
+       "10-15",
+       1991,
+       "The Yugoslav army took Cavtat"
+      ]
+     ],
+     "places": "Čilipi$"
+    },
+    {
+     "y": "1992",
+     "sort": 1992,
+     "title": "Freed",
+     "text": "Under the September 1992 Tuđman–Ćosić agreement the Yugoslav army withdrew, and on 21 October 1992 the last occupied part of the Dubrovnik area was freed.",
+     "src": [
+      [
+       "narod.hr",
+       "https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske"
+      ],
+      [
+       "Operation Tiger (1992)",
+       "https://en.wikipedia.org/wiki/Operation_Tiger_(1992)"
+      ]
+     ],
+     "days": [
+      [
+       "10-21",
+       1992,
+       "The last occupied part of the Dubrovnik area was freed"
+      ]
+     ]
+    },
+    {
+     "y": "2026",
+     "sort": 2026,
+     "title": "Epidaurum still giving up secrets",
+     "text": "Konavle's museum archaeologists found a sealed, untouched late Roman stone sarcophagus (4th–6th century) in Epidaurum's cemetery in Cavtat.",
+     "src": [
+      [
+       "Archaeology Magazine",
+       "https://archaeologymag.com/2026/06/sealed-roman-sarcophagus-found-in-epidaurum/"
+      ],
+      [
+       "The Dubrovnik Times",
+       "https://www.thedubrovniktimes.com/news/dubrovnik/item/19970-rare-late-roman-sarcophagus-discovered-in-cavtat"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dalmatia",
+   "name": "Dalmatia",
+   "kicker": "The coast around it",
+   "intro": "The long coast Ragusa belonged to and stood apart from: Illyrian, Greek, Roman, Byzantine, Croatian, Hungarian, Venetian, Austrian — and Croatian again.",
+   "events": [
+    {
+     "y": "4th c. BC",
+     "sort": -385,
+     "title": "Illyrians and Greeks",
+     "text": "The coast is Illyrian land (the Delmatae tribe gave Dalmatia its name), with Greek colonies on islands such as Vis (Issa) and Hvar (Pharos).",
+     "src": [
+      [
+       "History of Dalmatia",
+       "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "229 BC",
+     "sort": -229,
+     "title": "Rome arrives",
+     "text": "Rome fought the Illyrian queen Teuta and began two centuries of conquest. It took Salona in 78 BC.",
+     "src": [
+      [
+       "Salona",
+       "https://en.wikipedia.org/wiki/Salona"
+      ],
+      [
+       "History of Dalmatia",
+       "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "6–9 AD",
+     "sort": 6,
+     "title": "The Great Illyrian Revolt",
+     "text": "After crushing the revolt Rome organised the province of Dalmatia, with its capital at Salona near Split.",
+     "src": [
+      [
+       "History of Dalmatia",
+       "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ],
+      [
+       "Salona",
+       "https://en.wikipedia.org/wiki/Salona"
+      ]
+     ]
+    },
+    {
+     "y": "295–305",
+     "sort": 295,
+     "title": "Diocletian's palace",
+     "text": "The Dalmatian-born emperor built his retirement palace at Spalatum — the heart of today's Split.",
+     "src": [
+      [
+       "History of Split",
+       "https://en.wikipedia.org/wiki/History_of_Split"
+      ]
+     ]
+    },
+    {
+     "y": "480",
+     "sort": 476,
+     "title": "The last Western emperor",
+     "text": "Julius Nepos, who ruled from Dalmatia, was murdered in the palace in 480. The Ostrogoths took the province in 493; Justinian's armies won it back from 535.",
+     "src": [
+      [
+       "Salona",
+       "https://en.wikipedia.org/wiki/Salona"
+      ]
+     ]
+    },
+    {
+     "y": "7th c.",
+     "sort": 614,
+     "title": "Salona falls, Split is born",
+     "text": "Avar and Slav invasions ended Roman Salona; its people moved into Diocletian's palace. Byzantium kept only the islands and a few coast towns — Zadar, Split, Trogir and Ragusa among them.",
+     "src": [
+      [
+       "History of Split",
+       "https://en.wikipedia.org/wiki/History_of_Split"
+      ],
+      [
+       "Dalmatia (theme)",
+       "https://en.wikipedia.org/wiki/Dalmatia_(theme)"
+      ]
+     ]
+    },
+    {
+     "y": "c. 870",
+     "sort": 870,
+     "title": "The Theme of Dalmatia",
+     "text": "Byzantium governed its Dalmatian towns as a province ruled from Zadar, until about 1060.",
+     "src": [
+      [
+       "Dalmatia (theme)",
+       "https://en.wikipedia.org/wiki/Dalmatia_(theme)"
+      ]
+     ]
+    },
+    {
+     "y": "925 · 1060s",
+     "sort": 925,
+     "title": "Kings of Croatia and Dalmatia",
+     "text": "Tomislav is recorded as king around 925; under Peter Krešimir IV the Dalmatian towns came to the crown and the realm took the title Kingdom of Croatia and Dalmatia.",
+     "src": [
+      [
+       "Kingdom of Croatia (925–1102)",
+       "https://en.wikipedia.org/wiki/Kingdom_of_Croatia_(925%E2%80%931102)"
+      ],
+      [
+       "Peter Krešimir IV",
+       "https://en.wikipedia.org/wiki/Peter_Kre%C5%A1imir_IV"
+      ]
+     ]
+    },
+    {
+     "y": "1102",
+     "sort": 1102,
+     "tag": "debated",
+     "title": "Union with Hungary",
+     "text": "Croatia and Dalmatia came under the Hungarian king. The famous Pacta conventa describing the deal is now thought to be a later copy or forgery.",
+     "src": [
+      [
+       "Pacta conventa",
+       "https://en.wikipedia.org/wiki/Pacta_conventa_(Croatia)"
+      ]
+     ]
+    },
+    {
+     "y": "1358",
+     "sort": 1358,
+     "title": "Venice out",
+     "text": "The Treaty of Zadar made Venice give up Dalmatia to Louis I of Hungary — the same deal that freed Ragusa.",
+     "src": [
+      [
+       "Republic of Ragusa",
+       "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ]
+     ]
+    },
+    {
+     "y": "1409–1420",
+     "sort": 1409,
+     "title": "Sold to Venice",
+     "text": "Ladislaus of Naples sold his claim to Dalmatia to Venice for 100,000 ducats; by 1420 Venice ruled the coast, which it kept until 1797. Ragusa stayed outside.",
+     "src": [
+      [
+       "Dalmatia under Venetian rule",
+       "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"
+      ]
+     ]
+    },
+    {
+     "y": "1797–1815",
+     "sort": 1797,
+     "title": "Venice falls",
+     "text": "Austria took Venetian Dalmatia in 1797; Napoleon's France had it from 1805/06 and folded it, with Ragusa, into the Illyrian Provinces; the Congress of Vienna returned it all to Austria.",
+     "src": [
+      [
+       "Dalmatia under Venetian rule",
+       "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"
+      ],
+      [
+       "Kingdom of Dalmatia",
+       "https://en.wikipedia.org/wiki/Kingdom_of_Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "1815–1918",
+     "sort": 1815,
+     "title": "The Kingdom of Dalmatia",
+     "text": "An Austrian crown land, then part of Austria-Hungary, with its capital at Zadar — Dubrovnik and Konavle included.",
+     "src": [
+      [
+       "Kingdom of Dalmatia",
+       "https://en.wikipedia.org/wiki/Kingdom_of_Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "1918",
+     "sort": 1918,
+     "title": "Into Yugoslavia",
+     "text": "Dalmatia joined the Kingdom of Serbs, Croats and Slovenes (Yugoslavia from 1929); Zadar went to Italy in 1920.",
+     "src": [
+      [
+       "History of Dalmatia",
+       "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "1941–1943",
+     "sort": 1941,
+     "title": "Divided by the Axis",
+     "text": "The Treaties of Rome (18 May 1941) gave Italy much of the coast as the Governorate of Dalmatia; the rest went to the Independent State of Croatia. Italy's surrender in September 1943 ended the arrangement.",
+     "src": [
+      [
+       "Treaties of Rome (1941)",
+       "https://en.wikipedia.org/wiki/Treaties_of_Rome_(1941)"
+      ],
+      [
+       "Governorate of Dalmatia",
+       "https://en.wikipedia.org/wiki/Governorate_of_Dalmatia"
+      ]
+     ],
+     "days": [
+      [
+       "05-18",
+       1941,
+       "The Treaties of Rome divided Dalmatia"
+      ]
+     ]
+    },
+    {
+     "y": "1991",
+     "sort": 1991,
+     "title": "Croatia",
+     "text": "Dalmatia became part of independent Croatia, at the price of the war of 1991–95.",
+     "src": [
+      [
+       "History of Dalmatia",
+       "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ]
+     ]
+    }
+   ]
   }
+ ],
+ "records": {
+  "title": "Finding the family in the records",
+  "points": [
+   "Church birth (baptism) registers only became compulsory with the Council of Trent's decree of 11 November 1563. Croatia's oldest surviving parish register starts in Umag, Istria, in 1483; the Dubrovnik diocese's oldest is a 1580 death register from Suđurađ on Šipan.",
+   "For the 1400s, Ragusa's own government records are where families appear: the notarial and chancery books (Diversa Notariae, Diversa Cancellariae) and registered wills (Testamenta Notariae), kept from 1278–1282 onward in the State Archives in Dubrovnik, plus confraternity rolls such as the Antunini register.",
+   "Konavle became Ragusan in 1419–1426, so from then on Konavle families turn up in the Republic's land, tax and court records. Konavle's surviving parish registers mostly begin in the late 1700s (Veljaci's baptisms run from 1786).",
+   "Parish registers taken after 1945 were returned to the Dubrovnik diocese in 2022; FamilySearch also holds digitised Croatian church books."
+  ],
+  "src": [
+   [
+    "Dubrovačka biskupija (registers returned)",
+    "https://db.hr/dubrovackoj-biskupiji-vraceno-210-maticnih-knjige-oduzetih-nakon-drugog-svjetskog-rata/"
+   ],
+   [
+    "Croatian church records (exyugenealogy)",
+    "https://exyugenealogy.net/archives-church-records/"
+   ],
+   [
+    "Testamenta Notariae (JArchiveS)",
+    "https://arhiv.jas-center.eu/index.php/testamenta-notariae-testamenta-de-notaria-wills-registered-at-the-public-notary"
+   ],
+   [
+    "Antunini of Dubrovnik (ResearchGate)",
+    "https://www.researchgate.net/publication/267897109_U_predvorju_vlasti_Dubrovacki_antunini_u_kasnom_srednjem_vijeku_On_the_Threshold_of_Power_The_Antunini_of_Dubrovnik_in_the_Late_Middle_Ages"
+   ],
+   [
+    "Veljaci baptisms 1786–1808",
+    "https://www.researchgate.net/publication/318396344_Analiza_maticne_knjige_krstenih_danasnje_zupe_Veljaci_1786_-_1808"
+   ],
+   [
+    "FamilySearch: Croatia church books",
+    "https://www.familysearch.org/en/wiki/Croatia,_Church_Books_-_FamilySearch_Historical_Records"
+   ]
+  ]
+ }
 }

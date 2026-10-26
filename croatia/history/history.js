@@ -358,6 +358,8 @@
       const w = vp.clientWidth, h = vp.clientHeight;
       tx = Math.min(0, Math.max(w - w * scale, tx)); ty = Math.min(0, Math.max(h - h * scale, ty));
       stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      // un-zoomed, a vertical finger drag scrolls the page (touch-action: pan-y); zoomed, every drag pans the map
+      vp.classList.toggle('bh-zoomed', scale > 1);
       stage.style.setProperty('--bh-inv', (1 / scale).toFixed(4));
       clearTimeout(apply._t);
       apply._t = setTimeout(() => declutter([...labels.querySelectorAll('.bh-lab,.bh-oldcap')], [...labels.querySelectorAll('.bh-cap,.bh-raglab')]), 120);
@@ -376,6 +378,8 @@
       zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - r.left, e.clientY - r.top);
     }, { passive: false });
     const pts = new Map(); let moved = 0, pinch0 = null;
+    // with pan-y the browser may claim a two-finger gesture as a page scroll; keep pinches for the map
+    vp.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
     vp.addEventListener('pointerdown', e => {
       if (e.target.closest('.bh-zoom')) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0;

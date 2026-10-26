@@ -919,10 +919,12 @@ html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 .dcc-hist-note-a { justify-self: start; font-family: var(--dcc-tour-font-head); font-weight: 600; font-size: 0.8rem;
   color: var(--dcc-tour-accent-deep); text-decoration: none; padding: 4px 0; }
 .dcc-hist-note-a:hover { text-decoration: underline; }
-/* Time Machine: age chips under the timeline + neighbouring eras on the step buttons */
-.dcc-tm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 4px; }
-.dcc-tm-ages { display: flex; flex-wrap: wrap; gap: 6px; }
-.dcc-tm-age { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 3px 11px; cursor: pointer;
+/* Time Machine: age chips under the timeline, neighbouring eras on the step buttons, slider bubble */
+.dcc-tm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 4px; min-width: 0; }
+/* min-width 0: a scrolling row must not report its full width to the timeline's grid (that zoomed the phone page out) */
+.dcc-tm-ages { min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; max-width: 100%; padding-bottom: 2px; }
+.dcc-tm-ages::-webkit-scrollbar { display: none; }
+.dcc-tm-age { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 3px 12px; cursor: pointer;
   font: inherit; font-family: var(--dcc-tour-font-head); font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 999px; }
 .dcc-tm-age i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
@@ -930,15 +932,49 @@ html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 .dcc-tm-age[aria-pressed="true"] { border-color: var(--dcc-tour-primary); background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); }
 .dcc-tm-hint { font-size: 0.8rem; color: var(--dcc-tour-muted); font-style: italic; }
 .dcc-tour-history .bh-btn.dcc-tm-step { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 44px; }
-.dcc-tour-history .bh-btn.dcc-tm-step:disabled { opacity: 0.45; cursor: default; }
+.dcc-tour-history .bh-btn.dcc-tm-step[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.dcc-tour-history .bh-transport { position: relative; }
+.dcc-tm-bubble { position: absolute; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; opacity: 0;
+  font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.05rem; line-height: 1; white-space: nowrap;
+  color: #fff; background: var(--dcc-tour-accent-deep); border-radius: 6px; padding: 5px 9px; box-shadow: var(--dcc-tour-shadow);
+  transition: opacity .15s; z-index: 3; }
+.dcc-tm-bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent;
+  border-bottom: 0; border-top-color: var(--dcc-tour-accent-deep); }
+.dcc-tm-bubble.on { opacity: 1; }
 .dcc-tour-history .bh-head { scroll-margin-top: 72px; }
+.dcc-tour-history .dcc-hist-trip, .dcc-tour-history .dcc-chron { scroll-margin-top: 64px; }
+/* the side column is taller than a screen, so sticking it only hid its bottom */
+.dcc-tour-history .bh-side { position: static; }
+@media (pointer: coarse) {
+  .dcc-tour-history .bh-transport .bh-btn, .dcc-tm-age { min-height: 44px; }
+}
+
+/* top of the History tab: film, page jumps, the "on this day" banner */
+.dcc-hist-top { flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.dcc-hist-jump { display: flex; gap: 2px; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.dcc-hist-jump::-webkit-scrollbar { display: none; }
+.dcc-hist-jump button { flex: none; white-space: nowrap; font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--dcc-tour-accent-deep); background: none; border: 0; border-radius: 999px; padding: 8px 10px; min-height: 40px; cursor: pointer; }
+.dcc-hist-jump button:hover { background: var(--dcc-tour-accent-tint); }
+.dcc-hist-otd { flex-basis: 100%; }
+.dcc-otd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border);
+  border-left: 4px solid var(--dcc-tour-primary); border-radius: var(--dcc-tour-radius); padding: 10px 14px; min-height: 48px; }
+.dcc-otd:hover { border-color: var(--dcc-tour-primary); }
+.dcc-otd-k { font-family: var(--dcc-tour-font-head); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
+.dcc-otd-d { font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.15rem; }
+.dcc-otd-l { font-size: 0.92rem; flex: 1 1 220px; }
 
 /* The Chronicle: Ragusa · Konavle · Dalmatia, below the map */
-.dcc-chron { max-width: 860px; margin: 2.2rem auto 0; display: grid; gap: 14px; }
+.dcc-chron { max-width: 1120px; margin: 2.4rem auto 0; display: grid; gap: 14px; }
 .dcc-chron:empty { display: none; }
-.dcc-chron-head h2 { margin: 4px 0 6px; font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600;
-  font-size: clamp(1.7rem, 4.6vw, 2.3rem); line-height: 1.05; color: var(--dcc-tour-text); }
+.dcc-chron-head { display: grid; gap: 4px; }
+.dcc-chron-head h2 { margin: 2px 0 2px; font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600;
+  font-size: clamp(1.8rem, 4.8vw, 2.5rem); line-height: 1.05; color: var(--dcc-tour-text); }
 .dcc-chron-head p { margin: 0; color: var(--dcc-tour-muted); font-size: 0.92rem; }
+.dcc-chron-print { justify-self: start; margin-top: 4px; font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600;
+  color: var(--dcc-tour-accent-deep); background: none; border: 1px solid var(--dcc-tour-border); border-radius: 999px; padding: 6px 14px; min-height: 40px; cursor: pointer; }
+.dcc-chron-print:hover { border-color: var(--dcc-tour-primary); }
 .dcc-chron-k { display: flex; align-items: center; gap: 7px; font-family: var(--dcc-tour-font-head); font-size: 11.5px; font-weight: 600;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
 .dcc-chron-k .dcc-ic { width: 16px; height: 16px; }
@@ -949,6 +985,8 @@ html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 .dcc-chron-tabs button:hover { border-color: var(--dcc-tour-primary); }
 .dcc-chron-tabs button[aria-selected="true"] { background: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-accent-deep); color: #fff; }
 html.dcc-matrix-on .dcc-chron-tabs button[aria-selected="true"] { color: #000; }
+.dcc-chron-body { display: grid; gap: 14px; }
+.dcc-chron-panel { display: grid; gap: 12px; min-width: 0; }
 .dcc-chron-intro { margin: 0; font-size: 1rem; line-height: 1.55; }
 .dcc-chron-intro span { display: block; font-family: var(--dcc-tour-font-head); font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--dcc-tour-accent-deep); margin-bottom: 3px; }
@@ -956,24 +994,46 @@ html.dcc-matrix-on .dcc-chron-tabs button[aria-selected="true"] { color: #000; }
 .dcc-chron-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .dcc-chron-list::before { content: ""; position: absolute; left: 118px; top: 8px; bottom: 8px; width: 2px; background: var(--dcc-tour-border); }
 .dcc-chron-list > li { position: relative; display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 0 28px; padding: 14px 12px 14px 0;
-  border-radius: var(--dcc-tour-radius); }
+  border-radius: var(--dcc-tour-radius); transition: background-color .3s; scroll-margin-top: 120px; }
 .dcc-chron-list > li::before { content: ""; position: absolute; left: 113px; top: 22px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--dcc-tour-bg); border: 2px solid var(--dcc-tour-primary); box-sizing: border-box; }
+  background: var(--dcc-tour-bg); border: 2px solid var(--dcc-tour-primary); box-sizing: border-box; transition: transform .3s; }
 .dcc-chron-list > li.now { background: var(--dcc-tour-accent-tint); }
 .dcc-chron-list > li.now::before { background: #f2c230; border-color: #7d5411; }
+.dcc-chron-list > li.active::before { transform: scale(1.45); }
+.dcc-chron-list > li.active { box-shadow: inset 3px 0 0 var(--dcc-tour-primary); }
 .dcc-chron-y { text-align: right; font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.25rem; line-height: 1.15;
   color: var(--dcc-tour-accent-deep); font-variant-numeric: lining-nums; padding-top: 2px; }
 .dcc-chron-b h3 { margin: 0 0 4px; font-family: var(--dcc-tour-font-head); font-weight: 600; font-size: 1rem; letter-spacing: 0.03em; line-height: 1.3; }
-.dcc-chron-b p { margin: 0 0 6px; font-size: 0.95rem; line-height: 1.55; }
+.dcc-chron-b > p { margin: 0 0 6px; font-size: 0.95rem; line-height: 1.55; }
 .dcc-chron-tag { display: inline-block; vertical-align: 2px; margin-left: 4px; padding: 1px 7px; border-radius: 999px; font-family: var(--dcc-tour-font);
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dcc-tour-accent-deep);
   border: 1px solid var(--dcc-tour-primary); }
-.dcc-chron-go { font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600; color: var(--dcc-tour-accent-deep);
-  background: none; border: 0; padding: 6px 0; min-height: 32px; cursor: pointer; text-align: left; }
-.dcc-chron-go:hover:not(:disabled) { text-decoration: underline; }
+.dcc-chron-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; }
+.dcc-chron-go, .dcc-chron-share { font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600; color: var(--dcc-tour-accent-deep);
+  background: none; border: 0; padding: 6px 0; min-height: 44px; cursor: pointer; text-align: left; }
+.dcc-chron-go:hover:not(:disabled), .dcc-chron-share:hover { text-decoration: underline; }
 .dcc-chron-go:disabled { cursor: default; color: var(--dcc-tour-text); }
-.dcc-chron-src { font-size: 0.78rem; line-height: 1.5; color: var(--dcc-tour-muted); }
+.dcc-chron-share { color: var(--dcc-tour-muted); }
+/* your photos from the spot */
+.dcc-chron-you { margin: 2px 0 4px; }
+.dcc-chron-you-k { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; color: var(--dcc-tour-accent-deep); margin-bottom: 5px; }
+.dcc-chron-thumbs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-width: 420px; }
+.dcc-chron-thumbs button { position: relative; padding: 0; border: 0; border-radius: 6px; overflow: hidden; aspect-ratio: 1; cursor: zoom-in; background: var(--dcc-tour-surface); }
+.dcc-chron-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
+.dcc-chron-thumbs button:hover img { transform: scale(1.06); }
+.dcc-chron-thumbs span { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(20, 18, 16, .55); color: #fff;
+  font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.3rem; }
+/* sources: folded, with the strength of the best one */
+.dcc-chron-srcs { font-size: 0.78rem; color: var(--dcc-tour-muted); }
+.dcc-chron-srcs summary { cursor: pointer; display: inline-flex; align-items: center; gap: 7px; min-height: 32px; list-style: none; }
+.dcc-chron-srcs summary::-webkit-details-marker { display: none; }
+.dcc-chron-srcs summary::after { content: "▸"; font-size: 0.7rem; transition: transform .2s; }
+.dcc-chron-srcs[open] summary::after { transform: rotate(90deg); }
+.dcc-chron-src { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 2px 0 6px; line-height: 1.5; }
 .dcc-chron-src a { color: var(--dcc-tour-accent-deep); }
+.dcc-ev { display: inline-flex; gap: 2px; }
+.dcc-ev i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--dcc-tour-accent-deep); }
+.dcc-ev-3 i, .dcc-ev-2 i:nth-child(-n+2), .dcc-ev-1 i:first-child { background: var(--dcc-tour-accent-deep); }
 .dcc-chron-rech { margin: 0; font-family: var(--dcc-tour-font-head); font-size: 1rem; font-weight: 600; letter-spacing: 0.03em; }
 .dcc-chron-rec { margin: 0; padding-left: 1.2rem; display: grid; gap: 10px; font-size: 0.95rem; line-height: 1.55; }
 .dcc-chron-back { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 40;
@@ -981,6 +1041,60 @@ html.dcc-matrix-on .dcc-chron-tabs button[aria-selected="true"] { color: #000; }
   border: 0; border-radius: 999px; padding: 10px 18px; min-height: 44px; box-shadow: var(--dcc-tour-shadow); cursor: pointer;
   transition: opacity .2s, transform .2s; }
 .dcc-chron-back.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+
+/* Story mode: the map, following the chronicle */
+.dcc-story { position: sticky; top: 50px; z-index: 5; align-self: start; background: var(--dcc-tour-card-bg);
+  border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); box-shadow: var(--dcc-tour-shadow); overflow: hidden; }
+.dcc-story-top { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; }
+.dcc-story-mini { flex: none; width: 92px; aspect-ratio: 1870 / 979; border-radius: 4px; overflow: hidden; background: #d6e0e2; cursor: pointer; }
+.dcc-story-mini svg, .dcc-story-map svg { display: block; width: 100%; height: auto; }
+.dcc-story-txt { flex: 1; min-width: 0; display: grid; line-height: 1.15; }
+.dcc-story-k { font-family: var(--dcc-tour-font-head); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
+.dcc-story-y { font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.5rem; line-height: 1; }
+.dcc-story-s { font-size: 0.82rem; color: var(--dcc-tour-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcc-story-exp { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--dcc-tour-accent-deep);
+  cursor: pointer; border-radius: 50%; }
+.dcc-story-exp svg { width: 22px; height: 22px; transition: transform .25s; }
+.dcc-story.open .dcc-story-exp svg { transform: rotate(180deg); }
+.dcc-story-more { display: none; padding: 0 12px 12px; gap: 10px; }
+.dcc-story.open .dcc-story-more { display: grid; }
+.dcc-story-map { border-radius: 4px; overflow: hidden; background: #d6e0e2; }
+.dcc-story-cap { margin: 0; font-size: 0.88rem; line-height: 1.45; min-height: 2.9em; }
+.dcc-story.growing .dcc-story-cap { font-weight: 600; color: var(--dcc-tour-accent-deep); }
+.dcc-story-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.dcc-story-grow { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font: inherit; font-family: var(--dcc-tour-font-head);
+  font-size: 0.85rem; font-weight: 600; color: var(--dcc-tour-accent-deep); background: var(--dcc-tour-card-bg);
+  border: 1px solid var(--dcc-tour-primary); border-radius: 999px; padding: 4px 14px 4px 4px; min-height: 44px; }
+.dcc-story-grow .dcc-pbtn { width: 32px; height: 32px; }
+.dcc-story-grow .dcc-pbtn svg { width: 13px; height: 13px; }
+.dcc-story-grow[aria-pressed="true"] { background: var(--dcc-tour-accent-tint); }
+.dcc-story-follow { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; cursor: pointer; min-height: 44px; }
+.dcc-story-follow input { width: 17px; height: 17px; accent-color: var(--dcc-tour-primary); margin: 0; }
+.dcc-story .dcc-hist-stops circle.on { fill: #c0392b; }
+@media (min-width: 1000px) {
+  .dcc-chron-body { grid-template-columns: 330px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .dcc-chron-body.dcc-chron-solo { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+  .dcc-story { top: 70px; }
+  .dcc-story-mini, .dcc-story-exp { display: none; }
+  .dcc-story-top { padding: 12px 12px 4px; }
+  .dcc-story-y { font-size: 2.4rem; }
+  .dcc-story-s { white-space: normal; font-size: 0.9rem; }
+  .dcc-story-more { display: grid; }
+}
+
+/* "On this spot": a later visit to the same spot gets a one-line chip that opens the note */
+.dcc-hist-note-mini { display: block; padding: 0 12px; }
+.dcc-hist-note-mini summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px; min-height: 40px;
+  font-family: var(--dcc-tour-font-head); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; color: var(--dcc-tour-accent-deep); }
+.dcc-hist-note-mini summary::-webkit-details-marker { display: none; }
+.dcc-hist-note-mini summary .dcc-ic { width: 15px; height: 15px; flex: none; }
+.dcc-hist-note-mini[open] { padding-bottom: 10px; }
+.dcc-hist-note-mini > p { margin: 0 0 4px; }
+.dcc-hist-trip-how { margin-top: 2px; }
+.dcc-hist-trip-howb p { margin: 0 0 6px; font-size: 0.82rem; line-height: 1.5; color: var(--dcc-tour-text); }
+
+.dcc-hist-jump .dcc-js { display: none; }
+@media (max-width: 560px) { .dcc-hist-jump button { padding: 8px 7px; font-size: 0.76rem; } .dcc-hist-jump .dcc-jl { display: none; } .dcc-hist-jump .dcc-js { display: inline; } }
 @media (max-width: 800px) { .dcc-chron-back { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-width: 560px) {
   .dcc-chron-list::before { left: 7px; }
@@ -988,7 +1102,26 @@ html.dcc-matrix-on .dcc-chron-tabs button[aria-selected="true"] { color: #000; }
   .dcc-chron-list > li::before { left: 2px; top: 17px; }
   .dcc-chron-y { text-align: left; font-size: 1.15rem; margin-bottom: 2px; }
 }
-@media (prefers-reduced-motion: reduce) { .dcc-chron-back { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .dcc-chron-back, .dcc-chron-list > li, .dcc-chron-list > li::before, .dcc-chron-thumbs img, .dcc-story-exp svg, .dcc-tm-bubble { transition: none; }
+}
+
+/* Print: the chronicle as a keepsake (built only while printing) */
+.dcc-print { display: none; }
+@media print {
+  body.dcc-printing > *:not(.dcc-print) { display: none !important; }
+  body.dcc-printing { background: #fff !important; }
+  body.dcc-printing .dcc-print { display: block; color: #111; font-family: "Lora", Georgia, serif; font-size: 10.5pt; line-height: 1.45; }
+  .dcc-print h1 { font-family: "Cormorant Garamond", Georgia, serif; font-size: 30pt; margin: 0 0 2pt; }
+  .dcc-print h2 { font-family: "Cinzel", Georgia, serif; font-size: 14pt; letter-spacing: .06em; margin: 18pt 0 4pt; border-bottom: 1px solid #b68235; padding-bottom: 3pt; break-after: avoid; }
+  .dcc-print h3 { font-family: "Cinzel", Georgia, serif; font-size: 10.5pt; margin: 0 0 2pt; }
+  .dcc-print p { margin: 0 0 3pt; }
+  .dcc-pr-sub, .dcc-pr-intro { color: #555; }
+  .dcc-pr-ev { display: grid; grid-template-columns: 1.1in 1fr; gap: 10pt; padding: 5pt 0; border-top: 1px solid #ddd; break-inside: avoid; }
+  .dcc-pr-y { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 13pt; color: #7d5411; text-align: right; }
+  .dcc-pr-src { font-size: 8pt; color: #666; word-break: break-word; }
+  .dcc-print section { break-before: auto; }
+}
 /* muted text (the map's era names, ticks and notes, the chronicle's captions) sits at 4.46:1 on this
    ground in the default theme; one step darker clears 4.5:1 (Matrix mode already passes, so it's left alone) */
 html:not(.dcc-matrix-on) .dcc-tour-history { --dcc-tour-muted: #6d6964; }

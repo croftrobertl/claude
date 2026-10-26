@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v91';
+const CACHE_VERSION = 'dcc-tour-v92';
 const SHELL = [
   './',
   'index.html',
@@ -32,22 +32,69 @@ const SHELL = [
   'vendor/fonts/lora-italic-400-latinext.woff2',
 ];
 
+// Photos, fonts and other cache-first assets live in their own cache that survives
+// version bumps (a new CACHE_VERSION used to wipe every photo saved for offline).
+const MEDIA_CACHE = 'dcc-tour-media';
+const SHELL_RE = /\.(?:html|js|css|webmanifest|json)(?:$|\?)/;
+
+// Install fetches every shell file on its own. A file that fails (flaky mobile network)
+// keeps its last good copy from the previous version, so offline never ends up empty.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then(cache =>
-      cache.addAll(SHELL.map(p => new Request(p, { credentials: 'omit' })))
-        .catch(() => {})
-    ).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    await Promise.all(SHELL.map(async p => {
+      const req = new Request(p, { credentials: 'omit' });
+      try {
+        const res = await fetch(req, { cache: 'no-cache' });   // revalidates: an unchanged file is a cheap 304
+        if (!res.ok) throw new Error(res.status);
+        await cache.put(req, res);
+      } catch (e) {
+        const old = await caches.match(req);
+        if (old) await cache.put(req, old);
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
+// Old shell caches go; anything cache-first they held (photos saved before the media cache
+// existed) moves to the media cache first.
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const media = await caches.open(MEDIA_CACHE);
+    for (const k of await caches.keys()) {
+      if (k === CACHE_VERSION || k === MEDIA_CACHE) continue;
+      const old = await caches.open(k);
+      for (const req of await old.keys()) {
+        if (SHELL_RE.test(req.url) || req.mode === 'navigate' || req.url.endsWith('/')) continue;
+        const res = await old.match(req);
+        if (res) await media.put(req, res);
+      }
+      await caches.delete(k);
+    }
+    await self.clients.claim();
+  })());
 });
+
+// Network-first that gives up after `ms` when a saved copy exists (the fetch still finishes
+// and refreshes the cache); with no saved copy it simply waits for the network.
+function networkFirst(req, ms) {
+  const net = fetch(req).then(res => {
+    if (res.ok && req.url.startsWith(self.location.origin)) {
+      const copy = res.clone();
+      caches.open(CACHE_VERSION).then(c => c.put(req, copy));
+    }
+    return res;
+  });
+  const saved = () => caches.match(req).then(m => m || (req.mode === 'navigate' ? caches.match('index.html') : undefined));
+  return new Promise(resolve => {
+    let done = false;
+    const finish = r => { if (!done && r) { done = true; resolve(r); } };
+    const timer = ms ? setTimeout(() => saved().then(finish), ms) : 0;
+    net.then(r => { clearTimeout(timer); finish(r); })
+       .catch(() => { clearTimeout(timer); saved().then(m => { finish(m || Response.error()); }); });
+  });
+}
 
 self.addEventListener('fetch', event => {
   const req = event.request;
@@ -60,20 +107,10 @@ self.addEventListener('fetch', event => {
   if (/\.(?:mp4|m4v|mov|webm|ogv)(?:$|\?)/i.test(req.url) || req.headers.has('range')) return;
 
   // Network-first for the app shell (navigations + HTML/JS/CSS/manifest) and JSON,
-  // so code + data updates appear as soon as you're online — no more stale cached
-  // UI after "clear cache" fails to evict the service worker. Falls back to cache
-  // when offline. (Previously the shell was cache-first, which pinned old builds.)
-  const shell = req.mode === 'navigate' || /\.(?:html|js|css|webmanifest|json)(?:$|\?)/.test(req.url);
-  if (shell) {
-    event.respondWith(
-      fetch(req).then(res => {
-        if (res.ok && req.url.startsWith(self.location.origin)) {
-          const copy = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => caches.match(req).then(m => m || (req.mode === 'navigate' ? caches.match('index.html') : Response.error())))
-    );
+  // so code + data updates appear as soon as you're online. Data JSON (the trip and the
+  // history map, the big files) falls back to its saved copy after 4 s on a slow network.
+  if (req.mode === 'navigate' || SHELL_RE.test(req.url)) {
+    event.respondWith(networkFirst(req, /\.json(?:$|\?)/.test(req.url) ? 4000 : 0));
     return;
   }
 
@@ -83,7 +120,7 @@ self.addEventListener('fetch', event => {
       fetch(req).then(res => {
         if (res.ok && req.url.startsWith(self.location.origin)) {
           const copy = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(req, copy));
+          caches.open(MEDIA_CACHE).then(c => c.put(req, copy));
         }
         return res;
       }).catch(() => req.mode === 'navigate' ? caches.match('index.html') : Response.error())

@@ -359,6 +359,7 @@
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
     if (v !== 'map') mmStopPlay();
+    if (v !== 'history') historyLeave();
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
     else if (v === 'gallery') buildGallery();
@@ -378,12 +379,12 @@
     requestAnimationFrame(enhanceAllHScroll);
   }
   // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>,
-  //      #v=map|stats|gallery, #v=history&era=<slug> ----
+  //      #v=map|stats|gallery, #v=history&era=<slug>[&ch=<strand>][&e=<entry>] ----
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
     history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
-      : '#v=' + v + (v === 'history' && histSlug ? '&era=' + encodeURIComponent(histSlug) : ''));
+      : '#v=' + v + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') : ''));
   }
   function findDayByGuid(g) {
     for (let di = 0; di < DATA.days.length; di++)
@@ -398,7 +399,7 @@
       const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
     });
     if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { setView(m.v); return; }
-    if (m.v === 'history') { histWant = m.era || null; setView('history'); return; }
+    if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; setView('history'); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
     if (di != null) {
@@ -418,17 +419,32 @@
   // ---- History tab: BalkansHistory (history/history.js), 35 eras of Balkan borders.
   //      Its script + stylesheet load on the first visit through the bundle URL (so the
   //      Elementor embed works too), and the component mounts once. ----
-  let histEl = null, histHandle = null, histLoading = false, histWant = null, histSlug = null;
+  let histEl = null, histHandle = null, histLoading = false, histWant = null, histSlug = null, histLink = null;
   const histSlugOf = l => String(l).toLowerCase().replace(/\s+/g, '');
+  const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const scrollBehavior = () => reducedMotion() ? 'auto' : 'smooth';
   function showHistory() {
     if (!histEl) {
       histEl = el('section', 'dcc-tour-history');
       histEl.innerHTML =
-        '<div class="dcc-hist-top"><button class="dcc-hist-film" type="button">' +
-          '<span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch the 60-second film</span></button></div>' +
+        '<div class="dcc-hist-top">' +
+          '<button class="dcc-hist-film" type="button"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch the 60-second film</span></button>' +
+          '<nav class="dcc-hist-jump" aria-label="On this page">' +
+            '<button type="button" data-jump="map">Map</button><button type="button" data-jump="trip">Your trip</button>' +
+            '<button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="records" aria-label="Family records"><span class="dcc-jl">Family records</span><span class="dcc-js">Family</span></button></nav>' +
+          '<div class="dcc-hist-otd" hidden></div>' +
+        '</div>' +
         '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>' +
         '<section class="dcc-chron" aria-labelledby="dcc-chron-h"></section>';
       histEl.querySelector('.dcc-hist-film').addEventListener('click', playHistoryFilm);
+      histEl.querySelector('.dcc-hist-jump').addEventListener('click', e => {
+        const b = e.target.closest('[data-jump]');
+        if (!b) return;
+        const j = b.dataset.jump;
+        if (j === 'records') setStrand('records', false);
+        const t = histEl.querySelector({ map: '.bh-head', trip: '.dcc-hist-trip', chron: '.dcc-chron', records: '.dcc-chron' }[j]);
+        if (t) { storyLock(1600); t.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); }
+      });
       root.appendChild(histEl);
     }
     if (histHandle) {
@@ -436,6 +452,7 @@
       const f = histHandle.frames;
       if (histWant && f && f.some(fr => histSlugOf(fr.label) === histSlugOf(histWant))) histHandle.show(histWant);
       histWant = null;
+      applyChronLink();
       return;
     }
     if (histWant) histSlug = histWant;   // keep the era in the URL while the map loads
@@ -444,11 +461,7 @@
     const mountNow = () => {
       histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
         dataUrl: resolveUrl('history/history-data.json'), hash: false, start: histWant || undefined,
-        onChange: (f, slug) => {
-          histSlug = slug; if (root.dataset.view === 'history') updateHash();
-          // the first call comes from inside mount(), before the component is in the page
-          setTimeout(() => { renderTripThen(f); timeMachine(f, slug); chronicleNow(slug); }, 0);
-        }
+        onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
       histWant = null;
     };
@@ -466,6 +479,25 @@
     };
     document.head.appendChild(s);
   }
+  // leaving the tab: no stray "back" pill or Ragusa playback waiting when you return
+  function historyLeave() {
+    if (!histEl) return;
+    showChronBack(false);
+    stopGrow();
+  }
+  // every era change runs the panels once per frame — dragging the slider fires many changes
+  let histPending = null, histRaf = 0;
+  function histQueue(f) {
+    histPending = f;
+    if (histRaf) return;
+    histRaf = requestAnimationFrame(() => {
+      histRaf = 0;
+      const fr = histPending; histPending = null;
+      renderTripThen(fr); timeMachine(fr);
+      if (chron && !chronShown) chronFirstRender();
+      chronicleNow(histSlugOf(fr.label)); storyUpdate(fr);
+    });
+  }
   // the 60-second film plays in the shared media viewer (poster + play button, no autoplay)
   function playHistoryFilm() {
     viewerItems = [{ kind: 'video', url: resolveUrl('history/balkans-highlights.mp4'), full: '', src: '', id: '',
@@ -475,8 +507,8 @@
   }
 
   // ---- Time Machine: jump-to-age chips under the timeline, the neighbouring eras named on the
-  //      step buttons, and swipe-to-step on the map (only while it isn't zoomed, so panning
-  //      still works). The ages match the component's own timeline bands. ----
+  //      step buttons, a year bubble on the slider, and swipe-to-step on the map (only while
+  //      it isn't zoomed, so panning still works). The ages match the timeline's own bands. ----
   const TM_AGES = [['Greek', -500, '#4d8fd6'], ['Roman', -146, '#9b72c4'], ['Medieval', 476, '#5d8c3c'],
                    ['Ottoman', 1453, '#3f9a78'], ['Modern', 1878, '#d8bf55']];
   let histIdx = 0;
@@ -488,15 +520,15 @@
     if (!bar) {
       const tl = bh.querySelector('.bh-timeline');
       if (!tl) return;
-      const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
       bar = el('div', 'dcc-tm');
       bar.innerHTML = '<div class="dcc-tm-ages" role="group" aria-label="Jump to an age">' + TM_AGES.map(([n, t, c]) =>
           '<button type="button" class="dcc-tm-age" data-k="' + F.findIndex(fr => fr.tpos >= t) + '" aria-pressed="false">' +
           '<i style="background:' + c + '"></i>' + n + '</button>').join('') + '</div>' +
-        '<span class="dcc-tm-hint">' + (coarse ? 'Swipe the map to step through time' : 'Use ← → or swipe the map to step through time') + '</span>';
+        '<span class="dcc-tm-hint">Swipe the map or use ← → to step through time</span>';
       tl.appendChild(bar);
       bar.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) histHandle.show(+b.dataset.k); });
       wireSwipe(bh);
+      wireBubble(bh, F);
     }
     let act = 0;
     TM_AGES.forEach(([, t], i) => { if (f.tpos >= t) act = i; });
@@ -507,7 +539,8 @@
       const fr = F[k];
       b.textContent = fr ? (sel === 'prev' ? arrow + ' ' + fr.label : fr.label + ' ' + arrow) : arrow;
       b.classList.add('dcc-tm-step');
-      b.disabled = !fr;
+      // aria-disabled, not disabled: a disabled button would drop keyboard focus at the ends
+      b.setAttribute('aria-disabled', String(!fr));
       b.setAttribute('aria-label', fr ? word + ' era: ' + fr.label : word + ' era');
     };
     step('prev', histIdx - 1, '‹', 'Previous');
@@ -517,29 +550,66 @@
     const vp = bh.querySelector('.bh-viewport'), stage = bh.querySelector('.bh-stage');
     if (!vp || !stage) return;
     let s0 = null;
-    // a second finger (pinch) cancels the swipe
-    vp.addEventListener('pointerdown', e => { s0 = e.isPrimary ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null; });
+    // a second finger (pinch) or a non-primary mouse button cancels the swipe
+    vp.addEventListener('pointerdown', e => {
+      s0 = e.isPrimary && !(e.pointerType === 'mouse' && e.button !== 0) ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null;
+    });
     window.addEventListener('pointerup', e => {
       if (!s0 || !e.isPrimary) return;
       const dx = e.clientX - s0.x, dy = e.clientY - s0.y, dt = e.timeStamp - s0.t;
       s0 = null;
-      if (/scale\((?!1\))/.test(stage.style.transform || '')) return;   // zoomed in: the drag was a pan
+      if (vp.classList.contains('bh-zoomed')) return;   // zoomed in: the drag was a pan
       if (dt > 700 || Math.abs(dx) < 60 || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
       histHandle.show(histIdx + (dx < 0 ? 1 : -1));
     });
   }
+  // a bubble over the slider thumb names the era while you drag
+  function wireBubble(bh, F) {
+    const range = bh.querySelector('.bh-range');
+    if (!range) return;
+    const bub = el('span', 'dcc-tm-bubble');
+    bub.setAttribute('aria-hidden', 'true');
+    range.parentNode.appendChild(bub);
+    let hide = 0;
+    const place = () => {
+      const max = +range.max || 1, v = +range.value, th = 18;
+      bub.textContent = F[v] ? F[v].label : '';
+      bub.style.left = (range.offsetLeft + th / 2 + (range.offsetWidth - th) * v / max) + 'px';
+      bub.style.top = range.offsetTop + 'px';
+      bub.classList.add('on');
+      clearTimeout(hide);
+    };
+    const out = () => { clearTimeout(hide); hide = setTimeout(() => bub.classList.remove('on'), 500); };
+    range.addEventListener('input', place);
+    range.addEventListener('pointerdown', place);
+    ['pointerup', 'pointercancel', 'change', 'blur'].forEach(ev => range.addEventListener(ev, out));
+  }
 
-  // ---- The Chronicle (history/chronicle.json): Ragusa, Konavle and Dalmatia, every entry
-  //      with its sources. Each entry links to the map era that shows it, and the entries
-  //      belonging to the era on the map are marked as you move through time. ----
-  let chron = null, chronLoading = false, chronStrand = 'ragusa', chronFrom = null;
+  // ---- The Chronicle (history/chronicle.json): Ragusa, Konavle and Dalmatia, every entry with
+  //      the sources it was checked against and how strong they are. Entries link to the map era
+  //      that shows them, show your own photos from the spot, and drive the map as you read
+  //      (story mode). Deep links: #v=history&era=…&ch=<strand>&e=<entry>. ----
+  let chron = null, chronLoading = false, chronShown = false, chronStrand = 'ragusa', chronFrom = null;
+  function chronFirstRender() { chronShown = true; renderChronicle(); renderOnThisDay(); applyChronLink(); }
   const CHRON_TAGS = { tradition: 'Tradition', debated: 'Debated' };
+  // how strong an entry's best source is
+  const EV_TIERS = [
+    [3, 'Scholarly & official', /hrcak\.srce\.hr|pubmed|researchgate|unesco\.org|irb\.hr|jas-center\.eu|\/\/db\.hr|lzmk\.hr|enciklopedija\.hr|migk\.hr/],
+    [2, 'Encyclopedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|tzdubrovnik\.hr|dubrovniknet\.hr|topostext/],
+    [1, 'Travel guides & blogs', /./]
+  ];
+  const evidenceOf = src => EV_TIERS.find(t => src.some(([, u]) => t[2].test(u))) || EV_TIERS[2];
+  const chronId = t => String(t).toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   function loadChronicle() {
     if (chron || chronLoading) return;
     chronLoading = true;
     try { const v = localStorage.getItem('dcc-chron-strand'); if (v) chronStrand = v; } catch (e) { /* storage blocked */ }
-    fetch(resolveUrl('history/chronicle.json')).then(r => r.json()).then(d => { chron = d; renderChronicle(); })
-      .catch(() => { chronLoading = false; });
+    fetch(resolveUrl('history/chronicle.json')).then(r => r.json()).then(d => {
+      chron = d;
+      chron.strands.forEach(st => st.events.forEach(ev => { ev.id = chronId(ev.title); }));
+      // the map comes first: the chronicle (and its photos) renders once the map has drawn
+      if (histHandle && histHandle.frames) chronFirstRender();
+    }).catch(() => { chronLoading = false; });
   }
   // the map era that shows an event: the one named in the entry, else the first map on or after its year
   function chronFrame(sort, era) {
@@ -547,36 +617,92 @@
     if (!F) return null;
     return (era && F.find(fr => histSlugOf(fr.label) === era)) || F.find(fr => fr.year >= sort) || F[F.length - 1];
   }
-  const chronSrc = src => '<div class="dcc-chron-src">Sources: ' + src.map(([l, u]) =>
-    '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join(' · ') + '</div>';
+  function chronSrcHtml(src) {
+    const t = evidenceOf(src);
+    return '<details class="dcc-chron-srcs"><summary>' +
+      '<span class="dcc-ev dcc-ev-' + t[0] + '" aria-hidden="true"><i></i><i></i><i></i></span>' +
+      escapeHtml(t[1]) + ' · ' + src.length + (src.length === 1 ? ' source' : ' sources') + '</summary>' +
+      '<div class="dcc-chron-src">' + src.map(([l, u]) =>
+        '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join('') + '</div></details>';
+  }
+  // your own photos from the places an entry is about
+  const chronPhotoSets = {};
+  function chronPhotos(ev) {
+    if (!ev.places || !DATA) return null;
+    if (ev.id in chronPhotoSets) return chronPhotoSets[ev.id];
+    const re = new RegExp(ev.places), items = [], days = [];
+    DATA.days.forEach((d, di) => (d.places || []).forEach((p, pi) => {
+      if (!re.test(p.name || '')) return;
+      (p.items || []).forEach(it => {
+        if (!it.full) return;
+        items.push({ it, p, di, pi });
+        if (days.indexOf(di) < 0) days.push(di);
+      });
+    }));
+    return (chronPhotoSets[ev.id] = items.length ? { items, days } : null);
+  }
+  function chronPhotosHtml(ev) {
+    const ph = chronPhotos(ev);
+    if (!ph) return '';
+    const n = ph.items.length, k = Math.min(4, n), pick = [];
+    for (let i = 0; i < k; i++) pick.push(Math.floor(i * n / k));   // spread across days and places
+    return '<div class="dcc-chron-you"><div class="dcc-chron-you-k">You stood here · ' + escapeHtml(dayRanges(ph.days)) + '</div>' +
+      '<div class="dcc-chron-thumbs">' + pick.map((j, i) =>
+        '<button type="button" data-ph="' + escapeAttr(ev.id) + '" data-i="' + j + '" aria-label="Open your photo from ' + escapeAttr(ph.items[j].p.name) + '">' +
+        '<img alt="" data-src="' + escapeAttr(resolveUrl(ph.items[j].it.src || ph.items[j].it.full)) + '">' +
+        (i === k - 1 && n > k ? '<span>+' + (n - k) + '</span>' : '') + '</button>').join('') + '</div></div>';
+  }
+  // thumbnails get their src only when they come within 200px of the screen
+  let thumbIO = null;
+  function observeThumbs(box) {
+    const imgs = box.querySelectorAll('img[data-src]');
+    if (!('IntersectionObserver' in window)) { imgs.forEach(im => { im.src = im.dataset.src; }); return; }
+    if (thumbIO) thumbIO.disconnect();
+    thumbIO = new IntersectionObserver(es => es.forEach(x => {
+      if (!x.isIntersecting) return;
+      x.target.src = x.target.dataset.src; x.target.removeAttribute('data-src'); thumbIO.unobserve(x.target);
+    }), { rootMargin: '200px 0px' });
+    imgs.forEach(im => thumbIO.observe(im));
+  }
+  function openChronPhotos(id, i) {
+    const ev = chronEvent(id), ph = ev && chronPhotos(ev);
+    if (!ph) return;
+    viewerItems = ph.items.map(x => {
+      const m = viewerMeta(x.it, x.p.name);
+      m.mapRef = { di: x.di, pi: x.pi, place: x.p.name, count: placeCount(x.p) };
+      return m;
+    });
+    openViewer(i);
+  }
+  function chronEvent(id) {
+    for (const st of (chron ? chron.strands : [])) { const ev = st.events.find(e => e.id === id); if (ev) return ev; }
+    return null;
+  }
   function renderChronicle() {
     const box = histEl && histEl.querySelector('.dcc-chron');
     if (!box || !chron) return;
     const tabs = chron.strands.map(st => [st.id, st.name]).concat([['records', 'Family records']]);
     if (!tabs.some(t => t[0] === chronStrand)) chronStrand = 'ragusa';
     const st = chron.strands.find(x => x.id === chronStrand);
+    const n = chron.strands.reduce((s, x) => s + x.events.length, 0);
     box.innerHTML =
-      '<div class="dcc-chron-head"><div class="dcc-chron-k">' + svgIcon('history') + '<span>The chronicle</span></div>' +
+      '<div class="dcc-chron-head"><div class="dcc-chron-k">' + svgIcon('history') + '<span>The chronicle · ' + n + ' entries</span></div>' +
         '<h2 id="dcc-chron-h">Ragusa, Konavle &amp; Dalmatia</h2>' +
-        '<p>Every entry lists the sources it was checked against. Each one links to the map that shows its moment.</p></div>' +
-      '<div class="dcc-chron-tabs" role="tablist" aria-label="Chronicle">' + tabs.map(([id, n]) =>
+        '<p>Every entry shows how strong its sources are. As you read, the map follows the story.</p>' +
+        '<button type="button" class="dcc-chron-print">Print the chronicle</button></div>' +
+      '<div class="dcc-chron-tabs" role="tablist" aria-label="Chronicle">' + tabs.map(([id, nm]) =>
         '<button type="button" role="tab" id="dcc-chron-t-' + id + '" aria-controls="dcc-chron-panel" aria-selected="' + (id === chronStrand) + '"' +
-        ' tabindex="' + (id === chronStrand ? 0 : -1) + '" data-strand="' + id + '">' + escapeHtml(n) + '</button>').join('') + '</div>' +
-      '<div class="dcc-chron-panel" id="dcc-chron-panel" role="tabpanel" aria-labelledby="dcc-chron-t-' + chronStrand + '">' +
-        (st ? chronStrandHtml(st) : chronRecordsHtml(chron.records)) + '</div>';
+        ' tabindex="' + (id === chronStrand ? 0 : -1) + '" data-strand="' + id + '">' + escapeHtml(nm) + '</button>').join('') + '</div>' +
+      '<div class="dcc-chron-body' + (st ? '' : ' dcc-chron-solo') + '">' + (st ? storyHtml() : '') +
+        '<div class="dcc-chron-panel" id="dcc-chron-panel" role="tabpanel" aria-labelledby="dcc-chron-t-' + chronStrand + '">' +
+          (st ? chronStrandHtml(st) : chronRecordsHtml(chron.records)) + '</div></div>';
     if (!box._wired) {
       box._wired = true;
-      box.addEventListener('click', e => {
-        const t = e.target.closest('[data-strand]');
-        if (t) { setStrand(t.dataset.strand, true); return; }
-        const go = e.target.closest('.dcc-chron-go');
-        if (go && go.dataset.era && histHandle) {
-          chronFrom = go.closest('li');
-          histHandle.show(go.dataset.era);
-          const head = histEl.querySelector('.bh-head');
-          if (head) head.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
-          showChronBack(true);
-        }
+      box.addEventListener('click', chronClick);
+      box.addEventListener('change', e => {
+        if (!e.target.matches('.dcc-story-follow input')) return;
+        storyFollow = e.target.checked;
+        try { localStorage.setItem('dcc-story-follow', storyFollow ? '1' : '0'); } catch (err) { /* storage blocked */ }
       });
       box.addEventListener('keydown', e => {
         const t = e.target.closest('[role="tab"]');
@@ -587,29 +713,67 @@
       });
     }
     chronicleNow(histSlug);
+    observeStory();
+    observeThumbs(box);
+    if (histHandle && histHandle.frames) { const F = histHandle.frames, f = F.find(fr => histSlugOf(fr.label) === histSlug); if (f) storyUpdate(f); }
+  }
+  function chronClick(e) {
+    const t = e.target.closest('[data-strand]');
+    if (t) { setStrand(t.dataset.strand, true); return; }
+    const ph = e.target.closest('[data-ph]');
+    if (ph) { openChronPhotos(ph.dataset.ph, +ph.dataset.i); return; }
+    const go = e.target.closest('.dcc-chron-go');
+    if (go && go.dataset.era && histHandle) {
+      chronFrom = go.closest('li');
+      storyLock(1800);
+      histHandle.show(go.dataset.era);
+      const head = histEl.querySelector('.bh-head');
+      if (head) head.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+      showChronBack(true);
+      return;
+    }
+    const sh = e.target.closest('.dcc-chron-share');
+    if (sh) {
+      const li = sh.closest('li'), era = (li.querySelector('.dcc-chron-go') || {}).dataset || {};
+      doShare(shareUrl('v=history' + (era.era ? '&era=' + era.era : '') + '&ch=' + chronStrand + '&e=' + li.dataset.id),
+        li.querySelector('h3').textContent.replace(/\s*(Tradition|Debated)$/, ''));
+      return;
+    }
+    if (e.target.closest('.dcc-story-grow')) { growTimer ? stopGrow() : startGrow(); return; }
+    if (e.target.closest('.dcc-story-exp') || e.target.closest('.dcc-story-mini')) {
+      const s = histEl.querySelector('.dcc-story'), open = !s.classList.contains('open');
+      s.classList.toggle('open', open);
+      s.querySelector('.dcc-story-exp').setAttribute('aria-expanded', String(open));
+      return;
+    }
+    if (e.target.closest('.dcc-chron-print')) printChronicle();
   }
   function setStrand(id, save, focus) {
+    if (id !== chronStrand) stopGrow();
     chronStrand = id;
     if (save) { try { localStorage.setItem('dcc-chron-strand', id); } catch (e) { /* storage blocked */ } }
     renderChronicle();
+    if (root.dataset.view === 'history') updateHash();
     if (focus) { const t = histEl.querySelector('#dcc-chron-t-' + id); if (t) t.focus(); }
   }
   function chronStrandHtml(st) {
     return '<p class="dcc-chron-intro"><span>' + escapeHtml(st.kicker) + '</span>' + escapeHtml(st.intro) + '</p>' +
-      '<p class="dcc-chron-now" aria-live="polite"></p>' +
+      '<p class="dcc-chron-now"></p>' +
       '<ol class="dcc-chron-list">' + st.events.map(ev =>
-        '<li data-sort="' + ev.sort + '"' + (ev.era ? ' data-era="' + escapeAttr(ev.era) + '"' : '') + '>' +
+        '<li data-id="' + escapeAttr(ev.id) + '" data-sort="' + ev.sort + '"' + (ev.era ? ' data-era="' + escapeAttr(ev.era) + '"' : '') + '>' +
           '<div class="dcc-chron-y">' + escapeHtml(ev.y) + '</div>' +
           '<div class="dcc-chron-b">' +
             '<h3>' + escapeHtml(ev.title) + (ev.tag ? ' <span class="dcc-chron-tag">' + CHRON_TAGS[ev.tag] + '</span>' : '') + '</h3>' +
             '<p>' + escapeHtml(ev.text) + '</p>' +
-            '<button type="button" class="dcc-chron-go">See it on the map ›</button>' +
-            chronSrc(ev.src) +
+            chronPhotosHtml(ev) +
+            '<div class="dcc-chron-acts"><button type="button" class="dcc-chron-go">See it on the map ›</button>' +
+              '<button type="button" class="dcc-chron-share" aria-label="Share this entry">Share</button></div>' +
+            chronSrcHtml(ev.src) +
           '</div></li>').join('') + '</ol>';
   }
   function chronRecordsHtml(r) {
     return '<h3 class="dcc-chron-rech">' + escapeHtml(r.title) + '</h3>' +
-      '<ul class="dcc-chron-rec">' + r.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' + chronSrc(r.src);
+      '<ul class="dcc-chron-rec">' + r.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' + chronSrcHtml(r.src);
   }
   // mark the entries that belong to the era on the map, and name each entry's map
   function chronicleNow(slug) {
@@ -621,26 +785,220 @@
       li.classList.toggle('now', on);
       if (on) n++;
       const b = li.querySelector('.dcc-chron-go');
-      if (b && f) { b.dataset.era = era; b.textContent = on ? 'On the map now' : 'See it on the map of ' + f.label + ' ›'; b.disabled = on; }
+      if (b && f) {
+        b.dataset.era = era;
+        const txt = on ? 'On the map now' : 'See it on the map of ' + f.label + ' ›';
+        if (b.textContent !== txt) b.textContent = txt;
+        b.disabled = on;
+      }
     });
     const cur = F.find(fr => histSlugOf(fr.label) === slug), now = panel.querySelector('.dcc-chron-now');
     if (now && cur) now.textContent = 'The map shows ' + cur.label + (n ? ' · ' + n + (n === 1 ? ' entry' : ' entries') + ' marked below' : '');
   }
-  // after a jump to the map, a pill takes you back to the entry you came from
+  // after a jump to the map, a pill takes you back to the entry you came from; it goes away on
+  // its own once that entry is back on screen
+  let chronBackIO = null;
   function showChronBack(on) {
+    if (!histEl) return;
     let b = histEl.querySelector('.dcc-chron-back');
     if (!b) {
+      if (!on) return;
       b = el('button', 'dcc-chron-back', '↓ Back to the chronicle');
       b.type = 'button';
       b.addEventListener('click', () => {
-        if (chronFrom && chronFrom.isConnected) chronFrom.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'center' });
+        storyLock(1600);
+        if (chronFrom && chronFrom.isConnected) chronFrom.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
         showChronBack(false);
       });
       histEl.appendChild(b);
     }
     b.classList.toggle('on', on);
+    if (chronBackIO) { chronBackIO.disconnect(); chronBackIO = null; }
+    if (on && chronFrom && 'IntersectionObserver' in window) {
+      let armed = false;   // ignore the first report (the entry is still on screen as the jump starts)
+      chronBackIO = new IntersectionObserver(es => {
+        if (!armed) { armed = true; return; }
+        if (es.some(x => x.isIntersecting)) showChronBack(false);
+      }, { threshold: 0.6 });
+      chronBackIO.observe(chronFrom);
+    }
   }
-  const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // deep link into the chronicle: #…&ch=<strand>&e=<entry>
+  function applyChronLink() {
+    if (!histLink || !chron || !histEl || !chronShown) return;
+    const { ch, e } = histLink;
+    if (ch && ch !== chronStrand && (ch === 'records' || chron.strands.some(s => s.id === ch))) { chronStrand = ch; renderChronicle(); }
+    histLink = null;
+    if (!e) return;
+    setTimeout(() => {
+      const li = histEl.querySelector('.dcc-chron-list li[data-id="' + CSS.escape(e) + '"]');
+      if (!li) return;
+      storyLock(1600);
+      li.scrollIntoView({ behavior: 'auto', block: 'center' });
+      li.classList.add('dcc-tour-flash');
+      setTimeout(() => li.classList.remove('dcc-tour-flash'), 1600);
+    }, 300);
+  }
+
+  // ---- Story mode: a sticky card beside the chronicle (a slim bar on phones) shows the era and
+  //      a live copy of the Ragusa coast map. As an entry stays in the middle of the screen the
+  //      map turns to its era; "Watch Ragusa grow" plays the Republic's growth on the card. ----
+  let storyFollow = true, storyIO = null, storyDwell = 0, storyLockUntil = 0, growTimer = 0, growCap = '';
+  try { storyFollow = localStorage.getItem('dcc-story-follow') !== '0'; } catch (e) { /* storage blocked */ }
+  const storyLock = ms => { storyLockUntil = Date.now() + ms; clearTimeout(storyDwell); };
+  function storyHtml() {
+    return '<aside class="dcc-story" aria-label="The map, following the chronicle">' +
+      '<div class="dcc-story-top">' +
+        '<div class="dcc-story-mini" aria-hidden="true"></div>' +
+        '<div class="dcc-story-txt"><span class="dcc-story-k">The map now</span><span class="dcc-story-y"></span><span class="dcc-story-s"></span></div>' +
+        '<button type="button" class="dcc-story-exp" aria-expanded="false" aria-label="Show the coast map">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '</div>' +
+      '<div class="dcc-story-more">' +
+        '<div class="dcc-story-map" aria-hidden="true"></div>' +
+        '<p class="dcc-story-cap"></p>' +
+        '<div class="dcc-story-ctl">' +
+          '<button type="button" class="dcc-story-grow" aria-pressed="false"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch Ragusa grow</span></button>' +
+          '<label class="dcc-story-follow"><input type="checkbox"' + (storyFollow ? ' checked' : '') + '> Map follows as you read</label>' +
+        '</div></div></aside>';
+  }
+  function storyUpdate(f) {
+    const card = histEl && histEl.querySelector('.dcc-story');
+    if (!card || !f) return;
+    card.querySelector('.dcc-story-y').textContent = f.label;
+    card.querySelector('.dcc-story-s').textContent = f.ragusa.status;
+    card.querySelector('.dcc-story-cap').textContent = growTimer && growCap ? growCap : f.ragusa.body;
+    // a live copy of the component's coast map (territory, labels, your stops)
+    const src = histEl.querySelector('.bh-ragusa svg');
+    if (src) ['.dcc-story-map', '.dcc-story-mini'].forEach(sel => {
+      const host = card.querySelector(sel), c = src.cloneNode(true);
+      c.removeAttribute('role'); c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true'); c.setAttribute('focusable', 'false');
+      host.replaceChildren(c);
+    });
+  }
+  function observeStory() {
+    if (storyIO) storyIO.disconnect();
+    if (!('IntersectionObserver' in window)) return;
+    const lis = histEl.querySelectorAll('.dcc-chron-list > li');
+    if (!lis.length) return;
+    storyIO = new IntersectionObserver(es => {
+      const hit = es.filter(x => x.isIntersecting).map(x => x.target).pop();
+      if (!hit) return;
+      clearTimeout(storyDwell);
+      // only an entry you settle on (not one scrolled past) turns the map
+      storyDwell = setTimeout(() => storyActivate(hit), 450);
+    }, { rootMargin: '-42% 0px -52% 0px' });
+    lis.forEach(li => storyIO.observe(li));
+  }
+  function storyActivate(li) {
+    if (!li.isConnected || root.dataset.view !== 'history') return;
+    histEl.querySelectorAll('.dcc-chron-list > li.active').forEach(x => x.classList.remove('active'));
+    li.classList.add('active');
+    if (!storyFollow || growTimer || Date.now() < storyLockUntil || !histHandle) return;
+    const f = chronFrame(+li.dataset.sort, li.dataset.era), era = f && histSlugOf(f.label);
+    if (era && era !== histSlug) histHandle.show(era);
+  }
+  // the eras where Ragusa's territory changes, straight from the map data, until the Republic ends
+  function growSteps() {
+    const out = []; let prev = null;
+    for (const fr of histHandle.frames) {
+      const R = fr.ragusa;
+      if (!R.founded) continue;
+      const key = R.former ? 'gone' : R.parts.join(',') + (R.ceded ? '+ceded' : '');
+      if (key !== prev) { out.push(fr); prev = key; }
+      if (R.former) break;
+    }
+    return out;
+  }
+  function growCaption(fr) {
+    const st = chron && chron.strands.find(s => s.id === 'ragusa'), slug = histSlugOf(fr.label);
+    const evs = st ? st.events.filter(ev => { const f = chronFrame(ev.sort, ev.era); return f && histSlugOf(f.label) === slug; }) : [];
+    return evs.length ? evs.slice(0, 3).map(ev => ev.y + ': ' + ev.title).join(' · ') : fr.ragusa.body;
+  }
+  function startGrow() {
+    if (!histHandle || !histHandle.frames) return;
+    const steps = growSteps(), card = histEl.querySelector('.dcc-story'), btn = card && card.querySelector('.dcc-story-grow');
+    if (!steps.length || !btn) return;
+    card.classList.add('open', 'growing');
+    card.querySelector('.dcc-story-exp').setAttribute('aria-expanded', 'true');
+    btn.setAttribute('aria-pressed', 'true'); btn.lastChild.textContent = 'Stop';
+    let i = 0;
+    const tick = () => {
+      if (i >= steps.length) { stopGrow(); return; }
+      growCap = growCaption(steps[i]);
+      histHandle.show(histSlugOf(steps[i].label));
+      i++;
+      growTimer = setTimeout(tick, 3200);
+    };
+    growTimer = 1; tick();
+  }
+  function stopGrow() {
+    if (!growTimer) return;
+    clearTimeout(growTimer); growTimer = 0; growCap = '';
+    const card = histEl && histEl.querySelector('.dcc-story');
+    if (!card) return;
+    card.classList.remove('growing');
+    const btn = card.querySelector('.dcc-story-grow');
+    btn.setAttribute('aria-pressed', 'false'); btn.lastChild.textContent = 'Watch Ragusa grow';
+  }
+
+  // ---- On this day: the nearest anniversary in the chronicle (today, the last ten days, or the
+  //      next one coming), as a banner at the top of the History tab ----
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function renderOnThisDay() {
+    const box = histEl && histEl.querySelector('.dcc-hist-otd');
+    if (!box || !chron) return;
+    const now = new Date(), t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()), all = [];
+    chron.strands.forEach(st => st.events.forEach(ev => (ev.days || []).forEach(([md, yr, line]) => {
+      const [m, d] = md.split('-').map(Number);
+      let diff = Math.round((new Date(now.getFullYear(), m - 1, d) - t0) / 864e5);
+      if (diff < -182) diff += 365; else if (diff > 182) diff -= 365;
+      all.push({ diff, m, d, yr, line, st, ev });
+    })));
+    const pick = all.find(c => c.diff === 0) ||
+      all.filter(c => c.diff < 0 && c.diff >= -10).sort((a, b) => b.diff - a.diff)[0] ||
+      all.filter(c => c.diff > 0).sort((a, b) => a.diff - b.diff)[0];
+    if (!pick) return;
+    const k = pick.diff === 0 ? 'On this day' : pick.diff === -1 ? 'Yesterday' : pick.diff < 0 ? (-pick.diff) + ' days ago' :
+      pick.diff === 1 ? 'Tomorrow' : 'In ' + pick.diff + ' days';
+    box.innerHTML = '<button type="button" class="dcc-otd" data-ch="' + pick.st.id + '" data-e="' + escapeAttr(pick.ev.id) + '">' +
+      '<span class="dcc-otd-k">' + escapeHtml(k) + '</span>' +
+      '<span class="dcc-otd-d">' + pick.d + ' ' + MONTHS[pick.m - 1] + (pick.yr ? ' ' + pick.yr : '') + '</span>' +
+      '<span class="dcc-otd-l">' + escapeHtml(pick.line) + ' ›</span></button>';
+    box.hidden = false;
+    if (!box._wired) {
+      box._wired = true;
+      box.addEventListener('click', e => {
+        const b = e.target.closest('.dcc-otd');
+        if (!b) return;
+        histLink = { ch: b.dataset.ch, e: b.dataset.e };
+        applyChronLink();
+      });
+    }
+  }
+
+  // ---- Print: the whole chronicle (all strands, family records, every source written out)
+  //      as a keepsake, laid out by the print stylesheet ----
+  function printChronicle() {
+    if (!chron) return;
+    const ent = ev => '<div class="dcc-pr-ev"><div class="dcc-pr-y">' + escapeHtml(ev.y) + '</div><div>' +
+      '<h3>' + escapeHtml(ev.title) + (ev.tag ? ' <em>(' + CHRON_TAGS[ev.tag] + ')</em>' : '') + '</h3>' +
+      '<p>' + escapeHtml(ev.text) + '</p>' +
+      '<p class="dcc-pr-src">' + escapeHtml(evidenceOf(ev.src)[1]) + ': ' + ev.src.map(([l, u]) => escapeHtml(l) + ' — ' + escapeHtml(u)).join('; ') + '</p></div></div>';
+    const pr = el('div', 'dcc-print',
+      '<h1>Ragusa, Konavle &amp; Dalmatia</h1><p class="dcc-pr-sub">A family chronicle · Crofts in Croatia · printed ' +
+        escapeHtml(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '</p>' +
+      chron.strands.map(st => '<section><h2>' + escapeHtml(st.name) + '</h2><p class="dcc-pr-intro">' + escapeHtml(st.intro) + '</p>' +
+        st.events.map(ent).join('') + '</section>').join('') +
+      '<section><h2>' + escapeHtml(chron.records.title) + '</h2><ul>' + chron.records.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' +
+        '<p class="dcc-pr-src">' + chron.records.src.map(([l, u]) => escapeHtml(l) + ' — ' + escapeHtml(u)).join('; ') + '</p></section>');
+    document.body.appendChild(pr);
+    document.body.classList.add('dcc-printing');
+    const done = () => { document.body.classList.remove('dcc-printing'); pr.remove(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(() => { if (pr.isConnected && !window.matchMedia('print').matches) done(); }, 1000);
+  }
 
   // ---- "Your trip, then": the trip's stops on the Ragusa coast map, and what each one was in
   //      the era on screen. The status comes from that era's Ragusa territory list in
@@ -653,7 +1011,7 @@
     { name: 'Šipan',              re: /, Šipan, Elaphiti Islands$/,  parts: ['elaph'] },
     { name: 'Lopud',              re: /(^|, )Lopud, Elaphiti Islands$/, parts: ['elaph'] },
     { name: 'Cavtat',             re: /, Cavtat$/, minLng: 18.15,    parts: ['konavle'], epidaurum: true },
-    { name: 'Čilipi airport',     re: /Čilipi$/,                     parts: ['konavle'] }
+    { name: 'Čilipi airport',     re: /Čilipi$/,                     parts: ['konavle'], line1942: true }
   ];
   const STOP_SKIP = /^(Adriatic Sea|Adriatic Highway|In-flight)|Channel|\bto\b/;
   let tripStops = null;
@@ -679,8 +1037,8 @@
     return (n.length === 1 ? 'Day ' : 'Days ') + out.map(r => r[0] === r[1] ? r[0] : r[0] + '–' + r[1]).join(', ');
   }
   // What a stop belonged to in each era. Whether it lay inside Ragusa comes from the era's
-  // territory list in history-data.json; these labels name everything else (checked against
-  // the map's own era notes, plus Konavle's history: Travunia → Serbia → bought by Ragusa 1419–26).
+  // territory list in history-data.json, and Ragusa's own status before 1358 is the map's
+  // status line; these labels name everything else (sources in the panel's "How we know").
   // ERA_ALL: every stop shares one ruler. ERA_OUTSIDE: stops outside Ragusa, by kind of place.
   const ERA_ALL = {
     '500bc': 'Illyrian lands', '323bc': 'Illyrian lands', '300bc': 'Illyrian lands', '200bc': 'Illyrian kingdom',
@@ -701,6 +1059,13 @@
     '1300':   { konavle: 'Kingdom of Serbia' },
     '1355':   { konavle: 'Serbian Empire' }
   };
+  const TRIP_SOURCES = [
+    ['Proleksis enciklopedija: Konavle', 'https://proleksis.lzmk.hr/32039/'],
+    ['Kanalites (Konavle in De Administrando Imperio)', 'https://en.wikipedia.org/wiki/Kanalites'],
+    ['Dalmatia (theme)', 'https://en.wikipedia.org/wiki/Dalmatia_(theme)'],
+    ['Konavle in the Second World War (Konavle museums)', 'https://blog.migk.hr/2024/05/07/konavle-u-drugom-svjetskom-ratu/'],
+    ['Dubrovnik Republic (1991–1992)', 'https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)']
+  ];
   function stopStatus(st, f) {
     const R = f.ragusa, slug = histSlugOf(f.label);
     const kind = st.parts.indexOf('konavle') >= 0 ? 'konavle' : st.parts.indexOf('elaph') >= 0 || st.name === 'Lokrum' ? 'isle' : 'main';
@@ -710,17 +1075,20 @@
     }
     if (R.former) {
       if (R.siege && kind === 'konavle') return { t: 'Croatia · occupied 1991–92', cls: 'war' };
+      // Konavle was split in 1941: Cavtat's west went to the NDH, the east to Italy; Čilipi lay near the line
+      if (slug === '1942' && st.line1942) return { t: 'Axis-occupied (the NDH–Italy line ran through Konavle)' };
       return { t: ERA_ALL[slug] || 'once Ragusan' };
     }
     if (R.parts.some(k => st.parts.indexOf(k) >= 0)) {
-      return { t: f.year < 1205 ? 'Ragusa, under Byzantium' : f.year < 1358 ? 'Ragusa, under Venice' : 'Republic of Ragusa', cls: 'rag' };
+      const s = String(R.status || '');
+      return { t: f.year < 1358 ? 'Ragusa · ' + s.replace(/^(Under|Founded)\b/, w => w.toLowerCase()) : 'Republic of Ragusa', cls: 'rag' };
     }
     return { t: (ERA_OUTSIDE[slug] || {})[kind] || 'outside Ragusa' };
   }
   // the coast map's own projection (history/source/export_data.py): x = (lon − 16.75)·1000, y = (43.08 − lat)·1360
   const insetXY = (lat, lng) => [(lng - 16.75) * 1000, (43.08 - lat) * 1360];
   function renderTripThen(f) {
-    if (!histEl || !DATA) return;
+    if (!histEl || !DATA || !f) return;
     const stops = getTripStops();
     if (!stops.length) return;
     const svgEl = histEl.querySelector('.bh-ragusa svg');
@@ -741,14 +1109,28 @@
     }
     let panel = histEl.querySelector('.dcc-hist-trip');
     if (!panel) {
+      // built once; each era change only rewrites the text that changes
       panel = el('section', 'dcc-hist-trip');
-      panel.setAttribute('aria-live', 'polite');
+      panel.setAttribute('aria-label', 'Your trip, then');
+      panel.innerHTML =
+        '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span></span></div>' +
+        '<p class="dcc-hist-trip-sum"><span></span> <span class="dcc-hist-trip-key"><i></i>your stops on the coast map</span></p>' +
+        '<ul class="dcc-hist-trip-list">' + stops.map((st, i) =>
+          '<li><a href="#d=' + (st.days[0] + 1) + '" data-stop="' + i + '">' +
+            '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
+            '<span class="dcc-hist-trip-name"><b>' + escapeHtml(st.name) + ' <small>· ' + escapeHtml(dayRanges(st.days)) + '</small></b>' +
+              '<span class="dcc-hist-trip-v"></span></span>' +
+          '</a></li>').join('') + '</ul>' +
+        '<details class="dcc-chron-srcs dcc-hist-trip-how"><summary>How we know</summary><div class="dcc-hist-trip-howb">' +
+          '<p>Whether a place lay inside Ragusa comes from the map’s own territory data for each era. Elsewhere: Konavle was part of Travunia, then Serbian, Bosnian from 1377–78 and Ragusan from 1419–26; around 650–700 Byzantium still held the islands while Slavs settled the mainland. In 1941 Konavle was split — the west with Cavtat went to the Axis Independent State of Croatia, the east to Italy — and Čilipi lay near that line.</p>' +
+          '<div class="dcc-chron-src">' + TRIP_SOURCES.map(([l, u]) => '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join('') + '</div>' +
+        '</div></details>';
       const rag = histEl.querySelector('.bh-ragusa');
       if (rag) rag.after(panel); else histEl.querySelector('.dcc-hist-mount').appendChild(panel);
       const hl = (e, on) => {
-        const a = e.target.closest && e.target.closest('[data-stop]');
-        if (!a || !svgEl) return;
-        const c = svgEl.querySelector('.dcc-hist-stops [data-stop="' + a.dataset.stop + '"]');
+        const a = e.target.closest && e.target.closest('[data-stop]'), svgNow = histEl.querySelector('.bh-ragusa svg');
+        if (!a || !svgNow) return;
+        const c = svgNow.querySelector('.dcc-hist-stops [data-stop="' + a.dataset.stop + '"]');
         if (c) c.classList.toggle('on', on);
       };
       panel.addEventListener('mouseover', e => hl(e, true));
@@ -756,58 +1138,64 @@
       panel.addEventListener('focusin', e => hl(e, true));
       panel.addEventListener('focusout', e => hl(e, false));
     }
-    const rows = stops.map((st, i) => ({ st, i, s: stopStatus(st, f) }));
-    const R = f.ragusa, nRag = rows.filter(r => r.s.cls === 'rag').length;
-    const sum = R.founded && !R.former
-      ? nRag + ' of ' + rows.length + ' places you went ' + (nRag === 1 ? 'was' : 'were') + ' Ragusan in ' + f.label + '.'
+    const R = f.ragusa, vs = panel.querySelectorAll('.dcc-hist-trip-v');
+    let nRag = 0;
+    stops.forEach((st, i) => {
+      const s = stopStatus(st, f), v = vs[i];
+      if (s.cls === 'rag') nRag++;
+      if (v.textContent !== s.t) v.textContent = s.t;
+      v.className = 'dcc-hist-trip-v' + (s.cls ? ' ' + s.cls : '');
+    });
+    panel.querySelector('.dcc-hist-trip-k span').textContent = 'Your trip, then · ' + f.label;
+    panel.querySelector('.dcc-hist-trip-sum span').textContent = R.founded && !R.former
+      ? nRag + ' of ' + stops.length + ' places you went ' + (nRag === 1 ? 'was' : 'were') + ' Ragusan in ' + f.label + '.'
       : !R.founded ? 'Ragusa had not been founded yet.' : 'The Republic was gone by ' + f.label + '.';
-    panel.innerHTML =
-      '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>Your trip, then · ' + escapeHtml(f.label) + '</span></div>' +
-      '<p class="dcc-hist-trip-sum">' + escapeHtml(sum) + ' <span class="dcc-hist-trip-key"><i></i>your stops on the coast map</span></p>' +
-      '<ul class="dcc-hist-trip-list">' + rows.map(r =>
-        '<li><a href="#d=' + (r.st.days[0] + 1) + '" data-stop="' + r.i + '">' +
-          '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
-          '<span class="dcc-hist-trip-name"><b>' + escapeHtml(r.st.name) + ' <small>· ' + escapeHtml(dayRanges(r.st.days)) + '</small></b>' +
-            '<span class="dcc-hist-trip-v' + (r.s.cls ? ' ' + r.s.cls : '') + '">' + escapeHtml(r.s.t) + '</span></span>' +
-        '</a></li>').join('') + '</ul>';
   }
 
-  // ---- "On this spot": short history notes on Timeline place cards. A note goes on the first
-  //      matching place of a day; its link opens the History tab at that era. ----
+  // ---- "On this spot": short history notes on Timeline place cards. The full note sits on the
+  //      first day you were at that spot; later days get a one-line chip that opens it. The link
+  //      opens the History tab at that era. ----
   const PLACE_HISTORY = [
-    { re: /^Fort Lovrijenac/, era: '1600', text: '“Non bene pro toto libertas venditur auro” is carved over the gate: freedom is not sold for all the gold in the world.' },
-    { re: /^Stradun, /, era: '1100', text: 'By tradition this was a sea channel between the islet of Laus and the mainland town, filled in to join them; digs under the street have found a natural sandy shore instead. Its matching stone houses went up after the 1667 earthquake.' },
-    { re: /^Fort Imperial/, era: '1810', text: 'Built by Napoleon’s French between 1806 and 1812. Its defenders held it on 6 December 1991, and it now houses the Homeland War museum.' },
-    { re: /^Mount Srđ Cross/, era: '1992', text: 'The cross was pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' },
-    { re: /^Benedictine Monastery of St\. Mary, Lokrum/, era: '1000', text: 'Benedictine monks are first recorded on Lokrum in 1023.' },
-    { re: /^Maximilian's Pleasure Gardens/, era: '1832', text: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
-    { re: /^Onofrio's Large Fountain/, era: '1453', text: 'Built in 1438–40 at the end of an aqueduct that carried spring water about 12 km from Šumet into the city.' },
-    { re: /^Orlando's Column/, era: '1453', text: 'Set up in stone in 1419. The knight’s forearm is said to have fixed the Ragusan ell, the city’s measure of length.' },
-    { re: /^Fort Minčeta/, era: '1453', text: 'Rebuilt as a great round tower in the 1460s, as Ottoman power closed in after the fall of Constantinople.' },
-    { re: /^Pile Gate/, era: '1600', text: 'St. Blaise, patron saint of the Republic, watches over the gate.' },
-    { re: /^Dubrovnik Bell Tower/, era: '1453', text: 'First built in 1444. Left leaning by the 1667 earthquake, it was rebuilt to the same design in 1929; the bronze “green men” still strike the hours.' },
-    { re: /^Church of St\. Blaise/, era: '1700', text: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
-    { re: /^Cathedral of the Assumption/, era: '1700', text: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
-    { re: /^Fort Revelin/, era: '1526', text: 'Built in the 1460s against the Ottoman threat, and strengthened in 1538–49.' },
-    { re: /(Luka Cavtat|Žal)\b.*, Cavtat$/, era: '14 AD', text: 'Cavtat stands on ancient Epidaurum. By tradition, its people fled to the islet of Laus in the 600s and founded Ragusa.' },
-    { re: /^Skočibuha Summer Residence/, era: '1600', text: 'Summer estate of the Skočibuha family, Ragusan shipowners; its 16th-century tower guarded against pirates.' },
-    { re: /Ruđer Bošković Airport/, era: '1700', text: 'Named for Ruđer Bošković (1711–1787), the Ragusan-born physicist and astronomer.' }
+    { re: /^Fort Lovrijenac/, era: '1600', short: 'LIBERTAS over the gate', text: '“Non bene pro toto libertas venditur auro” is carved over the gate: freedom is not sold for all the gold in the world.' },
+    { re: /^Stradun, /, era: '1100', short: 'the channel that may never have been', text: 'By tradition this was a sea channel between the islet of Laus and the mainland town, filled in to join them; digs under the street have found a natural sandy shore instead. Its matching stone houses went up after the 1667 earthquake.' },
+    { re: /^Fort Imperial/, era: '1810', short: 'Napoleon’s fort, held in 1991', text: 'Built by Napoleon’s French between 1806 and 1812. Its defenders held it on 6 December 1991, and it now houses the Homeland War museum.' },
+    { re: /^Mount Srđ Cross/, era: '1992', short: 'pulled down 1991, raised again 1997', text: 'The cross was pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' },
+    { re: /^Benedictine Monastery of St\. Mary, Lokrum/, era: '1000', short: 'monks here since 1023', text: 'Benedictine monks are first recorded on Lokrum in 1023.' },
+    { re: /^Maximilian's Pleasure Gardens/, era: '1832', short: 'a future emperor’s garden', text: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
+    { re: /^Onofrio's Large Fountain/, era: '1453', short: 'spring water since 1438', text: 'Built in 1438–40 at the end of an aqueduct that carried spring water about 12 km from Šumet into the city.' },
+    { re: /^Orlando's Column/, era: '1453', short: 'the Ragusan ell', text: 'Set up in stone in 1419. The knight’s forearm is said to have fixed the Ragusan ell, the city’s measure of length.' },
+    { re: /^Fort Minčeta/, era: '1453', short: 'the great round tower', text: 'Rebuilt as a great round tower in the 1460s, as Ottoman power closed in after the fall of Constantinople.' },
+    { re: /^Pile Gate/, era: '1600', short: 'St. Blaise on guard', text: 'St. Blaise, patron saint of the Republic, watches over the gate.' },
+    { re: /^Dubrovnik Bell Tower/, era: '1453', short: 'the green men strike the hours', text: 'First built in 1444. Left leaning by the 1667 earthquake, it was rebuilt to the same design in 1929; the bronze “green men” still strike the hours.' },
+    { re: /^Church of St\. Blaise/, era: '1700', short: 'rebuilt after the fire of 1706', text: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
+    { re: /^Cathedral of the Assumption/, era: '1700', short: 'risen after the 1667 earthquake', text: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
+    { re: /^Fort Revelin/, era: '1526', short: 'guarding the land gate', text: 'Built in the 1460s against the Ottoman threat, and strengthened in 1538–49.' },
+    { re: /(Luka Cavtat|Žal)\b.*, Cavtat$/, era: '14 AD', short: 'ancient Epidaurum', text: 'Cavtat stands on ancient Epidaurum. By tradition, its people fled to the islet of Laus in the 600s and founded Ragusa.' },
+    { re: /^Skočibuha Summer Residence/, era: '1600', short: 'a shipowner’s summer house', text: 'Summer estate of the Skočibuha family, Ragusan shipowners; its 16th-century tower guarded against pirates.' },
+    { re: /Ruđer Bošković Airport/, era: '1700', short: 'named for Bošković', text: 'Named for Ruđer Bošković (1711–1787), the Ragusan-born physicist and astronomer.' }
   ];
-  // place index → note, for the places shown on one day (each note at most once)
-  function dayHistoryNotes(shown) {
+  let noteFirstDay = null;
+  // place index → note for the places shown on one day (each note at most once a day); `full`
+  // says whether this is the first day of the trip at that spot
+  function dayHistoryNotes(shown, di) {
+    if (!noteFirstDay) {
+      noteFirstDay = new Map();
+      DATA.days.forEach((d, k) => (d.places || []).forEach(p => PLACE_HISTORY.forEach(h => {
+        if (!noteFirstDay.has(h) && h.re.test(p.name || '')) noteFirstDay.set(h, k);
+      })));
+    }
     const out = {}, used = new Set();
     shown.forEach(({ p, pi }) => {
       const n = PLACE_HISTORY.find(h => !used.has(h) && h.re.test(p.name || ''));
-      if (n) { used.add(n); out[pi] = n; }
+      if (n) { used.add(n); out[pi] = { n, full: noteFirstDay.get(n) === di }; }
     });
     return out;
   }
-  function historyNoteHtml(n) {
-    return '<aside class="dcc-hist-note">' +
-      '<div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div>' +
-      '<p>' + escapeHtml(n.text) + '</p>' +
-      '<a class="dcc-hist-note-a" href="#v=history&amp;era=' + encodeURIComponent(histSlugOf(n.era)) + '">See it on the map of ' + escapeHtml(n.era) + ' ›</a>' +
-      '</aside>';
+  function historyNoteHtml({ n, full }) {
+    const body = '<p>' + escapeHtml(n.text) + '</p>' +
+      '<a class="dcc-hist-note-a" href="#v=history&amp;era=' + encodeURIComponent(histSlugOf(n.era)) + '">See it on the map of ' + escapeHtml(n.era) + ' ›</a>';
+    if (full) return '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div>' + body + '</aside>';
+    return '<details class="dcc-hist-note dcc-hist-note-mini"><summary>' + svgIcon('history') + '<span>On this spot · ' + escapeHtml(n.short) + '</span></summary>' + body + '</details>';
   }
 
   // ---- share helpers ----
@@ -2399,7 +2787,7 @@
     }
 
     const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
-    const hNotes = dayHistoryNotes(shownPlaces);
+    const hNotes = dayHistoryNotes(shownPlaces, DATA.days.indexOf(day));
     shownPlaces.forEach(({ p, pi }) => {
       const anchor = 'place-' + pi;
       const its = placeItems(p);

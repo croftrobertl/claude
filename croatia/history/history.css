@@ -47,8 +47,9 @@
 
 /* ---------- map plate ---------- */
 .bh-plate { background: var(--bh-surface); border-radius: var(--bh-radius); padding: 8px; position: relative; }
+.bh-viewport.bh-zoomed { touch-action: none; }
 .bh-viewport { position: relative; overflow: hidden; border-radius: calc(var(--bh-radius) - 2px); background: var(--bh-sea);
-  aspect-ratio: 1820 / 1831; max-width: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  aspect-ratio: 1820 / 1831; max-width: 100%; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
 .bh-viewport.bh-dragging { cursor: grabbing; }
 .bh-stage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
 .bh-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
