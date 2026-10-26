@@ -230,7 +230,7 @@ function page(state, opts) {
 ${CSS}
 </style></head>
 <body>
-<header id="masthead" class="cryout">
+<header id="${o.noMasthead ? 'masthead-not-recognised' : 'masthead'}" class="cryout">
   <!-- THE REAL ORDER, read from live: #site-header-main (which holds the menu
        band) comes FIRST and #header-image-main second. The card goes in as
        masthead's LAST child, after the band — see cardHome() in restore.js for
@@ -264,6 +264,8 @@ ${CSS}
   <div class="dcc-test-filler" style="height:1600px"></div>
 </div></article></div></main>
 <script>window.DCC_RESTORE = ${cfg(state)};</script>
+${o.heldStay ? `<script>try { sessionStorage.setItem('dcc_checkout_stay_v1',
+    JSON.stringify(${JSON.stringify(o.heldStay)})); } catch (e) {}</script>` : ''}
 <!-- COUNT THE RESIZE REGISTRATIONS. fitCardToHero() calls itself from its own
      resize handler, so a listener registered per call would double on every
      resize. Nothing observable in the DOM shows that, so the registration is
@@ -407,6 +409,17 @@ const MEASURE = `(() => {
            overflow-clipped area is not hit-testable, so asking what is at a
            point 10px inside the card's top is the measurement.
            (No backticks in here: MEASURE is a template literal.) */
+        /* WHERE THE CARD ENDED UP. 0.36.1 puts it in #masthead for the two
+           no-form states and leaves it in the content otherwise. */
+        home: (() => {
+            const c = document.querySelector('.dcc_checkout-continue');
+            if (!c || !c.parentNode) { return null; }
+            const pn = c.parentNode;
+            return {
+                parent: pn.id ? '#' + pn.id : (String(pn.className || '').trim().split(' ')[0] || pn.tagName.toLowerCase()),
+                inHeader: c.classList.contains('dcc_checkout-continue--inheader'),
+            };
+        })(),
         topIsHittable: (() => {
             const c = document.querySelector('.dcc_checkout-continue');
             if (!c) { return null; }
@@ -845,6 +858,89 @@ const MEASURE = `(() => {
             m.heading.tag, 'h2');
         check('… while the theme\'s banner is still not shown',
             m.themeTitleShown, false);
+        await ctx.close();
+    }
+
+    /* =====================================================================
+     * THE FALLBACK: A HEADER THIS PLUGIN DOES NOT RECOGNISE (0.36.1).
+     *
+     * cardHome() returns null unless #masthead exists with #header-image-main
+     * inside it, and the card then lands where 0.35.x put it — in MotoPress's
+     * wrapper, inside main.main and div.one-column, both overflow:hidden on
+     * this theme. THAT is the one path where removing the theme's clipping
+     * still matters, and until this case existed nothing exercised it: with
+     * the card in the header, re-clipping main cannot cut it, so the mutation
+     * guarding that rule had become an equivalent mutant. Found by the
+     * targeted sweep after the card moved, which is this repo's own "a new
+     * rule can make an old test vacuous" in a new shape.
+     *
+     * The header element is present and the right shape — only its id is
+     * something else — because that is the realistic failure: a theme update
+     * renames or restructures it.
+     * ===================================================================== */
+    {
+        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        const p = await ctx.newPage();
+        await p.route('**/*.webp', (route) => route.fulfill({
+            status: 200, contentType: 'image/webp',
+            body: Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQ////AA==', 'base64'),
+        }));
+        const html = page('lost', { noMasthead: true });
+        await p.route('https://example.test/submit-booking/', (route) => route.fulfill({
+            status: 200, contentType: 'text/html', body: html,
+        }));
+        await p.goto('https://example.test/submit-booking/');
+        const m = await p.evaluate(MEASURE);
+        check('an unrecognised header: the card falls back into the content',
+            [m.home.parent, m.home.inHeader],
+            ['mphb_sc_checkout-wrapper', false]);
+        /* A card, not a blank page — and still readable, which needs the
+           theme's clipping removed because the card is still pulled up. */
+        check('… it is still pulled onto the photo',
+            m.card.top > 0 && m.card.top <= 300, true);
+        check('… and it is still not cut off, which is what the unclipping is for',
+            m.topIsHittable, ['card', 'card', 'card']);
+        await ctx.close();
+    }
+
+    /* =====================================================================
+     * THE `continue` STATE, WHICH NOTHING HERE COVERED (0.36.1).
+     *
+     * cfg() only ever built `taken` and `lost`, so the third card — the one a
+     * guest with answers in sessionStorage gets — was never rendered by this
+     * suite. It is also the only state where the heading's tag is decided
+     * against a heading that still EXISTS: dropThemeTitle() runs for the two
+     * no-form states and removes the theme's 0x0 h1, so after it there is no
+     * invisible h1 left and "exists" and "is visible" cannot disagree. Here
+     * it does not run, the 0x0 title is still in the document, and the card
+     * must step down to an h2 beside it.
+     *
+     * That is the input the two mechanisms differ on. Without it the mutation
+     * on that line was equivalent — a claim about a mechanism needs an input
+     * where the mechanisms part company.
+     * ===================================================================== */
+    {
+        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        const p = await ctx.newPage();
+        await p.route('**/*.webp', (route) => route.fulfill({
+            status: 200, contentType: 'image/webp',
+            body: Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQ////AA==', 'base64'),
+        }));
+        /* PHP says `lost` — it holds the submission and this request posted
+           nothing. The browser half knows the one thing PHP cannot: answers
+           are held, so the dates are not lost and the guest can carry on. */
+        const html = page('lost', { heldStay: STAY });
+        await p.route('https://example.test/submit-booking/', (route) => route.fulfill({
+            status: 200, contentType: 'text/html', body: html,
+        }));
+        await p.goto('https://example.test/submit-booking/');
+        const m = await p.evaluate(MEASURE);
+        check('answers held: the Continue card is the one drawn',
+            m.heading.text, I18N.continueTitle);
+        check('… and it steps down to an h2, because the theme\'s 0x0 h1 is still there',
+            m.heading.tag, 'h2');
+        check('… and it is left in the content, not moved into the header',
+            m.home.inHeader, false);
         await ctx.close();
     }
 
