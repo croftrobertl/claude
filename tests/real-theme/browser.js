@@ -47,11 +47,19 @@ const MIN = !!process.env.DCC_MIN;
 
 let pass = 0;
 const fails = [];
+/* ONE LINE PER ASSERTION, STARTING AT COLUMN 0. The mutation runner reads a
+   suite's outcome from lines beginning "PASS" or "FAIL" — a tally alone is
+   "no verdict printed", which is what the baseline preflight caught this
+   suite doing, exactly as it is meant to. Leading spaces hide the line from
+   it just as effectively as printing nothing. */
 function check(name, got, want) {
     const a = JSON.stringify(got);
     const b = JSON.stringify(want);
-    if (a === b) { pass++; return; }
+    if (a === b) { pass++; console.log('PASS  ' + name); return; }
     fails.push(`${name}\n      got  ${a}\n      want ${b}`);
+    console.log('FAIL  ' + name);
+    console.log('      got  ' + a);
+    console.log('      want ' + b);
 }
 
 /* THE PAYLOAD — ONE COPY, shared with the live-swap verification, and
@@ -421,9 +429,8 @@ const WIDTHS = [390, 768, 1440];
     fs.writeFileSync(path.join(HERE, 'measured.json'), JSON.stringify(report, null, 1));
 
     if (fails.length) {
-        fails.forEach((f) => console.log('  FAIL ' + f));
-        console.log(`\n  ${pass} passing, ${fails.length} FAILING`);
+        console.log(`\n${pass} passing, ${fails.length} FAILING`);
         process.exit(1);
     }
-    console.log(`  ${pass} passing`);
+    console.log(`\n${pass} passing`);
 })();
