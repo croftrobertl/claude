@@ -92,7 +92,8 @@ const M = 8;                 /* the margin kept clear around every box, px */
 const FULL = w => Math.round(78 * Math.min(Math.max(w / 390, 0.82), 1.3));   /* the engine's sleigh length */
 const FULLR = w => Math.round(54 * Math.min(Math.max(w / 390, 0.82), 1.3));  /* and its moon */
 
-if (!process.argv.includes('--sheet')) (async () => {
+module.exports = { PAINT, LAB, M, FULL, FULLR };
+if (require.main === module && !process.argv.includes('--sheet')) (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const report = {};
   const shots = {};
@@ -251,7 +252,7 @@ if (!process.argv.includes('--sheet')) (async () => {
 
 /* ---- the sheet for Rob, from the last run's stills and numbers ---------
  *   node tools/xmas-place.js --sheet */
-if (process.argv.includes('--sheet')) {
+if (require.main === module && process.argv.includes('--sheet')) {
   (async () => {
     const R = JSON.parse(fs.readFileSync(path.join(OUT, 'Seasons - 4.14.1 christmas placement.json'), 'utf8'));
     const S = JSON.parse(fs.readFileSync(path.join(OUT, '.xp-shots.json'), 'utf8'));
