@@ -379,13 +379,13 @@
     requestAnimationFrame(enhanceAllHScroll);
   }
   // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>,
-  //      #v=map|stats|gallery, #v=map&then=<era>, #v=history&era=<slug>[&ch=<strand>][&e=<entry>] ----
+  //      #v=map|stats|gallery, #v=map&then=<era>, #v=history&era=<slug>[&ch=<strand>][&e=<entry>][&pl=<place>] ----
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
     history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
       : '#v=' + v + (v === 'map' && thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
-        (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') : ''));
+        (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') + (histPlace ? '&pl=' + encodeURIComponent(histPlace) : '') : ''));
   }
   function findDayByGuid(g) {
     for (let di = 0; di < DATA.days.length; di++)
@@ -400,7 +400,7 @@
       const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
     });
     if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { if (m.v === 'map' && m.then) thenWant = m.then; setView(m.v); return; }
-    if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; setView('history'); return; }
+    if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; histPlace = m.pl || null; setView('history'); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
     if (di != null) {
@@ -455,6 +455,7 @@
       if (histWant && f && f.some(fr => histSlugOf(fr.label) === histSlugOf(histWant))) histHandle.show(histWant);
       histWant = null;
       applyChronLink();
+      renderHistPlace();
       return;
     }
     if (histWant) histSlug = histWant;   // keep the era in the URL while the map loads
@@ -466,6 +467,7 @@
         onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
       histWant = null;
+      renderHistPlace();
     };
     loadChronicle();
     if (window.BalkansHistory) { mountNow(); return; }
@@ -501,6 +503,7 @@
       renderTripThen(fr); timeMachine(fr);
       if (chron && !chronShown) chronFirstRender();
       chronicleNow(histSlugOf(fr.label)); storyUpdate(fr);
+      renderHistPlace();   // no-op once drawn; the first time, it waits for the map's eras
     });
   }
   // the 60-second film plays in the shared media viewer (poster + play button, no autoplay)
@@ -1652,28 +1655,129 @@
     { re: /^Skočibuha Summer Residence/, era: '1600', short: 'a shipowner’s summer house', text: 'Summer estate of the Skočibuha family, Ragusan shipowners; its 16th-century tower guarded against pirates.' },
     { re: /Ruđer Bošković Airport/, era: '1700', short: 'named for Bošković', text: 'Named for Ruđer Bošković (1711–1787), the Ragusan-born physicist and astronomer.' }
   ];
-  let noteFirstDay = null;
-  // place index → note for the places shown on one day (each note at most once a day); `full`
-  // says whether this is the first day of the trip at that spot
-  function dayHistoryNotes(shown, di) {
-    if (!noteFirstDay) {
-      noteFirstDay = new Map();
-      DATA.days.forEach((d, k) => (d.places || []).forEach(p => PLACE_HISTORY.forEach(h => {
-        if (!noteFirstDay.has(h) && h.re.test(p.name || '')) noteFirstDay.set(h, k);
-      })));
+  // ---- "This place in history": every photo, video and clip from the Dubrovnik area links to the
+  //      History tab for the spot it was taken (#v=history&pl=<place name>). The other tabs carry
+  //      only that link; the History tab works out which part of the old Republic the spot is in
+  //      (history/street.json) and shows who held it in every era, the "On this spot" note, and
+  //      what was built close by. ----
+  let placeGeoMap = null, histPlace = null;
+  function placeGeo(name) {
+    if (!placeGeoMap) {
+      placeGeoMap = new Map();
+      DATA.days.forEach((d, di) => (d.places || []).forEach(p => {
+        if (p.lat == null || !p.name) return;
+        const g = placeGeoMap.get(p.name) || { lat: p.lat, lng: p.lng, days: [] };
+        if (g.days.indexOf(di) < 0) g.days.push(di);
+        placeGeoMap.set(p.name, g);
+      }));
     }
-    const out = {}, used = new Set();
-    shown.forEach(({ p, pi }) => {
-      const n = PLACE_HISTORY.find(h => !used.has(h) && h.re.test(p.name || ''));
-      if (n) { used.add(n); out[pi] = { n, full: noteFirstDay.get(n) === di }; }
-    });
-    return out;
+    return placeGeoMap.get(name) || null;
   }
-  function historyNoteHtml({ n, full }) {
-    const body = '<p>' + escapeHtml(n.text) + '</p>' +
-      '<a class="dcc-hist-note-a" href="#v=history&amp;era=' + encodeURIComponent(histSlugOf(n.era)) + '">See it on the map of ' + escapeHtml(n.era) + ' ›</a>';
-    if (full) return '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div>' + body + '</aside>';
-    return '<details class="dcc-hist-note dcc-hist-note-mini"><summary>' + svgIcon('history') + '<span>On this spot · ' + escapeHtml(n.short) + '</span></summary>' + body + '</details>';
+  // only spots on the Dubrovnik coast (not flights or the drive between two places)
+  function histPlaceOk(name) {
+    const g = name && !/^In-flight|\bto\b/.test(name) ? placeGeo(name) : null;
+    return !!g && g.lat > 42.35 && g.lat < 43.1 && g.lng > 16.75 && g.lng < 18.65;
+  }
+  const histPlaceHref = name => '#v=history&pl=' + encodeURIComponent(name);
+  function openPlaceHistory(name) { histPlace = name; setView('history'); }
+  function histPlaceLink(name) {
+    return histPlaceOk(name) ? '<a class="dcc-tour-histlink" href="' + escapeAttr(histPlaceHref(name)) + '" onclick="event.stopPropagation()">' +
+      svgIcon('history') + '<span>History of this place ›</span></a>' : '';
+  }
+  let streetLoading = null;
+  function streetLoad() {
+    if (!streetLoading) streetLoading = fetch(resolveUrl('history/street.json')).then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(s => (thenStreet = s)).catch(e => { streetLoading = null; throw e; });
+    return streetLoading;
+  }
+  // the part of the old Republic a spot lies in (or, at sea, the nearest one within 4 km)
+  function placePart(lat, lng) {
+    const S = thenStreet;
+    if (thenInPolys(lat, lng, S.parts.city)) return { k: 'core', city: true };
+    for (const k of THEN_ORDER) if (k !== 'city' && thenInPolys(lat, lng, S.parts[k] || [])) return { k };
+    let best = null, bd = 4;
+    const cx = Math.cos(lat * Math.PI / 180);
+    THEN_ORDER.forEach(k => k !== 'city' && (S.parts[k] || []).forEach(p => p[0].forEach(q => {
+      const d = Math.hypot((q[1] - lng) * cx, q[0] - lat) * 111.2;
+      if (d < bd) { bd = d; best = k; }
+    })));
+    return best ? { k: best, sea: bd > 0.15 } : null;   // within 150 m: the outlines are simplified to ~10 m, so call it the shore
+  }
+  // the place as placeStatus() wants it: a named village where we have one, else its part
+  function placeSubject(name, pp) {
+    const P = THEN_PART[pp.k];
+    const v = VILLAGES.find(v => {
+      const n = v.n.replace(/ \(Konavle\)$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return v.kind !== 'main' && v.parts.indexOf(pp.k) >= 0 && new RegExp('(^|[ ,(])' + n + '([ ,)]|$)').test(name);
+    });
+    if (v) return { subj: v, area: v.n.replace(/ \(Konavle\)$/, '') + (v.kind === 'konavle' ? ', Konavle' : '') };
+    return { subj: Object.assign({}, P, { parts: pp.city ? ['city', 'core'] : [pp.k] }), area: pp.city ? 'the walled city of Dubrovnik' : P.name };
+  }
+  function renderHistPlace() {
+    if (!histEl) return;
+    let sec = histEl.querySelector('.dcc-hist-place');
+    if (!histPlace || !histHandle || !DATA) { if (sec) sec.remove(); return; }
+    if (!histHandle.frames || !histHandle.frames.length) return;   // the map's eras are still loading (onChange calls back)
+    const name = histPlace, g = placeGeo(name);
+    if (!sec) {
+      sec = el('section', 'dcc-hist-place');
+      sec.setAttribute('aria-label', 'This place in history');
+      sec.addEventListener('click', histPlaceClick);
+      histEl.querySelector('.dcc-hist-top').after(sec);
+    }
+    if (sec.dataset.pl === name) return;
+    sec.dataset.pl = name;
+    const closeBtn = '<button type="button" class="dcc-hp-x" aria-label="Close this place" title="Close">×</button>';
+    if (!g) { sec.innerHTML = closeBtn + '<p class="dcc-hist-msg">That place isn’t in the trip.</p>'; return; }
+    sec.innerHTML = '<p class="dcc-hist-msg">Finding ' + escapeHtml(shortName(name)) + ' on the old maps…</p>';
+    streetLoad().then(() => {
+      if (sec.dataset.pl !== name) return;
+      const pp = placePart(g.lat, g.lng);
+      if (!pp) {
+        sec.innerHTML = closeBtn + '<h2 class="dcc-hp-h">' + escapeHtml(shortName(name)) + '</h2>' +
+          '<p class="dcc-hp-sub">This spot is outside the lands of the old Republic, so there’s no place history for it yet.</p>';
+        return;
+      }
+      const { subj, area } = placeSubject(name, pp);
+      const runs = villageRuns(subj);
+      const note = PLACE_HISTORY.find(h => h.re.test(name));
+      const cx = Math.cos(g.lat * Math.PI / 180);
+      const near = THEN_MARKS.map(m => ({ m, d: Math.hypot((m.ll[1] - g.lng) * cx, m.ll[0] - g.lat) * 111200 }))
+        .filter(x => x.d < 260).sort((a, b) => a.d - b.d).slice(0, 4);
+      sec.innerHTML = closeBtn +
+        '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>This place in history</span></div>' +
+        '<h2 class="dcc-hp-h">' + escapeHtml(shortName(name)) + '</h2>' +
+        '<p class="dcc-hp-sub">' + (pp.sea ? 'Off the coast of ' : 'In ') + escapeHtml(area) + ' · you were here on ' + escapeHtml(dayRanges(g.days).replace(/^D/, 'd')) + '</p>' +
+        (note ? '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div><p>' + escapeHtml(note.text) + '</p>' +
+          '<button type="button" class="dcc-hist-note-a" data-vt="' + escapeAttr(histSlugOf(note.era)) + '">See the map of ' + escapeHtml(note.era) + ' ›</button></aside>' : '') +
+        (near.length ? '<h3 class="dcc-hp-k">Built close by</h3><ul class="dcc-hp-marks">' + near.map(({ m }) =>
+          '<li><i class="dcc-hp-by-' + m.by + '" aria-hidden="true"></i><div><b>' + escapeHtml(m.t) + '</b> <span>' + escapeHtml(m.s) + ' · ' + THEN_BY[m.by] + '</span>' +
+            '<p>' + escapeHtml(m.x) + '</p></div></li>').join('') + '</ul>' : '') +
+        '<h3 class="dcc-hp-k">Who held it</h3>' +
+        '<ol class="dcc-vt">' + runs.map(r =>
+          '<li class="' + r.cls + '"><button type="button" data-vt="' + escapeAttr(histSlugOf(r.from.label)) + '">' +
+            '<span class="dcc-vt-y">' + escapeHtml(r.from.label) + (r.to !== r.from ? ' – ' + escapeHtml(r.to.label) : '') + '</span>' +
+            '<span class="dcc-vt-t">' + escapeHtml(r.t) + '</span></button></li>').join('') + '</ol>' +
+        '<p class="dcc-vt-note">Each line is one or more of the map’s eras; tap one to see that map.' + (pp.sea ? ' Out at sea, this follows the nearest coast.' : '') + '</p>' +
+        '<button type="button" class="dcc-hist-street dcc-hp-street">See this spot over today’s streets ›</button>';
+    }).catch(() => { sec.innerHTML = closeBtn + '<p class="dcc-hist-msg">The place history couldn’t load — try again when you’re online.</p>'; });
+  }
+  function histPlaceClick(e) {
+    const vt = e.target.closest('[data-vt]');
+    if (vt && histHandle) {
+      histHandle.show(vt.dataset.vt);
+      const head = histEl.querySelector('.bh-head');
+      if (head) { storyLock(1600); head.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); }
+      return;
+    }
+    if (e.target.closest('.dcc-hp-x')) { histPlace = null; renderHistPlace(); updateHash(); return; }
+    if (e.target.closest('.dcc-hp-street')) {
+      const g = placeGeo(histPlace);
+      // the era on the History map, unless that's before Ragusa was founded
+      const f = histHandle && histHandle.frames && histHandle.frames.find(x => histSlugOf(x.label) === histSlug);
+      thenWant = f && f.year >= 614 ? histSlug : '1453'; thenWantLL = g ? [g.lat, g.lng] : null;
+      setView('map');
+    }
   }
 
   // ---- share helpers ----
@@ -2090,8 +2194,8 @@
   // a #v=map&then=<era> link, or the History tab's "On today's map"
   function thenApplyWant() {
     if (!thenWant) return;
-    const w = thenWant; thenWant = null;
-    setTimeout(() => thenToggle(true, w, true), 120);
+    const w = thenWant, ll = thenWantLL; thenWant = null; thenWantLL = null;
+    setTimeout(() => thenToggle(true, w, ll || true), 120);
   }
   // ---- "Then": the History tab's eras laid over the Map tab's street map and satellite.
   //      Zoomed out it shows the era's empires (the History map's own shapes); from zoom 9
@@ -2136,6 +2240,7 @@
     { ll: [42.6409, 18.1104], from: 1444, by: 'rag', t: 'Bell Tower', s: '1444', x: 'First built in 1444. Left leaning by the 1667 earthquake, it was rebuilt to the same design in 1929.' },
     { ll: [42.64232, 18.11258], from: 1462, by: 'rag', t: 'Fort Revelin', s: '1460s', x: 'Built in the 1460s against the Ottoman threat, and strengthened in 1538–49.' },
     { ll: [42.64124, 18.11056], from: 1516, by: 'rag', t: 'Sponza Palace', s: '1516–22', x: 'Customs house and mint, built 1516–22. It came through the 1667 earthquake.' },
+    { ll: [42.64167, 18.11472], from: 1590, by: 'rag', t: 'Lazareti', s: '1590–1642', x: 'Quarantine houses outside the Ploče gate, built from 1590 and finished in 1642. Travellers and goods from plague-hit lands waited here before entering the city — the Republic had made the earliest known quarantine law in 1377.' },
     { ll: [42.6403, 18.110381], from: 1667, by: 'rag', t: 'Cathedral', s: 'after 1667', x: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
     { ll: [42.640629, 18.109978], from: 1706, by: 'rag', t: 'St. Blaise', s: '1706–15', x: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
     { ll: [42.64991, 18.11065], from: 1806, by: 'fra', t: 'Fort Imperial', s: 'France, 1806–12', x: 'Built by Napoleon’s French between 1806 and 1812, looking down on the whole city. Its defenders held it on 6 December 1991; it now houses the Homeland War museum.' },
@@ -2145,7 +2250,7 @@
     { ll: [42.649189, 18.111862], from: 1991, by: 'cro', t: 'Mount Srđ Cross', s: '1991 · 1997', x: 'Pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' }
   ];
   const THEN_BY = { rome: 'Rome', church: 'the Church', rag: 'Ragusa', fra: 'France', aus: 'Austria', cro: 'Croatia' };
-  let thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenLoading = null;
+  let thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenWantLL = null, thenLoading = null;
   let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false;
   const thenRingsCache = new Map();
   const thenLL = (x, y) => [48.4 - y / 132.7, 12 + x / 100];   // the History map's own projection, inverted
@@ -2161,8 +2266,8 @@
   function thenLoad() {
     if (!thenLoading) thenLoading = Promise.all([
       fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      fetch(resolveUrl('history/street.json')).then(r => r.ok ? r.json() : Promise.reject(r.status))
-    ]).then(([d, s]) => { thenData = d; thenStreet = s; }).catch(e => { thenLoading = null; throw e; });
+      streetLoad()
+    ]).then(([d]) => { thenData = d; }).catch(e => { thenLoading = null; throw e; });
     return thenLoading;
   }
   // ray-cast point-in-ring on [lat, lng] rings
@@ -2318,6 +2423,15 @@
       thenNear.addLayer(L.marker(mid, { pane: 'dccThenTop', interactive: false, keyboard: false,
         icon: L.divIcon({ className: 'dcc-then-llab' + (k === 'frontier' ? '' : ' dcc-then-llab-1699'), html: '<span>' + escapeHtml(k === 'frontier' ? (R.former ? 'old frontier' : 'frontier') : '1699 line') + '</span>', iconSize: null }) }));
     });
+    // the walls of Ston, tower to tower (begun 1358, still standing)
+    if (R.founded && f.year >= 1358 && S.ston) {
+      thenNear.addLayer(L.polyline(S.ston.lines, { renderer: thenNear._r, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineCap: 'round', lineJoin: 'round' }));
+      const sw = L.polyline(S.ston.lines, { renderer: thenNear._r, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'dcc-then-wall' });
+      sw.bindTooltip('<b>Walls of Ston, begun 1358</b><br>Drawn tower to tower, so the line is approximate: round the town, up to Pozvizd on the hill, and along the isthmus to Mali Ston.', { sticky: true, className: 'dcc-then-tip' });
+      thenNear.addLayer(sw);
+      S.ston.towers.forEach(t => thenNear.addLayer(L.circleMarker([t[1], t[2]], { renderer: thenNear._r, pane: 'dccThen', radius: 4, color: '#fff', weight: 1.5, fillColor: '#7d5411', fillOpacity: 1, className: 'dcc-then-tower' })
+        .bindTooltip(escapeHtml(t[0]), { className: 'dcc-then-tip', direction: 'top' })));
+    }
     // the Stradun: a sea channel by tradition until the town and the islet were joined
     if (R.founded && f.year <= 1100) {
       const ch = L.polyline(S.stradun, { renderer: thenNear._r, pane: 'dccThen', color: '#2f7f9c', weight: 6, opacity: 0.8, dashArray: '2 8', lineCap: 'round' });
@@ -2416,7 +2530,7 @@
       let i = want ? fr.findIndex(x => histSlugOf(x.label) === histSlugOf(want)) : thenIdx;
       if (i < 0) i = fr.findIndex(x => histSlugOf(x.label) === '1453');
       thenIdx = -1; thenShow(i);
-      if (fly) mmMap.flyTo([42.652, 18.098], 12, { duration: reducedMotion() ? 0 : 1.2 });
+      if (fly) mmMap.flyTo(Array.isArray(fly) ? fly : [42.652, 18.098], Array.isArray(fly) ? 16 : 12, { duration: reducedMotion() ? 0 : 1.2 });
     }).catch(() => { ui.querySelector('.dcc-then-s').textContent = 'The eras could not load — try again when you’re online.'; });
   }
   function thenMarkup() {
@@ -2628,7 +2742,7 @@
     });
     side.hidden = false;
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
-      '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
+      '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' + histPlaceLink(p.name) +
       '<p class="dcc-tour-mm-meta">' + [escapeHtml(d.label), escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to),
         items.length + (items.length === 1 ? ' shot' : ' shots') + (personOn() ? ' by ' + escapeHtml(personLabel()) : '')].filter(Boolean).join(' · ') + '</p>' +
       '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
@@ -3625,7 +3739,6 @@
     }
 
     const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
-    const hNotes = dayHistoryNotes(shownPlaces, DATA.days.indexOf(day));
     shownPlaces.forEach(({ p, pi }) => {
       const anchor = 'place-' + pi;
       const its = placeItems(p);
@@ -3646,10 +3759,10 @@
           '<div class="dcc-tour-place-htext">' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
             '<span class="dcc-tour-place-meta">' + [escapeHtml(time) + spent.replace(/^ · /, escapeHtml(time) ? ' · ' : ''), plur(its.length, 'shot')].filter(Boolean).join(' · ') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
+            histPlaceLink(p.name) +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
-        (hNotes[pi] ? historyNoteHtml(hNotes[pi]) : '') +
         '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(it => renderItem(it)).join('') + '</div>' +
         '</section>';
     });
@@ -3963,6 +4076,14 @@
     }
     const cap = el0.querySelector('.dcc-tour-lightbox-cap');
     cap.textContent = [it.place, it.date, it.time].filter(Boolean).join(' · ');
+    // one link to the History tab for the spot this was taken
+    if (it.place && histPlaceOk(it.place)) {
+      const a = document.createElement('button');
+      a.className = 'dcc-tour-lb-place dcc-tour-lb-hist'; a.type = 'button';
+      a.innerHTML = svgIcon('history') + '<span>History of this place ›</span>';
+      a.addEventListener('click', e => { e.stopPropagation(); const n = it.place; closeViewer(); openPlaceHistory(n); });
+      cap.appendChild(a);
+    }
     // map-opened items get a link to that place's full popup (all shots + Open day)
     if (it.mapRef) {
       const a = document.createElement('button');

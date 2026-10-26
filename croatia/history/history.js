@@ -86,8 +86,10 @@
       '<button type="button" class="bh-btn" data-z="out" aria-label="Zoom out">−</button>' +
       '<button type="button" class="bh-btn" data-z="ragusa" aria-label="Zoom in to Ragusa" title="Zoom in to Ragusa">' +
         '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg></button>' +
-      '<button type="button" class="bh-btn" data-z="reset" aria-label="Show the whole map">⤢</button>';
-    const attrib = el('div', 'bh-attrib', 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · old borders approximate');
+      '<button type="button" class="bh-btn" data-z="reset" aria-label="Show the whole map">⤢</button>' +
+      '<button type="button" class="bh-btn bh-satbtn" data-z="sat" aria-pressed="false" aria-label="Satellite view" title="Satellite view">' +
+        '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg></button>';
+    const attrib = el('div', 'bh-attrib');
     plate.append(vp, zoomUI, attrib);
 
     const tl = el('div', 'bh-timeline');
@@ -431,6 +433,7 @@
       const b = e.target.closest('[data-z]'); if (!b) return;
       const w = vp.clientWidth / 2, h = vp.clientHeight / 2, z = b.dataset.z;
       if (z === 'reset') zoomTo(VW / 2, VH / 2, 1);
+      else if (z === 'sat') setSat(!sat);
       else if (z === 'ragusa') zoomTo(RAG[0], RAG[1], Math.min(900, maxScale()));   // the Old Town and Lokrum
       else zoomAt(z === 'in' ? 2 : 1 / 2, w, h);
     });
@@ -443,6 +446,20 @@
     // (source/export_data.py) — within a tile the difference from web-map projection is negligible.
     const TILE_MIN = 2.5, tileImgs = new Map();
     let tileWant = new Set(), tileT = 0, tileFails = 0;
+    // street map (OpenStreetMap) or satellite (Esri World Imagery); the choice is remembered on this device
+    let sat = false;
+    try { sat = localStorage.getItem('bh-sat') === '1'; } catch (e) { /* storage blocked */ }
+    function setSat(on) {
+      sat = on;
+      root.classList.toggle('bh-sat', on);
+      const b = zoomUI.querySelector('[data-z=sat]');
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = on ? 'Street map view' : 'Satellite view'; b.setAttribute('aria-label', b.title);
+      attrib.innerHTML = (on ? 'Imagery © Esri' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
+      tileImgs.forEach(im => im.remove()); tileImgs.clear(); tileWant = new Set(); tileFails = 0;
+      try { localStorage.setItem('bh-sat', on ? '1' : '0'); } catch (e) { /* storage blocked */ }
+      loadTiles();
+    }
     const tLon = (x, n) => x / n * 360 - 180;
     const tLat = (y, n) => { const k = Math.PI - 2 * Math.PI * y / n; return 180 / Math.PI * Math.atan(0.5 * (Math.exp(k) - Math.exp(-k))); };
     function placeTile(im, w, h) {
@@ -465,7 +482,7 @@
       const x0 = -tx / (w * scale) * VW, x1 = x0 + VW / scale, y0 = -ty / (h * scale) * VH, y1 = y0 + VH / scale;
       const lonW = 12 + x0 / 100, lonE = 12 + x1 / 100, latN = 48.4 - y0 / 132.7, latS = 48.4 - y1 / 132.7;
       const dpr = Math.min(2.5, window.devicePixelRatio || 1);
-      const z = Math.max(4, Math.min(19, Math.ceil(Math.log2(360 * w * dpr / (256 * (lonE - lonW))))));
+      const z = Math.max(4, Math.min(sat ? 18 : 19, Math.ceil(Math.log2(360 * w * dpr / (256 * (lonE - lonW))))));
       const n = 2 ** z, col = lon => Math.floor((lon + 180) / 360 * n);
       const row = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n); };
       const c0 = col(lonW), c1 = col(lonE), r0 = row(latN), r1 = row(latS);
@@ -486,7 +503,8 @@
           }
           sweep();
         };
-        im.src = 'https://tile.openstreetmap.org/' + key + '.png';
+        im.src = sat ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + y + '/' + x
+          : 'https://tile.openstreetmap.org/' + key + '.png';
         placeTile(im, w, h); tilesEl.appendChild(im); tileImgs.set(key, im);
       }
       tileWant = want;
@@ -546,6 +564,7 @@
     let start = 0;
     const want = opts.start || (opts.hash !== false ? (location.hash || '').slice(1) : '');
     if (want) { const k = F.findIndex(f => slug(f.label) === slug(want)); if (k >= 0) start = k; }
+    setSat(sat);
     show(start, false);
     root.tabIndex = -1;
     return { show: k => show(typeof k === 'number' ? k : F.findIndex(f => slug(f.label) === slug(k))), frames: F };

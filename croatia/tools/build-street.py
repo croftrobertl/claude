@@ -23,6 +23,22 @@ REL = {  # OSM relation ids
     'sutorina': 4098902,  # boundary=historic: the 1699 Sutorina corridor
 }
 STRADUN_WAY = 987089809
+# The walls of Ston, tower to tower. OpenStreetMap maps the towers (man_made=tower) but not the
+# wall itself in a form Nominatim serves, so the line joins the towers in order along the
+# documented route: round the town, up to Pozvizd on the hill, then along the isthmus to Mali
+# Ston. Positions are the towers' OSM centroids (found with Nominatim reverse lookups).
+STON_TOWERS = {  # name: (osm way/node, lat, lng)
+    'Veliki Kaštio': ('w180367431', 42.8369293, 17.6967566), 'Kula Nad vodom': ('w250734826', 42.839309, 17.6969414),
+    'Minčeta': ('n2571160782', 42.8396384, 17.6939916), 'Sokolić': ('n2571160783', 42.8395804, 17.6937096),
+    'Arcimun': ('n2571160781', 42.8385192, 17.6934791), 'Stoviš': ('w250734827', 42.8402902, 17.6955856),
+    'Pozvizd': ('w208087226', 42.8427218, 17.6958284), 'Kula Dobri': ('w250734213', 42.8436669, 17.6997446),
+    'Kula Dolina': ('w250734290', 42.8448068, 17.7018059), 'Koruna': ('w250734212', 42.8453501, 17.7034374),
+    'Toljevac': ('w235921263', 42.8469313, 17.7048744),
+}
+STON_LINES = [
+    ['Veliki Kaštio', 'Kula Nad vodom', 'Minčeta', 'Sokolić', 'Arcimun', 'Veliki Kaštio'],   # round the town
+    ['Kula Nad vodom', 'Stoviš', 'Pozvizd', 'Kula Dobri', 'Kula Dolina', 'Koruna', 'Toljevac'],   # up the hill and on to Mali Ston
+]
 UA = 'croatia-family-archive/1.0 (history map build)'
 
 def fetch(d):
@@ -167,6 +183,10 @@ def build(d):
         'frontier': shared(d, rag, ['ravno', 'trebinje']),
         'neum': shared(d, rag, ['neum']) + shared(d, ['neum'], ['slivno']),
         'sutorina': shared(d, ['konavle'], ['hercegnovi']),
+    }
+    out['ston'] = {
+        'towers': [[n, round(v[1], 6), round(v[2], 6)] for n, v in STON_TOWERS.items()],
+        'lines': [[[round(STON_TOWERS[n][1], 6), round(STON_TOWERS[n][2], 6)] for n in l] for l in STON_LINES],
     }
     g = geo(d, 'W%d' % STRADUN_WAY)
     out['stradun'] = [[round(q[1], 6), round(q[0], 6)] for q in dp(g['coordinates'], 0.000005)]

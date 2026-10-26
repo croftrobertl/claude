@@ -912,12 +912,12 @@ html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 /* history.css gives inset strokes non-scaling widths, so this is in screen px */
 .dcc-hist-stops circle { fill: #fff; stroke: #201f1d; stroke-width: 1.6; }
 .dcc-hist-stops circle.on { fill: #c0392b; }
-/* "On this spot": a history note on a Timeline place card (stays visible when the card is collapsed) */
+/* "On this spot": the note in the History tab's place view */
 .dcc-hist-note { margin: 0.2rem 0 0.7rem; padding: 10px 12px; border-radius: var(--dcc-tour-radius);
   background: var(--dcc-tour-accent-tint); display: grid; gap: 4px; }
 .dcc-hist-note p { margin: 0; font-size: 0.9rem; line-height: 1.45; }
 .dcc-hist-note-a { justify-self: start; font-family: var(--dcc-tour-font-head); font-weight: 600; font-size: 0.8rem;
-  color: var(--dcc-tour-accent-deep); text-decoration: none; padding: 4px 0; }
+  color: var(--dcc-tour-accent-deep); text-decoration: none; padding: 4px 0; background: none; border: 0; cursor: pointer; }
 .dcc-hist-note-a:hover { text-decoration: underline; }
 /* Time Machine: age chips under the timeline, neighbouring eras on the step buttons, slider bubble */
 .dcc-tm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 4px; min-width: 0; }
@@ -1188,14 +1188,6 @@ html.dcc-matrix-on .dcc-fam-form button { color: #000; }
 .dcc-hist-trip-fam { margin: 4px 0 0; padding: 8px 8px 0; border-top: 1px dashed var(--dcc-tour-border); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 0.95rem; }
 .dcc-hist-trip-famk { flex-basis: 100%; font-family: var(--dcc-tour-font-head); font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
 
-/* "On this spot": a later visit to the same spot gets a one-line chip that opens the note */
-.dcc-hist-note-mini { display: block; padding: 0 12px; }
-.dcc-hist-note-mini summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px; min-height: 40px;
-  font-family: var(--dcc-tour-font-head); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; color: var(--dcc-tour-accent-deep); }
-.dcc-hist-note-mini summary::-webkit-details-marker { display: none; }
-.dcc-hist-note-mini summary .dcc-ic { width: 15px; height: 15px; flex: none; }
-.dcc-hist-note-mini[open] { padding-bottom: 10px; }
-.dcc-hist-note-mini > p { margin: 0 0 4px; }
 .dcc-hist-trip-how { margin-top: 2px; }
 .dcc-hist-trip-howb p { margin: 0 0 6px; font-size: 0.82rem; line-height: 1.5; color: var(--dcc-tour-text); }
 
@@ -1657,3 +1649,31 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
   .dcc-then-bar { padding: 5px 8px; bottom: 20px; }
   .mm-then-on .dcc-tour-mm-moment { bottom: 140px; }
 }
+
+/* one link from a photo's place to its history (Timeline place cards, Map popups, the viewer) */
+.dcc-tour-histlink { display: inline-flex; align-items: center; gap: 5px; margin: 2px 0 6px; padding: 3px 0; font-size: 0.8rem; font-weight: 600;
+  color: var(--dcc-tour-secondary); text-decoration: none; }
+.dcc-tour-histlink .dcc-ic { width: 14px; height: 14px; flex: none; }
+.dcc-tour-histlink:hover span { text-decoration: underline; }
+.dcc-tour-place-htext .dcc-tour-histlink { display: flex; width: fit-content; margin: 2px 0 0; }
+.dcc-tour-mm-side .dcc-tour-histlink { display: flex; width: fit-content; margin: 4px 0 2px; clear: both; }
+.dcc-tour-lb-hist { display: flex; align-items: center; gap: 6px; }
+.dcc-tour-lb-hist .dcc-ic { width: 15px; height: 15px; flex: none; }
+/* the History tab's place view */
+.dcc-hist-place { position: relative; margin: 10px 0 14px; padding: 14px 16px 12px; border: 1px solid var(--dcc-tour-border); border-left: 3px solid var(--dcc-tour-primary);
+  border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); box-shadow: var(--dcc-tour-shadow); }
+.dcc-hp-x { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: var(--dcc-tour-muted); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.dcc-hp-x:hover { color: var(--dcc-tour-text); background: var(--dcc-tour-accent-tint); }
+.dcc-hp-h { margin: 6px 40px 2px 0; font-family: var(--dcc-tour-font-head); font-size: 1.35rem; font-weight: 600; color: var(--dcc-tour-text); line-height: 1.2; }
+.dcc-hp-sub { margin: 0 0 10px; font-size: 0.9rem; color: var(--dcc-tour-muted); }
+.dcc-hp-k { margin: 12px 0 4px; font-family: var(--dcc-tour-font-head); font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
+.dcc-hp-marks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dcc-hp-marks li { display: flex; gap: 10px; align-items: flex-start; }
+.dcc-hp-marks i { flex: none; width: 10px; height: 10px; margin-top: 6px; transform: rotate(45deg); background: #b68235; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.dcc-hp-marks b { font-family: var(--dcc-tour-font-head); font-size: 0.92rem; }
+.dcc-hp-marks span { font-size: 0.8rem; color: var(--dcc-tour-muted); }
+.dcc-hp-marks p { margin: 2px 0 0; font-size: 0.88rem; line-height: 1.45; }
+.dcc-hp-by-rag { background: #f2c230 !important; } .dcc-hp-by-fra { background: #4a68c9 !important; } .dcc-hp-by-aus { background: #e2b14a !important; }
+.dcc-hp-by-rome { background: #9b72c4 !important; } .dcc-hp-by-church { background: #8a64b5 !important; } .dcc-hp-by-cro { background: #e07d82 !important; }
+.dcc-hp-street { margin-top: 10px; }
+.dcc-tour-mm-map:not(.dcc-then-street) .dcc-then-tower { display: none; }

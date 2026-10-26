@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Smoke test for the History tab (map, story mode, chronicle, family records) and the
-// Map tab's "Then" overlay of the old borders.
+// Map tab's "Then" overlay of the old borders, and the per-place history a photo links to.
 //
 //   cd croatia && python3 -m http.server 8199 &
 //   npm i playwright-core            # once, anywhere on NODE_PATH
@@ -42,6 +42,10 @@ const check = (ok, what) => { console.log((ok ? '  ok   ' : '  FAIL ') + what); 
     check(await p.$$eval('.leaflet-dccThen-pane path', x => x.length) > 8, 'old borders drawn over the street map');
     check((await p.evaluate(() => location.hash)) === '#v=map&then=' + era.toLowerCase().replace(/\s+/g, ''), 'street map era is in the link');
     check(await p.evaluate(() => document.documentElement.scrollWidth <= (window.visualViewport ? visualViewport.width : innerWidth) + 1), 'no sideways scroll on the map');
+    await p.evaluate(() => { location.hash = '#v=history&pl=' + encodeURIComponent('Fort Lovrijenac (Tvrđava Lovrijenac), Pile, Dubrovnik'); });
+    await p.waitForSelector('.dcc-hist-place .dcc-vt li', { timeout: 20000 });
+    check((await p.$eval('.dcc-hp-h', x => x.textContent)) === 'Fort Lovrijenac', 'a photo\'s place opens its history');
+    check(await p.$$eval('.dcc-hist-place .dcc-vt li.rag', x => x.length) > 0, 'the place history shows the Ragusan centuries');
     check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
     await ctx.close();
   }
