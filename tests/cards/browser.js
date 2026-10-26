@@ -162,22 +162,38 @@ function page(state, opts) {
   /* Bravada's button rules, as reproduced in tests/button. */
   button { font-family: Pavanam, sans-serif; text-transform: uppercase; }
 
-  /* --- Bravada's header boxes, as the Director read them --------------
+  /* --- Bravada's header boxes, MEASURED ON THE LIVE PAGE --------------
    *
-   * THE STACKING IS THE PART 0.36.0's FIXTURE DID NOT HAVE, and it is what
-   * hid the card on the real theme (the Director's staging measurement,
-   * 2026-10-24). #masthead is a positioned element with z-index: 999, so
-   * the WHOLE header is a stacking context painting above the content —
-   * nothing inside article.hentry can ever come over it, whatever z-index
-   * it asks for, because hentry's own transform scopes it. And
-   * #header-page-title is absolutely positioned across the full band at
-   * z-index 11, drawing "Submit Booking" over the photo.
+   * Every number below was read in Chromium from
+   * https://doracanalcourt.com/submit-booking/ on 2026-10-26 and the whole
+   * page is kept, stylesheets and all, in tests/real-theme/. Until then this
+   * block was the Director's prose turned into CSS, and it was missing the
+   * rule that broke 0.36.0 — the fixture reproduced the theme's CLIPPING and
+   * not its STACKING, so its hit-test passed while the top half of the card
+   * was invisible on the real theme at all three widths.
    *
-   * Values from his read of theme-css-all.css: two #masthead rules, 99 and
-   * 999, and #header-page-title at 11. THIS IS STILL A REPRODUCTION — the
-   * real stylesheet has not reached this session; see tests/real-theme/. */
+   *   header#masthead          position: relative  z-index: 999
+   *     #site-header-main      position: absolute  z-index: 251  (the menu)
+   *     #header-image-main     position: relative  z-index: auto overflow: HIDDEN
+   *       #header-image-main-inside                z-index: auto overflow: HIDDEN
+   *         #header-page-title position: absolute  z-index: 11
+   *
+   * #masthead (999) and main (9) are siblings in the ROOT stacking
+   * context, so everything in the header paints above everything in the
+   * content. THAT is why the card moved into the header (cardHome()).
+   *
+   * THE MENU, THE DROPDOWN AND THE PINNED BAR ARE NOT TESTED HERE ANY MORE.
+   * They were, from the Director's prose, and a reproduction of the very
+   * rules this release got wrong is not evidence about them. They are proved
+   * in tests/real-theme/ against the real stylesheets: the dropdown's eight
+   * links over the card at 768 and 1440, and the bar position: fixed; top: 0
+   * at >=1024 against absolute; top: -75px below it. The band is still
+   * drawn here because the card's own geometry has to be measured with the
+   * header above it. */
   header#masthead { position: relative; z-index: 999; }
-  #header-image-main { position: relative; }
+  #site-header-main { position: absolute; top: 0; left: 0; right: 0; z-index: 251; }
+  .site-header-bottom { background: #fff; height: 62px; }
+  #header-image-main { position: relative; overflow: hidden; }
   #header-image-main-inside { position: relative; overflow: hidden; }
   #header-page-title {
       position: absolute;
@@ -187,29 +203,6 @@ function page(state, opts) {
   }
   #header-page-title-inside { font-size: 40px; color: #fff; }
 
-  /* The menu band and its pinned copy, from the Director's 768 README.
-     The sub-menu is drawn over the card on hover/open, as live does. */
-  .site-header-bottom { position: relative; z-index: 12; background: #fff; height: 56px; }
-  .main-navigation ul.menu { list-style: none; margin: 0; padding: 0; text-align: center; }
-  .main-navigation li.menu-item-has-children { display: inline-block; position: relative; }
-  /* Centred under its item, so it falls over the centred card at every width.
-     The Director measured the dropdown over the card at 768; the real capture
-     settles the geometry at 390 and 1440. */
-  .main-navigation .sub-menu {
-      display: none; position: absolute; top: 56px; left: 50%; margin-left: -130px; width: 260px;
-      background: #fff; list-style: none; margin: 0; padding: 8px 0; z-index: 13;
-  }
-  .main-navigation li.menu-item-has-children.dcc-test-open .sub-menu { display: block; }
-  .main-navigation .sub-menu a { display: block; padding: 8px 16px; }
-  /* PINNED ONLY AT 1024 AND UP (the Director's measurement). Below that the
-     band scrolls away with the page and nothing is fixed. */
-  .site-header-bottom-fixed { display: none; }
-  @media (min-width: 1024px) {
-      .site-header-bottom-fixed {
-          display: block; position: fixed; top: -8px; left: 0; right: 0;
-          height: 63px; background: #fff; z-index: 14;
-      }
-  }
   #header-image-main-inside .header-image {
       background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==');
       background-size: cover;
@@ -238,34 +231,21 @@ ${CSS}
 </style></head>
 <body>
 <header id="masthead" class="cryout">
+  <!-- THE REAL ORDER, read from live: #site-header-main (which holds the menu
+       band) comes FIRST and #header-image-main second. The card goes in as
+       masthead's LAST child, after the band — see cardHome() in restore.js for
+       why it is a sibling of the band and not a child of it. -->
+  <div id="site-header-main"><div class="site-header-bottom"></div></div>
   <div id="header-image-main"><div id="header-image-main-inside">
     <div class="header-image"></div>
     <div id="header-overlay"></div>
     <img class="header-image" alt="">
     <!-- THE THEME'S PAGE TITLE: a DIV, visible, drawn large over the photo
-         (the Director, staging 0.36.0). It is not the page's h1 — the 0x0
-         entry-title below is — but it is what a guest SEES. -->
+         (live, 2026-10-26). It is not the page's h1 — the 0x0 entry-title
+         below is — but it is what a guest SEES. -->
     <div id="header-page-title"><div id="header-page-title-inside">Submit Booking</div></div>
     ${overlay}
   </div></div>
-  <!-- THE MENU BAND. Bravada pins a COPY of it (.site-header-bottom-fixed)
-       and ONLY at 1024px and up — the Director measured the pinned copy at
-       top -8..55 after a 600px scroll at 1440, and at 768 the band scrolls
-       away to top -665. Both are reproduced below. The dropdown opens ON TOP
-       of the card today and that is the baseline the stacking fix must keep,
-       so all eight links are hit-tested. -->
-  <div class="site-header-bottom">
-    <nav class="main-navigation"><ul class="menu">
-      <li class="menu-item-has-children"><a href="#" class="dcc-test-menu">Browse Cottages</a>
-        <ul class="sub-menu">${
-          ['The Boathouse','The Lighthouse','Hibiscus Hut','Cottage 22',
-           'Cottage 31','Cottage 32','Cottage 33','Cottage 34']
-            .map((n) => '<li><a href="#">' + n + '</a></li>').join('')
-        }</ul>
-      </li>
-    </ul></nav>
-  </div>
-  <div class="site-header-bottom-fixed"><span>pinned menu</span></div>
 </header>
 <main class="main"><div class="one-column"><article class="hentry"><div class="sheet">
   <!-- THE THEME'S OWN TITLE, 0x0 as the Director measured it at 1440. It is
@@ -868,125 +848,30 @@ const MEASURE = `(() => {
         await ctx.close();
     }
 
-    /* ===================================================================== *
-     * THE MENU, AND WHAT THE STACKING FIX MUST NOT BREAK.
+    /* =====================================================================
+     * THE MENU PROOFS HAVE MOVED TO tests/real-theme/ (0.36.1).
      *
-     * Three proofs the Director asked for, from his 768 README:
-     *   - the Browse Cottages dropdown opens ON TOP of the card today, all
-     *     eight links hit-tested. That is the BASELINE: it passes now because
-     *     the card is behind everything, and it must still pass once the card
-     *     is lifted out from under the header.
-     *   - the menu is pinned ONLY at 1024 and up. At 1440 the pinned copy sits
-     *     at top -8..55 after a 600px scroll, so the bar's centre must still
-     *     hit the bar.
-     *   - at 390 and 768 it scrolls away (he measured top -665 at 768), and
-     *     nothing of OURS may be left stuck over the content.
+     * They lived here, built from the Director's prose: the Browse Cottages
+     * dropdown's eight links over the card, the bar pinned at >=1024 and the
+     * band scrolling away below it. Eighteen assertions, all green.
+     *
+     * THEY WERE A REPRODUCTION OF THE EXACT RULES THIS RELEASE GOT WRONG, and
+     * that is why they are gone rather than updated. The same fixture's
+     * stacking reproduction passed its hit-test while, on the real theme, the
+     * top half of the card was painted over at all three widths — so a green
+     * menu proof built the same way says nothing about the real menu either.
+     * Measured against the real stylesheets instead, in tests/real-theme/,
+     * where the bar turned out to be `position: absolute; top: -75px` below
+     * 1024 and `fixed; top: 0` at and above it, pinned only after a scroll UP
+     * (a single jump to 600 catches it mid-transition) — none of which this
+     * reproduction had.
+     *
+     * No mutation was lost: nothing in tests/mutate/mutations.json ever named
+     * these assertions. What this suite still owns is everything about the
+     * card that is the card's own — the chips and their rules, the strip, the
+     * copy, the resize listener, the headings — measured with the real
+     * header's stacking above it.
      * ===================================================================== */
-    for (const size of [{ w: 390, h: 844 }, { w: 768, h: 1024 }, { w: 1440, h: 900 }]) {
-        const ctx = await browser.newContext({ viewport: { width: size.w, height: size.h } });
-        const p = await ctx.newPage();
-        await p.route('**/admin-ajax.php', (route) => route.fulfill({
-            status: 200, contentType: 'application/json',
-            body: JSON.stringify(availability('2027-01-11', 94, 5)),
-        }));
-        await p.route('**/*.webp', (route) => route.fulfill({
-            status: 200, contentType: 'image/webp',
-            body: Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQ////AA==', 'base64'),
-        }));
-        const html = page('taken', {});
-        await p.route('https://example.test/submit-booking/', (route) => route.fulfill({
-            status: 200, contentType: 'text/html', body: html,
-        }));
-        await p.goto('https://example.test/submit-booking/');
-        const tag = 'menu@' + size.w;
-
-        /* --- the dropdown, over the card ------------------------------- */
-        const drop = await p.evaluate(() => {
-            const li = document.querySelector('li.menu-item-has-children');
-            li.classList.add('dcc-test-open');
-            const links = Array.prototype.slice.call(li.querySelectorAll('.sub-menu a'));
-            return {
-                count: links.length,
-                /* Each link's own centre must return that link — if the card
-                   were lifted over the menu, these would return the card. */
-                onTop: links.map((a) => {
-                    const r = a.getBoundingClientRect();
-                    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-                    return !!(hit && (hit === a || a.contains(hit) || a.contains(hit.parentNode)));
-                }),
-                /* And it really is drawn over the card, or the check above
-                   proves nothing. */
-                overlapsCard: (() => {
-                    const c = document.querySelector('.dcc_checkout-continue');
-                    const m = li.querySelector('.sub-menu');
-                    if (!c || !m) { return null; }
-                    const a = c.getBoundingClientRect();
-                    const b = m.getBoundingClientRect();
-                    return !(b.right < a.left || b.left > a.right || b.bottom < a.top || b.top > a.bottom);
-                })(),
-            };
-        });
-        check(tag + ': the dropdown really is drawn over the card (the guard)',
-            drop.overlapsCard, true);
-        check(tag + ': all eight dropdown links are on top of the card',
-            [drop.count, drop.onTop.every(Boolean)], [8, true]);
-
-        /* --- the pinned menu, and what sticks after a 600px scroll ------ */
-        const scrolled = await p.evaluate(() => {
-            document.querySelector('li.menu-item-has-children').classList.remove('dcc-test-open');
-            window.scrollTo(0, 600);
-            return new Promise((resolve) => setTimeout(() => {
-                const fixed = document.querySelector('.site-header-bottom-fixed');
-                const band = document.querySelector('.site-header-bottom');
-                const fr = fixed ? fixed.getBoundingClientRect() : null;
-                /* ANYTHING OF OURS LEFT STUCK OVER THE CONTENT. The card and
-                   the header softening are the two things 0.36.x adds near the
-                   top of the page; neither may be fixed or sticky. */
-                const ours = Array.prototype.slice.call(
-                    document.querySelectorAll('.dcc_checkout-continue, #header-image-main, #header-image-main-inside')
-                ).map((el) => el.className || el.id)
-                 .filter((_, i, __) => true);
-                const stuck = Array.prototype.slice.call(
-                    document.querySelectorAll('.dcc_checkout-continue, #header-image-main')
-                ).filter((el) => {
-                    const pos = getComputedStyle(el).position;
-                    return pos === 'fixed' || pos === 'sticky';
-                }).map((el) => el.id || el.className);
-                return resolve({
-                    scrolled: window.scrollY,
-                    fixedShown: !!fr && getComputedStyle(fixed).display !== 'none',
-                    fixedTop: fr ? Math.round(fr.top) : null,
-                    barCentreHitsBar: (() => {
-                        if (!fr || getComputedStyle(fixed).display === 'none') { return null; }
-                        const hit = document.elementFromPoint(
-                            Math.round(fr.left + fr.width / 2),
-                            Math.round(fr.top + fr.height / 2)
-                        );
-                        return !!(hit && (hit === fixed || fixed.contains(hit)));
-                    })(),
-                    bandTop: band ? Math.round(band.getBoundingClientRect().top) : null,
-                    stuck: stuck,
-                });
-            }, 60));
-        });
-        check(tag + ': the page really scrolled (the guard)', scrolled.scrolled >= 600, true);
-        check(tag + ': nothing of ours is fixed or sticky over the content',
-            scrolled.stuck, []);
-        if (size.w >= 1024) {
-            /* THE FIXED-MENU TEST, at 1440 only — the Director measured the
-               pinned copy at top -8..55 there. */
-            check(tag + ': the menu is pinned at this width', scrolled.fixedShown, true);
-            check(tag + ': … and its centre still hits the bar, not the card',
-                scrolled.barCentreHitsBar, true);
-        } else {
-            /* At 390 and 768 the band scrolls away with the page: he measured
-               top -665 at 768. Nothing is pinned. */
-            check(tag + ': the menu is NOT pinned at this width', scrolled.fixedShown, false);
-            check(tag + ': … and the band has scrolled away with the page',
-                scrolled.bandTop !== null && scrolled.bandTop < 0, true);
-        }
-        await ctx.close();
-    }
 
     await browser.close();
     console.log('');

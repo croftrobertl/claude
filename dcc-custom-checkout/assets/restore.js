@@ -355,8 +355,8 @@
 
         var host = firstOf([
             /* The wrapper MotoPress really renders on this path (Director,
-               live 2026-10-22): the card goes inside it, above the message, so
-               the two are one block. */
+               live 2026-10-22): the dead-end message lives here, and this is
+               what gets swept whether or not the card lands beside it. */
             '.mphb_sc_checkout-wrapper',
             '.mphb_sc_checkout',
             '.entry-content',
@@ -364,7 +364,16 @@
             'body',
         ]);
         if (!host) { return; }
-        host.insertBefore(card, host.firstChild);
+
+        /* THE CARD GOES IN THE HEADER IN THESE TWO STATES (0.36.1). The
+           content area cannot hold it: see cardHome(). */
+        var home = (state === 'taken' || state === 'lost') ? cardHome() : null;
+        if (home) {
+            addClass(card, 'dcc_checkout-continue--inheader');
+            home.parent.insertBefore(card, home.before);
+        } else {
+            host.insertBefore(card, host.firstChild);
+        }
         hideDeadEnd(host);
 
         if (state === 'taken' || state === 'lost') {
@@ -645,6 +654,72 @@
      * on iOS that fires when the URL bar collapses mid-scroll. A width change
      * is a real relayout, so that one is answered.
      */
+    /**
+     * WHERE THE CARD GOES — THE HEADER, NOT THE CONTENT (0.36.1).
+     *
+     * 0.36.0 put the card in MotoPress's wrapper and pulled it up over the
+     * photo with a measured negative margin. On the real theme the top half of
+     * it was then painted over by the header, at 390, 768 and 1440 and in both
+     * switch states: the heading and the lead sentence were invisible and the
+     * guest saw only the dates, the button and the chips.
+     *
+     * IT IS A STACKING PROBLEM, NOT A GEOMETRY ONE, and no z-index on the card
+     * could have fixed it. Measured in Chromium on the live page
+     * (2026-10-26 — see tests/real-theme/):
+     *
+     *   header#masthead            position: relative  z-index: 999
+     *     #site-header-main        position: absolute  z-index: 251   (the menu)
+     *       .site-header-bottom-fixed, once pinned     z-index: 9999
+     *     #header-image-main       position: relative  z-index: auto  overflow: HIDDEN
+     *       #header-image-main-inside                  z-index: auto  overflow: HIDDEN
+     *         #header-page-title   position: absolute  z-index: 11
+     *   #content
+     *     #container.one-column
+     *       main#main              position: relative  z-index: 9     overflow: hidden
+     *         article.hentry       matrix3d(...)  → its own stacking context
+     *
+     * `#masthead` (999) and `main` (9) are siblings in the ROOT stacking
+     * context, so EVERYTHING in the header paints above EVERYTHING in the
+     * content, and a card in the content can never reach it. The article's
+     * matrix3d scopes the card's own z-index inside `main`'s 9, which is why
+     * 0.36.0's `z-index: 3` did nothing.
+     *
+     * So the card moves into `#masthead`, where the same stacking context that
+     * was painting over it now carries it. Inside that context it is ordered
+     * by z-index against the header's own parts, which is what makes the
+     * menu's behaviour a matter of construction rather than of tuning:
+     * `--inheader` is `z-index: 12`, so the card sits ABOVE the theme's page
+     * title (11) and BELOW the menu (251) and the pinned bar (9999). The
+     * Director's baseline — the Browse Cottages dropdown opening on top of the
+     * card, all eight links — cannot be broken by this placement.
+     *
+     * AND IT IS A SIBLING OF THE PHOTO BAND, NOT A CHILD OF IT. The brief
+     * preferred `#header-image-main`; that box and `#header-image-main-inside`
+     * are BOTH `overflow: hidden` (Bravada style.css, one rule, all three
+     * widths), and that clip is what crops the cottage photo to the 420px
+     * band. A card inside them is cut off at 420 — the card is taller than the
+     * room left below y=260 — and unclipping them to make room would release
+     * the photo as well. Immediately AFTER the band, still inside `#masthead`,
+     * the stacking is identical and the theme's crop is untouched.
+     *
+     * Nothing is restyled by the move: the theme has exactly two rules that
+     * reach arbitrary descendants of `#masthead`, and both name
+     * `.header-image` (checked across all thirty of the page's stylesheets).
+     *
+     * Returns null when the header is not the shape measured above, and the
+     * card then lands where 0.35.x put it — which is wrong on this theme but
+     * is a card, not a blank page.
+     */
+    function cardHome() {
+        var masthead = document.getElementById('masthead');
+        var band = document.getElementById('header-image-main');
+        if (!masthead || !band || !masthead.contains(band)) { return null; }
+        /* After the band, so the flow puts the card below the photo and
+           fitCardToHero() pulls it up from there. `nextSibling` is null when
+           the band is last, which appends — both are correct. */
+        return { parent: masthead, before: band.nextSibling };
+    }
+
     function fitCardToHero(card) {
         var hero = firstOf([
             /* The theme's header band, innermost first — the box the photo is

@@ -1512,9 +1512,49 @@ body.dcc_checkout-cardover div.one-column {
 
 body.dcc_checkout-cardover .dcc_checkout-continue {
     position: relative;
-    /* Above the header's own stacking, which is what the card is pulled over. */
+    /* ONLY MEANINGFUL ON THE FALLBACK PATH. When cardHome() recognises the
+       header the card is NOT here any more, and this 3 is scoped inside
+       `main`'s z-index 9 where it can outrank nothing in the header — that is
+       0.36.0's defect, and `--inheader` below is the fix. It is kept because
+       the fallback is a card in the content, where a 3 is still the right
+       answer against that subtree's own non-positioned children. */
     z-index: 3;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+/* THE CARD, IN THE HEADER (0.36.1).
+ *
+ * `cardHome()` in restore.js carries the measured stacking facts and the
+ * reason this is a sibling of the photo band rather than a child of it. What
+ * this rule has to get right is the ONE number:
+ *
+ *   #header-page-title   z-index: 11     the theme's "Submit Booking" banner
+ *   --inheader           z-index: 12     the card
+ *   #site-header-main    z-index: 251    the menu and its dropdown
+ *   .site-header-bottom-fixed, pinned    z-index: 9999
+ *
+ * All four are in `#masthead`'s stacking context (z-index 999), so this is a
+ * single ordering and not a race: the card clears the banner it replaces and
+ * cannot reach the menu. The Director's baseline — the dropdown opening on top
+ * of the card, all eight links — is preserved by construction rather than by
+ * being tested into place, and the pinned bar at >=1024 is 9999 whatever
+ * happens here.
+ *
+ * `z-index: 12` and not `auto`: at `auto` the card would paint among the
+ * header's non-positioned children, which puts the banner (11) over it.
+ */
+body.dcc_checkout-cardover .dcc_checkout-continue--inheader {
+    z-index: 12;
+}
+
+/* AND THE SIDE GUTTER, WHICH THE CONTENT USED TO GIVE IT. In the content the
+   card inherited `article.hentry`'s 18px side padding, which is why it
+   measured 354 wide at 390. `#masthead` is full-bleed, so the gutter has to be
+   the card's own or it touches both edges of a phone. `width` with
+   `max-width: 560px` above: 354 at 390, 732 capped to 560 at 768 and 1440 —
+   the same numbers, from the card rather than from the theme. */
+body.dcc_checkout-cardover .dcc_checkout-continue--inheader {
+    width: calc(100% - 36px);
 }
 
 /* THE PHOTO, SOFTENED BEHIND IT. A pseudo-element, never a child div: the
