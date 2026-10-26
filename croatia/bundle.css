@@ -896,16 +896,17 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-hist-trip-k .dcc-ic, .dcc-hist-note-k .dcc-ic { width: 16px; height: 16px; flex: none; }
 .dcc-hist-trip-sum { margin: 0; font-size: 0.92rem; line-height: 1.45; }
 .dcc-hist-trip-key { display: inline-flex; align-items: center; gap: 5px; color: var(--dcc-tour-muted); font-size: 0.82rem; white-space: nowrap; }
+.dcc-hist-trip-dot { margin-top: 5px; }
 .dcc-hist-trip-key i, .dcc-hist-trip-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; border: 2px solid #201f1d; box-sizing: border-box; }
 .dcc-hist-trip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.dcc-hist-trip-list a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: var(--dcc-tour-radius);
+.dcc-hist-trip-list a { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: var(--dcc-tour-radius);
   color: var(--dcc-tour-text); text-decoration: none; }
 .dcc-hist-trip-list a:hover, .dcc-hist-trip-list a:focus-visible { background: var(--dcc-tour-accent-tint); }
-.dcc-hist-trip-name { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.dcc-hist-trip-name { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; flex: 1; line-height: 1.25; }
 .dcc-hist-trip-name b { font-weight: 600; font-size: 0.95rem; }
-.dcc-hist-trip-name small { color: var(--dcc-tour-muted); font-size: 0.8rem; }
-.dcc-hist-trip-v { flex: none; font-size: 0.85rem; color: var(--dcc-tour-muted); text-align: right; }
-.dcc-hist-trip-v.rag { background: #f2c230; color: #201f1d; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.dcc-hist-trip-name small { font-weight: 400; color: var(--dcc-tour-muted); font-size: 0.8rem; white-space: nowrap; }
+.dcc-hist-trip-v { font-size: 0.88rem; color: var(--dcc-tour-text); }
+.dcc-hist-trip-v.rag { background: #f2c230; color: #201f1d; font-weight: 600; padding: 1px 9px; border-radius: 999px; }
 .dcc-hist-trip-v.war { color: #a5281b; font-weight: 600; }
 html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 /* history.css gives inset strokes non-scaling widths, so this is in screen px */

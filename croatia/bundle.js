@@ -445,7 +445,7 @@
         dataUrl: resolveUrl('history/history-data.json'), hash: false, start: histWant || undefined,
         onChange: (f, slug) => {
           histSlug = slug; if (root.dataset.view === 'history') updateHash();
-          // the first call comes from inside mount(), before the handle (and its frames) exist
+          // the first call comes from inside mount(), before the component is in the page
           setTimeout(() => renderTripThen(f), 0);
         }
       });
@@ -508,16 +508,45 @@
     n.forEach((v, i) => { if (i && v === n[i - 1] + 1) out[out.length - 1][1] = v; else out.push([v, v]); });
     return (n.length === 1 ? 'Day ' : 'Days ') + out.map(r => r[0] === r[1] ? r[0] : r[0] + '–' + r[1]).join(', ');
   }
-  function stopStatus(st, f, frames) {
-    const R = f.ragusa, inR = fr => fr.ragusa.parts.some(k => st.parts.indexOf(k) >= 0);
-    const before = (frames || []).filter(fr => fr.tpos < f.tpos);
-    if (!R.founded) return { t: st.epidaurum ? (f.year > -230 ? 'Epidaurum' : 'Epidauros') : 'before Ragusa' };
-    if (R.former) {
-      if (R.siege && st.parts.indexOf('konavle') >= 0) return { t: 'occupied', cls: 'war' };
-      return { t: before.some(inR) ? 'once Ragusan' : '—' };
+  // What a stop belonged to in each era. Whether it lay inside Ragusa comes from the era's
+  // territory list in history-data.json; these labels name everything else (checked against
+  // the map's own era notes, plus Konavle's history: Travunia → Serbia → bought by Ragusa 1419–26).
+  // ERA_ALL: every stop shares one ruler. ERA_OUTSIDE: stops outside Ragusa, by kind of place.
+  const ERA_ALL = {
+    '500bc': 'Illyrian lands', '323bc': 'Illyrian lands', '300bc': 'Illyrian lands', '200bc': 'Illyrian kingdom',
+    '100bc': 'Roman Republic (Illyricum)', '14ad': 'Roman Empire', '200ad': 'Roman Empire (Dalmatia)',
+    '300ad': 'Roman Empire (Dalmatia)', '400ad': 'Western Roman Empire', '500ad': 'Ostrogothic Kingdom',
+    '1810': 'Illyrian Provinces (France)', '1832': 'Austrian Empire', 'mar1878': 'Austria-Hungary',
+    'jul1878': 'Austria-Hungary', '1913': 'Austria-Hungary', '1920': 'Kingdom of Serbs, Croats & Slovenes',
+    '1938': 'Kingdom of Yugoslavia', '1942': 'Independent State of Croatia (Axis)', '1960': 'Yugoslavia (SR Croatia)',
+    '1992': 'Croatia', '1995': 'Croatia', '2026': 'Croatia'
+  };
+  const ERA_OUTSIDE = {
+    '650ad':  { main: 'Slav-settled mainland', isle: 'Byzantine Dalmatia', konavle: 'Slav-settled mainland' },
+    '700ad':  { main: 'Slav-settled mainland', isle: 'Byzantine Dalmatia', konavle: 'Slav-settled mainland' },
+    '900ad':  { konavle: 'Travunia (Slav principality)' },
+    '1000':   { konavle: 'Travunia (Slav principality)' },
+    '1100':   { konavle: 'Travunia (Slav principality)' },
+    '1210':   { konavle: 'Grand Principality of Serbia' },
+    '1300':   { konavle: 'Kingdom of Serbia' },
+    '1355':   { konavle: 'Serbian Empire' }
+  };
+  function stopStatus(st, f) {
+    const R = f.ragusa, slug = histSlugOf(f.label);
+    const kind = st.parts.indexOf('konavle') >= 0 ? 'konavle' : st.parts.indexOf('elaph') >= 0 || st.name === 'Lokrum' ? 'isle' : 'main';
+    if (!R.founded) {
+      const t = ERA_ALL[slug] || 'before Ragusa';
+      return { t: st.epidaurum ? t + ' · ' + (f.year > -230 ? 'Epidaurum' : 'Epidauros') : t };
     }
-    if (inR(f)) return { t: 'Ragusa', cls: 'rag' };
-    return { t: before.some(inR) ? 'no longer Ragusan' : 'not yet Ragusan' };
+    if (R.former) {
+      if (R.siege && kind === 'konavle') return { t: 'Croatia · occupied 1991–92', cls: 'war' };
+      if (slug === '1942' && kind === 'konavle') return { t: 'Axis-occupied' };
+      return { t: ERA_ALL[slug] || 'once Ragusan' };
+    }
+    if (R.parts.some(k => st.parts.indexOf(k) >= 0)) {
+      return { t: f.year < 1205 ? 'Ragusa, under Byzantium' : f.year < 1358 ? 'Ragusa, under Venice' : 'Republic of Ragusa', cls: 'rag' };
+    }
+    return { t: (ERA_OUTSIDE[slug] || {})[kind] || 'outside Ragusa' };
   }
   // the coast map's own projection (history/source/export_data.py): x = (lon − 16.75)·1000, y = (43.08 − lat)·1360
   const insetXY = (lat, lng) => [(lng - 16.75) * 1000, (43.08 - lat) * 1360];
@@ -525,7 +554,6 @@
     if (!histEl || !DATA) return;
     const stops = getTripStops();
     if (!stops.length) return;
-    const frames = histHandle && histHandle.frames;
     const svgEl = histEl.querySelector('.bh-ragusa svg');
     if (svgEl && !svgEl.querySelector('.dcc-hist-stops')) {
       const NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g');
@@ -559,7 +587,7 @@
       panel.addEventListener('focusin', e => hl(e, true));
       panel.addEventListener('focusout', e => hl(e, false));
     }
-    const rows = stops.map((st, i) => ({ st, i, s: stopStatus(st, f, frames) }));
+    const rows = stops.map((st, i) => ({ st, i, s: stopStatus(st, f) }));
     const R = f.ragusa, nRag = rows.filter(r => r.s.cls === 'rag').length;
     const sum = R.founded && !R.former
       ? nRag + ' of ' + rows.length + ' places you went ' + (nRag === 1 ? 'was' : 'were') + ' Ragusan in ' + f.label + '.'
@@ -570,8 +598,8 @@
       '<ul class="dcc-hist-trip-list">' + rows.map(r =>
         '<li><a href="#d=' + (r.st.days[0] + 1) + '" data-stop="' + r.i + '">' +
           '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
-          '<span class="dcc-hist-trip-name"><b>' + escapeHtml(r.st.name) + '</b><small>' + escapeHtml(dayRanges(r.st.days)) + '</small></span>' +
-          '<span class="dcc-hist-trip-v' + (r.s.cls ? ' ' + r.s.cls : '') + '">' + escapeHtml(r.s.t) + '</span>' +
+          '<span class="dcc-hist-trip-name"><b>' + escapeHtml(r.st.name) + ' <small>· ' + escapeHtml(dayRanges(r.st.days)) + '</small></b>' +
+            '<span class="dcc-hist-trip-v' + (r.s.cls ? ' ' + r.s.cls : '') + '">' + escapeHtml(r.s.t) + '</span></span>' +
         '</a></li>').join('') + '</ul>';
   }
 
