@@ -426,7 +426,8 @@
       histEl.innerHTML =
         '<div class="dcc-hist-top"><button class="dcc-hist-film" type="button">' +
           '<span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch the 60-second film</span></button></div>' +
-        '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>';
+        '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>' +
+        '<section class="dcc-chron" aria-labelledby="dcc-chron-h"></section>';
       histEl.querySelector('.dcc-hist-film').addEventListener('click', playHistoryFilm);
       root.appendChild(histEl);
     }
@@ -446,11 +447,12 @@
         onChange: (f, slug) => {
           histSlug = slug; if (root.dataset.view === 'history') updateHash();
           // the first call comes from inside mount(), before the component is in the page
-          setTimeout(() => renderTripThen(f), 0);
+          setTimeout(() => { renderTripThen(f); timeMachine(f, slug); chronicleNow(slug); }, 0);
         }
       });
       histWant = null;
     };
+    loadChronicle();
     if (window.BalkansHistory) { mountNow(); return; }
     const css = document.createElement('link');
     css.rel = 'stylesheet'; css.href = resolveUrl('history/history.css');
@@ -471,6 +473,174 @@
       place: 'The Balkans in 60 seconds', date: '', time: '' }];
     openViewer(0);
   }
+
+  // ---- Time Machine: jump-to-age chips under the timeline, the neighbouring eras named on the
+  //      step buttons, and swipe-to-step on the map (only while it isn't zoomed, so panning
+  //      still works). The ages match the component's own timeline bands. ----
+  const TM_AGES = [['Greek', -500, '#4d8fd6'], ['Roman', -146, '#9b72c4'], ['Medieval', 476, '#5d8c3c'],
+                   ['Ottoman', 1453, '#3f9a78'], ['Modern', 1878, '#d8bf55']];
+  let histIdx = 0;
+  function timeMachine(f) {
+    const F = histHandle && histHandle.frames, bh = histEl && histEl.querySelector('.bh-root');
+    if (!F || !bh) return;
+    histIdx = F.indexOf(f);
+    let bar = bh.querySelector('.dcc-tm');
+    if (!bar) {
+      const tl = bh.querySelector('.bh-timeline');
+      if (!tl) return;
+      const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+      bar = el('div', 'dcc-tm');
+      bar.innerHTML = '<div class="dcc-tm-ages" role="group" aria-label="Jump to an age">' + TM_AGES.map(([n, t, c]) =>
+          '<button type="button" class="dcc-tm-age" data-k="' + F.findIndex(fr => fr.tpos >= t) + '" aria-pressed="false">' +
+          '<i style="background:' + c + '"></i>' + n + '</button>').join('') + '</div>' +
+        '<span class="dcc-tm-hint">' + (coarse ? 'Swipe the map to step through time' : 'Use ← → or swipe the map to step through time') + '</span>';
+      tl.appendChild(bar);
+      bar.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) histHandle.show(+b.dataset.k); });
+      wireSwipe(bh);
+    }
+    let act = 0;
+    TM_AGES.forEach(([, t], i) => { if (f.tpos >= t) act = i; });
+    bar.querySelectorAll('.dcc-tm-age').forEach((b, i) => b.setAttribute('aria-pressed', String(i === act)));
+    const step = (sel, k, arrow, word) => {
+      const b = bh.querySelector('.bh-transport [data-a="' + sel + '"]');
+      if (!b) return;
+      const fr = F[k];
+      b.textContent = fr ? (sel === 'prev' ? arrow + ' ' + fr.label : fr.label + ' ' + arrow) : arrow;
+      b.classList.add('dcc-tm-step');
+      b.disabled = !fr;
+      b.setAttribute('aria-label', fr ? word + ' era: ' + fr.label : word + ' era');
+    };
+    step('prev', histIdx - 1, '‹', 'Previous');
+    step('next', histIdx + 1, '›', 'Next');
+  }
+  function wireSwipe(bh) {
+    const vp = bh.querySelector('.bh-viewport'), stage = bh.querySelector('.bh-stage');
+    if (!vp || !stage) return;
+    let s0 = null;
+    // a second finger (pinch) cancels the swipe
+    vp.addEventListener('pointerdown', e => { s0 = e.isPrimary ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null; });
+    window.addEventListener('pointerup', e => {
+      if (!s0 || !e.isPrimary) return;
+      const dx = e.clientX - s0.x, dy = e.clientY - s0.y, dt = e.timeStamp - s0.t;
+      s0 = null;
+      if (/scale\((?!1\))/.test(stage.style.transform || '')) return;   // zoomed in: the drag was a pan
+      if (dt > 700 || Math.abs(dx) < 60 || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
+      histHandle.show(histIdx + (dx < 0 ? 1 : -1));
+    });
+  }
+
+  // ---- The Chronicle (history/chronicle.json): Ragusa, Konavle and Dalmatia, every entry
+  //      with its sources. Each entry links to the map era that shows it, and the entries
+  //      belonging to the era on the map are marked as you move through time. ----
+  let chron = null, chronLoading = false, chronStrand = 'ragusa', chronFrom = null;
+  const CHRON_TAGS = { tradition: 'Tradition', debated: 'Debated' };
+  function loadChronicle() {
+    if (chron || chronLoading) return;
+    chronLoading = true;
+    try { const v = localStorage.getItem('dcc-chron-strand'); if (v) chronStrand = v; } catch (e) { /* storage blocked */ }
+    fetch(resolveUrl('history/chronicle.json')).then(r => r.json()).then(d => { chron = d; renderChronicle(); })
+      .catch(() => { chronLoading = false; });
+  }
+  // the map era that shows an event: the one named in the entry, else the first map on or after its year
+  function chronFrame(sort, era) {
+    const F = histHandle && histHandle.frames;
+    if (!F) return null;
+    return (era && F.find(fr => histSlugOf(fr.label) === era)) || F.find(fr => fr.year >= sort) || F[F.length - 1];
+  }
+  const chronSrc = src => '<div class="dcc-chron-src">Sources: ' + src.map(([l, u]) =>
+    '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join(' · ') + '</div>';
+  function renderChronicle() {
+    const box = histEl && histEl.querySelector('.dcc-chron');
+    if (!box || !chron) return;
+    const tabs = chron.strands.map(st => [st.id, st.name]).concat([['records', 'Family records']]);
+    if (!tabs.some(t => t[0] === chronStrand)) chronStrand = 'ragusa';
+    const st = chron.strands.find(x => x.id === chronStrand);
+    box.innerHTML =
+      '<div class="dcc-chron-head"><div class="dcc-chron-k">' + svgIcon('history') + '<span>The chronicle</span></div>' +
+        '<h2 id="dcc-chron-h">Ragusa, Konavle &amp; Dalmatia</h2>' +
+        '<p>Every entry lists the sources it was checked against. Each one links to the map that shows its moment.</p></div>' +
+      '<div class="dcc-chron-tabs" role="tablist" aria-label="Chronicle">' + tabs.map(([id, n]) =>
+        '<button type="button" role="tab" id="dcc-chron-t-' + id + '" aria-controls="dcc-chron-panel" aria-selected="' + (id === chronStrand) + '"' +
+        ' tabindex="' + (id === chronStrand ? 0 : -1) + '" data-strand="' + id + '">' + escapeHtml(n) + '</button>').join('') + '</div>' +
+      '<div class="dcc-chron-panel" id="dcc-chron-panel" role="tabpanel" aria-labelledby="dcc-chron-t-' + chronStrand + '">' +
+        (st ? chronStrandHtml(st) : chronRecordsHtml(chron.records)) + '</div>';
+    if (!box._wired) {
+      box._wired = true;
+      box.addEventListener('click', e => {
+        const t = e.target.closest('[data-strand]');
+        if (t) { setStrand(t.dataset.strand, true); return; }
+        const go = e.target.closest('.dcc-chron-go');
+        if (go && go.dataset.era && histHandle) {
+          chronFrom = go.closest('li');
+          histHandle.show(go.dataset.era);
+          const head = histEl.querySelector('.bh-head');
+          if (head) head.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
+          showChronBack(true);
+        }
+      });
+      box.addEventListener('keydown', e => {
+        const t = e.target.closest('[role="tab"]');
+        if (!t || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+        const all = [...box.querySelectorAll('[role="tab"]')], i = all.indexOf(t);
+        setStrand(all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length].dataset.strand, true, true);
+        e.preventDefault();
+      });
+    }
+    chronicleNow(histSlug);
+  }
+  function setStrand(id, save, focus) {
+    chronStrand = id;
+    if (save) { try { localStorage.setItem('dcc-chron-strand', id); } catch (e) { /* storage blocked */ } }
+    renderChronicle();
+    if (focus) { const t = histEl.querySelector('#dcc-chron-t-' + id); if (t) t.focus(); }
+  }
+  function chronStrandHtml(st) {
+    return '<p class="dcc-chron-intro"><span>' + escapeHtml(st.kicker) + '</span>' + escapeHtml(st.intro) + '</p>' +
+      '<p class="dcc-chron-now" aria-live="polite"></p>' +
+      '<ol class="dcc-chron-list">' + st.events.map(ev =>
+        '<li data-sort="' + ev.sort + '"' + (ev.era ? ' data-era="' + escapeAttr(ev.era) + '"' : '') + '>' +
+          '<div class="dcc-chron-y">' + escapeHtml(ev.y) + '</div>' +
+          '<div class="dcc-chron-b">' +
+            '<h3>' + escapeHtml(ev.title) + (ev.tag ? ' <span class="dcc-chron-tag">' + CHRON_TAGS[ev.tag] + '</span>' : '') + '</h3>' +
+            '<p>' + escapeHtml(ev.text) + '</p>' +
+            '<button type="button" class="dcc-chron-go">See it on the map ›</button>' +
+            chronSrc(ev.src) +
+          '</div></li>').join('') + '</ol>';
+  }
+  function chronRecordsHtml(r) {
+    return '<h3 class="dcc-chron-rech">' + escapeHtml(r.title) + '</h3>' +
+      '<ul class="dcc-chron-rec">' + r.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' + chronSrc(r.src);
+  }
+  // mark the entries that belong to the era on the map, and name each entry's map
+  function chronicleNow(slug) {
+    const panel = histEl && histEl.querySelector('.dcc-chron-panel'), F = histHandle && histHandle.frames;
+    if (!panel || !F) return;
+    let n = 0;
+    panel.querySelectorAll('li[data-sort]').forEach(li => {
+      const f = chronFrame(+li.dataset.sort, li.dataset.era), era = f && histSlugOf(f.label), on = era === slug;
+      li.classList.toggle('now', on);
+      if (on) n++;
+      const b = li.querySelector('.dcc-chron-go');
+      if (b && f) { b.dataset.era = era; b.textContent = on ? 'On the map now' : 'See it on the map of ' + f.label + ' ›'; b.disabled = on; }
+    });
+    const cur = F.find(fr => histSlugOf(fr.label) === slug), now = panel.querySelector('.dcc-chron-now');
+    if (now && cur) now.textContent = 'The map shows ' + cur.label + (n ? ' · ' + n + (n === 1 ? ' entry' : ' entries') + ' marked below' : '');
+  }
+  // after a jump to the map, a pill takes you back to the entry you came from
+  function showChronBack(on) {
+    let b = histEl.querySelector('.dcc-chron-back');
+    if (!b) {
+      b = el('button', 'dcc-chron-back', '↓ Back to the chronicle');
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        if (chronFrom && chronFrom.isConnected) chronFrom.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'center' });
+        showChronBack(false);
+      });
+      histEl.appendChild(b);
+    }
+    b.classList.toggle('on', on);
+  }
+  const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   // ---- "Your trip, then": the trip's stops on the Ragusa coast map, and what each one was in
   //      the era on screen. The status comes from that era's Ragusa territory list in
@@ -540,7 +710,6 @@
     }
     if (R.former) {
       if (R.siege && kind === 'konavle') return { t: 'Croatia · occupied 1991–92', cls: 'war' };
-      if (slug === '1942' && kind === 'konavle') return { t: 'Axis-occupied' };
       return { t: ERA_ALL[slug] || 'once Ragusan' };
     }
     if (R.parts.some(k => st.parts.indexOf(k) >= 0)) {
@@ -607,7 +776,7 @@
   //      matching place of a day; its link opens the History tab at that era. ----
   const PLACE_HISTORY = [
     { re: /^Fort Lovrijenac/, era: '1600', text: '“Non bene pro toto libertas venditur auro” is carved over the gate: freedom is not sold for all the gold in the world.' },
-    { re: /^Stradun, /, era: '1100', text: 'Once a sea channel between the islet of Laus and the town on the mainland, filled in to join them. Its matching stone houses went up after the 1667 earthquake.' },
+    { re: /^Stradun, /, era: '1100', text: 'By tradition this was a sea channel between the islet of Laus and the mainland town, filled in to join them; digs under the street have found a natural sandy shore instead. Its matching stone houses went up after the 1667 earthquake.' },
     { re: /^Fort Imperial/, era: '1810', text: 'Built by Napoleon’s French between 1806 and 1812. Its defenders held it on 6 December 1991, and it now houses the Homeland War museum.' },
     { re: /^Mount Srđ Cross/, era: '1992', text: 'The cross was pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' },
     { re: /^Benedictine Monastery of St\. Mary, Lokrum/, era: '1000', text: 'Benedictine monks are first recorded on Lokrum in 1023.' },
