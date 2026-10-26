@@ -111,6 +111,22 @@ function build(state, layoutOn) {
             '$1Accommodation is already booked.$2');
     }
 
+    if (state === 'form') {
+        /* THE FORM PAGE, WHICH 0.36.2 MUST NOT TOUCH. A cookieless GET of live
+           IS the dead end, so the form state cannot be captured — the first
+           version of this check measured a dead-end page and reported
+           "form=false, cardover=true", which proved nothing at all. A form in
+           MotoPress's own wrapper is enough: restore.js branches on whether a
+           form exists, so this is the real fork, and the theme's CSS around it
+           is the live page's. */
+        h = h.replace(/(<div class="mphb_sc_checkout-wrapper[^"]*">)[\s\S]*?(<\/div>)/,
+            '$1<form class="mphb_sc_checkout-form" method="post" action="/submit-booking/">'
+            + '<p class="mphb-text-control"><label>First Name'
+            + '<input type="text" name="mphb_first_name"></label></p>'
+            + '<p><button type="submit" class="button">Submit Booking</button></p>'
+            + '</form>$2');
+    }
+
     /* Relative hrefs in the captured page point at css/ and font/ here. */
     h = h.replace(/<head([^>]*)>/,
         '<head$1><base href="file://' + HERE + '/">');
@@ -146,6 +162,43 @@ function measure() {
         inHeader: !!(card && card.classList.contains('dcc_checkout-continue--inheader')),
         parent: card && card.parentNode ? name(card.parentNode) : null,
         prevSibling: card && card.previousElementSibling ? name(card.previousElementSibling) : null,
+        /* 0.36.2 — "BLUE ALL THE WAY": what paints below the card. */
+        blue: (() => {
+            const main = document.getElementById('main');
+            const art = document.querySelector('article.hentry');
+            const foot = document.getElementById('colophon');
+            if (!card || !main || !art || !foot) { return null; }
+            const cb = card.getBoundingClientRect().bottom + window.pageYOffset;
+            const ft = foot.getBoundingClientRect().top + window.pageYOffset;
+            /* Every element painting a background between the two, the footer
+               and its own contents aside. Before 0.36.2 this held `main` and
+               the article in white; after it, only the body's blue. */
+            const painters = [];
+            document.querySelectorAll('*').forEach((el) => {
+                const r = el.getBoundingClientRect();
+                if (r.top + window.pageYOffset + r.height < cb - 1) { return; }
+                if (el === foot || foot.contains(el)) { return; }
+                const bg = getComputedStyle(el).backgroundColor;
+                if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') { return; }
+                painters.push(((el.id ? '#' + el.id : el.tagName.toLowerCase())) + ' ' + bg);
+            });
+            return {
+                bodyBg: cs(document.body, 'background-color'),
+                mainBg: cs(main, 'background-color'),
+                mainPadTop: cs(main, 'padding-top'),
+                mainPadBottom: cs(main, 'padding-bottom'),
+                mainMarginBottom: cs(main, 'margin-bottom'),
+                mainHeight: Math.round(main.getBoundingClientRect().height),
+                artBg: cs(art, 'background-color'),
+                artMargin: cs(art, 'margin-bottom'),
+                gap: Math.round(ft - cb),
+                painters: painters.sort(),
+                /* NOTHING MAY BE HIDDEN OR REMOVED (the Director's
+                   instruction): the schema metas stay in the page. */
+                schemaNodes: document.querySelectorAll('.schema-image, [itemprop]').length,
+            };
+        })(),
+
         /* THE THEME'S CROP MUST BE UNTOUCHED — the whole reason the card is a
            sibling of the photo band and not a child of it. */
         bandOverflow: cs(document.getElementById('header-image-main'), 'overflow'),
@@ -303,6 +356,20 @@ const WIDTHS = [390, 768, 1440];
                 check(`${label}@${w}: one centred column, gutter on a phone and capped above it`,
                     m.cardBox.w, w === 390 ? 354 : 560);
                 check(`${label}@${w}: no sideways scrolling`, m.sideScroll, false);
+
+                /* ---- 0.36.2: the white band is gone and the blue is the body's ---- */
+                check(`${label}@${w}: main and the article paint nothing, and main collapses`,
+                    [m.blue.mainBg, m.blue.mainPadTop, m.blue.mainPadBottom,
+                     m.blue.mainMarginBottom, m.blue.mainHeight,
+                     m.blue.artBg, m.blue.artMargin],
+                    ['rgba(0, 0, 0, 0)', '0px', '0px', '0px', 0,
+                     'rgba(0, 0, 0, 0)', '0px']);
+                check(`${label}@${w}: the only things painting below the card are the blue body and the card`,
+                    m.blue.painters, ['body rgb(10, 80, 178)', 'section rgb(255, 255, 255)']);
+                check(`${label}@${w}: 38px of blue between the card and the footer, at every width`,
+                    m.blue.gap, 38);
+                check(`${label}@${w}: nothing was hidden or removed — the schema metas are still there`,
+                    m.blue.schemaNodes > 0, true);
                 check(`${label}@${w}: the theme's "Submit Booking" banner is not shown`,
                     m.themeTitleShown, false);
                 check(`${label}@${w}: the card's heading is the page's one visible h1`,
@@ -423,6 +490,132 @@ const WIDTHS = [390, 768, 1440];
                 await ctx.close();
             }
         }
+    }
+
+    /* ===================================================================== *
+     * 0.36.2 — THE PIXELS, AND THE FORM PAGE.
+     *
+     * The computed-style checks above cannot see a pseudo-element, a gradient
+     * or an image, and the white band this release removes could come back as
+     * any of them. So the column between the card's bottom and the footer is
+     * read out of a real screenshot, decoded by Chromium itself so there is no
+     * image library to trust.
+     *
+     * THE DIRECTOR'S CHECK WAS "the pixel 20px under the card is the blue",
+     * and it does NOT read the flat blue — it reads rgb(9, 76, 170). That is
+     * the card's OWN box-shadow (0 10px 30px rgba(0,0,0,.18), from 0.36.0):
+     * the column rises smoothly from rgb(8, 69, 155) at the card's edge to
+     * rgb(9, 79, 177) by 37px, which is the blue within one unit. A control
+     * page painting #0A50B2 screenshots as exactly rgb(10, 80, 178), so the
+     * pipeline is faithful and the tint is ours. Asserting the flat blue at
+     * 20px would therefore have been asserting a bug.
+     *
+     * What is asserted instead is what the release actually promises: no pixel
+     * in that column is white or near-white, every pixel is a blue, and the
+     * far end of the gap is the body's blue. Before 0.36.2 that column was
+     * 108-175px of #FFFFFF.
+     * ===================================================================== */
+    {
+        const decoder = await browser.newContext();
+        const dpage = await decoder.newPage();
+        const readColumn = async (png) => dpage.evaluate(async (b64) => {
+            const img = new Image();
+            img.src = 'data:image/png;base64,' + b64;
+            await img.decode();
+            const cv = document.createElement('canvas');
+            cv.width = img.width; cv.height = img.height;
+            const g = cv.getContext('2d');
+            g.drawImage(img, 0, 0);
+            const out = [];
+            for (let y = 0; y < img.height; y++) {
+                const d = g.getImageData(0, y, 1, 1).data;
+                out.push([d[0], d[1], d[2]]);
+            }
+            return out;
+        }, png.toString('base64'));
+
+        for (const w of WIDTHS) {
+            const file = build('lost', false);
+            const ctx = await browser.newContext({
+                viewport: { width: w, height: w < 500 ? 844 : 900 },
+                deviceScaleFactor: 1, isMobile: w < 500, hasTouch: w < 500,
+            });
+            const page = await ctx.newPage();
+            await page.route('**/*', (route) => (route.request().url().startsWith('file://')
+                ? route.continue() : route.abort()));
+            await page.goto('file://' + file, { waitUntil: 'load' });
+            await page.waitForTimeout(600);
+            const at = await page.evaluate(() => {
+                const c = document.querySelector('.dcc_checkout-continue').getBoundingClientRect();
+                const f = document.getElementById('colophon').getBoundingClientRect();
+                return {
+                    x: Math.round(c.left + c.width / 2),
+                    y: Math.round(c.bottom),
+                    h: Math.max(1, Math.round(f.top - c.bottom)),
+                };
+            });
+            const col = await readColumn(await page.screenshot({
+                clip: { x: at.x, y: at.y, width: 1, height: at.h },
+            }));
+            await ctx.close();
+
+            const nearWhite = col.filter((c) => c[0] > 200 && c[1] > 200 && c[2] > 200);
+            const allBlue = col.every((c) => c[2] > c[1] && c[1] > c[0] && c[2] >= 140 && c[0] <= 30);
+            const last = col[col.length - 1];
+
+            check(`blue@${w}: the column under the card is ${at.h}px tall, the full gap`,
+                at.h, 38);
+            check(`blue@${w}: NOT ONE near-white pixel under the card (the band is gone)`,
+                nearWhite.length, 0);
+            check(`blue@${w}: every pixel in the gap is a blue`, allBlue, true);
+            check(`blue@${w}: and the far end of the gap is the body's own #0A50B2`,
+                [Math.abs(last[0] - 10) <= 2, Math.abs(last[1] - 80) <= 2,
+                 Math.abs(last[2] - 178) <= 2], [true, true, true]);
+        }
+        await decoder.close();
+    }
+
+    /* ===================================================================== *
+     * AND THE FORM PAGE IS UNTOUCHED (0.36.2).
+     *
+     * `body.dcc_checkout-cardover` is added only in the two no-form states, so
+     * nothing in this release can reach a working checkout — but that is a
+     * claim about a branch, and the branch has to be taken for it to mean
+     * anything. With a form in MotoPress's wrapper, restore.js takes
+     * withForm(): no class, no card, and the theme's white content area and
+     * its padding exactly as the live page draws them.
+     * ===================================================================== */
+    for (const w of WIDTHS) {
+        const file = build('form', false);
+        const ctx = await browser.newContext({
+            viewport: { width: w, height: w < 500 ? 844 : 900 },
+            deviceScaleFactor: 1, isMobile: w < 500, hasTouch: w < 500,
+        });
+        const page = await ctx.newPage();
+        await page.route('**/*', (route) => (route.request().url().startsWith('file://')
+            ? route.continue() : route.abort()));
+        await page.goto('file://' + file, { waitUntil: 'load' });
+        await page.waitForTimeout(600);
+        const m = await page.evaluate(() => {
+            const main = document.getElementById('main');
+            const art = document.querySelector('article.hentry');
+            const cs = (el, p) => getComputedStyle(el).getPropertyValue(p);
+            return {
+                hasForm: !!document.querySelector('form.mphb_sc_checkout-form'),
+                cards: document.querySelectorAll('.dcc_checkout-continue').length,
+                cardover: document.body.className.indexOf('dcc_checkout-cardover') >= 0,
+                mainBg: cs(main, 'background-color'),
+                mainPadTop: cs(main, 'padding-top'),
+                artBg: cs(art, 'background-color'),
+            };
+        });
+        await ctx.close();
+        check(`form@${w}: the fork is really taken — a form, and no card`,
+            [m.hasForm, m.cards], [true, 0]);
+        check(`form@${w}: the body never carries the overlap class`, m.cardover, false);
+        check(`form@${w}: the content area keeps the theme's white and its padding`,
+            [m.mainBg, m.mainPadTop !== '0px', m.artBg],
+            ['rgb(255, 255, 255)', true, 'rgb(255, 255, 255)']);
     }
 
     await browser.close();

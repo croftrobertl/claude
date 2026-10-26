@@ -798,6 +798,19 @@ body.dcc_checkout-cardover main.main,
 body.dcc_checkout-cardover div.one-column {
 overflow: visible;
 }
+body.dcc_checkout-cardover main.main {
+background: transparent !important;
+padding-top: 0 !important;
+padding-bottom: 0 !important;
+margin-bottom: 0 !important;
+}
+body.dcc_checkout-cardover article.hentry {
+background: transparent;
+margin: 0;
+}
+body.dcc_checkout-cardover .dcc_checkout-continue--inheader {
+margin-bottom: 38px;
+}
 body.dcc_checkout-cardover .dcc_checkout-continue {
 position: relative;
 z-index: 3;

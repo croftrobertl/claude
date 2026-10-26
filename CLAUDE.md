@@ -1938,9 +1938,35 @@ yours to improvise.
     `Assets::checkout_page_id()` (ONE resolution, filter and all, shared with
     the gate): the hero and the Continue card read `_thumbnail_id` on the ROOM
     TYPE, and an unscoped filter would blank the cottage photo and leave the
-    page with no picture at all. Inside the no-photo gate too, because without
-    a cottage photo the banner IS the header and its heading is the page's only
-    one.
+    page with no picture at all.
+    **THIS ENTRY USED TO SAY "Inside the no-photo gate too, because without a
+    cottage photo the banner IS the header…" — IT IS THE OTHER WAY ROUND**
+    (corrected 2026-10-26 by reading `Hero::maybe_hook()`, not this file).
+    `suppress_page_featured_image()` is called AFTER
+    `if ($this->photo_url() === '') { return; }`, so it does NOT run when there
+    is no cottage photo — and the reason the old sentence gave is exactly the
+    reason the code declines to: with no cottage photo the canal banner IS the
+    header, the header image on this theme comes from the same attachment, and
+    suppressing `_thumbnail_id` could blank the header outright. The code is
+    right; the note was the opposite of it, which is the wrong-mechanism
+    failure the git section above exists to warn about.
+    **CONSEQUENCE, MEASURED ON LIVE 0.36.1 (2026-10-26, plain GET, nothing
+    swapped): the canal banner is still fetched twice on the switch-off
+    checkout** — the un-resized original at **227,470 bytes** (the header
+    image, which Bravada prints as both a background div and an `<img>`) plus a
+    Photon `?fit=` copy at 40.5 KB (390) / 59.4 KB (1440), the article's hidden
+    featured `<picture>`. 268 KB at 390, 287 KB at 1440. The suppression cannot
+    reach it: `maybe_hook()` returns unless `Layout::active()` AND a cottage
+    photo exists, and the switch is off on live. The Director's 0.35.2
+    verification was measured through the PREVIEW LINK, where both gates pass;
+    it was true there and still is.
+    **ROB'S DECISION (via the Director, 2026-10-26): LEAVE IT. Do not change
+    `Hero::maybe_hook()`.** The canal photo is 1214x911 and the 420px band
+    stretches it across 1440px — and to ~1,260 device pixels tall on a phone —
+    so the original is already smaller than what screens draw and a smaller
+    copy would only blur it. WordPress's 1024 copy is 278 KB against the
+    original's 289 KB, saving almost nothing. **This is not an open defect; it
+    is a closed decision**, recorded so it is not re-raised.
     **AND THE SHAPE OF A META FILTER'S ANSWER MATTERS**: core does
     `if ($single && is_array($check)) return $check[0];`, and
     `get_post_thumbnail_id()` asks with `$single = true` — so returning `[]`
@@ -2248,9 +2274,18 @@ yours to improvise.
   - **NOT THIS REPO'S, BUT LOAD-BEARING:** the checkout page (1399) carried an
     Elementor page background of `#0A50B2`, which is what drew the two blue
     132px bands down the sides at 1440. The Director removed it on staging and
-    live (backups `~/mu-backups/elementor-pagesettings-1399-*-pre-bg-*.json`);
-    the page now shows the theme's grey `rgb(206,206,206)`. **Do not style
-    around the blue; it is gone.**
+    live (backups `~/mu-backups/elementor-pagesettings-1399-*-pre-bg-*.json`).
+    **THIS ENTRY USED TO END "the page now shows the theme's grey
+    rgb(206,206,206). Do not style around the blue; it is gone." THAT IS WRONG
+    AND WAS CORRECTED ON 2026-10-26, BY MEASURING** rather than by reading it
+    here: `body` on live computes `rgb(10, 80, 178)` at 390, 768 and 1440, and
+    `18-post-1399.css` in `tests/real-theme/` still carries
+    `body.elementor-page-1399 … {background-color:#0A50B2}`. Whether it was
+    re-added or the removal did not take is not known and does not matter — the
+    blue is what 0.36.2's "Blue All the Way" floats the card on, so a reader
+    who trusted the old sentence would have built the feature on a colour that
+    is not there. **The two side bands at 1440 are gone either way**, which is
+    what that fix was for; the page background is not.
   - **THE TWO CARDS ARE ONE CENTRED COLUMN AT EVERY WIDTH, 560px AT MOST.**
     They were a `240px 1fr` grid built for the Continue card's photo, so on the
     two cards that have no photo the heading and the button were squeezed into
@@ -2529,6 +2564,102 @@ yours to improvise.
     **Asked for one reading rather than guessed.** Separately, the arithmetic
     on the Director's own live numbers says **B alone does not reach the
     2,000px target**: 3,240 − 590 ≈ 2,650.
+- **0.36.1 IS LIVE (2026-10-26, md5 `cff1bb2859a0bef8c82b3a8ab0a8b68a`)**, Rob
+  approved after the Director's staging pass. His measurements: staging switch
+  ON at 390 — card a child of `#masthead` right after `#header-image-main`, top
+  260, 354 wide, z-index 12, hit-tests at 10/30/near-bottom all the card, one
+  visible h1, no sideways scroll; staging 1440 — top 260, 560 wide, and after
+  scrolling down and back to 600 the bar's bottom is at 63 with the card's top
+  at 127 and a hit at the card's top returning the card; **live, switch off,
+  768, fresh visitor** — parent `#masthead`, top 260, 560x574, hits at 10/30/
+  bottom all the card, button plus eight cottage links, one h1, no sideways
+  scroll. **He did not check the taken card with a real taken stay, nor the 768
+  dropdown over the card on live** — the 12-combination live-swap run covered
+  both, and he looks at them next release.
+  **`.mphb-booking-details` HOLDS THE GUEST CHOOSER, SO OPTION B CANNOT SHIP**
+  (his read, staging form, Cottage 36, Dec 7-10, layout on). The block is
+  `h3.mphb-booking-details-title`, the two date lines, then
+  `div.mphb-reserve-rooms-details > div.mphb-room-details` containing
+  `input[room_type_id]`, `h3.mphb-room-number`, `p.mphb-room-type-title`,
+  **`p.mphb-adults-chooser` (the native select AND `fieldset.dcc_layout-segment`)**,
+  the three `section.dcc_checkout-guest-section`s, the guest note,
+  `input[children]`, `p.mphb-guest-name-wrapper`, `input[rate_id]` and
+  `section#mphb-services-details-0`. So folding that block away on desktop
+  would hide the control that drives the extra-guest fee, the guest panels and
+  MotoPress's own "please select the number of guests" — exactly the risk the
+  stand-in flagged. **Only the title, the two date lines, the room number and
+  the room-type title are safe to compact**, and that is Rob's call from stills
+  at 390/768/1440; nothing is built for it yet.
+- **0.36.2 — "BLUE ALL THE WAY"** (Rob's pick from a mockup on the live page,
+  via the Director 2026-10-26; `checkout.css` only, plus `tests/real-theme/`).
+  With the card moved into the header, `main#main` was left empty and still
+  painted a WHITE BAND under it — measured on live 0.36.1: 108px at 390, 114 at
+  768, 175 at 1440, holding nothing a guest can see. The band goes; the card
+  floats on the site's blue down to the footer.
+  - **FOUR WINNING RULES WERE READ WITH CDP, AND THE NAIVE READ FOUND NONE OF
+    THEM.** My first enumeration walked `document.styleSheets` and split each
+    `selectorText` on commas — which **breaks `:not(a, b)`**, so `matches()`
+    threw on the fragments and the script reported *no background rule at all*
+    for an element computing `#FFFFFF`. `CSS.getMatchedStylesForNode` gave the
+    real answer:
+    - background: `article.hentry, body:not(.blog):not(.page-template-template-blog):not(.archive):not(.search) #container:not(.bravada-landing-page) .main, …` → **(1,6,1)**
+    - padding: `.cryout #container[class*="one-"] … .main` → **(1,3,1)**
+    - margin: the same rule, `1.5em` → (1,3,1)
+    - the article's own branch and its `2em` margin → **(0,1,1)** each
+    **`body.dcc_checkout-cardover main.main` is (0,2,1) and loses to all three
+    of main's**, so the obvious rule would have looked right in the file and
+    done nothing. `main` therefore carries `!important` on background, both
+    paddings and the margin; **the article deliberately does not** — (0,2,1)
+    beats (0,1,1) outright, and keeping it weak leaves a later deliberate
+    override able to win. They are separate blocks with a comment saying so, so
+    a tidy-up cannot merge them and leave `main` correct by accident of order.
+  - **THE BLUE BELOW THE CARD IS ONE NUMBER, OWNED BY THE CARD.** With `main`
+    collapsed the gap would be whatever the theme's margin happened to be —
+    measured **27px at 390, 28.5 at 768 and 0 at 1440**, three different
+    answers to "about 38px". So `main`'s margin goes to 0 and the card's own
+    `margin-bottom` is the gap: **38px at every width**, one place to change.
+  - **NOTHING IS HIDDEN OR REMOVED** (the Director's instruction): only
+    background, padding and margin move, and the suite asserts the schema metas
+    are still in the page (13 nodes).
+  - **THE PIXEL CHECK DOES NOT READ THE FLAT BLUE, AND ASSERTING THAT IT DID
+    WOULD HAVE BEEN ASSERTING A BUG.** The brief said "pixel colour 20px under
+    the card is the blue"; it reads **rgb(9, 76, 170)**. The column rises
+    smoothly from rgb(8, 69, 155) at the card's edge to rgb(9, 79, 177) by
+    37px — that is **the card's OWN `box-shadow`** (`0 10px 30px
+    rgba(0,0,0,.18)`, 0.36.0) seen against the blue. A control page painting
+    `#0A50B2` screenshots as exactly rgb(10, 80, 178), so the pipeline is
+    faithful and the tint is ours. What is asserted instead is what the release
+    promises: **not one near-white pixel** in that column, every pixel a blue,
+    and the far end of the gap the body's own `#0A50B2` within one unit. The
+    column is decoded by Chromium itself, so there is no image library to trust
+    — and a pixel catches a pseudo-element or a gradient, which the
+    computed-style checks cannot.
+  - **THE FORM PAGE IS UNTOUCHED, AND THE BRANCH IS NOW ACTUALLY TAKEN.**
+    `body.dcc_checkout-cardover` exists only in the two no-form states, so
+    nothing here can reach a working checkout — but that is a claim about a
+    branch. **My first version of this check measured a cookieless GET of live,
+    which IS the dead end: it reported `form=false, cardover=true` and proved
+    nothing.** `tests/real-theme/` now builds a third state with a form in
+    MotoPress's wrapper, so `restore.js` takes `withForm()`, and asserts no
+    class, no card, and the theme's white content area and padding exactly as
+    live draws them.
+  - Mutations: `css-white-band-back`, **`css-white-band-no-important`** (the
+    specificity claim — without it the theme's (1,6,1) wins and the white
+    returns), `css-main-padding-kept`, `css-article-white-left`,
+    `css-blue-gap-from-theme`.
+- **THE THEME'S MENU BAR NOW HAS A SHARED CONTRACT — `dcc-topbar.php`**
+  (mu-plugin, live 2026-10-26, the Director). Below 1024 the bar slides in on
+  every scroll up, which is what `tests/real-theme/` measured as `position:
+  absolute; top: -75px` below 1024 against `fixed; top: 0` at and above it.
+  The mu-plugin publishes **`var(--dcc-topbar)`** (0px or 63px, following the
+  slide), **`window.DCCTopbar.get()`** and a **`dcc:topbar`** event on change.
+  **If anything of this plugin's is ever sticky at the TOP, read that rather
+  than measuring the bar.** Nothing is today — the Smart Next bar is pinned at
+  the bottom, and `tests/real-theme/` asserts nothing of ours is `fixed` or
+  `sticky` after a scroll — so nothing was wired up: a reader that nothing
+  reads is the "setting that never reaches its consumer" failure in another
+  shape.
+
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of
   0.32.0, folding in his findings — not before).

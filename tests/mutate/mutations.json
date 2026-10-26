@@ -6878,5 +6878,60 @@
   "find": ".dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,\n.dcc_layout .mphb_sc_checkout-form .mphb-room-number,",
   "replace": ".dcc_layout .mphb_sc_checkout-form .dcc_checkout-nothing-at-all,",
   "count": 1
+ },
+ {
+  "id": "css-white-band-back",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - main#main paints nothing under the card, so the empty white band is gone and the card floats on the site's blue",
+  "find": "body.dcc_checkout-cardover main.main {\n    background: transparent !important;",
+  "replace": "body.dcc_checkout-cardover main.main {\n    background: #fff !important;",
+  "count": 1
+ },
+ {
+  "id": "css-white-band-no-important",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - the background override needs !important: the theme paints main white at (1,6,1) and this selector is (0,2,1), so without it the rule looks right and does nothing",
+  "find": "    background: transparent !important;\n    padding-top: 0 !important;",
+  "replace": "    background: transparent;\n    padding-top: 0 !important;",
+  "count": 1
+ },
+ {
+  "id": "css-main-padding-kept",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - main's own padding is removed too, or the collapsed band is still 76-160px of blue-but-wrong spacing below the card",
+  "find": "    padding-top: 0 !important;\n    padding-bottom: 0 !important;",
+  "replace": "    padding-top: 0 !important;\n    padding-bottom: 4em !important;",
+  "count": 1
+ },
+ {
+  "id": "css-article-white-left",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - the article is transparent as well as main; its own branch of the same white declaration is (0,1,1) and needs no !important",
+  "find": "body.dcc_checkout-cardover article.hentry {\n    background: transparent;\n    margin: 0;\n}",
+  "replace": "body.dcc_checkout-cardover article.hentry {\n    margin: 0;\n}",
+  "count": 1
+ },
+ {
+  "id": "css-blue-gap-from-theme",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - the blue below the card is the card's own 38px margin, one number at every width; the theme's margin is 27 / 28.5 / 0 and is three different answers",
+  "find": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    margin-bottom: 38px;\n}",
+  "replace": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    margin-bottom: 24px;\n}",
+  "count": 1
  }
 ]

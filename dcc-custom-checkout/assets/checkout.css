@@ -1510,6 +1510,67 @@ body.dcc_checkout-cardover div.one-column {
     overflow: visible;
 }
 
+/* ------------------------------------------------------------------------- *
+ * "BLUE ALL THE WAY" (0.36.2, Rob's pick from a mockup on the live page).
+ *
+ * With the card moved up into the header (0.36.1), `main#main` is left empty
+ * and still paints a WHITE BAND under it — measured on live 0.36.1: 108px tall
+ * at 390, 114 at 768, 175 at 1440, holding nothing a guest can see (zero-height
+ * schema metas, the hidden featured <picture> and an empty Elementor
+ * container). So the band goes and the card floats on the site's blue down to
+ * the footer.
+ *
+ * THE BLUE IS THE BODY'S OWN, #0A50B2 — Elementor's page background for page
+ * 1399, measured `rgb(10, 80, 178)` on live at all three widths. Nothing here
+ * paints it; removing the white is the whole change.
+ *
+ * NOTHING IS HIDDEN OR REMOVED (the Director's instruction): the schema metas
+ * stay in the page. Only background, padding and margin move.
+ *
+ * THE `!important`s ARE MEASURED, NOT DEFENSIVE. The winning rules were read
+ * from the live page with CDP, because a selector list containing `:not(a, b)`
+ * cannot be split on commas and an earlier enumeration of mine reported NO
+ * matching rule at all:
+ *
+ *   background  `article.hentry, body:not(.blog):not(.page-template-template-blog)
+ *                :not(.archive):not(.search) #container:not(.bravada-landing-page)
+ *                .main, …`                                            → (1,6,1)
+ *   padding     `.cryout #container[class*="one-"] … .main`            → (1,3,1)
+ *   margin      the same rule, 1.5em                                   → (1,3,1)
+ *
+ * `body.dcc_checkout-cardover main.main` is (0,2,1) and loses to every one of
+ * them, so without `!important` this block would look right in the file and do
+ * nothing — which is this project's most repeated defect. The theme sets no
+ * `!important` of its own here, so one is enough.
+ * ------------------------------------------------------------------------- */
+body.dcc_checkout-cardover main.main {
+    background: transparent !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* THE ARTICLE NEEDS NO `!important`, AND THAT IS DELIBERATE. Its own branch of
+   the same white declaration is the bare `article.hentry` at (0,1,1), and its
+   2em bottom margin is `article.hentry, .main .content-widget`, also (0,1,1) —
+   both of which (0,2,1) beats outright. Kept weak so a later deliberate
+   override can still win, per the button spec's rule.
+   DO NOT merge this into the block above as a tidy-up: `main` would keep the
+   `!important` it needs only by accident of being listed first. */
+body.dcc_checkout-cardover article.hentry {
+    background: transparent;
+    margin: 0;
+}
+
+/* AND THE BLUE BELOW THE CARD IS ONE NUMBER, OWNED BY THE CARD. With `main`
+   collapsed the gap would otherwise be whatever the theme's margin happened to
+   be — measured 27px at 390, 28.5 at 768 and 0 at 1440, which is three
+   different answers to Rob's "about 38px". The card's own bottom margin is the
+   gap, so it is 38 at every width and there is one place to change it. */
+body.dcc_checkout-cardover .dcc_checkout-continue--inheader {
+    margin-bottom: 38px;
+}
+
 body.dcc_checkout-cardover .dcc_checkout-continue {
     position: relative;
     /* ONLY MEANINGFUL ON THE FALLBACK PATH. When cardHome() recognises the
