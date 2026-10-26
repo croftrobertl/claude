@@ -384,7 +384,8 @@
     if (!DATA) return;
     const v = root.dataset.view || 'story';
     history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
-      : '#v=' + v + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') : ''));
+      : '#v=' + v + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
+        (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') : ''));
   }
   function findDayByGuid(g) {
     for (let di = 0; di < DATA.days.length; di++)
@@ -427,11 +428,11 @@
     if (!histEl) {
       histEl = el('section', 'dcc-tour-history');
       histEl.innerHTML =
-        '<div class="dcc-hist-top">' +
-          '<button class="dcc-hist-film" type="button"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch the 60-second film</span></button>' +
+        '<div class="dcc-hist-top"><div class="dcc-hist-bar">' +
+          '<button class="dcc-hist-film" type="button"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span class="dcc-jl">Watch the 60-second film</span><span class="dcc-js">Film</span></button>' +
           '<nav class="dcc-hist-jump" aria-label="On this page">' +
             '<button type="button" data-jump="map">Map</button><button type="button" data-jump="trip">Your trip</button>' +
-            '<button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="records" aria-label="Family records"><span class="dcc-jl">Family records</span><span class="dcc-js">Family</span></button></nav>' +
+            '<button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="records" aria-label="Family records"><span class="dcc-jl">Family records</span><span class="dcc-js">Family</span></button></nav></div>' +
           '<div class="dcc-hist-otd" hidden></div>' +
         '</div>' +
         '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>' +
@@ -484,6 +485,9 @@
     if (!histEl) return;
     showChronBack(false);
     stopGrow();
+    stopListen();
+    const play = histEl.querySelector('.bh-transport [data-a="play"][aria-pressed="true"]');
+    if (play) play.click();
   }
   // every era change runs the panels once per frame — dragging the slider fires many changes
   let histPending = null, histRaf = 0;
@@ -589,16 +593,20 @@
   //      the sources it was checked against and how strong they are. Entries link to the map era
   //      that shows them, show your own photos from the spot, and drive the map as you read
   //      (story mode). Deep links: #v=history&era=…&ch=<strand>&e=<entry>. ----
-  let chron = null, chronLoading = false, chronShown = false, chronStrand = 'ragusa', chronFrom = null;
+  let chron = null, chronLoading = false, chronShown = false, chronStrand = 'ragusa', chronFrom = null, chronActive = null;
+  // entries you've settled on, per device, for "You've read 12 of 28"
+  let chronRead = new Set();
+  try { chronRead = new Set(JSON.parse(localStorage.getItem('dcc-chron-read') || '[]')); } catch (e) { /* storage blocked */ }
   function chronFirstRender() { chronShown = true; renderChronicle(); renderOnThisDay(); applyChronLink(); }
   const CHRON_TAGS = { tradition: 'Tradition', debated: 'Debated' };
   // how strong an entry's best source is
   const EV_TIERS = [
-    [3, 'Scholarly & official', /hrcak\.srce\.hr|pubmed|researchgate|unesco\.org|irb\.hr|jas-center\.eu|\/\/db\.hr|lzmk\.hr|enciklopedija\.hr|migk\.hr/],
-    [2, 'Encyclopedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|tzdubrovnik\.hr|dubrovniknet\.hr|topostext/],
+    [4, 'Scholarly & archival', /hrcak\.srce\.hr|pubmed|researchgate|jas-center\.eu/],
+    [3, 'Encyclopedias & institutions', /enciklopedija\.hr|lzmk\.hr|unesco\.org|irb\.hr|\/\/db\.hr|migk\.hr|matica\.hr|tzdubrovnik\.hr|britannica\.com|topostext/],
+    [2, 'Wikipedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|dubrovniknet\.hr/],
     [1, 'Travel guides & blogs', /./]
   ];
-  const evidenceOf = src => EV_TIERS.find(t => src.some(([, u]) => t[2].test(u))) || EV_TIERS[2];
+  const evidenceOf = src => EV_TIERS.find(t => src.some(([, u]) => t[2].test(u))) || EV_TIERS[3];
   const chronId = t => String(t).toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   function loadChronicle() {
     if (chron || chronLoading) return;
@@ -620,7 +628,7 @@
   function chronSrcHtml(src) {
     const t = evidenceOf(src);
     return '<details class="dcc-chron-srcs"><summary>' +
-      '<span class="dcc-ev dcc-ev-' + t[0] + '" aria-hidden="true"><i></i><i></i><i></i></span>' +
+      '<span class="dcc-ev dcc-ev-' + t[0] + '" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' +
       escapeHtml(t[1]) + ' · ' + src.length + (src.length === 1 ? ' source' : ' sources') + '</summary>' +
       '<div class="dcc-chron-src">' + src.map(([l, u]) =>
         '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join('') + '</div></details>';
@@ -646,7 +654,8 @@
     if (!ph) return '';
     const n = ph.items.length, k = Math.min(4, n), pick = [];
     for (let i = 0; i < k; i++) pick.push(Math.floor(i * n / k));   // spread across days and places
-    return '<div class="dcc-chron-you"><div class="dcc-chron-you-k">You stood here · ' + escapeHtml(dayRanges(ph.days)) + '</div>' +
+    const quiet = ev.tone === 'sombre';
+    return '<div class="dcc-chron-you' + (quiet ? ' quiet' : '') + '"><div class="dcc-chron-you-k">' + (quiet ? 'Your photos from here' : 'You stood here') + ' · ' + escapeHtml(dayRanges(ph.days)) + '</div>' +
       '<div class="dcc-chron-thumbs">' + pick.map((j, i) =>
         '<button type="button" data-ph="' + escapeAttr(ev.id) + '" data-i="' + j + '" aria-label="Open your photo from ' + escapeAttr(ph.items[j].p.name) + '">' +
         '<img alt="" data-src="' + escapeAttr(resolveUrl(ph.items[j].it.src || ph.items[j].it.full)) + '">' +
@@ -695,11 +704,14 @@
         ' tabindex="' + (id === chronStrand ? 0 : -1) + '" data-strand="' + id + '">' + escapeHtml(nm) + '</button>').join('') + '</div>' +
       '<div class="dcc-chron-body' + (st ? '' : ' dcc-chron-solo') + '">' + (st ? storyHtml() : '') +
         '<div class="dcc-chron-panel" id="dcc-chron-panel" role="tabpanel" aria-labelledby="dcc-chron-t-' + chronStrand + '">' +
-          (st ? chronStrandHtml(st) : chronRecordsHtml(chron.records)) + '</div></div>';
+          (st ? chronStrandHtml(st) : chronRootsHtml(chron.records)) + '</div></div>';
     if (!box._wired) {
       box._wired = true;
       box.addEventListener('click', chronClick);
+      box.addEventListener('input', rootsInput);
+      box.addEventListener('submit', rootsSubmit);
       box.addEventListener('change', e => {
+        rootsInput(e);
         if (!e.target.matches('.dcc-story-follow input')) return;
         storyFollow = e.target.checked;
         try { localStorage.setItem('dcc-story-follow', storyFollow ? '1' : '0'); } catch (err) { /* storage blocked */ }
@@ -720,6 +732,8 @@
   function chronClick(e) {
     const t = e.target.closest('[data-strand]');
     if (t) { setStrand(t.dataset.strand, true); return; }
+    if (rootsClick(e)) return;
+    if (e.target.closest('.dcc-skip')) { const end = histEl.querySelector('.dcc-chron-end'); if (end) end.focus(); return; }
     const ph = e.target.closest('[data-ph]');
     if (ph) { openChronPhotos(ph.dataset.ph, +ph.dataset.i); return; }
     const go = e.target.closest('.dcc-chron-go');
@@ -741,15 +755,18 @@
     }
     if (e.target.closest('.dcc-story-grow')) { growTimer ? stopGrow() : startGrow(); return; }
     if (e.target.closest('.dcc-story-exp') || e.target.closest('.dcc-story-mini')) {
-      const s = histEl.querySelector('.dcc-story'), open = !s.classList.contains('open');
-      s.classList.toggle('open', open);
-      s.querySelector('.dcc-story-exp').setAttribute('aria-expanded', String(open));
+      storyOpen(!histEl.querySelector('.dcc-story').classList.contains('open'));
       return;
     }
+    if (e.target.closest('.dcc-story-listen')) { listening ? stopListen() : startListen(); return; }
+    const pc = e.target.closest('.dcc-chron-postcard');
+    if (pc) { openPostcard(pc.closest('li').dataset.id, 0); return; }
+    const gl = e.target.closest('.dcc-gl');
+    if (gl) { showGloss(gl); return; }
     if (e.target.closest('.dcc-chron-print')) printChronicle();
   }
   function setStrand(id, save, focus) {
-    if (id !== chronStrand) stopGrow();
+    if (id !== chronStrand) { stopGrow(); stopListen(); chronActive = null; }
     chronStrand = id;
     if (save) { try { localStorage.setItem('dcc-chron-strand', id); } catch (e) { /* storage blocked */ } }
     renderChronicle();
@@ -759,21 +776,20 @@
   function chronStrandHtml(st) {
     return '<p class="dcc-chron-intro"><span>' + escapeHtml(st.kicker) + '</span>' + escapeHtml(st.intro) + '</p>' +
       '<p class="dcc-chron-now"></p>' +
+      '<button type="button" class="dcc-skip">Skip past these entries</button>' +
       '<ol class="dcc-chron-list">' + st.events.map(ev =>
         '<li data-id="' + escapeAttr(ev.id) + '" data-sort="' + ev.sort + '"' + (ev.era ? ' data-era="' + escapeAttr(ev.era) + '"' : '') + '>' +
           '<div class="dcc-chron-y">' + escapeHtml(ev.y) + '</div>' +
           '<div class="dcc-chron-b">' +
             '<h3>' + escapeHtml(ev.title) + (ev.tag ? ' <span class="dcc-chron-tag">' + CHRON_TAGS[ev.tag] + '</span>' : '') + '</h3>' +
-            '<p>' + escapeHtml(ev.text) + '</p>' +
+            '<p>' + glossHtml(ev.text) + '</p>' +
+            famLinesHtml(ev) +
             chronPhotosHtml(ev) +
             '<div class="dcc-chron-acts"><button type="button" class="dcc-chron-go">See it on the map ›</button>' +
+              (chronPhotos(ev) && ev.tone !== 'sombre' ? '<button type="button" class="dcc-chron-postcard">Postcard</button>' : '') +
               '<button type="button" class="dcc-chron-share" aria-label="Share this entry">Share</button></div>' +
             chronSrcHtml(ev.src) +
-          '</div></li>').join('') + '</ol>';
-  }
-  function chronRecordsHtml(r) {
-    return '<h3 class="dcc-chron-rech">' + escapeHtml(r.title) + '</h3>' +
-      '<ul class="dcc-chron-rec">' + r.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' + chronSrcHtml(r.src);
+          '</div></li>').join('') + '</ol><span class="dcc-chron-end" tabindex="-1"></span>';
   }
   // mark the entries that belong to the era on the map, and name each entry's map
   function chronicleNow(slug) {
@@ -792,8 +808,8 @@
         b.disabled = on;
       }
     });
-    const cur = F.find(fr => histSlugOf(fr.label) === slug), now = panel.querySelector('.dcc-chron-now');
-    if (now && cur) now.textContent = 'The map shows ' + cur.label + (n ? ' · ' + n + (n === 1 ? ' entry' : ' entries') + ' marked below' : '');
+    panel.querySelectorAll('.dcc-chron-list > li').forEach(li => li.classList.toggle('read', chronRead.has(li.dataset.id)));
+    chronNowLine();
   }
   // after a jump to the map, a pill takes you back to the entry you came from; it goes away on
   // its own once that entry is back on screen
@@ -827,7 +843,7 @@
   function applyChronLink() {
     if (!histLink || !chron || !histEl || !chronShown) return;
     const { ch, e } = histLink;
-    if (ch && ch !== chronStrand && (ch === 'records' || chron.strands.some(s => s.id === ch))) { chronStrand = ch; renderChronicle(); }
+    if (ch && ch !== chronStrand && (ch === 'records' || chron.strands.some(s => s.id === ch))) { chronStrand = ch; chronActive = null; renderChronicle(); }
     histLink = null;
     if (!e) return;
     setTimeout(() => {
@@ -835,6 +851,8 @@
       if (!li) return;
       storyLock(1600);
       li.scrollIntoView({ behavior: 'auto', block: 'center' });
+      chronActive = li.dataset.id;
+      if (root.dataset.view === 'history') updateHash();
       li.classList.add('dcc-tour-flash');
       setTimeout(() => li.classList.remove('dcc-tour-flash'), 1600);
     }, 300);
@@ -859,19 +877,26 @@
         '<p class="dcc-story-cap"></p>' +
         '<div class="dcc-story-ctl">' +
           '<button type="button" class="dcc-story-grow" aria-pressed="false"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch Ragusa grow</span></button>' +
+          (canListen() ? '<button type="button" class="dcc-story-listen" aria-pressed="false">' + LISTEN_ICON + '<span>Listen</span></button>' : '') +
           '<label class="dcc-story-follow"><input type="checkbox"' + (storyFollow ? ' checked' : '') + '> Map follows as you read</label>' +
         '</div></div></aside>';
   }
   function storyUpdate(f) {
     const card = histEl && histEl.querySelector('.dcc-story');
     if (!card || !f) return;
-    card.querySelector('.dcc-story-y').textContent = f.label;
+    const yEl = card.querySelector('.dcc-story-y');
+    if (yEl.textContent && yEl.textContent !== f.label && !reducedMotion()) {
+      yEl.classList.remove('tick'); void yEl.offsetWidth; yEl.classList.add('tick');   // the new year rolls in
+    }
+    yEl.textContent = f.label;
     card.querySelector('.dcc-story-s').textContent = f.ragusa.status;
     card.querySelector('.dcc-story-cap').textContent = growTimer && growCap ? growCap : f.ragusa.body;
     // a live copy of the component's coast map (territory, labels, your stops)
     const src = histEl.querySelector('.bh-ragusa svg');
     if (src) ['.dcc-story-map', '.dcc-story-mini'].forEach(sel => {
       const host = card.querySelector(sel), c = src.cloneNode(true);
+      // the copies use the original's hatch patterns; dropping their <defs> avoids duplicate ids
+      c.querySelectorAll('defs').forEach(x => x.remove());
       c.removeAttribute('role'); c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true'); c.setAttribute('focusable', 'false');
       host.replaceChildren(c);
     });
@@ -882,19 +907,25 @@
     const lis = histEl.querySelectorAll('.dcc-chron-list > li');
     if (!lis.length) return;
     storyIO = new IntersectionObserver(es => {
-      const hit = es.filter(x => x.isIntersecting).map(x => x.target).pop();
-      if (!hit) return;
+      if (!es.some(x => x.isIntersecting)) return;
       clearTimeout(storyDwell);
-      // only an entry you settle on (not one scrolled past) turns the map
-      storyDwell = setTimeout(() => storyActivate(hit), 450);
+      // only an entry you settle on (not one scrolled past) turns the map: the one under the
+      // reading line once scrolling has paused
+      storyDwell = setTimeout(() => {
+        const y = window.innerHeight * 0.45;
+        const li = [...lis].find(x => { const r = x.getBoundingClientRect(); return r.top <= y && r.bottom >= y; });
+        if (li) storyActivate(li);
+      }, 450);
     }, { rootMargin: '-42% 0px -52% 0px' });
     lis.forEach(li => storyIO.observe(li));
   }
   function storyActivate(li) {
     if (!li.isConnected || root.dataset.view !== 'history') return;
+    if (listening || Date.now() < storyLockUntil) return;   // a jump or read-aloud is moving the page
     histEl.querySelectorAll('.dcc-chron-list > li.active').forEach(x => x.classList.remove('active'));
     li.classList.add('active');
-    if (!storyFollow || growTimer || Date.now() < storyLockUntil || !histHandle) return;
+    markRead(li);
+    if (!storyFollow || growTimer || !histHandle) return;
     const f = chronFrame(+li.dataset.sort, li.dataset.era), era = f && histSlugOf(f.label);
     if (era && era !== histSlug) histHandle.show(era);
   }
@@ -915,12 +946,30 @@
     const evs = st ? st.events.filter(ev => { const f = chronFrame(ev.sort, ev.era); return f && histSlugOf(f.label) === slug; }) : [];
     return evs.length ? evs.slice(0, 3).map(ev => ev.y + ': ' + ev.title).join(' · ') : fr.ragusa.body;
   }
+  // the phone's story bar opens on demand and folds itself away once you scroll on (unless it's playing)
+  let storyOpenY = 0;
+  function storyOpen(open) {
+    const s = histEl && histEl.querySelector('.dcc-story');
+    if (!s) return;
+    s.classList.toggle('open', open);
+    s.querySelector('.dcc-story-exp').setAttribute('aria-expanded', String(open));
+    storyOpenY = window.scrollY;
+    if (!storyOpen._wired) {
+      storyOpen._wired = true;
+      window.addEventListener('scroll', () => {
+        const c = histEl.querySelector('.dcc-story.open');
+        if (c && !growTimer && !listening && Math.abs(window.scrollY - storyOpenY) > 160 &&
+            getComputedStyle(c.querySelector('.dcc-story-exp')).display !== 'none') storyOpen(false);
+      }, { passive: true });
+    }
+  }
   function startGrow() {
     if (!histHandle || !histHandle.frames) return;
+    stopListen();
     const steps = growSteps(), card = histEl.querySelector('.dcc-story'), btn = card && card.querySelector('.dcc-story-grow');
     if (!steps.length || !btn) return;
-    card.classList.add('open', 'growing');
-    card.querySelector('.dcc-story-exp').setAttribute('aria-expanded', 'true');
+    storyOpen(true);
+    card.classList.add('growing');
     btn.setAttribute('aria-pressed', 'true'); btn.lastChild.textContent = 'Stop';
     let i = 0;
     const tick = () => {
@@ -935,6 +984,7 @@
   function stopGrow() {
     if (!growTimer) return;
     clearTimeout(growTimer); growTimer = 0; growCap = '';
+    histEl.querySelectorAll('.dcc-chron-list > li.active').forEach(x => x.classList.remove('active'));
     const card = histEl && histEl.querySelector('.dcc-story');
     if (!card) return;
     card.classList.remove('growing');
@@ -981,37 +1031,457 @@
   //      as a keepsake, laid out by the print stylesheet ----
   function printChronicle() {
     if (!chron) return;
+    document.querySelectorAll('.dcc-print').forEach(x => x.remove());
     const ent = ev => '<div class="dcc-pr-ev"><div class="dcc-pr-y">' + escapeHtml(ev.y) + '</div><div>' +
       '<h3>' + escapeHtml(ev.title) + (ev.tag ? ' <em>(' + CHRON_TAGS[ev.tag] + ')</em>' : '') + '</h3>' +
       '<p>' + escapeHtml(ev.text) + '</p>' +
+      (famLines(ev).length ? '<p class="dcc-pr-fam">' + famLines(ev).join(' · ') + '</p>' : '') +
       '<p class="dcc-pr-src">' + escapeHtml(evidenceOf(ev.src)[1]) + ': ' + ev.src.map(([l, u]) => escapeHtml(l) + ' — ' + escapeHtml(u)).join('; ') + '</p></div></div>';
     const pr = el('div', 'dcc-print',
       '<h1>Ragusa, Konavle &amp; Dalmatia</h1><p class="dcc-pr-sub">A family chronicle · Crofts in Croatia · printed ' +
         escapeHtml(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '</p>' +
       chron.strands.map(st => '<section><h2>' + escapeHtml(st.name) + '</h2><p class="dcc-pr-intro">' + escapeHtml(st.intro) + '</p>' +
         st.events.map(ent).join('') + '</section>').join('') +
+      (famLoad().length ? '<section><h2>Our family</h2><ul>' + famLoad().map(p => '<li>' + escapeHtml(p.n) + ' · ' + p.b + (p.d ? '–' + p.d : '') +
+        (p.v ? ' · ' + escapeHtml(p.v) : '') + '</li>').join('') + '</ul></section>' : '') +
       '<section><h2>' + escapeHtml(chron.records.title) + '</h2><ul>' + chron.records.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' +
         '<p class="dcc-pr-src">' + chron.records.src.map(([l, u]) => escapeHtml(l) + ' — ' + escapeHtml(u)).join('; ') + '</p></section>');
     document.body.appendChild(pr);
     document.body.classList.add('dcc-printing');
     const done = () => { document.body.classList.remove('dcc-printing'); pr.remove(); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
+    // no timer: on phones print() returns before the dialog has read the page. The printout is
+    // hidden on screen anyway, and a later print replaces it.
     window.print();
-    setTimeout(() => { if (pr.isConnected && !window.matchMedia('print').matches) done(); }, 1000);
+  }
+
+  // ---- Glossary: the first mention of a few historical terms in an entry is a tappable word
+  //      with a one-line explanation ----
+  const GLOSSARY = [
+    ['De Administrando Imperio', 'A handbook on the empire’s neighbours written for the Byzantine emperor Constantine VII around 950 — the earliest written account of Ragusa’s founding.'],
+    ['Theme of Dalmatia', 'A Byzantine province of the Dalmatian coastal towns (about 870–1060), governed from Zadar.'],
+    ['Independent State of Croatia', 'The NDH: an Axis puppet state set up in 1941 under Ante Pavelić, which lasted until 1945.'],
+    ['Great Council', 'The assembly of all adult male nobles of Ragusa. It elected the officials and voted on the laws the Senate proposed.'],
+    ['Kanalites', 'The Slavs of Konavle (“Kanali”), as Constantine VII’s handbook calls them.'],
+    ['Travunia', 'A medieval Slav principality around Trebinje, inland from Dubrovnik. Konavle belonged to it.'],
+    ['perpers', 'Ragusa’s own unit of money (the perpera), used for prices, tribute and fines.'],
+    ['ducats', 'Gold coins, first struck in Venice in 1284, that were the trading money of the Mediterranean.'],
+    ['castellan', 'The commander of a castle — at Sokol Grad, a young Ragusan noble serving six months at a time.'],
+    ['rector', 'The Republic’s head of state. He presided over the councils but had little power of his own; Konavle had its own rector at Pridvorje.'],
+    ['Laus', 'The rocky islet where, by tradition, the first Ragusa was built; the city’s name is linked to it.'],
+    ['ban', 'A ruler’s title in Bosnia and Croatia, roughly “lord” or “viceroy”.']
+  ];
+  // escape the text and turn the first mention of each glossary term into a button
+  function glossHtml(text) {
+    const hits = [];
+    GLOSSARY.forEach(([term], gi) => {
+      const m = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').exec(text);
+      if (m && !hits.some(h => m.index < h.end && m.index + m[0].length > h.start)) hits.push({ start: m.index, end: m.index + m[0].length, gi });
+    });
+    hits.sort((a, b) => a.start - b.start);
+    let out = '', at = 0;
+    hits.forEach(h => {
+      out += escapeHtml(text.slice(at, h.start)) +
+        '<button type="button" class="dcc-gl" data-g="' + h.gi + '" aria-expanded="false">' + escapeHtml(text.slice(h.start, h.end)) + '</button>';
+      at = h.end;
+    });
+    return out + escapeHtml(text.slice(at));
+  }
+  function showGloss(btn) {
+    let pop = document.querySelector('.dcc-gl-pop');
+    const open = pop && pop.classList.contains('on') && pop._for === btn;
+    if (pop) { pop.classList.remove('on'); if (pop._for) pop._for.setAttribute('aria-expanded', 'false'); pop._for = null; }
+    if (open) return;
+    if (!pop) {
+      pop = el('div', 'dcc-gl-pop'); pop.id = 'dcc-gl-pop'; pop.setAttribute('role', 'tooltip');
+      document.body.appendChild(pop);
+      const close = () => { if (pop._for) { pop._for.setAttribute('aria-expanded', 'false'); pop._for = null; } pop.classList.remove('on'); };
+      document.addEventListener('click', e => { if (!e.target.closest('.dcc-gl') && !e.target.closest('.dcc-gl-pop')) close(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+      window.addEventListener('scroll', () => { if (pop._for && Math.abs(window.scrollY - pop._y) > 60) close(); }, { passive: true });
+    }
+    const [term, def] = GLOSSARY[+btn.dataset.g];
+    pop.innerHTML = '<b>' + escapeHtml(term) + '</b> ' + escapeHtml(def);
+    pop._for = btn; pop._y = window.scrollY; btn.setAttribute('aria-expanded', 'true'); btn.setAttribute('aria-describedby', 'dcc-gl-pop');
+    pop.classList.add('on');
+    const r = btn.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 32);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(16, Math.min(window.innerWidth - w - 16, r.left + r.width / 2 - w / 2)) + 'px';
+    const below = r.bottom + 8, h = pop.offsetHeight;
+    pop.style.top = (below + h > window.innerHeight - 70 ? r.top - h - 8 : below) + 'px';
+  }
+
+  // ---- Reading progress: entries you settle on count as read (on this device) ----
+  function markRead(li) {
+    if (!li) return;
+    // the URL follows the entry you're on, so a reload comes back to it
+    if (chronActive !== li.dataset.id) { chronActive = li.dataset.id; if (root.dataset.view === 'history') updateHash(); }
+    if (chronRead.has(li.dataset.id)) return;
+    chronRead.add(li.dataset.id);
+    li.classList.add('read');
+    try { localStorage.setItem('dcc-chron-read', JSON.stringify([...chronRead])); } catch (e) { /* storage blocked */ }
+    chronNowLine();
+  }
+  function chronNowLine() {
+    const panel = histEl && histEl.querySelector('.dcc-chron-panel'), now = panel && panel.querySelector('.dcc-chron-now');
+    const F = histHandle && histHandle.frames;
+    if (!now || !F) return;
+    const lis = [...panel.querySelectorAll('.dcc-chron-list > li')], n = lis.filter(li => li.classList.contains('now')).length;
+    const read = lis.filter(li => chronRead.has(li.dataset.id)).length, cur = F.find(fr => histSlugOf(fr.label) === histSlug);
+    now.innerHTML = (cur ? 'The map shows ' + escapeHtml(cur.label) + (n ? ' · ' + n + (n === 1 ? ' entry' : ' entries') + ' marked below' : '') : '') +
+      '<span class="dcc-chron-prog"><i style="width:' + Math.round(read / Math.max(1, lis.length) * 100) + '%"></i></span>' +
+      '<span class="dcc-chron-progt">You’ve read ' + read + ' of ' + lis.length + '</span>';
+  }
+
+  // ---- Listen: the phone reads the strand aloud, entry by entry, while the map follows ----
+  const canListen = () => 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+  const LISTEN_ICON = '<svg class="dcc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/><path d="M18 7a7 7 0 0 1 0 10"/></svg>';
+  let listening = false, listenTimer = 0;
+  function setListenBtn(on) {
+    const b = histEl && histEl.querySelector('.dcc-story-listen');
+    if (!b) return;
+    b.setAttribute('aria-pressed', String(on));
+    b.lastChild.textContent = on ? 'Stop' : 'Listen';
+    histEl.querySelector('.dcc-story').classList.toggle('listening', on);
+  }
+  function startListen() {
+    if (!canListen() || !histEl) return;
+    stopGrow();
+    const lis = [...histEl.querySelectorAll('.dcc-chron-list > li')];
+    if (!lis.length) return;
+    let i = Math.max(0, lis.findIndex(li => li.classList.contains('active')));
+    listening = true; setListenBtn(true);
+    const voice = (speechSynthesis.getVoices() || []).find(v => /^en(-|_)GB/i.test(v.lang)) ||
+                  (speechSynthesis.getVoices() || []).find(v => /^en/i.test(v.lang));
+    const next = () => {
+      clearTimeout(listenTimer);
+      if (!listening) return;
+      if (i >= lis.length) { stopListen(); return; }
+      const li = lis[i++];
+      histEl.querySelectorAll('.dcc-chron-list > li.active, .dcc-chron-list > li.speaking').forEach(x => x.classList.remove('active', 'speaking'));
+      li.classList.add('active', 'speaking');
+      markRead(li);
+      storyLock(2500);
+      li.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      const f = chronFrame(+li.dataset.sort, li.dataset.era);
+      if (f && histHandle && histSlugOf(f.label) !== histSlug) histHandle.show(histSlugOf(f.label));
+      const h3 = li.querySelector('h3');
+      const text = li.querySelector('.dcc-chron-y').textContent + '. ' + (h3.firstChild ? h3.firstChild.textContent : h3.textContent) + '. ' +
+        li.querySelector('.dcc-chron-b > p').textContent;
+      const u = new SpeechSynthesisUtterance(text);
+      if (voice) u.voice = voice;
+      u.rate = 0.97;
+      let finished = false;
+      const done = () => { if (finished) return; finished = true; li.classList.remove('speaking'); if (listening) listenTimer = setTimeout(next, 600); };
+      u.onend = done; u.onerror = done;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      // some browsers never report the end of an utterance: move on after a generous estimate
+      listenTimer = setTimeout(done, text.length * 95 + 4000);
+    };
+    next();
+  }
+  function stopListen() {
+    if (!listening) return;
+    listening = false;
+    clearTimeout(listenTimer);
+    try { speechSynthesis.cancel(); } catch (e) { /* not supported */ }
+    setListenBtn(false);
+    if (histEl) histEl.querySelectorAll('.dcc-chron-list > li.speaking').forEach(x => x.classList.remove('speaking'));
+  }
+
+  // ---- Postcards: an entry with your photos becomes a shareable 1080×1350 card — your photo,
+  //      the year and the story, and the coast map of that moment ----
+  const loadImg = src => new Promise((res, rej) => {
+    const im = new Image(); im.crossOrigin = 'anonymous'; im.decoding = 'async';
+    im.onload = () => res(im); im.onerror = rej; im.src = src;
+  });
+  async function postcardMap() {
+    const src = histEl && histEl.querySelector('.bh-ragusa svg');
+    if (!src) return null;
+    const c = src.cloneNode(true), NS = 'http://www.w3.org/2000/svg';
+    c.querySelectorAll('text').forEach(t => t.remove());
+    c.querySelectorAll('.dcc-hist-stops circle').forEach(ci => { ci.setAttribute('fill', '#fff'); ci.setAttribute('stroke', '#201f1d'); ci.setAttribute('stroke-width', '7'); });
+    const vb = (c.getAttribute('viewBox') || '0 0 1870 979').split(/\s+/).map(Number);
+    const sea = document.createElementNS(NS, 'rect');
+    sea.setAttribute('width', vb[2]); sea.setAttribute('height', vb[3]); sea.setAttribute('fill', '#d6e0e2');
+    c.insertBefore(sea, c.firstChild);
+    c.setAttribute('xmlns', NS); c.setAttribute('width', vb[2]); c.setAttribute('height', vb[3]);
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(c)], { type: 'image/svg+xml' }));
+    try { return await loadImg(url); } catch (e) { return null; } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  }
+  function wrapText(g, text, maxW, maxLines) {
+    const words = String(text).split(/\s+/), lines = [];
+    let cur = '';
+    for (const w of words) {
+      const t = cur ? cur + ' ' + w : w;
+      if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/[\s,.;:—-]*\S*$/, '') + '…'; }
+    return lines;
+  }
+  async function makePostcard(ev, x) {
+    const W = 1080, H = 1350, PH = 760, M = 64;
+    // the card's coast map shows the entry's own era: turn the map there first (story mode would anyway)
+    const fr = chronFrame(ev.sort, ev.era);
+    if (fr && histHandle && histSlugOf(fr.label) !== histSlug) histHandle.show(histSlugOf(fr.label));
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    try { await Promise.all(['600 60px "Cormorant Garamond"', '600 40px Cinzel', '400 30px Lora'].map(f => document.fonts.load(f))); } catch (e) { /* system fonts */ }
+    g.fillStyle = '#f6f1e7'; g.fillRect(0, 0, W, H);
+    const img = await loadImg(resolveUrl(x.it.full || x.it.src));
+    const s = Math.max(W / img.naturalWidth, PH / img.naturalHeight), iw = img.naturalWidth * s, ih = img.naturalHeight * s;
+    g.save(); g.beginPath(); g.rect(0, 0, W, PH); g.clip(); g.drawImage(img, (W - iw) / 2, (PH - ih) / 2, iw, ih); g.restore();
+    g.fillStyle = '#b68235'; g.fillRect(0, PH, W, 8);
+    const map = await postcardMap();
+    if (map) {
+      const mw = 380, mh = Math.round(mw * map.height / map.width), mx = W - M - mw, my = PH + 52;
+      g.drawImage(map, mx, my, mw, mh);
+      g.strokeStyle = '#b68235'; g.lineWidth = 3; g.strokeRect(mx, my, mw, mh);
+      g.fillStyle = '#7d5411'; g.font = '600 20px Cinzel, Georgia, serif';
+      if (fr) g.fillText('THE COAST IN ' + fr.label.toUpperCase(), mx, my + mh + 30);
+    }
+    const textW = map ? W - 2 * M - 380 - 36 : W - 2 * M;
+    g.fillStyle = '#7d5411'; g.font = '600 24px Cinzel, Georgia, serif';
+    g.fillText('CROFTS IN CROATIA · WE STOOD HERE', M, PH + 64);
+    g.fillStyle = '#201f1d'; g.font = '600 92px "Cormorant Garamond", Georgia, serif';
+    g.fillText(ev.y, M, PH + 160, textW);
+    g.font = '600 38px Cinzel, Georgia, serif';
+    let y = PH + 220;
+    wrapText(g, ev.title.toUpperCase(), textW, 2).forEach(l => { g.fillText(l, M, y); y += 48; });
+    g.fillStyle = '#2b2926'; g.font = '400 29px Lora, Georgia, serif';
+    y = Math.max(y + 10, PH + 330);
+    wrapText(g, ev.text, W - 2 * M, Math.max(2, Math.floor((H - 90 - y) / 42))).forEach(l => { g.fillText(l, M, y); y += 42; });
+    g.fillStyle = '#6d6964'; g.font = '400 23px Lora, Georgia, serif';
+    const d = DATA.days[x.di];
+    g.fillText(x.p.name.split(',')[0] + ' · Day ' + (x.di + 1) + (d ? ' · ' + dDate(d) + ', 2025' : ''), M, H - 46);
+    return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('no image')), 'image/jpeg', 0.9));
+  }
+  let pcBlob = null;
+  async function openPostcard(id, k) {
+    const ev = chronEvent(id), ph = ev && chronPhotos(ev);
+    if (!ph) return;
+    k = ((k % ph.items.length) + ph.items.length) % ph.items.length;
+    let ov = document.querySelector('.dcc-pc');
+    if (!ov) {
+      ov = el('div', 'dcc-pc');
+      ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Postcard');
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => {
+        const a = e.target.closest('[data-pc]');
+        if (!a) { if (e.target === ov) closePostcard(); return; }
+        const act = a.dataset.pc;
+        if (act === 'close') closePostcard();
+        else if (act === 'prev' || act === 'next') openPostcard(ov.dataset.id, +ov.dataset.k + (act === 'next' ? 1 : -1));
+        else if (act === 'share') sharePostcard(ov.dataset.id);
+      });
+      ov.addEventListener('keydown', e => { if (e.key === 'Escape') closePostcard(); });
+    }
+    ov.dataset.id = id; ov.dataset.k = k;
+    ov.innerHTML = '<div class="dcc-pc-box"><div class="dcc-pc-img"><p>Making your postcard…</p></div>' +
+      '<div class="dcc-pc-acts">' + (ph.items.length > 1 ? '<button type="button" data-pc="prev" aria-label="Previous photo">‹</button>' +
+        '<span class="dcc-pc-n">Photo ' + (k + 1) + ' of ' + ph.items.length + '</span><button type="button" data-pc="next" aria-label="Next photo">›</button>' : '') +
+        '<button type="button" data-pc="share" class="dcc-pc-main">' + (navigator.share ? 'Share' : 'Save') + '</button>' +
+        '<button type="button" data-pc="close" class="dcc-pc-x" aria-label="Close">×</button></div></div>';
+    ov.classList.add('open');
+    ov.querySelector('[data-pc="share"]').focus();
+    pcBlob = null;
+    try {
+      const blob = await makePostcard(ev, ph.items[k]);
+      if (ov.dataset.id !== id || +ov.dataset.k !== k) return;   // a newer card was asked for
+      pcBlob = blob;
+      const url = URL.createObjectURL(blob), box = ov.querySelector('.dcc-pc-img');
+      box.innerHTML = '<img alt="Postcard: ' + escapeAttr(ev.y + ', ' + ev.title) + '" src="' + url + '">';
+    } catch (e) {
+      ov.querySelector('.dcc-pc-img').innerHTML = '<p>The postcard couldn’t be made here — try again when online.</p>';
+    }
+  }
+  function closePostcard() { const ov = document.querySelector('.dcc-pc'); if (ov) ov.classList.remove('open'); }
+  function sharePostcard(id) {
+    if (!pcBlob) return;
+    const file = new File([pcBlob], 'crofts-' + id + '.jpg', { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'We stood here' }).catch(() => {});
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(pcBlob); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Postcard saved ✓');
+  }
+
+  // ---- Where's my village? Every Konavle village and the other parts of the old Republic, with
+  //      who held them in each era of the map (same rules as "Your trip, then") ----
+  const KONAVLE_VILLAGES = ['Brotnice', 'Cavtat', 'Čilipi', 'Drvenik', 'Duba Konavoska', 'Dubravka', 'Dunave', 'Gabrili', 'Gruda',
+    'Jasenice', 'Komaji', 'Kuna Konavoska', 'Lovorno', 'Ljuta', 'Mihanići', 'Mikulići', 'Močići', 'Molunat', 'Obod', 'Palje Brdo',
+    'Pločice', 'Poljice', 'Popovići', 'Pridvorje', 'Radovčići', 'Stravča', 'Šilješki', 'Uskoplje', 'Vitaljina', 'Vodovađa', 'Zastolje', 'Zvekovica'];
+  const VILLAGES = [
+    { n: 'Dubrovnik — the walled city', parts: ['city', 'core'], kind: 'main' },
+    { n: 'Gruž, Lapad & Ploče (Dubrovnik)', parts: ['core'], kind: 'main' },
+    { n: 'Župa dubrovačka (Mlini, Srebreno, Kupari)', parts: ['core'], kind: 'main' },
+    { n: 'Lokrum', parts: ['core'], kind: 'isle' },
+    { n: 'Koločep', parts: ['elaph'], kind: 'isle' },
+    { n: 'Lopud', parts: ['elaph'], kind: 'isle' },
+    { n: 'Šipan', parts: ['elaph'], kind: 'isle' },
+    { n: 'Lastovo', parts: ['lastovo'], kind: 'other', joined: 'by 1272', italy1920: true },
+    { n: 'Mljet', parts: ['mljet'], kind: 'other', joined: '1345', italy1941: true },
+    { n: 'Ston', parts: ['pel'], kind: 'other', joined: '1333' },
+    { n: 'Pelješac (Orebić, Janjina, Trpanj)', parts: ['pel'], kind: 'other', joined: '1333' },
+    { n: 'Slano & Dubrovačko primorje', parts: ['prim'], kind: 'other', joined: '1399' }
+  ].concat(KONAVLE_VILLAGES.map(n => ({ n: n + ' (Konavle)', parts: ['konavle'], kind: 'konavle', joined: '1419–26',
+    epidaurum: n === 'Cavtat', italy1941: n === 'Gruda', line1942: n !== 'Cavtat' && n !== 'Gruda' })));
+  const villageByName = q => {
+    const k = String(q || '').trim().toLowerCase();
+    return k ? VILLAGES.find(v => v.n.toLowerCase() === k || v.n.toLowerCase().replace(/ \(konavle\)$/, '') === k) : null;
+  };
+  // the village's story as runs of eras with the same ruler
+  function villageRuns(v) {
+    const F = histHandle && histHandle.frames, runs = [];
+    if (!F) return runs;
+    F.forEach(f => {
+      const s = placeStatus(v, f), last = runs[runs.length - 1];
+      if (last && last.t === s.t) last.to = f; else runs.push({ from: f, to: f, t: s.t, cls: s.cls || '' });
+    });
+    return runs;
+  }
+  function villageHtml(v) {
+    if (!v) return '';
+    const runs = villageRuns(v), rag = runs.filter(r => r.cls === 'rag');
+    const fam = famVillage() === v.n;
+    return '<div class="dcc-vt-head"><b>' + escapeHtml(v.n) + '</b>' +
+        (v.joined ? '<span>Ragusan from ' + escapeHtml(v.joined) + ' to 1808</span>' : rag.length ? '<span>Ragusan from ' + escapeHtml(rag[0].from.label) + ' to 1808</span>' : '') +
+        '<button type="button" class="dcc-vt-fam" aria-pressed="' + fam + '">' + (fam ? '★ Our family’s village' : '☆ Make this our family’s village') + '</button></div>' +
+      '<ol class="dcc-vt">' + runs.map(r =>
+        '<li class="' + r.cls + '"><button type="button" data-vt="' + escapeAttr(histSlugOf(r.from.label)) + '">' +
+          '<span class="dcc-vt-y">' + escapeHtml(r.from.label) + (r.to !== r.from ? ' – ' + escapeHtml(r.to.label) : '') + '</span>' +
+          '<span class="dcc-vt-t">' + escapeHtml(r.t) + '</span></button></li>').join('') + '</ol>' +
+      '<p class="dcc-vt-note">Each line is one or more of the map’s eras; tap one to see that map. Konavle’s villages share Konavle’s story; in 1941–43 the Axis line between the Croatian puppet state and Italy ran through Konavle.</p>';
+  }
+  function famVillage() { try { return localStorage.getItem('dcc-fam-village') || ''; } catch (e) { return ''; } }
+
+  // ---- Your family's thread: people you add (on this device) appear in the chronicle with their
+  //      age at each event, and in the printed chronicle ----
+  function famLoad() { try { return JSON.parse(localStorage.getItem('dcc-family') || '[]').filter(p => p && p.n && isFinite(p.b)); } catch (e) { return []; } }
+  function famSave(list) { try { localStorage.setItem('dcc-family', JSON.stringify(list)); } catch (e) { /* storage blocked */ } }
+  // the entry's own year: the first year it names ("1427–1672" → 1427), else its sort year
+  const evYear = ev => { const m = /(\d{3,4})/.exec(ev.y); return m ? (/BC/.test(ev.y) ? -m[1] : +m[1]) : ev.sort; };
+  function famLines(ev) {
+    const y = evYear(ev);
+    return famLoad().map(p => {
+      const age = y - p.b, end = isFinite(p.d) && p.d ? p.d : p.b + 100;
+      if (age < 0 || y > end) return null;
+      return escapeHtml(p.n) + (age === 0 ? ' was born that year' : ' was ' + age) + (y === p.d ? ' and died that year' : '');
+    }).filter(Boolean);
+  }
+  function famLinesHtml(ev) {
+    const l = famLines(ev);
+    return l.length ? '<p class="dcc-chron-fam">' + svgIcon('history') + '<span>' + l.join(' · ') + '</span></p>' : '';
+  }
+  function famHtml() {
+    const list = famLoad();
+    return '<ul class="dcc-fam-list">' + (list.length ? list.map((p, i) =>
+        '<li><b>' + escapeHtml(p.n) + '</b><span>' + p.b + (p.d ? '–' + p.d : '') + (p.v ? ' · ' + escapeHtml(p.v) : '') + '</span>' +
+        '<button type="button" data-fam-del="' + i + '" aria-label="Remove ' + escapeAttr(p.n) + '">Remove</button></li>').join('')
+      : '<li class="dcc-fam-empty">No one added yet.</li>') + '</ul>';
+  }
+  function chronRootsHtml(r) {
+    const fv = famVillage();
+    return '<section class="dcc-roots-sec"><h3 class="dcc-chron-rech">Where’s my village?</h3>' +
+        '<p class="dcc-roots-p">Pick a Konavle village or a part of the old Republic to see who held it in every era.</p>' +
+        '<label class="dcc-village-pick"><span>Village or area</span><input type="search" list="dcc-villages" autocomplete="off" placeholder="e.g. Čilipi" value="' + escapeAttr(fv) + '">' +
+        '<datalist id="dcc-villages">' + VILLAGES.map(v => '<option value="' + escapeAttr(v.n) + '">').join('') + '</datalist></label>' +
+        '<div class="dcc-village-out" aria-live="polite" data-v="' + escapeAttr(villageByName(fv) ? villageByName(fv).n : '') + '">' + villageHtml(villageByName(fv)) + '</div></section>' +
+      '<section class="dcc-roots-sec"><h3 class="dcc-chron-rech">Your family’s thread</h3>' +
+        '<p class="dcc-roots-p">Add the people you know of. Every chronicle entry then shows how old each of them was — saved on this device only.</p>' +
+        '<form class="dcc-fam-form"><label><span>Name</span><input name="n" required maxlength="60" autocomplete="off"></label>' +
+          '<label><span>Born</span><input name="b" required inputmode="numeric" pattern="-?[0-9]{1,4}" placeholder="1452"></label>' +
+          '<label><span>Died</span><input name="d" inputmode="numeric" pattern="-?[0-9]{1,4}" placeholder="optional"></label>' +
+          '<label class="dcc-fam-v"><span>Village</span><input name="v" list="dcc-villages" autocomplete="off" placeholder="optional"></label>' +
+          '<button type="submit">Add</button></form>' +
+        famHtml() + '</section>' +
+      '<section class="dcc-roots-sec"><h3 class="dcc-chron-rech">' + escapeHtml(r.title) + '</h3>' +
+        '<ul class="dcc-chron-rec">' + r.points.map(p => '<li>' + escapeHtml(p) + '</li>').join('') + '</ul>' + chronSrcHtml(r.src) + '</section>';
+  }
+  function rootsInput(e) {
+    const inp = e.target.closest('.dcc-village-pick input');
+    if (!inp) return;
+    const v = villageByName(inp.value), out = inp.closest('.dcc-roots-sec').querySelector('.dcc-village-out'), key = v ? v.n : '';
+    // only when the village changes: the blur 'change' would otherwise swap a button out mid-tap
+    if ((v || !inp.value) && out.dataset.v !== key) { out.dataset.v = key; out.innerHTML = villageHtml(v); }
+  }
+  function rootsClick(e) {
+    const vt = e.target.closest('[data-vt]');
+    if (vt && histHandle) {
+      chronFrom = vt.closest('li');
+      storyLock(1800);
+      histHandle.show(vt.dataset.vt);
+      const head = histEl.querySelector('.bh-head');
+      if (head) head.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+      showChronBack(true);
+      return true;
+    }
+    const fb = e.target.closest('.dcc-vt-fam');
+    if (fb) {
+      const name = fb.closest('.dcc-village-out').querySelector('.dcc-vt-head b').textContent, on = famVillage() !== name;
+      try { if (on) localStorage.setItem('dcc-fam-village', name); else localStorage.removeItem('dcc-fam-village'); } catch (err) { /* storage blocked */ }
+      fb.closest('.dcc-village-out').innerHTML = villageHtml(villageByName(name));
+      tripFamLine();
+      return true;
+    }
+    const del = e.target.closest('[data-fam-del]');
+    if (del) {
+      const list = famLoad(); list.splice(+del.dataset.famDel, 1); famSave(list);
+      del.closest('.dcc-roots-sec').querySelector('.dcc-fam-list').outerHTML = famHtml();
+      return true;
+    }
+    return false;
+  }
+  function rootsSubmit(e) {
+    const form = e.target.closest('.dcc-fam-form');
+    if (!form) return;
+    e.preventDefault();
+    const n = form.n.value.trim(), b = parseInt(form.b.value, 10), d = parseInt(form.d.value, 10), v = form.v.value.trim();
+    if (!n || !isFinite(b)) return;
+    const list = famLoad();
+    list.push({ n, b, d: isFinite(d) ? d : null, v: v || null });
+    list.sort((x, y) => x.b - y.b);
+    famSave(list);
+    form.reset();
+    form.closest('.dcc-roots-sec').querySelector('.dcc-fam-list').outerHTML = famHtml();
+    toast(n + ' added to the chronicle ✓');
+  }
+  // the family village as an extra line in "Your trip, then"
+  function tripFamLine(f) {
+    const panel = histEl && histEl.querySelector('.dcc-hist-trip');
+    if (!panel) return;
+    f = f || (histHandle && histHandle.frames && histHandle.frames.find(fr => histSlugOf(fr.label) === histSlug));
+    const v = villageByName(famVillage());
+    let line = panel.querySelector('.dcc-hist-trip-fam');
+    if (!v || !f) { if (line) line.remove(); return; }
+    if (!line) {
+      line = el('p', 'dcc-hist-trip-fam');
+      panel.querySelector('.dcc-hist-trip-list').after(line);
+    }
+    const s = placeStatus(v, f);
+    line.innerHTML = '<span class="dcc-hist-trip-famk">★ Your family’s village</span><b>' + escapeHtml(v.n) + '</b>' +
+      '<span class="dcc-hist-trip-v' + (s.cls ? ' ' + s.cls : '') + '">' + escapeHtml(s.t) + '</span>';
   }
 
   // ---- "Your trip, then": the trip's stops on the Ragusa coast map, and what each one was in
   //      the era on screen. The status comes from that era's Ragusa territory list in
   //      history-data.json; TRIP_STOPS only says which piece of territory each stop lies in. ----
   const TRIP_STOPS = [
-    { name: 'Dubrovnik Old Town', re: /Old City \(Stari grad\), Dubrovnik$|^Fort Lovrijenac/, parts: ['city', 'core'] },
-    { name: 'Lapad & Gruž',       re: /, (Lapad|Gruž), Dubrovnik$/,  parts: ['core'] },
-    { name: 'Mount Srđ',          re: /, Mount Srđ, Dubrovnik$/,     parts: ['core'] },
-    { name: 'Lokrum',             re: /Lokrum \(Otok Lokrum\)$/,     parts: ['core'] },
-    { name: 'Šipan',              re: /, Šipan, Elaphiti Islands$/,  parts: ['elaph'] },
-    { name: 'Lopud',              re: /(^|, )Lopud, Elaphiti Islands$/, parts: ['elaph'] },
-    { name: 'Cavtat',             re: /, Cavtat$/, minLng: 18.15,    parts: ['konavle'], epidaurum: true },
-    { name: 'Čilipi airport',     re: /Čilipi$/,                     parts: ['konavle'], line1942: true }
+    { name: 'Dubrovnik Old Town', re: /Old City \(Stari grad\), Dubrovnik$|^Fort Lovrijenac/, parts: ['city', 'core'], kind: 'main' },
+    { name: 'Lapad & Gruž',       re: /, (Lapad|Gruž), Dubrovnik$/,  parts: ['core'], kind: 'main' },
+    { name: 'Mount Srđ',          re: /, Mount Srđ, Dubrovnik$/,     parts: ['core'], kind: 'main' },
+    { name: 'Lokrum',             re: /Lokrum \(Otok Lokrum\)$/,     parts: ['core'], kind: 'isle' },
+    { name: 'Šipan',              re: /, Šipan, Elaphiti Islands$/,  parts: ['elaph'], kind: 'isle' },
+    { name: 'Lopud',              re: /(^|, )Lopud, Elaphiti Islands$/, parts: ['elaph'], kind: 'isle' },
+    { name: 'Cavtat',             re: /, Cavtat$/, minLng: 18.15,    parts: ['konavle'], kind: 'konavle', epidaurum: true },
+    { name: 'Čilipi airport',     re: /Čilipi$/,                     parts: ['konavle'], kind: 'konavle', line1942: true }
   ];
   const STOP_SKIP = /^(Adriatic Sea|Adriatic Highway|In-flight)|Channel|\bto\b/;
   let tripStops = null;
@@ -1066,25 +1536,29 @@
     ['Konavle in the Second World War (Konavle museums)', 'https://blog.migk.hr/2024/05/07/konavle-u-drugom-svjetskom-ratu/'],
     ['Dubrovnik Republic (1991–1992)', 'https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)']
   ];
-  function stopStatus(st, f) {
-    const R = f.ragusa, slug = histSlugOf(f.label);
-    const kind = st.parts.indexOf('konavle') >= 0 ? 'konavle' : st.parts.indexOf('elaph') >= 0 || st.name === 'Lokrum' ? 'isle' : 'main';
+  // what a place belonged to in an era; `pl` is a trip stop or a village (parts, kind, flags)
+  function placeStatus(pl, f) {
+    const R = f.ragusa, slug = histSlugOf(f.label), kind = pl.kind;
     if (!R.founded) {
       const t = ERA_ALL[slug] || 'before Ragusa';
-      return { t: st.epidaurum ? t + ' · ' + (f.year > -230 ? 'Epidaurum' : 'Epidauros') : t };
+      return { t: pl.epidaurum ? t + ' · ' + (f.year > -230 ? 'Epidaurum' : 'Epidauros') : t };
     }
     if (R.former) {
       if (R.siege && kind === 'konavle') return { t: 'Croatia · occupied 1991–92', cls: 'war' };
-      // Konavle was split in 1941: Cavtat's west went to the NDH, the east to Italy; Čilipi lay near the line
-      if (slug === '1942' && st.line1942) return { t: 'Axis-occupied (the NDH–Italy line ran through Konavle)' };
+      // Lastovo went to Italy at Rapallo (1920–47); in 1941 Italy annexed Mljet and eastern Konavle around Gruda,
+      // while western Konavle with Cavtat went to the Croatian puppet state — the line ran through Konavle
+      if (pl.italy1920 && (slug === '1920' || slug === '1938' || slug === '1942')) return { t: 'Kingdom of Italy (from 1920)' };
+      if (slug === '1942' && pl.italy1941) return { t: 'Kingdom of Italy (annexed 1941)' };
+      if (slug === '1942' && pl.line1942) return { t: 'Axis-occupied (the NDH–Italy line ran through Konavle)' };
       return { t: ERA_ALL[slug] || 'once Ragusan' };
     }
-    if (R.parts.some(k => st.parts.indexOf(k) >= 0)) {
+    if (R.parts.some(k => pl.parts.indexOf(k) >= 0)) {
       const s = String(R.status || '');
       return { t: f.year < 1358 ? 'Ragusa · ' + s.replace(/^(Under|Founded)\b/, w => w.toLowerCase()) : 'Republic of Ragusa', cls: 'rag' };
     }
-    return { t: (ERA_OUTSIDE[slug] || {})[kind] || 'outside Ragusa' };
+    return { t: (ERA_OUTSIDE[slug] || {})[kind] || (pl.joined ? 'not yet Ragusan · joined ' + pl.joined : 'outside Ragusa') };
   }
+  const stopStatus = placeStatus;
   // the coast map's own projection (history/source/export_data.py): x = (lon − 16.75)·1000, y = (43.08 − lat)·1360
   const insetXY = (lat, lng) => [(lng - 16.75) * 1000, (43.08 - lat) * 1360];
   function renderTripThen(f) {
@@ -1147,6 +1621,7 @@
       v.className = 'dcc-hist-trip-v' + (s.cls ? ' ' + s.cls : '');
     });
     panel.querySelector('.dcc-hist-trip-k span').textContent = 'Your trip, then · ' + f.label;
+    tripFamLine(f);
     panel.querySelector('.dcc-hist-trip-sum span').textContent = R.founded && !R.former
       ? nRag + ' of ' + stops.length + ' places you went ' + (nRag === 1 ? 'was' : 'were') + ' Ragusan in ' + f.label + '.'
       : !R.founded ? 'Ragusa had not been founded yet.' : 'The Republic was gone by ' + f.label + '.';

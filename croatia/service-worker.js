@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v92';
+const CACHE_VERSION = 'dcc-tour-v93';
 const SHELL = [
   './',
   'index.html',
@@ -57,20 +57,17 @@ self.addEventListener('install', event => {
   })());
 });
 
-// Old shell caches go; anything cache-first they held (photos saved before the media cache
-// existed) moves to the media cache first.
+// Old version caches go. One that still holds photos (saved before the media cache existed) is
+// kept and only pruned of its out-of-date app files — copying hundreds of photos here would hold
+// up every request until it finished. caches.match() still finds those photos.
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    const media = await caches.open(MEDIA_CACHE);
     for (const k of await caches.keys()) {
       if (k === CACHE_VERSION || k === MEDIA_CACHE) continue;
-      const old = await caches.open(k);
-      for (const req of await old.keys()) {
-        if (SHELL_RE.test(req.url) || req.mode === 'navigate' || req.url.endsWith('/')) continue;
-        const res = await old.match(req);
-        if (res) await media.put(req, res);
-      }
-      await caches.delete(k);
+      const old = await caches.open(k), reqs = await old.keys();
+      const media = reqs.filter(r => !(SHELL_RE.test(r.url) || r.url.endsWith('/')));
+      if (!media.length) { await caches.delete(k); continue; }
+      await Promise.all(reqs.filter(r => media.indexOf(r) < 0).map(r => old.delete(r)));
     }
     await self.clients.claim();
   })());

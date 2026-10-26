@@ -95,8 +95,12 @@
      "y": "1252",
      "sort": 1252,
      "title": "Lastovo joins",
-     "text": "The island of Lastovo placed itself under Ragusa of its own accord (some sources say 1272).",
+     "text": "The island of Lastovo placed itself under Ragusa of its own accord — by 1272 at the latest; the Dubrovnik diocese dates it to 1252.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
       [
        "Dubrovačka biskupija: Sveti Vlaho",
        "https://db.hr/sveti-vlaho-zastitnik-biskupije/"
@@ -149,6 +153,10 @@
      "text": "Ragusa bought Ston and the Pelješac peninsula from the Serbian king Stefan Dušan and the Bosnian ban Stjepan Kotromanić, then walled Ston to guard its salt pans.",
      "src": [
       [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
+      [
        "Dubrovačka Republika (hr)",
        "https://hr.wikipedia.org/wiki/Dubrova%C4%8Dka_Republika"
       ]
@@ -158,8 +166,16 @@
      "y": "1345",
      "sort": 1345,
      "title": "Mljet",
-     "text": "The island of Mljet came fully under Ragusan rule.",
+     "text": "The island of Mljet came fully under Ragusa (the Great Council had first claimed it in 1301). The same year Mljet got its own statute, and its Benedictine abbey freed the islanders from their dues for a yearly 300 perpers.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
+      [
+       "Proleksis enciklopedija: Mljet",
+       "https://proleksis.lzmk.hr/37627/"
+      ],
       [
        "Dubrovnik od XIII. do XV. stoljeća",
        "https://dubrovnikportal.com/kolumne/crtice-iz-povijesti-grada/dubrovnik-od-xiii-do-xv-stoljeca/"
@@ -172,6 +188,10 @@
      "title": "Free of Venice",
      "text": "By the Treaty of Zadar Venice gave up Dalmatia. At Visegrád Ragusa accepted the Hungarian-Croatian king as distant overlord — and from then on governed itself as a republic.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
       [
        "Republic of Ragusa",
        "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
@@ -314,8 +334,16 @@
      "y": "6 April 1667",
      "sort": 1667,
      "title": "The Great Earthquake",
-     "text": "An earthquake and the fires after it destroyed much of the city and killed about 5,000 people. The cathedral and much of the Stradun were rebuilt afterwards, in the Baroque look you saw.",
+     "text": "An earthquake and the fires after it all but razed the city; estimates of the dead run from about 3,000 to 5,000, the Rector among them. The cathedral and much of the Stradun were rebuilt afterwards, in the Baroque look you saw.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dubrovnik",
+       "https://www.enciklopedija.hr/clanak/dubrovnik"
+      ],
+      [
+       "Potres u Dubrovniku 1667. (hr)",
+       "https://hr.wikipedia.org/wiki/Potres_u_Dubrovniku_1667."
+      ],
       [
        "1667 Dubrovnik earthquake",
        "https://en.wikipedia.org/wiki/1667_Dubrovnik_earthquake"
@@ -328,7 +356,8 @@
        "The Great Earthquake struck Dubrovnik"
       ]
      ],
-     "places": "^Stradun, |^Cathedral of the Assumption"
+     "places": "^Stradun, |^Cathedral of the Assumption",
+     "tone": "sombre"
     },
     {
      "y": "1699",
@@ -359,8 +388,7 @@
        1711,
        "Ruđer Bošković was born in Dubrovnik"
       ]
-     ],
-     "places": "Ruđer Bošković Airport"
+     ]
     },
     {
      "y": "1806",
@@ -384,7 +412,8 @@
        "French troops entered Dubrovnik"
       ]
      ],
-     "places": "^Fort Imperial"
+     "places": "^Fort Imperial",
+     "tone": "sombre"
     },
     {
      "y": "31 Jan 1808",
@@ -392,6 +421,10 @@
      "title": "The Republic ends",
      "text": "Marshal Marmont abolished the Republic of Ragusa. After Napoleon's fall the Congress of Vienna (1815) gave it to Austria, and it was never restored.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
       [
        "Walls of Dubrovnik",
        "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
@@ -469,7 +502,8 @@
        "The siege of Dubrovnik ended"
       ]
      ],
-     "places": "^Fort Imperial|^Mount Srđ Cross"
+     "places": "^Fort Imperial|^Mount Srđ Cross",
+     "tone": "sombre"
     },
     {
      "y": "26 July 2022",
@@ -757,24 +791,34 @@
      "y": "1806",
      "sort": 1806,
      "title": "War reaches Cavtat",
-     "text": "When Russian and Montenegrin forces crossed the border, the French holding Konavle fell back; the first clash, on 30 May, was fought just south-east of Cavtat.",
+     "text": "Russian and Montenegrin forces crossed into Konavle. On 30 May about a hundred French soldiers held off some 300 Montenegrins near Zvekovica for hours, but on 3 June the French left Cavtat, and its people went with them. Cavtat was looted, and around 235 houses in Konavle — about a quarter of them — were burned.",
      "src": [
       [
-       "Balkan Wargamer (from Russian and Italian accounts)",
-       "http://balkandave.blogspot.com/2023/08/war-around-ragusa-dubrovnik-in-1806.html"
+       "Matica hrvatska (Kolo): Ratovanje oko Dubrovnika 1806.",
+       "https://www.matica.hr/kolo/310/ratovanje-oko-dubrovnika-godine-1806-20587/"
       ],
       [
-       "The fall of the Republic",
-       "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"
+       "Opsada Dubrovnika (1806.) (hr)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika_(1806.)"
+      ],
+      [
+       "Konavle museums: Ukidanje Dubrovačke Republike",
+       "https://blog.migk.hr/2026/01/12/ukidanje-dubrovacke-republike/"
       ]
      ],
      "days": [
       [
        "05-30",
        1806,
-       "The first clash of 1806, near Cavtat"
+       "French troops held off Montenegrin forces near Zvekovica"
+      ],
+      [
+       "06-03",
+       1806,
+       "The French left Cavtat"
       ]
-     ]
+     ],
+     "tone": "sombre"
     },
     {
      "y": "1834 · 1855",
@@ -860,7 +904,8 @@
        "The Yugoslav army took Cavtat"
       ]
      ],
-     "places": "Čilipi$"
+     "places": "Čilipi$",
+     "tone": "sombre"
     },
     {
      "y": "1992",
@@ -928,6 +973,10 @@
      "text": "Rome fought the Illyrian queen Teuta and began two centuries of conquest. It took Salona in 78 BC.",
      "src": [
       [
+       "Hrvatska enciklopedija: Dalmacija",
+       "https://enciklopedija.hr/clanak/13743"
+      ],
+      [
        "Salona",
        "https://en.wikipedia.org/wiki/Salona"
       ],
@@ -944,6 +993,10 @@
      "text": "After crushing the revolt Rome organised the province of Dalmatia, with its capital at Salona near Split.",
      "src": [
       [
+       "Hrvatska enciklopedija: Dalmacija",
+       "https://enciklopedija.hr/clanak/13743"
+      ],
+      [
        "History of Dalmatia",
        "https://en.wikipedia.org/wiki/History_of_Dalmatia"
       ],
@@ -959,6 +1012,10 @@
      "title": "Diocletian's palace",
      "text": "The Dalmatian-born emperor built his retirement palace at Spalatum — the heart of today's Split.",
      "src": [
+      [
+       "Leksikografski zavod (HEMU): Dalmacija",
+       "https://hemu.lzmk.hr/natuknica.aspx?ID=10815"
+      ],
       [
        "History of Split",
        "https://en.wikipedia.org/wiki/History_of_Split"
@@ -1041,6 +1098,10 @@
      "text": "The Treaty of Zadar made Venice give up Dalmatia to Louis I of Hungary — the same deal that freed Ragusa.",
      "src": [
       [
+       "Proleksis enciklopedija: Dalmacija",
+       "https://proleksis.lzmk.hr/16749/"
+      ],
+      [
        "Republic of Ragusa",
        "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
       ]
@@ -1053,8 +1114,23 @@
      "text": "Ladislaus of Naples sold his claim to Dalmatia to Venice for 100,000 ducats; by 1420 Venice ruled the coast, which it kept until 1797. Ragusa stayed outside.",
      "src": [
       [
+       "Proleksis enciklopedija: Dalmacija",
+       "https://proleksis.lzmk.hr/16749/"
+      ],
+      [
+       "Prodaja Dalmacije Mlecima 1409. (hr)",
+       "https://hr.wikipedia.org/wiki/Prodaja_Dalmacije_Mlecima_1409."
+      ],
+      [
        "Dalmatia under Venetian rule",
        "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"
+      ]
+     ],
+     "days": [
+      [
+       "07-09",
+       1409,
+       "Ladislaus of Naples sold his claim to Dalmatia to Venice"
       ]
      ]
     },
@@ -1064,6 +1140,10 @@
      "title": "Venice falls",
      "text": "Austria took Venetian Dalmatia in 1797; Napoleon's France had it from 1805/06 and folded it, with Ragusa, into the Illyrian Provinces; the Congress of Vienna returned it all to Austria.",
      "src": [
+      [
+       "Hrvatska enciklopedija: Dalmacija",
+       "https://enciklopedija.hr/clanak/13743"
+      ],
       [
        "Dalmatia under Venetian rule",
        "https://en.wikipedia.org/wiki/Dalmatia_under_Venetian_rule"
@@ -1081,6 +1161,10 @@
      "text": "An Austrian crown land, then part of Austria-Hungary, with its capital at Zadar — Dubrovnik and Konavle included.",
      "src": [
       [
+       "Leksikografski zavod (HEMU): Dalmacija",
+       "https://hemu.lzmk.hr/natuknica.aspx?ID=10815"
+      ],
+      [
        "Kingdom of Dalmatia",
        "https://en.wikipedia.org/wiki/Kingdom_of_Dalmatia"
       ]
@@ -1090,8 +1174,16 @@
      "y": "1918",
      "sort": 1918,
      "title": "Into Yugoslavia",
-     "text": "Dalmatia joined the Kingdom of Serbs, Croats and Slovenes (Yugoslavia from 1929); Zadar went to Italy in 1920.",
+     "text": "Dalmatia joined the Kingdom of Serbs, Croats and Slovenes (Yugoslavia from 1929). Under the Treaty of Rapallo (1920) Zadar and the island of Lastovo went to Italy, which kept them until 1947.",
      "src": [
+      [
+       "Treaty of Rapallo (1920)",
+       "https://en.wikipedia.org/wiki/Treaty_of_Rapallo_(1920)"
+      ],
+      [
+       "Britannica: Dalmatia",
+       "https://www.britannica.com/place/Dalmatia"
+      ],
       [
        "History of Dalmatia",
        "https://en.wikipedia.org/wiki/History_of_Dalmatia"
@@ -1102,8 +1194,12 @@
      "y": "1941–1943",
      "sort": 1941,
      "title": "Divided by the Axis",
-     "text": "The Treaties of Rome (18 May 1941) gave Italy much of the coast as the Governorate of Dalmatia; the rest went to the Independent State of Croatia. Italy's surrender in September 1943 ended the arrangement.",
+     "text": "The Treaties of Rome (18 May 1941) gave Italy much of the coast as the Governorate of Dalmatia — near Dubrovnik, the islands of Korčula and Mljet — while Šipan, Lopud and Lokrum stayed in the Independent State of Croatia. Italy's surrender in September 1943 ended the arrangement.",
      "src": [
+      [
+       "Rimski ugovori (1941.) (hr)",
+       "https://hr.wikipedia.org/wiki/Rimski_ugovori_(1941.)"
+      ],
       [
        "Treaties of Rome (1941)",
        "https://en.wikipedia.org/wiki/Treaties_of_Rome_(1941)"
