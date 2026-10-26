@@ -279,6 +279,27 @@ window.__resizeRegs = 0;
         return orig.apply(this, arguments);
     };
 })();
+
+/* WHEN THE AVAILABILITY REQUEST IS SENT, relative to the card existing.
+   0.36.1 moved that request earlier — it is issued before the card is built,
+   because on staging it began at 1,088ms and the chips landed at 2.85s. A
+   chips-count assertion cannot see that: delay the request and the same three
+   chips still arrive, just later, which is why the mutation guarding it
+   SURVIVED the first sweep. What distinguishes the two is whether the card is
+   already in the document when fetch is called. Recorded on the FIRST call
+   only, so a later re-render cannot overwrite the answer. */
+window.__availCalled = false;
+window.__availCardPresent = null;
+(function () {
+    var orig = window.fetch;
+    window.fetch = function () {
+        if (!window.__availCalled) {
+            window.__availCalled = true;
+            window.__availCardPresent = !!document.querySelector('.dcc_checkout-continue');
+        }
+        return orig.apply(this, arguments);
+    };
+})();
 </script>
 <script>${JS}</script>
 </body></html>`;
@@ -549,6 +570,15 @@ const MEASURE = `(() => {
 
             if (state === 'taken') {
                 check(tag + ': three open stays were offered', m.chips.length, 3);
+                /* THE REQUEST WENT OUT BEFORE THE CARD DID. Not a timing
+                   threshold — an ordering, which is what the claim actually
+                   says and the only thing a headless browser can hold to. */
+                const sent = await p.evaluate(() => ({
+                    called: window.__availCalled,
+                    cardPresent: window.__availCardPresent,
+                }));
+                check(tag + ': the availability request was sent before the card was built',
+                    [sent.called, sent.cardPresent], [true, false]);
                 /* The booked nights are skipped, the stays do not overlap, and
                    each is the three nights the guest asked for. */
                 check(tag + ': the chips name real open stays', m.chipPosts.map(
