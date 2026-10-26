@@ -42,6 +42,9 @@
     };
   }
 
+  const PLAY_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
+  const PAUSE_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
+
   function build(root, D, opts) {
     const F = D.frames, N = F.length, VW = D.view.w, VH = D.view.h;
     // the walled city itself (Stradun, 42.6413° N 18.1083° E) in map units; the data's ragusaPt sits
@@ -114,7 +117,7 @@
     const transport = el('div', 'bh-transport');
     transport.innerHTML =
       '<button type="button" class="bh-btn" data-a="prev" aria-label="Previous era">‹</button>' +
-      '<button type="button" class="bh-btn" data-a="play" aria-pressed="false">Play</button>' +
+      '<button type="button" class="bh-btn bh-playbtn" data-a="play" aria-pressed="false" aria-label="Play through the eras" title="Play through the eras">' + PLAY_SVG + '</button>' +
       '<button type="button" class="bh-btn" data-a="next" aria-label="Next era">›</button>' +
       `<input class="bh-range" id="bh-range" type="range" min="0" max="${N - 1}" step="1" value="0" aria-label="Era">`;
     const toggles = el('div', 'bh-toggles');
@@ -356,10 +359,11 @@
 
     // ---------- playback ----------
     const playBtn = transport.querySelector('[data-a="play"]');
-    function stop() { if (playing) { clearInterval(playing); playing = null; playBtn.textContent = 'Play'; playBtn.setAttribute('aria-pressed', 'false'); } }
+    const playLabel = on => { playBtn.innerHTML = on ? PAUSE_SVG : PLAY_SVG; playBtn.title = on ? 'Pause' : 'Play through the eras'; playBtn.setAttribute('aria-label', playBtn.title); };
+    function stop() { if (playing) { clearInterval(playing); playing = null; playLabel(false); playBtn.setAttribute('aria-pressed', 'false'); } }
     function play() {
       if (cur === N - 1) show(0);
-      playBtn.textContent = 'Pause'; playBtn.setAttribute('aria-pressed', 'true');
+      playLabel(true); playBtn.setAttribute('aria-pressed', 'true');
       playing = setInterval(() => { if (cur >= N - 1) stop(); else show(cur + 1); }, 4200);
     }
     transport.addEventListener('click', e => {

@@ -190,9 +190,14 @@
 /* satellite view: imagery under the old borders (no multiply blend, which would turn it to mud) */
 .bh-satbtn { display: none; }
 .bh-tiles-on .bh-satbtn { display: inline-flex; align-items: center; justify-content: center; }
-.bh-sat .bh-satbtn[aria-pressed=true] { background: var(--bh-gold); color: #201f1d; }
 .bh-sat .bh-tiles { background: #2b3326; }
 .bh-sat.bh-tiles-on .bh-stage svg { mix-blend-mode: normal; }
 .bh-sat.bh-tiles-on .bh-poly { fill-opacity: .3; }
 .bh-sat.bh-tiles-on .bh-poly:hover, .bh-sat.bh-tiles-on .bh-poly.bh-sel { fill-opacity: .5; }
 .bh-tile > img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
+/* play/pause: round and filled, like every play button on the site */
+.bh-btn.bh-playbtn { width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 999px;
+  background: var(--bh-accent); border-color: var(--bh-accent); color: #fff; }
+.bh-btn.bh-playbtn:hover { background: var(--bh-accent-deep, #7d5411); border-color: var(--bh-accent-deep, #7d5411); }
+.bh-btn.bh-playbtn[aria-pressed="true"] { background: var(--bh-accent); color: #fff; box-shadow: 0 0 0 3px var(--bh-tint); }
+.bh-playbtn svg { display: block; }

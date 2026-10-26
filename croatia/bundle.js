@@ -2528,14 +2528,14 @@
   function thenStart() {
     const frames = thenData.frames, b = root._mapmode.querySelector('.dcc-then [data-a=play]');
     if (thenIdx >= frames.length - 1) thenShow(0);
-    b.innerHTML = PAUSE_GLYPH; b.setAttribute('aria-label', 'Pause'); b.title = 'Pause';
+    b.innerHTML = PAUSE_GLYPH; b.setAttribute('aria-label', 'Pause'); b.title = 'Pause'; b.classList.add('playing');
     thenPlay = setInterval(() => { if (thenIdx >= frames.length - 1) thenStop(); else thenShow(thenIdx + 1); }, reducedMotion() ? 3500 : 2400);
   }
   function thenStop() {
     if (!thenPlay) return;
     clearInterval(thenPlay); thenPlay = null;
     const b = root._mapmode.querySelector('.dcc-then [data-a=play]');
-    if (b) { b.innerHTML = PLAY_GLYPH; b.setAttribute('aria-label', 'Play through the eras'); b.title = 'Play through the eras'; }
+    if (b) { b.innerHTML = PLAY_GLYPH; b.setAttribute('aria-label', 'Play through the eras'); b.title = 'Play through the eras'; b.classList.remove('playing'); }
   }
   // turn the overlay on/off; `slug` picks the era (default: the History tab's, else 1453)
   function thenToggle(on, slug, fly) {
