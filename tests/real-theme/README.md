@@ -34,7 +34,12 @@ Files:
 | `css/NN-*.css` | each stylesheet, numbered in document order |
 | `font/*` | the font files those stylesheets reference |
 | `manifest.json` | order, local name, original URL and byte count of each sheet |
-| `measured.json` | what the suite last measured, per state and width |
+
+The suite also writes `measured.json` (every state and width it measured),
+which is **gitignored on purpose**: it is rewritten on every run, so tracking
+it dirties the tree after each test pass and says nothing a later reader
+needs. The durable records are the pinned facts below and the three-width
+table in the release check list.
 
 ## What is real and what is derived
 
