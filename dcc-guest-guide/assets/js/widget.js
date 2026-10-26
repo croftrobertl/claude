@@ -551,9 +551,136 @@
         return p.get('stay') || 'default';
     }
     function checkStorageKey(widgetId) { return 'dccgg:check:' + widgetId + ':' + stayKey(); }
+
+    /* ---- v0.25.2: ticks expire, matched to the stay --------------------
+     *
+     * Two rules, because one window cannot fit both cases. A flat 48 hours
+     * would wipe a seven-night guest's ticks on their third morning; an
+     * open-ended store leaves a departed guest's ticks waiting for the next
+     * one.
+     *
+     *   stay WITH a checkout date  -> end of the day AFTER checkout, Eastern
+     *   anything else              -> 48 hours after the LAST tick
+     *
+     * "After the last tick", not after each tick: ticking something keeps the
+     * whole list alive, which is what a guest working through a checklist
+     * expects. The property clock is Eastern whatever the phone is set to —
+     * the cottages are in Florida and checkout is a time there.
+     */
+    const CHECK_TTL_MS = 48 * 60 * 60 * 1000;
+    const PROPERTY_TZ  = 'America/New_York';
+
+    /**
+     * Where the checkout date comes from, in order:
+     *   ?out=YYYY-MM-DD      — explicit, and the one to add to guest links
+     *   a full date inside ?stay=   e.g. ?stay=jane-2026-06-14
+     *
+     * The plugin has always treated `stay` as opaque — its only documented
+     * shape is the `jane-2026-06` the review template parses a first name
+     * out of, which carries a MONTH and no day. So a stay alone is not
+     * enough, and when no date is found the 48-hour rule applies. `out` is
+     * separate from `stay` on purpose: the storage key contains the stay, so
+     * changing the stay format to carry a date would change the key and
+     * silently discard every tick a guest had already made.
+     */
+    function checkoutISO() {
+        try {
+            const p = new URLSearchParams(window.location.search);
+            const direct = (p.get('out') || '').trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
+            const m = (p.get('stay') || '').match(/(\d{4}-\d{2}-\d{2})/);
+            return m ? m[1] : '';
+        } catch (_) { return ''; }
+    }
+
+    /** Minutes the property's clock is ahead of UTC at a given instant. */
+    function tzOffsetMinutes(ms) {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: PROPERTY_TZ, hour12: false,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+            }).formatToParts(new Date(ms)).reduce((o, x) => (o[x.type] = x.value, o), {});
+            // hour comes back as "24" at midnight in some engines.
+            const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day,
+                +parts.hour % 24, +parts.minute, +parts.second);
+            return Math.round((asUTC - ms) / 60000);
+        } catch (_) { return 0; }
+    }
+
+    /**
+     * The instant a property-time calendar day ends, as ms.
+     *
+     * The offset depends on the instant, so this converges on it: take the
+     * naive UTC end-of-day, read the offset there, and correct.
+     *
+     * The second pass does NOT currently change any answer, and the comment
+     * here used to claim it was needed for DST — it is not, and that claim was
+     * wrong. Measured over 2025-2030, every day including both transitions:
+     * one pass and two agree on all 2016 of them. The reason is that both the
+     * naive instant (23:59 UTC of day D) and the corrected one (~05:00 UTC of
+     * D+1) fall on the same side of a US transition, which happens at 07:00
+     * UTC. The second pass stays as insurance for a future caller asking for a
+     * different hour — a start-of-day or an 11:00 checkout time would straddle
+     * it — and the mutation runner records it as equivalent rather than
+     * pretending a test kills it.
+     */
+    function endOfPropertyDay(iso) {
+        const [y, m, d] = iso.split('-').map(Number);
+        if (!y || !m || !d) return 0;
+        const naive = Date.UTC(y, m - 1, d, 23, 59, 59, 999);
+        let ms = naive;
+        for (let i = 0; i < 2; i++) { ms = naive - tzOffsetMinutes(ms) * 60000; }
+        return ms;
+    }
+
+    /** The ISO date one day after the given one. */
+    function nextISO(iso) {
+        const [y, m, d] = iso.split('-').map(Number);
+        if (!y || !m || !d) return '';
+        const t = new Date(Date.UTC(y, m - 1, d + 1));
+        return t.toISOString().slice(0, 10);
+    }
+
+    /**
+     * Prune a stored set in place. Returns true when something was dropped,
+     * so the caller knows to write the smaller set back.
+     *
+     * Entries are `{ t: <ms> }`; a bare `true` is the pre-v0.25.2 shape and
+     * is stamped with now rather than discarded, so upgrading mid-stay does
+     * not cost a guest the ticks they have already made.
+     */
+    function pruneChecks(state, nowMs) {
+        const keys = Object.keys(state);
+        if (!keys.length) return false;
+        let changed = false;
+        let newest = 0;
+        for (const k of keys) {
+            const v = state[k];
+            if (v === true) { state[k] = { t: nowMs }; changed = true; }
+            else if (!v || typeof v !== 'object') { delete state[k]; changed = true; continue; }
+            const t = state[k] && state[k].t;
+            if (typeof t === 'number' && t > newest) newest = t;
+        }
+        const out = checkoutISO();
+        const deadline = out ? endOfPropertyDay(nextISO(out))
+                             : (newest ? newest + CHECK_TTL_MS : 0);
+        if (deadline && nowMs > deadline) {
+            for (const k of Object.keys(state)) delete state[k];
+            return true;
+        }
+        return changed;
+    }
+
     function loadChecks(widgetId) {
-        try { return JSON.parse(localStorage.getItem(checkStorageKey(widgetId)) || '{}'); }
+        let state;
+        try { state = JSON.parse(localStorage.getItem(checkStorageKey(widgetId)) || '{}'); }
         catch (_) { return {}; }
+        if (!state || typeof state !== 'object') return {};
+        // Stale entries go when the sheet READS them — there is no background
+        // sweep, and a guest who never returns leaves nothing running.
+        if (pruneChecks(state, Date.now())) saveChecks(widgetId, state);
+        return state;
     }
     function saveChecks(widgetId, state) {
         try { localStorage.setItem(checkStorageKey(widgetId), JSON.stringify(state)); } catch (_) {}
@@ -608,7 +735,13 @@
             const next = item.dataset.checked !== '1';
             item.dataset.checked = next ? '1' : '0';
             btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-            state[key] = next;
+            // v0.25.2: an entry is { t: when it was ticked }, and unticking
+            // DELETES it rather than storing false. A false entry would keep
+            // its timestamp, and the 48-hour rule reads the newest timestamp
+            // in the set — so an untick would have extended the life of the
+            // ticks the guest left alone.
+            if (next) { state[key] = { t: Date.now() }; }
+            else { delete state[key]; }
             saveChecks(widgetId, state);
             updateChecklistProgress(root, item.closest('.dccgg-detail'));
         });

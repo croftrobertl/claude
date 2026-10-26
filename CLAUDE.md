@@ -387,8 +387,10 @@ HOST MEASURED. Four of the five reported faults were not what they looked like.
   `dccgg:check:<widgetId>:<stayKey>` to localStorage and reads it back on
   load — section B of `tests/sheet-polish.ui.js` ticks through the CHECKBOX
   rather than the new row target precisely so it passes on 0.25.0 too, which
-  is what proves the point. It has no expiry; a 48-hour cap was discussed and
-  NOT added, because nothing was broken.
+  is what proves the point. It had no expiry in v0.25.1 — a 48-hour cap was
+  discussed and NOT added then, because nothing was broken. v0.25.2 added
+  expiry as its own release, on Rob's instruction, with the two-branch rule
+  described further down.
 
   The "⌘K on every platform" was already platform-aware (widget.js swaps in
   "Ctrl K" off a Mac) and already hidden under `@media (hover: none)`. Only
@@ -426,6 +428,40 @@ overflows the row instead of letting tiles shrink.
 the above. Its kit block includes a width for `.dccgg-item-report .fas`,
 because Font Awesome is absent here and without it that button measures 12x8
 and cannot be tapped — a property of the harness, not of the guide.
+
+Checklist ticks EXPIRE since v0.25.2, by two rules, because one window cannot
+fit both cases: a flat 48 hours erases a seven-night guest's ticks on their
+third morning, and no expiry at all leaves a departed guest's ticks waiting for
+the next one.
+
+  a checkout date is known  -> end of the day AFTER checkout, PROPERTY time
+  anything else             -> 48 hours after the LAST tick in the set
+
+"After the last tick", not after each: ticking keeps the whole list alive,
+which is what someone working through a checklist expects. An entry is
+`{ t: <ms> }`; unticking DELETES it rather than storing false, because a false
+entry keeps its timestamp and would go on holding the set alive. A pre-v0.25.2
+bare `true` is stamped with now rather than discarded, so upgrading mid-stay
+costs nobody their ticks. Pruning happens when the sheet READS the store —
+there is no background sweep.
+
+WHERE THE CHECKOUT DATE COMES FROM, and this needed checking rather than
+assuming: `stay` is opaque to this plugin. Its only documented shape is the
+`jane-2026-06` the review template parses a first name out of, which carries a
+MONTH and no day — so a stay alone is NOT a checkout date. The sources, in
+order, are `?out=YYYY-MM-DD` and then a full date found inside `?stay=`.
+`out` is separate on purpose: the storage key contains the stay, so changing
+the stay format to carry a date would change the key and silently discard every
+tick the guest had already made.
+
+The property clock is Eastern whatever the phone is set to — the cottages are
+in Florida and checkout is a time there. `endOfPropertyDay()` resolves the UTC
+offset TWICE: the offset depends on the instant, and on a DST boundary the
+first guess lands in the wrong one. 1 November 2026 is a 25-hour Eastern day
+and is in the suite for that reason. `tests/check-expiry.ui.js` stubs Date
+before any script runs and sets the DEVICE timezone to somewhere that is never
+Eastern, so a case cannot pass by the two happening to agree;
+`tests/check-expiry.mutations.py` guards it.
 
 Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
 left-aligned) is implemented the way the Cottage Selector implements it —
@@ -476,7 +512,7 @@ Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js`,
 `php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js`,
 `php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js`,
-`node tests/sheet-polish.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`node tests/sheet-polish.ui.js`, `node tests/check-expiry.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

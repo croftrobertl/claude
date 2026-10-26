@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.1
+Stable tag: 0.25.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,17 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.25.2 =
+
+**Checklist ticks no longer linger into the next guest's visit.** When the
+guest's link says when they check out, their ticks stay until the end of the
+day after checkout, on Florida time — so a week-long stay keeps them all the
+way through. Without a checkout date, ticks go 48 hours after the last one was
+made, the same window the Wi-Fi password uses. Reset still clears everything,
+and none of it is sent anywhere: it stays on the guest's own device.
+
+Ticks made before this update are kept rather than thrown away.
 
 = 0.25.1 =
 
