@@ -6856,5 +6856,27 @@
   "find": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    width: calc(100% - 36px);\n}",
   "replace": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    width: 100%;\n}",
   "count": 1
+ },
+ {
+  "id": "css-room-number-left-again",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.36.1 - MotoPress's H3 'Accommodation Details' (.mphb-room-number) is a TITLE and reads centred at every width; 0.36.0's desktop list left-aligned it with !important and won",
+  "find": "    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,\n    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {",
+  "replace": "    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,\n    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-room-number,\n    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {",
+  "count": 1
+ },
+ {
+  "id": "css-headings-four-of-five",
+  "file": "dcc-custom-checkout/assets/checkout-layout.css",
+  "suites": [
+   "layout-fields-browser"
+  ],
+  "claim": "0.36.1 - the heading rule covers MotoPress's OWN headings too, not just this plugin's class: four of its five selectors had no element in any fixture",
+  "find": ".dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,\n.dcc_layout .mphb_sc_checkout-form .mphb-room-number,",
+  "replace": ".dcc_layout .mphb_sc_checkout-form .dcc_checkout-nothing-at-all,",
+  "count": 1
  }
 ]

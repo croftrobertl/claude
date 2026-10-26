@@ -139,15 +139,35 @@ const page_html = `<!doctype html>
          customer details, which is the whole reason item 2 has anything to
          do — checkout.js stacks the panels after the customer block, so they
          appear a long way from the answer that revealed them. -->
-    <div class="mphb-room-details">
-      <p class="mphb-adults-wrapper"><label>Number of Guests
-        <select name="mphb_room_details[0][adults]">
-          <option value="">— Select —</option>
-          <option value="1">1</option><option value="2">2</option>
-          <option value="3">3</option><option value="4">4</option>
-        </select></label></p>
+    <!-- MOTOPRESS'S RESERVATION BLOCK, AND IT WAS MISSING UNTIL 0.36.1.
+         0.36.1 removed the underline from two headings the Director found
+         still underlined on staging — h3.mphb-booking-details-title
+         "Reservation Details" and .mphb-room-number "Accommodation Details" —
+         and NO fixture in this repo contained either selector, so the rule
+         was unverified prose and its mutation could not fail. Found by
+         grepping the fixtures for the selectors the new rule names, which is
+         worth doing for every new rule. This is also the block the A/B
+         desktop-height question is about: everything in it is something the
+         Your Stay card already shows. -->
+    <div class="mphb-booking-details">
+      <h3 class="mphb-booking-details-title">Reservation Details</h3>
+      <div class="mphb-room-details">
+        <h4 class="mphb-room-number">Accommodation Details</h4>
+        <p>Cottage 34: Coconut Cottage</p>
+        <p class="mphb-adults-wrapper"><label>Number of Guests
+          <select name="mphb_room_details[0][adults]">
+            <option value="">— Select —</option>
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option>
+          </select></label></p>
+      </div>
     </div>
     <div class="mphb-customer-details" id="customer">
+    <!-- MotoPress's own heading for this block. Missing until 0.36.1,
+         like the two above and the breakdown caption below: FOUR of the
+         five selectors the heading rule names had no element here, and
+         only .dcc_checkout-section-title (our own class) was tested. -->
+    <h3 class="mphb-customer-details-title">Customer Information</h3>
     <p class="mphb-text-control"><label>First Name <input type="text" name="mphb_first_name" required></label></p>
     <p><input type="text" name="mphb_last_name"></p>
     <p class="mphb-text-control"><label>Phone <input type="tel" name="mphb_phone" required></label></p>
@@ -161,6 +181,18 @@ const page_html = `<!doctype html>
     <p><select name="mphb_country"><option value="">—</option><option value="US">US</option></select></p>
 
     </div><!-- /.mphb-customer-details -->
+
+    <!-- The price breakdown, for its CAPTION's sake: MotoPress renders
+         the title as a <caption class="mphb-price-breakdown-title">, so
+         a rule written for a heading has to reach a table caption. The
+         "Rate:" row inside a <td> and the Taxes cell are covered by
+         tests/breakdown; this block carries only what the heading rule
+         needs. -->
+    <table class="mphb-price-breakdown">
+      <caption class="mphb-price-breakdown-title">Price Breakdown</caption>
+      <tbody><tr><td>Accommodation</td><td>$450.00</td></tr>
+      <tr><td>Taxes</td><td>$49.50</td></tr></tbody>
+    </table>
 
     <!-- The per-guest panels AS checkout.js LEAVES THEM: built sections,
          carrying the rows it moved in from MotoPress's own markup, stacked
@@ -1678,6 +1710,24 @@ const page_html = `<!doctype html>
                 })(),
                 barHome: bar && card && card.contains(bar) ? 'card'
                     : (bar && sheet && sheet.contains(bar) ? 'sheet' : 'body'),
+                /* EVERY SECTION HEADING, AT EVERY WIDTH (0.36.1, Rob: remove
+                   the underline at every width). Five selectors, and two of
+                   them — MotoPress's own "Reservation Details" and
+                   "Accommodation Details" — had NO element in any fixture in
+                   this repo until this release, so the rule that names them
+                   was unverified prose and its mutation could not fail.
+                   Measured as a SET, so a rule that covers four of the five
+                   is a failure rather than a pass. */
+                headings: ['.mphb-booking-details-title', '.mphb-room-number',
+                    '.mphb-customer-details-title', '.mphb-price-breakdown-title',
+                    '.dcc_checkout-section-title']
+                    .map((sel) => {
+                        const h = document.querySelector(sel);
+                        if (!h) { return sel + ': MISSING FROM THE FIXTURE'; }
+                        const cs = getComputedStyle(h);
+                        return sel + ': ' + cs.textAlign + '/' + cs.textDecorationLine
+                            + '/' + cs.borderBottomWidth;
+                    }),
                 pageHeight: Math.round(document.documentElement.scrollHeight),
                 scrollWidth: document.documentElement.scrollWidth,
                 clientWidth: document.documentElement.clientWidth,
@@ -1730,6 +1780,15 @@ const page_html = `<!doctype html>
                 fullPage: size.w >= 1000,
             });
         }
+        /* ROB'S PICK: centred, never underlined, at 390, 768 AND 1440. */
+        check(`every section heading is centred and not underlined @${size.w}`,
+            m.headings,
+            ['.mphb-booking-details-title: center/none/0px',
+             '.mphb-room-number: center/none/0px',
+             '.mphb-customer-details-title: center/none/0px',
+             '.mphb-price-breakdown-title: center/none/0px',
+             '.dcc_checkout-section-title: center/none/0px']);
+
         await c.close();
     }
 

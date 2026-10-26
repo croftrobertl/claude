@@ -750,9 +750,20 @@ body.dcc_layout {
         text-align: left;
     }
 
+    /* `.mphb-room-number` WAS IN THIS LIST AND HAD TO COME OUT (0.36.1).
+       0.36.0 put it here as a label-ish element, before anyone had read what
+       it renders: it is MotoPress's H3 "Accommodation Details", a title. So
+       this rule and 0.36.1's centred-headings rule named the same element and
+       disagreed — and this one won, being `!important` at (0,4,1) against
+       (0,3,1), so the heading stayed left at >=1000px while reading centred
+       everywhere else. That IS the "inconsistently aligned" the Director
+       found, and removing the underline alone would not have fixed it.
+       Under Rob's standing rule a title is centred; only a multi-sentence
+       paragraph reads left. Caught by tests/layout-fields/ once the fixture
+       finally contained the element — four of the five selectors in the
+       heading rule had none. */
     .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet label,
     .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,
-    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-room-number,
     .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {
         text-align: left !important;
     }
