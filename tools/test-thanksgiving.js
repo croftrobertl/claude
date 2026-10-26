@@ -75,11 +75,23 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     const RE8 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', corn: 'dccTgC3', acorn: 'dccTgK1', cranberry: 'dccTgR1', turkey: 'dccTgT2' };
     const bad8 = Object.entries(RE8).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
     ok(!bad8.length, 'the eight pieces are the 4.13.1 photo redraws', bad8.join(' ') || 'all eight');
-    const old = require('child_process').execSync('git show 66faa59:dcc-seasons/assets/js/engine.js', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().split('\n');
-    const now = src.split('\n'), oldSet = new Set(old);
-    const moved = now.filter(l => !oldSet.has(l) && !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l));
-    const gone = old.filter(l => !new Set(now).has(l) && !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l));
-    ok(!moved.length && !gone.length, 'nothing else in the engine changed since 4.13.0 (Halloween and the rest draw as live)', (moved.concat(gone)[0] || 'only the eight sprites and comments').slice(0, 80));
+    /* Everything outside Thanksgiving's own code is IDENTICAL to 4.13.0:
+     * cut out the crane regions (caches and the moon, the scene, the idle
+     * pre-draw, the debug getter) from both, drop the eight sprites and
+     * comment lines, and the rest must match line for line. So Halloween,
+     * Christmas and every other theme run exactly the code that is live. */
+    const old = require('child_process').execSync('git show 66faa59:dcc-seasons/assets/js/engine.js', { cwd: ROOT, maxBuffer: 1 << 26 }).toString();
+    function cutAll(t, isNew) {
+      const cut = (x, from, to) => { const i = x.indexOf(from); if (i < 0) { throw new Error('marker ' + from); } const j = x.indexOf(to, i); if (j < 0) { throw new Error('marker ' + to); } return x.slice(0, i) + x.slice(j + to.length); };
+      t = cut(t, '\t\tvar crCache = {}', isNew ? '\t\t\treturn pl;\n\t\t}\n' : 'return (hmC = { c: c, r: r, half: half });\n\t\t}\n');
+      t = cut(t, '\t\t\tcranemoon: { actors', '\n\t\t\t} },');
+      t = cut(t, "\t\tif (vigList.indexOf('cranemoon') >= 0) {", '\t\t\tcrLater(crIdle);\n\t\t}');
+      return t.split('\n').filter(l => !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l) && !/get cranes\(\)/.test(l)).join('\n');
+    }
+    const A = cutAll(old, false), Bn = cutAll(src, true);
+    let firstDiff = '';
+    if (A !== Bn) { const al = A.split('\n'), bl = Bn.split('\n'); for (let i = 0; i < Math.max(al.length, bl.length); i++) { if (al[i] !== bl[i]) { firstDiff = `line ${i}: ${String(bl[i]).slice(0, 70)} | was ${String(al[i]).slice(0, 70)}`; break; } } }
+    ok(A === Bn, 'outside the crane scene and the eight pieces, the engine is identical to 4.13.0 (Halloween and the rest draw as live)', firstDiff);
     const m1 = spr('leafm'), m2 = spr('leafm2');
     ok(m1.startsWith('24 24|') && m2.startsWith('24 24|'),
       'the maples carry the shorter stalk Rob asked for (24 tall, not 30)', m1.slice(0, 10) + ' / ' + m2.slice(0, 10));
@@ -122,10 +134,12 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
       ok(r.n === 5, `a V of five (${r.n})`, String(r.n));
       ok(!r.hero, 'and there is no crane flyer — the cranes are the scene only', String(r.hero));
       ok(r.cranes.frames === 24, `twelve beats pre-drawn lit and dark (${r.cranes.frames})`, String(r.cranes.frames));
-      ok(r.cranes.moon === true, 'the harvest moon is pre-drawn too', JSON.stringify(r.cranes));
-      /* off centre, so it clears the centred page title and the Sun dial */
-      ok(Math.abs(r.mx / r.w - 0.5) > 0.08, `the moon sits clear of the centred title (${(r.mx / r.w).toFixed(2)} of the width)`, String(r.mx));
-      /* the moon is WARM: the engine's own painter with a grade over it */
+      ok(r.cranes.moon === true, 'the full moon is pre-drawn too', JSON.stringify(r.cranes));
+      /* off centre, on the side the V flies into (4.13.1 keeps 0.30/0.70);
+       * the keep-clear proof is test-thanksgiving-scene.js on the real page */
+      ok(Math.abs(r.mx / r.w - 0.5) > 0.08, `the moon sits off centre, where the V flies (${(r.mx / r.w).toFixed(2)} of the width)`, String(r.mx));
+      /* 4.13.1: PALE — a full moon high in the sky, the engine's own
+       * painter ungraded (4.13.0's burnt orange is a horizon moon) */
       const hue = await pg.evaluate(() => {
         const s = window.DCCSeasonsEngine._state, st = s.vigSt;
         const c = s.witch.canvas, g = c.getContext('2d');
@@ -133,8 +147,8 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
         const d = g.getImageData(Math.round(st.mx * dp), Math.round(st.my * dp), 1, 1).data;
         return { r: d[0], g: d[1], b: d[2], a: d[3] };
       });
-      ok(hue.a > 200 && hue.r > hue.g + 40 && hue.g > hue.b,
-        `the moon is harvest-orange, not a plain moon (rgb ${hue.r},${hue.g},${hue.b})`, JSON.stringify(hue));
+      ok(hue.a > 200 && hue.r - hue.b < 70 && hue.g > 120,
+        `the moon is pale cream, not 4.13.0's orange (rgb ${hue.r},${hue.g},${hue.b})`, JSON.stringify(hue));
       ok(!errs.length, 'no page errors', errs.join(' | '));
     } finally { await ses.close(); }
   }

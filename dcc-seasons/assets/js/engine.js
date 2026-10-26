@@ -142,7 +142,7 @@
 		duckhen: '46 30|<path d="M9 19Q11 13 20 13L33 13Q40 13 43 8Q45 15 41 20Q35 27 21 27Q11 27 9 19Z" fill="#8C6A44"/><path d="M18 17l3 2 3-2M25 18l3 2 3-2M20 22l3 2 3-2M28 22l3 2 3-2M14 21l3 2 3-2" stroke="#5E4329" stroke-width="1" fill="none"/><path d="M30 15.6L38 15L37 17.4L30 18Z" fill="#4C6EF5"/><path d="M30 15.6L38 15M30 18L37 17.4" stroke="#F8F9FA" stroke-width=".6"/><path d="M9 13Q8 17 11 19L16 15Q13 13 12 10Z" fill="#9C7B52"/><circle cx="10.4" cy="9.4" r="5.4" fill="#B08C5F"/><path d="M7.4 5.2Q10.6 3.6 13.6 5Q12 5.8 10.2 6Q8.6 6 7.4 5.2Z" fill="#6B4F33"/><path d="M5.8 9.2Q9 8.8 14.6 10" stroke="#6B4F33" stroke-width=".55" fill="none"/><circle cx="8.6" cy="8.9" r=".95" fill="%g"/><path d="M5.6 10L.6 11.2Q.4 13 2 13.2L5.8 12.2Z" fill="#B8A23C"/><circle cx="1.2" cy="12" r=".6" fill="%g"/>',
 		duckling: '20 16|<ellipse cx="11" cy="10.4" rx="7.4" ry="5" fill="#6B4F33"/><path d="M6 12Q11 15.4 16 12Q11 13 6 12Z" fill="#E9C46A"/><path d="M16 8.6L19.4 7.4L18.4 10Z" fill="#6B4F33"/><circle cx="6" cy="6" r="3.8" fill="#E9C46A"/><path d="M2.6 4.6Q5 1.4 8.6 3Q9.6 4.6 9 6Q6 4.4 2.6 4.6Z" fill="#6B4F33"/><path d="M2.8 6.4L9.4 6" stroke="#6B4F33" stroke-width=".7"/><circle cx="4.8" cy="6.2" r=".8" fill="%g"/><path d="M2.6 6.8L.2 7.6L2.6 8.4Z" fill="#495057"/>',
 		witchsil: '92 66|<g fill="#1B1B24" stroke="#9C36B5" stroke-width=".7" paint-order="stroke"><path d="M10 48L74 44" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M72 44L90 36L88 44L91 50L72 47Z"/><path d="M38 30Q52 31 58 45L46 46Z"/><path d="M32 30H44L48 47H30Z"/><path d="M33 47L27 56H20V53H26L29 47Z"/><path d="M36 33L27 46" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M39 21Q50 22 52 32Q46 27 40 28Z"/><circle cx="36" cy="24" r="6"/><path d="M30.5 24L27 26L31 27Z"/><ellipse cx="38" cy="18.5" rx="11" ry="2.4" transform="rotate(-8 38 18.5)"/><path d="M31 18L41 16L50 2L44 3Z"/><ellipse cx="68" cy="40" rx="5.5" ry="3.6"/><circle cx="63.5" cy="36.4" r="3.2"/><path d="M61.4 34.6L61.8 30.8L64 33.4ZM65 33.4L66.6 30.4L67 34.6Z"/><path d="M73 40Q78 34 75.5 29" stroke="#1B1B24" stroke-width="1.6" fill="none"/></g><path d="M32 16.6L41 15L41.8 13.6L33 15Z" fill="#9C36B5"/><circle cx="62.6" cy="36" r=".8" fill="%k"/><circle cx="35" cy="23.5" r=".9" fill="%k"/>',
-		/* — thanksgiving / harvest — */
+		/* — thanksgiving — */
 		acorn: '21.3 32|<defs><radialGradient id="dccTgK1" cx=".62" cy=".3" r=".75"><stop offset="0" stop-color="#9A6638"/><stop offset=".5" stop-color="#5E3818"/><stop offset="1" stop-color="#36200C"/></radialGradient><linearGradient id="dccTgK2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6F5638"/><stop offset=".55" stop-color="#A18A62"/><stop offset="1" stop-color="#5E4A30"/></linearGradient></defs><path d="M9.6 27.4L9.8 31.9L11.6 31.9L11.8 27.4Z" fill="#8B7650" stroke="#4E3D24" stroke-width="0.3"/><path d="M10.6 1.9C11.5 1.9 12.1 2.3 12.9 3C13.8 3.6 14.9 4.5 15.6 5.7C16.3 7 16.8 8.6 17.1 10.4C17.4 12.2 18.4 15.6 17.4 16.7C16.3 17.8 12.9 17.2 10.6 17.2C8.4 17.2 5.2 17.8 4.1 16.7C3 15.6 3.7 12.2 3.9 10.4C4.1 8.6 4.6 7 5.3 5.7C6 4.5 7.2 3.6 8.1 3C9 2.3 9.8 1.9 10.6 1.9Z" fill="url(#dccTgK1)" stroke="#2A1808" stroke-width="0.4"/><path d="M10.6 2.1L10.1 0.5Q10.6 -0.2 11.2 0.5Z" fill="#4A2E14"/><path d="M14.4 6.2Q16.3 9.3 16.1 13.1" stroke="#D9B48A" stroke-width="1" fill="none" opacity=".45" stroke-linecap="round"/><path d="M3.6 16.3C4.8 15.7 8.3 15.9 10.6 15.9C13 15.9 16.5 15.7 17.7 16.3C18.8 16.9 17.8 18.6 17.6 19.7C17.4 20.9 17.1 22.3 16.6 23.3C16.1 24.4 15.3 25.3 14.5 26C13.7 26.7 12.8 27.3 12 27.5C11.1 27.8 10.2 27.8 9.3 27.5C8.4 27.3 7.3 26.7 6.5 26C5.7 25.3 5 24.4 4.5 23.3C4.1 22.3 3.8 20.9 3.6 19.7C3.5 18.6 2.4 16.9 3.6 16.3Z" fill="url(#dccTgK2)" stroke="#3E2F1A" stroke-width="0.4"/><path d="M3.8 17.4Q4.7 18.4 5.5 17.4M4.8 17.4Q5.7 18.4 6.5 17.4M5.8 17.4Q6.7 18.4 7.5 17.4M6.8 17.4Q7.7 18.4 8.5 17.4M7.8 17.4Q8.7 18.4 9.5 17.4M8.8 17.4Q9.6 18.4 10.5 17.4M9.8 17.4Q10.6 18.4 11.5 17.4M10.8 17.4Q11.6 18.4 12.5 17.4M11.8 17.4Q12.6 18.4 13.5 17.4M12.8 17.4Q13.6 18.4 14.5 17.4M13.8 17.4Q14.6 18.4 15.5 17.4M14.8 17.4Q15.6 18.4 16.5 17.4M15.8 17.4Q16.6 18.4 17.5 17.4M3.5 18.7Q4.3 19.7 5.2 18.7M4.4 18.7Q5.3 19.7 6.2 18.7M5.4 18.7Q6.3 19.7 7.2 18.7M6.4 18.7Q7.3 19.7 8.1 18.7M7.4 18.7Q8.2 19.7 9.1 18.7M8.3 18.7Q9.2 19.7 10.1 18.7M9.3 18.7Q10.2 19.7 11 18.7M10.3 18.7Q11.1 19.7 12 18.7M11.2 18.7Q12.1 19.7 13 18.7M12.2 18.7Q13.1 19.7 13.9 18.7M13.2 18.7Q14 19.7 14.9 18.7M14.1 18.7Q15 19.7 15.9 18.7M15.1 18.7Q16 19.7 16.8 18.7M16.1 18.7Q16.9 19.7 17.8 18.7M4.1 20Q5 21 5.9 20M5.1 20Q5.9 21 6.8 20M6 20Q6.9 21 7.7 20M6.9 20Q7.8 21 8.7 20M7.9 20Q8.8 21 9.6 20M8.8 20Q9.7 21 10.6 20M9.8 20Q10.6 21 11.5 20M10.7 20Q11.6 21 12.5 20M11.7 20Q12.5 21 13.4 20M12.6 20Q13.5 21 14.3 20M13.5 20Q14.4 21 15.3 20M14.5 20Q15.4 21 16.2 20M15.4 20Q16.3 21 17.2 20M3.9 21.4Q4.8 22.4 5.6 21.4M5 21.4Q5.8 22.4 6.7 21.4M6 21.4Q6.9 22.4 7.8 21.4M7.1 21.4Q8 22.4 8.8 21.4M8.2 21.4Q9 22.4 9.9 21.4M9.2 21.4Q10.1 22.4 11 21.4M10.3 21.4Q11.2 22.4 12.1 21.4M11.4 21.4Q12.3 22.4 13.1 21.4M12.4 21.4Q13.3 22.4 14.2 21.4M13.5 21.4Q14.4 22.4 15.3 21.4M14.6 21.4Q15.5 22.4 16.3 21.4M15.7 21.4Q16.5 22.4 17.4 21.4M4.8 22.7Q5.7 23.7 6.5 22.7M5.8 22.7Q6.7 23.7 7.5 22.7M6.8 22.7Q7.7 23.7 8.5 22.7M7.8 22.7Q8.7 23.7 9.5 22.7M8.8 22.7Q9.6 23.7 10.5 22.7M9.8 22.7Q10.6 23.7 11.5 22.7M10.8 22.7Q11.6 23.7 12.5 22.7M11.8 22.7Q12.6 23.7 13.5 22.7M12.8 22.7Q13.6 23.7 14.5 22.7M13.8 22.7Q14.6 23.7 15.5 22.7M14.8 22.7Q15.6 23.7 16.5 22.7M5.3 24Q6.2 25 7 24M6.3 24Q7.2 25 8 24M7.3 24Q8.2 25 9 24M8.3 24Q9.2 25 10 24M9.3 24Q10.1 25 11 24M10.3 24Q11.1 25 12 24M11.3 24Q12.1 25 13 24M12.3 24Q13.1 25 14 24M13.3 24Q14.1 25 15 24M14.3 24Q15.1 25 16 24M6.8 25.3Q7.7 26.3 8.5 25.3M7.8 25.3Q8.7 26.3 9.5 25.3M8.8 25.3Q9.6 26.3 10.5 25.3M9.8 25.3Q10.6 26.3 11.5 25.3M10.8 25.3Q11.6 26.3 12.5 25.3M11.8 25.3Q12.6 26.3 13.5 25.3M12.8 25.3Q13.6 26.3 14.5 25.3M7.3 26.6Q8.2 27.6 9 26.6M8.3 26.6Q9.2 27.6 10 26.6M9.3 26.6Q10.1 27.6 11 26.6M10.3 26.6Q11.1 27.6 12 26.6M11.3 26.6Q12.1 27.6 13 26.6M12.3 26.6Q13.1 27.6 14 26.6" stroke="#4E3D24" stroke-width="0.3" fill="none" opacity=".75"/>',
 		pie: '32 22|<path d="M3 11h26l-2.4 8q-.6 2-3 2H8q-2.4 0-3-2Z" fill="%o"/><path d="M1 11q3-8 15-8T31 11Z" fill="#E8B04B"/><g stroke="#B5772E" stroke-width="1" fill="none"><path d="M8 6 5 11m6-8L10 11M16 3.2V11m5-8L22 11m1.2-5L27 11"/></g>',
 		cornucopia: '48 32|<path d="M31 5 Q15 4 9 14 Q4 22 10 28 Q16 33 21 28 Q13 26 12 20 Q11 13 21 10 Q26 8 31 8 Z" fill="#A05A2C"/><path d="M12 20 Q18 17 24 18 M11 25 Q16 23 21 24" stroke="#7A421F" stroke-width="1" fill="none"/><ellipse cx="31" cy="12" rx="6" ry="8" fill="#7A421F"/><ellipse cx="31" cy="12" rx="6" ry="8" fill="none" stroke="#C98A4B" stroke-width="1.6"/><circle cx="38" cy="10" r="4.4" fill="%e"/><path d="M38 6 Q39 3 41 3" stroke="%c" stroke-width="1.4" fill="none"/><circle cx="44" cy="16" r="3.6" fill="%w"/><ellipse cx="36" cy="21" rx="5" ry="4" fill="%r"/><path d="M36 17 L36 19" stroke="%c" stroke-width="1.4"/><circle cx="43" cy="24" r="2.2" fill="%l"/><circle cx="46" cy="27" r="2" fill="%l"/><circle cx="41" cy="28" r="2" fill="%l"/>',
@@ -1161,7 +1161,7 @@
 	 * the engine simulates live (gravity, air drag), so they trail behind
 	 * her through the dive and the swoop. WITCH_CAPE / WITCH_HAIR are their anchors. */
 	var WITCH_CAPE = [[-3, -22], [2.5, -17.5]], WITCH_CAPE_K = 4, WITCH_HAIR = [[-1.5, -29], [0.2, -27], [-0.8, -25]];
-		/* ---- 4.13.0: the Thanksgiving cranes and their harvest moon ----
+		/* ---- 4.13.0: the Thanksgiving cranes and their full moon ----
 	 *
 	 * Built to witchmoon's standard and sharing its machinery: one
 	 * phone-based size factor, every frame pre-drawn once at idle, the
@@ -4812,7 +4812,9 @@
 		 * witch's, so the Theme guide's ART_DRAW can call it. */
 		var crCache = {}, crStats = { ms: 0, bytes: 0 };
 		function craneK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.45, (vh - 24) / 150)); }
-		function craneL() { return MT.round(34 * craneK()); }
+		/* 4.13.1 (Rob's pick A, "high and small"): the size comes from the
+		 * room the header leaves (crPlanFor), never more than the 4.13.0 size */
+		function craneL() { return crPlan && crPlan.L ? crPlan.L : MT.round(34 * craneK()); }
 		/* Every beat, lit and dark, pre-drawn once. Two sets rather than the
 		 * witch's live silhouette pass: a crane is small, so caching both is
 		 * cheaper than putting a scratch canvas in the frame loop, and it is
@@ -4829,15 +4831,16 @@
 			return (crCache[key] = { c: c, ox: b[0] * L, oy: b[1] * L, w: (b[2] - b[0]) * L, h: (b[3] - b[1]) * L });
 		}
 		function crBuild() { for (var i = 0; i < CR_FR; i++) { crGet(i, false); crGet(i, true); } }
-		/* The harvest moon: the engine's OWN painter with a warm grade over
-		 * it, never a second moon. A harvest moon is low, large and orange
-		 * because its light comes through a lot of atmosphere, so the grade
-		 * is a multiply over moonPaint and the maria stay exactly where it
-		 * puts them. Rob picked the deep burnt orange. */
+		/* November's full moon (4.13.1): the engine's OWN painter, ungraded —
+		 * the same real face as Halloween's moon. High in the sky, above the
+		 * title, a full moon is pale cream; the burnt orange of 4.13.0 is the
+		 * colour of a moon near the horizon, and it was miscalled a harvest
+		 * moon (that is September's). Rob's rule: the moon is a real full
+		 * moon. November's falls on 24 Nov 2026, Thanksgiving week. */
 		var hmC = null;
-		function harvestR() { return MT.round(58 * craneK()); }
-		function harvestGet() {
-			var r = harvestR();
+		function fullMoonR() { return crPlan && crPlan.R ? crPlan.R : MT.round(58 * craneK()); }
+		function fullMoonGet() {
+			var r = fullMoonR();
 			if (hmC && hmC.r === r) { return hmC; }
 			var t0 = nowMs(), dc = mn(W.devicePixelRatio || 1, 2), half = MT.ceil(r * 1.3);
 			var c = D.createElement('canvas');
@@ -4846,17 +4849,62 @@
 			if (g) {
 				g.scale(dc, dc); g.translate(half, half);
 				moonPaint(g, r);
-				g.globalCompositeOperation = 'source-atop';
-				var gr = g.createRadialGradient(0, 0, r * 0.1, 0, 0, r);
-				gr.addColorStop(0, 'rgba(255,146,54,0.72)');
-				gr.addColorStop(0.7, 'rgba(232,105,20,0.78)');
-				gr.addColorStop(1, 'rgba(190,74,16,0.86)');
-				g.fillStyle = gr;
-				g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
-				g.globalCompositeOperation = 'source-over';
 			}
 			crStats.ms += nowMs() - t0; crStats.bytes += c.width * c.height * 4;
 			return (hmC = { c: c, r: r, half: half });
+		}
+		/* Where the scene may draw (4.13.1): the band of sky between the
+		 * menu bar and the page title, kept KC px clear of the keep-clear
+		 * set — the title's and tagline's LETTERS (a Range per text node)
+		 * and the menu bar, its pinned copy, the dial and the menu button by
+		 * their boxes (CFG.keepText / CFG.keepBox, filter
+		 * dcc_seasons_keep_clear). Measured in IDLE time and every 10 s while
+		 * the page is open, never in a frame. The V and the moon (with its
+		 * glow) are sized to fit the band; with no room the scene declines. */
+		var KC = 8, crPlan = null;
+		var KC_TEXT = CFG.keepText == null ? '#header-page-title, [data-dcc-keep-clear-text]' : CFG.keepText;
+		var KC_BOX = CFG.keepBox == null ? '#site-header-main, .site-header-bottom-fixed, .dcc-sun-dial, .menu-burger, [data-dcc-keep-clear]' : CFG.keepBox;
+		function kcRects() {
+			var txt = [], box = [], i, j;
+			function seen(el) {
+				var cs = W.getComputedStyle(el);
+				return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity !== 0;
+			}
+			function add(list, r) { if (r.width > 0 && r.height > 0) { list.push([r.left - cvOX, r.top - cvOY, r.right - cvOX, r.bottom - cvOY]); } }
+			var te = [], be = [];
+			try { te = KC_TEXT ? D.querySelectorAll(KC_TEXT) : []; } catch (e) { te = []; }
+			try { be = KC_BOX ? D.querySelectorAll(KC_BOX) : []; } catch (e) { be = []; }
+			for (i = 0; i < te.length; i++) {
+				var tw = D.createTreeWalker(te[i], 4, null), tn;
+				while ((tn = tw.nextNode())) {
+					if (!/\S/.test(tn.nodeValue) || !tn.parentElement || !seen(tn.parentElement)) { continue; }
+					var rg = D.createRange(); rg.selectNodeContents(tn);
+					var cr = rg.getClientRects();
+					for (j = 0; j < cr.length; j++) { add(txt, cr[j]); }
+				}
+			}
+			for (i = 0; i < be.length; i++) { if (seen(be[i])) { add(box, be[i].getBoundingClientRect()); } }
+			return { txt: txt, box: box };
+		}
+		function crPlanFor() {
+			var k = kcRects(), top = INF, i;
+			for (i = 0; i < k.txt.length; i++) { top = mn(top, k.txt[i][1]); }
+			if (top >= INF) { top = vh * 0.45; }
+			var bt = 0;
+			for (i = 0; i < k.box.length; i++) { if (k.box[i][3] <= top + 2) { bt = mx2(bt, k.box[i][3]); } }
+			bt += KC;
+			var bb = mn(top, vh) - KC, h = bb - bt, full = MT.round(34 * craneK());
+			/* the V spans 2.18 L top to bottom (two ranks of 0.3 L, the
+			 * wings, the bob); the moon and its glow 2.5 R */
+			var L = mn(full, MT.floor(h / 2.2)), R = mn(MT.round(58 * craneK()), MT.floor(h / 2.5));
+			var pl = { vw: vw, vh: vh, ox: cvOX, oy: cvOY, at: nowMs(), bt: bt, bb: bb, k: k };
+			if (L < 12 || R < 10) { pl.none = 1; return pl; }
+			pl.L = L; pl.R = R; pl.full = full;
+			pl.my = MT.round((bt + bb) / 2);
+			pl.vy = bt + 1.17 * L + (h - 2.18 * L) / 2;
+			pl.mxR = MT.round(clamp(vw * 0.70, R * 1.25 + KC, vw - R * 1.25 - KC));
+			pl.mxL = MT.round(clamp(vw * 0.30, R * 1.25 + KC, vw - R * 1.25 - KC));
+			return pl;
 		}
 
 		function moonGet() {
@@ -5929,53 +5977,54 @@
 				return st.t2 > gone + 0.8;
 			} },
 			/* 4.13.0 — Thanksgiving's signature scene: a V of five sandhill
-			 * cranes crosses a low harvest moon. Rob picked the moon, the
+			 * cranes crosses the full moon (high and small, pale, since
+			 * 4.13.1 — Rob's pick A). Rob picked the moon, the
 			 * bird, the five. It is the scene ONLY: there is no crane flyer,
 			 * because a theme's signature character appears once. */
 			cranemoon: { actors: 2, run: function (st, dt) {
 				if (!st.on) {
-					st.on = 1; st.t2 = 0; st.dir = sgn();
-					st.L = craneL(); st.MR = harvestR();
-					var edge = st.MR + st.L;
-					/* OFF CENTRE, and on the side the skein is heading for, so
-					 * the birds fly INTO it — and so the moon stays clear of
-					 * the page title, which is centred in the header picture,
-					 * and of the Sun-on-the-Canal dial in the top right. The
-					 * header's letters are cut out of it either way, but a
-					 * moon sitting behind the title is not what Rob asked to
-					 * see at 1280. */
-					var band = st.dir > 0 ? rnd(0.60, 0.76) : rnd(0.24, 0.40);
-					st.mx = clamp(vw * band, edge, mx2(edge, vw - edge));
-					/* LOW in the sky, as a harvest moon is */
-					st.my = clamp(vh * 0.68, st.MR + 6, vh - st.MR * 0.35);
+					st.on = 1; st.t2 = 0; st.dir = (DEBUG && CFG.vigDir) ? CFG.vigDir : sgn();
+					/* 4.13.1: HIGH AND SMALL (Rob's pick A). The plan was
+					 * measured in idle time; only a resize since then measures
+					 * here. No room in the band: the scene declines. */
+					if (!crPlan || crPlan.vw !== vw || crPlan.vh !== vh || crPlan.ox !== cvOX || crPlan.oy !== cvOY) { crPlan = crPlanFor(); }
+					if (crPlan.none) { return true; }
+					st.L = crPlan.L; st.MR = crPlan.R;
+					/* on the side the skein is heading for, so the birds fly
+					 * INTO it, in the band between the menu bar and the title */
+					st.mx = st.dir > 0 ? crPlan.mxR : crPlan.mxL;
+					st.my = crPlan.my;
+					st.vy = crPlan.vy;
 					st.n = 5;
-					st.T = clamp(vw / (st.L * 7.0), 3.4, 7.2);   /* the crossing */
+					st.T = clamp(vw / (34 * craneK() * 7.0), 3.4, 7.2);   /* the crossing, as 4.13.0 timed it */
 					st.in = 0.45;                                 /* the moon is up first */
-					hdr = null;                                   /* re-measure the header's letters */
+					st.boxes = [];
 				}
 				st.t2 += dt;
 				var tc = st.t2 - st.in, gone = st.in + st.T;
 				var a = st.t2 < 0.5 ? st.t2 / 0.5 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 0.8, 0, 1) : 1);
-				var mo = harvestGet(), dp = mn(W.devicePixelRatio || 1, 2);
+				var mo = fullMoonGet(), dp = mn(W.devicePixelRatio || 1, 2);
 				cx.save();
 				cx.globalAlpha = clamp(a, 0, 1);
 				/* the glow, then the disc on WHOLE device pixels — at a
 				 * fractional position the browser resamples every pixel of it
 				 * every frame */
-				var gl = cx.createRadialGradient(st.mx, st.my, st.MR * 0.95, st.mx, st.my, st.MR * 1.5);
-				gl.addColorStop(0, 'rgba(255,150,60,0.30)'); gl.addColorStop(1, 'rgba(255,150,60,0)');
+				var gl = cx.createRadialGradient(st.mx, st.my, st.MR * 0.95, st.mx, st.my, st.MR * 1.25);
+				gl.addColorStop(0, 'rgba(255,246,222,0.30)'); gl.addColorStop(1, 'rgba(255,246,222,0)');
 				cx.fillStyle = gl;
-				cx.beginPath(); cx.arc(st.mx, st.my, st.MR * 1.5, 0, TAU); cx.fill();
+				cx.beginPath(); cx.arc(st.mx, st.my, st.MR * 1.25, 0, TAU); cx.fill();
 				cx.drawImage(mo.c, MT.round((st.mx - mo.half) * dp) / dp, MT.round((st.my - mo.half) * dp) / dp, mo.half * 2, mo.half * 2);
 				cx.restore();
 				var cut = [[st.mx - mo.half, st.my - mo.half, mo.half * 2, mo.half * 2]];
+				if (DEBUG) { st.boxes = [[st.mx - st.MR * 1.25, st.my - st.MR * 1.25, st.mx + st.MR * 1.25, st.my + st.MR * 1.25]]; }
 				if (tc > 0 && tc < st.T) {
-					var u = tc / st.T, L = st.L;
-					var x0 = st.dir > 0 ? -L : vw + L, x1 = st.dir > 0 ? vw + L : -L;
+					var u = tc / st.T, L = st.L, half = (st.n - 1) / 2, gapX = L * 0.80, gapY = L * 0.30;
+					/* level across the band, in from off one edge until the last
+					 * bird of the V has left the other */
+					var tail = 0.7 * L + half * gapX;
+					var x0 = st.dir > 0 ? -0.7 * L : vw + 0.7 * L, x1 = st.dir > 0 ? vw + tail : -tail;
 					var cxp = x0 + (x1 - x0) * u;
-					var cyp = st.my - st.MR * 0.25 - sin(u * MT.PI) * st.MR * 0.12;
-					var bank = (u - 0.5) * 0.22 * st.dir;
-					var half = (st.n - 1) / 2, gapX = L * 0.80, gapY = L * 0.30;
+					var cyp = st.vy, bank = 0;
 					var ca = MT.cos(bank), sa = sin(bank);
 					var minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
 					for (var i = 0; i < st.n; i++) {
@@ -6004,6 +6053,7 @@
 							cx.drawImage(dk.c, dk.ox, dk.oy, dk.w, dk.h);
 						}
 						cx.restore();
+						if (DEBUG) { st.boxes.push([bx - CR_BOX[2] * L, by + CR_BOX[1] * L, bx + CR_BOX[2] * L, by + CR_BOX[3] * L]); }
 						if (bx < minx) { minx = bx; } if (bx > maxx) { maxx = bx; }
 						if (by < miny) { miny = by; } if (by > maxy) { maxy = by; }
 					}
@@ -6602,13 +6652,36 @@
 			var wcLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			wcLater(wcIdle);
 		}
-		/* The cranes and their harvest moon, the same way (4.13.0): every
+		/* The cranes and their full moon, the same way (4.13.0): every
 		 * beat lit AND dark, plus the moon, pre-drawn in idle time at the
 		 * header picture's size, so a crossing is one drawImage per bird per
 		 * frame and nothing is painted during the scene. */
 		if (vigList.indexOf('cranemoon') >= 0) {
-			var crTodo = [-1], crI;
+			var crTodo = ['p', -1], crI;
 			for (crI = 0; crI < CR_FR; crI++) { crTodo.push(crI); }
+			crTodo.push('w', 'h');
+			/* one throwaway draw of each canvas, so no first drawImage lands
+			 * in the scene's first frame (4.14.0 measured 8.5 ms each at 4x) */
+			var crWarm = function () {
+				var c = D.createElement('canvas'); c.width = c.height = 2;
+				var g = c.getContext('2d'), k;
+				if (!g) { return; }
+				for (k in crCache) { g.drawImage(crCache[k].c, 0, 0, 1, 1); }
+				if (hmC) { g.drawImage(hmC.c, 0, 0, 1, 1); }
+			};
+			/* keep the plan and the header's letters fresh while the page is
+			 * open, in idle time, so the scene never measures in a frame
+			 * (4.13.0 measured 22 ms on that first frame at 4x CPU) */
+			var crKeep = function () {
+				if (!D.hidden && skyPic && (!vig || vig.name !== 'cranemoon')) {
+					inSky(function () {
+						var was = crPlan && crPlan.L;
+						crPlan = crPlanFor(); hdrBuild();
+						if (crPlan.L && crPlan.L !== was) { crBuild(); fullMoonGet(); crWarm(); }
+					});
+				}
+				setTimeout(function () { crLater(crKeep); }, 10000);
+			};
 			var crIdle = function (dl) {
 				var t0 = nowMs();
 				if (!skyPic) { return; }
@@ -6616,8 +6689,11 @@
 				inSky(function () {
 					do {
 						var k = crTodo.shift();
-						if (k === -1) { harvestGet(); }
-						else if (k != null) { crGet(k, false); crGet(k, true); }
+						if (k === 'p') { crPlan = crPlanFor(); }
+						else if (k === -1) { if (!crPlan.none) { fullMoonGet(); } }
+						else if (k === 'w') { crWarm(); }
+						else if (k === 'h') { hdrBuild(); setTimeout(function () { crLater(crKeep); }, 10000); }
+						else if (k != null) { if (!crPlan.none) { crGet(k, false); crGet(k, true); } }
 					} while (crTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
 				});
 				if (crTodo.length) { crLater(crIdle); }
@@ -7109,7 +7185,7 @@
 				 * it against Chromium's own getScreenCTM) */
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
-				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: harvestR() }; },
+				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: fullMoonR(), plan: crPlan }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },

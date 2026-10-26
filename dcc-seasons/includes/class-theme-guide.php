@@ -246,7 +246,7 @@ final class Theme_Guide {
                 'dragonlands' => __('A dragonfly lands', 'dcc-seasons'),
                 'dragonlotus' => __('A dragonfly lands on a lily pad', 'dcc-seasons'),
                 'witchmoon' => __('The witch crosses the moon', 'dcc-seasons'),
-            'cranemoon'    => __('Cranes across a harvest moon', 'dcc-seasons'),
+            'cranemoon'    => __('Cranes across the full moon', 'dcc-seasons'),
                 'gatorglide' => __('A gator glides by and sinks', 'dcc-seasons'),
                 'floatdrift' => __('A flamingo pool float drifts by with a lost flip-flop', 'dcc-seasons'),
                 'mulletskip' => __('A mullet skips three times, another answers', 'dcc-seasons'),

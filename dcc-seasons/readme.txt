@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.1-a
+Stable tag: 4.13.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -188,11 +188,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 == Changelog ==
 
-= 4.13.1-a (step A) =
-Thanksgiving's falling pieces, redrawn from photographs (Rob's pick). Built
-from 4.13.0, so every other theme is exactly as it is live. Rollback:
-reinstall the 4.13.0 zip.
+= 4.13.1 =
+Thanksgiving, as Rob picked it: the falling pieces redrawn from photographs,
+and the scene moved clear of the page title and the menu. Built from
+4.13.0, so every other theme is exactly as it is live. Rollback: reinstall
+the 4.13.0 zip.
 
+* The V of five sandhill cranes now crosses the moon high and small, in the
+  band of sky between the menu bar and the page title, at least 8px clear of
+  the title's letters, the tagline, the menu bar, the weather dial and the
+  menu button at every width. With no room for it, the scene sits out.
+* The moon is a real full moon as it looks high in the sky: pale, with the
+  same face as Halloween's. It was orange and called a harvest moon, which is
+  September's; November's full moon falls on 24 November 2026, Thanksgiving
+  week. The cranes still go dark as they cross it.
+* Everything the scene needs is drawn after the page has loaded, in idle
+  time, including measuring the header's letters, so its first frame no
+  longer stalls.
 * Eight pieces are redrawn, each laid over a public-domain or CC0
   photograph at half strength and fixed where the overlay showed a fault:
   the live oak leaf (broad and blunt-tipped), the sweetgum (five lobes, not
@@ -202,8 +214,7 @@ reinstall the 4.13.0 zip.
   wiry stems) and the turkey, now a wild turkey hen with her barring and
   feet, since only the hen leads poults.
 * The two maples, the bald cypress, the crookneck squash and the pie are
-  unchanged. So are the scene, the calendar and the number of pieces on
-  screen.
+  unchanged. So are the calendar and the number of pieces on screen.
 
 = 4.13.0 =
 Thanksgiving, brought up to Halloween's standard: a signature scene, nine
