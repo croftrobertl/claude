@@ -98,7 +98,7 @@
   display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 20;
   background: var(--dccs-unsel-bg); border: 1px solid var(--dccs-border); border-radius: 14px;
   box-shadow: 0 12px 30px rgba(20,28,40,0.18);
-  max-height: min(60vh, 320px); overflow-y: auto;
+  max-height: min(60vh, 320px); max-height: min(60svh, 320px); overflow-y: auto;
 }
 .dccs-root.dccs-root .dccs-modeselect.is-open .dccs-modeselect-list { display: block; }
 .dccs-root.dccs-root .dccs-modetab {
@@ -129,7 +129,7 @@
 .dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.5; }
 .dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; text-align: var(--dccs-question-align, center); font-weight: 800; }
-.dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
+.dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: none; outline: 2px solid var(--dccs-accent); outline-offset: 6px; border-radius: 6px; }
 .dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; align-items: center; }
 .dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
   width: 100%; text-align: var(--dccs-answer-align, center);
@@ -306,7 +306,7 @@
 .dccs-root.dccs-root .dccs-cmp-bar-thumb:active { cursor: grabbing; }
 .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
-  padding: 10px 26px 10px 10px; max-height: min(520px, 70vh);
+  padding: 10px 26px 10px 10px; max-height: min(520px, 70vh); max-height: min(520px, 70svh);
 }
 .dccs-root.dccs-root .dccs-compare > .dccs-hint { text-align: center; }
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
@@ -498,6 +498,17 @@
   color: var(--dccs-text, #1a2330);
 }
 .dccs-modal-content { flex: 1 1 auto; overflow: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.dccs-modal-closebar {
+  position: sticky; top: 0; z-index: 30; height: 0; overflow: visible;
+  display: flex; justify-content: flex-end; padding-right: 16px;
+}
+.dccs-modal-closebar .dccs-modal-close { margin-top: 20px; }
+@media (min-width: 640px) {
+  .dccs-modal-closebar { padding-right: 22px; }
+  .dccs-modal-closebar .dccs-modal-close { margin-top: 26px; }
+}
+.dccs-modal-bare .dccs-root.dccs-in-modal .dccs-modeselect { margin-right: calc(44px + 10px); }
+.dccs-modal-bare .dccs-root.dccs-in-modal .dccs-head { padding-left: calc(44px + 10px); padding-right: calc(44px + 10px); }
 .dccs-modal-host { position: static; }
 .dccs-modal-content .dccs-in-modal { max-width: none; margin: 0; }
 .dccs-modal.dccs-modal .dccs-modal-close {
@@ -625,6 +636,7 @@
 .dccs-root.dccs-root .dccs-mcard-view:focus-visible { text-decoration: none; background: rgba(0, 107, 207, 0.1); }
 .dccs-root.dccs-root .dccs-wizard[data-stage="q"] > .dccs-wizard-nav {
   position: sticky; bottom: 0; z-index: 3; background: var(--dccs-bg, #FFFFFF); padding-bottom: 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
   .dccs-root.dccs-root { max-width: none; }

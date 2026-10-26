@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.55.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.55.1 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -2077,9 +2077,14 @@
    * instead of by arithmetic, and keeps the title from scrolling out of view.
    */
   function buildOverlay(trigger, label, mount, title) {
-    var head = '<div class="dccs-modal-head">' +
-      (title ? '<h2 class="dccs-modal-title">' + esc(title) + '</h2>' : '<span></span>') +
-      '<button type="button" class="dccs-modal-close" aria-label="Close">' +
+    // The close button. WITH a title (the comparison table) it sits in a header row
+    // beside the title. WITHOUT one (the Mini Entry pop-up) a header row held nothing
+    // but the button and cost ~60px of a phone screen (0.55.1, Rob): the button now
+    // rides in a zero-height sticky bar at the top of the scroll area, level with the
+    // widget's own first row (the mode button), which leaves room for it. It is still
+    // never over the scrollbar — it is INSIDE the scroll area's content box — and it
+    // stays on screen while the content scrolls.
+    var closeBtn0 = '<button type="button" class="dccs-modal-close" aria-label="Close">' +
       // An SVG cross, not the × character: font-family is inherit here, so the
       // glyph's size depended on whichever face the theme happened to serve. The
       // × measured 19x13 of ink in a 44px button — 43% wide but only 29.5% tall,
@@ -2089,9 +2094,11 @@
       'aria-hidden="true" focusable="false">' +
       '<path d="M5 5 L19 19 M19 5 L5 19" fill="none" stroke="currentColor" ' +
       'stroke-width="2.6" stroke-linecap="round"/></svg>' +
-      '</button></div>';
-    var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true" aria-label="' + esc(label || '') + '"><div class="dccs-modal-box">' +
-      head + '<div class="dccs-modal-content"></div></div></div>');
+      '</button>';
+    var head = title ? '<div class="dccs-modal-head"><h2 class="dccs-modal-title">' + esc(title) + '</h2>' + closeBtn0 + '</div>' : '';
+    var bar = title ? '' : '<div class="dccs-modal-closebar">' + closeBtn0 + '</div>';
+    var overlay = el('<div class="dccs-modal' + (title ? '' : ' dccs-modal-bare') + '" role="dialog" aria-modal="true" aria-label="' + esc(label || '') + '"><div class="dccs-modal-box">' +
+      head + '<div class="dccs-modal-content">' + bar + '</div></div></div>');
     (mount || document.body).appendChild(overlay);
 
     var prevOverflow = document.body.style.overflow;

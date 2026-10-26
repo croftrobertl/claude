@@ -2457,8 +2457,32 @@ defer(async function () {
   const selSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
   ok('the pop-up passes no visible title, so the heading is not duplicated',
     /buildOverlay\(trigger, config\.strings && config\.strings\.heading, host \? host\.inner : null\)/.test(selSrc));
-  ok('and buildOverlay renders a header either way',
-    /title \? '<h2 class="dccs-modal-title">'/.test(selSrc));
+  // 0.55.1 (Rob): WITHOUT a title there is no header row at all — the close button
+  // rides a zero-height sticky bar at the top of the scroll area (behaviour, below).
+  {
+    const pw = freshDom();
+    const node = pw.document.createElement('div');
+    node.className = 'dccs-entry'; node.dataset.entry = JSON.stringify({ current: '34', selectorUrl: '', modalConfig: JSON.parse(CONFIG) });
+    node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+    pw.document.body.appendChild(node); pw.DCCS.bootAll(pw.document);
+    node.querySelector('.dccs-entry-btn').click();
+    const pm = pw.document.querySelector('.dccs-modal');
+    const pc = pm && pm.querySelector('.dccs-modal-close');
+    const bar = pm && pm.querySelector('.dccs-modal-content > .dccs-modal-closebar');
+    ok('0.55.1: the pop-up has NO header row (it held only the close button)', !!pm && !pm.querySelector('.dccs-modal-head') && pm.classList.contains('dccs-modal-bare'));
+    ok('0.55.1: its close button is the first thing in the scroll area, before the widget', !!bar && !!pc && pc.parentElement === bar
+      && bar.parentElement.firstElementChild === bar && bar.nextElementSibling && bar.nextElementSibling.classList.contains('dccs-root'));
+    ok('0.55.1: ...still a real, named button that takes focus when the pop-up opens', pc && pc.tagName === 'BUTTON' && pc.getAttribute('aria-label') === 'Close' && pw.document.activeElement === pc);
+    pc.click();
+    ok('0.55.1: ...and it still closes the pop-up', !pw.document.querySelector('.dccs-modal'));
+    const barRule = ruleBody('.dccs-modal-closebar');
+    ok('0.55.1: the bar is sticky, zero-height and on top (it takes no row, stays on screen)',
+      /position:\s*sticky/.test(barRule) && /top:\s*0/.test(barRule) && /height:\s*0/.test(barRule) && /z-index:\s*30/.test(barRule));
+    ok('0.55.1: the widget\'s first row leaves the button its 44px + gap (mode button and landing heading)',
+      /margin-right:\s*calc\(44px \+ 10px\)/.test(ruleBody('.dccs-modal-bare .dccs-root.dccs-in-modal .dccs-modeselect'))
+      && /padding-right:\s*calc\(44px \+ 10px\)/.test(ruleBody('.dccs-modal-bare .dccs-root.dccs-in-modal .dccs-head')));
+    ok('0.55.1: the comparison table (WITH a title) keeps its header row (control)', !!head && !!title && close.closest('.dccs-modal-head') === head);
+  }
 })();
 
 // ---- 77. 0.36.0: the identical-layout note is a fact about the GROUP ----
@@ -3878,6 +3902,27 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   ok('105/6: eight View Cottage links, eight different names, each naming its cottage',
     names.length === 8 && new Set(names).size === 8 && JSON.parse(CONFIG).cottages.every((c, i) => names[i].indexOf(c.name) !== -1 && names[i].indexOf(S.view_cottage) === 0));
   ok('105/6: one link per card (the photo and the name are not links)', Array.prototype.every.call(rv.querySelectorAll('.dccs-mcard'), m => m.querySelectorAll('a[href]').length === 1));
+})();
+
+// ==== 0.55.1 =======================================================================
+// ---- 106. The step heading's focus cue; iPhone toolbar and small-viewport units ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; css.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+  const bodies = (sel) => rules.filter(r => r.sel.indexOf(sel) !== -1).map(r => r.body).join(';');
+  const fv = bodies('.dccs-root.dccs-root .dccs-step-q:focus-visible');
+  ok('106/2: the focused question heading is NOT underlined (it is not a link)', /text-decoration:\s*none/.test(fv) && !/text-decoration:\s*underline/.test(fv));
+  ok('106/2: ...a keyboard user gets a quiet offset ring instead', /outline:\s*2px solid/.test(fv) && /outline-offset:\s*6px/.test(fv));
+  ok('106/2: no rule anywhere underlines the step heading', !rules.some(r => r.sel.some(x => /dccs-step-q/.test(x)) && /text-decoration(-line)?:\s*underline/.test(r.body)));
+  const w = freshDom(); const root = mountSelector(w); enter(root, 'quick');
+  const h = root.querySelector('.dccs-step-q');
+  ok('106/2: the heading keeps tabindex="-1" (focusable by script, not in the tab order)', !!h && h.getAttribute('tabindex') === '-1');
+  const nav = bodies('.dccs-root.dccs-root .dccs-wizard[data-stage="q"] > .dccs-wizard-nav');
+  ok('106/3: the pinned Back/Next clear the iPhone toolbar/home indicator (safe-area padding)', /padding-bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom,\s*0px\)\)/.test(nav));
+  ok('106/3: ...after a plain 10px for browsers without env() (fallback first)', /padding-bottom:\s*10px;[\s\S]*padding-bottom:\s*calc\(10px \+ env/.test(nav));
+  const vhRules = rules.filter(r => /\d\s*vh\b/.test(r.body));
+  ok('106/3: every viewport-tall size has a small/dynamic-viewport twin after its vh fallback',
+    vhRules.length >= 3 && vhRules.every(r => /\d\s*(svh|dvh)\b/.test(r.body) && r.body.search(/\d\s*(svh|dvh)\b/) > r.body.search(/\d\s*vh\b/)));
 })();
 
 (async function runDeferred() {

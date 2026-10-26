@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.55.0
+Stable tag: 0.55.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.55.1 =
+* The cottage-page pop-up no longer spends a row on its close button: the button sits beside the mode button (44x44, "Close"), stays on screen while the pop-up scrolls, and the quiz gets the space.
+* The question heading that takes focus on each step is no longer underlined; a keyboard user sees a quiet offset ring instead (a finger tap shows nothing).
+* iPhone: the pinned Back/Next row clears Safari's bottom toolbar and the home indicator (safe-area padding), and viewport-tall sizes use the small-viewport unit (svh) with vh as the fallback.
 
 = 0.55.0 =
 * On phones the quiz now comes into view when it opens and on every step (from 1024px, just under the theme's pinned bar). A question step's Back and Next stay pinned to the bottom of the screen if the question and its answers do not fit. Instant with reduced motion.
