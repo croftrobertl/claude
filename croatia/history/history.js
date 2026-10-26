@@ -449,7 +449,7 @@
     // its corners through the map's projection, x = (lon − 12)·100, y = (48.4 − lat)·132.7
     // (source/export_data.py) — within a tile the difference from web-map projection is negligible.
     const TILE_MIN = 2.5, tileImgs = new Map();
-    let tileWant = new Set(), tileT = 0, tileFails = 0;
+    let tileWant = new Set(), tileT = 0, tileFails = 0, tileGen = 0;
     // street map (OpenStreetMap) or satellite (Esri World Imagery); the choice is remembered on this device
     let sat = false;
     try { sat = localStorage.getItem('bh-sat') === '1'; } catch (e) { /* storage blocked */ }
@@ -460,7 +460,7 @@
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
       b.title = on ? 'Street map view' : 'Satellite view'; b.setAttribute('aria-label', b.title);
       attrib.innerHTML = (on ? 'Imagery © Esri' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
-      tileImgs.forEach(dropTile); tileImgs.clear(); tileWant = new Set(); tileFails = 0;
+      tileImgs.forEach(dropTile); tileImgs.clear(); tileWant = new Set(); tileFails = 0; tileGen++;
       // a switch made because street tiles failed isn't remembered as the viewer's choice
       if (!auto) { try { localStorage.setItem('bh-sat', on ? '1' : '0'); } catch (e) { /* storage blocked */ } }
       loadTiles();
@@ -510,10 +510,15 @@
           });
         }
         im._done = false;
-        pic.onload = () => { im._done = true; im.classList.add('bh-in'); tileFails = 0; sweep(); };
+        const gen = tileGen;   // a tile from before a street/satellite switch no longer counts
+        pic.onload = () => { im._done = true; im.classList.add('bh-in'); if (gen === tileGen) tileFails = 0; sweep(); };
         pic.onerror = () => {
           im._done = true;
-          tileFails++; dropTile(im); tileImgs.delete(key);
+          dropTile(im);
+          const current = tileImgs.get(key) === im;   // not a newer tile for the same spot, nor one already swept away
+          if (current) tileImgs.delete(key);
+          if (!current || gen !== tileGen) return;
+          tileFails++;
           if (tileFails >= 8 && !sat) { setSat(true, true); return; }   // street tiles refused: satellite comes from elsewhere
           if (tileFails >= 8) {   // no map underneath after all (offline or blocked): back out to where the era shapes still read
             root.classList.remove('bh-tiles-on');

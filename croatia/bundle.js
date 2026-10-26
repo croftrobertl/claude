@@ -363,7 +363,7 @@
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
     else if (v === 'gallery') buildGallery();
-    else if (v === 'history') showHistory();
+    else if (v === 'history') { histPlace = histPlaceNext; histPlaceNext = null; showHistory(); }
     else if (v === 'story') {
       // under a person filter, don't land on a day they didn't shoot
       if (personOn() && dayVisibleCount(DATA.days[curDay]) === 0) {
@@ -383,7 +383,10 @@
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
-    history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
+    // switching tabs adds a browser-history entry, so Back returns to the tab (and day) you came
+    // from; changes inside a tab (day, era, map overlay) just update the current one
+    const st = history.state, push = !!(st && st.dccView && st.dccView !== v);
+    history[push ? 'pushState' : 'replaceState']({ dccView: v }, '', v === 'story' ? '#d=' + (curDay + 1)
       : '#v=' + v + (v === 'map' && thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
         (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') + (histPlace ? '&pl=' + encodeURIComponent(histPlace) : '') : ''));
   }
@@ -400,7 +403,7 @@
       const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
     });
     if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { if (m.v === 'map' && m.then) thenWant = m.then; setView(m.v); return; }
-    if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; histPlace = m.pl || null; setView('history'); return; }
+    if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; histPlaceNext = m.pl || null; setView('history'); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
     if (di != null) {
@@ -463,7 +466,8 @@
     histLoading = true;
     const mountNow = () => {
       histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
-        dataUrl: resolveUrl('history/history-data.json'), hash: false, start: histWant || undefined,
+        dataUrl: resolveUrl('history/history-data.json'), data: thenData && thenData.view ? thenData : undefined,   // already loaded by the Map tab
+        hash: false, start: histWant || undefined,
         onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
       histWant = null;
@@ -1660,7 +1664,8 @@
   //      only that link; the History tab works out which part of the old Republic the spot is in
   //      (history/street.json) and shows who held it in every era, the "On this spot" note, and
   //      what was built close by. ----
-  let placeGeoMap = null, histPlace = null;
+  // histPlaceNext: the place a link asked for; any other way into the History tab starts without one
+  let placeGeoMap = null, histPlace = null, histPlaceNext = null;
   function placeGeo(name) {
     if (!placeGeoMap) {
       placeGeoMap = new Map();
@@ -1679,7 +1684,7 @@
     return !!g && g.lat > 42.35 && g.lat < 43.1 && g.lng > 16.75 && g.lng < 18.65;
   }
   const histPlaceHref = name => '#v=history&pl=' + encodeURIComponent(name);
-  function openPlaceHistory(name) { histPlace = name; setView('history'); }
+  function openPlaceHistory(name) { histPlaceNext = name; setView('history'); }
   function histPlaceLink(name) {
     return histPlaceOk(name) ? '<a class="dcc-tour-histlink" href="' + escapeAttr(histPlaceHref(name)) + '" onclick="event.stopPropagation()">' +
       svgIcon('history') + '<span>History of this place ›</span></a>' : '';
@@ -2230,6 +2235,11 @@
   function thenApplyWant() {
     if (!thenWant) return;
     const w = thenWant, ll = thenWantLL; thenWant = null; thenWantLL = null;
+    if (thenOn && thenData && !ll) {
+      const i = thenData.frames.findIndex(x => histSlugOf(x.label) === histSlugOf(w));
+      if (i >= 0 && i !== thenIdx) thenShow(i);
+      return;
+    }
     setTimeout(() => thenToggle(true, w, ll || true), 120);
   }
   // ---- "Then": the History tab's eras laid over the Map tab's street map and satellite.
@@ -2288,8 +2298,8 @@
     { ll: [42.649189, 18.111862], from: 1991, by: 'cro', t: 'Mount Srđ Cross', s: '1991 · 1997', x: 'Pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' }
   ];
   const THEN_BY = { rome: 'Rome', church: 'the Church', rag: 'Ragusa', fra: 'France', aus: 'Austria', cro: 'Croatia' };
-  let thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenWantLL = null, thenLoading = null;
-  let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false, thenRW = null, thenRN = null;
+  let thenScrub = false, thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenWantLL = null, thenLoading = null;
+  let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false, thenRW = null, thenRN = null, thenRB = null;
   const thenRingsCache = new Map();
   const thenLL = (x, y) => [48.4 - y / 132.7, 12 + x / 100];   // the History map's own projection, inverted
   function thenRings(d) {
@@ -2302,8 +2312,9 @@
     return r;
   }
   function thenLoad() {
+    const fr = histHandle && histHandle.frames;   // the History map already has them
     if (!thenLoading) thenLoading = Promise.all([
-      fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      fr ? Promise.resolve({ frames: fr }) : fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
       streetLoad()
     ]).then(([d]) => { thenData = d; }).catch(e => { thenLoading = null; throw e; });
     return thenLoading;
@@ -2360,19 +2371,33 @@
     if (k === 'neum') return { t: '1699: Ragusa hands Neum and Klek to the Ottomans', s: today ? 'A buffer against Venice that is still Bosnia and Herzegovina’s only coast.' : 'A buffer strip to keep Venice from reaching Ragusa by land.' };
     return { t: '1699: Ragusa hands Sutorina to the Ottomans', s: today ? 'The southern buffer; since 1947 Montenegro’s, and this is now the Croatia–Montenegro border.' : 'The southern buffer, matching Neum in the north.' };
   }
+  // a line's story: a tooltip on hover, and a popup on tap or click (touch screens have no hover)
+  function thenStory(layer, html) {
+    layer.bindTooltip(html, { sticky: true, className: 'dcc-then-tip' });
+    layer.bindPopup('<div class="dcc-then-pop dcc-then-pop-line">' + html + '</div>',
+      { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) });
+    layer.on('popupopen', () => layer.closeTooltip());
+    return layer;
+  }
   function thenInit() {
     if (thenTop) return;
     mmMap.createPane('dccThenWide').style.zIndex = 360;
+    mmMap.createPane('dccThenBih').style.zIndex = 365;   // the neighbours' land: drawn solid, the whole layer translucent (CSS)
     mmMap.createPane('dccThen').style.zIndex = 370;
     mmMap.createPane('dccThenTop').style.zIndex = 610;   // landmarks above the trip's pins
     thenWide = L.layerGroup().addTo(mmMap);
     thenNear = L.layerGroup().addTo(mmMap);
     thenTop = L.layerGroup().addTo(mmMap);
-    thenRW = L.svg({ pane: 'dccThenWide' }); thenRN = L.svg({ pane: 'dccThen' });
+    thenRW = L.svg({ pane: 'dccThenWide' }); thenRN = L.svg({ pane: 'dccThen' }); thenRB = L.svg({ pane: 'dccThenBih' });
     const wrap = root._mapmode.querySelector('.dcc-tour-mm-wrap'), ui = wrap.querySelector('.dcc-then');
     const frames = thenData.frames, rng = ui.querySelector('.dcc-then-rng');
     rng.max = frames.length - 1;
-    rng.addEventListener('input', () => { thenStop(); thenShow(+rng.value); });
+    let rngRaf = 0;
+    rng.addEventListener('input', () => {
+      thenStop(); thenScrub = true;
+      cancelAnimationFrame(rngRaf); rngRaf = requestAnimationFrame(() => thenShow(+rng.value));
+    });
+    rng.addEventListener('change', () => { thenScrub = false; });
     ui.querySelector('[data-a=prev]').addEventListener('click', () => { thenStop(); thenShow(Math.max(0, thenIdx - 1)); });
     ui.querySelector('[data-a=next]').addEventListener('click', () => { thenStop(); thenShow(Math.min(frames.length - 1, thenIdx + 1)); });
     ui.querySelector('[data-a=play]').addEventListener('click', () => thenPlay ? thenStop() : thenStart());
@@ -2392,7 +2417,7 @@
       if (d) { e.preventDefault(); thenCmp = Math.min(0.96, Math.max(0.04, thenCmp + d)); thenClip(); }
     });
     mmMap.on('zoomend', () => { if (thenOn) { thenZoomClass(); thenDrawTop(); thenHere(); } });
-    mmMap.on('moveend', () => { if (thenOn) thenHere(); });
+    mmMap.on('moveend', () => { if (thenOn) { thenHere(); thenDeclutter(); } });
     mmMap.on('move zoom resize', () => { if (thenOn && thenCmpOn) thenClip(); });
   }
   function thenZoomClass() {
@@ -2430,8 +2455,10 @@
     });
     // zoomed in: neighbours, then Ragusa's parts on today's outlines
     const S = thenStreet, inl = thenInland(f);
-    thenNear.addLayer(L.polygon(S.bih, { renderer: thenRN, pane: 'dccThen', interactive: false, stroke: false,
-      fillColor: thenColor(f, inl), fillOpacity: 0.28, className: 'dcc-then-bih' }));
+    // solid shapes with a matching outline: separately mapped municipalities leave hairline gaps
+    // where their borders don't quite meet, and the outline closes them without darkening the seams
+    thenNear.addLayer(L.polygon(S.bih, { renderer: thenRB, pane: 'dccThenBih', interactive: false,
+      color: thenColor(f, inl), weight: 3, opacity: 1, fillColor: thenColor(f, inl), fillOpacity: 1, className: 'dcc-then-bih' }));
     THEN_ORDER.forEach(k => {
       if (k === 'city' && R.parts.indexOf('city') < 0) return;
       const st = thenPartStatus(k, f), polys = S.parts[k];
@@ -2457,7 +2484,7 @@
       thenNear.addLayer(L.polyline(lines, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 8, opacity: 0.55, interactive: false, lineCap: 'round' }));   // a halo so the line reads on satellite
       const pl = L.polyline(lines, { renderer: thenRN, pane: 'dccThen', color: k === 'frontier' ? '#6b4508' : '#a3271b', weight: 4, opacity: 1,
         dashArray: k === 'frontier' ? '10 6' : '3 6', lineCap: 'round', className: 'dcc-then-line' });
-      pl.bindTooltip('<b>' + escapeHtml(info.t) + '</b><br>' + escapeHtml(info.s), { sticky: true, className: 'dcc-then-tip' });
+      thenStory(pl, '<b>' + escapeHtml(info.t) + '</b><br>' + escapeHtml(info.s));
       thenNear.addLayer(pl);
       const longest = lines.reduce((a, b) => b.length > a.length ? b : a), mid = longest[longest.length >> 1];
       thenNear.addLayer(L.marker(mid, { pane: 'dccThenTop', interactive: false, keyboard: false,
@@ -2470,9 +2497,9 @@
       thenNear.addLayer(L.polygon(K41.italy41, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.5, fillColor: it, fillOpacity: 0.5 }));
       thenNear.addLayer(L.polygon(K41.italy42, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.6, dashArray: '4 4', fillColor: it, fillOpacity: 0.35 }));
       thenNear.addLayer(L.polygon(K41.lovorno, { renderer: thenRN, pane: 'dccThen', interactive: false, color: '#a3271b', weight: 1, opacity: 0.6, dashArray: '2 5', fillColor: it, fillOpacity: 0.2 }));
-      thenNear.addLayer(L.polyline(K41.line41, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 2.5, opacity: 0.9, dashArray: '6 5' }).bindTooltip(tip, { sticky: true, className: 'dcc-then-tip' }));
+      thenNear.addLayer(thenStory(L.polyline(K41.line41, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 2.5, opacity: 0.9, dashArray: '6 5' }), tip));
       thenNear.addLayer(L.polyline(K41.line42, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.55, interactive: false }));
-      thenNear.addLayer(L.polyline(K41.line42, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 3.5, opacity: 1 }).bindTooltip(tip, { sticky: true, className: 'dcc-then-tip' }));
+      thenNear.addLayer(thenStory(L.polyline(K41.line42, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 3.5, opacity: 1 }), tip));
       thenNear.addLayer(L.marker(K41.lab41, { pane: 'dccThenTop', interactive: false, keyboard: false,
         icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-it', html: '<div><b>Annexed by Italy</b><span>1941–43 · line approximate</span></div>', iconSize: null }) }));
     }
@@ -2480,26 +2507,26 @@
     if (R.founded && f.year >= 1300 && S.dbkWalls) {
       thenNear.addLayer(L.polyline(S.dbkWalls.line, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineJoin: 'round' }));
       const dw = L.polyline(S.dbkWalls.line, { renderer: thenRN, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineJoin: 'round', className: 'dcc-then-wall' });
-      dw.bindTooltip('<b>The city walls</b><br>Built up from the 13th century and finished in the 1600s. Drawn between the towers and gates on today’s map, with the sea walls along the shore, so the line is approximate.', { sticky: true, className: 'dcc-then-tip' });
+      thenStory(dw, '<b>The city walls</b><br>Built up from the 13th century and finished in the 1600s. Drawn between the towers and gates on today’s map, with the sea walls along the shore, so the line is approximate.');
       thenNear.addLayer(dw);
     }
     // the walls of Ston, tower to tower (begun 1358, still standing)
     if (R.founded && f.year >= 1358 && S.ston) {
       thenNear.addLayer(L.polyline(S.ston.lines, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineCap: 'round', lineJoin: 'round' }));
       const sw = L.polyline(S.ston.lines, { renderer: thenRN, pane: 'dccThen', color: '#7d5411', weight: 3.5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'dcc-then-wall' });
-      sw.bindTooltip('<b>Walls of Ston, begun 1358</b><br>Drawn tower to tower, so the line is approximate: round the town, up to Pozvizd on the hill, and along the isthmus to Mali Ston.', { sticky: true, className: 'dcc-then-tip' });
+      thenStory(sw, '<b>Walls of Ston, begun 1358</b><br>Drawn tower to tower, so the line is approximate: round the town, up to Pozvizd on the hill, and along the isthmus to Mali Ston.');
       thenNear.addLayer(sw);
       S.ston.towers.forEach(t => thenNear.addLayer(L.circleMarker([t[1], t[2]], { renderer: thenRN, pane: 'dccThen', radius: 4, color: '#fff', weight: 1.5, fillColor: '#7d5411', fillOpacity: 1, className: 'dcc-then-tower' })
-        .bindTooltip(escapeHtml(t[0]), { className: 'dcc-then-tip', direction: 'top' })));
+        .bindTooltip(escapeHtml(t[0]), { className: 'dcc-then-tip', direction: 'top' }).bindPopup('<div class="dcc-then-pop"><small>Tower of the walls of Ston</small><b>' + escapeHtml(t[0]) + '</b></div>', { className: 'dcc-then-popup' })));
     }
     // the Stradun: a sea channel by tradition until the town and the islet were joined
     if (R.founded && f.year <= 1100) {
       const ch = L.polyline(S.stradun, { renderer: thenRN, pane: 'dccThen', color: '#2f7f9c', weight: 6, opacity: 0.8, dashArray: '2 8', lineCap: 'round' });
-      ch.bindTooltip('<b>The Stradun as a sea channel?</b><br>By tradition, water ran here between the islet of Laus and the mainland settlement until they were joined. Digs under the street have found a natural sandy shore instead.', { sticky: true, className: 'dcc-then-tip' });
+      thenStory(ch, '<b>The Stradun as a sea channel?</b><br>By tradition, water ran here between the islet of Laus and the mainland settlement until they were joined. Digs under the street have found a natural sandy shore instead.');
       thenNear.addLayer(ch);
     }
     const fade = (g, cls) => g.eachLayer(l => { const e = l._path || l._icon; if (e) e.classList.add(cls); });
-    const quick = reducedMotion() || !oldN.getLayers().length;
+    const quick = reducedMotion() || thenScrub || !oldN.getLayers().length;
     if (!quick) { fade(thenWide, 'dcc-then-in'); fade(thenNear, 'dcc-then-in'); fade(oldW, 'dcc-then-out'); fade(oldN, 'dcc-then-out'); }
     setTimeout(() => { mmMap.removeLayer(oldW); mmMap.removeLayer(oldN); }, quick ? 0 : 520);
     thenDrawTop();
@@ -2522,6 +2549,27 @@
         { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) });
       thenTop.addLayer(mk);
     });
+    requestAnimationFrame(thenDeclutter);
+  }
+  // landmark labels at street zoom: where two would overlap, the one nearer the middle of the map
+  // (or just built in this era) keeps its label; the other keeps its diamond, which still opens it
+  function thenDeclutter() {
+    if (!thenTop || !mmMap.getContainer().classList.contains('dcc-then-close')) return;
+    const c = mmMap.getSize().divideBy(2), items = [];
+    thenTop.eachLayer(l => {
+      const ic = l._icon;
+      if (!ic || !ic.classList.contains('dcc-then-mark')) return;
+      ic.classList.remove('dcc-then-nolab');
+      const pt = mmMap.latLngToContainerPoint(l.getLatLng());
+      items.push({ ic, d: pt.distanceTo(c) - (ic.classList.contains('dcc-then-fresh') ? 1e4 : 0) });
+    });
+    items.sort((a, b) => a.d - b.d);
+    const kept = [];
+    items.forEach(it => {
+      const r = it.ic.querySelector('span').getBoundingClientRect();
+      if (kept.some(k => r.left < k.right + 4 && r.right > k.left - 4 && r.top < k.bottom + 2 && r.bottom > k.top - 2)) it.ic.classList.add('dcc-then-nolab');
+      else kept.push(r);
+    });
   }
   // "Here in 1453": what the land under the middle of the map was, at street zoom
   function thenHere() {
@@ -2531,20 +2579,20 @@
     let txt = '';
     if (z >= 10) {
       const S = thenStreet, K41 = S.konavle41;
-      const k = f.ragusa.parts.indexOf('city') >= 0 && thenInPolys(c.lat, c.lng, S.parts.city) ? 'city'
-        : THEN_ORDER.find(k => k !== 'city' && thenInPolys(c.lat, c.lng, S.parts[k] || []));
+      const inland = thenInPolys(c.lat, c.lng, S.bih), pp = inland ? null : placePart(c.lat, c.lng);
+      const k = pp && (pp.city ? (f.ragusa.parts.indexOf('city') >= 0 ? 'city' : 'core') : pp.k), sea = pp && pp.sea;
       const ww2 = histSlugOf(f.label) === '1942' && k === 'konavle' && K41
         ? thenInPolys(c.lat, c.lng, K41.lovorno) ? 'on the Italy–NDH line; Lovorno changed hands'
         : thenInPolys(c.lat, c.lng, K41.italy41) ? 'Kingdom of Italy (annexed 1941)'
         : thenInPolys(c.lat, c.lng, K41.italy42) ? 'Kingdom of Italy (taken in 1942)' : 'Independent State of Croatia (Axis)' : null;
-      if (k) txt = '<b>' + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(ww2 || thenPartStatus(k, f).t);
-      else if (thenInPolys(c.lat, c.lng, S.bih)) { const n = thenInland(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
+      if (k) txt = (sea ? 'Off <b>' : '<b>') + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml((!sea && ww2) || thenPartStatus(k, f).t);
+      else if (inland) { const n = thenInland(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
     }
     ui.innerHTML = txt ? '<span class="dcc-then-x" aria-hidden="true">+</span>' + txt : '';
     ui.hidden = !txt;
   }
   function thenClip() {
-    const panes = ['dccThenWide', 'dccThen', 'dccThenTop'].map(n => mmMap.getPane(n));
+    const panes = ['dccThenWide', 'dccThenBih', 'dccThen', 'dccThenTop'].map(n => mmMap.getPane(n));
     const sw = root._mapmode.querySelector('.dcc-then-swipe');
     if (!thenCmpOn) { panes.forEach(p => { p.style.clipPath = ''; }); sw.hidden = true; return; }
     const size = mmMap.getSize(), x = Math.round(size.x * thenCmp);
@@ -2589,6 +2637,12 @@
     }
     ui.hidden = false;
     ui.querySelector('.dcc-then-s').textContent = 'Loading the eras…';
+    // on a phone the bottom of the map can sit under the fixed tab bar; bring the era bar into view
+    requestAnimationFrame(() => {
+      const r = m.querySelector('.dcc-tour-mm-wrap').getBoundingClientRect(), tb = document.querySelector('.dcc-tour-tabbar');
+      const limit = innerHeight - (tb && getComputedStyle(tb).display !== 'none' ? tb.offsetHeight : 0);   // it's position: fixed, so no offsetParent
+      if (r.bottom > limit && r.top - (r.bottom - limit) > -r.height / 2) window.scrollBy({ top: r.bottom - limit + 6, behavior: scrollBehavior() });
+    });
     thenLoad().then(() => {
       if (!thenOn) return;
       thenInit();
@@ -2604,10 +2658,10 @@
   function thenMarkup() {
     return '<button class="dcc-then-btn" type="button" aria-pressed="false" aria-label="Then: old borders on this map" title="See the old borders on this map">' + svgIcon('history') + '<span>Then</span></button>' +
       '<div class="dcc-then" hidden>' +
-        '<div class="dcc-then-here" aria-live="polite" hidden></div>' +
+        '<div class="dcc-then-here" hidden></div>' +
         '<div class="dcc-then-swipe" role="slider" tabindex="0" aria-label="Then and now divider" aria-valuemin="0" aria-valuemax="100" hidden><span>Then</span><i></i><span>Now</span></div>' +
         '<div class="dcc-then-bar" role="group" aria-label="Era">' +
-          '<div class="dcc-then-k"><b class="dcc-then-yr"></b><span class="dcc-then-t"></span>' +
+          '<div class="dcc-then-k" aria-live="polite"><b class="dcc-then-yr"></b><span class="dcc-then-t"></span>' +
             '<button type="button" class="dcc-then-x2" data-a="close" aria-label="Close the old borders" title="Close">×</button></div>' +
           '<div class="dcc-then-row">' +
             '<button type="button" data-a="play" aria-label="Play through the eras" title="Play through the eras">' + PLAY_GLYPH + '</button>' +

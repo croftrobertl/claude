@@ -150,13 +150,25 @@ def label_pt(ps):
             if dd > best: best, bp = dd, (x, y)
     return [round(bp[1], 4), round(bp[0], 4)]
 
-def out_polys(ps, eps=0.00009, min_area=1.5e-6):
+def dp_keep(r, eps, keep):
+    """Douglas–Peucker that never drops a point in `keep` (borders shared with a neighbour stay
+    exact on both sides, so separately simplified neighbours still meet without hairline gaps)."""
+    idx = [i for i, q in enumerate(r) if (round(q[0], 7), round(q[1], 7)) in keep]
+    if not idx: return dp(r, eps)
+    out, pts = [], r + r[:idx[0] + 1]
+    marks = idx + [idx[0] + len(r)]
+    for a, b in zip(marks, marks[1:]):
+        out += dp(pts[a:b + 1], eps)[:-1]
+    return out
+
+def out_polys(ps, eps=0.00009, min_area=1.5e-6, keep=None):
     res = []
     for p in ps:
         if area(p[0]) < min_area: continue   # islets under ~1 ha
         rings = []
         for r in p:
-            s = dp(r[:-1] if r[0] == r[-1] else r, eps)
+            r0 = r[:-1] if r[0] == r[-1] else r
+            s = dp_keep(r0, eps, keep) if keep else dp(r0, eps)
             if len(s) >= 4: rings.append([[round(q[1], 5), round(q[0], 5)] for q in s])
         if rings: res.append(rings)
     return res
@@ -203,7 +215,14 @@ def build(d):
     for k, ps in parts.items():
         out['parts'][k] = out_polys(ps, 0.00002, 0) if k == 'city' else out_polys(ps)
         out['lab'][k] = label_pt(ps)
-    out['bih'] = out_polys(polys(d, 'neum') + polys(d, 'ravno') + polys(d, 'trebinje'), 0.00015)
+    bih = [polys(d, n) for n in ('neum', 'ravno', 'trebinje')]
+    key = lambda q: (round(q[0], 7), round(q[1], 7))
+    seen, shared_pts = {}, set()
+    for i, ps in enumerate(bih):
+        for q in {key(q) for p in ps for r in p for q in r}:
+            if q in seen and seen[q] != i: shared_pts.add(q)
+            seen[q] = i
+    out['bih'] = out_polys(sum(bih, []), 0.00015, keep=shared_pts)
     rag = ['konavle', 'zupa', 'dubrovnik', 'primorje', 'ston']
     out['lines'] = {
         'frontier': shared(d, rag, ['ravno', 'trebinje']),

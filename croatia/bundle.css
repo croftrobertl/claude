@@ -1591,14 +1591,16 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
 .dcc-then-swipe:focus-visible i { outline: 2px solid var(--dcc-tour-primary); outline-offset: 3px; }
 /* zoom bands: empires when zoomed out, Ragusa's parts closer in, landmarks at street level */
 .dcc-tour-mm-map:not(.dcc-then-wide) .leaflet-dccThenWide-pane { display: none; }
-.dcc-tour-mm-map:not(.dcc-then-near) .leaflet-dccThen-pane,
+.dcc-tour-mm-map:not(.dcc-then-near) .leaflet-dccThen-pane, .dcc-tour-mm-map:not(.dcc-then-near) .leaflet-dccThenBih-pane,
 .dcc-tour-mm-map:not(.dcc-then-near) .dcc-then-plab, .dcc-tour-mm-map:not(.dcc-then-near) .dcc-then-llab { display: none; }
 .dcc-then-street .dcc-then-plab:not(.dcc-then-plab-city), .dcc-then-plab-city { display: none; }
 .dcc-then-street .dcc-then-plab-city { display: block; }
 .dcc-then-close .dcc-then-llab { display: none; }
 .leaflet-dccThenWide-pane path, .leaflet-dccThen-pane path { transition: fill-opacity .35s; }
 /* at street level the streets matter: thin the wash, keep the outlines */
-.dcc-then-street .dcc-then-part, .dcc-then-street .dcc-then-bih { fill-opacity: 0.16; }
+.leaflet-dccThenBih-pane { opacity: 0.28; }
+.dcc-then-street .leaflet-dccThenBih-pane { opacity: 0.16; }
+.dcc-then-street .dcc-then-part { fill-opacity: 0.16; }
 .dcc-then-street .dcc-then-part.dcc-then-rag { fill-opacity: 0.2; stroke-width: 3; }
 .mm-then-on .leaflet-marker-pane { opacity: 0.8; }
 .dcc-then-elab span, .dcc-then-plab > div, .dcc-then-llab span { display: block; transform: translate(-50%, -50%); width: max-content; max-width: 170px; text-align: center; pointer-events: none;
@@ -1694,3 +1696,11 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
 @media (pointer: coarse) {
   .dcc-then-row button { width: 40px; height: 40px; }
 }
+.dcc-then-nolab span { display: none !important; }
+/* Matrix theme: the overlay's floating panels need a solid backing to read over the map */
+html.dcc-matrix-on .dcc-then-bar, html.dcc-matrix-on .dcc-then-here, html.dcc-matrix-on .dcc-then-btn { background: rgba(2, 14, 4, 0.94); }
+html.dcc-matrix-on .dcc-then-btn.active { background: linear-gradient(var(--dcc-tour-accent-tint), var(--dcc-tour-accent-tint)), rgba(2, 14, 4, 0.94); }
+html.dcc-matrix-on .dcc-then-pop-line, html.dcc-matrix-on .dcc-then-pop { color: #201f1d; }
+/* a tapped map shape takes focus, and the browser's focus ring then outlines its whole bounding box
+   (straight orange lines across the map). Shapes aren't keyboard-reachable, so no ring is lost. */
+.leaflet-container path.leaflet-interactive:focus { outline: none; }
