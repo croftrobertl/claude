@@ -499,6 +499,8 @@
         // satellite: the imagery plus Esri's road and place-name layers on top (as on the Map tab)
         const pic = new Image(), im = sat ? document.createElement('div') : pic;
         pic.alt = ''; pic.decoding = 'async'; pic.draggable = false;
+        // the site sends no Referer, but OpenStreetMap blocks tile requests without one
+        pic.referrerPolicy = 'strict-origin-when-cross-origin';
         im._k = [z, x, y]; im.className = 'bh-tile';
         if (sat) {
           im.appendChild(pic);

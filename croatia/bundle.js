@@ -1901,6 +1901,7 @@
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
   }
+  const OSM_REFERRER = 'strict-origin-when-cross-origin';   // see the Map tab's tile layer
   const PLAY_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
   const PAUSE_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
   let mmColorMode = 'day';   // 'day' | 'person' | 'alt'
@@ -2118,7 +2119,9 @@
     // cap zoom at 18 so Esri never serves its "Map data not yet available"
     // placeholder tile (its imagery/reference layers run out past ~18 here) — task 3
     mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 21 });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
+    // the page sends no Referer (meta referrer), but OpenStreetMap's tile servers refuse requests
+    // without one ("Access blocked" tiles), so its tiles send just the site's origin
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap', referrerPolicy: OSM_REFERRER }).addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
@@ -3712,8 +3715,8 @@
     if (map || !window.L || !root._mapdiv) return;
     if (root._mapdiv.offsetParent === null) return;   // hidden (mobile app shell) — skip until visible
     map = L.map(root._mapdiv, { scrollWheelZoom: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '&copy; OpenStreetMap',
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap', referrerPolicy: OSM_REFERRER,
     }).addTo(map);
   }
 
