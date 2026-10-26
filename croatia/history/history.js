@@ -453,15 +453,16 @@
     // street map (OpenStreetMap) or satellite (Esri World Imagery); the choice is remembered on this device
     let sat = false;
     try { sat = localStorage.getItem('bh-sat') === '1'; } catch (e) { /* storage blocked */ }
-    function setSat(on) {
+    function setSat(on, auto) {
       sat = on;
       root.classList.toggle('bh-sat', on);
       const b = zoomUI.querySelector('[data-z=sat]');
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
       b.title = on ? 'Street map view' : 'Satellite view'; b.setAttribute('aria-label', b.title);
       attrib.innerHTML = (on ? 'Imagery © Esri' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
-      tileImgs.forEach(im => im.remove()); tileImgs.clear(); tileWant = new Set(); tileFails = 0;
-      try { localStorage.setItem('bh-sat', on ? '1' : '0'); } catch (e) { /* storage blocked */ }
+      tileImgs.forEach(dropTile); tileImgs.clear(); tileWant = new Set(); tileFails = 0;
+      // a switch made because street tiles failed isn't remembered as the viewer's choice
+      if (!auto) { try { localStorage.setItem('bh-sat', on ? '1' : '0'); } catch (e) { /* storage blocked */ } }
       loadTiles();
     }
     const tLon = (x, n) => x / n * 360 - 180;
@@ -499,8 +500,6 @@
         // satellite: the imagery plus Esri's road and place-name layers on top (as on the Map tab)
         const pic = new Image(), im = sat ? document.createElement('div') : pic;
         pic.alt = ''; pic.decoding = 'async'; pic.draggable = false;
-        // the site sends no Referer, but OpenStreetMap blocks tile requests without one
-        pic.referrerPolicy = 'strict-origin-when-cross-origin';
         im._k = [z, x, y]; im.className = 'bh-tile';
         if (sat) {
           im.appendChild(pic);
@@ -514,26 +513,41 @@
         pic.onload = () => { im._done = true; im.classList.add('bh-in'); tileFails = 0; sweep(); };
         pic.onerror = () => {
           im._done = true;
-          tileFails++; im.remove(); tileImgs.delete(key);
+          tileFails++; dropTile(im); tileImgs.delete(key);
+          if (tileFails >= 8 && !sat) { setSat(true, true); return; }   // street tiles refused: satellite comes from elsewhere
           if (tileFails >= 8) {   // no map underneath after all (offline or blocked): back out to where the era shapes still read
             root.classList.remove('bh-tiles-on');
             if (scale > 40) zoomAt(40 / scale, vp.clientWidth / 2, vp.clientHeight / 2);
           }
           sweep();
         };
-        pic.src = sat ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + y + '/' + x
-          : 'https://tile.openstreetmap.org/' + key + '.png';
+        if (sat) pic.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + y + '/' + x;
+        else osmTile(key).then(u => { if (im.isConnected) { im._url = u; pic.src = u; } else URL.revokeObjectURL(u); }, () => pic.onerror());
         placeTile(im, w, h); tilesEl.appendChild(im); tileImgs.set(key, im);
       }
       tileWant = want;
       sweep();
+    }
+    // OpenStreetMap tiles are fetched rather than set as an <img> src, so a refusal (its "Access
+    // blocked" picture comes back as an ordinary image with a 403) counts as a failure. The site
+    // sends no Referer, and OSM refuses tile requests without one, so these send the site's origin.
+    // A refusal is retried once past the browser cache, in case an old blocked tile was saved.
+    function osmTile(key) {
+      const url = 'https://tile.openstreetmap.org/' + key + '.png';
+      const get = cache => fetch(url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', cache })
+        .then(r => r.ok ? r.blob() : Promise.reject(r.status));
+      return get('default').catch(st => st === 403 ? get('reload') : Promise.reject(st)).then(b => URL.createObjectURL(b));
+    }
+    function dropTile(im) {
+      im.remove();
+      if (im._url) { URL.revokeObjectURL(im._url); im._url = null; }
     }
     // tiles from the previous view stay under the new ones until those have loaded
     function sweep() {
       const ready = [...tileWant].every(k => { const im = tileImgs.get(k); return !im || im._done; });
       tileImgs.forEach((im, k) => {
         if (tileWant.has(k)) { im.style.zIndex = 1; return; }
-        if (ready || tileImgs.size > 200) { im.remove(); tileImgs.delete(k); } else im.style.zIndex = 0;
+        if (ready || tileImgs.size > 200) { dropTile(im); tileImgs.delete(k); } else im.style.zIndex = 0;
       });
     }
     vp.addEventListener('wheel', e => {

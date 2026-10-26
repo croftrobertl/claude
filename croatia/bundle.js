@@ -1901,7 +1901,35 @@
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
   }
-  const OSM_REFERRER = 'strict-origin-when-cross-origin';   // see the Map tab's tile layer
+  // OpenStreetMap street tiles, fetched rather than set as an <img> src so that a refusal counts as
+  // a failure: OSM answers refused requests with an "Access blocked" picture that would otherwise
+  // load like any tile. The page sends no Referer (meta referrer, for the Drive thumbnails), and OSM
+  // refuses tile requests without one, so these send just the site's origin. A refusal is retried
+  // once past the browser cache (an old blocked tile may be saved); after 8 failures `onBroken` runs.
+  function osmLayer(opts, onBroken) {
+    let fails = 0;
+    const Layer = L.TileLayer.extend({
+      createTile(coords, done) {
+        const tile = document.createElement('img');
+        tile.alt = ''; tile.setAttribute('role', 'presentation');
+        const url = this.getTileUrl(coords);
+        const get = cache => fetch(url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', cache })
+          .then(r => r.ok ? r.blob() : Promise.reject(new Error('tile ' + r.status)));
+        get('default').catch(e => /403/.test(e.message) ? get('reload') : Promise.reject(e))
+          .then(b => {
+            const u = URL.createObjectURL(b);
+            tile.onload = () => { URL.revokeObjectURL(u); fails = 0; done(null, tile); };
+            tile.onerror = e => { URL.revokeObjectURL(u); done(e, tile); };
+            tile.src = u;
+          })
+          .catch(e => { if (++fails >= 8 && onBroken) onBroken(); done(e, tile); });   // onBroken must be safe to repeat
+        return tile;
+      }
+    });
+    const layer = new Layer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', opts);
+    layer.retry = () => { if (fails >= 8) { fails = 0; layer.redraw(); } };   // try the refused tiles again
+    return layer;
+  }
   const PLAY_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
   const PAUSE_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
   let mmColorMode = 'day';   // 'day' | 'person' | 'alt'
@@ -1975,7 +2003,7 @@
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>';
     return w;
   }
-  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
+  let mmOsm = null, mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
   let mmSpiderLayer = null, mmSpiderKey = null, mmAllItems = [];
   // per-ITEM colour, so each
   // photo/video/clip dot follows the current Color-by mode
@@ -2121,7 +2149,11 @@
     mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 21 });
     // the page sends no Referer (meta referrer), but OpenStreetMap's tile servers refuse requests
     // without one ("Access blocked" tiles), so its tiles send just the site's origin
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap', referrerPolicy: OSM_REFERRER }).addTo(mmMap);
+    mmOsm = osmLayer({ maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap' }, () => {
+      // the street map is refused or unreachable: fall back to the satellite view
+      const cb = root._mapmode.querySelector('#mm-sat');
+      if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); toast('Street map unavailable — showing satellite'); }
+    }).addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
@@ -2141,7 +2173,7 @@
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
-    m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else mmMap.removeLayer(mmSat); });
+    m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else { mmMap.removeLayer(mmSat); mmOsm.retry(); } });
     m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
     m.querySelector('#mm-then').addEventListener('change', e => thenToggle(e.target.checked, null, e.target.checked && mmMap.getZoom() < 9));
     m.querySelector('.dcc-then-btn').addEventListener('click', () => thenToggle(!thenOn, null, !thenOn && mmMap.getZoom() < 9));
@@ -3715,8 +3747,9 @@
     if (map || !window.L || !root._mapdiv) return;
     if (root._mapdiv.offsetParent === null) return;   // hidden (mobile app shell) — skip until visible
     map = L.map(root._mapdiv, { scrollWheelZoom: true });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '&copy; OpenStreetMap', referrerPolicy: OSM_REFERRER,
+    let satBackup = null;
+    osmLayer({ maxZoom: 19, attribution: '&copy; OpenStreetMap' }, () => {
+      if (!satBackup) satBackup = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }).addTo(map);
     }).addTo(map);
   }
 
