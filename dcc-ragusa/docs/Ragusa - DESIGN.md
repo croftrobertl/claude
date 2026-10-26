@@ -1262,3 +1262,17 @@ day, the probe repeats every tick while there is no reading, and status
 says what was asked and answered. The resolve record names the real shell
 account from posix, not the owner of the wp-cli script. The staging
 checklist scripts the "who changed it" drill on a real version change.
+
+**0.2.2 (the Director's staging run of 0.2.1, 2026-10-26).** The wp-cron.php
+probe ran every due event on a site where cron is deliberately off:
+wp-cron.php has no check of DISABLE_WP_CRON (only `_wp_cron()`, the page-load
+spawner, has one), so three plugin auto-updates ran within the minute.
+Where cron is off, Ragusa now sends nothing to wp-cron.php: the probe and the
+loopback test use wp-login.php, and the page says "WP-Cron Is Off Here;
+Ragusa Will Never Start It." A fatal written while AIOSEO's auto-update was
+half-installed was blamed on Ragusa's own self-update; a fatal now belongs to
+the update whose window it falls in and whose files it names. Reading that
+code showed the repeat check re-reading the same log span, so one fatal line
+counted as two failures and could roll a good update back; the repeat now
+reads only what was written after the first failure. Lovrijenac's row reads
+the PHP reading the moment it lands.

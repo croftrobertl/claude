@@ -1518,15 +1518,74 @@ suite('0.1.2 blocker 1b: a WP-CLI fatal is never evidence; a fatal elsewhere ale
     eq(1, count($fe), 'one "fatal elsewhere" finding');
     ok(str_contains(reset($fe)['title'], 'A New Fatal Elsewhere After This Update'), 'with the agreed title');
 
-    // A fatal in the updated plugin's own files still rolls back.
+    // 0.2.2: ONE fatal line in the plugin's own files (a half-written install) is one failure, not two.
     file_put_contents($log, '');
     break_cottage_when('9.9.9'); // pages fine; only the log fails
     $id = simulate_update('wporg-plugin', '1.6.0');
     file_put_contents($log, "[22-Oct-2026 01:50:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
     Sveti_Ivan::scheduled_check($id);
+    eq(Journal::VERIFYING, Journal::get($id)['state'], 'the first check fails once and waits for the repeat');
+    ok(!empty(Journal::get($id)['verify']['first_fail']['errlog']), 'the first failure records where the log stood');
     Sveti_Ivan::scheduled_check($id);
-    eq(1, count(Journal::recent(5, null, 'rollback')), 'a fatal in the plugin itself rolls back');
+    eq(0, count(Journal::recent(5, null, 'rollback')), '0.2.2: the same single fatal line is not read again by the repeat: no rollback');
+    eq(Journal::COMMITTED, Journal::get($id)['state'], 'the update passes');
+    eq('1.6.0', Revelin::plugin_version('wporg-plugin'), 'and stays');
+
+    // A plugin that keeps failing writes a fatal again before the repeat: that still rolls back.
+    $id = simulate_update('wporg-plugin', '1.7.0');
+    file_put_contents($log, "[22-Oct-2026 02:00:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    file_put_contents($log, "[22-Oct-2026 02:05:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    eq(1, count(Journal::recent(5, null, 'rollback')), 'a fatal in the plugin itself, again at the repeat, rolls back');
     $GLOBALS['dccr_site_handler'] = null;
+    unlink($log);
+});
+
+suite('0.2.2 item 2: a fatal is credited to the update whose window it falls in and whose files it names', function () {
+    tick();
+    $log = Site::abspath() . '/error_log';
+    file_put_contents($log, '');
+    $stamp = static fn(int $ts) => '[' . gmdate('d-M-Y H:i:s', $ts) . ' UTC]';
+    eq(strtotime('2026-10-26 04:29:13 UTC'), Error_Log::line_time('[26-Oct-2026 04:29:13 UTC] PHP Fatal error: x'), 'line_time reads PHP\'s stamp');
+    eq(strtotime('2026-10-26 04:29:13 UTC'), Error_Log::line_time('[26-Oct-2026 00:29:13 America/New_York] PHP Fatal error: x'), 'with a named zone');
+    ok(Error_Log::line_time('PHP Fatal error: no stamp') === null, 'no stamp, no time');
+
+    // AIOSEO's auto-update is in its window (journal row, still verifying) ...
+    $aioseo = Journal::create('update-check', 'all-in-one-seo-pack', ['slug' => 'all-in-one-seo-pack', 'kind' => 'update', 'source' => 'auto', 'new_version' => '5.0.4', 'started' => time() - 30], 'update from auto', false);
+    Journal::set_state($aioseo, Journal::VERIFYING, []);
+    // ... while Ragusa's own self-update check runs, and the log gets AIOSEO's half-written fatal.
+    $before = ['slug' => 'dcc-ragusa', 'errlog' => Error_Log::snapshot()];
+    $line   = $stamp(time()) . ' PHP Fatal error: Uncaught Error: Class "ActionScheduler" not found in ' . WP_PLUGIN_DIR . '/all-in-one-seo-pack/vendor/woocommerce/action-scheduler/classes/ActionScheduler.php:12';
+    file_put_contents($log, $line . "\n", FILE_APPEND);
+    $w = Sveti_Ivan::fatal_owner($line, 'dcc-ragusa');
+    ok($w !== null && $w['slug'] === 'all-in-one-seo-pack' && $w['id'] === $aioseo, 'fatal_owner names the AIOSEO update');
+    $r = Sveti_Ivan::run_checks($before, true);
+    ok($r['checks']['error_log']['ok'] === null && str_contains($r['checks']['error_log']['detail'], 'all-in-one-seo-pack during its own update (journal ' . $aioseo . ')'), 'Ragusa\'s check credits it to AIOSEO: ' . $r['checks']['error_log']['detail']);
+    eq([], array_filter(Alerts::open(Fortress::SVETI_IVAN), static fn($a) => $a['kind'] === 'fatal-elsewhere'), 'no "Fatal Elsewhere" finding against dcc-ragusa');
+    $ev = events_of('fatal-attributed');
+    ok(count($ev) === 1 && $ev[0]['target'] === 'all-in-one-seo-pack' && (int) $ev[0]['journal_id'] === $aioseo, 'one info line, on AIOSEO\'s journal row');
+    // AIOSEO's own check sees it as its own (it is AIOSEO's files): one failure, then the repeat decides.
+    $own = Sveti_Ivan::run_checks(['slug' => 'all-in-one-seo-pack', 'errlog' => $before['errlog']], true);
+    eq(false, $own['checks']['error_log']['ok'], 'for AIOSEO\'s own check it is its own fatal');
+
+    // Outside the window: the same kind of line is someone else's fatal, alerted as before.
+    file_put_contents($log, '');
+    $before = ['slug' => 'dcc-ragusa', 'errlog' => Error_Log::snapshot()];
+    $late   = $stamp(time() - 7200) . ' PHP Fatal error: Uncaught Error: boom in ' . WP_PLUGIN_DIR . '/all-in-one-seo-pack/app/Main.php:3';
+    file_put_contents($log, $late . "\n", FILE_APPEND);
+    ok(Sveti_Ivan::fatal_owner($late, 'dcc-ragusa') === null, 'two hours before the window: no owner');
+    Sveti_Ivan::run_checks($before, true);
+    $fe = array_filter(Alerts::open(Fortress::SVETI_IVAN), static fn($a) => $a['kind'] === 'fatal-elsewhere');
+    eq(1, count($fe), 'outside any window it is "A New Fatal Elsewhere"');
+    // In the window but naming ANOTHER plugin: not AIOSEO's.
+    $other = $stamp(time()) . ' PHP Fatal error: Uncaught Error: boom in ' . WP_PLUGIN_DIR . '/dcc-demo/dcc-demo.php:3';
+    ok(Sveti_Ivan::fatal_owner($other, 'dcc-ragusa') === null, 'a fatal in a plugin that was not updated has no owner');
+    // A core update's window owns a core fatal.
+    $core = Journal::create('core-check', 'core', ['slug' => 'core', 'kind' => 'core', 'version' => '7.1.4', 'started' => time() - 30], 'core update', false);
+    $cl   = $stamp(time()) . ' PHP Fatal error: boom in ' . ABSPATH . 'wp-includes/class-wp-hook.php:324';
+    eq($core, (Sveti_Ivan::fatal_owner($cl, 'dcc-ragusa') ?? ['id' => 0])['id'], 'a core fatal in a core update\'s window is core\'s');
+    Alerts::withdraw(Fortress::SVETI_IVAN, ['fatal-elsewhere']);
     unlink($log);
 });
 
@@ -2361,6 +2420,89 @@ suite('0.2.0 item 7: The Walls Report, every Monday at 7 AM Eastern', function (
     State::set('last_report', time() - 8 * 86400);
     eq((int) $now->format('N') === 1 && (int) $now->format('G') >= 7, Report::due(), 'due again the next week');
     Alerts::withdraw(Fortress::BOKAR, ['report-test']);
+});
+
+
+suite('0.2.2 item 1: WP-Cron is off: Ragusa never sends a request to wp-cron.php, and says so', function () {
+    Site::$cron_off_override = true;
+    delete_option(Php_Patch::READING_OPTION);
+    State::delete('php_probe');
+    State::delete('loopback');
+    Php_Patch::$reading_override = null;
+    // A leftover probe event from 0.2.1 goes.
+    wp_schedule_single_event(time() - 5, Php_Patch::PROBE_HOOK);
+    $GLOBALS['dccr_http'] = [];
+    $GLOBALS['dccr_http_handler'] = static fn(string $url, array $args) => str_contains($url, 'wp-login.php') ? dccr_http_ok('<form><input type="password"></form>') : (str_contains($url, 'wp-cron.php') ? dccr_http_ok('') : Test_Site::site_page($url));
+    ok(DCCR\Loopback::available(true), 'loopbacks are detected without wp-cron.php');
+    $line = Php_Patch::probe();
+    eq(false, wp_next_scheduled(Php_Patch::PROBE_HOOK), 'no probe event, and the leftover one is gone');
+    ok(str_contains($line, 'wp-cron.php not touched (WP-Cron is off here)') && str_contains($line, 'wp-login.php HTTP 200'), 'the probe uses wp-login.php only: ' . $line);
+    ok(str_contains(Php_Patch::status_lines()[0], 'no probe event: WP-Cron is off here'), 'status says why there is no event');
+    // A whole tick, with no reading and the PHP check due: still nothing to wp-cron.php.
+    State::delete('php_probe');
+    State::delete('php_check_ts');
+    State::delete('php_feed');
+    tick();
+    $cron_urls = array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-cron.php'));
+    eq([], array_values($cron_urls), 'across the probe, the loopback test and a full tick, not one request to wp-cron.php');
+    ok(count(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'ragusa_php=1'))) >= 1, 'the login path was asked');
+    // The promise, out loud.
+    dccr_cli_reset();
+    (new Cli())->status();
+    ok(str_contains(dccr_cli_text(), 'WP-Cron Is Off Here (DISABLE_WP_CRON); Ragusa Will Never Start It'), 'status says it');
+    $GLOBALS['dccr_is_admin'] = true;
+    $GLOBALS['dccr_caps'] = true;
+    ob_start();
+    DCCR\Admin::render();
+    $html = (string) ob_get_clean();
+    ok(str_contains($html, 'WP-Cron Is Off Here; Ragusa Will Never Start It.'), 'the page says it');
+    // With cron on, the page says nothing and the probe may use wp-cron.php (as on live).
+    Site::$cron_off_override = false;
+    ob_start();
+    DCCR\Admin::render();
+    $html = (string) ob_get_clean();
+    ok(!str_contains($html, 'Ragusa Will Never Start It'), 'with cron on the line is absent');
+    $GLOBALS['dccr_is_admin'] = false;
+    State::delete('php_probe');
+    $GLOBALS['dccr_http'] = [];
+    Php_Patch::probe();
+    ok(count(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-cron.php') && ($r['args']['method'] ?? '') === 'POST')) >= 1, 'with cron on, wp-cron.php is used');
+    Site::$cron_off_override = null;
+    $GLOBALS['dccr_http_handler'] = null;
+    State::delete('loopback');
+});
+
+suite('0.2.2 item 3: the Lovrijenac row reads the same PHP value as the status line, the moment it exists', function () {
+    $feed = '{"8":{"8.3":{"tags":["security"],"date":"21 Oct 2026","version":"8.3.36"}}}';
+    State::set('php_feed', ['ts' => time(), 'error' => '', 'branches' => Php_Patch::parse($feed)]);
+    delete_option(Php_Patch::READING_OPTION);
+    State::delete('php_probe');
+    tick(); // the row is built with no reading
+    ok(str_contains(Fortress::status(Fortress::LOVRIJENAC)['line'], 'PHP Not Read From The Web Server Yet'), 'before: not read');
+    $checked = Fortress::status(Fortress::LOVRIJENAC)['checked_at'];
+    // The reading lands from a web request between ticks.
+    Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+    Php_Patch::record_here('login');
+    State::reset();
+    $row = Fortress::status(Fortress::LOVRIJENAC);
+    ok(str_contains($row['line'], 'PHP 8.3.36 Current'), 'the row reads the reading at once, before any tick: ' . $row['line']);
+    ok(!str_contains($row['line'], 'Not Read'), 'and no longer says not read');
+    eq($checked, $row['checked_at'], 'when it was checked is kept');
+    dccr_cli_reset();
+    (new Cli())->status();
+    $text = dccr_cli_text();
+    ok(preg_match('/Lovrijenac[^\n]*PHP 8\.3\.36 Current/', $text) === 1 && str_contains($text, 'php: 8.3.36 (litespeed), read from the wp-login.php probe'), 'status: the row and the php line agree');
+    // A stale stored line is rebuilt by the status command itself.
+    $s = Fortress::status(Fortress::LOVRIJENAC);
+    Fortress::set_status(Fortress::LOVRIJENAC, $s['state'], str_replace('PHP 8.3.36 Current', 'PHP Not Read From The Web Server Yet', $s['line']), $s['checked_at']);
+    dccr_cli_reset();
+    (new Cli())->status();
+    ok(preg_match('/Lovrijenac[^\n]*PHP 8\.3\.36 Current/', dccr_cli_text()) === 1, 'status rebuilds the PHP part before printing');
+    Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
+    Php_Patch::record_here('admin');
+    ok(str_contains(Fortress::status(Fortress::LOVRIJENAC)['line'], 'PHP 8.3.30, 8.3.36 Is Out'), 'a behind reading shows at once too');
+    Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+    Php_Patch::record_here();
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

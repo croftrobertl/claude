@@ -373,6 +373,42 @@ $mutations = [
         'from' => "        return self::account() . ' (shell)';",
         'to'   => "        return get_current_user() . ' (shell)';",
     ],
+    [
+        'name' => '0.2.2 1: the probe POSTs wp-cron.php with WP-Cron off',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        if (Site::cron_off()) {\n            // wp-cron.php ignores DISABLE_WP_CRON",
+        'to'   => "        if (false) {\n            // wp-cron.php ignores DISABLE_WP_CRON",
+    ],
+    [
+        'name' => '0.2.2 1: the loopback test POSTs wp-cron.php with WP-Cron off',
+        'file' => 'includes/class-loopback.php',
+        'from' => "        if (Site::cron_off()) {",
+        'to'   => "        if (false) {",
+    ],
+    [
+        'name' => '0.2.2 2: a fatal in another update\'s window is blamed on this update',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            } elseif ((\$w = self::fatal_owner(\$line, \$slug)) !== null) {",
+        'to'   => "            } elseif (false && (\$w = self::fatal_owner(\$line, \$slug)) !== null) {",
+    ],
+    [
+        'name' => '0.2.2 2: any updated plugin owns any fatal in its window, whatever files it names',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$names) {\n                return \$w;\n            }",
+        'to'   => "            return \$w;",
+    ],
+    [
+        'name' => '0.2.2 2: the repeat re-reads the same fatal line (one failure counted twice)',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            \$scan['errlog'] = (array) \$row['verify']['first_fail']['errlog'];",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.2 3: a reading that lands does not refresh the row',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        Fortress\\Lovrijenac::refresh_php();\n        State::flush();",
+        'to'   => "        State::flush();",
+    ],
 ];
 
 

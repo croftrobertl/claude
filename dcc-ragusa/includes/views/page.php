@@ -54,6 +54,9 @@ $alerts  = Alerts::active();
     <?php foreach ($amber as $line) : ?>
         <div class="dccr-notice dccr-notice--warn"><p><?php echo esc_html($line); ?></p></div>
     <?php endforeach; ?>
+    <?php if (Site::cron_off()) : ?>
+        <div class="dccr-notice dccr-notice--good"><p><?php esc_html_e('WP-Cron Is Off Here; Ragusa Will Never Start It.', 'dcc-ragusa'); ?></p></div>
+    <?php endif; ?>
 
     <div class="dccr-actions">
         <?php echo Admin::form('check_now', [], __('Check Now', 'dcc-ragusa'), 'button button-primary dccr-button'); ?>

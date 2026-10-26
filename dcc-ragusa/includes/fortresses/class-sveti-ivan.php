@@ -341,15 +341,32 @@ final class Sveti_Ivan
         $slug   = (string) ($before['slug'] ?? '');
         $own    = [];
         $else   = [];
+        $theirs = [];
         foreach ($fatals as $line) {
             if ($slug === 'core' || Error_Log::in_plugin($line, $slug)) {
                 $own[] = $line;
+            } elseif (($w = self::fatal_owner($line, $slug)) !== null) {
+                // Written inside another update's window, in that update's files: that update's, not this one's.
+                $theirs[] = ['line' => $line, 'w' => $w];
             } else {
                 $else[] = $line;
             }
         }
+        foreach ($theirs as $t) {
+            Events::record(Fortress::SVETI_IVAN, Events::INFO, 'fatal-attributed', (string) $t['w']['slug'], sprintf(
+                /* translators: 1: other slug, 2: journal id, 3: this slug, 4: the log line */
+                __('A fatal in %1$s during its own update (journal %2$d) was credited to that update, not to %3$s: %4$s', 'dcc-ragusa'),
+                (string) $t['w']['slug'],
+                (int) $t['w']['id'],
+                $slug,
+                (string) $t['line']
+            ), [], (int) $t['w']['id']);
+        }
         if ($own !== []) {
             $checks['error_log'] = ['ok' => false, 'detail' => __('new fatal in this plugin: ', 'dcc-ragusa') . $own[0]];
+        } elseif ($else === [] && $theirs !== []) {
+            /* translators: 1: other slug, 2: journal id */
+            $checks['error_log'] = ['ok' => null, 'detail' => sprintf(__('a new fatal in %1$s during its own update (journal %2$d): that update\'s, not this one\'s', 'dcc-ragusa'), (string) $theirs[0]['w']['slug'], (int) $theirs[0]['w']['id'])];
         } elseif ($else !== []) {
             // Someone else's fatal is not evidence against this update: an alert, not a rollback.
             $checks['error_log'] = ['ok' => null, 'detail' => __('a new fatal elsewhere, not in this plugin (alerted, not counted): ', 'dcc-ragusa') . $else[0]];
@@ -383,6 +400,30 @@ final class Sveti_Ivan
             $host_up = true;
         }
         return ['checks' => $checks, 'failed' => $failed, 'host_up' => $host_up];
+    }
+
+    /**
+     * Whose fatal is it? The recorded update (not this one) whose window the
+     * fatal's time falls in AND whose files the line names: a plugin's own
+     * folder, or core's areas for a core update. Null when none.
+     *
+     * @return array{slug:string,version:string,id:int,from:int,to:int}|null
+     */
+    public static function fatal_owner(string $line, string $self_slug): ?array
+    {
+        $t = Error_Log::line_time($line) ?? time();
+        foreach (Minceta::update_windows() as $w) {
+            if ($w['slug'] === $self_slug || $t < $w['from'] || $t > $w['to']) {
+                continue;
+            }
+            $names = $w['slug'] === 'core'
+                ? preg_match('#/wp-(includes|admin)/#', $line) === 1
+                : Error_Log::in_plugin($line, $w['slug']);
+            if ($names) {
+                return $w;
+            }
+        }
+        return null;
     }
 
     /** The drill's probe stands in for the five pages while it runs. */
@@ -433,7 +474,13 @@ final class Sveti_Ivan
             }
         }
 
-        $results = self::run_checks($before, false);
+        // A repeat reads the error log from where the first failure left it:
+        // one fatal line must never count as two failures.
+        $scan = $before;
+        if (!empty($row['verify']['first_fail']['errlog'])) {
+            $scan['errlog'] = (array) $row['verify']['first_fail']['errlog'];
+        }
+        $results = self::run_checks($scan, false);
         $attempt = (int) ($row['verify']['attempts'] ?? 0) + 1;
         $failed  = $results['failed'];
         $detail  = [];
@@ -475,7 +522,7 @@ final class Sveti_Ivan
 
         $first = $row['verify']['first_fail'] ?? null;
         if ($first === null) {
-            $patch['first_fail'] = ['ts' => time(), 'failed' => $failed];
+            $patch['first_fail'] = ['ts' => time(), 'failed' => $failed, 'errlog' => Error_Log::snapshot()];
             Journal::set_state($id, Journal::VERIFYING, ['verify' => $patch]);
             self::schedule($id, self::REPEAT);
             Events::record(Fortress::SVETI_IVAN, Events::INFO, 'check-failed-once', $slug, sprintf(
@@ -490,7 +537,7 @@ final class Sveti_Ivan
         $repeated = array_intersect((array) ($first['failed'] ?? []), $failed);
         if ($repeated === []) {
             // A different check failed this time: one more repeat, never a rollback on two different single failures.
-            $patch['first_fail'] = ['ts' => time(), 'failed' => $failed];
+            $patch['first_fail'] = ['ts' => time(), 'failed' => $failed, 'errlog' => Error_Log::snapshot()];
             Journal::set_state($id, Journal::VERIFYING, ['verify' => $patch]);
             self::schedule($id, self::REPEAT);
             return;

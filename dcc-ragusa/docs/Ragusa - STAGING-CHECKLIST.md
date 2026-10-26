@@ -1,4 +1,16 @@
-# Ragusa 0.2.1 — Staging Checklist
+# Ragusa 0.2.2 — Staging Checklist
+
+> **Upgrading the 0.2.1 install on staging:** first `wp cron event list`
+> and note what is due (the auto-update events are the ones to watch). Then
+> `wp plugin install "Ragusa 0.2.2.zip" --force`, `wp ragusa tick` twice
+> and `wp ragusa status`. Expect: the tick line ends "WP-Cron Is Off Here
+> (DISABLE_WP_CRON); Ragusa Will Never Start It"; the php line reads "…
+> wp-cron.php not touched (WP-Cron is off here)" while asking and then
+> "read from the wp-login.php probe"; the Lovrijenac row shows the same PHP
+> value as the php line; and `wp cron event list` afterwards shows the same
+> due events, none run, and no `dccr_php_probe`. The journal has no new
+> "update from auto" row. Then step 12's items marked **0.2.2**.
+> Rollback: `wp plugin install "Ragusa 0.2.1.zip" --force`.
 
 > **Upgrading the 0.2.0 install on staging:** `wp plugin install
 > "Ragusa 0.2.1.zip" --force`, then `wp ragusa tick` twice and
@@ -321,6 +333,37 @@ cleans up. Each prints every journal state transition.
       Events shows "resolved by hand by <you> (shell)".
 - [ ] **One clock:** `wp ragusa journal` and `wp ragusa status` read
       "Oct 24, 8:16 PM EDT (18 Hours Ago)" everywhere; no bare UTC.
+- [ ] **0.2.2: nothing touches wp-cron.php.** With the server's access log,
+      if HostGator exposes it (`~/access-logs/` or cPanel → Raw Access),
+      grep for `staging/wp-cron.php` after two ticks and a page load of DCC
+      → Ragusa: no line from this server's address. Without the log,
+      `wp cron event list` before and after is the evidence.
+- [ ] **0.2.2: a fatal is credited to its update.** One command records an
+      AIOSEO-like update window, writes a fatal in AIOSEO's files to this
+      site's error_log, runs Ragusa's own error-log check against it,
+      prints the verdict, and cleans up after itself:
+
+          wp eval '
+            $log = ABSPATH . "error_log";
+            $size = is_file($log) ? filesize($log) : 0;
+            $id = DCCR\Journal::create("update-check", "all-in-one-seo-pack", ["slug" => "all-in-one-seo-pack", "kind" => "update", "new_version" => "drill", "started" => time() - 30], "drill: aioseo window", false);
+            $snap = DCCR\Error_Log::snapshot();
+            file_put_contents($log, "[" . gmdate("d-M-Y H:i:s") . " UTC] PHP Fatal error: Uncaught Error: ragusa drill in " . WP_PLUGIN_DIR . "/all-in-one-seo-pack/drill.php:1\n", FILE_APPEND);
+            $r = DCCR\Fortress\Sveti_Ivan::run_checks(["slug" => "dcc-ragusa", "errlog" => $snap], true);
+            echo $r["checks"]["error_log"]["detail"], "\n";
+            DCCR\Journal::set_state($id, DCCR\Journal::ABANDONED, ["note" => "drill: aioseo window, done"]);
+            global $wpdb; $wpdb->update(DCCR\Schema::journal(), ["created_at" => time() - 2 * 86400], ["id" => $id]); // out of every update window
+            $h = fopen($log, "r+"); ftruncate($h, $size); fclose($h);
+            DCCR\State::flush();'
+
+      Expect: "a new fatal in all-in-one-seo-pack during its own update
+      (journal N): that update's, not this one's"; `wp ragusa findings` has
+      no "Fatal Elsewhere"; Recent Events has one info line on journal N;
+      `tail -1 error_log` no longer shows the drill line.
+- [ ] **0.2.2: the new mu-plugin.** `wp-content/mu-plugins/dcc-topbar.php`
+      (Oct 26) reads "New File: dcc-topbar.php" (Needs A Look) after the
+      next full pass unless already sealed: `wp ragusa seal wp-content/mu-plugins/dcc-topbar.php`.
+      On live it is part of the first pass's baseline.
 - [ ] **0.2.1: the probe, both paths.** `wp option delete dcc_ragusa_php_web`,
       `wp eval 'DCCR\State::delete("php_probe"); DCCR\State::flush();'`,
       then `wp ragusa tick`: the line "PHP reading asked of the web server:

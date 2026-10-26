@@ -77,6 +77,13 @@ delete the folder and then purge SpeedyCache and the server cache. The
 finding resolves on the next tick. `/guest/` is cached on purpose and is
 never named.
 
+## If WP-Cron is off and something ran anyway
+
+Ragusa 0.2.2 and later send nothing to wp-cron.php where DISABLE_WP_CRON is
+true (0.2.1 did, through its PHP probe). If due events ran, look for
+another caller: a server crontab line, an uptime monitor, or a person
+loading `/wp-cron.php` by hand.
+
 ## If an email says PHP is behind, or a security fix is not applied
 
 Nothing was changed; PHP is the host's to update. The email names the

@@ -147,6 +147,17 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   parameter and no body; the second path is `wp-login.php?ragusa_php=1`,
   answered in `Plugin::boot()`; an admin page load (never AJAX) refreshes a
   stale reading. `ensure_reading()` runs every tick, once per ten minutes.
+- **WP-Cron off means wp-cron.php is never touched** (`Site::cron_off()`).
+  wp-cron.php ignores DISABLE_WP_CRON and runs every due event, auto-updates
+  included (0.2.1 set off three on staging). The probe and the loopback test
+  use wp-login.php there; status and the page state the promise.
+- **A fatal belongs to the update whose window and files it names**
+  (`Sveti_Ivan::fatal_owner()`, `Error_Log::line_time()`), never to whichever
+  check reads the log. A repeat check reads the log from the first failure's
+  snapshot (`first_fail.errlog`): one line is one failure, never two.
+- **The Lovrijenac row's PHP part is live** (`Php_Patch::line()` from the
+  reading and the cached feed; `Lovrijenac::refresh_php()` on every reading,
+  status and page render).
 - **The shell account is `Cli::account()`** (posix effective user), never
   `get_current_user()`, which names the script's owner (root for the phar).
 - **The Walls Report** (`Report`): Monday 7:00 AM Eastern, once a week by
@@ -184,7 +195,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 59 deliberate breakages, each must be caught
+    php tests/mutations.php            # 65 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -202,6 +213,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.1.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.2.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

@@ -517,7 +517,23 @@ final class Lovrijenac
             ? sprintf(__('No Known Weakness In %d Plugins', 'dcc-ragusa'), $plugins)
             /* translators: %d: count */
             : sprintf(_n('%d Plugin Has A Known Weakness', '%d Plugins Have A Known Weakness', $vulns, 'dcc-ragusa'), $vulns);
+        State::set('lovrijenac.base', $line . ' · ' . $feed_line);
         Fortress::set_status(Fortress::LOVRIJENAC, Alerts::worst(Fortress::LOVRIJENAC), $line . ' · ' . $feed_line . ' · ' . \DCCR\Php_Patch::line());
+    }
+
+    /**
+     * Rebuild the card's PHP part from the live reading, keeping the rest of
+     * the line and when it was checked. Called when a reading lands, and
+     * before the status command and the page print the row.
+     */
+    public static function refresh_php(): void
+    {
+        $base = State::get('lovrijenac.base');
+        if (!is_string($base) || $base === '') {
+            return; // no tick yet: nothing to refresh
+        }
+        $s = Fortress::status(Fortress::LOVRIJENAC);
+        Fortress::set_status(Fortress::LOVRIJENAC, Alerts::worst(Fortress::LOVRIJENAC), $base . ' · ' . \DCCR\Php_Patch::line(), (int) ($s['checked_at'] ?? 0) ?: null);
     }
 
     /**

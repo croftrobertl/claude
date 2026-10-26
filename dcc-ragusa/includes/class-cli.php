@@ -34,6 +34,7 @@ final class Cli
     public function status(array $args = [], array $assoc = []): void
     {
         Schema::ensure();
+        Fortress\Lovrijenac::refresh_php();
         \WP_CLI::log(Fortress::overall());
         foreach (Fortress::all() as $slug) {
             $s    = Fortress::status($slug);
@@ -73,8 +74,8 @@ final class Cli
                 $parts[] = 'scheduled, Overdue By ' . self::span(-$diff);
             }
         }
-        if (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) {
-            $parts[] = 'WP-Cron Is Off Here (DISABLE_WP_CRON): a system cron or wp ragusa tick must run it';
+        if (Site::cron_off()) {
+            $parts[] = 'WP-Cron Is Off Here (DISABLE_WP_CRON); Ragusa Will Never Start It: a system cron or wp ragusa tick runs the tick';
         }
         $last = (int) State::get('last_tick', 0);
         $parts[] = 'last ran ' . Site::both($last);

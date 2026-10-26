@@ -115,6 +115,19 @@ final class Site
         return null;
     }
 
+    /** Tests set this; otherwise the constant decides. */
+    public static ?bool $cron_off_override = null;
+
+    /**
+     * The owner switched WP-Cron off (DISABLE_WP_CRON). Ragusa then never
+     * sends a request to wp-cron.php, which ignores that constant and runs
+     * every due event, auto-updates included.
+     */
+    public static function cron_off(): bool
+    {
+        return self::$cron_off_override ?? (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON);
+    }
+
     public static function tz(): \DateTimeZone
     {
         return new \DateTimeZone(self::TZ);

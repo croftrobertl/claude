@@ -107,6 +107,21 @@ final class Error_Log
         return $found;
     }
 
+    /** The time PHP stamped on a log line, "[26-Oct-2026 04:29:13 UTC]", or null. */
+    public static function line_time(string $line): ?int
+    {
+        if (!preg_match('/^\[(\d{1,2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2}:\d{2})(?: ([A-Za-z_\/+:-]+))?\]/', $line, $m)) {
+            return null;
+        }
+        try {
+            $tz = new \DateTimeZone($m[2] ?? 'UTC');
+        } catch (\Throwable $e) {
+            $tz = new \DateTimeZone('UTC');
+        }
+        $d = \DateTimeImmutable::createFromFormat('d-M-Y H:i:s', $m[1], $tz);
+        return $d === false ? null : $d->getTimestamp();
+    }
+
     /** Does the fatal name a file inside this plugin's folder? */
     public static function in_plugin(string $line, string $slug): bool
     {

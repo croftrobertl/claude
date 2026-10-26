@@ -78,6 +78,9 @@ final class Php_Patch
         } else {
             update_option(self::READING_OPTION, $value, 'no');
         }
+        // The card reads the same value as the status line, the moment it exists.
+        Fortress\Lovrijenac::refresh_php();
+        State::flush();
     }
 
     /** @return array{version:string,sapi:string,source:string,ts:int}|null */
@@ -121,24 +124,31 @@ final class Php_Patch
     public static function probe(): string
     {
         $probe = (array) State::get('php_probe', []);
-        $probe = ['asked' => time(), 'attempts' => (int) ($probe['attempts'] ?? 0) + 1, 'cron' => '', 'login' => '', 'event' => false];
+        $probe = ['asked' => time(), 'attempts' => (int) ($probe['attempts'] ?? 0) + 1, 'cron' => '', 'login' => '', 'event' => false, 'cron_off' => Site::cron_off()];
         if (!Loopback::available()) {
             $probe['cron'] = $probe['login'] = __('loopbacks do not work here', 'dcc-ragusa');
             State::set('php_probe', $probe);
             return __('PHP reading: loopbacks do not work here; the web PHP cannot be read.', 'dcc-ragusa');
         }
-        if (!wp_next_scheduled(self::PROBE_HOOK)) {
-            wp_schedule_single_event(time(), self::PROBE_HOOK);
+        if (Site::cron_off()) {
+            // wp-cron.php ignores DISABLE_WP_CRON and runs every due event,
+            // auto-updates included: never touch it. A leftover probe event goes too.
+            wp_unschedule_hook(self::PROBE_HOOK);
+            $probe['cron'] = __('not touched (WP-Cron is off here)', 'dcc-ragusa');
+        } else {
+            if (!wp_next_scheduled(self::PROBE_HOOK)) {
+                wp_schedule_single_event(time(), self::PROBE_HOOK);
+            }
+            $probe['event'] = wp_next_scheduled(self::PROBE_HOOK) !== false;
+            $url  = site_url('wp-cron.php');
+            $resp = wp_remote_post($url, [
+                'timeout'   => 8,
+                'blocking'  => true,
+                'headers'   => ['Cache-Control' => 'no-cache', 'User-Agent' => 'DCC-Ragusa/' . DCCR_VERSION],
+                'sslverify' => apply_filters('https_local_ssl_verify', false, $url),
+            ]);
+            $probe['cron'] = is_wp_error($resp) ? Text::scrub($resp->get_error_message()) : 'HTTP ' . wp_remote_retrieve_response_code($resp);
         }
-        $probe['event'] = wp_next_scheduled(self::PROBE_HOOK) !== false;
-        $url  = site_url('wp-cron.php');
-        $resp = wp_remote_post($url, [
-            'timeout'   => 8,
-            'blocking'  => true,
-            'headers'   => ['Cache-Control' => 'no-cache', 'User-Agent' => 'DCC-Ragusa/' . DCCR_VERSION],
-            'sslverify' => apply_filters('https_local_ssl_verify', false, $url),
-        ]);
-        $probe['cron'] = is_wp_error($resp) ? Text::scrub($resp->get_error_message()) : 'HTTP ' . wp_remote_retrieve_response_code($resp);
         $login = add_query_arg(['ragusa_php' => '1', 'ragusa_check' => substr(bin2hex(random_bytes(4)), 0, 8)], site_url('wp-login.php'));
         $resp  = wp_remote_get($login, [
             'timeout'     => 8,
@@ -176,7 +186,9 @@ final class Php_Patch
             if (!empty($probe['asked'])) {
                 /* translators: 1: when, 2: wp-cron.php answer, 3: wp-login.php answer, 4: attempts */
                 $line .= '; ' . sprintf(__('asked the web server at %1$s (wp-cron.php %2$s, wp-login.php %3$s, %4$d attempts); no answer yet', 'dcc-ragusa'), Site::stamp((int) $probe['asked']), (string) $probe['cron'], (string) $probe['login'], (int) ($probe['attempts'] ?? 0));
-                $line .= '; ' . (!empty($probe['event']) ? __('probe event scheduled', 'dcc-ragusa') : __('probe event NOT in the cron list', 'dcc-ragusa'));
+                $line .= '; ' . (!empty($probe['cron_off'])
+                    ? __('no probe event: WP-Cron is off here', 'dcc-ragusa')
+                    : (!empty($probe['event']) ? __('probe event scheduled', 'dcc-ragusa') : __('probe event NOT in the cron list', 'dcc-ragusa')));
             } elseif (PHP_SAPI === 'cli') {
                 $line .= '; ' . __('not asked yet (first tick pending)', 'dcc-ragusa');
             }
@@ -331,20 +343,8 @@ final class Php_Patch
         $feed = (array) State::get('php_feed', []);
         $kinds = ['php-eol', 'php-security', 'php-behind'];
         $present = [];
-        if ($r === null) {
-            $probe = self::probe_state();
-            $line  = __('PHP Not Read From The Web Server Yet', 'dcc-ragusa');
-            if (!empty($probe['asked'])) {
-                /* translators: %s: when */
-                $line .= ' · ' . sprintf(__('Asked At %s, No Answer Yet', 'dcc-ragusa'), Site::stamp((int) $probe['asked']));
-            }
-            State::set('php_check', ['line' => $line, 'ok' => false, 'current' => null]);
-            return;
-        }
-        if (empty($feed['branches'])) {
-            /* translators: %s: version */
-            State::set('php_check', ['line' => sprintf(__('PHP %s · php.net Not Reachable', 'dcc-ragusa'), (string) $r['version']), 'ok' => false, 'current' => null]);
-            return; // raise nothing without the list
+        if ($r === null || empty($feed['branches'])) {
+            return; // nothing to judge; line() says why. Raise nothing without the list.
         }
         $f = self::judge((string) $r['version'], (array) $feed['branches'], time());
         if ($f !== null) {
@@ -372,24 +372,45 @@ final class Php_Patch
             ]);
         }
         Alerts::resolve_missing(Fortress::LOVRIJENAC, $kinds, $present);
-        $branch = preg_replace('/^(\d+\.\d+).*/', '$1', (string) $r['version']);
-        $latest = $feed['branches'][$branch]['version'] ?? '';
-        $line   = $f === null
-            /* translators: %s: version */
-            ? sprintf(__('PHP %s Current', 'dcc-ragusa'), (string) $r['version'])
-            : ($f['kind'] === 'php-eol'
-                /* translators: %s: version */
-                ? sprintf(__('PHP %s No Longer Supported', 'dcc-ragusa'), (string) $r['version'])
-                /* translators: 1: running, 2: latest */
-                : sprintf(__('PHP %1$s, %2$s Is Out', 'dcc-ragusa'), (string) $r['version'], $latest));
-        State::set('php_check', ['line' => $line, 'ok' => true, 'current' => $f === null, 'version' => (string) $r['version']]);
     }
 
-    /** For the status line and the report. */
+    /**
+     * For the card, the status and the report: computed from the reading and
+     * the cached feed every time, so it never lags the reading.
+     */
     public static function line(): string
     {
-        $c = (array) State::get('php_check', []);
-        return (string) ($c['line'] ?? __('PHP Not Checked Yet', 'dcc-ragusa'));
+        $r = self::reading();
+        if ($r === null) {
+            $probe = self::probe_state();
+            $line  = __('PHP Not Read From The Web Server Yet', 'dcc-ragusa');
+            if (!empty($probe['asked'])) {
+                /* translators: %s: when */
+                $line .= ' · ' . sprintf(__('Asked At %s, No Answer Yet', 'dcc-ragusa'), Site::stamp((int) $probe['asked']));
+            }
+            return $line;
+        }
+        $version = (string) $r['version'];
+        $feed    = (array) State::get('php_feed', []);
+        if (empty($feed['branches'])) {
+            return !empty($feed['error'])
+                /* translators: %s: version */
+                ? sprintf(__('PHP %s · php.net Not Reachable', 'dcc-ragusa'), $version)
+                /* translators: %s: version */
+                : sprintf(__('PHP %s · php.net Not Read Yet', 'dcc-ragusa'), $version);
+        }
+        $f = self::judge($version, (array) $feed['branches'], time());
+        if ($f === null) {
+            /* translators: %s: version */
+            return sprintf(__('PHP %s Current', 'dcc-ragusa'), $version);
+        }
+        if ($f['kind'] === 'php-eol') {
+            /* translators: %s: version */
+            return sprintf(__('PHP %s No Longer Supported', 'dcc-ragusa'), $version);
+        }
+        $branch = (string) preg_replace('/^(\d+\.\d+).*/', '$1', $version);
+        /* translators: 1: running, 2: latest */
+        return sprintf(__('PHP %1$s, %2$s Is Out', 'dcc-ragusa'), $version, (string) ($feed['branches'][$branch]['version'] ?? ''));
     }
 
     // -------------------------------------------------- the settings files

@@ -7,7 +7,8 @@ if (!defined('ABSPATH')) {
 
 /**
  * Loopback requests to this site. Feature-detected the way core's Site
- * Health does it (a POST to wp-cron.php), remembered for a day. Page checks
+ * Health does it (a POST to wp-cron.php that dies before WordPress loads),
+ * or, where WP-Cron is off, with a GET of wp-login.php; remembered for a day. Page checks
  * carry a cache-busting query string so SpeedyCache serves the real page.
  */
 final class Loopback
@@ -20,13 +21,26 @@ final class Loopback
         if (!$recheck && isset($cached['ok']) && time() - (int) ($cached['checked_at'] ?? 0) < 86400) {
             return (bool) $cached['ok'];
         }
-        $url  = site_url('wp-cron.php');
-        $resp = wp_remote_post($url, [
-            'timeout'   => self::TIMEOUT,
-            'body'      => ['ragusa' => 'loopback-test'],
-            'headers'   => ['Cache-Control' => 'no-cache'],
-            'sslverify' => apply_filters('https_local_ssl_verify', false, $url),
-        ]);
+        if (Site::cron_off()) {
+            // WP-Cron is off: never touch wp-cron.php. The login page answers the same question.
+            $url  = add_query_arg('ragusa_check', substr(bin2hex(random_bytes(4)), 0, 8), site_url('wp-login.php'));
+            $resp = wp_remote_get($url, [
+                'timeout'     => self::TIMEOUT,
+                'redirection' => 0,
+                'headers'     => ['Cache-Control' => 'no-cache'],
+                'sslverify'   => apply_filters('https_local_ssl_verify', false, $url),
+                'cookies'     => [],
+            ]);
+        } else {
+            // Core's own Site Health test. The body makes wp-cron.php die() before WordPress loads, so it runs nothing.
+            $url  = site_url('wp-cron.php');
+            $resp = wp_remote_post($url, [
+                'timeout'   => self::TIMEOUT,
+                'body'      => ['ragusa' => 'loopback-test'],
+                'headers'   => ['Cache-Control' => 'no-cache'],
+                'sslverify' => apply_filters('https_local_ssl_verify', false, $url),
+            ]);
+        }
         $ok = !is_wp_error($resp) && (int) wp_remote_retrieve_response_code($resp) === 200;
         State::set('loopback', ['ok' => $ok, 'checked_at' => time(), 'error' => is_wp_error($resp) ? $resp->get_error_message() : '']);
         return $ok;
