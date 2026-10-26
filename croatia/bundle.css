@@ -869,6 +869,28 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-root[data-view="gallery"] .dcc-tour-controls,
 .dcc-tour-root[data-view="gallery"] .dcc-tour-body,
 .dcc-tour-root[data-view="gallery"] .dcc-tour-mapmode { display: none; }
+
+/* ===== History tab: the map component brings its own bh-* styles (history/history.css) ===== */
+.dcc-tour-history { display: none; padding: 0.6rem 1.5rem 2rem; }
+.dcc-tour-root[data-view="history"] .dcc-tour-history { display: block; }
+.dcc-tour-root[data-view="history"] .dcc-tour-tripstats,
+.dcc-tour-root[data-view="history"] .dcc-tour-superlatives,
+.dcc-tour-root[data-view="history"] .dcc-tour-overview,
+.dcc-tour-root[data-view="history"] .dcc-tour-daynav,
+.dcc-tour-root[data-view="history"] .dcc-tour-controls,
+.dcc-tour-root[data-view="history"] .dcc-tour-body { display: none; }
+.dcc-hist-top { display: flex; justify-content: flex-start; margin: 0 0 0.9rem; }
+.dcc-hist-film { display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--dcc-tour-accent-deep); background: var(--dcc-tour-card-bg);
+  border: 1px solid var(--dcc-tour-primary); border-radius: 999px; padding: 5px 16px 5px 5px; }
+.dcc-hist-film:hover { background: var(--dcc-tour-accent-tint); }
+.dcc-hist-film .dcc-pbtn { width: 34px; height: 34px; }
+.dcc-hist-film .dcc-pbtn svg { width: 15px; height: 15px; }
+.dcc-hist-msg { color: var(--dcc-tour-muted); font-style: italic; margin: 1rem 0; }
+@media (max-width: 800px) {
+  .dcc-tour-history { padding: 0.5rem 0.8rem 2rem; }
+}
 .dcc-tour-gal-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; position: sticky; top: 0; z-index: 15; padding: 8px 0; background: color-mix(in srgb, var(--dcc-tour-bg) 92%, transparent); backdrop-filter: blur(6px); }
 .dcc-tour-gal-count { font-size: 0.8rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
 .dcc-tour-galmore { text-align: center; color: var(--dcc-tour-muted); font-size: 0.8rem; padding: 14px 0 4px; }
@@ -1151,6 +1173,14 @@ html.dcc-matrix-on .dcc-tour-root {
   --dcc-tour-accent-deep: #8dff9f;
   --dcc-tour-accent-tint: rgba(0, 255, 70, 0.12);
   --dcc-tour-shadow: 0 3px 16px rgba(0, 40, 0, 0.5);
+}
+/* History tab under Matrix mode: the map fills are fixed light colours by design, so
+   ink drawn ON a map (labels + halos, today's borders, former-territory fill, the
+   Ragusa inset labels) keeps the default palette instead of the translucent green */
+html.dcc-matrix-on .dcc-tour-history .bh-viewport,
+html.dcc-matrix-on .dcc-tour-history .bh-ragusa svg {
+  --bh-text: #201f1d; --bh-card: #f8f4f4; --bh-bg: #f3f2f2;
+  --bh-accent: #b68235; --bh-accent-deep: #7d5411;
 }
 /* the hidden toggle taps the header: manipulation kills iOS double-tap-zoom so rapid taps count */
 .dcc-tour-header { touch-action: manipulation; }

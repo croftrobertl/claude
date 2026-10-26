@@ -1,0 +1,165 @@
+/* Balkans History — interactive map tab.
+   Layout: map plate on the left (full width on phones), reading column on the right.
+   Tokens fall back to the Croatia site's "Classical" system (--dcc-tour-*) so the tab
+   inherits the host theme when embedded and still stands alone. */
+.bh-root {
+  --bh-bg: var(--dcc-tour-bg, #f3f2f2);
+  --bh-surface: var(--dcc-tour-surface, #eae9e9);
+  --bh-card: var(--dcc-tour-card-bg, #f8f4f4);
+  --bh-text: var(--dcc-tour-text, #201f1d);
+  --bh-muted: var(--dcc-tour-muted, #736f6a);
+  --bh-border: var(--dcc-tour-border, #d7d3d3);
+  --bh-accent: var(--dcc-tour-primary, #b68235);
+  --bh-accent-deep: var(--dcc-tour-accent-deep, #7d5411);
+  --bh-tint: color-mix(in srgb, var(--bh-accent) 13%, transparent);
+  --bh-radius: var(--dcc-tour-radius, 6px);
+  --bh-sea: #d6e0e2;
+  --bh-land: #e2dccf;
+  --bh-ink: #3c3730;
+  --bh-gold: #d9a22b;
+  --bh-font: var(--dcc-tour-font, "Lora", Georgia, "Times New Roman", serif);
+  --bh-head: var(--dcc-tour-font-head, "Cinzel", Georgia, "Times New Roman", serif);
+  --bh-display: "Cormorant Garamond", "Cormorant", Georgia, "Times New Roman", serif;
+  color: var(--bh-text);
+  background: var(--bh-bg);
+  font-family: var(--bh-font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+.bh-root *, .bh-root *::before, .bh-root *::after { box-sizing: border-box; }
+
+.bh-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) {
+  .bh-layout { grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); align-items: start; gap: 28px; }
+  .bh-side { position: sticky; top: 12px; }
+}
+
+/* ---------- era heading ---------- */
+.bh-head { display: grid; gap: 4px; min-width: 0; }
+.bh-kicker { font-family: var(--bh-head); font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--bh-accent-deep); }
+.bh-yearline { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.bh-year { font-family: var(--bh-display); font-weight: 600; font-size: clamp(44px, 9vw, 68px); line-height: .95;
+  font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; }
+.bh-title { font-family: var(--bh-head); font-weight: 600; font-size: clamp(16px, 2.6vw, 20px); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--bh-accent-deep); text-wrap: balance; }
+.bh-caption { margin: 2px 0 0; max-width: 62ch; color: var(--bh-text); text-wrap: pretty; }
+
+/* ---------- map plate ---------- */
+.bh-plate { background: var(--bh-surface); border-radius: var(--bh-radius); padding: 8px; position: relative; }
+.bh-viewport { position: relative; overflow: hidden; border-radius: calc(var(--bh-radius) - 2px); background: var(--bh-sea);
+  aspect-ratio: 1820 / 1831; max-width: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.bh-viewport.bh-dragging { cursor: grabbing; }
+.bh-stage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.bh-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bh-layer { transition: opacity .55s ease; }
+.bh-poly { stroke: var(--bh-ink); stroke-opacity: .55; stroke-width: 1.4; vector-effect: non-scaling-stroke; fill-opacity: .86;
+  cursor: pointer; transition: fill-opacity .2s; }
+.bh-poly:hover { fill-opacity: 1; }
+.bh-poly.bh-sel { stroke: var(--bh-text); stroke-opacity: 1; stroke-width: 2.6; fill-opacity: 1; }
+.bh-chg { fill: none; stroke: var(--bh-gold); stroke-width: 4; vector-effect: non-scaling-stroke; pointer-events: none;
+  opacity: 0; animation: bh-glow 2.2s ease-out .25s 1 both; }
+@keyframes bh-glow { 0% { opacity: 0 } 18% { opacity: 1 } 100% { opacity: 0 } }
+.bh-borders { fill: none; stroke: var(--bh-text); stroke-opacity: .5; stroke-width: 1.1; stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke; pointer-events: none; }
+.bh-trail { fill: none; stroke: var(--bh-text); stroke-opacity: .55; stroke-width: 1.6; stroke-dasharray: 1 5; stroke-linecap: round;
+  vector-effect: non-scaling-stroke; pointer-events: none; }
+.bh-former { fill: var(--bh-bg); stroke: var(--bh-text); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.bh-ragusa-ring { fill: none; stroke: var(--bh-gold); stroke-width: 2.4; vector-effect: non-scaling-stroke; }
+.bh-inbox { fill: none; stroke: var(--bh-accent); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+.bh-hide-borders .bh-borders, .bh-hide-caps .bh-cap, .bh-hide-trails .bh-trail, .bh-hide-trails .bh-oldcap { display: none; }
+
+/* labels live in HTML so they stay legible at phone size; positioned in % of the map */
+.bh-labels { position: absolute; inset: 0; pointer-events: none; }
+.bh-lab { position: absolute; transform: translate(-50%, -50%) scale(var(--bh-inv, 1)); white-space: nowrap; text-align: center;
+  font-family: var(--bh-font); font-weight: 600; color: var(--bh-text); line-height: 1.05;
+  text-shadow: 0 0 3px var(--bh-card), 0 0 3px var(--bh-card), 0 0 6px var(--bh-card); transition: opacity .3s; }
+.bh-lab.bh-tribal { font-style: italic; font-weight: 400; color: #4d473e; }
+.bh-lab.bh-off, .bh-oldcap.bh-off { opacity: 0; }
+.bh-cap { position: absolute; transform: translate(-6px, -50%) scale(var(--bh-inv, 1)); transform-origin: 6px 50%;
+  display: flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; white-space: nowrap; color: #fff;
+  text-shadow: 0 0 2px #000, 0 0 3px #000, 0 1px 3px #000; }
+.bh-cap::before { content: "★"; font-size: 13px; color: #fff; }
+.bh-cap.bh-edge::before { content: none; }
+.bh-oldcap { position: absolute; transform: translate(-50%, 4px) scale(var(--bh-inv, 1)); transform-origin: 50% 0; font-size: 10px; font-style: italic;
+  color: var(--bh-ink); text-shadow: 0 0 3px var(--bh-card), 0 0 3px var(--bh-card); white-space: nowrap; }
+.bh-oldcap::before { content: ""; position: absolute; left: 50%; top: -8px; width: 7px; height: 7px; margin-left: -3.5px;
+  border: 1.5px solid var(--bh-ink); border-radius: 50%; background: var(--bh-card); }
+.bh-raglab { position: absolute; transform: translate(-50%, 0) scale(var(--bh-inv, 1)); transform-origin: 50% 0; margin-top: 12px;
+  font-family: var(--bh-head); font-weight: 600; font-size: 12px; letter-spacing: .08em; color: var(--bh-accent-deep);
+  text-shadow: 0 0 3px var(--bh-card), 0 0 3px var(--bh-card), 0 0 6px var(--bh-card); white-space: nowrap; }
+
+.bh-zoom { position: absolute; left: 14px; bottom: 14px; display: grid; gap: 4px; z-index: 2; }
+.bh-zoom button { width: 34px; height: 34px; }
+
+/* ---------- controls ---------- */
+.bh-btn { font: inherit; font-size: 14px; color: var(--bh-text); background: var(--bh-card); border: 1px solid var(--bh-border);
+  border-radius: var(--bh-radius); min-height: 34px; padding: 4px 10px; cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; gap: 6px; }
+.bh-btn:hover { border-color: var(--bh-accent); }
+.bh-btn:focus-visible, .bh-dot:focus-visible, .bh-toggle input:focus-visible + span, .bh-range:focus-visible {
+  outline: 2px solid var(--bh-accent); outline-offset: 2px; }
+.bh-btn[aria-pressed="true"] { border-color: var(--bh-accent); background: var(--bh-tint); color: var(--bh-accent-deep); }
+
+.bh-timeline { display: grid; gap: 6px; margin-top: 12px; }
+.bh-track { position: relative; height: 54px; }
+.bh-era { position: absolute; top: 14px; height: 5px; border-radius: 3px; opacity: .85; }
+.bh-era-name { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--bh-head); font-size: 9.5px;
+  letter-spacing: .14em; color: var(--bh-muted); white-space: nowrap; }
+.bh-axis { position: absolute; left: 0; right: 0; top: 31px; height: 2px; background: var(--bh-border); }
+.bh-progress { position: absolute; left: 0; top: 31px; height: 2px; background: var(--bh-accent); transition: width .5s ease; }
+.bh-dot { position: absolute; top: 32px; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; padding: 0;
+  border: 1.5px solid var(--bh-muted); background: var(--bh-bg); cursor: pointer; }
+.bh-dot::after { content: ""; position: absolute; inset: -9px -3px; }   /* bigger tap target without bigger dots */
+.bh-dot.bh-past { background: var(--bh-accent); border-color: var(--bh-accent); }
+.bh-dot.bh-cur { width: 17px; height: 17px; margin: -8.5px 0 0 -8.5px; background: var(--bh-accent); border: 3px solid var(--bh-bg);
+  box-shadow: 0 0 0 1.5px var(--bh-accent); z-index: 1; }
+.bh-ticks { position: absolute; left: 0; right: 0; top: 40px; font-size: 10.5px; color: var(--bh-muted); font-variant-numeric: tabular-nums; }
+.bh-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.bh-ticks span:first-child { transform: none; }
+.bh-ticks span:last-child { transform: translateX(-100%); }
+.bh-gap { position: absolute; top: -2px; transform: translateX(-50%); font-size: 11px; font-weight: 600; white-space: nowrap;
+  background: var(--bh-accent); color: var(--bh-card); border-radius: 9px; padding: 0 7px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+.bh-gap.bh-show { opacity: 1; }
+.bh-transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bh-range { flex: 1 1 140px; min-width: 0; accent-color: var(--bh-accent); }
+.bh-toggles { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--bh-muted); margin-top: 4px; }
+.bh-toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.bh-toggle input { accent-color: var(--bh-accent); width: 15px; height: 15px; margin: 0; }
+
+/* ---------- side column ---------- */
+.bh-side { display: grid; gap: 18px; min-width: 0; }
+.bh-info { border-top: 1px solid var(--bh-border); padding-top: 12px; min-height: 64px; display: grid; gap: 2px; }
+.bh-info-label { font-family: var(--bh-head); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--bh-muted); }
+.bh-info-name { font-family: var(--bh-display); font-weight: 600; font-size: 24px; line-height: 1.15; display: flex; align-items: center; gap: 9px; }
+.bh-swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0,0,0,.25); }
+.bh-info-note { color: var(--bh-muted); font-size: 13.5px; }
+
+.bh-ragusa { background: var(--bh-card); border: 1px solid var(--bh-border); border-radius: var(--bh-radius); padding: 14px; display: grid; gap: 10px; }
+.bh-ragusa-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.bh-ragusa-name { font-family: var(--bh-head); font-weight: 600; letter-spacing: .1em; font-size: 14px; color: var(--bh-accent-deep); }
+.bh-ragusa-status { font-family: var(--bh-display); font-weight: 600; font-size: 21px; line-height: 1.1; }
+.bh-libertas { font-family: var(--bh-head); font-size: 11.5px; letter-spacing: .12em; color: var(--bh-accent-deep); font-variant-numeric: tabular-nums; }
+.bh-ragusa svg { width: 100%; height: auto; display: block; border-radius: 4px; background: var(--bh-sea); }
+.bh-ragusa-body { margin: 0; text-wrap: pretty; }
+.bh-ragusa svg path, .bh-ragusa svg circle, .bh-ragusa svg line { vector-effect: non-scaling-stroke; }
+.bh-ilabel { font: 600 64px var(--bh-font); fill: var(--bh-ink); paint-order: stroke; stroke: var(--bh-card); stroke-width: 16px; stroke-linejoin: round; }
+.bh-ilabel.bh-big { font: 600 76px var(--bh-head); letter-spacing: .08em; fill: var(--bh-accent-deep); }
+.bh-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--bh-muted); }
+.bh-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bh-key { width: 16px; height: 11px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,.2); }
+.bh-sources { font-size: 12px; color: var(--bh-muted); border-top: 1px solid var(--bh-border); padding-top: 10px; }
+.bh-sources a { color: var(--bh-accent-deep); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-layer, .bh-progress, .bh-lab, .bh-gap { transition: none; }
+  .bh-chg { animation: none; opacity: .9; }
+}
+
+.bh-cap.bh-capl { flex-direction: row-reverse; transform: translate(calc(-100% + 6px), -50%) scale(var(--bh-inv, 1)); transform-origin: calc(100% - 6px) 50%; }
+@media (max-width: 600px) {
+  .bh-cap { font-size: 10.5px; }
+  .bh-cap::before { font-size: 11px; }
+  .bh-zoom button { width: 30px; height: 30px; min-height: 30px; padding: 0; }
+  .bh-t-narrow { display: none; }
+}

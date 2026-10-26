@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v86';
+const CACHE_VERSION = 'dcc-tour-v87';
 const SHELL = [
   './',
   'index.html',
@@ -14,6 +14,11 @@ const SHELL = [
   'vendor/leaflet.js',
   'vendor/leaflet.css',
   'vendor/leaflet-heat.js',
+  // History tab (component + data). The 60-second film is deliberately NOT here:
+  // video streams natively and is never cached.
+  'history/history.js',
+  'history/history.css',
+  'history/history-data.json',
   // self-hosted Classical fonts (Cormorant Garamond + Lora) — cached so the
   // editorial type survives offline and never hits a CDN
   'vendor/fonts/cormorant-600-latin.woff2',

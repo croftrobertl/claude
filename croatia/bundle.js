@@ -296,6 +296,7 @@
       gallery: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M4 17l5-5 4 4 3-3 4 4"/>',
       map:     '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><line x1="9" y1="4" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="20"/>',
       stats:   '<line x1="4" y1="20" x2="20" y2="20"/><line x1="7" y1="20" x2="7" y2="12"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="17" y1="20" x2="17" y2="15"/>',
+      history: '<line x1="6" y1="3" x2="18" y2="3"/><line x1="6" y1="21" x2="18" y2="21"/><path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"/><path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"/>',
       dice:    '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.15" fill="currentColor" stroke="none"/>'
     }[name] || '';
     return '<svg class="dcc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + s + '</svg>';
@@ -325,7 +326,7 @@
     bar.setAttribute('aria-label', 'Sections');
     bar.setAttribute('role', 'tablist');
     bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Media') +
-      tabBtn('map', 'Map') + tabBtn('stats', 'Stats');
+      tabBtn('map', 'Map') + tabBtn('stats', 'Stats') + tabBtn('history', 'History');
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
@@ -361,6 +362,7 @@
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
     else if (v === 'gallery') buildGallery();
+    else if (v === 'history') showHistory();
     else if (v === 'story') {
       // under a person filter, don't land on a day they didn't shoot
       if (personOn() && dayVisibleCount(DATA.days[curDay]) === 0) {
@@ -375,11 +377,13 @@
     // scroll-fade hints now that this view is visible
     requestAnimationFrame(enhanceAllHScroll);
   }
-  // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>, #v=map|stats|gallery ----
+  // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>,
+  //      #v=map|stats|gallery, #v=history&era=<slug> ----
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
-    history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1) : '#v=' + v);
+    history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
+      : '#v=' + v + (v === 'history' && histSlug ? '&era=' + encodeURIComponent(histSlug) : ''));
   }
   function findDayByGuid(g) {
     for (let di = 0; di < DATA.days.length; di++)
@@ -394,6 +398,7 @@
       const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
     });
     if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { setView(m.v); return; }
+    if (m.v === 'history') { histWant = m.era || null; setView('history'); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
     if (di != null) {
@@ -410,6 +415,58 @@
       if (i >= 0) openViewer(i);
     }, 250);
   }
+  // ---- History tab: BalkansHistory (history/history.js), 35 eras of Balkan borders.
+  //      Its script + stylesheet load on the first visit through the bundle URL (so the
+  //      Elementor embed works too), and the component mounts once. ----
+  let histEl = null, histHandle = null, histLoading = false, histWant = null, histSlug = null;
+  const histSlugOf = l => String(l).toLowerCase().replace(/\s+/g, '');
+  function showHistory() {
+    if (!histEl) {
+      histEl = el('section', 'dcc-tour-history');
+      histEl.innerHTML =
+        '<div class="dcc-hist-top"><button class="dcc-hist-film" type="button">' +
+          '<span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span>Watch the 60-second film</span></button></div>' +
+        '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>';
+      histEl.querySelector('.dcc-hist-film').addEventListener('click', playHistoryFilm);
+      root.appendChild(histEl);
+    }
+    if (histHandle) {
+      // ignore unknown era slugs rather than letting show() clamp to 500 BC
+      const f = histHandle.frames;
+      if (histWant && f && f.some(fr => histSlugOf(fr.label) === histSlugOf(histWant))) histHandle.show(histWant);
+      histWant = null;
+      return;
+    }
+    if (histWant) histSlug = histWant;   // keep the era in the URL while the map loads
+    if (histLoading) return;
+    histLoading = true;
+    const mountNow = () => {
+      histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
+        dataUrl: resolveUrl('history/history-data.json'), hash: false, start: histWant || undefined,
+        onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); }
+      });
+      histWant = null;
+    };
+    if (window.BalkansHistory) { mountNow(); return; }
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = resolveUrl('history/history.css');
+    document.head.appendChild(css);
+    const s = document.createElement('script');
+    s.src = resolveUrl('history/history.js');
+    s.onload = mountNow;
+    s.onerror = () => {
+      histLoading = false;
+      histEl.querySelector('.dcc-hist-mount').innerHTML = '<p class="dcc-hist-msg">The History tab could not be loaded.</p>';
+    };
+    document.head.appendChild(s);
+  }
+  // the 60-second film plays in the shared media viewer (poster + play button, no autoplay)
+  function playHistoryFilm() {
+    viewerItems = [{ kind: 'video', url: resolveUrl('history/balkans-highlights.mp4'), full: '', src: '', poster: '', id: '',
+      place: 'The Balkans in 60 seconds', date: '', time: '' }];
+    openViewer(0);
+  }
+
   // ---- share helpers ----
   function shareUrl(extra) { return location.href.split('#')[0] + '#' + extra; }
   function doShare(url, title) {
@@ -542,6 +599,7 @@
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">' + svgIcon('gallery') + '<span>Media</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">' + svgIcon('map') + '<span>Map</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">' + svgIcon('stats') + '<span>Stats</span></button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="history">' + svgIcon('history') + '<span>History</span></button>' +
       '<span class="dcc-tour-modespacer"></span>' + unitToggleHTML('unit-desk') + musicToggleHTML('unit-desk');
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
