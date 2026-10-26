@@ -358,7 +358,7 @@
         b.classList.toggle('active', on);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-    if (v !== 'map') mmStopPlay();
+    if (v !== 'map') { mmStopPlay(); thenStop(); }
     if (v !== 'history') historyLeave();
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
@@ -379,12 +379,12 @@
     requestAnimationFrame(enhanceAllHScroll);
   }
   // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>,
-  //      #v=map|stats|gallery, #v=history&era=<slug>[&ch=<strand>][&e=<entry>] ----
+  //      #v=map|stats|gallery, #v=map&then=<era>, #v=history&era=<slug>[&ch=<strand>][&e=<entry>] ----
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
     history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1)
-      : '#v=' + v + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
+      : '#v=' + v + (v === 'map' && thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
         (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') : ''));
   }
   function findDayByGuid(g) {
@@ -399,7 +399,7 @@
     (hash || location.hash).slice(1).split('&').forEach(kv => {
       const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
     });
-    if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { setView(m.v); return; }
+    if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { if (m.v === 'map' && m.then) thenWant = m.then; setView(m.v); return; }
     if (m.v === 'history') { histWant = m.era || null; histLink = m.ch || m.e ? { ch: m.ch, e: m.e } : null; setView('history'); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
@@ -432,7 +432,7 @@
           '<button class="dcc-hist-film" type="button"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span class="dcc-jl">Watch the 60-second film</span><span class="dcc-js">Film</span></button>' +
           '<nav class="dcc-hist-jump" aria-label="On this page">' +
             '<button type="button" data-jump="map">Map</button><button type="button" data-jump="trip">Your trip</button>' +
-            '<button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="records" aria-label="Family records"><span class="dcc-jl">Family records</span><span class="dcc-js">Family</span></button></nav></div>' +
+            '<button type="button" data-jump="street" title="See this era on today’s street map"><span class="dcc-jl">On today’s map</span><span class="dcc-js">Streets</span></button><button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="records" aria-label="Family records"><span class="dcc-jl">Family records</span><span class="dcc-js">Family</span></button></nav></div>' +
           '<div class="dcc-hist-otd" hidden></div>' +
         '</div>' +
         '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>' +
@@ -442,6 +442,7 @@
         const b = e.target.closest('[data-jump]');
         if (!b) return;
         const j = b.dataset.jump;
+        if (j === 'street') { thenWant = histSlug || '1453'; setView('map'); return; }
         if (j === 'records') setStrand('records', false);
         const t = histEl.querySelector({ map: '.bh-head', trip: '.dcc-hist-trip', chron: '.dcc-chron', records: '.dcc-chron' }[j]);
         if (t) { storyLock(1600); t.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); }
@@ -1589,6 +1590,7 @@
       panel.innerHTML =
         '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span></span></div>' +
         '<p class="dcc-hist-trip-sum"><span></span> <span class="dcc-hist-trip-key"><i></i>your stops on the coast map</span></p>' +
+        '<button type="button" class="dcc-hist-street">See this era over today’s streets ›</button>' +
         '<ul class="dcc-hist-trip-list">' + stops.map((st, i) =>
           '<li><a href="#d=' + (st.days[0] + 1) + '" data-stop="' + i + '">' +
             '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
@@ -1601,6 +1603,7 @@
         '</div></details>';
       const rag = histEl.querySelector('.bh-ragusa');
       if (rag) rag.after(panel); else histEl.querySelector('.dcc-hist-mount').appendChild(panel);
+      panel.querySelector('.dcc-hist-street').addEventListener('click', () => { thenWant = histSlug || '1453'; setView('map'); });
       const hl = (e, on) => {
         const a = e.target.closest && e.target.closest('[data-stop]'), svgNow = histEl.querySelector('.bh-ragusa svg');
         if (!a || !svgNow) return;
@@ -1837,6 +1840,7 @@
             layerOpt('mm-labels', 'Place labels', true) +
             layerOpt('mm-heat', 'Heatmap', false) +
             layerOpt('mm-sat', 'Satellite', true) +
+            layerOpt('mm-then', 'Old borders (Then)', false) +
             layerOpt('mm-track', 'GPS track', true, 'mm-track-opt') +
             layerOpt('mm-saved', 'Saved spots', false, 'mm-saved-opt') +
           '</div></div>' +
@@ -1861,6 +1865,7 @@
       '<div class="dcc-tour-mm-legend" id="mm-legend"></div>' +          // task 8: legend above the map
       '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
         '<button class="dcc-tour-mm-fs" id="mm-fs" type="button" title="Full screen" aria-label="Full screen">⛶</button>' +
+        thenMarkup() +
         '<figure class="dcc-tour-mm-moment" id="mm-moment" hidden></figure>' +
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>';
     return w;
@@ -2003,7 +2008,7 @@
     else { wrap.classList.toggle('mm-fs-fallback'); mmMap && setTimeout(() => mmMap.invalidateSize(), 120); }
   }
   function initMapMode() {
-    if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); return; }
+    if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); thenApplyWant(); return; }
     mmInit = true;
     mmRange = [0, DATA.day_count - 1];
     // cap zoom at 18 so Esri never serves its "Map data not yet available"
@@ -2031,6 +2036,8 @@
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
     m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else mmMap.removeLayer(mmSat); });
     m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
+    m.querySelector('#mm-then').addEventListener('change', e => thenToggle(e.target.checked, null, e.target.checked && mmMap.getZoom() < 9));
+    m.querySelector('.dcc-then-btn').addEventListener('click', () => thenToggle(!thenOn, null, !thenOn && mmMap.getZoom() < 9));
     m.querySelector('#mm-saved').addEventListener('change', e => toggleSaved(e.target.checked));
     // reveal the optional-overlay toggles only when their data ships with the bundle
     loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-opt').hidden = false;
@@ -2078,6 +2085,362 @@
     renderMapLegend();
     renderMapMode(true);   // whole-trip bounds
     setTimeout(() => mmMap.invalidateSize(), 80);
+    thenApplyWant();
+  }
+  // a #v=map&then=<era> link, or the History tab's "On today's map"
+  function thenApplyWant() {
+    if (!thenWant) return;
+    const w = thenWant; thenWant = null;
+    setTimeout(() => thenToggle(true, w, true), 120);
+  }
+  // ---- "Then": the History tab's eras laid over the Map tab's street map and satellite.
+  //      Zoomed out it shows the era's empires (the History map's own shapes); from zoom 9
+  //      it switches to street-accurate outlines of Ragusa's lands (history/street.json:
+  //      OpenStreetMap municipal boundaries cut at the coast map's part lines), the
+  //      frontier lines that are still borders today, and dated landmarks. ----
+  const THEN_PART = {
+    city:     { parts: ['city'], name: 'Laus, the first town', kind: 'main' },
+    core:     { parts: ['core'], name: 'Dubrovnik & Župa', kind: 'main' },
+    elaph:    { parts: ['elaph'], name: 'Elaphiti Islands', kind: 'isle' },
+    lastovo:  { parts: ['lastovo'], name: 'Lastovo', kind: 'other', joined: 'by 1272', italy1920: true },
+    pel:      { parts: ['pel'], name: 'Ston & Pelješac', kind: 'other', joined: '1333' },
+    mljet:    { parts: ['mljet'], name: 'Mljet', kind: 'other', joined: '1345', italy1941: true },
+    prim:     { parts: ['prim'], name: 'Primorje', kind: 'other', joined: '1399' },
+    neum:     { parts: ['neum'], name: 'Neum & Klek', kind: 'other', ceded: 'bih' },
+    konavle:  { parts: ['konavle'], name: 'Konavle', kind: 'konavle', joined: '1419–26', line1942: true },
+    sutorina: { parts: ['sutorina'], name: 'Sutorina', kind: 'other', ceded: 'mne' }
+  };
+  const THEN_ORDER = ['core', 'elaph', 'lastovo', 'pel', 'mljet', 'prim', 'neum', 'konavle', 'sutorina', 'city'];   // the first town on top
+  const THEN_LAB = { core: [42.6555, 18.118], elaph: [42.7277, 17.8803] };
+  // the two 1699 corridors after Ragusa handed them to the Ottomans
+  const CEDED_STATUS = {
+    'mar1878': 'Ottoman Empire', 'jul1878': 'Bosnia (Austro-Hungarian)', '1913': 'Austria-Hungary',
+    '1920': 'Kingdom of Serbs, Croats & Slovenes', '1938': 'Kingdom of Yugoslavia', '1942': 'Axis-occupied'
+  };
+  const CEDED_BY = {
+    bih: { '1960': 'Yugoslavia (SR Bosnia and Herzegovina)', '1992': 'Bosnia and Herzegovina (at war)', '1995': 'Bosnia and Herzegovina', '2026': 'Bosnia and Herzegovina' },
+    mne: { '1960': 'Yugoslavia (SR Montenegro, from 1947)', '1992': 'FR Yugoslavia (Montenegro)', '1995': 'FR Yugoslavia (Montenegro)', '2026': 'Montenegro' }
+  };
+  // street-level landmarks: shown from the year they were built. Coordinates are OpenStreetMap's
+  // (or the trip's own geotags); facts are the same as the Timeline's "On this spot" notes.
+  const THEN_MARKS = [
+    { ll: [42.5814, 18.2177], from: 14, until: 613, by: 'rome', t: 'Epidaurum', s: 'Roman colony', x: 'A Roman colony on the coastal road, where Cavtat stands today. By tradition its people fled to the islet of Laus in the 600s and founded Ragusa.' },
+    { ll: [42.625, 18.1213], from: 1023, by: 'church', t: 'Benedictine monastery, Lokrum', s: '1023', x: 'Benedictine monks are first recorded on Lokrum in 1023.' },
+    { ll: [42.6408, 18.10423], from: 1301, by: 'rag', t: 'Fort Lovrijenac', s: 'recorded 1301', x: 'First recorded in 1301. Legend says Ragusa raised it in three months to beat Venice to the rock. Over its gate: “Freedom is not sold for all the gold in the world.”' },
+    { ll: [42.64297, 18.10843], from: 1319, by: 'rag', t: 'Fort Minčeta', s: '1319 · round 1460s', x: 'Begun as a square tower in 1319; rebuilt as the great round tower in the 1460s, as Ottoman power closed in.' },
+    { ll: [42.63995, 18.11205], from: 1346, by: 'rag', t: 'Fort St. John', s: '1346', x: 'Its first tower, guarding the harbour mouth, dates from 1346.' },
+    { ll: [42.83693, 17.69676], from: 1358, by: 'rag', t: 'Walls of Ston', s: 'begun 1358', x: 'Begun in 1358 to guard the peninsula Ragusa bought in 1333, and its salt pans.' },
+    { ll: [42.641106, 18.110278], from: 1419, by: 'rag', t: 'Orlando’s Column', s: '1419', x: 'Set up in stone in 1419. The knight’s forearm is said to have fixed the Ragusan ell, the city’s measure of length.' },
+    { ll: [42.64032, 18.11073], from: 1435, by: 'rag', t: 'Rector’s Palace', s: 'rebuilt 1435', x: 'Seat of the Rector and the Republic’s councils. Rebuilt after a gunpowder blast in 1435, and again after a second in 1463.' },
+    { ll: [42.64155, 18.1073], from: 1438, by: 'rag', t: 'Onofrio’s Fountain', s: '1438', x: 'Built in 1438–40 at the end of an aqueduct that carried spring water about 12 km from Šumet into the city.' },
+    { ll: [42.6409, 18.1104], from: 1444, by: 'rag', t: 'Bell Tower', s: '1444', x: 'First built in 1444. Left leaning by the 1667 earthquake, it was rebuilt to the same design in 1929.' },
+    { ll: [42.64232, 18.11258], from: 1462, by: 'rag', t: 'Fort Revelin', s: '1460s', x: 'Built in the 1460s against the Ottoman threat, and strengthened in 1538–49.' },
+    { ll: [42.64124, 18.11056], from: 1516, by: 'rag', t: 'Sponza Palace', s: '1516–22', x: 'Customs house and mint, built 1516–22. It came through the 1667 earthquake.' },
+    { ll: [42.6403, 18.110381], from: 1667, by: 'rag', t: 'Cathedral', s: 'after 1667', x: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
+    { ll: [42.640629, 18.109978], from: 1706, by: 'rag', t: 'St. Blaise', s: '1706–15', x: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
+    { ll: [42.64991, 18.11065], from: 1806, by: 'fra', t: 'Fort Imperial', s: 'France, 1806–12', x: 'Built by Napoleon’s French between 1806 and 1812, looking down on the whole city. Its defenders held it on 6 December 1991; it now houses the Homeland War museum.' },
+    { ll: [42.62997, 18.11674], from: 1806, by: 'fra', t: 'Fort Royal, Lokrum', s: 'France, 1806', x: 'Begun by the French in 1806 on Lokrum’s highest point; the Austrians later enlarged it.' },
+    { ll: [42.6242, 18.1201], from: 1859, by: 'aus', t: 'Maximilian’s gardens', s: 'Austria, 1859', x: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
+    { ll: [42.64274, 18.10492], from: 1897, by: 'aus', t: 'Grand Hotel Imperial', s: '1897', x: 'Dubrovnik’s first modern hotel, opened in 1897 under Habsburg rule. It was shelled in 1991.' },
+    { ll: [42.649189, 18.111862], from: 1991, by: 'cro', t: 'Mount Srđ Cross', s: '1991 · 1997', x: 'Pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' }
+  ];
+  const THEN_BY = { rome: 'Rome', church: 'the Church', rag: 'Ragusa', fra: 'France', aus: 'Austria', cro: 'Croatia' };
+  let thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenLoading = null;
+  let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false;
+  const thenRingsCache = new Map();
+  const thenLL = (x, y) => [48.4 - y / 132.7, 12 + x / 100];   // the History map's own projection, inverted
+  function thenRings(d) {
+    let r = thenRingsCache.get(d);
+    if (!r) {
+      r = d.split('M').filter(s => s.trim()).map(s => s.replace(/Z/g, '').trim().split(/\s+/)
+        .map(p => { const c = p.split(','); return thenLL(+c[0], +c[1]); }));
+      thenRingsCache.set(d, r);
+    }
+    return r;
+  }
+  function thenLoad() {
+    if (!thenLoading) thenLoading = Promise.all([
+      fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      fetch(resolveUrl('history/street.json')).then(r => r.ok ? r.json() : Promise.reject(r.status))
+    ]).then(([d, s]) => { thenData = d; thenStreet = s; }).catch(e => { thenLoading = null; throw e; });
+    return thenLoading;
+  }
+  // ray-cast point-in-ring on [lat, lng] rings
+  function thenPip(lat, lng, ring) {
+    let c = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[0] > lat) !== (b[0] > lat) && lng < a[1] + (lat - a[0]) * (b[1] - a[1]) / (b[0] - a[0])) c = !c;
+    }
+    return c;
+  }
+  const thenInPolys = (lat, lng, polys) => polys.some(p => thenPip(lat, lng, p[0]) && !p.slice(1).some(h => thenPip(lat, lng, h)));
+  // the era's colour for a ruler's name, matched against the History map's own legend
+  function thenColor(f, name) {
+    const n = String(name || '').replace(/\s*\(.*\)\s*$/, '').toLowerCase();
+    if (!n) return '#8f8a80';
+    const ft = f.feats.find(x => String(x.n || '').toLowerCase() === n) ||
+      f.feats.find(x => String(x.n || '').replace(/\s*\(.*\)\s*$/, '').toLowerCase() === n) ||
+      f.feats.find(x => String(x.n || '').toLowerCase().indexOf(n) === 0);
+    return ft ? ft.c : '#8f8a80';
+  }
+  // who held the land just inland of Ragusa (the History map's shapes, sampled at Trebinje)
+  function thenInland(f) {
+    for (const ft of f.feats) if (thenRings(ft.d).some(r => thenPip(42.711, 18.344, r))) return ft.n;
+    return '';
+  }
+  // what one of Ragusa's parts was in an era: { t: text, cls: rag|out|ceded|split|war|era, c: colour }
+  function thenPartStatus(k, f) {
+    const P = THEN_PART[k], R = f.ragusa, slug = histSlugOf(f.label);
+    if (P.ceded && R.founded && f.year >= 1699 && R.parts.indexOf(k) < 0) {
+      const t = f.year < 1878 ? 'Ottoman Empire' : (CEDED_BY[P.ceded][slug] || CEDED_STATUS[slug] || 'Ottoman Empire');
+      return { t: (f.year < 1878 ? t + ' · ceded 1699' : t), cls: 'ceded', c: thenColor(f, t) };
+    }
+    const s = placeStatus(P, f);
+    if (s.cls === 'rag') return { t: s.t, cls: 'rag', c: '#f2c230' };
+    if (s.cls === 'war') return { t: s.t, cls: 'war', c: '#c0392b' };
+    if (slug === '1942' && (P.line1942 || P.italy1941 || P.italy1920)) return { t: s.t, cls: P.line1942 ? 'split' : 'era', c: thenColor(f, P.line1942 ? 'Independent State of Croatia' : 'Italy') };
+    if (P.italy1920 && /Italy/.test(s.t)) return { t: s.t, cls: 'era', c: thenColor(f, 'Italy') };
+    return { t: s.t, cls: R.founded && !R.former ? 'out' : 'era', c: thenColor(f, s.t) };
+  }
+  function thenLineInfo(k, f) {
+    const R = f.ragusa, slug = histSlugOf(f.label), today = f.year >= 1992;
+    if (k === 'frontier') {
+      if (!R.founded || (!R.former && R.parts.indexOf('konavle') < 0)) return null;
+      if (!R.former) return { t: 'Ragusa’s land frontier with the ' + (thenInland(f) || 'inland powers'), s: 'Still the Croatia–Bosnia border today.' };
+      const ph = f.year < 1878 ? 'the border with the Ottoman Empire' : f.year < 1920 ? 'the line between Dalmatia and Austro-Hungarian Bosnia'
+        : slug === '1942' ? 'an internal line inside the Axis-run Independent State of Croatia'
+        : today ? 'the Croatia–Bosnia and Herzegovina border' : 'an internal line inside Yugoslavia';
+      return { t: 'The old Ragusan frontier: ' + ph, s: today ? 'It follows Ragusa’s frontier closely.' : 'Today it is the Croatia–Bosnia border.' };
+    }
+    if (!R.founded || f.year < 1699) return null;
+    if (k === 'neum') return { t: '1699: Ragusa hands Neum and Klek to the Ottomans', s: today ? 'A buffer against Venice that is still Bosnia and Herzegovina’s only coast.' : 'A buffer strip to keep Venice from reaching Ragusa by land.' };
+    return { t: '1699: Ragusa hands Sutorina to the Ottomans', s: today ? 'The southern buffer; since 1947 Montenegro’s, and this is now the Croatia–Montenegro border.' : 'The southern buffer, matching Neum in the north.' };
+  }
+  function thenInit() {
+    if (thenTop) return;
+    mmMap.createPane('dccThenWide').style.zIndex = 360;
+    mmMap.createPane('dccThen').style.zIndex = 370;
+    mmMap.createPane('dccThenTop').style.zIndex = 610;   // landmarks above the trip's pins
+    thenWide = L.layerGroup().addTo(mmMap);
+    thenNear = L.layerGroup().addTo(mmMap);
+    thenTop = L.layerGroup().addTo(mmMap);
+    thenWide._r = L.svg({ pane: 'dccThenWide' }); thenNear._r = L.svg({ pane: 'dccThen' });
+    const wrap = root._mapmode.querySelector('.dcc-tour-mm-wrap'), ui = wrap.querySelector('.dcc-then');
+    const frames = thenData.frames, rng = ui.querySelector('.dcc-then-rng');
+    rng.max = frames.length - 1;
+    rng.addEventListener('input', () => { thenStop(); thenShow(+rng.value); });
+    ui.querySelector('[data-a=prev]').addEventListener('click', () => { thenStop(); thenShow(Math.max(0, thenIdx - 1)); });
+    ui.querySelector('[data-a=next]').addEventListener('click', () => { thenStop(); thenShow(Math.min(frames.length - 1, thenIdx + 1)); });
+    ui.querySelector('[data-a=play]').addEventListener('click', () => thenPlay ? thenStop() : thenStart());
+    ui.querySelector('[data-a=cmp]').addEventListener('click', () => thenCompare(!thenCmpOn));
+    ui.querySelector('[data-a=hist]').addEventListener('click', () => { histWant = histSlugOf(frames[thenIdx].label); setView('history'); });
+    ui.querySelector('[data-a=close]').addEventListener('click', () => thenToggle(false));
+    // the Then|Now divider: drag it across the map
+    const sw = ui.querySelector('.dcc-then-swipe');
+    sw.addEventListener('pointerdown', e => {
+      e.preventDefault(); sw.setPointerCapture(e.pointerId);
+      const move = ev => { const b = mmMap.getContainer().getBoundingClientRect(); thenCmp = Math.min(0.96, Math.max(0.04, (ev.clientX - b.left) / b.width)); thenClip(); };
+      const up = () => { sw.removeEventListener('pointermove', move); sw.removeEventListener('pointerup', up); sw.removeEventListener('pointercancel', up); };
+      sw.addEventListener('pointermove', move); sw.addEventListener('pointerup', up); sw.addEventListener('pointercancel', up);
+    });
+    sw.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowLeft' ? -0.05 : e.key === 'ArrowRight' ? 0.05 : 0;
+      if (d) { e.preventDefault(); thenCmp = Math.min(0.96, Math.max(0.04, thenCmp + d)); thenClip(); }
+    });
+    mmMap.on('zoomend', () => { if (thenOn) { thenZoomClass(); thenDrawTop(); thenHere(); } });
+    mmMap.on('moveend', () => { if (thenOn) thenHere(); });
+    mmMap.on('move zoom resize', () => { if (thenOn && thenCmpOn) thenClip(); });
+  }
+  function thenZoomClass() {
+    const z = mmMap.getZoom(), c = mmMap.getContainer();
+    c.classList.toggle('dcc-then-wide', z <= 8);
+    c.classList.toggle('dcc-then-near', z >= 9);
+    c.classList.toggle('dcc-then-street', z >= 13);
+    c.classList.toggle('dcc-then-close', z >= 16);
+  }
+  // one era: the empires (zoomed out), Ragusa's parts and the corridors (zoomed in)
+  function thenShow(i) {
+    const frames = thenData.frames, f = frames[i], prev = frames[i - 1];
+    if (!f) return;
+    const changed = i !== thenIdx;
+    thenIdx = i;
+    const ui = root._mapmode.querySelector('.dcc-then'), R = f.ragusa;
+    ui.querySelector('.dcc-then-rng').value = i;
+    ui.querySelector('.dcc-then-rng').setAttribute('aria-valuetext', f.label + ', ' + f.title);
+    ui.querySelector('.dcc-then-yr').textContent = f.label;
+    ui.querySelector('.dcc-then-t').textContent = f.title;
+    ui.querySelector('.dcc-then-s').textContent = 'Ragusa · ' + R.status + ' — ' + R.body;
+    ui.querySelector('[data-a=prev]').disabled = i === 0;
+    ui.querySelector('[data-a=next]').disabled = i === frames.length - 1;
+    if (!changed && thenNear.getLayers().length) return;
+    thenWide.clearLayers(); thenNear.clearLayers();
+    // zoomed out: the History map's empires
+    f.feats.forEach(ft => {
+      thenWide.addLayer(L.polygon(thenRings(ft.d), { renderer: thenWide._r, pane: 'dccThenWide', interactive: false,
+        color: ft.chg ? '#d9a22b' : ft.c, weight: ft.chg ? 1.5 : 1, opacity: ft.chg ? 0.8 : 0.6, fillColor: ft.c, fillOpacity: 0.4,
+        className: ft.chg ? 'dcc-then-chg' : '' }));
+      if (ft.l && ft.n && ft.a > 1.5) thenWide.addLayer(L.marker(thenLL(ft.l[0], ft.l[1]), { pane: 'dccThenWide', interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'dcc-then-elab', html: '<span>' + escapeHtml(ft.n) + '</span>', iconSize: null }) }));
+    });
+    // zoomed in: neighbours, then Ragusa's parts on today's outlines
+    const S = thenStreet, inl = thenInland(f);
+    thenNear.addLayer(L.polygon(S.bih, { renderer: thenNear._r, pane: 'dccThen', interactive: false, stroke: false,
+      fillColor: thenColor(f, inl), fillOpacity: 0.28, className: 'dcc-then-bih' }));
+    THEN_ORDER.forEach(k => {
+      if (k === 'city' && R.parts.indexOf('city') < 0) return;
+      const st = thenPartStatus(k, f), polys = S.parts[k];
+      if (!polys || !polys.length) return;
+      const was = prev && k !== 'city' ? thenPartStatus(k, prev).cls : null;
+      const gained = st.cls === 'rag' && was && was !== 'rag', lost = was === 'rag' && st.cls !== 'rag';
+      const rag = st.cls === 'rag';
+      thenNear.addLayer(L.polygon(polys, { renderer: thenNear._r, pane: 'dccThen', interactive: false,
+        color: rag ? '#7d5411' : st.cls === 'war' ? '#c0392b' : '#3b3934', weight: rag || gained || lost ? 2 : 1, opacity: rag ? 0.9 : 0.5,
+        dashArray: st.cls === 'out' || st.cls === 'ceded' || st.cls === 'split' || k === 'city' ? '5 5' : null,
+        fillColor: st.c, fillOpacity: rag ? 0.45 : 0.3,
+        className: 'dcc-then-part dcc-then-' + st.cls + (gained ? ' dcc-then-gain' : lost ? ' dcc-then-lost' : '') }));
+      const lab = THEN_LAB[k] || S.lab[k];
+      const tag = gained ? '<em>new in ' + escapeHtml(f.label) + '</em>' : lost ? '<em>lost</em>' : '';
+      thenNear.addLayer(L.marker(lab, { pane: 'dccThenTop', interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-' + st.cls + (k === 'city' ? ' dcc-then-plab-city' : ''),
+          html: '<div><b>' + escapeHtml(THEN_PART[k].name) + '</b><span>' + escapeHtml(st.t) + '</span>' + tag + '</div>', iconSize: null }) }));
+    });
+    // the frontier and the two 1699 corridors, on today's border lines
+    ['frontier', 'neum', 'sutorina'].forEach(k => {
+      const info = thenLineInfo(k, f), lines = S.lines[k];
+      if (!info || !lines) return;
+      thenNear.addLayer(L.polyline(lines, { renderer: thenNear._r, pane: 'dccThen', color: '#fff', weight: 8, opacity: 0.55, interactive: false, lineCap: 'round' }));   // a halo so the line reads on satellite
+      const pl = L.polyline(lines, { renderer: thenNear._r, pane: 'dccThen', color: k === 'frontier' ? '#6b4508' : '#a3271b', weight: 4, opacity: 1,
+        dashArray: k === 'frontier' ? '10 6' : '3 6', lineCap: 'round', className: 'dcc-then-line' });
+      pl.bindTooltip('<b>' + escapeHtml(info.t) + '</b><br>' + escapeHtml(info.s), { sticky: true, className: 'dcc-then-tip' });
+      thenNear.addLayer(pl);
+      const longest = lines.reduce((a, b) => b.length > a.length ? b : a), mid = longest[longest.length >> 1];
+      thenNear.addLayer(L.marker(mid, { pane: 'dccThenTop', interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'dcc-then-llab' + (k === 'frontier' ? '' : ' dcc-then-llab-1699'), html: '<span>' + escapeHtml(k === 'frontier' ? (R.former ? 'old frontier' : 'frontier') : '1699 line') + '</span>', iconSize: null }) }));
+    });
+    // the Stradun: a sea channel by tradition until the town and the islet were joined
+    if (R.founded && f.year <= 1100) {
+      const ch = L.polyline(S.stradun, { renderer: thenNear._r, pane: 'dccThen', color: '#2f7f9c', weight: 6, opacity: 0.8, dashArray: '2 8', lineCap: 'round' });
+      ch.bindTooltip('<b>The Stradun as a sea channel?</b><br>By tradition, water ran here between the islet of Laus and the mainland settlement until they were joined. Digs under the street have found a natural sandy shore instead.', { sticky: true, className: 'dcc-then-tip' });
+      thenNear.addLayer(ch);
+    }
+    thenDrawTop();
+    thenHere();
+    if (thenCmpOn) thenClip();
+    updateHash();
+  }
+  // landmarks that stood by this era (street zoom only)
+  function thenDrawTop() {
+    thenTop.clearLayers();
+    if (!thenData || thenIdx < 0 || mmMap.getZoom() < 13) return;
+    const f = thenData.frames[thenIdx], prev = thenData.frames[thenIdx - 1], y = f.year;
+    THEN_MARKS.forEach(m => {
+      if (y < m.from || (m.until != null && y > m.until)) return;
+      const fresh = prev && prev.year < m.from;
+      const mk = L.marker(m.ll, { pane: 'dccThenTop', keyboard: true, title: m.t,
+        icon: L.divIcon({ className: 'dcc-then-mark dcc-then-by-' + m.by + (fresh ? ' dcc-then-fresh' : ''), iconSize: null,
+          html: '<i aria-hidden="true"></i><span><b>' + escapeHtml(m.t) + '</b> ' + escapeHtml(m.s) + '</span>' }) });
+      mk.bindPopup('<div class="dcc-then-pop"><small>' + escapeHtml(m.s) + ' · built by ' + THEN_BY[m.by] + '</small><b>' + escapeHtml(m.t) + '</b><p>' + escapeHtml(m.x) + '</p></div>',
+        { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) });
+      thenTop.addLayer(mk);
+    });
+  }
+  // "Here in 1453": what the land under the middle of the map was, at street zoom
+  function thenHere() {
+    const ui = root._mapmode.querySelector('.dcc-then-here');
+    if (!ui || !thenData || thenIdx < 0) return;
+    const f = thenData.frames[thenIdx], c = mmMap.getCenter(), z = mmMap.getZoom();
+    let txt = '';
+    if (z >= 10) {
+      const S = thenStreet;
+      const k = f.ragusa.parts.indexOf('city') >= 0 && thenInPolys(c.lat, c.lng, S.parts.city) ? 'city'
+        : THEN_ORDER.find(k => k !== 'city' && thenInPolys(c.lat, c.lng, S.parts[k] || []));
+      if (k) txt = '<b>' + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(thenPartStatus(k, f).t);
+      else if (thenInPolys(c.lat, c.lng, S.bih)) { const n = thenInland(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
+    }
+    ui.innerHTML = txt ? '<span class="dcc-then-x" aria-hidden="true">+</span>' + txt : '';
+    ui.hidden = !txt;
+  }
+  function thenClip() {
+    const panes = ['dccThenWide', 'dccThen', 'dccThenTop'].map(n => mmMap.getPane(n));
+    const sw = root._mapmode.querySelector('.dcc-then-swipe');
+    if (!thenCmpOn) { panes.forEach(p => { p.style.clipPath = ''; }); sw.hidden = true; return; }
+    const size = mmMap.getSize(), x = Math.round(size.x * thenCmp);
+    const nw = mmMap.containerPointToLayerPoint([0, 0]), se = mmMap.containerPointToLayerPoint(size), cx = nw.x + x;
+    const poly = 'polygon(' + nw.x + 'px ' + nw.y + 'px, ' + cx + 'px ' + nw.y + 'px, ' + cx + 'px ' + se.y + 'px, ' + nw.x + 'px ' + se.y + 'px)';
+    panes.forEach(p => { p.style.clipPath = poly; });
+    sw.hidden = false; sw.style.left = (thenCmp * 100) + '%';
+    sw.setAttribute('aria-valuenow', Math.round(thenCmp * 100));
+  }
+  function thenCompare(on) {
+    thenCmpOn = on;
+    const b = root._mapmode.querySelector('.dcc-then [data-a=cmp]');
+    b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('active', on);
+    thenClip();
+  }
+  function thenStart() {
+    const frames = thenData.frames, b = root._mapmode.querySelector('.dcc-then [data-a=play]');
+    if (thenIdx >= frames.length - 1) thenShow(0);
+    b.innerHTML = PAUSE_GLYPH; b.setAttribute('aria-label', 'Pause'); b.title = 'Pause';
+    thenPlay = setInterval(() => { if (thenIdx >= frames.length - 1) thenStop(); else thenShow(thenIdx + 1); }, reducedMotion() ? 3500 : 2400);
+  }
+  function thenStop() {
+    if (!thenPlay) return;
+    clearInterval(thenPlay); thenPlay = null;
+    const b = root._mapmode.querySelector('.dcc-then [data-a=play]');
+    if (b) { b.innerHTML = PLAY_GLYPH; b.setAttribute('aria-label', 'Play through the eras'); b.title = 'Play through the eras'; }
+  }
+  // turn the overlay on/off; `slug` picks the era (default: the History tab's, else 1453)
+  function thenToggle(on, slug, fly) {
+    const m = root._mapmode, ui = m.querySelector('.dcc-then'), btn = m.querySelector('.dcc-then-btn'), cb = m.querySelector('#mm-then');
+    thenOn = on;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.classList.toggle('active', on);
+    if (cb) cb.checked = on;
+    m.querySelector('.dcc-tour-mm-wrap').classList.toggle('mm-then-on', on);
+    if (!on) {
+      thenStop(); ui.hidden = true;
+      if (thenTop) { mmMap.removeLayer(thenWide); mmMap.removeLayer(thenNear); mmMap.removeLayer(thenTop); }
+      const c = mmMap.getContainer(); c.classList.remove('dcc-then-wide', 'dcc-then-near', 'dcc-then-street', 'dcc-then-close');
+      if (thenCmpOn) thenCompare(false);
+      updateHash();
+      return;
+    }
+    ui.hidden = false;
+    ui.querySelector('.dcc-then-s').textContent = 'Loading the eras…';
+    thenLoad().then(() => {
+      if (!thenOn) return;
+      thenInit();
+      [thenWide, thenNear, thenTop].forEach(g => { if (!mmMap.hasLayer(g)) g.addTo(mmMap); });
+      thenZoomClass();
+      const fr = thenData.frames, want = slug || (thenIdx < 0 ? histSlug || '1453' : null);
+      let i = want ? fr.findIndex(x => histSlugOf(x.label) === histSlugOf(want)) : thenIdx;
+      if (i < 0) i = fr.findIndex(x => histSlugOf(x.label) === '1453');
+      thenIdx = -1; thenShow(i);
+      if (fly) mmMap.flyTo([42.652, 18.098], 12, { duration: reducedMotion() ? 0 : 1.2 });
+    }).catch(() => { ui.querySelector('.dcc-then-s').textContent = 'The eras could not load — try again when you’re online.'; });
+  }
+  function thenMarkup() {
+    return '<button class="dcc-then-btn" type="button" aria-pressed="false" aria-label="Then: old borders on this map" title="See the old borders on this map">' + svgIcon('history') + '<span>Then</span></button>' +
+      '<div class="dcc-then" hidden>' +
+        '<div class="dcc-then-here" aria-live="polite" hidden></div>' +
+        '<div class="dcc-then-swipe" role="slider" tabindex="0" aria-label="Then and now divider" aria-valuemin="0" aria-valuemax="100" hidden><span>Then</span><i></i><span>Now</span></div>' +
+        '<div class="dcc-then-bar" role="group" aria-label="Era">' +
+          '<div class="dcc-then-k"><b class="dcc-then-yr"></b><span class="dcc-then-t"></span>' +
+            '<button type="button" class="dcc-then-x2" data-a="close" aria-label="Close the old borders" title="Close">×</button></div>' +
+          '<div class="dcc-then-row">' +
+            '<button type="button" data-a="play" aria-label="Play through the eras" title="Play through the eras">' + PLAY_GLYPH + '</button>' +
+            '<button type="button" data-a="prev" aria-label="Earlier era" title="Earlier era">‹</button>' +
+            '<input type="range" class="dcc-then-rng" min="0" max="0" value="0" step="1" aria-label="Era">' +
+            '<button type="button" data-a="next" aria-label="Later era" title="Later era">›</button>' +
+          '</div>' +
+          '<p class="dcc-then-s"></p>' +
+          '<div class="dcc-then-row2">' +
+            '<button type="button" class="dcc-then-pill" data-a="cmp" aria-pressed="false">Then | Now</button>' +
+            '<button type="button" class="dcc-then-pill" data-a="hist">This era’s story</button>' +
+            '<span class="dcc-then-src">Old borders approximate · outlines © OpenStreetMap</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
   }
   function mmShowAll() {
     mmIsolateDay = null; personFilter.clear();

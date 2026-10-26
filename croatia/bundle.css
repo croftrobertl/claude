@@ -1542,3 +1542,118 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
 }
 /* the hidden toggle taps the header: manipulation kills iOS double-tap-zoom so rapid taps count */
 .dcc-tour-header { touch-action: manipulation; }
+
+/* ---- Map tab "Then": the History eras over today's streets ---- */
+.dcc-then-btn { position: absolute; top: 52px; right: 10px; z-index: 450; display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; cursor: pointer;
+  border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text);
+  font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; box-shadow: var(--dcc-tour-shadow); }
+.dcc-then-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.dcc-then-btn:hover { border-color: var(--dcc-tour-primary); }
+.dcc-then-btn.active { background: var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); color: #fff; }
+.dcc-then-bar { position: absolute; left: 10px; bottom: 24px; z-index: 470; width: min(460px, calc(100% - 20px)); box-sizing: border-box; padding: 8px 10px 8px;
+  background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); box-shadow: var(--dcc-tour-shadow); color: var(--dcc-tour-text); }
+.dcc-then-k { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-right: 30px; position: relative; }
+.dcc-then-yr { font-family: var(--dcc-tour-font-head); font-size: 1.15rem; color: var(--dcc-tour-secondary); font-variant-numeric: tabular-nums; flex: none; }
+.dcc-then-t { font-size: 0.84rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dcc-then-x2 { position: absolute; right: -4px; top: -4px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--dcc-tour-muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.dcc-then-x2:hover { color: var(--dcc-tour-text); background: var(--dcc-tour-accent-tint); }
+.dcc-then-row { display: flex; align-items: center; gap: 4px; margin: 4px 0 2px; }
+.dcc-then-row button { flex: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-bg); color: var(--dcc-tour-text); font-size: 1.2rem; line-height: 1; }
+.dcc-then-row button:hover:not(:disabled) { border-color: var(--dcc-tour-primary); }
+.dcc-then-row button:disabled { opacity: 0.4; cursor: default; }
+.dcc-then-row [data-a=play] { background: var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); color: #fff; }
+.dcc-then-rng { flex: 1 1 auto; min-width: 60px; margin: 0 4px; accent-color: var(--dcc-tour-primary); cursor: pointer; }
+.dcc-then-s { margin: 2px 0 6px; font-size: 0.74rem; line-height: 1.35; color: var(--dcc-tour-muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dcc-then-row2 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.dcc-then-pill { font: inherit; font-size: 0.74rem; padding: 5px 10px; min-height: 30px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-bg); color: var(--dcc-tour-text); }
+.dcc-then-pill:hover { border-color: var(--dcc-tour-primary); }
+.dcc-then-pill.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
+.dcc-then-src { font-size: 0.66rem; color: var(--dcc-tour-muted); margin-left: auto; }
+.dcc-then-here { position: absolute; top: 10px; left: 56px; right: 56px; z-index: 460; width: fit-content; max-width: calc(100% - 112px); margin: 0 auto; box-sizing: border-box;
+  padding: 6px 10px; font-size: 0.78rem; line-height: 1.3; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 999px;
+  box-shadow: var(--dcc-tour-shadow); color: var(--dcc-tour-text); pointer-events: none; text-align: center; }
+.dcc-then-here b { color: var(--dcc-tour-accent-deep); }
+.dcc-then-x { display: inline-block; margin-right: 6px; color: var(--dcc-tour-primary); font-weight: 700; }
+/* a cross-hair at the middle of the map marks the spot "Here" describes */
+.mm-then-on .dcc-tour-mm-map::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; z-index: 455; pointer-events: none;
+  background: linear-gradient(var(--dcc-tour-primary), var(--dcc-tour-primary)) center / 2px 100% no-repeat, linear-gradient(var(--dcc-tour-primary), var(--dcc-tour-primary)) center / 100% 2px no-repeat; opacity: 0; transition: opacity .2s; }
+.mm-then-on .dcc-tour-mm-map.dcc-then-near::after { opacity: 0.8; }
+.mm-then-on .dcc-tour-mm-map.dcc-then-near:has(.leaflet-popup)::after { opacity: 0; }
+.mm-then-on .dcc-tour-mm-moment { bottom: 190px; }
+/* Then | Now divider */
+.dcc-then-swipe { position: absolute; top: 0; bottom: 0; z-index: 465; width: 30px; margin-left: -15px; cursor: ew-resize; touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.dcc-then-swipe[hidden] { display: none; }
+.dcc-then-swipe::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+.dcc-then-swipe i { position: relative; width: 26px; height: 26px; border-radius: 50%; background: var(--dcc-tour-primary); border: 2px solid #fff; box-shadow: var(--dcc-tour-shadow); }
+.dcc-then-swipe span { position: absolute; top: calc(50% + 20px); font-size: 0.68rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(32,31,29,.78); color: #fff; white-space: nowrap; pointer-events: none; }
+.dcc-then-swipe span:first-child { right: 22px; }
+.dcc-then-swipe span:last-of-type { left: 22px; }
+.dcc-then-swipe:focus-visible i { outline: 2px solid var(--dcc-tour-primary); outline-offset: 3px; }
+/* zoom bands: empires when zoomed out, Ragusa's parts closer in, landmarks at street level */
+.dcc-tour-mm-map:not(.dcc-then-wide) .leaflet-dccThenWide-pane { display: none; }
+.dcc-tour-mm-map:not(.dcc-then-near) .leaflet-dccThen-pane,
+.dcc-tour-mm-map:not(.dcc-then-near) .dcc-then-plab, .dcc-tour-mm-map:not(.dcc-then-near) .dcc-then-llab { display: none; }
+.dcc-then-street .dcc-then-plab:not(.dcc-then-plab-city), .dcc-then-plab-city { display: none; }
+.dcc-then-street .dcc-then-plab-city { display: block; }
+.dcc-then-close .dcc-then-llab { display: none; }
+.leaflet-dccThenWide-pane path, .leaflet-dccThen-pane path { transition: fill-opacity .35s; }
+/* at street level the streets matter: thin the wash, keep the outlines */
+.dcc-then-street .dcc-then-part, .dcc-then-street .dcc-then-bih { fill-opacity: 0.16; }
+.dcc-then-street .dcc-then-part.dcc-then-rag { fill-opacity: 0.2; stroke-width: 3; }
+.mm-then-on .leaflet-marker-pane { opacity: 0.8; }
+.dcc-then-elab span, .dcc-then-plab > div, .dcc-then-llab span { display: block; transform: translate(-50%, -50%); width: max-content; max-width: 170px; text-align: center; pointer-events: none;
+  font-size: 0.7rem; line-height: 1.2; color: #201f1d; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff; }
+.dcc-then-elab span { font-family: var(--dcc-tour-font-head); font-weight: 600; letter-spacing: 0.04em; max-width: 120px; opacity: 0.85; }
+.dcc-then-plab { background: none; border: 0; }
+.dcc-then-plab b { display: block; font-family: var(--dcc-tour-font-head); font-size: 0.78rem; letter-spacing: 0.03em; }
+.dcc-then-plab > div > span { display: block; }
+.dcc-then-plab em { display: inline-block; margin-top: 2px; padding: 1px 6px; border-radius: 999px; font-style: normal; font-weight: 600; font-size: 0.66rem; background: #d9a22b; color: #201f1d; text-shadow: none; }
+.dcc-then-plab-rag b { color: #7d5411; }
+.dcc-then-llab span { font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #7d5411; }
+.dcc-then-llab-1699 span { color: #a3271b; }
+.leaflet-container .dcc-then-gain { animation: dccThenGain 1.6s ease-out 2; stroke: #d9a22b; }
+.leaflet-container .dcc-then-lost { stroke: #a3271b; stroke-dasharray: 6 5; stroke-opacity: 0.9; }
+.leaflet-container .dcc-then-chg { stroke-dasharray: 7 5; animation: dccThenDash 1.2s linear infinite; }
+@keyframes dccThenGain { 0% { stroke-width: 9; stroke-opacity: 1; } 100% { stroke-width: 2; stroke-opacity: .9; } }
+@keyframes dccThenDash { to { stroke-dashoffset: -24; } }
+/* dated landmarks */
+.dcc-then-mark { background: none; border: 0; }
+.dcc-then-mark i { position: absolute; left: -7px; top: -7px; width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45); background: #b68235; cursor: pointer; }
+.dcc-then-mark i::after { content: ""; position: absolute; inset: -9px; }   /* a bigger tap target */
+.dcc-then-mark span { position: absolute; left: 10px; top: -9px; display: none; white-space: nowrap; font-size: 0.7rem; line-height: 1.2; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,255,255,.92); color: #201f1d; box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none; }
+.dcc-then-close .dcc-then-mark span { display: block; }
+.dcc-then-by-rag i { background: #f2c230; }
+.dcc-then-by-fra i { background: #4a68c9; }
+.dcc-then-by-aus i { background: #e2b14a; border-color: #201f1d; }
+.dcc-then-by-rome i { background: #9b72c4; }
+.dcc-then-by-church i { background: #8a64b5; }
+.dcc-then-by-cro i { background: #e07d82; }
+.dcc-then-fresh i { animation: dccThenPing 1.4s ease-out 3; }
+@keyframes dccThenPing { 0% { box-shadow: 0 0 0 0 rgba(217,162,43,.9); } 100% { box-shadow: 0 0 0 16px rgba(217,162,43,0); } }
+.dcc-then-popup .leaflet-popup-content { margin: 10px 12px; }
+.dcc-then-pop small { display: block; color: #736f6a; font-size: 0.7rem; }
+.dcc-then-pop b { display: block; font-family: var(--dcc-tour-font-head); font-size: 0.95rem; margin: 1px 0 4px; }
+.dcc-then-pop p { margin: 0; font-size: 0.8rem; line-height: 1.4; }
+.leaflet-tooltip.dcc-then-tip { max-width: 260px; white-space: normal; font-size: 0.74rem; line-height: 1.35; }
+@media (max-width: 560px) {
+  .dcc-then-btn span { display: none; }
+  .dcc-then-btn { width: 34px; padding: 0; justify-content: center; }
+  .dcc-then-bar { left: 8px; bottom: 22px; width: calc(100% - 16px); padding: 6px 8px; }
+  .dcc-then-src { display: none; }
+  .dcc-then-here { left: 50px; right: 50px; max-width: calc(100% - 100px); font-size: 0.72rem; border-radius: var(--dcc-tour-radius); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-container .dcc-then-gain, .leaflet-container .dcc-then-chg, .dcc-then-fresh i { animation: none; }
+}
+
+.dcc-hist-street { display: inline-block; margin: 8px 0 10px; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--dcc-tour-secondary); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.dcc-hist-street:hover { color: var(--dcc-tour-primary); }
+@media (max-height: 520px) {
+  .dcc-then-s, .dcc-then-src { display: none; }
+  .dcc-then-bar { padding: 5px 8px; bottom: 20px; }
+  .mm-then-on .dcc-tour-mm-moment { bottom: 140px; }
+}

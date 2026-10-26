@@ -11,6 +11,7 @@ cession, 1991–92 siege, 2022 Pelješac Bridge).
 | `history.js` | Vanilla JS component, no dependencies. `BalkansHistory.mount(el, opts)` |
 | `history.css` | Scoped `bh-*` styles. Reads the site's `--dcc-tour-*` tokens, with fallbacks |
 | `history-data.json` | All 35 eras as pre-projected SVG paths (~590 KB, gzips to ~150 KB) |
+| `street.json` | Street-accurate outlines for the Map tab's "Then" overlay (~230 KB, gzips to ~65 KB): Ragusa's parts on OpenStreetMap municipal boundaries, today's border lines that follow the old frontier and the 1699 corridors, the Stradun. Built by `../tools/build-street.py` |
 | `index.html` | Standalone demo (`python3 -m http.server`, open `/index.html`) |
 | `balkans-highlights.mp4` | 61-second vertical film (1080×1920, H.264, ~8 MB) |
 | `source/` | Python pipeline that generates the data and the videos (not shipped to users) |
@@ -42,3 +43,12 @@ Never hand-edit `history-data.json`.
 Borders come from historical-basemaps (A. Ourednik) and Natural Earth, with hand-drawn
 corrections for the Balkans (1210, 1355, 1453, 1526, 1600–1832, 1878 ×2, 1913, 1942, 1992).
 Hand-drawn eras are close approximations, not survey-exact.
+
+## The Map tab's "Then" overlay
+`street.json` comes from OpenStreetMap (© OpenStreetMap contributors, ODbL) via Nominatim:
+```
+python3 tools/build-street.py --fetch /tmp/osm   # downloads ~17 boundaries, 1 request/s
+python3 tools/build-street.py /tmp/osm           # writes history/street.json
+```
+Ragusa's parts are cut at the same lines the coast map uses, so both maps agree on what was
+Ragusan when. The landmarks and their dates live in `THEN_MARKS` in `bundle.js`.

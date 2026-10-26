@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Smoke test for the History tab (map, story mode, chronicle, family records).
+// Smoke test for the History tab (map, story mode, chronicle, family records) and the
+// Map tab's "Then" overlay of the old borders.
 //
 //   cd croatia && python3 -m http.server 8199 &
 //   npm i playwright-core            # once, anywhere on NODE_PATH
@@ -34,6 +35,13 @@ const check = (ok, what) => { console.log((ok ? '  ok   ' : '  FAIL ') + what); 
     await p.click('[data-strand=records]'); await sleep(300);
     await p.fill('.dcc-village-pick input', 'Čilipi'); await sleep(300);
     check(await p.$$eval('.dcc-vt li', x => x.length) > 5, 'village lookup lists eras');
+    const era = await p.$eval('.bh-year', x => x.textContent);
+    await p.click('[data-jump=street]');
+    await p.waitForSelector('.dcc-then-bar', { state: 'visible', timeout: 20000 }); await sleep(1500);
+    check((await p.$eval('.dcc-then-yr', x => x.textContent)) === era, 'the street map opens at the same era (' + era + ')');
+    check(await p.$$eval('.leaflet-dccThen-pane path', x => x.length) > 8, 'old borders drawn over the street map');
+    check((await p.evaluate(() => location.hash)) === '#v=map&then=' + era.toLowerCase().replace(/\s+/g, ''), 'street map era is in the link');
+    check(await p.evaluate(() => document.documentElement.scrollWidth <= (window.visualViewport ? visualViewport.width : innerWidth) + 1), 'no sideways scroll on the map');
     check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
     await ctx.close();
   }

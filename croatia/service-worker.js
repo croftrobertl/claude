@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v94';
+const CACHE_VERSION = 'dcc-tour-v95';
 const SHELL = [
   './',
   'index.html',
@@ -20,6 +20,7 @@ const SHELL = [
   'history/history.css',
   'history/history-data.json',
   'history/chronicle.json',
+  'history/street.json',
   // self-hosted Classical fonts (Cormorant Garamond + Lora) — cached so the
   // editorial type survives offline and never hits a CDN
   'vendor/fonts/cormorant-600-latin.woff2',
