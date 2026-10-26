@@ -358,7 +358,7 @@
         b.classList.toggle('active', on);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-    if (v !== 'map') { mmStopPlay(); thenStop(); }
+    if (v !== 'map') { mmStopPlay(); thenStop(); exitMapFullscreen(); }
     if (v !== 'history') historyLeave();
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
@@ -386,7 +386,9 @@
     // switching tabs adds a browser-history entry, so Back returns to the tab (and day) you came
     // from; changes inside a tab (day, era, map overlay) just update the current one
     const st = history.state, push = !!(st && st.dccView && st.dccView !== v);
-    history[push ? 'pushState' : 'replaceState']({ dccView: v }, '', v === 'story' ? '#d=' + (curDay + 1)
+    const state = { dccView: v };
+    if (!push && st && st.dccViewer && viewerIsOpen()) state.dccViewer = true;   // a photo is still open on this step
+    history[push ? 'pushState' : 'replaceState'](state, '', v === 'story' ? '#d=' + (curDay + 1)
       : '#v=' + v + (v === 'map' && thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
         (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') + (histPlace ? '&pl=' + encodeURIComponent(histPlace) : '') : ''));
   }
@@ -1696,10 +1698,11 @@
     return streetLoading;
   }
   // the part of the old Republic a spot lies in (or, at sea, the nearest one within 4 km)
-  function placePart(lat, lng) {
+  function placePart(lat, lng, onLandOnly) {
     const S = thenStreet;
     if (thenInPolys(lat, lng, S.parts.city)) return { k: 'core', city: true };
     for (const k of THEN_ORDER) if (k !== 'city' && thenInPolys(lat, lng, S.parts[k] || [])) return { k };
+    if (onLandOnly) return null;
     let best = null, bd = 4;
     const cx = Math.cos(lat * Math.PI / 180);
     THEN_ORDER.forEach(k => k !== 'city' && (S.parts[k] || []).forEach(p => p[0].forEach(q => {
@@ -1932,7 +1935,7 @@
       }
     });
     const layer = new Layer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', opts);
-    layer.retry = () => { if (fails >= 8) { fails = 0; layer.redraw(); } };   // try the refused tiles again
+    layer.reset = () => { fails = 0; };   // before trying the street map again
     return layer;
   }
   const PLAY_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
@@ -2139,6 +2142,13 @@
   }
   let mmRange = [0, 0];
   let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
+  // leaving the Map tab (a tab button, or Back) mustn't leave the map covering the screen
+  function exitMapFullscreen() {
+    const wrap = root._mapmode && root._mapmode.querySelector('.dcc-tour-mm-wrap');
+    if (!wrap) return;
+    if (document.fullscreenElement === wrap && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    wrap.classList.remove('mm-fs-fallback');
+  }
   function toggleMapFullscreen() {
     const wrap = root._mapmode.querySelector('.dcc-tour-mm-wrap');
     if (document.fullscreenElement) { document.exitFullscreen && document.exitFullscreen(); return; }
@@ -2154,17 +2164,21 @@
     mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 21 });
     // the page sends no Referer (meta referrer), but OpenStreetMap's tile servers refuse requests
     // without one ("Access blocked" tiles), so its tiles send just the site's origin
+    // the street map is on the map only while satellite is off: the satellite imagery covers it
+    // completely, and OSM's volunteer-run servers shouldn't serve tiles nobody sees
     mmOsm = osmLayer({ maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap' }, () => {
       // the street map is refused or unreachable: fall back to the satellite view
       const cb = root._mapmode.querySelector('#mm-sat');
       if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); toast('Street map unavailable — showing satellite'); }
-    }).addTo(mmMap);
+    });
+    if (!root._mapmode.querySelector('#mm-sat').checked) mmOsm.addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
-    ]).addTo(mmMap);
+    ]);
+    if (root._mapmode.querySelector('#mm-sat').checked) mmSat.addTo(mmMap);
     mmLabelLayer = L.layerGroup().addTo(mmMap);   // curated place labels (below markers)
     mmPathLayer = L.layerGroup().addTo(mmMap);    // day-route lines (below the pins)
     mmMarkers = L.layerGroup().addTo(mmMap);      // item pins + cluster bubbles
@@ -2178,7 +2192,10 @@
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
-    m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else { mmMap.removeLayer(mmSat); mmOsm.retry(); } });
+    m.querySelector('#mm-sat').addEventListener('change', e => {
+      if (e.target.checked) { mmSat.addTo(mmMap); mmMap.removeLayer(mmOsm); }
+      else { mmOsm.reset(); mmOsm.addTo(mmMap); mmMap.removeLayer(mmSat); }   // a fresh try at the street map
+    });
     m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
     m.querySelector('#mm-then').addEventListener('change', e => thenToggle(e.target.checked, null, e.target.checked && mmMap.getZoom() < 9));
     m.querySelector('.dcc-then-btn').addEventListener('click', () => thenToggle(!thenOn, null, !thenOn && mmMap.getZoom() < 9));
@@ -2579,7 +2596,10 @@
     let txt = '';
     if (z >= 10) {
       const S = thenStreet, K41 = S.konavle41;
-      const inland = thenInPolys(c.lat, c.lng, S.bih), pp = inland ? null : placePart(c.lat, c.lng);
+      // Ragusa's own lands first (Neum lay inside both the Republic and today's Bosnia), then the
+      // neighbours inland, then the nearest coast for a spot out at sea
+      let pp = placePart(c.lat, c.lng, true), inland = false;
+      if (!pp) { inland = thenInPolys(c.lat, c.lng, S.bih); if (!inland) pp = placePart(c.lat, c.lng); }
       const k = pp && (pp.city ? (f.ragusa.parts.indexOf('city') >= 0 ? 'city' : 'core') : pp.k), sea = pp && pp.sea;
       const ww2 = histSlugOf(f.label) === '1942' && k === 'konavle' && K41
         ? thenInPolys(c.lat, c.lng, K41.lovorno) ? 'on the Italy–NDH line; Lovorno changed hands'
@@ -4204,7 +4224,12 @@
       const a = document.createElement('button');
       a.className = 'dcc-tour-lb-place dcc-tour-lb-hist'; a.type = 'button';
       a.innerHTML = svgIcon('history') + '<span>History of this place ›</span>';
-      a.addEventListener('click', e => { e.stopPropagation(); const n = it.place; closeViewer(); openPlaceHistory(n); });
+      a.addEventListener('click', e => {
+        e.stopPropagation(); const n = it.place;
+        closeViewer(true);   // history.back() here would race the navigation below
+        try { history.replaceState({ dccView: root.dataset.view || 'story' }, '', location.href); } catch (err) { /* sandboxed */ }
+        openPlaceHistory(n);
+      });
       cap.appendChild(a);
     }
     // map-opened items get a link to that place's full popup (all shots + Open day)
@@ -4219,17 +4244,29 @@
     // nothing to step through with a single item: hide the arrows and the "1 / 1" counter
     el0.querySelectorAll('.dcc-tour-lightbox-nav, .dcc-tour-lightbox-count').forEach(x => { x.style.display = n === 1 ? 'none' : ''; });
     el0.classList.add('open');
-    if (!wasOpen) { vwPrevFocus = document.activeElement; el0.querySelector('.dcc-tour-lightbox-close').focus(); }
+    if (!wasOpen) {
+      vwPrevFocus = document.activeElement; el0.querySelector('.dcc-tour-lightbox-close').focus();
+      // an open photo is a step in the browser history, so the phone's Back button closes it
+      try { history.pushState(Object.assign({}, history.state, { dccViewer: true }), '', location.href); } catch (e) { /* sandboxed */ }
+    }
     document.body.classList.add('dcc-tour-noscroll');
   }
-  function closeViewer() {
+  // viaHistory: Back already took the viewer's history step (or a link is about to replace it)
+  // the viewer's own class says whether it's showing (renderDay resets viewerIdx under an open viewer)
+  const viewerIsOpen = () => { const v = document.getElementById('dcc-tour-viewer'); return !!(v && v.classList.contains('open')); };
+  function closeViewer(viaHistory) {
+    const wasOpen = viewerIsOpen();
     viewerIdx = -1;
     MUSIC.setVideoOpen(false);   // video/clip closed -> resume any suppressed song
     const el0 = document.getElementById('dcc-tour-viewer');
     if (el0) { el0.querySelector('.dcc-tour-vstage').innerHTML = ''; el0.classList.remove('open'); }   // detach player → stop playback
     document.body.classList.remove('dcc-tour-noscroll');
     if (vwPrevFocus && vwPrevFocus.focus) { try { vwPrevFocus.focus(); } catch (e) {} vwPrevFocus = null; }
+    if (wasOpen && !viaHistory && history.state && history.state.dccViewer) history.back();   // take back the viewer's step
   }
+  window.addEventListener('popstate', () => {
+    if (viewerIsOpen() && !(history.state && history.state.dccViewer)) closeViewer(true);
+  });
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

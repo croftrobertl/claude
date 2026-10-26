@@ -543,6 +543,13 @@
         .then(r => r.ok ? r.blob() : Promise.reject(r.status));
       return get('default').catch(st => st === 403 ? get('reload') : Promise.reject(st)).then(b => URL.createObjectURL(b));
     }
+    // back online after the map gave up on tiles: try again (street map first, unless satellite was chosen)
+    window.addEventListener('online', () => {
+      if (tileFails < 8) return;
+      let want = false; try { want = localStorage.getItem('bh-sat') === '1'; } catch (e) { /* storage blocked */ }
+      if (want !== sat) setSat(want, true); else { tileFails = 0; tileGen++; }
+      tiles(vp.clientWidth, vp.clientHeight);
+    });
     function dropTile(im) {
       im.remove();
       if (im._url) { URL.revokeObjectURL(im._url); im._url = null; }
