@@ -5427,3 +5427,107 @@ phone, where the header above them is taller).
   controls. 46 passed, and each mutant fails it. The offline twin of "one
   reading" also removes the transition listeners, because the stand-in's
   CSS slide ends in a `transitionend`.
+
+### 48. 1.47.3 — "Ride With the Bar", and one shared measurement of the theme's bar
+
+The Director held 1.47.2 on staging. Below 1024 the theme's bar slides back
+over the pinned controls on every scroll UP: the controls stayed at top 0 and
+the bar covered their top 63px, the Seen Here / Wider Florida switch. Rob
+picked **"Ride With the Bar"** from phone mockups on the real page.
+
+#### THE THEME'S BAR IS MEASURED IN ONE PLACE NOW, AND IT IS NOT THIS PLUGIN
+
+The Director's mu-plugin **`dcc-topbar.php`** (live and staging) sets CSS
+`--dcc-topbar` on `<html>`: how many pixels the theme's bar covers right now.
+It follows the bar frame by frame for 700ms after each scroll, re-reads on the
+bar's `transitionend`, and exposes `window.DCCTopbar.get()` and a `dcc:topbar`
+event on `document`. 1.47.2's own frame-by-frame tracking (`applySticky`,
+`themeBarsBottom`, the `transitionend`/`animationend` listeners) and the
+credits' own `barsBottom` probe are **retired**. The controls' sticky `top` and
+the pane's offset are `var(--dcc-topbar, 0px)`. With no helper they fall back
+to 0. The `overflow: clip` unclip (1.47.2) stays; it is still this plugin's job.
+
+**A gap in the helper, measured on live and reported, not worked around:**
+from 1024 the theme slides its bar in with a ~1s CSS **animation**
+(`header-fixed`), not a transition. The helper follows for only 0.7s and
+re-reads on `transitionend`, not `animationend`. So after a quick scroll it
+freezes part-way: 43–51px while the bar rests at 0–63. The controls sit at
+that value, so at 1024 and up they can sit 12–20px under the bar until the
+next scroll. The one-line fix belongs in the
+helper:
+
+```js
+document.addEventListener('animationend', function (e){
+  if(bar&&(e.target===bar||bar.contains(e.target))) update();
+});
+```
+
+`tools/live/live-swap.mjs` takes `DCC_PATCH_HELPER=1` to serve the helper with
+that line added. Plain, 54 of 58 live checks pass, and the 4 failures are
+exactly this gap at 1024 and 1440. Patched, 58 of 58.
+
+#### RIDE WITH THE BAR (below 1024), in guide.js `rideApply()`
+
+- **Locked to the bar, frame by frame.** The share of the controls showing is
+  the bar's progress (`--dcc-topbar` / the bar's full height), applied as a
+  `transform`. They start sliding in the same frame the bar does, move with
+  it, and finish with it, directly under it. When the bar snaps away on a
+  scroll down, they go with it. The bar's full height starts at the helper's
+  documented 63 and is re-learned at rest (150ms with no change), so a
+  different bar height corrects itself.
+- **Before they reach the top** (`--dcc-topbar` minus their natural position,
+  read from a zero-height marker inserted before them, is ≤ 0) they sit in
+  their normal place. Past it, with no bar, they scroll away as content would.
+  At the top of the page nothing has changed.
+- **Focus wins.** Anything focused inside the controls, the search above all,
+  keeps them fully shown.
+- **Reduced motion:** no slide. They are shown at the bar's resting height
+  while any of the bar shows, and gone when none does.
+- **A transform moves pixels, not layout:** nothing else shifts, so no CLS.
+- **From 1024, no transform at all.** The bar is always pinned there and the
+  controls sit at `var(--dcc-topbar)`, as 1.47.2 did.
+- The live state is on the element: `data-dccwl-ride` is
+  `flow|focus|hidden|moving|shown`.
+
+#### THE CREDITS LANDING USES THE SAME NUMBER
+
+`#credits > summary` has `scroll-margin-top: calc(var(--dcc-topbar, 0px) +
+var(--dccwl-gp-top-h, 0px))`. `--dccwl-gp-top-h` is now measured at every
+width, still only after first paint. Landing is `scrollIntoView`, so the
+browser does the arithmetic with the numbers as they stand. The settle loop
+no longer measures bars. It asks what the guest sees, "is the summary on
+screen, and is the point 6px inside its top edge the summary?", and lands
+again if not.
+
+#### ONE BOUNDARY, REPORTED NOT FIXED
+
+A sticky box cannot follow past the end of its container. With a search that
+leaves only a handful of rows (e.g. "heron"), the guide ends a screen later.
+Scrolling past it into the theme's footer takes the controls, focused search
+and all, with the guide's box. The theme's `main` wrapper also clips anything
+moved outside it, so no transform could show them there. Within the guide the
+focused search never hides (tested with "a", which leaves a long list).
+
+#### TESTED
+
+- **Live swap** (`tools/live/live-swap.mjs`), four widths, real pages through
+  the proxy, GET only. Checks: credits on arrival with `#credits`, from
+  /explore/'s link, and on a jump UPWARDS (scrolled 5,000px into the open
+  credits, then a fresh `#credits`). Scroll DOWN: the controls are off screen
+  and the hit-test at y 20 is the list. Scroll UP: the bar is at 0–63 and the
+  controls are directly under it (2px inside is the controls, 2px above is
+  the bar). With the search focused and "a" typed, a 900px scroll down leaves
+  the field on screen and on top. From 1024, the steps stay inside the guide
+  (600/900 down, 800 up), because the page is short and scrolling past its
+  end takes the controls with the guide's box. Plain 54/58 (the helper gap),
+  patched 58/58. Three mutants fail on live with the helper patched: stuck at
+  0 (16), never hiding (4), ignoring focus (2).
+- **Offline, `ui-1471.mjs`**: the stand-in theme now behaves as live does
+  below 1024 (slides in on a scroll up, gone on a scroll down) and carries the
+  helper's live source verbatim. Its slide is driven frame by frame in script,
+  because a CSS transition in headless Chromium sometimes produced no
+  in-between frames for the helper to report. The suite also samples every
+  frame of a scroll up. With motion, the controls must pass through part-way
+  positions only while the bar is part-way in. With reduced motion, never.
+  63 pass. Four mutants fail: the three above, plus sliding under reduced
+  motion.

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.47.2
+Stable tag: 1.47.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,19 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.47.3 =
+* **On a phone or tablet the guide's search and filters ride with the
+  site's menu bar** (Rob's pick). Scroll down and both slide away, so the
+  whole screen is species; scroll up and the menu bar slides back with the
+  search and filters right under it, moving together. At the top of the
+  page everything sits where it always has. While you are typing in the
+  search box it never hides. With reduced motion turned on they simply
+  appear and disappear, with no sliding.
+* On a computer nothing changes: the menu bar stays pinned and the search
+  and filters sit just under it.
+* The guide now reads the site's menu-bar height from the one shared
+  measurement on the site, instead of working it out itself.
 
 = 1.47.2 =
 * **The guide's search and filters really stay pinned now.** On the live

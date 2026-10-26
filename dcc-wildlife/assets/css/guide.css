@@ -35,10 +35,11 @@
  * THE PINNED CONTROLS (the Director's Option 1 order).
  *
  * One sticky block holding all three, because they are one decision: what
- * am I looking at. `--dccwl-sticky-offset` is the token canal.js writes
- * when it measures the theme's own sticky header; it is 0 by default, so
- * this works on a plain page and gets out of the way of the site's header
- * where there is one.
+ * am I looking at. Its `top` is `--dcc-topbar` (1.47.3): how many pixels
+ * the theme's pinned bar covers right now, set by the Director's mu-plugin
+ * dcc-topbar.php — the one place that measures that bar. 0 with no helper,
+ * so this works on a plain page. Below 1024 guide.js also rides the block
+ * in and out with the bar (Rob's "Ride With the Bar").
  *
  * The ground is OPAQUE and the rules are explicit. A translucent sticky bar
  * over a scrolling list of photographs is unreadable, and this plugin's
@@ -53,7 +54,7 @@
 	margin: 0 0 var(--dccwl-gap);
 	padding: var(--dccwl-gap) 0;
 	position: sticky;
-	top: var(--dccwl-sticky-offset, 0px);
+	top: var(--dcc-topbar, 0px);
 	/* Above the rows and above a row's own photograph, below the sheet
 	 * (which is body-level at a far higher layer). */
 	z-index: 20;
@@ -439,7 +440,7 @@
 		 * selector or a guess). The 0px fallback simply puts the pane at
 		 * the top, which is wrong by a band rather than broken.
 		 */
-		top: calc(var(--dccwl-sticky-offset, 0px) + var(--dccwl-gp-top-h, 0px) + var(--dccwl-gap));
+		top: calc(var(--dcc-topbar, 0px) + var(--dccwl-gp-top-h, 0px) + var(--dccwl-gap));
 	}
 	/*
 	 * SOURCE ORDER IS PANE, THEN LIST (1.47.0) — for the keyboard, see
@@ -674,7 +675,13 @@
  * "Photo Credits (N)" and its one line, as in the still. A summary is a
  * title, so it centres (the alignment rule); the chevron stays beside it.
  * ====================================================================== */
-.dccwl-gp .dccwl-photo-credits > .dccwl-fullguide-summary { justify-content: center; }
+.dccwl-gp .dccwl-photo-credits > .dccwl-fullguide-summary {
+	justify-content: center;
+	/* A jump to #credits lands below the theme's bar and the pinned
+	 * controls, with the numbers as they are at the moment of the jump
+	 * (1.47.3). */
+	scroll-margin-top: calc(var(--dcc-topbar, 0px) + var(--dccwl-gp-top-h, 0px));
+}
 .dccwl-gp .dccwl-photo-credits .dccwl-fullguide-text { align-items: center; }
 .dccwl-app .dccwl-photo-credits .dccwl-fullguide-h.dccwl-fullguide-h,
 .dccwl-gp .dccwl-photo-credits .dccwl-fullguide-meta { text-align: center; }

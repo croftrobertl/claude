@@ -470,10 +470,9 @@
 	 * ------------------------------------------------------------------ */
 	function measureTop() {
 		if (!top) { return; }
-		/* The pane is the ONLY reader of this token, and it exists only at
-		 * 900px and up. On a phone the measurement is a forced layout of
-		 * the whole list for a value nothing uses. */
-		if (!(wide && wide.matches)) { return; }
+		/* Read at every width since 1.47.3: the credits' scroll-margin uses
+		 * it too. Only ever after first paint (below), when the layout is
+		 * already done and the read is free. */
 		var h = Math.round(top.getBoundingClientRect().height);
 		root.style.setProperty('--dccwl-gp-top-h', h + 'px');
 	}
@@ -490,89 +489,109 @@
 		window.requestAnimationFrame(function () { window.requestAnimationFrame(fn); });
 	}
 	/*
-	 * THE PINNED CONTROLS SIT UNDER THE THEME'S PINNED BAR (1.47.2, Rob's yes).
+	 * THE PINNED CONTROLS RIDE WITH THE THEME'S BAR (1.47.3, Rob's pick:
+	 * "Ride With the Bar").
 	 *
-	 * From 1024px the theme's menu (`.site-header-bottom-fixed` on live) pins
-	 * itself to the top — but only once the page has scrolled past it: at the
-	 * top it is static, 10-72px down, and it turns `position: fixed` (0-63px)
-	 * in the theme's own scroll handler. So the offset is MEASURED, on load
-	 * and on every scroll (a frame at most), with the probe /explore/'s
-	 * canal.js uses: the fixed or sticky boxes over the top edge, OUTSIDE
-	 * this guide (its own pinned block must never push itself down).
-	 * `elementsFromPoint`, all of them, so a bar is found whichever of the two
-	 * is painted on top. Below 1024 the theme's menu scrolls away and the
-	 * offset is 0, as Rob asked.
+	 * The bar is measured in ONE place now: the Director's mu-plugin
+	 * `dcc-topbar.php`, which sets `--dcc-topbar` (how many pixels the theme's
+	 * bar covers right now) and fires `dcc:topbar` as it changes, following
+	 * the bar's slide frame by frame. 1.47.2's own tracking is retired; the
+	 * controls' sticky `top` is `var(--dcc-topbar, 0px)` in guide.css, so
+	 * from 1024 — where the bar is always pinned — they sit under it as
+	 * before, and with no helper they sit at 0.
+	 *
+	 * BELOW 1024 the bar slides in on a scroll UP and is gone on a scroll
+	 * DOWN, and the controls go with it, as one unit:
+	 *   - their reveal is LOCKED TO THE BAR'S: the bar's progress (pixels
+	 *     covered / its full height) is the share of the controls showing, so
+	 *     they start together, move frame by frame together, and finish
+	 *     together, sitting directly under it; when the bar vanishes, so do
+	 *     they;
+	 *   - before they reach the top of the screen they simply scroll with the
+	 *     page, as in their normal place;
+	 *   - anything focused inside them (the search above all: a guest typing
+	 *     must never lose the box) keeps them fully shown;
+	 *   - with reduced motion they do not slide: shown at the bar's resting
+	 *     height while the bar shows, gone when it is gone.
+	 * Done with a transform, which moves pixels and not layout: nothing else
+	 * on the page shifts. No helper (or 1024 and up): no transform at all.
 	 */
-	var themeWide = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
-	var stickyLast = -1;
+	var narrow = window.matchMedia ? window.matchMedia('(max-width: 1023.98px)') : null;
+	var rideFull = 63;     /* the helper's documented full value; corrected at rest */
+	var rideRest = 0;
+	var rideQueued = false;
+	var rideMark = null;
 
-	function themeBarsBottom() {
-		var w = window.innerWidth || 0;
-		var h = window.innerHeight || 0;
-		if (!w || !h || !document.elementsFromPoint) { return 0; }
-		var best = 0;
-		[0.5, 0.08, 0.92].forEach(function (fx) {
-			var x = Math.round(w * fx);
-			var y = 0;
-			for (var n = 0; n < 4; n++) {
-				var b = 0;
-				var hits = document.elementsFromPoint(x, y + 1);
-				for (var i = 0; i < hits.length && !b; i++) {
-					for (var e = hits[i]; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
-						if (root.contains(e)) { break; }
-						var pos = getComputedStyle(e).position;
-						if ('fixed' !== pos && 'sticky' !== pos) { continue; }
-						var r = e.getBoundingClientRect();
-						if (r.top <= y + 1 && r.bottom > y + 1 && r.bottom < h * 0.4) { b = Math.ceil(r.bottom); }
-						break;
-					}
-				}
-				if (b <= y) { break; }
-				y = b;
-			}
-			best = Math.max(best, y);
-		});
-		return best;
+	function topbarPx() {
+		var h = window.DCCTopbar;
+		var v = h && 'function' === typeof h.get ? parseFloat(h.get()) : 0;
+		return isFinite(v) && v > 0 ? v : 0;
 	}
 
-	function applySticky() {
-		var px = (themeWide && themeWide.matches) ? themeBarsBottom() : 0;
-		if (px === stickyLast) { return; }
-		stickyLast = px;
-		root.style.setProperty('--dccwl-sticky-offset', px + 'px');
+	function rideClear() {
+		if (!top) { return; }
+		top.style.transform = '';
+		top.style.top = '';
+		top.removeAttribute('data-dccwl-ride');
 	}
 
-	/*
-	 * FOLLOWED, NOT SAMPLED. On live the theme's bar is pinned in the
-	 * theme's own scroll handler and then ANIMATES into place — measured at
-	 * -13..50px while sliding, 0..63px at rest. A single reading at the
-	 * scroll event caught it mid-slide (or not yet fixed) and nothing read it
-	 * again. So after every scroll the offset follows it, frame by frame, for
-	 * 0.7s; and any CSS transition or animation ending on the page asks once
-	 * more. Below 1024 applySticky() returns 0 without probing, so a phone
-	 * pays nothing.
-	 */
-	var followUntil = 0;
-	var following = false;
-	var raf = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
-	function follow() {
-		applySticky();
-		if (Date.now() < followUntil) { raf(follow); } else { following = false; }
+	function rideApply() {
+		rideQueued = false;
+		if (!top) { return; }
+		if (!window.DCCTopbar || !(narrow && narrow.matches)) { rideClear(); return; }
+		if (!rideMark) {
+			/* A zero-height marker where the controls' top edge sits in the
+			 * flow: the sticky box itself moves, so its own rect cannot say
+			 * where "its normal place" is. */
+			rideMark = document.createElement('div');
+			rideMark.setAttribute('aria-hidden', 'true');
+			rideMark.style.cssText = 'height:0;margin:0;padding:0;border:0;';
+			top.parentNode.insertBefore(rideMark, top);
+		}
+		var v = topbarPx();
+		var natural = rideMark.getBoundingClientRect().top;
+		var past = v - natural;                 /* > 0 once sticky is holding them */
+		var focused = top.contains(document.activeElement);
+		if (past <= 0 || focused) {
+			top.style.transform = '';
+			top.style.top = '';
+			top.setAttribute('data-dccwl-ride', past <= 0 ? 'flow' : 'focus');
+			return;
+		}
+		var h = top.offsetHeight;
+		var share = reduced ? (v > 0 ? 1 : 0) : Math.min(1, v / rideFull);
+		var t = Math.max(-h * (1 - share), -Math.min(h, past));
+		top.style.top = reduced && v > 0 ? rideFull + 'px' : '';
+		top.style.transform = t < -0.5 ? 'translateY(' + Math.round(t) + 'px)' : '';
+		top.setAttribute('data-dccwl-ride', t <= -h + 0.5 ? 'hidden' : (t < -0.5 ? 'moving' : 'shown'));
 	}
-	function queueSticky() {
-		followUntil = Date.now() + 700;
-		if (following) { return; }
-		following = true;
-		raf(follow);
+
+	function queueRide() {
+		if (rideQueued) { return; }
+		rideQueued = true;
+		(window.requestAnimationFrame || setTimeout)(rideApply);
 	}
-	document.addEventListener('transitionend', queueSticky, true);
-	document.addEventListener('animationend', queueSticky, true);
+
+	document.addEventListener('dcc:topbar', function () {
+		/* Learn the bar's full height when it comes to rest, so the share is
+		 * right for whatever height the theme's bar really has. */
+		clearTimeout(rideRest);
+		rideRest = setTimeout(function () {
+			var v = topbarPx();
+			if (v > 0) { rideFull = v; queueRide(); }
+		}, 150);
+		rideApply();
+	});
+	window.addEventListener('scroll', queueRide, { passive: true });
+	window.addEventListener('resize', queueRide);
+	if (top) {
+		top.addEventListener('focusin', queueRide);
+		top.addEventListener('focusout', function () { setTimeout(queueRide, 0); });
+	}
 
 	afterPaint(function () {
 		measureTop();
-		applySticky();
-		window.addEventListener('scroll', queueSticky, { passive: true });
-		window.addEventListener('resize', queueSticky);
+		rideApply();
 		if (wide && wide.matches) { atEnd(); }
 		if (window.ResizeObserver && top) {
 			new window.ResizeObserver(measureTop).observe(top);
@@ -703,52 +722,34 @@
 		window.addEventListener('load', go, { once: true });
 	}
 
-	function jumpTo(y) {
-		try {
-			window.scrollTo({ top: y, left: 0, behavior: 'instant' });
-		} catch (e) {
-			window.scrollTo(0, y);
-		}
-	}
-
-	/* The bottom of the fixed or sticky bars stacked over the top edge at x,
-	 * or 0. The canal.js probe, walking down through bars that stack (a
-	 * theme menu over the guide's pinned controls). A box covering most of
-	 * the screen is an overlay, not a bar, and does not count. */
-	function barsBottom(x) {
-		var h = window.innerHeight || 0;
-		var y = 0;
-		for (var n = 0; n < 5; n++) {
-			var hit = document.elementFromPoint(x, y + 1);
-			var b = 0;
-			for (var e = hit; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
-				var pos = getComputedStyle(e).position;
-				if ('fixed' !== pos && 'sticky' !== pos) { continue; }
-				var r = e.getBoundingClientRect();
-				if (r.top <= y + 1 && r.bottom > y + 1 && r.bottom < h * 0.75) { b = Math.ceil(r.bottom); }
-				break;
-			}
-			if (b <= y) { break; }
-			y = b;
-		}
-		return y;
-	}
-
-	/* Where the summary's top should be right now: under every bar that
-	 * covers the top edge at its x. Measured fresh each time it is asked,
-	 * because the bars change WITH the scroll (1.47.2): the theme's menu is
-	 * static at the top of the page and only turns fixed in the theme's own
-	 * scroll handler, a frame after any jump. 1.47.1 measured before that
-	 * frame, saw no bar, and placed the summary under it on live. */
-	function creditsTarget(s) {
-		var r = s.getBoundingClientRect();
-		return barsBottom(Math.round(r.left + r.width / 2));
-	}
-
-	/* Put the summary where creditsTarget() says. */
+	/*
+	 * THE LANDING USES THE SHARED MEASUREMENT (1.47.3). The summary carries
+	 * `scroll-margin-top: calc(var(--dcc-topbar, 0px) + var(--dccwl-gp-top-h))`
+	 * (guide.css): the theme's bar as the Director's helper reports it, plus
+	 * the guide's own pinned controls. So landing is `scrollIntoView`, and
+	 * the browser does the arithmetic with the numbers as they are NOW.
+	 *
+	 * The watch afterwards no longer measures bars itself. It asks one
+	 * question of what the guest actually sees: is the summary on screen,
+	 * and is the point just inside its top edge the summary? If anything
+	 * covers it (the bar and the controls slide back on a scroll up) or the
+	 * layout above has moved it, it lands again.
+	 */
 	function placeCredits(d) {
 		var s = d.querySelector('summary') || d;
-		jumpTo(window.pageYOffset + s.getBoundingClientRect().top - creditsTarget(s));
+		try {
+			s.scrollIntoView({ block: 'start', behavior: 'instant' });
+		} catch (e) {
+			s.scrollIntoView(true);
+		}
+		return Math.round(s.getBoundingClientRect().top);
+	}
+
+	function creditsSeen(s) {
+		var r = s.getBoundingClientRect();
+		if (r.top < 0 || r.bottom > (window.innerHeight || 0)) { return false; }
+		var e = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top) + 6);
+		return !!e && s.contains(e);
 	}
 
 	function settleCredits(d) {
@@ -759,14 +760,12 @@
 		['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) {
 			window.addEventListener(t, stop, { once: true, passive: true });
 		});
-		placeCredits(d);
-		/* Every tick asks again where the summary SHOULD be — the bars may
-		 * have changed since the jump — and corrects only if it is not
-		 * there. Quiet once it is. */
+		var landed = placeCredits(d);
 		var tick = function () {
 			if (stopped || run !== creditsRun || !d.open || Date.now() > until) { return; }
 			var s = d.querySelector('summary') || d;
-			if (Math.abs(Math.round(s.getBoundingClientRect().top) - creditsTarget(s)) > 2) { placeCredits(d); }
+			var now = Math.round(s.getBoundingClientRect().top);
+			if (!creditsSeen(s) || Math.abs(now - landed) > 2) { landed = placeCredits(d); }
 			setTimeout(tick, 120);
 		};
 		setTimeout(tick, 120);

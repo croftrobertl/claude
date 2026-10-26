@@ -41,6 +41,38 @@ const JS = {
   guide: ['assets/js/sheet.js', 'assets/js/guide.js'],
 };
 const kit = (await import('node:fs')).readFileSync(new URL('./sitekit.css', import.meta.url), 'utf8');
+const TOPBAR = `(function (){
+var root=document.documentElement, px=0, until=0, ticking=false, bar=null;
+function read(){
+if(!bar||!bar.isConnected) bar=document.querySelector('.site-header-bottom-fixed');
+if(!bar) return 0;
+if(getComputedStyle(bar).position!=='fixed') return 0;
+var r=bar.getBoundingClientRect();
+return r.bottom > 0&&r.top < innerHeight ? Math.max(0, Math.round(r.bottom)):0;
+}
+function update(){
+var v=read();
+if(v!==px){
+px=v;
+root.style.setProperty('--dcc-topbar', v + 'px');
+document.dispatchEvent(new CustomEvent('dcc:topbar', { detail: { px: v }}));
+}}
+function frame(){
+update();
+if(performance.now() < until) requestAnimationFrame(frame);
+else ticking=false;
+}
+function follow(){
+until=performance.now() + 700;
+if(!ticking){ ticking=true; requestAnimationFrame(frame); }}
+window.DCCTopbar={ get: function (){ return px; }};
+addEventListener('scroll', follow, { passive: true });
+addEventListener('resize', follow, { passive: true });
+document.addEventListener('transitionend', function (e){
+if(bar&&(e.target===bar||bar.contains(e.target))) update();
+});
+follow();
+})();`;
 
 function doc(which, { menu = false, late = false } = {}) {
   const f = rendered(which);
@@ -60,24 +92,42 @@ function doc(which, { menu = false, late = false } = {}) {
   const theme = `<style>html{scroll-behavior:smooth}${kit}
       #theme-header{position:relative;height:150px;background:#ccd}
       .site-header-bottom-fixed{position:absolute;top:10px;left:0;right:0;height:63px;z-index:1000;background:#fff;display:flex;gap:24px;align-items:center;padding:0 24px}
-      .header-fixed .site-header-bottom-fixed{position:fixed;top:0;transform:translateY(-63px);transition:transform .35s}
-      .header-fixed.shown .site-header-bottom-fixed{transform:none}
+      .header-fixed .site-header-bottom-fixed{position:fixed;top:0;transform:translateY(-63px)}
     </style>`;
   const header = `<header id="theme-header"><div class="site-header-bottom">${menu
     ? '<div class="site-header-bottom-fixed"><a href="/">Home</a><a href="/cottages/">Cottages</a><a href="/explore/">Explore</a></div>'
     : ''}</div></header>`
+    /* 1.47.3: below 1024 the live bar slides in on a scroll UP and is gone
+     * (absolute, off screen) on a scroll DOWN; from 1024 it pins once the
+     * page is past the header and stays. */
     + `<script>(function () {
          var hb = document.querySelector('.site-header-bottom');
+         var lastY = window.scrollY;
          window.addEventListener('scroll', function () {
+           var y = window.scrollY, dy = y - lastY; lastY = y;
            setTimeout(function () {
-             var on = window.innerWidth >= 1024 && window.scrollY > 150;
+             var wide = window.innerWidth >= 1024;
+             var on = y > 150 && (wide ? true : dy < 0 || (dy === 0 && hb.classList.contains('header-fixed')));
+             var fb = hb.querySelector('.site-header-bottom-fixed');
              if (on && !hb.classList.contains('header-fixed')) {
+               /* The slide, frame by frame over 300ms, as live's bar moves
+                * (the helper reported 25, 30, 35 ... 63 on the real page).
+                * Driven in script so every frame really is part-way. */
                hb.classList.add('header-fixed');
-               requestAnimationFrame(function () { requestAnimationFrame(function () { hb.classList.add('shown'); }); });
-             } else if (!on) { hb.classList.remove('header-fixed', 'shown'); }
+               var t0 = performance.now();
+               (function step(now) {
+                 var k = Math.min(1, (now - t0) / 300);
+                 if (fb) { fb.style.transform = 'translateY(' + (-63 + 63 * k) + 'px)'; }
+                 if (k < 1 && hb.classList.contains('header-fixed')) { requestAnimationFrame(step); }
+               })(t0);
+             } else if (!on) { hb.classList.remove('header-fixed'); if (fb) { fb.style.transform = ''; } }
            }, 60);
          }, { passive: true });
-       })();</script>`;
+       })();</script>`
+    /* The Director's mu-plugin dcc-topbar.php, VERBATIM as live serves it
+     * (read from doracanalcourt.com on 2026-10-26): the one place that
+     * measures the theme's bar. */
+    + `<script>${TOPBAR}</script>`;
   const disturb = 'nudge' === late
     ? `<script>window.addEventListener('load', function () {
          setTimeout(function () { window.scrollBy(0, -300); }, 2200);
@@ -171,7 +221,7 @@ for (const [w, h, menu] of [[390, 844, false], [768, 1024, false], [1024, 768, t
     note(`landed ${JSON.stringify(got)} bars end at ${bars}`);
     checkSame(true, got.open, 'the credits are open');
     check(got.seen, 'and "Photo Credits (401)" is ON SCREEN and on top — the hit-test at the summary returns the summary', got.hit);
-    check(got.top >= bars && got.top <= bars + 3, `its top is right under whatever covers the top edge (${bars}px)`, String(got.top));
+    check(got.top >= bars, `nothing covers it — its top is at or below whatever covers the top edge (${bars}px)`, String(got.top));
     if (menu) { check(got.top >= 63, 'below the theme\'s 63px pinned menu', String(got.top)); }
     /* Opt-in stills for the release report; nothing is asserted on them. */
     if (process.env.DCC_SHOTS) { await page.screenshot({ path: `${process.env.DCC_SHOTS}/credits-${w}-${how}.png` }); }
@@ -180,35 +230,96 @@ for (const [w, h, menu] of [[390, 844, false], [768, 1024, false], [1024, 768, t
 }
 
 /* ====================================================================== */
-for (const [w, h, menu, dy] of [[390, 844, false, 1200], [768, 1024, false, 1200], [1024, 768, true, 600], [1440, 900, true, 600]]) {
-  section(`${w}: the pinned controls after a ${dy}px scroll`);
-  const page = await site(w, h, { menu });
+/* RIDE WITH THE BAR (1.47.3, Rob's pick). The same checks the live-swap
+ * harness makes on the real page. */
+const viewOf = (page) => page.evaluate(() => {
+  const top = document.querySelector('[data-dccwl-gp-top]');
+  const r = top.getBoundingClientRect();
+  const sw = top.querySelector('[data-dccwl-gp-scope="here"]').getBoundingClientRect();
+  const x = Math.round(sw.left + sw.width / 2);
+  const bar = document.querySelector('.site-header-bottom-fixed');
+  const br = bar ? bar.getBoundingClientRect() : null;
+  const hit = (y) => document.elementFromPoint(x, Math.max(0, Math.min(innerHeight - 1, y)));
+  const list = document.querySelector('[data-dccwl-gp-list]');
+  return {
+    top: Math.round(r.top), bottom: Math.round(r.bottom), ride: top.getAttribute('data-dccwl-ride'),
+    barFixed: !!bar && getComputedStyle(bar).position === 'fixed', barTop: br ? Math.round(br.top) : null, barBottom: br ? Math.round(br.bottom) : null,
+    at20IsList: !!list && list.contains(hit(20)),
+    edge: top.contains(hit(Math.round(r.top) + 2)),
+    above: !!bar && bar.contains(hit(Math.round(r.top) - 2)),
+  };
+});
+for (const [w, h] of [[390, 844], [768, 1024], [1024, 768], [1440, 900]]) {
+  section(`${w}: the pinned controls ride with the bar`);
+  const page = await site(w, h, { menu: true });
   await page.goto(`${SITE}/wildlife-guide/`, { waitUntil: 'load' });
   await page.waitForTimeout(800);
-  await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), dy);
-  await page.waitForTimeout(1200);
-  const pin = await page.evaluate(() => {
-    const top = document.querySelector('[data-dccwl-gp-top]');
-    const r = top.getBoundingClientRect();
-    const sw = top.querySelector('[data-dccwl-gp-scope="here"]').getBoundingClientRect();
-    const x = Math.round(sw.left + sw.width / 2);
-    const bar = document.querySelector('.site-header-bottom-fixed');
-    const br = bar ? bar.getBoundingClientRect() : null;
-    return {
-      top: Math.round(r.top), barBottom: br ? Math.round(br.bottom) : null,
-      barFixed: !!bar && getComputedStyle(bar).position === 'fixed',
-      edge: top.contains(document.elementFromPoint(x, Math.round(r.top) + 2)),
-      above: !!bar && bar.contains(document.elementFromPoint(x, Math.max(0, Math.round(r.top) - 2))),
-    };
-  });
-  note(`pinned ${JSON.stringify(pin)}`);
-  if (menu) {
-    check(pin.barFixed, 'the theme\'s bar has pinned itself (the condition under test)');
-    checkSame(pin.barBottom, pin.top, 'the controls stick just under it');
-    check(pin.edge && pin.above, 'the hit-test 2px inside their top edge is the controls, 2px above is the bar');
+  const DOWN = w < 1024 ? [1200, 1800, 2400] : [600, 900];
+  const UP = w < 1024 ? [2200, 2000] : [800];
+  for (const y of DOWN) { await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), y); await page.waitForTimeout(300); }
+  await page.waitForTimeout(1000);
+  const down = await viewOf(page);
+  note(`down ${JSON.stringify(down)}`);
+  if (w < 1024) {
+    check(down.bottom <= 0, 'scrolling down, the controls are off screen', String(down.bottom));
+    check(down.at20IsList, 'and the hit-test at y 20 is the species list');
   } else {
-    checkSame(0, pin.top, 'the controls stick at the top — the theme\'s menu has scrolled away');
-    check(pin.edge, 'and the hit-test 2px inside their top edge is the controls');
+    check(down.barFixed && down.top === down.barBottom, 'the bar stays pinned and the controls sit just under it', `${down.top} vs ${down.barBottom}`);
+    check(down.edge && down.above, '2px inside their top edge is the controls, 2px above is the bar');
+  }
+  for (const y of UP) { await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), y); await page.waitForTimeout(300); }
+  await page.waitForTimeout(1000);
+  const up = await viewOf(page);
+  note(`up ${JSON.stringify(up)}`);
+  check(up.barFixed && up.barTop === 0 && up.barBottom === 63, 'scrolling up, the bar is at 0-63', `${up.barTop}-${up.barBottom}`);
+  checkSame(up.barBottom, up.top, 'and the controls sit directly under it');
+  check(up.edge && up.above, '2px inside their top edge is the controls, 2px above is the bar');
+  if (w < 1024) {
+    await page.focus('[data-dccwl-gp-search]');
+    await page.keyboard.type('a');
+    await page.evaluate(() => window.scrollBy({ top: 900, behavior: 'instant' }));
+    await page.waitForTimeout(1000);
+    const typing = await page.evaluate(() => {
+      const f = document.querySelector('[data-dccwl-gp-search]');
+      const r = f.getBoundingClientRect();
+      const e = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+      return { focused: document.activeElement === f, top: Math.round(r.top), onTop: e === f || f.contains(e) };
+    });
+    note(`typing ${JSON.stringify(typing)}`);
+    check(typing.focused && typing.top >= 0 && typing.onTop, 'with the search focused, a scroll down leaves the field on screen and on top');
+  }
+  await page.close();
+}
+
+/* ====================================================================== */
+for (const rm of [false, true]) {
+  section(`390: the ride ${rm ? 'with reduced motion: no slide' : 'slides in step with the bar'}`);
+  const page = await site(390, 844, { menu: true, reducedMotion: rm });
+  await page.goto(`${SITE}/wildlife-guide/`, { waitUntil: 'load' });
+  await page.waitForTimeout(800);
+  for (const y of [1200, 1800, 2400]) { await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), y); await page.waitForTimeout(300); }
+  await page.waitForTimeout(800);
+  /* Sample EVERY FRAME through a scroll UP and the bar's whole slide
+   * (a 30ms timer missed the slide on some runs). */
+  const states = await page.evaluate(() => new Promise((resolve) => {
+    const out = [];
+    const top = document.querySelector('[data-dccwl-gp-top]');
+    window.scrollTo({ top: 2200, behavior: 'instant' });
+    const t0 = performance.now();
+    (function tick() {
+      out.push([top.getAttribute('data-dccwl-ride'), Math.round(top.getBoundingClientRect().top), window.DCCTopbar.get()]);
+      if (performance.now() - t0 < 1200) { requestAnimationFrame(tick); } else { resolve(out); }
+    })();
+  }));
+  const kinds = [...new Set(states.map((x) => x[0]))];
+  note(`states seen ${JSON.stringify(kinds)} over ${states.length} frames: ${states.map((x) => x.join(':')).filter((x, i, a) => i === 0 || x !== a[i - 1]).join(' > ')}`);
+  checkSame('shown', states[states.length - 1][0], 'it ends shown, under the bar');
+  if (rm) {
+    check(!kinds.includes('moving'), 'and never passes through a part-way position — it simply appears', JSON.stringify(kinds));
+  } else {
+    check(kinds.includes('moving'), 'and on the way it moves part-way, frame by frame with the bar', JSON.stringify(kinds));
+    const moving = states.filter((x) => 'moving' === x[0]);
+    check(moving.every((x) => x[2] > 0 && x[2] < 63), 'only while the bar itself is part-way in (0 < --dcc-topbar < 63)', JSON.stringify(moving.slice(0, 6)));
   }
   await page.close();
 }
