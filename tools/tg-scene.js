@@ -102,12 +102,12 @@ function drawVee(g, x, y, n, L, ph, moon) {
       }
       /* C: the hen and poults on the bank under the tagline */
       if (hasT) {
-        const top = tagB + M, room = PH - 6 - top, H = Math.min(Math.round(56 * kL), room);
+        const top = tagB + M, room = PH - 6 - top, H = Math.min(Math.round(80 * kL), room);
         const foot = PH - 6;
-        const birds = (x) => [[x, foot, H, 1], [x - 0.95 * H, foot, H * 0.42, 0], [x - 1.45 * H, foot, H * 0.40, 0], [x - 1.95 * H, foot, H * 0.42, 0]];
+        const birds = (x) => [[x, foot, H, 1], [x + 0.85 * H, foot, H * 0.46, 0], [x + 1.3 * H, foot, H * 0.44, 0], [x + 1.75 * H, foot, H * 0.46, 0]];
         const boxes = x => birds(x).map(([bx, by, h]) => [bx - 0.62 * h, by - h, bx + 0.42 * h, by]);
         let worst = { m: 1e9 };
-        for (let i = 0; i <= 200; i++) { const x = -0.5 * H + (PW + 2.6 * H) * i / 200; const c = clearOf(boxes(x)); if (c.m < worst.m) { worst = c; } }
+        for (let i = 0; i <= 200; i++) { const x = -2.2 * H + (PW + 2.8 * H) * i / 200; const c = clearOf(boxes(x)); if (c.m < worst.m) { worst = c; } }
         out.opts.C = { H, foot, path: worst, xs: [PW * 0.42, PW * 0.66] };
       }
       return out;
@@ -125,7 +125,7 @@ function drawVee(g, x, y, n, L, ph, moon) {
           const g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0);
           if (name === 'A') { g.save(); g.translate(o.mo.x, o.mo.y); harvest(g, o.mo.r); g.restore(); drawVee(g, x, o.y, o.n, o.L, 0.3, o.mo); }
           if (name === 'B') { drawVee(g, x, o.y, o.n, o.L, 0.3, null); }
-          if (name === 'C') { [[x, o.foot, o.H, 1], [x - 0.95 * o.H, o.foot, o.H * 0.42, 0], [x - 1.45 * o.H, o.foot, o.H * 0.40, 0], [x - 1.95 * o.H, o.foot, o.H * 0.42, 0]].forEach((b, i) => { g.save(); g.translate(b[0], b[1]); g.scale(b[2], b[2]); tkPaint(g, b[3] ? 'hen' : 'poult', i * 0.3); g.restore(); }); }
+          if (name === 'C') { [[x, o.foot, o.H, 1], [x + 0.85 * o.H, o.foot, o.H * 0.46, 0], [x + 1.3 * o.H, o.foot, o.H * 0.44, 0], [x + 1.75 * o.H, o.foot, o.H * 0.46, 0]].forEach((b, i) => { g.save(); g.translate(b[0], b[1]); g.scale(b[2], b[2]); tkPaint(g, b[3] ? 'hen' : 'poult', i * 0.3); g.restore(); }); }
           if (map) {
             const col = { title: '#E53935', tagline: '#FB8C00', menu: '#1E88E5', menuFixed: '#1E88E5', dial: '#8E24AA', menuButton: '#43A047' };
             for (const [k, bs] of Object.entries(keep)) { for (const b of bs) { g.strokeStyle = col[k]; g.lineWidth = 2; g.strokeRect(b[0] - pic[0], b[1] - pic[1], b[2] - b[0], b[3] - b[1]); } }
@@ -142,4 +142,23 @@ function drawVee(g, x, y, n, L, ph, moon) {
     await ses.close();
   }
   fs.writeFileSync(path.join(ROOT, 'build', '.tg-scene.json'), JSON.stringify({ report, shots, OPTS }));
+  const im = (b64, w) => `<img src="data:image/png;base64,${b64}" style="width:${w}px;display:block;border:1px solid #D9CDB6;border-radius:3px">`;
+  const disp = { 390: 250, 768: 400, 1280: 560, 1440: 560 };
+  const line = (n, w) => { const o = report[w].opts[n]; if (!o) { return ''; }
+    if (n === 'A') { return `team ${o.pct}% of today’s size, moon ${o.mpct}%; nearest the ${o.path.who} at ${o.path.m}px, the moon ${o.moon.m}px from the ${o.moon.who}, ${o.moonWater}px above the water`; }
+    if (n === 'B') { return `team at ${o.pct}% of today’s size; nearest the ${o.path.who} at ${o.path.m}px`; }
+    return `hen ${o.H}px tall; nearest the ${o.path.who} at ${o.path.m}px`; };
+  const sec = n => `<section><h2>${OPTS[n].title}</h2><p class="note">${OPTS[n].why}</p>${[390, 768, 1280, 1440].map(w => shots[w][n] ? `<h3>${w}</h3><p class="cap">${line(n, w)}</p><div class="row">${shots[w][n].map(b => im(b, disp[w])).join('')}</div>` : '').join('')}</section>`;
+  const html = `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#FBF6EC;font:13px/1.5 system-ui,sans-serif;color:#2b2b2b;padding:18px 20px}
+    h1{font-size:19px;margin:0 0 4px;text-align:center} h2{font-size:15px;margin:0 0 4px;text-align:center} h3{font-size:13px;margin:12px 0 2px;text-align:center}
+    .sub,.note{color:#555;margin:0 auto 10px;max-width:1000px} .cap{color:#666;text-align:center;margin:0 0 4px} section{border-top:1px solid #E3D9C6;padding:14px 0 8px}
+    .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}</style>
+    <h1>Seasons — Thanksgiving: Three Scenes on the Real Home Page</h1>
+    <p class="sub">Today’s scene, the V of cranes over the harvest moon, crosses the title and the menu bar on the real home page at every width. Three ways to keep the season’s moment clear of the title’s letters, the tagline, the menu bar, the dial and the menu button, walked across every width with an 8px margin, drawn on the page captured from the live site. Two have no moon. Nothing is painted into the photograph. Live Thanksgiving stays exactly as it is until Rob picks.</p>
+    ${['A', 'B', 'C'].map(sec).join('')}`;
+  const ses2 = await open(html, { viewport: { width: 1200, height: 900 }, dsf: 2 });
+  await ses2.page.waitForTimeout(500);
+  await ses2.page.setViewportSize({ width: 1200, height: await ses2.page.evaluate(() => document.body.scrollHeight) });
+  await ses2.page.screenshot({ path: path.join(ROOT, 'build', 'Seasons - 4.13.2 thanksgiving scenes.png') });
+  await ses2.close(); console.log('scene sheet: ok');
 })().catch(e => { console.error(e); process.exit(1); });
