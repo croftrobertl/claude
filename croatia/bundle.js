@@ -181,8 +181,10 @@
     buildShell();
     initMap();
     selectDay(0);
+    navBoot = true;   // the first view replaces the page's own entry instead of adding a step
     if (initialHash.length > 1) applyHash(initialHash);
     else setView('map');   // task 6: Map is the default tab
+    navBoot = false;
     window.addEventListener('hashchange', () => applyHash());  // pasted links in the same tab
     // if the window grows past the mobile breakpoint, bring the story map up
     const mq = window.matchMedia('(min-width: 801px)');
@@ -327,7 +329,7 @@
     bar.setAttribute('role', 'tablist');
     bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Media') +
       tabBtn('map', 'Map') + tabBtn('stats', 'Stats') + tabBtn('history', 'History');
-    bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.view)));
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
     sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day"><div class="sheet-handle"></div>' +
@@ -358,7 +360,7 @@
         b.classList.toggle('active', on);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-    if (v !== 'map') { mmStopPlay(); thenStop(); exitMapFullscreen(); }
+    if (v !== 'map') { mmStopPlay(); thenStop(); wallStop(); exitMapFullscreen(); }
     if (v !== 'history') historyLeave();
     if (v === 'map') initMapMode();
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
@@ -380,16 +382,28 @@
   }
   // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>,
   //      #v=map|stats|gallery, #v=map&then=<era>, #v=history&era=<slug>[&ch=<strand>][&e=<entry>][&pl=<place>] ----
+  // the view of each history step this visit made (index = history.state.i)
+  const navViews = [];
+  let navBoot = false;
+  // a tab button: going to the tab you just came from steps back to it, so switching between two
+  // tabs doesn't pile up Back steps
+  function goTab(v) {
+    const st = history.state, i = st && st.i;
+    if (i > 0 && navViews[i - 1] === v && root.dataset.view !== v && !viewerIsOpen()) { history.back(); return; }
+    setView(v);
+  }
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
     // switching tabs adds a browser-history entry, so Back returns to the tab (and day) you came
     // from; changes inside a tab (day, era, map overlay) just update the current one
-    const st = history.state, push = !!(st && st.dccView && st.dccView !== v);
-    const state = { dccView: v };
+    const st = history.state, push = !navBoot && !!(st && st.dccView && st.dccView !== v);
+    const i = navBoot ? 0 : (st && st.i || 0) + (push ? 1 : 0);
+    navViews[i] = v; if (push) navViews.length = i + 1;   // a new step drops the old forward ones
+    const state = { dccView: v, i };
     if (!push && st && st.dccViewer && viewerIsOpen()) state.dccViewer = true;   // a photo is still open on this step
     history[push ? 'pushState' : 'replaceState'](state, '', v === 'story' ? '#d=' + (curDay + 1)
-      : '#v=' + v + (v === 'map' && thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
+      : '#v=' + v + (v === 'map' ? (thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : thenWant ? '&then=' + encodeURIComponent(histSlugOf(thenWant)) : '') : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
         (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') + (histPlace ? '&pl=' + encodeURIComponent(histPlace) : '') : ''));
   }
   function findDayByGuid(g) {
@@ -618,16 +632,19 @@
   ];
   const evidenceOf = src => EV_TIERS.find(t => src.some(([, u]) => t[2].test(u))) || EV_TIERS[3];
   const chronId = t => String(t).toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // returns a promise of the chronicle (the Timeline's day line waits on it too)
+  let chronP = null;
   function loadChronicle() {
-    if (chron || chronLoading) return;
+    if (chron || chronLoading) return chronP || Promise.resolve(chron);
     chronLoading = true;
     try { const v = localStorage.getItem('dcc-chron-strand'); if (v) chronStrand = v; } catch (e) { /* storage blocked */ }
-    fetch(resolveUrl('history/chronicle.json')).then(r => r.json()).then(d => {
+    return (chronP = fetch(resolveUrl('history/chronicle.json')).then(r => r.json()).then(d => {
       chron = d;
       chron.strands.forEach(st => st.events.forEach(ev => { ev.id = chronId(ev.title); }));
       // the map comes first: the chronicle (and its photos) renders once the map has drawn
       if (histHandle && histHandle.frames) chronFirstRender();
-    }).catch(() => { chronLoading = false; });
+      return chron;
+    }).catch(() => { chronLoading = false; chronP = null; return null; }));
   }
   // the map era that shows an event: the one named in the entry, else the first map on or after its year
   function chronFrame(sort, era) {
@@ -1274,22 +1291,9 @@
     const ev = chronEvent(id), ph = ev && chronPhotos(ev);
     if (!ph) return;
     k = ((k % ph.items.length) + ph.items.length) % ph.items.length;
-    let ov = document.querySelector('.dcc-pc');
-    if (!ov) {
-      ov = el('div', 'dcc-pc');
-      ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Postcard');
-      document.body.appendChild(ov);
-      ov.addEventListener('click', e => {
-        const a = e.target.closest('[data-pc]');
-        if (!a) { if (e.target === ov) closePostcard(); return; }
-        const act = a.dataset.pc;
-        if (act === 'close') closePostcard();
-        else if (act === 'prev' || act === 'next') openPostcard(ov.dataset.id, +ov.dataset.k + (act === 'next' ? 1 : -1));
-        else if (act === 'share') sharePostcard(ov.dataset.id);
-      });
-      ov.addEventListener('keydown', e => { if (e.key === 'Escape') closePostcard(); });
-    }
+    const ov = pcOverlay();
     ov.dataset.id = id; ov.dataset.k = k;
+    ov._nav = d => openPostcard(id, k + d); ov._share = () => sharePostcard(id);
     ov.innerHTML = '<div class="dcc-pc-box"><div class="dcc-pc-img"><p>Making your postcard…</p></div>' +
       '<div class="dcc-pc-acts">' + (ph.items.length > 1 ? '<button type="button" data-pc="prev" aria-label="Previous photo">‹</button>' +
         '<span class="dcc-pc-n">Photo ' + (k + 1) + ' of ' + ph.items.length + '</span><button type="button" data-pc="next" aria-label="Next photo">›</button>' : '') +
@@ -1307,6 +1311,25 @@
     } catch (e) {
       ov.querySelector('.dcc-pc-img').innerHTML = '<p>The postcard couldn’t be made here — try again when online.</p>';
     }
+  }
+  // the postcard overlay (made once): prev/next/share go to whichever card it's showing
+  function pcOverlay() {
+    let ov = document.querySelector('.dcc-pc');
+    if (!ov) {
+      ov = el('div', 'dcc-pc');
+      ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Postcard');
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => {
+        const a = e.target.closest('[data-pc]');
+        if (!a) { if (e.target === ov) closePostcard(); return; }
+        const act = a.dataset.pc;
+        if (act === 'close') closePostcard();
+        else if (act === 'prev' || act === 'next') ov._nav(act === 'next' ? 1 : -1);
+        else if (act === 'share') ov._share();
+      });
+      ov.addEventListener('keydown', e => { if (e.key === 'Escape') closePostcard(); });
+    }
+    return ov;
   }
   function closePostcard() { const ov = document.querySelector('.dcc-pc'); if (ov) ov.classList.remove('open'); }
   function sharePostcard(id) {
@@ -1353,7 +1376,7 @@
     if (!F) return runs;
     F.forEach(f => {
       const s = placeStatus(v, f), last = runs[runs.length - 1];
-      if (last && last.t === s.t) last.to = f; else runs.push({ from: f, to: f, t: s.t, cls: s.cls || '' });
+      if (last && last.t === s.t) { last.to = f; last.n++; } else runs.push({ from: f, to: f, t: s.t, cls: s.cls || '', n: 1 });
     });
     return runs;
   }
@@ -1687,9 +1710,12 @@
   }
   const histPlaceHref = name => '#v=history&pl=' + encodeURIComponent(name);
   function openPlaceHistory(name) { histPlaceNext = name; setView('history'); }
-  function histPlaceLink(name) {
-    return histPlaceOk(name) ? '<a class="dcc-tour-histlink" href="' + escapeAttr(histPlaceHref(name)) + '" onclick="event.stopPropagation()">' +
-      svgIcon('history') + '<span>History of this place ›</span></a>' : '';
+  // compact: the Timeline's quiet inline link, next to the place's map pin
+  function histPlaceLink(name, compact) {
+    if (!histPlaceOk(name)) return '';
+    return '<a class="dcc-tour-histlink' + (compact ? ' compact' : '') + '" href="' + escapeAttr(histPlaceHref(name)) + '" onclick="event.stopPropagation()"' +
+      (compact ? ' title="History of this place" aria-label="History of this place"' : '') + '>' +
+      svgIcon('history') + '<span>' + (compact ? 'History' : 'History of this place ›') + '</span></a>';
   }
   let streetLoading = null;
   function streetLoad() {
@@ -1748,27 +1774,57 @@
       }
       const { subj, area } = placeSubject(name, pp);
       const runs = villageRuns(subj);
-      const note = PLACE_HISTORY.find(h => h.re.test(name));
       const cx = Math.cos(g.lat * Math.PI / 180);
       const near = THEN_MARKS.map(m => ({ m, d: Math.hypot((m.ll[1] - g.lng) * cx, m.ll[0] - g.lat) * 111200 }))
-        .filter(x => x.d < 260).sort((a, b) => a.d - b.d).slice(0, 4);
+        .filter(x => x.d < 260).sort((a, b) => a.d - b.d).map(x => x.m);
+      // when a landmark is this very place (Lovrijenac, Lokrum's monastery…), its fuller note becomes
+      // "On this spot" and it isn't listed again under "Built close by"; nor is a note that says the same
+      const lower = t => String(t).toLowerCase().replace(/[’']/g, '');
+      const here = lower(shortName(name));
+      const self = near.find(m => { const t = lower(m.t.split(',')[0]).replace(/^fort /, ''); return here.indexOf(t) >= 0; });
+      let note = PLACE_HISTORY.find(h => h.re.test(name));
+      const noteEra = note ? note.era : self ? (thenEraFor(self.from) || '') : '';
+      const noteText = self ? self.x : note ? note.text : '';
+      const others = near.filter(m => m !== self && m.x !== noteText);
+      // "Who held it": a ribbon of every era (Ragusa's in gold), then the runs, with the centuries
+      // before and after the Republic folded away when there were Ragusan ones
+      const N = runs.reduce((n, r) => n + r.n, 0) || 1;
+      const ragI = runs.map((r, i) => r.cls === 'rag' ? i : -1).filter(i => i >= 0);
+      const runRow = (r, i) => '<li class="' + r.cls + '" data-run="' + i + '"><button type="button" data-vt="' + escapeAttr(histSlugOf(r.from.label)) + '">' +
+        '<span class="dcc-vt-y">' + escapeHtml(r.from.label) + (r.to !== r.from ? ' – ' + escapeHtml(r.to.label) : '') + '</span>' +
+        '<span class="dcc-vt-t">' + escapeHtml(r.t) + '</span></button></li>';
+      const fold = (from, to, label) => from > to ? '' : '<li class="dcc-hp-fold"><details' + (from === to ? ' open' : '') + '><summary>' + escapeHtml(label) +
+        ' <span>' + escapeHtml(runs[from].from.label + (to > from || runs[to].to !== runs[from].from ? ' – ' + runs[to].to.label : '')) + '</span></summary><ol class="dcc-vt">' +
+        runs.slice(from, to + 1).map((r, j) => runRow(r, from + j)).join('') + '</ol></details></li>';
+      const list = ragI.length
+        ? fold(0, ragI[0] - 1, 'Before Ragusa') + runs.slice(ragI[0], ragI[ragI.length - 1] + 1).map((r, j) => runRow(r, ragI[0] + j)).join('') + fold(ragI[ragI.length - 1] + 1, runs.length - 1, 'After the Republic')
+        : runs.map(runRow).join('');
       sec.innerHTML = closeBtn +
         '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>This place in history</span></div>' +
         '<h2 class="dcc-hp-h">' + escapeHtml(shortName(name)) + '</h2>' +
         '<p class="dcc-hp-sub">' + (pp.sea ? 'Off the coast of ' : 'In ') + escapeHtml(area) + ' · you were here on ' + escapeHtml(dayRanges(g.days).replace(/^D/, 'd')) + '</p>' +
-        (note ? '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div><p>' + escapeHtml(note.text) + '</p>' +
-          '<button type="button" class="dcc-hist-note-a" data-vt="' + escapeAttr(histSlugOf(note.era)) + '">See the map of ' + escapeHtml(note.era) + ' ›</button></aside>' : '') +
-        (near.length ? '<h3 class="dcc-hp-k">Built close by</h3><ul class="dcc-hp-marks">' + near.map(({ m }) =>
-          '<li><i class="dcc-hp-by-' + m.by + '" aria-hidden="true"></i><div><b>' + escapeHtml(m.t) + '</b> <span>' + escapeHtml(m.s) + ' · ' + THEN_BY[m.by] + '</span>' +
-            '<p>' + escapeHtml(m.x) + '</p></div></li>').join('') + '</ul>' : '') +
+        (noteText ? '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div><p>' + escapeHtml(noteText) + '</p>' +
+          (noteEra ? '<button type="button" class="dcc-hist-note-a" data-vt="' + escapeAttr(histSlugOf(noteEra)) + '">See the map of ' + escapeHtml(noteEra) + ' ›</button>' : '') + '</aside>' : '') +
         '<h3 class="dcc-hp-k">Who held it</h3>' +
-        '<ol class="dcc-vt">' + runs.map(r =>
-          '<li class="' + r.cls + '"><button type="button" data-vt="' + escapeAttr(histSlugOf(r.from.label)) + '">' +
-            '<span class="dcc-vt-y">' + escapeHtml(r.from.label) + (r.to !== r.from ? ' – ' + escapeHtml(r.to.label) : '') + '</span>' +
-            '<span class="dcc-vt-t">' + escapeHtml(r.t) + '</span></button></li>').join('') + '</ol>' +
-        '<p class="dcc-vt-note">Each line is one or more of the map’s eras; tap one to see that map.' + (pp.sea ? ' Out at sea, this follows the nearest coast.' : '') + '</p>' +
-        '<button type="button" class="dcc-hist-street dcc-hp-street">See this spot over today’s streets ›</button>';
+        '<div class="dcc-hp-ribbon" role="group" aria-label="Who held it, era by era">' + runs.map((r, i) =>
+          '<button type="button" class="dcc-hp-rb ' + (r.cls || 'other') + '" data-run="' + i + '" style="flex-grow:' + r.n + '" title="' + escapeAttr(r.from.label + (r.to !== r.from ? ' – ' + r.to.label : '') + ': ' + r.t) + '" aria-label="' + escapeAttr(r.from.label + (r.to !== r.from ? ' to ' + r.to.label : '') + ': ' + r.t) + '"></button>').join('') + '</div>' +
+        '<div class="dcc-hp-rbax" aria-hidden="true"><span>' + escapeHtml(runs[0].from.label) + '</span>' + (ragI.length ? '<span class="rag" style="left:' + (runs.slice(0, ragI[0]).reduce((n, r) => n + r.n, 0) / N * 100).toFixed(1) + '%">' + escapeHtml(runs[ragI[0]].from.label) + '</span>' : '') + '<span>' + escapeHtml(runs[runs.length - 1].to.label) + '</span></div>' +
+        '<ol class="dcc-vt dcc-hp-runs">' + list + '</ol>' +
+        '<p class="dcc-vt-note">Tap the ribbon or a line to see that era’s map.' + (pp.sea ? ' Out at sea, this follows the nearest coast.' : '') + '</p>' +
+        (others.length ? '<h3 class="dcc-hp-k">Built close by</h3><ul class="dcc-hp-marks">' + others.map((m, i) =>
+          '<li' + (i > 1 ? ' hidden' : '') + '><i class="dcc-hp-by-' + m.by + '" aria-hidden="true"></i><div><b>' + escapeHtml(m.t) + '</b> <span>' + escapeHtml(m.s) + ' · ' + THEN_BY[m.by] + '</span>' +
+            '<p>' + escapeHtml(m.x) + '</p></div></li>').join('') + '</ul>' +
+          (others.length > 2 ? '<button type="button" class="dcc-hist-note-a dcc-hp-more">' + (others.length - 2) + ' more close by ›</button>' : '') : '') +
+        '<div class="dcc-hp-acts"><button type="button" class="dcc-hist-street dcc-hp-street">See this spot over today’s streets ›</button>' +
+          (placePhotos(name).length ? '<button type="button" class="dcc-hist-street dcc-hp-card">Make a postcard ›</button>' : '') + '</div>';
+      sec._runs = runs; sec._note = noteText;
     }).catch(() => { sec.innerHTML = closeBtn + '<p class="dcc-hist-msg">The place history couldn’t load — try again when you’re online.</p>'; });
+  }
+  function thenEraFor(year) {
+    const F = histHandle && histHandle.frames;
+    if (!F) return '';
+    let f = null; F.forEach(x => { if (x.year <= year) f = x; });
+    return f ? f.label : '';
   }
   function histPlaceClick(e) {
     const vt = e.target.closest('[data-vt]');
@@ -1778,6 +1834,26 @@
       if (head) { storyLock(1600); head.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); }
       return;
     }
+    const rb = e.target.closest('.dcc-hp-rb');
+    if (rb) {
+      // a ribbon block: show its line (opening the fold it sits in) rather than jumping away
+      const sec = rb.closest('.dcc-hist-place'), row = sec.querySelector('.dcc-hp-runs li[data-run="' + rb.dataset.run + '"]');
+      sec.querySelectorAll('.dcc-hp-rb.on, .dcc-hp-runs li.on').forEach(x => x.classList.remove('on'));
+      rb.classList.add('on');
+      if (row) {
+        const d = row.closest('details'); if (d) d.open = true;
+        row.classList.add('on');
+        row.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
+      }
+      return;
+    }
+    if (e.target.closest('.dcc-hp-more')) {
+      const b = e.target.closest('.dcc-hp-more');
+      b.previousElementSibling.querySelectorAll('li[hidden]').forEach(li => { li.hidden = false; });
+      b.remove();
+      return;
+    }
+    if (e.target.closest('.dcc-hp-card')) { placePostcard(histPlace); return; }
     if (e.target.closest('.dcc-hp-x')) { histPlace = null; renderHistPlace(); updateHash(); return; }
     if (e.target.closest('.dcc-hp-street')) {
       const g = placeGeo(histPlace);
@@ -1786,6 +1862,175 @@
       thenWant = f && f.year >= 614 ? histSlug : '1453'; thenWantLL = g ? [g.lat, g.lng] : null;
       setView('map');
     }
+  }
+
+  // ---- A dated history line in the Timeline's day header: when something in the chronicle happened
+  //      on this calendar date (any year), one quiet line links to that entry in the History tab ----
+  function dayHistLine(day) {
+    const md = String(day && day.date || '').slice(5);
+    if (!md) return;
+    loadChronicle().then(c => {
+      if (!c || DATA.days[curDay] !== day) return;
+      let hit = null;
+      c.strands.forEach(st => st.events.forEach(ev => (ev.days || []).forEach(([m, yr, line]) => { if (!hit && m === md) hit = { st, ev, yr, line }; })));
+      const head = root._story.querySelector('.dcc-tour-dayhead');
+      if (!hit || !head || head.querySelector('.dcc-tour-dayhist')) return;
+      const [mm, dd] = md.split('-').map(Number);
+      const a = document.createElement('a');
+      a.className = 'dcc-tour-dayhist';
+      a.href = '#v=history&ch=' + hit.st.id + '&e=' + encodeURIComponent(hit.ev.id);
+      a.innerHTML = svgIcon('history') + '<span><b>On ' + dd + ' ' + MONTHS[mm - 1] + ' ' + hit.yr + '</b> ' + escapeHtml(hit.line) + ' ›</span>';
+      head.appendChild(a);
+    });
+  }
+
+  // ---- A place's history as a postcard: your photo from there, its name, and the ribbon of who
+  //      held it, from the History tab's place page ----
+  function placePhotos(name) {
+    const out = [];
+    DATA.days.forEach((d, di) => (d.places || []).forEach(p => {
+      if (p.name !== name) return;
+      (p.items || []).forEach(it => { if (it.full || (it.src && it.kind !== 'video' && it.kind !== 'clip')) out.push({ it, di, p }); });
+    }));
+    return out;
+  }
+  async function makePlacePostcard(name, x, runs, note) {
+    const W = 1080, H = 1350, PH = 700, M = 64;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    try { await Promise.all(['600 60px "Cormorant Garamond"', '600 40px Cinzel', '400 30px Lora'].map(f => document.fonts.load(f))); } catch (e) { /* system fonts */ }
+    g.fillStyle = '#f6f1e7'; g.fillRect(0, 0, W, H);
+    const img = await loadImg(resolveUrl(x.it.full || x.it.src));
+    const s = Math.max(W / img.naturalWidth, PH / img.naturalHeight), iw = img.naturalWidth * s, ih = img.naturalHeight * s;
+    g.save(); g.beginPath(); g.rect(0, 0, W, PH); g.clip(); g.drawImage(img, (W - iw) / 2, (PH - ih) / 2, iw, ih); g.restore();
+    g.fillStyle = '#b68235'; g.fillRect(0, PH, W, 8);
+    g.fillStyle = '#7d5411'; g.font = '600 24px Cinzel, Georgia, serif';
+    g.fillText('CROFTS IN CROATIA · THIS PLACE IN HISTORY', M, PH + 64);
+    g.fillStyle = '#201f1d'; g.font = '600 76px "Cormorant Garamond", Georgia, serif';
+    let y = PH + 140;
+    wrapText(g, shortName(name), W - 2 * M, 2).forEach(l => { g.fillText(l, M, y); y += 76; });
+    // the ribbon: one block per run of eras, Ragusa's in gold
+    const N = runs.reduce((n, r) => n + r.n, 0) || 1, rw = W - 2 * M, ry = y - 18, rh = 46;
+    let rx = M;
+    runs.forEach(r => {
+      const w = r.n / N * rw;
+      g.fillStyle = r.cls === 'rag' ? '#f2c230' : r.cls === 'war' ? '#c0392b' : '#d8d1c4';
+      g.fillRect(rx + 1, ry, Math.max(2, w - 2), rh); rx += w;
+    });
+    g.fillStyle = '#6d6964'; g.font = '400 22px Lora, Georgia, serif';
+    g.fillText(runs[0].from.label, M, ry + rh + 30);
+    const last = runs[runs.length - 1].to.label;
+    g.fillText(last, W - M - g.measureText(last).width, ry + rh + 30);
+    const rag = runs.filter(r => r.cls === 'rag');
+    y = ry + rh + 84;
+    g.fillStyle = '#7d5411'; g.font = '600 30px Cinzel, Georgia, serif';
+    g.fillText(rag.length ? ('RAGUSAN ' + rag[0].from.label + ' – ' + rag[rag.length - 1].to.label).toUpperCase() : runs[runs.length - 1].t.toUpperCase(), M, y, W - 2 * M);
+    if (note) {
+      g.fillStyle = '#2b2926'; g.font = '400 29px Lora, Georgia, serif'; y += 54;
+      wrapText(g, note, W - 2 * M, Math.max(1, Math.floor((H - 100 - y) / 42))).forEach(l => { g.fillText(l, M, y); y += 42; });
+    }
+    g.fillStyle = '#6d6964'; g.font = '400 23px Lora, Georgia, serif';
+    const d = DATA.days[x.di];
+    g.fillText('Day ' + (x.di + 1) + (d ? ' · ' + dDate(d) + ', 2025' : ''), M, H - 46);
+    return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('no image')), 'image/jpeg', 0.9));
+  }
+  async function placePostcard(name, k) {
+    const ph = placePhotos(name), sec = histEl && histEl.querySelector('.dcc-hist-place');
+    if (!sec || !sec._runs) return;
+    if (!ph.length) { toast('No photo from this spot to make a postcard with'); return; }
+    k = (((k || 0) % ph.length) + ph.length) % ph.length;
+    const id = 'place-' + histSlugOf(shortName(name)).replace(/[^\w-]+/g, '');
+    const ov = pcOverlay();
+    ov.dataset.id = id; ov.dataset.k = k;
+    ov._nav = d => placePostcard(name, k + d); ov._share = () => sharePostcard(id);
+    ov.innerHTML = '<div class="dcc-pc-box"><div class="dcc-pc-img"><p>Making your postcard…</p></div>' +
+      '<div class="dcc-pc-acts">' + (ph.length > 1 ? '<button type="button" data-pc="prev" aria-label="Previous photo">‹</button>' +
+        '<span class="dcc-pc-n">Photo ' + (k + 1) + ' of ' + ph.length + '</span><button type="button" data-pc="next" aria-label="Next photo">›</button>' : '') +
+        '<button type="button" data-pc="share" class="dcc-pc-main">' + (navigator.share ? 'Share' : 'Save') + '</button>' +
+        '<button type="button" data-pc="close" class="dcc-pc-x" aria-label="Close">×</button></div></div>';
+    ov.classList.add('open');
+    ov.querySelector('[data-pc="share"]').focus();
+    pcBlob = null;
+    try {
+      const blob = await makePlacePostcard(name, ph[k], sec._runs, sec._note);
+      if (ov.dataset.id !== id || +ov.dataset.k !== k) return;
+      pcBlob = blob;
+      ov.querySelector('.dcc-pc-img').innerHTML = '<img alt="Postcard: ' + escapeAttr(shortName(name)) + ' in history" src="' + URL.createObjectURL(blob) + '">';
+    } catch (e) {
+      ov.querySelector('.dcc-pc-img').innerHTML = '<p>The postcard couldn’t be made here — try again when online.</p>';
+    }
+  }
+
+  // ---- "Then" in the photo viewer: drag across the photo to see it tinted with an era, with what
+  //      the spot was then (the same answer as the History tab's place page) ----
+  let vThenOn = false, vThenEra = null, vThenCleanup = null;
+  function viewerThenOff() { if (vThenCleanup) { vThenCleanup(); vThenCleanup = null; } }
+  function viewerThen(it) {
+    viewerThenOff();
+    const el0 = document.getElementById('dcc-tour-viewer'), stage = el0 && el0.querySelector('.dcc-tour-vstage');
+    const old = stage && stage.querySelector('.dcc-vthen');
+    if (old) old.remove();
+    const btn = el0 && el0.querySelector('.dcc-tour-lb-then');
+    if (btn) btn.setAttribute('aria-pressed', vThenOn ? 'true' : 'false');
+    if (!vThenOn || !stage || it.kind === 'video' || it.kind === 'clip' || !histPlaceOk(it.place)) return;
+    const im = stage.querySelector('.dcc-tour-vphoto');
+    if (!im) return;
+    const ov = el('div', 'dcc-vthen');
+    ov.innerHTML = '<div class="dcc-vthen-tint"></div><div class="dcc-vthen-bar" role="slider" tabindex="0" aria-label="Then and now divider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i></i></div>' +
+      '<div class="dcc-vthen-chip"><button type="button" data-d="-1" aria-label="Earlier era">‹</button><span>…</span><button type="button" data-d="1" aria-label="Later era">›</button></div>';
+    stage.appendChild(ov);
+    let split = 0.5;
+    const place = () => {
+      // cover the photo itself (inside its frame), wherever object-fit put it
+      const sr = stage.getBoundingClientRect(), r = im.getBoundingClientRect(), b = im.clientLeft || 0;
+      Object.assign(ov.style, { left: (r.left - sr.left + b) + 'px', top: (r.top - sr.top + b) + 'px', width: (r.width - 2 * b) + 'px', height: (r.height - 2 * b) + 'px' });
+    };
+    const setSplit = v => {
+      split = Math.min(1, Math.max(0, v));
+      ov.querySelector('.dcc-vthen-tint').style.clipPath = 'inset(0 ' + ((1 - split) * 100).toFixed(1) + '% 0 0)';
+      ov.querySelector('.dcc-vthen-bar').style.left = (split * 100) + '%';
+      ov.querySelector('.dcc-vthen-bar').setAttribute('aria-valuenow', Math.round(split * 100));
+    };
+    if (im.complete) place(); else im.addEventListener('load', place, { once: true });
+    window.addEventListener('resize', place);
+    vThenCleanup = () => { window.removeEventListener('resize', place); ov.remove(); };
+    setSplit(0.5);
+    // the viewer swipes between photos; inside the overlay a drag moves the divider instead
+    ['pointerdown', 'touchstart', 'touchmove', 'touchend', 'click'].forEach(t => ov.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+    ov.addEventListener('pointerdown', e => {
+      if (e.target.closest('.dcc-vthen-chip')) return;
+      const r = ov.getBoundingClientRect(), mv = ev => setSplit((ev.clientX - r.left) / r.width);
+      mv(e); ov.setPointerCapture(e.pointerId);
+      const up = () => { ov.removeEventListener('pointermove', mv); ov.removeEventListener('pointerup', up); ov.removeEventListener('pointercancel', up); };
+      ov.addEventListener('pointermove', mv); ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
+    });
+    ov.querySelector('.dcc-vthen-bar').addEventListener('keydown', e => {
+      const d = e.key === 'ArrowLeft' ? -0.05 : e.key === 'ArrowRight' ? 0.05 : 0;
+      if (d) { e.preventDefault(); e.stopPropagation(); setSplit(split + d); }
+    });
+    Promise.all([thenLoad(), streetLoad()]).then(() => {
+      if (!ov.isConnected) return;
+      const g = placeGeo(it.place), pp = g && placePart(g.lat, g.lng), F = thenData.frames;
+      if (!pp) { ov.remove(); return; }
+      const { subj } = placeSubject(it.place, pp);
+      if (vThenEra == null) {
+        const r = F.findIndex(f => placeStatus(subj, f).cls === 'rag' && f.year >= 1453);
+        vThenEra = r >= 0 ? r : F.findIndex(f => histSlugOf(f.label) === '1453');
+      }
+      const show = () => {
+        const f = F[vThenEra], st = placeStatus(subj, f);
+        const col = st.cls === 'rag' ? '#f2c230' : st.cls === 'war' ? '#c0392b' : thenColor(f, st.t);
+        ov.querySelector('.dcc-vthen-tint').style.setProperty('--vt', col);
+        ov.querySelector('.dcc-vthen-chip span').innerHTML = '<b>' + escapeHtml(f.label) + '</b> ' + escapeHtml(st.t);
+        ov.querySelector('[data-d="-1"]').disabled = vThenEra === 0;
+        ov.querySelector('[data-d="1"]').disabled = vThenEra === F.length - 1;
+      };
+      ov.querySelector('.dcc-vthen-chip').addEventListener('click', e => {
+        const b = e.target.closest('[data-d]'); if (!b) return;
+        vThenEra = Math.min(F.length - 1, Math.max(0, vThenEra + +b.dataset.d)); show();
+      });
+      show();
+    }).catch(() => ov.remove());
   }
 
   // ---- share helpers ----
@@ -1909,6 +2154,28 @@
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
   }
+  // Leaflet (the map library) loads the first time a map is shown, so a visit that opens on the
+  // Timeline, Media, Stats or History tab on a phone doesn't wait for it. Its stylesheet goes first
+  // in <head>, where the static page used to have it, so the site's own map styles still win.
+  // Esri's World Imagery credit, as its terms ask
+  const ESRI_CREDIT = 'Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+  let leafletP = null;
+  function ensureLeaflet() {
+    if (window.L && L.heatLayer) return Promise.resolve();
+    if (!leafletP) {
+      const load = (tag, attrs, where) => new Promise((ok, no) => {
+        const e = document.createElement(tag); Object.assign(e, attrs);
+        e.onload = ok; e.onerror = no; where(e);
+      });
+      leafletP = Promise.all([
+        document.querySelector('link[href$="leaflet.css"]') ? null
+          : load('link', { rel: 'stylesheet', href: resolveUrl('vendor/leaflet.css') }, e => document.head.insertBefore(e, document.head.querySelector('link[rel=stylesheet]'))),
+        (window.L ? Promise.resolve() : load('script', { src: resolveUrl('vendor/leaflet.js') }, e => document.head.appendChild(e)))
+          .then(() => window.L.heatLayer ? null : load('script', { src: resolveUrl('vendor/leaflet-heat.js') }, e => document.head.appendChild(e)))
+      ]).catch(err => { leafletP = null; throw err; });
+    }
+    return leafletP;
+  }
   // OpenStreetMap street tiles, fetched rather than set as an <img> src so that a refusal counts as
   // a failure: OSM answers refused requests with an "Access blocked" picture that would otherwise
   // load like any tile. The page sends no Referer (meta referrer, for the Drive thumbnails), and OSM
@@ -1952,7 +2219,7 @@
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="history">' + svgIcon('history') + '<span>History</span></button>' +
       '<span class="dcc-tour-modespacer"></span>' + unitToggleHTML('unit-desk') + musicToggleHTML('unit-desk');
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
-      b.addEventListener('click', () => setView(b.dataset.view)));
+      b.addEventListener('click', () => goTab(b.dataset.view)));
     w.querySelector('.dcc-unit-toggle').addEventListener('click', toggleUnits);
     w.querySelector('.dcc-music-toggle').addEventListener('click', () => MUSIC.toggle());
     return w;
@@ -2156,6 +2423,7 @@
     else { wrap.classList.toggle('mm-fs-fallback'); mmMap && setTimeout(() => mmMap.invalidateSize(), 120); }
   }
   function initMapMode() {
+    if (!window.L || !L.heatLayer) { ensureLeaflet().then(() => { if (root.dataset.view === 'map') initMapMode(); }); return; }
     if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); thenApplyWant(); return; }
     mmInit = true;
     mmRange = [0, DATA.day_count - 1];
@@ -2174,7 +2442,7 @@
     if (!root._mapmode.querySelector('#mm-sat').checked) mmOsm.addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: ESRI_CREDIT }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
     ]);
@@ -2291,7 +2559,7 @@
   // (or the trip's own geotags); facts are the same as the Timeline's "On this spot" notes.
   const THEN_MARKS = [
     { ll: [42.5814, 18.2177], from: 14, until: 613, by: 'rome', t: 'Epidaurum', s: 'Roman colony', x: 'A Roman colony on the coastal road, where Cavtat stands today. By tradition its people fled to the islet of Laus in the 600s and founded Ragusa.' },
-    { ll: [42.625, 18.1213], from: 1023, by: 'church', t: 'Benedictine monastery, Lokrum', s: '1023', x: 'Benedictine monks are first recorded on Lokrum in 1023.' },
+    { ll: [42.625, 18.1213], from: 1023, by: 'church', t: 'Benedictine monastery, Lokrum', s: 'recorded 1023', x: 'Benedictine monks are first recorded on Lokrum in 1023.' },
     { ll: [42.6408, 18.10423], from: 1301, by: 'rag', t: 'Fort Lovrijenac', s: 'recorded 1301', x: 'First recorded in 1301. Legend says Ragusa raised it in three months to beat Venice to the rock. Over its gate: “Freedom is not sold for all the gold in the world.”' },
     { ll: [42.64297, 18.10843], from: 1319, by: 'rag', t: 'Fort Minčeta', s: '1319 · round 1460s', x: 'Begun as a square tower in 1319; rebuilt as the great round tower in the 1460s, as Ottoman power closed in.' },
     { ll: [42.6398468, 18.112383], from: 1346, by: 'rag', t: 'Fort St. John', s: '1346', x: 'Its first tower, guarding the harbour mouth, dates from 1346.' },
@@ -2308,13 +2576,14 @@
     { ll: [42.64167, 18.11472], from: 1590, by: 'rag', t: 'Lazareti', s: '1590–1642', x: 'Quarantine houses outside the Ploče gate, built from 1590 and finished in 1642. Travellers and goods from plague-hit lands waited here before entering the city — the Republic had made the earliest known quarantine law in 1377.' },
     { ll: [42.6403, 18.110381], from: 1667, by: 'rag', t: 'Cathedral', s: 'after 1667', x: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
     { ll: [42.640629, 18.109978], from: 1706, by: 'rag', t: 'St. Blaise', s: '1706–15', x: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
-    { ll: [42.64991, 18.11065], from: 1806, by: 'fra', t: 'Fort Imperial', s: 'France, 1806–12', x: 'Built by Napoleon’s French between 1806 and 1812, looking down on the whole city. Its defenders held it on 6 December 1991; it now houses the Homeland War museum.' },
-    { ll: [42.62997, 18.11674], from: 1806, by: 'fra', t: 'Fort Royal, Lokrum', s: 'France, 1806', x: 'Begun by the French in 1806 on Lokrum’s highest point; the Austrians later enlarged it.' },
-    { ll: [42.6242, 18.1201], from: 1859, by: 'aus', t: 'Maximilian’s gardens', s: 'Austria, 1859', x: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
+    { ll: [42.64991, 18.11065], from: 1806, by: 'fra', t: 'Fort Imperial', s: '1806–12', x: 'Built by Napoleon’s French between 1806 and 1812, looking down on the whole city. Its defenders held it on 6 December 1991; it now houses the Homeland War museum.' },
+    { ll: [42.62997, 18.11674], from: 1806, by: 'fra', t: 'Fort Royal, Lokrum', s: '1806', x: 'Begun by the French in 1806 on Lokrum’s highest point; the Austrians later enlarged it.' },
+    { ll: [42.6242, 18.1201], from: 1859, by: 'aus', t: 'Maximilian’s gardens', s: '1859', x: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
     { ll: [42.64274, 18.10492], from: 1897, by: 'aus', t: 'Grand Hotel Imperial', s: '1897', x: 'Dubrovnik’s first modern hotel, opened in 1897 under Habsburg rule. It was shelled in 1991.' },
     { ll: [42.649189, 18.111862], from: 1991, by: 'cro', t: 'Mount Srđ Cross', s: '1991 · 1997', x: 'Pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' }
   ];
-  const THEN_BY = { rome: 'Rome', church: 'the Church', rag: 'Ragusa', fra: 'France', aus: 'Austria', cro: 'Croatia' };
+  // who built (or kept) each landmark, as it reads after its dates: "1806–12 · built by France"
+  const THEN_BY = { rome: 'Roman', church: 'Benedictine monks', rag: 'built by Ragusa', fra: 'built by France', aus: 'Habsburg era', cro: 'Croatia' };
   let thenScrub = false, thenOn = false, thenData = null, thenStreet = null, thenIdx = -1, thenWant = null, thenWantLL = null, thenLoading = null;
   let thenWide = null, thenNear = null, thenTop = null, thenPlay = null, thenCmp = 0.5, thenCmpOn = false, thenRW = null, thenRN = null, thenRB = null;
   const thenRingsCache = new Map();
@@ -2332,7 +2601,8 @@
     const fr = histHandle && histHandle.frames;   // the History map already has them
     if (!thenLoading) thenLoading = Promise.all([
       fr ? Promise.resolve({ frames: fr }) : fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      streetLoad()
+      streetLoad(),
+      mmTrackData ? null : loadJSON('track.json').then(d => { mmTrackData = mmTrackData || d; }).catch(() => {})
     ]).then(([d]) => { thenData = d; }).catch(e => { thenLoading = null; throw e; });
     return thenLoading;
   }
@@ -2360,6 +2630,11 @@
     for (const ft of f.feats) if (thenRings(ft.d).some(r => thenPip(42.711, 18.344, r))) return ft.n;
     return '';
   }
+  // the inland neighbour as words. In 1453 the land behind Ragusa belonged to Herceg Stjepan Vukčić
+  // Kosača, a Bosnian magnate who defied the Bosnian king (and fought Ragusa in 1451–54); the map's
+  // broad-brush "Kingdom of Bosnia" is kept for its colour, not its name
+  const INLAND_NAME = { '1453': 'Herceg Stjepan Kosača’s Herzegovina' };
+  const thenInlandName = f => INLAND_NAME[histSlugOf(f.label)] || thenInland(f);
   // what one of Ragusa's parts was in an era: { t: text, cls: rag|out|ceded|split|war|era, c: colour }
   function thenPartStatus(k, f) {
     const P = THEN_PART[k], R = f.ragusa, slug = histSlugOf(f.label);
@@ -2378,7 +2653,7 @@
     const R = f.ragusa, slug = histSlugOf(f.label), today = f.year >= 1992;
     if (k === 'frontier') {
       if (!R.founded || (!R.former && R.parts.indexOf('konavle') < 0)) return null;
-      if (!R.former) return { t: 'Ragusa’s land frontier with the ' + (thenInland(f) || 'inland powers'), s: 'Still the Croatia–Bosnia border today.' };
+      if (!R.former) return { t: 'Ragusa’s land frontier with ' + (INLAND_NAME[slug] || 'the ' + (thenInland(f) || 'inland powers')), s: 'Still the Croatia–Bosnia border today.' };
       const ph = f.year < 1878 ? 'the border with the Ottoman Empire' : f.year < 1920 ? 'the line between Dalmatia and Austro-Hungarian Bosnia'
         : slug === '1942' ? 'an internal line inside the Axis-run Independent State of Croatia'
         : today ? 'the Croatia–Bosnia and Herzegovina border' : 'an internal line inside Yugoslavia';
@@ -2396,6 +2671,141 @@
     layer.on('popupopen', () => layer.closeTooltip());
     return layer;
   }
+  // ---- Where your GPS track crossed from one part of the old Republic (or today's Bosnia) into
+  //      another. Each crossing is a marker on the "Then" map; its note says what both sides were
+  //      in the era on screen. Worked out once from track.json and history/street.json. ----
+  let thenCross = null;
+  function thenCrossings() {
+    if (thenCross || !mmTrackData || !thenStreet) return thenCross || [];
+    const S = thenStreet, boxes = {};
+    const bbox = polys => { let a = 90, b = -90, c = 180, d = -180; polys.forEach(p => p[0].forEach(q => { a = Math.min(a, q[0]); b = Math.max(b, q[0]); c = Math.min(c, q[1]); d = Math.max(d, q[1]); })); return [a, b, c, d]; };
+    const keys = THEN_ORDER.filter(k => k !== 'city' && S.parts[k]).concat(['bih']);
+    const geomOf = k => k === 'bih' ? S.bih : S.parts[k];
+    keys.forEach(k => { boxes[k] = bbox(geomOf(k)); });
+    const where = (lat, lng) => keys.find(k => { const b = boxes[k]; return lat >= b[0] && lat <= b[1] && lng >= b[2] && lng <= b[3] && thenInPolys(lat, lng, geomOf(k)); }) || null;
+    const out = [], seen = new Set();
+    mmTrackData.forEach(day => {
+      const di = DATA.days.findIndex(d => d.date === day.date);
+      let last = null;
+      (day.pts || []).forEach(pt => {
+        const k = where(pt[0], pt[1]);
+        if (!k) return;            // at sea: carry on from the last land
+        if (last && k !== last) {
+          const key = di + ':' + [last, k].sort().join('|');
+          if (!seen.has(key)) { seen.add(key); out.push({ ll: pt, from: last, to: k, di }); }
+        }
+        last = k;
+      });
+    });
+    return (thenCross = out);
+  }
+  const crossName = k => k === 'bih' ? 'Bosnia and Herzegovina' : THEN_PART[k].name;
+  function crossStatus(k, f) {
+    if (k === 'bih') return { t: thenInlandName(f) || 'inland' };
+    return thenPartStatus(k, f);
+  }
+  function thenDrawCrossings(f) {
+    thenCrossings().forEach(x => {
+      const a = crossStatus(x.from, f), b = crossStatus(x.to, f), d = DATA.days[x.di];
+      const same = a.t === b.t;
+      const html = '<div class="dcc-then-pop"><small>Day ' + (x.di + 1) + (d ? ' · ' + escapeHtml(dDate(d)) : '') + '</small>' +
+        '<b>You crossed into ' + escapeHtml(crossName(x.to)) + '</b>' +
+        '<p>From ' + escapeHtml(crossName(x.from)) + '. In ' + escapeHtml(f.label) + ': ' + escapeHtml(crossName(x.from)) + ' — ' + escapeHtml(a.t) + '; ' +
+          escapeHtml(crossName(x.to)) + ' — ' + escapeHtml(b.t) + '. ' + (same ? 'Then, one ruler on both sides.' : 'Then, a real border.') + '</p></div>';
+      thenNear.addLayer(L.marker(x.ll, { pane: 'dccThenTop', keyboard: true, title: 'Day ' + (x.di + 1) + ': crossed into ' + crossName(x.to),
+        icon: L.divIcon({ className: 'dcc-then-cross' + (same ? '' : ' dcc-then-cross-real'), html: '<i aria-hidden="true">⇄</i>', iconSize: null }) })
+        .bindPopup(html, { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) }));
+    });
+  }
+
+  // ---- Walk the walls: a marker goes round Dubrovnik's walls; at each tower or gate where you took
+  //      photos it pauses and shows one of them (the trip's own pictures, in walking order) ----
+  let wallWalk = null;
+  function wallStops() {
+    const line = thenStreet && thenStreet.dbkWalls && thenStreet.dbkWalls.line;
+    if (!line) return {};
+    // distance along the wall to each point of the line, in metres
+    const cx = Math.cos(42.64 * Math.PI / 180), segLen = [], cum = [0];
+    for (let i = 1; i < line.length; i++) { const d = Math.hypot((line[i][1] - line[i - 1][1]) * cx, line[i][0] - line[i - 1][0]) * 111200; segLen.push(d); cum.push(cum[i - 1] + d); }
+    const stops = [];
+    DATA.days.forEach((d, di) => (d.places || []).forEach(p => {
+      if (p.lat == null || !/Tower|Fort|Bastion|Gate|Kula|Tvrđava|Vrata/.test(p.name || '') || /Bell Tower|zvonik/.test(p.name) || !/Old City|Pile|Stari grad/.test(p.name)) return;
+      const photos = (p.items || []).filter(it => it.full || (it.src && it.kind !== 'video' && it.kind !== 'clip'));
+      if (!photos.length) return;
+      // nearest point on the wall line, and how far along the walk it is
+      let best = null;
+      for (let i = 1; i < line.length; i++) {
+        const ax = line[i - 1][1] * cx, ay = line[i - 1][0], bx = line[i][1] * cx, by = line[i][0], px = p.lng * cx, py = p.lat;
+        const L2 = (bx - ax) ** 2 + (by - ay) ** 2, t = L2 ? Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / L2)) : 0;
+        const dist = Math.hypot(px - (ax + t * (bx - ax)), py - (ay + t * (by - ay))) * 111200;
+        if (!best || dist < best.dist) best = { dist, along: cum[i - 1] + t * segLen[i - 1] };
+      }
+      if (best.dist > 60) return;
+      // one stop per tower: the visit with the most photos
+      const old = stops.find(s => s.name === p.name);
+      if (old && old.n >= photos.length) return;
+      if (old) stops.splice(stops.indexOf(old), 1);
+      stops.push({ name: p.name, along: best.along, it: photos[0], n: photos.length, di });
+    }));
+    stops.sort((a, b) => a.along - b.along);
+    return { line, cum, stops };
+  }
+  function wallStop(msg) {
+    if (!wallWalk) return;
+    cancelAnimationFrame(wallWalk.raf); clearTimeout(wallWalk.t);
+    if (wallWalk.mk) mmMap.removeLayer(wallWalk.mk);
+    const fig = root._mapmode.querySelector('#mm-moment'); if (fig) { fig.hidden = true; fig.removeEventListener('click', wallFigStop); fig.classList.remove('dcc-walk-card'); fig.removeAttribute('title'); }
+    const b = root._mapmode.querySelector('.dcc-then [data-a=walls]');
+    if (b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); }
+    wallWalk = null;
+    if (msg) toast(msg);
+  }
+  const wallFigStop = () => wallStop();
+  function wallStart() {
+    const W = wallStops();
+    if (!W.line) return;
+    if (!W.stops.length) { toast('No photos from the walls to walk with'); return; }
+    // the walls stand from the 1300 era on
+    if (thenData.frames[thenIdx].year < 1300) thenShow(thenData.frames.findIndex(f => histSlugOf(f.label) === '1600'));
+    const b = root._mapmode.querySelector('.dcc-then [data-a=walls]');
+    b.classList.add('active'); b.setAttribute('aria-pressed', 'true');
+    // on a phone, fold the era bar so the walk's photo card has room
+    const more = root._mapmode.querySelector('.dcc-then-more');
+    if (more && more.offsetParent && b.closest('.dcc-then-open')) more.click();
+    mmMap.setView([42.6408, 18.1090], 17, { animate: false });
+    const total = W.cum[W.cum.length - 1], speed = reducedMotion() ? Infinity : 140;   // metres a second
+    const at = m => {
+      let i = 1; while (i < W.cum.length - 1 && W.cum[i] < m) i++;
+      const t = (m - W.cum[i - 1]) / ((W.cum[i] - W.cum[i - 1]) || 1);
+      return [W.line[i - 1][0] + t * (W.line[i][0] - W.line[i - 1][0]), W.line[i - 1][1] + t * (W.line[i][1] - W.line[i - 1][1])];
+    };
+    const mk = L.circleMarker(at(0), { pane: 'dccThenTop', radius: 9, color: '#fff', weight: 3, fillColor: '#b68235', fillOpacity: 1, interactive: false }).addTo(mmMap);
+    wallWalk = { mk, raf: 0, t: 0 };
+    const fig = root._mapmode.querySelector('#mm-moment');
+    fig.addEventListener('click', wallFigStop); fig.classList.add('dcc-walk-card'); fig.title = 'Tap to stop the walk';
+    const show = s => {
+      fig.innerHTML = '<img alt="" src="' + escapeAttr(resolveUrl(s.it.src || s.it.full)) + '"><figcaption><b>' + escapeHtml(shortName(s.name)) + '</b><span>Day ' + (s.di + 1) + ' · on the walls</span></figcaption>';
+      fig.hidden = false;
+    };
+    let m = 0, next = 0, tPrev = performance.now();
+    const step = now => {
+      if (!wallWalk) return;
+      const dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
+      const target = next < W.stops.length ? W.stops[next].along : total;
+      m = Math.min(target, m + speed * dt);
+      const p = at(m); mk.setLatLng(p);
+      if (!mmMap.getBounds().pad(-0.2).contains(p)) mmMap.panTo(p, { animate: !reducedMotion(), duration: 0.6 });
+      if (next < W.stops.length && m >= target) {
+        show(W.stops[next]); next++;
+        wallWalk.t = setTimeout(() => { tPrev = performance.now(); wallWalk && (wallWalk.raf = requestAnimationFrame(step)); }, reducedMotion() ? 2600 : 1900);
+        return;
+      }
+      if (m >= total) { wallStop(); return; }
+      wallWalk.raf = requestAnimationFrame(step);
+    };
+    wallWalk.raf = requestAnimationFrame(step);
+  }
+
   function thenInit() {
     if (thenTop) return;
     mmMap.createPane('dccThenWide').style.zIndex = 360;
@@ -2421,6 +2831,20 @@
     ui.querySelector('[data-a=cmp]').addEventListener('click', () => thenCompare(!thenCmpOn));
     ui.querySelector('[data-a=hist]').addEventListener('click', () => { histWant = histSlugOf(frames[thenIdx].label); setView('history'); });
     ui.querySelector('[data-a=close]').addEventListener('click', () => thenToggle(false));
+    ui.querySelector('[data-a=walls]').addEventListener('click', () => wallWalk ? wallStop() : wallStart());
+    // a drag or zoom of the map, or leaving the tab, ends the walk
+    mmMap.on('dragstart', () => wallStop());
+    // phones: the bar starts compact (year and controls); ▴ or a swipe up shows the details
+    const bar = ui.querySelector('.dcc-then-bar'), more = ui.querySelector('[data-a=more]');
+    const setOpen = on => { bar.classList.toggle('dcc-then-open', on); more.setAttribute('aria-expanded', on ? 'true' : 'false'); more.textContent = on ? '▾' : '▴'; more.setAttribute('aria-label', on ? 'Hide this era’s details' : 'Show this era’s details'); };
+    more.addEventListener('click', () => setOpen(!bar.classList.contains('dcc-then-open')));
+    let y0 = null;
+    bar.addEventListener('touchstart', e => { y0 = e.touches.length === 1 && !e.target.closest('input') ? e.touches[0].clientY : null; }, { passive: true });
+    bar.addEventListener('touchend', e => {
+      if (y0 == null) return;
+      const dy = e.changedTouches[0].clientY - y0; y0 = null;
+      if (dy < -24) setOpen(true); else if (dy > 24) setOpen(false);
+    }, { passive: true });
     // the Then|Now divider: drag it across the map
     const sw = ui.querySelector('.dcc-then-swipe');
     sw.addEventListener('pointerdown', e => {
@@ -2520,6 +2944,7 @@
       thenNear.addLayer(L.marker(K41.lab41, { pane: 'dccThenTop', interactive: false, keyboard: false,
         icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-it', html: '<div><b>Annexed by Italy</b><span>1941–43 · line approximate</span></div>', iconSize: null }) }));
     }
+    thenDrawCrossings(f);
     // Dubrovnik's walls: land towers and gates from OSM, the sea walls along today's shore
     if (R.founded && f.year >= 1300 && S.dbkWalls) {
       thenNear.addLayer(L.polyline(S.dbkWalls.line, { renderer: thenRN, pane: 'dccThen', color: '#fff', weight: 7, opacity: 0.6, interactive: false, lineJoin: 'round' }));
@@ -2562,7 +2987,7 @@
       const mk = L.marker(m.ll, { pane: 'dccThenTop', keyboard: true, title: m.t,
         icon: L.divIcon({ className: 'dcc-then-mark dcc-then-by-' + m.by + (fresh ? ' dcc-then-fresh' : ''), iconSize: null,
           html: '<i aria-hidden="true"></i><span><b>' + escapeHtml(m.t) + '</b> ' + escapeHtml(m.s) + '</span>' }) });
-      mk.bindPopup('<div class="dcc-then-pop"><small>' + escapeHtml(m.s) + ' · built by ' + THEN_BY[m.by] + '</small><b>' + escapeHtml(m.t) + '</b><p>' + escapeHtml(m.x) + '</p></div>',
+      mk.bindPopup('<div class="dcc-then-pop"><small>' + escapeHtml(m.s) + ' · ' + THEN_BY[m.by] + '</small><b>' + escapeHtml(m.t) + '</b><p>' + escapeHtml(m.x) + '</p></div>',
         { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) });
       thenTop.addLayer(mk);
     });
@@ -2606,7 +3031,7 @@
         : thenInPolys(c.lat, c.lng, K41.italy41) ? 'Kingdom of Italy (annexed 1941)'
         : thenInPolys(c.lat, c.lng, K41.italy42) ? 'Kingdom of Italy (taken in 1942)' : 'Independent State of Croatia (Axis)' : null;
       if (k) txt = (sea ? 'Off <b>' : '<b>') + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml((!sea && ww2) || thenPartStatus(k, f).t);
-      else if (inland) { const n = thenInland(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
+      else if (inland) { const n = thenInlandName(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
     }
     ui.innerHTML = txt ? '<span class="dcc-then-x" aria-hidden="true">+</span>' + txt : '';
     ui.hidden = !txt;
@@ -2648,7 +3073,7 @@
     if (cb) cb.checked = on;
     m.querySelector('.dcc-tour-mm-wrap').classList.toggle('mm-then-on', on);
     if (!on) {
-      thenStop(); ui.hidden = true;
+      thenStop(); wallStop(); ui.hidden = true;
       if (thenTop) { mmMap.removeLayer(thenWide); mmMap.removeLayer(thenNear); mmMap.removeLayer(thenTop); }
       const c = mmMap.getContainer(); c.classList.remove('dcc-then-wide', 'dcc-then-near', 'dcc-then-street', 'dcc-then-close');
       if (thenCmpOn) thenCompare(false);
@@ -2682,6 +3107,7 @@
         '<div class="dcc-then-swipe" role="slider" tabindex="0" aria-label="Then and now divider" aria-valuemin="0" aria-valuemax="100" hidden><span>Then</span><i></i><span>Now</span></div>' +
         '<div class="dcc-then-bar" role="group" aria-label="Era">' +
           '<div class="dcc-then-k" aria-live="polite"><b class="dcc-then-yr"></b><span class="dcc-then-t"></span>' +
+            '<button type="button" class="dcc-then-more" data-a="more" aria-expanded="false" aria-label="Show this era’s details" title="More">▴</button>' +
             '<button type="button" class="dcc-then-x2" data-a="close" aria-label="Close the old borders" title="Close">×</button></div>' +
           '<div class="dcc-then-row">' +
             '<button type="button" data-a="play" aria-label="Play through the eras" title="Play through the eras">' + PLAY_GLYPH + '</button>' +
@@ -2693,6 +3119,7 @@
           '<div class="dcc-then-row2">' +
             '<button type="button" class="dcc-then-pill" data-a="cmp" aria-pressed="false">Then | Now</button>' +
             '<button type="button" class="dcc-then-pill" data-a="hist">This era’s story</button>' +
+            '<button type="button" class="dcc-then-pill" data-a="walls" aria-pressed="false">Walk the walls</button>' +
             '<span class="dcc-then-src">Old borders approximate · outlines © OpenStreetMap</span>' +
           '</div>' +
         '</div>' +
@@ -3818,12 +4245,13 @@
   }
 
   function initMap() {
-    if (map || !window.L || !root._mapdiv) return;
+    if (map || !root._mapdiv) return;
     if (root._mapdiv.offsetParent === null) return;   // hidden (mobile app shell) — skip until visible
+    if (!window.L) { ensureLeaflet().then(() => { initMap(); if (map) showDayOnMap(DATA.days[curDay]); }); return; }
     map = L.map(root._mapdiv, { scrollWheelZoom: true });
     let satBackup = null;
     osmLayer({ maxZoom: 19, attribution: '&copy; OpenStreetMap' }, () => {
-      if (!satBackup) satBackup = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }).addTo(map);
+      if (!satBackup) satBackup = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18, attribution: ESRI_CREDIT }).addTo(map);
     }).addTo(map);
   }
 
@@ -3901,8 +4329,7 @@
         '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
           '<div class="dcc-tour-place-htext">' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
-            '<span class="dcc-tour-place-meta">' + [escapeHtml(time) + spent.replace(/^ · /, escapeHtml(time) ? ' · ' : ''), plur(its.length, 'shot')].filter(Boolean).join(' · ') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
-            histPlaceLink(p.name) +
+            '<span class="dcc-tour-place-meta">' + [escapeHtml(time) + spent.replace(/^ · /, escapeHtml(time) ? ' · ' : ''), plur(its.length, 'shot')].filter(Boolean).join(' · ') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + histPlaceLink(p.name, true) + '</span>' +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
@@ -3917,6 +4344,7 @@
 
     story.innerHTML = html;
     story.scrollTop = 0;
+    dayHistLine(day);
     { const ic = story.querySelector('.dcc-tour-idx-chips'); if (ic) enhanceHScroll(ic, ic.closest('.dcc-tour-places-index') || ic); }
     const prev = story.querySelector('#dcc-prev'), next = story.querySelector('#dcc-next');
     if (prev) prev.addEventListener('click', () => selectDay(curDay - 1));
@@ -4230,8 +4658,20 @@
         try { history.replaceState({ dccView: root.dataset.view || 'story' }, '', location.href); } catch (err) { /* sandboxed */ }
         openPlaceHistory(n);
       });
-      cap.appendChild(a);
+      const row = document.createElement('div'); row.className = 'dcc-tour-lb-row';
+      row.appendChild(a);
+      if (it.kind !== 'video' && it.kind !== 'clip') {
+        const t = document.createElement('button');
+        t.className = 'dcc-tour-lb-place dcc-tour-lb-then'; t.type = 'button';
+        t.setAttribute('aria-pressed', vThenOn ? 'true' : 'false');
+        t.title = 'Drag across the photo to see this spot in another era';
+        t.innerHTML = '<span>Then</span>';
+        t.addEventListener('click', e => { e.stopPropagation(); vThenOn = !vThenOn; viewerThen(it); });
+        row.appendChild(t);
+      }
+      cap.appendChild(row);
     }
+    viewerThen(it);
     // map-opened items get a link to that place's full popup (all shots + Open day)
     if (it.mapRef) {
       const a = document.createElement('button');
@@ -4259,6 +4699,7 @@
     viewerIdx = -1;
     MUSIC.setVideoOpen(false);   // video/clip closed -> resume any suppressed song
     const el0 = document.getElementById('dcc-tour-viewer');
+    viewerThenOff();
     if (el0) { el0.querySelector('.dcc-tour-vstage').innerHTML = ''; el0.classList.remove('open'); }   // detach player → stop playback
     document.body.classList.remove('dcc-tour-noscroll');
     if (vwPrevFocus && vwPrevFocus.focus) { try { vwPrevFocus.focus(); } catch (e) {} vwPrevFocus = null; }

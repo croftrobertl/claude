@@ -459,7 +459,7 @@
       const b = zoomUI.querySelector('[data-z=sat]');
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
       b.title = on ? 'Street map view' : 'Satellite view'; b.setAttribute('aria-label', b.title);
-      attrib.innerHTML = (on ? 'Imagery © Esri' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
+      attrib.innerHTML = (on ? 'Imagery © Esri, Maxar, Earthstar Geographics' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
       tileImgs.forEach(dropTile); tileImgs.clear(); tileWant = new Set(); tileFails = 0; tileGen++;
       // a switch made because street tiles failed isn't remembered as the viewer's choice
       if (!auto) { try { localStorage.setItem('bh-sat', on ? '1' : '0'); } catch (e) { /* storage blocked */ } }

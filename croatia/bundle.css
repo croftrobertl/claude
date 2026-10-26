@@ -1704,3 +1704,95 @@ html.dcc-matrix-on .dcc-then-pop-line, html.dcc-matrix-on .dcc-then-pop { color:
 /* a tapped map shape takes focus, and the browser's focus ring then outlines its whole bounding box
    (straight orange lines across the map). Shapes aren't keyboard-reachable, so no ring is lost. */
 .leaflet-container path.leaflet-interactive:focus { outline: none; }
+/* place page: who held it, as a ribbon of eras (Ragusa's in gold) over the folded list */
+.dcc-hp-ribbon { display: flex; gap: 2px; height: 30px; margin: 6px 0 2px; border-radius: var(--dcc-tour-radius); overflow: hidden; }
+.dcc-hp-rb { flex: 1 1 0; min-width: 6px; border: 0; padding: 0; cursor: pointer; background: color-mix(in srgb, var(--dcc-tour-text) 16%, transparent); transition: transform .15s, filter .15s; }
+.dcc-hp-rb.rag { background: #f2c230; }
+.dcc-hp-rb.war { background: #c0392b; }
+.dcc-hp-rb:hover, .dcc-hp-rb:focus-visible { filter: brightness(0.88); }
+.dcc-hp-rb.on { box-shadow: inset 0 0 0 3px var(--dcc-tour-accent-deep); }
+.dcc-hp-rb:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 2px; }
+.dcc-hp-rbax { position: relative; display: flex; justify-content: space-between; height: 1.3em; margin-bottom: 6px; font-size: 0.72rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+.dcc-hp-rbax .rag { position: absolute; top: 0; color: var(--dcc-tour-accent-deep); font-weight: 600; transform: translateX(-2px); }
+.dcc-hp-runs { margin-top: 2px; }
+.dcc-hp-runs li.on button { background: var(--dcc-tour-accent-tint); box-shadow: inset 3px 0 0 var(--dcc-tour-primary); }
+.dcc-hp-fold details > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; padding: 9px 6px; min-height: 40px; box-sizing: border-box;
+  font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600; color: var(--dcc-tour-accent-deep); border-radius: var(--dcc-tour-radius); }
+.dcc-hp-fold details > summary::-webkit-details-marker { display: none; }
+.dcc-hp-fold details > summary::before { content: "▸"; color: var(--dcc-tour-primary); }
+.dcc-hp-fold details[open] > summary::before { content: "▾"; }
+.dcc-hp-fold details > summary span { font-family: var(--dcc-tour-font); font-weight: 400; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+.dcc-hp-fold details > summary:hover { background: var(--dcc-tour-accent-tint); }
+.dcc-hp-fold > details > ol { margin: 0 0 4px 14px; }
+.dcc-hp-more { display: inline-block; margin-top: 2px; }
+.dcc-hp-acts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 6px; }
+.dcc-hp-acts .dcc-hist-street { margin: 4px 0; }
+/* the Timeline's history link: quiet, inline, next to the map pin */
+.dcc-tour-histlink.compact { display: inline-flex; gap: 3px; margin: 0 0 0 10px; padding: 0; font-family: var(--dcc-tour-font); font-size: 0.78rem; font-weight: 600;
+  color: var(--dcc-tour-accent-deep); vertical-align: -1px; white-space: nowrap; }
+.dcc-tour-histlink.compact .dcc-ic { width: 12px; height: 12px; }
+.dcc-tour-place-htext .dcc-tour-histlink.compact { display: inline-flex; width: auto; margin: 0 0 0 10px; }
+/* small links and switches keep their look but get a ~44px tap area (an invisible halo around them) */
+.dcc-tour-maplink.meta, .dcc-tour-histlink, .dcc-unit-toggle { position: relative; }
+.dcc-tour-maplink.meta::after, .dcc-tour-histlink.compact::after { content: ""; position: absolute; inset: -13px -6px; }
+.dcc-unit-toggle::after { content: ""; position: absolute; inset: -11px 0; }
+.dcc-tour-histlink:not(.compact)::after { content: ""; position: absolute; inset: -10px -4px; }
+/* Matrix theme: Leaflet's own zoom buttons were left white */
+html.dcc-matrix-on .leaflet-bar a, html.dcc-matrix-on .leaflet-bar a:hover { background: rgba(2, 14, 4, 0.94); color: #bdffc6; border-bottom-color: rgba(0, 255, 70, 0.3); }
+html.dcc-matrix-on .leaflet-bar { border-color: rgba(0, 255, 70, 0.3); }
+html.dcc-matrix-on .leaflet-bar a.leaflet-disabled { color: #3c7a44; }
+/* the era bar on phones: compact until opened (▴ or swipe up) */
+.dcc-then-more { display: none; }
+@media (max-width: 560px) {
+  .dcc-then-k { padding-right: 66px; }
+  .dcc-then-more { display: block; position: absolute; right: 30px; top: -4px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none;
+    color: var(--dcc-tour-accent-deep); font-size: 0.9rem; cursor: pointer; }
+  .dcc-then-more:hover { background: var(--dcc-tour-accent-tint); }
+  .dcc-then-bar:not(.dcc-then-open) .dcc-then-s, .dcc-then-bar:not(.dcc-then-open) .dcc-then-row2 { display: none; }
+  .mm-then-on .dcc-tour-mm-moment { bottom: 118px; }
+}
+
+/* ===== creative round: day-head history line, viewer "Then", border crossings, wall walk ===== */
+.dcc-tour-dayhist { display: flex; align-items: flex-start; gap: 6px; width: fit-content; max-width: 100%; margin: 8px 0 0; padding: 4px 0;
+  font-size: 0.82rem; line-height: 1.35; color: var(--dcc-tour-accent-deep); text-decoration: none; }
+.dcc-tour-dayhist .dcc-ic { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+.dcc-tour-dayhist b { font-family: var(--dcc-tour-font-head); font-weight: 600; }
+.dcc-tour-dayhist:hover span { text-decoration: underline; }
+.dcc-tour-lb-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; pointer-events: none; }
+.dcc-tour-lb-row .dcc-tour-lb-place { margin: 0; }
+.dcc-tour-lb-then[aria-pressed="true"] { background: rgba(242, 194, 48, 0.32); border-color: #f2c230; box-shadow: inset 0 0 0 1px #f2c230; }
+.dcc-vthen { position: absolute; z-index: 2; cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+.dcc-vthen-tint { position: absolute; inset: 0; pointer-events: none;
+  -webkit-backdrop-filter: sepia(0.85) saturate(0.8) contrast(1.05); backdrop-filter: sepia(0.85) saturate(0.8) contrast(1.05);
+  background: color-mix(in srgb, var(--vt, #f2c230) 28%, transparent); }
+.dcc-vthen-bar { position: absolute; top: 0; bottom: 0; width: 44px; margin-left: -22px; cursor: ew-resize; }
+.dcc-vthen-bar::before { content: ""; position: absolute; top: 0; bottom: 0; left: 21px; width: 2px; background: #fff; box-shadow: 0 0 6px rgba(0,0,0,0.5); }
+.dcc-vthen-bar i { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+.dcc-vthen-bar i::before { content: "‹ ›"; position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 0.9rem; font-weight: 700; color: #7d5411; letter-spacing: 1px; }
+.dcc-vthen-bar:focus-visible { outline: none; }
+.dcc-vthen-bar:focus-visible i { outline: 2px solid #f2c230; outline-offset: 2px; }
+.dcc-vthen-chip { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; max-width: calc(100% - 20px);
+  padding: 2px; border-radius: 999px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); box-shadow: 0 2px 10px rgba(0,0,0,0.35); cursor: default; font-size: 0.78rem; }
+.dcc-vthen-chip span { padding: 0 6px; text-align: center; line-height: 1.25; min-width: 0; }
+.dcc-vthen-chip span b { font-family: var(--dcc-tour-font-head); color: var(--dcc-tour-accent-deep); margin-right: 3px; }
+.dcc-vthen-chip button { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: inherit; font: inherit; font-size: 1.15rem; cursor: pointer; }
+.dcc-vthen-chip button:hover:not(:disabled) { background: var(--dcc-tour-accent-tint); }
+.dcc-vthen-chip button:disabled { opacity: 0.3; cursor: default; }
+.dcc-vthen-chip button:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: -2px; }
+.dcc-then-cross { background: none; border: 0; }
+.dcc-then-cross i { display: grid; place-items: center; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: #fff; color: #6d6964; border: 2px solid #9a948a; font-style: normal; font-size: 0.85rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: pointer; }
+.dcc-then-cross-real i { color: #a3271b; border-color: #a3271b; }
+.dcc-then-cross::after { content: ""; position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; }
+.dcc-tour-mm-map:not(.dcc-then-near) .dcc-then-cross { display: none; }
+.dcc-then-cross:focus-visible { outline: none; }
+.dcc-then-cross:focus-visible i { outline: 2px solid var(--dcc-tour-primary); outline-offset: 2px; }
+html.dcc-matrix-on .dcc-vthen-chip { background: rgba(2, 14, 4, 0.94); }
+html.dcc-matrix-on .dcc-tour-lb-then[aria-pressed="true"] { background: rgba(0, 255, 65, 0.18); border-color: currentColor; }
+/* Leaflet's zoom buttons are 30px: give them 44px touch areas without moving them */
+.leaflet-bar a { position: relative; }
+.leaflet-bar a::after { content: ""; position: absolute; inset: -7px; }
+.leaflet-bar a:first-child:not(:last-child)::after { bottom: 0; }
+.leaflet-bar a:last-child:not(:first-child)::after { top: 0; }
+.dcc-walk-card { cursor: pointer; pointer-events: auto; }

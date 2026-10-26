@@ -478,7 +478,7 @@
      "y": "1991–1992",
      "sort": 1991,
      "title": "The siege",
-     "text": "The Yugoslav army surrounded Dubrovnik from 1 October 1991 to 31 May 1992. The worst shelling of the Old City came on 6 December 1991; Fort Imperial on Srđ held.",
+     "text": "The Yugoslav navy blockaded the city’s sea routes from 25 September 1991, and the army surrounded Dubrovnik from 1 October 1991 to 31 May 1992. The worst shelling of the Old City came on 6 December 1991; Fort Imperial on Srđ held.",
      "src": [
       [
        "Siege of Dubrovnik",
@@ -486,6 +486,11 @@
       ]
      ],
      "days": [
+      [
+       "09-25",
+       1991,
+       "The Yugoslav navy blockaded Dubrovnik’s sea routes"
+      ],
       [
        "10-01",
        1991,
@@ -881,7 +886,7 @@
      "y": "Oct 1991",
      "sort": 1991,
      "title": "Occupied",
-     "text": "Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. The occupation lasted into 1992, and Konavle's villages were rebuilt over the years that followed.",
+     "text": "The first shells fell on 23 September 1991, on Vitaljina in eastern Konavle. Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. The occupation lasted into 1992, and Konavle's villages were rebuilt over the years that followed.",
      "src": [
       [
        "tportal (indictment)",
@@ -890,9 +895,18 @@
       [
        "Dubrovnik Republic (1991–1992)",
        "https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)"
+      ],
+      [
+       "Siege of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
       ]
      ],
      "days": [
+      [
+       "09-23",
+       1991,
+       "Yugoslav artillery shelled Vitaljina in Konavle"
+      ],
       [
        "10-05",
        1991,

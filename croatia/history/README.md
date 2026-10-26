@@ -50,5 +50,9 @@ Hand-drawn eras are close approximations, not survey-exact.
 python3 tools/build-street.py --fetch /tmp/osm   # downloads ~17 boundaries, 1 request/s
 python3 tools/build-street.py /tmp/osm           # writes history/street.json
 ```
+If the Python `shapely` package is installed (`pip install shapely`), Sutorina is cut exactly
+to the land between today's Herceg Novi boundary and the old Ragusan line; without it the build
+falls back to a latitude cut, which is close but rougher.
+
 Ragusa's parts are cut at the same lines the coast map uses, so both maps agree on what was
 Ragusan when. The landmarks and their dates live in `THEN_MARKS` in `bundle.js`.

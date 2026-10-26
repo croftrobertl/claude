@@ -194,6 +194,19 @@ def shared(d, a_names, b_names, eps=0.00004):
                 if len(cur) > 1: lines.append(cur)
     return [[[round(q[1], 5), round(q[0], 5)] for q in dp(l, eps)] for l in lines]
 
+def sutorina_land(d):
+    """The 1699 Sutorina corridor's land: its historic outline (which runs out to sea) cut to Herceg
+    Novi's coastline. Uses shapely when it's installed; otherwise a straight cut at 42.445 °N."""
+    try:
+        from shapely.geometry import shape, mapping
+    except ImportError:
+        return clip_polys(polys(d, 'sutorina'), (1, 42.445, False))
+    hist = shape(geo(d, 'R%d' % REL['sutorina']))
+    land = shape(geo(d, 'R%d' % REL['hercegnovi']))
+    g = mapping(hist.intersection(land).buffer(0))
+    ps = g['coordinates'] if g['type'] == 'MultiPolygon' else [g['coordinates']]
+    return [[[list(q) for q in r] for r in p] for p in ps]
+
 def build(d):
     gd = polys(d, 'dubrovnik')
     big = max(gd, key=lambda p: area(p[0]))
@@ -208,7 +221,7 @@ def build(d):
         'pel': clip_polys(polys(d, 'ston'), (0, 17.72, True)) + polys(d, 'orebic') + polys(d, 'trpanj') + polys(d, 'janjina'),
         'mljet': polys(d, 'mljet'), 'lastovo': polys(d, 'lastovo'), 'konavle': polys(d, 'konavle'),
         'neum': clip_polys(polys(d, 'neum'), (0, 17.75, True)),
-        'sutorina': clip_polys(polys(d, 'sutorina'), (1, 42.445, False)),
+        'sutorina': sutorina_land(d),
     }
     out = {'src': 'Outlines © OpenStreetMap contributors (ODbL): municipal boundaries, cut at the coast map’s own part lines.',
            'parts': {}, 'lab': {}}
