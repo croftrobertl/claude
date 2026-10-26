@@ -443,7 +443,11 @@
     const mountNow = () => {
       histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
         dataUrl: resolveUrl('history/history-data.json'), hash: false, start: histWant || undefined,
-        onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); }
+        onChange: (f, slug) => {
+          histSlug = slug; if (root.dataset.view === 'history') updateHash();
+          // the first call comes from inside mount(), before the handle (and its frames) exist
+          setTimeout(() => renderTripThen(f), 0);
+        }
       });
       histWant = null;
     };
@@ -466,6 +470,147 @@
       poster: resolveUrl('history/balkans-highlights-poster.jpg'),
       place: 'The Balkans in 60 seconds', date: '', time: '' }];
     openViewer(0);
+  }
+
+  // ---- "Your trip, then": the trip's stops on the Ragusa coast map, and what each one was in
+  //      the era on screen. The status comes from that era's Ragusa territory list in
+  //      history-data.json; TRIP_STOPS only says which piece of territory each stop lies in. ----
+  const TRIP_STOPS = [
+    { name: 'Dubrovnik Old Town', re: /Old City \(Stari grad\), Dubrovnik$|^Fort Lovrijenac/, parts: ['city', 'core'] },
+    { name: 'Lapad & Gruž',       re: /, (Lapad|Gruž), Dubrovnik$/,  parts: ['core'] },
+    { name: 'Mount Srđ',          re: /, Mount Srđ, Dubrovnik$/,     parts: ['core'] },
+    { name: 'Lokrum',             re: /Lokrum \(Otok Lokrum\)$/,     parts: ['core'] },
+    { name: 'Šipan',              re: /, Šipan, Elaphiti Islands$/,  parts: ['elaph'] },
+    { name: 'Lopud',              re: /(^|, )Lopud, Elaphiti Islands$/, parts: ['elaph'] },
+    { name: 'Cavtat',             re: /, Cavtat$/, minLng: 18.15,    parts: ['konavle'], epidaurum: true },
+    { name: 'Čilipi airport',     re: /Čilipi$/,                     parts: ['konavle'] }
+  ];
+  const STOP_SKIP = /^(Adriatic Sea|Adriatic Highway|In-flight)|Channel|\bto\b/;
+  let tripStops = null;
+  function getTripStops() {
+    if (tripStops) return tripStops;
+    const med = a => { const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
+    tripStops = TRIP_STOPS.map(st => {
+      const days = [], lat = [], lng = [];
+      DATA.days.forEach((d, di) => (d.places || []).forEach(p => {
+        if (!p.name || STOP_SKIP.test(p.name) || !st.re.test(p.name) || p.lat == null) return;
+        if (st.minLng && p.lng < st.minLng) return;
+        if (days.indexOf(di) < 0) days.push(di);
+        lat.push(p.lat); lng.push(p.lng);
+      }));
+      return days.length ? Object.assign({}, st, { days, lat: med(lat), lng: med(lng) }) : null;
+    }).filter(Boolean);
+    return tripStops;
+  }
+  // "Day 4" · "Days 6–7, 13–16"
+  function dayRanges(days) {
+    const n = days.map(d => d + 1).sort((a, b) => a - b), out = [];
+    n.forEach((v, i) => { if (i && v === n[i - 1] + 1) out[out.length - 1][1] = v; else out.push([v, v]); });
+    return (n.length === 1 ? 'Day ' : 'Days ') + out.map(r => r[0] === r[1] ? r[0] : r[0] + '–' + r[1]).join(', ');
+  }
+  function stopStatus(st, f, frames) {
+    const R = f.ragusa, inR = fr => fr.ragusa.parts.some(k => st.parts.indexOf(k) >= 0);
+    const before = (frames || []).filter(fr => fr.tpos < f.tpos);
+    if (!R.founded) return { t: st.epidaurum ? (f.year > -230 ? 'Epidaurum' : 'Epidauros') : 'before Ragusa' };
+    if (R.former) {
+      if (R.siege && st.parts.indexOf('konavle') >= 0) return { t: 'occupied', cls: 'war' };
+      return { t: before.some(inR) ? 'once Ragusan' : '—' };
+    }
+    if (inR(f)) return { t: 'Ragusa', cls: 'rag' };
+    return { t: before.some(inR) ? 'no longer Ragusan' : 'not yet Ragusan' };
+  }
+  // the coast map's own projection (history/source/export_data.py): x = (lon − 16.75)·1000, y = (43.08 − lat)·1360
+  const insetXY = (lat, lng) => [(lng - 16.75) * 1000, (43.08 - lat) * 1360];
+  function renderTripThen(f) {
+    if (!histEl || !DATA) return;
+    const stops = getTripStops();
+    if (!stops.length) return;
+    const frames = histHandle && histHandle.frames;
+    const svgEl = histEl.querySelector('.bh-ragusa svg');
+    if (svgEl && !svgEl.querySelector('.dcc-hist-stops')) {
+      const NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g');
+      g.setAttribute('class', 'dcc-hist-stops');
+      const vb = (svgEl.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+      stops.forEach((st, i) => {
+        const [x, y] = insetXY(st.lat, st.lng);
+        if (!(x >= 0 && y >= 0 && x <= (vb[2] || 1870) && y <= (vb[3] || 980))) return;
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', 22);
+        c.setAttribute('data-stop', i);
+        g.appendChild(c);
+      });
+      // under the labels (the last group), above the territory fills
+      svgEl.insertBefore(g, svgEl.lastElementChild);
+    }
+    let panel = histEl.querySelector('.dcc-hist-trip');
+    if (!panel) {
+      panel = el('section', 'dcc-hist-trip');
+      panel.setAttribute('aria-live', 'polite');
+      const rag = histEl.querySelector('.bh-ragusa');
+      if (rag) rag.after(panel); else histEl.querySelector('.dcc-hist-mount').appendChild(panel);
+      const hl = (e, on) => {
+        const a = e.target.closest && e.target.closest('[data-stop]');
+        if (!a || !svgEl) return;
+        const c = svgEl.querySelector('.dcc-hist-stops [data-stop="' + a.dataset.stop + '"]');
+        if (c) c.classList.toggle('on', on);
+      };
+      panel.addEventListener('mouseover', e => hl(e, true));
+      panel.addEventListener('mouseout', e => hl(e, false));
+      panel.addEventListener('focusin', e => hl(e, true));
+      panel.addEventListener('focusout', e => hl(e, false));
+    }
+    const rows = stops.map((st, i) => ({ st, i, s: stopStatus(st, f, frames) }));
+    const R = f.ragusa, nRag = rows.filter(r => r.s.cls === 'rag').length;
+    const sum = R.founded && !R.former
+      ? nRag + ' of ' + rows.length + ' places you went ' + (nRag === 1 ? 'was' : 'were') + ' Ragusan in ' + f.label + '.'
+      : !R.founded ? 'Ragusa had not been founded yet.' : 'The Republic was gone by ' + f.label + '.';
+    panel.innerHTML =
+      '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>Your trip, then · ' + escapeHtml(f.label) + '</span></div>' +
+      '<p class="dcc-hist-trip-sum">' + escapeHtml(sum) + ' <span class="dcc-hist-trip-key"><i></i>your stops on the coast map</span></p>' +
+      '<ul class="dcc-hist-trip-list">' + rows.map(r =>
+        '<li><a href="#d=' + (r.st.days[0] + 1) + '" data-stop="' + r.i + '">' +
+          '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
+          '<span class="dcc-hist-trip-name"><b>' + escapeHtml(r.st.name) + '</b><small>' + escapeHtml(dayRanges(r.st.days)) + '</small></span>' +
+          '<span class="dcc-hist-trip-v' + (r.s.cls ? ' ' + r.s.cls : '') + '">' + escapeHtml(r.s.t) + '</span>' +
+        '</a></li>').join('') + '</ul>';
+  }
+
+  // ---- "On this spot": short history notes on Timeline place cards. A note goes on the first
+  //      matching place of a day; its link opens the History tab at that era. ----
+  const PLACE_HISTORY = [
+    { re: /^Fort Lovrijenac/, era: '1600', text: '“Non bene pro toto libertas venditur auro” is carved over the gate: freedom is not sold for all the gold in the world.' },
+    { re: /^Stradun, /, era: '1100', text: 'Once a sea channel between the islet of Laus and the town on the mainland, filled in to join them. Its matching stone houses went up after the 1667 earthquake.' },
+    { re: /^Fort Imperial/, era: '1810', text: 'Built by Napoleon’s French between 1806 and 1812. Its defenders held it on 6 December 1991, and it now houses the Homeland War museum.' },
+    { re: /^Mount Srđ Cross/, era: '1992', text: 'The cross was pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' },
+    { re: /^Benedictine Monastery of St\. Mary, Lokrum/, era: '1000', text: 'Benedictine monks are first recorded on Lokrum in 1023.' },
+    { re: /^Maximilian's Pleasure Gardens/, era: '1832', text: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
+    { re: /^Onofrio's Large Fountain/, era: '1453', text: 'Built in 1438–40 at the end of an aqueduct that carried spring water about 12 km from Šumet into the city.' },
+    { re: /^Orlando's Column/, era: '1453', text: 'Set up in stone in 1419. The knight’s forearm is said to have fixed the Ragusan ell, the city’s measure of length.' },
+    { re: /^Fort Minčeta/, era: '1453', text: 'Rebuilt as a great round tower in the 1460s, as Ottoman power closed in after the fall of Constantinople.' },
+    { re: /^Pile Gate/, era: '1600', text: 'St. Blaise, patron saint of the Republic, watches over the gate.' },
+    { re: /^Dubrovnik Bell Tower/, era: '1453', text: 'First built in 1444. Left leaning by the 1667 earthquake, it was rebuilt to the same design in 1929; the bronze “green men” still strike the hours.' },
+    { re: /^Church of St\. Blaise/, era: '1700', text: 'Rebuilt in 1706–15 after a fire destroyed the medieval church; the silver statue of the saint survived.' },
+    { re: /^Cathedral of the Assumption/, era: '1700', text: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.' },
+    { re: /^Fort Revelin/, era: '1526', text: 'Built in the 1460s against the Ottoman threat, and strengthened in 1538–49.' },
+    { re: /(Luka Cavtat|Žal)\b.*, Cavtat$/, era: '14 AD', text: 'Cavtat stands on ancient Epidaurum. By tradition, its people fled to the islet of Laus in the 600s and founded Ragusa.' },
+    { re: /^Skočibuha Summer Residence/, era: '1600', text: 'Summer estate of the Skočibuha family, Ragusan shipowners; its 16th-century tower guarded against pirates.' },
+    { re: /Ruđer Bošković Airport/, era: '1700', text: 'Named for Ruđer Bošković (1711–1787), the Ragusan-born physicist and astronomer.' }
+  ];
+  // place index → note, for the places shown on one day (each note at most once)
+  function dayHistoryNotes(shown) {
+    const out = {}, used = new Set();
+    shown.forEach(({ p, pi }) => {
+      const n = PLACE_HISTORY.find(h => !used.has(h) && h.re.test(p.name || ''));
+      if (n) { used.add(n); out[pi] = n; }
+    });
+    return out;
+  }
+  function historyNoteHtml(n) {
+    return '<aside class="dcc-hist-note">' +
+      '<div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div>' +
+      '<p>' + escapeHtml(n.text) + '</p>' +
+      '<a class="dcc-hist-note-a" href="#v=history&amp;era=' + encodeURIComponent(histSlugOf(n.era)) + '">See it on the map of ' + escapeHtml(n.era) + ' ›</a>' +
+      '</aside>';
   }
 
   // ---- share helpers ----
@@ -2057,6 +2202,7 @@
     }
 
     const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
+    const hNotes = dayHistoryNotes(shownPlaces);
     shownPlaces.forEach(({ p, pi }) => {
       const anchor = 'place-' + pi;
       const its = placeItems(p);
@@ -2080,6 +2226,7 @@
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
+        (hNotes[pi] ? historyNoteHtml(hNotes[pi]) : '') +
         '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(it => renderItem(it)).join('') + '</div>' +
         '</section>';
     });

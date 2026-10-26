@@ -888,9 +888,39 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-hist-film .dcc-pbtn { width: 34px; height: 34px; }
 .dcc-hist-film .dcc-pbtn svg { width: 15px; height: 15px; }
 .dcc-hist-msg { color: var(--dcc-tour-muted); font-style: italic; margin: 1rem 0; }
-/* the timeline's 9.5px era names (GREEK, ROMAN…) sit at 4.46:1 in the default theme;
-   one step darker clears 4.5:1 (Matrix mode already passes, so it's left alone) */
-html:not(.dcc-matrix-on) .dcc-tour-history .bh-era-name { color: #6d6964; }
+/* "Your trip, then": sits under the Ragusa panel in the map's side column */
+.dcc-hist-trip { background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius);
+  padding: 14px; display: grid; gap: 8px; min-width: 0; }
+.dcc-hist-trip-k, .dcc-hist-note-k { display: flex; align-items: center; gap: 7px; font-family: var(--dcc-tour-font-head);
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-accent-deep); }
+.dcc-hist-trip-k .dcc-ic, .dcc-hist-note-k .dcc-ic { width: 16px; height: 16px; flex: none; }
+.dcc-hist-trip-sum { margin: 0; font-size: 0.92rem; line-height: 1.45; }
+.dcc-hist-trip-key { display: inline-flex; align-items: center; gap: 5px; color: var(--dcc-tour-muted); font-size: 0.82rem; white-space: nowrap; }
+.dcc-hist-trip-key i, .dcc-hist-trip-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; border: 2px solid #201f1d; box-sizing: border-box; }
+.dcc-hist-trip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dcc-hist-trip-list a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: var(--dcc-tour-radius);
+  color: var(--dcc-tour-text); text-decoration: none; }
+.dcc-hist-trip-list a:hover, .dcc-hist-trip-list a:focus-visible { background: var(--dcc-tour-accent-tint); }
+.dcc-hist-trip-name { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.dcc-hist-trip-name b { font-weight: 600; font-size: 0.95rem; }
+.dcc-hist-trip-name small { color: var(--dcc-tour-muted); font-size: 0.8rem; }
+.dcc-hist-trip-v { flex: none; font-size: 0.85rem; color: var(--dcc-tour-muted); text-align: right; }
+.dcc-hist-trip-v.rag { background: #f2c230; color: #201f1d; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.dcc-hist-trip-v.war { color: #a5281b; font-weight: 600; }
+html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
+/* history.css gives inset strokes non-scaling widths, so this is in screen px */
+.dcc-hist-stops circle { fill: #fff; stroke: #201f1d; stroke-width: 1.6; }
+.dcc-hist-stops circle.on { fill: #c0392b; }
+/* "On this spot": a history note on a Timeline place card (stays visible when the card is collapsed) */
+.dcc-hist-note { margin: 0.2rem 0 0.7rem; padding: 10px 12px; border-radius: var(--dcc-tour-radius);
+  background: var(--dcc-tour-accent-tint); display: grid; gap: 4px; }
+.dcc-hist-note p { margin: 0; font-size: 0.9rem; line-height: 1.45; }
+.dcc-hist-note-a { justify-self: start; font-family: var(--dcc-tour-font-head); font-weight: 600; font-size: 0.8rem;
+  color: var(--dcc-tour-accent-deep); text-decoration: none; padding: 4px 0; }
+.dcc-hist-note-a:hover { text-decoration: underline; }
+/* the component's muted text (era names, year ticks, toggles, notes) sits at 4.46:1 on this ground in
+   the default theme; one step darker clears 4.5:1 (Matrix mode already passes, so it's left alone) */
+html:not(.dcc-matrix-on) .dcc-tour-history .bh-root { --bh-muted: #6d6964; }
 @media (max-width: 800px) {
   .dcc-tour-history { padding: 0.5rem 0.8rem 2rem; }
 }
