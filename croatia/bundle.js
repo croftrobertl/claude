@@ -462,7 +462,8 @@
   }
   // the 60-second film plays in the shared media viewer (poster + play button, no autoplay)
   function playHistoryFilm() {
-    viewerItems = [{ kind: 'video', url: resolveUrl('history/balkans-highlights.mp4'), full: '', src: '', poster: '', id: '',
+    viewerItems = [{ kind: 'video', url: resolveUrl('history/balkans-highlights.mp4'), full: '', src: '', id: '',
+      poster: resolveUrl('history/balkans-highlights-poster.jpg'),
       place: 'The Balkans in 60 seconds', date: '', time: '' }];
     openViewer(0);
   }
@@ -2341,6 +2342,8 @@
   function showViewer(idx) {
     if (!viewerItems.length) return;
     const n = viewerItems.length;
+    // a lone item: prev/next/swipe/arrow keys would just rebuild it (and stop a playing video)
+    if (n === 1 && viewerIdx === 0) return;
     viewerIdx = ((idx % n) + n) % n;
     const it = viewerItems[viewerIdx];
     MUSIC.setVideoOpen(it.kind === 'video' || it.kind === 'clip');   // mute music on video/clip, not photos
@@ -2399,6 +2402,8 @@
       cap.appendChild(a);
     }
     el0.querySelector('.dcc-tour-lightbox-count').textContent = (viewerIdx + 1) + ' / ' + n;
+    // nothing to step through with a single item: hide the arrows and the "1 / 1" counter
+    el0.querySelectorAll('.dcc-tour-lightbox-nav, .dcc-tour-lightbox-count').forEach(x => { x.style.display = n === 1 ? 'none' : ''; });
     el0.classList.add('open');
     if (!wasOpen) { vwPrevFocus = document.activeElement; el0.querySelector('.dcc-tour-lightbox-close').focus(); }
     document.body.classList.add('dcc-tour-noscroll');

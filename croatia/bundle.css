@@ -888,6 +888,9 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-hist-film .dcc-pbtn { width: 34px; height: 34px; }
 .dcc-hist-film .dcc-pbtn svg { width: 15px; height: 15px; }
 .dcc-hist-msg { color: var(--dcc-tour-muted); font-style: italic; margin: 1rem 0; }
+/* the timeline's 9.5px era names (GREEK, ROMAN…) sit at 4.46:1 in the default theme;
+   one step darker clears 4.5:1 (Matrix mode already passes, so it's left alone) */
+html:not(.dcc-matrix-on) .dcc-tour-history .bh-era-name { color: #6d6964; }
 @media (max-width: 800px) {
   .dcc-tour-history { padding: 0.5rem 0.8rem 2rem; }
 }
