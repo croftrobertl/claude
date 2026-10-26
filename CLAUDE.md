@@ -785,6 +785,21 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   that button off the spec while everything else appears to comply — which is what
   `style_comparebtn_*` was doing to the Compare button before 0.27.0 removed it from
   the preset. A SAVED value on a live widget still wins and only the panel can clear it.
+- **The bare pop-up has NO header row (0.55.1, Rob).** Without a title (the Mini
+  Entry pop-up) `buildOverlay()` renders no `.dccs-modal-head` — it held only the
+  close button and cost ~60px of a phone. The button rides `.dccs-modal-closebar`,
+  a ZERO-height `position: sticky; top: 0` bar that is the first child of the
+  scroll area: it takes no row, stays on screen while the content scrolls, and,
+  being inside the content box, still never sits over a classic scrollbar (the
+  0.35.0 fault below). The widget's first row leaves it room (`.dccs-modal-bare`:
+  the mode button's `margin-right` and the landing heading's padding, 44px + 10px).
+  WITH a title (the comparison table) the header row below is unchanged.
+- **The step heading's focus cue is NOT an underline (0.55.1).** It takes focus by
+  script (`tabindex="-1"`) for screen readers. A real touch tap leaves
+  `:focus-visible` false (measured), so nothing shows; a keyboard Enter on Next (or
+  a scripted `.click()`) makes it true and gets a 2px offset ring.
+- **iPhone (0.55.1):** the pinned Back/Next row pads `env(safe-area-inset-bottom)`
+  (after a plain 10px fallback); every `vh` size has an `svh`/`dvh` twin after it.
 - **The modal's close button belongs in the header row, never floating over the
   scroll area.** `.dccs-modal-content` is the element that scrolls, and it fills
   `.dccs-modal-box` — so anything positioned against the BOX's right edge lands on
