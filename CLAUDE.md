@@ -796,6 +796,47 @@ the stacking context, below our frontZ 9000).
   canvas (SwiftShader) the two builds read the same (scene 14-16 fps
   both, within noise).
 
+### The release line from 2026-10-26 (the Director): 4.13.1 → 4.13.2 → 4.14.1
+
+`dcc-seasons/` on the branch carries the release line, NOT the newest
+experiment. 4.14.0 (Christmas, commit `ad0e834`) was built from 4.13.0 and
+reached staging only; the folder was set back to 4.13.0 (`66faa59`) and:
+
+- **4.13.1 = Thanksgiving** (Rob, 2026-10-26), from 4.13.0. Step A: eight
+  pieces redrawn over public-domain/CC0 photographs at 50% (leafo, leafs,
+  gourd1, gourd3, corn, acorn, cranberry, turkey — now a wild turkey HEN,
+  since only hens lead poults); `tools/tg-pieces.js` draws them in the
+  photos' pixels, `tools/tg-build.js --write` scales them into the engine
+  (paths tokenized, never regex-trimmed). The maples, cypress, crookneck
+  and pie are unchanged. Step B: scene A "high and small" with a PALE full
+  moon (see below).
+- **4.13.2 = the Anniversary**, from 4.13.1, once Rob picks.
+- **4.14.1 = Christmas**, 4.14.0 rebuilt ON TOP of 4.13.2 once Rob confirms
+  Santa; diff it against 4.13.2 and show Thanksgiving and the Anniversary
+  survive. `tools/test-christmas.js` belongs to that build and fails on
+  4.13.x by design.
+
+**The moon is true (Rob's standing rule).** November's full moon is NOT the
+harvest moon (that is the full moon nearest the autumn equinox, late
+September). Call it the full moon, or November's Beaver Moon, in code,
+notes and guest text. High in the sky it is PALE CREAM — the same real face
+as Halloween's moon; orange belongs near the horizon only. USNO: full moon
+24 Nov 2026 14:53 UT (Thanksgiving week), 24 Dec 2026 01:28 UT.
+
+**Real-theme runs use a real scrollbar from 768 up** (`rt.opts(w)` →
+harness `scrollbar: true`). Headless Chromium hides it, which made the page
+15px wider and moved every centred box 7-8px against the Director's live
+measurements. With it, 1440 matches live exactly (title 314,129→1111,222;
+tagline letters 561,266→864,290). Keep-clear text is measured by its
+LETTERS, never the `p.byline` element box.
+
+**The keep-clear set** (Rob, every scene): title letters, tagline letters,
+the menu bar `#site-header-main` (and `.site-header-bottom-fixed` from
+1024), the dial `.dcc-sun-dial`, the menu button `.menu-burger`, at 8px.
+No moon on the water; nothing painted into the photograph. The live
+`dcc-topbar.php` mu-plugin publishes `--dcc-topbar` (0/63px) and
+`window.DCCTopbar.get()` for anything that must clear the sliding bar.
+
 ### Rob's picks (for 4.14.0, 2026-10-23/24): Christmas
 
 Four rounds of stills (`tools/xmas-redraw.js`, `tools/xmas-final.js`).
@@ -1232,7 +1273,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-christmas.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-christmas.js` (4.14.x only),
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

@@ -50,6 +50,12 @@ async function open(html, opts = {}) {
    * only if the pinned version in this repo's playwright disagrees. */
   const launch = { args: ['--no-sandbox', '--disable-dev-shm-usage', ...(process.env.DCC_CHROME_ARGS ? process.env.DCC_CHROME_ARGS.split(' ') : [])] };
   if (opts.executablePath) { launch.executablePath = opts.executablePath; }
+  /* opts.scrollbar: draw a real scrollbar, as desktop Chrome does. Headless
+   * Chromium hides it, which makes the page 15px wider than a real window
+   * and moved every centered box 7-8px (the real-theme fixture against the
+   * Director's live measurements, 2026-10-26). Phones overlay theirs, so a
+   * suite turns this on for desktop widths only. */
+  if (opts.scrollbar) { launch.ignoreDefaultArgs = ['--hide-scrollbars']; }
   let browser;
   try {
     browser = await chromium.launch(launch);

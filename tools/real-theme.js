@@ -78,4 +78,7 @@ async function keepClear(pg) {
     return out;
   }, KEEP);
 }
-module.exports = { DIR, page, route, keepClear, KEEP };
+/* the harness options a real-theme run uses at width w: a real scrollbar
+ * from 768 up (a phone overlays its own) */
+function opts(w, extra) { return { extra: route, scrollbar: w >= 768, ...(extra || {}) }; }
+module.exports = { opts, DIR, page, route, keepClear, KEEP };

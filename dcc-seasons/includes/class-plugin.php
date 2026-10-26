@@ -843,7 +843,7 @@ final class Plugin {
             /**
              * CSS selector for the footer element the ambient canvas mounts
              * inside under 'footer' placement. ONE copy, here: both the
-             * loader (which skips fetching the 221KB engine when nothing
+             * loader (which skips fetching the 182KB engine when nothing
              * matches) and the engine (which mounts into the first match)
              * read this same string, so they cannot disagree about what a
              * footer is.
@@ -889,9 +889,9 @@ final class Plugin {
             /**
              * CSS selector for the page's HEADER PICTURE (4.10.7, Rob: the
              * moon and witch belong to the hero banner, not the whole page).
-             * The sky scenes (moon and witch, cranes and moon, Santa's team
-             * and moon, doves, flag, cork pop) and the sky flyers (heron,
-             * eagle, witch, osprey) are drawn on a canvas inside the FIRST match, clipped
+             * The sky scenes (moon and witch, sleigh and moon, doves, flag,
+             * cork pop) and the sky flyers (heron, eagle, witch, osprey,
+             * sleigh) are drawn on a canvas inside the FIRST match, clipped
              * to its box and scrolling with it; they wait until it is in
              * view, and a page without one has none of them. Falling sprites
              * and the water-line scenes stay full-page.
@@ -899,18 +899,6 @@ final class Plugin {
              * @param string $selector Empty turns the sky off on every page.
              */
             'skySel'      => (string) apply_filters('dcc_seasons_sky', '#header-image-main-inside'),
-            /**
-             * CSS selector for what the Christmas moon must keep clear of
-             * (4.14.0): the page title over the header picture and anything
-             * marked data-dcc-keep-clear (the Sun-on-the-Canal dial, once it
-             * carries the attribute). The scene measures these when it starts
-             * — a text element by its letters, anything else by its box — and
-             * puts its moon on the nearest clear spot. From 768px up the
-             * picture's top-right corner is kept clear as well.
-             *
-             * @param string $selector Comma-separated; empty keeps only the corner.
-             */
-            'clearSel'    => (string) apply_filters('dcc_seasons_keep_clear', '#header-page-title, [data-dcc-keep-clear]'),
             /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque

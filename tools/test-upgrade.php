@@ -194,15 +194,13 @@ ok($none === [], 'every theme has an entry even with subtle_map absent from the 
 ok(count($map) === count($themes), 'the map covers exactly the themes that exist',
     count($map) . ' vs ' . count($themes));
 
-/* Christmas's bokeh came off in 4.14.0 (Rob's B), as Thanksgiving's ovals
- * did in 4.13.0: both resolve to none. */
 $exceptions = ['valentines' => 'hearts', 'new_years' => 'confetti', 'halloween' => 'embers',
-               'july4' => 'sparks', 'christmas' => '', 'thanksgiving' => ''];
+               'july4' => 'sparks', 'christmas' => 'bokeh'];
 $wrong = [];
 foreach ($exceptions as $theme => $want) {
     if (($map[$theme] ?? null) !== $want) { $wrong[] = "$theme=" . ($map[$theme] ?? 'none'); }
 }
-ok($wrong === [], 'the four bespoke exceptions resolve, and Christmas and Thanksgiving have none', implode(' ', $wrong));
+ok($wrong === [], 'all five bespoke exceptions resolve', implode(' ', $wrong));
 
 $effects = Settings::subtle_effects();
 $unknown = [];

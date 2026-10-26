@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.14.0
+Stable tag: 4.13.1-a
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -188,30 +188,22 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 == Changelog ==
 
-= 4.14.0 =
-Christmas, brought up to Halloween's standard: Santa and his reindeer
-across the moon, every piece redrawn, and a wreath in the corner. Staging
-first; live after Rob signs off. Rollback: reinstall the 4.13.0 zip.
+= 4.13.1-a (step A) =
+Thanksgiving's falling pieces, redrawn from photographs (Rob's pick). Built
+from 4.13.0, so every other theme is exactly as it is live. Rollback:
+reinstall the 4.13.0 zip.
 
-* Santa's sleigh and four reindeer cross a full moon in the header picture,
-  by day as well as by night. The lead reindeer has a red nose. Santa flicks
-  the reins every few seconds and the snap runs down the line to the team.
-  As the team crosses the moon, each reindeer goes dark exactly where it is
-  over the moon's face and stays lit outside it; the red nose still glows;
-  Santa and the sleigh stay lit. The moon is placed clear of the page title
-  and of the top-right corner of the picture.
-* Every reindeer pose and Santa's sleigh is drawn once after the page has
-  loaded, in idle time, so the crossing itself costs almost nothing.
-* The gift-drop scene stays. The old small sleigh that used to fly across
-  the header is gone, so there is one Santa.
-* Christmas's falling pieces go from five kinds to eight: three glass balls
-  (red, gold and blue), a red, white and green candy cane, and a flamingo in
-  a Santa hat standing on one leg, alongside the holly, the gift, the pine
-  and the sabal palm, all redrawn. The number of pieces on screen at once
-  is unchanged.
-* A wreath sits in the top-right corner, the same size as Halloween's web.
-* The soft background discs are gone from Christmas, as Thanksgiving's ovals
-  went in 4.13.0. No other theme changes.
+* Eight pieces are redrawn, each laid over a public-domain or CC0
+  photograph at half strength and fixed where the overlay showed a fault:
+  the live oak leaf (broad and blunt-tipped), the sweetgum (five lobes, not
+  eight points), the pumpkin (ribbed, with a thick stalk), the acorn squash
+  (dark, ribbed, pointed), the ear of corn (kernels in straight rows), the
+  live oak acorn (long, in a deep scaly cup), the cranberries (glossy, on
+  wiry stems) and the turkey, now a wild turkey hen with her barring and
+  feet, since only the hen leads poults.
+* The two maples, the bald cypress, the crookneck squash and the pie are
+  unchanged. So are the scene, the calendar and the number of pieces on
+  screen.
 
 = 4.13.0 =
 Thanksgiving, brought up to Halloween's standard: a signature scene, nine
@@ -982,7 +974,7 @@ BREAKING: the layer model changed and several themes' sprite sets changed.
   date so that page caching can never serve a stale season.
 * What the homepage actually loads, measured with the network timeline: ONE
   script is enqueued, ambient.min.js at 4,392 bytes, in the footer with
-  defer. The engine — 221KB raw, 77KB over the wire as of 4.14.0, not the
+  defer. The engine — 182KB raw, 65KB over the wire as of 4.12.1, not the
   "96KB" this note claimed for nine releases — is not enqueued at all: the
   loader fetches it after the window LOAD event, a short breath later or on
   the visitor's first scroll or tap, whichever comes first (4.12.1; before

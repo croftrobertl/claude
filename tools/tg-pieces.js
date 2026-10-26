@@ -145,23 +145,16 @@ const PIECES = [];
    * in STRAIGHT ROWS of rounded squares round the cob, narrowing toward the
    * tip, never scattered dots. Drawn upright with the husk peeled back from
    * the base, dried to straw as it is in November, and a little silk. */
-  let ker = '';
-  for (let r = 0; r < 17; r++) {
-    const y = 14 + r * 4.9, t = (y - 12) / 82, R = 13.5 * (0.62 + 0.38 * Math.sin(Math.PI * Math.min(1, 0.25 + t * 0.95)));
-    for (let j = -4; j <= 4; j++) {
-      const th = j * 0.36 + (r % 2) * 0.18, x = 25 + R * Math.sin(th), w = Math.max(0.6, 2.9 * Math.cos(th) * R / 13.5), sh = Math.cos(th);
-      if (Math.abs(th) > 1.45) { continue; }
-      const col = sh > 0.85 ? '#F7D560' : (sh > 0.6 ? '#EDBF3E' : '#C99A22');
-      ker += `<rect x="${(x - w / 2).toFixed(1)}" y="${(y - 2.1).toFixed(1)}" width="${w.toFixed(1)}" height="4.2" rx="${(w / 2.4).toFixed(1)}" fill="${col}"/>`;
-    }
-  }
+  const ker = '';
   PIECES.push({ key: 'corn', name: 'Ear of Corn', ref: 'corn.jpg', crop: [0, 30, 470, 260],
     src: '“VegCorn,” USDA, Wikimedia Commons, public domain',
     fit: { base: [0, 92], tip: [430, 212] }, fitNew: { base: [-60, 75], tip: [430, 212], span: 106 },
     redraw: `50 112|<defs><linearGradient id="dccTgC1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B98E1E"/><stop offset=".5" stop-color="#E9B83A"/><stop offset="1" stop-color="#A97C14"/></linearGradient></defs>
-<clipPath id="dccTgC2"><path d="M25 10 Q40 14 39 50 Q38 86 25 96 Q12 86 11 50 Q10 14 25 10 Z"/></clipPath>
-<path d="M25 10 Q40 14 39 50 Q38 86 25 96 Q12 86 11 50 Q10 14 25 10 Z" fill="url(#dccTgC1)"/>
-<g clip-path="url(#dccTgC2)">${ker}</g>
+<pattern id="dccTgC3" width="4.4" height="9.8" patternUnits="userSpaceOnUse"><rect x=".3" y=".3" width="3.8" height="4.3" rx="1.4" fill="#F4CF55"/><rect x="-1.9" y="5.2" width="3.8" height="4.3" rx="1.4" fill="#F4CF55"/><rect x="2.5" y="5.2" width="3.8" height="4.3" rx="1.4" fill="#F4CF55"/></pattern>
+<linearGradient id="dccTgC4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7A5408" stop-opacity=".75"/><stop offset=".3" stop-color="#7A5408" stop-opacity="0"/><stop offset=".62" stop-color="#FFF6CC" stop-opacity=".25"/><stop offset="1" stop-color="#7A5408" stop-opacity=".8"/></linearGradient>
+<path d="M25 10 Q40 14 39 50 Q38 86 25 96 Q12 86 11 50 Q10 14 25 10 Z" fill="#B98E1E"/>
+<path d="M25 10 Q40 14 39 50 Q38 86 25 96 Q12 86 11 50 Q10 14 25 10 Z" fill="url(#dccTgC3)"/>
+<path d="M25 10 Q40 14 39 50 Q38 86 25 96 Q12 86 11 50 Q10 14 25 10 Z" fill="url(#dccTgC4)"/>
 <path d="M24 10 Q22 4 18 1 M26 10 Q27 4 31 1 M25 10 Q25 5 25 2" stroke="#C8A06A" stroke-width=".8" fill="none"/>
 <path d="M25 94 Q4 86 0 54 Q12 68 21 86 Z" fill="#D8C48A" stroke="#9C8650" stroke-width=".8"/>
 <path d="M25 94 Q46 86 50 52 Q38 68 29 86 Z" fill="#CDB77A" stroke="#9C8650" stroke-width=".8"/>
@@ -262,13 +255,18 @@ function tkPaint(g, kind, ph) {
   PIECES.push({ key: 'turkey', name: 'Wild Turkey Hen', ref: 'tk1.jpg', crop: [370, 50, 520, 590],
     src: '“Wild Turkey with Chicks (50614047608),” Wikimedia Commons, public domain',
     fit: { base: [600, 620], tip: [600, 80] }, at: [380, 60],
-    redraw: `490 580|<defs><linearGradient id="dccTgT1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5A4630"/><stop offset=".5" stop-color="#3E2F20"/><stop offset="1" stop-color="#2A2016"/></linearGradient></defs>
-<path d="M170 455 L172 560 M285 495 L282 560 M172 560 L150 562 M282 560 L262 562" stroke="#B29A8C" stroke-width="8" stroke-linecap="round" fill="none"/>
-<path d="${svgPath(TK_BODY)}" fill="url(#dccTgT1)" stroke="#C7B48A" stroke-width="3"/>
+    redraw: `490 580|<defs><linearGradient id="dccTgT1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6A5236"/><stop offset=".5" stop-color="#4A3824"/><stop offset="1" stop-color="#2E2318"/></linearGradient>
+<pattern id="dccTgT2" width="70" height="44" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><path d="M0 30 Q35 10 70 30" stroke="#C99050" stroke-width="12" fill="none"/><path d="M0 40 Q35 20 70 40" stroke="#1E1610" stroke-width="7" fill="none"/></pattern>
+<clipPath id="dccTgT3"><path d="${svgPath(TK_BODY)}"/></clipPath></defs>
+<path d="M170 455 L172 556 M285 495 L282 556" stroke="#B29A8C" stroke-width="9" stroke-linecap="round" fill="none"/>
+<path d="M172 556 L140 562 M172 556 L150 572 M172 556 L188 566 M282 556 L250 562 M282 556 L262 572 M282 556 L298 566" stroke="#A08878" stroke-width="6" stroke-linecap="round" fill="none"/>
+<path d="${svgPath(TK_BODY)}" fill="url(#dccTgT1)"/>
+<g clip-path="url(#dccTgT3)"><rect x="70" y="190" width="420" height="400" fill="url(#dccTgT2)" opacity=".85"/></g>
 <path d="${svgPath(TK_TAIL)}" fill="#4C3A26"/>
-<path d="M330 410 L470 490 M342 425 L462 500 M356 440 L455 510" stroke="#A88A5E" stroke-width="4"/>
+<path d="M330 410 L470 490 M342 425 L462 500 M356 440 L455 510" stroke="#C08A4A" stroke-width="5"/>
 <path d="${svgPath(TK_WING)}" fill="#5E4A30"/>
-<path d="M150 262 Q205 300 240 350 M172 274 Q225 318 258 375 M196 290 Q246 338 276 400" stroke="#B9A47A" stroke-width="3" fill="none" opacity=".7"/>
+<path d="M150 262 Q205 300 240 350 M172 274 Q225 318 258 375 M196 290 Q246 338 276 400 M220 305 Q268 356 296 420" stroke="#E2D0A8" stroke-width="7" fill="none"/>
+<path d="${svgPath(TK_BODY)}" fill="none" stroke="#C7B48A" stroke-width="4"/>
 <ellipse cx="62" cy="35" rx="24" ry="17" fill="#9BA4B0"/><ellipse cx="52" cy="50" rx="10" ry="7" fill="#C66E6E"/><circle cx="56" cy="32" r="4.5" fill="#1A1410"/>
 <path d="M44 34 L18 33 L44 44 Z" fill="#C8B49A"/>`,
     note: 'The live turkey is a cartoon tom with a fanned tail, yet it leads two chicks, and only the hen raises poults. Redrawn as the hen in the photograph: small bare head, long neck, bronze-barred body, the pale-barred wing and a closed tail sloping down behind.', guest: 34 });
@@ -331,7 +329,7 @@ if (require.main === module) {
     const ses = await open(`<!doctype html><meta charset="utf-8"><style>${CSS}</style>${head}${top}<div id="w"></div>${tail}<script>${RUN}</script>`, { viewport: { width: 1300, height: 900 }, dsf: sheet ? 2 : 1 });
     await ses.page.evaluate(([l, s]) => window.run(l, s), [list, sheet]);
     await ses.page.setViewportSize({ width: 1300, height: await ses.page.evaluate(() => document.body.scrollHeight) });
-    const out = sheet ? path.join(ROOT, 'build', 'Seasons - 4.13.2 thanksgiving pieces.png') : path.join(REF, 'fit.png');
+    const out = sheet ? path.join(ROOT, 'build', 'Seasons - 4.13.1 thanksgiving pieces.png') : path.join(REF, 'fit.png');
     await ses.page.screenshot({ path: out });
     await ses.close(); console.log(out);
   })();

@@ -197,7 +197,7 @@
 		var wantEngine = CFG.engine !== undefined ? !!CFG.engine : !!CFG.ambient;
 		if (!wantEngine || reduced() || !CFG.engineSrc) { return; }
 		/* Footer placement with no footer renders nothing, so fetching the
-		 * engine to discover that costs ~221KB (77KB over the wire, 4.14.0) for no
+		 * engine to discover that costs ~182KB (65KB over the wire) for no
 		 * effect. Measured: on a
 		 * page with no footer the engine was fetched in full and produced
 		 * zero canvases. The selector is the config's, the same one the

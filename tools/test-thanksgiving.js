@@ -54,15 +54,32 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
      * revert to the old art fails here rather than passing because a sprite
      * of that name still exists. */
     const oak = spr('leafo');
-    ok(oak.startsWith('18 28|'), 'the live oak is the small oval leaf (18x28), not the lobed 22x30 one', oak.slice(0, 12));
+    /* 4.13.1: redrawn over the Michaux plate — broad (wider than tall when
+     * laid along its midrib) and dried brown (dccTgO1), never the narrow
+     * pointed 18x28 oval of 4.13.0 */
+    ok(oak.startsWith('32 24.8|') && oak.includes('dccTgO1'), 'the live oak is the 4.13.1 redraw from the plate, not the narrow 18x28 oval', oak.slice(0, 12));
     ok(!/Q17 5 17.6 7.6/.test(oak), "and none of the northern oak's lobes survive", oak.slice(0, 60));
     const cyp = spr('leafc');
     ok(cyp.includes('stroke-linecap="round"') && !cyp.includes('<ellipse'),
       'the cypress is needles drawn as needles, not a stack of ellipses', cyp.slice(0, 60));
     const sg = spr('leafs');
-    const pts = (sg.match(/ L\d/g) || []).length;
-    ok(sg.startsWith('26 26|') && pts >= 9,
-      `the sweetgum is a five-pointed star (${pts} points), not the chevron it replaced`, sg.slice(0, 60));
+    /* 4.13.1: FIVE lobes from the photograph (a smooth traced outline, one
+     * vein from the stalk to each tip), not the eight-pointed star of 4.13.0 */
+    const veins = ((sg.match(/stroke="#E88A5C"[^>]*d="([^"]*)"|d="([^"]*)"[^>]*stroke="#E88A5C"/) || [])[1] || (sg.match(/d="([^"]*)"[^>]*stroke="#E88A5C"/) || [])[1] || '').split('M').length - 1;
+    ok(sg.startsWith('32 23.1|') && veins === 5 && !/L15.4 8.2/.test(sg),
+      `the sweetgum has five lobes (${veins} veins), not the eight-pointed star`, sg.slice(0, 60));
+    /* 4.13.1: the eight redrawn pieces are the photo redraws (each carries
+     * its own dccTg gradient id), and NOTHING ELSE in the engine moved since
+     * 4.13.0: every changed line is one of those eight sprites or a comment,
+     * so Halloween, Christmas and every other theme draw exactly as live. */
+    const RE8 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', corn: 'dccTgC3', acorn: 'dccTgK1', cranberry: 'dccTgR1', turkey: 'dccTgT2' };
+    const bad8 = Object.entries(RE8).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
+    ok(!bad8.length, 'the eight pieces are the 4.13.1 photo redraws', bad8.join(' ') || 'all eight');
+    const old = require('child_process').execSync('git show 66faa59:dcc-seasons/assets/js/engine.js', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().split('\n');
+    const now = src.split('\n'), oldSet = new Set(old);
+    const moved = now.filter(l => !oldSet.has(l) && !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l));
+    const gone = old.filter(l => !new Set(now).has(l) && !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l));
+    ok(!moved.length && !gone.length, 'nothing else in the engine changed since 4.13.0 (Halloween and the rest draw as live)', (moved.concat(gone)[0] || 'only the eight sprites and comments').slice(0, 80));
     const m1 = spr('leafm'), m2 = spr('leafm2');
     ok(m1.startsWith('24 24|') && m2.startsWith('24 24|'),
       'the maples carry the shorter stalk Rob asked for (24 tall, not 30)', m1.slice(0, 10) + ' / ' + m2.slice(0, 10));

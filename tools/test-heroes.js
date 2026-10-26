@@ -174,10 +174,8 @@ async function waitVt(page, v, maxMs = 60000) {
   }
 
   console.log('\n  --- no hero draws an emoji (the rainbow\'s ☘ strip is Rob\'s one exception) ---');
-  /* christmas has no hero since 4.14.0: Santa is the sleighmoon scene, and
-   * forcing a 'sleigh' kind here would only test a debug knob */
   const HEROES = { patriot_day: 'eagle', july4: 'eagle', halloween: 'witch', fall_fishing: 'bass', florida_keys: 'osprey',
-    snowbird: 'manatee', st_patricks: 'rainbow', memorial_day: 'heron' };
+    christmas: 'sleigh', snowbird: 'manatee', st_patricks: 'rainbow', memorial_day: 'heron' };
   const EMOJI = /\p{Extended_Pictographic}/u;
   for (const [theme, kind] of Object.entries(HEROES)) {
     const cfg = cfgFor(theme, ['--noparticles', '--subtle=off']); cfg.vtScale = 1; cfg.heroEvery = [1, 1.5]; cfg.heroFirst = [1, 1.5]; cfg.heroOnly = kind;

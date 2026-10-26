@@ -87,7 +87,7 @@ $clean = Settings::sanitize([
     'subtle_intensity' => '0.8',
     'subtle_map'       => [
         'halloween'   => 'bokeh',     // valid re-point
-        'july4'       => '',          // valid "none" (a theme whose default is not none)
+        'christmas'   => '',          // valid "none"
         'valentines'  => 'nonsense',  // unknown effect -> dropped
         'not_a_theme' => 'bokeh',     // unknown theme  -> dropped
     ],
@@ -95,7 +95,7 @@ $clean = Settings::sanitize([
 ok($clean['subtle'] === 1, 'subtle checkbox survives');
 ok(abs($clean['subtle_intensity'] - 0.8) < 0.001, 'intensity survives');
 ok(($clean['subtle_map']['halloween'] ?? null) === 'bokeh', 'a valid re-point is kept');
-ok(array_key_exists('july4', $clean['subtle_map']) && $clean['subtle_map']['july4'] === '',
+ok(array_key_exists('christmas', $clean['subtle_map']) && $clean['subtle_map']['christmas'] === '',
     '"none" is kept — it is a real choice, not an empty field');
 ok(!array_key_exists('valentines', $clean['subtle_map']), 'an unknown EFFECT is dropped');
 ok(!array_key_exists('not_a_theme', $clean['subtle_map']), 'an unknown THEME is dropped');
@@ -126,7 +126,7 @@ ok($untouched['subtle_map'] === [], 'saving the form unchanged stores nothing at
 echo "\n=== effective map (defaults + overrides) ===\n";
 $eff = Settings::subtle_map(['subtle_map' => ['halloween' => 'bokeh']]);
 ok($eff['halloween'] === 'bokeh', 'the override wins');
-ok($eff['valentines'] === 'hearts', 'an untouched theme keeps tracking the plugin');
+ok($eff['christmas'] === 'bokeh', 'an untouched theme keeps tracking the plugin');
 ok(count($eff) === count($themes), 'the effective map still covers every theme');
 
 echo "\n=== no snow anywhere (4.2.0) ===\n";
@@ -134,8 +134,7 @@ ok(!isset($fx['snow']), 'the Snow choice is gone from the dropdown');
 foreach (['sunglow', 'goldlight', 'mardiconfetti', 'orangeblossom'] as $e) {
     ok(isset($fx[$e]), "the named choice '$e' exists");
 }
-// Christmas has none since 4.14.0 (Rob's B: the bokeh came off, as Thanksgiving's ovals did).
-$want = ['snowbird' => 'sunglow', 'mlk' => 'goldlight', 'mardi_gras' => 'mardiconfetti', 'presidents' => 'orangeblossom', 'christmas' => '', 'thanksgiving' => ''];
+$want = ['snowbird' => 'sunglow', 'mlk' => 'goldlight', 'mardi_gras' => 'mardiconfetti', 'presidents' => 'orangeblossom', 'christmas' => 'bokeh'];
 foreach ($want as $t => $e) {
     ok($map[$t] === $e, "$t defaults to $e (Rob's pick)", "got {$map[$t]}");
 }
