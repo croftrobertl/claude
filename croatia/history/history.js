@@ -44,6 +44,9 @@
 
   function build(root, D, opts) {
     const F = D.frames, N = F.length, VW = D.view.w, VH = D.view.h;
+    // the walled city itself (Stradun, 42.6413° N 18.1083° E) in map units; the data's ragusaPt sits
+    // about 1 km west — invisible at overview size, but the deep zoom puts today's streets underneath
+    const RAG = [(18.1083 - 12) * 100, (48.4 - 42.6413) * 132.7];
     let cur = 0, playing = null, sel = null, scale = 1, tx = 0, ty = 0, libertasShown = null;
 
     // ---------- markup ----------
@@ -57,26 +60,35 @@
     const plate = el('div', 'bh-plate');
     const vp = el('div', 'bh-viewport');
     vp.setAttribute('role', 'img');
+    const tilesEl = el('div', 'bh-tiles');   // today's map (OpenStreetMap) fades in underneath once zoomed in
     const stage = el('div', 'bh-stage');
     const map = svg('svg', { viewBox: `0 0 ${VW} ${VH}`, preserveAspectRatio: 'none', 'aria-hidden': 'true' });
     const defs = svg('defs'); map.appendChild(defs);
-    map.appendChild(svg('rect', { x: 0, y: 0, width: VW, height: VH, fill: 'var(--bh-sea)' }));
-    map.appendChild(svg('path', { d: D.land, fill: 'var(--bh-land)' }));
+    map.appendChild(svg('rect', { x: 0, y: 0, width: VW, height: VH, fill: 'var(--bh-sea)', class: 'bh-seafill' }));
+    map.appendChild(svg('path', { d: D.land, fill: 'var(--bh-land)', class: 'bh-landfill' }));
     const layers = svg('g'); map.appendChild(layers);
+    // Ragusa's own territory, from the much finer coast-map shapes, placed on the main map through
+    // the coast map's box; shown once zoomed in (CSS: .bh-tiles-on .bh-ragterr)
+    const ibx = D.inset.box;
+    const ragTerr = svg('g', { class: 'bh-ragterr', transform: `translate(${ibx[0]} ${ibx[1]}) scale(${ibx[2] / D.inset.w} ${ibx[3] / D.inset.h})` });
+    map.appendChild(ragTerr);
     const borders = svg('path', { d: D.borders, class: 'bh-borders' }); map.appendChild(borders);
     const trailsG = svg('g'); map.appendChild(trailsG);
     const ib = D.inset.box;
     map.appendChild(svg('rect', { x: ib[0], y: ib[1], width: ib[2], height: ib[3], class: 'bh-inbox' }));
-    const ring = svg('circle', { cx: D.ragusaPt[0], cy: D.ragusaPt[1], r: 24, class: 'bh-ragusa-ring' }); map.appendChild(ring);
-    const ragDot = svg('circle', { cx: D.ragusaPt[0], cy: D.ragusaPt[1], r: 10, fill: 'var(--bh-gold)', stroke: '#201f1d', 'stroke-width': 1.5 });
+    const ring = svg('circle', { cx: RAG[0], cy: RAG[1], r: 24, class: 'bh-ragusa-ring' }); map.appendChild(ring);
+    const ragDot = svg('circle', { cx: RAG[0], cy: RAG[1], r: 10, fill: 'var(--bh-gold)', stroke: '#201f1d', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
     map.appendChild(ragDot);
     const labels = el('div', 'bh-labels');
-    stage.append(map, labels); vp.appendChild(stage);
+    stage.append(map, labels); vp.append(tilesEl, stage);
     const zoomUI = el('div', 'bh-zoom');
     zoomUI.innerHTML = '<button type="button" class="bh-btn" data-z="in" aria-label="Zoom in">+</button>' +
       '<button type="button" class="bh-btn" data-z="out" aria-label="Zoom out">−</button>' +
+      '<button type="button" class="bh-btn" data-z="ragusa" aria-label="Zoom in to Ragusa" title="Zoom in to Ragusa">' +
+        '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg></button>' +
       '<button type="button" class="bh-btn" data-z="reset" aria-label="Show the whole map">⤢</button>';
-    plate.append(vp, zoomUI);
+    const attrib = el('div', 'bh-attrib', 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · old borders approximate');
+    plate.append(vp, zoomUI, attrib);
 
     const tl = el('div', 'bh-timeline');
     const track = el('div', 'bh-track');
@@ -149,8 +161,10 @@
       const id = 'bh-h' + Object.keys(patterns).length + Math.random().toString(36).slice(2, 6);
       const size = host === idefs ? 46 : 18;
       const p = svg('pattern', { id, patternUnits: 'userSpaceOnUse', width: size, height: size, patternTransform: 'rotate(45)' });
-      p.appendChild(svg('rect', { x: 0, y: 0, width: size * .38, height: size, fill: color, 'fill-opacity': .75 }));
+      const bar = svg('rect', { x: 0, y: 0, width: size * .38, height: size, fill: color, 'fill-opacity': .75 });
+      p.appendChild(bar);
       (host || defs).appendChild(p);
+      if (host !== idefs) { mainPatterns.push([p, bar, size]); sizePattern(p, bar, size); }
       return (patterns[key] = `url(#${id})`);
     }
 
@@ -212,7 +226,7 @@
         labels.appendChild(d);
       });
       const rl = el('div', 'bh-raglab', f.ragusa.founded ? (f.year < 1918 ? 'RAGUSA' : 'DUBROVNIK') : (f.year > -230 ? 'Epidaurum' : 'Epidauros'));
-      rl.style.left = (D.ragusaPt[0] / VW * 100) + '%'; rl.style.top = (D.ragusaPt[1] / VH * 100) + '%';
+      rl.style.left = (RAG[0] / VW * 100) + '%'; rl.style.top = (RAG[1] / VH * 100) + '%';
       labels.appendChild(rl);
       requestAnimationFrame(() => declutter(lab.concat([...labels.querySelectorAll('.bh-oldcap')]), [...labels.querySelectorAll('.bh-cap,.bh-raglab')]));
     }
@@ -229,6 +243,15 @@
       });
     }
 
+    function drawRagTerr(i) {
+      const R = F[i].ragusa, P = D.inset.parts;
+      ragTerr.innerHTML = '';
+      const add = (d, cls) => ragTerr.appendChild(svg('path', { d, class: 'bh-rt ' + cls }));
+      if (R.parts.length) add(R.parts.map(k => P[k]).join(''), 'bh-rt-rag');
+      else if (R.former && D.inset.former) add(D.inset.former, 'bh-rt-former');
+      if (R.ceded) add(P.neum + P.sutorina, 'bh-rt-ceded');
+      if (R.siege) add(P.konavle, 'bh-rt-siege');
+    }
     function drawInset(i) {
       const R = F[i].ragusa;
       R.icol.forEach((c, k) => ilands[k].setAttribute('fill', c));
@@ -313,6 +336,7 @@
       drawMap(i, animate && prev !== i);
       placeLabels(i);
       drawInset(i);
+      drawRagTerr(i);
       libertas(f.tpos);
       dots.forEach((d, k) => { d.classList.toggle('bh-past', k < i); d.classList.toggle('bh-cur', k === i); d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
       prog.style.width = pct(f.tpos) + '%';
@@ -354,25 +378,128 @@
     });
 
     // ---------- pan / zoom / tap ----------
+    // Zoom redraws the SVG through its viewBox, so shapes and lines stay sharp at any zoom (scaling a
+    // picture of the map made it blurry); labels sit in a box the size of the zoomed map, so their
+    // text is never stretched either. Markers and hatching keep their on-screen size.
+    const MAX_SCALE = 6000;   // street level: about 200 m across on a phone
+    const mainPatterns = [];
+    function sizePattern(p, bar, size) {
+      const z = size / scale;
+      p.setAttribute('width', z); p.setAttribute('height', z); bar.setAttribute('width', z * .38); bar.setAttribute('height', z);
+    }
     function apply() {
       const w = vp.clientWidth, h = vp.clientHeight;
+      if (!w || !h) return;
       tx = Math.min(0, Math.max(w - w * scale, tx)); ty = Math.min(0, Math.max(h - h * scale, ty));
-      stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      map.setAttribute('viewBox', (-tx / (w * scale) * VW).toFixed(6) + ' ' + (-ty / (h * scale) * VH).toFixed(6) + ' ' +
+        (VW / scale).toFixed(6) + ' ' + (VH / scale).toFixed(6));
+      labels.style.width = (w * scale) + 'px'; labels.style.height = (h * scale) + 'px';
+      labels.style.transform = `translate(${tx}px, ${ty}px)`;
+      ring.setAttribute('r', (24 / scale).toFixed(6)); ragDot.setAttribute('r', (10 / scale).toFixed(6));
+      mainPatterns.forEach(([p, bar, size]) => sizePattern(p, bar, size));
       // un-zoomed, a vertical finger drag scrolls the page (touch-action: pan-y); zoomed, every drag pans the map
       vp.classList.toggle('bh-zoomed', scale > 1);
-      stage.style.setProperty('--bh-inv', (1 / scale).toFixed(4));
+      // deep in, dashed lines run to millions of dashes and stall every frame: draw them solid instead
+      root.classList.toggle('bh-deep', scale > 8);
+      tiles(w, h);
       clearTimeout(apply._t);
       apply._t = setTimeout(() => declutter([...labels.querySelectorAll('.bh-lab,.bh-oldcap')], [...labels.querySelectorAll('.bh-cap,.bh-raglab')]), 120);
     }
+    // without today's map underneath (offline), the era shapes are too coarse to be worth more than 40×
+    const maxScale = () => (tileFails >= 8 || navigator.onLine === false) ? 40 : MAX_SCALE;
     function zoomAt(f, cx, cy) {
-      const ns = Math.max(1, Math.min(6, scale * f)); const k = ns / scale;
+      const ns = Math.max(1, Math.min(maxScale(), scale * f)); const k = ns / scale;
       tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; scale = ns; apply();
+    }
+    // glide so that map point (X, Y) sits in the middle at zoom s
+    function zoomTo(X, Y, s) {
+      const w = vp.clientWidth, h = vp.clientHeight, s0 = scale;
+      const cx0 = (w / 2 - tx) / (w * scale) * VW, cy0 = (h / 2 - ty) / (h * scale) * VH;
+      const steps = reduced() ? 1 : 32; let i = 0;
+      const step = () => {
+        i++;
+        const u = i / steps, e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+        scale = Math.exp(Math.log(s0) + (Math.log(s) - Math.log(s0)) * e);
+        const cx = cx0 + (X - cx0) * e, cy = cy0 + (Y - cy0) * e;
+        tx = w / 2 - cx / VW * w * scale; ty = h / 2 - cy / VH * h * scale;
+        apply();
+        if (i < steps) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
     }
     zoomUI.addEventListener('click', e => {
       const b = e.target.closest('[data-z]'); if (!b) return;
-      const w = vp.clientWidth / 2, h = vp.clientHeight / 2;
-      if (b.dataset.z === 'reset') { scale = 1; tx = ty = 0; apply(); } else zoomAt(b.dataset.z === 'in' ? 1.6 : 1 / 1.6, w, h);
+      const w = vp.clientWidth / 2, h = vp.clientHeight / 2, z = b.dataset.z;
+      if (z === 'reset') zoomTo(VW / 2, VH / 2, 1);
+      else if (z === 'ragusa') zoomTo(RAG[0], RAG[1], Math.min(900, maxScale()));   // the Old Town and Lokrum
+      else zoomAt(z === 'in' ? 2 : 1 / 2, w, h);
     });
+    vp.addEventListener('dblclick', e => { const r = vp.getBoundingClientRect(); zoomAt(2, e.clientX - r.left, e.clientY - r.top); });
+
+    // ---------- today's map underneath, once zoomed in ----------
+    // The era shapes are drawn for the whole Balkans and are coarse up close, so past a modest zoom
+    // OpenStreetMap tiles fade in beneath them (the shapes turn translucent). Each tile is placed by
+    // its corners through the map's projection, x = (lon − 12)·100, y = (48.4 − lat)·132.7
+    // (source/export_data.py) — within a tile the difference from web-map projection is negligible.
+    const TILE_MIN = 2.5, tileImgs = new Map();
+    let tileWant = new Set(), tileT = 0, tileFails = 0;
+    const tLon = (x, n) => x / n * 360 - 180;
+    const tLat = (y, n) => { const k = Math.PI - 2 * Math.PI * y / n; return 180 / Math.PI * Math.atan(0.5 * (Math.exp(k) - Math.exp(-k))); };
+    function placeTile(im, w, h) {
+      const [z, x, y] = im._k, n = 2 ** z, kx = w * scale / VW, ky = h * scale / VH;
+      const X0 = (tLon(x, n) - 12) * 100, X1 = (tLon(x + 1, n) - 12) * 100;
+      const Y0 = (48.4 - tLat(y, n)) * 132.7, Y1 = (48.4 - tLat(y + 1, n)) * 132.7;
+      im.style.left = (tx + X0 * kx) + 'px'; im.style.top = (ty + Y0 * ky) + 'px';
+      im.style.width = ((X1 - X0) * kx + 0.6) + 'px'; im.style.height = ((Y1 - Y0) * ky + 0.6) + 'px';
+    }
+    function tiles(w, h) {
+      const on = scale >= TILE_MIN && tileFails < 8 && navigator.onLine !== false;
+      root.classList.toggle('bh-tiles-on', on);
+      if (!on) return;
+      tileImgs.forEach(im => placeTile(im, w, h));            // follow the gesture straight away
+      clearTimeout(tileT); tileT = setTimeout(() => loadTiles(), 140);   // fetch the right set once it pauses
+    }
+    function loadTiles() {
+      const w = vp.clientWidth, h = vp.clientHeight;
+      if (!w || scale < TILE_MIN) return;
+      const x0 = -tx / (w * scale) * VW, x1 = x0 + VW / scale, y0 = -ty / (h * scale) * VH, y1 = y0 + VH / scale;
+      const lonW = 12 + x0 / 100, lonE = 12 + x1 / 100, latN = 48.4 - y0 / 132.7, latS = 48.4 - y1 / 132.7;
+      const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+      const z = Math.max(4, Math.min(19, Math.ceil(Math.log2(360 * w * dpr / (256 * (lonE - lonW))))));
+      const n = 2 ** z, col = lon => Math.floor((lon + 180) / 360 * n);
+      const row = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n); };
+      const c0 = col(lonW), c1 = col(lonE), r0 = row(latN), r1 = row(latS);
+      if ((c1 - c0 + 1) * (r1 - r0 + 1) > 140) return;
+      const want = new Set();
+      for (let x = c0; x <= c1; x++) for (let y = r0; y <= r1; y++) {
+        const key = z + '/' + x + '/' + y;
+        want.add(key);
+        if (tileImgs.has(key)) continue;
+        const im = new Image();
+        im._k = [z, x, y]; im.alt = ''; im.decoding = 'async'; im.draggable = false; im.className = 'bh-tile';
+        im.onload = () => { im.classList.add('bh-in'); tileFails = 0; sweep(); };
+        im.onerror = () => {
+          tileFails++; im.remove(); tileImgs.delete(key);
+          if (tileFails >= 8) {   // no map underneath after all (offline or blocked): back out to where the era shapes still read
+            root.classList.remove('bh-tiles-on');
+            if (scale > 40) zoomAt(40 / scale, vp.clientWidth / 2, vp.clientHeight / 2);
+          }
+          sweep();
+        };
+        im.src = 'https://tile.openstreetmap.org/' + key + '.png';
+        placeTile(im, w, h); tilesEl.appendChild(im); tileImgs.set(key, im);
+      }
+      tileWant = want;
+      sweep();
+    }
+    // tiles from the previous view stay under the new ones until those have loaded
+    function sweep() {
+      const ready = [...tileWant].every(k => { const im = tileImgs.get(k); return !im || im.complete; });
+      tileImgs.forEach((im, k) => {
+        if (tileWant.has(k)) { im.style.zIndex = 1; return; }
+        if (ready || tileImgs.size > 200) { im.remove(); tileImgs.delete(k); } else im.style.zIndex = 0;
+      });
+    }
     vp.addEventListener('wheel', e => {
       e.preventDefault(); const r = vp.getBoundingClientRect();
       zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - r.left, e.clientY - r.top);

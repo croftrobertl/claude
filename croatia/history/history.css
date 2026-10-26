@@ -51,7 +51,7 @@
 .bh-viewport { position: relative; overflow: hidden; border-radius: calc(var(--bh-radius) - 2px); background: var(--bh-sea);
   aspect-ratio: 1820 / 1831; max-width: 100%; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
 .bh-viewport.bh-dragging { cursor: grabbing; }
-.bh-stage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.bh-stage { position: absolute; inset: 0; }   /* never transformed: zoom redraws the SVG (see apply() in history.js) */
 .bh-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .bh-layer { transition: opacity .55s ease; }
 .bh-poly { stroke: var(--bh-ink); stroke-opacity: .55; stroke-width: 1.4; vector-effect: non-scaling-stroke; fill-opacity: .86;
@@ -71,7 +71,7 @@
 .bh-hide-borders .bh-borders, .bh-hide-caps .bh-cap, .bh-hide-trails .bh-trail, .bh-hide-trails .bh-oldcap { display: none; }
 
 /* labels live in HTML so they stay legible at phone size; positioned in % of the map */
-.bh-labels { position: absolute; inset: 0; pointer-events: none; }
+.bh-labels { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .bh-lab { position: absolute; transform: translate(-50%, -50%) scale(var(--bh-inv, 1)); white-space: nowrap; text-align: center;
   font-family: var(--bh-font); font-weight: 600; color: var(--bh-text); line-height: 1.05;
   text-shadow: 0 0 3px var(--bh-card), 0 0 3px var(--bh-card), 0 0 6px var(--bh-card); transition: opacity .3s; }
@@ -91,6 +91,28 @@
   text-shadow: 0 0 3px var(--bh-card), 0 0 3px var(--bh-card), 0 0 6px var(--bh-card); white-space: nowrap; }
 
 .bh-zoom { position: absolute; left: 14px; bottom: 14px; display: grid; gap: 4px; z-index: 2; }
+/* today's map underneath, once zoomed in (OpenStreetMap tiles; the era shapes turn translucent over them) */
+.bh-tiles { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .45s; background: #f2efe9; }   /* z-index 0: the tiles' own stacking stays under the map */
+.bh-tile { position: absolute; max-width: none; opacity: 0; transition: opacity .25s; user-select: none; -webkit-user-select: none; }
+.bh-tile.bh-in { opacity: 1; }
+.bh-seafill, .bh-landfill { transition: opacity .45s; }
+.bh-tiles-on .bh-tiles { opacity: 1; }
+.bh-tiles-on .bh-seafill, .bh-tiles-on .bh-landfill { opacity: 0; }
+.bh-tiles-on .bh-stage svg { mix-blend-mode: multiply; }
+.bh-tiles-on .bh-poly { fill-opacity: .42; }
+.bh-tiles-on .bh-poly:hover, .bh-tiles-on .bh-poly.bh-sel { fill-opacity: .62; }
+.bh-attrib { position: absolute; right: 12px; bottom: 12px; z-index: 2; display: none; font-size: 10.5px; line-height: 1.4; padding: 1px 6px;
+  border-radius: 3px; background: rgba(255, 255, 255, .85); color: #333; }
+.bh-attrib a { color: inherit; }
+.bh-tiles-on .bh-attrib { display: block; }
+.bh-deep .bh-borders, .bh-deep .bh-trail { stroke-dasharray: none; stroke-opacity: .4; }
+.bh-ragterr { display: none; pointer-events: none; }
+.bh-tiles-on .bh-ragterr { display: inline; }
+.bh-rt { vector-effect: non-scaling-stroke; stroke-width: 2; stroke-linejoin: round; }
+.bh-rt-rag { fill: #f2c230; fill-opacity: .55; stroke: #7d5411; }
+.bh-rt-former { fill: #f2c230; fill-opacity: .22; stroke: #b68235; }
+.bh-rt-ceded { fill: #b68235; fill-opacity: .18; stroke: #7d5411; }
+.bh-rt-siege { fill: #c0392b; fill-opacity: .28; stroke: #c0392b; }
 .bh-zoom button { width: 34px; height: 34px; }
 
 /* ---------- controls ---------- */
@@ -161,6 +183,6 @@
 @media (max-width: 600px) {
   .bh-cap { font-size: 10.5px; }
   .bh-cap::before { font-size: 11px; }
-  .bh-zoom button { width: 30px; height: 30px; min-height: 30px; padding: 0; }
+  .bh-zoom button { width: 38px; height: 38px; min-height: 38px; padding: 0; }
   .bh-t-narrow { display: none; }
 }
