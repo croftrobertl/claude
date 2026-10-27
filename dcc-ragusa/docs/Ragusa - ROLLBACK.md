@@ -19,7 +19,9 @@ can be moved back:
 | Roll back a plugin | the new version into quarantine, the previous version into place, auto-update off for that plugin | `wp ragusa restore <id>` swaps them back and turns auto-update back on |
 
 `<id>` is the journal number shown in the email, in Recent Events and in
-`wp ragusa journal`. Quarantined copies are kept 90 days.
+`wp ragusa journal`, or the eight-character id `wp ragusa findings` shows
+for the finding (its `journal` column names the same row). Quarantined
+copies are kept 90 days.
 
 ## If Ragusa restored something you changed on purpose
 

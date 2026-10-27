@@ -166,6 +166,27 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   or "Seen By …" to a row whose note named a finding (`note($slug, $line, $fp)`).
 - **A stale PHP reading judges nothing** (`Php_Patch::stale()`, 12 hours):
   it is asked for again and no finding is raised from it.
+- **Update-check events are a WP-Cron convenience, never a queue**
+  (`Sveti_Ivan::schedule()`, `sweep_events()`): none where cron is off; the
+  tick runs checks from `next_at`, clears a row's event when it runs it, and
+  sweeps leftovers every tick.
+- **WP Staging's sse folder is its own housekeeping, judged by content**
+  (`Minceta::wpstg_own()`): WP Staging 4.18.0 deletes every file older than
+  an hour there once a day (`Core/WPStaging.php` registerInitHook). Only its
+  four protection files (index.php comments-only) and `*.sse.cache.php`
+  starting `<?php exit(); ?>` with no code after pass; anything else there
+  is a finding.
+- **One owner per file, one finding per change.** `Minceta::OWNED_ELSEWHERE`
+  are skipped by the walk; .user.ini and php.ini are `Php_Patch`'s alone,
+  Breached only when `Htaccess::ini_enables_execution()` turns true.
+- **"Acted" means a journal action.** Action findings carry `journal_id` and
+  `acted` (`Alerts::acted()`); the headline and the report say "acted" only
+  for those. `wp ragusa restore` takes a finding's short id through them.
+- **A hand resolve signs the journal row** (`Journal::annotate()`,
+  `wp ragusa note`); history is only added to, never rewritten.
+- **PHP is judged every tick** from the reading and the cached list; with
+  no reading the probe asks every tick; the explicit login probe answers
+  whenever Ragusa asked within five minutes.
 - **The Lovrijenac row's PHP part is live** (`Php_Patch::line()` from the
   reading and the cached feed; `Lovrijenac::refresh_php()` on every reading,
   status and page render).
@@ -206,7 +227,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 71 deliberate breakages, each must be caught
+    php tests/mutations.php            # 86 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -224,6 +245,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.3.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.4.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

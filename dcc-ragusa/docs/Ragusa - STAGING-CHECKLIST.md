@@ -1,4 +1,14 @@
-# Ragusa 0.2.3 — Staging Checklist
+# Ragusa 0.2.4 — Staging Checklist
+
+> **Upgrading the 0.2.3 install on staging:** `wp plugin install
+> "Ragusa 0.2.4.zip" --force`, then `wp ragusa tick`. Expect the tick to
+> print "Removed N update-check events nobody will run." (N was 13 on Oct
+> 27; WP-Cron is off here, so all of them go), and `wp cron event list`
+> afterwards to show no `dccr_update_check`.
+> `wp ragusa findings` lists no info line (llms.txt's included). Then the
+> items marked **0.2.4** in step 12, and the WP Staging drill that waited
+> on item 2. Rollback: `wp plugin install "Ragusa 0.2.3.zip" --force`
+> (the 0.2.2 backup is the deeper one).
 
 > **Upgrading the 0.2.2 install on staging:** `wp plugin install
 > "Ragusa 0.2.3.zip" --force`, then `wp ragusa status` (no tick): the
@@ -336,7 +346,10 @@ cleans up. Each prints every journal state transition.
 - [ ] **Flood:** `wp eval 'for ($i = 0; $i < 3000; $i++) { DCCR\Events::record("minceta", "needs-look", "file-new", "flood/$i.php", "flood"); }'`
       after noting the id of one real breached event (`wp db query`). The
       breached row is still there; the table went past 2,000 only with
-      serious rows; `wp ragusa status` is unchanged. Clean up:
+      serious rows; `wp ragusa status` is unchanged. **This drill costs
+      Recent Events its info history:** noise goes first by design, so every
+      info row (passes, update lines, seals) is pruned before any serious
+      one. Run it last, or accept that. Clean up:
       `wp db query "DELETE FROM wpstg0_dcc_ragusa_events WHERE target LIKE 'flood/%'"`.
 - [ ] **Findings:** `wp ragusa findings` lists the unresolved ones with
       short ids and "Oct 24, 8:16 PM EDT" times; `--all --format=json`
@@ -409,47 +422,70 @@ cleans up. Each prints every journal state transition.
       and `wp ragusa tick`. Lovrijenac reads "PHP 8.3.30, 8.3.36 Is Out"
       and the finding is "PHP Security Fix Not Applied: 8.3.36" (breached,
       since Oct 21 is more than three days ago), naming lsphp and the time
-      of the reading. Then `wp option delete dcc_ragusa_php_web`, two ticks
-      (the probe, then the reading): "PHP 8.3.36 Current" and Resolved.
+      of the reading. Then `wp option delete dcc_ragusa_php_web` and ONE
+      tick: it asks the web server at once (no reading means no ten-minute
+      wait), prints "it answered at once: 8.3.36, via the wp-login.php
+      probe", and in the same tick Lovrijenac reads "PHP 8.3.36 Current",
+      the finding reads Resolved and the walls hold. No `php_check_ts`
+      deletion is needed (**0.2.4**: the reading is judged every tick).
 - [ ] **Settings file:** append `; ragusa drill` to `~/public_html/staging/.user.ini`
       (create it if absent, then tick once first so it is baselined),
       tick: "PHP Settings File Changed: .user.ini" with the "+ ; ragusa
-      drill" line in the finding. Remove the line, tick: a second finding
-      for the removal (any change is a finding), then Mark As Seen or
-      `wp ragusa resolve`.
+      drill" line in the finding. **0.2.4:** that is the only finding for
+      the edit (no Minčeta "Changed: .user.ini", also after `wp ragusa
+      scan`), it needs a look rather than a breach, and the headline reads
+      "Something Needs A Look". Then append `auto_prepend_file = /tmp/x.php`
+      and tick: "PHP Settings File Now Runs Extra Code: .user.ini",
+      Breached, and the headline reads "A Wall Was Breached · Ragusa Needs
+      You" (no "Acted": Ragusa did nothing). Remove both lines, tick (a
+      finding for the removal), then `wp ragusa resolve` each.
 - [ ] **A dropped `uploads/x.php`:** `echo '<?php echo 1;' > wp-content/uploads/x.php`,
       then `wp ragusa tick` (not scan): within that one tick the file is
       quarantined, the event is breached, and on live an email would have
-      gone. `wp ragusa restore <id>` puts it back; delete it by hand.
-- [ ] **0.2.1: who changed it, on a real version change.** A reinstall of
-      the same version does not rewrite WP Staging's `sse` files, so the
-      drill needs a real change. Scripted, from the staging root:
+      gone, and the headline reads "Ragusa Acted And Needs You".
+      **0.2.4:** `wp ragusa findings` shows the finding with its journal
+      row in the last column; `wp ragusa restore <the finding's id>` (or
+      `<the journal number>`) puts it back; delete it by hand.
+- [ ] **0.2.4: who changed it, on a real version change.** WP Staging
+      empties its own `sse` folder once a day (item 2), so the drill writes
+      into a folder of WP Staging's name instead. Scripted, from the staging
+      root:
 
           ts=$(date +%s); cur=$(wp plugin get wp-staging --field=version)
-          cp -a wp-content/wp-staging/sse ~/sse-before-$ts            # snapshot
-          wp ragusa findings                                            # expect none
+          wp ragusa findings                                            # note what is open
           wp plugin install https://downloads.wordpress.org/plugin/wp-staging.4.16.0.zip --force
           wp ragusa tick                                                # Sveti Ivan: update-check wp-staging 4.16.0
           wp plugin update wp-staging                                   # back up to $cur: a second real change
-          wp ragusa tick
-          # WP Staging rewrites its sse files on its first admin load after an update;
-          # load wp-admin once, or stand in for its write inside the window:
-          for f in wp-content/wp-staging/sse/*; do echo "# $(date)" >> "$f"; done
+          # inside the half hour after the update, stand in for a file the update writes:
+          mkdir -p wp-content/wp-staging/ragusa-drill && echo "drill $ts" > wp-content/wp-staging/ragusa-drill/marker.txt
           wp ragusa scan
-          wp ragusa findings                                            # expect none
+          wp ragusa findings                                            # nothing new
           wp ragusa journal --limit=3                                   # the two update-check rows
 
-      Recent Events carries one line per update: "wp-staging $cur wrote 4
-      files outside its own folder, accepted as the baseline: …". Then
-      the control: wait until the half-hour window has passed (or age the
-      row: `wp db query "UPDATE wpstg0_dcc_ragusa_journal SET created_at = created_at - 7200 WHERE target = 'wp-staging'"`),
-      append a line to one `sse` file again, `wp ragusa scan`: that one IS
-      a "File Changed" finding. Restore: `wp ragusa seal wp-content/wp-staging/sse/<file>`,
-      or `cp -a ~/sse-before-$ts/. wp-content/wp-staging/sse/` and seal
-      each; `wp plugin get wp-staging --field=version` must read $cur.
+      Recent Events carries "wp-staging $cur wrote 1 file outside its own
+      folder, accepted as the baseline: wp-content/wp-staging/ragusa-drill/marker.txt".
+      The control: age the rows out of the window
+      (`wp db query "UPDATE wpstg0_dcc_ragusa_journal SET created_at = created_at - 7200 WHERE target = 'wp-staging'"`),
+      `echo more >> wp-content/wp-staging/ragusa-drill/marker.txt`,
+      `wp ragusa scan`: that IS a "File Changed: marker.txt" finding.
+      Clean up: `rm -r wp-content/wp-staging/ragusa-drill`,
+      `wp ragusa seal wp-content/wp-staging/ragusa-drill/marker.txt` (drops
+      it from the baseline and settles its finding), and
+      `wp plugin get wp-staging --field=version` must read $cur.
+- [ ] **0.2.4: WP Staging's sse folder.** `ls -la wp-content/wp-staging/sse/`
+      (empty since its daily cleanup). Load DCC → Staging once if you want
+      WP Staging to write there; either way `wp ragusa scan` raises no
+      File Missing or New File for its own files. The control:
+      `echo '<?php echo 1;' > wp-content/wp-staging/sse/drill.php`,
+      `wp ragusa scan`: "New File: drill.php". Then `rm` it and
+      `wp ragusa seal wp-content/wp-staging/sse/drill.php`.
+- [ ] **0.2.4: a hand resolve signs the row.** `wp ragusa note 57 "resolved
+      by hand Oct 26: false alarm, see 0.2.3"`; `wp ragusa journal` shows
+      row 57's note ending with that line, signed "note by doracurt (shell)".
 - [ ] **llms.txt:** let AIOSEO regenerate it (or edit a word): no finding,
-      one info line "llms.txt Regenerated By AIOSEO" in the daily digest
-      list. Put `<?php` in it: a real "File Changed: llms.txt". Remove it,
+      one info line "llms.txt Changed (Plain Text Only, As When AIOSEO
+      Regenerates It)" in the daily digest list, and nothing in
+      `wp ragusa findings` (**0.2.4**). Put `<?php` in it: a real "File Changed: llms.txt". Remove it,
       seal.
 - [ ] **The report:** `wp ragusa report --dry-run` prints the subject and
       the five fortress lines with diacritics; `wp ragusa report` on staging

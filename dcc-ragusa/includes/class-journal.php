@@ -105,6 +105,19 @@ final class Journal
         $wpdb->update(Schema::journal(), $fields, ['id' => $id], $formats, ['%d']);
     }
 
+    /** Add a line to a row's note, whatever its state; history is never rewritten, only added to. */
+    public static function annotate(int $id, string $text): bool
+    {
+        global $wpdb;
+        $row = self::get($id);
+        if ($row === null) {
+            return false;
+        }
+        $note = trim((string) $row['note']);
+        $add  = Text::scrub(mb_substr($text, 0, 300));
+        return (bool) $wpdb->update(Schema::journal(), ['note' => $note === '' ? $add : $note . ' | ' . $add], ['id' => $id], ['%s'], ['%d']);
+    }
+
     public static function get(int $id): ?array
     {
         global $wpdb;

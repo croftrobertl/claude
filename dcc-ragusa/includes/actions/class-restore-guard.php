@@ -111,6 +111,8 @@ final class Restore_Guard extends Base
                 'fortress' => Fortress::REVELIN,
                 'severity' => Events::BREACHED,
                 'kind'     => 'guard-restored',
+                'journal_id' => $id,
+                'acted'    => true,
                 'target'   => $rel,
                 'title'    => __('Guarded File Restored', 'dcc-ragusa'),
                 'what'     => !empty($before['exists'])
@@ -137,6 +139,8 @@ final class Restore_Guard extends Base
             'fortress' => Fortress::REVELIN,
             'severity' => Events::BREACHED,
             'kind'     => 'restore-reversed',
+            'journal_id' => $id,
+            'acted'    => true,
             'target'   => $rel,
             'title'    => __('Restore Reversed', 'dcc-ragusa'),
             /* translators: %s: path */

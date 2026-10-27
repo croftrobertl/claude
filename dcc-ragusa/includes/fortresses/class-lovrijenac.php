@@ -47,6 +47,8 @@ final class Lovrijenac
             State::set('php_check_ts', time());
             $lines = array_merge($lines, \DCCR\Php_Patch::due());
         }
+        // Judged every tick from the reading and the cached list (no request): a new reading is judged at once.
+        \DCCR\Php_Patch::evaluate();
         self::evaluate();
         return $lines;
     }

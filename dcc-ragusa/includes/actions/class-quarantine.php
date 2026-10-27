@@ -61,6 +61,8 @@ final class Quarantine extends Base
                 'fortress' => Fortress::MINCETA,
                 'severity' => Events::BREACHED,
                 'kind'     => 'quarantined',
+                'journal_id' => $id,
+                'acted'    => true,
                 'target'   => $rel,
                 'title'    => __('File Quarantined', 'dcc-ragusa'),
                 /* translators: 1: path, 2: reason, 3: size */

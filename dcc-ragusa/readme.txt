@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,16 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.4 =
+* Update-check cron events no longer pile up where WP-Cron is off: none is scheduled there (the tick runs the checks from their due time), the event of a check the tick ran is removed, and every tick sweeps leftovers for finished rows (all of them where cron is off).
+* WP Staging's sse folder: WP Staging 4.18.0 deletes every file older than an hour in wp-content/wp-staging/sse/ once a day, on any request, its own protection files included (Core/WPStaging.php, registerInitHook). Its own files there, recognised by content (the four protection files, and *.sse.cache.php files that begin with its exit header and hold no code), come and go with one info line per pass. Any other file there, or one of those names carrying code, is a finding as anywhere.
+* A finding resolved by hand leaves a signed line on its journal row (`wp ragusa resolve <id> --note="…"`), and `wp ragusa note <journal id> "<text>"` adds one to any row. History is only added to.
+* PHP: with no reading at all, the web server is asked every tick, not once per ten minutes; the tick says whether the answer landed at once; and the reading is judged every tick from the cached php.net list, so a host that patches PHP clears the finding within a tick instead of the next morning. The explicit login probe answers whenever Ragusa asked within five minutes.
+* One finding per change: the PHP settings files (.user.ini, php.ini) are Lovrijenac's alone, and the file walk no longer reports the files the per-tick checks own (wp-config.php, the root index.php, the drop-ins). A settings-file edit is Breached only when it makes PHP run extra code (auto_prepend_file, auto_append_file, the engine on); otherwise it needs a look. "Ragusa Acted" appears in the headline and the report only for a finding whose journal action Ragusa took.
+* llms.txt: "llms.txt Changed (Plain Text Only, As When AIOSEO Regenerates It)": what was seen, not who. Info lines never appear among the unresolved findings.
+* `wp ragusa restore` takes the id `wp ragusa findings` shows, and that list prints the journal row each finding reports.
+* The probe line says whether the answer landed; the not-counted summary names each reason.
 
 = 0.2.3 =
 * No false "Failed Its Checks". A first failure recorded before 0.2.2 (no log offset) no longer sends the repeat back to the update's own snapshot: only lines stamped after that first failure count. A fatal stamped before the install finished (upgrader_process_complete) is the copy in progress, not the code. A "Failed opening required" for a file of the plugin that exists now was missing for a moment. Both are recorded as an info line on the update's row and never counted.

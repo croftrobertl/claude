@@ -57,6 +57,14 @@ final class Php_Patch
         if (PHP_SAPI === 'cli' && self::$reading_override === null) {
             return;
         }
+        if ($source === 'login') {
+            // Ragusa asked within five minutes: answer, whatever the reading says. Anyone else gets the stale rule.
+            $probe = (array) State::get('php_probe', []);
+            if (time() - (int) ($probe['asked'] ?? 0) <= 300) {
+                self::record_here($source);
+                return;
+            }
+        }
         $r = self::reading();
         if ($r !== null && time() - (int) ($r['ts'] ?? 0) < self::STALE_ADMIN) {
             return;
@@ -109,8 +117,8 @@ final class Php_Patch
             return []; // record_here() at the tick start already did it
         }
         $probe = (array) State::get('php_probe', []);
-        if (time() - (int) ($probe['asked'] ?? 0) < self::PROBE_EVERY) {
-            return [];
+        if ($r !== null && time() - (int) ($probe['asked'] ?? 0) < self::PROBE_EVERY) {
+            return []; // a stale reading waits out the interval; no reading at all is asked for every tick
         }
         return [self::probe()];
     }
@@ -164,8 +172,39 @@ final class Php_Patch
         ]);
         $probe['login'] = is_wp_error($resp) ? Text::scrub($resp->get_error_message()) : 'HTTP ' . wp_remote_retrieve_response_code($resp);
         State::set('php_probe', $probe);
+        // The web request wrote the option in another process: forget this process's copy and look.
+        self::forget_cached();
+        $r = self::reading();
+        if ($r !== null && (int) $r['ts'] >= (int) $probe['asked']) {
+            /* translators: 1: wp-cron.php answer, 2: wp-login.php answer, 3: version, 4: source */
+            return sprintf(__('PHP reading asked of the web server: wp-cron.php %1$s, wp-login.php %2$s; it answered at once: %3$s, via %4$s.', 'dcc-ragusa'), $probe['cron'], $probe['login'], (string) $r['version'], self::source_label((string) $r['source']));
+        }
         /* translators: 1: wp-cron.php answer, 2: wp-login.php answer */
-        return sprintf(__('PHP reading asked of the web server: wp-cron.php %1$s, wp-login.php %2$s; the answer lands on the next tick.', 'dcc-ragusa'), $probe['cron'], $probe['login']);
+        return sprintf(__('PHP reading asked of the web server: wp-cron.php %1$s, wp-login.php %2$s; no answer yet, asked again next tick.', 'dcc-ragusa'), $probe['cron'], $probe['login']);
+    }
+
+    /** Drop this process's cached copy of the reading (a web request may have written it). */
+    public static function forget_cached(): void
+    {
+        if (!function_exists('wp_cache_delete')) {
+            return;
+        }
+        wp_cache_delete(self::READING_OPTION, 'options');
+        $none = wp_cache_get('notoptions', 'options');
+        if (is_array($none) && isset($none[self::READING_OPTION])) {
+            unset($none[self::READING_OPTION]);
+            wp_cache_set('notoptions', $none, 'options');
+        }
+    }
+
+    public static function source_label(string $source): string
+    {
+        return match ($source) {
+            'probe' => __('the probe event under wp-cron.php', 'dcc-ragusa'),
+            'login' => __('the wp-login.php probe', 'dcc-ragusa'),
+            'admin' => __('an admin page load', 'dcc-ragusa'),
+            default => __('the tick under wp-cron.php', 'dcc-ragusa'),
+        };
     }
 
     /** The probe's state, for the status lines. */
@@ -199,12 +238,7 @@ final class Php_Patch
             }
             $lines[] = 'php: ' . $line;
         } else {
-            $source = match ((string) ($r['source'] ?? 'tick')) {
-                'probe' => __('the probe event under wp-cron.php', 'dcc-ragusa'),
-                'login' => __('the wp-login.php probe', 'dcc-ragusa'),
-                'admin' => __('an admin page load', 'dcc-ragusa'),
-                default => __('the tick under wp-cron.php', 'dcc-ragusa'),
-            };
+            $source = self::source_label((string) ($r['source'] ?? 'tick'));
             /* translators: 1: version, 2: sapi, 3: source, 4: when */
             $lines[] = 'php: ' . sprintf(__('%1$s (%2$s), read from %3$s at %4$s', 'dcc-ragusa'), (string) $r['version'], (string) $r['sapi'], $source, Site::stamp((int) $r['ts']));
         }
@@ -231,7 +265,6 @@ final class Php_Patch
         if (time() - (int) ($feed['ts'] ?? 0) >= self::FEED_CACHE) {
             $lines[] = self::fetch();
         }
-        self::evaluate();
         return $lines;
     }
 
@@ -501,17 +534,28 @@ final class Php_Patch
                 ? sprintf(__('%s appeared.', 'dcc-ragusa'), $name)
                 /* translators: %s: file */
                 : sprintf(__('%s changed.', 'dcc-ragusa'), $name));
-        Events::record(Fortress::LOVRIJENAC, Events::NEEDS_LOOK, 'php-settings-changed', $name, $what, ['diff' => $diff]);
+        // Breached only when the change makes PHP run extra code (auto_prepend_file, auto_append_file,
+        // the engine switched on); Rob or the host may change the rest on purpose.
+        $runs     = Htaccess::ini_enables_execution($new) && !Htaccess::ini_enables_execution($old);
+        $severity = $runs ? Events::BREACHED : Events::NEEDS_LOOK;
+        Events::record(Fortress::LOVRIJENAC, $severity, 'php-settings-changed', $name, $what, ['diff' => $diff]);
         Alerts::raise([
             'fortress' => Fortress::LOVRIJENAC,
-            'severity' => Events::NEEDS_LOOK,
+            'severity' => $severity,
             'kind'     => 'php-settings-changed',
             'target'   => $name . '@' . substr(hash('sha256', $new), 0, 8),
-            /* translators: %s: file name */
-            'title'    => sprintf(__('PHP Settings File Changed: %s', 'dcc-ragusa'), basename($abs)),
-            'what'     => $what . ' ' . __('The host writes its emergency mitigations here; so would an intruder.', 'dcc-ragusa') . "\n\n" . $diff,
-            'did'      => __('Ragusa recorded the new content as the baseline and changed nothing.', 'dcc-ragusa'),
-            'todo'     => __('If the host announced a mitigation (a comment in the file usually says so), nothing to do. Otherwise ask the site director to look.', 'dcc-ragusa'),
+            'title'    => $runs
+                /* translators: %s: file name */
+                ? sprintf(__('PHP Settings File Now Runs Extra Code: %s', 'dcc-ragusa'), basename($abs))
+                /* translators: %s: file name */
+                : sprintf(__('PHP Settings File Changed: %s', 'dcc-ragusa'), basename($abs)),
+            'what'     => $what . ' ' . ($runs
+                ? __('It now tells PHP to run another file before or after every page, which is how a planted backdoor stays loaded.', 'dcc-ragusa')
+                : __('The host writes its emergency mitigations here; so would an intruder.', 'dcc-ragusa')) . "\n\n" . $diff,
+            'did'      => __('Ragusa changed nothing: it never edits or restores this file. The new content is the baseline now.', 'dcc-ragusa'),
+            'todo'     => $runs
+                ? __('Ask the site director to look today: if no one added that line on purpose, remove it and change the passwords.', 'dcc-ragusa')
+                : __('If the host announced a mitigation (a comment in the file usually says so), nothing to do. Otherwise ask the site director to look.', 'dcc-ragusa'),
         ]);
         return $what;
     }

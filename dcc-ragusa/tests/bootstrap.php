@@ -166,7 +166,41 @@ function check_admin_referer(...$a): bool { if (($GLOBALS['dccr_nonce_ok'] ?? tr
 function wp_safe_redirect(string $url): void { throw new RuntimeException('redirect:' . $url); }
 function wp_die($m = ''): void { throw new RuntimeException('wp_die:' . (string) $m); }
 function status_header(int $c): void {}
-function _get_cron_array(): array { return $GLOBALS['dccr_cron_array'] ?? []; }
+function _get_cron_array(): array
+{
+    if (isset($GLOBALS['dccr_cron_array'])) {
+        return $GLOBALS['dccr_cron_array'];
+    }
+    $out = [];
+    foreach ($GLOBALS['dccr_cron'] as $e) {
+        $out[$e['ts']][$e['hook']][md5(serialize($e['args']))] = ['schedule' => $e['recurrence'] ?? false, 'args' => $e['args']];
+    }
+    return $out;
+}
+function wp_unschedule_event(int $ts, string $hook, array $args = []): bool
+{
+    foreach ($GLOBALS['dccr_cron'] as $i => $e) {
+        if ($e['ts'] === $ts && $e['hook'] === $hook && $e['args'] == $args) {
+            unset($GLOBALS['dccr_cron'][$i]);
+            return true;
+        }
+    }
+    return false;
+}
+function wp_clear_scheduled_hook(string $hook, array $args = []): int
+{
+    $n = 0;
+    foreach ($GLOBALS['dccr_cron'] as $i => $e) {
+        if ($e['hook'] === $hook && $e['args'] == $args) {
+            unset($GLOBALS['dccr_cron'][$i]);
+            $n++;
+        }
+    }
+    return $n;
+}
+function wp_cache_get($key, string $group = '') { return $GLOBALS['dccr_object_cache'][$group][$key] ?? false; }
+function wp_cache_set($key, $value, string $group = ''): bool { $GLOBALS['dccr_object_cache'][$group][$key] = $value; return true; }
+function wp_cache_delete($key, string $group = ''): bool { unset($GLOBALS['dccr_object_cache'][$group][$key]); return true; }
 function wp_get_theme() { return new class { public function get_stylesheet(): string { return 'bravada'; } public function get(string $k): string { return '1.2.0'; } }; }
 
 // ------------------------------------------------------------------ cron

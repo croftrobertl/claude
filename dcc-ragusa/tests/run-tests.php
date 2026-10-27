@@ -2026,9 +2026,9 @@ suite('0.2.0 item 3: who changed it: files an update writes outside its folder a
     tick();
     $id = simulate_update('wp-staging', '4.18.0');
     ok($id > 0, 'update recorded');
-    @mkdir(WP_CONTENT_DIR . '/wp-staging/sse', 0755, true);
+    @mkdir(WP_CONTENT_DIR . '/wp-staging/meta', 0755, true);
     foreach (['.htaccess' => "RemoveHandler .php\n", 'index.html' => '', 'index.php' => "<?php\n// Silence is golden.\n", 'web.config' => "<configuration/>\n"] as $name => $content) {
-        file_put_contents(WP_CONTENT_DIR . '/wp-staging/sse/' . $name, $content);
+        file_put_contents(WP_CONTENT_DIR . '/wp-staging/meta/' . $name, $content);
     }
     // In the same window, a file in ANOTHER plugin's folder, and one at the root: still findings.
     file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/injected-in-window.php', "<?php\n// not wp-staging's\n");
@@ -2036,38 +2036,38 @@ suite('0.2.0 item 3: who changed it: files an update writes outside its folder a
     tick();
     $open = Alerts::open(Fortress::MINCETA);
     foreach (['.htaccess', 'index.html', 'index.php', 'web.config'] as $name) {
-        ok(!isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/sse/' . $name)]), "wp-staging/sse/$name raised nothing");
+        ok(!isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/meta/' . $name)]), "wp-staging/meta/$name raised nothing");
     }
     ok(isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/plugins/dcc-demo/injected-in-window.php')]), 'a file in another plugin\'s folder in the same window is still a finding');
     $written = events_of('update-written');
     eq(1, count($written), 'one info line for the update');
     ok(str_contains($written[0]['message'], 'wp-staging 4.18.0 wrote 4 files outside its own folder'), 'naming the update and the count: ' . $written[0]['message']);
     eq(4, count($written[0]['data']['files'] ?? []), 'and listing the four files');
-    ok(isset(Fortress\Minceta::index()['wp-content/wp-staging/sse/.htaccess']), 'they are in the baseline');
-    ok(Fortress\Minceta::belongs_to('wp-content/wp-staging/sse/.htaccess', 'wp-staging') && Fortress\Minceta::belongs_to('wp-content/uploads/wp-staging/x', 'wp-staging') && Fortress\Minceta::belongs_to('wp-content/plugins/wp-staging/a.php', 'wp-staging'), 'belongs_to: its folders');
+    ok(isset(Fortress\Minceta::index()['wp-content/wp-staging/meta/.htaccess']), 'they are in the baseline');
+    ok(Fortress\Minceta::belongs_to('wp-content/wp-staging/meta/.htaccess', 'wp-staging') && Fortress\Minceta::belongs_to('wp-content/uploads/wp-staging/x', 'wp-staging') && Fortress\Minceta::belongs_to('wp-content/plugins/wp-staging/a.php', 'wp-staging'), 'belongs_to: its folders');
     ok(!Fortress\Minceta::belongs_to('wp-content/plugins/dcc-demo/a.php', 'wp-staging') && !Fortress\Minceta::belongs_to('llms.txt', 'wp-staging') && !Fortress\Minceta::belongs_to('wp-content/plugins/wp-staging-pro/a.php', 'wp-staging'), 'belongs_to: not another plugin, not the root, not a longer name');
     // Changed again, later, outside any window: a finding.
     Revelin::seal('wp-content/plugins/dcc-demo/injected-in-window.php');
-    file_put_contents(WP_CONTENT_DIR . '/wp-staging/sse/.htaccess', "RemoveHandler .php\n# edited by hand\n");
-    touch(WP_CONTENT_DIR . '/wp-staging/sse/.htaccess', time() - 7200);
+    file_put_contents(WP_CONTENT_DIR . '/wp-staging/meta/.htaccess', "RemoveHandler .php\n# edited by hand\n");
+    touch(WP_CONTENT_DIR . '/wp-staging/meta/.htaccess', time() - 7200);
     State::set('last_full_pass', 0);
     tick();
-    ok(isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-changed', 'wp-content/wp-staging/sse/.htaccess')]), 'a change two hours outside the window is a finding');
-    Revelin::seal('wp-content/wp-staging/sse/.htaccess');
+    ok(isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-changed', 'wp-content/wp-staging/meta/.htaccess')]), 'a change two hours outside the window is a finding');
+    Revelin::seal('wp-content/wp-staging/meta/.htaccess');
     // A File Missing finding from before is resolved when the update window explains the file.
     global $wpdb;
     $wpdb->query($wpdb->prepare('UPDATE ' . DCCR\Schema::journal() . ' SET created_at = %d WHERE target = %s', time() - 7200, 'wp-staging')); // the 4.18.0 window is two hours gone
-    unlink(WP_CONTENT_DIR . '/wp-staging/sse/web.config');
+    unlink(WP_CONTENT_DIR . '/wp-staging/meta/web.config');
     State::set('last_full_pass', 0);
     tick();
-    $fp_missing = Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/wp-staging/sse/web.config');
+    $fp_missing = Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/wp-staging/meta/web.config');
     eq('open', Alerts::state(Alerts::get($fp_missing)), 'gone outside a window: File Missing');
     simulate_update('wp-staging', '4.18.1');
-    file_put_contents(WP_CONTENT_DIR . '/wp-staging/sse/web.config', "<configuration><!-- 4.18.1 --></configuration>\n");
+    file_put_contents(WP_CONTENT_DIR . '/wp-staging/meta/web.config', "<configuration><!-- 4.18.1 --></configuration>\n");
     State::set('last_full_pass', 0);
     tick();
     eq('resolved', Alerts::state(Alerts::get($fp_missing)), 'the update wrote it back: the File Missing finding resolved');
-    ok(!isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/sse/web.config')]), 'and its return raised nothing');
+    ok(!isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/meta/web.config')]), 'and its return raised nothing');
 
     // Self-writers: llms.txt by AIOSEO.
     file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n");
@@ -2081,14 +2081,15 @@ suite('0.2.0 item 3: who changed it: files an update writes outside its folder a
     $fp_llms = Events::fingerprint(Fortress::MINCETA, 'file-changed', 'llms.txt');
     ok(!isset(Alerts::open(Fortress::MINCETA)[$fp_llms]), 'llms.txt regenerated: no finding');
     $sw = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'self-written', 'llms.txt'));
-    ok($sw !== null && $sw['severity'] === Events::INFO && str_contains($sw['title'], 'Regenerated By AIOSEO'), 'an info "llms.txt Regenerated By AIOSEO" instead');
+    ok($sw !== null && $sw['severity'] === Events::INFO && $sw['title'] === 'llms.txt Changed (Plain Text Only, As When AIOSEO Regenerates It)', '0.2.4: an info line that says what was seen, not who: ' . ($sw['title'] ?? ''));
+    ok(str_contains((string) Alerts::body($sw + ['what' => '']), '') && !isset(Alerts::unresolved()[Events::fingerprint(Fortress::MINCETA, 'self-written', 'llms.txt')]), '0.2.4: an info line is never in the unresolved list');
     file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n<?php system('id'); ?>\n");
     touch(ABSPATH . 'llms.txt', time() - 7200);
     State::set('last_full_pass', 0);
     tick();
     $a = Alerts::get($fp_llms);
     ok($a !== null && Alerts::state($a) === 'open' && $a['severity'] === Events::NEEDS_LOOK, 'llms.txt gaining PHP is a real finding');
-    ok(Fortress\Minceta::has_php(ABSPATH . 'llms.txt') && !Fortress\Minceta::has_php(WP_CONTENT_DIR . '/wp-staging/sse/index.html'), 'has_php');
+    ok(Fortress\Minceta::has_php(ABSPATH . 'llms.txt') && !Fortress\Minceta::has_php(WP_CONTENT_DIR . '/wp-staging/meta/index.html'), 'has_php');
     file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n");
     Revelin::seal('llms.txt');
 });
@@ -2107,7 +2108,7 @@ suite('0.2.0 item 4: wp ragusa findings and wp ragusa resolve', function () {
     $ids   = array_column($items, 'id');
     ok(in_array(substr($fp('one'), 0, 8), $ids, true) && in_array(substr($fp('two'), 0, 8), $ids, true), 'unresolved findings listed with eight-character ids');
     ok(!in_array(substr($fp('three'), 0, 8), $ids, true), 'a resolved finding is not listed by default');
-    eq(['id', 'fortress', 'severity', 'state', 'title', 'target', 'first_seen'], $GLOBALS['dccr_cli_items']['fields'], 'the columns');
+    eq(['id', 'fortress', 'severity', 'state', 'title', 'target', 'first_seen', 'journal'], $GLOBALS['dccr_cli_items']['fields'], 'the columns, with the journal row a finding reports');
     $row = array_values(array_filter($items, static fn($r) => $r['target'] === 'two'))[0];
     eq('Lovrijenac', $row['fortress'], 'fortress by name');
     eq(Events::BREACHED, $row['severity'], 'severity');
@@ -2228,13 +2229,17 @@ suite('0.2.0 item 6: PHP Is Patched: the web reading, the php.net feed, the thre
     // The hook: the probe event records with its source.
     DCCR\Plugin::boot();
     ok(count($GLOBALS['dccr_hooks'][Php_Patch::PROBE_HOOK] ?? []) >= 1, 'the probe hook is registered');
-    // ensure_reading(): every tick while there is no reading, at most once per ten minutes.
-    $before = count($GLOBALS['dccr_http']);
-    eq([], Php_Patch::ensure_reading(), 'asked ten minutes ago: not asked again yet');
-    eq($before, count($GLOBALS['dccr_http']), 'no request');
-    State::set('php_probe', ['asked' => time() - 601, 'attempts' => 1, 'cron' => 'HTTP 200', 'login' => 'HTTP 200', 'event' => true]);
-    ok(Php_Patch::ensure_reading() !== [], 'after ten minutes it asks again');
+    // ensure_reading(): 0.2.4: with NO reading it asks every tick; a stale reading waits ten minutes between asks.
+    ok(Php_Patch::ensure_reading() !== [], '0.2.4: no reading at all: asked again at once, not after ten minutes');
     eq(2, (int) Php_Patch::probe_state()['attempts'], 'counting the attempts');
+    update_option(Php_Patch::READING_OPTION, ['version' => '8.3.30', 'sapi' => 'litespeed', 'source' => 'login', 'ts' => time() - 13 * 3600], 'no');
+    $before = count($GLOBALS['dccr_http']);
+    eq([], Php_Patch::ensure_reading(), 'a stale reading, asked a moment ago: not asked again yet');
+    eq($before, count($GLOBALS['dccr_http']), 'no request');
+    State::set('php_probe', ['asked' => time() - 601, 'attempts' => 2, 'cron' => 'HTTP 200', 'login' => 'HTTP 200', 'event' => true]);
+    ok(Php_Patch::ensure_reading() !== [], 'after ten minutes it asks again');
+    eq(3, (int) Php_Patch::probe_state()['attempts'], 'counting the attempts');
+    delete_option(Php_Patch::READING_OPTION);
     // The web server answers (simulated): the reading is saved.
     Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
     $cb = $GLOBALS['dccr_hooks'][Php_Patch::PROBE_HOOK][0][0];
@@ -2557,7 +2562,7 @@ suite('0.2.3 item 1: no false "Failed Its Checks" from one fatal line, a half-co
     file_put_contents($log, $stamp($done + 2) . " PHP Fatal error:  Uncaught Error: Failed opening required '" . $missing . "' (include_path='.') in " . WP_PLUGIN_DIR . "/wporg-plugin/vendor/woocommerce/action-scheduler/action-scheduler.php:52\n", FILE_APPEND);
     Sveti_Ivan::scheduled_check($id);
     eq(Journal::COMMITTED, Journal::get($id)['state'], '(c) the file it could not open is present now: not counted');
-    ok(str_contains((string) (Journal::get($id)['verify']['last']['error_log']['detail'] ?? ''), 'missing for a moment and is present now'), '(c) and says so');
+    ok(str_contains((string) (Journal::get($id)['verify']['last']['error_log']['detail'] ?? ''), '1 for a file missing for a moment and present now'), '(c) and says so: ' . (Journal::get($id)['verify']['last']['error_log']['detail'] ?? ''));
     // The control: the file is really gone. That counts.
     file_put_contents($log, '');
     $id = simulate_update('wporg-plugin', '2.0.1');
@@ -2645,6 +2650,253 @@ suite('0.2.3 item 3: a stale PHP reading is asked again, judged from nothing, an
     eq([], array_filter(Alerts::open(Fortress::LOVRIJENAC), static fn($a) => str_starts_with($a['kind'], 'php-')), 'no PHP finding at any point');
     Site::$cron_off_override = null;
     $GLOBALS['dccr_http_handler'] = null;
+});
+
+
+suite('0.2.4 item 1: update-check events never pile up, with WP-Cron on or off', function () {
+    $events_for = static fn(int $id) => array_values(array_filter($GLOBALS['dccr_cron'], static fn($e) => $e['hook'] === DCCR\Plugin::CHECK_HOOK && ($e['args'][0] ?? 0) === $id));
+    $all_checks = static fn() => array_values(array_filter($GLOBALS['dccr_cron'], static fn($e) => $e['hook'] === DCCR\Plugin::CHECK_HOOK));
+    tick();
+    // WP-Cron on (live): an event is scheduled, and removed when the tick runs the check itself.
+    Site::$cron_off_override = false;
+    $id = simulate_update('wporg-plugin', '3.0.0');
+    eq(1, count($events_for($id)), 'cron on: one event for the row');
+    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['next_at' => time() - 120]]);
+    Sveti_Ivan::due();
+    ok(in_array(Journal::get($id)['state'], Journal::TERMINAL, true), 'the tick ran the check');
+    eq([], $events_for($id), 'and its event is gone');
+    // A leftover event for a finished row (as on staging) is swept by the next tick.
+    wp_schedule_single_event(time() - 3600, DCCR\Plugin::CHECK_HOOK, [$id]);
+    $lines = Sveti_Ivan::due();
+    eq([], $events_for($id), 'a leftover event for a finished row is removed');
+    ok(count(array_filter($lines, static fn($l) => str_contains($l, 'Removed 1 update-check event nobody will run'))) === 1, 'and the tick says so');
+    // WP-Cron off (staging): no event at all; the tick runs the check from next_at; every leftover goes.
+    Site::$cron_off_override = true;
+    foreach ([101, 102, 103] as $stale_id) {
+        wp_schedule_single_event(time() - 7200, DCCR\Plugin::CHECK_HOOK, [$stale_id]);
+    }
+    $id = simulate_update('wporg-plugin', '3.0.1');
+    eq([], $events_for($id), 'cron off: no event is scheduled');
+    ok((int) Journal::get($id)['verify']['next_at'] > 0, 'but the row knows when its check is due');
+    Sveti_Ivan::due();
+    eq([], $all_checks(), 'cron off: every update-check event is removed, the 13 on staging included');
+    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['next_at' => time() - 120]]);
+    Sveti_Ivan::due();
+    ok(in_array(Journal::get($id)['state'], Journal::TERMINAL, true), 'and the tick still runs the check');
+    eq([], $all_checks(), 'with nothing left behind');
+    Site::$cron_off_override = null;
+});
+
+suite('0.2.4 item 2: WP Staging\'s own sse files come and go without findings; anything else there is a finding', function () {
+    $dir = WP_CONTENT_DIR . '/wp-staging/sse';
+    @mkdir($dir, 0755, true);
+    $index = "<?php\n/**\n * WPSTAGING automatically places this index file on all folders it creates to prevent\n * directory listing on servers that might have directory listing enabled.\n */\n";
+    $files = [
+        'index.php'  => $index,
+        'index.html' => '',
+        '.htaccess'  => "# BEGIN WP STAGING\nOptions -Indexes\n<IfModule mod_php.c>\nphp_flag engine off\n</IfModule>\nRemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phps\n# END WP STAGING\n",
+        'web.config' => "<?xml version=\"1.0\"?>\n<configuration><system.webServer><directoryBrowse enabled=\"false\"/></system.webServer></configuration>\n",
+        'a1b2c3.sse.cache.php' => "<?php exit(); ?>\n" . '{"events":[{"type":"task","message":"Cloning"}]}',
+    ];
+    foreach ($files as $n => $c) {
+        file_put_contents("$dir/$n", $c);
+    }
+    State::set('last_full_pass', 0);
+    tick();
+    $missing = static fn() => array_filter(Alerts::open(Fortress::MINCETA), static fn($a) => in_array($a['kind'], ['file-missing', 'file-new', 'file-changed'], true) && str_starts_with((string) $a['target'], 'wp-content/wp-staging/sse/'));
+    eq([], $missing(), 'WP Staging\'s own files appearing raise nothing');
+    foreach ($files as $n => $c) {
+        ok(Fortress\Minceta::wpstg_own('wp-content/wp-staging/sse/' . $n, "$dir/$n"), "$n is recognised by its content");
+    }
+    // WP Staging's daily cleanup: every file older than an hour, protection files included.
+    foreach (array_keys($files) as $n) {
+        unlink("$dir/$n");
+    }
+    State::set('last_full_pass', 0);
+    tick();
+    eq([], $missing(), 'the daily cleanup emptying the folder raises no File Missing');
+    $hk = events_of('wpstg-housekeeping');
+    ok(count($hk) >= 1 && str_contains($hk[0]['message'], 'it empties that folder once a day'), 'one info line says what happened');
+    // Not WP Staging's: findings, as anywhere.
+    file_put_contents("$dir/evil.php", "<?php system(\$_GET['c']);\n");
+    file_put_contents("$dir/x9.sse.cache.php", "<?php exit(); ?>\n{}<?php system('id'); ?>");
+    file_put_contents("$dir/index.php", "<?php\n// looks like a stub\n@eval(\$_POST['x']);\n");
+    State::set('last_full_pass', 0);
+    tick();
+    $open = $missing();
+    ok(isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/sse/evil.php')]), 'a planted evil.php there is a finding');
+    ok(isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/sse/x9.sse.cache.php')]), 'a cache-named file carrying code is a finding');
+    ok(isset($open[Events::fingerprint(Fortress::MINCETA, 'file-new', 'wp-content/wp-staging/sse/index.php')]), 'an index.php that runs code is a finding');
+    ok(!Fortress\Minceta::wpstg_own('wp-content/wp-staging/sse/sub/index.php', "$dir/sub/index.php"), 'only the folder itself, not below it');
+    ok(!Fortress\Minceta::wpstg_own('wp-content/wp-staging/other/index.php', WP_CONTENT_DIR . '/wp-staging/other/index.php'), 'and not WP Staging\'s other folders');
+    foreach (['evil.php', 'x9.sse.cache.php', 'index.php'] as $n) {
+        unlink("$dir/$n");
+    }
+    foreach (['evil.php', 'x9.sse.cache.php', 'index.php'] as $n) {
+        Revelin::seal('wp-content/wp-staging/sse/' . $n);
+    }
+});
+
+suite('0.2.4 item 3: a hand resolve leaves a signed note on the finding\'s journal row; wp ragusa note adds one to any row', function () {
+    $id = Journal::create('update-check', 'all-in-one-seo-pack', ['slug' => 'all-in-one-seo-pack', 'kind' => 'update', 'new_version' => '5.0.4'], 'update from auto', false);
+    Journal::set_state($id, Journal::FAILED, ['note' => 'failed twice; no rollback possible']);
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::BREACHED, 'kind' => 'update-failed', 'target' => 'all-in-one-seo-pack', 'title' => 'Update Failed Its Checks', 'what' => 'w', 'did' => 'd', 'todo' => 't', 'journal_id' => $id]);
+    $fp = Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', 'all-in-one-seo-pack');
+    dccr_cli_reset();
+    $GLOBALS['dccr_display_name'] = '';
+    (new Cli())->resolve([substr($fp, 0, 8)], ['note' => 'false alarm, see 0.2.3']);
+    $note = Journal::get($id)['note'];
+    ok(str_starts_with($note, 'failed twice; no rollback possible | finding resolved by hand by ') && str_contains($note, '(shell), ') && str_ends_with($note, ': false alarm, see 0.2.3'), 'the row keeps its history and gains the signed note: ' . $note);
+    eq(Journal::FAILED, Journal::get($id)['state'], 'the state is history: unchanged');
+    ok(str_contains(events_of('resolved-by-hand')[0]['message'], 'false alarm, see 0.2.3'), 'Recent Events carries the why');
+    dccr_cli_reset();
+    (new Cli())->note([(string) $id, 'second look Oct 27: AIOSEO fine']);
+    ok(str_contains(Journal::get($id)['note'], ' | note by ') && str_ends_with(Journal::get($id)['note'], ': second look Oct 27: AIOSEO fine'), 'wp ragusa note adds a signed line');
+    $GLOBALS['dccr_display_name'] = 'Rob';
+    $threw = false;
+    try {
+        (new Cli())->note(['999999', 'x']);
+    } catch (WP_CLI_Error $e) {
+        $threw = true;
+    }
+    ok($threw, 'a row that does not exist is refused');
+});
+
+suite('0.2.4 item 4: no reading means ask now; a reading that lands is seen and judged at once', function () {
+    $feed = '{"8":{"8.3":{"tags":["security"],"date":"21 Oct 2026","version":"8.3.36"}}}';
+    State::set('php_feed', ['ts' => time(), 'error' => '', 'branches' => Php_Patch::parse($feed)]);
+    State::set('php_check_ts', time()); // the once-a-day check has already run today
+    Site::$cron_off_override = true;
+    // A stubbed old PHP, judged: Breached.
+    Php_Patch::$reading_override = ['version' => '8.3.30', 'sapi' => 'litespeed'];
+    tick();
+    $fp = Events::fingerprint(Fortress::LOVRIJENAC, 'php-security', '8.3.30');
+    eq('open', Alerts::state(Alerts::get($fp) ?? ['tag' => 'x']), 'the stub is breached');
+    // The stub is removed; the web server answers the login probe within the same tick.
+    Php_Patch::$reading_override = null;
+    delete_option(Php_Patch::READING_OPTION);
+    State::set('php_probe', ['asked' => time() - 30, 'attempts' => 1]); // asked a moment ago
+    $GLOBALS['dccr_http_handler'] = static function (string $url, array $args) {
+        if (str_contains($url, 'ragusa_php=1')) {
+            Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+            Php_Patch::record_if_stale('login');
+            Php_Patch::$reading_override = null;
+        }
+        return str_contains($url, 'wp-login.php') ? dccr_http_ok('<form><input type="password"></form>') : Test_Site::site_page($url);
+    };
+    $r = tick();
+    ok(count(array_filter($r, static fn($l) => str_contains($l, 'it answered at once: 8.3.36, via the wp-login.php probe'))) === 1, 'no reading: asked at once (not after ten minutes), and the tick says the answer landed: ' . implode(' | ', array_filter($r, static fn($l) => str_contains($l, 'PHP reading'))));
+    eq('resolved', Alerts::state(Alerts::get($fp)), 'judged in the same tick: the security finding resolves');
+    eq(Fortress::HOLDING, Alerts::worst(Fortress::LOVRIJENAC), 'and Lovrijenac holds, without waiting for tomorrow\'s daily check');
+    ok(str_contains(Fortress::status(Fortress::LOVRIJENAC)['line'], 'PHP 8.3.36 Current'), 'the row agrees');
+    // The explicit probe always answers when Ragusa asked within five minutes, even over a fresh reading.
+    update_option(Php_Patch::READING_OPTION, ['version' => '8.3.30', 'sapi' => 'litespeed', 'source' => 'tick', 'ts' => time() - 60], 'no');
+    State::set('php_probe', ['asked' => time() - 10, 'attempts' => 1]);
+    Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+    Php_Patch::record_if_stale('login');
+    eq('8.3.36', Php_Patch::reading()['version'], 'asked a moment ago: the login probe records over a fresh reading');
+    // Nobody asked: a stranger hitting wp-login.php?ragusa_php=1 cannot rewrite a fresh reading.
+    update_option(Php_Patch::READING_OPTION, ['version' => '8.3.36', 'sapi' => 'litespeed', 'source' => 'tick', 'ts' => time() - 60], 'no');
+    State::set('php_probe', ['asked' => time() - 3600, 'attempts' => 1]);
+    Php_Patch::$reading_override = ['version' => '7.0.0', 'sapi' => 'litespeed'];
+    Php_Patch::record_if_stale('login');
+    eq('8.3.36', Php_Patch::reading()['version'], 'not asked: the fresh reading stands');
+    Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+    Php_Patch::record_here();
+    $GLOBALS['dccr_http_handler'] = null;
+    Site::$cron_off_override = null;
+});
+
+suite('0.2.4 item 5: one finding per settings-file change, breached only when PHP would run extra code; "Acted" only when Ragusa acted', function () {
+    $ini = ABSPATH . '.user.ini';
+    file_put_contents($ini, "upload_max_filesize = 64M\n");
+    State::set('last_full_pass', 0);
+    tick();
+    foreach (array_keys(Alerts::open()) as $fp) {
+        Alerts::resolve($fp, true);
+    }
+    $count = static fn() => count(array_filter(Alerts::open(), static fn($a) => str_contains((string) $a['target'], '.user.ini') || str_contains((string) $a['title'], '.user.ini')));
+    // A harmless edit: one finding, Lovrijenac's, needs a look; a full pass adds nothing.
+    file_put_contents($ini, "upload_max_filesize = 64M\nsession.upload_progress.enabled = 0 ; added by webhost (mitigation)\n");
+    State::set('last_full_pass', 0);
+    tick();
+    eq(1, $count(), 'one edit, one finding, even after a full pass of the walk');
+    $a = array_values(array_filter(Alerts::open(), static fn($a) => str_contains((string) $a['title'], '.user.ini')))[0];
+    eq(Fortress::LOVRIJENAC, $a['fortress'], 'owned by Lovrijenac (it carries the diff)');
+    eq(Events::NEEDS_LOOK, $a['severity'], 'a harmless edit needs a look, not a breach');
+    ok(str_starts_with(Fortress::overall(), 'Something Needs A Look'), 'and the headline says so');
+    ok(Fortress\Minceta::skip('.user.ini', false) && Fortress\Minceta::skip('wp-config.php', false) && Fortress\Minceta::skip('wp-content/db.php', false), 'the walk leaves the per-tick files to their owners');
+    // An edit that makes PHP run another file: breached, and the headline does not claim Ragusa acted.
+    file_put_contents($ini, "upload_max_filesize = 64M\nauto_prepend_file = /home/x/.cache/l.php\n");
+    tick();
+    $b = array_values(array_filter(Alerts::open(), static fn($a) => str_contains((string) $a['title'], 'Runs Extra Code')));
+    ok(count($b) === 1 && $b[0]['severity'] === Events::BREACHED, 'auto_prepend_file is breached: ' . ($b[0]['title'] ?? ''));
+    ok(str_starts_with(Fortress::overall(), 'A Wall Was Breached · Ragusa Needs You'), 'the headline does not say Ragusa acted: ' . Fortress::overall());
+    $r = Report::build();
+    ok(str_contains($r['body'], 'is a breach Ragusa did not act on') && !str_contains($r['body'], 'acted on; it needs you'), 'nor does the report');
+    // A real action (a quarantine): now "Acted".
+    $shell = WP_CONTENT_DIR . '/uploads/2026/10/acted.php';
+    @mkdir(dirname($shell), 0755, true);
+    file_put_contents($shell, "<?php system(\$_GET['c']);\n");
+    touch(dirname($shell));
+    tick(0.0001);
+    ok(str_starts_with(Fortress::overall(), 'A Wall Was Breached · Ragusa Acted And Needs You'), 'with a quarantine open, it acted: ' . Fortress::overall());
+    ok(str_contains(Report::build()['body'], 'is a breach Ragusa acted on'), 'and the report counts it as acted');
+    unlink($ini);
+    tick();
+    foreach (array_keys(Alerts::open()) as $fp) {
+        Alerts::resolve($fp, true);
+    }
+});
+
+suite('0.2.4 item 7: restore takes the id the finding shows, and the finding names its journal row', function () {
+    tick();
+    $shell = WP_CONTENT_DIR . '/uploads/2026/10/restore-me.php';
+    @mkdir(dirname($shell), 0755, true);
+    file_put_contents($shell, "<?php echo 'mine';\n");
+    touch(dirname($shell));
+    tick(0.0001);
+    ok(!is_file($shell), 'quarantined');
+    $fp = Events::fingerprint(Fortress::MINCETA, 'quarantined', 'wp-content/uploads/2026/10/restore-me.php');
+    $a  = Alerts::get($fp);
+    $jid = (int) ($a['data']['journal_id'] ?? 0);
+    ok($jid > 0 && !empty($a['data']['acted']), 'the finding carries its journal row and that Ragusa acted');
+    dccr_cli_reset();
+    (new Cli())->findings();
+    $row = array_values(array_filter($GLOBALS['dccr_cli_items']['items'], static fn($r) => $r['id'] === substr($fp, 0, 8)))[0] ?? [];
+    eq($jid, $row['journal'] ?? null, 'wp ragusa findings prints the journal row next to the finding\'s id');
+    dccr_cli_reset();
+    (new Cli())->restore([substr($fp, 0, 8)]);
+    ok(is_file($shell), 'wp ragusa restore <the finding\'s id> undoes the quarantine');
+    ok(str_contains(dccr_cli_text(), 'Success') || $GLOBALS['dccr_cli'][0][0] === 'success', 'and says so');
+    eq(Journal::REVERSED, Journal::get($jid)['state'], 'the journal row is reversed');
+    unlink($shell);
+    // A finding that reports no action has nothing to undo.
+    Alerts::raise(['fortress' => Fortress::LOVRIJENAC, 'severity' => Events::NEEDS_LOOK, 'kind' => 'restore-test', 'target' => 'x', 'title' => 'Nothing Done', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    $threw = '';
+    try {
+        (new Cli())->restore([substr(Events::fingerprint(Fortress::LOVRIJENAC, 'restore-test', 'x'), 0, 8)]);
+    } catch (WP_CLI_Error $e) {
+        $threw = $e->getMessage();
+    }
+    ok(str_contains($threw, 'reports no action of Ragusa\'s'), 'a finding without an action is refused, plainly: ' . $threw);
+    Alerts::withdraw(Fortress::LOVRIJENAC, ['restore-test']);
+    Revelin::seal('wp-content/uploads/2026/10/restore-me.php');
+});
+
+suite('0.2.4 item 8: the not-counted summary names each reason', function () {
+    tick();
+    $log = Site::abspath() . '/error_log';
+    file_put_contents($log, '');
+    $stamp = static fn(int $ts) => '[' . gmdate('d-M-Y H:i:s', $ts) . ' UTC]';
+    $done  = time();
+    $file  = WP_PLUGIN_DIR . '/wporg-plugin/wporg-plugin.php';
+    $snap  = Error_Log::snapshot();
+    file_put_contents($log, $stamp($done - 4) . ' PHP Fatal error: Uncaught Error: copy in ' . WP_PLUGIN_DIR . "/wporg-plugin/x.php:1\n", FILE_APPEND);
+    file_put_contents($log, $stamp($done + 1) . " PHP Fatal error: Uncaught Error: Failed opening required '" . $file . "' (include_path='.') in " . WP_PLUGIN_DIR . "/wporg-plugin/y.php:1\n", FILE_APPEND);
+    $r = Sveti_Ivan::run_checks(['slug' => 'wporg-plugin', 'errlog' => $snap, 'installed_at' => $done], true);
+    eq('no new fatal; 2 not counted (1 written while the plugin was still being copied; 1 for a file missing for a moment and present now)', $r['checks']['error_log']['detail'], 'both reasons, each counted');
+    unlink($log);
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

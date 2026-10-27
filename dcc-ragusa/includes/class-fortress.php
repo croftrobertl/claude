@@ -186,7 +186,9 @@ final class Fortress
             /* translators: %s: relative time */
             : sprintf(__('Last Tick %s', 'dcc-ragusa'), Site::both($tick));
         return match ($worst) {
-            self::BREACHED   => __('A Wall Was Breached · Ragusa Acted And Needs You', 'dcc-ragusa') . ' · ' . $when,
+            self::BREACHED   => (Alerts::acted() !== []
+                ? __('A Wall Was Breached · Ragusa Acted And Needs You', 'dcc-ragusa')
+                : __('A Wall Was Breached · Ragusa Needs You', 'dcc-ragusa')) . ' · ' . $when,
             self::NEEDS_LOOK => __('Something Needs A Look', 'dcc-ragusa') . ' · ' . $when,
             default          => __('The Walls Are Holding', 'dcc-ragusa') . ' · ' . $when,
         };

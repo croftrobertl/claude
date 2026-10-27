@@ -76,9 +76,14 @@ final class Report
         } else {
             /* translators: 1: open now, 2: opened this week, 3: closed this week */
             $para[] = sprintf(__('%1$d open now (%2$d opened this week, %3$d closed).', 'dcc-ragusa'), $n_open, $o_total, $c_total);
-            if ($breach > 0) {
+            $acted = count(Alerts::acted());
+            if ($acted > 0) {
                 /* translators: %d: count */
-                $para[] = sprintf(_n('%d of them is a breach Ragusa acted on; it needs you.', '%d of them are breaches Ragusa acted on; they need you.', $breach, 'dcc-ragusa'), $breach);
+                $para[] = sprintf(_n('%d of them is a breach Ragusa acted on; it needs you.', '%d of them are breaches Ragusa acted on; they need you.', $acted, 'dcc-ragusa'), $acted);
+            }
+            if ($breach - $acted > 0) {
+                /* translators: %d: count */
+                $para[] = sprintf(_n('%d of them is a breach Ragusa did not act on; it needs you.', '%d of them are breaches Ragusa did not act on; they need you.', $breach - $acted, 'dcc-ragusa'), $breach - $acted);
             }
             $para[] = __('Open DCC → Ragusa to read them; each names what to do.', 'dcc-ragusa');
         }

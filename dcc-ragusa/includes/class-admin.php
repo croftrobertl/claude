@@ -156,6 +156,16 @@ final class Admin
         if (ctype_digit($target)) {
             return Actions::reverse((int) $target);
         }
+        // The short id `wp ragusa findings` prints: undo the action the finding reports.
+        $found = Alerts::by_short_id($target);
+        if ($found !== null && Vault::entry($target) === null) {
+            $journal = (int) ($found[1]['data']['journal_id'] ?? 0);
+            if ($journal <= 0 || empty($found[1]['data']['acted'])) {
+                /* translators: %s: title */
+                return [false, sprintf(__('The finding "%s" reports no action of Ragusa\'s, so there is nothing to undo.', 'dcc-ragusa'), (string) $found[1]['title'])];
+            }
+            return Actions::reverse($journal);
+        }
         $entry = Vault::entry($target);
         if ($entry === null) {
             return [false, __('No such journal entry or sealed copy.', 'dcc-ragusa')];

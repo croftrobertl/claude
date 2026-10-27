@@ -183,7 +183,7 @@ final class Cli
     }
 
     /**
-     * Undoes a journal entry, or puts a sealed copy back.
+     * Undoes a journal entry (by its number, or by the id of the finding that reports it), or puts a sealed copy back.
      *
      * ## OPTIONS
      *
@@ -320,7 +320,7 @@ final class Cli
             \WP_CLI::log($all ? 'No findings at all.' : 'No unresolved findings.');
             return;
         }
-        \WP_CLI\Utils\format_items($format, $rows, ['id', 'fortress', 'severity', 'state', 'title', 'target', 'first_seen']);
+        \WP_CLI\Utils\format_items($format, $rows, ['id', 'fortress', 'severity', 'state', 'title', 'target', 'first_seen', 'journal']);
     }
 
     /** The short id is the first eight characters of the fingerprint. */
@@ -334,6 +334,7 @@ final class Cli
             'title'      => (string) ($a['title'] ?? ''),
             'target'     => (string) ($a['target'] ?? ''),
             'first_seen' => Site::stamp((int) ($a['first_seen'] ?? 0)),
+            'journal'    => (int) ($a['data']['journal_id'] ?? 0) > 0 ? (int) $a['data']['journal_id'] : '',
         ];
     }
 
@@ -348,10 +349,14 @@ final class Cli
      * [--seen]
      * : Mark it seen instead of resolved (it stays counted as unresolved).
      *
+     * [--note=<text>]
+     * : Why, kept on the finding's journal row and in Recent Events (e.g. "false alarm, see 0.2.3").
+     *
      * ## EXAMPLES
      *
      *     wp ragusa resolve 3f2a9c1e
      *     wp ragusa resolve 3f2a9c1e --seen
+     *     wp ragusa resolve 3f2a9c1e --note="false alarm, see 0.2.3"
      */
     public function resolve(array $args = [], array $assoc = []): void
     {
@@ -371,7 +376,7 @@ final class Cli
         if (Alerts::state($a) !== 'open') {
             \WP_CLI::error('That finding is already ' . Alerts::state($a) . '.');
         }
-        $ok = Alerts::resolve_by_hand($fp, self::operator(), isset($assoc['seen']));
+        $ok = Alerts::resolve_by_hand($fp, self::operator(), isset($assoc['seen']), (string) ($assoc['note'] ?? ''));
         State::flush();
         if (!$ok) {
             \WP_CLI::error('Could not change that finding.');
@@ -408,6 +413,33 @@ final class Cli
         }
         $owner = function_exists('get_current_user') ? get_current_user() : '';
         return $owner !== '' ? $owner : 'shell';
+    }
+
+    /**
+     * Adds a line to a journal row's note, signed and dated. History is only ever added to.
+     *
+     * ## OPTIONS
+     *
+     * <id>
+     * : The journal number.
+     *
+     * <text>
+     * : The note.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa note 57 "resolved by hand Oct 26: false alarm, see 0.2.3"
+     */
+    public function note(array $args = [], array $assoc = []): void
+    {
+        Schema::ensure();
+        $id   = (int) ($args[0] ?? 0);
+        $text = trim((string) ($args[1] ?? ''));
+        if ($id <= 0 || $text === '') {
+            \WP_CLI::error('Usage: wp ragusa note <journal id> "<text>"');
+        }
+        $ok = Journal::annotate($id, sprintf('note by %s, %s: %s', self::operator(), Site::stamp(time()), $text));
+        $ok ? \WP_CLI::success(sprintf('Journal %d noted.', $id)) : \WP_CLI::error(sprintf('No journal row %d.', $id));
     }
 
     /**

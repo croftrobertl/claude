@@ -167,7 +167,11 @@ final class Alerts
             'resolved_at' => 0,
             'seen_at'     => 0,
             'seen_by'     => '',
-            'data'        => is_array($f['data'] ?? null) ? array_merge((array) ($entry['data'] ?? []), $f['data']) : (array) ($entry['data'] ?? []),
+            'data'        => array_merge(
+                (array) ($entry['data'] ?? []),
+                is_array($f['data'] ?? null) ? $f['data'] : [],
+                array_filter(['journal_id' => (int) ($f['journal_id'] ?? 0), 'acted' => !empty($f['acted'])])
+            ),
         ];
         self::save();
         return $sent;
@@ -345,11 +349,41 @@ final class Alerts
         return array_filter($out, static fn($a) => ($a['fortress'] ?? '') === $fortress);
     }
 
-    /** What counts: open and seen findings, never practice, never resolved. */
+    /** What counts: open and seen findings, never practice, never resolved, never an info line (the digest's). */
     public static function unresolved(?string $fortress = null): array
     {
         $data = self::load();
-        return array_filter($data['active'], static fn($a) => ($fortress === null || ($a['fortress'] ?? '') === $fortress) && in_array(self::state($a), ['open', 'seen'], true));
+        return array_filter($data['active'], static fn($a) => ($fortress === null || ($a['fortress'] ?? '') === $fortress)
+            && ($a['severity'] ?? '') !== Events::INFO
+            && in_array(self::state($a), ['open', 'seen'], true));
+    }
+
+    /** Open breaches in which Ragusa took an action (a journal row it wrote and can undo). */
+    public static function acted(): array
+    {
+        return array_filter(self::open(), static fn($a) => ($a['severity'] ?? '') === Events::BREACHED && !empty($a['data']['acted']));
+    }
+
+    /**
+     * A finding by the short id `wp ragusa findings` prints (the start of its
+     * fingerprint), across the active list and the history.
+     *
+     * @return array{0:string,1:array}|null
+     */
+    public static function by_short_id(string $id): ?array
+    {
+        $id = strtolower(trim($id));
+        if (strlen($id) < 6 || !ctype_xdigit($id)) {
+            return null;
+        }
+        $data  = self::load();
+        $match = [];
+        foreach ($data['active'] + $data['resolved'] as $fp => $a) {
+            if (str_starts_with((string) $fp, $id)) {
+                $match[(string) $fp] = $a;
+            }
+        }
+        return count($match) === 1 ? [(string) array_key_first($match), reset($match)] : null;
     }
 
     /** The resolved history, 30 days. */
@@ -363,11 +397,22 @@ final class Alerts
      * Resolved or seen by hand (`wp ragusa resolve`), recorded with who.
      * Returns false when the finding is not open.
      */
-    public static function resolve_by_hand(string $fp, string $by, bool $as_seen = false): bool
+    public static function resolve_by_hand(string $fp, string $by, bool $as_seen = false, string $why = ''): bool
     {
         $a = self::get($fp);
         if ($a === null || self::state($a) !== 'open') {
             return false;
+        }
+        $journal = (int) ($a['data']['journal_id'] ?? 0);
+        if ($journal > 0) {
+            Journal::annotate($journal, sprintf(
+                /* translators: 1: seen or resolved, 2: name, 3: when, 4: why */
+                __('finding %1$s by hand by %2$s, %3$s%4$s', 'dcc-ragusa'),
+                $as_seen ? __('marked seen', 'dcc-ragusa') : __('resolved', 'dcc-ragusa'),
+                mb_substr(Text::scrub($by), 0, 60),
+                Site::stamp(time()),
+                $why !== '' ? ': ' . $why : ''
+            ));
         }
         if ($as_seen) {
             return self::mark_seen($fp, $by);
@@ -378,7 +423,7 @@ final class Alerts
             __('"%1$s" was resolved by hand by %2$s.', 'dcc-ragusa'),
             (string) $a['title'],
             mb_substr(Text::scrub($by), 0, 60)
-        ));
+        ) . ($why !== '' ? ' ' . Text::scrub($why) : ''), [], $journal > 0 ? $journal : null);
         return true;
     }
 

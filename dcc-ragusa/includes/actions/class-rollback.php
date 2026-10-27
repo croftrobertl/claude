@@ -176,6 +176,8 @@ final class Rollback extends Base
                 'fortress' => Fortress::SVETI_IVAN,
                 'severity' => Events::BREACHED,
                 'kind'     => 'update-rolled-back',
+                'journal_id' => $id,
+                'acted'    => true,
                 'target'   => $slug,
                 'title'    => __('Update Rolled Back', 'dcc-ragusa'),
                 /* translators: 1: slug, 2: new version, 3: what failed */
@@ -200,6 +202,8 @@ final class Rollback extends Base
             'fortress' => Fortress::SVETI_IVAN,
             'severity' => Events::BREACHED,
             'kind'     => 'update-failed',
+            'journal_id' => $id,
+            'acted'    => true,
             'target'   => $slug,
             'title'    => __('Site Check Failing, Not The Update', 'dcc-ragusa'),
             /* translators: %s: slug */

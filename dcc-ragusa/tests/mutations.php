@@ -280,8 +280,8 @@ $mutations = [
     [
         'name' => '0.2.0 2: resolved findings count as active',
         'file' => 'includes/class-alerts.php',
-        'from' => "        return array_filter(\$data['active'], static fn(\$a) => (\$fortress === null || (\$a['fortress'] ?? '') === \$fortress) && in_array(self::state(\$a), ['open', 'seen'], true));",
-        'to'   => "        return array_filter(\$data['active'] + \$data['resolved'], static fn(\$a) => (\$fortress === null || (\$a['fortress'] ?? '') === \$fortress) && in_array(self::state(\$a), ['open', 'seen', 'resolved'], true));",
+        'from' => "            && in_array(self::state(\$a), ['open', 'seen'], true));",
+        'to'   => "            && in_array(self::state(\$a), ['open', 'seen', 'resolved'], true)) + array_filter(\$data['resolved'], static fn(\$a) => \$fortress === null || (\$a['fortress'] ?? '') === \$fortress);",
     ],
     [
         'name' => '0.2.0 3: a file written in an update window is a finding (no attribution)',
@@ -358,7 +358,7 @@ $mutations = [
     [
         'name' => '0.2.1 1: the probe is asked once and never again',
         'file' => 'includes/class-php-patch.php',
-        'from' => "        if (time() - (int) (\$probe['asked'] ?? 0) < self::PROBE_EVERY) {",
+        'from' => "        if (\$r !== null && time() - (int) (\$probe['asked'] ?? 0) < self::PROBE_EVERY) {",
         'to'   => "        if (!empty(\$probe['asked'])) {",
     ],
     [
@@ -444,6 +444,96 @@ $mutations = [
         'file' => 'includes/class-php-patch.php',
         'from' => "        if (self::stale(\$r)) {\n            return; // a fresh reading is asked for",
         'to'   => "        if (false) {\n            return; // a fresh reading is asked for",
+    ],
+    [
+        'name' => '0.2.4 1: a check event is scheduled where WP-Cron is off',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (!Site::cron_off()) {\n            wp_schedule_single_event(\$at, Plugin::CHECK_HOOK, [\$id]);",
+        'to'   => "        if (true) {\n            wp_schedule_single_event(\$at, Plugin::CHECK_HOOK, [\$id]);",
+    ],
+    [
+        'name' => '0.2.4 1: running a check leaves its event behind',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        // Run now: its cron event, if any, has nothing left to do.\n        wp_clear_scheduled_hook(Plugin::CHECK_HOOK, [\$id]);",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.4 1: leftover events are never swept',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        \$swept = self::sweep_events();",
+        'to'   => "        \$swept = 0;",
+    ],
+    [
+        'name' => '0.2.4 2: anything in the sse folder passes as WP Staging\'s own',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            return str_starts_with(\$c, \$header) && !\$opens(substr(\$c, strlen(\$header)));\n        }\n        return false;",
+        'to'   => "            return str_starts_with(\$c, \$header) && !\$opens(substr(\$c, strlen(\$header)));\n        }\n        return true;",
+    ],
+    [
+        'name' => '0.2.4 2: an sse index.php that runs code passes',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            case 'index.php':\n                return self::comments_only_php(\$c);",
+        'to'   => "            case 'index.php':\n                return true;",
+    ],
+    [
+        'name' => '0.2.4 2: WP Staging\'s daily cleanup raises File Missing',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            if (self::wpstg_own(\$rel, Site::abspath() . '/' . \$rel)) {\n                \$p['wpstg_sse'] = (int) (\$p['wpstg_sse'] ?? 0) + 1;\n                continue; // WP Staging's daily cleanup",
+        'to'   => "            if (false) {\n                continue; // WP Staging's daily cleanup",
+    ],
+    [
+        'name' => '0.2.4 4: with no reading the probe waits ten minutes',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        if (\$r !== null && time() - (int) (\$probe['asked'] ?? 0) < self::PROBE_EVERY) {",
+        'to'   => "        if (time() - (int) (\$probe['asked'] ?? 0) < self::PROBE_EVERY) {",
+    ],
+    [
+        'name' => '0.2.4 4: a new reading waits for the daily check to be judged',
+        'file' => 'includes/fortresses/class-lovrijenac.php',
+        'from' => "        // Judged every tick from the reading and the cached list (no request): a new reading is judged at once.\n        \\DCCR\\Php_Patch::evaluate();",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.4 4: the probe Ragusa just asked for is answered with the stale rule',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "            if (time() - (int) (\$probe['asked'] ?? 0) <= 300) {",
+        'to'   => "            if (false) {",
+    ],
+    [
+        'name' => '0.2.4 5: the walk reports the per-tick files a second time',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (!\$is_dir && in_array(\$rel, self::OWNED_ELSEWHERE, true)) {",
+        'to'   => "        if (false) {",
+    ],
+    [
+        'name' => '0.2.4 5: Minčeta watches .user.ini too (two findings for one edit)',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            'index.php'                    => \$root . '/index.php',\n",
+        'to'   => "            'index.php'                    => \$root . '/index.php',\n            '.user.ini'                    => \$root . '/.user.ini',\n",
+    ],
+    [
+        'name' => '0.2.4 5: every settings-file edit is breached',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        \$severity = \$runs ? Events::BREACHED : Events::NEEDS_LOOK;",
+        'to'   => "        \$severity = Events::BREACHED;",
+    ],
+    [
+        'name' => '0.2.4 5: the headline says Ragusa acted when it did not',
+        'file' => 'includes/class-fortress.php',
+        'from' => "            self::BREACHED   => (Alerts::acted() !== []",
+        'to'   => "            self::BREACHED   => (true",
+    ],
+    [
+        'name' => '0.2.4 7: restore refuses the finding\'s id',
+        'file' => 'includes/class-admin.php',
+        'from' => "        \$found = Alerts::by_short_id(\$target);",
+        'to'   => "        \$found = null;",
+    ],
+    [
+        'name' => '0.2.4 7: an action finding does not carry its journal row',
+        'file' => 'includes/class-alerts.php',
+        'from' => "                array_filter(['journal_id' => (int) (\$f['journal_id'] ?? 0), 'acted' => !empty(\$f['acted'])])",
+        'to'   => "                []",
     ],
 ];
 

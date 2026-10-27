@@ -198,11 +198,42 @@ final class Sveti_Ivan
 
     // ---------------------------------------------------------- scheduling
 
+    /**
+     * When the check is due. The tick runs it from `next_at` (`due()`); a
+     * cron event is added only where WP-Cron runs, so a site with WP-Cron off
+     * collects no events nobody will consume.
+     */
     public static function schedule(int $id, int $delay): void
     {
         $at = time() + $delay;
-        wp_schedule_single_event($at, Plugin::CHECK_HOOK, [$id]);
+        wp_clear_scheduled_hook(Plugin::CHECK_HOOK, [$id]);
+        if (!Site::cron_off()) {
+            wp_schedule_single_event($at, Plugin::CHECK_HOOK, [$id]);
+        }
         Journal::set_state($id, Journal::VERIFYING, ['verify' => ['next_at' => $at]]);
+    }
+
+    /**
+     * Every tick: remove check events nobody needs. With WP-Cron off, all of
+     * them (the tick runs the checks); otherwise those whose row has finished.
+     */
+    public static function sweep_events(): int
+    {
+        if (!function_exists('_get_cron_array')) {
+            return 0;
+        }
+        $n = 0;
+        foreach ((array) _get_cron_array() as $ts => $hooks) {
+            foreach ((array) ($hooks[Plugin::CHECK_HOOK] ?? []) as $event) {
+                $args = (array) ($event['args'] ?? []);
+                $row  = Journal::get((int) ($args[0] ?? 0));
+                if (Site::cron_off() || $row === null || in_array($row['state'], Journal::TERMINAL, true)) {
+                    wp_unschedule_event((int) $ts, Plugin::CHECK_HOOK, $args);
+                    $n++;
+                }
+            }
+        }
+        return $n;
     }
 
     public static function scheduled_check(int $id): void
@@ -218,6 +249,11 @@ final class Sveti_Ivan
     public static function due(): array
     {
         $lines = [];
+        $swept = self::sweep_events();
+        if ($swept > 0) {
+            /* translators: %d: events */
+            $lines[] = sprintf(_n('Removed %d update-check event nobody will run.', 'Removed %d update-check events nobody will run.', $swept, 'dcc-ragusa'), $swept);
+        }
         self::settle();
         foreach (Journal::recent(30, Journal::VERIFYING) as $row) {
             if (!in_array($row['action'], ['update-check', 'core-check', 'self-update'], true)) {
@@ -355,7 +391,8 @@ final class Sveti_Ivan
             if ($slug === 'core' || Error_Log::in_plugin($line, $slug)) {
                 $why = self::transient_reason($line, $t, $installed, $slug);
                 if ($why !== null) {
-                    $transient[] = ['line' => $line, 'why' => $why];
+                    [$type, $text] = explode(':', $why, 2);
+                    $transient[]   = ['line' => $line, 'why' => $text, 'type' => $type];
                 } else {
                     $own[] = $line;
                 }
@@ -388,8 +425,19 @@ final class Sveti_Ivan
         if ($own !== []) {
             $checks['error_log'] = ['ok' => false, 'detail' => __('new fatal in this plugin: ', 'dcc-ragusa') . $own[0]];
         } elseif ($else === [] && $theirs === [] && $transient !== []) {
-            /* translators: 1: count, 2: reason */
-            $checks['error_log'] = ['ok' => true, 'detail' => sprintf(_n('no new fatal; %1$d not counted (%2$s)', 'no new fatal; %1$d not counted (%2$s)', count($transient), 'dcc-ragusa'), count($transient), (string) $transient[0]['why'])];
+            $copy    = count(array_filter($transient, static fn($t) => $t['type'] === 'copy'));
+            $present = count($transient) - $copy;
+            $parts   = [];
+            if ($copy > 0) {
+                /* translators: %d: count */
+                $parts[] = sprintf(_n('%d written while the plugin was still being copied', '%d written while the plugin was still being copied', $copy, 'dcc-ragusa'), $copy);
+            }
+            if ($present > 0) {
+                /* translators: %d: count */
+                $parts[] = sprintf(_n('%d for a file missing for a moment and present now', '%d for files missing for a moment and present now', $present, 'dcc-ragusa'), $present);
+            }
+            /* translators: 1: count, 2: the reasons */
+            $checks['error_log'] = ['ok' => true, 'detail' => sprintf(__('no new fatal; %1$d not counted (%2$s)', 'dcc-ragusa'), count($transient), implode('; ', $parts))];
         } elseif ($else === [] && $theirs !== []) {
             /* translators: 1: other slug, 2: journal id */
             $checks['error_log'] = ['ok' => null, 'detail' => sprintf(__('a new fatal in %1$s during its own update (journal %2$d): that update\'s, not this one\'s', 'dcc-ragusa'), (string) $theirs[0]['w']['slug'], (int) $theirs[0]['w']['id'])];
@@ -442,14 +490,14 @@ final class Sveti_Ivan
     {
         if ($installed_at > 0 && $t !== null && $t < $installed_at) {
             /* translators: 1: when the fatal was written, 2: when the install finished */
-            return sprintf(__('written at %1$s, while the plugin was still being copied; the install finished at %2$s', 'dcc-ragusa'), Site::stamp($t), Site::stamp($installed_at));
+            return 'copy:' . sprintf(__('written at %1$s, while the plugin was still being copied; the install finished at %2$s', 'dcc-ragusa'), Site::stamp($t), Site::stamp($installed_at));
         }
         $file = Error_Log::missing_file($line);
         if ($file !== null && $slug !== 'core' && Error_Log::in_plugin($file, $slug)) {
             clearstatcache(true, $file);
             if (is_file($file)) {
                 /* translators: %s: file */
-                return sprintf(__('%s was missing for a moment and is present now', 'dcc-ragusa'), basename($file));
+                return 'present:' . sprintf(__('%s was missing for a moment and is present now', 'dcc-ragusa'), basename($file));
             }
         }
         return null;
@@ -509,6 +557,8 @@ final class Sveti_Ivan
         $id      = (int) $row['id'];
         $before  = $row['before'];
         $slug    = (string) $row['target'];
+        // Run now: its cron event, if any, has nothing left to do.
+        wp_clear_scheduled_hook(Plugin::CHECK_HOOK, [$id]);
 
         // A check that finishes late, for a version no longer installed, is
         // no evidence about anything: the plugin has moved on.
@@ -569,6 +619,7 @@ final class Sveti_Ivan
                 'fortress' => Fortress::SVETI_IVAN,
                 'severity' => Events::NEEDS_LOOK,
                 'kind'     => 'update-unverified',
+                'journal_id' => $id,
                 'target'   => $slug,
                 'title'    => __('Could Not Verify An Update', 'dcc-ragusa'),
                 /* translators: %s: slug */
@@ -638,6 +689,7 @@ final class Sveti_Ivan
             'fortress' => Fortress::SVETI_IVAN,
             'severity' => Events::BREACHED,
             'kind'     => 'update-failed',
+            'journal_id' => $id,
             'target'   => $slug,
             'title'    => __('Update Failed Its Checks', 'dcc-ragusa'),
             /* translators: 1: slug, 2: detail */

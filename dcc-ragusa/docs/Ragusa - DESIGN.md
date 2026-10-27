@@ -1289,3 +1289,19 @@ row, never a failure. The status command and the page work out the headline
 and every row from the live findings when they print, and a row that names
 a failure says when it was settled. A PHP reading older than twelve hours is
 asked for again and judges nothing meanwhile.
+
+**0.2.4 (the Director's step-12 sitting on 0.2.3, 2026-10-27).** Eight
+repairs from one sitting. Update-check cron events piled up where cron is
+off; none is scheduled there now, and leftovers are swept. The emptied
+`wp-content/wp-staging/sse/` is WP Staging's own housekeeping: 4.18.0 deletes
+every file older than an hour in that folder once a day on any request,
+protection files included (`Core/WPStaging.php`, registerInitHook), and its
+re-protection pass covers only the uploads folder, so they stay gone. Minčeta
+now recognises WP Staging's own files there by content, and anything else
+there is still a finding. A hand resolve signs the journal row. The PHP
+reading is asked for every tick while there is none and judged every tick,
+so a patched host clears within a tick, not the next morning. One settings-
+file edit is one finding (Lovrijenac's), Breached only when PHP would run
+extra code, and "Ragusa Acted" is said only when a journal action exists.
+llms.txt says what was seen, not who. `restore` takes the id a finding shows.
+
