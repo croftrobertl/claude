@@ -264,3 +264,20 @@
   .bh-pop { max-height: calc(100% - 20px); bottom: 10px; }
   .bh-head { left: 12px; top: 12px; }
 }
+
+/* the host's own places (the trip's photos, videos and clips), switched on in Layers; shown close in */
+.bh-pins { display: none; }
+.bh-pins-on.bh-close .bh-pins { display: inline; }
+.bh-quick .bh-pins { opacity: 0; }
+.bh-pin { cursor: pointer; }
+.bh-pin-hit { fill: transparent; pointer-events: all; }
+.bh-pin-dot { fill: #0f6dbf; stroke: #fff; stroke-width: 1.8; vector-effect: non-scaling-stroke; pointer-events: none; }
+.bh-pin:hover .bh-pin-dot, .bh-pin.bh-sel .bh-pin-dot { fill: #0a4d8a; stroke: var(--bh-text); stroke-width: 2.4; }
+.bh-pin-key { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #0f6dbf; border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.3); vertical-align: -1px; margin-right: 6px; box-sizing: border-box; }
+.bh-pin-swatch { background: #0f6dbf; border-radius: 50%; }
+.bh-info-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.bh-info-act { font: inherit; font-size: 13px; font-weight: 600; min-height: 44px; padding: 4px 14px; cursor: pointer; border-radius: 999px;
+  border: 1px solid var(--bh-accent); background: var(--bh-tint); color: var(--bh-accent-deep); }
+.bh-info-act:hover { box-shadow: inset 0 0 0 1px var(--bh-accent); }
+.bh-info-act:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: 2px; }

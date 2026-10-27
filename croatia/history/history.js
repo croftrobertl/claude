@@ -2,7 +2,9 @@
    Vanilla JS, no dependencies. Usage:
      BalkansHistory.mount(el, { dataUrl: 'history/history-data.json' })   // or { data: obj }
    Options: start (era slug, e.g. '1453'), hash (true = read/write location.hash), onChange(frame, slug),
-   fix (d → d, corrections applied to the data before it is drawn). */
+   fix (d → d, corrections applied to the data before it is drawn),
+   pins ({ label, get() → [{ id, lat, lng }], card(id) → { name, note, acts: [[key, label]] }, act(id, key) }:
+   the host's own places, shown close in when the viewer switches them on in Layers). */
 (function () {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
@@ -51,7 +53,7 @@
     // the walled city itself (Stradun, 42.6413° N 18.1083° E) in map units; the data's ragusaPt sits
     // about 1 km west — invisible at overview size, but the deep zoom puts today's streets underneath
     const RAG = [(18.1083 - 12) * 100, (48.4 - 42.6413) * 132.7];
-    const RAG_SEL = '§ragusa';   // the selection key for Ragusa's own card
+    const RAG_SEL = '§ragusa', PIN_SEL = '§pin:';   // selection keys for Ragusa's own card and the host's places
     let cur = 0, playing = null, sel = null, scale = 1, tx = 0, ty = 0, libertasShown = null, pickTop = true;
 
     // ---------- markup ----------
@@ -88,6 +90,7 @@
     const ring = svg('circle', { cx: RAG[0], cy: RAG[1], r: 24, class: 'bh-ragusa-ring' }); map.appendChild(ring);
     const ragDot = svg('circle', { cx: RAG[0], cy: RAG[1], r: 10, class: 'bh-ragdot', fill: 'var(--bh-gold)', stroke: '#201f1d', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
     map.appendChild(ragDot);
+    const pinsG = svg('g', { class: 'bh-pins' }); map.appendChild(pinsG);
     const labels = el('div', 'bh-labels');
     stage.append(map, labels); vp.append(tilesEl, stage);
     // the controls on the map: zoom, one button that goes to Ragusa (or back out to the whole map
@@ -152,7 +155,8 @@
     toggles.innerHTML =
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-caps" checked><span>Capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-trails" checked><span>Earlier capitals</span></label>' +
-      '<label class="bh-toggle"><input type="checkbox" id="bh-t-borders" checked><span>Today\'s borders</span></label>';
+      '<label class="bh-toggle"><input type="checkbox" id="bh-t-borders" checked><span>Today\'s borders</span></label>' +
+      (opts.pins ? '<label class="bh-toggle bh-toggle-pins"><input type="checkbox" id="bh-t-pins"><span><i class="bh-pin-key" aria-hidden="true"></i>' + esc(opts.pins.label) + '</span></label>' : '');
     tl.append(track, transport, caption);
     main.append(plate, tl);
 
@@ -175,7 +179,8 @@
       '<span><i class="bh-key" style="background:repeating-linear-gradient(135deg,#d8bf55 0 4px,#3f9a78 4px 6px)"></i>vassal or occupied</span>' +
       '<span><i class="bh-key" style="background:#f2c230"></i>Ragusa</span>' +
       '<span><i class="bh-key" style="background:transparent;border:2px solid #d9a22b"></i>just changed hands</span>' +
-      '<span>- - today\'s borders</span><span>· · · earlier capitals</span>';
+      '<span>- - today\'s borders</span><span>· · · earlier capitals</span>' +
+      (opts.pins ? '<span><i class="bh-pin-key" aria-hidden="true"></i>' + esc(opts.pins.label.toLowerCase()) + '</span>' : '');
     const sources = el('div', 'bh-sources');
     sources.innerHTML = 'Borders: <a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">historical-basemaps</a> ' +
       'and <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>, hand-corrected by era. ' +
@@ -372,6 +377,22 @@
     }
     function renderInfo() {
       const f = F[cur];
+      pinsG.querySelectorAll('.bh-pin').forEach(g => g.classList.toggle('bh-sel', sel === PIN_SEL + g.dataset.pin));
+      if (pinsOn) sizePins();
+      if (sel && sel.indexOf(PIN_SEL) === 0) {
+        const id = sel.slice(PIN_SEL.length), pc = opts.pins && opts.pins.card(id);
+        if (!pc) { sel = null; }
+        else {
+          info.hidden = false;
+          info.classList.toggle('bh-at-bottom', pickTop);
+          life.innerHTML = '';
+          info.innerHTML = `<div class="bh-info-name"><i class="bh-swatch bh-pin-swatch"></i>${esc(pc.name)}</div>` +
+            `<div class="bh-info-note">${esc(pc.note)}</div>` +
+            (pc.acts && pc.acts.length ? '<div class="bh-info-acts">' + pc.acts.map(([k, l]) => `<button type="button" class="bh-info-act" data-pin-act="${esc(k)}">${esc(l)}</button>`).join('') + '</div>' : '') +
+            '<button type="button" class="bh-pick-x" aria-label="Close">×</button>';
+          return;
+        }
+      }
       if (sel === RAG_SEL) {
         const rc = ragusaCard();
         if (!rc) { sel = null; }
@@ -518,7 +539,11 @@
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp' && e.target === track) { stop(); show(cur + 1); e.preventDefault(); }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowDown' && e.target === track) { stop(); show(cur - 1); e.preventDefault(); }
     });
-    info.addEventListener('click', e => { if (e.target.closest('.bh-pick-x')) { sel = null; markSel(); renderInfo(); } });
+    info.addEventListener('click', e => {
+      if (e.target.closest('.bh-pick-x')) { sel = null; markSel(); renderInfo(); return; }
+      const a = e.target.closest('[data-pin-act]');
+      if (a && sel && sel.indexOf(PIN_SEL) === 0) opts.pins.act(sel.slice(PIN_SEL.length), a.dataset.pinAct);
+    });
     function markSel() {
       ragTerr.querySelectorAll('.bh-rt-rag').forEach(p => p.classList.toggle('bh-sel', sel === RAG_SEL));
       layers.lastChild && layers.lastChild.querySelectorAll('.bh-poly').forEach(p => {
@@ -537,7 +562,43 @@
       root.classList.toggle('bh-hide-caps', !toggles.querySelector('#bh-t-caps').checked);
       root.classList.toggle('bh-hide-trails', !toggles.querySelector('#bh-t-trails').checked);
       root.classList.toggle('bh-hide-borders', !toggles.querySelector('#bh-t-borders').checked);
+      const pt = toggles.querySelector('#bh-t-pins');
+      if (pt && pt.checked !== pinsOn) setPins(pt.checked, true);
     });
+
+    // ---------- the host's own places (here: where the trip's photos, videos and clips were taken) ----------
+    // Off unless switched on in Layers; the choice is remembered on this device. They show once the map is
+    // zoomed in close enough for today's streets, and switching them on from far out flies there.
+    let pinsOn = false, pinList = null;
+    const pinXY = (lat, lng) => [(lng - 12) * 100, (48.4 - lat) * 132.7];   // the map's projection (see tiles below)
+    function drawPins() {
+      pinsG.innerHTML = '';
+      if (!pinsOn) return;
+      if (!pinList) pinList = (opts.pins.get() || []).filter(q => q.lat > 38 && q.lat < 47 && q.lng > 12 && q.lng < 30);
+      pinList.forEach(q => {
+        const [x, y] = pinXY(q.lat, q.lng);
+        const g = svg('g', { class: 'bh-pin' + (sel === PIN_SEL + q.id ? ' bh-sel' : ''), 'data-pin': q.id });
+        g.appendChild(svg('circle', { cx: x, cy: y, class: 'bh-pin-hit' }));
+        g.appendChild(svg('circle', { cx: x, cy: y, class: 'bh-pin-dot' }));
+        pinsG.appendChild(g);
+      });
+      sizePins();
+    }
+    function sizePins() {
+      pinsG.querySelectorAll('.bh-pin-hit').forEach(c => c.setAttribute('r', (17 / scale).toFixed(6)));
+      pinsG.querySelectorAll('.bh-pin-dot').forEach(c => c.setAttribute('r', (c.parentNode.classList.contains('bh-sel') ? 9 : 7) / scale));
+    }
+    function setPins(on, fromToggle) {
+      pinsOn = !!on;
+      const pt = toggles.querySelector('#bh-t-pins'); if (pt) pt.checked = pinsOn;
+      root.classList.toggle('bh-pins-on', pinsOn);
+      if (!pinsOn && sel && sel.indexOf(PIN_SEL) === 0) { sel = null; renderInfo(); }
+      drawPins();
+      if (fromToggle) {
+        try { localStorage.setItem('bh-pins', pinsOn ? '1' : '0'); } catch (e) { /* storage blocked */ }
+        if (pinsOn && scale < TILE_MIN) { layersOpen(false); zoomTo(RAG[0], RAG[1], Math.min(40, maxScale())); }
+      }
+    }
 
     // ---------- pan / zoom / tap ----------
     // Zoom redraws the SVG through its viewBox, so shapes and lines stay sharp at any zoom (scaling a
@@ -558,6 +619,8 @@
       labels.style.width = (w * scale) + 'px'; labels.style.height = (h * scale) + 'px';
       labels.style.transform = `translate(${tx}px, ${ty}px)`;
       ring.setAttribute('r', (24 / scale).toFixed(6)); ragDot.setAttribute('r', (10 / scale).toFixed(6));
+      if (pinsOn) sizePins();
+      root.classList.toggle('bh-close', scale >= TILE_MIN);
       mainPatterns.forEach(([p, bar, size]) => sizePattern(p, bar, size));
       // un-zoomed, a vertical finger drag scrolls the page (touch-action: pan-y); zoomed, every drag pans the map
       vp.classList.toggle('bh-zoomed', scale > 1);
@@ -752,7 +815,9 @@
         const ft = k != null ? F[cur].feats[k] : null;
         // Ragusa's own land (close in) or its gold dot (further out) opens Ragusa's card
         const onRag = hit && hit.closest && hit.closest('.bh-rt-rag, .bh-ragdot, .bh-ragusa-ring') && ragusaCard();
-        sel = onRag ? (sel === RAG_SEL ? null : RAG_SEL) : ft && ft.n ? (sel === ft.n ? null : ft.n) : null;
+        const pin = hit && hit.closest && hit.closest('.bh-pin');
+        sel = pin ? (sel === PIN_SEL + pin.dataset.pin ? null : PIN_SEL + pin.dataset.pin)
+          : onRag ? (sel === RAG_SEL ? null : RAG_SEL) : ft && ft.n ? (sel === ft.n ? null : ft.n) : null;
         markSel();
         renderInfo();
       }
@@ -767,6 +832,7 @@
     setSat(sat);
     show(start, false);
     settled = cur;
+    if (opts.pins) { let on = false; try { on = localStorage.getItem('bh-pins') === '1'; } catch (e) { /* storage blocked */ } if (on) setPins(true); }
     let nudged = false; try { nudged = localStorage.getItem('bh-nudged') === '1'; } catch (e) { nudged = true; }
     if (!nudged && !reduced() && 'IntersectionObserver' in window) {
       const io = new IntersectionObserver(es => {

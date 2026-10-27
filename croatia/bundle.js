@@ -497,6 +497,7 @@
       histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
         dataUrl: resolveUrl('history/history-data.json'), data: thenData && thenData.view ? thenData : undefined,   // already loaded by the Map tab
         fix: histFix,   // the Zeljko Test corrections
+        pins: histPins,   // Layers › Your photos & videos
         hash: false, start: histWant || undefined,
         onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
@@ -1804,6 +1805,45 @@
     return placeGeoMap.get(name) || null;
   }
   // only spots on the Dubrovnik coast (not flights or the drive between two places)
+  // ---- the trip on the History map: Layers › "Your photos & videos" puts a dot on every place with
+  //      photos, videos or clips; tapping one says what was taken there and opens it (the History
+  //      tab's counterpart to the Map tab's "Old borders (Then)") ----
+  let histPinData = null;
+  function histPinPlaces() {
+    if (histPinData || !DATA) return histPinData || [];
+    const by = new Map();
+    DATA.days.forEach((d, di) => (d.places || []).forEach((p, pi) => {
+      if (p.lat == null || !(p.items || []).length) return;
+      let q = by.get(p.name);
+      if (!q) by.set(p.name, q = { id: String(by.size), name: p.name, lat: p.lat, lng: p.lng, days: [], items: [], k: { photo: 0, video: 0, clip: 0 } });
+      if (q.days.indexOf(di) < 0) q.days.push(di);
+      p.items.forEach(it => { q.items.push({ it, di, pi, p }); q.k[it.kind === 'video' || it.kind === 'clip' ? it.kind : 'photo']++; });
+    }));
+    return (histPinData = [...by.values()]);
+  }
+  const histPins = {
+    label: 'Your photos & videos',
+    get: () => histPinPlaces().map(q => ({ id: q.id, lat: q.lat, lng: q.lng })),
+    card: id => {
+      const q = histPinPlaces()[+id];
+      if (!q) return null;
+      const k = [q.k.photo && plur(q.k.photo, 'photo'), q.k.video && plur(q.k.video, 'video'), q.k.clip && plur(q.k.clip, 'clip')].filter(Boolean);
+      return { name: shortName(q.name), note: dayRanges(q.days) + ' · ' + k.join(', '),
+        acts: [['see', q.k.photo && !q.k.video && !q.k.clip ? 'See the photos ›' : 'See them ›']].concat(histPlaceOk(q.name) ? [['history', 'This place in history ›']] : []) };
+    },
+    act: (id, key) => {
+      const q = histPinPlaces()[+id];
+      if (!q) return;
+      if (key === 'see') {
+        viewerItems = q.items.map(x => { const m = viewerMeta(x.it, x.p.name); m.mapRef = { di: x.di, pi: x.pi, place: x.p.name, count: placeCount(x.p) }; return m; });
+        openViewer(0);
+      } else if (key === 'history') {
+        histPlace = q.name; renderHistPlace(); updateHash();
+        const sec = histEl && histEl.querySelector('.dcc-hist-place');
+        if (sec) sec.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+      }
+    }
+  };
   function histPlaceOk(name) {
     const g = name && !/^In-flight|\bto\b/.test(name) ? placeGeo(name) : null;
     return !!g && g.lat > 42.35 && g.lat < 43.1 && g.lng > 16.75 && g.lng < 18.65;
