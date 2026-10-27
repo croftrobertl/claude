@@ -899,6 +899,9 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-hist-trip-key i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; border: 2px solid #201f1d; box-sizing: border-box; }
 .dcc-hist-trip-list { display: grid; gap: 12px; }
 .dcc-hist-trip-g { display: grid; gap: 6px; justify-items: start; }
+.dcc-hist-trip-g > .dcc-hist-trip-v { padding: 1px 10px; border-radius: 999px; font-weight: 600; background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-text); }
+.dcc-hist-trip-g > .dcc-hist-trip-v.rag { background: #f2c230; color: #201f1d; }
+.dcc-hist-trip-g > .dcc-hist-trip-v.war { background: rgba(165, 40, 27, 0.12); color: #a5281b; }
 .dcc-hist-trip-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .dcc-hist-trip-chip { position: relative; display: inline-flex; align-items: baseline; gap: 6px; min-height: 34px; padding: 6px 12px; border-radius: 999px;
   color: var(--dcc-tour-text); text-decoration: none; background: var(--dcc-tour-bg, #fff); border: 1px solid var(--dcc-tour-border); line-height: 1.2; }
@@ -1040,12 +1043,13 @@ html.dcc-matrix-on .dcc-chron-tabs button[aria-selected="true"] { color: #000; }
   font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.3rem; }
 /* sources: folded, with the strength of the best one */
 .dcc-chron-srcs { font-size: 0.78rem; color: var(--dcc-tour-muted); }
-.dcc-chron-srcs summary { cursor: pointer; display: inline-flex; align-items: center; gap: 7px; min-height: 32px; list-style: none; }
+.dcc-chron-srcs summary { cursor: pointer; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; list-style: none; }
 .dcc-chron-srcs summary::-webkit-details-marker { display: none; }
 .dcc-chron-srcs summary::after { content: "▸"; font-size: 0.7rem; transition: transform .2s; }
 .dcc-chron-srcs[open] summary::after { transform: rotate(90deg); }
 .dcc-chron-src { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 2px 0 6px; line-height: 1.5; }
-.dcc-chron-src a { color: var(--dcc-tour-accent-deep); }
+.dcc-chron-src a { color: var(--dcc-tour-accent-deep); display: inline-flex; align-items: center; min-height: 44px; }
+.dcc-chron-src { row-gap: 0; }
 .dcc-ev { display: inline-flex; gap: 2px; }
 .dcc-ev i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--dcc-tour-accent-deep); }
 .dcc-ev-4 i, .dcc-ev-3 i:nth-child(-n+3), .dcc-ev-2 i:nth-child(-n+2), .dcc-ev-1 i:first-child { background: var(--dcc-tour-accent-deep); }
@@ -1184,13 +1188,14 @@ html.dcc-matrix-on .dcc-fam-form button { color: #000; }
   .dcc-hist-jump [data-jump="map"] { display: none; }   /* the map is right below */
   .dcc-hist-top .dcc-jl { display: none; }
   .dcc-hist-top .dcc-js { display: inline; }
-  .dcc-hist-film { gap: 7px; padding: 3px 12px 3px 3px; font-size: 0.8rem; }
+  .dcc-hist-film { gap: 7px; padding: 3px 12px 3px 3px; font-size: 0.8rem; min-height: 44px; }
+  .dcc-hist-film .dcc-pbtn { flex: none; }
   .dcc-hist-film .dcc-pbtn { width: 30px; height: 30px; }
   .dcc-hist-film .dcc-pbtn svg { width: 12px; height: 12px; }
   .dcc-otd { flex-wrap: nowrap; align-items: center; gap: 8px; padding: 6px 10px; min-height: 40px; border-left-width: 3px; }
   .dcc-otd-k { flex: none; font-size: 10px; }
   .dcc-otd-d { flex: none; font-size: 1rem; }
-  .dcc-otd-l { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.86rem; }
+  .dcc-otd-l { min-width: 0; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.86rem; line-height: 1.3; }
 }
 @media (max-width: 800px) { .dcc-chron-back { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-width: 560px) {
@@ -1513,11 +1518,21 @@ html.dcc-matrix-on .dcc-tour-root {
    ink drawn ON a map (labels + halos, today's borders, former-territory fill, the
    Ragusa inset labels) keeps the default palette instead of the translucent green */
 html.dcc-matrix-on .dcc-tour-history .bh-viewport,
+html.dcc-matrix-on .dcc-tour-history .bh-head,
+html.dcc-matrix-on .dcc-tour-history .bh-pick,
+html.dcc-matrix-on .dcc-tour-history .bh-pop,
+html.dcc-matrix-on .dcc-tour-history .bh-zoom,
 html.dcc-matrix-on .dcc-tour-history .bh-ragusa svg,
 html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
   --bh-text: #201f1d; --bh-card: #f8f4f4; --bh-bg: #f3f2f2;
   --bh-accent: #b68235; --bh-accent-deep: #7d5411;
+  --bh-muted: #6d6964; --bh-border: #d8d2c8; --bh-tint: rgba(182, 130, 53, 0.16);
 }
+/* what sits on the map keeps the map's light, solid look (the Matrix glass let labels show through) */
+html.dcc-matrix-on .dcc-tour-history .bh-head, html.dcc-matrix-on .dcc-tour-history .bh-pick, html.dcc-matrix-on .dcc-tour-history .bh-pop,
+html.dcc-matrix-on .dcc-tour-history .bh-zoom .bh-btn { background: #f8f4f4; color: #201f1d; border-color: #d8d2c8; }
+html.dcc-matrix-on .dcc-tour-history .bh-zoom .bh-btn.bh-on { background: #f1e3cc; color: #7d5411; border-color: #b68235; }
+html.dcc-matrix-on .dcc-tour-history .bh-pop a { color: #7d5411; }
 /* the hidden toggle taps the header: manipulation kills iOS double-tap-zoom so rapid taps count */
 .dcc-tour-header { touch-action: manipulation; }
 
@@ -1635,7 +1650,7 @@ html.dcc-matrix-on .dcc-tour-history .dcc-story svg {
 }
 
 /* a text action, styled like the chronicle's "See it on the map ›" */
-.dcc-hist-street { display: inline-block; margin: 8px 0 10px; padding: 4px 0; border: 0; background: none; cursor: pointer; font: inherit;
+.dcc-hist-street { display: inline-flex; align-items: center; min-height: 44px; margin: 2px 0 4px; padding: 4px 0; border: 0; background: none; cursor: pointer; font: inherit;
   font-family: var(--dcc-tour-font-head); font-size: 0.8rem; font-weight: 600; color: var(--dcc-tour-accent-deep); text-decoration: none; }
 .dcc-hist-street:hover { text-decoration: underline; }
 @media (max-height: 520px) {

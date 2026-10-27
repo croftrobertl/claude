@@ -392,9 +392,20 @@
     if (i > 0 && navViews[i - 1] === v && root.dataset.view !== v && !viewerIsOpen()) { history.back(); return; }
     setView(v);
   }
+  // Safari allows about 100 history updates per 10 s and throws past that; dragging through eras,
+  // scrolling the chronicle or stepping days can ask for many. Replacing the address is rate-
+  // limited (a trailing update catches the last state); a new step (push) always goes at once.
+  let hashLast = 0, hashT = 0;
   function updateHash() {
     if (!DATA) return;
     const v = root.dataset.view || 'story';
+    const pushing = !navBoot && !!(history.state && history.state.dccView && history.state.dccView !== v);
+    if (!pushing && !navBoot) {
+      const now = performance.now();
+      clearTimeout(hashT);
+      if (now - hashLast < 350) { hashT = setTimeout(updateHash, 360 - (now - hashLast)); return; }
+      hashLast = now;
+    }
     // switching tabs adds a browser-history entry, so Back returns to the tab (and day) you came
     // from; changes inside a tab (day, era, map overlay) just update the current one
     const st = history.state, push = !navBoot && !!(st && st.dccView && st.dccView !== v);
@@ -402,9 +413,11 @@
     navViews[i] = v; if (push) navViews.length = i + 1;   // a new step drops the old forward ones
     const state = { dccView: v, i };
     if (!push && st && st.dccViewer && viewerIsOpen()) state.dccViewer = true;   // a photo is still open on this step
-    history[push ? 'pushState' : 'replaceState'](state, '', v === 'story' ? '#d=' + (curDay + 1)
-      : '#v=' + v + (v === 'map' ? (thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : thenWant ? '&then=' + encodeURIComponent(histSlugOf(thenWant)) : '') : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
+    try {
+      history[push ? 'pushState' : 'replaceState'](state, '', v === 'story' ? '#d=' + (curDay + 1)
+        : '#v=' + v + (v === 'map' ? (thenOn && thenIdx >= 0 && thenData ? '&then=' + encodeURIComponent(histSlugOf(thenData.frames[thenIdx].label)) : thenWant ? '&then=' + encodeURIComponent(histSlugOf(thenWant)) : '') : '') + (v === 'history' ? (histSlug ? '&era=' + encodeURIComponent(histSlug) : '') + (chronStrand !== 'ragusa' ? '&ch=' + chronStrand : '') +
         (chronActive ? '&e=' + encodeURIComponent(chronActive) : '') + (histPlace ? '&pl=' + encodeURIComponent(histPlace) : '') : ''));
+    } catch (e) { /* rate-limited or sandboxed: the next update catches up */ }
   }
   function findDayByGuid(g) {
     for (let di = 0; di < DATA.days.length; di++)

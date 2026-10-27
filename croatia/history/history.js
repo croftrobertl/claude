@@ -8,7 +8,7 @@
   const ERAS = [['Greek', -500, -146, '#4d8fd6'], ['Roman', -146, 476, '#9b72c4'], ['Medieval', 476, 1453, '#5d8c3c'],
                 ['Ottoman', 1453, 1878, '#3f9a78'], ['Modern', 1878, 2026, '#d8bf55']];
   const T0 = -500, T1 = 2026;
-  const TICKS = [[-500, '500 BC'], [1, '1 AD'], [500, '500'], [1000, '1000'], [1500, '1500'], [1800, '1800'], [2026, 'Today']];
+  const TICKS = [[-500, '500 BC'], [1, '1 AD'], [500, '500'], [1000, '1000'], [1500, '1500'], [1800, '1800'], [1900, '1900'], [2026, 'Today']];
   const slug = l => String(l).toLowerCase().replace(/\s+/g, '');
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const svg = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); return e; };
@@ -50,16 +50,19 @@
     // the walled city itself (Stradun, 42.6413° N 18.1083° E) in map units; the data's ragusaPt sits
     // about 1 km west — invisible at overview size, but the deep zoom puts today's streets underneath
     const RAG = [(18.1083 - 12) * 100, (48.4 - 42.6413) * 132.7];
-    let cur = 0, playing = null, sel = null, scale = 1, tx = 0, ty = 0, libertasShown = null;
+    let cur = 0, playing = null, sel = null, scale = 1, tx = 0, ty = 0, libertasShown = null, pickTop = true;
 
     // ---------- markup ----------
     root.innerHTML = '';
     const layout = el('div', 'bh-layout');
     const main = el('div', 'bh-main');
+    // the era's year and name sit on the map as a badge (with how far the last step jumped), so the
+    // map can start near the top of the page; the era's description follows the timeline
     const head = el('header', 'bh-head');
-    head.innerHTML = '<div class="bh-kicker">History · The Balkans, 500 BC to today</div>' +
+    head.innerHTML = '<h2 class="bh-kicker">History · The Balkans, 500 BC to today</h2>' +
       '<div class="bh-yearline"><div class="bh-year" aria-live="polite"></div><div class="bh-title"></div></div>' +
-      '<p class="bh-caption"></p>';
+      '<div class="bh-gap" aria-hidden="true"></div>';
+    const caption = el('p', 'bh-caption');
     const plate = el('div', 'bh-plate');
     const vp = el('div', 'bh-viewport');
     vp.setAttribute('role', 'img');
@@ -70,6 +73,7 @@
     map.appendChild(svg('rect', { x: 0, y: 0, width: VW, height: VH, fill: 'var(--bh-sea)', class: 'bh-seafill' }));
     map.appendChild(svg('path', { d: D.land, fill: 'var(--bh-land)', class: 'bh-landfill' }));
     const layers = svg('g'); map.appendChild(layers);
+    const chgG = svg('g'); map.appendChild(chgG);   // the "just changed hands" outlines, drawn fresh each step
     // Ragusa's own territory, from the much finer coast-map shapes, placed on the main map through
     // the coast map's box; shown once zoomed in (CSS: .bh-tiles-on .bh-ragterr)
     const ibx = D.inset.box;
@@ -107,24 +111,35 @@
     // Layers: street map or satellite (for close up), what to draw, and the key to the colours
     const pop = el('div', 'bh-pop'); pop.id = 'bh-pop'; pop.hidden = true;
     pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'Map layers and key');
-    plate.append(vp, zoomUI, attrib, info, pop);
+    plate.append(vp, head, zoomUI, attrib, info, pop);
 
     const tl = el('div', 'bh-timeline');
     const track = el('div', 'bh-track');
-    const pct = t => ((t - T0) / (T1 - T0) * 100);
+    // Each era gets an equal slot rather than a width in years: 35 eras in 2,500 years crowd the last
+    // century into a few pixels otherwise. Ages are as wide as their eras; years are placed between.
+    const at = i => (i + 0.5) / N * 100;
+    const yearAt = t => {
+      if (t <= F[0].tpos) return at(0);
+      for (let i = 1; i < N; i++) if (F[i].tpos >= t) return at(i - 1) + (at(i) - at(i - 1)) * (t - F[i - 1].tpos) / ((F[i].tpos - F[i - 1].tpos) || 1);
+      return at(N - 1);
+    };
     ERAS.forEach(([name, a, b, c]) => {
-      const band = el('div', 'bh-era'); band.style.left = pct(a) + '%'; band.style.width = (pct(b) - pct(a)) + '%'; band.style.background = c;
+      const i0 = F.findIndex(f => f.tpos >= a), i1 = F.length - 1 - [...F].reverse().findIndex(f => f.tpos < b);
+      if (i0 < 0 || i1 < i0) return;
+      const l = i0 / N * 100, w = (i1 + 1 - i0) / N * 100;
+      const band = el('div', 'bh-era'); band.style.left = l + '%'; band.style.width = w + '%'; band.style.background = c;
       track.appendChild(band);
-      if (pct(b) - pct(a) > 9) { const nm = el('div', 'bh-era-name', name.toUpperCase()); nm.style.left = ((pct(a) + pct(b)) / 2) + '%'; nm.dataset.from = a; track.appendChild(nm); }
+      const nm = el('div', 'bh-era-name', name.toUpperCase()); nm.style.left = (l + w / 2) + '%'; nm.dataset.from = a; track.appendChild(nm);
     });
     track.appendChild(el('div', 'bh-axis'));
     const prog = el('div', 'bh-progress'); track.appendChild(prog);
-    const dots = F.map(f => { const b = el('span', 'bh-dot'); b.style.left = pct(f.tpos) + '%'; track.appendChild(b); return b; });
-    const gap = el('div', 'bh-gap'); track.appendChild(gap);
+    const life = el('div', 'bh-life'); life.setAttribute('aria-hidden', 'true'); track.appendChild(life);   // a tapped region's lifetime
+    const dots = F.map((f, i) => { const b = el('span', 'bh-dot'); b.style.left = at(i) + '%'; track.appendChild(b); return b; });
+    const gap = head.querySelector('.bh-gap');
     const bubble = el('div', 'bh-bubble'); bubble.setAttribute('aria-hidden', 'true'); track.appendChild(bubble);
     track.setAttribute('role', 'slider'); track.tabIndex = 0; track.setAttribute('aria-label', 'Era');
     track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', String(N - 1));
-    const ticks = el('div', 'bh-ticks'); TICKS.forEach(([t, l]) => { const s = el('span', t === 1800 ? 'bh-t-narrow' : null, l); s.style.left = pct(t) + '%'; ticks.appendChild(s); });
+    const ticks = el('div', 'bh-ticks'); TICKS.forEach(([t, l]) => { const s = el('span', t === 1 ? 'bh-t-narrow' : null, l); s.style.left = yearAt(t) + '%'; ticks.appendChild(s); });
     track.appendChild(ticks);
     const transport = el('div', 'bh-transport');
     transport.innerHTML =
@@ -136,8 +151,8 @@
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-caps" checked><span>Capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-trails" checked><span>Earlier capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-borders" checked><span>Today\'s borders</span></label>';
-    tl.append(track, transport);
-    main.append(head, plate, tl);
+    tl.append(track, transport, caption);
+    main.append(plate, tl);
 
     const side = el('aside', 'bh-side');
     const rag = el('section', 'bh-ragusa');
@@ -194,19 +209,27 @@
     F.forEach((f, i) => f.feats.forEach(ft => { if (ft.n) (spans[ft.n] = spans[ft.n] || []).push(i); }));
 
     // ---------- rendering ----------
-    function drawMap(i, animate) {
-      const f = F[i];
+    const layerCache = new Map();
+    function eraLayer(i) {
+      if (layerCache.has(i)) return layerCache.get(i);
       const g = svg('g', { class: 'bh-layer' });
-      f.feats.forEach((ft, k) => {
-        const p = svg('path', { d: ft.d, fill: ft.c, class: 'bh-poly' + (sel && ft.n === sel ? ' bh-sel' : ''), 'data-k': k });
-        g.appendChild(p);
+      F[i].feats.forEach((ft, k) => {
+        g.appendChild(svg('path', { d: ft.d, fill: ft.c, class: 'bh-poly', 'data-k': k }));
         if (ft.h) g.appendChild(svg('path', { d: ft.d, fill: hatch(ft.h), 'pointer-events': 'none' }));
       });
-      if (animate && !reduced()) f.feats.forEach(ft => { if (ft.chg && ft.n) g.appendChild(svg('path', { d: ft.d, class: 'bh-chg' })); });
+      layerCache.set(i, g);
+      return g;
+    }
+    function drawMap(i, animate) {
+      const f = F[i];
+      const g = eraLayer(i);
+      chgG.innerHTML = '';
+      if (animate && !reduced()) f.feats.forEach(ft => { if (ft.chg && ft.n) chgG.appendChild(svg('path', { d: ft.d, class: 'bh-chg' })); });
       // At most two layers at once: the one on screen and the one fading in over it. (Stacking a
       // layer per step while the slider was dragged piled up a dozen translucent maps, darkening
       // the land and, on phones, making today's map underneath drop out.)
-      const old = [...layers.children];
+      const old = [...layers.children].filter(o => o !== g);
+      g.remove(); g.style.opacity = '';
       clearTimeout(drawMap._t);
       if (animate && !reduced()) {
         old.slice(0, -1).forEach(o => o.remove());
@@ -215,6 +238,7 @@
         requestAnimationFrame(() => requestAnimationFrame(() => { g.style.opacity = 1; }));
         drawMap._t = setTimeout(() => { if (under) under.remove(); }, 600);
       } else { old.forEach(o => o.remove()); layers.appendChild(g); }
+      markSel();
       // trails
       trailsG.innerHTML = '';
       f.trails.forEach(t => trailsG.appendChild(svg('polyline', { points: t.map(c => c[1] + ',' + c[2]).join(' '), class: 'bh-trail' })));
@@ -337,46 +361,72 @@
     function renderInfo() {
       const f = F[cur];
       const ft = sel && f.feats.find(x => x.n === sel);
-      if (!ft) { info.hidden = true; info.innerHTML = ''; return; }
+      if (!ft) { info.hidden = true; info.innerHTML = ''; life.innerHTML = ''; return; }
       info.hidden = false;
+      info.classList.toggle('bh-at-bottom', pickTop);
+      // the eras it appears in, lit up on the ribbon
+      const runs = []; (spans[ft.n] || [cur]).forEach(k => { const r = runs[runs.length - 1]; if (r && r[1] === k - 1) r[1] = k; else runs.push([k, k]); });
+      life.innerHTML = runs.map(([a, b]) => `<i style="left:${a / N * 100}%;width:${(b + 1 - a) / N * 100}%;background:${ft.c}"></i>`).join('');
       const idx = spans[ft.n] || [cur];
       const first = F[idx[0]].label, last = F[idx[idx.length - 1]].label;
       const notes = [];
       if (ft.t) notes.push('Peoples without a recorded state on this map.');
-      if (ft.h) notes.push('Hatched: a vassal state or territory under occupation.');
-      if (ft.chg && cur > 0) notes.push('Changed hands since the previous map.');
-      notes.push(idx.length === 1 ? `Appears only on the ${first} map.` : `On ${idx.length} of ${N} maps, from ${first} to ${last}.`);
+      if (ft.h) notes.push('A vassal state or occupied.');
+      if (ft.chg && cur > 0) notes.push('Just changed hands.');
+      notes.push(idx.length === 1 ? `Only on the ${first} map.` : `On ${idx.length} of ${N} maps, ${first} – ${last}.`);
       info.innerHTML = `<div class="bh-info-name"><i class="bh-swatch" style="background:${ft.c}"></i>${esc(ft.n)}</div>` +
         `<div class="bh-info-note">${notes.map(esc).join(' ')}</div>` +
         '<button type="button" class="bh-pick-x" aria-label="Close">×</button>';
     }
 
-    function show(i, animate = true) {
+    // Two speeds. While a finger drags the ribbon only the map, the year and the ribbon change
+    // (quick); the labels, the coast map, the panels below and the page address follow once the
+    // finger pauses or lifts (settle). Each step used to redraw all of it, 100–190 ms on a phone.
+    let settled = 0, settleT = 0, scrub = null;
+    function show(i, animate = true, quick = false) {
       i = Math.max(0, Math.min(N - 1, i));
       const prev = cur; cur = i;
       const f = F[i];
       head.querySelector('.bh-year').textContent = f.label;
       head.querySelector('.bh-title').textContent = f.title;
-      head.querySelector('.bh-caption').textContent = f.caption;
-      vp.setAttribute('aria-label', `Map of the Balkans, ${f.label}: ${f.title}`);
+      caption.textContent = f.caption;
       drawMap(i, animate && prev !== i);
-      placeLabels(i);
-      drawInset(i);
-      drawRagTerr(i);
-      libertas(f.tpos);
-      dots.forEach((d, k) => { d.classList.toggle('bh-past', k < i); d.classList.toggle('bh-cur', k === i); d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
-      prog.style.width = pct(f.tpos) + '%';
+      dots.forEach((d, k) => { d.classList.toggle('bh-past', k < i); d.classList.toggle('bh-cur', k === i); });
+      prog.style.width = at(i) + '%';
       track.setAttribute('aria-valuenow', String(i)); track.setAttribute('aria-valuetext', f.label + ': ' + f.title);
-      if (bubble.classList.contains('bh-show')) { bubble.textContent = f.label; bubble.style.left = pct(f.tpos) + '%'; }
-      if (animate && prev !== i) {
-        const g = Math.round(Math.abs(f.tpos - F[prev].tpos));
-        gap.textContent = (f.tpos >= F[prev].tpos ? '+' : '−') + (g < 1 ? '' : g) + (g === 1 ? ' year' : g < 1 ? 'same year' : ' years');
-        gap.style.left = pct(f.tpos) + '%'; gap.classList.add('bh-show');
-        clearTimeout(gap._t); gap._t = setTimeout(() => gap.classList.remove('bh-show'), 1600);
+      if (bubble.classList.contains('bh-show')) placeBubble();
+      clearTimeout(settleT);
+      if (quick) { root.classList.add('bh-quick'); settleT = setTimeout(settle, 160); return; }
+      settle();
+    }
+    function settle() {
+      clearTimeout(settleT);
+      root.classList.remove('bh-quick');
+      const f = F[cur];
+      vp.setAttribute('aria-label', `Map of the Balkans, ${f.label}: ${f.title}`);
+      placeLabels(cur);
+      drawInset(cur);
+      drawRagTerr(cur);
+      libertas(f.tpos);
+      // how far that step (or the whole drag) went, on the badge
+      if (settled !== cur && !scrub) {
+        const g = Math.round(Math.abs(f.tpos - F[settled].tpos));
+        gap.textContent = (f.tpos >= F[settled].tpos ? '+' : '−') + (g < 1 ? '' : g) + (g === 1 ? ' year' : g < 1 ? 'same year' : ' years');
+        gap.classList.add('bh-show');
+        clearTimeout(gap._t); gap._t = setTimeout(() => gap.classList.remove('bh-show'), 1800);
       }
+      if (!scrub) settled = cur;
       renderInfo();
-      if (opts.hash !== false) { try { history.replaceState(null, '', '#' + slug(f.label)); } catch (e) { /* sandboxed */ } }
+      if (opts.hash !== false) { try { history.replaceState(null, '', '#' + slug(f.label)); } catch (e) { /* sandboxed or rate-limited */ } }
       if (opts.onChange) opts.onChange(f, slug(f.label));
+    }
+    // the bubble over the handle names the era; it stays inside the ribbon at both ends, its arrow
+    // still pointing at the handle
+    function placeBubble() {
+      bubble.textContent = F[cur].label;
+      const w = track.clientWidth, x = at(cur) / 100 * w, bw = bubble.offsetWidth;
+      const cx = Math.max(bw / 2, Math.min(w - bw / 2, x));
+      bubble.style.left = cx + 'px'; bubble.style.setProperty('--ax', (x - cx) + 'px');
     }
 
     // ---------- playback ----------
@@ -396,18 +446,15 @@
     // The ribbon is the slider. A tap picks the nearest era (an age's name, the start of that
     // age); a sideways drag scrubs through them, swapping eras instantly with a bubble naming the
     // one under your finger; an up-and-down drag is left to scroll the page.
-    const nearest = x => {
-      const r = track.getBoundingClientRect(), t = T0 + (x - r.left) / r.width * (T1 - T0);
-      let k = 0; F.forEach((f, i) => { if (Math.abs(f.tpos - t) < Math.abs(F[k].tpos - t)) k = i; }); return k;
-    };
+    const nearest = x => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(N - 1, Math.floor((x - r.left) / r.width * N))); };
     const ageStart = from => F.findIndex(f => f.tpos >= from);
-    let scrub = null;
-    const bubbleOn = on => { bubble.classList.toggle('bh-show', on); if (on) { bubble.textContent = F[cur].label; bubble.style.left = pct(F[cur].tpos) + '%'; } };
+
+    const bubbleOn = on => { bubble.classList.toggle('bh-show', on); track.classList.toggle('bh-scrubbing', on); if (on) placeBubble(); };
     track.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       scrub = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false, name: e.target.closest('.bh-era-name') };
       // a mouse can't mean "scroll", so it scrubs straight away
-      if (e.pointerType === 'mouse') { scrub.on = true; stop(); track.setPointerCapture(e.pointerId); bubbleOn(true); if (!scrub.name) show(nearest(e.clientX), false); }
+      if (e.pointerType === 'mouse') { scrub.on = true; stop(); track.setPointerCapture(e.pointerId); bubbleOn(true); if (!scrub.name) show(nearest(e.clientX), false, true); }
     });
     track.addEventListener('pointermove', e => {
       if (!scrub || e.pointerId !== scrub.id) return;
@@ -418,16 +465,16 @@
         bubbleOn(true);
       }
       scrub.moved = true;
-      const k = nearest(e.clientX); if (k !== cur) show(k, false);
+      const k = nearest(e.clientX); if (k !== cur) show(k, false, true);
     });
     const scrubEnd = e => {
       if (!scrub || e.pointerId !== scrub.id) return;
       const s0 = scrub; scrub = null;
       bubbleOn(false);
-      if (e.type === 'pointercancel' || s0.moved) return;
+      if (e.type === 'pointercancel' || s0.moved) { settle(); return; }
       stop();
       const k = s0.name ? ageStart(+s0.name.dataset.from) : nearest(e.clientX);
-      if (k !== cur) show(k);
+      if (k !== cur) show(k); else settle();
     };
     track.addEventListener('pointerup', scrubEnd); track.addEventListener('pointercancel', scrubEnd);
     track.addEventListener('keydown', e => {
@@ -672,6 +719,7 @@
       pts.delete(e.pointerId); vp.classList.remove('bh-dragging');
       if (pts.size < 2) pinch0 = null;
       if (moved < 8 && e.type === 'pointerup') {
+        const vr = vp.getBoundingClientRect(); pickTop = e.clientY < vr.top + vr.height / 2;
         const hit = document.elementFromPoint(e.clientX, e.clientY);
         const k = hit && hit.closest && hit.closest('.bh-poly') ? +hit.closest('.bh-poly').dataset.k : null;
         const ft = k != null ? F[cur].feats[k] : null;
@@ -689,6 +737,21 @@
     if (want) { const k = F.findIndex(f => slug(f.label) === slug(want)); if (k >= 0) start = k; }
     setSat(sat);
     show(start, false);
+    settled = cur;
+    let nudged = false; try { nudged = localStorage.getItem('bh-nudged') === '1'; } catch (e) { nudged = true; }
+    if (!nudged && !reduced() && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => {
+        if (!es.some(x => x.isIntersecting)) return;
+        io.disconnect();
+        setTimeout(() => {
+          const d = dots[cur]; if (!d || scrub) return;
+          d.style.setProperty('--nudge', Math.min(track.clientWidth / N * 1.6, 24) + 'px');
+          d.classList.add('bh-nudge'); setTimeout(() => d.classList.remove('bh-nudge'), 1700);
+          try { localStorage.setItem('bh-nudged', '1'); } catch (e) { /* storage blocked */ }
+        }, 900);
+      }, { threshold: 0.9 });
+      io.observe(track);
+    }
     root.tabIndex = -1;
     return { show: k => show(typeof k === 'number' ? k : F.findIndex(f => slug(f.label) === slug(k))), frames: F };
   }
