@@ -829,6 +829,40 @@ before: the figures float, nothing says whose they are. Ask Rob whether
 the percentages are fixed text or should be COMPUTED from his date, like
 the year count — they change every year.)
 
+**Rob's picks on the round-2 sheet (for 4.13.2, 2026-10-27).** Plan A only,
+live before Sunday 1 Nov; a slipped date is reported THE SAME DAY.
+- **The bird is a strutting wild TOM** (replaces the hen; Rob asked for the
+  fanned tail "numerous times"): full upright fan, puffed body, wings
+  dropped, bare red-and-blue head with wattle and snood, chest beard. Traced
+  WHOLE from ONE real CC0/PD photograph — never a body from one and a fan
+  from another — at witch/heron quality (barred fan feathers, chestnut/buff
+  tip band, coverts, bronze-green iridescence, real shading). Body at least
+  as big as 4.13.1's turkey; the fan adds height; re-check the keep-clear set
+  at 390/768/1440.
+- **Poults stay, redrawn from a real poult photo** (mottled buff/brown,
+  fluffy, real poult-to-adult proportions; never "a spotted egg on stilts").
+  They follow the tom (Rob knows hens lead poults; he wants both).
+- **No sliding cutouts**: a real walk cycle (legs alternate, head bobs
+  forward/back per step) for the tom and the poults. The stop-and-peck stays
+  only at that standard, and his fan stays UP while he feeds.
+- **Pie**: retraced from Commons "File:Pumpkin_Pie.jpg" (PD), whole, NO steam.
+- **Cornucopia: 0.85** (Rob saw it over page text at 390 and chose it).
+- **No squash in 4.13.2 anywhere**: not the sheet's yellow squash, not the
+  old `gourd2`, not the squash in the cornucopia's spill (filled with the
+  other produce). A TRUE crookneck joins a later build once there is a
+  source (seed-catalog engravings pre-1931 are fair; else Rob photographs
+  one).
+- Maple, cypress, cornucopia approved; the cypress is a small pick: as shown
+  vs bolder rust and wider needle spread, at guest size.
+- **Declined (do not offer again):** a feather rattle, a poult catching up,
+  a cornucopia that fills through November, more pies on Thanksgiving Day.
+  The cornucopia stays full all month. Halloween is the guide: one
+  signature scene and a few pieces that belong together.
+- **Christmas starts 27 Nov**; if it only fits with the per-season split,
+  the split must be live before then. Not started yet: Thanksgiving, then the
+  Anniversary, come first. The 4.13.2 build carries a split size/effort
+  estimate.
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,

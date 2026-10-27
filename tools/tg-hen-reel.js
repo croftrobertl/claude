@@ -13,7 +13,7 @@ const { spawnSync } = require('child_process');
 const { config, open, ROOT } = require('./harness');
 const { page: fixture } = require('./fixture');
 const SECS = +((process.argv.find(a => a.startsWith('--secs=')) || '--secs=10').slice(7));
-const NAME = (process.argv.find(a => a.startsWith('--out=')) || '--out=Seasons - 4.13.2 hen walk 390').slice(6);
+const NAME = (process.argv.find(a => a.startsWith('--out=')) || '--out=Seasons - 4.13.2 tom walk 390').slice(6);
 (async () => {
   const cfg = config(['--theme=thanksgiving', '--placement=content', '--layering=front', '--density=16', '--diag']);
   const th = cfg.themes.thanksgiving.ambient;
@@ -25,13 +25,13 @@ const NAME = (process.argv.find(a => a.startsWith('--out=')) || '--out=Seasons -
   await pg.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.parts.some(p => p.sKey === 'turkey'), null, { timeout: 20000 });
   await pg.waitForTimeout(1500);   /* sprites decode */
   await pg.evaluate(() => { const S = window.DCCSeasonsEngine._state; S.manual(true);
-    const h = S.parts.find(p => p.sKey === 'turkey'); h.dir = -1; h.vx = -22; h.x = 320; h.fs = 0; h.ft = 2.6; h.gap = 1; });
+    const h = S.parts.find(p => p.sKey === 'turkey'); h.dir = -1; h.vx = -17; h.x = 330; h.fs = 0; h.ft = 3.2; h.gap = 1; h.wp = 0; h.kp = 0.3; });
   const dir = path.join(ROOT, 'build', '.henreel'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
   const strip = [];
   for (let f = 0; f < SECS * 30; f++) {
     const st = await pg.evaluate(() => { const S = window.DCCSeasonsEngine._state; S.tick(1000 / 30, 1); const h = S.parts.find(p => p.sKey === 'turkey');
       const c = document.querySelector('canvas.dcc-seasons-canvas').getBoundingClientRect(); return { x: h.x + c.left, y: h.y + c.top, fs: h.fs, peck: h.peck }; });
-    const clip = { x: 0, y: Math.max(0, Math.min(700 - 110, st.y - 70)), width: 390, height: 110 };
+    const clip = { x: 0, y: 700 - 130, width: 390, height: 130 };
     const buf = await pg.screenshot({ clip });
     fs.writeFileSync(path.join(dir, String(f).padStart(4, '0') + '.png'), buf);
     if (f % 15 === 0) { strip.push({ b: buf.toString('base64'), t: (f / 30).toFixed(1), fs: st.fs, peck: st.peck }); }
