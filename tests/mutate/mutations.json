@@ -6933,5 +6933,16 @@
   "find": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    margin-bottom: 38px;\n}",
   "replace": "body.dcc_checkout-cardover .dcc_checkout-continue--inheader {\n    margin-bottom: 24px;\n}",
   "count": 1
+ },
+ {
+  "id": "css-main-hidden-not-transparent",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "real-theme"
+  ],
+  "claim": "0.36.2 - the white band goes by making main TRANSPARENT, never by hiding it: the Director's instruction is that main and its children stay in the page, because the schema markup lives there",
+  "find": "body.dcc_checkout-cardover main.main {\n    background: transparent !important;",
+  "replace": "body.dcc_checkout-cardover main.main {\n    display: none !important;\n    background: transparent !important;",
+  "count": 1
  }
 ]

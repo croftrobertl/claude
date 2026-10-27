@@ -2619,8 +2619,26 @@ yours to improvise.
     answers to "about 38px". So `main`'s margin goes to 0 and the card's own
     `margin-bottom` is the gap: **38px at every width**, one place to change.
   - **NOTHING IS HIDDEN OR REMOVED** (the Director's instruction): only
-    background, padding and margin move, and the suite asserts the schema metas
-    are still in the page (13 nodes).
+    background, padding and margin move.
+    **THE SCHEMA COUNT RECONCILES THREE WAYS, AND THE FIRST ASSERTION ON IT WAS
+    VACUOUS** (his correction, 2026-10-26, then measured here). Same markup,
+    counted differently: **13** is `.schema-image, [itemprop]` document-wide
+    (what this entry used to quote), **11** is that selector inside `main#main`,
+    and **10** is `[itemprop], [itemscope]` inside `main` (his earlier note).
+    Nothing was lost. But the assertion was `document.querySelectorAll(...)
+    .length > 0`, and **two of the thirteen — `#site-title` and
+    `#site-description` — are in the HEADER**, so it would have read 2 > 0 and
+    passed with every schema node inside `main` stripped, which is the one
+    thing the claim is about. Now scoped to `main` and pinned at 11.
+    **AND A COUNT STILL CANNOT CATCH THE FORBIDDEN APPROACH**, which is worth
+    saying rather than leaving as a pinned number that looks sufficient: 0.36.2
+    is CSS-only, CSS cannot remove a node, and `querySelectorAll` finds
+    `display: none` elements too — so no mutation of this stylesheet could ever
+    turn that count red. What the instruction rules out is HIDING, which a
+    stylesheet CAN do, so `main`'s and the article's computed `display` and
+    `visibility` are asserted directly. Mutation
+    `css-main-hidden-not-transparent` puts `display: none` on `main` and goes
+    red; the count is kept for removal, which nothing here can cause today.
   - **THE PIXEL CHECK DOES NOT READ THE FLAT BLUE, AND ASSERTING THAT IT DID
     WOULD HAVE BEEN ASSERTING A BUG.** The brief said "pixel colour 20px under
     the card is the blue"; it reads **rgb(9, 76, 170)**. The column rises
@@ -2658,7 +2676,8 @@ yours to improvise.
   the bottom, and `tests/real-theme/` asserts nothing of ours is `fixed` or
   `sticky` after a scroll — so nothing was wired up: a reader that nothing
   reads is the "setting that never reaches its consumer" failure in another
-  shape.
+  shape. **1.0.1 (2026-10-26) also follows the theme's 1s DESKTOP slide-in**
+  as well as the phone slide; still nothing to do here for the same reason.
 
 - **ONE-TAP PET FEE (B) — THE VERIFIED MOTOPRESS SURFACE, for 0.33.0**
   (Director, live 6.3.0 source, 2026-10-11; to be built AFTER Rob's review of

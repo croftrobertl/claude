@@ -194,8 +194,33 @@ function measure() {
                 gap: Math.round(ft - cb),
                 painters: painters.sort(),
                 /* NOTHING MAY BE HIDDEN OR REMOVED (the Director's
-                   instruction): the schema metas stay in the page. */
-                schemaNodes: document.querySelectorAll('.schema-image, [itemprop]').length,
+                   instruction): the schema metas stay in the page.
+                   SCOPED TO `main`, AND PINNED, because the first version of
+                   this was `document.querySelectorAll(...).length > 0` — and
+                   TWO of those nodes (`#site-title`, `#site-description`) are
+                   in the HEADER. So it would have read 2 > 0 and passed with
+                   every schema node inside `main` stripped, which is the one
+                   thing the claim is about. Three counts that all reconcile,
+                   recorded so nobody re-derives them: 13 for this selector
+                   document-wide, 11 for it inside `main` (the Director's
+                   number, and what is asserted), 10 for
+                   `[itemprop], [itemscope]` inside `main` (his earlier note).
+                   Same markup, counted three ways. */
+                schemaNodes: main.querySelectorAll('.schema-image, [itemprop]').length,
+                /* AND THE COUNT ALONE CANNOT CATCH THE FORBIDDEN APPROACH.
+                   0.36.2 is CSS-only and CSS cannot remove a node, so a count
+                   can never go red from a mutation of this stylesheet —
+                   `querySelectorAll` finds display:none elements too. What the
+                   Director's instruction rules out is HIDING `main` or its
+                   children, and that is exactly what a stylesheet CAN do, so
+                   it is asserted directly. (Several of the eleven — the
+                   `<meta>`s and the theme's hidden featured `<picture>` — are
+                   legitimately unrendered already, which is why this asks
+                   about `main` and the article rather than about each node.) */
+                mainDisplay: cs(main, 'display'),
+                mainVisibility: cs(main, 'visibility'),
+                artDisplay: cs(art, 'display'),
+                artVisibility: cs(art, 'visibility'),
             };
         })(),
 
@@ -368,8 +393,12 @@ const WIDTHS = [390, 768, 1440];
                     m.blue.painters, ['body rgb(10, 80, 178)', 'section rgb(255, 255, 255)']);
                 check(`${label}@${w}: 38px of blue between the card and the footer, at every width`,
                     m.blue.gap, 38);
-                check(`${label}@${w}: nothing was hidden or removed — the schema metas are still there`,
-                    m.blue.schemaNodes > 0, true);
+                check(`${label}@${w}: nothing was removed — all 11 schema nodes inside main are still there`,
+                    m.blue.schemaNodes, 11);
+                check(`${label}@${w}: and nothing was HIDDEN — main and the article still render`,
+                    [m.blue.mainDisplay, m.blue.mainVisibility,
+                     m.blue.artDisplay, m.blue.artVisibility],
+                    ['block', 'visible', 'block', 'visible']);
                 check(`${label}@${w}: the theme's "Submit Booking" banner is not shown`,
                     m.themeTitleShown, false);
                 check(`${label}@${w}: the card's heading is the page's one visible h1`,
