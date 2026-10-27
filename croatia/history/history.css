@@ -120,7 +120,7 @@
   border-radius: var(--bh-radius); min-height: 34px; padding: 4px 10px; cursor: pointer; display: inline-flex; align-items: center;
   justify-content: center; gap: 6px; }
 .bh-btn:hover { border-color: var(--bh-accent); }
-.bh-btn:focus-visible, .bh-dot:focus-visible, .bh-toggle input:focus-visible + span, .bh-range:focus-visible {
+.bh-btn:focus-visible, .bh-toggle input:focus-visible + span {
   outline: 2px solid var(--bh-accent); outline-offset: 2px; }
 .bh-btn[aria-pressed="true"] { border-color: var(--bh-accent); background: var(--bh-tint); color: var(--bh-accent-deep); }
 
@@ -145,15 +145,12 @@
   background: var(--bh-accent); color: var(--bh-card); border-radius: 9px; padding: 0 7px; opacity: 0; transition: opacity .3s; pointer-events: none; }
 .bh-gap.bh-show { opacity: 1; }
 .bh-transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.bh-range { flex: 1 1 140px; min-width: 0; accent-color: var(--bh-accent); }
 .bh-toggles { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--bh-muted); margin-top: 4px; }
 .bh-toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .bh-toggle input { accent-color: var(--bh-accent); width: 15px; height: 15px; margin: 0; }
 
 /* ---------- side column ---------- */
 .bh-side { display: grid; gap: 18px; min-width: 0; }
-.bh-info { border-top: 1px solid var(--bh-border); padding-top: 12px; min-height: 64px; display: grid; gap: 2px; }
-.bh-info-label { font-family: var(--bh-head); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--bh-muted); }
 .bh-info-name { font-family: var(--bh-display); font-weight: 600; font-size: 24px; line-height: 1.15; display: flex; align-items: center; gap: 9px; }
 .bh-swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0,0,0,.25); }
 .bh-info-note { color: var(--bh-muted); font-size: 13.5px; }
@@ -188,8 +185,6 @@
 }
 
 /* satellite view: imagery under the old borders (no multiply blend, which would turn it to mud) */
-.bh-satbtn { display: none; }
-.bh-tiles-on .bh-satbtn { display: inline-flex; align-items: center; justify-content: center; }
 .bh-sat .bh-tiles { background: #2b3326; }
 .bh-sat.bh-tiles-on .bh-stage svg { mix-blend-mode: normal; }
 .bh-sat.bh-tiles-on .bh-poly { fill-opacity: .3; }
@@ -201,3 +196,44 @@
 .bh-btn.bh-playbtn:hover { background: var(--bh-accent-deep, #7d5411); border-color: var(--bh-accent-deep, #7d5411); }
 .bh-btn.bh-playbtn[aria-pressed="true"] { background: var(--bh-accent); color: #fff; box-shadow: 0 0 0 3px var(--bh-tint); }
 .bh-playbtn svg { display: block; }
+
+/* ---------- the ribbon is the slider ---------- */
+.bh-track { cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none; border-radius: 6px; }
+.bh-track:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: 4px; }
+.bh-dot { pointer-events: none; transition: left .2s; }
+.bh-dot.bh-cur { width: 22px; height: 22px; margin: -11px 0 0 -11px; box-shadow: 0 1px 4px rgba(0,0,0,.3), 0 0 0 4px var(--bh-tint); z-index: 1; }
+.bh-era-name { padding: 2px 4px; margin-top: -2px; border-radius: 4px; cursor: pointer; }
+.bh-era-name:hover { background: var(--bh-tint); color: var(--bh-accent-deep); }
+.bh-bubble { position: absolute; top: 32px; transform: translate(-50%, calc(-100% - 16px)); pointer-events: none; opacity: 0; z-index: 2;
+  font-family: var(--bh-display); font-weight: 600; font-size: 17px; line-height: 1; white-space: nowrap; color: #fff;
+  background: var(--bh-accent-deep); border-radius: 6px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: opacity .12s; }
+.bh-bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: var(--bh-accent-deep); }
+.bh-bubble.bh-show { opacity: 1; }
+.bh-bubble.bh-show ~ .bh-gap { opacity: 0; }
+.bh-transport { justify-content: center; }
+
+/* ---------- on the map: the region you tapped, and Layers ---------- */
+.bh-pick { position: absolute; left: 14px; right: 14px; top: 14px; z-index: 3; display: grid; gap: 2px; padding: 10px 40px 10px 12px;
+  background: var(--bh-card); border: 1px solid var(--bh-border); border-radius: var(--bh-radius); box-shadow: 0 4px 16px rgba(0,0,0,.18); max-width: 360px; }
+.bh-pick[hidden], .bh-pop[hidden] { display: none; }
+.bh-pick .bh-info-name { font-size: 19px; }
+.bh-pick .bh-info-note { font-size: 13px; line-height: 1.4; }
+.bh-pick-x { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--bh-muted); cursor: pointer; border-radius: 50%; }
+.bh-pick-x:hover { background: var(--bh-tint); color: var(--bh-text); }
+.bh-pick-x:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: -2px; }
+.bh-layersbtn.bh-on { border-color: var(--bh-accent); background: var(--bh-tint); color: var(--bh-accent-deep); }
+.bh-pop { position: absolute; left: 62px; bottom: 14px; z-index: 4; width: min(300px, calc(100% - 76px)); max-height: calc(100% - 28px); overflow: auto;
+  display: grid; gap: 8px; padding: 12px 14px; background: var(--bh-card); border: 1px solid var(--bh-border); border-radius: var(--bh-radius);
+  box-shadow: 0 6px 22px rgba(0,0,0,.22); font-size: 13.5px; }
+.bh-pop-k { font-family: var(--bh-head); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--bh-muted); margin-top: 2px; }
+.bh-seg { display: flex; gap: 6px; }
+.bh-seg button { flex: 1; font: inherit; font-size: 13px; min-height: 38px; padding: 4px 10px; cursor: pointer; border-radius: 999px;
+  color: var(--bh-text); background: var(--bh-card); border: 1px solid var(--bh-border); }
+.bh-seg button[aria-pressed="true"] { border-color: var(--bh-accent); background: var(--bh-tint); color: var(--bh-accent-deep); box-shadow: inset 0 0 0 1px var(--bh-accent); }
+.bh-seg button:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: 2px; }
+.bh-pop .bh-toggles { display: grid; gap: 2px; margin: 0; font-size: 13.5px; color: var(--bh-text); }
+.bh-pop .bh-toggle { min-height: 36px; }
+.bh-pop .bh-toggle input { width: 18px; height: 18px; }
+.bh-pop .bh-legend { display: grid; gap: 4px; font-size: 12.5px; }
+.bh-pop .bh-sources { border-top: 1px solid var(--bh-border); padding-top: 8px; font-size: 11.5px; }
+@media (max-width: 600px) { .bh-pop { left: 60px; } }

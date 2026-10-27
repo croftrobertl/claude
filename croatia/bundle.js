@@ -534,33 +534,15 @@
     openViewer(0);
   }
 
-  // ---- Time Machine: jump-to-age chips under the timeline, the neighbouring eras named on the
-  //      step buttons, a year bubble on the slider, and swipe-to-step on the map (only while
-  //      it isn't zoomed, so panning still works). The ages match the timeline's own bands. ----
-  const TM_AGES = [['Greek', -500, '#4d8fd6'], ['Roman', -146, '#9b72c4'], ['Medieval', 476, '#5d8c3c'],
-                   ['Ottoman', 1453, '#3f9a78'], ['Modern', 1878, '#d8bf55']];
+  // ---- Time Machine: the neighbouring eras named on the step buttons, and swipe-to-step on the
+  //      map (only while it isn't zoomed, so panning still works). The timeline ribbon itself is
+  //      the slider, and its age names jump to each age (history/history.js). ----
   let histIdx = 0;
   function timeMachine(f) {
     const F = histHandle && histHandle.frames, bh = histEl && histEl.querySelector('.bh-root');
     if (!F || !bh) return;
     histIdx = F.indexOf(f);
-    let bar = bh.querySelector('.dcc-tm');
-    if (!bar) {
-      const tl = bh.querySelector('.bh-timeline');
-      if (!tl) return;
-      bar = el('div', 'dcc-tm');
-      bar.innerHTML = '<div class="dcc-tm-ages" role="group" aria-label="Jump to an age">' + TM_AGES.map(([n, t, c]) =>
-          '<button type="button" class="dcc-tm-age" data-k="' + F.findIndex(fr => fr.tpos >= t) + '" aria-pressed="false">' +
-          '<i style="background:' + c + '"></i>' + n + '</button>').join('') + '</div>' +
-        '<span class="dcc-tm-hint">Swipe the map or use ← → to step through time</span>';
-      tl.appendChild(bar);
-      bar.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) histHandle.show(+b.dataset.k); });
-      wireSwipe(bh);
-      wireBubble(bh, F);
-    }
-    let act = 0;
-    TM_AGES.forEach(([, t], i) => { if (f.tpos >= t) act = i; });
-    bar.querySelectorAll('.dcc-tm-age').forEach((b, i) => b.setAttribute('aria-pressed', String(i === act)));
+    if (!bh._swipe) { bh._swipe = true; wireSwipe(bh); }
     const step = (sel, k, arrow, word) => {
       const b = bh.querySelector('.bh-transport [data-a="' + sel + '"]');
       if (!b) return;
@@ -591,27 +573,7 @@
       histHandle.show(histIdx + (dx < 0 ? 1 : -1));
     });
   }
-  // a bubble over the slider thumb names the era while you drag
-  function wireBubble(bh, F) {
-    const range = bh.querySelector('.bh-range');
-    if (!range) return;
-    const bub = el('span', 'dcc-tm-bubble');
-    bub.setAttribute('aria-hidden', 'true');
-    range.parentNode.appendChild(bub);
-    let hide = 0;
-    const place = () => {
-      const max = +range.max || 1, v = +range.value, th = 18;
-      bub.textContent = F[v] ? F[v].label : '';
-      bub.style.left = (range.offsetLeft + th / 2 + (range.offsetWidth - th) * v / max) + 'px';
-      bub.style.top = range.offsetTop + 'px';
-      bub.classList.add('on');
-      clearTimeout(hide);
-    };
-    const out = () => { clearTimeout(hide); hide = setTimeout(() => bub.classList.remove('on'), 500); };
-    range.addEventListener('input', place);
-    range.addEventListener('pointerdown', place);
-    ['pointerup', 'pointercancel', 'change', 'blur'].forEach(ev => range.addEventListener(ev, out));
-  }
+
 
   // ---- The Chronicle (history/chronicle.json): Ragusa, Konavle and Dalmatia, every entry with
   //      the sources it was checked against and how strong they are. Entries link to the map era
@@ -1729,12 +1691,9 @@
         '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span></span></div>' +
         '<p class="dcc-hist-trip-sum"><span></span> <span class="dcc-hist-trip-key"><i></i>your stops on the coast map</span></p>' +
         '<button type="button" class="dcc-hist-street">See this era over today’s streets ›</button>' +
-        '<ul class="dcc-hist-trip-list">' + stops.map((st, i) =>
-          '<li><a href="#d=' + (st.days[0] + 1) + '" data-stop="' + i + '">' +
-            '<i class="dcc-hist-trip-dot" aria-hidden="true"></i>' +
-            '<span class="dcc-hist-trip-name"><b>' + escapeHtml(st.name) + ' <small>· ' + escapeHtml(dayRanges(st.days)) + '</small></b>' +
-              '<span class="dcc-hist-trip-v"></span></span>' +
-          '</a></li>').join('') + '</ul>' +
+        // the stops, grouped under what they were in the era on screen (one heading per answer,
+        // not the same pill eight times); each stop is a chip that opens its first day
+        '<div class="dcc-hist-trip-list"></div>' +
         '<details class="dcc-chron-srcs dcc-hist-trip-how"><summary>How we know</summary><div class="dcc-hist-trip-howb">' +
           '<p>Whether a place lay inside Ragusa comes from the map’s own territory data for each era. Elsewhere: Konavle was part of Travunia, then Serbian, Bosnian from 1377–78 and Ragusan from 1419–26; around 650–700 Byzantium still held the islands while Slavs settled the mainland. In 1941 Konavle was split — the west with Cavtat went to the Axis Independent State of Croatia, the east to Italy — and Čilipi lay near that line.</p>' +
           '<div class="dcc-chron-src">' + TRIP_SOURCES.map(([l, u]) => '<a href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' + escapeHtml(l) + '</a>').join('') + '</div>' +
@@ -1742,6 +1701,12 @@
       const rag = histEl.querySelector('.bh-ragusa');
       if (rag) rag.after(panel); else histEl.querySelector('.dcc-hist-mount').appendChild(panel);
       panel.querySelector('.dcc-hist-street').addEventListener('click', () => { thenWant = histSlug || '1453'; setView('map'); });
+      panel._chips = stops.map((st, i) => {
+        const a = el('a', 'dcc-hist-trip-chip');
+        a.href = '#d=' + (st.days[0] + 1); a.dataset.stop = i;
+        a.innerHTML = '<b>' + escapeHtml(st.name) + '</b><small>' + escapeHtml(dayRanges(st.days)) + '</small>';
+        return a;
+      });
       const hl = (e, on) => {
         const a = e.target.closest && e.target.closest('[data-stop]'), svgNow = histEl.querySelector('.bh-ragusa svg');
         if (!a || !svgNow) return;
@@ -1753,14 +1718,22 @@
       panel.addEventListener('focusin', e => hl(e, true));
       panel.addEventListener('focusout', e => hl(e, false));
     }
-    const R = f.ragusa, vs = panel.querySelectorAll('.dcc-hist-trip-v');
+    const R = f.ragusa, groups = new Map();
     let nRag = 0;
     stops.forEach((st, i) => {
-      const s = stopStatus(st, f), v = vs[i];
+      const s = stopStatus(st, f);
       if (s.cls === 'rag') nRag++;
-      if (v.textContent !== s.t) v.textContent = s.t;
-      v.className = 'dcc-hist-trip-v' + (s.cls ? ' ' + s.cls : '');
+      if (!groups.has(s.t)) groups.set(s.t, { cls: s.cls, chips: [] });
+      groups.get(s.t).chips.push(panel._chips[i]);
     });
+    const list = panel.querySelector('.dcc-hist-trip-list'), frag = document.createDocumentFragment();
+    groups.forEach((g, t) => {
+      const box = el('div', 'dcc-hist-trip-g');
+      box.innerHTML = '<span class="dcc-hist-trip-v' + (g.cls ? ' ' + g.cls : '') + '">' + escapeHtml(t) + '</span>';
+      const row = el('div', 'dcc-hist-trip-chips'); g.chips.forEach(c => row.appendChild(c)); box.appendChild(row);
+      frag.appendChild(box);
+    });
+    list.replaceChildren(frag);
     panel.querySelector('.dcc-hist-trip-k span').textContent = 'Your trip, then · ' + f.label;
     tripFamLine(f);
     panel.querySelector('.dcc-hist-trip-sum span').textContent = R.founded && !R.former

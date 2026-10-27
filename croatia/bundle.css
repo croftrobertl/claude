@@ -896,15 +896,16 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-hist-trip-k .dcc-ic, .dcc-hist-note-k .dcc-ic { width: 16px; height: 16px; flex: none; }
 .dcc-hist-trip-sum { margin: 0; font-size: 0.92rem; line-height: 1.45; }
 .dcc-hist-trip-key { display: inline-flex; align-items: center; gap: 5px; color: var(--dcc-tour-muted); font-size: 0.82rem; white-space: nowrap; }
-.dcc-hist-trip-dot { margin-top: 5px; }
-.dcc-hist-trip-key i, .dcc-hist-trip-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; border: 2px solid #201f1d; box-sizing: border-box; }
-.dcc-hist-trip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.dcc-hist-trip-list a { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: var(--dcc-tour-radius);
-  color: var(--dcc-tour-text); text-decoration: none; }
-.dcc-hist-trip-list a:hover, .dcc-hist-trip-list a:focus-visible { background: var(--dcc-tour-accent-tint); }
-.dcc-hist-trip-name { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; flex: 1; line-height: 1.25; }
-.dcc-hist-trip-name b { font-weight: 600; font-size: 0.95rem; }
-.dcc-hist-trip-name small { font-weight: 400; color: var(--dcc-tour-muted); font-size: 0.8rem; white-space: nowrap; }
+.dcc-hist-trip-key i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; border: 2px solid #201f1d; box-sizing: border-box; }
+.dcc-hist-trip-list { display: grid; gap: 12px; }
+.dcc-hist-trip-g { display: grid; gap: 6px; justify-items: start; }
+.dcc-hist-trip-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dcc-hist-trip-chip { position: relative; display: inline-flex; align-items: baseline; gap: 6px; min-height: 34px; padding: 6px 12px; border-radius: 999px;
+  color: var(--dcc-tour-text); text-decoration: none; background: var(--dcc-tour-bg, #fff); border: 1px solid var(--dcc-tour-border); line-height: 1.2; }
+.dcc-hist-trip-chip::after { content: ""; position: absolute; inset: -5px 0; }
+.dcc-hist-trip-chip b { font-weight: 600; font-size: 0.88rem; }
+.dcc-hist-trip-chip small { color: var(--dcc-tour-muted); font-size: 0.74rem; white-space: nowrap; }
+.dcc-hist-trip-chip:hover, .dcc-hist-trip-chip:focus-visible { border-color: var(--dcc-tour-primary); background: var(--dcc-tour-accent-tint); }
 .dcc-hist-trip-v { font-size: 0.88rem; color: var(--dcc-tour-text); }
 .dcc-hist-trip-v.rag { background: #f2c230; color: #201f1d; font-weight: 600; padding: 1px 9px; border-radius: 999px; }
 .dcc-hist-trip-v.war { color: #a5281b; font-weight: 600; }
@@ -919,34 +920,18 @@ html.dcc-matrix-on .dcc-hist-trip-v.war { color: inherit; }
 .dcc-hist-note-a { justify-self: start; font-family: var(--dcc-tour-font-head); font-weight: 600; font-size: 0.8rem;
   color: var(--dcc-tour-accent-deep); text-decoration: none; padding: 4px 0; background: none; border: 0; cursor: pointer; }
 .dcc-hist-note-a:hover { text-decoration: underline; }
-/* Time Machine: age chips under the timeline, neighbouring eras on the step buttons, slider bubble */
-.dcc-tm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 4px; min-width: 0; }
-/* min-width 0: a scrolling row must not report its full width to the timeline's grid (that zoomed the phone page out) */
-.dcc-tm-ages { min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; max-width: 100%; padding-bottom: 2px; }
-.dcc-tm-ages::-webkit-scrollbar { display: none; }
-.dcc-tm-age { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 3px 12px; cursor: pointer;
-  font: inherit; font-family: var(--dcc-tour-font-head); font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 999px; }
-.dcc-tm-age i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.dcc-tm-age:hover { border-color: var(--dcc-tour-primary); }
-.dcc-tm-age[aria-pressed="true"] { border-color: var(--dcc-tour-primary); background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); }
-.dcc-tm-hint { font-size: 0.8rem; color: var(--dcc-tour-muted); font-style: italic; }
+/* Time Machine: the neighbouring eras named on the step buttons */
 .dcc-tour-history .bh-btn.dcc-tm-step { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 44px; }
 .dcc-tour-history .bh-btn.dcc-tm-step[aria-disabled="true"] { opacity: 0.45; cursor: default; }
 .dcc-tour-history .bh-transport { position: relative; }
-.dcc-tm-bubble { position: absolute; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; opacity: 0;
-  font-family: "Cormorant Garamond", var(--dcc-tour-font); font-weight: 600; font-size: 1.05rem; line-height: 1; white-space: nowrap;
-  color: #fff; background: var(--dcc-tour-accent-deep); border-radius: 6px; padding: 5px 9px; box-shadow: var(--dcc-tour-shadow);
-  transition: opacity .15s; z-index: 3; }
-.dcc-tm-bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent;
-  border-bottom: 0; border-top-color: var(--dcc-tour-accent-deep); }
-.dcc-tm-bubble.on { opacity: 1; }
 .dcc-tour-history .bh-head { scroll-margin-top: 72px; }
 .dcc-tour-history .dcc-hist-trip, .dcc-tour-history .dcc-chron { scroll-margin-top: 64px; }
 /* the side column is taller than a screen, so sticking it only hid its bottom */
 .dcc-tour-history .bh-side { position: static; }
 @media (pointer: coarse) {
-  .dcc-tour-history .bh-transport .bh-btn, .dcc-tm-age { min-height: 44px; }
+  .dcc-tour-history .bh-transport .bh-btn { min-height: 44px; }
+  .dcc-tour-history .bh-zoom .bh-btn { width: 40px; height: 40px; min-height: 40px; position: relative; }
+  .dcc-tour-history .bh-zoom .bh-btn::after { content: ""; position: absolute; inset: -2px; }
   .dcc-tour-history .bh-transport .bh-btn.bh-playbtn { width: 44px; min-width: 44px; height: 44px; }   /* stays a circle */
 }
 

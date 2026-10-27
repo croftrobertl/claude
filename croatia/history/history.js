@@ -84,16 +84,30 @@
     map.appendChild(ragDot);
     const labels = el('div', 'bh-labels');
     stage.append(map, labels); vp.append(tilesEl, stage);
+    // the controls on the map: zoom, one button that goes to Ragusa (or back out to the whole map
+    // once you're in close), and Layers, which holds everything else the map can show
     const zoomUI = el('div', 'bh-zoom');
     zoomUI.innerHTML = '<button type="button" class="bh-btn" data-z="in" aria-label="Zoom in">+</button>' +
       '<button type="button" class="bh-btn" data-z="out" aria-label="Zoom out">−</button>' +
-      '<button type="button" class="bh-btn" data-z="ragusa" aria-label="Zoom in to Ragusa" title="Zoom in to Ragusa">' +
-        '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg></button>' +
-      '<button type="button" class="bh-btn" data-z="reset" aria-label="Show the whole map">⤢</button>' +
-      '<button type="button" class="bh-btn bh-satbtn" data-z="sat" aria-pressed="false" aria-label="Satellite view" title="Satellite view">' +
+      '<button type="button" class="bh-btn bh-focus" data-z="ragusa"></button>' +
+      '<button type="button" class="bh-btn bh-layersbtn" data-z="layers" aria-expanded="false" aria-controls="bh-pop" aria-label="Map layers and key" title="Map layers and key">' +
         '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg></button>';
+    const FOCUS_IN = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>';
+    const focusBtn = zoomUI.querySelector('.bh-focus');
+    const setFocus = out => {
+      if (focusBtn.dataset.z === (out ? 'reset' : 'ragusa') && focusBtn.innerHTML) return;
+      focusBtn.dataset.z = out ? 'reset' : 'ragusa';
+      focusBtn.innerHTML = out ? '<span aria-hidden="true">⤢</span>' : FOCUS_IN;
+      focusBtn.title = out ? 'Show the whole map' : 'Zoom in to Ragusa'; focusBtn.setAttribute('aria-label', focusBtn.title);
+    };
+    setFocus(false);
     const attrib = el('div', 'bh-attrib');
-    plate.append(vp, zoomUI, attrib);
+    // tap a region: its name and how long it lasts, on the map itself
+    const info = el('div', 'bh-pick'); info.hidden = true; info.setAttribute('aria-live', 'polite');
+    // Layers: street map or satellite (for close up), what to draw, and the key to the colours
+    const pop = el('div', 'bh-pop'); pop.id = 'bh-pop'; pop.hidden = true;
+    pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'Map layers and key');
+    plate.append(vp, zoomUI, attrib, info, pop);
 
     const tl = el('div', 'bh-timeline');
     const track = el('div', 'bh-track');
@@ -101,35 +115,31 @@
     ERAS.forEach(([name, a, b, c]) => {
       const band = el('div', 'bh-era'); band.style.left = pct(a) + '%'; band.style.width = (pct(b) - pct(a)) + '%'; band.style.background = c;
       track.appendChild(band);
-      if (pct(b) - pct(a) > 9) { const nm = el('div', 'bh-era-name', name.toUpperCase()); nm.style.left = ((pct(a) + pct(b)) / 2) + '%'; track.appendChild(nm); }
+      if (pct(b) - pct(a) > 9) { const nm = el('div', 'bh-era-name', name.toUpperCase()); nm.style.left = ((pct(a) + pct(b)) / 2) + '%'; nm.dataset.from = a; track.appendChild(nm); }
     });
     track.appendChild(el('div', 'bh-axis'));
     const prog = el('div', 'bh-progress'); track.appendChild(prog);
-    const dots = F.map((f, i) => {
-      const b = el('button', 'bh-dot'); b.type = 'button'; b.style.left = pct(f.tpos) + '%';
-      b.setAttribute('aria-label', f.label + ': ' + f.title); b.title = f.label + ' · ' + f.title;
-      b.addEventListener('click', () => { stop(); show(i); });
-      track.appendChild(b); return b;
-    });
+    const dots = F.map(f => { const b = el('span', 'bh-dot'); b.style.left = pct(f.tpos) + '%'; track.appendChild(b); return b; });
     const gap = el('div', 'bh-gap'); track.appendChild(gap);
+    const bubble = el('div', 'bh-bubble'); bubble.setAttribute('aria-hidden', 'true'); track.appendChild(bubble);
+    track.setAttribute('role', 'slider'); track.tabIndex = 0; track.setAttribute('aria-label', 'Era');
+    track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', String(N - 1));
     const ticks = el('div', 'bh-ticks'); TICKS.forEach(([t, l]) => { const s = el('span', t === 1800 ? 'bh-t-narrow' : null, l); s.style.left = pct(t) + '%'; ticks.appendChild(s); });
     track.appendChild(ticks);
     const transport = el('div', 'bh-transport');
     transport.innerHTML =
       '<button type="button" class="bh-btn" data-a="prev" aria-label="Previous era">‹</button>' +
       '<button type="button" class="bh-btn bh-playbtn" data-a="play" aria-pressed="false" aria-label="Play through the eras" title="Play through the eras">' + PLAY_SVG + '</button>' +
-      '<button type="button" class="bh-btn" data-a="next" aria-label="Next era">›</button>' +
-      `<input class="bh-range" id="bh-range" type="range" min="0" max="${N - 1}" step="1" value="0" aria-label="Era">`;
+      '<button type="button" class="bh-btn" data-a="next" aria-label="Next era">›</button>';
     const toggles = el('div', 'bh-toggles');
     toggles.innerHTML =
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-caps" checked><span>Capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-trails" checked><span>Earlier capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-borders" checked><span>Today\'s borders</span></label>';
-    tl.append(track, transport, toggles);
+    tl.append(track, transport);
     main.append(head, plate, tl);
 
     const side = el('aside', 'bh-side');
-    const info = el('div', 'bh-info');
     const rag = el('section', 'bh-ragusa');
     rag.innerHTML = '<div class="bh-ragusa-head"><span class="bh-ragusa-name">RAGUSA · DUBROVNIK</span><span class="bh-libertas"></span></div>' +
       '<div class="bh-ragusa-status"></div>';
@@ -154,7 +164,13 @@
       'and <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>, hand-corrected by era. ' +
       'Ragusa: <a href="https://en.wikipedia.org/wiki/Republic_of_Ragusa" target="_blank" rel="noopener">Republic of Ragusa</a>. ' +
       'Borders before 1900 are approximate.';
-    side.append(info, rag, legend, sources);
+    side.append(rag);
+    pop.innerHTML = '<div class="bh-pop-k">Close up, show</div>' +
+      '<div class="bh-seg" role="group" aria-label="Map underneath"><button type="button" data-base="street" aria-pressed="true">Street map</button>' +
+      '<button type="button" data-base="sat" aria-pressed="false">Satellite</button></div>' +
+      '<div class="bh-pop-k">On the map</div>';
+    pop.append(toggles);
+    const keyK = el('div', 'bh-pop-k', 'Key'); pop.append(keyK, legend, sources);
     layout.append(main, side);
     root.appendChild(layout);
 
@@ -187,11 +203,17 @@
         if (ft.h) g.appendChild(svg('path', { d: ft.d, fill: hatch(ft.h), 'pointer-events': 'none' }));
       });
       if (animate && !reduced()) f.feats.forEach(ft => { if (ft.chg && ft.n) g.appendChild(svg('path', { d: ft.d, class: 'bh-chg' })); });
+      // At most two layers at once: the one on screen and the one fading in over it. (Stacking a
+      // layer per step while the slider was dragged piled up a dozen translucent maps, darkening
+      // the land and, on phones, making today's map underneath drop out.)
       const old = [...layers.children];
+      clearTimeout(drawMap._t);
       if (animate && !reduced()) {
+        old.slice(0, -1).forEach(o => o.remove());
+        const under = old[old.length - 1];
         g.style.opacity = 0; layers.appendChild(g);
         requestAnimationFrame(() => requestAnimationFrame(() => { g.style.opacity = 1; }));
-        old.forEach(o => { setTimeout(() => o.remove(), 600); });
+        drawMap._t = setTimeout(() => { if (under) under.remove(); }, 600);
       } else { old.forEach(o => o.remove()); layers.appendChild(g); }
       // trails
       trailsG.innerHTML = '';
@@ -315,10 +337,8 @@
     function renderInfo() {
       const f = F[cur];
       const ft = sel && f.feats.find(x => x.n === sel);
-      if (!ft) {
-        info.innerHTML = '<div class="bh-info-label">On this map</div><div class="bh-info-note">Tap any region to name it and see how long it lasts on the map. Drag or pinch to zoom.</div>';
-        return;
-      }
+      if (!ft) { info.hidden = true; info.innerHTML = ''; return; }
+      info.hidden = false;
       const idx = spans[ft.n] || [cur];
       const first = F[idx[0]].label, last = F[idx[idx.length - 1]].label;
       const notes = [];
@@ -326,8 +346,9 @@
       if (ft.h) notes.push('Hatched: a vassal state or territory under occupation.');
       if (ft.chg && cur > 0) notes.push('Changed hands since the previous map.');
       notes.push(idx.length === 1 ? `Appears only on the ${first} map.` : `On ${idx.length} of ${N} maps, from ${first} to ${last}.`);
-      info.innerHTML = `<div class="bh-info-label">Selected</div><div class="bh-info-name"><i class="bh-swatch" style="background:${ft.c}"></i>${esc(ft.n)}</div>` +
-        `<div class="bh-info-note">${notes.map(esc).join(' ')}</div>`;
+      info.innerHTML = `<div class="bh-info-name"><i class="bh-swatch" style="background:${ft.c}"></i>${esc(ft.n)}</div>` +
+        `<div class="bh-info-note">${notes.map(esc).join(' ')}</div>` +
+        '<button type="button" class="bh-pick-x" aria-label="Close">×</button>';
     }
 
     function show(i, animate = true) {
@@ -345,7 +366,8 @@
       libertas(f.tpos);
       dots.forEach((d, k) => { d.classList.toggle('bh-past', k < i); d.classList.toggle('bh-cur', k === i); d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
       prog.style.width = pct(f.tpos) + '%';
-      transport.querySelector('.bh-range').value = i;
+      track.setAttribute('aria-valuenow', String(i)); track.setAttribute('aria-valuetext', f.label + ': ' + f.title);
+      if (bubble.classList.contains('bh-show')) { bubble.textContent = f.label; bubble.style.left = pct(f.tpos) + '%'; }
       if (animate && prev !== i) {
         const g = Math.round(Math.abs(f.tpos - F[prev].tpos));
         gap.textContent = (f.tpos >= F[prev].tpos ? '+' : '−') + (g < 1 ? '' : g) + (g === 1 ? ' year' : g < 1 ? 'same year' : ' years');
@@ -371,12 +393,72 @@
       if (a.dataset.a === 'play') { playing ? stop() : play(); return; }
       stop(); show(cur + (a.dataset.a === 'next' ? 1 : -1));
     });
-    transport.querySelector('.bh-range').addEventListener('input', e => { stop(); show(+e.target.value); });
-    root.addEventListener('keydown', e => {
-      if (e.target.matches('input[type=range]')) return;
-      if (e.key === 'ArrowRight') { stop(); show(cur + 1); e.preventDefault(); }
-      if (e.key === 'ArrowLeft') { stop(); show(cur - 1); e.preventDefault(); }
+    // The ribbon is the slider. A tap picks the nearest era (an age's name, the start of that
+    // age); a sideways drag scrubs through them, swapping eras instantly with a bubble naming the
+    // one under your finger; an up-and-down drag is left to scroll the page.
+    const nearest = x => {
+      const r = track.getBoundingClientRect(), t = T0 + (x - r.left) / r.width * (T1 - T0);
+      let k = 0; F.forEach((f, i) => { if (Math.abs(f.tpos - t) < Math.abs(F[k].tpos - t)) k = i; }); return k;
+    };
+    const ageStart = from => F.findIndex(f => f.tpos >= from);
+    let scrub = null;
+    const bubbleOn = on => { bubble.classList.toggle('bh-show', on); if (on) { bubble.textContent = F[cur].label; bubble.style.left = pct(F[cur].tpos) + '%'; } };
+    track.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      scrub = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false, name: e.target.closest('.bh-era-name') };
+      // a mouse can't mean "scroll", so it scrubs straight away
+      if (e.pointerType === 'mouse') { scrub.on = true; stop(); track.setPointerCapture(e.pointerId); bubbleOn(true); if (!scrub.name) show(nearest(e.clientX), false); }
     });
+    track.addEventListener('pointermove', e => {
+      if (!scrub || e.pointerId !== scrub.id) return;
+      if (!scrub.on) {
+        const dx = Math.abs(e.clientX - scrub.x), dy = Math.abs(e.clientY - scrub.y);
+        if (dx < 6 || dx < dy) return;
+        scrub.on = true; stop(); try { track.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
+        bubbleOn(true);
+      }
+      scrub.moved = true;
+      const k = nearest(e.clientX); if (k !== cur) show(k, false);
+    });
+    const scrubEnd = e => {
+      if (!scrub || e.pointerId !== scrub.id) return;
+      const s0 = scrub; scrub = null;
+      bubbleOn(false);
+      if (e.type === 'pointercancel' || s0.moved) return;
+      stop();
+      const k = s0.name ? ageStart(+s0.name.dataset.from) : nearest(e.clientX);
+      if (k !== cur) show(k);
+    };
+    track.addEventListener('pointerup', scrubEnd); track.addEventListener('pointercancel', scrubEnd);
+    track.addEventListener('keydown', e => {
+      const ages = ERAS.map(a => ageStart(a[1]));
+      let k = null;
+      if (e.key === 'Home') k = 0; else if (e.key === 'End') k = N - 1;
+      else if (e.key === 'PageDown') k = ages.find(a => a > cur);
+      else if (e.key === 'PageUp') k = [...ages].reverse().find(a => a < cur);
+      if (k == null) return;
+      e.preventDefault(); stop(); show(k);
+    });
+    root.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !pop.hidden) { layersOpen(false); zoomUI.querySelector('[data-z=layers]').focus(); return; }
+      if (e.target.closest('.bh-pop')) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp' && e.target === track) { stop(); show(cur + 1); e.preventDefault(); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown' && e.target === track) { stop(); show(cur - 1); e.preventDefault(); }
+    });
+    info.addEventListener('click', e => { if (e.target.closest('.bh-pick-x')) { sel = null; markSel(); renderInfo(); } });
+    function markSel() {
+      layers.lastChild && layers.lastChild.querySelectorAll('.bh-poly').forEach(p => {
+        const f2 = F[cur].feats[+p.dataset.k]; p.classList.toggle('bh-sel', !!(sel && f2.n === sel));
+      });
+    }
+    // Layers opens over the map; a tap anywhere else closes it
+    function layersOpen(on) {
+      pop.hidden = !on;
+      zoomUI.querySelector('[data-z=layers]').setAttribute('aria-expanded', on ? 'true' : 'false');
+      zoomUI.querySelector('[data-z=layers]').classList.toggle('bh-on', on);
+    }
+    document.addEventListener('pointerdown', e => { if (!pop.hidden && !e.target.closest('.bh-pop, [data-z=layers]')) layersOpen(false); });
+    pop.addEventListener('click', e => { const b = e.target.closest('[data-base]'); if (b) setSat(b.dataset.base === 'sat'); });
     toggles.addEventListener('change', () => {
       root.classList.toggle('bh-hide-caps', !toggles.querySelector('#bh-t-caps').checked);
       root.classList.toggle('bh-hide-trails', !toggles.querySelector('#bh-t-trails').checked);
@@ -405,6 +487,7 @@
       mainPatterns.forEach(([p, bar, size]) => sizePattern(p, bar, size));
       // un-zoomed, a vertical finger drag scrolls the page (touch-action: pan-y); zoomed, every drag pans the map
       vp.classList.toggle('bh-zoomed', scale > 1);
+      setFocus(scale > 3);
       // deep in, dashed lines run to millions of dashes and stall every frame: draw them solid instead
       root.classList.toggle('bh-deep', scale > 8);
       tiles(w, h);
@@ -436,8 +519,8 @@
     zoomUI.addEventListener('click', e => {
       const b = e.target.closest('[data-z]'); if (!b) return;
       const w = vp.clientWidth / 2, h = vp.clientHeight / 2, z = b.dataset.z;
+      if (z === 'layers') { layersOpen(pop.hidden); return; }
       if (z === 'reset') zoomTo(VW / 2, VH / 2, 1);
-      else if (z === 'sat') setSat(!sat);
       else if (z === 'ragusa') zoomTo(RAG[0], RAG[1], Math.min(900, maxScale()));   // the Old Town and Lokrum
       else zoomAt(z === 'in' ? 2 : 1 / 2, w, h);
     });
@@ -456,9 +539,7 @@
     function setSat(on, auto) {
       sat = on;
       root.classList.toggle('bh-sat', on);
-      const b = zoomUI.querySelector('[data-z=sat]');
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      b.title = on ? 'Street map view' : 'Satellite view'; b.setAttribute('aria-label', b.title);
+      pop.querySelectorAll('[data-base]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.base === 'sat') === on)));
       attrib.innerHTML = (on ? 'Imagery © Esri, Maxar, Earthstar Geographics' : 'Today’s map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>') + ' · old borders approximate';
       tileImgs.forEach(dropTile); tileImgs.clear(); tileWant = new Set(); tileFails = 0; tileGen++;
       // a switch made because street tiles failed isn't remembered as the viewer's choice
@@ -595,9 +676,7 @@
         const k = hit && hit.closest && hit.closest('.bh-poly') ? +hit.closest('.bh-poly').dataset.k : null;
         const ft = k != null ? F[cur].feats[k] : null;
         sel = ft && ft.n ? (sel === ft.n ? null : ft.n) : null;
-        layers.lastChild && layers.lastChild.querySelectorAll('.bh-poly').forEach(p => {
-          const f2 = F[cur].feats[+p.dataset.k]; p.classList.toggle('bh-sel', !!(sel && f2.n === sel));
-        });
+        markSel();
         renderInfo();
       }
     };
