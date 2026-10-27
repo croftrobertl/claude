@@ -269,6 +269,12 @@ def build(d):
         'towers': [[n, round(v[1], 6), round(v[2], 6)] for n, v in STON_TOWERS.items()],
         'lines': [[[round(STON_TOWERS[n][1], 6), round(STON_TOWERS[n][2], 6)] for n in l] for l in STON_LINES],
     }
+    # 1991–92: by late October 1991 the Yugoslav army held almost all the land between Pelješac and
+    # Prevlaka except Dubrovnik itself — Konavle, Župa, the Dubrovnik Littoral and the coast west of
+    # the city. Drawn by municipality (and the city's own coast west of 17.98°E), so approximate.
+    out['siege'] = {
+        'held': out_polys(polys(d, 'konavle') + polys(d, 'zupa') + polys(d, 'primorje') + clip_polys([big], (0, 17.98, True)), 0.00012),
+    }
     g = geo(d, 'W%d' % STRADUN_WAY)
     out['stradun'] = [[round(q[1], 6), round(q[0], 6)] for q in dp(g['coordinates'], 0.000005)]
     return out
