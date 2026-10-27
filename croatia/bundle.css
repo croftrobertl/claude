@@ -1807,15 +1807,11 @@ html.dcc-matrix-on .dcc-tour-lb-then[aria-pressed="true"] { background: rgba(0, 
 .dcc-siege-banner > span:last-child { font-size: 0.86rem; color: var(--dcc-tour-muted); }
 .dcc-siege { margin: 14px 0 6px; }
 .dcc-siege-cal { padding: 14px 12px 8px; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); }
-.dcc-siege-track { --lane-h: 18px; position: relative; height: calc(30px + (var(--lanes, 1) - 1) * var(--lane-h)); margin: 0 8px; }
+.dcc-siege-track { position: relative; height: 30px; margin: 0 8px; }
 .dcc-siege-track::before { content: ""; position: absolute; left: 0; right: 0; bottom: 14px; height: 2px; background: var(--dcc-tour-border); }
 .dcc-siege-span { position: absolute; bottom: 9px; height: 12px; border-radius: 3px; }
 .dcc-siege-span.on, .dcc-siege-key i.on { background: #a3271b; }
 .dcc-siege-span.occ, .dcc-siege-key i.occ { background: repeating-linear-gradient(135deg, #a3271b 0 3px, #e9c5c1 3px 6px); }
-.dcc-siege-dot { position: absolute; bottom: calc(-7px + var(--lane, 0) * var(--lane-h)); width: 44px; height: 44px; margin-left: -22px; pointer-events: none; }
-.dcc-siege-dot i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); border-radius: 50%;
-  background: var(--dcc-tour-card-bg); border: 3px solid #201f1d; box-sizing: border-box; transition: transform 0.15s; }
-.dcc-siege-dot.on i { transform: translate(-50%, -50%) scale(1.35); background: #f2c230; }
 .dcc-siege-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
 .dcc-siege-chip { position: relative; font: inherit; font-size: 0.78rem; line-height: 1.25; min-height: 34px; padding: 5px 12px; border-radius: 999px; cursor: pointer; text-align: left;
   color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); }
@@ -1858,8 +1854,23 @@ html.dcc-matrix-on .dcc-siege-chip b { color: #ff6b5e; }
 .dcc-then-held-fort::after { content: ""; position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; }
 .dcc-tour-mm-map:not(.dcc-then-mid) .dcc-then-held-fort, .dcc-then-street .dcc-then-held-fort { display: none; }
 html.dcc-matrix-on .dcc-siege-banner-k, html.dcc-matrix-on .dcc-then-plab-war b { color: #ff6b5e; }
-html.dcc-matrix-on .dcc-siege-dot i { border-color: currentColor; }
 @media print { .dcc-siege-banner, .dcc-siege-map, .dcc-siege-read, .dcc-chron-focus { display: none; } }
-/* a dot stepped up a lane keeps a thin stem down to its date on the line */
-.dcc-siege-dot.up::before { content: ""; position: absolute; left: 21px; top: 29px; width: 2px; height: calc(var(--lane) * var(--lane-h) - 8px); background: #201f1d; }
-html.dcc-matrix-on .dcc-siege-dot.up::before { background: currentColor; }
+
+/* ---- the siege, refined: a line of marks, the blockade, and one row of dates on a phone ---- */
+.dcc-siege-dot { position: absolute; bottom: 7px; width: 2px; height: 16px; margin-left: -1px; background: #201f1d; border-radius: 1px; pointer-events: none; transition: transform .15s, background .15s; }
+.dcc-siege-dot.on { background: #f2c230; transform: scaleY(1.5); box-shadow: 0 0 0 1px #201f1d; }
+.dcc-siege-span.pre, .dcc-siege-key i.pre { background: repeating-linear-gradient(90deg, #a3271b 0 4px, transparent 4px 7px); height: 6px; }
+.dcc-siege-span.pre { bottom: 12px; }
+html.dcc-matrix-on .dcc-siege-dot { background: currentColor; }
+@media (max-width: 700px) {
+  .dcc-siege-chips { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; padding: 4px 2px 8px; margin-inline: -2px; scrollbar-width: none; }
+  .dcc-siege-chips::-webkit-scrollbar { display: none; }
+  .dcc-siege-chip { flex: none; scroll-snap-align: start; white-space: nowrap; }
+}
+/* the place page's 1991–92 note: quiet, with the siege's red rule */
+.dcc-hp-siege { background: rgba(163, 39, 27, 0.06); border-left: 3px solid #a3271b; }
+.dcc-hp-siege .dcc-hist-note-k { color: #a3271b; }
+html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
+/* the one-row date chips scroll inside the strand instead of widening it */
+.dcc-chron-body, .dcc-chron-panel, .dcc-siege, .dcc-siege-cal { min-width: 0; max-width: 100%; }
+.dcc-siege-chips { max-width: 100%; }

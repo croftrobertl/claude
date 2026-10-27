@@ -601,8 +601,8 @@
   // how strong an entry's best source is
   const EV_TIERS = [
     [4, 'Scholarly & archival', /hrcak\.srce\.hr|pubmed|researchgate|jas-center\.eu|icty\.org/],
-    [3, 'Encyclopedias & institutions', /enciklopedija\.hr|lzmk\.hr|unesco\.org|irb\.hr|\/\/db\.hr|migk\.hr|matica\.hr|tzdubrovnik\.hr|britannica\.com|topostext|\/\/www\.dubrovnik\.hr|dumus\.hr|dubrovackoprimorje\.hr/],
-    [2, 'Wikipedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|dubrovniknet\.hr|domovinskirat\.hr|jadrolinija\.hr|vreme\.com|cgo-cce\.org/],
+    [3, 'Encyclopedias & institutions', /enciklopedija\.hr|lzmk\.hr|unesco\.org|irb\.hr|\/\/db\.hr|migk\.hr|matica\.hr|tzdubrovnik\.hr|britannica\.com|topostext|\/\/www\.dubrovnik\.hr|\/\/dubrovnik\.hr|dumus\.hr|dubrovackoprimorje\.hr|mdrd\.hr|hrvatski-vojnik\.hr/],
+    [2, 'Wikipedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|dubrovniknet\.hr|domovinskirat\.hr|jadrolinija\.hr|vreme\.com|cgo-cce\.org|hina\.hr|hrt\.hr|slobodnaevropa\.org|teleskop\.hr|morski\.hr|identitet\.hr|dubrovnikinsider\.hr|dulist\.hr|hrvatskonebo\.org|hrvatskispomenar\.com|hu-benedikt\.hr/],
     [1, 'Travel guides & blogs', /./]
   ];
   const evidenceOf = src => EV_TIERS.find(t => src.some(([, u]) => t[2].test(u))) || EV_TIERS[3];
@@ -694,11 +694,13 @@
   //      the places on the trip where it happened, each with your photos. ----
   const SIEGE_SPOTS = [
     { re: /Airport \(DBV\), Čilipi$/, t: 'Dubrovnik Airport, Čilipi', s: 'Looted in October 1991, its equipment partly carried off to Montenegro, while army units burned Čilipi village.', ev: 'slano-and-cilipi' },
+    { re: /Lapad, Dubrovnik$/, t: 'Lapad, where you stayed', s: 'In November 1991 shells fell on Lapad and Babin Kuk, whose hotels were full of refugees from Konavle, Župa and the Littoral.', ev: 'a-city-of-refugees' },
     { re: /^Port of Gruž/, t: 'The port of Gruž', s: 'Where the Libertas convoy came in through the blockade, and where the ferry Slavija took almost 4,000 people out on 14 November 1991.', ev: 'the-libertas-convoy' },
-    { re: /Cavtat$/, t: 'Cavtat', s: 'Taken by the army on 15 October 1991. Konavle around it stayed occupied until 21 October 1992.', ev: 'cavtat-falls' },
-    { re: /^Stradun|^Orlando[’']s Column|Bell Tower/, t: 'Stradun and the Old Town', s: 'Shelled for more than ten hours on 6 December 1991. In all, 594 of the Old Town’s 824 buildings were damaged in the siege.', ev: 'the-darkest-day' },
-    { re: /^Fort Imperial/, t: 'Fort Imperial on Srđ', s: 'Its few defenders held through the day-long attack of 6 December 1991. It now tells the story of the war.', ev: 'the-darkest-day' },
-    { re: /^Dubrovnik Cable Car/, t: 'The cable car', s: 'Wrecked in the 1991 fighting; it carried people up Srđ again from July 2010.', ev: 'remembering-on-srd' }
+    { re: /Cavtat$/, t: 'Cavtat', s: 'Taken on 15 October 1991. Konavle stayed occupied for a year, until Operation Konavle landed here on the night of 20–21 October 1992.', ev: 'cavtat-falls' },
+    { re: /^Stradun|^Orlando[’']s Column|Bell Tower/, t: 'Stradun and the Old Town', s: 'Shelled for more than ten hours on 6 December 1991; a plaque under the bell tower remembers the photographer Pavo Urban, killed there that day. In all, 594 of the Old Town’s 824 buildings were damaged.', ev: 'the-darkest-day' },
+    { re: /^Fort Imperial/, t: 'Fort Imperial on Srđ', s: 'On 6 December 1991 a few dozen defenders held it against infantry and tanks; had it fallen, the city lay open below. It now houses the Museum of the Homeland War.', ev: 'the-darkest-day' },
+    { re: /^(Mount Srđ Cross|Observation Deck, Mount Srđ|Srđ ulica, Mount Srđ)/, t: 'Mount Srđ', s: 'The front line ran across Srđ: the defenders held Fort Imperial while the army held Bosanka just behind it. The summit cross, pulled down in 1991, was raised again in October 1997.', ev: 'remembering' },
+    { re: /^Dubrovnik Cable Car/, t: 'The cable car', s: 'Wrecked in the 1991 fighting; it has carried people up Srđ again since July 2010.', ev: 'remembering' }
   ];
   const SIEGE_FROM = Date.UTC(1991, 8, 1), SIEGE_TO = Date.UTC(1992, 10, 1);
   const siegeX = iso => { const [y, m, d] = iso.split('-').map(Number); return Math.max(0, Math.min(100, (Date.UTC(y, m - 1, d) - SIEGE_FROM) / (SIEGE_TO - SIEGE_FROM) * 100)); };
@@ -717,7 +719,7 @@
     return '<button type="button" class="dcc-siege-banner" data-strand="siege">' +
       '<span class="dcc-siege-banner-k">Special focus</span>' +
       '<b>The Siege of Dubrovnik, 1991–92</b>' +
-      '<span>Eight months in dates, and the places on your trip where it happened ›</span></button>';
+      '<span>In memory of its defenders and civilians: the siege in dates, and the places on your trip where it happened ›</span></button>';
   }
   function siegeHtml(st) {
     const dated = st.events.filter(ev => ev.d);
@@ -729,22 +731,22 @@
     }
     const span = (a, b, cls, lab) => '<i class="dcc-siege-span ' + cls + '" style="left:' + siegeX(a).toFixed(2) + '%;width:' + (siegeX(b) - siegeX(a)).toFixed(2) + '%" title="' + escapeAttr(lab) + '"></i>';
     const spots = siegeSpots();
-    // dots closer than ~20px step up a lane, so each one can be tapped
-    const w = Math.max(240, ((histEl && histEl.clientWidth) || 360) - 60), gap = 20 / w * 100, lanes = [];
-    const lane = dated.map(ev => { const x = siegeX(ev.d); let k = 0; while (lanes[k] != null && x - lanes[k] < gap) k++; lanes[k] = x; return k; });
-    const nl = lanes.length;
+    // the chip's date: day and month, with the year once it's 1992
+    const short = iso => { const [y, m, d] = iso.split('-').map(Number); return d + ' ' + MONTHS[m - 1].slice(0, 3) + (y > 1991 ? ' ' + y : ''); };
     return '<div class="dcc-siege">' +
       '<div class="dcc-siege-cal" role="group" aria-label="The siege month by month">' +
-        '<div class="dcc-siege-track" style="--lanes:' + nl + '">' +
-          span('1991-10-01', '1992-05-31', 'on', 'Dubrovnik besieged, 1 October 1991 – 31 May 1992') +
-          span('1992-05-31', '1992-10-21', 'occ', 'Konavle still occupied, to 21 October 1992') +
-          dated.map((ev, i) => '<span class="dcc-siege-dot' + (lane[i] ? ' up' : '') + '" data-dot="' + i + '" style="left:' + siegeX(ev.d).toFixed(2) + '%;--lane:' + lane[i] + '" aria-hidden="true"><i></i></span>').join('') +
+        '<div class="dcc-siege-track">' +
+          span('1991-09-17', '1991-10-01', 'pre', 'The sea blockade, from 17 September 1991') +
+          span('1991-10-01', '1992-05-26', 'on', 'Dubrovnik besieged, 1 October 1991 – 26 May 1992') +
+          span('1992-05-26', '1992-10-24', 'occ', 'Konavle still occupied, to October 1992') +
+          // each dated entry is a thin mark on the line (close dates simply sit side by side)
+          dated.map((ev, i) => '<span class="dcc-siege-dot" data-dot="' + i + '" style="left:' + siegeX(ev.d).toFixed(2) + '%" aria-hidden="true"></span>').join('') +
         '</div>' +
         '<div class="dcc-siege-months" aria-hidden="true">' + months.join('') + '</div>' +
         // the dots sit too close to tap on a phone: these chips are the way in, and light up their dot
         '<div class="dcc-siege-chips">' + dated.map((ev, i) =>
-          '<button type="button" class="dcc-siege-chip" data-sjump="' + escapeAttr(ev.id) + '" data-dot="' + i + '"><b>' + escapeHtml(ev.y.replace(/ 199[12]$/, '')) + '</b> ' + escapeHtml(ev.title) + '</button>').join('') + '</div>' +
-        '<p class="dcc-siege-key"><span><i class="on"></i>The city under siege</span><span><i class="occ"></i>Konavle still occupied</span></p>' +
+          '<button type="button" class="dcc-siege-chip" data-sjump="' + escapeAttr(ev.id) + '" data-dot="' + i + '"><b>' + escapeHtml(short(ev.d)) + '</b> ' + escapeHtml(ev.title) + '</button>').join('') + '</div>' +
+        '<p class="dcc-siege-key"><span><i class="pre"></i>Blockade</span><span><i class="on"></i>The city under siege</span><span><i class="occ"></i>Konavle still occupied</span></p>' +
       '</div>' +
       (spots.length ? '<h3 class="dcc-siege-h">Where you stood</h3>' +
         '<ul class="dcc-siege-spots">' + spots.map((sp, k) =>
@@ -952,7 +954,12 @@
     const { ch, e } = histLink;
     if (ch && ch !== chronStrand && (ch === 'records' || chron.strands.some(s => s.id === ch))) { chronStrand = ch; chronActive = null; renderChronicle(); }
     histLink = null;
-    if (!e) return;
+    if (!e) {
+      // a link to a strand alone (the Map tab's "The siege, 1991–92") lands on that strand
+      if (ch) { chronActive = null; if (root.dataset.view === 'history') updateHash(); }
+      if (ch) setTimeout(() => { const t = histEl.querySelector('.dcc-chron-tabs'); if (t) { storyLock(1600); t.scrollIntoView({ behavior: 'auto', block: 'start' }); } }, 300);
+      return;
+    }
     setTimeout(() => {
       const li = histEl.querySelector('.dcc-chron-list li[data-id="' + CSS.escape(e) + '"]');
       if (!li) return;
@@ -1891,12 +1898,16 @@
       const list = ragI.length
         ? fold(0, ragI[0] - 1, 'Before Ragusa') + runs.slice(ragI[0], ragI[ragI.length - 1] + 1).map((r, j) => runRow(r, ragI[0] + j)).join('') + fold(ragI[ragI.length - 1] + 1, runs.length - 1, 'After the Republic')
         : runs.map(runRow).join('');
+      const siegeSpot = SIEGE_SPOTS.find(sp => sp.re.test(name));
       sec.innerHTML = closeBtn +
         '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>This place in history</span></div>' +
         '<h2 class="dcc-hp-h">' + escapeHtml(shortName(name)) + '</h2>' +
         '<p class="dcc-hp-sub">' + (pp.sea ? 'Off the coast of ' : 'In ') + escapeHtml(area) + ' · you were here on ' + escapeHtml(dayRanges(g.days).replace(/^D/, 'd')) + '</p>' +
         (noteText ? '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div><p>' + escapeHtml(noteText) + '</p>' +
           (noteEra ? '<button type="button" class="dcc-hist-note-a" data-vt="' + escapeAttr(histSlugOf(noteEra)) + '">See the map of ' + escapeHtml(noteEra) + ' ›</button>' : '') + '</aside>' : '') +
+        // where the siege touched this spot: one note, and the way into its story
+        (siegeSpot ? '<aside class="dcc-hist-note dcc-hp-siege"><div class="dcc-hist-note-k"><span>In 1991–92</span></div><p>' + escapeHtml(siegeSpot.s) + '</p>' +
+          '<button type="button" class="dcc-hist-note-a" data-siege="' + escapeAttr(siegeSpot.ev) + '">The siege in detail ›</button></aside>' : '') +
         '<h3 class="dcc-hp-k">Who held it</h3>' +
         '<div class="dcc-hp-ribbon" role="group" aria-label="Who held it, era by era">' + runs.map((r, i) =>
           '<button type="button" class="dcc-hp-rb ' + (r.cls || 'other') + '" data-run="' + i + '" style="flex-grow:' + r.n + '" title="' + escapeAttr(r.from.label + (r.to !== r.from ? ' – ' + r.to.label : '') + ': ' + r.t) + '" aria-label="' + escapeAttr(r.from.label + (r.to !== r.from ? ' to ' + r.to.label : '') + ': ' + r.t) + '"></button>').join('') + '</div>' +
@@ -1919,6 +1930,8 @@
     return f ? f.label : '';
   }
   function histPlaceClick(e) {
+    const sj = e.target.closest('[data-siege]');
+    if (sj) { histLink = { ch: 'siege', e: sj.dataset.siege }; applyChronLink(); return; }
     const vt = e.target.closest('[data-vt]');
     if (vt && histHandle) {
       histHandle.show(vt.dataset.vt);
@@ -1971,7 +1984,7 @@
       const a = document.createElement('a');
       a.className = 'dcc-tour-dayhist';
       a.href = '#v=history&ch=' + hit.st.id + '&e=' + encodeURIComponent(hit.ev.id);
-      a.innerHTML = svgIcon('history') + '<span><b>On ' + dd + ' ' + MONTHS[mm - 1] + ' ' + hit.yr + '</b> ' + escapeHtml(hit.line) + ' ›</span>';
+      a.innerHTML = svgIcon('history') + '<span><b>On ' + dd + ' ' + MONTHS[mm - 1] + ' ' + hit.yr + '</b> ' + escapeHtml(hit.line.replace(/^The /, 'the ')) + ' ›</span>';
       head.appendChild(a);
     });
   }
@@ -2636,6 +2649,14 @@
     konavle:  { parts: ['konavle'], name: 'Konavle', kind: 'konavle', joined: '1419–26', line1942: true },
     sutorina: { parts: ['sutorina'], name: 'Sutorina', kind: 'other', ceded: 'mne' }
   };
+  // 1991–92, area by area (geometry: history/street.json "siege"; sources in the chronicle's siege strand)
+  const SIEGE_AREAS = {
+    konavle: { t: 'Konavle', s: 'Cavtat was taken on 15 October 1991, and the whole valley stayed occupied until Operation Konavle, 20–24 October 1992.' },
+    zupa: { t: 'Župa dubrovačka', s: 'Occupied in late October 1991, when Kupari and Srebreno fell; freed when Dubrovnik’s defenders broke out on 26 May 1992.' },
+    prim: { t: 'The Dubrovnik Littoral', s: 'Slano fell on 4–5 October 1991. The Littoral was freed in May and June 1992.' },
+    rijeka: { t: 'Rijeka dubrovačka and the coast to Brsečine', s: 'Taken in October and November 1991: Bosanka on the Srđ plateau fell on 9 November, Mokošica in late November after Osojnik. Freed from 26 May 1992.' }
+  };
+  const SIEGE_FORT = 'On 6 December 1991 a few dozen defenders held the fort against an infantry and tank attack from Bosanka and Strinčjera, with tanks right up at the fort. It was the anchor of the line that saved the city, and today it houses the Museum of the Homeland War.';
   const THEN_ORDER = ['core', 'elaph', 'lastovo', 'pel', 'mljet', 'prim', 'neum', 'konavle', 'sutorina', 'city'];   // the first town on top
   const THEN_LAB = { core: [42.6555, 18.118], elaph: [42.7277, 17.8803] };
   // the two 1699 corridors after Ragusa handed them to the Ottomans
@@ -2671,7 +2692,7 @@
     { ll: [42.64991, 18.11065], from: 1806, by: 'fra', t: 'Fort Imperial', s: '1806–12', x: 'Built by Napoleon’s French between 1806 and 1812, looking down on the whole city. Its defenders held it on 6 December 1991; it now houses the Homeland War museum.' },
     { ll: [42.62997, 18.11674], from: 1806, by: 'fra', t: 'Fort Royal, Lokrum', s: '1806', x: 'Begun by the French in 1806 on Lokrum’s highest point; the Austrians later enlarged it.' },
     { ll: [42.6242, 18.1201], from: 1859, by: 'aus', t: 'Maximilian’s gardens', s: '1859', x: 'From 1859 Lokrum belonged to Archduke Maximilian of Austria, later Emperor of Mexico, who laid out these gardens.' },
-    { ll: [42.64274, 18.10492], from: 1897, by: 'aus', t: 'Grand Hotel Imperial', s: '1897', x: 'Dubrovnik’s first modern hotel, opened in 1897 under Habsburg rule. It was shelled in 1991.' },
+    { ll: [42.64274, 18.10492], from: 1897, by: 'aus', t: 'Grand Hotel Imperial', s: '1897', x: 'Dubrovnik’s first modern hotel, opened in 1897 under Habsburg rule. In 1991 it sheltered refugees, and its top floor burned in the shelling.' },
     { ll: [42.649189, 18.111862], from: 1991, by: 'cro', t: 'Mount Srđ Cross', s: '1991 · 1997', x: 'Pulled down during the 1991 attack on Dubrovnik and put back up in 1997.' }
   ];
   // who built (or kept) each landmark, as it reads after its dates: "1806–12 · built by France"
@@ -2921,7 +2942,11 @@
     ui.querySelector('[data-a=next]').addEventListener('click', () => { thenStop(); thenShow(Math.min(frames.length - 1, thenIdx + 1)); });
     ui.querySelector('[data-a=play]').addEventListener('click', () => thenPlay ? thenStop() : thenStart());
     ui.querySelector('[data-a=cmp]').addEventListener('click', () => thenCompare(!thenCmpOn));
-    ui.querySelector('[data-a=hist]').addEventListener('click', () => { histWant = histSlugOf(frames[thenIdx].label); setView('history'); });
+    ui.querySelector('[data-a=hist]').addEventListener('click', () => {
+      histWant = histSlugOf(frames[thenIdx].label);
+      if (histWant === '1992') histLink = { ch: 'siege' };   // 1991–92 has its own story: the siege
+      setView('history');
+    });
     ui.querySelector('[data-a=close]').addEventListener('click', () => thenToggle(false));
     ui.querySelector('[data-a=walls]').addEventListener('click', () => wallWalk ? wallStop() : wallStart());
     // a drag or zoom of the map, or leaving the tab, ends the walk
@@ -2972,6 +2997,7 @@
     ui.querySelector('.dcc-then-rng').setAttribute('aria-valuetext', f.label + ', ' + f.title);
     ui.querySelector('.dcc-then-yr').textContent = f.label;
     ui.querySelector('.dcc-then-t').textContent = f.title;
+    ui.querySelector('[data-a=hist]').textContent = histSlugOf(f.label) === '1992' ? 'The siege, 1991–92' : 'This era’s story';
     ui.querySelector('.dcc-then-s').textContent = 'Ragusa · ' + R.status + ' — ' + R.body;
     ui.querySelector('[data-a=prev]').disabled = i === 0;
     ui.querySelector('[data-a=next]').disabled = i === frames.length - 1;
@@ -3038,12 +3064,21 @@
         icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-it', html: '<div><b>Annexed by Italy</b><span>1941–43 · line approximate</span></div>', iconSize: null }) }));
     }
     // 1991–92: the land the Yugoslav army held round the besieged city
-    if (R.siege && S.siege) {
-      const tip = '<b>Held by the Yugoslav army, autumn 1991</b><br>By late October 1991 the army held almost all the land between Pelješac and Prevlaka except Dubrovnik itself. The siege was lifted at the end of May 1992; Konavle was free again on 21 October 1992. Drawn by municipality, so approximate.';
-      thenNear.addLayer(thenStory(L.polygon(S.siege.held, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 0, fillColor: '#a3271b', fillOpacity: 0.32, className: 'dcc-then-held' }), tip));
+    if (R.siege && S.siege && S.siege.areas) {
+      Object.keys(SIEGE_AREAS).forEach(k => {
+        const A = SIEGE_AREAS[k], g = S.siege.areas[k];
+        if (!g) return;
+        // hover names the area; a tap tells its story
+        const pg = L.polygon(g, { renderer: thenRN, pane: 'dccThen', color: '#a3271b', weight: 0, fillColor: '#a3271b', fillOpacity: 0.32, className: 'dcc-then-held' });
+        pg.bindTooltip('<b>' + escapeHtml(A.t) + '</b><br>held by the Yugoslav army · tap for the story', { sticky: true, className: 'dcc-then-tip' });
+        pg.bindPopup('<div class="dcc-then-pop dcc-then-pop-line"><b>' + escapeHtml(A.t) + ': held by the Yugoslav army</b><br>' + escapeHtml(A.s) + '<br><small>Drawn by municipality and village, so approximate.</small></div>',
+          { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) });
+        pg.on('popupopen', () => pg.closeTooltip());
+        thenNear.addLayer(pg);
+      });
       thenNear.addLayer(L.marker([42.6498, 18.1107], { pane: 'dccThenTop', keyboard: true, title: 'Fort Imperial: held',
         icon: L.divIcon({ className: 'dcc-then-held-fort', html: '<i aria-hidden="true">★</i><span>Fort Imperial · held</span>', iconSize: null }) })
-        .bindPopup('<div class="dcc-then-pop"><b>Fort Imperial on Srđ</b><p>The Croatian defenders’ position above the city. Its few defenders held it through the day-long attack of 6 December 1991.</p></div>',
+        .bindPopup('<div class="dcc-then-pop"><b>Fort Imperial on Srđ: held</b><p>' + escapeHtml(SIEGE_FORT) + '</p></div>',
           { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) }));
     }
     thenDrawCrossings(f);
@@ -3133,7 +3168,7 @@
         : thenInPolys(c.lat, c.lng, K41.italy41) ? 'Kingdom of Italy (annexed 1941)'
         : thenInPolys(c.lat, c.lng, K41.italy42) ? 'Kingdom of Italy (taken in 1942)' : 'Independent State of Croatia (Axis)' : null;
       const siege = f.ragusa.siege && S.siege && !sea && k
-        ? (thenInPolys(c.lat, c.lng, S.siege.held) ? 'Croatia · held by the Yugoslav army 1991–92' : k === 'core' || k === 'city' ? 'Croatia · besieged, never taken' : null) : null;
+        ? (S.siege.areas && Object.values(S.siege.areas).some(g => thenInPolys(c.lat, c.lng, g)) ? 'Croatia · held by the Yugoslav army 1991–92' : k === 'core' || k === 'city' ? 'Croatia · besieged, never taken' : null) : null;
       if (k) txt = (sea ? 'Off <b>' : '<b>') + escapeHtml(THEN_PART[k].name) + '</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml((!sea && (ww2 || siege)) || thenPartStatus(k, f).t);
       else if (inland) { const n = thenInlandName(f); if (n) txt = '<b>Inland</b> in ' + escapeHtml(f.label) + ': ' + escapeHtml(n); }
     }

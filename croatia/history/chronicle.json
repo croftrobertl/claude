@@ -478,33 +478,15 @@
      "y": "1991–1992",
      "sort": 1991,
      "title": "The siege",
-     "text": "The Yugoslav navy blockaded the city’s sea routes from 25 September 1991, and the army surrounded Dubrovnik from 1 October 1991 to 31 May 1992. The worst shelling of the Old City came on 6 December 1991; Fort Imperial on Srđ held.",
+     "text": "The Yugoslav navy blockaded the city’s waters from 17 September 1991, and the army besieged Dubrovnik from 1 October 1991 until its defenders broke out on 26 May 1992. The worst attack came on 6 December 1991; Fort Imperial on Srđ held.",
      "src": [
+      [
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ],
       [
        "Siege of Dubrovnik",
        "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
-      ]
-     ],
-     "days": [
-      [
-       "09-25",
-       1991,
-       "The Yugoslav navy blockaded Dubrovnik’s sea routes"
-      ],
-      [
-       "10-01",
-       1991,
-       "The siege of Dubrovnik began"
-      ],
-      [
-       "12-06",
-       1991,
-       "The worst shelling of the Old City"
-      ],
-      [
-       "05-31",
-       1992,
-       "The siege of Dubrovnik ended"
       ]
      ],
      "places": "^Fort Imperial|^Mount Srđ Cross",
@@ -887,36 +869,23 @@
      "y": "Oct 1991",
      "sort": 1991,
      "title": "Occupied",
-     "text": "The first shells fell on 23 September 1991, on Vitaljina in eastern Konavle. Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. The occupation lasted into 1992, and Konavle's villages were rebuilt over the years that followed.",
+     "text": "The first shells fell on 22 September 1991, on Đurinići and Vitaljina in eastern Konavle. Yugoslav army units burned Čilipi between 5 and 7 October 1991 (an indictment lists 90 family houses destroyed) and took Cavtat on 15 October. Konavle stayed occupied for a year, and many of its people were held at Morinj in Montenegro; its villages were rebuilt over the years that followed.",
      "src": [
+      [
+       "Dubrovnik Insider",
+       "https://dubrovnikinsider.hr/krajem-rujna-1991-neprijatelj-je-poceo-pucati-po-konavlima/"
+      ],
       [
        "tportal (indictment)",
        "https://www.tportal.hr/vijesti/clanak/palio-cilipe-stize-ga-pravda-20121206"
       ],
       [
-       "Dubrovnik Republic (1991–1992)",
-       "https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)"
+       "Morinj camp",
+       "https://en.wikipedia.org/wiki/Morinj_camp"
       ],
       [
-       "Siege of Dubrovnik",
-       "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
-      ]
-     ],
-     "days": [
-      [
-       "09-23",
-       1991,
-       "Yugoslav artillery shelled Vitaljina in Konavle"
-      ],
-      [
-       "10-05",
-       1991,
-       "Yugoslav army units began burning Čilipi"
-      ],
-      [
-       "10-15",
-       1991,
-       "The Yugoslav army took Cavtat"
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
       ]
      ],
      "places": "Čilipi$",
@@ -927,22 +896,15 @@
      "y": "1992",
      "sort": 1992,
      "title": "Freed",
-     "text": "Under the September 1992 Tuđman–Ćosić agreement the Yugoslav army withdrew, and on 21 October 1992 the last occupied part of the Dubrovnik area was freed.",
+     "text": "Under the Tuđman–Ćosić agreement of 30 September 1992 the Yugoslav army withdrew, and Operation Konavle, from the night of 20–21 October 1992, freed the last occupied part of the Dubrovnik area.",
      "src": [
+      [
+       "Operacija Konavle (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Operacija_Konavle"
+      ],
       [
        "narod.hr",
        "https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske"
-      ],
-      [
-       "Operation Tiger (1992)",
-       "https://en.wikipedia.org/wiki/Operation_Tiger_(1992)"
-      ]
-     ],
-     "days": [
-      [
-       "10-21",
-       1992,
-       "The last occupied part of the Dubrovnik area was freed"
       ]
      ],
      "focus": "siege"
@@ -1251,20 +1213,181 @@
   {
    "id": "siege",
    "name": "The siege · 1991–92",
-   "kicker": "Special focus",
-   "intro": "From October 1991 to May 1992 the Yugoslav People’s Army (JNA) and Montenegrin forces besieged Dubrovnik. The city never fell. Here is the siege in dates, and the places on your trip where it happened.",
+   "kicker": "Special focus · In memory",
+   "intro": "From October 1991 to May 1992 Dubrovnik was cut off by land and sea and shelled by the Yugoslav People’s Army (JNA), the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina. Its defenders, few and poorly armed at first, never let the city fall. Here is the siege in dates, and the places on your trip where it happened.",
    "events": [
+    {
+     "y": "17 Sep 1991",
+     "d": "1991-09-17",
+     "sort": 1991,
+     "era": "1992",
+     "title": "The blockade",
+     "text": "On 17 September 1991 the Yugoslav navy began a full blockade of Dubrovnik’s waters. For months, ships bound for the city were stopped and searched.",
+     "src": [
+      [
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ],
+      [
+       "Hrvatski spomenar: 1 October",
+       "https://hrvatskispomenar.com/domovinski-rat/domovinski-rat-kultura-sjecanja-1-listopada/"
+      ],
+      [
+       "HU Benedikt: the naval blockade of Croatia",
+       "https://hu-benedikt.hr/2018/09/da-se-ne-zaboravi-pomorska-blokada-hrvatske-1991-godine/"
+      ]
+     ],
+     "days": [
+      [
+       "09-17",
+       1991,
+       "The Yugoslav navy began its blockade of Dubrovnik’s waters"
+      ]
+     ],
+     "tone": "sombre"
+    },
+    {
+     "y": "19 Sep 1991",
+     "d": "1991-09-19",
+     "sort": 1991,
+     "era": "1992",
+     "title": "The commander",
+     "text": "Nojko Marinović, a JNA officer commanding the barracks at Trebinje, crossed to the Croatian side on 19 September 1991, bringing the army’s plans for the attack on Dubrovnik. He led the city’s defence with a few hundred poorly armed police, Croatian National Guard and local volunteers. He was badly wounded by a landmine in March 1992, and died in 2021.",
+     "src": [
+      [
+       "Nojko Marinović (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Nojko_Marinovi%C4%87"
+      ],
+      [
+       "narod.hr",
+       "https://narod.hr/hrvatska/preminuo-general-nojko-marinovic-zapovjednik-obrane-dubrovnika"
+      ],
+      [
+       "Teleskop",
+       "https://teleskop.hr/hrvatska/nojko-marinovic-odvazni-i-smireni-vojskovoda-koji-je-obranio-dubrovnik/"
+      ]
+     ],
+     "days": [
+      [
+       "09-19",
+       1991,
+       "Nojko Marinović, who would lead the defence of Dubrovnik, crossed to the Croatian side"
+      ]
+     ],
+     "tone": "sombre"
+    },
+    {
+     "y": "22 Sep 1991",
+     "d": "1991-09-22",
+     "sort": 1991,
+     "era": "1992",
+     "title": "The first shells",
+     "text": "The war reached the Dubrovnik area on 22 September 1991, when mortar fire hit Đurinići and Vitaljina in eastern Konavle. The next day artillery struck Vitaljina and Brgat, and the first villagers were evacuated.",
+     "src": [
+      [
+       "Dubrovnik Insider",
+       "https://dubrovnikinsider.hr/krajem-rujna-1991-neprijatelj-je-poceo-pucati-po-konavlima/"
+      ],
+      [
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ],
+      [
+       "DubrovnikNet",
+       "https://www.dubrovniknet.hr/1-listopada-1991-zapoceo-je-napad-na-dubrovnik-s-kopna-mora-i-zraka-mislili-su-da-ce-sve-biti-gotovo-za-4-5-dana-prevarili-su-se/"
+      ]
+     ],
+     "days": [
+      [
+       "09-22",
+       1991,
+       "The first shells fell on Đurinići and Vitaljina in Konavle"
+      ]
+     ],
+     "tone": "sombre"
+    },
+    {
+     "y": "23 Sep 1991",
+     "d": "1991-09-23",
+     "sort": 1991,
+     "era": "1992",
+     "title": "The Armed Boats Squadron",
+     "text": "Local volunteers with fast boats formed the Armed Boats Squadron (Odred naoružanih brodova). Its first boat, the Sveti Vlaho, sailed on 23 September 1991, and through the siege its crews ran the blockade to keep a supply line open by sea.",
+     "src": [
+      [
+       "DubrovnikNet: the Armed Boats Squadron",
+       "https://www.dubrovniknet.hr/prije-tocno-32-godine-osnovan-je-odred-naoruzanih-brodova-legendarna-postrojba-dubrovackih-branitelja-ovo-je-njihov-ratni-put/"
+      ],
+      [
+       "Dubrovnik Insider",
+       "https://dubrovnikinsider.hr/odred-naoruzanih-brodova-sjecanje-na-hrabre-ljude-koji-su-ispisali-povijest/"
+      ],
+      [
+       "Armed Boats Squadron Dubrovnik",
+       "https://en.wikipedia.org/wiki/Armed_Boats_Squadron_Dubrovnik"
+      ]
+     ],
+     "days": [
+      [
+       "09-23",
+       1991,
+       "The Armed Boats Squadron’s first boat sailed to run the blockade"
+      ]
+     ]
+    },
     {
      "y": "1 Oct 1991",
      "d": "1991-10-01",
      "sort": 1991,
      "era": "1992",
      "title": "The attack begins",
-     "text": "The Yugoslav navy had blockaded Dubrovnik’s sea routes since 25 September. On 1 October the army attacked from Herzegovina and Montenegro, and the siege began.",
+     "text": "At dawn on 1 October 1991 the JNA, the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina attacked from land, sea and air. Jets hit the transmitter on Srđ, and the city lost electricity and water when the Komolac substation was destroyed. The attackers expected Dubrovnik to fall within days.",
      "src": [
       [
-       "Siege of Dubrovnik",
-       "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ],
+      [
+       "narod.hr: 1 October 1991",
+       "https://narod.hr/hrvatska/1-listopada-1991-dubrovnik-pocetak-agresije-i-opsade-koja-je-trajala-8-mjeseci"
+      ],
+      [
+       "HRT",
+       "https://vijesti.hrt.hr/hrvatska/na-danasnji-dan-1991-pokrenut-opci-napad-na-dubrovnik-3811754"
+      ],
+      [
+       "Morski.hr: the plan for Dubrovnik to fall in five days",
+       "https://www.morski.hr/slomljena-direktiva-jevrema-cokica-kako-je-propao-plan-jna-da-dubrovnik-padne-za-pet-dana/"
+      ]
+     ],
+     "days": [
+      [
+       "10-01",
+       1991,
+       "The attack on Dubrovnik began"
+      ]
+     ],
+     "tone": "sombre"
+    },
+    {
+     "y": "Oct 1991 – 1992",
+     "d": "1991-10-03",
+     "sort": 1991,
+     "era": "1992",
+     "title": "Morinj",
+     "text": "From 3 October 1991 the JNA held prisoners from the Dubrovnik area, most of them from Konavle, in a camp at Morinj on the Bay of Kotor in Montenegro. Around 300 people passed through it before it closed in 1992; former prisoners told of constant beatings. A Montenegrin court later convicted four former reservists.",
+     "src": [
+      [
+       "Morinj camp",
+       "https://en.wikipedia.org/wiki/Morinj_camp"
+      ],
+      [
+       "Radio Free Europe",
+       "https://www.slobodnaevropa.org/a/morinj-logor-crna-gora/28884396.html"
+      ],
+      [
+       "Vreme",
+       "https://vreme.com/vreme/lica-u-vlasnistvu-jna/"
       ]
      ],
      "tone": "sombre"
@@ -1275,7 +1398,7 @@
      "sort": 1991,
      "era": "1992",
      "title": "Slano and Čilipi",
-     "text": "Slano, in the Dubrovnik Littoral, was taken in the first days of October. Between 5 and 7 October army units burned Čilipi (an indictment lists 90 family houses destroyed), and the airport you flew into was looted, its equipment partly carried off to Montenegro.",
+     "text": "Slano, in the Dubrovnik Littoral, fell on 4–5 October 1991. Between 5 and 7 October army units burned Čilipi (an indictment lists 90 family houses destroyed), and the airport you flew into was looted, its equipment partly carried off to Montenegro.",
      "src": [
       [
        "Dubrovačko primorje: Povijest",
@@ -1299,15 +1422,19 @@
      "sort": 1991,
      "era": "1992",
      "title": "Cavtat falls",
-     "text": "The army took Cavtat on 15 October. By the end of the month it held almost all the land between Pelješac and Prevlaka, everything except Dubrovnik itself.",
+     "text": "The army took Cavtat on 15 October 1991, and Župa dubrovačka in the days after 22 October. By the end of November it held almost all the land between Pelješac and Prevlaka except Dubrovnik itself.",
      "src": [
+      [
+       "HRT Dani ponosa: Cavtat",
+       "https://daniponosa.hrt.hr/dani-ponosa/158/15-listopada-1991-okupacija-i-oslobodenje-cavtata"
+      ],
+      [
+       "Domovinski rat: the occupation of Župa",
+       "https://domovinskirat.hr/2025/10/24/bila-je-to-noc-u-kojoj-se-postavljalo-zastrasujce-pitanje-je-li-dubrovnik-pao-okupacija-zupe-dubrovacke/"
+      ],
       [
        "Siege of Dubrovnik",
        "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
-      ],
-      [
-       "Dubrovnik Republic (1991–1992)",
-       "https://en.wikipedia.org/wiki/Dubrovnik_Republic_(1991-1992)"
       ]
      ],
      "places": "Cavtat$",
@@ -1330,8 +1457,8 @@
        "https://www.jadrolinija.hr/en/news/jadrolinija-u-domovinskom-ratu"
       ],
       [
-       "Libertas convoy",
-       "https://en.wikipedia.org/wiki/Libertas_convoy"
+       "DubrovnikNet: 4,000 leave on the Slavija",
+       "https://www.dubrovniknet.hr/na-danasnji-dan-1991-dubrovnik-je-sa-slavijom-napustilo-4-000-izbjeglica/"
       ]
      ],
      "days": [
@@ -1350,18 +1477,61 @@
      "tone": "sombre"
     },
     {
-     "y": "1991",
-     "d": "1991-12-01",
+     "y": "Nov 1991",
+     "d": "1991-11-09",
      "sort": 1991,
      "era": "1992",
-     "title": "World Heritage in Danger",
-     "text": "UNESCO put the Old City on its List of World Heritage in Danger in 1991, as an emergency caused by the war.",
+     "title": "The ring closes",
+     "text": "Bosanka, on the plateau behind Srđ, fell on 9 November 1991 after hard fighting in which several defenders were killed. In late November, after Osojnik, Mokošica and the villages of Rijeka dubrovačka were occupied. Shells fell on Gruž, Lapad and Babin Kuk, including hotels full of refugees.",
      "src": [
       [
-       "UNESCO: Old City of Dubrovnik",
-       "https://whc.unesco.org/en/list/95/"
+       "DubrovnikNet: 9 November 1991, Bosanka",
+       "https://www.dubrovniknet.hr/ne-zaboravimo-9-studenog-1991-bio-je-jedan-od-najtezih-ratnih-dana-na-dubrovackom-podrucju-bosanka-je-pala-poginulo-je-sest-hrabrih-branitelja/"
+      ],
+      [
+       "DubrovnikNet: the army enters Mokošica",
+       "https://www.dubrovniknet.hr/na-danasnji-dan-1991-vojska-ja-je-usla-u-mokosicu-stisnuo-se-obruc-oko-grada/"
+      ],
+      [
+       "Identitet: the defence of Dubrovnik, part II",
+       "https://identitet.hr/obrana-dubrovnika-1991-1992-ii-dio/"
+      ],
+      [
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
       ]
-     ]
+     ],
+     "days": [
+      [
+       "11-09",
+       1991,
+       "Bosanka, on the plateau behind Srđ, fell after hard fighting"
+      ]
+     ],
+     "tone": "sombre"
+    },
+    {
+     "y": "1991–1992",
+     "sort": 1991,
+     "era": "1992",
+     "title": "A city of refugees",
+     "text": "Thousands of people driven from Konavle, Župa and the Littoral were sheltered in Dubrovnik’s hotels, from Lapad and Babin Kuk, where you stayed, to the Imperial by the Pile Gate, whose top floor burned in the shelling. The city lived without mains electricity or water.",
+     "src": [
+      [
+       "Identitet: the defence of Dubrovnik, part II",
+       "https://identitet.hr/obrana-dubrovnika-1991-1992-ii-dio/"
+      ],
+      [
+       "Famous Hotels: the Imperial",
+       "https://famoushotels.org/hotels/imperial-dubrovnik"
+      ],
+      [
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ]
+     ],
+     "places": "Lapad, Dubrovnik$",
+     "tone": "sombre"
     },
     {
      "y": "6 Dec 1991",
@@ -1369,65 +1539,124 @@
      "sort": 1991,
      "era": "1992",
      "title": "The darkest day",
-     "text": "The army shelled the Old Town for more than ten hours. The UN war-crimes tribunal later found that the attack was not a response to any Croatian military position. Fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival. In the Old Town two people were killed, one of them the photographer Pavo Urban, who was photographing the shelling; his last pictures survive. Up on Srđ, the few defenders of Fort Imperial held through a day-long attack.",
+     "text": "From before dawn the army shelled the city for more than ten hours, and attacked Srđ with infantry and tanks from Bosanka and Strinčjera. A few dozen defenders held Fort Imperial, with tanks right up at the fort; had it fallen, the city lay open below. In the Old Town fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival, and the UN tribunal later found that the attack answered no Croatian military position. Nineteen people, civilians and defenders, were killed that day and about sixty wounded. Among the dead was the photographer Pavo Urban, 23, killed while photographing the shelling; a plaque under the city bell tower marks where he fell. 6 December is Dubrovnik Defenders’ Day.",
      "src": [
       [
        "ICTY: Strugar judgement",
        "https://www.icty.org/en/press/judgement-case-prosecutor-v-pavle-strugar-pavle-strugar-sentenced-eight-years%E2%80%99-imprisonment"
       ],
       [
+       "Bitka za Srđ (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Bitka_za_Sr%C4%91"
+      ],
+      [
+       "The role of Fort Imperial in the defence of Dubrovnik (ResearchGate)",
+       "https://www.researchgate.net/publication/384375924_Prostorna_analiza_znacaja_i_uloge_tvrdave_Imperijal_u_ob-rani_Dubrovnika_u_Domovinskom_ratu_1991_godine"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik: 6 December",
+       "https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/"
+      ],
+      [
        "City of Dubrovnik: burned buildings",
        "https://www.dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/burned-buildings"
       ],
       [
-       "Dubrovnik Museums: Fort Imperial",
-       "https://www.dumus.hr/en/museum-of-contemporary-history/about-museum/"
+       "Hrvatsko nebo: 19 killed",
+       "https://hrvatskonebo.org/2022/12/06/dan-dubrovackih-branitelja-sjecanje-na-crni-petak-dubrovacki-1991-godine-u-jednom-danu-zivot-je-izgubilo-19-civila-i-branitelja/"
       ],
       [
        "Pavo Urban",
        "https://en.wikipedia.org/wiki/Pavo_Urban"
       ],
       [
-       "Human Rights Centre: when Dubrovnik burned",
-       "https://cgo-cce.org/en/2025/12/06/when-dubrovnik-burned-34-years-since-the-yugoslav-peoples-army-shelled-the-old-town/"
+       "Hina: the Pavo Urban plaque",
+       "https://www.hina.hr/OTS/10848593"
+      ]
+     ],
+     "days": [
+      [
+       "12-06",
+       1991,
+       "The worst attack on Dubrovnik; Fort Imperial held. Dubrovnik Defenders’ Day"
       ]
      ],
      "places": "^Fort Imperial|^Stradun|^Orlando’s Column|^Orlando's Column|Bell Tower",
      "tone": "sombre"
     },
     {
-     "y": "May 1992",
-     "d": "1992-05-31",
-     "sort": 1992,
+     "y": "Dec 1991",
+     "d": "1991-12-12",
+     "sort": 1991,
      "era": "1992",
-     "title": "The siege is lifted",
-     "text": "In May 1992 the JNA pulled back from around Dubrovnik into Bosnia and Herzegovina, and the Croatian Army, pushing in from the west, reached the city’s defenders by the end of the month. Konavle stayed occupied until 21 October 1992.",
+     "title": "World Heritage in Danger",
+     "text": "Meeting in Carthage in December 1991, after UNESCO’s observers reported on the attack of 6 December, the World Heritage Committee put the Old City on its List of World Heritage in Danger.",
      "src": [
       [
-       "Siege of Dubrovnik",
-       "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
+       "UNESCO: Committee decision, 1991",
+       "https://whc.unesco.org/en/decisions/5408"
       ],
       [
-       "Operation Tiger (1992)",
-       "https://en.wikipedia.org/wiki/Operation_Tiger_(1992)"
-      ],
-      [
-       "narod.hr",
-       "https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske"
+       "City of Dubrovnik: the role of UNESCO observers",
+       "https://dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/the-role-of-unesco-observers"
       ]
      ]
     },
     {
-     "y": "21 Oct 1992",
+     "y": "26 May 1992",
+     "d": "1992-05-26",
+     "sort": 1992,
+     "era": "1992",
+     "title": "The siege broken",
+     "text": "As the JNA began to pull back, Dubrovnik’s defenders, by now the 163rd Brigade, broke out of the city on 26 May 1992, freeing Rijeka dubrovačka, Župa, Brgat, Orašac and Osojnik, and joined the 1st Guards Brigade fighting its way down the coast from the west. The shelling did not stop at once: the city was hit again on 29 May. By the end of June the Dubrovnik Littoral was free.",
+     "src": [
+      [
+       "Hrvatski vojnik: the liberation of the south and the lifting of the siege",
+       "https://hrvatski-vojnik.hr/oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik",
+       "https://mdrd.hr/vro-oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/"
+      ],
+      [
+       "narod.hr: 26 May 1992",
+       "https://narod.hr/mozda-ste-propustili/26-svibnja-1992-dubrovnik-akcija-spaljena-zemlja-i-deblokada-dubrovnika"
+      ]
+     ],
+     "days": [
+      [
+       "05-26",
+       1992,
+       "Dubrovnik’s defenders broke the siege"
+      ]
+     ]
+    },
+    {
+     "y": "Oct 1992",
      "d": "1992-10-21",
      "sort": 1992,
      "era": "1992",
-     "title": "The last of the area freed",
-     "text": "After the September 1992 Tuđman–Ćosić agreement the army withdrew from Konavle, and on 21 October the last occupied part of the Dubrovnik area was free again.",
+     "title": "Konavle freed",
+     "text": "Under the Tuđman–Ćosić agreement, signed in Geneva on 30 September 1992, the Yugoslav army left Konavle; its last soldiers left Prevlaka on the evening of 20 October. That night Operation Konavle began with a landing at Cavtat, and by 24 October Croatian forces stood on the borders. Prevlaka was placed under UN supervision.",
      "src": [
       [
-       "narod.hr",
+       "Operacija Konavle (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Operacija_Konavle"
+      ],
+      [
+       "narod.hr: 21 October 1992",
        "https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske"
+      ],
+      [
+       "DuList: the landing at Cavtat",
+       "https://dulist.hr/prije-34-godine-zapocelo-oslobodenje-konavala-legendarni-desant-na-cavtat-slomio-obruc-oko-juga/1052071"
+      ]
+     ],
+     "days": [
+      [
+       "10-21",
+       1992,
+       "Operation Konavle: the last occupied part of the Dubrovnik area was freed"
       ]
      ]
     },
@@ -1454,15 +1683,19 @@
      "places": "^Pile Gate"
     },
     {
-     "y": "2004–2005",
+     "y": "2004–2008",
      "sort": 2005,
      "era": "2026",
      "title": "Judgement at The Hague",
-     "text": "At the UN tribunal for the former Yugoslavia, Admiral Miodrag Jokić pleaded guilty over the 6 December shelling and was sentenced to seven years in 2004. In 2005 General Pavle Strugar was convicted for failing to stop it.",
+     "text": "At the UN tribunal for the former Yugoslavia, Admiral Miodrag Jokić pleaded guilty over the attack of 6 December and was sentenced to seven years in 2004. General Pavle Strugar was convicted in 2005 for failing to stop it and sentenced to eight years, reduced on appeal in 2008 to seven and a half.",
      "src": [
       [
        "ICTY: Strugar judgement",
        "https://www.icty.org/en/press/judgement-case-prosecutor-v-pavle-strugar-pavle-strugar-sentenced-eight-years%E2%80%99-imprisonment"
+      ],
+      [
+       "ICTY: Strugar appeal judgement",
+       "https://www.icty.org/en/sid/9948"
       ],
       [
        "Miodrag Jokić",
@@ -1471,19 +1704,27 @@
      ]
     },
     {
-     "y": "2010",
+     "y": "In memory",
      "sort": 2010,
      "era": "2026",
-     "title": "Remembering on Srđ",
-     "text": "The cable car up Srđ, wrecked in the 1991 fighting, reopened in July 2010. Fort Imperial at the top now holds the exhibition Dubrovnik in the Homeland War 1991–1995, and the Memorial Room of the Dubrovnik Defenders in the Sponza Palace keeps the photographs of the city’s defenders who died.",
+     "title": "Remembering",
+     "text": "Croatian accounts count 182 defenders from Dubrovnik’s own units, and some 235 from other Croatian units, killed in the defence and liberation of the Dubrovnik area, and between 82 and 92 civilians. The photographs of Dubrovnik’s fallen defenders hang in the Memorial Room in the Sponza Palace; Fort Imperial houses the Museum of the Homeland War. The cross on Srđ, pulled down in 1991, was raised again in October 1997, and the cable car, wrecked in 1991, has run again since July 2010.",
      "src": [
       [
-       "Dubrovnik Museums: Fort Imperial",
-       "https://www.dumus.hr/en/museum-of-contemporary-history/about-museum/"
+       "Opsada Dubrovnika (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik",
+       "https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/"
       ],
       [
        "Dubrovnik Tourist Board: Memorial Room",
        "https://tzdubrovnik.hr/lang/en/get/muzeji/5704/o_nama.html"
+      ],
+      [
+       "Hina: the cross on Srđ",
+       "https://hina.hr/OTS/4210662"
       ],
       [
        "Dubrovnik cable car",

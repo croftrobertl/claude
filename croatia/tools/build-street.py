@@ -35,6 +35,18 @@ KONAVLE = {
     'Uskoplje': 15909675, 'Vitaljina': 15909852, 'Vodovađa': 15909872, 'Zastolje': 15909871, 'Zvekovica': 15909691,
 }
 REL.update({'k:' + k: v for k, v in KONAVLE.items()})
+# Grad Dubrovnik's own villages (OSM settlement boundaries), for the land held round the city in
+# 1991–92. Named as occupied in the sources: Bosanka (fell 9 November 1991), Mokošica, Rožat,
+# Komolac, Šumet and Čajkovići (late November, after Osojnik fell), Osojnik, Zaton, Orašac and
+# Trsteno; the rest lie between those villages and the border (Pobrežje and Čajkovica border only
+# occupied villages). Sustjepan, on the defenders' line, held.
+DBK_VILLAGES = {
+    'Bosanka': 15907328, 'Mokošica': 15906773, 'Rožat': 15906749, 'Komolac': 15906774, 'Šumet': 15926767, 'Čajkovići': 15907312,
+    'Osojnik': 15906714, 'Zaton': 15906691, 'Orašac': 15906630, 'Trsteno': 15906631, 'Brsečine': 15906620, 'Ljubač': 15906715,
+    'Gromača': 15906632, 'Kliševo': 15906633, 'Mravinjac': 15906622, 'Mrčevo': 15906619, 'Prijevor': 15906750, 'Petrovo Selo': 15906728,
+    'Knežica': 15907329, 'Dubravica': 15906621, 'Lozica': 15906718, 'Pobrežje': 15906716, 'Čajkovica': 15907330,
+}
+REL.update({'d:' + k: v for k, v in DBK_VILLAGES.items()})
 ITALY_1941 = ['Popovići', 'Radovčići', 'Gruda', 'Ljuta', 'Poljice', 'Dunave', 'Zastolje', 'Mikulići', 'Palje Brdo',
               'Pločice', 'Vodovađa', 'Molunat', 'Vitaljina', 'Lovorno']
 ITALY_1942 = ['Kuna Konavoska', 'Pridvorje']
@@ -269,12 +281,16 @@ def build(d):
         'towers': [[n, round(v[1], 6), round(v[2], 6)] for n, v in STON_TOWERS.items()],
         'lines': [[[round(STON_TOWERS[n][1], 6), round(STON_TOWERS[n][2], 6)] for n in l] for l in STON_LINES],
     }
-    # 1991–92: by late October 1991 the Yugoslav army held almost all the land between Pelješac and
-    # Prevlaka except Dubrovnik itself — Konavle, Župa, the Dubrovnik Littoral and the coast west of
-    # the city. Drawn by municipality (and the city's own coast west of 17.98°E), so approximate.
-    out['siege'] = {
-        'held': out_polys(polys(d, 'konavle') + polys(d, 'zupa') + polys(d, 'primorje') + clip_polys([big], (0, 17.98, True)), 0.00012),
-    }
+    # 1991–92: by the end of November 1991 the Yugoslav army held almost all the land between
+    # Pelješac and Prevlaka except Dubrovnik itself. Drawn by municipality and village, so approximate.
+    # Four areas, each with its own dates in the app: Konavle, Župa, the Dubrovnik Littoral, and
+    # Rijeka dubrovačka with the villages up the coast to Brsečine and on the Srđ plateau.
+    out['siege'] = {'areas': {
+        'konavle': out_polys(polys(d, 'konavle'), 0.00012),
+        'zupa': out_polys(polys(d, 'zupa'), 0.00012),
+        'prim': out_polys(polys(d, 'primorje'), 0.00012),
+        'rijeka': out_polys(sum((polys(d, 'd:' + n) for n in DBK_VILLAGES), []), 0.00006),
+    }}
     g = geo(d, 'W%d' % STRADUN_WAY)
     out['stradun'] = [[round(q[1], 6), round(q[0], 6)] for q in dp(g['coordinates'], 0.000005)]
     return out
