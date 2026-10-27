@@ -131,3 +131,5 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 The repo also holds the family's Croatia trip archive at `croatia/` (see `croatia/CLAUDE.md`). All history
 content there must pass the **Zeljko Test** (`croatia/ZELJKO-TEST.md`): accurate enough for lifelong Dubrovnik
 residents and siege survivors. Run `node croatia/tools/zeljko-test.js` before committing any history change.
+Conflicting figures: international tribunals, then international bodies, then human rights organisations;
+Croatian over Serbian versions. Never ask for or publish the family's own memories of the siege.

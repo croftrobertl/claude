@@ -11,9 +11,9 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
 > From October 1991 to May 1992 Dubrovnik was cut off by land and sea and shelled by the Yugoslav People’s Army (JNA), the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina. Its defenders, few and poorly armed at first, never let the city fall. Here is the siege in dates, and the places on your trip where it happened.
 
 - [ ] **17 Sep 1991 — The blockade**
-  On 17 September 1991 the Yugoslav navy began a full blockade of Dubrovnik’s waters. For months, ships bound for the city were stopped and searched.
-  - Anniversary 09-17 1991: The Yugoslav navy began its blockade of Dubrovnik’s waters
-  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [Hrvatski spomenar: 1 October](https://hrvatskispomenar.com/domovinski-rat/domovinski-rat-kultura-sjecanja-1-listopada/) — Wikipedia & press; [HU Benedikt: the naval blockade of Croatia](https://hu-benedikt.hr/2018/09/da-se-ne-zaboravi-pomorska-blokada-hrvatske-1991-godine/) — Wikipedia & press
+  On 17 September 1991 the Yugoslav navy declared a blockade of Croatia’s Adriatic ports, Dubrovnik among them. When the general attack began on 1 October, its Boka command told Dubrovnik’s crisis staff that no ship might sail past its blockade line; for months, ships bound for the city were stopped and searched.
+  - Anniversary 09-17 1991: The Yugoslav navy declared a blockade of Croatia’s ports, Dubrovnik among them
+  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [Hrvatski spomenar: 1 October](https://hrvatskispomenar.com/domovinski-rat/domovinski-rat-kultura-sjecanja-1-listopada/) — Wikipedia & press; [HU Benedikt: the naval blockade of Croatia](https://hu-benedikt.hr/2018/09/da-se-ne-zaboravi-pomorska-blokada-hrvatske-1991-godine/) — Wikipedia & press; [Jadrolinija in the Homeland War](https://www.jadrolinija.hr/hr/novost/jadrolinija-u-domovinskom-ratu) — Wikipedia & press; [State Archives in Split: Split, 15 November 1991 (exhibition catalogue)](https://www.das.hr/wp-content/uploads/2023/11/Katalog-izlo%C5%BEbe-Split-15.11.1991..pdf) — Scholarly & archival; [Museum of the Homeland War Dubrovnik: the general attack of 1 October 1991](https://mdrd.hr/opci-agresorski-vojni-napad-na-dubrovacko-podrucje-1-listopada-1991/) — Encyclopedias & institutions
 
 - [ ] **19 Sep 1991 — The commander**
   Nojko Marinović, a JNA officer commanding the barracks at Trebinje, crossed to the Croatian side on 19 September 1991, bringing the army’s plans for the attack on Dubrovnik. He led the city’s defence with a few hundred poorly armed police, Croatian National Guard and local volunteers. He was badly wounded by a landmine in March 1992, and died in 2021.
@@ -31,9 +31,9 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [DubrovnikNet: the Armed Boats Squadron](https://www.dubrovniknet.hr/prije-tocno-32-godine-osnovan-je-odred-naoruzanih-brodova-legendarna-postrojba-dubrovackih-branitelja-ovo-je-njihov-ratni-put/) — Wikipedia & press; [Dubrovnik Insider](https://dubrovnikinsider.hr/odred-naoruzanih-brodova-sjecanje-na-hrabre-ljude-koji-su-ispisali-povijest/) — Wikipedia & press; [Armed Boats Squadron Dubrovnik](https://en.wikipedia.org/wiki/Armed_Boats_Squadron_Dubrovnik) — Wikipedia & press
 
 - [ ] **1 Oct 1991 — The attack begins**
-  At dawn on 1 October 1991 the JNA, the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina attacked from land, sea and air. Jets hit the transmitter on Srđ, and the city lost electricity and water when the Komolac substation was destroyed. The attackers expected Dubrovnik to fall within days.
+  At dawn on 1 October 1991 the JNA, the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina attacked from land, sea and air; the Museum of the Homeland War puts the attacking force at 11,000 to 13,000 men. Jets hit the transmitter on Srđ, and the city lost electricity and water when the Komolac substation was destroyed. The attackers expected Dubrovnik to fall within days.
   - Anniversary 10-01 1991: The attack on Dubrovnik began
-  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [narod.hr: 1 October 1991](https://narod.hr/hrvatska/1-listopada-1991-dubrovnik-pocetak-agresije-i-opsade-koja-je-trajala-8-mjeseci) — Wikipedia & press; [HRT](https://vijesti.hrt.hr/hrvatska/na-danasnji-dan-1991-pokrenut-opci-napad-na-dubrovnik-3811754) — Wikipedia & press; [Morski.hr: the plan for Dubrovnik to fall in five days](https://www.morski.hr/slomljena-direktiva-jevrema-cokica-kako-je-propao-plan-jna-da-dubrovnik-padne-za-pet-dana/) — Wikipedia & press
+  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [narod.hr: 1 October 1991](https://narod.hr/hrvatska/1-listopada-1991-dubrovnik-pocetak-agresije-i-opsade-koja-je-trajala-8-mjeseci) — Wikipedia & press; [HRT](https://vijesti.hrt.hr/hrvatska/na-danasnji-dan-1991-pokrenut-opci-napad-na-dubrovnik-3811754) — Wikipedia & press; [Morski.hr: the plan for Dubrovnik to fall in five days](https://www.morski.hr/slomljena-direktiva-jevrema-cokica-kako-je-propao-plan-jna-da-dubrovnik-padne-za-pet-dana/) — Wikipedia & press; [Museum of the Homeland War Dubrovnik: the general attack of 1 October 1991](https://mdrd.hr/opci-agresorski-vojni-napad-na-dubrovacko-podrucje-1-listopada-1991/) — Encyclopedias & institutions
 
 - [ ] **Oct 1991 – 1992 — Morinj**
   From 3 October 1991 the JNA held prisoners from the Dubrovnik area, most of them from Konavle, in a camp at Morinj on the Bay of Kotor in Montenegro. Around 300 people passed through it before it closed in 1992; former prisoners told of constant beatings. A Montenegrin court later convicted four former reservists.
@@ -63,9 +63,9 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [Identitet: the defence of Dubrovnik, part II](https://identitet.hr/obrana-dubrovnika-1991-1992-ii-dio/) — Wikipedia & press; [Famous Hotels: the Imperial](https://famoushotels.org/hotels/imperial-dubrovnik) — Travel guides & blogs; [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press
 
 - [ ] **6 Dec 1991 — The darkest day**
-  From before dawn the army shelled the city for more than ten hours, and attacked Srđ with infantry and tanks from Bosanka and Strinčjera. A few dozen defenders held Fort Imperial, with tanks right up at the fort; had it fallen, the city lay open below. In the Old Town fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival, and the UN tribunal later found that the attack answered no Croatian military position. Nineteen people, civilians and defenders, were killed that day and about sixty wounded. Among the dead was the photographer Pavo Urban, 23, killed while photographing the shelling; a plaque under the city bell tower marks where he fell. 6 December is Dubrovnik Defenders’ Day.
+  From before dawn the army shelled the city for more than ten hours, and attacked Srđ with infantry and tanks from Bosanka and Strinčjera. A few dozen defenders held Fort Imperial, with tanks right up at the fort; had it fallen, the city lay open below. In the Old Town fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival, and the UN tribunal later found that the attack answered no Croatian military position. The UN Commission of Experts counted thirteen civilians killed in the Dubrovnik area that day, the most of any day of the siege, and defenders were killed too. In the Old Town the tribunal’s judgement names two of the dead: Tonči Skočko, and the photographer Pavo Urban, 23, killed while photographing the shelling; a plaque under the city bell tower marks where Pavo fell. 6 December is Dubrovnik Defenders’ Day.
   - Anniversary 12-06 1991: The worst attack on Dubrovnik; Fort Imperial held. Dubrovnik Defenders’ Day
-  - Sources: [ICTY: Strugar judgement](https://www.icty.org/en/press/judgement-case-prosecutor-v-pavle-strugar-pavle-strugar-sentenced-eight-years%E2%80%99-imprisonment) — Scholarly & archival; [Bitka za Srđ (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Bitka_za_Sr%C4%91) — Wikipedia & press; [The role of Fort Imperial in the defence of Dubrovnik (ResearchGate)](https://www.researchgate.net/publication/384375924_Prostorna_analiza_znacaja_i_uloge_tvrdave_Imperijal_u_ob-rani_Dubrovnika_u_Domovinskom_ratu_1991_godine) — Scholarly & archival; [Museum of the Homeland War Dubrovnik: 6 December](https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/) — Encyclopedias & institutions; [City of Dubrovnik: burned buildings](https://www.dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/burned-buildings) — Encyclopedias & institutions; [Hrvatsko nebo: 19 killed](https://hrvatskonebo.org/2022/12/06/dan-dubrovackih-branitelja-sjecanje-na-crni-petak-dubrovacki-1991-godine-u-jednom-danu-zivot-je-izgubilo-19-civila-i-branitelja/) — Wikipedia & press; [Pavo Urban](https://en.wikipedia.org/wiki/Pavo_Urban) — Wikipedia & press; [Hina: the Pavo Urban plaque](https://www.hina.hr/OTS/10848593) — Wikipedia & press
+  - Sources: [ICTY: Strugar judgement](https://www.icty.org/en/press/judgement-case-prosecutor-v-pavle-strugar-pavle-strugar-sentenced-eight-years%E2%80%99-imprisonment) — Scholarly & archival; [Bitka za Srđ (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Bitka_za_Sr%C4%91) — Wikipedia & press; [The role of Fort Imperial in the defence of Dubrovnik (ResearchGate)](https://www.researchgate.net/publication/384375924_Prostorna_analiza_znacaja_i_uloge_tvrdave_Imperijal_u_ob-rani_Dubrovnika_u_Domovinskom_ratu_1991_godine) — Scholarly & archival; [Museum of the Homeland War Dubrovnik: 6 December](https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/) — Encyclopedias & institutions; [City of Dubrovnik: burned buildings](https://www.dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/burned-buildings) — Encyclopedias & institutions; [Hrvatsko nebo: 19 killed](https://hrvatskonebo.org/2022/12/06/dan-dubrovackih-branitelja-sjecanje-na-crni-petak-dubrovacki-1991-godine-u-jednom-danu-zivot-je-izgubilo-19-civila-i-branitelja/) — Wikipedia & press; [Pavo Urban](https://en.wikipedia.org/wiki/Pavo_Urban) — Wikipedia & press; [Hina: the Pavo Urban plaque](https://www.hina.hr/OTS/10848593) — Wikipedia & press; [UN Commission of Experts: The battle of Dubrovnik (S/1994/674/Add.2, Annex XI.A)](https://phdn.org/archives/www.ess.uwe.ac.uk/comexpert/ANX/XI-A.htm) — Scholarly & archival; [Srđa Pavlović: The siege of Dubrovnik (York University)](https://www.yorku.ca/soi/_Vol_5_1/_HTML/Pavlovic.html) — Scholarly & archival
 
 - [ ] **Dec 1991 — World Heritage in Danger**
   Meeting in Carthage in December 1991, after UNESCO’s observers reported on the attack of 6 December, the World Heritage Committee put the Old City on its List of World Heritage in Danger.
@@ -82,16 +82,16 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [Operacija Konavle (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Operacija_Konavle) — Wikipedia & press; [narod.hr: 21 October 1992](https://narod.hr/kultura/21-listopada-1992-operacija-konavle-osloboden-posljednji-dio-okupiranog-dubrovackog-podrucja-i-juzne-hrvatske) — Wikipedia & press; [DuList: the landing at Cavtat](https://dulist.hr/prije-34-godine-zapocelo-oslobodenje-konavala-legendarni-desant-na-cavtat-slomio-obruc-oko-juga/1052071) — Wikipedia & press
 
 - [ ] **1991–1998 — The damage and the repair**
-  About 2,000 shells and rockets struck the Old Town: 594 of its 824 buildings were damaged and the walls took more than a hundred direct hits. Restoration followed, and in 1998 UNESCO took the Old City off its In Danger list. A map of the hits stands near the Pile Gate.
-  - Sources: [City of Dubrovnik: destruction in the Old City](https://www.dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/destruction-old-city) — Encyclopedias & institutions; [UNESCO: Dubrovnik removed from the Danger List](https://whc.unesco.org/en/news/147) — Encyclopedias & institutions; [HMdb: the map of the damage](https://www.hmdb.org/m.asp?m=126979) — Travel guides & blogs
+  By the city’s count about 2,000 shells and rockets struck the Old Town, and the walls took more than a hundred direct hits. A survey made with UNESCO, cited by the Hague tribunal, found that 563 of the Old Town’s 824 buildings, 68 per cent, were hit in 1991–92. Restoration followed, and in 1998 UNESCO took the Old City off its In Danger list. A map of the hits stands near the Pile Gate.
+  - Sources: [City of Dubrovnik: destruction in the Old City](https://www.dubrovnik.hr/stradanje-grada/the-destruction-and-restoration-dubrovnik-1991-2000/destruction-old-city) — Encyclopedias & institutions; [UNESCO: Dubrovnik removed from the Danger List](https://whc.unesco.org/en/news/147) — Encyclopedias & institutions; [HMdb: the map of the damage](https://www.hmdb.org/m.asp?m=126979) — Travel guides & blogs; [ICTY: Strugar et al., amended indictment](https://www.icty.org/x/cases/strugar/ind/en/str-ai030331e.htm) — Scholarly & archival
 
 - [ ] **2004–2008 — Judgement at The Hague**
   At the UN tribunal for the former Yugoslavia, Admiral Miodrag Jokić pleaded guilty over the attack of 6 December and was sentenced to seven years in 2004. General Pavle Strugar was convicted in 2005 for failing to stop it and sentenced to eight years, reduced on appeal in 2008 to seven and a half.
   - Sources: [ICTY: Strugar judgement](https://www.icty.org/en/press/judgement-case-prosecutor-v-pavle-strugar-pavle-strugar-sentenced-eight-years%E2%80%99-imprisonment) — Scholarly & archival; [ICTY: Strugar appeal judgement](https://www.icty.org/en/sid/9948) — Scholarly & archival; [Miodrag Jokić](https://en.wikipedia.org/wiki/Miodrag_Joki%C4%87) — Wikipedia & press
 
 - [ ] **In memory — Remembering**
-  Croatian accounts count 182 defenders from Dubrovnik’s own units, and some 235 from other Croatian units, killed in the defence and liberation of the Dubrovnik area, and between 82 and 92 civilians. The photographs of Dubrovnik’s fallen defenders hang in the Memorial Room in the Sponza Palace; Fort Imperial houses the Museum of the Homeland War. The cross on Srđ, pulled down in 1991, was raised again in October 1997, and the cable car, wrecked in 1991, has run again since July 2010.
-  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [Museum of the Homeland War Dubrovnik](https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/) — Encyclopedias & institutions; [Dubrovnik Tourist Board: Memorial Room](https://tzdubrovnik.hr/lang/en/get/muzeji/5704/o_nama.html) — Encyclopedias & institutions; [Hina: the cross on Srđ](https://hina.hr/OTS/4210662) — Wikipedia & press; [Dubrovnik cable car](https://www.visit-croatia.co.uk/croatia-destinations/dubrovnik/dubrovnik-cable-car/) — Travel guides & blogs
+  Croatian records count 182 defenders from Dubrovnik’s own units, and some 235 from other Croatian units, killed in the defence and liberation of the Dubrovnik area. The UN Commission of Experts counted at least 82, and possibly 88, civilians of the Dubrovnik area killed between September 1991 and the end of 1992. The photographs of Dubrovnik’s fallen defenders hang in the Memorial Room in the Sponza Palace; Fort Imperial houses the Museum of the Homeland War. The cross on Srđ, pulled down in 1991, was raised again in October 1997, and the cable car, wrecked in 1991, has run again since July 2010.
+  - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [Museum of the Homeland War Dubrovnik](https://mdrd.hr/herojska-obrana-grada-1991-dan-za-sve-dane-6-prosinac/) — Encyclopedias & institutions; [Dubrovnik Tourist Board: Memorial Room](https://tzdubrovnik.hr/lang/en/get/muzeji/5704/o_nama.html) — Encyclopedias & institutions; [Hina: the cross on Srđ](https://hina.hr/OTS/4210662) — Wikipedia & press; [Dubrovnik cable car](https://www.visit-croatia.co.uk/croatia-destinations/dubrovnik/dubrovnik-cable-car/) — Travel guides & blogs; [UN Commission of Experts: The battle of Dubrovnik (S/1994/674/Add.2, Annex XI.A)](https://phdn.org/archives/www.ess.uwe.ac.uk/comexpert/ANX/XI-A.htm) — Scholarly & archival; [Srđa Pavlović: The siege of Dubrovnik (York University)](https://www.yorku.ca/soi/_Vol_5_1/_HTML/Pavlovic.html) — Scholarly & archival
 
 ## Ragusa · Dubrovnik
 
@@ -202,7 +202,7 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [Hrvatska enciklopedija: Dubrovačka Republika](https://enciklopedija.hr/clanak/dubrovacka-republika) — Encyclopedias & institutions; [Walls of Dubrovnik](https://en.wikipedia.org/wiki/Walls_of_Dubrovnik) — Wikipedia & press; [Republic of Ragusa](https://en.wikipedia.org/wiki/Republic_of_Ragusa) — Wikipedia & press
 
 - [ ] **18 Oct 1944 — The Partisans enter**
-  German troops left and Yugoslav Partisans took the city on 18 October 1944. They arrested more than 300 citizens, and on 24–25 October executed 53 men without trial on the island of Daksa (some sources say 48); the remains of 53 were found there in 2009.
+  German troops left and Yugoslav Partisans took the city on 18 October 1944. They arrested more than 300 citizens, and on 24–25 October executed 53 people without trial on the island of Daksa, whose remains were exhumed there in 2009.
   - Anniversary 10-18 1944: Yugoslav Partisans entered Dubrovnik
   - Sources: [Daksa massacre](https://en.wikipedia.org/wiki/Daksa_massacre) — Wikipedia & press; [Daksa (island)](https://en.wikipedia.org/wiki/Daksa_(island)) — Wikipedia & press; [HRT: the 53 victims of Daksa](https://vijesti.hrt.hr/hrvatska/odana-pocast-za-53-zrtve-ubijene-na-daksi-kod-dubrovnika-1944-12975503) — Wikipedia & press
 
@@ -211,7 +211,7 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [UNESCO: Old City of Dubrovnik](https://whc.unesco.org/en/list/95/) — Encyclopedias & institutions
 
 - [ ] **1991–1992 — The siege**
-  The Yugoslav navy blockaded the city’s waters from 17 September 1991, and the army besieged Dubrovnik from 1 October 1991 until its defenders broke out on 26 May 1992. The worst attack came on 6 December 1991; Fort Imperial on Srđ held.
+  The Yugoslav navy declared a blockade of Croatia’s ports, Dubrovnik among them, on 17 September 1991, and the army besieged Dubrovnik from 1 October 1991 until its defenders broke out on 26 May 1992. The worst attack came on 6 December 1991; Fort Imperial on Srđ held.
   - Sources: [Opsada Dubrovnika (Croatian Wikipedia)](https://hr.wikipedia.org/wiki/Opsada_Dubrovnika) — Wikipedia & press; [Siege of Dubrovnik](https://en.wikipedia.org/wiki/Siege_of_Dubrovnik) — Wikipedia & press; [Museum of the Homeland War Dubrovnik](https://mdrd.hr/vro-oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/) — Encyclopedias & institutions; [Hrvatski vojnik: the lifting of the siege](https://hrvatski-vojnik.hr/oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/) — Encyclopedias & institutions
 
 - [ ] **26 July 2022 — The Pelješac Bridge**
@@ -264,9 +264,9 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Anniversary 12-31 1426: Ragusa bought Lower Konavle and Cavtat
   - Sources: [Proleksis enciklopedija: Konavle](https://proleksis.lzmk.hr/32039/) — Encyclopedias & institutions; [Radoslav Pavlović](https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87) — Wikipedia & press; [Konavle](https://en.wikipedia.org/wiki/Konavle) — Wikipedia & press
 
-- [ ] **1430–1432 — The Konavle War**
-  Radoslav Pavlović tried to take back what he had sold. The war ended in 1432 with Konavle staying Ragusan.
-  - Sources: [Radoslav Pavlović](https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87) — Wikipedia & press; [Pavlovića Zemlja](https://en.wikipedia.org/wiki/Pavlovi%C4%87a_Zemlja) — Wikipedia & press; [Hrvatska enciklopedija: Pavlovići](https://www.enciklopedija.hr/clanak/pavlovici) — Encyclopedias & institutions; [Hrvatski biografski leksikon: Kosače](https://hbl.lzmk.hr/clanak/kosace) — Encyclopedias & institutions
+- [ ] **1430–1433 — The Konavle War**
+  Radoslav Pavlović tried to take back what he had sold. Peace was made on 25 October 1432 and confirmed by the Bosnian king in March 1433, and Konavle stayed Ragusan.
+  - Sources: [Radoslav Pavlović](https://en.wikipedia.org/wiki/Radoslav_Pavlovi%C4%87_Radinovi%C4%87) — Wikipedia & press; [Pavlovića Zemlja](https://en.wikipedia.org/wiki/Pavlovi%C4%87a_Zemlja) — Wikipedia & press; [Hrvatska enciklopedija: Pavlovići](https://www.enciklopedija.hr/clanak/pavlovici) — Encyclopedias & institutions; [Hrvatski biografski leksikon: Kosače](https://hbl.lzmk.hr/clanak/kosace) — Encyclopedias & institutions; [The Bosnian king in the Konavle War, 1430–1433 (Hrčak)](https://hrcak.srce.hr/clanak/118299) — Scholarly & archival
 
 - [ ] **1451–1454 — Herceg Stjepan's war**
   Stjepan Vukčić Kosača, Sandalj’s nephew, went to war with Ragusa over trade and over Konavle, and his troops overran it. Peace came on 10 April 1454 with nothing settled, and Konavle stayed Ragusan.
@@ -396,7 +396,7 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
 - [ ] **Lapad, where you stayed** — In November 1991 shells fell on Lapad and Babin Kuk, whose hotels were full of refugees from Konavle, Župa and the Littoral.
 - [ ] **The port of Gruž** — Where the Libertas convoy came in through the blockade, and where the ferry Slavija took almost 4,000 people out on 14 November 1991.
 - [ ] **Cavtat** — Taken on 15 October 1991. Konavle stayed occupied for a year, until Operation Konavle landed here on the night of 20–21 October 1992.
-- [ ] **Stradun and the Old Town** — Shelled for more than ten hours on 6 December 1991; a plaque under the bell tower remembers the photographer Pavo Urban, killed there that day. In all, 594 of the Old Town’s 824 buildings were damaged.
+- [ ] **Stradun and the Old Town** — Shelled for more than ten hours on 6 December 1991; a plaque under the bell tower remembers the photographer Pavo Urban, killed there that day. In all, 563 of the Old Town’s 824 buildings were hit in 1991–92, by the survey the Hague tribunal cited.
 - [ ] **Fort Imperial on Srđ** — On 6 December 1991 a few dozen defenders held it against infantry and tanks; had it fallen, the city lay open below. It now houses the Museum of the Homeland War.
 - [ ] **Mount Srđ** — The front line ran across Srđ: the defenders held Fort Imperial while the army held Bosanka just behind it. The summit cross, pulled down in 1991, was raised again in October 1997.
 - [ ] **The cable car** — Wrecked in the 1991 fighting; it has carried people up Srđ again since July 2010.
@@ -436,7 +436,7 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [Dubrovnik Bell Tower](https://en.wikipedia.org/wiki/Dubrovnik_Bell_Tower) — Wikipedia & press; [Dubrovnik Tourist Board: the Bell Tower](https://tzdubrovnik.hr/lang/en/get/spomenici/5420/odjeli.html) — Encyclopedias & institutions
 - [ ] **Fort Revelin** (1460s · rebuilt 1538) — Built in the 1460s against the Ottoman threat, and rebuilt from 1538 to a design by Antonio Ferramolino.
   - Sources: [Dubrovnik Tourist Board: Fort Revelin](https://tzdubrovnik.hr/get/spomenici/5351/tvrdava_revelin.html) — Encyclopedias & institutions; [Antonio Ferramolino](https://en.wikipedia.org/wiki/Antonio_Ferramolino) — Wikipedia & press
-- [ ] **Sponza Palace** (1516–22) — Customs house and mint, built 1516–22 to a design by Paskoje Miličević. It came through the 1667 earthquake.
+- [ ] **Sponza Palace** (1516–22) — Customs house and mint, built 1516–22 to a design by Paskoje Miličević, who died in 1516. It came through the 1667 earthquake.
   - Sources: [Sponza Palace](https://en.wikipedia.org/wiki/Sponza_Palace) — Wikipedia & press; [Hrvatska enciklopedija: Paskoje Miličević](https://www.enciklopedija.hr/clanak/milicevic-paskoje-mihov) — Encyclopedias & institutions; [State Archives in Dubrovnik: the Sponza Palace](https://dad.hr/palaca-sponza-2/) — Encyclopedias & institutions
 - [ ] **Lazareti** (1590–1640s) — Quarantine houses outside the Ploče gate, begun in 1590 and finished in the 1640s. Travellers and goods from plague-hit lands waited here before entering the city; the Republic had made the earliest known quarantine law in 1377.
   - Sources: [Lazzarettos of Dubrovnik](https://en.wikipedia.org/wiki/Lazzarettos_of_Dubrovnik) — Wikipedia & press; [Dubrovnik Tourist Board: Lazareti](https://tzdubrovnik.hr/lang/en/get/spomenici/5502/o_nama.html) — Encyclopedias & institutions
@@ -491,6 +491,79 @@ _Generated 2026-10-27 · 83 chronicle entries · 23 landmarks · 17 place notes 
   - Sources: [Šipan](https://en.wikipedia.org/wiki/%C5%A0ipan) — Wikipedia & press; [The Stjepović-Skočibuha family and Suđurađ (Povijesni prilozi)](https://ojs.srce.hr/index.php/povijesni-prilozi/article/view/11829/10973) — Travel guides & blogs
 - [ ] **named for Bošković** — Named for Ruđer Bošković (1711–1787), the Ragusan-born physicist and astronomer.
   - Sources: [Ruđer Bošković Institute: Ruđer Bošković](https://www.irb.hr/eng/About-RBI/Ruder-Boskovic) — Encyclopedias & institutions
+
+## The History map, era by era
+
+- [ ] **500 BC — The Greek World & Persia** — Greek city-states led by Athens and Sparta face the Persian Empire across the Aegean. Illyrian and Thracian tribes hold the interior.
+  - Ragusa: _Not yet founded_ — The coast where Cavtat stands is Illyrian land; Greek traders sail these waters.
+- [ ] **323 BC — Alexander the Great** — Macedon conquers Greece and the Persian Empire. Alexander dies in Babylon in 323 BC.
+  - Ragusa: _Not yet founded_ — The southern Adriatic coast is Illyrian territory, outside Alexander's empire.
+- [ ] **300 BC — The Successor Kingdoms** — Alexander's generals carve up his empire: Kassander takes Macedon, Lysimachus takes Thrace.
+  - Ragusa: _Not yet founded_ — Greek traders sail the Adriatic; the Illyrian kingdoms control this coast.
+- [ ] **200 BC — Rome Arrives** — Rome crosses the Adriatic. Macedon and its Hellenic League will fall to Rome by 168 BC.
+  - Ragusa: _Not yet founded_ — Rome fights the Illyrian queen Teuta's kingdom (229 BC) and starts to control the coast.
+- [ ] **100 BC — Roman Republic** — Macedonia and Greece are Roman provinces. The Dacians hold the lands north of the Danube.
+  - Ragusa: _Not yet founded_ — The coast is now part of Roman Illyricum.
+- [ ] **14 AD — Augustus: The Roman Empire** — Rome rules almost the whole peninsula. Dacia remains independent beyond the Danube.
+  - Ragusa: _Roman Epidaurum_ — Epidaurum (Cavtat) is a Roman colony — the town whose refugees will later found Ragusa.
+- [ ] **200 AD — The Roman Empire at its Height** — Trajan conquers Dacia (106 AD). The Danube frontier is lined with legions and new cities.
+  - Ragusa: _Roman Epidaurum_ — Province of Dalmatia. Epidaurum prospers on the coastal road to Greece.
+- [ ] **300 AD — The Tetrarchy** — Diocletian splits rule among four emperors. Balkan cities like Sirmium and Thessalonica become imperial seats.
+  - Ragusa: _Roman Epidaurum_ — Dalmatia is Diocletian's home province — he retires to his palace at Split.
+- [ ] **400 AD — East and West Divide** — The empire splits for good in 395. The border runs through the Balkans — roughly today's Bosnia–Serbia line.
+  - Ragusa: _Roman Epidaurum_ — The East–West dividing line runs just inland of this coast.
+- [ ] **500 AD — Ostrogoths & Byzantium** — The West has fallen. Theodoric's Ostrogoths rule Italy and Dalmatia; Constantinople rules the rest.
+  - Ragusa: _Roman Epidaurum_ — Dalmatia passes to the Ostrogoths, then back to Byzantium (530s).
+- [ ] **650 AD — Avars & Slavs** — Avars and Slavs overrun the interior. By tradition, refugees from Epidaurum found Ragusa on a rocky islet (c. 614).
+  - Ragusa: _Founded c. 614_ — By tradition, the people of Epidaurum, fleeing Avar and Slav raids, settle the islet of Laus: Ragusa. Byzantine protection.
+- [ ] **700 AD — The Bulgars Arrive** — The First Bulgarian Empire is founded south of the Danube in 681, with its capital at Pliska.
+  - Ragusa: _Byzantine town_ — A small walled town under Byzantine protection; Slavic Dubrava grows on the mainland opposite.
+- [ ] **900 AD — Medieval Kingdoms Emerge** — Croatia, Serbia and Bulgaria take shape (Croatia becomes a kingdom c. 925). Bulgaria is Christian; Magyars settle the Danube basin.
+  - Ragusa: _Byzantine city_ — Ragusa resists an Arab siege (866–67) and becomes a self-governing Byzantine city.
+- [ ] **1000 — Byzantium Strikes Back** — Emperor Basil II wages war on Tsar Samuel of Bulgaria; by 1018 Bulgaria is absorbed. Hungary becomes a kingdom.
+  - Ragusa: _Byzantine city_ — Self-governing under Byzantium, trading across the Adriatic.
+- [ ] **1100 — Byzantium & Hungary** — Byzantium rules the south; Croatia enters a union with the Hungarian crown (1102).
+  - Ragusa: _Byzantine city_ — By tradition, the channel between the islet and the mainland town is filled in and becomes the Stradun.
+- [ ] **1210 — The Fourth Crusade** — Crusaders sack Constantinople (1204) and carve up Byzantium with Venice. Greek successor states rule from Nicaea and Arta.
+  - Ragusa: _Under Venice_ — 1205: after the Fourth Crusade, Venice takes sovereignty — but Ragusa keeps its own laws, council and trade.
+- [ ] **1300 — Restored Byzantium, Rising Serbia** — Byzantium retakes Constantinople (1261) but is weakened. Serbia under the Nemanjić dynasty expands south.
+  - Ragusa: _Under Venice_ — Lastovo joins (mid-1200s). Ragusan merchants work the Serbian and Bosnian silver mines.
+- [ ] **1355 — The Serbian Empire of Dušan** — Stefan Dušan, crowned Emperor in Skopje (1346), rules from the Danube to the Gulf of Corinth. The Ottomans land at Gallipoli (1354).
+  - Ragusa: _Under Venice_ — Ston and Pelješac bought from Serbia and Bosnia (1333), Mljet added (1345). In 1358 Venice gives up Dalmatia; Ragusa accepts the distant overlordship of the Hungarian–Croatian king and governs itself.
+- [ ] **1453 — Fall of Constantinople** — The Ottomans take Constantinople and make it their capital. The last Serbian, Bosnian, Albanian and Greek states fall within 30 years.
+  - Ragusa: _Free Republic_ — The Littoral (Primorje) added (1399), Konavle (1419–26). From 1458 it pays tribute to the Sultan — and keeps its freedom.
+- [ ] **1526 — Mohács** — Suleiman the Magnificent takes Belgrade (1521) and destroys the Hungarian army at Mohács (1526). Buda falls in 1541.
+  - Ragusa: _Free Republic_ — A tributary of the Sultan but self-governing; Ragusan merchants hold trading privileges across the Ottoman Balkans.
+- [ ] **1600 — The Ottoman Balkans** — After Mohács (1526) Hungary is partitioned. The Habsburgs hold a thin frontier; Venice keeps the coast; Ragusa pays tribute and trades.
+  - Ragusa: _Golden Age_ — A neutral merchant republic trading between the Ottomans and Christian Europe. Motto: LIBERTAS.
+- [ ] **1700 — Treaty of Karlowitz** — After the failed siege of Vienna (1683) the Habsburgs take Hungary and Slavonia; Venice takes the Morea. At Ragusa’s urging the Ottomans keep a corridor to the sea at Neum.
+  - Ragusa: _Republic_ — 1667 earthquake devastates the city. 1699: at Ragusa’s urging, the Ottomans keep corridors to the sea at Neum and Sutorina, so that Venice’s new lands do not touch the Republic.
+- [ ] **1800 — The End of Venice** — Napoleon ends the Venetian Republic (1797). Austria takes Dalmatia; the Ionian Islands become a Russo-Ottoman protectorate.
+  - Ragusa: _Republic_ — Venice is gone (1797); Ragusa still stands — but Napoleon's armies are near.
+- [ ] **1810 — Napoleon's Illyrian Provinces** — French troops end the Republic of Ragusa (1808). The coast from Ljubljana to Kotor becomes part of the French Empire. Serbs revolt (1804).
+  - Ragusa: _Abolished 1808_ — Marshal Marmont dissolves the Republic after ~450 years. It joins the Illyrian Provinces.
+- [ ] **1832 — Greek & Serbian Independence** — Greece wins independence (1830–32). Serbia is an autonomous principality. Ragusa is now Austrian Dalmatia.
+  - Ragusa: _Austrian rule_ — 1815 Congress of Vienna: the Republic is not restored. Part of Austria's Kingdom of Dalmatia.
+- [ ] **Mar 1878 — Treaty of San Stefano** — Russia defeats the Ottomans and dictates a huge Bulgaria from the Danube to the Aegean. Britain and Austria object.
+  - Ragusa: _Austrian rule_ — A provincial Austrian town; the Republic is a memory. The Neum strip is still Ottoman Bosnia.
+- [ ] **Jul 1878 — Congress of Berlin** — The powers cut "Big Bulgaria" back: a small principality, plus autonomous Eastern Rumelia. Serbia, Montenegro, Romania win independence.
+  - Ragusa: _Austrian rule_ — Austria-Hungary occupies Bosnia; the Neum strip, though, stays Bosnian.
+- [ ] **1913 — The Balkan Wars** — The Ottomans lose almost all of Europe; they keep Edirne. Albania is born. In 1914 a shot in Sarajevo starts the First World War.
+  - Ragusa: _Austrian rule_ — A quiet Habsburg port on the eve of war.
+- [ ] **1920 — After the First World War** — Austria-Hungary collapses. The Kingdom of Serbs, Croats and Slovenes (Yugoslavia) unites the South Slavs. Romania doubles.
+  - Ragusa: _Yugoslavia_ — 1918: Dubrovnik joins the Kingdom of Serbs, Croats & Slovenes.
+- [ ] **1938 — The Interwar Balkans** — Republican Turkey rules from Ankara (since 1923); kings rule Yugoslavia, Romania, Bulgaria, Greece and Albania.
+  - Ragusa: _Yugoslavia_ — Part of the Banovina of Croatia (1939).
+- [ ] **1942 — Axis Occupation** — Germany and its allies invade in 1941. Yugoslavia is carved up and Greece occupied; resistance and civil war last until 1945.
+  - Ragusa: _Axis occupation_ — Part of the Axis puppet Independent State of Croatia, garrisoned by Italy. Partisans take the city in October 1944.
+- [ ] **1960 — The Cold War** — Tito's socialist Yugoslavia stays non-aligned. Albania, Bulgaria and Romania are communist; Greece and Turkey join NATO.
+  - Ragusa: _Yugoslavia_ — Tourism booms. UNESCO World Heritage listing follows in 1979.
+- [ ] **1992 — War and Independence** — Slovenia, Croatia, Bosnia and Herzegovina and Macedonia declare independence (1991–92). Croatia defends itself in the Homeland War, and war engulfs Bosnia and Herzegovina; Serbia and Montenegro form FR Yugoslavia.
+  - Ragusa: _Under siege_ — Oct 1991 – May 1992: the Yugoslav army besieges Dubrovnik; Konavle and Cavtat are occupied and the Old Town is shelled.
+- [ ] **1995 — Dayton** — Croatia frees most of its occupied land in Operation Storm (Aug 1995); the Dayton Agreement (Nov 1995) ends the war in Bosnia and Herzegovina and divides it into two entities.
+  - Ragusa: _Croatia_ — The Old Town is on UNESCO's "in danger" list (1991–98) while its shell damage is repaired.
+- [ ] **2026 — The Balkans Today** — Montenegro (2006) and Kosovo (2008, recognition disputed) complete the map. Dubrovnik is in Croatia.
+  - Ragusa: _Croatia_ — The 2022 Pelješac Bridge links the Dubrovnik area to the rest of Croatia, bypassing Neum.
 
 ## Glossary
 

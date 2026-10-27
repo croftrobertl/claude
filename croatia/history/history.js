@@ -1,7 +1,8 @@
 /* Balkans History — interactive map of 2,500 years of borders, with Ragusa/Dubrovnik in focus.
    Vanilla JS, no dependencies. Usage:
      BalkansHistory.mount(el, { dataUrl: 'history/history-data.json' })   // or { data: obj }
-   Options: start (era slug, e.g. '1453'), hash (true = read/write location.hash), onChange(frame, slug). */
+   Options: start (era slug, e.g. '1453'), hash (true = read/write location.hash), onChange(frame, slug),
+   fix (d → d, corrections applied to the data before it is drawn). */
 (function () {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
@@ -30,7 +31,7 @@
     // the map is built only once the data arrives, so return a handle that works
     // straight away: a show() made before then is applied as soon as it's ready
     let api = null, queued = null;
-    const go = d => { api = build(root, d, opts); if (queued != null) { api.show(queued); queued = null; } };
+    const go = d => { if (opts.fix) d = opts.fix(d) || d; api = build(root, d, opts); if (queued != null) { api.show(queued); queued = null; } };
     if (opts.data) go(opts.data);
     else fetch(opts.dataUrl || 'history-data.json').then(r => r.json()).then(go).catch(err => {
       console.error('[balkans-history]', err);
@@ -316,7 +317,7 @@
       }
       if (R.ceded) {
         ragG.appendChild(svg('path', { d: P.neum + P.sutorina, fill: hatch('#b68235', idefs), stroke: '#7d5411', 'stroke-width': 1.4, 'stroke-dasharray': '4 3' }));
-        const t = svg('text', { x: 850, y: 100, class: 'bh-ilabel', 'text-anchor': 'middle' }); t.textContent = 'ceded 1699'; ilabG.appendChild(t);
+        const t = svg('text', { x: 850, y: 100, class: 'bh-ilabel', 'text-anchor': 'middle' }); t.textContent = 'Ottoman corridors 1699'; ilabG.appendChild(t);
       }
       if (R.siege) {
         ragG.appendChild(svg('path', { d: P.konavle, fill: hatch('#c0392b', idefs), stroke: '#c0392b', 'stroke-width': 1.4 }));
@@ -331,7 +332,7 @@
       }
       const y = F[i].year;
       D.inset.places.forEach(([n, x, yy, side]) => {
-        if (n === 'Sutorina' && !(y >= 1426 && y < 1699)) return;
+        if (n === 'Sutorina' && !R.ceded) return;
         if (n === 'Neum' && y < 1399) return;
         if (R.siege && n === 'Konavle') return;
         const o = { r: [34, 20, 'start'], l: [-34, 20, 'end'], b: [0, 82, 'middle'], c: [0, 20, 'middle'] }[side] || [0, 20, 'middle'];

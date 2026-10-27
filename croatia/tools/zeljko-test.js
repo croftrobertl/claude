@@ -86,15 +86,24 @@ const KNOWN_ERRORS = [
   [/Bonino da Milano[^.]{0,40}alone/i, 'Orlando was carved by Bonino da Milano with Antun Dubrovčanin'],
   [/Ragusa (was|became) (a )?(colony|part) of Venice (until|from) 1808/i, 'Venetian rule ended in 1358; the Republic was abolished by the French in 1808'],
   [/abolished (in|on) 1806/i, 'the French occupied Ragusa in 1806 and abolished the Republic on 31 January 1808'],
+  [/Ragusa (cedes|ceded|hands|handed|sold|gave)[^.]{0,40}(Neum|Sutorina|Klek)/i, 'in 1699 Venice withdrew and, at Ragusa’s urging, the Ottomans kept the Neum and Sutorina corridors; Ragusa never held them'],
+  [/594 of (its|the Old Town’s|the) 824/i, 'use the survey cited by the Hague tribunal: 563 of 824 buildings hit (68%)'],
+  [/retakes the Krajina|break(s)? away[^.]{0,60}199[12]/i, 'Croatia declared independence and freed its occupied land (Operation Storm); never “broke away” or “retook”'],
+  [/Serb-held areas|Republika Srpska Krajina(?! \()/i, 'call them the occupied areas of Croatia'],
+  [/some sources say 48/i, 'Daksa: 53 killed, as Croatian sources and the 2009 exhumation give'],
+  [/Nineteen people[^.]{0,60}killed that day/i, 'for 6 December use the UN Commission of Experts’ count of civilians (13) and the tribunal’s named dead'],
 ];
 // the checker checks itself: each rule must still catch the mistake it was written for
 const SAMPLES = ['On 25 September 1991 the navy began its blockade', 'the first shells fell on 23 September 1991', 'it ended on 31 May 1992',
   'they besieged it until 1 October', 'a stone bridge from 1537', 'Left leaning by the 1667 quake', 'Orlando’s Column was carved in 1419',
   'the civil war of 1991', 'and Dubrovnik fell', 'Fort Imperial fell that day', 'the Serbo-Croatian war', 'forty days, as decreed in 1377',
-  'by Bonino da Milano alone', 'Ragusa was part of Venice until 1808', 'the Republic was abolished in 1806'];
+  'by Bonino da Milano alone', 'Ragusa was part of Venice until 1808', 'the Republic was abolished in 1806',
+  'Ragusa cedes Neum and Sutorina', '594 of its 824 buildings', 'Croatia retakes the Krajina', 'Serb-held areas (1991–95)', 'executed 53 (some sources say 48)', 'Nineteen people were killed that day'];
 KNOWN_ERRORS.forEach(([re], i) => { if (!SAMPLES[i] || !re.test(SAMPLES[i])) fail('zeljko-test.js', 'rule ' + re + ' no longer catches “' + SAMPLES[i] + '”'); });
 texts.forEach(({ where, text }) => KNOWN_ERRORS.forEach(([re, why]) => { if (re.test(stripUrls(text))) fail(where, 'known error: ' + why); }));
-[['bundle.js', bundle], ['history/history.js', histJs]].forEach(([f, src]) => KNOWN_ERRORS.forEach(([re, why]) => {
+// (the corrections table quotes the wrong text on purpose, so it is left out of this scan)
+const bundleSansFix = bundle.replace(/const HIST_TEXT_FIX = \[[\s\S]*?\n  \];/, '');
+[['bundle.js', bundleSansFix], ['history/history.js', histJs]].forEach(([f, src]) => KNOWN_ERRORS.forEach(([re, why]) => {
   const m = stripUrls(src).match(re);
   if (m) fail(f, 'known error “' + m[0] + '”: ' + why);
 }));
@@ -222,7 +231,7 @@ else {
   // contested numbers come with words that say so
   siege.events.forEach(e => {
     const n = (e.text.match(/\b\d{1,3}(,\d{3})+|\b\d{3,}\b(?! (BC|AD))/g) || []).filter(x => !/^1[0-9]{3}$|^20[0-9]{2}$/.test(x));
-    if (n.length && !/about|some|almost|more than|over|at least|nearly|around|up to|between|estimate|counted|official|reported|according/i.test(e.text)) warn('chronicle/siege “' + e.title + '”', 'figures (' + n.join(', ') + ') given with no hedge or attribution');
+    if (n.length && !/about|some|almost|more than|over|at least|nearly|around|up to|between|estimate|counted|official|reported|according|puts|count/i.test(e.text)) warn('chronicle/siege “' + e.title + '”', 'figures (' + n.join(', ') + ') given with no hedge or attribution');
   });
 }
 
@@ -264,13 +273,31 @@ Object.keys(SIEGE_AREAS).forEach(k => {
   else if (!allIds.has(A.ev)) fail('siege area ' + k, 'its ev “' + A.ev + '” is not a chronicle entry');
 });
 
-// ---------- 8. history-data.json: report only, never hand-edited ----------
-const hd = read('history/history-data.json');
-KNOWN_ERRORS.forEach(([re, why]) => { const m = hd.match(re); if (m) warn('history-data.json (report only)', '“' + m[0] + '”: ' + why); });
-{
-  const m = stripUrls(hd).match(new RegExp(asciiRe.source, 'gu'));
-  if (m) warn('history-data.json (report only)', 'names without diacritics: ' + [...new Set(m)].slice(0, 12).join(', '));
-}
+// ---------- 8. history-data.json: never hand-edited; checked as the site shows it ----------
+// bundle.js corrects it as it loads (HIST_TEXT_FIX, HIST_NOT_RAGUSAN); the corrected text must pass
+const HD = JSON.parse(read('history/history-data.json'));
+const HIST_TEXT_FIX = constant('HIST_TEXT_FIX'), HIST_NOT_RAGUSAN = constant('HIST_NOT_RAGUSAN');
+HIST_TEXT_FIX.forEach(([era, field, wrong, right]) => {
+  const f = HD.frames.find(fr => fr.label === era);
+  if (field === 'feat') {
+    const ft = f && f.feats.find(x => x.n === wrong);
+    if (!ft) fail('HIST_TEXT_FIX ' + era + ' feat', 'the region it renames is no longer in history-data.json: “' + wrong + '”'); else ft.n = right;
+    return;
+  }
+  const o = f && (field === 'caption' ? f : f.ragusa);
+  if (!o || typeof o[field] !== 'string' || o[field].indexOf(wrong) < 0) fail('HIST_TEXT_FIX ' + era + ' ' + field, 'the text it corrects is no longer in history-data.json: “' + wrong.slice(0, 50) + '…”');
+  else o[field] = o[field].replace(wrong, right);
+});
+HD.frames.forEach(f => {
+  f.ragusa.parts = f.ragusa.parts.filter(k => HIST_NOT_RAGUSAN.indexOf(k) < 0);
+  const all = [f.title, f.caption, f.ragusa.status, f.ragusa.body].concat(f.feats.map(x => x.n)).join(' ');
+  texts.push({ where: 'map era ' + f.label, text: all });
+  const t = stripUrls(all);
+  KNOWN_ERRORS.forEach(([re, why]) => { const m = t.match(re); if (m) fail('map era ' + f.label, 'known error “' + m[0] + '”: ' + why); });
+  const a = t.match(asciiRe); if (a) fail('map era ' + f.label, 'name without its diacritics: “' + a[1] + '”');
+});
+// the map's own labels for the 1699 corridors
+if (/Ragusa (hands|cedes)|ceded 1699/.test(bundleSansFix + histJs)) fail('bundle.js / history.js', 'a map label still says Ragusa ceded the 1699 corridors');
 
 // ---------- report ----------
 const count = { chronicle: chron.strands.reduce((n, s) => n + s.events.length, 0), landmarks: THEN_MARKS.length, notes: PLACE_HISTORY.length, spots: SIEGE_SPOTS.length, areas: Object.keys(SIEGE_AREAS).length };
@@ -311,6 +338,8 @@ if (process.argv.includes('--sheet')) {
   THEN_MARKS.forEach(m => out.push('- [ ] **' + m.t + '** (' + m.s + ') — ' + m.x, '  - Sources: ' + srcLine(m.src)));
   out.push('', '## Notes on place pages', '');
   PLACE_HISTORY.forEach(p => out.push('- [ ] **' + p.short + '** — ' + p.text, '  - Sources: ' + srcLine(p.src)));
+  out.push('', '## The History map, era by era', '');
+  HD.frames.forEach(f => out.push('- [ ] **' + f.label + ' — ' + f.title + '** — ' + f.caption, '  - Ragusa: _' + f.ragusa.status + '_ — ' + f.ragusa.body));
   out.push('', '## Glossary', '');
   GLOSSARY.forEach(g => out.push('- [ ] **' + g[0] + '** — ' + g[1]));
   if (warns.length) { out.push('', '## Flagged by the checker (⚠)', ''); warns.forEach(w => out.push('- ' + w)); }

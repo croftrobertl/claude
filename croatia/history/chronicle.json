@@ -526,7 +526,7 @@
      "y": "18 Oct 1944",
      "sort": 1944,
      "title": "The Partisans enter",
-     "text": "German troops left and Yugoslav Partisans took the city on 18 October 1944. They arrested more than 300 citizens, and on 24–25 October executed 53 men without trial on the island of Daksa (some sources say 48); the remains of 53 were found there in 2009.",
+     "text": "German troops left and Yugoslav Partisans took the city on 18 October 1944. They arrested more than 300 citizens, and on 24–25 October executed 53 people without trial on the island of Daksa, whose remains were exhumed there in 2009.",
      "src": [
       [
        "Daksa massacre",
@@ -566,7 +566,7 @@
      "y": "1991–1992",
      "sort": 1991,
      "title": "The siege",
-     "text": "The Yugoslav navy blockaded the city’s waters from 17 September 1991, and the army besieged Dubrovnik from 1 October 1991 until its defenders broke out on 26 May 1992. The worst attack came on 6 December 1991; Fort Imperial on Srđ held.",
+     "text": "The Yugoslav navy declared a blockade of Croatia’s ports, Dubrovnik among them, on 17 September 1991, and the army besieged Dubrovnik from 1 October 1991 until its defenders broke out on 26 May 1992. The worst attack came on 6 December 1991; Fort Imperial on Srđ held.",
      "src": [
       [
        "Opsada Dubrovnika (Croatian Wikipedia)",
@@ -825,10 +825,10 @@
      "places": "^(?!Ludo More)(.*(Luka Cavtat|Žal|Tiha Bay \\(Uvala Tiha\\)|Old City \\(Stari grad\\)), Cavtat$|.*Cavtat Harbor)"
     },
     {
-     "y": "1430–1432",
+     "y": "1430–1433",
      "sort": 1430,
      "title": "The Konavle War",
-     "text": "Radoslav Pavlović tried to take back what he had sold. The war ended in 1432 with Konavle staying Ragusan.",
+     "text": "Radoslav Pavlović tried to take back what he had sold. Peace was made on 25 October 1432 and confirmed by the Bosnian king in March 1433, and Konavle stayed Ragusan.",
      "src": [
       [
        "Radoslav Pavlović",
@@ -845,6 +845,10 @@
       [
        "Hrvatski biografski leksikon: Kosače",
        "https://hbl.lzmk.hr/clanak/kosace"
+      ],
+      [
+       "The Bosnian king in the Konavle War, 1430–1433 (Hrčak)",
+       "https://hrcak.srce.hr/clanak/118299"
       ]
      ]
     },
@@ -1414,7 +1418,7 @@
      "sort": 1991,
      "era": "1992",
      "title": "The blockade",
-     "text": "On 17 September 1991 the Yugoslav navy began a full blockade of Dubrovnik’s waters. For months, ships bound for the city were stopped and searched.",
+     "text": "On 17 September 1991 the Yugoslav navy declared a blockade of Croatia’s Adriatic ports, Dubrovnik among them. When the general attack began on 1 October, its Boka command told Dubrovnik’s crisis staff that no ship might sail past its blockade line; for months, ships bound for the city were stopped and searched.",
      "src": [
       [
        "Opsada Dubrovnika (Croatian Wikipedia)",
@@ -1427,13 +1431,25 @@
       [
        "HU Benedikt: the naval blockade of Croatia",
        "https://hu-benedikt.hr/2018/09/da-se-ne-zaboravi-pomorska-blokada-hrvatske-1991-godine/"
+      ],
+      [
+       "Jadrolinija in the Homeland War",
+       "https://www.jadrolinija.hr/hr/novost/jadrolinija-u-domovinskom-ratu"
+      ],
+      [
+       "State Archives in Split: Split, 15 November 1991 (exhibition catalogue)",
+       "https://www.das.hr/wp-content/uploads/2023/11/Katalog-izlo%C5%BEbe-Split-15.11.1991..pdf"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik: the general attack of 1 October 1991",
+       "https://mdrd.hr/opci-agresorski-vojni-napad-na-dubrovacko-podrucje-1-listopada-1991/"
       ]
      ],
      "days": [
       [
        "09-17",
        1991,
-       "The Yugoslav navy began its blockade of Dubrovnik’s waters"
+       "The Yugoslav navy declared a blockade of Croatia’s ports, Dubrovnik among them"
       ]
      ],
      "tone": "sombre"
@@ -1533,7 +1549,7 @@
      "sort": 1991,
      "era": "1992",
      "title": "The attack begins",
-     "text": "At dawn on 1 October 1991 the JNA, the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina attacked from land, sea and air. Jets hit the transmitter on Srđ, and the city lost electricity and water when the Komolac substation was destroyed. The attackers expected Dubrovnik to fall within days.",
+     "text": "At dawn on 1 October 1991 the JNA, the Montenegrin Territorial Defence and volunteers from Montenegro and eastern Herzegovina attacked from land, sea and air; the Museum of the Homeland War puts the attacking force at 11,000 to 13,000 men. Jets hit the transmitter on Srđ, and the city lost electricity and water when the Komolac substation was destroyed. The attackers expected Dubrovnik to fall within days.",
      "src": [
       [
        "Opsada Dubrovnika (Croatian Wikipedia)",
@@ -1550,6 +1566,10 @@
       [
        "Morski.hr: the plan for Dubrovnik to fall in five days",
        "https://www.morski.hr/slomljena-direktiva-jevrema-cokica-kako-je-propao-plan-jna-da-dubrovnik-padne-za-pet-dana/"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik: the general attack of 1 October 1991",
+       "https://mdrd.hr/opci-agresorski-vojni-napad-na-dubrovacko-podrucje-1-listopada-1991/"
       ]
      ],
      "days": [
@@ -1731,7 +1751,7 @@
      "sort": 1991,
      "era": "1992",
      "title": "The darkest day",
-     "text": "From before dawn the army shelled the city for more than ten hours, and attacked Srđ with infantry and tanks from Bosanka and Strinčjera. A few dozen defenders held Fort Imperial, with tanks right up at the fort; had it fallen, the city lay open below. In the Old Town fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival, and the UN tribunal later found that the attack answered no Croatian military position. Nineteen people, civilians and defenders, were killed that day and about sixty wounded. Among the dead was the photographer Pavo Urban, 23, killed while photographing the shelling; a plaque under the city bell tower marks where he fell. 6 December is Dubrovnik Defenders’ Day.",
+     "text": "From before dawn the army shelled the city for more than ten hours, and attacked Srđ with infantry and tanks from Bosanka and Strinčjera. A few dozen defenders held Fort Imperial, with tanks right up at the fort; had it fallen, the city lay open below. In the Old Town fires gutted palaces, among them the one on Od Sigurate that housed the Dubrovnik Summer Festival, and the UN tribunal later found that the attack answered no Croatian military position. The UN Commission of Experts counted thirteen civilians killed in the Dubrovnik area that day, the most of any day of the siege, and defenders were killed too. In the Old Town the tribunal’s judgement names two of the dead: Tonči Skočko, and the photographer Pavo Urban, 23, killed while photographing the shelling; a plaque under the city bell tower marks where Pavo fell. 6 December is Dubrovnik Defenders’ Day.",
      "src": [
       [
        "ICTY: Strugar judgement",
@@ -1764,6 +1784,14 @@
       [
        "Hina: the Pavo Urban plaque",
        "https://www.hina.hr/OTS/10848593"
+      ],
+      [
+       "UN Commission of Experts: The battle of Dubrovnik (S/1994/674/Add.2, Annex XI.A)",
+       "https://phdn.org/archives/www.ess.uwe.ac.uk/comexpert/ANX/XI-A.htm"
+      ],
+      [
+       "Srđa Pavlović: The siege of Dubrovnik (York University)",
+       "https://www.yorku.ca/soi/_Vol_5_1/_HTML/Pavlovic.html"
       ]
      ],
      "days": [
@@ -1857,7 +1885,7 @@
      "sort": 1995,
      "era": "1995",
      "title": "The damage and the repair",
-     "text": "About 2,000 shells and rockets struck the Old Town: 594 of its 824 buildings were damaged and the walls took more than a hundred direct hits. Restoration followed, and in 1998 UNESCO took the Old City off its In Danger list. A map of the hits stands near the Pile Gate.",
+     "text": "By the city’s count about 2,000 shells and rockets struck the Old Town, and the walls took more than a hundred direct hits. A survey made with UNESCO, cited by the Hague tribunal, found that 563 of the Old Town’s 824 buildings, 68 per cent, were hit in 1991–92. Restoration followed, and in 1998 UNESCO took the Old City off its In Danger list. A map of the hits stands near the Pile Gate.",
      "src": [
       [
        "City of Dubrovnik: destruction in the Old City",
@@ -1870,6 +1898,10 @@
       [
        "HMdb: the map of the damage",
        "https://www.hmdb.org/m.asp?m=126979"
+      ],
+      [
+       "ICTY: Strugar et al., amended indictment",
+       "https://www.icty.org/x/cases/strugar/ind/en/str-ai030331e.htm"
       ]
      ],
      "places": "^Pile Gate"
@@ -1900,7 +1932,7 @@
      "sort": 2010,
      "era": "2026",
      "title": "Remembering",
-     "text": "Croatian accounts count 182 defenders from Dubrovnik’s own units, and some 235 from other Croatian units, killed in the defence and liberation of the Dubrovnik area, and between 82 and 92 civilians. The photographs of Dubrovnik’s fallen defenders hang in the Memorial Room in the Sponza Palace; Fort Imperial houses the Museum of the Homeland War. The cross on Srđ, pulled down in 1991, was raised again in October 1997, and the cable car, wrecked in 1991, has run again since July 2010.",
+     "text": "Croatian records count 182 defenders from Dubrovnik’s own units, and some 235 from other Croatian units, killed in the defence and liberation of the Dubrovnik area. The UN Commission of Experts counted at least 82, and possibly 88, civilians of the Dubrovnik area killed between September 1991 and the end of 1992. The photographs of Dubrovnik’s fallen defenders hang in the Memorial Room in the Sponza Palace; Fort Imperial houses the Museum of the Homeland War. The cross on Srđ, pulled down in 1991, was raised again in October 1997, and the cable car, wrecked in 1991, has run again since July 2010.",
      "src": [
       [
        "Opsada Dubrovnika (Croatian Wikipedia)",
@@ -1921,6 +1953,14 @@
       [
        "Dubrovnik cable car",
        "https://www.visit-croatia.co.uk/croatia-destinations/dubrovnik/dubrovnik-cable-car/"
+      ],
+      [
+       "UN Commission of Experts: The battle of Dubrovnik (S/1994/674/Add.2, Annex XI.A)",
+       "https://phdn.org/archives/www.ess.uwe.ac.uk/comexpert/ANX/XI-A.htm"
+      ],
+      [
+       "Srđa Pavlović: The siege of Dubrovnik (York University)",
+       "https://www.yorku.ca/soi/_Vol_5_1/_HTML/Pavlovic.html"
       ]
      ],
      "places": "^Dubrovnik Cable Car|^Mount Srđ Cross|^Observation Deck, Mount Srđ"

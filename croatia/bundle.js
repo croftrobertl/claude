@@ -496,6 +496,7 @@
     const mountNow = () => {
       histHandle = window.BalkansHistory.mount(histEl.querySelector('.dcc-hist-mount'), {
         dataUrl: resolveUrl('history/history-data.json'), data: thenData && thenData.view ? thenData : undefined,   // already loaded by the Map tab
+        fix: histFix,   // the Zeljko Test corrections
         hash: false, start: histWant || undefined,
         onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
@@ -600,7 +601,7 @@
   const CHRON_TAGS = { tradition: 'Tradition', debated: 'Debated' };
   // how strong an entry's best source is
   const EV_TIERS = [
-    [4, 'Scholarly & archival', /hrcak\.srce\.hr|pubmed|researchgate|jas-center\.eu|icty\.org|dapa\.hr/],
+    [4, 'Scholarly & archival', /hrcak\.srce\.hr|pubmed|researchgate|jas-center\.eu|icty\.org|dapa\.hr|das\.hr|yorku\.ca|comexpert/],
     [3, 'Encyclopedias & institutions', /enciklopedija\.hr|lzmk\.hr|unesco\.org|irb\.hr|\/\/db\.hr|migk\.hr|matica\.hr|tzdubrovnik\.hr|britannica\.com|topostext|\/\/www\.dubrovnik\.hr|\/\/dubrovnik\.hr|dumus\.hr|dubrovackoprimorje\.hr|mdrd\.hr|hrvatski-vojnik\.hr|dad\.hr|hbl\.lzmk|vlada\.gov\.hr|citywallsdubrovnik\.hr|lokrum\.hr|hrz\.hr|portdubrovnik\.hr|muzej-marindrzic\.eu|marble\.nd\.edu/],
     [2, 'Wikipedia & press', /wikipedia\.org|ebsco\.com|narod\.hr|tportal\.hr|dubrovniktimes|total-croatia-news|archaeologymag|dulist\.hr|dubrovniknet\.hr|domovinskirat\.hr|jadrolinija\.hr|vreme\.com|cgo-cce\.org|hina\.hr|hrt\.hr|hrturizam\.hr|slobodnaevropa\.org|teleskop\.hr|morski\.hr|identitet\.hr|dubrovnikinsider\.hr|dulist\.hr|hrvatskonebo\.org|hrvatskispomenar\.com|hu-benedikt\.hr/],
     [1, 'Travel guides & blogs', /./]
@@ -697,7 +698,7 @@
     { re: /Lapad, Dubrovnik$/, t: 'Lapad, where you stayed', s: 'In November 1991 shells fell on Lapad and Babin Kuk, whose hotels were full of refugees from Konavle, Župa and the Littoral.', ev: 'a-city-of-refugees' },
     { re: /^Port of Gruž/, t: 'The port of Gruž', s: 'Where the Libertas convoy came in through the blockade, and where the ferry Slavija took almost 4,000 people out on 14 November 1991.', ev: 'the-libertas-convoy' },
     { re: /Cavtat$/, t: 'Cavtat', s: 'Taken on 15 October 1991. Konavle stayed occupied for a year, until Operation Konavle landed here on the night of 20–21 October 1992.', ev: 'cavtat-falls' },
-    { re: /^Stradun|^Orlando[’']s Column|Bell Tower/, t: 'Stradun and the Old Town', s: 'Shelled for more than ten hours on 6 December 1991; a plaque under the bell tower remembers the photographer Pavo Urban, killed there that day. In all, 594 of the Old Town’s 824 buildings were damaged.', ev: 'the-darkest-day' },
+    { re: /^Stradun|^Orlando[’']s Column|Bell Tower/, t: 'Stradun and the Old Town', s: 'Shelled for more than ten hours on 6 December 1991; a plaque under the bell tower remembers the photographer Pavo Urban, killed there that day. In all, 563 of the Old Town’s 824 buildings were hit in 1991–92, by the survey the Hague tribunal cited.', ev: 'the-darkest-day' },
     { re: /^Fort Imperial/, t: 'Fort Imperial on Srđ', s: 'On 6 December 1991 a few dozen defenders held it against infantry and tanks; had it fallen, the city lay open below. It now houses the Museum of the Homeland War.', ev: 'the-darkest-day' },
     { re: /^(Mount Srđ Cross|Observation Deck, Mount Srđ|Srđ ulica, Mount Srđ)/, t: 'Mount Srđ', s: 'The front line ran across Srđ: the defenders held Fort Imperial while the army held Bosanka just behind it. The summit cross, pulled down in 1991, was raised again in October 1997.', ev: 'remembering' },
     { re: /^Dubrovnik Cable Car/, t: 'The cable car', s: 'Wrecked in the 1991 fighting; it has carried people up Srđ again since July 2010.', ev: 'remembering' }
@@ -2651,6 +2652,40 @@
     konavle:  { parts: ['konavle'], name: 'Konavle', kind: 'konavle', joined: '1419–26', line1942: true },
     sutorina: { parts: ['sutorina'], name: 'Sutorina', kind: 'other', ceded: 'mne' }
   };
+  // Corrections to history/history-data.json, which is generated and never hand-edited; they are applied
+  // as it loads, and the Zeljko Test (ZELJKO-TEST.md) checks the corrected text. Sutorina was Ottoman from
+  // 1482 and Venetian from 1687, and the Neum corridor was not Ragusan either: in 1699 Venice withdrew and,
+  // at Ragusa's urging, the Ottomans kept both strips (Hrvatska enciklopedija: Dubrovačka Republika, Neum,
+  // Konavle). Each text fix is [era, field, wrong, right]; a 'feat' fix renames a region on the map.
+  const HIST_NOT_RAGUSAN = ['neum', 'sutorina'];
+  const HIST_TEXT_FIX = [
+    ['500 BC', 'body', 'Nearby Epidauros (today\'s Cavtat) is an Illyrian–Greek coastal settlement in the land of the Illyrians.', 'The coast where Cavtat stands is Illyrian land; Greek traders sail these waters.'],
+    ['650 AD', 'caption', 'Refugees from Epidaurum found Ragusa on a rocky islet (c. 614).', 'By tradition, refugees from Epidaurum found Ragusa on a rocky islet (c. 614).'],
+    ['650 AD', 'body', 'Fleeing Avar and Slav raids, the people of Epidaurum settle the islet of Laus: Ragusa.', 'By tradition, the people of Epidaurum, fleeing Avar and Slav raids, settle the islet of Laus: Ragusa.'],
+    ['1100', 'body', 'Islet and mainland town merge; the channel between them becomes the Stradun.', 'By tradition, the channel between the islet and the mainland town is filled in and becomes the Stradun.'],
+    ['1355', 'body', 'Ston & Pelješac bought from Serbia (1333), Mljet added. In 1358 Venice gives up Dalmatia and Ragusa becomes a free republic.', 'Ston and Pelješac bought from Serbia and Bosnia (1333), Mljet added (1345). In 1358 Venice gives up Dalmatia; Ragusa accepts the distant overlordship of the Hungarian–Croatian king and governs itself.'],
+    ['1453', 'body', 'Coast to Neum added (1399), Konavle (1419–26).', 'The Littoral (Primorje) added (1399), Konavle (1419–26).'],
+    ['1700', 'caption', 'the Habsburgs take Hungary and Croatia; Venice takes the Morea. Ragusa cedes Neum as a buffer.', 'the Habsburgs take Hungary and Slavonia; Venice takes the Morea. At Ragusa’s urging the Ottomans keep a corridor to the sea at Neum.'],
+    ['1700', 'body', '1699: Ragusa cedes Neum and Sutorina to the Ottomans as buffers against Venice.', '1699: at Ragusa’s urging, the Ottomans keep corridors to the sea at Neum and Sutorina, so that Venice’s new lands do not touch the Republic.'],
+    ['1992', 'caption', 'Slovenia, Croatia, Bosnia and Macedonia break away (1991–92). War follows in Croatia and Bosnia; Serbia and Montenegro form FR Yugoslavia.', 'Slovenia, Croatia, Bosnia and Herzegovina and Macedonia declare independence (1991–92). Croatia defends itself in the Homeland War, and war engulfs Bosnia and Herzegovina; Serbia and Montenegro form FR Yugoslavia.'],
+    ['1992', 'feat', 'Serb-held areas (1991–95)', 'Occupied areas of Croatia (1991–95)'],
+    ['1995', 'caption', 'Croatia retakes the Krajina (Aug 1995); the Dayton Agreement (Nov 1995) ends the Bosnian war and splits Bosnia into two entities.', 'Croatia frees most of its occupied land in Operation Storm (Aug 1995); the Dayton Agreement (Nov 1995) ends the war in Bosnia and Herzegovina and divides it into two entities.']
+  ];
+  function histFix(d) {
+    if (!d || !d.frames || d.zeljkoFixed) return d;
+    d.frames.forEach(f => {
+      const R = f.ragusa;
+      if (R && R.parts) R.parts = R.parts.filter(k => HIST_NOT_RAGUSAN.indexOf(k) < 0);
+      HIST_TEXT_FIX.forEach(([era, field, wrong, right]) => {
+        if (f.label !== era) return;
+        if (field === 'feat') { (f.feats || []).forEach(ft => { if (ft.n === wrong) ft.n = right; }); return; }
+        const o = field === 'caption' ? f : R;
+        if (o && typeof o[field] === 'string') o[field] = o[field].replace(wrong, right);
+      });
+    });
+    d.zeljkoFixed = true;
+    return d;
+  }
   // 1991–92, area by area (geometry: history/street.json "siege"; sources in the chronicle's siege strand)
   const SIEGE_AREAS = {
     konavle: { t: 'Konavle', s: 'Cavtat was taken on 15 October 1991, and the whole valley stayed occupied until Operation Konavle, 20–24 October 1992.', ev: 'cavtat-falls' },
@@ -2661,7 +2696,7 @@
   const SIEGE_FORT = 'On 6 December 1991 a few dozen defenders held the fort against an infantry and tank attack from Bosanka and Strinčjera, with tanks right up at the fort. It was the anchor of the line that saved the city, and today it houses the Museum of the Homeland War.';
   const THEN_ORDER = ['core', 'elaph', 'lastovo', 'pel', 'mljet', 'prim', 'neum', 'konavle', 'sutorina', 'city'];   // the first town on top
   const THEN_LAB = { core: [42.6555, 18.118], elaph: [42.7277, 17.8803] };
-  // the two 1699 corridors after Ragusa handed them to the Ottomans
+  // the two 1699 corridors the Ottomans kept, at Ragusa's urging
   const CEDED_STATUS = {
     'mar1878': 'Ottoman Empire', 'jul1878': 'Bosnia (Austro-Hungarian)', '1913': 'Austria-Hungary',
     '1920': 'Kingdom of Serbs, Croats & Slovenes', '1938': 'Kingdom of Yugoslavia', '1942': 'Axis-occupied'
@@ -2688,7 +2723,7 @@
     { ll: [42.64155, 18.1073], from: 1438, by: 'rag', t: 'Onofrio’s Fountain', s: '1438', x: 'Built in 1438–40 by Onofrio della Cava at the end of an aqueduct that brought spring water about 12 km from Šumet in Rijeka dubrovačka.', src: [["Onofrio’s Fountain", "https://en.wikipedia.org/wiki/Onofrio%27s_Fountain"], ["History Hit: Large Onofrio Fountain", "https://www.historyhit.com/locations/large-onofrio-fountain/"]] },
     { ll: [42.6409, 18.1104], from: 1444, by: 'rag', t: 'Bell Tower', s: '1444', x: 'First built in 1444. It began to lean in the 1800s, was taken down in 1928 and rebuilt to the same design in 1929.', src: [["Dubrovnik Bell Tower", "https://en.wikipedia.org/wiki/Dubrovnik_Bell_Tower"], ["Dubrovnik Tourist Board: the Bell Tower", "https://tzdubrovnik.hr/lang/en/get/spomenici/5420/odjeli.html"]] },
     { ll: [42.64232, 18.11258], from: 1462, by: 'rag', t: 'Fort Revelin', s: '1460s · rebuilt 1538', x: 'Built in the 1460s against the Ottoman threat, and rebuilt from 1538 to a design by Antonio Ferramolino.', src: [["Dubrovnik Tourist Board: Fort Revelin", "https://tzdubrovnik.hr/get/spomenici/5351/tvrdava_revelin.html"], ["Antonio Ferramolino", "https://en.wikipedia.org/wiki/Antonio_Ferramolino"]] },
-    { ll: [42.64124, 18.11056], from: 1516, by: 'rag', t: 'Sponza Palace', s: '1516–22', x: 'Customs house and mint, built 1516–22 to a design by Paskoje Miličević. It came through the 1667 earthquake.', src: [["Sponza Palace", "https://en.wikipedia.org/wiki/Sponza_Palace"], ["Hrvatska enciklopedija: Paskoje Miličević", "https://www.enciklopedija.hr/clanak/milicevic-paskoje-mihov"], ["State Archives in Dubrovnik: the Sponza Palace", "https://dad.hr/palaca-sponza-2/"]] },
+    { ll: [42.64124, 18.11056], from: 1516, by: 'rag', t: 'Sponza Palace', s: '1516–22', x: 'Customs house and mint, built 1516–22 to a design by Paskoje Miličević, who died in 1516. It came through the 1667 earthquake.', src: [["Sponza Palace", "https://en.wikipedia.org/wiki/Sponza_Palace"], ["Hrvatska enciklopedija: Paskoje Miličević", "https://www.enciklopedija.hr/clanak/milicevic-paskoje-mihov"], ["State Archives in Dubrovnik: the Sponza Palace", "https://dad.hr/palaca-sponza-2/"]] },
     { ll: [42.64167, 18.11472], from: 1590, by: 'rag', t: 'Lazareti', s: '1590–1640s', x: 'Quarantine houses outside the Ploče gate, begun in 1590 and finished in the 1640s. Travellers and goods from plague-hit lands waited here before entering the city; the Republic had made the earliest known quarantine law in 1377.', src: [["Lazzarettos of Dubrovnik", "https://en.wikipedia.org/wiki/Lazzarettos_of_Dubrovnik"], ["Dubrovnik Tourist Board: Lazareti", "https://tzdubrovnik.hr/lang/en/get/spomenici/5502/o_nama.html"]] },
     { ll: [42.6403, 18.110381], from: 1667, by: 'rag', t: 'Cathedral', s: 'after 1667', x: 'The medieval cathedral fell in the 1667 earthquake; this Baroque one replaced it.', src: [["Dubrovnik Cathedral", "https://en.wikipedia.org/wiki/Dubrovnik_Cathedral"], ["Dubrovnik Tourist Board: the Cathedral", "https://tzdubrovnik.hr/lang/en/get/sakralni_objekti/5014/cathedral.html"]] },
     { ll: [42.640629, 18.109978], from: 1706, by: 'rag', t: 'St. Blaise', s: '1706–15', x: 'Rebuilt in 1706–15, to a design by Marino Gropelli, after a fire destroyed the medieval church; the silver statue of the saint survived.', src: [["St Blaise’s Church", "https://en.wikipedia.org/wiki/St_Blaise%27s_Church"], ["Croatian Conservation Institute: St Blaise", "https://www.hrz.hr/en/index.php/djelatnosti/konzerviranje-restauriranje/kamena-plastika/337-crkva-sv-vlaha-u-dubrovniku"]] },
@@ -2716,7 +2751,7 @@
   function thenLoad() {
     const fr = histHandle && histHandle.frames;   // the History map already has them
     if (!thenLoading) thenLoading = Promise.all([
-      fr ? Promise.resolve({ frames: fr }) : fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      fr ? Promise.resolve({ frames: fr }) : fetch(resolveUrl('history/history-data.json')).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(histFix),
       streetLoad(),
       mmTrackData ? null : loadJSON('track.json').then(d => { mmTrackData = mmTrackData || d; }).catch(() => {})
     ]).then(([d]) => { thenData = d; }).catch(e => { thenLoading = null; throw e; });
@@ -2756,8 +2791,9 @@
     const P = THEN_PART[k], R = f.ragusa, slug = histSlugOf(f.label);
     if (P.ceded && R.founded && f.year >= 1699 && R.parts.indexOf(k) < 0) {
       const t = f.year < 1878 ? 'Ottoman Empire' : (CEDED_BY[P.ceded][slug] || CEDED_STATUS[slug] || 'Ottoman Empire');
-      return { t: (f.year < 1878 ? t + ' · ceded 1699' : t), cls: 'ceded', c: thenColor(f, t) };
+      return { t: (f.year < 1878 ? t + ' · corridor from 1699' : t), cls: 'ceded', c: thenColor(f, t) };
     }
+    if (P.ceded && R.founded && !R.former && f.year >= 1399 && f.year < 1699) return { t: thenInlandName(f) || 'outside Ragusa', cls: 'out', c: thenColor(f, thenInland(f)) };
     const s = placeStatus(P, f);
     if (s.cls === 'rag') return { t: s.t, cls: 'rag', c: '#f2c230' };
     if (s.cls === 'war') return { t: s.t, cls: 'war', c: '#c0392b' };
@@ -2776,8 +2812,8 @@
       return { t: 'The old Ragusan frontier: ' + ph, s: today ? 'It follows Ragusa’s frontier closely.' : 'Today it is the Croatia–Bosnia border.' };
     }
     if (!R.founded || f.year < 1699) return null;
-    if (k === 'neum') return { t: '1699: Ragusa hands Neum and Klek to the Ottomans', s: today ? 'A buffer against Venice that is still Bosnia and Herzegovina’s only coast.' : 'A buffer strip to keep Venice from reaching Ragusa by land.' };
-    return { t: '1699: Ragusa hands Sutorina to the Ottomans', s: today ? 'The southern buffer; since 1947 Montenegro’s, and this is now the Croatia–Montenegro border.' : 'The southern buffer, matching Neum in the north.' };
+    if (k === 'neum') return { t: '1699: the Ottomans keep a corridor to the sea at Neum', s: today ? 'Won at Ragusa’s urging so that Venice’s land would not touch the Republic; still Bosnia and Herzegovina’s only coast.' : 'Won at Ragusa’s urging, so that Venice’s land would not touch the Republic.' };
+    return { t: '1699: the Ottomans keep a corridor to the sea at Sutorina', s: today ? 'The southern buffer; since 1947 Montenegro’s, and this is now the Croatia–Montenegro border.' : 'The southern buffer, matching Neum in the north.' };
   }
   // a line's story: a tooltip on hover, and a popup on tap or click (touch screens have no hover)
   function thenStory(layer, html) {

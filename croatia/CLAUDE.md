@@ -17,6 +17,9 @@ node tools/zeljko-test.js --sheet   # regenerates ZELJKO-REVIEW.md, the sign-off
 In short: every claim sourced (one institutional/scholarly/court source or two independent ones), exact dates
 only where sources agree, traditions and disputes labelled, full Croatian diacritics, "Homeland War" and
 "defenders" for 1991–95, and **never invent family history** — family material only as the family supplies it.
+When sources conflict: death tolls and other numbers come from international tribunals (ICTY), then international
+bodies (UN, UNESCO), then human rights organisations; between Croatian and Serbian versions, use the Croatian.
+Never ask for or publish the family's own memories of the siege.
 When you correct an error, add a rule for it to `KNOWN_ERRORS` in the checker so it cannot come back.
 
 ## Standing rules
