@@ -111,7 +111,9 @@
 .bh-ragterr { display: none; pointer-events: none; }
 .bh-tiles-on .bh-ragterr { display: inline; }
 .bh-rt { vector-effect: non-scaling-stroke; stroke-width: 2; stroke-linejoin: round; }
-.bh-rt-rag { fill: #f2c230; fill-opacity: .55; stroke: #7d5411; }
+.bh-rt-rag { fill: #f2c230; fill-opacity: .55; stroke: #7d5411; pointer-events: visiblePainted; cursor: pointer; }
+.bh-rt-rag:hover, .bh-rt-rag.bh-sel { fill-opacity: .72; stroke: var(--bh-text); stroke-width: 2.6; }
+.bh-ragdot, .bh-ragusa-ring { cursor: pointer; }
 .bh-rt-former { fill: #f2c230; fill-opacity: .22; stroke: #b68235; }
 .bh-rt-ceded { fill: #b68235; fill-opacity: .18; stroke: #7d5411; }
 .bh-rt-siege { fill: #c0392b; fill-opacity: .28; stroke: #c0392b; }

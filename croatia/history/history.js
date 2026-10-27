@@ -51,6 +51,7 @@
     // the walled city itself (Stradun, 42.6413° N 18.1083° E) in map units; the data's ragusaPt sits
     // about 1 km west — invisible at overview size, but the deep zoom puts today's streets underneath
     const RAG = [(18.1083 - 12) * 100, (48.4 - 42.6413) * 132.7];
+    const RAG_SEL = '§ragusa';   // the selection key for Ragusa's own card
     let cur = 0, playing = null, sel = null, scale = 1, tx = 0, ty = 0, libertasShown = null, pickTop = true;
 
     // ---------- markup ----------
@@ -85,7 +86,7 @@
     const ib = D.inset.box;
     map.appendChild(svg('rect', { x: ib[0], y: ib[1], width: ib[2], height: ib[3], class: 'bh-inbox' }));
     const ring = svg('circle', { cx: RAG[0], cy: RAG[1], r: 24, class: 'bh-ragusa-ring' }); map.appendChild(ring);
-    const ragDot = svg('circle', { cx: RAG[0], cy: RAG[1], r: 10, fill: 'var(--bh-gold)', stroke: '#201f1d', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
+    const ragDot = svg('circle', { cx: RAG[0], cy: RAG[1], r: 10, class: 'bh-ragdot', fill: 'var(--bh-gold)', stroke: '#201f1d', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' });
     map.appendChild(ragDot);
     const labels = el('div', 'bh-labels');
     stage.append(map, labels); vp.append(tilesEl, stage);
@@ -299,7 +300,7 @@
       const R = F[i].ragusa, P = D.inset.parts;
       ragTerr.innerHTML = '';
       const add = (d, cls) => ragTerr.appendChild(svg('path', { d, class: 'bh-rt ' + cls }));
-      if (R.parts.length) add(R.parts.map(k => P[k]).join(''), 'bh-rt-rag');
+      if (R.parts.length) add(R.parts.map(k => P[k]).join(''), 'bh-rt-rag' + (sel === RAG_SEL ? ' bh-sel' : ''));
       else if (R.former && D.inset.former) add(D.inset.former, 'bh-rt-former');
       if (R.ceded) add(P.neum + P.sutorina, 'bh-rt-ceded');
       if (R.siege) add(P.konavle, 'bh-rt-siege');
@@ -359,8 +360,32 @@
       libertasShown = tgt; requestAnimationFrame(step);
     }
 
+    // Ragusa's own card: its territory is drawn from the finer coast map, not as one of the era's
+    // regions, so it gets a card of its own, in the same form, for the eras it held land
+    const ragEras = F.map((f, i) => f.ragusa.founded && !f.ragusa.former && f.ragusa.parts.length ? i : -1).filter(i => i >= 0);
+    function ragusaCard() {
+      const f = F[cur], R = f.ragusa;
+      if (!R.founded || R.former || !R.parts.length) return null;
+      const free = f.year >= 1358;
+      return { n: free ? 'Republic of Ragusa' : 'Ragusa', c: 'var(--bh-gold)', idx: ragEras,
+        notes: [R.status + '.', R.body, `On ${ragEras.length} of ${N} maps, ${F[ragEras[0]].label} – ${F[ragEras[ragEras.length - 1]].label}.`] };
+    }
     function renderInfo() {
       const f = F[cur];
+      if (sel === RAG_SEL) {
+        const rc = ragusaCard();
+        if (!rc) { sel = null; }
+        else {
+          info.hidden = false;
+          info.classList.toggle('bh-at-bottom', pickTop);
+          const runs = []; rc.idx.forEach(k => { const r = runs[runs.length - 1]; if (r && r[1] === k - 1) r[1] = k; else runs.push([k, k]); });
+          life.innerHTML = runs.map(([a, b]) => `<i style="left:${a / N * 100}%;width:${(b + 1 - a) / N * 100}%;background:${rc.c}"></i>`).join('');
+          info.innerHTML = `<div class="bh-info-name"><i class="bh-swatch" style="background:${rc.c}"></i>${esc(rc.n)}</div>` +
+            `<div class="bh-info-note">${rc.notes.map(esc).join(' ')}</div>` +
+            '<button type="button" class="bh-pick-x" aria-label="Close">×</button>';
+          return;
+        }
+      }
       const ft = sel && f.feats.find(x => x.n === sel);
       if (!ft) { info.hidden = true; info.innerHTML = ''; life.innerHTML = ''; return; }
       info.hidden = false;
@@ -495,6 +520,7 @@
     });
     info.addEventListener('click', e => { if (e.target.closest('.bh-pick-x')) { sel = null; markSel(); renderInfo(); } });
     function markSel() {
+      ragTerr.querySelectorAll('.bh-rt-rag').forEach(p => p.classList.toggle('bh-sel', sel === RAG_SEL));
       layers.lastChild && layers.lastChild.querySelectorAll('.bh-poly').forEach(p => {
         const f2 = F[cur].feats[+p.dataset.k]; p.classList.toggle('bh-sel', !!(sel && f2.n === sel));
       });
@@ -724,7 +750,9 @@
         const hit = document.elementFromPoint(e.clientX, e.clientY);
         const k = hit && hit.closest && hit.closest('.bh-poly') ? +hit.closest('.bh-poly').dataset.k : null;
         const ft = k != null ? F[cur].feats[k] : null;
-        sel = ft && ft.n ? (sel === ft.n ? null : ft.n) : null;
+        // Ragusa's own land (close in) or its gold dot (further out) opens Ragusa's card
+        const onRag = hit && hit.closest && hit.closest('.bh-rt-rag, .bh-ragdot, .bh-ragusa-ring') && ragusaCard();
+        sel = onRag ? (sel === RAG_SEL ? null : RAG_SEL) : ft && ft.n ? (sel === ft.n ? null : ft.n) : null;
         markSel();
         renderInfo();
       }
