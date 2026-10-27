@@ -2899,6 +2899,95 @@ suite('0.2.4 item 8: the not-counted summary names each reason', function () {
     unlink($log);
 });
 
+
+/** Put paths into Minčeta's stored baseline as an older version left them. */
+function dccr_seed_index(array $rels): void
+{
+    $ref  = new ReflectionClass(Fortress\Minceta::class);
+    $idx  = Fortress\Minceta::index();
+    $pass = max(1, (int) State::get('minceta.pass_no', 1) - 1);
+    foreach ($rels as $rel) {
+        $abs = ABSPATH . $rel;
+        $idx[$rel] = ['s' => is_file($abs) ? filesize($abs) : 1, 'm' => is_file($abs) ? filemtime($abs) : 1, 'h' => is_file($abs) ? hash_file('sha256', $abs) : 'x', 'x' => 'base', 'p' => $pass];
+    }
+    $prop = $ref->getProperty('index');
+    $prop->setAccessible(true);
+    $prop->setValue(null, $idx);
+    $dirty = $ref->getProperty('index_dirty');
+    $dirty->setAccessible(true);
+    $dirty->setValue(null, true);
+    $save = $ref->getMethod('save_index');
+    $save->setAccessible(true);
+    $save->invoke(null);
+}
+
+suite('0.2.5 item 1: files that moved to another owner are never reported missing, at the first pass or at the upgrade', function () {
+    tick();
+    foreach (['wp-config.php' => "<?php\n// config\n", 'index.php' => "<?php\n// front\n", '.user.ini' => "upload_max_filesize = 64M\n", 'php.ini' => "memory_limit = 256M\n"] as $rel => $c) {
+        if (!is_file(ABSPATH . $rel)) {
+            file_put_contents(ABSPATH . $rel, $c);
+        }
+    }
+    $owned = ['wp-config.php', 'index.php', '.user.ini', 'php.ini'];
+    $missing = static fn() => array_filter(Alerts::open(Fortress::MINCETA), static fn($a) => $a['kind'] === 'file-missing' && in_array($a['target'], ['wp-config.php', 'index.php', '.user.ini', 'php.ini'], true));
+    // (a) A 0.2.3-shaped baseline meets the first full pass, with no upgrade step at all.
+    dccr_seed_index($owned);
+    foreach ($owned as $rel) {
+        ok(isset(Fortress\Minceta::index()[$rel]), "seeded: $rel is in the old baseline");
+    }
+    State::set('last_full_pass', 0);
+    $before = count(events_of('file-missing'));
+    tick();
+    eq([], $missing(), 'the first pass raises no File Missing for files another check owns');
+    eq($before, count(events_of('file-missing')), 'and records no missing event');
+    ok(str_contains((string) (State::get('minceta.last')['missing'] ?? -1), '0'), 'the pass counts 0 missing');
+    foreach ($owned as $rel) {
+        ok(!isset(Fortress\Minceta::index()[$rel]), "$rel left the walk's baseline");
+    }
+    $pr = events_of('baseline-pruned');
+    ok(count($pr) === 1 && $pr[0]['severity'] === Events::INFO && str_contains($pr[0]['message'], '4 paths left the file walk\'s baseline') && str_contains($pr[0]['message'], 'wp-config.php'), 'one info line names them: ' . ($pr[0]['message'] ?? ''));
+    eq(Fortress::HOLDING, Alerts::worst(Fortress::MINCETA), 'Minčeta holds');
+    // (b) The upgrade from 0.2.4 prunes them before any pass.
+    dccr_seed_index($owned);
+    update_option('dcc_ragusa_version', '0.2.4', 'no');
+    DCCR\Plugin::maybe_upgrade();
+    foreach ($owned as $rel) {
+        ok(!isset(Fortress\Minceta::index()[$rel]), "upgrade: $rel left the baseline before any tick");
+    }
+    eq(2, count(events_of('baseline-pruned')), 'with its own info line');
+    eq(DCCR_VERSION, get_option('dcc_ragusa_version'), 'version recorded');
+    // A file that is really gone, and still watched by the walk, is still missing.
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/really-gone.php', "<?php\n");
+    State::set('last_full_pass', 0);
+    tick();
+    unlink(WP_PLUGIN_DIR . '/dcc-demo/really-gone.php');
+    State::set('last_full_pass', 0);
+    tick();
+    ok(isset(Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/dcc-demo/really-gone.php')]), 'a watched file that is gone is still File Missing');
+    Revelin::seal('wp-content/plugins/dcc-demo/really-gone.php');
+    ok(Fortress\Minceta::walk_ignores('wp-content/uploads/x/y.php') && Fortress\Minceta::walk_ignores('wp-config.php') && !Fortress\Minceta::walk_ignores('wp-content/plugins/dcc-demo/a.php'), 'walk_ignores: skipped files and folders, not watched ones');
+});
+
+suite('0.2.5 item 2: every plain-text change to llms.txt leaves a line in Recent Events', function () {
+    file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n");
+    State::set('last_full_pass', 0);
+    tick();
+    Revelin::seal('llms.txt');
+    $before = count(events_of('self-written'));
+    foreach ([1, 2] as $n) {
+        file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n# edit $n\n");
+        touch(ABSPATH . 'llms.txt', time() - 7200 + $n);
+        State::set('last_full_pass', 0);
+        tick();
+        $ev = events_of('self-written');
+        eq($before + $n, count($ev), "change $n: one event");
+    }
+    ok($ev[0]['severity'] === Events::INFO && $ev[0]['message'] === 'llms.txt Changed (Plain Text Only, As When AIOSEO Regenerates It).', 'worded as seen: ' . $ev[0]['message']);
+    eq([], array_filter(Alerts::open(Fortress::MINCETA), static fn($a) => $a['kind'] === 'file-changed' && $a['target'] === 'llms.txt'), 'and no finding');
+    file_put_contents(ABSPATH . 'llms.txt', "# Dora Canal Court\n");
+    Revelin::seal('llms.txt');
+});
+
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);
 exit($GLOBALS['t_fail'] === 0 ? 0 : 1);

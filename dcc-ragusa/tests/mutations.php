@@ -535,6 +535,24 @@ $mutations = [
         'from' => "                array_filter(['journal_id' => (int) (\$f['journal_id'] ?? 0), 'acted' => !empty(\$f['acted'])])",
         'to'   => "                []",
     ],
+    [
+        'name' => '0.2.5 1: the first pass reports files that moved owner as missing',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        self::prune_unwatched(); // never report as missing what the walk stopped visiting",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.5 1: the upgrade leaves moved files in the walk\'s baseline',
+        'file' => 'includes/class-plugin.php',
+        'from' => "                Fortress\\Minceta::prune_unwatched();\n            }",
+        'to'   => "            }",
+    ],
+    [
+        'name' => '0.2.5 2: a plain llms.txt change leaves no event',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        Events::record(Fortress::MINCETA, Events::INFO, 'self-written', \$rel, sprintf(",
+        'to'   => "        if (false) Events::record(Fortress::MINCETA, Events::INFO, 'self-written', \$rel, sprintf(",
+    ],
 ];
 
 

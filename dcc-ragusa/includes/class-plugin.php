@@ -90,6 +90,11 @@ final class Plugin
             if ($seen === '' || version_compare($seen, '0.1.3', '<')) {
                 self::upgrade_0_1_3();
             }
+            if ($seen !== '' && version_compare($seen, '0.2.5', '<')) {
+                // 0.2.4 moved wp-config.php, the root index.php, .user.ini, php.ini and the
+                // drop-ins to their per-tick owners; the walk's old baseline still listed them.
+                Fortress\Minceta::prune_unwatched();
+            }
             if ($seen !== '' && version_compare($seen, '0.2.0', '<')) {
                 // 0.2.0: resolved findings leave `active` for the 30-day history.
                 $moved = Alerts::migrate();

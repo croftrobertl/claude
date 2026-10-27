@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.4
+Stable tag: 0.2.5
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,10 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.5 =
+* A path the file walk no longer looks at is never reported missing. 0.2.4 handed wp-config.php, the root index.php, .user.ini, php.ini and the drop-ins to their per-tick owners, but the walk's stored baseline still listed them, so the first pass after the upgrade called them gone (wp-config.php as a breach). Such paths now leave the baseline quietly, with one info line, both at the upgrade and at the end of any pass, so a future change of owner cannot do this again.
+* Every plain-text change to llms.txt writes a line in Recent Events ("llms.txt Changed (Plain Text Only, As When AIOSEO Regenerates It).") instead of only a first-time digest entry.
 
 = 0.2.4 =
 * Update-check cron events no longer pile up where WP-Cron is off: none is scheduled there (the tick runs the checks from their due time), the event of a check the tick ran is removed, and every tick sweeps leftovers for finished rows (all of them where cron is off).

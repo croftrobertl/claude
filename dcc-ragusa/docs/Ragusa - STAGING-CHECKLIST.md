@@ -1,4 +1,15 @@
-# Ragusa 0.2.4 — Staging Checklist
+# Ragusa 0.2.5 — Staging Checklist
+
+> **Upgrading the 0.2.4 install on staging:** `wp plugin install
+> "Ragusa 0.2.5.zip" --force`, then `wp ragusa scan`. Expect no File
+> Missing at all, the pass line ending "0 missing", and nothing in
+> `wp ragusa findings`. The 0.2.4 → 0.2.5 upgrade writes no pruning line on
+> staging, because the first pass after 0.2.4 already dropped those four
+> paths and you resolved their findings. To see the rule work, follow
+> "0.2.5: not visited is not missing" in step 12. Then append a comment
+> to llms.txt and `wp ragusa scan`: Recent Events gains "llms.txt Changed
+> (Plain Text Only, As When AIOSEO Regenerates It)." and nothing is
+> raised. Rollback: `wp plugin install "Ragusa 0.2.4.zip" --force`.
 
 > **Upgrading the 0.2.3 install on staging:** `wp plugin install
 > "Ragusa 0.2.4.zip" --force`, then `wp ragusa tick`. Expect the tick to
@@ -439,7 +450,24 @@ cleans up. Each prints every journal state transition.
       Breached, and the headline reads "A Wall Was Breached · Ragusa Needs
       You" (no "Acted": Ragusa did nothing). Remove both lines, tick (a
       finding for the removal), then `wp ragusa resolve` each.
-- [ ] **A dropped `uploads/x.php`:** `echo '<?php echo 1;' > wp-content/uploads/x.php`,
+- [ ] **0.2.5: not visited is not missing.** Put the four root files back
+      into the walk's baseline as 0.2.3 left them, then run a pass:
+
+          wp eval '
+            $f = DCCR\Vault::dir() . "/index/files.json"; $d = json_decode(file_get_contents($f), true);
+            foreach (["wp-config.php", "index.php", ".user.ini", "php.ini"] as $r) {
+              if (is_file(ABSPATH . $r)) { $d["files"][$r] = ["s" => filesize(ABSPATH . $r), "m" => filemtime(ABSPATH . $r), "h" => "drill", "x" => "base", "p" => 1]; }
+            }
+            file_put_contents($f, json_encode($d));'
+          wp ragusa scan
+
+      Expect no File Missing, the pass line "… 0 missing", and one info
+      line "N paths left the file walk's baseline because another check
+      owns them now (not missing): wp-config.php, index.php, …".
+- [ ] **A dropped `uploads/x.php`:** use a NEW name each run (`x3.php`,
+      `x4.php` …): after `restore`, Ragusa allowlists the restored file at
+      its size, so the same name and size is accepted the next time by
+      design. `echo '<?php echo 1;' > wp-content/uploads/x3.php`,
       then `wp ragusa tick` (not scan): within that one tick the file is
       quarantined, the event is breached, and on live an email would have
       gone, and the headline reads "Ragusa Acted And Needs You".

@@ -1305,3 +1305,12 @@ file edit is one finding (Lovrijenac's), Breached only when PHP would run
 extra code, and "Ragusa Acted" is said only when a journal action exists.
 llms.txt says what was seen, not who. `restore` takes the id a finding shows.
 
+**0.2.5 (the Director's run of 0.2.4, 2026-10-27; the last round before
+live).** The upgrade to 0.2.4 raised four false "File Missing" findings,
+wp-config.php among them as a breach: 0.2.4 gave those files to their
+per-tick owners, but the walk's stored baseline still listed them, and a
+path the walk no longer visits looked deleted. A path the walk ignores now
+leaves the baseline quietly, at the upgrade and at every pass end, so no
+future change of owner can repeat it. A plain-text change to llms.txt now
+always leaves a line in Recent Events.
+

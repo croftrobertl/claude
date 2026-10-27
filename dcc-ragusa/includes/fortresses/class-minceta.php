@@ -765,6 +765,13 @@ final class Minceta
         $owner = self::SELF_WRITERS[$rel];
         $fp    = Events::fingerprint(Fortress::MINCETA, 'self-written', $rel);
         $p['fps'][] = $fp;
+        // Every change leaves a line in Recent Events (the finding is info: the digest has it once, the events always).
+        Events::record(Fortress::MINCETA, Events::INFO, 'self-written', $rel, sprintf(
+            /* translators: 1: file, 2: owner */
+            __('%1$s Changed (Plain Text Only, As When %2$s Regenerates It).', 'dcc-ragusa'),
+            basename($rel),
+            $owner
+        ));
         Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-changed', $rel), true);
         Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::INFO, 'kind' => 'self-written', 'target' => $rel,
             /* translators: 1: file, 2: owner */
@@ -1001,8 +1008,53 @@ final class Minceta
 
     // --------------------------------------------------------- pass end
 
+    /** A path the walk never visits now: skipped itself, or below a skipped folder. */
+    public static function walk_ignores(string $rel): bool
+    {
+        if (self::skip($rel, false)) {
+            return true;
+        }
+        for ($dir = dirname($rel); $dir !== '.' && $dir !== '' && $dir !== '/'; $dir = dirname($dir)) {
+            if (self::skip($dir, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Drop from the baseline every path the walk no longer looks at (another
+     * check owns it now, or its folder is skipped). Such a path is not
+     * missing: the walk simply stopped visiting it. Returns the paths, and
+     * writes one info line when there are any.
+     *
+     * @return string[]
+     */
+    public static function prune_unwatched(): array
+    {
+        $dropped = [];
+        foreach (array_keys(self::index()) as $rel) {
+            if (self::walk_ignores((string) $rel)) {
+                unset(self::$index[$rel]);
+                $dropped[] = (string) $rel;
+            }
+        }
+        if ($dropped !== []) {
+            self::$index_dirty = true;
+            self::save_index();
+            Events::record(Fortress::MINCETA, Events::INFO, 'baseline-pruned', 'walk', sprintf(
+                /* translators: 1: count, 2: paths */
+                _n('%1$d path left the file walk\'s baseline because another check owns it now (not missing): %2$s', '%1$d paths left the file walk\'s baseline because another check owns them now (not missing): %2$s', count($dropped), 'dcc-ragusa'),
+                count($dropped),
+                implode(', ', array_slice($dropped, 0, 12)) . (count($dropped) > 12 ? ', …' : '')
+            ));
+        }
+        return $dropped;
+    }
+
     private static function finish_pass(array $p, bool $first): void
     {
+        self::prune_unwatched(); // never report as missing what the walk stopped visiting
         $index   = self::index();
         $missing = [];
         foreach ($index as $rel => $e) {
