@@ -816,6 +816,19 @@ reached staging only; the folder was set back to 4.13.0 (`66faa59`) and:
   survive. `tools/test-christmas.js` belongs to that build and fails on
   4.13.x by design.
 
+**4.13.1 is LIVE (2026-10-26, md5 44bff49b…).** Thanksgiving continues
+until Rob says it is done: round 2 is **4.13.2** (from 4.13.1, live before
+1 Nov), any further round 4.13.3 and so on. The Anniversary waits until
+Thanksgiving is done and takes the NEXT number, built on the last
+Thanksgiving release; Christmas is rebuilt on whatever is last before it.
+
+**The Anniversary, Rob's own instruction (2026-10-27), for when that round
+comes:** floating "40%" and "37.5%" text — he has been married to Erica 40%
+of his life, and she to him 37.5% of hers. (Names stay OFF the site, as
+before: the figures float, nothing says whose they are. Ask Rob whether
+the percentages are fixed text or should be COMPUTED from his date, like
+the year count — they change every year.)
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,

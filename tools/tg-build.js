@@ -17,11 +17,11 @@ const { PIECES } = require('./tg-pieces');
 const SIDE = 32;
 const ENGINE = path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js', 'engine.js');
 
-const PAGE = `window.compact = function (raw, side) {
+const PAGE = `window.compact = function (raw, side, base) {
   var cut = raw.indexOf('|'), wh = raw.slice(0, cut).split(' ').map(Number), f = side / Math.max(wh[0], wh[1]);
   var doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + raw.slice(cut + 1) + '</svg>', 'image/svg+xml');
   if (doc.querySelector('parsererror')) { throw new Error('parse'); }
-  var P = 10;
+  var B0 = base || 10, P = B0;
   function n(v) { var r = Math.round(v * f * P) / P; return String(r === 0 ? 0 : r); }
   function d(s) {
     var t = s.match(/[a-zA-Z]|-?(?:\\d+\\.?\\d*|\\.\\d+)(?:e[-+]?\\d+)?/g), out = [];
@@ -33,13 +33,16 @@ const PAGE = `window.compact = function (raw, side) {
     var tag = el.tagName;
     if (tag === 'linearGradient' || tag === 'radialGradient' || tag === 'stop') { return; }
     if (el.closest('linearGradient,radialGradient')) { return; }
-    P = el.closest('pattern') ? 100 : 10;
+    /* inside a nested <svg>, coordinates are in ITS viewBox: leave them */
+    if (el.parentElement && el.parentElement.closest('svg') !== doc.documentElement) { return; }
+    P = el.closest('pattern') ? 100 : B0;
     SC.forEach(function (a) { if (el.hasAttribute(a)) { el.setAttribute(a, n(+el.getAttribute(a))); } });
     if (el.hasAttribute('d')) { el.setAttribute('d', d(el.getAttribute('d'))); }
     if (el.hasAttribute('stroke-dasharray')) { el.setAttribute('stroke-dasharray', el.getAttribute('stroke-dasharray').split(/[ ,]+/).map(function (v) { return n(+v); }).join(' ')); }
     if (el.hasAttribute('transform')) {
-      el.setAttribute('transform', el.getAttribute('transform').replace(/(translate|rotate)\\(([^)]*)\\)/g, function (m, fn, args) {
+      el.setAttribute('transform', el.getAttribute('transform').replace(/(translate|rotate|matrix)\\(([^)]*)\\)/g, function (m, fn, args) {
         var a = args.split(/[ ,]+/).map(Number);
+        if (fn === 'matrix') { return 'matrix(' + a.slice(0, 4).join(' ') + ' ' + n(a[4]) + ' ' + n(a[5]) + ')'; }
         return fn + '(' + (fn === 'rotate' ? [a[0]].concat(a.slice(1).map(n)) : a.map(n)).join(' ') + ')'; }));
     }
   });
@@ -58,8 +61,10 @@ window.diff = async function (a, b) {
   const b = await chromium.launch(); const p = await b.newPage();
   await p.setContent('<script>' + PAGE + '</script>');
   const res = [];
+  const only = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
   for (const pc of PIECES) {
-    const c = await p.evaluate(([r, s]) => window.compact(r, s), [pc.redraw, SIDE]);
+    if (pc.old || pc.option || (only.length && !only.includes(pc.key))) { continue; }
+    const c = await p.evaluate(([r, s, b]) => window.compact(r, s, b), [pc.redraw, SIDE, pc.prec || 10]);
     const df = await p.evaluate(([a, b2]) => window.diff(a, b2), [pc.redraw, c]);
     if (df > 2) { throw new Error(pc.key + ' changed by ' + df.toFixed(2) + ' per channel when compacted'); }
     if (c.indexOf("'") >= 0) { throw new Error(pc.key + ' has a quote'); }
@@ -70,7 +75,13 @@ window.diff = async function (a, b) {
     let src = fs.readFileSync(ENGINE, 'utf8');
     for (const [k, v] of res) {
       const re = new RegExp('(\\n\\t\\t' + k + ": )'[^'\\n]*'");
-      if (!re.test(src)) { throw new Error('no sprite ' + k); }
+      if (!re.test(src)) {
+        /* a NEW sprite (4.13.2: the feeding hen, the poults): after the turkey */
+        const at = /\n\t\tturkey: '[^'\n]*',/;
+        if (!at.test(src)) { throw new Error('no anchor for ' + k); }
+        src = src.replace(at, m => m + '\n\t\t' + k + ": '" + v + "',");
+        continue;
+      }
       src = src.replace(re, (m, a) => a + "'" + v + "'");
     }
     fs.writeFileSync(ENGINE, src); console.error('engine.js updated');
