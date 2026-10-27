@@ -1874,3 +1874,5 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
 /* the one-row date chips scroll inside the strand instead of widening it */
 .dcc-chron-body, .dcc-chron-panel, .dcc-siege, .dcc-siege-cal { min-width: 0; max-width: 100%; }
 .dcc-siege-chips { max-width: 100%; }
+/* a landmark's sources, folded under its note on the Then map */
+.dcc-then-pop .dcc-chron-srcs { margin-top: 4px; font-size: 0.72rem; }

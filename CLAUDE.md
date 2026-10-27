@@ -125,3 +125,9 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+## Croatia trip archive and the Zeljko Test
+
+The repo also holds the family's Croatia trip archive at `croatia/` (see `croatia/CLAUDE.md`). All history
+content there must pass the **Zeljko Test** (`croatia/ZELJKO-TEST.md`): accurate enough for lifelong Dubrovnik
+residents and siege survivors. Run `node croatia/tools/zeljko-test.js` before committing any history change.

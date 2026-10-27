@@ -21,6 +21,14 @@
       [
        "Epidaurum",
        "https://en.wikipedia.org/wiki/Epidaurum"
+      ],
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
+      [
+       "Britannica: Dubrovnik",
+       "https://www.britannica.com/place/Dubrovnik"
       ]
      ],
      "places": "^Stradun, |^Old City Port"
@@ -38,6 +46,14 @@
       [
        "Niketas Ooryphas",
        "https://en.wikipedia.org/wiki/Niketas_Ooryphas"
+      ],
+      [
+       "Hrvatska enciklopedija: Dubrovnik",
+       "https://enciklopedija.hr/clanak/dubrovnik"
+      ],
+      [
+       "Hrvatska enciklopedija: Saraceni",
+       "https://www.enciklopedija.hr/clanak/saraceni"
       ]
      ]
     },
@@ -83,11 +99,19 @@
      "y": "1205–1358",
      "sort": 1205,
      "title": "Under Venice",
-     "text": "After the Fourth Crusade, Venice took sovereignty and sent the city's count, but Ragusa kept its own councils, laws and trade.",
+     "text": "After the Fourth Crusade Venice took sovereignty and chose the city’s count and archbishop, but Ragusa kept its own councils, laws and trade. Resentment boiled over in revolts in 1231, 1235 and 1251; Venetian rule ended in 1358.",
      "src": [
       [
        "Republic of Ragusa",
        "https://en.wikipedia.org/wiki/Republic_of_Ragusa"
+      ],
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
+      ],
+      [
+       "Proleksis: Dubrovačka Republika",
+       "https://proleksis.lzmk.hr/18640/"
       ]
      ]
     },
@@ -202,19 +226,19 @@
      "y": "27 July 1377",
      "sort": 1377,
      "title": "The earliest known quarantine law",
-     "text": "The Great Council — merchants, not doctors — ordered travellers from plague areas to spend 30 days on the islets of Mrkan, Bobara and Supetar off Cavtat before entering the city. The wait was later raised to 40 days: quaranta, the root of 'quarantine'.",
+     "text": "On 27 July 1377 the Great Council ordered that travellers from plague areas spend 30 days (the trentino) on the islet of Mrkan or in Cavtat before entering the city; the islets of Bobara and Supetar were used later too. The decree survives in the city’s law book, the Liber Viridis. The 40-day wait that later became the rule elsewhere, quaranta in Venetian, gave quarantine its name.",
      "src": [
       [
-       "PubMed: Quarantine in Ragusa",
+       "Quarantine, trade and health policies in Ragusa-Dubrovnik (PubMed)",
        "https://pubmed.ncbi.nlm.nih.gov/11624707/"
       ],
       [
-       "Karantena (hr)",
-       "https://hr.wikipedia.org/wiki/Karantena"
+       "Lazzarettos of Dubrovnik",
+       "https://en.wikipedia.org/wiki/Lazzarettos_of_Dubrovnik"
       ],
       [
-       "DuList",
-       "https://dulist.hr/na-danasnji-dan-1377-dubrovcani-pokrenuli-prvu-karantenu-u-svijetu/960242/"
+       "Quarantine",
+       "https://en.wikipedia.org/wiki/Quarantine"
       ]
      ],
      "days": [
@@ -228,12 +252,20 @@
     {
      "y": "1399",
      "sort": 1399,
-     "title": "The coast to Neum",
-     "text": "King Ostoja of Bosnia sold the coastland from Kuril to Ston (Primorje, the 'New Lands'), run from Slano.",
+     "title": "The Littoral bought",
+     "text": "King Ostoja of Bosnia sold Ragusa the coastland from Kuril to Ston, the Dubrovnik Littoral (Primorje), for 1,500 ducats, a house in the city and Ragusan citizenship. It was governed from Slano, whose first count took office in May 1399.",
      "src": [
       [
        "Primorje (medieval župa)",
        "https://en.wikipedia.org/wiki/Primorje_(medieval_%C5%BEupa)"
+      ],
+      [
+       "Proleksis: Stjepan Ostoja",
+       "https://proleksis.lzmk.hr/40117/"
+      ],
+      [
+       "Dubrovačko primorje municipality: history",
+       "https://www.dubrovackoprimorje.hr/povijest"
       ]
      ]
     },
@@ -264,11 +296,19 @@
      "y": "1419–1426",
      "sort": 1419,
      "title": "Konavle bought",
-     "text": "The Republic bought Konavle in two halves — the story is told in the Konavle strand. It now reached from Neum to the Bay of Kotor.",
+     "text": "The Republic bought Konavle in two halves, the east in 1419 and the west in 1426 — the story is told in the Konavle strand. Its land now ran along the coast to Cape Oštro, at the mouth of the Bay of Kotor.",
      "src": [
       [
        "Konavle",
        "https://en.wikipedia.org/wiki/Konavle"
+      ],
+      [
+       "Proleksis: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ],
+      [
+       "Hrvatska enciklopedija: Konavle",
+       "https://www.enciklopedija.hr/clanak/konavle"
       ]
      ]
     },
@@ -293,7 +333,7 @@
      "y": "1458",
      "sort": 1458,
      "title": "Tribute to the Sultan — and freedom kept",
-     "text": "Ragusa signed a treaty making it a tributary of the Ottoman Empire. The same year the Ragusan merchant Benedetto Cotrugli wrote the first known manual describing double-entry bookkeeping.",
+     "text": "Ragusa began paying the Sultan a yearly tribute, the harač: 1,500 gold ducats, first handed over in Skopje in 1458, in return for its freedom and its merchants’ rights across Ottoman lands. The same year the Ragusan merchant Benedetto Cotrugli (Benedikt Kotruljević) wrote the earliest known description of double-entry bookkeeping; it was printed only in 1573.",
      "src": [
       [
        "Republic of Ragusa",
@@ -302,6 +342,18 @@
       [
        "Benedetto Cotrugli",
        "https://en.wikipedia.org/wiki/Benedetto_Cotrugli"
+      ],
+      [
+       "Vesna Miović: Dubrovnik in Ottoman documents (Hrčak)",
+       "https://hrcak.srce.hr/file/46061"
+      ],
+      [
+       "Turkish receipts for the Ragusan tribute (Hrčak)",
+       "https://hrcak.srce.hr/clanak/17872"
+      ],
+      [
+       "Hrvatski biografski leksikon: Kotruljević",
+       "https://hbl.lzmk.hr/clanak/250"
       ]
      ]
     },
@@ -314,6 +366,14 @@
       [
        "Walls of Dubrovnik",
        "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
+      ],
+      [
+       "Dubrovnik City Walls (Society of Friends of Dubrovnik Antiquities)",
+       "https://citywallsdubrovnik.hr/western-outer-wall/"
+      ],
+      [
+       "Hrvatska enciklopedija: Dubrovnik",
+       "https://enciklopedija.hr/clanak/dubrovnik"
       ]
      ],
      "places": "^Fort (Minčeta|Revelin|Bokar|St\\. John|St\\. Stephen)"
@@ -322,11 +382,19 @@
      "y": "1551",
      "sort": 1551,
      "title": "Dundo Maroje",
-     "text": "Marin Držić's comedy was first staged in the hall of the Great Council — the Golden Age of Ragusan letters.",
+     "text": "Marin Držić’s comedy was first staged at Carnival in 1551, in the council hall beside the Rector’s Palace — the Golden Age of Ragusan letters.",
      "src": [
       [
        "Marin Držić",
        "https://en.wikipedia.org/wiki/Marin_Dr%C5%BEi%C4%87"
+      ],
+      [
+       "Marin Držić lexicon: Dundo Maroje",
+       "https://leksikon.muzej-marindrzic.eu/dundo-maroje/"
+      ],
+      [
+       "House of Marin Držić: biography",
+       "https://muzej-marindrzic.eu/en/biography/"
       ]
      ]
     },
@@ -363,11 +431,19 @@
      "y": "1699",
      "sort": 1699,
      "title": "Buffers against Venice",
-     "text": "At Karlowitz Ragusa ceded Neum–Klek and Sutorina to the Ottomans so that Venetian land would never touch its own — which is why Bosnia still reaches the sea at Neum.",
+     "text": "At the peace of Karlowitz, after Ragusan diplomats lobbied in Vienna and Constantinople, the Ottomans kept two narrow outlets to the sea, at Neum–Klek and at Sutorina, so that Venetian land would not touch the Republic’s — which is why Bosnia and Herzegovina still reaches the sea at Neum.",
      "src": [
       [
        "Neum",
        "https://en.wikipedia.org/wiki/Neum"
+      ],
+      [
+       "Hrvatska enciklopedija: Karlovački mir",
+       "https://www.enciklopedija.hr/clanak/karlovacki-mir"
+      ],
+      [
+       "Hrvatska enciklopedija: Dubrovačka Republika",
+       "https://enciklopedija.hr/clanak/dubrovacka-republika"
       ]
      ]
     },
@@ -394,15 +470,19 @@
      "y": "1806",
      "sort": 1806,
      "title": "The French arrive",
-     "text": "On 27 May French troops under Lauriston entered the city; Russian and Montenegrin forces besieged it until 1 October, burning the suburbs and summer villas.",
+     "text": "On 27 May 1806 French troops under General Lauriston entered the city. From 17 June Russian and Montenegrin forces besieged it, burning the suburbs and the summer villas, until a French relief force under General Molitor drove them off on 6 July.",
      "src": [
+      [
+       "Opsada Dubrovnika (1806.) (Croatian Wikipedia)",
+       "https://hr.wikipedia.org/wiki/Opsada_Dubrovnika_(1806.)"
+      ],
+      [
+       "Matica hrvatska: the war round Dubrovnik in 1806",
+       "https://www.matica.hr/kolo/310/ratovanje-oko-dubrovnika-godine-1806-20587/"
+      ],
       [
        "Siege of Ragusa (1806)",
        "https://en.wikipedia.org/wiki/Siege_of_Ragusa_(1806)"
-      ],
-      [
-       "The fall of the Republic",
-       "https://www.absolute-dubrovnik.com/dubrovnik/the-fall-of-the-dubrovnik-republic-1806-1808"
       ]
      ],
      "days": [
@@ -446,11 +526,19 @@
      "y": "18 Oct 1944",
      "sort": 1944,
      "title": "The Partisans enter",
-     "text": "German troops left and Yugoslav Partisans took the city; in the days after, they executed 53 citizens without trial on the island of Daksa.",
+     "text": "German troops left and Yugoslav Partisans took the city on 18 October 1944. They arrested more than 300 citizens, and on 24–25 October executed 53 men without trial on the island of Daksa (some sources say 48); the remains of 53 were found there in 2009.",
      "src": [
       [
        "Daksa massacre",
        "https://en.wikipedia.org/wiki/Daksa_massacre"
+      ],
+      [
+       "Daksa (island)",
+       "https://en.wikipedia.org/wiki/Daksa_(island)"
+      ],
+      [
+       "HRT: the 53 victims of Daksa",
+       "https://vijesti.hrt.hr/hrvatska/odana-pocast-za-53-zrtve-ubijene-na-daksi-kod-dubrovnika-1944-12975503"
       ]
      ],
      "days": [
@@ -469,8 +557,8 @@
      "text": "The Old City was added to UNESCO's World Heritage List.",
      "src": [
       [
-       "EBSCO: Yugoslav Army shells Dubrovnik",
-       "https://www.ebsco.com/research-starters/military-history-and-science/yugoslav-army-shells-dubrovnik/"
+       "UNESCO: Old City of Dubrovnik",
+       "https://whc.unesco.org/en/list/95/"
       ]
      ]
     },
@@ -487,6 +575,14 @@
       [
        "Siege of Dubrovnik",
        "https://en.wikipedia.org/wiki/Siege_of_Dubrovnik"
+      ],
+      [
+       "Museum of the Homeland War Dubrovnik",
+       "https://mdrd.hr/vro-oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/"
+      ],
+      [
+       "Hrvatski vojnik: the lifting of the siege",
+       "https://hrvatski-vojnik.hr/oslobadanje-juga-hrvatske-i-deblokada-dubrovnika/"
       ]
      ],
      "places": "^Fort Imperial|^Mount Srđ Cross",
@@ -502,6 +598,14 @@
       [
        "Pelješac Bridge",
        "https://en.wikipedia.org/wiki/Pelje%C5%A1ac_Bridge"
+      ],
+      [
+       "Hina: the bridge opened",
+       "https://www.hina.hr/vijest/11058274"
+      ],
+      [
+       "Croatian Government: the opening",
+       "https://vlada.gov.hr/vijesti/otvorenje-peljeskog-mosta-velik-dogadjaj-za-hrvatsku/35836?lang=hr"
       ]
      ],
      "days": [
@@ -555,7 +659,7 @@
     },
     {
      "y": "530s",
-     "sort": 500,
+     "sort": 530,
      "title": "A bishop of Epidaurum",
      "text": "Epidaurum had become a bishop's seat; its bishop took part in the Church councils held at Salona in the 530s.",
      "src": [
@@ -606,7 +710,7 @@
      "y": "1166–1196",
      "sort": 1166,
      "title": "Under the Nemanjić",
-     "text": "Stefan Nemanja brought Travunia, and with it Konavle, under Serbian rule. It remained part of the Serbian realm until his dynasty died out in 1371.",
+     "text": "Stefan Nemanja brought Travunia, and with it Konavle, under Serbian rule. It stayed Serbian until the Nemanjić line ended in 1371, then passed through the hands of local lords.",
      "src": [
       [
        "Stefan Nemanja",
@@ -615,6 +719,14 @@
       [
        "Nemanjić dynasty",
        "https://en.wikipedia.org/wiki/Nemanji%C4%87_dynasty"
+      ],
+      [
+       "Proleksis: Konavle",
+       "https://proleksis.lzmk.hr/32039/"
+      ],
+      [
+       "Hrvatska enciklopedija: Nemanjići",
+       "https://www.enciklopedija.hr/clanak/nemanjici"
       ]
      ]
     },
@@ -644,7 +756,7 @@
      "sort": 1391,
      "era": "1355",
      "title": "A sale blocked",
-     "text": "The Sanković brothers tried to sell Konavle to Ragusa. The Bosnian lords refused; Vlatko Vuković and Pavle Radinović seized Radič Sanković and split Konavle between themselves.",
+     "text": "On 15 April 1391 the Sanković brothers sold Konavle to Ragusa, without the Bosnian king’s consent. Before Ragusa could take it, the Bosnian lords Vlatko Vuković and Pavle Radinović seized Radič Sanković and split Konavle between themselves.",
      "src": [
       [
        "Radič Sanković",
@@ -653,6 +765,14 @@
       [
        "Herzegovina",
        "https://en.wikipedia.org/wiki/Herzegovina"
+      ],
+      [
+       "Paula Kaulić: Ragusa’s expansion into Konavle (Hrčak)",
+       "https://hrcak.srce.hr/file/250172"
+      ],
+      [
+       "Hrvatska enciklopedija: Vlatko Vuković Kosača",
+       "https://www.enciklopedija.hr/clanak/kosaca-vlatko-vukovic"
       ]
      ]
     },
@@ -717,6 +837,14 @@
       [
        "Pavlovića Zemlja",
        "https://en.wikipedia.org/wiki/Pavlovi%C4%87a_Zemlja"
+      ],
+      [
+       "Hrvatska enciklopedija: Pavlovići",
+       "https://www.enciklopedija.hr/clanak/pavlovici"
+      ],
+      [
+       "Hrvatski biografski leksikon: Kosače",
+       "https://hbl.lzmk.hr/clanak/kosace"
       ]
      ]
     },
@@ -724,31 +852,35 @@
      "y": "1451–1454",
      "sort": 1451,
      "title": "Herceg Stjepan's war",
-     "text": "Stjepan Vukčić Kosača, claiming his uncle Sandalj had been cheated, attacked Ragusa and ravaged its lands. The 1454 peace put everything back as it was.",
+     "text": "Stjepan Vukčić Kosača, Sandalj’s nephew, went to war with Ragusa over trade and over Konavle, and his troops overran it. Peace came on 10 April 1454 with nothing settled, and Konavle stayed Ragusan.",
      "src": [
       [
        "Stjepan Vukčić Kosača",
        "https://en.wikipedia.org/wiki/Stjepan_Vuk%C4%8Di%C4%87_Kosa%C4%8Da"
       ],
       [
-       "Walls of Dubrovnik",
-       "https://en.wikipedia.org/wiki/Walls_of_Dubrovnik"
+       "Hrvatska enciklopedija: Stjepan Vukčić Kosača",
+       "https://www.enciklopedija.hr/clanak/kosaca-stjepan-vukcic"
+      ],
+      [
+       "Hrvatski biografski leksikon: Kosače",
+       "https://hbl.lzmk.hr/clanak/kosace"
       ]
      ]
     },
     {
-     "y": "1427–1672",
+     "y": "1420s–1672",
      "sort": 1453,
      "title": "Sokol Grad on guard",
-     "text": "The Republic kept a garrison in Sokol Grad under a noble castellan, under 25 and elected for six months at a time,, until the fort was abandoned in 1672.",
+     "text": "Sokol Grad, the fortress above Dunave, came to the Republic with Konavle and was kept with a garrison under a Ragusan castellan. It no longer appears as a military post in the records of 1672, and was probably abandoned around then.",
      "src": [
       [
        "Sokol (Konavle)",
        "https://en.wikipedia.org/wiki/Sokol_(Konavle)"
       ],
       [
-       "The Dubrovnik Times",
-       "https://www.thedubrovniktimes.com/times-travel/item/16533-discover-the-hidden-fortress-of-konavle-sokol-grad"
+       "Total Croatia: the Republic’s highest fortress",
+       "https://total-croatia-news.com/lifestyle/fortress-dubrovnik-republic/"
       ]
      ]
     },
@@ -937,11 +1069,19 @@
      "y": "4th c. BC",
      "sort": -385,
      "title": "Illyrians and Greeks",
-     "text": "The coast is Illyrian land (the Delmatae tribe gave Dalmatia its name), with Greek colonies on islands such as Vis (Issa) and Hvar (Pharos).",
+     "text": "The coast is Illyrian land (the Delmatae tribe gave Dalmatia its name), with Greek colonies on the islands: Issa on Vis, founded by Dionysius of Syracuse in the 390s BC, and Pharos on Hvar, from about 385 BC.",
      "src": [
       [
        "History of Dalmatia",
        "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ],
+      [
+       "Hrvatska enciklopedija: Greek colonisation of the Adriatic",
+       "https://www.enciklopedija.hr/natuknica.aspx?id=23213"
+      ],
+      [
+       "Hrvatska enciklopedija: Delmati",
+       "https://www.enciklopedija.hr/clanak/delmati"
       ]
      ]
     },
@@ -1003,13 +1143,21 @@
     },
     {
      "y": "480",
-     "sort": 476,
+     "sort": 480,
      "title": "The last Western emperor",
-     "text": "Julius Nepos, who ruled from Dalmatia, was murdered in the palace in 480. The Ostrogoths took the province in 493; Justinian's armies won it back from 535.",
+     "text": "Julius Nepos, driven out of Italy in 475, went on ruling from Dalmatia, still recognised in Constantinople as Western emperor, until he was murdered in Diocletian’s palace on 9 May 480. The Ostrogoths took the province in 493; Justinian’s armies won it back from 535.",
      "src": [
       [
        "Salona",
        "https://en.wikipedia.org/wiki/Salona"
+      ],
+      [
+       "Hrvatska enciklopedija: Julije Nepot",
+       "https://www.enciklopedija.hr/clanak/nepot-julije"
+      ],
+      [
+       "Britannica: Julius Nepos",
+       "https://www.britannica.com/biography/Julius-Nepos"
       ]
      ]
     },
@@ -1026,6 +1174,14 @@
       [
        "Dalmatia (theme)",
        "https://en.wikipedia.org/wiki/Dalmatia_(theme)"
+      ],
+      [
+       "Hrvatska enciklopedija: Split",
+       "https://enciklopedija.hr/clanak/split"
+      ],
+      [
+       "Hrvatska enciklopedija: Diocletian’s Palace",
+       "https://www.enciklopedija.hr/clanak/dioklecijanova-palaca"
       ]
      ]
     },
@@ -1038,6 +1194,14 @@
       [
        "Dalmatia (theme)",
        "https://en.wikipedia.org/wiki/Dalmatia_(theme)"
+      ],
+      [
+       "Hrvatska enciklopedija: tema",
+       "https://www.enciklopedija.hr/natuknica.aspx?id=60765"
+      ],
+      [
+       "Proleksis: Dalmacija",
+       "https://proleksis.lzmk.hr/16749/"
       ]
      ]
     },
@@ -1045,7 +1209,7 @@
      "y": "925 · 1060s",
      "sort": 925,
      "title": "Kings of Croatia and Dalmatia",
-     "text": "Tomislav is recorded as king around 925; under Peter Krešimir IV the Dalmatian towns came to the crown and the realm took the title Kingdom of Croatia and Dalmatia.",
+     "text": "Pope John X’s letter of 925 calls Tomislav king of the Croats. Peter Krešimir IV is the first ruler recorded as king of Croatia and Dalmatia, and from about 1069 the Dalmatian towns came under his crown.",
      "src": [
       [
        "Kingdom of Croatia (925–1102)",
@@ -1054,6 +1218,14 @@
       [
        "Peter Krešimir IV",
        "https://en.wikipedia.org/wiki/Peter_Kre%C5%A1imir_IV"
+      ],
+      [
+       "Hrvatska enciklopedija: Tomislav",
+       "https://www.enciklopedija.hr/clanak/tomislav"
+      ],
+      [
+       "Hrvatska enciklopedija: Petar Krešimir IV",
+       "https://www.enciklopedija.hr/clanak/petar-kresimir-iv"
       ]
      ]
     },
@@ -1067,6 +1239,14 @@
       [
        "Pacta conventa",
        "https://en.wikipedia.org/wiki/Pacta_conventa_(Croatia)"
+      ],
+      [
+       "Hrvatska enciklopedija: Pacta conventa",
+       "https://www.enciklopedija.hr/natuknica.aspx?id=46073"
+      ],
+      [
+       "Proleksis: Koloman",
+       "https://proleksis.lzmk.hr/31853/"
       ]
      ]
     },
@@ -1186,6 +1366,10 @@
       [
        "Governorate of Dalmatia",
        "https://en.wikipedia.org/wiki/Governorate_of_Dalmatia"
+      ],
+      [
+       "Hrvatska enciklopedija: Rimski ugovori",
+       "https://www.enciklopedija.hr/clanak/rimski-ugovori"
       ]
      ],
      "days": [
@@ -1200,11 +1384,19 @@
      "y": "1991",
      "sort": 1991,
      "title": "Croatia",
-     "text": "Dalmatia became part of independent Croatia, at the price of the war of 1991–95.",
+     "text": "Dalmatia became part of independent Croatia, at the price of the Homeland War of 1991–95.",
      "src": [
       [
        "History of Dalmatia",
        "https://en.wikipedia.org/wiki/History_of_Dalmatia"
+      ],
+      [
+       "Hrvatska enciklopedija: Dalmacija",
+       "https://www.enciklopedija.hr/clanak/dalmacija"
+      ],
+      [
+       "Proleksis: Domovinski rat",
+       "https://proleksis.lzmk.hr/18243/"
       ]
      ]
     }
@@ -1739,12 +1931,20 @@
  "records": {
   "title": "Finding the family in the records",
   "points": [
-   "Church birth (baptism) registers only became compulsory with the Council of Trent's decree of 11 November 1563. Croatia's oldest surviving parish register starts in Umag, Istria, in 1483; the Dubrovnik diocese's oldest is a 1580 death register from Suđurađ on Šipan.",
+   "Church birth (baptism) registers only became compulsory with the Council of Trent’s decree of 11 November 1563. Croatia’s oldest parish register is Umag’s in Istria, from 1483, though its earliest entries survive as copies made after 1608; in the Dubrovnik area the oldest is a 1580 death register from Suđurađ on Šipan.",
    "For the 1400s, Ragusa's own government records are where families appear: the notarial and chancery books (Diversa Notariae, Diversa Cancellariae) and registered wills (Testamenta Notariae), kept from 1278–1282 onward in the State Archives in Dubrovnik, plus confraternity rolls such as the Antunini register.",
    "Konavle became Ragusan in 1419–1426, so from then on Konavle families turn up in the Republic's land, tax and court records. Konavle's surviving parish registers mostly begin in the late 1700s (Veljaci's baptisms run from 1786).",
    "Parish registers taken after 1945 were returned to the Dubrovnik diocese in 2022; FamilySearch also holds digitised Croatian church books."
   ],
   "src": [
+   [
+    "Umag baptismal register 1483–1643 (State Archives in Pazin)",
+    "https://www.dapa.hr/predstavljena-je-knjiga-maticna-knjiga-krstenih-zupe-umag-1483-1643/"
+   ],
+   [
+    "Istrian encyclopedia: parish registers",
+    "https://istra.lzmk.hr/clanak/maticne-knjige"
+   ],
    [
     "Dubrovačka biskupija (registers returned)",
     "https://db.hr/dubrovackoj-biskupiji-vraceno-210-maticnih-knjige-oduzetih-nakon-drugog-svjetskog-rata/"
