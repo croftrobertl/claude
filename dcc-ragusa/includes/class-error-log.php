@@ -122,6 +122,18 @@ final class Error_Log
         return $d === false ? null : $d->getTimestamp();
     }
 
+    /** The file a "Failed opening required" / "Failed to open stream" line names, or null. */
+    public static function missing_file(string $line): ?string
+    {
+        if (preg_match("/Failed opening required '([^']+)'/i", $line, $m)) {
+            return $m[1];
+        }
+        if (preg_match('/(?:require|include)(?:_once)?\(([^)]+)\): Failed to open stream/i', $line, $m)) {
+            return trim($m[1], "'\" ");
+        }
+        return null;
+    }
+
     /** Does the fatal name a file inside this plugin's folder? */
     public static function in_plugin(string $line, string $slug): bool
     {

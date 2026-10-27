@@ -70,8 +70,7 @@ final class Admin
             wp_die(esc_html__('You do not have permission to see this page.', 'dcc-ragusa'));
         }
         Schema::ensure();
-        Fortress::settle();
-        Fortress\Lovrijenac::refresh_php();
+        Fortress::refresh();
         State::flush();
         $confirm = isset($_GET['confirm']) ? sanitize_key(wp_unslash((string) $_GET['confirm'])) : '';
         $notice  = isset($_GET['dccr_notice']) ? sanitize_text_field(wp_unslash((string) $_GET['dccr_notice'])) : '';

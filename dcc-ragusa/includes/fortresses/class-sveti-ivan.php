@@ -127,6 +127,7 @@ final class Sveti_Ivan
             'new_version' => Revelin::plugin_version($slug),
             'entry'       => $seal['entry'] ?? null,
             'started'     => (int) ($pre['ts'] ?? time()),
+            'installed_at' => time(), // upgrader_process_complete: the copy is finished
             'errlog'      => $pre['errlog'] ?? Error_Log::snapshot(),
             'is_self'     => $is_self,
         ];
@@ -187,6 +188,7 @@ final class Sveti_Ivan
             'source'  => self::source(),
             'version' => (string) $wp_version,
             'started' => (int) ($pre['ts'] ?? time()),
+            'installed_at' => time(),
             'errlog'  => $pre['errlog'] ?? Error_Log::snapshot(),
         ];
         $id = Journal::create('core-check', 'core', $before, 'core update', false);
@@ -337,14 +339,26 @@ final class Sveti_Ivan
             $checks['pages'] = ['ok' => null, 'detail' => __('loopbacks do not work on this host; pages not checked', 'dcc-ragusa')];
         }
 
-        $fatals = Error_Log::new_fatals((array) ($before['errlog'] ?? []));
-        $slug   = (string) ($before['slug'] ?? '');
-        $own    = [];
-        $else   = [];
-        $theirs = [];
+        $fatals    = Error_Log::new_fatals((array) ($before['errlog'] ?? []));
+        $slug      = (string) ($before['slug'] ?? '');
+        $after_ts  = (int) ($before['after_ts'] ?? 0);
+        $installed = (int) ($before['installed_at'] ?? 0);
+        $own       = [];
+        $transient = [];
+        $else      = [];
+        $theirs    = [];
         foreach ($fatals as $line) {
+            $t = Error_Log::line_time($line);
+            if ($after_ts > 0 && ($t === null || $t <= $after_ts)) {
+                continue; // read at the first failure already: one line is one failure
+            }
             if ($slug === 'core' || Error_Log::in_plugin($line, $slug)) {
-                $own[] = $line;
+                $why = self::transient_reason($line, $t, $installed, $slug);
+                if ($why !== null) {
+                    $transient[] = ['line' => $line, 'why' => $why];
+                } else {
+                    $own[] = $line;
+                }
             } elseif (($w = self::fatal_owner($line, $slug)) !== null) {
                 // Written inside another update's window, in that update's files: that update's, not this one's.
                 $theirs[] = ['line' => $line, 'w' => $w];
@@ -362,8 +376,20 @@ final class Sveti_Ivan
                 (string) $t['line']
             ), [], (int) $t['w']['id']);
         }
+        foreach ($transient as $tr) {
+            Events::record(Fortress::SVETI_IVAN, Events::INFO, 'fatal-transient', $slug, sprintf(
+                /* translators: 1: slug, 2: reason, 3: the log line */
+                __('A fatal in %1$s was not counted against the update (%2$s): %3$s', 'dcc-ragusa'),
+                $slug,
+                (string) $tr['why'],
+                (string) $tr['line']
+            ), [], (int) ($before['journal_id'] ?? 0) ?: null);
+        }
         if ($own !== []) {
             $checks['error_log'] = ['ok' => false, 'detail' => __('new fatal in this plugin: ', 'dcc-ragusa') . $own[0]];
+        } elseif ($else === [] && $theirs === [] && $transient !== []) {
+            /* translators: 1: count, 2: reason */
+            $checks['error_log'] = ['ok' => true, 'detail' => sprintf(_n('no new fatal; %1$d not counted (%2$s)', 'no new fatal; %1$d not counted (%2$s)', count($transient), 'dcc-ragusa'), count($transient), (string) $transient[0]['why'])];
         } elseif ($else === [] && $theirs !== []) {
             /* translators: 1: other slug, 2: journal id */
             $checks['error_log'] = ['ok' => null, 'detail' => sprintf(__('a new fatal in %1$s during its own update (journal %2$d): that update\'s, not this one\'s', 'dcc-ragusa'), (string) $theirs[0]['w']['slug'], (int) $theirs[0]['w']['id'])];
@@ -400,6 +426,33 @@ final class Sveti_Ivan
             $host_up = true;
         }
         return ['checks' => $checks, 'failed' => $failed, 'host_up' => $host_up];
+    }
+
+    /**
+     * A fatal in the updated plugin's own files that is not evidence against
+     * it, and why; null when it counts.
+     *
+     * 1. Stamped before the install finished (upgrader_process_complete):
+     *    the copy was still being written. A request that loaded the plugin
+     *    half-way through hit a missing file; that is the copy, not the code.
+     * 2. "Failed opening required '<file>'" for a file inside the plugin that
+     *    exists now: it was missing for a moment, and is not missing.
+     */
+    public static function transient_reason(string $line, ?int $t, int $installed_at, string $slug): ?string
+    {
+        if ($installed_at > 0 && $t !== null && $t < $installed_at) {
+            /* translators: 1: when the fatal was written, 2: when the install finished */
+            return sprintf(__('written at %1$s, while the plugin was still being copied; the install finished at %2$s', 'dcc-ragusa'), Site::stamp($t), Site::stamp($installed_at));
+        }
+        $file = Error_Log::missing_file($line);
+        if ($file !== null && $slug !== 'core' && Error_Log::in_plugin($file, $slug)) {
+            clearstatcache(true, $file);
+            if (is_file($file)) {
+                /* translators: %s: file */
+                return sprintf(__('%s was missing for a moment and is present now', 'dcc-ragusa'), basename($file));
+            }
+        }
+        return null;
     }
 
     /**
@@ -475,10 +528,17 @@ final class Sveti_Ivan
         }
 
         // A repeat reads the error log from where the first failure left it:
-        // one fatal line must never count as two failures.
-        $scan = $before;
-        if (!empty($row['verify']['first_fail']['errlog'])) {
-            $scan['errlog'] = (array) $row['verify']['first_fail']['errlog'];
+        // one fatal line must never count as two failures. A first failure
+        // recorded before 0.2.2 has no offset: then only lines stamped after
+        // it count. Never the update's own snapshot again.
+        $scan                 = $before;
+        $scan['journal_id']   = $id;
+        $scan['installed_at'] = (int) ($before['installed_at'] ?? $row['created_at']);
+        if (!empty($row['verify']['first_fail'])) {
+            $scan['after_ts'] = (int) ($row['verify']['first_fail']['ts'] ?? time());
+            if (!empty($row['verify']['first_fail']['errlog'])) {
+                $scan['errlog'] = (array) $row['verify']['first_fail']['errlog'];
+            }
         }
         $results = self::run_checks($scan, false);
         $attempt = (int) ($row['verify']['attempts'] ?? 0) + 1;
@@ -516,7 +576,7 @@ final class Sveti_Ivan
                 'did'      => __('Ragusa did not roll anything back, because a site that does not answer at all is a host problem, not evidence about the update.', 'dcc-ragusa'),
                 'todo'     => __('Open the site. If it loads and books, nothing to do. If not, ask the site director.', 'dcc-ragusa'),
             ]);
-            Fortress::note(Fortress::SVETI_IVAN, __('Last Update Could Not Be Verified', 'dcc-ragusa'));
+            Fortress::note(Fortress::SVETI_IVAN, __('Last Update Could Not Be Verified', 'dcc-ragusa'), Events::fingerprint(Fortress::SVETI_IVAN, 'update-unverified', $slug));
             return;
         }
 
@@ -587,7 +647,7 @@ final class Sveti_Ivan
             'todo'     => __('Ask the site director to look at the site and, if needed, reinstall the previous version of the plugin.', 'dcc-ragusa'),
         ]);
         /* translators: %s: slug */
-        Fortress::note(Fortress::SVETI_IVAN, sprintf(__('%s Failed Its Checks', 'dcc-ragusa'), $slug));
+        Fortress::note(Fortress::SVETI_IVAN, sprintf(__('%s Failed Its Checks', 'dcc-ragusa'), $slug), Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', $slug));
     }
 
     private static function pass(array $row, array $patch): void
@@ -691,7 +751,7 @@ final class Sveti_Ivan
 
     public static function status_line(): string
     {
-        $line = Fortress::status(Fortress::SVETI_IVAN)['line'];
+        $line = Fortress::row_line(Fortress::SVETI_IVAN);
         if ((int) State::get('pages_gated', 0) > 0) {
             $line .= ' · ' . __('Pages Are Behind The Staging Login: Not Checked', 'dcc-ragusa');
         } elseif (!Loopback::available()) {

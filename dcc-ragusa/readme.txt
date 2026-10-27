@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,11 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.3 =
+* No false "Failed Its Checks". A first failure recorded before 0.2.2 (no log offset) no longer sends the repeat back to the update's own snapshot: only lines stamped after that first failure count. A fatal stamped before the install finished (upgrader_process_complete) is the copy in progress, not the code. A "Failed opening required" for a file of the plugin that exists now was missing for a moment. Both are recorded as an info line on the update's row and never counted.
+* The headline and every row are worked out from the live findings whenever status or the page prints them, not from the last tick. A row that names a failure says when its finding was settled ("all-in-one-seo-pack Failed Its Checks · Resolved Oct 27, 9:10 AM EDT").
+* A PHP reading older than twelve hours is asked for again (wp-login.php where WP-Cron is off) and nothing is judged from it meanwhile, so a host that has updated PHP since cannot raise a false "Security Fix Not Applied".
 
 = 0.2.2 =
 * Where WP-Cron is off (DISABLE_WP_CRON), Ragusa sends no request to wp-cron.php at all. wp-cron.php ignores that constant and runs every due event, so 0.2.1's PHP probe set off three plugin auto-updates on staging. The probe uses wp-login.php only, the loopback test uses wp-login.php too, a leftover probe event is removed, and status and the page say "WP-Cron Is Off Here; Ragusa Will Never Start It."

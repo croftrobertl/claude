@@ -72,35 +72,77 @@ final class Fortress
             'state'      => (string) ($s['state'] ?? self::UNKNOWN),
             'line'       => (string) ($s['line'] ?? __('No check has run yet.', 'dcc-ragusa')),
             'checked_at' => (int) ($s['checked_at'] ?? 0),
+            'fp'         => (string) ($s['fp'] ?? ''),
         ];
     }
 
-    public static function set_status(string $slug, string $state, string $line, ?int $checked_at = null): void
+    public static function set_status(string $slug, string $state, string $line, ?int $checked_at = null, ?string $fp = null): void
     {
         State::set('status.' . $slug, [
             'state'      => $state,
             'line'       => Text::scrub($line),
             'checked_at' => $checked_at ?? time(),
+            'fp'         => (string) ($fp ?? ''),
         ]);
+    }
+
+    /**
+     * The row as it should read NOW: a line that speaks for a finding says
+     * when that finding was settled. "all-in-one-seo-pack Failed Its Checks ·
+     * Resolved Oct 26, 9:10 PM EDT".
+     */
+    public static function row_line(string $slug): string
+    {
+        $s    = self::status($slug);
+        $line = (string) $s['line'];
+        $fp   = (string) ($s['fp'] ?? '');
+        if ($fp === '') {
+            return $line;
+        }
+        $a = Alerts::get($fp);
+        if ($a === null) {
+            return $line;
+        }
+        return match (Alerts::state($a)) {
+            /* translators: %s: when */
+            'resolved' => $line . ' · ' . sprintf(__('Resolved %s', 'dcc-ragusa'), Site::stamp((int) $a['resolved_at'])),
+            /* translators: 1: name, 2: when */
+            'seen'     => $line . ' · ' . sprintf(__('Seen By %1$s, %2$s', 'dcc-ragusa'), (string) $a['seen_by'], Site::stamp((int) $a['seen_at'])),
+            default    => $line,
+        };
+    }
+
+    /**
+     * Before anything prints the headline or the rows: every state from the
+     * live findings, and the lines that count findings rebuilt. Nothing is
+     * checked again; this is reading, not watching.
+     */
+    public static function refresh(): void
+    {
+        self::settle();
+        if (self::status(self::MINCETA)['state'] !== self::UNKNOWN) {
+            Fortress\Minceta::update_status();
+        }
+        Fortress\Lovrijenac::refresh_php();
     }
 
     /**
      * A fortress reports what it did: the line is kept, the state comes from
      * its open findings. A drill's report never reaches the card.
      */
-    public static function note(string $slug, string $line): void
+    public static function note(string $slug, string $line, ?string $fp = null): void
     {
         if (Drill::tag() === Events::TAG_DRILL) {
             return;
         }
-        self::set_status($slug, Alerts::worst($slug), $line);
+        self::set_status($slug, Alerts::worst($slug), $line, null, $fp);
     }
 
     /** Keep the line and time, change only the state (e.g. when an alert resolves). */
     public static function set_state(string $slug, string $state): void
     {
         $s = self::status($slug);
-        self::set_status($slug, $state, $s['line'], $s['checked_at'] ?: time());
+        self::set_status($slug, $state, $s['line'], $s['checked_at'] ?: time(), (string) ($s['fp'] ?? '') ?: null);
     }
 
     /**

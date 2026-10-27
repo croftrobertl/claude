@@ -155,6 +155,17 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   (`Sveti_Ivan::fatal_owner()`, `Error_Log::line_time()`), never to whichever
   check reads the log. A repeat check reads the log from the first failure's
   snapshot (`first_fail.errlog`): one line is one failure, never two.
+- **A fatal counts against an update only if written after the install
+  finished** (`before.installed_at`, set at upgrader_process_complete;
+  `Sveti_Ivan::transient_reason()`), and a "Failed opening required" for a
+  plugin file that exists now is transient. A repeat counts only lines
+  stamped after `first_fail.ts`, even for rows from before the offset field.
+  Never re-read the update's own snapshot on a repeat.
+- **Print from the live findings.** `Fortress::refresh()` runs before the
+  status command and the page print; `Fortress::row_line()` adds "Resolved …"
+  or "Seen By …" to a row whose note named a finding (`note($slug, $line, $fp)`).
+- **A stale PHP reading judges nothing** (`Php_Patch::stale()`, 12 hours):
+  it is asked for again and no finding is raised from it.
 - **The Lovrijenac row's PHP part is live** (`Php_Patch::line()` from the
   reading and the cached feed; `Lovrijenac::refresh_php()` on every reading,
   status and page render).
@@ -195,7 +206,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 65 deliberate breakages, each must be caught
+    php tests/mutations.php            # 71 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -213,6 +224,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.2.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.3.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

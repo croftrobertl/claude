@@ -409,6 +409,42 @@ $mutations = [
         'from' => "        Fortress\\Lovrijenac::refresh_php();\n        State::flush();",
         'to'   => "        State::flush();",
     ],
+    [
+        'name' => '0.2.3 1a: a 0.2.1 first failure re-reads the update\'s own snapshot (row 57)',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$after_ts > 0 && (\$t === null || \$t <= \$after_ts)) {",
+        'to'   => "            if (false) {",
+    ],
+    [
+        'name' => '0.2.3 1b: a fatal stamped while the plugin was being copied counts',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (\$installed_at > 0 && \$t !== null && \$t < \$installed_at) {",
+        'to'   => "        if (false) {",
+    ],
+    [
+        'name' => '0.2.3 1c: a file that was missing for a moment and is present now counts',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (is_file(\$file)) {",
+        'to'   => "            if (false) {",
+    ],
+    [
+        'name' => '0.2.3 2: status prints last tick\'s headline and rows',
+        'file' => 'includes/class-cli.php',
+        'from' => "        Schema::ensure();\n        Fortress::refresh();\n        \\WP_CLI::log(Fortress::overall());",
+        'to'   => "        Schema::ensure();\n        \\WP_CLI::log(Fortress::overall());",
+    ],
+    [
+        'name' => '0.2.3 2: a row that names a settled finding does not say so',
+        'file' => 'includes/class-fortress.php',
+        'from' => "        \$fp   = (string) (\$s['fp'] ?? '');\n        if (\$fp === '') {",
+        'to'   => "        \$fp   = '';\n        if (\$fp === '') {",
+    ],
+    [
+        'name' => '0.2.3 3: a stale reading is judged (a false breach after the host updated PHP)',
+        'file' => 'includes/class-php-patch.php',
+        'from' => "        if (self::stale(\$r)) {\n            return; // a fresh reading is asked for",
+        'to'   => "        if (false) {\n            return; // a fresh reading is asked for",
+    ],
 ];
 
 

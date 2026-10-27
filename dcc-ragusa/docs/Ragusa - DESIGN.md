@@ -1276,3 +1276,16 @@ code showed the repeat check re-reading the same log span, so one fatal line
 counted as two failures and could roll a good update back; the repeat now
 reads only what was written after the first failure. Lovrijenac's row reads
 the PHP reading the moment it lands.
+
+**0.2.3 (the Director's staging run of 0.2.2, 2026-10-27).** The fix for one
+fatal line counting twice had a migration gap: AIOSEO's row 57 carried a
+first failure recorded by 0.2.1, with no log offset, so 0.2.2's repeat fell
+back to the update's own snapshot, read the same line again and declared a
+healthy plugin "Failed Its Checks". Now a repeat counts only lines stamped
+after the first failure, a fatal stamped before the install finished is the
+copy in progress, and a "Failed opening required" for a plugin file that
+exists now was missing for a moment: each is an info line on the update's
+row, never a failure. The status command and the page work out the headline
+and every row from the live findings when they print, and a row that names
+a failure says when it was settled. A PHP reading older than twelve hours is
+asked for again and judges nothing meanwhile.

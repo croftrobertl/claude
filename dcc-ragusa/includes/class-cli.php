@@ -34,11 +34,11 @@ final class Cli
     public function status(array $args = [], array $assoc = []): void
     {
         Schema::ensure();
-        Fortress\Lovrijenac::refresh_php();
+        Fortress::refresh();
         \WP_CLI::log(Fortress::overall());
         foreach (Fortress::all() as $slug) {
             $s    = Fortress::status($slug);
-            $line = $slug === Fortress::SVETI_IVAN ? Fortress\Sveti_Ivan::status_line() : $s['line'];
+            $line = $slug === Fortress::SVETI_IVAN ? Fortress\Sveti_Ivan::status_line() : Fortress::row_line($slug);
             \WP_CLI::log(sprintf('  %-11s %-13s %s (checked %s)', Fortress::name($slug), Fortress::state_label($s['state']), $line, Site::both((int) $s['checked_at'])));
         }
         \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));

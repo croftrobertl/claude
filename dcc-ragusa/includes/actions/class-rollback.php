@@ -190,7 +190,7 @@ final class Rollback extends Base
                 __('%1$s Rolled Back To %2$s', 'dcc-ragusa'),
                 $slug,
                 (string) ($row['before']['old_version'] ?? '')
-            ));
+            ), Events::fingerprint(Fortress::SVETI_IVAN, 'update-rolled-back', $slug));
             return;
         }
         // Both versions fail: not the update. Put the new one back.
@@ -209,7 +209,7 @@ final class Rollback extends Base
                 : __('Ragusa could not put the new version back; the previous version is in place.', 'dcc-ragusa'),
             'todo'     => __('Ask the site director to look at the site: something other than this plugin is broken.', 'dcc-ragusa'),
         ]);
-        Fortress::note(Fortress::SVETI_IVAN, __('A Check Fails With Either Version', 'dcc-ragusa'));
+        Fortress::note(Fortress::SVETI_IVAN, __('A Check Fails With Either Version', 'dcc-ragusa'), Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', $slug));
     }
 
     /** Swap the folders back: the new version returns, the old one goes to quarantine. */

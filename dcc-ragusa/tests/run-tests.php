@@ -1522,7 +1522,7 @@ suite('0.1.2 blocker 1b: a WP-CLI fatal is never evidence; a fatal elsewhere ale
     file_put_contents($log, '');
     break_cottage_when('9.9.9'); // pages fine; only the log fails
     $id = simulate_update('wporg-plugin', '1.6.0');
-    file_put_contents($log, "[22-Oct-2026 01:50:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    file_put_contents($log, '[' . gmdate('d-M-Y H:i:s', time() + 1) . " UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
     Sveti_Ivan::scheduled_check($id);
     eq(Journal::VERIFYING, Journal::get($id)['state'], 'the first check fails once and waits for the repeat');
     ok(!empty(Journal::get($id)['verify']['first_fail']['errlog']), 'the first failure records where the log stood');
@@ -1533,9 +1533,9 @@ suite('0.1.2 blocker 1b: a WP-CLI fatal is never evidence; a fatal elsewhere ale
 
     // A plugin that keeps failing writes a fatal again before the repeat: that still rolls back.
     $id = simulate_update('wporg-plugin', '1.7.0');
-    file_put_contents($log, "[22-Oct-2026 02:00:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    file_put_contents($log, '[' . gmdate('d-M-Y H:i:s', time() + 1) . " UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
     Sveti_Ivan::scheduled_check($id);
-    file_put_contents($log, "[22-Oct-2026 02:05:00 UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    file_put_contents($log, '[' . gmdate('d-M-Y H:i:s', time() + 3) . " UTC] PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
     Sveti_Ivan::scheduled_check($id);
     eq(1, count(Journal::recent(5, null, 'rollback')), 'a fatal in the plugin itself, again at the repeat, rolls back');
     $GLOBALS['dccr_site_handler'] = null;
@@ -2503,6 +2503,148 @@ suite('0.2.2 item 3: the Lovrijenac row reads the same PHP value as the status l
     ok(str_contains(Fortress::status(Fortress::LOVRIJENAC)['line'], 'PHP 8.3.30, 8.3.36 Is Out'), 'a behind reading shows at once too');
     Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
     Php_Patch::record_here();
+});
+
+
+suite('0.2.3 item 1: no false "Failed Its Checks" from one fatal line, a half-copied plugin, or a file that was missing for a moment', function () {
+    tick();
+    $log   = Site::abspath() . '/error_log';
+    file_put_contents($log, '');
+    $stamp = static fn(int $ts) => '[' . gmdate('d-M-Y H:i:s', $ts) . ' UTC]';
+    $failed_findings = static fn() => array_filter(Alerts::open(Fortress::SVETI_IVAN), static fn($a) => in_array($a['kind'], ['update-failed', 'update-rolled-back'], true));
+    $rollbacks = count(Journal::recent(50, null, 'rollback'));
+
+    // (a) Row 57: a first failure recorded by 0.2.1, with no offset. The repeat must not re-read the update's own snapshot.
+    $id   = simulate_update('wporg-plugin', '1.8.0');
+    $row  = Journal::get($id);
+    $done = (int) $row['before']['installed_at'];
+    ok($done > 0, 'the row records when the install finished');
+    file_put_contents($log, $stamp($done + 2) . " PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    Journal::set_state($id, Journal::VERIFYING, ['verify' => ['attempts' => 1, 'first_fail' => ['ts' => $done + 5, 'failed' => ['error_log']]]]);
+    ok(empty(Journal::get($id)['verify']['first_fail']['errlog']), 'set up like 0.2.1: a first failure without an offset');
+    Sveti_Ivan::scheduled_check($id);
+    eq(Journal::COMMITTED, Journal::get($id)['state'], '(a) the repeat counts only lines stamped after the first failure: the update passes');
+    eq($rollbacks, count(Journal::recent(50, null, 'rollback')), '(a) no rollback');
+    eq([], $failed_findings(), '(a) no "Failed Its Checks"');
+    // The recovery path ("check run during recovery") runs the same check.
+    $id2 = simulate_update('wporg-plugin', '1.8.1');
+    $d2  = (int) Journal::get($id2)['before']['installed_at'];
+    file_put_contents($log, $stamp($d2 + 2) . " PHP Fatal error: Uncaught Error: boom in " . WP_PLUGIN_DIR . "/wporg-plugin/includes/a.php:2\n", FILE_APPEND);
+    Journal::set_state($id2, Journal::VERIFYING, ['verify' => ['attempts' => 1, 'next_at' => time() - 1, 'first_fail' => ['ts' => $d2 + 5, 'failed' => ['error_log']]]]);
+    age_row($id2, 3600);
+    Actions::recover();
+    eq(Journal::COMMITTED, Journal::get($id2)['state'], '(a) the same through recovery');
+
+    // (b) Stamped inside the install itself: the copy in progress (AIOSEO at 04:29:17, 4 s after it started).
+    file_put_contents($log, '');
+    $id = simulate_update('wporg-plugin', '1.9.0');
+    $done = (int) Journal::get($id)['before']['installed_at'];
+    $missing = WP_PLUGIN_DIR . '/wporg-plugin/vendor/woocommerce/action-scheduler/classes/abstracts/ActionScheduler.php';
+    file_put_contents($log, $stamp($done - 4) . " PHP Fatal error:  Uncaught Error: Failed opening required '" . $missing . "' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in " . WP_PLUGIN_DIR . "/wporg-plugin/vendor/woocommerce/action-scheduler/action-scheduler.php:52\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    eq(Journal::COMMITTED, Journal::get($id)['state'], '(b) a fatal stamped before the install finished is not counted: passes on the first check');
+    $last = Journal::get($id)['verify']['last']['error_log'] ?? [];
+    ok(($last['ok'] ?? null) === true && str_contains((string) ($last['detail'] ?? ''), 'still being copied'), '(b) the check says why: ' . ($last['detail'] ?? ''));
+    $tr = array_values(array_filter(events_of('fatal-transient'), static fn($e) => (int) $e['journal_id'] === $id));
+    ok(count($tr) >= 1 && $tr[0]['severity'] === Events::INFO, '(b) one info line on the row');
+
+    // (c) "Failed opening required" for a file of the plugin that exists now: transient, after the install too.
+    file_put_contents($log, '');
+    $id = simulate_update('wporg-plugin', '2.0.0');
+    $done = (int) Journal::get($id)['before']['installed_at'];
+    @mkdir(dirname($missing), 0755, true);
+    file_put_contents($missing, "<?php\n// present now\n");
+    file_put_contents($log, $stamp($done + 2) . " PHP Fatal error:  Uncaught Error: Failed opening required '" . $missing . "' (include_path='.') in " . WP_PLUGIN_DIR . "/wporg-plugin/vendor/woocommerce/action-scheduler/action-scheduler.php:52\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    eq(Journal::COMMITTED, Journal::get($id)['state'], '(c) the file it could not open is present now: not counted');
+    ok(str_contains((string) (Journal::get($id)['verify']['last']['error_log']['detail'] ?? ''), 'missing for a moment and is present now'), '(c) and says so');
+    // The control: the file is really gone. That counts.
+    file_put_contents($log, '');
+    $id = simulate_update('wporg-plugin', '2.0.1');
+    $done = (int) Journal::get($id)['before']['installed_at'];
+    $gone = WP_PLUGIN_DIR . '/wporg-plugin/vendor/really-gone.php';
+    file_put_contents($log, $stamp($done + 2) . " PHP Fatal error:  Uncaught Error: Failed opening required '" . $gone . "' (include_path='.') in " . WP_PLUGIN_DIR . "/wporg-plugin/wporg-plugin.php:9\n", FILE_APPEND);
+    Sveti_Ivan::scheduled_check($id);
+    eq(Journal::VERIFYING, Journal::get($id)['state'], '(c) a file still missing after the install is a real failure (the repeat decides)');
+    ok(Error_Log::missing_file("PHP Warning:  require_once(/x/plugins/p/a.php): Failed to open stream: No such file or directory in /x/b.php on line 3") === '/x/plugins/p/a.php', 'missing_file reads the PHP 8 warning form too');
+    Journal::set_state($id, Journal::ABANDONED, ['note' => 'test done']);
+    eq([], $failed_findings(), 'no false finding anywhere in this suite');
+    unlink($log);
+});
+
+suite('0.2.3 item 2: the headline and every row are worked out from the live findings when printed', function () {
+    tick();
+    foreach (array_keys(Alerts::open()) as $fp) {
+        Alerts::resolve($fp, true); // start from a calm site
+    }
+    Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'lag-test', 'target' => 'dcc-lag-test', 'title' => 'Lag Test', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::BREACHED, 'kind' => 'update-failed', 'target' => 'all-in-one-seo-pack', 'title' => 'Update Failed Its Checks', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    Fortress::note(Fortress::SVETI_IVAN, 'all-in-one-seo-pack Failed Its Checks', Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', 'all-in-one-seo-pack'));
+    tick();
+    ok(str_contains(Fortress::overall(), 'A Wall Was Breached'), 'before: breached');
+    ok(preg_match('/[\d,]+ Files, 1 Finding\b/', Fortress::status(Fortress::MINCETA)['line']) === 1, 'before: Minčeta counts one finding: ' . Fortress::status(Fortress::MINCETA)['line']);
+    // Resolve both by hand, then print status with NO tick in between.
+    Alerts::resolve_by_hand(Events::fingerprint(Fortress::MINCETA, 'lag-test', 'dcc-lag-test'), 'doracurt (shell)');
+    Alerts::resolve_by_hand(Events::fingerprint(Fortress::SVETI_IVAN, 'update-failed', 'all-in-one-seo-pack'), 'doracurt (shell)');
+    dccr_cli_reset();
+    (new Cli())->status();
+    $text = dccr_cli_text();
+    ok(str_starts_with($text, 'The Walls Are Holding'), 'the headline reads Holding at once: ' . strtok($text, "\n"));
+    ok(preg_match('/Minčeta\s+Holding\s+All [\d,]+ Files Match/u', $text) === 1, 'Minčeta\'s row too: ' . (preg_match('/Minčeta[^\n]*/u', $text, $m) ? $m[0] : '?'));
+    ok(preg_match('/Sveti Ivan\s+Holding\s+all-in-one-seo-pack Failed Its Checks · Resolved [A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2} [AP]M E[DS]T/u', $text) === 1, 'Sveti Ivan\'s row keeps the history and says it was resolved: ' . (preg_match('/Sveti Ivan[^\n]*/u', $text, $m) ? $m[0] : '?'));
+    // The page reads the same.
+    $GLOBALS['dccr_is_admin'] = true;
+    ob_start();
+    DCCR\Admin::render();
+    $html = (string) ob_get_clean();
+    $GLOBALS['dccr_is_admin'] = false;
+    ok(str_contains($html, 'The Walls Are Holding') && str_contains($html, 'Failed Its Checks · Resolved'), 'the page says the same');
+    // A seen finding reads "Seen By".
+    Alerts::raise(['fortress' => Fortress::SVETI_IVAN, 'severity' => Events::NEEDS_LOOK, 'kind' => 'update-unverified', 'target' => 'x-plugin', 'title' => 'Could Not Verify An Update', 'what' => 'w', 'did' => 'd', 'todo' => 't']);
+    Fortress::note(Fortress::SVETI_IVAN, 'Last Update Could Not Be Verified', Events::fingerprint(Fortress::SVETI_IVAN, 'update-unverified', 'x-plugin'));
+    Alerts::mark_seen(Events::fingerprint(Fortress::SVETI_IVAN, 'update-unverified', 'x-plugin'), 'Rob');
+    ok(str_contains(Fortress::row_line(Fortress::SVETI_IVAN), 'Last Update Could Not Be Verified · Seen By Rob,'), 'seen: ' . Fortress::row_line(Fortress::SVETI_IVAN));
+    Fortress::set_state(Fortress::SVETI_IVAN, Fortress::HOLDING);
+    ok(str_contains(Fortress::row_line(Fortress::SVETI_IVAN), 'Seen By Rob'), 'set_state keeps the finding the row speaks for');
+    Alerts::withdraw(Fortress::SVETI_IVAN, ['update-unverified', 'update-failed']);
+    Alerts::withdraw(Fortress::MINCETA, ['lag-test']);
+});
+
+suite('0.2.3 item 3: a stale PHP reading is asked again, judged from nothing, and the new one names wp-login.php where cron is off', function () {
+    Site::$cron_off_override = true;
+    $feed = '{"8":{"8.3":{"tags":["security"],"date":"21 Oct 2026","version":"8.3.36"}}}';
+    State::set('php_feed', ['ts' => time(), 'error' => '', 'branches' => Php_Patch::parse($feed)]);
+    // The 0.2.1 reading: taken by the probe event under wp-cron.php, 8.3.30, older than twelve hours.
+    update_option(Php_Patch::READING_OPTION, ['version' => '8.3.30', 'sapi' => 'litespeed', 'source' => 'probe', 'ts' => time() - 13 * 3600], 'no');
+    State::delete('php_probe');
+    State::delete('php_check_ts');
+    Alerts::withdraw(Fortress::LOVRIJENAC, ['php-security', 'php-behind', 'php-eol']);
+    ok(Php_Patch::stale(Php_Patch::reading()), 'thirteen hours old is stale');
+    ok(str_contains(Php_Patch::line(), 'PHP 8.3.30 As Read') && str_contains(Php_Patch::line(), 'Asking The Web Server Again'), 'the line says it is old and being asked again: ' . Php_Patch::line());
+    // The web server answers the login probe (simulated: the request records, as boot does).
+    Php_Patch::$reading_override = null; // the tick runs under WP-CLI here: it records nothing itself
+    $GLOBALS['dccr_http'] = [];
+    $GLOBALS['dccr_http_handler'] = static function (string $url, array $args) {
+        if (str_contains($url, 'ragusa_php=1')) {
+            Php_Patch::$reading_override = ['version' => '8.3.36', 'sapi' => 'litespeed'];
+            Php_Patch::record_here('login');
+            Php_Patch::$reading_override = null;
+        }
+        return str_contains($url, 'wp-login.php') ? dccr_http_ok('<form><input type="password"></form>') : (str_contains($url, 'php.net') ? dccr_http_ok('{}') : Test_Site::site_page($url));
+    };
+    // Before the answer lands, a judgement from the stale 8.3.30 would be a false breach: none is raised.
+    Php_Patch::evaluate();
+    eq([], array_filter(Alerts::open(Fortress::LOVRIJENAC), static fn($a) => str_starts_with($a['kind'], 'php-')), 'no PHP finding is raised from a stale reading');
+    tick();
+    eq([], array_values(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'wp-cron.php'))), 'cron is off: nothing to wp-cron.php');
+    ok(count(array_filter($GLOBALS['dccr_http'], static fn($r) => str_contains($r['url'], 'ragusa_php=1'))) === 1, 'the stale reading set off one login probe');
+    $r = Php_Patch::reading();
+    eq('login', $r['source'], 'the new reading came from wp-login.php');
+    ok(str_contains(Php_Patch::status_lines()[0], 'read from the wp-login.php probe'), 'and the php line names it: ' . Php_Patch::status_lines()[0]);
+    ok(str_contains(Php_Patch::line(), 'PHP 8.3.36 Current'), 'and judges the fresh one');
+    eq([], array_filter(Alerts::open(Fortress::LOVRIJENAC), static fn($a) => str_starts_with($a['kind'], 'php-')), 'no PHP finding at any point');
+    Site::$cron_off_override = null;
+    $GLOBALS['dccr_http_handler'] = null;
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

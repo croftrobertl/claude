@@ -24,7 +24,7 @@ final class Php_Patch
     public const FEED_CACHE     = 86400;
     public const SECURITY_GRACE = 3 * 86400;
     public const READING_OPTION = 'dcc_ragusa_php_web';
-    public const READING_MAX    = 2 * 86400;
+    public const READING_MAX    = 12 * 3600; // older than this: ask again, and judge nothing from it
     public const PROBE_HOOK     = 'dccr_php_probe';
     public const SETTINGS_FILES = ['.user.ini', 'php.ini'];
     public const SETTINGS_MAX   = 64 * 1024;
@@ -81,6 +81,11 @@ final class Php_Patch
         // The card reads the same value as the status line, the moment it exists.
         Fortress\Lovrijenac::refresh_php();
         State::flush();
+    }
+
+    public static function stale(array $r): bool
+    {
+        return time() - (int) ($r['ts'] ?? 0) > self::READING_MAX;
     }
 
     /** @return array{version:string,sapi:string,source:string,ts:int}|null */
@@ -346,6 +351,9 @@ final class Php_Patch
         if ($r === null || empty($feed['branches'])) {
             return; // nothing to judge; line() says why. Raise nothing without the list.
         }
+        if (self::stale($r)) {
+            return; // a fresh reading is asked for; never a finding from an old one (the host may have updated since)
+        }
         $f = self::judge((string) $r['version'], (array) $feed['branches'], time());
         if ($f !== null) {
             $fp = Events::fingerprint(Fortress::LOVRIJENAC, $f['kind'], (string) $r['version']);
@@ -391,6 +399,10 @@ final class Php_Patch
             return $line;
         }
         $version = (string) $r['version'];
+        if (self::stale($r)) {
+            /* translators: 1: version, 2: when */
+            return sprintf(__('PHP %1$s As Read %2$s · Asking The Web Server Again', 'dcc-ragusa'), $version, Site::stamp((int) $r['ts']));
+        }
         $feed    = (array) State::get('php_feed', []);
         if (empty($feed['branches'])) {
             return !empty($feed['error'])

@@ -1,4 +1,15 @@
-# Ragusa 0.2.2 — Staging Checklist
+# Ragusa 0.2.3 — Staging Checklist
+
+> **Upgrading the 0.2.2 install on staging:** `wp plugin install
+> "Ragusa 0.2.3.zip" --force`, then `wp ragusa status` (no tick): the
+> headline and rows already read from the live findings, and Sveti Ivan's
+> row reads "all-in-one-seo-pack Failed Its Checks · Resolved …" for the
+> finding you resolved. Then `wp ragusa tick`: the 0.2.1 PHP reading (Oct
+> 26, 12:30 AM, "the probe event under wp-cron.php") is older than twelve
+> hours, so that tick asks wp-login.php; `wp ragusa status` afterwards reads
+> "php: 8.3.36 (litespeed), read from the wp-login.php probe at …". Then
+> the whole of step 12 in one sitting. Rollback:
+> `wp plugin install "Ragusa 0.2.2.zip" --force`.
 
 > **Upgrading the 0.2.1 install on staging:** first `wp cron event list`
 > and note what is due (the auto-update events are the ones to watch). Then
@@ -333,6 +344,26 @@ cleans up. Each prints every journal state transition.
       Events shows "resolved by hand by <you> (shell)".
 - [ ] **One clock:** `wp ragusa journal` and `wp ragusa status` read
       "Oct 24, 8:16 PM EDT (18 Hours Ago)" everywhere; no bare UTC.
+- [ ] **0.2.3: a half-copied plugin is not a failure.** One command writes
+      two fatal lines for a real update row, one stamped during the copy and
+      one naming a plugin file that exists, runs the check, and cleans up:
+
+          wp eval '
+            $log = ABSPATH . "error_log"; $size = is_file($log) ? filesize($log) : 0;
+            $row = DCCR\Journal::recent(1, null, "update-check")[0];
+            $slug = $row["target"]; $done = (int) ($row["before"]["installed_at"] ?? $row["created_at"]);
+            $file = WP_PLUGIN_DIR . "/$slug/$slug.php";
+            $snap = DCCR\Error_Log::snapshot();
+            file_put_contents($log, "[" . gmdate("d-M-Y H:i:s", $done - 4) . " UTC] PHP Fatal error: Uncaught Error: ragusa drill copy in " . WP_PLUGIN_DIR . "/$slug/x.php:1\n", FILE_APPEND);
+            file_put_contents($log, "[" . gmdate("d-M-Y H:i:s") . " UTC] PHP Fatal error: Uncaught Error: Failed opening required \x27$file\x27 (include_path=\x27.\x27) in " . WP_PLUGIN_DIR . "/$slug/y.php:1\n", FILE_APPEND);
+            $r = DCCR\Fortress\Sveti_Ivan::run_checks(["slug" => $slug, "errlog" => $snap, "installed_at" => $done], true);
+            echo $slug, ": ", $r["checks"]["error_log"]["detail"], "\n";
+            $h = fopen($log, "r+"); ftruncate($h, $size); fclose($h);
+            DCCR\State::flush();'
+
+      Expect "no new fatal; 2 not counted (written at …, while the plugin
+      was still being copied …)", two info lines in Recent Events, and no
+      finding. `tail -1 error_log` no longer shows a drill line.
 - [ ] **0.2.2: nothing touches wp-cron.php.** With the server's access log,
       if HostGator exposes it (`~/access-logs/` or cPanel → Raw Access),
       grep for `staging/wp-cron.php` after two ticks and a page load of DCC
