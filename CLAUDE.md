@@ -885,6 +885,24 @@ after fixes; Erica's instinct was a simple cartoon tom, Rob keeps realism.
 - **He walks along the bottom of the screen**, over page text on a phone
   while scrolling: Rob saw it and chose it.
 
+**Rob on the round-4 sheet (for 4.13.2, 2026-10-29).**
+- **APPROVED, do not change:** the feeding neck and pose; the fan.
+- **Pie: approved; the tin a little larger** (its visible side wall and rim
+  only, so it reads at guest size). The pie itself unchanged, no steam.
+- **Tom's BODY, one more pass:** not pale crescent "fish scales". The
+  photo's body is near-black and glossy: long pointed overlapping feathers,
+  only the tips show, each tip a NARROW bronze/copper edge, bright where the
+  light hits (upper breast, shoulder), nearly invisible on the shadow side;
+  size and angle varied so no two rows repeat; fitted at 50% to the photo's
+  bright and dark areas. Test: at guest size a dark glossy bird with a
+  bronze sheen, not a patterned one.
+- **Poults, one more pass:** downy, finely streaked, slightly ragged neck and
+  head (thicker neck at the body, pale eye ring, bill, dark crown
+  speckles); separate overlapping pale-edged wing feathers with shading,
+  never ruled stripes; scaly grey-pink legs, a clear joint, slimmer below,
+  toes with small claws; a fluffy irregular belly outline. At 50% the legs
+  must sit on the photo's legs. The walk cycle and feeding pose stay.
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,

@@ -54,7 +54,7 @@ if (require.main === module) {
       window.go = async (jpg) => { const im = new Image(); im.src = jpg; await im.decode();
         const W = 760 * 0.75, H = 850 * 0.75, c = document.getElementById('c'); c.width = W * 4; c.height = H + 260; const g = c.getContext('2d');
         for (let k = 0; k < 3; k++) { g.save(); g.translate(W * k, 0); g.drawImage(im, 1750, 1450, 760, 850, 0, 0, W, H);
-          if (k > 0) { g.globalAlpha = k === 1 ? 0.5 : 1; if (k === 2) { g.fillStyle = '#F6F1E7'; g.fillRect(0, 0, W, H); } g.scale(7.5, 7.5); g.translate(10, 10); kpPaint(g, 0.25, 0); } g.restore(); }
+          if (k > 0) { g.globalAlpha = k === 1 ? 0.5 : 1; if (k === 2) { g.fillStyle = '#F6F1E7'; g.fillRect(0, 0, W, H); } g.scale(7.5, 7.5); g.translate(10, 10); kpPaint(g, 0.2, 0); } g.restore(); }
         g.save(); g.translate(W * 3, 0); g.fillStyle = '#F6F1E7'; g.fillRect(0, 0, W, H); g.scale(7.5, 7.5); g.translate(10, 10); kpPaint(g, -1, 1); g.restore();
         for (let k = 0; k < 8; k++) { g.save(); g.translate(k * 290 + 20, H + 20); g.scale(3, 3); kpPaint(g, k / 8, 0); g.restore(); }
         document.title = 'done'; };</script>`;
