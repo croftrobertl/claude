@@ -96,7 +96,7 @@
 		if (def.s) {
 			var keys = Array.isArray(def.s) ? def.s : [def.s], seen = {}, names = [];
 			keys.forEach(function (k) { var n = spriteName(k); if (!seen[n]) { seen[n] = 1; names.push(n); } });
-			return { id: 's:' + keys.join('|'), name: names.join(' / '), pics: function () { return keys.map(function (k) { return spriteImg(k, spriteName(k)); }); } };
+			return { id: 's:' + keys.join('|'), name: names.join(' / '), pics: function () { return keys.map(function (k) { return def.draw ? artPic(k, spriteName(k)) : spriteImg(k, spriteName(k)); }); } };
 		}
 		if (def.c) {
 			var nm = (N.prims && N.prims[def.c]) || def.c, cl = (def.cl || ['#888888']).slice(0, 5);

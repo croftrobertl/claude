@@ -1,6 +1,8 @@
 'use strict';
 /**
- * DCC Seasons — 4.13.0, Thanksgiving: that what Rob approved is what ships.
+ * DCC Seasons — Thanksgiving (4.13.0, 4.13.1, 4.13.2): that what Rob
+ * approved is what ships. That every OTHER theme is untouched is
+ * tools/test-untouched.js (against 4.13.1, the live release).
  *
  * Every assertion here is a pick of his, so a mutation that quietly swaps
  * one has something to fail against. The set is pinned EXACTLY — an extra
@@ -23,7 +25,7 @@ const QUIET = '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{d
 /* Rob's approved set, written out rather than derived: a test that reads the
  * same source as the code cannot tell you the code changed. */
 const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
-  'gourd1', 'gourd2', 'gourd3', 'corn', 'cranberry', 'acorn', 'pie', 'turkey'];
+  'gourd1', 'gourd3', 'corn', 'cranberry', 'acorn', 'pie', 'turkey'];
 
 (async () => {
   console.log('\n  --- the approved pieces, and nothing else ---');
@@ -35,13 +37,21 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
       require '${ROOT}/dcc-seasons/includes/class-themes.php';
       $t = \\DCC_Seasons\\Themes::themes()['thanksgiving']['ambient'];
       $k = []; foreach ($t['particles'] as $p) { foreach ((array) $p['s'] as $s) { $k[] = $s; } }
-      echo json_encode($k);`], { cwd: ROOT, encoding: 'utf8' }));
+      echo json_encode([$k, $t['particles']]);`], { cwd: ROOT, encoding: 'utf8' }));
+    const rows = keys.pop();
+    keys.push(...keys.splice(0)[0]);
     const extra = keys.filter(k => !APPROVED.includes(k));
     const missing = APPROVED.filter(k => !keys.includes(k));
     ok(!extra.length, `no unapproved piece reaches the build (${keys.length} kinds)`, extra.join(','));
     ok(!missing.length, 'every approved piece is there', missing.join(','));
-    ok(['gourd1', 'gourd2', 'gourd3'].every(g => keys.includes(g)),
-      "the gourds are the variety set, like Halloween's jack faces", keys.join(','));
+    ok(['gourd1', 'gourd3'].every(g => keys.includes(g)) && !keys.includes('gourd2'),
+      'the two approved gourds, and no squash (the flat gourd2 is gone — Rob, 4.13.2)', keys.join(','));
+    const row = k => rows.find(r => [].concat(r.s).includes(k)) || {};
+    ok(!row('pie').fx, 'the pie has no smoke effect (no steam, Rob)', JSON.stringify(row('pie')));
+    const tk = row('turkey');
+    ok(tk.draw === 'tom' && tk.b === 'forage' && tk.face === 'L', 'the turkey is the drawn tom, walking (forage), art facing left', JSON.stringify(tk));
+    ok(['leafo', 'leafc', 'leafm', 'leafs'].every(k => row(k).b === 'leaf') && ['gourd1', 'corn', 'cranberry', 'acorn', 'pie'].every(k => row(k).b === 'drop'),
+      'leaves rock (leaf); heavy pieces drop and tumble (drop)', rows.map(r => [].concat(r.s).join('/') + ':' + r.b).join(' '));
     ok(keys.includes('leafm') && keys.includes('leafm2'),
       'the maple is one kind with two variations — full red and mid-turn', keys.join(','));
   }
@@ -59,44 +69,36 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
      * pointed 18x28 oval of 4.13.0 */
     ok(oak.startsWith('32 24.8|') && oak.includes('dccTgO1'), 'the live oak is the 4.13.1 redraw from the plate, not the narrow 18x28 oval', oak.slice(0, 12));
     ok(!/Q17 5 17.6 7.6/.test(oak), "and none of the northern oak's lobes survive", oak.slice(0, 60));
-    const cyp = spr('leafc');
-    ok(cyp.includes('stroke-linecap="round"') && !cyp.includes('<ellipse'),
-      'the cypress is needles drawn as needles, not a stack of ellipses', cyp.slice(0, 60));
+    /* 4.13.2: the cypress is drawn by rule, and it is B (bolder) */
+    ok(/\n\t\tleafc: function \(\) \{ return tgCypress\(true\); \}/.test(src), 'the cypress is B, the bolder one (tgCypress(true))', 'leafc');
+    const cyf = src.slice(src.indexOf('function tgCypress'), src.indexOf('function tgPie'));
+    ok(cyf.includes('stroke-linecap="round"') && !cyf.includes('<ellipse'), 'and needles drawn as needles, not a stack of ellipses', 'tgCypress');
     const sg = spr('leafs');
     /* 4.13.1: FIVE lobes from the photograph (a smooth traced outline, one
      * vein from the stalk to each tip), not the eight-pointed star of 4.13.0 */
     const veins = ((sg.match(/stroke="#E88A5C"[^>]*d="([^"]*)"|d="([^"]*)"[^>]*stroke="#E88A5C"/) || [])[1] || (sg.match(/d="([^"]*)"[^>]*stroke="#E88A5C"/) || [])[1] || '').split('M').length - 1;
     ok(sg.startsWith('32 23.1|') && veins === 5 && !/L15.4 8.2/.test(sg),
       `the sweetgum has five lobes (${veins} veins), not the eight-pointed star`, sg.slice(0, 60));
-    /* 4.13.1: the eight redrawn pieces are the photo redraws (each carries
-     * its own dccTg gradient id), and NOTHING ELSE in the engine moved since
-     * 4.13.0: every changed line is one of those eight sprites or a comment,
-     * so Halloween, Christmas and every other theme draw exactly as live. */
-    const RE8 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', corn: 'dccTgC3', acorn: 'dccTgK1', cranberry: 'dccTgR1', turkey: 'dccTgT2' };
-    const bad8 = Object.entries(RE8).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
-    ok(!bad8.length, 'the eight pieces are the 4.13.1 photo redraws', bad8.join(' ') || 'all eight');
-    /* Everything outside Thanksgiving's own code is IDENTICAL to 4.13.0:
-     * cut out the crane regions (caches and the moon, the scene, the idle
-     * pre-draw, the debug getter) from both, drop the eight sprites and
-     * comment lines, and the rest must match line for line. So Halloween,
-     * Christmas and every other theme run exactly the code that is live. */
-    const old = require('child_process').execSync('git show 66faa59:dcc-seasons/assets/js/engine.js', { cwd: ROOT, maxBuffer: 1 << 26 }).toString();
-    function cutAll(t, isNew) {
-      const cut = (x, from, to) => { const i = x.indexOf(from); if (i < 0) { throw new Error('marker ' + from); } const j = x.indexOf(to, i); if (j < 0) { throw new Error('marker ' + to); } return x.slice(0, i) + x.slice(j + to.length); };
-      t = cut(t, '\t\tvar crCache = {}', isNew ? '\t\t\treturn pl;\n\t\t}\n' : 'return (hmC = { c: c, r: r, half: half });\n\t\t}\n');
-      t = cut(t, '\t\t\tcranemoon: { actors', '\n\t\t\t} },');
-      t = cut(t, "\t\tif (vigList.indexOf('cranemoon') >= 0) {", '\t\t\tcrLater(crIdle);\n\t\t}');
-      return t.split('\n').filter(l => !/^\t\t(leafo|leafs|gourd1|gourd3|corn|acorn|cranberry|turkey): '/.test(l) && !/^\s*(\/\*|\*)/.test(l) && !/get cranes\(\)/.test(l)).join('\n');
-    }
-    const A = cutAll(old, false), Bn = cutAll(src, true);
-    let firstDiff = '';
-    if (A !== Bn) { const al = A.split('\n'), bl = Bn.split('\n'); for (let i = 0; i < Math.max(al.length, bl.length); i++) { if (al[i] !== bl[i]) { firstDiff = `line ${i}: ${String(bl[i]).slice(0, 70)} | was ${String(al[i]).slice(0, 70)}`; break; } } }
-    ok(A === Bn, 'outside the crane scene and the eight pieces, the engine is identical to 4.13.0 (Halloween and the rest draw as live)', firstDiff);
-    const m1 = spr('leafm'), m2 = spr('leafm2');
-    ok(m1.startsWith('24 24|') && m2.startsWith('24 24|'),
-      'the maples carry the shorter stalk Rob asked for (24 tall, not 30)', m1.slice(0, 10) + ' / ' + m2.slice(0, 10));
-    ok(m2.includes('#E8A33D') && !m1.includes('#E8A33D'),
-      'and only the mid-turn one carries the amber middle', 'leafm/leafm2');
+    /* the seven 4.13.1 photo redraws still in the set (each carries its
+     * own dccTg gradient id); the turkey is the drawn tom since 4.13.2 */
+    const RE7 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', corn: 'dccTgC3', acorn: 'dccTgK1', cranberry: 'dccTgR1' };
+    const bad7 = Object.entries(RE7).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
+    ok(!bad7.length, 'the seven photo redraws are 4.13.1\'s', bad7.join(' ') || 'all seven');
+    ok(spr('turkey') === '1 1|' && /function tkPaint\(/.test(src) && /function kpPaint\(/.test(src), 'the turkey key names the drawn tom (tkPaint) and his poults (kpPaint), not a picture', spr('turkey').slice(0, 20));
+    /* the pie in its tin, from the USDA photo, and nothing rising off it */
+    const pf = src.slice(src.indexOf('function tgPie'), src.indexOf('function tgNest'));
+    ok(/\n\t\tpie: function \(\) \{ return tgPie\(\); \}/.test(src) && pf.includes('dccTgI1p') && pf.includes('dccTgI1s') && !/steam/i.test(pf.replace('No steam', '')),
+      'the pie sits in its foil tin with a soft shadow, and no steam', 'tgPie');
+    /* the cornucopia at 0.85 (Rob saw it over page text at 390), no squash */
+    ok(/thanksgiving: \['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:\.85;'\]/.test(src), 'the cornucopia accent is at 0.85', 'ACCENTS');
+    const hf = src.slice(src.indexOf('function tgHorn'), src.indexOf('/* TG_GEN_END */'));
+    ok(!/gourd2|squash/i.test(hf.replace('no squash', '')) && /tgNest\('gourd1'/.test(hf), "the cornucopia's spill has no squash", 'tgHorn');
+    /* 4.13.2: the red maple from its photograph (Rob approved both), the
+     * mid-turn one the SAME leaf recoloured orange-gold */
+    const m1 = spr('leafm');
+    ok(m1.startsWith('30.4 32|') && m1.includes('dccTgM1'), 'the red maple is the 4.13.2 photo redraw', m1.slice(0, 16));
+    ok(/\n\t\tleafm2: function \(\) \{ return SVGS\.leafm\.replace\(\/dccTgM1\/g, 'dccTgM2'\)/.test(src) && /leafm2:[^\n]*#F2C14E/.test(src),
+      'and the mid-turn one is the same leaf turned orange-gold', 'leafm2');
   }
 
   console.log('\n  --- the crane is B, with the primaries picked out ---');

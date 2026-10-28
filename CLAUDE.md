@@ -903,6 +903,61 @@ after fixes; Erica's instinct was a simple cartoon tom, Rob keeps realism.
   toes with small claws; a fluffy irregular belly outline. At 50% the legs
   must sit on the photo's legs. The walk cycle and feeding pose stay.
 
+**Rob approves round 5, all of it (2026-10-30): 4.13.2 is built.** Final,
+nothing more to change: the tom (fan, dark glossy body, dropped wing, head,
+walk, feeding neck), the round-5 poults, the pie in the larger tin with no
+steam, red maple (both), cypress B, live oak, sweetgum, acorn, corn,
+cranberry, the two gourds, the cornucopia at 0.85 with no squash, the
+motion (leaves rock, heavy pieces drop and tumble, he walks along the
+bottom). How 4.13.2 carries it:
+- **The pre-draw is in a WORKER** (`tkMod` wraps the TK block so its own
+  source, `'' + tkMod`, is the worker's; `tkDraw` paints one pose into a
+  canvas or an OffscreenCanvas). One pose is ~35 ms at 4x CPU (≈730
+  gradients and 1,080 fills), longer than any idle moment while the page
+  animates, so on the page's thread it cost frames — the first build drew
+  poses in frames (50-100 ms each) and an idle-sliced one stalled. The
+  bitmaps come back transferred; their first draws measure ~0 ms. No
+  OffscreenCanvas (iOS before 16.4), no Worker, or a worker error → the
+  fallback: one pose per scroll-quiet idle moment, 300 ms apart, on the
+  page's thread (14-39 ms each at 4x, for ~10 s). Both wait for 300 ms
+  with no scroll/touch/wheel before their last step, and the worker itself
+  is started in idle time, never in a frame.
+- **He is never built in a frame** (`tkGet` returns null on a miss). Until
+  his 37 poses are ready (`tkDone`) he waits just off the edge (`size *
+  1.4`), then walks in — no popping.
+- **The check link** (the Director's ask): `?dcc_key=<key>` opens the
+  admin-only preview (`?dcc_season=`) and `?dcc_scene=now` (`CFG.sceneNow`:
+  the scene at 1 s of visible time, then 3 s after each one ends, outside
+  the moments queue, which then skips us via `momReady`) to a browser that
+  is not logged in. The key is `DCC_SEASONS_CHECK_KEY` (wp-config) or the
+  `dcc_seasons_check_key` option, created by the SETTINGS PAGE only (shown
+  there as "Check link"), never on the front end; under 12 characters opens
+  nothing; compared with `hash_equals`. A page with a valid key is sent
+  `nocache_headers()` + `DONOTCACHEPAGE` (`no_cache_for_checks`, on
+  template_redirect). The exclusions still win (`/submit-booking/` stays
+  silent). `tools/test-check-key.php`.
+- **The Untouched test** (`tools/test-untouched.js`, against 4.13.1 =
+  `64340a4`): Themes byte-identical but Thanksgiving; engine.js identical
+  line for line after taking out ONLY Thanksgiving's named code and the
+  check link's two lines; ambient.js and matrix.js byte-identical; and all
+  26 other themes draw the SAME PIXELS on the mocked clock with a seeded
+  Math.random and pinned Date (`tools/untouched-hash.js`, 7 moments over
+  24 s, through each first scene and flyer). Mutation-checked eight ways.
+  Use it for every release on this line: change `BASE` to the live commit.
+- **Measuring**: `tools/measure-tom.js` (shipped build, 390, DPR 3, 4x CPU,
+  a guest's first scroll at 300 ms, NO warm-up excluded; seed 14 puts the
+  tom on screen; `--noworker`/`--nooffscreen` force the fallback). This
+  container stalls a single drawImage of a long-drawn image for 10-21 ms
+  now and then, in 4.13.1 exactly as in 4.13.2: compare builds in
+  alternating pairs, never one run.
+- **OPEN for Rob (asked with the 4.13.2 build): how often the tom
+  appears.** As built (A) he is one piece in the mix at weight 1, like the
+  4.13.1 hen, so a phone shows him in the first minute on 2 visits in 20
+  (768: 12/20, 1440: 20/20). B = `'w' => 3, 'n' => 1` on his theme row:
+  every visit at every width, never two, one falling piece fewer on a
+  phone. `tools/tg-tom-often.js` renders both. Do not ship B until he
+  picks it.
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,
@@ -1008,7 +1063,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 206,300 raw / 72,362 gzipped (4.13.1, `gzip -c`; the eight redrawn Thanksgiving pieces are +14.8KB raw / +4.6KB gz and the keep-clear crane plan +1.6KB raw / +0.6KB gz over 4.13.0's 189,931 / 67,225. 4.14.0, off the release line: 221,478 raw / 77,396 gzipped; the Christmas scene, its painters and the redrawn pieces are +31.5KB raw / +10.2KB gz over 4.13.0's 189,931 / 67,225, against the Director's ceiling of 82,225 gz. Earlier: 181,684 raw / 64,661 gzipped (4.12.2; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 231,262 raw / 82,218 gzipped (4.13.2, `gzip -c` with the file name, as always — 7 bytes under the Director's 82,225 ceiling, so Christmas needs the per-season split; Thanksgiving's own art and code are 16.1KB gz of it (82,218 → 66,107 with them taken out); the tom, poults, pie tin, cypress B, cornucopia and the worker pre-draw are +24.9KB raw / +9.9KB gz over 4.13.1's 206,300 / 72,362. Earlier: 206,300 raw / 72,362 gzipped (4.13.1; the eight redrawn Thanksgiving pieces are +14.8KB raw / +4.6KB gz and the keep-clear crane plan +1.6KB raw / +0.6KB gz over 4.13.0's 189,931 / 67,225. 4.14.0, off the release line: 221,478 raw / 77,396 gzipped; the Christmas scene, its painters and the redrawn pieces are +31.5KB raw / +10.2KB gz over 4.13.0's 189,931 / 67,225, against the Director's ceiling of 82,225 gz. Earlier: 181,684 raw / 64,661 gzipped (4.12.2; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -1360,7 +1415,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-christmas.js` (4.14.x only),
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-untouched.js` (against the live release), `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

@@ -185,20 +185,27 @@ class Themes {
                          * species, and the maple is one kind with two
                          * variations — full red and mid-turn — exactly as
                          * the gourds are one kind with three. */
-                        ['s' => $leaves[0], 'b' => 'fall', 'w' => 2],
-                        ['s' => $leaves[1], 'b' => 'fall', 'w' => 2],
-                        ['s' => $maple, 'b' => 'fall', 'w' => 2],
-                        ['s' => $leaves[2], 'b' => 'fall', 'w' => 2],
+                        /* 4.13.2 (Rob's pick): each piece falls its own way.
+                         * Leaves drift slowly and rock (b 'leaf'); heavy
+                         * pieces drop faster and turn over (b 'drop'). New
+                         * behaviours, so no other theme's motion moves. */
+                        ['s' => $leaves[0], 'b' => 'leaf', 'w' => 2],
+                        ['s' => $leaves[1], 'b' => 'leaf', 'w' => 2],
+                        ['s' => $maple, 'b' => 'leaf', 'w' => 2],
+                        ['s' => $leaves[2], 'b' => 'leaf', 'w' => 2],
                         /* Thanksgiving's variety set, like Halloween's three
                          * jack faces: three different plants mixed as they
                          * fall, never three colours of one. */
-                        ['s' => ['gourd1', 'gourd2', 'gourd3'], 'b' => 'fall'],
-                        ['s' => 'corn', 'b' => 'fall'],
-                        ['s' => 'cranberry', 'b' => 'fall'],
-                        ['s' => 'acorn', 'b' => 'fall', 'w' => 2],
-                        ['s' => 'pie', 'b' => 'fall', 'fx' => 'smoke'],
-                        // Turkey 2.0 leads two chicks along the bottom.
-                        ['s' => 'turkey', 'b' => 'waddle', 'face' => 'L', 'fx' => 'chicks', 'sz' => [26, 32]],
+                        ['s' => ['gourd1', 'gourd3'], 'b' => 'drop'],   /* 4.13.2: no squash until a true crookneck (Rob) */
+                        ['s' => 'corn', 'b' => 'drop'],
+                        ['s' => 'cranberry', 'b' => 'drop'],
+                        ['s' => 'acorn', 'b' => 'drop', 'w' => 2],
+                        ['s' => 'pie', 'b' => 'drop'],
+                        /* 4.13.2: the strutting wild tom (Rob, 2026-10-27),
+                         * drawn in code (TK_ in engine.js) and stepping, two
+                         * poults following him; he stops, feeds with his fan
+                         * up, walks on. */
+                        ['s' => 'turkey', 'b' => 'forage', 'face' => 'L', 'draw' => 'tom', 'sz' => [26, 32]],
                     ],
                 ],
                 'egg' => [

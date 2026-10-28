@@ -15,6 +15,7 @@ final class Plugin {
 
     /** Stores the version last seen running, to detect an install/upgrade. */
     public const VERSION_OPTION = 'dcc_seasons_version';
+    public const CHECK_KEY_OPTION = 'dcc_seasons_check_key';
     /**
      * Seconds between appearances after the first hero and first scene:
      * one every 60-90 s, hero and scene taking turns (Rob, 4.8.0). A code
@@ -38,6 +39,7 @@ final class Plugin {
     public function boot(): void {
         add_action('init', [$this, 'load_textdomain']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
+        add_action('template_redirect', [$this, 'no_cache_for_checks'], 0);
         add_action('wp_head', [$this, 'print_layering_css']);
         // Runs even when nothing else does — see print_diag_stub().
         add_action('wp_footer', [$this, 'print_diag_stub'], 99);
@@ -440,7 +442,7 @@ final class Plugin {
         if ($this->is_excluded()) {
             return false;
         }
-        if ($this->preview_theme() !== null || $this->diag_requested()) {
+        if ($this->preview_theme() !== null || $this->diag_requested() || $this->scene_now()) {
             return true;
         }
         return $this->in_scope();
@@ -450,6 +452,67 @@ final class Plugin {
      * ?dcc_debug=1 for a logged-in administrator. Never true for visitors,
      * so the panel's markup and the flag never reach cached HTML for them.
      */
+    /**
+     * The staging check key (4.13.2, the Director's ask). A page opened with
+     * ?dcc_key=<key> is treated like an administrator's for the PREVIEW only
+     * (?dcc_season=, and ?dcc_scene=now below), so a check can run in a
+     * fresh browser that is not logged in. Without the key, or with a wrong
+     * one, both are ignored and the visitor gets the normal page. The key
+     * is DCC_SEASONS_CHECK_KEY from wp-config.php when defined, else a
+     * random one the settings page creates and shows; it is never made on
+     * the front end, so a site whose settings page was never opened has no
+     * key and nothing opens.
+     */
+    public static function check_key(bool $create = false): string {
+        if (defined('DCC_SEASONS_CHECK_KEY')) {
+            return (string) DCC_SEASONS_CHECK_KEY;
+        }
+        $key = (string) get_option(self::CHECK_KEY_OPTION, '');
+        if ($key === '' && $create) {
+            $key = wp_generate_password(20, false, false);
+            update_option(self::CHECK_KEY_OPTION, $key, false);
+        }
+        return $key;
+    }
+
+    private function key_ok(): bool {
+        if (!isset($_GET['dcc_key'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return false;
+        }
+        $key = self::check_key();
+        $given = sanitize_text_field(wp_unslash((string) $_GET['dcc_key'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        return strlen($key) >= 12 && hash_equals($key, $given);
+    }
+
+    /** A preview may be asked by an administrator or by the check key. */
+    private function may_preview(): bool {
+        return current_user_can('manage_options') || $this->key_ok();
+    }
+
+    /**
+     * ?dcc_scene=now (with the key, or as an administrator): play the
+     * season's scene about a second after the engine starts, then again
+     * shortly after each one ends, instead of waiting its turn.
+     */
+    private function scene_now(): bool {
+        return isset($_GET['dcc_scene']) && $_GET['dcc_scene'] === 'now' && $this->may_preview(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    }
+
+    /**
+     * A page opened with a valid check key is never cached: its config
+     * carries the forced theme and scene, which must never reach a guest.
+     * (A wrong key gets the normal page, which is safe to cache.)
+     */
+    public function no_cache_for_checks(): void {
+        if (!$this->key_ok()) {
+            return;
+        }
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+    }
+
     private function diag_requested(): bool {
         return isset($_GET['dcc_debug']) && current_user_can('manage_options'); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     }
@@ -948,6 +1011,7 @@ final class Plugin {
              * found when it looked for a backdrop host, and what it did.
              * Gated server-side exactly like the preview flag. */
             'diag'         => $this->diag_requested(),
+            'sceneNow'     => $this->scene_now(),
             'i18n'        => [
                 'close'         => __('Close', 'dcc-seasons'),
                 'eggLabel'      => __('Seasonal Matrix easter egg', 'dcc-seasons'),
@@ -1003,7 +1067,7 @@ final class Plugin {
      * @return array{key:string,label:string}|null
      */
     private function preview_theme(): ?array {
-        if (!isset($_GET['dcc_season']) || !current_user_can('manage_options')) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (!isset($_GET['dcc_season']) || !$this->may_preview()) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             return null;
         }
         $key = sanitize_key(wp_unslash($_GET['dcc_season'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended

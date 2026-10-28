@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.1
+Stable tag: 4.13.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,33 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.13.2 =
+Thanksgiving, round 2, as Rob approved it (2026-10-30). Built from 4.13.1,
+so every other theme is exactly as it is live. Rollback: reinstall the
+4.13.1 zip.
+
+* A strutting wild tom replaces the hen, traced whole from one public-domain
+  photograph: the full fan, the dark glossy body with its bronze edges, the
+  dropped wing, the bare red-and-blue head with wattle, snood and beard. He
+  walks along the bottom of the screen with a real walk cycle (16 frames;
+  his feet plant and stay put) and stops to feed with his fan up (5 poses).
+* His poults follow him, redrawn from a public-domain photograph, walking
+  and feeding with him.
+* Both are pre-drawn after the page loads, in a background worker (or, in
+  browsers without OffscreenCanvas, in idle time a pose at a time), so a
+  crossing is one image draw a frame. None of it runs during a scroll;
+  until his poses are ready he waits just off the edge of the screen.
+* The pie sits in a foil tin with no steam (the smoke effect is off).
+* The bald cypress is bolder (Rob's B). No squash anywhere: the flat gourd is
+  gone and the cornucopia's spill is filled with the other produce.
+* Leaves rock as they fall; heavy pieces drop and tumble.
+* The cornucopia corner accent is at 0.85 opacity.
+* The Theme guide shows the drawn tom.
+* A staging check link: dcc_key (shown on the settings page) with
+  dcc_season and dcc_scene=now plays the season's scene at once, in a
+  browser that is not logged in. Without the key it is ignored; a page
+  opened with it is never cached.
 
 = 4.13.1 =
 Thanksgiving, as Rob picked it: the falling pieces redrawn from photographs,

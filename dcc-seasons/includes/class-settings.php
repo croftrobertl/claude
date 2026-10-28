@@ -1050,6 +1050,13 @@ class Settings {
                 </table>
                 </div>
 
+                <?php $dcc_ck = Plugin::check_key(true); ?>
+                <h2><?php esc_html_e('Check link', 'dcc-seasons'); ?></h2>
+                <p class="description">
+                    <?php esc_html_e('For checking on staging in a browser that is not logged in: add dcc_key and this key to a front-end URL to preview a theme with dcc_season, and add dcc_scene=now to play the season\'s scene about a second after the effects start, and again shortly after each one ends. Without the key both are ignored. A page opened with the key is never cached.', 'dcc-seasons'); ?>
+                </p>
+                <p><code><?php echo esc_html(add_query_arg(['dcc_season' => 'thanksgiving', 'dcc_scene' => 'now', 'dcc_key' => $dcc_ck], home_url('/'))); ?></code></p>
+
                 <?php submit_button(); ?>
             </form>
         </div>

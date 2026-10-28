@@ -56,6 +56,8 @@ function current_user_can($c) { return true; }
 function current_time($f) { return $f === 'Y' ? (getenv('DCC_YEAR') ?: date('Y')) : date($f); }
 function date_i18n($f, $ts = null) { return date($f, $ts ?? time()); }
 function home_url($p = '') { return 'https://doracanalcourt.com' . $p; }
+/* the settings page creates the check key (4.13.2); fixed here so renders compare */
+function wp_generate_password($n = 12, $s = true, $x = false) { return substr('k3yForTheRenderOnly0123456789', 0, $n); }
 function admin_url($p = '') { return 'https://doracanalcourt.com/wp-admin/' . $p; }
 function add_query_arg($k, $v = null, $u = null) {
     if (is_array($k)) { $u = $v; $q = $k; } else { $q = [$k => $v]; }
