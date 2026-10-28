@@ -863,6 +863,28 @@ live before Sunday 1 Nov; a slipped date is reported THE SAME DAY.
   Anniversary, come first. The 4.13.2 build carries a split size/effort
   estimate.
 
+**Rob on the round-3 sheet (for 4.13.2, 2026-10-28).** The tom is approved
+after fixes; Erica's instinct was a simple cartoon tom, Rob keeps realism.
+- **No kaleidoscope**: no rachis spokes in the fan; separate broad rounded
+  tail feathers that vary a little in width, angle and tip, barring across
+  each feather along its own curve, then the black band and the
+  chestnut-buff tip; coverts in LOOSE overlapping rows, never perfect rings.
+  The body: fewer, larger shingled feathers in rows flowing neck to tail,
+  dark centre with a bronze/copper edge, one light direction, iridescence as
+  a soft sheen across a row, never scattered specks. Rows must line up with
+  the photo's rows at 50%. The dropped wing is approved as drawn.
+- **The feeding neck unfolds the strut S** from under the head (never a tube
+  out of the chest: "like ET or a horse penis"), thickness and colour
+  continuous (bronze feathered base thinning into bare skin), head upright,
+  bill down, wattle and snood hanging with gravity; traced from real PD
+  reference. Fan stays up.
+- Poults redrawn to the tom's standard; walk cycle stays.
+- **Pie: a pan.** Foil/metal tin side wall below the crust, sloping to the
+  base, soft shadow, the photo's angle.
+- **Cypress: B** (bolder). **Crookneck: dropped by Rob** (not "later").
+- **He walks along the bottom of the screen**, over page text on a phone
+  while scrolling: Rob saw it and chose it.
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,
