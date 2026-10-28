@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.5
+Stable tag: 0.2.6
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,9 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.6 =
+* The .htaccess order check matches its two markers as whole lines. On live, "# BEGIN speedycache" was matched as the prefix of SpeedyCache's "# BEGIN SpeedyCacheheaders" block, far above the DCC Pre-gzipped Cache block, so Revelin raised "The Pre-gzipped Cache Block Is Below SpeedyCache" every tick while the order was right (live serves X-SpeedyCache-Source: Server-pregz). SpeedyCache's Gzip, LBC and WEBP blocks are not the rewrite block either. Case, trailing spaces and CRLF line ends are allowed.
 
 = 0.2.5 =
 * A path the file walk no longer looks at is never reported missing. 0.2.4 handed wp-config.php, the root index.php, .user.ini, php.ini and the drop-ins to their per-tick owners, but the walk's stored baseline still listed them, so the first pass after the upgrade called them gone (wp-config.php as a breach). Such paths now leave the baseline quietly, with one info line, both at the upgrade and at the end of any pass, so a future change of owner cannot do this again.

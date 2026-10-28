@@ -1,4 +1,12 @@
-# Ragusa 0.2.5 — Staging Checklist
+# Ragusa 0.2.6 — Staging Checklist
+
+> **Upgrading LIVE from 0.2.5:** `wp plugin install "Ragusa 0.2.6.zip"
+> --force`, then `wp ragusa tick` and `wp ragusa findings`. Expect the open
+> "The Pre-gzipped Cache Block Is Below SpeedyCache" to read Resolved on
+> that tick and not come back on the next. To see the rule itself:
+> `wp eval 'echo DCCR\Htaccess::order_problem(file_get_contents(ABSPATH . ".htaccess")) === "" ? "in order\n" : "PROBLEM\n";'`
+> prints "in order". Staging has no speedycache block and is unaffected.
+> Rollback: `wp plugin install "Ragusa 0.2.5.zip" --force`, or deactivate.
 
 > **Upgrading the 0.2.4 install on staging:** `wp plugin install
 > "Ragusa 0.2.5.zip" --force`, then `wp ragusa scan`. Expect no File

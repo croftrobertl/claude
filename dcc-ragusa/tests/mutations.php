@@ -244,7 +244,7 @@ $mutations = [
     [
         'name' => '0.1.5: an .htaccess with neither block (staging) raises a finding',
         'file' => 'includes/class-htaccess.php',
-        'from' => "        if (\$speedy === false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
+        'from' => "        if (\$speedy === null) {\n            return self::ORDER_NO_SPEEDY;\n        }",
         'to'   => "        if (false) {\n            return self::ORDER_NO_SPEEDY;\n        }",
     ],
     [
@@ -552,6 +552,12 @@ $mutations = [
         'file' => 'includes/fortresses/class-minceta.php',
         'from' => "        Events::record(Fortress::MINCETA, Events::INFO, 'self-written', \$rel, sprintf(",
         'to'   => "        if (false) Events::record(Fortress::MINCETA, Events::INFO, 'self-written', \$rel, sprintf(",
+    ],
+    [
+        'name' => '0.2.6: the SpeedyCache marker is matched as a prefix again (live\'s false "Below SpeedyCache")',
+        'file' => 'includes/class-htaccess.php',
+        'from' => "        \$speedy = self::marker_offset(\$content, self::SPEEDY_BEGIN, true);\n        if (\$speedy === null) {",
+        'to'   => "        \$speedy = stripos(\$content, self::SPEEDY_BEGIN);\n        \$speedy = \$speedy === false ? null : \$speedy;\n        if (\$speedy === null) {",
     ],
 ];
 

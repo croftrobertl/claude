@@ -9,6 +9,18 @@ final class Test_Site
 {
     /** The two .htaccess blocks whose order matters: pre-gzipped above SpeedyCache, whose rule ends in [L]. */
     public const PREGZ_BLOCK  = "# BEGIN DCC Pre-gzipped Cache\nRewriteEngine On\nRewriteCond %{HTTP:Accept-Encoding} gzip\nRewriteCond %{REQUEST_FILENAME}.gz -f\nRewriteRule ^(.*)$ $1.gz [L]\n# END DCC Pre-gzipped Cache\n";
+    /**
+     * Live's .htaccess as the Director read it on Oct 28: SpeedyCache's headers
+     * block (line 46) well above the DCC Pre-gzipped Cache block (143), which
+     * sits above the speedycache rewrite block (178). Where the Gzip, LBC and
+     * WEBP blocks stand was not given; they are placed above the DCC block,
+     * the case a prefix match would get wrong.
+     */
+    public const LIVE_SPEEDY_SEQUENCE = "# BEGIN SpeedyCacheheaders\n<IfModule mod_headers.c>\nHeader set X-SpeedyCache-Source \"Server\"\n</IfModule>\n# END SpeedyCacheheaders\n\n"
+        . "# BEGIN Gzipspeedycache\n<IfModule mod_deflate.c>\nAddOutputFilterByType DEFLATE text/html\n</IfModule>\n# END Gzipspeedycache\n\n"
+        . "# BEGIN LBCspeedycache\n<IfModule mod_expires.c>\nExpiresActive on\n</IfModule>\n# END LBCspeedycache\n\n"
+        . "# BEGIN WEBPspeedycache\n<IfModule mod_rewrite.c>\nRewriteEngine On\n</IfModule>\n# END WEBPspeedycache\n\n";
+
     public const SPEEDY_BLOCK = "# BEGIN speedycache\nRewriteEngine On\nRewriteRule ^(.*)$ wp-content/cache/speedycache/$1 [L]\n# END speedycache\n";
 
     public static function reset(): void

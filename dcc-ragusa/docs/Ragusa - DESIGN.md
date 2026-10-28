@@ -1314,3 +1314,16 @@ leaves the baseline quietly, at the upgrade and at every pass end, so no
 future change of owner can repeat it. A plain-text change to llms.txt now
 always leaves a line in Recent Events.
 
+**0.2.6 (live, 2026-10-28).** 0.2.5 went live on Oct 28. Its first ticks
+there raised "The Pre-gzipped Cache Block Is Below SpeedyCache" every tick:
+the order check found "# BEGIN speedycache" as the prefix of SpeedyCache's
+"# BEGIN SpeedyCacheheaders" block at line 46, above the DCC block at 143,
+while the real rewrite block stands at 178 and live serves Server-pregz.
+Both markers are now matched as whole lines, and the test fixture carries
+live's block sequence. Live's cron knock runs every 19 minutes, not 10.
+Nothing in Ragusa is timed to 10 minutes. The probe re-asks after at least
+10 minutes, and a check's repeat is due after 5. With 19-minute ticks both
+simply run at the next tick. The rollback window is an hour from the update.
+Zelenci rings after 3 hours of silence. The healthchecks Grace is an hour.
+All hold, and live also runs WP-Cron from visitor traffic.
+

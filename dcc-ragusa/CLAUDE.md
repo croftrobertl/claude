@@ -111,7 +111,10 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   never rewrites that block. Only the DCC Security block is ever rewritten.
   No speedycache block (staging has none) is `ORDER_NO_SPEEDY`: nothing to
   order, one info line, never a finding. A finding that can never clear
-  teaches Rob to ignore the page.
+  teaches Rob to ignore the page. Markers are matched as WHOLE lines
+  (`Htaccess::marker_offset()`): SpeedyCache also writes
+  `# BEGIN SpeedyCacheheaders`, `Gzipspeedycache`, `LBCspeedycache` and
+  `WEBPspeedycache` blocks, and a prefix match took the first (0.2.6).
 - **The booking-cache check is read-only.** `Speedycache::dead_booking_rules()`
   flags only `type: page` rules naming one of `Speedycache::BOOKING_PAGES`
   whose text carries a slash (SpeedyCache compares against
@@ -211,7 +214,10 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
   `WP_CONTENT_DIR/debug.log`; rotated by rename then truncation.
 - The eight benign stubs under uploads: `Minceta::STUB_ALLOWLIST` (path and size).
 - Vendor mu-plugins that change as info: `Minceta::MU_VENDOR`.
-- Healthchecks: Period 1 hour, Grace 1 hour (the cPanel knock runs every 10 minutes).
+- Healthchecks: Period 1 hour, Grace 1 hour. The cPanel knock on live is
+  `*/19 * * * *` (ticks at :00, :19, :38, :57; its comment says 10 minutes),
+  and live runs WP-Cron too, so visitor traffic also spawns the tick. Nothing
+  in Ragusa assumes 10 minutes; see the 0.2.6 design note.
 - Wordfence v3 scanner feed, Bearer key, once a day at 03:40 ET.
 - PHP flaw of 2026-10-21 (CVE-2026-109618/109619, unauthenticated RCE,
   fixed only by updating PHP): live's web SAPI is LiteSpeed lsphp 8.3.36;
@@ -231,7 +237,7 @@ Director's corrections of 2026-10-21. Read it before changing behaviour.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 89 deliberate breakages, each must be caught
+    php tests/mutations.php            # 90 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -249,6 +255,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.5.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.6.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

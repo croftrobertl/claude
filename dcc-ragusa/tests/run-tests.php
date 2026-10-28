@@ -2988,6 +2988,33 @@ suite('0.2.5 item 2: every plain-text change to llms.txt leaves a line in Recent
     Revelin::seal('llms.txt');
 });
 
+
+suite('0.2.6: the SpeedyCache marker is matched as a whole line; live\'s real block sequence is in order', function () {
+    $live = Test_Site::LIVE_SPEEDY_SEQUENCE . Test_Site::PREGZ_BLOCK . "\n" . Test_Site::SPEEDY_BLOCK;
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem($live), 'live\'s sequence (SpeedyCacheheaders far above, then DCC, then speedycache) is in order');
+    eq(Htaccess::ORDER_NO_SPEEDY, Htaccess::order_problem(Test_Site::LIVE_SPEEDY_SEQUENCE . Test_Site::PREGZ_BLOCK), 'SpeedyCache\'s other blocks alone are not the rewrite block');
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n" . Test_Site::SPEEDY_BLOCK . "\n" . Test_Site::LIVE_SPEEDY_SEQUENCE), 'the other blocks may also come after');
+    eq(Htaccess::ORDER_WRONG, Htaccess::order_problem(Test_Site::LIVE_SPEEDY_SEQUENCE . Test_Site::SPEEDY_BLOCK . "\n" . Test_Site::PREGZ_BLOCK), 'a real wrong order is still caught with them present');
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem(str_replace("\n", "\r\n", $live)), 'CRLF line ends');
+    eq(Htaccess::ORDER_OK, Htaccess::order_problem(Test_Site::PREGZ_BLOCK . "\n# BEGIN SPEEDYCACHE  \nx\n# END SPEEDYCACHE\n"), 'any case, trailing spaces');
+    ok(Htaccess::marker_offset("x\n# BEGIN speedycacheX\n", Htaccess::SPEEDY_BEGIN, true) === null, 'a longer marker is not the marker');
+    eq(Htaccess::ORDER_PREGZ_MISSING, Htaccess::order_problem("# BEGIN DCC Pre-gzipped Cache v2\n" . Test_Site::SPEEDY_BLOCK), 'the DCC marker is a whole line too');
+
+    // On the site: live's file raises nothing, tick after tick.
+    $path = Htaccess::path();
+    $orig = (string) file_get_contents($path);
+    $sec  = (string) Htaccess::extract_block($orig);
+    file_put_contents($path, $sec . "\n\n" . $live);
+    $fp = Events::fingerprint(Fortress::REVELIN, 'htaccess-order', '.htaccess');
+    tick();
+    tick();
+    $a = Alerts::get($fp);
+    ok($a === null || Alerts::state($a) !== 'open', 'no "Below SpeedyCache" finding on live\'s file');
+    file_put_contents($path, $orig);
+    tick();
+    Revelin::seal('.htaccess');
+});
+
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);
 exit($GLOBALS['t_fail'] === 0 ? 0 : 1);

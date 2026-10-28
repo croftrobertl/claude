@@ -50,15 +50,28 @@ final class Htaccess
      */
     public static function order_problem(string $content): string
     {
-        $speedy = stripos($content, self::SPEEDY_BEGIN);
-        if ($speedy === false) {
+        $speedy = self::marker_offset($content, self::SPEEDY_BEGIN, true);
+        if ($speedy === null) {
             return self::ORDER_NO_SPEEDY;
         }
-        $pregz = strpos($content, self::PREGZ_BEGIN);
-        if ($pregz === false) {
+        $pregz = self::marker_offset($content, self::PREGZ_BEGIN, false);
+        if ($pregz === null) {
             return self::ORDER_PREGZ_MISSING;
         }
         return $pregz < $speedy ? self::ORDER_OK : self::ORDER_WRONG;
+    }
+
+    /**
+     * Where a marker stands as a WHOLE line (trailing spaces and a CR
+     * allowed), or null. SpeedyCache writes "# BEGIN SpeedyCacheheaders",
+     * "# BEGIN Gzipspeedycache", "# BEGIN LBCspeedycache" and
+     * "# BEGIN WEBPspeedycache" besides "# BEGIN speedycache"; a prefix
+     * match took the first of those for the rewrite block (live, Oct 28).
+     */
+    public static function marker_offset(string $content, string $marker, bool $any_case): ?int
+    {
+        $re = '/^' . preg_quote($marker, '/') . '[ \t]*\r?$/m' . ($any_case ? 'i' : '');
+        return preg_match($re, $content, $m, PREG_OFFSET_CAPTURE) === 1 ? (int) $m[0][1] : null;
     }
 
     /** Replace only the marked block; everything else byte for byte. Missing markers: the block goes at line 1. */
