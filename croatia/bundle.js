@@ -1807,7 +1807,7 @@
   // only spots on the Dubrovnik coast (not flights or the drive between two places)
   // ---- the trip on the History map: Layers › "Your photos & videos" puts a dot on every place with
   //      photos, videos or clips; tapping one says what was taken there and opens it (the History
-  //      tab's counterpart to the Map tab's "Old borders (Then)") ----
+  //      tab's counterpart to the Map tab's "Old Borders") ----
   let histPinData = null;
   function histPinPlaces() {
     if (histPinData || !DATA) return histPinData || [];
@@ -2391,12 +2391,12 @@
         '<div class="dcc-tour-facet dcc-tour-mm-layers" data-facet="layers">' +
           '<button type="button" class="facet-btn" aria-expanded="false">Layers<span class="facet-caret" aria-hidden="true">▾</span></button>' +
           '<div class="facet-panel" hidden><div class="facet-list">' +
-            layerOpt('mm-path', 'Path', false) +
+            layerOpt('mm-path', 'Path', true) +
             layerOpt('mm-facing', 'Facing', true) +
             layerOpt('mm-labels', 'Place labels', true) +
-            layerOpt('mm-heat', 'Heatmap', false) +
+            layerOpt('mm-heat', 'Heatmap', true) +
             layerOpt('mm-sat', 'Satellite', true) +
-            layerOpt('mm-then', 'Old borders (Then)', false) +
+            layerOpt('mm-then', 'Old Borders', true) +
             layerOpt('mm-track', 'GPS track', true, 'mm-track-opt') +
             layerOpt('mm-saved', 'Saved spots', false, 'mm-saved-opt') +
           '</div></div>' +
@@ -2572,6 +2572,13 @@
   }
   function initMapMode() {
     if (!window.L || !L.heatLayer) { ensureLeaflet().then(() => { if (root.dataset.view === 'map') initMapMode(); }); return; }
+    // the heatmap redraws on every map move; while the Map tab is hidden its canvas is 0 wide and the
+    // heatmap library throws, so it waits until the map has a size again (its next moveend redraws it)
+    if (!L.HeatLayer.prototype.dccGuard) {
+      const redraw = L.HeatLayer.prototype._redraw;
+      L.HeatLayer.prototype._redraw = function () { const z = this._map && this._map.getSize(); if (!z || !z.x || !z.y) { this._frame = null; return; } redraw.call(this); };
+      L.HeatLayer.prototype.dccGuard = true;
+    }
     if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); thenApplyWant(); return; }
     mmInit = true;
     mmRange = [0, DATA.day_count - 1];
@@ -2662,7 +2669,9 @@
     renderMapLegend();
     renderMapMode(true);   // whole-trip bounds
     setTimeout(() => mmMap.invalidateSize(), 80);
-    thenApplyWant();
+    // every layer starts on, Old Borders included (a #v=map&then=<era> link picks its era instead)
+    if (thenWant) thenApplyWant();
+    else if (m.querySelector('#mm-then').checked) thenToggle(true, null, false);
   }
   // a #v=map&then=<era> link, or the History tab's "On today's map"
   function thenApplyWant() {
@@ -2671,6 +2680,7 @@
     if (thenOn && thenData && !ll) {
       const i = thenData.frames.findIndex(x => histSlugOf(x.label) === histSlugOf(w));
       if (i >= 0 && i !== thenIdx) thenShow(i);
+      thenBarIntoView();   // Old Borders is on from the start, so a jump here only changes the era
       return;
     }
     setTimeout(() => thenToggle(true, w, ll || true), 120);
@@ -3283,6 +3293,14 @@
     const b = root._mapmode.querySelector('.dcc-then [data-a=play]');
     if (b) { b.innerHTML = PLAY_GLYPH; b.setAttribute('aria-label', 'Play through the eras'); b.title = 'Play through the eras'; b.classList.remove('playing'); }
   }
+  // on a phone the bottom of the map can sit under the fixed tab bar; bring the era bar into view
+  function thenBarIntoView() {
+    requestAnimationFrame(() => {
+      const r = root._mapmode.querySelector('.dcc-tour-mm-wrap').getBoundingClientRect(), tb = document.querySelector('.dcc-tour-tabbar');
+      const limit = innerHeight - (tb && getComputedStyle(tb).display !== 'none' ? tb.offsetHeight : 0);   // it's position: fixed, so no offsetParent
+      if (r.bottom > limit && r.top - (r.bottom - limit) > -r.height / 2) window.scrollBy({ top: r.bottom - limit + 6, behavior: scrollBehavior() });
+    });
+  }
   // turn the overlay on/off; `slug` picks the era (default: the History tab's, else 1453)
   function thenToggle(on, slug, fly) {
     const m = root._mapmode, ui = m.querySelector('.dcc-then'), btn = m.querySelector('.dcc-then-btn'), cb = m.querySelector('#mm-then');
@@ -3300,12 +3318,7 @@
     }
     ui.hidden = false;
     ui.querySelector('.dcc-then-s').textContent = 'Loading the eras…';
-    // on a phone the bottom of the map can sit under the fixed tab bar; bring the era bar into view
-    requestAnimationFrame(() => {
-      const r = m.querySelector('.dcc-tour-mm-wrap').getBoundingClientRect(), tb = document.querySelector('.dcc-tour-tabbar');
-      const limit = innerHeight - (tb && getComputedStyle(tb).display !== 'none' ? tb.offsetHeight : 0);   // it's position: fixed, so no offsetParent
-      if (r.bottom > limit && r.top - (r.bottom - limit) > -r.height / 2) window.scrollBy({ top: r.bottom - limit + 6, behavior: scrollBehavior() });
-    });
+    thenBarIntoView();
     thenLoad().then(() => {
       if (!thenOn) return;
       thenInit();

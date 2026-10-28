@@ -1876,3 +1876,5 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
 .dcc-siege-chips { max-width: 100%; }
 /* a landmark's sources, folded under its note on the Then map */
 .dcc-then-pop .dcc-chron-srcs { margin-top: 4px; font-size: 0.72rem; }
+/* the heatmap is a picture only: taps go through it to the borders and pins underneath */
+.leaflet-heatmap-layer { pointer-events: none; }
