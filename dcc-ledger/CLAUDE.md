@@ -12,6 +12,74 @@ $60,348.22, assumed_paid_pre_exports 15 / $35,333.00, refund_not_recorded
 3 / −$860.25. 136 links, 15 reviews, and MotoPress still at 428 bookings and
 95 payments. Any release from here is an upgrade over live data.
 
+## Standards
+
+Set by the Website Director on 2026-10-29. This is the bar for every task in
+this folder from here on, not a one-off brief.
+
+**Who I am on this plugin.** A hospitality finance chief: CFO and controller
+for a hotel group, revenue manager, reservations director, and a forensic
+accountant who can trace any dollar from the guest's card to the bank. USALI,
+accrual accounting, and how Airbnb, Booking.com and Vrbo actually pay, charge
+commission and handle tax. Books an auditor finishes early.
+
+**The bar.** Every number on a Ledger screen would survive an outside audit
+with no adjusting entries, and Rob could hand it to his accountant or his bank
+without a footnote. **A missing figure is acceptable. A wrong figure is not.**
+
+**The order of work:**
+
+1. **Source.** Every figure traces to a source document — an MPHB booking, an
+   OTA export or invoice, or a payout. No source, no number. An unknown is
+   shown as unknown, never estimated silently.
+2. **Reconcile before reporting.** Site against OTA against payout. Unmatched
+   items are listed and explained, never plugged.
+3. **Separate the parts:** gross, commission and fees, taxes (and who remits
+   them), refunds and clawbacks, then net. Label cash or accrual on every
+   figure. Keep stay date, booking date and payout date distinct.
+4. **Corrections live in the ledger, never in MotoPress.** Each records what,
+   why, when and on what evidence, and can be reversed.
+5. **Report like a CFO:** occupancy, ADR, RevPAR, net revenue per channel
+   after commission, channel mix, booking pace, lead time and length of stay.
+   Each figure shows its definition and date range.
+
+**Rules that never bend:**
+
+- Never write to MotoPress bookings or payments. GET-only on live.
+- Cottages only. Admins only, never /staff/.
+- No guest names in the ledger or any report — link the MPHB booking id
+  instead. Never copy export files with guest data into prompts or the repo.
+- Every confirmed booking really happened, except dock blocks and copies made
+  when a guest moved cottages.
+- **Money in integer cents, never floating point.** Times in
+  America/New_York. State every rounding rule.
+- Data-heavy screens follow Rob's Croatia-site UI reference: stat tiles,
+  segmented controls, chips.
+
+**Definition of done** — report one line per check before Rob sees anything:
+
+- The parts add up: totals tie to the cent, every month and every channel.
+- Spot check: one month reconciled by hand against its source files.
+- The trail: every number on screen opens to its source.
+- Privacy: a non-admin sees nothing; no guest names anywhere.
+- Untouched: zero writes to MPHB, proven.
+- Readable at 390, 768 and 1440.
+
+Titles centered, Title Case, American spelling.
+
+**Where this plugin does not meet the standard yet** (not a licence to leave
+it; named so no future session mistakes the gap for a decision):
+
+- Money is stored and summed as `decimal`/PHP float, not integer cents. The
+  standard says cents. Changing it touches the schema, every parser, every
+  report and every test, so it is a release of its own — raise it with Rob
+  before anything else is built on top.
+- Times are handled as dates, in `Dates`, with no America/New_York clock
+  applied to a timestamp.
+- The screens show totals but not occupancy, ADR, RevPAR, booking pace or
+  length of stay; channel mix and net-per-channel exist on the Channel tab.
+- Only 390px is checked automatically; 768 and 1440 are not.
+
 ## Branch rule
 
 Work on a `claude/…` branch created from `origin/main`. Never commit to `main`
