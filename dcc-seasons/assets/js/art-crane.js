@@ -670,10 +670,16 @@
 		function store(j, m) { cache[key(j)] = m; bytes += m.c.width * m.c.height * 4; }
 		function finish() {
 			later(function () {
+				/* one throwaway draw of each canvas, so no first drawImage lands in
+				 * the scene's first frame (as the Christmas sleigh's, 4.14.0: it
+				 * measured 9-10 ms on that frame at 4x CPU before) */
+				var wc = W.document.createElement('canvas'); wc.width = wc.height = 2;
+				var wg = wc.getContext('2d');
 				for (var q in cache) {
 					var m = cache[q], c = m.c;
 					if (c.close) { c = W.document.createElement('canvas'); c.width = m.c.width; c.height = m.c.height; c.getContext('2d').drawImage(m.c, 0, 0); m.c.close(); m.c = c; }
 					c.getContext('2d').getImageData(0, 0, 1, 1);   /* rasterised now, not in its first frame */
+					if (wg) { wg.drawImage(c, 0, 0, 1, 1); }
 				}
 				st.done = true; st.ms = ms; st.bytes = bytes;
 				if (done) { done(st); }
