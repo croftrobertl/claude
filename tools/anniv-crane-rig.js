@@ -139,7 +139,59 @@ const RIG = { stand: build('stand'), call: build('call'), leap: build('leap') };
  * coverts, as a share along the wing (0 shoulder, 1 wrist) and strength */
 RIG.stand.wRust = [0.55, 0.3]; RIG.call.wRust = [0.5, 0.35]; RIG.leap.wRust = [0.45, 0.4];
 
-module.exports = { RIG, SEG, WING, WINGB, resample };
+/* ONE body scale through the dance (4.13.5 fix 2). Each pose was normalized
+ * by its photograph's bird height, legs included, so the trunk came out
+ * 0.85x the standing bird's in the call and 1.32x in the leap, and the head
+ * with it (crown and cheek agree within each pose). The dance's poses are
+ * the traced ones resized about the hips so the trunk (back + tail + rump +
+ * breast outline, by area) equals the standing bird's: body, neck, head and
+ * wings move together; the legs below the belly feathers (ankle, foot,
+ * toes) keep their traced points, so only the legs and wings extend.
+ * RIG0 keeps the poses as traced, for anything drawn over a photograph. */
+const RIG0 = JSON.parse(JSON.stringify(RIG));
+function trunk(U) { const P = [].concat(U.seg.back, U.seg.tail, U.seg.legs, U.seg.breast); let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.sqrt(Math.abs(a) / 2); }
+function resize(U, s) {
+  const h0 = U.legN.p[0], h1 = U.legF.p[0], c = [(h0[0] + h1[0]) / 2, (h0[1] + h1[1]) / 2];
+  const sp = q => { q[0] = c[0] + (q[0] - c[0]) * s; q[1] = c[1] + (q[1] - c[1]) * s; };
+  const all = P => P.forEach(sp);
+  Object.values(U.seg).forEach(all);
+  ['billU', 'billL', 'crown', 'cheek', 'plB', 'plT'].forEach(k => all(U[k]));
+  ['wa', 'wb'].forEach(w => ['lead', 'base', 'tips', 'inner'].forEach(k => all(U[w][k])));
+  sp(U.eye); U.eye[2] *= s;
+  U.rust.forEach(r => { sp(r); r[2] *= s; });
+  /* the hip and the end of the belly feathers go with the body */
+  ['legN', 'legF'].forEach(l => { sp(U[l].p[0]); sp(U[l].p[1]); });
+  U.s = s;
+}
+/* the trunk's length along its own long axis (breast to rump) */
+function tlen(U) {
+  const P = [].concat(U.seg.back, U.seg.tail, U.seg.legs, U.seg.breast), n = P.length, m = [0, 0];
+  P.forEach(p => { m[0] += p[0] / n; m[1] += p[1] / n; });
+  let a = 0, b = 0, c = 0; P.forEach(p => { const x = p[0] - m[0], y = p[1] - m[1]; a += x * x; b += x * y; c += y * y; });
+  const th = 0.5 * Math.atan2(2 * b, a - c), u = [Math.cos(th), Math.sin(th)];
+  let lo = 1e9, hi = -1e9; P.forEach(p => { const v = p[0] * u[0] + p[1] * u[1]; lo = Math.min(lo, v); hi = Math.max(hi, v); });
+  return hi - lo;
+}
+/* the bill: the leap's is open and was traced 43% longer than the standing
+ * bird's; a crane's bill does not grow, so each mandible is set to the
+ * standing bird's length, about its base (its point furthest from the tip) */
+function blen(B) { let m = 0; B.forEach(p => { m = Math.max(m, Math.hypot(p[0] - B[0][0], p[1] - B[0][1])); }); return m; }
+function billTo(U, S) {
+  [['billU', S.billU], ['billL', S.billL]].forEach(([k, ref]) => {
+    const B = U[k]; let bi = 0, m = 0; B.forEach((p, i) => { const d = Math.hypot(p[0] - B[0][0], p[1] - B[0][1]); if (d > m) { m = d; bi = i; } });
+    const c = B[bi].slice(), f = blen(ref) / blen(B), sp = q => { q[0] = c[0] + (q[0] - c[0]) * f; q[1] = c[1] + (q[1] - c[1]) * f; };
+    B.forEach(sp);
+    /* the outline's bill stretch follows the upper mandible */
+    if (k === 'billU') { U.seg.bill.forEach(sp); }
+  });
+}
+/* the size: matched on the trunk's area AND its length (their geometric
+ * mean), so neither is off by more than a few percent */
+const A0 = trunk(RIG.stand), L0 = tlen(RIG.stand);
+['call', 'leap'].forEach(k => { resize(RIG[k], Math.sqrt((A0 / trunk(RIG[k])) * (L0 / tlen(RIG[k])))); billTo(RIG[k], RIG.stand); });
+RIG.stand.s = 1;
+
+module.exports = { RIG, RIG0, SEG, WING, WINGB, resample };
 if (require.main === module) {
   const out = path.join(__dirname, 'data', 'anniv-crane-rig.json');
   const r = v => (Array.isArray(v) ? v.map(r) : (typeof v === 'number' ? Math.round(v * 1e4) / 1e4 : (v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([a, b]) => [a, r(b)])) : v)));

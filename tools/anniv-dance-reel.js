@@ -4,7 +4,8 @@
  * page (tests/real-theme), Rob's row 10 A placement (under the tagline,
  * centered, 8 px clear of the keep-clear set over the WHOLE dance, leaps
  * included). Every body frame is pre-drawn once, the way the engine will:
- * at guest size × DPR, both facings, then one drawImage per bird per frame
+ * at guest size × min(DPR, 2) (the Director, 2026-10-29: as the heron, the
+ * witch and the reindeer), both facings, then one drawImage per bird per frame
  * plus the live legs and shadow. Writes a frame strip, an MP4 (30 fps), and
  * the pre-draw time and bitmap memory.
  *
@@ -90,7 +91,7 @@ function sep(a, b) { return Math.max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1]
     if (clear >= M && boxes.every(b => b[0] >= 0 && b[2] <= pic[2] && b[1] >= 0)) { break; }
   }
   /* pre-draw both facings and keep them on the page */
-  const cost = await pg.evaluate(([H, dpr]) => { const a = window.preDraw(H, dpr, 1), b = window.preDraw(H, dpr, -1); window.PD = [a, b]; return { n: a.n, ms: +(a.ms + b.ms).toFixed(1), mem: a.mem + b.mem }; }, [H, DPR]);
+  const cost = await pg.evaluate(([H, dpr]) => { const a = window.preDraw(H, dpr, 1), b = window.preDraw(H, dpr, -1); window.PD = [a, b]; return { n: a.n, ms: +(a.ms + b.ms).toFixed(1), mem: a.mem + b.mem }; }, [H, Math.min(DPR, 2)]);
   console.log(W, 'H', H, 'clear', Math.round(clear), who, 'frames', cost.n, 'x2 facings, pre-draw', cost.ms, 'ms, memory', (cost.mem / 1048576).toFixed(2), 'MB');
   await pg.evaluate(([pic]) => {
     const host = document.querySelector('#header-image-main-inside'), c = document.createElement('canvas'); c.id = 'dclab';

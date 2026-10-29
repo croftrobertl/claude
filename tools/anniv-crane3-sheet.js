@@ -23,7 +23,7 @@ const path = require('path');
 const { open } = require('./harness');
 const rt = require('./real-theme');
 const { DC3_SRC } = require('./anniv-crane3');
-const { RIG } = require('./anniv-crane-rig');
+const { RIG, RIG0 } = require('./anniv-crane-rig');
 
 const T = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'anniv-crane-trace.json'), 'utf8'));
 const REF = process.env.DCC_REFS || '/tmp/claude-0/-home-user-claude/3d01797e-7fb8-52f8-926f-a10d1a703217/scratchpad/aref';
@@ -41,9 +41,9 @@ const dance = JSON.parse(fs.readFileSync(path.join(B, '.anniv-dance-390.json'), 
 const keys = { 390: JSON.parse(fs.readFileSync(path.join(B, '.anniv-keys-390.json'), 'utf8')), 1440: JSON.parse(fs.readFileSync(path.join(B, '.anniv-keys-1440.json'), 'utf8')) };
 
 const LIB = `${DC3_SRC}
-window.RIG = ${JSON.stringify(RIG)}; window.TR = ${JSON.stringify(Object.fromEntries(POSES.map(k => [k, T[k]])))}; window.L0 = [0.3, -0.954];
+window.RIG = ${JSON.stringify(RIG)}; window.RIG0 = ${JSON.stringify(RIG0)}; window.TR = ${JSON.stringify(Object.fromEntries(POSES.map(k => [k, T[k]])))}; window.L0 = [0.3, -0.954];
 /* a key pose in its photograph's pixels */
-window.inPhoto = function (g, k, legs) { var R = TR[k].ref; g.save(); g.translate(R.ground[0], R.ground[1]); g.scale(R.H * R.face, R.H); var U = RIG[k]; if (legs === 0) { U = Object.assign({}, U, { noLegs: 1 }); } dc3Paint(g, U, L0[0] * R.face, L0[1]); g.restore(); };
+window.inPhoto = function (g, k, legs) { var R = TR[k].ref; g.save(); g.translate(R.ground[0], R.ground[1]); g.scale(R.H * R.face, R.H); var U = RIG0[k]; if (legs === 0) { U = Object.assign({}, U, { noLegs: 1 }); } dc3Paint(g, U, L0[0] * R.face, L0[1]); g.restore(); };
 /* a key pose on screen: feet at (x, y), H px, facing f */
 window.drawPose = function (g, k, x, y, H, f) { g.save(); g.translate(x, y); g.scale(H * f, H); dc3Paint(g, RIG[k], L0[0] * f, L0[1]); g.restore(); };
 window.poseBox = function (k) {

@@ -27,7 +27,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DC3_SRC = String.raw`
-var C3 = { base: '#93969A', shade: 'rgba(52,60,76,', lit: 'rgba(214,215,212,', rim: 'rgba(226,230,232,', ao: 'rgba(36,42,54,',
+var C3 = { base: '#6E7175', shade: 'rgba(52,60,76,', lit: 'rgba(214,215,212,', rim: 'rgba(226,230,232,', ao: 'rgba(36,42,54,',
 	cov: '#958E87', cov2: '#7C756E', fl: '#5E5550', fl2: '#463F3B', tip: '#2A2523', leg: '#3E4045', leg2: '#313338',
 	rust: [168, 108, 62], crown2: '#7E1C25', eye: '#C9681E' };
 function c3L(a, b) { var dx = b[0] - a[0], dy = b[1] - a[1]; return Math.sqrt(dx * dx + dy * dy); }
@@ -168,40 +168,53 @@ function c3Wing(g, U, W, lx, ly, far, Obody) {
 	 * A small solid ground under the first rows only, so nothing reads as a
 	 * see-through fan. Rows are drawn from the back row forward, so each
 	 * row lies over the one behind it. */
-	var Bs = base.slice().reverse(), RW = 5, FR = [0.1, 0.3, 0.5, 0.7, 0.9];
+	var Bs = base.slice().reverse(), RW = 6, FR = [0.06, 0.22, 0.38, 0.54, 0.7, 0.84];
 	function rowAt(f) { var row = []; for (var q = 0; q <= 10; q++) { var a1 = c3At(lead, q / 10), b1 = c3At(Bs, q / 10); row.push([a1[0] + (b1[0] - a1[0]) * f, a1[1] + (b1[1] - a1[1]) * f]); } return row; }
 	var g0 = lead.concat(rowAt(0.32).reverse());
 	g.fillStyle = far ? '#A5A29E' : '#8E8781'; g.beginPath(); c3Path(g, g0); g.fill();
+	/* nothing pokes out past the leading edge */
+	g.save(); g.beginPath(); c3Path(g, lead.concat(rowAt(1.4).reverse())); g.clip();
 	for (var r = RW - 1; r >= 0; r--) {
 		var row = rowAt(FR[r]), k, rl = 0; for (k = 1; k <= 10; k++) { rl += c3L(row[k - 1], row[k]); }
-		var sz = (0.026 + r * 0.01) * (far ? 0.9 : 1), cnt = Math.max(3, Math.round(rl / (sz * 0.85)));
+		/* each row's feathers longer than the row in front (the lesser
+		 * coverts small at the edge, the greater coverts long over the flight
+		 * feathers), each about 2.3 times as long as it is wide */
+		var sz = (0.022 + r * 0.011) * (far ? 0.9 : 1), cnt = Math.max(3, Math.round(rl / (sz * 0.78)));
 		for (k = 0; k < cnt; k++) {
-			var u = (k + 0.5 + (r % 2) * 0.5) / (cnt + 0.5), p0 = c3At(row, u), ref = c3At(Bs, u), ld = c3At(lead, u);
-			var ang = Math.atan2(ref[1] - ld[1], ref[0] - ld[0]), j = r * 37 + k;
-			/* lighter and grayer near the leading edge, browner and darker
-			 * toward the flight feathers, as the photographs show */
-			var tone = far ? c3Mixc([176, 173, 170], [150, 146, 142], r / (RW - 1)) : c3Mixc([152, 147, 142], [112, 103, 96], r / (RW - 1));
-			var ru = far ? 0 : c3WR(U, u, j) * (0.4 + r * 0.25);
-			(function (sz, tone, ru) {
+			var j = r * 37 + k, u = Math.min(0.98, Math.max(0.02, (k + 0.5 + (r % 2) * 0.5 + (c3H(j + 1) - 0.5) * 0.35) / (cnt + 0.5)));
+			var p0 = c3At(row, u), ref = c3At(Bs, u), ld = c3At(lead, u);
+			var ang = Math.atan2(ref[1] - ld[1], ref[0] - ld[0]) + (c3H(j + 2) - 0.5) * 0.22, fs = sz * (0.85 + 0.3 * c3H(j + 3));
+			/* gray-brown, darker and browner toward the flight feathers, as in
+			 * the photographs; each feather a little different */
+			/* the lesser coverts along the leading edge are the pale band the
+			 * photographs show; behind them gray-brown, darker toward the
+			 * flight feathers */
+			var tone = far ? c3Mixc([160, 156, 152], [130, 124, 120], r / (RW - 1)) : (r === 0 ? [176, 170, 164] : c3Mixc([132, 125, 119], [92, 82, 76], (r - 1) / (RW - 2)));
+			tone = c3Mixc(tone, [70, 66, 66], (c3H(j + 4) - 0.5) * 0.16);
+			var ru = far ? 0 : Math.min(0.85, c3WR(U, u, j) * (0.55 + r * 0.3));
+			(function (sz, tone, ru, ang, p0) {
+				var Lf = sz * 2.7, Wf = sz * 0.46, x0 = -Lf * 0.3, x1 = Lf * 0.7;
 				g.save(); g.translate(p0[0], p0[1]); g.rotate(ang);
-				function shp() { g.moveTo(-sz * 0.9, -sz * 0.52); g.quadraticCurveTo(sz * 0.9, -sz * 0.62, sz * 0.88, 0); g.quadraticCurveTo(sz * 0.9, sz * 0.62, -sz * 0.9, sz * 0.52); g.closePath(); }
-				/* its own soft shadow on what it lies over */
-				g.save(); c3Sh(g, C3.ao + '.45)', sz * 0.3, sz * 0.16, 0); g.fillStyle = c3Rgba(tone, 1); g.beginPath(); shp(); g.fill(); g.restore();
-				/* shade along the feather toward its tip; rust staining from
-				 * its tip edge, fading back along it */
-				var fg = g.createLinearGradient(-sz * 0.9, 0, sz * 0.9, 0);
-				fg.addColorStop(0, c3Rgba(c3Mixc(tone, [210, 206, 200], 0.18), 1)); fg.addColorStop(0.6, c3Rgba(tone, 1));
-				fg.addColorStop(1, c3Rgba(c3Mixc(tone, C3.rust, Math.min(0.75, ru)), 1));
+				/* the blade: straight-sided, a rounded point at the tip */
+				function shp() { g.moveTo(x0, -Wf * 0.8); g.lineTo(x1 - Wf * 0.9, -Wf); g.quadraticCurveTo(x1 + Wf * 0.15, -Wf * 0.7, x1, 0); g.quadraticCurveTo(x1 + Wf * 0.15, Wf * 0.7, x1 - Wf * 0.9, Wf); g.lineTo(x0, Wf * 0.8); g.closePath(); }
+				/* its own shadow on the feathers it lies over (occlusion) */
+				g.save(); c3Sh(g, C3.ao + '.5)', sz * 0.35, sz * 0.12, sz * 0.05); g.fillStyle = c3Rgba(tone, 1); g.beginPath(); shp(); g.fill(); g.restore();
+				/* lit toward its base, shaded toward the tip; rust staining from
+				 * the tip, fading back along the feather */
+				var fg = g.createLinearGradient(x0, 0, x1, 0);
+				fg.addColorStop(0, c3Rgba(c3Mixc(tone, [196, 192, 186], 0.22), 1)); fg.addColorStop(0.55, c3Rgba(tone, 1));
+				fg.addColorStop(1, c3Rgba(c3Mixc(c3Mixc(tone, [60, 54, 52], 0.18), C3.rust, ru), 1));
 				g.fillStyle = fg; g.beginPath(); shp(); g.fill();
-				/* the fringe: pale on the lit side */
-				g.strokeStyle = far ? 'rgba(220,218,214,.35)' : 'rgba(208,202,194,.38)'; g.lineWidth = sz * 0.07;
-				g.beginPath(); g.moveTo(sz * 0.2, -sz * 0.5); g.quadraticCurveTo(sz * 0.88, -sz * 0.4, sz * 0.86, 0); g.quadraticCurveTo(sz * 0.88, sz * 0.4, sz * 0.2, sz * 0.5); g.stroke();
-				g.strokeStyle = 'rgba(44,40,40,.25)'; g.lineWidth = sz * 0.06;
-				g.beginPath(); g.moveTo(sz * 0.1, sz * 0.12); g.lineTo(sz * 0.8, sz * 0.02); g.stroke();
+				/* the edge toward the light: a narrow pale fringe; the shaft */
+				g.strokeStyle = far ? 'rgba(214,212,206,.16)' : 'rgba(200,192,182,.17)'; g.lineWidth = sz * 0.06;
+				g.beginPath(); g.moveTo(x0 + Lf * 0.3, -Wf * 0.9); g.lineTo(x1 - Wf * 0.9, -Wf * 0.96); g.quadraticCurveTo(x1 + Wf * 0.12, -Wf * 0.66, x1, 0); g.stroke();
+				g.strokeStyle = 'rgba(44,40,40,.22)'; g.lineWidth = sz * 0.045;
+				g.beginPath(); g.moveTo(x0 + Lf * 0.2, Wf * 0.05); g.lineTo(x1 - Wf * 0.4, 0); g.stroke();
 				g.restore();
-			})(sz, tone, ru);
+			})(fs, tone, ru, ang, p0);
 		}
 	}
+	g.restore();
 	/* the leading edge: pale lesser coverts with a crisp found edge on the
 	 * shade side (point 4) */
 	g.lineCap = 'round';
@@ -281,7 +294,7 @@ function dc3Paint(g, U, lx, ly) {
 	 * In the dance the legs and the contact shadow are drawn live (dc3Legs,
 	 * the heron's way) so the feet stay planted while the body moves:
 	 * U.noLegs leaves them out of the pre-drawn body */
-	c3Wing(g, U, U.wb, lx, ly, 1, null);
+	if (!U.hideWings) { c3Wing(g, U, U.wb, lx, ly, 1, null); }
 	if (!U.noLegs) {
 		var fN = U.legN.p[3], fF = U.legF.p[3];
 		dc3Shadow(g, (fN[0] + fF[0]) / 2, Math.abs(fN[0] - fF[0]), 0);
@@ -292,11 +305,11 @@ function dc3Paint(g, U, lx, ly) {
 	g.save(); g.beginPath(); c3Path(g, O); g.clip();
 	/* value: lit from above, the underside in cool shade (deeper, point 4) */
 	var lg = g.createLinearGradient(bx[0] + (bx[2] - bx[0]) * (0.5 + lx * 0.3), bx[1] + (bx[3] - bx[1]) * (0.5 + ly * 0.5), bx[0] + (bx[2] - bx[0]) * (0.5 - lx * 0.3), bx[1] + (bx[3] - bx[1]) * (0.5 - ly * 0.5));
-	lg.addColorStop(0, 'rgba(226,226,220,.28)'); lg.addColorStop(0.5, 'rgba(160,164,168,0)'); lg.addColorStop(1, 'rgba(52,60,78,.55)');
+	lg.addColorStop(0, 'rgba(214,212,204,.2)'); lg.addColorStop(0.42, 'rgba(130,132,134,0)'); lg.addColorStop(1, 'rgba(34,38,52,.66)');
 	g.fillStyle = lg; g.fillRect(bx[0], bx[1], bx[2] - bx[0], bx[3] - bx[1]);
 	/* the value step from the pale breast to the darker rear (point 6) */
 	var rg = g.createLinearGradient(breast[0], breast[1], tailTip[0], tailTip[1]);
-	rg.addColorStop(0, 'rgba(226,224,218,.22)'); rg.addColorStop(0.55, 'rgba(120,118,116,0)'); rg.addColorStop(1, 'rgba(70,66,64,.42)');
+	rg.addColorStop(0, 'rgba(214,212,206,.14)'); rg.addColorStop(0.55, 'rgba(110,108,106,0)'); rg.addColorStop(1, 'rgba(58,54,54,.46)');
 	g.fillStyle = rg; g.fillRect(bx[0], bx[1], bx[2] - bx[0], bx[3] - bx[1]);
 	/* body texture: faint scallops along the feathers' flow, rust-stained
 	 * where the photographs are (points 2 and 3); gone at guest size */
@@ -312,9 +325,12 @@ function dc3Paint(g, U, lx, ly) {
 			var sz = st * (0.55 + 0.3 * c3H(j + 11));
 			g.save(); g.translate(px, py); g.rotate(fa + (c3H(j + 5) - 0.5) * 0.5);
 			if (c3H(j + 17) < 0.35) { g.restore(); continue; }
-			g.strokeStyle = ru > 0.15 ? c3Rgba(C3.rust, 0.22 * ru) : 'rgba(226,224,218,.06)'; g.lineWidth = sz * (ru > 0.15 ? 0.16 : 0.09);
+			/* 4.13.5 fix 4: strong enough to read in the 3x close-up (the
+			 * photographs' scalloped breast and back); at guest size a scallop
+			 * is under 2px and averages away */
+			g.strokeStyle = ru > 0.15 ? c3Rgba(C3.rust, 0.4 * ru) : 'rgba(222,220,214,.16)'; g.lineWidth = sz * (ru > 0.15 ? 0.18 : 0.12);
 			g.beginPath(); g.moveTo(sz * 0.1, -sz * 0.55); g.quadraticCurveTo(sz * 0.62, -sz * 0.4, sz * 0.62, 0); g.quadraticCurveTo(sz * 0.62, sz * 0.4, sz * 0.1, sz * 0.55); g.stroke();
-			g.strokeStyle = 'rgba(40,44,54,.05)'; g.lineWidth = sz * 0.09;
+			g.strokeStyle = 'rgba(40,44,54,.15)'; g.lineWidth = sz * 0.12;
 			g.beginPath(); g.moveTo(sz * 0.7, -sz * 0.35); g.quadraticCurveTo(sz * 0.78, 0, sz * 0.7, sz * 0.35); g.stroke();
 			g.restore();
 		}
@@ -359,7 +375,7 @@ function dc3Paint(g, U, lx, ly) {
 	var hn = U.seg.crown.concat(U.seg.nape.slice(1));
 	g.strokeStyle = 'rgba(38,42,52,.42)'; g.lineWidth = 0.0032; g.lineCap = 'round'; g.beginPath(); c3Path(g, hn, true); g.stroke();
 	/* the near wing over the body */
-	c3Wing(g, U, U.wa, lx, ly, 0, O);
+	if (!U.hideWings) { c3Wing(g, U, U.wa, lx, ly, 0, O); }
 	/* the bill and the eye */
 	[U.billU, U.billL].forEach(function (B) {
 		var bb = c3B(B), bgr = g.createLinearGradient(bb[0], bb[1], bb[0], bb[3]);
@@ -400,9 +416,10 @@ function dc3Leg(g, hip, foot, Lt, Ls, w0, w1, frac, far, lx, ly, air) {
 function c3Lerp(a, b, t) { return a + (b - a) * t; }
 function c3LP(A, B, t) { var o = []; for (var i = 0; i < A.length; i++) { o.push(typeof A[i] === 'number' ? c3Lerp(A[i], B[i], t) : c3LP(A[i], B[i], t)); } return o; }
 /* points that swing round a pivot: angle and radius interpolated, the pivot
- * itself moving linearly, so a wing opens in arcs, never along chords */
-function c3Arc(A, B, pa, pb, t) {
-	var pc = [c3Lerp(pa[0], pb[0], t), c3Lerp(pa[1], pb[1], t)], o = [];
+ * itself moving linearly (or along pc, where given), so a wing opens in
+ * arcs, never along chords */
+function c3Arc(A, B, pa, pb, t, pc) {
+	pc = pc || [c3Lerp(pa[0], pb[0], t), c3Lerp(pa[1], pb[1], t)]; var o = [];
 	for (var i = 0; i < A.length; i++) {
 		var ra = c3L(pa, A[i]), rb = c3L(pb, B[i]), aa = Math.atan2(A[i][1] - pa[1], A[i][0] - pa[0]), ab = Math.atan2(B[i][1] - pb[1], B[i][0] - pb[0]);
 		var da = ab - aa; while (da > Math.PI) { da -= 2 * Math.PI; } while (da < -Math.PI) { da += 2 * Math.PI; }
@@ -412,25 +429,100 @@ function c3Arc(A, B, pa, pb, t) {
 	}
 	return o;
 }
+function c3Ang(a, b, t) { var d = b - a; while (d > Math.PI) { d -= 2 * Math.PI; } while (d < -Math.PI) { d += 2 * Math.PI; } return a + d * t; }
+/* a part that moves as ONE piece (4.13.5 fix 2): each pose's points in the
+ * part's own frame (origin o, heading an), the shape blended there, then
+ * placed by the in-between frame (fo, fa). A rotating part keeps its size;
+ * blending the points themselves pulled the head in by 20% and the body by
+ * 10% half way into the leap. */
+function c3Frame(o, an) { return { o: o, c: Math.cos(an), s: Math.sin(an), an: an }; }
+function c3Loc(F, p) { var x = p[0] - F.o[0], y = p[1] - F.o[1]; return [x * F.c + y * F.s, -x * F.s + y * F.c]; }
+function c3Rig(A, B, FA, FB, F, t, k) {
+	var o = []; k = k || 1;
+	for (var i = 0; i < A.length; i++) {
+		var a = c3Loc(FA, A[i]), b = c3Loc(FB, B[i]), x = c3Lerp(a[0], b[0], t) * k, y = c3Lerp(a[1], b[1], t) * k;
+		o.push([F.o[0] + x * F.c - y * F.s, F.o[1] + x * F.s + y * F.c]);
+	}
+	return o;
+}
+/* the head's frame: the eye, heading to the bill tip; the trunk's: the hips,
+ * heading from the tail to the breast */
+/* sizes that stay put while a part turns: an outline's area and its length
+ * along its own long axis (geometric mean); the head's crown and cheek
+ * patches and the eye to the back of the head */
+function c3Area(P) { var a = 0; for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; }
+function c3Axis(P) {
+	var n = P.length, cx = 0, cy = 0, i; for (i = 0; i < n; i++) { cx += P[i][0] / n; cy += P[i][1] / n; }
+	var a = 0, b = 0, d = 0; for (i = 0; i < n; i++) { var x = P[i][0] - cx, y = P[i][1] - cy; a += x * x; b += x * y; d += y * y; }
+	var th = 0.5 * Math.atan2(2 * b, a - d), ux = Math.cos(th), uy = Math.sin(th), lo = 1e9, hi = -1e9;
+	for (i = 0; i < n; i++) { var v = P[i][0] * ux + P[i][1] * uy; if (v < lo) { lo = v; } if (v > hi) { hi = v; } }
+	return hi - lo;
+}
+function c3TrunkPts(S) { return [].concat(S.back, S.tail, S.legs, S.breast); }
+function c3TrunkSz(P) { return Math.sqrt(Math.sqrt(c3Area(P)) * c3Axis(P)); }
+function c3HeadSz(cr, ch, eye, nape0) { return Math.pow(c3Area(cr) * c3Area(ch), 1 / 6) * Math.pow(c3L(eye, nape0), 1 / 3); }
+function c3HeadF(U) { return c3Frame(U.eye, Math.atan2(U.billU[0][1] - U.eye[1], U.billU[0][0] - U.eye[0])); }
+function c3TrunkF(U) {
+	var h = [(U.legN.p[0][0] + U.legF.p[0][0]) / 2, (U.legN.p[0][1] + U.legF.p[0][1]) / 2], a = c3At(U.seg.tail, 0.5), b = c3At(U.seg.breast, 0.45);
+	return c3Frame(h, Math.atan2(b[1] - a[1], b[0] - a[0]));
+}
 function dc3Mix(A, B, t, tw, th) {
 	/* tw / th: separate timing for the wings and the head (overlap and
 	 * follow-through), default t */
 	if (tw == null) { tw = t; } if (th == null) { th = t; }
 	var U = { k: t < 0.5 ? A.k : B.k, seg: {} }, n;
 	var na = A.seg.nape[A.seg.nape.length - 1], nb = B.seg.nape[B.seg.nape.length - 1];
-	for (n in A.seg) {
-		if (n === 'bill' || n === 'crown' || n === 'nape' || n === 'foreneck' || n === 'chin') { U.seg[n] = c3Arc(A.seg[n], B.seg[n], na, nb, th); }
-		else { U.seg[n] = c3LP(A.seg[n], B.seg[n], t); }
+	/* the trunk: one piece, its hips moving straight, turning between the
+	 * poses' headings */
+	var TA = c3TrunkF(A), TB = c3TrunkF(B), TF = c3Frame([c3Lerp(TA.o[0], TB.o[0], t), c3Lerp(TA.o[1], TB.o[1], t)], c3Ang(TA.an, TB.an, t));
+	/* two different shapes blended come out a little small (by up to 9% in
+	 * the leap): the blend is set to the size between the poses' sizes */
+	var tA = c3TrunkPts(A.seg), tB = c3TrunkPts(B.seg), tk = c3Lerp(c3TrunkSz(tA), c3TrunkSz(tB), t) / c3TrunkSz(c3Rig(tA, tB, TA, TB, TF, t));
+	function trunk(PA, PB) { return c3Rig(PA, PB, TA, TB, TF, t, tk); }
+	/* the head: one piece, the eye swinging round the base of the neck as
+	 * before (follow-through on th), turning to the in-between heading */
+	var HA = c3HeadF(A), HB = c3HeadF(B), eo = c3Arc([A.eye], [B.eye], na, nb, th)[0], HF = c3Frame(eo, c3Ang(HA.an, HB.an, th));
+	var hb = function (P, Q) { return c3Rig(P, Q, HA, HB, HF, th); };
+	var hk = c3Lerp(c3HeadSz(A.crown, A.cheek, A.eye, A.seg.nape[0]), c3HeadSz(B.crown, B.cheek, B.eye, B.seg.nape[0]), th) / c3HeadSz(hb(A.crown, B.crown), hb(A.cheek, B.cheek), eo, hb([A.seg.nape[0]], [B.seg.nape[0]])[0]);
+	function head(PA, PB) { return c3Rig(PA, PB, HA, HB, HF, th, hk); }
+	/* the neck bends between them: rigid with the head at its top, with the
+	 * trunk at its base, swinging in arcs between */
+	function neck(PA, PB, topFirst) {
+		var h = head(PA, PB), b = trunk(PA, PB), m = c3Arc(PA, PB, na, nb, th), o = [], N = PA.length - 1;
+		for (var i = 0; i <= N; i++) {
+			var u = topFirst ? i / N : 1 - i / N, wh = (1 - u) * (1 - u), wb = u * u, wm = 1 - wh - wb;
+			o.push([h[i][0] * wh + b[i][0] * wb + m[i][0] * wm, h[i][1] * wh + b[i][1] * wb + m[i][1] * wm]);
+		}
+		return o;
 	}
-	['billU', 'billL', 'crown', 'cheek'].forEach(function (k) { U[k] = c3Arc(A[k], B[k], na, nb, th); });
-	var e = c3Arc([A.eye], [B.eye], na, nb, th)[0]; U.eye = [e[0], e[1], c3Lerp(A.eye[2], B.eye[2], th)];
+	for (n in A.seg) {
+		if (n === 'bill') { U.seg[n] = hb(A.seg[n], B.seg[n]); }
+		else if (n === 'crown' || n === 'chin') { U.seg[n] = head(A.seg[n], B.seg[n]); }
+		else if (n === 'nape') { U.seg[n] = neck(A.seg[n], B.seg[n], true); }
+		else if (n === 'foreneck') { U.seg[n] = neck(A.seg[n], B.seg[n], false); }
+		else { U.seg[n] = trunk(A.seg[n], B.seg[n]); }
+	}
+	/* the bill is horn: never resized, only carried (it blends to its own
+	 * length; the size correction would stretch it 6%) */
+	U.billU = hb(A.billU, B.billU); U.billL = hb(A.billL, B.billL);
+	U.crown = head(A.crown, B.crown); U.cheek = head(A.cheek, B.cheek);
+	U.eye = [eo[0], eo[1], c3Lerp(A.eye[2], B.eye[2], th)];
 	['wa', 'wb'].forEach(function (w) {
-		var WA = A[w], WB = B[w], sa = WA.lead[0], sb = WB.lead[0], W = {};
-		['lead', 'base', 'tips', 'inner'].forEach(function (k) { W[k] = c3Arc(WA[k], WB[k], sa, sb, tw); });
+		/* the wing swings round its shoulder, the shoulder riding the trunk */
+		var WA = A[w], WB = B[w], sa = WA.lead[0], sb = WB.lead[0], W = {}, sc = trunk([sa], [sb])[0];
+		['lead', 'base', 'tips', 'inner'].forEach(function (k) { W[k] = c3Arc(WA[k], WB[k], sa, sb, tw, sc); });
 		W.open = c3Lerp(WA.open, WB.open, tw); U[w] = W;
 	});
-	['legN', 'legF'].forEach(function (l) { U[l] = { p: c3LP(A[l].p, B[l].p, t), toes: c3LP(A[l].toes, B[l].toes, t), w: c3LP(A[l].w, B[l].w, t) }; });
-	U.plB = c3LP(A.plB, B.plB, t); U.plT = c3LP(A.plT, B.plT, t); U.rust = c3LP(A.rust, B.rust, t); U.wRust = c3LP(A.wRust, B.wRust, t);
+	['legN', 'legF'].forEach(function (l) {
+		/* the hip and the belly feathers ride the trunk; below them the leg
+		 * (drawn live in the dance) */
+		var p = c3LP(A[l].p, B[l].p, t), q = trunk(A[l].p.slice(0, 2), B[l].p.slice(0, 2));
+		p[0] = q[0]; p[1] = q[1];
+		U[l] = { p: p, toes: c3LP(A[l].toes, B[l].toes, t), w: c3LP(A[l].w, B[l].w, t) };
+	});
+	U.plB = trunk(A.plB, B.plB); U.plT = trunk(A.plT, B.plT);
+	var rp = trunk(A.rust, B.rust); U.rust = c3LP(A.rust, B.rust, t).map(function (r, i) { return [rp[i][0], rp[i][1], r[2], r[3]]; });
+	U.wRust = c3LP(A.wRust, B.wRust, t);
 	return U;
 }
 `;

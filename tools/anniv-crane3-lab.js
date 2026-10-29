@@ -11,7 +11,9 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { DC3_SRC } = require('./anniv-crane3');
-const { RIG } = require('./anniv-crane-rig');
+const { RIG0, RIG: RIGd } = require('./anniv-crane-rig');
+/* over the photographs: the poses as traced; the in-betweens: the dance's */
+const RIG = process.argv.some(a => a.startsWith('--mix=')) ? RIGd : RIG0;
 const T = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'anniv-crane-trace.json'), 'utf8'));
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
