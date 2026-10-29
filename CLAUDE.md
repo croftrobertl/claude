@@ -810,7 +810,7 @@ reached staging only; the folder was set back to 4.13.0 (`66faa59`) and:
   (paths tokenized, never regex-trimmed). The maples, cypress, crookneck
   and pie are unchanged. Step B: scene A "high and small" with a PALE full
   moon (see below).
-- **4.13.2 = the Anniversary**, from 4.13.1, once Rob picks.
+- **4.13.2 and 4.13.3 = Thanksgiving round 2** (the Anniversary moved to 4.13.4, the split to 4.13.5; see below).
 - **4.14.1 = Christmas**, 4.14.0 rebuilt ON TOP of 4.13.2 once Rob confirms
   Santa; diff it against 4.13.2 and show Thanksgiving and the Anniversary
   survive. `tools/test-christmas.js` belongs to that build and fails on
@@ -950,13 +950,42 @@ bottom). How 4.13.2 carries it:
   container stalls a single drawImage of a long-drawn image for 10-21 ms
   now and then, in 4.13.1 exactly as in 4.13.2: compare builds in
   alternating pairs, never one run.
-- **OPEN for Rob (asked with the 4.13.2 build): how often the tom
-  appears.** As built (A) he is one piece in the mix at weight 1, like the
-  4.13.1 hen, so a phone shows him in the first minute on 2 visits in 20
-  (768: 12/20, 1440: 20/20). B = `'w' => 3, 'n' => 1` on his theme row:
-  every visit at every width, never two, one falling piece fewer on a
-  phone. `tools/tg-tom-often.js` renders both. Do not ship B until he
-  picks it.
+
+**Rob's answers on 4.13.2 (the Director, 2026-10-29), shipped as 4.13.3**
+(a NEW number so no cache can serve the 4.13.2 engine; the Anniversary is
+now **4.13.4**, the split **4.13.5**):
+- **How often the tom appears: B** — `'w' => 3, 'n' => 1` on his theme
+  row: every visit at every width, never two; on a phone he takes one
+  falling piece's place. Measured on the REAL page (`tools/test-tom-turn.js`,
+  20 visits a width), never only the fixture: the Director saw A at about
+  half his visits at 1440 on staging, against the fixture's 20/20.
+- **He turns before the cornucopia** (Rob): he and both poults never
+  overlap the accent's real box (`.dcc-seasons-accent`, read against the
+  canvas every 250 ms, `tkBlock`), feeding stops included, at every width.
+  When the box stands in his band he enters from the far side; a stride
+  plus 8px out he finishes his step and turns (`p.tn`); the poults stay
+  where they stand, pecking (`'kp4'`), while he walks back past them
+  (`p.pw`, ground walked since the turn, mirrors their offset), then fall
+  in behind. `test-tom-turn.js` catches every tom/poult drawImage through
+  the context's transform: zero overlaps, on the fixture and the real page;
+  mutation-checked (no turn, poults snapping behind him, A's row).
+- **The Theme guide label:** `gourd3` is "Green Gourd" (no squash anywhere).
+- **The crane crossing's cost goes on the split round's list**: on Rob's
+  Mac with `&dcc_scene=now` repeating it, p95 doubles (9.2-10.7 ms, 59-102
+  callbacks over 8 ms in 20 s). Unchanged since 4.13.1; once a visit.
+- **Size, made without changing a pixel** (82,221 gz, 4 under): the TG
+  sprite markup minified losslessly (`tools/tg-svgmin.js`: separators the
+  grammar does not need, attributes at their SVG default, `0.N` → `.N`;
+  every number keeps its own text) and the generators' literals the same;
+  `tools/tg-svgmin-check.js` rasterises every piece old vs new at 32/96/256
+  px — 0 differing values. `leafm2` RECOLOURS `leafm` by text replacement,
+  so its search string had to follow the minify (it would have drawn plain
+  red); `test-thanksgiving.js` now RUNS it. `tkMod` returns an array (its
+  names minify; the worker reads `M[1]`), and the guide's tom picture is
+  drawn by `theme-guide.js` from `E.tk` (= the tkMod array).
+- **The Anniversary (4.13.4): COMPUTED from the dates** (Rob), so the
+  40% / 37.5% stay true every Nov 11, like the year count. Dates in code or
+  config only, no names public; ask the Director for any date not in hand.
 
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
@@ -1415,7 +1444,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-untouched.js` (against the live release), `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release), `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

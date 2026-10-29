@@ -70,7 +70,11 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     ok(oak.startsWith('32 24.8|') && oak.includes('dccTgO1'), 'the live oak is the 4.13.1 redraw from the plate, not the narrow 18x28 oval', oak.slice(0, 12));
     ok(!/Q17 5 17.6 7.6/.test(oak), "and none of the northern oak's lobes survive", oak.slice(0, 60));
     /* 4.13.2: the cypress is drawn by rule, and it is B (bolder) */
-    ok(/\n\t\tleafc: function \(\) \{ return tgCypress\(true\); \}/.test(src), 'the cypress is B, the bolder one (tgCypress(true))', 'leafc');
+    /* 4.13.3 folded the painter to B alone (A's branches were dead): B's
+     * own values, the rust #9A3E22 tips, the 1.4 outline and 320x228 box */
+    const cyB = src.slice(src.indexOf('function tgCypress'), src.indexOf('function tgPie'));
+    ok(/\n\t\tleafc: function \(\) \{ return tgCypress\(\); \}/.test(src) && !/bold \?|\(bold\)/.test(cyB) && cyB.includes("'#9A3E22'") && cyB.includes("'320 228'") && cyB.includes('(1.4)'),
+      'the cypress is B, the bolder one, and only B', 'leafc');
     const cyf = src.slice(src.indexOf('function tgCypress'), src.indexOf('function tgPie'));
     ok(cyf.includes('stroke-linecap="round"') && !cyf.includes('<ellipse'), 'and needles drawn as needles, not a stack of ellipses', 'tgCypress');
     const sg = spr('leafs');
@@ -99,6 +103,13 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     ok(m1.startsWith('30.4 32|') && m1.includes('dccTgM1'), 'the red maple is the 4.13.2 photo redraw', m1.slice(0, 16));
     ok(/\n\t\tleafm2: function \(\) \{ return SVGS\.leafm\.replace\(\/dccTgM1\/g, 'dccTgM2'\)/.test(src) && /leafm2:[^\n]*#F2C14E/.test(src),
       'and the mid-turn one is the same leaf turned orange-gold', 'leafm2');
+    /* and it really IS recoloured: leafm2 replaces leafm's exact gradient
+     * text, so a rewrite of leafm (4.13.3's lossless minify) that its search
+     * string no longer matched would draw it plain red. Run it. */
+    const m2f = src.match(/\n\t\tleafm2: (function \(\) \{[^\n]*?\}),/);
+    const m2 = new Function('SVGS', 'return (' + m2f[1] + ')();')({ leafm: m1 });
+    ok(m2.includes('#F2C14E') && m2.includes('#E8823A') && !m2.includes('#E0453A') && m2.includes('#FBE0A0') && !m2.includes('#F08A72'),
+      'leafm2, run, is orange-gold (every recolour matched)', m2.slice(0, 200));
   }
 
   console.log('\n  --- the crane is B, with the primaries picked out ---');

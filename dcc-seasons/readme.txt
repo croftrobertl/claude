@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.2
+Stable tag: 4.13.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.13.3 =
+Thanksgiving, Rob's answers on 4.13.2. Built from 4.13.2; every other
+theme is still exactly as in 4.13.1, which is live. Rollback: reinstall the
+4.13.1 zip.
+
+* One tom on every Thanksgiving page, at every width, never two (Rob's B).
+  On a phone he takes the place of one falling piece; the count is the same.
+* He and his poults turn round before the cornucopia in the corner and
+  walk back, so they never walk through it. When the cornucopia is in his
+  way he walks in from the other side. At the turn the poults stay where
+  they stand, pecking, while he walks back past them, then follow him.
+* The Theme guide calls the green gourd "Green Gourd" (no squash anywhere).
+* To make room under the size ceiling without changing a pixel: the
+  Thanksgiving pieces' drawing code is written more compactly (every piece
+  checked pixel for pixel against 4.13.2), and the Theme guide's picture of
+  the tom is drawn by the guide's own script.
 
 = 4.13.2 =
 Thanksgiving, round 2, as Rob approved it (2026-10-30). Built from 4.13.1,

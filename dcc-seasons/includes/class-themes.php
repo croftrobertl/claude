@@ -205,7 +205,7 @@ class Themes {
                          * drawn in code (TK_ in engine.js) and stepping, two
                          * poults following him; he stops, feeds with his fan
                          * up, walks on. */
-                        ['s' => 'turkey', 'b' => 'forage', 'face' => 'L', 'draw' => 'tom', 'sz' => [26, 32]],
+                        ['s' => 'turkey', 'b' => 'forage', 'face' => 'L', 'draw' => 'tom', 'w' => 3, 'n' => 1, 'sz' => [26, 32]],   /* 4.13.3 (Rob's B): one tom on every page, never two */
                     ],
                 ],
                 'egg' => [

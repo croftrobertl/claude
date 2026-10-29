@@ -92,6 +92,7 @@ function strip(src) {
       .replace(" || b === 'forage'", '')
       .replace(" case 'leaf': case 'drop':", '')
       .replace(' leaf drop ', ' ')
+      .replace(' artDraw: ART_DRAW, tk: TKM,', ' artDraw: ART_DRAW,')   /* 4.13.3: the guide's tom painter reads the tom's own painter */
       .replace(' && !sceneNow', '')
       .replace('!sceneNow && ', '')
       .replace('{ vigAt = sceneNow ? 1 : (DEBUG', '{ vigAt = (DEBUG'))

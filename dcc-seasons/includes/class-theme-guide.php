@@ -182,7 +182,7 @@ final class Theme_Guide {
                 'leafs' => __('Sweetgum leaf', 'dcc-seasons'),
                 'gourd1' => __('Ribbed gourd', 'dcc-seasons'),
                 'gourd2' => __('Crookneck gourd', 'dcc-seasons'),
-                'gourd3' => __('Acorn squash', 'dcc-seasons'),
+                'gourd3' => __('Green Gourd', 'dcc-seasons'),
                 'corn' => __('Indian corn', 'dcc-seasons'),
                 'cranberry' => __('Cranberry sprig', 'dcc-seasons'),
                 'banana' => __('Banana', 'dcc-seasons'), 'bass' => __('Largemouth bass', 'dcc-seasons'),

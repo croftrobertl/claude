@@ -74,6 +74,19 @@
 		if (g) { g.scale(dpr, dpr); try { fn(g, w, h); } catch (e) { /* shown blank */ } }
 		return cv;
 	}
+	/* 4.13.2: the strutting tom, the engine's own painter (E.tk = its
+	 * tkPaint and box; 4.13.3 moved this picture out of the engine's bytes),
+	 * mirrored to face left as he walks on the site */
+	if (E.tk && E.artDraw && !E.artDraw.turkey) {
+		E.artDraw.turkey = function (g, w, h) {
+			var b = E.tk[2], L = Math.min(w / (b[2] - b[0]), h / (b[3] - b[1]));
+			g.save();
+			g.translate(w / 2 + (b[0] + b[2]) / 2 * L, h / 2 - (b[1] + b[3]) / 2 * L);
+			g.scale(-L, L);
+			E.tk[0](g, 0.12, 0, 0);
+			g.restore();
+		};
+	}
 	function artPic(k, name) {
 		return E.artDraw && E.artDraw[k] ? drawnPic(E.artDraw[k], name) : spriteImg(k, name);
 	}
