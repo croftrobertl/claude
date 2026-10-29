@@ -81,7 +81,7 @@ const ALLON = { ...LIVE, ambient: 1 };
         newyears: document.querySelectorAll('.dcc-guide-card')[0].innerText,
       };
     });
-    ok(r.ids.length === r.nThemes && r.nThemes === 27, `one card per theme (${r.ids.length} of ${r.nThemes})`, r.ids.join(','));
+    ok(r.ids.length === r.nThemes && r.nThemes === 28, `one card per theme (4.13.5: the Anniversary is the 28th) (${r.ids.length} of ${r.nThemes})`, r.ids.join(','));
     ok(r.ids[0] === 'new_years', 'New Year\'s first', r.ids[0]);
     const sched = r.firsts.filter(Boolean);
     ok(sched.every((d, i) => i === 0 || sched[i - 1] <= d), 'scheduled themes in calendar order', sched.join(' '));
