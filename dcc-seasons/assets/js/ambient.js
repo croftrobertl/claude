@@ -16,7 +16,9 @@
 	function pad(n) { return (n < 10 ? '0' : '') + n; }
 	function ymd(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
 	var now = new Date();
-	var today = ymd(now.getFullYear(), now.getMonth() + 1, now.getDate());
+	/* 4.13.5: the check link's forced date (CFG.date, set server-side only
+	 * with the check key or for an administrator), else the visitor's day */
+	var today = CFG.date || ymd(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
 	/* ---- Schedule rules → dates, resolved HERE from the visitor's local
 	 * clock (cache-safe: the HTML never carries "today"). Mirrors
@@ -224,10 +226,13 @@
 		function go() {
 			if (loading) { return; }
 			loading = true;
-			/* 4.13.4: a season with its own art file has it fetched alongside
-			 * the engine and run first; every other day fetches nothing more */
-			var art = CFG.art && themeKey ? CFG.art[themeKey] : null;
-			if (art) { loadScript(art, null, null, true); }
+			/* 4.13.4: a season with its own art has it fetched alongside the
+			 * engine and run first; every other day fetches nothing more.
+			 * 4.13.5: a list of files (the shared crane, then the season's);
+			 * a single URL from an older cached config still works. */
+			var art = CFG.art && themeKey ? CFG.art[themeKey] : null, ai;
+			if (typeof art === 'string') { art = [art]; }
+			for (ai = 0; art && ai < art.length; ai++) { loadScript(art[ai], null, null, true); }
 			loadScript(CFG.engineSrc, function () {
 				if (W.DCCSeasonsEngine) {
 					W.DCCSeasonsEngine.start({
@@ -238,7 +243,7 @@
 						mq: mq
 					});
 				}
-			}, null, !!art);
+			}, null, !!(art && art.length));
 		}
 		/* WHEN the engine is fetched (4.12.1). It used to be
 		 * requestIdleCallback(timeout 3000), with setTimeout(go, 1500) where

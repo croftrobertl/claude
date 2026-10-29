@@ -87,6 +87,16 @@
 			g.restore();
 		};
 	}
+	/* 4.13.5: the sandhill crane, the crane pack's own painter (E.crane),
+	 * standing, facing left as on the site */
+	if (E.crane && E.artDraw && !E.artDraw.sandhill) {
+		E.artDraw.sandhill = function (g, w, h) {
+			var c = document.createElement('canvas'), L = Math.min(w, h) * 0.9;
+			var m = E.crane.M[1](c, 'stand', L * 2, -1), b = m.box, s = Math.min(w / (b[2] - b[0]), h / (b[3] - b[1])) / (L * 2) * L * 2;
+			var dw = (b[2] - b[0]) * s, dh = (b[3] - b[1]) * s;
+			g.drawImage(c, (w - dw) / 2, (h - dh) / 2, dw, dh);
+		};
+	}
 	function artPic(k, name) {
 		return E.artDraw && E.artDraw[k] ? drawnPic(E.artDraw[k], name) : spriteImg(k, name);
 	}

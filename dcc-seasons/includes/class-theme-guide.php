@@ -43,11 +43,11 @@ final class Theme_Guide {
     /** The guide's scripts and styles; called by Settings::assets() on this tab only. */
     public static function enqueue(): void {
         wp_enqueue_style('dcc-seasons-guide', DCC_SEASONS_URL . 'assets/css/theme-guide.css', [], DCC_SEASONS_VERSION);
-        /* 4.13.4: every season's own art file, before the engine reads them */
+        /* 4.13.4: every art file (each pack once), before the engine reads them */
         $art = [];
-        foreach (Plugin::ART_PACKS as $t) {
-            wp_enqueue_script('dcc-seasons-art-' . $t, DCC_SEASONS_URL . 'assets/js/art-' . $t . Plugin::suffix() . '.js', [], DCC_SEASONS_VERSION, true);
-            $art[] = 'dcc-seasons-art-' . $t;
+        foreach (Plugin::art_files() as $p) {
+            wp_enqueue_script('dcc-seasons-art-' . $p, DCC_SEASONS_URL . 'assets/js/art-' . $p . Plugin::suffix() . '.js', [], DCC_SEASONS_VERSION, true);
+            $art[] = 'dcc-seasons-art-' . $p;
         }
         wp_enqueue_script('dcc-seasons-engine', DCC_SEASONS_URL . 'assets/js/engine' . Plugin::suffix() . '.js', $art, DCC_SEASONS_VERSION, true);
         wp_enqueue_script('dcc-seasons-guide', DCC_SEASONS_URL . 'assets/js/theme-guide.js', ['dcc-seasons-engine'], DCC_SEASONS_VERSION, true);
@@ -234,6 +234,13 @@ final class Theme_Guide {
                 'web' => __('Spider web', 'dcc-seasons'), 'cornucopia' => __('Cornucopia', 'dcc-seasons'),
                 'sunshades' => __('Sun in sunglasses', 'dcc-seasons'), 'hands' => __('Hands holding the Earth', 'dcc-seasons'),
                 'sun' => __('Sun', 'dcc-seasons'),
+                // 4.13.5: the Anniversary's pieces, and the sandhill crane
+                // drawn in code (the Anniversary's pair and Florida Keys)
+                'anheart' => __('Blush heart', 'dcc-seasons'), 'anrings' => __('Two gold rings', 'dcc-seasons'),
+                'ancrystal' => __('Cut crystal drop', 'dcc-seasons'), 'antoast' => __('Champagne flutes clinking', 'dcc-seasons'),
+                'andate' => __('Gold date band (11·11·11)', 'dcc-seasons'), 'anyear' => __('Crystal year count', 'dcc-seasons'),
+                'anpct1' => __('Gold percentage', 'dcc-seasons'), 'anpct2' => __('Gold percentage', 'dcc-seasons'),
+                'sandhill' => __('Sandhill crane', 'dcc-seasons'),
             ],
             'prims' => [
                 'star' => __('Star', 'dcc-seasons'), 'confetti' => __('Confetti', 'dcc-seasons'),
@@ -276,6 +283,7 @@ final class Theme_Guide {
                 'hatch' => __('An egg hatches a chick', 'dcc-seasons'),
                 'bananaslip' => __('A jester slips on a banana peel', 'dcc-seasons'),
                 'duckparade' => __('A mother duck leads her ducklings', 'dcc-seasons'),
+                'annivdance' => __('A sandhill crane pair dances under the title', 'dcc-seasons'),
             ],
         ];
     }

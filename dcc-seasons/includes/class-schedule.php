@@ -71,12 +71,13 @@ class Schedule {
         'patriot_day'  => 'patriot_day',
         'halloween'    => 'halloween',
         'veterans_day' => 'veterans_day',
+        'anniversary'  => 'anniversary',
         'thanksgiving' => 'thanksgiving',
         'christmas'    => 'christmas',
     ];
 
     /** Same-day clashes Rob has decided: [winner, loser]. */
-    public const CLASH_WINS = [['easter', 'april_fools']];
+    public const CLASH_WINS = [['easter', 'april_fools'], ['anniversary', 'veterans_day']];   /* 11 Nov is the Anniversary (Rob, 4.13.0/4.13.5) */
 
     /**
      * Named anchors. 'nth' = nth weekday of month (n = -1 for last),
@@ -107,6 +108,7 @@ class Schedule {
             'columbus'     => ['type' => 'nth', 'm' => 10, 'wd' => 1, 'n' => 2,  'label' => __('Columbus / Indigenous Peoples\' Day (2nd Mon Oct)', 'dcc-seasons')],
             'halloween'    => ['type' => 'fixed', 'm' => 10, 'd' => 31, 'label' => __('Halloween (Oct 31)', 'dcc-seasons')],
             'veterans_day' => ['type' => 'fixed', 'm' => 11, 'd' => 11, 'label' => __('Veterans Day (Nov 11)', 'dcc-seasons')],
+            'anniversary'  => ['type' => 'fixed', 'm' => 11, 'd' => 11, 'label' => __('The Anniversary (Nov 11)', 'dcc-seasons')],
             'thanksgiving' => ['type' => 'nth', 'm' => 11, 'wd' => 4, 'n' => 4,  'label' => __('Thanksgiving (4th Thu Nov)', 'dcc-seasons')],
             'christmas'    => ['type' => 'fixed', 'm' => 12, 'd' => 25, 'label' => __('Christmas (Dec 25)', 'dcc-seasons')],
         ];
@@ -379,9 +381,11 @@ class Schedule {
              * so it can still be previewed and re-added by hand. */
             self::row(self::fx(10, 1),           self::at('halloween'),          'halloween',    __('Halloween', 'dcc-seasons')),
             self::row(self::fx(11, 1),           self::at('thanksgiving'),       'thanksgiving', __('Thanksgiving', 'dcc-seasons')),
-            /* Veterans Day is NOT scheduled (4.13.0, Rob). Nov 11 becomes
-             * the Anniversary theme in 4.13.1; until that ships, Thanksgiving
-             * runs unbroken through it. The theme stays in the library. */
+            /* Veterans Day is NOT scheduled (4.13.0, Rob). Nov 11 is the
+             * Anniversary (4.13.5), a one-day holiday inside Thanksgiving's
+             * row: the narrower row wins its day, and Thanksgiving keeps the
+             * 10th and the 12th. The Veterans Day theme stays in the library. */
+            self::row(self::at('anniversary'),   self::at('anniversary'),        'anniversary',  __('The Anniversary', 'dcc-seasons')),
             self::row(self::at('thanksgiving', 1), self::at('christmas'),        'christmas',    __('Christmas', 'dcc-seasons')),
             // Year-round base, LAST on purpose. A full-year range is the
             // widest possible, and active() takes the narrowest containing
@@ -433,6 +437,7 @@ class Schedule {
         return [
             '3.7.0' => ['mothers_day', 'memorial_day', 'summer_canal', 'fathers_day', 'july4', 'veterans_day'],
             '3.8.0' => ['florida_keys'],
+            '4.13.5' => ['anniversary'],
         ];
     }
 

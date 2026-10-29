@@ -584,7 +584,8 @@
 		april_fools: ['bananaslip'],
 		spring_canal: ['duckparade', 'kayaker', 'dragonlotus'],
 		summer_canal: ['gatorglide', 'floatdrift', 'mulletskip'],
-		florida_keys: ['anhinga', 'ospreycatch', 'cranes', 'limpkinsnail', 'hibfloat']
+		florida_keys: ['anhinga', 'ospreycatch', 'cranes', 'limpkinsnail', 'hibfloat'],
+		anniversary: ['annivdance']   /* 4.13.5: the pair dancing under the tagline (Rob's 10 A) */
 	};
 
 	var WINGS = { eagle: ['eagleup', 'eagledown', 280], osprey: ['ospreyup', 'ospreydown', 260] };
@@ -647,9 +648,9 @@
 	var SCENE_ART = {
 		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch', cranemoon: 'crane',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
-		ospreycatch: 'ospreyup', cranes: 'cranedance', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
+		ospreycatch: 'ospreyup', cranes: 'sandhill', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
-		doubloons: 'doubloon', swans: 'swan', catch1: 'berry', egghunt: 'bunny', hatch: 'chick', bananaslip: 'peel', duckparade: 'duckhen'
+		doubloons: 'doubloon', swans: 'swan', catch1: 'berry', egghunt: 'bunny', hatch: 'chick', bananaslip: 'peel', duckparade: 'duckhen', annivdance: 'sandhill'
 	};
 
 	/* ---------- The heron (4.9.0, Rob's pick: style A · Field guide) ------
@@ -2698,7 +2699,7 @@
 		 * does too, because it drops real drawn leaves in front instead. */
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
-			halloween: 'embers', thanksgiving: '', christmas: 'bokeh',
+			halloween: 'embers', thanksgiving: '', anniversary: '', christmas: 'bokeh',
 			new_years: 'confetti', snowbird: 'sunglow', mlk: 'goldlight',
 			mardi_gras: 'mardiconfetti', valentines: 'hearts', presidents: 'orangeblossom',
 			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
@@ -4095,7 +4096,7 @@
 		 * While a sky actor runs, inSky() points the drawing state (cv, cx,
 		 * vw, vh, waterY, ground, lastDpr) at the sky canvas, so every scene
 		 * and flyer works in the picture's own coordinates unchanged. --- */
-		var SKY_VIG = { witchmoon: 1, cranemoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1 };
+		var SKY_VIG = { witchmoon: 1, cranemoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1, annivdance: 1 };
 		/* the flyers that cross the sky; the bass and the manatee are on the
 		 * water, the rainbow in a corner */
 		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
@@ -5062,6 +5063,44 @@
 			pl.vy = bt + 1.17 * L + (h - 2.18 * L) / 2;
 			pl.mxR = MT.round(clamp(vw * 0.70, R * 1.25 + KC, vw - R * 1.25 - KC));
 			pl.mxL = MT.round(clamp(vw * 0.30, R * 1.25 + KC, vw - R * 1.25 - KC));
+			return pl;
+		}
+
+		/* 4.13.5: where the Anniversary's pair dances (Rob's 10 A): under
+		 * the tagline, centred, the whole dance (leaps included) at least
+		 * AD_M px clear of the keep-clear set and inside the picture, its
+		 * feet 10 px above the picture's foot. As big as fits, never bigger
+		 * than the sizes Rob approved (60 / 76 / 65 px standing at 390 / 768 /
+		 * 1440, the polish sheet), straight between them and flat outside.
+		 * Measured in idle time, never in a frame. */
+		var AD = ART.crane || null, AD_T = 11, AD_M = 8, AD_GRADE = 'rgba(38,44,34,.42)', adPlan = null, adS = null, adK = null;
+		function adCap(w) {
+			var P = [[390, 60], [768, 76], [1440, 65]], i;
+			if (w <= P[0][0]) { return P[0][1]; }
+			for (i = 1; i < P.length; i++) { if (w <= P[i][0]) { return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (w - P[i - 1][0]) / (P[i][0] - P[i - 1][0]); } }
+			return P[P.length - 1][1];
+		}
+		function adPlanFor() {
+			var k = kcRects(), b = AD.danceBox, tg = 0, all = k.txt.concat(k.box), i, j;
+			for (i = 0; i < k.txt.length; i++) { tg = mx2(tg, k.txt[i][3]); }
+			var floorY = vh - 10, H = MT.floor(mn(adCap(vw), (floorY - (tg + AD_M)) / -b[1]));
+			var pl = { vw: vw, vh: vh, ox: cvOX, oy: cvOY, at: nowMs(), floorY: floorY, none: 1 };
+			for (; H >= 24; H--) {
+				var xa = vw / 2 - 0.55 * H, xb = vw / 2 + 0.55 * H, ok = 1;
+				var bx = [[xa + b[0] * H, floorY + b[1] * H, xa + b[2] * H, floorY + b[3] * H], [xb - b[2] * H, floorY + b[1] * H, xb - b[0] * H, floorY + b[3] * H]];
+				for (i = 0; i < 2 && ok; i++) {
+					if (bx[i][0] < 0 || bx[i][2] > vw || bx[i][1] < 0) { ok = 0; }
+					for (j = 0; j < all.length && ok; j++) {
+						var r = all[j];
+						if (mx2(r[0] - bx[i][2], bx[i][0] - r[2], r[1] - bx[i][3], bx[i][1] - r[3]) < AD_M) { ok = 0; }
+					}
+				}
+				if (ok) {
+					pl.none = 0; pl.H = H; pl.xa = xa; pl.xb = xb; pl.boxes = bx;
+					pl.cut = bx.map(function (q) { return [q[0], q[1], q[2] - q[0], q[3] - q[1]]; });
+					break;
+				}
+			}
 			return pl;
 		}
 
@@ -6388,9 +6427,28 @@
 				if (!st.on) { st.on = 1; st.dir = sgn(); st.x = st.dir > 0 ? -40 : vw + 40; st.tx = rnd(vw * 0.35, vw * 0.55); st.p = 1; st.t2 = 0; st.ph = 0; }
 				st.t2 += dt; st.ph += dt;
 				var W2 = 40, fy = waterY - W2 * 70 / 44 / 2 + 4, gap = 44, a = VA;
+				/* 4.13.5 (Rob's row 9): the Anniversary's sandhill crane in the
+				 * sprites' places, the timing and positions unchanged; decided
+				 * once per scene, so a bird never changes mid-dance. Without the
+				 * crane pack, or before its poses are drawn, the old sprites. */
+				if (st.nb == null) { st.nb = !!(adK && adK.done); }
 				function one(x, dance, hop, bow) {
-					if (dance) { dspr('cranedance', x, fy - hop, W2 * 64 / 44, st.dir > 0, 0, a); }
-					else { dspr('crane', x, fy - hop + abs(sin(st.ph * 5)) * (st.p === 1 ? 1.5 : 0), W2, st.dir > 0, st.dir * bow, a); }
+					var y = dance ? fy - hop : fy - hop + abs(sin(st.ph * 5)) * (st.p === 1 ? 1.5 : 0);
+					if (st.nb) {
+						/* the box's own feet line (the sprites stand at 69 and 69.5
+						 * of 70 units), the bird at the standing height they gave
+						 * it: 66 units of 44, so 60 px at this width */
+						var kp = adK.cache['k' + (dance ? 'leap' : 'stand') + (st.dir > 0 ? 1 : -1)], hb = W2 * 70 / 44, Hk = W2 * 66 / 44;
+						if (!kp) { return; }
+						cx.save(); cx.globalAlpha = clamp(a, 0, 1); cx.translate(x, y);
+						if (!dance && bow) { cx.rotate(st.dir * bow); }
+						var b = kp.box, fo = hb * ((dance ? 69.5 : 69) / 70 - 0.5);
+						cx.drawImage(kp.c, b[0] * Hk, fo + b[1] * Hk, (b[2] - b[0]) * Hk, (b[3] - b[1]) * Hk);
+						cx.restore();
+						return;
+					}
+					if (dance) { dspr('cranedance', x, y, W2 * 64 / 44, st.dir > 0, 0, a); }
+					else { dspr('crane', x, y, W2, st.dir > 0, st.dir * bow, a); }
 				}
 				if (st.p === 1) {
 					st.x += st.dir * 58 * dt;
@@ -6406,6 +6464,36 @@
 				one(st.x - st.dir * gap, d2, h2, -bow);
 				one(st.x, d1, h1, bow);
 				return false;
+			} },
+			/* 4.13.5: the Anniversary (Rob's picks 8 and 10 A). The new
+			 * sandhill pair dances under the tagline, centred, at every width:
+			 * they face each other and dance in turn, 2.25 s apart, over two
+			 * of the 5.4 s cycles, fading in over 0.6 s and out over 0.8 s.
+			 * One bird is pre-drawn (ART.crane, its own pack) and mirrored for
+			 * its partner (Rob, 2026-10-29: the light flips on that one). The
+			 * place and size are measured in idle time (adPlan); until the
+			 * frames are drawn it waits up to 5 s, then declines, and with no
+			 * room it declines. */
+			annivdance: { actors: 2, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.w = 0;
+					if (!adPlan || adPlan.none || !adPlan.vw) { return true; }
+				}
+				var P = adPlan;
+				if (!adS || !adS.done || adS.H !== P.H) { st.w += dt; return st.w > 5; }
+				st.t2 += dt;
+				var a = clamp(mn(st.t2 / 0.6, (AD_T - st.t2) / 0.8), 0, 1);
+				cx.save(); cx.globalAlpha = a;
+				var birds = [[P.xa, 1, st.t2], [P.xb, -1, st.t2 - 2.25]], i;
+				for (i = 0; i < 2; i++) {
+					cx.save(); cx.translate(birds[i][0], P.floorY); cx.scale(P.H * birds[i][1], P.H);
+					AD.dance(cx, adS, mx2(0, birds[i][2]));
+					cx.restore();
+				}
+				cx.restore();
+				st.fgB = P.cut;   /* behind the header picture's foreground */
+				if (DEBUG) { st.boxes = P.boxes; }
+				return st.t2 >= AD_T;
 			} },
 			/* Keys KD: a limpkin wades up to the reeds (pink apple-snail eggs on a stem),
 			 * probes, pulls up an apple snail and walks off with it */
@@ -6858,6 +6946,31 @@
 			};
 			var crLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			crLater(crIdle);
+		}
+		/* 4.13.5: the Anniversary's pair. The plan is measured in idle time
+		 * (and kept fresh every 10 s while the page is open, as the cranes'
+		 * is), then every frame of the dance is pre-drawn in the crane pack's
+		 * worker at the planned size x min(DPR, 2), graded to the hero's dim
+		 * light (Art Standards step 6) — again only if the size changed. */
+		if (AD && vigList.indexOf('annivdance') >= 0) {
+			var adLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
+			var adKeep = function () {
+				if (skyPic && vw && !D.hidden && (!vig || vig.name !== 'annivdance')) {
+					inSky(function () { adPlan = adPlanFor(); });
+					var Hd = adPlan.none ? 0 : adPlan.H;
+					if (Hd && (!adS || adS.H !== Hd)) {
+						var S = AD.prep(AD.danceJobs(), { k: Hd * mn(W.devicePixelRatio || 1, 2), grade: AD_GRADE });
+						S.H = Hd; adS = S;
+					}
+				}
+				setTimeout(function () { adLater(adKeep); }, adS ? 10000 : 500);
+			};
+			adLater(adKeep);
+		}
+		/* Florida Keys' cranes scene takes the same bird (Rob's row 9): its
+		 * two poses, both facings, at the scene's 60 px x min(DPR, 2) */
+		if (AD && vigList.indexOf('cranes') >= 0) {
+			adK = AD.prep([['k', 'stand', 1], ['k', 'stand', -1], ['k', 'leap', 1], ['k', 'leap', -1]], { k: 60 * mn(W.devicePixelRatio || 1, 2) });
 		}
 		/* The first scene: 6-10 s in, on every page. A theme with no scenes
 		 * (or none at this hour) gives that slot to its hero on a later page,
@@ -7427,7 +7540,7 @@
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
 		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, vigs: VIGS, eveningVigs: EVENING_VIGS,
-		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, artDraw: ART_DRAW, tk: TKM, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, witch: { body: witchBody, cape: witchCape, hair: witchHair, still: witchStill, box: WITCH_BOX, capeAt: WITCH_CAPE, hairAt: WITCH_HAIR }, moon: moonPaint, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
+		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, artDraw: ART_DRAW, tk: TKM, crane: ART.crane || null, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, witch: { body: witchBody, cape: witchCape, hair: witchHair, still: witchStill, box: WITCH_BOX, capeAt: WITCH_CAPE, hairAt: WITCH_HAIR }, moon: moonPaint, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
 		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
 	} };
 })();

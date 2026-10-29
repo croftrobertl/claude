@@ -215,6 +215,36 @@ class Themes {
                 ],
             ],
 
+            /* 4.13.5: the Anniversary, 11 November. Rob's picks (2026-10-29):
+             * the pieces in assets/js/art-anniversary.js, the dancing pair
+             * as its scene (annivdance, the crane in assets/js/art-crane.js),
+             * no flyer (a theme's signature character appears ONCE, as its
+             * scene). Sizes are his picked HEIGHTS turned into widths through
+             * each sprite's viewBox: the pieces about 26 px tall, the date
+             * half as big again (27), the year crystal at 1.5x (42), the two
+             * figures half as big again (36). No names anywhere.
+             * PROVISIONAL until Rob picks the mix and the motion (the
+             * 4.13.5 options sheet): this row is option A. */
+            'anniversary' => [
+                'ambient' => [
+                    'particles' => [
+                        ['s' => 'anheart', 'b' => 'fall', 'w' => 3, 'sz' => [22, 30]],
+                        ['s' => 'anrings', 'b' => 'fall', 'w' => 2, 'sz' => [30, 38]],
+                        ['s' => 'ancrystal', 'b' => 'fall', 'w' => 2, 'sz' => [18, 22]],
+                        ['s' => 'antoast', 'b' => 'fall', 'sz' => [24, 30]],
+                        ['s' => 'andate', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
+                        ['s' => 'anyear', 'b' => 'fall', 'n' => 1, 'sz' => [28, 32]],
+                        ['s' => 'anpct1', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
+                        ['s' => 'anpct2', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#E2C25A', '#E8838F'],
+                    'glyphs' => ['♥', 'ﾊ', 'ｷ', '1', '1', '0'],
+                    'finale' => '💍',
+                ],
+            ],
+
             'christmas' => [
                 'ambient' => [
                     'water'     => true,
@@ -733,6 +763,7 @@ class Themes {
              * Patriot Day and Veterans Day keep the leaves effect. */
             'thanksgiving' => '',
             'veterans_day' => 'leaves',
+            'anniversary'  => '',   /* PROVISIONAL until Rob picks (the 4.13.5 options sheet) */
             // Winter — no snow anywhere (4.2.0). Each is Rob's pick.
             'snowbird'     => 'sunglow',
             'mlk'          => 'goldlight',
@@ -790,6 +821,7 @@ class Themes {
             'mothers_day'  => __('Mother\'s Day', 'dcc-seasons'),
             'fathers_day'  => __('Father\'s Day', 'dcc-seasons'),
             'veterans_day' => __('Veterans Day', 'dcc-seasons'),
+            'anniversary'  => __('The Anniversary (Nov 11)', 'dcc-seasons'),
             'summer_canal' => __('Summer on the Canal', 'dcc-seasons'),
             'florida_keys' => __('Florida Keys (year-round base)', 'dcc-seasons'),
             'classic'      => __('None (heron + classic green egg only)', 'dcc-seasons'),

@@ -161,7 +161,7 @@ $config = [
     'matrixSrc'    => !empty($args['min']) ? 'matrix.min.js' : 'matrix.js',
     'engineSrc'    => !empty($args['min']) ? 'engine.min.js' : 'engine.js',
     /* 4.13.4: the seasons whose art is its own file, as the plugin lists them */
-    'art'          => array_combine(\DCC_Seasons\Plugin::ART_PACKS, array_map(function ($t) use ($args) { return 'art-' . $t . (!empty($args['min']) ? '.min' : '') . '.js'; }, \DCC_Seasons\Plugin::ART_PACKS)),
+    'art'          => array_map(function ($packs) use ($args) { return array_map(function ($p) use ($args) { return 'art-' . $p . (!empty($args['min']) ? '.min' : '') . '.js'; }, $packs); }, \DCC_Seasons\Plugin::ART_PACKS),
     /* One appearance every 60-90 s after the first ones (4.8.0), from the
      * plugin's own constant. --heroevery=<seconds> is a DEBUG knob: the gap
      * after a hero, so a suite can observe several without waiting. */

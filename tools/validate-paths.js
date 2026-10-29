@@ -16,6 +16,7 @@
  */
 'use strict';
 const fs = require('fs');
+const path = require('path');
 
 const ARGC = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
 const NUM = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?/;
@@ -140,6 +141,10 @@ function collectVignettes(js) {
   /* art drawn in code (the heron, 4.9.0; the witch, 4.10.0) is pictured by ART_DRAW */
   const hd = js.match(/var ART_DRAW = \{([\s\S]*?)\n\t\};/);
   art.drawn = new Set(hd ? [...hd[1].matchAll(/\n\t\t([a-z0-9_]+): function/g)].map(x => x[1]) : []);
+  /* and art the Theme guide paints with a pack's own painter (theme-guide.js
+   * E.artDraw.<key>: the tom, 4.13.3; the sandhill crane, 4.13.5) */
+  const tg = fs.readFileSync(path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js', 'theme-guide.js'), 'utf8');
+  for (const m of tg.matchAll(/E\.artDraw\.([a-z0-9_]+) = function/g)) art.drawn.add(m[1]);
   return { defined, named, missing: [...named].filter(n => !defined.has(n)), art };
 }
 

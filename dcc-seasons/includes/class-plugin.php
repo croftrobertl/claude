@@ -499,6 +499,24 @@ final class Plugin {
     }
 
     /**
+     * ?dcc_date=Y-m-d (4.13.5, with the key, or as an administrator): the
+     * page resolves its season as if the visitor's day were that date, so
+     * the Anniversary can be checked on staging before 11 Nov. The figures
+     * it computes (the year count and the percentages) use the same date.
+     * Anything that is not a real calendar date is ignored.
+     */
+    private function forced_date(): ?string {
+        if (!isset($_GET['dcc_date']) || !$this->may_preview()) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return null;
+        }
+        $d = sanitize_text_field(wp_unslash((string) $_GET['dcc_date'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return null;
+        }
+        return $d;
+    }
+
+    /**
      * A page opened with a valid check key is never cached: its config
      * carries the forced theme and scene, which must never reach a guest.
      * (A wrong key gets the normal page, which is safe to cache.)
@@ -877,15 +895,36 @@ final class Plugin {
      * @param array $opt Sanitized options.
      * @return array
      */
-    /** Seasons whose art lives in its own file (assets/js/art-<theme>.js),
-     * fetched by the loader only for that theme (4.13.4, the split). */
-    const ART_PACKS = ['thanksgiving'];
+    /** Art that lives in its own file (assets/js/art-<pack>.js), fetched by
+     * the loader only on the days of a theme that uses it (4.13.4, the
+     * split). theme => its packs, in the order they run. 4.13.5: the crane
+     * is ONE pack shared by the Anniversary's pair and the Florida Keys
+     * `cranes` scene, so the plugin carries one bird. */
+    const ART_PACKS = [
+        'thanksgiving' => ['thanksgiving'],
+        'anniversary'  => ['crane', 'anniversary'],
+        'florida_keys' => ['crane'],
+    ];
 
-    /** theme => URL of its art file, for the config and the Theme guide */
+    /** every pack file, once each, in a stable order (the Theme guide) */
+    public static function art_files(): array {
+        $out = [];
+        foreach (self::ART_PACKS as $packs) {
+            foreach ($packs as $p) { $out[$p] = $p; }
+        }
+        return array_values($out);
+    }
+
+    /** one pack's URL */
+    public static function art_src(string $pack): string {
+        return add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/art-' . $pack . self::suffix() . '.js');
+    }
+
+    /** theme => URLs of its art files, for the config */
     public static function art_srcs(): array {
         $out = [];
-        foreach (self::ART_PACKS as $t) {
-            $out[$t] = add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/art-' . $t . self::suffix() . '.js');
+        foreach (self::ART_PACKS as $t => $packs) {
+            $out[$t] = array_map([self::class, 'art_src'], $packs);
         }
         return $out;
     }
@@ -1028,6 +1067,7 @@ final class Plugin {
              * Gated server-side exactly like the preview flag. */
             'diag'         => $this->diag_requested(),
             'sceneNow'     => $this->scene_now(),
+            'date'         => null,
             'i18n'        => [
                 'close'         => __('Close', 'dcc-seasons'),
                 'eggLabel'      => __('Seasonal Matrix easter egg', 'dcc-seasons'),
@@ -1035,6 +1075,13 @@ final class Plugin {
                 'bannerReduced' => __('Animation is off because your device prefers reduced motion.', 'dcc-seasons'),
             ],
         ];
+
+        /* the check link's forced date: its themes ride along with today's */
+        $forced = $this->forced_date();
+        if ($forced !== null) {
+            $config['date']   = $forced;
+            $config['themes'] = Themes::reachable($schedule, $forced) + $config['themes'];
+        }
 
         $preview = $this->preview_theme();
         if ($preview !== null) {
