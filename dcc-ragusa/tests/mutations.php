@@ -559,6 +559,54 @@ $mutations = [
         'from' => "        \$speedy = self::marker_offset(\$content, self::SPEEDY_BEGIN, true);\n        if (\$speedy === null) {",
         'to'   => "        \$speedy = stripos(\$content, self::SPEEDY_BEGIN);\n        \$speedy = \$speedy === false ? null : \$speedy;\n        if (\$speedy === null) {",
     ],
+    [
+        'name' => '0.2.7: any file gone inside an update window is credited to the update (a hidden deletion passes)',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            if (\$by !== null && \$ships === false) {",
+        'to'   => "            if (\$by !== null) {",
+    ],
+    [
+        'name' => '0.2.7: a shipped file gone when the upgrader finishes is credited to the update',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$ships === false) {\n                \$gone[] = (string) \$rel;",
+        'to'   => "            if (true) {\n                \$gone[] = (string) \$rel;",
+    ],
+    [
+        'name' => '0.2.7: updates the upgrader hooks never saw go unrecorded',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        foreach (self::detect_unseen() as \$line) {",
+        'to'   => "        foreach ([] as \$line) {",
+    ],
+    [
+        'name' => '0.2.7: an unseen update vouches for the files changed in its window',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            if (!empty(\$w['unseen'])) {\n                continue; // an update nobody saw vouches for no file",
+        'to'   => "            if (false) {\n                continue; // an update nobody saw vouches for no file",
+    ],
+    [
+        'name' => '0.2.7: an unseen update nobody can verify raises nothing',
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (\$known || \$kind === 'core') {",
+        'to'   => "        if (true) {",
+    ],
+    [
+        'name' => '0.2.7: the missing-file email no longer says plainly that no update happened',
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        } elseif (in_array(\$comp['kind'], ['plugin', 'theme', 'core'], true)) {",
+        'to'   => "        } elseif (false) {",
+    ],
+    [
+        'name' => '0.2.7: the unpacked plugin package is not listed',
+        'file' => 'includes/fortresses/class-revelin.php',
+        'from' => "            \\DCCR\\Packages::capture('plugin', \$slug, \$source);",
+        'to'   => "",
+    ],
+    [
+        'name' => '0.2.7: a theme package is not listed (its dropped files become findings)',
+        'file' => 'includes/fortresses/class-revelin.php',
+        'from' => "                \\DCCR\\Packages::capture('theme', \$slug, \$source);",
+        'to'   => "",
+    ],
 ];
 
 

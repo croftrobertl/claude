@@ -3015,6 +3015,216 @@ suite('0.2.6: the SpeedyCache marker is matched as a whole line; live\'s real bl
     Revelin::seal('.htaccess');
 });
 
+
+/** Publish a WordPress.org release of the test plugin: its checksums, and its files. */
+function dccr_release(string $version, array $files): array
+{
+    $files['wporg-plugin.php'] = "<?php\n/**\n * Plugin Name: WPORG Plugin\n * Version: $version\n */\n";
+    $map = [];
+    foreach ($files as $rel => $c) {
+        $map[$rel] = ['md5' => md5($c), 'sha256' => hash('sha256', $c)];
+    }
+    Test_Site::$plugin_checksums['wporg-plugin/' . $version] = $map;
+    return $files;
+}
+/** A real upgrader run: the package is unpacked, listed, copied over, the old files it drops removed. */
+function dccr_real_update(string $slug, array $files, array $drop, ?callable $during = null): int
+{
+    $hook = ['type' => 'plugin', 'action' => 'update', 'plugin' => "$slug/$slug.php"];
+    Sveti_Ivan::on_pre_install(true, $hook);
+    $pkg = DCCR_TEST_ROOT . '/upgrade/pkg-' . bin2hex(random_bytes(3)) . "/$slug";
+    foreach ($files as $rel => $c) {
+        @mkdir(dirname("$pkg/$rel"), 0755, true);
+        file_put_contents("$pkg/$rel", $c);
+    }
+    Revelin::on_source_selection($pkg . '/', dirname($pkg), null, $hook);
+    foreach ($files as $rel => $c) {
+        @mkdir(dirname(WP_PLUGIN_DIR . "/$slug/$rel"), 0755, true);
+        file_put_contents(WP_PLUGIN_DIR . "/$slug/$rel", $c);
+    }
+    foreach ($drop as $rel) {
+        @unlink(WP_PLUGIN_DIR . "/$slug/$rel");
+    }
+    if ($during !== null) {
+        $during();
+    }
+    Sveti_Ivan::on_process_complete((object) ['result' => ['destination_name' => $slug]], $hook);
+    return (int) (Journal::latest('update-check', $slug)['id'] ?? 0);
+}
+function dccr_full_pass(): void
+{
+    State::set('last_full_pass', 0);
+    tick();
+}
+
+suite('0.2.7 drill 1: an update that drops a file: info, on the update\'s journal row, no email', function () {
+    Alerts::force(true);
+    $base = ['includes/a.php' => "<?php\n// a\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'Backend/Pluginmeta/Meta.php' => "<?php\n// meta\n", 'Core/Utils/Hash.php' => "<?php\n// hash\n"];
+    $r18 = dccr_release('4.18.0', $base);
+    foreach ($r18 as $rel => $c) {
+        @mkdir(dirname(WP_PLUGIN_DIR . "/wporg-plugin/$rel"), 0755, true);
+        file_put_contents(WP_PLUGIN_DIR . "/wporg-plugin/$rel", $c);
+    }
+    dccr_full_pass();
+    ok(isset(Fortress\Minceta::index()['wp-content/plugins/wporg-plugin/Core/Utils/Hash.php']), 'the old files are in the baseline');
+    $r19 = dccr_release('4.19.0', ['includes/a.php' => "<?php\n// a 4.19\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'Backend/Pluginmeta/Pluginmeta.php' => "<?php\n// new\n"]);
+    $mails = count($GLOBALS['dccr_mail']);
+    $id = dccr_real_update('wporg-plugin', $r19, ['Backend/Pluginmeta/Meta.php', 'Core/Utils/Hash.php']);
+    dccr_full_pass();
+    $missing = array_filter(Alerts::open(Fortress::MINCETA), static fn($a) => $a['kind'] === 'file-missing' && str_contains((string) $a['target'], 'wporg-plugin/'));
+    eq([], $missing, 'no File Missing for the two files 4.19.0 dropped');
+    eq(0, count(mails_with('Meta.php')) + count(mails_with('Hash.php')), 'no email names them');
+    $ev = array_values(array_filter(events_of('removed-by-update'), static fn($e) => (int) $e['journal_id'] === $id));
+    ok(count($ev) === 1 && $ev[0]['severity'] === Events::INFO && str_contains($ev[0]['message'], 'Removed by WPORG Plugin 4.18.0 → 4.19.0') && str_contains($ev[0]['message'], 'Backend/Pluginmeta/Meta.php'), 'one info line, naming the update: ' . ($ev[0]['message'] ?? ''));
+    $row = Journal::get($id);
+    eq(2, (int) ($row['before']['files']['removed'] ?? -1), 'the journal row counts the files removed');
+    ok((int) ($row['before']['files']['added'] ?? 0) >= 1 && (int) ($row['before']['files']['changed'] ?? 0) >= 1, 'and added and changed');
+    ok(str_contains((string) $row['note'], 'removed by this update: Backend/Pluginmeta/Meta.php'), 'and its note says so');
+    ok(\DCCR\Packages::files('plugin', 'wporg-plugin', '4.19.0') !== null, 'the unpacked package was listed as 4.19.0\'s manifest');
+    Alerts::force(false);
+});
+
+suite('0.2.7 drill 2: the live case: an update the upgrader hooks never saw, a file it no longer ships', function () {
+    Alerts::force(true);
+    // 4.19.0 installed and baselined, with a file 4.20.0 no longer ships.
+    $r19 = dccr_release('4.19.0', ['includes/a.php' => "<?php\n// a 4.19\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'Backend/Pluginmeta/Pluginmeta.php' => "<?php\n// meta\n"]);
+    foreach ($r19 as $rel => $c) {
+        @mkdir(dirname(WP_PLUGIN_DIR . "/wporg-plugin/$rel"), 0755, true);
+        file_put_contents(WP_PLUGIN_DIR . "/wporg-plugin/$rel", $c);
+    }
+    dccr_full_pass();
+    tick(); // the version snapshot holds 4.19.0
+    $r20 = dccr_release('4.20.0', ['includes/a.php' => "<?php\n// a 4.20\n", 'readme.txt' => "=== WPORG Plugin ===\n"]);
+    // Updated by a route Ragusa does not load on (WordPress.com, Jetpack over REST): files replaced, no hooks.
+    foreach ($r20 as $rel => $c) {
+        file_put_contents(WP_PLUGIN_DIR . "/wporg-plugin/$rel", $c);
+    }
+    @unlink(WP_PLUGIN_DIR . '/wporg-plugin/Backend/Pluginmeta/Pluginmeta.php');
+    $pm_before = count(mails_with('Pluginmeta.php'));
+    $r = tick();
+    $row = Journal::latest('update-check', 'wporg-plugin');
+    ok($row !== null && ($row['before']['source'] ?? '') === 'unseen' && ($row['before']['old_version'] ?? '') === '4.19.0' && ($row['before']['new_version'] ?? '') === '4.20.0', 'the next tick records it in the journal: 4.19.0 → 4.20.0, source unseen');
+    ok(count(array_filter($r, static fn($l) => str_contains($l, 'without passing through the upgrader Ragusa watches'))) === 1, 'and says so');
+    eq(Events::INFO, events_of('update-unseen')[0]['severity'] ?? '', 'info: WordPress.org publishes what 4.20.0 contains');
+    dccr_full_pass();
+    eq([], array_filter(Alerts::open(Fortress::MINCETA), static fn($a) => str_contains((string) $a['target'], 'wporg-plugin/')), 'no finding: the changed file matches 4.20.0\'s checksums and the removed one is not in 4.20.0');
+    eq($pm_before, count(mails_with('Pluginmeta.php')), 'no email about it during this drill');
+    ok(count(array_filter(events_of('removed-by-update'), static fn($e) => str_contains($e['message'], '4.19.0 → 4.20.0'))) === 1, 'the removal is recorded as the update\'s');
+    Alerts::force(false);
+});
+
+suite('0.2.7 drill 3: a file deleted by hand from a plugin that did not update: needs a look, emailed, in plain English', function () {
+    Alerts::force(true);
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/includes/helper.php', "<?php\n// helper\n");
+    dccr_full_pass();
+    unlink(WP_PLUGIN_DIR . '/dcc-demo/includes/helper.php');
+    dccr_full_pass();
+    $fp = Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/dcc-demo/includes/helper.php');
+    $a  = Alerts::get($fp);
+    ok($a !== null && Alerts::state($a) === 'open' && $a['severity'] === Events::NEEDS_LOOK, 'needs a look');
+    $m = mails_with('helper.php');
+    ok(count($m) === 1, 'one email');
+    $body = $m[0]['body'] ?? '';
+    ok(str_starts_with($a['title'], 'File Missing From DCC Demo 0.3'), 'the title names the plugin and its version: ' . $a['title']);
+    ok(str_contains($body, 'It belongs to DCC Demo 0.3'), 'the email says whose file it is');
+    ok(str_contains($body, 'No update of DCC Demo was recorded in the last week.'), 'and plainly that no update happened');
+    ok(str_contains($body, 'Ragusa is certain the file is gone; it cannot tell who removed it.'), 'how sure Ragusa is');
+    ok(str_contains($body, 'Forward this to the site director'), 'and the one thing to do');
+    ok(!str_contains($body, 'If the site director removed it'), 'not the old guess');
+    Revelin::seal('wp-content/plugins/dcc-demo/includes/helper.php');
+    Alerts::force(false);
+});
+
+suite('0.2.7 drill 4: a deletion hidden inside an update window, of a file the new version still ships: needs a look, emailed', function () {
+    Alerts::force(true);
+    // (a) After the update finished, inside its half hour.
+    $r21 = dccr_release('4.21.0', ['includes/a.php' => "<?php\n// a 4.21\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'includes/guard.php' => "<?php\n// guard 4.21\n"]);
+    $id = dccr_real_update('wporg-plugin', $r21, []);
+    unlink(WP_PLUGIN_DIR . '/wporg-plugin/includes/guard.php');
+    dccr_full_pass();
+    $a = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/includes/guard.php'));
+    ok($a !== null && Alerts::state($a) === 'open' && $a['severity'] === Events::NEEDS_LOOK, '(a) needs a look, though it is inside the update window');
+    $body = (mails_with('guard.php')[0]['body'] ?? '');
+    ok(str_contains($body, 'Version 4.21.0 still includes this file, so the update should have left it in place.'), '(a) the email says the update should have left it');
+    ok(str_contains($body, 'was updated from 1.4.0 to 4.21.0 at') && str_contains($body, '(journal ' . $id . ')'), '(a) and names the update and its journal row: ' . $body);
+    ok(str_contains($body, 'wp plugin install wporg-plugin --version=4.21.0 --force'), '(a) and how to put it back');
+    // (b) During the copy itself: gone when the upgrader finished.
+    $r22 = dccr_release('4.22.0', ['includes/a.php' => "<?php\n// a 4.22\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'includes/guard.php' => "<?php\n// guard 4.22\n", 'includes/keep.php' => "<?php\n// keep\n"]);
+    $id = dccr_real_update('wporg-plugin', $r22, [], static function () {
+        @unlink(WP_PLUGIN_DIR . '/wporg-plugin/includes/keep.php');
+    });
+    $a = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/includes/keep.php'));
+    eq(null, $a, '(b) keep.php was never in the baseline: nothing to miss');
+    // the real case: an existing shipped file deleted during the copy
+    $id = dccr_real_update('wporg-plugin', dccr_release('4.23.0', ['includes/a.php' => "<?php\n// a 4.23\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'includes/guard.php' => "<?php\n// guard 4.23\n"]), [], static function () {
+        @unlink(WP_PLUGIN_DIR . '/wporg-plugin/includes/a.php');
+    });
+    $a = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/includes/a.php'));
+    ok($a !== null && Alerts::state($a) === 'open' && $a['severity'] === Events::NEEDS_LOOK, '(b) a shipped file gone when the upgrader finished is a finding at once');
+    ok(count(mails_with('a.php')) >= 1, '(b) emailed');
+    file_put_contents(WP_PLUGIN_DIR . '/wporg-plugin/includes/a.php', "<?php\n// a 4.23\n");
+    file_put_contents(WP_PLUGIN_DIR . '/wporg-plugin/includes/guard.php', "<?php\n// guard 4.23\n");
+    dccr_full_pass();
+    Alerts::force(false);
+});
+
+suite('0.2.7 drill 5: a theme update is journaled and its dropped files judged against its package', function () {
+    file_put_contents(WP_CONTENT_DIR . '/themes/bravada/style.css', "/*\nTheme Name: Bravada\nVersion: 1.2.0\n*/\n");
+    file_put_contents(WP_CONTENT_DIR . '/themes/bravada/old.css', "/* old */\n");
+    dccr_full_pass();
+    $hook = ['type' => 'theme', 'action' => 'update', 'theme' => 'bravada'];
+    $pkg  = DCCR_TEST_ROOT . '/upgrade/theme-pkg/bravada';
+    @mkdir($pkg, 0755, true);
+    file_put_contents("$pkg/style.css", "/*\nTheme Name: Bravada\nVersion: 1.3.0\n*/\n");
+    file_put_contents("$pkg/functions.php", "<?php\n// theme 1.3\n");
+    Revelin::on_source_selection($pkg . '/', dirname($pkg), null, $hook);
+    copy("$pkg/style.css", WP_CONTENT_DIR . '/themes/bravada/style.css');
+    copy("$pkg/functions.php", WP_CONTENT_DIR . '/themes/bravada/functions.php');
+    unlink(WP_CONTENT_DIR . '/themes/bravada/old.css');
+    Sveti_Ivan::on_process_complete(null, $hook);
+    $row = Journal::latest('update-seen', 'bravada');
+    ok($row !== null && $row['before']['old_version'] === '1.2.0' && $row['before']['new_version'] === '1.3.0' && $row['state'] === Journal::COMMITTED, 'journaled: Bravada 1.2.0 → 1.3.0');
+    eq(1, (int) $row['before']['files']['removed'], 'one file removed');
+    dccr_full_pass();
+    eq(null, Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/themes/bravada/old.css')), 'old.css, not in the 1.3.0 package, raises nothing');
+});
+
+suite('0.2.7 drill 6: an unseen update of a plugin nobody publishes a file list for vouches for nothing', function () {
+    Alerts::force(true);
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/includes/extra.php', "<?php\n// extra\n");
+    dccr_full_pass();
+    // A bumped version header, a changed file, a removed file: no upgrader.
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/dcc-demo.php', "<?php\n/**\n * Plugin Name: DCC Demo\n * Version: 9.9.9\n */\n");
+    file_put_contents(WP_PLUGIN_DIR . '/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { /* injected */ }\n");
+    unlink(WP_PLUGIN_DIR . '/dcc-demo/includes/extra.php');
+    tick();
+    $u = array_values(array_filter(Alerts::open(Fortress::SVETI_IVAN), static fn($a) => $a['kind'] === 'update-unseen'));
+    ok(count($u) === 1 && str_contains($u[0]['title'], 'Updated Without Ragusa Seeing It: DCC Demo'), 'an unseen, unverifiable update is a finding of its own');
+    $miss = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/dcc-demo/includes/extra.php'));
+    ok($miss !== null && Alerts::state($miss) === 'open', 'the removed file is a finding: nobody can say 9.9.9 dropped it');
+    $ev = array_values(array_filter(events_of('file-missing'), static fn($e) => $e['target'] === 'wp-content/plugins/dcc-demo/includes/extra.php'));
+    ok(str_contains((string) ($ev[0]['message'] ?? ''), 'could not get the list of files in version 9.9.9'), 'and says why: ' . ($ev[0]['message'] ?? ''));
+    ok(count(array_filter(events_of('file-changed'), static fn($e) => $e['target'] === 'wp-content/plugins/dcc-demo/includes/class-demo.php' && $e['severity'] === Events::NEEDS_LOOK)) === 1, 'the changed file is reported on its own, not credited to the unseen update');
+    eq(0, count(array_filter(events_of('update-written'), static fn($e) => str_contains($e['message'], 'class-demo.php'))), 'and not accepted as the update\'s');
+    foreach (['dcc-demo.php', 'includes/class-demo.php', 'includes/extra.php'] as $rel) {
+        Revelin::seal('wp-content/plugins/dcc-demo/' . $rel);
+    }
+    Alerts::withdraw(Fortress::SVETI_IVAN, ['update-unseen']);
+    Alerts::force(false);
+});
+
+suite('0.2.7 failure drill: the package list cannot be written; the update still completes and is judged by WordPress.org\'s list', function () {
+    $pk = DCCR\Vault::dir() . '/packages';
+    @exec('rm -rf ' . escapeshellarg($pk));
+    file_put_contents($pk, 'blocked'); // a file where the folder should be
+    $r = dccr_release('4.24.0', ['includes/a.php' => "<?php\n// a 4.24\n", 'readme.txt' => "=== WPORG Plugin ===\n"]);
+    $id = dccr_real_update('wporg-plugin', $r, ['includes/guard.php']);
+    ok($id > 0 && Journal::get($id)['before']['new_version'] === '4.24.0', 'the update was journaled');
+    eq('4.24.0', Revelin::plugin_version('wporg-plugin'), 'and is installed: Ragusa never stood in the upgrader\'s way');
+    eq(null, Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/includes/guard.php')), 'the removal is still judged, from WordPress.org\'s list for 4.24.0');
+    unlink($pk);
+});
+
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);
 exit($GLOBALS['t_fail'] === 0 ? 0 : 1);

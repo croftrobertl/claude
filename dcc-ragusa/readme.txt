@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.6
+Stable tag: 0.2.7
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,11 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.7 =
+* A file removed by a plugin, theme or core update is recorded as information, not emailed, when it disappears inside that update's window, in that component's files, and the new version no longer ships it. "Ships" is decided from the package the upgrader unpacked (listed as it arrives), WordPress.org's published file list for the version, or core's checksums. Anything else missing is still a finding, including a file the new version still ships that vanished during the update: a deletion hidden inside an update is what an attacker would try.
+* Third-party updates are in the journal with component, old and new version, time, source and files added, changed and removed, themes included. An update that never passed through the upgrader Ragusa watches (WordPress.com or Jetpack over the REST API, the host, by hand) is noticed by its version change on the next tick, recorded as "unseen", and given the same smoke checks; it vouches for no file, and when nobody publishes its file list it is a finding of its own.
+* The File Missing email names the component and its current version, says whether an update was recorded near that time and what it means, says how sure Ragusa is, and gives the one thing to do.
 
 = 0.2.6 =
 * The .htaccess order check matches its two markers as whole lines. On live, "# BEGIN speedycache" was matched as the prefix of SpeedyCache's "# BEGIN SpeedyCacheheaders" block, far above the DCC Pre-gzipped Cache block, so Revelin raised "The Pre-gzipped Cache Block Is Below SpeedyCache" every tick while the order was right (live serves X-SpeedyCache-Source: Server-pregz). SpeedyCache's Gzip, LBC and WEBP blocks are not the rewrite block either. Case, trailing spaces and CRLF line ends are allowed.

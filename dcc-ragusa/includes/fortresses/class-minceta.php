@@ -9,6 +9,7 @@ use DCCR\Events;
 use DCCR\Fortress;
 use DCCR\Htaccess;
 use DCCR\Journal;
+use DCCR\Packages;
 use DCCR\Site;
 use DCCR\State;
 use DCCR\Text;
@@ -693,7 +694,10 @@ final class Minceta
     public static function attribution(string $rel, int $mtime): ?array
     {
         foreach (self::update_windows() as $w) {
-            if ($mtime >= $w['from'] && $mtime <= $w['to'] && self::belongs_to($rel, $w['slug'])) {
+            if (!empty($w['unseen'])) {
+                continue; // an update nobody saw vouches for no file: a bumped version header is cheap to fake
+            }
+            if ($mtime >= $w['from'] && $mtime <= $w['to'] && self::belongs_to($rel, $w['slug'], $w['kind'] ?? 'plugin')) {
                 return $w;
             }
         }
@@ -706,8 +710,11 @@ final class Minceta
      * name. Core: the core areas and the bundled plugins and themes. Never
      * another plugin's folder, never a root file.
      */
-    public static function belongs_to(string $rel, string $slug): bool
+    public static function belongs_to(string $rel, string $slug, string $kind = 'plugin'): bool
     {
+        if ($kind === 'theme') {
+            return $slug !== '' && str_starts_with($rel, 'wp-content/themes/' . $slug . '/');
+        }
         if ($slug === 'core') {
             return str_starts_with($rel, 'wp-admin/') || str_starts_with($rel, 'wp-includes/')
                 || preg_match('#^(wp-[a-z-]+\.php|index\.php|license\.txt|readme\.html)$#', $rel) === 1
@@ -728,19 +735,191 @@ final class Minceta
     {
         $out = [];
         foreach (Journal::recent(30) as $row) {
-            if (!in_array($row['action'], ['update-check', 'self-update', 'core-check'], true) || $row['created_at'] < time() - 86400) {
+            if (!in_array($row['action'], ['update-check', 'self-update', 'core-check', 'update-seen'], true) || $row['created_at'] < time() - 86400) {
                 continue;
             }
             $before = (array) ($row['before'] ?? []);
             $out[]  = [
                 'slug'    => (string) ($before['slug'] ?? $row['target']),
+                'kind'    => $row['action'] === 'core-check' ? 'core' : (string) ($before['component'] ?? 'plugin'),
                 'version' => (string) ($before['new_version'] ?? $before['version'] ?? ''),
+                'old'     => (string) ($before['old_version'] ?? ''),
                 'id'      => (int) $row['id'],
+                'unseen'  => !empty($before['unseen']),
+                'at'      => (int) ($before['installed_at'] ?? $row['created_at']),
                 'from'    => (int) ($before['started'] ?? $row['created_at']) - 60,
                 'to'      => (int) $row['created_at'] + self::UPDATE_WINDOW,
             ];
         }
         return $out;
+    }
+
+    /** The recorded update whose window and component cover this path, or null. */
+    public static function window_for(string $rel, array $windows, int $pass_started): ?array
+    {
+        foreach ($windows as $w) {
+            if ($pass_started <= $w['to'] && time() >= $w['from'] && self::belongs_to($rel, (string) $w['slug'], (string) ($w['kind'] ?? 'plugin'))) {
+                return $w;
+            }
+        }
+        return null;
+    }
+
+    private static function removed_by_update(string $rel, array $w, array &$p): void
+    {
+        $key = $w['kind'] . ':' . $w['slug'] . ':' . $w['version'];
+        $p['removed'][$key][]  = $rel;
+        $p['removed_by'][$key] = $w;
+        Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-missing', $rel), true);
+    }
+
+    /**
+     * Files an update removed, that its new version no longer ships: one info
+     * line, on the update's journal row too. Never an email.
+     */
+    public static function record_removed(array $w, array $rels): void
+    {
+        if ($rels === []) {
+            return;
+        }
+        $comp  = self::component_of($rels[0]);
+        $label = trim($comp['name'] . ' ' . (string) $w['old'] . ' → ' . (string) $w['version']);
+        $short = array_map(static fn($r) => self::inside($r, $w), $rels);
+        Events::record(Fortress::MINCETA, Events::INFO, 'removed-by-update', (string) $w['slug'], sprintf(
+            /* translators: 1: component and versions, 2: count, 3: files */
+            _n('Removed by %1$s (the new version no longer ships it): %3$s', 'Removed by %1$s (the new version no longer ships them, %2$d files): %3$s', count($rels), 'dcc-ragusa'),
+            $label,
+            count($rels),
+            implode(', ', array_slice($short, 0, 12)) . (count($short) > 12 ? ', …' : '')
+        ), ['files' => $rels], (int) ($w['id'] ?? 0) ?: null);
+        if ((int) ($w['id'] ?? 0) > 0) {
+            Journal::annotate((int) $w['id'], sprintf('removed by this update: %s', implode(', ', array_slice($short, 0, 12)) . (count($short) > 12 ? ', …' : '')));
+        }
+    }
+
+    private static function inside(string $rel, array $w): string
+    {
+        $prefix = Packages::prefix((string) ($w['kind'] ?? 'plugin'), (string) $w['slug']);
+        return $prefix !== '' && str_starts_with($rel, $prefix) ? substr($rel, strlen($prefix)) : $rel;
+    }
+
+    /**
+     * Whose file is it, and at what version now: a plugin, a theme, core, a
+     * must-use plugin, or the site's own.
+     *
+     * @return array{kind:string,slug:string,name:string,version:string,wporg:bool}
+     */
+    public static function component_of(string $rel): array
+    {
+        if (preg_match('#^wp-content/plugins/([^/]+)/#', $rel, $m)) {
+            $slug = $m[1];
+            $file = Revelin::plugin_file($slug);
+            $data = $file !== '' && function_exists('get_plugin_data') ? get_plugin_data(Site::plugins_dir() . '/' . $file, false, false) : [];
+            $ver  = (string) ($data['Version'] ?? '');
+            return ['kind' => 'plugin', 'slug' => $slug, 'name' => (string) (($data['Name'] ?? '') ?: $slug), 'version' => $ver, 'wporg' => $ver !== '' && Checksums::plugin($slug, $ver) !== null];
+        }
+        if (preg_match('#^wp-content/themes/([^/]+)/#', $rel, $m)) {
+            $head = Sveti_Ivan::theme_header($m[1]);
+            return ['kind' => 'theme', 'slug' => $m[1], 'name' => $head['name'] ?: $m[1], 'version' => $head['version'], 'wporg' => false];
+        }
+        if (str_starts_with($rel, 'wp-admin/') || str_starts_with($rel, 'wp-includes/') || preg_match('#^(wp-[a-z-]+\.php|index\.php|xmlrpc\.php)$#', $rel) === 1) {
+            global $wp_version;
+            return ['kind' => 'core', 'slug' => 'core', 'name' => 'WordPress', 'version' => (string) $wp_version, 'wporg' => true];
+        }
+        if (str_starts_with($rel, 'wp-content/mu-plugins/')) {
+            return ['kind' => 'mu', 'slug' => basename($rel), 'name' => __('The must-use plugin', 'dcc-ragusa') . ' ' . basename($rel), 'version' => '', 'wporg' => false];
+        }
+        return ['kind' => 'other', 'slug' => '', 'name' => __('The site\'s own files', 'dcc-ragusa'), 'version' => '', 'wporg' => false];
+    }
+
+    /** The newest recorded update of a component in the last week, as a window-shaped row, or null. */
+    public static function recent_update(array $comp): ?array
+    {
+        if (!in_array($comp['kind'], ['plugin', 'theme', 'core'], true)) {
+            return null;
+        }
+        foreach (Journal::recent(60) as $row) {
+            if (!in_array($row['action'], ['update-check', 'self-update', 'core-check', 'update-seen'], true) || $row['created_at'] < time() - 7 * 86400) {
+                continue;
+            }
+            if ((string) $row['target'] !== ($comp['kind'] === 'core' ? 'core' : $comp['slug'])) {
+                continue;
+            }
+            $b = (array) $row['before'];
+            return ['slug' => (string) $row['target'], 'kind' => $comp['kind'], 'version' => (string) ($b['new_version'] ?? $b['version'] ?? ''), 'old' => (string) ($b['old_version'] ?? ''), 'id' => (int) $row['id'], 'unseen' => !empty($b['unseen']), 'at' => (int) ($b['installed_at'] ?? $row['created_at'])];
+        }
+        return null;
+    }
+
+    /**
+     * A file that should be there is not. The email says whose it is, what
+     * Ragusa knows about any update, how sure it is, and the one thing to do.
+     * Returns the finding's fingerprint.
+     */
+    public static function raise_missing(string $rel, string $severity, ?array $w, ?bool $ships): string
+    {
+        $comp  = self::component_of($rel);
+        $upd   = $w ?? self::recent_update($comp);
+        $label = trim($comp['name'] . ($comp['version'] !== '' ? ' ' . $comp['version'] : ''));
+        if ($upd !== null && $ships === null && $w === null) {
+            $ships = Packages::ships((string) $upd['kind'], (string) $upd['slug'], (string) $upd['version'], $rel);
+        }
+        $what = [sprintf(
+            /* translators: 1: path, 2: component and version */
+            __('%1$s is gone. It belongs to %2$s.', 'dcc-ragusa'),
+            $rel,
+            $label
+        )];
+        if ($upd !== null) {
+            $what[] = sprintf(
+                /* translators: 1: name, 2: old version, 3: new version, 4: when, 5: journal */
+                __('%1$s was updated from %2$s to %3$s at %4$s (journal %5$d).', 'dcc-ragusa'),
+                $comp['name'],
+                $upd['old'] !== '' ? $upd['old'] : '?',
+                $upd['version'],
+                Site::stamp((int) $upd['at']),
+                (int) $upd['id']
+            );
+            $what[] = $ships === true
+                /* translators: %s: version */
+                ? sprintf(__('Version %s still includes this file, so the update should have left it in place.', 'dcc-ragusa'), $upd['version'])
+                /* translators: %s: version */
+                : sprintf(__('Ragusa could not get the list of files in version %s, so it cannot tell whether the update removed it.', 'dcc-ragusa'), $upd['version']);
+        } elseif (in_array($comp['kind'], ['plugin', 'theme', 'core'], true)) {
+            /* translators: %s: name */
+            $what[] = sprintf(__('No update of %s was recorded in the last week.', 'dcc-ragusa'), $comp['name']);
+        }
+        $what[] = __('Ragusa is certain the file is gone; it cannot tell who removed it.', 'dcc-ragusa');
+        $todo = match (true) {
+            $comp['kind'] === 'plugin' && $comp['wporg'] => sprintf(
+                /* translators: 1: name, 2: version, 3: slug */
+                __('Forward this to the site director: reinstalling %1$s %2$s puts the file back (wp plugin install %3$s --version=%2$s --force).', 'dcc-ragusa'),
+                $comp['name'],
+                $comp['version'],
+                $comp['slug']
+            ),
+            $comp['kind'] === 'core' => __('Forward this to the site director: wp core verify-checksums lists anything else that is wrong, and wp core download --force --skip-content puts core files back.', 'dcc-ragusa'),
+            $comp['kind'] === 'plugin' || $comp['kind'] === 'theme' => sprintf(
+                /* translators: %s: name */
+                __('Forward this to the site director: if they did not remove it, they reinstall %s from its release.', 'dcc-ragusa'),
+                $comp['name']
+            ),
+            default => __('Forward this to the site director today: they will know whether they removed it.', 'dcc-ragusa'),
+        };
+        $fp = Events::fingerprint(Fortress::MINCETA, 'file-missing', $rel);
+        Events::record(Fortress::MINCETA, $severity, 'file-missing', $rel, implode(' ', $what), [], $upd !== null ? (int) $upd['id'] : null);
+        Alerts::raise([
+            'fortress' => Fortress::MINCETA,
+            'severity' => $severity,
+            'kind'     => 'file-missing',
+            'target'   => $rel,
+            /* translators: 1: file, 2: component */
+            'title'    => sprintf(__('File Missing From %2$s: %1$s', 'dcc-ragusa'), basename($rel), $label),
+            'what'     => implode(' ', $what),
+            'did'      => __('Ragusa changed nothing; it restores only its own sealed copies.', 'dcc-ragusa'),
+            'todo'     => $severity === Events::INFO ? '' : $todo,
+        ]);
+        return $fp;
     }
 
     /** Accepted as the baseline, tagged with the update; one info event per update at the pass end. */
@@ -1079,40 +1258,21 @@ final class Minceta
                 $p['wpstg_sse'] = (int) ($p['wpstg_sse'] ?? 0) + 1;
                 continue; // WP Staging's daily cleanup
             }
-            // Gone during an update's window (the walk's own timing is the only clock a missing file has).
-            $by = null;
-            foreach ($windows as $w) {
-                if ($p['started'] <= $w['to'] && time() >= $w['from'] && self::attribution($rel, $w['from'] + 61) !== null) {
-                    $by = $w;
-                    break;
-                }
-            }
-            if ($by !== null) {
-                self::attributed($rel, $by, $p, 'file-missing');
+            // Gone during an update's window, in that update's files: the update's
+            // only if the new version no longer ships the file.
+            $by    = self::window_for($rel, $windows, (int) $p['started']);
+            $ships = $by === null ? null : Packages::ships((string) $by['kind'], (string) $by['slug'], (string) $by['version'], $rel);
+            if ($by !== null && $ships === false) {
+                self::removed_by_update($rel, $by, $p);
                 continue;
             }
             if (($index[$rel]['x'] ?? '') === 'core') {
                 $severity = Events::NEEDS_LOOK;
             }
-            $fp = Events::fingerprint(Fortress::MINCETA, 'file-missing', $rel);
-            $p['fps'][] = $fp;
-            Events::record(Fortress::MINCETA, $severity, 'file-missing', $rel, sprintf(
-                /* translators: %s: path */
-                __('%s is gone.', 'dcc-ragusa'),
-                $rel
-            ));
-            Alerts::raise([
-                'fortress' => Fortress::MINCETA,
-                'severity' => $severity,
-                'kind'     => 'file-missing',
-                'target'   => $rel,
-                /* translators: %s: path */
-                'title'    => sprintf(__('File Missing: %s', 'dcc-ragusa'), basename($rel)),
-                /* translators: %s: path */
-                'what'     => sprintf(__('%s was there at the last pass and is gone now.', 'dcc-ragusa'), $rel),
-                'did'      => __('Ragusa recorded it; it restores only its own sealed copies.', 'dcc-ragusa'),
-                'todo'     => $severity === Events::INFO ? '' : __('If the site director removed it, nothing to do. Otherwise ask them to look.', 'dcc-ragusa'),
-            ]);
+            $p['fps'][] = self::raise_missing($rel, $severity, $by, $ships);
+        }
+        foreach ((array) ($p['removed'] ?? []) as $key => $rels) {
+            self::record_removed((array) $p['removed_by'][$key], array_values(array_unique((array) $rels)));
         }
         // file-missing is not here: a file stays gone, so its finding stays
         // until the file is back, or `wp ragusa seal <path>` drops it.
@@ -1158,12 +1318,65 @@ final class Minceta
      * rollback, or `wp ragusa seal`). Returns how many files were new or
      * different from the index.
      */
+    /** Files added, changed (size or time) and removed in a folder against the baseline, accepting nothing. */
+    public static function compare_dir(string $abs): array
+    {
+        $abs    = rtrim($abs, '/');
+        $prefix = Site::rel($abs) . '/';
+        $index  = self::index();
+        $out    = ['added' => [], 'changed' => [], 'removed' => []];
+        $seen   = [];
+        if (is_dir($abs)) {
+            foreach (Vault::list_files($abs) as $f => $r) {
+                $rel        = Site::rel((string) $f);
+                $seen[$rel] = true;
+                if (!isset($index[$rel])) {
+                    $out['added'][] = $rel;
+                } elseif ((int) $index[$rel]['s'] !== (int) @filesize((string) $f) || (int) $index[$rel]['m'] !== (int) @filemtime((string) $f)) {
+                    $out['changed'][] = $rel;
+                }
+            }
+        }
+        foreach (array_keys($index) as $rel) {
+            if (str_starts_with((string) $rel, $prefix) && !isset($seen[$rel])) {
+                $out['removed'][] = (string) $rel;
+            }
+        }
+        return $out;
+    }
+
+    public static function newest_mtime(string $abs): int
+    {
+        $max = 0;
+        foreach (is_dir($abs) ? Vault::list_files($abs) : [] as $f => $r) {
+            $max = max($max, (int) @filemtime((string) $f));
+        }
+        return $max;
+    }
+
+    /** Take paths out of the baseline (their absence was judged elsewhere). */
+    public static function drop_from_index(array $rels): void
+    {
+        self::index();
+        foreach ($rels as $rel) {
+            if (isset(self::$index[$rel])) {
+                unset(self::$index[$rel]);
+                self::$index_dirty = true;
+            }
+        }
+        self::save_index();
+    }
+
+    /** What the last rebaseline() found: files added, changed and removed (paths relative to the root). */
+    public static array $last_diff = ['added' => [], 'changed' => [], 'removed' => []];
+
     public static function rebaseline(string $abs): int
     {
         $changed = 0;
         $abs   = rtrim($abs, '/');
         $index = self::index();
         $rels  = [];
+        self::$last_diff = ['added' => [], 'changed' => [], 'removed' => []];
         if (is_dir($abs)) {
             foreach (Vault::list_files($abs) as $f => $r) {
                 $rels[Site::rel($f)] = $f;
@@ -1172,6 +1385,7 @@ final class Minceta
             foreach (array_keys($index) as $rel) {
                 if (str_starts_with($rel, $prefix) && !isset($rels[$rel])) {
                     unset(self::$index[$rel]);
+                    self::$last_diff['removed'][] = (string) $rel;
                 }
             }
         } elseif (is_file($abs)) {
@@ -1184,6 +1398,7 @@ final class Minceta
             $hash = self::hash($file, $exp['algo']);
             if (($index[$rel]['h'] ?? null) !== $hash) {
                 $changed++;
+                self::$last_diff[isset($index[$rel]) ? 'changed' : 'added'][] = (string) $rel;
             }
             self::$index[$rel] = ['s' => (int) filesize($file), 'm' => (int) filemtime($file), 'h' => $hash, 'x' => $exp['src'], 'p' => $pass];
             foreach (['file-new', 'file-changed', 'file-missing', 'plugin-modified', 'core-modified'] as $kind) {

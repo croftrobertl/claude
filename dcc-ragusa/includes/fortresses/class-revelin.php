@@ -438,6 +438,14 @@ final class Revelin
                 return $source;
             }
             $type = is_array($hook_extra) ? ($hook_extra['type'] ?? null) : null;
+            if ($type === 'theme') {
+                $slug = basename(is_array($hook_extra) && !empty($hook_extra['theme']) ? (string) $hook_extra['theme'] : rtrim($source, '/\\'));
+                $pending        = (array) State::get('pending_theme', []);
+                $pending[$slug] = ['old_version' => Sveti_Ivan::theme_header($slug)['version'], 'ts' => time()];
+                State::set('pending_theme', array_slice($pending, -10, null, true));
+                \DCCR\Packages::capture('theme', $slug, $source);
+                return $source;
+            }
             if ($type !== null && $type !== 'plugin') {
                 return $source;
             }
@@ -445,6 +453,8 @@ final class Revelin
             if (is_array($hook_extra) && !empty($hook_extra['plugin']) && dirname((string) $hook_extra['plugin']) !== '.') {
                 $slug = dirname((string) $hook_extra['plugin']);
             }
+            // What the new version ships, as the upgrader unpacked it.
+            \DCCR\Packages::capture('plugin', $slug, $source);
             if ($slug === '' || !is_dir(Site::plugins_dir() . '/' . $slug)) {
                 return $source; // a brand-new install
             }

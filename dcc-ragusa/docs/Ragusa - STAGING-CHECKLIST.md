@@ -1,4 +1,12 @@
-# Ragusa 0.2.6 — Staging Checklist
+# Ragusa 0.2.7 — Staging Checklist
+
+> **Upgrading from 0.2.6 (staging first, then live):** `wp plugin install
+> "Ragusa 0.2.7.zip" --force`, then `wp ragusa tick`. That tick takes the
+> version snapshot every later tick compares against; an update made before
+> it cannot be judged after the fact. On live, the two open WP Staging
+> findings (Meta.php, Hash.php) predate 0.2.7: resolve each with
+> `wp ragusa resolve <id> --note="removed by WP Staging 4.19.0, not in its file list"`.
+> Then step 13. Rollback: `wp plugin install "Ragusa 0.2.6.zip" --force`.
 
 > **Upgrading LIVE from 0.2.5:** `wp plugin install "Ragusa 0.2.6.zip"
 > --force`, then `wp ragusa tick` and `wp ragusa findings`. Expect the open
@@ -526,6 +534,54 @@ cleans up. Each prints every journal state transition.
 - [ ] **The report:** `wp ragusa report --dry-run` prints the subject and
       the five fortress lines with diacritics; `wp ragusa report` on staging
       says it is not sent from here.
+
+## 13. The 0.2.7 drills (staging): updates and the files they remove
+
+A throwaway plugin with two versions, built on the server, so every drill
+is deterministic. From the home directory:
+
+    rm -rf ~/walls-test && mkdir -p ~/walls-test/v1/walls-test-plugin ~/walls-test/v2/walls-test-plugin
+    printf '<?php\n/**\n * Plugin Name: Walls Test Plugin\n * Version: 1.0.0\n */\n' > ~/walls-test/v1/walls-test-plugin/walls-test-plugin.php
+    printf '<?php\n/**\n * Plugin Name: Walls Test Plugin\n * Version: 1.1.0\n */\n' > ~/walls-test/v2/walls-test-plugin/walls-test-plugin.php
+    echo '<?php // old helper' > ~/walls-test/v1/walls-test-plugin/old-helper.php
+    echo '<?php // kept 1.0' > ~/walls-test/v1/walls-test-plugin/kept.php
+    echo '<?php // kept 1.1' > ~/walls-test/v2/walls-test-plugin/kept.php
+    (cd ~/walls-test/v1 && zip -qr ../walls-test-1.0.0.zip walls-test-plugin)
+    (cd ~/walls-test/v2 && zip -qr ../walls-test-1.1.0.zip walls-test-plugin)
+    cd ~/public_html/staging && wp plugin install ~/walls-test/walls-test-1.0.0.zip && wp ragusa scan
+
+- [ ] **An update that drops a file: info, no email.**
+      `wp plugin install ~/walls-test/walls-test-1.1.0.zip --force && wp ragusa scan`.
+      `wp ragusa findings` shows nothing for walls-test-plugin;
+      `wp db query "SELECT id, action, note FROM wpstg0_dcc_ragusa_journal WHERE target = 'walls-test-plugin' ORDER BY id DESC LIMIT 1"`
+      shows its update-check row with the note "removed by this update:
+      old-helper.php" (`wp ragusa journal` cuts notes at 60 characters);
+      Recent Events reads
+      "Removed by Walls Test Plugin 1.0.0 → 1.1.0 (the new version no
+      longer ships it): old-helper.php".
+- [ ] **A deletion hidden inside the update window: needs a look.** At
+      once, `rm wp-content/plugins/walls-test-plugin/kept.php && wp ragusa scan`:
+      "File Missing From Walls Test Plugin 1.1.0: kept.php", needs a look,
+      saying "Version 1.1.0 still includes this file, so the update should
+      have left it in place." (staging shows it on the page; live would
+      email). Put it back: install the 1.1.0 zip again with `--force`.
+- [ ] **A hand deletion from a plugin that did not update: needs a look.**
+      Age the rows out of the week:
+      `wp db query "UPDATE wpstg0_dcc_ragusa_journal SET created_at = created_at - 8*86400 WHERE target = 'walls-test-plugin'"`,
+      then `rm wp-content/plugins/walls-test-plugin/kept.php && wp ragusa scan`:
+      the finding says "No update of Walls Test Plugin was recorded in the
+      last week." and "Ragusa is certain the file is gone; it cannot tell
+      who removed it."
+- [ ] **An update nobody saw: recorded, and a finding.**
+      `sed -i 's/1.1.0/1.2.0/' wp-content/plugins/walls-test-plugin/walls-test-plugin.php && wp ragusa tick`:
+      the tick prints "… went from 1.1.0 to 1.2.0 … without passing
+      through the upgrader Ragusa watches … Recorded as journal N", and
+      `wp ragusa findings` has "Updated Without Ragusa Seeing It: Walls
+      Test Plugin" (nobody publishes its file list).
+- [ ] **Clean up:** `wp plugin delete walls-test-plugin`,
+      `wp ragusa seal wp-content/plugins/walls-test-plugin` (drops the
+      folder from the baseline and settles its findings),
+      `wp ragusa resolve <the update-unseen id>`, `rm -rf ~/walls-test`.
 
 ## 11. Before live
 

@@ -239,6 +239,16 @@ Titles centered, Title Case, American spelling.
   `prune_unwatched()`): at every pass end and at upgrade, a baseline path
   the walk now skips leaves the baseline with one info line. Any change of
   owner or of `skip()` relies on this; never report such a path missing.
+- **A removal is an update's only with three proofs** (`Packages::ships()`,
+  `Minceta::window_for()`, `Sveti_Ivan::judge_removed()`): inside the
+  update's window, in that component's files, and the new version no longer
+  ships the file (the unpacked package's manifest, WordPress.org's checksums,
+  core's checksums). A shipped file gone in the window is a finding. Unknown
+  is a finding.
+- **Updates nobody saw are recorded, never trusted** (`Sveti_Ivan::detect_unseen()`):
+  a version change without a hook-recorded row becomes a journal row with
+  source `unseen` on the next tick. Its window vouches for no file
+  (`attribution()` skips it); without a published file list it is a finding.
 - **One owner per file, one finding per change.** `Minceta::OWNED_ELSEWHERE`
   are skipped by the walk; .user.ini and php.ini are `Php_Patch`'s alone,
   Breached only when `Htaccess::ini_enables_execution()` turns true.
@@ -293,7 +303,7 @@ Titles centered, Title Case, American spelling.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 90 deliberate breakages, each must be caught
+    php tests/mutations.php            # 98 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -311,6 +321,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.6.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.7.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

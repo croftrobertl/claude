@@ -68,6 +68,20 @@ final class Sveti_Ivan
                 self::after_core();
                 return;
             }
+            if ($type === 'theme') {
+                $themes = [];
+                if (!empty($hook_extra['themes']) && is_array($hook_extra['themes'])) {
+                    $themes = $hook_extra['themes'];
+                } elseif (!empty($hook_extra['theme'])) {
+                    $themes = [(string) $hook_extra['theme']];
+                } elseif (is_object($upgrader) && is_array($upgrader->result ?? null) && !empty($upgrader->result['destination_name'])) {
+                    $themes = [(string) $upgrader->result['destination_name']];
+                }
+                foreach (array_unique(array_map('strval', $themes)) as $theme) {
+                    self::after_theme($theme, (string) ($hook_extra['action'] ?? 'update'));
+                }
+                return;
+            }
             if ($type !== 'plugin') {
                 return;
             }
@@ -161,8 +175,14 @@ final class Sveti_Ivan
             self::say(sprintf(__('Ragusa · Sveti Ivan: %s failed; a repeat check decides, nothing is rolled back from one failure.', 'dcc-ragusa'), implode(', ', $results['failed'])));
         }
         // The plugin's own files are the new baseline now, not a finding; a
-        // rollback re-baselines again.
-        $n = Minceta::rebaseline(Site::plugins_dir() . '/' . $slug);
+        // rollback re-baselines again. A file it no longer has is the
+        // update's only if the new version no longer ships it.
+        \DCCR\Packages::finalize('plugin', $slug, $before['new_version']);
+        $n    = Minceta::rebaseline(Site::plugins_dir() . '/' . $slug);
+        $diff = Minceta::$last_diff;
+        $w    = ['slug' => $slug, 'kind' => 'plugin', 'version' => $before['new_version'], 'old' => $before['old_version'], 'id' => $id, 'unseen' => false, 'at' => time()];
+        self::judge_removed($w, $diff['removed']);
+        Journal::set_state($id, Journal::VERIFYING, ['before' => ['files' => self::files_summary($diff)]]);
         Events::record(Fortress::MINCETA, Events::INFO, 'plugin-rebaselined', $slug, sprintf(
             /* translators: 1: slug, 2: version, 3: files */
             __('%1$s %2$s: %3$d files updated and accepted as the baseline.', 'dcc-ragusa'),
@@ -176,6 +196,218 @@ final class Sveti_Ivan
                 self::say(__('Ragusa · Sveti Ivan: the in-process checks run on the next cron tick (no wp subprocess available).', 'dcc-ragusa'));
             }
         }
+    }
+
+    /**
+     * Files gone after an update: the update's (info, on its journal row)
+     * when the new version no longer ships them; otherwise a finding.
+     */
+    private static function judge_removed(array $w, array $removed): void
+    {
+        $gone = [];
+        foreach ($removed as $rel) {
+            $ships = \DCCR\Packages::ships((string) $w['kind'], (string) $w['slug'], (string) $w['version'], (string) $rel);
+            if ($ships === false) {
+                $gone[] = (string) $rel;
+            } else {
+                Minceta::raise_missing((string) $rel, Events::NEEDS_LOOK, $w, $ships);
+            }
+        }
+        Minceta::record_removed($w, $gone);
+    }
+
+    /** @return array{added:int,changed:int,removed:int,lists:array} */
+    private static function files_summary(array $diff): array
+    {
+        $out = ['lists' => []];
+        foreach (['added', 'changed', 'removed'] as $k) {
+            $out[$k]          = count((array) ($diff[$k] ?? []));
+            $out['lists'][$k] = array_slice(array_values((array) ($diff[$k] ?? [])), 0, 30);
+        }
+        return $out;
+    }
+
+    /** Name and version from a theme's style.css. */
+    public static function theme_header(string $slug): array
+    {
+        $css  = Site::content_dir() . '/themes/' . basename($slug) . '/style.css';
+        $head = is_file($css) ? (string) @file_get_contents($css, false, null, 0, 8192) : '';
+        $name = preg_match('/^[\s*#@\/]*Theme Name:(.*)$/mi', $head, $m) ? trim($m[1], " \t*/") : '';
+        $ver  = preg_match('/^[\s*#@\/]*Version:(.*)$/mi', $head, $m) ? trim($m[1], " \t*/") : '';
+        return ['name' => $name, 'version' => $ver];
+    }
+
+    /** A theme update or install: recorded, re-baselined, its removals judged. Themes never roll back. */
+    private static function after_theme(string $slug, string $action): void
+    {
+        $slug    = basename($slug); // a folder name, never a path
+        if ($slug === '' || $slug === '.' || $slug === '..') {
+            return;
+        }
+        $pending = (array) State::get('pending_theme', []);
+        $pre     = (array) ($pending[$slug] ?? []);
+        unset($pending[$slug]);
+        State::set('pending_theme', $pending);
+        $new = self::theme_header($slug)['version'];
+        \DCCR\Packages::finalize('theme', $slug, $new);
+        $before = [
+            'slug'         => $slug,
+            'component'    => 'theme',
+            'kind'         => $action === 'install' ? 'install' : 'update',
+            'source'       => self::source(),
+            'old_version'  => (string) ($pre['old_version'] ?? ''),
+            'new_version'  => $new,
+            'started'      => (int) ($pre['ts'] ?? time()),
+            'installed_at' => time(),
+        ];
+        $id   = Journal::create('update-seen', $slug, $before, 'theme ' . $before['kind'] . ' from ' . $before['source'], false);
+        Minceta::rebaseline(Site::content_dir() . '/themes/' . $slug);
+        $diff = Minceta::$last_diff;
+        self::judge_removed(['slug' => $slug, 'kind' => 'theme', 'version' => $new, 'old' => $before['old_version'], 'id' => $id, 'unseen' => false, 'at' => time()], $diff['removed']);
+        Journal::set_state($id, Journal::COMMITTED, ['before' => ['files' => self::files_summary($diff)]]);
+        Events::record(Fortress::SVETI_IVAN, Events::INFO, 'update-seen', $slug, sprintf(
+            /* translators: 1: theme, 2: old, 3: new */
+            __('Theme %1$s %2$s → %3$s recorded.', 'dcc-ragusa'),
+            $slug,
+            $before['old_version'] !== '' ? $before['old_version'] : '?',
+            $new !== '' ? $new : '?'
+        ), [], $id);
+    }
+
+    // ------------------------------------------------- updates nobody saw
+
+    /** @return array{plugins:array<string,string>,themes:array<string,string>,core:string} */
+    public static function versions_now(): array
+    {
+        global $wp_version;
+        if (!function_exists('get_plugins')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        $plugins = [];
+        foreach (get_plugins() as $file => $data) {
+            $dir = dirname((string) $file);
+            if ($dir !== '.' && $dir !== '') {
+                $plugins[$dir] = (string) ($data['Version'] ?? '');
+            }
+        }
+        $themes = [];
+        foreach ((array) glob(Site::content_dir() . '/themes/*/style.css') as $css) {
+            $slug          = basename(dirname((string) $css));
+            $themes[$slug] = self::theme_header($slug)['version'];
+        }
+        return ['plugins' => $plugins, 'themes' => $themes, 'core' => (string) $wp_version];
+    }
+
+    /** Did a hook-recorded update already put this version in the journal? */
+    private static function recorded(string $slug, string $version): bool
+    {
+        foreach (Journal::recent(60) as $row) {
+            if (!in_array($row['action'], ['update-check', 'self-update', 'core-check', 'update-seen'], true) || $row['created_at'] < time() - 2 * 86400) {
+                continue;
+            }
+            $b = (array) $row['before'];
+            if ((string) $row['target'] === $slug && (string) ($b['new_version'] ?? $b['version'] ?? '') === $version) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Every tick: a version that changed without passing through the
+     * upgrader hooks Ragusa watches (an update made by WordPress.com or
+     * Jetpack over the REST API, by the host, by hand over SFTP) is recorded
+     * in the journal now, with what is known, and its removed files judged.
+     *
+     * @return string[]
+     */
+    public static function detect_unseen(): array
+    {
+        $now  = self::versions_now();
+        $prev = State::get('versions');
+        State::set('versions', $now + ['ts' => time()]);
+        if (!is_array($prev)) {
+            return [];
+        }
+        $since = (int) ($prev['ts'] ?? time());
+        $lines = [];
+        foreach (['plugins' => 'plugin', 'themes' => 'theme'] as $key => $kind) {
+            foreach ($now[$key] as $slug => $version) {
+                $old = $prev[$key][$slug] ?? null;
+                if ($old === null || $old === $version || $version === '' || $slug === 'dcc-ragusa' || self::recorded((string) $slug, $version)) {
+                    continue;
+                }
+                $lines[] = self::record_unseen($kind, (string) $slug, (string) $old, $version, $since);
+            }
+        }
+        if (($prev['core'] ?? '') !== '' && $prev['core'] !== $now['core'] && !self::recorded('core', $now['core'])) {
+            $lines[] = self::record_unseen('core', 'core', (string) $prev['core'], $now['core'], $since);
+        }
+        return $lines;
+    }
+
+    private static function record_unseen(string $kind, string $slug, string $old, string $new, int $since): string
+    {
+        $slug   = $kind === 'core' ? 'core' : basename($slug);
+        $dir    = $kind === 'plugin' ? Site::plugins_dir() . '/' . $slug : ($kind === 'theme' ? Site::content_dir() . '/themes/' . $slug : '');
+        $diff   = $dir !== '' ? Minceta::compare_dir($dir) : ['added' => [], 'changed' => [], 'removed' => []];
+        $newest = $dir !== '' ? Minceta::newest_mtime($dir) : time();
+        $known  = $kind === 'theme' ? \DCCR\Packages::known('theme', $slug, $new) : \DCCR\Packages::known($kind, $slug, $new);
+        $before = [
+            'slug'         => $slug,
+            'component'    => $kind,
+            'kind'         => $kind === 'core' ? 'core' : 'update',
+            'source'       => 'unseen',
+            'unseen'       => true,
+            'old_version'  => $old,
+            'new_version'  => $new,
+            'version'      => $new,
+            'started'      => $since,
+            'installed_at' => min(time(), max($since, $newest)),
+            'errlog'       => Error_Log::snapshot(),
+            'entry'        => null,
+            'files'        => self::files_summary($diff),
+        ];
+        $action = $kind === 'plugin' ? 'update-check' : ($kind === 'core' ? 'core-check' : 'update-seen');
+        $id     = Journal::create($action, $slug, $before, 'update detected after the fact (it did not pass through the upgrader Ragusa watches)', false);
+        if ($action === 'update-seen') {
+            Journal::set_state($id, Journal::COMMITTED);
+        } else {
+            self::schedule($id, self::FOLLOWUP); // the smoke checks still run; nothing can be rolled back without a sealed copy
+        }
+        $comp = $kind === 'core' ? 'WordPress' : ($kind === 'plugin' ? Minceta::component_of('wp-content/plugins/' . $slug . '/x')['name'] : (self::theme_header($slug)['name'] ?: $slug));
+        $text = sprintf(
+            /* translators: 1: component, 2: old, 3: new, 4: from, 5: to, 6: journal */
+            __('%1$s went from %2$s to %3$s between %4$s and %5$s without passing through the upgrader Ragusa watches (an update made by WordPress.com or Jetpack, the host, or by hand). Recorded as journal %6$d.', 'dcc-ragusa'),
+            $comp,
+            $old,
+            $new,
+            Site::stamp($since),
+            Site::stamp(time()),
+            $id
+        );
+        if ($dir !== '') {
+            Minceta::drop_from_index($diff['removed']);
+            self::judge_removed(['slug' => $slug, 'kind' => $kind, 'version' => $new, 'old' => $old, 'id' => $id, 'unseen' => true, 'at' => $before['installed_at']], $diff['removed']);
+        }
+        if ($known || $kind === 'core') {
+            Events::record(Fortress::SVETI_IVAN, Events::INFO, 'update-unseen', $slug, $text . ' ' . __('Its files are checked against the published list for that version.', 'dcc-ragusa'), [], $id);
+        } else {
+            Events::record(Fortress::SVETI_IVAN, Events::NEEDS_LOOK, 'update-unseen', $slug, $text, [], $id);
+            Alerts::raise([
+                'fortress'   => Fortress::SVETI_IVAN,
+                'severity'   => Events::NEEDS_LOOK,
+                'kind'       => 'update-unseen',
+                'target'     => $slug . '@' . $new,
+                /* translators: %s: component */
+                'title'      => sprintf(__('Updated Without Ragusa Seeing It: %s', 'dcc-ragusa'), $comp),
+                'what'       => $text . ' ' . __('Ragusa has no list of the files this version should contain, so it cannot vouch for them; any changed file in it is reported on its own.', 'dcc-ragusa'),
+                'did'        => __('Ragusa recorded the update and changed nothing.', 'dcc-ragusa'),
+                'todo'       => __('Forward this to the site director: if they made this update, nothing to do.', 'dcc-ragusa'),
+                'journal_id' => $id,
+            ]);
+        }
+        return $text;
     }
 
     private static function after_core(): void
@@ -249,6 +481,9 @@ final class Sveti_Ivan
     public static function due(): array
     {
         $lines = [];
+        foreach (self::detect_unseen() as $line) {
+            $lines[] = $line;
+        }
         $swept = self::sweep_events();
         if ($swept > 0) {
             /* translators: %d: events */

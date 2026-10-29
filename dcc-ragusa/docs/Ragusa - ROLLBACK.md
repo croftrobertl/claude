@@ -46,6 +46,16 @@ fail because a marker was renamed on purpose:
     wp ragusa markers set /explore/ "new-marker"
     wp ragusa markers reset         # back to the baked defaults
 
+## If an email says "File Missing From …"
+
+It names the plugin, theme or core version the file belongs to, and any
+update recorded near that time. If that version still includes the file,
+the update did not remove it: reinstall that version (the email gives the
+command for a WordPress.org plugin). If no update was recorded, someone or
+something removed it; the site director decides. A file an update removed,
+that the new version no longer ships, never sends this email: it is a line
+in Recent Events and on the update's journal row.
+
 ## If you removed a file on purpose
 
 Seal the path before the next pass, or after it raised "File Missing":
