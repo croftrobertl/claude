@@ -1,0 +1,916 @@
+/**
+ * v0.35.0 — THE NEW /submit-booking/ LAYOUT. Loaded only when Layout::active()
+ * says this request gets it, so today's checkout stays byte-identical for every
+ * other guest. checkout.css loads first and still owns the fields, the buttons
+ * and the breakdown; this file adds what is new and overrides nothing it does
+ * not have to.
+ *
+ * -----------------------------------------------------------------------------
+ * ITEM 1 — THE COTTAGE PHOTO AND THE LIP (pictures 6 and 7)
+ * -----------------------------------------------------------------------------
+ *
+ * The photo itself is not styled here. class-hero.php filters the THEME's own
+ * `bravada_header_image_url`, so Bravada paints the cottage in the box it
+ * already owns — one photo, nothing stacked, no `!important` background
+ * override of the kind /explore/ uses.
+ *
+ * THE BOX IS THE DIRECTOR'S, NOT OURS. The mu-plugin `dcc-hero-frame.php`
+ * sizes `#header-image-main` / `#header-image-main-inside` to
+ * `clamp(420px, 29vw, 720px)` and forces every child div of the inside box to
+ * `height: 100% !important`. This file works WITH those rules rather than
+ * against them:
+ *
+ *   - The overlay IS such a child div, so it is going to be full height
+ *     whatever it asks for. It therefore says `inset: 0` and lays its content
+ *     out with flexbox, which means the mu-plugin's height and this file agree
+ *     instead of fighting.
+ *
+ *   - THE LIP IS A PSEUDO-ELEMENT, AND THAT IS NOT A STYLE CHOICE. A <div>
+ *     lip directly inside that box would be stretched to `height: 100%` and
+ *     paint the whole photo white. `::after` is not a child div, so the rule
+ *     does not reach it, and the same mu-plugin already gives the box
+ *     `position: relative; overflow: hidden` — exactly what an ::after needs.
+ *     Drawn OUTSIDE the header it would be clipped by `overflow: hidden` on
+ *     `main.main` and `div.one-column` and never seen at all. There is a test
+ *     for its height; keep it.
+ */
+
+.dcc_layout {
+    /* The lip's height is read by the test and by the sheet's top offset, so
+       it is declared once, here, and never retyped. */
+    --dcc-lip-height: 24px;
+    --dcc-lip-radius: 24px;
+
+    /* 0.36.0 — THE DESKTOP'S TWO PANES, declared once. The Smart Next bar is
+       aligned to the form pane from these, and the suite reads them, so a
+       width that exists in three places cannot drift. */
+    --dcc-pane-card: 340px;
+    --dcc-pane-gap: 40px;
+    --dcc-pane-form: 560px;
+}
+
+/* --------------------------------------------------------------------------
+ * The lip: the sheet's rounded top, drawn inside the bottom of the photo.
+ * -------------------------------------------------------------------------- */
+
+/* PHONES ONLY, SINCE 0.36.0. At 1440 this rounded top and its grab line
+   stretched the full 1425px of the window, which reads as a panel somebody
+   left there rather than as a sheet that slid up — the Director measured it
+   and Rob saw it. Below 900px it is the shape the phone layout was designed
+   around and it stays exactly as it was. */
+@media (max-width: 899px) {
+
+.dcc_layout #header-image-main-inside::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--dcc-lip-height);
+    /* The page's own ground, so the lip and the sheet below it are one
+       surface with no seam. */
+    background-color: #fff;
+    border-top-left-radius: var(--dcc-lip-radius);
+    border-top-right-radius: var(--dcc-lip-radius);
+    /* Above the photo and the theme's #header-overlay, below nothing. */
+    z-index: 3;
+    /* The grab line (picture 7): a 40x4 rounded bar, centred. An inline SVG
+       rather than a gradient because a gradient cannot have round ends. */
+    background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="4"%3E%3Crect width="40" height="4" rx="2" fill="%23d4d8dd"/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: 50% 10px;
+    pointer-events: none;
+}
+
+}   /* end: the lip, phones only */
+
+/* --------------------------------------------------------------------------
+ * The overlay: cottage name, cottage number, dates pill. Nothing else goes
+ * on the photo (Rob, 2026-10-22) — no animation, no drawn decoration.
+ * -------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    /* Centred, per Rob's standing rule for titles. */
+    justify-content: center;
+    text-align: center;
+    /* Clear of the lip, so no text is cut by its white strip. */
+    padding: 0 20px calc(var(--dcc-lip-height) + 20px);
+    z-index: 2;
+    /* Legibility, not decoration: the cottage photos are bright and the name
+       has to be readable on all eight of them without touching the picture
+       itself. */
+    background-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 45%,
+        rgba(0, 0, 0, 0.55) 100%
+    );
+    pointer-events: none;
+}
+
+.dcc_layout .dcc_hero-overlay__inner {
+    max-width: 44rem;
+}
+
+/* EVERY line on the photo, not just the paragraphs. The cottage name became
+   an <h1> when the theme's own title was removed, and a `p`-only rule left it
+   BLACK ON THE PHOTO — caught by the suite, invisible in the stylesheet. */
+.dcc_layout .dcc_hero-overlay p,
+.dcc_layout .dcc_hero-overlay h1 {
+    margin: 0;
+    color: #fff;
+    /* The site face, not the theme's header face. */
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* The page's single <h1>. Sized here rather than inheriting the theme's
+   heading scale, which is built for a title bar and not for a photo. */
+.dcc_layout h1.dcc_hero-overlay__name {
+    margin: 0;
+    padding: 0;
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.dcc_layout .dcc_hero-overlay__label {
+    margin-top: 4px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+}
+
+/* The frosted pill with the dates and the night count. */
+.dcc_layout .dcc_hero-overlay__dates {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 14px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    /* A progressive nicety: where it is unsupported the pill is simply a
+       translucent panel, which is already legible over the scrim. */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 900px) {
+    .dcc_layout .dcc_hero-overlay {
+        padding: 0 40px calc(var(--dcc-lip-height) + 32px);
+    }
+    .dcc_layout .dcc_hero-overlay__inner {
+        margin: 0 auto;
+        width: 100%;
+        max-width: 1100px;
+    }
+    .dcc_layout h1.dcc_hero-overlay__name {
+        font-size: 38px;
+    }
+}
+
+/* The theme's 0px-tall <img class="header-image"> stays as the theme draws it;
+   it is the preload's companion request and must not be given a size here. */
+
+/* ---------------------------------------------------------------------------
+ * ITEM 3 — SEGMENTED BUTTONS (guests, coat, boat) and the dog question.
+ *
+ * The dog Yes/No is checkout.js's own <fieldset> of radios (buildPetBlock), so
+ * it is STYLED here and never rebuilt — rebuilding it would take over the
+ * control that applies the pet fee. The other three are built by layout.js
+ * from their <select>, which stays in the form and stays what submits.
+ *
+ * 44px targets and a visible focus ring are Rob's, and both are load-bearing:
+ * under 44px a thumb misses, and the focus ring is the ONLY focus treatment —
+ * the selected fill is #006BCF and white on it is the same pair the site
+ * button spec uses, so a focus style that depended on the fill would vanish on
+ * the selected option.
+ * ------------------------------------------------------------------------- */
+
+/* The native select stays in the form, hidden VISUALLY only: never disabled,
+   never removed, so it still submits. Clipped rather than `display: none`
+   because a `display: none` control cannot be focused for a browser's own
+   validation message, which is how select-list.js (0.34.1) hides its selects
+   and why checkout.js's readers were taught to measure the shown field.
+ *
+ * THIS IS THE SAME FIGHT select-list.js ALREADY WON, AND IT IS WON THE SAME
+ * WAY — deliberately, line for line. The field standard sizes every select on
+ * this checkout with `!important` (width: 100%, min-height: 44px, display:
+ * block), so a plain (0,2,0) rule loses: the first version of this was exactly
+ * that, and the select kept a full-width 44px box. Clipped out of sight but
+ * still taking a row of space above every segmented set — invisible in the
+ * stylesheet, and the suite is what found it. So: the form class, the class
+ * DOUBLED, and `!important` on every line, mirroring
+ * `select.dcc_checkout-select-native.dcc_checkout-select-native` in
+ * checkout.css. Change one, look at the other.
+ *
+ * The `.dcc_layout` marker stays on the front of it like every other rule in
+ * this file — tests/hero asserts that no rule here can match a page that is
+ * not the new layout, and that assertion is worth keeping strict. It only adds
+ * specificity, so it costs the fight nothing.
+ *
+ * THE DOUBLED CLASS IS A BELT, MEASURED AND SAID SO. With the marker and a
+ * SINGLE class — `.dcc_layout .dcc_layout-segment__native` — the select still
+ * measures 1x1 with opacity 0 and no pointer events, because `!important` on
+ * every line already beats the field standard at that specificity. So the
+ * doubling changes nothing observable here, and the mutation that removed it
+ * was retired rather than left as a survivor. It is kept because it mirrors
+ * `select.dcc_checkout-select-native.dcc_checkout-select-native` in
+ * checkout.css line for line, and two rules fighting the same battle in the
+ * same shape are easier to keep in step than two that differ for no reason —
+ * but nobody should read it as load-bearing. */
+.dcc_layout .mphb_sc_checkout-form select.dcc_layout-segment__native.dcc_layout-segment__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    max-width: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+}
+
+.dcc_layout .dcc_layout-segment {
+    display: block;
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+    /* A fieldset is a block with its own intrinsic sizing; min-width:0 is what
+       stops it refusing to shrink inside a flex or grid parent. */
+    min-width: 0;
+}
+
+/* THE OPTIONS, NOT THE FIELDSET, ARE THE FLEX BOX. A <legend> inside a
+   `display: flex` fieldset is not a flex item and every engine lays it out
+   specially, so the group's own box is not a thing to stand on. It does NOT
+   fix an overlap of the Submit button: that was measured, before and after,
+   and there is none in either shape — see the note in layout.js. */
+.dcc_layout .dcc_layout-segment__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dcc_layout .dcc_layout-segment__legend {
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--dcc-ink, #111);
+}
+
+.dcc_layout .dcc_layout-segment__option,
+.dcc_layout .dcc_checkout-pet__toggle label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 44px, Rob's floor, and a 12px side padding so two or four fit a 360px
+       screen without wrapping mid-word. */
+    min-width: 64px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--dcc-gold, #f4da62);
+    border-radius: 22px;
+    background-color: #fff;
+    color: var(--dcc-ink, #111);
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    /* 0.15.0 item 6 — a declared gesture, so iOS does not hold the tap back to
+       see whether it is a double-tap-to-zoom. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* The radio itself is invisible but still the control: it keeps the keyboard
+   behaviour, the focus and the form semantics. Not `display: none`, which
+   would take it out of the tab order and out of arrow-key grouping. */
+.dcc_layout .dcc_layout-segment__radio,
+.dcc_layout .dcc_checkout-pet__toggle input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Chosen. */
+.dcc_layout .dcc_layout-segment__radio:checked + .dcc_layout-segment__text,
+.dcc_layout .dcc_layout-segment__option:has(.dcc_layout-segment__radio:checked),
+.dcc_layout .dcc_checkout-pet__toggle label:has(input[type="radio"]:checked) {
+    background-color: var(--dcc-blue, #006bcf);
+    border-color: var(--dcc-blue, #006bcf);
+    color: #fff;
+}
+
+/* `:has()` is not everywhere, so the chosen state is also carried on the text
+   span, which every browser can select. Both rules say the same thing; the
+   span version wins nothing it should not, because it is the inner element. */
+.dcc_layout .dcc_layout-segment__radio:checked + .dcc_layout-segment__text {
+    display: block;
+    width: 100%;
+    border-radius: 20px;
+    padding: 10px 0;
+    margin: -10px -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* THE FOCUS RING IS THE WHOLE FOCUS TREATMENT, and it is outside the hover
+   query on purpose (0.11.0): focus must work on a touch screen. */
+.dcc_layout .dcc_layout-segment__option:focus-within,
+.dcc_layout .dcc_checkout-pet__toggle label:focus-within {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+/* Hover, gated — on iOS the first tap applies :hover and it sticks until the
+   next tap elsewhere, so a hover-styled control eats a tap (v0.11.0). The
+   selector is the resting one with :hover appended, so it cannot lose to its
+   own resting rule. */
+@media (hover: hover) and (pointer: fine) {
+    .dcc_layout .dcc_layout-segment__option:hover,
+    .dcc_layout .dcc_checkout-pet__toggle label:hover {
+        border-color: var(--dcc-blue, #006bcf);
+    }
+}
+
+/* A choice the page has disabled — checkout.js caps the guest count above the
+   offered number (0.25.2). Shown, so the guest can see the ceiling exists,
+   and not choosable. */
+.dcc_layout .dcc_layout-segment__option:has(.dcc_layout-segment__radio:disabled) {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* ---------------------------------------------------------------------------
+ * ITEM 4 — the coupon, folded behind a link.
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_layout-coupon__reveal.dcc_layout-coupon__reveal {
+    display: inline-block;
+    margin: 0 0 10px;
+    padding: 0;
+    color: var(--dcc-blue, #006bcf);
+    font-size: 16px;
+    text-decoration: underline;
+    cursor: pointer;
+    /* 0.15.0 item 6 — a declared gesture. */
+    touch-action: manipulation;
+}
+
+.dcc_layout .dcc_layout-coupon__reveal:focus-visible {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+/* Folded by default; the link reveals it. Display-based, as everywhere else on
+   this checkout — the field keeps submitting either way, and it is empty while
+   it is folded, so MotoPress sends nothing for it (0.22.0's rule about hidden
+   controls still submitting cuts the other way here and costs nothing). */
+.dcc_layout .dcc_layout-coupon {
+    display: none;
+}
+
+.dcc_layout .dcc_layout-coupon.dcc_layout-coupon--open {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+ * ITEM 5 — the photo ID after choosing a file (picture 2).
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_layout-id {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 0 18px;
+    padding: 12px;
+    border: 2px solid var(--dcc-gold, #f4da62);
+    border-radius: 16px;
+    background: #fffdf5;
+}
+
+.dcc_layout .dcc_layout-id__thumb {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--dcc-blue, #006bcf);
+}
+
+.dcc_layout .dcc_layout-id__image {
+    width: 64px;
+    height: 64px;
+    /* The photo is any shape; the box is square. */
+    object-fit: cover;
+    display: block;
+}
+
+.dcc_layout .dcc_layout-id__meta {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dcc_layout .dcc_layout-id__meta p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+/* A file name can be long and must not push the card sideways. */
+.dcc_layout .dcc_layout-id__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.dcc_layout .dcc_layout-id__ready {
+    color: #0a7d32;
+    font-weight: 700;
+}
+
+/* "Change" is a real tap target, and a bare control: the site button spec
+   matches a plain <button> at (0,3,1), so without this it would render as a
+   full-width blue pill inside the card (v0.17.0). */
+.dcc_layout .dcc_layout-id__change.dcc_layout-id__change {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--dcc-blue, #006bcf);
+    border-radius: 22px;
+    background: #fff;
+    color: var(--dcc-blue, #006bcf);
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    text-transform: none;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.dcc_layout .dcc_layout-id__change:focus-visible {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .dcc_layout .dcc_layout-id__change:hover {
+        background-color: #f08080;
+        border-color: #f08080;
+        color: #fff;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * ITEMS 6 and 7 — THE PINNED BAR.
+ *
+ * Pinned to the bottom on phones and clear of the iOS home bar. The element
+ * lives on <body>, outside article.hentry, because Bravada puts a `matrix3d`
+ * transform on that article and a transformed ancestor becomes the containing
+ * block for `position: fixed` — a fixed box inside it was measured 2,156px
+ * off-screen. NO pinned bar on desktop (Rob): at ≥900px it is moved into the
+ * summary card and laid out in the flow.
+ *
+ * NO TRANSITION, deliberately. WebKit's content observation watches what a
+ * page does around a tap — including transitions started during it — and
+ * v0.18.0 closed the three-tap bug by making this checkout's writes
+ * uneventful. A slide-in on the one element that sits under the guest's thumb
+ * is not worth reopening that.
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .dcc_layout-bar,
+body.dcc_layout > .dcc_layout-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    /* Clear of the iOS home bar. The fallback keeps the padding sane where
+       env() is unknown. */
+    padding-bottom: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid var(--dcc-gold, #f4da62);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Out of the way while the keyboard is up, or while Google Places is showing
+   its suggestions (the site's Customizer CSS puts .pac-container at z-index
+   99999, so the bar would be under the list the guest is trying to tap). */
+body.dcc_layout > .dcc_layout-bar.dcc_layout-bar--away {
+    display: none;
+}
+
+/* The page is padded by the bar's own measured height, so the last field and
+   MotoPress's own Submit button are not stuck underneath it. */
+body.dcc_layout {
+    padding-bottom: var(--dcc-bar-height, 0px);
+}
+
+.dcc_layout .dcc_layout-bar__total {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.dcc_layout .dcc_layout-bar__label {
+    font-size: 13px;
+    color: #555;
+}
+
+.dcc_layout .dcc_layout-bar__amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--dcc-ink, #111);
+}
+
+.dcc_layout .dcc_layout-bar__note {
+    font-size: 13px;
+    color: #555;
+}
+
+.dcc_layout .dcc_layout-bar--ready .dcc_layout-bar__note {
+    color: #0a7d32;
+    font-weight: 700;
+}
+
+.dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__note {
+    /* ONE ERROR INK (0.21.0): --dcc-required is DEFINED as --dcc-error, so the
+       bar, the banner and MotoPress's own messages cannot drift apart. */
+    color: var(--dcc-error, #c62828);
+    font-weight: 700;
+}
+
+.dcc_layout .dcc_layout-bar__amount:empty::before {
+    /* An em dash rather than an empty box while MotoPress has not priced
+       anything yet. Never a zero: this file must not be able to state a
+       number. */
+    content: "\2014";
+    color: #555;
+}
+
+/* The action. The site button spec (v0.8.0), declared rather than inherited. */
+.dcc_layout .dcc_layout-bar__action.dcc_layout-bar__action {
+    flex: 0 0 auto;
+    min-height: 50px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 30px;
+    background-color: var(--dcc-blue, #006bcf);
+    color: #fff;
+    font-family: Raleway, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 50px;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* "Show Me" is outlined, not filled (picture 3): it is a way back to a
+   problem, not the way forward. */
+.dcc_layout .dcc_layout-bar--attention .dcc_layout-bar__action.dcc_layout-bar__action {
+    background-color: #fff;
+    border: 2px solid var(--dcc-error, #c62828);
+    color: var(--dcc-error, #c62828);
+}
+
+.dcc_layout .dcc_layout-bar__action:focus-visible {
+    outline: 3px solid var(--dcc-blue, #006bcf);
+    outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .dcc_layout .dcc_layout-bar__action:hover {
+        background-color: #f08080;
+        color: #fff;
+    }
+}
+
+/* Pressed once, and done. */
+.dcc_layout .dcc_layout-bar__action[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* NO PINNED BAR ON DESKTOP (Rob). It is moved into the summary card and laid
+   out in the flow there. */
+@media (min-width: 900px) {
+    .dcc_layout .dcc_layout-bar {
+        position: static;
+        box-shadow: none;
+        border-top: 0;
+        padding: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    body.dcc_layout {
+        padding-bottom: 0;
+    }
+    .dcc_layout .dcc_layout-bar__action.dcc_layout-bar__action {
+        width: 100%;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * ITEM 8 — DESKTOP: the form sheet left, the summary card right.
+ *
+ * STICKY DOES NOT WORK HERE WITHOUT UNCLIPPING, AND THAT WAS MEASURED.
+ * `main.main` and `div.one-column` are both `overflow: hidden`, which makes
+ * each a scroll container; a sticky card inside them takes its own box as its
+ * scrollport, and that box never scrolls because the PAGE does. Measured in
+ * Chromium at 1280: scrolled 1200px, a sticky card ended at `top: -1180px`.
+ * With only that clipping removed it held at `top: 20px`. Bravada's matrix3d
+ * transform is NOT the cause — sticky worked with it still in place.
+ *
+ * SO THE CLIPPING IS REMOVED FOR THIS PAGE AND THIS WIDTH ONLY, never
+ * site-wide (Rob). Gated three times: the `.dcc_layout` marker, which only
+ * the new layout puts on the body; the checkout page, the only place this
+ * stylesheet loads; and `min-width: 900px`, so a phone's layout is untouched.
+ * Preferred over translating the card on scroll, which would mean writing
+ * layout on every scroll frame — the opposite of what v0.13.0 and v0.18.0
+ * established for this checkout.
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * 0.36.0 — AND REBUILT, AFTER ROB LOOKED AT IT ON A DESKTOP.
+ *
+ * WHAT HE SAW AT 1440 (the Director measured all of it): the form in one
+ * 768px column with its fields topping out at 360px, so half the column was
+ * empty; 29 of the first 30 labels and paragraphs centred, which reads as a
+ * poster rather than a form; the price card over on the right; and 3,202px of
+ * page. The two-column grid below is 0.35.0's, turned round and given a
+ * column width.
+ *
+ * THREE BANDS NOW, AND THEY DO NOT OVERLAP:
+ *   - below 900: the phone, untouched. Rob reviewed it and likes it.
+ *   - 768 to 999: one column, 640 at most, centred. A tablet is not a narrow
+ *     desktop; two panes at 999px would be two cramped ones.
+ *   - 1000 and up: two panes — the card on the left, sticky, and the form on
+ *     the right in ONE 560px column, left-aligned, fields full width.
+ *
+ * THE PANES ARE ASSIGNED BY grid-column, so the card paints left while
+ * staying second in the DOM. That is deliberate: the card holds the
+ * acceptance tick, and the tab order stays "fill the form, then accept",
+ * which is the order the guest acts in. Reversing the DOM instead would put
+ * the tick before the fields it certifies.
+ * ------------------------------------------------------------------------- */
+
+/* TABLET: one column, centred, with room to breathe. */
+@media (min-width: 768px) and (max-width: 999px) {
+    .dcc_layout .mphb_sc_checkout-form {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+@media (min-width: 1000px) {
+    body.dcc_layout main.main,
+    body.dcc_layout div.one-column {
+        overflow: visible;
+    }
+
+    .dcc_layout .mphb_sc_checkout-form {
+        display: grid;
+        grid-template-columns: var(--dcc-pane-card) minmax(0, var(--dcc-pane-form));
+        grid-gap: var(--dcc-pane-gap);
+        /* Centred as a pair, so the two panes sit together rather than being
+           pushed to the edges of a wide window. */
+        justify-content: center;
+        align-items: start;
+    }
+
+    .dcc_layout .dcc_layout-summary {
+        grid-column: 1;
+        grid-row: 1;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        margin-top: 0;
+    }
+
+    .dcc_layout .dcc_layout-sheet {
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+    }
+
+    /* LEFT-ALIGNED (Rob), AND THE RULE BEING OVERRIDDEN IS THIS PLUGIN'S OWN.
+       The 29-of-30 centred labels the Director measured are not the theme's:
+       `checkout.css` centres `.mphb_sc_checkout-form label` and its four
+       sibling selectors with `!important`, which is the field standard's
+       choice for the phone. Inheritance cannot touch a direct `!important`
+       rule, so these name the same elements at a higher specificity —
+       (0,3,1) against (0,2,0) — and are `!important` themselves. The phone
+       keeps the centring: Rob reviewed that and likes it.
+
+       The SECTION TITLES are deliberately not in this list. They stay
+       centred, because a title is centred under his standing rule. */
+    .dcc_layout .dcc_layout-sheet {
+        text-align: left;
+    }
+
+    /* `.mphb-room-number` WAS IN THIS LIST AND HAD TO COME OUT (0.36.1).
+       0.36.0 put it here as a label-ish element, before anyone had read what
+       it renders: it is MotoPress's H3 "Accommodation Details", a title. So
+       this rule and 0.36.1's centred-headings rule named the same element and
+       disagreed — and this one won, being `!important` at (0,4,1) against
+       (0,3,1), so the heading stayed left at >=1000px while reading centred
+       everywhere else. That IS the "inconsistently aligned" the Director
+       found, and removing the underline alone would not have fixed it.
+       Under Rob's standing rule a title is centred; only a multi-sentence
+       paragraph reads left. Caught by tests/layout-fields/ once the fixture
+       finally contained the element — four of the five selectors in the
+       heading rule had none. */
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet label,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet .mphb-coupon-code-title,
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet p {
+        text-align: left !important;
+    }
+
+    /* The text INSIDE a field reads left too — `checkout.css` centres it to
+       match the centred labels, and a left label over a centred value is
+       worse than either on its own. */
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="text"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="tel"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet input[type="email"],
+    .dcc_layout .mphb_sc_checkout-form .dcc_layout-sheet textarea {
+        text-align: left !important;
+    }
+
+    /* FIELDS FILL THE COLUMN. The 360px cap is the phone's proportion
+       (v0.14.0: 360 was chosen so the cap is inert at 390), and in a 560px
+       column it leaves a 200px dead strip beside every field. The token is
+       overridden rather than the two rules that read it, so the cap stays one
+       idea in one place. */
+    .dcc_layout .dcc_layout-sheet {
+        --dcc-field-max: 100%;
+    }
+
+
+    /* THE SMART NEXT BAR BELONGS TO THE FORM PANE (Rob). homeTheBar() moves
+       it there at this width — into the sheet rather than into the card,
+       which is where it went while the card was the right-hand column — so it
+       is the pane's width by being in it, with nothing measured and nothing
+       to drift. */
+    .dcc_layout .dcc_layout-sheet > .dcc_layout-bar {
+        margin-top: 10px;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * 0.36.1 — THE SECTION HEADINGS, AT EVERY WIDTH (Rob: "remove it at every
+ * width. It's the same fault.").
+ *
+ * 0.36.0 removed the underline above 1000px only, and the Director then
+ * measured TWO headings still underlined on the staging desktop that the
+ * narrower list had missed: H3 "Reservation Details"
+ * (`.mphb-booking-details-title`) and H3 "Accommodation Details"
+ * (`.mphb-room-number`). The same read found them INCONSISTENTLY aligned —
+ * one centred, one left — which is the other half of Rob's complaint.
+ *
+ * SO: every heading MotoPress draws inside this layout, centred and not
+ * underlined, at every width. The underline is this plugin's OWN rule in
+ * checkout.css (`text-decoration: underline !important` at 25px on four
+ * selectors), so an `!important` at higher specificity is what it takes.
+ *
+ * SCOPED TO `.dcc_layout`, which is this release's scope. Today's checkout —
+ * the switch off, which is live — carries the same underline and is NOT
+ * touched here: the Director's item 6 says every 0.35.x behaviour stays as it
+ * is, and with the switch off none of these rules apply at all. If Rob wants
+ * it gone from today's checkout too, that is a one-line move into
+ * checkout.css and a separate decision about a page every guest sees.
+ * ------------------------------------------------------------------------- */
+
+.dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+.dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+.dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
+    text-align: center !important;
+    text-decoration: none !important;
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* In a 560px column beside a card, 25px underlined headings are the loudest
+   thing on the page; 20px is the desktop's proportion. The phone keeps
+   MotoPress's size, which Rob approved. */
+@media (min-width: 1000px) {
+    .dcc_layout .mphb_sc_checkout-form .mphb-customer-details-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-price-breakdown-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-booking-details-title,
+    .dcc_layout .mphb_sc_checkout-form .mphb-room-number,
+    .dcc_layout .mphb_sc_checkout-form .dcc_checkout-section-title {
+        font-size: 20px !important;
+    }
+}
+
+/* The card itself, at every width. On a phone it is simply the last block,
+   which is Rob's own section order: Your Stay, About You, Price. */
+.dcc_layout .dcc_layout-summary {
+    box-sizing: border-box;
+    margin: 24px 0 0;
+    padding: 18px;
+    border: 1px solid var(--dcc-gold, #f4da62);
+    border-radius: 18px;
+    background: #fffdf5;
+}
+
+/* 0.36.0 — the cottage photo, framed, at the top of the card. */
+.dcc_layout .dcc_layout-summary__photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0 0 12px;
+    border-radius: 12px;
+    /* A frame rather than a bleed: the card is a card. */
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    object-fit: cover;
+    aspect-ratio: 4 / 3;
+}
+
+.dcc_layout .dcc_layout-summary__name {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.dcc_layout .dcc_layout-summary__title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.dcc_layout .dcc_layout-summary__dates {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+/* The breakdown fills the card rather than keeping its own narrow intrinsic
+   width (v0.14.0: the container is content-sized, which is why the tax
+   footnote needed `width: 0; min-width: 100%`). */
+.dcc_layout .dcc_layout-summary table.dcc_checkout-breakdown {
+    width: 100%;
+    margin: 0 0 10px;
+}
+
+/* The field's original label, once its words have become the segmented
+   group's legend. Hidden, never removed: it still labels the clipped select,
+   which anything walking labels may rely on. Without this the field's name
+   printed twice — "Number of Guests" above "Number of Guests". */
+.dcc_layout .dcc_layout-segment__oldlabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}

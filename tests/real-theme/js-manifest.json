@@ -1,0 +1,188 @@
+[
+ {
+  "order": 1,
+  "file": "01-jquery.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1",
+  "bytes": 87553
+ },
+ {
+  "order": 2,
+  "file": "02-jquery-migrate.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1",
+  "bytes": 13577
+ },
+ {
+  "order": 3,
+  "file": "03-editor-panel.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/stratum/assets/js/editor-panel.min.js?ver=1.6.2",
+  "bytes": 13691
+ },
+ {
+  "order": 4,
+  "file": "04-moment.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/vendor/moment.min.js?ver=2.30.1",
+  "bytes": 58812
+ },
+ {
+  "order": 5,
+  "file": "05-hooks.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/hooks.min.js?ver=f0f188028580e8dc1255",
+  "bytes": 5107
+ },
+ {
+  "order": 6,
+  "file": "06-deprecated.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/deprecated.min.js?ver=fe587bac92b7d0ef760e",
+  "bytes": 1382
+ },
+ {
+  "order": 7,
+  "file": "07-date.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/date.min.js?ver=8173fc0fc12b7bb7eaf0",
+  "bytes": 144747
+ },
+ {
+  "order": 8,
+  "file": "08-i18n.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/i18n.min.js?ver=1dfe7db3940c23ea9216",
+  "bytes": 5791
+ },
+ {
+  "order": 9,
+  "file": "09-url.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/dist/url.min.js?ver=7b0de086d4ae11d55704",
+  "bytes": 10423
+ },
+ {
+  "order": 10,
+  "file": "10-index.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/assets/js/global/index.js?ver=6.4.0",
+  "bytes": 5763
+ },
+ {
+  "order": 11,
+  "file": "11-index.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/assets/js/shortcodes/group-availability-calendar/index.js?ver=6.4.0",
+  "bytes": 43416
+ },
+ {
+  "order": 12,
+  "file": "12-jquery.serializejson.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/vendors/jquery.serializeJSON/jquery.serializejson.min.js?ver=6.4.0",
+  "bytes": 4862
+ },
+ {
+  "order": 13,
+  "file": "13-can.custom.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/vendors/canjs/can.custom.min.js?ver=6.4.0",
+  "bytes": 25344
+ },
+ {
+  "order": 14,
+  "file": "14-jquery.plugin.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/vendors/kbwood/datepick/jquery.plugin.min.js?ver=6.4.0",
+  "bytes": 3181
+ },
+ {
+  "order": 15,
+  "file": "15-jquery.datepick.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/vendors/kbwood/datepick/jquery.datepick.min.js?ver=6.4.0",
+  "bytes": 37853
+ },
+ {
+  "order": 16,
+  "file": "16-mphb.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/motopress-hotel-booking/assets/js/public/mphb.min.js?ver=6.4.0",
+  "bytes": 83230
+ },
+ {
+  "order": 17,
+  "file": "17-webpack.runtime.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/elementor/assets/js/webpack.runtime.min.js?ver=4.3.5",
+  "bytes": 103
+ },
+ {
+  "order": 18,
+  "file": "18-frontend-modules.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/elementor/assets/js/frontend-modules.min.js?ver=4.3.5",
+  "bytes": 53086
+ },
+ {
+  "order": 19,
+  "file": "19-core.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/jquery/ui/core.min.js?ver=1.14.2",
+  "bytes": 18674
+ },
+ {
+  "order": 20,
+  "file": "20-frontend.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/elementor/assets/js/frontend.min.js?ver=4.3.5",
+  "bytes": 60022
+ },
+ {
+  "order": 21,
+  "file": null,
+  "url": "https://doracanalcourt.com/wp-content/plugins/dcc-custom-checkout/assets/guest-count.min.js?ver=0.35.3",
+  "note": "ours - swapped for the build at run time"
+ },
+ {
+  "order": 22,
+  "file": null,
+  "url": "https://doracanalcourt.com/wp-content/plugins/dcc-custom-checkout/assets/checkout.min.js?ver=0.35.3",
+  "note": "ours - swapped for the build at run time"
+ },
+ {
+  "order": 23,
+  "file": null,
+  "url": "https://doracanalcourt.com/wp-content/plugins/dcc-custom-checkout/assets/select-list.min.js?ver=0.35.3",
+  "note": "ours - swapped for the build at run time"
+ },
+ {
+  "order": 24,
+  "file": null,
+  "url": "https://doracanalcourt.com/wp-content/plugins/dcc-custom-checkout/assets/restore.min.js?ver=0.35.3",
+  "note": "ours - swapped for the build at run time"
+ },
+ {
+  "order": 25,
+  "file": "25-general.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/essential-addons-for-elementor-lite/assets/front-end/js/view/general.min.js?ver=6.8.7",
+  "bytes": 11970
+ },
+ {
+  "order": 26,
+  "file": "26-e-202644.js",
+  "url": "https://stats.wp.com/e-202644.js",
+  "bytes": 3812
+ },
+ {
+  "order": 27,
+  "file": "27-frontend.js",
+  "url": "https://doracanalcourt.com/wp-content/themes/bravada/resources/js/frontend.js?ver=1.2.0",
+  "bytes": 30149
+ },
+ {
+  "order": 28,
+  "file": "28-comment-reply.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/comment-reply.min.js?ver=7.1.3",
+  "bytes": 2950
+ },
+ {
+  "order": 29,
+  "file": "29-frontend.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/stratum-menu/assets/js/frontend.min.js?ver=1.0.5",
+  "bytes": 5825
+ },
+ {
+  "order": 30,
+  "file": "30-imagesloaded.min.js",
+  "url": "https://doracanalcourt.com/wp-includes/js/imagesloaded.min.js?ver=5.0.0",
+  "bytes": 5520
+ },
+ {
+  "order": 31,
+  "file": "31-frontend.min.js",
+  "url": "https://doracanalcourt.com/wp-content/plugins/stratum/assets/js/frontend.min.js?ver=1.6.2",
+  "bytes": 55139
+ }
+]

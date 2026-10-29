@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-admin-layout-tests",
+  "private": true,
+  "description": "Admin booking screen: Customer Information order and headings (v0.26.0).",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.47.0" }
+}
