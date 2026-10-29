@@ -13,7 +13,7 @@
 declare(strict_types=1);
 
 $plugin = dirname(__DIR__);
-$work   = sys_get_temp_dir() . '/dccr-mutations';
+$work   = sys_get_temp_dir() . '/dccr-mutations-' . getmypid(); // its own copy: two runs at once never share one
 $only   = $argv[1] ?? ''; // php tests/mutations.php 0.2.1   runs only the mutations whose name contains it
 
 $mutations = [
@@ -738,6 +738,12 @@ $mutations = [
         'file' => 'includes/fortresses/class-sveti-ivan.php',
         'from' => "        if ((\$_GET['for'] ?? '') === 'jetpack') {\n            return 'jetpack';\n        }",
         'to'   => "",
+    ],
+    [
+        'name' => "0.2.9: a broken Ragusa stops WordPress.com's update",
+        'file' => 'dcc-ragusa.php',
+        'from' => "    } catch (\\Throwable \$e) {\n        dccr_harbour_failed(\$e);\n        return \$res; // Ragusa broken never stops an update\n    }",
+        'to'   => "    } finally {\n    }",
     ],
 ];
 

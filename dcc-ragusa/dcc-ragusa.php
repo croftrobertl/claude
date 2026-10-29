@@ -90,20 +90,40 @@ function dccr_load(): void
  */
 function dccr_harbour_pre_install($res, $hook_extra = [])
 {
-    dccr_load();
-    return \DCCR\Fortress\Sveti_Ivan::on_pre_install($res, $hook_extra);
+    try {
+        dccr_load();
+        return \DCCR\Fortress\Sveti_Ivan::on_pre_install($res, $hook_extra);
+    } catch (\Throwable $e) {
+        dccr_harbour_failed($e);
+        return $res; // Ragusa broken never stops an update
+    }
 }
 
 function dccr_harbour_source_selection($source, $remote_source = '', $upgrader = null, $hook_extra = [])
 {
-    dccr_load();
-    return \DCCR\Fortress\Revelin::on_source_selection($source, $remote_source, $upgrader, $hook_extra);
+    try {
+        dccr_load();
+        return \DCCR\Fortress\Revelin::on_source_selection($source, $remote_source, $upgrader, $hook_extra);
+    } catch (\Throwable $e) {
+        dccr_harbour_failed($e);
+        return $source;
+    }
 }
 
 function dccr_harbour_process_complete($upgrader = null, $hook_extra = []): void
 {
-    dccr_load();
-    \DCCR\Fortress\Sveti_Ivan::on_process_complete($upgrader, $hook_extra);
+    try {
+        dccr_load();
+        \DCCR\Fortress\Sveti_Ivan::on_process_complete($upgrader, $hook_extra);
+    } catch (\Throwable $e) {
+        dccr_harbour_failed($e);
+    }
+}
+
+/** Loud, in PHP's own error log: the journal may be what failed. The tick's unseen check still catches the update. */
+function dccr_harbour_failed(\Throwable $e): void
+{
+    error_log('DCC Ragusa: could not record an update in this request: ' . substr(str_replace(ABSPATH, '', $e->getMessage()), 0, 300));
 }
 
 if (!dccr_request_is_watched()) {

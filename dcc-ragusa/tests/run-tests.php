@@ -3539,6 +3539,33 @@ suite('0.2.9 drill 1: WordPress.com updates a plugin through Jetpack\'s comms en
     Alerts::force(false);
 });
 
+suite('0.2.9 failure drill: Ragusa\'s files are gone; the guest listeners get out of the upgrader\'s way and say so', function () {
+    $dir = DCCR_TEST_ROOT . '/broken-ragusa';
+    @mkdir($dir, 0700, true);
+    copy(dirname(__DIR__) . '/dcc-ragusa.php', $dir . '/dcc-ragusa.php'); // the main file alone: no includes/
+    $log = $dir . '/php-error.log';
+    file_put_contents($dir . '/run.php', '<?php
+        define("ABSPATH", "' . ABSPATH . '");
+        ini_set("error_log", "' . $log . '");
+        $GLOBALS["pagenow"] = "index.php";
+        $_GET = ["for" => "jetpack", "jetpack" => "comms"];
+        function is_admin() { return false; }
+        function wp_doing_cron() { return false; }
+        function add_action(...$a) {} function add_filter(...$a) {}
+        function plugin_basename($f) { return "dcc-ragusa/dcc-ragusa.php"; }
+        function plugin_dir_url($f) { return "/"; }
+        require "' . $dir . '/dcc-ragusa.php";
+        $hook = ["type" => "plugin", "action" => "update", "plugin" => "x/x.php"];
+        $a = dccr_harbour_pre_install(true, $hook);
+        $b = dccr_harbour_source_selection("/tmp/pkg/x/", "/tmp/pkg", null, $hook);
+        dccr_harbour_process_complete(null, $hook);
+        echo json_encode([$a, $b, "finished"]);
+    ');
+    $out = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($dir . '/run.php') . ' 2>&1');
+    eq([true, '/tmp/pkg/x/', 'finished'], json_decode($out, true), 'the upgrader gets its values back and the request finishes: ' . $out);
+    ok(substr_count((string) @file_get_contents($log), 'DCC Ragusa: could not record an update in this request') === 3, 'PHP\'s error log says so, once per listener');
+});
+
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);
 exit($GLOBALS['t_fail'] === 0 ? 0 : 1);
