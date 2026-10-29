@@ -1223,6 +1223,37 @@ Rob sees it (the overlay rows; sources named on the sheets).
   late, and a 404), mutation-checked (`DCC_SPLIT_MUT=every|async`).
   Minify a pack with the same terser command as the engine. Sizes at
   4.13.4: core 189,438 raw / 68,186 gz, Thanksgiving 41,384 / 14,288.
+- **4.13.5: a pack can be shared, and two packs are GENERATED.**
+  `Plugin::ART_PACKS` is theme => [packs] (`anniversary` => crane +
+  anniversary, `florida_keys` => crane), `CFG.art[theme]` a list (the
+  loader still takes a single URL from an old cached config), and
+  `Plugin::art_files()` gives each pack once for the Theme guide.
+  `art-crane.js` is written by `tools/crane-build.js` from the approved
+  painter (`tools/anniv-crane3.js`) and the rig (`tools/anniv-crane-rig.js`);
+  `art-anniversary.js` by `tools/anniv-build.js` from the sheets' sources.
+  NEVER edit either by hand: edit the tools and regenerate (`--check` says
+  whether the file is stale). The crane pack carries its own worker
+  pre-draw (`prep`, as the tom's), frame boxes from geometry, one warm
+  draw per frame in idle time (the scene's first frame cost 9-10 ms at 4x
+  without it), and `dance()`; the engine only plans and places.
+  **The Anniversary pack holds the dates, so it carries NO NAMES, comments
+  included** (`test-anniversary.js` checks the readable and the minified
+  file). The figures are computed in it from the day (`CFG.date`, the check
+  link's forced date, else the visitor's). Sizes at 4.13.5 (gz): core
+  69,224, crane 14,326, anniversary 2,691.
+- **The Anniversary (4.13.5).** One day, 11 Nov (anchor `anniversary`,
+  `CLASH_WINS` over Veterans Day). Its scene `annivdance` is a SKY scene:
+  the plan (`adPlanFor`: the keep-clear set by `kcRects`, the cap
+  `adCap(innerWidth)` straight through Rob's approved 60 / 76 / 65 at 390 /
+  768 / 1440, 8 px clear) is measured in idle time every 10 s, never in a
+  frame; the frames are pre-drawn at H x min(DPR, 2), ONE facing, mirrored
+  for the partner (Rob accepted the flipped light), graded
+  `rgba(38,44,34,.42)` to the hero's dim light. Until they are ready it
+  waits 5 s, then declines. The date, the year and the figures fall
+  UPRIGHT (`b 'wobble'`), or 'fall' spins them unreadable. Florida Keys'
+  `cranes` scene draws the same bird (`st.nb`, decided once per scene) in
+  the old sprites' places; without the crane pack it keeps the old
+  sprites. `?dcc_date=Y-m-d` (key or admin, never cached) forces the day.
 - **Minified assets have a recorded build command.** Regenerate with exactly
   `npx terser assets/js/<name>.js -c passes=3 -m --safari10 -d __DCC_DEBUG__=false
   -o assets/js/<name>.min.js` for ambient/engine/matrix and every art-<theme>. Before 3.6.0 the engine's
@@ -1580,7 +1611,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release), `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.13.4 for 4.13.5), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
