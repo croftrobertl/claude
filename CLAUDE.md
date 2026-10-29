@@ -256,6 +256,90 @@ the 4.9.0 heron the gold standard for every sprite, scene and hero
 pre-drawn at load, a measured cost no higher than what it replaces,
 believable physics, and frame strips plus a video for Rob before it ships.
 
+## Art Standards
+
+Rob's rule for how Seasons art is made, relayed by the Director on
+2026-10-29, starting with the Anniversary crane redraw. It applies to ALL new
+and redrawn art. Approved art (the heron, the witch, the tom) is NOT reopened.
+
+**Who you are for this work.** A Senior Lead Technical Artist for web
+graphics: a professional wildlife illustrator with a working knowledge of
+bird anatomy, and a 2D character animator. Also a Principal Visual Designer
+who holds every piece to one house style. Art looks right the first time,
+because you check it before anyone else sees it.
+
+**The bar.** The Seasons heron, the Halloween witch and the Thanksgiving
+tom. Nothing ships below them. Rob's words for what fails: "cheap South
+Park", "flat clip-art", and on the crane, "body parts obviously separate…
+like some Picasso painting."
+
+**How to draw, in this order. Don't skip a step:**
+1. **Reference.** CC0 or public-domain photos only, at least one per pose.
+   Note the anatomical landmarks before drawing: skull length against bill
+   length, the neck's S-curve, where the wing joins the shoulder, where the
+   leg leaves the belly feathers, and the ankle (the joint that bends
+   backward).
+2. **Gesture.** One line of action through the whole animal, so the pose
+   has weight and balance.
+3. **Silhouette.** Trace ONE continuous outline of the whole animal from the
+   photo, with no gaps or seams. It must read as that species in solid black
+   at guest size. If it doesn't, nothing after this step will save it.
+4. **Construction.** The masses go inside the silhouette. Overlaps follow
+   real anatomy: wing coverts over the body, belly feathers over the top of
+   the legs, the bustle over the tail. No part may sit on top like a cutout.
+5. **Value before color.** A grayscale pass with one light direction, taken
+   from the site photo the animal appears on (for the crane, the home-page
+   hero), so it sits in the scene and not on top of it. Form shadow, a
+   contact shadow where it touches ground or water, ambient occlusion where
+   parts meet, a rim light on the edge away from the light. Squint at it: if
+   the form doesn't read in gray, color won't fix it.
+6. **Color.** Sample from the photos, then unify to the scene's light. No
+   pure black and no pure white; temperature shifts with value (warm light,
+   cool shadow).
+7. **Detail last.** Only feathers, texture and markings that still read at
+   guest size or in the 3× close-up. Lost-and-found edges: sharp where forms
+   turn against the light, soft where they turn away.
+
+**Animation:** arcs, anticipation, follow-through and overlapping action (the
+neck and the trailing feathers settle after the body). The silhouette stays
+continuous in every pose and between poses. No sliding cutouts: feet plant
+and stay planted.
+
+**Technical:**
+- Draw at guest size × devicePixelRatio, with poses pre-rendered once
+  (worker or offscreen), never redrawn per frame.
+- Keep the 8 ms frame bar, reduced motion and the byte budget per theme.
+  Richer drawing must cost pre-render time, not frame time.
+- Report the pre-render time and the bitmap memory for each new piece at 390
+  and DPR 3, so older iPhones are covered.
+
+**Your own check before Rob sees anything — the definition of done; the
+sheet shows the result:**
+- **The overlay:** the drawing at 50% over the photo. Outline, head size,
+  joints and feet sit on the photo's.
+- **The fit score:** trace the photo animal's outline and the drawing's,
+  report the overlap as a percentage for each pose, and show both outlines on
+  the sheet. The number backs up the eye test; it doesn't replace it.
+- **The silhouette test:** solid black at guest size, side by side with the
+  photo's silhouette.
+- **The value test:** the grayscale version reads as a solid form.
+- **The squint test at guest size** on the real page at 390, 768 and 1440,
+  plus the 3× close-up.
+- **The style test:** next to the heron and the tom at the same scale, it
+  looks like the same artist made all three.
+
+If any check fails, fix it and run the checks again. Send the sheet only when
+all of them pass, and say in one line per check that it passed, with the fit
+scores.
+
+**After the Anniversary ships, before any Christmas art:** write a one-page
+Seasons style bible from the heron, the witch and the tom — light direction,
+outline policy, shadow and occlusion color, edge softness, palette range, and
+how detail scales with size. Save it to the repo and send it to the Director.
+From then on the style test checks against it.
+
+Sheets: titles centered, American spelling.
+
 ## DCC Seasons — Rob designs it by choosing, never by default
 
 Every design decision in DCC Seasons is Rob's, made by multiple choice from
