@@ -86,6 +86,7 @@ function c3Wrap(g, P, vx, vy, color, blur) {
 	c3Soft(g, function () { g.rect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4); c3Path(g, P); }, color, blur, vx, vy, 1);
 }
 function c3Rgba(c, a) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + a + ')'; }
+function c3Parse(c) { var m = c.match(/[\d.]+/g); return [+m[0], +m[1], +m[2]]; }
 function c3Mixc(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
 /* the body outline from the pose's stretches, each joint once */
 function c3Out(U) {
@@ -98,22 +99,41 @@ function c3Out(U) {
  * ROUNDED tip (point 1), lit vane toward the light, shaded vane away, a pale
  * shaft, dark at the tip; rust staining along its outer edge near the base,
  * fading along it (point 2) */
-function c3Feather(g, b, t, w, lx, ly, cols, far, rust, fing) {
+/* one flight feather from its base b to its tip t, w wide. kind: 2 a
+ * separated outer primary (a finger), 1 an inner primary, 0 a secondary.
+ * Drawn from a width profile along a midline that curves a little (bend:
+ * signed, a share of the length, toward the inner feathers), so a primary
+ * narrows to a POINT and a secondary keeps its width to a shallow round
+ * (Rob, 2026-10-29: the photographs' primaries taper to points, darken
+ * toward the tips and separate into fingers; never round paddles with a
+ * pale stripe). The shaft barely shows. */
+function c3Feather(g, b, t, w, lx, ly, cols, far, rust, kind, bend) {
 	var dx = t[0] - b[0], dy = t[1] - b[1], d = Math.sqrt(dx * dx + dy * dy) || 1e-6, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
-	/* a primary tapers to a narrow rounded tip; a secondary keeps its
-	 * width and ends in a shallow round */
-	var tw = fing ? 0.24 : 0.4, r = Math.min(w * (fing ? 0.9 : 0.34), d * 0.3), m = [b[0] + dx * 0.5, b[1] + dy * 0.5];
+	bend = bend || 0;
+	var N = 9, L = [], R = [], i;
+	function mid(s) { var o = bend * d * 4 * s * (1 - s); return [b[0] + dx * s + nx * o, b[1] + dy * s + ny * o]; }
+	function hw(s) {
+		if (kind === 2) { return w * 0.44 * Math.pow(Math.max(0, 1 - Math.pow(s, 2.4)), 0.75); }
+		if (kind === 1) { return w * 0.44 * Math.pow(Math.max(0, 1 - Math.pow(s, 2.6)), 0.6); }
+		return w * 0.44 * Math.pow(Math.max(0, 1 - Math.pow(s, 4)), 0.5);
+	}
+	for (i = 0; i <= N; i++) {
+		var sN = i / N, p = mid(sN), h = hw(sN);
+		L.push([p[0] + nx * h, p[1] + ny * h]); R.push([p[0] - nx * h, p[1] - ny * h]);
+	}
+	function blade() {
+		g.moveTo(L[0][0], L[0][1]);
+		for (var k = 1; k < N; k++) { g.quadraticCurveTo(L[k][0], L[k][1], (L[k][0] + L[k + 1][0]) / 2, (L[k][1] + L[k + 1][1]) / 2); }
+		g.lineTo(L[N][0], L[N][1]);
+		for (k = N - 1; k > 0; k--) { g.quadraticCurveTo(R[k][0], R[k][1], (R[k][0] + R[k - 1][0]) / 2, (R[k][1] + R[k - 1][1]) / 2); }
+		g.lineTo(R[0][0], R[0][1]); g.closePath();
+	}
+	/* dark toward the tip: the last third goes to the tip color and past it */
 	var gr = g.createLinearGradient(b[0], b[1], t[0], t[1]);
-	gr.addColorStop(0, cols[0]); gr.addColorStop(0.62, cols[1]); gr.addColorStop(1, cols[2]);
-	g.fillStyle = gr;
-	g.beginPath();
-	g.moveTo(b[0] + nx * w * 0.4, b[1] + ny * w * 0.4);
-	g.quadraticCurveTo(m[0] + nx * w * 0.52, m[1] + ny * w * 0.52, t[0] - ux * r + nx * w * tw, t[1] - uy * r + ny * w * tw);
-	g.quadraticCurveTo(t[0] + nx * w * tw * 0.9, t[1] + ny * w * tw * 0.9, t[0] + ux * w * 0.02, t[1] + uy * w * 0.02);
-	g.quadraticCurveTo(t[0] - nx * w * tw * 0.9, t[1] - ny * w * tw * 0.9, t[0] - ux * r - nx * w * tw, t[1] - uy * r - ny * w * tw);
-	g.quadraticCurveTo(m[0] - nx * w * 0.52, m[1] - ny * w * 0.52, b[0] - nx * w * 0.4, b[1] - ny * w * 0.4);
-	g.closePath(); g.fill();
-	var lit = (nx * lx + ny * ly) < 0 ? 1 : -1;
+	gr.addColorStop(0, cols[0]); gr.addColorStop(0.55, cols[1]); gr.addColorStop(0.82, cols[2]);
+	gr.addColorStop(1, c3Rgba(c3Mixc(c3Parse(cols[2]), [22, 20, 20], kind ? 0.45 : 0.25), 1));
+	g.fillStyle = gr; g.beginPath(); blade(); g.fill();
+	var lit = (nx * lx + ny * ly) < 0 ? 1 : -1, m = mid(0.5);
 	if (rust > 0.02) {
 		var rg = g.createLinearGradient(b[0], b[1], b[0] + dx * 0.55, b[1] + dy * 0.55);
 		rg.addColorStop(0, c3Rgba(C3.rust, 0.55 * rust)); rg.addColorStop(1, c3Rgba(C3.rust, 0));
@@ -121,14 +141,17 @@ function c3Feather(g, b, t, w, lx, ly, cols, far, rust, fing) {
 		g.beginPath(); g.moveTo(b[0] + lit * nx * w * 0.24, b[1] + lit * ny * w * 0.24); g.quadraticCurveTo(m[0] + lit * nx * w * 0.32, m[1] + lit * ny * w * 0.32, b[0] + dx * 0.55 + lit * nx * w * 0.3, b[1] + dy * 0.55 + lit * ny * w * 0.3); g.stroke();
 	}
 	if (far) { return; }
-	g.strokeStyle = 'rgba(200,196,190,.18)'; g.lineWidth = w * 0.06;
-	g.beginPath(); g.moveTo(b[0] + lit * nx * w * 0.36 + dx * 0.15, b[1] + lit * ny * w * 0.36 + dy * 0.15);
-	g.quadraticCurveTo(m[0] + lit * nx * w * 0.48, m[1] + lit * ny * w * 0.48, t[0] - ux * r + lit * nx * w * tw * 0.85, t[1] - uy * r + lit * ny * w * tw * 0.85); g.stroke();
-	g.strokeStyle = 'rgba(24,24,28,.34)'; g.lineWidth = w * 0.12;
-	g.beginPath(); g.moveTo(b[0] - lit * nx * w * 0.36 + dx * 0.1, b[1] - lit * ny * w * 0.36 + dy * 0.1);
-	g.quadraticCurveTo(m[0] - lit * nx * w * 0.48, m[1] - lit * ny * w * 0.48, t[0] - ux * r - lit * nx * w * tw * 0.85, t[1] - uy * r - lit * ny * w * tw * 0.85); g.stroke();
-	g.strokeStyle = 'rgba(170,166,160,.14)'; g.lineWidth = w * 0.035;
-	g.beginPath(); g.moveTo(b[0] + dx * 0.1, b[1] + dy * 0.1); g.quadraticCurveTo(m[0], m[1], b[0] + dx * 0.88, b[1] + dy * 0.88); g.stroke();
+	/* light and shade across the vane, soft (no outline): the half toward the
+	 * light a touch lighter, the other darker, inside the blade only */
+	g.save(); g.beginPath(); blade(); g.clip();
+	var q0 = mid(0.3), cg = g.createLinearGradient(q0[0] + lit * nx * w * 0.45, q0[1] + lit * ny * w * 0.45, q0[0] - lit * nx * w * 0.45, q0[1] - lit * ny * w * 0.45);
+	cg.addColorStop(0, 'rgba(206,200,192,.12)'); cg.addColorStop(0.5, 'rgba(0,0,0,0)'); cg.addColorStop(1, 'rgba(20,20,24,.28)');
+	g.fillStyle = cg; g.fillRect(Math.min(b[0], t[0]) - w, Math.min(b[1], t[1]) - w, Math.abs(dx) + 2 * w, Math.abs(dy) + 2 * w);
+	g.restore();
+	/* the shaft, barely there, stopping short of the tip */
+	g.strokeStyle = 'rgba(150,146,140,.06)'; g.lineWidth = w * 0.03;
+	var s1 = mid(0.1), s2 = mid(0.7);
+	g.beginPath(); g.moveTo(s1[0], s1[1]); g.quadraticCurveTo(m[0], m[1], s2[0], s2[1]); g.stroke();
 }
 /* how much rust a wing carries at a share u along it (0 shoulder, 1 wrist) */
 function c3WR(U, u, j) { var w = U.wRust || [0.5, 0.3], d = (u - w[0]) / 0.22; return w[1] * Math.exp(-d * d) * (0.55 + 0.9 * c3H(j)); }
@@ -159,8 +182,14 @@ function c3Wing(g, U, W, lx, ly, far, Obody) {
 		var t = tips[i], bpt = c3At(base, i / (n - 1));
 		var fo = (i < nf) ? FP : FO, cl = [0, 1, 2].map(function (q) { return c3Rgba(c3Mixc(fo[q], OPEN[q], op), 1); }), cols = cl;
 		var sp = c3L(tips[Math.max(0, i - 1)], tips[Math.min(n - 1, i + 1)]);
-		var fing = i < nf && W.open > 0.5, w = fing ? Math.min(Math.max(sp * 0.95, 0.03), 0.062) : Math.max(sp * 0.62, 0.024);
-		c3Feather(g, bpt, t, w, lx, ly, cols, far, fing ? 0 : c3WR(U, 1 - i / (n - 1), i) * 0.45, fing);
+		/* open: the outer primaries are fingers, each its own width so the
+		 * gaps between them are uneven, and the next four primaries also
+		 * taper to points; folded, every feather keeps a rounded end */
+		var fing = i < nf && W.open > 0.5, prim = !fing && i < nf + 4 && W.open > 0.5;
+		var w = fing ? Math.min(Math.max(sp * 0.95, 0.03), 0.062) * (0.72 + 0.36 * c3H(i * 7 + (far ? 3 : 0))) : Math.max(sp * 0.62, 0.024);
+		/* each curves a little toward the inner feathers */
+		var nb = tips[Math.min(n - 1, i + 1)], ddx = t[0] - bpt[0], ddy = t[1] - bpt[1], side = ((nb[0] - t[0]) * -ddy + (nb[1] - t[1]) * ddx) > 0 ? 1 : -1;
+		c3Feather(g, bpt, t, w, lx, ly, cols, far, fing ? 0 : c3WR(U, 1 - i / (n - 1), i) * 0.45, fing ? 2 : (prim ? 1 : 0), W.open > 0.5 ? side * (fing ? 0.05 : 0.03) : 0);
 	}
 	/* the coverts (4.13.5 fix 3): OPAQUE overlapping feather rows growing
 	 * from the leading edge back over the flight feathers' bases, the last
@@ -173,47 +202,46 @@ function c3Wing(g, U, W, lx, ly, far, Obody) {
 	var g0 = lead.concat(rowAt(0.32).reverse());
 	g.fillStyle = far ? '#A5A29E' : '#8E8781'; g.beginPath(); c3Path(g, g0); g.fill();
 	/* nothing pokes out past the leading edge */
-	g.save(); g.beginPath(); c3Path(g, lead.concat(rowAt(1.4).reverse())); g.clip();
+	g.save(); g.beginPath(); c3Path(g, lead.concat(rowAt(2.4).reverse())); g.clip();
 	for (var r = RW - 1; r >= 0; r--) {
 		var row = rowAt(FR[r]), k, rl = 0; for (k = 1; k <= 10; k++) { rl += c3L(row[k - 1], row[k]); }
 		/* each row's feathers longer than the row in front (the lesser
 		 * coverts small at the edge, the greater coverts long over the flight
 		 * feathers), each about 2.3 times as long as it is wide */
-		var sz = (0.022 + r * 0.011) * (far ? 0.9 : 1), cnt = Math.max(3, Math.round(rl / (sz * 0.78)));
+		var sz = (0.022 + r * 0.011) * (far ? 0.9 : 1), cnt = Math.max(3, Math.round(rl / (sz * (r ? 0.72 : 0.42))));   /* the lesser coverts packed into one pale band, never teeth */
 		for (k = 0; k < cnt; k++) {
-			var j = r * 37 + k, u = Math.min(0.98, Math.max(0.02, (k + 0.5 + (r % 2) * 0.5 + (c3H(j + 1) - 0.5) * 0.35) / (cnt + 0.5)));
-			var p0 = c3At(row, u), ref = c3At(Bs, u), ld = c3At(lead, u);
-			var ang = Math.atan2(ref[1] - ld[1], ref[0] - ld[0]) + (c3H(j + 2) - 0.5) * 0.22, fs = sz * (0.85 + 0.3 * c3H(j + 3));
-			/* gray-brown, darker and browner toward the flight feathers, as in
-			 * the photographs; each feather a little different */
-			/* the lesser coverts along the leading edge are the pale band the
-			 * photographs show; behind them gray-brown, darker toward the
-			 * flight feathers */
+			/* spacing and size vary feather to feather, and each sits a little
+			 * off its row, so no row reads as a line of shingles (Rob,
+			 * 2026-10-29) */
+			var j = r * 37 + k, u = Math.min(0.98, Math.max(0.02, (k + 0.5 + (r % 2) * 0.5 + (c3H(j + 1) - 0.5) * 0.9) / (cnt + 0.5)));
+			var fo = Math.max(0, FR[r] + (c3H(j + 6) - 0.5) * 0.09), p0 = c3At(rowAt(fo), u), ref = c3At(Bs, u), ld = c3At(lead, u);
+			var ang = Math.atan2(ref[1] - ld[1], ref[0] - ld[0]) + (c3H(j + 2) - 0.5) * 0.3, fs = sz * (0.65 + 0.7 * c3H(j + 3));
 			var tone = far ? c3Mixc([160, 156, 152], [130, 124, 120], r / (RW - 1)) : (r === 0 ? [176, 170, 164] : c3Mixc([132, 125, 119], [92, 82, 76], (r - 1) / (RW - 2)));
-			tone = c3Mixc(tone, [70, 66, 66], (c3H(j + 4) - 0.5) * 0.16);
+			tone = c3Mixc(tone, [70, 66, 66], (c3H(j + 4) - 0.5) * 0.2);
 			var ru = far ? 0 : Math.min(0.85, c3WR(U, u, j) * (0.55 + r * 0.3));
 			(function (sz, tone, ru, ang, p0) {
-				var Lf = sz * 2.7, Wf = sz * 0.46, x0 = -Lf * 0.3, x1 = Lf * 0.7;
+				var Lf = sz * 2.5, Wf = sz * 0.5, x0 = -Lf * 0.3, x1 = Lf * 0.7;
 				g.save(); g.translate(p0[0], p0[1]); g.rotate(ang);
-				/* the blade: straight-sided, a rounded point at the tip */
-				function shp() { g.moveTo(x0, -Wf * 0.8); g.lineTo(x1 - Wf * 0.9, -Wf); g.quadraticCurveTo(x1 + Wf * 0.15, -Wf * 0.7, x1, 0); g.quadraticCurveTo(x1 + Wf * 0.15, Wf * 0.7, x1 - Wf * 0.9, Wf); g.lineTo(x0, Wf * 0.8); g.closePath(); }
-				/* its own shadow on the feathers it lies over (occlusion) */
-				g.save(); c3Sh(g, C3.ao + '.5)', sz * 0.35, sz * 0.12, sz * 0.05); g.fillStyle = c3Rgba(tone, 1); g.beginPath(); shp(); g.fill(); g.restore();
-				/* lit toward its base, shaded toward the tip; rust staining from
-				 * the tip, fading back along the feather */
+				function shp() { g.moveTo(x0, -Wf * 0.8); g.quadraticCurveTo(x1 - Wf * 0.6, -Wf * 1.05, x1, 0); g.quadraticCurveTo(x1 - Wf * 0.6, Wf * 1.05, x0, Wf * 0.8); g.closePath(); }
+				/* a soft, wide occlusion where it lies over the one behind: no
+				 * crisp shadow line */
+				g.save(); c3Sh(g, C3.ao + '.2)', sz * 0.45, sz * 0.08, sz * 0.03); g.fillStyle = c3Rgba(tone, 1); g.beginPath(); shp(); g.fill(); g.restore();
 				var fg = g.createLinearGradient(x0, 0, x1, 0);
-				fg.addColorStop(0, c3Rgba(c3Mixc(tone, [196, 192, 186], 0.22), 1)); fg.addColorStop(0.55, c3Rgba(tone, 1));
-				fg.addColorStop(1, c3Rgba(c3Mixc(c3Mixc(tone, [60, 54, 52], 0.18), C3.rust, ru), 1));
+				fg.addColorStop(0, c3Rgba(c3Mixc(tone, [196, 192, 186], 0.12), 1)); fg.addColorStop(0.6, c3Rgba(tone, 1));
+				fg.addColorStop(1, c3Rgba(c3Mixc(c3Mixc(tone, [60, 54, 52], 0.1), C3.rust, ru), 1));
 				g.fillStyle = fg; g.beginPath(); shp(); g.fill();
-				/* the edge toward the light: a narrow pale fringe; the shaft */
-				g.strokeStyle = far ? 'rgba(214,212,206,.16)' : 'rgba(200,192,182,.17)'; g.lineWidth = sz * 0.06;
-				g.beginPath(); g.moveTo(x0 + Lf * 0.3, -Wf * 0.9); g.lineTo(x1 - Wf * 0.9, -Wf * 0.96); g.quadraticCurveTo(x1 + Wf * 0.12, -Wf * 0.66, x1, 0); g.stroke();
-				g.strokeStyle = 'rgba(44,40,40,.22)'; g.lineWidth = sz * 0.045;
-				g.beginPath(); g.moveTo(x0 + Lf * 0.2, Wf * 0.05); g.lineTo(x1 - Wf * 0.4, 0); g.stroke();
 				g.restore();
 			})(fs, tone, ru, ang, p0);
 		}
 	}
+	/* the light, over the coverts as one surface: lit along the leading edge
+	 * (toward the light), falling into shade toward the flight feathers;
+	 * this, not edges, is where their contrast comes from */
+	var lm = c3At(lead, 0.5), bm = c3At(Bs, 0.5), lw = g.createLinearGradient(lm[0], lm[1], bm[0], bm[1]);
+	lw.addColorStop(0, 'rgba(220,216,208,' + (far ? 0.06 : 0.12) + ')'); lw.addColorStop(0.5, 'rgba(220,216,208,0)'); lw.addColorStop(1, 'rgba(220,216,208,0)');   /* the shade side is in the back rows' own tones: a dark end here left an edge */
+	/* over the coverts only, ending where they end (beyond them it would lie
+	 * on the flight feathers as a visible edge) */
+	g.fillStyle = lw; g.beginPath(); c3Path(g, lead.concat(rowAt(0.86).reverse())); g.fill();
 	g.restore();
 	/* the leading edge: pale lesser coverts with a crisp found edge on the
 	 * shade side (point 4) */

@@ -100,8 +100,10 @@ function sep(a, b) { return Math.max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1]
     if (clear >= M && boxes.every(b => b[0] >= 0 && b[2] <= pic[2] && b[1] >= 0)) { break; }
   }
   /* pre-draw both facings and keep them on the page */
-  const cost = await pg.evaluate(([H, dpr]) => { const a = window.preDraw(H, dpr, 1), b = window.preDraw(H, dpr, -1); window.PD = [a, b]; return { n: a.n, ms: +(a.ms + b.ms).toFixed(1), mem: a.mem + b.mem }; }, [H, Math.min(DPR, 2)]);
-  console.log(W, 'H', H, 'clear', Math.round(clear), who, 'frames', cost.n, 'x2 facings, pre-draw', cost.ms, 'ms, memory', (cost.mem / 1048576).toFixed(2), 'MB');
+  const cost = await pg.evaluate(([H, dpr]) => { /* ONE facing, pre-drawn; the partner is the same bitmaps mirrored (Rob,
+       * 2026-10-29: he accepts that the light flips on the mirrored bird) */
+      const a = window.preDraw(H, dpr, 1); window.PD = [a, a]; return { n: a.n, ms: +a.ms.toFixed(1), mem: a.mem }; }, [H, Math.min(DPR, 2)]);
+  console.log(W, 'H', H, 'clear', Math.round(clear), who, 'frames', cost.n, 'one facing (mirrored for the partner), pre-draw', cost.ms, 'ms, memory', (cost.mem / 1048576).toFixed(2), 'MB');
   await pg.evaluate(([pic]) => {
     const host = document.querySelector('#header-image-main-inside'), c = document.createElement('canvas'); c.id = 'dclab';
     c.style.cssText = 'position:absolute;left:0;top:0;z-index:99999;pointer-events:none'; host.appendChild(c);
@@ -118,7 +120,7 @@ function sep(a, b) { return Math.max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1]
       [[xa, 1, t, window.PD[0]], [xb, -1, t - off, window.PD[1]]].forEach(([x, f, tt, P]) => {
         const st = dcAt(F, Math.max(0, tt)), fr = P.frames[st.fi];
         g.setTransform(dp * H * f, 0, 0, dp * H, dp * x, dp * floorY);
-        dcDraw(g, F, st, window.L0[0] * f, window.L0[1], fr.c, f > 0 ? fr.box : [-fr.box[2], fr.box[1], -fr.box[0], fr.box[3]]);
+        dcDraw(g, F, st, window.L0[0], window.L0[1], fr.c, fr.box);   /* the transform mirrors the partner, light and all */
       });
       return performance.now() - t0;
     }, [t, H, xa, xb, floorY, OFFSET]);
