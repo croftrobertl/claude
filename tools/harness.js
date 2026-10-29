@@ -85,7 +85,7 @@ async function open(html, opts = {}) {
     }
     const name = path.basename(url.pathname);
     const file = path.join(ASSETS, name);
-    if (/^[a-z.]+\.js$/.test(name) && fs.existsSync(file)) {
+    if (/^[a-z.-]+\.js$/.test(name) && fs.existsSync(file)) {
       return route.fulfill({
         contentType: 'application/javascript; charset=utf-8',
         body: fs.readFileSync(file, 'utf8'),

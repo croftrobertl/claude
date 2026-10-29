@@ -58,7 +58,7 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
 
   console.log('\n  --- the leaves are the ones Rob picked, not the ones they replaced ---');
   {
-    const src = require('fs').readFileSync(`${ROOT}/dcc-seasons/assets/js/engine.js`, 'utf8');
+    const src = require('./engine-src').engineSource(`${ROOT}/dcc-seasons/assets/js/engine.js`);
     const spr = k => (src.match(new RegExp(`\\n\\t\\t${k}: '([^']*)'`)) || [])[1] || '';
     /* Each assertion names the thing that TELLS THE TWO DRAWINGS APART, so a
      * revert to the old art fails here rather than passing because a sprite
@@ -114,7 +114,7 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
 
   console.log('\n  --- the crane is B, with the primaries picked out ---');
   {
-    const src = require('fs').readFileSync(`${ROOT}/dcc-seasons/assets/js/engine.js`, 'utf8');
+    const src = require('./engine-src').engineSource(`${ROOT}/dcc-seasons/assets/js/engine.js`);
     const fn = src.slice(src.indexOf('function crPaint'), src.indexOf('function crGet'));
     /* B's greys, not A's: Rob compared them side by side and chose B. */
     ok(fn.includes("'#9BA3A8'"), "the body is B's grey, not A's", 'crPaint');

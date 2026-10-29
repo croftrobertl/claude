@@ -170,10 +170,11 @@
 		}
 	}
 
-	function loadScript(src, cb, fail) {
+	function loadScript(src, cb, fail, ordered) {
 		var sc = D.createElement('script');
 		sc.src = src;
-		sc.async = true;
+		/* ordered: run in the order added (a season's art before the engine) */
+		sc.async = !ordered;
 		sc.onload = cb;
 		/* A failed fetch (a flaky phone connection) must not leave the
 		 * caller waiting for good: remove the dead tag and let it retry. */
@@ -223,6 +224,10 @@
 		function go() {
 			if (loading) { return; }
 			loading = true;
+			/* 4.13.4: a season with its own art file has it fetched alongside
+			 * the engine and run first; every other day fetches nothing more */
+			var art = CFG.art && themeKey ? CFG.art[themeKey] : null;
+			if (art) { loadScript(art, null, null, true); }
 			loadScript(CFG.engineSrc, function () {
 				if (W.DCCSeasonsEngine) {
 					W.DCCSeasonsEngine.start({
@@ -233,7 +238,7 @@
 						mq: mq
 					});
 				}
-			});
+			}, null, !!art);
 		}
 		/* WHEN the engine is fetched (4.12.1). It used to be
 		 * requestIdleCallback(timeout 3000), with setTimeout(go, 1500) where

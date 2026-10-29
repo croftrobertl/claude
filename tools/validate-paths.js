@@ -145,7 +145,8 @@ function collectVignettes(js) {
 
 function main() {
   const file = process.argv.slice(2).find(a => !a.startsWith('--')) || 'dcc-seasons/assets/js/engine.js';
-  const src = fs.readFileSync(file, 'utf8');
+  /* 4.13.4: a season's own art file (art-<theme>.js) counts as engine source */
+  const src = require('./engine-src').engineSource(file);
   let checked = 0, badSprites = 0;
   const failures = [];
   // every sprite entry in the SVGS registry, plus any inline SVG elsewhere

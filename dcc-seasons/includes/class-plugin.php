@@ -877,6 +877,19 @@ final class Plugin {
      * @param array $opt Sanitized options.
      * @return array
      */
+    /** Seasons whose art lives in its own file (assets/js/art-<theme>.js),
+     * fetched by the loader only for that theme (4.13.4, the split). */
+    const ART_PACKS = ['thanksgiving'];
+
+    /** theme => URL of its art file, for the config and the Theme guide */
+    public static function art_srcs(): array {
+        $out = [];
+        foreach (self::ART_PACKS as $t) {
+            $out[$t] = add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/art-' . $t . self::suffix() . '.js');
+        }
+        return $out;
+    }
+
     private function config(array $opt): array {
         $schedule = Themes::schedule($opt['schedule']);
         $config = [
@@ -1003,6 +1016,9 @@ final class Plugin {
             'themes'      => Themes::reachable($schedule),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
+            /* 4.13.4: the seasons whose art is its own file; the loader
+             * fetches one only on that season's days (and for a preview) */
+            'art'         => self::art_srcs(),
             'every'       => self::EVERY,
             'preview'      => null,
             'previewLabel' => '',

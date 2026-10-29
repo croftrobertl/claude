@@ -59,6 +59,8 @@ const ALLON = { ...LIVE, ambient: 1 };
   {
     const { p, errs } = await load(live.f, 1280);
     ok(!errs.length, 'no page errors', errs.join(' | '));
+    /* 4.13.4: Thanksgiving's pictures come from its own art file */
+    ok(await p.evaluate(() => { const E = window.DCCSeasonsEngine.guide; return !!(E.svgs.cornucopia && E.svgs.leafc && E.tk && E.tk.length === 9); }), 'Thanksgiving\'s art reached the guide (its sprites and the tom\'s painter)', '');
     /* the pictures are loading="lazy": load them all before judging them */
     await p.evaluate(() => Promise.all([...document.querySelectorAll('.dcc-guide-card img')].map(i => { i.loading = 'eager'; return i.decode().catch(() => null); })));
     const r = await p.evaluate(() => {
@@ -155,6 +157,9 @@ const ALLON = { ...LIVE, ambient: 1 };
     const s = render('settings', LIVE).html, g = live.html;
     ok(/theme-guide\.js/.test(g) && /theme-guide\.css/.test(g) && /engine\.min\.js/.test(g), 'guide tab loads theme-guide.js, theme-guide.css and the engine', '');
     ok(!/theme-guide|DCCSeasonsGuideData|engine(\.min)?\.js/.test(s), 'settings tab loads none of them', '');
+    /* 4.13.4: every season's own art file, loaded BEFORE the engine reads it */
+    const ia = g.search(/<script[^>]*art-thanksgiving\.min\.js/), ie = g.search(/<script[^>]*engine\.min\.js/);
+    ok(ia >= 0 && ia < ie, 'guide tab loads Thanksgiving\'s art file before the engine', `art at ${ia}, engine at ${ie}`);
     const plugin = fs.readFileSync(path.join(ROOT, 'dcc-seasons/includes/class-plugin.php'), 'utf8');
     ok(!/theme-guide|Theme_Guide::enqueue/.test(plugin), 'the front end never enqueues the guide', '');
     const links = [...s.matchAll(/<a href="([^"]+)" target="_blank" rel="noopener">([^<]+)<span class="screen-reader-text">/g)];

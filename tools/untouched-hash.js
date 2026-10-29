@@ -37,7 +37,7 @@ const INIT = `(() => {
   const themes = arg('themes', '') ? arg('themes').split(',') : all;
   const out = {};
   for (const th of themes) {
-    const cfg = config(['--theme=' + th, '--placement=content', '--layering=front', '--density=16', '--diag']);
+    const cfg = config(['--theme=' + th, '--placement=content', '--layering=front', '--density=16', '--diag'].concat(process.argv.includes('--min') ? ['--min'] : []));
     cfg.forceHour = 12;
     const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), {
       viewport: { width: W, height: W < 768 ? 700 : 800 }, dsf: 2, init: INIT,

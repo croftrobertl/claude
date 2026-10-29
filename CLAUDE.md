@@ -894,7 +894,7 @@ reached staging only; the folder was set back to 4.13.0 (`66faa59`) and:
   (paths tokenized, never regex-trimmed). The maples, cypress, crookneck
   and pie are unchanged. Step B: scene A "high and small" with a PALE full
   moon (see below).
-- **4.13.2 and 4.13.3 = Thanksgiving round 2** (the Anniversary moved to 4.13.4, the split to 4.13.5; see below).
+- **4.13.2 and 4.13.3 = Thanksgiving round 2**; **4.13.4 = the per-season split**, **4.13.5 = the Anniversary** (order set 2026-10-29; see below).
 - **4.14.1 = Christmas**, 4.14.0 rebuilt ON TOP of 4.13.2 once Rob confirms
   Santa; diff it against 4.13.2 and show Thanksgiving and the Anniversary
   survive. `tools/test-christmas.js` belongs to that build and fails on
@@ -1203,9 +1203,29 @@ Rob sees it (the overlay rows; sources named on the sheets).
 
 ## DCC Seasons — things that bite
 
+- **A season's art can be its own file since 4.13.4 (the split).**
+  `assets/js/art-<theme>.js` registers `window.DCCSeasonsArt[theme] =
+  { svgs, <painters> }`; the engine merges every registered pack's sprites
+  into SVGS and its painters into `ART` when it runs (so the pack must run
+  FIRST). The loader fetches a theme's pack only when that theme resolves
+  (or is previewed), with `async = false` on both scripts so the pack runs
+  before the engine whatever order they arrive in; `Plugin::ART_PACKS`
+  lists the packs, `Plugin::art_srcs()` feeds `CFG.art`, and the Theme
+  guide enqueues every pack before the engine. 4.13.4 moved Thanksgiving
+  (its 13 sprites, the TG_GEN generators and `tkMod`, which the worker
+  reads as `'' + ART.tk`). A pack that fails to load leaves its season
+  without its pieces and nothing broken (the tom is dropped from the pool
+  when `TKM` is empty). The pack's own sprite functions read the pack's
+  `S`, never the engine's `SVGS`. Tools that read the engine's SOURCE use
+  `tools/engine-src.js` (splices the packs back in); `harness.js` serves
+  `art-*.js`; `gen-config.php` emits `CFG.art`. `tools/test-split.js`
+  proves what each day fetches (and the order, with the pack arriving
+  late, and a 404), mutation-checked (`DCC_SPLIT_MUT=every|async`).
+  Minify a pack with the same terser command as the engine. Sizes at
+  4.13.4: core 189,438 raw / 68,186 gz, Thanksgiving 41,384 / 14,288.
 - **Minified assets have a recorded build command.** Regenerate with exactly
   `npx terser assets/js/<name>.js -c passes=3 -m --safari10 -d __DCC_DEBUG__=false
-  -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
+  -o assets/js/<name>.min.js` for ambient/engine/matrix and every art-<theme>. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
 - **The engine's size baseline is 231,262 raw / 82,218 gzipped (4.13.2, `gzip -c` with the file name, as always — 7 bytes under the Director's 82,225 ceiling, so Christmas needs the per-season split; Thanksgiving's own art and code are 16.1KB gz of it (82,218 → 66,107 with them taken out); the tom, poults, pie tin, cypress B, cornucopia and the worker pre-draw are +24.9KB raw / +9.9KB gz over 4.13.1's 206,300 / 72,362. Earlier: 206,300 raw / 72,362 gzipped (4.13.1; the eight redrawn Thanksgiving pieces are +14.8KB raw / +4.6KB gz and the keep-clear crane plan +1.6KB raw / +0.6KB gz over 4.13.0's 189,931 / 67,225. 4.14.0, off the release line: 221,478 raw / 77,396 gzipped; the Christmas scene, its painters and the redrawn pieces are +31.5KB raw / +10.2KB gz over 4.13.0's 189,931 / 67,225, against the Director's ceiling of 82,225 gz. Earlier: 181,684 raw / 64,661 gzipped (4.12.2; the 30 fps sprite cap and the carried pacing anchor are +58 raw / +44 gz over 4.12.0/4.12.1's 181,626 / 64,617 — 4.12.1 changed the loader, not the engine; the moments queue and the heron yield are +1.7KB raw / +0.7KB gz over 4.10.7's 179,951 / 63,939; the header-picture sky canvas is +3.2KB raw / +1.3KB gz over 4.10.6's 176,708 / 62,678; the cut's shape picture and the per-frame read memo are +3.0KB raw / +1.4KB gz over 4.10.5's 173,735 / 61,323; the box cut and sky flyers are +2.1KB raw / +0.8KB gz over 4.10.4's 171,669 / 60,512; the header picture's foreground cut is +9.5KB raw / +3.7KB gz over 4.10.2/4.10.3's 162,169 / 56,792; removing the loop and the turn-round squeeze is −585 raw / −264 gz against 4.10.1's 162,754 / 57,056; the header-letter cut-out, the cloth cape and the smoothed path are +4.7KB over 4.10.0's 158,072 / 54,984; the drawn witch and the real moon were +17KB raw over 4.9.0's 140,774 / 48,875; the drawn heron was +8.7KB over 4.8.0's 132,038 / 45,032). Earlier: 129,444 raw / 43,746 gzipped (4.4.0; +1.5KB for the Theme guide exports); 4.3.0 was 127,906 / 43,207; 4.2.0 was 124,372 / 42,179 ( 4.1.3 measured the same way was 105,954 / 36,395 — the +18.4KB raw is 22 new sprites and 8 new scenes, roughly 0.8KB raw per sprite and 0.7KB per scene). Earlier: 105,948 / 36,385 (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0

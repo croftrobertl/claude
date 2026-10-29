@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.3
+Stable tag: 4.13.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,20 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.13.4 =
+The per-season split. No visible change: every theme draws exactly what it
+drew in 4.13.3, proven pixel for pixel on all 27. Rollback: reinstall the
+4.13.3 zip.
+
+* Thanksgiving's art (its falling pieces, the cornucopia, the strutting tom
+  and his poults) is now its own file, art-thanksgiving.min.js. The loader
+  fetches it only on Thanksgiving's days (and for a preview of it), before
+  the engine; every other day loads the engine alone, about 14KB smaller
+  over the wire than 4.13.3's.
+* If that file ever fails to load, Thanksgiving shows without its own
+  pieces; nothing else changes and nothing breaks.
+* The Theme guide loads every season's art file.
 
 = 4.13.3 =
 Thanksgiving, Rob's answers on 4.13.2. Built from 4.13.2; every other
