@@ -1332,8 +1332,8 @@ auto-updated from 4.18.0 to 4.19.0 at 11:18 PM EDT on Oct 28. 4.19.0
 dropped two files, and Rob got two File Missing emails for them. The files
 the update changed raised nothing, because Minčeta compares a WordPress.org
 plugin's files with the checksums WordPress.org publishes for the installed
-version. The "4 new" in that pass were WP Staging's own sse protection
-files, which raise nothing under the 0.2.4 rule. Nothing vouched for the
+version. The "4 new" in that pass were most likely WP Staging's own sse
+protection files, which raise nothing under the 0.2.4 rule (not verified). Nothing vouched for the
 removals, and the journal had no row: WordPress's own source shows that a
 cron auto-update fires the upgrader hook Ragusa listens on, so the update
 most likely came through a request Ragusa never loads on (WordPress.com or
