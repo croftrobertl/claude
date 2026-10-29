@@ -87,9 +87,16 @@ Titles centered, Title Case, American spelling.
 
 ## Invariants — do not "fix" these without asking Rob
 
-- **Zero weight for guests.** `dcc-ragusa.php` returns before any hook on a
-  request that is not wp-admin, cron, WP-CLI or wp-login.php. The test
-  suite proves it in a separate PHP process. Nothing is enqueued on the
+- **Near-zero weight for guests, but the harbour is always open.** On a
+  request that is not wp-admin, cron, WP-CLI or wp-login.php,
+  `dcc-ragusa.php` adds exactly three listeners (`dccr_harbour_*` on
+  upgrader_pre_install, upgrader_source_selection,
+  upgrader_process_complete) and returns: no class, no autoloader, no
+  query. WordPress.com updates plugins from front-end requests (Jetpack's
+  `/?for=jetpack&jetpack=comms`, REST, XML-RPC); 0.2.8 and earlier never
+  saw them (live, 2026-10-29). The listeners call `dccr_load()` only when
+  an upgrader fires. The suite proves the rest in a separate PHP process
+  for a page, Jetpack comms, REST and XML-RPC. Nothing is enqueued on the
   front end, ever.
 - **Only `dcc_ragusa_settings` autoloads.** Every other option is
   autoload=no; a test scans the source for it.
@@ -319,7 +326,7 @@ Titles centered, Title Case, American spelling.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 114 deliberate breakages, each must be caught
+    php tests/mutations.php            # 120 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -337,6 +344,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.8.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.9.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

@@ -133,37 +133,50 @@ Sveti_Ivan::$shutdown_registrar = static function ($cb): void {
     $GLOBALS['dccr_shutdown'][] = $cb;
 };
 
-suite('front-end gate: the main file returns before any hook on a visitor request', function () {
+suite('front-end gate: a visitor request adds the three upgrader listeners and nothing else', function () {
     $script = DCCR_TEST_ROOT . '/gate.php';
-    file_put_contents($script, '<?php
-        define("ABSPATH", "' . ABSPATH . '");
-        $GLOBALS["pagenow"] = "index.php";
-        $calls = 0;
-        function is_admin() { return false; }
-        function wp_doing_cron() { return false; }
-        function add_action(...$a) { $GLOBALS["calls"]++; }
-        function add_filter(...$a) { $GLOBALS["calls"]++; }
-        function register_activation_hook(...$a) { $GLOBALS["calls"]++; }
-        function register_deactivation_hook(...$a) { $GLOBALS["calls"]++; }
-        function plugin_basename($f) { $GLOBALS["calls"]++; return ""; }
-        function plugin_dir_url($f) { $GLOBALS["calls"]++; return ""; }
-        $GLOBALS["calls"] = 0;
-        $before = get_included_files();
-        require "' . dirname(__DIR__) . '/dcc-ragusa.php";
-        $after = get_included_files();
-        echo json_encode(["calls" => $GLOBALS["calls"], "files" => count($after) - count($before), "classes" => count(array_filter(get_declared_classes(), fn($c) => str_starts_with($c, "DCCR")))]);
-    ');
-    $out = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script));
-    $r   = json_decode($out, true);
-    ok(is_array($r), 'gate script ran: ' . $out);
-    eq(0, (int) ($r['calls'] ?? -1), 'no hook, no basename, no url computed on a front-end request');
-    eq(1, (int) ($r['files'] ?? -1), 'only the main file is included');
-    eq(0, (int) ($r['classes'] ?? -1), 'no Ragusa class is loaded');
-
-    // And on the login page it does register.
-    file_put_contents($script, str_replace('"index.php"', '"wp-login.php"', (string) file_get_contents($script)));
-    $r = json_decode((string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script)), true);
-    ok((int) ($r['calls'] ?? 0) >= 3, 'on wp-login.php the hooks are registered');
+    $make   = static function (string $pagenow, string $get) use ($script): array {
+        file_put_contents($script, '<?php
+            define("ABSPATH", "' . ABSPATH . '");
+            $GLOBALS["pagenow"] = "' . $pagenow . '";
+            ' . $get . '
+            $GLOBALS["hooks"] = []; $GLOBALS["other"] = 0;
+            function is_admin() { return false; }
+            function wp_doing_cron() { return false; }
+            function add_action($h, $cb, ...$a) { $GLOBALS["hooks"][] = [$h, is_string($cb) ? $cb : "closure"]; }
+            function add_filter($h, $cb, ...$a) { $GLOBALS["hooks"][] = [$h, is_string($cb) ? $cb : "closure"]; }
+            function register_activation_hook(...$a) { $GLOBALS["other"]++; }
+            function register_deactivation_hook(...$a) { $GLOBALS["other"]++; }
+            function plugin_basename($f) { $GLOBALS["other"]++; return ""; }
+            function plugin_dir_url($f) { $GLOBALS["other"]++; return ""; }
+            $before = get_included_files();
+            require "' . dirname(__DIR__) . '/dcc-ragusa.php";
+            $after = get_included_files();
+            echo json_encode(["hooks" => $GLOBALS["hooks"], "other" => $GLOBALS["other"], "files" => count($after) - count($before), "classes" => count(array_filter(get_declared_classes(), fn($c) => str_starts_with($c, "DCCR"))), "autoloaders" => count(spl_autoload_functions())]);
+        ');
+        return (array) json_decode((string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script)), true);
+    };
+    $want = [
+        ['upgrader_pre_install', 'dccr_harbour_pre_install'],
+        ['upgrader_source_selection', 'dccr_harbour_source_selection'],
+        ['upgrader_process_complete', 'dccr_harbour_process_complete'],
+    ];
+    foreach ([
+        'a visitor\'s page'                        => ['index.php', ''],
+        'Jetpack\'s comms endpoint (WordPress.com)' => ['index.php', '$_GET = ["for" => "jetpack", "jetpack" => "comms", "token" => "x"]; $_SERVER["REQUEST_URI"] = "/?for=jetpack&jetpack=comms";'],
+        'the REST API'                             => ['index.php', '$_SERVER["REQUEST_URI"] = "/wp-json/jetpack/v4/sync/spawn-sync";'],
+        'XML-RPC'                                  => ['xmlrpc.php', 'define("XMLRPC_REQUEST", true);'],
+    ] as $what => [$pagenow, $get]) {
+        $r = $make($pagenow, $get);
+        eq($want, $r['hooks'] ?? null, "$what: exactly the three upgrader listeners");
+        eq(0, (int) ($r['other'] ?? -1), "$what: no basename, no URL, no activation hook");
+        eq(1, (int) ($r['files'] ?? -1), "$what: only the main file is included");
+        eq(0, (int) ($r['classes'] ?? -1), "$what: no Ragusa class is loaded");
+        eq(0, (int) ($r['autoloaders'] ?? -1), "$what: not even the autoloader");
+    }
+    // And on the login page the whole plugin registers.
+    $r = $make('wp-login.php', '');
+    ok(count((array) ($r['hooks'] ?? [])) >= 2 && !in_array(['upgrader_pre_install', 'dccr_harbour_pre_install'], (array) $r['hooks'], true) && (int) ($r['other'] ?? 0) >= 2, 'on wp-login.php the plugin registers itself, without the guest listeners');
 });
 
 suite('site: role and id come from prefix and URL, never a stored flag', function () {
@@ -3483,6 +3496,46 @@ suite('0.2.8 drill 8: an .htaccess edit Newfold did not make is not credited to 
     ok(!str_contains($ev[0]['message'] ?? '', 'made this change'), 'and Newfold is not said to have made it');
     Revelin::seal('.htaccess');
     @unlink(ABSPATH . '.htaccess.nfd-backup');
+    Alerts::force(false);
+});
+
+// ---------------------------------------------------------------- 0.2.9
+
+suite('0.2.9 drill 1: WordPress.com updates a plugin through Jetpack\'s comms endpoint; the guest listeners record it', function () {
+    Alerts::force(true);
+    dccr_install_release(dccr_release('2.9.5', ['includes/a.php' => "<?php\n// a 2.9.5\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'old/legacy.php' => "<?php\n// legacy\n"]));
+    dccr_full_pass();
+    tick(); // the version snapshot holds 2.9.5
+    $get = $_GET;
+    $cron = $GLOBALS['dccr_doing_cron'];
+    $GLOBALS['dccr_doing_cron'] = false; // a front-end request: not cron, not admin, not WP-CLI
+    $_GET = ['for' => 'jetpack', 'jetpack' => 'comms', 'token' => 'x'];
+    $hook = ['type' => 'plugin', 'action' => 'update', 'plugin' => 'wporg-plugin/wporg-plugin.php'];
+    $files = dccr_release('2.9.6', ['includes/a.php' => "<?php\n// a 2.9.6\n", 'readme.txt' => "=== WPORG Plugin ===\n"]);
+    // What WordPress calls, in this order, inside the comms request.
+    eq(true, dccr_harbour_pre_install(true, $hook), 'pre-install hands WordPress its value back');
+    $pkg = DCCR_TEST_ROOT . '/upgrade/pkg-jp/wporg-plugin';
+    foreach ($files as $rel => $c) {
+        @mkdir(dirname("$pkg/$rel"), 0755, true);
+        file_put_contents("$pkg/$rel", $c);
+    }
+    eq($pkg . '/', dccr_harbour_source_selection($pkg . '/', dirname($pkg), null, $hook), 'source selection hands back the source');
+    foreach ($files as $rel => $c) {
+        file_put_contents(WP_PLUGIN_DIR . "/wporg-plugin/$rel", $c);
+    }
+    unlink(WP_PLUGIN_DIR . '/wporg-plugin/old/legacy.php');
+    dccr_harbour_process_complete((object) ['result' => ['destination_name' => 'wporg-plugin']], $hook);
+    $_GET = $get;
+    $GLOBALS['dccr_doing_cron'] = $cron;
+    $row = Journal::latest('update-check', 'wporg-plugin');
+    ok($row !== null && ($row['before']['old_version'] ?? '') === '2.9.5' && ($row['before']['new_version'] ?? '') === '2.9.6', 'one journal row: 2.9.5 → 2.9.6');
+    eq('jetpack', $row['before']['source'] ?? '', 'source jetpack: made from WordPress.com');
+    ok(str_contains((string) $row['note'], 'update from jetpack'), 'its note says so: ' . $row['note']);
+    eq('complete', $row['before']['stage'] ?? '', 'opened before the copy, finished by the hook');
+    ok(count(array_filter(events_of('sealed-plugin'), static fn($e) => $e['target'] === 'wporg-plugin')) >= 1, 'the old version was sealed before it was replaced');
+    tick();
+    eq(0, count(events_of('update-unseen')), 'the next tick finds it recorded: not unseen');
+    ok(count(array_filter(events_of('removed-by-update'), static fn($e) => str_contains($e['message'], 'legacy.php'))) === 1, 'the file 2.9.6 no longer ships is the update\'s');
     Alerts::force(false);
 });
 

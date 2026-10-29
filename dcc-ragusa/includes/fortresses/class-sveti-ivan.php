@@ -132,7 +132,23 @@ final class Sveti_Ivan
         if (defined('WP_CLI') && WP_CLI) {
             return 'cli';
         }
-        return wp_doing_cron() ? 'auto' : 'admin';
+        if (wp_doing_cron()) {
+            return 'auto';
+        }
+        if (is_admin()) {
+            return 'admin';
+        }
+        // A front-end request: an update made from WordPress.com.
+        if (($_GET['for'] ?? '') === 'jetpack') {
+            return 'jetpack';
+        }
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return 'rest';
+        }
+        if (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST) {
+            return 'xmlrpc';
+        }
+        return 'web';
     }
 
     /** @param array{id?:int,installed_at?:int,source?:string,old_version?:string,note?:string} $late the tick finishing an update WordPress never reported */

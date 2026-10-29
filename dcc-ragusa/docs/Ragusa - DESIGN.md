@@ -1367,3 +1367,19 @@ listed in the staging checklist, step 14.
 upgrader_pre_install, before the copy; the request's end is recorded with
 PHP's last fatal error; the tick completes what WordPress never reported.
 
+**0.2.9 (the route found, 2026-10-29).** The live readings for 11:11 CDT
+were all empty: no Ragusa event, no sealed copy, nothing pending, no
+updater lock, no fatal error. Ragusa never saw that update. The access log
+has WordPress.com calling Jetpack's comms endpoint (`POST
+/?for=jetpack&jetpack=comms`, 192.0.86.184) two seconds before the files
+changed. That is a front-end request, and the guest gate returned before
+any hook on it. The same was true of REST and XML-RPC. So the cron path
+was never the gap: WP-CLI and cron auto-updates were recorded on staging
+(journal 82–90).
+
+The gate's promise changes from "no hook" to "three upgrader listeners and
+nothing else". They are named functions in the main file, cost about a
+microsecond, and load Ragusa only when an upgrader runs. The write-ahead
+row, shutdown note and tick completion of 0.2.8 now cover these requests
+too.
+

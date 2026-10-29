@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.8
+Stable tag: 0.2.9
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,10 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.9 =
+* Updates made from WordPress.com are recorded. They run inside front-end requests (Jetpack's /?for=jetpack&jetpack=comms endpoint, the REST API, XML-RPC), which the guest gate never loaded Ragusa for: on live, Ultimate Addons for Elementor 2.9.6 was updated that way on Oct 29 with no event, no sealed copy and no journal row. A guest request now adds the three upgrader listeners and returns; they load Ragusa only when an upgrader fires them. Measured with WordPress's own add_filter: about 1 microsecond and 4.9 KB per request; still one file, no Ragusa class, no autoloader.
+* The journal names the route: jetpack, rest, xmlrpc or web, besides auto, admin and cli.
 
 = 0.2.8 =
 * A plugin update's journal row is written at upgrader_pre_install, before a file is copied, not at upgrader_process_complete. If the request ends before Ragusa hears the update finish (another plugin's completion callback dies or exits, the hook is removed, the process is killed), the row says how it ended, with PHP's last fatal error, and the next tick completes it as a recorded update: its sealed copy, its window, its smoke checks. An update that started and changed nothing is abandoned, never invented.

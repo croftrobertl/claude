@@ -1,4 +1,9 @@
-# Ragusa 0.2.8 — Staging Checklist
+# Ragusa 0.2.9 — Staging Checklist
+
+> **Upgrading from 0.2.8 (staging first, then live):** step 15 part A on
+> 0.2.8, `wp plugin install "Ragusa 0.2.9.zip" --force`, `wp ragusa tick`,
+> then part B. Nothing migrates. Rollback: `wp plugin install
+> "Ragusa 0.2.8.zip" --force`.
 
 > **Upgrading from 0.2.7 (staging first, then live):** step 14 part A runs
 > on 0.2.7 first (it reproduces the miss), then `wp plugin install
@@ -622,9 +627,11 @@ Ragusa does not track), one release behind, active, auto-updates on:
     wp plugin auto-updates enable classic-editor
     wp plugin list --update=available --fields=name,version,update_version,auto_update
 
-The last list must show classic-editor and **nothing else with
-auto_update on**: wp-cron.php runs every due event and updates every
-plugin set to auto-update (0.2.1's lesson). Then a real WP-Cron run:
+**On this site every plugin with an update available will update**: the
+HostGator plugin forces `auto_update_plugin` to true for all of them
+(`wp-plugin-hostgator/inc/updates.php`), whatever the `auto_update_plugins`
+option says (the Director's finding, Oct 29). Bring staging's plugins level
+with live first. Then a real WP-Cron run:
 
     wp eval 'delete_site_transient("update_plugins"); wp_update_plugins();'
     wp cron event schedule wp_maybe_auto_update
@@ -661,6 +668,62 @@ same commands.
       and name the update before it.
 - [ ] Clean up: `wp plugin auto-updates disable classic-editor` and
       `wp plugin delete classic-editor` if it was not there before.
+
+## 15. The 0.2.9 drill: Ragusa on a WordPress.com-shaped request
+
+Staging sits behind WP Staging's login, so no real WordPress.com update can
+reach it; this drill shows what loads on the request that carries one. A
+temporary must-use probe, staging only, that writes what it saw to
+`~/ragusa-probe.json` and nothing else:
+
+    cat > ~/public_html/staging/wp-content/mu-plugins/zz-ragusa-probe.php <<'PHP'
+    <?php
+    // Staging only. Delete after the 0.2.9 drill.
+    if (isset($_GET['ragusa_probe']) && ($_GET['for'] ?? '') === 'jetpack') {
+        register_shutdown_function(static function () {
+            $out = ['files' => [], 'listeners' => [], 'classes' => []];
+            foreach (get_included_files() as $f) {
+                if (str_contains($f, '/plugins/dcc-ragusa/')) {
+                    $out['files'][] = substr($f, strpos($f, '/plugins/') + 9);
+                }
+            }
+            foreach (['upgrader_pre_install', 'upgrader_source_selection', 'upgrader_process_complete'] as $h) {
+                foreach ((array) ($GLOBALS['wp_filter'][$h]->callbacks ?? []) as $prio => $cbs) {
+                    foreach ($cbs as $cb) {
+                        $fn   = $cb['function'];
+                        $name = is_string($fn) ? $fn : (is_array($fn) ? (is_object($fn[0]) ? get_class($fn[0]) : $fn[0]) . '::' . $fn[1] : 'closure');
+                        if (stripos($name, 'dccr') !== false) {
+                            $out['listeners'][] = "$h @$prio $name";
+                        }
+                    }
+                }
+            }
+            $out['classes'] = array_values(array_filter(get_declared_classes(), static fn($c) => str_starts_with($c, 'DCCR\\')));
+            file_put_contents(dirname(ABSPATH, 2) . '/ragusa-probe.json', json_encode($out, JSON_PRETTY_PRINT) . "\n");
+        });
+    }
+    PHP
+
+The request, shaped like WordPress.com's (any body; Jetpack rejects it):
+
+    rm -f ~/ragusa-probe.json
+    curl -s -o /dev/null -w '%{http_code}\n' -X POST --data 'x=1' 'https://doracanalcourt.com/staging/?for=jetpack&jetpack=comms&ragusa_probe=1'
+    cat ~/ragusa-probe.json
+
+- [ ] **Part A, on 0.2.8:** `files` is `["dcc-ragusa/dcc-ragusa.php"]`,
+      `listeners` is empty, `classes` is empty. This is the gap.
+- [ ] **Part B, on 0.2.9:** `files` is still only the main file, `classes`
+      still empty, and `listeners` holds exactly
+      `upgrader_pre_install @10 dccr_harbour_pre_install`,
+      `upgrader_source_selection @10 dccr_harbour_source_selection` and
+      `upgrader_process_complete @10 dccr_harbour_process_complete`.
+- [ ] REST and XML-RPC pass the same gate as a page; the suite checks
+      all four routes (page, Jetpack comms, REST, XML-RPC) in a separate
+      PHP process, so this drill needs only the comms request.
+- [ ] Clean up: `rm ~/public_html/staging/wp-content/mu-plugins/zz-ragusa-probe.php ~/ragusa-probe.json`.
+- [ ] **Live, on the next WordPress.com update:** its journal row reads
+      `update from jetpack` (or `rest`, `xmlrpc`), with a sealed copy and
+      `"stage":"complete"`, and no "Updated Without Ragusa Seeing It".
 
 ## 11. Before live
 

@@ -703,6 +703,42 @@ $mutations = [
         'from' => "            if (!\$w['unseen'] && \$d >= 0 && \$d <= 300 && (\$best === null || \$d < \$best[0])) {",
         'to'   => "            if (false) {",
     ],
+    [
+        'name' => "0.2.9: a guest request registers no upgrader listener (WordPress.com updates go unseen)",
+        'file' => 'dcc-ragusa.php',
+        'from' => "    add_filter('upgrader_pre_install', 'dccr_harbour_pre_install', 10, 2);\n    add_filter('upgrader_source_selection', 'dccr_harbour_source_selection', 10, 4);\n    add_action('upgrader_process_complete', 'dccr_harbour_process_complete', 10, 2);\n    return;",
+        'to'   => "    return;",
+    ],
+    [
+        'name' => "0.2.9: the guest completion listener records nothing",
+        'file' => 'dcc-ragusa.php',
+        'from' => "    \\DCCR\\Fortress\\Sveti_Ivan::on_process_complete(\$upgrader, \$hook_extra);\n}",
+        'to'   => "}",
+    ],
+    [
+        'name' => "0.2.9: the guest pre-install listener opens no row",
+        'file' => 'dcc-ragusa.php',
+        'from' => "    return \\DCCR\\Fortress\\Sveti_Ivan::on_pre_install(\$res, \$hook_extra);",
+        'to'   => "    return \$res;",
+    ],
+    [
+        'name' => "0.2.9: the guest source listener seals nothing",
+        'file' => 'dcc-ragusa.php',
+        'from' => "    return \\DCCR\\Fortress\\Revelin::on_source_selection(\$source, \$remote_source, \$upgrader, \$hook_extra);",
+        'to'   => "    return \$source;",
+    ],
+    [
+        'name' => "0.2.9: a guest request loads Ragusa up front",
+        'file' => 'dcc-ragusa.php',
+        'from' => "if (!dccr_request_is_watched()) {\n    add_filter(",
+        'to'   => "dccr_load();\nif (!dccr_request_is_watched()) {\n    add_filter(",
+    ],
+    [
+        'name' => "0.2.9: an update from WordPress.com is labelled admin",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if ((\$_GET['for'] ?? '') === 'jetpack') {\n            return 'jetpack';\n        }",
+        'to'   => "",
+    ],
 ];
 
 
