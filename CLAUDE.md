@@ -1788,6 +1788,17 @@ Rob sees it (the overlay rows; sources named on the sheets).
     the canvas actually last painted, and `pdt` uses the latter. Proven on
     the mocked clock with a seeded field: three seconds of travel is 463.7
     px in 60 steps and 463.6 px in 30 (0.02%; worst single sprite 0.16%).
+    **That 0.02% was luck, corrected in 4.13.5.** The suite waited for the
+    engine with real frames running and only then took the clock, so each
+    run started from whatever field the real frames left, and under load
+    it read 0.58% and failed. With rAF held until the clock is taken (as
+    `untouched-hash.js` does; poll `waitForFunction` on a timer, since it
+    polls on rAF by default) both runs start from ONE field and the number
+    is exact: 0.37-0.56% over five seeds, 0.56% at seed 11, identical with
+    three copies running at once. That is the integration's own step size.
+    A single erratic flyer differs more (a bat up to 8.5%: a fresh random
+    wiggle each step), so the median sprite and the whole field are held
+    to 1%. Motion stepped by frame count reads 49% (mutation-checked).
     Compare PATH LENGTH, never net displacement — a bat's net displacement
     over 3 s depends on where it is in its wiggle and read 19 px against 36
     between the two cadences, which looks exactly like a speed regression
