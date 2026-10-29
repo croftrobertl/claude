@@ -986,6 +986,13 @@ now **4.13.4**, the split **4.13.5**):
 - **The Anniversary (4.13.4): COMPUTED from the dates** (Rob), so the
   40% / 37.5% stay true every Nov 11, like the year count. Dates in code or
   config only, no names public; ask the Director for any date not in hand.
+  **The dates (Rob, 2026-10-29):** wedding 11 Nov 2011 (the year count's
+  `year - 2011`), births 26 Mar 1989 (his) and 25 Mar 1986 (hers).
+  **Rounding: to the nearest whole number, no decimals** (Rob). Computed on
+  11 Nov from day counts (365.2425 days a year): 2026 → 40% and 37% (not
+  37.5: his figure was before rounding; reported to him), 2027 → 41 / 38,
+  2028 → 43 / 40, 2029 → 44 / 41, 2030 → 46 / 43. The figures float with
+  nothing saying whose they are.
 
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
