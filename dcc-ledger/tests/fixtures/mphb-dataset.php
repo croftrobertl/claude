@@ -152,7 +152,7 @@ function dccl_seed_mphb(): void
     // Hand-typed, in the same cottage and starting the same day as the
     // Booking.com payout whose reservation row has not arrived. Probably the
     // same stay; nothing links it, because the check-out is unknown.
-    $booking(9052, 'confirmed', 1072, '2026-09-28', '2026-10-01', [
+    $booking(9052, 'confirmed', 1072, '2026-09-28', '2026-10-04', [
         LIVE_TOTAL      => '1120.00',
         LIVE_FIRST_NAME => 'Nadia',
         LIVE_LAST_NAME  => 'Oyelaran',
@@ -184,6 +184,16 @@ function dccl_seed_mphb(): void
         LIVE_LAST_NAME  => 'Adeyemi',
     ]);
     $payment(79831, 7983, 716.45, '2025-01-20');
+
+    // A confirmed direct booking with no total at all — a comp, or one Rob
+    // has not priced yet. It occupies the cottage, so it counts in
+    // occupancy, but it must not divide a rate: a night with nothing above
+    // it reads as a discount nobody gave.
+    $booking(9053, 'confirmed', 1613, '2026-07-06', '2026-07-10', [
+        LIVE_TOTAL      => '0.00',
+        LIVE_FIRST_NAME => 'Margit',
+        LIVE_LAST_NAME  => 'Sandoval',
+    ]);
 
     // A calendar block, not a booking: Airbnb's own wording for dates the
     // host closed. Live booking 6313 is this shape exactly.

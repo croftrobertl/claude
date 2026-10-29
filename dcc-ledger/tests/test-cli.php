@@ -112,7 +112,7 @@ T::group('Both spellings of the money commands reach the code');
 WP_CLI::$commands = [];
 DCCL\Plugin::instance()->register_cli();
 
-foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback'] as $spelling) {
+foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback', 'direct-total', 'direct_total'] as $spelling) {
     // Each spelling is run against a converted ledger, because money-check
     // fails by design on one that has been rolled back.
     DCCL\Money_Migration::run();
@@ -126,3 +126,18 @@ foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback'] as $
 
 // Put the money back in cents: the rollback spellings ran last.
 DCCL\Money_Migration::run();
+
+T::group('What a direct booking\'s total is made of');
+
+WP_CLI::reset();
+T::ok(WP_CLI::run_command('dcc-ledger direct-total', [], []), 'wp dcc-ledger direct-total reaches the code');
+$shape = WP_CLI::output();
+
+T::ok(str_contains($shape, 'mphb_total_price'), 'It lists the key the ledger reads as room revenue');
+T::ok(str_contains($shape, 'money'), 'Marking the keys whose values are plain numbers');
+T::ok(str_contains($shape, 'Compare one booking in wp-admin'), 'And says how to settle the question it cannot settle itself');
+
+// Key names and counts only: a value could be a guest's.
+foreach (dccl_fixture_pii() as $needle) {
+    T::ok(!dccl_has_pii($shape, $needle), 'No "' . $needle . '" is printed by the probe');
+}

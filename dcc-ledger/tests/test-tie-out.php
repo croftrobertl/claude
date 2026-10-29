@@ -16,6 +16,7 @@ declare(strict_types=1);
 use DCCL\Cottages;
 use DCCL\Linker;
 use DCCL\Reports;
+use DCCL\Repo;
 use DCCL\Snapshot;
 
 dccl_seed_mphb();
@@ -40,8 +41,13 @@ foreach (['stay', 'payout'] as $basis) {
 
     $whole = Reports::summary($from, $to, $basis);
 
+    // Nights as well as money. A payout-only stay linked to a booking that
+    // crosses a month end was selected for September and not for October,
+    // because the query coalesced its missing check-out to its check-in —
+    // so the year held three nights and $494.62 the months did not.
     $fields = [
         'guest_total', 'platform_fees', 'net_payout', 'room_revenue',
+        'room_revenue_gross', 'room_revenue_net',
         'tax_platform_remitted', 'tax_in_payout', 'nights',
         'direct_due', 'direct_recorded', 'direct_assumed',
         'direct_assumed_pre_exports', 'direct_refunds', 'direct_paid',
@@ -127,3 +133,26 @@ T::same(
     (int) $original['totals']['direct_assumed'] + (int) $original['totals']['direct_assumed_pre_exports'],
     'The Original view carries no assumption of either kind'
 );
+
+T::group('A payout-only stay linked across a month end is in both months');
+
+// 5722711078 is a payout with no reservation row, linked to booking 9052,
+// which runs 28 September to 4 October 2026. Three nights each side.
+Repo::link((int) Repo::stay_id('bookingcom', '5722711078'), 9052, 'copy', 1);
+Reports::flush_cache();
+
+$sep = Reports::summary('2026-09-01', '2026-09-30', 'stay');
+$oct = Reports::summary('2026-10-01', '2026-10-31', 'stay');
+$pair = Reports::summary('2026-09-01', '2026-10-31', 'stay');
+
+T::ok((int) $sep['by_channel']['bookingcom']['nights'] > 0, 'September counts its share of the nights');
+T::ok((int) $oct['by_channel']['bookingcom']['nights'] > 0, 'And October counts its share, which it used to lose entirely');
+T::ok((int) $oct['by_channel']['bookingcom']['guest_total'] > 0, 'With the money that belongs to those nights');
+
+foreach (['nights', 'guest_total', 'room_revenue_gross', 'room_revenue_net'] as $field) {
+    T::same(
+        (int) $pair['totals'][$field],
+        (int) $sep['totals'][$field] + (int) $oct['totals'][$field],
+        'September plus October equals the pair, for ' . $field
+    );
+}

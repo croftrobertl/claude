@@ -79,6 +79,9 @@ it; named so no future session mistakes the gap for a decision):
   aggregates. Report it as "not run", never as passed.
 - Booking pace has no history yet. Recording began with 0.3.0; the first
   month with a complete curve is about six months after that.
+- Whether a direct booking's total includes tax or fees has not been
+  established on this site. `wp dcc-ledger direct-total` is the instrument;
+  the answer has to come from a person looking at a booking.
 
 ## Branch rule
 
@@ -297,6 +300,29 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   `wp dcc-ledger money-check` walks every month and names any month,
   channel or cottage where net exceeds gross, or where money reached a rate
   with no nights under it.
+- **A stay is selected on the dates it will actually use.** A payout-only
+  stay takes its dates from the booking it is linked to, so the selection
+  has to know them BEFORE the query runs. Coalescing a missing check-out to
+  the check-in meant October never selected stay 134 at all, and three
+  nights and $494.62 were in the year but in no month.
+- **On the stay basis a direct booking's room revenue is its total, paid or
+  not.** The accrual standard, and Rob's decision of 2026-10-29: a night
+  stayed is revenue whether or not the money has arrived. Taking receipts
+  instead divided October's $549.17 across 43 nights that had earned
+  $6,027.30, for an ADR of $12.77. What has been paid is shown beside it.
+  On the cash basis only money received counts, and the two bases must
+  disagree — if they ever match, something is wrong.
+- **A night divides a rate only with money under it, on both sides of the
+  house.** Platform nights already followed this; direct nights now do too,
+  counting only bookings that have a total.
+- **Whether `mphb_total_price` includes tax or fees is unanswered.** It
+  depends on how MotoPress is configured on this site and nothing in the
+  code can tell. Room revenue excludes tax, so if a tax or fee sits inside
+  that total the direct figures are overstated by it.
+  `wp dcc-ledger direct-total` prints the shape of the booking meta — key
+  names and counts only, never a value — so a person can settle it. Until
+  someone does, treat the direct room revenue figure as resting on an
+  unverified assumption and say so.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -406,8 +432,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1585 assertions
-    php dcc-ledger/tests/mutations.php            # 82 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1648 assertions
+    php dcc-ledger/tests/mutations.php            # 87 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -442,6 +468,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.3.1.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.2.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

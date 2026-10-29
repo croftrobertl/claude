@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,13 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.2 =
+* **The months stopped adding up to the year.** A payout-only stay linked to a booking that crosses a month end was selected for the first month and not the second: the query coalesced its missing check-out to its check-in, so October lost three nights and $494.62 that the year still held. Stays are now selected on the dates they will actually use, including dates from a linked booking.
+* **October's rates divided receipts by every night.** 43 nights that had earned $6,027.30 were divided into the $549.17 that had come in, giving an ADR of $12.77. On the stay basis a direct booking's room revenue is now its booking total, paid or not — the accrual standard. What has been paid is shown beside it. The cash basis still counts only money received.
+* A direct night only divides a rate when its booking has a total, the mirror of the rule platform nights already followed.
+* `wp dcc-ledger money-check` gained two more rules over the real data: **no nights in a rate without money**, and **the months add up to the range** — eleven figures across every month, to the cent.
+* New: `wp dcc-ledger direct-total` prints every meta key a MotoPress booking carries, with how many bookings carry it and whether its values are plain numbers. Key names and counts only, never a value. It is there to settle whether this site's booking total includes tax or fees, which decides whether the total is room revenue — a question the code cannot answer about itself.
 
 = 0.3.1 =
 * **Net revenue was wrong for Booking.com, and showed as a net ADR above the gross one.** Net was taken as the payout — but a Booking.com payout carries the tax Rob has to remit, and its commission is invoiced separately rather than deducted, so net was overstated by both. Net is now one definition on every channel: gross room revenue, less commission and fees, with tax inside neither figure. For Airbnb and Vrbo that lands on the payout, because those platforms deduct their fee before paying.

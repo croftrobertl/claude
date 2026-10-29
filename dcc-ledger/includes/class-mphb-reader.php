@@ -208,6 +208,71 @@ final class Mphb_Reader
     }
 
     /**
+     * What a booking's meta looks like, by key name only.
+     *
+     * The question this answers is one nobody here can answer from the
+     * code: does `mphb_total_price` include tax, a pet fee or other
+     * services on THIS site? That depends on how MotoPress is configured,
+     * and the ledger must not guess — room revenue excludes tax, and
+     * guessing wrong moves every rate.
+     *
+     * So this reports the shape of the data instead: every meta key that
+     * appears on a booking, how many bookings carry it, and whether its
+     * values look like money. Key names and counts only — never a value,
+     * because a value could be a guest's.
+     *
+     * @return array<int,array{key:string,bookings:int,money_like:bool,example_shape:string}>
+     */
+    public static function booking_meta_shape(): array
+    {
+        global $wpdb;
+
+        try {
+            // Key and value together, so "is this a number?" can be decided
+            // in PHP — portable SQL only, no REGEXP. The value is looked at
+            // inside this loop and never kept: it could be a guest's.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT m.meta_key AS k, m.meta_value AS v, m.post_id AS p
+                       FROM {$wpdb->postmeta} m
+                       INNER JOIN {$wpdb->posts} p ON p.ID = m.post_id
+                      WHERE p.post_type = %s
+                      ORDER BY m.meta_key",
+                    self::POST_TYPE_BOOKING
+                ),
+                ARRAY_A
+            ) ?: [];
+        } catch (\Throwable $e) {
+            error_log('DCCL: booking meta shape query failed');
+
+            return [];
+        }
+
+        $keys = [];
+        foreach ($rows as $row) {
+            $key = (string) $row['k'];
+            $keys[$key] ??= ['posts' => [], 'values' => 0, 'numeric' => 0];
+            $keys[$key]['posts'][(int) $row['p']] = true;
+            $keys[$key]['values']++;
+            if (is_numeric(trim((string) $row['v']))) {
+                $keys[$key]['numeric']++;
+            }
+        }
+        unset($rows);
+
+        $out = [];
+        foreach ($keys as $key => $seen) {
+            $out[] = [
+                'key'        => $key,
+                'bookings'   => count($seen['posts']),
+                'money_like' => $seen['values'] > 0 && $seen['numeric'] === $seen['values'],
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Words an OTA writes into an iCal event that is a block rather than a
      * booking — the host closed the dates, or the platform did.
      *

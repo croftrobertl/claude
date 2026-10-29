@@ -233,6 +233,19 @@ what carries them, so removing the link on the Stays tab puts its nights
 back to unknown and takes its money out of every rate again. Nothing in
 MotoPress changes either way — those dates are read, never written.
 
+## If a month and its year disagree
+
+They should not, and it is checked over the real data rather than only in
+the tests:
+
+    wp dcc-ledger money-check
+
+"the months add up to the range" compares eleven figures — nights and ten
+money figures — month by month against the whole range. If it reports a
+difference, send the output and change nothing. A month that disagrees with
+its year means a stay is being selected for one period and not another, and
+the fix is in the selection, never in the data.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

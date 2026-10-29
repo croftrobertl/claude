@@ -1,4 +1,4 @@
-# DCC Ledger 0.3.1 — Staging Checklist
+# DCC Ledger 0.3.2 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -597,3 +597,49 @@ with Rob's exports:
 - [ ] Stay 134's $1,154.16 splits by the nights booking 19667 gives it,
       four in September and three in October, instead of landing whole in
       September.
+
+## 16. 0.3.2 — the two October errors
+
+Both were found by adding October up by hand. 0.3.2 changes how two figures
+are computed and adds two more rules to `money-check`; it writes nothing new.
+
+- [ ] Deactivate, upload `Ledger 0.3.2.zip`, activate.
+- [ ] `wp dcc-ledger money-check` ends with **Success** and its **Figures**
+      block now has four lines, all OK:
+      *net is never above gross*, *no money in a rate without nights*,
+      *no nights in a rate without money*, and
+      *the months add up to the range* — eleven figures across every month.
+- [ ] **October 2026** now shows Booking.com with three nights and
+      **$494.62**, which it had been losing entirely.
+- [ ] Add the twelve months of 2026 by hand: **835 nights** and guest total
+      **3,535,565 cents**, matching the year.
+- [ ] October's ADR and RevPAR are now computed from what the bookings
+      **earned** ($6,027.30), not from what has come in ($549.17). The
+      Overview says both figures in one line under the rates.
+- [ ] Switch to the **payout basis**: the figures there still count only
+      money received. If the two bases agree, something is wrong — tell me.
+- [ ] September 2026 is unchanged: 14 nights of 240, **5.8%**, gross
+      $2,176.77 and net $1,999.35.
+- [ ] Whole-range money is unchanged: guest total 5,167,431, platform fees
+      543,360, net payout 4,964,593, tax 339,276 cents.
+- [ ] MotoPress checksums, links and reviews all unchanged.
+
+**The question I could not answer, and the command that answers it.**
+
+Room revenue excludes tax. The ledger now reads a direct booking's
+`mphb_total_price` as its room revenue on the stay basis, and whether that
+total includes tax, a pet fee or other services depends on how MotoPress is
+configured on this site. Nothing in the code can tell. So:
+
+    wp dcc-ledger direct-total
+
+It prints every meta key a booking carries, how many bookings carry it, and
+which keys hold plain numbers — key names and counts only, never a value.
+
+- [ ] Run it and read the list.
+- [ ] Open one booking in wp-admin and compare its displayed total with
+      `mphb_total_price`.
+- [ ] **If tax or a fee is inside that total**, room revenue is overstated
+      by that much and the definition has to change — tell me and I will
+      change it. **If it is not**, the figures are right as they stand.
+- [ ] Either way, say which, so it can be written down rather than assumed.

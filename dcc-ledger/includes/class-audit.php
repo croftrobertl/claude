@@ -29,15 +29,29 @@ final class Audit
 
         $net_failures    = [];
         $rate_failures   = [];
+        $night_failures  = [];
         $months_checked  = 0;
+
+        // Summed as the months are walked, to compare with the whole range
+        // at the end. The months of a year have to add up to the year.
+        $tie_fields = [
+            'nights', 'guest_total', 'platform_fees', 'net_payout',
+            'room_revenue_gross', 'room_revenue_net',
+            'tax_platform_remitted', 'tax_in_payout',
+            'direct_due', 'direct_recorded', 'direct_paid',
+        ];
+        $summed = array_fill_keys($tie_fields, 0);
 
         $cursor = (new \DateTimeImmutable($from . ' 00:00:00', Dates::timezone()))
             ->modify('first day of this month');
         $end    = new \DateTimeImmutable($to . ' 00:00:00', Dates::timezone());
 
         while ($cursor <= $end) {
-            $start = $cursor->format('Y-m-01');
-            $stop  = $cursor->modify('last day of this month')->format('Y-m-d');
+            // Clamped to the range. A range that starts mid-month would
+            // otherwise be compared against whole months and never tie —
+            // the check would report a fault of its own making.
+            $start = max($cursor->format('Y-m-01'), $from);
+            $stop  = min($cursor->modify('last day of this month')->format('Y-m-d'), $to);
             $month = Reports::summary($start, $stop, 'stay');
             $months_checked++;
 
@@ -66,7 +80,41 @@ final class Audit
                 }
             }
 
+            // Nights in a rate with no money under them. The mirror of the
+            // check above, and the one that let October divide $549.17 of
+            // receipts across 43 nights that had earned $6,027.30.
+            if ((int) $month['totals']['rate_nights'] > 0 && (int) $month['totals']['rate_gross'] <= 0) {
+                $night_failures[] = sprintf(
+                    /* translators: 1: month, 2: the nights the rate divides by */
+                    __('%1$s: %2$d nights are in the rate with no room revenue under them', 'dcc-ledger'),
+                    $start,
+                    (int) $month['totals']['rate_nights']
+                );
+            }
+
+            foreach ($tie_fields as $field) {
+                $summed[$field] += (int) ($month['totals'][$field] ?? 0);
+            }
+
             $cursor = $cursor->modify('+1 month');
+        }
+
+        // The months against the whole range. A figure that ties in total
+        // while its months do not is a figure that is wrong twice — and
+        // that is exactly how October lost a payout-only stay's share.
+        $whole     = Reports::summary($from, $to, 'stay');
+        $tie_fails = [];
+        foreach ($tie_fields as $field) {
+            $want = (int) ($whole['totals'][$field] ?? 0);
+            if ($want !== $summed[$field]) {
+                $tie_fails[] = sprintf(
+                    /* translators: 1: the figure's name, 2: the whole range, 3: the months added up */
+                    __('%1$s: the range gives %2$d but its months give %3$d', 'dcc-ledger'),
+                    $field,
+                    $want,
+                    $summed[$field]
+                );
+            }
         }
 
         return [
@@ -91,6 +139,29 @@ final class Audit
                         $months_checked
                     )
                     : implode('; ', array_slice($rate_failures, 0, 5)),
+            ],
+            [
+                'what'   => __('no nights in a rate without money', 'dcc-ledger'),
+                'ok'     => $night_failures === [],
+                'detail' => $night_failures === []
+                    ? sprintf(
+                        /* translators: %d: number of months checked */
+                        __('%d months', 'dcc-ledger'),
+                        $months_checked
+                    )
+                    : implode('; ', array_slice($night_failures, 0, 5)),
+            ],
+            [
+                'what'   => __('the months add up to the range', 'dcc-ledger'),
+                'ok'     => $tie_fails === [],
+                'detail' => $tie_fails === []
+                    ? sprintf(
+                        /* translators: 1: number of figures compared, 2: number of months */
+                        __('%1$d figures across %2$d months, to the cent', 'dcc-ledger'),
+                        count($tie_fields),
+                        $months_checked
+                    )
+                    : implode('; ', array_slice($tie_fails, 0, 5)),
             ],
         ];
     }

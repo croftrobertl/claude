@@ -808,7 +808,7 @@ EOT,
         'name' => 'A night with no money dragging the average rate down',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-        $rate_nights = $ota['nights_with_revenue'] + $direct['nights'];
+        $rate_nights = $ota['nights_with_revenue'] + $direct['nights_with_revenue'];
 EOT,
         'to'   => <<<'EOT'
         $rate_nights = $ota['nights'] + $direct['nights'];
@@ -947,6 +947,64 @@ EOT,
 EOT,
         'to'   => <<<'EOT'
         return;
+EOT,
+    ],
+    [
+        'name' => 'A payout-only stay dropped from the months it reaches',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $extra = $reaching === []
+            ? ''
+            : ' OR s.id IN (' . implode(',', array_map('intval', $reaching)) . ')';
+EOT,
+        'to'   => <<<'EOT'
+        $extra = '';
+EOT,
+    ],
+    [
+        'name' => 'Direct receipts taken as revenue on the stay basis',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+EOT,
+        'to'   => <<<'EOT'
+        $direct_room_revenue = $direct['paid'];
+EOT,
+    ],
+    [
+        'name' => 'Direct money earned taken as cash on the payout basis',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+EOT,
+        'to'   => <<<'EOT'
+        $direct_room_revenue = $direct['due'];
+EOT,
+    ],
+    [
+        'name' => 'A direct night with no money dividing the rate',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                if ((int) $booking['total_cents'] > 0) {
+                    $out['nights_with_revenue'] += $nights;
+                } else {
+                    $out['nights_without_revenue'] += $nights;
+                }
+EOT,
+        'to'   => <<<'EOT'
+                $out['nights_with_revenue'] += $nights;
+EOT,
+    ],
+    [
+        'name' => 'The audit comparing whole months against a part-month range',
+        'file' => 'includes/class-audit.php',
+        'from' => <<<'EOT'
+            $start = max($cursor->format('Y-m-01'), $from);
+            $stop  = min($cursor->modify('last day of this month')->format('Y-m-d'), $to);
+EOT,
+        'to'   => <<<'EOT'
+            $start = $cursor->format('Y-m-01');
+            $stop  = $cursor->modify('last day of this month')->format('Y-m-d');
 EOT,
     ],
 ];

@@ -133,7 +133,17 @@ T::same([], $wpdb->mphb_writes(), 'Reading a booking\'s dates writes nothing to 
 T::group('The audit runs the same two rules over the stored data');
 
 $audit = Audit::run('2025-01-01', '2026-09-30');
-T::same(2, count($audit), 'Both invariants are checked');
+T::same(4, count($audit), 'Every invariant is checked');
+T::same(
+    [
+        'net is never above gross',
+        'no money in a rate without nights',
+        'no nights in a rate without money',
+        'the months add up to the range',
+    ],
+    array_column($audit, 'what'),
+    'And each is named, so the output says what was looked at'
+);
 foreach ($audit as $check) {
     T::ok($check['ok'], 'Audit: ' . $check['what'] . ' — ' . $check['detail']);
 }
@@ -168,3 +178,63 @@ $wpdb->query("DELETE FROM " . Schema::lines() . " WHERE hash = 'audit-probe'");
 Reports::flush_cache();
 
 T::ok(Audit::run('2025-03-01', '2025-03-31')[0]['ok'], 'And passes again once the bad row is gone');
+
+T::group('The audit names nights in a rate with no money under them');
+
+// October 2026's fault, the other way up from September's: 43 nights, all
+// direct, with $549.17 recorded against $6,027.30 earned. Taking receipts
+// as revenue gave an ADR of $12.77. The guard is that no night divides a
+// rate unless there is room revenue under it — so a month whose rate
+// nights have no revenue at all is named.
+$probe = Audit::run('2026-10-01', '2026-10-31');
+$by_name = [];
+foreach ($probe as $check) {
+    $by_name[$check['what']] = $check;
+}
+
+T::ok(isset($by_name['no nights in a rate without money']), 'The invariant is among those checked');
+T::ok($by_name['no nights in a rate without money']['ok'], 'And October passes it now');
+
+$october = Reports::summary('2026-10-01', '2026-10-31', 'stay');
+T::ok((int) $october['totals']['rate_nights'] > 0, 'October has nights in its rate');
+T::ok(
+    (int) $october['totals']['rate_gross'] > (int) $october['totals']['direct_recorded'],
+    'And divides what those nights earned, not only what has been paid'
+);
+T::same(
+    (int) $october['direct']['due'] + (int) $october['totals']['room_revenue'],
+    (int) $october['totals']['room_revenue_gross'],
+    'Which is the booking totals plus the platforms\' room revenue'
+);
+
+T::group('A direct night with no money does not divide the rate');
+
+// 9053 is a confirmed booking with a total of nothing — a comp, or one Rob
+// has not priced. Four nights in July 2026. It belongs in occupancy and
+// nowhere near the average rate.
+$july = Reports::summary('2026-07-01', '2026-07-31', 'stay');
+$j    = $july['totals'];
+
+T::ok((int) $j['nights'] > 0, 'July has nights');
+T::same(4, (int) $july['direct']['nights_without_revenue'], 'Four of them have no money above them');
+T::same(
+    (int) $july['ota']['nights_with_revenue'] + (int) $july['direct']['nights_with_revenue'],
+    (int) $j['rate_nights'],
+    'And the rate divides by the rest'
+);
+T::ok(
+    (int) $j['rate_nights'] < (int) $j['nights'],
+    'So the rate nights are fewer than the occupied nights'
+);
+T::ok(
+    (int) $j['nights_without_revenue'] >= 4,
+    'And the screen is told how many were left out'
+);
+
+T::group('The audit holds for a range that starts and ends mid-month');
+
+// Clamped to the range: whole months against a part-month range would
+// never tie, and the check would be reporting a fault of its own making.
+foreach (Audit::run('2025-01-15', '2026-09-20') as $check) {
+    T::ok($check['ok'], 'Part-month range: ' . $check['what'] . ' — ' . $check['detail']);
+}

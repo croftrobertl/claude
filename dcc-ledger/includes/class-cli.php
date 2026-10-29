@@ -29,6 +29,7 @@ final class Cli
     public const HYPHENATED = [
         'money-check'    => 'money_check',
         'money-rollback' => 'money_rollback',
+        'direct-total'   => 'direct_total',
     ];
 
     /**
@@ -345,6 +346,57 @@ final class Cli
         \WP_CLI::log(sprintf('Cells restored: %d', $result['restored']));
         \WP_CLI::log($result['message']);
         \WP_CLI::warning(__('The ledger will not report figures until the money is converted again or 0.1.9 is reinstalled. This is deliberate: reading cents that are no longer there would report every figure as zero.', 'dcc-ledger'));
+    }
+
+    /**
+     * What a direct booking's total is made of, on THIS site.
+     *
+     * Room revenue excludes tax, and the ledger now counts a direct
+     * booking's total as its room revenue on the stay basis. Whether
+     * `mphb_total_price` includes tax, a pet fee or other services depends
+     * on how MotoPress is configured here — nobody can read that off the
+     * code, and guessing moves every rate. So this prints the shape of the
+     * data and leaves the reading to a person.
+     *
+     * Key names and counts only. No value is printed, because a value
+     * could be a guest's.
+     *
+     * @subcommand direct-total
+     * @alias direct_total
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public function direct_total(array $args, array $assoc): void
+    {
+        $shape = Mphb_Reader::booking_meta_shape();
+
+        if ($shape === []) {
+            \WP_CLI::warning(__('No booking meta found at all. Either there are no bookings, or the post type is spelled differently here.', 'dcc-ledger'));
+
+            return;
+        }
+
+        \WP_CLI::log(__('Every meta key on a MotoPress booking, with how many bookings carry it.', 'dcc-ledger'));
+        \WP_CLI::log(__('"money" marks a key whose every value is a plain number.', 'dcc-ledger'));
+        \WP_CLI::log('');
+
+        foreach ($shape as $row) {
+            \WP_CLI::log(sprintf(
+                '  %-42s %6d  %s',
+                $row['key'],
+                $row['bookings'],
+                $row['money_like'] ? 'money' : ''
+            ));
+        }
+
+        \WP_CLI::log('');
+        \WP_CLI::log(sprintf(
+            /* translators: %s: the total meta key */
+            __('The ledger reads %s as a direct booking\'s room revenue on the stay basis.', 'dcc-ledger'),
+            Mphb_Reader::META_TOTAL
+        ));
+        \WP_CLI::log(__('If a tax or fee key above is NOT already inside that total, room revenue is right as it stands. If it IS inside, the total is above room revenue by that much and the definition has to change. Compare one booking in wp-admin against its total to settle it.', 'dcc-ledger'));
     }
 
     /**

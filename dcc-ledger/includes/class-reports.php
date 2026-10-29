@@ -141,7 +141,14 @@ final class Reports
         // Direct bookings pay no commission, so their gross and their net
         // are the same figure. MotoPress reports no tax split for them, so
         // nothing is deducted and the screen says so.
-        $direct_room_revenue = $direct['paid'];
+        //
+        // On the stay basis a direct booking's room revenue is its BOOKING
+        // TOTAL, paid or not — the accrual standard, and Rob's decision of
+        // 2026-10-29. Taking what had been paid instead divided October's
+        // $549.17 of receipts across all 43 of its nights and reported an
+        // ADR of $12.77. On the cash basis only money received counts, so
+        // there the paid figure is the right one.
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
 
         $gross_revenue = $room_revenue + $direct_room_revenue;
         $net_revenue   = $room_revenue_net + $direct_room_revenue;
@@ -151,7 +158,7 @@ final class Reports
         // like a discount nobody gave. The same cut the other way: money
         // whose nights are unknown comes out of the top, because a dollar
         // with no night under it lifts an average exactly as wrongly.
-        $rate_nights = $ota['nights_with_revenue'] + $direct['nights'];
+        $rate_nights = $ota['nights_with_revenue'] + $direct['nights_with_revenue'];
 
         $no_nights_gross = self::gross_room_revenue($ota['no_nights']);
         $no_nights_net   = self::net_room_revenue($ota['no_nights']);
@@ -193,7 +200,7 @@ final class Reports
                 'rate_gross'         => $rate_gross,
                 'rate_net'           => $rate_net,
                 'rate_nights'        => $rate_nights,
-                'nights_without_revenue' => $ota['nights_without_revenue'],
+                'nights_without_revenue' => $ota['nights_without_revenue'] + $direct['nights_without_revenue'],
                 'money_without_nights'   => $no_nights_gross,
                 'stays_without_nights'   => $ota['stays_without_nights'],
                 'nights_from_link'       => $ota['nights_from_link'],
@@ -263,6 +270,29 @@ final class Reports
         }
         $sum_sql = implode(",\n                       ", $sums);
 
+        // A payout that arrived before its reservation row has no check-out
+        // of its own. Where somebody has linked it to a MotoPress booking,
+        // that booking's dates are the stay's dates — read from MotoPress,
+        // never written to it.
+        //
+        // Resolved BEFORE the query, because the query selects on dates:
+        // stay 134's stored check-out is null, which coalesces to its
+        // check-in of 27 September, so October never selected it and its
+        // three October nights and $494.62 fell out of the year. Select on
+        // the dates the stay will actually use.
+        $linked_dates = self::dates_from_linked_bookings();
+
+        $reaching = [];
+        foreach ($linked_dates as $stay_id => $dates) {
+            if ($dates['check_in'] <= $to && $dates['check_out'] >= $from) {
+                $reaching[] = (int) $stay_id;
+            }
+        }
+
+        $extra = $reaching === []
+            ? ''
+            : ' OR s.id IN (' . implode(',', array_map('intval', $reaching)) . ')';
+
         // One grouped query per period; the PHP below walks the stays that
         // overlap the period only, never the whole history.
         $rows = $wpdb->get_results(
@@ -273,8 +303,8 @@ final class Reports
                    FROM {$stays_t} s
                    LEFT JOIN {$lines_t} l ON l.stay_id = s.id
                   WHERE s.check_in IS NOT NULL
-                    AND s.check_in <= %s
-                    AND COALESCE(s.check_out, s.check_in) >= %s
+                    AND ((s.check_in <= %s AND COALESCE(s.check_out, s.check_in) >= %s)
+                         {$extra})
                   GROUP BY s.id, s.channel, s.cottage, s.check_in, s.check_out, s.nights, s.status, s.booked_on",
                 $to,
                 $from
@@ -290,12 +320,6 @@ final class Reports
         // — the platform still says cancelled, and the ruling is beside it,
         // not instead of it.
         $ruled = Stay_Rulings::all_current();
-
-        // A payout that arrived before its reservation row has no check-out
-        // of its own. Where somebody has linked it to a MotoPress booking,
-        // that booking's dates are the stay's dates — read from MotoPress,
-        // never written to it.
-        $linked_dates = self::dates_from_linked_bookings();
 
         foreach ($rows as $row) {
             $status    = (string) $row['status'];
@@ -643,6 +667,8 @@ final class Reports
             // which for a booking Rob typed in later is not the date the
             // guest booked. Reported separately from the platform figure
             // and labelled, never blended into one number.
+            'nights_with_revenue'    => 0,
+            'nights_without_revenue' => 0,
             'lead_times'      => [],
             'lead_time_median' => null,
             'lead_time_mean'  => null,
@@ -699,6 +725,15 @@ final class Reports
 
             if ($nights > 0) {
                 $out['nights'] += $nights;
+                // The same rule the platform side uses, the other way up: a
+                // night only divides a rate when there is room revenue
+                // under it. On the stay basis that is the booking's total,
+                // whether or not it has been paid yet.
+                if ((int) $booking['total_cents'] > 0) {
+                    $out['nights_with_revenue'] += $nights;
+                } else {
+                    $out['nights_without_revenue'] += $nights;
+                }
                 $out['by_cottage'][$cottage] ??= self::blank_breakdown();
                 $out['by_cottage'][$cottage]['nights'] += $nights;
                 $out['by_channel']['direct'] ??= self::blank_breakdown();

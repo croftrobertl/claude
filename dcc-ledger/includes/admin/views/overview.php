@@ -174,6 +174,19 @@ $view_sources = [
     </p>
 <?php endif; ?>
 
+<?php if ((string) $period['basis'] === 'stay') : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: 1: what the direct bookings earned, 2: what has been recorded as paid */
+            esc_html__('Direct bookings count what they earned, not what has come in: %1$s earned · %2$s recorded paid. That is the accrual standard — a night that was stayed is revenue whether or not the money has arrived — and it is why the rates above do not move when a payment is entered late. Switch to the payout basis to see money received instead.', 'dcc-ledger'),
+            esc_html(Ui::money((int) $t['direct_due'])),
+            esc_html(Ui::money((int) $t['direct_recorded']))
+        );
+        ?>
+    </p>
+<?php endif; ?>
+
 <h3 class="dccl-h3"><?php esc_html_e('Lead Time', 'dcc-ledger'); ?></h3>
 <p class="dccl-note">
     <?php esc_html_e('How far ahead guests booked, over stays checking in inside the range. Platform and direct are kept apart because they are not the same measurement.', 'dcc-ledger'); ?>
