@@ -712,8 +712,8 @@ $mutations = [
     [
         'name' => "0.2.9: the guest completion listener records nothing",
         'file' => 'dcc-ragusa.php',
-        'from' => "    \\DCCR\\Fortress\\Sveti_Ivan::on_process_complete(\$upgrader, \$hook_extra);\n}",
-        'to'   => "}",
+        'from' => "        \\DCCR\\Fortress\\Sveti_Ivan::on_process_complete(\$upgrader, \$hook_extra);\n    } catch",
+        'to'   => "    } catch",
     ],
     [
         'name' => "0.2.9: the guest pre-install listener opens no row",
