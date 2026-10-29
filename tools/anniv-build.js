@@ -35,7 +35,9 @@ if (!lab.includes('font-size="16" font-weight="700" fill="#5A410C" text-anchor="
 }
 const yearA = body(P.crystalA).replace(/dccAnC1/g, 'dccAnY1');
 
-const src = `/* DCC Seasons — the Anniversary's art (4.13.5): Rob's picks from the
+/* No name anywhere in the shipped file: it carries the dates, so its
+ * comments say nothing about whose they are (tools/test-anniversary.js). */
+const src = `/* DCC Seasons — the Anniversary's art (4.13.5): the picks from the
  * 2026-10-29 sheets, falling on 11 November. The loader fetches it only
  * that day (or in a preview), with the crane's pack, before the engine.
  *

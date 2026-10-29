@@ -5083,7 +5083,9 @@
 		function adPlanFor() {
 			var k = kcRects(), b = AD.danceBox, tg = 0, all = k.txt.concat(k.box), i, j;
 			for (i = 0; i < k.txt.length; i++) { tg = mx2(tg, k.txt[i][3]); }
-			var floorY = vh - 10, H = MT.floor(mn(adCap(vw), (floorY - (tg + AD_M)) / -b[1]));
+			/* the cap is keyed by the WINDOW's width, as Rob saw the sizes (the
+			 * picture is a scrollbar narrower from 768 up) */
+			var floorY = vh - 10, H = MT.floor(mn(adCap(W.innerWidth || vw), (floorY - (tg + AD_M)) / -b[1]));
 			var pl = { vw: vw, vh: vh, ox: cvOX, oy: cvOY, at: nowMs(), floorY: floorY, none: 1 };
 			for (; H >= 24; H--) {
 				var xa = vw / 2 - 0.55 * H, xb = vw / 2 + 0.55 * H, ok = 1;
@@ -7456,6 +7458,7 @@
 				 * it against Chromium's own getScreenCTM) */
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
+				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: fullMoonR(), plan: crPlan }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },

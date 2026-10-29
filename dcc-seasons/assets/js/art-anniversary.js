@@ -1,4 +1,4 @@
-/* DCC Seasons — the Anniversary's art (4.13.5): Rob's picks from the
+/* DCC Seasons — the Anniversary's art (4.13.5): the picks from the
  * 2026-10-29 sheets, falling on 11 November. The loader fetches it only
  * that day (or in a preview), with the crane's pack, before the engine.
  *

@@ -22,8 +22,8 @@ function ok(c, label, detail) {
 
 (async () => {
   console.log('\n  --- reduced motion: nothing animates, nothing is fetched ---');
-  for (const w of [390, 1440]) {
-    const cfg = config(['--theme=thanksgiving', '--placement=content', '--layering=front', '--density=16', '--min']);
+  for (const [theme, w] of [['thanksgiving', 390], ['thanksgiving', 1440], ['anniversary', 390], ['anniversary', 1440]]) {   /* 4.13.5: and the Anniversary */
+    const cfg = config(['--theme=' + theme, '--placement=content', '--layering=front', '--density=16', '--min']);
     const reqs = [], workers = [];
     const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), { viewport: { width: w, height: 844 }, dsf: 2, reducedMotion: 'reduce' });
     try {
@@ -32,15 +32,15 @@ function ok(c, label, detail) {
       await ses.page.mouse.wheel(0, 300);
       await ses.page.waitForTimeout(12000);   /* past the loader's 10 s net */
       const r = await ses.page.evaluate(() => ({ eng: !!window.DCCSeasonsEngine, cv: document.querySelectorAll('canvas.dcc-seasons-canvas, canvas.dcc-seasons-sky').length, acc: document.querySelectorAll('.dcc-seasons-accent').length }));
-      ok(!r.eng && !r.cv && !r.acc && !workers.length && !reqs.some(u => /engine/.test(u)),
-        `${w}px: the engine is never fetched — no canvas, no cornucopia, no tom, no worker`, JSON.stringify(r) + ' ' + reqs.join(',') + ' ' + workers.join(','));
+      ok(!r.eng && !r.cv && !r.acc && !workers.length && !reqs.some(u => /engine|art-/.test(u)),
+        `${theme} ${w}px: neither the engine nor an art file is fetched — no canvas, no accent, no tom, no crane, no worker`, JSON.stringify(r) + ' ' + reqs.join(',') + ' ' + workers.join(','));
     } finally { await ses.close(); }
   }
 
   console.log('\n  --- /submit-booking/: zero Seasons requests, counted ---');
-  for (const scope of ['all', 'no_cottages', 'not_home', 'home']) {
+  for (const [theme, scope] of [['thanksgiving', 'all'], ['thanksgiving', 'no_cottages'], ['thanksgiving', 'not_home'], ['thanksgiving', 'home'], ['anniversary', 'all'], ['anniversary', 'no_cottages']]) {
     const verdict = execFileSync('php', [`${ROOT}/tools/scope-decide.php`, `--scope=${scope}`, '--kind=submitbooking'], { cwd: ROOT, encoding: 'utf8' }).trim();
-    const cfg = config(['--theme=thanksgiving', '--placement=content', '--layering=front', '--density=16', '--min']);
+    const cfg = config(['--theme=' + theme, '--placement=content', '--layering=front', '--density=16', '--min']);
     let html = fixture({ kind: 'bravada', config: cfg, banner: 'page' });
     /* served exactly as the site would: SKIP means the plugin printed nothing */
     if (verdict === 'SKIP') { html = html.replace(/<script>window\.DCC_SEASONS = [\s\S]*?<\/script>/, '').replace(/<script src="\/[a-z.]+\.js"><\/script>/g, ''); }
@@ -54,7 +54,7 @@ function ok(c, label, detail) {
       const g = await ses.page.evaluate(() => ({ cfg: !!window.DCC_SEASONS, eng: !!window.DCCSeasonsEngine, el: document.querySelectorAll('[class*="dcc-seasons"]').length }));
       const seasons = reqs.filter(u => /ambient|engine|matrix|dcc-seasons/.test(u));
       ok(verdict === 'SKIP' && seasons.length === 0 && !g.cfg && !g.eng && !g.el,
-        `scope ${scope}: should_load() says ${verdict}; ${seasons.length} Seasons requests, no config, no element (${reqs.length} requests in all)`, JSON.stringify({ seasons, g }));
+        `${theme}, scope ${scope}: should_load() says ${verdict}; ${seasons.length} Seasons requests, no config, no element (${reqs.length} requests in all)`, JSON.stringify({ seasons, g }));
     } finally { await ses.close(); }
   }
 

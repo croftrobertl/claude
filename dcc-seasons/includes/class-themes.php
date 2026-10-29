@@ -223,6 +223,8 @@ class Themes {
              * each sprite's viewBox: the pieces about 26 px tall, the date
              * half as big again (27), the year crystal at 1.5x (42), the two
              * figures half as big again (36). No names anywhere.
+             * The date, the year and the two figures drift down UPRIGHT
+             * (b 'wobble', the ghost's motion: no spin) so they can be read.
              * PROVISIONAL until Rob picks the mix and the motion (the
              * 4.13.5 options sheet): this row is option A. */
             'anniversary' => [
@@ -232,10 +234,10 @@ class Themes {
                         ['s' => 'anrings', 'b' => 'fall', 'w' => 2, 'sz' => [30, 38]],
                         ['s' => 'ancrystal', 'b' => 'fall', 'w' => 2, 'sz' => [18, 22]],
                         ['s' => 'antoast', 'b' => 'fall', 'sz' => [24, 30]],
-                        ['s' => 'andate', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
-                        ['s' => 'anyear', 'b' => 'fall', 'n' => 1, 'sz' => [28, 32]],
-                        ['s' => 'anpct1', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
-                        ['s' => 'anpct2', 'b' => 'fall', 'n' => 1, 'sz' => [58, 66]],
+                        ['s' => 'andate', 'b' => 'wobble', 'n' => 1, 'sz' => [58, 66]],
+                        ['s' => 'anyear', 'b' => 'wobble', 'n' => 1, 'sz' => [28, 32]],
+                        ['s' => 'anpct1', 'b' => 'wobble', 'n' => 1, 'sz' => [58, 66]],
+                        ['s' => 'anpct2', 'b' => 'wobble', 'n' => 1, 'sz' => [58, 66]],
                     ],
                 ],
                 'egg' => [

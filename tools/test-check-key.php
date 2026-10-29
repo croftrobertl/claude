@@ -51,7 +51,7 @@ function req(array $page, array $get, bool $admin = false): array {
     $load = (bool) $call('should_load');
     $cfg = $call('config', array_merge(Settings::defaults(), ['scope' => 'home']));
     $inst->no_cache_for_checks();
-    return ['load' => $load, 'now' => !empty($cfg['sceneNow']), 'preview' => $cfg['preview'], 'nocache' => $GLOBALS['NOCACHE'] > 0];
+    return ['load' => $load, 'now' => !empty($cfg['sceneNow']), 'preview' => $cfg['preview'], 'nocache' => $GLOBALS['NOCACHE'] > 0, 'date' => $cfg['date'] ?? null, 'themes' => array_keys($cfg['themes'])];
 }
 $HOME = ['front' => true, 'path' => '/'];
 $CONTACT = ['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'];
@@ -87,6 +87,22 @@ $r = req($CONTACT, ['dcc_key' => 'nope', 'dcc_scene' => 'now']);
 ok(!$r['load'], 'a wrong key does not open a page outside the scope', json_encode($r));
 $r = req($HOME, ['dcc_scene' => 'later', 'dcc_key' => $k]);
 ok(!$r['now'], 'only dcc_scene=now means now', json_encode($r));
+
+echo "\n=== 4.13.5: the forced date (?dcc_date=), for the Anniversary on staging ===\n";
+$r = req($HOME, ['dcc_key' => $k, 'dcc_date' => '2026-11-11', 'dcc_scene' => 'now']);
+ok($r['date'] === '2026-11-11' && in_array('anniversary', $r['themes'], true) && $r['nocache'], 'with the key: the page resolves 11 Nov, carries its theme, and is never cached', json_encode($r));
+foreach ([['no key', ['dcc_date' => '2026-11-11']], ['a wrong key', ['dcc_key' => strrev($k), 'dcc_date' => '2026-11-11']]] as [$what, $q]) {
+    $r = req($HOME, $q);
+    ok($r['date'] === null && !$r['nocache'], "$what: no forced date, cacheable as usual", json_encode($r));
+}
+foreach (['2026-02-30', '2026-11-1', '11/11/2026', '2026-11-11x', '<script>'] as $bad) {
+    $r = req($HOME, ['dcc_key' => $k, 'dcc_date' => $bad]);
+    ok($r['date'] === null, "not a real date ('$bad'): ignored", json_encode($r));
+}
+$r = req($SUBMIT, ['dcc_key' => $k, 'dcc_date' => '2026-11-11']);
+ok(!$r['load'], '/submit-booking/ stays silent with the forced date too', json_encode($r));
+$r = req($HOME, ['dcc_date' => '2026-11-11'], true);
+ok($r['date'] === '2026-11-11', 'an administrator needs no key for it', json_encode($r));
 
 echo "\n=== an administrator needs no key ===\n";
 $r = req($HOME, ['dcc_scene' => 'now'], true);
