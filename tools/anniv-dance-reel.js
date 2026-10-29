@@ -45,6 +45,7 @@ window.danceBox = function () {
 };
 /* pre-draw every body frame at H px tall, DPR, for one facing; returns the
  * bitmaps, their boxes (bird units), the time and the memory */
+window.GRADE = ${JSON.stringify(process.env.DCC_GRADE || 'rgba(38,44,34,.42)')};
 window.preDraw = function (H, dpr, face) {
   var F = window.FR || (window.FR = dcFrames(RIG)), out = [], t0 = performance.now(), mem = 0, k = H * dpr;
   for (var i = 0; i < F.length; i++) {
@@ -54,6 +55,10 @@ window.preDraw = function (H, dpr, face) {
     var cw = Math.ceil((bb[2] - bb[0]) * k) + 4, ch = Math.ceil((bb[3] - bb[1]) * k) + 4, c = document.createElement('canvas'); c.width = cw; c.height = ch;
     var g = c.getContext('2d'); g.setTransform(k * face, 0, 0, k, face > 0 ? (-bb[0] * k + 2) : (bb[2] * k + 2), -bb[1] * k + 2);
     dc3Paint(g, U, L0[0] * face, L0[1]);
+    /* the scene's light (Art Standards step 6): the home-page hero is a dim,
+     * green-shadowed photograph, so the bird is graded toward its ambient,
+     * over its own pixels only */
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = window.GRADE; g.fillRect(0, 0, cw, ch); g.globalCompositeOperation = 'source-over';
     out.push({ c: c, box: face > 0 ? [bb[0] - 2 / k, bb[1] - 2 / k, bb[2] + 2 / k, bb[3] + 2 / k] : [-bb[2] - 2 / k, bb[1] - 2 / k, -bb[0] + 2 / k, bb[3] + 2 / k] });
     mem += cw * ch * 4;
   }
@@ -82,7 +87,11 @@ function sep(a, b) { return Math.max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1]
   const db = await pg.evaluate(() => window.danceBox());
   /* place: the pair stands 1.1 H apart; as big as fits under the tagline */
   const tg = keep.tagline.reduce((m, b) => Math.max(m, b[3] - pic[1]), 0), floorY = pic[3] - 10;
-  let H = Math.floor((floorY - (tg + M)) / -db[1]), xa, xb, clear, who;
+  /* never bigger than the size Rob approved (the polish sheet, 2026-10-29:
+   * 60 / 76 / 65 px standing at 390 / 768 / 1440): the 4.13.5 scale fix made
+   * the leap smaller, so the fit alone would now grow the bird */
+  const APPROVED = { 390: 60, 768: 76, 1440: 65 };
+  let H = Math.min(APPROVED[W] || 1e9, Math.floor((floorY - (tg + M)) / -db[1])), xa, xb, clear, who;
   for (; H > 20; H--) {
     xa = pic[2] / 2 - 0.55 * H; xb = pic[2] / 2 + 0.55 * H;
     const boxes = [[xa + db[0] * H, floorY + db[1] * H, xa + db[2] * H, floorY + db[3] * H], [xb - db[2] * H, floorY + db[1] * H, xb - db[0] * H, floorY + db[3] * H]];

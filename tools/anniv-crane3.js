@@ -27,8 +27,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DC3_SRC = String.raw`
-var C3 = { base: '#6E7175', shade: 'rgba(52,60,76,', lit: 'rgba(214,215,212,', rim: 'rgba(226,230,232,', ao: 'rgba(36,42,54,',
-	cov: '#958E87', cov2: '#7C756E', fl: '#5E5550', fl2: '#463F3B', tip: '#2A2523', leg: '#3E4045', leg2: '#313338',
+var C3 = { base: '#63666B', shade: 'rgba(52,60,76,', lit: 'rgba(214,215,212,', rim: 'rgba(226,230,232,', ao: 'rgba(36,42,54,',
+	cov: '#857E78', cov2: '#6E6862', fl: '#5E5550', fl2: '#463F3B', tip: '#2A2523', leg: '#3E4045', leg2: '#313338',
 	rust: [168, 108, 62], crown2: '#7E1C25', eye: '#C9681E' };
 function c3L(a, b) { var dx = b[0] - a[0], dy = b[1] - a[1]; return Math.sqrt(dx * dx + dy * dy); }
 function c3M(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
@@ -305,7 +305,7 @@ function dc3Paint(g, U, lx, ly) {
 	g.save(); g.beginPath(); c3Path(g, O); g.clip();
 	/* value: lit from above, the underside in cool shade (deeper, point 4) */
 	var lg = g.createLinearGradient(bx[0] + (bx[2] - bx[0]) * (0.5 + lx * 0.3), bx[1] + (bx[3] - bx[1]) * (0.5 + ly * 0.5), bx[0] + (bx[2] - bx[0]) * (0.5 - lx * 0.3), bx[1] + (bx[3] - bx[1]) * (0.5 - ly * 0.5));
-	lg.addColorStop(0, 'rgba(214,212,204,.2)'); lg.addColorStop(0.42, 'rgba(130,132,134,0)'); lg.addColorStop(1, 'rgba(34,38,52,.66)');
+	lg.addColorStop(0, 'rgba(206,204,196,.16)'); lg.addColorStop(0.42, 'rgba(130,132,134,0)'); lg.addColorStop(1, 'rgba(34,38,52,.66)');
 	g.fillStyle = lg; g.fillRect(bx[0], bx[1], bx[2] - bx[0], bx[3] - bx[1]);
 	/* the value step from the pale breast to the darker rear (point 6) */
 	var rg = g.createLinearGradient(breast[0], breast[1], tailTip[0], tailTip[1]);
