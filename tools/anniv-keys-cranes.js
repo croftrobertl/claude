@@ -2,7 +2,7 @@
 /**
  * DCC Seasons — the Florida Keys water-line scene `cranes` (Keys KC, the
  * sandhill pair dance) as it is today and with the Anniversary's new bird
- * (tools/anniv-crane.js), on the REAL home page at a width (Rob's row 9,
+ * (tools/anniv-crane3.js, the 4.13.5 polished painter), on the REAL home page at a width (Rob's row 9,
  * the Director 2026-10-30). The engine runs unchanged on the mocked clock;
  * for the "new bird" run, every draw of the `crane` / `cranedance` sprite
  * is replaced in the same box by the new painter's pose (stand while it
@@ -16,23 +16,25 @@ const fs = require('fs');
 const path = require('path');
 const { config, open } = require('./harness');
 const rt = require('./real-theme');
-const { DC_SRC, POSES } = require('./anniv-crane');
+const { DC3_SRC } = require('./anniv-crane3');
+const { RIG } = require('./anniv-crane-rig');
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const WIDTH = +arg('width', 390);
 const OUT = arg('out', path.join(__dirname, '..', 'build', `.anniv-keys-${WIDTH}.json`));
 
 /* in the page: swap the two crane sprites for the new painter, same box */
-const SWAP = `${DC_SRC}
+const SWAP = `${DC3_SRC}
 window.__swapCranes = function () {
-  var E = window.DCCSeasonsEngine.guide, P = ${JSON.stringify({ stand: POSES.stand.P, leap: POSES.leap.P })};
+  var E = window.DCCSeasonsEngine.guide, R = ${JSON.stringify({ stand: RIG.stand, leap: RIG.leap })};
   function key(n) { return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(E.svgDoc(E.svgs[n])); }
   var kc = key('crane'), kd = key('cranedance');
   /* one canvas per pose, drawn once: the bird facing left as the sprite does,
-   * feet on the box's bottom, centred; H is the standing height in box px */
+   * feet on the box's bottom, centred; H is the standing height in box px;
+   * the light from the hero (above, a little from the right) */
   function pose(name, bw, bh, H, gy) {
     var S = 4, c = document.createElement('canvas'); c.width = bw * S; c.height = bh * S;
-    var g = c.getContext('2d'); g.scale(S, S); g.translate(bw / 2, gy); g.scale(-H, H); dcPaint(g, P[name]); return c;
+    var g = c.getContext('2d'); g.scale(S, S); g.translate(bw / 2, gy); g.scale(-H, H); dc3Paint(g, R[name], -0.3, -0.954); return c;
   }
   var cs = pose('stand', 44, 70, 66, 69), cd = pose('leap', 64, 70, 46, 69.5);
   var di = CanvasRenderingContext2D.prototype.drawImage;
