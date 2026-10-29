@@ -953,7 +953,7 @@ bottom). How 4.13.2 carries it:
 
 **Rob's answers on 4.13.2 (the Director, 2026-10-29), shipped as 4.13.3**
 (a NEW number so no cache can serve the 4.13.2 engine; the Anniversary is
-now **4.13.4**, the split **4.13.5**):
+now **4.13.5**, on top of the split, **4.13.4**; reversed 2026-10-29, see below):
 - **How often the tom appears: B** — `'w' => 3, 'n' => 1` on his theme
   row: every visit at every width, never two; on a phone he takes one
   falling piece's place. Measured on the REAL page (`tools/test-tom-turn.js`,
@@ -983,7 +983,7 @@ now **4.13.4**, the split **4.13.5**):
   red); `test-thanksgiving.js` now RUNS it. `tkMod` returns an array (its
   names minify; the worker reads `M[1]`), and the guide's tom picture is
   drawn by `theme-guide.js` from `E.tk` (= the tkMod array).
-- **The Anniversary (4.13.4): COMPUTED from the dates** (Rob), so the
+- **The Anniversary (4.13.5): COMPUTED from the dates** (Rob), so the
   40% / 37.5% stay true every Nov 11, like the year count. Dates in code or
   config only, no names public; ask the Director for any date not in hand.
   **The dates (Rob, 2026-10-29):** wedding 11 Nov 2011 (the year count's
@@ -993,6 +993,31 @@ now **4.13.4**, the split **4.13.5**):
   37.5: his figure was before rounding; reported to him), 2027 → 41 / 38,
   2028 → 43 / 40, 2029 → 44 / 41, 2030 → 46 / 43. The figures float with
   nothing saying whose they are.
+
+**Rob's Anniversary picks, all 12 rows (relayed by the Director, 2026-10-29).**
+The Anniversary does not fit in one engine, so the order is: **4.13.4 = the
+per-season split** (no visible change), **4.13.5 = the Anniversary** on top of
+it, live by 9 Nov; Christmas (4.14.1) is rebuilt on 4.13.5, live before 27 Nov.
+1. Hearts: **A, blush only**. 2. Gold rings: **B, two bands linked**.
+3. Crystal: **A, the cut drop**. 4. The toast: **A, flutes clinking**.
+5. The date: **A, the gold band (11·11·11)**. 6. The year count: **A, a
+crystal numeral of its own** (15 in 2026, computed). 7. The date falls
+**half as big again**; the Director wants the year crystal 1.5× too (agreed:
+at 1× its numeral is 8px type). 8. The dancing bird: **B, the new bird**
+(`tools/anniv-crane.js`), after a DETAIL PASS Rob sees first
+(`tools/anniv-crane-detail.js`: white cheek, ochre staining, loose feather
+rows, the tertial bustle as separate feathers, separate primaries dark at the
+tips, separate secondaries, dark legs with the heel, one light — the cr5
+photo's, cream breast and slate back, in every pose so the bird does not
+change colour as it dances). 9. **Florida Keys' `cranes` scene takes the same
+new bird** in the same boxes (`tools/anniv-keys-cranes.js` swaps the two
+sprites at draw time to show it); the Untouched test exempts ONLY that crane
+and proves the rest of Florida Keys pixel-identical. 10. The pair dances
+**A, under the tagline, centered, at every width** (`tools/anniv-scene.js`).
+11. The percentages: **A, gold numerals alone**. 12. They fall **half as big
+again**. Build checks: Untouched (mutation-checked), the 8 ms frame bar,
+reduced motion, `/submit-booking/` zero requests, three widths on the real
+page, and a key-gated check link that forces 11 Nov on staging.
 
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late

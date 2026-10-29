@@ -16,9 +16,9 @@ const fs = require('fs');
 const path = require('path');
 
 const DC_SRC = String.raw`
-var DC = { body: '#92979A', body2: '#7E8387', belly: '#A9ACAC', cheek: '#ECEAE4', neck: '#9FA3A4',
-	crown: '#D0242E', bill: '#3A3B3D', leg: '#3C3D40', prim: '#4C4E52', prim2: '#626569', sec: '#7E8387',
-	cov: '#B0B4B6', cov2: '#9DA2A5', bust: '#7C8186', bust2: '#676C71', rust: '#A88E73' };
+var DC = { body: '#A9AAAE', body2: '#6E7586', belly: '#DCD8D1', cheek: '#F4F2EC', neck: '#B9BBBD',
+	crown: '#D0242E', bill: '#3A3B3D', leg: '#2E2F32', prim: '#3B322E', prim2: '#4D4340', sec: '#5A504B',
+	cov: '#B4AFAA', cov2: '#8E8884', bust: '#7D8594', bust2: '#5C6577', rust: '#B0743E' };
 function dcLerp(a, b, t) { return a + (b - a) * t; }
 /* a filled strip of varying width along a cubic, so the neck tapers */
 function dcTube(g, p0, c1, c2, p1, w0, w1, n) {
@@ -36,6 +36,30 @@ function dcTube(g, p0, c1, c2, p1, w0, w1, n) {
 	for (i = 1; i <= n; i++) { g.lineTo(L[i][0], L[i][1]); }
 	for (i = n; i >= 0; i--) { g.lineTo(R[i][0], R[i][1]); }
 	g.closePath(); g.fill();
+}
+/* 4.13.4 detail pass (the Director, 2026-10-30): the surface of the bird,
+ * fitted to the same three photographs. A deterministic jitter, so every
+ * pre-drawn pose is the same bird. */
+function dcH(i) { var x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); }
+/* rows of contour feathers seen from the side: each a rounded tip pointing
+ * back along 'ang', a shade darker than the ground, its pale fringe drawn
+ * as a narrow crescent; rows overlap like shingles. Placed in the frame
+ * (o, ang); callers clip to the region they cover. */
+function dcRows(g, o, ang, len, wid, rows, per, sz, fill, edge, seed) {
+	var ca = Math.cos(ang), sa = Math.sin(ang), r, k;
+	for (r = 0; r < rows; r++) {
+		for (k = 0; k < per; k++) {
+			var j = dcH(seed + r * 31 + k * 7), j2 = dcH(seed + r * 17 + k * 13 + 5);
+			var u = (k + (r % 2) * 0.5 + (j - 0.5) * 0.35) / per * len, v = ((r + 0.5) / rows - 0.5) * wid + (j2 - 0.5) * wid / rows * 0.4;
+			var x = o[0] + u * ca - v * sa, y = o[1] + u * sa + v * ca, w = sz * (0.8 + 0.4 * j), h = w * 0.62;
+			g.save(); g.translate(x, y); g.rotate(ang + (j2 - 0.5) * 0.3);
+			g.fillStyle = fill;
+			g.beginPath(); g.moveTo(-w * 0.2, -h); g.quadraticCurveTo(w * 1.05, -h * 0.9, w, 0); g.quadraticCurveTo(w * 1.05, h * 0.9, -w * 0.2, h); g.closePath(); g.fill();
+			g.strokeStyle = edge; g.lineWidth = sz * 0.16;
+			g.beginPath(); g.moveTo(w * 0.35, -h * 0.82); g.quadraticCurveTo(w * 1.02, -h * 0.5, w * 0.98, h * 0.1); g.stroke();
+			g.restore();
+		}
+	}
 }
 /* one flight feather: a narrow blade from base to tip, curving a little */
 function dcFeather(g, bx, by, tx, ty, w, bend) {
@@ -57,8 +81,8 @@ function dcQ(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) *
 function dcWing(g, S, W, T, E, R, far, under, bulge) {
 	var i, n = 7;
 	bulge = bulge == null ? 0.06 : bulge;
-	var fl = far ? '#55595D' : (under ? '#575A5E' : '#6C7175');
-	var pr = far ? '#4A4D51' : (under ? '#3F4246' : '#4B4E52');
+	var fl = far ? '#4A423F' : (under ? '#4C423E' : '#5A504B');
+	var pr = far ? '#3E3633' : (under ? '#3B322E' : '#463C38');
 	/* outward normal of the leading edge, pointing away from the trailing side */
 	var lx = W[0] - S[0], ly = W[1] - S[1], ll = Math.sqrt(lx*lx + ly*ly) || 1;
 	var ox = ly / ll, oy = -lx / ll;
@@ -94,7 +118,9 @@ function dcWing(g, S, W, T, E, R, far, under, bulge) {
 		var q = i / (n - 1) * 0.92, tp = tipAt(q);
 		var bs = dcQ(dcQ(W, T, 0.18 + 0.30 * (1 - q)), E, 0.10), dx = tp[0] - bs[0], dy = tp[1] - bs[1], d = Math.sqrt(dx*dx + dy*dy) || 1;
 		var px = -dy / d * tl * 0.034, py = dx / d * tl * 0.034;
-		g.fillStyle = i % 2 ? pr : fl;
+		var pg = g.createLinearGradient(bs[0], bs[1], tp[0], tp[1]);   /* dark at the tip, as the photos show */
+		pg.addColorStop(0, i % 2 ? pr : fl); pg.addColorStop(0.55, i % 2 ? pr : fl); pg.addColorStop(1, far ? '#2A2321' : '#1C1715');
+		g.fillStyle = pg;
 		g.beginPath();
 		g.moveTo(bs[0] - px, bs[1] - py);
 		g.quadraticCurveTo(tp[0] - px * 0.9 - dx / d * tl * 0.06, tp[1] - py * 0.9 - dy / d * tl * 0.06, tp[0], tp[1]);
@@ -103,6 +129,21 @@ function dcWing(g, S, W, T, E, R, far, under, bulge) {
 		if (!far) {
 			g.strokeStyle = under ? 'rgba(160,165,170,.55)' : 'rgba(150,155,160,.6)'; g.lineWidth = tl * 0.008;
 			g.beginPath(); g.moveTo(bs[0], bs[1]); g.lineTo(dcLerp(bs[0], tp[0], 0.85), dcLerp(bs[1], tp[1], 0.85)); g.stroke();
+		}
+	}
+	/* the secondaries: separate broad feathers from under the coverts to
+	 * the scalloped trailing edge, alternately shaded, each with a pale
+	 * fringe, so the inner wing is feathers and never a slab */
+	var sb0 = dcQ(W, T, 0.12), sb1 = dcQ(R, S, 0.35);
+	for (i = 0; i < m; i++) {
+		var sq = (i + 0.5) / m, st = dcQ(E, R, sq), sbp = dcQ(dcQ(sb0, sb1, sq), st, 0.15);
+		var sg = g.createLinearGradient(sbp[0], sbp[1], st[0], st[1]);
+		sg.addColorStop(0, far ? '#4A423F' : (i % 2 ? '#5E5450' : '#685E59')); sg.addColorStop(1, far ? '#332C29' : (i % 2 ? '#3C3330' : '#463C38'));
+		g.fillStyle = sg;
+		dcFeather(g, sbp[0], sbp[1], st[0] - ox * tl * 0.02, st[1] - oy * tl * 0.02, tl * (0.15 + 0.03 * dcH(i + 70)), 0.03);
+		if (!far) {
+			g.strokeStyle = 'rgba(214,204,196,.42)'; g.lineWidth = tl * 0.007;
+			g.beginPath(); g.moveTo(dcLerp(sbp[0], st[0], 0.45), dcLerp(sbp[1], st[1], 0.45)); g.lineTo(st[0] - ox * tl * 0.02, st[1] - oy * tl * 0.02); g.stroke();
 		}
 	}
 	/* the coverts: the inner wing, lighter, in soft rows */
@@ -114,11 +155,20 @@ function dcWing(g, S, W, T, E, R, far, under, bulge) {
 	g.quadraticCurveTo(dcQ(cB, cR, 0.5)[0] - ox * tl * 0.03, dcQ(cB, cR, 0.5)[1] - oy * tl * 0.03, cR[0], cR[1]);
 	g.closePath();
 	var gr = g.createLinearGradient(Lc[0], Lc[1], cB[0], cB[1]);
-	if (far) { gr.addColorStop(0, '#7C8186'); gr.addColorStop(1, '#6A6F74'); }
-	else if (under) { gr.addColorStop(0, '#A7ABAD'); gr.addColorStop(0.35, '#8E9295'); gr.addColorStop(1, '#75797C'); }
-	else { gr.addColorStop(0, '#A3A7A9'); gr.addColorStop(1, '#868B8E'); }
+	if (far) { gr.addColorStop(0, '#8C8784'); gr.addColorStop(1, '#6E6966'); }
+	else if (under) { gr.addColorStop(0, '#C9C5C0'); gr.addColorStop(0.35, '#A39D98'); gr.addColorStop(1, '#7A726D'); }
+	else { gr.addColorStop(0, '#C4C0BB'); gr.addColorStop(0.5, '#A8A29D'); gr.addColorStop(1, '#857E79'); }
 	g.fillStyle = gr; g.fill();
 	if (!far) {
+		/* the coverts in overlapping rows, fringed paler, lying back toward
+		 * the trailing edge, with the photo's ochre wash over the inner wing */
+		g.save(); g.clip();
+		var wa = Math.atan2(E[1] - W[1], E[0] - W[0]), cl = Math.sqrt(Math.pow(cB[0] - S[0], 2) + Math.pow(cB[1] - S[1], 2));
+		dcRows(g, dcQ(S, W, 0.1), Math.atan2(cB[1] - S[1], cB[0] - S[0]), cl * 1.1, tl * 0.9, 9, 11, tl * 0.034, under ? 'rgba(110,114,118,.2)' : 'rgba(100,106,112,.22)', under ? 'rgba(238,236,228,.4)' : 'rgba(222,222,218,.45)', 3);
+		var rw = g.createRadialGradient(dcQ(S, cB, 0.55)[0], dcQ(S, cB, 0.55)[1], 0, dcQ(S, cB, 0.55)[0], dcQ(S, cB, 0.55)[1], cl * 0.7);
+		rw.addColorStop(0, 'rgba(180,112,56,.40)'); rw.addColorStop(1, 'rgba(180,112,56,0)');
+		g.fillStyle = rw; g.fillRect(-3, -3, 6, 6);
+		g.restore();
 		g.strokeStyle = under ? 'rgba(110,115,120,.55)' : 'rgba(120,125,130,.6)'; g.lineWidth = tl * 0.012;
 		for (i = 1; i <= 2; i++) {
 			var t2 = i / 3, a2 = dcQ(dcQ(S, Lc, 0.5), cR, t2), b2 = dcQ(W, cB, t2);
@@ -141,9 +191,13 @@ function dcLeg(g, H, K, F, down, col, w) {
 	g.strokeStyle = col;
 	g.lineWidth = w;
 	g.beginPath(); g.moveTo(H[0], H[1]); g.lineTo(K[0], K[1]); g.lineTo(F[0], F[1]); g.stroke();
-	g.fillStyle = col; g.beginPath(); g.arc(K[0], K[1], w * 0.85, 0, Math.PI * 2); g.fill();
+	g.fillStyle = col; g.beginPath(); g.ellipse(K[0], K[1], w * 1.0, w * 0.8, Math.atan2(F[1] - K[1], F[0] - K[0]), 0, Math.PI * 2); g.fill();
+	/* the low sun's line down the front of the bare leg */
+	g.strokeStyle = 'rgba(150,140,120,.45)'; g.lineWidth = w * 0.3;
+	g.beginPath(); g.moveTo(dcLerp(H[0], K[0], 0.3) + w * 0.3, dcLerp(H[1], K[1], 0.3)); g.lineTo(K[0] + w * 0.3, K[1]); g.lineTo(dcLerp(K[0], F[0], 0.9) + w * 0.3, dcLerp(K[1], F[1], 0.9)); g.stroke();
+	g.strokeStyle = col;
 	var dx = F[0] - K[0], dy = F[1] - K[1], d = Math.sqrt(dx*dx + dy*dy) || 1;
-	var ax = dx/d, ay = dy/d, tl = 0.058;
+	var ax = dx/d, ay = dy/d, tl = 0.075;
 	g.lineWidth = w * 0.75;
 	g.beginPath();
 	if (down) {
@@ -179,15 +233,36 @@ function dcPaint(g, P, dark) {
 	g.quadraticCurveTo(r1[0], r1[1], bt[0], bt[1]);
 	g.quadraticCurveTo(B(-0.40, 0.40)[0], B(-0.40, 0.40)[1] + 0.02 * bs, B(-0.20, 0.30)[0], B(-0.20, 0.30)[1]);
 	g.closePath(); g.fill();
+	/* the bustle's own feathers: long, loose, drooping over the tail, each
+	 * slate with a paler fringe, the tips curling down */
+	for (var tq = 0; tq < 7; tq++) {
+		var ta = B(-0.16 - tq * 0.05, -0.40 + tq * 0.11), tb = B(-0.66 - dcH(tq) * 0.06, -0.12 + tq * 0.075);
+		g.fillStyle = tq % 2 ? DC.bust : DC.bust2;
+		dcFeather(g, ta[0], ta[1], tb[0], tb[1] + 0.05 * bs + tq * 0.008 * bs, 0.05, 0.12 + dcH(tq + 9) * 0.06);
+		g.strokeStyle = 'rgba(196,198,200,.55)'; g.lineWidth = 0.004;
+		g.beginPath(); g.moveTo(dcLerp(ta[0], tb[0], 0.35), dcLerp(ta[1], tb[1], 0.35)); g.quadraticCurveTo(dcLerp(ta[0], tb[0], 0.75), dcLerp(ta[1], tb[1], 0.75) + 0.012, tb[0], tb[1] + 0.05 * bs); g.stroke();
+	}
 	/* neck: long and thin, from the front of the body to the head */
 	var n0 = P.n0 || B(0.46, -0.30), h = P.h, ha = P.ha;
 	var c1 = [n0[0] + P.n[0], n0[1] + P.n[1]], c2 = [h[0] + P.n[2], h[1] + P.n[3]];
-	g.fillStyle = DC.neck;
+	/* the neck lit from in front: shade across it, never bands along it */
+	var nm = dcQ(n0, h, 0.5), nax = h[0] - n0[0], nay = h[1] - n0[1], nal = Math.sqrt(nax * nax + nay * nay) || 1, npx = -nay / nal, npy = nax / nal;
+	if (npx < 0) { npx = -npx; npy = -npy; }
+	var ng = g.createLinearGradient(nm[0] - npx * 0.06, nm[1] - npy * 0.06, nm[0] + npx * 0.06, nm[1] + npy * 0.06);
+	ng.addColorStop(0, dark ? '#241A12' : '#7A8293'); ng.addColorStop(0.45, dark ? '#241A12' : '#B9BBBE'); ng.addColorStop(1, dark ? '#241A12' : '#F1EEE7');
+	g.fillStyle = ng;
 	dcTube(g, n0, c1, c2, h, P.nw || 0.10, 0.042, 18);
+	if (!dark) {   /* its ochre-tinged base and fine feathering low down */
+		g.save(); g.clip();
+		var ngr = g.createRadialGradient(n0[0], n0[1], 0, n0[0], n0[1], 0.16);
+		ngr.addColorStop(0, 'rgba(170,116,64,.32)'); ngr.addColorStop(1, 'rgba(170,116,64,0)'); g.fillStyle = ngr; g.fillRect(n0[0] - 0.2, n0[1] - 0.2, 0.4, 0.4);
+		dcRows(g, n0, Math.atan2(-nay, -nax), nal * 0.55, 0.11, 4, 12, 0.012, 'rgba(110,114,120,.14)', 'rgba(244,242,236,.32)', 41);
+		g.restore();
+	}
 	/* body: deep-chested, tapering to the tail under the bustle; shaded
 	 * darker along the back, paler at the breast, as the heron is */
 	var gb0 = B(0, -0.6), gb1 = B(0.1, 0.6), gbr = g.createLinearGradient(gb0[0], gb0[1], gb1[0], gb1[1]);
-	gbr.addColorStop(0, dark ? '#241A12' : '#7A7F83'); gbr.addColorStop(0.55, dark ? '#241A12' : DC.body); gbr.addColorStop(1, dark ? '#241A12' : '#ADAFAE');
+	gbr.addColorStop(0, dark ? '#241A12' : '#5E687C'); gbr.addColorStop(0.5, dark ? '#241A12' : DC.body); gbr.addColorStop(1, dark ? '#241A12' : '#D9D5CE');
 	g.fillStyle = gbr;
 	var p = [B(0.50, -0.05), B(0.38, -0.52), B(-0.05, -0.56), B(-0.42, -0.30), B(-0.58, 0.10), B(-0.30, 0.55), B(0.10, 0.62), B(0.42, 0.40)];
 	g.beginPath(); g.moveTo(p[0][0], p[0][1]);
@@ -196,8 +271,27 @@ function dcPaint(g, P, dark) {
 	g.bezierCurveTo(p[5][0], p[5][1], p[6][0], p[6][1], p[7][0], p[7][1]);
 	g.quadraticCurveTo(B(0.56, 0.20)[0], B(0.56, 0.20)[1], p[0][0], p[0][1]);
 	g.closePath(); g.fill();
-	/* the paler breast and belly */
-	g.fillStyle = DC.belly;
+	if (!dark) {
+		g.save(); g.clip();
+		/* contour feathers in rows from breast to tail, fringed paler */
+		dcRows(g, B(0.55, -0.62), b[2] + Math.PI, bl * 1.25, bd * 1.25, 12, 16, 0.017, 'rgba(110,114,120,.09)', 'rgba(242,240,234,.24)', 11);
+		/* the rusty, ochre staining the photos show on the back and flank */
+		var rs = [[-0.05, -0.30, 0.20, 0.34], [0.20, 0.05, 0.16, 0.22], [-0.35, 0.10, 0.16, 0.26]];
+		for (var ri = 0; ri < rs.length; ri++) {
+			var rc = B(rs[ri][0], rs[ri][1]), rg = g.createRadialGradient(rc[0], rc[1], 0, rc[0], rc[1], rs[ri][2]);
+			rg.addColorStop(0, 'rgba(178,110,52,' + (rs[ri][3] * 1.3) + ')'); rg.addColorStop(1, 'rgba(178,110,52,0)');
+			g.fillStyle = rg; g.fillRect(rc[0] - 0.3, rc[1] - 0.3, 0.6, 0.6);
+		}
+		/* the light: the low sun on the breast, the back and belly in shade */
+		var lg = g.createLinearGradient(B(0.55, -0.35)[0], B(0.55, -0.35)[1], B(-0.45, 0.45)[0], B(-0.45, 0.45)[1]);
+		lg.addColorStop(0, 'rgba(255,246,232,.55)'); lg.addColorStop(0.45, 'rgba(255,246,232,0)'); lg.addColorStop(1, 'rgba(36,44,64,.36)');
+		g.fillStyle = lg; g.fillRect(B(0, 0)[0] - 0.6, B(0, 0)[1] - 0.6, 1.2, 1.2);
+		g.restore();
+	}
+	/* the paler breast and belly, fading into the flank */
+	var bgr = g.createLinearGradient(B(0.50, 0.1)[0], B(0.50, 0.1)[1], B(-0.15, 0.3)[0], B(-0.15, 0.3)[1]);
+	bgr.addColorStop(0, dark ? '#241A12' : 'rgba(236,232,224,.95)'); bgr.addColorStop(1, dark ? '#241A12' : 'rgba(220,216,209,0)');
+	g.fillStyle = bgr;
 	g.beginPath();
 	var e0 = B(0.48, -0.10), e1 = B(0.50, 0.40), e2 = B(0.00, 0.62), e3 = B(-0.25, 0.48), e4 = B(0.05, 0.20);
 	g.moveTo(e0[0], e0[1]); g.quadraticCurveTo(e1[0], e1[1], e2[0], e2[1]);
@@ -205,10 +299,19 @@ function dcPaint(g, P, dark) {
 	g.quadraticCurveTo(e4[0], e4[1], e0[0], e0[1]); g.closePath(); g.fill();
 	/* the folded wing on the flank when it is not open */
 	if (!P.w1) {
-		g.fillStyle = DC.body2;
+		var fw0 = B(0.0, -0.70), fw1 = B(-0.2, 0.25), fwg = g.createLinearGradient(fw0[0], fw0[1], fw1[0], fw1[1]);
+		fwg.addColorStop(0, dark ? '#241A12' : '#8E929A'); fwg.addColorStop(0.55, dark ? '#241A12' : '#6A7384'); fwg.addColorStop(1, dark ? '#241A12' : '#36425A');
+		g.fillStyle = fwg;   /* the folded wing, slate as in the photo */
 		var f0 = B(0.36, -0.44), f1 = B(-0.10, -0.70), f2 = B(-0.66, -0.08), f3 = B(-0.20, 0.22);
 		g.beginPath(); g.moveTo(f0[0], f0[1]); g.quadraticCurveTo(f1[0], f1[1], f2[0], f2[1]);
 		g.quadraticCurveTo(f3[0], f3[1], B(0.30, -0.05)[0], B(0.30, -0.05)[1]); g.closePath(); g.fill();
+		if (!dark) {   /* the folded coverts: scalloped rows, fringed, with the ochre wash */
+			g.save(); g.clip();
+			dcRows(g, B(0.34, -0.55), b[2] + Math.PI - 0.15, bl * 1.05, bd * 0.75, 8, 12, 0.021, 'rgba(60,66,74,.10)', 'rgba(206,208,210,.26)', 23);
+			var fr = B(-0.05, -0.35), fg = g.createRadialGradient(fr[0], fr[1], 0, fr[0], fr[1], 0.22);
+			fg.addColorStop(0, 'rgba(178,108,50,.46)'); fg.addColorStop(1, 'rgba(178,108,50,0)'); g.fillStyle = fg; g.fillRect(fr[0] - 0.3, fr[1] - 0.3, 0.6, 0.6);
+			g.restore();
+		}
 		/* the tertials over the bustle, a few long feathers drooping */
 		g.fillStyle = DC.bust;
 		for (var q = 0; q < 4; q++) {
@@ -223,9 +326,9 @@ function dcPaint(g, P, dark) {
 	function Hd(u, v) { return [h[0] + u*hc - v*hs, h[1] + u*hs + v*hc]; }
 	g.fillStyle = DC.neck;
 	g.beginPath(); g.ellipse(h[0], h[1], 0.040, 0.030, ha, 0, Math.PI * 2); g.fill();
-	g.fillStyle = DC.cheek;
-	var k0 = Hd(0.025, 0.004), k1 = Hd(-0.022, 0.026), k2 = Hd(-0.040, 0.000);
-	g.beginPath(); g.moveTo(k0[0], k0[1]); g.quadraticCurveTo(k1[0], k1[1], k2[0], k2[1]); g.quadraticCurveTo(Hd(-0.01, -0.012)[0], Hd(-0.01, -0.012)[1], k0[0], k0[1]); g.fill();
+	g.fillStyle = dark ? DC.neck : '#F4F2EC';   /* the white cheek, gape to nape, below the crown */
+	var k0 = Hd(0.032, 0.002), k1 = Hd(-0.010, 0.034), k2 = Hd(-0.046, 0.006);
+	g.beginPath(); g.moveTo(k0[0], k0[1]); g.quadraticCurveTo(k1[0], k1[1], k2[0], k2[1]); g.quadraticCurveTo(Hd(-0.02, -0.016)[0], Hd(-0.02, -0.016)[1], k0[0], k0[1]); g.fill();
 	var gape = P.gape || 0;
 	g.fillStyle = DC.bill;
 	var t0 = Hd(0.030, -0.010), t1 = Hd(0.150, -0.002 - gape * 0.03), t2 = Hd(0.030, 0.008);
@@ -239,8 +342,13 @@ function dcPaint(g, P, dark) {
 		var r0 = Hd(0.030, -0.010), r1 = Hd(0.000, -0.040), r2 = Hd(-0.030, -0.018);
 		g.beginPath(); g.moveTo(r0[0], r0[1]); g.quadraticCurveTo(r1[0], r1[1], r2[0], r2[1]);
 		g.quadraticCurveTo(Hd(0.000, -0.010)[0], Hd(0.000, -0.010)[1], r0[0], r0[1]); g.fill();
-		g.fillStyle = '#E6A23A';
-		var ey = Hd(0.012, -0.006); g.beginPath(); g.arc(ey[0], ey[1], 0.0055, 0, Math.PI * 2); g.fill();
+		g.fillStyle = 'rgba(120,10,20,.55)';   /* the crown is bare, warty skin */
+		for (var cq = 0; cq < 6; cq++) { var cp = Hd(0.022 - cq * 0.008, -0.020 - dcH(cq) * 0.010); g.beginPath(); g.arc(cp[0], cp[1], 0.0028, 0, Math.PI * 2); g.fill(); }
+		g.fillStyle = '#E2741C';
+		var ey = Hd(0.012, -0.006); g.beginPath(); g.arc(ey[0], ey[1], 0.0058, 0, Math.PI * 2); g.fill();
+		g.fillStyle = '#1A1A1A'; g.beginPath(); g.arc(ey[0], ey[1], 0.0026, 0, Math.PI * 2); g.fill();
+		g.strokeStyle = 'rgba(150,150,140,.6)'; g.lineWidth = 0.004;   /* the bill's lit ridge */
+		g.beginPath(); g.moveTo(Hd(0.034, -0.008)[0], Hd(0.034, -0.008)[1]); g.lineTo(Hd(0.14, -0.003 - gape * 0.03)[0], Hd(0.14, -0.003 - gape * 0.03)[1]); g.stroke();
 	}
 	/* the near wing over everything when open */
 	if (P.w1 && !P.w1.behind) { dcWing(g, P.w1.s, P.w1.w, P.w1.t, P.w1.e, P.w1.r, false, !!P.w1.under, P.w1.bulge); }
@@ -260,17 +368,17 @@ const POSES = {
   call: {
     ref: { f: 'cr5.jpg', crop: [150, 170, 330, 470], x0: 385, y0: 625, H: 368, face: 1 },
     note: 'head thrown up, calling, wings half open (the left bird)',
-    P: { b: [0.02, -0.54, -0.85], bl: 0.42, bd: 0.26, n0: [0.11, -0.66], n: [0.02, -0.14, -0.02, 0.12], h: [0.085, -1.13], ha: -0.38, gape: 1, bs: 0.25,
+    P: { b: [0.05, -0.61, -1.0], bl: 0.40, bd: 0.23, n0: [0.12, -0.72], n: [0.02, -0.14, -0.02, 0.12], h: [0.085, -1.13], ha: -0.38, gape: 1, bs: 0.25,
          l1: { h: [0.03, -0.44], k: [0.025, -0.20], f: [0.02, -0.005], down: true }, l2: { h: [0.07, -0.44], k: [0.10, -0.22], f: [0.11, -0.005], down: true },
-         w1: { s: [0.17, -0.74], w: [-0.10, -0.92], t: [-0.56, -0.87], e: [-0.36, -0.60], r: [-0.04, -0.42], under: true, behind: true, bulge: 0.10 },
+         w1: { s: [0.16, -0.78], w: [-0.12, -0.97], t: [-0.58, -0.92], e: [-0.46, -0.79], r: [-0.12, -0.56], under: true, behind: true, bulge: 0.10 },
          w2: null },
   },
   leap: {
     ref: { f: 'cr6.jpg', crop: [380, 0, 580, 713], x0: 720, y0: 705, H: 470, face: -1 },
     note: 'springing up, both wings thrown open (the right bird)',
-    P: { b: [0.07, -0.45, -0.65], bl: 0.46, bd: 0.20, n0: [0.17, -0.58], n: [0.10, -0.08, -0.10, 0.10], h: [0.47, -0.88], ha: 0.09, bs: 0.3,
+    P: { b: [0.07, -0.45, -0.65], bl: 0.46, bd: 0.20, n0: [0.17, -0.58], nw: 0.13, n: [0.12, -0.02, -0.12, 0.08], h: [0.51, -0.89], ha: 0.09, bs: 0.3,
          l1: { h: [-0.02, -0.30], k: [-0.09, -0.24], f: [0.05, -0.02], down: true }, l2: { h: [-0.05, -0.29], k: [-0.11, -0.23], f: [-0.11, -0.02], down: true },
-         w1: { s: [0.085, -0.61], w: [-0.11, -0.81], t: [-0.32, -1.16], e: [-0.38, -0.67], r: [-0.15, -0.39], bulge: 0.10 },
+         w1: { s: [0.07, -0.64], w: [-0.17, -0.88], t: [-0.33, -1.16], e: [-0.27, -0.50], r: [0.02, -0.43], bulge: 0.10 },
          w2: { s: [0.19, -0.70], w: [0.31, -1.05], t: [0.37, -1.45], e: [0.06, -1.02], r: [-0.02, -0.66], lit: true, bulge: 0.05 } },
   },
 };
@@ -346,7 +454,7 @@ if (require.main === module && process.argv.includes('--sheet')) {
       <script>${DC_SRC}
       window.run = async (items) => { for (const it of items) {
         const im = new Image(); im.src = it.img; await im.decode();
-        const [cx, cy, cw, ch] = it.ref.crop, S = 1.6;
+        const [cx, cy, cw, ch] = it.ref.crop, S = window.SC || 1.6;
         const box = document.createElement('div'); box.innerHTML = '<b>' + it.k + '</b> — ' + it.note + '<br>';
         for (const mode of ['photo', 'overlay', 'drawing']) {
           const c = document.createElement('canvas'); c.width = cw * S; c.height = ch * S; c.style.marginRight = '6px';
@@ -357,10 +465,20 @@ if (require.main === module && process.argv.includes('--sheet')) {
             g.scale(S, S); g.translate(it.ref.x0 - cx, it.ref.y0 - cy); g.scale(it.ref.H * it.ref.face, it.ref.H);
             dcPaint(g, it.P); g.restore();
           }
+          if (mode === 'photo' && window.GRID) {   /* pose units, every 0.1, to fit by */
+            g.save(); g.scale(S, S); g.translate(it.ref.x0 - cx, it.ref.y0 - cy); g.scale(it.ref.H * it.ref.face, it.ref.H);
+            g.lineWidth = 1 / it.ref.H; g.font = (10 / it.ref.H) + 'px sans-serif';
+            for (let u = -1.0; u <= 1.01; u += 0.1) { g.strokeStyle = Math.abs(u) < 0.01 ? 'rgba(255,0,0,.8)' : 'rgba(0,255,255,.45)'; g.beginPath(); g.moveTo(u, -1.6); g.lineTo(u, 0.1); g.stroke(); }
+            for (let v = -1.6; v <= 0.01; v += 0.1) { g.strokeStyle = 'rgba(0,255,255,.45)'; g.beginPath(); g.moveTo(-1, v); g.lineTo(1, v); g.stroke(); }
+            g.fillStyle = '#ff0'; for (let u = -1.0; u <= 1.01; u += 0.2) { for (let v = -1.6; v <= 0.01; v += 0.2) { g.save(); g.translate(u, v); g.scale(it.ref.face, 1); g.fillText(u.toFixed(1) + ',' + v.toFixed(1), 0.004, -0.004); g.restore(); } }
+            g.restore();
+          }
           box.appendChild(c);
         }
         w.appendChild(box);
       } document.title = 'done'; };</script>`);
+    if (process.argv.includes('--grid')) { await pg.evaluate(() => { window.GRID = 1; }); }
+    const SC = +((process.argv.find(a => a.startsWith('--scale=')) || '').slice(8)) || 0; if (SC) { await pg.evaluate(v => { window.SC = v; }, SC); }
     await pg.evaluate(it => window.run(it), items);
     await pg.screenshot({ path: out, fullPage: true });
     await b.close();
