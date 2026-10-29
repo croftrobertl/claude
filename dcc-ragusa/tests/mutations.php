@@ -166,8 +166,8 @@ $mutations = [
     [
         'name' => '0.1.2 item 2: an updated plugin\'s own files are raised as findings',
         'file' => 'includes/fortresses/class-sveti-ivan.php',
-        'from' => "        \$n = Minceta::rebaseline(Site::plugins_dir() . '/' . \$slug);",
-        'to'   => '        $n = 0;',
+        'from' => "        \$n    = Minceta::rebaseline(Site::plugins_dir() . '/' . \$slug);",
+        'to'   => '        $n    = 0;',
     ],
     [
         'name' => '0.1.2 item 3: a lost self-update check is abandoned',
@@ -292,7 +292,7 @@ $mutations = [
     [
         'name' => '0.2.0 3: any file in the window is attributed, even in another plugin\'s folder',
         'file' => 'includes/fortresses/class-minceta.php',
-        'from' => "            if (\$mtime >= \$w['from'] && \$mtime <= \$w['to'] && self::belongs_to(\$rel, \$w['slug'])) {",
+        'from' => "            if (\$mtime >= \$w['from'] && \$mtime <= \$w['to'] && self::belongs_to(\$rel, \$w['slug'], \$w['kind'] ?? 'plugin')) {",
         'to'   => "            if (\$mtime >= \$w['from'] && \$mtime <= \$w['to']) {",
     ],
     [
