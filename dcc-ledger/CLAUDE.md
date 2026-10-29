@@ -276,6 +276,27 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   subcommand after its method, so `money_check` answered to the underscore
   while every document said `money-check`. Both spellings are registered in
   `Cli::HYPHENATED` and tested by the name, not the method.
+- **Net revenue is gross less commission and fees, never the payout.**
+  `Reports::net_room_revenue()`, one definition for every channel. A
+  Booking.com payout carries the tax Rob remits AND has no commission taken
+  out — that is invoiced separately — so taking the payout as net
+  overstated Booking.com twice and produced a net ADR ABOVE the gross one
+  on live. Gross is `guest_total` less both tax buckets, plus refunds,
+  which reduce room revenue the way they would in any set of books; a
+  resolution or an adjustment is not room revenue and is in neither figure,
+  staying visible in net payout, which is the cash that moved.
+- **A dollar with no night under it is out of every rate.** The mirror of
+  the night-with-no-money rule. A payout whose reservation row has not
+  arrived has no nights; linked to a MotoPress booking it takes that
+  booking's dates (read, never written), and unlinked its nights are
+  unknown — its money is reported, kept out of both sides of every rate,
+  and named on screen along with the fact that its tax and commission are
+  unknown too, not zero.
+- **`Audit` runs the rules over the real data.** Both of 0.3.1's errors were
+  true of live and visible on no screen, and a test suite cannot see live.
+  `wp dcc-ledger money-check` walks every month and names any month,
+  channel or cottage where net exceeds gross, or where money reached a rate
+  with no nights under it.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -385,8 +406,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1243 assertions
-    php dcc-ledger/tests/mutations.php            # 77 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1585 assertions
+    php dcc-ledger/tests/mutations.php            # 82 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -421,6 +442,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.3.0.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.1.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

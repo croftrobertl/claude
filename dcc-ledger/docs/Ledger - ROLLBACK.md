@@ -210,6 +210,29 @@ Before 0.3.0 only the underscored form was registered, while every document
 said the hyphen. If a hyphenated command errors, the plugin on that site is
 older than 0.3.0 — use the underscore, and upgrade.
 
+## If a rate looks wrong
+
+Two rules hold over every figure, and they are checked over the real data
+rather than only in the tests:
+
+    wp dcc-ledger money-check
+
+It names any month, channel or cottage where net revenue exceeds gross, and
+any month where money with no nights under it reached a rate. Both were real
+errors on live before 0.3.1, and neither was visible on a screen.
+
+If a line comes back with `!!`, send the output and change nothing. A rate
+that is wrong is a definition that is wrong, and the fix belongs in the
+definition, not in the data.
+
+## If a payout-only stay has the wrong nights
+
+A payout that arrives before its reservation row has no nights of its own.
+Linked to a MotoPress booking, it takes that booking's dates; the link is
+what carries them, so removing the link on the Stays tab puts its nights
+back to unknown and takes its money out of every rate again. Nothing in
+MotoPress changes either way — those dates are read, never written.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

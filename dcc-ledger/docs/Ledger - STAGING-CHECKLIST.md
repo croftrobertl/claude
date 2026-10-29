@@ -1,4 +1,4 @@
-# DCC Ledger 0.3.0 — Staging Checklist
+# DCC Ledger 0.3.1 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -551,3 +551,49 @@ carries money.
 **The hand reconciliation is yours.** Pick September 2026, add it up from
 Rob's own export files on his Mac, and compare with the Overview for the
 same month. Aggregates only; no guest data needs to leave that machine.
+
+## 15. 0.3.1 — the two money errors
+
+Both were found by hand on real September data, and neither showed on a
+screen. 0.3.1 changes how two figures are computed; it writes nothing new.
+
+**Net revenue.** Net was taken as the payout. A Booking.com payout carries
+the tax Rob remits AND has no commission deducted — that is invoiced
+separately — so Booking.com's net was overstated by both, and net ADR came
+out above gross. Net is now gross room revenue less commission and fees, on
+every channel, with tax inside neither figure.
+
+**Money with no nights.** A payout whose reservation row has not arrived was
+putting its full amount into ADR and RevPAR with nothing underneath.
+
+- [ ] Deactivate, upload `Ledger 0.3.1.zip`, activate.
+- [ ] `wp dcc-ledger money-check` ends with **Success** and now prints a
+      **Figures** block with two lines, both OK:
+      *net is never above gross* and *no money in a rate without nights*.
+      Each names how many months it looked at.
+- [ ] On the Overview for **September 2026**: ADR net is **below** ADR
+      gross, and RevPAR net below RevPAR gross. If either is the other way
+      round, stop.
+- [ ] Occupancy for September 2026 reads **5.8%** — 14 nights of 240 — once
+      stay 134 is linked to booking 19667. Before that link it reads lower,
+      and the screen says why.
+- [ ] The Overview names the payout-only stays whose nights are unknown,
+      their money, and that their tax and commission are unknown too — not
+      zero.
+- [ ] The Channel tab shows **Net Revenue** beside **Net Payout**, and the
+      two differ for Booking.com by its tax plus its commission.
+- [ ] The money totals are unchanged: guest total, platform fees, net
+      payout and the three tax buckets are what they were in 0.3.0. Only
+      the rates and net revenue move.
+- [ ] Nothing was written: links, reviews, adjustments and the MotoPress
+      checksums are all as before.
+
+**Reconcile September again, by hand.** The figures that should now agree
+with Rob's exports:
+
+- [ ] Booking.com stay 133: room $1,008.00, commission $151.20, tax
+      $146.16, payout $1,154.16 — and **net revenue $856.80**, which is
+      $1,008.00 − $151.20.
+- [ ] Stay 134's $1,154.16 splits by the nights booking 19667 gives it,
+      four in September and three in October, instead of landing whole in
+      September.

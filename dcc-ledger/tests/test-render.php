@@ -67,6 +67,19 @@ T::ok(
     'Which says the curve is recorded, not reconstructed'
 );
 T::ok(str_contains($screens['channel'], 'Channel Mix'), 'The channel screen shows the mix');
+T::ok(str_contains($screens['channel'], 'Net Revenue'), 'And net revenue beside net payout');
+T::ok(
+    str_contains($screens['channel'], 'carries the tax Rob remits'),
+    'Saying why the two are not the same figure'
+);
+T::ok(
+    str_contains($screens['overview'], 'gross less commission and fees, never the payout'),
+    'The overview says what net is, and what it is not'
+);
+T::ok(
+    str_contains($screens['overview'], 'has not arrived'),
+    'And names the money whose nights are unknown'
+);
 T::ok(str_contains($screens['channel'], 'Share Of Net Revenue'), 'By money as well as by nights');
 
 // The trail: every figure opens to the rows behind it.

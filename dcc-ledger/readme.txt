@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,13 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.1 =
+* **Net revenue was wrong for Booking.com, and showed as a net ADR above the gross one.** Net was taken as the payout — but a Booking.com payout carries the tax Rob has to remit, and its commission is invoiced separately rather than deducted, so net was overstated by both. Net is now one definition on every channel: gross room revenue, less commission and fees, with tax inside neither figure. For Airbnb and Vrbo that lands on the payout, because those platforms deduct their fee before paying.
+* A refund now reduces gross room revenue as well as net, the way it would in any set of books. A resolution or an adjustment is not room revenue and is in neither; both stay visible in net payout, which is the cash that moved.
+* **Money with no nights under it is out of every rate.** A payout whose reservation row has not arrived was putting its whole amount into ADR and RevPAR with nothing underneath. Where such a stay is linked to a MotoPress booking it now takes that booking's dates — read from MotoPress, never written to — and its money splits across the month end by those nights. Unlinked, its nights are unknown: it stays out of both sides of every rate, and the screen names it and says its tax and commission are unknown too, not zero.
+* `wp dcc-ledger money-check` now also runs those two rules over the stored data, month by month, and names anything that fails: net is never above gross for any month, channel or cottage, and no money is counted into a rate without nights.
+* The Channel tab shows net revenue beside net payout, and says why they are not the same figure.
 
 = 0.3.0 =
 * `wp dcc-ledger money-check` and `money-rollback` answer to the names every document gives them. Until now only the underscored spellings were registered, so the line a person would copy at the worst possible moment — the rollback — errored out. Both spellings work, and both are tested by the name a person types.

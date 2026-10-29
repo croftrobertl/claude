@@ -117,8 +117,12 @@ EOT,
     [
         'name' => 'Airbnb-remitted tax added to revenue',
         'file' => 'includes/class-reports.php',
-        'from' => '        $room_revenue     = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'] - $ota[\'tax_platform_remitted\'];',
-        'to'   => '        $room_revenue     = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'];',
+        'from' => <<<'EOT'
+            - (int) ($figures['tax_platform_remitted'] ?? 0)
+EOT,
+        'to'   => <<<'EOT'
+            - 0 * (int) ($figures['tax_platform_remitted'] ?? 0)
+EOT,
     ],
     [
         'name' => "Vrbo's missing tax shown as $0 rather than unknown",
@@ -885,6 +889,65 @@ if ($trail !== null) {
 }
 EOT,
         'to'   => '',
+    ],
+    [
+        'name' => 'A payout taken as net revenue',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        return self::gross_room_revenue($figures)
+            - (int) ($figures['commission'] ?? 0)
+            - (int) ($figures['service_fee'] ?? 0);
+EOT,
+        'to'   => <<<'EOT'
+        return (int) ($figures['payout'] ?? 0) + (int) ($figures['refund'] ?? 0)
+            + (int) ($figures['adjustment'] ?? 0) + (int) ($figures['resolution'] ?? 0);
+EOT,
+    ],
+    [
+        'name' => 'Tax left inside gross room revenue',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        return (int) ($figures['guest_total'] ?? 0)
+            - (int) ($figures['tax_in_payout'] ?? 0)
+EOT,
+        'to'   => <<<'EOT'
+        return (int) ($figures['guest_total'] ?? 0)
+            - 0 * (int) ($figures['tax_in_payout'] ?? 0)
+EOT,
+    ],
+    [
+        'name' => 'Money with no nights under it left in the rate',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $rate_gross = $gross_revenue - $no_nights_gross;
+        $rate_net   = $net_revenue - $no_nights_net;
+EOT,
+        'to'   => <<<'EOT'
+        $rate_gross = $gross_revenue;
+        $rate_net   = $net_revenue;
+EOT,
+    ],
+    [
+        'name' => 'A payout-only stay ignoring the booking it is linked to',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+            if ($check_out === null && isset($linked_dates[(int) $row['id']])) {
+EOT,
+        'to'   => <<<'EOT'
+            if (false) {
+EOT,
+    ],
+    [
+        'name' => 'The audit passing a net above its gross',
+        'file' => 'includes/class-audit.php',
+        'from' => <<<'EOT'
+        if ((int) $net <= (int) $gross) {
+            return;
+        }
+EOT,
+        'to'   => <<<'EOT'
+        return;
+EOT,
     ],
 ];
 

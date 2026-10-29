@@ -301,11 +301,27 @@ final class Cli
         $unconverted = Health::money_not_in_cents();
         \WP_CLI::log(sprintf('Rows still holding a decimal and no cents: %d', $unconverted));
 
-        if (!$result['ok'] || $unconverted > 0) {
+        // The two invariants that were wrong on live and visible on no
+        // screen. Checked over the real data, month by month.
+        \WP_CLI::log('');
+        \WP_CLI::log('Figures:');
+        $audit  = Audit::run();
+        $sound  = true;
+        foreach ($audit as $check) {
+            $sound = $sound && $check['ok'];
+            \WP_CLI::log(sprintf(
+                '  %s %-34s %s',
+                $check['ok'] ? 'OK  ' : '!!  ',
+                $check['what'],
+                $check['detail']
+            ));
+        }
+
+        if (!$result['ok'] || $unconverted > 0 || !$sound) {
             \WP_CLI::error(__('The money is not in the state the ledger expects.', 'dcc-ledger'));
         }
 
-        \WP_CLI::success(__('Every stored figure is in whole cents, and every total ties.', 'dcc-ledger'));
+        \WP_CLI::success(__('Every stored figure is in whole cents, every total ties, and no figure breaks its own rules.', 'dcc-ledger'));
     }
 
     /**

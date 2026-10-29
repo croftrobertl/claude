@@ -88,6 +88,11 @@ $cli->money_check([], []);
 $out = WP_CLI::output();
 T::ok(str_contains($out, 'whole cents'), 'The check reports on the state of the money');
 T::ok(str_contains($out, 'Rows still holding a decimal and no cents: 0'), 'And counts what is left unconverted');
+// The two invariants that were wrong on live and shown on no screen. The
+// Director checks these from the command line, without a login.
+T::ok(str_contains($out, 'net is never above gross'), 'It checks net against gross over the stored data');
+T::ok(str_contains($out, 'no money in a rate without nights'), 'And that no money is in a rate without nights');
+T::ok(str_contains($out, 'every channel and every cottage'), 'Saying how widely it looked');
 T::ok(str_contains($out, 'Success:'), 'It passes on a ledger written in cents');
 
 WP_CLI::reset();

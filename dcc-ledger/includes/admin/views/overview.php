@@ -88,8 +88,9 @@ $view_sources = [
         __('ADR, Gross', 'dcc-ledger'),
         $t['adr_gross'] === null ? Ui::unknown() : Ui::money((int) $t['adr_gross']),
         sprintf(
-            /* translators: %s: the number of nights the rate divides by */
-            __('Room revenue before commission, over the %s nights that carry money', 'dcc-ledger'),
+            /* translators: 1: the money the rate divides, 2: the number of nights it divides by */
+            __('%1$s before commission, over the %2$s nights that carry money', 'dcc-ledger'),
+            Ui::money((int) $t['rate_gross']),
             number_format((float) $t['rate_nights'])
         ),
         '',
@@ -98,7 +99,11 @@ $view_sources = [
     echo Ui::tile(
         __('ADR, Net', 'dcc-ledger'),
         $t['adr_net'] === null ? Ui::unknown() : Ui::money((int) $t['adr_net']),
-        __('The same nights, after the platform\'s cut', 'dcc-ledger'),
+        sprintf(
+            /* translators: %s: net room revenue */
+            __('%s over the same nights: gross less commission and fees, never the payout', 'dcc-ledger'),
+            Ui::money((int) $t['rate_net'])
+        ),
         '',
         Ui::trail_url($period, 'rate_nights')
     );
@@ -130,6 +135,32 @@ $view_sources = [
     );
     ?>
 </div>
+
+<?php if ((int) $t['stays_without_nights'] > 0) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: 1: number of stays, 2: the money on them */
+            esc_html__('%1$s of these are payouts whose reservation row has not arrived, carrying %2$s between them. Nobody has linked them to a MotoPress booking, so their nights are unknown and their money is kept out of every rate — a dollar with no night under it would lift an average exactly as wrongly as a night with no dollar above it would lower one. Their tax and commission are unknown too, not zero: no reservation row has reported them.', 'dcc-ledger'),
+            esc_html(number_format((float) $t['stays_without_nights'])),
+            esc_html(DCCL\Ui::money((int) $t['money_without_nights']))
+        );
+        ?>
+        <?php esc_html_e('Link one to its booking on the Cleanup tab and its nights come from there.', 'dcc-ledger'); ?>
+    </p>
+<?php endif; ?>
+
+<?php if ((int) $t['nights_from_link'] > 0) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: %s: number of stays */
+            esc_html__('%s payout-only stays take their nights from the MotoPress booking they are linked to. MotoPress is read for those dates and never written to.', 'dcc-ledger'),
+            esc_html(number_format((float) $t['nights_from_link']))
+        );
+        ?>
+    </p>
+<?php endif; ?>
 
 <?php if ((int) $t['nights_without_revenue'] > 0) : ?>
     <p class="dccl-note">

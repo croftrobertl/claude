@@ -32,6 +32,7 @@ $suites = [
     'stayed'    => __DIR__ . '/test-stayed.php',
     'pace'      => __DIR__ . '/test-pace.php',
     'metrics'   => __DIR__ . '/test-metrics.php',
+    'rates'     => __DIR__ . '/test-rates.php',
 ];
 
 foreach ($suites as $name => $file) {

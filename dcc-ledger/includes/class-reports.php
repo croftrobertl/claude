@@ -131,13 +131,12 @@ final class Reports
         $nights    = $ota['nights'] + $direct['nights'];
         $occupancy = $capacity > 0 ? round($nights / $capacity * 100, 1) : 0.0;
 
-        // Room revenue: what the guest paid for the room, before the
-        // platform's cut and before any tax. Gross is the price the cottage
+        // Room revenue, gross and net. Gross is the price the cottage
         // commands; net is what reaches the bank. One without the other
         // hides a commission difference of fifteen to eighteen per cent
         // between channels, so neither is ever shown alone.
-        $room_revenue     = $ota['guest_total'] - $ota['tax_in_payout'] - $ota['tax_platform_remitted'];
-        $room_revenue_net = $ota['net_payout'];
+        $room_revenue     = self::gross_room_revenue($ota);
+        $room_revenue_net = self::net_room_revenue($ota);
 
         // Direct bookings pay no commission, so their gross and their net
         // are the same figure. MotoPress reports no tax split for them, so
@@ -149,14 +148,22 @@ final class Reports
 
         // A night with no money behind it is left out of BOTH sides of the
         // rate, not just the top: in the denominator alone it would look
-        // like a discount nobody gave.
+        // like a discount nobody gave. The same cut the other way: money
+        // whose nights are unknown comes out of the top, because a dollar
+        // with no night under it lifts an average exactly as wrongly.
         $rate_nights = $ota['nights_with_revenue'] + $direct['nights'];
 
+        $no_nights_gross = self::gross_room_revenue($ota['no_nights']);
+        $no_nights_net   = self::net_room_revenue($ota['no_nights']);
+
+        $rate_gross = $gross_revenue - $no_nights_gross;
+        $rate_net   = $net_revenue - $no_nights_net;
+
         $adr_base     = self::per_night((int) $room_revenue, (int) $ota['nights_with_revenue']);
-        $adr_gross    = self::per_night((int) $gross_revenue, (int) $rate_nights);
-        $adr_net      = self::per_night((int) $net_revenue, (int) $rate_nights);
-        $revpar_gross = self::per_night((int) $gross_revenue, (int) $capacity);
-        $revpar_net   = self::per_night((int) $net_revenue, (int) $capacity);
+        $adr_gross    = self::per_night((int) $rate_gross, (int) $rate_nights);
+        $adr_net      = self::per_night((int) $rate_net, (int) $rate_nights);
+        $revpar_gross = self::per_night((int) $rate_gross, (int) $capacity);
+        $revpar_net   = self::per_night((int) $rate_net, (int) $capacity);
 
         $lengths = array_merge($ota['stay_lengths'], $direct['stay_lengths']);
 
@@ -181,8 +188,15 @@ final class Reports
                 // so a reader can check the division rather than trust it.
                 'room_revenue_gross' => $gross_revenue,
                 'room_revenue_net'   => $net_revenue,
+                // What the rates actually divide, once money with no nights
+                // under it is taken out.
+                'rate_gross'         => $rate_gross,
+                'rate_net'           => $rate_net,
                 'rate_nights'        => $rate_nights,
                 'nights_without_revenue' => $ota['nights_without_revenue'],
+                'money_without_nights'   => $no_nights_gross,
+                'stays_without_nights'   => $ota['stays_without_nights'],
+                'nights_from_link'       => $ota['nights_from_link'],
                 'adr_gross'          => $adr_gross,
                 'adr_net'            => $adr_net,
                 'revpar_gross'       => $revpar_gross,
@@ -277,6 +291,12 @@ final class Reports
         // not instead of it.
         $ruled = Stay_Rulings::all_current();
 
+        // A payout that arrived before its reservation row has no check-out
+        // of its own. Where somebody has linked it to a MotoPress booking,
+        // that booking's dates are the stay's dates — read from MotoPress,
+        // never written to it.
+        $linked_dates = self::dates_from_linked_bookings();
+
         foreach ($rows as $row) {
             $status    = (string) $row['status'];
             if ($status !== 'ok' && isset($ruled[(int) $row['id']])) {
@@ -285,9 +305,25 @@ final class Reports
             $check_in  = (string) $row['check_in'];
             $check_out = $row['check_out'] !== null ? (string) $row['check_out'] : null;
 
+            if ($check_out === null && isset($linked_dates[(int) $row['id']])) {
+                $check_in  = $linked_dates[(int) $row['id']]['check_in'] ?: $check_in;
+                $check_out = $linked_dates[(int) $row['id']]['check_out'];
+                $figures['nights_from_link']++;
+            }
+
             $total_nights = (int) ($row['nights'] ?? 0);
             if ($total_nights <= 0) {
                 $total_nights = Dates::nights($check_in, $check_out) ?? 0;
+            }
+
+            // Nights unknown: the reservation row has not arrived and nothing
+            // is linked. Its money is real and is reported, but it is kept
+            // out of every rate — on BOTH sides. A dollar with no night under
+            // it would lift the average exactly as a night with no dollar
+            // above it would lower it.
+            $nights_known = $check_out !== null && $total_nights > 0;
+            if (!$nights_known && $status === 'ok') {
+                $figures['stays_without_nights']++;
             }
 
             $in_period = $status === 'ok'
@@ -350,6 +386,10 @@ final class Reports
 
             if ($part > 0) {
                 self::add_money($figures, $row, $part, $whole, (string) $row['cottage'], (string) $row['channel']);
+                if (!$nights_known) {
+                    // Counted in the money, kept out of the rates.
+                    self::add_no_nights($figures, $row, $part, $whole);
+                }
             }
 
             // Cancellation fees are money even on a cancelled stay, and they
@@ -432,6 +472,66 @@ final class Reports
             $figures['by_channel'][$channel] ??= self::blank_breakdown();
             $figures['by_channel'][$channel][$type] = ($figures['by_channel'][$channel][$type] ?? 0) + $amount;
         }
+    }
+
+    /**
+     * The money of a stay whose nights are unknown, kept to one side.
+     *
+     * Reported in the money figures, which are about dollars, and subtracted
+     * from the figures the rates divide — which are about dollars per night,
+     * and have no night here to divide by.
+     *
+     * @param array<string,mixed> $figures
+     * @param array<string,mixed> $row
+     */
+    private static function add_no_nights(
+        array &$figures,
+        array $row,
+        int $nights_in_period,
+        int $total_nights
+    ): void {
+        foreach (self::MONEY_TYPES as $type) {
+            $figures['no_nights'][$type] += Money::share(
+                (int) ($row['t_' . $type] ?? 0),
+                $nights_in_period,
+                $total_nights
+            );
+        }
+    }
+
+    /**
+     * Dates for payout-only stays, taken from the booking they are linked to.
+     *
+     * A payout can arrive before the reservations export that explains it, so
+     * the stay has a check-in and no check-out. Where a person has linked it
+     * to a MotoPress booking, that booking knows the nights — and MotoPress
+     * is read for them, never written to.
+     *
+     * @return array<int,array{check_in:string,check_out:string}>
+     */
+    private static function dates_from_linked_bookings(): array
+    {
+        $links = [];
+        foreach (Repo::all_links() as $link) {
+            $links[(int) $link['mphb_booking_id']] = (int) $link['stay_id'];
+        }
+        if ($links === []) {
+            return [];
+        }
+
+        $out = [];
+        foreach (Mphb_Reader::bookings() as $booking) {
+            $stay_id = $links[(int) $booking['id']] ?? 0;
+            if ($stay_id <= 0 || $booking['check_in'] === null || $booking['check_out'] === null) {
+                continue;
+            }
+            $out[$stay_id] = [
+                'check_in'  => (string) $booking['check_in'],
+                'check_out' => (string) $booking['check_out'],
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -759,6 +859,12 @@ final class Reports
             // by the first; occupancy counts both.
             'nights_with_revenue'    => 0,
             'nights_without_revenue' => 0,
+            // Stays whose nights are not known at all — a payout whose
+            // reservation row has not arrived and which nobody has linked.
+            // Their money is reported and kept out of every rate.
+            'stays_without_nights'   => 0,
+            'nights_from_link'       => 0,
+            'no_nights'              => [],
             'cancellations'         => 0,
             'lead_times'            => [],
             'lead_time_median'      => null,
@@ -769,6 +875,7 @@ final class Reports
         ];
         foreach (self::MONEY_TYPES as $type) {
             $figures[$type] = 0;
+            $figures['no_nights'][$type] = 0;
         }
         foreach (Cottages::COTTAGES as $cottage) {
             $figures['by_cottage'][$cottage] = self::blank_breakdown();
@@ -777,6 +884,53 @@ final class Reports
             $figures['by_channel'][$channel] = self::blank_breakdown();
         }
         return $figures;
+    }
+
+    /**
+     * Gross room revenue: what the guest paid for the room, tax out.
+     *
+     * The tax a platform reports sits INSIDE the figure it calls the guest
+     * total — for Booking.com the guest total is the payout, which carries
+     * the tax Rob has to remit — so both tax buckets come out.
+     *
+     * A refund is money the guest got back, so it reduces room revenue, as
+     * it would in any set of books. A resolution or an adjustment is not
+     * room revenue at all — a damage payment or a platform correction — so
+     * neither is in here; both stay visible in net payout, which is the
+     * cash that moved. A cancellation fee is not room revenue either,
+     * because nobody stayed.
+     *
+     * @param array<string,int|float> $figures a money bucket keyed by type
+     */
+    public static function gross_room_revenue(array $figures): int
+    {
+        return (int) ($figures['guest_total'] ?? 0)
+            - (int) ($figures['tax_in_payout'] ?? 0)
+            - (int) ($figures['tax_platform_remitted'] ?? 0)
+            + (int) ($figures['refund'] ?? 0);
+    }
+
+    /**
+     * Net room revenue: gross, less what the platform took.
+     *
+     * One definition for every channel — gross less commission and fees,
+     * with tax inside neither figure. Taking the payout as net instead was
+     * wrong for Booking.com twice over: its payout carries the tax Rob
+     * remits, and its commission is invoiced separately rather than deducted
+     * from the payout at all, so net came out ABOVE gross. For Airbnb and
+     * Vrbo the same definition lands on the payout, because those platforms
+     * do deduct their fee before paying.
+     *
+     * Commission and fees are stored as positive costs, so net can never
+     * exceed gross. `Money_Migration` checks that over the real data.
+     *
+     * @param array<string,int|float> $figures a money bucket keyed by type
+     */
+    public static function net_room_revenue(array $figures): int
+    {
+        return self::gross_room_revenue($figures)
+            - (int) ($figures['commission'] ?? 0)
+            - (int) ($figures['service_fee'] ?? 0);
     }
 
     /**
@@ -915,11 +1069,15 @@ final class Reports
         $row['net_payout']    =
             ($row['payout'] ?? 0) + ($row['refund'] ?? 0) + ($row['adjustment'] ?? 0)
             + ($row['resolution'] ?? 0) + ($row['cancellation_fee'] ?? 0) + ($row['cancellation_fee_refund'] ?? 0);
-        $row['room_revenue'] =
-            ($row['guest_total'] ?? 0) - ($row['tax_in_payout'] ?? 0) - ($row['tax_platform_remitted'] ?? 0);
+        // The one definition, the same on every row as in the totals.
+        $row['room_revenue']     = self::gross_room_revenue($row);
+        $row['room_revenue_net'] = self::net_room_revenue($row);
         // Cents per night, rounded half up at the last step only.
         $row['adr'] = ($row['nights'] ?? 0) > 0
             ? intdiv((int) $row['room_revenue'] * 2 + (int) $row['nights'], (int) $row['nights'] * 2)
+            : 0;
+        $row['adr_net'] = ($row['nights'] ?? 0) > 0
+            ? intdiv((int) $row['room_revenue_net'] * 2 + (int) $row['nights'], (int) $row['nights'] * 2)
             : 0;
         return $row;
     }

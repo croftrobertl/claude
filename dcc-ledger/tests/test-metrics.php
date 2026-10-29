@@ -88,15 +88,48 @@ T::same(
     (int) $t['room_revenue_gross'],
     'Gross is the platforms\' room revenue plus the direct bookings'
 );
+// Net is gross less what the platform took, on one definition for every
+// channel. Taking the payout as net was wrong for Booking.com twice over:
+// its payout carries the tax Rob remits, and its commission is invoiced
+// separately rather than deducted — so net came out ABOVE gross.
 T::same(
-    (int) $s['ota']['net_payout'] + (int) $s['direct']['paid'],
+    (int) $t['room_revenue_gross'] - (int) $s['ota']['commission'] - (int) $s['ota']['service_fee'],
     (int) $t['room_revenue_net'],
-    'Net is the platforms\' payouts plus the same direct bookings'
+    'Net is gross less commission and fees, never the payout'
 );
 T::ok(
     (int) $t['room_revenue_gross'] >= (int) $t['room_revenue_net'],
     'And gross is never below net'
 );
+T::ok((int) $t['adr_net'] <= (int) $t['adr_gross'], 'Nor is ADR gross below ADR net');
+T::ok((int) $t['revpar_net'] <= (int) $t['revpar_gross'], 'Nor RevPAR');
+
+T::group('Net never exceeds gross, in any month, channel or cottage');
+
+foreach (['2025', '2026'] as $year) {
+    for ($m = 1; $m <= 12; $m++) {
+        $start = sprintf('%s-%02d-01', $year, $m);
+        $stop  = (new DateTimeImmutable($start))->modify('last day of this month')->format('Y-m-d');
+        $month = Reports::summary($start, $stop, 'stay');
+
+        T::ok(
+            (int) $month['totals']['room_revenue_net'] <= (int) $month['totals']['room_revenue_gross'],
+            $start . ': net is at or below gross'
+        );
+        foreach ($month['by_channel'] as $channel => $row) {
+            T::ok(
+                (int) ($row['room_revenue_net'] ?? 0) <= (int) ($row['room_revenue'] ?? 0),
+                $start . ' ' . $channel . ': net is at or below gross'
+            );
+        }
+        foreach ($month['by_cottage'] as $cottage => $row) {
+            T::ok(
+                (int) ($row['room_revenue_net'] ?? 0) <= (int) ($row['room_revenue'] ?? 0),
+                $start . ' cottage ' . $cottage . ': net is at or below gross'
+            );
+        }
+    }
+}
 
 T::group('Length of stay counts a stay whole, in the month it begins');
 
