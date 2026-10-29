@@ -98,3 +98,26 @@ T::ok(str_contains($rolled, 'Warning:'), 'And warns that figures are withheld un
 
 // Put it back, so the suites that follow read a converted ledger.
 DCCL\Money_Migration::run();
+
+T::group('Both spellings of the money commands reach the code');
+
+// The checklist and the rollback notes both say `wp dcc-ledger money-check`.
+// Until 0.3.0 only `money_check` was registered, so the line a person would
+// copy at the worst possible moment — the rollback — errored out.
+WP_CLI::$commands = [];
+DCCL\Plugin::instance()->register_cli();
+
+foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback'] as $spelling) {
+    // Each spelling is run against a converted ledger, because money-check
+    // fails by design on one that has been rolled back.
+    DCCL\Money_Migration::run();
+    WP_CLI::reset();
+    T::ok(
+        WP_CLI::run_command('dcc-ledger ' . $spelling, [], ['dry-run' => true]),
+        'wp dcc-ledger ' . $spelling . ' reaches the code'
+    );
+    T::ok(WP_CLI::output() !== '', 'And prints something when it gets there');
+}
+
+// Put the money back in cents: the rollback spellings ran last.
+DCCL\Money_Migration::run();

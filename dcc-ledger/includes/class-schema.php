@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
  */
 final class Schema
 {
-    public const DB_VERSION     = '5';
+    public const DB_VERSION     = '6';
     public const VERSION_OPTION = 'dccl_db_version';
 
     public static function table(string $name): string
@@ -53,6 +53,16 @@ final class Schema
     public static function reviews(): string
     {
         return self::table('reviews');
+    }
+
+    public static function pace(): string
+    {
+        return self::table('pace');
+    }
+
+    public static function stay_rulings(): string
+    {
+        return self::table('stay_rulings');
     }
 
     public static function money_backup(): string
@@ -177,6 +187,46 @@ final class Schema
                 ],
                 'primary' => 'id',
                 'keys'    => ['KEY batch_kind (kind)'],
+            ],
+
+            // What was on the books, as at a date. Written once a night and
+            // never recomputed: a pace curve reconstructed after the fact
+            // shows what SURVIVED to today, not what stood on the day.
+            'pace' => [
+                'columns' => [
+                    'id'          => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',
+                    'recorded_on' => 'date NOT NULL',
+                    'stay_month'  => 'varchar(7) NOT NULL',
+                    'room_nights' => 'int(11) NOT NULL DEFAULT 0',
+                    'stays'       => 'int(11) NOT NULL DEFAULT 0',
+                    'created_at'  => 'datetime NOT NULL',
+                ],
+                'primary' => 'id',
+                'keys'    => [
+                    'UNIQUE KEY pace_point (recorded_on,stay_month)',
+                    'KEY pace_month (stay_month)',
+                ],
+            ],
+
+            // Rob's answer to "did this one really happen?", for a cancelled
+            // platform stay somebody attached a hand-typed copy to. Its
+            // nights belong somewhere; until he rules, they belong nowhere.
+            'stay_rulings' => [
+                'columns' => [
+                    'id'         => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',
+                    'stay_id'    => 'bigint(20) unsigned NOT NULL',
+                    'evidence'   => 'varchar(16) NOT NULL',
+                    'note'       => 'text DEFAULT NULL',
+                    'created_at' => 'datetime NOT NULL',
+                    'created_by' => 'bigint(20) unsigned DEFAULT NULL',
+                    'revoked_at' => 'datetime DEFAULT NULL',
+                    'revoked_by' => 'bigint(20) unsigned DEFAULT NULL',
+                ],
+                'primary' => 'id',
+                'keys'    => [
+                    'KEY ruling_stay (stay_id)',
+                    'KEY ruling_live (stay_id,revoked_at)',
+                ],
             ],
 
             // The decimal money columns exactly as they stood before 0.2.0

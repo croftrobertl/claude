@@ -1,4 +1,4 @@
-# DCC Ledger 0.2.0 — Staging Checklist
+# DCC Ledger 0.3.0 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -495,3 +495,59 @@ correction entered at 00:10 on the first of a month lands in the new month;
 a payout at 23:40 on the last day lands in the old one.
 
 - [ ] Enter a manual correction and check its date is today in Tavares.
+
+## 14. The 0.3.0 upgrade — live goes from 0.1.9 straight to here
+
+Live never ran 0.2.0, so this activation does everything 0.2.0 did and
+everything 0.3.0 adds, in one go. That path is tested against a database
+built in the 0.1.9 shape, not only against a 0.2.0 one.
+
+**Back up live first, including the ledger's own tables.**
+
+- [ ] Deactivate, upload `Ledger 0.3.0.zip`, activate.
+- [ ] `wp dcc-ledger money-check` ends with **Success**, all four groups
+      tie, and **0 rows hold a decimal and no cents**. The hyphen works now;
+      `money_check` still does too.
+- [ ] The figures are unchanged from before the upgrade: assumed_paid
+      38 / $60,348.22, assumed_paid_pre_exports 15 / $35,333.00,
+      refund_not_recorded 3 / −$860.25.
+- [ ] Links 136 and reviews 15, unchanged.
+- [ ] MotoPress still 428 bookings and 95 payments.
+- [ ] `wp dcc-ledger money-rollback` restores every decimal and warns that
+      figures are withheld; `wp dcc-ledger money-check` converts again and
+      every figure is identical. **Do this on staging, not on live.**
+
+**The metrics.** On the Overview, for a month you know well:
+
+- [ ] Occupancy, ADR gross and net, RevPAR gross and net, length of stay,
+      and both lead times are shown, each with its definition and the range
+      beside it.
+- [ ] ADR net is below ADR gross, and RevPAR below ADR. If either is the
+      other way round, stop and tell me.
+- [ ] Any figure with nothing behind it reads **Unknown**, never $0.00.
+- [ ] Every headline figure opens to the rows behind it, over the same
+      range, with a way back to the whole list.
+- [ ] The Channel tab shows the mix by nights and by money, and each
+      channel's row opens to its stays.
+
+**Booking pace.** Nothing is drawn yet, and that is correct.
+
+- [ ] The Overview says recording has begun, and names the first month that
+      will have a complete curve — about six months out, because a curve
+      starts 180 days before the month it describes.
+- [ ] After a few days, it reports how many nights it has recorded.
+- [ ] If a night is missed, it is named as a gap. It is never filled in.
+
+**"This Really Stayed".** Nothing on live reaches this today, so test it on
+staging by attaching a hand-typed booking to a cancelled platform stay that
+carries money.
+
+- [ ] The item appears, and offers the ruling with a note field.
+- [ ] A ruling with no note is refused.
+- [ ] Once ruled, the stay's nights and money appear in the figures, the
+      item turns to information, and the ruling and its reason are shown.
+- [ ] Taking it back returns the figures exactly to where they were.
+
+**The hand reconciliation is yours.** Pick September 2026, add it up from
+Rob's own export files on his Mac, and compare with the Overview for the
+same month. Aggregates only; no guest data needs to leave that machine.

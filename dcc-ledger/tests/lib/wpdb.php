@@ -327,6 +327,12 @@ function dbDelta(string $sql): void
     }
 }
 
+/** Does this table exist at all? */
+function table_exists(string $table): bool
+{
+    return table_columns($table) !== [];
+}
+
 /**
  * The columns a table has now, or [] when it does not exist.
  *

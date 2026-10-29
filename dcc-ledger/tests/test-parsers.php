@@ -78,7 +78,7 @@ T::ok(!str_contains((string) json_encode($parsed), 'Whitfield'), 'No guest name 
 T::group('Airbnb reservations parser');
 
 $parsed = (new Airbnb_Reservations())->parse(dccl_fixture('airbnb-reservations.csv'));
-T::same(7, count($parsed['stays']), 'Seven stays, Crofty excluded, payout rows skipped');
+T::same(8, count($parsed['stays']), 'Eight stays, Crofty excluded, payout rows skipped');
 T::same(2, $parsed['counts']['skipped'], 'Both interleaved payout rows are skipped');
 T::same(1, $parsed['counts']['excluded'], 'The Crofty listing is excluded');
 T::same([], $parsed['lines'], 'The reservations file carries no money');

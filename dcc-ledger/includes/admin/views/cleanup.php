@@ -166,6 +166,41 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
                 </form>
             <?php endif; ?>
 
+            <?php if (!empty($item['rule_stayed'])) : ?>
+                <?php $ruling_id = 'stayed-' . md5($item['key']); ?>
+                <form class="dccl-rule-stayed" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_rule_stayed">
+                    <input type="hidden" name="stay_id" value="<?php echo (int) $item['rule_stayed']; ?>">
+                    <label for="<?php echo esc_attr($ruling_id); ?>">
+                        <?php esc_html_e('This Really Stayed, On The Evidence Of', 'dcc-ledger'); ?>
+                    </label>
+                    <select id="<?php echo esc_attr($ruling_id); ?>" name="evidence">
+                        <?php foreach (DCCL\Stay_Rulings::EVIDENCE as $evidence) : ?>
+                            <option value="<?php echo esc_attr($evidence); ?>">
+                                <?php echo esc_html(DCCL\Stay_Rulings::label_for($evidence)); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label class="screen-reader-text" for="<?php echo esc_attr($ruling_id); ?>-note">
+                        <?php esc_html_e('The payout it rests on, or why you know it happened', 'dcc-ledger'); ?>
+                    </label>
+                    <input type="text" id="<?php echo esc_attr($ruling_id); ?>-note" name="note" class="regular-text"
+                           required maxlength="500"
+                           placeholder="<?php esc_attr_e('The payout it rests on, or why you know it happened', 'dcc-ledger'); ?>">
+                    <button type="submit" class="button"><?php esc_html_e('Record It', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
+            <?php if (!empty($item['revoke_stayed'])) : ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field(Admin::NONCE); ?>
+                    <input type="hidden" name="action" value="dccl_revoke_stayed">
+                    <input type="hidden" name="stay_id" value="<?php echo (int) $item['revoke_stayed']; ?>">
+                    <button type="submit" class="button"><?php esc_html_e('Take That Ruling Back', 'dcc-ledger'); ?></button>
+                </form>
+            <?php endif; ?>
+
             <?php if (!empty($item['record_refund'])) : ?>
                 <?php $refund_id = 'refund-' . md5($item['key']); ?>
                 <form class="dccl-record-refund" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">

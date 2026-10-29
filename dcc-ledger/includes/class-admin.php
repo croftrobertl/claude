@@ -82,7 +82,7 @@ final class Admin
         'import', 'link', 'manual_link', 'unlink', 'review', 'undo',
         'settings', 'export', 'snapshot', 'adjust', 'unadjust',
         'confirm_move', 'reject_move', 'reverse_assumed', 'remove_bad_links',
-        'record_refund',
+        'record_refund', 'rule_stayed', 'revoke_stayed',
     ];
 
     public static function register_actions(): void
@@ -449,6 +449,39 @@ final class Admin
         Reports::flush_cache();
 
         self::back('cleanup', __('Refund recorded. MotoPress is unchanged; the ledger carries the correction.', 'dcc-ledger'));
+    }
+
+    /**
+     * Record that a cancelled platform stay really was stayed.
+     *
+     * The one decision that changes a night count rather than a figure of
+     * money, so it asks for its evidence and refuses without it.
+     */
+    public static function handle_rule_stayed(): void
+    {
+        self::guard();
+
+        $stay_id  = isset($_POST['stay_id']) ? (int) $_POST['stay_id'] : 0;
+        $evidence = isset($_POST['evidence']) ? sanitize_key(wp_unslash($_POST['evidence'])) : '';
+        $note     = isset($_POST['note']) ? sanitize_text_field(wp_unslash($_POST['note'])) : '';
+
+        $result = Stay_Rulings::rule($stay_id, $evidence, $note, get_current_user_id());
+
+        self::back('cleanup', $result['message'], $result['ok'] ? 'success' : 'error');
+    }
+
+    /** Take such a ruling back. It is marked revoked, never removed. */
+    public static function handle_revoke_stayed(): void
+    {
+        self::guard();
+
+        $stay_id = isset($_POST['stay_id']) ? (int) $_POST['stay_id'] : 0;
+
+        if ($stay_id <= 0 || !Stay_Rulings::revoke($stay_id, get_current_user_id())) {
+            self::back('cleanup', __('There is no ruling standing against that stay.', 'dcc-ledger'), 'error');
+        }
+
+        self::back('cleanup', __('Taken back. Both the ruling and its withdrawal stay on the record, and the nights go back to being counted nowhere.', 'dcc-ledger'));
     }
 
     /**

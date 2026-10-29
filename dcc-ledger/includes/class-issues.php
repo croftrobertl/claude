@@ -797,6 +797,36 @@ final class Issues
             }
 
             $nights = (int) ($stay['nights'] ?? 0);
+            $ruling = Stay_Rulings::current((int) $stay['id']);
+
+            if ($ruling !== null) {
+                // Ruled. It stays on the list as a record of the decision,
+                // with the way to take it back beside it.
+                $items[] = [
+                    'key'      => 'stayed_ruled:' . $stay['channel'] . ':' . $stay['code'],
+                    'title'    => __('A Cancelled Stay Ruled As Really Stayed', 'dcc-ledger'),
+                    'facts'    => [
+                        self::stay_fact($stay),
+                        sprintf(
+                            /* translators: 1: what the ruling rests on, 2: the note given with it */
+                            __('Ruled as stayed on the evidence of %1$s: "%2$s"', 'dcc-ledger'),
+                            Stay_Rulings::label_for((string) $ruling['evidence']),
+                            (string) $ruling['note']
+                        ),
+                        sprintf(
+                            /* translators: 1: number of nights, 2: the money on the stay */
+                            __('Its %1$d nights and its %2$s are counted once, on this stay. The platform still says cancelled; the ruling sits beside that, not instead of it.', 'dcc-ledger'),
+                            $nights,
+                            self::money($money)
+                        ),
+                    ],
+                    'action'   => __('Nothing to do unless the ruling was wrong, in which case take it back.', 'dcc-ledger'),
+                    'severity' => 'info',
+                    'stay_id'  => (int) $stay['id'],
+                    'revoke_stayed' => (int) $stay['id'],
+                ];
+                continue;
+            }
 
             $items[] = [
                 'key'      => 'cancelled_with_copy:' . $stay['channel'] . ':' . $stay['code'],
@@ -819,9 +849,12 @@ final class Issues
                         $nights
                     ),
                 ],
-                'action'   => __('Decide what this stay was. If the guest really stayed, the platform\'s cancelled status is wrong and the nights belong in the figures; tell me and I will add a way to record that.', 'dcc-ledger'),
+                'action'   => __('Decide what this stay was. If the guest really stayed, rule it so below and its nights and money will count once, on this stay.', 'dcc-ledger'),
                 'severity' => 'warn',
                 'stay_id'  => (int) $stay['id'],
+                // Offered, never decided here: the ruling needs a person and
+                // a reason, and the form asks for both.
+                'rule_stayed' => (int) $stay['id'],
             ];
         }
     }

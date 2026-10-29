@@ -28,30 +28,6 @@ $keys  = array_column($items, 'key');
 
 $has = static fn (string $key): bool => in_array($key, $keys, true);
 
-/** One field of one item, or null if the item is not on the list. */
-function dccl_issue_field(array $items, string $key, string $field)
-{
-    foreach ($items as $item) {
-        if ($item['key'] === $key) {
-            return $item[$field] ?? null;
-        }
-    }
-
-    return null;
-}
-
-/** The severity of one item, or '' if it is not on the list at all. */
-function dccl_issue_severity(array $items, string $key): string
-{
-    foreach ($items as $item) {
-        if ($item['key'] === $key) {
-            return (string) $item['severity'];
-        }
-    }
-
-    return '';
-}
-
 T::ok($has('payout_no_reservation:bookingcom:5722711078'), 'A payout with no reservation row is raised');
 // 9052 starts the same day in the same cottage. It is offered, not taken.
 T::same(

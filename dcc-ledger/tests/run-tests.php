@@ -28,6 +28,10 @@ $suites = [
     'money'     => __DIR__ . '/test-money.php',
     'time'      => __DIR__ . '/test-time.php',
     'tie-out'   => __DIR__ . '/test-tie-out.php',
+    'from-019'  => __DIR__ . '/test-upgrade-019.php',
+    'stayed'    => __DIR__ . '/test-stayed.php',
+    'pace'      => __DIR__ . '/test-pace.php',
+    'metrics'   => __DIR__ . '/test-metrics.php',
 ];
 
 foreach ($suites as $name => $file) {

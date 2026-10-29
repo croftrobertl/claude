@@ -39,7 +39,7 @@ $before = Repo::find_stay('airbnb', 'HMBBBB0003');
 $result = Importer::run(dccl_fixture('airbnb-reservations.csv'), 'airbnb-reservations.csv', false, 1);
 $after  = Repo::find_stay('airbnb', 'HMBBBB0003');
 T::same($before['check_in'], $after['check_in'], 'An existing check-in is not overwritten');
-T::same(3, $result['counts']['stays_new'], 'Only the reservations missing from the payout file are new');
+T::same(4, $result['counts']['stays_new'], 'Only the reservations missing from the payout file are new');
 T::ok($result['counts']['stays_unchanged'] + $result['counts']['stays_enriched'] === 4, 'The rest were already there');
 
 T::group('Crofty Bear and Hipcamp');

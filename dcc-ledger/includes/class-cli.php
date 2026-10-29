@@ -17,6 +17,21 @@ if (!defined('ABSPATH')) {
 final class Cli
 {
     /**
+     * Subcommands whose method name is not the name a person types.
+     *
+     * WP-CLI derives a subcommand from its method, so money_check answered
+     * to the underscore while the checklist and the rollback notes both said
+     * money-check. Registered explicitly here, with the underscore kept as
+     * an alias so anything already written down keeps working.
+     *
+     * hyphenated name => method
+     */
+    public const HYPHENATED = [
+        'money-check'    => 'money_check',
+        'money-rollback' => 'money_rollback',
+    ];
+
+    /**
      * Import a platform export.
      *
      * ## OPTIONS
@@ -263,6 +278,9 @@ final class Cli
      * [--dry-run]
      * : Report what would be converted and write nothing.
      *
+     * @subcommand money-check
+     * @alias money_check
+     *
      * @param array<int,string>    $args
      * @param array<string,string> $assoc
      */
@@ -297,6 +315,9 @@ final class Cli
      * The one-line way back out of 0.2.0. Afterwards the ledger refuses to
      * report figures — it says so in a banner — until either this command's
      * opposite (`wp dcc-ledger money-check`) is run or 0.1.9 is reinstalled.
+     *
+     * @subcommand money-rollback
+     * @alias money_rollback
      *
      * @param array<int,string>    $args
      * @param array<string,string> $assoc

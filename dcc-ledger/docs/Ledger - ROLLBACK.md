@@ -178,6 +178,38 @@ and names any group that does not tie.
 If one does not tie, do not adjust anything to make it. Send the output,
 and the month it names, and leave the data as it stands.
 
+## If a stay was ruled as stayed and should not have been
+
+The ruling sits beside the platform's cancelled status, never instead of it,
+and nothing about the stay itself was changed. Take it back with
+**Take That Ruling Back** on the Cleanup tab. The nights and money leave the
+figures again at once, the question returns to the list, and the record
+keeps both the ruling and its withdrawal — including the reason that was
+given for it.
+
+## If the booking pace history has a gap
+
+Leave it. A night the recorder missed is reported as missing on purpose: the
+position on that date is not knowable afterwards, and filling it in from
+today's bookings would show what survived rather than what stood. A month is
+charted only when every reading on its curve exists, so a gap costs that
+month's chart and nothing else.
+
+Recording is a daily WP-Cron event. If gaps are frequent, cron is not firing
+reliably on the host — that is worth fixing, but nothing in the ledger is
+wrong meanwhile.
+
+## If the money commands cannot be found
+
+Both spellings work from 0.3.0:
+
+    wp dcc-ledger money-check
+    wp dcc-ledger money_check
+
+Before 0.3.0 only the underscored form was registered, while every document
+said the hyphen. If a hyphenated command errors, the plugin on that site is
+older than 0.3.0 — use the underscore, and upgrade.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

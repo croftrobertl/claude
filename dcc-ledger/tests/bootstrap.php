@@ -279,6 +279,37 @@ function is_admin(): bool
     return true;
 }
 
+// --------------------------------------------------------------- WP-Cron
+
+$GLOBALS['dccl_cron'] = [];
+
+function wp_next_scheduled(string $hook)
+{
+    return $GLOBALS['dccl_cron'][$hook] ?? false;
+}
+
+function wp_schedule_event(int $timestamp, string $recurrence, string $hook): bool
+{
+    $GLOBALS['dccl_cron'][$hook] = $timestamp;
+
+    return true;
+}
+
+function wp_unschedule_event(int $timestamp, string $hook): bool
+{
+    unset($GLOBALS['dccl_cron'][$hook]);
+
+    return true;
+}
+
+function register_deactivation_hook(string $file, callable $callback): void
+{
+}
+
+if (!defined('HOUR_IN_SECONDS')) {
+    define('HOUR_IN_SECONDS', 3600);
+}
+
 // ------------------------------------------------------------------ WP-CLI
 
 /**
@@ -326,9 +357,50 @@ final class WP_CLI
         throw new RuntimeException('WP_CLI::error ' . $message);
     }
 
+    /** Every command registered, name => callable. */
+    public static array $commands = [];
+
     /** @param mixed $callable */
     public static function add_command(string $name, $callable): void
     {
+        self::$commands[$name] = $callable;
+    }
+
+    /**
+     * Run a registered command the way a person types it.
+     *
+     * The point is the NAME: `wp dcc-ledger money-check` has to reach the
+     * method, not just `money_check`. Anything registered as a class is
+     * resolved the way WP-CLI resolves it, by turning the subcommand into a
+     * method name.
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public static function run_command(string $name, array $args = [], array $assoc = []): bool
+    {
+        if (isset(self::$commands[$name])) {
+            $callable = self::$commands[$name];
+            if (is_array($callable) && is_string($callable[0])) {
+                $callable = [new $callable[0](), $callable[1]];
+            }
+            $callable($args, $assoc);
+
+            return true;
+        }
+
+        // Not registered by its own name: fall back to the class command, as
+        // WP-CLI does, which names the method after the subcommand verbatim.
+        $parts = explode(' ', $name, 2);
+        $class = self::$commands[$parts[0]] ?? null;
+        $method = $parts[1] ?? '';
+        if (is_string($class) && class_exists($class) && $method !== '' && method_exists($class, $method)) {
+            (new $class())->$method($args, $assoc);
+
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -341,6 +413,30 @@ define('DCCL_DIR', rtrim(getenv('DCCL_TEST_DIR') ?: dirname(__DIR__), '/') . '/'
 define('DCCL_URL', 'https://example.test/wp-content/plugins/dcc-ledger/');
 
 require_once DCCL_DIR . 'includes/autoload.php';
+
+/** One field of one item, or null if the item is not on the list. */
+function dccl_issue_field(array $items, string $key, string $field)
+{
+    foreach ($items as $item) {
+        if ($item['key'] === $key) {
+            return $item[$field] ?? null;
+        }
+    }
+
+    return null;
+}
+
+/** The severity of one item, or '' if it is not on the list at all. */
+function dccl_issue_severity(array $items, string $key): string
+{
+    foreach ($items as $item) {
+        if ($item['key'] === $key) {
+            return (string) $item['severity'];
+        }
+    }
+
+    return '';
+}
 
 // ------------------------------------------------------------- test runner
 

@@ -14,8 +14,45 @@ if (!defined('ABSPATH')) {
 }
 
 $rows = Reports::stay_rows($period['from'], $period['to']);
+
+// Arrived here from a figure on another tab: show only the rows that figure
+// was added up from, and say which figure it was.
+$show = isset($_GET['show']) ? sanitize_key(wp_unslash($_GET['show'])) : '';
+$trail = Reports::trail($show);
+if ($trail !== null) {
+    $rows = array_values(array_filter($rows, $trail['matches']));
+}
 ?>
 <h2 class="dccl-h2"><?php esc_html_e('Stays', 'dcc-ledger'); ?></h2>
+<?php if ($trail !== null) : ?>
+    <div class="dccl-trail">
+        <p>
+            <strong><?php echo esc_html($trail['label']); ?></strong>
+            <?php echo esc_html($trail['definition']); ?>
+        </p>
+        <p class="dccl-note">
+            <?php
+            printf(
+                /* translators: 1: start date, 2: end date */
+                esc_html__('Over %1$s to %2$s, which is the range the figure was taken over.', 'dcc-ledger'),
+                esc_html((string) $period['from']),
+                esc_html((string) $period['to'])
+            );
+            ?>
+        </p>
+        <p>
+            <a href="<?php echo esc_url(add_query_arg([
+                'page'   => DCCL\Admin::SLUG,
+                'tab'    => 'stays',
+                'period' => 'custom',
+                'from'   => (string) $period['from'],
+                'to'     => (string) $period['to'],
+            ], admin_url('admin.php'))); ?>">
+                <?php esc_html_e('Show Every Stay In This Period Instead', 'dcc-ledger'); ?>
+            </a>
+        </p>
+    </div>
+<?php endif; ?>
 <p class="dccl-note">
     <?php esc_html_e('A stay is identified by its channel, confirmation code, cottage and dates. No guest names are held anywhere in the ledger — open the MotoPress booking when you need to know who it was.', 'dcc-ledger'); ?>
 </p>

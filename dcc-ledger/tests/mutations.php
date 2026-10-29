@@ -117,8 +117,8 @@ EOT,
     [
         'name' => 'Airbnb-remitted tax added to revenue',
         'file' => 'includes/class-reports.php',
-        'from' => '        $room_revenue = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'] - $ota[\'tax_platform_remitted\'];',
-        'to'   => '        $room_revenue = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'];',
+        'from' => '        $room_revenue     = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'] - $ota[\'tax_platform_remitted\'];',
+        'to'   => '        $room_revenue     = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'];',
     ],
     [
         'name' => "Vrbo's missing tax shown as $0 rather than unknown",
@@ -763,6 +763,128 @@ EOT,
         'to'   => <<<'EOT'
             : new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 EOT,
+    ],
+    [
+        'name' => 'The hyphenated money commands left unregistered',
+        'file' => 'includes/class-plugin.php',
+        'from' => <<<'EOT'
+        foreach (Cli::HYPHENATED as $name => $method) {
+EOT,
+        'to'   => <<<'EOT'
+        foreach ([] as $name => $method) {
+EOT,
+    ],
+    [
+        'name' => 'A cancelled stay ruled as stayed without any evidence',
+        'file' => 'includes/class-stay-rulings.php',
+        'from' => <<<'EOT'
+        if ($note === '') {
+EOT,
+        'to'   => <<<'EOT'
+        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'A stayed ruling that does not bring its nights back',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+            if ($status !== 'ok' && isset($ruled[(int) $row['id']])) {
+                $status = 'ok';
+            }
+EOT,
+        'to'   => '',
+    ],
+    [
+        'name' => 'A revoked ruling still counting',
+        'file' => 'includes/class-stay-rulings.php',
+        'from' => "WHERE stay_id = %d AND revoked_at IS NULL ORDER BY id DESC LIMIT 1",
+        'to'   => "WHERE stay_id = %d ORDER BY id DESC LIMIT 1",
+    ],
+    [
+        'name' => 'A night with no money dragging the average rate down',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $rate_nights = $ota['nights_with_revenue'] + $direct['nights'];
+EOT,
+        'to'   => <<<'EOT'
+        $rate_nights = $ota['nights'] + $direct['nights'];
+EOT,
+    ],
+    [
+        'name' => 'An empty rate reported as zero instead of unknown',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        if ($nights <= 0) {
+            return null;
+        }
+EOT,
+        'to'   => <<<'EOT'
+        if ($nights <= 0) {
+            return 0;
+        }
+EOT,
+    ],
+    [
+        'name' => 'Platform and direct lead time blended into one figure',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                'direct_lead_time_median' => $direct['lead_time_median'],
+EOT,
+        'to'   => <<<'EOT'
+                'direct_lead_time_median' => $ota['lead_time_median'],
+                'lead_time_all'           => self::median(array_merge($ota['lead_times'], $direct['lead_times'])),
+EOT,
+    ],
+    [
+        'name' => 'A length of stay split across the month end',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                $figures['stay_lengths'][] = $total_nights;
+EOT,
+        'to'   => <<<'EOT'
+                $figures['stay_lengths'][] = $in_period;
+EOT,
+    ],
+    [
+        'name' => 'A pace reading overwritten later the same day',
+        'file' => 'includes/class-pace.php',
+        'from' => <<<'EOT'
+        if ($already) {
+EOT,
+        'to'   => <<<'EOT'
+        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'A missed pace night passed over in silence',
+        'file' => 'includes/class-pace.php',
+        'from' => <<<'EOT'
+            if (!isset($have[$day])) {
+                $out[] = $day;
+            }
+EOT,
+        'to'   => '',
+    ],
+    [
+        'name' => 'A pace curve drawn through a month it has no readings for',
+        'file' => 'includes/class-pace.php',
+        'from' => <<<'EOT'
+                if (!isset($have[$start->modify('-' . $days . ' days')->format('Y-m-d')])) {
+                    $covered = false;
+                    break;
+                }
+EOT,
+        'to'   => '',
+    ],
+    [
+        'name' => 'A trail that shows every row whatever figure was clicked',
+        'file' => 'includes/admin/views/stays.php',
+        'from' => <<<'EOT'
+if ($trail !== null) {
+    $rows = array_values(array_filter($rows, $trail['matches']));
+}
+EOT,
+        'to'   => '',
     ],
 ];
 

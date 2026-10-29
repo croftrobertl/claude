@@ -25,6 +25,19 @@ final class Ui
     }
 
     /**
+     * A figure that cannot be worked out from what the ledger holds.
+     *
+     * Shown in place of a number, never as zero: no stays is not a rate of
+     * nothing, and an empty average is not an average of nought.
+     */
+    public static function unknown(): string
+    {
+        return '<span class="dccl-muted" title="'
+            . esc_attr__('There is nothing to work this out from in this range. It is unknown, not zero.', 'dcc-ledger')
+            . '">' . esc_html__('Unknown', 'dcc-ledger') . '</span>';
+    }
+
+    /**
      * Money that does not apply to this row at all — a direct booking has no
      * platform payout or fee, which is not the same as one of zero.
      */
@@ -43,8 +56,13 @@ final class Ui
     /**
      * A stat tile: a figure, what it is, and where it came from.
      */
-    public static function tile(string $label, string $value, string $source = '', string $tone = ''): string
-    {
+    public static function tile(
+        string $label,
+        string $value,
+        string $source = '',
+        string $tone = '',
+        string $trail = ''
+    ): string {
         $class = 'dccl-tile' . ($tone !== '' ? ' dccl-tile--' . sanitize_html_class($tone) : '');
         $html  = '<div class="' . esc_attr($class) . '">';
         $html .= '<div class="dccl-tile__label">' . esc_html($label) . '</div>';
@@ -52,8 +70,41 @@ final class Ui
         if ($source !== '') {
             $html .= '<div class="dccl-tile__source">' . esc_html($source) . '</div>';
         }
+        // The trail. Every figure opens to the rows it was added up from,
+        // because a number a reader cannot get behind is a number they have
+        // to take on trust, and this ledger does not ask for trust.
+        if ($trail !== '') {
+            $html .= '<a class="dccl-tile__trail" href="' . esc_url($trail) . '">'
+                . esc_html__('Show The Rows Behind This', 'dcc-ledger')
+                . '</a>';
+        }
         $html .= '</div>';
         return $html;
+    }
+
+    /**
+     * A link to the Stays tab, showing the rows behind one figure.
+     *
+     * The period travels with it, so what opens is the same slice of time
+     * the figure was taken over — not whatever the Stays tab last showed.
+     *
+     * @param array<string,mixed> $period
+     */
+    public static function trail_url(array $period, string $figure): string
+    {
+        return add_query_arg(
+            [
+                'page'   => Admin::SLUG,
+                'tab'    => 'stays',
+                'period' => 'custom',
+                'from'   => (string) $period['from'],
+                'to'     => (string) $period['to'],
+                'basis'  => (string) ($period['basis'] ?? 'stay'),
+                'view'   => (string) ($period['view'] ?? 'ledger'),
+                'show'   => $figure,
+            ],
+            admin_url('admin.php')
+        );
     }
 
     public static function chip(string $text, string $tone = ''): string

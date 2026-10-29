@@ -30,40 +30,255 @@ $view_sources = [
     echo Ui::tile(
         __('Guest Total', 'dcc-ledger'),
         Ui::money($t['guest_total']),
-        __('What guests paid the platforms', 'dcc-ledger')
+        __('What guests paid the platforms', 'dcc-ledger'),
+        '',
+        Ui::trail_url($period, 'guest_total')
     );
     echo Ui::tile(
         __('Platform Fees', 'dcc-ledger'),
         Ui::money($t['platform_fees']),
-        __('Commission and service fees', 'dcc-ledger')
+        __('Commission and service fees', 'dcc-ledger'),
+        '',
+        Ui::trail_url($period, 'platform_fees')
     );
     echo Ui::tile(
         __('Net Payout', 'dcc-ledger'),
         Ui::money($t['net_payout']),
-        __('Payouts, refunds and adjustments', 'dcc-ledger')
+        __('Payouts, refunds and adjustments', 'dcc-ledger'),
+        '',
+        Ui::trail_url($period, 'net_payout')
     );
     echo Ui::tile(
         __('Nights', 'dcc-ledger'),
         Ui::number($t['nights']),
-        __('Platform stays plus direct bookings, each copy once', 'dcc-ledger')
+        __('Platform stays plus direct bookings, each copy once', 'dcc-ledger'),
+        '',
+        Ui::trail_url($period, 'nights')
     );
+    ?>
+</div>
+
+<h3 class="dccl-h3"><?php esc_html_e('How The Cottages Performed', 'dcc-ledger'); ?></h3>
+<p class="dccl-note">
+    <?php
+    printf(
+        /* translators: 1: start date, 2: end date */
+        esc_html__('Every figure below is over %1$s to %2$s, on the stay basis: revenue belongs to the nights it was earned on. Gross is before the platform\'s cut; net is after it. Direct bookings pay no commission, so their gross and net are the same, and MotoPress reports no tax split for them.', 'dcc-ledger'),
+        esc_html((string) $period['from']),
+        esc_html((string) $period['to'])
+    );
+    ?>
+</p>
+
+<div class="dccl-tiles">
+    <?php
     echo Ui::tile(
         __('Occupancy', 'dcc-ledger'),
         Ui::number($t['occupancy_pct'], 1) . '%',
         sprintf(
             /* translators: 1: nights booked, 2: nights available */
-            __('%1$s of %2$s cottage-nights', 'dcc-ledger'),
+            __('%1$s of %2$s cottage-nights — 8 cottages, every night in the range', 'dcc-ledger'),
             number_format((float) $t['nights']),
             number_format((float) $t['capacity_nights'])
-        )
+        ),
+        '',
+        Ui::trail_url($period, 'nights')
     );
     echo Ui::tile(
-        __('Average Nightly Rate', 'dcc-ledger'),
-        Ui::money($t['adr']),
-        __('Room revenue divided by platform nights', 'dcc-ledger')
+        __('ADR, Gross', 'dcc-ledger'),
+        $t['adr_gross'] === null ? Ui::unknown() : Ui::money((int) $t['adr_gross']),
+        sprintf(
+            /* translators: %s: the number of nights the rate divides by */
+            __('Room revenue before commission, over the %s nights that carry money', 'dcc-ledger'),
+            number_format((float) $t['rate_nights'])
+        ),
+        '',
+        Ui::trail_url($period, 'rate_nights')
+    );
+    echo Ui::tile(
+        __('ADR, Net', 'dcc-ledger'),
+        $t['adr_net'] === null ? Ui::unknown() : Ui::money((int) $t['adr_net']),
+        __('The same nights, after the platform\'s cut', 'dcc-ledger'),
+        '',
+        Ui::trail_url($period, 'rate_nights')
+    );
+    echo Ui::tile(
+        __('RevPAR, Gross', 'dcc-ledger'),
+        $t['revpar_gross'] === null ? Ui::unknown() : Ui::money((int) $t['revpar_gross']),
+        __('Room revenue over every available cottage-night', 'dcc-ledger')
+    );
+    echo Ui::tile(
+        __('RevPAR, Net', 'dcc-ledger'),
+        $t['revpar_net'] === null ? Ui::unknown() : Ui::money((int) $t['revpar_net']),
+        __('The same, after the platform\'s cut', 'dcc-ledger')
+    );
+    echo Ui::tile(
+        __('Length Of Stay', 'dcc-ledger'),
+        $t['length_of_stay_median'] === null
+            ? Ui::unknown()
+            : esc_html(sprintf(
+                /* translators: %d: nights */
+                _n('%d night', '%d nights', (int) $t['length_of_stay_median'], 'dcc-ledger'),
+                (int) $t['length_of_stay_median']
+            )),
+        sprintf(
+            /* translators: 1: mean nights, 2: number of stays counted */
+            __('Median; the mean is %1$s over %2$s stays beginning in the range, each counted whole', 'dcc-ledger'),
+            $t['length_of_stay_mean'] === null ? __('unknown', 'dcc-ledger') : number_format((float) $t['length_of_stay_mean'], 1),
+            number_format((float) $t['stays_counted'])
+        )
     );
     ?>
 </div>
+
+<?php if ((int) $t['nights_without_revenue'] > 0) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: %s: number of nights */
+            esc_html__('%s nights are in occupancy but not in the rate: their stay is in an export, but the money has not come through yet. Counting them in the denominator alone would read as a discount nobody gave.', 'dcc-ledger'),
+            esc_html(number_format((float) $t['nights_without_revenue']))
+        );
+        ?>
+    </p>
+<?php endif; ?>
+
+<h3 class="dccl-h3"><?php esc_html_e('Lead Time', 'dcc-ledger'); ?></h3>
+<p class="dccl-note">
+    <?php esc_html_e('How far ahead guests booked, over stays checking in inside the range. Platform and direct are kept apart because they are not the same measurement.', 'dcc-ledger'); ?>
+</p>
+
+<div class="dccl-tiles">
+    <?php
+    echo Ui::tile(
+        __('Platform Lead Time', 'dcc-ledger'),
+        $t['lead_time_median'] === null
+            ? Ui::unknown()
+            : esc_html(sprintf(
+                /* translators: %d: days */
+                _n('%d day', '%d days', (int) $t['lead_time_median'], 'dcc-ledger'),
+                (int) $t['lead_time_median']
+            )),
+        sprintf(
+            /* translators: 1: mean days, 2: number of stays */
+            __('Median; mean %1$s, over %2$s stays. From the guest\'s own booking date, as the export states it.', 'dcc-ledger'),
+            $t['lead_time_mean'] === null ? __('unknown', 'dcc-ledger') : number_format((float) $t['lead_time_mean'], 1),
+            number_format((float) $t['lead_time_count'])
+        )
+    );
+    echo Ui::tile(
+        __('Direct Lead Time', 'dcc-ledger'),
+        $t['direct_lead_time_median'] === null
+            ? Ui::unknown()
+            : esc_html(sprintf(
+                /* translators: %d: days */
+                _n('%d day', '%d days', (int) $t['direct_lead_time_median'], 'dcc-ledger'),
+                (int) $t['direct_lead_time_median']
+            )),
+        sprintf(
+            /* translators: 1: mean days, 2: number of bookings */
+            __('Median; mean %1$s, over %2$s bookings. From the date the booking was entered, which for one typed in later is not the day the guest booked — a floor, not a fact.', 'dcc-ledger'),
+            $t['direct_lead_time_mean'] === null ? __('unknown', 'dcc-ledger') : number_format((float) $t['direct_lead_time_mean'], 1),
+            number_format((float) $t['direct_lead_time_count'])
+        ),
+        'warn'
+    );
+    ?>
+</div>
+
+<h3 class="dccl-h3"><?php esc_html_e('Booking Pace', 'dcc-ledger'); ?></h3>
+
+<?php
+$pace_dates   = DCCL\Pace::recorded_dates();
+$pace_missing = DCCL\Pace::missing_dates();
+$pace_months  = DCCL\Pace::months_covered();
+$pace_first   = DCCL\Pace::first_complete_month();
+?>
+
+<p class="dccl-note">
+    <?php esc_html_e('Room nights on the books, as at a date. This is recorded once a night and never worked out afterwards: a curve drawn from today\'s bookings would show what survived to today, not what stood on the day, and would understate every month that saw cancellations.', 'dcc-ledger'); ?>
+</p>
+
+<?php if ($pace_dates === []) : ?>
+    <p class="dccl-empty">
+        <?php esc_html_e('Nothing recorded yet. Recording begins the night after this plugin is activated.', 'dcc-ledger'); ?>
+    </p>
+<?php else : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: 1: first date recorded, 2: number of nights recorded */
+            esc_html__('Recording since %1$s, %2$s nights so far.', 'dcc-ledger'),
+            esc_html($pace_dates[0]),
+            esc_html(number_format((float) count($pace_dates)))
+        );
+        ?>
+        <?php if ($pace_missing !== []) : ?>
+            <?php
+            printf(
+                /* translators: 1: number of missed nights, 2: the dates, comma separated */
+                esc_html__('%1$s nights were missed and are left as gaps rather than filled in: %2$s.', 'dcc-ledger'),
+                esc_html(number_format((float) count($pace_missing))),
+                esc_html(implode(', ', array_slice($pace_missing, 0, 10)))
+            );
+            ?>
+        <?php endif; ?>
+    </p>
+
+    <?php if ($pace_months === []) : ?>
+        <p class="dccl-empty">
+            <?php
+            if ($pace_first !== null) {
+                printf(
+                    /* translators: %s: a month, as YYYY-MM */
+                    esc_html__('No month has a complete curve yet. The first one will be %s — a curve starts 180 days before the month begins, so the history has to be that long before a month can be charted.', 'dcc-ledger'),
+                    esc_html($pace_first)
+                );
+            } else {
+                esc_html_e('No month has a complete curve yet.', 'dcc-ledger');
+            }
+            ?>
+        </p>
+    <?php else : ?>
+        <div class="dccl-table-wrap">
+            <table class="dccl-table">
+                <caption><?php esc_html_e('Room nights on the books at each point before the month began. Only months whose every reading was recorded are shown.', 'dcc-ledger'); ?></caption>
+                <thead>
+                    <tr>
+                        <th scope="col"><?php esc_html_e('Stay Month', 'dcc-ledger'); ?></th>
+                        <?php foreach (DCCL\Pace::DAYS_OUT as $days) : ?>
+                            <th scope="col">
+                                <?php
+                                echo esc_html($days === 0
+                                    ? __('At The Month', 'dcc-ledger')
+                                    : sprintf(
+                                        /* translators: %d: days before the month begins */
+                                        __('%d Days Out', 'dcc-ledger'),
+                                        $days
+                                    ));
+                                ?>
+                            </th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($pace_months as $pace_month) : ?>
+                    <tr>
+                        <th scope="row"><?php echo esc_html($pace_month); ?></th>
+                        <?php foreach (DCCL\Pace::curve($pace_month) as $point) : ?>
+                            <td>
+                                <?php echo $point['room_nights'] === null
+                                    ? Ui::unknown()
+                                    : Ui::number($point['room_nights']); ?>
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+<?php endif; ?>
 
 <h3 class="dccl-h3"><?php esc_html_e('Taxes', 'dcc-ledger'); ?></h3>
 <p class="dccl-note">

@@ -70,17 +70,15 @@ Titles centered, Title Case, American spelling.
 **Where this plugin does not meet the standard yet** (not a licence to leave
 it; named so no future session mistakes the gap for a decision):
 
-- The screens show totals but not occupancy, ADR, RevPAR, booking pace or
-  length of stay. The definitions went to the Director on 2026-10-29 and are
-  in `docs/Ledger - METRIC-DEFINITIONS.md`; nothing is built until he has
-  answered the five questions in it.
-- The Croatia-site UI reference has not been applied to the screens. They
-  use stat tiles and chips already; the segmented controls and the layout
-  itself are still the plugin's own.
-- Lead time for direct bookings is measured from the MotoPress post date,
-  which is when Rob typed the booking in, not necessarily when the guest
-  booked. It is a floor, not a fact, and must be labelled as one wherever
-  it appears.
+- The Croatia-site UI reference has not been applied. The screens use stat
+  tiles and chips; the segmented controls and the layout itself are still
+  the plugin's own.
+- The hand reconciliation of a real month against Rob's own export files has
+  never been run here and cannot be: the exports carry guest PII and never
+  reach this session. The Director does it on Rob's Mac and reports
+  aggregates. Report it as "not run", never as passed.
+- Booking pace has no history yet. Recording began with 0.3.0; the first
+  month with a complete curve is about six months after that.
 
 ## Branch rule
 
@@ -246,6 +244,38 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   at 00:10 on the first of a month belongs to the new month. `DCCL_TEST_NOW`
   pins the clock so both clock changes and New Year's Eve can be stood on
   deliberately.
+- **A metric shows the nights it divides by.** Occupancy counts every
+  occupied night; ADR divides by the nights that carry money, because a
+  night with nothing above it in the denominator alone reads as a discount
+  nobody gave. Both figures are on the screen so the division can be
+  checked rather than trusted. `Reports::per_night()` rounds half up once,
+  at the end, and returns null — shown as "Unknown" — rather than zero.
+- **Gross and net are never shown one without the other.** The gap between
+  them is the commission story, and a single ADR hides fifteen to eighteen
+  per cent of it.
+- **Lead time is split.** The platform figure is the guest's own booking
+  date from the export. The direct figure is the date the booking was
+  ENTERED in MotoPress, which for one Rob typed in later is not when the
+  guest booked — a floor, not a fact, labelled as such wherever it appears.
+  There is deliberately no blended figure to read by mistake.
+- **Booking pace is recorded, never reconstructed.** A curve drawn today
+  from booking dates shows what survived to today, not what stood: a
+  reservation made in March and cancelled in April is in neither record.
+  `Pace::record()` writes the position once a night and never rewrites it,
+  a missed night is reported as a gap rather than filled, and a month is
+  charted only when every reading on its curve exists.
+- **A cancelled stay counts only when a person rules that it happened.**
+  `Stay_Rulings` records the evidence — money received, named in the note,
+  or Rob's own word with his reason — and refuses a ruling with no note. A
+  ruling is revoked, never deleted, and the cleanup list carries it either
+  way.
+- **Every figure opens to its rows.** `Reports::trail()` is the one place a
+  figure's name, its definition and the rows behind it are written down, so
+  the sentence a reader is shown is the sentence the figure was computed by.
+- **A subcommand is registered by the name a person types.** WP-CLI names a
+  subcommand after its method, so `money_check` answered to the underscore
+  while every document said `money-check`. Both spellings are registered in
+  `Cli::HYPHENATED` and tested by the name, not the method.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -326,14 +356,15 @@ is simply reported as "no name to compare".
 plugin's constants. A fixture built from the constants follows the plugin into
 its own mistakes and proves nothing; three mutations exist to keep that honest.
 
-## Known gap, not yet decided
+## The gap that was, and how it closed
 
-If somebody links a hand-typed booking to a cancelled stay as a copy, that
-stay's money is counted once, on the stay — but its NIGHTS are counted
-nowhere: a cancelled stay contributes none, and the copy is excluded. The
-cleanup list raises it rather than absorbing it quietly. If Rob confirms such
-a stay happened, the fix is a way to record that a cancelled stay was really
-stayed. Nothing on live reaches this today.
+A hand-typed booking linked to a cancelled stay as a copy had its money
+counted once, on the stay — but its NIGHTS counted nowhere: a cancelled
+stay contributes none, and the copy is excluded. Harmless while the screens
+showed only money, wrong the moment they show occupancy. 0.3.0 closed it the
+way Rob asked: `Stay_Rulings` records that such a stay really happened, on
+stated evidence, and its nights and money then count once. Nothing on live
+reaches this today.
 
 ## Nights
 
@@ -354,8 +385,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1047 assertions
-    php dcc-ledger/tests/mutations.php            # 65 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1243 assertions
+    php dcc-ledger/tests/mutations.php            # 77 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -390,6 +421,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.2.0.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.0.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

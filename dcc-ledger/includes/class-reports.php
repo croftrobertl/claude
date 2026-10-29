@@ -124,17 +124,41 @@ final class Reports
         $direct = self::direct_figures($from, $to, $basis, $view);
 
         $days      = Dates::days_inclusive($from, $to);
+        // Capacity is what Rob owns, not what he chose to sell. A night he
+        // closed is occupancy lost, never capacity lost — USALI, and the
+        // Director's ruling of 2026-10-29.
         $capacity  = $days * count(Cottages::COTTAGES);
         $nights    = $ota['nights'] + $direct['nights'];
         $occupancy = $capacity > 0 ? round($nights / $capacity * 100, 1) : 0.0;
 
-        // Room revenue: what the guest paid the platform for the room, before
-        // the platform's cut and before any tax that sits inside a payout.
-        $room_revenue = $ota['guest_total'] - $ota['tax_in_payout'] - $ota['tax_platform_remitted'];
-        // Cents per night, rounded half up once, at the end.
-        $adr_base     = $ota['nights'] > 0
-            ? intdiv((int) $room_revenue * 2 + (int) $ota['nights'], (int) $ota['nights'] * 2)
-            : 0;
+        // Room revenue: what the guest paid for the room, before the
+        // platform's cut and before any tax. Gross is the price the cottage
+        // commands; net is what reaches the bank. One without the other
+        // hides a commission difference of fifteen to eighteen per cent
+        // between channels, so neither is ever shown alone.
+        $room_revenue     = $ota['guest_total'] - $ota['tax_in_payout'] - $ota['tax_platform_remitted'];
+        $room_revenue_net = $ota['net_payout'];
+
+        // Direct bookings pay no commission, so their gross and their net
+        // are the same figure. MotoPress reports no tax split for them, so
+        // nothing is deducted and the screen says so.
+        $direct_room_revenue = $direct['paid'];
+
+        $gross_revenue = $room_revenue + $direct_room_revenue;
+        $net_revenue   = $room_revenue_net + $direct_room_revenue;
+
+        // A night with no money behind it is left out of BOTH sides of the
+        // rate, not just the top: in the denominator alone it would look
+        // like a discount nobody gave.
+        $rate_nights = $ota['nights_with_revenue'] + $direct['nights'];
+
+        $adr_base     = self::per_night((int) $room_revenue, (int) $ota['nights_with_revenue']);
+        $adr_gross    = self::per_night((int) $gross_revenue, (int) $rate_nights);
+        $adr_net      = self::per_night((int) $net_revenue, (int) $rate_nights);
+        $revpar_gross = self::per_night((int) $gross_revenue, (int) $capacity);
+        $revpar_net   = self::per_night((int) $net_revenue, (int) $capacity);
+
+        $lengths = array_merge($ota['stay_lengths'], $direct['stay_lengths']);
 
         $summary = [
             'from'   => $from,
@@ -153,6 +177,19 @@ final class Reports
                 'net_payout'        => $ota['net_payout'],
                 'room_revenue'      => $room_revenue,
                 'adr'               => $adr_base,
+                // The metrics, each reported with the nights it divides by
+                // so a reader can check the division rather than trust it.
+                'room_revenue_gross' => $gross_revenue,
+                'room_revenue_net'   => $net_revenue,
+                'rate_nights'        => $rate_nights,
+                'nights_without_revenue' => $ota['nights_without_revenue'],
+                'adr_gross'          => $adr_gross,
+                'adr_net'            => $adr_net,
+                'revpar_gross'       => $revpar_gross,
+                'revpar_net'         => $revpar_net,
+                'length_of_stay_mean'   => self::mean($lengths),
+                'length_of_stay_median' => self::median($lengths),
+                'stays_counted'         => count($lengths),
                 'tax_platform_remitted' => $ota['tax_platform_remitted'],
                 'tax_in_payout'         => $ota['tax_in_payout'],
                 'tax_not_reported'      => $ota['tax_not_reported'],
@@ -166,7 +203,15 @@ final class Reports
                 'direct_paid'       => $direct['paid'],
                 'cancellations'     => $ota['cancellations'],
                 'cancellation_fees' => $ota['cancellation_fees'],
+                // Platform and direct are never blended: the platform date
+                // is the guest's, the direct one is the day Rob typed the
+                // booking in. One number would be wrong for both.
                 'lead_time_median'  => $ota['lead_time_median'],
+                'lead_time_mean'    => $ota['lead_time_mean'],
+                'lead_time_count'   => count($ota['lead_times']),
+                'direct_lead_time_median' => $direct['lead_time_median'],
+                'direct_lead_time_mean'   => $direct['lead_time_mean'],
+                'direct_lead_time_count'  => count($direct['lead_times']),
             ],
             'by_cottage'  => self::merge_breakdowns($ota['by_cottage'], $direct['by_cottage']),
             'by_channel'  => self::merge_breakdowns($ota['by_channel'], $direct['by_channel']),
@@ -226,8 +271,17 @@ final class Reports
         $figures = self::blank_figures();
         $lead    = [];
 
+        // A cancelled reservation Rob has ruled as really stayed counts as a
+        // stay: its nights and its money both. Nothing else about it changes
+        // — the platform still says cancelled, and the ruling is beside it,
+        // not instead of it.
+        $ruled = Stay_Rulings::all_current();
+
         foreach ($rows as $row) {
             $status    = (string) $row['status'];
+            if ($status !== 'ok' && isset($ruled[(int) $row['id']])) {
+                $status = 'ok';
+            }
             $check_in  = (string) $row['check_in'];
             $check_out = $row['check_out'] !== null ? (string) $row['check_out'] : null;
 
@@ -263,6 +317,24 @@ final class Reports
                 $figures['nights'] += $in_period;
                 $figures['by_cottage'][(string) $row['cottage']]['nights'] += $in_period;
                 $figures['by_channel'][(string) $row['channel']]['nights'] += $in_period;
+
+                // A night with nothing above it would drag the average rate
+                // down and look like a discount. A stay whose money has not
+                // arrived yet is left out of BOTH sides of that division.
+                $stay_money = (int) ($row['t_guest_total'] ?? 0)
+                    + (int) ($row['t_room_sales'] ?? 0)
+                    + (int) ($row['t_payout'] ?? 0);
+                if ($stay_money !== 0) {
+                    $figures['nights_with_revenue'] += $in_period;
+                } elseif ($in_period > 0) {
+                    $figures['nights_without_revenue'] += $in_period;
+                }
+            }
+
+            // Length of stay counts a stay whole, in the period it begins:
+            // half a stay has no length.
+            if ($status === 'ok' && $check_in >= $from && $check_in <= $to && $total_nights > 0) {
+                $figures['stay_lengths'][] = $total_nights;
             }
 
             if ($status === 'cancelled' && $check_in >= $from && $check_in <= $to) {
@@ -291,13 +363,9 @@ final class Reports
             self::add_cash_basis($figures, $from, $to);
         }
 
-        sort($lead);
-        $count = count($lead);
-        $figures['lead_time_median'] = $count === 0
-            ? null
-            : ($count % 2 === 1
-                ? $lead[intdiv($count, 2)]
-                : (int) round(($lead[$count / 2 - 1] + $lead[$count / 2]) / 2));
+        $figures['lead_times']       = $lead;
+        $figures['lead_time_median'] = self::median($lead);
+        $figures['lead_time_mean']   = self::mean($lead);
 
         $figures['platform_fees'] = $figures['commission'] + $figures['service_fee'];
         $figures['net_payout']    =
@@ -471,11 +539,27 @@ final class Reports
             'by_channel' => [],
             'copies_excluded' => 0,
             'copy_payments'   => 0,
+            // Measured from the date the booking was ENTERED in MotoPress,
+            // which for a booking Rob typed in later is not the date the
+            // guest booked. Reported separately from the platform figure
+            // and labelled, never blended into one number.
+            'lead_times'      => [],
+            'lead_time_median' => null,
+            'lead_time_mean'  => null,
+            'stay_lengths'    => [],
             'snapshot_taken'  => Snapshot::taken(),
             'snapshot_at'     => Originals::last_snapshot_at(),
         ];
 
         $adjustments = self::adjustments_by_booking();
+
+        // Read live, because the booking date is structure rather than
+        // money: it is not copied into the Originals and cannot move a
+        // figure under Rob's feet.
+        $entered_on = [];
+        foreach (Mphb_Reader::bookings() as $live) {
+            $entered_on[(int) $live['id']] = (string) ($live['entered_on'] ?? '');
+        }
 
         foreach (Originals::bookings_with_payments() as $booking_id => $booking) {
             // A cancelled booking is copied, because the copy is of what is
@@ -499,6 +583,19 @@ final class Reports
 
             $nights = Dates::nights_in_period($booking['check_in'], $booking['check_out'], $from, $to);
             $total  = Dates::nights($booking['check_in'], $booking['check_out']) ?? 0;
+
+            if ((string) $booking['check_in'] >= $from && (string) $booking['check_in'] <= $to) {
+                if ($total > 0) {
+                    $out['stay_lengths'][] = $total;
+                }
+                $entered = (string) ($entered_on[$booking_id] ?? '');
+                if ($entered !== '') {
+                    $days = Dates::nights($entered, (string) $booking['check_in']);
+                    if ($days !== null) {
+                        $out['lead_times'][] = $days;
+                    }
+                }
+            }
 
             if ($nights > 0) {
                 $out['nights'] += $nights;
@@ -596,6 +693,9 @@ final class Reports
             $out['paid'] = $out['recorded'] + $corrections;
         }
 
+        $out['lead_time_median'] = self::median($out['lead_times']);
+        $out['lead_time_mean']   = self::mean($out['lead_times']);
+
         foreach (array_keys($out['by_cottage']) as $cottage) {
             $out['by_cottage'][$cottage] = self::finish_breakdown($out['by_cottage'][$cottage]);
         }
@@ -654,11 +754,18 @@ final class Reports
     private static function blank_figures(): array
     {
         $figures = [
-            'nights'            => 0,
-            'cancellations'     => 0,
-            'lead_time_median'  => null,
-            'by_cottage'        => [],
-            'by_channel'        => [],
+            'nights'                => 0,
+            // Nights with money behind them, and nights without. ADR divides
+            // by the first; occupancy counts both.
+            'nights_with_revenue'    => 0,
+            'nights_without_revenue' => 0,
+            'cancellations'         => 0,
+            'lead_times'            => [],
+            'lead_time_median'      => null,
+            'lead_time_mean'        => null,
+            'stay_lengths'          => [],
+            'by_cottage'            => [],
+            'by_channel'            => [],
         ];
         foreach (self::MONEY_TYPES as $type) {
             $figures[$type] = 0;
@@ -670,6 +777,122 @@ final class Reports
             $figures['by_channel'][$channel] = self::blank_breakdown();
         }
         return $figures;
+    }
+
+    /**
+     * What one figure on a screen was added up from.
+     *
+     * The standard says every number opens to its source. This is the map
+     * from a figure's name to the rows behind it and the sentence that says
+     * what it counts — one place, so the definition a reader is shown is
+     * the same definition the figure was computed by.
+     *
+     * @return array{label:string,definition:string,matches:callable}|null
+     */
+    public static function trail(string $figure): ?array
+    {
+        $has_money = static fn (array $row): bool =>
+            (int) $row['guest_total'] !== 0
+            || (int) $row['room_sales'] !== 0
+            || (int) $row['payout'] !== 0;
+
+        $trails = [
+            'guest_total' => [
+                'label'      => __('Guest Total', 'dcc-ledger'),
+                'definition' => __('Every platform stay carrying money: what guests paid the platforms, before the platform\'s cut and before tax.', 'dcc-ledger'),
+                'matches'    => $has_money,
+            ],
+            'platform_fees' => [
+                'label'      => __('Platform Fees', 'dcc-ledger'),
+                'definition' => __('Every stay charged commission or a service fee.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool =>
+                    (int) $row['commission'] !== 0 || (int) $row['service_fee'] !== 0,
+            ],
+            'net_payout' => [
+                'label'      => __('Net Payout', 'dcc-ledger'),
+                'definition' => __('Every stay whose money moved: payouts, with refunds, adjustments and resolutions netted off.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (int) $row['net_payout'] !== 0,
+            ],
+            'nights' => [
+                'label'      => __('Nights', 'dcc-ledger'),
+                'definition' => __('Every platform stay with a night inside the range. A cancelled reservation contributes none, and a hand-typed copy is counted on the stay it duplicates.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (int) $row['nights_in'] > 0,
+            ],
+            'rate_nights' => [
+                'label'      => __('Nights Behind The Rate', 'dcc-ledger'),
+                'definition' => __('The stays the average rate divides by: those with a night inside the range AND money attached. A night with nothing above it is left out of both sides of that division.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (int) $row['nights_in'] > 0 && $has_money($row),
+            ],
+            'tax_platform_remitted' => [
+                'label'      => __('Tax The Platform Remitted', 'dcc-ledger'),
+                'definition' => __('Every stay where the platform collected and paid the tax itself. Never revenue.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (int) $row['tax_platform_remitted'] !== 0,
+            ],
+            'tax_in_payout' => [
+                'label'      => __('Tax Inside The Payout', 'dcc-ledger'),
+                'definition' => __('Every stay whose payout carried tax for Rob to remit.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (int) $row['tax_in_payout'] !== 0,
+            ],
+            'cancellations' => [
+                'label'      => __('Cancellations', 'dcc-ledger'),
+                'definition' => __('Every platform reservation the channel marks cancelled, counted in the month it would have checked in.', 'dcc-ledger'),
+                'matches'    => static fn (array $row): bool => (string) $row['status'] !== 'ok',
+            ],
+        ];
+
+        return $trails[$figure] ?? null;
+    }
+
+    /**
+     * The middle value, or null for nothing at all.
+     *
+     * An even count takes the mean of the two middles, rounded half up —
+     * stated because a median of 51.5 days has to land somewhere.
+     *
+     * @param array<int,int> $values
+     */
+    public static function median(array $values): ?int
+    {
+        sort($values);
+        $count = count($values);
+        if ($count === 0) {
+            return null;
+        }
+
+        return $count % 2 === 1
+            ? (int) $values[intdiv($count, 2)]
+            : (int) floor((($values[$count / 2 - 1] + $values[$count / 2]) / 2) + 0.5);
+    }
+
+    /**
+     * The mean, rounded half up, or null for nothing at all.
+     *
+     * @param array<int,int> $values
+     */
+    public static function mean(array $values): ?int
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return null;
+        }
+
+        return (int) floor((array_sum($values) / $count) + 0.5);
+    }
+
+    /**
+     * Cents per night, rounded half up once and only at the end.
+     *
+     * Zero nights give null, not zero: no stays is not a rate of nothing.
+     */
+    public static function per_night(int $cents, int $nights): ?int
+    {
+        if ($nights <= 0) {
+            return null;
+        }
+
+        $sign = $cents < 0 ? -1 : 1;
+
+        return $sign * intdiv(abs($cents) * 2 + $nights, $nights * 2);
     }
 
     /** @return array<string,float|int> */

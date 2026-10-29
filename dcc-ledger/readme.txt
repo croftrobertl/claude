@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,17 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.0 =
+* `wp dcc-ledger money-check` and `money-rollback` answer to the names every document gives them. Until now only the underscored spellings were registered, so the line a person would copy at the worst possible moment — the rollback — errored out. Both spellings work, and both are tested by the name a person types.
+* Occupancy, ADR and RevPAR — each shown gross and net, never one alone — plus length of stay, lead time and channel mix. Every figure carries its definition and its date range, and the nights it divides by.
+* A night whose money has not arrived is counted in occupancy but left out of both sides of the rate. In the denominator alone it would read as a discount nobody gave.
+* Lead time is reported separately for platform and direct bookings. The direct figure is measured from the date the booking was entered in MotoPress, which for one typed in later is not the day the guest booked, and it says so.
+* Booking pace is recorded once a night from now on, never reconstructed: a curve drawn from today's bookings shows what survived to today, not what stood. A missed night is left as a gap, a month is charted only once every reading on its curve exists, and until then the screen says when the first complete month will be.
+* A cancelled platform stay with a hand-typed copy attached can be ruled as really stayed, on the evidence of money received or Rob's own word, with the reason recorded. Its nights and money then count once. The ruling is revoked, never deleted.
+* Every headline figure on the Overview, and every channel on the Channel tab, opens to the rows it was added up from.
+* A figure with nothing behind it reads "Unknown", never zero.
+* The upgrade from 0.1.9 straight to 0.3.0 is proven: the move to cents, its proof and its rollback all work from the 0.1.9 shape, in one activation.
 
 = 0.2.0 =
 * Every amount is now stored and added as a whole number of cents. A float cannot hold 0.1, so a column of them does not add up to what a person adding the same column by hand would get; the months of a year now tie to the year exactly, and so do the channels and the cottages.

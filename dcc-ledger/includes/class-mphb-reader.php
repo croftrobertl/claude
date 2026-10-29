@@ -175,6 +175,12 @@ final class Mphb_Reader
             $out[] = [
                 'id'          => $id,
                 'status'      => (string) $row['status'],
+                // When the booking row was created in MotoPress. For a
+                // walk-in that is the day the guest booked; for one Rob
+                // typed in later it is the day he typed it. A floor on the
+                // lead time, never a fact about it — labelled as such
+                // wherever it is reported.
+                'entered_on'  => substr((string) ($row['created'] ?? ''), 0, 10),
                 'check_in'    => $row['check_in'] ?: null,
                 'check_out'   => $row['check_out'] ?: null,
                 'room_id'     => (int) $row['room_id'],
