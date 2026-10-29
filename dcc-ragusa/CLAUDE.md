@@ -249,6 +249,22 @@ Titles centered, Title Case, American spelling.
   a version change without a hook-recorded row becomes a journal row with
   source `unseen` on the next tick. Its window vouches for no file
   (`attribution()` skips it); without a published file list it is a finding.
+- **An update's row is written before its files move** (`Sveti_Ivan::open_update()`
+  at upgrader_pre_install). upgrader_process_complete finishes the same row
+  (`take_open()`); a request that ends first leaves its reason on the row
+  (`on_shutdown()`, PHP's last fatal error); the tick completes it once
+  ended or after `OPEN_GRACE` (`finish_open()`), or abandons it when the
+  version did not change. Recovery and `detect_unseen()` leave an open row
+  alone. Never count on being reached at upgrader_process_complete: any
+  callback before Ragusa's can end the request.
+- **No inline checks during WordPress's maintenance page** (`maintenance_on()`):
+  every page answers 503 then; the follow-up runs them.
+- **A failed journal insert is 0** (`Journal::create()`): wpdb leaves the
+  previous insert's id in `insert_id`.
+- **Newfold's .htaccess writes are explained, never silenced**
+  (`Htaccess::newfold_marks()`, `Minceta::newfold_sentence()`): credited only
+  when .htaccess.nfd-backup is 0–5 s older than .htaccess; "made this
+  change" only when the backup holds exactly the hash Ragusa had on record.
 - **One owner per file, one finding per change.** `Minceta::OWNED_ELSEWHERE`
   are skipped by the walk; .user.ini and php.ini are `Php_Patch`'s alone,
   Breached only when `Htaccess::ini_enables_execution()` turns true.
@@ -303,7 +319,7 @@ Titles centered, Title Case, American spelling.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 98 deliberate breakages, each must be caught
+    php tests/mutations.php            # 114 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -321,6 +337,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.7.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.2.8.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

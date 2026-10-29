@@ -1346,3 +1346,24 @@ ships, and credits a removal to an update only inside its window, in its
 files, when the new version no longer ships the file. The email names the
 component, the update, the certainty and the one thing to do.
 
+**0.2.8 (an auto-update the journal missed, 2026-10-29).** Ultimate Addons
+for Elementor auto-updated to 2.9.6 on live at 11:11:35 CDT, inside
+WordPress's own WP-Cron request, while 0.2.6 was installed, and the journal
+recorded nothing. WordPress's source (`WP_Automatic_Updater::update()`,
+`Plugin_Upgrader::upgrade()`, `WP_Upgrader::run()`) shows the update runs in
+that same request, and upgrader_process_complete fires there whatever the
+result. Ragusa loads on wp-cron.php (DOING_CRON is defined before
+wp-load.php), and nothing in core removes its callback. Newfold's
+Htaccess Manager writes .htaccess on `shutdown`, in admin, cron and CLI
+requests only, so its 11:11:37 write puts that request alive at its end.
+What WordPress cannot rule out from the source: a callback registered
+before Ragusa's (a must-use plugin, a plugin loaded earlier, or the
+updated plugin's own old code) ending the request with a fatal error or
+an exit, after which only shutdown runs; or something removing the hook.
+Which one happened on live is not verified; the evidence to tell is
+listed in the staging checklist, step 14.
+
+0.2.8 stops depending on the answer. The journal row is written at
+upgrader_pre_install, before the copy; the request's end is recorded with
+PHP's last fatal error; the tick completes what WordPress never reported.
+

@@ -127,6 +127,12 @@ function break_cottage_when(string $version): void
 echo "Ragusa test suite\n";
 
 // --------------------------------------------------------------------------
+// The shutdown check is recorded, never left to run at the end of the test process.
+$GLOBALS['dccr_shutdown'] = [];
+Sveti_Ivan::$shutdown_registrar = static function ($cb): void {
+    $GLOBALS['dccr_shutdown'][] = $cb;
+};
+
 suite('front-end gate: the main file returns before any hook on a visitor request', function () {
     $script = DCCR_TEST_ROOT . '/gate.php';
     file_put_contents($script, '<?php
@@ -3223,6 +3229,261 @@ suite('0.2.7 failure drill: the package list cannot be written; the update still
     eq('4.24.0', Revelin::plugin_version('wporg-plugin'), 'and is installed: Ragusa never stood in the upgrader\'s way');
     eq(null, Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/includes/guard.php')), 'the removal is still judged, from WordPress.org\'s list for 4.24.0');
     unlink($pk);
+});
+
+// ---------------------------------------------------------------- 0.2.8
+
+
+/** An upgrader run that never reaches upgrader_process_complete: pre-install, the package listed, the files copied. Returns the open row. */
+function dccr_partial_update(string $slug, array $files, array $drop, bool $copy = true): int
+{
+    $hook = ['type' => 'plugin', 'action' => 'update', 'plugin' => "$slug/$slug.php"];
+    Sveti_Ivan::on_pre_install(true, $hook);
+    $pkg = DCCR_TEST_ROOT . '/upgrade/pkg-' . bin2hex(random_bytes(3)) . "/$slug";
+    foreach ($files as $rel => $c) {
+        @mkdir(dirname("$pkg/$rel"), 0755, true);
+        file_put_contents("$pkg/$rel", $c);
+    }
+    Revelin::on_source_selection($pkg . '/', dirname($pkg), null, $hook);
+    if ($copy) {
+        foreach ($files as $rel => $c) {
+            @mkdir(dirname(WP_PLUGIN_DIR . "/$slug/$rel"), 0755, true);
+            file_put_contents(WP_PLUGIN_DIR . "/$slug/$rel", $c);
+        }
+        foreach ($drop as $rel) {
+            @unlink(WP_PLUGIN_DIR . "/$slug/$rel");
+        }
+    }
+    return (int) (((array) State::get('update.open', []))[$slug] ?? 0);
+}
+function dccr_install_release(array $files): void
+{
+    foreach ($files as $rel => $c) {
+        @mkdir(dirname(WP_PLUGIN_DIR . "/wporg-plugin/$rel"), 0755, true);
+        file_put_contents(WP_PLUGIN_DIR . "/wporg-plugin/$rel", $c);
+    }
+}
+function dccr_set_started(int $id, int $ago): void
+{
+    $row = Journal::get($id);
+    Journal::set_state($id, $row['state'], ['before' => ['started' => time() - $ago]]);
+}
+
+suite('0.2.8 drill 1: the live case: a WP-Cron auto-update whose request ended before Ragusa heard it finish', function () {
+    Alerts::force(true);
+    dccr_install_release(dccr_release('2.9.5', ['includes/a.php' => "<?php\n// a 2.9.5\n", 'readme.txt' => "=== WPORG Plugin ===\n", 'old/legacy.php' => "<?php\n// legacy\n"]));
+    dccr_full_pass();
+    tick(); // the version snapshot holds 2.9.5
+    $r = dccr_release('2.9.6', ['includes/a.php' => "<?php\n// a 2.9.6\n", 'readme.txt' => "=== WPORG Plugin ===\n"]);
+    $id = dccr_partial_update('wporg-plugin', $r, ['old/legacy.php']);
+    $row = Journal::get($id);
+    ok($id > 0 && $row['action'] === 'update-check' && ($row['before']['stage'] ?? '') === 'started', 'the row is written at upgrader_pre_install, before a file is copied');
+    eq('2.9.5', $row['before']['old_version'] ?? '', 'with the version it started from');
+    ok(isset($row['before']['request']['entry']) && array_key_exists('cron', (array) $row['before']['request']), 'and where its request came in');
+    ok(in_array([Sveti_Ivan::class, 'on_shutdown'], $GLOBALS['dccr_shutdown'], true), 'a shutdown check is registered for the request');
+    // Another plugin's upgrader_process_complete callback dies before Ragusa's runs.
+    Sveti_Ivan::on_shutdown(['type' => E_ERROR, 'message' => 'Uncaught Error: Class "Old_Thing" not found', 'file' => WP_PLUGIN_DIR . '/other/other.php', 'line' => 12]);
+    $row = Journal::get($id);
+    eq('ended-early', $row['before']['stage'] ?? '', 'shutdown marks it ended early');
+    ok(str_contains((string) $row['note'], 'PHP fatal error: Uncaught Error: Class "Old_Thing" not found in wp-content/plugins/other/other.php line 12'), 'and names the fatal error, path relative: ' . $row['note']);
+    $lines = tick();
+    $row = Journal::get($id);
+    eq('2.9.6', $row['before']['new_version'] ?? '', 'the next tick completes it: 2.9.6');
+    eq('complete', $row['before']['stage'] ?? '', 'stage complete');
+    ok(($row['before']['source'] ?? '') !== 'unseen' && empty($row['before']['unseen']), 'as a recorded update, not an unseen one');
+    eq(1, count(array_filter(Journal::recent(30), static fn($j) => $j['target'] === 'wporg-plugin' && $j['action'] === 'update-check' && ($j['before']['new_version'] ?? '') === '2.9.6')), 'one row for it, no unseen duplicate');
+    eq(0, count(events_of('update-unseen')), 'no "updated without Ragusa seeing it"');
+    ok(str_contains((string) $row['note'], 'completed by the tick'), 'the row says the tick completed it');
+    ok(count(array_filter($lines, static fn($l) => str_contains($l, 'WordPress never reported it finished'))) === 1, 'and the tick says so');
+    ok(count(array_filter(events_of('removed-by-update'), static fn($e) => str_contains($e['message'], '2.9.5 → 2.9.6') && str_contains($e['message'], 'legacy.php'))) === 1, 'the file 2.9.6 no longer ships is credited to it: info');
+    eq(null, Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/wporg-plugin/old/legacy.php')), 'no File Missing for it');
+    ok(in_array($row['state'], [Journal::VERIFYING, Journal::COMMITTED], true), 'its smoke checks run: ' . $row['state']);
+    Alerts::force(false);
+});
+
+suite('0.2.8 drill 2: an update still copying is left alone, then finished after the grace period', function () {
+    dccr_install_release(dccr_release('3.0.0', ['includes/a.php' => "<?php\n// a 3.0.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    tick();
+    $id = dccr_partial_update('wporg-plugin', dccr_release('3.0.1', ['includes/a.php' => "<?php\n// a 3.0.1\n", 'readme.txt' => "=== WPORG Plugin ===\n"]), []);
+    age_row($id, 200); // what a tick in another request sees: an unfinished row from another run
+    tick();
+    $row = Journal::get($id);
+    eq(Journal::PLANNED, $row['state'], 'recovery leaves an open update alone');
+    eq('started', $row['before']['stage'] ?? '', 'still open within the grace period');
+    eq(0, count(events_of('update-unseen')), 'and the version change is not taken for an unseen update');
+    dccr_set_started($id, Sveti_Ivan::OPEN_GRACE + 5);
+    $lines = tick();
+    $row = Journal::get($id);
+    eq('3.0.1', $row['before']['new_version'] ?? '', 'after the grace period the tick completes it');
+    ok(str_contains((string) $row['note'], 'its request never said how it ended'), 'saying it never heard how the request ended');
+    eq(0, count(events_of('update-unseen')), 'still not unseen');
+    Sveti_Ivan::on_shutdown(); // nothing left open: no error
+});
+
+suite('0.2.8 drill 3: an update that started and changed nothing is abandoned, not invented', function () {
+    dccr_install_release(dccr_release('3.1.0', ['includes/a.php' => "<?php\n// a 3.1.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    tick();
+    $id = dccr_partial_update('wporg-plugin', dccr_release('3.1.1', ['includes/a.php' => "<?php\n// a 3.1.1\n"]), [], false);
+    Sveti_Ivan::on_shutdown(null);
+    $row = Journal::get($id);
+    ok(str_contains((string) $row['note'], 'no PHP error'), 'shutdown with no fatal says so');
+    tick();
+    $row = Journal::get($id);
+    eq(Journal::ABANDONED, $row['state'], 'abandoned');
+    ok(str_contains((string) $row['note'], 'the update did not finish: the version is still 3.1.0'), 'the version is still 3.1.0: ' . $row['note']);
+    eq('', (string) ($row['before']['new_version'] ?? ''), 'no new version is claimed');
+});
+
+suite('0.2.8 drill 4: an unseen update says when WordPress\'s automatic updater died holding its lock', function () {
+    dccr_install_release(dccr_release('3.2.0', ['includes/a.php' => "<?php\n// a 3.2.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    tick();
+    update_option('auto_updater.lock', time() - 1200);
+    dccr_install_release(dccr_release('3.2.1', ['includes/a.php' => "<?php\n// a 3.2.1\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    State::set('versions', array_merge((array) State::get('versions'), ['ts' => time() - 1800]));
+    tick();
+    $ev = events_of('update-unseen');
+    ok(count($ev) === 1 && str_contains($ev[0]['message'], 'WordPress\'s automatic updater started a run at') && str_contains($ev[0]['message'], 'never finished it'), 'the lock is named: ' . ($ev[0]['message'] ?? ''));
+    $row = Journal::latest('update-check', 'wporg-plugin');
+    ok(str_contains((string) $row['note'], 'automatic updater'), 'and on the journal row');
+    update_option('auto_updater.lock', time() - 30);
+    dccr_install_release(dccr_release('3.2.2', ['includes/a.php' => "<?php\n// a 3.2.2\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    tick();
+    $ev = array_values(array_filter(events_of('update-unseen'), static fn($e) => str_contains($e['message'], '3.2.2')));
+    ok(count($ev) === 1 && !str_contains($ev[0]['message'], 'automatic updater started'), 'a lock taken moments ago is a run in progress, not a dead one');
+    delete_option('auto_updater.lock');
+});
+
+suite('0.2.8 drill 5: during WordPress\'s maintenance page the inline checks wait; the follow-up runs them', function () {
+    dccr_install_release(dccr_release('3.3.0', ['includes/a.php' => "<?php\n// a 3.3.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    file_put_contents(ABSPATH . '.maintenance', '<?php $upgrading = ' . time() . ';');
+    $GLOBALS['dccr_http'] = [];
+    $id = dccr_real_update('wporg-plugin', dccr_release('3.3.1', ['includes/a.php' => "<?php\n// a 3.3.1\n", 'readme.txt' => "=== WPORG Plugin ===\n"]), []);
+    $row = Journal::get($id);
+    eq('deferred: maintenance mode', $row['verify']['inline'] ?? null, 'no inline checks while WordPress shows its maintenance page');
+    eq([], array_column(array_filter((array) $GLOBALS['dccr_http'], static fn($h) => !str_contains((string) $h['url'], 'wordpress.org/')), 'url'), 'not one loopback was made');
+    ok((int) ($row['verify']['next_at'] ?? 0) > time(), 'the follow-up is scheduled');
+    unlink(ABSPATH . '.maintenance');
+    $id2 = dccr_real_update('wporg-plugin', dccr_release('3.3.2', ['includes/a.php' => "<?php\n// a 3.3.2\n", 'readme.txt' => "=== WPORG Plugin ===\n"]), []);
+    ok(is_array(Journal::get($id2)['verify']['inline'] ?? null), 'without the maintenance page they run inline as before');
+});
+
+suite('0.2.8 drill 6: an ordinary update is one row, finished by the hook', function () {
+    dccr_install_release(dccr_release('3.4.0', ['includes/a.php' => "<?php\n// a 3.4.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    $n  = count(Journal::recent(200));
+    $id = dccr_real_update('wporg-plugin', dccr_release('3.4.1', ['includes/a.php' => "<?php\n// a 3.4.1\n", 'readme.txt' => "=== WPORG Plugin ===\n"]), []);
+    eq($n + 1, count(Journal::recent(200)), 'exactly one new journal row');
+    $row = Journal::get($id);
+    eq('complete', $row['before']['stage'] ?? '', 'opened at pre-install, completed by the hook');
+    eq('3.4.0', $row['before']['old_version'] ?? '', 'from 3.4.0');
+    eq('3.4.1', $row['before']['new_version'] ?? '', 'to 3.4.1');
+    ok(!str_contains((string) $row['note'], 'in progress'), 'its note no longer says in progress: ' . $row['note']);
+    eq([], (array) State::get('update.open', []), 'nothing left open');
+    Sveti_Ivan::on_shutdown(null);
+    ok(!str_contains((string) Journal::get($id)['note'], 'request ended'), 'shutdown adds nothing to a finished update');
+});
+
+suite('0.2.8 failure drill: the journal cannot be written; the upgrader still finishes and the failure is loud', function () {
+    global $wpdb;
+    dccr_install_release(dccr_release('3.5.0', ['includes/a.php' => "<?php\n// a 3.5.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    $t = DCCR\Schema::journal();
+    $wpdb->query("ALTER TABLE {$t} RENAME TO {$t}_away");
+    $log = DCCR_TEST_ROOT . '/php-error.log';
+    $old = ini_set('error_log', $log);
+    $hook = ['type' => 'plugin', 'action' => 'update', 'plugin' => 'wporg-plugin/wporg-plugin.php'];
+    $res = @Sveti_Ivan::on_pre_install(true, $hook);
+    ini_set('error_log', (string) $old);
+    $wpdb->query("ALTER TABLE {$t}_away RENAME TO {$t}");
+    eq(true, $res, 'upgrader_pre_install gets its value back untouched: the update goes on');
+    ok(str_contains((string) @file_get_contents($log), 'DCC Ragusa: could not write the journal row for the update of wporg-plugin'), 'PHP\'s error log says so');
+    ok(count(events_of('journal-write-failed')) === 1, 'and Recent Events');
+    eq([], (array) State::get('update.open', []), 'nothing is left open that nobody can finish');
+});
+
+suite('0.2.8: a failed journal insert is 0, never the id wpdb kept from the insert before it', function () {
+    global $wpdb;
+    $real = $wpdb;
+    $first = Journal::create('update-check', 'x-first', [], 'first', false);
+    $wpdb = new class ($real) {
+        public int $insert_id;
+        public string $last_error = 'Table is marked as crashed';
+        public function __construct(private $real) { $this->insert_id = $real->insert_id; }
+        public function insert(...$a) { return false; } // real wpdb: false, insert_id untouched
+        public function __call($m, $a) { return $this->real->$m(...$a); }
+        public function __get($n) { return $this->real->$n; }
+    };
+    $id = Journal::create('update-check', 'x-second', [], 'second', false);
+    $wpdb = $real;
+    eq(0, $id, 'create returns 0');
+    ok($first > 0 && Journal::get($first)['note'] === 'first', 'and the earlier row is untouched');
+});
+
+/** What Newfold's Htaccess Manager does on a write: refresh the backup with the current file, then write. */
+function dccr_newfold_write(string $new_content, int $at, int $gap = 1, ?string $backup = null): void
+{
+    $ht = ABSPATH . '.htaccess';
+    file_put_contents(ABSPATH . '.htaccess.nfd-backup', $backup ?? (string) file_get_contents($ht));
+    touch(ABSPATH . '.htaccess.nfd-backup', $at - $gap);
+    file_put_contents($ht, $new_content);
+    touch($ht, $at);
+}
+function dccr_nfd_block(): string
+{
+    return "# BEGIN NFD Htaccess\n# Managed by Newfold Htaccess Manager v1.4.2 (doracanalcourt.com)\n# STATE sha256: " . str_repeat('ab12', 16) . " applied: " . gmdate('Y-m-d\TH:i:s\Z') . "\n\n# skip 404 for static files\n# END NFD Htaccess\n";
+}
+
+suite('0.2.8 drill 7: Newfold rewrites .htaccess right after a recorded update: still a finding, and it says who and when', function () {
+    Alerts::force(true);
+    @unlink(ABSPATH . '.htaccess.nfd-backup');
+    dccr_install_release(dccr_release('3.6.0', ['includes/a.php' => "<?php\n// a 3.6.0\n", 'readme.txt' => "=== WPORG Plugin ===\n"]));
+    dccr_full_pass();
+    $id = dccr_real_update('wporg-plugin', dccr_release('3.6.1', ['includes/a.php' => "<?php\n// a 3.6.1\n", 'readme.txt' => "=== WPORG Plugin ===\n"]), []);
+    $old = (string) file_get_contents(ABSPATH . '.htaccess');
+    dccr_newfold_write(dccr_nfd_block() . str_replace('# BEGIN WordPress', "# BEGIN WordPress\n# nfd: skip 404 for static files", $old), time() + 2);
+    dccr_full_pass();
+    $a = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-changed', '.htaccess'));
+    ok($a !== null && Alerts::state($a) === 'open' && $a['severity'] === Events::NEEDS_LOOK, 'still a finding, needs a look: .htaccess is never quiet');
+    $ev  = array_values(array_filter(events_of('file-changed'), static fn($e) => $e['target'] === '.htaccess'));
+    $msg = (string) ($ev[0]['message'] ?? '');
+    ok(str_contains($msg, 'Newfold Htaccess Manager (HostGator\'s) made this change') && str_contains($msg, 'holds exactly the .htaccess Ragusa had on record'), 'names Newfold, with the backup as proof: ' . $msg);
+    ok(str_contains($msg, 'Managed by Newfold Htaccess Manager v1.4.2, STATE sha256 ab12ab12ab12…, applied'), 'quotes its STATE line');
+    ok(str_contains($msg, 'seconds after the WPORG Plugin update from 3.6.0 to 3.6.1 (journal ' . $id . ')'), 'and the update just before it');
+    ok(str_contains($msg, 'Ragusa still reports it'), 'and says why it is still reported');
+    $m = mails_with('Newfold');
+    ok(count($m) >= 1 && str_contains($m[0]['body'], 'diff .htaccess .htaccess.nfd-backup'), 'the email gives the one thing to do');
+    $bk = array_values(array_filter(array_merge(events_of('file-new'), events_of('file-changed')), static fn($e) => $e['target'] === '.htaccess.nfd-backup'));
+    ok(count($bk) === 1 && str_contains($bk[0]['message'], 'copy of the previous .htaccess'), 'the backup file is explained too: ' . ($bk[0]['message'] ?? ''));
+    Revelin::seal('.htaccess');
+    Revelin::seal('.htaccess.nfd-backup');
+    Alerts::force(false);
+});
+
+suite('0.2.8 drill 8: an .htaccess edit Newfold did not make is not credited to it', function () {
+    Alerts::force(true);
+    dccr_full_pass();
+    // A stale backup from long ago: not this write.
+    file_put_contents(ABSPATH . '.htaccess.nfd-backup', "old\n");
+    touch(ABSPATH . '.htaccess.nfd-backup', time() - 86400);
+    dccr_full_pass();
+    file_put_contents(ABSPATH . '.htaccess', (string) file_get_contents(ABSPATH . '.htaccess') . "\n# edited by hand\n");
+    dccr_full_pass();
+    $ev = array_values(array_filter(events_of('file-changed'), static fn($e) => $e['target'] === '.htaccess'));
+    ok($ev !== [] && !str_contains($ev[0]['message'], 'Newfold'), 'a hand edit says nothing about Newfold: ' . ($ev[0]['message'] ?? ''));
+    Revelin::seal('.htaccess');
+    // Fresh backup, but not the file Ragusa had on record: a change between them.
+    $now = (string) file_get_contents(ABSPATH . '.htaccess');
+    dccr_newfold_write($now . "\n# second\n", time() + 3, 1, "# something else entirely\n");
+    dccr_full_pass();
+    $ev = array_values(array_filter(events_of('file-changed'), static fn($e) => $e['target'] === '.htaccess'));
+    ok(str_contains($ev[0]['message'] ?? '', 'not the .htaccess Ragusa had on record, so another change may sit between them'), 'a backup that does not match is said plainly: ' . ($ev[0]['message'] ?? ''));
+    ok(!str_contains($ev[0]['message'] ?? '', 'made this change'), 'and Newfold is not said to have made it');
+    Revelin::seal('.htaccess');
+    @unlink(ABSPATH . '.htaccess.nfd-backup');
+    Alerts::force(false);
 });
 
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);

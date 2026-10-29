@@ -607,6 +607,102 @@ $mutations = [
         'from' => "                \\DCCR\\Packages::capture('theme', \$slug, \$source);",
         'to'   => "",
     ],
+    [
+        'name' => "0.2.8: the update row is not opened at upgrader_pre_install",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "                self::open_update(dirname((string) \$hook_extra['plugin']));",
+        'to'   => "",
+    ],
+    [
+        'name' => "0.2.8: shutdown does not say how the request ended",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "                Journal::set_state(\$id, Journal::PLANNED, ['before' => ['stage' => 'ended-early', 'ended_at' => time(), 'ended' => \$how]]);\n                Journal::annotate(\$id, 'the request ended before WordPress reported the update finished: ' . \$how);",
+        'to'   => "",
+    ],
+    [
+        'name' => "0.2.8: an open update is finished before its grace period (it may still be copying)",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (!\$ended && (int) (\$b['started'] ?? 0) > time() - self::OPEN_GRACE) {",
+        'to'   => "            if (false) {",
+    ],
+    [
+        'name' => "0.2.8: an open update is taken for an unseen one",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => " || isset(\$open[\$slug]) || self::recorded(",
+        'to'   => " || self::recorded(",
+    ],
+    [
+        'name' => "0.2.8: recovery schedules checks on an update still open",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (in_array((string) (\$row['before']['stage'] ?? ''), ['started', 'ended-early'], true)) {\n            return ''; // an update still open: finish_open() completes or abandons it\n        }",
+        'to'   => "",
+    ],
+    [
+        'name' => "0.2.8: an update that changed nothing is completed as if it had",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            if (\$new === '' || \$new === \$old) {",
+        'to'   => "            if (\$new === '') {",
+    ],
+    [
+        'name' => "0.2.8: the tick never completes open updates",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        foreach (self::finish_open() as \$line) {",
+        'to'   => "        foreach ([] as \$line) {",
+    ],
+    [
+        'name' => "0.2.8: the automatic updater's dead lock is not named",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (\$lock !== '') {\n            \$text .= ' ' . \$lock;",
+        'to'   => "        if (false) {\n            \$text .= ' ' . \$lock;",
+    ],
+    [
+        'name' => "0.2.8: inline checks run during WordPress's maintenance page",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "        if (self::maintenance_on()) {",
+        'to'   => "        if (false) {",
+    ],
+    [
+        'name' => "0.2.8: the hook writes a second row instead of finishing the open one",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            \$id = \$is_self ? 0 : self::take_open(\$slug, \$before);",
+        'to'   => "            \$id = 0;",
+    ],
+    [
+        'name' => "0.2.8: a failed journal write is silent",
+        'file' => 'includes/fortresses/class-sveti-ivan.php',
+        'from' => "            error_log('DCC Ragusa: could not write the journal row for the update of ' . \$slug . (\$why !== '' ? ': ' . \$why : ''));",
+        'to'   => "",
+    ],
+    [
+        'name' => "0.2.8: a failed journal insert returns the id wpdb kept from the insert before",
+        'file' => 'includes/class-journal.php',
+        'from' => "        if (\$ok === false) {\n            return 0;",
+        'to'   => "        if (false) {\n            return 0;",
+    ],
+    [
+        'name' => "0.2.8: any fresh nfd-backup credits Newfold, matching or not",
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        \$match = \$prior !== '' && hash_equals(\$prior, \$m['backup_hash']);",
+        'to'   => "        \$match = true;",
+    ],
+    [
+        'name' => "0.2.8: a stale nfd-backup still credits Newfold",
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (\$m === null || \$m['gap'] === null || \$m['gap'] < 0 || \$m['gap'] > 5) {",
+        'to'   => "        if (\$m === null || \$m['gap'] === null) {",
+    ],
+    [
+        'name' => "0.2.8: Newfold's rewrite of .htaccess goes quiet",
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "        if (\$nfd !== '') {\n            \$what .= ' ' . \$nfd;\n        }\n        Events::record(Fortress::MINCETA, \$severity, \$kind, \$rel, \$what);",
+        'to'   => "        if (\$nfd !== '') {\n            return;\n        }\n        Events::record(Fortress::MINCETA, \$severity, \$kind, \$rel, \$what);",
+    ],
+    [
+        'name' => "0.2.8: the update before Newfold's write is not named",
+        'file' => 'includes/fortresses/class-minceta.php',
+        'from' => "            if (!\$w['unseen'] && \$d >= 0 && \$d <= 300 && (\$best === null || \$d < \$best[0])) {",
+        'to'   => "            if (false) {",
+    ],
 ];
 
 

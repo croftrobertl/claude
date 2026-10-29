@@ -603,6 +603,9 @@ final class Minceta
             }
         } elseif (($known['h'] ?? '') !== $hash) {
             $p['changed']++;
+            if ($site_rel === '.htaccess') {
+                $p['prev_h']['.htaccess'] = (string) ($known['h'] ?? ''); // what Newfold's backup should hold
+            }
             $by = self::attribution($site_rel, $mtime);
             if ($by !== null) {
                 self::attributed($site_rel, $by, $p, 'file-changed');
@@ -1035,6 +1038,10 @@ final class Minceta
         Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-missing', $rel)); // it is back
         /* translators: %s: path */
         $what = sprintf(__('A new file appeared: %s.', 'dcc-ragusa'), $rel);
+        $nfd  = $rel === '.htaccess.nfd-backup' ? self::newfold_sentence($rel, $p) : '';
+        if ($nfd !== '') {
+            $what .= ' ' . $nfd;
+        }
         if ($where === 'mu') {
             $what .= ' ' . __('Nothing legitimately adds a must-use plugin without the site director knowing.', 'dcc-ragusa');
         }
@@ -1073,6 +1080,10 @@ final class Minceta
         $p['fps'][] = $fp;
         /* translators: %s: path */
         $what = sprintf(__('%s changed since Ragusa last saw it.', 'dcc-ragusa'), $rel);
+        $nfd  = in_array($rel, ['.htaccess', '.htaccess.nfd-backup'], true) ? self::newfold_sentence($rel, $p) : '';
+        if ($nfd !== '') {
+            $what .= ' ' . $nfd;
+        }
         Events::record(Fortress::MINCETA, $severity, $kind, $rel, $what);
         Alerts::raise([
             'fortress' => Fortress::MINCETA,
@@ -1085,9 +1096,72 @@ final class Minceta
             'did'      => __('Ragusa recorded it and changed nothing.', 'dcc-ragusa'),
             'todo'     => $severity === Events::INFO
                 ? ''
-                /* translators: %s: path */
-                : sprintf(__('If the site director changed it on purpose, run wp ragusa seal %s. Otherwise ask them to look.', 'dcc-ragusa'), $rel),
+                : ($nfd !== '' && $rel === '.htaccess'
+                    ? __('Ask the site director to compare it with the backup (diff .htaccess .htaccess.nfd-backup); if the difference is Newfold\'s, run wp ragusa seal .htaccess.', 'dcc-ragusa')
+                    /* translators: %s: path */
+                    : sprintf(__('If the site director changed it on purpose, run wp ragusa seal %s. Otherwise ask them to look.', 'dcc-ragusa'), $rel)),
         ]);
+    }
+
+    /**
+     * The evidence that Newfold's Htaccess Manager made an .htaccess change:
+     * it refreshes .htaccess.nfd-backup with the current file just before
+     * each write. Said only when the backup's time fits; the finding stays,
+     * because .htaccess decides what the server runs.
+     */
+    private static function newfold_sentence(string $rel, array $p): string
+    {
+        $m = Htaccess::newfold_marks(Site::abspath());
+        if ($m === null || $m['gap'] === null || $m['gap'] < 0 || $m['gap'] > 5) {
+            return '';
+        }
+        $prior = (string) ($p['prev_h']['.htaccess'] ?? (self::index()['.htaccess']['h'] ?? ''));
+        $match = $prior !== '' && hash_equals($prior, $m['backup_hash']);
+        if ($rel === '.htaccess') {
+            $parts = [$match
+                /* translators: %d: seconds */
+                ? sprintf(__('Newfold Htaccess Manager (HostGator\'s) made this change: it refreshed its backup, .htaccess.nfd-backup, %d seconds before, and that backup holds exactly the .htaccess Ragusa had on record.', 'dcc-ragusa'), $m['gap'])
+                /* translators: %d: seconds */
+                : sprintf(__('Newfold Htaccess Manager (HostGator\'s) refreshed its backup, .htaccess.nfd-backup, %d seconds before this change, which is how it writes; but the backup is not the .htaccess Ragusa had on record, so another change may sit between them.', 'dcc-ragusa'), $m['gap'])];
+        } else {
+            $parts = [$match
+                /* translators: %d: seconds */
+                ? sprintf(__('It is Newfold Htaccess Manager\'s copy of the previous .htaccess, refreshed %d seconds before .htaccess changed, and it holds exactly the .htaccess Ragusa had on record.', 'dcc-ragusa'), $m['gap'])
+                /* translators: %d: seconds */
+                : sprintf(__('Newfold Htaccess Manager refreshes this backup just before it writes .htaccess (%d seconds apart here), but it is not the .htaccess Ragusa had on record.', 'dcc-ragusa'), $m['gap'])];
+        }
+        if ($m['version'] !== '' || $m['sha'] !== '') {
+            $parts[] = sprintf(
+                /* translators: 1: version, 2: sha256 prefix, 3: time */
+                __('Its own block reads: Managed by Newfold Htaccess Manager v%1$s, STATE sha256 %2$s…, applied %3$s.', 'dcc-ragusa'),
+                $m['version'] !== '' ? $m['version'] : '?',
+                $m['sha'] !== '' ? substr($m['sha'], 0, 12) : '?',
+                $m['applied'] > 0 ? Site::stamp($m['applied']) : '?'
+            );
+        }
+        $changed = (int) @filemtime(Site::abspath() . '/.htaccess');
+        $best    = null;
+        foreach (self::update_windows() as $w) {
+            $d = $changed - (int) $w['at'];
+            if (!$w['unseen'] && $d >= 0 && $d <= 300 && ($best === null || $d < $best[0])) {
+                $best = [$d, $w];
+            }
+        }
+        if ($best !== null) {
+            [$d, $w] = $best;
+            $name    = $w['kind'] === 'plugin' ? self::component_of('wp-content/plugins/' . $w['slug'] . '/x')['name'] : ($w['kind'] === 'core' ? 'WordPress' : (string) $w['slug']);
+            $parts[] = sprintf(
+                /* translators: 1: seconds, 2: component, 3: old, 4: new, 5: journal */
+                __('That was %1$d seconds after the %2$s update from %3$s to %4$s (journal %5$d).', 'dcc-ragusa'),
+                $d,
+                $name,
+                $w['old'] !== '' ? $w['old'] : '?',
+                $w['version'] !== '' ? $w['version'] : '?',
+                (int) $w['id']
+            );
+        }
+        $parts[] = __('Ragusa still reports it: .htaccess decides what the server runs.', 'dcc-ragusa');
+        return implode(' ', $parts);
     }
 
     // ------------------------------------------------------------ uploads

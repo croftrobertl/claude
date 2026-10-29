@@ -46,7 +46,7 @@ final class Journal
     {
         global $wpdb;
         $now = time();
-        $wpdb->insert(Schema::journal(), [
+        $ok  = $wpdb->insert(Schema::journal(), [
             'action'      => substr($action, 0, 24),
             'target'      => substr($target, 0, 255),
             'state'       => self::PLANNED,
@@ -61,6 +61,9 @@ final class Journal
             'note'        => Text::scrub($note),
             'tag'         => Drill::tag(),
         ], ['%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s']);
+        if ($ok === false) {
+            return 0; // wpdb leaves the previous insert's id in insert_id on a failed insert
+        }
         $id = (int) $wpdb->insert_id;
         self::trim();
         return $id;

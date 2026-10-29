@@ -25,7 +25,10 @@ final class Actions
                 if (isset(self::MAP[$action])) {
                     $lines[] = (self::MAP[$action])::recover($row);
                 } elseif (in_array($action, ['update-check', 'core-check', 'self-update'], true)) {
-                    $lines[] = Fortress\Sveti_Ivan::recover($row);
+                    $line = Fortress\Sveti_Ivan::recover($row);
+                    if ($line !== '') {
+                        $lines[] = $line;
+                    }
                 } else {
                     Journal::set_state((int) $row['id'], Journal::ABANDONED, ['note' => 'unknown action']);
                     $lines[] = 'Abandoned unknown journal row ' . $row['id'];

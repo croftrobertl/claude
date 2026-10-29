@@ -33,6 +33,14 @@ final class Sveti_Ivan
     public const HOST_RETRY = 900;
     public const WINDOW     = 3600;
     public const MAX_HOST   = 3;
+    /** An update WordPress never reported finished is completed by the tick after this long. */
+    public const OPEN_GRACE = 900;
+
+    /** @var array<string,int> slug => journal id of the updates this request opened */
+    private static array $open = [];
+    private static bool $shutdown_set = false;
+    /** @var callable tests record the registration instead of running it at process end */
+    public static $shutdown_registrar = 'register_shutdown_function';
 
     /** @var callable|null prints each check in WP-CLI */
     public static $printer = null;
@@ -53,6 +61,9 @@ final class Sveti_Ivan
             if ($type === 'plugin' || $type === 'core') {
                 State::set('update.pre', ['ts' => time(), 'errlog' => Error_Log::snapshot(), 'type' => $type]);
                 State::flush();
+            }
+            if ($type === 'plugin' && !empty($hook_extra['plugin'])) {
+                self::open_update(dirname((string) $hook_extra['plugin']));
             }
         } catch (\Throwable $e) {
             // Never break the upgrader.
@@ -124,7 +135,8 @@ final class Sveti_Ivan
         return wp_doing_cron() ? 'auto' : 'admin';
     }
 
-    private static function after_plugin(string $slug, string $action): void
+    /** @param array{id?:int,installed_at?:int,source?:string,old_version?:string,note?:string} $late the tick finishing an update WordPress never reported */
+    private static function after_plugin(string $slug, string $action, array $late = []): void
     {
         $pending = (array) State::get('pending_update', []);
         $seal    = $pending[$slug] ?? null;
@@ -145,7 +157,22 @@ final class Sveti_Ivan
             'errlog'      => $pre['errlog'] ?? Error_Log::snapshot(),
             'is_self'     => $is_self,
         ];
-        $id = Journal::create($is_self ? 'self-update' : 'update-check', $slug, $before, $kind . ' from ' . $before['source'], false);
+        if ($late !== []) {
+            $before['source']       = (string) ($late['source'] ?? $before['source']);
+            $before['installed_at'] = (int) ($late['installed_at'] ?? $before['installed_at']);
+            if ($before['old_version'] === '') {
+                $before['old_version'] = (string) ($late['old_version'] ?? '');
+            }
+            $id = self::adopt((int) ($late['id'] ?? 0), $before);
+            if ($id > 0) {
+                Journal::annotate($id, (string) ($late['note'] ?? ''));
+            }
+        } else {
+            $id = $is_self ? 0 : self::take_open($slug, $before);
+        }
+        if ($id === 0) {
+            $id = Journal::create($is_self ? 'self-update' : 'update-check', $slug, $before, $kind . ' from ' . $before['source'], false);
+        }
         Events::record(Fortress::SVETI_IVAN, Events::INFO, 'update-seen', $slug, sprintf(
             /* translators: 1: slug, 2: old, 3: new, 4: source */
             __('%1$s %2$s → %3$s (%4$s); checks pending.', 'dcc-ragusa'),
@@ -165,14 +192,22 @@ final class Sveti_Ivan
         }
 
         // Inline: the loopbacks already test fresh requests; the error log too.
-        $results = self::run_checks($before, true);
-        Journal::set_state($id, Journal::VERIFYING, ['verify' => ['inline' => $results['checks']]]);
-        foreach ($results['checks'] as $name => $c) {
-            self::say(self::format_check($name, $c));
-        }
-        if ($results['failed'] !== []) {
-            /* translators: %s: check names */
-            self::say(sprintf(__('Ragusa · Sveti Ivan: %s failed; a repeat check decides, nothing is rolled back from one failure.', 'dcc-ragusa'), implode(', ', $results['failed'])));
+        // Not while WordPress shows its maintenance page for this update (an
+        // automatic update keeps it up until it has looked for a fatal error):
+        // every page would answer 503, and guests would wait on the checks.
+        if (self::maintenance_on()) {
+            Journal::set_state($id, Journal::VERIFYING, ['verify' => ['inline' => 'deferred: maintenance mode']]);
+            self::say(__('Ragusa · Sveti Ivan: WordPress is in maintenance mode for this update; the checks run in 2 minutes.', 'dcc-ragusa'));
+        } else {
+            $results = self::run_checks($before, true);
+            Journal::set_state($id, Journal::VERIFYING, ['verify' => ['inline' => $results['checks']]]);
+            foreach ($results['checks'] as $name => $c) {
+                self::say(self::format_check($name, $c));
+            }
+            if ($results['failed'] !== []) {
+                /* translators: %s: check names */
+                self::say(sprintf(__('Ragusa · Sveti Ivan: %s failed; a repeat check decides, nothing is rolled back from one failure.', 'dcc-ragusa'), implode(', ', $results['failed'])));
+            }
         }
         // The plugin's own files are the new baseline now, not a finding; a
         // rollback re-baselines again. A file it no longer has is the
@@ -191,11 +226,231 @@ final class Sveti_Ivan
             $n
         ), [], $id);
         self::schedule($id, self::FOLLOWUP);
-        if (self::source() === 'cli') {
+        if ($late === [] && self::source() === 'cli') {
             if (!self::cli_subprocess($id)) {
                 self::say(__('Ragusa · Sveti Ivan: the in-process checks run on the next cron tick (no wp subprocess available).', 'dcc-ragusa'));
             }
         }
+    }
+
+    // ------------------------------------------- the write-ahead update row
+
+    /**
+     * upgrader_pre_install, before a single file is copied: the update's
+     * journal row is written now, so an update that never reaches
+     * upgrader_process_complete (a callback before Ragusa's ended the
+     * request, the hook was removed, the process died) is still on record,
+     * with the moment it started and how its request ended.
+     */
+    private static function open_update(string $slug): void
+    {
+        $slug = basename($slug);
+        if ($slug === '' || $slug === '.' || $slug === 'dcc-ragusa') {
+            return;
+        }
+        $before = [
+            'slug'        => $slug,
+            'kind'        => 'update',
+            'source'      => self::source(),
+            'old_version' => Revelin::plugin_version($slug),
+            'new_version' => '',
+            'started'     => time(),
+            'errlog'      => Error_Log::snapshot(),
+            'stage'       => 'started',
+            'request'     => self::request_context(),
+        ];
+        global $wpdb;
+        $why = '';
+        try {
+            $id = Journal::create('update-check', $slug, $before, 'update from ' . $before['source'] . ' | in progress', false);
+        } catch (\Throwable $e) {
+            $id  = 0;
+            $why = $e->getMessage();
+        }
+        if ($id === 0) {
+            $why = Text::scrub(mb_substr($why !== '' ? $why : (string) ($wpdb->last_error ?? ''), 0, 200));
+            // Loud: the journal is the record, and an update without one is unseen.
+            error_log('DCC Ragusa: could not write the journal row for the update of ' . $slug . ($why !== '' ? ': ' . $why : ''));
+            Events::record(Fortress::SVETI_IVAN, Events::NEEDS_LOOK, 'journal-write-failed', $slug, sprintf(
+                /* translators: 1: slug, 2: database error */
+                __('The journal row for the update of %1$s could not be written (%2$s).', 'dcc-ragusa'),
+                $slug,
+                $why !== '' ? $why : __('no error given', 'dcc-ragusa')
+            ));
+            return;
+        }
+        $open        = (array) State::get('update.open', []);
+        $open[$slug] = $id;
+        State::set('update.open', array_slice($open, -20, null, true));
+        State::flush();
+        self::$open[$slug] = $id;
+        if (!self::$shutdown_set) {
+            self::$shutdown_set = true;
+            (self::$shutdown_registrar)([self::class, 'on_shutdown']);
+        }
+    }
+
+    /** Where this request came in; nothing a person typed, nothing secret. */
+    private static function request_context(): array
+    {
+        $script = defined('WP_CLI') && WP_CLI ? 'wp-cli' : basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        return [
+            'entry' => Text::slug($script !== '' ? $script : 'unknown', 40),
+            'cron'  => wp_doing_cron(),
+            'admin' => function_exists('is_admin') && is_admin(),
+            'pid'   => (int) getmypid(),
+        ];
+    }
+
+    /** The update this request opened for the slug, now finished by the hook: the same row. */
+    private static function take_open(string $slug, array $before): int
+    {
+        $open = (array) State::get('update.open', []);
+        $id   = (int) ($open[$slug] ?? 0);
+        unset($open[$slug], self::$open[$slug]);
+        State::set('update.open', $open);
+        return self::adopt($id, $before);
+    }
+
+    /** Finish an open row with what is known now; its start, old version and log snapshot stay. */
+    private static function adopt(int $id, array $before): int
+    {
+        $row = $id > 0 ? Journal::get($id) : null;
+        if ($row === null || in_array($row['state'], Journal::TERMINAL, true) || !in_array((string) ($row['before']['stage'] ?? ''), ['started', 'ended-early'], true)) {
+            return 0;
+        }
+        $b = (array) $row['before'];
+        $before['started'] = (int) ($b['started'] ?? $before['started']);
+        if ($before['old_version'] === '') {
+            $before['old_version'] = (string) ($b['old_version'] ?? '');
+        }
+        if (isset($b['errlog'])) {
+            $before['errlog'] = $b['errlog'];
+        }
+        $before['stage'] = 'complete';
+        Journal::set_state($id, Journal::PLANNED, ['before' => $before, 'note' => $before['kind'] . ' from ' . $before['source']]);
+        return $id;
+    }
+
+    /**
+     * At the end of a request that opened an update: if Ragusa never heard
+     * it finish, the row says how the request ended, with PHP's last fatal
+     * error when there was one. The tick completes it.
+     */
+    public static function on_shutdown(?array $err = null): void
+    {
+        if (self::$open === []) {
+            return;
+        }
+        try {
+            $err   = $err ?? error_get_last();
+            $fatal = is_array($err) && in_array((int) ($err['type'] ?? 0), [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR], true);
+            $how   = $fatal
+                /* translators: 1: message, 2: file, 3: line */
+                ? sprintf(__('PHP fatal error: %1$s in %2$s line %3$d', 'dcc-ragusa'), mb_substr((string) $err['message'], 0, 300), Site::rel((string) ($err['file'] ?? '')), (int) ($err['line'] ?? 0))
+                : __('no PHP error: the request finished without the upgrader telling Ragusa', 'dcc-ragusa');
+            $how = Text::scrub(str_replace(Site::abspath() . '/', '', $how));
+            foreach (self::$open as $slug => $id) {
+                Journal::set_state($id, Journal::PLANNED, ['before' => ['stage' => 'ended-early', 'ended_at' => time(), 'ended' => $how]]);
+                Journal::annotate($id, 'the request ended before WordPress reported the update finished: ' . $how);
+            }
+            self::$open = [];
+        } catch (\Throwable $e) {
+            // Shutdown must never add an error of its own.
+        }
+    }
+
+    /** WordPress's own automatic updater lock: the time it was taken, while still held. */
+    public static function auto_lock(): int
+    {
+        return (int) get_option('auto_updater.lock', 0);
+    }
+
+    /** A sentence when WordPress's automatic updater started long ago and never finished. */
+    private static function lock_sentence(int $from, int $to): string
+    {
+        $lock = self::auto_lock();
+        if ($lock <= 0 || $lock < $from - 3600 || $lock > $to || $lock > time() - self::OPEN_GRACE) {
+            return '';
+        }
+        return sprintf(
+            /* translators: %s: time */
+            __('WordPress\'s automatic updater started a run at %s and never finished it (its lock is still held), so its request ended early.', 'dcc-ragusa'),
+            Site::stamp($lock)
+        );
+    }
+
+    /** WordPress shows its maintenance page while an update or its fatal-error check runs. */
+    private static function maintenance_on(): bool
+    {
+        $file = Site::abspath() . '/.maintenance';
+        clearstatcache(true, $file);
+        return is_file($file) && (int) @filemtime($file) >= time() - 600;
+    }
+
+    /**
+     * Every tick: an update this site opened and WordPress never reported
+     * finished. Once its request has ended (or OPEN_GRACE has passed), the
+     * version on disk decides: changed, the update is completed as a
+     * recorded one, with its sealed copy and its window; unchanged, the row
+     * is abandoned.
+     *
+     * @return string[]
+     */
+    public static function finish_open(): array
+    {
+        $lines = [];
+        $open  = (array) State::get('update.open', []);
+        foreach ($open as $slug => $id) {
+            $slug = basename((string) $slug);
+            $row  = Journal::get((int) $id);
+            if ($row === null || in_array($row['state'], Journal::TERMINAL, true) || !in_array((string) ($row['before']['stage'] ?? ''), ['started', 'ended-early'], true)) {
+                unset($open[$slug]);
+                continue;
+            }
+            $b     = (array) $row['before'];
+            $ended = (string) ($b['stage'] ?? '') === 'ended-early';
+            if (!$ended && (int) ($b['started'] ?? 0) > time() - self::OPEN_GRACE) {
+                continue; // it may still be copying
+            }
+            unset($open[$slug]);
+            State::set('update.open', $open);
+            $old = (string) ($b['old_version'] ?? '');
+            $new = Revelin::plugin_version($slug);
+            $how = $ended ? (string) ($b['ended'] ?? '') : __('its request never said how it ended', 'dcc-ragusa');
+            $lock = self::lock_sentence((int) ($b['started'] ?? 0), time());
+            if ($new === '' || $new === $old) {
+                Journal::set_state((int) $id, Journal::ABANDONED, ['before' => ['stage' => 'abandoned']]);
+                Journal::annotate((int) $id, sprintf('the update did not finish: the version is still %s (%s)', $new !== '' ? $new : '?', $how));
+                /* translators: 1: slug, 2: version */
+                $lines[] = sprintf(__('%1$s: an update started and did not finish; it is still %2$s.', 'dcc-ragusa'), $slug, $new !== '' ? $new : '?');
+                continue;
+            }
+            $dir    = Site::plugins_dir() . '/' . $slug;
+            $newest = Minceta::newest_mtime($dir);
+            $note   = sprintf('completed by the tick: WordPress never told Ragusa this update finished (%s)', $how) . ($lock !== '' ? ' | ' . $lock : '');
+            self::after_plugin($slug, 'update', [
+                'id'           => (int) $id,
+                'installed_at' => min(time(), max((int) ($b['started'] ?? 0), $newest)),
+                'source'       => (string) ($b['source'] ?? 'auto'),
+                'old_version'  => $old,
+                'note'         => $note,
+            ]);
+            $text = sprintf(
+                /* translators: 1: slug, 2: old, 3: new, 4: time, 5: journal, 6: how */
+                __('%1$s %2$s → %3$s started at %4$s and WordPress never reported it finished (%6$s). Completed as journal %5$d; its checks run now.', 'dcc-ragusa'),
+                $slug,
+                $old !== '' ? $old : '?',
+                $new,
+                Site::stamp((int) ($b['started'] ?? time())),
+                (int) $id,
+                $how
+            );
+            Events::record(Fortress::SVETI_IVAN, Events::INFO, 'update-completed-late', $slug, $text . ($lock !== '' ? ' ' . $lock : ''), [], (int) $id);
+            $lines[] = $text;
+        }
+        State::set('update.open', $open);
+        return $lines;
     }
 
     /**
@@ -331,10 +586,11 @@ final class Sveti_Ivan
         }
         $since = (int) ($prev['ts'] ?? time());
         $lines = [];
+        $open  = (array) State::get('update.open', []); // still copying: finish_open() owns them
         foreach (['plugins' => 'plugin', 'themes' => 'theme'] as $key => $kind) {
             foreach ($now[$key] as $slug => $version) {
                 $old = $prev[$key][$slug] ?? null;
-                if ($old === null || $old === $version || $version === '' || $slug === 'dcc-ragusa' || self::recorded((string) $slug, $version)) {
+                if ($old === null || $old === $version || $version === '' || $slug === 'dcc-ragusa' || isset($open[$slug]) || self::recorded((string) $slug, $version)) {
                     continue;
                 }
                 $lines[] = self::record_unseen($kind, (string) $slug, (string) $old, $version, $since);
@@ -386,6 +642,11 @@ final class Sveti_Ivan
             Site::stamp(time()),
             $id
         );
+        $lock = self::lock_sentence($since, time());
+        if ($lock !== '') {
+            $text .= ' ' . $lock;
+            Journal::annotate($id, $lock);
+        }
         if ($dir !== '') {
             Minceta::drop_from_index($diff['removed']);
             self::judge_removed(['slug' => $slug, 'kind' => $kind, 'version' => $new, 'old' => $old, 'id' => $id, 'unseen' => true, 'at' => $before['installed_at']], $diff['removed']);
@@ -481,6 +742,9 @@ final class Sveti_Ivan
     public static function due(): array
     {
         $lines = [];
+        foreach (self::finish_open() as $line) {
+            $lines[] = $line;
+        }
         foreach (self::detect_unseen() as $line) {
             $lines[] = $line;
         }
@@ -505,6 +769,9 @@ final class Sveti_Ivan
 
     public static function recover(array $row): string
     {
+        if (in_array((string) ($row['before']['stage'] ?? ''), ['started', 'ended-early'], true)) {
+            return ''; // an update still open: finish_open() completes or abandons it
+        }
         $next = (int) ($row['verify']['next_at'] ?? 0);
         if ($row['state'] === Journal::PLANNED || $next === 0) {
             self::schedule((int) $row['id'], 60);

@@ -20,6 +20,38 @@ final class Htaccess
     public const ORDER_PREGZ_MISSING = 'pregz-missing';
     public const ORDER_WRONG         = 'wrong-order';
 
+    /**
+     * Newfold Htaccess Manager's own marks (HostGator's wp-module-htaccess,
+     * Updater::build_block_lines() and refresh_single_backup()): its block
+     * header, and the single backup it refreshes just before every write.
+     *
+     * @return array{version:string,sha:string,applied:int,gap:?int,backup_hash:string}|null
+     */
+    public static function newfold_marks(string $dir): ?array
+    {
+        $ht  = rtrim($dir, '/') . '/.htaccess';
+        $bak = rtrim($dir, '/') . '/.htaccess.nfd-backup';
+        clearstatcache(true, $ht);
+        clearstatcache(true, $bak);
+        if (!is_file($ht)) {
+            return null;
+        }
+        $content = (string) @file_get_contents($ht, false, null, 0, 256 * 1024);
+        $out     = ['version' => '', 'sha' => '', 'applied' => 0, 'gap' => null, 'backup_hash' => ''];
+        if (preg_match('/^\s*#\s*Managed by Newfold Htaccess Manager v([0-9A-Za-z.\-]{1,20})/mi', $content, $m)) {
+            $out['version'] = $m[1];
+        }
+        if (preg_match('/^\s*#\s*STATE\s+sha256:\s*([0-9a-f]{64})\s+applied:\s*(\S{1,40})\s*$/mi', $content, $m)) {
+            $out['sha']     = $m[1];
+            $out['applied'] = (int) strtotime($m[2]);
+        }
+        if (is_file($bak)) {
+            $out['gap']         = (int) filemtime($ht) - (int) filemtime($bak);
+            $out['backup_hash'] = (string) hash_file('sha256', $bak);
+        }
+        return $out['version'] === '' && $out['sha'] === '' && $out['gap'] === null ? null : $out;
+    }
+
     public static function path(): string
     {
         return Site::abspath() . '/.htaccess';

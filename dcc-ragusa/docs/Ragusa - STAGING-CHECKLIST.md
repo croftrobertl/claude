@@ -1,4 +1,9 @@
-# Ragusa 0.2.7 — Staging Checklist
+# Ragusa 0.2.8 — Staging Checklist
+
+> **Upgrading from 0.2.7 (staging first, then live):** step 14 part A runs
+> on 0.2.7 first (it reproduces the miss), then `wp plugin install
+> "Ragusa 0.2.8.zip" --force` and `wp ragusa tick`, then part B. Nothing
+> migrates. Rollback: `wp plugin install "Ragusa 0.2.7.zip" --force`.
 
 > **Upgrading from 0.2.6 (staging first, then live):** `wp plugin install
 > "Ragusa 0.2.7.zip" --force`, then `wp ragusa tick`. That tick takes the
@@ -582,6 +587,80 @@ is deterministic. From the home directory:
       `wp ragusa seal wp-content/plugins/walls-test-plugin` (drops the
       folder from the baseline and settles its findings),
       `wp ragusa resolve <the update-unseen id>`, `rm -rf ~/walls-test`.
+
+## 14. The 0.2.8 drills: a real WP-Cron auto-update
+
+**Live first, read-only: what happened at 11:11 CDT on Oct 29** (16:11 UTC).
+Each answer narrows the cause; none changes anything.
+
+    wp db query "SELECT id, fortress, kind, target, FROM_UNIXTIME(ts), LEFT(message, 140) FROM portal_dcc_ragusa_events WHERE ts BETWEEN UNIX_TIMESTAMP('2026-10-29 16:05:00') AND UNIX_TIMESTAMP('2026-10-29 16:20:00') ORDER BY id"
+    wp eval 'var_export(DCCR\State::get("pending_update")); echo "\n"; var_export(DCCR\State::get("update.pre"));'
+    wp option get auto_updater.lock
+    grep -n '29-Oct-2026 16:1' ~/public_html/error_log | tail -20
+
+(`UNIX_TIMESTAMP` reads in the MySQL session's zone; if the rows look an
+hour or five off, widen the window.)
+
+- A **"Sealed … before its update"** event for the plugin at 11:11, and its
+  slug still in `pending_update`: Ragusa was loaded and saw the upgrader
+  start; upgrader_process_complete never reached it. The error_log lines
+  at 16:11 then name what ended the request.
+- **No sealed event**: Ragusa never saw that upgrader run (not loaded in
+  that request, or its hooks were removed).
+- A **check-error** event: Ragusa itself failed inside the hook.
+- `auto_updater.lock` still set with a time near 11:11 (`date -d @<value>`):
+  WordPress's automatic updater run died before its end. Also: did the
+  admin email "Some plugins were automatically updated" arrive for 11:11?
+  WordPress sends it only at the end of a run that finished.
+
+**Part A, staging, still on 0.2.7: reproduce.** A small WordPress.org
+plugin with its own folder (Classic Editor; not Hello Dolly, a single file
+Ragusa does not track), one release behind, active, auto-updates on:
+
+    cd ~/public_html/staging
+    wp plugin install classic-editor --version=<the release before the current one> --force --activate
+    wp plugin auto-updates enable classic-editor
+    wp plugin list --update=available --fields=name,version,update_version,auto_update
+
+The last list must show classic-editor and **nothing else with
+auto_update on**: wp-cron.php runs every due event and updates every
+plugin set to auto-update (0.2.1's lesson). Then a real WP-Cron run:
+
+    wp eval 'delete_site_transient("update_plugins"); wp_update_plugins();'
+    wp cron event schedule wp_maybe_auto_update
+    php wp-cron.php        # WordPress's own cron entry point, as the loopback runs it, without the web server
+    sleep 20; wp plugin get classic-editor --field=version
+    wp db query "SELECT id, action, state, note FROM wpstg0_dcc_ragusa_journal WHERE target = 'classic-editor' ORDER BY id DESC LIMIT 3"
+
+- [ ] The version moved to the current release.
+- [ ] Record whether 0.2.7 wrote a row. **No row** reproduces live: run the
+      four read-only checks above against staging (prefix `wpstg0_`).
+      **A row** means the plain WP-Cron path works, and the live miss is
+      specific to that update: repeat part A with Ultimate Addons for
+      Elementor one release behind 2.9.6 (`wp plugin list` gives its slug).
+
+**Part B, staging, on 0.2.8.** Install the older release again, then the
+same commands.
+
+- [ ] One journal row for classic-editor, note `update from auto`,
+      `wp db query "SELECT before_json FROM wpstg0_dcc_ragusa_journal WHERE id = <id>"`
+      shows `"stage":"complete"` and `"request":{"entry":"wp-cron.php","cron":true,…}`.
+- [ ] `verify_json` shows `"inline":"deferred: maintenance mode"` (WordPress
+      keeps its maintenance page up through an auto-update) and the follow-up
+      check ran on the next `wp ragusa tick` after two minutes.
+- [ ] If part A had no row: in 0.2.8 the row exists and either reads
+      complete, or reads "the request ended before WordPress reported the
+      update finished: PHP fatal error: … in <file> line <n>", and the
+      next `wp ragusa tick` prints "… WordPress never reported it finished
+      … Completed as journal N". That file and line are the answer.
+- [ ] **No "Updated Without Ragusa Seeing It"** for classic-editor.
+- [ ] **Newfold:** staging has no Newfold module, so this is the harness's
+      drill 7 only. On live, the next Newfold rewrite's finding should read
+      "Newfold Htaccess Manager (HostGator's) made this change: … holds
+      exactly the .htaccess Ragusa had on record", quote the STATE line,
+      and name the update before it.
+- [ ] Clean up: `wp plugin auto-updates disable classic-editor` and
+      `wp plugin delete classic-editor` if it was not there before.
 
 ## 11. Before live
 

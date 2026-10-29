@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.7
+Stable tag: 0.2.8
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,13 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.2.8 =
+* A plugin update's journal row is written at upgrader_pre_install, before a file is copied, not at upgrader_process_complete. If the request ends before Ragusa hears the update finish (another plugin's completion callback dies or exits, the hook is removed, the process is killed), the row says how it ended, with PHP's last fatal error, and the next tick completes it as a recorded update: its sealed copy, its window, its smoke checks. An update that started and changed nothing is abandoned, never invented.
+* An update nobody saw says when WordPress's own automatic updater died holding its lock (the `auto_updater.lock` option it takes at the start of a run and deletes at the end).
+* While WordPress shows its maintenance page for an update, the inline smoke checks wait for the follow-up two minutes later: every page would answer 503, and guests would wait on the checks.
+* A failed journal insert returns 0. wpdb keeps the previous insert's id after a failed insert, and Ragusa would have written onto that row.
+* An .htaccess change made by Newfold's Htaccess Manager says so: it refreshes .htaccess.nfd-backup just before each write, so when the backup is seconds older and holds exactly the .htaccess Ragusa had on record, the finding names Newfold, quotes its STATE line and names a recorded update just before it. It stays a finding.
 
 = 0.2.7 =
 * A file removed by a plugin, theme or core update is recorded as information, not emailed, when it disappears inside that update's window, in that component's files, and the new version no longer ships it. "Ships" is decided from the package the upgrader unpacked (listed as it arrives), WordPress.org's published file list for the version, or core's checksums. Anything else missing is still a finding, including a file the new version still ships that vanished during the update: a deletion hidden inside an update is what an attacker would try.
